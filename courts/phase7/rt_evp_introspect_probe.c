@@ -49,7 +49,9 @@
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/objects.h>
+#include <openssl/md5.h>
 #include <openssl/params.h>
+#include <openssl/ripemd.h>
 #include <openssl/sha.h>
 
 static void sayn(const char *key, long long v)
@@ -396,6 +398,17 @@ static void legacy_md_arms(void)
         { "SHA512", EVP_sha512 },
         { "SHA512-224", EVP_sha512_224 },
         { "SHA512-256", EVP_sha512_256 },
+        { "MD5", EVP_md5 },
+        { "MD5-SHA1", EVP_md5_sha1 },
+        { "RIPEMD160", EVP_ripemd160 },
+        { "BLAKE2b512", EVP_blake2b512 },
+        { "BLAKE2s256", EVP_blake2s256 },
+        { "SHA3-224", EVP_sha3_224 },
+        { "SHA3-256", EVP_sha3_256 },
+        { "SHA3-384", EVP_sha3_384 },
+        { "SHA3-512", EVP_sha3_512 },
+        { "SHAKE128", EVP_shake128 },
+        { "SHAKE256", EVP_shake256 },
     };
     unsigned char md[EVP_MAX_MD_SIZE];
     unsigned int n;

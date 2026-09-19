@@ -193,12 +193,6 @@
         "evidence": "docs/DECISIONS.md D193; docs/PHASE-7-SUBPHASES.md row 7.4l"
       },
       {
-        "symbol": "EVP_md5",
-        "owner_phase": 13,
-        "reason": "`PEM_do_header` derives the block's key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`), and `PEM_ASN1_write_bio_internal` does the same on its encrypted arm (`:392`). `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s -- a legacy `EVP_MD` whose callbacks are `MD5_Init`/`MD5_Update`/`MD5_Final` -- and 7.3g handed every such static to Phase 13 with its primitive unit named, so `EVP_md5` is that stratum's and not this one's. Through `PEM_do_header` it withholds `PEM_bytes_read_bio`, its `_secmem` spelling, `PEM_ASN1_read_bio`/`PEM_ASN1_read`, and the `PEM_ASN1_write_bio`/`PEM_ASN1_write_bio_ctx`/`PEM_ASN1_write` trio; the withholding is per symbol and the blocker is the same one.",
-        "evidence": "docs/DECISIONS.md D194; docs/PHASE-7-SUBPHASES.md rows 7.3g and 7.5"
-      },
-      {
         "symbol": "RAND_bytes",
         "owner_phase": 9,
         "reason": "`PEM_ASN1_write_bio_internal`'s encrypted arm generates the DEK-Info salt from `RAND_bytes(iv, EVP_CIPHER_get_iv_length(enc))` (`crypto/pem/pem_lib.c:386`), and `rand.h` is Phase 9's. The name blocks `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx` and `PEM_ASN1_write` alongside `EVP_md5`; all three are withheld, and this row records the second of their two blockers rather than a second withheld export. The same argument D165 makes applies in the other direction here: the `enc == NULL` arm of the function is transcribable against landed machinery alone, but an export cannot be half-written, and the encrypted arm is the one every `PEM_write_*PrivateKey*` caller reaches.",

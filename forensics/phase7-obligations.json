@@ -3,16 +3,16 @@
   "body": {
     "blocker_liveness": {
       "findings": 0,
-      "legacy_rows": 157,
-      "legacy_unit_claims": 21,
-      "structured_blockers": 60,
+      "legacy_rows": 146,
+      "legacy_unit_claims": 20,
+      "structured_blockers": 57,
       "structured_rows": 25
     },
     "complete": true,
     "counts": {
       "atlas_owned": 924,
-      "deferred_to_later_phase": 237,
-      "implemented": 713,
+      "deferred_to_later_phase": 226,
+      "implemented": 724,
       "open_in_this_stratum": 0,
       "owned": 950,
       "received_by_handoff": 26
@@ -1938,22 +1938,6 @@
         "blocked_by": [],
         "declaring_header": "evp.h",
         "owning_phase": 13,
-        "reason": "a legacy method static whose callbacks call providers/implementations/digests/'s own primitives; `legacy_blake2.c`, whose callbacks call the provider BLAKE2 implementation's `ossl_blake2b_*`/`ossl_blake2s_*` (the authority has no `crypto/blake2/`; the name this row carried from D196 was wrong and the unit check found it)",
-        "symbol": "EVP_blake2b512"
-      },
-      {
-        "binding_phase": 13,
-        "blocked_by": [],
-        "declaring_header": "evp.h",
-        "owning_phase": 13,
-        "reason": "a legacy method static whose callbacks call providers/implementations/digests/'s own primitives; `legacy_blake2.c`, whose callbacks call the provider BLAKE2 implementation's `ossl_blake2b_*`/`ossl_blake2s_*` (the authority has no `crypto/blake2/`; the name this row carried from D196 was wrong and the unit check found it)",
-        "symbol": "EVP_blake2s256"
-      },
-      {
-        "binding_phase": 13,
-        "blocked_by": [],
-        "declaring_header": "evp.h",
-        "owning_phase": 13,
         "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
         "symbol": "EVP_camellia_128_cbc"
       },
@@ -2370,22 +2354,6 @@
         "blocked_by": [],
         "declaring_header": "evp.h",
         "owning_phase": 13,
-        "reason": "a legacy method static whose callbacks call crypto/md5/'s own primitives; `legacy_md5.c` and `legacy_md5_sha1.c`, the second an MD5-then-SHA1 composition",
-        "symbol": "EVP_md5"
-      },
-      {
-        "binding_phase": 13,
-        "blocked_by": [],
-        "declaring_header": "evp.h",
-        "owning_phase": 13,
-        "reason": "a legacy method static whose callbacks call crypto/md5/'s own primitives; `legacy_md5.c` and `legacy_md5_sha1.c`, the second an MD5-then-SHA1 composition",
-        "symbol": "EVP_md5_sha1"
-      },
-      {
-        "binding_phase": 13,
-        "blocked_by": [],
-        "declaring_header": "evp.h",
-        "owning_phase": 13,
         "reason": "a legacy method static whose callbacks call crypto/mdc2/'s own primitives; `legacy_mdc2.c`, itself over `crypto/des/`",
         "symbol": "EVP_mdc2"
       },
@@ -2554,14 +2522,6 @@
         "blocked_by": [],
         "declaring_header": "evp.h",
         "owning_phase": 13,
-        "reason": "a legacy method static whose callbacks call crypto/ripemd/'s own primitives; `legacy_ripemd.c`",
-        "symbol": "EVP_ripemd160"
-      },
-      {
-        "binding_phase": 13,
-        "blocked_by": [],
-        "declaring_header": "evp.h",
-        "owning_phase": 13,
         "reason": "a legacy method static whose callbacks call crypto/seed/'s own primitives; `e_seed.c`",
         "symbol": "EVP_seed_cbc"
       },
@@ -2588,54 +2548,6 @@
         "owning_phase": 13,
         "reason": "a legacy method static whose callbacks call crypto/seed/'s own primitives; `e_seed.c`",
         "symbol": "EVP_seed_ofb"
-      },
-      {
-        "binding_phase": 13,
-        "blocked_by": [],
-        "declaring_header": "evp.h",
-        "owning_phase": 13,
-        "reason": "a legacy method static whose callbacks call crypto/sha/'s own primitives; `legacy_sha.c`, which builds every SHA-1, SHA-2, SHA-3 and SHAKE static in one table",
-        "symbol": "EVP_sha3_224"
-      },
-      {
-        "binding_phase": 13,
-        "blocked_by": [],
-        "declaring_header": "evp.h",
-        "owning_phase": 13,
-        "reason": "a legacy method static whose callbacks call crypto/sha/'s own primitives; `legacy_sha.c`, which builds every SHA-1, SHA-2, SHA-3 and SHAKE static in one table",
-        "symbol": "EVP_sha3_256"
-      },
-      {
-        "binding_phase": 13,
-        "blocked_by": [],
-        "declaring_header": "evp.h",
-        "owning_phase": 13,
-        "reason": "a legacy method static whose callbacks call crypto/sha/'s own primitives; `legacy_sha.c`, which builds every SHA-1, SHA-2, SHA-3 and SHAKE static in one table",
-        "symbol": "EVP_sha3_384"
-      },
-      {
-        "binding_phase": 13,
-        "blocked_by": [],
-        "declaring_header": "evp.h",
-        "owning_phase": 13,
-        "reason": "a legacy method static whose callbacks call crypto/sha/'s own primitives; `legacy_sha.c`, which builds every SHA-1, SHA-2, SHA-3 and SHAKE static in one table",
-        "symbol": "EVP_sha3_512"
-      },
-      {
-        "binding_phase": 13,
-        "blocked_by": [],
-        "declaring_header": "evp.h",
-        "owning_phase": 13,
-        "reason": "a legacy method static whose callbacks call crypto/sha/'s own primitives; `legacy_sha.c`, which builds every SHA-1, SHA-2, SHA-3 and SHAKE static in one table",
-        "symbol": "EVP_shake128"
-      },
-      {
-        "binding_phase": 13,
-        "blocked_by": [],
-        "declaring_header": "evp.h",
-        "owning_phase": 13,
-        "reason": "a legacy method static whose callbacks call crypto/sha/'s own primitives; `legacy_sha.c`, which builds every SHA-1, SHA-2, SHA-3 and SHAKE static in one table",
-        "symbol": "EVP_shake256"
       },
       {
         "binding_phase": 13,
@@ -2711,15 +2623,8 @@
         "symbol": "OSSL_HPKE_get_grease_value"
       },
       {
-        "binding_phase": 13,
+        "binding_phase": 9,
         "blocked_by": [
-          {
-            "authority_unit": "crypto/evp/legacy_md5.c",
-            "kind": "exported",
-            "line": 31,
-            "name": "EVP_md5",
-            "owning_phase": 13
-          },
           {
             "authority_unit": "crypto/rand/rand_lib.c",
             "kind": "exported",
@@ -2729,20 +2634,13 @@
           }
         ],
         "declaring_header": "pem.h",
-        "owning_phase": 13,
+        "owning_phase": 9,
         "reason": "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and not this stratum's even though `evp.h` declares it. The other seven reach it through one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` (`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
         "symbol": "PEM_ASN1_read"
       },
       {
-        "binding_phase": 13,
+        "binding_phase": 9,
         "blocked_by": [
-          {
-            "authority_unit": "crypto/evp/legacy_md5.c",
-            "kind": "exported",
-            "line": 31,
-            "name": "EVP_md5",
-            "owning_phase": 13
-          },
           {
             "authority_unit": "crypto/rand/rand_lib.c",
             "kind": "exported",
@@ -2752,20 +2650,13 @@
           }
         ],
         "declaring_header": "pem.h",
-        "owning_phase": 13,
+        "owning_phase": 9,
         "reason": "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and not this stratum's even though `evp.h` declares it. The other seven reach it through one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` (`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
         "symbol": "PEM_ASN1_read_bio"
       },
       {
-        "binding_phase": 13,
+        "binding_phase": 9,
         "blocked_by": [
-          {
-            "authority_unit": "crypto/evp/legacy_md5.c",
-            "kind": "exported",
-            "line": 31,
-            "name": "EVP_md5",
-            "owning_phase": 13
-          },
           {
             "authority_unit": "crypto/rand/rand_lib.c",
             "kind": "exported",
@@ -2775,20 +2666,13 @@
           }
         ],
         "declaring_header": "pem.h",
-        "owning_phase": 13,
+        "owning_phase": 9,
         "reason": "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and not this stratum's even though `evp.h` declares it. The other seven reach it through one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` (`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
         "symbol": "PEM_ASN1_write"
       },
       {
-        "binding_phase": 13,
+        "binding_phase": 9,
         "blocked_by": [
-          {
-            "authority_unit": "crypto/evp/legacy_md5.c",
-            "kind": "exported",
-            "line": 31,
-            "name": "EVP_md5",
-            "owning_phase": 13
-          },
           {
             "authority_unit": "crypto/rand/rand_lib.c",
             "kind": "exported",
@@ -2798,20 +2682,13 @@
           }
         ],
         "declaring_header": "pem.h",
-        "owning_phase": 13,
+        "owning_phase": 9,
         "reason": "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and not this stratum's even though `evp.h` declares it. The other seven reach it through one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` (`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
         "symbol": "PEM_ASN1_write_bio"
       },
       {
-        "binding_phase": 13,
+        "binding_phase": 9,
         "blocked_by": [
-          {
-            "authority_unit": "crypto/evp/legacy_md5.c",
-            "kind": "exported",
-            "line": 31,
-            "name": "EVP_md5",
-            "owning_phase": 13
-          },
           {
             "authority_unit": "crypto/rand/rand_lib.c",
             "kind": "exported",
@@ -2821,20 +2698,13 @@
           }
         ],
         "declaring_header": "pem.h",
-        "owning_phase": 13,
+        "owning_phase": 9,
         "reason": "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and not this stratum's even though `evp.h` declares it. The other seven reach it through one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` (`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
         "symbol": "PEM_ASN1_write_bio_ctx"
       },
       {
-        "binding_phase": 13,
+        "binding_phase": 9,
         "blocked_by": [
-          {
-            "authority_unit": "crypto/evp/legacy_md5.c",
-            "kind": "exported",
-            "line": 31,
-            "name": "EVP_md5",
-            "owning_phase": 13
-          },
           {
             "authority_unit": "crypto/rand/rand_lib.c",
             "kind": "exported",
@@ -2844,20 +2714,13 @@
           }
         ],
         "declaring_header": "pem.h",
-        "owning_phase": 13,
+        "owning_phase": 9,
         "reason": "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and not this stratum's even though `evp.h` declares it. The other seven reach it through one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` (`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
         "symbol": "PEM_bytes_read_bio"
       },
       {
-        "binding_phase": 13,
+        "binding_phase": 9,
         "blocked_by": [
-          {
-            "authority_unit": "crypto/evp/legacy_md5.c",
-            "kind": "exported",
-            "line": 31,
-            "name": "EVP_md5",
-            "owning_phase": 13
-          },
           {
             "authority_unit": "crypto/rand/rand_lib.c",
             "kind": "exported",
@@ -2867,7 +2730,7 @@
           }
         ],
         "declaring_header": "pem.h",
-        "owning_phase": 13,
+        "owning_phase": 9,
         "reason": "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and not this stratum's even though `evp.h` declares it. The other seven reach it through one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` (`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
         "symbol": "PEM_bytes_read_bio_secmem"
       },
@@ -2889,15 +2752,8 @@
         "symbol": "PEM_def_callback"
       },
       {
-        "binding_phase": 13,
+        "binding_phase": 9,
         "blocked_by": [
-          {
-            "authority_unit": "crypto/evp/legacy_md5.c",
-            "kind": "exported",
-            "line": 31,
-            "name": "EVP_md5",
-            "owning_phase": 13
-          },
           {
             "authority_unit": "crypto/rand/rand_lib.c",
             "kind": "exported",
@@ -2907,7 +2763,7 @@
           }
         ],
         "declaring_header": "pem.h",
-        "owning_phase": 13,
+        "owning_phase": 9,
         "reason": "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and not this stratum's even though `evp.h` declares it. The other seven reach it through one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` (`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
         "symbol": "PEM_do_header"
       },
@@ -2927,13 +2783,6 @@
             "line": 342,
             "name": "OSSL_ENCODER_CTX_new_for_pkey",
             "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/evp/legacy_md5.c",
-            "kind": "exported",
-            "line": 31,
-            "name": "EVP_md5",
-            "owning_phase": 13
           },
           {
             "authority_unit": "crypto/ui/ui_lib.c",
@@ -2966,13 +2815,6 @@
             "owning_phase": 10
           },
           {
-            "authority_unit": "crypto/evp/legacy_md5.c",
-            "kind": "exported",
-            "line": 31,
-            "name": "EVP_md5",
-            "owning_phase": 13
-          },
-          {
             "authority_unit": "crypto/ui/ui_lib.c",
             "kind": "exported",
             "line": 18,
@@ -3001,13 +2843,6 @@
             "line": 342,
             "name": "OSSL_ENCODER_CTX_new_for_pkey",
             "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/evp/legacy_md5.c",
-            "kind": "exported",
-            "line": 31,
-            "name": "EVP_md5",
-            "owning_phase": 13
           },
           {
             "authority_unit": "crypto/ui/ui_lib.c",
@@ -3040,13 +2875,6 @@
             "owning_phase": 10
           },
           {
-            "authority_unit": "crypto/evp/legacy_md5.c",
-            "kind": "exported",
-            "line": 31,
-            "name": "EVP_md5",
-            "owning_phase": 13
-          },
-          {
             "authority_unit": "crypto/ui/ui_lib.c",
             "kind": "exported",
             "line": 18,
@@ -3075,13 +2903,6 @@
             "line": 342,
             "name": "OSSL_ENCODER_CTX_new_for_pkey",
             "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/evp/legacy_md5.c",
-            "kind": "exported",
-            "line": 31,
-            "name": "EVP_md5",
-            "owning_phase": 13
           },
           {
             "authority_unit": "crypto/ui/ui_lib.c",
@@ -3114,13 +2935,6 @@
             "owning_phase": 10
           },
           {
-            "authority_unit": "crypto/evp/legacy_md5.c",
-            "kind": "exported",
-            "line": 31,
-            "name": "EVP_md5",
-            "owning_phase": 13
-          },
-          {
             "authority_unit": "crypto/ui/ui_lib.c",
             "kind": "exported",
             "line": 18,
@@ -3149,13 +2963,6 @@
             "line": 342,
             "name": "OSSL_ENCODER_CTX_new_for_pkey",
             "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/evp/legacy_md5.c",
-            "kind": "exported",
-            "line": 31,
-            "name": "EVP_md5",
-            "owning_phase": 13
           },
           {
             "authority_unit": "crypto/ui/ui_lib.c",
@@ -3188,13 +2995,6 @@
             "owning_phase": 10
           },
           {
-            "authority_unit": "crypto/evp/legacy_md5.c",
-            "kind": "exported",
-            "line": 31,
-            "name": "EVP_md5",
-            "owning_phase": 13
-          },
-          {
             "authority_unit": "crypto/ui/ui_lib.c",
             "kind": "exported",
             "line": 18,
@@ -3223,13 +3023,6 @@
             "line": 342,
             "name": "OSSL_ENCODER_CTX_new_for_pkey",
             "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/evp/legacy_md5.c",
-            "kind": "exported",
-            "line": 31,
-            "name": "EVP_md5",
-            "owning_phase": 13
           },
           {
             "authority_unit": "crypto/ui/ui_lib.c",
@@ -3262,13 +3055,6 @@
             "owning_phase": 10
           },
           {
-            "authority_unit": "crypto/evp/legacy_md5.c",
-            "kind": "exported",
-            "line": 31,
-            "name": "EVP_md5",
-            "owning_phase": 13
-          },
-          {
             "authority_unit": "crypto/ui/ui_lib.c",
             "kind": "exported",
             "line": 18,
@@ -3297,13 +3083,6 @@
             "line": 342,
             "name": "OSSL_ENCODER_CTX_new_for_pkey",
             "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/evp/legacy_md5.c",
-            "kind": "exported",
-            "line": 31,
-            "name": "EVP_md5",
-            "owning_phase": 13
           },
           {
             "authority_unit": "crypto/ui/ui_lib.c",
@@ -3336,13 +3115,6 @@
             "owning_phase": 10
           },
           {
-            "authority_unit": "crypto/evp/legacy_md5.c",
-            "kind": "exported",
-            "line": 31,
-            "name": "EVP_md5",
-            "owning_phase": 13
-          },
-          {
             "authority_unit": "crypto/ui/ui_lib.c",
             "kind": "exported",
             "line": 18,
@@ -3371,13 +3143,6 @@
             "line": 342,
             "name": "OSSL_ENCODER_CTX_new_for_pkey",
             "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/evp/legacy_md5.c",
-            "kind": "exported",
-            "line": 31,
-            "name": "EVP_md5",
-            "owning_phase": 13
           },
           {
             "authority_unit": "crypto/ui/ui_lib.c",
@@ -3410,13 +3175,6 @@
             "owning_phase": 10
           },
           {
-            "authority_unit": "crypto/evp/legacy_md5.c",
-            "kind": "exported",
-            "line": 31,
-            "name": "EVP_md5",
-            "owning_phase": 13
-          },
-          {
             "authority_unit": "crypto/ui/ui_lib.c",
             "kind": "exported",
             "line": 18,
@@ -3447,13 +3205,6 @@
             "owning_phase": 10
           },
           {
-            "authority_unit": "crypto/evp/legacy_md5.c",
-            "kind": "exported",
-            "line": 31,
-            "name": "EVP_md5",
-            "owning_phase": 13
-          },
-          {
             "authority_unit": "crypto/ui/ui_lib.c",
             "kind": "exported",
             "line": 18,
@@ -3467,7 +3218,7 @@
         "symbol": "PEM_write_bio_PrivateKey_ex"
       },
       {
-        "binding_phase": 13,
+        "binding_phase": 10,
         "blocked_by": [
           {
             "authority_unit": "crypto/evp/p_lib.c",
@@ -3484,13 +3235,6 @@
             "owning_phase": 10
           },
           {
-            "authority_unit": "crypto/evp/legacy_md5.c",
-            "kind": "exported",
-            "line": 31,
-            "name": "EVP_md5",
-            "owning_phase": 13
-          },
-          {
             "authority_unit": "crypto/rand/rand_lib.c",
             "kind": "exported",
             "line": 500,
@@ -3499,7 +3243,7 @@
           }
         ],
         "declaring_header": "pem.h",
-        "owning_phase": 13,
+        "owning_phase": 10,
         "reason": "`crypto/pem/pem_pkey.c:342` needs `evp_pkey_copy_downgraded` (`:356`, Phase 8, for the provided-key copy), `x->ameth->old_priv_encode`/`x->ameth->pem_str` (`:359`, `:364`, Phase 8's ameth contents), the `i2d_PrivateKey` function pointer (`:365`, Phase 10) and `PEM_ASN1_write_bio` (`:365`, Phase 13 behind `EVP_md5` and Phase 9 behind `RAND_bytes`). Four strata feed it and Phase 13 is the latest, so Phase 13 retires it. D194 named this as the one name of the private-key family that needs the ameth *before* it needs the encoder, and this row is the four-dependency version of that sentence.",
         "symbol": "PEM_write_bio_PrivateKey_traditional"
       },
@@ -3894,10 +3638,10 @@
     ],
     "deferred_by_phase": {
       "8": 27,
-      "9": 4,
-      "10": 15,
+      "9": 12,
+      "10": 16,
       "11": 5,
-      "13": 186
+      "13": 166
     },
     "handoffs_discharged": {
       "5": [
@@ -4736,6 +4480,8 @@
       "EVP_VerifyFinal_ex",
       "EVP_add_cipher",
       "EVP_add_digest",
+      "EVP_blake2b512",
+      "EVP_blake2s256",
       "EVP_default_properties_enable_fips",
       "EVP_default_properties_is_fips_enabled",
       "EVP_enc_null",
@@ -4743,16 +4489,25 @@
       "EVP_get_cipherbyname",
       "EVP_get_digestbyname",
       "EVP_get_pw_prompt",
+      "EVP_md5",
+      "EVP_md5_sha1",
       "EVP_md_null",
+      "EVP_ripemd160",
       "EVP_set_default_properties",
       "EVP_set_pw_prompt",
       "EVP_sha1",
       "EVP_sha224",
       "EVP_sha256",
       "EVP_sha384",
+      "EVP_sha3_224",
+      "EVP_sha3_256",
+      "EVP_sha3_384",
+      "EVP_sha3_512",
       "EVP_sha512",
       "EVP_sha512_224",
       "EVP_sha512_256",
+      "EVP_shake128",
+      "EVP_shake256",
       "HMAC",
       "HMAC_CTX_copy",
       "HMAC_CTX_free",
@@ -5117,7 +4872,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "85401a1ee4a5ad81c9b019c3c6e58ad05667529e2ae5e6a604ae83d577c7247d"
+      "sha256": "8cd11f55e7769f2d8e4c0b23331b364543c7334704ed2e6657e12ddd2259e5a8"
     },
     {
       "name": "export-defining-units",
@@ -5137,7 +4892,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "1e6ef720cf516b09550e28522bcd6814ab29faf55f8381547b148feb69f6c698"
+      "sha256": "8b6447589c05de51d3c348b7a797291afb3babd325921d847047cf8c7ed5935c"
     },
     {
       "name": "phase-state",
@@ -5151,7 +4906,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "2a0f6d808b23f705581927adc6b5be612652409c8452a6483122e9d7082b6d7b"
+      "sha256": "95140f6a70708ef1145c544cc16c22efb20c27a0309726732febba4a3cbb5228"
     }
   ],
   "kind": "phase7-obligations",

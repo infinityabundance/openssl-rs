@@ -4,7 +4,6 @@
     "blocking_dependencies": [
       "ASN1_item_sign_ctx -> phase 11 (`ASN1_item_sign_ex` (`crypto/asn1/a_sign.c:138`) hands the digest context to `ASN1_item_sign_ctx`, which is declared in `x509.h` and is Phase 11's. The hand-off from Phase 5 that 7.4l owns therefore cannot be completed here even though `EVP_DigestSignInit` landed: the `_ex` spelling is a constructor for a context the `x509.h` function consumes, and its own answer would be the delegate's.)",
       "ASN1_item_verify_ctx -> phase 11 (The verification twin of `ASN1_item_sign_ctx`: `ASN1_item_verify_ex` (`crypto/asn1/a_verify.c:104`) delegates to it, and it is declared in `x509.h`, Phase 11's. The hand-off from Phase 5 to this stratum cannot be completed while the delegate is another stratum's export.)",
-      "EVP_md5 -> phase 13 (`PEM_do_header` derives the block's key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`), and `PEM_ASN1_write_bio_internal` does the same on its encrypted arm (`:392`). `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s -- a legacy `EVP_MD` whose callbacks are `MD5_Init`/`MD5_Update`/`MD5_Final` -- and 7.3g handed every such static to Phase 13 with its primitive unit named, so `EVP_md5` is that stratum's and not this one's. Through `PEM_do_header` it withholds `PEM_bytes_read_bio`, its `_secmem` spelling, `PEM_ASN1_read_bio`/`PEM_ASN1_read`, and the `PEM_ASN1_write_bio`/`PEM_ASN1_write_bio_ctx`/`PEM_ASN1_write` trio; the withholding is per symbol and the blocker is the same one.)",
       "OSSL_DECODER_CTX_new_for_pkey -> phase 10 (`crypto/asn1/d2i_pr.c`'s `d2i_PrivateKey_decoder` builds an `OSSL_DECODER_CTX` and is the first thing `d2i_PrivateKey_ex` and `d2i_AutoPrivateKey_ex` try, with the legacy ameth path only as a fallback. The names are declared in `decoder.h`, Phase 10's, so the four `d2i_PrivateKey*`/`d2i_AutoPrivateKey*` exports are withheld.)",
       "OSSL_ENCODER_CTX_new_for_pkey -> phase 10 (`crypto/asn1/i2d_evp.c`'s `i2d_provided` builds an `OSSL_ENCODER_CTX` for a **provider** key, which is the branch every one of `i2d_KeyParams`, `i2d_KeyParams_bio`, `i2d_PrivateKey`, `i2d_PKCS8PrivateKey` and `i2d_PublicKey` takes first. The names are declared in `encoder.h`, Phase 10's, so no provider key can be encoded and the five exports are withheld with the boundary named in `RT-EVP-PKEY`.)",
       "OSSL_provider_init -> phase 13 (providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.)",
@@ -30,7 +29,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 55,
-      "language_surface_not_modelled_by_name": 3124,
+      "language_surface_not_modelled_by_name": 3139,
       "planned_prerequisites": 14
     },
     "census_by_unit": {
@@ -172,6 +171,9 @@
         "crypto/evp/kem.c": 15,
         "crypto/evp/keymgmt_lib.c": 9,
         "crypto/evp/keymgmt_meth.c": 14,
+        "crypto/evp/legacy_blake2.c": 8,
+        "crypto/evp/legacy_md5.c": 4,
+        "crypto/evp/legacy_ripemd.c": 4,
         "crypto/evp/legacy_sha.c": 6,
         "crypto/evp/mac_lib.c": 13,
         "crypto/evp/names.c": 9,
@@ -213,7 +215,7 @@
         "crypto/params.c": 22,
         "crypto/params_dup.c": 12,
         "crypto/params_from_text.c": 10,
-        "crypto/pem/pem_lib.c": 57,
+        "crypto/pem/pem_lib.c": 56,
         "crypto/poly1305/poly1305.c": 5,
         "crypto/property/defn_cache.c": 7,
         "crypto/property/property.c": 25,
@@ -360,10 +362,10 @@
       ]
     },
     "checked": {
-      "authority_units": 174,
-      "crate_modules": 235,
+      "authority_units": 177,
+      "crate_modules": 239,
       "deferral_blocker_rows": 5,
-      "deferrals_recorded": 25,
+      "deferrals_recorded": 24,
       "divergence_names_covered": 31,
       "divergence_rows": 5,
       "names_referenced_and_not_built": 16
@@ -482,7 +484,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "1c19116cce6b9cfb5adc2cd629b25545a38e8066b41e8f28c954b99de7218460",
+  "body_hash": "420ed0ca2811a4624ab79559d6cd5dd44fa84dd6ba3a439048bda4343e8913b0",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -503,7 +505,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "78ff223cb96578654ff288bfc34d9b11d5b33e271cdd0f4fab6654794f01b4ec"
+      "sha256": "bd4ce920ec14de8a1abde24e832643873d4048f18ad6f82faa422806a9461502"
     },
     {
       "name": "symbol-ownership",
@@ -518,7 +520,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "7036edd2bc3adeff242dcd004ffab11f498c50d6280a076c99ebc244b8a0a067"
+      "sha256": "bfdb215264b7a0ba381e9014b8f408a813590a6d9b12a0f0a76fc86cc9d3bfb2"
     },
     {
       "name": "phase-state",
@@ -528,7 +530,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "1e6ef720cf516b09550e28522bcd6814ab29faf55f8381547b148feb69f6c698"
+      "sha256": "8b6447589c05de51d3c348b7a797291afb3babd325921d847047cf8c7ed5935c"
     },
     {
       "name": "crate-source-tree",

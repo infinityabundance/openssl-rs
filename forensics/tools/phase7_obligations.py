@@ -199,8 +199,10 @@ LEGACY_HANDOFFS: list[tuple[tuple[str, ...], str, str]] = [
     (("EVP_xcbc",), "crypto/aes/",
      "`e_xcbc_d.c`, which is the XCBC-MAC construction over the AES-CBC primitive"),
     (("EVP_md4",), "crypto/md4/", "`legacy_md4.c`"),
-    (("EVP_md5",), "crypto/md5/",
-     "`legacy_md5.c` and `legacy_md5_sha1.c`, the second an MD5-then-SHA1 composition"),
+    # `EVP_md5` and `EVP_md5_sha1` were the tenth and eleventh rows here until D293 landed
+    # them: `legacy_md5.c` and `legacy_md5_sha1.c` are transcribed in `src/evp/legacy_md5.rs`,
+    # so the row is retired rather than left covering a symbol the crate now defines -- which
+    # `BLOCKED_HANDOFFS`' own fail-closed rule refuses. `EVP_md4` and `EVP_mdc2` stay.
     (("EVP_mdc2",), "crypto/mdc2/", "`legacy_mdc2.c`, itself over `crypto/des/`"),
     (("EVP_sha",), "crypto/sha/",
      "`legacy_sha.c`, which builds every SHA-1, SHA-2, SHA-3 and SHAKE static in one table"),
@@ -709,9 +711,8 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
             "PEM_ASN1_read", "PEM_ASN1_read_bio", "PEM_ASN1_write", "PEM_ASN1_write_bio",
             "PEM_ASN1_write_bio_ctx"
         ),
-        binding_phase=13,
+        binding_phase=9,
         blocked_by=(
-            Blocker("EVP_md5", "crypto/evp/legacy_md5.c", 31, "exported", 13),
             Blocker("RAND_bytes", "crypto/rand/rand_lib.c", 500, "exported", 9),
         ),
         reason=(
@@ -765,7 +766,6 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
         blocked_by=(
             Blocker("OSSL_DECODER_CTX_new_for_pkey", "crypto/encode_decode/decoder_pkey.c", 821, "exported", 10),
             Blocker("OSSL_ENCODER_CTX_new_for_pkey", "crypto/encode_decode/encoder_pkey.c", 342, "exported", 10),
-            Blocker("EVP_md5", "crypto/evp/legacy_md5.c", 31, "exported", 13),
             Blocker("UI_new", "crypto/ui/ui_lib.c", 18, "exported", 13),
         ),
         reason=(
@@ -788,11 +788,10 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
         symbols=(
             "PEM_write_bio_PrivateKey_traditional",
         ),
-        binding_phase=13,
+        binding_phase=10,
         blocked_by=(
             Blocker("evp_pkey_copy_downgraded", "crypto/evp/p_lib.c", 2066, "internal", 8),
             Blocker("OSSL_ENCODER_CTX_new_for_pkey", "crypto/encode_decode/encoder_pkey.c", 342, "exported", 10),
-            Blocker("EVP_md5", "crypto/evp/legacy_md5.c", 31, "exported", 13),
             Blocker("RAND_bytes", "crypto/rand/rand_lib.c", 500, "exported", 9),
         ),
         reason=(

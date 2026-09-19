@@ -544,6 +544,13 @@
         "translation_unit": "crypto/evp/keymgmt_lib.c"
       },
       {
+        "module": "src/evp/legacy_blake2.rs",
+        "phase": 7,
+        "phase_source": "export-ownership",
+        "share": "2/2",
+        "translation_unit": "crypto/evp/legacy_blake2.c"
+      },
+      {
         "module": "src/evp/legacy_evp.rs",
         "phase": 7,
         "phase_source": "module-declaration",
@@ -551,10 +558,31 @@
         "translation_unit": "crypto/evp/names.c"
       },
       {
+        "module": "src/evp/legacy_md5.rs",
+        "phase": 7,
+        "phase_source": "export-ownership",
+        "share": "1/2",
+        "translation_unit": "crypto/evp/legacy_md5.c"
+      },
+      {
+        "module": "src/evp/legacy_ripemd.rs",
+        "phase": 7,
+        "phase_source": "export-ownership",
+        "share": "1/1",
+        "translation_unit": "crypto/evp/legacy_ripemd.c"
+      },
+      {
         "module": "src/evp/legacy_sha.rs",
         "phase": 7,
         "phase_source": "export-ownership",
         "share": "7/7",
+        "translation_unit": "crypto/evp/legacy_sha.c"
+      },
+      {
+        "module": "src/evp/legacy_sha3.rs",
+        "phase": 7,
+        "phase_source": "export-ownership",
+        "share": "6/6",
         "translation_unit": "crypto/evp/legacy_sha.c"
       },
       {
@@ -18522,6 +18550,129 @@
       },
       {
         "identifiers": [
+          "BLAKE2B_BLOCKBYTES",
+          "BLAKE2B_CTX",
+          "BLAKE2B_DIGEST_LENGTH",
+          "BLAKE2B_PARAM",
+          "BLAKE2S_BLOCKBYTES",
+          "BLAKE2S_CTX",
+          "BLAKE2S_DIGEST_LENGTH",
+          "BLAKE2S_PARAM",
+          "C",
+          "EVP_MD",
+          "EVP_ORIG_GLOBAL",
+          "EVP_blake2b512",
+          "EVP_blake2s256",
+          "IMPLEMENT_LEGACY_EVP_MD_METH_LC",
+          "LEGACY_EVP_MD_METH_TABLE",
+          "NID_blake2b512",
+          "NID_blake2s256",
+          "NULL",
+          "P",
+          "blake2b",
+          "blake2b_final",
+          "blake2b_init",
+          "blake2b_int",
+          "blake2b_int_final",
+          "blake2b_int_init",
+          "blake2b_int_update",
+          "blake2b_md",
+          "blake2b_update",
+          "blake2s",
+          "blake2s_final",
+          "blake2s_init",
+          "blake2s_int",
+          "blake2s_int_final",
+          "blake2s_int_init",
+          "blake2s_int_update",
+          "blake2s_md",
+          "blake2s_update",
+          "const",
+          "define",
+          "include",
+          "int",
+          "ossl_blake2b_final",
+          "ossl_blake2b_init",
+          "ossl_blake2b_param_init",
+          "ossl_blake2b_update",
+          "ossl_blake2s_final",
+          "ossl_blake2s_init",
+          "ossl_blake2s_param_init",
+          "ossl_blake2s_update",
+          "return",
+          "static",
+          "void"
+        ],
+        "modules": [
+          "src/evp/legacy_blake2.rs"
+        ],
+        "tu": "crypto/evp/legacy_blake2.c"
+      },
+      {
+        "identifiers": [
+          "EVP_MD",
+          "EVP_ORIG_GLOBAL",
+          "EVP_md5",
+          "IMPLEMENT_LEGACY_EVP_MD_METH",
+          "LEGACY_EVP_MD_METH_TABLE",
+          "MD5",
+          "MD5_CBLOCK",
+          "MD5_DIGEST_LENGTH",
+          "NID_md5",
+          "NID_md5WithRSAEncryption",
+          "NULL",
+          "const",
+          "h",
+          "include",
+          "md5",
+          "md5_final",
+          "md5_init",
+          "md5_md",
+          "md5_update",
+          "openssl",
+          "return",
+          "static",
+          "void"
+        ],
+        "modules": [
+          "src/evp/legacy_md5.rs"
+        ],
+        "tu": "crypto/evp/legacy_md5.c"
+      },
+      {
+        "identifiers": [
+          "EVP_MD",
+          "EVP_ORIG_GLOBAL",
+          "EVP_ripemd160",
+          "IMPLEMENT_LEGACY_EVP_MD_METH",
+          "LEGACY_EVP_MD_METH_TABLE",
+          "NID_ripemd160",
+          "NID_ripemd160WithRSA",
+          "NULL",
+          "RIPEMD160",
+          "RIPEMD160_CBLOCK",
+          "RIPEMD160_DIGEST_LENGTH",
+          "const",
+          "h",
+          "include",
+          "openssl",
+          "return",
+          "ripe",
+          "ripe_final",
+          "ripe_init",
+          "ripe_update",
+          "ripemd",
+          "ripemd160_md",
+          "static",
+          "void"
+        ],
+        "modules": [
+          "src/evp/legacy_ripemd.rs"
+        ],
+        "tu": "crypto/evp/legacy_ripemd.c"
+      },
+      {
+        "identifiers": [
           "EVP_MD",
           "EVP_MD_CTRL_XOF_LEN",
           "EVP_MD_CTX",
@@ -18674,7 +18825,8 @@
           "void"
         ],
         "modules": [
-          "src/evp/legacy_sha.rs"
+          "src/evp/legacy_sha.rs",
+          "src/evp/legacy_sha3.rs"
         ],
         "tu": "crypto/evp/legacy_sha.c"
       },
