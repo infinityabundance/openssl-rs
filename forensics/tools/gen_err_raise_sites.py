@@ -454,6 +454,17 @@ COVERED_FILES = [
     # `sm4_xts_stream_update`, and the two `xts_standard` arms of `sm4_xts_set_ctx_params` (`:227`,
     # `:235`). Its `cipher_sm4_xts_hw.c` raises nothing, like `cipher_sm4_hw.c`.
     ("providers/implementations/ciphers/cipher_sm4_xts.c", "PROV_CIPHER_SM4_XTS"),
+    # The AES-CBC-HMAC-SHA row layer. It is a **source-tree** file, so its `__FILE__` carries the
+    # `../../src/openssl-3.6.4/` prefix, and its raises are its own: three
+    # `PROV_R_FAILED_TO_GET_PARAMETER` in the setter (the AEAD mac key, the multiblock AAD pair and
+    # the multiblock ENC trio, plus the two length keys), one `PROV_R_INVALID_KEY_LENGTH` for the
+    # `keylen` check, and one `ERR_R_INTERNAL_ERROR` for the TLS-version/`removetlsfixed` assertion.
+    # Its HW siblings (`cipher_aes_cbc_hmac_sha1_hw.c`, `cipher_aes_cbc_hmac_sha256_hw.c`) raise
+    # **nothing** in this profile -- they return 0 -- so they are absent for the reason
+    # `cipher_chacha20_hw.c` is. The nine `*_etm_*` units are absent for a stronger reason: on this
+    # profile `AES_CBC_HMAC_SHA_ETM_CAPABLE` is undefined (`aes_platform.h:114-121` is aarch64-only),
+    # so both their row layer and their hw files compile the stub branch and raise nothing.
+    ("providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c", "PROV_CIPHER_AES_CBC_HMAC_SHA"),
     # Deliberately *not* covered, with the reason: `cipher_sm4.c` and `cipher_sm4_hw.c` raise
     # nothing at all in this profile -- there is no failure arm in either -- so an entry would read
     # as coverage that does not exist. The SM4 *primitive* `crypto/sm4/sm4.c` has no failure path
