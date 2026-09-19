@@ -1370,7 +1370,8 @@
           "2.16.840.1.101.3.4.2.1"
         ],
         "courts": [
-          "RT-DIGEST"
+          "RT-DIGEST",
+          "RT-CIPHER"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_DIGEST",
@@ -1587,7 +1588,7 @@
     {
       "name": "court:RT-CIPHER",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "bcf448599d0f3ea5b5b122a7ceb225c14c4d3109b52dfa465d585ed96f85edc1"
+      "sha256": "bb4895eb296411f40f183fc0c0c542c2f70c7a28f60896c329603578f75fb93d"
     }
   ],
   "kind": "provider-court-coverage",

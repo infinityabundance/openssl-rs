@@ -3849,6 +3849,56 @@ static void rt_deflt_row_census(void)
     }
 }
 
+/*
+ * The property definition every default-provider row carries, which is `"provider=default"` and is
+ * observable through the property query rather than only through the table. The authority spells it
+ * with `#define ALGC(NAMES, FUNC, CHECK) { { NAMES, "provider=default", FUNC }, CHECK }`, so a row
+ * published with a NULL property is not merely missing a string: a fetch whose query is
+ * `provider=default` stops resolving through it, and one whose query is `provider!=default` starts
+ * resolving when it should not. Both directions are observed here, for a cipher, a digest and a MAC,
+ * because the three tables are built by three different pieces of code (D247).
+ */
+static void rt_deflt_properties(void)
+{
+    static const struct {
+        const char *op;
+        const char *name;
+    } rows[] = {
+        { "cipher", "AES-128-CBC" },
+        { "digest", "SHA256" },
+        { "mac",    "CMAC" },
+    };
+    static const char *props[] = { NULL, "provider=default", "provider!=default" };
+    size_t i, j;
+
+    for (i = 0; i < sizeof(rows) / sizeof(rows[0]); i++) {
+        for (j = 0; j < sizeof(props) / sizeof(props[0]); j++) {
+            const char *prop = props[j];
+            int ok;
+
+            if (strcmp(rows[i].op, "cipher") == 0) {
+                EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, rows[i].name, prop);
+
+                ok = c != NULL;
+                EVP_CIPHER_free(c);
+            } else if (strcmp(rows[i].op, "digest") == 0) {
+                EVP_MD *m = EVP_MD_fetch(NULL, rows[i].name, prop);
+
+                ok = m != NULL;
+                EVP_MD_free(m);
+            } else {
+                EVP_MAC *m = EVP_MAC_fetch(NULL, rows[i].name, prop);
+
+                ok = m != NULL;
+                EVP_MAC_free(m);
+            }
+            printf("defltprop.%s.%s=%d\n", rows[i].op,
+                   prop == NULL ? "null" : (strcmp(prop, "provider=default") == 0 ? "eq" : "ne"),
+                   ok);
+        }
+    }
+}
+
 /* The drained queue, normalised the one way both sides can hold: library and reason as numbers,
  * the authority's three debug strings verbatim, and the entry count. Declared here because the
  * EVP arm below uses it and `rt_errq` is defined with the dispatch arm. */
@@ -4402,6 +4452,7 @@ int main(void)
     rt_deflt_ccm();
     rt_deflt_siv();
     rt_deflt_row_census();
+    rt_deflt_properties();
     rt_deflt_errors();
     rt_disp_failures();
     return 0;
