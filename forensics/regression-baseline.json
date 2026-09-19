@@ -314,7 +314,7 @@
       "verdict": "pass"
     },
     "RT-RSA": {
-      "observations": 104,
+      "observations": 194,
       "verdict": "pass"
     },
     "RT-RUNTIME-EXT": {
@@ -356,10 +356,10 @@
     "phase5": 91,
     "phase6": 0,
     "phase7": 244,
-    "phase8": 16
+    "phase8": 26
   },
   "implemented": {
-    "libcrypto": 2069,
+    "libcrypto": 2076,
     "libssl": 0
   },
   "open_obligations": {
@@ -368,7 +368,7 @@
     "phase5": 0,
     "phase6": 0,
     "phase7": 0,
-    "phase8": 542
+    "phase8": 525
   },
   "owned_obligations": {
     "phase3": 294,

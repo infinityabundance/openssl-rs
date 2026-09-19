@@ -197,6 +197,42 @@ BLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
         "are blocked on Phase 9 through BN's own random path, and `RSA_blinding_off` is *not* "
         "in this row: it frees the object and needs nothing random.",
     ),
+    # (4) 8.4's padding *add* functions whose bytes are random, and the one check whose refusal
+    # is randomised. Measured by D285, which is the entry that named the whole dependency.
+    (
+        ("RSA_padding_add_PKCS1_type_2",
+         "RSA_padding_add_PKCS1_OAEP", "RSA_padding_add_PKCS1_OAEP_mgf1",
+         "RSA_padding_add_PKCS1_PSS", "RSA_padding_add_PKCS1_PSS_mgf1",
+         "RSA_padding_check_PKCS1_type_2"),
+        9,
+        "`ossl_rsa_padding_add_PKCS1_type_2_ex` (`crypto/rsa/rsa_pk1.c:147`) fills the padding "
+        "with `RAND_bytes_ex`; `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` (`rsa_oaep.c:122`) "
+        "generates its seed with it; `RSA_padding_add_PKCS1_PSS_mgf1` (`rsa_pss.c:242`) its "
+        "salt; and `ossl_rsa_padding_check_PKCS1_type_2_ex` (`rsa_pk1.c:569`) generates a "
+        "`rand_premaster_secret` with `RAND_priv_bytes_ex` for the implicit-rejection arm. "
+        "The other three members of the family are *not* in this row and landed in D285: the "
+        "`none` and X9.31 paddings, PKCS#1 v1.5 type 1, and both OAEP checks -- a padding "
+        "*check* is a pure function of its input except where the refusal is deliberately "
+        "randomised, which is why `RSA_padding_check_PKCS1_type_2` is here and "
+        "`RSA_padding_check_PKCS1_OAEP_mgf1` is not.",
+    ),
+    # (5) The `RSA` object's own constructor, which is blocked one level further out: not by a
+    # random call in its own body but by the table its body reads.
+    (
+        ("RSA_new", "RSA_new_method", "RSA_get_default_method", "RSA_PKCS1_OpenSSL"),
+        9,
+        "`rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from "
+        "`RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` "
+        "(`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which "
+        "reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence "
+        "`RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be "
+        "constructed -- until row (4)'s path exists, which is what makes the *lifetime* follow "
+        "the padding rather than precede it. `RSA_set_default_method` is "
+        "*not* in this row: it is a pointer store with no table read and no random call, and it "
+        "stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. "
+        "`ossl_rsa_new_with_ctx` is internal and is blocked with "
+        "`RSA_new`, which it calls into.",
+    ),
     # (3) The four key generators and the parameter generators, all on the same BN path.
     (
         ("RSA_generate_key", "RSA_generate_key_ex", "RSA_generate_multi_prime_key",

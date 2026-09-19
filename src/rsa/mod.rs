@@ -2,21 +2,35 @@
 //!
 //! This module is Phase 8.4's, and it is being built in the slices D283 measured rather than all at
 //! once, because the block is 150 labels and its parts have different prerequisites. What is here
-//! now is the **method table**: `RSA_METHOD`, the thirty-three `RSA_meth_*` labels, and
-//! `RSA_null_method`. Nothing in it does any cryptography -- every function is an allocation, a
-//! stored pointer, or a returned one -- which is why it is the slice that can land first.
+//! now is the **method table** (`crypto/rsa/rsa_meth.c`, D284) and **the half of the padding
+//! functions whose output is a pure function of its input** (`rsa_none.c`, `rsa_x931.c` and the
+//! type-1 pair in `rsa_pk1.c`, D285).
+//!
+//! **The block is much more Phase 9-bound than D283's table implied, and D285 measured it.**
+//! `RAND_bytes_ex` is Phase 9's, and it is reached by five of the padding *add* functions (the type
+//! 2, both OAEP and both PSS adds), by the type-2 *check*'s implicit rejection, and — one level
+//! further out — by the `RSA` object's own constructor, because `rsa_new_intern` takes its method
+//! from `RSA_get_default_method()` and that table's first member is `rsa_ossl_public_encrypt`,
+//! which pads randomly. Those six padding labels and the four constructor labels are recorded
+//! Phase 9 hand-offs in `forensics/tools/phase8_obligations.py`'s `BLOCKED_HANDOFFS`.
 //!
 //! The other six slices, and what each still needs:
 //!
-//! * **A**, the `RSA` object and its accessors (42 labels) -- its *shape* is here, because
-//!   `RSA_METHOD`'s members take `RSA *` and the measured layout is what slice A's accessors will
-//!   hand out as writable addresses; its lifetime and accessor *functions* are not;
-//! * **B**, 33 labels, **this slice**;
-//! * **C**, the padding add/check pairs for the five paddings (15);
+//! * **B**, 33 labels, **landed** (D284): the method table.
+//! * **C**, the padding add/check pairs for the five paddings (15) -- **its RAND-free half landed in
+//!   D285**: `RSA_padding_add_none`, `_check_none`, `_add_X931`, `_check_X931`, `RSA_X931_hash_id`,
+//!   `_add_PKCS1_type_1`, `_check_PKCS1_type_1`. What remains is the five randomised *adds* and the
+//!   randomised type-2 *check* -- six Phase 9 hand-offs on `RAND_bytes_ex` -- plus the two OAEP
+//!   checks and `PKCS1_MGF1`, which D285 measured as landable and which are not yet transcribed;
 //! * **D**, `RSA_public_encrypt`/`_decrypt`, `RSA_private_*`, `RSA_sign`/`RSA_verify`, the two
 //!   `PKCS1_PSS` verifiers and `PKCS1_MGF1` (11) -- and this is also where `RSA_PKCS1_OpenSSL`'s
 //!   table belongs, because thirteen of its fifteen members are `rsa_ossl_*` entry points that
 //!   slice D defines and the other two are `0`;
+//! * **A**, the `RSA` object and its accessors (41 labels) -- its *shape* is here, because
+//!   `RSA_METHOD`'s members take `RSA *` and the measured layout is what slice A's accessors will
+//!   hand out as writable addresses; its lifetime and accessor *functions* are not. **Its lifetime
+//!   is a Phase 9 hand-off** and its accessors cannot be courted before it, because a probe has no
+//!   other way to obtain an `RSA *` (D285);
 //! * **E**, the `EVP_PKEY_CTX_set_rsa_*`/`get_rsa_*` controls and the three `EVP_PKEY_*RSA`
 //!   bridges (26);
 //! * **F**, the four `d2i_`/`i2d_` pairs and their `_it` tables (19), which need 8.8's
@@ -43,8 +57,11 @@ use crate::bn::bignum::BigNum;
 use crate::bn::ctx::{BnCtx, BnGencb};
 use crate::bn::mont::MontCtx;
 use crate::evp::pkey_asn1::Engine;
+use crate::runtime::err::err_sites;
+use crate::runtime::err::raise_site;
 use crate::runtime::ex_data::CryptoExData;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::obj::{NID_sha1, NID_sha256, NID_sha384, NID_sha512};
 use crate::runtime::stack::OpenSslStack;
 use crate::runtime::thread::CryptoRwlock;
 
@@ -760,6 +777,332 @@ pub unsafe extern "C" fn RSA_meth_set_multi_prime_keygen(
 #[no_mangle]
 pub extern "C" fn RSA_null_method() -> *const RsaMethod {
     core::ptr::null()
+}
+
+// =============================================================================================
+// Slice C, first part — the RAND-free half of the padding functions (D285)
+// =============================================================================================
+//
+// Three of the eight padding *add* functions need `RAND_bytes_ex` for the bytes they insert
+// (`rsa_pk1.c:147`, `rsa_oaep.c:122`, `rsa_pss.c`'s salt), and three of the six *checks* need it
+// for implicit rejection. What lands here is the half whose output is a **pure function of its
+// input**: the `none` padding, X9.31, PKCS#1 v1.5 type 1, and the X9.31 hash ids. The other half is
+// a Phase 9 hand-off, recorded in `docs/DECISIONS.md` D285 rather than left as unstated open work.
+
+/// `RSA_PKCS1_PADDING_SIZE` — `include/openssl/rsa.h:206`. Eleven: the two header octets, eight
+/// mandatory `0xFF` octets and the separating zero.
+const RSA_PKCS1_PADDING_SIZE: c_int = 11;
+
+/// `int RSA_padding_add_none(unsigned char *to, int tlen, const unsigned char *from, int flen)` —
+/// `rsa_none.c:20-35`.
+///
+/// **Both length disagreements are refusals**, and they raise *different* reasons: too long is
+/// `RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE` and too short is `RSA_R_DATA_TOO_SMALL_FOR_KEY_SIZE`. The
+/// `none` padding is the one that does not pad, so the message must be exactly the modulus width.
+///
+/// # Safety
+/// `to` is writable for `tlen` bytes; `from` is readable for `flen` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_padding_add_none(
+    to: *mut c_uchar,
+    tlen: c_int,
+    from: *const c_uchar,
+    flen: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if flen > tlen {
+            raise_site(&err_sites::RSA_NONE_24);
+            return 0;
+        }
+        if flen < tlen {
+            raise_site(&err_sites::RSA_NONE_29);
+            return 0;
+        }
+        core::ptr::copy_nonoverlapping(from, to, flen as usize);
+        1
+    }
+}
+
+/// `int RSA_padding_check_none(unsigned char *to, int tlen, const unsigned char *from, int flen,
+/// int num)` — `rsa_none.c:37-49`.
+///
+/// **It left-aligns by zero-filling**, not by stripping: the message is copied to the *end* of the
+/// output buffer and the leading `tlen - flen` bytes are zeroed. The `num` argument is accepted and
+/// read nowhere, which is the authority's own signature rather than a transcription choice.
+///
+/// # Safety
+/// `to` is writable for `tlen` bytes; `from` is readable for `flen` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_padding_check_none(
+    to: *mut c_uchar,
+    tlen: c_int,
+    from: *const c_uchar,
+    flen: c_int,
+    _num: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if flen > tlen {
+            raise_site(&err_sites::RSA_NONE_42);
+            return -1;
+        }
+        core::ptr::write_bytes(to, 0, (tlen - flen) as usize);
+        core::ptr::copy_nonoverlapping(from, to.offset((tlen - flen) as isize), flen as usize);
+        tlen
+    }
+}
+
+/// `int RSA_padding_add_X931(unsigned char *to, int tlen, const unsigned char *from, int flen)` —
+/// `rsa_x931.c:43-77`.
+///
+/// The `j == 0` arm is the whole point of the header: it emits the single octet `0x6A`, which is
+/// the four-bit header `0x6` and the four-bit terminator `0xA` **in one byte**, where the padding
+/// case emits `0x6B`, the `0xBB` run and `0xBA` as separate octets. A transcription that always took
+/// the second path would be one byte too long for the smallest legal key.
+///
+/// # Safety
+/// `to` is writable for `tlen` bytes; `from` is readable for `flen` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_padding_add_X931(
+    to: *mut c_uchar,
+    tlen: c_int,
+    from: *const c_uchar,
+    flen: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let j = tlen - flen - 2;
+
+        if j < 0 {
+            raise_site(&err_sites::RSA_X931_56);
+            return -1;
+        }
+        let mut p = to;
+
+        if j == 0 {
+            *p = 0x6a;
+            p = p.offset(1);
+        } else {
+            *p = 0x6b;
+            p = p.offset(1);
+            if j > 1 {
+                core::ptr::write_bytes(p, 0xbb, (j - 1) as usize);
+                p = p.offset((j - 1) as isize);
+            }
+            *p = 0xba;
+            p = p.offset(1);
+        }
+        core::ptr::copy_nonoverlapping(from, p, flen as usize);
+        *p.offset(flen as isize) = 0xcc;
+        1
+    }
+}
+
+/// `int RSA_padding_check_X931(unsigned char *to, int tlen, const unsigned char *from, int flen,
+/// int num)` — `rsa_x931.c:79-122`.
+///
+/// Three distinct refusals, and the third is the one a reader gets wrong: an `0x6B` header
+/// followed immediately by the terminator (`i == 0`) is **invalid padding**, because the format
+/// requires at least one padding octet between them. `num != flen` is checked first, so a
+/// truncated input is refused as an invalid header rather than read past its end.
+///
+/// # Safety
+/// `to` is writable for `tlen` bytes; `from` is readable for `flen` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_padding_check_X931(
+    to: *mut c_uchar,
+    _tlen: c_int,
+    from: *const c_uchar,
+    flen: c_int,
+    num: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut p = from;
+        let mut i: c_int = 0;
+
+        if num != flen || (*p != 0x6a && *p != 0x6b) {
+            raise_site(&err_sites::RSA_X931_87);
+            return -1;
+        }
+        let header = *p;
+        p = p.offset(1);
+
+        if header == 0x6b {
+            let limit = flen - 3;
+
+            while i < limit {
+                let c = *p;
+                p = p.offset(1);
+                if c == 0xba {
+                    break;
+                }
+                if c != 0xbb {
+                    raise_site(&err_sites::RSA_X931_98);
+                    return -1;
+                }
+                i += 1;
+            }
+            if i == 0 {
+                raise_site(&err_sites::RSA_X931_106);
+                return -1;
+            }
+            let j = limit - i;
+            if *p.offset(j as isize) != 0xcc {
+                raise_site(&err_sites::RSA_X931_115);
+                return -1;
+            }
+            core::ptr::copy_nonoverlapping(p, to, j as usize);
+            return j;
+        }
+        let j = flen - 2;
+        if *p.offset(j as isize) != 0xcc {
+            raise_site(&err_sites::RSA_X931_115);
+            return -1;
+        }
+        core::ptr::copy_nonoverlapping(p, to, j as usize);
+        j
+    }
+}
+
+/// `int RSA_X931_hash_id(int nid)` — `rsa_x931.c:131-147`.
+///
+/// The ISO/IEC 10118 part numbers, and the four are **not** in the order the digests were
+/// standardised: SHA-384 is `0x36` and SHA-512 is `0x35`. An unknown NID answers `-1`, which is
+/// what a caller writing the trailer must refuse on.
+///
+/// # Safety
+/// None: the answer depends on the argument alone.
+#[no_mangle]
+pub extern "C" fn RSA_X931_hash_id(nid: c_int) -> c_int {
+    // A comparison chain rather than a `match`: the four subjects are `const`s named after the
+    // authority's own `NID_*` spelling, and a constant pattern trips `non_upper_case_globals` —
+    // the lint is right about Rust naming and the authority's spelling is part of this crate's
+    // transcription, so the spelling is kept and the pattern form is the one that goes.
+    if nid == NID_sha1 {
+        0x33
+    } else if nid == NID_sha256 {
+        0x34
+    } else if nid == NID_sha384 {
+        0x36
+    } else if nid == NID_sha512 {
+        0x35
+    } else {
+        -1
+    }
+}
+
+/// `int RSA_padding_add_PKCS1_type_1(unsigned char *to, int tlen, const unsigned char *from,
+/// int flen)` — `rsa_pk1.c:34-52`.
+///
+/// `00 || 01 || 0xFF... || 00 || D`. Nothing here is random: block type 1 is the *signing*
+/// padding, where the `0xFF` run is fixed, and that is why it can land without the RAND stratum
+/// while its type-2 sibling cannot.
+///
+/// # Safety
+/// `to` is writable for `tlen` bytes; `from` is readable for `flen` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_padding_add_PKCS1_type_1(
+    to: *mut c_uchar,
+    tlen: c_int,
+    from: *const c_uchar,
+    flen: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if flen > (tlen - RSA_PKCS1_PADDING_SIZE) {
+            raise_site(&err_sites::RSA_PK1_38);
+            return 0;
+        }
+        let mut p = to;
+
+        *p = 0;
+        p = p.offset(1);
+        *p = 1;
+        p = p.offset(1);
+        let j = tlen - 3 - flen;
+        core::ptr::write_bytes(p, 0xff, j as usize);
+        p = p.offset(j as isize);
+        *p = 0;
+        p = p.offset(1);
+        core::ptr::copy_nonoverlapping(from, p, flen as usize);
+        1
+    }
+}
+
+/// `int RSA_padding_check_PKCS1_type_1(unsigned char *to, int tlen, const unsigned char *from,
+/// int flen, int num)` — `rsa_pk1.c:55-121`.
+///
+/// **The leading zero is optional.** A decoded block arrives with `num == flen` and starts `00 01`;
+/// a caller that already stripped the leading zero arrives with `num == flen + 1`. Both are
+/// accepted, and the rest of the walk is the same. The eight-octet minimum `0xFF` run is what
+/// `i < 8` refuses, and it is a **security** parameter rather than a format detail.
+///
+/// # Safety
+/// `to` is writable for `tlen` bytes; `from` is readable for `flen` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_padding_check_PKCS1_type_1(
+    to: *mut c_uchar,
+    tlen: c_int,
+    from: *const c_uchar,
+    flen: c_int,
+    num: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if num < RSA_PKCS1_PADDING_SIZE {
+            return -1;
+        }
+        let mut p = from;
+        let mut flen = flen;
+
+        if num == flen {
+            if *p != 0x00 {
+                raise_site(&err_sites::RSA_PK1_78);
+                return -1;
+            }
+            p = p.offset(1);
+            flen -= 1;
+        }
+        if num != (flen + 1) || *p != 0x01 {
+            raise_site(&err_sites::RSA_PK1_85);
+            return -1;
+        }
+        p = p.offset(1);
+
+        let j = flen - 1;
+        let mut i: c_int = 0;
+
+        while i < j {
+            if *p != 0xff {
+                if *p == 0 {
+                    p = p.offset(1);
+                    break;
+                }
+                raise_site(&err_sites::RSA_PK1_97);
+                return -1;
+            }
+            p = p.offset(1);
+            i += 1;
+        }
+        if i == j {
+            raise_site(&err_sites::RSA_PK1_105);
+            return -1;
+        }
+        if i < 8 {
+            raise_site(&err_sites::RSA_PK1_110);
+            return -1;
+        }
+        i += 1;
+        let j = j - i;
+        if j > tlen {
+            raise_site(&err_sites::RSA_PK1_116);
+            return -1;
+        }
+        core::ptr::copy_nonoverlapping(p, to, j as usize);
+        j
+    }
 }
 
 #[cfg(test)]

@@ -4,9 +4,9 @@
     "complete": false,
     "counts": {
       "atlas_owned": 759,
-      "deferred_to_later_phase": 16,
-      "implemented": 228,
-      "open_in_this_stratum": 542,
+      "deferred_to_later_phase": 26,
+      "implemented": 235,
+      "open_in_this_stratum": 525,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -68,6 +68,12 @@
       {
         "declaring_header": "rsa.h",
         "owning_phase": 9,
+        "reason": "`rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from `RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence `RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be constructed -- until row (4)'s path exists, which is what makes the *lifetime* follow the padding rather than precede it. `RSA_set_default_method` is *not* in this row: it is a pointer store with no table read and no random call, and it stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. `ossl_rsa_new_with_ctx` is internal and is blocked with `RSA_new`, which it calls into.",
+        "symbol": "RSA_PKCS1_OpenSSL"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "owning_phase": 9,
         "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
         "symbol": "RSA_X931_derive_ex"
       },
@@ -104,12 +110,66 @@
       {
         "declaring_header": "rsa.h",
         "owning_phase": 9,
+        "reason": "`rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from `RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence `RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be constructed -- until row (4)'s path exists, which is what makes the *lifetime* follow the padding rather than precede it. `RSA_set_default_method` is *not* in this row: it is a pointer store with no table read and no random call, and it stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. `ossl_rsa_new_with_ctx` is internal and is blocked with `RSA_new`, which it calls into.",
+        "symbol": "RSA_get_default_method"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "owning_phase": 9,
+        "reason": "`rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from `RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence `RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be constructed -- until row (4)'s path exists, which is what makes the *lifetime* follow the padding rather than precede it. `RSA_set_default_method` is *not* in this row: it is a pointer store with no table read and no random call, and it stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. `ossl_rsa_new_with_ctx` is internal and is blocked with `RSA_new`, which it calls into.",
+        "symbol": "RSA_new"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "owning_phase": 9,
+        "reason": "`rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from `RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence `RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be constructed -- until row (4)'s path exists, which is what makes the *lifetime* follow the padding rather than precede it. `RSA_set_default_method` is *not* in this row: it is a pointer store with no table read and no random call, and it stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. `ossl_rsa_new_with_ctx` is internal and is blocked with `RSA_new`, which it calls into.",
+        "symbol": "RSA_new_method"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "owning_phase": 9,
+        "reason": "`ossl_rsa_padding_add_PKCS1_type_2_ex` (`crypto/rsa/rsa_pk1.c:147`) fills the padding with `RAND_bytes_ex`; `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` (`rsa_oaep.c:122`) generates its seed with it; `RSA_padding_add_PKCS1_PSS_mgf1` (`rsa_pss.c:242`) its salt; and `ossl_rsa_padding_check_PKCS1_type_2_ex` (`rsa_pk1.c:569`) generates a `rand_premaster_secret` with `RAND_priv_bytes_ex` for the implicit-rejection arm. The other three members of the family are *not* in this row and landed in D285: the `none` and X9.31 paddings, PKCS#1 v1.5 type 1, and both OAEP checks -- a padding *check* is a pure function of its input except where the refusal is deliberately randomised, which is why `RSA_padding_check_PKCS1_type_2` is here and `RSA_padding_check_PKCS1_OAEP_mgf1` is not.",
+        "symbol": "RSA_padding_add_PKCS1_OAEP"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "owning_phase": 9,
+        "reason": "`ossl_rsa_padding_add_PKCS1_type_2_ex` (`crypto/rsa/rsa_pk1.c:147`) fills the padding with `RAND_bytes_ex`; `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` (`rsa_oaep.c:122`) generates its seed with it; `RSA_padding_add_PKCS1_PSS_mgf1` (`rsa_pss.c:242`) its salt; and `ossl_rsa_padding_check_PKCS1_type_2_ex` (`rsa_pk1.c:569`) generates a `rand_premaster_secret` with `RAND_priv_bytes_ex` for the implicit-rejection arm. The other three members of the family are *not* in this row and landed in D285: the `none` and X9.31 paddings, PKCS#1 v1.5 type 1, and both OAEP checks -- a padding *check* is a pure function of its input except where the refusal is deliberately randomised, which is why `RSA_padding_check_PKCS1_type_2` is here and `RSA_padding_check_PKCS1_OAEP_mgf1` is not.",
+        "symbol": "RSA_padding_add_PKCS1_OAEP_mgf1"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "owning_phase": 9,
+        "reason": "`ossl_rsa_padding_add_PKCS1_type_2_ex` (`crypto/rsa/rsa_pk1.c:147`) fills the padding with `RAND_bytes_ex`; `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` (`rsa_oaep.c:122`) generates its seed with it; `RSA_padding_add_PKCS1_PSS_mgf1` (`rsa_pss.c:242`) its salt; and `ossl_rsa_padding_check_PKCS1_type_2_ex` (`rsa_pk1.c:569`) generates a `rand_premaster_secret` with `RAND_priv_bytes_ex` for the implicit-rejection arm. The other three members of the family are *not* in this row and landed in D285: the `none` and X9.31 paddings, PKCS#1 v1.5 type 1, and both OAEP checks -- a padding *check* is a pure function of its input except where the refusal is deliberately randomised, which is why `RSA_padding_check_PKCS1_type_2` is here and `RSA_padding_check_PKCS1_OAEP_mgf1` is not.",
+        "symbol": "RSA_padding_add_PKCS1_PSS"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "owning_phase": 9,
+        "reason": "`ossl_rsa_padding_add_PKCS1_type_2_ex` (`crypto/rsa/rsa_pk1.c:147`) fills the padding with `RAND_bytes_ex`; `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` (`rsa_oaep.c:122`) generates its seed with it; `RSA_padding_add_PKCS1_PSS_mgf1` (`rsa_pss.c:242`) its salt; and `ossl_rsa_padding_check_PKCS1_type_2_ex` (`rsa_pk1.c:569`) generates a `rand_premaster_secret` with `RAND_priv_bytes_ex` for the implicit-rejection arm. The other three members of the family are *not* in this row and landed in D285: the `none` and X9.31 paddings, PKCS#1 v1.5 type 1, and both OAEP checks -- a padding *check* is a pure function of its input except where the refusal is deliberately randomised, which is why `RSA_padding_check_PKCS1_type_2` is here and `RSA_padding_check_PKCS1_OAEP_mgf1` is not.",
+        "symbol": "RSA_padding_add_PKCS1_PSS_mgf1"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "owning_phase": 9,
+        "reason": "`ossl_rsa_padding_add_PKCS1_type_2_ex` (`crypto/rsa/rsa_pk1.c:147`) fills the padding with `RAND_bytes_ex`; `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` (`rsa_oaep.c:122`) generates its seed with it; `RSA_padding_add_PKCS1_PSS_mgf1` (`rsa_pss.c:242`) its salt; and `ossl_rsa_padding_check_PKCS1_type_2_ex` (`rsa_pk1.c:569`) generates a `rand_premaster_secret` with `RAND_priv_bytes_ex` for the implicit-rejection arm. The other three members of the family are *not* in this row and landed in D285: the `none` and X9.31 paddings, PKCS#1 v1.5 type 1, and both OAEP checks -- a padding *check* is a pure function of its input except where the refusal is deliberately randomised, which is why `RSA_padding_check_PKCS1_type_2` is here and `RSA_padding_check_PKCS1_OAEP_mgf1` is not.",
+        "symbol": "RSA_padding_add_PKCS1_type_2"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "owning_phase": 9,
+        "reason": "`ossl_rsa_padding_add_PKCS1_type_2_ex` (`crypto/rsa/rsa_pk1.c:147`) fills the padding with `RAND_bytes_ex`; `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` (`rsa_oaep.c:122`) generates its seed with it; `RSA_padding_add_PKCS1_PSS_mgf1` (`rsa_pss.c:242`) its salt; and `ossl_rsa_padding_check_PKCS1_type_2_ex` (`rsa_pk1.c:569`) generates a `rand_premaster_secret` with `RAND_priv_bytes_ex` for the implicit-rejection arm. The other three members of the family are *not* in this row and landed in D285: the `none` and X9.31 paddings, PKCS#1 v1.5 type 1, and both OAEP checks -- a padding *check* is a pure function of its input except where the refusal is deliberately randomised, which is why `RSA_padding_check_PKCS1_type_2` is here and `RSA_padding_check_PKCS1_OAEP_mgf1` is not.",
+        "symbol": "RSA_padding_check_PKCS1_type_2"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "owning_phase": 9,
         "reason": "`RSA_blinding_on` (`crypto/rsa/rsa_crpt.c:68`) is a lock plus `RSA_setup_blinding`, and `RSA_setup_blinding` (`:104`) ends in `BN_BLINDING_create_param` (`crypto/bn/bn_blind.c`), whose `ai`/`e` values come from `BN_rand_range_ex` -> `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`). So both are blocked on Phase 9 through BN's own random path, and `RSA_blinding_off` is *not* in this row: it frees the object and needs nothing random.",
         "symbol": "RSA_setup_blinding"
       }
     ],
     "deferred_by_phase": {
-      "9": 16
+      "9": 26
     },
     "handoffs_discharged": {
       "7": [
@@ -1324,6 +1384,7 @@
       "RIPEMD160_Init",
       "RIPEMD160_Transform",
       "RIPEMD160_Update",
+      "RSA_X931_hash_id",
       "RSA_meth_dup",
       "RSA_meth_free",
       "RSA_meth_get0_app_data",
@@ -1358,6 +1419,12 @@
       "RSA_meth_set_sign",
       "RSA_meth_set_verify",
       "RSA_null_method",
+      "RSA_padding_add_PKCS1_type_1",
+      "RSA_padding_add_X931",
+      "RSA_padding_add_none",
+      "RSA_padding_check_PKCS1_type_1",
+      "RSA_padding_check_X931",
+      "RSA_padding_check_none",
       "SEED_cbc_encrypt",
       "SEED_cfb128_encrypt",
       "SEED_decrypt",
@@ -4224,12 +4291,6 @@
         "declaring_header": "rsa.h",
         "module": "src/rsa/mod.rs",
         "received_from_phase": null,
-        "symbol": "RSA_PKCS1_OpenSSL"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
         "symbol": "RSA_PSS_PARAMS_dup"
       },
       {
@@ -4249,12 +4310,6 @@
         "module": "src/rsa/mod.rs",
         "received_from_phase": null,
         "symbol": "RSA_PSS_PARAMS_new"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_X931_hash_id"
       },
       {
         "declaring_header": "rsa.h",
@@ -4392,12 +4447,6 @@
         "declaring_header": "rsa.h",
         "module": "src/rsa/mod.rs",
         "received_from_phase": null,
-        "symbol": "RSA_get_default_method"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
         "symbol": "RSA_get_ex_data"
       },
       {
@@ -4422,66 +4471,6 @@
         "declaring_header": "rsa.h",
         "module": "src/rsa/mod.rs",
         "received_from_phase": null,
-        "symbol": "RSA_new"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_new_method"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_padding_add_PKCS1_OAEP"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_padding_add_PKCS1_OAEP_mgf1"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_padding_add_PKCS1_PSS"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_padding_add_PKCS1_PSS_mgf1"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_padding_add_PKCS1_type_1"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_padding_add_PKCS1_type_2"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_padding_add_X931"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_padding_add_none"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
         "symbol": "RSA_padding_check_PKCS1_OAEP"
       },
       {
@@ -4489,30 +4478,6 @@
         "module": "src/rsa/mod.rs",
         "received_from_phase": null,
         "symbol": "RSA_padding_check_PKCS1_OAEP_mgf1"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_padding_check_PKCS1_type_1"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_padding_check_PKCS1_type_2"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_padding_check_X931"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_padding_check_none"
       },
       {
         "declaring_header": "rsa.h",
@@ -4934,12 +4899,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "309c416c368e533b14f8245fc06e07c88bf6d2e1b80eb9a5fc23218b04492796"
+      "sha256": "c42602a63a813563b377f8f3564f46fa04273f4e9ecf44fb4e7f34fa9545d3b1"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "7c662a18386fcadc22ddb8cf22063fef84e3a8e8d02497d131ca03ff989b9433"
+      "sha256": "42476b8121fef1e7340a5aafd9f90609ef0e9e31fc4b44aac1b09de139f6c6ee"
     }
   ],
   "kind": "phase8-obligations",
