@@ -18876,3 +18876,59 @@ together in the next unit rather than sequentially.
 **What this entry does not claim.** It does not land the OAEP checks, by the reasons above. It does
 not reopen Phase 7. And it does not claim the subphase table above is complete: it is the dependency
 chain from `RAND_bytes_ex`, which is what 8.4 needs, and the full Phase 9 census is 9.0's job.
+
+## D288 — the constant-time 32-bit family lands, and the OAEP checks turn out to need Phase 7's legacy digest objects
+
+Two transcriptions, one dead end, and the unit that dead end points at.
+
+**`constant_time.h`'s `unsigned int` family is in** (`src/runtime/constant_time.rs`): `msb`, `lt`,
+`ge`, `is_zero`, `eq`, `eq_int`, `select` and `select_int`, each with the header's own body and each
+named with a `_u32` suffix the authority does not spell — Rust has one namespace and the `size_t`
+forms took the unsuffixed names, so the family's own `_8`/`_32`/`_64`/`_s` convention is what the
+suffix follows. `msb`, `lt` and `is_zero` *do* have `_32` spellings in the header; `ge`, `eq` and
+`select` do not, which is why the suffix is uniform rather than the header's spelling.
+
+The test is a cross-check rather than a second fixture: the `size_t` forms are checked **row by row
+against the authority's own header output** in the same module, and the new test asserts the 32-bit
+forms agree with them over a domain that straddles every place the two widths can differ — `0`, `1`,
+`2`, `2^n - 1`/`2^n` at eight and sixteen bits, and both the 31- and 32-bit boundaries. Writing it
+found the first thing worth recording: **the masks are width-specific.** `is_zero(0)` is
+`0xffff_ffff` in one family and `0xffff_ffff_ffff_ffff` in the other, so the claim the two can share
+is the *predicate*, not the value; a test that compared `as usize` would have been asserting that a
+32-bit mask equals a 64-bit one. The second thing it found is smaller and more important: a mask that
+is neither all-ones nor all-zeros **mixes** its operands, so `select_int(1, 42, -1)` is `-2` and not
+`-1`. That is the documented `select(1, 0xaa, 0x55) == 0x54` row, and asserting it is what keeps a
+later rewrite from turning the select into an `if`.
+
+**`err_clear_last_constant_time` is in** (`src/runtime/err.rs`, `pub(crate)`), with the authority's
+shape: the flag is ORed in and its operand is selected in constant time, because an `if (clear)`
+would be a branch the OAEP decrypt path leaks. The record is *flagged* rather than removed, for the
+reason the authority's own comment gives — a later error would otherwise occupy the same slot and
+reveal timing. The one addition is a bounds check on `top`, recorded as an addition: the authority
+indexes unguarded and relies on `top` staying inside `ERR_NUM_ERRORS`, while a Rust index would panic
+and this crate forbids a panic on a published path.
+
+**The dead end, and it is the useful part.** With both prerequisites in, the OAEP checks still could
+not be written: `RSA_padding_check_PKCS1_OAEP_mgf1` begins `if (md == NULL) md = EVP_sha1();`, and
+`EVP_sha1` does not exist in this crate. So the block is Phase 7's after all, and the unit it points
+at is measurable rather than a guess: **`crypto/evp/legacy_sha.c`** defines `sha1_md`, `sha224_md`,
+`sha256_md`, `sha384_md`, `sha512_md`, `sha512_224_md` and `sha512_256_md` as static `EVP_MD`
+objects, each with a `LEGACY_EVP_MD_METH_TABLE` of `init`/`update`/`final`/`ctrl` callbacks built by
+`IMPLEMENT_LEGACY_EVP_MD_METH` over the `SHA*_Init`/`_Update`/`_Final` functions this crate already
+has. `EVP_sha1()` is `return &sha1_md;` — one line, no allocation, no fetch. The same file holds
+`EVP_md5` in `legacy_md5.c` and the SHA-3/SHAKE objects beside them.
+
+That makes the next unit the **legacy digest method objects**, and it is Phase 7's surface being
+finished rather than Phase 8's being started. It is worth naming why that is the right order instead
+of a detour: `EVP_sha1` is not one RSA default, it is the default digest of both OAEP adds, of PSS's
+`EVP_PKEY_CTX_set_rsa_pss_keygen_md` family, of `RSA_verify_PKCS1_PSS`, and of `PKCS1_MGF1`'s
+callers — so it is the same class of unblock as the RAND substrate, one stratum down, and it is
+smaller. Phase 7's seal has a **scaffolded** subset (the ABI shell's abort names one of them), and
+D287 recorded that reopening a sealed stratum is a decision; this entry is that decision for these
+seven objects, and the ledger movement it causes will be visible in `phase7-obligations.json` rather
+than hidden.
+
+**What this entry does not claim.** It lands no export: the two helpers are `#[allow(dead_code)]`
+with their caller named, which is the project's recorded idiom for a mechanism whose consumer is the
+next commit. It does not land the OAEP checks, and it does not reopen the rest of Phase 7 — only the
+digest method objects, whose bodies are already transcribed here.

@@ -117,6 +117,93 @@ pub(crate) fn constant_time_select_8(mask: u8, a: u8, b: u8) -> u8 {
     constant_time_select(mask as usize, a as usize, b as usize) as u8
 }
 
+// ---------------------------------------------------------------------------------------------
+// The `unsigned int` family.
+//
+// `constant_time.h` defines every operation at four widths -- `unsigned int`, `uint32_t`,
+// `uint64_t` and `size_t` -- and this crate modelled only the `size_t` ones, because that is what
+// the Phase 8.3 record-MAC arithmetic is written in. The RSA padding checks are written in the
+// `unsigned int` ones, and so are PSS verification, DH and ECDSA. They are the same expression at a
+// different width, but "the same expression at a different width" is an argument, and the bodies
+// below are transcriptions instead: the header's own text, with `u32` in place of
+// `unsigned int`.
+//
+// The names carry a `_u32` suffix the authority does not spell. Rust has one namespace, and the
+// `size_t` forms above already took the unsuffixed names; the family's own convention (`_8`, `_32`,
+// `_64`, `_s`) is what the suffix follows, so the width is stated rather than implied.
+// ---------------------------------------------------------------------------------------------
+
+/// `value_barrier(unsigned int a)` — `constant_time.h:278-288`, the `unsigned int` form of the
+/// barrier the `select` is written through.
+#[inline(always)]
+#[allow(dead_code)] // the landing caller is `RSA_padding_check_PKCS1_OAEP_mgf1`, D288's next unit
+fn value_barrier_u32(a: u32) -> u32 {
+    core::hint::black_box(a)
+}
+
+/// `constant_time_msb(unsigned int a)` — `constant_time.h:102-105`. The sign bit smeared over the
+/// word: `0 - (a >> 31)`.
+#[inline(always)]
+#[allow(dead_code)] // as above: the RSA padding checks, then PSS/DH/ECDSA
+pub(crate) fn constant_time_msb_u32(a: u32) -> u32 {
+    0u32.wrapping_sub(a >> 31)
+}
+
+/// `constant_time_lt(unsigned int a, unsigned int b)` — `constant_time.h:122-126`. The same single
+/// expression as its `size_t` sibling: `a ^ ((a ^ b) | ((a - b) ^ b))` has the sign bit set iff
+/// `a < b`.
+#[inline(always)]
+#[allow(dead_code)] // as above
+pub(crate) fn constant_time_lt_u32(a: u32, b: u32) -> u32 {
+    constant_time_msb_u32(a ^ ((a ^ b) | (a.wrapping_sub(b) ^ b)))
+}
+
+/// `constant_time_ge(unsigned int a, unsigned int b)` — `constant_time.h:185-189`. The complement,
+/// so the mask is all-ones when `a >= b`.
+#[inline(always)]
+#[allow(dead_code)] // as above
+pub(crate) fn constant_time_ge_u32(a: u32, b: u32) -> u32 {
+    !constant_time_lt_u32(a, b)
+}
+
+/// `constant_time_is_zero(unsigned int a)` — `constant_time.h:214-218`.
+#[inline(always)]
+#[allow(dead_code)] // as above
+pub(crate) fn constant_time_is_zero_u32(a: u32) -> u32 {
+    constant_time_msb_u32((!a) & a.wrapping_sub(1))
+}
+
+/// `constant_time_eq(unsigned int a, unsigned int b)` — `constant_time.h:247-251`.
+#[inline(always)]
+#[allow(dead_code)] // as above
+pub(crate) fn constant_time_eq_u32(a: u32, b: u32) -> u32 {
+    constant_time_is_zero_u32(a ^ b)
+}
+
+/// `constant_time_eq_int(int a, int b)` — `constant_time.h:272-276`. The widening is the
+/// authority's own: the two `int`s are reinterpreted as `unsigned int` and compared there.
+#[inline(always)]
+pub(crate) fn constant_time_eq_int(a: i32, b: i32) -> u32 {
+    constant_time_eq_u32(a as u32, b as u32)
+}
+
+/// `constant_time_select(unsigned int mask, unsigned int a, unsigned int b)` —
+/// `constant_time.h:348-353`. `mask` must be all-ones or all-zeros.
+#[inline(always)]
+#[allow(dead_code)] // as above
+pub(crate) fn constant_time_select_u32(mask: u32, a: u32, b: u32) -> u32 {
+    (value_barrier_u32(mask) & a) | (value_barrier_u32(!mask) & b)
+}
+
+/// `constant_time_select_int(unsigned int mask, int a, int b)` — `constant_time.h:362-366`. The
+/// operands are the **bit patterns**, not the numbers: the authority casts through
+/// `unsigned int` and back, which is what makes `constant_time_select_int(good, mlen, -1)` a
+/// constant-time choice between a length and minus one.
+#[inline(always)]
+pub(crate) fn constant_time_select_int(mask: u32, a: i32, b: i32) -> i32 {
+    constant_time_select_u32(mask, a as u32, b as u32) as i32
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -283,6 +370,83 @@ mod tests {
             }
         }
         out
+    }
+
+    /// **The `unsigned int` family against the fixture-backed `size_t` one.** The 32-bit forms cannot
+    /// have their own fixture section without changing the C generator, and they do not need one:
+    /// `constant_time_lt_s`/`_ge_s`/`_is_zero_s`/`_eq_s` are checked row-by-row against the
+    /// authority's own header output above, so agreeing with *them* on a domain that includes both
+    /// zero-crossings and the 31-bit boundary is a cross-check with real content.
+    ///
+    /// The domain is chosen to straddle what the two widths can disagree about: `0` (where the
+    /// borrow smears), `1`, `2`, `2^n - 1`/`2^n` at 8 and 16 bits, and the two 31/32-bit
+    /// boundaries. Anything above 2^31 is where a naive substitution would go wrong, which is why
+    /// `0x8000_0000` and `0xffff_ffff` are both in it.
+    #[test]
+    fn the_32_bit_forms_agree_with_the_fixture_backed_size_t_forms() {
+        let domain: [u32; 10] = [
+            0,
+            1,
+            2,
+            3,
+            0xff,
+            0x100,
+            0x7fff_ffff,
+            0x8000_0000,
+            0xffff_fffe,
+            0xffff_ffff,
+        ];
+
+        for &a in &domain {
+            // The masks are **width-specific** -- the `unsigned int` form smears over 32 bits and the
+            // `size_t` form over 64 -- so what the two must agree on is the *predicate*, not the
+            // value. Comparing `as usize` would be asserting that a 32-bit mask equals a 64-bit one,
+            // which is false and would have to be papered over with a truncation everywhere.
+            assert_eq!(
+                constant_time_is_zero_u32(a) != 0,
+                constant_time_is_zero_s(a as usize) != 0,
+                "is_zero({a:#x})"
+            );
+            for &b in &domain {
+                let (x, y) = (a as usize, b as usize);
+
+                assert_eq!(
+                    constant_time_lt_u32(a, b) != 0,
+                    constant_time_lt_s(x, y) != 0,
+                    "lt({a:#x}, {b:#x})"
+                );
+                assert_eq!(
+                    constant_time_ge_u32(a, b) != 0,
+                    constant_time_ge_s(x, y) != 0,
+                    "ge({a:#x}, {b:#x})"
+                );
+                assert_eq!(
+                    constant_time_eq_u32(a, b) != 0,
+                    constant_time_eq_s(x, y) != 0,
+                    "eq({a:#x}, {b:#x})"
+                );
+            }
+        }
+    }
+
+    /// `constant_time_select_int` chooses between an `int` length and `-1`, which is what the OAEP
+    /// check ends on. The point is that `-1` is selected as a **bit pattern**, so the result is minus
+    /// one and not a truncated length.
+    #[test]
+    fn constant_time_select_int_picks_the_bit_pattern_and_not_the_number() {
+        let all_ones = u32::MAX;
+
+        assert_eq!(constant_time_select_int(all_ones, 42, -1), 42);
+        assert_eq!(constant_time_select_int(0, 42, -1), -1);
+        assert_eq!(constant_time_eq_int(0, 0), all_ones);
+        assert_eq!(constant_time_eq_int(0, 1), 0);
+        // A mask that is neither all-ones nor all-zeros mixes the two operands, which is the
+        // documented row `select(1, 0xaa, 0x55) == 0x54`. The `int` form is the same arithmetic on the
+        // same bit patterns, so `42` and `-1` mix to `0xffff_fffe` -- that is, `-2`, and *not* a
+        // boolean choice. Asserting it here is what keeps a later "tidy" rewrite from turning the
+        // select into an `if`.
+        assert_eq!(constant_time_select_u32(1, 0xaa, 0x55), 0x54);
+        assert_eq!(constant_time_select_int(1, 42, -1), -2);
     }
 
     #[test]
