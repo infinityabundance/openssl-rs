@@ -779,6 +779,122 @@ done:
     return ret;
 }
 
+/*
+ * `ChaCha20-Poly1305` -- the second provider-only AEAD row, and the one whose *whole* construction
+ * is a stitching of two primitives this crate already had.
+ *
+ * The arm goes through the provider deliberately. There is no low-level entry point that produces
+ * this record shape: `ChaCha20_ctr32` has no authentication and `Poly1305_*` has no key schedule,
+ * so the only object that *is* the construction is the row. That makes the corpus's RFC 7539
+ * vectors -- and the four self-generated ones beside them, which vary the payload length past a
+ * block boundary -- a construction claim about the row rather than a re-run of a primitive.
+ *
+ * **The name is lower case and matched exactly.** The corpus spells it `chacha20-poly1305` where
+ * every AES row is upper case, so a case-folded test would silently answer for a name the corpus
+ * never wrote; `ct_gcm`'s `strncmp(cipher + 4, ...)` lesson (D278) is the reason this is a whole-name
+ * `strcmp` and why `ct_cipher` dispatches this arm *before* the families whose guards are prefixes.
+ *
+ * **The tag is an output here, never an input.** An AEAD decrypt vector's expected value is the
+ * plaintext and its tag is something to verify, so the `correctness_vectors` mirror keeps only the
+ * encrypt direction; the verification half is exercised below, on every vector, by re-running the
+ * decryption under the real tag and under a one-bit-flipped one. The record's tail is therefore
+ * `accept || reject`, and a rejected tag is a committed expectation on every vector.
+ */
+static int ct_chacha20_poly1305(const char *cipher, int enc_op,
+                                const unsigned char *key, size_t keylen,
+                                const unsigned char *iv, size_t ivlen,
+                                const unsigned char *aad, size_t aadlen,
+                                const unsigned char *in, size_t inlen,
+                                unsigned char *out, size_t *outlen, size_t taglen)
+{
+    EVP_CIPHER *c = NULL;
+    EVP_CIPHER_CTX *ctx = NULL;
+    unsigned char tag[16], bad[16];
+    unsigned char tmp[CT_MAX];
+    int outl = 0, finl = 0, i, accept = 0, reject = 0, ret = -1;
+
+    if (enc_op != 1 || ivlen != 12 || taglen != 16 || inlen > sizeof(tmp))
+        return -1;
+    if (strcmp(cipher, "chacha20-poly1305") != 0)
+        return -1;
+    if (keylen != 32)
+        return -1;
+
+    c = EVP_CIPHER_fetch(NULL, "ChaCha20-Poly1305", NULL);
+    if (c == NULL)
+        return -1;
+
+    /* Encrypt, and read back the tag the construction produced. */
+    ctx = EVP_CIPHER_CTX_new();
+    if (ctx == NULL)
+        goto done;
+    if (EVP_EncryptInit_ex2(ctx, c, key, iv, NULL) != 1)
+        goto done;
+    if (aadlen != 0 && EVP_EncryptUpdate(ctx, NULL, &outl, aad, (int)aadlen) != 1)
+        goto done;
+    outl = 0;
+    if (inlen != 0 && EVP_EncryptUpdate(ctx, out, &outl, in, (int)inlen) != 1)
+        goto done;
+    finl = 0;
+    if (EVP_EncryptFinal_ex(ctx, out + outl, &finl) != 1)
+        goto done;
+    if (outl != (int)inlen)
+        goto done;
+    if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, 16, tag) != 1)
+        goto done;
+    EVP_CIPHER_CTX_free(ctx);
+    ctx = NULL;
+
+    /*
+     * `accept`: re-run the decryption under the tag and require both the plaintext and the answer.
+     * `reject`: the same with one bit of the tag flipped, which must be refused.
+     */
+    for (i = 0; i < 2; i++) {
+        int got_accept;
+
+        memcpy(bad, tag, sizeof(bad));
+        bad[0] ^= 0x01;
+
+        ctx = EVP_CIPHER_CTX_new();
+        if (ctx == NULL)
+            goto done;
+        if (EVP_DecryptInit_ex2(ctx, c, key, iv, NULL) != 1)
+            goto done;
+        if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16,
+                                i == 0 ? (void *)tag : (void *)bad) != 1)
+            goto done;
+        if (aadlen != 0 && EVP_DecryptUpdate(ctx, NULL, &outl, aad, (int)aadlen) != 1)
+            goto done;
+        memset(tmp, 0, sizeof(tmp));
+        outl = 0;
+        if (inlen != 0 && EVP_DecryptUpdate(ctx, tmp, &outl, out, (int)inlen) != 1)
+            goto done;
+        finl = 0;
+        got_accept = EVP_DecryptFinal_ex(ctx, tmp + outl, &finl) == 1;
+        EVP_CIPHER_CTX_free(ctx);
+        ctx = NULL;
+        if (i == 0) {
+            accept = got_accept;
+            if (memcmp(tmp, in, inlen) != 0)
+                goto done;
+        } else {
+            reject = !got_accept;
+        }
+    }
+
+    memcpy(out + inlen, tag, 16);
+    out[inlen + 16] = accept ? 1u : 0u;
+    out[inlen + 17] = reject ? 1u : 0u;
+    *outlen = inlen + 18;
+    ret = 0;
+
+done:
+    if (ctx != NULL)
+        EVP_CIPHER_CTX_free(ctx);
+    EVP_CIPHER_free(c);
+    return ret;
+}
+
 static int ct_gcm(const char *cipher, int enc_op,
                   const unsigned char *key, size_t keylen,
                   const unsigned char *iv, size_t ivlen,
@@ -1425,6 +1541,9 @@ static int ct_cipher(const char *cipher, const char *operation,
 {
     int enc_op = strcmp(operation, "ENCRYPT") == 0;
 
+    if (ct_chacha20_poly1305(cipher, enc_op, key, keylen, iv, ivlen, aad, aadlen,
+                             in, inlen, out, outlen, taglen) == 0)
+        return 0;
     if (ct_gcm_siv(cipher, enc_op, key, keylen, iv, ivlen, aad, aadlen,
                    in, inlen, out, outlen, taglen) == 0)
         return 0;

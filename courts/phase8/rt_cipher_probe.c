@@ -4544,6 +4544,10 @@ static void rt_deflt_row_census(void)
          * the `SM4-*` rows land between the ARIA family and `ChaCha20`. */
         "SM4-ECB", "SM4-CBC", "SM4-CTR", "SM4-OFB", "SM4-CFB", "SM4-XTS",
         "ChaCha20",
+        /* The authority's last cipher row, `defltprov.c:327`, immediately after `ChaCha20` and
+         * inside the same `#ifndef OPENSSL_NO_CHACHA`/`#ifndef OPENSSL_NO_POLY1305` block. A plain
+         * `ALG`, not an `ALGC`: no capability predicate, so it is published on every host. */
+        "ChaCha20-Poly1305",
     };
     size_t i;
 
@@ -6151,6 +6155,519 @@ static void rt_deflt_chacha20(void)
         printf("chacha.nokey=%d\n", EVP_EncryptInit_ex(nk, cipher, NULL, NULL, iv));
         rt_errq("chacha_nokey");
         EVP_CIPHER_CTX_free(nk);
+    }
+
+    EVP_CIPHER_free(cipher);
+}
+
+/*
+ * The `ChaCha20-Poly1305` row -- 8.3's last cipher, and the only landed row whose hw vtable's
+ * `base.cipher` is NULL (`courts/layout/oracle-chacha20-poly1305-hw.c` prints all three base
+ * members). It is also the only one that is a *stitching* of three already-landed constructions
+ * rather than a new primitive, so what this arm has to reach is the **record shape**.
+ *
+ * Seven things are particular to it.
+ *
+ * **Two enciphering paths, and the TLS one is entered by a side effect.** Setting `tlsaad` leaves
+ * `tls_payload_length` at the record's payload length, and the *next* `EVP_CipherUpdate` is then a
+ * whole RFC 7905 record: the caller passes `payload + 16` and gets ciphertext plus tag back in one
+ * call. Everywhere else the row is the ordinary incremental AEAD, and the `plain` arms are that
+ * path. The two must not be confused, so both are exercised.
+ *
+ * **The TLS path's fast and slow arms are chosen by `plen <= 192`.** That threshold is the
+ * `XOR128_HELPERS` arm's, and the two arms generate their keystream differently -- one call for
+ * `128 + roundup(plen, 64)` bytes from block one, versus a single block for the poly1305 key and
+ * then the whole payload through `ChaCha20_ctr32`. A payload of 32 octets takes the first and one
+ * of 260 takes the second, so a transcription that got the threshold or either arm's origin wrong
+ * cannot pass.
+ *
+ * **Thirteen bytes of AAD are hashed as sixteen.** `EVP_AEAD_TLS1_AAD_LEN` is 13 and
+ * `chacha20_poly1305_tls_cipher` hashes `POLY1305_BLOCK_SIZE` bytes of `tls_aad`, so three zero
+ * bytes go into the tag that the length block does not count. The `tlsaadpad` the control answers
+ * is that sixteen, which is what makes the record sixteen octets longer than its plaintext.
+ *
+ * **The fixed IV can be installed two ways and they must agree.** The record layer's `else` branch
+ * (`ssl/record/methods/tls1_meth.c:107`) hands the explicit IV straight to
+ * `EVP_CipherInit_ex`, because ChaCha20-Poly1305's mode is 0 and not GCM's or CCM's; the
+ * `EVP_CTRL_AEAD_SET_IV_FIXED` control is the other way. `initiv` pads the twelve octets into the
+ * counter block either way, so the two records must be identical, and the arm prints whether they
+ * are.
+ *
+ * **The tag has a direction.** `EVP_CTRL_AEAD_GET_TAG` on a decrypting context is
+ * `PROV_R_TAG_NOT_SET`, and a non-NULL `SET_TAG` on an *encrypting* one is `PROV_R_TAG_NOT_NEEDED`
+ * -- the two refusals are each other's mirror, and both queues are printed. A tag length outside
+ * `1..=16` on either side is `PROV_R_INVALID_TAG_LENGTH`.
+ *
+ * **A zero-length update is a no-op that answers rather than a pass-through.** That is a separate
+ * dispatch entry from the one-shot `cipher`, so `EVP_EncryptUpdate(ctx, out, &outl, in, 0)`
+ * succeeds with `outl == 0` and leaves the poly1305 state alone.
+ *
+ * **The tag is checked silently.** A wrong tag or a wrong ciphertext is a plain `0` and the queue
+ * is printed to say so, because the row raises nothing on that path -- which is an observable
+ * difference from the GCM rows, not a detail.
+ */
+static void rt_deflt_chacha20_poly1305(void)
+{
+    /* RFC 8439's key and nonce, so this arm's records and the CT court's published vectors are the
+     * same construction rather than two. */
+    static const unsigned char key[32] = {
+        0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87,
+        0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f,
+        0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97,
+        0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f
+    };
+    static const unsigned char nonce[12] = {
+        0x07, 0x00, 0x00, 0x00, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47
+    };
+    static const unsigned char aad13[13] = {
+        0x50, 0x51, 0x52, 0x53, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, 0x00
+    };
+    unsigned char in[512], ct[512], pt[512], tag[16], got[16], other[512];
+    unsigned char tlsfixed[12];
+    EVP_CIPHER *cipher = EVP_CIPHER_fetch(NULL, "ChaCha20-Poly1305", NULL);
+    EVP_CIPHER_CTX *ctx;
+    OSSL_PARAM p[2];
+    size_t i, clen;
+    int l1, l2, fin;
+
+    printf("chachapoly.fetched=%d\n", cipher != NULL);
+    if (cipher == NULL)
+        return;
+    for (i = 0; i < sizeof(in); i++)
+        in[i] = (unsigned char)(i & 0xff);
+
+    /* The lengths, the mode and the flags: a twelve-octet IV, a one-octet block and
+     * `EVP_CIPH_FLAG_AEAD_CIPHER`. All four are what a caller reasons about. */
+    printf("chachapoly.keylen=%d\n", EVP_CIPHER_get_key_length(cipher));
+    printf("chachapoly.ivlen=%d\n", EVP_CIPHER_get_iv_length(cipher));
+    printf("chachapoly.block=%d\n", EVP_CIPHER_get_block_size(cipher));
+    printf("chachapoly.mode=%d\n", EVP_CIPHER_get_mode(cipher));
+    printf("chachapoly.flags=%lu\n", (unsigned long)EVP_CIPHER_get_flags(cipher));
+    rt_param_list("chachapoly", "x", "gp", EVP_CIPHER_gettable_params(cipher));
+
+    /* The row's own context lists -- five gettable keys (`keylen`, `ivlen`, `taglen`, `tag`,
+     * `tlsaadpad`) and five settable ones (`keylen`, `ivlen`, `tag`, `tlsaad`, `tlsivfixed`) -- and
+     * the zero-length update, which is only reachable after a cipher is assigned. */
+    {
+        EVP_CIPHER_CTX *c = EVP_CIPHER_CTX_new();
+
+        if (c != NULL && EVP_CipherInit_ex(c, cipher, NULL, NULL, NULL, 1) == 1) {
+            rt_param_list("chachapoly", "x", "cgp", EVP_CIPHER_CTX_gettable_params(c));
+            rt_param_list("chachapoly", "x", "sgp", EVP_CIPHER_CTX_settable_params(c));
+
+            ERR_clear_error();
+            l1 = -999;
+            printf("chachapoly.zeroupdate=%d\n", EVP_EncryptUpdate(c, other, &l1, in, 0));
+            printf("chachapoly.zeroupdate.outl=%d\n", l1);
+            rt_errq("chachapoly_zeroupdate");
+        }
+        if (c != NULL)
+            EVP_CIPHER_CTX_free(c);
+    }
+
+    /* The setter's four one-key refusals, each with the queue that distinguishes them. */
+    {
+        static const char *const names[] = { "keylen33", "ivlen13", "tag0", "tag17" };
+        size_t k;
+
+        for (k = 0; k < sizeof(names) / sizeof(names[0]); k++) {
+            EVP_CIPHER_CTX *c = EVP_CIPHER_CTX_new();
+            unsigned char tagbuf[32];
+            size_t sz;
+
+            memset(tagbuf, 0, sizeof(tagbuf));
+            memset(p, 0, sizeof(p));
+            if (c == NULL || EVP_CipherInit_ex(c, cipher, NULL, NULL, NULL, 1) != 1) {
+                printf("chachapoly.set.%s=noctx\n", names[k]);
+                if (c != NULL)
+                    EVP_CIPHER_CTX_free(c);
+                continue;
+            }
+            ERR_clear_error();
+            if (k == 0) {
+                sz = 33;
+                p[0] = OSSL_PARAM_construct_size_t(OSSL_CIPHER_PARAM_KEYLEN, &sz);
+            } else if (k == 1) {
+                sz = 13;
+                p[0] = OSSL_PARAM_construct_size_t(OSSL_CIPHER_PARAM_IVLEN, &sz);
+            } else {
+                sz = (k == 2) ? 0 : 17;
+                p[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG, tagbuf, sz);
+            }
+            p[1] = OSSL_PARAM_construct_end();
+            printf("chachapoly.set.%s=%d\n", names[k], EVP_CIPHER_CTX_set_params(c, p));
+            rt_errq(names[k]);
+            EVP_CIPHER_CTX_free(c);
+        }
+    }
+
+    /* The plain AEAD path, whole: 13 octets of AAD, 32 octets of text, the tag read back through
+     * the classic control. */
+    memset(ct, 0, sizeof(ct));
+    memset(tag, 0, sizeof(tag));
+    ctx = EVP_CIPHER_CTX_new();
+    clen = 0;
+    if (ctx == NULL
+        || EVP_EncryptInit_ex2(ctx, cipher, NULL, NULL, NULL) != 1
+        || EVP_EncryptInit_ex2(ctx, NULL, key, nonce, NULL) != 1) {
+        printf("chachapoly.plain.enc=0\n");
+    } else {
+        printf("chachapoly.plain.aad=%d\n",
+               EVP_EncryptUpdate(ctx, NULL, &l1, aad13, sizeof(aad13)));
+        printf("chachapoly.plain.aad.outl=%d\n", l1);
+        printf("chachapoly.plain.text=%d\n",
+               EVP_EncryptUpdate(ctx, ct, &l1, in, 32));
+        clen = (size_t)l1;
+        printf("chachapoly.plain.text.outl=%d\n", l1);
+        printf("chachapoly.plain.final=%d\n", EVP_EncryptFinal_ex(ctx, ct + clen, &l2));
+        clen += (size_t)l2;
+        printf("chachapoly.plain.final.outl=%d\n", l2);
+        printf("chachapoly.plain.clen=%zu\n", clen);
+        rt_hex("chachapoly.plain.ct", ct, clen);
+        printf("chachapoly.plain.gettag=%d\n",
+               EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, 16, tag));
+        rt_hex("chachapoly.plain.tag", tag, 16);
+
+        /* `taglen` answers the context's own `tag_len`, which no `SET_TAG` has set, and `tlsaadpad`
+         * is still zero because no record has been announced. */
+        {
+            size_t tl = 999, pad = 999;
+
+            p[0] = OSSL_PARAM_construct_size_t(OSSL_CIPHER_PARAM_AEAD_TAGLEN, &tl);
+            p[1] = OSSL_PARAM_construct_end();
+            printf("chachapoly.plain.cget.taglen=%d\n", EVP_CIPHER_CTX_get_params(ctx, p));
+            printf("chachapoly.plain.taglen=%zu\n", tl);
+            p[0] = OSSL_PARAM_construct_size_t(OSSL_CIPHER_PARAM_AEAD_TLS1_AAD_PAD, &pad);
+            printf("chachapoly.plain.cget.pad=%d\n", EVP_CIPHER_CTX_get_params(ctx, p));
+            printf("chachapoly.plain.pad=%zu\n", pad);
+        }
+
+        /* Reading the tag from an *encrypting* context answers; the refusal is for the decrypting
+         * side only. A buffer outside `1..=16` is the other refusal. */
+        memset(got, 0, sizeof(got));
+        printf("chachapoly.plain.encgettag16=%d\n",
+               EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, 16, got));
+        rt_hex("chachapoly.plain.encgettag", got, 16);
+        ERR_clear_error();
+        printf("chachapoly.plain.encgettag0=%d\n",
+               EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, 0, got));
+        rt_errq("chachapoly_encgettag0");
+        ERR_clear_error();
+        printf("chachapoly.plain.encgettag17=%d\n",
+               EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, 17, got));
+        rt_errq("chachapoly_encgettag17");
+
+        /* A non-NULL `SET_TAG` on an encrypting context. */
+        ERR_clear_error();
+        printf("chachapoly.plain.encsettag=%d\n",
+               EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16, tag));
+        rt_errq("chachapoly_encsettag");
+    }
+    if (ctx != NULL)
+        EVP_CIPHER_CTX_free(ctx);
+
+    /* The decrypting side: an acceptance, then a `GET_TAG` refusal on that side. */
+    ERR_clear_error();
+    ctx = EVP_CIPHER_CTX_new();
+    if (ctx == NULL
+        || EVP_DecryptInit_ex2(ctx, cipher, NULL, NULL, NULL) != 1
+        || EVP_DecryptInit_ex2(ctx, NULL, key, nonce, NULL) != 1
+        || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16, tag) != 1) {
+        printf("chachapoly.plain.dec=0\n");
+    } else {
+        memset(pt, 0, sizeof(pt));
+        EVP_DecryptUpdate(ctx, NULL, &l1, aad13, sizeof(aad13));
+        printf("chachapoly.plain.decupdate=%d\n",
+               EVP_DecryptUpdate(ctx, pt, &l1, ct, (int)clen));
+        printf("chachapoly.plain.decupdate.outl=%d\n", l1);
+        printf("chachapoly.plain.decfinal=%d\n", EVP_DecryptFinal_ex(ctx, pt + l1, &l2));
+        printf("chachapoly.plain.decfinal.outl=%d\n", l2);
+        printf("chachapoly.plain.roundtrip=%d\n",
+               l1 == 32 && memcmp(pt, in, 32) == 0);
+        rt_hex("chachapoly.plain.pt", pt, 32);
+
+        memset(got, 0, sizeof(got));
+        ERR_clear_error();
+        printf("chachapoly.plain.decgettag=%d\n",
+               EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, 16, got));
+        rt_errq("chachapoly_decgettag");
+    }
+    if (ctx != NULL)
+        EVP_CIPHER_CTX_free(ctx);
+
+    /* A flipped tag and a flipped ciphertext, each a silent refusal. */
+    {
+        int which;
+
+        for (which = 0; which < 2; which++) {
+            unsigned char bad[512];
+
+            memcpy(bad, ct, clen);
+            if (which == 0)
+                tag[15] ^= 0x01;
+            else
+                bad[0] ^= 0x01;
+
+            ERR_clear_error();
+            ctx = EVP_CIPHER_CTX_new();
+            memset(pt, 0, sizeof(pt));
+            fin = 0;
+            if (ctx != NULL
+                && EVP_DecryptInit_ex2(ctx, cipher, NULL, NULL, NULL) == 1
+                && EVP_DecryptInit_ex2(ctx, NULL, key, nonce, NULL) == 1
+                && EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16, tag) == 1) {
+                EVP_DecryptUpdate(ctx, NULL, &l1, aad13, sizeof(aad13));
+                EVP_DecryptUpdate(ctx, pt, &l1, bad, (int)clen);
+                fin = EVP_DecryptFinal_ex(ctx, pt + l1, &l2);
+            }
+            printf("chachapoly.bad.%s=%d\n", which == 0 ? "tag" : "ct", fin);
+            rt_errq(which == 0 ? "chachapoly_badtag" : "chachapoly_badct");
+            if (ctx != NULL)
+                EVP_CIPHER_CTX_free(ctx);
+        }
+        tag[15] ^= 0x01;
+    }
+
+    /* The empty message: the tag comes from a final-only operation whose poly1305 input is a
+     * different shape from any non-empty one. */
+    {
+        unsigned char etag[16];
+
+        memset(etag, 0, sizeof(etag));
+        ctx = EVP_CIPHER_CTX_new();
+        if (ctx != NULL
+            && EVP_EncryptInit_ex2(ctx, cipher, NULL, NULL, NULL) == 1
+            && EVP_EncryptInit_ex2(ctx, NULL, key, nonce, NULL) == 1) {
+            EVP_EncryptUpdate(ctx, NULL, &l1, aad13, sizeof(aad13));
+            printf("chachapoly.empty.final=%d\n", EVP_EncryptFinal_ex(ctx, other, &l2));
+            printf("chachapoly.empty.final.outl=%d\n", l2);
+            EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, 16, etag);
+            rt_hex("chachapoly.empty.tag", etag, 16);
+        }
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+
+        /* And the decrypting acceptance of a tag over no text at all. */
+        ctx = EVP_CIPHER_CTX_new();
+        if (ctx != NULL
+            && EVP_DecryptInit_ex2(ctx, cipher, NULL, NULL, NULL) == 1
+            && EVP_DecryptInit_ex2(ctx, NULL, key, nonce, NULL) == 1
+            && EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16, etag) == 1) {
+            EVP_DecryptUpdate(ctx, NULL, &l1, aad13, sizeof(aad13));
+            printf("chachapoly.empty.decfinal=%d\n", EVP_DecryptFinal_ex(ctx, other, &l2));
+            printf("chachapoly.empty.decfinal.outl=%d\n", l2);
+        }
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+    }
+
+    /*
+     * The TLS record, twice: a 32-octet payload (the fast arm, `plen <= 3 * CHACHA_BLK_SIZE`) and a
+     * 260-octet payload (the slow arm). The AAD's last two octets carry the payload length
+     * big-endian, and the caller passes `payload + 16` so the tag lands in the record.
+     */
+    {
+        static const size_t payloads[2] = { 32, 260 };
+        size_t w;
+
+        for (w = 0; w < 2; w++) {
+            size_t plen = payloads[w];
+            char label[40], hexlabel[64];
+            unsigned char rec[640], dec[640], aadlen[13], aaddec[13];
+            EVP_CIPHER_CTX *ectx, *dctx;
+
+            snprintf(label, sizeof(label), "chachapoly.tls%zu", plen);
+            memcpy(aadlen, aad13, sizeof(aadlen));
+            aadlen[11] = (unsigned char)(plen >> 8);
+            aadlen[12] = (unsigned char)plen;
+            /*
+             * **The decrypting AAD's length field is the record length, not the payload length.**
+             * TLS puts ciphertext-plus-tag in the record's length, and `tls_init` discounts the tag
+             * itself -- it refuses anything shorter than a tag, subtracts `POLY1305_BLOCK_SIZE`, and
+             * rewrites the two octets it will hash. Encrypting therefore announces `plen` and
+             * decrypting announces `plen + 16`, which is why the two arrays differ.
+             */
+            memcpy(aaddec, aadlen, sizeof(aaddec));
+            aaddec[11] = (unsigned char)((plen + 16) >> 8);
+            aaddec[12] = (unsigned char)(plen + 16);
+            memset(rec, 0, sizeof(rec));
+            memset(dec, 0, sizeof(dec));
+
+            ERR_clear_error();
+            ectx = EVP_CIPHER_CTX_new();
+            if (ectx == NULL || EVP_EncryptInit_ex2(ectx, cipher, key, nonce, NULL) != 1) {
+                printf("%s.enc=0\n", label);
+                if (ectx != NULL)
+                    EVP_CIPHER_CTX_free(ectx);
+                continue;
+            }
+            printf("%s.pad=%d\n", label,
+                   EVP_CIPHER_CTX_ctrl(ectx, EVP_CTRL_AEAD_TLS1_AAD, 13, aadlen));
+            ERR_clear_error();
+            printf("%s.update=%d\n", label,
+                   EVP_EncryptUpdate(ectx, rec, &l1, in, (int)(plen + 16)));
+            printf("%s.update.outl=%d\n", label, l1);
+            printf("%s.final=%d\n", label, EVP_EncryptFinal_ex(ectx, rec + l1, &l2));
+            printf("%s.final.outl=%d\n", label, l2);
+            snprintf(hexlabel, sizeof(hexlabel), "%s.ct", label);
+            rt_hex(hexlabel, rec, plen + 16);
+            EVP_CIPHER_CTX_free(ectx);
+
+            /* The decrypting side, with the tag inside the record: this is the arm that proves
+             * `tls_init` discounted the tag from the length it encoded in the AAD. */
+            ERR_clear_error();
+            dctx = EVP_CIPHER_CTX_new();
+            if (dctx == NULL || EVP_DecryptInit_ex2(dctx, cipher, key, nonce, NULL) != 1) {
+                printf("%s.dec=0\n", label);
+                if (dctx != NULL)
+                    EVP_CIPHER_CTX_free(dctx);
+                continue;
+            }
+            EVP_CIPHER_CTX_ctrl(dctx, EVP_CTRL_AEAD_TLS1_AAD, 13, aaddec);
+            printf("%s.decupdate=%d\n", label,
+                   EVP_DecryptUpdate(dctx, dec, &l1, rec, (int)(plen + 16)));
+            printf("%s.decupdate.outl=%d\n", label, l1);
+            printf("%s.decfinal=%d\n", label, EVP_DecryptFinal_ex(dctx, dec + l1, &l2));
+            printf("%s.decfinal.outl=%d\n", label, l2);
+            printf("%s.roundtrip=%d\n", label,
+                   l1 == (int)plen && memcmp(dec, in, plen) == 0);
+            EVP_CIPHER_CTX_free(dctx);
+
+            /* A flipped tag inside the record is the same silent refusal, and the ciphertext is
+             * zeroed in place on the way out. */
+            rec[plen] ^= 0x01;
+            memset(dec, 0, sizeof(dec));
+            ERR_clear_error();
+            dctx = EVP_CIPHER_CTX_new();
+            if (dctx != NULL && EVP_DecryptInit_ex2(dctx, cipher, key, nonce, NULL) == 1) {
+                EVP_CIPHER_CTX_ctrl(dctx, EVP_CTRL_AEAD_TLS1_AAD, 13, aaddec);
+                l1 = -999;
+                printf("%s.bad=%d\n", label,
+                       EVP_DecryptUpdate(dctx, dec, &l1, rec, (int)(plen + 16)));
+                printf("%s.bad.outl=%d\n", label, l1);
+                snprintf(hexlabel, sizeof(hexlabel), "%s.baddec", label);
+                rt_hex(hexlabel, dec, plen);
+            }
+            rt_errq("chachapoly_tlsbad");
+            if (dctx != NULL)
+                EVP_CIPHER_CTX_free(dctx);
+            rec[plen] ^= 0x01;
+        }
+    }
+
+    /*
+     * The fixed IV installed two ways. `tls1_meth.c:107` hands the explicit IV to
+     * `EVP_CipherInit_ex`; `EVP_CTRL_AEAD_SET_IV_FIXED` is the other. Both end with the same
+     * counter block, so the two records must be identical.
+     */
+    {
+        unsigned char rec_a[128], rec_b[128], aadlen[13];
+        size_t plen = 32;
+
+        memcpy(aadlen, aad13, sizeof(aadlen));
+        aadlen[11] = 0;
+        aadlen[12] = (unsigned char)plen;
+        memcpy(tlsfixed, nonce, sizeof(tlsfixed));
+        memset(rec_a, 0, sizeof(rec_a));
+        memset(rec_b, 0, sizeof(rec_b));
+
+        ERR_clear_error();
+        ctx = EVP_CIPHER_CTX_new();
+        if (ctx != NULL && EVP_EncryptInit_ex2(ctx, cipher, key, tlsfixed, NULL) == 1) {
+            EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_TLS1_AAD, 13, aadlen);
+            printf("chachapoly.ivfix.a=%d\n",
+                   EVP_EncryptUpdate(ctx, rec_a, &l1, in, (int)(plen + 16)));
+        } else {
+            printf("chachapoly.ivfix.a=0\n");
+        }
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+
+        ERR_clear_error();
+        ctx = EVP_CIPHER_CTX_new();
+        if (ctx != NULL
+            && EVP_EncryptInit_ex2(ctx, cipher, NULL, NULL, NULL) == 1
+            && EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_IV_FIXED, 12, tlsfixed) == 1
+            && EVP_EncryptInit_ex2(ctx, NULL, key, NULL, NULL) == 1) {
+            EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_TLS1_AAD, 13, aadlen);
+            printf("chachapoly.ivfix.b=%d\n",
+                   EVP_EncryptUpdate(ctx, rec_b, &l2, in, (int)(plen + 16)));
+            printf("chachapoly.ivfix.same=%d\n", memcmp(rec_a, rec_b, plen + 16) == 0);
+        } else {
+            printf("chachapoly.ivfix.b=0\n");
+            printf("chachapoly.ivfix.same=0\n");
+        }
+        rt_errq("chachapoly_ivfix");
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+    }
+
+    /* A `tlsivfixed` of the wrong length and a `tlsaad` of the wrong length: two refusals. */
+    {
+        struct {
+            const char *name;
+            int ctrl;
+            int arg;
+        } cases[2];
+        size_t k;
+
+        cases[0].name = "chachapoly.ivfixed13";
+        cases[0].ctrl = EVP_CTRL_AEAD_SET_IV_FIXED;
+        cases[0].arg = 13;
+        cases[1].name = "chachapoly.aad12";
+        cases[1].ctrl = EVP_CTRL_AEAD_TLS1_AAD;
+        cases[1].arg = 12;
+
+        for (k = 0; k < 2; k++) {
+            unsigned char buf[16];
+            int ans = 0;
+
+            memset(buf, 0, sizeof(buf));
+            ERR_clear_error();
+            ctx = EVP_CIPHER_CTX_new();
+            if (ctx != NULL && EVP_EncryptInit_ex2(ctx, cipher, key, nonce, NULL) == 1)
+                ans = EVP_CIPHER_CTX_ctrl(ctx, cases[k].ctrl, cases[k].arg, buf);
+            printf("%s=%d\n", cases[k].name, ans);
+            rt_errq(cases[k].name);
+            if (ctx != NULL)
+                EVP_CIPHER_CTX_free(ctx);
+        }
+    }
+
+    /* `dupctx` is a whole-context copy, poly1305 state included: a copy taken after the record is
+     * announced but before it is enciphered must produce the same record. */
+    {
+        EVP_CIPHER_CTX *cp;
+        unsigned char a2[13], whole[256], copied[256];
+        size_t plen = 96;
+
+        memcpy(a2, aad13, sizeof(a2));
+        a2[11] = 0;
+        a2[12] = (unsigned char)plen;
+        memset(whole, 0, sizeof(whole));
+        memset(copied, 0, sizeof(copied));
+
+        ctx = EVP_CIPHER_CTX_new();
+        cp = EVP_CIPHER_CTX_new();
+        if (ctx != NULL && cp != NULL
+            && EVP_EncryptInit_ex2(ctx, cipher, key, nonce, NULL) == 1) {
+            EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_TLS1_AAD, 13, a2);
+            printf("chachapoly.dup.copy=%d\n", EVP_CIPHER_CTX_copy(cp, ctx));
+            printf("chachapoly.dup.whole=%d\n",
+                   EVP_EncryptUpdate(ctx, whole, &l1, in, (int)(plen + 16)));
+            printf("chachapoly.dup.other=%d\n",
+                   EVP_EncryptUpdate(cp, copied, &l2, in, (int)(plen + 16)));
+            printf("chachapoly.dup.same=%d\n",
+                   memcmp(whole, copied, plen + 16) == 0);
+            rt_hex("chachapoly.dup.wholehex", whole, plen + 16);
+        } else {
+            printf("chachapoly.dup.copy=0\n");
+            printf("chachapoly.dup.same=0\n");
+        }
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+        if (cp != NULL)
+            EVP_CIPHER_CTX_free(cp);
     }
 
     EVP_CIPHER_free(cipher);
@@ -7966,6 +8483,7 @@ int main(void)
     rt_deflt_poly1305();
     rt_deflt_kmac();
     rt_deflt_chacha20();
+    rt_deflt_chacha20_poly1305();
     rt_deflt_sm4();
     rt_deflt_aria();
     rt_deflt_sm4_xts();

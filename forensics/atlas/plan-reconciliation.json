@@ -5,26 +5,31 @@
       "in-progress"
     ],
     "census": {
-      "names_a_file_the_authority_does_not_have": 5,
-      "symbols_not_reached": 3,
+      "names_a_file_the_authority_does_not_have": 9,
+      "symbols_not_reached": 4,
       "units_not_reached": 6
     },
     "census_by_stratum": {
-      "8": 14
+      "8": 19
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
       "names_a_file_the_authority_does_not_have": [
         "docs/PHASE-8-SUBPHASES.md:8.1b:_prov.c",
         "docs/PHASE-8-SUBPHASES.md:8.1b:digestcommon.c",
+        "docs/PHASE-8-SUBPHASES.md:8.3:_hw.c",
+        "docs/PHASE-8-SUBPHASES.md:8.3:cipher_chacha20_poly1305.c",
         "docs/PHASE-8-SUBPHASES.md:8.3:ciphercommon_ccm.c",
+        "docs/PHASE-8-SUBPHASES.md:8.3:courts/layout/oracle-chacha20-poly1305-hw.c",
         "docs/PHASE-8-SUBPHASES.md:8.3:courts/layout/oracle-polyval.c",
+        "docs/PHASE-8-SUBPHASES.md:8.3:oracle-mem-file.c",
         "docs/PHASE-8-SUBPHASES.md:8.3:providers/implementations/macs/cmac_prov.c"
       ],
       "symbols_not_reached": [
         "ossl_dh_asn1_meth",
         "ossl_polyval_ghash_init",
-        "ossl_prov_get_capabilities"
+        "ossl_prov_get_capabilities",
+        "xor128_encrypt_n_pad"
       ],
       "units_not_reached": [
         "crypto/chacha/chacha_enc.c",
@@ -43,7 +48,7 @@
         "docs/PHASE-8-SUBPHASES.md"
       ],
       "rows_judged": 75,
-      "symbols_named_by_a_row": 78,
+      "symbols_named_by_a_row": 79,
       "symbols_reached": 75,
       "unit_records": 67,
       "units_named_by_a_record": 70,
@@ -2164,7 +2169,7 @@
       "transcribed_units": 172
     }
   },
-  "body_hash": "0f05ff4c5869fdd32c21f2bac50caba3cff46828248c82cd8aca70d6c4845290",
+  "body_hash": "a8f41f899f7ce24b14aa3be2e2e9467f88dbc90322c125ae5cba41b7ae1c8ffb",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -2175,17 +2180,17 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "c6a3168b8db66a28c04d78f9d2bea9f26b55216fc6cbe01b24ed355cd415ed81"
+      "sha256": "a22db3b48eea90a89b4e0d1271a5b4660fe68932f807c8180e98dc41a5702228"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "b475c8ba34aca3b89d5a0e40097d41c5f35c4ce6034319ec09a118fa4e097093"
+      "sha256": "0226a1b038f28d433dbc8b88a4418fbbcbee324b68a93122ae21edf5928d47cd"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "47a9558c6558d05fdd45cf9988e58d31292b691b988d421bca1b100d950163f2"
+      "sha256": "85e067a2a05b19497a5ee51f16503e8d266d85f6f4a834570f194070ce1dd10f"
     },
     {
       "name": "prerequisites",
@@ -2215,7 +2220,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "46e00d4e41866ac75d0a90973eef8803db646d4ff50b88f501c36a1eda88445f"
+      "sha256": "b7d7a5e7ce5af61e5427a3d8184622ae4c3931ce3f8152e85b60f89e8af878aa"
     }
   ],
   "kind": "plan-reconciliation",
