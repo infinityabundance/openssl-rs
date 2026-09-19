@@ -18033,3 +18033,67 @@ has to be the *decomposition* -- re-derive the record from the generic AES-CBC c
 facility, both of which are separately courted, and compare -- with the pinned corpus's
 `evpciph_aes_stitched.txt` as a second arm whose provenance is stated as the corpus mirroring it is
 rather than as an independent derivation. The `AES-*-GCM-SIV` trio remains 8.3's last open block.
+
+## D277 — 8.3's last four rows are landable, and none of them is a Phase 9 hand-off
+
+Reconnaissance for the block D276 leaves open, in D274's form, because the answer decides whether
+the block is work or a hand-off and the two look identical from the ledger.
+
+**The four rows.** `defltprov.c:198-200` publishes `AES-128-GCM-SIV`, `AES-192-GCM-SIV` and
+`AES-256-GCM-SIV` inside `#ifndef OPENSSL_NO_SIV`, and `:327` publishes `ChaCha20-Poly1305` inside
+`#ifndef OPENSSL_NO_CHACHA`/`#ifndef OPENSSL_NO_POLY1305`. All four are `ALG(...)` rather than
+`ALGC(...)`, so **no capability predicate** is involved and there is no ETM-style surprise to find:
+unlike D276's nine, these four are published unconditionally.
+
+**No randomness anywhere in either block.** `grep -n "RAND" cipher_aes_gcm_siv.c
+cipher_aes_gcm_siv_hw.c cipher_chacha20_poly1305_hw.c` answers nothing, and
+`cipher_chacha20_poly1305.c.in`'s only `libctx`/`provctx` uses are the context's own fields. So
+neither block is a `RAND_bytes_ex` hand-off: the four rows are Phase 8's work and belong in 8.3,
+not in Phase 9's ledger.
+
+**`AES-*-GCM-SIV`'s construction is an `EVP_CIPHER_CTX`, not an `AES_KEY`.** `PROV_AES_GCM_SIV_CTX`
+(`cipher_aes_gcm_siv.h:13-36`) begins with `EVP_CIPHER_CTX *ecb_ctx`, carries an `OSSL_LIB_CTX *libctx`
+and an `OSSL_PROVIDER *provctx`, and holds `u128 Htable[16]` "Polyval calculations via ghash"
+beside `key_gen_key`/`msg_enc_key`/`msg_auth_key`. The engine is therefore the GCM-SIV construction
+(`aes_gcm_siv_ctr32`, `_aad`, `_encrypt`, `_decrypt`, `_finish` in `cipher_aes_gcm_siv_hw.c`, plus
+`cipher_aes_gcm_siv_polyval.c`'s `ossl_polyval_ghash_init`/`_hash`) driven over a *fetched*
+`AES-ECB` cipher context rather than over a key schedule. Every piece of that is landed: the fetch,
+the ECB context and the counter mode are Phase 7's and 8.2's. What is new is one authority unit
+(`cipher_aes_gcm_siv_polyval.c`, whose hashing is the ghash table the crate already has from
+`src/modes/gcm.rs`) and the context's own layout, which must be measured the way D269's six
+provider contexts were.
+
+**`ChaCha20-Poly1305` reuses the row that is already in.** `cipher_chacha20_poly1305_hw.c`'s
+`chacha20_poly1305_initkey` calls `ossl_chacha20_einit`/`_dinit` on the embedded
+`PROV_CHACHA20_CTX` (`:70`, `:72`, `:93`, `:96`), so D263's transcription is a **prerequisite that
+is already discharged** rather than a parallel implementation. Its payload path calls
+`ChaCha20_ctr32` (`:136`, `:160`, `:192`, `:204`) and `Poly1305_Update` (`:197`, `:205`) -- both
+perlasm in this profile, and both already declined with a Rust substitute that is courted: D263's
+ChaCha20 primitive and D258's Poly1305. So the row is a *stitching* of three landed constructions
+plus the TLS arm (`chacha_poly1305_tls_init`, `chacha_poly1305_tls_iv_set_fixed`), and its `.c.in`
+unit is build-generated like `cipher_chacha20.c`.
+
+**The flags each row's rows carry.** Both blocks are `AEAD_FLAGS`, which
+`providers/implementations/include/prov/ciphercommon_aead.h:16` defines as
+`PROV_CIPHER_FLAG_AEAD | PROV_CIPHER_FLAG_CUSTOM_IV` -- so `get_params` publishes `aead=1` and
+`custom-iv=1`, and the IV is the caller's own 12-byte nonce rather than a 16-byte block. That is
+observable and is what `RT-CIPHER`'s row census already prints for every row it fetches; the four
+names join the census list and their `flags`, lengths and three parameter lists arrive with them.
+
+**One consequence of the `provctx`/`libctx` fields worth recording now.** `PROV_AES_GCM_SIV_CTX`
+stores a provider pointer, which is the acquisition D240 identified and D241 discharged for the
+providers whose `initkey` goes through `ossl_cipher_generic_initkey`. This block's `initkey` is its
+own (`aes_gcm_siv_initkey`), so the acquisition has to be read out of that function rather than
+assumed, and the `provider-algorithms.json` `provider_context` block is where it is anchored when
+the rows land -- as its 26-site classification already does for the landed ones.
+
+**What this entry moves.** Nothing. It is reconnaissance in the append-only log, and no source,
+artefact or court changes with it: the pipeline stays at the four rows `open` owning Phase 8, with
+no blocker recorded, and the next entry is the first of them.
+
+**The order the block will take.** `AES-128/192/256-GCM-SIV` first, together, because they differ
+only in `keybits` (`cipher_aes_gcm_siv.c:314-316`) and share one measurement of
+`PROV_AES_GCM_SIV_CTX`; then `ChaCha20-Poly1305`, whose prerequisite is already in. Then 8.3 is
+closed and 8.4 (RSA) begins, which is the first block whose rows are `OSSL_OP_SIGNATURE`,
+`OSSL_OP_KEYMGMT`, `OSSL_OP_KDF`, `OSSL_OP_KEM`, `OSSL_OP_KEYEXCH` and `OSSL_OP_ASYM_CIPHER`'s --
+the 140 rows the census records as `open` owning Phase 8 with no blocker once these four land: 59 `OSSL_OP_SIGNATURE`, 40 `OSSL_OP_KEYMGMT`, 19 `OSSL_OP_KDF`, 11 `OSSL_OP_KEM`, 7 `OSSL_OP_KEYEXCH`, 2 `OSSL_OP_ASYM_CIPHER` and 2 `OSSL_OP_SKEYMGMT`.
