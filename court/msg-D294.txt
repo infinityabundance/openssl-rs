@@ -1,0 +1,53 @@
+rand: Phase 9's census is measured at 95 exports, and three of D287's units are corrected (D294)
+
+Phase 9.0 -- the plan and the census. No export is implemented and no Phase 9 court
+exists; this commit lands the measurement that the subphase plan rests on, plus the
+three transcriptions the measurement produced.
+
+The working set is 95 exports, and only 25 of them are rand.h's. The ownership atlas
+assigns phase 9 exactly 25 exports, every one declaring rand.h. The other 70 are
+incoming hand-offs read from the other ledgers' owning_phase == 9 rows rather than
+listed by hand: one from phase 4 (BIO_f_nbio_test), thirty-one from phase 5 (the BN
+random, blinding, prime-generator and primality families), twelve from phase 7
+(EVP_SealInit, EVP_CIPHER_CTX_rand_key, the five PEM_* file-encryption helpers and
+four more), and twenty-six from phase 8 (the four key types' constructors and
+generators, the RSA blinding pair, and the six RSA padding functions whose bytes are
+random). The shape is the finding: Phase 9's work lives in ten earlier strata's
+modules, so there is no src/rand/-only reading of this stratum.
+
+Fifteen provider registration rows, counted by (provider, operation): default/cipher
+8 (the three AES-GCM, the three ARIA-GCM, SM4-GCM, DES3-WRAP), default/RAND 5 (the
+three DRBGs, SEED-SRC, TEST-RAND), default/MAC 1 (GMAC), base/RAND 1 (SEED-SRC).
+
+Three corrections to D287, each measured against the admitted tree:
+
+1. There is no providers/implementations/rands/crngt.c in 3.6.4. The continuous
+   random number generator test is fips_crng_test.c (RCT_test/APT_test,
+   ossl_crng_test_functions); implementations.h keeps only a dead extern.
+2. The base provider's single RAND row is SEED-SRC, not the test RNG: baseprov.c's
+   base_rands[] publishes SEED-SRC and nothing else, and TEST-RAND is defltprov.c's.
+   The census's own count agrees.
+3. None of the six RAND rows carries an alias or an OID, so the census's
+   alias-sequence identity check is trivially satisfied for them and their exactness
+   rests on the dispatch-association and subsequence-order checks instead.
+
+Staged and preserved, not landed. Three transcriptions were prepared for 9.2-9.5 and
+are force-added out of the ignored court/ scratch path so the preparation survives:
+court/phase9/rand_lib.rs.txt (2,185 lines), court/phase9/drbg.rs.txt (4,795) and
+court/phase9/seed_src.rs.txt (2,389), with the staged plan beside them at
+court/phase9/PHASE-9-SUBPHASES.md.txt. They are deliberately not integrated and not
+watered down to compile: the DRBG rows cannot be courted before the framework they
+dispatch into exists, and RAND_bytes_ex cannot be written before the DRBG it fetches.
+They are also the instrument that found corrections 1 and 2.
+
+The plan is staged rather than landed because of a precondition this commit records
+rather than works around. phase_state.py refuses any stratum with a plan, a ledger or
+a court file on disk and no STRATUM_EVIDENCE row, and the row cannot be added before
+gen_provider_algorithms.py stops deriving state as "open" if owning_phase == 8 else
+"deferred". With that line unchanged, activating phase 9 would silently reclassify
+phase 8's eleven open cipher rows as deferred and let phase 8 reach
+open_in_this_stratum == 0 with those rows never published. The state must become a
+projection over the stratum being judged first; that refactor lands in 9.1's commit,
+the one that activates the stratum.
+
+PIPELINE OK, 85 courts, 31469 observations.

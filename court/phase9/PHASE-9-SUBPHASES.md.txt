@@ -1,0 +1,145 @@
+# Phase 9 — RAND, DRBG and entropy, as subphases
+
+## 0. What this stratum is, and what it is not
+
+Phase 9 is the random layer: `rand.h`'s front, the BN random family that sits behind it, the
+providers' DRBG framework and its three instantiations, and the seed sources those draw on.
+
+It is **not** a cryptographic primitive stratum of Phase 8's kind. Phase 8's court question is
+"does this construction satisfy its standard"; the random layer's question is a different one,
+and this plan's §3 records what it is: an output *distribution* claim that no byte-comparison
+can make. What a differential court can do here is exhaustively measured in §3.3.
+
+**Why this stratum is being planned while Phase 8 is still open.** D286 measured that `RSA_new`,
+`DH_new`, `DSA_new` and `EC_KEY_new` each reach `RAND_bytes_ex` through their default method
+table, so 8.4–8.7's *object layers* cannot land before this stratum's front exists. Phase 8's
+remaining open work is therefore almost entirely blocked on this stratum, and D287 scoped the
+dependency chain and recorded it as the next unit. This document is that scope, measured.
+
+## 1. The measurement this plan rests on
+
+Every number below is read from `forensics/atlas/`, not typed.
+
+**Phase 9's atlas-owned universe is twenty-five exports, and they are all `rand.h`'s.**
+`forensics/atlas/symbol-ownership.json` assigns exactly 25 exports to phase 9, each declaring
+`rand.h`. No other header in the authority declares an export this stratum owns.
+
+**It also receives seventy hand-offs**, discovered from the other ledgers (`phase*-obligations.json`
+rows whose `owning_phase` is 9) rather than listed here:
+
+| from phase | count | what it is |
+|---|---|---|
+| 4 | 1 | `BIO_f_nbio_test`, whose body is a random-fill |
+| 5 | 31 | the BN random family, the blinding family, the prime generators and the primality tests |
+| 7 | 12 | `EVP_SealInit`, `EVP_CIPHER_CTX_rand_key`, the `PEM_*` file-encryption helpers, `OSSL_HPKE_get_grease_value`, `BIO_f_reliable` |
+| 8 | 26 | the four key types' constructors and generators, the RSA blinding pair, and the six RSA padding functions whose bytes are random |
+
+That is a working set of **95 exports**, and the shape of it is the finding: **Phase 9's work
+lives in ten earlier strata's modules**. There is no `src/rand/`-only reading of this stratum. A
+`BIO` export, a `PEM` export and four key types' constructors are all *bodies* this stratum owes,
+because the authority wrote the random call inside them.
+
+**Phase 9 owns fifteen provider registration rows** (`provider-algorithms.json`, `owning_phase 9`):
+
+```
+default / OSSL_OP_CIPHER   8    the AES-GCM three, the ARIA-GCM three, SM4-GCM, DES3-WRAP
+default / OSSL_OP_RAND     5    CTR-DRBG, HASH-DRBG, HMAC-DRBG, SEED-SRC, TEST-RAND
+default / OSSL_OP_MAC      1    GMAC, blocked on the GCM cipher rows
+base    / OSSL_OP_RAND     1    SEED-SRC
+```
+
+## 2. The subphases
+
+| # | Subphase | Owns | Depends on | Courts |
+|---|---|---|---|---|
+| 9.0 | **The plan and the census** | `docs/PHASE-9-SUBPHASES.md`, and the measurement in §1. The ledger and the runner are the *next* subphase's, unlike Phase 8's 8.0, and §4 says why. | 8.3 (the provider table machinery), `phase-state.json` | — |
+| 9.1 | **The BN random family** | `crypto/bn/bn_rand.c`: `BN_rand`, `BN_rand_ex`, `BN_priv_rand`, `BN_priv_rand_ex`, `BN_rand_range`, `BN_rand_range_ex`, `BN_priv_rand_range`, `BN_priv_rand_range_ex`, `BN_pseudo_rand`, `BN_pseudo_rand_range`, `BN_bntest_rand` and the `bnrand`/`bnrand_range` bodies. Retires eleven of phase 5's thirty-one. | 9.2 | `RT-BN-RAND`, `CT-BN-RAND` |
+| 9.2 | **The RAND front** | `crypto/rand/rand_lib.c`'s twenty-five exports, plus `rand_uniform.c`'s internal consumers. | 9.3–9.5 | `RT-RAND` |
+| 9.3 | **The DRBG framework** | `providers/implementations/rands/drbg.c` — `PROV_DRBG`, the reseed/instantiate/generate state machine, and the three dispatch tables' shared shape. | 9.4 | `RT-RAND` (shared) |
+| 9.4 | **The three DRBGs** | `drbg_ctr.c`, `drbg_hash.c`, `drbg_hmac.c`, and the `OSSL_OP_RAND` rows `ossl_drbg_ctr_functions`, `ossl_drbg_hash_functions` and `ossl_drbg_ossl_hmac_functions`. | 9.5 | `RT-DRBG`, `CT-DRBG` |
+| 9.5 | **The seed sources** | `seed_src.c`, `test_rng.c`, `fips_crng_test.c`, and the two SEED-SRC rows plus the TEST-RAND row. | 9.3 | `RT-RAND` (shared) |
+| 9.6 | **The seventy hand-offs** | the earlier strata's blocked rows, discharged in the order the strata that own their headers: the four key types' object layers first, then 8.4's accessors, then `EVP_sha*`' retrieval, then the `PEM_*` and `HPKE` tails. | 9.1, 9.2 | each stratum's own courts |
+
+The order is forced twice over, and D287 recorded both: `RAND_bytes_ex` cannot be written before
+the DRBG it fetches, and the DRBG cannot be courted before the provider row that publishes it.
+9.1 is written with 9.2 rather than before it because the BN family's own court needs the front's
+fixed-seed path.
+
+## 3. What each subphase must honour
+
+**3.1 The front is a fetch, not a function.** `RAND_bytes_ex` resolves a DRBG through the
+provider store and calls `EVP_RAND_generate`; it is not an entropy call. A transcription that
+answered bytes from a source of its own would satisfy every vector a probe could write and be a
+different library.
+
+**3.2 The provider context carries the library context.** D240's finding applies unchanged: a
+fetched DRBG's sub-fetches (the AES under CTR-DRBG, the digest under HASH-DRBG) resolve in the
+library context of the provider that created the row, so `PROV_LIBCTX_OF(provctx)` is load-bearing
+here rather than incidental. `provider-algorithms.json`'s `provider_context` block already
+classifies the authority's acquisition sites and anchors each landed one; the DRBG rows are three
+more of them.
+
+**3.3 What a differential court can and cannot establish here.** A probe can compare, byte for
+byte: the *parameters* a DRBG reports (`ossl_drbg_get_ctx_params`), the refusal reasons and
+coordinates for every invalid-parameter arm, the state transitions (`EVP_RAND_STATE_ERROR` after a
+failed instantiate, `_READY` after a successful one), the reseed-interval boundary, the
+prediction-resistance path's *observable* refusal, and — with a `TEST-RAND` row and a fixed seed —
+the exact bytes both sides produce. It cannot establish that either side's output is
+unpredictable. That is a property of the seeding pool, not of a transcript, and this plan records
+it as **not courted** rather than leaving it implied. Where the authority's own behaviour *is* the
+contract — the refusal shapes, the parameter surface, the state machine — the differential court
+is the strongest instrument there is, and those are what 9.2–9.5's arms carry.
+
+**3.4 Nothing here is a parity claim about entropy.** The entropy pool's source on the host is
+environmental (`getrandom(2)`, `/dev/urandom`), and a court that compared pool *contents* across
+two builds would be comparing two machines. The measured surface is the one above.
+
+## 4. Two measured corrections to D287, and one precondition
+
+**4.1 There is no `providers/implementations/rands/crngt.c` in 3.6.4.** D287's table names
+`crngt.c` as 9.5's unit. It does not exist in the admitted tree. The continuous random number
+generator test is `providers/implementations/rands/fips_crng_test.c`, whose entry points are
+`RCT_test`/`APT_test` and whose dispatch table is `ossl_crng_test_functions`; `implementations.h`
+keeps a dead `extern` for the old name. The correction is recorded rather than silently applied,
+because a later reader following D287 to that path would conclude the unit was missing.
+
+**4.2 D287's "the `base` provider's single RAND row is the test RNG" is wrong.** `baseprov.c`'s
+`base_rands[]` publishes **SEED-SRC** and nothing else; TEST-RAND is `defltprov.c`'s. The census
+agrees — `base / OSSL_OP_RAND` is one row, and it is `SEED-SRC` (4.2 is measured by the same
+`Counter` that produced §1's table).
+
+**4.3 None of these rows carries an alias or an OID.** The three DRBG rows, both SEED-SRC rows and
+TEST-RAND each declare a single `algorithm_names` string (`"CTR-DRBG"`, `"HASH-DRBG"`,
+`"HMAC-DRBG"`, `"SEED-SRC"`, `"TEST-RAND"`) and no alias, so the census's alias-sequence identity
+check is trivially satisfied for them. Their exactness rests on the *dispatch association* and the
+*subsequence order* checks instead, which is where a transcription error in these rows would be
+observable.
+
+**4.4 The precondition this plan places on 9.1's commit, and it is not optional.**
+`forensics/tools/gen_provider_algorithms.py` currently derives each row's state as
+
+```python
+state = "open" if owning_phase == 8 else "deferred"
+```
+
+which is **stratum-8-relative**. Activating phase 9 in `forensics/tools/phase_state.py`'s
+`STRATUM_EVIDENCE` — the thing that makes a stratum's courts and ledger participate in its
+completion rule — would, with that line unchanged, silently reclassify **phase 8's eleven open
+cipher rows as `deferred`**, and phase 8 would then be able to reach `open_in_this_stratum == 0`
+with eleven provider rows unpublished. The state must become a *projection over the stratum
+being judged* (an `implementation_state` of `implemented`/`unimplemented` plus the owning phase,
+with `open` and `deferred` derived) before, not after, phase 9 is activated. That refactor lands
+with 9.1, in the commit that activates the stratum.
+
+## 5. Process
+
+This stratum inherits Phase 8's process unchanged: a subphase lands its code, its court and its
+regenerated artefacts in **one commit**; every export carries a court edge in
+`forensics/atlas/court-coverage.json` on the commit that lands it (D236); every provider row it
+publishes is named by a probe of a court that covers it (D245); and an artefact that a source
+change moves is regenerated in the same commit. `docs/DECISIONS.md` is append-only and this
+document is not a decision record.
+
+**Status.** 9.0 — this document and §1's census — is the only landed subphase. Nothing in
+`src/` implements any of the 95 exports yet, no Phase 9 court exists, and `phase-state.json`
+reports the stratum `not-started`, which is correct until 9.1's commit activates it.
