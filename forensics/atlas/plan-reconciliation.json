@@ -1035,7 +1035,9 @@
           "7.3",
           "7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/legacy_sha.rs"
+        ]
       },
       "crypto/evp/legacy_wp.c": {
         "defines": [],
@@ -2230,10 +2232,10 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 173
+      "transcribed_units": 174
     }
   },
-  "body_hash": "f8e4a0018edd6813f36bd279e312619cde01c9f63ed41712ccbeab85de095bcf",
+  "body_hash": "b25fc178af477264046af4e413ba7b845f179410e5bfe44737b20dbc6c3c7eec",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -2244,12 +2246,12 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "71d73259984076e83af11fd7f7d225ba79d60557c9a315e288b08c7068dbb5da"
+      "sha256": "0209425479d709b65114ba0c75cc599bb8b67f8b882d3182cd96fbd26418853b"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "a37596516c6288513482b645a6dd75b31607a6edafca55879795c7631afcfd20"
+      "sha256": "a3273b354925b96fa4871e32b6b69f77c242717b6d97561eb9a6746f417fa193"
     },
     {
       "name": "phase-state",

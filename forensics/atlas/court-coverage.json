@@ -8838,10 +8838,10 @@
       {
         "completed": true,
         "counts": {
-          "directly_courted": 706,
-          "directly_courted_called": 646,
+          "directly_courted": 713,
+          "directly_courted_called": 653,
           "directly_courted_referenced": 60,
-          "implemented": 706,
+          "implemented": 713,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -9863,6 +9863,7 @@
             "courts": [
               "RT-DIGEST",
               "RT-EVP-BIO",
+              "RT-EVP-INTROSPECT",
               "RT-EVP-PEM",
               "RT-FETCH"
             ],
@@ -9880,6 +9881,7 @@
             "courts": [
               "RT-DIGEST",
               "RT-EVP-BIO",
+              "RT-EVP-INTROSPECT",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-FETCH"
@@ -9941,6 +9943,7 @@
             "courts": [
               "RT-DIGEST",
               "RT-EVP-BIO",
+              "RT-EVP-INTROSPECT",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-FETCH"
@@ -11008,6 +11011,7 @@
             "basis": "called",
             "courts": [
               "RT-DIGEST",
+              "RT-EVP-INTROSPECT",
               "RT-FETCH"
             ],
             "symbol": "EVP_MD_get_block_size"
@@ -11015,6 +11019,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-EVP-INTROSPECT",
               "RT-FETCH"
             ],
             "symbol": "EVP_MD_get_flags"
@@ -11037,6 +11042,7 @@
             "basis": "called",
             "courts": [
               "RT-DIGEST",
+              "RT-EVP-INTROSPECT",
               "RT-FETCH"
             ],
             "symbol": "EVP_MD_get_size"
@@ -11044,6 +11050,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-EVP-INTROSPECT",
               "RT-FETCH"
             ],
             "symbol": "EVP_MD_get_type"
@@ -13795,6 +13802,55 @@
           {
             "basis": "called",
             "courts": [
+              "RT-EVP-INTROSPECT"
+            ],
+            "symbol": "EVP_sha1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-INTROSPECT"
+            ],
+            "symbol": "EVP_sha224"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-INTROSPECT"
+            ],
+            "symbol": "EVP_sha256"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-INTROSPECT"
+            ],
+            "symbol": "EVP_sha384"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-INTROSPECT"
+            ],
+            "symbol": "EVP_sha512"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-INTROSPECT"
+            ],
+            "symbol": "EVP_sha512_224"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-INTROSPECT"
+            ],
+            "symbol": "EVP_sha512_256"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-HMAC"
             ],
             "symbol": "HMAC"
@@ -15813,10 +15869,10 @@
       }
     ],
     "totals": {
-      "directly_courted": 2069,
-      "directly_courted_called": 1785,
+      "directly_courted": 2076,
+      "directly_courted_called": 1792,
       "directly_courted_referenced": 284,
-      "implemented": 2077,
+      "implemented": 2084,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -15827,7 +15883,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "a37596516c6288513482b645a6dd75b31607a6edafca55879795c7631afcfd20"
+      "sha256": "a3273b354925b96fa4871e32b6b69f77c242717b6d97561eb9a6746f417fa193"
     },
     {
       "name": "symbol-ownership",
@@ -15842,7 +15898,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "f649def52f7a19a4f9342bf46777cd34448609124eb761ad8b9227cf92f3250e"
+      "sha256": "d5c9b81aee3ebc3620174d04b8c8fbf615b8033ba2b6d7a893e863e7c90b1efe"
     },
     {
       "name": "phase3-courts",
@@ -15852,7 +15908,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "bd46d6c984eedbf106a9f10e7c43342976141e48772cc7377ab12fdceffa56b1"
+      "sha256": "d06e21e96a5689f93b0bb90d8ab50c1d5793a58a7ad7b476b1231d6d626358c8"
     },
     {
       "name": "phase4-courts",
@@ -15862,7 +15918,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "90bf50fdecc491431233056fd81115fa134408bd49733f254f084991369b9f73"
+      "sha256": "5982e8d7fde506c858a3a5490877458edeb848d5185e510c3f26f280dafd8e6e"
     },
     {
       "name": "phase5-courts",
@@ -15872,7 +15928,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "6f5f198e80bf9e0b1a3aabb0b94dc2b1fb3b1b99d5fbb5a988279268ef76ea08"
+      "sha256": "35d9843b522309bdf4f612903e560bae234079b3b5330b1cce2a922f04235704"
     },
     {
       "name": "phase6-courts",
@@ -15882,17 +15938,17 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "a97343b42f2895d475516f240e1ad550b47abbdb28252345cee5f221e00b2984"
+      "sha256": "1cfae87711d6c8e464aecb18dcea930d8f39e8153b5bb1c9ebbdc735e03cee74"
     },
     {
       "name": "phase7-courts",
       "path": "artifacts/phase7/COURTS.json",
-      "sha256": "d2fd46f011467dd9a39390af0aae349d2ab7970ede23e80c0a781b8a3e4fa0e0"
+      "sha256": "ec0919ff6a1c621a4ce378e9c5ef08e45b7b3b96bc4527bf4e0caf7ddafc877e"
     },
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "c6ce47fe836d1a0026a2a4de0fdbe76b925721d22183e7ee2923b9747a69debc"
+      "sha256": "8109219a576396ab348b035826215eb651c656eee29d98a403394031e3472159"
     },
     {
       "name": "phase8-courts",
