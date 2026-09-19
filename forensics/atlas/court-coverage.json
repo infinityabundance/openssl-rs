@@ -10522,6 +10522,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-MAC"
             ],
             "symbol": "EVP_MAC_CTX_free"
@@ -10550,6 +10551,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-MAC"
             ],
             "symbol": "EVP_MAC_CTX_get_params"
@@ -10564,6 +10566,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-MAC"
             ],
             "symbol": "EVP_MAC_CTX_new"
@@ -10571,6 +10574,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-MAC"
             ],
             "symbol": "EVP_MAC_CTX_set_params"
@@ -10600,6 +10604,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-MAC"
             ],
             "symbol": "EVP_MAC_final"
@@ -10664,6 +10669,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-MAC"
             ],
             "symbol": "EVP_MAC_init"
@@ -10706,6 +10712,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-MAC"
             ],
             "symbol": "EVP_MAC_update"
@@ -15490,7 +15497,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "2f0259975978530f2e7994af3300a339f751d612ccf71e537b2131fb0dfa6ff1"
+      "sha256": "00ab01fdec7eb5b6392aa35a97d8e885c374dd85e46c6cae4e9d3db17ae6b542"
     },
     {
       "name": "symbol-ownership",
@@ -15560,7 +15567,7 @@
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "f3bbb6163c0861b32db3233ed2b9965fa8091ee318563470cba100f81bddbd0c"
+      "sha256": "d49fe987270f3930e4d166299436750cc03e06d415e7d3f9aff58a3b8e293eaf"
     }
   ],
   "kind": "court-coverage",

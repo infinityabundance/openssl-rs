@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 1889,
+      "sites": 1896,
       "unattributed": 0
     },
     "covered_files": [
@@ -187,6 +187,7 @@
       "providers/implementations/ciphers/cipher_aes_siv.c",
       "providers/implementations/macs/cmac_prov.c",
       "providers/implementations/macs/gmac_prov.c",
+      "providers/implementations/macs/siphash_prov.c",
       "providers/implementations/digests/digestcommon.c"
     ],
     "note": "`file` is the authority's `__FILE__` string, derived from relpath(source_tree, build_dir) of the admitted build record. It is a build artifact of the forensic build, reproduced exactly rather than normalized away, so the candidate's ERR records compare byte-for-byte with the authority's.",
@@ -28507,6 +28508,111 @@
         "rel_source": "providers/implementations/macs/gmac_prov.c"
       },
       {
+        "const_name": "PROV_SIPHASH_PROV_190",
+        "data_format": "\"param %s is repeated\"",
+        "dynamic_reason": false,
+        "file": "providers/implementations/macs/siphash_prov.c",
+        "function": "siphash_get_ctx_params_decoder",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 190,
+        "macro": "ERR_raise_data",
+        "reason": 252,
+        "reason_symbol": "PROV_R_REPEATED_PARAMETER",
+        "rel_source": "providers/implementations/macs/siphash_prov.c"
+      },
+      {
+        "const_name": "PROV_SIPHASH_PROV_201",
+        "data_format": "\"param %s is repeated\"",
+        "dynamic_reason": false,
+        "file": "providers/implementations/macs/siphash_prov.c",
+        "function": "siphash_get_ctx_params_decoder",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 201,
+        "macro": "ERR_raise_data",
+        "reason": 252,
+        "reason_symbol": "PROV_R_REPEATED_PARAMETER",
+        "rel_source": "providers/implementations/macs/siphash_prov.c"
+      },
+      {
+        "const_name": "PROV_SIPHASH_PROV_212",
+        "data_format": "\"param %s is repeated\"",
+        "dynamic_reason": false,
+        "file": "providers/implementations/macs/siphash_prov.c",
+        "function": "siphash_get_ctx_params_decoder",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 212,
+        "macro": "ERR_raise_data",
+        "reason": 252,
+        "reason_symbol": "PROV_R_REPEATED_PARAMETER",
+        "rel_source": "providers/implementations/macs/siphash_prov.c"
+      },
+      {
+        "const_name": "PROV_SIPHASH_PROV_285",
+        "data_format": "\"param %s is repeated\"",
+        "dynamic_reason": false,
+        "file": "providers/implementations/macs/siphash_prov.c",
+        "function": "siphash_set_params_decoder",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 285,
+        "macro": "ERR_raise_data",
+        "reason": 252,
+        "reason_symbol": "PROV_R_REPEATED_PARAMETER",
+        "rel_source": "providers/implementations/macs/siphash_prov.c"
+      },
+      {
+        "const_name": "PROV_SIPHASH_PROV_296",
+        "data_format": "\"param %s is repeated\"",
+        "dynamic_reason": false,
+        "file": "providers/implementations/macs/siphash_prov.c",
+        "function": "siphash_set_params_decoder",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 296,
+        "macro": "ERR_raise_data",
+        "reason": 252,
+        "reason_symbol": "PROV_R_REPEATED_PARAMETER",
+        "rel_source": "providers/implementations/macs/siphash_prov.c"
+      },
+      {
+        "const_name": "PROV_SIPHASH_PROV_307",
+        "data_format": "\"param %s is repeated\"",
+        "dynamic_reason": false,
+        "file": "providers/implementations/macs/siphash_prov.c",
+        "function": "siphash_set_params_decoder",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 307,
+        "macro": "ERR_raise_data",
+        "reason": 252,
+        "reason_symbol": "PROV_R_REPEATED_PARAMETER",
+        "rel_source": "providers/implementations/macs/siphash_prov.c"
+      },
+      {
+        "const_name": "PROV_SIPHASH_PROV_318",
+        "data_format": "\"param %s is repeated\"",
+        "dynamic_reason": false,
+        "file": "providers/implementations/macs/siphash_prov.c",
+        "function": "siphash_set_params_decoder",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 318,
+        "macro": "ERR_raise_data",
+        "reason": 252,
+        "reason_symbol": "PROV_R_REPEATED_PARAMETER",
+        "rel_source": "providers/implementations/macs/siphash_prov.c"
+      },
+      {
         "const_name": "PROV_DIGESTCOMMON_56",
         "data_format": "\"param %s is repeated\"",
         "dynamic_reason": false,
@@ -29536,6 +29642,11 @@
       "name": "authority:providers/implementations/macs/gmac_prov.c",
       "path": "forensics/authorities/build/openssl-3.6.4-production/providers/implementations/macs/gmac_prov.c",
       "sha256": "40b09a92360d412c52f5ab3ea2ecfe7c4065606bb9b58eefe951a3ad6ffcbbad"
+    },
+    {
+      "name": "authority:providers/implementations/macs/siphash_prov.c",
+      "path": "forensics/authorities/build/openssl-3.6.4-production/providers/implementations/macs/siphash_prov.c",
+      "sha256": "04dc7e867441af86bfb46495d467653b7a267a639ef17b4351680ff769a57ecf"
     },
     {
       "name": "authority:providers/implementations/digests/digestcommon.c",

@@ -46,7 +46,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_uchar, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void};
 use core::ptr;
 
 use crate::context::dispatch::{OsslDispatch, OSSL_DISPATCH_END};
@@ -66,6 +66,10 @@ use crate::mac::cmac::{
     ossl_cmac_init, CMAC_CTX_copy, CMAC_CTX_free, CMAC_CTX_get0_cipher_ctx, CMAC_CTX_new,
     CMAC_Final, CMAC_Init, CMAC_Update, CmacCtx,
 };
+use crate::mac::siphash::{
+    SipHash_Final, SipHash_Init, SipHash_Update, SipHash_hash_size, SipHash_set_hash_size, Siphash,
+    SIPHASH_C_ROUNDS, SIPHASH_D_ROUNDS, SIPHASH_KEY_SIZE,
+};
 use crate::params::{
     OsslParam, END, OSSL_PARAM_OCTET_STRING, OSSL_PARAM_UNSIGNED_INTEGER, OSSL_PARAM_UTF8_STRING,
 };
@@ -77,7 +81,7 @@ use crate::provider::util::{
     ossl_prov_cipher_reset, ProvCipher,
 };
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 
 /// The allocation-tracking `file` argument for this unit's allocations: `cmac_prov.c` (the
 /// build-generated spelling, as the compiler recorded it).
@@ -509,16 +513,29 @@ pub(crate) static CMAC_FUNCTIONS: [OsslDispatch; 11] = [
 ];
 
 /// `static const OSSL_ALGORITHM deflt_macs[]` — `providers/defltprov.c:334-353`, restricted to
-/// the rows this half implements, in the authority's order. `deflt_macs[]` carries nine rows
+/// the rows this half implements, **in the authority's order**. `deflt_macs[]` carries nine rows
 /// (`BLAKE2BMAC`, `BLAKE2SMAC`, `CMAC`, `GMAC`, `HMAC`, `KMAC-128`, `KMAC-256`, `POLY1305`,
-/// `SIPHASH`); seven stay `open` in `forensics/atlas/provider-algorithms.json` with
-/// `owning_phase: 8`, GMAC is `deferred` to Phase 9 with its blocker named (D243), and the
-/// census's exact accounting is what keeps both true.
-pub(crate) static DEFLT_MACS: [OsslAlgorithm; 2] = [
+/// `SIPHASH`), so `SIPHASH` is not appended: it is the authority's ninth row and the census checks
+/// that the rows this table publishes are a **subsequence** of the authority's order (D244). GMAC
+/// is `deferred` to Phase 9 with its blocker named (D243) and its engine is transcribed above;
+/// `BLAKE2BMAC`, `BLAKE2SMAC`, `HMAC`, `KMAC-128`, `KMAC-256` and `POLY1305` stay `open` with
+/// `owning_phase: 8`, and the census's exact accounting is what keeps all of that true.
+///
+/// **The property definition is `"provider=default"` on every row.** `defltprov.c`'s `ALG` macro
+/// expands through `ALGC(NAMES, FUNC, CHECK) { { NAMES, "provider=default", FUNC }, CHECK }`, and
+/// D247 is what a NULL there cost: a fetch whose property query is `provider=default` stopped
+/// resolving, and `provider!=default` resolved when it should not have.
+pub(crate) static DEFLT_MACS: [OsslAlgorithm; 3] = [
     OsslAlgorithm {
         algorithm_names: c"CMAC".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
         implementation: CMAC_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SIPHASH".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SIPHASH_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
@@ -531,6 +548,10 @@ pub(crate) static DEFLT_MACS: [OsslAlgorithm; 2] = [
 
 /// `OSSL_MAC_PARAM_IV` — `core_names.h:344` (`"iv"`).
 const OSSL_MAC_PARAM_IV: *const c_char = c"iv".as_ptr();
+/// `OSSL_MAC_PARAM_C_ROUNDS` — `core_names.h:341` (`"c-rounds"`).
+const OSSL_MAC_PARAM_C_ROUNDS: *const c_char = c"c-rounds".as_ptr();
+/// `OSSL_MAC_PARAM_D_ROUNDS` — `core_names.h:345` (`"d-rounds"`).
+const OSSL_MAC_PARAM_D_ROUNDS: *const c_char = c"d-rounds".as_ptr();
 /// `OSSL_CIPHER_PARAM_AEAD_TAG` — `core_names.h:179` (`"tag"`). Repeated rather than re-exported
 /// for the reason `src/provider/util.rs` repeats `EVP_ORIG_GLOBAL`: it is a string, not a symbol.
 const OSSL_CIPHER_PARAM_AEAD_TAG: *const c_char = c"tag".as_ptr();
@@ -999,29 +1020,632 @@ pub(crate) static GMAC_FUNCTIONS: [OsslDispatch; 11] = [
     },
 ];
 
+/// The allocation-tracking `file` argument for the SipHash row's allocations: `siphash_prov.c`.
+const FILE_SIPHASH: *const c_char =
+    c"../../src/openssl-3.6.4/providers/implementations/macs/siphash_prov.c".as_ptr();
+
+/// `struct siphash_data_st` — `siphash_prov.c:45-50`.
+///
+/// **Two contexts, not one, and the second is the whole point of the row.** `sipcopy` is the
+/// initialised state saved by `siphash_setkey`, so `siphash_init` with a NULL key can *restart* a
+/// message without the key by copying it back -- which is how `EVP_MAC_init(ctx, NULL, 0, NULL)`
+/// re-runs a message. A transcription with one context would pass every one-shot vector and fail on
+/// the second `EVP_MAC_init`.
+#[repr(C)]
+pub(crate) struct SiphashData {
+    /// `void *provctx`.
+    pub provctx: *mut c_void,
+    /// `SIPHASH siphash`.
+    pub siphash: Siphash,
+    /// `SIPHASH sipcopy` — the restorable initialised state.
+    pub sipcopy: Siphash,
+    /// `unsigned int crounds, drounds` — zero means "the primitive's default", not zero rounds.
+    pub crounds: c_uint,
+    /// `unsigned int drounds`.
+    pub drounds: c_uint,
+}
+
+/// `static unsigned int crounds(struct siphash_data_st *ctx)` — `siphash_prov.c:52-55`. Zero is the
+/// *unset* value, which is what lets `SipHash_Init` supply `SIPHASH_C_ROUNDS`.
+fn crounds(ctx: *const SiphashData) -> c_uint {
+    // SAFETY: the caller passes a live context.
+    let value = unsafe { (*ctx).crounds };
+    if value != 0 {
+        value
+    } else {
+        SIPHASH_C_ROUNDS
+    }
+}
+
+/// `static unsigned int drounds(struct siphash_data_st *ctx)` — `siphash_prov.c:57-60`.
+fn drounds(ctx: *const SiphashData) -> c_uint {
+    // SAFETY: the caller passes a live context.
+    let value = unsafe { (*ctx).drounds };
+    if value != 0 {
+        value
+    } else {
+        SIPHASH_D_ROUNDS
+    }
+}
+
+/// `static void *siphash_new(void *provctx)` — `siphash_prov.c:62-72`. `OPENSSL_zalloc`, so a fresh
+/// context has `hash_size == 0` in both copies and `SipHash_Init` will supply sixteen.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn siphash_new(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let ctx = CRYPTO_zalloc(core::mem::size_of::<SiphashData>(), FILE_SIPHASH, LINE);
+        if !ctx.is_null() {
+            let ctx = ctx.cast::<SiphashData>();
+            (*ctx).provctx = provctx;
+        }
+        ctx
+    }
+}
+
+/// `static void siphash_free(void *vmacctx)` — `siphash_prov.c:74-77`. A plain free: the context
+/// holds no owned pointers, which is why this row has no `reset` to get wrong.
+///
+/// # Safety
+/// The dispatch contract; `vmacctx` NULL or live.
+unsafe extern "C" fn siphash_free(vmacctx: *mut c_void) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if !vmacctx.is_null() {
+            CRYPTO_free(vmacctx, FILE_SIPHASH, LINE);
+        }
+    }
+}
+
+/// `static void *siphash_dup(void *vsrc)` — `siphash_prov.c:79-92`. A struct copy, because there is
+/// nothing to up-ref: both contexts are by-value and the provider context pointer is shared.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn siphash_dup(vsrc: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let dst = CRYPTO_malloc(core::mem::size_of::<SiphashData>(), FILE_SIPHASH, LINE)
+            .cast::<SiphashData>();
+        if dst.is_null() {
+            return ptr::null_mut();
+        }
+        // SAFETY: both are live `SiphashData`s, and the copy C's `*sdst = *ssrc` performs.
+        ptr::copy_nonoverlapping(vsrc.cast::<SiphashData>(), dst, 1);
+        dst.cast()
+    }
+}
+
+/// `static size_t siphash_size(void *vmacctx)` — `siphash_prov.c:94-99`. It reads the *context's*
+/// hash size, so a fresh uninitialised context answers 0 rather than sixteen.
+///
+/// # Safety
+/// `vmacctx` is live.
+unsafe fn siphash_size(vmacctx: *mut c_void) -> usize {
+    // SAFETY: the caller's contract.
+    unsafe { SipHash_hash_size(ptr::addr_of_mut!((*vmacctx.cast::<SiphashData>()).siphash)) }
+}
+
+/// `static int siphash_setkey(struct siphash_data_st *ctx, const unsigned char *key,
+/// size_t keylen)` — `siphash_prov.c:101-112`.
+///
+/// The sixteen-octet key length is a *bare* refusal with no raise, and on success the initialised
+/// state is saved into `sipcopy`.
+///
+/// # Safety
+/// `ctx` is live; `key` is readable for `keylen` bytes.
+unsafe fn siphash_setkey(ctx: *mut SiphashData, key: *const c_uchar, keylen: usize) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if keylen != SIPHASH_KEY_SIZE {
+            return 0;
+        }
+        let ret = SipHash_Init(
+            ptr::addr_of_mut!((*ctx).siphash),
+            key,
+            crounds(ctx) as c_int,
+            drounds(ctx) as c_int,
+        );
+        if ret != 0 {
+            (*ctx).sipcopy = (*ctx).siphash;
+        }
+        ret
+    }
+}
+
+/// `static int siphash_init(void *vmacctx, const unsigned char *key, size_t keylen,
+/// const OSSL_PARAM params[])` — `siphash_prov.c:114-130`.
+///
+/// The `key == NULL` arm restarts from `sipcopy` and returns 1 even when no key was ever set, which
+/// is why a caller must set the key through `params` or a first `init` before this arm means
+/// anything.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn siphash_init(
+    vmacctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 || siphash_set_params(vmacctx, params) == 0 {
+            return 0;
+        }
+        let ctx = vmacctx.cast::<SiphashData>();
+        if key.is_null() {
+            (*ctx).siphash = (*ctx).sipcopy;
+            return 1;
+        }
+        siphash_setkey(ctx, key, keylen)
+    }
+}
+
+/// `static int siphash_update(void *vmacctx, const unsigned char *data, size_t datalen)` —
+/// `siphash_prov.c:132-142`. `SipHash_Update` has no failure to report, so the only refusal here is
+/// the empty-input shortcut.
+///
+/// # Safety
+/// The dispatch contract; `data` is readable for `datalen` bytes.
+unsafe extern "C" fn siphash_update(
+    vmacctx: *mut c_void,
+    data: *const c_uchar,
+    datalen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if datalen == 0 {
+            return 1;
+        }
+        SipHash_Update(
+            ptr::addr_of_mut!((*vmacctx.cast::<SiphashData>()).siphash),
+            data,
+            datalen,
+        );
+        1
+    }
+}
+
+/// `static int siphash_final(void *vmacctx, unsigned char *out, size_t *outl, size_t outsize)` —
+/// `siphash_prov.c:144-155`.
+///
+/// **`outsize < hlen` is the refusal, and it is checked before `*outl` is written.** `SipHash_Final`
+/// itself also refuses an `outlen` that is not the context's `hash_size`, so the size is validated
+/// twice -- once against the caller's buffer and once inside the primitive -- and a transcription
+/// that dropped either would still pass a matching-size vector.
+///
+/// # Safety
+/// The dispatch contract; `out` is writable for `outsize` bytes and `outl` is writable.
+unsafe extern "C" fn siphash_final(
+    vmacctx: *mut c_void,
+    out: *mut c_uchar,
+    outl: *mut usize,
+    outsize: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let hlen = siphash_size(vmacctx);
+        if is_running() == 0 || outsize < hlen {
+            return 0;
+        }
+        *outl = hlen;
+        SipHash_Final(
+            ptr::addr_of_mut!((*vmacctx.cast::<SiphashData>()).siphash),
+            out,
+            hlen,
+        )
+    }
+}
+
+/// The three keys `siphash_get_ctx_params_decoder` locates, in the generated `switch`'s order
+/// (`siphash_prov.c:190`, `:201`, `:212`): `c-rounds`, `d-rounds`, `size`.
+const SIPHASH_GET_CTX_PARAMS_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 3] = [
+    (&err_sites::PROV_SIPHASH_PROV_190, OSSL_MAC_PARAM_C_ROUNDS),
+    (&err_sites::PROV_SIPHASH_PROV_201, OSSL_MAC_PARAM_D_ROUNDS),
+    (&err_sites::PROV_SIPHASH_PROV_212, OSSL_MAC_PARAM_SIZE),
+];
+
+/// The four keys `siphash_set_params_decoder` locates, in the generated `switch`'s order
+/// (`siphash_prov.c:285`, `:296`, `:307`, `:318`). Note that this is **not** the settable list's
+/// order: the `switch` is keyed on the first byte, so `c` and `d` come before `k` and `s`.
+const SIPHASH_SET_PARAMS_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 4] = [
+    (&err_sites::PROV_SIPHASH_PROV_285, OSSL_MAC_PARAM_C_ROUNDS),
+    (&err_sites::PROV_SIPHASH_PROV_296, OSSL_MAC_PARAM_D_ROUNDS),
+    (&err_sites::PROV_SIPHASH_PROV_307, OSSL_MAC_PARAM_KEY),
+    (&err_sites::PROV_SIPHASH_PROV_318, OSSL_MAC_PARAM_SIZE),
+];
+
+/// `static const OSSL_PARAM siphash_get_ctx_params_list[]` — `siphash_prov.c:157-162`.
+static SIPHASH_GETTABLE_CTX_PARAMS: [OsslParam; 4] = [
+    param(OSSL_MAC_PARAM_SIZE, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_MAC_PARAM_C_ROUNDS, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_MAC_PARAM_D_ROUNDS, OSSL_PARAM_UNSIGNED_INTEGER),
+    END,
+];
+
+/// `static const OSSL_PARAM *siphash_gettable_ctx_params(void *ctx, void *provctx)` —
+/// `siphash_prov.c:165-169`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn siphash_gettable_ctx_params(
+    _ctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    SIPHASH_GETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `static int siphash_get_ctx_params(void *vmacctx, OSSL_PARAM params[])` —
+/// `siphash_prov.c:171-186`. All three answers are the *context's*: `size` is the hash size (0 on a
+/// context whose key has never been set) and the round counts are the effective ones, so a caller
+/// that never set `c-rounds` reads back 2 rather than 0.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn siphash_get_ctx_params(vmacctx: *mut c_void, params: *mut OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vmacctx.is_null() {
+            return 0;
+        }
+        if let Some(site) = repeated_param_site(params, &SIPHASH_GET_CTX_PARAMS_DECODER_KEYS) {
+            return fail_at(site);
+        }
+        let ctx = vmacctx.cast::<SiphashData>();
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_MAC_PARAM_SIZE);
+        if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, siphash_size(vmacctx)) == 0 {
+            return 0;
+        }
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_MAC_PARAM_C_ROUNDS);
+        if !p.is_null() && crate::params::OSSL_PARAM_set_uint(p, crounds(ctx)) == 0 {
+            return 0;
+        }
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_MAC_PARAM_D_ROUNDS);
+        if !p.is_null() && crate::params::OSSL_PARAM_set_uint(p, drounds(ctx)) == 0 {
+            return 0;
+        }
+        1
+    }
+}
+
+/// `static const OSSL_PARAM siphash_set_params_list[]` — `siphash_prov.c:188-194`.
+static SIPHASH_SETTABLE_CTX_PARAMS: [OsslParam; 5] = [
+    param(OSSL_MAC_PARAM_SIZE, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_MAC_PARAM_KEY, OSSL_PARAM_OCTET_STRING),
+    param(OSSL_MAC_PARAM_C_ROUNDS, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_MAC_PARAM_D_ROUNDS, OSSL_PARAM_UNSIGNED_INTEGER),
+    END,
+];
+
+/// `static const OSSL_PARAM *siphash_settable_ctx_params(void *ctx, void *provctx)` —
+/// `siphash_prov.c:197-201`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn siphash_settable_ctx_params(
+    _ctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    SIPHASH_SETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `static int siphash_set_params(void *vmacctx, const OSSL_PARAM *params)` —
+/// `siphash_prov.c:203-227`.
+///
+/// Three things are contract. A `size` sets **both** contexts' hash size, so the restorable copy
+/// stays in step; a `size` that is neither 8 nor 16 is a bare refusal, and `SipHash_set_hash_size`'s
+/// `v1 ^= 0xee` compensation is what makes setting it after the key equivalent to setting it before.
+/// A `key` is applied last, and a non-octet-string descriptor for it is a bare refusal.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn siphash_set_params(vmacctx: *mut c_void, params: *const OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vmacctx.is_null() {
+            return 0;
+        }
+        if let Some(site) = repeated_param_site(params, &SIPHASH_SET_PARAMS_DECODER_KEYS) {
+            return fail_at(site);
+        }
+        let ctx = vmacctx.cast::<SiphashData>();
+
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_MAC_PARAM_SIZE);
+        if !p.is_null() {
+            let mut size: usize = 0;
+            if crate::params::OSSL_PARAM_get_size_t(p, &mut size) == 0
+                || SipHash_set_hash_size(ptr::addr_of_mut!((*ctx).siphash), size) == 0
+                || SipHash_set_hash_size(ptr::addr_of_mut!((*ctx).sipcopy), size) == 0
+            {
+                return 0;
+            }
+        }
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_MAC_PARAM_C_ROUNDS);
+        if !p.is_null() && crate::params::OSSL_PARAM_get_uint(p, &mut (*ctx).crounds) == 0 {
+            return 0;
+        }
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_MAC_PARAM_D_ROUNDS);
+        if !p.is_null() && crate::params::OSSL_PARAM_get_uint(p, &mut (*ctx).drounds) == 0 {
+            return 0;
+        }
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_MAC_PARAM_KEY);
+        if !p.is_null() {
+            if (*p).data_type != OSSL_PARAM_OCTET_STRING {
+                return 0;
+            }
+            if siphash_setkey(ctx, (*p).data.cast::<c_uchar>(), (*p).data_size) == 0 {
+                return 0;
+            }
+        }
+        1
+    }
+}
+
+/// `const OSSL_DISPATCH ossl_siphash_functions[]` — `siphash_prov.c:229-243`, ten entries and the
+/// terminator. The same shape as `CMAC_FUNCTIONS`: the ctx-params pair, not the provider-level one.
+pub(crate) static SIPHASH_FUNCTIONS: [OsslDispatch; 11] = [
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_NEWCTX,
+        function: siphash_new as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_DUPCTX,
+        function: siphash_dup as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_FREECTX,
+        function: siphash_free as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_INIT,
+        function: siphash_init as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_UPDATE,
+        function: siphash_update as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_FINAL,
+        function: siphash_final as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_GETTABLE_CTX_PARAMS,
+        function: siphash_gettable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_GET_CTX_PARAMS,
+        function: siphash_get_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_SETTABLE_CTX_PARAMS,
+        function: siphash_settable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_SET_CTX_PARAMS,
+        function: siphash_set_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_DISPATCH_END,
+        function: ptr::null_mut(),
+    },
+];
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::context::dispatch::OSSL_DISPATCH_END as END_ID;
 
     #[test]
-    fn the_mac_table_terminates_and_names_its_one_registered_row() {
-        // Two entries, not three: GMAC's engine is transcribed and its *registration* is held for
-        // Phase 9 with the blocker named (D243). A test that asserted three would be asserting a
-        // row that cannot work.
-        assert_eq!(DEFLT_MACS.len(), 2);
+    fn the_mac_table_names_its_rows_in_the_authoritys_order() {
+        // CMAC then SIPHASH, and **not** appended: `defltprov.c` lists SIPHASH ninth, after GMAC,
+        // and the census requires the crate's rows to be a subsequence of the authority's order
+        // (D244). GMAC's engine is transcribed and its registration is held for Phase 9 (D243), so
+        // it is absent here rather than in the wrong place.
+        assert_eq!(DEFLT_MACS.len(), 3);
         // SAFETY: the terminator's name is NULL by construction, and each landed row's is a
         // `'static` C string.
         unsafe {
-            assert!(DEFLT_MACS[1].algorithm_names.is_null());
-            assert!(DEFLT_MACS[1].property_definition.is_null());
-            assert!(DEFLT_MACS[1].implementation.is_null());
-            let first = core::ffi::CStr::from_ptr(DEFLT_MACS[0].algorithm_names);
-            assert_eq!(first.to_bytes(), b"CMAC");
-            let props = core::ffi::CStr::from_ptr(DEFLT_MACS[0].property_definition);
-            assert_eq!(props.to_bytes(), b"provider=default");
-            assert!(!DEFLT_MACS[0].implementation.is_null());
-            assert!(DEFLT_MACS[0].algorithm_description.is_null());
+            assert!(DEFLT_MACS[2].algorithm_names.is_null());
+            assert!(DEFLT_MACS[2].property_definition.is_null());
+            assert!(DEFLT_MACS[2].implementation.is_null());
+            for (row, want) in [
+                (&DEFLT_MACS[0], b"CMAC".as_slice()),
+                (&DEFLT_MACS[1], b"SIPHASH"),
+            ] {
+                let name = core::ffi::CStr::from_ptr(row.algorithm_names);
+                assert_eq!(name.to_bytes(), want);
+                // `ALGC(NAMES, FUNC, CHECK) { { NAMES, "provider=default", FUNC }, CHECK }`.
+                let props = core::ffi::CStr::from_ptr(row.property_definition);
+                assert_eq!(props.to_bytes(), b"provider=default");
+                assert!(!row.implementation.is_null());
+                assert!(row.algorithm_description.is_null());
+            }
+        }
+    }
+
+    #[test]
+    fn the_siphash_dispatch_carries_the_ctx_params_pair_and_terminates() {
+        let ids: Vec<c_int> = SIPHASH_FUNCTIONS.iter().map(|d| d.function_id).collect();
+        assert_eq!(ids.len(), 11);
+        assert_eq!(ids[10], END_ID);
+        // The same shape as `CMAC_FUNCTIONS`: the ctx-params pair, not the provider-level one that
+        // `GMAC_FUNCTIONS` uses.
+        assert_eq!(
+            ids[..10],
+            [
+                OSSL_FUNC_MAC_NEWCTX,
+                OSSL_FUNC_MAC_DUPCTX,
+                OSSL_FUNC_MAC_FREECTX,
+                OSSL_FUNC_MAC_INIT,
+                OSSL_FUNC_MAC_UPDATE,
+                OSSL_FUNC_MAC_FINAL,
+                OSSL_FUNC_MAC_GETTABLE_CTX_PARAMS,
+                OSSL_FUNC_MAC_GET_CTX_PARAMS,
+                OSSL_FUNC_MAC_SETTABLE_CTX_PARAMS,
+                OSSL_FUNC_MAC_SET_CTX_PARAMS,
+            ]
+        );
+        assert!(SIPHASH_FUNCTIONS[..10]
+            .iter()
+            .all(|d| !d.function.is_null()));
+    }
+
+    #[test]
+    fn the_siphash_decoder_key_order_is_the_switches_not_the_lists() {
+        // The generated decoder is a `switch` on the key's first byte, so it raises for `c-rounds`
+        // and `d-rounds` before `key` and `size` -- while the *settable* list reads `size`, `key`,
+        // `c-rounds`, `d-rounds`. Two different orders in the same file, and a transcription that
+        // used one for both would misattribute every repeated-parameter raise.
+        let mut keys: Vec<&[u8]> = Vec::new();
+        for (_, k) in SIPHASH_SET_PARAMS_DECODER_KEYS.iter() {
+            // SAFETY: every key in each table is a `'static` C string literal.
+            keys.push(unsafe { core::ffi::CStr::from_ptr(*k) }.to_bytes());
+        }
+        assert_eq!(
+            keys,
+            [
+                b"c-rounds".as_slice(),
+                b"d-rounds".as_slice(),
+                b"key".as_slice(),
+                b"size".as_slice(),
+            ]
+        );
+        let mut listed: Vec<&[u8]> = Vec::new();
+        for p in SIPHASH_SETTABLE_CTX_PARAMS[..4].iter() {
+            // SAFETY: every key in each table is a `'static` C string literal.
+            listed.push(unsafe { core::ffi::CStr::from_ptr(p.key.cast()) }.to_bytes());
+        }
+        assert_eq!(
+            listed,
+            [
+                b"size".as_slice(),
+                b"key".as_slice(),
+                b"c-rounds".as_slice(),
+                b"d-rounds".as_slice(),
+            ]
+        );
+        assert!(SIPHASH_SETTABLE_CTX_PARAMS[4].key.is_null());
+        let mut get_keys: Vec<&[u8]> = Vec::new();
+        for (_, k) in SIPHASH_GET_CTX_PARAMS_DECODER_KEYS.iter() {
+            // SAFETY: every key in each table is a `'static` C string literal.
+            get_keys.push(unsafe { core::ffi::CStr::from_ptr(*k) }.to_bytes());
+        }
+        assert_eq!(
+            get_keys,
+            [
+                b"c-rounds".as_slice(),
+                b"d-rounds".as_slice(),
+                b"size".as_slice()
+            ]
+        );
+    }
+
+    #[test]
+    fn a_fresh_siphash_context_answers_zero_size_and_the_default_round_counts() {
+        // SAFETY: the dispatch contract, with a NULL provctx which `siphash_new` accepts.
+        unsafe {
+            let ctx = siphash_new(ptr::null_mut()).cast::<SiphashData>();
+            assert!(!ctx.is_null());
+            // Zero, not sixteen: `hash_size` is only adjusted by `SipHash_Init` or a `size`.
+            assert_eq!(siphash_size(ctx.cast()), 0);
+            assert_eq!((*ctx).crounds, 0);
+            assert_eq!(crounds(ctx), SIPHASH_C_ROUNDS);
+            assert_eq!(drounds(ctx), SIPHASH_D_ROUNDS);
+            (*ctx).crounds = 4;
+            (*ctx).drounds = 8;
+            assert_eq!(crounds(ctx), 4);
+            assert_eq!(drounds(ctx), 8);
+            siphash_free(ctx.cast());
+        }
+    }
+
+    #[test]
+    fn a_null_key_init_restarts_from_the_saved_copy() {
+        // `sipcopy` is the whole reason this row has two contexts. Run a message, re-init with a
+        // NULL key, run it again, and the tag must equal a fresh one-shot -- which it cannot if the
+        // row restarts from the *partially consumed* state instead of the saved one.
+        let key = [0x5au8; 16];
+        let msg = [0x11u8; 40];
+        // SAFETY: locals, and every pointer is derived from a live context.
+        unsafe {
+            let ctx = siphash_new(ptr::null_mut()).cast::<SiphashData>();
+            assert_eq!(siphash_setkey(ctx, key.as_ptr(), 16), 1);
+            assert_eq!(siphash_size(ctx.cast()), 16);
+            siphash_update(ctx.cast(), msg.as_ptr(), msg.len());
+
+            assert_eq!(siphash_init(ctx.cast(), ptr::null(), 0, ptr::null()), 1);
+            siphash_update(ctx.cast(), msg.as_ptr(), msg.len());
+            let mut out = [0u8; 16];
+            let mut outl = 0usize;
+            assert_eq!(
+                siphash_final(ctx.cast(), out.as_mut_ptr(), &mut outl, 16),
+                1
+            );
+            assert_eq!(outl, 16);
+
+            let fresh = siphash_new(ptr::null_mut()).cast::<SiphashData>();
+            assert_eq!(siphash_setkey(fresh, key.as_ptr(), 16), 1);
+            siphash_update(fresh.cast(), msg.as_ptr(), msg.len());
+            let mut want = [0u8; 16];
+            let mut wantl = 0usize;
+            assert_eq!(
+                siphash_final(fresh.cast(), want.as_mut_ptr(), &mut wantl, 16),
+                1
+            );
+            assert_eq!(out, want, "the restarted message must equal the one-shot");
+
+            siphash_free(ctx.cast());
+            siphash_free(fresh.cast());
+        }
+    }
+
+    #[test]
+    fn a_short_final_buffer_is_refused_before_the_length_is_written() {
+        // SAFETY: locals and a live context.
+        unsafe {
+            let ctx = siphash_new(ptr::null_mut()).cast::<SiphashData>();
+            let key = [0u8; 32];
+            // The key length is exactly `SIPHASH_KEY_SIZE`, and both neighbours are bare refusals.
+            assert_eq!(siphash_setkey(ctx, key.as_ptr(), 15), 0);
+            assert_eq!(siphash_setkey(ctx, key.as_ptr(), 17), 0);
+            assert_eq!(siphash_setkey(ctx, key.as_ptr(), 16), 1);
+
+            let mut out = [0u8; 16];
+            let mut outl = 7usize;
+            // `outsize < hlen` is checked *before* `*outl = hlen`, so the caller's value survives.
+            assert_eq!(
+                siphash_final(ctx.cast(), out.as_mut_ptr(), &mut outl, 15),
+                0
+            );
+            assert_eq!(outl, 7);
+            assert_eq!(
+                siphash_final(ctx.cast(), out.as_mut_ptr(), &mut outl, 16),
+                1
+            );
+            assert_eq!(outl, 16);
+
+            // A duplicate raises, and the raise is the decoder's own site.
+            let size = OSSL_MAC_PARAM_SIZE;
+            let dup = [
+                param(size, OSSL_PARAM_UNSIGNED_INTEGER),
+                param(size, OSSL_PARAM_UNSIGNED_INTEGER),
+                END,
+            ];
+            assert_eq!(
+                siphash_get_ctx_params(ctx.cast(), dup.as_ptr() as *mut _),
+                0
+            );
+            assert_eq!(siphash_set_params(ctx.cast(), dup.as_ptr()), 0);
+            siphash_free(ctx.cast());
         }
     }
 
