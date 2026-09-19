@@ -57,6 +57,7 @@ pub mod kem;
 pub mod keymgmt;
 pub mod keymgmt_lib;
 pub mod legacy_evp;
+pub mod legacy_sha;
 pub mod mac;
 pub mod method_store;
 pub mod p5_crpt;

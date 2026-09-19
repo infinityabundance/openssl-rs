@@ -206,7 +206,7 @@
       "verdict": "pass"
     },
     "RT-EVP-INTROSPECT": {
-      "observations": 48,
+      "observations": 167,
       "verdict": "pass"
     },
     "RT-EVP-KDF": {
@@ -355,11 +355,11 @@
     "phase4": 23,
     "phase5": 91,
     "phase6": 0,
-    "phase7": 244,
+    "phase7": 237,
     "phase8": 26
   },
   "implemented": {
-    "libcrypto": 2077,
+    "libcrypto": 2084,
     "libssl": 0
   },
   "open_obligations": {
@@ -406,7 +406,7 @@
     "blocking_dependencies": 25,
     "divergence_names_covered": 31,
     "findings": 0,
-    "language_census": 3118,
+    "language_census": 3124,
     "sealed_census": 56
   },
   "provider_implemented": [

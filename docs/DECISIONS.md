@@ -19118,3 +19118,51 @@ bypasses the callbacks is in place and courted by 8.1's provider rows.
 
 **What this entry does not claim.** It does not land the objects -- that is the next commit, and it
 is now a transcription with no open questions rather than a search.
+
+## D291 — the seven legacy `EVP_sha*()` objects land, and Phase 7's scaffolded digest surface closes
+
+`src/evp/legacy_sha.rs`, transcribed from `crypto/evp/legacy_sha.c`: `EVP_sha1`, `EVP_sha224`,
+`EVP_sha256`, `EVP_sha384`, `EVP_sha512`, `EVP_sha512_224` and `EVP_sha512_256`. Seven exports, and
+they move `deferred[phase7]` from 244 to 237 — these are Phase 7's surface, not Phase 8's, and the
+entry exists because D287 made reopening a sealed stratum a decision rather than something to do
+quietly. `RT-EVP-INTROSPECT` grew from 48 to 167 observations; `libcrypto` moves 2077 -> 2084.
+
+**What the objects are.** Each is a `static EvpMd` built by one `const fn` so the seven differ only
+in the fields that distinguish them: `type_`, `pkey_type`, `md_size`, `flags`
+(`EVP_MD_FLAG_DIGALGID_ABSENT`, and only that), `origin` (`EVP_ORIG_GLOBAL`), `block_size`,
+`ctx_size` **0**, and the four legacy callbacks. `copy` and `cleanup` are NULL; only `EVP_sha1`'s
+`md_ctrl` is non-NULL, because only `sha1_md` supplies `sha1_int_ctrl`. The provider half and the
+identity fields are zero and stay zero, because `EVP_ORIG_GLOBAL` means no mutating arm ever runs.
+
+**Two details that would have been wrong by default.** `LEGACY_EVP_MD_METH_TABLE`'s zero is `ctx_size`
+and not an omission — D290 is the whole argument for keeping it, and the unit test asserts it
+explicitly so a later "fix" fails there rather than at the first digest call. And the two truncated
+variants are not `SHA512_Init`: `legacy_sha.c:46-47` `#define`s `sha512_224_Init` to the
+**lower-case** `sha512_224_init`, so their init callbacks call the crate's own `sha512_224_init` /
+`sha512_256_init` (`src/digest/sha2.rs:393`/`:417`), which is what makes their `md_size` 28 and 32
+while their block stays 128. Their update and final are the SHA-512 ones, because `SHA512_Update` and
+`SHA512_Final` are shared.
+
+**The court arm is the one that matters.** The seven objects' *fields* are compared by the crate's
+unit test, but a court can only see the public accessors — so `RT-EVP-INTROSPECT`'s new
+`legacy_md_arms` calls each entry point, reads `EVP_MD_get_type`/`_get_size`/`_get_block_size`/
+`_get_flags`, and then **hashes `"abc"` through `EVP_DigestInit_ex`/`_Update`/`_Final_ex` and
+compares the digest**. That is the arm with content: D290 established that the library replaces a
+legacy method with the provider implementation it fetches by NID, so a transcription that got every
+field right and the fetch-replacement wrong would pass all the field checks and fail here. The
+candidate reproduces all 167 observations.
+
+**Phase 7's seal, and what reopening it cost.** The registration is that these seven were
+*scaffolded* ABIs — present in the distribution shell so artifacts link, absent from the crate, and
+one of them aborts a caller with `SCAFFOLDED symbol EVP_sha1 was called`. That is the class the
+project's own rule is about, and it was reachable from `8.4`: `EVP_sha1()` is the default digest of
+both OAEP *add* functions, of PSS's keygen-md family, of `RSA_verify_PKCS1_PSS`, and of
+`PKCS1_MGF1`'s callers. Closing it here rather than at each caller is the same trade D287 recorded
+for the RAND substrate. No other part of Phase 7 moves: its courts' verdicts and observation counts
+are unchanged apart from this probe's, and its ledger's `open` list stays empty.
+
+**What this entry does not claim.** `EVP_md5` and the SHA-3/SHAKE objects are `legacy_md5.c` and its
+siblings, and are **not** here — they are the same shape and land the same way, and they are the
+immediate follow-up rather than part of this commit. The two OAEP checks are still not landed: with
+`EVP_sha1` present their last prerequisite is `RSA_padding_check_PKCS1_OAEP`'s constant-time body,
+which is now the next unit and has no open questions left.
