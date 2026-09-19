@@ -24,9 +24,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 5931,
+        "authority_observations": 6134,
         "candidate_exit_code": 0,
-        "candidate_observations": 5931,
+        "candidate_observations": 6134,
         "candidate_stderr_tail": [],
         "court": "RT-CIPHER",
         "crashed": false,
@@ -5604,6 +5604,14 @@
             "standard": "RFC 5794",
             "total": 21
           },
+          "aria_ccm": {
+            "failed": 0,
+            "passed": 7,
+            "primary_source": "IETF draft-ietf-avtcore-aria-srtp-02",
+            "source": "forensics/vectors/aria_ccm.json",
+            "standard": "IETF draft-ietf-avtcore-aria-srtp-02",
+            "total": 7
+          },
           "bf": {
             "failed": 0,
             "passed": 10,
@@ -5708,6 +5716,14 @@
             "standard": "GB/T 32907-2016 / IETF draft-ribose-cfrg-sm4",
             "total": 7
           },
+          "sm4_ccm": {
+            "failed": 0,
+            "passed": 1,
+            "primary_source": "RFC 8998",
+            "source": "forensics/vectors/sm4_ccm.json",
+            "standard": "RFC 8998",
+            "total": 1
+          },
           "wrap": {
             "failed": 0,
             "passed": 7,
@@ -5726,20 +5742,20 @@
           }
         },
         "authority": "openssl-3.6.4-production",
-        "calls_checked": 3111,
+        "calls_checked": 3119,
         "candidate_shared_object": "artifacts/phase2/libcrypto.so.3",
-        "claim": "A correctness-vector PASS means candidate-only construction verification: the candidate's low-level cipher produced the committed expected bytes for every vector. Of the 3111 committed vectors, 3094 are published standard values mirrored through the pinned OpenSSL test corpus and 17 are independently-derived boundary vectors with named oracles (2 by the construction's definition (FIPS-197 §5.1, SP 800-38A §6.1): an empty message has no blocks and emits no bytes; 1 by the construction's definition: RC4 over a zero-byte input emits no bytes and leaves its state unchanged; 14 by the construction's definition: a block or feedback mode over a zero-byte input emits no bytes) -- these counts are read from the 17 committed `forensics/vectors/*.json` cipher sets by `correctness_vectors.py`, not typed. It is NOT OpenSSL parity and NOT formal validation. See D201/D208 and docs/PHASE-8-SUBPHASES.md.",
+        "claim": "A correctness-vector PASS means candidate-only construction verification: the candidate's low-level cipher produced the committed expected bytes for every vector. Of the 3119 committed vectors, 3102 are published standard values mirrored through the pinned OpenSSL test corpus and 17 are independently-derived boundary vectors with named oracles (2 by the construction's definition (FIPS-197 §5.1, SP 800-38A §6.1): an empty message has no blocks and emits no bytes; 1 by the construction's definition: RC4 over a zero-byte input emits no bytes and leaves its state unchanged; 14 by the construction's definition: a block or feedback mode over a zero-byte input emits no bytes) -- these counts are read from the 19 committed `forensics/vectors/*.json` cipher sets by `correctness_vectors.py`, not typed. It is NOT OpenSSL parity and NOT formal validation. See D201/D208 and docs/PHASE-8-SUBPHASES.md.",
         "court": "CT-CIPHER",
         "derivation_census": {
-          "corpus": 3094,
-          "files": 17,
+          "corpus": 3102,
+          "files": 19,
           "independent": 17,
           "oracles": {
             "the construction's definition (FIPS-197 §5.1, SP 800-38A §6.1): an empty message has no blocks and emits no bytes": 2,
             "the construction's definition: RC4 over a zero-byte input emits no bytes and leaves its state unchanged": 1,
             "the construction's definition: a block or feedback mode over a zero-byte input emits no bytes": 14
           },
-          "vectors": 3111
+          "vectors": 3119
         },
         "failures": [],
         "kind": "cipher-vectors",
@@ -6683,6 +6699,76 @@
             "expected_hex": "30026c329666141721178b99c0a1f1b2f06940253f7b3089e2a30ea86aa3c88f5940f05ad7ee41d71347bb7261e348f18360473fdf7d4e7723bffb4411cc13f6cdd89f3bc7b9c768145022c7a74f14d7c305cd012a10f16050c23f1ae5c23f45998d13fbaa041e51619577e0772764896a5d4516d8ffceb3bf7e05f613edd9a60cdcedaff9cfcaf4e00d445a54334f73ab2cad944e51d266548e61c6eb0aa1cd",
             "id": "aria-21",
             "input_hex": "11111111aaaaaaaa11111111bbbbbbbb11111111cccccccc11111111dddddddd22222222aaaaaaaa22222222bbbbbbbb22222222cccccccc22222222dddddddd33333333aaaaaaaa33333333bbbbbbbb33333333cccccccc33333333dddddddd44444444aaaaaaaa44444444bbbbbbbb44444444cccccccc44444444dddddddd55555555aaaaaaaa55555555bbbbbbbb55555555cccccccc55555555dddddddd",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "621e408a2e455505b39f704dcbac4307daabbd6d670abc4e42f2fd2fca263f094f4683e6fb0b10c5093d42b69dce0ba546520e7c4400975713f3bde93ef131160b9cbcd6df78a1502be7c6ea8d395b9ed0078819c3105c0ab92cb67b16ba51bb1f53508738bf7a37c9a905439b88b7af9d51a407916fdfea8d43bf253721846dc1671391225fc58d9d0693c8ade6a4ffb034ee6543dd4e651b7a084eae60f85540f04b6467e300f6b336aedf9df4185b0101",
+            "algorithm": "aria_ccm",
+            "cipher": "ARIA-128-CCM",
+            "expected_hex": "621e408a2e455505b39f704dcbac4307daabbd6d670abc4e42f2fd2fca263f094f4683e6fb0b10c5093d42b69dce0ba546520e7c4400975713f3bde93ef131160b9cbcd6df78a1502be7c6ea8d395b9ed0078819c3105c0ab92cb67b16ba51bb1f53508738bf7a37c9a905439b88b7af9d51a407916fdfea8d43bf253721846dc1671391225fc58d9d0693c8ade6a4ffb034ee6543dd4e651b7a084eae60f85540f04b6467e300f6b336aedf9df4185b0101",
+            "id": "aria_ccm-1",
+            "input_hex": "f57af5fd4ae19562976ec57a5a7ad55a5af5c5e5c5fdf5c55ad57a4a7272d57262e9729566ed66e97ac54a4a5a7ad5e15ae5fdd5fd5ac5d56ae56ad5c572d54ae54ac55a956afd6aed5a4ac562957a9516991691d572fd14e97ae962ed7a9f4a955af572e162f57a956666e17ae1f54a95f566d54a66e16e4afd6a9f7ae1c5c55ae5d56afde916c5e94a6ec56695e14afde1148416e94ad57ac5146ed59d1cc5",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "ff78128ee18ee3cb9fb0d20726a017ff67fbd09d3a4c38aa32f6d306d3fdda378e459b83ed005507449d6cd981a4c1e3ff4193870c276ef09b6317a01a2283206ae4b4be0d0b235422c8abb00122410656b75e1ffc7fb49c0d0c5d6169aa7623610579968037aee8e83fc26264ea866590fd620aa3c0a5f323d953aa7f8defb0d0d60ab5a9de44dbaf8eae74ea3ab5f30594154f405fd630aa4c4d5603efdfa187b6bd222c55365a9c7d0b215b77ea410101",
+            "algorithm": "aria_ccm",
+            "cipher": "ARIA-256-CCM",
+            "expected_hex": "ff78128ee18ee3cb9fb0d20726a017ff67fbd09d3a4c38aa32f6d306d3fdda378e459b83ed005507449d6cd981a4c1e3ff4193870c276ef09b6317a01a2283206ae4b4be0d0b235422c8abb00122410656b75e1ffc7fb49c0d0c5d6169aa7623610579968037aee8e83fc26264ea866590fd620aa3c0a5f323d953aa7f8defb0d0d60ab5a9de44dbaf8eae74ea3ab5f30594154f405fd630aa4c4d5603efdfa187b6bd222c55365a9c7d0b215b77ea410101",
+            "id": "aria_ccm-2",
+            "input_hex": "f57af5fd4ae19562976ec57a5a7ad55a5af5c5e5c5fdf5c55ad57a4a7272d57262e9729566ed66e97ac54a4a5a7ad5e15ae5fdd5fd5ac5d56ae56ad5c572d54ae54ac55a956afd6aed5a4ac562957a9516991691d572fd14e97ae962ed7a9f4a955af572e162f57a956666e17ae1f54a95f566d54a66e16e4afd6a9f7ae1c5c55ae5d56afde916c5e94a6ec56695e14afde1148416e94ad57ac5146ed59d1cc5",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "621e408a2e455505b39f704dcbac4307daabbd6d670abc4e42f2fd2fca263f094f4683e6fb0b10c5093d42b69dce0ba546520e7c4400975713f3bde93ef131160b9cbcd6df78a1502be7c6ea8d395b9ed0078819c3105c0ab92cb67b16ba51bb1f53508738bf7a37c9a905439b88b7af9d51a407916fdfea8d43bf253721846dc1671391225fc58d9d0693c8ade6a4ffb034ee6543dd4e651b7a084eae60f855dd2282c93a67fe4b0101",
+            "algorithm": "aria_ccm",
+            "cipher": "ARIA-128-CCM",
+            "expected_hex": "621e408a2e455505b39f704dcbac4307daabbd6d670abc4e42f2fd2fca263f094f4683e6fb0b10c5093d42b69dce0ba546520e7c4400975713f3bde93ef131160b9cbcd6df78a1502be7c6ea8d395b9ed0078819c3105c0ab92cb67b16ba51bb1f53508738bf7a37c9a905439b88b7af9d51a407916fdfea8d43bf253721846dc1671391225fc58d9d0693c8ade6a4ffb034ee6543dd4e651b7a084eae60f855dd2282c93a67fe4b0101",
+            "id": "aria_ccm-3",
+            "input_hex": "f57af5fd4ae19562976ec57a5a7ad55a5af5c5e5c5fdf5c55ad57a4a7272d57262e9729566ed66e97ac54a4a5a7ad5e15ae5fdd5fd5ac5d56ae56ad5c572d54ae54ac55a956afd6aed5a4ac562957a9516991691d572fd14e97ae962ed7a9f4a955af572e162f57a956666e17ae1f54a95f566d54a66e16e4afd6a9f7ae1c5c55ae5d56afde916c5e94a6ec56695e14afde1148416e94ad57ac5146ed59d1cc5",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "ff78128ee18ee3cb9fb0d20726a017ff67fbd09d3a4c38aa32f6d306d3fdda378e459b83ed005507449d6cd981a4c1e3ff4193870c276ef09b6317a01a2283206ae4b4be0d0b235422c8abb00122410656b75e1ffc7fb49c0d0c5d6169aa7623610579968037aee8e83fc26264ea866590fd620aa3c0a5f323d953aa7f8defb0d0d60ab5a9de44dbaf8eae74ea3ab5f30594154f405fd630aa4c4d5603efdfa1828dc0088f99a7ef0101",
+            "algorithm": "aria_ccm",
+            "cipher": "ARIA-256-CCM",
+            "expected_hex": "ff78128ee18ee3cb9fb0d20726a017ff67fbd09d3a4c38aa32f6d306d3fdda378e459b83ed005507449d6cd981a4c1e3ff4193870c276ef09b6317a01a2283206ae4b4be0d0b235422c8abb00122410656b75e1ffc7fb49c0d0c5d6169aa7623610579968037aee8e83fc26264ea866590fd620aa3c0a5f323d953aa7f8defb0d0d60ab5a9de44dbaf8eae74ea3ab5f30594154f405fd630aa4c4d5603efdfa1828dc0088f99a7ef0101",
+            "id": "aria_ccm-4",
+            "input_hex": "f57af5fd4ae19562976ec57a5a7ad55a5af5c5e5c5fdf5c55ad57a4a7272d57262e9729566ed66e97ac54a4a5a7ad5e15ae5fdd5fd5ac5d56ae56ad5c572d54ae54ac55a956afd6aed5a4ac562957a9516991691d572fd14e97ae962ed7a9f4a955af572e162f57a956666e17ae1f54a95f566d54a66e16e4afd6a9f7ae1c5c55ae5d56afde916c5e94a6ec56695e14afde1148416e94ad57ac5146ed59d1cc5",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "621e408a2e455505b39f704dcbac4307daabbd6d670abc4e42f2fd2fca263f094f4683e6fb0b10c5093d42b69dce0ba546520e7c4400975713f3bde93ef131160b9cbcd6df78a1502be7c6ea8d395b9ed0078819c3105c0ab92cb67b16ba51bb1f53508738bf7a37c9a905439b88b7af9d51a407916fdfea8d43bf253721846dc1671391225fc58d9d0693c8ade6a4ffb034ee6543dd4e651b7a084eae60f85501f3dedd15238da5ebfb15900101",
+            "algorithm": "aria_ccm",
+            "cipher": "ARIA-128-CCM",
+            "expected_hex": "621e408a2e455505b39f704dcbac4307daabbd6d670abc4e42f2fd2fca263f094f4683e6fb0b10c5093d42b69dce0ba546520e7c4400975713f3bde93ef131160b9cbcd6df78a1502be7c6ea8d395b9ed0078819c3105c0ab92cb67b16ba51bb1f53508738bf7a37c9a905439b88b7af9d51a407916fdfea8d43bf253721846dc1671391225fc58d9d0693c8ade6a4ffb034ee6543dd4e651b7a084eae60f85501f3dedd15238da5ebfb15900101",
+            "id": "aria_ccm-5",
+            "input_hex": "f57af5fd4ae19562976ec57a5a7ad55a5af5c5e5c5fdf5c55ad57a4a7272d57262e9729566ed66e97ac54a4a5a7ad5e15ae5fdd5fd5ac5d56ae56ad5c572d54ae54ac55a956afd6aed5a4ac562957a9516991691d572fd14e97ae962ed7a9f4a955af572e162f57a956666e17ae1f54a95f566d54a66e16e4afd6a9f7ae1c5c55ae5d56afde916c5e94a6ec56695e14afde1148416e94ad57ac5146ed59d1cc5",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "ff78128ee18ee3cb9fb0d20726a017ff67fbd09d3a4c38aa32f6d306d3fdda378e459b83ed005507449d6cd981a4c1e3ff4193870c276ef09b6317a01a2283206ae4b4be0d0b235422c8abb00122410656b75e1ffc7fb49c0d0c5d6169aa7623610579968037aee8e83fc26264ea866590fd620aa3c0a5f323d953aa7f8defb0d0d60ab5a9de44dbaf8eae74ea3ab5f30594154f405fd630aa4c4d5603efdfa13615b7f90a651de15da20fb60101",
+            "algorithm": "aria_ccm",
+            "cipher": "ARIA-256-CCM",
+            "expected_hex": "ff78128ee18ee3cb9fb0d20726a017ff67fbd09d3a4c38aa32f6d306d3fdda378e459b83ed005507449d6cd981a4c1e3ff4193870c276ef09b6317a01a2283206ae4b4be0d0b235422c8abb00122410656b75e1ffc7fb49c0d0c5d6169aa7623610579968037aee8e83fc26264ea866590fd620aa3c0a5f323d953aa7f8defb0d0d60ab5a9de44dbaf8eae74ea3ab5f30594154f405fd630aa4c4d5603efdfa13615b7f90a651de15da20fb60101",
+            "id": "aria_ccm-6",
+            "input_hex": "f57af5fd4ae19562976ec57a5a7ad55a5af5c5e5c5fdf5c55ad57a4a7272d57262e9729566ed66e97ac54a4a5a7ad5e15ae5fdd5fd5ac5d56ae56ad5c572d54ae54ac55a956afd6aed5a4ac562957a9516991691d572fd14e97ae962ed7a9f4a955af572e162f57a956666e17ae1f54a95f566d54a66e16e4afd6a9f7ae1c5c55ae5d56afde916c5e94a6ec56695e14afde1148416e94ad57ac5146ed59d1cc5",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "ff78128ee18ee3cb9fb0d20726a017ff67fbd09d3a4c38aa32f6d306d3fdda378e459b83ed005507449d6cd981a4c1e3ff4193870c276ef09b6317a01a2283206ae4b4be0d0b235422c8abb00122410656b75e1ffc7fb49c0d0c5d6169aa7623610579968037aee8e83fc26264ea866590fd620aa3c0a5f323d953aa7f8defb0d0d60ab5a9de44dbaf8eae74ea3ab5f30594154f405fd630aa4c4d5603efdfa13615b7f90a651de15da20fb60101",
+            "algorithm": "aria_ccm",
+            "cipher": "ARIA-256-CCM",
+            "expected_hex": "ff78128ee18ee3cb9fb0d20726a017ff67fbd09d3a4c38aa32f6d306d3fdda378e459b83ed005507449d6cd981a4c1e3ff4193870c276ef09b6317a01a2283206ae4b4be0d0b235422c8abb00122410656b75e1ffc7fb49c0d0c5d6169aa7623610579968037aee8e83fc26264ea866590fd620aa3c0a5f323d953aa7f8defb0d0d60ab5a9de44dbaf8eae74ea3ab5f30594154f405fd630aa4c4d5603efdfa13615b7f90a651de15da20fb60101",
+            "id": "aria_ccm-7",
+            "input_hex": "f57af5fd4ae19562976ec57a5a7ad55a5af5c5e5c5fdf5c55ad57a4a7272d57262e9729566ed66e97ac54a4a5a7ad5e15ae5fdd5fd5ac5d56ae56ad5c572d54ae54ac55a956afd6aed5a4ac562957a9516991691d572fd14e97ae962ed7a9f4a955af572e162f57a956666e17ae1f54a95f566d54a66e16e4afd6a9f7ae1c5c55ae5d56afde916c5e94a6ec56695e14afde1148416e94ad57ac5146ed59d1cc5",
             "operation": "ENCRYPT",
             "passed": true
           },
@@ -36327,6 +36413,16 @@
             "passed": true
           },
           {
+            "actual_hex": "48af93501fa62adbcd414cce6034d895dda1bf8f132f042098661572e7483094fd12e518ce062c98acee28d95df4416bed31a2f04476c18bb40c84a74b97dc5b16842d4fa186f56ab33256971fa110f40101",
+            "algorithm": "sm4_ccm",
+            "cipher": "SM4-CCM",
+            "expected_hex": "48af93501fa62adbcd414cce6034d895dda1bf8f132f042098661572e7483094fd12e518ce062c98acee28d95df4416bed31a2f04476c18bb40c84a74b97dc5b16842d4fa186f56ab33256971fa110f40101",
+            "id": "sm4_ccm-1",
+            "input_hex": "aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbccccccccccccccccddddddddddddddddeeeeeeeeeeeeeeeeffffffffffffffffeeeeeeeeeeeeeeeeaaaaaaaaaaaaaaaa",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
             "actual_hex": "1fa68b0a8112b447aef34bd8fb5a7b829d3e862371d2cfe5",
             "algorithm": "wrap",
             "cipher": "id-aes128-wrap",
@@ -36858,9 +36954,9 @@
           }
         ],
         "stage": "compare",
-        "vectors_checked": 3111,
+        "vectors_checked": 3119,
         "vectors_failed": 0,
-        "vectors_passed": 3111,
+        "vectors_passed": 3119,
         "verdict": "pass"
       }
     ],
@@ -36885,7 +36981,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "dbc5aaba7ea20a2f8ecd18ee7f4b074bf7ec5455ab9c7f7540143039329c2c0d"
+      "sha256": "4e945d8934b5e51e5e7eabc505c6faf45aeed75c5a3e5d8eb68b419b1a0a2a9c"
     },
     {
       "name": "correctness-probe",
@@ -37000,7 +37096,7 @@
     {
       "name": "cipher-correctness-probe",
       "path": "courts/phase8/ct_cipher.c",
-      "sha256": "58f0940e5e20c07fd81f0476c3753a49df97513017aef3bf20d446d5c1ab2e89"
+      "sha256": "e05dfbabacda7536d07ac6f37d51201f950a53dbe1f08d724c31c31efc028f2a"
     },
     {
       "name": "cipher-correctness-vectors:aes",
@@ -37053,9 +37149,19 @@
       "sha256": "e90be3c79ea4d0559cfc1e3edf604570e9e4d085a3caed5b785f883892b772ad"
     },
     {
+      "name": "cipher-correctness-vectors:aria_ccm",
+      "path": "forensics/vectors/aria_ccm.json",
+      "sha256": "adaa07d6dfffdcb89b3da6198e7a983b65307f670def80a97c41e807d927ae9d"
+    },
+    {
       "name": "cipher-correctness-vectors:sm4",
       "path": "forensics/vectors/sm4.json",
       "sha256": "0904eee2ecfc30dab6c5fcc9929f0730793036556a9dc4d856c258c14c301833"
+    },
+    {
+      "name": "cipher-correctness-vectors:sm4_ccm",
+      "path": "forensics/vectors/sm4_ccm.json",
+      "sha256": "cee59d7be0b44fd02c616efac14f228a4efa5ff9417a231b3cd84a9a800ac415"
     },
     {
       "name": "cipher-correctness-vectors:wrap",

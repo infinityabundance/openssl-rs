@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 144,
+        "implemented": 148,
         "unmatched": 0
       }
     },
@@ -20,8 +20,8 @@
         "probe": "courts/phase8/rt_cipher_probe.c"
       }
     ],
-    "directly_courted": 144,
-    "implemented_rows": 144,
+    "directly_courted": 148,
+    "implemented_rows": 148,
     "rows": [
       {
         "algorithm_names": "AES-128-CBC",
@@ -697,6 +697,20 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "ARIA-128-CCM",
+        "aliases": [
+          "ARIA-128-CCM",
+          "1.2.410.200046.1.1.37"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "ARIA-128-CFB",
         "aliases": [
           "ARIA-128-CFB",
@@ -794,6 +808,20 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "ARIA-192-CCM",
+        "aliases": [
+          "ARIA-192-CCM",
+          "1.2.410.200046.1.1.38"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "ARIA-192-CFB",
         "aliases": [
           "ARIA-192-CFB",
@@ -881,6 +909,20 @@
           "ARIA-256-CBC",
           "ARIA256",
           "1.2.410.200046.1.1.12"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARIA-256-CCM",
+        "aliases": [
+          "ARIA-256-CCM",
+          "1.2.410.200046.1.1.39"
         ],
         "courts": [
           "RT-CIPHER"
@@ -1480,6 +1522,20 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "SM4-CCM",
+        "aliases": [
+          "SM4-CCM",
+          "1.2.156.10197.1.104.9"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "SM4-CFB",
         "aliases": [
           "SM4-CFB",
@@ -2055,7 +2111,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "14f1352ed48cd57ad5af16115c0b30d70b29b050935e3e8414d1594916c4c69e"
+      "sha256": "d43ac6e121dc6c2eaa2f2493dd4d299a18c94b92ffd155e0327565a3a0936408"
     },
     {
       "name": "court:RT-DIGEST",
@@ -2065,7 +2121,7 @@
     {
       "name": "court:RT-CIPHER",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "dbc5aaba7ea20a2f8ecd18ee7f4b074bf7ec5455ab9c7f7540143039329c2c0d"
+      "sha256": "4e945d8934b5e51e5e7eabc505c6faf45aeed75c5a3e5d8eb68b419b1a0a2a9c"
     }
   ],
   "kind": "provider-court-coverage",

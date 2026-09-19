@@ -154,7 +154,7 @@
       "verdict": "pass"
     },
     "RT-CIPHER": {
-      "observations": 5931,
+      "observations": 6134,
       "verdict": "pass"
     },
     "RT-CMAC": {
@@ -450,6 +450,7 @@
     "default/OSSL_OP_CIPHER/AES-256-WRAP-PAD-INV",
     "default/OSSL_OP_CIPHER/AES-256-XTS",
     "default/OSSL_OP_CIPHER/ARIA-128-CBC",
+    "default/OSSL_OP_CIPHER/ARIA-128-CCM",
     "default/OSSL_OP_CIPHER/ARIA-128-CFB",
     "default/OSSL_OP_CIPHER/ARIA-128-CFB1",
     "default/OSSL_OP_CIPHER/ARIA-128-CFB8",
@@ -457,6 +458,7 @@
     "default/OSSL_OP_CIPHER/ARIA-128-ECB",
     "default/OSSL_OP_CIPHER/ARIA-128-OFB",
     "default/OSSL_OP_CIPHER/ARIA-192-CBC",
+    "default/OSSL_OP_CIPHER/ARIA-192-CCM",
     "default/OSSL_OP_CIPHER/ARIA-192-CFB",
     "default/OSSL_OP_CIPHER/ARIA-192-CFB1",
     "default/OSSL_OP_CIPHER/ARIA-192-CFB8",
@@ -464,6 +466,7 @@
     "default/OSSL_OP_CIPHER/ARIA-192-ECB",
     "default/OSSL_OP_CIPHER/ARIA-192-OFB",
     "default/OSSL_OP_CIPHER/ARIA-256-CBC",
+    "default/OSSL_OP_CIPHER/ARIA-256-CCM",
     "default/OSSL_OP_CIPHER/ARIA-256-CFB",
     "default/OSSL_OP_CIPHER/ARIA-256-CFB1",
     "default/OSSL_OP_CIPHER/ARIA-256-CFB8",
@@ -507,6 +510,7 @@
     "default/OSSL_OP_CIPHER/DES-EDE3-OFB",
     "default/OSSL_OP_CIPHER/NULL",
     "default/OSSL_OP_CIPHER/SM4-CBC",
+    "default/OSSL_OP_CIPHER/SM4-CCM",
     "default/OSSL_OP_CIPHER/SM4-CFB",
     "default/OSSL_OP_CIPHER/SM4-CTR",
     "default/OSSL_OP_CIPHER/SM4-ECB",
@@ -554,10 +558,10 @@
       "13": 39,
       "9": 15
     },
-    "implemented": 144,
-    "open": 162,
+    "implemented": 148,
+    "open": 158,
     "open_by_phase": {
-      "8": 162
+      "8": 158
     },
     "total": 996
   }

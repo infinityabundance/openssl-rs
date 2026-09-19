@@ -16,6 +16,8 @@
 #include "cipher_chacha20.h"
 #include "cipher_sm4.h"
 #include "cipher_aria.h"
+#include "cipher_aria_ccm.h"
+#include "cipher_sm4_ccm.h"
 
 int main(void)
 {
@@ -30,6 +32,10 @@ int main(void)
     printf("PROV_CHACHA20_CTX %zu\n", sizeof(PROV_CHACHA20_CTX));
     printf("PROV_SM4_CTX %zu\n", sizeof(PROV_SM4_CTX));
     printf("PROV_ARIA_CTX %zu\n", sizeof(PROV_ARIA_CTX));
+    printf("PROV_ARIA_CCM_CTX %zu\n", sizeof(PROV_ARIA_CCM_CTX));
+    printf("PROV_SM4_CCM_CTX %zu\n", sizeof(PROV_SM4_CCM_CTX));
+    printf("off PROV_ARIA_CCM_CTX.ks %zu\n", offsetof(PROV_ARIA_CCM_CTX, ks));
+    printf("off PROV_SM4_CCM_CTX.ks %zu\n", offsetof(PROV_SM4_CCM_CTX, ks));
     /* the `ks` offsets, which the hw casts depend on */
     printf("off PROV_AES_CTX.ks %zu\n", offsetof(PROV_AES_CTX, ks));
     printf("off PROV_CAMELLIA_CTX.ks %zu\n", offsetof(PROV_CAMELLIA_CTX, ks));

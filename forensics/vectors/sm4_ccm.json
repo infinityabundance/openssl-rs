@@ -1,0 +1,51 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "algorithm": "sm4_ccm",
+    "court": "CT-CIPHER",
+    "openssl_cipher": "SM4-CCM",
+    "primary_source": "RFC 8998",
+    "provenance": {
+      "authority": "openssl-3.6.4-production",
+      "corpus": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_sm4.txt",
+      "corpus_sha256": "9e66667dd0634a59a5549340e14822591314c9b1ccebfcf5ae70ba6fe7472aba",
+      "note": "Candidate-only construction verification: the primary source is RFC 8998's CCM section, and the bytes are mirrored through the pinned corpus (`corpus_sha256`) rather than fetched. Only the encrypt direction is mirrored, for the reason `aria_ccm`'s note gives; the reject path is exercised by `RT-CIPHER`'s per-row CCM arm. No independent SM4 implementation is present in the pinned court image, so no boundary vector carries an independent oracle.",
+      "primary_source": "RFC 8998"
+    },
+    "standard": "RFC 8998",
+    "vectors": [
+      {
+        "aad_hex": "feedfacedeadbeeffeedfacedeadbeefabaddad2",
+        "cipher": "SM4-CCM",
+        "expected_hex": "48af93501fa62adbcd414cce6034d895dda1bf8f132f042098661572e7483094fd12e518ce062c98acee28d95df4416bed31a2f04476c18bb40c84a74b97dc5b",
+        "id": "sm4_ccm-1",
+        "input_hex": "aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbccccccccccccccccddddddddddddddddeeeeeeeeeeeeeeeeffffffffffffffffeeeeeeeeeeeeeeeeaaaaaaaaaaaaaaaa",
+        "iv_hex": "00001234567800000000abcd",
+        "key_hex": "0123456789abcdeffedcba9876543210",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_sm4.txt",
+          "form": "keyed-block",
+          "line": 64,
+          "mirror_sha256": "9e66667dd0634a59a5549340e14822591314c9b1ccebfcf5ae70ba6fe7472aba",
+          "primary_source": "RFC 8998",
+          "title": "SM4 CCM test vectors from RFC8998"
+        },
+        "standard": "RFC 8998",
+        "tag_hex": "16842d4fa186f56ab33256971fa110f4"
+      }
+    ]
+  },
+  "generator": "forensics/tools/correctness_vectors.py",
+  "inputs": [
+    {
+      "name": "authority-evp-vector-file",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_sm4.txt",
+      "sha256": "9e66667dd0634a59a5549340e14822591314c9b1ccebfcf5ae70ba6fe7472aba"
+    }
+  ],
+  "kind": "cipher-vectors-sm4_ccm",
+  "schema": "openssl-rs/atlas/cipher-vectors-sm4_ccm/v1"
+}
