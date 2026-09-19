@@ -54,6 +54,8 @@ use crate::evp::mac::{
 /// **They are currently private `const`s there**, so integration must raise them to
 /// `pub(crate)`; the duplicate-free reference below is the form that wants.
 use crate::evp::rand::{
+    OSSL_FUNC_RAND_NONCE,
+
     OSSL_FUNC_RAND_CLEAR_SEED, OSSL_FUNC_RAND_ENABLE_LOCKING, OSSL_FUNC_RAND_FREECTX,
     OSSL_FUNC_RAND_GENERATE, OSSL_FUNC_RAND_GET_CTX_PARAMS, OSSL_FUNC_RAND_GET_SEED,
     OSSL_FUNC_RAND_GETTABLE_CTX_PARAMS, OSSL_FUNC_RAND_INSTANTIATE, OSSL_FUNC_RAND_LOCK,
@@ -99,6 +101,10 @@ use crate::runtime::thread::{
 use crate::runtime::time::TimeT;
 
 // D307: the three helpers this module reaches that landed in D304/D305, plus the platform clock.
+use crate::context::lib_ctx_get_data as ossl_lib_ctx_get_data;
+use crate::provider::seeding::{
+    ossl_prov_cleanup_entropy, ossl_prov_cleanup_nonce, ossl_prov_get_entropy, ossl_prov_get_nonce,
+};
 use crate::provider::util::{ossl_prov_macctx_load, ossl_prov_set_macctx};
 use crate::runtime::bio::sys::time;
 use crate::runtime::thread::openssl_get_fork_id;
@@ -123,6 +129,14 @@ const FILE_DRBG_HASH: *const c_char = c"providers/implementations/rands/drbg_has
 const FILE_DRBG_HMAC: *const c_char = c"providers/implementations/rands/drbg_hmac.c".as_ptr();
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
+
+/// `OSSL_LIB_CTX_DRBG_NONCE_INDEX` — `include/internal/cryptlib.h:102`, slot **6**.
+///
+/// MISSING(crate): `src/context/mod.rs` declares slots 2, 3, 14 and 17 and not the DRBG pair.
+/// The authority's whole allocation is `OSSL_LIB_CTX_DRBG_INDEX 5` and
+/// `OSSL_LIB_CTX_DRBG_NONCE_INDEX 6` (`:101-102`), so both belong there when this module lands;
+/// the value is carried here so the staging file is compilable against the crate as it is.
+const OSSL_LIB_CTX_DRBG_NONCE_INDEX: c_int = 6;
 
 // =============================================================================================
 // Constants — `providers/implementations/include/prov/drbg.h` and `include/crypto/rand.h`
@@ -872,12 +886,12 @@ unsafe fn ossl_prov_drbg_reseed_unlocked(
 
         if !ent.is_null() {
             if ent_len < (*drbg).min_entropylen {
-                raise_site(&err_sites::DRBG_RAND_ENTROPY_OUT_OF_RANGE);
+                raise_site(&err_sites::PROV_DRBG_509);
                 (*drbg).state = crate::evp::rand::EVP_RAND_STATE_ERROR;
                 return 0;
             }
             if ent_len > (*drbg).max_entropylen {
-                raise_site(&err_sites::DRBG_RAND_ENTROPY_INPUT_TOO_LONG);
+                raise_site(&err_sites::PROV_DRBG_514);
                 (*drbg).state = crate::evp::rand::EVP_RAND_STATE_ERROR;
                 return 0;
             }
@@ -2370,7 +2384,7 @@ unsafe fn drbg_ctr_init(drbg: *mut ProvDrbg) -> c_int {
     unsafe {
         let ctr = (*drbg).data.cast::<ProvDrbgCtr>();
         if (*ctr).cipher_ctr.is_null() {
-            raise_site(&err_sites::PROV_DRBG_CTR_579);
+            raise_site(&err_sites::PROV_DRBG_CTR_577);
             return 0;
         }
         let keylen = EVP_CIPHER_get_key_length((*ctr).cipher_ctr) as usize;
@@ -2382,7 +2396,7 @@ unsafe fn drbg_ctr_init(drbg: *mut ProvDrbg) -> c_int {
             (*ctr).ctx_ctr = EVP_CIPHER_CTX_new();
         }
         if (*ctr).ctx_ecb.is_null() || (*ctr).ctx_ctr.is_null() {
-            raise_site(&err_sites::PROV_DRBG_CTR_588);
+            raise_site(&err_sites::PROV_DRBG_CTR_586);
             EVP_CIPHER_CTX_free((*ctr).ctx_ecb);
             EVP_CIPHER_CTX_free((*ctr).ctx_ctr);
             (*ctr).ctx_ecb = ptr::null_mut();
@@ -2392,7 +2406,7 @@ unsafe fn drbg_ctr_init(drbg: *mut ProvDrbg) -> c_int {
         if EVP_CipherInit_ex((*ctr).ctx_ecb, (*ctr).cipher_ecb, ptr::null_mut(), ptr::null(), ptr::null(), 1) == 0
             || EVP_CipherInit_ex((*ctr).ctx_ctr, (*ctr).cipher_ctr, ptr::null_mut(), ptr::null(), ptr::null(), 1) == 0
         {
-            raise_site(&err_sites::PROV_DRBG_CTR_596);
+            raise_site(&err_sites::PROV_DRBG_CTR_594);
             EVP_CIPHER_CTX_free((*ctr).ctx_ecb);
             EVP_CIPHER_CTX_free((*ctr).ctx_ctr);
             (*ctr).ctx_ecb = ptr::null_mut();
@@ -2417,7 +2431,7 @@ unsafe fn drbg_ctr_init(drbg: *mut ProvDrbg) -> c_int {
                 (*ctr).ctx_df = EVP_CIPHER_CTX_new();
             }
             if (*ctr).ctx_df.is_null() {
-                raise_site(&err_sites::PROV_DRBG_CTR_627);
+                raise_site(&err_sites::PROV_DRBG_CTR_625);
                 EVP_CIPHER_CTX_free((*ctr).ctx_ecb);
                 EVP_CIPHER_CTX_free((*ctr).ctx_ctr);
                 (*ctr).ctx_ecb = ptr::null_mut();
@@ -2427,7 +2441,7 @@ unsafe fn drbg_ctr_init(drbg: *mut ProvDrbg) -> c_int {
             // Set the key schedule for df_key.
             if EVP_CipherInit_ex((*ctr).ctx_df, (*ctr).cipher_ecb, ptr::null_mut(), DF_KEY.as_ptr(), ptr::null(), 1) == 0
             {
-                raise_site(&err_sites::PROV_DRBG_CTR_633);
+                raise_site(&err_sites::PROV_DRBG_CTR_631);
                 EVP_CIPHER_CTX_free((*ctr).ctx_ecb);
                 EVP_CIPHER_CTX_free((*ctr).ctx_ctr);
                 (*ctr).ctx_ecb = ptr::null_mut();
@@ -2766,7 +2780,7 @@ unsafe fn drbg_ctr_set_ctx_params_locked(
             }
             if OPENSSL_strcasecmp(c"CTR".as_ptr(), base.add((*(*p).cipher).data_size - ctr_str_len)) != 0
             {
-                raise_site(&err_sites::PROV_DRBG_CTR_786);
+                raise_site(&err_sites::PROV_DRBG_CTR_1105);
                 return 0;
             }
             let ecb = CRYPTO_strndup(base, (*(*p).cipher).data_size, FILE_DRBG_CTR, LINE);
@@ -2787,7 +2801,7 @@ unsafe fn drbg_ctr_set_ctx_params_locked(
             (*ctr).cipher_ecb = EVP_CIPHER_fetch(libctx, ecb, propquery);
             CRYPTO_free(ecb.cast(), FILE_DRBG_CTR, LINE);
             if (*ctr).cipher_ctr.is_null() || (*ctr).cipher_ecb.is_null() {
-                raise_site(&err_sites::PROV_DRBG_CTR_805);
+                raise_site(&err_sites::PROV_DRBG_CTR_1124);
                 return 0;
             }
             cipher_init = 1;
@@ -3930,7 +3944,7 @@ pub(crate) unsafe fn ossl_drbg_hmac_init(
     // SAFETY: `hmac` is live per the contract.
     unsafe {
         if (*hmac).ctx.is_null() {
-            raise_site(&err_sites::PROV_DRBG_HMAC_131);
+            raise_site(&err_sites::PROV_DRBG_HMAC_129);
             return 0;
         }
         // (Step 2) Key = 0x00 00...00.
