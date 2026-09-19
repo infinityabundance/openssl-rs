@@ -3851,7 +3851,9 @@ static void rt_deflt_row_census(void)
         "DES-EDE3-ECB", "DES-EDE3-CBC", "DES-EDE3-OFB", "DES-EDE3-CFB",
         "DES-EDE3-CFB8", "DES-EDE3-CFB1", "DES-EDE-ECB", "DES-EDE-CBC",
         "DES-EDE-OFB", "DES-EDE-CFB",
-        /* The authority's `deflt_ciphers[]` order, which is the order this list is compared in. */
+        /* The authority's `deflt_ciphers[]` order, which is the order this list is compared in:
+         * the `SM4-*` five land between the ARIA family and `ChaCha20`. */
+        "SM4-ECB", "SM4-CBC", "SM4-CTR", "SM4-OFB", "SM4-CFB",
         "ChaCha20",
     };
     size_t i;
@@ -5466,6 +5468,126 @@ static void rt_deflt_chacha20(void)
 }
 
 /*
+ * The five `SM4-*` block and stream rows -- the authority's only pure block cipher with **no
+ * low-level public API at all**, so the provider rows are the entire surface.
+ *
+ * The standard vector is the reason this arm is not just a round trip:
+ * **GB/T 32907-2016 / RFC 8998** gives key = plaintext = `0123456789abcdef fedcba9876543210` and
+ * ciphertext `681edf34 d206965e 86b3e94f 536e4246`, and SM4-ECB must produce exactly that block.
+ * Everything else here is the row mechanics: the two block modes keep a sixteen-byte block size and
+ * the three stream modes report **one byte**, which is the difference a caller reasons about.
+ */
+static void rt_deflt_sm4(void)
+{
+    static const unsigned char key[16] = {
+        0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
+        0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10
+    };
+    static const unsigned char iv[16] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
+    };
+    static const char *rows[] = { "SM4-ECB", "SM4-CBC", "SM4-CTR", "SM4-OFB", "SM4-CFB" };
+    unsigned char in[64], out[128], dec[128];
+    size_t r, i;
+
+    for (i = 0; i < sizeof(in); i++)
+        in[i] = (unsigned char)(i * 3 + 1);
+
+    for (r = 0; r < sizeof(rows) / sizeof(rows[0]); r++) {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, rows[r], NULL);
+        EVP_CIPHER_CTX *e, *d;
+        int l1, l2;
+        size_t olen = 0, dlen = 0;
+
+        printf("sm4.%s.fetched=%d\n", rows[r], c != NULL);
+        if (c == NULL)
+            continue;
+
+        /*
+         * The standard block, through SM4-ECB with **no padding**: sixteen bytes in, sixteen out.
+         * SM4-CBC would need an IV and would not show the raw block, so the vector is checked on the
+         * row the standard is stated for.
+         */
+        if (strcmp(rows[r], "SM4-ECB") == 0) {
+            EVP_CIPHER_CTX *k = EVP_CIPHER_CTX_new();
+            unsigned char one[16], kout[16];
+            int n = 0;
+
+            EVP_EncryptInit_ex(k, c, NULL, key, NULL);
+            EVP_CIPHER_CTX_set_padding(k, 0);
+            printf("sm4.ecb.vector.update=%d\n",
+                   EVP_EncryptUpdate(k, kout, &n, key, 16));
+            printf("sm4.ecb.vector.len=%d\n", n);
+            rt_hex("sm4.ecb.vector", kout, (size_t)n);
+            printf("sm4.ecb.vector.matches=%d\n", n == 16
+                   && kout[0] == 0x68 && kout[1] == 0x1e && kout[2] == 0xdf && kout[3] == 0x34
+                   && kout[4] == 0xd2 && kout[5] == 0x06 && kout[6] == 0x96 && kout[7] == 0x5e
+                   && kout[8] == 0x86 && kout[9] == 0xb3 && kout[10] == 0xe9 && kout[11] == 0x4f
+                   && kout[12] == 0x53 && kout[13] == 0x6e && kout[14] == 0x42 && kout[15] == 0x46);
+            /* And the decrypt twin, which walks the same schedule backwards. */
+            memset(one, 0, sizeof(one));
+            EVP_DecryptInit_ex(k, c, NULL, key, NULL);
+            EVP_CIPHER_CTX_set_padding(k, 0);
+            printf("sm4.ecb.vector.dec=%d\n",
+                   EVP_DecryptUpdate(k, one, &n, kout, 16));
+            rt_hex("sm4.ecb.vector.dec", one, (size_t)n);
+            EVP_CIPHER_CTX_free(k);
+        }
+
+        /* The 64-byte round trip, with the IV only where the row takes one. */
+        e = EVP_CIPHER_CTX_new();
+        d = EVP_CIPHER_CTX_new();
+        printf("sm4.%s.enc.init=%d\n", rows[r],
+               EVP_EncryptInit_ex(e, c, NULL, key, strcmp(rows[r], "SM4-ECB") == 0 ? NULL : iv));
+        EVP_CIPHER_CTX_set_padding(e, 0);
+        printf("sm4.%s.enc.update=%d\n", rows[r], EVP_EncryptUpdate(e, out, &l1, in, 64));
+        olen += (size_t)l1;
+        printf("sm4.%s.enc.final=%d\n", rows[r], EVP_EncryptFinal_ex(e, out + olen, &l2));
+        olen += (size_t)l2;
+        printf("sm4.%s.enc.len=%zu\n", rows[r], olen);
+        rt_hex_w("sm4", rows[r], out, olen);
+
+        printf("sm4.%s.dec.init=%d\n", rows[r],
+               EVP_DecryptInit_ex(d, c, NULL, key, strcmp(rows[r], "SM4-ECB") == 0 ? NULL : iv));
+        EVP_CIPHER_CTX_set_padding(d, 0);
+        printf("sm4.%s.dec.update=%d\n", rows[r], EVP_DecryptUpdate(d, dec, &l1, out, (int)olen));
+        dlen += (size_t)l1;
+        printf("sm4.%s.dec.final=%d\n", rows[r], EVP_DecryptFinal_ex(d, dec + dlen, &l2));
+        dlen += (size_t)l2;
+        printf("sm4.%s.dec.len=%zu\n", rows[r], dlen);
+        printf("sm4.%s.roundtrip=%d\n", rows[r],
+               dlen == 64 && memcmp(dec, in, 64) == 0);
+
+        /* A three-way split of the same message must agree with the one-shot: the partial-block and
+         * counter paths are where a stream mode and a CBC chain differ from ECB. */
+        {
+            EVP_CIPHER_CTX *s = EVP_CIPHER_CTX_new();
+            unsigned char split[128];
+            size_t slen = 0;
+
+            EVP_EncryptInit_ex(s, c, NULL, key, strcmp(rows[r], "SM4-ECB") == 0 ? NULL : iv);
+            EVP_CIPHER_CTX_set_padding(s, 0);
+            EVP_EncryptUpdate(s, split, &l1, in, 13);
+            slen += (size_t)l1;
+            EVP_EncryptUpdate(s, split + slen, &l1, in + 13, 30);
+            slen += (size_t)l1;
+            EVP_EncryptUpdate(s, split + slen, &l1, in + 43, 21);
+            slen += (size_t)l1;
+            EVP_EncryptFinal_ex(s, split + slen, &l2);
+            slen += (size_t)l2;
+            printf("sm4.%s.split.len=%zu\n", rows[r], slen);
+            printf("sm4.%s.split.agrees=%d\n", rows[r],
+                   slen == olen && memcmp(split, out, olen) == 0);
+            EVP_CIPHER_CTX_free(s);
+        }
+
+        EVP_CIPHER_CTX_free(e);
+        EVP_CIPHER_CTX_free(d);
+        EVP_CIPHER_free(c);
+    }
+}
+/*
  * The `BLAKE2BMAC` and `BLAKE2SMAC` rows. One implementation instantiated twice, so the arm takes
  * the four widths as parameters rather than being written twice -- and the widths are the whole
  * difference between the rows, which is why they are printed rather than assumed.
@@ -6796,6 +6918,7 @@ int main(void)
     rt_deflt_poly1305();
     rt_deflt_kmac();
     rt_deflt_chacha20();
+    rt_deflt_sm4();
     rt_deflt_errors();
     rt_disp_failures();
     return 0;

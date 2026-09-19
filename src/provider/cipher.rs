@@ -8976,6 +8976,13 @@ macro_rules! alias {
 }
 alias!(N_NULL, "NULL");
 alias!(N_CHACHA20, "ChaCha20");
+// The **whole** alias sequence, OIDs included -- `prov/names.h:168-172`. The first version of this
+// block used the primary names alone, which is the short-alias defect D244 exists for.
+alias!(N_SM4_ECB, "SM4-ECB:1.2.156.10197.1.104.1");
+alias!(N_SM4_CBC, "SM4-CBC:SM4:1.2.156.10197.1.104.2");
+alias!(N_SM4_CTR, "SM4-CTR:1.2.156.10197.1.104.7");
+alias!(N_SM4_OFB, "SM4-OFB:SM4-OFB128:1.2.156.10197.1.104.3");
+alias!(N_SM4_CFB, "SM4-CFB:SM4-CFB128:1.2.156.10197.1.104.4");
 alias!(N_AES_256_ECB, "AES-256-ECB:2.16.840.1.101.3.4.1.41");
 alias!(N_AES_192_ECB, "AES-192-ECB:2.16.840.1.101.3.4.1.21");
 alias!(N_AES_128_ECB, "AES-128-ECB:2.16.840.1.101.3.4.1.1");
@@ -9132,7 +9139,7 @@ const fn row(names: *const c_char, implementation: *const c_void) -> OsslAlgorit
 
 /// `static const OSSL_ALGORITHM_CAPABLE deflt_ciphers[]` — `providers/defltprov.c:161-330`,
 /// restricted to the rows this half implements, in the authority's order.
-pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 84] = [
+pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 89] = [
     row(N_NULL, NULL_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_ECB, AES256ECB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_ECB, AES192ECB_FUNCTIONS.as_ptr().cast()),
@@ -9251,6 +9258,11 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 84] = [
     row(N_DES_EDE_CBC, TDES_EDE2_CBC_FUNCTIONS.as_ptr().cast()),
     row(N_DES_EDE_OFB, TDES_EDE2_OFB_FUNCTIONS.as_ptr().cast()),
     row(N_DES_EDE_CFB, TDES_EDE2_CFB_FUNCTIONS.as_ptr().cast()),
+    row(N_SM4_ECB, SM4128ECB_FUNCTIONS.as_ptr().cast()),
+    row(N_SM4_CBC, SM4128CBC_FUNCTIONS.as_ptr().cast()),
+    row(N_SM4_CTR, SM4128CTR_FUNCTIONS.as_ptr().cast()),
+    row(N_SM4_OFB, SM4128OFB128_FUNCTIONS.as_ptr().cast()),
+    row(N_SM4_CFB, SM4128CFB128_FUNCTIONS.as_ptr().cast()),
     row(N_CHACHA20, CHACHA20_FUNCTIONS.as_ptr().cast()),
     OsslAlgorithm {
         algorithm_names: ptr::null(),
@@ -9942,6 +9954,353 @@ pub(crate) static CHACHA20_FUNCTIONS: [OsslDispatch; 15] = [
     },
 ];
 
+// ---------------------------------------------------------------------------------------------
+// `cipher_sm4.c` and `cipher_sm4_hw.c` — the `SM4-*` rows
+// ---------------------------------------------------------------------------------------------
+//
+// **SM4 has no low-level public API in this authority.** `nm -D libcrypto.so.3` lists no `SM4_*`
+// symbol, `include/crypto/sm4.h` is internal, and its three names — `ossl_sm4_set_key`,
+// `ossl_sm4_encrypt`, `ossl_sm4_decrypt` — are internal functions. So unlike AES and Camellia there
+// is no `EVP_sm4 *`-style surface to keep and this unit exists entirely for the default provider's
+// eight rows; the primitive is `src/sm4.rs`'s (D266).
+//
+// **The C path is what is transcribed and the x86-64 hardware path is declined.** `sm4.c` *is*
+// compiled in this profile (`libcrypto-lib-sm4.o` exists beside `libcrypto-lib-sm4-x86_64.o`), and
+// `cipher_sm4_hw.c`'s `HWSM4_CAPABLE` plus `cipher_sm4_hw_x86_64.inc`'s `HWSM4_CAPABLE_X86_64`
+// choose between the two **at runtime**, with the x86-64 table installed when the CPU reports the
+// extension. SM4 is a pure function of key and block, so the bytes are identical either way — the
+// same decline D209 records for AES and D222 for Camellia's key table.
+//
+// **The consequence is that each row installs the C `PROV_CIPHER_HW` directly, and the five
+// `ossl_prov_cipher_hw_sm4_*` selectors have no caller here.** The authority's
+// `IMPLEMENT_generic_cipher` reaches its hw through `ossl_prov_cipher_hw_<alg>_<mode>(kbits)`, and on
+// the x86-64 path that function returns `hw_x86_64_sm4_<mode>` — a table whose only difference is
+// which pointer `initkey` stores in `ctx->block`. Since the assembly is declined, the C table *is*
+// this transcription's answer, so the selectors are transcribed for their own sake and marked as
+// uncalled rather than left out: a reader of `cipher_sm4.h` should find every name it declares.
+//
+// One thing about the row's *behaviour* is worth stating where it can be seen. `IMPLEMENT_generic_cipher`
+// passes `blkbits` independently of `kbits`, and `cipher_sm4.c` gives SM4-CTR/OFB/CFB a **block size
+// of one byte** (`128, 8, 128`) while ECB and CBC keep 128. That is what tells every
+// alignment-reasoning caller that the three stream modes are streams, and it is the `blkbits`
+// argument below.
+
+/// `SM4_BLOCK_SIZE * 8` — the two block modes' `blkbits`, expressed through the primitive's own
+/// constant rather than as the literal `128` the authority's macro invocation writes. The five
+/// stream modes pass `8` instead, which is `cipher_sm4.c:48-52`'s one-byte block size.
+const SM4_BLK_BITS: usize = crate::sm4::SM4_BLOCK_SIZE * 8;
+
+/// The allocation-tracking `file` argument for this row's allocations. `cipher_sm4.c` is a
+/// source-tree file rather than a `.c.in` template, so its `__FILE__` carries the
+/// `../../src/openssl-3.6.4/` prefix.
+const FILE_SM4: *const c_char =
+    c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_sm4.c".as_ptr();
+
+/// `ossl_sm4_encrypt` as the generic engine's `block128_f` — `cipher_sm4_hw.c:116`'s cast.
+///
+/// The cast is a transcription, not a convenience: the authority stores
+/// `(block128_f)ossl_sm4_encrypt`, and `block128_f` takes the schedule as a `const void *` while the
+/// function itself takes `const SM4_KEY *`. Same address, different type, so the trampoline is what
+/// the cast is in C.
+///
+/// # Safety
+/// As [`crate::sm4::ossl_sm4_encrypt`]; `key` is a `SM4_KEY *`.
+unsafe extern "C" fn sm4_block_encrypt(in_: *const c_uchar, out: *mut c_uchar, key: *const c_void) {
+    // SAFETY: the caller's contract.
+    unsafe { crate::sm4::ossl_sm4_encrypt(in_, out, key.cast()) }
+}
+
+/// `ossl_sm4_decrypt` as the generic engine's `block128_f`. See [`sm4_block_encrypt`].
+///
+/// # Safety
+/// As [`crate::sm4::ossl_sm4_decrypt`]; `key` is a `SM4_KEY *`.
+unsafe extern "C" fn sm4_block_decrypt(in_: *const c_uchar, out: *mut c_uchar, key: *const c_void) {
+    // SAFETY: the caller's contract.
+    unsafe { crate::sm4::ossl_sm4_decrypt(in_, out, key.cast()) }
+}
+
+/// `struct prov_sm4_ctx_st` — `cipher_sm4.h:17-24`. The authority's `ks` is a union whose live
+/// member is `SM4_KEY`; there is no other member, so it is a plain field whose alignment is the
+/// union's, and the unit test binds the resulting size.
+#[repr(C)]
+pub(crate) struct ProvSm4Ctx {
+    /// `PROV_CIPHER_CTX base; /* Must be first */`.
+    pub base: ProvCipherCtx,
+    /// `union { OSSL_UNION_ALIGN; SM4_KEY ks; } ks`.
+    pub ks: crate::sm4::Sm4Key,
+}
+
+/// `static int cipher_hw_sm4_initkey(PROV_CIPHER_CTX *ctx, const unsigned char *key,
+/// size_t keylen)` — `cipher_sm4_hw.c:13-121`, the `#else`-side C body.
+///
+/// **The encrypt schedule serves both directions, and which block function is stored depends on the
+/// mode as well as the direction.** The condition is
+/// `ctx->enc || (ctx->mode != ECB && ctx->mode != CBC)`: an *encrypting* context always gets
+/// `ossl_sm4_encrypt`, and a **decrypting** one gets `ossl_sm4_decrypt` only for ECB and CBC —
+/// because those are the two modes that call the block function directly on the way in. A
+/// decrypting CTR/OFB/CFB context gets the *encrypt* function, because those modes only ever encrypt
+/// the counter or the feedback register.
+///
+/// `ctx->ks` is set to point into the context's own `ks` field, which is what the generic modes pass
+/// as the `key` argument to the block function.
+///
+/// `ctx->stream` is left **untouched** — the authority's C branch writes neither `stream.cbc` nor
+/// `stream.ecb` nor `stream.ctr`, and the x86-64 branch writes `stream.cbc = NULL`. Both leave it
+/// NULL, because `ossl_cipher_generic_initkey` does not write it and the context is `zalloc`'d, so
+/// the generic CBC/ECB paths fall through to `block`. Setting it explicitly here would be a
+/// difference from the C body that happens to agree with the assembly.
+///
+/// # Safety
+/// The hw contract; `ctx` is live; `key` is readable for sixteen bytes.
+unsafe extern "C" fn cipher_hw_sm4_initkey(
+    ctx: *mut ProvCipherCtx,
+    key: *const c_uchar,
+    _keylen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let sctx = ctx.cast::<ProvSm4Ctx>();
+        let ks: *mut crate::sm4::Sm4Key = ptr::addr_of_mut!((*sctx).ks);
+        (*ctx).ks = ks.cast();
+
+        if (*ctx).enc_int() != 0
+            || ((*ctx).mode != EVP_CIPH_ECB_MODE && (*ctx).mode != EVP_CIPH_CBC_MODE)
+        {
+            crate::sm4::ossl_sm4_set_key(key, ks);
+            (*ctx).block = Some(sm4_block_encrypt);
+        } else {
+            crate::sm4::ossl_sm4_set_key(key, ks);
+            (*ctx).block = Some(sm4_block_decrypt);
+        }
+        1
+    }
+}
+
+/// `IMPLEMENT_CIPHER_HW_COPYCTX(cipher_hw_sm4_copyctx, PROV_SM4_CTX)` — `cipher_sm4_hw.c:124`.
+///
+/// The macro copies the whole row-specific struct onto the destination's base. Unlike ChaCha20's hw
+/// this one **is** installed, because `sm4_dupctx` calls it.
+///
+/// # Safety
+/// The hw contract; both contexts are live and `dst`'s row fields are uninitialised.
+unsafe extern "C" fn cipher_hw_sm4_copyctx(dst: *mut ProvCipherCtx, src: *const ProvCipherCtx) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        core::ptr::copy_nonoverlapping(src.cast::<ProvSm4Ctx>(), dst.cast::<ProvSm4Ctx>(), 1);
+    }
+}
+
+/// `static void sm4_freectx(void *vctx)` — `cipher_sm4.c:20-25`. Cleared before release, because the
+/// context holds a key schedule.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn sm4_freectx(vctx: *mut c_void) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        ossl_cipher_generic_reset_ctx(vctx.cast::<ProvCipherCtx>());
+        CRYPTO_clear_free(vctx, core::mem::size_of::<ProvSm4Ctx>(), FILE_SM4, LINE);
+    }
+}
+
+/// `static void *sm4_dupctx(void *ctx)` — `cipher_sm4.c:27-41`.
+///
+/// Note what it does **not** do: it does not check `vctx` for NULL, and it copies only the base plus
+/// whatever `copyctx` writes — so the `ks` field arrives through the hw, not through the allocation.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn sm4_dupctx(vctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let in_ = vctx.cast::<ProvSm4Ctx>();
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let ret = CRYPTO_malloc(core::mem::size_of::<ProvSm4Ctx>(), FILE_SM4, LINE);
+        if ret.is_null() {
+            return ptr::null_mut();
+        }
+        let hw = (*in_).base.hw;
+        if let Some(copyctx) = (*hw).copyctx {
+            copyctx(ret.cast(), vctx.cast());
+        }
+        ret
+    }
+}
+
+/// `PROV_CIPHER_HW_sm4_mode(mode)` — `cipher_sm4_hw.c:127-137`, the five tables. The `select`
+/// variant's `#define`s are empty in the generic case and are transcribed separately below.
+static SM4_ECB_HW: ProvCipherHw = ProvCipherHw {
+    init: cipher_hw_sm4_initkey,
+    cipher: ossl_cipher_hw_generic_ecb,
+    copyctx: Some(cipher_hw_sm4_copyctx),
+};
+static SM4_CBC_HW: ProvCipherHw = ProvCipherHw {
+    init: cipher_hw_sm4_initkey,
+    cipher: ossl_cipher_hw_generic_cbc,
+    copyctx: Some(cipher_hw_sm4_copyctx),
+};
+static SM4_OFB128_HW: ProvCipherHw = ProvCipherHw {
+    init: cipher_hw_sm4_initkey,
+    cipher: ossl_cipher_hw_generic_ofb128,
+    copyctx: Some(cipher_hw_sm4_copyctx),
+};
+static SM4_CFB128_HW: ProvCipherHw = ProvCipherHw {
+    init: cipher_hw_sm4_initkey,
+    cipher: ossl_cipher_hw_generic_cfb128,
+    copyctx: Some(cipher_hw_sm4_copyctx),
+};
+static SM4_CTR_HW: ProvCipherHw = ProvCipherHw {
+    init: cipher_hw_sm4_initkey,
+    cipher: ossl_cipher_hw_generic_ctr,
+    copyctx: Some(cipher_hw_sm4_copyctx),
+};
+
+/// `const PROV_CIPHER_HW *ossl_prov_cipher_hw_sm4_ecb(size_t keybits)` —
+/// `cipher_sm4_hw.c:139-146`, and the four siblings.
+///
+/// **Transcribed and uncalled.** The authority's `IMPLEMENT_generic_cipher` reaches its hw through
+/// these, and on the x86-64 path they answer `hw_x86_64_sm4_<mode>` when the CPU reports the SM4
+/// extension. Since that assembly is declined, the C table is this transcription's answer and each
+/// row installs it directly — so these five have no caller in the crate, and they exist because
+/// `cipher_sm4.h` declares them and a reader should find every declared name.
+///
+/// `keybits` is ignored by all five: SM4's key is sixteen bytes and there is one of them.
+#[allow(dead_code)] // no caller by construction: the rows install the C tables directly (D266)
+fn ossl_prov_cipher_hw_sm4_ecb(_keybits: usize) -> *const ProvCipherHw {
+    ptr::addr_of!(SM4_ECB_HW)
+}
+/// See [`ossl_prov_cipher_hw_sm4_ecb`].
+#[allow(dead_code)] // as above
+fn ossl_prov_cipher_hw_sm4_cbc(_keybits: usize) -> *const ProvCipherHw {
+    ptr::addr_of!(SM4_CBC_HW)
+}
+/// See [`ossl_prov_cipher_hw_sm4_ecb`].
+#[allow(dead_code)] // as above
+fn ossl_prov_cipher_hw_sm4_ofb128(_keybits: usize) -> *const ProvCipherHw {
+    ptr::addr_of!(SM4_OFB128_HW)
+}
+/// See [`ossl_prov_cipher_hw_sm4_ecb`].
+#[allow(dead_code)] // as above
+fn ossl_prov_cipher_hw_sm4_cfb128(_keybits: usize) -> *const ProvCipherHw {
+    ptr::addr_of!(SM4_CFB128_HW)
+}
+/// See [`ossl_prov_cipher_hw_sm4_ecb`].
+#[allow(dead_code)] // as above
+fn ossl_prov_cipher_hw_sm4_ctr(_keybits: usize) -> *const ProvCipherHw {
+    ptr::addr_of!(SM4_CTR_HW)
+}
+
+// `IMPLEMENT_generic_cipher(sm4, SM4, <mode>, <MODE>, 0, 128, <blkbits>, <ivbits>, <typ>)` —
+// `cipher_sm4.c:44-52`'s five invocations. The `0` is the mode-flags argument, which is
+// `EVP_CIPH_FLAG_DEFAULT_ASN1`-zero here: SM4 has no `CUSTOM_IV` and no `AEAD` flag.
+cipher_row!(
+    sm4128ecb_newctx,
+    sm4128ecb_get_params,
+    SM4128ECB_FUNCTIONS,
+    ProvSm4Ctx,
+    SM4_ECB_HW,
+    128,
+    SM4_BLK_BITS,
+    0,
+    EVP_CIPH_ECB_MODE,
+    0,
+    sm4_freectx,
+    sm4_dupctx,
+    ossl_cipher_generic_block_update,
+    ossl_cipher_generic_block_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+cipher_row!(
+    sm4128cbc_newctx,
+    sm4128cbc_get_params,
+    SM4128CBC_FUNCTIONS,
+    ProvSm4Ctx,
+    SM4_CBC_HW,
+    128,
+    SM4_BLK_BITS,
+    128,
+    EVP_CIPH_CBC_MODE,
+    0,
+    sm4_freectx,
+    sm4_dupctx,
+    ossl_cipher_generic_block_update,
+    ossl_cipher_generic_block_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+cipher_row!(
+    sm4128ctr_newctx,
+    sm4128ctr_get_params,
+    SM4128CTR_FUNCTIONS,
+    ProvSm4Ctx,
+    SM4_CTR_HW,
+    128,
+    8,
+    128,
+    EVP_CIPH_CTR_MODE,
+    0,
+    sm4_freectx,
+    sm4_dupctx,
+    ossl_cipher_generic_stream_update,
+    ossl_cipher_generic_stream_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+cipher_row!(
+    sm4128ofb128_newctx,
+    sm4128ofb128_get_params,
+    SM4128OFB128_FUNCTIONS,
+    ProvSm4Ctx,
+    SM4_OFB128_HW,
+    128,
+    8,
+    128,
+    EVP_CIPH_OFB_MODE,
+    0,
+    sm4_freectx,
+    sm4_dupctx,
+    ossl_cipher_generic_stream_update,
+    ossl_cipher_generic_stream_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+cipher_row!(
+    sm4128cfb128_newctx,
+    sm4128cfb128_get_params,
+    SM4128CFB128_FUNCTIONS,
+    ProvSm4Ctx,
+    SM4_CFB128_HW,
+    128,
+    8,
+    128,
+    EVP_CIPH_CFB_MODE,
+    0,
+    sm4_freectx,
+    sm4_dupctx,
+    ossl_cipher_generic_stream_update,
+    ossl_cipher_generic_stream_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -9949,9 +10308,9 @@ mod tests {
 
     #[test]
     fn the_cipher_table_terminates_and_names_the_rows() {
-        assert_eq!(DEFLT_CIPHERS.len(), 84);
+        assert_eq!(DEFLT_CIPHERS.len(), 89);
         // SAFETY: every entry up to the terminator is initialised.
-        let last = DEFLT_CIPHERS[83].algorithm_names;
+        let last = DEFLT_CIPHERS[88].algorithm_names;
         assert!(last.is_null(), "the table is NULL-name terminated");
         // SAFETY: the first row's name is a `'static` C string.
         let first = unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[0].algorithm_names) };

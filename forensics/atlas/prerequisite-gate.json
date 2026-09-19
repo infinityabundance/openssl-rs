@@ -30,7 +30,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 59,
-      "language_surface_not_modelled_by_name": 3107,
+      "language_surface_not_modelled_by_name": 3111,
       "planned_prerequisites": 14
     },
     "census_by_unit": {
@@ -234,6 +234,7 @@
         "crypto/sha/sha512.c": 7,
         "crypto/siphash/siphash.c": 2,
         "crypto/sm3/sm3.c": 16,
+        "crypto/sm4/sm4.c": 4,
         "crypto/sparse_array.c": 7,
         "crypto/stack/stack.c": 18,
         "crypto/thread/api.c": 4,
@@ -360,8 +361,8 @@
       ]
     },
     "checked": {
-      "authority_units": 170,
-      "crate_modules": 231,
+      "authority_units": 171,
+      "crate_modules": 232,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 25,
       "divergence_names_covered": 35,
@@ -483,7 +484,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "826fe239a46049e1643291dc75ca175f82eef98087ef88d462147c2c1065a460",
+  "body_hash": "8823be735d4c012f28781eee1f21c569a541f4cf281a0848a365b38f359800e1",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -504,7 +505,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "9c7f04ddae683d8d354a64536decae275e389a6976e84139afee8c264e3955b4"
+      "sha256": "d7fb9e20b37a3f078874b5846cd3eebb7f17796b36c84ec5bc0c7acf4f541d17"
     },
     {
       "name": "symbol-ownership",
@@ -519,12 +520,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "bc2d65dcff576cb884128cd0875f386a9e631ec34cc9fcaa9dc509157cc4c070"
+      "sha256": "e19edfc09b5865d03d25c8bd2acca16bfb6798e1c35a7c8d36da47c06372495a"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "19f92b3b6c90ecaff7c98e3903602d188ee643126c25edde7f6dc49bf71f3db2"
+      "sha256": "8e691dc7af5106ff94ad0e24ba6a3f2f968b1d0a81316447c094bc9cc44d8a09"
     },
     {
       "name": "prerequisites",
