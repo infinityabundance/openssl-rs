@@ -1,5 +1,6 @@
 //! Phase 8.3 — the default provider's MAC rows: `providers/implementations/macs/cmac_prov.c`
-//! (the `CMAC` row, landed) and `gmac_prov.c` (`GMAC`, transcribed and held for Phase 9).
+//! (the `CMAC` row), `siphash_prov.c` (`SIPHASH`), `hmac_prov.c` (`HMAC`) and `gmac_prov.c`
+//! (`GMAC`, transcribed and held for Phase 9).
 //!
 //! **Why these rows land with the ciphers rather than with a MAC stratum.** CMAC is the first
 //! `OSSL_OP_MAC` row anything in this crate needs: `crypto/modes/siv128.c` implements RFC 5297's
@@ -15,6 +16,14 @@
 //! sides and then make every `EVP_MAC_init` fail where the authority succeeds — worse than not
 //! publishing it, because the difference would be invisible to a fetch-only observation. So the
 //! row is Phase 9's with its blocker named in `provider-algorithm-plans.json` (D243).
+//!
+//! **`HMAC` is the row with a real engine behind it.** It is the third of HMAC's three units and
+//! the reason this stratum took `ssl3_cbc_digest_record` (D251), `PROV_DIGEST` (D249) and
+//! `constant_time.h`'s helpers (D250) ahead of itself: the row is a shell over
+//! `crypto/hmac/hmac.c`, and what it adds is the `tls-data-size` arm — a state machine where the
+//! first `update` is a stored 13-byte record header and the second is the record body whose MAC is
+//! computed in constant time. Nothing else in the crate reaches that function, which is why an
+//! ordinary HMAC comparison would not have observed it at all.
 //!
 //! **A row is a shell over landed machinery.** `CMAC_CTX_new`/`_free`/`_copy`/
 //! `_get0_cipher_ctx`, `CMAC_Init`/`Update`/`Final` and `ossl_cmac_init` are `src/mac/cmac.rs`'s,
@@ -41,8 +50,17 @@
 //! two get-decoder keys (`block-size`, `size`), four set-decoder keys (`cipher`, `engine`, `key`,
 //! `properties`), no `tdes_check_param`, and no `EVP_CIPHER_is_a` allow-list. `gmac_prov.c` has
 //! one get-decoder key (`size`) and five set-decoder keys (`cipher`, `engine`, `iv`, `key`,
-//! `properties`). Every raise site that remains reachable in either unit is transcribed, and
-//! `RT-MAC` courts the refusals.
+//! `properties`); `hmac_prov.c` has three get-decoder keys (`block-size`, `fips-indicator`,
+//! `size`) and six set-decoder keys (`digest`, `engine`, `fips-key-check`, `key`, `properties`,
+//! `tls-data-size`). Every raise site that remains reachable in either unit is transcribed, and
+//! the courts drain the queues the refusals leave.
+//!
+//! **The published parameter lists are observable, and this module's lists are checked against the
+//! authority's own descriptors.** `EVP_MAC_CTX_gettable_params`, `_settable_params` and
+//! `EVP_MAC_gettable_params` hand a caller the array, and a caller reads `data_size` as well as
+//! `data_type` and the key. The constructors in `src/provider/cipher.rs` mirror the authority's
+//! macros one-for-one for that reason, and `RT-CIPHER` prints every entry of every published list
+//! (D253).
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -56,6 +74,7 @@ use crate::evp::cipher_ctx::{
     EVP_CIPHER_CTX_get_block_size, EVP_CIPHER_CTX_get_key_length, EVP_CIPHER_CTX_get_params,
     EVP_CIPHER_CTX_new, EVP_EncryptFinal_ex, EVP_EncryptInit_ex, EVP_EncryptUpdate, EvpCipherCtx,
 };
+use crate::evp::digest::EVP_MD_get_block_size;
 use crate::evp::mac::{
     OSSL_FUNC_MAC_DUPCTX, OSSL_FUNC_MAC_FINAL, OSSL_FUNC_MAC_FREECTX,
     OSSL_FUNC_MAC_GETTABLE_CTX_PARAMS, OSSL_FUNC_MAC_GETTABLE_PARAMS, OSSL_FUNC_MAC_GET_CTX_PARAMS,
@@ -66,27 +85,46 @@ use crate::mac::cmac::{
     ossl_cmac_init, CMAC_CTX_copy, CMAC_CTX_free, CMAC_CTX_get0_cipher_ctx, CMAC_CTX_new,
     CMAC_Final, CMAC_Init, CMAC_Update, CmacCtx,
 };
+use crate::mac::hmac::{
+    HMAC_CTX_copy, HMAC_CTX_free, HMAC_CTX_new, HMAC_Final, HMAC_Init_ex, HMAC_Update, HMAC_size,
+    HmacCtx,
+};
 use crate::mac::siphash::{
     SipHash_Final, SipHash_Init, SipHash_Update, SipHash_hash_size, SipHash_set_hash_size, Siphash,
     SIPHASH_C_ROUNDS, SIPHASH_D_ROUNDS, SIPHASH_KEY_SIZE,
 };
-use crate::params::{
-    OsslParam, END, OSSL_PARAM_OCTET_STRING, OSSL_PARAM_UNSIGNED_INTEGER, OSSL_PARAM_UTF8_STRING,
-};
+use crate::mac::ssl3_cbc::ssl3_cbc_digest_record;
+use crate::params::{OsslParam, END, OSSL_PARAM_OCTET_STRING};
 use crate::provider::activate::OsslAlgorithm;
-use crate::provider::cipher::{param, repeated_param_site};
+use crate::provider::cipher::{
+    param_octet_string, param_size_t, param_uint, param_utf8_string, repeated_param_site,
+};
 use crate::provider::ctx::prov_libctx_of;
+use crate::provider::util::prov_digest::{
+    ossl_prov_digest_copy, ossl_prov_digest_engine, ossl_prov_digest_load, ossl_prov_digest_md,
+    ossl_prov_digest_reset, ProvDigest,
+};
 use crate::provider::util::{
     ossl_prov_cipher_cipher, ossl_prov_cipher_copy, ossl_prov_cipher_engine, ossl_prov_cipher_load,
-    ossl_prov_cipher_reset, ProvCipher,
+    ossl_prov_cipher_reset, ProvCipher, OSSL_ALG_PARAM_DIGEST,
 };
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 
-/// The allocation-tracking `file` argument for this unit's allocations: `cmac_prov.c` (the
-/// build-generated spelling, as the compiler recorded it).
-const FILE: *const c_char =
-    c"../../src/openssl-3.6.4/providers/implementations/macs/cmac_prov.c".as_ptr();
+/// The allocation-tracking `file` argument for CMAC's allocations.
+///
+/// **No `../../src/openssl-3.6.4/` prefix**, because `cmac_prov.c` is generated from
+/// `cmac_prov.c.in` and the compiler spells a generated file with its build-relative path only —
+/// D235's finding, and the same one `FILE_HMAC`'s note records. The three `FILE_*` constants here,
+/// `FILE_GMAC` and `FILE_SIPHASH` carried the prefix and this commit corrects them; the unit test
+/// below compares each against the `file` of a raise site in the same authority unit, which is the
+/// same `__FILE__` and therefore the same string.
+///
+/// The argument is inert on this profile in the sense that `OPENSSL_NO_CRYPTO_MDEBUG` means no
+/// allocator records it — but it is not unobservable: `CRYPTO_set_mem_functions` hands an
+/// application's own allocator the `file` pointer, and an application may compare it. So the string
+/// is contract, which is why the constants exist rather than being folded into `LINE`'s `` "" `` .
+const FILE: *const c_char = c"providers/implementations/macs/cmac_prov.c".as_ptr();
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
 
@@ -276,8 +314,8 @@ unsafe fn cmac_setkey(macctx: *mut CmacData, key: *const c_uchar, keylen: usize)
 /// `static const OSSL_PARAM cmac_get_ctx_params_list[]` — `cmac_prov.c:209-216`, the two keys
 /// this profile's generator emits.
 static CMAC_GETTABLE_CTX_PARAMS: [OsslParam; 3] = [
-    param(OSSL_MAC_PARAM_SIZE, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_MAC_PARAM_BLOCK_SIZE, OSSL_PARAM_UNSIGNED_INTEGER),
+    param_size_t(OSSL_MAC_PARAM_SIZE),
+    param_size_t(OSSL_MAC_PARAM_BLOCK_SIZE),
     END,
 ];
 
@@ -324,9 +362,9 @@ unsafe extern "C" fn cmac_get_ctx_params(vmacctx: *mut c_void, params: *mut Ossl
 /// `static const OSSL_PARAM cmac_set_ctx_params_list[]` — `cmac_prov.c:311-319`, the three keys
 /// this profile's generator emits. `engine` is **not** here: it is a `hidden` decoder key.
 static CMAC_SETTABLE_CTX_PARAMS: [OsslParam; 4] = [
-    param(OSSL_MAC_PARAM_CIPHER, OSSL_PARAM_UTF8_STRING),
-    param(OSSL_MAC_PARAM_PROPERTIES, OSSL_PARAM_UTF8_STRING),
-    param(OSSL_MAC_PARAM_KEY, OSSL_PARAM_OCTET_STRING),
+    param_utf8_string(OSSL_MAC_PARAM_CIPHER),
+    param_utf8_string(OSSL_MAC_PARAM_PROPERTIES),
+    param_octet_string(OSSL_MAC_PARAM_KEY),
     END,
 ];
 
@@ -515,21 +553,27 @@ pub(crate) static CMAC_FUNCTIONS: [OsslDispatch; 11] = [
 /// `static const OSSL_ALGORITHM deflt_macs[]` — `providers/defltprov.c:334-353`, restricted to
 /// the rows this half implements, **in the authority's order**. `deflt_macs[]` carries nine rows
 /// (`BLAKE2BMAC`, `BLAKE2SMAC`, `CMAC`, `GMAC`, `HMAC`, `KMAC-128`, `KMAC-256`, `POLY1305`,
-/// `SIPHASH`), so `SIPHASH` is not appended: it is the authority's ninth row and the census checks
-/// that the rows this table publishes are a **subsequence** of the authority's order (D244). GMAC
-/// is `deferred` to Phase 9 with its blocker named (D243) and its engine is transcribed above;
-/// `BLAKE2BMAC`, `BLAKE2SMAC`, `HMAC`, `KMAC-128`, `KMAC-256` and `POLY1305` stay `open` with
-/// `owning_phase: 8`, and the census's exact accounting is what keeps all of that true.
+/// `SIPHASH`), so `HMAC` and `SIPHASH` are not appended: they are the authority's fifth and ninth
+/// rows, and the census checks that the rows this table publishes are a **subsequence** of the
+/// authority's order (D244). GMAC is `deferred` to Phase 9 with its blocker named (D243) and its
+/// engine is transcribed; `BLAKE2BMAC`, `BLAKE2SMAC`, `KMAC-128`, `KMAC-256` and `POLY1305` stay
+/// `open` with `owning_phase: 8`, and the census's exact accounting is what keeps all of that true.
 ///
 /// **The property definition is `"provider=default"` on every row.** `defltprov.c`'s `ALG` macro
 /// expands through `ALGC(NAMES, FUNC, CHECK) { { NAMES, "provider=default", FUNC }, CHECK }`, and
 /// D247 is what a NULL there cost: a fetch whose property query is `provider=default` stopped
 /// resolving, and `provider!=default` resolved when it should not have.
-pub(crate) static DEFLT_MACS: [OsslAlgorithm; 3] = [
+pub(crate) static DEFLT_MACS: [OsslAlgorithm; 4] = [
     OsslAlgorithm {
         algorithm_names: c"CMAC".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
         implementation: CMAC_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"HMAC".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: HMAC_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
@@ -566,8 +610,7 @@ const EVP_CIPH_GCM_MODE: c_int = 0x6;
 const EVP_GCM_TLS_TAG_LEN: usize = 16;
 
 /// The allocation-tracking `file` argument for the GMAC row's allocations: `gmac_prov.c`.
-const FILE_GMAC: *const c_char =
-    c"../../src/openssl-3.6.4/providers/implementations/macs/gmac_prov.c".as_ptr();
+const FILE_GMAC: *const c_char = c"providers/implementations/macs/gmac_prov.c".as_ptr();
 
 /// `struct gmac_data_st` — `gmac_prov.c:48-52`. Three fields, and the middle one is why the row
 /// is a shell over `EVP_CIPHER`'s GCM path rather than over GHASH directly.
@@ -805,8 +848,7 @@ unsafe extern "C" fn gmac_final(
 /// `static const OSSL_PARAM gmac_get_params_list[]` — `gmac_prov.c:176-179`. This is the
 /// **provider-level** list (`OSSL_FUNC_MAC_GETTABLE_PARAMS`), not a ctx-params list: GMAC has one
 /// and CMAC does not.
-static GMAC_GETTABLE_PARAMS: [OsslParam; 2] =
-    [param(OSSL_MAC_PARAM_SIZE, OSSL_PARAM_UNSIGNED_INTEGER), END];
+static GMAC_GETTABLE_PARAMS: [OsslParam; 2] = [param_size_t(OSSL_MAC_PARAM_SIZE), END];
 
 /// `static const OSSL_PARAM *gmac_gettable_params(void *provctx)` — `gmac_prov.c:181-184`.
 ///
@@ -839,10 +881,10 @@ unsafe extern "C" fn gmac_get_params(params: *mut OsslParam) -> c_int {
 /// `static const OSSL_PARAM gmac_set_ctx_params_list[]` — `gmac_prov.c:233-239`, the four keys
 /// this profile's generator emits. `engine` is a `hidden` decoder key and is deliberately absent.
 static GMAC_SETTABLE_CTX_PARAMS: [OsslParam; 5] = [
-    param(OSSL_MAC_PARAM_CIPHER, OSSL_PARAM_UTF8_STRING),
-    param(OSSL_MAC_PARAM_PROPERTIES, OSSL_PARAM_UTF8_STRING),
-    param(OSSL_MAC_PARAM_KEY, OSSL_PARAM_OCTET_STRING),
-    param(OSSL_MAC_PARAM_IV, OSSL_PARAM_OCTET_STRING),
+    param_utf8_string(OSSL_MAC_PARAM_CIPHER),
+    param_utf8_string(OSSL_MAC_PARAM_PROPERTIES),
+    param_octet_string(OSSL_MAC_PARAM_KEY),
+    param_octet_string(OSSL_MAC_PARAM_IV),
     END,
 ];
 
@@ -1021,8 +1063,7 @@ pub(crate) static GMAC_FUNCTIONS: [OsslDispatch; 11] = [
 ];
 
 /// The allocation-tracking `file` argument for the SipHash row's allocations: `siphash_prov.c`.
-const FILE_SIPHASH: *const c_char =
-    c"../../src/openssl-3.6.4/providers/implementations/macs/siphash_prov.c".as_ptr();
+const FILE_SIPHASH: *const c_char = c"providers/implementations/macs/siphash_prov.c".as_ptr();
 
 /// `struct siphash_data_st` — `siphash_prov.c:45-50`.
 ///
@@ -1266,9 +1307,9 @@ const SIPHASH_SET_PARAMS_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 4]
 
 /// `static const OSSL_PARAM siphash_get_ctx_params_list[]` — `siphash_prov.c:157-162`.
 static SIPHASH_GETTABLE_CTX_PARAMS: [OsslParam; 4] = [
-    param(OSSL_MAC_PARAM_SIZE, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_MAC_PARAM_C_ROUNDS, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_MAC_PARAM_D_ROUNDS, OSSL_PARAM_UNSIGNED_INTEGER),
+    param_size_t(OSSL_MAC_PARAM_SIZE),
+    param_uint(OSSL_MAC_PARAM_C_ROUNDS),
+    param_uint(OSSL_MAC_PARAM_D_ROUNDS),
     END,
 ];
 
@@ -1319,10 +1360,10 @@ unsafe extern "C" fn siphash_get_ctx_params(vmacctx: *mut c_void, params: *mut O
 
 /// `static const OSSL_PARAM siphash_set_params_list[]` — `siphash_prov.c:188-194`.
 static SIPHASH_SETTABLE_CTX_PARAMS: [OsslParam; 5] = [
-    param(OSSL_MAC_PARAM_SIZE, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_MAC_PARAM_KEY, OSSL_PARAM_OCTET_STRING),
-    param(OSSL_MAC_PARAM_C_ROUNDS, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_MAC_PARAM_D_ROUNDS, OSSL_PARAM_UNSIGNED_INTEGER),
+    param_size_t(OSSL_MAC_PARAM_SIZE),
+    param_octet_string(OSSL_MAC_PARAM_KEY),
+    param_uint(OSSL_MAC_PARAM_C_ROUNDS),
+    param_uint(OSSL_MAC_PARAM_D_ROUNDS),
     END,
 ];
 
@@ -1439,6 +1480,591 @@ pub(crate) static SIPHASH_FUNCTIONS: [OsslDispatch; 11] = [
     },
 ];
 
+// ---------------------------------------------------------------------------------------------
+// `HMAC` — `providers/implementations/macs/hmac_prov.c`
+// ---------------------------------------------------------------------------------------------
+
+/// `OSSL_MAC_PARAM_TLS_DATA_SIZE` — `core_names.h:354` (`"tls-data-size"`). The parameter that
+/// switches the row from the ordinary HMAC path to `ssl3_cbc_digest_record`.
+const OSSL_MAC_PARAM_TLS_DATA_SIZE: *const c_char = c"tls-data-size".as_ptr();
+
+/// The `file` argument of this unit's allocations.
+///
+/// **`hmac_prov.c` is generated from `hmac_prov.c.in`, so `__FILE__` carries only the
+/// build-relative path.** That is D235's finding and it is checked, not asserted: a unit test below
+/// compares this constant with the `file` of every `PROV_HMAC_PROV_*` raise site in the same unit,
+/// because both are `__FILE__` and the two must therefore be one string. The three `FILE_*`
+/// constants above it said otherwise and this commit corrects them.
+const FILE_HMAC: *const c_char = c"providers/implementations/macs/hmac_prov.c".as_ptr();
+
+/// `EVP_MAX_MD_SIZE` — `include/openssl/evp.h`, the width of `tls_mac_out`.
+const EVP_MAX_MD_SIZE: usize = 64;
+
+/// `struct hmac_data_st` — `hmac_prov.c:57-78`. `OSSL_FIPS_IND_DECLARE` contributes no field when
+/// `FIPS_MODULE` is undefined, so these ten are the whole struct in this profile, and `internal` is
+/// inside the same `#ifdef` and absent with it.
+#[repr(C)]
+pub(crate) struct HmacData {
+    /// `void *provctx` — the creating provider's context, which the digest fetch is scoped to.
+    pub provctx: *mut c_void,
+    /// `HMAC_CTX *ctx` — `crypto/hmac/hmac.c`'s context, the row being a shell over it.
+    pub ctx: *mut HmacCtx,
+    /// `PROV_DIGEST digest` — the construct's digest, resolved from a *name*.
+    pub digest: ProvDigest,
+    /// `unsigned char *key` — *"Keep a copy of the key in case we need it for TLS HMAC"*.
+    pub key: *mut c_uchar,
+    /// `size_t keylen`.
+    pub keylen: usize,
+    /// `size_t tls_data_size` — *"Length of full TLS record including the MAC and any padding"*.
+    pub tls_data_size: usize,
+    /// `unsigned char tls_header[13]` — the first `update` call's payload in the TLS arm.
+    pub tls_header: [c_uchar; 13],
+    /// `int tls_header_set`.
+    pub tls_header_set: c_int,
+    /// `unsigned char tls_mac_out[EVP_MAX_MD_SIZE]`.
+    pub tls_mac_out: [c_uchar; EVP_MAX_MD_SIZE],
+    /// `size_t tls_mac_out_size`.
+    pub tls_mac_out_size: usize,
+}
+
+/// The two keys `hmac_get_ctx_params_decoder` locates in this profile, each with the site of its own
+/// repeated-parameter raise (`hmac_prov.c:313`, `:337`). The third the generator emits,
+/// `fips-indicator`, is `# if defined(FIPS_MODULE)`-guarded and absent here.
+const HMAC_GET_CTX_PARAMS_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 2] = [
+    (&err_sites::PROV_HMAC_PROV_313, OSSL_MAC_PARAM_BLOCK_SIZE),
+    (&err_sites::PROV_HMAC_PROV_337, OSSL_MAC_PARAM_SIZE),
+];
+
+/// The five keys `hmac_set_ctx_params_decoder` locates in this profile, each with its raise site
+/// (`hmac_prov.c:427`, `:438`, `:472`, `:485`, `:496`). The sixth is the FIPS `key-check`.
+///
+/// The `switch` orders them by first byte and then by prefix, so the array below is in the order
+/// `repeated_param_site` matches rather than in the list's order — which for this decoder is the
+/// same for all five, since the prefixes `digest`, `engine`, `key`, `properties`, `tls-data-size`
+/// are distinguishable at their first byte except for the `k` pair, and `key` is the only one of
+/// that pair this profile admits.
+const HMAC_SET_CTX_PARAMS_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 5] = [
+    (&err_sites::PROV_HMAC_PROV_427, OSSL_ALG_PARAM_DIGEST),
+    (&err_sites::PROV_HMAC_PROV_438, OSSL_ALG_PARAM_ENGINE),
+    (&err_sites::PROV_HMAC_PROV_472, OSSL_MAC_PARAM_KEY),
+    (&err_sites::PROV_HMAC_PROV_485, OSSL_MAC_PARAM_PROPERTIES),
+    (&err_sites::PROV_HMAC_PROV_496, OSSL_MAC_PARAM_TLS_DATA_SIZE),
+];
+
+/// `static void *hmac_new(void *provctx)` — `hmac_prov.c:80-96`.
+///
+/// Both allocations are checked against one release. The `OPENSSL_free(macctx)` runs whether the
+/// zalloc failed (making it a no-op) or the `HMAC_CTX_new` did, and in the second case `macctx->ctx`
+/// is the NULL the assignment wrote.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn hmac_new(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+
+        let macctx =
+            CRYPTO_zalloc(core::mem::size_of::<HmacData>(), FILE_HMAC, LINE).cast::<HmacData>();
+        if macctx.is_null() {
+            return ptr::null_mut();
+        }
+        (*macctx).ctx = HMAC_CTX_new();
+        if (*macctx).ctx.is_null() {
+            CRYPTO_free(macctx.cast(), FILE_HMAC, LINE);
+            return ptr::null_mut();
+        }
+        (*macctx).provctx = provctx;
+        macctx.cast()
+    }
+}
+
+/// `static void hmac_free(void *vmacctx)` — `hmac_prov.c:98-108`.
+///
+/// The key is **cleansed** as well as released, because it is the MAC key and not a parameter
+/// buffer: `OPENSSL_clear_free(macctx->key, macctx->keylen)`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn hmac_free(vmacctx: *mut c_void) {
+    // SAFETY: the caller's contract; `vmacctx` is a context `hmac_new` allocated.
+    unsafe {
+        if !vmacctx.is_null() {
+            let macctx = vmacctx.cast::<HmacData>();
+            HMAC_CTX_free((*macctx).ctx);
+            ossl_prov_digest_reset(ptr::addr_of_mut!((*macctx).digest));
+            CRYPTO_clear_free((*macctx).key.cast(), (*macctx).keylen, FILE_HMAC, LINE);
+            CRYPTO_free(vmacctx, FILE_HMAC, LINE);
+        }
+    }
+}
+
+/// `static void *hmac_dup(void *vsrc)` — `hmac_prov.c:110-143`.
+///
+/// **The whole struct is copied, and that is what makes a duplicated TLS context work.**
+/// `*dst = *src` carries `tls_data_size`, `tls_header`, `tls_header_set`, `tls_mac_out` and
+/// `tls_mac_out_size` across, then three fields are restored or cleared: the live `ctx` that
+/// `hmac_new` just created, the `key` pointer (reallocated below rather than shared) and the
+/// `digest` (zeroed, then copied properly by `ossl_prov_digest_copy`). Copying the struct *before*
+/// the digest copy is what makes the failed-copy path free a context that is fully built.
+///
+/// Both `return 0` paths after the copy return NULL, and the `dst` they abandon is the one
+/// `hmac_free` has already released.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn hmac_dup(vsrc: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let src = vsrc.cast::<HmacData>();
+
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let dst = hmac_new((*src).provctx).cast::<HmacData>();
+        if dst.is_null() {
+            return ptr::null_mut();
+        }
+
+        let ctx = (*dst).ctx;
+        // The authority's `*dst = *src`. `ptr::read`/`ptr::write` rather than an assignment: the
+        // struct owns nothing that a bitwise copy would double-free, but saying "bitwise copy" is
+        // what the C says and `HmacData` is deliberately not `Copy`.
+        ptr::write(dst, ptr::read(src));
+        (*dst).ctx = ctx;
+        (*dst).key = ptr::null_mut();
+        // `memset(&dst->digest, 0, sizeof(dst->digest))`.
+        ptr::write_bytes(ptr::addr_of_mut!((*dst).digest), 0, 1);
+
+        if HMAC_CTX_copy((*dst).ctx, (*src).ctx) == 0
+            || ossl_prov_digest_copy(
+                ptr::addr_of_mut!((*dst).digest),
+                ptr::addr_of!((*src).digest),
+            ) == 0
+        {
+            hmac_free(dst.cast());
+            return ptr::null_mut();
+        }
+        if !(*src).key.is_null() {
+            // `src->keylen > 0 ? src->keylen : 1` -- a zero-length request is still one byte here.
+            (*dst).key = CRYPTO_malloc(
+                if (*src).keylen > 0 { (*src).keylen } else { 1 },
+                FILE_HMAC,
+                LINE,
+            )
+            .cast::<c_uchar>();
+            if (*dst).key.is_null() {
+                hmac_free(dst.cast());
+                return ptr::null_mut();
+            }
+            if (*src).keylen > 0 {
+                ptr::copy_nonoverlapping((*src).key, (*dst).key, (*src).keylen);
+            }
+        }
+        dst.cast()
+    }
+}
+
+/// `static size_t hmac_size(struct hmac_data_st *macctx)` — `hmac_prov.c:145-148`. The digest's own
+/// size, from the HMAC context rather than from the `PROV_DIGEST`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe fn hmac_size(macctx: *mut HmacData) -> usize {
+    // SAFETY: the caller's contract.
+    unsafe { HMAC_size((*macctx).ctx) }
+}
+
+/// `static int hmac_block_size(struct hmac_data_st *macctx)` — `hmac_prov.c:150-157`. A context with
+/// no digest answers 0 rather than the block size of nothing.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe fn hmac_block_size(macctx: *mut HmacData) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let md = ossl_prov_digest_md(ptr::addr_of!((*macctx).digest));
+
+        if md.is_null() {
+            return 0;
+        }
+        // `EVP_MD_block_size`, which `include/openssl/evp.h:568` defines as
+        // `EVP_MD_get_block_size`.
+        EVP_MD_get_block_size(md)
+    }
+}
+
+/// `static int hmac_setkey(struct hmac_data_st *macctx, const unsigned char *key,
+/// size_t keylen)` — `hmac_prov.c:159-201` without its FIPS arm.
+///
+/// The stored key is replaced on **every** call, whether or not the HMAC init below succeeds, and
+/// the init is skipped entirely when the caller passed no key *and* either this is a TLS context or
+/// there is no digest yet — `HMAC_Init_ex` *"doesn't tolerate all zero params, so we must be
+/// careful"*. The three-condition test is transcribed as three conditions rather than simplified.
+///
+/// # Safety
+/// `key` is NULL or readable for `keylen` bytes.
+unsafe fn hmac_setkey(macctx: *mut HmacData, key: *const c_uchar, keylen: usize) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if !(*macctx).key.is_null() {
+            CRYPTO_clear_free((*macctx).key.cast(), (*macctx).keylen, FILE_HMAC, LINE);
+        }
+        // `keylen > 0 ? keylen : 1`.
+        (*macctx).key =
+            CRYPTO_malloc(if keylen > 0 { keylen } else { 1 }, FILE_HMAC, LINE).cast::<c_uchar>();
+        if (*macctx).key.is_null() {
+            return 0;
+        }
+        if keylen > 0 {
+            ptr::copy_nonoverlapping(key, (*macctx).key, keylen);
+        }
+        (*macctx).keylen = keylen;
+
+        let digest = ossl_prov_digest_md(ptr::addr_of!((*macctx).digest));
+        if !key.is_null() || ((*macctx).tls_data_size == 0 && !digest.is_null()) {
+            return HMAC_Init_ex(
+                (*macctx).ctx,
+                key.cast(),
+                keylen as c_int,
+                digest,
+                ossl_prov_digest_engine(ptr::addr_of!((*macctx).digest)),
+            );
+        }
+        1
+    }
+}
+
+/// `static int hmac_init(void *vmacctx, const unsigned char *key, size_t keylen,
+/// const OSSL_PARAM params[])` — `hmac_prov.c:203-216`.
+///
+/// The `key == NULL` arm is `HMAC_Init_ex(ctx, NULL, 0, NULL, NULL)`, which *re-initialises* the
+/// construct rather than failing, and it is the arm a caller reaches by calling `EVP_MAC_init`
+/// twice.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn hmac_init(
+    vmacctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 || hmac_set_ctx_params(vmacctx, params) == 0 {
+            return 0;
+        }
+        if !key.is_null() {
+            return hmac_setkey(vmacctx.cast::<HmacData>(), key, keylen);
+        }
+        /* Just reinit the HMAC context */
+        HMAC_Init_ex(
+            (*vmacctx.cast::<HmacData>()).ctx,
+            ptr::null(),
+            0,
+            ptr::null(),
+            ptr::null_mut(),
+        )
+    }
+}
+
+/// `static int hmac_update(void *vmacctx, const unsigned char *data, size_t datalen)` —
+/// `hmac_prov.c:218-250`.
+///
+/// **The TLS arm is a state machine over exactly two `update` calls.** The first must be the
+/// 13-byte header and nothing else, and it is *stored* rather than hashed; the second is the record
+/// body, whose MAC is computed by `ssl3_cbc_digest_record` over the stored header and the caller's
+/// `tls_data_size`. A first call of any other length is a bare `return 0` with no raise, and so is a
+/// body longer than `tls_data_size` — the second check is the one that keeps the constant-time
+/// function's `data_plus_mac_plus_padding_size < 1024 * 1024` assertion out of reach of a caller.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn hmac_update(
+    vmacctx: *mut c_void,
+    data: *const c_uchar,
+    datalen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let macctx = vmacctx.cast::<HmacData>();
+
+        if (*macctx).tls_data_size > 0 {
+            /* We're doing a TLS HMAC */
+            if (*macctx).tls_header_set == 0 {
+                /* We expect the first update call to contain the TLS header */
+                if datalen != core::mem::size_of::<[c_uchar; 13]>() {
+                    return 0;
+                }
+                ptr::copy_nonoverlapping(data, (*macctx).tls_header.as_mut_ptr(), datalen);
+                (*macctx).tls_header_set = 1;
+                return 1;
+            }
+            /* macctx->tls_data_size is datalen plus the padding length */
+            if (*macctx).tls_data_size < datalen {
+                return 0;
+            }
+
+            return ssl3_cbc_digest_record(
+                ossl_prov_digest_md(ptr::addr_of!((*macctx).digest)),
+                (*macctx).tls_mac_out.as_mut_ptr(),
+                ptr::addr_of_mut!((*macctx).tls_mac_out_size),
+                (*macctx).tls_header.as_ptr(),
+                data,
+                datalen,
+                (*macctx).tls_data_size,
+                (*macctx).key,
+                (*macctx).keylen,
+                0,
+            );
+        }
+
+        HMAC_Update((*macctx).ctx, data, datalen)
+    }
+}
+
+/// `static int hmac_final(void *vmacctx, unsigned char *out, size_t *outl, size_t outsize)` —
+/// `hmac_prov.c:252-272`. The running check precedes the TLS arm, so a stopped provider refuses
+/// before anything is written.
+///
+/// **`*outl = hlen` is unconditional**, while the TLS arm guards the same write with `outl != NULL`.
+/// That asymmetry is the authority's and it is transcribed: it is unreachable with a NULL through
+/// `EVP_MAC_final`'s surface, because `evp_mac_final` always passes the address of its own local
+/// (`crypto/evp/mac_lib.c:184`) — including from `EVP_MAC_finalXOF`, whose own `outl` is NULL. A
+/// dispatch-table caller that passed NULL directly would be undefined on both sides.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn hmac_final(
+    vmacctx: *mut c_void,
+    out: *mut c_uchar,
+    outl: *mut usize,
+    _outsize: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut hlen: c_uint = 0;
+        let macctx = vmacctx.cast::<HmacData>();
+
+        if is_running() == 0 {
+            return 0;
+        }
+        if (*macctx).tls_data_size > 0 {
+            if (*macctx).tls_mac_out_size == 0 {
+                return 0;
+            }
+            if !outl.is_null() {
+                *outl = (*macctx).tls_mac_out_size;
+            }
+            ptr::copy_nonoverlapping(
+                (*macctx).tls_mac_out.as_ptr(),
+                out,
+                (*macctx).tls_mac_out_size,
+            );
+            return 1;
+        }
+        if HMAC_Final((*macctx).ctx, out, ptr::addr_of_mut!(hlen)) == 0 {
+            return 0;
+        }
+        *outl = hlen as usize;
+        1
+    }
+}
+
+/// `static const OSSL_PARAM hmac_get_ctx_params_list[]` — `hmac_prov.c:277-284`, the two keys this
+/// profile's generator emits.
+static HMAC_GETTABLE_CTX_PARAMS: [OsslParam; 3] = [
+    param_size_t(OSSL_MAC_PARAM_SIZE),
+    param_size_t(OSSL_MAC_PARAM_BLOCK_SIZE),
+    END,
+];
+
+/// `static const OSSL_PARAM *hmac_gettable_ctx_params(void *ctx, void *provctx)` —
+/// `hmac_prov.c:350-354`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn hmac_gettable_ctx_params(
+    _ctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    HMAC_GETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `static int hmac_get_ctx_params(void *vmacctx, OSSL_PARAM params[])` — `hmac_prov.c:356-381`.
+///
+/// **The two keys are written by two different setters.** `size` goes through
+/// `OSSL_PARAM_set_size_t` and `block-size` through `OSSL_PARAM_set_int`, even though the *list*
+/// declares both as `OSSL_PARAM_size_t`. That mismatch is the authority's at
+/// `hmac_prov.c:367`, and CMAC's row does the opposite, so it is one of the places where two rows
+/// that look the same are not.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn hmac_get_ctx_params(vmacctx: *mut c_void, params: *mut OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vmacctx.is_null() {
+            return 0;
+        }
+        if let Some(site) = repeated_param_site(params, &HMAC_GET_CTX_PARAMS_DECODER_KEYS) {
+            return fail_at(site);
+        }
+
+        let macctx = vmacctx.cast::<HmacData>();
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_MAC_PARAM_SIZE);
+        if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, hmac_size(macctx)) == 0 {
+            return 0;
+        }
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_MAC_PARAM_BLOCK_SIZE);
+        if !p.is_null() && crate::params::OSSL_PARAM_set_int(p, hmac_block_size(macctx)) == 0 {
+            return 0;
+        }
+        1
+    }
+}
+
+/// `static const OSSL_PARAM hmac_set_ctx_params_list[]` — `hmac_prov.c:386-395`, the four keys this
+/// profile's generator emits. `engine` is **not** here: it is a `hidden` decoder key, exactly as it
+/// is for CMAC and GMAC.
+static HMAC_SETTABLE_CTX_PARAMS: [OsslParam; 5] = [
+    param_utf8_string(OSSL_ALG_PARAM_DIGEST),
+    param_utf8_string(OSSL_MAC_PARAM_PROPERTIES),
+    param_octet_string(OSSL_MAC_PARAM_KEY),
+    param_size_t(OSSL_MAC_PARAM_TLS_DATA_SIZE),
+    END,
+];
+
+/// `static const OSSL_PARAM *hmac_settable_ctx_params(void *ctx, void *provctx)` —
+/// `hmac_prov.c:509-513`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn hmac_settable_ctx_params(
+    _ctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    HMAC_SETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `static int hmac_set_ctx_params(void *vmacctx, const OSSL_PARAM params[])` —
+/// `hmac_prov.c:518-549` without its FIPS arm.
+///
+/// **The library context is computed unconditionally and used by the digest arm.**
+/// `PROV_LIBCTX_OF(macctx->provctx)` is a local here rather than a field, so it is not one of
+/// `provider-algorithms.json`'s 26 carry sites — but it is not decorative either: it is the context
+/// `ossl_prov_digest_load` resolves the digest *name* in, so a row created in a private
+/// `OSSL_LIB_CTX` fetches its digest there and not from the global one. Losing the context would
+/// make the row resolve a digest the authority's cannot see, which is the same class of difference
+/// D241 recorded for the cipher rows.
+///
+/// **The `key` arm continues rather than returning.** Unlike CMAC, a `key` here does not end the
+/// function: `tls-data-size` may still follow in the same array, and `hmac_setkey`'s decision to
+/// init the HMAC depends on it.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn hmac_set_ctx_params(vmacctx: *mut c_void, params: *const OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vmacctx.is_null() {
+            return 0;
+        }
+        if let Some(site) = repeated_param_site(params, &HMAC_SET_CTX_PARAMS_DECODER_KEYS) {
+            return fail_at(site);
+        }
+
+        let macctx = vmacctx.cast::<HmacData>();
+        let ctx = prov_libctx_of((*macctx).provctx);
+
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_ALG_PARAM_DIGEST);
+        if !p.is_null() {
+            let propq = crate::params::OSSL_PARAM_locate_const(params, OSSL_MAC_PARAM_PROPERTIES);
+            let engine = crate::params::OSSL_PARAM_locate_const(params, OSSL_ALG_PARAM_ENGINE);
+
+            if ossl_prov_digest_load(ptr::addr_of_mut!((*macctx).digest), p, propq, engine, ctx)
+                == 0
+            {
+                return 0;
+            }
+        }
+
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_MAC_PARAM_KEY);
+        if !p.is_null() {
+            if (*p).data_type != OSSL_PARAM_OCTET_STRING {
+                return 0;
+            }
+
+            if hmac_setkey(macctx, (*p).data.cast::<c_uchar>(), (*p).data_size) == 0 {
+                return 0;
+            }
+        }
+
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_MAC_PARAM_TLS_DATA_SIZE);
+        if !p.is_null()
+            && crate::params::OSSL_PARAM_get_size_t(p, ptr::addr_of_mut!((*macctx).tls_data_size))
+                == 0
+        {
+            return 0;
+        }
+
+        1
+    }
+}
+
+/// `const OSSL_DISPATCH ossl_hmac_functions[]` — `hmac_prov.c:551-566`, ten entries and the
+/// terminator. The FIPS-only `ossl_hmac_internal_functions[]` is inside `#ifdef FIPS_MODULE` and is
+/// absent here with its `hmac_internal_new`.
+pub(crate) static HMAC_FUNCTIONS: [OsslDispatch; 11] = [
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_NEWCTX,
+        function: hmac_new as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_DUPCTX,
+        function: hmac_dup as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_FREECTX,
+        function: hmac_free as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_INIT,
+        function: hmac_init as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_UPDATE,
+        function: hmac_update as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_FINAL,
+        function: hmac_final as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_GETTABLE_CTX_PARAMS,
+        function: hmac_gettable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_GET_CTX_PARAMS,
+        function: hmac_get_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_SETTABLE_CTX_PARAMS,
+        function: hmac_settable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_SET_CTX_PARAMS,
+        function: hmac_set_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_DISPATCH_END,
+        function: ptr::null_mut(),
+    },
+];
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1446,20 +2072,21 @@ mod tests {
 
     #[test]
     fn the_mac_table_names_its_rows_in_the_authoritys_order() {
-        // CMAC then SIPHASH, and **not** appended: `defltprov.c` lists SIPHASH ninth, after GMAC,
-        // and the census requires the crate's rows to be a subsequence of the authority's order
-        // (D244). GMAC's engine is transcribed and its registration is held for Phase 9 (D243), so
-        // it is absent here rather than in the wrong place.
-        assert_eq!(DEFLT_MACS.len(), 3);
+        // CMAC then HMAC then SIPHASH, and **not** appended: `defltprov.c` lists HMAC fifth and
+        // SIPHASH ninth, after GMAC, and the census requires the crate's rows to be a subsequence of
+        // the authority's order (D244). GMAC's engine is transcribed and its registration is held for
+        // Phase 9 (D243), so it is absent here rather than in the wrong place.
+        assert_eq!(DEFLT_MACS.len(), 4);
         // SAFETY: the terminator's name is NULL by construction, and each landed row's is a
         // `'static` C string.
         unsafe {
-            assert!(DEFLT_MACS[2].algorithm_names.is_null());
-            assert!(DEFLT_MACS[2].property_definition.is_null());
-            assert!(DEFLT_MACS[2].implementation.is_null());
+            assert!(DEFLT_MACS[3].algorithm_names.is_null());
+            assert!(DEFLT_MACS[3].property_definition.is_null());
+            assert!(DEFLT_MACS[3].implementation.is_null());
             for (row, want) in [
                 (&DEFLT_MACS[0], b"CMAC".as_slice()),
-                (&DEFLT_MACS[1], b"SIPHASH"),
+                (&DEFLT_MACS[1], b"HMAC"),
+                (&DEFLT_MACS[2], b"SIPHASH"),
             ] {
                 let name = core::ffi::CStr::from_ptr(row.algorithm_names);
                 assert_eq!(name.to_bytes(), want);
@@ -1469,6 +2096,36 @@ mod tests {
                 assert!(!row.implementation.is_null());
                 assert!(row.algorithm_description.is_null());
             }
+        }
+    }
+
+    /// **The allocation `file` string is contract, and the authority's own raise coordinates are the
+    /// oracle for it.** `CRYPTO_malloc`'s `file` and `ERR_raise`'s `OPENSSL_FILE` are the same
+    /// `__FILE__`, so a `PROV_<UNIT>_*` raise site in a unit and the `FILE_*` constant for that unit
+    /// must be one string -- and the raise sites are generated from the authority's compiler, so they
+    /// cannot be transcribed wrongly.
+    ///
+    /// This exists because three of the four were wrong: `cmac_prov.c`, `gmac_prov.c` and
+    /// `siphash_prov.c` are generated from `.c.in` templates and carry **no**
+    /// `../../src/openssl-3.6.4/` prefix, which D235 established when the same mistake appeared in
+    /// the err-site generator. The mistake's second appearance is the reason this is a test rather
+    /// than a comment.
+    #[test]
+    fn every_allocation_file_constant_is_the_authoritys_own_string() {
+        let cases: [(&str, *const c_char, &err_sites::ErrSite); 4] = [
+            ("cmac", FILE, &err_sites::PROV_CMAC_PROV_245),
+            ("gmac", FILE_GMAC, &err_sites::PROV_GMAC_PROV_200),
+            ("hmac", FILE_HMAC, &err_sites::PROV_HMAC_PROV_313),
+            ("siphash", FILE_SIPHASH, &err_sites::PROV_SIPHASH_PROV_190),
+        ];
+        for (unit, file, site) in cases {
+            // SAFETY: `file` is a `'static` literal and is NUL-terminated.
+            let crate_file = unsafe { core::ffi::CStr::from_ptr(file) };
+            assert_eq!(
+                crate_file.to_bytes(),
+                site.file.to_bytes(),
+                "{unit}: the allocation file must be the unit's __FILE__"
+            );
         }
     }
 
@@ -1635,11 +2292,7 @@ mod tests {
 
             // A duplicate raises, and the raise is the decoder's own site.
             let size = OSSL_MAC_PARAM_SIZE;
-            let dup = [
-                param(size, OSSL_PARAM_UNSIGNED_INTEGER),
-                param(size, OSSL_PARAM_UNSIGNED_INTEGER),
-                END,
-            ];
+            let dup = [param_size_t(size), param_size_t(size), END];
             assert_eq!(
                 siphash_get_ctx_params(ctx.cast(), dup.as_ptr() as *mut _),
                 0
@@ -1776,9 +2429,11 @@ mod tests {
         unsafe {
             let first = core::ffi::CStr::from_ptr(GMAC_GETTABLE_PARAMS[0].key.cast());
             assert_eq!(first.to_bytes(), b"size");
+            assert_eq!(GMAC_GETTABLE_PARAMS[0].data_type, 2); // OSSL_PARAM_UNSIGNED_INTEGER
+                                                              // `OSSL_PARAM_size_t`, so 8 rather than `OSSL_PARAM_uint`'s 4.
             assert_eq!(
-                GMAC_GETTABLE_PARAMS[0].data_type,
-                OSSL_PARAM_UNSIGNED_INTEGER
+                GMAC_GETTABLE_PARAMS[0].data_size,
+                core::mem::size_of::<usize>()
             );
             assert!(GMAC_GETTABLE_PARAMS[1].key.is_null());
         }

@@ -281,14 +281,14 @@ Hand-offs received and discharged:
 
 * from phase 7: 27 symbol(s) — `EVP_PKEY_assign`, `EVP_PKEY_decrypt_old`, `EVP_PKEY_encrypt_old`, `EVP_PKEY_get0_DH`, `EVP_PKEY_get0_DSA`, `EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get0_RSA`, `EVP_PKEY_get0_hmac`, `EVP_PKEY_get0_poly1305`, `EVP_PKEY_get0_siphash`, `EVP_PKEY_get1_DH`, `EVP_PKEY_get1_DSA`, `EVP_PKEY_get1_EC_KEY`, `EVP_PKEY_get1_RSA`, `EVP_PKEY_get_ec_point_conv_form`, `EVP_PKEY_get_field_type`, `EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0`, `EVP_PKEY_meth_get_count`, `EVP_PKEY_set1_DH`, `EVP_PKEY_set1_DSA`, `EVP_PKEY_set1_EC_KEY`, `EVP_PKEY_set1_RSA`, `EVP_PKEY_type`, `d2i_KeyParams`, `d2i_KeyParams_bio`, `d2i_PublicKey`
 
-Courts: `all pass`, 4 court(s), **1906** authority observation(s) over 2 transcript court(s).
+Courts: `all pass`, 4 court(s), **4421** authority observation(s) over 2 transcript court(s).
 
 The other 2 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
 
 | court | verdict | observations |
 |---|---|---|
-| RT-DIGEST | `pass` | 330 |
-| RT-CIPHER | `pass` | 1576 |
+| RT-DIGEST | `pass` | 468 |
+| RT-CIPHER | `pass` | 3953 |
 | CT-DIGEST | `pass` | — (structural) |
 | CT-CIPHER | `pass` | — (structural) |
 
@@ -309,9 +309,9 @@ are proofs of reference only. See `docs/DECISIONS.md` D199 and D236.
 | 4 | 249 | 249 | 213 | 36 | 0 | 0 | 0 |
 | 5 | 474 | 474 | 380 | 94 | 0 | 0 | 0 |
 | 6 | 161 | 161 | 156 | 5 | 0 | 0 | 0 |
-| 7 | 706 | 706 | 645 | 61 | 0 | 0 | 0 |
+| 7 | 706 | 706 | 646 | 60 | 0 | 0 | 0 |
 | 8 | 194 | 186 | 186 | 0 | 8 | 0 | 0 |
-| **total** | **2035** | **2027** | **1742** | **285** | **8** | **0** | **0** |
+| **total** | **2035** | **2027** | **1743** | **284** | **8** | **0** | **0** |
 
 ## Atlas/ledger reconciliation
 

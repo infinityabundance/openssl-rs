@@ -18842,6 +18842,106 @@ pub(crate) const PROV_GMAC_PROV_354: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `hmac_setkey` at `providers/implementations/macs/hmac_prov.c:177` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_HMAC_PROV_177: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/hmac_prov.c",
+    line: 177,
+    func: c"hmac_setkey",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `hmac_get_ctx_params_decoder` at `providers/implementations/macs/hmac_prov.c:313` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMAC_PROV_313: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/hmac_prov.c",
+    line: 313,
+    func: c"hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_get_ctx_params_decoder` at `providers/implementations/macs/hmac_prov.c:325` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMAC_PROV_325: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/hmac_prov.c",
+    line: 325,
+    func: c"hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_get_ctx_params_decoder` at `providers/implementations/macs/hmac_prov.c:337` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMAC_PROV_337: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/hmac_prov.c",
+    line: 337,
+    func: c"hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_set_ctx_params_decoder` at `providers/implementations/macs/hmac_prov.c:427` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMAC_PROV_427: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/hmac_prov.c",
+    line: 427,
+    func: c"hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_set_ctx_params_decoder` at `providers/implementations/macs/hmac_prov.c:438` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMAC_PROV_438: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/hmac_prov.c",
+    line: 438,
+    func: c"hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_set_ctx_params_decoder` at `providers/implementations/macs/hmac_prov.c:462` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMAC_PROV_462: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/hmac_prov.c",
+    line: 462,
+    func: c"hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_set_ctx_params_decoder` at `providers/implementations/macs/hmac_prov.c:472` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMAC_PROV_472: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/hmac_prov.c",
+    line: 472,
+    func: c"hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_set_ctx_params_decoder` at `providers/implementations/macs/hmac_prov.c:485` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMAC_PROV_485: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/hmac_prov.c",
+    line: 485,
+    func: c"hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_set_ctx_params_decoder` at `providers/implementations/macs/hmac_prov.c:496` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMAC_PROV_496: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/hmac_prov.c",
+    line: 496,
+    func: c"hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
 /// `siphash_get_ctx_params_decoder` at `providers/implementations/macs/siphash_prov.c:190` (PROV_R_REPEATED_PARAMETER).
 pub(crate) const PROV_SIPHASH_PROV_190: ErrSite = ErrSite {
     file: c"providers/implementations/macs/siphash_prov.c",
@@ -20884,6 +20984,16 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_GMAC_PROV_301,
     PROV_GMAC_PROV_312,
     PROV_GMAC_PROV_354,
+    PROV_HMAC_PROV_177,
+    PROV_HMAC_PROV_313,
+    PROV_HMAC_PROV_325,
+    PROV_HMAC_PROV_337,
+    PROV_HMAC_PROV_427,
+    PROV_HMAC_PROV_438,
+    PROV_HMAC_PROV_462,
+    PROV_HMAC_PROV_472,
+    PROV_HMAC_PROV_485,
+    PROV_HMAC_PROV_496,
     PROV_SIPHASH_PROV_190,
     PROV_SIPHASH_PROV_201,
     PROV_SIPHASH_PROV_212,

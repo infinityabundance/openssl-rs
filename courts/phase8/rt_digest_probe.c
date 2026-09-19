@@ -386,6 +386,24 @@ static void rt_provider_digest(const char *name, const char *label)
     }
     printf("provider.%s.size=%d\n", label, EVP_MD_get_size(md));
     printf("provider.%s.blocksize=%d\n", label, EVP_MD_get_block_size(md));
+    /*
+     * The published parameter list, in full: key, type and size, in order. Only the
+     * provider-level list is reachable here -- a digest has no `EVP_MD_gettable_ctx_params` -- and
+     * the size is printed because `OSSL_PARAM_size_t` and `OSSL_PARAM_uint` share the
+     * `UNSIGNED_INTEGER` type and differ only in it. `BLAKE2S-256` and `BLAKE2B-512` genuinely
+     * declare their `size` with the *uint* macro, so the two digests that look like the others are
+     * exactly the ones a keys-only comparison would miss (D253).
+     */
+    {
+        const OSSL_PARAM *p = EVP_MD_gettable_params(md);
+        size_t n = 0;
+
+        printf("provider.%s.gp.present=%d\n", label, p != NULL);
+        for (; p != NULL && p->key != NULL; p++, n++)
+            printf("provider.%s.gp.%zu=%s:%u:%zu\n", label, n, p->key, p->data_type,
+                   p->data_size);
+        printf("provider.%s.gp.count=%zu\n", label, n);
+    }
     ctx = EVP_MD_CTX_new();
     memset(out, 0, sizeof(out));
     if (EVP_DigestInit_ex(ctx, md, NULL) == 1

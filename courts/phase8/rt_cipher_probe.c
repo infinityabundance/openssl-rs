@@ -3808,6 +3808,25 @@ static void rt_deflt_siv(void)
  * size and mode are what `EVP_CIPHER_get_*` answers, and a row whose engine is right but whose
  * descriptor is wrong would pass a fetch-only arm.
  */
+/*
+ * Print a published `OSSL_PARAM` list in full: the key, the type and the *size*, in order, with a
+ * count. The size is the third field on purpose. `OSSL_PARAM_size_t` and `OSSL_PARAM_uint` both
+ * carry `OSSL_PARAM_UNSIGNED_INTEGER` and differ only in `data_size` (8 and 4), and a caller reads
+ * that field; a list transcribed with the type right and the size zero is wrong in a way a
+ * keys-only comparison cannot see. `tag` is the observation family, `noun` the row's own name.
+ */
+static void rt_param_list(const char *tag, const char *noun, const char *kind,
+                          const OSSL_PARAM *p)
+{
+    size_t n = 0;
+
+    printf("%s.%s.%s.present=%d\n", tag, noun, kind, p != NULL);
+    for (; p != NULL && p->key != NULL; p++, n++)
+        printf("%s.%s.%s.%zu=%s:%u:%zu\n", tag, noun, kind, n, p->key, p->data_type,
+               p->data_size);
+    printf("%s.%s.%s.count=%zu\n", tag, noun, kind, n);
+}
+
 static void rt_deflt_row_census(void)
 {
     static const char *rows[] = {
@@ -3845,6 +3864,33 @@ static void rt_deflt_row_census(void)
         printf("defltrow.%s.ivlen=%d\n", rows[i], EVP_CIPHER_get_iv_length(c));
         printf("defltrow.%s.blocksize=%d\n", rows[i], EVP_CIPHER_get_block_size(c));
         printf("defltrow.%s.mode=%d\n", rows[i], EVP_CIPHER_get_mode(c));
+
+        /*
+         * The three published parameter lists for the row. `data_size` is part of what a caller
+         * reads -- `OSSL_PARAM_size_t` carries `sizeof(size_t)` and `OSSL_PARAM_uint` carries
+         * `sizeof(unsigned int)`, which are different numbers for the same
+         * `OSSL_PARAM_UNSIGNED_INTEGER` type -- so the *whole* descriptor is printed and not just
+         * the key. The context is created with a NULL key and IV: the cipher is assigned to the
+         * context before `einit` runs, so the lists are reachable even when the init itself
+         * refuses, and the refusal is printed rather than suppressed.
+         */
+        rt_param_list("defltrow", rows[i], "gp", EVP_CIPHER_gettable_params(c));
+        {
+            EVP_CIPHER_CTX *cc = EVP_CIPHER_CTX_new();
+            int r = 0;
+
+            if (cc != NULL) {
+                ERR_clear_error();
+                r = EVP_CipherInit_ex2(cc, c, NULL, NULL, 1, NULL);
+                ERR_clear_error();
+            }
+            printf("defltrow.%s.ctxinit=%d\n", rows[i], r);
+            rt_param_list("defltrow", rows[i], "cgp",
+                          EVP_CIPHER_CTX_gettable_params(cc));
+            rt_param_list("defltrow", rows[i], "csp",
+                          EVP_CIPHER_CTX_settable_params(cc));
+            EVP_CIPHER_CTX_free(cc);
+        }
         EVP_CIPHER_free(c);
     }
 }
@@ -3867,6 +3913,7 @@ static void rt_deflt_properties(void)
         { "cipher", "AES-128-CBC" },
         { "digest", "SHA256" },
         { "mac",    "CMAC" },
+        { "mac",    "HMAC" },
     };
     static const char *props[] = { NULL, "provider=default", "provider!=default" };
     size_t i, j;
@@ -3892,7 +3939,7 @@ static void rt_deflt_properties(void)
                 ok = m != NULL;
                 EVP_MAC_free(m);
             }
-            printf("defltprop.%s.%s=%d\n", rows[i].op,
+            printf("defltprop.%s.%s.%s=%d\n", rows[i].op, rows[i].name,
                    prop == NULL ? "null" : (strcmp(prop, "provider=default") == 0 ? "eq" : "ne"),
                    ok);
         }
@@ -4043,9 +4090,428 @@ static void rt_deflt_siphash(void)
 }
 
 /* The drained queue, normalised the one way both sides can hold: library and reason as numbers,
- * the authority's three debug strings verbatim, and the entry count. Declared here because the
- * EVP arm below uses it and `rt_errq` is defined with the dispatch arm. */
+ * the authority's three debug strings verbatim, and the entry count. Declared before the `HMAC` arm
+ * because that arm drains queues and `rt_errq` is defined with the dispatch arm below. */
 static void rt_errq(const char *tag);
+
+/*
+ * The `HMAC` row, driven through `EVP_MAC`. It is the one MAC row here whose implementation is a
+ * shell over another unit: `crypto/hmac/hmac.c`. So this arm has three jobs the SIPHASH one does
+ * not.
+ *
+ * The first is that the *parameterisation* is observable. A row receives a digest **name**, not a
+ * method, so `digest`/`properties` go through `ossl_prov_digest_load` in
+ * `PROV_LIBCTX_OF(macctx->provctx)` -- and the size a context reports before a digest arrives is 0,
+ * not the size of a default. Both are printed, before and after.
+ *
+ * The second is the **TLS arm**, which is the reason `ssl3_cbc_digest_record` exists in this crate
+ * at all. `tls-data-size` switches the row from `HMAC_Update` to `ssl3_cbc_digest_record`, the
+ * first `update` must be the 13-byte record header and is stored rather than hashed, and the second
+ * must be no longer than `tls-data-size`. All four of those are observed, including the two
+ * refusals, because the state machine is where a transcription of this row can disagree while
+ * every ordinary HMAC still matches. The record buffer is 256 bytes on the stack and
+ * `tls-data-size` is 85, so the bytes `ssl3_cbc_digest_record` reads past `datalen` are the same on
+ * both sides rather than whatever the stack held -- the caller's contract is that `data` is
+ * `data_plus_mac_plus_padding_size` long, and the probe honours it.
+ *
+ * The third is the refusals' **error queues**. A repeated `digest` is the decoder's
+ * `PROV_R_REPEATED_PARAMETER` at `hmac_prov.c:427`; a `key` of the wrong type is a bare `return 0`
+ * with nothing queued; and a duplicate context is where `hmac_dup`'s whole-struct copy is visible,
+ * because the copy and the original are advanced differently and then compared.
+ */
+static void rt_deflt_hmac(void)
+{
+    static const size_t lens[] = { 0, 1, 16, 63, 64, 128 };
+    static const unsigned char key[] = {
+        0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+        0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b
+    };
+    unsigned char msg[256];
+    unsigned char rec[256];
+    unsigned char out[64];
+    unsigned char out2[64];
+    EVP_MAC *mac = EVP_MAC_fetch(NULL, "HMAC", NULL);
+    EVP_MAC_CTX *ctx;
+    OSSL_PARAM params[3];
+    OSSL_PARAM set[3];
+    size_t i, outl, outl2;
+    int r;
+
+    printf("deflthmac.fetched=%d\n", mac != NULL);
+    if (mac == NULL)
+        return;
+    ctx = EVP_MAC_CTX_new(mac);
+    printf("deflthmac.ctx=%d\n", ctx != NULL);
+    if (ctx == NULL) {
+        EVP_MAC_free(mac);
+        return;
+    }
+
+    for (i = 0; i < sizeof(msg); i++) {
+        msg[i] = (unsigned char)i;
+        rec[i] = (unsigned char)(0xa0u + (unsigned)i);
+    }
+
+    /* Before a digest is named, both published sizes are zero. */
+    {
+        size_t sz = 999, bs = 999;
+
+        params[0] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &sz);
+        params[1] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_BLOCK_SIZE, &bs);
+        params[2] = OSSL_PARAM_construct_end();
+        printf("deflthmac.pre.get=%d:%zu:%zu\n",
+               EVP_MAC_CTX_get_params(ctx, params), sz, bs);
+    }
+
+    /* The digest arrives as a name, in the init params. */
+    {
+        const char *digest = "SHA256";
+        OSSL_PARAM ip[2];
+
+        ip[0] = OSSL_PARAM_construct_utf8_string(OSSL_MAC_PARAM_DIGEST,
+                                                 (char *)digest, 0);
+        ip[1] = OSSL_PARAM_construct_end();
+        printf("deflthmac.sha256.init=%d\n", EVP_MAC_init(ctx, key, sizeof(key), ip));
+    }
+    {
+        size_t sz = 999, bs = 999;
+
+        params[0] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &sz);
+        params[1] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_BLOCK_SIZE, &bs);
+        params[2] = OSSL_PARAM_construct_end();
+        printf("deflthmac.post.get=%d:%zu:%zu\n",
+               EVP_MAC_CTX_get_params(ctx, params), sz, bs);
+    }
+
+    /*
+     * The two published parameter lists, in order. A caller introspects these, so the names and
+     * their sequence are part of the row's contract rather than an implementation detail -- and the
+     * *set* list for a MAC row is the one a caller builds its `set_ctx_params` array from.
+     */
+    {
+        const OSSL_PARAM *p;
+        const char *kind[2];
+        int k;
+
+        kind[0] = "get";
+        kind[1] = "set";
+        for (k = 0; k < 2; k++) {
+            size_t n = 0;
+
+            p = k == 0 ? EVP_MAC_CTX_gettable_params(ctx)
+                       : EVP_MAC_CTX_settable_params(ctx);
+            printf("deflthmac.list.%s.present=%d\n", kind[k], p != NULL);
+            if (p == NULL)
+                continue;
+            for (; p->key != NULL; p++) {
+                printf("deflthmac.list.%s.%zu=%s:%u:%zu\n", kind[k], n, p->key,
+                       p->data_type, p->data_size);
+                n++;
+            }
+            printf("deflthmac.list.%s.count=%zu\n", kind[k], n);
+        }
+    }
+    /* `EVP_MAC_gettable_params` on the fetched MAC itself: HMAC publishes no provider-level list. */
+    {
+        const OSSL_PARAM *p = EVP_MAC_gettable_params(mac);
+
+        printf("deflthmac.list.provider.present=%d\n", p != NULL);
+        if (p != NULL)
+            printf("deflthmac.list.provider.first=%s\n", p->key != NULL ? p->key : "");
+    }
+
+    /* The known answers, at every length that crosses a block boundary. */
+    for (i = 0; i < sizeof(lens) / sizeof(lens[0]); i++) {
+        EVP_MAC_CTX *c = EVP_MAC_CTX_new(mac);
+        OSSL_PARAM ip[2];
+        const char *digest = "SHA256";
+
+        ip[0] = OSSL_PARAM_construct_utf8_string(OSSL_MAC_PARAM_DIGEST,
+                                                 (char *)digest, 0);
+        ip[1] = OSSL_PARAM_construct_end();
+        outl = 0;
+        if (EVP_MAC_init(c, key, sizeof(key), ip) == 1
+            && EVP_MAC_update(c, msg, lens[i]) == 1
+            && EVP_MAC_final(c, out, &outl, sizeof(out)) == 1) {
+            printf("deflthmac.kat%zu.len=%zu\n", lens[i], outl);
+            rt_hex("deflthmac.katv", out, outl);
+        } else {
+            printf("deflthmac.kat%zu.enclen=0\n", lens[i]);
+        }
+        EVP_MAC_CTX_free(c);
+    }
+
+    /* SHA-1 and SHA-512 as well, because the digest dispatch is what the TLS arm keys off. */
+    {
+        static const char *names[] = { "SHA1", "SHA512", "SHA2-224" };
+
+        for (i = 0; i < sizeof(names) / sizeof(names[0]); i++) {
+            EVP_MAC_CTX *c = EVP_MAC_CTX_new(mac);
+            OSSL_PARAM ip[2];
+
+            ip[0] = OSSL_PARAM_construct_utf8_string(OSSL_MAC_PARAM_DIGEST,
+                                                     (char *)names[i], 0);
+            ip[1] = OSSL_PARAM_construct_end();
+            outl = 0;
+            if (EVP_MAC_init(c, key, sizeof(key), ip) == 1
+                && EVP_MAC_update(c, msg, 16) == 1
+                && EVP_MAC_final(c, out, &outl, sizeof(out)) == 1) {
+                printf("deflthmac.%s.len=%zu\n", names[i], outl);
+                rt_hex("deflthmac.digv", out, outl);
+            } else {
+                printf("deflthmac.%s.enclen=0\n", names[i]);
+            }
+            EVP_MAC_CTX_free(c);
+        }
+    }
+
+    /*
+     * A key set through `set_ctx_params` rather than through `init`, then the same message. The
+     * tag must equal the init-keyed one, because both paths end in `HMAC_Init_ex` over the same
+     * key -- and a row that ignored the params key would produce the previous key's tag.
+     */
+    EVP_MAC_CTX_free(ctx);
+    ctx = EVP_MAC_CTX_new(mac);
+    {
+        const char *digest = "SHA256";
+
+        set[0] = OSSL_PARAM_construct_utf8_string(OSSL_MAC_PARAM_DIGEST,
+                                                  (char *)digest, 0);
+        set[1] = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_KEY, (void *)key,
+                                                   sizeof(key));
+        set[2] = OSSL_PARAM_construct_end();
+        printf("deflthmac.set.digestkey=%d\n", EVP_MAC_CTX_set_params(ctx, set));
+    }
+    outl = 0;
+    if (EVP_MAC_init(ctx, NULL, 0, NULL) == 1
+        && EVP_MAC_update(ctx, msg, 16) == 1
+        && EVP_MAC_final(ctx, out, &outl, sizeof(out)) == 1) {
+        printf("deflthmac.paramkey.len=%zu\n", outl);
+        rt_hex("deflthmac.paramkey.tag", out, outl);
+    } else {
+        printf("deflthmac.paramkey.enclen=0\n");
+    }
+
+    /* A re-init with NULLs restarts from the stored key rather than failing. */
+    outl = 0;
+    if (EVP_MAC_init(ctx, NULL, 0, NULL) == 1
+        && EVP_MAC_update(ctx, msg, 16) == 1
+        && EVP_MAC_final(ctx, out, &outl, sizeof(out)) == 1) {
+        rt_hex("deflthmac.reinit.tag", out, outl);
+    } else {
+        printf("deflthmac.reinit.enclen=0\n");
+    }
+    EVP_MAC_CTX_free(ctx);
+
+    /*
+     * The duplicate. The copy takes the whole struct, so a copy made mid-message continues from
+     * where the original is; advancing only the copy and then finalising both is the observation
+     * that separates a real duplicate from one that restarted.
+     *
+     * **The lengths are printed only when the final succeeded**, and that is deliberate rather than
+     * defensive. `evp_mac_final` writes `*outl = l` from an uninitialised local when the row's
+     * `final` returns 0 without writing its own `*outl`, so a failed final leaves the caller's
+     * length indeterminate on *both* sides. Reading it would be a transcription of undefined
+     * behaviour and the two transcripts could not be compared at all.
+     */
+    {
+        EVP_MAC_CTX *a0 = EVP_MAC_CTX_new(mac);
+        EVP_MAC_CTX *b0;
+        const char *digest = "SHA256";
+        OSSL_PARAM ip[2];
+        int ok_copy, ok_orig;
+
+        ip[0] = OSSL_PARAM_construct_utf8_string(OSSL_MAC_PARAM_DIGEST,
+                                                 (char *)digest, 0);
+        ip[1] = OSSL_PARAM_construct_end();
+        printf("deflthmac.dup.init=%d\n", EVP_MAC_init(a0, key, sizeof(key), ip));
+        printf("deflthmac.dup.update=%d\n", EVP_MAC_update(a0, msg, 32));
+        b0 = EVP_MAC_CTX_dup(a0);
+        printf("deflthmac.dup.made=%d\n", b0 != NULL);
+        if (b0 != NULL) {
+            outl = 0;
+            outl2 = 0;
+            printf("deflthmac.dup.copy.update=%d\n", EVP_MAC_update(b0, msg + 32, 32));
+            ok_copy = EVP_MAC_final(b0, out2, &outl2, sizeof(out2));
+            printf("deflthmac.dup.copy.final=%d\n", ok_copy);
+            if (ok_copy)
+                printf("deflthmac.dup.copy.len=%zu\n", outl2);
+            ok_orig = EVP_MAC_final(a0, out, &outl, sizeof(out));
+            printf("deflthmac.dup.orig.final=%d\n", ok_orig);
+            if (ok_orig)
+                printf("deflthmac.dup.orig.len=%zu\n", outl);
+            if (ok_copy)
+                rt_hex("deflthmac.dup.copytag", out2, outl2);
+            if (ok_orig)
+                rt_hex("deflthmac.dup.origtag", out, outl);
+            EVP_MAC_CTX_free(b0);
+        }
+        EVP_MAC_CTX_free(a0);
+    }
+
+    /*
+     * The TLS arm. `tls-data-size` is the whole decrypted record: 37 bytes of data, a 32-byte MAC
+     * and 16 bytes of padding is 85, and `rec` is 256 bytes, so the neighbourhood
+     * `ssl3_cbc_digest_record` scans is initialised on both sides.
+     */
+    {
+        const char *digest = "SHA256";
+        size_t tlssize = 37 + 32 + 16;
+        OSSL_PARAM ip[3];
+        EVP_MAC_CTX *c = EVP_MAC_CTX_new(mac);
+
+        ip[0] = OSSL_PARAM_construct_utf8_string(OSSL_MAC_PARAM_DIGEST,
+                                                 (char *)digest, 0);
+        ip[1] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_TLS_DATA_SIZE, &tlssize);
+        ip[2] = OSSL_PARAM_construct_end();
+        printf("deflthmac.tls.init=%d\n", EVP_MAC_init(c, key, sizeof(key), ip));
+        outl = 0;
+        printf("deflthmac.tls.header=%d\n", EVP_MAC_update(c, rec, 13));
+        printf("deflthmac.tls.body=%d\n", EVP_MAC_update(c, rec + 13, 37));
+        printf("deflthmac.tls.final=%d\n", EVP_MAC_final(c, out, &outl, sizeof(out)));
+        printf("deflthmac.tls.len=%zu\n", outl);
+        rt_hex("deflthmac.tls.tag", out, outl);
+        EVP_MAC_CTX_free(c);
+    }
+
+    /* The TLS refusals, each with its queue. */
+    {
+        const char *digest = "SHA256";
+        size_t tlssize = 85;
+        OSSL_PARAM ip[3];
+        EVP_MAC_CTX *c;
+
+        /* A first update that is not the 13-byte header. */
+        c = EVP_MAC_CTX_new(mac);
+        ip[0] = OSSL_PARAM_construct_utf8_string(OSSL_MAC_PARAM_DIGEST,
+                                                 (char *)digest, 0);
+        ip[1] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_TLS_DATA_SIZE, &tlssize);
+        ip[2] = OSSL_PARAM_construct_end();
+        EVP_MAC_init(c, key, sizeof(key), ip);
+        ERR_clear_error();
+        printf("deflthmac.tls.badheader=%d\n", EVP_MAC_update(c, rec, 12));
+        rt_errq("hmac_tls_badheader");
+        EVP_MAC_CTX_free(c);
+
+        /* A body longer than the record it claims to arrive in. */
+        c = EVP_MAC_CTX_new(mac);
+        EVP_MAC_init(c, key, sizeof(key), ip);
+        EVP_MAC_update(c, rec, 13);
+        ERR_clear_error();
+        printf("deflthmac.tls.longbody=%d\n", EVP_MAC_update(c, rec + 13, 86));
+        rt_errq("hmac_tls_longbody");
+        EVP_MAC_CTX_free(c);
+
+        /* A TLS context that never saw a body: `tls_mac_out_size` is still zero. */
+        c = EVP_MAC_CTX_new(mac);
+        EVP_MAC_init(c, key, sizeof(key), ip);
+        EVP_MAC_update(c, rec, 13);
+        ERR_clear_error();
+        outl = 0;
+        printf("deflthmac.tls.earlyfinal=%d\n", EVP_MAC_final(c, out, &outl, sizeof(out)));
+        rt_errq("hmac_tls_earlyfinal");
+        EVP_MAC_CTX_free(c);
+    }
+
+    /* The parameter refusals. Each arm builds its own array: reusing one would leave a previous
+     * arm's `digest` in place and turn a key-type refusal into a repeated-parameter one. */
+    {
+        EVP_MAC_CTX *c = EVP_MAC_CTX_new(mac);
+        int one = 1;
+        OSSL_PARAM a[3];
+
+        /* A repeated `digest`: the decoder's own raise, at its own coordinate. */
+        a[0] = OSSL_PARAM_construct_utf8_string(OSSL_MAC_PARAM_DIGEST, (char *)"SHA256", 0);
+        a[1] = OSSL_PARAM_construct_utf8_string(OSSL_MAC_PARAM_DIGEST, (char *)"SHA1", 0);
+        a[2] = OSSL_PARAM_construct_end();
+        ERR_clear_error();
+        printf("deflthmac.set.repeat=%d\n", EVP_MAC_CTX_set_params(c, a));
+        rt_errq("hmac_set_repeat");
+
+        /* A `key` that is not an octet string: a bare zero, nothing queued. */
+        a[0] = OSSL_PARAM_construct_int(OSSL_MAC_PARAM_KEY, &one);
+        a[1] = OSSL_PARAM_construct_end();
+        ERR_clear_error();
+        printf("deflthmac.set.keytype=%d\n", EVP_MAC_CTX_set_params(c, a));
+        rt_errq("hmac_set_keytype");
+
+        /* A digest nobody publishes: the fetch fails and the row reports it. The failed fetch's
+         * own queue entries are the ones `ossl_prov_digest_load` pops on the legacy fallback and
+         * clears when there is none, so what remains is what the row left. */
+        a[0] = OSSL_PARAM_construct_utf8_string(OSSL_MAC_PARAM_DIGEST,
+                                                (char *)"no-such-digest", 0);
+        a[1] = OSSL_PARAM_construct_end();
+        ERR_clear_error();
+        printf("deflthmac.set.baddigest=%d\n", EVP_MAC_CTX_set_params(c, a));
+        rt_errq("hmac_set_baddigest");
+
+        /* A `tls-data-size` that is not a number: the size_t getter refuses. */
+        a[0] = OSSL_PARAM_construct_int(OSSL_MAC_PARAM_TLS_DATA_SIZE, &one);
+        a[1] = OSSL_PARAM_construct_end();
+        ERR_clear_error();
+        printf("deflthmac.set.tlsnotnum=%d\n", EVP_MAC_CTX_set_params(c, a));
+        rt_errq("hmac_set_tlsnotnum");
+
+        /* A repeated `block-size`, then a repeated `size`: the *get* decoder's two own raises. */
+        {
+            OSSL_PARAM g[3];
+            size_t bs = 0, sz = 0;
+
+            g[0] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_BLOCK_SIZE, &bs);
+            g[1] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_BLOCK_SIZE, &bs);
+            g[2] = OSSL_PARAM_construct_end();
+            ERR_clear_error();
+            printf("deflthmac.get.repeatbsize=%d\n", EVP_MAC_CTX_get_params(c, g));
+            rt_errq("hmac_get_repeatbsize");
+
+            g[0] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &sz);
+            g[1] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &sz);
+            g[2] = OSSL_PARAM_construct_end();
+            ERR_clear_error();
+            printf("deflthmac.get.repeatsize=%d\n", EVP_MAC_CTX_get_params(c, g));
+            rt_errq("hmac_get_repeatsize");
+        }
+
+        /* A property query that nothing satisfies, then one that this row does. */
+        a[0] = OSSL_PARAM_construct_utf8_string(OSSL_MAC_PARAM_DIGEST, (char *)"SHA256", 0);
+        a[1] = OSSL_PARAM_construct_utf8_string(OSSL_MAC_PARAM_PROPERTIES,
+                                                (char *)"fips=yes", 0);
+        a[2] = OSSL_PARAM_construct_end();
+        ERR_clear_error();
+        printf("deflthmac.set.propfips=%d\n", EVP_MAC_CTX_set_params(c, a));
+        rt_errq("hmac_set_propfips");
+
+        a[0] = OSSL_PARAM_construct_utf8_string(OSSL_MAC_PARAM_DIGEST, (char *)"SHA256", 0);
+        a[1] = OSSL_PARAM_construct_utf8_string(OSSL_MAC_PARAM_PROPERTIES,
+                                                (char *)"provider=default", 0);
+        a[2] = OSSL_PARAM_construct_end();
+        ERR_clear_error();
+        printf("deflthmac.set.propeq=%d\n", EVP_MAC_CTX_set_params(c, a));
+        rt_errq("hmac_set_propeq");
+
+        EVP_MAC_CTX_free(c);
+    }
+
+    /* A final whose buffer is smaller than the tag: refused by `evp_mac_final`, not by the row. */
+    {
+        EVP_MAC_CTX *c = EVP_MAC_CTX_new(mac);
+        const char *digest = "SHA256";
+        OSSL_PARAM ip[2];
+
+        ip[0] = OSSL_PARAM_construct_utf8_string(OSSL_MAC_PARAM_DIGEST,
+                                                 (char *)digest, 0);
+        ip[1] = OSSL_PARAM_construct_end();
+        EVP_MAC_init(c, key, sizeof(key), ip);
+        EVP_MAC_update(c, msg, 16);
+        ERR_clear_error();
+        outl = 0;
+        printf("deflthmac.final.short=%d\n", EVP_MAC_final(c, out, &outl, 7));
+        rt_errq("hmac_final_short");
+        EVP_MAC_CTX_free(c);
+    }
+
+    EVP_MAC_free(mac);
+}
 
 /* The same refusals reached the way an application reaches them, through `EVP_*`. Four of the
  * six named paths are reachable here (the invalid key length and the too-small output buffer are
@@ -4597,6 +5063,7 @@ int main(void)
     rt_deflt_row_census();
     rt_deflt_properties();
     rt_deflt_siphash();
+    rt_deflt_hmac();
     rt_deflt_errors();
     rt_disp_failures();
     return 0;

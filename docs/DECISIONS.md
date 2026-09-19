@@ -16750,3 +16750,111 @@ court-coverage atlas covers *exports*, so the evidence for this unit is a tracke
 referenced from its module doc, and nothing fails if a future internal unit lands with neither. That
 is the same class as the Phase 7 coverage hole that D236 closed, one level down, and it is named here
 so the next internal unit has a decision to make rather than a precedent to follow by accident.
+
+## D252 — the `HMAC` provider row lands, and the TLS arm is the observation that matters
+
+`providers/implementations/macs/hmac_prov.c` is the third of the three units HMAC needed — after
+`crypto/hmac/hmac.c` (Phase 7), `PROV_DIGEST` (D249), `constant_time.h`'s helpers (D250) and
+`ssl3_cbc_digest_record` (D251) — and it is `deflt_macs[]`'s fifth row. The census moves
+**111 -> 112 implemented / 199 -> 198 open**, `provider-court-coverage.json` stays at zero unmatched,
+and `implemented[libcrypto]` does **not** move: a provider registration row is not an ELF export,
+which is D237's whole point.
+
+**What the row adds over the engine.** `hmac_prov.c` is a shell: `HMAC_CTX_new`/`free`/`copy`,
+`HMAC_Init_ex`/`Update`/`Final`/`size` are `src/mac/hmac.rs`'s and `RT-HMAC` already courts them. What
+the row owns is the parameterisation and — the part with no other caller in the crate — the
+**`tls-data-size` arm**. With that parameter set the row stops hashing and becomes a two-call state
+machine: the first `update` must be exactly the 13-byte record header and is *stored*, the second is
+the record body whose MAC `ssl3_cbc_digest_record` computes in constant time over the stored header.
+Nothing else in this crate reaches that function, so a court that only hashed ordinary messages would
+have left D251's unit unobserved while calling it implemented. `RT-CIPHER`'s `deflthmac.tls.*` family
+drives the whole arm and both of its refusals.
+
+**Three transcription details the probe pins.** `hmac_get_ctx_params` writes `size` with
+`OSSL_PARAM_set_size_t` and `block-size` with `OSSL_PARAM_set_int` even though the *list* declares both
+as `OSSL_PARAM_size_t` — CMAC's row does the opposite, so two rows that look alike are not. The
+`library context` in `hmac_set_ctx_params` is computed from `macctx->provctx` and scopes the digest
+*fetch*, so the row's digest is resolved in the creating provider's context rather than the global one
+(it is a local and not a stored field, so it is not one of D240's 26 carry sites). And `hmac_final`
+dereferences `outl` unconditionally in the non-TLS arm while guarding it in the TLS arm — the EVP
+layer always passes the address of its own local, so the asymmetry is unreachable with a NULL through
+the public surface and is transcribed rather than "fixed".
+
+**The `FILE` constants were wrong, and are now checked.** `cmac_prov.c`, `gmac_prov.c`,
+`siphash_prov.c` and `hmac_prov.c` are all generated from `.c.in` templates, so `__FILE__` carries only
+the build-relative path with no `../../src/openssl-3.6.4/` prefix — D235's finding, which had already
+been applied to the err-site generator and not to these four constants. The string reaches an
+application through `CRYPTO_set_mem_functions`, which is handed the `file` pointer on every
+allocation, so it is contract rather than archaeology. Corrected, and bound by a unit test that
+compares each constant against the `file` of a raise site in the same authority unit: both are
+`__FILE__`, the raise sites are generated from the authority's own compiler, and the equality is
+therefore checkable rather than asserted.
+
+**What this entry moves.** `implemented[libcrypto]` stays **2035 / 5896**. Phase 8 stays **194
+implemented / 576 open / 16 deferred**. The provider census moves **112 implemented / 198 open / 686
+deferred** with coverage **112 / 112 / 0**. `RT-CIPHER` moves **1576 -> 1641** observations here, and
+the next entry takes it further. Unit tests move **573 -> 574**.
+
+## D253 — every provider `OSSL_PARAM` list carried `data_size` zero on every numeric entry, and two lists published keys the authority does not
+
+D252's court arm enumerated the two MAC lists to observe them. That failed on the first run, and what
+it reported was not a mistake in the row but a defect class underneath every provider row this crate
+publishes:
+
+    deflthmac.list.get.0: authority='size:2:8' candidate='size:2:0'
+    deflthmac.list.get.1: authority='block-size:2:8' candidate='block-size:2:0'
+    deflthmac.list.set.3: authority='tls-data-size:2:8' candidate='tls-data-size:2:0'
+
+The crate's one descriptor helper took `(key, data_type)` and hard-coded `data_size: 0`. The
+authority's generated lists do not: `OSSL_PARAM_size_t` carries `sizeof(size_t)` and
+`OSSL_PARAM_uint` carries `sizeof(unsigned int)`. **Both produce `OSSL_PARAM_UNSIGNED_INTEGER`**, so
+the type alone cannot distinguish them and a table that stores only the type cannot be checked against
+the authority at all. The fix is one constructor per authority macro — `param_size_t`, `param_uint`,
+`param_int`, `param_utf8_string`, `param_octet_string`, `param_octet_ptr` — so that the only spelling of
+a list is the one that carries the macro.
+
+**Why the size is observable.** `EVP_CIPHER_gettable_params`, `EVP_CIPHER_CTX_gettable_params`,
+`EVP_CIPHER_CTX_settable_params`, `EVP_MAC_CTX_gettable_params`, `EVP_MAC_CTX_settable_params`,
+`EVP_MAC_gettable_params` and `EVP_MD_gettable_params` hand a caller the descriptor array and a caller
+reads all three fields. The three lists that publish `OSSL_PARAM_UNSIGNED_INTEGER` with different
+sizes — `digest_default_get_params_list` (8, 8), `shake_get_ctx_params_list` (8, 8) and
+`blake_get_ctx_params_list` (**4**) — are exactly where a keys-and-types comparison is blind: the
+BLAKE2 row declared `size` with `OSSL_PARAM_uint` while its neighbours used `OSSL_PARAM_size_t`.
+
+**Two more lists were wrong in a way no size could fix: they published keys the authority does not
+have.** The CTS rows' `gettable_ctx_params` carried a `tls-mac` the authority's
+`CIPHER_DEFAULT_GETTABLE_CTX_PARAMS_START` + `OSSL_CIPHER_PARAM_CTS_MODE` list does not, and their
+`settable_ctx_params` carried `use-bits`, `tls-version` and `tls-mac-size` that belong to
+`cipher_generic_set_ctx_params_list` — which the CTS rows do not use. The TDES rows had the same three
+extras plus `tls-mac`. The crate had copied the *generic* lists and added the row's own key, when the
+authority builds the row's list from the default macro and adds its own key to that. Counted from the
+authority's own observation: CTS settled on 7 and 3 entries, TDES on 7 and 2, where the crate
+published 8 and 6, and 8 and 5.
+
+**The oracle is the authority's own output, and it is now a court.** `rt_deflt_row_census` prints
+every entry of `EVP_CIPHER_gettable_params`, `EVP_CIPHER_CTX_gettable_params` and
+`EVP_CIPHER_CTX_settable_params` for all 82 fetched cipher rows — key, `data_type`, `data_size`, in
+order, with a count — and `rt_digest_probe` does the same for `EVP_MD_gettable_params` on every digest
+row. That is `RT-CIPHER` **1641 -> 3953** observations and `RT-DIGEST` **330 -> 468**, and it is why
+the defect could not be found before: the previous arms observed that a row *fetches*, its key and IV
+lengths, its block size and its mode, and none of those reads a param descriptor. One list is still
+unobserved and the plan records it: a cipher's *provider-level* `gettable_params` has no
+`EVP_CIPHER_*_gettable_params` accessor to reach it through, so it is covered by the dispatch-table
+court rather than by this one.
+
+**A note on the encodings the observations use.** `data_type` is printed as its numeric value because
+that is what a caller compares; `OSSL_PARAM_INTEGER` is 1, `UNSIGNED_INTEGER` is 2, `UTF8_STRING` is 4,
+`OCTET_STRING` is 5 and `OCTET_PTR` is 7, which is why the NULL cipher's `tls-mac` reads `7:0`.
+
+**What this entry moves.** `implemented[libcrypto]` stays **2035 / 5896**, Phase 8 stays **194
+implemented / 576 open / 16 deferred**, and the provider census stays at D252's **112 implemented / 198
+open / 686 deferred** with coverage **112 / 112 / 0**: this is a correctness repair inside rows that
+were already counted, and it moves no row's state. `RT-CIPHER` moves **1641 -> 3953** and `RT-DIGEST`
+**330 -> 468**; the pipeline's total moves **25014 -> 27529** observations. Unit tests stay at **574**.
+
+**And the one thing this entry does not claim.** The repair is derived from the authority's generated
+list text and confirmed by the authority's own runtime output, so the crate's lists are now the
+authority's. It says nothing about whether a list the crate has *not* published yet will be right when
+it lands: the constructors make the mistake harder, and the court makes it a failure, but neither
+generates the tables from the authority. That is a name-level property of this crate's style rather
+than a gap in this fix, and it is named here so it is a decision rather than an omission.

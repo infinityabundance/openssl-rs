@@ -435,6 +435,14 @@ COVERED_FILES = [
     ("providers/implementations/ciphers/cipher_aes_siv.c", "PROV_CIPHER_AES_SIV"),
     ("providers/implementations/macs/cmac_prov.c", "PROV_CMAC_PROV"),
     ("providers/implementations/macs/gmac_prov.c", "PROV_GMAC_PROV"),
+    # The row lands with this stratum and its two generated decoders are the only
+    # sites it raises from in this profile: two in the get decoder (`block-size`,
+    # `size`) and five in the set decoder (`digest`, `engine`, `key`, `properties`,
+    # `tls-data-size`). The two `fips` keys the generator also emits are
+    # `# if defined(FIPS_MODULE)`-guarded in the generated text, so their
+    # coordinates exist and no reachable arm uses them -- the same shape as
+    # `cmac_prov.c`'s three and `gmac_prov.c`'s.
+    ("providers/implementations/macs/hmac_prov.c", "PROV_HMAC_PROV"),
     ("providers/implementations/macs/siphash_prov.c", "PROV_SIPHASH_PROV"),
     # Phase 8's digest half. `digestcommon.c` is generated and shared by every digest
     # row the *default* provider publishes. The other `*_prov.c` units raise nothing in

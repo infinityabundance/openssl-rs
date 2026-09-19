@@ -8058,6 +8058,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-MAC",
               "RT-PARAM"
             ],
@@ -8833,8 +8834,8 @@
         "completed": true,
         "counts": {
           "directly_courted": 706,
-          "directly_courted_called": 645,
-          "directly_courted_referenced": 61,
+          "directly_courted_called": 646,
+          "directly_courted_referenced": 60,
           "implemented": 706,
           "indirectly_courted": 0,
           "non_observable": 0,
@@ -9185,6 +9186,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-CIPHER"
             ],
             "symbol": "EVP_CIPHER_CTX_gettable_params"
@@ -9294,6 +9296,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-CIPHER"
             ],
             "symbol": "EVP_CIPHER_CTX_settable_params"
@@ -9464,6 +9467,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-CIPHER"
             ],
             "symbol": "EVP_CIPHER_gettable_params"
@@ -9697,8 +9701,9 @@
             "symbol": "EVP_CipherInit_ex"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-REF"
             ],
             "symbol": "EVP_CipherInit_ex2"
@@ -10515,6 +10520,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-MAC"
             ],
             "symbol": "EVP_MAC_CTX_dup"
@@ -10559,6 +10565,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-MAC"
             ],
             "symbol": "EVP_MAC_CTX_gettable_params"
@@ -10582,6 +10589,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-MAC"
             ],
             "symbol": "EVP_MAC_CTX_settable_params"
@@ -10662,6 +10670,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-MAC"
             ],
             "symbol": "EVP_MAC_gettable_params"
@@ -11023,6 +11032,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DIGEST",
               "RT-FETCH"
             ],
             "symbol": "EVP_MD_gettable_params"
@@ -15484,8 +15494,8 @@
     ],
     "totals": {
       "directly_courted": 2027,
-      "directly_courted_called": 1742,
-      "directly_courted_referenced": 285,
+      "directly_courted_called": 1743,
+      "directly_courted_referenced": 284,
       "implemented": 2035,
       "indirectly_courted": 8,
       "non_observable": 0
@@ -15497,7 +15507,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "00ab01fdec7eb5b6392aa35a97d8e885c374dd85e46c6cae4e9d3db17ae6b542"
+      "sha256": "ef2fff0b7396cc64dc2c2e4bf00a69bcb7d6e249baea20ffd1918c3dfd6dded5"
     },
     {
       "name": "symbol-ownership",
@@ -15552,7 +15562,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "8190d7acf32acf2573a7cfd7ed26cd34aaec17298852e21d6ef3208207db37a4"
+      "sha256": "bac12bec6d0f0a38929ac6162f35be4c2d81b1a69875f00121f6b2276bb9f7cc"
     },
     {
       "name": "phase7-courts",
@@ -15562,12 +15572,12 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "f4e90179c272ef2c8e87d90b799643156c8cf22282c790ae03182cafe50d79ae"
+      "sha256": "38cfe3c6e2df8b106c29594c4d3828546ce86601ba2bd60b28f96adcc5580f94"
     },
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "d49fe987270f3930e4d166299436750cc03e06d415e7d3f9aff58a3b8e293eaf"
+      "sha256": "fc8b745f71a66cb0d3441045cf47d93ab0042939ca397a537dfb61ec5a4bac2d"
     }
   ],
   "kind": "court-coverage",

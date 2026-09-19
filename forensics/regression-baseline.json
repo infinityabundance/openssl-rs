@@ -154,7 +154,7 @@
       "verdict": "pass"
     },
     "RT-CIPHER": {
-      "observations": 1576,
+      "observations": 3953,
       "verdict": "pass"
     },
     "RT-CMAC": {
@@ -174,7 +174,7 @@
       "verdict": "pass"
     },
     "RT-DIGEST": {
-      "observations": 330,
+      "observations": 468,
       "verdict": "pass"
     },
     "RT-DSO": {
@@ -512,6 +512,7 @@
     "default/OSSL_OP_DIGEST/SHAKE-256",
     "default/OSSL_OP_DIGEST/SM3",
     "default/OSSL_OP_MAC/CMAC",
+    "default/OSSL_OP_MAC/HMAC",
     "default/OSSL_OP_MAC/SIPHASH"
   ],
   "provider_rows": {
@@ -521,10 +522,10 @@
       "13": 39,
       "9": 11
     },
-    "implemented": 111,
-    "open": 199,
+    "implemented": 112,
+    "open": 198,
     "open_by_phase": {
-      "8": 199
+      "8": 198
     },
     "total": 996
   }
