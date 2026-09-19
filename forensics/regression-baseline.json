@@ -154,7 +154,7 @@
       "verdict": "pass"
     },
     "RT-CIPHER": {
-      "observations": 4501,
+      "observations": 4646,
       "verdict": "pass"
     },
     "RT-CMAC": {
@@ -396,7 +396,7 @@
   },
   "prerequisites": {
     "blocking_dependencies": 25,
-    "divergence_names_covered": 34,
+    "divergence_names_covered": 35,
     "findings": 0,
     "language_census": 3107,
     "sealed_census": 57
@@ -473,6 +473,7 @@
     "default/OSSL_OP_CIPHER/CAMELLIA-256-CTR",
     "default/OSSL_OP_CIPHER/CAMELLIA-256-ECB",
     "default/OSSL_OP_CIPHER/CAMELLIA-256-OFB",
+    "default/OSSL_OP_CIPHER/ChaCha20",
     "default/OSSL_OP_CIPHER/DES-EDE-CBC",
     "default/OSSL_OP_CIPHER/DES-EDE-CFB",
     "default/OSSL_OP_CIPHER/DES-EDE-ECB",
@@ -527,10 +528,10 @@
       "13": 39,
       "9": 11
     },
-    "implemented": 117,
-    "open": 193,
+    "implemented": 118,
+    "open": 192,
     "open_by_phase": {
-      "8": 193
+      "8": 192
     },
     "total": 996
   }

@@ -3851,6 +3851,8 @@ static void rt_deflt_row_census(void)
         "DES-EDE3-ECB", "DES-EDE3-CBC", "DES-EDE3-OFB", "DES-EDE3-CFB",
         "DES-EDE3-CFB8", "DES-EDE3-CFB1", "DES-EDE-ECB", "DES-EDE-CBC",
         "DES-EDE-OFB", "DES-EDE-CFB",
+        /* The authority's `deflt_ciphers[]` order, which is the order this list is compared in. */
+        "ChaCha20",
     };
     size_t i;
 
@@ -5023,6 +5025,444 @@ static void rt_deflt_kmac(void)
 {
     rt_deflt_kmac_one("KMAC-128", "kmac128", "KMAC128", "2.16.840.1.101.3.4.2.19", 32, 168);
     rt_deflt_kmac_one("KMAC-256", "kmac256", "KMAC256", "2.16.840.1.101.3.4.2.20", 64, 136);
+}
+
+/*
+ * The `ChaCha20` row -- the last cipher of 8.3, and the first one in this half whose primitive is
+ * **perlasm-only in this profile** (`crypto/chacha/chacha_enc.c` is not compiled at all; see
+ * `src/chacha.rs`).
+ *
+ * Six things are particular to it.
+ *
+ * **The row's block size is one byte.** `EVP_CIPHER_get_block_size` answers 1, which is what says
+ * the row is a stream cipher to every caller that reasons about alignment, and it is why the update
+ * and final are the *stream* generics with no padding. The `invariant` arm prints all three lengths.
+ *
+ * **`updated-iv` is generated, not stored.** The counter block is four little-endian words, and
+ * `EVP_CIPHER_CTX_get_params(OSSL_CIPHER_PARAM_UPDATED_IV)` reproduces it — so it is read *before*
+ * any data (where it must equal the IV that was set) and again after a block boundary, and the
+ * pinned corpus supplies the expected second value: RFC 7539's `NextIV` is `01000000…`.
+ *
+ * **The key and IV lengths are checked, not set.** `chacha20_set_ctx_params` refuses any `keylen`
+ * but 32 and any `ivlen` but 16, with `PROV_R_INVALID_KEY_LENGTH`/`PROV_R_INVALID_IV_LENGTH`, which
+ * is why a row that publishes a two-key setter can change nothing through it. Both refusals and the
+ * queues they leave are printed.
+ *
+ * **The counter carries across calls, and the partial block is held.** `ChaCha20_ctr32` advances
+ * only `counter[0]`, so the row adds the block count itself, carries into `counter[1]`, and keeps the
+ * remainder in `ctx->buf` with `partial_len`. The `split` arms are what observe that: a hundred bytes
+ * then twenty-eight must equal a hundred and twenty-eight in one call, and the `updated-iv` between
+ * the two calls must be the block boundary rather than the byte boundary.
+ *
+ * **A second `EVP_EncryptInit_ex` with no IV resumes rather than restarts**, because
+ * `chacha20_initiv` collects the counter only when `iv_set` is already true. That is the row's most
+ * easily-lost behaviour and it is the `resume` arm.
+ *
+ * **`dupctx` is a whole-context copy, `hw` included.** `EVP_CIPHER_CTX_copy` mid-partial-block must
+ * give two contexts that continue identically — which only works if the copy carries the counter,
+ * the held block and the hw pointer that reached them.
+ */
+static void rt_deflt_chacha20(void)
+{
+    static const unsigned char key[32] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f
+    };
+    static const unsigned char zero_iv[16] = { 0 };
+    unsigned char in[400], out[400], dec[400], iv[16], got[16];
+    unsigned char iv_copy[16];
+    EVP_CIPHER *cipher = EVP_CIPHER_fetch(NULL, "ChaCha20", NULL);
+    EVP_CIPHER_CTX *ctx, *cp;
+    OSSL_PARAM p[2];
+    size_t i, outl;
+    int l1, l2;
+    size_t ivl = sizeof(got);
+
+    printf("chacha.fetched=%d\n", cipher != NULL);
+    if (cipher == NULL)
+        return;
+    for (i = 0; i < sizeof(in); i++)
+        in[i] = (unsigned char)i;
+
+    /*
+     * The three lengths and the two parameter lists. A block size of one is the contract every
+     * alignment-reasoning caller depends on, and the lists are the row's own: three gettable keys
+     * with `updated-iv` an octet string, and two settable ones that exist to be refused.
+     */
+    printf("chacha.keylen=%d\n", EVP_CIPHER_get_key_length(cipher));
+    printf("chacha.ivlen=%d\n", EVP_CIPHER_get_iv_length(cipher));
+    printf("chacha.block=%d\n", EVP_CIPHER_get_block_size(cipher));
+    rt_param_list("chacha", "x", "gp", EVP_CIPHER_gettable_params(cipher));
+    /*
+     * **A cipher-less context faults the authority, so this arm prints the boundary rather than
+     * calling it.** `EVP_CIPHER_CTX_gettable_params`'s guard is
+     * `if (cctx != NULL && cctx->cipher->gettable_ctx_params != NULL)`, which dereferences
+     * `cctx->cipher` without checking it -- measured: a fresh `EVP_CIPHER_CTX_new()` segfaults. A
+     * probe cannot compare a crash, so the marker is printed on both sides and the boundary is
+     * recorded as `D-CIPHERCTX-NOALG-1` in `docs/SECURITY_DIVERGENCE_POLICY.md`.
+     */
+    printf("chacha.x.cgp.unset=NOT_MEASURED_AUTHORITY_FAULTS\n");
+    /* The two ctx-level lists are read *after* an init, which is the only reachable way. */
+    {
+        EVP_CIPHER_CTX *c = EVP_CIPHER_CTX_new();
+
+        printf("chacha.x.cgp.init=%d\n", EVP_CipherInit_ex(c, cipher, NULL, NULL, NULL, 1));
+        rt_param_list("chacha", "x", "cgp", EVP_CIPHER_CTX_gettable_params(c));
+        rt_param_list("chacha", "x", "csp", EVP_CIPHER_CTX_settable_params(c));
+        EVP_CIPHER_CTX_free(c);
+    }
+
+    /*
+     * **RFC 7539 A.1 Test Vector 1.** An all-zero key, an all-zero counter block and sixty-four zero
+     * bytes in gives the standard's first keystream block out; `NextIV` is the counter block after
+     * one block, which is what `updated-iv` must reproduce.
+     */
+    {
+        static const unsigned char v1[64] = {
+            0x76, 0xb8, 0xe0, 0xad, 0xa0, 0xf1, 0x3d, 0x90, 0x40, 0x5d, 0x6a, 0xe5, 0x53, 0x86,
+            0xbd, 0x28, 0xbd, 0xd2, 0x19, 0xb8, 0xa0, 0x8d, 0xed, 0x1a, 0xa8, 0x36, 0xef, 0xcc,
+            0x8b, 0x77, 0x0d, 0xc7, 0xda, 0x41, 0x59, 0x7c, 0x51, 0x57, 0x48, 0x8d, 0x77, 0x24,
+            0xe0, 0x3f, 0xb8, 0xd8, 0x4a, 0x37, 0x6a, 0x43, 0xb8, 0xf4, 0x15, 0x18, 0xa1, 0x1c,
+            0xc3, 0x87, 0xb6, 0x69, 0xb2, 0xee, 0x65, 0x86
+        };
+        static const unsigned char zero_key[32] = { 0 };
+        unsigned char zero[64] = { 0 };
+
+        ctx = EVP_CIPHER_CTX_new();
+        printf("chacha.v1.init=%d\n",
+               EVP_EncryptInit_ex(ctx, cipher, NULL, zero_key, zero_iv));
+        outl = 0;
+        printf("chacha.v1.update=%d\n", EVP_EncryptUpdate(ctx, out, &l1, zero, 64));
+        outl = (size_t)l1;
+        printf("chacha.v1.final=%d\n", EVP_EncryptFinal_ex(ctx, out + outl, &l2));
+        outl += (size_t)l2;
+        printf("chacha.v1.len=%zu\n", outl);
+        rt_hex("chacha.v1.out", out, outl);
+        printf("chacha.v1.matches=%d\n", outl == 64 && memcmp(out, v1, 64) == 0);
+
+        /* `NextIV` == `updated-iv` after exactly one block. */
+        memset(got, 0, sizeof(got));
+        ivl = sizeof(got);
+        p[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_UPDATED_IV, got, ivl);
+        p[1] = OSSL_PARAM_construct_end();
+        printf("chacha.v1.updated=%d\n", EVP_CIPHER_CTX_get_params(ctx, p));
+        rt_hex("chacha.v1.nextiv", got, 16);
+        EVP_CIPHER_CTX_free(ctx);
+    }
+
+    /* `updated-iv` before any data must be the IV that was set, and the round trip must hold. */
+    for (i = 0; i < 16; i++)
+        iv[i] = (unsigned char)(0xa0 + i);
+    ctx = EVP_CIPHER_CTX_new();
+    printf("chacha.rt.init=%d\n", EVP_EncryptInit_ex(ctx, cipher, NULL, key, iv));
+    printf("chacha.rt.ctx.keylen=%d\n", EVP_CIPHER_CTX_get_key_length(ctx));
+    printf("chacha.rt.ctx.ivlen=%d\n", EVP_CIPHER_CTX_get_iv_length(ctx));
+    printf("chacha.rt.ctx.block=%d\n", EVP_CIPHER_CTX_get_block_size(ctx));
+    memset(got, 0, sizeof(got));
+    p[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_UPDATED_IV, got, sizeof(got));
+    p[1] = OSSL_PARAM_construct_end();
+    printf("chacha.rt.updated.before=%d\n", EVP_CIPHER_CTX_get_params(ctx, p));
+    rt_hex("chacha.rt.updated.before.iv", got, 16);
+
+    /*
+     * 128 bytes in two calls: 100 then 28. The boundary falls inside the second block, so the first
+     * call holds 36 bytes of partial block and the second must consume it before generating.
+     */
+    outl = 0;
+    printf("chacha.rt.u1=%d\n", EVP_EncryptUpdate(ctx, out, &l1, in, 100));
+    printf("chacha.rt.u1.len=%d\n", l1);
+    outl += (size_t)l1;
+    memset(got, 0, sizeof(got));
+    p[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_UPDATED_IV, got, sizeof(got));
+    printf("chacha.rt.updated.mid=%d\n", EVP_CIPHER_CTX_get_params(ctx, p));
+    rt_hex("chacha.rt.updated.mid.iv", got, 16);
+
+    /* The `updated-iv` setter is not published: only keylen and ivlen are, and both are refusals. */
+    {
+        unsigned char bad[16] = { 0 };
+
+        p[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_UPDATED_IV, bad, 16);
+        p[1] = OSSL_PARAM_construct_end();
+        ERR_clear_error();
+        printf("chacha.rt.updated.set=%d\n", EVP_CIPHER_CTX_set_params(ctx, p));
+        rt_errq("chacha_updated_set");
+    }
+
+    printf("chacha.rt.u2=%d\n", EVP_EncryptUpdate(ctx, out + outl, &l1, in + 100, 28));
+    outl += (size_t)l1;
+    printf("chacha.rt.final=%d\n", EVP_EncryptFinal_ex(ctx, out + outl, &l2));
+    outl += (size_t)l2;
+    printf("chacha.rt.len=%zu\n", outl);
+    rt_hex("chacha.rt.enc", out, outl);
+    memset(got, 0, sizeof(got));
+    p[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_UPDATED_IV, got, sizeof(got));
+    EVP_CIPHER_CTX_get_params(ctx, p);
+    rt_hex("chacha.rt.updated.after.iv", got, 16);
+    EVP_CIPHER_CTX_free(ctx);
+
+    /*
+     * The same 128 bytes in **one** call must produce the same ciphertext and the same final
+     * `updated-iv`. This is the arm that a partial-block bug breaks and nothing else does.
+     */
+    {
+        EVP_CIPHER_CTX *one = EVP_CIPHER_CTX_new();
+        unsigned char one_out[400];
+        size_t one_len = 0;
+
+        EVP_EncryptInit_ex(one, cipher, NULL, key, iv);
+        printf("chacha.whole.u=%d\n", EVP_EncryptUpdate(one, one_out, &l1, in, 128));
+        one_len += (size_t)l1;
+        printf("chacha.whole.final=%d\n", EVP_EncryptFinal_ex(one, one_out + one_len, &l2));
+        one_len += (size_t)l2;
+        printf("chacha.whole.len=%zu\n", one_len);
+        rt_hex("chacha.whole.enc", one_out, one_len);
+        printf("chacha.whole.agrees=%d\n",
+               one_len == outl && memcmp(one_out, out, outl) == 0);
+        memset(got, 0, sizeof(got));
+        p[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_UPDATED_IV, got, sizeof(got));
+        EVP_CIPHER_CTX_get_params(one, p);
+        rt_hex("chacha.whole.updated.iv", got, 16);
+        EVP_CIPHER_CTX_free(one);
+    }
+
+    /* The decrypt twin, on the two-call ciphertext, must return the plaintext. */
+    ctx = EVP_CIPHER_CTX_new();
+    printf("chacha.dec.init=%d\n", EVP_DecryptInit_ex(ctx, cipher, NULL, key, iv));
+    {
+        size_t dl = 0;
+
+        printf("chacha.dec.u1=%d\n", EVP_DecryptUpdate(ctx, dec, &l1, out, 100));
+        dl += (size_t)l1;
+        printf("chacha.dec.u2=%d\n", EVP_DecryptUpdate(ctx, dec + dl, &l1, out + 100, 28));
+        dl += (size_t)l1;
+        printf("chacha.dec.final=%d\n", EVP_DecryptFinal_ex(ctx, dec + dl, &l2));
+        dl += (size_t)l2;
+        printf("chacha.dec.len=%zu\n", dl);
+        printf("chacha.dec.roundtrip=%d\n", dl == 128 && memcmp(dec, in, 128) == 0);
+    }
+    EVP_CIPHER_CTX_free(ctx);
+
+    /*
+     * **A re-init that does not name a cipher resumes; one that names it does not.**
+     *
+     * `EVP_EncryptInit_ex(ctx, NULL, ...)` keeps the cipher *and* its `algctx`, so the counter block
+     * survives and the second half of a 128-byte message is the tail of the one-call ciphertext.
+     * That is the form `chacha20_initiv`'s `iv_set` conditional is for.
+     *
+     * `EVP_EncryptInit_ex(ctx, cipher, ...)` was measured and **does not** resume: the counter block
+     * comes back all zero and the following update yields nothing, so naming the cipher again
+     * replaces the algorithm context rather than re-entering the row. Both forms are printed,
+     * because the difference is the whole observable and a probe that only did the first would have
+     * recorded the wrong rule.
+     */
+    {
+        EVP_CIPHER_CTX *res = EVP_CIPHER_CTX_new();
+        unsigned char half[400];
+        size_t hl = 0;
+
+        printf("chacha.resume.init=%d\n", EVP_EncryptInit_ex(res, cipher, NULL, key, iv));
+        EVP_EncryptUpdate(res, half, &l1, in, 64);
+        hl += (size_t)l1;
+        printf("chacha.resume.reinit=%d\n", EVP_EncryptInit_ex(res, NULL, NULL, NULL, NULL));
+        EVP_EncryptUpdate(res, half + hl, &l1, in + 64, 64);
+        hl += (size_t)l1;
+        EVP_EncryptFinal_ex(res, half + hl, &l2);
+        hl += (size_t)l2;
+        printf("chacha.resume.len=%zu\n", hl);
+        rt_hex("chacha.resume.enc", half, hl);
+        printf("chacha.resume.agrees=%d\n", hl == 128 && memcmp(half, out, 128) == 0);
+        memset(got, 0, sizeof(got));
+        p[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_UPDATED_IV, got, sizeof(got));
+        EVP_CIPHER_CTX_get_params(res, p);
+        rt_hex("chacha.resume.updated.iv", got, 16);
+        EVP_CIPHER_CTX_free(res);
+    }
+    {
+        EVP_CIPHER_CTX *res = EVP_CIPHER_CTX_new();
+        unsigned char half[400];
+        size_t hl = 0;
+
+        EVP_EncryptInit_ex(res, cipher, NULL, key, iv);
+        EVP_EncryptUpdate(res, half, &l1, in, 64);
+        hl += (size_t)l1;
+        printf("chacha.recipher.reinit=%d\n",
+               EVP_EncryptInit_ex(res, cipher, NULL, NULL, NULL));
+        printf("chacha.recipher.u=%d\n", EVP_EncryptUpdate(res, half + hl, &l1, in + 64, 64));
+        hl += (size_t)l1;
+        printf("chacha.recipher.final=%d\n", EVP_EncryptFinal_ex(res, half + hl, &l2));
+        hl += (size_t)l2;
+        printf("chacha.recipher.len=%zu\n", hl);
+        memset(got, 0, sizeof(got));
+        p[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_UPDATED_IV, got, sizeof(got));
+        EVP_CIPHER_CTX_get_params(res, p);
+        rt_hex("chacha.recipher.updated.iv", got, 16);
+        EVP_CIPHER_CTX_free(res);
+    }
+
+    /*
+     * **`dupctx` is a whole-context copy, and the comparison window is the *continuation*.**
+     *
+     * The duplicate is taken after 70 bytes, so it holds no copy of the first 70 output bytes — a
+     * comparison of the two whole buffers would read uninitialised memory in the duplicate's (the
+     * first version of this arm did exactly that, and its `agrees=0` was the probe's bug rather than
+     * a defect). What must agree is `a`'s continuation against `b`'s, byte for byte, and `a`'s whole
+     * output against the one-call ciphertext above.
+     */
+    {
+        EVP_CIPHER_CTX *a = EVP_CIPHER_CTX_new();
+        EVP_CIPHER_CTX *b = EVP_CIPHER_CTX_new();
+        unsigned char oa[400], ob[400];
+        size_t la = 0, lb = 0;
+        int first;
+
+        EVP_EncryptInit_ex(a, cipher, NULL, key, iv);
+        EVP_EncryptUpdate(a, oa, &l1, in, 70);
+        la += (size_t)l1;
+        first = l1;
+        printf("chacha.dup.first=%d\n", first);
+        printf("chacha.dup.copy=%d\n", EVP_CIPHER_CTX_copy(b, a));
+        /* `a` continues, and `b` continues with the same bytes: the two must agree from 70 on. */
+        EVP_EncryptUpdate(a, oa + la, &l1, in + 70, 58);
+        la += (size_t)l1;
+        EVP_EncryptUpdate(b, ob, &l1, in + 70, 58);
+        lb += (size_t)l1;
+        EVP_EncryptFinal_ex(a, oa + la, &l2);
+        la += (size_t)l2;
+        EVP_EncryptFinal_ex(b, ob + lb, &l2);
+        lb += (size_t)l2;
+        printf("chacha.dup.la=%zu\n", la);
+        printf("chacha.dup.lb=%zu\n", lb);
+        printf("chacha.dup.cont=%zu\n", la - (size_t)first);
+        printf("chacha.dup.agrees=%d\n",
+               lb == la - (size_t)first
+                   && memcmp(oa + (size_t)first, ob, lb) == 0);
+        printf("chacha.dup.whole=%d\n", la == 128 && memcmp(oa, out, 128) == 0);
+        EVP_CIPHER_CTX_free(a);
+        EVP_CIPHER_CTX_free(b);
+    }
+
+    /*
+     * **The two length keys are refusals.** `keylen` of 16 and `ivlen` of 8 are each refused with the
+     * row's own reason, and the correct values are accepted — which is why the row publishes a setter
+     * that can change nothing.
+     */
+    {
+        size_t bad_keylen = 16, good_keylen = 32, bad_ivlen = 8, good_ivlen = 16;
+
+        ctx = EVP_CIPHER_CTX_new();
+        EVP_EncryptInit_ex(ctx, cipher, NULL, key, iv);
+
+        ERR_clear_error();
+        p[0] = OSSL_PARAM_construct_size_t(OSSL_CIPHER_PARAM_KEYLEN, &bad_keylen);
+        p[1] = OSSL_PARAM_construct_end();
+        printf("chacha.set.keylen.bad=%d\n", EVP_CIPHER_CTX_set_params(ctx, p));
+        rt_errq("chacha_keylen_bad");
+
+        ERR_clear_error();
+        p[0] = OSSL_PARAM_construct_size_t(OSSL_CIPHER_PARAM_KEYLEN, &good_keylen);
+        printf("chacha.set.keylen.good=%d\n", EVP_CIPHER_CTX_set_params(ctx, p));
+        rt_errq("chacha_keylen_good");
+
+        ERR_clear_error();
+        p[0] = OSSL_PARAM_construct_size_t(OSSL_CIPHER_PARAM_IVLEN, &bad_ivlen);
+        printf("chacha.set.ivlen.bad=%d\n", EVP_CIPHER_CTX_set_params(ctx, p));
+        rt_errq("chacha_ivlen_bad");
+
+        ERR_clear_error();
+        p[0] = OSSL_PARAM_construct_size_t(OSSL_CIPHER_PARAM_IVLEN, &good_ivlen);
+        printf("chacha.set.ivlen.good=%d\n", EVP_CIPHER_CTX_set_params(ctx, p));
+        rt_errq("chacha_ivlen_good");
+
+        /* A wrong *type* is refused by the params layer, which raises a `CRYPTO` error instead. */
+        ERR_clear_error();
+        p[0] = OSSL_PARAM_construct_int(OSSL_CIPHER_PARAM_KEYLEN, &l1);
+        printf("chacha.set.keylen.type=%d\n", EVP_CIPHER_CTX_set_params(ctx, p));
+        rt_errq("chacha_keylen_type");
+
+        /* An unknown key is ignored: the row's decoder locates by name and finds nothing. */
+        ERR_clear_error();
+        p[0] = OSSL_PARAM_construct_size_t("nonesuch", &good_keylen);
+        printf("chacha.set.unknown=%d\n", EVP_CIPHER_CTX_set_params(ctx, p));
+        rt_errq("chacha_set_unknown");
+        EVP_CIPHER_CTX_free(ctx);
+    }
+
+    /* A one-shot `EVP_Cipher` on a 200-byte message, and the straddling-tail case at a block edge. */
+    for (i = 0; i <= 130; i += 65) {
+        EVP_CIPHER_CTX *one = EVP_CIPHER_CTX_new();
+        unsigned char o[400];
+        size_t olen = 0;
+
+        EVP_EncryptInit_ex(one, cipher, NULL, key, iv);
+        printf("chacha.sz%zu.u=%d\n", i, EVP_EncryptUpdate(one, o, &l1, in, i));
+        olen += (size_t)l1;
+        printf("chacha.sz%zu.final=%d\n", i, EVP_EncryptFinal_ex(one, o + olen, &l2));
+        olen += (size_t)l2;
+        printf("chacha.sz%zu.len=%zu\n", i, olen);
+        rt_hex_w("chacha", i == 0 ? "sz0.enc" : "sz65.enc", o, olen);
+        memset(got, 0, sizeof(got));
+        p[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_UPDATED_IV, got, sizeof(got));
+        EVP_CIPHER_CTX_get_params(one, p);
+        rt_hex_w("chacha", i == 0 ? "sz0.iv" : "sz65.iv", got, 16);
+        EVP_CIPHER_CTX_free(one);
+    }
+
+    /*
+     * The counter's second word. `ChaCha20_ctr32` advances only `counter[0]`; the row carries into
+     * `counter[1]` itself. Setting the first word to `0xffffffff` puts the very next block on the
+     * carry, which is the one input that distinguishes a row that carries from one that does not.
+     */
+    for (i = 0; i < 16; i++)
+        iv_copy[i] = 0;
+    iv_copy[0] = 0xff;
+    iv_copy[1] = 0xff;
+    iv_copy[2] = 0xff;
+    iv_copy[3] = 0xff;
+    ctx = EVP_CIPHER_CTX_new();
+    EVP_EncryptInit_ex(ctx, cipher, NULL, key, iv_copy);
+    outl = 0;
+    EVP_EncryptUpdate(ctx, out, &l1, in, 128);
+    outl += (size_t)l1;
+    EVP_EncryptFinal_ex(ctx, out + outl, &l2);
+    outl += (size_t)l2;
+    printf("chacha.carry.len=%zu\n", outl);
+    rt_hex("chacha.carry.enc", out, outl);
+    memset(got, 0, sizeof(got));
+    p[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_UPDATED_IV, got, sizeof(got));
+    EVP_CIPHER_CTX_get_params(ctx, p);
+    rt_hex("chacha.carry.iv", got, 16);
+    EVP_CIPHER_CTX_free(ctx);
+
+    /* The same 128 bytes under the pre-carry IV must differ, so the arm is not vacuous. */
+    {
+        unsigned char iv2[16];
+        unsigned char other[400];
+        size_t other_len = 0;
+
+        memcpy(iv2, iv_copy, 16);
+        iv2[0] = 0xfe;
+        cp = EVP_CIPHER_CTX_new();
+        EVP_EncryptInit_ex(cp, cipher, NULL, key, iv2);
+        EVP_EncryptUpdate(cp, other, &l1, in, 128);
+        other_len += (size_t)l1;
+        EVP_EncryptFinal_ex(cp, other + other_len, &l2);
+        other_len += (size_t)l2;
+        printf("chacha.carry.differs=%d\n",
+               other_len == outl && memcmp(other, out, outl) != 0);
+        EVP_CIPHER_CTX_free(cp);
+    }
+
+    /* A NULL key on the first init: the generic init refuses, and the row's `initiv` is not reached. */
+    {
+        EVP_CIPHER_CTX *nk = EVP_CIPHER_CTX_new();
+
+        ERR_clear_error();
+        printf("chacha.nokey=%d\n", EVP_EncryptInit_ex(nk, cipher, NULL, NULL, iv));
+        rt_errq("chacha_nokey");
+        EVP_CIPHER_CTX_free(nk);
+    }
+
+    EVP_CIPHER_free(cipher);
 }
 
 /*
@@ -6355,6 +6795,7 @@ int main(void)
     rt_deflt_blake2_mac();
     rt_deflt_poly1305();
     rt_deflt_kmac();
+    rt_deflt_chacha20();
     rt_deflt_errors();
     rt_disp_failures();
     return 0;
