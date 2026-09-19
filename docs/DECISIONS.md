@@ -16887,3 +16887,42 @@ which is what makes the ordering safe rather than merely conventional.
 implemented / 576 open / 16 deferred**, the provider census stays **112 implemented / 198 open / 686
 deferred** with coverage **112 / 112 / 0**, and no court observation moves. The err-site table moves
 **1906 -> 1912**. Unit tests stay at **574**. Full pipeline to `PIPELINE OK`.
+
+## D255 — the committed `libcrypto.so.3` is not a function of its inputs, and only in `.symtab`
+
+Re-running `forensics/tools/build_phase2.sh` over **unchanged** Rust source produces a different
+`artifacts/phase2/install/lib/libcrypto.so.3`, and the difference is precisely locatable:
+
+    sizes equal (10907848 bytes), first differing byte at 0x91bc90 (the section is `.symtab`, which
+    starts at 0x8ef948), last at 0xa44677, 660176 differing bytes -- and every one of them is at or
+    after `.symtab`.
+
+`.text`, `.rodata`, `.data`, `.dynsym` and every relocation table are byte-identical, which is why the
+two builds carry the **same GNU build-id** (`readelf -n`): the linker derives it from the loadable
+segments. So the artefact's *behaviour* is reproducible and its *static symbol table* is not.
+
+**Why this is recorded rather than shrugged off.** The repository's rule for derived artefacts is that
+a committed file must be a function of its inputs, or the comparison cannot certify it; a tracked file
+whose bytes move between two builds of one source is exactly the class that rule exists for, and it has
+been silently present since `artifacts/phase2/install/lib/` was first committed — it went unnoticed
+because the intervening commits (D249, D250, D251) added only unreachable code, which dead-code
+elimination removed, so the rebuild happened to produce identical bytes.
+
+**What it is not.** It is not a candidate defect and not a court divergence: nothing in the census or
+in a court reads this file. `elf_symbols.py` reads the crate's static archive and the version script,
+and `check_evidence_portability.py` re-runs the Python generators rather than this build, which is why
+no gate failed. The consequence is narrower and stated exactly: a fresh build is not byte-comparable
+against the committed one, so the committed file cannot be used as a check on the build.
+
+**The follow-up, named rather than implied.** Either the artefact becomes a function of its inputs —
+`strip --strip-all` on the dist shell's copy removes `.symtab`/`.strtab` and would leave the loadable
+image, which is already reproducible, as the whole file — or it stops being tracked and the census's
+inputs stay limited to the version script and the static archive. Both are real options with different
+costs, and choosing between them is a decision this entry does not make; what it does is make the
+non-reproducibility visible so the next commit that touches this file is a decision rather than an
+accident.
+
+**What this entry moves.** Nothing. `implemented[libcrypto]` stays **2035 / 5896**, Phase 8 stays
+**194 implemented / 576 open / 16 deferred**, the provider census stays **112 implemented / 198 open /
+686 deferred** with coverage **112 / 112 / 0**, no court observation moves, and unit tests stay at
+**574**. Full pipeline to `PIPELINE OK`.
