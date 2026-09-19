@@ -19051,3 +19051,70 @@ read through a struct replica rather than through the public surface.
 **What this entry does not claim.** It does not land `legacy_sha.c`, the two OAEP checks, or
 anything else. It records four measurements, the contradiction between them, and the one probe that
 resolves it.
+
+## D290 — the `EVP_sha1` contradiction is resolved: `evp_md_init_internal` replaces a legacy method with a fetched one
+
+D289 recorded four mutually inconsistent measurements and named the next probe. This entry is that
+probe's result, and it resolves all four at once.
+
+**The line D289 had not read.** `evp_md_init_internal` opens (`crypto/evp/digest.c:258-280`) with:
+
+```c
+    if (ossl_unlikely(type->prov == NULL)) {
+#ifndef FIPS_MODULE
+        EVP_MD *provmd = EVP_MD_fetch(NULL,
+            type->type != NID_undef ? OBJ_nid2sn(type->type) : "NULL", "");
+        if (provmd == NULL) { ERR_raise(ERR_LIB_EVP, EVP_R_INITIALIZATION_ERROR); return 0; }
+        type = provmd;
+        EVP_MD_free(ctx->fetched_digest);
+        ctx->fetched_digest = provmd;
+#endif
+    }
+```
+
+**A legacy method is not used to digest anything.** `EVP_sha1()` returns `&sha1_md`, whose `prov` is
+NULL; `evp_md_init_internal` sees that, fetches `"SHA1"` out of the default provider and **rebinds
+`type` to the fetched method** before `ctx->digest = type`. So the digest runs through the provider
+method's `newctx`/`dinit`/`dupdate`/`dfinal` on `ctx->algctx`, which is what D287 and D288's OAEP
+depends on and what 8.1's provider SHA1 rows already provide.
+
+**Every D289 fact falls out of that.**
+
+* `ctx_size == 0` in `sha1_md` and `ctx->md_data == NULL` — correct, and irrelevant: the provider
+  path uses `algctx`, and `md_data` is the *legacy* half's slot.
+* `EVP_MD_CTX_get0_md(ctx)` comparing equal to `EVP_sha1()` — `EVP_MD_CTX_get0_md` answers
+  `ctx->fetched_digest` only for a dynamic request and prefers the requested method otherwise, so the
+  pointer test D289 ran does not observe the rebinding.
+* `EVP_MD_fetch(NULL, "SHA1", NULL) != used` — the internal fetch uses the empty property query `""`,
+  not `NULL`, and each fetch returns its own object, so the addresses differ even though the *method*
+  is the same.
+* and `SHA1_Init` being called with a **non-NULL** argument, which was the fact that made D289 look
+  impossible: the call is the *provider* method's `sha1_init` calling `SHA1_Init` on its own
+  algorithm context. `courts/layout/oracle-legacy-sha.c`'s interposer cannot tell the two callers
+  apart, so it observed the provider's call and reported it as the legacy one's. The resolution is
+  not that the legacy callback was reached; it is that **the interposer was ambiguous** — a lesson
+  worth the entry on its own, because the technique D289 named as "the next probe" measures a symbol
+  without measuring *which* caller reached it.
+
+**What the unit now is, and it is much smaller than D289 feared.** `EVP_sha1()` and its six
+siblings need only to be **correct `EVP_MD` objects**: the seven legacy fields D289 measured
+(`type` 64, `pkey_type` 65, `md_size` 20, `flags` 8, `origin` 1, `block_size` 64, `ctx_size` 0) plus
+the four callbacks, which exist so that the object is faithful and so that an ENGINE that *does*
+call them gets the right function. Nothing about the digest path depends on those callbacks being
+reached, because `evp_md_init_internal` never reaches them. The crate's own `EVP_DigestInit_ex` must
+have the same fetch-replacement arm — which is now a question with a file and line rather than a
+mystery, and the next thing to check before the objects are written.
+
+**The one thing to verify first, verified in the same sitting.** If the crate's
+`evp_md_init_internal` equivalent lacked the fetch-replacement arm, landing `EVP_sha1` alone would
+produce an object whose callbacks *are* reached, with `ctx_size` 0 and a NULL `md_data`, and the
+first court arm would abort. It does not lack it: `src/evp/digest.rs:124-145` already carries the
+arm, comment and all -- "A legacy method that reached the provider path has no provider, so its
+provider counterpart is fetched by name. This is the one place `EVP_MD_fetch` is called with an
+[empty property query]" -- and calls `EVP_MD_fetch(NULL, name, c"")` on exactly the condition
+`(*type_).prov.is_null()`. So the seven objects are a **closed** unit: a static `EvpMd` per digest,
+seven measured fields and four callbacks, and the digest path already works because the arm that
+bypasses the callbacks is in place and courted by 8.1's provider rows.
+
+**What this entry does not claim.** It does not land the objects -- that is the next commit, and it
+is now a transcription with no open questions rather than a search.
