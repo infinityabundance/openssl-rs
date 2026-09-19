@@ -596,9 +596,20 @@ def read_crate_table(path: Path, ident: str) -> list[tuple[str, str]]:
 # for the census to see it (D246).
 CRATE_QUERY_UNIT = REPO_ROOT / "src" / "provider" / "digest.rs"
 CRATE_QUERY_FN = 'unsafe extern "C" fn deflt_query('
+# An arm may return a table's `.as_ptr()` or call a function that answers the address. The second
+# form exists because one arm answers a **filtered copy** rather than the source table.
 CRATE_QUERY_ARM = re.compile(
-    r"if\s+operation_id\s*==\s*([A-Za-z0-9_:]+)\s*\{\s*return\s+([A-Za-z0-9_:]+)\.as_ptr\(\)\s*;"
+    r"if\s+operation_id\s*==\s*([A-Za-z0-9_:]+)\s*\{\s*return\s+([A-Za-z0-9_:]+)\s*(\(\)|\.as_ptr\(\))\s*;"
 )
+# `OSSL_OP_CIPHER`'s arm answers `exported_ciphers`, which
+# `ossl_prov_cache_exported_algorithms` fills from `DEFLT_CIPHERS` at provider init (D275). The
+# census must read the **source** table: the filtered copy is a runtime projection of it, and a row
+# the filter drops is still a row the crate published a capability predicate for. That is a fact
+# about this crate's structure rather than a naming convention, so it is written down here rather
+# than inferred from the call.
+CRATE_QUERY_ARM_SOURCE = {
+    "crate::provider::cipher::exported_ciphers": "DEFLT_CIPHERS",
+}
 # The provider whose query function is walked. The authority has four admitted providers and only
 # the default publishes algorithm tables on this profile, so the second anchor is a second constant
 # rather than an assumption folded into this one.
@@ -621,6 +632,10 @@ def crate_query_tables(ops: dict[str, int]) -> dict[tuple[str, str], list[tuple[
     tables: dict[tuple[str, str], list[tuple[str, str]]] = {}
     for arm in CRATE_QUERY_ARM.finditer(body):
         constant, table_path = arm.group(1), arm.group(2)
+        source = CRATE_QUERY_ARM_SOURCE.get(table_path)
+        if source is not None:
+            # The arm answers a derived table; the census reads the one it derives from.
+            table_path = f"crate::provider::cipher::{source}"
         operation = constant.split("::")[-1]
         if operation not in ops:
             raise CensusError(
@@ -1462,13 +1477,20 @@ def main(argv: list[str]) -> int:
             "relation": {
                 src: dst for src, dst in sorted(cache_relation(strip_comments(read(auth.source / PROVIDER_FILES[0][1]))).items())
             },
-            "prerequisite": (
-                "`deflt_query` publishes `exported_ciphers[]`, which "
-                "`ossl_prov_cache_exported_algorithms` fills by evaluating each row's "
-                "`capability_predicate` and dropping the rows whose predicate answers 0. The "
-                "crate's `deflt_query` returns `DEFLT_CIPHERS` directly, which is correct only "
-                "while every landed row is unconditional; the filtering must be built before "
-                "the first capability-gated row lands, not repaired after it."
+            "state": "discharged",
+            "what": (
+                "`deflt_query` publishes `exported_ciphers[]` rather than `deflt_ciphers[]`: the "
+                "capability-filtered copy `ossl_prov_cache_exported_algorithms` fills at provider "
+                "init by evaluating each row's `capability_predicate` and dropping the rows whose "
+                "predicate answers 0. The crate now does the same -- "
+                "`src/provider/activate.rs`'s `ossl_prov_cache_exported_algorithms` and "
+                "`src/provider/cipher.rs`'s `cache_exported_ciphers`, called from "
+                "`ossl_default_provider_init` before the provider is published -- so a gated row "
+                "can land without a later repair. D275 records the change and the test that proves "
+                "the predicate is consulted. This paragraph replaces the earlier one that named "
+                "the filtering as an outstanding prerequisite; the two tables it relates are "
+                "equal while every landed row's `capable` is `None`, which a unit test asserts so "
+                "that the day one is not, the difference is a failure rather than a silent one."
             ),
         },
         "provider_context": provider_context(auth),

@@ -19,7 +19,7 @@
       "signatures_authority_only": 405,
       "signatures_checked": 229,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 108,
+      "signatures_not_a_dispatch": 109,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -3861,6 +3861,11 @@
           "alias": "ProviderDoAllFn",
           "at": "src/provider/activate.rs",
           "why": "not a provider dispatch: the crate's own provider-table traversal callback; the authority has no named type for it"
+        },
+        {
+          "alias": "AlgorithmCapability",
+          "at": "src/provider/activate.rs",
+          "why": "not a provider dispatch: the predicate field of `OSSL_ALGORITHM_CAPABLE` (`provider_util.h:140-143`), spelled inline as `int (*capable)(void)` rather than declared as a typedef"
         },
         {
           "alias": "CreateChildCbFn",

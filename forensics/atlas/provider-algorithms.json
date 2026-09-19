@@ -2,10 +2,11 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "capability_filtering": {
-      "prerequisite": "`deflt_query` publishes `exported_ciphers[]`, which `ossl_prov_cache_exported_algorithms` fills by evaluating each row's `capability_predicate` and dropping the rows whose predicate answers 0. The crate's `deflt_query` returns `DEFLT_CIPHERS` directly, which is correct only while every landed row is unconditional; the filtering must be built before the first capability-gated row lands, not repaired after it.",
       "relation": {
         "deflt_ciphers": "exported_ciphers"
-      }
+      },
+      "state": "discharged",
+      "what": "`deflt_query` publishes `exported_ciphers[]` rather than `deflt_ciphers[]`: the capability-filtered copy `ossl_prov_cache_exported_algorithms` fills at provider init by evaluating each row's `capability_predicate` and dropping the rows whose predicate answers 0. The crate now does the same -- `src/provider/activate.rs`'s `ossl_prov_cache_exported_algorithms` and `src/provider/cipher.rs`'s `cache_exported_ciphers`, called from `ossl_default_provider_init` before the provider is published -- so a gated row can land without a later repair. D275 records the change and the test that proves the predicate is consulted. This paragraph replaces the earlier one that named the filtering as an outstanding prerequisite; the two tables it relates are equal while every landed row's `capable` is `None`, which a unit test asserts so that the day one is not, the difference is a failure rather than a silent one."
     },
     "claim": "One row per algorithm registration row of every admitted provider's tables. The row inventory, the names, the property definitions, the dispatch symbols, the capability predicates and the row order are generated from the pinned provider translation units with the profile's own `configuration.h` guards applied; the dispatch-table symbol is never typed. `state` is `implemented` when the crate publishes the row, `open` when it is this stratum's remaining work, and `deferred` when it is handed to a later phase, in which case `blocked_by` names the blocker. Only the owning phase and the blocker are authored, in `provider-algorithm-plans.json`; a row with neither is a failure and no output is written. A row here is NOT an exported symbol and carries no ABI obligation.",
     "disabled_in_profile": [

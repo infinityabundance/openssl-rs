@@ -5181,17 +5181,17 @@
     {
       "name": "typedef-owners",
       "path": "forensics/atlas/typedef-owners.json",
-      "sha256": "724f942c03273db60ee4624954dabb119ba6e95ae94a17ebad1fce0800aa6337"
+      "sha256": "3f6575f7830fadf9053b40469c06faf8d69288dfa854225e146b253e7f6bd8b7"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "69ca4d87eea01f3fabd4a4d17c518357878e0dea5d21b167b5f038383ff52608"
+      "sha256": "1e6ef720cf516b09550e28522bcd6814ab29faf55f8381547b148feb69f6c698"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "d9c736e8fed14fb8542f7c64735605128ac9f0a85ecbfa102d7eab872a57353b"
+      "sha256": "a826a43dde88e6403a6e68a4dab808d6b3266d7771490ce9ab3ef2c65ef46f69"
     },
     {
       "name": "authority-source-tree-and-crate-source",

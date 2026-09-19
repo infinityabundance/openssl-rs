@@ -2088,11 +2088,11 @@ static DEFLT_DIGESTS: [OsslAlgorithm; 28] = [
 /// `providers/defltprov.c`, with the `OSSL_OP_DIGEST`, `OSSL_OP_CIPHER` and `OSSL_OP_MAC` arms.
 ///
 /// The other operations the authority answers are other subphases' and are absent, not stubbed.
-/// The authority's `OSSL_OP_CIPHER` arm returns `exported_ciphers` rather than `deflt_ciphers` —
-/// the capability-filtered copy `ossl_prov_cache_exported_algorithms` fills — which is correct
-/// only while every landed row is unconditional; that ordering is recorded in
-/// `forensics/atlas/provider-algorithms.json`'s `capability_filtering` prerequisite and is
-/// unchanged by this entry.
+/// **The `OSSL_OP_CIPHER` arm answers `exported_ciphers`, not `deflt_ciphers`** — the
+/// capability-filtered copy `ossl_prov_cache_exported_algorithms` fills at provider init, reached
+/// through `crate::provider::cipher::exported_ciphers`. The two tables are equal while every landed
+/// row's `capable` is `None`, and they stop being equal on the commit that lands the first `ALGC`
+/// row (D275).
 ///
 /// # Safety
 /// `no_cache` must be writable; `provctx` is ignored by all three arms.
@@ -2107,7 +2107,7 @@ unsafe extern "C" fn deflt_query(
         return DEFLT_DIGESTS.as_ptr();
     }
     if operation_id == crate::provider::cipher::OSSL_OP_CIPHER {
-        return crate::provider::cipher::DEFLT_CIPHERS.as_ptr();
+        return crate::provider::cipher::exported_ciphers();
     }
     if operation_id == crate::provider::mac::OSSL_OP_MAC {
         return crate::provider::mac::DEFLT_MACS.as_ptr();
@@ -2203,6 +2203,15 @@ pub(crate) unsafe extern "C" fn ossl_default_provider_init(
         crate::provider::ctx::ossl_prov_ctx_set0_libctx(ctx, libctx);
         crate::provider::ctx::ossl_prov_ctx_set0_handle(ctx, handle);
         crate::provider::ctx::ossl_prov_ctx_set0_core_get_params(ctx, c_get_params.cast_mut());
+
+        // `ossl_prov_cache_exported_algorithms(deflt_ciphers, exported_ciphers)` --
+        // `defltprov.c:804`, and **this is the ordering the call has to keep**: the filter reads
+        // each row's capability predicate, and `deflt_query`'s `OSSL_OP_CIPHER` arm answers the
+        // destination. Filling it here rather than lazily in the query is the authority's own
+        // choice and the one that avoids a data race, because the write precedes the provider
+        // being published to the core.
+        // SAFETY: this is the single writer, and it runs before `*out` is assigned below.
+        crate::provider::cipher::cache_exported_ciphers();
 
         *out = DEFLT_DISPATCH.as_ptr();
         *provctx = ctx.cast();

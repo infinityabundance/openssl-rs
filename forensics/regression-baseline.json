@@ -396,9 +396,9 @@
   },
   "prerequisites": {
     "blocking_dependencies": 25,
-    "divergence_names_covered": 35,
+    "divergence_names_covered": 31,
     "findings": 0,
-    "language_census": 3114,
+    "language_census": 3116,
     "sealed_census": 57
   },
   "provider_implemented": [

@@ -266,12 +266,9 @@
           "F",
           "arg",
           "cb_arg",
-          "cbc",
           "in",
-          "initkey",
           "inlen",
           "libctx",
-          "now",
           "out_len",
           "outlen",
           "sleep",
@@ -283,17 +280,8 @@
           "u64",
           "u8"
         ],
-        "note": "Each of these is a name the authority's *non-installed* headers introduce -- `#define F(x)` in crypto/md4/md4_local.h and crypto/sha/sha_local.h, `u8`/`u16`/`u32`/`u64` in crypto/aes/aes_local.h, macro-body and parameter names in include/internal/list.h, quic_*.h and sha3.h, and `sleep` in include/internal/e_os.h, which is EINTR-retry shim over the C library's -- and each also appears in this crate as an ordinary Rust identifier: a generic parameter, a local binding, a width alias, or a word inside a doc comment. A lexical scan of either side cannot separate those two facts, which is why this is a recorded class rather than a narrower matcher: a matcher tuned to drop `u8` would also drop a real collision. The gate holds the list exact, so a new member has to be looked at. `cbc` joins the list at D239: it is the parameter name in `include/crypto/siv.h`'s `ossl_siv128_new` declaration, and `src/modes/siv128.rs` uses it for the same parameter and for its own local bindings, which is a lexical collision rather than a missing prerequisite. `initkey` joins the list at D242: it is a member of `PROV_CIPHER_HW_AES_SIV` in providers/implementations/ciphers/cipher_aes_siv.h, a non-installed header, and `src/provider/cipher.rs` mirrors that struct as `ProvSivHw` with a Rust field of the same name -- the same lexical collision as `cbc`, not a prerequisite the crate is missing.",
-        "evidence": "forensics/atlas/macro-owners.json (defined_in for each name); the gate's first-run report, recorded in docs/DECISIONS.md D123; src/modes/siv128.rs (D239); providers/implementations/ciphers/cipher_aes_siv.h (D242, `initkey`)"
-      },
-      {
-        "owner_module": "src/provider/cipher.rs",
-        "class": "not_in_this_profile",
-        "covers": [
-          "initiv"
-        ],
-        "note": "A **field name, not a namespace member.** `cipher_chacha20.h:30` declares `int (*initiv)(PROV_CIPHER_CTX *ctx);` inside `struct prov_cipher_hw_chacha20_st`, and the typedef atlas's extraction is lexical by its own admission -- it records the name as a `typedef` with `owner_phase: null`. The crate's `ProvCipherHwChacha20::initiv` is the same field under the same spelling, which is why the gate sees the name referenced and finds nothing to join it to: there is no type, function, macro or enumerator of that name anywhere in the authority. Recorded as a divergence rather than fixed in the atlas because the atlas change is a grammar, and the honest disposition of a lexical false positive is to say so where the tooling can see it.",
-        "evidence": "src/provider/cipher.rs (ProvCipherHwChacha20); forensics/atlas/typedef-owners.json; docs/DECISIONS.md D265"
+        "note": "Each of these is a name the authority's *non-installed* headers introduce -- `#define F(x)` in crypto/md4/md4_local.h and crypto/sha/sha_local.h, `u8`/`u16`/`u32`/`u64` in crypto/aes/aes_local.h, macro-body and parameter names in include/internal/list.h, quic_*.h and sha3.h, and `sleep` in include/internal/e_os.h, which is EINTR-retry shim over the C library's -- and each also appears in this crate as an ordinary Rust identifier: a generic parameter, a local binding, a width alias, or a word inside a doc comment. A lexical scan of either side cannot separate those two facts, which is why this is a recorded class rather than a narrower matcher: a matcher tuned to drop `u8` would also drop a real collision. The gate holds the list exact, so a new member has to be looked at. Three earlier members -- `cbc` (D239), `initkey` (D242) and `now` -- and the one-member `not_in_this_profile` row that carried `initiv` (D265) were retired at D275: each was a *struct-member function-pointer field*, not a type, and `scan_typedefs` had taken the field's name out of the enclosing struct body. The grammar now reads a typedef's name from after the closing brace of a struct/union/enum body, so all four left the type universe and the records that existed only to cover them are gone. `initiv`'s own record had already said the honest disposition of that lexical false positive was to fix the atlas.",
+        "evidence": "forensics/atlas/macro-owners.json (defined_in for each name); the gate's first-run report, recorded in docs/DECISIONS.md D123; docs/DECISIONS.md D275 (the `scan_typedefs` grammar fix and the four retirements)"
       }
     ],
     "units": [

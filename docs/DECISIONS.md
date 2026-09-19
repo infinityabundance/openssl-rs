@@ -17841,3 +17841,96 @@ currently absent: `deflt_query` answers `DEFLT_CIPHERS` directly, which is corre
 landed row is unconditional, and every one of the thirteen is not. Then the two non-ETM rows
 (`AES-128/256-CBC-HMAC-SHA1` and `-SHA256`, which share `cipher_aes_cbc_hmac_sha.c`), then the nine
 ETM rows in `cipher_aes_cbc_hmac_sha_etm.c`, one decision entry each.
+
+## D275 — the capability filter lands, and the type atlas was reading struct members as types
+
+The first step of D274's order, and it found a defect in the tooling that had been quietly corrupting
+the prerequisite universe since the atlas was written.
+
+**What landed.** `ossl_prov_cache_exported_algorithms` is transcribed in `src/provider/activate.rs`
+from `providers/common/provider_util.c:338-350`, guard included: the body is
+`if (out[0].algorithm_names == NULL) { ... }`, so the fill happens only while the destination is
+untouched — the same test rather than a `bool`, because that is what makes the call idempotent when
+`ossl_default_provider_init` runs twice. `deflt_ciphers[]` becomes `[OsslAlgorithmCapable; 115]`
+(`ALG(NAMES, FUNC)` is `ALGC(NAMES, FUNC, NULL)`, so every row is a two-field row and an
+unconditional row's `capable` is `None`), and `deflt_query(OSSL_OP_CIPHER)` answers
+`cipher::exported_ciphers()` — a cached `[OsslAlgorithm; 115]` filled once, at provider init, before
+`*out = DEFLT_DISPATCH.as_ptr()` (`defltprov.c:332`'s `exported_ciphers`, filled at `:804`). The
+buffer shares the source table's lifetime and is written exactly once before any read, which is the
+authority's own discipline for the same object; the `SyncCell` that makes that sound carries the
+reasoning inline.
+
+**The predicate is a runtime bit, so the mechanism is observable, not decorative.** Every one of the
+authority's thirteen gated rows tests `OPENSSL_ia32cap_P[1] & (1 << 25)`
+(`include/crypto/aes_platform.h:170-173`, D274). A candidate that published all thirteen
+unconditionally would be indistinguishable on a host where the bit is set — which is this host — but
+wrong on one where it is not, and wrong the other way the moment a predicate's answer changes. That
+is why the filter is transcribed rather than approximated.
+
+**The proof that the filter is consulted, and that nothing landed depends on it.** The new unit test
+`the_capability_filter_drops_a_row_whose_predicate_refuses` drives the function with a four-row table
+whose middle rows carry an `AtomicUsize`-counting accepting predicate and a refusing one, asserts the
+refusing row is dropped and the accepting row kept and that a second call is a no-op (the guard), and
+then walks the real table and fails on any row whose `capable` is not `None`, with a message telling
+the next person to extend the test when the first `ALGC` row lands. So "every landed row is
+unconditional" is a checked fact with a tripwire attached, not a claim in prose. The generated
+`provider-algorithms.json`'s `capability_filtering` block moves from `prerequisite` prose to
+`state: "discharged"`.
+
+**The finding: `scan_typedefs` was reading struct members as type names.** Wiring the filter made the
+crate reference an authority name — `capable`, the predicate field of `struct ag_capable_st`
+(`providers/common/include/prov/provider_util.h:140-143`) — that no Rust item defines, and the
+prerequisite gate reported it as an `undefined_prerequisite`. Chasing that produced the real bug, in
+`gen_prerequisite_atlas.py`: the scanner ran from each `typedef` to the next top-level `;` and then
+searched the *whole* declaration for `(*NAME`, so for
+
+```c
+typedef struct ag_capable_st {
+    OSSL_ALGORITHM alg;
+    int (*capable)(void);
+} OSSL_ALGORITHM_CAPABLE;
+```
+
+it recorded `capable` — a member — as the type, and never reached `OSSL_ALGORITHM_CAPABLE`. The fix
+takes a name from after the body's closing brace whenever a top-level `{...}` is present; only when
+there is no body does the `(*NAME` form apply.
+
+**What that moved, measured.** The type universe is **1573** records, up from **1568**: **18** names
+left, **23** were recovered, and the recoveries are exactly the real typedefs the member-name grab
+had been shadowing — `OSSL_ALGORITHM_CAPABLE` and `OSSL_METHOD_CONSTRUCT_METHOD`, `PROV_TDES_CTX`
+and `PROV_DES_CTX`, the seven `PROV_CIPHER_HW_*` structures, `SSL3_ENC_METHOD`, `RECORD_LAYER`,
+`SRP_CTX`, `CERT`, `HT_CONFIG` and the `QUIC_*`/`QLOG_*` argument structs. The 18 removed are all
+struct-member function pointers — `cbc`, `initkey`, `initiv`, `now`, `setup_key_block`, `tls_init`,
+`ht_free_fn` and the rest. Nothing in the crate changed as a result, because a type name the crate
+does not use is inert; what changed is that the universe is now the authority's actual typedefs
+rather than its typedefs mangled with a member name from each of them.
+
+**Four divergence records were retired, because they covered names that no longer exist.**
+`prerequisites.json`'s `shadowed_by_a_crate_identifier` row loses `cbc`, `initkey` and `now`, and the
+one-member `not_in_this_profile` row that carried `initiv` is deleted outright. All four were struct
+members the atlas had mis-recorded as types — `cbc` from `cipher_des.h`/`cipher_tdes.h`, `initkey`
+from `cipher_aes_siv.h`/`cipher_aes_gcm_siv.h`, `initiv` from `cipher_chacha20.h`, `now` from
+`quic_txp.h`. D265's note for `initiv` said the honest disposition of that lexical false positive was
+to fix the atlas; this entry is that fix, and the four records existed only because the grammar was
+wrong. The gate's reverse check is what forced the cleanup: a record that keeps covering a name the
+tooling has since stopped observing is a record that can hide the next real one.
+
+**`AlgorithmCapability` is not a dispatch type, and the citations said it was.** The dispatch court
+reported one unlinked Rust alias, and it was this unit's. `OSSL_ALGORITHM_CAPABLE`'s predicate has no
+authority typedef — the struct spells it inline — so the name is exempted with that reason rather
+than linked. Fixing it also corrected two doc citations on the type itself, which had been pointing
+at `include/openssl/core.h`; the struct is `providers/common/include/prov/provider_util.h`'s.
+
+**What this entry moves.** `src/provider/activate.rs`, `src/provider/cipher.rs`,
+`src/provider/digest.rs` (the `OSSL_OP_CIPHER` arm), `forensics/tools/gen_provider_algorithms.py`
+(the `deflt_query` arm's reader, which now maps `cipher::exported_ciphers` back to its source table),
+`forensics/tools/gen_prerequisite_atlas.py`, `forensics/tools/dispatch_court.py`,
+`forensics/prerequisites.json`, `docs/PHASE-8-SUBPHASES.md`'s 8.3 row, and every derived artefact
+they feed. Unit tests **605**; the pipeline is **29776 observations over 83 courts**; the provider
+census is **149 implemented / 157 open / 690 deferred**, with Phase 8 owning 149 implemented and 157
+open of those; `libcrypto` stays at **2035 implemented**.
+
+**What it does not move.** No export and no provider row. The thirteen `AES-*-CBC-HMAC-*` rows stay
+`open` on their predicates' host bit and on the absence of a portable arm (D274); the mechanism they
+needed is now in place, so the next entry is the construction itself, one entry for the two non-ETM
+rows and one for the nine ETM rows, in the order D274 records.
