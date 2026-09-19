@@ -17617,3 +17617,65 @@ export-coverage atlas stays **0 unmatched**. `RT-CIPHER` moves **4887 -> 5931** 
 `CT-CIPHER` **3090 -> 3111 / 3111** vectors, and the pipeline total **28463 -> 29507 over 83
 courts**. `RT-DIGEST` (468) and `CT-DIGEST` (272 / 272) do not move. Unit tests stay **604**. Full
 pipeline to `PIPELINE OK`.
+
+## D271 — the ARIA and SM4 CCM rows land, and the correctness court grows its second provider arm
+
+The four remaining CCM registrations — `ARIA-128/192/256-CCM` and `SM4-CCM` — land on the
+`ciphercommon_ccm.c` engine D238 transcribed. They are the AES rows one algorithm over: the same six
+`ossl_ccm_generic_*` methods, the same `blkbits`/`ivbits`, and the same `IMPLEMENT_aead_cipher`
+dispatch shape. So `ccm_row!` became the expansion of **the authority's macro** rather than of its
+first user: the `newctx`/`dupctx`/`freectx` trio and the context type behind them are parameters,
+and `AES_CCM_FLAGS`/`AES_CCM_BLOCK_BITS`/`AES_CCM_IV_BITS` are renamed to the names the authority
+actually uses for them (`AEAD_FLAGS`, `CCM_BLOCK_BITS`, `CCM_IV_BITS`) — three families pass the same
+three values, which is what makes one macro honest here.
+
+**Two of the four were right for a reason worth recording, and one needed care.** `ARIA_KEY` is 276
+bytes so its union rounds to 280 and `PROV_ARIA_CCM_CTX` is **432**; `SM4_KEY` is 128, already a
+multiple of eight, so `PROV_SM4_CCM_CTX` is **280**. Neither needed the `AesCcmKeyUnion` treatment,
+because the AES-CCM union's extra sixteen bytes are the s390x arm's `pad[16]` and neither of these
+headers has one. Both numbers are bound in the size test with their `ks` offsets (D269).
+
+**`PROV_CCM_CTX::str` is written by every CCM initkey, and the crate now writes it too.** The
+authority's `ccm_aria_initkey` sets `ctx->str = NULL` and `cipher_sm4_ccm_hw.c`'s macro sets
+`ctx->str = ctx->enc ? fn_ccm_enc : fn_ccm_dec` with both call sites passing `NULL`, so the value is
+NULL on every path and the context's `zalloc` already left it that way. It is assigned anyway:
+D269 added the field for its eight bytes and said it was never written, which was true of the
+transcription then and is not true of the authority.
+
+**The correctness plane needed a second provider arm, and found a case-sensitivity bug in the first
+version of it.** `CT-CIPHER`'s CCM arm drove the low-level `CRYPTO_ccm128_*` over `AES_*`, and its
+guard was `strncmp(cipher, "aes-", 4) != 0 -> return -1`. That arm cannot reach ARIA or SM4 at all —
+the authority exports no primitive for either, and `CRYPTO_ccm128_init` takes a `block128_f` over the
+row's own schedule — so the vectors fell through to the plain provider fallback `ct_evp`, which
+produces a bare ciphertext. The failure was therefore `expected = ciphertext || tag || 01 01` against
+`actual = ciphertext`, which says nothing about CCM. The arm now has a provider branch that
+reproduces the same four-field record through `EVP_CIPHER_fetch`, reading the tag back with
+`EVP_CTRL_AEAD_GET_TAG` and deriving the two answer bytes from a decrypt under the tag and under a
+one-bit flip of it. This is D267's precedent (SM4's rows reached the court through the provider
+because it publishes no low-level API) applied to the AEAD arm, and the vectors' expectations remain
+entirely the corpus's own bytes.
+
+The first version of that branch refused every ARIA and SM4 vector, because the corpus spells AES's
+names in lower case and ARIA's and SM4's in upper case and the suffix test was case-sensitive. That
+is the quiet failure mode again: the arm returns -1, the caller falls through to the plain provider
+path, and the answer is a plausible-looking ciphertext that fails without saying why.
+
+**`RT-CIPHER`'s CCM arm now covers all seven rows and records where the tag rejection lands.** The
+per-row round trip was extended from the AES three to every family, because what ARIA and SM4 add to
+the shared engine is their own `ccm_<alg>_initkey` and their own schedule, and a row that built the
+wrong schedule would pass every AES arm. A one-bit tag flip is then refused — and the first version
+of *that* printed `setup_refused` on the authority, because it reported only whether the whole chain
+succeeded. Instrumenting each step shows the authority's answer is `1,1,1,1,1,1,0,-1`: **the refusal
+lands on the payload update, not on the final**, on every family. An arm that stops before the call
+it names is D261's class yet again, so the per-step record is what the arm now prints.
+
+**What this entry moves.** `implemented[libcrypto]` stays **2035 / 5896** and Phase 8 stays **194
+implemented / 576 open / 16 deferred** — ARIA and SM4 export nothing. The provider census moves
+**144 -> 148 implemented / 162 -> 158 open / 690 deferred**, with coverage exact at **148 / 148 / 0
+unmatched**, and the export-coverage atlas stays **0 unmatched**. `RT-CIPHER` moves **5931 -> 6134**
+observations, `CT-CIPHER` **3111 -> 3119 / 3119** vectors, and the pipeline total **29507 -> 29710
+over 83 courts**. The err-site table stays at **1951**: neither `cipher_aria_ccm_hw.c` nor
+`cipher_sm4_ccm_hw.c` raises anything, because both ignore their schedule setter's return value and
+answer 1 unconditionally — which is itself the difference between them and `cipher_aria_hw.c` (D270).
+`RT-DIGEST` (468) and `CT-DIGEST` (272 / 272) do not move; unit tests stay **604**. Full pipeline to
+`PIPELINE OK`.

@@ -7017,14 +7017,19 @@ const EVP_AEAD_TLS1_AAD_LEN: usize = 13;
 const EVP_CCM_TLS_FIXED_IV_LEN: usize = 4;
 /// `EVP_CCM_TLS_EXPLICIT_IV_LEN` — `include/openssl/evp.h:482`.
 const EVP_CCM_TLS_EXPLICIT_IV_LEN: usize = 8;
-/// `AES_CCM_FLAGS` — `cipher_aes_ccm.c:68-72`'s `AEAD_FLAGS`, which is `prov/ciphercommon_aead.h:16`.
-const AES_CCM_FLAGS: u64 = PROV_CIPHER_FLAG_AEAD | PROV_CIPHER_FLAG_CUSTOM_IV;
+/// `AEAD_FLAGS` — `prov/ciphercommon_aead.h:16`, the flag pair every `IMPLEMENT_aead_cipher` row
+/// passes: `PROV_CIPHER_FLAG_AEAD | PROV_CIPHER_FLAG_CUSTOM_IV`.
+///
+/// **Shared, not AES's.** The AES, ARIA and SM4 CCM rows and the AES-SIV rows all pass it, so it is
+/// named for the macro rather than for its first user (D271).
+const AEAD_FLAGS: u64 = PROV_CIPHER_FLAG_AEAD | PROV_CIPHER_FLAG_CUSTOM_IV;
 /// `EVP_CIPH_CCM_MODE` — `include/openssl/evp.h:317`.
 const EVP_CIPH_CCM_MODE: c_uint = 0x7;
-/// The CCM rows' `blkbits` — `cipher_aes_ccm.c:68-72`'s sixth `IMPLEMENT_aead_cipher` argument.
-const AES_CCM_BLOCK_BITS: usize = 8;
-/// The CCM rows' `ivbits` — `cipher_aes_ccm.c:68-72`'s seventh argument.
-const AES_CCM_IV_BITS: usize = 96;
+/// The CCM rows' `blkbits` — every `IMPLEMENT_aead_cipher(..., ccm, CCM, ...)` invocation's sixth
+/// argument, in `cipher_aes_ccm.c`, `cipher_aria_ccm.c` and `cipher_sm4_ccm.c` alike.
+const CCM_BLOCK_BITS: usize = 8;
+/// The CCM rows' `ivbits` — the same invocations' seventh argument.
+const CCM_IV_BITS: usize = 96;
 /// `UNINITIALISED_SIZET` — `prov/ciphercommon_aead.h:14`.
 const UNINITIALISED_SIZET: usize = usize::MAX;
 /// `OSSL_CIPHER_PARAM_AEAD_TLS1_AAD` — `core_names.h:181` (`"tlsaad"`).
@@ -8157,17 +8162,24 @@ unsafe extern "C" fn aes_ccm_freectx(vctx: *mut c_void) {
 const FILE_CCM: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ccm.c".as_ptr();
 
-/// `IMPLEMENT_aead_cipher` — `prov/ciphercommon_aead.h:18-67`, the three AES-CCM rows' dispatch
-/// tables. Each has fourteen entries; `CIPHER` is the shared `ossl_ccm_cipher`, `UPDATE` and
-/// `FINAL` the shared stream pair, and `GET_PARAMS` is the row's own `blkbits`/`ivbits` triple.
+/// `IMPLEMENT_aead_cipher` — `prov/ciphercommon_aead.h:18-67`, the CCM rows' dispatch tables. Each
+/// has fourteen entries; `CIPHER` is the shared `ossl_ccm_cipher`, `UPDATE` and `FINAL` the shared
+/// stream pair, and `GET_PARAMS` is the row's own `blkbits`/`ivbits` triple.
+///
+/// **The three per-family items are parameters, not fixed**, because the AES, ARIA and SM4 CCM rows
+/// differ in exactly those three: the `newctx`/`dupctx`/`freectx` trio each `cipher_<alg>_ccm.c`
+/// declares and the context type behind them. Everything else — including `blkbits` and `ivbits`,
+/// which all three families pass as `8` and `96` — is shared, which is what makes one macro the
+/// honest expansion of one authority macro rather than three transcriptions of it.
 ///
 /// The expansion writes only `pub(crate)` function items and a `'static` table — no exported
 /// symbol — so the project's ban on `macro_rules!`-generated exports is not engaged.
 macro_rules! ccm_row {
-    ($newctx:ident, $getparams:ident, $table:ident, $kbits:expr) => {
+    ($newctx:ident, $getparams:ident, $table:ident, $kbits:expr, $newctx_impl:path,
+     $freectx:path, $dupctx:path) => {
         unsafe extern "C" fn $newctx(provctx: *mut c_void) -> *mut c_void {
             // SAFETY: the dispatch contract.
-            unsafe { aes_ccm_newctx(provctx, $kbits) }
+            unsafe { $newctx_impl(provctx, $kbits) }
         }
 
         unsafe extern "C" fn $getparams(params: *mut OsslParam) -> c_int {
@@ -8176,10 +8188,10 @@ macro_rules! ccm_row {
                 ossl_cipher_generic_get_params(
                     params,
                     EVP_CIPH_CCM_MODE,
-                    AES_CCM_FLAGS,
+                    AEAD_FLAGS,
                     $kbits,
-                    AES_CCM_BLOCK_BITS,
-                    AES_CCM_IV_BITS,
+                    CCM_BLOCK_BITS,
+                    CCM_IV_BITS,
                 )
             }
         }
@@ -8191,11 +8203,11 @@ macro_rules! ccm_row {
             },
             OsslDispatch {
                 function_id: OSSL_FUNC_CIPHER_FREECTX,
-                function: aes_ccm_freectx as *mut c_void,
+                function: $freectx as *mut c_void,
             },
             OsslDispatch {
                 function_id: crate::evp::cipher::OSSL_FUNC_CIPHER_DUPCTX,
-                function: aes_ccm_dupctx as *mut c_void,
+                function: $dupctx as *mut c_void,
             },
             OsslDispatch {
                 function_id: OSSL_FUNC_CIPHER_ENCRYPT_INIT,
@@ -8253,19 +8265,357 @@ ccm_row!(
     aes128ccm_newctx,
     aes128ccm_get_params,
     AES128CCM_FUNCTIONS,
-    128
+    128,
+    aes_ccm_newctx,
+    aes_ccm_freectx,
+    aes_ccm_dupctx
 );
 ccm_row!(
     aes192ccm_newctx,
     aes192ccm_get_params,
     AES192CCM_FUNCTIONS,
-    192
+    192,
+    aes_ccm_newctx,
+    aes_ccm_freectx,
+    aes_ccm_dupctx
 );
 ccm_row!(
     aes256ccm_newctx,
     aes256ccm_get_params,
     AES256CCM_FUNCTIONS,
-    256
+    256,
+    aes_ccm_newctx,
+    aes_ccm_freectx,
+    aes_ccm_dupctx
+);
+
+// ---------------------------------------------------------------------------------------------
+// `cipher_aria_ccm*.c` and `cipher_sm4_ccm*.c` — the ARIA and SM4 CCM rows
+// ---------------------------------------------------------------------------------------------
+//
+// Both families are the AES-CCM shape one algorithm over: the same `ciphercommon_ccm.c` engine, the
+// same six `ossl_ccm_generic_*` methods, and a `ccm_row!` invocation whose only differences are the
+// three per-family items the macro takes as parameters.
+//
+// Three things are worth stating where they can be seen.
+//
+// **`str` is written, not merely absent.** `ccm_aria_initkey` sets `ctx->str = NULL`
+// (`cipher_aria_ccm_hw.c:25`) and the SM4 macro sets `ctx->str = ctx->enc ? fn_ccm_enc : fn_ccm_dec`
+// with both call sites passing `NULL` (`cipher_sm4_ccm_hw.c:22`) -- so the value the authority
+// produces is NULL on every path, which is what the context's `zalloc` already leaves. The crate
+// assigns it anyway, because `PROV_CCM_CTX::str` is a field the authority writes and a transcription
+// that relied on the allocator would be right by accident rather than by construction.
+//
+// **Neither hw table has an assembly arm in this profile.** `cipher_sm4_ccm_hw.c:63-72` selects
+// `cipher_sm4_ccm_hw_x86_64.inc`'s `hw_x86_64_sm4_ccm` when `HWSM4_CAPABLE_X86_64` reports the
+// extension, and the `.inc`'s `initkey` is the same `SM4_HW_CCM_SET_KEY_FN` expansion with
+// `hw_x86_64_sm4_set_key`/`hw_x86_64_sm4_encrypt` in place of the C pair. The assembly is declined
+// for the reason D266 records for SM4 generally, so `ossl_prov_sm4_hw_ccm` answers the C table and
+// the capability test is not transcribed: a function that always returns the same pointer would be
+// a branch the crate cannot take either way.
+//
+// **`cipher_aria_ccm.c` and `cipher_sm4_ccm.c` are source-tree files**, so their `__FILE__` carries
+// the `../../src/openssl-3.6.4/` prefix, as every other provider cipher row's here does.
+
+/// The allocation-tracking `file` argument for the ARIA CCM rows' allocations.
+const FILE_ARIA_CCM: *const c_char =
+    c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aria_ccm.c".as_ptr();
+/// The allocation-tracking `file` argument for the SM4 CCM row's allocation.
+const FILE_SM4_CCM: *const c_char =
+    c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_sm4_ccm.c".as_ptr();
+
+/// `PROV_ARIA_CCM_CTX` — `cipher_aria_ccm.h:14-20`. Unlike the AES-CCM union this one has no
+/// leading `unsigned char pad[16]`, so `ARIA_KEY`'s 276 bytes are the whole union's content and the
+/// eight-alignment rounds them to 280: 152 + 280 = **432**, which the unit test binds (D269).
+#[repr(C)]
+pub(crate) struct ProvAriaCcmCtx {
+    /// `PROV_CCM_CTX base; /* Must be first */`.
+    pub base: ProvCcmCtx,
+    /// `union { OSSL_UNION_ALIGN; ARIA_KEY ks; } ks`.
+    pub ks: crate::aria::AriaKey,
+}
+
+/// `PROV_SM4_CCM_CTX` — `cipher_sm4_ccm.h:15-22`. `SM4_KEY` is 128 bytes and already a multiple of
+/// eight, so the union adds no padding and this is 152 + 128 = **280**.
+#[repr(C)]
+pub(crate) struct ProvSm4CcmCtx {
+    /// `PROV_CCM_CTX base; /* Must be first */`.
+    pub base: ProvCcmCtx,
+    /// `union { OSSL_UNION_ALIGN; SM4_KEY ks; } ks`.
+    pub ks: crate::sm4::Sm4Key,
+}
+
+/// `ccm_aria_initkey` — `cipher_aria_ccm_hw.c:16-28`.
+///
+/// **The schedule setter's return value is ignored.** `cipher_aria_ccm_hw.c` does not test
+/// `ossl_aria_set_encrypt_key`'s answer and answers 1 unconditionally, which is why the ARIA CCM
+/// rows add no raise site even though the same setter has one in `cipher_aria_hw.c` (D270).
+///
+/// # Safety
+/// `ctx` is a `PROV_ARIA_CCM_CTX`; `key` is readable for `keylen` bytes.
+unsafe fn ccm_aria_initkey(ctx: *mut ProvCcmCtx, key: *const c_uchar, keylen: usize) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let actx = ctx.cast::<ProvAriaCcmCtx>();
+        let ks: *mut crate::aria::AriaKey = ptr::addr_of_mut!((*actx).ks);
+
+        crate::aria::ossl_aria_set_encrypt_key(key, (keylen * 8) as c_int, ks);
+        CRYPTO_ccm128_init(
+            ptr::addr_of_mut!((*ctx).ccm_ctx),
+            (*ctx).m as c_uint,
+            (*ctx).l as c_uint,
+            ks.cast(),
+            aria_block_encrypt,
+        );
+        (*ctx).str = None;
+        (*ctx).flags.set_key_set(true);
+        1
+    }
+}
+
+/// `ccm_sm4_initkey` — `cipher_sm4_ccm_hw.c:25-52`'s portable arm, which is the
+/// `SM4_HW_CCM_SET_KEY_FN(ossl_sm4_set_key, ossl_sm4_encrypt, NULL, NULL)` expansion.
+///
+/// **`ossl_sm4_set_key` takes no bit count**, unlike every other schedule setter on this surface:
+/// SM4 has one key size and the function's own signature says so.
+///
+/// # Safety
+/// `ctx` is a `PROV_SM4_CCM_CTX`; `key` is readable for sixteen bytes.
+unsafe fn ccm_sm4_initkey(ctx: *mut ProvCcmCtx, key: *const c_uchar, _keylen: usize) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let actx = ctx.cast::<ProvSm4CcmCtx>();
+        let ks: *mut crate::sm4::Sm4Key = ptr::addr_of_mut!((*actx).ks);
+
+        crate::sm4::ossl_sm4_set_key(key, ks);
+        CRYPTO_ccm128_init(
+            ptr::addr_of_mut!((*ctx).ccm_ctx),
+            (*ctx).m as c_uint,
+            (*ctx).l as c_uint,
+            ks.cast(),
+            sm4_block_encrypt,
+        );
+        // `ctx->enc ? NULL : NULL` -- both arms of the authority's ternary are NULL here.
+        (*ctx).str = None;
+        (*ctx).flags.set_key_set(true);
+        1
+    }
+}
+
+/// `static const PROV_CCM_HW ccm_aria` — `cipher_aria_ccm_hw.c:30-37`.
+static ARIA_CCM_HW: ProvCcmHw = ProvCcmHw {
+    setkey: ccm_aria_initkey,
+    setiv: ossl_ccm_generic_setiv,
+    setaad: ossl_ccm_generic_setaad,
+    auth_encrypt: ossl_ccm_generic_auth_encrypt,
+    auth_decrypt: ossl_ccm_generic_auth_decrypt,
+    gettag: ossl_ccm_generic_gettag,
+};
+
+/// `static const PROV_CCM_HW ccm_sm4` — `cipher_sm4_ccm_hw.c:54-61`.
+static SM4_CCM_HW: ProvCcmHw = ProvCcmHw {
+    setkey: ccm_sm4_initkey,
+    setiv: ossl_ccm_generic_setiv,
+    setaad: ossl_ccm_generic_setaad,
+    auth_encrypt: ossl_ccm_generic_auth_encrypt,
+    auth_decrypt: ossl_ccm_generic_auth_decrypt,
+    gettag: ossl_ccm_generic_gettag,
+};
+
+/// `const PROV_CCM_HW *ossl_prov_aria_hw_ccm(size_t keybits)` — `cipher_aria_ccm_hw.c:38-41`.
+/// ARIA has one CCM table and ignores `keybits`.
+///
+/// # Safety
+/// Always safe; a uniform signature the hw contract requires.
+unsafe fn ossl_prov_aria_hw_ccm(_keybits: usize) -> *const ProvCcmHw {
+    ptr::addr_of!(ARIA_CCM_HW)
+}
+
+/// `const PROV_CCM_HW *ossl_prov_sm4_hw_ccm(size_t keybits)` — `cipher_sm4_ccm_hw_x86_64.inc:28-34`.
+/// The C table is the answer on both sides of the extension test this profile declines.
+///
+/// # Safety
+/// Always safe; a uniform signature the hw contract requires.
+unsafe fn ossl_prov_sm4_hw_ccm(_keybits: usize) -> *const ProvCcmHw {
+    ptr::addr_of!(SM4_CCM_HW)
+}
+
+/// `aria_ccm_newctx` — `cipher_aria_ccm.c:18-29`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe fn aria_ccm_newctx(_provctx: *mut c_void, keybits: usize) -> *mut c_void {
+    // SAFETY: the caller's contract; `ossl_ccm_initctx` writes only within the allocation.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+
+        let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvAriaCcmCtx>(), FILE_ARIA_CCM, LINE);
+        if !ctx.is_null() {
+            ossl_ccm_initctx(ctx.cast(), keybits, ossl_prov_aria_hw_ccm(keybits));
+        }
+        ctx
+    }
+}
+
+/// `aria_ccm_dupctx` — `cipher_aria_ccm.c:31-44`. The shallow copy's `ccm_ctx.key` still points at
+/// the *original* schedule, so it is re-pointed at the copy's own.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aria_ccm_dupctx(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+
+        let ctx = provctx.cast::<ProvAriaCcmCtx>();
+        if ctx.is_null() {
+            return ptr::null_mut();
+        }
+        let dupctx = CRYPTO_memdup(
+            provctx,
+            core::mem::size_of::<ProvAriaCcmCtx>(),
+            FILE_ARIA_CCM,
+            LINE,
+        );
+        if dupctx.is_null() {
+            return ptr::null_mut();
+        }
+        let dup = dupctx.cast::<ProvAriaCcmCtx>();
+        (*dup)
+            .base
+            .ccm_ctx
+            .repoint_key(ptr::addr_of_mut!((*dup).ks).cast());
+
+        dupctx
+    }
+}
+
+/// `aria_ccm_freectx` — `cipher_aria_ccm.c:46-51`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aria_ccm_freectx(vctx: *mut c_void) {
+    // SAFETY: the context is the one `aria_ccm_newctx` allocated.
+    unsafe {
+        CRYPTO_clear_free(
+            vctx,
+            core::mem::size_of::<ProvAriaCcmCtx>(),
+            FILE_ARIA_CCM,
+            LINE,
+        )
+    };
+}
+
+/// `sm4_ccm_newctx` — `cipher_sm4_ccm.c:18-29`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe fn sm4_ccm_newctx(_provctx: *mut c_void, keybits: usize) -> *mut c_void {
+    // SAFETY: the caller's contract; `ossl_ccm_initctx` writes only within the allocation.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+
+        let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvSm4CcmCtx>(), FILE_SM4_CCM, LINE);
+        if !ctx.is_null() {
+            ossl_ccm_initctx(ctx.cast(), keybits, ossl_prov_sm4_hw_ccm(keybits));
+        }
+        ctx
+    }
+}
+
+/// `sm4_ccm_dupctx` — `cipher_sm4_ccm.c:31-44`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn sm4_ccm_dupctx(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+
+        let ctx = provctx.cast::<ProvSm4CcmCtx>();
+        if ctx.is_null() {
+            return ptr::null_mut();
+        }
+        let dupctx = CRYPTO_memdup(
+            provctx,
+            core::mem::size_of::<ProvSm4CcmCtx>(),
+            FILE_SM4_CCM,
+            LINE,
+        );
+        if dupctx.is_null() {
+            return ptr::null_mut();
+        }
+        let dup = dupctx.cast::<ProvSm4CcmCtx>();
+        (*dup)
+            .base
+            .ccm_ctx
+            .repoint_key(ptr::addr_of_mut!((*dup).ks).cast());
+
+        dupctx
+    }
+}
+
+/// `sm4_ccm_freectx` — `cipher_sm4_ccm.c:46-51`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn sm4_ccm_freectx(vctx: *mut c_void) {
+    // SAFETY: the context is the one `sm4_ccm_newctx` allocated.
+    unsafe {
+        CRYPTO_clear_free(
+            vctx,
+            core::mem::size_of::<ProvSm4CcmCtx>(),
+            FILE_SM4_CCM,
+            LINE,
+        )
+    };
+}
+
+// `IMPLEMENT_aead_cipher(aria, ccm, CCM, AEAD_FLAGS, <kbits>, 8, 96)` — `cipher_aria_ccm.c:53-58`,
+// and `IMPLEMENT_aead_cipher(sm4, ccm, CCM, AEAD_FLAGS, 128, 8, 96)` — `cipher_sm4_ccm.c:53`.
+ccm_row!(
+    aria128ccm_newctx,
+    aria128ccm_get_params,
+    ARIA128CCM_FUNCTIONS,
+    128,
+    aria_ccm_newctx,
+    aria_ccm_freectx,
+    aria_ccm_dupctx
+);
+ccm_row!(
+    aria192ccm_newctx,
+    aria192ccm_get_params,
+    ARIA192CCM_FUNCTIONS,
+    192,
+    aria_ccm_newctx,
+    aria_ccm_freectx,
+    aria_ccm_dupctx
+);
+ccm_row!(
+    aria256ccm_newctx,
+    aria256ccm_get_params,
+    ARIA256CCM_FUNCTIONS,
+    256,
+    aria_ccm_newctx,
+    aria_ccm_freectx,
+    aria_ccm_dupctx
+);
+ccm_row!(
+    sm4128ccm_newctx,
+    sm4128ccm_get_params,
+    SM4128CCM_FUNCTIONS,
+    128,
+    sm4_ccm_newctx,
+    sm4_ccm_freectx,
+    sm4_ccm_dupctx
 );
 
 // ---------------------------------------------------------------------------------------------
@@ -9313,6 +9663,12 @@ alias!(N_ARIA_128_CFB8, "ARIA-128-CFB8");
 alias!(N_ARIA_256_CTR, "ARIA-256-CTR:1.2.410.200046.1.1.15");
 alias!(N_ARIA_192_CTR, "ARIA-192-CTR:1.2.410.200046.1.1.10");
 alias!(N_ARIA_128_CTR, "ARIA-128-CTR:1.2.410.200046.1.1.5");
+// The ARIA and SM4 CCM rows' sequences -- `prov/names.h:111-113` and `:174`. Neither carries a
+// short alias, unlike their CBC rows.
+alias!(N_ARIA_256_CCM, "ARIA-256-CCM:1.2.410.200046.1.1.39");
+alias!(N_ARIA_192_CCM, "ARIA-192-CCM:1.2.410.200046.1.1.38");
+alias!(N_ARIA_128_CCM, "ARIA-128-CCM:1.2.410.200046.1.1.37");
+alias!(N_SM4_CCM, "SM4-CCM:1.2.156.10197.1.104.9");
 alias!(N_AES_256_ECB, "AES-256-ECB:2.16.840.1.101.3.4.1.41");
 alias!(N_AES_192_ECB, "AES-192-ECB:2.16.840.1.101.3.4.1.21");
 alias!(N_AES_128_ECB, "AES-128-ECB:2.16.840.1.101.3.4.1.1");
@@ -9469,7 +9825,7 @@ const fn row(names: *const c_char, implementation: *const c_void) -> OsslAlgorit
 
 /// `static const OSSL_ALGORITHM_CAPABLE deflt_ciphers[]` — `providers/defltprov.c:161-330`,
 /// restricted to the rows this half implements, in the authority's order.
-pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 110] = [
+pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 114] = [
     row(N_NULL, NULL_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_ECB, AES256ECB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_ECB, AES192ECB_FUNCTIONS.as_ptr().cast()),
@@ -9528,8 +9884,12 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 110] = [
         AES128WRAPPADINV_FUNCTIONS.as_ptr().cast(),
     ),
     // The `ARIA` family, `defltprov.c:246-274`, between the AES-CBC-HMAC `ALGC` rows (not landed)
-    // and `CAMELLIA`. The six GCM and CCM rows precede these in the authority and are a separate
-    // unit, so this is the authority's order restricted to the rows that exist here.
+    // and `CAMELLIA`. The six GCM and CCM rows precede these in the authority; the GCM three are
+    // Phase 9's on `RAND_bytes_ex` and the CCM three are landed below, ahead of the mode rows
+    // because that is where the authority puts them.
+    row(N_ARIA_256_CCM, ARIA256CCM_FUNCTIONS.as_ptr().cast()),
+    row(N_ARIA_192_CCM, ARIA192CCM_FUNCTIONS.as_ptr().cast()),
+    row(N_ARIA_128_CCM, ARIA128CCM_FUNCTIONS.as_ptr().cast()),
     row(N_ARIA_256_ECB, ARIA256ECB_FUNCTIONS.as_ptr().cast()),
     row(N_ARIA_192_ECB, ARIA192ECB_FUNCTIONS.as_ptr().cast()),
     row(N_ARIA_128_ECB, ARIA128ECB_FUNCTIONS.as_ptr().cast()),
@@ -9612,6 +9972,7 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 110] = [
     row(N_DES_EDE_CBC, TDES_EDE2_CBC_FUNCTIONS.as_ptr().cast()),
     row(N_DES_EDE_OFB, TDES_EDE2_OFB_FUNCTIONS.as_ptr().cast()),
     row(N_DES_EDE_CFB, TDES_EDE2_CFB_FUNCTIONS.as_ptr().cast()),
+    row(N_SM4_CCM, SM4128CCM_FUNCTIONS.as_ptr().cast()),
     row(N_SM4_ECB, SM4128ECB_FUNCTIONS.as_ptr().cast()),
     row(N_SM4_CBC, SM4128CBC_FUNCTIONS.as_ptr().cast()),
     row(N_SM4_CTR, SM4128CTR_FUNCTIONS.as_ptr().cast()),
@@ -11340,9 +11701,9 @@ mod tests {
 
     #[test]
     fn the_cipher_table_terminates_and_names_the_rows() {
-        assert_eq!(DEFLT_CIPHERS.len(), 110);
+        assert_eq!(DEFLT_CIPHERS.len(), 114);
         // SAFETY: every entry up to the terminator is initialised.
-        let last = DEFLT_CIPHERS[109].algorithm_names;
+        let last = DEFLT_CIPHERS[113].algorithm_names;
         assert!(last.is_null(), "the table is NULL-name terminated");
         // SAFETY: the first row's name is a `'static` C string.
         let first = unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[0].algorithm_names) };
@@ -11458,6 +11819,10 @@ mod tests {
         assert_eq!(core::mem::size_of::<ProvSm4Ctx>(), 320);
         assert_eq!(core::mem::size_of::<ProvAriaCtx>(), 472);
         assert_eq!(core::mem::offset_of!(ProvAriaCtx, ks), 192);
+        assert_eq!(core::mem::size_of::<ProvAriaCcmCtx>(), 432);
+        assert_eq!(core::mem::offset_of!(ProvAriaCcmCtx, ks), 152);
+        assert_eq!(core::mem::size_of::<ProvSm4CcmCtx>(), 280);
+        assert_eq!(core::mem::offset_of!(ProvSm4CcmCtx, ks), 152);
     }
 
     /// **The row's two parameter lists are its own, not the generic ones.** `ChaCha20` publishes a

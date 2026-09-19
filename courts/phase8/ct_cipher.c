@@ -725,6 +725,108 @@ static int ct_gcm(const char *cipher, int enc_op,
 }
 
 /*
+ * The CCM arm's **provider branch**, for the families whose schedule the driver cannot reach.
+ *
+ * `CRYPTO_ccm128_init` takes a `block128_f` over the row's own key schedule, and the authority
+ * exports no ARIA or SM4 primitive at all -- so for these two families the only schedule reachable
+ * from the distribution shell is the row's own, through `EVP_CIPHER_fetch`. Everything else is the
+ * same record: the tag is read back through `EVP_CTRL_AEAD_GET_TAG`, and the two answer bytes come
+ * from re-running the decrypt with that tag and with a one-bit flip of it, so a vector's
+ * expectation is still entirely the corpus's own bytes and this arm still asks the construction
+ * question rather than the parity one. This is D267's precedent -- SM4's rows reached this court
+ * through the provider because they publish no low-level API -- applied to the AEAD arm.
+ */
+static int ct_ccm_evp(const char *cipher,
+                      const unsigned char *key, size_t keylen,
+                      const unsigned char *iv, size_t ivlen,
+                      const unsigned char *aad, size_t aadlen,
+                      const unsigned char *in, size_t inlen,
+                      unsigned char *out, size_t *outlen, size_t m)
+{
+    EVP_CIPHER *c;
+    EVP_CIPHER_CTX *ctx;
+    unsigned char tag[16], bad[16], back[CT_MAX];
+    int l = 0, f = 0, al = 0, bl = 0;
+    int accept = 0, reject = 0;
+
+    if (m < 4 || m > 16 || (m & 1) != 0 || ivlen > INT_MAX || inlen > INT_MAX
+        || keylen > INT_MAX || aadlen > INT_MAX)
+        return -1;
+    c = EVP_CIPHER_fetch(NULL, cipher, NULL);
+    if (c == NULL)
+        return -1;
+    ctx = EVP_CIPHER_CTX_new();
+    if (ctx == NULL) {
+        EVP_CIPHER_free(c);
+        return -1;
+    }
+
+    /* Encrypt, and read the tag the construction produced. */
+    if (EVP_EncryptInit_ex2(ctx, c, NULL, NULL, NULL) != 1
+        || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, (int)ivlen, NULL) != 1
+        || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, (int)m, NULL) != 1
+        || EVP_EncryptInit_ex2(ctx, NULL, key, iv, NULL) != 1
+        || EVP_EncryptUpdate(ctx, NULL, &al, NULL, (int)inlen) != 1
+        || (aadlen != 0 && EVP_EncryptUpdate(ctx, NULL, &al, aad, (int)aadlen) != 1)
+        || EVP_EncryptUpdate(ctx, out, &l, in, (int)inlen) != 1
+        || EVP_EncryptFinal_ex(ctx, out + l, &f) != 1
+        || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, (int)m, tag) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        EVP_CIPHER_free(c);
+        return -1;
+    }
+
+    /*
+     * The two answers. The `accept` arm decrypts under the tag and must return the plaintext; the
+     * `reject` arm decrypts under a one-bit flip of it and must refuse. Each is a fresh init on the
+     * same context, because a CCM context carries the operation's state.
+     */
+    memcpy(bad, tag, m);
+    bad[0] ^= 0x01;
+
+    memset(back, 0, sizeof(back));
+    bl = 0;
+    accept = (EVP_DecryptInit_ex2(ctx, c, NULL, NULL, NULL) == 1
+              && EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, (int)ivlen, NULL) == 1
+              && EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, (int)m, (void *)tag) == 1
+              && EVP_DecryptInit_ex2(ctx, NULL, key, iv, NULL) == 1
+              && EVP_DecryptUpdate(ctx, NULL, &al, NULL, (int)inlen) == 1
+              && (aadlen == 0 || EVP_DecryptUpdate(ctx, NULL, &al, aad, (int)aadlen) == 1)
+              && EVP_DecryptUpdate(ctx, back, &bl, out, l + f) == 1
+              && EVP_DecryptFinal_ex(ctx, back + bl, &f) == 1
+              && bl == (int)inlen
+              && memcmp(back, in, inlen) == 0)
+                 ? 1
+                 : 0;
+
+    /*
+     * `reject`: a one-bit flip in the tag must be refused. **The refusal lands on the payload
+     * update, not on the final** -- the low-level arm's per-step record reads `1,1,1,1,1,1,0,-1`
+     * on the authority for every family -- so the answer is that the update returned 0 and wrote
+     * nothing.
+     */
+    memset(back, 0, sizeof(back));
+    reject = 0;
+    if (EVP_DecryptInit_ex2(ctx, c, NULL, NULL, NULL) == 1
+        && EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, (int)ivlen, NULL) == 1
+        && EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, (int)m, (void *)bad) == 1
+        && EVP_DecryptInit_ex2(ctx, NULL, key, iv, NULL) == 1
+        && EVP_DecryptUpdate(ctx, NULL, &al, NULL, (int)inlen) == 1
+        && (aadlen == 0 || EVP_DecryptUpdate(ctx, NULL, &al, aad, (int)aadlen) == 1)) {
+        bl = 0;
+        reject = EVP_DecryptUpdate(ctx, back, &bl, out, l + f) != 1 && bl == 0;
+    }
+
+    memcpy(out + inlen, tag, m);
+    out[inlen + m] = (unsigned char)(accept ? 1u : 0u);
+    out[inlen + m + 1] = (unsigned char)(reject ? 1u : 0u);
+    *outlen = inlen + m + 2;
+    EVP_CIPHER_CTX_free(ctx);
+    EVP_CIPHER_free(c);
+    return 0;
+}
+
+/*
  * CCM: the second AEAD arm, with the same `ciphertext || tag || accept || reject` answer as
  * `ct_gcm`. `M` is the vector's tag length and `L = 15 - ivlen`; the CAVS corpus uses every even
  * `M` in [4,16] and every `L` in [2,8], so both are read from the vector rather than fixed.
@@ -750,8 +852,31 @@ static int ct_ccm(const char *cipher, int enc_op,
     size_t m = taglen, l;
     int accept, reject;
 
-    if (enc_op != 1 || strncmp(cipher, "aes-", 4) != 0)
+    if (enc_op != 1)
         return -1;
+    /*
+     * The families with no low-level primitive go through the provider branch; the AES rows keep
+     * the low-level one, which is what makes the CAVS expectation a construction claim rather than
+     * a re-run of the provider.
+     */
+    if (strncmp(cipher, "aes-", 4) != 0) {
+        size_t cl = strlen(cipher);
+
+        /*
+         * The corpus spells the AEAD names in lower case for AES and in upper case for ARIA and
+         * SM4, so the suffix test is case-insensitive. Getting that wrong is silent in the worst
+         * way: this arm refuses, the caller falls through to the plain provider path, and the
+         * answer is a bare ciphertext that fails every vector without saying why.
+         */
+        if (cl < 4
+            || (cipher[cl - 4] != '-')
+            || (cipher[cl - 3] != 'c' && cipher[cl - 3] != 'C')
+            || (cipher[cl - 2] != 'c' && cipher[cl - 2] != 'C')
+            || (cipher[cl - 1] != 'm' && cipher[cl - 1] != 'M'))
+            return -1;
+        return ct_ccm_evp(cipher, key, keylen, iv, ivlen, aad, aadlen, in, inlen,
+                          out, outlen, taglen);
+    }
     if (strncmp(cipher + 4, "128-ccm", 7) == 0)
         bits = 128;
     else if (strncmp(cipher + 4, "192-ccm", 7) == 0)

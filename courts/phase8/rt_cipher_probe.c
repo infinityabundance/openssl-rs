@@ -3098,7 +3098,18 @@ static void rt_deflt_ocb(void)
  */
 static void rt_deflt_ccm(void)
 {
-    static const char *names[] = { "AES-256-CCM", "AES-192-CCM", "AES-128-CCM" };
+    /*
+     * **All seven CCM rows, not only the AES three.** The engine is `ciphercommon_ccm.c` shared by
+     * every family, so the AES arms below reach it once; what ARIA and SM4 add is their own
+     * `ccm_<alg>_initkey` and their own schedule, and a row that built the wrong schedule would pass
+     * every AES arm. The round trip at the end of this function is therefore run for each of
+     * them, and the ARIA rows' bytes are also checked against their own published corpus by
+     * `CT-CIPHER`.
+     */
+    static const char *names[] = {
+        "AES-256-CCM", "AES-192-CCM", "AES-128-CCM",
+        "ARIA-256-CCM", "ARIA-192-CCM", "ARIA-128-CCM", "SM4-CCM",
+    };
     unsigned char key[32];
     unsigned char iv[16];
     unsigned char in[48];
@@ -3424,6 +3435,88 @@ static void rt_deflt_ccm(void)
             if (c != NULL)
                 EVP_CIPHER_free(c);
         }
+    }
+
+    /*
+     * The per-row CCM round trip over **every** family, not only the AES three. What ARIA and SM4
+     * add to the shared `ciphercommon_ccm.c` engine is their own `ccm_<alg>_initkey` and their own
+     * schedule, and a row that built the wrong schedule would pass every AES arm above. The
+     * 48-octet payload is deliberately not a multiple of 16, so the partial-block path is reached,
+     * and a one-bit flip in the tag must be refused by the final.
+     */
+    for (n = 0; n < sizeof(names) / sizeof(names[0]); n++) {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, names[n], NULL);
+        EVP_CIPHER_CTX *e, *d;
+        int outl = 0, finl = 0, aadl = 0, backl = 0;
+        size_t clen;
+
+        snprintf(buf, sizeof(buf), "defltccmrt.%s", names[n]);
+        if (c == NULL) {
+            printf("%s.ok=0\n", buf);
+            continue;
+        }
+        clen = (size_t)EVP_CIPHER_get_key_length(c);
+        e = EVP_CIPHER_CTX_new();
+        d = EVP_CIPHER_CTX_new();
+        if (e == NULL || d == NULL
+            || EVP_EncryptInit_ex2(e, c, NULL, NULL, NULL) != 1
+            || EVP_CIPHER_CTX_ctrl(e, EVP_CTRL_CCM_SET_IVLEN, 12, NULL) != 1
+            || EVP_CIPHER_CTX_ctrl(e, EVP_CTRL_AEAD_SET_TAG, 16, NULL) != 1
+            || EVP_EncryptInit_ex2(e, NULL, key, iv, NULL) != 1
+            || EVP_EncryptUpdate(e, NULL, &aadl, NULL, (int)sizeof(in)) != 1
+            || EVP_EncryptUpdate(e, NULL, &aadl, aad, (int)sizeof(aad)) != 1
+            || EVP_EncryptUpdate(e, out, &outl, in, (int)sizeof(in)) != 1
+            || EVP_EncryptFinal_ex(e, out + outl, &finl) != 1
+            || EVP_CIPHER_CTX_ctrl(e, EVP_CTRL_AEAD_GET_TAG, 16, tag) != 1) {
+            printf("%s.ok=0\n", buf);
+        } else {
+            printf("%s.ct.len=%d\n", buf, outl + finl);
+            printf("%s.ct.is_not_plaintext=%d\n", buf, memcmp(out, in, sizeof(in)) != 0);
+            if (EVP_DecryptInit_ex2(d, c, NULL, NULL, NULL) != 1
+                || EVP_CIPHER_CTX_ctrl(d, EVP_CTRL_CCM_SET_IVLEN, 12, NULL) != 1
+                || EVP_CIPHER_CTX_ctrl(d, EVP_CTRL_AEAD_SET_TAG, 16, tag) != 1
+                || EVP_DecryptInit_ex2(d, NULL, key, iv, NULL) != 1
+                || EVP_DecryptUpdate(d, NULL, &aadl, NULL, (int)sizeof(in)) != 1
+                || EVP_DecryptUpdate(d, NULL, &aadl, aad, (int)sizeof(aad)) != 1
+                || EVP_DecryptUpdate(d, back, &backl, out, outl + finl) != 1
+                || EVP_DecryptFinal_ex(d, back + backl, &finl) != 1) {
+                printf("%s.rt=0\n", buf);
+            } else {
+                printf("%s.rt=%d\n", buf,
+                       backl + finl == (int)sizeof(in) && memcmp(back, in, sizeof(in)) == 0);
+            }
+            /*
+             * A one-bit flip in the tag must be refused by the final. **Every step's return value is
+             * printed**, because the first version of this arm reported only whether the whole chain
+             * succeeded and printed `setup_refused` on the authority -- an arm that stops before the
+             * call it names is the class D261 recorded, so which step refuses is the observation.
+             */
+            memcpy(bad, tag, sizeof(bad));
+            bad[0] = (unsigned char)(bad[0] ^ 0x40);
+            {
+                int r1 = EVP_DecryptInit_ex2(d, c, NULL, NULL, NULL);
+                int r2 = r1 == 1 ? EVP_CIPHER_CTX_ctrl(d, EVP_CTRL_CCM_SET_IVLEN, 12, NULL) : -1;
+                int r3 = r2 == 1
+                             ? EVP_CIPHER_CTX_ctrl(d, EVP_CTRL_AEAD_SET_TAG, 16, bad)
+                             : -1;
+                int r4 = r3 == 1 ? EVP_DecryptInit_ex2(d, NULL, key, iv, NULL) : -1;
+                int r5 = r4 == 1 ? EVP_DecryptUpdate(d, NULL, &aadl, NULL, (int)sizeof(in)) : -1;
+                int r6 = r5 == 1 ? EVP_DecryptUpdate(d, NULL, &aadl, aad, (int)sizeof(aad)) : -1;
+                int r7 = r6 == 1
+                             ? EVP_DecryptUpdate(d, back, &backl, out, outl + finl)
+                             : -1;
+                int rf = r7 == 1 ? EVP_DecryptFinal_ex(d, back + backl, &finl) : -1;
+
+                printf("%s.badtag.steps=%d,%d,%d,%d,%d,%d,%d,%d\n", buf, r1, r2, r3, r4, r5, r6,
+                       r7, rf);
+            }
+        }
+        printf("%s.keylen=%zu\n", buf, clen);
+        if (e != NULL)
+            EVP_CIPHER_CTX_free(e);
+        if (d != NULL)
+            EVP_CIPHER_CTX_free(d);
+        EVP_CIPHER_free(c);
     }
 }
 
@@ -3842,9 +3935,10 @@ static void rt_deflt_row_census(void)
         "AES-256-WRAP", "AES-192-WRAP", "AES-128-WRAP", "AES-256-WRAP-PAD",
         "AES-192-WRAP-PAD", "AES-128-WRAP-PAD", "AES-256-WRAP-INV", "AES-192-WRAP-INV",
         "AES-128-WRAP-INV", "AES-256-WRAP-PAD-INV", "AES-192-WRAP-PAD-INV", "AES-128-WRAP-PAD-INV",
-        /* The authority's `deflt_ciphers[]` order again: the `ARIA-*` twenty-one land between the
-         * AES-CBC-HMAC `ALGC` rows (not landed) and `CAMELLIA`, and the six `ARIA-*-GCM`/`-CCM` rows
-         * that precede them in `defltprov.c` are a separate unit. */
+        /* The authority's `deflt_ciphers[]` order again: the `ARIA-*` rows land between the
+         * AES-CBC-HMAC `ALGC` rows (not landed) and `CAMELLIA`. The three GCM rows precede the CCM
+         * three in `defltprov.c` and are Phase 9's on `RAND_bytes_ex` (D270). */
+        "ARIA-256-CCM", "ARIA-192-CCM", "ARIA-128-CCM",
         "ARIA-256-ECB", "ARIA-192-ECB", "ARIA-128-ECB",
         "ARIA-256-CBC", "ARIA-192-CBC", "ARIA-128-CBC",
         "ARIA-256-OFB", "ARIA-192-OFB", "ARIA-128-OFB",
@@ -3861,8 +3955,11 @@ static void rt_deflt_row_census(void)
         "DES-EDE3-ECB", "DES-EDE3-CBC", "DES-EDE3-OFB", "DES-EDE3-CFB",
         "DES-EDE3-CFB8", "DES-EDE3-CFB1", "DES-EDE-ECB", "DES-EDE-CBC",
         "DES-EDE-OFB", "DES-EDE-CFB",
+        /* `SM4-GCM` precedes `SM4-CCM` in `defltprov.c` and is Phase 9's on `RAND_bytes_ex`; the
+         * `SM4-XTS` row follows `SM4-CFB` and has not landed. */
+        "SM4-CCM",
         /* The authority's `deflt_ciphers[]` order, which is the order this list is compared in:
-         * the `SM4-*` five land between the ARIA family and `ChaCha20`. */
+         * the `SM4-*` rows land between the ARIA family and `ChaCha20`. */
         "SM4-ECB", "SM4-CBC", "SM4-CTR", "SM4-OFB", "SM4-CFB",
         "ChaCha20",
     };

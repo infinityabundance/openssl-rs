@@ -1845,6 +1845,39 @@ CIPHER_RECIPE_FAMILIES: list[CipherRecipeFamily] = [
             "independent CCM implementation is present in the pinned court image, so no "
             "boundary vector carries an independent oracle; that is the recorded cost of D208."
         ), aead=True),
+    # The ARIA and SM4 CCM sections of their own corpora, whose titles name the primary sources.
+    # Both are the AES-CCM shape one algorithm over -- the same `ciphercommon_ccm.c` engine and the
+    # same `ossl_ccm_generic_*` methods -- so the point of mirroring them is the **schedule**: a row
+    # whose `ccm_<alg>_initkey` built the wrong key schedule would agree with `RT-CIPHER`'s own round
+    # trip and disagree here. The ARIA blocks are the SRTP profile's (tag lengths 8 and 16 both
+    # appear) and the SM4 blocks RFC 8998's.
+    CipherRecipeFamily(
+        "aria_ccm", "test/recipes/30-test_evp_data/evpciph_aria.txt",
+        r"^ARIA-(128|192|256)-CCM$", "IETF draft-ietf-avtcore-aria-srtp-02",
+        "ARIA-{128,192,256}-CCM", (),
+        "", "",
+        note=(
+            "Candidate-only construction verification: the primary source is the ARIA SRTP profile "
+            "draft, whose CCM test vectors the pinned corpus carries verbatim, and the bytes are "
+            "mirrored through the corpus (`corpus_sha256`) rather than fetched. Only the encrypt "
+            "direction is mirrored, because an AEAD decrypt vector's tag is an input to be verified "
+            "rather than an output this driver's record can carry; the reject path is exercised by "
+            "`RT-CIPHER`'s per-row CCM arm. No independent ARIA implementation is present in the "
+            "pinned court image, so no boundary vector carries an independent oracle."
+        ), aead=True),
+    CipherRecipeFamily(
+        "sm4_ccm", "test/recipes/30-test_evp_data/evpciph_sm4.txt",
+        r"^SM4-CCM$", "RFC 8998",
+        "SM4-CCM", (),
+        "", "",
+        note=(
+            "Candidate-only construction verification: the primary source is RFC 8998's CCM "
+            "section, and the bytes are mirrored through the pinned corpus (`corpus_sha256`) rather "
+            "than fetched. Only the encrypt direction is mirrored, for the reason `aria_ccm`'s note "
+            "gives; the reject path is exercised by `RT-CIPHER`'s per-row CCM arm. No independent "
+            "SM4 implementation is present in the pinned court image, so no boundary vector carries "
+            "an independent oracle."
+        ), aead=True),
     # 8.3 -- XTS. `evpciph_aes_common.txt`'s XTS section is IEEE Std 1619-2007's own vectors;
     # both directions are mirrored (a mode, not an AEAD, so a decrypt vector's output is the
     # plaintext). The two `Result = KEY_SET_ERROR` blocks are skipped by the result-key rule.
