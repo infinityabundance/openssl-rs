@@ -13,6 +13,17 @@ only honest source is to compile a program that asks the compiler and print the 
 `src/provider/cipher.rs`'s size test carries the numbers these programs produced; the programs are
 committed so a reviewer can reproduce them instead of trusting the prose.
 
+## `oracle-polyval.c` — an oracle rather than a measurement
+
+`oracle-polyval.c` is the same idea pointed at a *value* instead of a layout. The authority's
+`ossl_polyval_ghash_init` and `ossl_polyval_ghash_hash` have external linkage but are absent from
+the shared object's dynamic symbol table, so they are reachable only by linking the **static**
+archive — which is what this program does, and which is why its three answers are the only direct
+observation of the byte-order bridging `src/provider/cipher.rs` makes for POLYVAL. Through the
+provider that bridge can only be seen through a whole AES-GCM-SIV record, where a wrong byte order
+and a wrong multiply look identical. `the_polyval_helpers_match_the_authority_oracle` pins the three
+values; two of the three `gswap8` calls that bridge needs were found by running it.
+
 They live here rather than in `court/` because `court/` is scratch material that `.gitignore`
 excludes, and a `docs/DECISIONS.md` entry that cites a file a reviewer cannot open is not evidence.
 `courts/layout/` is outside every probe glob — `probe_hygiene.py`'s subjects are

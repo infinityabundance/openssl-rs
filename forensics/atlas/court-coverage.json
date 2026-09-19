@@ -15520,7 +15520,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "b33c84fd2ba283e24e72f86554b7e4d5571029a1ef382257904a37ed4ad05179"
+      "sha256": "b475c8ba34aca3b89d5a0e40097d41c5f35c4ce6034319ec09a118fa4e097093"
     },
     {
       "name": "symbol-ownership",
@@ -15590,7 +15590,7 @@
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "41773fdd2d82f064722761944a0c9cc5297aaf4017866332963a4eb731e8a8bd"
+      "sha256": "a703cf338422778b30cd440f1ff538f4c59a7c9215906d1469671e427ec7f7d2"
     }
   ],
   "kind": "court-coverage",

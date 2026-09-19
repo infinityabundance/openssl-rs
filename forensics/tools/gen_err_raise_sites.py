@@ -465,6 +465,14 @@ COVERED_FILES = [
     # profile `AES_CBC_HMAC_SHA_ETM_CAPABLE` is undefined (`aes_platform.h:114-121` is aarch64-only),
     # so both their row layer and their hw files compile the stub branch and raise nothing.
     ("providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c", "PROV_CIPHER_AES_CBC_HMAC_SHA"),
+    # The AES-GCM-SIV row layer. Also a **source-tree** file, and its raises are its own: one
+    # `PROV_R_INVALID_KEY_LENGTH` in `ossl_aes_gcm_siv_init` and one more in
+    # `ossl_aes_gcm_siv_set_ctx_params`, a `PROV_R_INVALID_IV_LENGTH`, a
+    # `PROV_R_OUTPUT_BUFFER_TOO_SMALL` in the cipher entry point, three
+    # `PROV_R_FAILED_TO_SET_PARAMETER` in the getter (one per key it publishes) and two
+    # `PROV_R_FAILED_TO_GET_PARAMETER` in the setter. Its `_hw.c` and `_polyval.c` siblings raise
+    # **nothing** -- they return 0 -- so they are absent for the reason `cipher_chacha20_hw.c` is.
+    ("providers/implementations/ciphers/cipher_aes_gcm_siv.c", "PROV_CIPHER_AES_GCM_SIV"),
     # Deliberately *not* covered, with the reason: `cipher_sm4.c` and `cipher_sm4_hw.c` raise
     # nothing at all in this profile -- there is no failure arm in either -- so an entry would read
     # as coverage that does not exist. The SM4 *primitive* `crypto/sm4/sm4.c` has no failure path

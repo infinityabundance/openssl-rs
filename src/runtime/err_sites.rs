@@ -18982,6 +18982,106 @@ pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_279: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ossl_aes_gcm_siv_init` at `providers/implementations/ciphers/cipher_aes_gcm_siv.c:104` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_AES_GCM_SIV_104: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_gcm_siv.c",
+    line: 104,
+    func: c"ossl_aes_gcm_siv_init",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `ossl_aes_gcm_siv_init` at `providers/implementations/ciphers/cipher_aes_gcm_siv.c:111` (PROV_R_INVALID_IV_LENGTH).
+pub(crate) const PROV_CIPHER_AES_GCM_SIV_111: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_gcm_siv.c",
+    line: 111,
+    func: c"ossl_aes_gcm_siv_init",
+    lib: 57,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `ossl_aes_gcm_siv_cipher` at `providers/implementations/ciphers/cipher_aes_gcm_siv.c:148` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHER_AES_GCM_SIV_148: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_gcm_siv.c",
+    line: 148,
+    func: c"ossl_aes_gcm_siv_cipher",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_aes_gcm_siv_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_gcm_siv.c:185` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_GCM_SIV_185: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_gcm_siv.c",
+    line: 185,
+    func: c"ossl_aes_gcm_siv_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_aes_gcm_siv_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_gcm_siv.c:191` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_GCM_SIV_191: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_gcm_siv.c",
+    line: 191,
+    func: c"ossl_aes_gcm_siv_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_aes_gcm_siv_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_gcm_siv.c:196` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_GCM_SIV_196: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_gcm_siv.c",
+    line: 196,
+    func: c"ossl_aes_gcm_siv_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_aes_gcm_siv_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_gcm_siv.c:228` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_GCM_SIV_228: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_gcm_siv.c",
+    line: 228,
+    func: c"ossl_aes_gcm_siv_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_aes_gcm_siv_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_gcm_siv.c:239` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_GCM_SIV_239: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_gcm_siv.c",
+    line: 239,
+    func: c"ossl_aes_gcm_siv_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_aes_gcm_siv_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_gcm_siv.c:249` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_GCM_SIV_249: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_gcm_siv.c",
+    line: 249,
+    func: c"ossl_aes_gcm_siv_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_aes_gcm_siv_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_gcm_siv.c:254` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_AES_GCM_SIV_254: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_gcm_siv.c",
+    line: 254,
+    func: c"ossl_aes_gcm_siv_set_ctx_params",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
 /// `cmac_get_ctx_params_decoder` at `providers/implementations/macs/cmac_prov.c:245` (PROV_R_REPEATED_PARAMETER).
 pub(crate) const PROV_CMAC_PROV_245: ErrSite = ErrSite {
     file: c"providers/implementations/macs/cmac_prov.c",
@@ -21688,6 +21788,16 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_CIPHER_AES_CBC_HMAC_SHA_267,
     PROV_CIPHER_AES_CBC_HMAC_SHA_273,
     PROV_CIPHER_AES_CBC_HMAC_SHA_279,
+    PROV_CIPHER_AES_GCM_SIV_104,
+    PROV_CIPHER_AES_GCM_SIV_111,
+    PROV_CIPHER_AES_GCM_SIV_148,
+    PROV_CIPHER_AES_GCM_SIV_185,
+    PROV_CIPHER_AES_GCM_SIV_191,
+    PROV_CIPHER_AES_GCM_SIV_196,
+    PROV_CIPHER_AES_GCM_SIV_228,
+    PROV_CIPHER_AES_GCM_SIV_239,
+    PROV_CIPHER_AES_GCM_SIV_249,
+    PROV_CIPHER_AES_GCM_SIV_254,
     PROV_CMAC_PROV_245,
     PROV_CMAC_PROV_257,
     PROV_CMAC_PROV_269,

@@ -154,7 +154,7 @@
       "verdict": "pass"
     },
     "RT-CIPHER": {
-      "observations": 6505,
+      "observations": 6772,
       "verdict": "pass"
     },
     "RT-CMAC": {
@@ -415,6 +415,7 @@
     "default/OSSL_OP_CIPHER/AES-128-CFB8",
     "default/OSSL_OP_CIPHER/AES-128-CTR",
     "default/OSSL_OP_CIPHER/AES-128-ECB",
+    "default/OSSL_OP_CIPHER/AES-128-GCM-SIV",
     "default/OSSL_OP_CIPHER/AES-128-OCB",
     "default/OSSL_OP_CIPHER/AES-128-OFB",
     "default/OSSL_OP_CIPHER/AES-128-SIV",
@@ -434,6 +435,7 @@
     "default/OSSL_OP_CIPHER/AES-192-CFB8",
     "default/OSSL_OP_CIPHER/AES-192-CTR",
     "default/OSSL_OP_CIPHER/AES-192-ECB",
+    "default/OSSL_OP_CIPHER/AES-192-GCM-SIV",
     "default/OSSL_OP_CIPHER/AES-192-OCB",
     "default/OSSL_OP_CIPHER/AES-192-OFB",
     "default/OSSL_OP_CIPHER/AES-192-SIV",
@@ -454,6 +456,7 @@
     "default/OSSL_OP_CIPHER/AES-256-CFB8",
     "default/OSSL_OP_CIPHER/AES-256-CTR",
     "default/OSSL_OP_CIPHER/AES-256-ECB",
+    "default/OSSL_OP_CIPHER/AES-256-GCM-SIV",
     "default/OSSL_OP_CIPHER/AES-256-OCB",
     "default/OSSL_OP_CIPHER/AES-256-OFB",
     "default/OSSL_OP_CIPHER/AES-256-SIV",
@@ -572,10 +575,10 @@
       "13": 39,
       "9": 15
     },
-    "implemented": 162,
-    "open": 144,
+    "implemented": 165,
+    "open": 141,
     "open_by_phase": {
-      "8": 144
+      "8": 141
     },
     "total": 996
   }
