@@ -1,0 +1,47 @@
+rand: the error coordinates of the random layer are covered, and one reason family was missing from the resolver (D297)
+
+Phase 9.1's first prerequisite, and it is D285's rule applied to a second subsystem:
+a coordinate's `file` string is part of the observable error record, so a
+translation unit is covered as a whole or the record is half-covered between
+commits.
+
+Two subsystems join the covered set:
+
+  crypto/rand/rand_lib.c          RAND_LIB
+  crypto/rand/randfile.c          RANDFILE
+  crypto/rand/rand_pool.c         RAND_POOL
+  providers/implementations/rands/drbg.c             PROV_DRBG
+  providers/implementations/rands/drbg_ctr.c         PROV_DRBG_CTR
+  providers/implementations/rands/drbg_hash.c        PROV_DRBG_HASH
+  providers/implementations/rands/drbg_hmac.c        PROV_DRBG_HMAC
+  providers/implementations/rands/seed_src.c         PROV_SEED_SRC
+  providers/implementations/rands/test_rng.c         PROV_TEST_RNG
+  providers/implementations/rands/fips_crng_test.c   PROV_FIPS_CRNG_TEST
+
+Sites 2238 -> 2418; covered translation units 219 -> 229.
+
+This stratum needs the subsystem set rather than a selection of convenient files
+for a reason crypto/rsa did not have: Phase 9's symbols are raised from inside
+bodies whose declaring header belongs to an *earlier* stratum -- BN_rand,
+RSA_generate_key_ex, EVP_SealInit -- so the file string is the only thing that
+tells a caller which unit refused, and those units are the ones the random layer
+owns.
+
+Three files are deliberately absent and the reasons are recorded at the list:
+rand_uniform.c raises nothing (its two functions are arithmetic over a RAND_POOL),
+rand_err.c is the generated reason-string table rather than a raiser, and crngt.c
+does not exist in 3.6.4 -- the continuous test is fips_crng_test.c, which is
+listed, and the correction carries a does_not_exist_in_this_authority record
+(D294).
+
+One defect the new coverage found: the resolver program that asks the authority's
+own headers what each reason symbol evaluates to did not include randerr.h, so all
+fourteen RAND_R_* names the sites now reference were undeclared and the generator
+failed to compile. The header is installed, so this is evperr.h's case rather than
+the internal/ fallthrough, and it is now included with that reasoning. Worth
+recording because the failure mode was a compile error in a generated program
+rather than a wrong number: had the resolver instead answered 0 for an unresolved
+symbol, the table would have been written with fourteen zero reason codes and
+nothing would have said so.
+
+PIPELINE OK, 85 courts, 31469 observations.

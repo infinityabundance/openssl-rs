@@ -569,6 +569,32 @@ COVERED_FILES = [
     ("crypto/rsa/rsa_schemes.c", "RSA_SCHEMES"),
     ("crypto/rsa/rsa_mp_names.c", "RSA_MP_NAMES"),
     ("crypto/rsa/rsa_acvp_test_params.c", "RSA_ACVP_TEST_PARAMS"),
+    # Phase 9's `crypto/rand` subsystem. **The subsystem set, not a selection of convenient
+    # files**, for `crypto/rsa`'s reason and one more of its own: this stratum's symbols are
+    # raised from inside bodies whose declaring header belongs to *earlier* strata (`BN_rand`,
+    # `RSA_generate_key_ex`, `EVP_SealInit`), so a coordinate's `file` string is what tells a
+    # caller which unit refused -- and the units are the ones the random layer owns.
+    #
+    # `rand_uniform.c` is deliberately **absent**: its two functions are arithmetic over a
+    # `RAND_POOL` and raise nothing, so an entry for it would read as coverage that does not
+    # exist -- the reasoning `mdc2_prov.c` is named under above. `rand_err.c` is absent for the
+    # generator's own reason: it is the generated reason-string table, not a raiser.
+    # `rand_engine.c` does not exist in 3.6.4; the ENGINE arms live in `rand_lib.c` and are
+    # Phase 13's, but the file is covered here because the sites it raises from are Phase 9's.
+    ("crypto/rand/rand_lib.c", "RAND_LIB"),
+    ("crypto/rand/randfile.c", "RANDFILE"),
+    ("crypto/rand/rand_pool.c", "RAND_POOL"),
+    # Phase 9's `providers/implementations/rands` subsystem -- the four `OSSL_OP_RAND` rows and
+    # the seed sources they draw on. `crngt.c` is **not** in this list because it is not in the
+    # authority: the continuous test is `fips_crng_test.c`, which is, and the correction is
+    # recorded in `forensics/prerequisites.json`'s `units` block (docs/DECISIONS.md D294).
+    ("providers/implementations/rands/drbg.c", "PROV_DRBG"),
+    ("providers/implementations/rands/drbg_ctr.c", "PROV_DRBG_CTR"),
+    ("providers/implementations/rands/drbg_hash.c", "PROV_DRBG_HASH"),
+    ("providers/implementations/rands/drbg_hmac.c", "PROV_DRBG_HMAC"),
+    ("providers/implementations/rands/seed_src.c", "PROV_SEED_SRC"),
+    ("providers/implementations/rands/test_rng.c", "PROV_TEST_RNG"),
+    ("providers/implementations/rands/fips_crng_test.c", "PROV_FIPS_CRNG_TEST"),
     # Deliberately *not* covered yet, with the stratum that owns each: the AEAD
     # template `ciphercommon_gcm.c.in` (9: no row reaches it, because
     # `deflt_ciphers[]` carries no GCM row in this crate -- D234); the
@@ -1092,6 +1118,11 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
     "#include <openssl/evperr.h>",
     "#include <openssl/pemerr.h>",
     "#include <openssl/rsaerr.h>",
+    # Phase 9 needs `RAND_R_*` for `crypto/rand/rand_lib.c`, `randfile.c` and `rand_pool.c`.
+    # `randerr.h` is an installed header, so this is `evperr.h`'s case again rather than the
+    # `internal/` fallthrough below. `RAND_R_*` is the one family whose *library* is also the
+    # stratum: the sites are the random layer raising about itself.
+    "#include <openssl/randerr.h>",
     # Phase 7.6 needs `PROV_R_*`: `crypto/hpke/hpke_util.c` is a `crypto/` file whose
     # helpers raise with the *provider* library's reasons (they are shared with the
     # `providers/` implementations that use the same labelled extract/expand).

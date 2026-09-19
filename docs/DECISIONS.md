@@ -19443,3 +19443,46 @@ verified. `RT-BN-RAND`, `RT-RAND`, `RT-DRBG` and `CT-DRBG` are named as pending 
 passing. And the corrections above are corrections to *bookkeeping that now has an owner*; whether
 phase 9's ninety-three symbols can be built in the order its plan gives them is 9.1's measurement,
 not this entry's.
+
+## D297 -- the random layer's error coordinates are covered, and the resolver was missing a reason family
+
+9.1's first prerequisite, and it is D285's rule applied to a second subsystem: a coordinate's
+`file` string is part of the observable error record, so a translation unit joins the covered set
+as a whole or the record is half-covered between the commits that cite its first site.
+
+**Two subsystems join.** `crypto/rand/`'s `rand_lib.c` (`RAND_LIB`), `randfile.c` (`RANDFILE`) and
+`rand_pool.c` (`RAND_POOL`); and `providers/implementations/rands/`'s `drbg.c` (`PROV_DRBG`),
+`drbg_ctr.c` (`PROV_DRBG_CTR`), `drbg_hash.c` (`PROV_DRBG_HASH`), `drbg_hmac.c`
+(`PROV_DRBG_HMAC`), `seed_src.c` (`PROV_SEED_SRC`), `test_rng.c` (`PROV_TEST_RNG`) and
+`fips_crng_test.c` (`PROV_FIPS_CRNG_TEST`). Sites 2 238 -> **2 418**; covered translation units
+219 -> **229**.
+
+**Why this stratum needs the subsystem set for a reason `crypto/rsa` did not have.** Phase 9's
+symbols are raised from inside bodies whose *declaring header* belongs to an earlier stratum --
+`BN_rand`, `RSA_generate_key_ex`, `EVP_SealInit` -- so the `file` string is the only thing that
+tells a caller which unit refused, and the units are the ones the random layer owns. The RSA case
+was a subsystem raising about its own surface; this is a subsystem raising through four others'.
+
+**Three files are deliberately absent, with the reason at the list.** `rand_uniform.c` raises
+nothing -- its two functions are arithmetic over a `RAND_POOL` -- so an entry for it would read as
+coverage that does not exist, which is the reasoning `mdc2_prov.c` is already named under;
+`rand_err.c` is the generated reason-string table rather than a raiser; and `crngt.c` is not in the
+authority at all (D294), so `fips_crng_test.c` is listed in its place and the correction carries
+its `does_not_exist_in_this_authority` record.
+
+**The defect the new coverage found, and it is the kind that would not have announced itself.**
+The resolver program -- which asks the authority's own headers what each reason symbol evaluates to
+-- did not include `randerr.h`. All fourteen `RAND_R_*` names the new sites reference were
+therefore undeclared, and the generator failed at *compile* time.
+
+That is the good outcome, and it is worth saying why: had the resolver been the other kind of
+tool, one that answered `0` for a symbol it could not resolve, the table would have been written
+with fourteen zero reason codes, every site would still have had a coordinate, and nothing in the
+pipeline would have said so. The failure was loud because the check is a C program compiled
+against the authority's own headers rather than a pattern match over the crate. `randerr.h` is an
+installed header, so the include is `evperr.h`'s case rather than the `internal/` fallthrough
+below it, and it is now listed with that reasoning recorded at the site.
+
+**What this entry does not claim.** No Phase 9 export is implemented and no coordinate here is
+*cited* yet: the sites exist so that the subphase which raises from them has a name to cite, which
+is exactly how `crypto/rsa` joined the set in D285 -- ahead of its raisers rather than with them.
