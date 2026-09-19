@@ -389,7 +389,7 @@ here is. (`forensics/phase8-obligations.json` remains the only complete list.)
 `RSA_padding_check_X931`, `RSA_X931_hash_id`, `RSA_padding_add_PKCS1_type_1`,
 `RSA_padding_check_PKCS1_type_1`, `PKCS1_MGF1`.
 
-**Open exports (checked against the ledger):** `RSA_padding_check_PKCS1_OAEP_mgf1`, `RSA_sign`.
+**Open exports (checked against the ledger):** `RSA_check_key`, `RSA_sign`.
 Phase 8.2's cipher families and 8.3's `modes.h` constructions all have their low-level exports in,
 and the default provider's AEAD half is nearly there: the twelve AES
 key-wrap rows landed in D230, the six CBC-CTS rows in D231, the two AES-XTS rows in D232, the

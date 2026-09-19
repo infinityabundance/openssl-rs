@@ -19166,3 +19166,34 @@ siblings, and are **not** here — they are the same shape and land the same way
 immediate follow-up rather than part of this commit. The two OAEP checks are still not landed: with
 `EVP_sha1` present their last prerequisite is `RSA_padding_check_PKCS1_OAEP`'s constant-time body,
 which is now the next unit and has no open questions left.
+
+## D292 — the two OAEP checks land, and 8.4's slice C closes its landable half
+
+`RSA_padding_check_PKCS1_OAEP` and `RSA_padding_check_PKCS1_OAEP_mgf1` (`rsa_oaep.c:160` and `:168`),
+transcribed whole — the Manger-attack zero check, both `PKCS1_MGF1` calls, the `EVP_Digest` of the
+label, the `found_one_byte`/`one_index` walk, the length-hiding `O(N log N)` in-place shift, and the
+final `constant_time_select_int(good, mlen, -1)`. `RT-RSA` goes 261 -> 282 observations.
+
+This closes slice C's landable half: ten of the fifteen padding labels are in, and the five that are
+not are the Phase 9 hand-offs D285 recorded by name and anchor. It also closes the chain D287
+opened: these two were blocked on the 32-bit constant-time family (D288), on
+`err_clear_last_constant_time` (D288), and on `EVP_sha1()` (D291), and all three are now in.
+
+**The one arm that could not be written the obvious way, and what replaced it.**
+`RSA_padding_add_PKCS1_OAEP_mgf1` — the natural source of a valid encoding to feed the check — is
+itself a Phase 9 hand-off, because it draws its seed with `RAND_bytes_ex` (`rsa_oaep.c:122`). So the
+court builds the encoding itself, out of primitives both sides publish: `PKCS1_MGF1`, `EVP_Digest`,
+and a **fixed seed**. That is RFC 8017 section 7.1.1 written forwards in the probe, and it makes the
+arm stronger than a corpus vector would be, because the construction is independent of the
+implementation under test — the check is asked to invert a block built from the exported primitives,
+not to agree with a byte string the crate also produced. `RT-RSA`'s arms are the successful decode
+through both `_mgf1` and the `NULL`-digest wrapper (which is what reaches `EVP_sha1()`), a
+single-flipped-byte refusal through the implicit-rejection path, a non-zero first byte, and the three
+size refusals — each with the error queue drained and compared, coordinate included.
+
+**What this entry does not claim.** `CT-RSA` remains PENDING. The checks are courted
+differentially, which proves the candidate behaves like the authority on these inputs; it does not
+prove the construction is the standard's, and for an OAEP *decoder* that second plane is where the
+chosen-ciphertext properties live. The corpus is the next unit's, and it wants the published OAEP
+test vectors rather than a mirror. `RSA_padding_add_PKCS1_OAEP_mgf1` and its sibling remain Phase 9's,
+as do the four `RSA_padding_*` adds and the type-2 check D285 recorded.
