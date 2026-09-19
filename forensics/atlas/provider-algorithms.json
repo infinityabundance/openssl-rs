@@ -71,6 +71,51 @@
       "OSSL_OP_STORE": 22,
       "OSSL_OP__HIGHEST": 22
     },
+    "provider_context": {
+      "authority": {
+        "effect": "every provider cipher context stores the creating provider's library context, and the GCM no-IV arm and `cipher_tdes_wrap.c`'s IV generation call `RAND_bytes_ex(ctx->libctx, ...)` against it",
+        "line": "ctx->libctx = PROV_LIBCTX_OF(provctx);",
+        "unit": "providers/implementations/ciphers/ciphercommon.c.in"
+      },
+      "blocked_rows": [
+        [
+          "default",
+          "OSSL_OP_CIPHER",
+          "AES-256-GCM"
+        ],
+        [
+          "default",
+          "OSSL_OP_CIPHER",
+          "AES-192-GCM"
+        ],
+        [
+          "default",
+          "OSSL_OP_CIPHER",
+          "AES-128-GCM"
+        ],
+        [
+          "default",
+          "OSSL_OP_CIPHER",
+          "DES3-WRAP"
+        ]
+      ],
+      "court_requirement": "Before Phase 9 retires a random-dependent row, the observation has to be taken in a **private `OSSL_LIB_CTX`**, not the global default context: with both providers loaded in the global context the isolation difference is invisible, so a passing test there would certify nothing about this obligation.",
+      "crate": [
+        {
+          "fact": "`ossl_default_provider_init` publishes a NULL provctx",
+          "path": "src/provider/digest.rs"
+        },
+        {
+          "fact": "`ossl_cipher_generic_initkey` takes the provider context and ignores it",
+          "path": "src/provider/cipher.rs"
+        },
+        {
+          "fact": "no assignment from a provider context to `(*ctx).libctx` exists; the field is only ever NULL-initialised in a unit test",
+          "path": "src/provider/cipher.rs"
+        }
+      ],
+      "obligation": "The default provider's `provctx` is NULL in this crate, so `PROV_LIBCTX_OF(provctx)` -- and therefore a provider cipher context's `libctx` -- cannot be supplied. Counted as the **second** blocker of every provider row whose first blocker is randomness, because those are the rows where `ctx->libctx` is what the random call resolves against. It is the provider's own port of D117's residual."
+    },
     "providers": [
       {
         "provider": "default",
@@ -1558,7 +1603,7 @@
           "id-aes256-GCM",
           "2.16.840.1.101.3.4.1.46"
         ],
-        "blocked_by": "RAND_bytes_ex: ciphercommon_gcm.c.in:423 and :536 (docs/DECISIONS.md D234).",
+        "blocked_by": "RAND_bytes_ex: ciphercommon_gcm.c.in:423 and :536 (docs/DECISIONS.md D234).  **Second blocker (D240):** the provider context. `ossl_cipher_generic_initkey` stores `PROV_LIBCTX_OF(provctx)` on `ctx->libctx` so the random call resolves against the library context of the provider that created the cipher, and this crate's `ossl_default_provider_init` publishes a NULL `provctx`. Landing `RAND_bytes_ex` alone would therefore answer with the *global* context where the authority answers with the fetching `OSSL_LIB_CTX`; the observation has to be taken in a private libctx. `forensics/atlas/provider-algorithms.json`'s `provider_context` block is the measured record and fails if either fact moves.",
         "capability_filtered": true,
         "capability_predicate": null,
         "dispatch_table_symbol": "ossl_aes256gcm_functions",
@@ -1580,7 +1625,7 @@
           "id-aes192-GCM",
           "2.16.840.1.101.3.4.1.26"
         ],
-        "blocked_by": "RAND_bytes_ex: ciphercommon_gcm.c.in:423 and :536 (docs/DECISIONS.md D234).",
+        "blocked_by": "RAND_bytes_ex: ciphercommon_gcm.c.in:423 and :536 (docs/DECISIONS.md D234).  **Second blocker (D240):** the provider context. `ossl_cipher_generic_initkey` stores `PROV_LIBCTX_OF(provctx)` on `ctx->libctx` so the random call resolves against the library context of the provider that created the cipher, and this crate's `ossl_default_provider_init` publishes a NULL `provctx`. Landing `RAND_bytes_ex` alone would therefore answer with the *global* context where the authority answers with the fetching `OSSL_LIB_CTX`; the observation has to be taken in a private libctx. `forensics/atlas/provider-algorithms.json`'s `provider_context` block is the measured record and fails if either fact moves.",
         "capability_filtered": true,
         "capability_predicate": null,
         "dispatch_table_symbol": "ossl_aes192gcm_functions",
@@ -1602,7 +1647,7 @@
           "id-aes128-GCM",
           "2.16.840.1.101.3.4.1.6"
         ],
-        "blocked_by": "RAND_bytes_ex: ciphercommon_gcm.c.in:423 and :536 (docs/DECISIONS.md D234).",
+        "blocked_by": "RAND_bytes_ex: ciphercommon_gcm.c.in:423 and :536 (docs/DECISIONS.md D234).  **Second blocker (D240):** the provider context. `ossl_cipher_generic_initkey` stores `PROV_LIBCTX_OF(provctx)` on `ctx->libctx` so the random call resolves against the library context of the provider that created the cipher, and this crate's `ossl_default_provider_init` publishes a NULL `provctx`. Landing `RAND_bytes_ex` alone would therefore answer with the *global* context where the authority answers with the fetching `OSSL_LIB_CTX`; the observation has to be taken in a private libctx. `forensics/atlas/provider-algorithms.json`'s `provider_context` block is the measured record and fails if either fact moves.",
         "capability_filtered": true,
         "capability_predicate": null,
         "dispatch_table_symbol": "ossl_aes128gcm_functions",
@@ -3399,7 +3444,7 @@
           "id-smime-alg-CMS3DESwrap",
           "1.2.840.113549.1.9.16.3.6"
         ],
-        "blocked_by": "RAND_bytes_ex: providers/implementations/ciphers/cipher_tdes_wrap.c's ossl_tdes_wrap_cbc_init generates the wrap IV with it, and rand.h is Phase 9's (docs/DECISIONS.md D234's class). The row is Phase 8's obligation, handed to Phase 9 with the blocker named rather than stubbed.",
+        "blocked_by": "RAND_bytes_ex: providers/implementations/ciphers/cipher_tdes_wrap.c's ossl_tdes_wrap_cbc_init generates the wrap IV with it, and rand.h is Phase 9's (docs/DECISIONS.md D234's class). The row is Phase 8's obligation, handed to Phase 9 with the blocker named rather than stubbed.  **Second blocker (D240):** the provider context. `ossl_cipher_generic_initkey` stores `PROV_LIBCTX_OF(provctx)` on `ctx->libctx` so the random call resolves against the library context of the provider that created the cipher, and this crate's `ossl_default_provider_init` publishes a NULL `provctx`. Landing `RAND_bytes_ex` alone would therefore answer with the *global* context where the authority answers with the fetching `OSSL_LIB_CTX`; the observation has to be taken in a private libctx. `forensics/atlas/provider-algorithms.json`'s `provider_context` block is the measured record and fails if either fact moves.",
         "capability_filtered": true,
         "capability_predicate": null,
         "dispatch_table_symbol": "ossl_tdes_wrap_cbc_functions",

@@ -15931,3 +15931,67 @@ the provider-algorithm census stays at **106 implemented / 205 open** — the SI
 MAC rows were already `open` and remain so. What moves is `prerequisites.divergence_names_covered`
 (32 -> 33, the `cbc` collision) and the language census, because a crate module for
 `crypto/modes/siv128.c` now exists and its unit's names enter the atlas.
+
+## D240 — the provider context is the second blocker of every random-dependent row, and the provider census's two silent skips become fatals
+
+D239 left the SIV rows waiting on the `OSSL_OP_MAC` CMAC row. The next thing the provider census
+needed was not more rows but a tighter **invariant**, and the two belong together because both are
+about the same failure mode: a provider registration or a provider context disappearing between
+phases because no ELF census can see it.
+
+**The provider context, measured rather than asserted.** `ciphercommon.c.in`'s
+`ossl_cipher_generic_initkey` ends with
+
+```c
+if (provctx != NULL)
+    ctx->libctx = PROV_LIBCTX_OF(provctx); /* used for rand */
+```
+
+so a provider *cipher* context carries the library context of the provider that created it, and
+that is the context the GCM rows' no-IV arm and `cipher_tdes_wrap.c`'s IV generation pass to
+`RAND_bytes_ex`. This crate's `ossl_default_provider_init` publishes `*provctx = NULL`, so
+`PROV_LIBCTX_OF` has no argument at all; `ossl_cipher_generic_initkey` takes `_provctx` and never
+assigns it; and `ProvCipherCtx`'s `libctx` field exists but is only ever NULL-initialised, in a
+unit test. Those three facts are now read out of the crate by
+`gen_provider_algorithms.py::provider_context` and **fail the generator if any of them moves** —
+including the one that retires the obligation, a future assignment to `(*ctx).libctx`, which fails
+on purpose so the obligation is discharged by a commit rather than by editing prose.
+
+Why it matters is not the answer today, which is identical for every landed row because every one
+of them is deterministic. It is **library-context isolation**: an application that loads the
+default provider in a private `OSSL_LIB_CTX` A and fetches a random-dependent cipher in A gets the
+authority's A and the candidate's global context, and a test taken against the global default
+context cannot tell those apart. So the obligation carries a `court_requirement` with it: the
+observation has to be taken in a private `OSSL_LIB_CTX` before any of these rows is retired. This
+is D117's residual re-stated at the row level, and it is recorded as the **second** blocker of the
+four cipher rows whose first blocker is randomness (`AES-{128,192,256}-GCM`, `DES3-WRAP`), in the
+row itself rather than only in the census's prose.
+
+**The census's two silent skips.** `gen_provider_algorithms.py` had two `continue`s that could
+drop a table without a word:
+
+* a table the parser found **no rows in** was skipped, and the existing check only caught that
+  when the query switch named the table — so a table the switch does not return could parse to
+  nothing and vanish. That is `DES3-WRAP`'s blind spot one level down: the row reader exists so a
+  registration row cannot disappear, and a table-level disappearance is the same failure;
+* a parsed table that **no operation claims** was skipped, which would leave a row set the census
+  knows about and never classifies.
+
+Both are `CensusError`s now. They were *measured* to be unreachable before the change — all 22
+tables across the four admitted providers are claimed by a `query` arm or by
+`ossl_prov_cache_exported_algorithms`, and all 22 parse to at least one row — which is exactly why
+they are worth asserting: an invariant that holds by luck is not an invariant. The per-provider
+row accounting is checked too, not only the global total, so a row counted twice under one
+provider and not at all under another cannot close globally and lie locally.
+
+**The capability filter is already recorded as a prerequisite and needs no change here.** The
+census's `capability_filtering` block still says what it said at D237: `deflt_query` publishes
+`exported_ciphers[]` through `ossl_prov_cache_exported_algorithms`, the crate returns
+`DEFLT_CIPHERS` directly, and that is correct only while every landed row is unconditional — so
+the filtering must be built **before** the first `ALGC(...)` AES-CBC-HMAC row lands. Nothing in
+this entry lands such a row, and nothing here appends one to `DEFLT_CIPHERS`.
+
+**No export, row, court or count moves.** `implemented[libcrypto]` stays **2035 / 5896**, Phase 8
+stays **194 implemented / 576 open / 16 deferred**, the census stays **996 rows / 106 implemented /
+205 open / 685 deferred**, and `RT-CIPHER` stays at **1055 observations**. The artefact this entry
+moves is `provider-algorithms.json`, and what it gains is an invariant rather than a row.

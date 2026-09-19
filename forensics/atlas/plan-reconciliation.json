@@ -39,8 +39,8 @@
         "docs/PHASE-8-SUBPHASES.md"
       ],
       "rows_judged": 75,
-      "symbols_named_by_a_row": 75,
-      "symbols_reached": 73,
+      "symbols_named_by_a_row": 76,
+      "symbols_reached": 74,
       "unit_records": 67,
       "units_named_by_a_record": 70,
       "units_named_by_a_row": 141,
@@ -2156,7 +2156,7 @@
       "transcribed_units": 168
     }
   },
-  "body_hash": "1163726c12e676a99629328f1344ec1d618a4fa0e35f8330aaa175eed98233b3",
+  "body_hash": "9c82f99ea49aebe3f8414daf880b8b04ad3f944ef225bfcba8cfe60e78c06818",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -2207,7 +2207,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "cf9dc4951c7b07a4bc377c0f0ffb723dd43c254caa997d71e6cde513162e1a93"
+      "sha256": "d879df663bb8b1daba5c3ca3e0d7cc83f9d39e846a7734a889f5c5e0cf09d555"
     }
   ],
   "kind": "plan-reconciliation",
