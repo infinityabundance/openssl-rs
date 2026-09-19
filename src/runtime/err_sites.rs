@@ -18732,6 +18732,16 @@ pub(crate) const PROV_CIPHER_CHACHA20_171: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `cipher_hw_aria_initkey` at `providers/implementations/ciphers/cipher_aria_hw.c:25` (PROV_R_KEY_SETUP_FAILED).
+pub(crate) const PROV_CIPHER_ARIA_HW_25: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aria_hw.c",
+    line: 25,
+    func: c"cipher_hw_aria_initkey",
+    lib: 57,
+    reason: 101,
+    dynamic_reason: false,
+};
+
 /// `cmac_get_ctx_params_decoder` at `providers/implementations/macs/cmac_prov.c:245` (PROV_R_REPEATED_PARAMETER).
 pub(crate) const PROV_CMAC_PROV_245: ErrSite = ErrSite {
     file: c"providers/implementations/macs/cmac_prov.c",
@@ -21413,6 +21423,7 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_CIPHER_CHACHA20_160,
     PROV_CIPHER_CHACHA20_167,
     PROV_CIPHER_CHACHA20_171,
+    PROV_CIPHER_ARIA_HW_25,
     PROV_CMAC_PROV_245,
     PROV_CMAC_PROV_257,
     PROV_CMAC_PROV_269,

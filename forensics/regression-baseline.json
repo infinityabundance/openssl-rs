@@ -154,7 +154,7 @@
       "verdict": "pass"
     },
     "RT-CIPHER": {
-      "observations": 4887,
+      "observations": 5931,
       "verdict": "pass"
     },
     "RT-CMAC": {
@@ -449,6 +449,27 @@
     "default/OSSL_OP_CIPHER/AES-256-WRAP-PAD",
     "default/OSSL_OP_CIPHER/AES-256-WRAP-PAD-INV",
     "default/OSSL_OP_CIPHER/AES-256-XTS",
+    "default/OSSL_OP_CIPHER/ARIA-128-CBC",
+    "default/OSSL_OP_CIPHER/ARIA-128-CFB",
+    "default/OSSL_OP_CIPHER/ARIA-128-CFB1",
+    "default/OSSL_OP_CIPHER/ARIA-128-CFB8",
+    "default/OSSL_OP_CIPHER/ARIA-128-CTR",
+    "default/OSSL_OP_CIPHER/ARIA-128-ECB",
+    "default/OSSL_OP_CIPHER/ARIA-128-OFB",
+    "default/OSSL_OP_CIPHER/ARIA-192-CBC",
+    "default/OSSL_OP_CIPHER/ARIA-192-CFB",
+    "default/OSSL_OP_CIPHER/ARIA-192-CFB1",
+    "default/OSSL_OP_CIPHER/ARIA-192-CFB8",
+    "default/OSSL_OP_CIPHER/ARIA-192-CTR",
+    "default/OSSL_OP_CIPHER/ARIA-192-ECB",
+    "default/OSSL_OP_CIPHER/ARIA-192-OFB",
+    "default/OSSL_OP_CIPHER/ARIA-256-CBC",
+    "default/OSSL_OP_CIPHER/ARIA-256-CFB",
+    "default/OSSL_OP_CIPHER/ARIA-256-CFB1",
+    "default/OSSL_OP_CIPHER/ARIA-256-CFB8",
+    "default/OSSL_OP_CIPHER/ARIA-256-CTR",
+    "default/OSSL_OP_CIPHER/ARIA-256-ECB",
+    "default/OSSL_OP_CIPHER/ARIA-256-OFB",
     "default/OSSL_OP_CIPHER/CAMELLIA-128-CBC",
     "default/OSSL_OP_CIPHER/CAMELLIA-128-CBC-CTS",
     "default/OSSL_OP_CIPHER/CAMELLIA-128-CFB",
@@ -527,16 +548,16 @@
     "default/OSSL_OP_MAC/SIPHASH"
   ],
   "provider_rows": {
-    "deferred": 686,
+    "deferred": 690,
     "deferred_by_phase": {
       "10": 636,
       "13": 39,
-      "9": 11
+      "9": 15
     },
-    "implemented": 123,
-    "open": 187,
+    "implemented": 144,
+    "open": 162,
     "open_by_phase": {
-      "8": 187
+      "8": 162
     },
     "total": 996
   }

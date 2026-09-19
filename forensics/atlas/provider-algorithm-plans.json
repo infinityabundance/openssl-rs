@@ -166,6 +166,34 @@
   },
   {
    "provider": "default",
+   "operation": "OSSL_OP_CIPHER",
+   "name": "ARIA-128-GCM",
+   "phase": 9,
+   "blocked_by": "RAND_bytes_ex: ciphercommon_gcm.c.in:423 and :536, the same unit and the same two sites as AES-GCM's. `cipher_aria_gcm.c:18-28`'s `aria_gcm_newctx` calls `ossl_gcm_initctx`, so the no-IV encrypting arm and the TLS arm both reach the shared RAND call; the row is a Phase-8 obligation handed to Phase 9 with the blocker named rather than stubbed (D270, and D234's class)."
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_CIPHER",
+   "name": "ARIA-192-GCM",
+   "phase": 9,
+   "blocked_by": "RAND_bytes_ex: as `ARIA-128-GCM`; the three rows differ only in `keybits` (D270)."
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_CIPHER",
+   "name": "ARIA-256-GCM",
+   "phase": 9,
+   "blocked_by": "RAND_bytes_ex: as `ARIA-128-GCM`; the three rows differ only in `keybits` (D270)."
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_CIPHER",
+   "name": "SM4-GCM",
+   "phase": 9,
+   "blocked_by": "RAND_bytes_ex: as `ARIA-128-GCM`. `cipher_sm4_gcm.c:18-30`'s `sm4_gcm_newctx` calls `ossl_gcm_initctx`, so the blocker is the shared unit rather than anything SM4's own (D270)."
+  },
+  {
+   "provider": "default",
    "operation": "OSSL_OP_MAC",
    "name": "GMAC",
    "phase": 9,

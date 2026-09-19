@@ -1759,6 +1759,26 @@ CIPHER_RECIPE_FAMILIES: list[CipherRecipeFamily] = [
             "`RT-CIPHER` proves the row behaves as the authority's does, and this proves the bytes "
             "are the standard's."
         )),
+    # 8.2 -- ARIA. The corpus's own title is "ARIA test vectors from RFC5794 (and others)", and
+    # RFC 5794 A is the primary source for the block and stream modes this regex admits. Three
+    # things the regex deliberately does not reach, each recorded rather than silent: the six
+    # `ARIA-*-GCM`/`-CCM` sections belong to the AEAD rows, which have not landed; and **`CFB1` has
+    # no vector here at all**, so its only evidence is `RT-CIPHER`'s differential arm. That gap is
+    # stated in the note instead of being left for a reader to infer from an absent id.
+    CipherRecipeFamily(
+        "aria", "test/recipes/30-test_evp_data/evpciph_aria.txt",
+        r"^ARIA-(128|192|256)-(ECB|CBC|CFB|CFB8|CTR|OFB)$", "RFC 5794",
+        "ARIA-{128,192,256}-{ECB,CBC,CFB,CFB8,CTR,OFB}", (),
+        "", "",
+        note=(
+            "Candidate-only construction verification: the primary source is RFC 5794, whose A "
+            "gives the 128-, 192- and 256-bit blocks, and the bytes are mirrored through the "
+            "pinned corpus (`corpus_sha256`) rather than fetched. There are no "
+            "independently-derived boundary vectors because the pinned court image carries no "
+            "independent ARIA implementation, and there is no `CFB1` vector because RFC 5794 does "
+            "not publish one -- that mode's only evidence is `RT-CIPHER`'s differential arm, which "
+            "exercises it against the authority directly."
+        )),
     CipherRecipeFamily(
         "camellia", "test/recipes/30-test_evp_data/evpciph_camellia.txt",
         r"^CAMELLIA-(128|192|256)-(ECB|CBC|CFB|OFB|CTR)$", "RFC 3713 (NTT Camellia)",

@@ -1847,6 +1847,147 @@ pub(crate) unsafe extern "C" fn ossl_cipher_hw_generic_ctr(
         1
     }
 }
+
+//
+// `ciphercommon_hw.c:126-193` — the chunked wrappers. `ciphercommon.h:237-243` declares four of them
+// and `#define`s three more onto the generic functions, because those modes have no per-chunk work:
+//
+//     #define ossl_cipher_hw_chunked_ecb  ossl_cipher_hw_generic_ecb
+//     #define ossl_cipher_hw_chunked_ctr  ossl_cipher_hw_generic_ctr
+//     #define ossl_cipher_hw_chunked_cfb1 ossl_cipher_hw_generic_cfb1
+//
+// so the ARIA ECB, CTR and CFB1 rows install the generic functions themselves and there is no
+// `chunked_*` item for those three here.
+//
+// **`cfb8` and `cfb128` pass `inl`, not `chunk`, to the generic function**, which is worth stating
+// because it reads like a transcription slip and is not one. `ciphercommon_hw.c:153` and `:171`
+// both forward `inl`; for an input shorter than `MAXCHUNK` the two are equal, and for a longer one
+// the first call covers the whole buffer while the loop's later iterations rewrite a suffix of what
+// it already wrote. Transcribing `chunk` there would be a difference from the authority on any
+// single update of a gibibyte or more — and would be the *safer* code — so what is transcribed is
+// what the authority does.
+//
+
+/// `ossl_cipher_hw_chunked_cbc` — `ciphercommon_hw.c:131-143`.
+///
+/// # Safety
+/// The `PROV_CIPHER_HW_FN` contract.
+unsafe extern "C" fn ossl_cipher_hw_chunked_cbc(
+    ctx: *mut ProvCipherCtx,
+    out: *mut c_uchar,
+    in_: *const c_uchar,
+    inl: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut inl = inl;
+        let mut in_ = in_;
+        let mut out = out;
+        while inl >= MAXCHUNK {
+            ossl_cipher_hw_generic_cbc(ctx, out, in_, MAXCHUNK);
+            inl -= MAXCHUNK;
+            in_ = in_.add(MAXCHUNK);
+            out = out.add(MAXCHUNK);
+        }
+        if inl > 0 {
+            ossl_cipher_hw_generic_cbc(ctx, out, in_, inl);
+        }
+        1
+    }
+}
+
+/// `ossl_cipher_hw_chunked_cfb8` — `ciphercommon_hw.c:145-161`. See the block comment above for why
+/// the generic call is handed `inl` rather than `chunk`.
+///
+/// # Safety
+/// The `PROV_CIPHER_HW_FN` contract.
+unsafe extern "C" fn ossl_cipher_hw_chunked_cfb8(
+    ctx: *mut ProvCipherCtx,
+    out: *mut c_uchar,
+    in_: *const c_uchar,
+    inl: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut inl = inl;
+        let mut in_ = in_;
+        let mut out = out;
+        let mut chunk = MAXCHUNK;
+        if inl < chunk {
+            chunk = inl;
+        }
+        while inl > 0 && inl >= chunk {
+            ossl_cipher_hw_generic_cfb8(ctx, out, in_, inl);
+            inl -= chunk;
+            in_ = in_.add(chunk);
+            out = out.add(chunk);
+            if inl < chunk {
+                chunk = inl;
+            }
+        }
+        1
+    }
+}
+
+/// `ossl_cipher_hw_chunked_cfb128` — `ciphercommon_hw.c:163-179`. As [`ossl_cipher_hw_chunked_cfb8`].
+///
+/// # Safety
+/// The `PROV_CIPHER_HW_FN` contract.
+unsafe extern "C" fn ossl_cipher_hw_chunked_cfb128(
+    ctx: *mut ProvCipherCtx,
+    out: *mut c_uchar,
+    in_: *const c_uchar,
+    inl: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut inl = inl;
+        let mut in_ = in_;
+        let mut out = out;
+        let mut chunk = MAXCHUNK;
+        if inl < chunk {
+            chunk = inl;
+        }
+        while inl > 0 && inl >= chunk {
+            ossl_cipher_hw_generic_cfb128(ctx, out, in_, inl);
+            inl -= chunk;
+            in_ = in_.add(chunk);
+            out = out.add(chunk);
+            if inl < chunk {
+                chunk = inl;
+            }
+        }
+        1
+    }
+}
+
+/// `ossl_cipher_hw_chunked_ofb128` — `ciphercommon_hw.c:181-193`.
+///
+/// # Safety
+/// The `PROV_CIPHER_HW_FN` contract.
+unsafe extern "C" fn ossl_cipher_hw_chunked_ofb128(
+    ctx: *mut ProvCipherCtx,
+    out: *mut c_uchar,
+    in_: *const c_uchar,
+    inl: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut inl = inl;
+        let mut in_ = in_;
+        let mut out = out;
+        while inl >= MAXCHUNK {
+            ossl_cipher_hw_generic_ofb128(ctx, out, in_, MAXCHUNK);
+            inl -= MAXCHUNK;
+            in_ = in_.add(MAXCHUNK);
+            out = out.add(MAXCHUNK);
+        }
+        if inl > 0 {
+            ossl_cipher_hw_generic_ofb128(ctx, out, in_, inl);
+        }
+        1
+    }
+}
 // ---------------------------------------------------------------------------------------------
 // The per-algorithm hardware
 // ---------------------------------------------------------------------------------------------
@@ -9148,6 +9289,30 @@ alias!(N_SM4_CBC, "SM4-CBC:SM4:1.2.156.10197.1.104.2");
 alias!(N_SM4_CTR, "SM4-CTR:1.2.156.10197.1.104.7");
 alias!(N_SM4_OFB, "SM4-OFB:SM4-OFB128:1.2.156.10197.1.104.3");
 alias!(N_SM4_CFB, "SM4-CFB:SM4-CFB128:1.2.156.10197.1.104.4");
+// The **whole** alias sequence, OIDs included -- `prov/names.h:114-134`. ARIA's mode names carry
+// their own OIDs under `1.2.410.200046.1.1.*`, and only the CBC rows carry a short alias
+// (`ARIA128`/`ARIA192`/`ARIA256`), exactly as SM4's CBC carries `SM4`.
+alias!(N_ARIA_256_ECB, "ARIA-256-ECB:1.2.410.200046.1.1.11");
+alias!(N_ARIA_192_ECB, "ARIA-192-ECB:1.2.410.200046.1.1.6");
+alias!(N_ARIA_128_ECB, "ARIA-128-ECB:1.2.410.200046.1.1.1");
+alias!(N_ARIA_256_CBC, "ARIA-256-CBC:ARIA256:1.2.410.200046.1.1.12");
+alias!(N_ARIA_192_CBC, "ARIA-192-CBC:ARIA192:1.2.410.200046.1.1.7");
+alias!(N_ARIA_128_CBC, "ARIA-128-CBC:ARIA128:1.2.410.200046.1.1.2");
+alias!(N_ARIA_256_OFB, "ARIA-256-OFB:1.2.410.200046.1.1.14");
+alias!(N_ARIA_192_OFB, "ARIA-192-OFB:1.2.410.200046.1.1.9");
+alias!(N_ARIA_128_OFB, "ARIA-128-OFB:1.2.410.200046.1.1.4");
+alias!(N_ARIA_256_CFB, "ARIA-256-CFB:1.2.410.200046.1.1.13");
+alias!(N_ARIA_192_CFB, "ARIA-192-CFB:1.2.410.200046.1.1.8");
+alias!(N_ARIA_128_CFB, "ARIA-128-CFB:1.2.410.200046.1.1.3");
+alias!(N_ARIA_256_CFB1, "ARIA-256-CFB1");
+alias!(N_ARIA_192_CFB1, "ARIA-192-CFB1");
+alias!(N_ARIA_128_CFB1, "ARIA-128-CFB1");
+alias!(N_ARIA_256_CFB8, "ARIA-256-CFB8");
+alias!(N_ARIA_192_CFB8, "ARIA-192-CFB8");
+alias!(N_ARIA_128_CFB8, "ARIA-128-CFB8");
+alias!(N_ARIA_256_CTR, "ARIA-256-CTR:1.2.410.200046.1.1.15");
+alias!(N_ARIA_192_CTR, "ARIA-192-CTR:1.2.410.200046.1.1.10");
+alias!(N_ARIA_128_CTR, "ARIA-128-CTR:1.2.410.200046.1.1.5");
 alias!(N_AES_256_ECB, "AES-256-ECB:2.16.840.1.101.3.4.1.41");
 alias!(N_AES_192_ECB, "AES-192-ECB:2.16.840.1.101.3.4.1.21");
 alias!(N_AES_128_ECB, "AES-128-ECB:2.16.840.1.101.3.4.1.1");
@@ -9304,7 +9469,7 @@ const fn row(names: *const c_char, implementation: *const c_void) -> OsslAlgorit
 
 /// `static const OSSL_ALGORITHM_CAPABLE deflt_ciphers[]` — `providers/defltprov.c:161-330`,
 /// restricted to the rows this half implements, in the authority's order.
-pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 89] = [
+pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 110] = [
     row(N_NULL, NULL_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_ECB, AES256ECB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_ECB, AES192ECB_FUNCTIONS.as_ptr().cast()),
@@ -9362,6 +9527,30 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 89] = [
         N_AES_128_WRAP_PAD_INV,
         AES128WRAPPADINV_FUNCTIONS.as_ptr().cast(),
     ),
+    // The `ARIA` family, `defltprov.c:246-274`, between the AES-CBC-HMAC `ALGC` rows (not landed)
+    // and `CAMELLIA`. The six GCM and CCM rows precede these in the authority and are a separate
+    // unit, so this is the authority's order restricted to the rows that exist here.
+    row(N_ARIA_256_ECB, ARIA256ECB_FUNCTIONS.as_ptr().cast()),
+    row(N_ARIA_192_ECB, ARIA192ECB_FUNCTIONS.as_ptr().cast()),
+    row(N_ARIA_128_ECB, ARIA128ECB_FUNCTIONS.as_ptr().cast()),
+    row(N_ARIA_256_CBC, ARIA256CBC_FUNCTIONS.as_ptr().cast()),
+    row(N_ARIA_192_CBC, ARIA192CBC_FUNCTIONS.as_ptr().cast()),
+    row(N_ARIA_128_CBC, ARIA128CBC_FUNCTIONS.as_ptr().cast()),
+    row(N_ARIA_256_OFB, ARIA256OFB_FUNCTIONS.as_ptr().cast()),
+    row(N_ARIA_192_OFB, ARIA192OFB_FUNCTIONS.as_ptr().cast()),
+    row(N_ARIA_128_OFB, ARIA128OFB_FUNCTIONS.as_ptr().cast()),
+    row(N_ARIA_256_CFB, ARIA256CFB_FUNCTIONS.as_ptr().cast()),
+    row(N_ARIA_192_CFB, ARIA192CFB_FUNCTIONS.as_ptr().cast()),
+    row(N_ARIA_128_CFB, ARIA128CFB_FUNCTIONS.as_ptr().cast()),
+    row(N_ARIA_256_CFB1, ARIA256CFB1_FUNCTIONS.as_ptr().cast()),
+    row(N_ARIA_192_CFB1, ARIA192CFB1_FUNCTIONS.as_ptr().cast()),
+    row(N_ARIA_128_CFB1, ARIA128CFB1_FUNCTIONS.as_ptr().cast()),
+    row(N_ARIA_256_CFB8, ARIA256CFB8_FUNCTIONS.as_ptr().cast()),
+    row(N_ARIA_192_CFB8, ARIA192CFB8_FUNCTIONS.as_ptr().cast()),
+    row(N_ARIA_128_CFB8, ARIA128CFB8_FUNCTIONS.as_ptr().cast()),
+    row(N_ARIA_256_CTR, ARIA256CTR_FUNCTIONS.as_ptr().cast()),
+    row(N_ARIA_192_CTR, ARIA192CTR_FUNCTIONS.as_ptr().cast()),
+    row(N_ARIA_128_CTR, ARIA128CTR_FUNCTIONS.as_ptr().cast()),
     row(N_CAMELLIA_256_ECB, CAMELLIA256ECB_FUNCTIONS.as_ptr().cast()),
     row(N_CAMELLIA_192_ECB, CAMELLIA192ECB_FUNCTIONS.as_ptr().cast()),
     row(N_CAMELLIA_128_ECB, CAMELLIA128ECB_FUNCTIONS.as_ptr().cast()),
@@ -10466,6 +10655,684 @@ cipher_row!(
     ossl_cipher_generic_settable_ctx_params
 );
 
+// ---------------------------------------------------------------------------------------------
+// `cipher_aria.c` and `cipher_aria_hw.c` — the twenty-one `ARIA-*` mode rows
+// ---------------------------------------------------------------------------------------------
+//
+// The ARIA rows are `cipher_sm4.c`'s shape with three differences that all matter.
+//
+// **The hw uses the `chunked` wrappers, not the plain generic ones.** `cipher_aria_hw.c:35-44`'s
+// `PROV_CIPHER_HW_aria_mode` macro spells `ossl_cipher_hw_chunked_##mode`, and `ciphercommon.h:241-243`
+// `#define`s three of those onto the generic functions, so ECB, CTR and CFB1 install the generic
+// function itself while CBC, OFB, CFB and CFB8 take a chunking wrapper. `cipher_sm4_hw.c` uses the
+// generic functions directly, which is why SM4's rows did not need `ciphercommon_hw.c:126-193` to be
+// transcribed and ARIA's do.
+//
+// **There is one schedule function, not two.** `cipher_hw_aria_initkey` stores
+// `(block128_f)ossl_aria_encrypt` **unconditionally**, where `cipher_hw_sm4_initkey` selects between
+// an encrypt and a decrypt function. That is not a simplification: `src/aria.rs` records that this
+// authority has no `ossl_aria_decrypt` at all, and `ossl_aria_set_decrypt_key` builds a schedule
+// that the forward function decrypts with. So the branch here chooses which *schedule* to build and
+// nothing else.
+//
+// **The branch has an error arm, and it is this stratum's first ARIA raise.** `ret < 0` raises
+// `PROV_R_KEY_SETUP_FAILED` at `cipher_aria_hw.c:25` and answers 0. Both schedule functions answer
+// 0, not negative, on success, and `-1` when the key pointer is NULL or `bits` is not 128, 192 or
+// 256 -- so the arm is negative-return-driven exactly as `cipher_aria_hw.c` writes it.
+//
+// The six `ARIA-*-GCM` and `ARIA-*-CCM` rows precede these twenty-one in `deflt_ciphers[]` and are
+// their own unit: they come from `cipher_aria_gcm.c` and `cipher_aria_ccm.c`, whose hw is the
+// shared GCM and CCM machinery rather than `cipher_aria_hw.c`.
+
+/// `ARIA_BLOCK_SIZE * 8` — the two block modes' `blkbits`. The five stream modes pass `8`, which is
+/// `cipher_aria.c`'s one-byte block size for OFB, CFB, CFB1, CFB8 and CTR.
+const ARIA_BLK_BITS: usize = crate::aria::ARIA_BLOCK_SIZE * 8;
+
+/// The allocation-tracking `file` argument for this row's allocations. `cipher_aria.c` is a
+/// **source-tree** file rather than a `.c.in` template, so its `__FILE__` carries the
+/// `../../src/openssl-3.6.4/` prefix, as `cipher_sm4.c`'s and `cipher_chacha20.c`'s do.
+const FILE_ARIA: *const c_char =
+    c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aria.c".as_ptr();
+
+/// `ossl_aria_encrypt` as the generic engine's `block128_f` — `cipher_aria_hw.c:29`'s cast, which is
+/// unconditional and therefore serves both directions.
+///
+/// # Safety
+/// As [`crate::aria::ossl_aria_encrypt`]; `key` is an `ARIA_KEY *`.
+unsafe extern "C" fn aria_block_encrypt(
+    in_: *const c_uchar,
+    out: *mut c_uchar,
+    key: *const c_void,
+) {
+    // SAFETY: the caller's contract.
+    unsafe { crate::aria::ossl_aria_encrypt(in_, out, key.cast()) }
+}
+
+/// `struct prov_aria_ctx_st` — `cipher_aria.h:13-19`.
+///
+/// The authority's `ks` is a union with `OSSL_UNION_ALIGN` whose live member is `ARIA_KEY`, which is
+/// 276 bytes and four-aligned, so the union is 280. `ARIA_KEY` is the **last** member of the
+/// context, so the union's four trailing bytes and the struct's own four trailing bytes of padding
+/// coincide: `size_of` is 192 + 280 = 472 with either model, and the unit test binds that number
+/// rather than the reasoning (D269).
+#[repr(C)]
+pub(crate) struct ProvAriaCtx {
+    /// `PROV_CIPHER_CTX base; /* Must be first */`.
+    pub base: ProvCipherCtx,
+    /// `union { OSSL_UNION_ALIGN; ARIA_KEY ks; } ks`.
+    pub ks: crate::aria::AriaKey,
+}
+
+/// `static int cipher_hw_aria_initkey(PROV_CIPHER_CTX *dat, const unsigned char *key,
+/// size_t keylen)` — `cipher_aria_hw.c:13-31`.
+///
+/// **The condition chooses the schedule; the block function is the same either way.** An
+/// encrypting context always builds the encrypt schedule, and a decrypting one builds the decrypt
+/// schedule for ECB and CBC and the encrypt schedule for the five stream modes -- because those
+/// modes only ever run the block function forwards over a counter or a feedback register.
+///
+/// # Safety
+/// The hw contract; `dat` is a live `ProvAriaCtx`; `key` is readable for `keylen` bytes.
+unsafe extern "C" fn cipher_hw_aria_initkey(
+    dat: *mut ProvCipherCtx,
+    key: *const c_uchar,
+    keylen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract; `dat` is a `PROV_ARIA_CTX`.
+    unsafe {
+        let adat = dat.cast::<ProvAriaCtx>();
+        let ks: *mut crate::aria::AriaKey = ptr::addr_of_mut!((*adat).ks);
+        let mode = (*dat).mode;
+        let ret =
+            if (*dat).enc_int() != 0 || (mode != EVP_CIPH_ECB_MODE && mode != EVP_CIPH_CBC_MODE) {
+                crate::aria::ossl_aria_set_encrypt_key(key, (keylen * 8) as c_int, ks)
+            } else {
+                crate::aria::ossl_aria_set_decrypt_key(key, (keylen * 8) as c_int, ks)
+            };
+        if ret < 0 {
+            return fail_at(&err_sites::PROV_CIPHER_ARIA_HW_25);
+        }
+        (*dat).ks = ks.cast();
+        (*dat).block = Some(aria_block_encrypt);
+        1
+    }
+}
+
+/// `IMPLEMENT_CIPHER_HW_COPYCTX(cipher_hw_aria_copyctx, PROV_ARIA_CTX)` — `cipher_aria_hw.c:33`.
+///
+/// # Safety
+/// The hw contract; both contexts are live and `dst`'s row fields are uninitialised.
+unsafe extern "C" fn cipher_hw_aria_copyctx(dst: *mut ProvCipherCtx, src: *const ProvCipherCtx) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        ptr::copy_nonoverlapping(src.cast::<ProvAriaCtx>(), dst.cast::<ProvAriaCtx>(), 1);
+    }
+}
+
+/// `static void aria_freectx(void *vctx)` — `cipher_aria.c:20-25`. Cleared before release, as
+/// `sm4_freectx` is, because the context holds a key schedule.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aria_freectx(vctx: *mut c_void) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        ossl_cipher_generic_reset_ctx(vctx.cast::<ProvCipherCtx>());
+        CRYPTO_clear_free(vctx, core::mem::size_of::<ProvAriaCtx>(), FILE_ARIA, LINE);
+    }
+}
+
+/// `static void *aria_dupctx(void *ctx)` — `cipher_aria.c:27-41`. No NULL check on `vctx`, and the
+/// row fields arrive through `hw->copyctx` rather than through the allocation.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aria_dupctx(vctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let in_ = vctx.cast::<ProvAriaCtx>();
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let ret = CRYPTO_malloc(core::mem::size_of::<ProvAriaCtx>(), FILE_ARIA, LINE);
+        if ret.is_null() {
+            return ptr::null_mut();
+        }
+        let hw = (*in_).base.hw;
+        if let Some(copyctx) = (*hw).copyctx {
+            copyctx(ret.cast(), vctx.cast());
+        }
+        ret
+    }
+}
+
+/// `PROV_CIPHER_HW_aria_mode(mode)` — `cipher_aria_hw.c:46-52`, the seven tables. **The three modes
+/// whose `chunked` spelling is a `#define` onto the generic function install that function here**,
+/// which is what `ciphercommon.h:241-243` says and what the authority's preprocessed text contains.
+static ARIA_ECB_HW: ProvCipherHw = ProvCipherHw {
+    init: cipher_hw_aria_initkey,
+    cipher: ossl_cipher_hw_generic_ecb,
+    copyctx: Some(cipher_hw_aria_copyctx),
+};
+static ARIA_CBC_HW: ProvCipherHw = ProvCipherHw {
+    init: cipher_hw_aria_initkey,
+    cipher: ossl_cipher_hw_chunked_cbc,
+    copyctx: Some(cipher_hw_aria_copyctx),
+};
+static ARIA_OFB128_HW: ProvCipherHw = ProvCipherHw {
+    init: cipher_hw_aria_initkey,
+    cipher: ossl_cipher_hw_chunked_ofb128,
+    copyctx: Some(cipher_hw_aria_copyctx),
+};
+static ARIA_CFB128_HW: ProvCipherHw = ProvCipherHw {
+    init: cipher_hw_aria_initkey,
+    cipher: ossl_cipher_hw_chunked_cfb128,
+    copyctx: Some(cipher_hw_aria_copyctx),
+};
+static ARIA_CFB1_HW: ProvCipherHw = ProvCipherHw {
+    init: cipher_hw_aria_initkey,
+    cipher: ossl_cipher_hw_generic_cfb1,
+    copyctx: Some(cipher_hw_aria_copyctx),
+};
+static ARIA_CFB8_HW: ProvCipherHw = ProvCipherHw {
+    init: cipher_hw_aria_initkey,
+    cipher: ossl_cipher_hw_chunked_cfb8,
+    copyctx: Some(cipher_hw_aria_copyctx),
+};
+static ARIA_CTR_HW: ProvCipherHw = ProvCipherHw {
+    init: cipher_hw_aria_initkey,
+    cipher: ossl_cipher_hw_generic_ctr,
+    copyctx: Some(cipher_hw_aria_copyctx),
+};
+
+/// `const PROV_CIPHER_HW *ossl_prov_cipher_hw_aria_<mode>(size_t keybits)` —
+/// `cipher_aria_hw.c:41-52`, and the six siblings. `cipher_aria.h:21-22` also `#define`s
+/// `ossl_prov_cipher_hw_aria_ofb` onto `_ofb128` and `_cfb` onto `_cfb128`.
+///
+/// **Transcribed and uncalled**, for `ossl_prov_cipher_hw_sm4_*`'s reason: the authority's
+/// `IMPLEMENT_generic_cipher` reaches its hw through these, and each row installs the C table
+/// directly here, so a reader of `cipher_aria.h` still finds every name it declares.
+#[allow(dead_code)] // no caller by construction: the rows install the C tables directly
+fn ossl_prov_cipher_hw_aria_ecb(_keybits: usize) -> *const ProvCipherHw {
+    ptr::addr_of!(ARIA_ECB_HW)
+}
+/// See [`ossl_prov_cipher_hw_aria_ecb`].
+#[allow(dead_code)] // as above
+fn ossl_prov_cipher_hw_aria_cbc(_keybits: usize) -> *const ProvCipherHw {
+    ptr::addr_of!(ARIA_CBC_HW)
+}
+/// See [`ossl_prov_cipher_hw_aria_ecb`].
+#[allow(dead_code)] // as above
+fn ossl_prov_cipher_hw_aria_ofb128(_keybits: usize) -> *const ProvCipherHw {
+    ptr::addr_of!(ARIA_OFB128_HW)
+}
+/// See [`ossl_prov_cipher_hw_aria_ecb`].
+#[allow(dead_code)] // as above
+fn ossl_prov_cipher_hw_aria_cfb128(_keybits: usize) -> *const ProvCipherHw {
+    ptr::addr_of!(ARIA_CFB128_HW)
+}
+/// See [`ossl_prov_cipher_hw_aria_ecb`].
+#[allow(dead_code)] // as above
+fn ossl_prov_cipher_hw_aria_cfb1(_keybits: usize) -> *const ProvCipherHw {
+    ptr::addr_of!(ARIA_CFB1_HW)
+}
+/// See [`ossl_prov_cipher_hw_aria_ecb`].
+#[allow(dead_code)] // as above
+fn ossl_prov_cipher_hw_aria_cfb8(_keybits: usize) -> *const ProvCipherHw {
+    ptr::addr_of!(ARIA_CFB8_HW)
+}
+/// See [`ossl_prov_cipher_hw_aria_ecb`].
+#[allow(dead_code)] // as above
+fn ossl_prov_cipher_hw_aria_ctr(_keybits: usize) -> *const ProvCipherHw {
+    ptr::addr_of!(ARIA_CTR_HW)
+}
+
+// `IMPLEMENT_generic_cipher(aria, ARIA, <mode>, <MODE>, 0, <kbits>, <blkbits>, <ivbits>, <typ>)` —
+// `cipher_aria.c:37-73`'s twenty-one invocations. The `0` is the mode-flags argument: ARIA has
+// neither `CUSTOM_IV` nor an AEAD flag. ECB's `ivbits` is `0` and CBC's is `128`; every stream mode
+// is `8`/`128`, the one-byte block size that tells an alignment-reasoning caller it is a stream.
+cipher_row!(
+    aria256ecb_newctx,
+    aria256ecb_get_params,
+    ARIA256ECB_FUNCTIONS,
+    ProvAriaCtx,
+    ARIA_ECB_HW,
+    256,
+    ARIA_BLK_BITS,
+    0,
+    EVP_CIPH_ECB_MODE,
+    0,
+    aria_freectx,
+    aria_dupctx,
+    ossl_cipher_generic_block_update,
+    ossl_cipher_generic_block_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+cipher_row!(
+    aria192ecb_newctx,
+    aria192ecb_get_params,
+    ARIA192ECB_FUNCTIONS,
+    ProvAriaCtx,
+    ARIA_ECB_HW,
+    192,
+    ARIA_BLK_BITS,
+    0,
+    EVP_CIPH_ECB_MODE,
+    0,
+    aria_freectx,
+    aria_dupctx,
+    ossl_cipher_generic_block_update,
+    ossl_cipher_generic_block_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+cipher_row!(
+    aria128ecb_newctx,
+    aria128ecb_get_params,
+    ARIA128ECB_FUNCTIONS,
+    ProvAriaCtx,
+    ARIA_ECB_HW,
+    128,
+    ARIA_BLK_BITS,
+    0,
+    EVP_CIPH_ECB_MODE,
+    0,
+    aria_freectx,
+    aria_dupctx,
+    ossl_cipher_generic_block_update,
+    ossl_cipher_generic_block_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+cipher_row!(
+    aria256cbc_newctx,
+    aria256cbc_get_params,
+    ARIA256CBC_FUNCTIONS,
+    ProvAriaCtx,
+    ARIA_CBC_HW,
+    256,
+    ARIA_BLK_BITS,
+    128,
+    EVP_CIPH_CBC_MODE,
+    0,
+    aria_freectx,
+    aria_dupctx,
+    ossl_cipher_generic_block_update,
+    ossl_cipher_generic_block_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+cipher_row!(
+    aria192cbc_newctx,
+    aria192cbc_get_params,
+    ARIA192CBC_FUNCTIONS,
+    ProvAriaCtx,
+    ARIA_CBC_HW,
+    192,
+    ARIA_BLK_BITS,
+    128,
+    EVP_CIPH_CBC_MODE,
+    0,
+    aria_freectx,
+    aria_dupctx,
+    ossl_cipher_generic_block_update,
+    ossl_cipher_generic_block_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+cipher_row!(
+    aria128cbc_newctx,
+    aria128cbc_get_params,
+    ARIA128CBC_FUNCTIONS,
+    ProvAriaCtx,
+    ARIA_CBC_HW,
+    128,
+    ARIA_BLK_BITS,
+    128,
+    EVP_CIPH_CBC_MODE,
+    0,
+    aria_freectx,
+    aria_dupctx,
+    ossl_cipher_generic_block_update,
+    ossl_cipher_generic_block_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+cipher_row!(
+    aria256ofb128_newctx,
+    aria256ofb128_get_params,
+    ARIA256OFB_FUNCTIONS,
+    ProvAriaCtx,
+    ARIA_OFB128_HW,
+    256,
+    8,
+    128,
+    EVP_CIPH_OFB_MODE,
+    0,
+    aria_freectx,
+    aria_dupctx,
+    ossl_cipher_generic_stream_update,
+    ossl_cipher_generic_stream_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+cipher_row!(
+    aria192ofb128_newctx,
+    aria192ofb128_get_params,
+    ARIA192OFB_FUNCTIONS,
+    ProvAriaCtx,
+    ARIA_OFB128_HW,
+    192,
+    8,
+    128,
+    EVP_CIPH_OFB_MODE,
+    0,
+    aria_freectx,
+    aria_dupctx,
+    ossl_cipher_generic_stream_update,
+    ossl_cipher_generic_stream_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+cipher_row!(
+    aria128ofb128_newctx,
+    aria128ofb128_get_params,
+    ARIA128OFB_FUNCTIONS,
+    ProvAriaCtx,
+    ARIA_OFB128_HW,
+    128,
+    8,
+    128,
+    EVP_CIPH_OFB_MODE,
+    0,
+    aria_freectx,
+    aria_dupctx,
+    ossl_cipher_generic_stream_update,
+    ossl_cipher_generic_stream_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+cipher_row!(
+    aria256cfb128_newctx,
+    aria256cfb128_get_params,
+    ARIA256CFB_FUNCTIONS,
+    ProvAriaCtx,
+    ARIA_CFB128_HW,
+    256,
+    8,
+    128,
+    EVP_CIPH_CFB_MODE,
+    0,
+    aria_freectx,
+    aria_dupctx,
+    ossl_cipher_generic_stream_update,
+    ossl_cipher_generic_stream_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+cipher_row!(
+    aria192cfb128_newctx,
+    aria192cfb128_get_params,
+    ARIA192CFB_FUNCTIONS,
+    ProvAriaCtx,
+    ARIA_CFB128_HW,
+    192,
+    8,
+    128,
+    EVP_CIPH_CFB_MODE,
+    0,
+    aria_freectx,
+    aria_dupctx,
+    ossl_cipher_generic_stream_update,
+    ossl_cipher_generic_stream_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+cipher_row!(
+    aria128cfb128_newctx,
+    aria128cfb128_get_params,
+    ARIA128CFB_FUNCTIONS,
+    ProvAriaCtx,
+    ARIA_CFB128_HW,
+    128,
+    8,
+    128,
+    EVP_CIPH_CFB_MODE,
+    0,
+    aria_freectx,
+    aria_dupctx,
+    ossl_cipher_generic_stream_update,
+    ossl_cipher_generic_stream_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+cipher_row!(
+    aria256cfb1_newctx,
+    aria256cfb1_get_params,
+    ARIA256CFB1_FUNCTIONS,
+    ProvAriaCtx,
+    ARIA_CFB1_HW,
+    256,
+    8,
+    128,
+    EVP_CIPH_CFB_MODE,
+    0,
+    aria_freectx,
+    aria_dupctx,
+    ossl_cipher_generic_stream_update,
+    ossl_cipher_generic_stream_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+cipher_row!(
+    aria192cfb1_newctx,
+    aria192cfb1_get_params,
+    ARIA192CFB1_FUNCTIONS,
+    ProvAriaCtx,
+    ARIA_CFB1_HW,
+    192,
+    8,
+    128,
+    EVP_CIPH_CFB_MODE,
+    0,
+    aria_freectx,
+    aria_dupctx,
+    ossl_cipher_generic_stream_update,
+    ossl_cipher_generic_stream_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+cipher_row!(
+    aria128cfb1_newctx,
+    aria128cfb1_get_params,
+    ARIA128CFB1_FUNCTIONS,
+    ProvAriaCtx,
+    ARIA_CFB1_HW,
+    128,
+    8,
+    128,
+    EVP_CIPH_CFB_MODE,
+    0,
+    aria_freectx,
+    aria_dupctx,
+    ossl_cipher_generic_stream_update,
+    ossl_cipher_generic_stream_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+cipher_row!(
+    aria256cfb8_newctx,
+    aria256cfb8_get_params,
+    ARIA256CFB8_FUNCTIONS,
+    ProvAriaCtx,
+    ARIA_CFB8_HW,
+    256,
+    8,
+    128,
+    EVP_CIPH_CFB_MODE,
+    0,
+    aria_freectx,
+    aria_dupctx,
+    ossl_cipher_generic_stream_update,
+    ossl_cipher_generic_stream_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+cipher_row!(
+    aria192cfb8_newctx,
+    aria192cfb8_get_params,
+    ARIA192CFB8_FUNCTIONS,
+    ProvAriaCtx,
+    ARIA_CFB8_HW,
+    192,
+    8,
+    128,
+    EVP_CIPH_CFB_MODE,
+    0,
+    aria_freectx,
+    aria_dupctx,
+    ossl_cipher_generic_stream_update,
+    ossl_cipher_generic_stream_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+cipher_row!(
+    aria128cfb8_newctx,
+    aria128cfb8_get_params,
+    ARIA128CFB8_FUNCTIONS,
+    ProvAriaCtx,
+    ARIA_CFB8_HW,
+    128,
+    8,
+    128,
+    EVP_CIPH_CFB_MODE,
+    0,
+    aria_freectx,
+    aria_dupctx,
+    ossl_cipher_generic_stream_update,
+    ossl_cipher_generic_stream_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+cipher_row!(
+    aria256ctr_newctx,
+    aria256ctr_get_params,
+    ARIA256CTR_FUNCTIONS,
+    ProvAriaCtx,
+    ARIA_CTR_HW,
+    256,
+    8,
+    128,
+    EVP_CIPH_CTR_MODE,
+    0,
+    aria_freectx,
+    aria_dupctx,
+    ossl_cipher_generic_stream_update,
+    ossl_cipher_generic_stream_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+cipher_row!(
+    aria192ctr_newctx,
+    aria192ctr_get_params,
+    ARIA192CTR_FUNCTIONS,
+    ProvAriaCtx,
+    ARIA_CTR_HW,
+    192,
+    8,
+    128,
+    EVP_CIPH_CTR_MODE,
+    0,
+    aria_freectx,
+    aria_dupctx,
+    ossl_cipher_generic_stream_update,
+    ossl_cipher_generic_stream_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+cipher_row!(
+    aria128ctr_newctx,
+    aria128ctr_get_params,
+    ARIA128CTR_FUNCTIONS,
+    ProvAriaCtx,
+    ARIA_CTR_HW,
+    128,
+    8,
+    128,
+    EVP_CIPH_CTR_MODE,
+    0,
+    aria_freectx,
+    aria_dupctx,
+    ossl_cipher_generic_stream_update,
+    ossl_cipher_generic_stream_final,
+    ossl_cipher_generic_get_params,
+    ossl_cipher_generic_get_ctx_params,
+    ossl_cipher_generic_set_ctx_params,
+    ossl_cipher_generic_gettable_ctx_params,
+    ossl_cipher_generic_settable_ctx_params
+);
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -10473,9 +11340,9 @@ mod tests {
 
     #[test]
     fn the_cipher_table_terminates_and_names_the_rows() {
-        assert_eq!(DEFLT_CIPHERS.len(), 89);
+        assert_eq!(DEFLT_CIPHERS.len(), 110);
         // SAFETY: every entry up to the terminator is initialised.
-        let last = DEFLT_CIPHERS[88].algorithm_names;
+        let last = DEFLT_CIPHERS[109].algorithm_names;
         assert!(last.is_null(), "the table is NULL-name terminated");
         // SAFETY: the first row's name is a `'static` C string.
         let first = unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[0].algorithm_names) };
@@ -10589,6 +11456,8 @@ mod tests {
         assert_eq!(core::mem::size_of::<ProvAesWrapCtx>(), 448);
         assert_eq!(core::mem::size_of::<ProvChacha20Ctx>(), 312);
         assert_eq!(core::mem::size_of::<ProvSm4Ctx>(), 320);
+        assert_eq!(core::mem::size_of::<ProvAriaCtx>(), 472);
+        assert_eq!(core::mem::offset_of!(ProvAriaCtx, ks), 192);
     }
 
     /// **The row's two parameter lists are its own, not the generic ones.** `ChaCha20` publishes a
