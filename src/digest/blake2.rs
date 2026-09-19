@@ -91,6 +91,13 @@ pub mod blake2b {
     pub const BLOCKBYTES: usize = 128;
     /// `BLAKE2B_OUTBYTES` — `prov/blake2.h:26`.
     pub const OUTBYTES: usize = 64;
+    /// `BLAKE2B_KEYBYTES` — `prov/blake2.h:27`. The MAC row's key buffer is this wide, and a key
+    /// shorter than it is zero-padded rather than rejected.
+    pub const KEYBYTES: usize = 64;
+    /// `BLAKE2B_SALTBYTES` — `prov/blake2.h:28`.
+    pub const SALTBYTES: usize = 16;
+    /// `BLAKE2B_PERSONALBYTES` — `prov/blake2.h:29`.
+    pub const PERSONALBYTES: usize = 16;
     /// `BLAKE2B_DIGEST_LENGTH` — `prov/blake2.h:80`.
     pub const DIGEST_LENGTH: u8 = 64;
 
@@ -171,6 +178,40 @@ pub mod blake2b {
         p.b[0] = outlen;
     }
 
+    /// `ossl_blake2b_param_set_key_length` — `blake2b_prov.c:102-105`.
+    pub fn param_set_key_length(p: &mut Param, keylen: u8) {
+        p.b[1] = keylen;
+    }
+
+    /// `ossl_blake2b_param_set_personal` — `blake2b_prov.c:107-112`.
+    ///
+    /// `memcpy` then `memset` the remainder, so the field is the caller's `len` bytes followed by
+    /// `PERSONALBYTES - len` zeroes. The caller rejects `len > PERSONALBYTES` before reaching here,
+    /// which is why the subtraction cannot underflow.
+    pub fn param_set_personal(p: &mut Param, personal: &[u8]) {
+        let n = personal.len();
+        debug_assert!(n <= PERSONALBYTES);
+        p.b[PERSONAL_OFFSET..PERSONAL_OFFSET + n].copy_from_slice(personal);
+        for byte in &mut p.b[PERSONAL_OFFSET + n..PERSONAL_OFFSET + PERSONALBYTES] {
+            *byte = 0;
+        }
+    }
+
+    /// `ossl_blake2b_param_set_salt` — `blake2b_prov.c:114-119`, the same shape as the personal.
+    pub fn param_set_salt(p: &mut Param, salt: &[u8]) {
+        let n = salt.len();
+        debug_assert!(n <= SALTBYTES);
+        p.b[SALT_OFFSET..SALT_OFFSET + n].copy_from_slice(salt);
+        for byte in &mut p.b[SALT_OFFSET + n..SALT_OFFSET + SALTBYTES] {
+            *byte = 0;
+        }
+    }
+
+    /// `BLAKE2B_PARAM`'s `personal` offset — `prov/blake2.h:63`.
+    const PERSONAL_OFFSET: usize = 48;
+    /// `BLAKE2B_PARAM`'s `salt` offset — `prov/blake2.h:62`.
+    const SALT_OFFSET: usize = 32;
+
     /// `blake2b_set_lastblock` — `blake2b_prov.c:47-50`.
     fn set_lastblock(s: &mut Ctx) {
         s.f[0] = u64::MAX;
@@ -203,6 +244,36 @@ pub mod blake2b {
     pub unsafe fn init(c: *mut Ctx, p: *const Param) {
         // SAFETY: both are live per the caller's contract.
         unsafe { init_param(&mut *c, &*p) };
+    }
+
+    /// `ossl_blake2b_init_key` — `blake2b_prov.c:135-151`.
+    ///
+    /// **The key is not hashed as a key; it is zero-padded to one whole block and *updated* as the
+    /// first block of data.** That is BLAKE2's keying rule, and it is why the MAC row zero-pads a
+    /// short key into its `KEYBYTES` buffer before calling this rather than passing the caller's
+    /// length: the authority copies `P->key_length` bytes out of that buffer and then feeds the
+    /// entire block, so the padding is what the algorithm sees.
+    ///
+    /// # Safety
+    /// `c` and `p` must be live; `key` readable for `(*p).b[1]` bytes.
+    pub unsafe fn init_key(c: *mut Ctx, p: *const Param, key: *const u8) -> c_int {
+        // SAFETY: both are live per the caller's contract.
+        unsafe { init_param(&mut *c, &*p) };
+
+        let mut block = [0u8; BLOCKBYTES];
+        // SAFETY: `p` is live; byte 1 of the parameter image is `key_length`, which
+        // `param_set_key_length` cannot have set above `KEYBYTES`.
+        let keylen = unsafe { (*p).b[1] } as usize;
+        debug_assert!(keylen <= KEYBYTES);
+        // SAFETY: `key` is readable for `keylen` bytes per the caller's contract, and
+        // `keylen <= KEYBYTES <= BLOCKBYTES`, so the copy stays inside `block`.
+        unsafe { ptr::copy_nonoverlapping(key, block.as_mut_ptr(), keylen) };
+        // SAFETY: `block` is this frame's own and `c` is live.
+        let r = unsafe { update(c, block.as_ptr(), BLOCKBYTES) };
+        // `OPENSSL_cleanse(block, BLAKE2B_BLOCKBYTES)`.
+        // SAFETY: `block` is this frame's own storage and is never read again.
+        unsafe { core::ptr::write_bytes(block.as_mut_ptr(), 0, BLOCKBYTES) };
+        r
     }
 
     /// One `G` — `blake2b_prov.c:204-214`.
@@ -362,6 +433,12 @@ pub mod blake2s {
     pub const BLOCKBYTES: usize = 64;
     /// `BLAKE2S_OUTBYTES` — `prov/blake2.h:20`.
     pub const OUTBYTES: usize = 32;
+    /// `BLAKE2S_KEYBYTES` — `prov/blake2.h:21`.
+    pub const KEYBYTES: usize = 32;
+    /// `BLAKE2S_SALTBYTES` — `prov/blake2.h:22`.
+    pub const SALTBYTES: usize = 8;
+    /// `BLAKE2S_PERSONALBYTES` — `prov/blake2.h:23`.
+    pub const PERSONALBYTES: usize = 8;
     /// `BLAKE2S_DIGEST_LENGTH` — `prov/blake2.h:81`.
     pub const DIGEST_LENGTH: u8 = 32;
 
@@ -440,6 +517,38 @@ pub mod blake2s {
         p.b[0] = outlen;
     }
 
+    /// `ossl_blake2s_param_set_key_length` — `blake2s_prov.c:95-98`.
+    pub fn param_set_key_length(p: &mut Param, keylen: u8) {
+        p.b[1] = keylen;
+    }
+
+    /// `ossl_blake2s_param_set_personal` — `blake2s_prov.c:100-105`.
+    pub fn param_set_personal(p: &mut Param, personal: &[u8]) {
+        let n = personal.len();
+        debug_assert!(n <= PERSONALBYTES);
+        p.b[PERSONAL_OFFSET..PERSONAL_OFFSET + n].copy_from_slice(personal);
+        for byte in &mut p.b[PERSONAL_OFFSET + n..PERSONAL_OFFSET + PERSONALBYTES] {
+            *byte = 0;
+        }
+    }
+
+    /// `ossl_blake2s_param_set_salt` — `blake2s_prov.c:107-112`.
+    pub fn param_set_salt(p: &mut Param, salt: &[u8]) {
+        let n = salt.len();
+        debug_assert!(n <= SALTBYTES);
+        p.b[SALT_OFFSET..SALT_OFFSET + n].copy_from_slice(salt);
+        for byte in &mut p.b[SALT_OFFSET + n..SALT_OFFSET + SALTBYTES] {
+            *byte = 0;
+        }
+    }
+
+    /// `BLAKE2S_PARAM`'s `personal` offset — `prov/blake2.h:41`. The salt and personal fields are
+    /// narrower than the BLAKE2b variant's, so these offsets are *not* that module's numbers and
+    /// the two are deliberately not shared.
+    const PERSONAL_OFFSET: usize = 24;
+    /// `BLAKE2S_PARAM`'s `salt` offset — `prov/blake2.h:40`.
+    const SALT_OFFSET: usize = 16;
+
     /// `blake2s_set_lastblock` — `blake2s_prov.c:42-45`.
     fn set_lastblock(s: &mut Ctx) {
         s.f[0] = u32::MAX;
@@ -471,6 +580,28 @@ pub mod blake2s {
     pub unsafe fn init(c: *mut Ctx, p: *const Param) {
         // SAFETY: both are live per the caller's contract.
         unsafe { init_param(&mut *c, &*p) };
+    }
+
+    /// `ossl_blake2s_init_key` — `blake2s_prov.c:128-144`, the same shape as the BLAKE2b pair.
+    ///
+    /// # Safety
+    /// `c` and `p` must be live; `key` readable for `(*p).b[1]` bytes.
+    pub unsafe fn init_key(c: *mut Ctx, p: *const Param, key: *const u8) -> c_int {
+        // SAFETY: both are live per the caller's contract.
+        unsafe { init_param(&mut *c, &*p) };
+
+        let mut block = [0u8; BLOCKBYTES];
+        // SAFETY: `p` is live; byte 1 of the parameter image is `key_length`.
+        let keylen = unsafe { (*p).b[1] } as usize;
+        debug_assert!(keylen <= KEYBYTES);
+        // SAFETY: `key` is readable for `keylen` bytes and `keylen <= KEYBYTES <= BLOCKBYTES`.
+        unsafe { ptr::copy_nonoverlapping(key, block.as_mut_ptr(), keylen) };
+        // SAFETY: `block` is this frame's own and `c` is live.
+        let r = unsafe { update(c, block.as_ptr(), BLOCKBYTES) };
+        // `OPENSSL_cleanse(block, BLAKE2S_BLOCKBYTES)`.
+        // SAFETY: `block` is this frame's own storage and is never read again.
+        unsafe { core::ptr::write_bytes(block.as_mut_ptr(), 0, BLOCKBYTES) };
+        r
     }
 
     /// One `G` — `blake2s_prov.c:197-207`.

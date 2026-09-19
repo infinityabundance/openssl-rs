@@ -2159,12 +2159,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "1ed7d4a87c09abe0fcea7beb443a19c4696726aa78c5fd2b49ee665a159aa887"
+      "sha256": "b964417ddc80efa1ff358b7be6ba862fbe740d7ac7f71743c860495a80d9d362"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "8105cf439d888269650d265bab17e95913a45562fd58ff5cec67437f18efa785"
+      "sha256": "906bced117e058947ac0d044292d568809085467ac224078fe0b884f6e9b6133"
     },
     {
       "name": "prerequisites",
@@ -2194,7 +2194,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "62b6bcfd47a5d4352076449501d14ca6f6ee0abafb67b0d48de4ead00b276e10"
+      "sha256": "d1f355bffdc1ef5f411ebdbd58a641af9db8ceeb84e1b78e1b56c526132e7f3c"
     }
   ],
   "kind": "plan-reconciliation",
