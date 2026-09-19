@@ -235,12 +235,15 @@ def eval_guard(expr: str, defined: set[str]) -> bool:
         raise CensusError(f"[provider-algorithms] fatal: unevaluable guard: {expr!r}") from exc
 
 
-def evaluate_lines(lines: list[str], defined: set[str]) -> list[tuple[int, str]]:
+def evaluate_lines(
+    lines: list[str], defined: set[str], src_label: str = "a preprocessed stream"
+) -> list[tuple[int, str]]:
     """(line number, text) for every line the preprocessor would keep.
 
     `#include "x.inc"` is spliced in place, recursively, so a table that is assembled from
     an include is parsed as the authority compiles it. A `#define` and its backslash
-    continuations are one preprocessor statement and are dropped whole.
+    continuations are one preprocessor statement and are dropped whole. `src_label` exists so
+    the `#elif` refusal can name the file it is in.
     """
     out: list[tuple[int, str]] = []
     stack: list[bool] = []
@@ -273,9 +276,20 @@ def evaluate_lines(lines: list[str], defined: set[str]) -> list[tuple[int, str]]
         elif kind == "if":
             stack.append(eval_guard(rest, defined))
         elif kind == "elif":
-            if not stack:
-                raise CensusError("[provider-algorithms] fatal: #elif without #if")
-            stack[-1] = stack[-1] or eval_guard(rest, defined)
+            # **Rejected rather than approximated** (D244). The previous arm was
+            # `stack[-1] = stack[-1] or eval_guard(...)`, which keeps an `#elif` branch active
+            # when an earlier branch was already true -- the opposite of what C does. It was
+            # measured harmless on the admitted profile (all seven files this walks carry zero
+            # `#elif`s), and that measurement is exactly why the arm is replaced by a refusal
+            # instead of a fix: a branch-selection expression this file cannot get right is a
+            # branch-selection expression it must not silently answer. The day an authority
+            # update adds one, this fires and the arm gets written properly.
+            raise CensusError(
+                f"[provider-algorithms] fatal: {src_label}: unsupported `#elif` at line {i} "
+                f"({rest!r}). This reader tracks a single boolean per nesting level, so it "
+                f"cannot express `#elif`'s 'no earlier branch was taken' condition; refusing is "
+                f"the fail-closed answer"
+            )
         elif kind == "else":
             if not stack:
                 raise CensusError("[provider-algorithms] fatal: #else without #if")
@@ -400,7 +414,7 @@ def parse_table(
 ) -> list[dict]:
     """Every row of one table, guards applied and `.inc` includes spliced."""
     rows: list[dict] = []
-    lines = evaluate_lines(body, defined)
+    lines = evaluate_lines(body, defined, f"{source.name}:{table}")
     # Splice `.inc` includes in place; they are their own small preprocessor streams.
     spliced: list[tuple[int, str]] = []
     for lineno, text in lines:
@@ -420,7 +434,13 @@ def parse_table(
             symbol = sm.group(1)
             kind, token = symbol.split("_STRUCTURE_", 1)
             _STRUCTURE_CACHE[(kind, token)] = sm.group(2)
-        spliced.extend(evaluate_lines(inc_text.splitlines(), defined | INC_TIME_DEFINED))
+        spliced.extend(
+            evaluate_lines(
+                inc_text.splitlines(),
+                defined | INC_TIME_DEFINED,
+                f"{inc.name} (included by {source.name})",
+            )
+        )
         # The `.inc` files end their last row without a trailing comma, so the include site's
         # own terminator would be glued onto it. One comma keeps the row boundaries.
         spliced.append((-1, ","))
@@ -536,16 +556,30 @@ def crate_cipher_rows() -> list[tuple[str, str]]:
     return out
 
 
-def crate_digest_rows() -> list[str]:
-    """The alias string of every `DEFLT_DIGESTS` row, in order."""
+def crate_digest_rows() -> list[tuple[str, str]]:
+    """`(alias string, Rust dispatch-table expression)` for every `DEFLT_DIGESTS` row, in order."""
     text = read(REPO_ROOT / "src" / "provider" / "digest.rs")
     start = text.index("static DEFLT_DIGESTS")
     end = text.index("];", start)
-    return [m.group(1) for m in re.finditer(r'algorithm_names:\s*c"([^"]*)"', text[start:end])]
+    body = text[start:end]
+    out = []
+    for m in re.finditer(
+        r'algorithm_names:\s*c"([^"]*)".*?implementation:\s*([A-Za-z0-9_:]+)\.as_ptr\(\)',
+        body,
+        re.S,
+    ):
+        out.append((m.group(1), m.group(2)))
+    if len(out) != body.count('algorithm_names: c"'):
+        raise CensusError(
+            "[provider-algorithms] fatal: a DEFLT_DIGESTS row did not yield both an alias "
+            "string and a dispatch-table expression, so the dispatch association cannot be "
+            "checked for it"
+        )
+    return out
 
 
-def crate_mac_rows() -> list[str]:
-    """The alias string of every `DEFLT_MACS` row, in order.
+def crate_mac_rows() -> list[tuple[str, str]]:
+    """`(alias string, Rust dispatch-table identifier)` for every `DEFLT_MACS` row, in order.
 
     Read here rather than alongside the cipher rows because `OSSL_OP_MAC` was the operation this
     census could not see until D241: `cmac_prov.c` is the row `crypto/modes/siv128.c` reaches
@@ -555,7 +589,20 @@ def crate_mac_rows() -> list[str]:
     text = read(REPO_ROOT / "src" / "provider" / "mac.rs")
     start = text.index("pub(crate) static DEFLT_MACS")
     end = text.index("];", start)
-    return [m.group(1) for m in re.finditer(r'algorithm_names:\s*c"([^"]*)"', text[start:end])]
+    body = text[start:end]
+    out = []
+    for m in re.finditer(
+        r'algorithm_names:\s*c"([^"]*)".*?implementation:\s*([A-Za-z0-9_]+)\.as_ptr\(\)',
+        body,
+        re.S,
+    ):
+        out.append((m.group(1), m.group(2)))
+    if len(out) != body.count('algorithm_names: c"'):
+        raise CensusError(
+            "[provider-algorithms] fatal: a DEFLT_MACS row did not yield both an alias "
+            "string and a dispatch-table identifier"
+        )
+    return out
 
 
 def primary(alias_string: str) -> str:
@@ -1185,25 +1232,77 @@ def main(argv: list[str]) -> int:
         raise CensusError("[provider-algorithms] fatal: a row is double-counted")
 
     # --- the crate's landed rows, and the exact join ---
+    #
+    # **The identity is the whole alias string, not the primary name** (D244). The authority's
+    # `algorithm_names` field *is* the alias sequence, and for a provider compatibility port the
+    # OIDs and spellings in it are part of the observable contract: `EVP_MD_fetch(NULL,
+    # "SHA-256", NULL)` and a row published as `SHA2-256` alone are different rows even though
+    # their primaries agree. The earlier join compared `primary(alias)` and would have accepted a
+    # crate row that had dropped every alias and every OID.
+    #
+    # Two further facts are checked without a naming convention, because a convention would be a
+    # guess: the crate's **dispatch association** — the relation "two matched rows share one
+    # crate implementation" must equal the relation "two matched rows share one authority
+    # dispatch symbol", so a crate table standing in for two authority tables is a failure even
+    # though nothing is named differently; and the crate rows must be a **subsequence** of the
+    # authority's rows for that operation in the authority's order, so an accidental reorder
+    # cannot remain `implemented`.
     cipher_rows = crate_cipher_rows()
     digest_rows = crate_digest_rows()
     mac_rows = crate_mac_rows()
     landed: dict[tuple[str, str], list[tuple[str, str]]] = {
-        ("default", "OSSL_OP_CIPHER"): [(primary(a), d) for a, d in cipher_rows],
-        ("default", "OSSL_OP_DIGEST"): [(primary(a), "") for a in digest_rows],
-        ("default", "OSSL_OP_MAC"): [(primary(a), "") for a in mac_rows],
+        ("default", "OSSL_OP_CIPHER"): cipher_rows,
+        ("default", "OSSL_OP_DIGEST"): digest_rows,
+        ("default", "OSSL_OP_MAC"): mac_rows,
     }
-    seen_landed: set[tuple[str, str, str]] = set()
+
+    # Every authority row keyed by its **full alias sequence**, so the join below cannot fall
+    # back to a prefix match. `algorithm_names` is the primary and `aliases` is the sequence the
+    # authority's `PROV_NAMES_*` macro expands to, so joining on the sequence is what compares
+    # the whole contract rather than its first element.
+    def full_alias(row: dict) -> str:
+        return ":".join(row["aliases"])
+
+    by_alias: dict[tuple[str, str, str], list[dict]] = {}
     for row in census_rows:
-        key = (row["provider"], row["operation"])
-        match = None
-        for name, dispatch in landed.get(key, []):
-            if name == row["algorithm_names"]:
-                match = dispatch
-                break
-        if match is not None:
-            row["state"] = "implemented"
-            seen_landed.add((row["provider"], row["operation"], row["algorithm_names"]))
+        by_alias.setdefault(
+            (row["provider"], row["operation"], full_alias(row)), []
+        ).append(row)
+
+    matched: dict[tuple[str, str], list[tuple[dict, str]]] = {}
+    for (provider, operation), names_ in landed.items():
+        for alias, dispatch in names_:
+            hits = by_alias.get((provider, operation, alias), [])
+            if not hits:
+                near = [
+                    r for r in census_rows
+                    if r["provider"] == provider
+                    and r["operation"] == operation
+                    and r["algorithm_names"] == alias.split(":")[0]
+                ]
+                detail = (
+                    f" The authority's row of that primary name carries the alias sequence "
+                    f"{full_alias(near[0])!r}."
+                    if near
+                    else ""
+                )
+                raise CensusError(
+                    f"[provider-algorithms] fatal: the crate publishes {provider}/{operation} "
+                    f"with the alias sequence {alias!r} ({dispatch}), which no authority row "
+                    f"matches exactly. A row whose primaries agree but whose aliases differ is a "
+                    f"different row: the alias sequence is the observable contract.{detail}"
+                )
+            if len(hits) > 1:
+                raise CensusError(
+                    f"[provider-algorithms] fatal: {provider}/{operation}/{alias} matches "
+                    f"{len(hits)} authority rows, so the crate row is ambiguous"
+                )
+            hits[0]["state"] = "implemented"
+            hits[0]["crate_dispatch"] = dispatch
+            matched.setdefault((provider, operation), []).append((hits[0], dispatch))
+
+    for row in census_rows:
+        if row.get("state") == "implemented":
             continue
         phase, blocker, matched_by = plan_for(plan, row["provider"], row["operation"], row)
         if phase is None:
@@ -1224,27 +1323,61 @@ def main(argv: list[str]) -> int:
             row.setdefault("blocked_by", None)
             row.setdefault("plan_match", "crate-table")
 
-    # Every landed crate row must have an authority row behind it, and no more than one.
-    for (provider, operation), names_ in landed.items():
-        for name, dispatch in names_:
-            hits = [r for r in census_rows if r["provider"] == provider and r["operation"] == operation and r["algorithm_names"] == name]
-            if not hits:
+    for (provider, operation), pairs in sorted(matched.items()):
+        # The dispatch association, as a partition equality rather than a name comparison.
+        crate_dispatch: dict[str, str] = {}
+        authority_dispatch: dict[str, str] = {}
+        for row, dispatch in pairs:
+            label = f"{provider}/{operation}/{row['algorithm_names']}"
+            crate_dispatch.setdefault(dispatch, label)
+            authority_dispatch.setdefault(row["dispatch_table_symbol"], label)
+            if authority_dispatch[row["dispatch_table_symbol"]] != label:
                 raise CensusError(
-                    f"[provider-algorithms] fatal: the crate publishes {provider}/{operation}/{name} "
-                    f"({dispatch or 'a digest row'}), which no authority row matches"
+                    f"[provider-algorithms] fatal: {label} and "
+                    f"{authority_dispatch[row['dispatch_table_symbol']]} share the authority "
+                    f"dispatch symbol {row['dispatch_table_symbol']!r} but are different rows"
                 )
-            if len(hits) > 1:
+        for dispatch, label in sorted(crate_dispatch.items()):
+            same = [
+                r["dispatch_table_symbol"]
+                for r, d in pairs
+                if d == dispatch
+            ]
+            if len(set(same)) > 1:
                 raise CensusError(
-                    f"[provider-algorithms] fatal: {provider}/{operation}/{name} is double-counted "
-                    "in the authority tables"
+                    f"[provider-algorithms] fatal: the crate implementation {dispatch} answers "
+                    f"for {sorted(set(same))}, which the authority dispatches separately; the "
+                    f"dispatch association is not one-to-one ({label})"
                 )
-    for (provider, operation, name) in seen_landed:
-        hits = [r for r in census_rows if r["provider"] == provider and r["operation"] == operation and r["algorithm_names"] == name and r["state"] == "implemented"]
-        if len(hits) != 1:
-            raise CensusError(f"[provider-algorithms] fatal: {name} matched {len(hits)} authority rows")
-    # Exact accounting, in both directions: the crate's landed row count for an operation is
-    # the census's `implemented` count for it. A missing row and an invented one are both
-    # failures rather than a smaller or larger number nobody compares.
+
+        # Subsequence order. The authority's rows for one operation are the concatenation of its
+        # tables in declaration order, which is the order `deflt_query` publishes them in, and the
+        # crate's rows must appear in that same relative order.
+        authority_order = [
+            r["algorithm_names"]
+            for r in census_rows
+            if r["provider"] == provider and r["operation"] == operation
+        ]
+        crate_order = [row["algorithm_names"] for row, _ in pairs]
+        cursor = 0
+        for position, name in enumerate(crate_order):
+            while cursor < len(authority_order) and authority_order[cursor] != name:
+                cursor += 1
+            if cursor == len(authority_order):
+                previous = crate_order[position - 1] if position else None
+                raise CensusError(
+                    f"[provider-algorithms] fatal: the crate's {provider}/{operation} rows are "
+                    f"not a subsequence of the authority's order: {name!r} follows "
+                    f"{previous!r} in the crate and precedes it in the authority"
+                )
+            cursor += 1
+
+    # Every landed crate row's alias sequence matched exactly one authority row, and every
+    # authority row matched at most once -- both are enforced by the join above, which is the
+    # single place that can get it wrong. What is left here is the *accounting*: the crate's
+    # landed row count for an operation is the census's `implemented` count for it. A missing row
+    # and an invented one are both failures rather than a smaller or larger number nobody
+    # compares.
     for (provider, operation), names_ in landed.items():
         implemented_here = [
             r for r in census_rows

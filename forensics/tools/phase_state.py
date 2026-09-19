@@ -49,6 +49,17 @@ OUT = REPO_ROOT / "forensics" / "phase-state.json"
 # from the ledgers rather than from this file, so there is no cycle.
 COVERAGE = "forensics/atlas/court-coverage.json"
 
+# The provider-algorithm census (docs/DECISIONS.md D237). A stratum owns **two** universes: the
+# exports it must publish, and the provider *algorithm registration rows* it must publish. The
+# second is invisible to every ELF census -- `deflt_ciphers[]` and its siblings are arrays whose
+# members no `libcrypto.num` entry names -- so until this rule it participated in no completion
+# decision at all. That left the hole the structural review found: a stratum could reach
+# `open_in_this_stratum == 0`, every court passing, zero unmatched exports and a seal, while
+# publishing two hundred fewer provider rows than the authority, with only the atlas saying so.
+# The rule below is generic over `STRATUM_EVIDENCE` rather than special to the stratum that
+# happens to be in progress, and it reads the same atlas the census writes.
+PROVIDER_ALGORITHMS = "forensics/atlas/provider-algorithms.json"
+
 # The conservation strata, in dependency order (docs/RELEASE_GATES.md §1).
 STRATA: list[tuple[int, str, str]] = [
     (0, "constitution", "Constitution, authorities, claim algebra"),
@@ -201,6 +212,25 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
                 f"in no court coverage set ({COVERAGE})")
     else:
         absent.append(COVERAGE)
+
+    # Provider registration rows (D237). The census in `PROVIDER_ALGORITHMS` records every row of
+    # every admitted provider's tables with an `owning_phase` and a `state`, and a stratum may not
+    # be complete while any row it owns is `open`. `deferred` is not `open`: a hand-off names the
+    # phase that will take it and a blocker, and handing work to a later stratum is a decision
+    # this project allows -- silently *not* publishing a row is what it does not.
+    providers = read_json(PROVIDER_ALGORITHMS)
+    if providers:
+        present.append(PROVIDER_ALGORITHMS)
+        owned = [r for r in providers["body"]["rows"] if r["owning_phase"] == phase]
+        open_rows = [r for r in owned if r["state"] == "open"]
+        if open_rows:
+            names = sorted({r["algorithm_names"] for r in open_rows})
+            shown = ", ".join(names[:6]) + ("..." if len(names) > 6 else "")
+            blocking = blocking or (
+                f"{len(open_rows)} provider registration row(s) of this stratum are neither "
+                f"implemented nor handed to a later phase ({PROVIDER_ALGORITHMS}): {shown}")
+    else:
+        absent.append(PROVIDER_ALGORITHMS)
     return present, absent, blocking
 
     return present, absent, "not started"
@@ -642,6 +672,28 @@ def deferred_rows(phase: int) -> list[str]:
     ]
 
 
+def provider_rows_for(phase: int) -> dict | None:
+    """The stratum's provider registration rows, counted by the census's own `state`.
+
+    Machine-readable rather than prose, and on every stratum's row rather than only the one in
+    progress, because the *count* is what makes the obligation auditable a year from now: a
+    reader can see that phase 8 owns 311 rows of which 1 is implemented, 110 are open and 200 are
+    handed on -- and the regression guard can watch those numbers instead of watching the state
+    alone. `None` when the atlas is absent, which `evidence_for` already reports as absent
+    evidence rather than as a zero.
+    """
+    doc = read_json(PROVIDER_ALGORITHMS)
+    if not doc:
+        return None
+    owned = [r for r in doc["body"]["rows"] if r["owning_phase"] == phase]
+    if not owned:
+        return None
+    by_state: dict[str, int] = {}
+    for row in owned:
+        by_state[row["state"]] = by_state.get(row["state"], 0) + 1
+    return {"owned": len(owned), **{k: by_state[k] for k in sorted(by_state)}}
+
+
 def main() -> int:
     # Every stratum that has *any* of the three artefacts a stratum's evidence is built from
     # must have a row, or it would be derived `not-started` however much of that evidence is
@@ -716,6 +768,7 @@ def main() -> int:
             "evidence_present": present, "evidence_absent": absent,
             "blocking": blocking, "seal_sha256": seals.get(f"phase{phase}"),
             "deferred": deferred_rows(phase),
+            "provider_rows": provider_rows_for(phase),
         })
 
     body = {
