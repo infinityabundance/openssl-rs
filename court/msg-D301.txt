@@ -1,0 +1,39 @@
+rand: the platform layer and the file/uniform units are staged, and five more facts about D287's table (D301)
+
+Three more Phase 9 transcriptions, staged and not integrated, force-added out of the
+ignored court/ scratch path:
+
+  court/phase9/rand_sys.rs.txt          364 lines   the platform bindings the seeding
+                                                    arm needs, each verified against the
+                                                    system headers on this host
+  court/phase9/randfile.rs.txt          509 lines   crypto/rand/randfile.c, whose three
+                                                    exports are RAND_file_name,
+                                                    RAND_load_file and RAND_write_file
+  court/phase9/rand_uniform.rs.txt      273 lines   crypto/rand/rand_uniform.c
+
+The platform layer is the one worth reading, because every value in it was checked
+rather than recalled: __NR_getrandom is 318, read from /usr/include/asm/unistd_64.h:322
+and corroborated by the authority's own #if at rand_unix.c:283 (not the asm-generic 278
+and not x32); struct stat is 144 bytes with st_dev at 0, st_ino at 8 and st_mode at 24,
+read from bits/struct_stat.h's __x86_64__ arm; dev_t/ino_t/mode_t are 8/8/4 from
+bits/typesizes.h; fd_set is sixteen 64-bit words with __FD_SETSIZE 1024, from sys/select.h
+and bits/select.h; ENOSYS is 38 from asm-generic/errno.h.
+
+Five more corrections and measurements, all from reading the tree:
+
+1. There is no RAND_FILE_NAME_MAX and no RANDFILE constant anywhere in 3.6.4. "RANDFILE"
+   exists only as the literal environment-variable *name*. The seeding of the default RNG
+   from $RANDFILE is apps/lib/app_rand.c, not randfile.c.
+2. rand_uniform.c has no _uint64 variant. It has exactly two functions, both uint32.
+3. randfile.c needs sys::{stat, fstat, fdopen, chmod, setbuf, clearerr} and the three-arg
+   open, so D298's list of what the random layer needs from the platform was short by six.
+4. The authority probes getentropy as a *weak* symbol. Rust has no weak-symbol mechanism,
+   so the binding here is strong and the divergence is stated on the declaration rather
+   than hidden: the authority links on a host without getentropy, this crate would not.
+5. open is declared variadic, because that is the <fcntl.h> prototype and it serves the
+   two-argument /dev/* call sites and the three-argument randfile.c site with one honest
+   signature. Integration replaces the crate's existing two-argument open rather than
+   adding beside it, which the binding's own doc says.
+
+Staged only: no export is implemented, no court has landed, and none of these files is
+compiled by the crate yet.
