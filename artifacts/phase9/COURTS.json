@@ -58,9 +58,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 41,
+        "authority_observations": 42,
         "candidate_exit_code": 0,
-        "candidate_observations": 41,
+        "candidate_observations": 42,
         "candidate_stderr_tail": [],
         "court": "RT-RAND-USERS",
         "crashed": false,
@@ -108,7 +108,7 @@
     {
       "name": "probe",
       "path": "courts/phase9/rt_rand_users_probe.c",
-      "sha256": "64fc3ee21b5c434e5d673a907f6f424008fb3dd0af59986ef93a1a60075c954f"
+      "sha256": "08764276f526f0e8756fc4913d1e4eed80465f8eb2275fdcaefac79ea40e61b1"
     }
   ],
   "kind": "phase9-courts",

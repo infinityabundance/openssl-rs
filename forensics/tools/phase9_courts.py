@@ -79,6 +79,14 @@ RSA key construction and the ASN.1 public-key decoder land, and the authority's 
 `EVP_PKEY_get_size(NULL)` on that path is a null dereference, so a probe must not reach it with a
 NULL key either.
 
+`OSSL_HPKE_get_grease_value` was transcribed and measured in D316 and **did not land**, and this
+court is where that is visible: the probe prints a `NOT_MEASURED` line for it rather than staying
+silent. Its success path calls `OSSL_HPKE_keygen`, which fetches a keymgmt **by name from the
+library context**, and the default provider's `OSSL_OP_KEYMGMT X25519` row is unimplemented and
+Phase 8's; `RT-HPKE` never sees that because it deliberately runs in a private `OSSL_LIB_CTX`
+carrying its own test provider, so that court measures the HPKE *framework* and this one measures
+the default provider's algorithm universe.
+
 SPDX-License-Identifier: Apache-2.0"""
 
 from __future__ import annotations

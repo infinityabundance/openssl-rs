@@ -20523,3 +20523,66 @@ in the pipeline.
 observations; `PIPELINE OK` over 89 courts and 32173 observations. The ten names D313 retargeted
 that remain are `EVP_SealInit`'s `npubk > 0` path, `BIO_f_reliable` (with the whole `bio_ok.c`
 unit), `OSSL_HPKE_get_grease_value`, and the eight PEM names.
+
+## D316 -- `OSSL_HPKE_get_grease_value` is blocked on Phase 8's X25519 keymgmt, and the probe that
+proved it did not land
+
+### What was tried, and what the court said
+
+`OSSL_HPKE_get_grease_value` (`crypto/hpke/hpke.c:1377`) was transcribed into `src/hpke/mod.rs`
+together with the four callees the crate had recorded as omitted with it: the three
+`find_random` helpers (`crypto/hpke/hpke_util.c:192`, `:214`, `:236`) and `hpke_random_suite`
+(`hpke.c:351`). All seven of its generated raise sites were used, mapped by their documented
+coordinates rather than positionally (`:1391` `ERR_R_PASSED_INVALID_ARGUMENT`, and `:1397`,
+`:1404`, `:1410`, `:1416`, `:1429`, `:1434` `ERR_R_INTERNAL_ERROR` -- D316's draft said five and
+the file has seven, which is exactly the kind of count that must be read and not remembered).
+
+A new arm was added to `courts/phase9/rt_rand_users_probe.c` and it **failed on three arms** --
+`grease.ok`, `grease.random_suite`, and a second success call -- with the candidate answering 0
+where the authority answers 1, raising one `ERR_LIB_EVP`/`ERR_R_UNSUPPORTED` and two
+`ERR_LIB_CRYPTO`/`ERR_R_INTERNAL_ERROR`. Every *refusal* arm matched, which is what localised it:
+`enc`/`enclen`/`ct`/`ctlen`/`suite` validation, the tag-length test and the `Npk > *enclen` test all
+agreed, and every arm that stops before the key generation agreed, so the failure is inside
+`OSSL_HPKE_keygen` and past the suite check.
+
+### The cause, and why `RT-HPKE` could not have found it
+
+`OSSL_HPKE_keygen` does not take a provider handle: it builds an `EVP_PKEY_CTX` with
+`EVP_PKEY_CTX_new_from_name(libctx, keytype, propq)`, so the keymgmt is fetched **by name from the
+library context**. `RT-HPKE` calls it with a private `OSSL_LIB_CTX` that carries the probe's own
+`court-hpke` provider, deliberately, so that "the probe's provider is the only one the fetches can
+reach" -- and that provider supplies its own X25519 keymgmt. This court calls it with the
+**default provider**, and `forensics/atlas/provider-algorithms.json` answers plainly:
+
+```text
+default  OSSL_OP_KEYMGMT  X25519          unimplemented  phase 8
+default  OSSL_OP_KEYEXCH  X25519          unimplemented  phase 8
+```
+
+So the export is blocked on an algorithm row Phase 8 has not landed, not on the random layer alone.
+That is a correction to D195's note -- "the KEM, KDF and AEAD arms all build over landed 7.3
+objects" -- which was measured against the test provider and is true of the framework rather than
+of the default provider's algorithm universe. The two courts are measuring two different things,
+and neither is wrong.
+
+### Why it was reverted rather than parked
+
+`crate::hpke`'s four new helpers are a faithful transcription and the export body is ninety lines,
+and the cheapest thing would have been to land them with `#[allow(dead_code)]` naming the export as
+the landing caller. That is the crate's idiom for a **caller that exists elsewhere** -- `ossl_rand_cleanup_int`
+waits for `OPENSSL_cleanup`, `ossl_rand_check_random_provider_on_load` waits for
+`provider_core.c` -- and it is not the same thing: here there is no caller at all, so the allow
+would name a caller that is the code itself, and an export that answers 0 on the only arm that
+matters is worse than an export that is absent. So all of it is reverted, and the absence is made
+visible instead: `rt_rand_users_probe.c` prints
+`OSSL_HPKE_get_grease_value=NOT_MEASURED_DEFAULT_PROVIDER_KEYMGMT_X25519_IS_PHASE_8`, which is
+`RT-HPKE`'s own device for exactly this, so a reader of the transcript cannot read "not run" as
+"passed".
+
+### What this changes about the order of work
+
+`OSSL_HPKE_get_grease_value` moves out of the "random layer's remaining names" group and into the
+set that waits on **8.5–8.7's asymmetric algorithm objects**: the default provider's `X25519`
+keymgmt and keyexch rows. It is one of the first exports that will fall out of that work rather
+than the other way round, and the eight PEM names and `BIO_f_reliable` remain this stratum's own
+transcriptions.
