@@ -17,6 +17,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,7 +26,9 @@
 #include <openssl/blowfish.h>
 #include <openssl/camellia.h>
 #include <openssl/cast.h>
+#include <openssl/core_names.h>
 #include <openssl/des.h>
+#include <openssl/evp.h>
 #include <openssl/idea.h>
 #include <openssl/modes.h>
 #include <openssl/rc2.h>
@@ -1031,6 +1034,73 @@ static int ct_cts(const char *cipher, const char *ctsmode, int enc_op,
     return 0;
 }
 
+
+/*
+ * **The provider path, used by the rows that have no low-level API at all.**
+ *
+ * Every arm above drives a low-level function -- `AES_cbc_encrypt`, `DES_ede3_cbc_encrypt`,
+ * `SEED_ecb_encrypt` -- because that is the surface those algorithms publish. SM4 publishes **none**:
+ * `nm -D libcrypto.so.3` lists no `SM4_*` symbol and `include/crypto/sm4.h` is an internal header, so
+ * the five `SM4-*` rows exist *only* as provider registrations and the only way to reach them is
+ * `EVP_CIPHER_fetch`. ARIA is the same.
+ *
+ * This arm is still **candidate-only**, which is the court's whole property: it fetches through the
+ * candidate's own distribution shell and compares against the standard's bytes. What it adds over
+ * `RT-CIPHER` is the oracle -- `RT-CIPHER` proves the row behaves as the authority's does, and this
+ * proves the bytes are GB/T 32907-2016's.
+ *
+ * Padding is turned **off**, because the corpus's vectors are block-aligned plaintexts and a padded
+ * final would add a block the expected ciphertext does not have.
+ */
+static int ct_evp(const char *cipher, int enc_op,
+                  const unsigned char *key, size_t keylen,
+                  const unsigned char *iv, size_t ivlen,
+                  const unsigned char *in, size_t inlen,
+                  unsigned char *out, size_t *outlen)
+{
+    EVP_CIPHER *c;
+    EVP_CIPHER_CTX *ctx;
+    int l1 = 0, l2 = 0, ok;
+
+    if (cipher == NULL || keylen > INT_MAX || inlen > INT_MAX)
+        return -1;
+    c = EVP_CIPHER_fetch(NULL, cipher, NULL);
+    if (c == NULL)
+        return -1;
+    ctx = EVP_CIPHER_CTX_new();
+    if (ctx == NULL) {
+        EVP_CIPHER_free(c);
+        return -1;
+    }
+    ok = enc_op ? EVP_EncryptInit_ex(ctx, c, NULL, key, ivlen ? iv : NULL)
+                : EVP_DecryptInit_ex(ctx, c, NULL, key, ivlen ? iv : NULL);
+    if (ok != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        EVP_CIPHER_free(c);
+        return -1;
+    }
+    EVP_CIPHER_CTX_set_padding(ctx, 0);
+    ok = enc_op ? EVP_EncryptUpdate(ctx, out, &l1, in, (int)inlen)
+                : EVP_DecryptUpdate(ctx, out, &l1, in, (int)inlen);
+    if (ok != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        EVP_CIPHER_free(c);
+        return -1;
+    }
+    *outlen = (size_t)l1;
+    ok = enc_op ? EVP_EncryptFinal_ex(ctx, out + l1, &l2)
+                : EVP_DecryptFinal_ex(ctx, out + l1, &l2);
+    if (ok != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        EVP_CIPHER_free(c);
+        return -1;
+    }
+    *outlen += (size_t)l2;
+    EVP_CIPHER_CTX_free(ctx);
+    EVP_CIPHER_free(c);
+    return 0;
+}
+
 static int ct_cipher(const char *cipher, const char *operation,
                      const unsigned char *key, size_t keylen,
                      const unsigned char *iv, size_t ivlen,
@@ -1060,7 +1130,11 @@ static int ct_cipher(const char *cipher, const char *operation,
         return 0;
     if (ct_aes_rc4(cipher, enc_op, key, keylen, iv, ivlen, in, inlen, out, outlen) == 0)
         return 0;
-    return ct_legacy(cipher, enc_op, key, keylen, iv, ivlen, in, inlen, out, outlen);
+    if (ct_legacy(cipher, enc_op, key, keylen, iv, ivlen, in, inlen, out, outlen) == 0)
+        return 0;
+    /* Last resort: the provider path, for the rows that publish no low-level API (SM4, and ARIA
+     * when it lands). A name nothing recognises still refuses. */
+    return ct_evp(cipher, enc_op, key, keylen, iv, ivlen, in, inlen, out, outlen);
 }
 
 int main(int argc, char **argv)

@@ -5692,6 +5692,14 @@
             "standard": "RFC 4269 (KISA SEED)",
             "total": 52
           },
+          "sm4": {
+            "failed": 0,
+            "passed": 7,
+            "primary_source": "GB/T 32907-2016 / IETF draft-ribose-cfrg-sm4",
+            "source": "forensics/vectors/sm4.json",
+            "standard": "GB/T 32907-2016 / IETF draft-ribose-cfrg-sm4",
+            "total": 7
+          },
           "wrap": {
             "failed": 0,
             "passed": 7,
@@ -5710,20 +5718,20 @@
           }
         },
         "authority": "openssl-3.6.4-production",
-        "calls_checked": 3083,
+        "calls_checked": 3090,
         "candidate_shared_object": "artifacts/phase2/libcrypto.so.3",
-        "claim": "A correctness-vector PASS means candidate-only construction verification: the candidate's low-level cipher produced the committed expected bytes for every vector. Of the 3083 committed vectors, 3066 are published standard values mirrored through the pinned OpenSSL test corpus and 17 are independently-derived boundary vectors with named oracles (2 by the construction's definition (FIPS-197 §5.1, SP 800-38A §6.1): an empty message has no blocks and emits no bytes; 1 by the construction's definition: RC4 over a zero-byte input emits no bytes and leaves its state unchanged; 14 by the construction's definition: a block or feedback mode over a zero-byte input emits no bytes) -- these counts are read from the 15 committed `forensics/vectors/*.json` cipher sets by `correctness_vectors.py`, not typed. It is NOT OpenSSL parity and NOT formal validation. See D201/D208 and docs/PHASE-8-SUBPHASES.md.",
+        "claim": "A correctness-vector PASS means candidate-only construction verification: the candidate's low-level cipher produced the committed expected bytes for every vector. Of the 3090 committed vectors, 3073 are published standard values mirrored through the pinned OpenSSL test corpus and 17 are independently-derived boundary vectors with named oracles (2 by the construction's definition (FIPS-197 §5.1, SP 800-38A §6.1): an empty message has no blocks and emits no bytes; 1 by the construction's definition: RC4 over a zero-byte input emits no bytes and leaves its state unchanged; 14 by the construction's definition: a block or feedback mode over a zero-byte input emits no bytes) -- these counts are read from the 16 committed `forensics/vectors/*.json` cipher sets by `correctness_vectors.py`, not typed. It is NOT OpenSSL parity and NOT formal validation. See D201/D208 and docs/PHASE-8-SUBPHASES.md.",
         "court": "CT-CIPHER",
         "derivation_census": {
-          "corpus": 3066,
-          "files": 15,
+          "corpus": 3073,
+          "files": 16,
           "independent": 17,
           "oracles": {
             "the construction's definition (FIPS-197 §5.1, SP 800-38A §6.1): an empty message has no blocks and emits no bytes": 2,
             "the construction's definition: RC4 over a zero-byte input emits no bytes and leaves its state unchanged": 1,
             "the construction's definition: a block or feedback mode over a zero-byte input emits no bytes": 14
           },
-          "vectors": 3083
+          "vectors": 3090
         },
         "failures": [],
         "kind": "cipher-vectors",
@@ -36031,6 +36039,76 @@
             "passed": true
           },
           {
+            "actual_hex": "681edf34d206965e86b3e94f536e4246",
+            "algorithm": "sm4",
+            "cipher": "SM4-ECB",
+            "expected_hex": "681edf34d206965e86b3e94f536e4246",
+            "id": "sm4-1",
+            "input_hex": "0123456789abcdeffedcba9876543210",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "2677f46b09c122cc975533105bd4a22af6125f7275ce552c3a2bbcf533de8a3b",
+            "algorithm": "sm4",
+            "cipher": "SM4-CBC",
+            "expected_hex": "2677f46b09c122cc975533105bd4a22af6125f7275ce552c3a2bbcf533de8a3b",
+            "id": "sm4-2",
+            "input_hex": "0123456789abcdeffedcba98765432100123456789abcdeffedcba9876543210",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "2677f46b09c122cc975533105bd4a22af6125f7275ce552c3a2bbcf533de8a3bfff5a4f208092c0901ba02d5772977369915e3fa2356c9f4eb6460ecc457e7f8e3cfa3deebfe9883e3a48bcf7c4a11aa3ec9e0d317c5d319be72a5cdddec640c",
+            "algorithm": "sm4",
+            "cipher": "SM4-CBC",
+            "expected_hex": "2677f46b09c122cc975533105bd4a22af6125f7275ce552c3a2bbcf533de8a3bfff5a4f208092c0901ba02d5772977369915e3fa2356c9f4eb6460ecc457e7f8e3cfa3deebfe9883e3a48bcf7c4a11aa3ec9e0d317c5d319be72a5cdddec640c",
+            "id": "sm4-3",
+            "input_hex": "0123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba9876543210",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "2677f46b09c122cc975533105bd4a22af6125f7275ce552c3a2bbcf533de8a3bfff5a4f208092c0901ba02d5772977369915e3fa2356c9f4eb6460ecc457e7f8e3cfa3deebfe9883e3a48bcf7c4a11aa3ec9e0d317c5d319be72a5cdddec640c6fc70bfa3ddaafffdd7c09b2774dcb2cec29f0c6f0b6773e985b3e395e924238505a8f120d9ca84de5c3cf7e45f097b14b3a46c5b1068669982a5c1f5f61be291b984f331d44ffb2758f771672448fc957fa1416c446427a41e25d5524a2418b9d96b2f17582f0f1aa9c204c6807f54f7b6833c5f00856659ddabc245936868c",
+            "algorithm": "sm4",
+            "cipher": "SM4-CBC",
+            "expected_hex": "2677f46b09c122cc975533105bd4a22af6125f7275ce552c3a2bbcf533de8a3bfff5a4f208092c0901ba02d5772977369915e3fa2356c9f4eb6460ecc457e7f8e3cfa3deebfe9883e3a48bcf7c4a11aa3ec9e0d317c5d319be72a5cdddec640c6fc70bfa3ddaafffdd7c09b2774dcb2cec29f0c6f0b6773e985b3e395e924238505a8f120d9ca84de5c3cf7e45f097b14b3a46c5b1068669982a5c1f5f61be291b984f331d44ffb2758f771672448fc957fa1416c446427a41e25d5524a2418b9d96b2f17582f0f1aa9c204c6807f54f7b6833c5f00856659ddabc245936868c",
+            "id": "sm4-4",
+            "input_hex": "0123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba9876543210",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "693d9a535bad5bb1786f53d7253a7056f2075d28b5235f58d50027e4177d2bce",
+            "algorithm": "sm4",
+            "cipher": "SM4-OFB",
+            "expected_hex": "693d9a535bad5bb1786f53d7253a7056f2075d28b5235f58d50027e4177d2bce",
+            "id": "sm4-5",
+            "input_hex": "0123456789abcdeffedcba98765432100123456789abcdeffedcba9876543210",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "693d9a535bad5bb1786f53d7253a70569ed258a85a0467cc92aab393dd978995",
+            "algorithm": "sm4",
+            "cipher": "SM4-CFB",
+            "expected_hex": "693d9a535bad5bb1786f53d7253a70569ed258a85a0467cc92aab393dd978995",
+            "id": "sm4-6",
+            "input_hex": "0123456789abcdeffedcba98765432100123456789abcdeffedcba9876543210",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "c2b4759e78ac3cf43d0852f4e8d5f9fd7256e8a5fcb65a350ee00630912e44492a0b17e1b85b060d0fba612d8a95831638b361fd5ffacd942f081485a83ca35d",
+            "algorithm": "sm4",
+            "cipher": "SM4-CTR",
+            "expected_hex": "c2b4759e78ac3cf43d0852f4e8d5f9fd7256e8a5fcb65a350ee00630912e44492a0b17e1b85b060d0fba612d8a95831638b361fd5ffacd942f081485a83ca35d",
+            "id": "sm4-7",
+            "input_hex": "aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbccccccccccccccccddddddddddddddddeeeeeeeeeeeeeeeeffffffffffffffffeeeeeeeeeeeeeeeeaaaaaaaaaaaaaaaa",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
             "actual_hex": "1fa68b0a8112b447aef34bd8fb5a7b829d3e862371d2cfe5",
             "algorithm": "wrap",
             "cipher": "id-aes128-wrap",
@@ -36562,9 +36640,9 @@
           }
         ],
         "stage": "compare",
-        "vectors_checked": 3083,
+        "vectors_checked": 3090,
         "vectors_failed": 0,
-        "vectors_passed": 3083,
+        "vectors_passed": 3090,
         "verdict": "pass"
       }
     ],
@@ -36704,7 +36782,7 @@
     {
       "name": "cipher-correctness-probe",
       "path": "courts/phase8/ct_cipher.c",
-      "sha256": "b0c043807a3769d7d1191d602704f8bfc4be8716af9368c8194d132aaced8c09"
+      "sha256": "58f0940e5e20c07fd81f0476c3753a49df97513017aef3bf20d446d5c1ab2e89"
     },
     {
       "name": "cipher-correctness-vectors:aes",
@@ -36750,6 +36828,11 @@
       "name": "cipher-correctness-vectors:camellia",
       "path": "forensics/vectors/camellia.json",
       "sha256": "d566749157ecff0d89822b875a8302ddea924b0e3a18f37c13956720aa943371"
+    },
+    {
+      "name": "cipher-correctness-vectors:sm4",
+      "path": "forensics/vectors/sm4.json",
+      "sha256": "0904eee2ecfc30dab6c5fcc9929f0730793036556a9dc4d856c258c14c301833"
     },
     {
       "name": "cipher-correctness-vectors:wrap",

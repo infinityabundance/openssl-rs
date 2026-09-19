@@ -17380,3 +17380,35 @@ implemented / 576 open / 16 deferred**, because SM4 has no exports. The provider
 is now stated where the covered set is defined rather than left as an absence. `RT-CIPHER` moves
 **4646 -> 4887** and the pipeline total **28357 -> 28463**. Unit tests move **594 -> 598**. Full
 pipeline to `PIPELINE OK`.
+
+## D267 — `CT-CIPHER` reaches an algorithm through the provider for the first time, because SM4 has no low-level API
+
+**D267 — `CT-CIPHER` gained its first provider-path arm, and SM4 is why.** Every arm of the
+candidate-only cipher court drove a *low-level* function: `AES_cbc_encrypt`,
+`DES_ede3_cbc_encrypt`, `SEED_ecb_encrypt`. SM4 publishes none — `nm -D libcrypto.so.3` lists no
+`SM4_*` symbol and `include/crypto/sm4.h` is internal, so the five rows exist only as provider
+registrations and the only way to reach them is `EVP_CIPHER_fetch`. The court's `ct_evp` arm is
+therefore a last-resort fallback that fetches the row through the **candidate's own distribution
+shell**, turns padding off (the corpus's plaintexts are block-aligned and a padded final would add a
+block the expected ciphertext does not have) and drives `EVP_EncryptUpdate`/`EVP_DecryptUpdate`.
+
+The court's defining property is unaffected: it is still candidate-only, so it still answers *"does
+it satisfy the construction?"* and never *"does it behave like the authority?"*. What it adds is the
+oracle. `RT-CIPHER` had already proved the row agrees with the authority on every SM4 arm; only
+`CT-CIPHER` can prove the bytes are GB/T 32907-2016's, and the seven vectors are the corpus's whole
+SM4 set for these five modes (`evpciph_sm4.txt`'s own titles name the provenance:
+"SM4 test vectors from IETF draft-ribose-cfrg-sm4").
+
+The family is registered **by name** in `CIPHER_CORRECTNESS_COURTS` rather than discovered, and that
+is deliberate: a `--emit-ciphers` run that wrote `forensics/vectors/sm4.json` did not by itself add
+SM4 to the court, so the seven vectors sat unrun until the list named them. A vector file nothing
+loads is the quietest possible way to believe a primitive is covered.
+
+**No independent boundary vectors, and the note says so.** The pinned court image carries no
+independent SM4 implementation, so `sm4.json`'s derivation census is uniformly `corpus` and its note
+states that the bytes are the standard's own mirrored through the pinned corpus rather than implying
+a second oracle that does not exist. ARIA will land the same way, and for the same reason.
+
+**What this moves.** `CT-CIPHER` moves **3083 -> 3090 / 3090 vectors** and the SM4 family joins the
+court's per-algorithm table with 7 passed / 0 failed. The pipeline total is unchanged at **28463**
+— the correctness courts count vectors rather than observations — and unit tests stay at **598**.

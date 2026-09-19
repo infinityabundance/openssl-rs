@@ -15586,7 +15586,7 @@
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "7374a7d83d9b4b004a9b24a81044e8feb4d77b86405e8421e963c2c67145677b"
+      "sha256": "d67a5e826fb85205e6bd8e73f67aeda3c7fc020e64e4d6af7176a70804cd9cc8"
     }
   ],
   "kind": "court-coverage",

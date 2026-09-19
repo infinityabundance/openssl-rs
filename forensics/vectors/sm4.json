@@ -1,0 +1,183 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "algorithm": "sm4",
+    "court": "CT-CIPHER",
+    "openssl_cipher": "SM4-{ECB,CBC,CFB,CTR,OFB}",
+    "primary_source": "GB/T 32907-2016 / IETF draft-ribose-cfrg-sm4",
+    "provenance": {
+      "authority": "openssl-3.6.4-production",
+      "corpus": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_sm4.txt",
+      "corpus_sha256": "9e66667dd0634a59a5549340e14822591314c9b1ccebfcf5ae70ba6fe7472aba",
+      "note": "Candidate-only construction verification: the primary source is draft-ribose-cfrg-sm4 (published as RFC 8998), and the bytes are mirrored through the pinned corpus rather than fetched. There are no independently-derived boundary vectors because the pinned court image carries no independent SM4 implementation; `RT-CIPHER` proves the row behaves as the authority's does, and this proves the bytes are the standard's.",
+      "primary_source": "GB/T 32907-2016 / IETF draft-ribose-cfrg-sm4"
+    },
+    "standard": "GB/T 32907-2016 / IETF draft-ribose-cfrg-sm4",
+    "vectors": [
+      {
+        "aad_hex": "",
+        "cipher": "SM4-ECB",
+        "expected_hex": "681edf34d206965e86b3e94f536e4246",
+        "id": "sm4-1",
+        "input_hex": "0123456789abcdeffedcba9876543210",
+        "iv_hex": "",
+        "key_hex": "0123456789abcdeffedcba9876543210",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_sm4.txt",
+          "form": "keyed-block",
+          "line": 11,
+          "mirror_sha256": "9e66667dd0634a59a5549340e14822591314c9b1ccebfcf5ae70ba6fe7472aba",
+          "primary_source": "GB/T 32907-2016 / IETF draft-ribose-cfrg-sm4",
+          "title": "SM4 test vectors from IETF draft-ribose-cfrg-sm4"
+        },
+        "standard": "GB/T 32907-2016 / IETF draft-ribose-cfrg-sm4",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "SM4-CBC",
+        "expected_hex": "2677f46b09c122cc975533105bd4a22af6125f7275ce552c3a2bbcf533de8a3b",
+        "id": "sm4-2",
+        "input_hex": "0123456789abcdeffedcba98765432100123456789abcdeffedcba9876543210",
+        "iv_hex": "0123456789abcdeffedcba9876543210",
+        "key_hex": "0123456789abcdeffedcba9876543210",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_sm4.txt",
+          "form": "keyed-block",
+          "line": 16,
+          "mirror_sha256": "9e66667dd0634a59a5549340e14822591314c9b1ccebfcf5ae70ba6fe7472aba",
+          "primary_source": "GB/T 32907-2016 / IETF draft-ribose-cfrg-sm4",
+          "title": "SM4 test vectors from IETF draft-ribose-cfrg-sm4"
+        },
+        "standard": "GB/T 32907-2016 / IETF draft-ribose-cfrg-sm4",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "SM4-CBC",
+        "expected_hex": "2677f46b09c122cc975533105bd4a22af6125f7275ce552c3a2bbcf533de8a3bfff5a4f208092c0901ba02d5772977369915e3fa2356c9f4eb6460ecc457e7f8e3cfa3deebfe9883e3a48bcf7c4a11aa3ec9e0d317c5d319be72a5cdddec640c",
+        "id": "sm4-3",
+        "input_hex": "0123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba9876543210",
+        "iv_hex": "0123456789abcdeffedcba9876543210",
+        "key_hex": "0123456789abcdeffedcba9876543210",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_sm4.txt",
+          "form": "keyed-block",
+          "line": 22,
+          "mirror_sha256": "9e66667dd0634a59a5549340e14822591314c9b1ccebfcf5ae70ba6fe7472aba",
+          "primary_source": "GB/T 32907-2016 / IETF draft-ribose-cfrg-sm4",
+          "title": "SM4 test vectors from IETF draft-ribose-cfrg-sm4"
+        },
+        "standard": "GB/T 32907-2016 / IETF draft-ribose-cfrg-sm4",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "SM4-CBC",
+        "expected_hex": "2677f46b09c122cc975533105bd4a22af6125f7275ce552c3a2bbcf533de8a3bfff5a4f208092c0901ba02d5772977369915e3fa2356c9f4eb6460ecc457e7f8e3cfa3deebfe9883e3a48bcf7c4a11aa3ec9e0d317c5d319be72a5cdddec640c6fc70bfa3ddaafffdd7c09b2774dcb2cec29f0c6f0b6773e985b3e395e924238505a8f120d9ca84de5c3cf7e45f097b14b3a46c5b1068669982a5c1f5f61be291b984f331d44ffb2758f771672448fc957fa1416c446427a41e25d5524a2418b9d96b2f17582f0f1aa9c204c6807f54f7b6833c5f00856659ddabc245936868c",
+        "id": "sm4-4",
+        "input_hex": "0123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba98765432100123456789abcdeffedcba9876543210",
+        "iv_hex": "0123456789abcdeffedcba9876543210",
+        "key_hex": "0123456789abcdeffedcba9876543210",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_sm4.txt",
+          "form": "keyed-block",
+          "line": 28,
+          "mirror_sha256": "9e66667dd0634a59a5549340e14822591314c9b1ccebfcf5ae70ba6fe7472aba",
+          "primary_source": "GB/T 32907-2016 / IETF draft-ribose-cfrg-sm4",
+          "title": "SM4 test vectors from IETF draft-ribose-cfrg-sm4"
+        },
+        "standard": "GB/T 32907-2016 / IETF draft-ribose-cfrg-sm4",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "SM4-OFB",
+        "expected_hex": "693d9a535bad5bb1786f53d7253a7056f2075d28b5235f58d50027e4177d2bce",
+        "id": "sm4-5",
+        "input_hex": "0123456789abcdeffedcba98765432100123456789abcdeffedcba9876543210",
+        "iv_hex": "0123456789abcdeffedcba9876543210",
+        "key_hex": "0123456789abcdeffedcba9876543210",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_sm4.txt",
+          "form": "keyed-block",
+          "line": 34,
+          "mirror_sha256": "9e66667dd0634a59a5549340e14822591314c9b1ccebfcf5ae70ba6fe7472aba",
+          "primary_source": "GB/T 32907-2016 / IETF draft-ribose-cfrg-sm4",
+          "title": "SM4 test vectors from IETF draft-ribose-cfrg-sm4"
+        },
+        "standard": "GB/T 32907-2016 / IETF draft-ribose-cfrg-sm4",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "SM4-CFB",
+        "expected_hex": "693d9a535bad5bb1786f53d7253a70569ed258a85a0467cc92aab393dd978995",
+        "id": "sm4-6",
+        "input_hex": "0123456789abcdeffedcba98765432100123456789abcdeffedcba9876543210",
+        "iv_hex": "0123456789abcdeffedcba9876543210",
+        "key_hex": "0123456789abcdeffedcba9876543210",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_sm4.txt",
+          "form": "keyed-block",
+          "line": 40,
+          "mirror_sha256": "9e66667dd0634a59a5549340e14822591314c9b1ccebfcf5ae70ba6fe7472aba",
+          "primary_source": "GB/T 32907-2016 / IETF draft-ribose-cfrg-sm4",
+          "title": "SM4 test vectors from IETF draft-ribose-cfrg-sm4"
+        },
+        "standard": "GB/T 32907-2016 / IETF draft-ribose-cfrg-sm4",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "SM4-CTR",
+        "expected_hex": "c2b4759e78ac3cf43d0852f4e8d5f9fd7256e8a5fcb65a350ee00630912e44492a0b17e1b85b060d0fba612d8a95831638b361fd5ffacd942f081485a83ca35d",
+        "id": "sm4-7",
+        "input_hex": "aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbccccccccccccccccddddddddddddddddeeeeeeeeeeeeeeeeffffffffffffffffeeeeeeeeeeeeeeeeaaaaaaaaaaaaaaaa",
+        "iv_hex": "0123456789abcdeffedcba9876543210",
+        "key_hex": "0123456789abcdeffedcba9876543210",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_sm4.txt",
+          "form": "keyed-block",
+          "line": 46,
+          "mirror_sha256": "9e66667dd0634a59a5549340e14822591314c9b1ccebfcf5ae70ba6fe7472aba",
+          "primary_source": "GB/T 32907-2016 / IETF draft-ribose-cfrg-sm4",
+          "title": "SM4 test vectors from IETF draft-ribose-cfrg-sm4"
+        },
+        "standard": "GB/T 32907-2016 / IETF draft-ribose-cfrg-sm4",
+        "tag_hex": ""
+      }
+    ]
+  },
+  "generator": "forensics/tools/correctness_vectors.py",
+  "inputs": [
+    {
+      "name": "authority-evp-vector-file",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_sm4.txt",
+      "sha256": "9e66667dd0634a59a5549340e14822591314c9b1ccebfcf5ae70ba6fe7472aba"
+    }
+  ],
+  "kind": "cipher-vectors-sm4",
+  "schema": "openssl-rs/atlas/cipher-vectors-sm4/v1"
+}

@@ -1739,6 +1739,26 @@ CIPHER_RECIPE_FAMILIES: list[CipherRecipeFamily] = [
         r"^SEED-(ECB|CBC|CFB|OFB)$", "RFC 4269 (KISA SEED)",
         "SEED-{ECB,CBC,CFB,OFB}", ("SEED-ECB", "SEED-CBC"),
         "00000000000000000000000000000000", "00000000000000000000000000000000"),
+    # 8.2 -- SM4. The corpus's own titles give the provenance: "SM4 test vectors from IETF
+    # draft-ribose-cfrg-sm4" for the five modes here, and RFC 8998 for the GCM/CCM sections this
+    # regex excludes (those rows are the AEAD ring's and have not landed). **No independent
+    # boundary vectors**, for the same reason the key-wrap family has none: the pinned court image
+    # carries no independent SM4 implementation, so the only honest derivation is "the standard's
+    # own bytes, mirrored through the corpus" and the note says exactly that rather than implying a
+    # second oracle that does not exist (D208's rule, and D261's).
+    CipherRecipeFamily(
+        "sm4", "test/recipes/30-test_evp_data/evpciph_sm4.txt",
+        r"^SM4-(ECB|CBC|CFB|CTR|OFB)$", "GB/T 32907-2016 / IETF draft-ribose-cfrg-sm4",
+        "SM4-{ECB,CBC,CFB,CTR,OFB}", (),
+        "", "",
+        note=(
+            "Candidate-only construction verification: the primary source is "
+            "draft-ribose-cfrg-sm4 (published as RFC 8998), and the bytes are mirrored through the "
+            "pinned corpus rather than fetched. There are no independently-derived boundary "
+            "vectors because the pinned court image carries no independent SM4 implementation; "
+            "`RT-CIPHER` proves the row behaves as the authority's does, and this proves the bytes "
+            "are the standard's."
+        )),
     CipherRecipeFamily(
         "camellia", "test/recipes/30-test_evp_data/evpciph_camellia.txt",
         r"^CAMELLIA-(128|192|256)-(ECB|CBC|CFB|OFB|CTR)$", "RFC 3713 (NTT Camellia)",
