@@ -92,6 +92,12 @@ echo "== court coverage atlas =="
 # coverage for a `complete` stratum. See docs/DECISIONS.md D199.
 python3 forensics/tools/court_coverage.py
 
+# The provider-row coverage join (D245), the same invariant one level down: every provider
+# registration row the census calls `implemented` must be named by a probe of a court that
+# covers its stratum. It reads the census and the probe sources, so it belongs beside the
+# export atlas and before `phase_state.py`, which requires it for a `complete` stratum.
+python3 forensics/tools/provider_court_coverage.py
+
 echo "== ownership audit =="
 python3 forensics/tools/ownership_audit.py
 

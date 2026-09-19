@@ -154,7 +154,7 @@
       "verdict": "pass"
     },
     "RT-CIPHER": {
-      "observations": 1127,
+      "observations": 1537,
       "verdict": "pass"
     },
     "RT-CMAC": {

@@ -3795,6 +3795,60 @@ static void rt_deflt_siv(void)
     }
 }
 
+/*
+ * Every cipher row the census records as implemented, fetched by name and measured the way
+ * `EVP_CIPHER_get_*` answers. This arm exists because of a measured coverage gap: 39 of the 82
+ * implemented `OSSL_OP_CIPHER` rows were named nowhere in any probe, so the census could call them
+ * `implemented` while no observation touched them at all. The list is checked against
+ * `forensics/atlas/provider-algorithms.json` by `forensics/tools/provider_court_coverage.py`, so it
+ * cannot go stale in either direction: a row landed without a line here, and a line here for a row
+ * the census does not call implemented, are both failures.
+ *
+ * The five observations per row are deliberately not just `fetched`: key length, IV length, block
+ * size and mode are what `EVP_CIPHER_get_*` answers, and a row whose engine is right but whose
+ * descriptor is wrong would pass a fetch-only arm.
+ */
+static void rt_deflt_row_census(void)
+{
+    static const char *rows[] = {
+        "NULL", "AES-256-ECB", "AES-192-ECB", "AES-128-ECB",
+        "AES-256-CBC", "AES-192-CBC", "AES-128-CBC", "AES-128-CBC-CTS",
+        "AES-192-CBC-CTS", "AES-256-CBC-CTS", "AES-256-OFB", "AES-192-OFB",
+        "AES-128-OFB", "AES-256-CFB", "AES-192-CFB", "AES-128-CFB",
+        "AES-256-CFB1", "AES-192-CFB1", "AES-128-CFB1", "AES-256-CFB8",
+        "AES-192-CFB8", "AES-128-CFB8", "AES-256-CTR", "AES-192-CTR",
+        "AES-128-CTR", "AES-256-XTS", "AES-128-XTS", "AES-256-OCB",
+        "AES-192-OCB", "AES-128-OCB", "AES-128-SIV", "AES-192-SIV",
+        "AES-256-SIV", "AES-256-CCM", "AES-192-CCM", "AES-128-CCM",
+        "AES-256-WRAP", "AES-192-WRAP", "AES-128-WRAP", "AES-256-WRAP-PAD",
+        "AES-192-WRAP-PAD", "AES-128-WRAP-PAD", "AES-256-WRAP-INV", "AES-192-WRAP-INV",
+        "AES-128-WRAP-INV", "AES-256-WRAP-PAD-INV", "AES-192-WRAP-PAD-INV", "AES-128-WRAP-PAD-INV",
+        "CAMELLIA-256-ECB", "CAMELLIA-192-ECB", "CAMELLIA-128-ECB", "CAMELLIA-256-CBC",
+        "CAMELLIA-192-CBC", "CAMELLIA-128-CBC", "CAMELLIA-128-CBC-CTS", "CAMELLIA-192-CBC-CTS",
+        "CAMELLIA-256-CBC-CTS", "CAMELLIA-256-OFB", "CAMELLIA-192-OFB", "CAMELLIA-128-OFB",
+        "CAMELLIA-256-CFB", "CAMELLIA-192-CFB", "CAMELLIA-128-CFB", "CAMELLIA-256-CFB1",
+        "CAMELLIA-192-CFB1", "CAMELLIA-128-CFB1", "CAMELLIA-256-CFB8", "CAMELLIA-192-CFB8",
+        "CAMELLIA-128-CFB8", "CAMELLIA-256-CTR", "CAMELLIA-192-CTR", "CAMELLIA-128-CTR",
+        "DES-EDE3-ECB", "DES-EDE3-CBC", "DES-EDE3-OFB", "DES-EDE3-CFB",
+        "DES-EDE3-CFB8", "DES-EDE3-CFB1", "DES-EDE-ECB", "DES-EDE-CBC",
+        "DES-EDE-OFB", "DES-EDE-CFB",
+    };
+    size_t i;
+
+    for (i = 0; i < sizeof(rows) / sizeof(rows[0]); i++) {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, rows[i], NULL);
+
+        printf("defltrow.%s.fetched=%d\n", rows[i], c != NULL);
+        if (c == NULL)
+            continue;
+        printf("defltrow.%s.keylen=%d\n", rows[i], EVP_CIPHER_get_key_length(c));
+        printf("defltrow.%s.ivlen=%d\n", rows[i], EVP_CIPHER_get_iv_length(c));
+        printf("defltrow.%s.blocksize=%d\n", rows[i], EVP_CIPHER_get_block_size(c));
+        printf("defltrow.%s.mode=%d\n", rows[i], EVP_CIPHER_get_mode(c));
+        EVP_CIPHER_free(c);
+    }
+}
+
 /* The drained queue, normalised the one way both sides can hold: library and reason as numbers,
  * the authority's three debug strings verbatim, and the entry count. Declared here because the
  * EVP arm below uses it and `rt_errq` is defined with the dispatch arm. */
@@ -4347,6 +4401,7 @@ int main(void)
     rt_deflt_ocb();
     rt_deflt_ccm();
     rt_deflt_siv();
+    rt_deflt_row_census();
     rt_deflt_errors();
     rt_disp_failures();
     return 0;
