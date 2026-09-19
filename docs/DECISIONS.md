@@ -16858,3 +16858,32 @@ authority's. It says nothing about whether a list the crate has *not* published 
 it lands: the constructors make the mistake harder, and the court makes it a failure, but neither
 generates the tables from the authority. That is a name-level property of this crate's style rather
 than a gap in this fix, and it is named here so it is a decision rather than an omission.
+
+## D254 — `blake2_params.inc` joins the covered error-site set, and the generator resolves a generated include
+
+`providers/implementations/macs/blake2_params.inc` is where the two BLAKE2 MAC rows raise from. It is
+not a translation unit: `blake2b_mac.c` and `blake2s_mac.c` are thirty-four-line `#define` preambles
+that `#include` `blake2_mac_impl.c`, which in turn includes this file for its two generated
+`OSSL_PARAM` lists and their decoders. So the six `PROV_R_REPEATED_PARAMETER` sites exist **once** and
+belong to both rows, and the only new thing the generator needed was the relative path: the file is
+generated into `providers/implementations/include/prov/`, not next to the `.c` that includes it, so
+the covered-file entry spells it where it actually lives and `resolve_site_source` finds it in the
+build tree.
+
+**Verified against the compiler rather than assumed.** `strings` over
+`libdefault-lib-blake2b_mac.o` contains `providers/implementations/include/prov/blake2_params.inc`,
+which is exactly the `file` the six generated constants carry, and the enclosing functions resolve to
+the included file's own `blake2_get_ctx_decoder` and `blake2_mac_set_ctx_decoder` — the same
+line-relative-to-file rule that makes an include's coordinates reproducible rather than a function of
+which file pulled it in.
+
+**Coordinates ahead of their caller, deliberately.** The two rows are not written yet; this entry lands
+the six sites so that when they are, the raise coordinates are already the authority's. That is the
+same ordering D235 used for the Provider cipher and digest families — *"a site nobody calls yet is a
+coordinate rather than a claim"* — and the prerequisite gate reports no finding for an unraised site,
+which is what makes the ordering safe rather than merely conventional.
+
+**What this entry moves.** `implemented[libcrypto]` stays **2035 / 5896**, Phase 8 stays **194
+implemented / 576 open / 16 deferred**, the provider census stays **112 implemented / 198 open / 686
+deferred** with coverage **112 / 112 / 0**, and no court observation moves. The err-site table moves
+**1906 -> 1912**. Unit tests stay at **574**. Full pipeline to `PIPELINE OK`.
