@@ -18816,3 +18816,63 @@ of constant-time code using `constant_time_is_zero`/`_eq`/`_select_int`/`_select
 that shape is worth its own commit and its own court arms rather than being appended here. They are
 measured landable in D285 and remain the next unit after the RAND substrate or beside it.
 `RT-RSA` is at **261 observations**.
+
+## D287 — two measured prerequisites for the OAEP/PSS checks, and Phase 9's RAND scoped as subphases
+
+Three findings from opening the two OAEP checks, and the plan they force. The checks themselves are
+not landed here, and the reason is the first finding rather than the size of the second.
+
+**1. `include/internal/constant_time.h` has two widths and this crate has one.** The crate's
+`src/runtime/constant_time.rs` models the `_s` (`size_t`) forms — `constant_time_msb_s`,
+`_lt_s`, `_ge_s`, `_is_zero_s`, `_eq_s`, `_select`, `_select_8`, and the `_8` narrowings — which is
+what the Phase 8.3 work needed. The OAEP checks use the **`unsigned int` forms**: `is_zero`, `eq`,
+`ge`, `lt`, and `select_int` on `int`. The two families are the same algorithm at different widths,
+and `_s` is a correct substitute for the 32-bit one whenever every operand is below `2^31` — which
+the OAEP operands are, being lengths, indices and octets. But *that* is an argument, and this project
+does not let an argument stand where a transcription would do: the missing forms are a unit of their
+own, with the header's own bodies and a fixture-backed test, because PSS verification, DH and ECDSA
+all use them too. That unit is the next one after this entry.
+
+**2. The five `EVP_sha*` accessors are Phase 7's and are scaffolded, not implemented.** `RT-RSA`
+found this the hard way (D286): the candidate aborts on `EVP_sha1()`. `symbol-ownership.json` puts
+`EVP_sha1`, `EVP_sha224`, `EVP_sha256`, `EVP_sha384`, `EVP_sha512` and `EVP_md5` in **Phase 7**, and
+`src/evp/digest.rs` has no `EVP_sha1` definition at all. That matters beyond the RSA block: **both
+OAEP *add* functions and PSS's defaults take `EVP_sha1()` as the default digest when the caller
+passes `NULL`**, so `RSA_padding_check_PKCS1_OAEP` — the wrapper that passes `NULL, NULL` — is blocked
+on Phase 7's accessor rather than on anything in 8.4. Two consequences follow and both are recorded
+rather than acted on: the OAEP wrapper lands only after those five exports do, and Phase 7's seal has
+a **scaffolded** subset whose next encounter is this one. Reopening a sealed stratum is a decision a
+later entry has to make explicitly; it is not something to do silently while transcribing RSA.
+
+**3. `err_clear_last_constant_time` is `crypto/err/err.c`'s and is small.** Seventy-five lines into
+`err.c`, it takes the current error-state top and ORs a **constant-time-selected** flag into
+`err_flags[top]` — `ERR_FLAG_CLEAR` when `clear` is non-zero, `0` otherwise — so that clearing the
+record does not reveal by timing which branch was taken. It is not an export; it belongs in
+`src/runtime/err.rs` as a `pub(crate)` function beside the state it writes. It is named here because
+it is the third and last prerequisite the two OAEP checks have, and because the OAEP check calls it
+**unconditionally after raising**, which a transcription that guarded it would get wrong in exactly
+the case the flag exists for.
+
+**Phase 9's RAND scoped, because D286 measured that it gates 8.4–8.7's object layers.** The
+dependency is `RAND_bytes_ex` -> `RAND_get0_primary` -> a fetched DRBG, so the subphases follow the
+fetch rather than the header:
+
+| # | subphase | unit | what it unblocks |
+| --- | --- | --- | --- |
+| 9.0 | the plan and the census | `docs/PHASE-9-*-SUBPHASES.md`, the `OSSL_OP_RAND` rows already in `provider-algorithms.json` | the measurement, as 8.0 was for 8 |
+| 9.1 | the BN random family | `crypto/bn/bn_rand.c`: `BN_rand`, `BN_rand_ex`, `BN_priv_rand`, `BN_priv_rand_ex`, `BN_rand_range`, `BN_rand_range_ex`, `BN_priv_rand_range`, `BN_priv_rand_range_ex` and their `bnrand`/`bnrand_range` bodies | `BN_BLINDING_create_param`, which is what `RSA_setup_blinding` and every private-key operation reach |
+| 9.2 | the RAND front | `crypto/rand/rand_lib.c`: `RAND_bytes_ex`, `RAND_priv_bytes_ex`, `RAND_bytes`, `RAND_priv_bytes`, `RAND_get0_primary`/`_public`/`_private` | the padding *adds*, and `RAND_priv_bytes_ex` for the type-2 check's implicit rejection |
+| 9.3 | the DRBG framework | `providers/implementations/rands/drbg.c` | the four instantiations below |
+| 9.4 | the three DRBGs | `drbg_ctr.c`, `drbg_hash.c`, `drbg_hmac.c` | the `OSSL_OP_RAND` rows `EVP_RAND_fetch(NULL, "CTR-DRBG", NULL)` resolves |
+| 9.5 | the seed sources | `seed_src.c`, `crngt.c`, `test_rng.c` and the `base` provider's RAND row | seeding, and the `base` provider's single RAND row |
+| 9.6 | the RSA/PSS path it re-opens | the four constructor labels D285 recorded, then 8.4's accessors, then `EVP_sha*` | 8.4's object layer, and then 8.5, 8.6 and 8.7 |
+
+The order is forced twice over: `RAND_bytes_ex` cannot be written before the DRBG it fetches, and the
+DRBG cannot be courted before the provider row that publishes it. 9.1 is first only because it is the
+smallest and because its own court (`BN_rand` against the authority, with a fixed seed source) does
+not need the provider path at all if the front lands with it — which is why 9.1 and 9.2 are written
+together in the next unit rather than sequentially.
+
+**What this entry does not claim.** It does not land the OAEP checks, by the reasons above. It does
+not reopen Phase 7. And it does not claim the subphase table above is complete: it is the dependency
+chain from `RAND_bytes_ex`, which is what 8.4 needs, and the full Phase 9 census is 9.0's job.
