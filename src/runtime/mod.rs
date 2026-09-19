@@ -28,6 +28,7 @@ pub mod bsearch;
 pub mod buffer;
 pub mod conf;
 pub mod confmod;
+pub mod constant_time;
 pub mod ctype;
 pub mod ctype_table;
 pub mod defaults;

@@ -16591,3 +16591,51 @@ invariant.
 Phase 8 stays **194 implemented / 576 open / 16 deferred**, the provider census stays **996 rows /
 111 implemented / 199 open / 686 deferred**, the coverage atlas stays **111 / 111 / 0**, and no court
 observation moves. The unit tests move **558 -> 562 passed, 0 failed**.
+
+## D250 — `constant_time.h`'s seven helpers, and the `/*` the prerequisite gate's cleaner mis-pairs
+
+`ssl3_cbc_digest_record` is HMAC's TLS arm, and the second of the three units that row needs. It is
+`ssl/record/methods/ssl3_cbc.c` — an internal libcrypto unit that happens to live under `ssl/`, and
+the file's own header says why: *"This file has no dependencies on the rest of libssl because it is
+shared with the providers."* Before it can be written, seven functions of
+`include/internal/constant_time.h` have to exist, and this entry lands those.
+
+**The seven, and why exactly seven.** The header is 480 lines covering the `BN_ULONG` domain, 32- and
+64-bit masks, several `value_barrier` variants and the `_8`/`_int` convenience wrappers.
+`ssl3_cbc.c` uses `constant_time_eq_8_s`, `constant_time_ge_8_s`, `constant_time_select_8`, and the
+four they are written in terms of (`constant_time_msb_s`, `constant_time_lt_s`,
+`constant_time_is_zero_s`, `constant_time_select`). The rest are absent with a named caller-to-be
+rather than transcribed-and-unused, which is the same call this project makes everywhere.
+
+**`value_barrier` is `core::hint::black_box`, and that equivalence is the point.** The authority's
+barrier is an empty `__asm__("" : "=r"(r) : "0"(a))` — an optimisation barrier, not a computation.
+Without one, `(mask & a) | (~mask & b)` is legal for LLVM to turn into a branch on `mask`, and a
+constant-time select becomes a secret-dependent branch. `black_box` is the standard-library spelling
+of the same thing. The barrier is placed exactly where the authority places it — inside `select`, not
+inside `msb_s` — because moving a barrier changes what the compiler may fold.
+
+**Every mask is all-ones or all-zeros, and a caller can get that wrong while the code looks right.**
+`constant_time_select_8(1, a, b)` is not `a`: it keeps bit 0 of `a` and every *other* bit of `b`, so
+it answers `(a & 1) | (b & !1)`. The first draft of this module's boundary assertion claimed `0x01`
+for `(1, 0xaa, 0x55)` and the authority answers `0x54` — which is why the expectations are a table
+the authority's own header produced, `courts/phase8/ct_expectations.txt` from the tracked
+`court/gen-constant-time-values.c`, and not arithmetic this file wrote down. The table is **the whole
+of what the generator emitted**: 576 equality rows, 576 ordering rows, 98 select rows, and 196 more
+select rows for masks that are neither all-ones nor all-zeros, over a 24-value input domain chosen to
+straddle every boundary (`0`, `1`, `2`, `2^n - 1`, `2^n`, `0x7fff_ffff`, `0x8000_0000`,
+`0xffff_ffff`, `0x1_0000_0000`, `usize::MAX`).
+
+**A finding about this crate's own tooling.** The prerequisite gate scans `.rs` files with a cleaner
+that strips comments, and in its *definition* lens it deliberately does not blank string literals —
+which is what lets `extern "C" fn` survive. The consequence is that a Rust string containing the
+two-character comment opener **opens a comment that never closes**, and the gate reports the file as
+mis-paired: `a span at offset 7965 (6680 chars) contains code; the cleaner mis-paired a delimiter`.
+That is a real blind spot, not a complaint: any future `.rs` file with that literal in it will fail a
+gate for a reason that has nothing to do with its content. This entry works around it — the fixture's
+section headers are matched by `starts_with('/')`, which is equivalent for that file — and records
+the blind spot here so the next person does not have to rediscover it.
+
+**What this entry moves.** Nothing that counts work: `implemented[libcrypto]` stays **2035 / 5896**,
+Phase 8 stays **194 implemented / 576 open / 16 deferred**, the provider census stays **996 rows /
+111 implemented / 199 open / 686 deferred**, and no court observation moves. The unit tests move
+**562 -> 569 passed, 0 failed**.
