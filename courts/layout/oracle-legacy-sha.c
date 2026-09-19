@@ -18,10 +18,15 @@
  * therefore predicts `ctx->update == NULL` and `ctx->md_data == NULL`, and `EVP_DigestUpdate`'s
  * `legacy:` arm (`digest.c:431`) predicts `return 0`.
  *
- * **The measurements below contradict that prediction in every observable that can be observed**,
- * and no reading of the three files in the time available reconciles them. So the object is not
- * transcribed yet: the four facts are recorded, reproducible and mutually inconsistent, and a
- * transcription written over them would be a guess dressed as a measurement.
+ * **The prediction is right and the object is never used to digest anything.** D290 resolved this
+ * with one line D289 had not read: `evp_md_init_internal` (`crypto/evp/digest.c:258-280`) checks
+ * `type->prov == NULL` and, for such a method, **fetches the provider implementation by
+ * `OBJ_nid2sn(type->type)` and rebinds `type` to it** before `ctx->digest = type`. So a legacy
+ * `EVP_MD` is a carrier whose callbacks an ENGINE may use and whose digest path the library
+ * replaces. Every fact below follows from that, including the one that looked impossible:
+ * `SHA1_Init` is called with a non-NULL argument because the **provider** method's own `sha1_init`
+ * calls it, and this interposer cannot tell the two callers apart. That ambiguity is the lesson:
+ * measuring a symbol does not measure which caller reached it.
  *
  * The measurements, in the order the program makes them
  * -----------------------------------------------------
