@@ -157,6 +157,10 @@
       "observations": 6939,
       "verdict": "pass"
     },
+    "RT-CIPHER-MEM": {
+      "observations": 382,
+      "verdict": "pass"
+    },
     "RT-CMAC": {
       "observations": 26,
       "verdict": "pass"

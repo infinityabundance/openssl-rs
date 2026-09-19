@@ -5,12 +5,12 @@
       "in-progress"
     ],
     "census": {
-      "names_a_file_the_authority_does_not_have": 9,
+      "names_a_file_the_authority_does_not_have": 10,
       "symbols_not_reached": 4,
-      "units_not_reached": 6
+      "units_not_reached": 12
     },
     "census_by_stratum": {
-      "8": 19
+      "8": 26
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
@@ -19,6 +19,7 @@
         "docs/PHASE-8-SUBPHASES.md:8.1b:digestcommon.c",
         "docs/PHASE-8-SUBPHASES.md:8.3:_hw.c",
         "docs/PHASE-8-SUBPHASES.md:8.3:cipher_chacha20_poly1305.c",
+        "docs/PHASE-8-SUBPHASES.md:8.3:ciphercommon.c",
         "docs/PHASE-8-SUBPHASES.md:8.3:ciphercommon_ccm.c",
         "docs/PHASE-8-SUBPHASES.md:8.3:courts/layout/oracle-chacha20-poly1305-hw.c",
         "docs/PHASE-8-SUBPHASES.md:8.3:courts/layout/oracle-polyval.c",
@@ -33,9 +34,15 @@
       ],
       "units_not_reached": [
         "crypto/chacha/chacha_enc.c",
+        "providers/implementations/ciphers/cipher_aes.c",
         "providers/implementations/ciphers/cipher_aes_siv.c",
+        "providers/implementations/ciphers/cipher_aria.c",
+        "providers/implementations/ciphers/cipher_camellia.c",
         "providers/implementations/ciphers/cipher_chacha20.c",
         "providers/implementations/ciphers/cipher_chacha20_hw.c",
+        "providers/implementations/ciphers/cipher_cts.c",
+        "providers/implementations/ciphers/cipher_sm4.c",
+        "providers/implementations/ciphers/cipher_tdes_common.c",
         "providers/implementations/ciphers/ciphercommon_block.c",
         "providers/implementations/ciphers/ciphercommon_hw.c"
       ]
@@ -52,7 +59,7 @@
       "symbols_reached": 75,
       "unit_records": 67,
       "units_named_by_a_record": 70,
-      "units_named_by_a_row": 143,
+      "units_named_by_a_row": 149,
       "units_reached": 137
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
@@ -1784,7 +1791,31 @@
         ],
         "transcribed_by": []
       },
+      "providers/implementations/ciphers/cipher_aes.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
+      },
       "providers/implementations/ciphers/cipher_aes_siv.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/ciphers/cipher_aria.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/ciphers/cipher_camellia.c": {
         "defines": [],
         "recorded_by": null,
         "subphases": [
@@ -1801,6 +1832,30 @@
         "transcribed_by": []
       },
       "providers/implementations/ciphers/cipher_chacha20_hw.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/ciphers/cipher_cts.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/ciphers/cipher_sm4.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/ciphers/cipher_tdes_common.c": {
         "defines": [],
         "recorded_by": null,
         "subphases": [
@@ -2169,7 +2224,7 @@
       "transcribed_units": 172
     }
   },
-  "body_hash": "a8f41f899f7ce24b14aa3be2e2e9467f88dbc90322c125ae5cba41b7ae1c8ffb",
+  "body_hash": "78cea9ac29f56ddfa5055e4d48d7af9859f0332eb8d9f40bb7175d3c1740b431",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -2185,7 +2240,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "0226a1b038f28d433dbc8b88a4418fbbcbee324b68a93122ae21edf5928d47cd"
+      "sha256": "1d0728a7b206169c1b1aa7be8a8bac36fb952e79d50723af51fe2a9fb181bf08"
     },
     {
       "name": "phase-state",
@@ -2220,7 +2275,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "b7d7a5e7ce5af61e5427a3d8184622ae4c3931ce3f8152e85b60f89e8af878aa"
+      "sha256": "97a19de00ba312546ec02f87980ba879afb0315d456817af1da6a44455eb4516"
     }
   ],
   "kind": "plan-reconciliation",
