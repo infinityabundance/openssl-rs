@@ -19958,3 +19958,45 @@ their call sites: classifying them now would be classifying the symptom.
 the tree is green and the module stays staged. No export is implemented, no Phase 9 court has
 landed, and a compile-error count is not progress toward a working DRBG -- it is the measurement
 that makes the next attempt finite.
+
+## D308 -- the DRBG's coordinate and import classes are closed, and 22 errors remain in one cause
+
+The second half of D307's remainder, done, and the remainder measured down to a **single** root
+cause.
+
+**Closed in this pass**, each with its mapping recorded where it is used:
+
+* **The eight init-function sites**, re-mapped from the `.c.in` line numbers the staging file cited
+  to the build's, matched by the raise's own **reason symbol**: `MISSING_CIPHER` 579->577,
+  `ERR_R_EVP_LIB` 588->586, `UNABLE_TO_INITIALISE_CIPHERS` 596->594, `ERR_R_EVP_LIB` 627->625,
+  `DERIVATION_FUNCTION_INIT_FAILED` 633->631, `REQUIRE_CTR_MODE_CIPHER` 786->1105,
+  `UNABLE_TO_FIND_CIPHERS` 805->1124, and HMAC's `MISSING_MAC` 131->129. The last two are in
+  `drbg_ctr_set_ctx_params_locked`, whose sites the atlas has at 1105 and 1124.
+* **Two reasons cited by name rather than by site**: `DRBG_RAND_ENTROPY_OUT_OF_RANGE` and
+  `DRBG_RAND_ENTROPY_INPUT_TOO_LONG` are `err_sites::PROV_DRBG_509` and `::PROV_DRBG_514`. The
+  authority raises those two with the **RAND** library rather than `PROV`, which is why they do not
+  sit in the `PROV_DRBG` reason family -- a detail a transcription-by-name would have carried
+  wrongly forever, because both spellings compile.
+* **Five imports**: `OSSL_FUNC_RAND_NONCE` from `evp::rand` (D299 made it `pub(crate)`), the four
+  seeding up-calls from `provider::seeding` (D305), and `ossl_lib_ctx_get_data` aliased from
+  `context::lib_ctx_get_data`.
+* **The DRBG nonce slot as a local const** carrying the authority's value **6**
+  (`include/internal/cryptlib.h:102`), with a note that its home is `src/context/mod.rs` -- which
+  declares slots 2, 3, 14 and 17 and not the DRBG pair. Local rather than added to that module for
+  the reason the other staged files carry their missing constants locally: a `const` added where
+  nothing yet uses it is dead code, and the crate denies that.
+
+**The error set's history: 143 -> 108 -> 46 -> 39 -> 30 -> 27 -> 24 -> 23 -> 22.**
+
+**The remaining 22 are one root cause, and that is the finding worth keeping.** They are five
+method-not-found on `ProvDrbg` (`instantiate`, `uninstantiate`, `reseed`, `generate`), seven
+mismatched types, seven `expected function, found i32`, and three argument errors. The staged file
+calls the four cached virtual functions **as methods** -- `(*drbg).instantiate(...)` -- where the
+authority stores them as function pointers, so the compiler resolves each call against a field
+whose type is not a function pointer, and **every one of the seventeen type errors is a call site
+of those four**. Representing them as fn-pointer fields and calling them as such should close all
+22, which makes the next edit one change rather than seventeen.
+
+**What this entry does not claim.** `src/provider/rand.rs` is not in `src/provider/mod.rs`; the
+build and clippy are clean and the module stays staged at 22 measured errors. No export is
+implemented and no Phase 9 court has landed.
