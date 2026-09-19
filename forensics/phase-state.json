@@ -147,7 +147,8 @@
           "forensics/phase3-obligations.json",
           "artifacts/phase3/COURTS.json",
           "forensics/atlas/court-coverage.json",
-          "forensics/atlas/provider-algorithms.json"
+          "forensics/atlas/provider-algorithms.json",
+          "forensics/atlas/provider-court-coverage.json"
         ],
         "name": "core-runtime",
         "phase": 3,
@@ -234,7 +235,8 @@
           "forensics/phase4-obligations.json",
           "artifacts/phase4/COURTS.json",
           "forensics/atlas/court-coverage.json",
-          "forensics/atlas/provider-algorithms.json"
+          "forensics/atlas/provider-algorithms.json",
+          "forensics/atlas/provider-court-coverage.json"
         ],
         "name": "bio-conf-objects",
         "phase": 4,
@@ -261,7 +263,8 @@
           "forensics/phase5-obligations.json",
           "artifacts/phase5/COURTS.json",
           "forensics/atlas/court-coverage.json",
-          "forensics/atlas/provider-algorithms.json"
+          "forensics/atlas/provider-algorithms.json",
+          "forensics/atlas/provider-court-coverage.json"
         ],
         "name": "bn-asn1-der-pem",
         "phase": 5,
@@ -328,7 +331,8 @@
           "forensics/phase6-obligations.json",
           "artifacts/phase6/COURTS.json",
           "forensics/atlas/court-coverage.json",
-          "forensics/atlas/provider-algorithms.json"
+          "forensics/atlas/provider-algorithms.json",
+          "forensics/atlas/provider-court-coverage.json"
         ],
         "name": "libctx-provider",
         "phase": 6,
@@ -384,7 +388,8 @@
           "forensics/phase7-obligations.json",
           "artifacts/phase7/COURTS.json",
           "forensics/atlas/court-coverage.json",
-          "forensics/atlas/provider-algorithms.json"
+          "forensics/atlas/provider-algorithms.json",
+          "forensics/atlas/provider-court-coverage.json"
         ],
         "name": "evp",
         "phase": 7,
@@ -406,7 +411,8 @@
           "forensics/phase8-obligations.json",
           "artifacts/phase8/COURTS.json",
           "forensics/atlas/court-coverage.json",
-          "forensics/atlas/provider-algorithms.json"
+          "forensics/atlas/provider-algorithms.json",
+          "forensics/atlas/provider-court-coverage.json"
         ],
         "name": "algorithms",
         "phase": 8,
@@ -592,7 +598,7 @@
       "not_started": 13
     }
   },
-  "body_hash": "4b080e0475f5491a3791d61fccdb714add9604156737cb32a9c6f18061cd1bcb",
+  "body_hash": "c09252ba438852fa1dd8b00c356dc0a980040047285e92433056b1acdad34869",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

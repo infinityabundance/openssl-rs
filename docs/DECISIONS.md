@@ -16332,3 +16332,54 @@ while Phase 10's six hundred and thirty-six want their own projection; the inten
 immutable `implementation_state` (`implemented`/`unimplemented`) beside `owning_phase`, with the
 projection derived per stratum rather than stored on the row. Neither is a correctness gap in what
 is published today, and both are recorded here rather than in a comment.
+
+## D245 — the provider-row coverage join, and the 39 cipher rows it found with no observation at all
+
+D244 made provider rows a completion input: a stratum may not be complete while a row it owns is
+`open`. This entry closes the other half of the same hole, the one D199 and D236 closed for exports:
+`implemented` is a statement about a candidate table, and it is **not** a statement that any
+observation touches the row.
+
+**The measured gap, before anything was built.** Of the 110 implemented provider rows, 71 were named
+somewhere in a probe. The 39 that were not are all `OSSL_OP_CIPHER`:
+
+```text
+AES-{128,192,256}-{OFB,CFB,CFB1,CFB8},  AES-{192,256}-ECB,  AES-{192,256}-CTR
+CAMELLIA-{128,192,256}-{ECB,CBC,OFB,CFB,CFB1,CFB8},  CAMELLIA-{128,192,256}-CTR
+DES-EDE-{ECB,OFB,CFB},  DES-EDE3-{ECB,OFB,CFB,CFB8,CFB1}
+```
+
+The census called every one of them `implemented` because the row exists in `DEFLT_CIPHERS`, and no
+court observation touched any of them. This is exactly the class the review named as "the provider
+row equivalent of the Phase-7 court-coverage hole" — and it was not hypothetical.
+
+**The cure is an observation, not a declaration.** `rt_cipher_probe.c` gains
+`rt_deflt_row_census`, which fetches all 82 implemented cipher rows by name and prints five
+observations each: `fetched`, `keylen`, `ivlen`, `blocksize`, `mode`. Not `fetched` alone — a row
+whose engine is right and whose descriptor is wrong would pass a fetch-only arm, and the descriptor
+is what `EVP_CIPHER_get_*` answers. `RT-CIPHER` moves **1127 -> 1537** observations with **zero
+residuals**, which is itself a result: all 82 rows' descriptors, including `NULL`'s and the 3DES
+and Camellia families', match the authority. The alternative — 39 hand-written `declared` rows
+naming a "path" — would have been a table nobody could check and the same hand-waving the export
+atlas refuses.
+
+**`forensics/tools/provider_court_coverage.py` is the join.** For every `implemented` row it asks
+whether one of the row's aliases appears as a C string literal in a probe belonging to a court that
+covers its stratum, and **nothing is authored**: the required set comes from the census, the
+provided set from the probe sources, and a row no probe names is a finding rather than an entry in a
+hand-kept list. It also checks the one place a hand-kept set remains — the arm's own name list —
+against the census **in both directions**, so a row landed without a probe line and a probe line for
+a row the census does not call implemented are each a failure. Result: **110 implemented, 110
+directly courted, 0 unmatched.**
+
+`phase_state.py` requires that join of every stratum before it may be `complete`, beside the export
+one. Verified by four negative tests against mutated copies of the probe: a renamed row (caught
+twice — once as the arm disagreeing with the census, once as a row named by no probe), an invented
+name, and an emptied arm. The last one matters most: an empty list must not read as vacuously
+covered, and it reports 70 courted / 40 unmatched rather than 0 / 0.
+
+**What this entry moves.** `implemented[libcrypto]` stays **2035 / 5896**, Phase 8 stays **194
+implemented / 576 open / 16 deferred**, the provider census stays **996 rows / 110 implemented / 200
+open / 686 deferred**, and the export coverage atlas is untouched. What moves is `RT-CIPHER`
+(**1127 -> 1537**) and the new `provider-court-coverage.json`. Unit tests stay at **548 passed, 0
+failed**.

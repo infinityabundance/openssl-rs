@@ -60,6 +60,11 @@ COVERAGE = "forensics/atlas/court-coverage.json"
 # happens to be in progress, and it reads the same atlas the census writes.
 PROVIDER_ALGORITHMS = "forensics/atlas/provider-algorithms.json"
 
+# The provider-row court-coverage atlas (docs/DECISIONS.md D245): the join that says a row the
+# census calls `implemented` is also *observed*. Generated before this tool, from the same census
+# and the court probes.
+PROVIDER_COVERAGE = "forensics/atlas/provider-court-coverage.json"
+
 # The conservation strata, in dependency order (docs/RELEASE_GATES.md §1).
 STRATA: list[tuple[int, str, str]] = [
     (0, "constitution", "Constitution, authorities, claim algebra"),
@@ -231,6 +236,26 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
                 f"implemented nor handed to a later phase ({PROVIDER_ALGORITHMS}): {shown}")
     else:
         absent.append(PROVIDER_ALGORITHMS)
+
+    # Provider-row court coverage (D245). The same join D199 performs for exports, one universe
+    # down: `implemented` is a statement about a candidate table, and it is not a statement that
+    # any observation touches the row. A stratum may not be complete while any row it owns is
+    # implemented and named by no probe.
+    pcov = read_json(PROVIDER_COVERAGE)
+    if pcov:
+        present.append(PROVIDER_COVERAGE)
+        unmatched = pcov["body"]["unmatched"]
+        if unmatched:
+            names = sorted(
+                r["algorithm_names"] for r in pcov["body"]["rows"]
+                if r["coverage"] == "unmatched"
+            )
+            shown = ", ".join(names[:6]) + ("..." if len(names) > 6 else "")
+            blocking = blocking or (
+                f"{unmatched} implemented provider row(s) are named by no probe "
+                f"({PROVIDER_COVERAGE}): {shown}")
+    else:
+        absent.append(PROVIDER_COVERAGE)
     return present, absent, blocking
 
     return present, absent, "not started"

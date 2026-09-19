@@ -15543,7 +15543,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "285a7c5c84e03e9798d02bcf4c5349ae884ea6e3afa75f657b4b520738366f81"
+      "sha256": "fbea002607bc86652321c90d0b2298d512d50fc28658393209d68b686b645f42"
     },
     {
       "name": "phase7-courts",
@@ -15553,12 +15553,12 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "19d74d6da6c92fb565f0901a97c53fbd2f67b3223cf2d57d1d12944fab06a5b3"
+      "sha256": "e71922c9d783881d2c2ceec2d8046e63e63767693ca9a11cb8cbdb08ea37dde1"
     },
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "1cc8c1d6d80f8f21db0c38bdf1cf953292b02d9d09a5228790e9e93fa0d2adab"
+      "sha256": "096d862e04fb75d46e1ccbce3da9654d9e70da1367c1c4fa1ae7c3f789acce60"
     }
   ],
   "kind": "court-coverage",
