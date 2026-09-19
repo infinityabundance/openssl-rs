@@ -71,6 +71,7 @@ from atlas_common import (  # noqa: E402
     ATLAS,
     PRODUCTION_AUTHORITY,
     REPO_ROOT,
+    Authority,
     InputRef,
     authority_build_dir,
     envelope,
@@ -543,6 +544,20 @@ def crate_digest_rows() -> list[str]:
     return [m.group(1) for m in re.finditer(r'algorithm_names:\s*c"([^"]*)"', text[start:end])]
 
 
+def crate_mac_rows() -> list[str]:
+    """The alias string of every `DEFLT_MACS` row, in order.
+
+    Read here rather than alongside the cipher rows because `OSSL_OP_MAC` was the operation this
+    census could not see until D241: `cmac_prov.c` is the row `crypto/modes/siv128.c` reaches
+    through `EVP_MAC_fetch(…, "CMAC", …)`, and a row the crate publishes but the census does not
+    read is exactly the `unknown = 0` hole D237 and D240 were about.
+    """
+    text = read(REPO_ROOT / "src" / "provider" / "mac.rs")
+    start = text.index("pub(crate) static DEFLT_MACS")
+    end = text.index("];", start)
+    return [m.group(1) for m in re.finditer(r'algorithm_names:\s*c"([^"]*)"', text[start:end])]
+
+
 def primary(alias_string: str) -> str:
     return alias_string.split(":")[0]
 
@@ -584,116 +599,309 @@ def plan_for(plan: dict, provider: str, operation: str, row: dict) -> tuple[int 
 #
 # so a provider *cipher* context carries the library context of the provider that created it.
 # That is the context `RAND_bytes_ex(ctx->libctx, ...)` resolves against in the GCM rows' no-IV
-# arm and in `cipher_tdes_wrap.c`'s IV generation, and it is the one thing this crate's
-# `ossl_default_provider_init` cannot supply: it publishes `*provctx = NULL`, so
-# `PROV_LIBCTX_OF` has no argument at all.
+# arm and in `cipher_tdes_wrap.c`'s IV generation, and `EVP_CIPHER_fetch(ctx->libctx, ...)` and
+# `EVP_MAC_fetch(libctx, ...)` resolve their sub-fetches against it too.
 #
-# The consequence is not a wrong answer today -- every landed cipher row is deterministic -- it is
-# a **library-context isolation** difference the moment a random-dependent row lands. An
-# application that loads the default provider in a private `OSSL_LIB_CTX` A and fetches such a row
-# in A gets the authority's A and the candidate's *global* context, and a test taken against the
-# global default context cannot tell the two apart. That is why the obligation is recorded here
-# as a **second blocker** beside `RAND_bytes_ex` rather than only in prose.
+# **D241 discharged the plumbing, and this block is now the inverse measurement.** It used to
+# *fail* when the crate grew the plumbing -- that was the obligation's stated retirement
+# condition, and it is what fired -- and it now fails when the plumbing is *removed*. A
+# certificate that fails when it stops being true is the shape that condition asked for.
 #
-# It is measured rather than asserted, and every measurement is a fatal if it stops being true:
-# the day the crate grows the plumbing this generator fails instead of the claim going stale, and
-# a reviewer never has to re-derive which spelling is current.
-CRATE_PROVIDER_CONTEXT_FACTS = [
-    (
-        "src/provider/digest.rs",
-        "*provctx = ptr::null_mut();",
-        "`ossl_default_provider_init` publishes a NULL provctx",
-    ),
-    (
-        "src/provider/cipher.rs",
-        "_provctx: *mut c_void,",
-        "`ossl_cipher_generic_initkey` takes the provider context and ignores it",
-    ),
+# **D241 was also one row short, and the court arm is what found it.** The obligation was
+# discharged at `ossl_cipher_generic_initkey` only, so `aes_siv_newctx` -- the *other* landed
+# cipher unit that acquires the context -- kept `(*ctx).libctx = ptr::null_mut();`. Its own doc
+# comment asserted the opposite was harmless, on the grounds that a NULL context and the default
+# context are the same thing; that is true of the *values* and false of the *scope*, which is
+# what this file is for. So the certificate below is no longer one needle in one file: it is the
+# complete set of authority sites that acquire the context, each one checked **inside the crate
+# function that owes it**, because a needle that is present somewhere in the file is exactly how
+# the second site passed the first certificate.
+
+# An *acquisition*: an object taking its library context from the provider context its provider
+# was created with. Readers -- `OSSL_LIB_CTX *libctx = PROV_LIBCTX_OF(provctx);` locals, and the
+# `RAND_*_ex(ctx->libctx, …)` / `EVP_*_fetch(ctx->libctx, …)` calls -- need no row of their own,
+# because they read a field these assignments are what set.
+LIBCTX_CARRY_RE = re.compile(r"\w+->libctx\s*=\s*PROV_LIBCTX_OF\(provctx\)")
+
+# The land the enumeration walks. The `.c.in` templates are the authority's own source and are
+# enumerated from the source tree; the build tree's expanded copies carry different line numbers
+# and are deliberately not walked, so a site has exactly one row.
+LIBCTX_CARRY_ROOT = "providers/implementations"
+
+# Every acquisition site, with what discharges it.
+#
+#   state `landed`  the crate carries the context, and `crate_fn`'s **body** is checked for
+#                   exactly one `.libctx` assignment, equal to `anchor`
+#   state `open`    a named phase's own remaining work
+#   state `later`   a family no current subphase has reached
+#
+# The set is compared for **exact equality** against the authority, so a site the authority has
+# and this table does not classify fails the census instead of going unmentioned -- the `DES3-WRAP`
+# failure class (D237), one level down.
+LIBCTX_CARRY_SITES: list[dict] = [
+    # The four cipher sites: the generic path (`ciphercommon.c.in`), the two AEAD rows that acquire
+    # at `newctx` because their own `initkey` never reaches the generic one (`cipher_aes_siv.c`,
+    # `cipher_aes_gcm_siv.c`), and GCM's.
+    {
+        "unit": "providers/implementations/ciphers/ciphercommon.c.in",
+        "line": 759,
+        "state": "landed",
+        "owner": "8.3",
+        "crate": "src/provider/cipher.rs",
+        "crate_fn": "ossl_cipher_generic_initkey",
+        "anchor": "(*ctx).libctx = crate::provider::ctx::prov_libctx_of(provctx);",
+    },
+    {
+        "unit": "providers/implementations/ciphers/cipher_aes_siv.c",
+        "line": 44,
+        "state": "landed",
+        "owner": "8.3",
+        "crate": "src/provider/cipher.rs",
+        "crate_fn": "aes_siv_newctx",
+        "anchor": "(*ctx).libctx = crate::provider::ctx::prov_libctx_of(provctx);",
+    },
+    {
+        "unit": "providers/implementations/ciphers/cipher_aes_gcm_siv.c",
+        "line": 38,
+        "state": "open",
+        "owner": "8.3",
+        "blocked_by": "the `AES-*-GCM-SIV` rows are 8.3's own remaining work",
+    },
+    {
+        "unit": "providers/implementations/ciphers/ciphercommon_gcm.c.in",
+        "line": 47,
+        "state": "open",
+        "owner": "9",
+        "blocked_by": "the `AES-*-GCM` rows are handed to phase 9 on `RAND_bytes_ex`",
+    },
+    # The signature, asym-cipher, KEM, KDF and exchange families: none of them has reached the
+    # crate, and the owner is the subphase the plan already names or `later` where it names none.
+    {"unit": "providers/implementations/signature/rsa_sig.c.in", "line": 248, "state": "later", "owner": "8.4"},
+    {"unit": "providers/implementations/asymciphers/rsa_enc.c.in", "line": 96, "state": "later", "owner": "8.4"},
+    {"unit": "providers/implementations/kem/rsa_kem.c.in", "line": 100, "state": "later", "owner": "8.4"},
+    {"unit": "providers/implementations/exchange/dh_exch.c.in", "line": 99, "state": "later", "owner": "8.5"},
+    {"unit": "providers/implementations/signature/dsa_sig.c.in", "line": 144, "state": "later", "owner": "8.6"},
+    {"unit": "providers/implementations/signature/ecdsa_sig.c.in", "line": 163, "state": "later", "owner": "8.7"},
+    {"unit": "providers/implementations/signature/eddsa_sig.c.in", "line": 182, "state": "later", "owner": "8.7"},
+    {"unit": "providers/implementations/signature/sm2_sig.c.in", "line": 132, "state": "later", "owner": "8.7"},
+    {"unit": "providers/implementations/asymciphers/sm2_enc.c.in", "line": 61, "state": "later", "owner": "8.7"},
+    {"unit": "providers/implementations/kem/ec_kem.c.in", "line": 205, "state": "later", "owner": "8.7"},
+    {"unit": "providers/implementations/kem/ecx_kem.c.in", "line": 169, "state": "later", "owner": "8.7"},
+    {"unit": "providers/implementations/signature/mac_legacy_sig.c", "line": 62, "state": "later", "owner": "8.8"},
+    {"unit": "providers/implementations/keymgmt/kdf_legacy_kmgmt.c", "line": 44, "state": "later", "owner": "8.8"},
+    {"unit": "providers/implementations/kdfs/argon2.c.in", "line": 944, "state": "later", "owner": None},
+    {"unit": "providers/implementations/kdfs/argon2.c.in", "line": 963, "state": "later", "owner": None},
+    {"unit": "providers/implementations/kdfs/argon2.c.in", "line": 982, "state": "later", "owner": None},
+    {"unit": "providers/implementations/exchange/ecdh_exch.c.in", "line": 101, "state": "later", "owner": None},
+    {"unit": "providers/implementations/kem/template_kem.c", "line": 67, "state": "later", "owner": None},
+    {"unit": "providers/implementations/kem/mlx_kem.c", "line": 45, "state": "later", "owner": None},
+    {"unit": "providers/implementations/signature/lms_signature.c", "line": 47, "state": "later", "owner": None},
+    {"unit": "providers/implementations/signature/ml_dsa_sig.c.in", "line": 95, "state": "later", "owner": None},
+    {"unit": "providers/implementations/signature/slh_dsa_sig.c.in", "line": 85, "state": "later", "owner": None},
 ]
 
-# The point the authority's line makes, in one place so the check and the artefact cannot drift.
-AUTHORITY_PROVIDER_CONTEXT_FACT = (
-    "providers/implementations/ciphers/ciphercommon.c.in",
-    "ctx->libctx = PROV_LIBCTX_OF(provctx);",
-)
+
+def authority_libctx_carry_sites(auth: Authority) -> list[tuple[str, int]]:
+    """Every acquisition site the pinned provider tree actually has, as `(unit, line)`.
+
+    Walked rather than typed, which is what makes [`LIBCTX_CARRY_SITES`] a census instead of a
+    list. `.c` and `.c.in` are both taken, in the source tree only.
+    """
+    root = auth.source / LIBCTX_CARRY_ROOT
+    if not root.is_dir():
+        raise CensusError(
+            f"[provider-algorithms] fatal: {rel(root)} is missing, so the provider tree's "
+            "library-context acquisition sites cannot be enumerated"
+        )
+    found: list[tuple[str, int]] = []
+    for path in sorted(root.rglob("*")):
+        if not (path.name.endswith(".c") or path.name.endswith(".c.in")):
+            continue
+        for number, line in enumerate(read(path).splitlines(), start=1):
+            # A commented-out assignment is not an acquisition.
+            if line.lstrip().startswith("//") or line.lstrip().startswith("*"):
+                continue
+            if LIBCTX_CARRY_RE.search(line):
+                found.append((f"{LIBCTX_CARRY_ROOT}/{path.relative_to(root)}", number))
+    return found
+
+
+def rust_fn_body(text: str, name: str) -> str | None:
+    """The source of the top-level Rust `fn name` body, `rustfmt`'s `^}` being its end.
+
+    The certificate is anchored per *function* rather than per file because per file is what let
+    `aes_siv_newctx` keep a NULL `libctx`: the needle was present, in
+    `ossl_cipher_generic_initkey`. `None` means the function is absent, which is a failure for a
+    site whose row says `landed`.
+    """
+    match = re.search(
+        rf'^(?:pub(?:\([^)]*\))?\s+)?(?:unsafe\s+)?(?:extern\s+"C"\s+)?fn {re.escape(name)}\s*[(<]',
+        text,
+        re.MULTILINE,
+    )
+    if match is None:
+        return None
+    end = text.find("\n}", match.end())
+    if end == -1:
+        return None
+    return text[match.start():end + 2]
+
+
+def check_libctx_carry_sites(auth: Authority) -> list[dict]:
+    """The acquisition census: every authority site classified, every landed one anchored.
+
+    Three failures are possible and all three are fatal:
+
+      * the authority has an acquisition this table does not classify (the `DES3-WRAP` class);
+      * a classified site is no longer at the recorded unit and line, so the row has drifted;
+      * a `landed` row's crate function does not hold exactly the recorded `.libctx` assignment
+        -- absent, doubled, or replaced by a NULL.
+
+    The third is the one D241's first certificate could not see, so it is checked inside the
+    function rather than anywhere in the file.
+    """
+    found = sorted(authority_libctx_carry_sites(auth))
+    classified = sorted((row["unit"], row["line"]) for row in LIBCTX_CARRY_SITES)
+    if len(set(classified)) != len(classified):
+        raise CensusError("[provider-algorithms] fatal: LIBCTX_CARRY_SITES repeats a site")
+    if found != classified:
+        missing = [f"{u}:{n}" for u, n in found if (u, n) not in classified]
+        stale = [f"{u}:{n}" for u, n in classified if (u, n) not in found]
+        raise CensusError(
+            "[provider-algorithms] fatal: the authority's library-context acquisition sites and "
+            f"LIBCTX_CARRY_SITES disagree -- unclassified: {missing or 'none'}; no longer present: "
+            f"{stale or 'none'}. A provider object that acquires the creating provider's library "
+            "context must be classified where it is discharged, or the class goes missing the way "
+            "`DES3-WRAP` did (D237, D241, D242)"
+        )
+
+    landed: list[dict] = []
+    for row in LIBCTX_CARRY_SITES:
+        if row["state"] != "landed":
+            continue
+        body = rust_fn_body(read(REPO_ROOT / row["crate"]), row["crate_fn"])
+        if body is None:
+            raise CensusError(
+                f"[provider-algorithms] fatal: {row['crate']} has no fn {row['crate_fn']}, "
+                f"which is the row that owes {row['unit']}:{row['line']}'s library context"
+            )
+        assignments = re.findall(r"\(\*\w+\)\.libctx\s*=\s*[^;]+;", body)
+        if assignments != [row["anchor"]]:
+            raise CensusError(
+                f"[provider-algorithms] fatal: fn {row['crate_fn']} in {row['crate']} must hold "
+                f"exactly one library-context assignment, {row['anchor']!r}, and holds {assignments}. "
+                "A needle that is present elsewhere in the file is how `aes_siv_newctx` kept a NULL "
+                "one while `ossl_cipher_generic_initkey` held the real one (D242)"
+            )
+        landed.append(dict(row))
+    return landed
 
 
 def provider_context(auth: Authority) -> dict:
-    """The measured provider-context gap, and the rows whose blockers it joins.
+    """The provider context's **discharge certificate**, and the rows whose plumbing it is.
 
-    Reads the crate and the authority's template, and fails on any of the three facts moving:
-    a crate fact disappears, the crate starts assigning `(*ctx).libctx` (the obligation is
-    retired), or the authority's line moves. A `CensusError` rather than a warning, because a
-    stale obligation here is exactly the class D237 exists to stop.
+    D240 recorded this as an obligation and gave it a retirement condition: an assignment to a
+    `.libctx` field, or the disappearance of the NULL `provctx`, means the crate has grown the
+    plumbing, and the block has to be re-derived in the same commit. That is what happened here,
+    so what follows is the *inverse* measurement: every fact that used to hold is now asserted
+    **not** to hold, and this generator fails if the plumbing is ever removed again. A certificate
+    that fails when it stops being true is the shape D240's own message asked for, and the
+    `court_arm` field names where the observation is taken.
+
+    D242 widened it from one needle to the whole acquisition census, because the first version
+    certified `ossl_cipher_generic_initkey` and nothing else -- and the site it left out was
+    `aes_siv_newctx`.
     """
-    for rel, needle, what in CRATE_PROVIDER_CONTEXT_FACTS:
-        if needle not in read(REPO_ROOT / rel):
-            raise CensusError(
-                f"[provider-algorithms] fatal: {rel} no longer contains {needle!r}, so the "
-                f"provider-context fact recorded here ({what}) has moved: re-derive this block "
-                "rather than trusting it"
-            )
-    # **The absence is the finding.** Nothing writes a provider cipher context's `libctx` from a
-    # provider context; the field exists and is only ever NULL-initialised in a unit test. The
-    # test is `any assignment to the field at all`, not one spelling of one: the first version
-    # looked for the literal `(*ctx).libctx =` and a negative test with a differently-named
-    # receiver (`(*c).libctx =`) sailed past it, which is precisely the false comfort this block
-    # exists to prevent. Any assignment means the plumbing is arriving, so the obligation has to
-    # be re-derived rather than trusted -- and its removal, not this check, is what retires it.
-    cipher_rs = read(REPO_ROOT / "src" / "provider" / "cipher.rs")
-    assignment = re.search(r"\.libctx\s*=", cipher_rs)
-    if assignment is not None:
-        line = cipher_rs.count("\n", 0, assignment.start()) + 1
+    digest_rs = read(REPO_ROOT / "src" / "provider" / "digest.rs")
+
+    if "*provctx = ptr::null_mut();" in digest_rs:
         raise CensusError(
-            "[provider-algorithms] fatal: src/provider/cipher.rs line "
-            f"{line} assigns a `.libctx` field, so the provider context may now be plumbed: "
-            "re-derive this obligation and the second blocker of the random-dependent rows with "
-            "it. **This check failing is the obligation's retirement condition, not a bug in the "
-            "generator**: delete this block and the `blocked_by` half in "
-            "`provider-algorithm-plans.json` in the same commit that lands the plumbing, and "
-            "replace both with the court arm the `court_requirement` below asks for."
+            "[provider-algorithms] fatal: src/provider/digest.rs publishes a NULL provctx again, "
+            "so `PROV_LIBCTX_OF` has no argument and every provider sub-fetch in a private "
+            "`OSSL_LIB_CTX` would silently reach the global one (D240, D241)"
         )
-    auth_rel, auth_needle = AUTHORITY_PROVIDER_CONTEXT_FACT
-    if auth_needle not in read(auth.source / auth_rel):
+    if "*provctx = ctx.cast();" not in digest_rs:
         raise CensusError(
-            f"[provider-algorithms] fatal: the authority's {auth_rel} no longer contains "
-            f"{auth_needle!r}, so a row's second blocker may no longer be what this says"
+            "[provider-algorithms] fatal: src/provider/digest.rs no longer stores a `PROV_CTX` "
+            "in `*provctx`, so this certificate has gone stale rather than been preserved"
+        )
+    landed = check_libctx_carry_sites(auth)
+    ctx_rs = read(REPO_ROOT / "src" / "provider" / "ctx.rs")
+    if "pub(crate) unsafe fn prov_libctx_of" not in ctx_rs:
+        raise CensusError(
+            "[provider-algorithms] fatal: src/provider/ctx.rs no longer publishes "
+            "`prov_libctx_of`, which is the sites' `PROV_LIBCTX_OF`"
         )
     return {
-        "obligation": (
-            "The default provider's `provctx` is NULL in this crate, so `PROV_LIBCTX_OF(provctx)` "
-            "-- and therefore a provider cipher context's `libctx` -- cannot be supplied. Counted "
-            "as the **second** blocker of every provider row whose first blocker is randomness, "
-            "because those are the rows where `ctx->libctx` is what the random call resolves "
-            "against. It is the provider's own port of D117's residual."
+        "state": "discharged",
+        "what": (
+            "Every provider object the crate builds acquires the library context of the provider "
+            "that created it, so a row's sub-fetches and its `RAND_bytes_ex(ctx->libctx, …)` calls "
+            "resolve in the creating provider's context rather than the global one. D240 recorded "
+            "the gap as a measured obligation and made an assignment to a `.libctx` field its "
+            "retirement condition; D241 landed the plumbing and D242 widened the measurement from "
+            "one needle to the authority's whole acquisition census, so this block is the inverse "
+            "measurement and fails if any landed site is removed or narrowed."
         ),
         "authority": {
-            "unit": auth_rel,
-            "line": auth_needle,
+            "unit": LIBCTX_CARRY_ROOT,
+            "line": LIBCTX_CARRY_RE.pattern,
             "effect": (
-                "every provider cipher context stores the creating provider's library context, "
-                "and the GCM no-IV arm and `cipher_tdes_wrap.c`'s IV generation call "
+                "a provider object stores the creating provider's library context, and the GCM "
+                "no-IV arm and `cipher_tdes_wrap.c`'s IV generation call "
                 "`RAND_bytes_ex(ctx->libctx, ...)` against it"
             ),
         },
         "crate": [
-            {"path": rel, "fact": what} for rel, _needle, what in CRATE_PROVIDER_CONTEXT_FACTS
-        ]
-        + [
+            {
+                "path": "src/provider/digest.rs",
+                "fact": "`ossl_default_provider_init` builds a `PROV_CTX` and stores it in `*provctx`",
+            },
             {
                 "path": "src/provider/cipher.rs",
                 "fact": (
-                    "no assignment from a provider context to `(*ctx).libctx` exists; the field "
-                    "is only ever NULL-initialised in a unit test"
+                    "the two landed sites assign "
+                    f"{landed[0]['anchor']!r} inside {landed[0]['crate_fn']} and "
+                    f"{landed[1]['crate_fn']}"
                 ),
-            }
+            },
+            {
+                "path": "src/provider/ctx.rs",
+                "fact": "`prov_libctx_of` is `PROV_LIBCTX_OF`, and the accessors accept a NULL context",
+            },
         ],
-        "blocked_rows": [],
-        "court_requirement": (
-            "Before Phase 9 retires a random-dependent row, the observation has to be taken in a "
-            "**private `OSSL_LIB_CTX`**, not the global default context: with both providers "
-            "loaded in the global context the isolation difference is invisible, so a passing "
-            "test there would certify nothing about this obligation."
+        "court_arm": (
+            "`RT-CIPHER`'s `defltsiv.libctx*` observations, in two parts. The first is that a "
+            "private `OSSL_LIB_CTX` is created, the default provider is loaded **in it**, "
+            "AES-128-SIV is fetched there, and the tag matches both the same run in the global "
+            "context and the published RFC 5297 A.1 value. The second is what catches a NULL "
+            "context, because the first part cannot: the global context can always answer the "
+            "row's sub-fetches, so the *values* are identical either way. So `fips=yes` is set as "
+            "the private context's default properties -- a per-`OSSL_LIB_CTX` preference -- and "
+            "`EVP_MAC_fetch(lc, \"CMAC\", NULL)` and a fresh `EVP_EncryptInit_ex2` on the "
+            "already-fetched row are observed with it set, while the same `EVP_MAC_fetch(NULL, ...)` "
+            "is observed unchanged. SIV is the row that makes scoping observable at all: "
+            "`aes_siv_initkey` and `ossl_siv128_init` both sub-fetch through `PROV_LIBCTX_OF`, so "
+            "with a NULL context the operation *succeeds* where the authority's fails."
+        ),
+        "libctx_carry_sites": [
+            {
+                "unit": row["unit"],
+                "authority_line": row["line"],
+                "state": row["state"],
+                "owning_phase": row.get("owner"),
+                "crate_fn": row.get("crate_fn"),
+                "blocked_by": row.get("blocked_by"),
+            }
+            for row in LIBCTX_CARRY_SITES
+        ],
+        "libctx_carry_note": (
+            f"All {len(LIBCTX_CARRY_SITES)} authority sites that acquire `PROV_LIBCTX_OF` into an "
+            f"object are classified: {len(landed)} landed and anchored per crate function, "
+            f"{sum(1 for r in LIBCTX_CARRY_SITES if r['state'] == 'open')} open on a named phase, "
+            f"{sum(1 for r in LIBCTX_CARRY_SITES if r['state'] == 'later')} in a family no current "
+            "subphase has reached. Readers of the field need no row: they read what these "
+            "assignments set."
         ),
     }
 
@@ -752,12 +960,116 @@ def weak_tier() -> int:
     return 0
 
 
+def self_test(auth: Authority) -> int:
+    """Provoke every way [`check_libctx_carry_sites`] can fail, and require the finding.
+
+    A fail-closed check that cannot fail is indistinguishable from a passing check, so each
+    failure mode is reconstructed here rather than argued for in prose: the site that regressed to
+    a NULL, the same field write spelled with another local, the assignment doubled, an authority
+    acquisition the table does not classify, a recorded line that has drifted, and the owing
+    function renamed away. The crate-side cases are applied to copies of the real sources, so the
+    tree is never touched.
+    """
+    real_read = read
+    cipher = REPO_ROOT / "src" / "provider" / "cipher.rs"
+    anchor = LIBCTX_CARRY_SITES[1]["anchor"]
+    problems: list[str] = []
+
+    def mutate_in_fn(text: str, fn: str, old: str, new: str) -> str:
+        body = rust_fn_body(text, fn)
+        if body is None or body.count(old) != 1:
+            raise CensusError(f"self-test: cannot mutate {old!r} inside fn {fn}")
+        return text.replace(body, body.replace(old, new))
+
+    def expect(label: str, needle: str, *, sites=None, reader=real_read) -> None:
+        global read
+        saved = LIBCTX_CARRY_SITES[:]
+        try:
+            if sites is not None:
+                LIBCTX_CARRY_SITES[:] = sites
+            read = reader
+            check_libctx_carry_sites(auth)
+        except SystemExit as exc:
+            if needle in str(exc):
+                print(f"[provider-algorithms] ok   {label}")
+                return
+            problems.append(f"{label}: caught, but the message does not say {needle!r}: {exc}")
+            return
+        finally:
+            LIBCTX_CARRY_SITES[:] = saved
+            read = real_read
+        problems.append(f"{label}: NOT caught, so the check is not fail-closed")
+
+    def reader_with(fn_mutation):
+        def _read(path: Path) -> str:
+            text = real_read(path)
+            return fn_mutation(text) if path == cipher else text
+
+        return _read
+
+    expect(
+        "aes_siv_newctx regressed to a NULL libctx",
+        "must hold exactly one library-context assignment",
+        reader=reader_with(
+            lambda t: mutate_in_fn(t, "aes_siv_newctx", anchor, "(*ctx).libctx = ptr::null_mut();")
+        ),
+    )
+    expect(
+        "the generic site respelled to a NULL",
+        "must hold exactly one library-context assignment",
+        reader=reader_with(
+            lambda t: mutate_in_fn(
+                t, "ossl_cipher_generic_initkey", anchor, "(*c).libctx = ptr::null_mut();"
+            )
+        ),
+    )
+    expect(
+        "the site assigned twice",
+        "must hold exactly one library-context assignment",
+        reader=reader_with(
+            lambda t: mutate_in_fn(
+                t, "aes_siv_newctx", anchor, f"{anchor}\n            (*ctx).libctx = ptr::null_mut();"
+            )
+        ),
+    )
+    expect("an authority site the table does not classify", "unclassified", sites=LIBCTX_CARRY_SITES[1:])
+    expect(
+        "a recorded line that no longer matches",
+        "no longer present",
+        sites=[dict(r, line=r["line"] + 1) if r["state"] == "landed" else r for r in LIBCTX_CARRY_SITES],
+    )
+    expect(
+        "the owing function renamed away",
+        "has no fn",
+        sites=[
+            LIBCTX_CARRY_SITES[0],
+            dict(LIBCTX_CARRY_SITES[1], crate_fn="aes_siv_newctx_renamed"),
+            *LIBCTX_CARRY_SITES[2:],
+        ],
+    )
+
+    if problems:
+        print("[provider-algorithms] SELF-TEST FAILED:", file=sys.stderr)
+        for p in problems:
+            print(f"  {p}", file=sys.stderr)
+        return 1
+    print("[provider-algorithms] self-test ok: all six ways to defeat the census are caught")
+    return 0
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
+    ap.add_argument(
+        "--self-test",
+        action="store_true",
+        help="provoke each way the library-context acquisition census can fail, and require it",
+    )
     args = ap.parse_args(argv)
 
     auth = resolve_authority(args.authority)
+    if args.self_test:
+        return self_test(auth)
     build = authority_build_dir(auth.id)
     first = auth.source / PROVIDER_FILES[0][1]
     if not first.is_file():
@@ -875,9 +1187,11 @@ def main(argv: list[str]) -> int:
     # --- the crate's landed rows, and the exact join ---
     cipher_rows = crate_cipher_rows()
     digest_rows = crate_digest_rows()
+    mac_rows = crate_mac_rows()
     landed: dict[tuple[str, str], list[tuple[str, str]]] = {
         ("default", "OSSL_OP_CIPHER"): [(primary(a), d) for a, d in cipher_rows],
         ("default", "OSSL_OP_DIGEST"): [(primary(a), "") for a in digest_rows],
+        ("default", "OSSL_OP_MAC"): [(primary(a), "") for a in mac_rows],
     }
     seen_landed: set[tuple[str, str, str]] = set()
     for row in census_rows:
@@ -964,11 +1278,6 @@ def main(argv: list[str]) -> int:
         "provider_context": provider_context(auth),
         "rows": census_rows,
     }
-    body["provider_context"]["blocked_rows"] = [
-        [r["provider"], r["operation"], r["algorithm_names"]]
-        for r in census_rows
-        if r["operation"] == "OSSL_OP_CIPHER" and r["blocked_by"] and "RAND" in r["blocked_by"]
-    ]
     doc = envelope(kind="provider-algorithms", authority=auth.id, inputs=inputs, body=body, generator=GENERATOR)
     write_json(OUT, doc)
 

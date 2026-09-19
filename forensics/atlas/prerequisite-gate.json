@@ -29,8 +29,8 @@
       "ossl_rsa_pkey_method -> phase 8 (The `EVP_PKEY_METHOD` half of the same boundary: `crypto/evp/pmeth_lib.c`'s `standard_methods[]` holds the ten `ossl_<alg>_pkey_method` objects of the algorithm strata. `EVP_PKEY_meth_find`'s application half (`evp_pkey_meth_find_added_by_application`) is landed and courted; its `OBJ_bsearch_pmeth_func` half is not, and `EVP_PKEY_meth_get0` and `_get_count` index the table outright, so all three exports are withheld rather than stubbed with an application-count answer.)"
     ],
     "census": {
-      "covered_by_a_divergence": 57,
-      "language_surface_not_modelled_by_name": 3131,
+      "covered_by_a_divergence": 58,
+      "language_surface_not_modelled_by_name": 3130,
       "planned_prerequisites": 14
     },
     "census_by_unit": {
@@ -41,6 +41,7 @@
         "cb_arg": 1,
         "cbc": 1,
         "in": 1,
+        "initkey": 1,
         "inlen": 1,
         "libctx": 1,
         "now": 1,
@@ -162,7 +163,7 @@
         "crypto/evp/bio_enc.c": 14,
         "crypto/evp/cmeth_lib.c": 6,
         "crypto/evp/encode.c": 6,
-        "crypto/evp/evp_enc.c": 48,
+        "crypto/evp/evp_enc.c": 47,
         "crypto/evp/evp_fetch.c": 19,
         "crypto/evp/evp_key.c": 14,
         "crypto/evp/evp_lib.c": 27,
@@ -262,6 +263,7 @@
         "cb_arg",
         "cbc",
         "in",
+        "initkey",
         "inlen",
         "libctx",
         "now",
@@ -293,7 +295,6 @@
         "ossl_lib_ctx_is_default",
         "ossl_lib_ctx_is_default",
         "ossl_lib_ctx_is_default",
-        "ossl_lib_ctx_is_global_default",
         "ossl_lib_ctx_is_global_default"
       ],
       "language_surface_not_modelled_by_name": [
@@ -357,12 +358,12 @@
     },
     "checked": {
       "authority_units": 168,
-      "crate_modules": 223,
+      "crate_modules": 226,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 25,
-      "divergence_names_covered": 33,
+      "divergence_names_covered": 34,
       "divergence_rows": 5,
-      "names_referenced_and_not_built": 18
+      "names_referenced_and_not_built": 19
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
     "counts": {},
@@ -479,13 +480,13 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "6b579e478d808936e4b0afff8cea086fc553bd005afdc1cb052ea2a0e05d986f",
+  "body_hash": "92ef53e6525bc54b73ac0f58c6c87c5564deb423a054ee6ea1fb90af62c729b5",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "d6bda3aaefdc527b51aa3498d200b8f8d87991a4e9514f62377509118c645d51"
+      "sha256": "2cb47d356854ef68d7eb3081d062cf9a6b1923cb3f03f11dcbcd0c1ba00127a7"
     },
     {
       "name": "macro-owners",
@@ -500,7 +501,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "d916ac359f406cd58ff0d67d598599291a767d8095087c6491846e18a1beda1f"
+      "sha256": "f9f518efc5bd64842f57e66f804ed7e127f76d15ae293e6fdc9c1ac45da0632a"
     },
     {
       "name": "symbol-ownership",
@@ -515,7 +516,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "4c71a427fe948ac0b82ffc9d33621dae6293cb11ab77f7bdd852caac3953f2fb"
+      "sha256": "9d33cc1f09b2800b39d54d72f3711b96e65e8aa59b7bba3d78266881685f25ff"
     },
     {
       "name": "phase-state",
@@ -525,7 +526,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "113d55cc270b7e23ddd3421ac63b33029f7062ef34510c9ed181da318ce75b87"
+      "sha256": "37547ea97ff9fd3768bf41fdf6922e5bc523aed808c7bc4d9cc2ab68512edc3a"
     },
     {
       "name": "crate-source-tree",

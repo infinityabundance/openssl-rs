@@ -73,48 +73,238 @@
     },
     "provider_context": {
       "authority": {
-        "effect": "every provider cipher context stores the creating provider's library context, and the GCM no-IV arm and `cipher_tdes_wrap.c`'s IV generation call `RAND_bytes_ex(ctx->libctx, ...)` against it",
-        "line": "ctx->libctx = PROV_LIBCTX_OF(provctx);",
-        "unit": "providers/implementations/ciphers/ciphercommon.c.in"
+        "effect": "a provider object stores the creating provider's library context, and the GCM no-IV arm and `cipher_tdes_wrap.c`'s IV generation call `RAND_bytes_ex(ctx->libctx, ...)` against it",
+        "line": "\\w+->libctx\\s*=\\s*PROV_LIBCTX_OF\\(provctx\\)",
+        "unit": "providers/implementations"
       },
-      "blocked_rows": [
-        [
-          "default",
-          "OSSL_OP_CIPHER",
-          "AES-256-GCM"
-        ],
-        [
-          "default",
-          "OSSL_OP_CIPHER",
-          "AES-192-GCM"
-        ],
-        [
-          "default",
-          "OSSL_OP_CIPHER",
-          "AES-128-GCM"
-        ],
-        [
-          "default",
-          "OSSL_OP_CIPHER",
-          "DES3-WRAP"
-        ]
-      ],
-      "court_requirement": "Before Phase 9 retires a random-dependent row, the observation has to be taken in a **private `OSSL_LIB_CTX`**, not the global default context: with both providers loaded in the global context the isolation difference is invisible, so a passing test there would certify nothing about this obligation.",
+      "court_arm": "`RT-CIPHER`'s `defltsiv.libctx*` observations, in two parts. The first is that a private `OSSL_LIB_CTX` is created, the default provider is loaded **in it**, AES-128-SIV is fetched there, and the tag matches both the same run in the global context and the published RFC 5297 A.1 value. The second is what catches a NULL context, because the first part cannot: the global context can always answer the row's sub-fetches, so the *values* are identical either way. So `fips=yes` is set as the private context's default properties -- a per-`OSSL_LIB_CTX` preference -- and `EVP_MAC_fetch(lc, \"CMAC\", NULL)` and a fresh `EVP_EncryptInit_ex2` on the already-fetched row are observed with it set, while the same `EVP_MAC_fetch(NULL, ...)` is observed unchanged. SIV is the row that makes scoping observable at all: `aes_siv_initkey` and `ossl_siv128_init` both sub-fetch through `PROV_LIBCTX_OF`, so with a NULL context the operation *succeeds* where the authority's fails.",
       "crate": [
         {
-          "fact": "`ossl_default_provider_init` publishes a NULL provctx",
+          "fact": "`ossl_default_provider_init` builds a `PROV_CTX` and stores it in `*provctx`",
           "path": "src/provider/digest.rs"
         },
         {
-          "fact": "`ossl_cipher_generic_initkey` takes the provider context and ignores it",
+          "fact": "the two landed sites assign '(*ctx).libctx = crate::provider::ctx::prov_libctx_of(provctx);' inside ossl_cipher_generic_initkey and aes_siv_newctx",
           "path": "src/provider/cipher.rs"
         },
         {
-          "fact": "no assignment from a provider context to `(*ctx).libctx` exists; the field is only ever NULL-initialised in a unit test",
-          "path": "src/provider/cipher.rs"
+          "fact": "`prov_libctx_of` is `PROV_LIBCTX_OF`, and the accessors accept a NULL context",
+          "path": "src/provider/ctx.rs"
         }
       ],
-      "obligation": "The default provider's `provctx` is NULL in this crate, so `PROV_LIBCTX_OF(provctx)` -- and therefore a provider cipher context's `libctx` -- cannot be supplied. Counted as the **second** blocker of every provider row whose first blocker is randomness, because those are the rows where `ctx->libctx` is what the random call resolves against. It is the provider's own port of D117's residual."
+      "libctx_carry_note": "All 26 authority sites that acquire `PROV_LIBCTX_OF` into an object are classified: 2 landed and anchored per crate function, 2 open on a named phase, 22 in a family no current subphase has reached. Readers of the field need no row: they read what these assignments set.",
+      "libctx_carry_sites": [
+        {
+          "authority_line": 759,
+          "blocked_by": null,
+          "crate_fn": "ossl_cipher_generic_initkey",
+          "owning_phase": "8.3",
+          "state": "landed",
+          "unit": "providers/implementations/ciphers/ciphercommon.c.in"
+        },
+        {
+          "authority_line": 44,
+          "blocked_by": null,
+          "crate_fn": "aes_siv_newctx",
+          "owning_phase": "8.3",
+          "state": "landed",
+          "unit": "providers/implementations/ciphers/cipher_aes_siv.c"
+        },
+        {
+          "authority_line": 38,
+          "blocked_by": "the `AES-*-GCM-SIV` rows are 8.3's own remaining work",
+          "crate_fn": null,
+          "owning_phase": "8.3",
+          "state": "open",
+          "unit": "providers/implementations/ciphers/cipher_aes_gcm_siv.c"
+        },
+        {
+          "authority_line": 47,
+          "blocked_by": "the `AES-*-GCM` rows are handed to phase 9 on `RAND_bytes_ex`",
+          "crate_fn": null,
+          "owning_phase": "9",
+          "state": "open",
+          "unit": "providers/implementations/ciphers/ciphercommon_gcm.c.in"
+        },
+        {
+          "authority_line": 248,
+          "blocked_by": null,
+          "crate_fn": null,
+          "owning_phase": "8.4",
+          "state": "later",
+          "unit": "providers/implementations/signature/rsa_sig.c.in"
+        },
+        {
+          "authority_line": 96,
+          "blocked_by": null,
+          "crate_fn": null,
+          "owning_phase": "8.4",
+          "state": "later",
+          "unit": "providers/implementations/asymciphers/rsa_enc.c.in"
+        },
+        {
+          "authority_line": 100,
+          "blocked_by": null,
+          "crate_fn": null,
+          "owning_phase": "8.4",
+          "state": "later",
+          "unit": "providers/implementations/kem/rsa_kem.c.in"
+        },
+        {
+          "authority_line": 99,
+          "blocked_by": null,
+          "crate_fn": null,
+          "owning_phase": "8.5",
+          "state": "later",
+          "unit": "providers/implementations/exchange/dh_exch.c.in"
+        },
+        {
+          "authority_line": 144,
+          "blocked_by": null,
+          "crate_fn": null,
+          "owning_phase": "8.6",
+          "state": "later",
+          "unit": "providers/implementations/signature/dsa_sig.c.in"
+        },
+        {
+          "authority_line": 163,
+          "blocked_by": null,
+          "crate_fn": null,
+          "owning_phase": "8.7",
+          "state": "later",
+          "unit": "providers/implementations/signature/ecdsa_sig.c.in"
+        },
+        {
+          "authority_line": 182,
+          "blocked_by": null,
+          "crate_fn": null,
+          "owning_phase": "8.7",
+          "state": "later",
+          "unit": "providers/implementations/signature/eddsa_sig.c.in"
+        },
+        {
+          "authority_line": 132,
+          "blocked_by": null,
+          "crate_fn": null,
+          "owning_phase": "8.7",
+          "state": "later",
+          "unit": "providers/implementations/signature/sm2_sig.c.in"
+        },
+        {
+          "authority_line": 61,
+          "blocked_by": null,
+          "crate_fn": null,
+          "owning_phase": "8.7",
+          "state": "later",
+          "unit": "providers/implementations/asymciphers/sm2_enc.c.in"
+        },
+        {
+          "authority_line": 205,
+          "blocked_by": null,
+          "crate_fn": null,
+          "owning_phase": "8.7",
+          "state": "later",
+          "unit": "providers/implementations/kem/ec_kem.c.in"
+        },
+        {
+          "authority_line": 169,
+          "blocked_by": null,
+          "crate_fn": null,
+          "owning_phase": "8.7",
+          "state": "later",
+          "unit": "providers/implementations/kem/ecx_kem.c.in"
+        },
+        {
+          "authority_line": 62,
+          "blocked_by": null,
+          "crate_fn": null,
+          "owning_phase": "8.8",
+          "state": "later",
+          "unit": "providers/implementations/signature/mac_legacy_sig.c"
+        },
+        {
+          "authority_line": 44,
+          "blocked_by": null,
+          "crate_fn": null,
+          "owning_phase": "8.8",
+          "state": "later",
+          "unit": "providers/implementations/keymgmt/kdf_legacy_kmgmt.c"
+        },
+        {
+          "authority_line": 944,
+          "blocked_by": null,
+          "crate_fn": null,
+          "owning_phase": null,
+          "state": "later",
+          "unit": "providers/implementations/kdfs/argon2.c.in"
+        },
+        {
+          "authority_line": 963,
+          "blocked_by": null,
+          "crate_fn": null,
+          "owning_phase": null,
+          "state": "later",
+          "unit": "providers/implementations/kdfs/argon2.c.in"
+        },
+        {
+          "authority_line": 982,
+          "blocked_by": null,
+          "crate_fn": null,
+          "owning_phase": null,
+          "state": "later",
+          "unit": "providers/implementations/kdfs/argon2.c.in"
+        },
+        {
+          "authority_line": 101,
+          "blocked_by": null,
+          "crate_fn": null,
+          "owning_phase": null,
+          "state": "later",
+          "unit": "providers/implementations/exchange/ecdh_exch.c.in"
+        },
+        {
+          "authority_line": 67,
+          "blocked_by": null,
+          "crate_fn": null,
+          "owning_phase": null,
+          "state": "later",
+          "unit": "providers/implementations/kem/template_kem.c"
+        },
+        {
+          "authority_line": 45,
+          "blocked_by": null,
+          "crate_fn": null,
+          "owning_phase": null,
+          "state": "later",
+          "unit": "providers/implementations/kem/mlx_kem.c"
+        },
+        {
+          "authority_line": 47,
+          "blocked_by": null,
+          "crate_fn": null,
+          "owning_phase": null,
+          "state": "later",
+          "unit": "providers/implementations/signature/lms_signature.c"
+        },
+        {
+          "authority_line": 95,
+          "blocked_by": null,
+          "crate_fn": null,
+          "owning_phase": null,
+          "state": "later",
+          "unit": "providers/implementations/signature/ml_dsa_sig.c.in"
+        },
+        {
+          "authority_line": 85,
+          "blocked_by": null,
+          "crate_fn": null,
+          "owning_phase": null,
+          "state": "later",
+          "unit": "providers/implementations/signature/slh_dsa_sig.c.in"
+        }
+      ],
+      "state": "discharged",
+      "what": "Every provider object the crate builds acquires the library context of the provider that created it, so a row's sub-fetches and its `RAND_bytes_ex(ctx->libctx, …)` calls resolve in the creating provider's context rather than the global one. D240 recorded the gap as a measured obligation and made an assignment to a `.libctx` field its retirement condition; D241 landed the plumbing and D242 widened the measurement from one needle to the authority's whole acquisition census, so this block is the inverse measurement and fails if any landed site is removed or narrowed."
     },
     "providers": [
       {
@@ -1488,12 +1678,12 @@
         "operation": "OSSL_OP_CIPHER",
         "operation_id": 2,
         "owning_phase": 8,
-        "plan_match": "operation-default",
+        "plan_match": "crate-table",
         "property_definition": "provider=default",
         "provider": "default",
         "row_order": 30,
         "source": "providers/defltprov.c",
-        "state": "open",
+        "state": "implemented",
         "table_symbol": "deflt_ciphers"
       },
       {
@@ -1508,12 +1698,12 @@
         "operation": "OSSL_OP_CIPHER",
         "operation_id": 2,
         "owning_phase": 8,
-        "plan_match": "operation-default",
+        "plan_match": "crate-table",
         "property_definition": "provider=default",
         "provider": "default",
         "row_order": 31,
         "source": "providers/defltprov.c",
-        "state": "open",
+        "state": "implemented",
         "table_symbol": "deflt_ciphers"
       },
       {
@@ -1528,12 +1718,12 @@
         "operation": "OSSL_OP_CIPHER",
         "operation_id": 2,
         "owning_phase": 8,
-        "plan_match": "operation-default",
+        "plan_match": "crate-table",
         "property_definition": "provider=default",
         "provider": "default",
         "row_order": 32,
         "source": "providers/defltprov.c",
-        "state": "open",
+        "state": "implemented",
         "table_symbol": "deflt_ciphers"
       },
       {
@@ -1603,7 +1793,7 @@
           "id-aes256-GCM",
           "2.16.840.1.101.3.4.1.46"
         ],
-        "blocked_by": "RAND_bytes_ex: ciphercommon_gcm.c.in:423 and :536 (docs/DECISIONS.md D234).  **Second blocker (D240):** the provider context. `ossl_cipher_generic_initkey` stores `PROV_LIBCTX_OF(provctx)` on `ctx->libctx` so the random call resolves against the library context of the provider that created the cipher, and this crate's `ossl_default_provider_init` publishes a NULL `provctx`. Landing `RAND_bytes_ex` alone would therefore answer with the *global* context where the authority answers with the fetching `OSSL_LIB_CTX`; the observation has to be taken in a private libctx. `forensics/atlas/provider-algorithms.json`'s `provider_context` block is the measured record and fails if either fact moves.",
+        "blocked_by": "RAND_bytes_ex: ciphercommon_gcm.c.in:423 and :536 (docs/DECISIONS.md D234).",
         "capability_filtered": true,
         "capability_predicate": null,
         "dispatch_table_symbol": "ossl_aes256gcm_functions",
@@ -1625,7 +1815,7 @@
           "id-aes192-GCM",
           "2.16.840.1.101.3.4.1.26"
         ],
-        "blocked_by": "RAND_bytes_ex: ciphercommon_gcm.c.in:423 and :536 (docs/DECISIONS.md D234).  **Second blocker (D240):** the provider context. `ossl_cipher_generic_initkey` stores `PROV_LIBCTX_OF(provctx)` on `ctx->libctx` so the random call resolves against the library context of the provider that created the cipher, and this crate's `ossl_default_provider_init` publishes a NULL `provctx`. Landing `RAND_bytes_ex` alone would therefore answer with the *global* context where the authority answers with the fetching `OSSL_LIB_CTX`; the observation has to be taken in a private libctx. `forensics/atlas/provider-algorithms.json`'s `provider_context` block is the measured record and fails if either fact moves.",
+        "blocked_by": "RAND_bytes_ex: ciphercommon_gcm.c.in:423 and :536 (docs/DECISIONS.md D234).",
         "capability_filtered": true,
         "capability_predicate": null,
         "dispatch_table_symbol": "ossl_aes192gcm_functions",
@@ -1647,7 +1837,7 @@
           "id-aes128-GCM",
           "2.16.840.1.101.3.4.1.6"
         ],
-        "blocked_by": "RAND_bytes_ex: ciphercommon_gcm.c.in:423 and :536 (docs/DECISIONS.md D234).  **Second blocker (D240):** the provider context. `ossl_cipher_generic_initkey` stores `PROV_LIBCTX_OF(provctx)` on `ctx->libctx` so the random call resolves against the library context of the provider that created the cipher, and this crate's `ossl_default_provider_init` publishes a NULL `provctx`. Landing `RAND_bytes_ex` alone would therefore answer with the *global* context where the authority answers with the fetching `OSSL_LIB_CTX`; the observation has to be taken in a private libctx. `forensics/atlas/provider-algorithms.json`'s `provider_context` block is the measured record and fails if either fact moves.",
+        "blocked_by": "RAND_bytes_ex: ciphercommon_gcm.c.in:423 and :536 (docs/DECISIONS.md D234).",
         "capability_filtered": true,
         "capability_predicate": null,
         "dispatch_table_symbol": "ossl_aes128gcm_functions",
@@ -3444,7 +3634,7 @@
           "id-smime-alg-CMS3DESwrap",
           "1.2.840.113549.1.9.16.3.6"
         ],
-        "blocked_by": "RAND_bytes_ex: providers/implementations/ciphers/cipher_tdes_wrap.c's ossl_tdes_wrap_cbc_init generates the wrap IV with it, and rand.h is Phase 9's (docs/DECISIONS.md D234's class). The row is Phase 8's obligation, handed to Phase 9 with the blocker named rather than stubbed.  **Second blocker (D240):** the provider context. `ossl_cipher_generic_initkey` stores `PROV_LIBCTX_OF(provctx)` on `ctx->libctx` so the random call resolves against the library context of the provider that created the cipher, and this crate's `ossl_default_provider_init` publishes a NULL `provctx`. Landing `RAND_bytes_ex` alone would therefore answer with the *global* context where the authority answers with the fetching `OSSL_LIB_CTX`; the observation has to be taken in a private libctx. `forensics/atlas/provider-algorithms.json`'s `provider_context` block is the measured record and fails if either fact moves.",
+        "blocked_by": "RAND_bytes_ex: providers/implementations/ciphers/cipher_tdes_wrap.c's ossl_tdes_wrap_cbc_init generates the wrap IV with it, and rand.h is Phase 9's (docs/DECISIONS.md D234's class). The row is Phase 8's obligation, handed to Phase 9 with the blocker named rather than stubbed.",
         "capability_filtered": true,
         "capability_predicate": null,
         "dispatch_table_symbol": "ossl_tdes_wrap_cbc_functions",
@@ -3806,12 +3996,12 @@
         "operation": "OSSL_OP_MAC",
         "operation_id": 3,
         "owning_phase": 8,
-        "plan_match": "operation-default",
+        "plan_match": "crate-table",
         "property_definition": "provider=default",
         "provider": "default",
         "row_order": 2,
         "source": "providers/defltprov.c",
-        "state": "open",
+        "state": "implemented",
         "table_symbol": "deflt_macs"
       },
       {

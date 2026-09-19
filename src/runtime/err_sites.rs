@@ -18582,6 +18582,186 @@ pub(crate) const PROV_CIPHERCOMMON_CCM_560: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `siv_init` at `providers/implementations/ciphers/cipher_aes_siv.c:90` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_AES_SIV_90: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_siv.c",
+    line: 90,
+    func: c"siv_init",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `siv_cipher` at `providers/implementations/ciphers/cipher_aes_siv.c:122` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHER_AES_SIV_122: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_siv.c",
+    line: 122,
+    func: c"siv_cipher",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `aes_siv_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_siv.c:161` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_SIV_161: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_siv.c",
+    line: 161,
+    func: c"aes_siv_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_siv_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_siv.c:167` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_SIV_167: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_siv.c",
+    line: 167,
+    func: c"aes_siv_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_siv_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_siv.c:172` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_SIV_172: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_siv.c",
+    line: 172,
+    func: c"aes_siv_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_siv_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_siv.c:206` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_SIV_206: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_siv.c",
+    line: 206,
+    func: c"aes_siv_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_siv_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_siv.c:213` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_SIV_213: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_siv.c",
+    line: 213,
+    func: c"aes_siv_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_siv_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_siv.c:223` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_SIV_223: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_siv.c",
+    line: 223,
+    func: c"aes_siv_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `cmac_get_ctx_params_decoder` at `providers/implementations/macs/cmac_prov.c:245` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CMAC_PROV_245: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/cmac_prov.c",
+    line: 245,
+    func: c"cmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cmac_get_ctx_params_decoder` at `providers/implementations/macs/cmac_prov.c:257` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CMAC_PROV_257: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/cmac_prov.c",
+    line: 257,
+    func: c"cmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cmac_get_ctx_params_decoder` at `providers/implementations/macs/cmac_prov.c:269` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CMAC_PROV_269: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/cmac_prov.c",
+    line: 269,
+    func: c"cmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cmac_set_ctx_params_decoder` at `providers/implementations/macs/cmac_prov.c:350` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CMAC_PROV_350: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/cmac_prov.c",
+    line: 350,
+    func: c"cmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cmac_set_ctx_params_decoder` at `providers/implementations/macs/cmac_prov.c:370` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CMAC_PROV_370: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/cmac_prov.c",
+    line: 370,
+    func: c"cmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cmac_set_ctx_params_decoder` at `providers/implementations/macs/cmac_prov.c:382` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CMAC_PROV_382: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/cmac_prov.c",
+    line: 382,
+    func: c"cmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cmac_set_ctx_params_decoder` at `providers/implementations/macs/cmac_prov.c:395` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CMAC_PROV_395: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/cmac_prov.c",
+    line: 395,
+    func: c"cmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cmac_set_ctx_params_decoder` at `providers/implementations/macs/cmac_prov.c:406` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CMAC_PROV_406: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/cmac_prov.c",
+    line: 406,
+    func: c"cmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cmac_set_ctx_params` at `providers/implementations/macs/cmac_prov.c:449` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_CMAC_PROV_449: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/cmac_prov.c",
+    line: 449,
+    func: c"cmac_set_ctx_params",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `cmac_set_ctx_params` at `providers/implementations/macs/cmac_prov.c:460` (PROV_R_NOT_SUPPORTED).
+pub(crate) const PROV_CMAC_PROV_460: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/cmac_prov.c",
+    line: 460,
+    func: c"cmac_set_ctx_params",
+    lib: 57,
+    reason: 136,
+    dynamic_reason: false,
+};
+
 /// `digest_default_get_params_decoder` at `providers/implementations/digests/digestcommon.c:56` (PROV_R_REPEATED_PARAMETER).
 pub(crate) const PROV_DIGESTCOMMON_56: ErrSite = ErrSite {
     file: c"providers/implementations/digests/digestcommon.c",
@@ -20528,6 +20708,24 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_CIPHERCOMMON_CCM_514,
     PROV_CIPHERCOMMON_CCM_519,
     PROV_CIPHERCOMMON_CCM_560,
+    PROV_CIPHER_AES_SIV_90,
+    PROV_CIPHER_AES_SIV_122,
+    PROV_CIPHER_AES_SIV_161,
+    PROV_CIPHER_AES_SIV_167,
+    PROV_CIPHER_AES_SIV_172,
+    PROV_CIPHER_AES_SIV_206,
+    PROV_CIPHER_AES_SIV_213,
+    PROV_CIPHER_AES_SIV_223,
+    PROV_CMAC_PROV_245,
+    PROV_CMAC_PROV_257,
+    PROV_CMAC_PROV_269,
+    PROV_CMAC_PROV_350,
+    PROV_CMAC_PROV_370,
+    PROV_CMAC_PROV_382,
+    PROV_CMAC_PROV_395,
+    PROV_CMAC_PROV_406,
+    PROV_CMAC_PROV_449,
+    PROV_CMAC_PROV_460,
     PROV_DIGESTCOMMON_56,
     PROV_DIGESTCOMMON_67,
     PROV_DIGESTCOMMON_78,

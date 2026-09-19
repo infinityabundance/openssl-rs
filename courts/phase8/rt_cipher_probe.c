@@ -43,6 +43,7 @@
 #include <openssl/camellia.h>
 #include <openssl/cast.h>
 #include <openssl/core_dispatch.h>
+#include <openssl/crypto.h>
 #include <openssl/core_names.h>
 #include <openssl/des.h>
 #include <openssl/err.h>
@@ -3426,6 +3427,374 @@ static void rt_deflt_ccm(void)
     }
 }
 
+/*
+ * The default provider's AES-SIV rows. SIV's flow is the mirror image of every other AEAD here:
+ * there is no IV at all (`ivbits` is 0 and `siv_init` ignores whatever a caller passes), the
+ * AAD **is** the nonce per RFC 5297 and is fed as ordinary associated data, the tag is the
+ * synthetic IV and is produced by the payload update rather than by the final, and `Final` is
+ * what reports whether the operation succeeded. So the observations are: each row's shape;
+ * RFC 5297 Appendix A.1's own vector, which is an *independent* published expectation rather
+ * than a mirror of the authority; the two-piece AAD of that vector; the decrypt round trip; the
+ * tag rejection; an AAD-only operation; the tag-length refusal in both directions; and the
+ * `speed` parameter, which is the one knob that lifts S2V's single-operation limit.
+ */
+static void rt_deflt_siv(void)
+{
+    static const char *names[] = { "AES-256-SIV", "AES-192-SIV", "AES-128-SIV" };
+    /* RFC 5297 Appendix A.1, verbatim: the K1 || K2 key, the 24-octet associated data, the
+     * plaintext, the SIV and the ciphertext. The AD is **one** component, not two: the RFC
+     * prints it wrapped over two lines for width, and OpenSSL's own
+     * `test/recipes/30-test_evp_data/evpciph_aes_siv.txt` carries it as a single `AAD =` line.
+     * S2V is `D = dbl(D) xor CMAC(S_i)` per component, so feeding AD1||AD2 as two update calls
+     * would be a *different* SIV input -- which is exactly the mistake this comment records. */
+    static const unsigned char rkey[32] = {
+        0xff, 0xfe, 0xfd, 0xfc, 0xfb, 0xfa, 0xf9, 0xf8,
+        0xf7, 0xf6, 0xf5, 0xf4, 0xf3, 0xf2, 0xf1, 0xf0,
+        0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7,
+        0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff
+    };
+    static const unsigned char rad[24] = {
+        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+        0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+        0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27
+    };
+    static const unsigned char rpt[14] = {
+        0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
+        0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee
+    };
+    static const unsigned char rsiv[16] = {
+        0x85, 0x63, 0x2d, 0x07, 0xc6, 0xe8, 0xf3, 0x7f,
+        0x95, 0x0a, 0xcd, 0x32, 0x0a, 0x2e, 0xcc, 0x93
+    };
+    static const unsigned char rct[14] = {
+        0x40, 0xc0, 0x2b, 0x96, 0x90, 0xc4, 0xdc, 0x04,
+        0xda, 0xef, 0x7f, 0x6a, 0xfe, 0x5c
+    };
+    unsigned char key[64];
+    unsigned char in[48];
+    unsigned char aad[20];
+    unsigned char out[96];
+    unsigned char back[96];
+    unsigned char tag[16];
+    unsigned char bad[16];
+    char buf[160];
+    char nbuf[176];
+    size_t n;
+
+    rt_fill(key, sizeof(key), 121);
+    rt_fill(in, sizeof(in), 122);
+    rt_fill(aad, sizeof(aad), 123);
+
+    /* Each row's shape: the key is *twice* the algorithm's, and the IV length is zero. */
+    for (n = 0; n < sizeof(names) / sizeof(names[0]); n++) {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, names[n], NULL);
+
+        snprintf(buf, sizeof(buf), "defltsiv.%s", names[n]);
+        printf("%s.fetched=%d\n", buf, c != NULL);
+        if (c == NULL)
+            continue;
+        printf("%s.keylen=%d\n", buf, EVP_CIPHER_get_key_length(c));
+        printf("%s.ivlen=%d\n", buf, EVP_CIPHER_get_iv_length(c));
+        printf("%s.blocksize=%d\n", buf, EVP_CIPHER_get_block_size(c));
+        printf("%s.mode=%d\n", buf, EVP_CIPHER_get_mode(c));
+        EVP_CIPHER_free(c);
+    }
+
+    /* RFC 5297 Appendix A.1 through AES-128-SIV, which is the row that vector's 32-octet key
+     * belongs to. The published SIV and ciphertext are compared to what the provider produces,
+     * so this arm is a known-answer test *and* a parity observation. */
+    {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-SIV", NULL);
+        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+        int outl = 0, finl = 0, aadl = 0;
+
+        if (c == NULL || ctx == NULL
+            || EVP_EncryptInit_ex2(ctx, c, rkey, NULL, NULL) != 1
+            || EVP_EncryptUpdate(ctx, NULL, &aadl, rad, (int)sizeof(rad)) != 1
+            || EVP_EncryptUpdate(ctx, out, &outl, rpt, (int)sizeof(rpt)) != 1
+            || EVP_EncryptFinal_ex(ctx, out + outl, &finl) != 1
+            || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, 16, tag) != 1) {
+            printf("defltsiv.rfc.enc=0\n");
+        } else {
+            printf("defltsiv.rfc.ctlen=%d\n", outl + finl);
+            printf("defltsiv.rfc.ct=%d\n",
+                   (size_t)(outl + finl) == sizeof(rct) && memcmp(out, rct, sizeof(rct)) == 0);
+            printf("defltsiv.rfc.siv=%d\n", memcmp(tag, rsiv, 16) == 0);
+            rt_hex("defltsiv.rfc.ctv", out, (size_t)(outl + finl));
+            rt_hex("defltsiv.rfc.sivv", tag, 16);
+            printf("defltsiv.rfc.taglen=%d\n", EVP_CIPHER_CTX_get_tag_length(ctx));
+        }
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+
+        /* The round trip, under the *published* SIV rather than the produced one. */
+        ctx = EVP_CIPHER_CTX_new();
+        if (c != NULL && ctx != NULL
+            && EVP_DecryptInit_ex2(ctx, c, rkey, NULL, NULL) == 1
+            && EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16, (void *)rsiv) == 1
+            && EVP_DecryptUpdate(ctx, NULL, &aadl, rad, (int)sizeof(rad)) == 1
+            && EVP_DecryptUpdate(ctx, back, &outl, rct, (int)sizeof(rct)) == 1) {
+            printf("defltsiv.rfc.accept=%d\n",
+                   EVP_DecryptFinal_ex(ctx, back + outl, &finl) == 1
+                   && (size_t)(outl + finl) == sizeof(rpt)
+                   && memcmp(back, rpt, sizeof(rpt)) == 0);
+        } else {
+            printf("defltsiv.rfc.accept=0\n");
+        }
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+
+        /* One SIV bit flipped: the refusal, and the cleansed output behind it. */
+        memcpy(bad, rsiv, 16);
+        bad[0] ^= 0x80;
+        ctx = EVP_CIPHER_CTX_new();
+        if (c != NULL && ctx != NULL
+            && EVP_DecryptInit_ex2(ctx, c, rkey, NULL, NULL) == 1
+            && EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16, bad) == 1
+            && EVP_DecryptUpdate(ctx, NULL, &aadl, rad, (int)sizeof(rad)) == 1
+            && EVP_DecryptUpdate(ctx, back, &outl, rct, (int)sizeof(rct)) == 1) {
+            printf("defltsiv.rfc.reject=%d\n",
+                   EVP_DecryptFinal_ex(ctx, back + outl, &finl) == 0);
+            rt_hex("defltsiv.rfc.rejectbuf", back, sizeof(rct));
+        } else {
+            printf("defltsiv.rfc.reject=0\n");
+        }
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+        if (c != NULL)
+            EVP_CIPHER_free(c);
+    }
+
+    /* The round trip over each row's own key length, with one AAD piece and a 48-octet
+     * message, so every row's fetched CBC/CTR pair is exercised. */
+    for (n = 0; n < sizeof(names) / sizeof(names[0]); n++) {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, names[n], NULL);
+        EVP_CIPHER_CTX *ectx = EVP_CIPHER_CTX_new();
+        EVP_CIPHER_CTX *dctx = NULL;
+        int outl = 0, finl = 0, aadl = 0, decl = 0, defl = 0;
+
+        snprintf(buf, sizeof(buf), "defltsiv.%s", names[n]);
+        if (c == NULL || ectx == NULL
+            || EVP_EncryptInit_ex2(ectx, c, key, NULL, NULL) != 1
+            || EVP_EncryptUpdate(ectx, NULL, &aadl, aad, 13) != 1
+            || EVP_EncryptUpdate(ectx, out, &outl, in, 48) != 1
+            || EVP_EncryptFinal_ex(ectx, out + outl, &finl) != 1
+            || EVP_CIPHER_CTX_ctrl(ectx, EVP_CTRL_AEAD_GET_TAG, 16, tag) != 1) {
+            printf("%s.enc=0\n", buf);
+        } else {
+            printf("%s.ctlen=%d\n", buf, outl + finl);
+            snprintf(nbuf, sizeof(nbuf), "%s.ct", buf);
+            rt_hex(nbuf, out, (size_t)(outl + finl));
+            snprintf(nbuf, sizeof(nbuf), "%s.tag", buf);
+            rt_hex(nbuf, tag, 16);
+        }
+        if (ectx != NULL)
+            EVP_CIPHER_CTX_free(ectx);
+
+        dctx = EVP_CIPHER_CTX_new();
+        if (c != NULL && dctx != NULL
+            && EVP_DecryptInit_ex2(dctx, c, key, NULL, NULL) == 1
+            && EVP_CIPHER_CTX_ctrl(dctx, EVP_CTRL_AEAD_SET_TAG, 16, tag) == 1
+            && EVP_DecryptUpdate(dctx, NULL, &aadl, aad, 13) == 1
+            && EVP_DecryptUpdate(dctx, back, &decl, out, 48) == 1) {
+            printf("%s.accept=%d\n", buf,
+                   EVP_DecryptFinal_ex(dctx, back + decl, &defl) == 1
+                   && (size_t)(decl + defl) == 48 && memcmp(back, in, 48) == 0);
+        } else {
+            printf("%s.accept=0\n", buf);
+        }
+        if (dctx != NULL)
+            EVP_CIPHER_CTX_free(dctx);
+
+        /* The key length is the row's own; the wrong one is refused. EVP derives it from the
+         * cipher, so that refusal is the dispatch arm's, not this one's. */
+        if (c != NULL)
+            EVP_CIPHER_free(c);
+    }
+
+    /* An AAD-only operation: the tag is S2V over the AAD alone, and the payload is empty. */
+    {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-SIV", NULL);
+        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+        int outl = 0, finl = 0, aadl = 0;
+
+        if (c == NULL || ctx == NULL
+            || EVP_EncryptInit_ex2(ctx, c, rkey, NULL, NULL) != 1
+            || EVP_EncryptUpdate(ctx, NULL, &aadl, rad, 16) != 1
+            || EVP_EncryptUpdate(ctx, out, &outl, in, 0) != 1
+            || EVP_EncryptFinal_ex(ctx, out + outl, &finl) != 1
+            || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, 16, tag) != 1) {
+            printf("defltsiv.aadonly=0\n");
+        } else {
+            printf("defltsiv.aadonly.len=%d\n", outl + finl);
+            rt_hex("defltsiv.aadonly.tag", tag, 16);
+        }
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+        if (c != NULL)
+            EVP_CIPHER_free(c);
+    }
+
+    /* The tag-length window: `ossl_siv128_set_tag` and `get_tag` accept only 16, and the
+     * getter refuses an encryption context that has not produced one. */
+    {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-SIV", NULL);
+        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+
+        if (c != NULL && ctx != NULL && EVP_EncryptInit_ex2(ctx, c, NULL, NULL, NULL) == 1) {
+            printf("defltsiv.tl.get=%d\n",
+                   EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, 16, tag));
+            printf("defltsiv.tl.get15=%d\n",
+                   EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, 15, tag));
+            printf("defltsiv.tl.set=%d\n",
+                   EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16, tag));
+            printf("defltsiv.tl.set15=%d\n",
+                   EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 15, tag));
+        } else {
+            printf("defltsiv.tl.get=0\n");
+        }
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+        if (c != NULL)
+            EVP_CIPHER_free(c);
+    }
+
+    /* `speed` is the only settable besides the tag and the key length; setting it must not
+     * disturb the operation. */
+    {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-SIV", NULL);
+        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+        int outl = 0, finl = 0, aadl = 0;
+
+        if (c == NULL || ctx == NULL
+            || EVP_EncryptInit_ex2(ctx, c, NULL, NULL, NULL) != 1
+            || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_SET_SPEED, 1, NULL) != 1
+            || EVP_EncryptInit_ex2(ctx, NULL, rkey, NULL, NULL) != 1
+            || EVP_EncryptUpdate(ctx, NULL, &aadl, rad, 24) != 1
+            || EVP_EncryptUpdate(ctx, out, &outl, rpt, 14) != 1
+            || EVP_EncryptFinal_ex(ctx, out + outl, &finl) != 1
+            || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, 16, tag) != 1) {
+            printf("defltsiv.speed.enc=0\n");
+        } else {
+            printf("defltsiv.speed.same=%d\n", memcmp(tag, rsiv, 16) == 0);
+        }
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+        if (c != NULL)
+            EVP_CIPHER_free(c);
+    }
+
+    /* The provider context's library context (`PROV_LIBCTX_OF`), the observation D240 named and
+     * D241's plumbing exists to make true. A private `OSSL_LIB_CTX` is created, the default
+     * provider is loaded **in it**, and AES-128-SIV is fetched and run there; the same operation
+     * is run in the global context and the two tags are compared to each other and to the
+     * published RFC 5297 A.1 value.
+     *
+     * SIV is the one landed row that makes this observable at all. `aes_siv_initkey` and
+     * `ossl_siv128_init` both sub-fetch their CBC/CTR pair through `PROV_LIBCTX_OF(provctx)`, so
+     * a NULL `provctx` -- or a NULL `ctx->libctx` -- would resolve those sub-fetches in the
+     * *global* library context instead of the private one. The tag would still be correct, which
+     * is exactly why this arm is written as a three-way observation rather than as a KAT: the
+     * `same` line is the one that would move first if the context stopped being carried. */
+    {
+        OSSL_LIB_CTX *lc = OSSL_LIB_CTX_new();
+        OSSL_PROVIDER *lp = NULL;
+        EVP_CIPHER *gc = EVP_CIPHER_fetch(NULL, "AES-128-SIV", NULL);
+        EVP_CIPHER *pc = NULL;
+        unsigned char gtag[16];
+        unsigned char ptag[16];
+        int gok = 0;
+        int pok = 0;
+
+        memset(gtag, 0, sizeof(gtag));
+        memset(ptag, 0, sizeof(ptag));
+
+        printf("defltsiv.libctx.new=%d\n", lc != NULL);
+        if (lc != NULL) {
+            lp = OSSL_PROVIDER_load(lc, "default");
+            printf("defltsiv.libctx.load=%d\n", lp != NULL);
+            pc = EVP_CIPHER_fetch(lc, "AES-128-SIV", NULL);
+        }
+        printf("defltsiv.libctx.fetch=%d\n", pc != NULL);
+
+        if (gc != NULL) {
+            EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+            int outl = 0, finl = 0, aadl = 0;
+
+            if (ctx != NULL
+                && EVP_EncryptInit_ex2(ctx, gc, rkey, NULL, NULL) == 1
+                && EVP_EncryptUpdate(ctx, NULL, &aadl, rad, (int)sizeof(rad)) == 1
+                && EVP_EncryptUpdate(ctx, out, &outl, rpt, (int)sizeof(rpt)) == 1
+                && EVP_EncryptFinal_ex(ctx, out + outl, &finl) == 1
+                && EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, 16, gtag) == 1)
+                gok = 1;
+            if (ctx != NULL)
+                EVP_CIPHER_CTX_free(ctx);
+        }
+        if (pc != NULL) {
+            EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+            int outl = 0, finl = 0, aadl = 0;
+
+            if (ctx != NULL
+                && EVP_EncryptInit_ex2(ctx, pc, rkey, NULL, NULL) == 1
+                && EVP_EncryptUpdate(ctx, NULL, &aadl, rad, (int)sizeof(rad)) == 1
+                && EVP_EncryptUpdate(ctx, out, &outl, rpt, (int)sizeof(rpt)) == 1
+                && EVP_EncryptFinal_ex(ctx, out + outl, &finl) == 1
+                && EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, 16, ptag) == 1)
+                pok = 1;
+            if (ctx != NULL)
+                EVP_CIPHER_CTX_free(ctx);
+        }
+
+        printf("defltsiv.libctx.globalkat=%d\n", gok && memcmp(gtag, rsiv, 16) == 0);
+        printf("defltsiv.libctx.privatekat=%d\n", pok && memcmp(ptag, rsiv, 16) == 0);
+        printf("defltsiv.libctx.same=%d\n", gok && pok && memcmp(gtag, ptag, 16) == 0);
+        rt_hex("defltsiv.libctx.privatesiv", ptag, 16);
+
+        /* The three lines above prove the private context *works*; they cannot prove the row's
+         * sub-fetches are *scoped* to it, because the global context can always answer them. This
+         * block makes scoping observable: default properties are a per-`OSSL_LIB_CTX` preference,
+         * and `ossl_siv128_init` reaches CMAC through `EVP_MAC_fetch(libctx, "CMAC", NULL)` with a
+         * NULL property query -- so the *default* properties of whichever context it was handed
+         * decide whether that fetch resolves. Setting `fips=yes` on the private context only must
+         * therefore break the private run and leave the global one alone. */
+        {
+            EVP_MAC *m = EVP_MAC_fetch(lc, "CMAC", NULL);
+            int pinit = -1;
+
+            printf("defltsiv.libctx.macbefore=%d\n", m != NULL);
+            EVP_MAC_free(m);
+            printf("defltsiv.libctx.setprops=%d\n",
+                   lc != NULL && EVP_set_default_properties(lc, "fips=yes") == 1);
+            m = EVP_MAC_fetch(lc, "CMAC", NULL);
+            printf("defltsiv.libctx.macafter=%d\n", m != NULL);
+            EVP_MAC_free(m);
+            m = EVP_MAC_fetch(NULL, "CMAC", NULL);
+            printf("defltsiv.libctx.macglobal=%d\n", m != NULL);
+            EVP_MAC_free(m);
+
+            if (pc != NULL) {
+                EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+
+                if (ctx != NULL)
+                    pinit = EVP_EncryptInit_ex2(ctx, pc, rkey, NULL, NULL);
+                printf("defltsiv.libctx.propsinit=%d\n", pinit);
+                if (ctx != NULL)
+                    EVP_CIPHER_CTX_free(ctx);
+            }
+        }
+
+        if (pc != NULL)
+            EVP_CIPHER_free(pc);
+        if (gc != NULL)
+            EVP_CIPHER_free(gc);
+        if (lp != NULL)
+            OSSL_PROVIDER_unload(lp);
+        if (lc != NULL)
+            OSSL_LIB_CTX_free(lc);
+    }
+}
+
 /* The drained queue, normalised the one way both sides can hold: library and reason as numbers,
  * the authority's three debug strings verbatim, and the entry count. Declared here because the
  * EVP arm below uses it and `rt_errq` is defined with the dispatch arm. */
@@ -3806,6 +4175,77 @@ static void rt_disp_failures(void)
         freectx(ctx);
     }
 
+    /* ---- AES-128-SIV: the four reachable provider refusals ---- */
+    {
+        rt_setctxparams_fn setctxparams;
+        OSSL_PARAM params[3];
+        unsigned int speed = 1;
+        size_t klen = 16;
+
+        d = rt_disp(algs, "AES-128-SIV");
+        printf("disp.siv=%d\n", d != NULL);
+        newctx = (rt_newctx_fn)rt_fn(d, OSSL_FUNC_CIPHER_NEWCTX);
+        einit = (rt_init_fn)rt_fn(d, OSSL_FUNC_CIPHER_ENCRYPT_INIT);
+        dinit = (rt_init_fn)rt_fn(d, OSSL_FUNC_CIPHER_DECRYPT_INIT);
+        update = (rt_update_fn)rt_fn(d, OSSL_FUNC_CIPHER_UPDATE);
+        freectx = (rt_free_fn)rt_fn(d, OSSL_FUNC_CIPHER_FREECTX);
+        setctxparams = (rt_setctxparams_fn)rt_fn(d, OSSL_FUNC_CIPHER_SET_CTX_PARAMS);
+
+        /* The key is twice the algorithm's: 31 octets is neither half of a pair. */
+        ctx = newctx(pctx);
+        ERR_clear_error();
+        r = einit(ctx, key, 31, NULL, 0, NULL);
+        printf("disp.sivkeylen.ret=%d\n", r);
+        rt_errq("sivkeylen");
+        freectx(ctx);
+
+        /* A non-NULL output with too little room. The `out != NULL` guard is why the AAD and
+         * final calls, which pass NULL, are not refused here. */
+        ctx = newctx(pctx);
+        ERR_clear_error();
+        r = einit(ctx, key, 32, NULL, 0, NULL);
+        outl = 0;
+        r = update(ctx, out, &outl, 8, in, 32);
+        printf("disp.sivsmall.update=%d\n", r);
+        rt_errq("sivsmall");
+        freectx(ctx);
+
+        /* A tag parameter of the wrong type on a *decryption* context: the encryption side
+         * returns success without looking. */
+        ctx = newctx(pctx);
+        ERR_clear_error();
+        r = dinit(ctx, key, 32, NULL, 0, NULL);
+        params[0] = OSSL_PARAM_construct_uint(OSSL_CIPHER_PARAM_AEAD_TAG, &speed);
+        params[1] = OSSL_PARAM_construct_end();
+        printf("disp.sivtagtype.ret=%d\n", setctxparams(ctx, params));
+        rt_errq("sivtagtype");
+
+        /* A `speed` of the wrong type. */
+        params[0] = OSSL_PARAM_construct_size_t(OSSL_CIPHER_PARAM_SPEED, &klen);
+        printf("disp.sivspeedtype.ret=%d\n", setctxparams(ctx, params));
+        rt_errq("sivspeedtype");
+
+        /* A `keylen` that does not parse, and one that parses but differs -- the second is a
+         * bare `return 0` with *no* raise, which the drained queue shows. */
+        params[0] = OSSL_PARAM_construct_uint(OSSL_CIPHER_PARAM_KEYLEN, &speed);
+        printf("disp.sivkeylentype.ret=%d\n", setctxparams(ctx, params));
+        rt_errq("sivkeylentype");
+        params[0] = OSSL_PARAM_construct_size_t(OSSL_CIPHER_PARAM_KEYLEN, &klen);
+        printf("disp.sivkeylenmismatch.ret=%d\n", setctxparams(ctx, params));
+        rt_errq("sivkeylenmismatch");
+        freectx(ctx);
+
+        /* A tag on an *encryption* context is ignored with success rather than refused. */
+        ctx = newctx(pctx);
+        ERR_clear_error();
+        r = einit(ctx, key, 32, NULL, 0, NULL);
+        params[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG, out, 16);
+        params[1] = OSSL_PARAM_construct_end();
+        printf("disp.sivtagenc.ret=%d\n", setctxparams(ctx, params));
+        rt_errq("sivtagenc");
+        freectx(ctx);
+    }
+
     /* ---- AES-128-WRAP ---- */
     d = rt_disp(algs, "AES-128-WRAP");
     printf("disp.wrap=%d\n", d != NULL);
@@ -3906,6 +4346,7 @@ int main(void)
     rt_deflt_xts();
     rt_deflt_ocb();
     rt_deflt_ccm();
+    rt_deflt_siv();
     rt_deflt_errors();
     rt_disp_failures();
     return 0;

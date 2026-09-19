@@ -83,12 +83,15 @@ pub(crate) mod activate;
 // 6.8d: `crypto/provider_conf.c`, the `providers` configuration module.
 pub(crate) mod cipher;
 pub(crate) mod conf;
+pub(crate) mod ctx;
 // 6.8e: `crypto/provider_child.c`, the child provider and its parent callbacks.
 pub(crate) mod child;
 pub(crate) mod core_dispatch;
 pub(crate) mod digest;
 pub(crate) mod init;
+pub(crate) mod mac;
 pub(crate) mod stores;
+pub(crate) mod util;
 
 use core::ffi::{c_char, c_int, c_uint, c_void};
 use core::ptr;

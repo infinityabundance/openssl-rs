@@ -7,10 +7,10 @@
     "census": {
       "names_a_file_the_authority_does_not_have": 4,
       "symbols_not_reached": 2,
-      "units_not_reached": 4
+      "units_not_reached": 5
     },
     "census_by_stratum": {
-      "8": 10
+      "8": 11
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
@@ -27,6 +27,7 @@
       "units_not_reached": [
         "crypto/chacha/chacha_enc.c",
         "crypto/poly1305/poly1305.c",
+        "providers/implementations/ciphers/cipher_aes_siv.c",
         "providers/implementations/ciphers/ciphercommon_block.c",
         "providers/implementations/ciphers/ciphercommon_hw.c"
       ]
@@ -44,7 +45,7 @@
       "unit_records": 67,
       "units_named_by_a_record": 70,
       "units_named_by_a_row": 141,
-      "units_reached": 137
+      "units_reached": 136
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -1325,28 +1326,6 @@
           "src/selftest/indicator.rs"
         ]
       },
-      "crypto/modes/siv128.c": {
-        "defines": [
-          "ossl_siv128_aad",
-          "ossl_siv128_cleanup",
-          "ossl_siv128_copy_ctx",
-          "ossl_siv128_decrypt",
-          "ossl_siv128_encrypt",
-          "ossl_siv128_finish",
-          "ossl_siv128_get_tag",
-          "ossl_siv128_init",
-          "ossl_siv128_new",
-          "ossl_siv128_set_tag",
-          "ossl_siv128_speed"
-        ],
-        "recorded_by": null,
-        "subphases": [
-          "8.3"
-        ],
-        "transcribed_by": [
-          "src/modes/siv128.rs"
-        ]
-      },
       "crypto/o_time.c": {
         "defines": [],
         "recorded_by": null,
@@ -1795,6 +1774,14 @@
         ],
         "transcribed_by": []
       },
+      "providers/implementations/ciphers/cipher_aes_siv.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
+      },
       "providers/implementations/ciphers/ciphercommon_block.c": {
         "defines": [],
         "recorded_by": null,
@@ -2156,23 +2143,23 @@
       "transcribed_units": 168
     }
   },
-  "body_hash": "9c82f99ea49aebe3f8414daf880b8b04ad3f944ef225bfcba8cfe60e78c06818",
+  "body_hash": "5e7a84b42bab75108801a367b1daf93f5426f76401524830f273f9b7c4675062",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "d6bda3aaefdc527b51aa3498d200b8f8d87991a4e9514f62377509118c645d51"
+      "sha256": "2cb47d356854ef68d7eb3081d062cf9a6b1923cb3f03f11dcbcd0c1ba00127a7"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "d916ac359f406cd58ff0d67d598599291a767d8095087c6491846e18a1beda1f"
+      "sha256": "f9f518efc5bd64842f57e66f804ed7e127f76d15ae293e6fdc9c1ac45da0632a"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "4c71a427fe948ac0b82ffc9d33621dae6293cb11ab77f7bdd852caac3953f2fb"
+      "sha256": "9d33cc1f09b2800b39d54d72f3711b96e65e8aa59b7bba3d78266881685f25ff"
     },
     {
       "name": "phase-state",
@@ -2182,7 +2169,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "113d55cc270b7e23ddd3421ac63b33029f7062ef34510c9ed181da318ce75b87"
+      "sha256": "37547ea97ff9fd3768bf41fdf6922e5bc523aed808c7bc4d9cc2ab68512edc3a"
     },
     {
       "name": "source-manifest",
@@ -2207,7 +2194,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "d879df663bb8b1daba5c3ca3e0d7cc83f9d39e846a7734a889f5c5e0cf09d555"
+      "sha256": "732caaa15e0918336ad3bb8893bfc2730df05f0b6ae0c43bb4f146020e493647"
     }
   ],
   "kind": "plan-reconciliation",

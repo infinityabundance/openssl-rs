@@ -2126,12 +2126,17 @@ static DEFLT_DIGESTS: [OsslAlgorithm; 28] = [
 ];
 
 /// `static const OSSL_ALGORITHM *deflt_query(void *provctx, int operation_id, int *no_cache)` —
-/// `providers/defltprov.c`, with the `OSSL_OP_DIGEST` and `OSSL_OP_CIPHER` arms.
+/// `providers/defltprov.c`, with the `OSSL_OP_DIGEST`, `OSSL_OP_CIPHER` and `OSSL_OP_MAC` arms.
 ///
 /// The other operations the authority answers are other subphases' and are absent, not stubbed.
+/// The authority's `OSSL_OP_CIPHER` arm returns `exported_ciphers` rather than `deflt_ciphers` —
+/// the capability-filtered copy `ossl_prov_cache_exported_algorithms` fills — which is correct
+/// only while every landed row is unconditional; that ordering is recorded in
+/// `forensics/atlas/provider-algorithms.json`'s `capability_filtering` prerequisite and is
+/// unchanged by this entry.
 ///
 /// # Safety
-/// `no_cache` must be writable; `provctx` is ignored by both arms.
+/// `no_cache` must be writable; `provctx` is ignored by all three arms.
 unsafe extern "C" fn deflt_query(
     _provctx: *mut c_void,
     operation_id: c_int,
@@ -2145,46 +2150,119 @@ unsafe extern "C" fn deflt_query(
     if operation_id == crate::provider::cipher::OSSL_OP_CIPHER {
         return crate::provider::cipher::DEFLT_CIPHERS.as_ptr();
     }
+    if operation_id == crate::provider::mac::OSSL_OP_MAC {
+        return crate::provider::mac::DEFLT_MACS.as_ptr();
+    }
     ptr::null()
 }
 
-/// `int ossl_default_provider_init(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in,
-/// const OSSL_DISPATCH **out, void **provctx)` — `providers/defltprov.c`.
-///
-/// **The digest and cipher halves.** The authority's body walks `in` for `CORE_GET_LIBCTX` and
-/// `CORE_GET_PARAMS`, builds a `provctx` with `ossl_prov_ctx_new` and a core BIO method, stores
-/// the handle in it, publishes `deflt_get_params`/`deflt_gettable_params` and
-/// `ossl_prov_get_capabilities`, and caches the exported cipher algorithm table. None of that
-/// is reachable from `OSSL_OP_DIGEST` or `OSSL_OP_CIPHER`: both queries ignore `provctx`, so
-/// this init publishes the one entry both halves use — `QUERY_OPERATION` — and leaves `provctx`
-/// NULL.
+/// `static void deflt_teardown(void *provctx)` — `providers/defltprov.c:735-739`, without its
+/// `BIO_meth_free` of the core BIO method, which this crate does not build (see
+/// `src/provider/ctx.rs`). Freeing the context is what keeps a provider that is registered and
+/// then dropped from leaking it.
 ///
 /// # Safety
-/// `out` and `provctx` must be writable; `handle` and `in_` are unused by this half.
+/// The dispatch contract: `provctx` is what `ossl_default_provider_init` published.
+unsafe extern "C" fn deflt_teardown(provctx: *mut c_void) {
+    // SAFETY: the caller's contract; `ossl_prov_ctx_free` accepts NULL.
+    unsafe { crate::provider::ctx::ossl_prov_ctx_free(provctx.cast()) };
+}
+
+/// `int ossl_default_provider_init(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in,
+/// const OSSL_DISPATCH **out, void **provctx)` — `providers/defltprov.c:754-807`.
+///
+/// **The provider context is why this function exists at all rather than publishing `NULL`.**
+/// The authority's comment says it directly: "We want to make sure that all calls from this
+/// provider that requires a library context use the same context as the one used to call our
+/// functions. We do that by passing it along in the provider context." `PROV_LIBCTX_OF(provctx)`
+/// is what `ossl_cipher_generic_initkey` stores on `ctx->libctx` and what every provider
+/// sub-fetch resolves against, so a NULL context here would make a private-`OSSL_LIB_CTX`
+/// application silently reach the global one. D240 recorded that as a measured obligation;
+/// `RT-CIPHER`'s private-libctx arm is what takes the observation where it discriminates.
+///
+/// Four things the authority does are **absent, and named**:
+///
+/// * `ossl_prov_bio_from_dispatch(in)` / `ossl_prov_seeding_from_dispatch(in)` are the first two
+///   calls in the authority's body, and their units (`providers/common/bio_prov.c` and
+///   `providers/common/provider_seeding.c`) are not transcribed. What they install is the core
+///   `BIO_METHOD` and the seeding callbacks, which the BIO and RAND strata need; the
+///   `||`-short-circuit they form is the *only* thing skipped, and nothing in this crate's
+///   landed rows reaches either callback;
+/// * `ossl_bio_prov_init_bio_method()` and the `corebiometh` field it fills;
+/// * `deflt_get_params`/`deflt_gettable_params` and their `OSSL_PROV_PARAM_*` keys;
+/// * `ossl_prov_get_capabilities` and `ossl_prov_cache_exported_algorithms`.
+///
+/// All four remain the D117 residual, and `(*prov).provctx` becoming non-NULL is the part that
+/// matters for correctness now: `OSSL_PROVIDER_get0_provider_ctx` on the default provider
+/// answers a real context, as the authority's does.
+///
+/// # Safety
+/// `out` and `provctx` must be writable; `handle` names the live provider and `in_` is the core
+/// dispatch table the registry handed over.
 pub(crate) unsafe extern "C" fn ossl_default_provider_init(
-    _handle: *const c_void,
-    _in: *const OsslDispatch,
+    handle: *const c_void,
+    in_: *const OsslDispatch,
     out: *mut *const OsslDispatch,
     provctx: *mut *mut c_void,
 ) -> c_int {
-    if out.is_null() || provctx.is_null() {
-        return 0;
-    }
-    // SAFETY: both out-parameters are writable per the contract, and the table is `'static`.
+    // SAFETY: `in_` is the core's own terminated table; every entry read is within it.
     unsafe {
+        if out.is_null() || provctx.is_null() {
+            return 0;
+        }
+
+        let mut c_get_libctx: *const c_void = ptr::null();
+        let mut c_get_params: *const c_void = ptr::null();
+        let mut d = in_;
+        while !d.is_null() && (*d).function_id != OSSL_DISPATCH_END {
+            match (*d).function_id {
+                crate::provider::core_dispatch::FUNC_CORE_GET_PARAMS => {
+                    c_get_params = (*d).function
+                }
+                crate::provider::core_dispatch::FUNC_CORE_GET_LIBCTX => {
+                    c_get_libctx = (*d).function
+                }
+                _ => {} // Just ignore anything we don't understand
+            }
+            d = d.add(1);
+        }
+
+        if c_get_libctx.is_null() {
+            return 0;
+        }
+
+        let ctx = crate::provider::ctx::ossl_prov_ctx_new();
+        if ctx.is_null() {
+            return 0;
+        }
+        // SAFETY: `c_get_libctx` is the core's own `OSSL_FUNC_core_get_libctx_fn`, which the
+        // registry published with this exact signature, and `handle` is the provider it expects.
+        let get_libctx: unsafe extern "C" fn(*const c_void) -> *mut c_void =
+            core::mem::transmute(c_get_libctx);
+        let libctx = get_libctx(handle);
+
+        crate::provider::ctx::ossl_prov_ctx_set0_libctx(ctx, libctx);
+        crate::provider::ctx::ossl_prov_ctx_set0_handle(ctx, handle);
+        crate::provider::ctx::ossl_prov_ctx_set0_core_get_params(ctx, c_get_params.cast_mut());
+
         *out = DEFLT_DISPATCH.as_ptr();
-        *provctx = ptr::null_mut();
+        *provctx = ctx.cast();
     }
     1
 }
 
-/// `deflt_dispatch_table` — `providers/defltprov.c`, restricted to the entry the digest half
-/// needs. The authority also publishes `TEARDOWN`, `GETTABLE_PARAMS`, `GET_PARAMS` and
-/// `GET_CAPABILITIES`; those are the provider-params half, absent here by design.
-static DEFLT_DISPATCH: [OsslDispatch; 2] = [
+/// `deflt_dispatch_table` — `providers/defltprov.c`, restricted to the two entries reachable
+/// without the provider-params and cache halves. The authority also publishes
+/// `GETTABLE_PARAMS`, `GET_PARAMS` and `GET_CAPABILITIES`; those are the D117 residual named
+/// above, and they are absent rather than stubbed.
+static DEFLT_DISPATCH: [OsslDispatch; 3] = [
     OsslDispatch {
         function_id: FUNC_PROVIDER_QUERY_OPERATION,
         function: deflt_query as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: crate::provider::init::FUNC_PROVIDER_TEARDOWN,
+        function: deflt_teardown as *mut c_void,
     },
     OsslDispatch {
         function_id: OSSL_DISPATCH_END,
@@ -2248,15 +2326,84 @@ mod tests {
         let mut out: *const OsslDispatch = ptr::null();
         let mut sentinel: c_int = 1;
         let mut provctx: *mut c_void = ptr::addr_of_mut!(sentinel).cast::<c_void>();
-        // SAFETY: both slots are this frame's and writable.
-        let ok =
+
+        // The authority's init returns 0 when the core did not offer `CORE_GET_LIBCTX`, which is
+        // the one lookup it cannot do without: every provider sub-fetch resolves against the
+        // context it yields. That arm is checked first because it is the reason this function was
+        // not a `*provctx = NULL` assignment any more.
+        // SAFETY: both slots are this frame's and writable; the table below is `'static`.
+        let refused =
             unsafe { ossl_default_provider_init(ptr::null(), ptr::null(), &mut out, &mut provctx) };
+        assert_eq!(refused, 0, "a core with no CORE_GET_LIBCTX is refused");
+
+        // Now a core that does offer it. The two callbacks are this test's own, so the assertion
+        // is about the *plumbing* rather than about the registry: what the init must do is call
+        // `CORE_GET_LIBCTX` and store its answer.
+        static MARKER: u8 = 0;
+        /// The core's `OSSL_FUNC_core_get_libctx_fn`, returning a known address.
+        ///
+        /// # Safety
+        /// The handle is unused; the answer is a `'static` address.
+        unsafe extern "C" fn test_get_libctx(_handle: *const c_void) -> *mut c_void {
+            ptr::addr_of!(MARKER).cast_mut().cast::<c_void>()
+        }
+        /// The core's `OSSL_FUNC_core_get_params_fn`, which this half never calls.
+        ///
+        /// # Safety
+        /// Both arguments are unused.
+        unsafe extern "C" fn test_get_params(
+            _handle: *const c_void,
+            _params: *mut OsslParam,
+        ) -> c_int {
+            1
+        }
+        static CORE_IN: [OsslDispatch; 3] = [
+            OsslDispatch {
+                function_id: crate::provider::core_dispatch::FUNC_CORE_GET_LIBCTX,
+                function: test_get_libctx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: crate::provider::core_dispatch::FUNC_CORE_GET_PARAMS,
+                function: test_get_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_DISPATCH_END,
+                function: ptr::null_mut(),
+            },
+        ];
+
+        let mut out: *const OsslDispatch = ptr::null();
+        let mut provctx: *mut c_void = ptr::null_mut();
+        // SAFETY: both slots are this frame's and writable; `CORE_IN` is `'static`; the handle is
+        // ignored by both test callbacks.
+        let ok = unsafe {
+            ossl_default_provider_init(ptr::null(), CORE_IN.as_ptr(), &mut out, &mut provctx)
+        };
         assert_eq!(ok, 1);
-        assert!(provctx.is_null());
-        // SAFETY: `out` is the published `'static` table.
-        assert_eq!(unsafe { (*out).function_id }, FUNC_PROVIDER_QUERY_OPERATION);
-        // SAFETY: the entry after it is the terminator.
-        assert_eq!(unsafe { (*out.add(1)).function_id }, OSSL_DISPATCH_END);
+        assert!(!provctx.is_null(), "the context is published, not NULL");
+        // The context carries whatever `CORE_GET_LIBCTX` answered, which is the whole point.
+        // SAFETY: `provctx` is the `PROV_CTX` the call just published, and `MARKER` is `'static`.
+        unsafe {
+            assert_eq!(
+                crate::provider::ctx::prov_libctx_of(provctx),
+                test_get_libctx(ptr::null())
+            );
+            assert_eq!(
+                crate::provider::ctx::ossl_prov_ctx_get0_core_get_params(provctx.cast()),
+                test_get_params as *mut c_void
+            );
+            // The published context is freed the way the teardown entry would.
+            crate::provider::ctx::ossl_prov_ctx_free(provctx.cast());
+        }
+        // SAFETY: `out` is the published `'static` table; query, then teardown, then the end.
+        unsafe {
+            assert_eq!((*out).function_id, FUNC_PROVIDER_QUERY_OPERATION);
+            assert_eq!(
+                (*out.add(1)).function_id,
+                crate::provider::init::FUNC_PROVIDER_TEARDOWN
+            );
+            assert_eq!((*out.add(2)).function_id, OSSL_DISPATCH_END);
+        }
     }
 
     #[test]
