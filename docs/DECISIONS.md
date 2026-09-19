@@ -18510,3 +18510,55 @@ one recorded narrowing, on `RAND_bytes_ex`
 (`docs/SECURITY_DIVERGENCE_POLICY.md` D-CBCHMAC-MULTIBLOCK-ENC-1`) -- and the four `0x0302` vectors'
 independent plane, which is now a precisely-stated open question rather than an unexamined gap. Then
 8.4 (RSA).
+
+## D283 — 8.4's reconnaissance: the RSA block is 150 labels in seven slices, and its object is measured
+
+Reconnaissance for 8.4, in D274's and D277's form, because 150 labels is too many to start without
+measuring the split and because two of the slices turn out to have owners that are not 8.4's.
+
+**What the block is.** `forensics/phase8-obligations.json` records **150** open labels whose module is
+`src/rsa/mod.rs`, against a subphase row that names 157. `src/rsa/` does not exist yet; `src/bn/` does
+(Phase 5's `BIGNUM`, with its `arith`/`limbs`/`mont`/`primes`/`recp`/`blinding` units), so the
+arithmetic this subphase needs is beneath it rather than beside it. The provider half is another
+**140 rows** in `forensics/atlas/provider-algorithms.json` that Phase 8 owns and no blocker names:
+`OSSL_OP_KEYMGMT`, `OSSL_OP_SIGNATURE`, `OSSL_OP_ASYM_CIPHER`, `OSSL_OP_KEM` and `OSSL_OP_KDF`'s RSA
+entries, which is why 8.4 is the first block whose rows are not `OSSL_OP_CIPHER` or `OSSL_OP_DIGEST`.
+
+**The seven slices, counted rather than estimated.**
+
+| slice | labels | what it is | depends on |
+| --- | --- | --- | --- |
+| A | 42 | the `RSA` object: `RSA_new`/`RSA_free`/`RSA_up_ref`, the `set0`/`get0` accessors, `RSA_bits`/`RSA_size`/`RSA_security_bits`/`RSA_get_version`, the flags quartet, `ex_data`, the multi-prime accessors, `RSA_PKCS1_OpenSSL`, `RSA_blinding_off`, the engine and default-method quartet | nothing but `src/bn/` |
+| B | 33 | `RSA_meth_*`: `RSA_meth_new`/`_free`/`_dup` plus sixteen setters and fourteen getters | A |
+| C | 15 | `RSA_padding_add_*`/`RSA_padding_check_*` for the five paddings, and `RSA_X931_hash_id` | A, and the digest for OAEP's MGF1 |
+| D | 11 | `RSA_public_encrypt`/`_decrypt`, `RSA_private_encrypt`/`_decrypt`, `RSA_sign`, `RSA_verify`, `RSA_sign_ASN1_OCTET_STRING`, `RSA_verify_ASN1_OCTET_STRING`, `RSA_verify_PKCS1_PSS`, `RSA_verify_PKCS1_PSS_mgf1`, `PKCS1_MGF1` | A, C, and `src/bn`'s `BN_mod_exp`/blinding |
+| E | 26 | `EVP_PKEY_CTX_set_rsa_*`/`get_rsa_*`, `EVP_PKEY_CTX_set1_rsa_keygen_pubexp`, `EVP_PKEY_get0_RSA`/`get1`/`set1` | A and Phase 7's `EVP_PKEY` (landed) |
+| F | 19 | `d2i_`/`i2d_` for `RSAPrivateKey`, `RSAPublicKey`, `RSA_PSS_PARAMS` and `RSA_OAEP_PARAMS`, their `_it` tables, `RSAPrivateKey_dup`/`RSAPublicKey_dup`, `RSA_PSS_PARAMS_dup` | A **and 8.8's `ossl_*_asn1_meth`**, which is why this slice cannot close before 8.8 |
+| G | 4 | `RSA_check_key`, `RSA_check_key_ex`, `RSA_print`, `RSA_print_fp` | A and, for the printer, `src/bn` |
+
+**The object, measured rather than read.** `courts/layout/measure-rsa-ctx.c` reports `sizeof(RSA)` at
+**216** bytes, eight-aligned, with `dummy_zero` 0 (the field the header says "MUST REMAIN THE FIRST
+FIELD" precisely so that an `EVP_PKEY` passed as an `RSA` is caught), `libctx` 8, `version` 16, `meth`
+24, `engine` 32, the eight `BIGNUM *`s at 40, 48, 56, 64, 72, 80, 88 and 96, `pss_params` 104,
+`pss` 128, `prime_infos` 136, `ex_data` 144, `references` 160, `flags` 164, `_method_mod_n` 168,
+`lock` 200 and `dirty_cnt` 208. `RSA_METHOD` is **120** bytes with the fifteen members in the
+header's own order, and `RSA_PSS_PARAMS_30` is **20** -- five `int`s, not three pointers, which is not
+what a reader of the `RSA` object's "pss_params" member name would guess.
+
+**The layout is profile-dependent, and that is the measurement's point.**
+`struct rsa_st`'s `pss`, `prime_infos` and `ex_data` members are inside `#ifndef FIPS_MODULE`, so the
+object this crate must reproduce is the *non-FIPS-module* one; a build that took the module branch
+would be 32 bytes shorter with every later offset moved. The measurement program is committed for the
+same reason the others are: the offsets are what `RSA_get0_key`, `RSA_get0_factors` and
+`RSA_get0_crt_params` hand to a caller as writable addresses, so a field in the wrong place is a
+silent wrong key rather than a crash.
+
+**What this entry is and is not.** It is a plan, not a landing: nothing in `src/rsa/` exists after it,
+`RT-RSA` and `CT-RSA` remain registered-but-PENDING, and `libcrypto` stays at **2035 implemented**.
+What it fixes is the order: A first, because B through G all read or write the object A defines, and
+because A is the one slice whose prerequisites are already in. What it also fixes is F's owner -- the
+four `d2i_`/`i2d_` pairs and their `_it` tables are 8.8's machinery with 8.4's structures, so F is the
+one slice of this block that cannot close inside it.
+
+**What comes next.** Slice A, with `RT-RSA` as its court and the measured offsets as its first unit
+test.
