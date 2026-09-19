@@ -1437,6 +1437,45 @@ pub(crate) const fn param_octet_ptr(key: *const c_char) -> OsslParam {
     }
 }
 
+/// `OSSL_PARAM_uint64(key, addr)` — `params.h:48-50`, in this module's key-only list form.
+///
+/// It is `UNSIGNED_INTEGER` with `sizeof(uint64_t)`, which on the admitted profile is the same
+/// eight bytes `param_size_t` names — **and the two are not interchangeable**. The data type is
+/// part of the parameter's identity: `OSSL_PARAM_get_uint64` is what a reader calls for one and
+/// `OSSL_PARAM_get_size_t` for the other, and `params/match.rs` refuses a size mismatch rather
+/// than widening. The DRBG rows' `reseed_counter` is the caller this exists for, and the
+/// authority spells it `OSSL_PARAM_uint64` (`drbg.c`'s gettable list) rather than `size_t`.
+#[allow(dead_code)] // the landing caller is `src/provider/rand.rs`'s DRBG gettable-ctx-params
+pub(crate) const fn param_uint64(key: *const c_char) -> OsslParam {
+    OsslParam {
+        key: key.cast(),
+        data_type: OSSL_PARAM_UNSIGNED_INTEGER,
+        data: ptr::null_mut(),
+        data_size: core::mem::size_of::<u64>(),
+        return_size: OSSL_PARAM_UNMODIFIED,
+    }
+}
+
+/// `OSSL_PARAM_time_t(key, addr)` — `params.h:53-54`, in the same key-only list form.
+///
+/// **`INTEGER`, not `UNSIGNED_INTEGER`, and that is the authority's choice rather than a slip.**
+/// `time_t` is signed on this platform and the macro the authority reaches for is the signed one,
+/// so a transcription that reused the `param_uint64` body above because both are eight bytes would
+/// produce a parameter whose *type* differs from the authority's for the same key. `params/mod.rs`
+/// branches on the data type when it copies, so the difference is observable through
+/// `OSSL_PARAM_get_int64` on the caller's side. `drbg.c` publishes `max_request` and
+/// `reseed_time_interval` with it.
+#[allow(dead_code)] // the landing caller is `src/provider/rand.rs`'s DRBG gettable-ctx-params
+pub(crate) const fn param_time_t(key: *const c_char) -> OsslParam {
+    OsslParam {
+        key: key.cast(),
+        data_type: OSSL_PARAM_INTEGER,
+        data: ptr::null_mut(),
+        data_size: core::mem::size_of::<crate::runtime::time::TimeT>(),
+        return_size: OSSL_PARAM_UNMODIFIED,
+    }
+}
+
 /// `ossl_cipher_generic_gettable_params` — `ciphercommon.c.in:48-51`, the ten keys
 /// `produce_param_decoder` locates.
 static CIPHER_GETTABLE_PARAMS: [OsslParam; 11] = [

@@ -19529,3 +19529,48 @@ corrections above are to *unit names in a plan*; whether the pool's two acquisit
 courted with a fixed seed source is 9.5's measurement, not this entry's. The `does_not_exist`
 family of corrections to D287 is now four and they were all found by reading the tree rather than
 by reading the table -- which is the argument for the census being generated.
+
+## D299 -- the constants the DRBG rows need, and eight census names close
+
+9.1's crate-side prerequisites, each named as missing by a staged transcription and each verified
+against the authority before it was added.
+
+**Eight dispatch ids.** `src/context/dispatch.rs` gains the entropy and nonce up-calls
+`providers/common/provider_seeding.c` publishes and `drbg.c` consumes through the provider context:
+`CLEANUP_USER_ENTROPY` 96, `CLEANUP_USER_NONCE` 97, `GET_USER_ENTROPY` 98, `GET_USER_NONCE` 99,
+`GET_ENTROPY` 101, `CLEANUP_ENTROPY` 102, `GET_NONCE` 103, `CLEANUP_NONCE` 104 -- read from
+`core_dispatch.h:177-191`, where **100 is absent** and the `CLEANUP_` pair precedes the `GET_` pair
+because it was added first. Both facts are the kind a transcription from a description would get
+wrong, and both are why the numbers were read rather than inferred.
+
+**The census moved by exactly those eight, and that is the evidence the addition was needed.**
+`prerequisites.json`'s `language_surface_not_modelled_by_name` goes **3 139 -> 3 131**: the
+prerequisite gate counts the authority's names the crate does not model, and the eight ids were
+eight of them. A change that closed a different number would have meant the ids were already
+modelled elsewhere, or that the count is not measuring what it says.
+
+**Visibility, because the DRBG rows read across modules now.** `src/evp/rand.rs` widens
+`OSSL_OP_RAND`, `EVP_RAND_STATE_ERROR` and all nineteen `OSSL_FUNC_RAND_*` constants to
+`pub(crate)`. `src/modes/mod.rs` widens `get_u32_be`/`put_u32_be`, which the CTR and HASH DRBGs
+assemble their counter blocks with.
+
+**Two EVP_RAND states are now named rather than implied.** `EVP_RAND_STATE_UNINITIALISED` (0) and
+`EVP_RAND_STATE_READY` (1) join the existing `EVP_RAND_STATE_ERROR` (2). A DRBG row's
+`gettable_ctx_params` reports `state` as a **number** in its parameter array and the authority's
+`drbg.c` compares against `READY` by name, so a transcription that wrote `1` at one site and the
+constant at another would agree with itself and disagree with the authority the first time either
+moved.
+
+**`param_time_t` is `INTEGER`, not `UNSIGNED_INTEGER`, and that is worth a paragraph.**
+`provider/cipher.rs` gains `param_uint64` and `param_time_t`. `params.h:53-54` spells
+`OSSL_PARAM_time_t` with `OSSL_PARAM_INTEGER` and `sizeof(time_t)`; `OSSL_PARAM_uint64`
+(`:48-50`) uses `UNSIGNED_INTEGER` and the same eight bytes. A transcription that reused the
+`uint64` body because the sizes agree would publish a parameter whose *type* differs from the
+authority's for the same key, and `params/mod.rs` branches on the data type when it copies -- so the
+difference is observable through `OSSL_PARAM_get_int64` on the caller's side. `drbg.c` publishes
+`max_request` and `reseed_time_interval` with it.
+
+**Nothing here is a stub and nothing is wired.** Each new item carries an `allow(dead_code)` naming
+the landing caller, which is the idiom the crate already uses for a mechanism landed ahead of its
+reader; a reader that wants to know what is outstanding has the allow comments rather than a
+silent unused-symbol warning to guess from.
