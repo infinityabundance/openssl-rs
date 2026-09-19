@@ -407,7 +407,7 @@
     "divergence_names_covered": 31,
     "findings": 0,
     "language_census": 3118,
-    "sealed_census": 57
+    "sealed_census": 56
   },
   "provider_implemented": [
     "default/OSSL_OP_CIPHER/AES-128-CBC",

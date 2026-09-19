@@ -441,7 +441,6 @@
           "OPENSSL_showfatal"
         ],
         "crypto/err/err.c": [
-          "err_clear_last_constant_time",
           "err_shelve_state",
           "err_unshelve_state",
           "ossl_err_get_state_int",
@@ -472,7 +471,7 @@
         ]
       },
       "definition": "authority internal functions a transcribed unit calls, whose own translation unit's stratum has already sealed. Not a failure: each is either modelled differently by the crate or is work carried across the boundary by a later stratum. The count is held to non-increase by the regression guard.",
-      "names": 57
+      "names": 56
     },
     "universes": {
       "crate_references_checked": 32438,
@@ -482,7 +481,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "d8d4c370994f308da44245c03831f03daff1307fe22b4799f2382d3bc47ca924",
+  "body_hash": "51d65a3d2d3ae1440623d2fee1527ecadff355e279ba748b1bd1959abe27f912",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -503,7 +502,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "1019734473321bd8da42b3094ccc3c55387e0b08755738dd70e756a19e335f4d"
+      "sha256": "71d73259984076e83af11fd7f7d225ba79d60557c9a315e288b08c7068dbb5da"
     },
     {
       "name": "symbol-ownership",
@@ -518,7 +517,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "97fbf2137a49bfc45e71435085eaa59c675fdd381eb7b0c2fabfa742bc3931ff"
+      "sha256": "a37596516c6288513482b645a6dd75b31607a6edafca55879795c7631afcfd20"
     },
     {
       "name": "phase-state",
