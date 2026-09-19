@@ -17218,3 +17218,93 @@ merely for whether it compiles and produces a value.** The stronger form is what
 below supply: an inert arm against a *published* expected value fails loudly instead of silently, and
 that is the argument for a construction-vector plane beside the differential one rather than for
 more differential arms.
+
+## D263 — `ChaCha20` lands, and its primitive is perlasm-only in this profile
+
+the primitive is perlasm-only here, which is a different decline from D258's.**
+`crypto/chacha/build.info` starts `$CHACHAASM=chacha_enc.c` and then replaces it with the
+arch-specific list: on x86-64 that is `chacha-x86_64.s` **alone**, and `$CHACHADEF` — the variable
+carrying `INCLUDE_C_CHACHA20` — is assigned only for `riscv64`. So this build has
+`libcrypto-lib-chacha-x86_64.o` and **no** `libcrypto-lib-chacha_enc.o`, and the atlas agrees:
+`internal-symbols.json` gives `ChaCha20_ctr32` the translation unit `crypto/chacha/chacha-x86_64.c`,
+and that unit is in `translation_units_without_a_source_file` beside `crypto/aes/aes-x86_64.c`.
+
+For Poly1305 the C file *is* a translation unit and only `poly1305_init` comes from perlasm, so the
+transcription there is of the branch that compiles. Here there is **no compiled C branch**:
+`chacha_enc.c` defines `ChaCha20_ctr32_c` under `INCLUDE_C_CHACHA20` and `ChaCha20_ctr32` under
+`#else`, the same body behind one `#ifdef`. The file is therefore the *specification* of the
+function rather than an implementation of it, and the decline is stated in those terms rather than
+inheriting D258's justification. The properties that make it safe are the same shape and are
+re-established rather than assumed: it is a pure function of key, counter and input with no
+allocation, no error path and no context — its only observable is bytes — and it is the authority's
+own reference ("Adapted from the public domain code by D. Bernstein from SUPERCOP") of the function
+the assembly optimises.
+
+The endianness branch is **not** declined, and the distinction matters: `chacha20_core` writes
+`output->u[i]` under `IS_LITTLE_ENDIAN` and `U32TO8_LITTLE(...)` otherwise, and `U32TO8_LITTLE` is
+little-endian by construction, so both arms are the same bytes on every host. `u32::to_le_bytes`
+unconditionally is the same function here and the correct one everywhere, not a chosen arm.
+
+**The row.** `cipher_chacha20.c` + `cipher_chacha20_hw.c` in `src/provider/cipher.rs`. Four things
+about it are unlike the rows already transcribed. Its block size is **one byte**, so the update and
+final are the *stream* generics and there is no padding. It publishes its **own** ctx-params quartet
+— three gettable keys with `updated-iv` an octet string, and two settable keys that exist to be
+*refused* (`keylen` must be 32 and `ivlen` 16, and anything else is
+`PROV_R_INVALID_KEY_LENGTH`/`PROV_R_INVALID_IV_LENGTH`). Its hw is an **extended** struct,
+`PROV_CIPHER_HW_CHACHA20`, whose `initiv` is called by the row's own `einit`/`dinit` **only when an
+IV was actually supplied** — which is what makes a re-init without an IV resume the counter rather
+than reset it, and is the row's most easily-lost behaviour. And the counter is **carried by the
+row**: `ChaCha20_ctr32` advances only `counter[0]`, so the hw limits each call to the exact 32-bit
+overflow point, carries into `counter[1]`, and holds the partial block in `ctx->buf` with
+`partial_len`.
+
+## D264 — `PROV_CIPHER_CTX` was sixteen bytes too wide, and the size is observable
+
+ `PROV_CIPHER_CTX` was sixteen bytes too wide, and the size is observable.** The authority's
+`union { cbc128_f cbc; ctr128_f ctr; ecb128_f ecb; } stream` had been modelled as three separate
+`Option<fn>` fields, which is behaviourally identical and 24 bytes where the union is 8. The row's
+size assertion measured `sizeof(PROV_CIPHER_CTX)` at **192** against this struct's **208**, and
+`sizeof(PROV_CHACHA20_CTX)` at **312** — numbers taken from `court/measure-chacha-ctx.c`, compiled
+against the pinned build's own internal headers. The difference reaches an application: the provider
+allocates `sizeof(*ctx)` for every cipher row's context and `CRYPTO_set_mem_functions` hands that
+`num` to a caller's allocator, which is the same class of observable D258 recorded for
+`Poly1305_ctx_size`.
+
+It is now a real `union`, `ProvCipherStream`, with its members `Option<...>` because the authority's
+pointers can be NULL and every reader tests for it. Six call sites moved: the two readers (`stream.cbc`
+in the CBC fast path, `stream.ecb` in the ECB one), the two writers in `cipher_hw_aes_initkey` and
+`cipher_hw_camellia_initkey`, and the two struct literals in the tests. Every row's context is now
+the authority's size, which is checked rather than asserted for the one row that made it visible.
+
+## D265 — the row made `copyctx` nullable, and three probe arms were measuring the wrong thing
+
+ the `ChaCha20` row also made `ProvCipherHw::copyctx` an `Option`.** `chacha20_hw`
+initialises only `{ { chacha20_initkey, chacha20_cipher }, chacha20_initiv }`, so its `base.copyctx`
+is a **null pointer** and the authority's own `chacha20_dupctx` does not consult it (it is
+`OPENSSL_memdup` of the whole context). A non-nullable field could not have held that truth without
+fabricating a pointer, so the field is `Option<...>` and the five call sites — the three `*_dupctx`
+rows, `aes_xts_dupctx` and the AES-OCB one — take the `if let Some(f)` form. The guard is
+unreachable through the public surface: `ctx->hw` is written only by `ossl_cipher_generic_initkey` or
+a row's own init, and only to that row's static.
+
+**D265 also records three probe arms that were wrong, and one authority fault.** None of the three
+was a row defect; each was the arm measuring something other than what its comment claimed, which is
+D261's class a fourth time. The `resume` arm asserted that re-initing with the same *cipher* resumes
+the stream; measured, it does not — naming the cipher again replaces the algorithm context, the
+counter comes back all zero and the next update returns nothing — while `EVP_EncryptInit_ex(ctx,
+NULL, NULL, NULL, NULL)`, which does not name a cipher, does resume. Both forms are now printed,
+because the difference is the whole observable. The `dup` arm compared the duplicate's output against
+the original's *whole* output when the duplicate was taken after seventy bytes and so holds no copy
+of them, which read uninitialised memory; it now compares the continuation window. And
+`EVP_CIPHER_CTX_gettable_params` on a context with **no cipher set faults the authority** — its
+guard is `if (cctx != NULL && cctx->cipher->gettable_ctx_params != NULL)`, which dereferences
+`cctx->cipher` unchecked — so the arm prints the boundary rather than calling it, and the crate's own
+guard (`cipher.is_null()`) is recorded as `D-CIPHERCTX-NOALG-1` in
+`docs/SECURITY_DIVERGENCE_POLICY.md`.
+
+**What these entries move.** `implemented[libcrypto]` stays **2035 / 5896** — `ChaCha20` is a
+provider row and `EVP_chacha20` is Phase 13's, being a legacy method static — so Phase 8 stays **194
+implemented / 576 open / 16 deferred**. The provider census moves **117 -> 118 implemented / 193 ->
+192 open**, coverage stays **118 / 118 / 0**. The err-site table moves **1943 -> 1950** (the seven
+raises in `cipher_chacha20.c`). `RT-CIPHER` moves **4501 -> 4646** and the pipeline total **28077 ->
+28357**. Unit tests move **582 -> 594**. Full pipeline to `PIPELINE OK`.

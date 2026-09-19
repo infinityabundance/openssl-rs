@@ -72,9 +72,9 @@ use crate::des::{
 };
 use crate::evp::cipher::{EVP_CIPHER_fetch, EVP_CIPHER_free, EVP_CIPHER_up_ref, EvpCipher};
 use crate::evp::cipher::{
-    OSSL_FUNC_CIPHER_DECRYPT_INIT, OSSL_FUNC_CIPHER_DECRYPT_SKEY_INIT,
-    OSSL_FUNC_CIPHER_ENCRYPT_INIT, OSSL_FUNC_CIPHER_ENCRYPT_SKEY_INIT, OSSL_FUNC_CIPHER_FINAL,
-    OSSL_FUNC_CIPHER_FREECTX, OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS,
+    OSSL_FUNC_CIPHER_CIPHER, OSSL_FUNC_CIPHER_DECRYPT_INIT, OSSL_FUNC_CIPHER_DECRYPT_SKEY_INIT,
+    OSSL_FUNC_CIPHER_DUPCTX, OSSL_FUNC_CIPHER_ENCRYPT_INIT, OSSL_FUNC_CIPHER_ENCRYPT_SKEY_INIT,
+    OSSL_FUNC_CIPHER_FINAL, OSSL_FUNC_CIPHER_FREECTX, OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS,
     OSSL_FUNC_CIPHER_GETTABLE_PARAMS, OSSL_FUNC_CIPHER_GET_CTX_PARAMS, OSSL_FUNC_CIPHER_GET_PARAMS,
     OSSL_FUNC_CIPHER_NEWCTX, OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS, OSSL_FUNC_CIPHER_SET_CTX_PARAMS,
     OSSL_FUNC_CIPHER_UPDATE,
@@ -224,6 +224,22 @@ const CTX_USE_BITS: c_uint = 1 << 7;
 // `prov/ciphercommon.h`'s structures
 // ---------------------------------------------------------------------------------------------
 
+/// `union { cbc128_f cbc; ctr128_f ctr; ecb128_f ecb; } stream` — `prov/ciphercommon.h:75-79`.
+///
+/// A union rather than three fields because **its width is contract**: see `ProvCipherCtx::stream`.
+/// Each member is an `Option` because the authority's pointers can be NULL and every reader tests
+/// for it; reading a member is `unsafe` and writing one is not, exactly as `union` requires.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub(crate) union ProvCipherStream {
+    /// `cbc128_f cbc`.
+    pub cbc: Option<Cbc128F>,
+    /// `ctr128_f ctr`.
+    pub ctr: Option<crate::modes::Ctr128F>,
+    /// `ecb128_f ecb`.
+    pub ecb: Option<Ecb128F>,
+}
+
 /// `struct prov_cipher_ctx_st` — `prov/ciphercommon.h:48-100`. The C bitfields are one
 /// `unsigned int` here, addressed by the `CTX_*` masks.
 #[repr(C)]
@@ -236,14 +252,16 @@ pub(crate) struct ProvCipherCtx {
     pub iv: [c_uchar; GENERIC_BLOCK_SIZE],
     /// `block128_f block`.
     pub block: Option<Block128F>,
-    /// `union { cbc128_f cbc; ctr128_f ctr; ecb128_f ecb; } stream`. Three fields, because only
-    /// the mode's own hw function reads its member, which is what the union's aliasing gives the
-    /// authority.
-    pub cbc_fn: Option<Cbc128F>,
-    /// `stream.ctr`.
-    pub ctr: Option<crate::modes::Ctr128F>,
-    /// `stream.ecb`.
-    pub ecb: Option<Ecb128F>,
+    /// `union { cbc128_f cbc; ctr128_f ctr; ecb128_f ecb; } stream` — a **union**, because its
+    /// width is observable.
+    ///
+    /// Three separate fields would be behaviourally identical and sixteen bytes larger, and the
+    /// difference reaches an application: the provider allocates `sizeof(*ctx)` for the row's own
+    /// context and `CRYPTO_set_mem_functions` hands that `num` to a caller's allocator. It was
+    /// modelled as three fields until the `ChaCha20` row's size assertion measured
+    /// `sizeof(PROV_CIPHER_CTX)` at 192 against this struct's 208 (D262). Only the mode's own hw
+    /// function ever reads its member, which is the aliasing the authority relies on.
+    pub stream: ProvCipherStream,
     /// `unsigned int mode`.
     pub mode: c_uint,
     /// `size_t keylen`.
@@ -289,7 +307,14 @@ pub(crate) struct ProvCipherHw {
     pub cipher:
         unsafe extern "C" fn(*mut ProvCipherCtx, *mut c_uchar, *const c_uchar, usize) -> c_int,
     /// `void (*copyctx)(PROV_CIPHER_CTX *, const PROV_CIPHER_CTX *)`.
-    pub copyctx: unsafe extern "C" fn(*mut ProvCipherCtx, *const ProvCipherCtx),
+    ///
+    /// **`Option`, because the authority's field really can be NULL.** `cipher_chacha20_hw.c`'s
+    /// `chacha20_hw` initialises only `{ { chacha20_initkey, chacha20_cipher }, chacha20_initiv }`,
+    /// so its `base.copyctx` is a null pointer, and `cipher_chacha20.c`'s `chacha20_dupctx` does not
+    /// consult it (it is `OPENSSL_memdup` of the whole context). A non-nullable field would have made
+    /// that row's hw unrepresentable and forced a fabricated pointer into a transcription, which is
+    /// the kind of convenience this crate records instead of taking.
+    pub copyctx: Option<unsafe extern "C" fn(*mut ProvCipherCtx, *const ProvCipherCtx)>,
 }
 
 /// `struct prov_skey_st` — `include/internal/skey.h:17-30`, for the two `*_skey_*` arms.
@@ -1582,7 +1607,7 @@ pub(crate) unsafe extern "C" fn ossl_cipher_hw_generic_cbc(
 ) -> c_int {
     // SAFETY: the caller's contract.
     unsafe {
-        if let Some(cbc_fn) = (*dat).cbc_fn {
+        if let Some(cbc_fn) = (*dat).stream.cbc {
             cbc_fn(
                 in_,
                 out,
@@ -1630,7 +1655,7 @@ pub(crate) unsafe extern "C" fn ossl_cipher_hw_generic_ecb(
         if len < bl {
             return 1;
         }
-        if let Some(ecb) = (*dat).ecb {
+        if let Some(ecb) = (*dat).stream.ecb {
             ecb(in_, out, len, (*dat).ks, (*dat).enc_int());
         } else {
             let block = ctx_block!(dat);
@@ -1944,7 +1969,7 @@ unsafe extern "C" fn cipher_hw_aes_initkey(
             (*dat).block = Some(aes_block_encrypt);
             AES_set_encrypt_key(key, (keylen * 8) as c_int, ks)
         };
-        (*dat).cbc_fn = if (*dat).mode == EVP_CIPH_CBC_MODE {
+        (*dat).stream.cbc = if (*dat).mode == EVP_CIPH_CBC_MODE {
             Some(aes_cbc_run)
         } else {
             None
@@ -1991,7 +2016,7 @@ unsafe extern "C" fn cipher_hw_camellia_initkey(
         } else {
             (*dat).block = Some(camellia_block_decrypt);
         }
-        (*dat).cbc_fn = if mode == EVP_CIPH_CBC_MODE {
+        (*dat).stream.cbc = if mode == EVP_CIPH_CBC_MODE {
             Some(camellia_cbc_run)
         } else {
             None
@@ -2387,7 +2412,15 @@ unsafe extern "C" fn aes_dupctx(ctx: *mut c_void) -> *mut c_void {
         }
         let src = ctx.cast::<ProvAesCtx>();
         let hw = (*src).base.hw;
-        ((*hw).copyctx)(ret.cast(), ctx.cast());
+        // `copyctx` is `Option` because `chacha20_hw` leaves it NULL; the three rows that reach
+        // here (`cipher_aes.c`, `cipher_camellia.c`, `cipher_tdes_common.c`) all install a
+        // non-NULL one through `ossl_cipher_generic_initkey`, and `ctx->hw` is written only by
+        // that function or by a row's own init -- so the guard is unreachable through the public
+        // surface, and it is a guard rather than a `transmute` because fabricating a pointer is
+        // not a transcription.
+        if let Some(copyctx) = (*hw).copyctx {
+            copyctx(ret.cast(), ctx.cast());
+        }
         ret
     }
 }
@@ -2420,7 +2453,15 @@ unsafe extern "C" fn camellia_dupctx(ctx: *mut c_void) -> *mut c_void {
         }
         let src = ctx.cast::<ProvCamelliaCtx>();
         let hw = (*src).base.hw;
-        ((*hw).copyctx)(ret.cast(), ctx.cast());
+        // `copyctx` is `Option` because `chacha20_hw` leaves it NULL; the three rows that reach
+        // here (`cipher_aes.c`, `cipher_camellia.c`, `cipher_tdes_common.c`) all install a
+        // non-NULL one through `ossl_cipher_generic_initkey`, and `ctx->hw` is written only by
+        // that function or by a row's own init -- so the guard is unreachable through the public
+        // surface, and it is a guard rather than a `transmute` because fabricating a pointer is
+        // not a transcription.
+        if let Some(copyctx) = (*hw).copyctx {
+            copyctx(ret.cast(), ctx.cast());
+        }
         ret
     }
 }
@@ -2453,7 +2494,15 @@ unsafe extern "C" fn tdes_dupctx(ctx: *mut c_void) -> *mut c_void {
         }
         let src = ctx.cast::<ProvTdesCtx>();
         let hw = (*src).base.hw;
-        ((*hw).copyctx)(ret.cast(), ctx.cast());
+        // `copyctx` is `Option` because `chacha20_hw` leaves it NULL; the three rows that reach
+        // here (`cipher_aes.c`, `cipher_camellia.c`, `cipher_tdes_common.c`) all install a
+        // non-NULL one through `ossl_cipher_generic_initkey`, and `ctx->hw` is written only by
+        // that function or by a row's own init -- so the guard is unreachable through the public
+        // surface, and it is a guard rather than a `transmute` because fabricating a pointer is
+        // not a transcription.
+        if let Some(copyctx) = (*hw).copyctx {
+            copyctx(ret.cast(), ctx.cast());
+        }
         ret
     }
 }
@@ -2669,7 +2718,7 @@ macro_rules! hw_static {
         static $name: ProvCipherHw = ProvCipherHw {
             init: $init,
             cipher: $cipher,
-            copyctx: $copy,
+            copyctx: Some($copy),
         };
     };
 }
@@ -4230,7 +4279,7 @@ unsafe extern "C" fn cipher_hw_aes_xts_cipher_unused(
 static AES_XTS_HW: ProvCipherHw = ProvCipherHw {
     init: cipher_hw_aes_xts_generic_initkey,
     cipher: cipher_hw_aes_xts_cipher_unused,
-    copyctx: cipher_hw_aes_xts_copyctx,
+    copyctx: Some(cipher_hw_aes_xts_copyctx),
 };
 
 /// `AES-*-XTS`'s one settable parameter — `cipher_aes_xts.c:244-247`.
@@ -4343,7 +4392,11 @@ unsafe extern "C" fn aes_xts_dupctx(vctx: *mut c_void) -> *mut c_void {
             return ptr::null_mut();
         }
         let hw = (*in_).base.hw;
-        ((*hw).copyctx)(ret.cast(), vctx.cast());
+        // The same `Option` guard the three `*_dupctx` rows carry, and unreachable for the same
+        // reason: `aes_xts` installs a non-NULL `copyctx` through `ossl_cipher_generic_initkey`.
+        if let Some(copyctx) = (*hw).copyctx {
+            copyctx(ret.cast(), vctx.cast());
+        }
         ret
     }
 }
@@ -4856,7 +4909,7 @@ unsafe extern "C" fn cipher_hw_aes_ocb_cipher_unused(
 static AES_OCB_HW: ProvCipherHw = ProvCipherHw {
     init: cipher_hw_aes_ocb_generic_initkey,
     cipher: cipher_hw_aes_ocb_cipher_unused,
-    copyctx: cipher_hw_aes_ocb_copyctx_unused,
+    copyctx: Some(cipher_hw_aes_ocb_copyctx_unused),
 };
 
 /// `aes_ocb_dupctx` does the copy itself, through `aes_generic_ocb_copy_ctx`
@@ -8922,6 +8975,7 @@ macro_rules! alias {
     };
 }
 alias!(N_NULL, "NULL");
+alias!(N_CHACHA20, "ChaCha20");
 alias!(N_AES_256_ECB, "AES-256-ECB:2.16.840.1.101.3.4.1.41");
 alias!(N_AES_192_ECB, "AES-192-ECB:2.16.840.1.101.3.4.1.21");
 alias!(N_AES_128_ECB, "AES-128-ECB:2.16.840.1.101.3.4.1.1");
@@ -9078,7 +9132,7 @@ const fn row(names: *const c_char, implementation: *const c_void) -> OsslAlgorit
 
 /// `static const OSSL_ALGORITHM_CAPABLE deflt_ciphers[]` — `providers/defltprov.c:161-330`,
 /// restricted to the rows this half implements, in the authority's order.
-pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 83] = [
+pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 84] = [
     row(N_NULL, NULL_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_ECB, AES256ECB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_ECB, AES192ECB_FUNCTIONS.as_ptr().cast()),
@@ -9197,11 +9251,694 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 83] = [
     row(N_DES_EDE_CBC, TDES_EDE2_CBC_FUNCTIONS.as_ptr().cast()),
     row(N_DES_EDE_OFB, TDES_EDE2_OFB_FUNCTIONS.as_ptr().cast()),
     row(N_DES_EDE_CFB, TDES_EDE2_CFB_FUNCTIONS.as_ptr().cast()),
+    row(N_CHACHA20, CHACHA20_FUNCTIONS.as_ptr().cast()),
     OsslAlgorithm {
         algorithm_names: ptr::null(),
         property_definition: ptr::null(),
         implementation: ptr::null(),
         algorithm_description: ptr::null(),
+    },
+];
+
+// ---------------------------------------------------------------------------------------------
+// `cipher_chacha20.c` and `cipher_chacha20_hw.c` — the `ChaCha20` stream cipher row
+// ---------------------------------------------------------------------------------------------
+//
+// The one row in this half whose **primitive is not a `ciphercommon` mode**. ChaCha20 is a stream
+// cipher with a *counter block* rather than an IV, so the row declares a **one-byte block size**
+// (`CHACHA20_BLKLEN`), takes a sixteen-byte counter block as its IV, and owns the whole of its own
+// `cipher` — the generic CBC/CTR/ECB/CFB/OFB paths never see it. That is what `PROV_CIPHER_FLAG_CUSTOM_IV`
+// is for, and it is also why the row publishes a `get_ctx_params`/`settable_ctx_params` pair of its
+// own: the generic list has nothing useful to say about a counter block.
+//
+// Four things about it are unlike the rows already transcribed.
+//
+// **The primitive is perlasm-only in this profile, and `crypto/chacha/chacha_enc.c` is not compiled
+// at all.** See `src/chacha.rs` for the full record; the consequence here is that `ChaCha20_ctr32`
+// is called as `include/crypto/chacha.h` declares it, with the key and counter as **collected
+// thirty-two-bit words in host order** rather than as byte vectors. `chacha20_initkey` and
+// `chacha20_initiv` are the two places those words are collected, and `CHACHA_U8TOU32`'s shifts are
+// little-endian in the header's own text.
+//
+// **The hw struct is extended, and its `base.copyctx` is NULL.** `PROV_CIPHER_HW_CHACHA20` is
+// `PROV_CIPHER_HW base` plus `int (*initiv)(PROV_CIPHER_CTX *)`, and `chacha20_hw` initialises only
+// `{ { chacha20_initkey, chacha20_cipher }, chacha20_initiv }` — so `copyctx` is a null pointer.
+// `chacha20_dupctx` does not consult it (it is `OPENSSL_memdup` of the whole context), which is why
+// this is the row that discovered `ProvCipherHw::copyctx` had to be `Option`.
+//
+// **`initiv` is called by the row's own `einit`/`dinit`, not by `ossl_cipher_generic_initkey`.** The
+// generic init stores the IV in `oiv` and marks `iv_set`; the counter block is then collected
+// **only when an IV was actually supplied**, which is what makes a second init without an IV resume
+// the counter rather than reset it. That conditional is the row's most easily-lost behaviour.
+//
+// **`chacha20_cipher` carries the counter itself.** `ChaCha20_ctr32` advances only the first counter
+// word and its own comment says a wider counter is the caller's job, so the hw limits each call to
+// the exact 32-bit overflow point, carries into `counter[1]`, and keeps the partial block in
+// `ctx->buf` with `partial_len` for the next call. A transcription that fed a whole buffer in one
+// call would produce the right bytes for every input shorter than 256 GiB and the wrong ones after.
+
+/// `CHACHA20_KEYLEN` — `cipher_chacha20.c:20` (`CHACHA_KEY_SIZE`).
+const CHACHA20_KEYLEN: usize = crate::chacha::CHACHA_KEY_SIZE;
+/// `CHACHA20_BLKLEN` — `cipher_chacha20.c:21`. **One byte**: the row is a stream cipher and every
+/// `ciphercommon` path that reasons about block alignment must see a unit of one.
+const CHACHA20_BLKLEN: usize = 1;
+/// `CHACHA20_IVLEN` — `cipher_chacha20.c:22` (`CHACHA_CTR_SIZE`).
+const CHACHA20_IVLEN: usize = crate::chacha::CHACHA_CTR_SIZE;
+/// `CHACHA20_FLAGS` — `cipher_chacha20.c:23`.
+const CHACHA20_FLAGS: u64 = PROV_CIPHER_FLAG_CUSTOM_IV;
+
+/// The allocation-tracking `file` argument for this row's allocations. `cipher_chacha20.c` is a
+/// **source-tree** file rather than a `.c.in` template, so its `__FILE__` carries the
+/// `../../src/openssl-3.6.4/` prefix — the opposite of every generated provider unit, and the same
+/// distinction `ciphercommon_block.c` records.
+const FILE_CHACHA20: *const c_char =
+    c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_chacha20.c".as_ptr();
+
+/// `struct prov_chacha20_ctx_st` — `cipher_chacha20.h:17-25`.
+///
+/// `base` must be first: `chacha20_cipher` and `chacha20_initiv` cast the `PROV_CIPHER_CTX *` they
+/// are handed back to this type, and `ossl_cipher_generic_initkey` writes only the base's fields.
+///
+/// The authority's `key` is a union with `OSSL_UNION_ALIGN` whose live member is `unsigned int d[8]`;
+/// the union's alignment is that of the widest scalar, and the unit test below binds the resulting
+/// size rather than assuming it.
+#[repr(C)]
+pub(crate) struct ProvChacha20Ctx {
+    /// `PROV_CIPHER_CTX base; /* must be first */`.
+    pub base: ProvCipherCtx,
+    /// `union { OSSL_UNION_ALIGN; unsigned int d[CHACHA_KEY_SIZE / 4]; } key`.
+    pub key: [c_uint; CHACHA20_KEYLEN / 4],
+    /// `unsigned int counter[CHACHA_CTR_SIZE / 4]`.
+    pub counter: [c_uint; CHACHA20_IVLEN / 4],
+    /// `unsigned char buf[CHACHA_BLK_SIZE]` — the partial block held between updates.
+    pub buf: [c_uchar; crate::chacha::CHACHA_BLK_SIZE],
+    /// `unsigned int partial_len` — how much of `buf` has been consumed.
+    pub partial_len: c_uint,
+}
+
+/// `PROV_CIPHER_HW_CHACHA20` — `cipher_chacha20.h:27-31`: the generic three fields plus `initiv`.
+#[repr(C)]
+struct ProvCipherHwChacha20 {
+    /// `PROV_CIPHER_HW base; /* must be first */`.
+    base: ProvCipherHw,
+    /// `int (*initiv)(PROV_CIPHER_CTX *ctx)`.
+    initiv: unsafe extern "C" fn(*mut ProvCipherCtx) -> c_int,
+}
+
+/// `static int chacha20_initkey(PROV_CIPHER_CTX *bctx, const uint8_t *key, size_t keylen)` —
+/// `cipher_chacha20_hw.c:19-33`.
+///
+/// **A NULL key is accepted and only resets `partial_len`.** The condition is `key != NULL`, not a
+/// failure, which is what lets a second init without a key resume the stream — the same shape as
+/// `chacha20_initiv`'s `iv_set` test.
+///
+/// # Safety
+/// The hw contract; `bctx` is a live `ProvChacha20Ctx`; `key` is NULL or readable for thirty-two
+/// bytes.
+unsafe extern "C" fn chacha20_initkey(
+    bctx: *mut ProvCipherCtx,
+    key: *const c_uchar,
+    _keylen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = bctx.cast::<ProvChacha20Ctx>();
+        if !key.is_null() {
+            let mut i = 0;
+            while i < CHACHA20_KEYLEN {
+                (*ctx).key[i / 4] =
+                    crate::chacha::u8tou32(core::slice::from_raw_parts(key.add(i), 4));
+                i += 4;
+            }
+        }
+        (*ctx).partial_len = 0;
+        1
+    }
+}
+
+/// `static int chacha20_initiv(PROV_CIPHER_CTX *bctx)` — `cipher_chacha20_hw.c:35-48`.
+///
+/// **The counter block is collected only when the base has an IV set.** `bctx->iv_set` is the
+/// generic init's record that an IV was supplied on *this* or an earlier init, so the row's
+/// `einit`/`dinit` can call this unconditionally and a stream that was never re-IV'd keeps counting
+/// where it left off. The `partial_len = 0` is outside the conditional, so an init always discards a
+/// partial block.
+///
+/// # Safety
+/// The hw contract; `bctx` is a live `ProvChacha20Ctx`.
+unsafe extern "C" fn chacha20_initiv(bctx: *mut ProvCipherCtx) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = bctx.cast::<ProvChacha20Ctx>();
+        if bits(bctx) & CTX_IV_SET != 0 {
+            let mut i = 0;
+            while i < CHACHA20_IVLEN {
+                (*ctx).counter[i / 4] = crate::chacha::u8tou32(core::slice::from_raw_parts(
+                    (*bctx).oiv.as_ptr().add(i),
+                    4,
+                ));
+                i += 4;
+            }
+        }
+        (*ctx).partial_len = 0;
+        1
+    }
+}
+
+/// `static int chacha20_cipher(PROV_CIPHER_CTX *bctx, unsigned char *out,
+/// const unsigned char *in, size_t inl)` — `cipher_chacha20_hw.c:50-113`.
+///
+/// Three phases, and each exists for a reason that a single `ChaCha20_ctr32` call cannot supply.
+///
+///   * **The held partial block is finished first**, byte at a time out of `ctx->buf`. If the caller
+///     supplies fewer bytes than remain, `partial_len` is left advanced and the call returns 1 with
+///     nothing else done — a successful short update.
+///   * **Whole blocks go in one call each, but only up to the 32-bit counter's overflow point.**
+///     `ChaCha20_ctr32` advances `counter[0]` and nothing else, so this function adds the block count
+///     to `counter[0]` *first* and, when that wraps, trims `blocks` back to the exact distance to the
+///     wrap before calling. The `1 << 28` clamp above it is the authority's own belt-and-braces: it
+///     is "practically never met" and is kept because `blocks` is a `size_t` and the cast to
+///     `unsigned int` would otherwise be the only bound.
+///   * **The trailing partial block is generated into `ctx->buf` and XORed from there**, so the next
+///     call can finish it. The zero fill before the keystream call is what makes `ChaCha20_ctr32`'s
+///     output *be* the keystream rather than keystream XOR garbage — the trick is that `inp == out`
+///     and the buffer is zeroed first.
+///
+/// # Safety
+/// The hw contract; `out` is writable for `inl` bytes; `in` is readable for `inl` bytes.
+unsafe extern "C" fn chacha20_cipher(
+    bctx: *mut ProvCipherCtx,
+    out: *mut c_uchar,
+    in_: *const c_uchar,
+    inl: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = bctx.cast::<ProvChacha20Ctx>();
+        let mut inl = inl;
+        let mut out = out;
+        let mut in_ = in_;
+        let mut n = (*ctx).partial_len;
+
+        if n > 0 {
+            while inl > 0 && n < crate::chacha::CHACHA_BLK_SIZE as c_uint {
+                *out = *in_ ^ (*ctx).buf[n as usize];
+                out = out.add(1);
+                in_ = in_.add(1);
+                n += 1;
+                inl -= 1;
+            }
+            (*ctx).partial_len = n;
+
+            if inl == 0 {
+                return 1;
+            }
+            if n == crate::chacha::CHACHA_BLK_SIZE as c_uint {
+                (*ctx).partial_len = 0;
+            }
+        }
+
+        let rem = (inl % crate::chacha::CHACHA_BLK_SIZE) as c_uint;
+        inl -= rem as usize;
+        let mut ctr32 = (*ctx).counter[0];
+        while inl >= crate::chacha::CHACHA_BLK_SIZE {
+            let mut blocks: usize = inl / crate::chacha::CHACHA_BLK_SIZE;
+
+            /*
+             * 1<<28 is just a not-so-small yet not-so-large number...
+             * Below condition is practically never met, but it has to
+             * be checked for code correctness.
+             */
+            if core::mem::size_of::<usize>() > core::mem::size_of::<c_uint>()
+                && blocks > (1usize << 28)
+            {
+                blocks = 1usize << 28;
+            }
+
+            /*
+             * As ChaCha20_ctr32 operates on 32-bit counter, caller
+             * has to handle overflow. 'if' below detects the
+             * overflow, which is then handled by limiting the
+             * amount of blocks to the exact overflow point...
+             */
+            ctr32 = ctr32.wrapping_add(blocks as c_uint);
+            if (ctr32 as usize) < blocks {
+                blocks -= ctr32 as usize;
+                ctr32 = 0;
+            }
+            blocks *= crate::chacha::CHACHA_BLK_SIZE;
+            crate::chacha::ChaCha20_ctr32(
+                out,
+                in_,
+                blocks,
+                (*ctx).key.as_ptr(),
+                (*ctx).counter.as_ptr(),
+            );
+            inl -= blocks;
+            in_ = in_.add(blocks);
+            out = out.add(blocks);
+
+            (*ctx).counter[0] = ctr32;
+            if ctr32 == 0 {
+                (*ctx).counter[1] = (*ctx).counter[1].wrapping_add(1);
+            }
+        }
+
+        if rem > 0 {
+            (*ctx).buf = [0; crate::chacha::CHACHA_BLK_SIZE];
+            crate::chacha::ChaCha20_ctr32(
+                (*ctx).buf.as_mut_ptr(),
+                (*ctx).buf.as_ptr(),
+                crate::chacha::CHACHA_BLK_SIZE,
+                (*ctx).key.as_ptr(),
+                (*ctx).counter.as_ptr(),
+            );
+
+            /* propagate counter overflow */
+            (*ctx).counter[0] = (*ctx).counter[0].wrapping_add(1);
+            if (*ctx).counter[0] == 0 {
+                (*ctx).counter[1] = (*ctx).counter[1].wrapping_add(1);
+            }
+
+            for i in 0..rem as usize {
+                out.add(i).write(*in_.add(i) ^ (*ctx).buf[i]);
+            }
+            (*ctx).partial_len = rem;
+        }
+
+        1
+    }
+}
+
+/// `static const PROV_CIPHER_HW_CHACHA20 chacha20_hw` — `cipher_chacha20_hw.c:115-118`.
+///
+/// **`base.copyctx` is left out of the initialiser and is therefore NULL**, which is why
+/// `ProvCipherHw::copyctx` is an `Option`. Nothing calls it for this row: `chacha20_dupctx` is a
+/// `memdup`.
+static CHACHA20_HW: ProvCipherHwChacha20 = ProvCipherHwChacha20 {
+    base: ProvCipherHw {
+        init: chacha20_initkey,
+        cipher: chacha20_cipher,
+        copyctx: None,
+    },
+    initiv: chacha20_initiv,
+};
+
+/// `const PROV_CIPHER_HW *ossl_prov_cipher_hw_chacha20(size_t keybits)` —
+/// `cipher_chacha20_hw.c:120-123`. `keybits` is ignored: there is one ChaCha20 and its key is
+/// thirty-two bytes.
+fn ossl_prov_cipher_hw_chacha20(_keybits: usize) -> *const ProvCipherHw {
+    // `ProvCipherHwChacha20` is `#[repr(C)]` with `base` first, so the two pointers are the same
+    // address and the cast is the one the authority's typedef performs. No `unsafe` is needed: the
+    // cast and `addr_of!` are both safe, which is itself the statement that this is a layout
+    // equivalence rather than a dereference.
+    core::ptr::addr_of!(CHACHA20_HW).cast::<ProvCipherHw>()
+}
+
+/// `void ossl_chacha20_initctx(PROV_CHACHA20_CTX *ctx)` — `cipher_chacha20.c:44-51`.
+///
+/// The `0` mode is the authority's: ChaCha20 is not one of `evp.h`'s cipher modes.
+///
+/// # Safety
+/// `ctx` is a live, writable `ProvChacha20Ctx`.
+unsafe fn ossl_chacha20_initctx(ctx: *mut ProvChacha20Ctx) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        ossl_cipher_generic_initkey(
+            ctx.cast(),
+            CHACHA20_KEYLEN * 8,
+            CHACHA20_BLKLEN * 8,
+            CHACHA20_IVLEN * 8,
+            0,
+            CHACHA20_FLAGS,
+            ossl_prov_cipher_hw_chacha20(CHACHA20_KEYLEN * 8),
+            ptr::null_mut(),
+        );
+    }
+}
+
+/// `static void *chacha20_newctx(void *provctx)` — `cipher_chacha20.c:53-64`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn chacha20_newctx(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvChacha20Ctx>(), FILE_CHACHA20, LINE)
+            .cast::<ProvChacha20Ctx>();
+        if !ctx.is_null() {
+            ossl_chacha20_initctx(ctx);
+        }
+        let _ = provctx;
+        ctx.cast()
+    }
+}
+
+/// `static void chacha20_freectx(void *vctx)` — `cipher_chacha20.c:66-74`. The whole context is
+/// cleared before release, not merely freed, because it holds key material.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn chacha20_freectx(vctx: *mut c_void) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if !vctx.is_null() {
+            ossl_cipher_generic_reset_ctx(vctx.cast::<ProvCipherCtx>());
+            CRYPTO_clear_free(
+                vctx,
+                core::mem::size_of::<ProvChacha20Ctx>(),
+                FILE_CHACHA20,
+                LINE,
+            );
+        }
+    }
+}
+
+/// `static void *chacha20_dupctx(void *vctx)` — `cipher_chacha20.c:76-95`.
+///
+/// **The whole context is copied, `hw` included, and the TLS MAC is the one field that needs its own
+/// allocation.** Because the copy carries `hw`, the duplicate's `einit` calls the same
+/// `chacha20_initiv` the original's does — which is what makes a duplicated context resumable
+/// mid-partial-block. The `alloced` guard is what says the MAC buffer belongs to this context rather
+/// than to a caller's, so only then is it reallocated; if that allocation fails the whole duplicate
+/// is released and NULL returned.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn chacha20_dupctx(vctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvChacha20Ctx>();
+        if ctx.is_null() {
+            return ptr::null_mut();
+        }
+        let dupctx = CRYPTO_memdup(
+            ctx.cast(),
+            core::mem::size_of::<ProvChacha20Ctx>(),
+            FILE_CHACHA20,
+            LINE,
+        )
+        .cast::<ProvChacha20Ctx>();
+        if !dupctx.is_null() && !(*dupctx).base.tlsmac.is_null() && (*dupctx).base.alloced != 0 {
+            (*dupctx).base.tlsmac = CRYPTO_memdup(
+                (*dupctx).base.tlsmac.cast(),
+                (*dupctx).base.tlsmacsize,
+                FILE_CHACHA20,
+                LINE,
+            )
+            .cast::<c_uchar>();
+            if (*dupctx).base.tlsmac.is_null() {
+                CRYPTO_free(dupctx.cast(), FILE_CHACHA20, LINE);
+                return ptr::null_mut();
+            }
+        }
+        dupctx.cast()
+    }
+}
+
+/// `static int chacha20_get_params(OSSL_PARAM params[])` — `cipher_chacha20.c:97-103`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn chacha20_get_params(params: *mut OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        ossl_cipher_generic_get_params(
+            params,
+            0,
+            CHACHA20_FLAGS,
+            CHACHA20_KEYLEN * 8,
+            CHACHA20_BLKLEN * 8,
+            CHACHA20_IVLEN * 8,
+        )
+    }
+}
+
+/// `static int chacha20_get_ctx_params(void *vctx, OSSL_PARAM params[])` —
+/// `cipher_chacha20.c:105-132`.
+///
+/// **`updated-iv` is the row's own key and it is generated, not stored.** The counter block is four
+/// little-endian words, so it is written out with `CHACHA_U32TOU8` — the same little-endian
+/// spelling `CHACHA_U8TOU32` reads back, and the pair is what makes a caller able to save and
+/// restore a stream position. `keylen` and `ivlen` are the two constants rather than the context's
+/// fields, so a row whose lengths could not be set still reports them.
+///
+/// Each of the three arms raises `PROV_R_FAILED_TO_SET_PARAMETER` on a failed write, which is a
+/// *provider* error and not the params layer's.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn chacha20_get_ctx_params(vctx: *mut c_void, params: *mut OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvChacha20Ctx>();
+
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_IVLEN);
+        if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, CHACHA20_IVLEN) == 0 {
+            return fail_at(&err_sites::PROV_CIPHER_CHACHA20_111);
+        }
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_KEYLEN);
+        if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, CHACHA20_KEYLEN) == 0 {
+            return fail_at(&err_sites::PROV_CIPHER_CHACHA20_116);
+        }
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_UPDATED_IV);
+        if !p.is_null() {
+            let mut ivbuf = [0 as c_uchar; CHACHA20_IVLEN];
+            for i in 0..4 {
+                ivbuf[4 * i..4 * i + 4].copy_from_slice(&(*ctx).counter[i].to_le_bytes());
+            }
+            if crate::params::OSSL_PARAM_set_octet_string(p, ivbuf.as_ptr().cast(), CHACHA20_IVLEN)
+                == 0
+            {
+                return fail_at(&err_sites::PROV_CIPHER_CHACHA20_126);
+            }
+        }
+        1
+    }
+}
+
+/// `chacha20_known_gettable_ctx_params` — `cipher_chacha20.c:134-139`. Three keys, and `updated-iv`
+/// is `octet_string` rather than the `size_t` the other two are.
+static CHACHA20_GETTABLE_CTX_PARAMS: [OsslParam; 4] = [
+    param_size_t(OSSL_CIPHER_PARAM_KEYLEN),
+    param_size_t(OSSL_CIPHER_PARAM_IVLEN),
+    param_octet_string(OSSL_CIPHER_PARAM_UPDATED_IV),
+    END,
+];
+
+/// `const OSSL_PARAM *chacha20_gettable_ctx_params(void *cctx, void *provctx)` —
+/// `cipher_chacha20.c:140-144`. Hand-written rather than the generic list, which is the row's shape.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn chacha20_gettable_ctx_params(
+    _cctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    CHACHA20_GETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `static int chacha20_set_ctx_params(void *vctx, const OSSL_PARAM params[])` —
+/// `cipher_chacha20.c:146-176`.
+///
+/// **Both keys are length *checks*, not settings.** `keylen` and `ivlen` are fixed by the row, so a
+/// descriptor naming a different value is refused with `PROV_R_INVALID_KEY_LENGTH` or
+/// `PROV_R_INVALID_IV_LENGTH` and a descriptor of the wrong *type* is refused by the params layer
+/// with `PROV_R_FAILED_TO_GET_PARAMETER`. That is why this row's `settable_ctx_params` publishes two
+/// keys that cannot change anything: they exist to be *rejected*, which a caller that hands a generic
+/// parameter block through `EVP_EncryptInit_ex` depends on.
+///
+/// `ossl_param_is_empty` short-circuits both arms, so a NULL or immediately-terminated array answers
+/// 1 without locating anything.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn chacha20_set_ctx_params(vctx: *mut c_void, params: *const OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let _ = vctx.cast::<ProvChacha20Ctx>();
+        if ossl_param_is_empty(params) {
+            return 1;
+        }
+
+        let mut len: usize = 0;
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_KEYLEN);
+        if !p.is_null() {
+            if crate::params::OSSL_PARAM_get_size_t(p, &mut len) == 0 {
+                return fail_at(&err_sites::PROV_CIPHER_CHACHA20_156);
+            }
+            if len != CHACHA20_KEYLEN {
+                return fail_at(&err_sites::PROV_CIPHER_CHACHA20_160);
+            }
+        }
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_IVLEN);
+        if !p.is_null() {
+            if crate::params::OSSL_PARAM_get_size_t(p, &mut len) == 0 {
+                return fail_at(&err_sites::PROV_CIPHER_CHACHA20_167);
+            }
+            if len != CHACHA20_IVLEN {
+                return fail_at(&err_sites::PROV_CIPHER_CHACHA20_171);
+            }
+        }
+        1
+    }
+}
+
+/// `chacha20_known_settable_ctx_params` — `cipher_chacha20.c:178-182`.
+static CHACHA20_SETTABLE_CTX_PARAMS: [OsslParam; 3] = [
+    param_size_t(OSSL_CIPHER_PARAM_KEYLEN),
+    param_size_t(OSSL_CIPHER_PARAM_IVLEN),
+    END,
+];
+
+/// `const OSSL_PARAM *chacha20_settable_ctx_params(void *cctx, void *provctx)` —
+/// `cipher_chacha20.c:183-187`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn chacha20_settable_ctx_params(
+    _cctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    CHACHA20_SETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `int ossl_chacha20_einit(void *vctx, const unsigned char *key, size_t keylen,
+/// const unsigned char *iv, size_t ivlen, const OSSL_PARAM params[])` —
+/// `cipher_chacha20.c:189-204`.
+///
+/// **Three steps, and the middle one is the row's whole reason for existing.** The generic init runs
+/// with a NULL params array, then — **only if an IV was supplied** — `hw->initiv` collects the
+/// counter block, then the row's own `set_ctx_params` runs. The authority's comment on the first line
+/// is the contract for the running check: "The generic function checks for `ossl_prov_is_running()`",
+/// so this wrapper does not.
+///
+/// `hw` is read out of the context rather than named, so the extended struct's `initiv` is reached
+/// through the same pointer the base was installed with.
+///
+/// # Safety
+/// The dispatch contract.
+pub(crate) unsafe extern "C" fn ossl_chacha20_einit(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut ret = ossl_cipher_generic_einit(vctx, key, keylen, iv, ivlen, ptr::null());
+        if ret != 0 && !iv.is_null() {
+            let ctx = vctx.cast::<ProvCipherCtx>();
+            let hw = (*ctx).hw.cast::<ProvCipherHwChacha20>();
+            ((*hw).initiv)(ctx);
+        }
+        if ret != 0 && chacha20_set_ctx_params(vctx, params) == 0 {
+            ret = 0;
+        }
+        ret
+    }
+}
+
+/// `int ossl_chacha20_dinit(void *vctx, const unsigned char *key, size_t keylen,
+/// const unsigned char *iv, size_t ivlen, const OSSL_PARAM params[])` —
+/// `cipher_chacha20.c:206-221`. The decrypt twin, identical but for the generic call it makes.
+///
+/// # Safety
+/// The dispatch contract.
+pub(crate) unsafe extern "C" fn ossl_chacha20_dinit(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut ret = ossl_cipher_generic_dinit(vctx, key, keylen, iv, ivlen, ptr::null());
+        if ret != 0 && !iv.is_null() {
+            let ctx = vctx.cast::<ProvCipherCtx>();
+            let hw = (*ctx).hw.cast::<ProvCipherHwChacha20>();
+            ((*hw).initiv)(ctx);
+        }
+        if ret != 0 && chacha20_set_ctx_params(vctx, params) == 0 {
+            ret = 0;
+        }
+        ret
+    }
+}
+
+/// `const OSSL_DISPATCH ossl_chacha20_functions[]` — `cipher_chacha20.c:223-245`: fourteen entries
+/// and the terminator.
+///
+/// The row's own `ENCRYPT_INIT`/`DECRYPT_INIT` and its own ctx-params quartet; the update, final and
+/// one-shot `cipher` are the **stream** generic ones, because the block size is one byte and there is
+/// no padding to add or strip.
+pub(crate) static CHACHA20_FUNCTIONS: [OsslDispatch; 15] = [
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_NEWCTX,
+        function: chacha20_newctx as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_FREECTX,
+        function: chacha20_freectx as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_DUPCTX,
+        function: chacha20_dupctx as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_ENCRYPT_INIT,
+        function: ossl_chacha20_einit as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_DECRYPT_INIT,
+        function: ossl_chacha20_dinit as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_UPDATE,
+        function: ossl_cipher_generic_stream_update as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_FINAL,
+        function: ossl_cipher_generic_stream_final as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_CIPHER,
+        function: ossl_cipher_generic_cipher as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_GET_PARAMS,
+        function: chacha20_get_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_GETTABLE_PARAMS,
+        function: ossl_cipher_generic_gettable_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_GET_CTX_PARAMS,
+        function: chacha20_get_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS,
+        function: chacha20_gettable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_SET_CTX_PARAMS,
+        function: chacha20_set_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS,
+        function: chacha20_settable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_DISPATCH_END,
+        function: ptr::null_mut(),
     },
 ];
 
@@ -9212,9 +9949,9 @@ mod tests {
 
     #[test]
     fn the_cipher_table_terminates_and_names_the_rows() {
-        assert_eq!(DEFLT_CIPHERS.len(), 83);
+        assert_eq!(DEFLT_CIPHERS.len(), 84);
         // SAFETY: every entry up to the terminator is initialised.
-        let last = DEFLT_CIPHERS[82].algorithm_names;
+        let last = DEFLT_CIPHERS[83].algorithm_names;
         assert!(last.is_null(), "the table is NULL-name terminated");
         // SAFETY: the first row's name is a `'static` C string.
         let first = unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[0].algorithm_names) };
@@ -9229,9 +9966,7 @@ mod tests {
                 buf: [0; 16],
                 iv: [0; 16],
                 block: None,
-                cbc_fn: None,
-                ctr: None,
-                ecb: None,
+                stream: ProvCipherStream { cbc: None },
                 mode: EVP_CIPH_ECB_MODE,
                 keylen: 16,
                 ivlen: 0,
@@ -9271,5 +10006,250 @@ mod tests {
         assert_eq!(ctx.base.keylen, 16);
         assert_eq!(ctx.base.blocksize, 16);
         assert_eq!(ctx.base.bits & CTX_PAD, CTX_PAD, "padding defaults on");
+    }
+
+    /// **The `ChaCha20` row's context, field for field.** The numbers are the authority's own,
+    /// measured by `court/measure-chacha-ctx.c` compiled against the pinned build's internal
+    /// headers: `sizeof(PROV_CIPHER_CTX)` is 192 and `sizeof(PROV_CHACHA20_CTX)` is 312, with `key`
+    /// at 192, `counter` at 224, `buf` at 240 and `partial_len` at 304. The allocation request is
+    /// what a `CRYPTO_set_mem_functions` application's allocator receives, so the size is contract.
+    ///
+    /// The three offsets matter as much as the size: `chacha20_initkey` and `chacha20_initiv` cast
+    /// the base pointer onto this struct, and `chacha20_cipher` reads `counter` and `partial_len`
+    /// through it, so a field in the wrong place is a silent wrong keystream rather than a crash.
+    #[test]
+    fn the_chacha20_context_is_the_authoritys_size() {
+        assert_eq!(core::mem::size_of::<ProvCipherCtx>(), 192);
+        assert_eq!(core::mem::size_of::<ProvChacha20Ctx>(), 312);
+        assert_eq!(core::mem::align_of::<ProvChacha20Ctx>(), 8);
+        assert_eq!(core::mem::offset_of!(ProvChacha20Ctx, key), 192);
+        assert_eq!(core::mem::offset_of!(ProvChacha20Ctx, counter), 224);
+        assert_eq!(core::mem::offset_of!(ProvChacha20Ctx, buf), 240);
+        assert_eq!(core::mem::offset_of!(ProvChacha20Ctx, partial_len), 304);
+        // `PROV_CIPHER_HW_CHACHA20` is the generic three pointers plus `initiv`.
+        assert_eq!(core::mem::size_of::<ProvCipherHwChacha20>(), 32);
+        assert_eq!(CHACHA20_KEYLEN, 32);
+        assert_eq!(CHACHA20_BLKLEN, 1);
+        assert_eq!(CHACHA20_IVLEN, 16);
+    }
+
+    /// **The row's two parameter lists are its own, not the generic ones.** `ChaCha20` publishes a
+    /// *three*-key getter whose third key is `octet_string` -- the counter block as it would be read
+    /// back -- and a two-key setter whose entries exist to be *rejected* rather than applied. A
+    /// transcription that had reused `CIPHER_GETTABLE_CTX_PARAMS` would pass every encrypt/decrypt
+    /// observation and answer both of these wrongly.
+    #[test]
+    fn the_chacha20_param_lists_are_the_rows_own() {
+        // SAFETY: every key is a `'static` C string literal, and the terminator's is NULL.
+        unsafe {
+            assert_eq!(CHACHA20_GETTABLE_CTX_PARAMS.len(), 4);
+            for (i, want) in [b"keylen".as_slice(), b"ivlen", b"updated-iv"]
+                .into_iter()
+                .enumerate()
+            {
+                let k = core::ffi::CStr::from_ptr(CHACHA20_GETTABLE_CTX_PARAMS[i].key.cast());
+                assert_eq!(k.to_bytes(), want);
+            }
+            // `updated-iv` is the odd one: `OCTET_STRING`, not the `size_t` of the two above it.
+            assert_eq!(CHACHA20_GETTABLE_CTX_PARAMS[2].data_type, 5);
+            assert_eq!(CHACHA20_GETTABLE_CTX_PARAMS[2].data_size, 0);
+            assert!(CHACHA20_GETTABLE_CTX_PARAMS[3].key.is_null());
+
+            assert_eq!(CHACHA20_SETTABLE_CTX_PARAMS.len(), 3);
+            for (i, want) in [b"keylen".as_slice(), b"ivlen"].into_iter().enumerate() {
+                let k = core::ffi::CStr::from_ptr(CHACHA20_SETTABLE_CTX_PARAMS[i].key.cast());
+                assert_eq!(k.to_bytes(), want);
+                assert_eq!(CHACHA20_SETTABLE_CTX_PARAMS[i].data_size, 8);
+            }
+            assert!(CHACHA20_SETTABLE_CTX_PARAMS[2].key.is_null());
+        }
+
+        // Fourteen entries and the terminator, and the four the row overrides are the two inits and
+        // the two ctx-params accessors.
+        assert_eq!(CHACHA20_FUNCTIONS.len(), 15);
+        assert_eq!(
+            CHACHA20_FUNCTIONS[3].function_id,
+            OSSL_FUNC_CIPHER_ENCRYPT_INIT
+        );
+        assert_eq!(
+            CHACHA20_FUNCTIONS[3].function as usize,
+            ossl_chacha20_einit as *const c_void as usize
+        );
+        assert_eq!(
+            CHACHA20_FUNCTIONS[4].function as usize,
+            ossl_chacha20_dinit as *const c_void as usize
+        );
+        assert_eq!(CHACHA20_FUNCTIONS[14].function_id, OSSL_DISPATCH_END);
+        assert!(CHACHA20_FUNCTIONS[14].function.is_null());
+    }
+
+    /// **`chacha20_hw`'s `copyctx` is NULL, and `initiv` is not.** This is the row that made
+    /// `ProvCipherHw::copyctx` an `Option`: the authority's initialiser names only `initkey`,
+    /// `cipher` and `initiv`, so a non-nullable field could not have held the truth. `copyctx` is
+    /// never called for this row -- `chacha20_dupctx` is a `memdup`.
+    #[test]
+    fn the_chacha20_hw_leaves_copyctx_null() {
+        assert!(CHACHA20_HW.base.copyctx.is_none());
+        assert_eq!(
+            CHACHA20_HW.base.init as usize,
+            chacha20_initkey as *const c_void as usize
+        );
+        assert_eq!(
+            CHACHA20_HW.base.cipher as usize,
+            chacha20_cipher as *const c_void as usize
+        );
+        assert_eq!(
+            CHACHA20_HW.initiv as usize,
+            chacha20_initiv as *const c_void as usize
+        );
+        // `ossl_prov_cipher_hw_chacha20` ignores its argument and answers the same pointer.
+        assert_eq!(
+            ossl_prov_cipher_hw_chacha20(256) as usize,
+            core::ptr::addr_of!(CHACHA20_HW) as usize
+        );
+        // The `#[repr(C)]` cast the initctx makes is an address identity, not a copy.
+        assert_eq!(
+            ossl_prov_cipher_hw_chacha20(256) as usize,
+            core::ptr::addr_of!(CHACHA20_HW.base) as usize
+        );
+    }
+
+    /// `chacha20_initkey` collects the key as **eight little-endian words**, and a NULL key only
+    /// resets `partial_len`. The second half is what makes a re-init without a key resume the
+    /// stream, and the word order is what makes the keystream the standard's rather than its
+    /// byte-reverse.
+    #[test]
+    fn chacha20_initkey_collects_little_endian_words_and_tolerates_null() {
+        let mut ctx = ProvChacha20Ctx {
+            base: zeroed_ctx(),
+            key: [0; 8],
+            counter: [0; 4],
+            buf: [0; 64],
+            partial_len: 0,
+        };
+        let mut key = [0u8; 32];
+        for (i, b) in key.iter_mut().enumerate() {
+            *b = i as u8;
+        }
+
+        // SAFETY: `ctx` is this frame's and `key` is a live local of thirty-two bytes.
+        unsafe {
+            assert_eq!(
+                chacha20_initkey(core::ptr::addr_of_mut!(ctx).cast(), key.as_ptr(), key.len()),
+                1
+            );
+        }
+        assert_eq!(ctx.key[0], 0x0302_0100);
+        assert_eq!(ctx.key[1], 0x0706_0504);
+        assert_eq!(ctx.key[7], 0x1f1e_1d1c);
+
+        // A held partial block is discarded on every init, with or without a key.
+        ctx.partial_len = 17;
+        // SAFETY: a NULL key takes the early arm and writes only `partial_len`.
+        unsafe {
+            assert_eq!(
+                chacha20_initkey(core::ptr::addr_of_mut!(ctx).cast(), core::ptr::null(), 0),
+                1
+            );
+        }
+        assert_eq!(ctx.partial_len, 0);
+        // The key survived the keyless init, which is the whole point of the `key != NULL` test.
+        assert_eq!(ctx.key[0], 0x0302_0100);
+    }
+
+    /// **`chacha20_initiv` collects the counter block only when the base has an IV set.** That
+    /// conditional is the row's most easily-lost behaviour: without it, an init that supplies no IV
+    /// would silently reset the counter to zero and a resumed stream would restart.
+    #[test]
+    fn chacha20_initiv_needs_the_base_to_have_an_iv() {
+        let mut ctx = ProvChacha20Ctx {
+            base: zeroed_ctx(),
+            key: [0; 8],
+            counter: [0xdead_beef; 4],
+            buf: [0; 64],
+            partial_len: 9,
+        };
+        for (i, b) in ctx.base.oiv.iter_mut().enumerate() {
+            *b = i as u8;
+        }
+
+        // No IV bit: the counter is left exactly as it was, and only `partial_len` resets.
+        // SAFETY: `ctx` is this frame's.
+        unsafe {
+            assert_eq!(chacha20_initiv(core::ptr::addr_of_mut!(ctx).cast()), 1);
+        }
+        assert_eq!(ctx.counter, [0xdead_beef; 4]);
+        assert_eq!(ctx.partial_len, 0);
+
+        // With the bit: the counter block is collected little-endian from `oiv`.
+        ctx.base.bits |= CTX_IV_SET;
+        // SAFETY: as above.
+        unsafe {
+            assert_eq!(chacha20_initiv(core::ptr::addr_of_mut!(ctx).cast()), 1);
+        }
+        assert_eq!(ctx.counter[0], 0x0302_0100);
+        assert_eq!(ctx.counter[3], 0x0f0e_0d0c);
+    }
+
+    /// The `ChaCha20` row is present in `DEFLT_CIPHERS`, carries the authority's own spelling of the
+    /// name, and is the row that sits after the DES EDE family. `PROV_NAMES_ChaCha20` is spelled in
+    /// **mixed case** (`prov/names.h:176`), unlike every other name constant in that header, so the
+    /// alias sequence is asserted rather than assumed.
+    #[test]
+    fn the_deflt_ciphers_table_carries_the_chacha20_row() {
+        // The terminator's name is NULL, so the scan skips it rather than dereferencing it, and the
+        // "not found" answer is a sentinel rather than an `Option` -- an `expect` here would be a
+        // `clippy::expect_used` failure under the CI's `-D warnings`.
+        let mut found = usize::MAX;
+        for (i, row) in DEFLT_CIPHERS.iter().enumerate() {
+            if row.algorithm_names.is_null() {
+                continue;
+            }
+            // SAFETY: each landed row's name is a `'static` C string literal, checked non-NULL.
+            let name = unsafe { core::ffi::CStr::from_ptr(row.algorithm_names) };
+            if name.to_bytes() == b"ChaCha20" {
+                found = i;
+            }
+        }
+        assert_ne!(found, usize::MAX, "the ChaCha20 row is published");
+        // SAFETY: the row's property is the default provider's own `'static` literal.
+        unsafe {
+            let props = core::ffi::CStr::from_ptr(DEFLT_CIPHERS[found].property_definition);
+            assert_eq!(props.to_bytes(), b"provider=default");
+            assert_eq!(
+                DEFLT_CIPHERS[found].implementation as usize,
+                CHACHA20_FUNCTIONS.as_ptr() as usize
+            );
+        }
+    }
+
+    /// A `PROV_CIPHER_CTX` with every field zero, for the two hw tests above. Written out rather
+    /// than `zeroed()` because `ProvCipherCtx` holds raw pointers and a hand-built zero keeps the
+    /// tests free of the type's `Default`.
+    fn zeroed_ctx() -> ProvCipherCtx {
+        ProvCipherCtx {
+            oiv: [0; GENERIC_BLOCK_SIZE],
+            buf: [0; GENERIC_BLOCK_SIZE],
+            iv: [0; GENERIC_BLOCK_SIZE],
+            block: None,
+            stream: ProvCipherStream { cbc: None },
+            mode: 0,
+            keylen: 0,
+            ivlen: 0,
+            blocksize: 0,
+            bufsz: 0,
+            cts_mode: 0,
+            bits: 0,
+            tlsversion: 0,
+            tlsmac: core::ptr::null_mut(),
+            alloced: 0,
+            tlsmacsize: 0,
+            removetlspad: 0,
+            removetlsfixed: 0,
+            num: 0,
+            hw: core::ptr::null(),
+            ks: core::ptr::null(),
+            libctx: core::ptr::null_mut(),
+        }
     }
 }

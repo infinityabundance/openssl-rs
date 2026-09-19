@@ -7,10 +7,10 @@
     "census": {
       "names_a_file_the_authority_does_not_have": 4,
       "symbols_not_reached": 2,
-      "units_not_reached": 4
+      "units_not_reached": 6
     },
     "census_by_stratum": {
-      "8": 10
+      "8": 12
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
@@ -27,6 +27,8 @@
       "units_not_reached": [
         "crypto/chacha/chacha_enc.c",
         "providers/implementations/ciphers/cipher_aes_siv.c",
+        "providers/implementations/ciphers/cipher_chacha20.c",
+        "providers/implementations/ciphers/cipher_chacha20_hw.c",
         "providers/implementations/ciphers/ciphercommon_block.c",
         "providers/implementations/ciphers/ciphercommon_hw.c"
       ]
@@ -43,7 +45,7 @@
       "symbols_reached": 74,
       "unit_records": 67,
       "units_named_by_a_record": 70,
-      "units_named_by_a_row": 141,
+      "units_named_by_a_row": 143,
       "units_reached": 137
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
@@ -1783,6 +1785,22 @@
         ],
         "transcribed_by": []
       },
+      "providers/implementations/ciphers/cipher_chacha20.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/ciphers/cipher_chacha20_hw.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
+      },
       "providers/implementations/ciphers/ciphercommon_block.c": {
         "defines": [],
         "recorded_by": null,
@@ -2144,33 +2162,33 @@
       "transcribed_units": 170
     }
   },
-  "body_hash": "dcaa59018d3b4d9a6a3431cc0650d2479d0e24a9be1fc500949107f9d0406256",
+  "body_hash": "b899a02bddcf0bddc92bf65e90ca50a45159db6970c34b727b22c5296c92181a",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "233e2db91dace6ba583002c23c967aee54f7ecb181e5b8f039af5d52d2209362"
+      "sha256": "1a1e85b8e5945145c414da87ffc44af4020c1c022de29bdcfdc42d0ee6a36b12"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "6eff5c03119c9a5940eff711faa8eec019139ae53e624923a5d13a4158af2d19"
+      "sha256": "9c7f04ddae683d8d354a64536decae275e389a6976e84139afee8c264e3955b4"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "a3e326ac46ff950cbde94afc5191831e447b58e869f8a8c2a044f2606f0a5aab"
+      "sha256": "bc2d65dcff576cb884128cd0875f386a9e631ec34cc9fcaa9dc509157cc4c070"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "14aa1d94282095a86769a2a0515feb269c4323b5a978704edbd0ee7609682dd2"
+      "sha256": "19f92b3b6c90ecaff7c98e3903602d188ee643126c25edde7f6dc49bf71f3db2"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "37547ea97ff9fd3768bf41fdf6922e5bc523aed808c7bc4d9cc2ab68512edc3a"
+      "sha256": "69ca4d87eea01f3fabd4a4d17c518357878e0dea5d21b167b5f038383ff52608"
     },
     {
       "name": "source-manifest",
@@ -2195,7 +2213,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "37900400d3a9ae0cfdeecdb9ab9419e8f0fc43c1f01dd68afbc8ad799b96f60f"
+      "sha256": "50afc2af1002d481f862acd24369a4db15f6d92fdc595cda4c530c4f35ca424b"
     }
   ],
   "kind": "plan-reconciliation",

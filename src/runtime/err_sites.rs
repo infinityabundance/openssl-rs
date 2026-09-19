@@ -18662,6 +18662,76 @@ pub(crate) const PROV_CIPHER_AES_SIV_223: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `chacha20_get_ctx_params` at `providers/implementations/ciphers/cipher_chacha20.c:111` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_111: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_chacha20.c",
+    line: 111,
+    func: c"chacha20_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `chacha20_get_ctx_params` at `providers/implementations/ciphers/cipher_chacha20.c:116` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_116: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_chacha20.c",
+    line: 116,
+    func: c"chacha20_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `chacha20_get_ctx_params` at `providers/implementations/ciphers/cipher_chacha20.c:126` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_126: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_chacha20.c",
+    line: 126,
+    func: c"chacha20_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `chacha20_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20.c:156` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_156: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_chacha20.c",
+    line: 156,
+    func: c"chacha20_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `chacha20_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20.c:160` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_CHACHA20_160: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_chacha20.c",
+    line: 160,
+    func: c"chacha20_set_ctx_params",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `chacha20_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20.c:167` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_167: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_chacha20.c",
+    line: 167,
+    func: c"chacha20_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `chacha20_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20.c:171` (PROV_R_INVALID_IV_LENGTH).
+pub(crate) const PROV_CIPHER_CHACHA20_171: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_chacha20.c",
+    line: 171,
+    func: c"chacha20_set_ctx_params",
+    lib: 57,
+    reason: 109,
+    dynamic_reason: false,
+};
+
 /// `cmac_get_ctx_params_decoder` at `providers/implementations/macs/cmac_prov.c:245` (PROV_R_REPEATED_PARAMETER).
 pub(crate) const PROV_CMAC_PROV_245: ErrSite = ErrSite {
     file: c"providers/implementations/macs/cmac_prov.c",
@@ -21336,6 +21406,13 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_CIPHER_AES_SIV_206,
     PROV_CIPHER_AES_SIV_213,
     PROV_CIPHER_AES_SIV_223,
+    PROV_CIPHER_CHACHA20_111,
+    PROV_CIPHER_CHACHA20_116,
+    PROV_CIPHER_CHACHA20_126,
+    PROV_CIPHER_CHACHA20_156,
+    PROV_CIPHER_CHACHA20_160,
+    PROV_CIPHER_CHACHA20_167,
+    PROV_CIPHER_CHACHA20_171,
     PROV_CMAC_PROV_245,
     PROV_CMAC_PROV_257,
     PROV_CMAC_PROV_269,

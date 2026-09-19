@@ -433,6 +433,14 @@ COVERED_FILES = [
     ("providers/implementations/ciphers/cipher_aes_xts.c", "PROV_CIPHER_AES_XTS"),
     ("providers/implementations/ciphers/ciphercommon_ccm.c", "PROV_CIPHERCOMMON_CCM"),
     ("providers/implementations/ciphers/cipher_aes_siv.c", "PROV_CIPHER_AES_SIV"),
+    # `cipher_chacha20.c` is a **source-tree** file rather than a `.c.in` template, so its `__FILE__`
+    # carries the source-tree prefix and its seven raises are its own: three
+    # `PROV_R_FAILED_TO_SET_PARAMETER` in the getter (one per key it publishes) and four in the setter
+    # -- two `PROV_R_FAILED_TO_GET_PARAMETER` for the two length keys and one reason each for the
+    # length checks they guard. The row's sibling `cipher_chacha20_hw.c` raises nothing at all, so it
+    # is absent for the reason `cipher_cts.c` is: an entry that can never change would read as
+    # coverage that does not exist.
+    ("providers/implementations/ciphers/cipher_chacha20.c", "PROV_CIPHER_CHACHA20"),
     ("providers/implementations/macs/cmac_prov.c", "PROV_CMAC_PROV"),
     ("providers/implementations/macs/gmac_prov.c", "PROV_GMAC_PROV"),
     # The row lands with this stratum and its two generated decoders are the only

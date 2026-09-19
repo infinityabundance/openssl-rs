@@ -77,6 +77,22 @@ each case the probe prints a `NOT_MEASURED_AUTHORITY_FAULTS` marker: the boundar
 is visible in the transcript rather than silently absent from it. The
 observations that *can* be made around each boundary are compared normally.
 
+### D-CIPHERCTX-NOALG-1 — `EVP_CIPHER_CTX_gettable_params` dereferences a NULL cipher
+
+- **Obligation:** `EVP_CIPHER_CTX_gettable_params` and its `_settable_` twin, on a context created by
+  `EVP_CIPHER_CTX_new()` and not yet initialised.
+- **Authority:** **faults.** The guard is
+  `if (cctx != NULL && cctx->cipher->gettable_ctx_params != NULL)` (`crypto/evp/evp_enc.c:1730`),
+  which dereferences `cctx->cipher` without checking it. Measured: a fresh context segfaults, so the
+  condition's own precondition is one the function does not establish.
+- **Candidate:** total and quiet. Both accessors test `(*cctx).cipher.is_null()` and answer NULL.
+- **Reason:** calling through a NULL pointer is not a contract to reproduce. It is the same class as
+  D-LHASH-1 and D-STACK-2, and reproducing it would violate §3's prohibition on copying a known
+  memory-safety defect.
+- **Claim removed:** none. The boundary cannot be compared — one side dies — so `RT-CIPHER`'s
+  `ChaCha20` arm prints `chacha.x.cgp.unset=NOT_MEASURED_AUTHORITY_FAULTS` on both sides and the
+  reachable observation, the two lists read *after* an init, is compared normally.
+
 ### D-MEM-ALIGNED-1 — the `CRYPTO_aligned_alloc` family writes through a NULL `freeptr`
 
 - **Obligation:** `CRYPTO_aligned_alloc(num, align, NULL, file, line)` and

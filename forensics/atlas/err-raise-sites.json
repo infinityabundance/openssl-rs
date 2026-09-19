@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 1943,
+      "sites": 1950,
       "unattributed": 0
     },
     "covered_files": [
@@ -185,6 +185,7 @@
       "providers/implementations/ciphers/cipher_aes_xts.c",
       "providers/implementations/ciphers/ciphercommon_ccm.c",
       "providers/implementations/ciphers/cipher_aes_siv.c",
+      "providers/implementations/ciphers/cipher_chacha20.c",
       "providers/implementations/macs/cmac_prov.c",
       "providers/implementations/macs/gmac_prov.c",
       "providers/implementations/macs/hmac_prov.c",
@@ -28243,6 +28244,111 @@
         "rel_source": "providers/implementations/ciphers/cipher_aes_siv.c"
       },
       {
+        "const_name": "PROV_CIPHER_CHACHA20_111",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_chacha20.c",
+        "function": "chacha20_get_ctx_params",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 111,
+        "macro": "ERR_raise",
+        "reason": 104,
+        "reason_symbol": "PROV_R_FAILED_TO_SET_PARAMETER",
+        "rel_source": "providers/implementations/ciphers/cipher_chacha20.c"
+      },
+      {
+        "const_name": "PROV_CIPHER_CHACHA20_116",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_chacha20.c",
+        "function": "chacha20_get_ctx_params",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 116,
+        "macro": "ERR_raise",
+        "reason": 104,
+        "reason_symbol": "PROV_R_FAILED_TO_SET_PARAMETER",
+        "rel_source": "providers/implementations/ciphers/cipher_chacha20.c"
+      },
+      {
+        "const_name": "PROV_CIPHER_CHACHA20_126",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_chacha20.c",
+        "function": "chacha20_get_ctx_params",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 126,
+        "macro": "ERR_raise",
+        "reason": 104,
+        "reason_symbol": "PROV_R_FAILED_TO_SET_PARAMETER",
+        "rel_source": "providers/implementations/ciphers/cipher_chacha20.c"
+      },
+      {
+        "const_name": "PROV_CIPHER_CHACHA20_156",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_chacha20.c",
+        "function": "chacha20_set_ctx_params",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 156,
+        "macro": "ERR_raise",
+        "reason": 103,
+        "reason_symbol": "PROV_R_FAILED_TO_GET_PARAMETER",
+        "rel_source": "providers/implementations/ciphers/cipher_chacha20.c"
+      },
+      {
+        "const_name": "PROV_CIPHER_CHACHA20_160",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_chacha20.c",
+        "function": "chacha20_set_ctx_params",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 160,
+        "macro": "ERR_raise",
+        "reason": 105,
+        "reason_symbol": "PROV_R_INVALID_KEY_LENGTH",
+        "rel_source": "providers/implementations/ciphers/cipher_chacha20.c"
+      },
+      {
+        "const_name": "PROV_CIPHER_CHACHA20_167",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_chacha20.c",
+        "function": "chacha20_set_ctx_params",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 167,
+        "macro": "ERR_raise",
+        "reason": 103,
+        "reason_symbol": "PROV_R_FAILED_TO_GET_PARAMETER",
+        "rel_source": "providers/implementations/ciphers/cipher_chacha20.c"
+      },
+      {
+        "const_name": "PROV_CIPHER_CHACHA20_171",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_chacha20.c",
+        "function": "chacha20_set_ctx_params",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 171,
+        "macro": "ERR_raise",
+        "reason": 109,
+        "reason_symbol": "PROV_R_INVALID_IV_LENGTH",
+        "rel_source": "providers/implementations/ciphers/cipher_chacha20.c"
+      },
+      {
         "const_name": "PROV_CMAC_PROV_245",
         "data_format": "\"param %s is repeated\"",
         "dynamic_reason": false,
@@ -30342,6 +30448,11 @@
       "name": "authority:providers/implementations/ciphers/cipher_aes_siv.c",
       "path": "forensics/authorities/src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_siv.c",
       "sha256": "5c5a5fe5e00a787792db9fa282224905ec681ae43f9ec2b3108325aab308908a"
+    },
+    {
+      "name": "authority:providers/implementations/ciphers/cipher_chacha20.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/providers/implementations/ciphers/cipher_chacha20.c",
+      "sha256": "964cded86b620feae3bafe920cbd27462e037329d6f07bc620f1f03c47b09e4b"
     },
     {
       "name": "authority:providers/implementations/macs/cmac_prov.c",

@@ -29,7 +29,7 @@
       "ossl_rsa_pkey_method -> phase 8 (The `EVP_PKEY_METHOD` half of the same boundary: `crypto/evp/pmeth_lib.c`'s `standard_methods[]` holds the ten `ossl_<alg>_pkey_method` objects of the algorithm strata. `EVP_PKEY_meth_find`'s application half (`evp_pkey_meth_find_added_by_application`) is landed and courted; its `OBJ_bsearch_pmeth_func` half is not, and `EVP_PKEY_meth_get0` and `_get_count` index the table outright, so all three exports are withheld rather than stubbed with an application-count answer.)"
     ],
     "census": {
-      "covered_by_a_divergence": 58,
+      "covered_by_a_divergence": 59,
       "language_surface_not_modelled_by_name": 3107,
       "planned_prerequisites": 14
     },
@@ -41,6 +41,7 @@
         "cb_arg": 1,
         "cbc": 1,
         "in": 1,
+        "initiv": 1,
         "initkey": 1,
         "inlen": 1,
         "libctx": 1,
@@ -265,6 +266,7 @@
         "cb_arg",
         "cbc",
         "in",
+        "initiv",
         "initkey",
         "inlen",
         "libctx",
@@ -296,8 +298,7 @@
         "ossl_lib_ctx_is_child",
         "ossl_lib_ctx_is_default",
         "ossl_lib_ctx_is_default",
-        "ossl_lib_ctx_is_default",
-        "ossl_lib_ctx_is_global_default"
+        "ossl_lib_ctx_is_default"
       ],
       "language_surface_not_modelled_by_name": [
         "crypto/asn1/a_bitstr.c:ASN1_BIT_STRING",
@@ -360,12 +361,12 @@
     },
     "checked": {
       "authority_units": 170,
-      "crate_modules": 230,
+      "crate_modules": 231,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 25,
-      "divergence_names_covered": 34,
-      "divergence_rows": 5,
-      "names_referenced_and_not_built": 19
+      "divergence_names_covered": 35,
+      "divergence_rows": 6,
+      "names_referenced_and_not_built": 20
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
     "counts": {},
@@ -482,13 +483,13 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "51d64b670f4bae916130b32c0ad0c8b57b73dbbea4ed1073bbe977923224fe2e",
+  "body_hash": "826fe239a46049e1643291dc75ca175f82eef98087ef88d462147c2c1065a460",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "233e2db91dace6ba583002c23c967aee54f7ecb181e5b8f039af5d52d2209362"
+      "sha256": "1a1e85b8e5945145c414da87ffc44af4020c1c022de29bdcfdc42d0ee6a36b12"
     },
     {
       "name": "macro-owners",
@@ -503,7 +504,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "6eff5c03119c9a5940eff711faa8eec019139ae53e624923a5d13a4158af2d19"
+      "sha256": "9c7f04ddae683d8d354a64536decae275e389a6976e84139afee8c264e3955b4"
     },
     {
       "name": "symbol-ownership",
@@ -518,17 +519,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "a3e326ac46ff950cbde94afc5191831e447b58e869f8a8c2a044f2606f0a5aab"
+      "sha256": "bc2d65dcff576cb884128cd0875f386a9e631ec34cc9fcaa9dc509157cc4c070"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "14aa1d94282095a86769a2a0515feb269c4323b5a978704edbd0ee7609682dd2"
+      "sha256": "19f92b3b6c90ecaff7c98e3903602d188ee643126c25edde7f6dc49bf71f3db2"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "37547ea97ff9fd3768bf41fdf6922e5bc523aed808c7bc4d9cc2ab68512edc3a"
+      "sha256": "69ca4d87eea01f3fabd4a4d17c518357878e0dea5d21b167b5f038383ff52608"
     },
     {
       "name": "crate-source-tree",
