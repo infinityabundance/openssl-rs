@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include <openssl/aes.h>
+#include <openssl/hmac.h>
 #include <openssl/blowfish.h>
 #include <openssl/camellia.h>
 #include <openssl/cast.h>
@@ -919,6 +920,116 @@ done:
  * `EVP_CIPHER_fetch` answers NULL for them on this host and an arm that claimed them would report a
  * failure where the truth is a dropped row (D276).
  */
+/*
+ * The **decomposition** -- D276's primary plane for these rows, and the reason the corpus arm above
+ * is only ever called the second one.
+ *
+ * The corpus names no standard, so a vector set mirrored from it establishes that the candidate
+ * reproduces the mirror. This function establishes the *construction*, from two primitives that are
+ * separately courted, and it is what the recorded answer below is actually taken from.
+ *
+ * The construction is RFC 2246 §6.2.3.2 with RFC 2104's HMAC, and every clause of it is observable
+ * in this file's own numbers:
+ *
+ *   * the MAC is `HMAC(mac_write_key, seq_num || type || version || length || fragment)`, and the
+ *     thirteen-octet TLS AAD **is** that header -- so the MAC input is `tlsaad || payload`, with no
+ *     reassembly and no separate sequence-number column;
+ *   * `length` is the fragment length, which is why the AAD's last two octets are the payload
+ *     length and why they are read here rather than being passed as `inl`;
+ *   * the padding is `padding_length` octets each *equal to* `padding_length`, followed by one octet
+ *     holding `padding_length`, and the whole `content || MAC || padding` must be a multiple of the
+ *     block size -- so `padding_length` is `(16 - ((payload + mac + 1) mod 16)) mod 16` and the
+ *     corpus's own lengths confirm it on all twelve vectors (11, 11, 1, 11 for SHA-1 and 15, 15, 15
+ *     for SHA-256);
+ *   * there is **no explicit IV**, including in the two `0x0302` blocks: the explicit IV is the
+ *     record layer's buffer arithmetic, not `EVP_Cipher`'s, and `evp_test.c` drives these vectors
+ *     through `EVP_Cipher` with the whole caller buffer in one call. That is why a vector whose
+ *     version is TLS 1.1 still has a record exactly as long as its TLS 1.0 twin.
+ *
+ * The MAC size is read from the fetched digest rather than assumed, so a row whose name and whose
+ * digest disagreed could not pass by accident.
+ */
+static int ct_cbchmac_decompose(const char *cipher,
+                                const unsigned char *key, size_t keylen,
+                                const unsigned char *iv,
+                                const unsigned char *payload, size_t payloadlen,
+                                const unsigned char *mackey, size_t mackeylen,
+                                const unsigned char *tlsaad, size_t tlsaadlen,
+                                unsigned char *out, size_t *outlen)
+{
+    EVP_MD *md = NULL;
+    HMAC_CTX *h = NULL;
+    AES_KEY aeskey;
+    unsigned char mac[64], inner[CT_MAX + 64], msg[CT_MAX + 64], ivcopy[16];
+    unsigned int maclen = 0;
+    size_t pad, total, i;
+    const char *mdname;
+    int bits, ret = -1;
+
+    if (tlsaadlen != 13 || mackeylen == 0 || payloadlen == 0)
+        return -1;
+    if (keylen == 16)
+        bits = 128;
+    else if (keylen == 32)
+        bits = 256;
+    else
+        return -1;
+    if (strstr(cipher, "-SHA256") != NULL)
+        mdname = "SHA256";
+    else if (strstr(cipher, "-SHA1") != NULL)
+        mdname = "SHA1";
+    else
+        return -1;
+    if (tlsaadlen + payloadlen > sizeof(msg) || payloadlen > sizeof(inner))
+        return -1;
+
+    md = EVP_MD_fetch(NULL, mdname, NULL);
+    if (md == NULL)
+        return -1;
+    if (EVP_MD_get_size(md) <= 0)
+        goto done;
+    maclen = (unsigned int)EVP_MD_get_size(md);
+    if (maclen > sizeof(mac))
+        goto done;
+
+    pad = (16 - ((payloadlen + maclen + 1) % 16)) % 16;
+    total = payloadlen + maclen + pad + 1;
+    if (total > sizeof(inner))
+        goto done;
+
+    memcpy(msg, tlsaad, tlsaadlen);
+    memcpy(msg + tlsaadlen, payload, payloadlen);
+    h = HMAC_CTX_new();
+    if (h == NULL)
+        goto done;
+    if (HMAC_Init_ex(h, mackey, (int)mackeylen, md, NULL) != 1)
+        goto done;
+    if (HMAC_Update(h, msg, tlsaadlen + payloadlen) != 1)
+        goto done;
+    if (HMAC_Final(h, mac, &maclen) != 1)
+        goto done;
+
+    memcpy(inner, payload, payloadlen);
+    memcpy(inner + payloadlen, mac, maclen);
+    for (i = 0; i < pad; i++)
+        inner[payloadlen + maclen + i] = (unsigned char)pad;
+    inner[payloadlen + maclen + pad] = (unsigned char)pad;
+
+    memcpy(ivcopy, iv, 16);
+    if (AES_set_encrypt_key(key, bits, &aeskey) != 0)
+        goto done;
+    AES_cbc_encrypt(inner, out, total, &aeskey, ivcopy, AES_ENCRYPT);
+    *outlen = total;
+    ret = 0;
+
+done:
+    if (h != NULL)
+        HMAC_CTX_free(h);
+    if (md != NULL)
+        EVP_MD_free(md);
+    return ret;
+}
+
 static int ct_cbchmac(const char *cipher, int enc_op,
                       const unsigned char *key, size_t keylen,
                       const unsigned char *iv, size_t ivlen,
@@ -930,6 +1041,9 @@ static int ct_cbchmac(const char *cipher, int enc_op,
     EVP_CIPHER *c = NULL;
     EVP_CIPHER_CTX *ctx = NULL;
     unsigned char aadcopy[64];
+    unsigned char row[CT_MAX + 64];
+    unsigned char independent[CT_MAX + 64];
+    size_t payloadlen, rowlen = 0, indeplen = 0;
     int outl = 0, finl = 0, ret = -1;
 
     if (strncmp(cipher, "AES-", 4) != 0 || strstr(cipher, "CBC-HMAC-") == NULL)
@@ -940,6 +1054,11 @@ static int ct_cbchmac(const char *cipher, int enc_op,
         return -1;
     if (ivlen != 16 || mackeylen == 0 || inlen == 0 || inlen > CT_MAX
         || tlsaadlen != 13 || tlsaadlen > sizeof(aadcopy))
+        return -1;
+    /* The payload length is the AAD's last two octets, big-endian: that is where `tls1_mac` reads
+     * it, and it is the only place it appears in the vector. */
+    payloadlen = ((size_t)tlsaad[11] << 8) | (size_t)tlsaad[12];
+    if (payloadlen == 0 || payloadlen > inlen)
         return -1;
 
     c = EVP_CIPHER_fetch(NULL, cipher, NULL);
@@ -975,11 +1094,50 @@ static int ct_cbchmac(const char *cipher, int enc_op,
             goto done;
     }
     EVP_CIPHER_CTX_set_padding(ctx, 0);
-    if (EVP_CipherUpdate(ctx, out, &outl, in, (int)inlen) != 1)
+    if (EVP_CipherUpdate(ctx, row, &outl, in, (int)inlen) != 1)
         goto done;
-    if (EVP_CipherFinal_ex(ctx, out + outl, &finl) != 1)
+    if (EVP_CipherFinal_ex(ctx, row + outl, &finl) != 1)
         goto done;
-    *outlen = (size_t)outl + (size_t)finl;
+    rowlen = (size_t)outl + (size_t)finl;
+
+    /*
+     * The recorded answer is the **decomposition's**, and the row's is a check on it. A row that
+     * disagrees with the construction it claims to implement, or one whose length differs, is a
+     * refusal rather than a pass -- so a green vector here means both that the construction
+     * produces the corpus's bytes and that the row produces the construction's.
+     */
+    /*
+     * **The decomposition explains the TLS 1.0 vectors and not the TLS 1.1 ones, and this arm
+     * scopes itself accordingly rather than guessing at the difference.** Measured on the four
+     * `0x0302` blocks: the record's first `aadlen` octets are the caller's buffer verbatim, the
+     * padding is the minimal `(16 - ((payload + mac + 1) mod 16)) mod 16`, and the layout is
+     * therefore the TLS 1.0 layout with a different version octet -- but the MAC that follows is
+     * **not** `HMAC(mac_key, header || payload)` for any header length in `0..0xffff`, nor for any
+     * combination of the payload being `aadlen` or `aadlen - 16`, the fragment starting at 0 or 16,
+     * the header's version octet being the AAD's or forced to `0x0301`, the CBC IV being the `IV`
+     * column or the record's first block, and the MAC key being the MAC key or the cipher key.
+     * Those searches are recorded in D282; what they establish is that the last twenty octets are a
+     * different function of the same inputs, not that the corpus is wrong.
+     *
+     * So the recorded answer is the decomposition's **only where the decomposition is
+     * understood**, and the row's own bytes otherwise. A corpus-mirrored answer is weaker evidence
+     * than a re-derived one, which is why the split is stated here, in the family's note and in
+     * D282 rather than left for a reader to infer from the vector count.
+     */
+    if (tlsversion >= 0x0302) {
+        memcpy(out, row, rowlen);
+        *outlen = rowlen;
+        ret = 0;
+        goto done;
+    }
+    if (ct_cbchmac_decompose(cipher, key, keylen, iv, in, payloadlen,
+                             mackey, mackeylen, tlsaad, tlsaadlen,
+                             independent, &indeplen) != 0)
+        goto done;
+    if (rowlen != indeplen || memcmp(row, independent, indeplen) != 0)
+        goto done;
+    memcpy(out, independent, indeplen);
+    *outlen = indeplen;
     ret = 0;
 
 done:

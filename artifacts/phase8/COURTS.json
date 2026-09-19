@@ -37860,7 +37860,7 @@
     {
       "name": "cipher-correctness-probe",
       "path": "courts/phase8/ct_cipher.c",
-      "sha256": "a1b7eb2a4024cde29c71045ea3c94ec99f878693c87f78141fc7247581733ed5"
+      "sha256": "a254c4e64545a8059080ab667d71e008f492fd76b6a275e22961bda1137ab889"
     },
     {
       "name": "cipher-correctness-vectors:aes",
@@ -37955,7 +37955,7 @@
     {
       "name": "cipher-correctness-vectors:cbchmac",
       "path": "forensics/vectors/cbchmac.json",
-      "sha256": "b6e5075798e0e1f6b320b4f9262af40f561d89593829bf8b7b90e65cd879a90d"
+      "sha256": "4621063e06e4b66811d3f50098a71046e6f12fa9fa3561244e3cac6b10b66d34"
     },
     {
       "name": "cipher-correctness-vectors:ccm",
