@@ -586,6 +586,7 @@ pub(crate) unsafe fn provider_free_intern(prov: *mut OsslProvider, deactivate: c
 /// `*const c_void` immediately, and typing it as the dispatch struct would invite a
 /// dereference the authority never performs here.
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct OsslAlgorithm {
     /// `const char *algorithm_names` — the `:`-separated alias list, and the array's key: a
     /// **NULL** here terminates the array, which is how every walk in this crate stops.
@@ -604,6 +605,89 @@ pub struct OsslAlgorithm {
 // query result. A `static` array of rows is therefore safe to share, which is what the default
 // provider's `deflt_digests[]` is.
 unsafe impl Sync for OsslAlgorithm {}
+
+/// The predicate an `ALGC` row carries instead of `NULL`: `int (*capable)(void)`, written inline as
+/// the second field of `struct ag_capable_st` (`providers/common/include/prov/provider_util.h:140-143`)
+/// rather than introduced as a typedef. The authority spells the field's type at its use site, so no
+/// authority header records a name for it and this crate's `AlgorithmCapability` is its own.
+///
+/// It takes no arguments and answers whether the row is to be published at all. In the authority
+/// every instance is a host-CPU test (`AESNI_CBC_HMAC_SHA_CAPABLE` is
+/// `OPENSSL_ia32cap_P[1] & (1 << 25)`), which is why a row's *presence* is not a compile-time fact
+/// and why the filtering below is real work rather than a formality.
+pub(crate) type AlgorithmCapability = unsafe extern "C" fn() -> c_int;
+
+/// `OSSL_ALGORITHM_CAPABLE` — `providers/common/include/prov/provider_util.h:140-143`:
+/// `struct ag_capable_st { OSSL_ALGORITHM alg; int (*capable)(void); }`.
+///
+/// **This is the type of a provider's *source* table, not of a query result.** The core walks a
+/// query result as a stride of the four-field [`OsslAlgorithm`], so a result element may not carry
+/// the fifth field; `ossl_prov_cache_exported_algorithms` exists precisely to copy the `alg` halves
+/// of a capable table into a plain one. `defltprov.c`'s two macros are
+/// `ALGC(NAMES, FUNC, CHECK) { { NAMES, "provider=default", FUNC }, CHECK }` and
+/// `ALG(NAMES, FUNC) ALGC(NAMES, FUNC, NULL)`, so every row of the source table is one of these and
+/// an unconditional row's `capable` is `None`.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub(crate) struct OsslAlgorithmCapable {
+    /// `OSSL_ALGORITHM alg`.
+    pub alg: OsslAlgorithm,
+    /// `int (*capable)(void)` — `None` is the authority's `NULL`.
+    pub capable: Option<AlgorithmCapability>,
+}
+
+// SAFETY: as [`OsslAlgorithm`]: the row points at `'static` literals, has no interior mutability,
+// and the authority shares it between the compiled-in table and the filtered copy.
+unsafe impl Sync for OsslAlgorithmCapable {}
+
+/// `void ossl_prov_cache_exported_algorithms(const OSSL_ALGORITHM_CAPABLE *in, OSSL_ALGORITHM *out)`
+/// — `providers/common/provider_util.c:338-350`.
+///
+/// One pass over `in`, copying each row's `alg` into `out` unless its `capable` answers 0, and
+/// terminating `out` with the `NULL`-named row that ended `in`.
+///
+/// **The authority's own guard is on `out`, not on a flag of its own**: the body is
+/// `if (out[0].algorithm_names == NULL) { ... }`, so the fill happens only when the destination is
+/// still untouched. That is what makes it idempotent when `ossl_default_provider_init` runs twice,
+/// and it is the reason this transcription keeps the same test rather than a `bool`.
+///
+/// # Safety
+/// `in` is a `NULL`-named terminated capable table and `out` is writable for at least as many rows
+/// as `in` has, including the terminator.
+pub(crate) unsafe fn ossl_prov_cache_exported_algorithms(
+    in_: *const OsslAlgorithmCapable,
+    out: *mut OsslAlgorithm,
+) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if (*out).algorithm_names.is_null() {
+            let mut i = 0usize;
+            let mut j = 0usize;
+            while !(*in_.add(i)).alg.algorithm_names.is_null() {
+                let keep = match (*in_.add(i)).capable {
+                    Some(capable) => capable() != 0,
+                    None => true,
+                };
+                if keep {
+                    *out.add(j) = OsslAlgorithm {
+                        algorithm_names: (*in_.add(i)).alg.algorithm_names,
+                        property_definition: (*in_.add(i)).alg.property_definition,
+                        implementation: (*in_.add(i)).alg.implementation,
+                        algorithm_description: (*in_.add(i)).alg.algorithm_description,
+                    };
+                    j += 1;
+                }
+                i += 1;
+            }
+            *out.add(j) = OsslAlgorithm {
+                algorithm_names: ptr::null(),
+                property_definition: ptr::null(),
+                implementation: ptr::null(),
+                algorithm_description: ptr::null(),
+            };
+        }
+    }
+}
 
 /// `typedef int (*OSSL_provider_random_bytes_fn)(void *provctx, int which, void *buf,
 /// size_t n, unsigned int strength)` — the provider-side dispatch entry point.

@@ -57,6 +57,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+use core::cell::UnsafeCell;
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
 use core::ptr;
 
@@ -106,7 +107,9 @@ use crate::params::{
     OsslParam, END, OSSL_PARAM_INTEGER, OSSL_PARAM_OCTET_PTR, OSSL_PARAM_OCTET_STRING,
     OSSL_PARAM_UNMODIFIED, OSSL_PARAM_UNSIGNED_INTEGER, OSSL_PARAM_UTF8_STRING,
 };
-use crate::provider::activate::OsslAlgorithm;
+use crate::provider::activate::{
+    ossl_prov_cache_exported_algorithms, AlgorithmCapability, OsslAlgorithm, OsslAlgorithmCapable,
+};
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{
     CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_memcmp, CRYPTO_memdup, CRYPTO_zalloc,
@@ -10391,6 +10394,12 @@ alias!(
 /// A `deflt_ciphers[]` row.
 /// `ALG(NAMES, FUNC)` over `ALGC(NAMES, FUNC, NULL)` — `providers/defltprov.c:34-35`.
 ///
+/// **The table is `OSSL_ALGORITHM_CAPABLE[]`, not `OSSL_ALGORITHM[]`.** The authority's
+/// `deflt_ciphers` is the former; `deflt_query` answers the latter, filled by
+/// `ossl_prov_cache_exported_algorithms` at provider init. Every `ALG` row here is an `ALGC` row
+/// whose `capable` is `NULL`, which is why `row` below and a future `capable_row` differ in one
+/// field.
+///
 /// **The property definition is `"provider=default"`, not NULL, and that is observable.** The
 /// authority's two macros are
 ///
@@ -10406,18 +10415,30 @@ alias!(
 /// answers 0 -- the predicate inverted rather than merely absent. The digest and MAC tables already
 /// carried it (`DEFLT_DIGESTS` uses `DEFAULT_PROPERTIES`), which is what made this one row
 /// constructor the whole of the divergence (D247).
-const fn row(names: *const c_char, implementation: *const c_void) -> OsslAlgorithm {
-    OsslAlgorithm {
-        algorithm_names: names,
-        property_definition: c"provider=default".as_ptr(),
-        implementation,
-        algorithm_description: ptr::null(),
+const fn row(names: *const c_char, implementation: *const c_void) -> OsslAlgorithmCapable {
+    capable_row(names, implementation, None)
+}
+
+/// An `ALGC(NAMES, FUNC, CHECK)` row — the same constructor with a capability predicate.
+const fn capable_row(
+    names: *const c_char,
+    implementation: *const c_void,
+    capable: Option<AlgorithmCapability>,
+) -> OsslAlgorithmCapable {
+    OsslAlgorithmCapable {
+        alg: OsslAlgorithm {
+            algorithm_names: names,
+            property_definition: c"provider=default".as_ptr(),
+            implementation,
+            algorithm_description: ptr::null(),
+        },
+        capable,
     }
 }
 
 /// `static const OSSL_ALGORITHM_CAPABLE deflt_ciphers[]` — `providers/defltprov.c:161-330`,
 /// restricted to the rows this half implements, in the authority's order.
-pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 115] = [
+pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 115] = [
     row(N_NULL, NULL_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_ECB, AES256ECB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_ECB, AES192ECB_FUNCTIONS.as_ptr().cast()),
@@ -10572,13 +10593,66 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 115] = [
     row(N_SM4_CFB, SM4128CFB128_FUNCTIONS.as_ptr().cast()),
     row(N_SM4_XTS, SM4128XTS_FUNCTIONS.as_ptr().cast()),
     row(N_CHACHA20, CHACHA20_FUNCTIONS.as_ptr().cast()),
-    OsslAlgorithm {
+    OsslAlgorithmCapable {
+        alg: OsslAlgorithm {
+            algorithm_names: ptr::null(),
+            property_definition: ptr::null(),
+            implementation: ptr::null(),
+            algorithm_description: ptr::null(),
+        },
+        capable: None,
+    },
+];
+
+/// `static OSSL_ALGORITHM exported_ciphers[OSSL_NELEM(deflt_ciphers)]` — `providers/defltprov.c:332`,
+/// the destination `ossl_prov_cache_exported_algorithms` fills and the `OSSL_OP_CIPHER` arm of
+/// `deflt_query` answers.
+///
+/// The authority declares it a plain `static` and fills it in `ossl_default_provider_init`
+/// (`defltprov.c:804`) before the provider is published, so every later read is single-threaded
+/// against the write. This crate keeps the same discipline: the only writer is
+/// `crate::provider::cipher::cache_exported_ciphers`, called from provider init, and every reader
+/// goes through [`exported_ciphers`].
+static EXPORTED_CIPHERS: SyncCell<[OsslAlgorithm; 115]> = SyncCell(UnsafeCell::new(
+    [OsslAlgorithm {
         algorithm_names: ptr::null(),
         property_definition: ptr::null(),
         implementation: ptr::null(),
         algorithm_description: ptr::null(),
-    },
-];
+    }; 115],
+));
+
+/// A `static` the crate mutates once at provider init and shares afterwards, exactly as the
+/// authority does with `exported_ciphers`. The invariant is that the sole write precedes every
+/// read, which is `ossl_default_provider_init`'s contract rather than a property of the type.
+struct SyncCell<T>(UnsafeCell<T>);
+// SAFETY: see `SyncCell`'s own note: one write at init, then read-only sharing, which is the
+// authority's own discipline for the same object.
+unsafe impl<T> Sync for SyncCell<T> {}
+
+/// `void ossl_prov_cache_exported_algorithms(deflt_ciphers, exported_ciphers)` — `defltprov.c:804`,
+/// called from `ossl_default_provider_init`.
+///
+/// # Safety
+/// Called once, before the provider is published.
+pub(crate) unsafe fn cache_exported_ciphers() {
+    // SAFETY: the caller's contract, and the destination is this module's own array.
+    unsafe {
+        ossl_prov_cache_exported_algorithms(
+            DEFLT_CIPHERS.as_ptr(),
+            EXPORTED_CIPHERS.0.get().cast(),
+        );
+    }
+}
+
+/// The `OSSL_OP_CIPHER` arm's table: the capability-filtered copy, once
+/// [`cache_exported_ciphers`] has run.
+///
+/// Before that call its first row is `NULL`-named, which is the authority's own state and the
+/// reason `ossl_prov_cache_exported_algorithms`'s guard is the test it is.
+pub(crate) fn exported_ciphers() -> *const OsslAlgorithm {
+    EXPORTED_CIPHERS.0.get().cast()
+}
 
 // ---------------------------------------------------------------------------------------------
 // `cipher_chacha20.c` and `cipher_chacha20_hw.c` — the `ChaCha20` stream cipher row
@@ -12296,10 +12370,10 @@ mod tests {
     fn the_cipher_table_terminates_and_names_the_rows() {
         assert_eq!(DEFLT_CIPHERS.len(), 115);
         // SAFETY: every entry up to the terminator is initialised.
-        let last = DEFLT_CIPHERS[114].algorithm_names;
+        let last = DEFLT_CIPHERS[114].alg.algorithm_names;
         assert!(last.is_null(), "the table is NULL-name terminated");
         // SAFETY: the first row's name is a `'static` C string.
-        let first = unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[0].algorithm_names) };
+        let first = unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[0].alg.algorithm_names) };
         assert_eq!(first.to_bytes(), b"NULL");
     }
 
@@ -12594,11 +12668,11 @@ mod tests {
         // `clippy::expect_used` failure under the CI's `-D warnings`.
         let mut found = usize::MAX;
         for (i, row) in DEFLT_CIPHERS.iter().enumerate() {
-            if row.algorithm_names.is_null() {
+            if row.alg.algorithm_names.is_null() {
                 continue;
             }
             // SAFETY: each landed row's name is a `'static` C string literal, checked non-NULL.
-            let name = unsafe { core::ffi::CStr::from_ptr(row.algorithm_names) };
+            let name = unsafe { core::ffi::CStr::from_ptr(row.alg.algorithm_names) };
             if name.to_bytes() == b"ChaCha20" {
                 found = i;
             }
@@ -12606,12 +12680,117 @@ mod tests {
         assert_ne!(found, usize::MAX, "the ChaCha20 row is published");
         // SAFETY: the row's property is the default provider's own `'static` literal.
         unsafe {
-            let props = core::ffi::CStr::from_ptr(DEFLT_CIPHERS[found].property_definition);
+            let props = core::ffi::CStr::from_ptr(DEFLT_CIPHERS[found].alg.property_definition);
             assert_eq!(props.to_bytes(), b"provider=default");
             assert_eq!(
-                DEFLT_CIPHERS[found].implementation as usize,
+                DEFLT_CIPHERS[found].alg.implementation as usize,
                 CHACHA20_FUNCTIONS.as_ptr() as usize
             );
+        }
+    }
+
+    /// **The capability filter really filters, and the counter is what says so.** The mechanism
+    /// exists for the thirteen `ALGC` rows whose `capable` is a host-CPU test, and a version of it
+    /// that copied every row but never called the predicate would be indistinguishable from a
+    /// working one on any table whose `capable` is `NULL` -- which every landed row's is. So the
+    /// test uses a synthetic table with three predicates and asserts both the resulting aliases and
+    /// the number of times the predicates were consulted: an implementation that skipped the call
+    /// would pass the aliases check by accident if the refusing row happened to be absent for
+    /// another reason, and cannot pass the counter.
+    ///
+    /// The second half exercises the authority's own guard, which is `if (out[0].algorithm_names
+    /// == NULL)`: a second fill against an already-filled destination must change nothing. That is
+    /// what makes the call idempotent when `ossl_default_provider_init` runs twice, and it is a
+    /// behaviour rather than an implementation detail.
+    #[test]
+    fn the_capability_filter_drops_a_row_whose_predicate_refuses() {
+        use core::sync::atomic::{AtomicUsize, Ordering};
+
+        static CONSULTED: AtomicUsize = AtomicUsize::new(0);
+
+        unsafe extern "C" fn refuses() -> c_int {
+            CONSULTED.fetch_add(1, Ordering::SeqCst);
+            0
+        }
+        unsafe extern "C" fn accepts() -> c_int {
+            CONSULTED.fetch_add(1, Ordering::SeqCst);
+            1
+        }
+
+        static ROWS: [OsslAlgorithmCapable; 4] = [
+            // `ALG(NAMES, FUNC)` -- no predicate, always published.
+            capable_row(c"KEPT-A".as_ptr(), ptr::null(), None),
+            capable_row(c"REFUSED".as_ptr(), ptr::null(), Some(refuses)),
+            capable_row(c"KEPT-B".as_ptr(), ptr::null(), Some(accepts)),
+            OsslAlgorithmCapable {
+                alg: OsslAlgorithm {
+                    algorithm_names: ptr::null(),
+                    property_definition: ptr::null(),
+                    implementation: ptr::null(),
+                    algorithm_description: ptr::null(),
+                },
+                capable: None,
+            },
+        ];
+        const NULL_ROW: OsslAlgorithm = OsslAlgorithm {
+            algorithm_names: ptr::null(),
+            property_definition: ptr::null(),
+            implementation: ptr::null(),
+            algorithm_description: ptr::null(),
+        };
+
+        let mut out = [NULL_ROW; 4];
+        // SAFETY: `ROWS` is `NULL`-named terminated and `out` has a row for each plus the terminator.
+        unsafe { ossl_prov_cache_exported_algorithms(ROWS.as_ptr(), out.as_mut_ptr()) };
+        // SAFETY: the first two rows are `'static` C strings and the third is the terminator.
+        let names: Vec<&[u8]> = unsafe {
+            (0..3)
+                .map(|i| {
+                    let p = out[i].algorithm_names;
+                    if p.is_null() {
+                        b"<term>".as_slice()
+                    } else {
+                        core::ffi::CStr::from_ptr(p).to_bytes()
+                    }
+                })
+                .collect()
+        };
+        assert_eq!(names, [b"KEPT-A".as_slice(), b"KEPT-B", b"<term>"]);
+        assert!(
+            out[3].algorithm_names.is_null(),
+            "the terminator is copied too"
+        );
+        assert_eq!(
+            CONSULTED.load(Ordering::SeqCst),
+            2,
+            "the predicate is consulted once per row that has one, and never for a NULL one"
+        );
+
+        // The guard: a second fill against the same destination is a no-op.
+        // SAFETY: the caller's contract; `out` is filled, which is the case the guard is for.
+        unsafe { ossl_prov_cache_exported_algorithms(ROWS.as_ptr(), out.as_mut_ptr()) };
+        assert_eq!(
+            CONSULTED.load(Ordering::SeqCst),
+            2,
+            "the guard skipped the second fill"
+        );
+        // SAFETY: as above; the destination still holds the first fill's rows.
+        let after = unsafe { core::ffi::CStr::from_ptr(out[0].algorithm_names) };
+        assert_eq!(after.to_bytes(), b"KEPT-A");
+
+        // And on the **real** table: every landed row is unconditional today, so the filter keeps
+        // all of them and the two tables agree. The day an `ALGC` row lands, this assertion is the
+        // one that will have to change, which is the point of writing it down.
+        let mut real = [NULL_ROW; 115];
+        // SAFETY: `DEFLT_CIPHERS` is `NULL`-named terminated with 114 rows; `real` has 115 slots.
+        unsafe { ossl_prov_cache_exported_algorithms(DEFLT_CIPHERS.as_ptr(), real.as_mut_ptr()) };
+        for (i, row) in DEFLT_CIPHERS.iter().enumerate() {
+            assert!(
+                row.capable.is_none(),
+                "row {i} carries a capability predicate, so `exported_ciphers` is not `deflt_ciphers` \
+                 any more and this test must be updated with the row"
+            );
+            assert_eq!(real[i].algorithm_names, row.alg.algorithm_names);
         }
     }
 

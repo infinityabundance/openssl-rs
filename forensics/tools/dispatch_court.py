@@ -326,6 +326,12 @@ NOT_A_DISPATCH: dict[str, str] = {
     # the atlas to record.
     "OsslSm4XtsStreamFn": PROV_CIPHER_FUNC_TYPE,
     "TdesStreamFn": TDES_TSTREAM_FN,
+    # `provider_util.h:140-143`'s `struct ag_capable_st` writes its predicate inline, as
+    # `int (*capable)(void)`. The authority introduces no typedef for that type, so there is no
+    # authority name for the crate's `AlgorithmCapability` to link to.
+    "AlgorithmCapability": ("not a provider dispatch: the predicate field of "
+                           "`OSSL_ALGORITHM_CAPABLE` (`provider_util.h:140-143`), spelled inline "
+                           "as `int (*capable)(void)` rather than declared as a typedef"),
     "ConfInitFn@src/runtime/conf/types.rs": CONF_METHOD,
     "ConfFinishFn": ("not a provider dispatch: the crate's `conf_finish_func` equivalent for the "
                      "`CONF_METHOD` vtable; the authority declares the module finish callback "

@@ -3,10 +3,10 @@
   "body": {
     "counts": {
       "installed_headers": 139,
-      "internal_only": 402,
+      "internal_only": 407,
       "owned": 754,
-      "records": 1568,
-      "unowned": 814
+      "records": 1573,
+      "unowned": 819
     },
     "definition": "every typedef name the authority's installed and internal headers introduce, with the header that introduces it and that header's owning stratum",
     "installed_headers": [
@@ -926,6 +926,14 @@
         "kind": "typedef",
         "name": "CCM128_CONTEXT",
         "owner_phase": 8
+      },
+      {
+        "defined_in": [
+          "ssl/ssl_local.h"
+        ],
+        "kind": "typedef",
+        "name": "CERT",
+        "owner_phase": null
       },
       {
         "defined_in": [
@@ -2341,6 +2349,14 @@
           "include/internal/hashtable.h"
         ],
         "kind": "typedef",
+        "name": "HT_CONFIG",
+        "owner_phase": null
+      },
+      {
+        "defined_in": [
+          "include/internal/hashtable.h"
+        ],
+        "kind": "typedef",
         "name": "HT_KEY",
         "owner_phase": null
       },
@@ -3070,6 +3086,14 @@
         ],
         "kind": "typedef",
         "name": "OSSL_ALGORITHM",
+        "owner_phase": null
+      },
+      {
+        "defined_in": [
+          "providers/common/include/prov/provider_util.h"
+        ],
+        "kind": "typedef",
+        "name": "OSSL_ALGORITHM_CAPABLE",
         "owner_phase": null
       },
       {
@@ -6354,6 +6378,14 @@
       },
       {
         "defined_in": [
+          "include/internal/core.h"
+        ],
+        "kind": "typedef",
+        "name": "OSSL_METHOD_CONSTRUCT_METHOD",
+        "owner_phase": null
+      },
+      {
+        "defined_in": [
           "include/internal/property.h"
         ],
         "kind": "typedef",
@@ -6541,6 +6573,14 @@
           "include/internal/quic_record_tx.h"
         ],
         "kind": "typedef",
+        "name": "OSSL_QTX_ARGS",
+        "owner_phase": null
+      },
+      {
+        "defined_in": [
+          "include/internal/quic_record_tx.h"
+        ],
+        "kind": "typedef",
         "name": "OSSL_QTX_IOVEC",
         "owner_phase": null
       },
@@ -6618,10 +6658,26 @@
       },
       {
         "defined_in": [
+          "ssl/ssl_local.h"
+        ],
+        "kind": "typedef",
+        "name": "OSSL_QUIC_TLS_CALLBACKS",
+        "owner_phase": null
+      },
+      {
+        "defined_in": [
           "include/internal/quic_predef.h"
         ],
         "kind": "typedef",
         "name": "OSSL_QUIC_TX_PACKETISER",
+        "owner_phase": null
+      },
+      {
+        "defined_in": [
+          "include/internal/quic_txp.h"
+        ],
+        "kind": "typedef",
+        "name": "OSSL_QUIC_TX_PACKETISER_ARGS",
         "owner_phase": null
       },
       {
@@ -7443,10 +7499,74 @@
       },
       {
         "defined_in": [
+          "providers/implementations/ciphers/cipher_aes_gcm_siv.h"
+        ],
+        "kind": "typedef",
+        "name": "PROV_CIPHER_HW_AES_GCM_SIV",
+        "owner_phase": null
+      },
+      {
+        "defined_in": [
+          "providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.h"
+        ],
+        "kind": "typedef",
+        "name": "PROV_CIPHER_HW_AES_HMAC_SHA",
+        "owner_phase": null
+      },
+      {
+        "defined_in": [
+          "providers/implementations/ciphers/cipher_aes_cbc_hmac_sha_etm.h"
+        ],
+        "kind": "typedef",
+        "name": "PROV_CIPHER_HW_AES_HMAC_SHA_ETM",
+        "owner_phase": null
+      },
+      {
+        "defined_in": [
+          "providers/implementations/ciphers/cipher_aes_siv.h"
+        ],
+        "kind": "typedef",
+        "name": "PROV_CIPHER_HW_AES_SIV",
+        "owner_phase": null
+      },
+      {
+        "defined_in": [
+          "providers/implementations/ciphers/cipher_chacha20.h"
+        ],
+        "kind": "typedef",
+        "name": "PROV_CIPHER_HW_CHACHA20",
+        "owner_phase": null
+      },
+      {
+        "defined_in": [
+          "providers/implementations/ciphers/cipher_chacha20_poly1305.h"
+        ],
+        "kind": "typedef",
+        "name": "PROV_CIPHER_HW_CHACHA20_POLY1305",
+        "owner_phase": null
+      },
+      {
+        "defined_in": [
+          "providers/implementations/ciphers/cipher_rc4_hmac_md5.h"
+        ],
+        "kind": "typedef",
+        "name": "PROV_CIPHER_HW_RC4_HMAC_MD5",
+        "owner_phase": null
+      },
+      {
+        "defined_in": [
           "providers/common/include/prov/provider_ctx.h"
         ],
         "kind": "typedef",
         "name": "PROV_CTX",
+        "owner_phase": null
+      },
+      {
+        "defined_in": [
+          "providers/implementations/ciphers/cipher_des.h"
+        ],
+        "kind": "typedef",
+        "name": "PROV_DES_CTX",
         "owner_phase": null
       },
       {
@@ -7579,6 +7699,14 @@
       },
       {
         "defined_in": [
+          "providers/implementations/ciphers/cipher_tdes.h"
+        ],
+        "kind": "typedef",
+        "name": "PROV_TDES_CTX",
+        "owner_phase": null
+      },
+      {
+        "defined_in": [
           "x509v3.h"
         ],
         "kind": "typedef",
@@ -7599,6 +7727,14 @@
         ],
         "kind": "typedef",
         "name": "QLOG",
+        "owner_phase": null
+      },
+      {
+        "defined_in": [
+          "include/internal/qlog.h"
+        ],
+        "kind": "typedef",
+        "name": "QLOG_TRACE_INFO",
         "owner_phase": null
       },
       {
@@ -7751,6 +7887,14 @@
         ],
         "kind": "typedef",
         "name": "QUIC_PORT",
+        "owner_phase": null
+      },
+      {
+        "defined_in": [
+          "include/internal/quic_port.h"
+        ],
+        "kind": "typedef",
+        "name": "QUIC_PORT_ARGS",
         "owner_phase": null
       },
       {
@@ -7915,6 +8059,14 @@
       },
       {
         "defined_in": [
+          "include/internal/quic_tls.h"
+        ],
+        "kind": "typedef",
+        "name": "QUIC_TLS_ARGS",
+        "owner_phase": null
+      },
+      {
+        "defined_in": [
           "include/internal/quic_ssl.h"
         ],
         "kind": "typedef",
@@ -7927,6 +8079,14 @@
         ],
         "kind": "typedef",
         "name": "QUIC_TSERVER",
+        "owner_phase": null
+      },
+      {
+        "defined_in": [
+          "include/internal/quic_tserver.h"
+        ],
+        "kind": "typedef",
+        "name": "QUIC_TSERVER_ARGS",
         "owner_phase": null
       },
       {
@@ -8047,6 +8207,14 @@
         ],
         "kind": "typedef",
         "name": "READ_STATE",
+        "owner_phase": null
+      },
+      {
+        "defined_in": [
+          "ssl/record/record.h"
+        ],
+        "kind": "typedef",
+        "name": "RECORD_LAYER",
         "owner_phase": null
       },
       {
@@ -8251,6 +8419,14 @@
       },
       {
         "defined_in": [
+          "ssl/ssl_local.h"
+        ],
+        "kind": "typedef",
+        "name": "SRP_CTX",
+        "owner_phase": null
+      },
+      {
+        "defined_in": [
           "srp.h"
         ],
         "kind": "typedef",
@@ -8295,6 +8471,14 @@
         ],
         "kind": "typedef",
         "name": "SSL",
+        "owner_phase": null
+      },
+      {
+        "defined_in": [
+          "ssl/ssl_local.h"
+        ],
+        "kind": "typedef",
+        "name": "SSL3_ENC_METHOD",
         "owner_phase": null
       },
       {
@@ -8719,14 +8903,6 @@
         ],
         "kind": "typedef",
         "name": "TLS_SIGALG_INFO",
-        "owner_phase": null
-      },
-      {
-        "defined_in": [
-          "ssl/ssl_local.h"
-        ],
-        "kind": "typedef",
-        "name": "TLS_ext_srp_username_callback",
         "owner_phase": null
       },
       {
@@ -9531,14 +9707,6 @@
       },
       {
         "defined_in": [
-          "providers/implementations/ciphers/cipher_chacha20_poly1305.h"
-        ],
-        "kind": "typedef",
-        "name": "aead_cipher",
-        "owner_phase": null
-      },
-      {
-        "defined_in": [
           "engines/e_afalg.h"
         ],
         "kind": "typedef",
@@ -9664,27 +9832,10 @@
       },
       {
         "defined_in": [
-          "providers/common/include/prov/provider_util.h"
-        ],
-        "kind": "typedef",
-        "name": "capable",
-        "owner_phase": null
-      },
-      {
-        "defined_in": [
           "include/internal/quic_sf_list.h"
         ],
         "kind": "typedef",
         "name": "cb_arg",
-        "owner_phase": null
-      },
-      {
-        "defined_in": [
-          "providers/implementations/ciphers/cipher_des.h",
-          "providers/implementations/ciphers/cipher_tdes.h"
-        ],
-        "kind": "typedef",
-        "name": "cbc",
         "owner_phase": null
       },
       {
@@ -9750,15 +9901,6 @@
         "kind": "typedef",
         "name": "const_DES_cblock",
         "owner_phase": 8
-      },
-      {
-        "defined_in": [
-          "include/internal/quic_tls.h",
-          "ssl/ssl_local.h"
-        ],
-        "kind": "typedef",
-        "name": "crypto_send_cb",
-        "owner_phase": null
       },
       {
         "defined_in": [
@@ -9866,14 +10008,6 @@
       },
       {
         "defined_in": [
-          "ssl/ssl_local.h"
-        ],
-        "kind": "typedef",
-        "name": "dh_tmp_cb",
-        "owner_phase": null
-      },
-      {
-        "defined_in": [
           "crypto/ec/curve448/word.h"
         ],
         "kind": "typedef",
@@ -9954,30 +10088,6 @@
       },
       {
         "defined_in": [
-          "include/internal/quic_port.h"
-        ],
-        "kind": "typedef",
-        "name": "get_conn_user_ssl",
-        "owner_phase": null
-      },
-      {
-        "defined_in": [
-          "include/internal/quic_record_tx.h"
-        ],
-        "kind": "typedef",
-        "name": "get_qlog_cb",
-        "owner_phase": null
-      },
-      {
-        "defined_in": [
-          "include/internal/core.h"
-        ],
-        "kind": "typedef",
-        "name": "get_tmp_store",
-        "owner_phase": null
-      },
-      {
-        "defined_in": [
           "crypto/ec/curve448/field.h"
         ],
         "kind": "typedef",
@@ -10002,14 +10112,6 @@
       },
       {
         "defined_in": [
-          "include/internal/hashtable.h"
-        ],
-        "kind": "typedef",
-        "name": "ht_free_fn",
-        "owner_phase": null
-      },
-      {
-        "defined_in": [
           "asn1.h"
         ],
         "kind": "typedef",
@@ -10022,32 +10124,6 @@
         ],
         "kind": "typedef",
         "name": "in",
-        "owner_phase": null
-      },
-      {
-        "defined_in": [
-          "providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.h",
-          "providers/implementations/ciphers/cipher_aes_cbc_hmac_sha_etm.h"
-        ],
-        "kind": "typedef",
-        "name": "init_mac_key",
-        "owner_phase": null
-      },
-      {
-        "defined_in": [
-          "providers/implementations/ciphers/cipher_chacha20.h"
-        ],
-        "kind": "typedef",
-        "name": "initiv",
-        "owner_phase": null
-      },
-      {
-        "defined_in": [
-          "providers/implementations/ciphers/cipher_aes_gcm_siv.h",
-          "providers/implementations/ciphers/cipher_aes_siv.h"
-        ],
-        "kind": "typedef",
-        "name": "initkey",
         "owner_phase": null
       },
       {
@@ -10220,23 +10296,6 @@
       },
       {
         "defined_in": [
-          "include/internal/quic_txp.h"
-        ],
-        "kind": "typedef",
-        "name": "now",
-        "owner_phase": null
-      },
-      {
-        "defined_in": [
-          "include/internal/qlog.h",
-          "include/internal/quic_tserver.h"
-        ],
-        "kind": "typedef",
-        "name": "now_cb",
-        "owner_phase": null
-      },
-      {
-        "defined_in": [
           "modes.h"
         ],
         "kind": "typedef",
@@ -10405,14 +10464,6 @@
       },
       {
         "defined_in": [
-          "ssl/record/record.h"
-        ],
-        "kind": "typedef",
-        "name": "record_padding_cb",
-        "owner_phase": null
-      },
-      {
-        "defined_in": [
           "ct.h"
         ],
         "kind": "typedef",
@@ -10441,14 +10492,6 @@
         ],
         "kind": "typedef",
         "name": "seed_word",
-        "owner_phase": null
-      },
-      {
-        "defined_in": [
-          "ssl/ssl_local.h"
-        ],
-        "kind": "typedef",
-        "name": "setup_key_block",
         "owner_phase": null
       },
       {
@@ -12630,14 +12673,6 @@
       },
       {
         "defined_in": [
-          "providers/implementations/ciphers/cipher_rc4_hmac_md5.h"
-        ],
-        "kind": "typedef",
-        "name": "tls_init",
-        "owner_phase": null
-      },
-      {
-        "defined_in": [
           "ssl.h"
         ],
         "kind": "typedef",
@@ -12754,6 +12789,7 @@
       "BUF_MEM",
       "BY_DIR_ENTRY",
       "BY_DIR_HASH",
+      "CERT",
       "CERT_PKEY",
       "CIPH_DIGEST",
       "CLIENTHELLO_MSG",
@@ -12855,6 +12891,7 @@
       "FFC_PARAMS",
       "HMAC_CTX",
       "HT",
+      "HT_CONFIG",
       "HT_KEY",
       "HT_VALUE",
       "HT_VALUE_LIST",
@@ -12892,6 +12929,7 @@
       "OSSL_ACKM_RX_PKT",
       "OSSL_ACKM_TX_PKT",
       "OSSL_ALGORITHM",
+      "OSSL_ALGORITHM_CAPABLE",
       "OSSL_CALLBACK",
       "OSSL_CC_ACK_INFO",
       "OSSL_CC_DATA",
@@ -13221,10 +13259,7 @@
       "OSSL_HPKE_AEAD_INFO",
       "OSSL_HPKE_KDF_INFO",
       "OSSL_HPKE_KEM_INFO",
-      "OSSL_HTTP_REQ_CTX",
-      "OSSL_INOUT_CALLBACK",
-      "OSSL_ITEM",
-      "OSSL_JSON_ENC"
+      "OSSL_HTTP_REQ_CTX"
     ]
   },
   "generator": "forensics/tools/gen_prerequisite_atlas.py",
