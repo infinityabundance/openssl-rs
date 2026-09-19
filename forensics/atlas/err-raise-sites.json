@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 2418,
+      "sites": 2420,
       "unattributed": 0
     },
     "covered_files": [
@@ -228,6 +228,7 @@
       "crypto/rand/rand_lib.c",
       "crypto/rand/randfile.c",
       "crypto/rand/rand_pool.c",
+      "crypto/rand/prov_seed.c",
       "providers/implementations/rands/drbg.c",
       "providers/implementations/rands/drbg_ctr.c",
       "providers/implementations/rands/drbg_hash.c",
@@ -34464,6 +34465,36 @@
         "rel_source": "crypto/rand/rand_pool.c"
       },
       {
+        "const_name": "PROV_SEED_28",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/rand/prov_seed.c",
+        "function": "ossl_rand_get_entropy",
+        "generated": false,
+        "lib": 36,
+        "lib_symbol": "ERR_LIB_RAND",
+        "line": 28,
+        "macro": "ERR_raise",
+        "reason": 524324,
+        "reason_symbol": "ERR_R_RAND_LIB",
+        "rel_source": "crypto/rand/prov_seed.c"
+      },
+      {
+        "const_name": "PROV_SEED_84",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/rand/prov_seed.c",
+        "function": "ossl_rand_get_nonce",
+        "generated": false,
+        "lib": 36,
+        "lib_symbol": "ERR_LIB_RAND",
+        "line": 84,
+        "macro": "ERR_raise",
+        "reason": 524324,
+        "reason_symbol": "ERR_R_RAND_LIB",
+        "rel_source": "crypto/rand/prov_seed.c"
+      },
+      {
         "const_name": "PROV_DRBG_70",
         "data_format": null,
         "dynamic_reason": false,
@@ -37723,6 +37754,11 @@
       "name": "authority:crypto/rand/rand_pool.c",
       "path": "forensics/authorities/src/openssl-3.6.4/crypto/rand/rand_pool.c",
       "sha256": "5c538731454a45f2b49c60c1a8b57c3e8c6feddc6002e57a4fadc79fb1c729ae"
+    },
+    {
+      "name": "authority:crypto/rand/prov_seed.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/rand/prov_seed.c",
+      "sha256": "b005a0fe24a0019f754091eb3f93203ac73aaf855da9c8d802cdfd2e378dc210"
     },
     {
       "name": "authority:providers/implementations/rands/drbg.c",

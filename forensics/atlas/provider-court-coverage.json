@@ -5,6 +5,10 @@
       "8": {
         "implemented": 166,
         "unmatched": 0
+      },
+      "9": {
+        "implemented": 3,
+        "unmatched": 0
       }
     },
     "claim": "Every provider algorithm registration row that `provider-algorithms.json` records as `implemented` is either named as a C string literal by a probe belonging to a differential court, or declared with a reason. The required set is derived from the census and the provided set from the probe sources, so a row that becomes implemented without an observation is a failure on the commit that lands it rather than at a stratum's seal.",
@@ -18,10 +22,15 @@
         "court": "RT-CIPHER",
         "phase": 8,
         "probe": "courts/phase8/rt_cipher_probe.c"
+      },
+      {
+        "court": "RT-DRBG",
+        "phase": 9,
+        "probe": "courts/phase9/rt_drbg_probe.c"
       }
     ],
-    "directly_courted": 166,
-    "implemented_rows": 166,
+    "directly_courted": 169,
+    "implemented_rows": 169,
     "rows": [
       {
         "algorithm_names": "AES-128-CBC",
@@ -741,7 +750,8 @@
           "AES-256-CTR"
         ],
         "courts": [
-          "RT-CIPHER"
+          "RT-CIPHER",
+          "RT-DRBG"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_CIPHER",
@@ -2041,7 +2051,8 @@
         ],
         "courts": [
           "RT-DIGEST",
-          "RT-CIPHER"
+          "RT-CIPHER",
+          "RT-DRBG"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_DIGEST",
@@ -2275,7 +2286,8 @@
           "HMAC"
         ],
         "courts": [
-          "RT-CIPHER"
+          "RT-CIPHER",
+          "RT-DRBG"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_MAC",
@@ -2337,6 +2349,45 @@
         "operation": "OSSL_OP_MAC",
         "owning_phase": 8,
         "provider": "default"
+      },
+      {
+        "algorithm_names": "CTR-DRBG",
+        "aliases": [
+          "CTR-DRBG"
+        ],
+        "courts": [
+          "RT-DRBG"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_RAND",
+        "owning_phase": 9,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "HASH-DRBG",
+        "aliases": [
+          "HASH-DRBG"
+        ],
+        "courts": [
+          "RT-DRBG"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_RAND",
+        "owning_phase": 9,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "HMAC-DRBG",
+        "aliases": [
+          "HMAC-DRBG"
+        ],
+        "courts": [
+          "RT-DRBG"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_RAND",
+        "owning_phase": 9,
+        "provider": "default"
       }
     ],
     "unmatched": 0
@@ -2346,7 +2397,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "0407f01ef9b149a35f6862db0103e277bb195747c251934897de5bb309ee94a6"
+      "sha256": "cb0dcfbc57c67bfafc99163614e11417f7c57a482cfe460a6cf69c87171774a9"
     },
     {
       "name": "court:RT-DIGEST",
@@ -2357,6 +2408,11 @@
       "name": "court:RT-CIPHER",
       "path": "courts/phase8/rt_cipher_probe.c",
       "sha256": "ef2ab23265f12492907b9db5028d4136fd96f0b93499ba718e819379fb2f86eb"
+    },
+    {
+      "name": "court:RT-DRBG",
+      "path": "courts/phase9/rt_drbg_probe.c",
+      "sha256": "089163564876bbb4a99f98171bb81cf06a487eb9de6fc3be2b108a589ee2d4d9"
     }
   ],
   "kind": "provider-court-coverage",

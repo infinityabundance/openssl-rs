@@ -22782,6 +22782,26 @@ pub(crate) const RAND_POOL_431: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ossl_rand_get_entropy` at `crypto/rand/prov_seed.c:28` (ERR_R_RAND_LIB).
+pub(crate) const PROV_SEED_28: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/prov_seed.c",
+    line: 28,
+    func: c"ossl_rand_get_entropy",
+    lib: 36,
+    reason: 524324,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_get_nonce` at `crypto/rand/prov_seed.c:84` (ERR_R_RAND_LIB).
+pub(crate) const PROV_SEED_84: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/prov_seed.c",
+    line: 84,
+    func: c"ossl_rand_get_nonce",
+    lib: 36,
+    reason: 524324,
+    dynamic_reason: false,
+};
+
 /// `ossl_drbg_lock_parent` at `providers/implementations/rands/drbg.c:70` (PROV_R_PARENT_LOCKING_NOT_ENABLED).
 pub(crate) const PROV_DRBG_70: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
@@ -26498,6 +26518,8 @@ pub(crate) static ALL: &[ErrSite] = &[
     RAND_POOL_395,
     RAND_POOL_426,
     RAND_POOL_431,
+    PROV_SEED_28,
+    PROV_SEED_84,
     PROV_DRBG_70,
     PROV_DRBG_91,
     PROV_DRBG_97,

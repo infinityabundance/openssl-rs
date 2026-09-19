@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 244,
+      "crate_files_read": 247,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -19,7 +19,7 @@
       "signatures_authority_only": 397,
       "signatures_checked": 237,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 117,
+      "signatures_not_a_dispatch": 123,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -4012,6 +4012,36 @@
           "alias": "SkCopyFn",
           "at": "src/provider/mod.rs",
           "why": "not a provider dispatch: `safestack.h.in`'s `sk_*_compfunc` / `freefunc` / `copyfunc` macros generate it per type, so there is no single typedef"
+        },
+        {
+          "alias": "ProvDrbgInstantiateFn",
+          "at": "src/provider/rand.rs",
+          "why": "not a provider dispatch: a member of `struct prov_drbg_st`, declared inline in `providers/implementations/include/prov/drbg.h:59-165` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "ProvDrbgUninstantiateFn",
+          "at": "src/provider/rand.rs",
+          "why": "not a provider dispatch: a member of `struct prov_drbg_st`, declared inline in `providers/implementations/include/prov/drbg.h:59-165` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "ProvDrbgReseedFn",
+          "at": "src/provider/rand.rs",
+          "why": "not a provider dispatch: a member of `struct prov_drbg_st`, declared inline in `providers/implementations/include/prov/drbg.h:59-165` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "ProvDrbgGenerateFn",
+          "at": "src/provider/rand.rs",
+          "why": "not a provider dispatch: a member of `struct prov_drbg_st`, declared inline in `providers/implementations/include/prov/drbg.h:59-165` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "ProvDrbgNewFn",
+          "at": "src/provider/rand.rs",
+          "why": "not a provider dispatch: a member of `struct prov_drbg_st`, declared inline in `providers/implementations/include/prov/drbg.h:59-165` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "ProvDrbgFreeFn",
+          "at": "src/provider/rand.rs",
+          "why": "not a provider dispatch: a member of `struct prov_drbg_st`, declared inline in `providers/implementations/include/prov/drbg.h:59-165` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
         },
         {
           "alias": "RsaCryptFn",

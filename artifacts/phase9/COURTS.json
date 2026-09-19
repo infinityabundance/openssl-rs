@@ -3,18 +3,35 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "**Zero courts have landed.** `courts` is empty because every export this stratum owns is unimplemented and a probe that called one would abort the candidate, which is not an observation. `all_pass` is therefore true of an empty set and is NOT evidence that anything works; `pending_courts` names the four courts the plan gives this stratum and the subphase that brings each. A passing RT-* court, when one lands, will mean the candidate produced the same observable transcript as the authority for the behaviours that probe exercises -- differential compatibility, NOT that its output is unpredictable (docs/PARITY_MODEL.md, docs/PHASE-9-SUBPHASES.md section 3.3).",
-    "courts": [],
+    "claim": "A passing RT-* court means the candidate produced the same observable transcript as the authority for the behaviours that probe exercises -- differential compatibility, NOT that its output is unpredictable (docs/PARITY_MODEL.md, docs/PHASE-9-SUBPHASES.md section 3.3). `pending_courts` names the courts the plan gives this stratum that have not landed; each is printed on every run so that 'not run yet' cannot be read as 'passed'.",
+    "courts": [
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 303,
+        "candidate_exit_code": 0,
+        "candidate_observations": 303,
+        "candidate_stderr_tail": [],
+        "court": "RT-DRBG",
+        "crashed": false,
+        "probe": "courts/phase9/rt_drbg_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase9/probes/rt_drbg_probe.authority",
+          "candidate": "artifacts/phase9/probes/rt_drbg_probe.candidate"
+        },
+        "verdict": "pass"
+      }
+    ],
     "pending_courts": {
       "CT-DRBG": "9.4 -- the DRBGs' construction vectors, which the pinned tree already carries: `test/recipes/30-test_evp_data/evprand.txt` mirror the NIST CAVP `drbgtestvectors.zip` sets, with the URL written in the file, and `evpkdf_hmac_drbg.txt` carries the HMAC-DRBG KDF cases. No network fetch is needed and none is permitted (docs/AUTHORITY_POLICY.md).",
       "RT-BN-RAND": "9.1 -- the BN random family against the authority, with a fixed seed source on both sides. It cannot be written before the front exists, because the authority's own `BN_rand` reaches it.",
-      "RT-DRBG": "9.3-9.4 -- the DRBG framework and the three instantiations, through the provider they are published by, including the parameter surface and the state machine.",
-      "RT-RAND": "9.2 -- `rand.h`'s twenty-five exports: the method table, the thread-local primary/public/private DRBGs, the file helpers, and the refusal arms."
+      "RT-RAND": "9.2 -- `rand.h`'s twenty-five exports: the method table, the thread-local primary/public/private DRBGs, the file helpers, and the refusal arms. The front's seed-source and per-context half has landed (D309); the exports are what remain."
     },
     "summary": {
       "fail": 0,
-      "pass": 0,
-      "total": 0
+      "pass": 1,
+      "total": 1
     }
   },
   "generator": "forensics/tools/phase9_courts.py",
@@ -23,6 +40,11 @@
       "name": "authority-symbols",
       "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
       "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase9/rt_drbg_probe.c",
+      "sha256": "089163564876bbb4a99f98171bb81cf06a487eb9de6fc3be2b108a589ee2d4d9"
     }
   ],
   "kind": "phase9-courts",

@@ -4474,12 +4474,74 @@
           }
         },
         "verdict": "clean"
+      },
+      {
+        "probe": "courts/phase9/rt_drbg_probe.c",
+        "sides": {
+          "authority": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 303,
+              "-O1": 303,
+              "-O2": 303
+            },
+            "side": "authority",
+            "verdict": "clean"
+          },
+          "candidate": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 303,
+              "-O1": 303,
+              "-O2": 303
+            },
+            "side": "candidate",
+            "verdict": "clean"
+          }
+        },
+        "verdict": "clean"
       }
     ],
     "runs_per_level": 2,
     "summary": {
-      "clean": 72,
-      "total": 72,
+      "clean": 73,
+      "total": 73,
       "unstable": 0
     }
   },
@@ -4844,6 +4906,11 @@
       "name": "probe",
       "path": "courts/phase8/rt_rsa_probe.c",
       "sha256": "bcb3302ef651bad973ca0991101c5815047183f2638c81a09e54c7df3e8127c5"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase9/rt_drbg_probe.c",
+      "sha256": "089163564876bbb4a99f98171bb81cf06a487eb9de6fc3be2b108a589ee2d4d9"
     }
   ],
   "kind": "probe-hygiene",

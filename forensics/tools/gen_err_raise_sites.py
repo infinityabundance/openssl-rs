@@ -584,6 +584,12 @@ COVERED_FILES = [
     ("crypto/rand/rand_lib.c", "RAND_LIB"),
     ("crypto/rand/randfile.c", "RANDFILE"),
     ("crypto/rand/rand_pool.c", "RAND_POOL"),
+    # `prov_seed.c` **joins the covered set in D309, when its first caller lands**: it is the
+    # core-side half of the provider seeding up-call (`ossl_rand_get_entropy` and its seven
+    # siblings), and `$CRYPTO` in `crypto/rand/build.info:4` says it is built on this profile. Its
+    # two raises are `ERR_LIB_RAND`/`ERR_R_RAND_LIB` on the pool-allocation failure path, which is
+    # exactly the kind of coordinate a caller sees rather than a diagnostic.
+    ("crypto/rand/prov_seed.c", "PROV_SEED"),
     # Phase 9's `providers/implementations/rands` subsystem -- the four `OSSL_OP_RAND` rows and
     # the seed sources they draw on. `crngt.c` is **not** in this list because it is not in the
     # authority: the continuous test is `fips_crng_test.c`, which is, and the correction is

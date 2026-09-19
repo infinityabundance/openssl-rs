@@ -2085,9 +2085,11 @@ static DEFLT_DIGESTS: [OsslAlgorithm; 28] = [
 ];
 
 /// `static const OSSL_ALGORITHM *deflt_query(void *provctx, int operation_id, int *no_cache)` —
-/// `providers/defltprov.c`, with the `OSSL_OP_DIGEST`, `OSSL_OP_CIPHER` and `OSSL_OP_MAC` arms.
+/// `providers/defltprov.c`, with the `OSSL_OP_DIGEST`, `OSSL_OP_CIPHER`, `OSSL_OP_MAC` and
+/// `OSSL_OP_RAND` arms.
 ///
 /// The other operations the authority answers are other subphases' and are absent, not stubbed.
+/// The arms are in the authority's own `switch` order (`defltprov.c:706-734`).
 /// **The `OSSL_OP_CIPHER` arm answers `exported_ciphers`, not `deflt_ciphers`** — the
 /// capability-filtered copy `ossl_prov_cache_exported_algorithms` fills at provider init, reached
 /// through `crate::provider::cipher::exported_ciphers`. The two tables are equal while every landed
@@ -2095,7 +2097,7 @@ static DEFLT_DIGESTS: [OsslAlgorithm; 28] = [
 /// row (D275).
 ///
 /// # Safety
-/// `no_cache` must be writable; `provctx` is ignored by all three arms.
+/// `no_cache` must be writable; `provctx` is ignored by all four arms.
 unsafe extern "C" fn deflt_query(
     _provctx: *mut c_void,
     operation_id: c_int,
@@ -2111,6 +2113,9 @@ unsafe extern "C" fn deflt_query(
     }
     if operation_id == crate::provider::mac::OSSL_OP_MAC {
         return crate::provider::mac::DEFLT_MACS.as_ptr();
+    }
+    if operation_id == crate::evp::rand::OSSL_OP_RAND {
+        return crate::provider::rand::DEFLT_RANDS.as_ptr();
     }
     ptr::null()
 }
@@ -2167,6 +2172,19 @@ pub(crate) unsafe extern "C" fn ossl_default_provider_init(
     // SAFETY: `in_` is the core's own terminated table; every entry read is within it.
     unsafe {
         if out.is_null() || provctx.is_null() {
+            return 0;
+        }
+
+        // The authority's first two statements are `ossl_prov_bio_from_dispatch(in) ||
+        // ossl_prov_seeding_from_dispatch(in)`, and **the seeding half is load-bearing**: it
+        // records the eight `OSSL_FUNC_{GET,CLEANUP}_{USER_,}{ENTROPY,NONCE}` callbacks this
+        // crate now publishes, and without them a DRBG's instantiate cannot get a nonce or
+        // entropy — it is refused with `PROV_R_ERROR_RETRIEVING_NONCE`/`..._ENTROPY`.
+        // `ossl_prov_bio_from_dispatch` remains absent: it installs the core `BIO_METHOD`, and
+        // this crate builds no provider-side BIO method (see the `deflt_teardown` note above).
+        // Failing here would abort provider activation, so the answer is checked as the
+        // authority checks it.
+        if crate::provider::seeding::ossl_prov_seeding_from_dispatch(in_) == 0 {
             return 0;
         }
 
@@ -2266,12 +2284,12 @@ mod tests {
             "the twenty-seven default-provider digest rows 8.1 has landed"
         );
 
-        // SAFETY: the query's contract; an operation neither half answers. There are fifteen
+        // SAFETY: the query's contract; an operation no arm answers. There are fifteen
         // `OSSL_OP_*` values (1..=13 plus the two max sentinels); 14 is the max sentinel.
         let none = unsafe { deflt_query(ptr::null_mut(), 14, &mut no_cache) };
         assert!(
             none.is_null(),
-            "only OSSL_OP_DIGEST and OSSL_OP_CIPHER are answered"
+            "only OSSL_OP_DIGEST, OSSL_OP_CIPHER, OSSL_OP_MAC and OSSL_OP_RAND are answered"
         );
 
         // The cipher half answers too, and its table starts at `deflt_ciphers[]`'s first row.
@@ -2287,6 +2305,20 @@ mod tests {
         // SAFETY: the returned table's first row is initialised.
         let first = unsafe { core::ffi::CStr::from_ptr((*ciphers).algorithm_names) };
         assert_eq!(first.to_bytes(), b"NULL");
+
+        // The RAND arm answers `deflt_rands[]`, whose first row is CTR-DRBG.
+        // SAFETY: the query's contract; `provctx` is NULL and this arm ignores it.
+        let rands = unsafe {
+            deflt_query(
+                ptr::null_mut(),
+                crate::evp::rand::OSSL_OP_RAND,
+                &mut no_cache,
+            )
+        };
+        assert!(!rands.is_null());
+        // SAFETY: the returned table's first row is initialised.
+        let first = unsafe { core::ffi::CStr::from_ptr((*rands).algorithm_names) };
+        assert_eq!(first.to_bytes(), b"CTR-DRBG");
     }
 
     #[test]
@@ -2299,9 +2331,24 @@ mod tests {
         // the one lookup it cannot do without: every provider sub-fetch resolves against the
         // context it yields. That arm is checked first because it is the reason this function was
         // not a `*provctx = NULL` assignment any more.
-        // SAFETY: both slots are this frame's and writable; the table below is `'static`.
-        let refused =
-            unsafe { ossl_default_provider_init(ptr::null(), ptr::null(), &mut out, &mut provctx) };
+        //
+        // The table is a real, terminated one rather than NULL: the init's **first** statement is
+        // the seeding walk (`ossl_prov_seeding_from_dispatch`), and a NULL there is a dereference
+        // the authority would also make. The walk needs a table; the refusal needs one without
+        // `CORE_GET_LIBCTX`.
+        static CORE_IN_NO_LIBCTX: [OsslDispatch; 1] = [OsslDispatch {
+            function_id: OSSL_DISPATCH_END,
+            function: ptr::null_mut(),
+        }];
+        // SAFETY: both slots are this frame's and writable; the table above is `'static`.
+        let refused = unsafe {
+            ossl_default_provider_init(
+                ptr::null(),
+                CORE_IN_NO_LIBCTX.as_ptr(),
+                &mut out,
+                &mut provctx,
+            )
+        };
         assert_eq!(refused, 0, "a core with no CORE_GET_LIBCTX is refused");
 
         // Now a core that does offer it. The two callbacks are this test's own, so the assertion

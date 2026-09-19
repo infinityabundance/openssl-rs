@@ -143,6 +143,23 @@ pub(crate) const OSSL_LIB_CTX_BIO_CORE_INDEX: c_int = 17;
 #[allow(dead_code)] // unreachable until the stratum that calls it lands
 pub(crate) const OSSL_LIB_CTX_NAMEMAP_INDEX: c_int = 4;
 
+/// `OSSL_LIB_CTX_DRBG_INDEX`, from `include/internal/cryptlib.h`. Slot 5: the RAND front's
+/// per-context DRBG holder (`ossl_rand_ctx_new`). **Still unfilled**, and it is the RAND
+/// front's to fill: `context_init` builds it here in the authority the moment
+/// `src/provider`'s DRBG rows need a parent, and `ossl_rand_ctx_new` lands with
+/// `crypto/rand/rand_lib.c` in 9.2. Reading the slot before then answers NULL exactly as an
+/// unbuilt slot does.
+pub(crate) const OSSL_LIB_CTX_DRBG_INDEX: c_int = 5;
+
+/// `OSSL_LIB_CTX_DRBG_NONCE_INDEX`, from `include/internal/cryptlib.h`. Slot 6: the DRBG
+/// nonce counter and its lock, built by `context_init` from `ossl_prov_drbg_nonce_ctx_new`.
+///
+/// It is **load-bearing for every DRBG instantiation with `min_noncelen > 0`** (all three
+/// default-provider rows): `prov_drbg_get_nonce` reads the slot and answers 0 when it is NULL,
+/// which the caller reports as `PROV_R_ERROR_RETRIEVING_NONCE`. RT-DRBG found the slot
+/// unfilled on the first run.
+pub(crate) const OSSL_LIB_CTX_DRBG_NONCE_INDEX: c_int = 6;
+
 /// `OSSL_LIB_CTX_SELF_TEST_CB_INDEX`, from `include/internal/cryptlib.h`. Slot 12,
 /// filled by 6.11.
 pub(crate) const OSSL_LIB_CTX_SELF_TEST_CB_INDEX: c_int = 12;
@@ -402,6 +419,21 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
     // SAFETY: as above; the slot is published once, here.
     unsafe { (*ctx).provider_conf = provider_conf.cast::<c_void>() };
 
+    // The per-context RAND state, slot 5. The authority builds it **third**, after
+    // `evp_method_store` and `provider_conf` and before the decoder stores; this is that
+    // position. It is what `ossl_rand_get0_seed_noncreating` and every DRBG's nonce read, and
+    // an unfilled slot is why `PROV_R_ERROR_RETRIEVING_NONCE` refused every instantiation
+    // before D309 -- measured by RT-DRBG, not inferred.
+    // SAFETY: `ctx` is the live context being initialised; the constructor allocates and
+    // releases the thread-handling base first, as `rand_lib.c` does.
+    let drbg = unsafe { crate::rand::rand_lib::ossl_rand_ctx_new(ctx.cast::<c_void>()) };
+    if drbg.is_null() {
+        context_deinit(ctx);
+        return false;
+    }
+    // SAFETY: as above; the slot is published once, here.
+    unsafe { (*ctx).drbg = drbg };
+
     // The child-provider globals, slot 18. Built here and **filled later**:
     // `ossl_provider_init_as_child` is what creates the lock and stores the upcalls, so a
     // context that is not a child has a zeroed object with a NULL lock — which
@@ -499,6 +531,20 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
     // SAFETY: as above.
     unsafe { (*ctx).bio_core = bio_core.cast::<c_void>() };
 
+    // The DRBG nonce counter and its lock. The authority builds it after `bio_core` and before
+    // the two callback holders, and it is **the slot every DRBG instantiate with a nonce reads**:
+    // `prov_drbg_get_nonce` answers 0 for a NULL slot, which `ossl_prov_drbg_instantiate` reports
+    // as `PROV_R_ERROR_RETRIEVING_NONCE`. RT-DRBG measured that refusal on the first run.
+    let drbg_nonce =
+        // SAFETY: `ctx` is the live context being built; the constructor only allocates.
+        unsafe { crate::provider::rand::ossl_prov_drbg_nonce_ctx_new(ctx.cast::<c_void>()) };
+    if drbg_nonce.is_null() {
+        context_deinit(ctx);
+        return false;
+    }
+    // SAFETY: as above; the slot is published once, here.
+    unsafe { (*ctx).drbg_nonce = drbg_nonce };
+
     // The two callback holders. The authority builds them after `drbg_nonce` and
     // before the thread slot, and each is a plain `OPENSSL_zalloc`ed pair.
     let self_test_cb = crate::selftest::ossl_self_test_set_callback_new(ctx.cast::<c_void>());
@@ -572,6 +618,17 @@ fn context_deinit_objs(ctx: *mut OsslLibCtx) {
                     .cast::<crate::property::store::OsslMethodStore>(),
             );
             (*ctx).evp_method_store = ptr::null_mut();
+        }
+    }
+
+    // The per-context RAND state, released **immediately after the EVP method store**, which is
+    // the authority's P2 order -- and it has to be, because the DRBG this slot holds is fetched
+    // *through* the method store.
+    // SAFETY: as above; the slot is released once and re-NULLed.
+    unsafe {
+        if !(*ctx).drbg.is_null() {
+            crate::rand::rand_lib::ossl_rand_ctx_free((*ctx).drbg);
+            (*ctx).drbg = ptr::null_mut();
         }
     }
 
@@ -673,6 +730,17 @@ fn context_deinit_objs(ctx: *mut OsslLibCtx) {
                     .cast::<crate::context::core_bio::BioCoreGlobals>(),
             );
             (*ctx).bio_core = ptr::null_mut();
+        }
+    }
+
+    // The DRBG nonce counter, released after the core BIO globals and before the two callback
+    // holders, which is the authority's own order.
+    // SAFETY: `ctx` is a live context being torn down by `context_deinit`, and no other thread
+    // holds a reference to it. The slot is released exactly once and re-NULLed.
+    unsafe {
+        if !(*ctx).drbg_nonce.is_null() {
+            crate::provider::rand::ossl_prov_drbg_nonce_ctx_free((*ctx).drbg_nonce);
+            (*ctx).drbg_nonce = ptr::null_mut();
         }
     }
 

@@ -42,25 +42,25 @@
         "evidence": "docs/PHASE-6-SUBPHASES.md rows 6.8d and 6.12"
       },
       {
-        "symbol": "evp_rand_can_seed",
+        "symbol": "ossl_rand_check_random_provider_on_load",
         "owner_phase": 9,
-        "authority_unit": "crypto/evp/evp_rand.c",
-        "reason": "Internal: declared in `include/crypto/evp.h`, which is not installed, and its only caller in the whole authority is `crypto/rand/rand_lib.c`, already recorded in this file's `units` section as Phase 9's. 7.3f transcribes `evp_rand.c` and deliberately stops at the dispatch walk that fills the `get_seed` and `clear_seed` *fields*: the fields are this file's, the three callers are the stratum that needs the DRBG plumbing. Recording the name here is what makes that boundary visible to the gate rather than only to a reader.",
-        "evidence": "src/evp/rand.rs module doc, section \"What is not here\"; forensics/prerequisites.json units row crypto/rand/rand_lib.c"
+        "authority_unit": "crypto/rand/rand_lib.c",
+        "reason": "The provider-load hook `crypto/provider_core.c` calls when a provider is activated: it is what makes a provider named by `RAND_set1_random_provider` take over the RAND up-call. D309 landed `rand_lib.c`'s per-context and seed-source half (slot 5, the seed accessor, the slot constructor/releaser) because the DRBG rows cannot instantiate without it; this hook and its unload twin are the *provider-nomination* half, which nothing in the landed surface reaches yet. They are recorded rather than stubbed, and the row is discharged -- and must be retired -- on the commit that lands them.",
+        "evidence": "src/rand/rand_lib.rs module doc, section 'What is absent, and named'; docs/DECISIONS.md D309"
       },
       {
-        "symbol": "evp_rand_get_seed",
+        "symbol": "ossl_rand_check_random_provider_on_unload",
         "owner_phase": 9,
-        "authority_unit": "crypto/evp/evp_rand.c",
-        "reason": "The same boundary as its `can_seed` sibling: internal to `crypto/evp/evp_rand.c`, declared in the uninstalled `include/crypto/evp.h`, called only by `crypto/rand/rand_lib.c`. It answers entropy to the DRBG, so it cannot be written before the thing that asks for entropy exists.",
-        "evidence": "src/evp/rand.rs module doc, section \"What is not here\"; forensics/prerequisites.json units row crypto/rand/rand_lib.c"
+        "authority_unit": "crypto/rand/rand_lib.c",
+        "reason": "The releasing half of the provider-nomination pair above: `crypto/provider_core.c` calls it when a provider is deactivated, so that a nominated randomness provider cannot outlive its registration. Same stratum, same boundary, same discharge condition.",
+        "evidence": "src/rand/rand_lib.rs module doc, section 'What is absent, and named'; docs/DECISIONS.md D309"
       },
       {
-        "symbol": "evp_rand_clear_seed",
+        "symbol": "ossl_rand_cleanup_int",
         "owner_phase": 9,
-        "authority_unit": "crypto/evp/evp_rand.c",
-        "reason": "The third of the seed trio, and the same boundary again: internal, declared in the uninstalled `include/crypto/evp.h`, called only by `crypto/rand/rand_lib.c`, and the releasing half of the pair whose acquiring half is `evp_rand_get_seed`. Neither half has a caller before Phase 9.",
-        "evidence": "src/evp/rand.rs module doc, section \"What is not here\"; forensics/prerequisites.json units row crypto/rand/rand_lib.c"
+        "authority_unit": "crypto/rand/rand_lib.c",
+        "reason": "`OPENSSL_cleanup`'s RAND arm, and the counterpart of `do_rand_init`: it frees the two module locks and the method table that `RUN_ONCE(&rand_init, ...)` builds. D309 deliberately landed neither, because the method table it would release is the front's -- `RAND_get_rand_method`/`RAND_set_rand_method` and the `RAND_METHOD` static they compare against are 9.2's remaining work, and a cleanup that released state nothing had built would be a stub wearing a name.",
+        "evidence": "src/rand/rand_lib.rs module doc, section 'What is absent, and named'; docs/DECISIONS.md D309"
       },
       {
         "symbol": "evp_cleanup_int",
@@ -834,13 +834,6 @@
         "owner_phase": 13,
         "reason": "Row 6.10 names it because it shares `CRYPTO_THREAD_get_local_ex` with the per-context thread-local family, and that sharing is why 6.10a had to land the family. The file itself is the async job framework, which is Phase 13's: every in-tree caller is an asynchronous engine or the SSL async API. `OPENSSL_NO_ASYNC` is not defined in this profile, so this is real functionality waiting for a real dependent rather than a stub.",
         "evidence": "docs/PHASE-6-SUBPHASES.md section 2 (\"Why ASYNC_* is deferred to Phase 13\"); forensics/phase3-obligations.json's ASYNC_* hand-off"
-      },
-      {
-        "unit": "crypto/rand/rand_lib.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 9,
-        "reason": "Also named by row 6.10 for the shared thread-local family. Its own content is the RAND state and the DRBG plumbing, which is Phase 9's; the one internal 6.10 cares about, `ossl_random_add_conf_module`, is one of the seven registrations `OPENSSL_load_builtin_modules` makes and is recorded separately as a symbol deferral.",
-        "evidence": "docs/PHASE-6-SUBPHASES.md row 6.10; forensics/phase-state.json phase 9"
       },
       {
         "unit": "crypto/rsa/rsa_ossl.c",
