@@ -895,6 +895,100 @@ done:
     return ret;
 }
 
+/*
+ * The four published `AES-*-CBC-HMAC-*` "stitched" rows -- OpenSSL's MAC-then-encrypt TLS record,
+ * and the only family in this court whose construction **names no published standard**. The
+ * corpus's own title is `AES-128-CBC-HMAC-SHA1 test vectors`; nothing in the file says where the
+ * values came from.
+ *
+ * Two things about the calling convention are not guessable and both are `evp_test.c`'s.
+ *
+ * **The caller reserves the MAC and the padding itself.** `input` is the stitched buffer
+ * `[payload][MAC space][padding space]` and `input` and `expected` are the *same length* -- 112
+ * and 112, 288 and 288 in this file. The payload length is not a column: it is the TLS AAD's last
+ * two bytes, big-endian, which is where `tls1_mac` reads it. A driver that passed the payload
+ * length as `inl` would produce a record with no room for the MAC.
+ *
+ * **Padding is turned off and the version is set explicitly.** `EVP_CIPHER_CTX_set_padding(ctx, 0)`
+ * because the corpus's buffer already carries the padding, and `OSSL_CIPHER_PARAM_TLS_VERSION`
+ * because the version decides the record's shape -- it is what adds the explicit IV at TLS 1.1 and
+ * later, and the same `TLSAAD` is handed to a `0x0301` record and a `0x0302` one in this file.
+ *
+ * The six `-ETM` sections of the corpus are excluded by this arm's name test as well as by the
+ * family's regex: their capability predicate is the aarch64-only `AES_CBC_HMAC_SHA_ETM_CAPABLE`, so
+ * `EVP_CIPHER_fetch` answers NULL for them on this host and an arm that claimed them would report a
+ * failure where the truth is a dropped row (D276).
+ */
+static int ct_cbchmac(const char *cipher, int enc_op,
+                      const unsigned char *key, size_t keylen,
+                      const unsigned char *iv, size_t ivlen,
+                      const unsigned char *in, size_t inlen,
+                      unsigned char *out, size_t *outlen,
+                      const unsigned char *mackey, size_t mackeylen,
+                      const unsigned char *tlsaad, size_t tlsaadlen, int tlsversion)
+{
+    EVP_CIPHER *c = NULL;
+    EVP_CIPHER_CTX *ctx = NULL;
+    unsigned char aadcopy[64];
+    int outl = 0, finl = 0, ret = -1;
+
+    if (strncmp(cipher, "AES-", 4) != 0 || strstr(cipher, "CBC-HMAC-") == NULL)
+        return -1;
+    if (strstr(cipher, "-ETM") != NULL)
+        return -1;
+    if (keylen != 16 && keylen != 32)
+        return -1;
+    if (ivlen != 16 || mackeylen == 0 || inlen == 0 || inlen > CT_MAX
+        || tlsaadlen != 13 || tlsaadlen > sizeof(aadcopy))
+        return -1;
+
+    c = EVP_CIPHER_fetch(NULL, cipher, NULL);
+    if (c == NULL)
+        return -1;
+    ctx = EVP_CIPHER_CTX_new();
+    if (ctx == NULL)
+        goto done;
+    if (EVP_CipherInit_ex2(ctx, c, key, iv, enc_op ? 1 : 0, NULL) != 1)
+        goto done;
+    if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_MAC_KEY, (int)mackeylen,
+                            (void *)mackey) <= 0)
+        goto done;
+    if (tlsversion != 0) {
+        OSSL_PARAM tp[2];
+        int v = tlsversion;
+
+        tp[0] = OSSL_PARAM_construct_int(OSSL_CIPHER_PARAM_TLS_VERSION, &v);
+        tp[1] = OSSL_PARAM_construct_end();
+        if (!EVP_CIPHER_CTX_set_params(ctx, tp))
+            goto done;
+    }
+    if (tlsaad != NULL) {
+        OSSL_PARAM sp[2];
+
+        /* The implementation **rewrites** the AAD's length octets, so it gets its own copy
+         * exactly as `evp_test.c` gives it one. */
+        memcpy(aadcopy, tlsaad, tlsaadlen);
+        sp[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_TLS1_AAD,
+                                                  aadcopy, tlsaadlen);
+        sp[1] = OSSL_PARAM_construct_end();
+        if (!EVP_CIPHER_CTX_set_params(ctx, sp))
+            goto done;
+    }
+    EVP_CIPHER_CTX_set_padding(ctx, 0);
+    if (EVP_CipherUpdate(ctx, out, &outl, in, (int)inlen) != 1)
+        goto done;
+    if (EVP_CipherFinal_ex(ctx, out + outl, &finl) != 1)
+        goto done;
+    *outlen = (size_t)outl + (size_t)finl;
+    ret = 0;
+
+done:
+    if (ctx != NULL)
+        EVP_CIPHER_CTX_free(ctx);
+    EVP_CIPHER_free(c);
+    return ret;
+}
+
 static int ct_gcm(const char *cipher, int enc_op,
                   const unsigned char *key, size_t keylen,
                   const unsigned char *iv, size_t ivlen,
@@ -1537,10 +1631,15 @@ static int ct_cipher(const char *cipher, const char *operation,
                      const unsigned char *aad, size_t aadlen,
                      const unsigned char *in, size_t inlen,
                      unsigned char *out, size_t *outlen, size_t taglen,
-                     const char *ctsmode, const char *xtsstandard)
+                     const char *ctsmode, const char *xtsstandard,
+                     const unsigned char *mackey, size_t mackeylen,
+                     const unsigned char *tlsaad, size_t tlsaadlen, int tlsversion)
 {
     int enc_op = strcmp(operation, "ENCRYPT") == 0;
 
+    if (ct_cbchmac(cipher, enc_op, key, keylen, iv, ivlen, in, inlen, out, outlen,
+                   mackey, mackeylen, tlsaad, tlsaadlen, tlsversion) == 0)
+        return 0;
     if (ct_chacha20_poly1305(cipher, enc_op, key, keylen, iv, ivlen, aad, aadlen,
                              in, inlen, out, outlen, taglen) == 0)
         return 0;
@@ -1594,12 +1693,19 @@ int main(int argc, char **argv)
         int nf = 0;
         char *p = line;
         unsigned char key[64], iv[64], aad[CT_MAX], in[CT_MAX], out[CT_MAX + 64];
+        unsigned char mackey[64], tlsaad[64];
         size_t keylen = 0, ivlen = 0, aadlen = 0, inlen = 0, outlen = 0;
-        size_t taglen = 0;
+        size_t taglen = 0, mackeylen = 0, tlsaadlen = 0;
         const char *ctsmode = "";
         const char *xtsstandard = "";
+        int tlsversion = 0;
         long index;
         int rc;
+        char *nl;
+
+        nl = strchr(line, '\n');
+        if (nl != NULL)
+            *nl = '\0';
 
         while (nf < 7) {
             char *tab = strchr(p, '\t');
@@ -1617,29 +1723,38 @@ int main(int argc, char **argv)
             continue;
         {
             /*
-             * field[7] is `taglen`; the eighth column is the CTS mode and the ninth the XTS
-             * standard. Both are per-family, so a family without one carries an empty column,
-             * which is how `ctsmode` has worked since it was added.
+             * `fields[7]` carries the six per-family columns the header describes. They are
+             * peeled with one loop rather than nested `strchr`s so that the count lives in a
+             * single place: a family that has none of them leaves every column empty, and the
+             * newline was already removed from `line` above so an empty tail cannot carry one.
              */
-            char *tab = strchr(fields[7], '\t');
-            char *nl;
+            char *cols[6];
+            char *q = fields[7];
+            int c;
 
-            if (tab != NULL) {
-                *tab = '\0';
-                ctsmode = tab + 1;
-                tab = strchr(ctsmode, '\t');
+            for (c = 0; c < 6; c++) {
+                char *tab = strchr(q, '\t');
+
                 if (tab != NULL) {
                     *tab = '\0';
-                    xtsstandard = tab + 1;
+                    cols[c] = q;
+                    q = tab + 1;
+                } else {
+                    cols[c] = q;
+                    q = cols[c] + strlen(cols[c]);
                 }
             }
-            nl = strchr(xtsstandard[0] != '\0' ? xtsstandard
-                        : (ctsmode[0] != '\0' ? ctsmode : fields[7]), '\n');
-            if (nl != NULL)
-                *nl = '\0';
+            taglen = (size_t)strtol(cols[0], NULL, 10);
+            ctsmode = cols[1];
+            xtsstandard = cols[2];
+            if (ct_unhex(cols[3], mackey, sizeof(mackey), &mackeylen) != 0
+                || ct_unhex(cols[4], tlsaad, sizeof(tlsaad), &tlsaadlen) != 0) {
+                printf("%ld\terr\tbad-hex\n", strtol(fields[0], NULL, 10));
+                continue;
+            }
+            tlsversion = (int)strtol(cols[5], NULL, 10);
         }
         index = strtol(fields[0], NULL, 10);
-        taglen = (size_t)strtol(fields[7], NULL, 10);
         if (ct_unhex(fields[3], key, sizeof(key), &keylen) != 0
             || ct_unhex(fields[4], iv, sizeof(iv), &ivlen) != 0
             || ct_unhex(fields[5], in, sizeof(in), &inlen) != 0
@@ -1648,7 +1763,8 @@ int main(int argc, char **argv)
             continue;
         }
         rc = ct_cipher(fields[1], fields[2], key, keylen, iv, ivlen, aad, aadlen,
-                       in, inlen, out, &outlen, taglen, ctsmode, xtsstandard);
+                       in, inlen, out, &outlen, taglen, ctsmode, xtsstandard,
+                       mackey, mackeylen, tlsaad, tlsaadlen, tlsversion);
         if (rc != 0) {
             printf("%ld\terr\trefused\n", index);
             continue;
