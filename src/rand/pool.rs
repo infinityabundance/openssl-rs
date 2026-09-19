@@ -61,7 +61,11 @@ const RAND_DRBG_STRENGTH: usize = 256;
 /// `RAND_POOL_MAX_LENGTH` — `include/crypto/rand_pool.h:36`.
 ///
 /// `(RAND_POOL_FACTOR * 3 * (RAND_DRBG_STRENGTH / 16))` = 12288.
-const RAND_POOL_MAX_LENGTH: usize = RAND_POOL_FACTOR * 3 * (RAND_DRBG_STRENGTH / 16);
+///
+/// `pub(crate)` since D311: `rand_lib.c`'s `RAND_add` clamps its `randomness` argument against
+/// the pool's maximum, so the front reads it across modules. Widened rather than duplicated,
+/// because a second copy would be a second place for the arithmetic to be wrong.
+pub(crate) const RAND_POOL_MAX_LENGTH: usize = RAND_POOL_FACTOR * 3 * (RAND_DRBG_STRENGTH / 16);
 
 /// `RAND_POOL_MIN_ALLOCATION(secure)` — `include/crypto/rand_pool.h:59`.
 const fn rand_pool_min_allocation(secure: c_int) -> usize {
