@@ -24,9 +24,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 6134,
+        "authority_observations": 6200,
         "candidate_exit_code": 0,
-        "candidate_observations": 6134,
+        "candidate_observations": 6200,
         "candidate_stderr_tail": [],
         "court": "RT-CIPHER",
         "crashed": false,
@@ -5724,6 +5724,14 @@
             "standard": "RFC 8998",
             "total": 1
           },
+          "sm4_xts": {
+            "failed": 0,
+            "passed": 4,
+            "primary_source": "GB/T 17964-2021; IEEE Std 1619-2007",
+            "source": "forensics/vectors/sm4_xts.json",
+            "standard": "GB/T 17964-2021; IEEE Std 1619-2007",
+            "total": 4
+          },
           "wrap": {
             "failed": 0,
             "passed": 7,
@@ -5742,20 +5750,20 @@
           }
         },
         "authority": "openssl-3.6.4-production",
-        "calls_checked": 3119,
+        "calls_checked": 3123,
         "candidate_shared_object": "artifacts/phase2/libcrypto.so.3",
-        "claim": "A correctness-vector PASS means candidate-only construction verification: the candidate's low-level cipher produced the committed expected bytes for every vector. Of the 3119 committed vectors, 3102 are published standard values mirrored through the pinned OpenSSL test corpus and 17 are independently-derived boundary vectors with named oracles (2 by the construction's definition (FIPS-197 §5.1, SP 800-38A §6.1): an empty message has no blocks and emits no bytes; 1 by the construction's definition: RC4 over a zero-byte input emits no bytes and leaves its state unchanged; 14 by the construction's definition: a block or feedback mode over a zero-byte input emits no bytes) -- these counts are read from the 19 committed `forensics/vectors/*.json` cipher sets by `correctness_vectors.py`, not typed. It is NOT OpenSSL parity and NOT formal validation. See D201/D208 and docs/PHASE-8-SUBPHASES.md.",
+        "claim": "A correctness-vector PASS means candidate-only construction verification: the candidate's low-level cipher produced the committed expected bytes for every vector. Of the 3123 committed vectors, 3106 are published standard values mirrored through the pinned OpenSSL test corpus and 17 are independently-derived boundary vectors with named oracles (2 by the construction's definition (FIPS-197 §5.1, SP 800-38A §6.1): an empty message has no blocks and emits no bytes; 1 by the construction's definition: RC4 over a zero-byte input emits no bytes and leaves its state unchanged; 14 by the construction's definition: a block or feedback mode over a zero-byte input emits no bytes) -- these counts are read from the 20 committed `forensics/vectors/*.json` cipher sets by `correctness_vectors.py`, not typed. It is NOT OpenSSL parity and NOT formal validation. See D201/D208 and docs/PHASE-8-SUBPHASES.md.",
         "court": "CT-CIPHER",
         "derivation_census": {
-          "corpus": 3102,
-          "files": 19,
+          "corpus": 3106,
+          "files": 20,
           "independent": 17,
           "oracles": {
             "the construction's definition (FIPS-197 §5.1, SP 800-38A §6.1): an empty message has no blocks and emits no bytes": 2,
             "the construction's definition: RC4 over a zero-byte input emits no bytes and leaves its state unchanged": 1,
             "the construction's definition: a block or feedback mode over a zero-byte input emits no bytes": 14
           },
-          "vectors": 3119
+          "vectors": 3123
         },
         "failures": [],
         "kind": "cipher-vectors",
@@ -36423,6 +36431,46 @@
             "passed": true
           },
           {
+            "actual_hex": "e9538251c71d7b80bbe4483fef497bd12c5c581bd6242fc51e08964fb4f60fdb0ba42f63499279213d318d2c11f6886e903be7f93a1b3479",
+            "algorithm": "sm4_xts",
+            "cipher": "SM4-XTS",
+            "expected_hex": "e9538251c71d7b80bbe4483fef497bd12c5c581bd6242fc51e08964fb4f60fdb0ba42f63499279213d318d2c11f6886e903be7f93a1b3479",
+            "id": "sm4_xts-1",
+            "input_hex": "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "e9538251c71d7b80bbe4483fef497bd12c5c581bd6242fc51e08964fb4f60fdb0ba42f63499279213d318d2c11f6886e903be7f93a1b3479",
+            "algorithm": "sm4_xts",
+            "cipher": "SM4-XTS",
+            "expected_hex": "e9538251c71d7b80bbe4483fef497bd12c5c581bd6242fc51e08964fb4f60fdb0ba42f63499279213d318d2c11f6886e903be7f93a1b3479",
+            "id": "sm4_xts-2",
+            "input_hex": "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "e9538251c71d7b80bbe4483fef497bd1b3db1a3e60408c575d63ff7db39f83260869f9e2585fec9f0b863bf8fd784b8627d16c0db6d2cfc7",
+            "algorithm": "sm4_xts",
+            "cipher": "SM4-XTS",
+            "expected_hex": "e9538251c71d7b80bbe4483fef497bd1b3db1a3e60408c575d63ff7db39f83260869f9e2585fec9f0b863bf8fd784b8627d16c0db6d2cfc7",
+            "id": "sm4_xts-3",
+            "input_hex": "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "9e52443a35410ca0ba5637b94c0766f469",
+            "algorithm": "sm4_xts",
+            "cipher": "SM4-XTS",
+            "expected_hex": "9e52443a35410ca0ba5637b94c0766f469",
+            "id": "sm4_xts-4",
+            "input_hex": "000102030405060708090a0b0c0d0e0f10",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
             "actual_hex": "1fa68b0a8112b447aef34bd8fb5a7b829d3e862371d2cfe5",
             "algorithm": "wrap",
             "cipher": "id-aes128-wrap",
@@ -36954,9 +37002,9 @@
           }
         ],
         "stage": "compare",
-        "vectors_checked": 3119,
+        "vectors_checked": 3123,
         "vectors_failed": 0,
-        "vectors_passed": 3119,
+        "vectors_passed": 3123,
         "verdict": "pass"
       }
     ],
@@ -36981,7 +37029,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "4e945d8934b5e51e5e7eabc505c6faf45aeed75c5a3e5d8eb68b419b1a0a2a9c"
+      "sha256": "b33e90539a434ff3de4cc73903f3dc3f4347af4e43ff1b57bebf2a0fa199c8a1"
     },
     {
       "name": "correctness-probe",
@@ -37096,7 +37144,7 @@
     {
       "name": "cipher-correctness-probe",
       "path": "courts/phase8/ct_cipher.c",
-      "sha256": "e05dfbabacda7536d07ac6f37d51201f950a53dbe1f08d724c31c31efc028f2a"
+      "sha256": "9184d447574364e453b7cf6c6667500fe1421b0c9233a46fe8c062a623948aad"
     },
     {
       "name": "cipher-correctness-vectors:aes",
@@ -37162,6 +37210,11 @@
       "name": "cipher-correctness-vectors:sm4_ccm",
       "path": "forensics/vectors/sm4_ccm.json",
       "sha256": "cee59d7be0b44fd02c616efac14f228a4efa5ff9417a231b3cd84a9a800ac415"
+    },
+    {
+      "name": "cipher-correctness-vectors:sm4_xts",
+      "path": "forensics/vectors/sm4_xts.json",
+      "sha256": "9f11623bce12198605defa1022ff0fb8762d832bc8d516350e6c397b3dfa05fe"
     },
     {
       "name": "cipher-correctness-vectors:wrap",

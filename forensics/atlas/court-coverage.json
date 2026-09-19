@@ -9068,6 +9068,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-CIPHER"
             ],
             "symbol": "EVP_CIPHER_CTX_dup"
@@ -15516,7 +15517,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "72ba14af99c2f361ba461b1d3874443ad309d94359e3a3a716a186b24401f46d"
+      "sha256": "dd3d19b5b542e91688df393506bb84b3671f4a95a409d0274f3f5958d9e81c0f"
     },
     {
       "name": "symbol-ownership",
@@ -15586,7 +15587,7 @@
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "89ea53b6ad15adbc3bdd2320afef3d4088bdb84e70a1fa8e9ad11c9830795887"
+      "sha256": "ab986f81ad7528bc6e591cb6bc0254fab50ba07fb9266eb40f4c4f4743998e05"
     }
   ],
   "kind": "court-coverage",

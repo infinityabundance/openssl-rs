@@ -4774,21 +4774,28 @@ unsafe extern "C" fn aes_xts_stream_final(
     }
 }
 
-/// `IMPLEMENT_cipher` — `cipher_aes_xts.c:279-315`. The table has fourteen entries; the one-shot
-/// `CIPHER` is this row's own, and the block size is one byte, so the EVP layer treats it as a
-/// stream.
+/// `IMPLEMENT_cipher` — `cipher_aes_xts.c:279-315` and `cipher_sm4_xts.c:243-279`. The table has
+/// fourteen entries in both, in the same order; the one-shot `CIPHER` is the row's own, and the
+/// block size is one byte, so the EVP layer treats it as a stream.
+///
+/// **Every row-specific item is a parameter**, because the two families share the macro and almost
+/// nothing inside it: their `einit`/`dinit`, their update, final and cipher, their `get_ctx_params`
+/// pair and their settable list are all their own, and only the mode, the entry order and the
+/// `get_params` shape are common to both. That is what `IMPLEMENT_cipher` is in the authority too.
 macro_rules! xts_row {
-    ($newctx:ident, $getparams:ident, $table:ident, $kbits:expr) => {
+    ($newctx:ident, $getparams:ident, $table:ident, $kbits:expr, $flags:expr, $blkbits:expr,
+     $ivbits:expr, $newctx_impl:path, $einit:path, $dinit:path, $update:path, $final:path,
+     $cipher:path, $freectx:path, $dupctx:path, $setctx:path, $settable:path) => {
         unsafe extern "C" fn $newctx(provctx: *mut c_void) -> *mut c_void {
             // SAFETY: the dispatch contract.
             unsafe {
-                aes_xts_newctx(
+                $newctx_impl(
                     provctx,
                     EVP_CIPH_XTS_MODE,
-                    AES_XTS_FLAGS,
+                    $flags,
                     2 * $kbits,
-                    AES_XTS_BLOCK_BITS,
-                    AES_XTS_IV_BITS,
+                    $blkbits,
+                    $ivbits,
                 )
             }
         }
@@ -4799,10 +4806,10 @@ macro_rules! xts_row {
                 ossl_cipher_generic_get_params(
                     params,
                     EVP_CIPH_XTS_MODE,
-                    AES_XTS_FLAGS,
+                    $flags,
                     2 * $kbits,
-                    AES_XTS_BLOCK_BITS,
-                    AES_XTS_IV_BITS,
+                    $blkbits,
+                    $ivbits,
                 )
             }
         }
@@ -4814,31 +4821,31 @@ macro_rules! xts_row {
             },
             OsslDispatch {
                 function_id: OSSL_FUNC_CIPHER_ENCRYPT_INIT,
-                function: aes_xts_einit as *mut c_void,
+                function: $einit as *mut c_void,
             },
             OsslDispatch {
                 function_id: OSSL_FUNC_CIPHER_DECRYPT_INIT,
-                function: aes_xts_dinit as *mut c_void,
+                function: $dinit as *mut c_void,
             },
             OsslDispatch {
                 function_id: OSSL_FUNC_CIPHER_UPDATE,
-                function: aes_xts_stream_update as *mut c_void,
+                function: $update as *mut c_void,
             },
             OsslDispatch {
                 function_id: OSSL_FUNC_CIPHER_FINAL,
-                function: aes_xts_stream_final as *mut c_void,
+                function: $final as *mut c_void,
             },
             OsslDispatch {
                 function_id: crate::evp::cipher::OSSL_FUNC_CIPHER_CIPHER,
-                function: aes_xts_cipher as *mut c_void,
+                function: $cipher as *mut c_void,
             },
             OsslDispatch {
                 function_id: OSSL_FUNC_CIPHER_FREECTX,
-                function: aes_xts_freectx as *mut c_void,
+                function: $freectx as *mut c_void,
             },
             OsslDispatch {
                 function_id: crate::evp::cipher::OSSL_FUNC_CIPHER_DUPCTX,
-                function: aes_xts_dupctx as *mut c_void,
+                function: $dupctx as *mut c_void,
             },
             OsslDispatch {
                 function_id: OSSL_FUNC_CIPHER_GET_PARAMS,
@@ -4858,11 +4865,11 @@ macro_rules! xts_row {
             },
             OsslDispatch {
                 function_id: OSSL_FUNC_CIPHER_SET_CTX_PARAMS,
-                function: aes_xts_set_ctx_params as *mut c_void,
+                function: $setctx as *mut c_void,
             },
             OsslDispatch {
                 function_id: OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS,
-                function: aes_xts_settable_ctx_params as *mut c_void,
+                function: $settable as *mut c_void,
             },
             OsslDispatch {
                 function_id: OSSL_DISPATCH_END,
@@ -4876,13 +4883,597 @@ xts_row!(
     aes256xts_newctx,
     aes256xts_get_params,
     AES256XTS_FUNCTIONS,
-    256
+    256,
+    AES_XTS_FLAGS,
+    AES_XTS_BLOCK_BITS,
+    AES_XTS_IV_BITS,
+    aes_xts_newctx,
+    aes_xts_einit,
+    aes_xts_dinit,
+    aes_xts_stream_update,
+    aes_xts_stream_final,
+    aes_xts_cipher,
+    aes_xts_freectx,
+    aes_xts_dupctx,
+    aes_xts_set_ctx_params,
+    aes_xts_settable_ctx_params
 );
 xts_row!(
     aes128xts_newctx,
     aes128xts_get_params,
     AES128XTS_FUNCTIONS,
-    128
+    128,
+    AES_XTS_FLAGS,
+    AES_XTS_BLOCK_BITS,
+    AES_XTS_IV_BITS,
+    aes_xts_newctx,
+    aes_xts_einit,
+    aes_xts_dinit,
+    aes_xts_stream_update,
+    aes_xts_stream_final,
+    aes_xts_cipher,
+    aes_xts_freectx,
+    aes_xts_dupctx,
+    aes_xts_set_ctx_params,
+    aes_xts_settable_ctx_params
+);
+
+// ---------------------------------------------------------------------------------------------
+// `cipher_sm4_xts.c` / `cipher_sm4_xts_hw.c` — the `SM4-XTS` row
+// ---------------------------------------------------------------------------------------------
+//
+// The AES-XTS shape with two differences that are the whole of the row.
+//
+// **`SM4-XTS` has two XTS standards and defaults to the GB one.** `cipher_sm4_xts.h:36`'s
+// `int xts_standard` is 0 for `GB/T 17964-2021` and 1 for `IEEE Std 1619-2007`, the context is
+// `zalloc`'d, and `sm4_xts_cipher` branches on it: 0 calls `ossl_crypto_xts128gb_encrypt`, 1 calls
+// `CRYPTO_xts128_encrypt`. So **the default is the GB variant**, which is not the function AES-XTS
+// uses at all, and the two doublings are not interchangeable -- `src/modes/xts.rs` records the
+// arithmetic difference (GB shifts the big-endian reading right and reduces with `0xe1` at byte 15;
+// IEEE shifts the little-endian reading left and reduces with `0x87` at byte 0). The standard is
+// selected with `xts_standard`, an `OSSL_PARAM_utf8_string` taking `"GB"` or `"IEEE"`
+// case-insensitively.
+//
+// **The row has its own update, final, cipher, `get_ctx_params` pair and settable list**, so nothing
+// here is the generic engine's except `ossl_cipher_generic_get_params` and the two `initiv`-based
+// helpers. `sm4_xts_stream_update` is where two of the row's provider reasons live
+// (`PROV_R_OUTPUT_BUFFER_TOO_SMALL` before the cipher, `PROV_R_CIPHER_OPERATION_FAILED` after it),
+// and `sm4_xts_cipher` is where the other two are (`PROV_R_INVALID_KEY_LENGTH` is in `sm4_xts_init`,
+// and `PROV_R_XTS_DATA_UNIT_IS_TOO_LARGE` guards the 2^20-block limit).
+//
+// Two smaller facts that are easy to lose. `sm4_xts_newctx` passes **NULL** as
+// `ossl_cipher_generic_initkey`'s `provctx`, so this row's `ctx->libctx` is NULL and every
+// sub-fetch it makes would resolve in the default library context -- which is why D240's
+// `provider_context` block classifies it beside the GCM rows rather than with the rows that carry
+// their creator's context. And `sm4_xts_dupctx` **refuses** rather than copying when either
+// `xts.key1`/`xts.key2` is non-NULL and not the context's own `ks1`/`ks2`, which is an assertion
+// about the caller rather than a repair.
+
+/// `SM4_XTS_FLAGS` — `cipher_sm4_xts.c:18`, which is `PROV_CIPHER_FLAG_CUSTOM_IV` and **not** the
+/// AEAD pair: XTS is a mode, not an AEAD.
+const SM4_XTS_FLAGS: u64 = PROV_CIPHER_FLAG_CUSTOM_IV;
+/// `SM4_XTS_IV_BITS` — `cipher_sm4_xts.c:19`.
+const SM4_XTS_IV_BITS: usize = 128;
+/// `SM4_XTS_BLOCK_BITS` — `cipher_sm4_xts.c:20`. One byte, so the EVP layer treats the row as a
+/// stream and `EVP_CipherUpdate` reaches `sm4_xts_cipher` with any length above a block.
+const SM4_XTS_BLOCK_BITS: usize = 8;
+
+/// `OSSL_CIPHER_PARAM_XTS_STANDARD` — `util/perl/OpenSSL/paramnames.pm:153` (`"xts_standard"`).
+const OSSL_CIPHER_PARAM_XTS_STANDARD: *const c_char = c"xts_standard".as_ptr();
+
+/// The allocation-tracking `file` argument for this row's allocations. `cipher_sm4_xts.c` is a
+/// source-tree file, so its `__FILE__` carries the `../../src/openssl-3.6.4/` prefix.
+const FILE_SM4_XTS: *const c_char =
+    c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_sm4_xts.c".as_ptr();
+
+/// `OSSL_xts_stream_fn` as `cipher_sm4_xts.h:14-17` generates it, through `PROV_CIPHER_FUNC`'s
+/// `typedef type(*OSSL_##name##_fn) args`.
+///
+/// **This is a different type from the AES row's, under the same name.** `cipher_aes_xts.h:20-23`
+/// generates `OSSL_xts_stream_fn` with two `const AES_KEY *` parameters and a five-argument tail;
+/// `cipher_sm4_xts.h` generates it with two `const SM4_KEY *` and a trailing `const int enc`. The
+/// two headers cannot be included in one translation unit, which is why
+/// `courts/layout/measure-sm4-xts-ctx.c` is a separate program from `measure-provider-ctxs.c`.
+/// Both spellings are NULL in this profile -- the assembly that would install them is declined --
+/// and they exist here for the same reason the AES one does: they are eight bytes of the
+/// allocation each (D269, D271).
+pub(crate) type OsslSm4XtsStreamFn = unsafe extern "C" fn(
+    *const c_uchar,
+    *mut c_uchar,
+    usize,
+    *const crate::sm4::Sm4Key,
+    *const crate::sm4::Sm4Key,
+    *const c_uchar,
+    c_int,
+);
+
+/// `PROV_SM4_XTS_CTX` — `cipher_sm4_xts.h:19-44`.
+///
+/// Measured: 192 + 128 + 128 + 4 + 32 + 8 + 8 = **504**, with `ks1` at 192, `ks2` at 320,
+/// `xts_standard` at 448, `xts` at 456, `stream_gb` at 488 and `stream` at 496. `SM4_KEY` is 128
+/// bytes and already a multiple of eight, so the two `ks` unions need no tail padding and `XTS128_CONTEXT`
+/// is eight-aligned after the `int`, which is why `xts` sits at 456 rather than 452 (D269's rule).
+#[repr(C)]
+pub(crate) struct ProvSm4XtsCtx {
+    /// `PROV_CIPHER_CTX base; /* Must be first */`.
+    pub base: ProvCipherCtx,
+    /// `union { OSSL_UNION_ALIGN; SM4_KEY ks; } ks1` — the data-unit schedule.
+    pub ks1: crate::sm4::Sm4Key,
+    /// `union { OSSL_UNION_ALIGN; SM4_KEY ks; } ks2` — the tweak schedule.
+    pub ks2: crate::sm4::Sm4Key,
+    /// `int xts_standard` — 0 for GB/T 17964-2021, 1 for IEEE Std 1619-2007, and **0 is the default**.
+    pub xts_standard: c_int,
+    /// `XTS128_CONTEXT xts` — the caller-populated four-field context.
+    pub xts: XtsCtx,
+    /// `OSSL_xts_stream_fn stream_gb` — the GB variant's assembly entry point; NULL here.
+    #[allow(dead_code)] // size-only member: see the struct's doc comment
+    pub stream_gb: Option<OsslSm4XtsStreamFn>,
+    /// `OSSL_xts_stream_fn stream` — the IEEE variant's; NULL here. Nothing writes either, and the
+    /// authority's own `XTS_SET_KEY_FN` assigns them from locals that are NULL on every arm this
+    /// profile compiles.
+    #[allow(dead_code)] // size-only member, as above
+    pub stream: Option<OsslSm4XtsStreamFn>,
+}
+
+/// `cipher_hw_sm4_xts_generic_initkey` — `cipher_sm4_xts_hw.c:33-73`'s portable arm, which is the
+/// `XTS_SET_KEY_FN(ossl_sm4_set_key, ossl_sm4_set_key, ossl_sm4_encrypt, ossl_sm4_decrypt, NULL,
+/// NULL)` expansion.
+///
+/// **`ossl_sm4_set_key` is both setters.** SM4 has one key schedule function: the decryption
+/// direction is a property of the block function (`ossl_sm4_decrypt` walks the same schedule
+/// backwards), so the decrypt arm rebuilds `ks1` with the *same* setter and only swaps `block1`.
+/// `xts.key1`/`xts.key2` are pointed at the **unions** here rather than at the schedules, which is
+/// what `sm4_xts_dupctx`'s own-key guard compares against.
+///
+/// # Safety
+/// The `PROV_CIPHER_HW::init` contract; `ctx` is a live `ProvSm4XtsCtx` and `key` is readable for
+/// `keylen` bytes.
+unsafe extern "C" fn cipher_hw_sm4_xts_generic_initkey(
+    ctx: *mut ProvCipherCtx,
+    key: *const c_uchar,
+    keylen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract; `ctx` is a `PROV_SM4_XTS_CTX`.
+    unsafe {
+        let xctx = ctx.cast::<ProvSm4XtsCtx>();
+        let bytes = keylen / 2;
+        let ks1: *mut crate::sm4::Sm4Key = ptr::addr_of_mut!((*xctx).ks1);
+        let ks2: *mut crate::sm4::Sm4Key = ptr::addr_of_mut!((*xctx).ks2);
+
+        if (*ctx).enc_int() != 0 {
+            crate::sm4::ossl_sm4_set_key(key, ks1);
+            (*xctx).xts.block1 = Some(sm4_block_encrypt);
+        } else {
+            crate::sm4::ossl_sm4_set_key(key, ks1);
+            (*xctx).xts.block1 = Some(sm4_block_decrypt);
+        }
+        crate::sm4::ossl_sm4_set_key(key.add(bytes), ks2);
+        (*xctx).xts.block2 = Some(sm4_block_encrypt);
+        (*xctx).xts.key1 = ks1.cast();
+        (*xctx).xts.key2 = ks2.cast();
+        (*xctx).stream_gb = None;
+        (*xctx).stream = None;
+        1
+    }
+}
+
+/// `cipher_hw_sm4_xts_copyctx` — `cipher_sm4_xts_hw.c:75-84`. `*dctx = *sctx` then the two key
+/// pointers are re-pointed at the destination's own schedules.
+///
+/// # Safety
+/// The `PROV_CIPHER_HW::copyctx` contract; both are `ProvSm4XtsCtx`.
+unsafe extern "C" fn cipher_hw_sm4_xts_copyctx(dst: *mut ProvCipherCtx, src: *const ProvCipherCtx) {
+    // SAFETY: the caller's contract; both are `PROV_SM4_XTS_CTX`.
+    unsafe {
+        ptr::copy_nonoverlapping(src.cast::<ProvSm4XtsCtx>(), dst.cast::<ProvSm4XtsCtx>(), 1);
+        let d = dst.cast::<ProvSm4XtsCtx>();
+        (*d).xts.key1 = ptr::addr_of_mut!((*d).ks1).cast();
+        (*d).xts.key2 = ptr::addr_of_mut!((*d).ks2).cast();
+    }
+}
+
+/// `static const PROV_CIPHER_HW sm4_generic_xts` — `cipher_sm4_xts_hw.c:86-90`. `cipher` is NULL,
+/// as the AES-XTS table's is, so
+/// [`cipher_hw_aes_xts_cipher_unused`] stands in for it and its doc comment names both rows.
+static SM4_XTS_HW: ProvCipherHw = ProvCipherHw {
+    init: cipher_hw_sm4_xts_generic_initkey,
+    cipher: cipher_hw_aes_xts_cipher_unused,
+    copyctx: Some(cipher_hw_sm4_xts_copyctx),
+};
+
+/// `const PROV_CIPHER_HW *ossl_prov_cipher_hw_sm4_xts(size_t keybits)` —
+/// `cipher_sm4_xts_hw_x86_64.inc:28-34`. The C table is the answer on both sides of the extension
+/// test this profile declines (D266's reason for SM4 generally).
+///
+/// # Safety
+/// Always safe; a uniform signature the hw contract requires.
+unsafe fn ossl_prov_cipher_hw_sm4_xts(_keybits: usize) -> *const ProvCipherHw {
+    ptr::addr_of!(SM4_XTS_HW)
+}
+
+/// `sm4_xts_init` — `cipher_sm4_xts.c:36-61`.
+///
+/// The order is the authority's: `enc` first, then the IV, then the key, then the params. The key
+/// length is checked against `ctx->keylen` — which `ossl_cipher_generic_initkey` set to
+/// `2 * kbits` — and the refusal is this row's `PROV_R_INVALID_KEY_LENGTH` rather than the generic
+/// engine's.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe fn sm4_xts_init(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+    enc: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let xctx = vctx.cast::<ProvSm4XtsCtx>();
+        let ctx = ptr::addr_of_mut!((*xctx).base);
+        if is_running() == 0 {
+            return fail();
+        }
+        bits_set(ctx, CTX_ENC, enc != 0);
+        if !iv.is_null() && ossl_cipher_generic_initiv(ctx, iv, ivlen) == 0 {
+            return fail();
+        }
+        if !key.is_null() {
+            if keylen != (*ctx).keylen {
+                return fail_at(&err_sites::PROV_CIPHER_SM4_XTS_54);
+            }
+            let hw = (*ctx).hw;
+            if ((*hw).init)(ctx, key, keylen) == 0 {
+                return fail();
+            }
+        }
+        sm4_xts_set_ctx_params(vctx, params)
+    }
+}
+
+/// `sm4_xts_einit` — `cipher_sm4_xts.c:63-68`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn sm4_xts_einit(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe { sm4_xts_init(vctx, key, keylen, iv, ivlen, params, 1) }
+}
+
+/// `sm4_xts_dinit` — `cipher_sm4_xts.c:70-75`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn sm4_xts_dinit(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe { sm4_xts_init(vctx, key, keylen, iv, ivlen, params, 0) }
+}
+
+/// `sm4_xts_newctx` — `cipher_sm4_xts.c:77-88`.
+///
+/// **`NULL` is passed as the generic init's `provctx`**, which is the authority's own text and not
+/// a transcription slip: `ossl_cipher_generic_initkey(..., ossl_prov_cipher_hw_sm4_xts(kbits), NULL)`.
+/// `ossl_cipher_generic_initkey` stores `PROV_LIBCTX_OF(provctx)` on `ctx->libctx` only when that
+/// argument is non-NULL, so this row's `libctx` is NULL (D240/D241 classify it accordingly).
+///
+/// # Safety
+/// The dispatch contract.
+unsafe fn sm4_xts_newctx(
+    _provctx: *mut c_void,
+    mode: c_uint,
+    flags: u64,
+    kbits: usize,
+    blkbits: usize,
+    ivbits: usize,
+) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvSm4XtsCtx>(), FILE_SM4_XTS, LINE);
+        if !ctx.is_null() {
+            ossl_cipher_generic_initkey(
+                ctx.cast(),
+                kbits,
+                blkbits,
+                ivbits,
+                mode,
+                flags,
+                ossl_prov_cipher_hw_sm4_xts(kbits),
+                ptr::null_mut(),
+            );
+        }
+        ctx
+    }
+}
+
+/// `sm4_xts_freectx` — `cipher_sm4_xts.c:90-96`. Reset then cleared, as every row with a schedule
+/// does.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn sm4_xts_freectx(vctx: *mut c_void) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        ossl_cipher_generic_reset_ctx(vctx.cast::<ProvCipherCtx>());
+        CRYPTO_clear_free(
+            vctx,
+            core::mem::size_of::<ProvSm4XtsCtx>(),
+            FILE_SM4_XTS,
+            LINE,
+        );
+    }
+}
+
+/// `sm4_xts_dupctx` — `cipher_sm4_xts.c:98-119`.
+///
+/// **The two guards are assertions, not repairs.** A non-NULL `xts.key1` that is not this context's
+/// own `ks1` means the context has been pointed somewhere the row does not own, and the authority
+/// answers NULL rather than copying the stale pointer. The `hw->copyctx` call is the `Option`
+/// guard D265 introduced.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn sm4_xts_dupctx(vctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let in_ = vctx.cast::<ProvSm4XtsCtx>();
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let ks1: *const crate::sm4::Sm4Key = ptr::addr_of!((*in_).ks1);
+        let ks2: *const crate::sm4::Sm4Key = ptr::addr_of!((*in_).ks2);
+        if !(*in_).xts.key1.is_null() && (*in_).xts.key1.cast_const() != ks1.cast() {
+            return ptr::null_mut();
+        }
+        if !(*in_).xts.key2.is_null() && (*in_).xts.key2.cast_const() != ks2.cast() {
+            return ptr::null_mut();
+        }
+        let ret = CRYPTO_malloc(core::mem::size_of::<ProvSm4XtsCtx>(), FILE_SM4_XTS, LINE);
+        if ret.is_null() {
+            return ptr::null_mut();
+        }
+        let hw = (*in_).base.hw;
+        if let Some(copyctx) = (*hw).copyctx {
+            copyctx(ret.cast(), vctx.cast());
+        }
+        ret
+    }
+}
+
+/// `sm4_xts_cipher` — `cipher_sm4_xts.c:121-162`.
+///
+/// **The default standard is GB.** `xts_standard` is 0 in a fresh context, so the `else` arm -- the
+/// GB/T 17964-2021 variant -- is what a caller who never sets the parameter gets, and the IEEE arm
+/// is the opt-in. Both arms prefer a non-NULL `stream`/`stream_gb` and fall back to the C
+/// construction function; on this profile the pointers are NULL and the fallback is what runs.
+///
+/// # Safety
+/// The dispatch contract; `in`/`out` are readable/writable for `inl` bytes.
+unsafe extern "C" fn sm4_xts_cipher(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    outl: *mut usize,
+    _outsize: usize,
+    in_: *const c_uchar,
+    inl: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let xctx = vctx.cast::<ProvSm4XtsCtx>();
+        let base = ptr::addr_of_mut!((*xctx).base);
+
+        if is_running() == 0
+            || (*xctx).xts.key1.is_null()
+            || (*xctx).xts.key2.is_null()
+            || bits(base) & CTX_IV_SET == 0
+            || out.is_null()
+            || in_.is_null()
+            || inl < crate::sm4::SM4_BLOCK_SIZE
+        {
+            return 0;
+        }
+        // IEEE Std 1619-2018's limit, which NIST SP 800-38E mandates and the row enforces.
+        if inl > XTS_MAX_BLOCKS_PER_DATA_UNIT * crate::sm4::SM4_BLOCK_SIZE {
+            return fail_at(&err_sites::PROV_CIPHER_SM4_XTS_142);
+        }
+        if (*xctx).xts_standard != 0 {
+            if let Some(stream) = (*xctx).stream {
+                stream(
+                    in_,
+                    out,
+                    inl,
+                    (*xctx).xts.key1.cast_const().cast(),
+                    (*xctx).xts.key2.cast_const().cast(),
+                    (*base).iv.as_ptr(),
+                    (*base).enc_int(),
+                );
+            } else if (crate::modes::xts::CRYPTO_xts128_encrypt)(
+                ptr::addr_of!((*xctx).xts),
+                (*base).iv.as_ptr(),
+                in_,
+                out,
+                inl,
+                (*base).enc_int(),
+            ) != 0
+            {
+                return 0;
+            }
+        } else {
+            if let Some(stream_gb) = (*xctx).stream_gb {
+                stream_gb(
+                    in_,
+                    out,
+                    inl,
+                    (*xctx).xts.key1.cast_const().cast(),
+                    (*xctx).xts.key2.cast_const().cast(),
+                    (*base).iv.as_ptr(),
+                    (*base).enc_int(),
+                );
+            } else if (crate::modes::xts::ossl_crypto_xts128gb_encrypt)(
+                ptr::addr_of!((*xctx).xts),
+                (*base).iv.as_ptr(),
+                in_,
+                out,
+                inl,
+                (*base).enc_int(),
+            ) != 0
+            {
+                return 0;
+            }
+        }
+        *outl = inl;
+        1
+    }
+}
+
+/// `sm4_xts_stream_update` — `cipher_sm4_xts.c:164-181`. The output-size check is the row's own
+/// and sits *before* the cipher, so a too-small buffer is `PROV_R_OUTPUT_BUFFER_TOO_SMALL` rather
+/// than the generic engine's refusal; a failing cipher is
+/// `PROV_R_CIPHER_OPERATION_FAILED`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn sm4_xts_stream_update(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    outl: *mut usize,
+    outsize: usize,
+    in_: *const c_uchar,
+    inl: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if outsize < inl {
+            return fail_at(&err_sites::PROV_CIPHER_SM4_XTS_171);
+        }
+        if sm4_xts_cipher(vctx, out, outl, outsize, in_, inl) == 0 {
+            return fail_at(&err_sites::PROV_CIPHER_SM4_XTS_176);
+        }
+        1
+    }
+}
+
+/// `sm4_xts_stream_final` — `cipher_sm4_xts.c:183-190`. No tail, because XTS's data unit is the
+/// whole message and the row's `cipher` has already emitted every byte.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn sm4_xts_stream_final(
+    _vctx: *mut c_void,
+    _out: *mut c_uchar,
+    outl: *mut usize,
+    _outsize: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return 0;
+        }
+        *outl = 0;
+        1
+    }
+}
+
+/// `sm4_xts_known_settable_ctx_params` — `cipher_sm4_xts.c:192-195`, one utf8 string.
+static SM4_XTS_SETTABLE_CTX_PARAMS: [OsslParam; 2] = [
+    OsslParam {
+        key: OSSL_CIPHER_PARAM_XTS_STANDARD,
+        data_type: crate::params::OSSL_PARAM_UTF8_STRING,
+        data: ptr::null_mut(),
+        data_size: 0,
+        return_size: 0,
+    },
+    OsslParam {
+        key: ptr::null(),
+        data_type: 0,
+        data: ptr::null_mut(),
+        data_size: 0,
+        return_size: 0,
+    },
+];
+
+/// `sm4_xts_settable_ctx_params` — `cipher_sm4_xts.c:197-201`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn sm4_xts_settable_ctx_params(
+    _cctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    SM4_XTS_SETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `sm4_xts_set_ctx_params` — `cipher_sm4_xts.c:203-241`.
+///
+/// `xts_standard` is a utf8 string compared case-insensitively against `"GB"` and `"IEEE"`; any
+/// other spelling raises `PROV_R_FAILED_TO_SET_PARAMETER`, and a non-utf8 parameter type is refused
+/// **without** a raise (the `data_type` test returns 0 directly, where the three others raise).
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn sm4_xts_set_ctx_params(vctx: *mut c_void, params: *const OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let xctx = vctx.cast::<ProvSm4XtsCtx>();
+        if params.is_null() || (*params).key.is_null() {
+            return 1;
+        }
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_XTS_STANDARD);
+        if !p.is_null() {
+            if (*p).data_type != crate::params::OSSL_PARAM_UTF8_STRING {
+                return 0;
+            }
+            let mut standard: *const c_char = ptr::null();
+            if crate::params::OSSL_PARAM_get_utf8_string_ptr(p, &mut standard) == 0 {
+                return fail_at(&err_sites::PROV_CIPHER_SM4_XTS_227);
+            }
+            if crate::runtime::str::OPENSSL_strcasecmp(standard, c"GB".as_ptr()) == 0 {
+                (*xctx).xts_standard = 0;
+            } else if crate::runtime::str::OPENSSL_strcasecmp(standard, c"IEEE".as_ptr()) == 0 {
+                (*xctx).xts_standard = 1;
+            } else {
+                return fail_at(&err_sites::PROV_CIPHER_SM4_XTS_235);
+            }
+        }
+        1
+    }
+}
+
+// `IMPLEMENT_cipher(xts, XTS, 128, SM4_XTS_FLAGS)` — `cipher_sm4_xts.c:280-281`, one invocation
+// whose `kbits` is doubled by the macro into a 256-bit key.
+xts_row!(
+    sm4128xts_newctx,
+    sm4128xts_get_params,
+    SM4128XTS_FUNCTIONS,
+    128,
+    SM4_XTS_FLAGS,
+    SM4_XTS_BLOCK_BITS,
+    SM4_XTS_IV_BITS,
+    sm4_xts_newctx,
+    sm4_xts_einit,
+    sm4_xts_dinit,
+    sm4_xts_stream_update,
+    sm4_xts_stream_final,
+    sm4_xts_cipher,
+    sm4_xts_freectx,
+    sm4_xts_dupctx,
+    sm4_xts_set_ctx_params,
+    sm4_xts_settable_ctx_params
 );
 
 // ---------------------------------------------------------------------------------------------
@@ -9669,6 +10260,7 @@ alias!(N_ARIA_256_CCM, "ARIA-256-CCM:1.2.410.200046.1.1.39");
 alias!(N_ARIA_192_CCM, "ARIA-192-CCM:1.2.410.200046.1.1.38");
 alias!(N_ARIA_128_CCM, "ARIA-128-CCM:1.2.410.200046.1.1.37");
 alias!(N_SM4_CCM, "SM4-CCM:1.2.156.10197.1.104.9");
+alias!(N_SM4_XTS, "SM4-XTS:1.2.156.10197.1.104.10");
 alias!(N_AES_256_ECB, "AES-256-ECB:2.16.840.1.101.3.4.1.41");
 alias!(N_AES_192_ECB, "AES-192-ECB:2.16.840.1.101.3.4.1.21");
 alias!(N_AES_128_ECB, "AES-128-ECB:2.16.840.1.101.3.4.1.1");
@@ -9825,7 +10417,7 @@ const fn row(names: *const c_char, implementation: *const c_void) -> OsslAlgorit
 
 /// `static const OSSL_ALGORITHM_CAPABLE deflt_ciphers[]` — `providers/defltprov.c:161-330`,
 /// restricted to the rows this half implements, in the authority's order.
-pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 114] = [
+pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 115] = [
     row(N_NULL, NULL_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_ECB, AES256ECB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_ECB, AES192ECB_FUNCTIONS.as_ptr().cast()),
@@ -9978,6 +10570,7 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 114] = [
     row(N_SM4_CTR, SM4128CTR_FUNCTIONS.as_ptr().cast()),
     row(N_SM4_OFB, SM4128OFB128_FUNCTIONS.as_ptr().cast()),
     row(N_SM4_CFB, SM4128CFB128_FUNCTIONS.as_ptr().cast()),
+    row(N_SM4_XTS, SM4128XTS_FUNCTIONS.as_ptr().cast()),
     row(N_CHACHA20, CHACHA20_FUNCTIONS.as_ptr().cast()),
     OsslAlgorithm {
         algorithm_names: ptr::null(),
@@ -11701,9 +12294,9 @@ mod tests {
 
     #[test]
     fn the_cipher_table_terminates_and_names_the_rows() {
-        assert_eq!(DEFLT_CIPHERS.len(), 114);
+        assert_eq!(DEFLT_CIPHERS.len(), 115);
         // SAFETY: every entry up to the terminator is initialised.
-        let last = DEFLT_CIPHERS[113].algorithm_names;
+        let last = DEFLT_CIPHERS[114].algorithm_names;
         assert!(last.is_null(), "the table is NULL-name terminated");
         // SAFETY: the first row's name is a `'static` C string.
         let first = unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[0].algorithm_names) };
@@ -11823,6 +12416,13 @@ mod tests {
         assert_eq!(core::mem::offset_of!(ProvAriaCcmCtx, ks), 152);
         assert_eq!(core::mem::size_of::<ProvSm4CcmCtx>(), 280);
         assert_eq!(core::mem::offset_of!(ProvSm4CcmCtx, ks), 152);
+        assert_eq!(core::mem::size_of::<ProvSm4XtsCtx>(), 504);
+        assert_eq!(core::mem::offset_of!(ProvSm4XtsCtx, ks1), 192);
+        assert_eq!(core::mem::offset_of!(ProvSm4XtsCtx, ks2), 320);
+        assert_eq!(core::mem::offset_of!(ProvSm4XtsCtx, xts_standard), 448);
+        assert_eq!(core::mem::offset_of!(ProvSm4XtsCtx, xts), 456);
+        assert_eq!(core::mem::offset_of!(ProvSm4XtsCtx, stream_gb), 488);
+        assert_eq!(core::mem::offset_of!(ProvSm4XtsCtx, stream), 496);
     }
 
     /// **The row's two parameter lists are its own, not the generic ones.** `ChaCha20` publishes a

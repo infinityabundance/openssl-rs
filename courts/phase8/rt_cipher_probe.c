@@ -3960,7 +3960,7 @@ static void rt_deflt_row_census(void)
         "SM4-CCM",
         /* The authority's `deflt_ciphers[]` order, which is the order this list is compared in:
          * the `SM4-*` rows land between the ARIA family and `ChaCha20`. */
-        "SM4-ECB", "SM4-CBC", "SM4-CTR", "SM4-OFB", "SM4-CFB",
+        "SM4-ECB", "SM4-CBC", "SM4-CTR", "SM4-OFB", "SM4-CFB", "SM4-XTS",
         "ChaCha20",
     };
     size_t i;
@@ -5853,6 +5853,205 @@ static void rt_deflt_aria(void)
     }
 }
 /*
+ * The `SM4-XTS` row. AES-XTS's shape with one structural difference that this arm exists to
+ * observe: `SM4-XTS` has **two XTS standards** and defaults to the GB one.
+ *
+ * The load-bearing observation is therefore not the round trip -- a row that ignored
+ * `xts_standard` entirely would round-trip perfectly under both -- but `sm4xts.standards_differ`:
+ * the same key, IV and plaintext under the default (GB/T 17964-2021) and under `IEEE` must produce
+ * **different** ciphertext, because the two tweak doublings are not interchangeable. `RT-CIPHER`
+ * compares that bit against the authority, so a row that dropped the parameter, or wired both arms
+ * to one function, fails on the commit that lands it.
+ *
+ * The rest is the row's own surface: a 32-octet key (`2 * 128` bits), a 16-octet IV, the
+ * one-byte block size, a length that is not a multiple of sixteen (so ciphertext stealing is
+ * exercised), the split update, `EVP_CIPHER_CTX_dup` (whose row-specific guard is the only way to
+ * reach `sm4_xts_dupctx`'s two assertions), and the invalid `xts_standard` refusal.
+ */
+static void rt_deflt_sm4_xts(void)
+{
+    static const unsigned char key[32] = {
+        0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
+        0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10,
+        0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+        0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff
+    };
+    static const unsigned char iv[16] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
+    };
+    unsigned char in[64], gb[80], ieee[80], dec[80], tmp[80], p1[80], p2[80];
+    EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "SM4-XTS", NULL);
+    size_t i, glen = 0, ilen = 0;
+
+    printf("sm4xts.fetched=%d\n", c != NULL);
+    if (c == NULL)
+        return;
+    printf("sm4xts.keylen=%d\n", EVP_CIPHER_get_key_length(c));
+    printf("sm4xts.ivlen=%d\n", EVP_CIPHER_get_iv_length(c));
+    printf("sm4xts.blocksize=%d\n", EVP_CIPHER_get_block_size(c));
+    for (i = 0; i < sizeof(in); i++)
+        in[i] = (unsigned char)(i * 7 + 3);
+
+    /*
+     * The default standard, which is GB because the context is zalloc'd and `xts_standard` is 0.
+     * Sixty-four octets, a whole number of blocks.
+     */
+    {
+        EVP_CIPHER_CTX *e = EVP_CIPHER_CTX_new();
+        int l1 = 0, l2 = 0;
+
+        printf("sm4xts.gb.init=%d\n", EVP_EncryptInit_ex(e, c, NULL, key, iv));
+        EVP_CIPHER_CTX_set_padding(e, 0);
+        printf("sm4xts.gb.update=%d\n", EVP_EncryptUpdate(e, gb, &l1, in, 64));
+        glen = (size_t)l1;
+        printf("sm4xts.gb.final=%d\n", EVP_EncryptFinal_ex(e, gb + glen, &l2));
+        glen += (size_t)l2;
+        printf("sm4xts.gb.len=%zu\n", glen);
+        rt_hex("sm4xts.gb", gb, glen);
+
+        printf("sm4xts.gb.dec.init=%d\n", EVP_DecryptInit_ex(e, c, NULL, key, iv));
+        EVP_CIPHER_CTX_set_padding(e, 0);
+        printf("sm4xts.gb.dec.update=%d\n", EVP_DecryptUpdate(e, dec, &l1, gb, (int)glen));
+        printf("sm4xts.gb.roundtrip=%d\n", l1 == 64 && memcmp(dec, in, 64) == 0);
+        EVP_CIPHER_CTX_free(e);
+    }
+
+    /* And the same message under IEEE, which must differ from the GB answer. */
+    {
+        EVP_CIPHER_CTX *e = EVP_CIPHER_CTX_new();
+        OSSL_PARAM p[2];
+        int l1 = 0, l2 = 0;
+
+        p[0] = OSSL_PARAM_construct_utf8_string("xts_standard", (char *)"IEEE", 0);
+        p[1] = OSSL_PARAM_construct_end();
+        printf("sm4xts.ieee.init=%d\n", EVP_EncryptInit_ex2(e, c, key, iv, p));
+        EVP_CIPHER_CTX_set_padding(e, 0);
+        printf("sm4xts.ieee.update=%d\n", EVP_EncryptUpdate(e, ieee, &l1, in, 64));
+        ilen = (size_t)l1;
+        printf("sm4xts.ieee.final=%d\n", EVP_EncryptFinal_ex(e, ieee + ilen, &l2));
+        ilen += (size_t)l2;
+        printf("sm4xts.ieee.len=%zu\n", ilen);
+        rt_hex("sm4xts.ieee", ieee, ilen);
+        printf("sm4xts.standards_differ=%d\n",
+               glen == ilen && glen == 64 && memcmp(gb, ieee, glen) != 0);
+
+        printf("sm4xts.ieee.dec.init=%d\n", EVP_DecryptInit_ex2(e, c, key, iv, p));
+        EVP_CIPHER_CTX_set_padding(e, 0);
+        printf("sm4xts.ieee.dec.update=%d\n", EVP_DecryptUpdate(e, dec, &l1, ieee, (int)ilen));
+        printf("sm4xts.ieee.roundtrip=%d\n", l1 == 64 && memcmp(dec, in, 64) == 0);
+        EVP_CIPHER_CTX_free(e);
+    }
+
+    /*
+     * A length that is not a multiple of sixteen, in both directions. XTS's data unit is the whole
+     * message and the tail is handled by ciphertext stealing, so this is where a row that routed
+     * only whole blocks would differ. **The output goes to `tmp`, not to `gb`** -- the first version
+     * of this arm reused `gb` here and then compared the split and the duplicate against the tail's
+     * 61 bytes instead of the one-shot's 64, which read as two row defects and was this arm's own
+     * mistake (D261's class, and D265's `dup` arm exactly).
+     */
+    {
+        EVP_CIPHER_CTX *e = EVP_CIPHER_CTX_new();
+        int l1 = 0, l2 = 0;
+        size_t tlen;
+
+        EVP_EncryptInit_ex(e, c, NULL, key, iv);
+        EVP_CIPHER_CTX_set_padding(e, 0);
+        printf("sm4xts.tail.update=%d\n", EVP_EncryptUpdate(e, tmp, &l1, in, 61));
+        tlen = (size_t)l1;
+        printf("sm4xts.tail.final=%d\n", EVP_EncryptFinal_ex(e, tmp + tlen, &l2));
+        tlen += (size_t)l2;
+        printf("sm4xts.tail.len=%zu\n", tlen);
+        rt_hex("sm4xts.tail", tmp, tlen);
+        EVP_DecryptInit_ex(e, c, NULL, key, iv);
+        EVP_CIPHER_CTX_set_padding(e, 0);
+        printf("sm4xts.tail.dec.update=%d\n", EVP_DecryptUpdate(e, dec, &l1, tmp, (int)tlen));
+        printf("sm4xts.tail.roundtrip=%d\n", l1 == 61 && memcmp(dec, in, 61) == 0);
+        EVP_CIPHER_CTX_free(e);
+    }
+
+    /*
+     * **A split update is not the one-shot, and that is XTS rather than a defect.** `sm4_xts_cipher`
+     * is the whole data unit: every `EVP_EncryptUpdate` restarts the tweak from the context's IV, so
+     * two updates are two data units. The arm therefore measures the *property* rather than
+     * agreement: the 16+48 split must equal what two fresh contexts produce for the same two
+     * pieces, and must differ from the 64-byte one-shot.
+     */
+    {
+        EVP_CIPHER_CTX *e = EVP_CIPHER_CTX_new();
+        int l1 = 0, l2 = 0;
+        size_t slen = 0, l1len = 0, l2len = 0;
+
+        EVP_EncryptInit_ex(e, c, NULL, key, iv);
+        EVP_CIPHER_CTX_set_padding(e, 0);
+        EVP_EncryptUpdate(e, tmp, &l1, in, 16);
+        slen += (size_t)l1;
+        EVP_EncryptUpdate(e, tmp + slen, &l1, in + 16, 48);
+        slen += (size_t)l1;
+        EVP_EncryptFinal_ex(e, tmp + slen, &l2);
+        slen += (size_t)l2;
+        EVP_CIPHER_CTX_free(e);
+        printf("sm4xts.split.len=%zu\n", slen);
+
+        /* The same two pieces, each in its own context and its own data unit. */
+        e = EVP_CIPHER_CTX_new();
+        EVP_EncryptInit_ex(e, c, NULL, key, iv);
+        EVP_CIPHER_CTX_set_padding(e, 0);
+        EVP_EncryptUpdate(e, p1, &l1, in, 16);
+        l1len = (size_t)l1;
+        EVP_EncryptFinal_ex(e, p1 + l1len, &l2);
+        l1len += (size_t)l2;
+        EVP_EncryptInit_ex(e, c, NULL, key, iv);
+        EVP_EncryptUpdate(e, p2, &l1, in + 16, 48);
+        l2len = (size_t)l1;
+        EVP_EncryptFinal_ex(e, p2 + l2len, &l2);
+        l2len += (size_t)l2;
+        EVP_CIPHER_CTX_free(e);
+
+        printf("sm4xts.split.is_two_data_units=%d\n",
+               slen == l1len + l2len && slen == 64
+               && memcmp(tmp, p1, l1len) == 0
+               && memcmp(tmp + l1len, p2, l2len) == 0);
+        printf("sm4xts.split.differs_from_oneshot=%d\n",
+               slen == glen && memcmp(tmp, gb, glen) != 0);
+    }
+
+    /* `EVP_CIPHER_CTX_dup`, which is the only route to `sm4_xts_dupctx`. */
+    {
+        EVP_CIPHER_CTX *e = EVP_CIPHER_CTX_new();
+        EVP_CIPHER_CTX *d2;
+        unsigned char dup[80];
+        int l1 = 0;
+
+        EVP_EncryptInit_ex(e, c, NULL, key, iv);
+        EVP_CIPHER_CTX_set_padding(e, 0);
+        d2 = EVP_CIPHER_CTX_dup(e);
+        printf("sm4xts.dup=%d\n", d2 != NULL);
+        if (d2 != NULL) {
+            printf("sm4xts.dup.update=%d\n", EVP_EncryptUpdate(d2, dup, &l1, in, 64));
+            printf("sm4xts.dup.agrees=%d\n", l1 == 64 && glen == 64 && memcmp(dup, gb, 64) == 0);
+            EVP_CIPHER_CTX_free(d2);
+        }
+        EVP_CIPHER_CTX_free(e);
+    }
+
+    /* A spelling of `xts_standard` that is neither GB nor IEEE is the row's own refusal. */
+    {
+        EVP_CIPHER_CTX *e = EVP_CIPHER_CTX_new();
+        OSSL_PARAM p[2];
+
+        p[0] = OSSL_PARAM_construct_utf8_string("xts_standard", (char *)"NO-SUCH-STANDARD", 0);
+        p[1] = OSSL_PARAM_construct_end();
+        printf("sm4xts.badstd.init=%d\n", EVP_EncryptInit_ex2(e, c, key, iv, p));
+        rt_errq("sm4xts.badstd");
+        EVP_CIPHER_CTX_free(e);
+    }
+
+    EVP_CIPHER_free(c);
+}
+
+/*
  * The `BLAKE2BMAC` and `BLAKE2SMAC` rows. One implementation instantiated twice, so the arm takes
  * the four widths as parameters rather than being written twice -- and the widths are the whole
  * difference between the rows, which is why they are printed rather than assumed.
@@ -7185,6 +7384,7 @@ int main(void)
     rt_deflt_chacha20();
     rt_deflt_sm4();
     rt_deflt_aria();
+    rt_deflt_sm4_xts();
     rt_deflt_errors();
     rt_disp_failures();
     return 0;

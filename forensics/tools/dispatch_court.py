@@ -318,6 +318,13 @@ NOT_A_DISPATCH: dict[str, str] = {
     "SkFreeFn": SK_MACRO,
     "AesWrapFn@src/provider/cipher.rs": WRAP_FN,
     "OsslXtsStreamFn": PROV_CIPHER_FUNC_TYPE,
+    # The same macro-generated typedef one header over. `cipher_sm4_xts.h:14-17` invokes
+    # `PROV_CIPHER_FUNC(void, xts_stream, ...)` with `SM4_KEY` parameters and a trailing `enc` where
+    # `cipher_aes_xts.h`'s invocation of the same macro uses `AES_KEY` and no `enc`, so the two
+    # produce one typedef *name* with two different types and cannot share a translation unit. The
+    # crate therefore declares two Rust aliases; both are generated, so neither has a `typedef` for
+    # the atlas to record.
+    "OsslSm4XtsStreamFn": PROV_CIPHER_FUNC_TYPE,
     "TdesStreamFn": TDES_TSTREAM_FN,
     "ConfInitFn@src/runtime/conf/types.rs": CONF_METHOD,
     "ConfFinishFn": ("not a provider dispatch: the crate's `conf_finish_func` equivalent for the "

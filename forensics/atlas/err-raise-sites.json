@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 1951,
+      "sites": 1957,
       "unattributed": 0
     },
     "covered_files": [
@@ -187,6 +187,7 @@
       "providers/implementations/ciphers/cipher_aes_siv.c",
       "providers/implementations/ciphers/cipher_chacha20.c",
       "providers/implementations/ciphers/cipher_aria_hw.c",
+      "providers/implementations/ciphers/cipher_sm4_xts.c",
       "providers/implementations/macs/cmac_prov.c",
       "providers/implementations/macs/gmac_prov.c",
       "providers/implementations/macs/hmac_prov.c",
@@ -28365,6 +28366,96 @@
         "rel_source": "providers/implementations/ciphers/cipher_aria_hw.c"
       },
       {
+        "const_name": "PROV_CIPHER_SM4_XTS_54",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_sm4_xts.c",
+        "function": "sm4_xts_init",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 54,
+        "macro": "ERR_raise",
+        "reason": 105,
+        "reason_symbol": "PROV_R_INVALID_KEY_LENGTH",
+        "rel_source": "providers/implementations/ciphers/cipher_sm4_xts.c"
+      },
+      {
+        "const_name": "PROV_CIPHER_SM4_XTS_142",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_sm4_xts.c",
+        "function": "sm4_xts_cipher",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 142,
+        "macro": "ERR_raise",
+        "reason": 148,
+        "reason_symbol": "PROV_R_XTS_DATA_UNIT_IS_TOO_LARGE",
+        "rel_source": "providers/implementations/ciphers/cipher_sm4_xts.c"
+      },
+      {
+        "const_name": "PROV_CIPHER_SM4_XTS_171",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_sm4_xts.c",
+        "function": "sm4_xts_stream_update",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 171,
+        "macro": "ERR_raise",
+        "reason": 106,
+        "reason_symbol": "PROV_R_OUTPUT_BUFFER_TOO_SMALL",
+        "rel_source": "providers/implementations/ciphers/cipher_sm4_xts.c"
+      },
+      {
+        "const_name": "PROV_CIPHER_SM4_XTS_176",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_sm4_xts.c",
+        "function": "sm4_xts_stream_update",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 176,
+        "macro": "ERR_raise",
+        "reason": 102,
+        "reason_symbol": "PROV_R_CIPHER_OPERATION_FAILED",
+        "rel_source": "providers/implementations/ciphers/cipher_sm4_xts.c"
+      },
+      {
+        "const_name": "PROV_CIPHER_SM4_XTS_227",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_sm4_xts.c",
+        "function": "sm4_xts_set_ctx_params",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 227,
+        "macro": "ERR_raise",
+        "reason": 103,
+        "reason_symbol": "PROV_R_FAILED_TO_GET_PARAMETER",
+        "rel_source": "providers/implementations/ciphers/cipher_sm4_xts.c"
+      },
+      {
+        "const_name": "PROV_CIPHER_SM4_XTS_235",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_sm4_xts.c",
+        "function": "sm4_xts_set_ctx_params",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 235,
+        "macro": "ERR_raise",
+        "reason": 104,
+        "reason_symbol": "PROV_R_FAILED_TO_SET_PARAMETER",
+        "rel_source": "providers/implementations/ciphers/cipher_sm4_xts.c"
+      },
+      {
         "const_name": "PROV_CMAC_PROV_245",
         "data_format": "\"param %s is repeated\"",
         "dynamic_reason": false,
@@ -30474,6 +30565,11 @@
       "name": "authority:providers/implementations/ciphers/cipher_aria_hw.c",
       "path": "forensics/authorities/src/openssl-3.6.4/providers/implementations/ciphers/cipher_aria_hw.c",
       "sha256": "564e3e04ea2c67c27c9b5e942c2ffcd4fefa469eb505d92f50023e2c519ade08"
+    },
+    {
+      "name": "authority:providers/implementations/ciphers/cipher_sm4_xts.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/providers/implementations/ciphers/cipher_sm4_xts.c",
+      "sha256": "37d445f4f01c3b5ae4c9b471eca0d37f5b47eab18ef09b1f2f731d6c85afef52"
     },
     {
       "name": "authority:providers/implementations/macs/cmac_prov.c",

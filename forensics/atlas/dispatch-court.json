@@ -19,7 +19,7 @@
       "signatures_authority_only": 405,
       "signatures_checked": 229,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 107,
+      "signatures_not_a_dispatch": 108,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -3889,6 +3889,11 @@
         },
         {
           "alias": "OsslXtsStreamFn",
+          "at": "src/provider/cipher.rs",
+          "why": "not a provider dispatch: `prov/ciphercommon.h:30`'s `PROV_CIPHER_FUNC` macro generates it as `typedef type(*OSSL_##name##_fn) args`, so the header carries no `typedef` declaration and the atlas records none"
+        },
+        {
+          "alias": "OsslSm4XtsStreamFn",
           "at": "src/provider/cipher.rs",
           "why": "not a provider dispatch: `prov/ciphercommon.h:30`'s `PROV_CIPHER_FUNC` macro generates it as `typedef type(*OSSL_##name##_fn) args`, so the header carries no `typedef` declaration and the atlas records none"
         },

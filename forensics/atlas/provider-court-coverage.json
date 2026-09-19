@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 148,
+        "implemented": 149,
         "unmatched": 0
       }
     },
@@ -20,8 +20,8 @@
         "probe": "courts/phase8/rt_cipher_probe.c"
       }
     ],
-    "directly_courted": 148,
-    "implemented_rows": 148,
+    "directly_courted": 149,
+    "implemented_rows": 149,
     "rows": [
       {
         "algorithm_names": "AES-128-CBC",
@@ -1594,6 +1594,20 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "SM4-XTS",
+        "aliases": [
+          "SM4-XTS",
+          "1.2.156.10197.1.104.10"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "BLAKE2B-512",
         "aliases": [
           "BLAKE2B-512",
@@ -2111,7 +2125,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "d43ac6e121dc6c2eaa2f2493dd4d299a18c94b92ffd155e0327565a3a0936408"
+      "sha256": "6e0cce017c7be6a39eb424a8b6a45f3dcb32e21128bec6658a6c2350e62301f6"
     },
     {
       "name": "court:RT-DIGEST",
@@ -2121,7 +2135,7 @@
     {
       "name": "court:RT-CIPHER",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "4e945d8934b5e51e5e7eabc505c6faf45aeed75c5a3e5d8eb68b419b1a0a2a9c"
+      "sha256": "b33e90539a434ff3de4cc73903f3dc3f4347af4e43ff1b57bebf2a0fa199c8a1"
     }
   ],
   "kind": "provider-court-coverage",

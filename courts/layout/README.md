@@ -47,3 +47,4 @@ not include it a second time.
 | `measure-union-align.c` | the key structs (`AES_KEY`, `CAMELLIA_KEY`, `SM4_KEY`, `ARIA_KEY`) and the context each makes | D269 |
 | `measure-provider-ctxs.c` | every landed cipher context's size and its `ks` offsets | D269 |
 | `measure-mode-ctxs.c` | the embedded mode contexts (`XTS128_CONTEXT`, `OCB128_CONTEXT`, `PROV_CCM_CTX`, `siv128_context`) and the `PROV_AES_OCB_CTX`/`PROV_AES_CCM_CTX`/`PROV_AES_XTS_CTX` member offsets | D269 |
+| `measure-sm4-xts-ctx.c` | `PROV_SM4_XTS_CTX` and its five member offsets. A **separate program** from `measure-provider-ctxs.c`, because `cipher_sm4_xts.h` and `cipher_aes_xts.h` each generate an `OSSL_xts_stream_fn` through `PROV_CIPHER_FUNC` with different key types under one name, so the two headers cannot be included in one translation unit | D273 |

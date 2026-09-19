@@ -625,6 +625,12 @@ class CipherVector:
     # under one name (`cipher_cts.c:33-46`), and the corpus's `CTSMode` line is where the
     # variant is chosen.
     ctsmode: str = ""
+    # The XTS standard (`GB`/`IEEE`), empty for every construction that has no such choice. Like
+    # `ctsmode` it is a per-family column rather than a general field, because only `SM4-XTS`
+    # carries it -- and there it is load-bearing: the corpus publishes the **same** key, IV and
+    # plaintext twice with different expected ciphertext, once under each standard, so a driver
+    # that ignored the field would have two vectors that cannot both pass.
+    xtsstandard: str = ""
 
 
 @dataclass
@@ -693,7 +699,8 @@ def load_cipher_vector_set(path: Path) -> CipherVectorSet:
             vid, cipher, operation, key, iv, input_bytes, expected,
             str(raw.get("standard", standard)),
             str(provenance.get("primary_source", primary_source)), provenance,
-            aad=aad, tag=tag, ctsmode=str(raw.get("ctsmode", "")).upper()))
+            aad=aad, tag=tag, ctsmode=str(raw.get("ctsmode", "")).upper(),
+            xtsstandard=str(raw.get("xtsstandard", "")).upper()))
 
     return CipherVectorSet(path=path, algorithm=algorithm, standard=standard,
                            primary_source=primary_source,
@@ -757,7 +764,7 @@ def run_cipher_court(
     call_path = work_dir / f"{name.lower()}.calls.tsv"
     call_path.write_text("".join(
         f"{i}\t{v.cipher}\t{v.operation}\t{v.key.hex()}\t{v.iv.hex()}\t{v.input.hex()}"
-        f"\t{v.aad.hex()}\t{len(v.tag)}\t{v.ctsmode}\n"
+        f"\t{v.aad.hex()}\t{len(v.tag)}\t{v.ctsmode}\t{v.xtsstandard}\n"
         for i, _vs, v in calls), encoding="utf-8")
 
     binary = work_dir / f"{name.lower()}.candidate"
@@ -1878,6 +1885,26 @@ CIPHER_RECIPE_FAMILIES: list[CipherRecipeFamily] = [
             "SM4 implementation is present in the pinned court image, so no boundary vector carries "
             "an independent oracle."
         ), aead=True),
+    # SM4-XTS, the one family whose corpus carries a **per-vector** construction parameter. The two
+    # titles are GB/T 17964-2021's vectors and the IEEE Std 1619-2007 spelling of the same ones,
+    # and every block names its standard in an `XTSStandard` line -- so the same key, IV and
+    # plaintext appears twice with different expected ciphertext. That is what makes this family the
+    # only construction evidence for `ossl_crypto_xts128gb_encrypt`, which the IEEE arm does not
+    # reach at all.
+    CipherRecipeFamily(
+        "sm4_xts", "test/recipes/30-test_evp_data/evpciph_sm4.txt",
+        r"^SM4-XTS$", "GB/T 17964-2021; IEEE Std 1619-2007",
+        "SM4-XTS", (),
+        "", "",
+        note=(
+            "Candidate-only construction verification: the corpus's two `SM4 XTS` sections are "
+            "GB/T 17964-2021's vectors and the IEEE Std 1619-2007 spelling of the same ones, and "
+            "each block names its standard. Both are mirrored (`corpus_sha256`), and the "
+            "`xtsstandard` column is what keeps them distinct -- the two sections publish different "
+            "expected ciphertext for identical inputs, so a driver that ignored the field could not "
+            "pass both. No independent SM4 implementation is present in the pinned court image, so "
+            "no boundary vector carries an independent oracle."
+        )),
     # 8.3 -- XTS. `evpciph_aes_common.txt`'s XTS section is IEEE Std 1619-2007's own vectors;
     # both directions are mirrored (a mode, not an AEAD, so a decrypt vector's output is the
     # plaintext). The two `Result = KEY_SET_ERROR` blocks are skipped by the result-key rule.
@@ -1989,6 +2016,11 @@ def _emit_recipe_family(authority_id: str, family: CipherRecipeFamily,
         ctsmode = block.get("ctsmode", "").strip().upper()
         if ctsmode:
             vec["ctsmode"] = ctsmode
+        # The same rule for the XTS standard: recorded only where the corpus has it, so a family
+        # without one keeps its committed file byte-identical.
+        xtsstandard = block.get("xtsstandard", "").strip().upper()
+        if xtsstandard:
+            vec["xtsstandard"] = xtsstandard
         vectors.append(vec)
 
     # One independently-derived boundary per family: the empty message. No standard publishes

@@ -18742,6 +18742,66 @@ pub(crate) const PROV_CIPHER_ARIA_HW_25: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `sm4_xts_init` at `providers/implementations/ciphers/cipher_sm4_xts.c:54` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_SM4_XTS_54: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_sm4_xts.c",
+    line: 54,
+    func: c"sm4_xts_init",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `sm4_xts_cipher` at `providers/implementations/ciphers/cipher_sm4_xts.c:142` (PROV_R_XTS_DATA_UNIT_IS_TOO_LARGE).
+pub(crate) const PROV_CIPHER_SM4_XTS_142: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_sm4_xts.c",
+    line: 142,
+    func: c"sm4_xts_cipher",
+    lib: 57,
+    reason: 148,
+    dynamic_reason: false,
+};
+
+/// `sm4_xts_stream_update` at `providers/implementations/ciphers/cipher_sm4_xts.c:171` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHER_SM4_XTS_171: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_sm4_xts.c",
+    line: 171,
+    func: c"sm4_xts_stream_update",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `sm4_xts_stream_update` at `providers/implementations/ciphers/cipher_sm4_xts.c:176` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHER_SM4_XTS_176: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_sm4_xts.c",
+    line: 176,
+    func: c"sm4_xts_stream_update",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `sm4_xts_set_ctx_params` at `providers/implementations/ciphers/cipher_sm4_xts.c:227` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_SM4_XTS_227: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_sm4_xts.c",
+    line: 227,
+    func: c"sm4_xts_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `sm4_xts_set_ctx_params` at `providers/implementations/ciphers/cipher_sm4_xts.c:235` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_SM4_XTS_235: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_sm4_xts.c",
+    line: 235,
+    func: c"sm4_xts_set_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
 /// `cmac_get_ctx_params_decoder` at `providers/implementations/macs/cmac_prov.c:245` (PROV_R_REPEATED_PARAMETER).
 pub(crate) const PROV_CMAC_PROV_245: ErrSite = ErrSite {
     file: c"providers/implementations/macs/cmac_prov.c",
@@ -21424,6 +21484,12 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_CIPHER_CHACHA20_167,
     PROV_CIPHER_CHACHA20_171,
     PROV_CIPHER_ARIA_HW_25,
+    PROV_CIPHER_SM4_XTS_54,
+    PROV_CIPHER_SM4_XTS_142,
+    PROV_CIPHER_SM4_XTS_171,
+    PROV_CIPHER_SM4_XTS_176,
+    PROV_CIPHER_SM4_XTS_227,
+    PROV_CIPHER_SM4_XTS_235,
     PROV_CMAC_PROV_245,
     PROV_CMAC_PROV_257,
     PROV_CMAC_PROV_269,
