@@ -448,6 +448,12 @@ COVERED_FILES = [
     # and it was the ARIA rows landing that made the difference visible (D270). `cipher_aria.c`
     # itself still raises nothing and is absent for `cipher_chacha20_hw.c`'s reason.
     ("providers/implementations/ciphers/cipher_aria_hw.c", "PROV_CIPHER_ARIA_HW"),
+    # `cipher_sm4_xts.c` is a source-tree file with six raises, one per failure arm the row has that
+    # the shared engine does not own: the key-length check in `sm4_xts_init` (`:54`), the 2^20-block
+    # data-unit limit (`:142`), the output-size check (`:171`) and the cipher failure (`:176`) in
+    # `sm4_xts_stream_update`, and the two `xts_standard` arms of `sm4_xts_set_ctx_params` (`:227`,
+    # `:235`). Its `cipher_sm4_xts_hw.c` raises nothing, like `cipher_sm4_hw.c`.
+    ("providers/implementations/ciphers/cipher_sm4_xts.c", "PROV_CIPHER_SM4_XTS"),
     # Deliberately *not* covered, with the reason: `cipher_sm4.c` and `cipher_sm4_hw.c` raise
     # nothing at all in this profile -- there is no failure arm in either -- so an entry would read
     # as coverage that does not exist. The SM4 *primitive* `crypto/sm4/sm4.c` has no failure path

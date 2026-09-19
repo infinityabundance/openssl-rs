@@ -757,7 +757,7 @@
         "module": "src/modes/xts.rs",
         "phase": 8,
         "phase_source": "module-declaration",
-        "share": "1/1",
+        "share": "1/2",
         "translation_unit": "crypto/modes/xts128.c"
       },
       {
@@ -855,7 +855,7 @@
         "module": "src/provider/cipher.rs",
         "phase": 8,
         "phase_source": "module-declaration",
-        "share": "20/79",
+        "share": "20/80",
         "translation_unit": "providers/implementations/ciphers/libcommon-lib-ciphercommon.c"
       },
       {

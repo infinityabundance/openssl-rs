@@ -958,7 +958,8 @@ static int ct_xts(const char *cipher, int enc_op,
                   const unsigned char *iv, size_t ivlen,
                   const unsigned char *aad, size_t aadlen,
                   const unsigned char *in, size_t inlen,
-                  unsigned char *out, size_t *outlen, size_t taglen)
+                  unsigned char *out, size_t *outlen, size_t taglen,
+                  const char *xtsstandard)
 {
     AES_KEY ek1, ek2, dk1;
     ct_xts_ctx x;
@@ -966,8 +967,63 @@ static int ct_xts(const char *cipher, int enc_op,
 
     (void)aad;
     (void)aadlen;
-    if (strncmp(cipher, "aes-", 4) != 0)
-        return -1;
+    /*
+     * **`SM4-XTS` goes through the provider, and must, because of the standard.** The row's default
+     * is the GB/T 17964-2021 construction, whose doubling is not `CRYPTO_xts128_encrypt`'s, and the
+     * authority exports no SM4 primitive for a low-level arm to drive (`src/provider/cipher.rs`
+     * records the arithmetic difference). The corpus's two `SM4 XTS` sections publish the **same**
+     * key, IV and plaintext with different expected ciphertext, one per standard, so this arm sets
+     * `xts_standard` and lets the row choose -- which is also the only construction evidence
+     * `ossl_crypto_xts128gb_encrypt` has. D271's CCM branch is the same shape for the same reason.
+     */
+    if (strncmp(cipher, "aes-", 4) != 0) {
+        EVP_CIPHER *c;
+        EVP_CIPHER_CTX *ctx;
+        OSSL_PARAM p[2];
+        char standard[8];
+        int l1 = 0, l2 = 0;
+        size_t i;
+
+        if (strcmp(cipher, "SM4-XTS") != 0 || ivlen != 16 || taglen != 0 || inlen < 16)
+            return -1;
+        c = EVP_CIPHER_fetch(NULL, cipher, NULL);
+        if (c == NULL || keylen != (size_t)EVP_CIPHER_get_key_length(c)) {
+            if (c != NULL)
+                EVP_CIPHER_free(c);
+            return -1;
+        }
+        /*
+         * The parameter is a utf8 string; the corpus spells it `GB` or `IEEE`, and **a block with
+         * no `XTSStandard` line leaves it unset** -- which is the row's own default, GB, and is
+         * what the corpus's first section expects. So the empty column is passed through rather
+         * than refused: an arm that demanded a spelling would fail four of the four vectors.
+         */
+        p[0] = OSSL_PARAM_construct_end();
+        if (xtsstandard[0] != '\0') {
+            for (i = 0; i < sizeof(standard) - 1 && xtsstandard[i] != '\0'; i++)
+                standard[i] = xtsstandard[i];
+            standard[i] = '\0';
+            p[0] = OSSL_PARAM_construct_utf8_string(OSSL_CIPHER_PARAM_XTS_STANDARD, standard, 0);
+            p[1] = OSSL_PARAM_construct_end();
+        }
+        ctx = EVP_CIPHER_CTX_new();
+        if (ctx == NULL
+            || (enc_op ? EVP_EncryptInit_ex2(ctx, c, key, iv, p)
+                       : EVP_DecryptInit_ex2(ctx, c, key, iv, p)) != 1
+            || (enc_op ? EVP_EncryptUpdate(ctx, out, &l1, in, (int)inlen)
+                       : EVP_DecryptUpdate(ctx, out, &l1, in, (int)inlen)) != 1
+            || (enc_op ? EVP_EncryptFinal_ex(ctx, out + l1, &l2)
+                       : EVP_DecryptFinal_ex(ctx, out + l1, &l2)) != 1) {
+            if (ctx != NULL)
+                EVP_CIPHER_CTX_free(ctx);
+            EVP_CIPHER_free(c);
+            return -1;
+        }
+        EVP_CIPHER_CTX_free(ctx);
+        EVP_CIPHER_free(c);
+        *outlen = (size_t)(l1 + l2);
+        return 0;
+    }
     if (strncmp(cipher + 4, "128-xts", 7) == 0)
         bits = 128;
     else if (strncmp(cipher + 4, "256-xts", 7) == 0)
@@ -1232,7 +1288,7 @@ static int ct_cipher(const char *cipher, const char *operation,
                      const unsigned char *aad, size_t aadlen,
                      const unsigned char *in, size_t inlen,
                      unsigned char *out, size_t *outlen, size_t taglen,
-                     const char *ctsmode)
+                     const char *ctsmode, const char *xtsstandard)
 {
     int enc_op = strcmp(operation, "ENCRYPT") == 0;
 
@@ -1243,7 +1299,7 @@ static int ct_cipher(const char *cipher, const char *operation,
                in, inlen, out, outlen, taglen) == 0)
         return 0;
     if (ct_xts(cipher, enc_op, key, keylen, iv, ivlen, aad, aadlen,
-               in, inlen, out, outlen, taglen) == 0)
+               in, inlen, out, outlen, taglen, xtsstandard) == 0)
         return 0;
     if (ct_ocb(cipher, enc_op, key, keylen, iv, ivlen, aad, aadlen,
                in, inlen, out, outlen, taglen) == 0)
@@ -1286,6 +1342,7 @@ int main(int argc, char **argv)
         size_t keylen = 0, ivlen = 0, aadlen = 0, inlen = 0, outlen = 0;
         size_t taglen = 0;
         const char *ctsmode = "";
+        const char *xtsstandard = "";
         long index;
         int rc;
 
@@ -1304,15 +1361,25 @@ int main(int argc, char **argv)
         if (nf < 8)
             continue;
         {
-            /* field[7] is `taglen`, and the optional ninth column is the CTS mode. */
+            /*
+             * field[7] is `taglen`; the eighth column is the CTS mode and the ninth the XTS
+             * standard. Both are per-family, so a family without one carries an empty column,
+             * which is how `ctsmode` has worked since it was added.
+             */
             char *tab = strchr(fields[7], '\t');
             char *nl;
 
             if (tab != NULL) {
                 *tab = '\0';
                 ctsmode = tab + 1;
+                tab = strchr(ctsmode, '\t');
+                if (tab != NULL) {
+                    *tab = '\0';
+                    xtsstandard = tab + 1;
+                }
             }
-            nl = strchr(tab != NULL ? ctsmode : fields[7], '\n');
+            nl = strchr(xtsstandard[0] != '\0' ? xtsstandard
+                        : (ctsmode[0] != '\0' ? ctsmode : fields[7]), '\n');
             if (nl != NULL)
                 *nl = '\0';
         }
@@ -1326,7 +1393,7 @@ int main(int argc, char **argv)
             continue;
         }
         rc = ct_cipher(fields[1], fields[2], key, keylen, iv, ivlen, aad, aadlen,
-                       in, inlen, out, &outlen, taglen, ctsmode);
+                       in, inlen, out, &outlen, taglen, ctsmode, xtsstandard);
         if (rc != 0) {
             printf("%ld\terr\trefused\n", index);
             continue;

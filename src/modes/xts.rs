@@ -171,6 +171,186 @@ pub unsafe extern "C" fn CRYPTO_xts128_encrypt(
     }
 }
 
+/// `int ossl_crypto_xts128gb_encrypt(const XTS128_CONTEXT *ctx, const unsigned char iv[16], const
+/// unsigned char *inp, unsigned char *out, size_t len, int enc)` —
+/// `crypto/modes/xts128gb.c:23-199`.
+///
+/// This is the GB/T variant of XTS, reached only through `cipher_sm4_xts.c:156`; its tweak
+/// doubling is the byte-swapping spelling and is **not** interchangeable with the doubling
+/// [`CRYPTO_xts128_encrypt`] performs: each word is read, byte-swapped (`BSWAP8`, which this
+/// x86-64 GCC build defines), the pair is shifted right across `hi`/`lo`, the `0xe1` reduction is
+/// applied when the bit shifted out was set, and the words are swapped back — so the bit order the
+/// reduction reads is the mirror of `xts128.c`'s, not another way of writing it.
+///
+/// The `#if defined(STRICT_ALIGNMENT)` arms of the C are not compiled here, so the unaligned
+/// `u64_a1` arms are transcribed. `BSWAP8` is defined and `IS_LITTLE_ENDIAN` is true, so the
+/// little-endian arm of each endian test is transcribed; the C's big-endian `#else` arm and its
+/// non-`BSWAP8` `GETU32` spellings are dead in this profile and are noted here rather than
+/// implemented.
+///
+/// # Safety
+/// `ctx` points at a caller-populated context whose four fields are live, `iv` is readable for
+/// sixteen bytes, and `inp`/`out` are as the caller's contract requires for `len` bytes — with the
+/// decrypt tail additionally reading `inp + 16` and writing `out + 16` for the stolen-byte count.
+/// The buffers may be unaligned, exactly as `u64_a1` permits.
+pub(crate) unsafe fn ossl_crypto_xts128gb_encrypt(
+    ctx: *const XtsCtx,
+    iv: *const u8,
+    inp: *const u8,
+    out: *mut u8,
+    len: usize,
+    enc: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut len = len;
+        if len < 16 {
+            return -1;
+        }
+
+        let block1 = (*ctx).block1;
+        let block2 = (*ctx).block2;
+        let key1 = (*ctx).key1.cast_const();
+        let key2 = (*ctx).key2.cast_const();
+
+        let mut tweak = [0u8; 16];
+        ptr::copy_nonoverlapping(iv, tweak.as_mut_ptr(), 16);
+
+        if let Some(f) = block2 {
+            f(tweak.as_ptr(), tweak.as_mut_ptr(), key2);
+        }
+
+        let mut inp = inp;
+        let mut out = out;
+        if enc == 0 && !len.is_multiple_of(16) {
+            len -= 16;
+        }
+
+        let mut scratch = [0u8; 16];
+        while len >= 16 {
+            // Unaligned arms: `scratch.u[0] = ((u64_a1 *)inp)[0] ^ tweak.u[0]` and the same for
+            // `u[1]` — a little-endian load of each eight-byte half.
+            let s0 = read_le_u64(core::slice::from_raw_parts(inp, 8)) ^ read_le_u64(&tweak[0..8]);
+            let s1 = read_le_u64(core::slice::from_raw_parts(inp.add(8), 8))
+                ^ read_le_u64(&tweak[8..16]);
+            scratch[0..8].copy_from_slice(&s0.to_le_bytes());
+            scratch[8..16].copy_from_slice(&s1.to_le_bytes());
+            if let Some(f) = block1 {
+                f(scratch.as_ptr(), scratch.as_mut_ptr(), key1);
+            }
+            // `((u64_a1 *)out)[0] = scratch.u[0] ^= tweak.u[0]` yields the new `scratch.u[0]` and
+            // stores that same value; the net effect is `scratch ^= tweak`, then `out = scratch`.
+            let o0 = read_le_u64(&scratch[0..8]) ^ read_le_u64(&tweak[0..8]);
+            let o1 = read_le_u64(&scratch[8..16]) ^ read_le_u64(&tweak[8..16]);
+            scratch[0..8].copy_from_slice(&o0.to_le_bytes());
+            scratch[8..16].copy_from_slice(&o1.to_le_bytes());
+            ptr::copy_nonoverlapping(scratch.as_ptr(), out, 16);
+
+            inp = inp.add(16);
+            out = out.add(16);
+            len -= 16;
+            if len == 0 {
+                return 0;
+            }
+
+            // `IS_LITTLE_ENDIAN` + `BSWAP8` arm (`xts128gb.c:71-98`); the `#else` big-endian arm
+            // is not compiled.
+            let hi = read_le_u64(&tweak[0..8]).swap_bytes();
+            let lo = read_le_u64(&tweak[8..16]).swap_bytes();
+            let res = (lo & 1) as u8;
+            let w0 = (lo >> 1) | (hi << 63);
+            let w1 = hi >> 1;
+            tweak[0..8].copy_from_slice(&w0.to_le_bytes());
+            tweak[8..16].copy_from_slice(&w1.to_le_bytes());
+            if res != 0 {
+                tweak[15] ^= 0xe1;
+            }
+            let hi = read_le_u64(&tweak[0..8]).swap_bytes();
+            let lo = read_le_u64(&tweak[8..16]).swap_bytes();
+            tweak[0..8].copy_from_slice(&lo.to_le_bytes());
+            tweak[8..16].copy_from_slice(&hi.to_le_bytes());
+        }
+
+        if enc != 0 {
+            // Ciphertext stealing forward: the tail of the output is the stolen prefix of the
+            // previous ciphertext, and the mixed block is written back over it.
+            let mut i = 0usize;
+            while i < len {
+                let c = *inp.add(i);
+                *out.add(i) = scratch[i];
+                scratch[i] = c;
+                i += 1;
+            }
+            let s0 = read_le_u64(&scratch[0..8]) ^ read_le_u64(&tweak[0..8]);
+            let s1 = read_le_u64(&scratch[8..16]) ^ read_le_u64(&tweak[8..16]);
+            scratch[0..8].copy_from_slice(&s0.to_le_bytes());
+            scratch[8..16].copy_from_slice(&s1.to_le_bytes());
+            if let Some(f) = block1 {
+                f(scratch.as_ptr(), scratch.as_mut_ptr(), key1);
+            }
+            let s0 = read_le_u64(&scratch[0..8]) ^ read_le_u64(&tweak[0..8]);
+            let s1 = read_le_u64(&scratch[8..16]) ^ read_le_u64(&tweak[8..16]);
+            scratch[0..8].copy_from_slice(&s0.to_le_bytes());
+            scratch[8..16].copy_from_slice(&s1.to_le_bytes());
+            ptr::copy_nonoverlapping(scratch.as_ptr(), out.sub(16), 16);
+        } else {
+            // Ciphertext stealing backward: decrypt the last full block under the doubled tweak,
+            // recover the tail, then decrypt the stolen block under the current tweak.
+            let mut tweak1 = [0u8; 16];
+            // `tweak1` is the doubled copy of `tweak` (`xts128gb.c:129-167`).
+            let hi = read_le_u64(&tweak[0..8]).swap_bytes();
+            let lo = read_le_u64(&tweak[8..16]).swap_bytes();
+            let res = (lo & 1) as u8;
+            let w0 = (lo >> 1) | (hi << 63);
+            let w1 = hi >> 1;
+            tweak1[0..8].copy_from_slice(&w0.to_le_bytes());
+            tweak1[8..16].copy_from_slice(&w1.to_le_bytes());
+            if res != 0 {
+                tweak1[15] ^= 0xe1;
+            }
+            let hi = read_le_u64(&tweak1[0..8]).swap_bytes();
+            let lo = read_le_u64(&tweak1[8..16]).swap_bytes();
+            tweak1[0..8].copy_from_slice(&lo.to_le_bytes());
+            tweak1[8..16].copy_from_slice(&hi.to_le_bytes());
+
+            let s0 = read_le_u64(core::slice::from_raw_parts(inp, 8)) ^ read_le_u64(&tweak1[0..8]);
+            let s1 = read_le_u64(core::slice::from_raw_parts(inp.add(8), 8))
+                ^ read_le_u64(&tweak1[8..16]);
+            scratch[0..8].copy_from_slice(&s0.to_le_bytes());
+            scratch[8..16].copy_from_slice(&s1.to_le_bytes());
+            if let Some(f) = block1 {
+                f(scratch.as_ptr(), scratch.as_mut_ptr(), key1);
+            }
+            let s0 = read_le_u64(&scratch[0..8]) ^ read_le_u64(&tweak1[0..8]);
+            let s1 = read_le_u64(&scratch[8..16]) ^ read_le_u64(&tweak1[8..16]);
+            scratch[0..8].copy_from_slice(&s0.to_le_bytes());
+            scratch[8..16].copy_from_slice(&s1.to_le_bytes());
+
+            let mut i = 0usize;
+            while i < len {
+                let c = *inp.add(16 + i);
+                *out.add(16 + i) = scratch[i];
+                scratch[i] = c;
+                i += 1;
+            }
+            let s0 = read_le_u64(&scratch[0..8]) ^ read_le_u64(&tweak[0..8]);
+            let s1 = read_le_u64(&scratch[8..16]) ^ read_le_u64(&tweak[8..16]);
+            scratch[0..8].copy_from_slice(&s0.to_le_bytes());
+            scratch[8..16].copy_from_slice(&s1.to_le_bytes());
+            if let Some(f) = block1 {
+                f(scratch.as_ptr(), scratch.as_mut_ptr(), key1);
+            }
+            let o0 = read_le_u64(&scratch[0..8]) ^ read_le_u64(&tweak[0..8]);
+            let o1 = read_le_u64(&scratch[8..16]) ^ read_le_u64(&tweak[8..16]);
+            scratch[0..8].copy_from_slice(&o0.to_le_bytes());
+            scratch[8..16].copy_from_slice(&o1.to_le_bytes());
+            ptr::copy_nonoverlapping(scratch.as_ptr(), out, 16);
+        }
+
+        0
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -17722,3 +17722,60 @@ hashes, and no court. The README paragraph and `docs/DECISIONS.md` are hand-writ
 and `phase8-obligations.json` move only in their recorded input hashes. `check_evidence_portability`
 and `evidence_determinism` both return 0, and the full pipeline is `PIPELINE OK` at the same **29710
 observations over 83 courts**.
+
+## D273 — `SM4-XTS` lands, and it is the first row with two constructions under one name
+
+The last of the family's unconditional rows, on a prerequisite the AES-XTS row never needed:
+`crypto/modes/xts128gb.c`'s `ossl_crypto_xts128gb_encrypt`, which is **not** the function AES-XTS
+calls. `SM4-XTS` has two XTS standards, `cipher_sm4_xts.h:36`'s `int xts_standard` is 0 for
+`GB/T 17964-2021` and 1 for `IEEE Std 1619-2007`, the context is `zalloc`'d, and `sm4_xts_cipher`
+branches on it — so **the default is the GB construction**, and a caller who never sets the
+parameter gets the variant whose tweak doubling shifts the big-endian reading right and reduces with
+`0xe1` at byte 15, where `crypto/modes/xts128.c` shifts the little-endian reading left and reduces
+with `0x87` at byte 0.
+
+**That the two are not interchangeable is a measured fact, not a reading of the code.** `RT-CIPHER`'s
+new arm encrypts the same 64-octet message under the default and under `IEEE` and records
+`sm4xts.standards_differ`; on the authority it is 1. A row that dropped `xts_standard`, or wired both
+arms to one function, would round-trip perfectly under both and fail exactly that bit — which is why
+it is the bit the arm prints rather than a comment.
+
+**`xts128gb.c` is a transcription with a preprocessor decision in it.** `include/crypto/modes.h`
+sets `STRICT_ALIGNMENT` and `#undef`s it for x86-64, and defines `BSWAP8` as a `bswapq` inline asm,
+so the compiled arms are the unaligned `u64_a1` loads and the `BSWAP8` spellings; the big-endian and
+non-`BSWAP8` arms are dead here and are recorded as such rather than implemented. The `u64`/`u32`/`u8`
+union is modelled as a `[u8; 16]` with the `u64` views read and written explicitly, and the function
+is `pub(crate)` with no `#[no_mangle]` because the authority exports neither it nor anything else
+from that unit.
+
+**The row's `dupctx` is an assertion, and the arm reaches it.** `sm4_xts_dupctx` answers NULL when
+either `xts.key1`/`xts.key2` is non-NULL and not the context's own `ks1`/`ks2`, rather than
+re-pointing a pointer it does not own; `EVP_CIPHER_CTX_dup` is the only public route to it.
+`sm4_xts_newctx` also passes **NULL** as `ossl_cipher_generic_initkey`'s `provctx`, so this row's
+`ctx->libctx` is NULL by the authority's own text — the same class D240 measured for the GCM rows.
+
+**The construction court needed a per-vector column, and it is the corpus that forced it.** The two
+`SM4 XTS` sections of `evpciph_sm4.txt` publish the **same** key, IV and plaintext with different
+expected ciphertext, one per standard, and every block names its own in an `XTSStandard` line. A
+driver that ignored the field could not pass both, so `CipherVector` gained `xtsstandard` beside
+`ctsmode` — the same shape as the CTS column, and driven by the same reasoning: the field is the
+vector's, not the family's. Blocks with no `XTSStandard` line leave the parameter unset, which is the
+row's GB default, and that is what the corpus's first section expects.
+
+**A transcription error the subagent caught by reading rather than assuming.** The brief for
+`xts128gb.c` described the GB doubling loosely enough that it could have been read as "the same
+arithmetic as `xts128.c`". It is not, and the doc comment now says so with the arithmetic, which is
+what the `standards_differ` arm then confirms from the other side.
+
+**What this entry moves.** `implemented[libcrypto]` stays **2035 / 5896** — SM4 exports nothing — so
+Phase 8 stays **194 implemented / 576 open / 16 deferred**. The provider census moves **148 -> 149
+implemented / 158 -> 157 open / 690 deferred**, coverage staying exact at **149 / 149 / 0 unmatched**,
+and the export-coverage atlas stays **0 unmatched**. `RT-CIPHER` moves **6134 -> 6200** observations,
+`CT-CIPHER` **3119 -> 3123 / 3123** vectors, and the pipeline total **29710 -> 29776 over 83 courts**.
+The err-site table moves **1951 -> 1957** (the six raises in `cipher_sm4_xts.c`). `RT-DIGEST` (468)
+and `CT-DIGEST` (272 / 272) do not move; unit tests stay **604**. Full pipeline to `PIPELINE OK`.
+
+**What remains of 8.3.** The fourteen capability-filtered `AES-*-CBC-HMAC-*` `ALGC` rows, which need
+`ossl_prov_cache_exported_algorithms`' filtering before the first gated row can land — `deflt_query`
+currently answers `DEFLT_CIPHERS` directly, which is correct only while every landed row is
+unconditional — and the three `AES-*-GCM-SIV` rows. Then 8.4's RSA.
