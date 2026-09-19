@@ -19770,3 +19770,45 @@ obligation ledger, the court-coverage atlas and the provider census are all unmo
 landing is visible only through `phase_state.py`'s `PHASE9_MODULES` and the prerequisite gate's
 language census. The four Phase 9 courts remain pending, and `ossl_pool_acquire_entropy` returning
 bytes says nothing about whether the DRBG above it is faithful.
+
+## D304 -- `openssl_get_fork_id` lands, and the divergence row that covered it goes stale
+
+The DRBG's fork check, and the first of its prerequisites that is not itself the DRBG.
+`crypto/threads_pthread.c:1238-1241` is `int openssl_get_fork_id(void) { return getpid(); }`, so
+this is one function in `src/runtime/thread.rs` plus a test that asserts it **against the
+platform** rather than against a recorded value. `drbg.c` records the value at every (re)seed and
+compares it before generating, so a transcription that returned a constant would satisfy every
+caller in a single process and defeat the check in exactly the case it exists for -- a `fork(2)`
+child that must reseed rather than repeat its parent's output. **Suite 648 -> 649.**
+
+**`getpid` moved to `src/runtime/bio/sys.rs`, where both callers can reach it**: this function and
+`rand_unix.c`'s nonce. `src/rand/sys.rs` keeps the safe wrapper and imports the declaration, so one
+`<unistd.h>` prototype has one `extern`. That is the second time this pattern was needed (D302 did
+it for `open`) and the reason is the same: a platform declaration belongs to the layer that owns
+the platform rather than to whichever caller arrived first.
+
+**The gate caught a record that had become false, which is what it is for.**
+`forensics/prerequisites.json`'s divergence row for `src/runtime/thread.rs` had class
+`modelled_differently` covering **both** `openssl_init_fork_handlers` and `openssl_get_fork_id`,
+with the note "a caller that needs a fork id asks the C library for one". The moment this commit
+defined it, that `covers` list was wrong, and `prerequisite_gate.py` reported
+`divergence_record_does_not_match` rather than letting the row keep covering a name the crate now
+builds. `openssl_init_fork_handlers` stays -- it really is `return 1` on this profile and really
+does need no function -- and the note records that the other name left the list and why. This is
+the fail-closed shape D294's `EVP_md5` retirement and D296's KDF correction each exercised from a
+different direction, and it is the first time the *gate* rather than a reviewer found the stale
+row.
+
+**Staged, not integrated, and parked deliberately.** `court/phase9/drbg_renamed.rs.txt` is the DRBG
+module with its 162 error-site references renamed from the staging file's `PROV_DRBG_C_<line>`
+spelling to the generator's actual `PROV_DRBG_<line>`. It gets no further than that today: its
+generated-decoder key tables still need the sixteen per-unit line-numbered raise sites mapped
+against the generated `drbg_*.c` files in the build tree, and its three remaining helpers
+(`ossl_prov_get_entropy`, `ossl_prov_macctx_load`, and the `OSSL_LIB_CTX` DRBG slot indexes) are
+not landed. It is parked with the rename applied rather than re-derived later, and the reason for
+parking rather than pushing through is recorded so that the next unit starts from the measured
+error set: 143 compile errors before the rename, 108 after, of which the bulk are the four decoder
+key tables.
+
+**What this entry does not claim.** No Phase 9 export is implemented, no Phase 9 court has landed,
+and the DRBG rows the front depends on are still not published.

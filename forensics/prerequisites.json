@@ -247,11 +247,10 @@
         "owner_module": "src/runtime/thread.rs",
         "class": "modelled_differently",
         "covers": [
-          "openssl_init_fork_handlers",
-          "openssl_get_fork_id"
+          "openssl_init_fork_handlers"
         ],
-        "note": "Neither needs a function in the crate. On this profile openssl_init_fork_handlers() is `return 1` -- a no-op, which src/runtime/init.rs already records for OPENSSL_INIT_ATFORK -- and openssl_get_fork_id() is `return getpid()`, so a caller that needs a fork id asks the C library for one.",
-        "evidence": "forensics/authorities/src/openssl-3.6.4/crypto/threads_pthread.c lines 1232 and 1238; src/runtime/init.rs's OPENSSL_INIT_ATFORK row"
+        "note": "The remaining name needs no function in the crate. On this profile `openssl_init_fork_handlers()` is `return 1` -- a no-op, which `src/runtime/init.rs` already records for `OPENSSL_INIT_ATFORK`. **`openssl_get_fork_id` was in this list until D304 landed it**: it is `return getpid()`, it is `drbg.c`'s fork check, and a `getpid`-shaped answer is one the crate can give rather than one it must delegate. The gate reported this row as `divergence_record_does_not_match` on the commit that defined the function, which is what makes the row fail-closed rather than a place to park a name the crate has since built.",
+        "evidence": "forensics/authorities/src/openssl-3.6.4/crypto/threads_pthread.c lines 1232 and 1238; src/runtime/init.rs's OPENSSL_INIT_ATFORK row; src/runtime/thread.rs's `openssl_get_fork_id` (docs/DECISIONS.md D304)"
       },
       {
         "owner_module": "several",

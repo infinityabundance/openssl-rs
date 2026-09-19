@@ -1403,6 +1403,23 @@ unsafe extern "C" {
     fn nanosleep(req: *const Timespec, rem: *mut Timespec) -> c_int;
 }
 
+/// `int openssl_get_fork_id(void)` — `crypto/threads_pthread.c:1238-1241`.
+///
+/// The whole body is `return getpid();`; the `FIPS_MODULE` arm beside it is not built on this
+/// profile. It exists because a `fork(2)` hands the child a copy of its parent's DRBG state:
+/// `drbg.c` records this value at every (re)seed and compares it before generating, so a child
+/// that inherits a seeded DRBG reseeds rather than repeating its parent's output. A value that was
+/// not the process's would make that comparison answer "no fork" forever, which is a false
+/// negative in a security-relevant path rather than a cosmetic error.
+///
+/// Internal: `include/internal/cryptlib.h` declares it and `libcrypto.num` does not, so it carries
+/// no export.
+#[allow(dead_code)] // the landing caller is `src/provider/rand.rs`'s `ProvDrbg` reseed check
+pub(crate) fn openssl_get_fork_id() -> c_int {
+    // SAFETY: `getpid` takes no arguments, dereferences none, and cannot fail per POSIX.
+    unsafe { sys::getpid() }
+}
+
 #[cfg(test)]
 mod sleep_tests {
     use super::*;
@@ -1426,5 +1443,29 @@ mod sleep_tests {
         // magnitude on an unloaded machine. The units are nanoseconds.
         assert!(elapsed >= 20_000_000, "elapsed {elapsed}ns");
         assert!(elapsed < 2_000_000_000, "elapsed {elapsed}ns");
+    }
+}
+
+#[cfg(test)]
+mod fork_id_tests {
+    //! `openssl_get_fork_id` is one line, and this is the test that says which line.
+    //!
+    //! The function's whole contract is "the process's id", and `drbg.c`'s fork check is a
+    //! comparison of two of its answers. A transcription that returned a constant would satisfy
+    //! every caller in a single process and defeat the check in exactly the case it exists for, so
+    //! the assertion is against the platform rather than against a recorded value.
+
+    use super::*;
+
+    #[test]
+    fn the_fork_id_is_this_process_id() {
+        let id = openssl_get_fork_id();
+        assert!(id > 0, "a pid is positive, got {id}");
+        // SAFETY: `getpid` takes no arguments and cannot fail per POSIX.
+        let real = unsafe { sys::getpid() };
+        assert_eq!(
+            id, real,
+            "openssl_get_fork_id() is getpid(), not a copy of it"
+        );
     }
 }
