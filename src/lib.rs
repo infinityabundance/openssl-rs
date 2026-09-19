@@ -63,6 +63,7 @@
 #![deny(missing_docs)]
 
 pub mod aes;
+pub mod aria;
 pub mod asn1;
 pub mod blowfish;
 pub mod bn;
