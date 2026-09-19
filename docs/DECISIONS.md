@@ -19574,3 +19574,57 @@ difference is observable through `OSSL_PARAM_get_int64` on the caller's side. `d
 the landing caller, which is the idiom the crate already uses for a mechanism landed ahead of its
 reader; a reader that wants to know what is outstanding has the allow comments rather than a
 silent unused-symbol warning to guess from.
+
+## D300 -- the entropy pool lands as `src/rand/`, compiled and tested while nothing calls it
+
+9.2's first unit, and the one part of Phase 9 that can land honestly before the front it will be
+called from. `src/rand/mod.rs` and `src/rand/pool.rs` transcribe `crypto/rand/rand_pool.c` and
+`include/crypto/rand_pool.h`: the `RAND_POOL` layout with the authority's field order and widths,
+and sixteen functions -- `_new`, `_attach`, `_free`, `_buffer`, `_entropy`, `_length`, `_detach`,
+`_reattach`, `_entropy_available`, `_entropy_needed`, `_bytes_needed`, `_bytes_remaining`, `_add`,
+`_add_begin`, `_add_end`, `_adin_mix_in` -- plus the two static helpers `rand_pool_grow` and
+`entropy_to_bytes`. **Ten unit tests; the suite goes 624 -> 634.**
+
+**Why this unit first.** The pool is the only piece of the random layer with **no platform
+dependency and no caller**, so it is the only piece that can be landed, compiled, clippy-clean and
+tested on the day it arrives. Everything else in 9.2–9.5 needs either the DRBG it fetches or the
+`sys` bindings the seeding arm uses. The module-level `allow(dead_code)` states that and names the
+landing callers; the precedent is `src/runtime/rcu.rs` and `src/evp/fetch.rs`.
+
+**The seeding half is deliberately not here.** `ossl_pool_acquire_entropy`,
+`ossl_rand_pool_init`/`_cleanup` and the `/dev` device cache live in
+`providers/implementations/rands/seeding/rand_unix.c`, which is 9.5's and needs about a dozen `sys`
+bindings the crate does not declare. D298 recorded the correction that put them there.
+
+**Three wrong intuitions the tests caught, all of them in the test rather than the
+transcription**, and recorded at the sites because the same intuition would come back:
+
+1. **`ossl_rand_pool_bytes_needed` clips nothing.** When the estimate does not fit in
+   `max_len - len` the authority raises and answers **0** (`rand_pool.c:262-273`); the test that
+   asserted a clip to `max_len` failed against the transcription, and the transcription was right.
+   Clipping is the plausible-looking answer, which is why the arm is kept with the assertion
+   inverted.
+2. **`ossl_rand_pool_adin_mix_in`'s cyclic side is the pool, not the adin**:
+   `pool->buffer[i % pool->len] ^= adin[i]` with the loop running over `adin_len`. A two-byte adin
+   over a four-byte pool touches only a prefix, and a six-byte adin XORs bytes 0 and 1 **twice**,
+   returning them to what they were. The test now drives both directions plus the double-application
+   identity, and the first version of it failed for exactly the reason a transcription would.
+3. The unit mix: `len` is in **bytes** and `entropy` in **bits**, and `entropy_available` gates on
+   three independent thresholds -- the bit count, `min_len`, and nothing else. A single `>=` would
+   pass a round-trip test and fail the `min_len` arm.
+
+**Every overflowing operation is `wrapping_*`**, for the reason `docs/UNSAFE.md` gives: the crate
+builds with `overflow-checks = true`, so the authority's undefined `size_t` arithmetic has to have a
+defined answer here rather than a panic. The header records it rather than leaving it to the reader
+to notice.
+
+**The evidence that this landed.** The prerequisite gate's `language_census` moves **3 131 ->
+3 140**: nine internal names the crate did not model. The module carries **no export**, so the
+obligation ledger and the court-coverage atlas gain nothing from it -- naming `src/rand/` in
+`phase_state.py`'s `PHASE9_MODULES` is the only place the landing is visible to the evidence
+machinery at all, and the plan's 9.2 row names `crypto/rand/rand_pool.c` so the unit is not
+invisible to `plan_reconciliation` either.
+
+**What this entry does not claim.** Nothing in the crate calls the pool, no Phase 9 export is
+implemented, and the four Phase 9 courts remain pending. The pool is `IMPLEMENTED` in
+`docs/PARITY_MODEL.md`'s sense and nothing stronger.
