@@ -43,6 +43,17 @@
 //! `EVP_CTRL_AEAD_SET_IVLEN` and a second `EVP_EncryptInit_ex`, and applies a `key` **after** the
 //! cipher and the IV, where CMAC returns as soon as it has seen one.
 //!
+//! **`BLAKE2BMAC` and `BLAKE2SMAC` are one row written twice.** The authority's implementation is
+//! `blake2_mac_impl.c`, and `blake2b_mac.c`/`blake2s_mac.c` are thirty-four-line `#define`
+//! preambles that `#include` it — so the two rows differ only in the substitutions the C makes, and
+//! `blake2_mac_row!` is the transcription of those `#define`s rather than a convenience. Three
+//! things about the row are easy to get wrong: the context reports a **non-zero size before
+//! anything is set**, because the parameter block's first byte *is* the digest length; a key
+//! shorter than `KEYBYTES` is zero-padded into a full-width buffer and then fed as one whole
+//! *block*, so the padding is part of what is hashed; and `custom`/`salt` are read out of the
+//! descriptor directly, bounded by their own widths, because `OSSL_PARAM` has no setter for a
+//! fixed-width field.
+//!
 //! **The FIPS arms are absent, and they are absent from the authority's own build too.** Every
 //! `OSSL_FIPS_IND_*` macro is a no-op or a literal `1` when `FIPS_MODULE` is undefined
 //! (`providers/fips/include/fips/fipsindicator.h`'s `#else` block), and the generated decoders
@@ -109,7 +120,7 @@ use crate::provider::util::{
     ossl_prov_cipher_reset, ProvCipher, OSSL_ALG_PARAM_DIGEST,
 };
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{cleanse, CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 
 /// The allocation-tracking `file` argument for CMAC's allocations.
 ///
@@ -553,17 +564,32 @@ pub(crate) static CMAC_FUNCTIONS: [OsslDispatch; 11] = [
 /// `static const OSSL_ALGORITHM deflt_macs[]` — `providers/defltprov.c:334-353`, restricted to
 /// the rows this half implements, **in the authority's order**. `deflt_macs[]` carries nine rows
 /// (`BLAKE2BMAC`, `BLAKE2SMAC`, `CMAC`, `GMAC`, `HMAC`, `KMAC-128`, `KMAC-256`, `POLY1305`,
-/// `SIPHASH`), so `HMAC` and `SIPHASH` are not appended: they are the authority's fifth and ninth
-/// rows, and the census checks that the rows this table publishes are a **subsequence** of the
+/// `SIPHASH`), so the five rows here are the authority's first, second, third, fifth and ninth and
+/// are **not** appended: the census checks that what this table publishes is a *subsequence* of the
 /// authority's order (D244). GMAC is `deferred` to Phase 9 with its blocker named (D243) and its
-/// engine is transcribed; `BLAKE2BMAC`, `BLAKE2SMAC`, `KMAC-128`, `KMAC-256` and `POLY1305` stay
-/// `open` with `owning_phase: 8`, and the census's exact accounting is what keeps all of that true.
+/// engine is transcribed; `KMAC-128`, `KMAC-256` and `POLY1305` stay `open` with `owning_phase: 8`,
+/// and the census's exact accounting is what keeps all of that true.
 ///
 /// **The property definition is `"provider=default"` on every row.** `defltprov.c`'s `ALG` macro
 /// expands through `ALGC(NAMES, FUNC, CHECK) { { NAMES, "provider=default", FUNC }, CHECK }`, and
 /// D247 is what a NULL there cost: a fetch whose property query is `provider=default` stopped
 /// resolving, and `provider!=default` resolved when it should not have.
-pub(crate) static DEFLT_MACS: [OsslAlgorithm; 4] = [
+pub(crate) static DEFLT_MACS: [OsslAlgorithm; 6] = [
+    OsslAlgorithm {
+        // `PROV_NAMES_BLAKE2BMAC` — `prov/names.h:322`. The OID is part of the row: the
+        // census compares the whole alias sequence, not the primary name (D244).
+        algorithm_names: c"BLAKE2BMAC:1.3.6.1.4.1.1722.12.2.1".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: blake2b_mac::FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_BLAKE2SMAC` — `prov/names.h:323`.
+        algorithm_names: c"BLAKE2SMAC:1.3.6.1.4.1.1722.12.2.2".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: blake2s_mac::FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
     OsslAlgorithm {
         algorithm_names: c"CMAC".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
@@ -2065,6 +2091,489 @@ pub(crate) static HMAC_FUNCTIONS: [OsslDispatch; 11] = [
     },
 ];
 
+// ---------------------------------------------------------------------------------------------
+// `BLAKE2BMAC` / `BLAKE2SMAC` — `providers/implementations/macs/blake2_mac_impl.c`
+// ---------------------------------------------------------------------------------------------
+//
+// The authority writes this row once and instantiates it twice. `blake2b_mac.c` and
+// `blake2s_mac.c` are thirty-four-line `#define` preambles -- the context type, the five widths and
+// the names of the algorithm functions -- and each `#include`s `blake2_mac_impl.c`, which is the
+// whole implementation. `macro_rules!` is the transcription of those `#define`s rather than a
+// convenience, and `src/provider/digest.rs`'s `blake_row!` is the same shape for the digest rows.
+
+/// `OSSL_MAC_PARAM_CUSTOM` — `core_names.h:340` (`"custom"`).
+const OSSL_MAC_PARAM_CUSTOM: *const c_char = c"custom".as_ptr();
+/// `OSSL_MAC_PARAM_SALT` — `core_names.h:352` (`"salt"`).
+const OSSL_MAC_PARAM_SALT: *const c_char = c"salt".as_ptr();
+
+/// The allocation `file` argument for both rows.
+///
+/// **This one carries the `../../src/openssl-3.6.4/` prefix, and the four rows of D252 do not.**
+/// `blake2_mac_impl.c` is a *source-tree* file that the two preambles `#include`, while
+/// `cmac_prov.c`, `gmac_prov.c`, `hmac_prov.c` and `siphash_prov.c` are generated from `.c.in`
+/// templates into the build tree. The compiler spells an included source file with its source-tree
+/// path and a generated file with its build-relative path, which is why the two groups differ; both
+/// object files carry this exact string. The unit test below binds it to the `file` of a raise in
+/// the same unit, which is the same `__FILE__`.
+const FILE_BLAKE2_MAC: *const c_char =
+    c"../../src/openssl-3.6.4/providers/implementations/macs/blake2_mac_impl.c".as_ptr();
+
+/// The two keys `blake2_get_ctx_decoder` locates, each with the site of its own
+/// repeated-parameter raise. The sites are in `blake2_params.inc`, which is generated into
+/// `providers/implementations/include/prov/` and included by both preambles, so the six
+/// coordinates are one set shared by the two rows (D254).
+const BLAKE2_GET_CTX_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 2] = [
+    (&err_sites::PROV_BLAKE2_PARAMS_46, OSSL_MAC_PARAM_BLOCK_SIZE),
+    (&err_sites::PROV_BLAKE2_PARAMS_57, OSSL_MAC_PARAM_SIZE),
+];
+
+/// The four keys `blake2_mac_set_ctx_decoder` locates, with their raise sites. `custom` and `salt`
+/// both begin with `s`, and the generated `switch` separates them on the *second* byte, so this
+/// array's order is not the switch's order -- what it has to do is pair each key with its own site,
+/// which is what a duplicate has to report.
+const BLAKE2_SET_CTX_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 4] = [
+    (&err_sites::PROV_BLAKE2_PARAMS_105, OSSL_MAC_PARAM_CUSTOM),
+    (&err_sites::PROV_BLAKE2_PARAMS_116, OSSL_MAC_PARAM_KEY),
+    (&err_sites::PROV_BLAKE2_PARAMS_131, OSSL_MAC_PARAM_SALT),
+    (&err_sites::PROV_BLAKE2_PARAMS_142, OSSL_MAC_PARAM_SIZE),
+];
+
+/// `blake2_get_ctx_list` — `blake2_params.inc:22-27`: two `OSSL_PARAM_size_t` entries.
+static BLAKE2_GETTABLE_CTX_PARAMS: [OsslParam; 3] = [
+    param_size_t(OSSL_MAC_PARAM_SIZE),
+    param_size_t(OSSL_MAC_PARAM_BLOCK_SIZE),
+    END,
+];
+
+/// `blake2_mac_set_ctx_list` — `blake2_params.inc:76-83`. `size` is a `size_t` and the other three
+/// are octet strings, and `RT-CIPHER` prints all three fields of every entry.
+static BLAKE2_SETTABLE_CTX_PARAMS: [OsslParam; 5] = [
+    param_size_t(OSSL_MAC_PARAM_SIZE),
+    param_octet_string(OSSL_MAC_PARAM_KEY),
+    param_octet_string(OSSL_MAC_PARAM_CUSTOM),
+    param_octet_string(OSSL_MAC_PARAM_SALT),
+    END,
+];
+
+macro_rules! blake2_mac_row {
+    ($row:ident, $flavour:ident) => {
+        pub(crate) mod $row {
+            use super::*;
+            use crate::digest::blake2::$flavour as b2;
+
+            /// `struct blake2_mac_data_st` — `blake2_mac_impl.c:38-42`.
+            ///
+            /// The context keeps the whole parameter block beside the state, so a `size`, `custom`
+            /// or `salt` set before `init` survives the re-initialisation. The key is kept at the
+            /// **full** `KEYBYTES` width and zero-padded, because `init_key` copies exactly
+            /// `key_length` bytes out of it and then feeds an entire block -- so the padding is
+            /// part of what the algorithm hashes.
+            #[repr(C)]
+            pub(crate) struct MacData {
+                /// `BLAKE2_CTX ctx`.
+                pub ctx: b2::Ctx,
+                /// `BLAKE2_PARAM params`.
+                pub params: b2::Param,
+                /// `unsigned char key[KEYBYTES]`.
+                pub key: [c_uchar; b2::KEYBYTES],
+            }
+
+            /// `static void *blake2_mac_new(void *unused_provctx)` — `blake2_mac_impl.c:44-57`.
+            ///
+            /// # Safety
+            /// The dispatch contract.
+            unsafe extern "C" fn newctx(_provctx: *mut c_void) -> *mut c_void {
+                // SAFETY: the caller's contract.
+                unsafe {
+                    if is_running() == 0 {
+                        return ptr::null_mut();
+                    }
+                    let macctx =
+                        CRYPTO_zalloc(core::mem::size_of::<MacData>(), FILE_BLAKE2_MAC, LINE)
+                            .cast::<MacData>();
+                    if !macctx.is_null() {
+                        b2::param_init(&mut (*macctx).params);
+                    }
+                    macctx.cast()
+                }
+            }
+
+            /// `static void *blake2_mac_dup(void *vsrc)` — `blake2_mac_impl.c:59-73`.
+            ///
+            /// **A fresh zalloc and a whole-struct copy.** Unlike `hmac_dup` this rebuilds nothing:
+            /// the row owns no pointer of its own, so the copy *is* the duplicate. The `zalloc`
+            /// before it is the authority's own redundancy -- the `*dst = *src` then overwrites
+            /// every byte of the block -- and it is transcribed rather than simplified away,
+            /// because a failed `zalloc` is an observable refusal.
+            ///
+            /// # Safety
+            /// The dispatch contract.
+            unsafe extern "C" fn dup(vsrc: *mut c_void) -> *mut c_void {
+                // SAFETY: the caller's contract.
+                unsafe {
+                    if is_running() == 0 {
+                        return ptr::null_mut();
+                    }
+                    let dst = CRYPTO_zalloc(core::mem::size_of::<MacData>(), FILE_BLAKE2_MAC, LINE)
+                        .cast::<MacData>();
+                    if dst.is_null() {
+                        return ptr::null_mut();
+                    }
+                    ptr::copy_nonoverlapping(
+                        vsrc.cast::<u8>(),
+                        dst.cast::<u8>(),
+                        core::mem::size_of::<MacData>(),
+                    );
+                    dst.cast()
+                }
+            }
+
+            /// `static void blake2_mac_free(void *vmacctx)` — `blake2_mac_impl.c:75-83`. The key
+            /// *member* is cleansed and then the struct is freed, which is not
+            /// `CRYPTO_clear_free`'s cleanse-and-free of a single block.
+            ///
+            /// # Safety
+            /// The dispatch contract.
+            unsafe extern "C" fn free(vmacctx: *mut c_void) {
+                // SAFETY: the caller's contract; `vmacctx` is a context `newctx` allocated.
+                unsafe {
+                    if !vmacctx.is_null() {
+                        let macctx = vmacctx.cast::<MacData>();
+                        cleanse((*macctx).key.as_mut_ptr(), b2::KEYBYTES);
+                        CRYPTO_free(vmacctx, FILE_BLAKE2_MAC, LINE);
+                    }
+                }
+            }
+
+            /// `static size_t blake2_mac_size(void *vmacctx)` — `blake2_mac_impl.c:85-90`. The
+            /// parameter block's first byte *is* the digest length, so a context reports the
+            /// default before `init` rather than zero.
+            ///
+            /// # Safety
+            /// The dispatch contract.
+            unsafe fn mac_size(macctx: *mut MacData) -> usize {
+                // SAFETY: the caller's contract.
+                unsafe { (*macctx).params.b[0] as usize }
+            }
+
+            /// `static int blake2_setkey(struct blake2_mac_data_st *macctx, const unsigned char
+            /// *key, size_t keylen)` — `blake2_mac_impl.c:92-105`.
+            ///
+            /// A zero-length key is refused as well as an over-long one, and the zero pad is
+            /// written only when it is needed -- so the tail of the buffer otherwise still holds
+            /// the previous key's bytes, and `init_key` reading `key_length` of them is what makes
+            /// that unobservable rather than a leak.
+            ///
+            /// # Safety
+            /// `macctx` is live; `key` readable for `keylen` bytes.
+            unsafe fn setkey(macctx: *mut MacData, key: *const c_uchar, keylen: usize) -> c_int {
+                // SAFETY: the caller's contract.
+                unsafe {
+                    if keylen > b2::KEYBYTES || keylen == 0 {
+                        return fail_at(&err_sites::PROV_BLAKE2_MAC_IMPL_96);
+                    }
+                    ptr::copy_nonoverlapping(key, (*macctx).key.as_mut_ptr(), keylen);
+                    if keylen < b2::KEYBYTES {
+                        ptr::write_bytes(
+                            (*macctx).key.as_mut_ptr().add(keylen),
+                            0,
+                            b2::KEYBYTES - keylen,
+                        );
+                    }
+                    b2::param_set_key_length(&mut (*macctx).params, keylen as u8);
+                    1
+                }
+            }
+
+            /// `static int blake2_mac_init(void *vmacctx, const unsigned char *key, size_t keylen,
+            /// const OSSL_PARAM params[])` — `blake2_mac_impl.c:107-123`.
+            ///
+            /// The `key == NULL` arm refuses when no key has been set *by any route*: the `params`
+            /// array may have carried one, which is why the test is on the parameter block's
+            /// `key_length` byte and not on the argument.
+            ///
+            /// # Safety
+            /// The dispatch contract.
+            unsafe extern "C" fn init(
+                vmacctx: *mut c_void,
+                key: *const c_uchar,
+                keylen: usize,
+                params: *const OsslParam,
+            ) -> c_int {
+                // SAFETY: the caller's contract.
+                unsafe {
+                    if is_running() == 0 || set_ctx_params(vmacctx, params) == 0 {
+                        return 0;
+                    }
+                    let macctx = vmacctx.cast::<MacData>();
+                    if !key.is_null() {
+                        if setkey(macctx, key, keylen) == 0 {
+                            return 0;
+                        }
+                    } else if (*macctx).params.b[1] == 0 {
+                        return fail_at(&err_sites::PROV_BLAKE2_MAC_IMPL_119);
+                    }
+                    b2::init_key(
+                        ptr::addr_of_mut!((*macctx).ctx),
+                        ptr::addr_of!((*macctx).params),
+                        (*macctx).key.as_ptr(),
+                    )
+                }
+            }
+
+            /// `static int blake2_mac_update(void *vmacctx, const unsigned char *data, size_t
+            /// datalen)` — `blake2_mac_impl.c:125-134`. A zero-length update succeeds without
+            /// touching the state.
+            ///
+            /// # Safety
+            /// The dispatch contract.
+            unsafe extern "C" fn update(
+                vmacctx: *mut c_void,
+                data: *const c_uchar,
+                datalen: usize,
+            ) -> c_int {
+                // SAFETY: the caller's contract.
+                unsafe {
+                    if datalen == 0 {
+                        return 1;
+                    }
+                    b2::update(
+                        ptr::addr_of_mut!((*vmacctx.cast::<MacData>()).ctx),
+                        data,
+                        datalen,
+                    )
+                }
+            }
+
+            /// `static int blake2_mac_final(void *vmacctx, unsigned char *out, size_t *outl,
+            /// size_t outsize)` — `blake2_mac_impl.c:136-147`.
+            ///
+            /// The length is written **before** the final runs and is never conditional, so a
+            /// failed final still leaves the caller's `*outl` holding the size. That ordering is
+            /// the authority's and it is observable through `EVP_MAC_final`, which copies the row's
+            /// value even when the row returned 0.
+            ///
+            /// # Safety
+            /// The dispatch contract.
+            unsafe extern "C" fn final_(
+                vmacctx: *mut c_void,
+                out: *mut c_uchar,
+                outl: *mut usize,
+                _outsize: usize,
+            ) -> c_int {
+                // SAFETY: the caller's contract.
+                unsafe {
+                    if is_running() == 0 {
+                        return 0;
+                    }
+                    let macctx = vmacctx.cast::<MacData>();
+                    *outl = mac_size(macctx);
+                    b2::final_(out, ptr::addr_of_mut!((*macctx).ctx))
+                }
+            }
+
+            /// `static const OSSL_PARAM *blake2_gettable_ctx_params(void *ctx, void *provctx)` —
+            /// `blake2_mac_impl.c:150-154`.
+            ///
+            /// # Safety
+            /// The dispatch contract.
+            unsafe extern "C" fn gettable_ctx_params(
+                _ctx: *mut c_void,
+                _provctx: *mut c_void,
+            ) -> *const OsslParam {
+                BLAKE2_GETTABLE_CTX_PARAMS.as_ptr()
+            }
+
+            /// `static int blake2_get_ctx_params(void *vmacctx, OSSL_PARAM params[])` —
+            /// `blake2_mac_impl.c:156-172`. Both keys answer through `OSSL_PARAM_set_size_t`, and
+            /// `block-size` answers the **constant** `BLOCKBYTES` rather than anything from the
+            /// parameter block.
+            ///
+            /// # Safety
+            /// The dispatch contract.
+            unsafe extern "C" fn get_ctx_params(
+                vmacctx: *mut c_void,
+                params: *mut OsslParam,
+            ) -> c_int {
+                // SAFETY: the caller's contract.
+                unsafe {
+                    if vmacctx.is_null() {
+                        return 0;
+                    }
+                    if let Some(site) = repeated_param_site(params, &BLAKE2_GET_CTX_DECODER_KEYS) {
+                        return fail_at(site);
+                    }
+                    let macctx = vmacctx.cast::<MacData>();
+                    let p = crate::params::OSSL_PARAM_locate(params, OSSL_MAC_PARAM_SIZE);
+                    if !p.is_null()
+                        && crate::params::OSSL_PARAM_set_size_t(p, mac_size(macctx)) == 0
+                    {
+                        return 0;
+                    }
+                    let p = crate::params::OSSL_PARAM_locate(params, OSSL_MAC_PARAM_BLOCK_SIZE);
+                    if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, b2::BLOCKBYTES) == 0
+                    {
+                        return 0;
+                    }
+                    1
+                }
+            }
+
+            /// `static const OSSL_PARAM *blake2_mac_settable_ctx_params(void *ctx, void *p_ctx)`
+            /// — `blake2_mac_impl.c:174-178`.
+            ///
+            /// # Safety
+            /// The dispatch contract.
+            unsafe extern "C" fn settable_ctx_params(
+                _ctx: *mut c_void,
+                _p_ctx: *mut c_void,
+            ) -> *const OsslParam {
+                BLAKE2_SETTABLE_CTX_PARAMS.as_ptr()
+            }
+
+            /// `static int blake2_mac_set_ctx_params(void *vmacctx, const OSSL_PARAM params[])` —
+            /// `blake2_mac_impl.c:183-237`.
+            ///
+            /// Four things are contract. The `size` arm accepts the **range** `1..=OUTBYTES` and
+            /// raises `PROV_R_NOT_XOF_OR_INVALID_LENGTH` outside it. `custom` and `salt` are
+            /// bounded by their own widths with their own reasons. Both are applied to the
+            /// parameter block without any setter indirection -- the descriptor's `data` and
+            /// `data_size` are read directly, because `OSSL_PARAM` offers no setter for a
+            /// fixed-width field, and the authority's comment says so. And a wrong `data_type` on
+            /// any of the three is a bare zero with nothing queued.
+            ///
+            /// # Safety
+            /// The dispatch contract.
+            unsafe extern "C" fn set_ctx_params(
+                vmacctx: *mut c_void,
+                params: *const OsslParam,
+            ) -> c_int {
+                // SAFETY: the caller's contract.
+                unsafe {
+                    if vmacctx.is_null() {
+                        return 0;
+                    }
+                    if let Some(site) = repeated_param_site(params, &BLAKE2_SET_CTX_DECODER_KEYS) {
+                        return fail_at(site);
+                    }
+                    let macctx = vmacctx.cast::<MacData>();
+
+                    let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_MAC_PARAM_SIZE);
+                    if !p.is_null() {
+                        let mut size: usize = 0;
+                        if crate::params::OSSL_PARAM_get_size_t(p, &mut size) == 0 {
+                            return fail_at(&err_sites::PROV_BLAKE2_MAC_IMPL_197);
+                        }
+                        // The authority's literal `size < 1 || size > BLAKE2_OUTBYTES`, kept in
+                        // the form it is written rather than rewritten as a `RangeInclusive`
+                        // membership test -- the same call this crate makes wherever the
+                        // arithmetic *is* the transcription.
+                        #[allow(clippy::manual_range_contains)]
+                        let out_of_range = size < 1 || size > b2::OUTBYTES;
+                        if out_of_range {
+                            return fail_at(&err_sites::PROV_BLAKE2_MAC_IMPL_197);
+                        }
+                        b2::param_set_digest_length(&mut (*macctx).params, size as u8);
+                    }
+
+                    let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_MAC_PARAM_KEY);
+                    if !p.is_null() {
+                        if (*p).data_type != OSSL_PARAM_OCTET_STRING
+                            || setkey(macctx, (*p).data.cast::<c_uchar>(), (*p).data_size) == 0
+                        {
+                            return 0;
+                        }
+                    }
+
+                    let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_MAC_PARAM_CUSTOM);
+                    if !p.is_null() {
+                        if (*p).data_type != OSSL_PARAM_OCTET_STRING {
+                            return 0;
+                        }
+                        if (*p).data_size > b2::PERSONALBYTES {
+                            return fail_at(&err_sites::PROV_BLAKE2_MAC_IMPL_216);
+                        }
+                        // SAFETY: the descriptor's `data` is readable for its own `data_size`,
+                        // which the bound above has just checked against `PERSONALBYTES`.
+                        let bytes =
+                            core::slice::from_raw_parts((*p).data.cast::<u8>(), (*p).data_size);
+                        b2::param_set_personal(&mut (*macctx).params, bytes);
+                    }
+
+                    let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_MAC_PARAM_SALT);
+                    if !p.is_null() {
+                        if (*p).data_type != OSSL_PARAM_OCTET_STRING {
+                            return 0;
+                        }
+                        if (*p).data_size > b2::SALTBYTES {
+                            return fail_at(&err_sites::PROV_BLAKE2_MAC_IMPL_231);
+                        }
+                        // SAFETY: as above, against `SALTBYTES`.
+                        let bytes =
+                            core::slice::from_raw_parts((*p).data.cast::<u8>(), (*p).data_size);
+                        b2::param_set_salt(&mut (*macctx).params, bytes);
+                    }
+                    1
+                }
+            }
+
+            /// `const OSSL_DISPATCH ossl_blake2bmac_functions[]` /
+            /// `ossl_blake2smac_functions[]` — `blake2_mac_impl.c:239-253`: ten entries and the
+            /// terminator, identical in both instantiations because the table is inside the
+            /// included body.
+            pub(crate) static FUNCTIONS: [OsslDispatch; 11] = [
+                OsslDispatch {
+                    function_id: OSSL_FUNC_MAC_NEWCTX,
+                    function: newctx as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_FUNC_MAC_DUPCTX,
+                    function: dup as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_FUNC_MAC_FREECTX,
+                    function: free as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_FUNC_MAC_INIT,
+                    function: init as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_FUNC_MAC_UPDATE,
+                    function: update as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_FUNC_MAC_FINAL,
+                    function: final_ as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_FUNC_MAC_GETTABLE_CTX_PARAMS,
+                    function: gettable_ctx_params as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_FUNC_MAC_GET_CTX_PARAMS,
+                    function: get_ctx_params as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_FUNC_MAC_SETTABLE_CTX_PARAMS,
+                    function: settable_ctx_params as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_FUNC_MAC_SET_CTX_PARAMS,
+                    function: set_ctx_params as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_DISPATCH_END,
+                    function: ptr::null_mut(),
+                },
+            ];
+        }
+    };
+}
+
+blake2_mac_row!(blake2b_mac, blake2b);
+blake2_mac_row!(blake2s_mac, blake2s);
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2072,21 +2581,27 @@ mod tests {
 
     #[test]
     fn the_mac_table_names_its_rows_in_the_authoritys_order() {
-        // CMAC then HMAC then SIPHASH, and **not** appended: `defltprov.c` lists HMAC fifth and
-        // SIPHASH ninth, after GMAC, and the census requires the crate's rows to be a subsequence of
-        // the authority's order (D244). GMAC's engine is transcribed and its registration is held for
+        // The authority's first, second, third, fifth and ninth rows, and **not** appended:
+        // `defltprov.c` lists BLAKE2BMAC first, BLAKE2SMAC second, HMAC fifth and SIPHASH ninth
+        // after GMAC, and the census requires the crate's rows to be a subsequence of the
+        // authority's order (D244). GMAC's engine is transcribed and its registration is held for
         // Phase 9 (D243), so it is absent here rather than in the wrong place.
-        assert_eq!(DEFLT_MACS.len(), 4);
+        assert_eq!(DEFLT_MACS.len(), 6);
         // SAFETY: the terminator's name is NULL by construction, and each landed row's is a
         // `'static` C string.
         unsafe {
-            assert!(DEFLT_MACS[3].algorithm_names.is_null());
-            assert!(DEFLT_MACS[3].property_definition.is_null());
-            assert!(DEFLT_MACS[3].implementation.is_null());
+            assert!(DEFLT_MACS[5].algorithm_names.is_null());
+            assert!(DEFLT_MACS[5].property_definition.is_null());
+            assert!(DEFLT_MACS[5].implementation.is_null());
             for (row, want) in [
-                (&DEFLT_MACS[0], b"CMAC".as_slice()),
-                (&DEFLT_MACS[1], b"HMAC"),
-                (&DEFLT_MACS[2], b"SIPHASH"),
+                (
+                    &DEFLT_MACS[0],
+                    b"BLAKE2BMAC:1.3.6.1.4.1.1722.12.2.1".as_slice(),
+                ),
+                (&DEFLT_MACS[1], b"BLAKE2SMAC:1.3.6.1.4.1.1722.12.2.2"),
+                (&DEFLT_MACS[2], b"CMAC"),
+                (&DEFLT_MACS[3], b"HMAC"),
+                (&DEFLT_MACS[4], b"SIPHASH"),
             ] {
                 let name = core::ffi::CStr::from_ptr(row.algorithm_names);
                 assert_eq!(name.to_bytes(), want);
@@ -2112,11 +2627,24 @@ mod tests {
     /// than a comment.
     #[test]
     fn every_allocation_file_constant_is_the_authoritys_own_string() {
-        let cases: [(&str, *const c_char, &err_sites::ErrSite); 4] = [
+        let cases: [(&str, *const c_char, &err_sites::ErrSite); 6] = [
             ("cmac", FILE, &err_sites::PROV_CMAC_PROV_245),
             ("gmac", FILE_GMAC, &err_sites::PROV_GMAC_PROV_200),
             ("hmac", FILE_HMAC, &err_sites::PROV_HMAC_PROV_313),
             ("siphash", FILE_SIPHASH, &err_sites::PROV_SIPHASH_PROV_190),
+            // The two BLAKE2 rows allocate from `blake2_mac_impl.c`, which is *included* rather
+            // than generated, so its `__FILE__` carries the source-tree prefix the four above do
+            // not -- and both rows share this one constant because both include the one file.
+            (
+                "blake2bmac",
+                FILE_BLAKE2_MAC,
+                &err_sites::PROV_BLAKE2_MAC_IMPL_96,
+            ),
+            (
+                "blake2smac",
+                FILE_BLAKE2_MAC,
+                &err_sites::PROV_BLAKE2_MAC_IMPL_96,
+            ),
         ];
         for (unit, file, site) in cases {
             // SAFETY: `file` is a `'static` literal and is NUL-terminated.

@@ -444,6 +444,11 @@ COVERED_FILES = [
     # `cmac_prov.c`'s three and `gmac_prov.c`'s.
     ("providers/implementations/macs/hmac_prov.c", "PROV_HMAC_PROV"),
     ("providers/implementations/include/prov/blake2_params.inc", "PROV_BLAKE2_PARAMS"),
+    # The BLAKE2 MAC implementation, which `blake2b_mac.c` and `blake2s_mac.c` each `#include` as
+    # their whole body. It is a *source-tree* file, so unlike the `.c.in`-generated units its
+    # `__FILE__` carries the `../../src/openssl-3.6.4/` prefix -- the opposite of D235's finding,
+    # and measured from the two object files rather than assumed.
+    ("providers/implementations/macs/blake2_mac_impl.c", "PROV_BLAKE2_MAC_IMPL"),
     ("providers/implementations/macs/siphash_prov.c", "PROV_SIPHASH_PROV"),
     # Phase 8's digest half. `digestcommon.c` is generated and shared by every digest
     # row the *default* provider publishes. The other `*_prov.c` units raise nothing in

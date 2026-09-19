@@ -19002,6 +19002,56 @@ pub(crate) const PROV_BLAKE2_PARAMS_142: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `blake2_setkey` at `providers/implementations/macs/blake2_mac_impl.c:96` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_BLAKE2_MAC_IMPL_96: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/macs/blake2_mac_impl.c",
+    line: 96,
+    func: c"blake2_setkey",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `blake2_mac_init` at `providers/implementations/macs/blake2_mac_impl.c:119` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_BLAKE2_MAC_IMPL_119: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/macs/blake2_mac_impl.c",
+    line: 119,
+    func: c"blake2_mac_init",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `blake2_mac_set_ctx_params` at `providers/implementations/macs/blake2_mac_impl.c:197` (PROV_R_NOT_XOF_OR_INVALID_LENGTH).
+pub(crate) const PROV_BLAKE2_MAC_IMPL_197: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/macs/blake2_mac_impl.c",
+    line: 197,
+    func: c"blake2_mac_set_ctx_params",
+    lib: 57,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `blake2_mac_set_ctx_params` at `providers/implementations/macs/blake2_mac_impl.c:216` (PROV_R_INVALID_CUSTOM_LENGTH).
+pub(crate) const PROV_BLAKE2_MAC_IMPL_216: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/macs/blake2_mac_impl.c",
+    line: 216,
+    func: c"blake2_mac_set_ctx_params",
+    lib: 57,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `blake2_mac_set_ctx_params` at `providers/implementations/macs/blake2_mac_impl.c:231` (PROV_R_INVALID_SALT_LENGTH).
+pub(crate) const PROV_BLAKE2_MAC_IMPL_231: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/macs/blake2_mac_impl.c",
+    line: 231,
+    func: c"blake2_mac_set_ctx_params",
+    lib: 57,
+    reason: 112,
+    dynamic_reason: false,
+};
+
 /// `siphash_get_ctx_params_decoder` at `providers/implementations/macs/siphash_prov.c:190` (PROV_R_REPEATED_PARAMETER).
 pub(crate) const PROV_SIPHASH_PROV_190: ErrSite = ErrSite {
     file: c"providers/implementations/macs/siphash_prov.c",
@@ -21060,6 +21110,11 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_BLAKE2_PARAMS_116,
     PROV_BLAKE2_PARAMS_131,
     PROV_BLAKE2_PARAMS_142,
+    PROV_BLAKE2_MAC_IMPL_96,
+    PROV_BLAKE2_MAC_IMPL_119,
+    PROV_BLAKE2_MAC_IMPL_197,
+    PROV_BLAKE2_MAC_IMPL_216,
+    PROV_BLAKE2_MAC_IMPL_231,
     PROV_SIPHASH_PROV_190,
     PROV_SIPHASH_PROV_201,
     PROV_SIPHASH_PROV_212,

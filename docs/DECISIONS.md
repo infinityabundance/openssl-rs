@@ -16926,3 +16926,87 @@ accident.
 **194 implemented / 576 open / 16 deferred**, the provider census stays **112 implemented / 198 open /
 686 deferred** with coverage **112 / 112 / 0**, no court observation moves, and unit tests stay at
 **574**. Full pipeline to `PIPELINE OK`.
+
+## D256 — `BLAKE2BMAC` and `BLAKE2SMAC` land, and the census refuses a row whose aliases are short
+
+Two rows for one implementation. `providers/implementations/macs/blake2_mac_impl.c` is the whole
+row; `blake2b_mac.c` and `blake2s_mac.c` are thirty-four-line `#define` preambles that `#include` it,
+substituting the context type, the five widths and the names of the algorithm functions. The census
+moves **112 -> 114 implemented / 198 -> 196 open**, coverage stays at zero unmatched, and
+`implemented[libcrypto]` does not move — the same shape as D252.
+
+**`macro_rules!` is the transcription of the `#define`s.** `src/provider/digest.rs`'s `blake_row!`
+already instantiates the BLAKE2 *digest* rows the same way, and the module doc's note there applies:
+these are provider tables with no exported symbol, so the project's ban on macro-generated *exports*
+is not engaged. The two rows differ in nothing else, and the widths are read from the chosen flavour
+module (`b2::KEYBYTES`, `b2::PERSONALBYTES`, …) rather than passed in, so a row cannot be instantiated
+with a width its own parameter block does not have.
+
+**Three things about the row that a plausible transcription gets wrong.** The context reports a
+**non-zero size before anything is set** — the parameter block's first byte *is* the digest length and
+`newctx` writes the default into it — where CMAC's row answers 0 for the same question. A key shorter
+than `KEYBYTES` is zero-padded into a full-width buffer and then fed as **one whole block** by
+`init_key`, so the padding is part of what is hashed rather than an implementation detail; the probe
+observes an eight-byte key for exactly that reason. And `custom` and `salt` are read out of the
+descriptor's `data`/`data_size` directly, bounded by `PERSONALBYTES`/`SALTBYTES` with a reason of
+their own each, because `OSSL_PARAM` has no setter for a fixed-width field — the authority's own
+comment says as much.
+
+**The key is clean, and the buffer beyond it is not.** `blake2_setkey` writes the zero pad *only* when
+the key is short, so a context that previously held a sixty-four-byte key and is then given eight
+keeps fifty-six bytes of the old one in its key buffer. `init_key` copies exactly `key_length` bytes
+out of it, which is what makes that unobservable rather than a leak — and it is why the pad is
+transcribed as conditional rather than as "always zero the tail", which would be a difference a
+later reader could see through `EVP_MAC_CTX_dup`'s whole-struct copy but not through any tag.
+
+**Two new evidence facts, and one of them is the opposite of D252's.** `blake2_mac_impl.c` is a
+*source-tree* file that is `#include`d, so its `__FILE__` carries the `../../src/openssl-3.6.4/`
+prefix, while the four MAC units D252 corrected are generated from `.c.in` templates into the build
+tree and carry none. Both object files say so and the string is bound by the same unit test, which
+now covers all six rows. And the six `PROV_R_REPEATED_PARAMETER` sites live in
+`blake2_params.inc`, generated into `providers/implementations/include/prov/` — a *different*
+directory from the `.c` that includes it, which is why the covered-file entry spells it where it is
+(D254).
+
+**The census refused the first version, and it was right to.** The two rows were published as
+`BLAKE2BMAC`/`BLAKE2SMAC`, and `provider-algorithms.json` failed the run:
+
+    the crate publishes default/OSSL_OP_MAC with the alias sequence 'BLAKE2BMAC' (blake2b_mac::FUNCTIONS),
+    which no authority row matches exactly. A row whose primaries agree but whose aliases differ is a
+    different row: the alias sequence is the observable contract. The authority's row of that primary
+    name carries the alias sequence 'BLAKE2BMAC:1.3.6.1.4.1.1722.12.2.1'.
+
+`PROV_NAMES_BLAKE2BMAC` is `prov/names.h:322` and carries an OID. That is D244's whole-alias-sequence
+rule earning its keep on the first row landed after it: a primary-name match would have published a
+row an application cannot fetch by OID. Both aliases are now the full sequences, and the unit test
+compares against those rather than against the short names.
+
+**What this entry moves.** `implemented[libcrypto]` stays **2035 / 5896**. Phase 8 stays **194
+implemented / 576 open / 16 deferred**. The provider census moves **114 implemented / 196 open / 686
+deferred** with coverage **114 / 114 / 0**. The err-site table moves **1912 -> 1917** (the five raises
+in `blake2_mac_impl.c`). `RT-CIPHER` moves **3953 -> 4149** observations and the pipeline's total
+**27529 -> 27725**. Unit tests stay at **574**. Full pipeline to `PIPELINE OK`.
+
+## D257 — the two BLAKE2 MAC rows are the first whose key buffer has a *conditional* pad, and the probe proves it
+
+Recorded separately because it is a property of the *observation* rather than of the row, and because
+the next MAC rows will need the same treatment.
+
+`blake2_setkey` zero-pads a short key and leaves the tail of the buffer alone for a full-width one, so
+the bytes past `key_length` are whatever the previous key left there. Nothing observable distinguishes
+a "pad only when needed" transcription from an "always zero the tail" one through any tag, through
+`EVP_MAC_CTX_get_params`, or through the error queue — the difference is confined to bytes the
+algorithm never reads, which is exactly the class of defect a differential court *cannot* see by
+construction.
+
+The probe therefore does not merely hash with a short key: it initialises a context with the full
+width, then re-initialises the *same* context with an eight-byte key, and only then finalises. That
+ordering is what a caller does when it reuses a context, and it is the reason the observation is in
+the arm at all rather than being left to a reader of the source. What it establishes is bounded and
+stated exactly: the transcript for that sequence is identical on both sides, which is evidence that the
+pad's conditionality is reproduced; it is not evidence that the tail bytes agree, because neither side
+can read them through the public surface, and the decision that could distinguish them — whether the
+buffer should be cleansed on a short key — is not one the authority makes.
+
+**What this entry moves.** Nothing. No count, no census and no court observation moves; the
+observation it describes is part of D256's `RT-CIPHER` movement. Unit tests stay at **574**.

@@ -384,7 +384,7 @@ and the default provider's AEAD half is nearly there: the twelve AES
 key-wrap rows landed in D230, the six CBC-CTS rows in D231, the two AES-XTS rows in D232, the
 three AES-OCB rows in D233, the three AES-CCM rows in D238, and the three AES-SIV rows in D241,
 on top of the CMAC row and `crypto/modes/siv128.c` that discharged D239's prerequisite — leaving
-ChaCha20 and five of the nine MAC rows open, with GMAC a measured Phase 9 hand-off on the
+ChaCha20 and three of the nine MAC rows open, with GMAC a measured Phase 9 hand-off on the
 `AES-*-GCM` cipher rows whose modes it will accept; the AES-GCM rows are
 a recorded Phase 9 hand-off rather than open work, because both its no-IV encrypting arm
 (`ciphercommon_gcm.c.in:423`) and its TLS arm (`:536`) call RAND_bytes_ex, which `rand.h` owns
@@ -396,8 +396,9 @@ move when it lands. They are recorded here so that "no `OSSL_OP_MAC` row moved" 
 work happened": `include/internal/constant_time.h`'s seven helpers (D250), `PROV_DIGEST` as the
 digest object `hmac_prov.c` stores (D249), and `ssl/record/methods/ssl3_cbc.c`'s
 `ssl3_cbc_digest_record` (D251), which is HMAC's TLS arm. All three have now landed and the `HMAC`
-row they were for is in with them (D252); a fourth, `blake2_mac_impl.c`, is 8.3's BLAKE2 MAC rows'
-and has not landed. Each is evidenced by a tracked expectation table the authority itself produced,
+row they were for is in with them (D252). A fourth, `blake2_mac_impl.c`, is the whole body of the
+two BLAKE2 MAC rows and landed with them (D256); `blake2_params.inc`, the generated include both of
+those rows raise from, joined the covered error-site set ahead of them (D254). Each is evidenced by a tracked expectation table the authority itself produced,
 not by a court observation, because the court-coverage atlas covers exports; see D251's closing
 note, which names the missing plane rather than assuming one.
 

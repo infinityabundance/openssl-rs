@@ -3914,6 +3914,8 @@ static void rt_deflt_properties(void)
         { "digest", "SHA256" },
         { "mac",    "CMAC" },
         { "mac",    "HMAC" },
+        { "mac",    "BLAKE2BMAC" },
+        { "mac",    "BLAKE2SMAC" },
     };
     static const char *props[] = { NULL, "provider=default", "provider!=default" };
     size_t i, j;
@@ -4090,9 +4092,366 @@ static void rt_deflt_siphash(void)
 }
 
 /* The drained queue, normalised the one way both sides can hold: library and reason as numbers,
- * the authority's three debug strings verbatim, and the entry count. Declared before the `HMAC` arm
- * because that arm drains queues and `rt_errq` is defined with the dispatch arm below. */
+ * the authority's three debug strings verbatim, and the entry count. Declared before the `BLAKE2`
+ * and `HMAC` arms, which drain queues, and defined with the dispatch arm below. */
 static void rt_errq(const char *tag);
+
+/*
+ * The `BLAKE2BMAC` and `BLAKE2SMAC` rows. One implementation instantiated twice, so the arm takes
+ * the four widths as parameters rather than being written twice -- and the widths are the whole
+ * difference between the rows, which is why they are printed rather than assumed.
+ *
+ * Three things are particular to this row. The context reports a **non-zero** size before anything
+ * is set, because the parameter block's first byte *is* the digest length and `newctx` writes the
+ * default into it. A key shorter than `KEYBYTES` is **zero-padded and then fed as a whole block**,
+ * so an eight-byte key and a sixty-four-byte one exercise different code and the short one is what
+ * says the padding is real. And `custom`/`salt` are applied from the descriptor directly, bounded
+ * by their own widths, with a reason of their own each.
+ *
+ * Every refusal is drained: `PROV_R_INVALID_KEY_LENGTH` for a zero and an over-long key,
+ * `PROV_R_NO_KEY_SET`, `PROV_R_NOT_XOF_OR_INVALID_LENGTH` at both ends of the size range,
+ * `PROV_R_INVALID_CUSTOM_LENGTH` and `PROV_R_INVALID_SALT_LENGTH` -- five reasons from one unit.
+ */
+static void rt_deflt_blake2_mac_one(const char *name, const char *label, size_t keybytes,
+                                    size_t outbytes, size_t personabytes, size_t saltbytes)
+{
+    static const size_t lens[] = { 0, 1, 63, 64, 127, 128, 129, 200 };
+    EVP_MAC *mac = EVP_MAC_fetch(NULL, name, NULL);
+    EVP_MAC_CTX *ctx;
+    unsigned char key[64];
+    unsigned char big[64];
+    unsigned char msg[200];
+    unsigned char out[64];
+    unsigned char out2[64];
+    OSSL_PARAM set[4];
+    size_t i, outl, outl2;
+    int r;
+
+    printf("defltblake2.%s.fetched=%d\n", label, mac != NULL);
+    if (mac == NULL)
+        return;
+    for (i = 0; i < sizeof(key); i++) {
+        key[i] = (unsigned char)(0xf0u + i);
+        big[i] = (unsigned char)(0x10u + i);
+    }
+    for (i = 0; i < sizeof(msg); i++)
+        msg[i] = (unsigned char)i;
+
+    ctx = EVP_MAC_CTX_new(mac);
+    printf("defltblake2.%s.ctx=%d\n", label, ctx != NULL);
+    if (ctx == NULL) {
+        EVP_MAC_free(mac);
+        return;
+    }
+
+    rt_param_list("defltblake2", label, "gp", EVP_MAC_gettable_params(mac));
+    rt_param_list("defltblake2", label, "cgp", EVP_MAC_CTX_gettable_params(ctx));
+    rt_param_list("defltblake2", label, "csp", EVP_MAC_CTX_settable_params(ctx));
+
+    /* Both published sizes are readable before anything is set, and neither is zero. */
+    {
+        size_t sz = 0, bs = 0;
+        OSSL_PARAM g[3];
+
+        g[0] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &sz);
+        g[1] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_BLOCK_SIZE, &bs);
+        g[2] = OSSL_PARAM_construct_end();
+        printf("defltblake2.%s.pre=%d:%zu:%zu\n", label, EVP_MAC_CTX_get_params(ctx, g), sz, bs);
+    }
+
+    /* The known answers, at every length that crosses a block boundary. */
+    for (i = 0; i < sizeof(lens) / sizeof(lens[0]); i++) {
+        EVP_MAC_CTX *c = EVP_MAC_CTX_new(mac);
+
+        outl = 0;
+        if (EVP_MAC_init(c, key, keybytes, NULL) == 1
+            && EVP_MAC_update(c, msg, lens[i]) == 1
+            && EVP_MAC_final(c, out, &outl, sizeof(out)) == 1) {
+            printf("defltblake2.%s.kat%zu.len=%zu\n", label, lens[i], outl);
+            rt_hex("defltblake2.katv", out, outl);
+        } else {
+            printf("defltblake2.%s.kat%zu.enclen=0\n", label, lens[i]);
+        }
+        EVP_MAC_CTX_free(c);
+    }
+
+    /*
+     * A key shorter than the full width, which is zero-padded into the key buffer and then fed as
+     * a whole block. The tag must equal the `keybytes` one only when the padding makes the two
+     * keys equal, which it does not here -- the observation is that the short key is *accepted*,
+     * not that it agrees with anything.
+     */
+    {
+        EVP_MAC_CTX *c = EVP_MAC_CTX_new(mac);
+
+        /*
+         * The **same** context twice: first with a full-width key, then with an eight-byte one.
+         * `blake2_setkey` pads the buffer only when the key is short, so after the second call the
+         * bytes past eight are the first key's -- and `init_key` copies exactly `key_length` of
+         * them, which is what makes the conditional pad unobservable. A fresh context would not
+         * test that, because its buffer starts zeroed; reusing one is what a caller does and what
+         * makes the sequence worth observing. See D257 for what this does and does not establish.
+         */
+        outl = 0;
+        printf("defltblake2.%s.reuse.full=%d\n", label,
+               EVP_MAC_init(c, key, keybytes, NULL));
+        outl = 0;
+        printf("defltblake2.%s.reuse.8=%d\n", label, EVP_MAC_init(c, key, 8, NULL));
+        if (EVP_MAC_update(c, msg, 16) == 1
+            && EVP_MAC_final(c, out, &outl, sizeof(out)) == 1) {
+            printf("defltblake2.%s.shortkey.len=%zu\n", label, outl);
+            rt_hex("defltblake2.shortkey.tag", out, outl);
+        } else {
+            printf("defltblake2.%s.shortkey.enclen=0\n", label);
+        }
+        EVP_MAC_CTX_free(c);
+    }
+
+    /* A truncated output, through the `size` parameter. */
+    {
+        EVP_MAC_CTX *c = EVP_MAC_CTX_new(mac);
+        size_t sz = 16;
+
+        set[0] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &sz);
+        set[1] = OSSL_PARAM_construct_end();
+        printf("defltblake2.%s.size16.set=%d\n", label, EVP_MAC_CTX_set_params(c, set));
+        outl = 0;
+        if (EVP_MAC_init(c, key, keybytes, NULL) == 1
+            && EVP_MAC_update(c, msg, 16) == 1
+            && EVP_MAC_final(c, out, &outl, sizeof(out)) == 1) {
+            printf("defltblake2.%s.size16.len=%zu\n", label, outl);
+            rt_hex("defltblake2.size16.tag", out, outl);
+        } else {
+            printf("defltblake2.%s.size16.enclen=0\n", label);
+        }
+        EVP_MAC_CTX_free(c);
+    }
+
+    /* A whole-width output, which is not the same construction truncated. */
+    {
+        EVP_MAC_CTX *c = EVP_MAC_CTX_new(mac);
+        size_t sz = outbytes;
+
+        set[0] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &sz);
+        set[1] = OSSL_PARAM_construct_end();
+        printf("defltblake2.%s.sizefull.set=%d\n", label, EVP_MAC_CTX_set_params(c, set));
+        outl = 0;
+        if (EVP_MAC_init(c, key, keybytes, NULL) == 1
+            && EVP_MAC_update(c, msg, 16) == 1
+            && EVP_MAC_final(c, out, &outl, sizeof(out)) == 1) {
+            printf("defltblake2.%s.sizefull.len=%zu\n", label, outl);
+            rt_hex("defltblake2.sizefull.tag", out, outl);
+        } else {
+            printf("defltblake2.%s.sizefull.enclen=0\n", label);
+        }
+        EVP_MAC_CTX_free(c);
+    }
+
+    /* `custom` and `salt`, at their full widths, which changes the tag. */
+    {
+        EVP_MAC_CTX *c = EVP_MAC_CTX_new(mac);
+
+        set[0] = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_CUSTOM, big, personabytes);
+        set[1] = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_SALT, big, saltbytes);
+        set[2] = OSSL_PARAM_construct_end();
+        printf("defltblake2.%s.cs.set=%d\n", label, EVP_MAC_CTX_set_params(c, set));
+        outl = 0;
+        if (EVP_MAC_init(c, key, keybytes, NULL) == 1
+            && EVP_MAC_update(c, msg, 16) == 1
+            && EVP_MAC_final(c, out, &outl, sizeof(out)) == 1) {
+            printf("defltblake2.%s.cs.len=%zu\n", label, outl);
+            rt_hex("defltblake2.cs.tag", out, outl);
+        } else {
+            printf("defltblake2.%s.cs.enclen=0\n", label);
+        }
+        EVP_MAC_CTX_free(c);
+    }
+
+    /* A key delivered through the parameter array rather than as an argument. */
+    {
+        EVP_MAC_CTX *c = EVP_MAC_CTX_new(mac);
+
+        set[0] = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_KEY, key, keybytes);
+        set[1] = OSSL_PARAM_construct_end();
+        printf("defltblake2.%s.pkey.set=%d\n", label, EVP_MAC_CTX_set_params(c, set));
+        outl = 0;
+        if (EVP_MAC_init(c, NULL, 0, NULL) == 1
+            && EVP_MAC_update(c, msg, 16) == 1
+            && EVP_MAC_final(c, out, &outl, sizeof(out)) == 1) {
+            printf("defltblake2.%s.pkey.len=%zu\n", label, outl);
+            rt_hex("defltblake2.pkey.tag", out, outl);
+        } else {
+            printf("defltblake2.%s.pkey.enclen=0\n", label);
+        }
+        EVP_MAC_CTX_free(c);
+    }
+
+    /*
+     * The duplicate. The copy is a whole-struct `memcpy` of a context that owns nothing, so a copy
+     * taken mid-message continues where the original is; advancing only the copy and finalising
+     * both separates a real duplicate from one that restarted. The lengths are printed only on a
+     * successful final, because `evp_mac_final` copies an uninitialised local into the caller's
+     * `*outl` when the row refuses (D252).
+     */
+    {
+        EVP_MAC_CTX *a0 = EVP_MAC_CTX_new(mac);
+        EVP_MAC_CTX *b0;
+        int ok_copy, ok_orig;
+
+        printf("defltblake2.%s.dup.init=%d\n", label, EVP_MAC_init(a0, key, keybytes, NULL));
+        printf("defltblake2.%s.dup.update=%d\n", label, EVP_MAC_update(a0, msg, 64));
+        b0 = EVP_MAC_CTX_dup(a0);
+        printf("defltblake2.%s.dup.made=%d\n", label, b0 != NULL);
+        if (b0 != NULL) {
+            outl = 0;
+            outl2 = 0;
+            printf("defltblake2.%s.dup.copy.update=%d\n", label,
+                   EVP_MAC_update(b0, msg + 64, 64));
+            ok_copy = EVP_MAC_final(b0, out2, &outl2, sizeof(out2));
+            printf("defltblake2.%s.dup.copy.final=%d\n", label, ok_copy);
+            if (ok_copy)
+                printf("defltblake2.%s.dup.copy.len=%zu\n", label, outl2);
+            ok_orig = EVP_MAC_final(a0, out, &outl, sizeof(out));
+            printf("defltblake2.%s.dup.orig.final=%d\n", label, ok_orig);
+            if (ok_orig)
+                printf("defltblake2.%s.dup.orig.len=%zu\n", label, outl);
+            if (ok_copy)
+                rt_hex("defltblake2.dup.copytag", out2, outl2);
+            if (ok_orig)
+                rt_hex("defltblake2.dup.origtag", out, outl);
+            EVP_MAC_CTX_free(b0);
+        }
+        EVP_MAC_CTX_free(a0);
+    }
+
+    /* A zero-length update, which the row answers 1 for without touching the state. */
+    {
+        EVP_MAC_CTX *c = EVP_MAC_CTX_new(mac);
+
+        r = EVP_MAC_init(c, key, keybytes, NULL);
+        printf("defltblake2.%s.zeroupd.init=%d\n", label, r);
+        printf("defltblake2.%s.zeroupd.update=%d\n", label, EVP_MAC_update(c, msg, 0));
+        outl = 0;
+        r = EVP_MAC_final(c, out, &outl, sizeof(out));
+        printf("defltblake2.%s.zeroupd.final=%d:%zu\n", label, r, outl);
+        rt_hex("defltblake2.zeroupd.tag", out, outl);
+        EVP_MAC_CTX_free(c);
+    }
+
+    /* The refusals, each with its queue. */
+    {
+        EVP_MAC_CTX *c = EVP_MAC_CTX_new(mac);
+        int one = 1;
+
+        /* A zero-length key: `blake2_setkey` refuses it as well as an over-long one. */
+        ERR_clear_error();
+        printf("defltblake2.%s.badkey0=%d\n", label, EVP_MAC_init(c, key, 0, NULL));
+        rt_errq("blake2_badkey0");
+
+        /* An over-long key. */
+        ERR_clear_error();
+        printf("defltblake2.%s.badkeybig=%d\n", label, EVP_MAC_init(c, key, keybytes + 1, NULL));
+        rt_errq("blake2_badkeybig");
+
+        /* No key by any route. */
+        EVP_MAC_CTX_free(c);
+        c = EVP_MAC_CTX_new(mac);
+        ERR_clear_error();
+        printf("defltblake2.%s.nokey=%d\n", label, EVP_MAC_init(c, NULL, 0, NULL));
+        rt_errq("blake2_nokey");
+
+        /* Both ends of the size range. */
+        {
+            size_t zero = 0, over = outbytes + 1;
+            OSSL_PARAM a[2];
+
+            a[0] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &zero);
+            a[1] = OSSL_PARAM_construct_end();
+            ERR_clear_error();
+            printf("defltblake2.%s.size0=%d\n", label, EVP_MAC_CTX_set_params(c, a));
+            rt_errq("blake2_size0");
+
+            a[0] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &over);
+            ERR_clear_error();
+            printf("defltblake2.%s.sizebig=%d\n", label, EVP_MAC_CTX_set_params(c, a));
+            rt_errq("blake2_sizebig");
+        }
+
+        /* `custom` and `salt` past their widths, then each of them one byte inside. */
+        {
+            OSSL_PARAM a[2];
+
+            a[0] = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_CUSTOM, big, personabytes + 1);
+            a[1] = OSSL_PARAM_construct_end();
+            ERR_clear_error();
+            printf("defltblake2.%s.custbig=%d\n", label, EVP_MAC_CTX_set_params(c, a));
+            rt_errq("blake2_custbig");
+
+            a[0] = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_SALT, big, saltbytes + 1);
+            ERR_clear_error();
+            printf("defltblake2.%s.saltbig=%d\n", label, EVP_MAC_CTX_set_params(c, a));
+            rt_errq("blake2_saltbig");
+
+            a[0] = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_CUSTOM, big, personabytes);
+            ERR_clear_error();
+            printf("defltblake2.%s.custexact=%d\n", label, EVP_MAC_CTX_set_params(c, a));
+            rt_errq("blake2_custexact");
+        }
+
+        /* A `key` that is not an octet string, and a repeated `size`. */
+        {
+            OSSL_PARAM a[3];
+
+            a[0] = OSSL_PARAM_construct_int(OSSL_MAC_PARAM_KEY, &one);
+            a[1] = OSSL_PARAM_construct_end();
+            ERR_clear_error();
+            printf("defltblake2.%s.keytype=%d\n", label, EVP_MAC_CTX_set_params(c, a));
+            rt_errq("blake2_keytype");
+
+            {
+                size_t sixteen = 16;
+                a[0] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &sixteen);
+                a[1] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &sixteen);
+                a[2] = OSSL_PARAM_construct_end();
+            }
+            ERR_clear_error();
+            printf("defltblake2.%s.repeat=%d\n", label, EVP_MAC_CTX_set_params(c, a));
+            rt_errq("blake2_repeat");
+
+            /* The *get* decoder's two sites. */
+            {
+                size_t sz = 0;
+                OSSL_PARAM g[3];
+
+                g[0] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_BLOCK_SIZE, &sz);
+                g[1] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_BLOCK_SIZE, &sz);
+                g[2] = OSSL_PARAM_construct_end();
+                ERR_clear_error();
+                printf("defltblake2.%s.repeatbsize=%d\n", label, EVP_MAC_CTX_get_params(c, g));
+                rt_errq("blake2_repeatbsize");
+
+                /* A fresh array: reusing the `block-size` pair above would leave `g[1]` a
+                 * `block-size` and make this a two-key array with no duplicate at all. */
+                g[0] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &sz);
+                g[1] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &sz);
+                g[2] = OSSL_PARAM_construct_end();
+                ERR_clear_error();
+                printf("defltblake2.%s.repeatsize=%d\n", label, EVP_MAC_CTX_get_params(c, g));
+                rt_errq("blake2_repeatsize");
+            }
+        }
+        EVP_MAC_CTX_free(c);
+    }
+
+    EVP_MAC_free(mac);
+}
+
+/* Both rows, with the widths each preamble substitutes. */
+static void rt_deflt_blake2_mac(void)
+{
+    rt_deflt_blake2_mac_one("BLAKE2BMAC", "b", 64, 64, 16, 16);
+    rt_deflt_blake2_mac_one("BLAKE2SMAC", "s", 32, 32, 8, 8);
+}
 
 /*
  * The `HMAC` row, driven through `EVP_MAC`. It is the one MAC row here whose implementation is a
@@ -5064,6 +5423,7 @@ int main(void)
     rt_deflt_properties();
     rt_deflt_siphash();
     rt_deflt_hmac();
+    rt_deflt_blake2_mac();
     rt_deflt_errors();
     rt_disp_failures();
     return 0;
