@@ -12,7 +12,8 @@
     ],
     "definition": "a stratum that has begun is one with an obligation ledger on disk; `complete` records whether it has sealed. Every export a begun stratum implements is partitioned below, whether the stratum is in-progress or complete",
     "in_progress": [
-      8
+      8,
+      9
     ],
     "strata": [
       {
@@ -15958,6 +15959,23 @@
         "non_observable": [],
         "phase": 8,
         "staged_candidate_probes": 4
+      },
+      {
+        "completed": false,
+        "counts": {
+          "directly_courted": 0,
+          "directly_courted_called": 0,
+          "directly_courted_referenced": 0,
+          "implemented": 0,
+          "indirectly_courted": 0,
+          "non_observable": 0,
+          "unmatched": 0
+        },
+        "directly_courted": [],
+        "indirectly_courted": [],
+        "non_observable": [],
+        "phase": 9,
+        "staged_candidate_probes": 0
       }
     ],
     "totals": {
@@ -16030,7 +16048,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "c4e9c7855c0d58ac2bbf8550e90278ab579262c883811657a139a8a8e2ea5790"
+      "sha256": "e5cd5f888a3546f27fcd6309b3adf89a37d0f2d0f92af69950e7a1e169583314"
     },
     {
       "name": "phase7-courts",
@@ -16040,12 +16058,22 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "fdc72de09406c9adfde2c58a3d01c6a4fcb676c1910e4c7b49b47318d161c887"
+      "sha256": "3db7f85436dd5f62bb1b8e022b985b52e1ed1279d2240f5a84329fff16936b66"
     },
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
       "sha256": "e005bf5a96fc7e070f15582878015f07216a77cfb7a8272435e5b72975ad3e17"
+    },
+    {
+      "name": "phase9-obligations",
+      "path": "forensics/phase9-obligations.json",
+      "sha256": "960752f6213c36e9e8ee02922d523f07a1e780f0b56602e2d176d95eaef19c9b"
+    },
+    {
+      "name": "phase9-courts",
+      "path": "artifacts/phase9/COURTS.json",
+      "sha256": "7e9de317f672173d048d88e8f4bdb7e2ce04eb87733d14592ce24e23589541e4"
     }
   ],
   "kind": "court-coverage",

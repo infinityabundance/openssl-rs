@@ -1,0 +1,63 @@
+rand: Phase 9 is activated -- ninety-three exports, and two corrections to what the ledger mechanism could say (D296)
+
+Phase 9's activation, and the two defects that activating it found. The stratum now has
+its plan (docs/PHASE-9-SUBPHASES.md), its obligation ledger, its court runner and its
+row in phase_state.py's STRATUM_EVIDENCE, which is what makes its ledger and its courts
+participate in its own completion rule.
+
+The working set is ninety-three, and only twenty-five are its own header's. The atlas
+assigns phase 9 twenty-five exports, all rand.h's. The other sixty-eight arrive as
+recorded hand-offs: one from phase 4, thirty-one from phase 5, twelve from phase 7 and
+twenty-four from phase 8. owned_by_module has eleven entries -- src/rand/mod.rs 25,
+src/rsa/mod.rs 17, src/bn/rand.rs 12, src/bn/primes.rs 11, src/pem/pem_lib.rs 8, and six
+more -- so there is no src/rand/-only reading of this stratum, and the ledger is what
+says so.
+
+The court file is present and empty, and that is the honest shape rather than a
+placeholder. Every one of the ninety-three symbols is unimplemented and a probe that
+called one would abort the candidate, which is not an observation. The runner registers
+no court and prints a pending_courts table naming the four the plan gives the stratum
+(RT-BN-RAND, RT-RAND, RT-DRBG, CT-DRBG) and the subphase that brings each, the way phase
+8's PENDING_CORRECTNESS_COURTS does. all_pass is true of an empty set and the file's own
+claim says in its first sentence that this is not evidence that anything works.
+
+Correction 1: phase 8's BLOCKED_HANDOFFS handed DH_KDF_X9_42 and ECDH_KDF_X9_62 to phase
+9, and named the condition under which that was wrong -- "if that plan names a different
+stratum, this row is the one to correct". provider-algorithm-plans.json gives
+default/OSSL_OP_KDF to phase 8, so the plan names this stratum and both are now phase 8's
+own open work, which is the treatment every same-stratum blocker gets. Phase 8's deferred
+goes 26 -> 24 and its open 522 -> 524; phase 9 receives sixty-eight rather than seventy.
+
+Correction 2: the ownership audit could only follow a one-hop hand-off, and pem.h is two
+hops. Eight symbols -- PEM_do_header and its neighbours -- are phase 5's by the
+declaring-header rule and their chain is 5 -> 7 -> 9: phase 5 hands the PEM layer to 7,
+and 7 hands these eight to 9 because PEM_do_header derives its block key with EVP_md5
+(phase 13's) and the PEM_ASN1_write* trio generates its DEK salt with RAND_bytes
+(pem_lib.c:386). Rule 2 compared deferred_to[(atlas_owner, symbol)] against the carrying
+stratum -- exactly one hop -- so phase 9's ledger carrying them read as a disagreement.
+
+The fix is the rule rather than the data: rule 2 now asks whether the atlas owner reaches
+the carrying ledger along the recorded hand-off graph for that symbol. Satisfying the
+one-hop rule would have required deleting the intermediate hop, and that hop is the record
+of phase 7 having measured the blocker -- the evidence would have been removed to make a
+check pass.
+
+The graph is now also built before any phase is checked. It was filled in as the checking
+loop walked the phases in ascending order, so whether a phase's rule-2 answer was right
+depended on its number. That is a second, quieter instance of the class D295 removed from
+the provider census -- a result that depends on when it was computed -- and it is fixed
+the same way.
+
+A third finding, from plan_reconciliation.py and about this very correction: the
+crngt.c units record landed and the tool reported plan_unit_record_is_stale, because a
+units record is kept live by being named in a subphase table row and the plan stated it in
+prose. The tool is right -- prose cannot be checked -- so the 9.5 row now names the path,
+and the manifest check it carries is live rather than decorative.
+
+Numbers, all read. Phase 8: implemented 238, open 524, deferred 24, owned 786. Phase 9:
+implemented 0, open 93, deferred 0, owned 93. libcrypto implemented 2097 / 5896. Two
+strata in-progress, twelve not-started. PIPELINE OK, 85 courts, 31469 observations; the
+phase-9 entry adds a runner and no observations, which is the point.
+
+What this commit does not claim: no export is implemented, so nothing about the random
+layer is verified. The four courts are named as pending rather than passing.

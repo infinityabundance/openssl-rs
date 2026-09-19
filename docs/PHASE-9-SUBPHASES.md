@@ -57,7 +57,7 @@ base    / OSSL_OP_RAND     1    SEED-SRC
 | 9.2 | **The RAND front** | `crypto/rand/rand_lib.c`'s twenty-five exports, plus `rand_uniform.c`'s internal consumers. | 9.3–9.5 | `RT-RAND` |
 | 9.3 | **The DRBG framework** | `providers/implementations/rands/drbg.c` — `PROV_DRBG`, the reseed/instantiate/generate state machine, and the three dispatch tables' shared shape. | 9.4 | `RT-RAND` (shared) |
 | 9.4 | **The three DRBGs** | `drbg_ctr.c`, `drbg_hash.c`, `drbg_hmac.c`, and the `OSSL_OP_RAND` rows `ossl_drbg_ctr_functions`, `ossl_drbg_hash_functions` and `ossl_drbg_ossl_hmac_functions`. | 9.5 | `RT-DRBG`, `CT-DRBG` |
-| 9.5 | **The seed sources** | `seed_src.c`, `test_rng.c`, `fips_crng_test.c`, and the two SEED-SRC rows plus the TEST-RAND row. | 9.3 | `RT-RAND` (shared) |
+| 9.5 | **The seed sources** | `seed_src.c`, `test_rng.c`, `fips_crng_test.c`, and the two SEED-SRC rows plus the TEST-RAND row. **D287 named `providers/implementations/rands/crngt.c` instead of `fips_crng_test.c` and that file does not exist in this authority** -- §4.1 is the measurement and `forensics/prerequisites.json`'s `units` block carries the `does_not_exist_in_this_authority` record, so the correction is checked against the committed manifest rather than left as prose. | 9.3 | `RT-RAND` (shared) |
 | 9.6 | **The seventy hand-offs** | the earlier strata's blocked rows, discharged in the order the strata that own their headers: the four key types' object layers first, then 8.4's accessors, then `EVP_sha*`' retrieval, then the `PEM_*` and `HPKE` tails. | 9.1, 9.2 | each stratum's own courts |
 
 The order is forced twice over, and D287 recorded both: `RAND_bytes_ex` cannot be written before
@@ -96,12 +96,15 @@ two builds would be comparing two machines. The measured surface is the one abov
 
 ## 4. Two measured corrections to D287, and one precondition
 
-**4.1 There is no `providers/implementations/rands/crngt.c` in 3.6.4.** D287's table names
-`crngt.c` as 9.5's unit. It does not exist in the admitted tree. The continuous random number
+**4.1 There is no `providers/implementations/rands/crngt.c` in 3.6.4.** D287's table names that
+file as 9.5's unit and it does not exist in the admitted tree. The continuous random number
 generator test is `providers/implementations/rands/fips_crng_test.c`, whose entry points are
 `RCT_test`/`APT_test` and whose dispatch table is `ossl_crng_test_functions`; `implementations.h`
 keeps a dead `extern` for the old name. The correction is recorded rather than silently applied,
-because a later reader following D287 to that path would conclude the unit was missing.
+because a later reader following D287 to that path would conclude the unit was missing. It is also
+recorded where the machine can see it: `forensics/prerequisites.json`'s `units` block carries a
+`does_not_exist_in_this_authority` row for the path, which `plan_reconciliation.py` verifies against
+the committed manifest and fails if the file ever appears.
 
 **4.2 D287's "the `base` provider's single RAND row is the test RNG" is wrong.** `baseprov.c`'s
 `base_rands[]` publishes **SEED-SRC** and nothing else; TEST-RAND is `defltprov.c`'s. The census
@@ -140,6 +143,43 @@ publishes is named by a probe of a court that covers it (D245); and an artefact 
 change moves is regenerated in the same commit. `docs/DECISIONS.md` is append-only and this
 document is not a decision record.
 
-**Status.** 9.0 — this document and §1's census — is the only landed subphase. Nothing in
-`src/` implements any of the 95 exports yet, no Phase 9 court exists, and `phase-state.json`
-reports the stratum `not-started`, which is correct until 9.1's commit activates it.
+**4.5 This plan's own boundaries are the census's, and the census will correct them.** The
+subphase table above was written from the dependency chain D287 established and the 95-export
+measurement in §1. D283's equivalent table for Phase 8 was corrected twice by measurement -- by
+D285, which found that most of a slice was another stratum's, and by D287, which found a
+prerequisite the slice's name could not show. The same is expected here and is not a defect in
+this document: the census is the authority, and a subphase that discovers its unit is somewhere
+else records that rather than forcing the row.
+
+**Landed exports (checked against the ledger):**
+
+None. No export of this stratum is implemented: the crate defines none of the twenty-five `rand.h`
+exports it owns, and none of the seventy that earlier strata handed it. The stratum's provider rows
+are likewise unpublished -- fifteen rows, none of them landed.
+
+**Open exports (checked against the ledger):**
+
+All ninety-five, beginning with the twenty-five this stratum owns and the seventy it receives.
+The `rand.h` front is `RAND_bytes_ex`, `RAND_bytes`, `RAND_priv_bytes_ex`, `RAND_priv_bytes`,
+`RAND_get0_primary`, `RAND_get0_public`, `RAND_get0_private`, `RAND_status`, `RAND_seed`,
+`RAND_add`, `RAND_poll`, `RAND_OpenSSL`, `RAND_get_rand_method`, `RAND_set_rand_method`,
+`RAND_set_rand_engine`, `RAND_set_DRBG_type`, `RAND_set_seed_source_type`,
+`RAND_set1_random_provider`, `RAND_set0_public`, `RAND_set0_private`, `RAND_pseudo_bytes`,
+`RAND_file_name`, `RAND_load_file`, `RAND_write_file` and `RAND_keep_random_devices_open`. The
+hand-offs are the BN random and blinding families (`BN_rand`, `BN_rand_ex`, `BN_priv_rand`,
+`BN_priv_rand_range_ex`, `BN_pseudo_rand_range`, `BN_bntest_rand`, `BN_BLINDING_create_param`),
+the prime generators (`BN_generate_prime_ex2`, `BN_check_prime`, `BN_X931_generate_prime_ex`), the
+key generators (`RSA_generate_key_ex`, `DH_generate_key`, `DSA_generate_key`,
+`EC_KEY_generate_key`), the four key types' constructors (`RSA_new`, `RSA_new_method`), the RSA
+blinding pair and the six RSA padding functions whose bytes are random
+(`RSA_padding_add_PKCS1_type_2`, `RSA_padding_add_PKCS1_OAEP_mgf1`, `RSA_padding_add_PKCS1_PSS`,
+`RSA_padding_add_PKCS1_PSS_mgf1`, `RSA_padding_check_PKCS1_type_2`, `RSA_X931_generate_key_ex`),
+and the tails (`EVP_SealInit`, `EVP_CIPHER_CTX_rand_key`, `DES_random_key`, `PEM_do_header`,
+`OSSL_HPKE_get_grease_value`, `BIO_f_reliable`, `BIO_f_nbio_test`, `DH_KDF_X9_42`,
+`ECDH_KDF_X9_62`).
+
+**Why 9.0 is staged over two commits.** The plan and the census land with the stratum's ledger and
+court runner, because `phase_state.py` refuses any stratum that has a plan, a ledger or a court file
+on disk without a `STRATUM_EVIDENCE` row, and the row cannot be added while a third stratum's
+activation would move another's numbers -- which is the provider-state projection D295 landed
+first, in its own commit and with its own self-test.

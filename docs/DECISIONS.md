@@ -19365,3 +19365,81 @@ at the site rather than only here.
 **What this entry does not claim.** No provider row landed and none was removed: `implemented` is 166
 before and after. No stratum is activated; Phase 9 is still `not-started`, and its activation is the
 remainder of 9.1.
+
+## D296 -- Phase 9 is activated: ninety-three exports, and two measured corrections to what the ledger mechanism could say
+
+Phase 9's activation, and the two defects that activating it found. The stratum now has its plan
+(`docs/PHASE-9-SUBPHASES.md`), its obligation ledger (`forensics/phase9-obligations.json`), its
+court runner (`forensics/tools/phase9_courts.py`) and its row in `phase_state.py`'s
+`STRATUM_EVIDENCE`, which is what makes its ledger and its courts participate in its own
+completion rule.
+
+**The working set is ninety-three, and only twenty-five are its own header's.** The atlas assigns
+phase 9 twenty-five exports, all `rand.h`'s. The other **sixty-eight** arrive as recorded
+hand-offs: one from phase 4, thirty-one from phase 5, twelve from phase 7 and twenty-four from
+phase 8. `owned_by_module` is the useful reading and it is eleven entries -- `src/rand/mod.rs` 25,
+`src/rsa/mod.rs` 17, `src/bn/rand.rs` 12, `src/bn/primes.rs` 11, `src/pem/pem_lib.rs` 8,
+`src/bn/blinding.rs` 4, `src/bn/gf2m.rs` 4, `src/dh/mod.rs` 3, `src/dsa/mod.rs` 2,
+`src/evp/` 2, `src/evp/bio_enc.rs` 2, `src/des/mod.rs` 1, `src/ec/mod.rs` 1,
+`src/hpke/mod.rs` 1. There is no `src/rand/`-only reading of this stratum and the ledger is what
+says so.
+
+**The court file is present and empty, and that is the honest shape rather than a placeholder.**
+Every one of the ninety-three symbols is unimplemented, and a probe that called one would abort
+the candidate -- which is not an observation. So the runner registers no court and prints a
+`pending_courts` table naming the four the plan gives the stratum (`RT-BN-RAND`, `RT-RAND`,
+`RT-DRBG`, `CT-DRBG`) and the subphase that brings each, the way Phase 8's
+`PENDING_CORRECTNESS_COURTS` does. `all_pass` is true of an empty set and the file's own `claim`
+says in its first sentence that this is not evidence that anything works.
+
+**Correction 1: two phase-8 rows were handed to a stratum the plan does not give them to.**
+Phase 8's `BLOCKED_HANDOFFS` handed `DH_KDF_X9_42` and `ECDH_KDF_X9_62` to phase 9, and named the
+condition under which that would be wrong: *"Phase 9 is named because it is the stratum the plan
+puts the provider KDF family in; if that plan names a different stratum, this row is the one to
+correct."* `provider-algorithm-plans.json` gives `default / OSSL_OP_KDF` to **phase 8**, so the
+plan names phase 8 and the row is corrected rather than carried: both are now `open` in phase 8,
+which is the treatment every same-stratum blocker gets, because a stratum cannot hand a symbol to
+itself. Phase 8's deferred goes 26 -> 24 and its open 522 -> 524, and phase 9 receives sixty-eight
+rather than seventy. **The condition the row wrote for itself is what made this findable**, and it
+was found by building the receiving ledger rather than by reading the row.
+
+**Correction 2: the ownership audit could only follow a one-hop hand-off, and `pem.h` is
+two hops.** Eight symbols -- `PEM_do_header`, its seven neighbours in `pem.h` -- are phase 5's by
+the declaring-header rule, and their chain is **5 -> 7 -> 9**: phase 5 hands the PEM layer to 7,
+and 7 hands these eight to 9 because `PEM_do_header` derives its block key with `EVP_md5` (phase
+13's, via 7.3g) and the `PEM_ASN1_write*` trio generates its DEK salt with `RAND_bytes`
+(`pem_lib.c:386`, phase 9's), so phase 9's row records `binding_phase: 9`.
+`ownership_audit.py`'s rule 2 compared `deferred_to[(atlas_owner, symbol)]` against the carrying
+stratum -- exactly one hop -- so phase 9's ledger carrying them read as a disagreement.
+
+The fix is the rule rather than the data. Rule 2 now asks whether the atlas owner **reaches** the
+carrying ledger along the recorded hand-off graph for that symbol, which is what "the two ledgers
+agree about who owes them" means when a hand-off passes through a third stratum. Satisfying the
+one-hop rule instead would have required deleting the intermediate hop, and that hop is the record
+of phase 7 having measured the blocker -- the evidence would have been removed to make a check
+pass, which is the failure mode this project refuses.
+
+**And the graph is now built before any phase is checked.** It was filled in as the checking loop
+walked the phases in ascending order, so whether a phase's rule-2 answer was right depended on its
+*number*: phase 7's answer was available and phase 5's would not have been. That is a second,
+quieter instance of the class D295 removed from the provider census -- a result that depends on
+when it was computed rather than on what it describes -- and it is fixed the same way, by making
+the input complete before the judgement rather than by ordering the judgements.
+
+**A third finding, from `plan_reconciliation.py` and about this very correction.** The
+`providers/implementations/rands/crngt.c` record landed and the tool reported
+`plan_unit_record_is_stale`, because a `units` record is kept live by being named **in a subphase
+table row** and §4.1 of the plan states it in prose. The tool is right: prose cannot be checked.
+The 9.5 row now names the path and states the correction, so the record is load-bearing rather
+than decorative, and the manifest check it carries -- fail if the file ever appears -- is live.
+
+**Numbers, all read.** Phase 8: implemented 238, open 524, deferred 24, owned 786. Phase 9:
+implemented 0, open 93, deferred 0, owned 93. `libcrypto` implemented 2097 / 5896. Two strata are
+`in-progress` and twelve `not-started`. `PIPELINE OK`, 85 courts, 31,469 observations; the phase-9
+entry adds a runner and no observations, which is the point.
+
+**What this entry does not claim.** No export is implemented, so nothing about the random layer is
+verified. `RT-BN-RAND`, `RT-RAND`, `RT-DRBG` and `CT-DRBG` are named as pending rather than
+passing. And the corrections above are corrections to *bookkeeping that now has an owner*; whether
+phase 9's ninety-three symbols can be built in the order its plan gives them is 9.1's measurement,
+not this entry's.

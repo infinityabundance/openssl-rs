@@ -525,12 +525,12 @@
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "2502b2e2f4a241faafee5df82116416a0dbee68213e2aba59ed6b353b0794347"
+      "sha256": "1d5287c714bf5e8527935829057e2411bb785d7f69c1af780cbb19d8101a9482"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "8b6447589c05de51d3c348b7a797291afb3babd325921d847047cf8c7ed5935c"
+      "sha256": "1e256f940c5c454cedc20284a40d9a52f862e3a84550110c4e9b6e56fefce0ea"
     },
     {
       "name": "crate-source-tree",

@@ -855,6 +855,12 @@
         "class": "does_not_exist_in_this_authority",
         "reason": "Row 7.3f names it in order to say it is **not** where `EVP_PKEY_derive_SKEY` lives: *\"`EVP_PKEY_derive_SKEY` is `pkey_derive.c`'s and is 7.4's, with its module named\"*, and the module it names is `crypto/evp/exchange.c`, which defines the function at `:554` and is a promised unit this stratum reached. The file is therefore a reconnaissance finding rather than a promise -- the same shape as `crypto/rcu.c`, which row 6.10 names in order to say RCU lives in `crypto/threads_pthread.c` -- so the tool's \"names a file the authority does not have\" check is right about the fact and wrong about the intent. The plan sentence is kept rather than reworded, because a guessed filename recorded beside its correction is what the next reader needs, and the record fails the moment the file appears.",
         "evidence": "docs/PHASE-7-SUBPHASES.md row 7.3f; forensics/atlas/export-defining-units.json (crypto/evp/exchange.c defines `EVP_PKEY_derive_SKEY`); docs/DECISIONS.md D196"
+      },
+      {
+        "unit": "providers/implementations/rands/crngt.c",
+        "class": "does_not_exist_in_this_authority",
+        "reason": "D287's Phase-9 scope names this file as 9.5's unit and it does not exist in the admitted tree. The continuous random number generator test is `providers/implementations/rands/fips_crng_test.c` (`RCT_test`/`APT_test`, dispatch symbol `ossl_crng_test_functions`), and `implementations.h` keeps only a dead `extern` for the old name. The correction is the reason this row exists rather than the row being avoided: a reader who follows D287 to that path must find the measurement that says it is not there, and the record fails if the file ever appears. `docs/PHASE-9-SUBPHASES.md` section 4.1 is where the plan states it and `docs/DECISIONS.md` D294 is where the measurement is recorded.",
+        "evidence": "forensics/authorities/src/openssl-3.6.4/providers/implementations/rands/fips_crng_test.c; docs/PHASE-9-SUBPHASES.md section 4.1; docs/DECISIONS.md D287, D294"
       }
     ]
   }

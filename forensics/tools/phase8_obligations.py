@@ -252,18 +252,15 @@ BLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
         "deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same "
         "reason.",
     ),
-    # (4) The two X9 KDF wrappers, which are provider KDF fetches.
-    (
-        ("DH_KDF_X9_42", "ECDH_KDF_X9_62"),
-        9,
-        "each is an `EVP_KDF` fetch of a *provider* KDF: `crypto/dh/dh_kdf.c:40` asks for "
-        "`OSSL_KDF_NAME_X942KDF_ASN1` and `crypto/ec/ecdh_kdf.c:34` for "
-        "`OSSL_KDF_NAME_X963KDF`, then derives through `EVP_KDF_derive`. The `EVP_KDF` object "
-        "is Phase 7's and every KDF the fetch can find is a provider implementation, so the "
-        "answer is a later stratum's. Phase 9 is named because it is the stratum the plan puts "
-        "the provider KDF family in; if that plan names a different stratum, this row is the "
-        "one to correct, and `docs/DECISIONS.md` D197 says so.",
-    ),
+    # (4) **Corrected while building Phase 9's ledger, and the row's own text said how.** This row
+    # used to hand `DH_KDF_X9_42` and `ECDH_KDF_X9_62` to phase 9, and it named the condition under
+    # which that would be wrong: *"Phase 9 is named because it is the stratum the plan puts the
+    # provider KDF family in; if that plan names a different stratum, this row is the one to
+    # correct."* `forensics/atlas/provider-algorithm-plans.json` gives `default / OSSL_OP_KDF` to
+    # **phase 8**, so the plan names this stratum and the row is corrected rather than carried:
+    # both symbols are now `open` in phase 8, which is the same treatment every other
+    # same-stratum blocker gets, because a stratum cannot hand a symbol to itself
+    # (docs/DECISIONS.md D296).
 ]
 
 

@@ -665,6 +665,27 @@ PHASE8_MODULES = [
     "courts/phase8/ct_digest.c",
 ]
 
+
+# Phase 9's evidence: the random layer -- `rand.h`'s front, the BN random family behind it, the
+# providers' DRBG framework and its three instantiations, and the seed sources those draw on. Its
+# plan is `docs/PHASE-9-SUBPHASES.md`, which 9.0 lands with the ledger and the runner. The
+# modules are added by the subphase that lands them, in the same commit, so that this list is a
+# statement about the tree rather than about the plan -- which is why it does not yet name
+# `src/rand/` or any of the three DRBG modules: none of them exists.
+#
+# **The court file is present and empty, and its own claim says so** (docs/DECISIONS.md D294).
+# `run_courts.py` requires a stratum that has committed a courts file to have a runner that
+# reproduces it, so the runner lands with the file; `Phase 9`'s evidence until 9.1 is the ledger,
+# and `phase-state.json` reports the stratum `in-progress` rather than `complete` because the
+# ledger's `open_in_this_stratum` is ninety-three.
+PHASE9_COURTS = "artifacts/phase9/COURTS.json"
+PHASE9_OBLIGATIONS = "forensics/phase9-obligations.json"
+PHASE9_MODULES = [
+    "docs/PHASE-9-SUBPHASES.md",
+    "forensics/tools/phase9_courts.py",
+    "forensics/tools/phase9_obligations.py",
+]
+
 STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
     3: StratumEvidence(PHASE3_MODULES, PHASE3_OBLIGATIONS, PHASE3_COURTS,
                        ledger_note=(
@@ -677,6 +698,16 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
     6: StratumEvidence(PHASE6_MODULES, PHASE6_OBLIGATIONS, PHASE6_COURTS),
     7: StratumEvidence(PHASE7_MODULES, PHASE7_OBLIGATIONS, PHASE7_COURTS),
     8: StratumEvidence(PHASE8_MODULES, PHASE8_OBLIGATIONS, PHASE8_COURTS),
+    9: StratumEvidence(PHASE9_MODULES, PHASE9_OBLIGATIONS, PHASE9_COURTS,
+                       ledger_note=(
+                           "Its working set is ninety-three exports, and only twenty-five "
+                           "are its own header's: the other sixty-eight arrive as recorded "
+                           "hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives "
+                           "in ten earlier strata's modules (docs/DECISIONS.md D294). The "
+                           "court file records `courts: []` and is not evidence that "
+                           "anything works: no Phase 9 court has landed yet "
+                           "(docs/PHASE-9-SUBPHASES.md section 1)"
+                       )),
 }
 
 
