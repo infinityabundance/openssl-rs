@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 2077 | 3819 |
+| libcrypto | 5896 | 2084 | 3812 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **2077** | **4422** |
+| **total** | **6499** | **2084** | **4415** |
 
 ## Ownership atlas, by stratum
 
@@ -32,7 +32,7 @@ declared owner; this is that assignment.
 | 4 | BIO + CONF + object database | `complete` | 256 | 272 | 249 | 23 | 0 |
 | 5 | BN + ASN.1 + DER/PEM | `complete` | 561 | 565 | 474 | 91 | 0 |
 | 6 | OSSL_LIB_CTX + provider core | `complete` | 137 | 161 | 161 | 0 | 0 |
-| 7 | EVP framework | `complete` | 924 | 950 | 706 | 244 | 0 |
+| 7 | EVP framework | `complete` | 924 | 950 | 713 | 237 | 0 |
 | 8 | Native cryptographic primitives | `in-progress` | 759 | 786 | 236 | 26 | 524 |
 | 9 | RAND / DRBG + entropy | `not-started` | 25 | — | — | — | — |
 | 10 | Key formats + PKCS + STORE | `not-started` | 272 | — | — | — | — |
@@ -215,8 +215,8 @@ Courts: `all pass`, 10 court(s), **2040** authority observation(s) over 10 trans
 * ledger: `forensics/phase7-obligations.json`
 * atlas-owned: 924
 * owned working set: 950
-* implemented: 706
-* deferred to a later stratum with a stated reason: 244
+* implemented: 713
+* deferred to a later stratum with a stated reason: 237
 * **open in this stratum: 0**
 
 Deferred out, by receiving stratum:
@@ -229,14 +229,14 @@ Deferred out, by receiving stratum:
   `EVP_PKEY_print_params`, `EVP_PKEY_print_params_fp`, `EVP_PKEY_print_private`, `EVP_PKEY_print_private_fp`, `EVP_PKEY_print_public`, `EVP_PKEY_print_public_fp`, `d2i_AutoPrivateKey`, `d2i_AutoPrivateKey_ex`, `d2i_PrivateKey`, `d2i_PrivateKey_ex`, `i2d_KeyParams`, `i2d_KeyParams_bio`, `i2d_PKCS8PrivateKey`, `i2d_PrivateKey`, `i2d_PublicKey`
 * to phase 11: 5 symbol(s)
   `ASN1_item_sign_ex`, `ASN1_item_verify_ex`, `EVP_CIPHER_CTX_get_algor`, `EVP_PKEY_CTX_get_algor`, `EVP_add_alg_module`
-* to phase 13: 193 symbol(s)
-  `EVP_PKEY_get0_engine`, `EVP_PKEY_set1_engine`, `EVP_aes_128_cbc`, `EVP_aes_128_cbc_hmac_sha1`, `EVP_aes_128_cbc_hmac_sha256`, `EVP_aes_128_ccm`, `EVP_aes_128_cfb1`, `EVP_aes_128_cfb128`, `EVP_aes_128_cfb8`, `EVP_aes_128_ctr`, `EVP_aes_128_ecb`, `EVP_aes_128_gcm`, `EVP_aes_128_ocb`, `EVP_aes_128_ofb`, `EVP_aes_128_wrap`, `EVP_aes_128_wrap_pad`, `EVP_aes_128_xts`, `EVP_aes_192_cbc`, `EVP_aes_192_ccm`, `EVP_aes_192_cfb1`, `EVP_aes_192_cfb128`, `EVP_aes_192_cfb8`, `EVP_aes_192_ctr`, `EVP_aes_192_ecb`, `EVP_aes_192_gcm`, `EVP_aes_192_ocb`, `EVP_aes_192_ofb`, `EVP_aes_192_wrap`, `EVP_aes_192_wrap_pad`, `EVP_aes_256_cbc`, `EVP_aes_256_cbc_hmac_sha1`, `EVP_aes_256_cbc_hmac_sha256`, `EVP_aes_256_ccm`, `EVP_aes_256_cfb1`, `EVP_aes_256_cfb128`, `EVP_aes_256_cfb8`, `EVP_aes_256_ctr`, `EVP_aes_256_ecb`, `EVP_aes_256_gcm`, `EVP_aes_256_ocb`, `EVP_aes_256_ofb`, `EVP_aes_256_wrap`, `EVP_aes_256_wrap_pad`, `EVP_aes_256_xts`, `EVP_aria_128_cbc`, `EVP_aria_128_ccm`, `EVP_aria_128_cfb1`, `EVP_aria_128_cfb128`, `EVP_aria_128_cfb8`, `EVP_aria_128_ctr`, `EVP_aria_128_ecb`, `EVP_aria_128_gcm`, `EVP_aria_128_ofb`, `EVP_aria_192_cbc`, `EVP_aria_192_ccm`, `EVP_aria_192_cfb1`, `EVP_aria_192_cfb128`, `EVP_aria_192_cfb8`, `EVP_aria_192_ctr`, `EVP_aria_192_ecb`, `EVP_aria_192_gcm`, `EVP_aria_192_ofb`, `EVP_aria_256_cbc`, `EVP_aria_256_ccm`, `EVP_aria_256_cfb1`, `EVP_aria_256_cfb128`, `EVP_aria_256_cfb8`, `EVP_aria_256_ctr`, `EVP_aria_256_ecb`, `EVP_aria_256_gcm`, `EVP_aria_256_ofb`, `EVP_bf_cbc`, `EVP_bf_cfb64`, `EVP_bf_ecb`, `EVP_bf_ofb`, `EVP_blake2b512`, `EVP_blake2s256`, `EVP_camellia_128_cbc`, `EVP_camellia_128_cfb1`, `EVP_camellia_128_cfb128`, `EVP_camellia_128_cfb8`, `EVP_camellia_128_ctr`, `EVP_camellia_128_ecb`, `EVP_camellia_128_ofb`, `EVP_camellia_192_cbc`, `EVP_camellia_192_cfb1`, `EVP_camellia_192_cfb128`, `EVP_camellia_192_cfb8`, `EVP_camellia_192_ctr`, `EVP_camellia_192_ecb`, `EVP_camellia_192_ofb`, `EVP_camellia_256_cbc`, `EVP_camellia_256_cfb1`, `EVP_camellia_256_cfb128`, `EVP_camellia_256_cfb8`, `EVP_camellia_256_ctr`, `EVP_camellia_256_ecb`, `EVP_camellia_256_ofb`, `EVP_cast5_cbc`, `EVP_cast5_cfb64`, `EVP_cast5_ecb`, `EVP_cast5_ofb`, `EVP_chacha20`, `EVP_chacha20_poly1305`, `EVP_des_cbc`, `EVP_des_cfb1`, `EVP_des_cfb64`, `EVP_des_cfb8`, `EVP_des_ecb`, `EVP_des_ede`, `EVP_des_ede3`, `EVP_des_ede3_cbc`, `EVP_des_ede3_cfb1`, `EVP_des_ede3_cfb64`, `EVP_des_ede3_cfb8`, `EVP_des_ede3_ecb`, `EVP_des_ede3_ofb`, `EVP_des_ede3_wrap`, `EVP_des_ede_cbc`, `EVP_des_ede_cfb64`, `EVP_des_ede_ecb`, `EVP_des_ede_ofb`, `EVP_des_ofb`, `EVP_desx_cbc`, `EVP_idea_cbc`, `EVP_idea_cfb64`, `EVP_idea_ecb`, `EVP_idea_ofb`, `EVP_md4`, `EVP_md5`, `EVP_md5_sha1`, `EVP_mdc2`, `EVP_rc2_40_cbc`, `EVP_rc2_64_cbc`, `EVP_rc2_cbc`, `EVP_rc2_cfb64`, `EVP_rc2_ecb`, `EVP_rc2_ofb`, `EVP_rc4`, `EVP_rc4_40`, `EVP_rc4_hmac_md5`, `EVP_read_pw_string`, `EVP_read_pw_string_min`, `EVP_ripemd160`, `EVP_seed_cbc`, `EVP_seed_cfb128`, `EVP_seed_ecb`, `EVP_seed_ofb`, `EVP_sha1`, `EVP_sha224`, `EVP_sha256`, `EVP_sha384`, `EVP_sha3_224`, `EVP_sha3_256`, `EVP_sha3_384`, `EVP_sha3_512`, `EVP_sha512`, `EVP_sha512_224`, `EVP_sha512_256`, `EVP_shake128`, `EVP_shake256`, `EVP_sm3`, `EVP_sm4_cbc`, `EVP_sm4_cfb128`, `EVP_sm4_ctr`, `EVP_sm4_ecb`, `EVP_sm4_ofb`, `EVP_whirlpool`, `PEM_ASN1_read`, `PEM_ASN1_read_bio`, `PEM_ASN1_write`, `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx`, `PEM_bytes_read_bio`, `PEM_bytes_read_bio_secmem`, `PEM_def_callback`, `PEM_do_header`, `PEM_read_PrivateKey`, `PEM_read_PrivateKey_ex`, `PEM_read_bio_Parameters`, `PEM_read_bio_Parameters_ex`, `PEM_read_bio_PrivateKey`, `PEM_read_bio_PrivateKey_ex`, `PEM_write_PKCS8PrivateKey`, `PEM_write_PKCS8PrivateKey_nid`, `PEM_write_PrivateKey`, `PEM_write_PrivateKey_ex`, `PEM_write_bio_PKCS8PrivateKey`, `PEM_write_bio_PKCS8PrivateKey_nid`, `PEM_write_bio_Parameters`, `PEM_write_bio_PrivateKey`, `PEM_write_bio_PrivateKey_ex`, `PEM_write_bio_PrivateKey_traditional`
+* to phase 13: 186 symbol(s)
+  `EVP_PKEY_get0_engine`, `EVP_PKEY_set1_engine`, `EVP_aes_128_cbc`, `EVP_aes_128_cbc_hmac_sha1`, `EVP_aes_128_cbc_hmac_sha256`, `EVP_aes_128_ccm`, `EVP_aes_128_cfb1`, `EVP_aes_128_cfb128`, `EVP_aes_128_cfb8`, `EVP_aes_128_ctr`, `EVP_aes_128_ecb`, `EVP_aes_128_gcm`, `EVP_aes_128_ocb`, `EVP_aes_128_ofb`, `EVP_aes_128_wrap`, `EVP_aes_128_wrap_pad`, `EVP_aes_128_xts`, `EVP_aes_192_cbc`, `EVP_aes_192_ccm`, `EVP_aes_192_cfb1`, `EVP_aes_192_cfb128`, `EVP_aes_192_cfb8`, `EVP_aes_192_ctr`, `EVP_aes_192_ecb`, `EVP_aes_192_gcm`, `EVP_aes_192_ocb`, `EVP_aes_192_ofb`, `EVP_aes_192_wrap`, `EVP_aes_192_wrap_pad`, `EVP_aes_256_cbc`, `EVP_aes_256_cbc_hmac_sha1`, `EVP_aes_256_cbc_hmac_sha256`, `EVP_aes_256_ccm`, `EVP_aes_256_cfb1`, `EVP_aes_256_cfb128`, `EVP_aes_256_cfb8`, `EVP_aes_256_ctr`, `EVP_aes_256_ecb`, `EVP_aes_256_gcm`, `EVP_aes_256_ocb`, `EVP_aes_256_ofb`, `EVP_aes_256_wrap`, `EVP_aes_256_wrap_pad`, `EVP_aes_256_xts`, `EVP_aria_128_cbc`, `EVP_aria_128_ccm`, `EVP_aria_128_cfb1`, `EVP_aria_128_cfb128`, `EVP_aria_128_cfb8`, `EVP_aria_128_ctr`, `EVP_aria_128_ecb`, `EVP_aria_128_gcm`, `EVP_aria_128_ofb`, `EVP_aria_192_cbc`, `EVP_aria_192_ccm`, `EVP_aria_192_cfb1`, `EVP_aria_192_cfb128`, `EVP_aria_192_cfb8`, `EVP_aria_192_ctr`, `EVP_aria_192_ecb`, `EVP_aria_192_gcm`, `EVP_aria_192_ofb`, `EVP_aria_256_cbc`, `EVP_aria_256_ccm`, `EVP_aria_256_cfb1`, `EVP_aria_256_cfb128`, `EVP_aria_256_cfb8`, `EVP_aria_256_ctr`, `EVP_aria_256_ecb`, `EVP_aria_256_gcm`, `EVP_aria_256_ofb`, `EVP_bf_cbc`, `EVP_bf_cfb64`, `EVP_bf_ecb`, `EVP_bf_ofb`, `EVP_blake2b512`, `EVP_blake2s256`, `EVP_camellia_128_cbc`, `EVP_camellia_128_cfb1`, `EVP_camellia_128_cfb128`, `EVP_camellia_128_cfb8`, `EVP_camellia_128_ctr`, `EVP_camellia_128_ecb`, `EVP_camellia_128_ofb`, `EVP_camellia_192_cbc`, `EVP_camellia_192_cfb1`, `EVP_camellia_192_cfb128`, `EVP_camellia_192_cfb8`, `EVP_camellia_192_ctr`, `EVP_camellia_192_ecb`, `EVP_camellia_192_ofb`, `EVP_camellia_256_cbc`, `EVP_camellia_256_cfb1`, `EVP_camellia_256_cfb128`, `EVP_camellia_256_cfb8`, `EVP_camellia_256_ctr`, `EVP_camellia_256_ecb`, `EVP_camellia_256_ofb`, `EVP_cast5_cbc`, `EVP_cast5_cfb64`, `EVP_cast5_ecb`, `EVP_cast5_ofb`, `EVP_chacha20`, `EVP_chacha20_poly1305`, `EVP_des_cbc`, `EVP_des_cfb1`, `EVP_des_cfb64`, `EVP_des_cfb8`, `EVP_des_ecb`, `EVP_des_ede`, `EVP_des_ede3`, `EVP_des_ede3_cbc`, `EVP_des_ede3_cfb1`, `EVP_des_ede3_cfb64`, `EVP_des_ede3_cfb8`, `EVP_des_ede3_ecb`, `EVP_des_ede3_ofb`, `EVP_des_ede3_wrap`, `EVP_des_ede_cbc`, `EVP_des_ede_cfb64`, `EVP_des_ede_ecb`, `EVP_des_ede_ofb`, `EVP_des_ofb`, `EVP_desx_cbc`, `EVP_idea_cbc`, `EVP_idea_cfb64`, `EVP_idea_ecb`, `EVP_idea_ofb`, `EVP_md4`, `EVP_md5`, `EVP_md5_sha1`, `EVP_mdc2`, `EVP_rc2_40_cbc`, `EVP_rc2_64_cbc`, `EVP_rc2_cbc`, `EVP_rc2_cfb64`, `EVP_rc2_ecb`, `EVP_rc2_ofb`, `EVP_rc4`, `EVP_rc4_40`, `EVP_rc4_hmac_md5`, `EVP_read_pw_string`, `EVP_read_pw_string_min`, `EVP_ripemd160`, `EVP_seed_cbc`, `EVP_seed_cfb128`, `EVP_seed_ecb`, `EVP_seed_ofb`, `EVP_sha3_224`, `EVP_sha3_256`, `EVP_sha3_384`, `EVP_sha3_512`, `EVP_shake128`, `EVP_shake256`, `EVP_sm3`, `EVP_sm4_cbc`, `EVP_sm4_cfb128`, `EVP_sm4_ctr`, `EVP_sm4_ecb`, `EVP_sm4_ofb`, `EVP_whirlpool`, `PEM_ASN1_read`, `PEM_ASN1_read_bio`, `PEM_ASN1_write`, `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx`, `PEM_bytes_read_bio`, `PEM_bytes_read_bio_secmem`, `PEM_def_callback`, `PEM_do_header`, `PEM_read_PrivateKey`, `PEM_read_PrivateKey_ex`, `PEM_read_bio_Parameters`, `PEM_read_bio_Parameters_ex`, `PEM_read_bio_PrivateKey`, `PEM_read_bio_PrivateKey_ex`, `PEM_write_PKCS8PrivateKey`, `PEM_write_PKCS8PrivateKey_nid`, `PEM_write_PrivateKey`, `PEM_write_PrivateKey_ex`, `PEM_write_bio_PKCS8PrivateKey`, `PEM_write_bio_PKCS8PrivateKey_nid`, `PEM_write_bio_Parameters`, `PEM_write_bio_PrivateKey`, `PEM_write_bio_PrivateKey_ex`, `PEM_write_bio_PrivateKey_traditional`
 
 Hand-offs received and discharged:
 
 * from phase 5: 26 symbol(s) — `ASN1_item_sign_ex`, `ASN1_item_verify_ex`, `PEM_ASN1_read`, `PEM_ASN1_read_bio`, `PEM_ASN1_write`, `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx`, `PEM_SignFinal`, `PEM_SignInit`, `PEM_SignUpdate`, `PEM_bytes_read_bio`, `PEM_bytes_read_bio_secmem`, `PEM_def_callback`, `PEM_do_header`, `PEM_read`, `PEM_read_bio`, `PEM_read_bio_Parameters`, `PEM_read_bio_Parameters_ex`, `PEM_read_bio_ex`, `PEM_write`, `PEM_write_PKCS8PrivateKey_nid`, `PEM_write_bio`, `PEM_write_bio_ASN1_stream`, `PEM_write_bio_PKCS8PrivateKey_nid`, `PEM_write_bio_Parameters`, `PEM_write_bio_PrivateKey_traditional`
 
-Courts: `all pass`, 19 court(s), **2664** authority observation(s) over 19 transcript court(s).
+Courts: `all pass`, 19 court(s), **2783** authority observation(s) over 19 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
@@ -256,7 +256,7 @@ Courts: `all pass`, 19 court(s), **2664** authority observation(s) over 19 trans
 | RT-CMAC | `pass` | 26 |
 | RT-HPKE | `pass` | 65 |
 | RT-EVP-REF | `pass` | 264 |
-| RT-EVP-INTROSPECT | `pass` | 48 |
+| RT-EVP-INTROSPECT | `pass` | 167 |
 | RT-EVP-CLASS | `pass` | 22 |
 | RT-EVP-PKEY-OPS | `pass` | 100 |
 
@@ -311,9 +311,9 @@ are proofs of reference only. See `docs/DECISIONS.md` D199 and D236.
 | 4 | 249 | 249 | 213 | 36 | 0 | 0 | 0 |
 | 5 | 474 | 474 | 380 | 94 | 0 | 0 | 0 |
 | 6 | 161 | 161 | 156 | 5 | 0 | 0 | 0 |
-| 7 | 706 | 706 | 646 | 60 | 0 | 0 | 0 |
+| 7 | 713 | 713 | 653 | 60 | 0 | 0 | 0 |
 | 8 | 236 | 228 | 228 | 0 | 8 | 0 | 0 |
-| **total** | **2077** | **2069** | **1785** | **284** | **8** | **0** | **0** |
+| **total** | **2084** | **2076** | **1792** | **284** | **8** | **0** | **0** |
 
 ## Atlas/ledger reconciliation
 
