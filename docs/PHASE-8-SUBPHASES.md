@@ -387,7 +387,7 @@ here is. (`forensics/phase8-obligations.json` remains the only complete list.)
 `RSA_meth_set_keygen`, `RSA_meth_get_multi_prime_keygen`, `RSA_meth_set_multi_prime_keygen`,
 `RSA_null_method`, `RSA_padding_add_none`, `RSA_padding_check_none`, `RSA_padding_add_X931`,
 `RSA_padding_check_X931`, `RSA_X931_hash_id`, `RSA_padding_add_PKCS1_type_1`,
-`RSA_padding_check_PKCS1_type_1`.
+`RSA_padding_check_PKCS1_type_1`, `PKCS1_MGF1`.
 
 **Open exports (checked against the ledger):** `RSA_padding_check_PKCS1_OAEP_mgf1`, `RSA_sign`.
 Phase 8.2's cipher families and 8.3's `modes.h` constructions all have their low-level exports in,
@@ -440,6 +440,19 @@ subsystem rather than the files one slice happens to touch, because a coordinate
 part of the observable record and adding a unit's files only when its first site is cited would leave
 the subsystem half-covered between commits. `RSA_meth.c` is deliberately absent from that set: D284
 measured it as allocations and stored pointers, and it raises nothing.
+
+**The same measurement now says the gate is systematic across every key type, which is the
+largest plan correction Phase 8 has needed (D286).** DH, DSA and EC each construct their object the
+way RSA does — `dh_new_intern` (`crypto/dh/dh_lib.c:95`), `dsa_new_intern`
+(`crypto/dsa/dsa_lib.c:153`) and `ossl_ec_key_new_method_int` all take their method from a default
+table, and every one of those tables carries the key-generation entry point (`dh_key.c:165`'s
+`dh_ossl`, whose `ossl_dh_generate_key` reaches `BN_priv_rand_ex` at `dh_key.c:336`). So **no key
+type's constructor, and therefore no key type's accessors, can land before Phase 9's `rand.h`**, and
+8.5, 8.6 and 8.7 inherit 8.4's blocker. What *is* landable in the block is the arithmetic and the
+pure format code, and `PKCS1_MGF1` is the second of those to land: it hashes a four-octet big-endian
+counter with the seed, needs no randomness, and `RT-RSA` now checks it at one digest, across two
+blocks, on a truncated final block, and at zero length — where the authority returns success and
+leaves the output untouched rather than refusing.
 
 **The subphase's own cipher surface is one row smaller than it was (D263, D264, D265).** The
 `ChaCha20` row landed with `cipher_chacha20.c` and `cipher_chacha20_hw.c` transcribed whole, over a

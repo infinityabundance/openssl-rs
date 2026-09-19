@@ -18746,3 +18746,73 @@ is recorded as the next unit rather than implied by this one. And the Phase 9 ha
 *dependencies*, not estimates: each row names the call and its file and line, and `RSA_new`'s names a
 table member rather than a call in its own body, which is the part D283's plan could not have seen
 from the slice's name.
+
+## D286 — `PKCS1_MGF1` lands, and the RAND gate turns out to be systematic across every key type
+
+`PKCS1_MGF1` (`rsa_oaep.c:350-393`), the mask generation function the OAEP padding and the PSS
+verifiers both call. It is the second landable piece of 8.4's format code, and the entry is mostly
+about the measurement that followed it.
+
+**What the function is.** NIST SP 800-56B section 7.2.2.2: for each block, hash a **four-octet
+big-endian counter** concatenated after the seed, and truncate the last block to the caller's
+remaining length. Two transcription traps are worth naming because the court is built on them. The
+loop counter is a `long`, but the counter it *writes* is four octets wide — a transcription that
+wrote the native width would produce a mask whose first block is correct and whose later blocks are
+not, which is exactly the shape of defect no single-block test can see. And **`len <= 0` answers
+`0`, not `-1`**: the loop's condition is `outlen < len`, so a non-positive length does no work and
+reaches the success label, leaving the output untouched. `RT-RSA`'s arms are therefore one digest's
+length, two blocks (the counter's second value), a truncated final block, a zero length, and a
+zero-length seed with a non-zero mask length.
+
+**The measurement: the gate is not RSA's, it is every key type's.** D285 found that `RSA_new` is
+blocked because its default method table carries `rsa_ossl_public_encrypt`, which pads randomly. The
+natural question was whether that is an RSA peculiarity. It is not:
+
+| key type | constructor | takes its method from | the table's random arm |
+| --- | --- | --- | --- |
+| RSA | `rsa_new_intern` (`rsa_lib.c:101`) | `default_RSA_meth` = `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`) | `rsa_ossl_public_encrypt` -> type-2 padding (`:144`) |
+| DH | `dh_new_intern` (`dh_lib.c:95`) | `default_DH_method` = `&dh_ossl` (`dh_key.c:177`) | `ossl_dh_generate_key` -> `BN_priv_rand_ex` (`dh_key.c:336`) |
+| DSA | `dsa_new_intern` (`dsa_lib.c:153`) | `DSA_get_default_method()` | `dsa_ossl`'s key generation |
+| EC | `ossl_ec_key_new_method_int` | the `EC_KEY_METHOD` default | `ossl_ec_key_simple_generate_key` |
+
+Every one of those tables is a table of *function pointers* whose key-generation member reaches the
+RAND stratum, and a table cannot be built without its members existing. So the conclusion is not
+"8.4 has a RAND dependency" but **no key type's constructor — and therefore no key type's accessors,
+since an accessor needs an object to access — can land before Phase 9's `rand.h` and the DRBG its
+`RAND_bytes_ex` fetches**. 8.5, 8.6 and 8.7 inherit 8.4's blocker exactly.
+
+**What follows from that, stated plainly so it is not mistaken for a preference.** The remaining
+Phase 8 work divides in two. The *format and arithmetic* halves are landable and are being landed in
+sequence: 8.4's `none`/X9.31/type-1 padding (D285), the two OAEP checks (their RAND is only in the
+*add*), `PKCS1_MGF1` (this entry), the PKCS1/PSS/FFC arithmetic the sibling blocks own, and the
+`OSS_CIPHER`-style provider rows that were already landed in 8.1–8.3. The *object* halves of 8.4
+through 8.7 are not landable at all until the RAND substrate exists, and that substrate is Phase 9's
+opening move rather than a detour from it: `crypto/rand/rand_lib.c`, `crypto/bn/bn_rand.c`, and the
+`OSSL_OP_RAND` provider rows the census already records as `deferred`. The next unit is therefore
+that substrate, because "do not defer" and "wait for Phase 9" cannot both be true, and the
+measurement above is what says so rather than a judgement call.
+
+**A finding the probe made on its first run, and it is worth its own paragraph.** The first version
+drove `PKCS1_MGF1` with `EVP_sha1()` and `EVP_sha256()`. Both sides *compiled*, and the candidate
+aborted at run time:
+
+```
+openssl-rs: SCAFFOLDED symbol EVP_sha1 was called. It is not implemented; the ABI shell
+            exists only so distribution artifacts can be linked and loaded.
+```
+
+So the `EVP_sha1`/`EVP_sha224`/`EVP_sha256`/`EVP_sha384`/`EVP_sha512` accessors are **not**
+implemented — they are scaffolded ABIs in the shell. This is the class the project's own rule is
+about: a symbol that exists in the distribution artifact but not in the crate reads as coverage to
+an ELF census and as an abort to a caller. The court's fix is the honest one — fetch the methods
+rather than using the accessors, which is what the padding code does anyway — but the *fact* is
+recorded here because a later entry that lands the accessors should say so explicitly rather than
+appearing to close a gap nobody had named. `round_to_eight` is unaffected: `EVP_MD_fetch(NULL,
+"SHA1", NULL)` resolves on both sides, and the digest is the same function.
+
+**What this entry does not claim.** The two OAEP checks are **not** landed: they are a hundred lines
+of constant-time code using `constant_time_is_zero`/`_eq`/`_select_int`/`_select_8`/`_ge`/`_lt` and
+`err_clear_last_constant_time`, the last of which is `crypto/err/err.c`'s, and a transcription of
+that shape is worth its own commit and its own court arms rather than being appended here. They are
+measured landable in D285 and remain the next unit after the RAND substrate or beside it.
+`RT-RSA` is at **261 observations**.

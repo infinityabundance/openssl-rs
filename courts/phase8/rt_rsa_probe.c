@@ -63,7 +63,9 @@
 #include <openssl/bn.h>
 #include <openssl/crypto.h>
 #include <openssl/err.h>
+#include <openssl/evp.h>
 #include <openssl/rsa.h>
+#include <openssl/sha.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -527,6 +529,56 @@ int main(void)
     blk[9] = 0x00;
     printf("rsa.chk_t1.padcount=%d\n", RSA_padding_check_PKCS1_type_1(to, 64, blk, 16, 16));
     drain("chk_t1_padcount");
+
+    /* PKCS1_MGF1: the counter is big-endian and four octets wide, so the arms are a mask that
+     * is exactly one digest, one that spans two blocks (the counter's second value), one that is
+     * not a multiple of the digest size (the truncating final block), and a zero length. */
+    {
+        static const unsigned char mgf_seed[20] = {
+            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
+            0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13
+        };
+        unsigned char mask[80];
+        const EVP_MD *md_sha1 = EVP_MD_fetch(NULL, "SHA1", NULL);
+        const EVP_MD *md_sha256 = EVP_MD_fetch(NULL, "SHA256", NULL);
+        int k;
+
+        /* Fetched rather than `EVP_sha1()`/`EVP_sha256()`: the accessor functions are still a
+         * scaffolded ABI in the candidate shell, while the fetched methods are 8.1b's and are
+         * what `PKCS1_MGF1` is actually handed by the padding code. The digest is the same
+         * function either way, so the mask is the same bytes. */
+        printf("rsa.mgf1.fetched=%d\n", md_sha1 != NULL && md_sha256 != NULL);
+        if (md_sha1 == NULL || md_sha256 == NULL)
+            return 1;
+
+        ERR_clear_error();
+        memset(mask, 0, sizeof(mask));
+        printf("rsa.mgf1.sha1.one.ret=%d\n", PKCS1_MGF1(mask, 20, mgf_seed, 20, md_sha1));
+        for (k = 0; k < 20; k++)
+            printf("rsa.mgf1.sha1.one.%02d=%02x\n", k, mask[k]);
+        drain("mgf1_sha1_one");
+        memset(mask, 0, sizeof(mask));
+        printf("rsa.mgf1.sha1.two.ret=%d\n", PKCS1_MGF1(mask, 40, mgf_seed, 20, md_sha1));
+        for (k = 20; k < 40; k++)
+            printf("rsa.mgf1.sha1.two.%02d=%02x\n", k, mask[k]);
+        drain("mgf1_sha1_two");
+        memset(mask, 0, sizeof(mask));
+        printf("rsa.mgf1.sha256.part.ret=%d\n",
+            PKCS1_MGF1(mask, 45, mgf_seed, 20, md_sha256));
+        for (k = 32; k < 45; k++)
+            printf("rsa.mgf1.sha256.part.%02d=%02x\n", k, mask[k]);
+        /* The seed is `seedlen` octets and is not NUL-terminated: a zero length is legal and
+         * hashes the counter alone. The mask must be left untouched by a zero-length request. */
+        memset(mask, 0xa5, sizeof(mask));
+        printf("rsa.mgf1.zero.ret=%d\n", PKCS1_MGF1(mask, 0, mgf_seed, 20, md_sha1));
+        printf("rsa.mgf1.zero.untouched=%d\n", mask[0] == 0xa5 && mask[19] == 0xa5);
+        printf("rsa.mgf1.noseed.ret=%d\n", PKCS1_MGF1(mask, 20, mgf_seed, 0, md_sha1));
+        for (k = 0; k < 4; k++)
+            printf("rsa.mgf1.noseed.%02d=%02x\n", k, mask[k]);
+        EVP_MD_free((EVP_MD *)md_sha1);
+        EVP_MD_free((EVP_MD *)md_sha256);
+        printf("rsa.mgf1.released=1\n");
+    }
 
     /* ---------------------------------------------------------------- release */
 

@@ -10963,7 +10963,8 @@
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-FETCH",
-              "RT-HMAC"
+              "RT-HMAC",
+              "RT-RSA"
             ],
             "symbol": "EVP_MD_fetch"
           },
@@ -10977,7 +10978,8 @@
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-FETCH",
-              "RT-HMAC"
+              "RT-HMAC",
+              "RT-RSA"
             ],
             "symbol": "EVP_MD_free"
           },
@@ -14149,10 +14151,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 227,
-          "directly_courted_called": 227,
+          "directly_courted": 228,
+          "directly_courted_called": 228,
           "directly_courted_referenced": 0,
-          "implemented": 235,
+          "implemented": 236,
           "indirectly_courted": 8,
           "non_observable": 0,
           "unmatched": 0
@@ -15134,6 +15136,13 @@
           {
             "basis": "called",
             "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "PKCS1_MGF1"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-CIPHER"
             ],
             "symbol": "RC2_cbc_encrypt"
@@ -15804,10 +15813,10 @@
       }
     ],
     "totals": {
-      "directly_courted": 2068,
-      "directly_courted_called": 1784,
+      "directly_courted": 2069,
+      "directly_courted_called": 1785,
       "directly_courted_referenced": 284,
-      "implemented": 2076,
+      "implemented": 2077,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -15818,7 +15827,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "e9c5316591d2a0a03bfb63fbdd60ebe5dd6e69a265840389b66a6a6a6b37bbff"
+      "sha256": "97fbf2137a49bfc45e71435085eaa59c675fdd381eb7b0c2fabfa742bc3931ff"
     },
     {
       "name": "symbol-ownership",
@@ -15833,7 +15842,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "d9eadfc0074b07386256aef6aa279b3379d262f7846fd6d3f2cf5e3e9a563627"
+      "sha256": "f649def52f7a19a4f9342bf46777cd34448609124eb761ad8b9227cf92f3250e"
     },
     {
       "name": "phase3-courts",
@@ -15843,7 +15852,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "c9796d0f9d650c3d43c0dd2bed56a01685ea6b2cfcf77fb10995064d693e8844"
+      "sha256": "bd46d6c984eedbf106a9f10e7c43342976141e48772cc7377ab12fdceffa56b1"
     },
     {
       "name": "phase4-courts",
@@ -15853,7 +15862,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "e91401937622d35de3a090ca3d1ea0b99ee0e6983275e4197461914b2b549970"
+      "sha256": "90bf50fdecc491431233056fd81115fa134408bd49733f254f084991369b9f73"
     },
     {
       "name": "phase5-courts",
@@ -15863,7 +15872,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "363d77f6556a3bf9b7da0998fc8b6f593ddb2fef6a5c47c7576a613ffc1e6e53"
+      "sha256": "6f5f198e80bf9e0b1a3aabb0b94dc2b1fb3b1b99d5fbb5a988279268ef76ea08"
     },
     {
       "name": "phase6-courts",
@@ -15873,7 +15882,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "42476b8121fef1e7340a5aafd9f90609ef0e9e31fc4b44aac1b09de139f6c6ee"
+      "sha256": "ad42d3215afea8e28de956c74c9655d9d09dc38810f80c65633c6caf0b1097b7"
     },
     {
       "name": "phase7-courts",
@@ -15883,12 +15892,12 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "1a5138909b1656c86416e19ab44116c2ad1f047f9f1e471dff23778e9dc6506b"
+      "sha256": "6b5f81413e8af247a789f94a115379ae916af56b5c7118d3d842cd9c94a536e3"
     },
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "784568c2a6d1ad2cd4488de1c8c3cbc73d6e18a95044fe3f302c4cbccb371168"
+      "sha256": "2f1d132291025785fa9d5565bde0e80bde604215236a6bcae6d2d55dd5817b7a"
     }
   ],
   "kind": "court-coverage",

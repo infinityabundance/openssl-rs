@@ -51,16 +51,20 @@
 //! `rsa_mod_exp` and `bn_mod_exp` "Can be null". So every function-pointer member is an `Option`,
 //! and the null is expressed as `None` rather than by a fabricated address.
 
-use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void};
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
 
 use crate::bn::bignum::BigNum;
 use crate::bn::ctx::{BnCtx, BnGencb};
 use crate::bn::mont::MontCtx;
+use crate::evp::digest::{
+    EVP_DigestFinal_ex, EVP_DigestInit_ex, EVP_DigestUpdate, EVP_MD_CTX_free, EVP_MD_CTX_new,
+    EVP_MD_get_size, EvpMd,
+};
 use crate::evp::pkey_asn1::Engine;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::ex_data::CryptoExData;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::{cleanse, CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};
 use crate::runtime::obj::{NID_sha1, NID_sha256, NID_sha384, NID_sha512};
 use crate::runtime::stack::OpenSslStack;
 use crate::runtime::thread::CryptoRwlock;
@@ -1102,6 +1106,97 @@ pub unsafe extern "C" fn RSA_padding_check_PKCS1_type_1(
         }
         core::ptr::copy_nonoverlapping(p, to, j as usize);
         j
+    }
+}
+
+/// `EVP_MAX_MD_SIZE` — `include/openssl/evp.h:34`. Sixty-four, the widest digest this crate
+/// publishes.
+const EVP_MAX_MD_SIZE: usize = 64;
+
+/// `int PKCS1_MGF1(unsigned char *mask, long len, const unsigned char *seed, long seedlen,
+/// const EVP_MD *dgst)` — `rsa_oaep.c:350-393`.
+///
+/// NIST SP 800-56B section 7.2.2.2's mask generation function, and the **counter is big-endian and
+/// four octets wide** even though the loop counter is a `long` -- a transcription that wrote the
+/// counter in native order, or widened it to eight octets, would produce a mask that is correct for
+/// the first block and wrong for every later one. The final partial block is truncated to the
+/// caller's remaining length rather than written whole.
+///
+/// **`len <= 0` answers `0`, not `-1`**: the loop's condition is `outlen < len`, so a
+/// non-positive length performs no work and the function reaches its success label. That is the
+/// authority's own behaviour and a caller relying on it would break under a "reject empty"
+/// transcription.
+///
+/// # Safety
+/// `mask` is writable for `len` bytes; `seed` is readable for `seedlen`; `dgst` is a live digest
+/// method.
+#[no_mangle]
+pub unsafe extern "C" fn PKCS1_MGF1(
+    mask: *mut c_uchar,
+    len: c_long,
+    seed: *const c_uchar,
+    seedlen: c_long,
+    dgst: *const EvpMd,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let c = EVP_MD_CTX_new();
+        let mut md = [0u8; EVP_MAX_MD_SIZE];
+        let mut cnt = [0u8; 4];
+        let mut i: c_long = 0;
+        let mut outlen: c_long = 0;
+
+        // The authority's `goto err`: every exit that is not the loop's own condition reports
+        // `-1`, and the `cleanse` and the context release happen on both paths.
+        let completed = 'body: {
+            if c.is_null() {
+                break 'body false;
+            }
+            let mdlen = EVP_MD_get_size(dgst);
+
+            if mdlen <= 0 {
+                break 'body false;
+            }
+            while outlen < len {
+                cnt[0] = ((i >> 24) & 255) as u8;
+                cnt[1] = ((i >> 16) & 255) as u8;
+                cnt[2] = ((i >> 8) & 255) as u8;
+                cnt[3] = (i & 255) as u8;
+                if EVP_DigestInit_ex(c, dgst, core::ptr::null_mut()) == 0
+                    || EVP_DigestUpdate(c, seed.cast(), seedlen as usize) == 0
+                    || EVP_DigestUpdate(c, cnt.as_ptr().cast(), 4) == 0
+                {
+                    break 'body false;
+                }
+                if outlen + mdlen as c_long <= len {
+                    if EVP_DigestFinal_ex(c, mask.offset(outlen as isize), core::ptr::null_mut())
+                        == 0
+                    {
+                        break 'body false;
+                    }
+                    outlen += mdlen as c_long;
+                } else {
+                    if EVP_DigestFinal_ex(c, md.as_mut_ptr(), core::ptr::null_mut()) == 0 {
+                        break 'body false;
+                    }
+                    core::ptr::copy_nonoverlapping(
+                        md.as_ptr(),
+                        mask.offset(outlen as isize),
+                        (len - outlen) as usize,
+                    );
+                    outlen = len;
+                }
+                i += 1;
+            }
+            true
+        };
+        cleanse(md.as_mut_ptr(), md.len());
+        EVP_MD_CTX_free(c);
+        if completed {
+            0
+        } else {
+            -1
+        }
     }
 }
 
