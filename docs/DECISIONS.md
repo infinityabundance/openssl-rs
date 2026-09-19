@@ -16233,3 +16233,102 @@ census moves **110 implemented / 201 open / 685 deferred** to **110 / 200 / 686*
 same 996-row universe; `err-raise-sites.json` moves **1881 → 1889**; and the unit tests move to
 **548 passed, 0 failed**. No court observation moves: `RT-CIPHER` is untouched by this unit and
 `RT-DIGEST` with it.
+
+## D244 — provider rows are a completion input, the census is a plane the guard watches, and the row identity is the whole alias sequence
+
+D237 built the provider-algorithm census to make a contract surface visible that no ELF census can
+see. This entry makes it *load-bearing* in four places, because an atlas that nothing reads is a
+report rather than an obligation.
+
+**The structural hole, stated exactly.** `phase_state.py` derived a stratum's state from its export
+ledger, its courts, the export court-coverage atlas and the existence of its seal. It did not read
+`provider-algorithms.json` at all. So this was reachable:
+
+```text
+export open = 0
+courts = pass
+export coverage unmatched = 0
+seal exists
+
+provider rows open = 200          <- nothing looked
+        |
+Phase 8 = COMPLETE
+```
+
+The atlas would have said so honestly and the state would have said `complete` anyway. The rule is
+now generic over `STRATUM_EVIDENCE` rather than special to the stratum in progress: a stratum may
+not be complete while any provider row whose `owning_phase` is that stratum is `open`. `deferred` is
+deliberately not `open` — a hand-off names the phase that takes it and a blocker, and handing work on
+is a decision this project allows while silently not publishing a row is not.
+
+The counts are machine-readable on every phase's row (`provider_rows: {owned, implemented, open,
+deferred}`), not only prose in the one phase that happens to be in progress:
+
+```text
+phase  8  in-progress  {'owned': 310, 'implemented': 110, 'open': 200}
+phase  9  not-started  {'owned': 11,  'deferred': 11}
+phase 10  not-started  {'owned': 636, 'deferred': 636}
+phase 13  not-started  {'owned': 39,  'deferred': 39}
+```
+
+**The regression guard watches it now, and the direction is per key.** `provider_rows` (total,
+implemented, open, deferred, `open_by_phase`, `deferred_by_phase`) and the **identities** of the 110
+implemented rows are in `forensics/regression-baseline.json`. Counts alone would catch the review's
+scenario only by accident, so the identity set is compared too: deleting a landed provider row moves
+an identity out of the set and is reported by name. Direction is explicit per key because the
+opposite default is silently permissive — `open` growing is a regression and `implemented` shrinking
+is one, `deferred` is neutral in both directions, and a key the table does not know is reported as a
+movement rather than assumed benign. **The first version of this block got the direction wrong for
+`open`**, and the negative test is what found it: the check reported `implemented: 111 -> 110` for a
+mutation that had only raised `open`, which is precisely the failure mode a directional invariant
+exists to prevent.
+
+**The row identity is the whole alias sequence.** The join compared `primary(alias_string)`, so it
+would have accepted a crate row that had dropped every alias and every OID:
+
+```text
+authority:  AES-128-GCM:id-aes128-GCM:2.16.840.1.101.3.4.1.6
+candidate:  AES-128-GCM
+```
+
+Those are different rows for a provider compatibility port: the alias sequence is what
+`EVP_CIPHER_fetch(NULL, "id-aes128-GCM", NULL)` resolves through. The join now compares the
+**complete** sequence, and adds two checks that need no naming convention:
+
+* the relation "two matched rows share one crate implementation" must equal the relation "two
+  matched rows share one authority dispatch symbol", so a crate table standing in for two authority
+  tables fails even though nothing is spelled differently;
+* the crate's rows must be a **subsequence** of the authority's rows for that operation in the
+  authority's own order, so an accidental reorder cannot remain `implemented`.
+
+All four checks are negative-tested against mutated copies of the crate's own text: a dropped alias,
+a reorder, a shared dispatch identifier, and — the trap the first attempt fell into — the fact that
+the census stores the **primary** in `algorithm_names` and the sequence in `aliases`, so comparing a
+crate row's `c"A:B:C"` string against `algorithm_names` fails on every aliased row. That produced a
+false failure on `AES-256-ECB:2.16.840.1.101.3.4.1.41` before it produced a true one, which is the
+check doing its job on the checker.
+
+**The preprocessor refuses `#elif` rather than approximating it.** The arm was
+`stack[-1] = stack[-1] or eval_guard(...)`, which keeps an `#elif` branch active when an earlier
+branch was already taken — the opposite of C. It was measured harmless on the admitted profile (all
+seven files this walks contain zero `#elif`s), and that measurement is why the arm is replaced by a
+**refusal**: a branch-selection expression this reader cannot get right is one it must not silently
+answer. The day an authority update adds one, it fails and the arm gets written properly.
+
+**What this entry moves.** Nothing that is a count of work: `implemented[libcrypto]` stays **2035 /
+5896**, Phase 8 stays **194 implemented / 576 open / 16 deferred**, the provider census stays **996
+rows / 110 implemented / 200 open / 686 deferred**, and no court observation moves. What moves is
+what those numbers *do*: the census is now a completion input, a watched regression plane, and one
+whose row identity is the full contract. The verification is 8 provider-plane and 4 row-identity
+negative tests, each of which has to fail for the corresponding check to be worth having.
+
+**Left this turn, and named rather than implied.** Two items from the same review remain open. The
+census's candidate reader still has one reader per operation (`crate_cipher_rows`,
+`crate_digest_rows`, `crate_mac_rows`) rather than one generic walk of the crate's `deflt_query`
+arms, so a newly landed KDF or KEYMGMT row would not be discovered until its reader is written. And
+`state` is still phase-relative — `open` versus `deferred` is a projection over the *current* phase,
+so when Phase 9 becomes active its eleven `deferred` rows will want to read as `deferred` still
+while Phase 10's six hundred and thirty-six want their own projection; the intended shape is an
+immutable `implementation_state` (`implemented`/`unimplemented`) beside `owning_phase`, with the
+projection derived per stratum rather than stored on the row. Neither is a correctness gap in what
+is published today, and both are recorded here rather than in a comment.

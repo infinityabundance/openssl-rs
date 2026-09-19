@@ -78,6 +78,9 @@ BASELINE = REPO_ROOT / BASELINE_REL
 
 IMPLEMENTED_SURFACE = "forensics/atlas/implemented-surface.json"
 PREREQUISITE_GATE = "forensics/atlas/prerequisite-gate.json"
+# The provider-algorithm census. Its rows are the one part of the contract no ELF census can
+# see, so a plane that watched only exports could lose a landed registration row in silence.
+PROVIDER_ALGORITHMS = "forensics/atlas/provider-algorithms.json"
 PHASE_STATE = "forensics/phase-state.json"
 TRANSITIONS = "forensics/ownership-transitions.json"
 
@@ -148,7 +151,8 @@ def baseline_from_ref(ref: str, allow_missing: bool) -> dict | None:
 def observe() -> dict:
     """The current evidence, reduced to the numbers the guard compares."""
     obs: dict = {"implemented": {}, "open_obligations": {}, "owned_obligations": {},
-                 "deferred": {}, "courts": {}, "phases": {}, "court_phases": []}
+                 "deferred": {}, "courts": {}, "phases": {}, "court_phases": [],
+                 "provider_rows": {}, "provider_implemented": []}
 
     surface = read_json(IMPLEMENTED_SURFACE)
     if surface:
@@ -200,6 +204,35 @@ def observe() -> dict:
             "blocking_dependencies": len(gb["blocking_dependencies"]),
             "divergence_names_covered": gb["checked"]["divergence_names_covered"],
         }
+
+    # The provider-algorithm census (D237). Counts alone would catch a row being
+    # un-implemented only if the count is what moves, so the *identities* of the
+    # implemented rows are tracked as well: deleting a landed provider row moves one
+    # identity out of this set and one count down, and both are reported. The reverse
+    # direction is scope growth rather than regression and is a movement.
+    providers = read_json(PROVIDER_ALGORITHMS)
+    if providers:
+        rows = providers["body"]["rows"]
+        by_state: dict[str, int] = {}
+        open_by_phase: dict[str, int] = {}
+        deferred_by_phase: dict[str, int] = {}
+        for row in rows:
+            by_state[row["state"]] = by_state.get(row["state"], 0) + 1
+            bucket = {"open": open_by_phase, "deferred": deferred_by_phase}.get(row["state"])
+            if bucket is not None:
+                key = str(row["owning_phase"])
+                bucket[key] = bucket.get(key, 0) + 1
+        obs["provider_rows"] = {
+            "total": len(rows),
+            **{k: by_state[k] for k in sorted(by_state)},
+            "open_by_phase": {k: open_by_phase[k] for k in sorted(open_by_phase)},
+            "deferred_by_phase": {k: deferred_by_phase[k] for k in sorted(deferred_by_phase)},
+        }
+        obs["provider_implemented"] = sorted(
+            f"{r['provider']}/{r['operation']}/{r['algorithm_names']}"
+            for r in rows
+            if r["state"] == "implemented"
+        )
 
     return obs
 
@@ -512,6 +545,76 @@ def compare(baseline: dict, current: dict) -> tuple[list[str], list[str]]:
                 movements.append(
                     f"prerequisites[language_census_by_unit][{unit}]: new unit, "
                     f"{now} censused name(s)")
+
+    # The provider-algorithm plane. An absent census is an absence of evidence rather than
+    # a clean bill, exactly as for every other plane, and the *identity* set is compared
+    # both ways: a row that was implemented and is not is the regression the review named
+    # (`CMAC provider row = implemented` at commit A, deleted at commit B), and a row that
+    # was open and is now implemented is the movement this stratum exists to produce.
+    #
+    # **Direction is per key, and getting it wrong is silent.** `open` counts must not grow
+    # and `implemented` must not shrink; `total` must not shrink either, because a row
+    # leaving the universe is an ownership change and not a quiet edit; and `deferred` is
+    # deliberately neutral in both directions, because handing work to a later stratum is a
+    # decision this project allows and taking it back is a decision too. A key this table
+    # does not know is reported as a movement rather than assumed benign, so a new field
+    # arrives as a visible line instead of as an unchecked one.
+    PROVIDER_UP_IS_BAD = {"open", "open_by_phase"}
+    PROVIDER_DOWN_IS_BAD = {"implemented", "total"}
+    was_providers = baseline.get("provider_rows")
+    now_providers = current.get("provider_rows")
+
+    def provider_move(key: str, parent: str, was, now) -> None:
+        if was == now:
+            return
+        if parent in PROVIDER_UP_IS_BAD and now > was:
+            regressions.append(f"provider_rows[{key}]: {was} -> {now} (+{now - was})")
+        elif parent in PROVIDER_DOWN_IS_BAD and now < was:
+            regressions.append(f"provider_rows[{key}]: {was} -> {now} (lost {was - now})")
+        else:
+            movements.append(f"provider_rows[{key}]: {was} -> {now}")
+
+    if was_providers is not None and not now_providers:
+        regressions.append(
+            f"provider_rows: baseline {was_providers}, but {PROVIDER_ALGORITHMS} is absent "
+            f"or unreadable -- absence is not completion")
+    elif was_providers and now_providers:
+        for key, was in sorted(was_providers.items()):
+            now = now_providers.get(key)
+            if isinstance(was, dict):
+                if not isinstance(now, dict):
+                    regressions.append(f"provider_rows[{key}]: shape changed to a scalar")
+                    continue
+                for sub, count in sorted(was.items()):
+                    here = now.get(sub)
+                    if here is None:
+                        movements.append(f"provider_rows[{key}][{sub}]: {count} -> absent")
+                    else:
+                        provider_move(f"{key}][{sub}", key, count, here)
+                for sub, here in sorted(now.items()):
+                    if sub not in was:
+                        movements.append(f"provider_rows[{key}][{sub}]: new, {here}")
+                continue
+            if now is None:
+                regressions.append(
+                    f"provider_rows[{key}]: baseline {was}, but the census does not carry "
+                    f"this field")
+                continue
+            provider_move(key, key, was, now)
+
+    was_impl = set(baseline.get("provider_implemented", []))
+    now_impl = set(current.get("provider_implemented", []))
+    if was_impl and not now_impl:
+        regressions.append(
+            f"provider_implemented: baseline carried {len(was_impl)} row(s), but the census "
+            f"carries none -- absence is not completion")
+    elif was_impl:
+        for row in sorted(was_impl - now_impl):
+            regressions.append(
+                f"provider_implemented[{row}]: was implemented, and the census no longer "
+                f"lists it -- a landed provider row cannot be un-registered")
+        for row in sorted(now_impl - was_impl):
+            movements.append(f"provider_implemented[{row}]: newly implemented")
 
     return regressions, movements
 

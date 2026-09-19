@@ -521,7 +521,7 @@
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "e133c5bf5366204961ea1dd15d8e2b6b7c01507ea3bb9922a15b7d75e980d014"
+      "sha256": "6167af0b1c5ab7797b28e02f0b8d230ff3685210849e936a34995301401a41d6"
     },
     {
       "name": "prerequisites",

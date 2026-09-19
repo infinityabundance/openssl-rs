@@ -62,6 +62,14 @@ more than "our `EVP_*` calls seem to work".
 - **Obligations**: every provider operation, algorithm and property is a
   generated obligation (`PROVIDER-LOAD`, `PROVIDER-DISPATCH`,
   `FETCH-PROPERTY` courts).
+- **Registration rows are a completion input, not a report.** A provider publishes
+  *algorithm registration rows* — `deflt_ciphers[]`, `deflt_digests[]`, `deflt_macs[]` and their
+  siblings — and no `libcrypto.num` entry names any of them, so no symbol atlas can see one. They
+  are enumerated by `forensics/atlas/provider-algorithms.json`, and since D244 a stratum cannot
+  reach `complete` while any row it owns is neither implemented nor handed to a later phase. The
+  row counts are carried on every phase's row in `forensics/phase-state.json` and in
+  `forensics/regression-baseline.json`, so a landed row cannot be un-registered in silence.
+  `deferred` is not `open`: a hand-off names the phase that will take it and a blocker.
 - **Duplicated names / property selection**: the *selected* algorithm is
   observable and may differ; selection is courted, not assumed.
 - **Configuration**: config-driven provider module activation and property
