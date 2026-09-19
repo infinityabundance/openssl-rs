@@ -177,6 +177,20 @@ CRATE_LOCAL = "not an authority type: a crate-local callback shape with no heade
 WRAP_FN = ("not a provider dispatch: `cipher_aes_wrp.c:28-30`'s `aeswrap_fn`, a typedef local to a "
            "provider implementation file, which the atlas -- whose universe is the installed "
            "public surface -- records no typedef for")
+# `prov/ciphercommon.h:30` -- `PROV_CIPHER_FUNC(type, name, args)` expands to
+# `typedef type(*OSSL_##name##_fn) args`, so the typedef is produced by the preprocessor and there
+# is no `typedef` declaration for a declaration reader to record. `OSSL_xts_stream_fn` is the one
+# instance the crate names.
+PROV_CIPHER_FUNC_TYPE = (
+    "not a provider dispatch: `prov/ciphercommon.h:30`'s `PROV_CIPHER_FUNC` macro generates it as "
+    "`typedef type(*OSSL_##name##_fn) args`, so the header carries no `typedef` declaration and "
+    "the atlas records none")
+# `cipher_tdes.h:26-29` -- the member type of `PROV_TDES_CTX`'s `tstream` union, written inline in
+# the struct rather than introduced with a `typedef`.
+TDES_TSTREAM_FN = (
+    "not a provider dispatch: the type of `PROV_TDES_CTX`'s `tstream` union member "
+    "(`cipher_tdes.h:26-29`), written inline in the struct rather than introduced with a "
+    "`typedef`, so the atlas records no name for it")
 
 
 def _inline(fn: str, spelling: str) -> str:
@@ -215,6 +229,9 @@ LINKS: dict[str, tuple[str, ...]] = {
     "BioCallbackFn": ("BIO_callback_fn",),
     "BioCallbackExFn": ("BIO_callback_fn_ex",),
     "BioInfoCb": ("BIO_info_cb",),
+    # `include/openssl/modes.h:40-44`'s `ccm128_f`. The authority's name ends `_f` rather than
+    # `_fn`, so the convention rule (which strips only `_fn`) cannot reach it.
+    "Ccm128Fn": ("ccm128_f",),
 }
 
 # ---------------------------------------------------------------------------------------------
@@ -300,6 +317,8 @@ NOT_A_DISPATCH: dict[str, str] = {
     "SkCopyFn": SK_MACRO,
     "SkFreeFn": SK_MACRO,
     "AesWrapFn@src/provider/cipher.rs": WRAP_FN,
+    "OsslXtsStreamFn": PROV_CIPHER_FUNC_TYPE,
+    "TdesStreamFn": TDES_TSTREAM_FN,
     "ConfInitFn@src/runtime/conf/types.rs": CONF_METHOD,
     "ConfFinishFn": ("not a provider dispatch: the crate's `conf_finish_func` equivalent for the "
                      "`CONF_METHOD` vtable; the authority declares the module finish callback "

@@ -1851,16 +1851,43 @@ pub(crate) unsafe extern "C" fn ossl_cipher_hw_generic_ctr(
 // The per-algorithm hardware
 // ---------------------------------------------------------------------------------------------
 
-/// `PROV_AES_CTX` — `cipher_aes.h:?`: `PROV_CIPHER_CTX base` then the `AES_KEY` union.
+/// The authority's `union { OSSL_UNION_ALIGN; AES_KEY ks; }`, which every AES-family provider context
+/// embeds as a member.
+///
+/// **The union is the contract, not the `AES_KEY`.** `OSSL_UNION_ALIGN` is
+/// `double align; ossl_uintmax_t align_int; void *align_ptr` (`internal/common.h:75-78`), so the
+/// union is **eight**-aligned, and a 244-byte `AES_KEY` therefore occupies **248** bytes of the
+/// enclosing object. The four trailing bytes are part of the allocation request, which is exactly
+/// what a `CRYPTO_set_mem_functions` application's allocator receives, so flattening the union to
+/// `AES_KEY` under-allocates every AES, XTS, OCB, CCM and wrap context (D269).
+///
+/// `ks` is at offset zero, so this is transparent to the `*mut AES_KEY` a hw function is handed
+/// and to every `addr_of_mut!` taken on a context's `ks` member.
+#[repr(C, align(8))]
+pub(crate) struct AesKeyUnion {
+    /// `AES_KEY ks`.
+    pub ks: AesKey,
+}
+
+/// `PROV_AES_CTX` — `cipher_aes.h:16-39`: `PROV_CIPHER_CTX base`, the `AES_KEY` union, and the
+/// platform union that is a bare `int` in this profile.
 #[repr(C)]
 pub(crate) struct ProvAesCtx {
     /// `PROV_CIPHER_CTX base`.
     pub base: ProvCipherCtx,
     /// `union { OSSL_UNION_ALIGN; AES_KEY ks; } ks`.
-    pub ks: AesKey,
+    pub ks: AesKeyUnion,
+    /// `union { int dummy; /* the s390x arm is not compiled here */ } plat`. Read by nothing in
+    /// this profile; it is present because it is four bytes of the allocation request.
+    #[allow(dead_code)]
+    // size-only member: `sizeof(PROV_AES_CTX)` is 448 and this is its last four bytes
+    pub plat: c_int,
 }
 
 /// `PROV_CAMELLIA_CTX` — `cipher_camellia.h`'s shape.
+///
+/// `CAMELLIA_KEY` is itself eight-aligned and 280 bytes (`src/camellia.rs`), so the union adds no
+/// tail padding here and the flattened field is the union's layout exactly.
 #[repr(C)]
 pub(crate) struct ProvCamelliaCtx {
     /// `PROV_CIPHER_CTX base`.
@@ -1869,13 +1896,28 @@ pub(crate) struct ProvCamelliaCtx {
     pub ks: CamelliaKey,
 }
 
-/// `PROV_TDES_CTX` — `cipher_tdes.h:22-38`.
+/// `union { void (*cbc)(const void *, void *, size_t, const DES_key_schedule *, unsigned char *); }
+/// tstream` — `cipher_tdes.h:26-29`. The assembly path's CBC entry point.
+pub(crate) type TdesStreamFn =
+    unsafe extern "C" fn(*const c_void, *mut c_void, usize, *const DesKeySchedule, *mut c_uchar);
+
+/// `PROV_TDES_CTX` — `cipher_tdes.h:22-38`. `OSSL_FIPS_IND_DECLARE` is empty in this profile (it is
+/// `OSSL_FIPS_IND indicator` only under `FIPS_MODULE`), so the struct is the base, `tks` and
+/// `tstream`.
+///
+/// `tstream` holds the single `void (*cbc)(...)` the assembly path installs. The crate reaches the
+/// same behaviour through `cipher_tdes_hw.c`'s own `cbc` function, so nothing writes this member —
+/// but it is eight bytes of a 584-byte allocation request, and `cipher_hw_tdes_copyctx` copies it.
 #[repr(C)]
 pub(crate) struct ProvTdesCtx {
     /// `PROV_CIPHER_CTX base`.
     pub base: ProvCipherCtx,
     /// `union { OSSL_UNION_ALIGN; DES_key_schedule ks[3]; } tks`.
     pub tks: [DesKeySchedule; 3],
+    /// `union { void (*cbc)(const void *, void *, size_t, const DES_key_schedule *,
+    /// unsigned char *); } tstream`. Left NULL, as the C body leaves it.
+    #[allow(dead_code)] // size-only member: see the struct's doc comment
+    pub tstream: Option<TdesStreamFn>,
 }
 
 /// `AES_encrypt` as the generic engine's `block128_f`.
@@ -1958,7 +2000,7 @@ unsafe extern "C" fn cipher_hw_aes_initkey(
     // SAFETY: the caller's contract; `dat` is a `PROV_AES_CTX`.
     unsafe {
         let adat = dat.cast::<ProvAesCtx>();
-        let ks = ptr::addr_of_mut!((*adat).ks);
+        let ks = ptr::addr_of_mut!((*adat).ks.ks);
         (*dat).ks = ks.cast();
         let ret = if ((*dat).mode == EVP_CIPH_ECB_MODE || (*dat).mode == EVP_CIPH_CBC_MODE)
             && bits(dat) & CTX_ENC == 0
@@ -1989,7 +2031,8 @@ unsafe extern "C" fn cipher_hw_aes_copyctx(dst: *mut ProvCipherCtx, src: *const 
     // SAFETY: the caller's contract; both are `PROV_AES_CTX`.
     unsafe {
         ptr::copy_nonoverlapping(src.cast::<ProvAesCtx>(), dst.cast::<ProvAesCtx>(), 1);
-        (*dst.cast::<ProvAesCtx>()).base.ks = ptr::addr_of!((*dst.cast::<ProvAesCtx>()).ks).cast();
+        (*dst.cast::<ProvAesCtx>()).base.ks =
+            ptr::addr_of!((*dst.cast::<ProvAesCtx>()).ks.ks).cast();
     }
 }
 
@@ -2906,7 +2949,7 @@ pub(crate) struct ProvAesWrapCtx {
     /// `PROV_CIPHER_CTX base`.
     pub base: ProvCipherCtx,
     /// `union { OSSL_UNION_ALIGN; AES_KEY ks; } ks`.
-    pub ks: AesKey,
+    pub ks: AesKeyUnion,
     /// `aeswrap_fn wrapfn`.
     pub wrapfn: Option<AesWrapFn>,
 }
@@ -3035,7 +3078,7 @@ unsafe fn aes_wrap_init(
             } else {
                 enc == 0
             };
-            let ks = ptr::addr_of_mut!((*wctx).ks);
+            let ks = ptr::addr_of_mut!((*wctx).ks.ks);
             if use_forward {
                 AES_set_encrypt_key(key, (keylen * 8) as c_int, ks);
                 (*ctx).block = Some(aes_block_encrypt);
@@ -4183,18 +4226,42 @@ const EVP_CIPH_XTS_MODE: c_uint = 0x10001;
 /// the duplicated-key check is applied to encryption **and** decryption.
 const AES_XTS_ALLOW_INSECURE_DECRYPT: c_int = 0;
 
-/// `PROV_AES_XTS_CTX` — `cipher_aes_xts.h:33-58`, without the s390x platform union (that arm is
-/// not compiled in this profile).
+/// `OSSL_xts_stream_fn` — `cipher_aes_xts.h:20-23`, through `PROV_CIPHER_FUNC`'s
+/// `typedef type(*OSSL_##name##_fn) args`.
+pub(crate) type OsslXtsStreamFn = unsafe extern "C" fn(
+    *const c_uchar,
+    *mut c_uchar,
+    usize,
+    *const AesKey,
+    *const AesKey,
+    *const c_uchar,
+);
+
+/// `PROV_AES_XTS_CTX` — `cipher_aes_xts.h:33-58`, without the s390x members of the platform union
+/// (that arm is not compiled in this profile).
+///
+/// `stream` is the assembly data-unit entry point the hw selects when the CPU reports AES-NI. The
+/// crate declines that path for the reason D209 records for AES generally — the assembly is a
+/// different code path to the same bytes — so `cipher_hw_aes_xts_generic_initkey` leaves it NULL
+/// and `aes_xts_cipher` takes the `CRYPTO_xts128_encrypt` branch the authority takes on a machine
+/// without the extension. The member is still transcribed: it is eight bytes of a 736-byte
+/// allocation request, and `cipher_hw_aes_xts_copyctx` copies it.
 #[repr(C)]
 pub(crate) struct ProvAesXtsCtx {
     /// `PROV_CIPHER_CTX base`.
     pub base: ProvCipherCtx,
     /// `union { OSSL_UNION_ALIGN; AES_KEY ks; } ks1` — the data-unit schedule.
-    pub ks1: AesKey,
+    pub ks1: AesKeyUnion,
     /// `union { OSSL_UNION_ALIGN; AES_KEY ks; } ks2` — the tweak schedule.
-    pub ks2: AesKey,
+    pub ks2: AesKeyUnion,
     /// `XTS128_CONTEXT xts` — the caller-populated four-field context.
     pub xts: XtsCtx,
+    /// `OSSL_xts_stream_fn stream` — NULL here; see the struct's doc comment.
+    #[allow(dead_code)] // size-only member: see the struct's doc comment
+    pub stream: Option<OsslXtsStreamFn>,
+    /// `union { int dummy; /* the s390x arm is not compiled here */ } plat`.
+    #[allow(dead_code)] // size-only member, as in `ProvAesCtx`
+    pub plat: c_int,
 }
 
 /// `aes_xts_check_keys_differ` — `cipher_aes_xts.c:54-63`.
@@ -4228,8 +4295,8 @@ unsafe extern "C" fn cipher_hw_aes_xts_generic_initkey(
         let xctx = ctx.cast::<ProvAesXtsCtx>();
         let bytes = keylen / 2;
         let bits = (bytes * 8) as c_int;
-        let ks1 = ptr::addr_of_mut!((*xctx).ks1);
-        let ks2 = ptr::addr_of_mut!((*xctx).ks2);
+        let ks1 = ptr::addr_of_mut!((*xctx).ks1.ks);
+        let ks2 = ptr::addr_of_mut!((*xctx).ks2.ks);
 
         if (*ctx).enc_int() != 0 {
             AES_set_encrypt_key(key, bits, ks1);
@@ -4255,8 +4322,8 @@ unsafe extern "C" fn cipher_hw_aes_xts_copyctx(dst: *mut ProvCipherCtx, src: *co
     unsafe {
         ptr::copy_nonoverlapping(src.cast::<ProvAesXtsCtx>(), dst.cast::<ProvAesXtsCtx>(), 1);
         let d = dst.cast::<ProvAesXtsCtx>();
-        (*d).xts.key1 = ptr::addr_of_mut!((*d).ks1).cast();
-        (*d).xts.key2 = ptr::addr_of_mut!((*d).ks2).cast();
+        (*d).xts.key1 = ptr::addr_of_mut!((*d).ks1.ks).cast();
+        (*d).xts.key2 = ptr::addr_of_mut!((*d).ks2.ks).cast();
     }
 }
 
@@ -4722,17 +4789,17 @@ const OSSL_CIPHER_PARAM_AEAD_TAG: *const c_char = c"tag".as_ptr();
 /// `OSSL_CIPHER_PARAM_AEAD_TAGLEN` — `core_names.h:180` (`"taglen"`).
 const OSSL_CIPHER_PARAM_AEAD_TAGLEN: *const c_char = c"taglen".as_ptr();
 
-/// `PROV_AES_OCB_CTX` — `cipher_aes_ocb.h:18-37`, without the platform union on the `AES_KEY`
-/// members (that arm is not compiled in this profile). `key_set` is the `unsigned int : 1`
-/// bitfield, which occupies a whole `unsigned int` allocation unit after the named `iv_state`.
+/// `PROV_AES_OCB_CTX` — `cipher_aes_ocb.h:18-37`, without the s390x members of the platform union
+/// (that arm is not compiled in this profile). `key_set` is the `unsigned int : 1` bitfield, which
+/// occupies a whole `unsigned int` allocation unit after the named `iv_state`.
 #[repr(C)]
 pub(crate) struct ProvAesOcbCtx {
     /// `PROV_CIPHER_CTX base`.
     pub base: ProvCipherCtx,
     /// `union { OSSL_UNION_ALIGN; AES_KEY ks; } ksenc` — the encryption/AAD schedule.
-    pub ksenc: AesKey,
+    pub ksenc: AesKeyUnion,
     /// `union { OSSL_UNION_ALIGN; AES_KEY ks; } ksdec` — the decryption schedule.
-    pub ksdec: AesKey,
+    pub ksdec: AesKeyUnion,
     /// `OCB128_CONTEXT ocb`.
     pub ocb: OcbCtx,
     /// `unsigned int iv_state` — one of `IV_STATE_*`.
@@ -4868,8 +4935,8 @@ unsafe extern "C" fn cipher_hw_aes_ocb_generic_initkey(
     unsafe {
         let ctx = vctx.cast::<ProvAesOcbCtx>();
         let bits = (keylen * 8) as c_int;
-        let ksenc = ptr::addr_of_mut!((*ctx).ksenc);
-        let ksdec = ptr::addr_of_mut!((*ctx).ksdec);
+        let ksenc = ptr::addr_of_mut!((*ctx).ksenc.ks);
+        let ksdec = ptr::addr_of_mut!((*ctx).ksdec.ks);
 
         CRYPTO_ocb128_cleanup(ptr::addr_of_mut!((*ctx).ocb));
         AES_set_encrypt_key(key, bits, ksenc);
@@ -6826,24 +6893,104 @@ const OSSL_CIPHER_PARAM_AEAD_TLS1_AAD_PAD: *const c_char = c"tlsaadpad".as_ptr()
 /// `OSSL_CIPHER_PARAM_AEAD_TLS1_IV_FIXED` — `core_names.h:184` (`"tlsivfixed"`).
 const OSSL_CIPHER_PARAM_AEAD_TLS1_IV_FIXED: *const c_char = c"tlsivfixed".as_ptr();
 
-/// `PROV_CCM_CTX` — `prov/ciphercommon_ccm.h:34-57`, the base shared by the AES and ARIA CCM rows.
+/// The authority's run of five `unsigned int : 1` fields at the head of `PROV_CCM_CTX`
+/// (`prov/ciphercommon_ccm.h:35-40`).
 ///
-/// The authority declares the five state flags as a run of `unsigned int : 1` bitfields, which the
-/// compiler packs into a single allocation unit; they are modelled as one `c_uint` each, as
-/// `ProvAesOcbCtx`'s `key_set` is, because the layout is internal (no exported signature carries
-/// this type) and the field's *meaning* is what the transcription has to keep.
+/// **The ABI packs them.** Consecutive bitfields of one type share an allocation unit on the x86-64
+/// System V ABI, so the five bits occupy **four** bytes, not twenty. That is not a tidiness point:
+/// the whole context is `OPENSSL_zalloc`'d, so its size is the allocation request an application's
+/// `CRYPTO_set_mem_functions` receives, and modelling the five as five `unsigned int`s made every
+/// CCM context eight bytes too large (D269). The bits are named after the authority's fields; the
+/// positions are this crate's own, because the authority never exposes them.
+#[repr(C)]
+pub(crate) struct CcmFlags {
+    /// The packed flag bits.
+    pub bits: c_uint,
+}
+
+impl CcmFlags {
+    /// `enc == 1`.
+    const ENC: c_uint = 1 << 0;
+    /// `key_set == 1`.
+    const KEY_SET: c_uint = 1 << 1;
+    /// `iv_set == 1`.
+    const IV_SET: c_uint = 1 << 2;
+    /// `tag_set == 1`.
+    const TAG_SET: c_uint = 1 << 3;
+    /// `len_set == 1`.
+    const LEN_SET: c_uint = 1 << 4;
+
+    /// `ctx->enc` as a `c_uint`, so the authority's `== 0`/`!= 0` tests read unchanged.
+    fn enc(&self) -> c_uint {
+        c_uint::from(self.bits & Self::ENC != 0)
+    }
+    /// `ctx->enc = ...`.
+    fn set_enc(&mut self, value: c_int) {
+        self.bits = set_bit(self.bits, Self::ENC, value != 0);
+    }
+    /// `ctx->key_set` as a `c_uint`.
+    fn key_set(&self) -> c_uint {
+        c_uint::from(self.bits & Self::KEY_SET != 0)
+    }
+    /// `ctx->key_set = ...`.
+    fn set_key_set(&mut self, value: bool) {
+        self.bits = set_bit(self.bits, Self::KEY_SET, value);
+    }
+    /// `ctx->iv_set` as a `c_uint`.
+    fn iv_set(&self) -> c_uint {
+        c_uint::from(self.bits & Self::IV_SET != 0)
+    }
+    /// `ctx->iv_set = ...`.
+    fn set_iv_set(&mut self, value: bool) {
+        self.bits = set_bit(self.bits, Self::IV_SET, value);
+    }
+    /// `ctx->tag_set` as a `c_uint`.
+    fn tag_set(&self) -> c_uint {
+        c_uint::from(self.bits & Self::TAG_SET != 0)
+    }
+    /// `ctx->tag_set = ...`.
+    fn set_tag_set(&mut self, value: bool) {
+        self.bits = set_bit(self.bits, Self::TAG_SET, value);
+    }
+    /// `ctx->len_set` as a `c_uint`.
+    fn len_set(&self) -> c_uint {
+        c_uint::from(self.bits & Self::LEN_SET != 0)
+    }
+    /// `ctx->len_set = ...`.
+    fn set_len_set(&mut self, value: bool) {
+        self.bits = set_bit(self.bits, Self::LEN_SET, value);
+    }
+}
+
+/// The clear-or-set one bitfield assignment needs.
+fn set_bit(bits: c_uint, mask: c_uint, value: bool) -> c_uint {
+    if value {
+        bits | mask
+    } else {
+        bits & !mask
+    }
+}
+
+/// `ccm128_f` — `include/openssl/modes.h:40-44`, the block-stream entry point the `CCM64` assembly
+/// path installs. Both arms this profile can select leave `PROV_CCM_CTX::str` NULL.
+pub(crate) type Ccm128Fn = unsafe extern "C" fn(
+    *const c_uchar,
+    *mut c_uchar,
+    usize,
+    *const c_void,
+    *const c_uchar,
+    *mut c_uchar,
+);
+
+/// `PROV_CCM_CTX` — `prov/ciphercommon_ccm.h:34-55`, the base shared by the AES and ARIA CCM rows.
+///
+/// Both `flags` and `str` are load-bearing for the **size**: `str` is the `ccm128_f` the `CCM64`
+/// assembly path would install, and although the crate reaches CCM through `crypto/modes/ccm128.c`'s
+/// scalar path and leaves it NULL, it is eight bytes of a 416-byte allocation request.
 #[repr(C)]
 pub(crate) struct ProvCcmCtx {
-    /// `unsigned int enc : 1`.
-    pub enc: c_uint,
-    /// `unsigned int key_set : 1` — set if the key was initialised.
-    pub key_set: c_uint,
-    /// `unsigned int iv_set : 1` — set if an IV is set.
-    pub iv_set: c_uint,
-    /// `unsigned int tag_set : 1` — set if the tag is valid.
-    pub tag_set: c_uint,
-    /// `unsigned int len_set : 1` — set if the message length is set.
-    pub len_set: c_uint,
+    /// The five `unsigned int : 1` fields, packed.
+    pub flags: CcmFlags,
     /// `size_t l` — the RFC 3610 `L` parameter.
     pub l: usize,
     /// `size_t m` — the RFC 3610 `M` parameter, the tag length.
@@ -6860,20 +7007,38 @@ pub(crate) struct ProvCcmCtx {
     pub buf: [c_uchar; GENERIC_BLOCK_SIZE],
     /// `CCM128_CONTEXT ccm_ctx` — the landed `crypto/modes/ccm128.c` context.
     pub ccm_ctx: CcmCtx,
+    /// `ccm128_f str` — NULL here; see the struct's doc comment.
+    #[allow(dead_code)] // size-only member: see the struct's doc comment
+    pub str: Option<Ccm128Fn>,
     /// `const PROV_CCM_HW *hw`.
     pub hw: *const ProvCcmHw,
 }
 
-/// `PROV_AES_CCM_CTX` — `cipher_aes_ccm.h:15-46`. The union's leading `unsigned char pad[16]`
-/// exists only so that the s390x arm's `kmac.k`/`fc` overlap `ks.ks`/`ks.ks.rounds` (the header
-/// says so); this profile compiles neither that arm nor its union member, so the schedule stands
-/// alone.
+/// The authority's `union { OSSL_UNION_ALIGN; struct { unsigned char pad[16]; AES_KEY ks; } ks; }`
+/// from `cipher_aes_ccm.h:17-38`.
+///
+/// Two things make this one larger than the plain `AES_KEY` union. The `pad[16]` exists so that the
+/// s390x arm's `kmac.k` and `fc` overlap `ks.ks` and `ks.ks.rounds` -- the header says so -- and
+/// although neither that arm nor its union member is compiled here, the sixteen bytes are still the
+/// first member of the compiled union and still part of the object. Then `OSSL_UNION_ALIGN` adds the
+/// usual eight-alignment, so the union is 260 rounded up to **264**, and the whole context is
+/// `sizeof(PROV_CCM_CTX)` + 264 = 416 (D269).
+#[repr(C, align(8))]
+pub(crate) struct AesCcmKeyUnion {
+    /// `unsigned char pad[16]`.
+    #[allow(dead_code)] // size-only member: see the struct's doc comment
+    pub pad: [c_uchar; 16],
+    /// `AES_KEY ks` — at offset sixteen, as in the authority.
+    pub ks: AesKey,
+}
+
+/// `PROV_AES_CCM_CTX` — `cipher_aes_ccm.h:15-46`.
 #[repr(C)]
 pub(crate) struct ProvAesCcmCtx {
     /// `PROV_CCM_CTX base` — must be first.
     pub base: ProvCcmCtx,
-    /// `union { OSSL_UNION_ALIGN; AES_KEY ks; }` — `ccm.ks.ks`.
-    pub ks: AesKey,
+    /// `union { OSSL_UNION_ALIGN; struct { unsigned char pad[16]; AES_KEY ks; } ks; } ccm`.
+    pub ks: AesCcmKeyUnion,
 }
 
 /// `PROV_CIPHER_FUNC(int, CCM_setkey, ...)` — `prov/ciphercommon_ccm.h:59`.
@@ -6947,7 +7112,7 @@ unsafe fn ccm_tls_init(ctx: *mut ProvCcmCtx, aad: *const c_uchar, alen: usize) -
         /* Correct length for explicit iv. */
         len -= EVP_CCM_TLS_EXPLICIT_IV_LEN;
 
-        if (*ctx).enc == 0 {
+        if (*ctx).flags.enc() == 0 {
             if len < (*ctx).m {
                 return 0;
             }
@@ -7074,7 +7239,7 @@ unsafe extern "C" fn ossl_ccm_set_ctx_params(vctx: *mut c_void, params: *const O
             }
 
             if !(*p).data.is_null() {
-                if (*ctx).enc != 0 {
+                if (*ctx).flags.enc() != 0 {
                     return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_196);
                 }
                 ptr::copy_nonoverlapping(
@@ -7082,7 +7247,7 @@ unsafe extern "C" fn ossl_ccm_set_ctx_params(vctx: *mut c_void, params: *const O
                     (*ctx).buf.as_mut_ptr(),
                     (*p).data_size,
                 );
-                (*ctx).tag_set = 1;
+                (*ctx).flags.set_tag_set(true);
             }
             (*ctx).m = (*p).data_size;
         }
@@ -7099,7 +7264,7 @@ unsafe extern "C" fn ossl_ccm_set_ctx_params(vctx: *mut c_void, params: *const O
             }
             if (*ctx).l != ivlen {
                 (*ctx).l = ivlen;
-                (*ctx).iv_set = 0;
+                (*ctx).flags.set_iv_set(false);
             }
         }
 
@@ -7207,7 +7372,7 @@ unsafe extern "C" fn ossl_ccm_get_ctx_params(vctx: *mut c_void, params: *mut Oss
 
         let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_AEAD_TAG);
         if !p.is_null() {
-            if (*ctx).enc == 0 || (*ctx).tag_set == 0 {
+            if (*ctx).flags.enc() == 0 || (*ctx).flags.tag_set() == 0 {
                 return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_446);
             }
             if (*p).data_type != OSSL_PARAM_OCTET_STRING {
@@ -7217,9 +7382,9 @@ unsafe extern "C" fn ossl_ccm_get_ctx_params(vctx: *mut c_void, params: *mut Oss
             if ((*hw).gettag)(ctx, (*p).data.cast::<c_uchar>(), (*p).data_size) == 0 {
                 return fail();
             }
-            (*ctx).tag_set = 0;
-            (*ctx).iv_set = 0;
-            (*ctx).len_set = 0;
+            (*ctx).flags.set_tag_set(false);
+            (*ctx).flags.set_iv_set(false);
+            (*ctx).flags.set_len_set(false);
         }
 
         1
@@ -7247,14 +7412,14 @@ unsafe fn ccm_init(
             return 0;
         }
 
-        (*ctx).enc = c_uint::from(enc != 0);
+        (*ctx).flags.set_enc(enc);
 
         if !iv.is_null() {
             if ivlen != ccm_get_ivlen(ctx) {
                 return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_476);
             }
             ptr::copy_nonoverlapping(iv, (*ctx).iv.as_mut_ptr(), ivlen);
-            (*ctx).iv_set = 1;
+            (*ctx).flags.set_iv_set(true);
         }
         if !key.is_null() {
             if keylen != (*ctx).keylen {
@@ -7351,9 +7516,9 @@ unsafe extern "C" fn ossl_ccm_stream_final(
          * decryption clears iv_set. Use those transitions to avoid processing an
          * operation twice.
          */
-        if (*ctx).key_set == 0
-            || ((*ctx).iv_set != 0
-                && ((*ctx).enc == 0 || (*ctx).tag_set == 0)
+        if (*ctx).flags.key_set() == 0
+            || ((*ctx).flags.iv_set() != 0
+                && ((*ctx).flags.enc() == 0 || (*ctx).flags.tag_set() == 0)
                 && ccm_cipher_internal(
                     ctx,
                     ptr::addr_of_mut!(dummy_out),
@@ -7419,7 +7584,7 @@ unsafe fn ccm_set_iv(ctx: *mut ProvCcmCtx, mlen: usize) -> c_int {
         if ((*hw).setiv)(ctx, (*ctx).iv.as_ptr(), ccm_get_ivlen(ctx), mlen) == 0 {
             return 0;
         }
-        (*ctx).len_set = 1;
+        (*ctx).flags.set_len_set(true);
         1
     }
 }
@@ -7456,7 +7621,7 @@ unsafe fn ccm_tls_cipher(
             }
 
             /* If encrypting set explicit IV from sequence number (start of AAD) */
-            if (*ctx).enc != 0 {
+            if (*ctx).flags.enc() != 0 {
                 ptr::copy_nonoverlapping((*ctx).buf.as_ptr(), out, EVP_CCM_TLS_EXPLICIT_IV_LEN);
             }
             /* Get rest of IV from explicit IV */
@@ -7480,7 +7645,7 @@ unsafe fn ccm_tls_cipher(
             /* Fix buffer to point to payload */
             in_ = in_.add(EVP_CCM_TLS_EXPLICIT_IV_LEN);
             out = out.add(EVP_CCM_TLS_EXPLICIT_IV_LEN);
-            if (*ctx).enc != 0 {
+            if (*ctx).flags.enc() != 0 {
                 if ((*hw).auth_encrypt)(ctx, in_, out, len, out.add(len), (*ctx).m) == 0 {
                     break 'arm;
                 }
@@ -7519,7 +7684,7 @@ unsafe fn ccm_cipher_internal(
         let hw = (*ctx).hw;
 
         /* If no key set, return error */
-        if (*ctx).key_set == 0 {
+        if (*ctx).flags.key_set() == 0 {
             return 0;
         }
 
@@ -7533,7 +7698,7 @@ unsafe fn ccm_cipher_internal(
                 break 'arm;
             }
 
-            if (*ctx).iv_set == 0 {
+            if (*ctx).flags.iv_set() == 0 {
                 break 'arm;
             }
 
@@ -7544,7 +7709,7 @@ unsafe fn ccm_cipher_internal(
                     }
                 } else {
                     /* If we have AAD, we need a message length */
-                    if (*ctx).len_set == 0 && len != 0 {
+                    if (*ctx).flags.len_set() == 0 && len != 0 {
                         break 'arm;
                     }
                     if ((*hw).setaad)(ctx, in_, len) == 0 {
@@ -7553,18 +7718,18 @@ unsafe fn ccm_cipher_internal(
                 }
             } else {
                 /* If not set length yet do it */
-                if (*ctx).len_set == 0 && ccm_set_iv(ctx, len) == 0 {
+                if (*ctx).flags.len_set() == 0 && ccm_set_iv(ctx, len) == 0 {
                     break 'arm;
                 }
 
-                if (*ctx).enc != 0 {
+                if (*ctx).flags.enc() != 0 {
                     if ((*hw).auth_encrypt)(ctx, in_, out, len, ptr::null_mut(), 0) == 0 {
                         break 'arm;
                     }
-                    (*ctx).tag_set = 1;
+                    (*ctx).flags.set_tag_set(true);
                 } else {
                     /* The tag must be set before actually decrypting data */
-                    if (*ctx).tag_set == 0 {
+                    if (*ctx).flags.tag_set() == 0 {
                         break 'arm;
                     }
 
@@ -7574,9 +7739,9 @@ unsafe fn ccm_cipher_internal(
                         break 'arm;
                     }
                     /* Finished - reset flags so calling this method again will fail */
-                    (*ctx).iv_set = 0;
-                    (*ctx).tag_set = 0;
-                    (*ctx).len_set = 0;
+                    (*ctx).flags.set_iv_set(false);
+                    (*ctx).flags.set_tag_set(false);
+                    (*ctx).flags.set_len_set(false);
                 }
             }
             olen = len;
@@ -7597,10 +7762,10 @@ unsafe fn ossl_ccm_initctx(ctx: *mut ProvCcmCtx, keybits: usize, hw: *const Prov
     // SAFETY: the caller's contract.
     unsafe {
         (*ctx).keylen = keybits / 8;
-        (*ctx).key_set = 0;
-        (*ctx).iv_set = 0;
-        (*ctx).tag_set = 0;
-        (*ctx).len_set = 0;
+        (*ctx).flags.set_key_set(false);
+        (*ctx).flags.set_iv_set(false);
+        (*ctx).flags.set_tag_set(false);
+        (*ctx).flags.set_len_set(false);
         (*ctx).l = 8;
         (*ctx).m = 12;
         (*ctx).tls_aad_len = UNINITIALISED_SIZET;
@@ -7648,7 +7813,7 @@ unsafe fn ccm_generic_aes_initkey(
     // SAFETY: the caller's contract.
     unsafe {
         let actx = ctx.cast::<ProvAesCcmCtx>();
-        let ks = ptr::addr_of_mut!((*actx).ks);
+        let ks = ptr::addr_of_mut!((*actx).ks.ks);
 
         AES_set_encrypt_key(key, (keylen * 8) as c_int, ks);
         CRYPTO_ccm128_init(
@@ -7658,7 +7823,7 @@ unsafe fn ccm_generic_aes_initkey(
             ks.cast(),
             aes_block_encrypt,
         );
-        (*ctx).key_set = 1;
+        (*ctx).flags.set_key_set(true);
         1
     }
 }
@@ -10344,10 +10509,13 @@ mod tests {
                 ks: ptr::null(),
                 libctx: ptr::null_mut(),
             },
-            ks: AesKey {
-                rd_key: [0; 4 * (AES_MAXNR + 1)],
-                rounds: 0,
+            ks: AesKeyUnion {
+                ks: AesKey {
+                    rd_key: [0; 4 * (AES_MAXNR + 1)],
+                    rounds: 0,
+                },
             },
+            plat: 0,
         };
         // SAFETY: the context is this frame's and `get_params` writes the caller's descs.
         unsafe {
@@ -10368,7 +10536,7 @@ mod tests {
     }
 
     /// **The `ChaCha20` row's context, field for field.** The numbers are the authority's own,
-    /// measured by `court/measure-chacha-ctx.c` compiled against the pinned build's internal
+    /// measured by `courts/layout/measure-chacha-ctx.c` compiled against the pinned build's internal
     /// headers: `sizeof(PROV_CIPHER_CTX)` is 192 and `sizeof(PROV_CHACHA20_CTX)` is 312, with `key`
     /// at 192, `counter` at 224, `buf` at 240 and `partial_len` at 304. The allocation request is
     /// what a `CRYPTO_set_mem_functions` application's allocator receives, so the size is contract.
@@ -10390,6 +10558,37 @@ mod tests {
         assert_eq!(CHACHA20_KEYLEN, 32);
         assert_eq!(CHACHA20_BLKLEN, 1);
         assert_eq!(CHACHA20_IVLEN, 16);
+    }
+
+    /// **Every landed provider cipher context, measured against the authority's own compiler.**
+    /// The allocation request is what a `CRYPTO_set_mem_functions` application's allocator receives,
+    /// so each size is contract, and so is each `ks` offset. The numbers are from
+    /// `courts/layout/measure-provider-ctxs.c`, compiled against the pinned build's internal headers.
+    #[test]
+    fn the_provider_contexts_are_the_authoritys_sizes() {
+        assert_eq!(core::mem::size_of::<ProvCipherCtx>(), 192);
+        assert_eq!(core::mem::size_of::<ProvAesCtx>(), 448);
+        assert_eq!(core::mem::offset_of!(ProvAesCtx, ks), 192);
+        assert_eq!(core::mem::size_of::<ProvCamelliaCtx>(), 472);
+        assert_eq!(core::mem::offset_of!(ProvCamelliaCtx, ks), 192);
+        assert_eq!(core::mem::size_of::<ProvTdesCtx>(), 584);
+        assert_eq!(core::mem::offset_of!(ProvTdesCtx, tks), 192);
+        assert_eq!(core::mem::size_of::<ProvAesXtsCtx>(), 736);
+        assert_eq!(core::mem::offset_of!(ProvAesXtsCtx, ks1), 192);
+        assert_eq!(core::mem::offset_of!(ProvAesXtsCtx, ks2), 440);
+        assert_eq!(core::mem::offset_of!(ProvAesXtsCtx, xts), 688);
+        assert_eq!(core::mem::size_of::<ProvAesOcbCtx>(), 944);
+        assert_eq!(core::mem::offset_of!(ProvAesOcbCtx, ksenc), 192);
+        assert_eq!(core::mem::offset_of!(ProvAesOcbCtx, ksdec), 440);
+        assert_eq!(core::mem::offset_of!(ProvAesOcbCtx, ocb), 688);
+        assert_eq!(core::mem::offset_of!(ProvAesOcbCtx, iv_state), 864);
+        assert_eq!(core::mem::offset_of!(ProvAesOcbCtx, taglen), 872);
+        assert_eq!(core::mem::size_of::<ProvAesCcmCtx>(), 416);
+        assert_eq!(core::mem::offset_of!(ProvAesCcmCtx, ks), 152);
+        assert_eq!(core::mem::size_of::<ProvAesSivCtx>(), 120);
+        assert_eq!(core::mem::size_of::<ProvAesWrapCtx>(), 448);
+        assert_eq!(core::mem::size_of::<ProvChacha20Ctx>(), 312);
+        assert_eq!(core::mem::size_of::<ProvSm4Ctx>(), 320);
     }
 
     /// **The row's two parameter lists are its own, not the generic ones.** `ChaCha20` publishes a

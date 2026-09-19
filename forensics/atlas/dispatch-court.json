@@ -14,12 +14,12 @@
       "identities_mismatches": 0,
       "links_convention": 203,
       "links_documented": 8,
-      "links_explicit": 14,
+      "links_explicit": 15,
       "problems": 0,
       "signatures_authority_only": 405,
-      "signatures_checked": 228,
+      "signatures_checked": 229,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 105,
+      "signatures_not_a_dispatch": 107,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -3418,6 +3418,14 @@
           "how": "convention"
         },
         {
+          "alias": "Ccm128Fn",
+          "at": "src/provider/cipher.rs",
+          "authority": "ccm128_f",
+          "authority_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), int:8:u, ptr(const(opaque)), ptr(const(int:1:u)), ptr(int:1:u))",
+          "crate_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), int:8:u, ptr(const(opaque)), ptr(const(int:1:u)), ptr(int:1:u))",
+          "how": "explicit"
+        },
+        {
           "alias": "CoreGetParamsFn",
           "at": "src/provider/ctx.rs",
           "authority": "OSSL_FUNC_core_get_params_fn",
@@ -3870,9 +3878,19 @@
           "why": "not a provider dispatch: the type of a parameter of `OSSL_FUNC_provider_register_child_cb_fn`, spelled `int (*global_props_cb)(const void *, const OSSL_PARAM *)` inline in the header rather than as a typedef"
         },
         {
+          "alias": "TdesStreamFn",
+          "at": "src/provider/cipher.rs",
+          "why": "not a provider dispatch: the type of `PROV_TDES_CTX`'s `tstream` union member (`cipher_tdes.h:26-29`), written inline in the struct rather than introduced with a `typedef`, so the atlas records no name for it"
+        },
+        {
           "alias": "AesWrapFn",
           "at": "src/provider/cipher.rs",
           "why": "not a provider dispatch: `cipher_aes_wrp.c:28-30`'s `aeswrap_fn`, a typedef local to a provider implementation file, which the atlas -- whose universe is the installed public surface -- records no typedef for"
+        },
+        {
+          "alias": "OsslXtsStreamFn",
+          "at": "src/provider/cipher.rs",
+          "why": "not a provider dispatch: `prov/ciphercommon.h:30`'s `PROV_CIPHER_FUNC` macro generates it as `typedef type(*OSSL_##name##_fn) args`, so the header carries no `typedef` declaration and the atlas records none"
         },
         {
           "alias": "SkCompFn",

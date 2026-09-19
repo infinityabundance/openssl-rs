@@ -17460,3 +17460,90 @@ followed by its own decrypt round trip.
 / 16** and the provider census stays **123 / 187** — no row and no export lands here. Unit tests move
 **598 -> 603**. `RT-CIPHER` and `CT-CIPHER` do not move, because nothing new is reachable yet, and
 saying so is the point: this commit is a prerequisite, not evidence. Full pipeline to `PIPELINE OK`.
+
+## D269 — five provider cipher contexts were allocated with the wrong size, and the union is the contract
+
+**Six defects, one class, all found by measuring rather than reading.** D264 established that a
+provider context's size is observable — the provider allocates `sizeof(*ctx)` and
+`CRYPTO_set_mem_functions` hands that `num` to a caller's allocator — and made that visible for the
+one row that happened to expose it. This entry applies the same measurement to *every* landed cipher
+context, and finds that the class was never a one-off.
+
+`courts/layout/measure-provider-ctxs.c` compiles against the pinned build's own internal headers and prints
+each context's size and its `ks` offsets; `courts/layout/measure-mode-ctxs.c` does the same for the embedded
+mode contexts; `courts/layout/measure-union-align.c` for the key structs alone. Measured against this
+crate's `size_of`, before the repair:
+
+| context | crate | authority | |
+| --- | ---: | ---: | --- |
+| `PROV_CIPHER_CTX` | 192 | 192 | ok |
+| `PROV_AES_CTX` | 440 | **448** | eight bytes short |
+| `PROV_CAMELLIA_CTX` | 472 | 472 | ok |
+| `PROV_TDES_CTX` | 576 | **584** | eight bytes short |
+| `PROV_AES_XTS_CTX` | 712 | **736** | twenty-four bytes short |
+| `PROV_AES_OCB_CTX` | 936 | **944** | eight bytes short |
+| `PROV_AES_CCM_CTX` | 408 | **416** | eight bytes short |
+| `PROV_AES_SIV_CTX` | 120 | 120 | ok |
+| `PROV_AES_WRAP_CTX` | 448 | 448 | ok, and only by arithmetic |
+| `PROV_CIPHER_NULL_CTX` | 24 | 24 | ok |
+| `PROV_CHACHA20_CTX` | 312 | 312 | ok |
+| `PROV_SM4_CTX` | 320 | 320 | ok |
+
+**The dominant cause is that a union is not its widest member.** Every one of these contexts embeds
+`union { OSSL_UNION_ALIGN; <ALG>_KEY ks; }`, and `OSSL_UNION_ALIGN` is
+`double align; ossl_uintmax_t align_int; void *align_ptr` (`include/internal/common.h:75-78`), so the
+union is **eight**-aligned. A 244-byte `AES_KEY` therefore occupies **248** bytes of the enclosing
+object. The crate had flattened each union to its `AES_KEY` and lost the four trailing bytes —
+four times over in `XTS` and `OCB`, where two schedules precede another field. That is why
+`PROV_CAMELLIA_CTX`, `PROV_SM4_CTX` and (as of D268) `PROV_ARIA_CTX` were already correct:
+`CAMELLIA_KEY` is 280 bytes and `SM4_KEY` is 128, both already multiples of eight, and `ARIA_KEY` is
+276 with nothing after it, so the compiler's own tail padding lands in the same place.
+
+**Four further members were absent rather than mis-sized.** `PROV_AES_CTX` and `PROV_AES_XTS_CTX`
+carry `union { int dummy; /* s390x */ } plat`; `PROV_AES_XTS_CTX` carries `OSSL_xts_stream_fn
+stream`; `PROV_TDES_CTX` carries `union { void (*cbc)(...); } tstream`; `PROV_CCM_CTX` carries
+`ccm128_f str`. Each was omitted as dead — and each is right that nothing in this crate reads it —
+but each is bytes of the allocation request, so each is now transcribed, typed from its authority
+declaration, and marked as a size-only member with the reason in its own doc comment.
+
+`PROV_AES_WRAP_CTX` is the interesting near-miss: flattening its union happened to be harmless
+because the next member is `wrapfn`, a pointer that must land on an eight-byte boundary anyway, so
+the compiler inserted the same four bytes. It is now modelled as the union too, which is why it is
+listed as ok before *and* after.
+
+**`PROV_CCM_CTX` was wrong twice, in opposite directions, and the second half is the instructive
+one.** The authority declares its five state flags as a run of `unsigned int : 1` bitfields, which
+the x86-64 ABI packs into **one** allocation unit; the crate modelled them as five separate
+`c_uint`s, which is twenty bytes, and the previous doc comment justified that by saying the layout is
+internal and only the fields' meaning matters. That reasoning is exactly what D264 refuted one level
+up: the *members* are internal, but their total is the allocation request. They are now a `CcmFlags`
+newtype over a single `c_uint` with the five bits named, so the struct's head is four bytes as the
+ABI makes it. Counteracting that, `str` was missing, so the crate's context was 424 against the
+authority's 416 — the two errors did not cancel, and neither would have been visible without the
+measurement.
+
+**The dispatch court caught the repair's own footprint.** Three new function-pointer type aliases
+(`Ccm128Fn`, `OsslXtsStreamFn`, `TdesStreamFn`) made `signatures_unlinked` go **0 -> 3** and the
+pipeline stop, which is the plane doing its job on the commit that introduced the names rather than
+three phases later. `Ccm128Fn` now links explicitly to `ccm128_f` — the authority's name ends `_f`
+rather than `_fn`, so the convention rule cannot reach it — and the other two are exempted with
+named reasons: `OSSL_xts_stream_fn` is produced by `prov/ciphercommon.h:30`'s `PROV_CIPHER_FUNC`
+macro, so no `typedef` declaration exists for the atlas to record, and `tstream`'s member type is
+written inline in the struct rather than introduced with a `typedef`. `signatures_checked` moves
+**228 -> 229** because the new explicit link is a real comparison.
+
+**A cited measurement program that cannot be opened is not evidence, so the programs moved.**
+D264 cited `court/measure-chacha-ctx.c`, and `court/` is scratch material that `.gitignore`
+excludes — so the entry pointed a reviewer at a file they could never read. All four programs are now
+tracked in `courts/layout/`, with a README that gives the include set and the exact command, and the
+references in D264's neighbour (this entry) and in the two doc comments in `src/provider/cipher.rs`
+name the tracked path. `courts/layout/` is deliberately outside every probe glob — `probe_hygiene.py`'s
+subjects are `courts/phase<N>/*_probe.c` and nothing else — so these are never mistaken for courts.
+
+**What this entry moves.** `implemented[libcrypto]` stays **2035 / 5896**; Phase 8 stays **194
+implemented / 576 open / 16 deferred**; the provider census stays **123 / 187 implemented/open** with
+coverage **123 / 123 / 0**. `RT-CIPHER` stays **4887**, `CT-CIPHER` stays **3090 / 3090**, `RT-DIGEST`
+stays **468** and `CT-DIGEST` stays **272 / 272** — every one unchanged, which is the point: this
+repair is invisible to every behavioural court and is only reachable through an application's own
+allocator. Unit tests move **603 -> 604**. The pipeline total stays **28463 over 83 courts**. Full
+pipeline to `PIPELINE OK`.
