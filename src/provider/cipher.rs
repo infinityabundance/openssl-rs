@@ -70,6 +70,7 @@ use crate::des::{
     DES_ecb3_encrypt, DES_ede3_cbc_encrypt, DES_ede3_cfb64_encrypt, DES_ede3_cfb_encrypt,
     DES_ede3_ofb64_encrypt, DES_set_key_unchecked, DesKeySchedule,
 };
+use crate::evp::cipher::{EVP_CIPHER_fetch, EVP_CIPHER_free, EVP_CIPHER_up_ref, EvpCipher};
 use crate::evp::cipher::{
     OSSL_FUNC_CIPHER_DECRYPT_INIT, OSSL_FUNC_CIPHER_DECRYPT_SKEY_INIT,
     OSSL_FUNC_CIPHER_ENCRYPT_INIT, OSSL_FUNC_CIPHER_ENCRYPT_SKEY_INIT, OSSL_FUNC_CIPHER_FINAL,
@@ -86,6 +87,11 @@ use crate::modes::ocb::{
     CRYPTO_ocb128_aad, CRYPTO_ocb128_cleanup, CRYPTO_ocb128_copy_ctx, CRYPTO_ocb128_decrypt,
     CRYPTO_ocb128_encrypt, CRYPTO_ocb128_finish, CRYPTO_ocb128_init, CRYPTO_ocb128_setiv,
     CRYPTO_ocb128_tag, OcbCtx,
+};
+use crate::modes::siv128::{
+    ossl_siv128_aad, ossl_siv128_cleanup, ossl_siv128_copy_ctx, ossl_siv128_decrypt,
+    ossl_siv128_encrypt, ossl_siv128_finish, ossl_siv128_init, ossl_siv128_set_tag,
+    ossl_siv128_speed, Siv128Context, SIV_LEN,
 };
 use crate::modes::wrap::{
     CRYPTO_128_unwrap, CRYPTO_128_unwrap_pad, CRYPTO_128_wrap, CRYPTO_128_wrap_pad,
@@ -377,9 +383,13 @@ fn fail_at(site: &err_sites::ErrSite) -> c_int {
 /// so the scan is kept here and reports the *decoder's own* recorded coordinate rather than
 /// the get/set body's.
 ///
+/// `pub(crate)` because the provider MAC rows (`src/provider/mac.rs`) run the same scan against
+/// their own generated decoders, and the subtlety here — the raise site belongs to the *decoder*
+/// rather than to the calling body — must not be spelled twice.
+///
 /// # Safety
 /// `params` is NULL or a key-terminated array; the keys in `keys` are `'static` C strings.
-unsafe fn repeated_param_site(
+pub(crate) unsafe fn repeated_param_site(
     params: *const OsslParam,
     keys: &[(&'static err_sites::ErrSite, *const c_char)],
 ) -> Option<&'static err_sites::ErrSite> {
@@ -1177,6 +1187,21 @@ unsafe fn ossl_cipher_generic_initiv(
 ///
 /// # Safety
 /// `vctx` is live and zero-initialised.
+///
+/// **The `provctx` argument is why `ctx->libctx` exists.** `ciphercommon.c.in:758-759` ends this
+/// function with
+///
+/// ```c
+/// if (provctx != NULL)
+///     ctx->libctx = PROV_LIBCTX_OF(provctx); /* used for rand */
+/// ```
+///
+/// so a provider cipher context carries the library context of the provider that created it, and
+/// the GCM no-IV arm and `cipher_tdes_wrap.c`'s IV generation pass it to `RAND_bytes_ex`. D240
+/// recorded that as a measured obligation — the crate published a NULL `provctx`, so the field
+/// could never be set — and `src/provider/ctx.rs`'s module doc is its discharge. The field's
+/// other readers are the provider rows that sub-fetch (`cmac_prov.c`'s `ossl_prov_cipher_load`,
+/// `cipher_aes_siv_hw.c`'s two fetches) through their own `PROV_LIBCTX_OF`.
 #[allow(clippy::too_many_arguments)]
 unsafe fn ossl_cipher_generic_initkey(
     vctx: *mut c_void,
@@ -1186,7 +1211,7 @@ unsafe fn ossl_cipher_generic_initkey(
     mode: c_uint,
     flags: u64,
     hw: *const ProvCipherHw,
-    _provctx: *mut c_void,
+    provctx: *mut c_void,
 ) {
     // SAFETY: the caller's contract.
     unsafe {
@@ -1203,11 +1228,17 @@ unsafe fn ossl_cipher_generic_initkey(
         (*ctx).hw = hw;
         (*ctx).mode = mode;
         (*ctx).blocksize = blkbits / 8;
+        if !provctx.is_null() {
+            (*ctx).libctx = crate::provider::ctx::prov_libctx_of(provctx);
+        }
     }
 }
 
 /// A read-only descriptor for a gettable/settable param list.
-const fn param(key: *const c_char, data_type: c_uint) -> OsslParam {
+///
+/// `pub(crate)` because the provider MAC rows (`src/provider/mac.rs`) publish lists of the same
+/// shape, and one spelling of "a known key with no buffer" is better than two.
+pub(crate) const fn param(key: *const c_char, data_type: c_uint) -> OsslParam {
     OsslParam {
         key: key.cast(),
         data_type,
@@ -7781,6 +7812,726 @@ ccm_row!(
 );
 
 // ---------------------------------------------------------------------------------------------
+// `cipher_aes_siv.c` / `cipher_aes_siv_hw.c` — the three AES-SIV rows
+// ---------------------------------------------------------------------------------------------
+
+// SIV is not a mode over the generic engine: the row is a thin shell over the landed
+// `crypto/modes/siv128.c` transcription (`src/modes/siv128.rs`), which itself drives the crate's
+// own CMAC and AES-CTR through EVP. What the shell owns is the **key split** (a 2n-octet key is n
+// octets of CMAC key and n octets of CTR key), the two fetches that split implies, the tag
+// get/set pair, and the `speed` parameter that lifts S2V's one-operation limit.
+//
+// Two things are worth reading twice. `siv_init` **ignores `iv` and `ivlen` entirely** — SIV's
+// synthetic IV is the tag, so there is nothing for a caller's IV to do, and the row's `ivbits`
+// is 0 — and the `UPDATE` and `CIPHER` dispatch entries are the *same function* (the authority's
+// `#define siv_stream_update siv_cipher`), because the AAD arm is selected by `out == NULL`
+// rather than by a separate call.
+
+/// `SIV_FLAGS` — `cipher_aes_siv.c:32`, which is `AEAD_FLAGS` (`prov/ciphercommon_aead.h:16`).
+const AES_SIV_FLAGS: u64 = PROV_CIPHER_FLAG_AEAD | PROV_CIPHER_FLAG_CUSTOM_IV;
+/// `EVP_CIPH_SIV_MODE` — `include/openssl/evp.h:321`.
+const EVP_CIPH_SIV_MODE: c_uint = 0x10004;
+/// The SIV rows' `blkbits` — `cipher_aes_siv.c:258-260`'s sixth argument.
+const AES_SIV_BLOCK_BITS: usize = 8;
+/// The SIV rows' `ivbits` — `cipher_aes_siv.c:258-260`'s seventh argument, and 0 is the point.
+const AES_SIV_IV_BITS: usize = 0;
+/// `OSSL_CIPHER_PARAM_SPEED` — `core_names.h:208` (`"speed"`).
+const OSSL_CIPHER_PARAM_SPEED: *const c_char = c"speed".as_ptr();
+
+/// `PROV_AES_SIV_CTX` — `cipher_aes_siv.h:26-37`, with `enc` as the `unsigned int : 1` run's own
+/// allocation unit (as in `ProvAesOcbCtx`).
+#[repr(C)]
+pub(crate) struct ProvAesSivCtx {
+    /// `unsigned int mode`.
+    pub mode: c_uint,
+    /// `unsigned int enc : 1`.
+    pub enc: c_uint,
+    /// `size_t keylen` — the input key length, **twice** the underlying cipher's.
+    pub keylen: usize,
+    /// `size_t taglen` — `SIV_LEN`, and not settable.
+    pub taglen: usize,
+    /// `SIV128_CONTEXT siv` — the embedded `src/modes/siv128.rs` context.
+    pub siv: Siv128Context,
+    /// `EVP_CIPHER *ctr` — fetched, so it must be freed.
+    pub ctr: *mut EvpCipher,
+    /// `EVP_CIPHER *cbc` — fetched, so it must be freed.
+    pub cbc: *mut EvpCipher,
+    /// `const PROV_CIPHER_HW_AES_SIV *hw`.
+    pub hw: *const ProvSivHw,
+    /// `OSSL_LIB_CTX *libctx`.
+    pub libctx: *mut c_void,
+}
+
+/// `PROV_CIPHER_HW_AES_SIV` — `cipher_aes_siv.h:16-23`.
+pub(crate) struct ProvSivHw {
+    /// `int (*initkey)(void *ctx, const uint8_t *key, size_t keylen)`.
+    pub initkey: unsafe fn(*mut c_void, *const c_uchar, usize) -> c_int,
+    /// `int (*cipher)(void *ctx, unsigned char *out, const unsigned char *in, size_t len)`.
+    pub cipher: unsafe fn(*mut c_void, *mut c_uchar, *const c_uchar, usize) -> c_int,
+    /// `void (*setspeed)(void *ctx, int speed)`.
+    pub setspeed: unsafe fn(*mut c_void, c_int),
+    /// `int (*settag)(void *ctx, const unsigned char *tag, size_t tagl)`.
+    pub settag: unsafe fn(*mut c_void, *const c_uchar, usize) -> c_int,
+    /// `void (*cleanup)(void *ctx)`.
+    pub cleanup: unsafe fn(*mut c_void),
+    /// `int (*dupctx)(void *src, void *dst)`.
+    pub dupctx: unsafe fn(*mut c_void, *mut c_void) -> c_int,
+}
+
+/// The allocation-tracking `file` argument for this section's allocations: `cipher_aes_siv.c`.
+const FILE_SIV: *const c_char =
+    c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_siv.c".as_ptr();
+
+/// `aes_siv_newctx` — `cipher_aes_siv.c:37-54`.
+///
+/// `keybits` is already the **doubled** value: `IMPLEMENT_cipher`'s `newctx` wrapper passes
+/// `2 * kbits`, so `AES-128-SIV` arrives as 256 and `ctx->keylen` is 32.
+///
+/// **SIV sets `ctx->libctx` at `newctx`, not at `initkey`, and that is why this assignment is
+/// load-bearing.** `aes_siv_initkey` is the row's own (`cipher_aes_siv_hw.c`), so it never reaches
+/// `ossl_cipher_generic_initkey`'s `if (provctx != NULL) ctx->libctx = PROV_LIBCTX_OF(provctx)`:
+/// nothing else in this row would set the field. It is read by `aes_siv_initkey`'s two
+/// `EVP_CIPHER_fetch(ctx->libctx, …)` calls and by the `EVP_MAC_fetch(libctx, "CMAC", NULL)` inside
+/// `ossl_siv128_init`, so a NULL here does not fail the operation — it silently redirects both
+/// sub-fetches into the **global** `OSSL_LIB_CTX`, and the row's ciphertext is unchanged. That is
+/// the divergence `RT-CIPHER`'s `defltsiv.libctx.*` arm makes observable, and the default
+/// provider now publishes a real `PROV_CTX` (D241), so the macro's argument is no longer NULL.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe fn aes_siv_newctx(
+    provctx: *mut c_void,
+    keybits: usize,
+    mode: c_uint,
+    _flags: u64,
+) -> *mut c_void {
+    // SAFETY: the caller's contract; `ossl_siv128_init` is only reached through `siv_init`.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+
+        let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvAesSivCtx>(), FILE_SIV, LINE);
+        if !ctx.is_null() {
+            let ctx = ctx.cast::<ProvAesSivCtx>();
+            (*ctx).taglen = SIV_LEN;
+            (*ctx).mode = mode;
+            (*ctx).keylen = keybits / 8;
+            (*ctx).hw = ossl_prov_cipher_hw_aes_siv();
+            /* Unconditional, as the authority's line is: `PROV_LIBCTX_OF` is itself NULL-safe. */
+            (*ctx).libctx = crate::provider::ctx::prov_libctx_of(provctx);
+        }
+        ctx
+    }
+}
+
+/// `aes_siv_freectx` — `cipher_aes_siv.c:56-63`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_siv_freectx(vctx: *mut c_void) {
+    // SAFETY: the context is the one `aes_siv_newctx` allocated.
+    unsafe {
+        if !vctx.is_null() {
+            let ctx = vctx.cast::<ProvAesSivCtx>();
+            ((*(*ctx).hw).cleanup)(vctx);
+            CRYPTO_clear_free(vctx, core::mem::size_of::<ProvAesSivCtx>(), FILE_SIV, LINE);
+        }
+    }
+}
+
+/// `siv_dupctx` — `cipher_aes_siv.c:65-82`. The copy is made by the hw's `dupctx`, which
+/// up-refs the two ciphers and repairs the embedded context's pointers.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn siv_dupctx(vctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+
+        let in_ = vctx.cast::<ProvAesSivCtx>();
+        let ret = CRYPTO_malloc(core::mem::size_of::<ProvAesSivCtx>(), FILE_SIV, LINE);
+        if ret.is_null() {
+            return ptr::null_mut();
+        }
+        if ((*(*in_).hw).dupctx)(vctx, ret) == 0 {
+            CRYPTO_free(ret, FILE_SIV, LINE);
+            return ptr::null_mut();
+        }
+        ret
+    }
+}
+
+/// `siv_init` — `cipher_aes_siv.c:84-103`. `iv`/`ivlen` are accepted and ignored; the key
+/// length must be the row's own, and `keylen` handed to the hw is `ctx->keylen` (the whole
+/// doubled key) rather than the caller's argument, which is the same value by then.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe fn siv_init(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    _iv: *const c_uchar,
+    _ivlen: usize,
+    params: *const OsslParam,
+    enc: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesSivCtx>();
+
+        if is_running() == 0 {
+            return 0;
+        }
+
+        (*ctx).enc = c_uint::from(enc != 0);
+
+        if !key.is_null() {
+            if keylen != (*ctx).keylen {
+                return fail_at(&err_sites::PROV_CIPHER_AES_SIV_90);
+            }
+            if ((*(*ctx).hw).initkey)(vctx, key, (*ctx).keylen) == 0 {
+                return 0;
+            }
+        }
+        aes_siv_set_ctx_params(vctx, params)
+    }
+}
+
+/// `siv_einit` — `cipher_aes_siv.c:105-111`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn siv_einit(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe { siv_init(vctx, key, keylen, iv, ivlen, params, 1) }
+}
+
+/// `siv_dinit` — `cipher_aes_siv.c:113-119`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn siv_dinit(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe { siv_init(vctx, key, keylen, iv, ivlen, params, 0) }
+}
+
+/// `siv_cipher` — `cipher_aes_siv.c:121-140`, and the `UPDATE` entry as well.
+///
+/// The `out != NULL` guard on the size check matters: the AAD call passes `out == NULL` and the
+/// final call passes `in == NULL`, and neither is a buffered write to be sized.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn siv_cipher(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    outl: *mut usize,
+    outsize: usize,
+    in_: *const c_uchar,
+    inl: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesSivCtx>();
+
+        if is_running() == 0 {
+            return 0;
+        }
+
+        if !out.is_null() && outsize < inl {
+            return fail_at(&err_sites::PROV_CIPHER_AES_SIV_122);
+        }
+
+        if ((*(*ctx).hw).cipher)(vctx, out, in_, inl) <= 0 {
+            return 0;
+        }
+
+        if !outl.is_null() {
+            *outl = inl;
+        }
+        1
+    }
+}
+
+/// `siv_stream_final` — `cipher_aes_siv.c:142-155`. The final call is the hw's `cipher` with a
+/// NULL input, which is `ossl_siv128_finish` — the tag computed by the encryption, or the
+/// verdict on the tag the decryption verified.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn siv_stream_final(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    outl: *mut usize,
+    _outsize: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesSivCtx>();
+
+        if is_running() == 0 {
+            return 0;
+        }
+
+        if ((*(*ctx).hw).cipher)(vctx, out, ptr::null(), 0) == 0 {
+            return 0;
+        }
+
+        if !outl.is_null() {
+            *outl = 0;
+        }
+        1
+    }
+}
+
+/// `aes_siv_get_ctx_params` — `cipher_aes_siv.c:157-183`.
+///
+/// The tag arm refuses three different things with one reason: a decryption context has no tag
+/// to hand back, a size that is not `taglen` is wrong, and a `set_octet_string` failure is the
+/// caller's buffer.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_siv_get_ctx_params(vctx: *mut c_void, params: *mut OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesSivCtx>();
+
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_AEAD_TAG);
+        if !p.is_null() && (*p).data_type == OSSL_PARAM_OCTET_STRING {
+            let refuse = (*ctx).enc == 0
+                || (*p).data_size != (*ctx).taglen
+                || crate::params::OSSL_PARAM_set_octet_string(
+                    p,
+                    ptr::addr_of!((*ctx).siv.tag).cast::<c_void>(),
+                    (*ctx).taglen,
+                ) == 0;
+            if refuse {
+                return fail_at(&err_sites::PROV_CIPHER_AES_SIV_161);
+            }
+        }
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_AEAD_TAGLEN);
+        if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, (*ctx).taglen) == 0 {
+            return fail_at(&err_sites::PROV_CIPHER_AES_SIV_167);
+        }
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_KEYLEN);
+        if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, (*ctx).keylen) == 0 {
+            return fail_at(&err_sites::PROV_CIPHER_AES_SIV_172);
+        }
+        1
+    }
+}
+
+/// `cipher_siv_known_gettable_ctx_params` — `cipher_aes_siv.c:185-190`.
+static SIV_GETTABLE_CTX_PARAMS: [OsslParam; 4] = [
+    param(OSSL_CIPHER_PARAM_KEYLEN, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_CIPHER_PARAM_AEAD_TAGLEN, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_CIPHER_PARAM_AEAD_TAG, OSSL_PARAM_OCTET_STRING),
+    END,
+];
+
+/// `aes_siv_gettable_ctx_params` — `cipher_aes_siv.c:191-196`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_siv_gettable_ctx_params(
+    _cctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    SIV_GETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `aes_siv_set_ctx_params` — `cipher_aes_siv.c:198-233`.
+///
+/// Three asymmetries are contract rather than accident: a tag on an **encryption** context is
+/// ignored with success (`return 1`, not a refusal); a `keylen` that differs from the row's is a
+/// bare `return 0` with **no raise**; and the function always ends by resetting
+/// `sctx->final_ret` to `-1`, which is what makes a re-init of a used context behave like a new
+/// one.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_siv_set_ctx_params(vctx: *mut c_void, params: *const OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesSivCtx>();
+        let mut speed: c_uint = 0;
+
+        if ossl_param_is_empty(params) {
+            return 1;
+        }
+
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_AEAD_TAG);
+        if !p.is_null() {
+            if (*ctx).enc != 0 {
+                return 1;
+            }
+            if (*p).data_type != OSSL_PARAM_OCTET_STRING
+                || ((*(*ctx).hw).settag)(vctx, (*p).data.cast::<c_uchar>(), (*p).data_size) == 0
+            {
+                return fail_at(&err_sites::PROV_CIPHER_AES_SIV_206);
+            }
+        }
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_SPEED);
+        if !p.is_null() {
+            if crate::params::OSSL_PARAM_get_uint(p, &mut speed) == 0 {
+                return fail_at(&err_sites::PROV_CIPHER_AES_SIV_213);
+            }
+            ((*(*ctx).hw).setspeed)(vctx, speed as c_int);
+        }
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_KEYLEN);
+        if !p.is_null() {
+            let mut keylen = 0usize;
+
+            if crate::params::OSSL_PARAM_get_size_t(p, &mut keylen) == 0 {
+                return fail_at(&err_sites::PROV_CIPHER_AES_SIV_223);
+            }
+            /* The key length can not be modified */
+            if keylen != (*ctx).keylen {
+                return 0;
+            }
+        }
+        (*ctx).siv.final_ret = -1;
+
+        1
+    }
+}
+
+/// `cipher_siv_known_settable_ctx_params` — `cipher_aes_siv.c:235-241`.
+static SIV_SETTABLE_CTX_PARAMS: [OsslParam; 4] = [
+    param(OSSL_CIPHER_PARAM_KEYLEN, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_CIPHER_PARAM_SPEED, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_CIPHER_PARAM_AEAD_TAG, OSSL_PARAM_OCTET_STRING),
+    END,
+];
+
+/// `aes_siv_settable_ctx_params` — `cipher_aes_siv.c:242-247`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_siv_settable_ctx_params(
+    _cctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    SIV_SETTABLE_CTX_PARAMS.as_ptr()
+}
+
+// ---------------------------------------------------------------------------------------------
+// `cipher_aes_siv_hw.c` — the portable arm
+// ---------------------------------------------------------------------------------------------
+
+/// `aes_siv_initkey` — `cipher_aes_siv_hw.c:18-58`: free any previous ciphers, fetch the
+/// CBC/CTR pair for **half** the key, and hand the whole key to `ossl_siv128_init` with the half
+/// length.
+///
+/// The `default: break` arm leaves both fetches NULL, which the following test turns into a 0.
+///
+/// # Safety
+/// The `PROV_CIPHER_HW_AES_SIV::initkey` contract; `ctx` is a `PROV_AES_SIV_CTX` and `key` is
+/// readable for `keylen` bytes.
+unsafe fn aes_siv_initkey(vctx: *mut c_void, key: *const c_uchar, keylen: usize) -> c_int {
+    // SAFETY: the caller's contract; `vctx` is a `PROV_AES_SIV_CTX`.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesSivCtx>();
+        let klen = keylen / 2;
+        let libctx = (*ctx).libctx;
+        let propq: *const c_char = ptr::null();
+
+        EVP_CIPHER_free((*ctx).cbc);
+        EVP_CIPHER_free((*ctx).ctr);
+        (*ctx).cbc = ptr::null_mut();
+        (*ctx).ctr = ptr::null_mut();
+
+        match klen {
+            16 => {
+                (*ctx).cbc = EVP_CIPHER_fetch(libctx, c"AES-128-CBC".as_ptr(), propq);
+                (*ctx).ctr = EVP_CIPHER_fetch(libctx, c"AES-128-CTR".as_ptr(), propq);
+            }
+            24 => {
+                (*ctx).cbc = EVP_CIPHER_fetch(libctx, c"AES-192-CBC".as_ptr(), propq);
+                (*ctx).ctr = EVP_CIPHER_fetch(libctx, c"AES-192-CTR".as_ptr(), propq);
+            }
+            32 => {
+                (*ctx).cbc = EVP_CIPHER_fetch(libctx, c"AES-256-CBC".as_ptr(), propq);
+                (*ctx).ctr = EVP_CIPHER_fetch(libctx, c"AES-256-CTR".as_ptr(), propq);
+            }
+            _ => {}
+        }
+        if (*ctx).cbc.is_null() || (*ctx).ctr.is_null() {
+            return 0;
+        }
+        /*
+         * klen is the length of the underlying cipher, not the input key,
+         * which should be twice as long
+         */
+        ossl_siv128_init(
+            ptr::addr_of_mut!((*ctx).siv),
+            key,
+            klen as c_int,
+            (*ctx).cbc,
+            (*ctx).ctr,
+            libctx,
+            propq,
+        )
+    }
+}
+
+/// `aes_siv_dupctx` — `cipher_aes_siv_hw.c:61-79`. The ciphers are up-ref'd *before* the struct
+/// copy, so the copy owns them too; the embedded context's three pointers are then cleared and
+/// rebuilt by `ossl_siv128_copy_ctx`, which is the whole reason they are cleared.
+///
+/// # Safety
+/// The `PROV_CIPHER_HW_AES_SIV::dupctx` contract; `in_vctx` and `out_vctx` are live
+/// `PROV_AES_SIV_CTX`es.
+unsafe fn aes_siv_dupctx(in_vctx: *mut c_void, out_vctx: *mut c_void) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let in_ = in_vctx.cast::<ProvAesSivCtx>();
+        let out = out_vctx.cast::<ProvAesSivCtx>();
+
+        if !(*in_).cbc.is_null() && EVP_CIPHER_up_ref((*in_).cbc) == 0 {
+            return 0;
+        }
+        if !(*in_).ctr.is_null() && EVP_CIPHER_up_ref((*in_).ctr) == 0 {
+            EVP_CIPHER_free((*in_).cbc);
+            return 0;
+        }
+
+        // SAFETY: the bitwise copy C's `*out = *in` performs; both are live `PROV_AES_SIV_CTX`es.
+        ptr::copy_nonoverlapping(in_, out, 1);
+        (*out).siv.cipher_ctx = ptr::null_mut();
+        (*out).siv.mac_ctx_init = ptr::null_mut();
+        (*out).siv.mac = ptr::null_mut();
+        if ossl_siv128_copy_ctx(ptr::addr_of_mut!((*out).siv), ptr::addr_of_mut!((*in_).siv)) == 0 {
+            return 0;
+        }
+
+        1
+    }
+}
+
+/// `aes_siv_settag` — `cipher_aes_siv_hw.c:81-87`.
+///
+/// # Safety
+/// The `PROV_CIPHER_HW_AES_SIV::settag` contract.
+unsafe fn aes_siv_settag(vctx: *mut c_void, tag: *const c_uchar, tagl: usize) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesSivCtx>();
+        ossl_siv128_set_tag(ptr::addr_of_mut!((*ctx).siv), tag, tagl)
+    }
+}
+
+/// `aes_siv_setspeed` — `cipher_aes_siv_hw.c:89-95`.
+///
+/// # Safety
+/// The `PROV_CIPHER_HW_AES_SIV::setspeed` contract.
+unsafe fn aes_siv_setspeed(vctx: *mut c_void, speed: c_int) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesSivCtx>();
+        ossl_siv128_speed(ptr::addr_of_mut!((*ctx).siv), speed);
+    }
+}
+
+/// `aes_siv_cleanup` — `cipher_aes_siv_hw.c:97-105`.
+///
+/// # Safety
+/// The `PROV_CIPHER_HW_AES_SIV::cleanup` contract.
+unsafe fn aes_siv_cleanup(vctx: *mut c_void) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesSivCtx>();
+        ossl_siv128_cleanup(ptr::addr_of_mut!((*ctx).siv));
+        EVP_CIPHER_free((*ctx).cbc);
+        EVP_CIPHER_free((*ctx).ctr);
+    }
+}
+
+/// `aes_siv_cipher` — `cipher_aes_siv_hw.c:107-125`. The three arms are the whole SIV protocol:
+/// a NULL input is the finish, a NULL output is AAD, and anything else is the payload — through
+/// `ossl_siv128_encrypt` or `ossl_siv128_decrypt` depending on the direction. Note that the
+/// underlying answers are `-1`-or-`0` (`final_ret`) and `0`-or-`1`, so the comparisons are `== 0`
+/// and `> 0` respectively rather than a uniform truth test.
+///
+/// # Safety
+/// The `PROV_CIPHER_HW_AES_SIV::cipher` contract.
+unsafe fn aes_siv_cipher(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    in_: *const c_uchar,
+    len: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesSivCtx>();
+        let sctx = ptr::addr_of_mut!((*ctx).siv);
+
+        /* EncryptFinal or DecryptFinal */
+        if in_.is_null() {
+            return c_int::from(ossl_siv128_finish(sctx) == 0);
+        }
+
+        /* Deal with associated data */
+        if out.is_null() {
+            return c_int::from(ossl_siv128_aad(sctx, in_, len) == 1);
+        }
+
+        if (*ctx).enc != 0 {
+            return c_int::from(ossl_siv128_encrypt(sctx, in_, out, len) > 0);
+        }
+
+        c_int::from(ossl_siv128_decrypt(sctx, in_, out, len) > 0)
+    }
+}
+
+/// `static const PROV_CIPHER_HW_AES_SIV aes_siv_hw` — `cipher_aes_siv_hw.c:127-134`.
+static AES_SIV_HW: ProvSivHw = ProvSivHw {
+    initkey: aes_siv_initkey,
+    cipher: aes_siv_cipher,
+    setspeed: aes_siv_setspeed,
+    settag: aes_siv_settag,
+    cleanup: aes_siv_cleanup,
+    dupctx: aes_siv_dupctx,
+};
+
+/// `const PROV_CIPHER_HW_AES_SIV *ossl_prov_cipher_hw_aes_siv(size_t keybits)` —
+/// `cipher_aes_siv_hw.c:136-139`. The authority has one arm for all key lengths; the AES-NI
+/// machinery is inside the fetched AES method, not here.
+fn ossl_prov_cipher_hw_aes_siv() -> *const ProvSivHw {
+    ptr::addr_of!(AES_SIV_HW)
+}
+
+/// `IMPLEMENT_cipher` — `cipher_aes_siv.c:249-306`, the three AES-SIV rows' dispatch tables.
+///
+/// Each has fourteen entries, and `UPDATE` and `CIPHER` are the *same* function pointer because
+/// the authority's `#define siv_stream_update siv_cipher` makes them one. As with `ccm_row!`,
+/// the expansion writes only `pub(crate)` items and a `'static` table.
+macro_rules! siv_row {
+    ($newctx:ident, $getparams:ident, $table:ident, $kbits:expr) => {
+        unsafe extern "C" fn $newctx(provctx: *mut c_void) -> *mut c_void {
+            // SAFETY: the dispatch contract.
+            unsafe { aes_siv_newctx(provctx, 2 * $kbits, EVP_CIPH_SIV_MODE, AES_SIV_FLAGS) }
+        }
+
+        unsafe extern "C" fn $getparams(params: *mut OsslParam) -> c_int {
+            // SAFETY: the dispatch contract.
+            unsafe {
+                ossl_cipher_generic_get_params(
+                    params,
+                    EVP_CIPH_SIV_MODE,
+                    AES_SIV_FLAGS,
+                    2 * $kbits,
+                    AES_SIV_BLOCK_BITS,
+                    AES_SIV_IV_BITS,
+                )
+            }
+        }
+
+        pub(crate) static $table: [OsslDispatch; 15] = [
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_NEWCTX,
+                function: $newctx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_FREECTX,
+                function: aes_siv_freectx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: crate::evp::cipher::OSSL_FUNC_CIPHER_DUPCTX,
+                function: siv_dupctx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_ENCRYPT_INIT,
+                function: siv_einit as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_DECRYPT_INIT,
+                function: siv_dinit as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_UPDATE,
+                function: siv_cipher as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_FINAL,
+                function: siv_stream_final as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: crate::evp::cipher::OSSL_FUNC_CIPHER_CIPHER,
+                function: siv_cipher as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GET_PARAMS,
+                function: $getparams as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GETTABLE_PARAMS,
+                function: ossl_cipher_generic_gettable_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GET_CTX_PARAMS,
+                function: aes_siv_get_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS,
+                function: aes_siv_gettable_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_SET_CTX_PARAMS,
+                function: aes_siv_set_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS,
+                function: aes_siv_settable_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_DISPATCH_END,
+                function: ptr::null_mut(),
+            },
+        ];
+    };
+}
+
+siv_row!(
+    aes128siv_newctx,
+    aes128siv_get_params,
+    AES128SIV_FUNCTIONS,
+    128
+);
+siv_row!(
+    aes192siv_newctx,
+    aes192siv_get_params,
+    AES192SIV_FUNCTIONS,
+    192
+);
+siv_row!(
+    aes256siv_newctx,
+    aes256siv_get_params,
+    AES256SIV_FUNCTIONS,
+    256
+);
+
+// ---------------------------------------------------------------------------------------------
 // `cipher_null.c`
 // ---------------------------------------------------------------------------------------------
 
@@ -8147,6 +8898,9 @@ alias!(N_DES_EDE_ECB, "DES-EDE-ECB:DES-EDE:1.3.14.3.2.17");
 alias!(N_DES_EDE_CBC, "DES-EDE-CBC");
 alias!(N_DES_EDE_OFB, "DES-EDE-OFB");
 alias!(N_DES_EDE_CFB, "DES-EDE-CFB");
+alias!(N_AES_128_SIV, "AES-128-SIV");
+alias!(N_AES_192_SIV, "AES-192-SIV");
+alias!(N_AES_256_SIV, "AES-256-SIV");
 alias!(
     N_AES_256_CCM,
     "AES-256-CCM:id-aes256-CCM:2.16.840.1.101.3.4.1.47"
@@ -8211,7 +8965,7 @@ const fn row(names: *const c_char, implementation: *const c_void) -> OsslAlgorit
 
 /// `static const OSSL_ALGORITHM_CAPABLE deflt_ciphers[]` — `providers/defltprov.c:161-330`,
 /// restricted to the rows this half implements, in the authority's order.
-pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 80] = [
+pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 83] = [
     row(N_NULL, NULL_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_ECB, AES256ECB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_ECB, AES192ECB_FUNCTIONS.as_ptr().cast()),
@@ -8242,6 +8996,9 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 80] = [
     row(N_AES_256_OCB, AES256OCB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_OCB, AES192OCB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_128_OCB, AES128OCB_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_128_SIV, AES128SIV_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_192_SIV, AES192SIV_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_256_SIV, AES256SIV_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_CCM, AES256CCM_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_CCM, AES192CCM_FUNCTIONS.as_ptr().cast()),
     row(N_AES_128_CCM, AES128CCM_FUNCTIONS.as_ptr().cast()),
@@ -8342,9 +9099,9 @@ mod tests {
 
     #[test]
     fn the_cipher_table_terminates_and_names_the_rows() {
-        assert_eq!(DEFLT_CIPHERS.len(), 80);
+        assert_eq!(DEFLT_CIPHERS.len(), 83);
         // SAFETY: every entry up to the terminator is initialised.
-        let last = DEFLT_CIPHERS[79].algorithm_names;
+        let last = DEFLT_CIPHERS[82].algorithm_names;
         assert!(last.is_null(), "the table is NULL-name terminated");
         // SAFETY: the first row's name is a `'static` C string.
         let first = unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[0].algorithm_names) };

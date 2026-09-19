@@ -141,28 +141,28 @@
    "operation": "OSSL_OP_CIPHER",
    "name": "DES3-WRAP",
    "phase": 9,
-   "blocked_by": "RAND_bytes_ex: providers/implementations/ciphers/cipher_tdes_wrap.c's ossl_tdes_wrap_cbc_init generates the wrap IV with it, and rand.h is Phase 9's (docs/DECISIONS.md D234's class). The row is Phase 8's obligation, handed to Phase 9 with the blocker named rather than stubbed.  **Second blocker (D240):** the provider context. `ossl_cipher_generic_initkey` stores `PROV_LIBCTX_OF(provctx)` on `ctx->libctx` so the random call resolves against the library context of the provider that created the cipher, and this crate's `ossl_default_provider_init` publishes a NULL `provctx`. Landing `RAND_bytes_ex` alone would therefore answer with the *global* context where the authority answers with the fetching `OSSL_LIB_CTX`; the observation has to be taken in a private libctx. `forensics/atlas/provider-algorithms.json`'s `provider_context` block is the measured record and fails if either fact moves."
+   "blocked_by": "RAND_bytes_ex: providers/implementations/ciphers/cipher_tdes_wrap.c's ossl_tdes_wrap_cbc_init generates the wrap IV with it, and rand.h is Phase 9's (docs/DECISIONS.md D234's class). The row is Phase 8's obligation, handed to Phase 9 with the blocker named rather than stubbed."
   },
   {
    "provider": "default",
    "operation": "OSSL_OP_CIPHER",
    "name": "AES-128-GCM",
    "phase": 9,
-   "blocked_by": "RAND_bytes_ex: ciphercommon_gcm.c.in:423 and :536 (docs/DECISIONS.md D234).  **Second blocker (D240):** the provider context. `ossl_cipher_generic_initkey` stores `PROV_LIBCTX_OF(provctx)` on `ctx->libctx` so the random call resolves against the library context of the provider that created the cipher, and this crate's `ossl_default_provider_init` publishes a NULL `provctx`. Landing `RAND_bytes_ex` alone would therefore answer with the *global* context where the authority answers with the fetching `OSSL_LIB_CTX`; the observation has to be taken in a private libctx. `forensics/atlas/provider-algorithms.json`'s `provider_context` block is the measured record and fails if either fact moves."
+   "blocked_by": "RAND_bytes_ex: ciphercommon_gcm.c.in:423 and :536 (docs/DECISIONS.md D234)."
   },
   {
    "provider": "default",
    "operation": "OSSL_OP_CIPHER",
    "name": "AES-192-GCM",
    "phase": 9,
-   "blocked_by": "RAND_bytes_ex: ciphercommon_gcm.c.in:423 and :536 (docs/DECISIONS.md D234).  **Second blocker (D240):** the provider context. `ossl_cipher_generic_initkey` stores `PROV_LIBCTX_OF(provctx)` on `ctx->libctx` so the random call resolves against the library context of the provider that created the cipher, and this crate's `ossl_default_provider_init` publishes a NULL `provctx`. Landing `RAND_bytes_ex` alone would therefore answer with the *global* context where the authority answers with the fetching `OSSL_LIB_CTX`; the observation has to be taken in a private libctx. `forensics/atlas/provider-algorithms.json`'s `provider_context` block is the measured record and fails if either fact moves."
+   "blocked_by": "RAND_bytes_ex: ciphercommon_gcm.c.in:423 and :536 (docs/DECISIONS.md D234)."
   },
   {
    "provider": "default",
    "operation": "OSSL_OP_CIPHER",
    "name": "AES-256-GCM",
    "phase": 9,
-   "blocked_by": "RAND_bytes_ex: ciphercommon_gcm.c.in:423 and :536 (docs/DECISIONS.md D234).  **Second blocker (D240):** the provider context. `ossl_cipher_generic_initkey` stores `PROV_LIBCTX_OF(provctx)` on `ctx->libctx` so the random call resolves against the library context of the provider that created the cipher, and this crate's `ossl_default_provider_init` publishes a NULL `provctx`. Landing `RAND_bytes_ex` alone would therefore answer with the *global* context where the authority answers with the fetching `OSSL_LIB_CTX`; the observation has to be taken in a private libctx. `forensics/atlas/provider-algorithms.json`'s `provider_context` block is the measured record and fails if either fact moves."
+   "blocked_by": "RAND_bytes_ex: ciphercommon_gcm.c.in:423 and :536 (docs/DECISIONS.md D234)."
   },
   {
    "provider": "default",

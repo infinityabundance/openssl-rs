@@ -136,29 +136,29 @@ const LINE_FREE_Q_MAC: c_int = 301;
 // ---------------------------------------------------------------------------------------------
 
 /// `OSSL_FUNC_MAC_NEWCTX`.
-const OSSL_FUNC_MAC_NEWCTX: c_int = 1;
+pub(crate) const OSSL_FUNC_MAC_NEWCTX: c_int = 1;
 /// `OSSL_FUNC_MAC_DUPCTX`.
-const OSSL_FUNC_MAC_DUPCTX: c_int = 2;
+pub(crate) const OSSL_FUNC_MAC_DUPCTX: c_int = 2;
 /// `OSSL_FUNC_MAC_FREECTX`.
-const OSSL_FUNC_MAC_FREECTX: c_int = 3;
+pub(crate) const OSSL_FUNC_MAC_FREECTX: c_int = 3;
 /// `OSSL_FUNC_MAC_INIT`.
-const OSSL_FUNC_MAC_INIT: c_int = 4;
+pub(crate) const OSSL_FUNC_MAC_INIT: c_int = 4;
 /// `OSSL_FUNC_MAC_UPDATE`.
-const OSSL_FUNC_MAC_UPDATE: c_int = 5;
+pub(crate) const OSSL_FUNC_MAC_UPDATE: c_int = 5;
 /// `OSSL_FUNC_MAC_FINAL`.
-const OSSL_FUNC_MAC_FINAL: c_int = 6;
+pub(crate) const OSSL_FUNC_MAC_FINAL: c_int = 6;
 /// `OSSL_FUNC_MAC_GET_PARAMS`.
 const OSSL_FUNC_MAC_GET_PARAMS: c_int = 7;
 /// `OSSL_FUNC_MAC_GET_CTX_PARAMS`.
-const OSSL_FUNC_MAC_GET_CTX_PARAMS: c_int = 8;
+pub(crate) const OSSL_FUNC_MAC_GET_CTX_PARAMS: c_int = 8;
 /// `OSSL_FUNC_MAC_SET_CTX_PARAMS`.
-const OSSL_FUNC_MAC_SET_CTX_PARAMS: c_int = 9;
+pub(crate) const OSSL_FUNC_MAC_SET_CTX_PARAMS: c_int = 9;
 /// `OSSL_FUNC_MAC_GETTABLE_PARAMS`.
 const OSSL_FUNC_MAC_GETTABLE_PARAMS: c_int = 10;
 /// `OSSL_FUNC_MAC_GETTABLE_CTX_PARAMS`.
-const OSSL_FUNC_MAC_GETTABLE_CTX_PARAMS: c_int = 11;
+pub(crate) const OSSL_FUNC_MAC_GETTABLE_CTX_PARAMS: c_int = 11;
 /// `OSSL_FUNC_MAC_SETTABLE_CTX_PARAMS`.
-const OSSL_FUNC_MAC_SETTABLE_CTX_PARAMS: c_int = 12;
+pub(crate) const OSSL_FUNC_MAC_SETTABLE_CTX_PARAMS: c_int = 12;
 /// `OSSL_FUNC_MAC_INIT_SKEY`. Counted toward the same total as `INIT`, which is why this class's
 /// structural check accepts a provider that publishes the symmetric-key form alone.
 const OSSL_FUNC_MAC_INIT_SKEY: c_int = 13;

@@ -15995,3 +15995,169 @@ this entry lands such a row, and nothing here appends one to `DEFLT_CIPHERS`.
 stays **194 implemented / 576 open / 16 deferred**, the census stays **996 rows / 106 implemented /
 205 open / 685 deferred**, and `RT-CIPHER` stays at **1055 observations**. The artefact this entry
 moves is `provider-algorithms.json`, and what it gains is an invariant rather than a row.
+
+## D241 — the provider context is published, the CMAC row and the three AES-SIV rows land, and `PROV_LIBCTX_OF` stops being an argument with no argument
+
+D240 recorded the provider context as a *measured obligation*: `ossl_default_provider_init`
+published `*provctx = NULL`, so `PROV_LIBCTX_OF` had no argument, so no provider context could
+carry the library context of the provider that created it. D239 had left the six SIV rows waiting
+on the CMAC row, and CMAC's own construction is *parameterised by a cipher* whose name arrives as
+a parameter. This entry discharges both, and it does them in one unit because they are the same
+layer: a provider row that sub-fetches needs both a provider context to resolve in and a
+`PROV_CIPHER` to resolve through.
+
+**The provider context.** `src/provider/ctx.rs` transcribes `providers/common/provider_ctx.c`:
+`ossl_prov_ctx_new`/`_free`/`set0_libctx`/`set0_handle`/`set0_core_get_params` and the `get0`
+accessors, with `prov_libctx_of` as `PROV_LIBCTX_OF`. The authority's accessor is NULL-safe
+(`if (ctx == NULL) return NULL;`), and so is this one, which is what lets every acquisition site
+write the assignment unconditionally the way the authority's own `newctx` bodies do.
+`corebiometh` is absent with its reason rather than stubbed. `ossl_default_provider_init` now
+walks its `in_` array for `FUNC_CORE_GET_LIBCTX` and `FUNC_CORE_GET_PARAMS`, returns 0 when the
+first is absent — the authority does the same — builds a `PROV_CTX`, stores the libctx, the handle
+and the get-params callback on it, publishes it in `*provctx`, and gained its `deflt_teardown`.
+`DEFLT_DISPATCH` is three entries now (`QUERY_OPERATION`, `TEARDOWN`, `END`). The digest half is
+unchanged; what is new is that a digest or cipher row created *by* this provider can now ask which
+library context created it.
+
+**`ossl_cipher_generic_initkey` closes the loop.** `ciphercommon.c.in:758-759` ends with
+
+```c
+if (provctx != NULL)
+    ctx->libctx = PROV_LIBCTX_OF(provctx); /* used for rand */
+```
+
+and that line is now in the crate, inside the function it belongs to. Nothing observable moves
+today, because every landed row is deterministic; what moves is that `RAND_bytes_ex(ctx->libctx, …)`
+and every `EVP_*_fetch(ctx->libctx, …)` have an answer that is not "the global context".
+
+**The CMAC row.** `src/provider/mac.rs` transcribes `providers/implementations/macs/cmac_prov.c`:
+`cmac_new`/`_free`/`_dup`/`_size`/`_setkey`/`_gettable_ctx_params`/`_get_ctx_params`/
+`_settable_ctx_params`/`_set_ctx_params`/`_init`/`_update`/`_final`, the eleven-entry
+`CMAC_FUNCTIONS`, and the default provider's two `deflt_macs[]` rows. Its four decoder keys are
+`cipher`, `engine`, `key` and `properties`; its two get keys are `block-size` and `size`; the four
+FIPS arms are absent because the authority's non-FIPS build compiles them out. The reasons it
+raises are the authority's own — `PROV_CMAC_PROV_245`, `_269`, `_350`, `_382`, `_395`, `_406`,
+`_449` — and they are raised through the same generated site table the cipher rows use. The
+measurement that D239 wrote down as the prerequisite is discharged: `EVP_MAC_fetch(NULL, "CMAC",
+NULL)` answered **1** on the authority and **0** on the candidate, and answers **1 on both** now.
+`HMAC`, `GMAC`, `KMAC-128/256`, `POLY1305`, `SIPHASH` and `BLAKE2B-SMAC` do **not**, and that is
+recorded rather than glossed: eight of this stratum's nine `OSSL_OP_MAC` rows are still open.
+
+**`src/provider/util.rs` is the other half of that dependency.** `cmac_set_ctx_params` receives a
+cipher *name* and needs it resolved, so `provider_util.c`'s `PROV_CIPHER` half lands with it:
+`ossl_prov_cipher_reset`/`_copy`/`_load`/`_load_from_params`/`_cipher`/`_engine` and
+`ossl_prov_cipher_set_propq`/`_set_engine`. The `ENGINE` arms are **narrowed to always-refuse**,
+and the narrowing is named in the module doc and in `docs/SECURITY_DIVERGENCE_POLICY.md` §4's
+sense: this crate transcribes no `ENGINE` registry, so a caller that names an engine the
+authority's build holds gets a refusal where the authority succeeds. `dso`-loaded engines are
+absent from this profile's provider set, no landed row and no court reaches the arm, and the
+`engine` key stays a decoder key rather than being quietly dropped from the list.
+
+**The three AES-SIV rows.** They cannot land before CMAC, because `aes_siv_initkey` hands the
+SIV128 context a libctx and a `propq`, and `ossl_siv128_init` reaches
+`EVP_MAC_fetch(libctx, "CMAC", propq)` with them. With the CMAC row in, `src/provider/cipher.rs`
+gained `cipher_aes_siv.c`'s engine — `aes_siv_newctx`, the `siv_init`/`siv_einit`/`siv_dinit`
+trio and its params, `aes_siv_cipher`, the settag/gettag/setspeed hw pair, `aes_siv_dupctx` and
+`ossl_prov_cipher_hw_aes_siv` — plus the three `DEFLT_CIPHERS` rows with the
+`id-aes128-SIV`/`id-aes192-SIV`/`id-aes256-SIV` aliases, which took the table from 80 to 83
+entries.
+
+**RFC 5297 Appendix A.1 is one 24-octet AD, and getting that wrong is silent.** The probe's first
+draft split the A.1 associated data into a 16-octet and an 8-octet component, because that is how
+the RFC *prints* it — wrapped over two lines for width. S2V is `D = dbl(D) xor CMAC(S_i)` per
+component, so those are two different inputs and two different tags, and the draft was comparing
+its own wrong answer against a correct constant. OpenSSL's own
+`test/recipes/30-test_evp_data/evpciph_aes_siv.txt` carries A.1 with a single `AAD =` line, which
+is what settled it. The arm is one known-answer test over one vector, and it is worth stating
+plainly that the vector is the RFC's rather than the authority's: this is a `CT`-shaped
+observation sitting inside an `RT` probe, and the two are not the same evidence class.
+
+**The census joins the MAC table, and the certificate becomes a discharge.** `DEFLT_MACS` is read
+by `gen_provider_algorithms.py` the way `DEFLT_CIPHERS` and `DEFLT_DIGESTS` already were, so the
+CMAC row is *measured* as implemented instead of typed as one. The census moves from **106
+implemented / 205 open** to **110 / 201** — one CMAC row and three SIV rows — and nothing else
+about it changes. `provider_context` stops being an obligation and becomes the inverse
+measurement: it fails if the NULL `provctx` returns, if the `PROV_CTX` is no longer published, if
+the accessor disappears, or if the authority's own line moves.
+
+**What this entry moves.** `implemented[libcrypto]` stays **2035 / 5896** and Phase 8 stays **194
+implemented / 576 open / 16 deferred**, because neither a provider registration row nor a
+`pub(crate)` transcription is an exported symbol — the SIV and CMAC rows are rows, and the crate
+gains no new `libcrypto` export here. What moves is the provider census (106/205 → **110/201** of
+996), `err-raise-sites.json` (**1873 → 1881** sites, from `cipher_aes_siv.c` and `cmac_prov.c`),
+and `RT-CIPHER` (**1055 → 1115** observations: the SIV row shapes, the RFC 5297 A.1 encrypt,
+round-trip, bit-flip-refusal and AAD-only arms, the tag-length window, the `speed` arm, and the
+provider-failure arms D235's machinery drains). The unit tests go to **544 passed, 0 failed**.
+
+## D242 — the acquisition census is per function, and the second `PROV_LIBCTX_OF` site was holding a NULL
+
+D241's certificate asserted one needle in one file: `ctx->libctx = PROV_LIBCTX_OF(provctx);`
+appears in `ossl_cipher_generic_initkey`. It appeared. The certificate passed. And
+`aes_siv_newctx` — the other landed cipher unit that acquires the context, and the one that has to,
+because its own `initkey` never reaches the generic path — still ended with
+
+```rust
+(*ctx).libctx = ptr::null_mut();
+```
+
+with a doc comment asserting the opposite was harmless. The claim was that the crate's NULL
+`provctx` and the authority's default library context are the same thing. That is true of every
+*value* the row produces and false of the *scope* its sub-fetches resolve in, and the courts could
+not see it: `aes_siv_initkey`'s two `EVP_CIPHER_fetch` calls and `ossl_siv128_init`'s
+`EVP_MAC_fetch` all succeed either way, in whichever context they land, and the tag comes out
+identical. An arm that loads a provider in a private `OSSL_LIB_CTX`, fetches SIV there and
+compares the tag against the global run therefore passes on both the broken and the correct
+implementation. It was a smoke test wearing a discrimination test's name.
+
+**What makes the difference observable.** Default properties are a per-`OSSL_LIB_CTX` preference,
+and `ossl_siv128_init` reaches CMAC through `EVP_MAC_fetch(libctx, "CMAC", NULL)` with a **NULL
+property query** — so the *default* properties of whichever context it was handed decide whether
+that fetch resolves. Setting `fips=yes` as the private context's defaults after the row has been
+fetched must therefore break the private run and leave the global run alone. Measured with a
+scratch program before anything was changed: the authority answers `EVP_MAC_fetch(lc, "CMAC", NULL)`
+**0** and `EVP_EncryptInit_ex2` on the already-fetched SIV row **0**, while the candidate answered
+**0** and **1**; `EVP_MAC_fetch(NULL, "CMAC", NULL)` answered 1 on both, so the difference is the
+context and not the property machinery. `RT-CIPHER`'s `defltsiv.libctx.*` group now carries both
+halves: the private-context round trip (new/load/fetch/global-KAT/private-KAT/same/hex) and the
+scoping probe (`macbefore`, `setprops`, `macafter`, `macglobal`, `propsinit`). **1055 → 1115 → 1127**
+observations, where the second step is this group.
+
+**The fix is one line, and the check that it stays is the point.** `aes_siv_newctx` renames
+`_provctx` to `provctx` and assigns `prov_libctx_of(provctx)` unconditionally, as the authority's
+line does. `provider_context` then stops being a needle and becomes a census: every authority site
+that *acquires* `PROV_LIBCTX_OF` into an object is enumerated from the pinned tree by
+`authority_libctx_carry_sites` — **26 sites**, `.c` and `.c.in` both — and each is classified
+`landed` (2), `open` (2: `cipher_aes_gcm_siv.c` and `ciphercommon_gcm.c.in`, the latter Phase 9's
+with the GCM rows) or `later` (22, in the keymgmt, signature, asymcipher, KEM, KDF and exchange
+families that no current subphase has reached). Readers of the field need no row: they read what
+these assignments set. The comparison is exact in both directions, so an authority site the table
+does not classify fails — the `DES3-WRAP` failure class one level down.
+
+**Anchoring is per function, not per file**, and that is the whole finding. `rust_fn_body` extracts
+a top-level `fn`'s source up to rustfmt's `^}`, and each `landed` row requires **exactly one**
+`(*x).libctx = … ;` inside the named function, equal to the recorded anchor. A needle anywhere in
+the file is what let the second site hide; requiring exactly one is also what stops a second
+assignment being appended to the same function.
+
+**The check is negative-tested, because a fail-closed check that cannot fail is not a check.**
+`gen_provider_algorithms.py --self-test` reconstructs all six ways to defeat it and requires a
+finding from each: `aes_siv_newctx` regressed to a NULL; the same field write respelled with
+another local (`(*c).libctx`), which the *first* certificate was explicitly written to match past;
+the assignment doubled; an authority site dropped from the table; a recorded line drifted by one;
+and the owing function renamed away. It mutates text in memory, so the tree is untouched, and it
+runs in the pipeline immediately after the census — the shape `blocker_liveness.py --self-test`
+already established for the stale `EVP_PKEY_new_mac_key` deferral.
+
+**One gate finding, and it was a lexical collision rather than a missing prerequisite.**
+`ProvSivHw`'s Rust field `initkey` mirrors a member of `PROV_CIPHER_HW_AES_SIV`
+(`providers/implementations/ciphers/cipher_aes_siv.h:15`), a non-installed header, so the
+prerequisite gate reported `undefined_prerequisite: initkey`. It joins the existing
+`shadowed_by_a_crate_identifier` divergence row beside `cbc`, which is the same collision from the
+same header family, with the source named in the note and the evidence. The gate holds that list
+exact, so the member had to be looked at rather than filtered.
+
+**What this entry moves.** `implemented[libcrypto]` stays **2035 / 5896**, Phase 8 stays **194
+implemented / 576 open / 16 deferred**, and the provider census stays **110 implemented / 201 open**
+of 996. `RT-CIPHER` moves **1115 → 1127**. What it adds is a class: after this, landing a provider
+object that acquires a library context without anchoring *where* it acquires it fails the census on
+the commit that lands it, rather than at the next stratum's seal.

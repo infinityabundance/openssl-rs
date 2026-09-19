@@ -7762,6 +7762,7 @@
             "basis": "called",
             "courts": [
               "RT-BIO-CORE",
+              "RT-CIPHER",
               "RT-CMAC",
               "RT-EVP-BIO",
               "RT-EVP-CIPHER",
@@ -7823,6 +7824,7 @@
             "basis": "called",
             "courts": [
               "RT-BIO-CORE",
+              "RT-CIPHER",
               "RT-CMAC",
               "RT-EVP-BIO",
               "RT-EVP-CIPHER",
@@ -8127,6 +8129,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-PARAM"
             ],
             "symbol": "OSSL_PARAM_construct_uint"
@@ -9425,6 +9428,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-CIPHER"
             ],
             "symbol": "EVP_CIPHER_get_mode"
@@ -10588,6 +10592,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-MAC"
             ],
             "symbol": "EVP_MAC_fetch"
@@ -10609,6 +10614,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-MAC"
             ],
             "symbol": "EVP_MAC_free"
@@ -13728,6 +13734,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-FETCH"
             ],
             "symbol": "EVP_set_default_properties"
@@ -15481,7 +15488,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "4c71a427fe948ac0b82ffc9d33621dae6293cb11ab77f7bdd852caac3953f2fb"
+      "sha256": "9d33cc1f09b2800b39d54d72f3711b96e65e8aa59b7bba3d78266881685f25ff"
     },
     {
       "name": "symbol-ownership",
@@ -15536,7 +15543,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "e66ccb6f8e0d316204328747ac4cde0030a5c05bce2ab59edcfae2cf7fbc4743"
+      "sha256": "2606635256e56a8edcbd2291b65a9ecfc47911acbae698f6f4b7edcc11bbb382"
     },
     {
       "name": "phase7-courts",
@@ -15546,12 +15553,12 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "9bd06f83a8b29319a4e401aa41a16a6c0c53bcf6e79c892ee36b15b0f5eb7472"
+      "sha256": "e3669312b31033380bfade5895d5ce6efd748c839277cef518c7bd3c0a065a52"
     },
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "2ab1b1481f889a8cf74d4f8058ea31ef012c7f9b30cad5335da4ec6e768c0e2f"
+      "sha256": "1cc8c1d6d80f8f21db0c38bdf1cf953292b02d9d09a5228790e9e93fa0d2adab"
     }
   ],
   "kind": "court-coverage",

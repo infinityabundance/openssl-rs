@@ -72,6 +72,16 @@ echo "== provider algorithm census =="
 # not rustfmt-stable) while this one must read the crate's final text.
 python3 forensics/tools/gen_provider_algorithms.py
 
+# Then provoke the census's own failure modes (D242). The provider context's discharge
+# certificate now anchors each landed `PROV_LIBCTX_OF` acquisition **inside the crate function
+# that owes it**, which is the only way the second site -- `aes_siv_newctx`, holding a NULL
+# context while `ossl_cipher_generic_initkey` held the real one -- could have been caught. A
+# check that fails closed is worth exactly as much as the evidence that it can fail, so each of
+# the six ways to defeat it is reconstructed here and required to fire, the way
+# `blocker_liveness.py --self-test` reconstructs the stale `EVP_PKEY_new_mac_key` deferral. It
+# mutates copies-of-text in memory, so it leaves the tree untouched.
+python3 forensics/tools/gen_provider_algorithms.py --self-test
+
 echo "== ledgers =="
 # Discovery-driven, the way `evidence_determinism.py` already is: a stratum is a file
 # matching the glob, not an entry in a list somebody has to remember to extend.

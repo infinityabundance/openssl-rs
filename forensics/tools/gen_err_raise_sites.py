@@ -432,6 +432,8 @@ COVERED_FILES = [
     ("providers/implementations/ciphers/cipher_aes_wrp.c", "PROV_CIPHER_AES_WRP"),
     ("providers/implementations/ciphers/cipher_aes_xts.c", "PROV_CIPHER_AES_XTS"),
     ("providers/implementations/ciphers/ciphercommon_ccm.c", "PROV_CIPHERCOMMON_CCM"),
+    ("providers/implementations/ciphers/cipher_aes_siv.c", "PROV_CIPHER_AES_SIV"),
+    ("providers/implementations/macs/cmac_prov.c", "PROV_CMAC_PROV"),
     # Phase 8's digest half. `digestcommon.c` is generated and shared by every digest
     # row the *default* provider publishes. The other `*_prov.c` units raise nothing in
     # this profile and are deliberately absent (an entry that can never change would read
@@ -446,8 +448,9 @@ COVERED_FILES = [
     # template `ciphercommon_gcm.c.in` (9: no row reaches it, because
     # `deflt_ciphers[]` carries no GCM row in this crate -- D234); the
     # `cipher_chacha20*.c`, `cipher_aes_siv.c`, `cipher_aes_gcm_siv.c` (9, or
-    # 8.3's blocked rows: `cipher_aes_siv.c`'s three rows need the `OSSL_OP_MAC`
-    # CMAC row, which is not this stratum's -- D239);
+    # 8.3's blocked rows: `cipher_aes_siv.c`'s three rows needed the `OSSL_OP_MAC`
+    # CMAC row, which landed with them (D241); `cipher_aes_gcm_siv.c` and
+    # `cipher_chacha20*.c` (9);
     # whose `ciphercommon_ccm.c.in` sibling *is* covered above, because the three
     # AES-CCM rows land in 8.3);
     # `cipher_cts.c` and the `cipher_*_cts.inc` pair raise nothing and are absent for
