@@ -20223,3 +20223,54 @@ writes down for `git add -- src forensics docs artifacts`: **that list is not th
 No export landed. `rand.h`'s twenty-five are all still `open`, the ledger is unchanged at 0
 implemented, and no Phase-9 court beyond `RT-DRBG` has moved. What changed is that 9.2 is now a
 measured job with one named cross-stratum blocker instead of an unknown.
+
+## D312 -- the front's sys bindings land, its 33 errors are measured to 0, and the gate is the export court
+
+The front was integrated a second time, now that D311's `sys` prerequisites exist, and it
+**compiles**: 33 errors -> 0. It is **not committed**, and this entry records why, because the
+reason is the project's own invariant rather than effort.
+
+### What was measured, and what it settles
+
+* **The 27 non-ENGINE errors were one import block, as D311 predicted.** The pool, seeding and
+  `sys` names the staging file calls all exist; `c_ulong` was an unused import once the local
+  `struct stat` went; one `unsafe` block was missing at one call site.
+* **`randfile.c`'s `struct stat` has a home, and it is not a second one.** The staging file carried
+  its own layout because neither existed then; D298/D312's `crate::rand::sys::Stat` is measured and
+  tested, so the duplicate was dropped and `Stat::ZEROED` added -- a struct literal, so a field
+  added later cannot be forgotten, which is `OsslLibCtx::ZEROED`'s shape.
+* **`rand_meth.c` is not a separate unit after all.** `ossl_rand_meth`'s six callbacks are
+  `drbg_seed`/`drbg_bytes`/`drbg_add`/`drbg_status`, which are the DRBG-path functions this file
+  already carries, so the table is functional and no `rand_meth.c` transcription is owed. This is
+  worth recording because D311's `FILE_METH` constant implied otherwise.
+
+### The gate: an export needs a court, not just a body
+
+With the front compiling, `rand.h`'s twenty-five rows become `implemented`, and
+`court_coverage.py` then requires each to be directly courted, indirectly courted or declared
+non-observable -- for an **in-progress** stratum, which is D236's change. `RT-DRBG` drives
+`EVP_RAND_*` and names none of them. So the front's landing commit is `rand_lib.rs` **plus
+`RT-RAND`**, and that is the same shape D309 and D310 had: the row and the observation land
+together or neither does. Committing the front alone would have made the invariant fail on the
+commit that landed it, which is precisely what the invariant is for.
+
+### The engine arms: the decision the next pass needs
+
+D311 measured that ENGINE is enabled and that `RAND_get_rand_method`, `RAND_set_rand_method` and
+`RAND_set_rand_engine` reach `ENGINE_get_default_RAND`/`ENGINE_get_RAND`/`ENGINE_init`/
+`ENGINE_finish`. **They will be written with the no-engine reduction, not withheld.** The
+argument, recorded here so it can be attacked: this crate exports no `ENGINE_add`, no
+`ENGINE_by_id` and no `ENGINE_new`, so **no `ENGINE *` can be constructed**, and every one of
+those four entry points is an unimplemented scaffold that aborts. Every reachable argument is
+NULL, and for NULL the authority's bodies reduce to `ossl_rand_meth()` (its own "no engine
+registered" arm) and `rand_set_rand_method_internal(NULL, NULL)`. The reductions are written at
+each site with the authority's code in the comment, and a `modelled_differently` row belongs in
+`forensics/prerequisites.json` when the front lands.
+
+### What landed
+
+`src/runtime/bio/sys.rs` gains `setbuf`, `clearerr` and `fdopen`; `src/rand/sys.rs` gains `stat`,
+`chmod`, `S_IFMT`/`S_IFREG`/`S_IFDIR`, `s_isreg` and `Stat::ZEROED`. The first three were
+committed with their own tests as `8ac19d4f`; `ZEROED` lands here with its landing caller named.
+The front itself is reverted to keep the tree green -- `PIPELINE OK` -- rather than committed with
+its court missing.
