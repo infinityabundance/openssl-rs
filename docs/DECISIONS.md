@@ -16383,3 +16383,53 @@ implemented / 576 open / 16 deferred**, the provider census stays **996 rows / 1
 open / 686 deferred**, and the export coverage atlas is untouched. What moves is `RT-CIPHER`
 (**1127 -> 1537**) and the new `provider-court-coverage.json`. Unit tests stay at **548 passed, 0
 failed**.
+
+## D246 — the candidate side of the census is one walk of the crate's own `deflt_query`, not a reader per operation
+
+D237's census read the authority generically and the candidate specifically: `crate_cipher_rows`,
+`crate_digest_rows`, and — from D241 — `crate_mac_rows`. That asymmetry was named in the structural
+review and it is the same failure mode this census exists to remove, reached from the candidate
+side: a row landed under an operation nobody had written a reader for would be invisible, which is
+`DES3-WRAP`'s class (D237) one level over. The three readers are gone.
+
+**What replaced them.** `crate_query_tables` walks `src/provider/digest.rs`'s `deflt_query` and
+reads its arms:
+
+```rust
+if operation_id == OSSL_OP_DIGEST { return DEFLT_DIGESTS.as_ptr(); }
+if operation_id == crate::provider::cipher::OSSL_OP_CIPHER { return ... };
+if operation_id == crate::provider::mac::OSSL_OP_MAC { return ... };
+```
+
+Three things are read rather than typed:
+
+* **the operation** — each arm's constant's final path segment is looked up in the *authority's* own
+  operation ids, so an arm naming an `OSSL_OP_*` this authority does not define is a failure rather
+  than a row set classified under a name nobody checked;
+* **the table's location** — a bare identifier is a table in the module the query itself lives in
+  (which is how `defltprov.c` spells its own `deflt_digests[]`), and a `crate::provider::…` path is
+  resolved to the file that declares it, with both `.rs` and `mod.rs` forms tried and a failure when
+  neither exists. Adding an operation to the crate's query is now enough for the census to see it;
+* **the row form** — a table may carry its alias sequence inline (`algorithm_names: c"…"`, which is
+  what the authority's `PROV_NAMES_*` expands to) or through the module's `alias!` map
+  (`row(N_AES_128_CBC, …)`, which is what `ALG(PROV_NAMES_AES_128_CBC, …)` expands to). Both are the
+  authority's own shapes and both are read; the inline form is checked against the number of
+  `algorithm_names:` fields, so a row a regex missed cannot pass as a table with fewer rows.
+
+The provider identity is the one thing that stays a constant (`CRATE_QUERY_PROVIDER = "default"`),
+because the reader is anchored on the *default* provider's query function; a second admitted
+provider's query is a second anchor rather than an assumption folded into this one.
+
+**Two negative tests, and the trap the first version of one of them fell into.** An arm naming an
+unknown operation is caught, and an arm whose table yields no rows is caught. The second test
+initially renamed the table's *declaration* — and changed nothing, because the reader searches
+`static DEFLT_DIGESTS` and `static DEFLT_DIGESTS_UNREADABLE` matches that as a **prefix**. The
+mutation was a no-op and the check looked satisfied. Renaming a *row field* is what makes it a real
+mutation. That is the same lesson D242 recorded for the `libctx` certificate and D240 for the
+deferred-symbol table: a mutation that does not actually change the input proves nothing.
+
+**What this entry moves.** Nothing. `implemented[libcrypto]` stays **2035 / 5896**, Phase 8 stays
+**194 implemented / 576 open / 16 deferred**, the provider census stays **996 rows / 110 implemented
+/ 200 open / 686 deferred**, the provider coverage atlas stays **110 / 110 / 0 unmatched**, and no
+court observation moves. What changes is that the candidate half of the census can now see a row it
+was never taught to look for.
