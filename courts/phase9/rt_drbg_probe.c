@@ -160,6 +160,113 @@ static int set_algorithms(EVP_RAND_CTX *ctx, const struct rowdef *d)
     return EVP_RAND_CTX_set_params(ctx, p);
 }
 
+/*
+ * The two remaining `OSSL_OP_RAND` rows the **default** provider publishes: `SEED-SRC` (which the
+ * base provider publishes too) and `TEST-RAND`. Neither is a DRBG, so neither needs an algorithm
+ * set before it will instantiate; they differ from each other in one way that matters here.
+ *
+ * `SEED-SRC`'s generate polls the platform pool, so its **bytes are not observable** -- two
+ * machines would disagree. Its return code, its states and its parameter surface are.
+ *
+ * `TEST-RAND` is the opposite and is the reason this stratum can court construction at all: once
+ * `test_entropy` and `test_nonce` are set it is a pure function of them, so its 32 generated
+ * bytes are compared **byte for byte**. That is the only place in this probe where an output is
+ * an observation rather than a comparison of two entropy pools.
+ */
+static void non_drbg_row(const char *name, int is_test_rand)
+{
+    char k[200];
+    EVP_RAND *r;
+    EVP_RAND_CTX *ctx;
+    unsigned char out[64];
+    unsigned char ent[64];
+    unsigned char nonce[16];
+    size_t i;
+
+    r = EVP_RAND_fetch(NULL, name, NULL);
+    snprintf(k, sizeof(k), "fetch.%s", name);
+    printf("%s=%d\n", k, r != NULL);
+    if (r == NULL) {
+        snprintf(k, sizeof(k), "fetch.err.%s", name);
+        errs(k);
+        return;
+    }
+
+    snprintf(k, sizeof(k), "name.%s", name);
+    printf("%s=%s\n", k, EVP_RAND_get0_name(r));
+    snprintf(k, sizeof(k), "is_a.%s.self", name);
+    printf("%s=%d\n", k, EVP_RAND_is_a(r, name));
+    snprintf(k, sizeof(k), "gettable.%s", name);
+    params(k, EVP_RAND_gettable_params(r));
+
+    ctx = EVP_RAND_CTX_new(r, NULL);
+    snprintf(k, sizeof(k), "ctx.%s", name);
+    printf("%s=%d\n", k, ctx != NULL);
+    if (ctx == NULL) {
+        EVP_RAND_free(r);
+        return;
+    }
+
+    snprintf(k, sizeof(k), "state.new.%s", name);
+    printf("%s=%d\n", k, EVP_RAND_get_state(ctx));
+    snprintf(k, sizeof(k), "ctxtable.%s", name);
+    params(k, EVP_RAND_CTX_gettable_params(ctx));
+    snprintf(k, sizeof(k), "settable.%s", name);
+    params(k, EVP_RAND_CTX_settable_params(ctx));
+
+    if (is_test_rand) {
+        OSSL_PARAM p[3];
+
+        for (i = 0; i < sizeof(ent); i++)
+            ent[i] = (unsigned char)i;
+        for (i = 0; i < sizeof(nonce); i++)
+            nonce[i] = (unsigned char)(0xa0 + i);
+        p[0] = OSSL_PARAM_construct_octet_string("test_entropy", ent, sizeof(ent));
+        p[1] = OSSL_PARAM_construct_octet_string("test_nonce", nonce, sizeof(nonce));
+        p[2] = OSSL_PARAM_construct_end();
+        snprintf(k, sizeof(k), "set.%s", name);
+        printf("%s=%d\n", k, EVP_RAND_CTX_set_params(ctx, p));
+        snprintf(k, sizeof(k), "err.set.%s", name);
+        errs(k);
+    }
+
+    snprintf(k, sizeof(k), "instantiate.%s", name);
+    printf("%s=%d\n", k, EVP_RAND_instantiate(ctx, 0, 0, NULL, 0, NULL));
+    snprintf(k, sizeof(k), "state.ready.%s", name);
+    printf("%s=%d\n", k, EVP_RAND_get_state(ctx));
+    snprintf(k, sizeof(k), "strength.ready.%s", name);
+    printf("%s=%u\n", k, EVP_RAND_get_strength(ctx));
+    snprintf(k, sizeof(k), "err.instantiate.%s", name);
+    errs(k);
+    snprintf(k, sizeof(k), "uints.%s", name);
+    uints(k, ctx, EVP_RAND_CTX_gettable_params(ctx));
+
+    snprintf(k, sizeof(k), "generate.%s", name);
+    printf("%s=%d\n", k, EVP_RAND_generate(ctx, out, sizeof(out), 0, 0, NULL, 0));
+    snprintf(k, sizeof(k), "state.after.generate.%s", name);
+    printf("%s=%d\n", k, EVP_RAND_get_state(ctx));
+    snprintf(k, sizeof(k), "err.generate.%s", name);
+    errs(k);
+
+    if (is_test_rand) {
+        /* The one place an output is an observation: TEST-RAND is a function of its seed. */
+        printf("bytes.%s=", name);
+        for (i = 0; i < sizeof(out); i++)
+            printf("%02x", out[i]);
+        printf("\n");
+    }
+
+    snprintf(k, sizeof(k), "uninstantiate.%s", name);
+    printf("%s=%d\n", k, EVP_RAND_uninstantiate(ctx));
+    snprintf(k, sizeof(k), "state.uninstantiated.%s", name);
+    printf("%s=%d\n", k, EVP_RAND_get_state(ctx));
+    snprintf(k, sizeof(k), "err.uninstantiate.%s", name);
+    errs(k);
+
+    EVP_RAND_CTX_free(ctx);
+    EVP_RAND_free(r);
+}
+
 static void row(const struct rowdef *d)
 {
     const char *name = d->name;
@@ -360,6 +467,10 @@ int main(void)
 
     for (i = 0; i < N_ROWS; i++)
         row(&ROWS[i]);
+
+    /* The default provider's two non-DRBG RAND rows. */
+    non_drbg_row("SEED-SRC", 0);
+    non_drbg_row("TEST-RAND", 1);
 
     /* The walk's own edges: a name no row answers, and the provider's availability. */
     printf("fetch.RSA=%d\n", EVP_RAND_fetch(NULL, "RSA", NULL) != NULL);
