@@ -19908,3 +19908,53 @@ exactly as long as its key list, which is the check that would confirm the whole
 **What this entry does not claim.** The DRBG remains parked at `court/phase9/drbg_renamed.rs.txt`.
 No export is implemented, no Phase 9 court has landed, and this entry's only evidence is the six
 counts above and the generated file's own text.
+
+## D307 -- the decoder tables are rewritten to real site coordinates, and the DRBG's error set is 39
+
+The unit D306 scoped, done, plus the measured remainder. `court/phase9/drbg_renamed.rs.txt`'s six
+decoder key tables now cite the real line-numbered sites instead of the staging file's invented
+`_DECODER_<FIELD>` names: **63 entries rewritten, each by field macro name rather than position**,
+which is what D306 established was necessary because the generated decoder is ordered by switch
+case rather than by the spec's field list.
+
+**The mapping, extracted from the generated files, is exact for all six tables.** CTR get: cipher
+751, maxadlen 791, maxentlen 802, maxnonlen 813, maxperlen 824, maxreq 835, minentlen 861,
+minnonlen 872, reseed_cnt 915, reseed_req 926, reseed_int 953, reseed_time 962, state 991, str 1002,
+df 1015. CTR set: cipher 1179, propq 1202, prov 1213, reseed_req 1255, reseed_time 1266, df 1284.
+HASH get: digest 540 through str 791, fourteen sites. HASH set: digest 1021, engine 1037, propq
+1060, prov 1071, reseed_req 1113, reseed_time 1124. HMAC get: digest 434, mac 468, through str 698,
+ifteen sites. HMAC set: digest 967, engine 983, mac 994, propq 1017, prov 1028, reseed_req 1070,
+reseed_time 1081. The `ind`/`ind_d` sites are absent from every table for the reason D306 gave: the
+`FIPS_MODULE`-guarded fips-indicator arms are not compiled on this profile.
+
+**What the rewrite confirmed.** The staged field suffixes and the generated assignments agree
+one-for-one -- `cipher`, `df`, `state`, `str`, `maxreq` and the rest -- with no field left over and
+none the generated code has that the table lacks, apart from the guarded one. D306 named that as
+the check which would confirm the whole reading, and it passed.
+
+**What it exposed, and it is the next unit's first task.** **Eight more sites do not exist at the
+lines the staging file cites**, and they are a different class from the decoder tables:
+`PROV_DRBG_CTR_579/588/596/627/633/786/805` and `PROV_DRBG_HMAC_131`. The atlas's sites for those
+functions are the **generated** line numbers -- `drbg_ctr_init` at 577, 586, 594, 607, 625, 631 and
+`ossl_drbg_hmac_init` at 129 -- because the staging file cited the `.c.in` line numbers, which are
+the author's rather than the build's. Re-mapping them is the same exercise as the decoder tables,
+against `drbg_ctr_init` and `ossl_drbg_hmac_init`, and the atlas already has both site lists.
+
+**Three imports fixed in the same pass**, which is what moved the count: `time` from the platform
+layer, and `ossl_prov_macctx_load` and `openssl_get_fork_id` from D304's and D305's landings.
+
+**The measured remainder is 39 compile errors**, and its composition is part of this entry rather
+than left to be re-derived: the eight site mismatches above, **five method-not-found on `ProvDrbg`**
+(`instantiate`, `uninstantiate`, `reseed`, `generate` -- the four cached virtual functions, which
+need to be read as fields rather than called as methods), and **7 mismatched types, 6
+expected-function-found-`i32` and 3 argument errors that are deliberately left unclassified** until
+the five are fixed, because a wrong representation of the virtual functions changes the types of
+their call sites: classifying them now would be classifying the symptom.
+
+**The error set's history, so nothing is re-measured:** 143 (the raw staging file) -> 108 (D304's
+`_C_` rename) -> 46 (this commit's six tables) -> 39 (the three imports).
+
+**What this entry does not claim.** `src/provider/rand.rs` is **not** in `src/provider/mod.rs`, so
+the tree is green and the module stays staged. No export is implemented, no Phase 9 court has
+landed, and a compile-error count is not progress toward a working DRBG -- it is the measurement
+that makes the next attempt finite.
