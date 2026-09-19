@@ -945,9 +945,24 @@ def main(argv: list[str]) -> int:
     handed_on_names = set(handed_on)
 
     # The third mechanism (see `UNBLOCKED_HANDOFFS`): a hand-off whose blocker has landed. Same
-    # fail-closed rules as `BLOCKED_HANDOFFS` -- a row naming a symbol outside the working set, or
-    # one the crate now defines, is a stale row rather than a harmless one -- and no liveness proof,
-    # because a row that makes no blocker claim has nothing left to go stale.
+    # fail-closed rule as `BLOCKED_HANDOFFS` for a symbol outside the working set, and **not** the
+    # same rule for a symbol the crate now defines -- deliberately, and the asymmetry is the whole
+    # point of keeping the two tables apart:
+    #
+    #   * a `BLOCKED_HANDOFFS` row is falsified by its blocker landing, because its claim IS
+    #     "file:line calls X and X is absent";
+    #   * an `UNBLOCKED_HANDOFFS` row makes no such claim, so it is not falsified by *itself* being
+    #     built. The row is the hand-off **edge**: it is what puts the symbol in the receiving
+    #     stratum's working set, and it is what `phase9_obligations.py` reads to count the symbol
+    #     as that stratum's. Retiring it the moment the owner lands the symbol would move the
+    #     symbol into *this* stratum's `implemented` list on the strength of work this stratum did
+    #     not do, and take it off the owner's books at the same time. So the row stays, and where
+    #     the landing appears is the owner's ledger, which this tool cannot read: it is written
+    #     later in the pipeline, and reading a possibly-stale ledger would be worse than not
+    #     reading one.
+    #
+    # What still fails closed is a row that hands on a symbol this stratum may not name at all,
+    # and one that collides with either of the other two mechanisms.
     unblocked_handed_on: dict[str, dict] = {}
     for symbols, owning_phase, reason in UNBLOCKED_HANDOFFS:
         for sym in symbols:
@@ -955,11 +970,6 @@ def main(argv: list[str]) -> int:
                 raise SystemExit(
                     f"phase7-obligations: UNBLOCKED_HANDOFFS names {sym}, which is not in this "
                     f"stratum's working set (or is not an authority export at all)"
-                )
-            if sym in done:
-                raise SystemExit(
-                    f"phase7-obligations: UNBLOCKED_HANDOFFS hands {sym} to phase "
-                    f"{owning_phase}, but the crate defines it; retire the row"
                 )
             if sym in handed_on or any(sym in r.symbols for r in BLOCKED_HANDOFFS):
                 raise SystemExit(

@@ -20465,3 +20465,61 @@ above and D314 as its `recorded_by`. A row blesses the change it describes and n
 larger increase, or a different metric, fails -- so the increase is recorded rather than permitted.
 Both names are the later slice this module's own note already says is not transcribed, and both
 need `ossl_bn_mask_bits_fixed_top` and the fixed-top representation.
+
+## D315 -- the random layer's first two consumers land, and a hand-off row is not falsified by its
+owner finishing the work
+
+### What landed
+
+`EVP_CIPHER_CTX_rand_key` (`crypto/evp/evp_enc.c:1751`) in `src/evp/cipher_ctx.rs`, and
+`EVP_SealInit` (`crypto/evp/p_seal.c:22`) in `src/evp/p_legacy.rs`. These are the first two of the
+twelve Phase-7 names D313 retargeted: each was withheld because its body reaches the random layer,
+and each is now the first thing a key-establishment path calls. Two smaller things moved with them.
+`EVP_CIPHER_get_flags`'s fact `EVP_CIPH_RAND_KEY` was a **test-local** `const` in `cipher_ctx.rs`
+while the module-level copy lives private in `cipher.rs`, so it is promoted to the module's flag
+block and the duplicate is deleted; and a `#[allow(dead_code)]` on `EVP_CIPHER_CTX_get_libctx`
+whose comment said its only caller was deferred to Phase 9 is removed, because the caller landed.
+
+### RT-RAND-USERS, and the two arms it cannot reach
+
+`courts/phase9/rt_rand_users_probe.c` is a court of its own rather than an arm of `RT-RAND`, because
+these two are not the `RAND_*` front -- they are *callers* of it, and what is worth measuring is
+that they call it the way the authority does. It passes with **41 observations** and zero
+residuals, over the key and IV lengths the context reports before and after, whether a cipher is
+installed, the four deterministic `EVP_SealInit` early returns (`npubk <= 0` answers **1**,
+`npubk < 0` answers 1, a NULL `type` answers 1, a positive `npubk` with a NULL `pubk` answers 1),
+and `EVP_CIPHER_CTX_rand_key`'s `kl <= 0` refusal, which is reached by fetching the provider's
+`NULL` cipher rather than assuming its key length.
+
+Two arms are **not** courted and each is a measurement rather than an omission:
+
+* **`EVP_SealInit` with `npubk > 0` and a real key.** It needs an `EVP_PKEY` with a public part,
+  which the crate can build only once RSA key construction and the ASN.1 public-key decoder land,
+  and the authority's own `EVP_PKEY_get_size(NULL)` on that path is a null dereference -- so a
+  probe cannot reach it with a NULL key either. Recorded as owed.
+* **`EVP_CIPHER_CTX_rand_key`'s `EVP_CIPH_RAND_KEY` branch.** Only `e_des.c` and `e_des3.c` set
+  that flag, and those statics are Phase 13's, so no cipher this build can fetch routes the call
+  through `EVP_CIPHER_CTX_ctrl`.
+
+### The asymmetry between the two hand-off tables, and why it is deliberate
+
+`phase7_obligations.py` fails closed when a `BLOCKED_HANDOFFS` symbol lands: the row claims
+"file:line calls X and X is absent", and landing X falsifies it. The `UNBLOCKED_HANDOFFS` rows
+D313 added must **not** be treated that way, and the first of them landing is what made the
+difference visible. Those rows make no absence claim. They are the hand-off **edge**: the thing
+that puts the symbol in the receiving stratum's working set, which `phase9_obligations.py` reads to
+count it as Phase 9's. Retiring a row the moment its owner finishes would move the symbol into
+*this* stratum's `implemented` list on the strength of work this stratum did not do, and take it
+off the owner's books at the same time -- and because `court_coverage.py` looks for a court in the
+*owning ledger's* stratum, it would also strand the export with a Phase-9 court and a Phase-7
+ledger. So the rule is now written as the asymmetry it is: a row outside the working set still
+fails closed, a collision with either other mechanism still fails closed, and a landing is recorded
+where it belongs -- in the owner's ledger, which this tool cannot read because it is written later
+in the pipeline.
+
+### Numbers
+
+`implemented[libcrypto]` 2133 -> 2135; `phase9-obligations` `open=57` -> `55`; `RT-RAND-USERS` 41
+observations; `PIPELINE OK` over 89 courts and 32173 observations. The ten names D313 retargeted
+that remain are `EVP_SealInit`'s `npubk > 0` path, `BIO_f_reliable` (with the whole `bio_ok.c`
+unit), `OSSL_HPKE_get_grease_value`, and the eight PEM names.
