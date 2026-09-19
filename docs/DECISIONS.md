@@ -19669,4 +19669,59 @@ header each value came from for that reason.
 **What this entry does not claim.** No export is implemented, no court has landed, and none of the
 three files is compiled by the crate yet. The staging set for this stratum is now seven files and
 about 8,000 lines; the integration order is the platform layer, then the seeding arm, then the
-front, then the DRBGs.
+the front, then the DRBGs.
+
+## D302 -- the seeding arm's platform layer lands, with ten tests that call every binding
+
+9.5's platform surface, as `src/rand/sys.rs`: the part of the seeding work that can be verified on
+its own, landed before the arm that calls it. **Ten unit tests; the suite goes 634 -> 644.** The
+tests matter more here than usual because the file has no caller yet -- without them the whole
+module would be `allow(dead_code)` and nothing in the repository would ever have called one of these
+declarations.
+
+**Every value was read from a header rather than recalled**, and the citations are at each item:
+`__NR_getrandom` is **318** (`/usr/include/asm/unistd_64.h:322`, corroborated by `rand_unix.c:283`'s
+own `#if` -- not asm-generic's 278 and not x32); `struct stat` is **144 bytes** with `st_dev`@0,
+`st_ino`@8, `st_mode`@24, `st_rdev`@40, `st_size`@48 from `bits/struct_stat.h`'s `__x86_64__` arm;
+`dev_t`/`ino_t`/`mode_t` are 8/8/4 from `bits/typesizes.h`; `fd_set` is sixteen 64-bit words with
+`__FD_SETSIZE` 1024 from `sys/select.h`; `ENOSYS` is 38 from `asm-generic/errno.h`.
+
+**Three tests exist because no other instrument could settle the question.**
+
+1. `the_stat_layout_is_the_glibc_x86_64_arm` asserts the size and all five `offset_of!`s. The
+   seeding arm's device-identity check compares `st_dev`/`st_ino`/`st_mode`/`st_rdev`, so an offset
+   error would make that comparison *accidentally* true or false rather than fail loudly.
+2. `the_syscall_getrandom_path_answers_bytes` proves the syscall number **by calling it**: a wrong
+   number answers `-1` with `ENOSYS` instead of writing sixteen bytes. There is no other way to
+   verify a number short of reading the header, and both were done.
+3. `fstat_reports_a_character_device_for_dev_urandom` opens `/dev/urandom` through the crate's own
+   `open` and asserts `S_IFCHR` in `st_mode` -- so `open`, `fstat` and the `Stat` offsets are
+   exercised together against the kernel's answer rather than against each other.
+
+**Three decisions worth recording.**
+
+* **`open` is now variadic in `runtime/bio/sys.rs`.** Two declarations of one C function with
+  different arities is a compile error (`clashing_extern_declarations`) and the header has one
+  prototype. The crate's was the narrower one and `randfile.c` needs the three-argument form, so the
+  prototype was widened in its one home rather than duplicated -- which is what the staging file's
+  own documentation asked for.
+* **Six bindings are safe wrappers over `_raw` externs** -- `getpid`, `clock_gettime`, `fstat`,
+  `shmget`, `uname`, `atoi` -- the shape `errno()` already has over `__errno_location`. The reason is
+  not convenience: an `unsafe` block that guards nothing is an `unsafe` block a reader learns to
+  skip, and a dozen of them would have been inserted purely to satisfy the compiler. `shmat`,
+  `shmdt`, `syscall` and `getentropy` stay `unsafe` because they genuinely are, and the out-pointer
+  ones that became wrappers take `&mut` so the borrow checker covers what the C leaves to the
+  caller.
+* **`fd_set` masks its index into the set.** glibc's macro writes past an out-of-range descriptor;
+  this cannot, so the divergence is defined and asserted by
+  `fd_set_masks_an_out_of_range_descriptor_into_the_set` rather than left to be discovered.
+
+**One correction to the staging file it came from.** `S_IRWXU`/`S_IRWXG`/`S_IRWXO` were omitted
+from it as belonging to `randfile.c`'s half. They largely do -- but `rand_unix.c` compares the
+**whole permission mask** with them when it decides whether a `/dev` path is still the device it
+recorded (`(rd.mode ^ st.st_mode) & !(S_IRWXU | S_IRWXG | S_IRWXO)`), so the seeding arm needs them
+and the omission was a measurement error in the staging file rather than a boundary.
+
+**What this entry does not claim.** The seeding arm itself (`rand_unix.c`) remains staged: its
+integration needs a `// SAFETY:` comment at each of roughly a dozen `unsafe` sites and is the next
+unit rather than this one. No export is implemented and no Phase 9 court has landed.

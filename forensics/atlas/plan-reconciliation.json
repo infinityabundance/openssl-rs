@@ -6,12 +6,12 @@
     ],
     "census": {
       "names_a_file_the_authority_does_not_have": 16,
-      "symbols_not_reached": 7,
-      "units_not_reached": 16
+      "symbols_not_reached": 9,
+      "units_not_reached": 17
     },
     "census_by_stratum": {
       "8": 27,
-      "9": 12
+      "9": 15
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
@@ -39,7 +39,9 @@
         "ossl_drbg_hash_functions",
         "ossl_drbg_ossl_hmac_functions",
         "ossl_polyval_ghash_init",
+        "ossl_pool_acquire_entropy",
         "ossl_prov_get_capabilities",
+        "ossl_rand_pool_init",
         "xor128_encrypt_n_pad"
       ],
       "units_not_reached": [
@@ -58,6 +60,7 @@
         "providers/implementations/ciphers/ciphercommon_block.c",
         "providers/implementations/ciphers/ciphercommon_hw.c",
         "providers/implementations/rands/drbg.c",
+        "providers/implementations/rands/seeding/rand_unix.c",
         "test/evp_test.c"
       ]
     },
@@ -70,11 +73,11 @@
         "docs/PHASE-9-SUBPHASES.md"
       ],
       "rows_judged": 82,
-      "symbols_named_by_a_row": 82,
+      "symbols_named_by_a_row": 84,
       "symbols_reached": 75,
       "unit_records": 68,
       "units_named_by_a_record": 71,
-      "units_named_by_a_row": 155,
+      "units_named_by_a_row": 156,
       "units_reached": 139
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
@@ -1712,7 +1715,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "9.2"
+          "9.2",
+          "9.5"
         ],
         "transcribed_by": [
           "src/rand/pool.rs"
@@ -1966,6 +1970,14 @@
         "recorded_by": null,
         "subphases": [
           "9.3"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/rands/seeding/rand_unix.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "9.5"
         ],
         "transcribed_by": []
       },
@@ -2327,7 +2339,7 @@
       "transcribed_units": 178
     }
   },
-  "body_hash": "b441db58a104d5d3c1f44c0f6bc6aefb3a27869141bbdafe9f49f5924ccc4337",
+  "body_hash": "22933b2ae36ef4bc3d95b1d59b680fedf1e119f0d7a28b8b560e5871d2b359a9",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -2343,12 +2355,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "dbef24d07c2ebce5f2228396cf01de28a50db97af580b7d15580d262528839fd"
+      "sha256": "3ad93ed1c8ebfd5f80f4270d123056d762dc22a3ad9197925607268c74e6c565"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "a021e4c787905997f148bbac3076ee8de700f69093f178f2b6d419318dcb0ab6"
+      "sha256": "7ce33a8e9cb87ea94d4ef11c11c0ed0fa4f350e5cba8791e59bbe85cda19af9c"
     },
     {
       "name": "prerequisites",
@@ -2383,7 +2395,7 @@
     {
       "name": "plan-PHASE-9-SUBPHASES",
       "path": "docs/PHASE-9-SUBPHASES.md",
-      "sha256": "b0cfbc26faf639b5e53f1569b0d64b08136436f4938565d7225e152c6cc6dded"
+      "sha256": "41910763f59959afe19690c87e5ff1911d2f7f70432cd704652232dfb546147c"
     }
   ],
   "kind": "plan-reconciliation",

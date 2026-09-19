@@ -691,6 +691,11 @@ PHASE9_MODULES = [
     # the only place its landing is visible to the evidence machinery at all.
     "src/rand/mod.rs",
     "src/rand/pool.rs",
+    # 9.5's platform layer. It landed before the arm that calls it because it is the part with an
+    # ABI to get wrong and no dependency of its own: ten unit tests exercise each binding against
+    # the running kernel, including the `struct stat` offsets and the `__NR_getrandom` value, which
+    # are exactly the two a transcription can get wrong without any caller noticing.
+    "src/rand/sys.rs",
 ]
 
 STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
