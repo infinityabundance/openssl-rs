@@ -26,7 +26,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_int, c_void};
+use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 
 use crate::evp::cipher::{EVP_CIPHER_fetch, EVP_CIPHER_free, EVP_CIPHER_up_ref, EvpCipher};
@@ -34,6 +34,14 @@ use crate::evp::digest::{EVP_MD_fetch, EVP_MD_free, EVP_MD_up_ref, EvpMd};
 use crate::evp::legacy_evp::{EVP_get_cipherbyname, EVP_get_digestbyname};
 use crate::params::{OsslParam, OSSL_PARAM_UTF8_STRING};
 use crate::runtime::err::{ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark};
+
+use crate::evp::mac::{
+    EVP_MAC_CTX_free, EVP_MAC_CTX_new, EVP_MAC_CTX_set_params, EVP_MAC_fetch, EVP_MAC_free,
+    EvpMacCtx,
+};
+use crate::params::{
+    OSSL_PARAM_construct_end, OSSL_PARAM_construct_utf8_string, OSSL_PARAM_get_utf8_string_ptr,
+};
 
 /// `EVP_ORIG_GLOBAL` — `crypto/evp/evp_lib.c`'s method-origin values, as
 /// `src/evp/cipher.rs:85` declares it. Repeated rather than re-exported for the same reason the
@@ -462,6 +470,172 @@ pub(crate) mod prov_digest {
     pub(crate) unsafe fn ossl_prov_digest_engine(pd: *const ProvDigest) -> *mut c_void {
         // SAFETY: the caller's contract.
         unsafe { (*pd).engine }
+    }
+}
+
+// =============================================================================================
+// `providers/common/provider_util.c` -- the MAC-context half (docs/DECISIONS.md D305)
+// =============================================================================================
+//
+// The rest of `provider_util.c` is transcribed above; these two are the functions `drbg_hmac.c`
+// reaches and `src/provider/util.rs` was missing. They are here rather than in a module of their
+// own because the file they come from is already this module.
+
+/// `int ossl_prov_set_macctx(EVP_MAC_CTX *macctx, const char *ciphername, const char *mdname,
+/// const char *engine, const char *properties)` — `provider_util.c:242-269`.
+///
+/// The array is `OSSL_PARAM mac_params[5]`: at most `digest`, `cipher`, `properties` and
+/// `engine`, plus the terminator. Only non-NULL names are appended, and the `engine` arm **is**
+/// compiled in this profile (`OPENSSL_NO_ENGINE` and `FIPS_MODULE` are both undefined). The
+/// descriptors borrow the caller's strings, so they must outlive the call — which they do,
+/// because they are the parameters' own data.
+///
+/// # Safety
+/// `macctx` is NULL or live; each name pointer is NULL or NUL-terminated and stays live for the
+/// call.
+#[allow(dead_code)] // the landing caller is `src/provider/rand.rs`'s HMAC-DRBG ctx load
+pub(crate) unsafe fn ossl_prov_set_macctx(
+    macctx: *mut EvpMacCtx,
+    ciphername: *const c_char,
+    mdname: *const c_char,
+    engine: *const c_char,
+    properties: *const c_char,
+) -> c_int {
+    let mut mac_params: [OsslParam; 5] = [crate::params::END; 5];
+    let mut mp = 0usize;
+
+    // SAFETY: each descriptor is built from a caller string that is NUL-terminated per the
+    // contract, and `mp` stays below the array's length (four conditional entries at most).
+    unsafe {
+        if !mdname.is_null() {
+            mac_params[mp] =
+                OSSL_PARAM_construct_utf8_string(OSSL_ALG_PARAM_DIGEST, mdname.cast_mut(), 0);
+            mp += 1;
+        }
+        if !ciphername.is_null() {
+            mac_params[mp] =
+                OSSL_PARAM_construct_utf8_string(OSSL_ALG_PARAM_CIPHER, ciphername.cast_mut(), 0);
+            mp += 1;
+        }
+        if !properties.is_null() {
+            mac_params[mp] = OSSL_PARAM_construct_utf8_string(
+                OSSL_ALG_PARAM_PROPERTIES,
+                properties.cast_mut(),
+                0,
+            );
+            mp += 1;
+        }
+        // `#if !defined(OPENSSL_NO_ENGINE) && !defined(FIPS_MODULE)` — both undefined here.
+        if !engine.is_null() {
+            mac_params[mp] =
+                OSSL_PARAM_construct_utf8_string(OSSL_ALG_PARAM_ENGINE, engine.cast_mut(), 0);
+            mp += 1;
+        }
+        mac_params[mp] = OSSL_PARAM_construct_end();
+
+        // The authority returns the setter's value directly; `1` is its "no set_ctx_params
+        // callback" answer, which is this crate's too.
+        EVP_MAC_CTX_set_params(macctx, mac_params.as_ptr())
+    }
+}
+
+/// `int ossl_prov_macctx_load(EVP_MAC_CTX **macctx, const OSSL_PARAM *pmac,
+/// const OSSL_PARAM *pcipher, const OSSL_PARAM *pdigest, const OSSL_PARAM *propq,
+/// const OSSL_PARAM *pengine, const char *macname, const char *ciphername, const char *mdname,
+/// OSSL_LIB_CTX *libctx)` — `provider_util.c:271-321`.
+///
+/// The explicit arguments are consulted only when the corresponding descriptor is absent, and the
+/// descriptor only when the argument is NULL. `macname` is `mut` because the authority
+/// reassigns it from the `mac` descriptor; so are `ciphername` and `mdname`.
+///
+/// # Safety
+/// `macctx` is writable for one context pointer; the five descriptors are NULL or live; the
+/// three names are NULL or NUL-terminated; `libctx` is NULL or a live library context.
+#[allow(dead_code)] // the landing caller is `src/provider/rand.rs`'s HMAC-DRBG ctx load
+#[allow(clippy::too_many_arguments)] // the authority's own signature has ten parameters: four
+                                     // descriptors, four out-parameters, the context and the
+                                     // library context. Folding them into a struct would be a
+                                     // representation the authority does not have, and the
+                                     // call sites pass them positionally from a parameter list.
+pub(crate) unsafe fn ossl_prov_macctx_load(
+    macctx: *mut *mut EvpMacCtx,
+    pmac: *const OsslParam,
+    pcipher: *const OsslParam,
+    pdigest: *const OsslParam,
+    propq: *const OsslParam,
+    pengine: *const OsslParam,
+    mut macname: *const c_char,
+    mut ciphername: *const c_char,
+    mut mdname: *const c_char,
+    libctx: *mut c_void,
+) -> c_int {
+    let mut properties: *const c_char = ptr::null();
+    let mut engine: *const c_char = ptr::null();
+
+    // SAFETY: the descriptors are NULL or live and the out-parameters are this frame's own; every
+    // string read is NUL-terminated by the descriptor's own type check inside
+    // `OSSL_PARAM_get_utf8_string_ptr`.
+    unsafe {
+        if macname.is_null()
+            && !pmac.is_null()
+            && OSSL_PARAM_get_utf8_string_ptr(pmac, ptr::addr_of_mut!(macname)) == 0
+        {
+            return 0;
+        }
+        if !propq.is_null()
+            && OSSL_PARAM_get_utf8_string_ptr(propq, ptr::addr_of_mut!(properties)) == 0
+        {
+            return 0;
+        }
+
+        // If we got a new MAC name, we make a new `EVP_MAC_CTX`.
+        if !macname.is_null() {
+            let mac = EVP_MAC_fetch(libctx, macname, properties);
+
+            EVP_MAC_CTX_free(*macctx);
+            *macctx = if mac.is_null() {
+                ptr::null_mut()
+            } else {
+                EVP_MAC_CTX_new(mac)
+            };
+            // The context holds on to the MAC.
+            EVP_MAC_free(mac);
+            if (*macctx).is_null() {
+                return 0;
+            }
+        }
+
+        // If there is no MAC yet (and therefore no context), all other parameters are ignored.
+        if (*macctx).is_null() {
+            return 1;
+        }
+
+        if ciphername.is_null()
+            && !pcipher.is_null()
+            && OSSL_PARAM_get_utf8_string_ptr(pcipher, ptr::addr_of_mut!(ciphername)) == 0
+        {
+            return 0;
+        }
+        if mdname.is_null()
+            && !pdigest.is_null()
+            && OSSL_PARAM_get_utf8_string_ptr(pdigest, ptr::addr_of_mut!(mdname)) == 0
+        {
+            return 0;
+        }
+        if !pengine.is_null()
+            && OSSL_PARAM_get_utf8_string_ptr(pengine, ptr::addr_of_mut!(engine)) == 0
+        {
+            return 0;
+        }
+
+        if ossl_prov_set_macctx(*macctx, ciphername, mdname, engine, properties) != 0 {
+            return 1;
+        }
+
+        // The parameters were refused, so the context is released rather than left half-set.
+        EVP_MAC_CTX_free(*macctx);
+        *macctx = ptr::null_mut();
+        0
     }
 }
 

@@ -700,6 +700,12 @@ PHASE9_MODULES = [
     # `crypto/rand/rand_pool.c`. It is the only part of this stratum that reaches the kernel for
     # entropy, so its four tests are the only place `ossl_pool_acquire_entropy` is called at all.
     "src/rand/unix.rs",
+    # 9.3's provider-side prerequisites: the four seed up-calls `drbg.c` reaches through the
+    # provider context, and `provider_util.c`'s two MAC-context functions `drbg_hmac.c` calls.
+    # Both are internal and neither has a caller until the DRBG rows land, which is why they are
+    # named here -- nothing else in the evidence machinery sees them.
+    "src/provider/seeding.rs",
+    "src/provider/util.rs",
 ]
 
 STRATUM_EVIDENCE: dict[int, StratumEvidence] = {

@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 243,
+      "crate_files_read": 244,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -13,11 +13,11 @@
       "identities_checked": 203,
       "identities_mismatches": 0,
       "links_convention": 203,
-      "links_documented": 8,
+      "links_documented": 12,
       "links_explicit": 15,
       "problems": 0,
-      "signatures_authority_only": 405,
-      "signatures_checked": 229,
+      "signatures_authority_only": 397,
+      "signatures_checked": 237,
       "signatures_mismatches": 0,
       "signatures_not_a_dispatch": 117,
       "signatures_unlinked": 0,
@@ -1447,10 +1447,6 @@
         "OSSL_FUNC_SSL_QUIC_TLS_crypto_send_fn",
         "OSSL_FUNC_SSL_QUIC_TLS_got_transport_params_fn",
         "OSSL_FUNC_SSL_QUIC_TLS_yield_secret_fn",
-        "OSSL_FUNC_cleanup_entropy_fn",
-        "OSSL_FUNC_cleanup_nonce_fn",
-        "OSSL_FUNC_cleanup_user_entropy_fn",
-        "OSSL_FUNC_cleanup_user_nonce_fn",
         "OSSL_FUNC_core_clear_last_error_mark_fn",
         "OSSL_FUNC_core_count_to_mark_fn",
         "OSSL_FUNC_core_gettable_params_fn",
@@ -1481,10 +1477,6 @@
         "OSSL_FUNC_encoder_newctx_fn",
         "OSSL_FUNC_encoder_set_ctx_params_fn",
         "OSSL_FUNC_encoder_settable_ctx_params_fn",
-        "OSSL_FUNC_get_entropy_fn",
-        "OSSL_FUNC_get_nonce_fn",
-        "OSSL_FUNC_get_user_entropy_fn",
-        "OSSL_FUNC_get_user_nonce_fn",
         "OSSL_FUNC_indicator_cb_fn",
         "OSSL_FUNC_provider_get_capabilities_fn",
         "OSSL_FUNC_provider_get_params_fn",
@@ -3488,6 +3480,70 @@
           "authority_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(const(opaque)), ptr(ptr(const(opaque))), ptr(ptr(opaque)))",
           "crate_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(const(opaque)), ptr(ptr(const(opaque))), ptr(ptr(opaque)))",
           "how": "explicit"
+        },
+        {
+          "alias": "CoreGetEntropyFn",
+          "at": "src/provider/seeding.rs",
+          "authority": "OSSL_FUNC_get_entropy_fn",
+          "authority_signature": "fptr(int:8:u; ptr(const(opaque)), ptr(ptr(int:1:u)), int:4:s, int:8:u, int:8:u)",
+          "crate_signature": "fptr(int:8:u; ptr(const(opaque)), ptr(ptr(int:1:u)), int:4:s, int:8:u, int:8:u)",
+          "how": "documented"
+        },
+        {
+          "alias": "CoreGetEntropyFn",
+          "at": "src/provider/seeding.rs",
+          "authority": "OSSL_FUNC_get_user_entropy_fn",
+          "authority_signature": "fptr(int:8:u; ptr(const(opaque)), ptr(ptr(int:1:u)), int:4:s, int:8:u, int:8:u)",
+          "crate_signature": "fptr(int:8:u; ptr(const(opaque)), ptr(ptr(int:1:u)), int:4:s, int:8:u, int:8:u)",
+          "how": "documented"
+        },
+        {
+          "alias": "CoreCleanupEntropyFn",
+          "at": "src/provider/seeding.rs",
+          "authority": "OSSL_FUNC_cleanup_entropy_fn",
+          "authority_signature": "fptr(void; ptr(const(opaque)), ptr(int:1:u), int:8:u)",
+          "crate_signature": "fptr(void; ptr(const(opaque)), ptr(int:1:u), int:8:u)",
+          "how": "documented"
+        },
+        {
+          "alias": "CoreCleanupEntropyFn",
+          "at": "src/provider/seeding.rs",
+          "authority": "OSSL_FUNC_cleanup_user_entropy_fn",
+          "authority_signature": "fptr(void; ptr(const(opaque)), ptr(int:1:u), int:8:u)",
+          "crate_signature": "fptr(void; ptr(const(opaque)), ptr(int:1:u), int:8:u)",
+          "how": "documented"
+        },
+        {
+          "alias": "CoreGetNonceFn",
+          "at": "src/provider/seeding.rs",
+          "authority": "OSSL_FUNC_get_nonce_fn",
+          "authority_signature": "fptr(int:8:u; ptr(const(opaque)), ptr(ptr(int:1:u)), int:8:u, int:8:u, ptr(const(opaque)), int:8:u)",
+          "crate_signature": "fptr(int:8:u; ptr(const(opaque)), ptr(ptr(int:1:u)), int:8:u, int:8:u, ptr(const(opaque)), int:8:u)",
+          "how": "documented"
+        },
+        {
+          "alias": "CoreGetNonceFn",
+          "at": "src/provider/seeding.rs",
+          "authority": "OSSL_FUNC_get_user_nonce_fn",
+          "authority_signature": "fptr(int:8:u; ptr(const(opaque)), ptr(ptr(int:1:u)), int:8:u, int:8:u, ptr(const(opaque)), int:8:u)",
+          "crate_signature": "fptr(int:8:u; ptr(const(opaque)), ptr(ptr(int:1:u)), int:8:u, int:8:u, ptr(const(opaque)), int:8:u)",
+          "how": "documented"
+        },
+        {
+          "alias": "CoreCleanupNonceFn",
+          "at": "src/provider/seeding.rs",
+          "authority": "OSSL_FUNC_cleanup_nonce_fn",
+          "authority_signature": "fptr(void; ptr(const(opaque)), ptr(int:1:u), int:8:u)",
+          "crate_signature": "fptr(void; ptr(const(opaque)), ptr(int:1:u), int:8:u)",
+          "how": "documented"
+        },
+        {
+          "alias": "CoreCleanupNonceFn",
+          "at": "src/provider/seeding.rs",
+          "authority": "OSSL_FUNC_cleanup_user_nonce_fn",
+          "authority_signature": "fptr(void; ptr(const(opaque)), ptr(int:1:u), int:8:u)",
+          "crate_signature": "fptr(void; ptr(const(opaque)), ptr(int:1:u), int:8:u)",
+          "how": "documented"
         },
         {
           "alias": "BioInfoCb",

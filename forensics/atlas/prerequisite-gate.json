@@ -363,7 +363,7 @@
     },
     "checked": {
       "authority_units": 178,
-      "crate_modules": 243,
+      "crate_modules": 244,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 24,
       "divergence_names_covered": 30,
@@ -484,13 +484,13 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "b69f432d93e0e93a17bf5b43a7be88fa56ccf76fd1e46fa74e0bee0b52e8b6f7",
+  "body_hash": "6832e534e2d463ee28193321bb4265ac6f198e2d3a8c224683194d2be24c9e74",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "386e42c2b71293d52b0ef96ef44d053128f147d5d438e8da9636d5da2d5e352f"
+      "sha256": "6a32a08a37ab5b54fb7cf8c6a66bb4aa74aef2625631640acf59176e46483af2"
     },
     {
       "name": "macro-owners",
@@ -505,7 +505,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "dee909b76dcafe94babf0a1697b52aea1e611990534e05e144c740c0660d9f0e"
+      "sha256": "d396a3175481e69fbd6818cf14890a7267de607aaaa5027221b84e0dc373c98e"
     },
     {
       "name": "symbol-ownership",
@@ -520,12 +520,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "0d9c8ad472e15db99ba8770d6fdbff9382db4f529dfcd9b9d6cc9dcb5575467a"
+      "sha256": "13c2bf9a6aa8b4d9273b7a0eac4a85786d2451b5f57a18ea200a6ddcb28bb080"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "e0d0a6caa027d707a9c469c9db4a7e8d773ad247ba87ab24c85700d8ee3193a1"
+      "sha256": "3f8cb45bba7da288b99b33e4b6878e79ca838103fc1dfe71593e0d6a31470023"
     },
     {
       "name": "prerequisites",
