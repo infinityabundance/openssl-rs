@@ -92,4 +92,5 @@ pub mod rc4;
 pub mod runtime;
 pub mod seed;
 pub mod selftest;
+pub mod sm4;
 pub mod status;

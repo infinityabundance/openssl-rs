@@ -402,6 +402,15 @@ defects in machinery every cipher row touches: `PROV_CIPHER_CTX` had modelled th
 AEAD ring — `AES-*-GCM` (Phase 9), `AES-*-GCM-SIV`, the fourteen capability-filtered
 `AES-*-CBC-HMAC-*` rows, and the ARIA and SM4 families.
 
+**`SM4` is in, as five of its eight rows (D266).** `src/sm4.rs` transcribes `crypto/sm4/sm4.c` whole —
+the authority's only cipher unit with no low-level public API at all — and `cipher_sm4.c`/
+`cipher_sm4_hw.c` publish `SM4-ECB`, `SM4-CBC`, `SM4-CTR`, `SM4-OFB` and `SM4-CFB`; `SM4-GCM`,
+`SM4-CCM` and `SM4-XTS` are the AEAD ring's and follow. Two order errors in the primitive were found
+by the GB/T 32907-2016 standard vector rather than by review: the four `SM4_SBOX_T` rotations run
+the opposite way from the obvious reading, and decryption walks its round keys in **descending**
+fours. A self-consistent transcription could not have found either — encryption was correct
+throughout and a wrong-ordered round trip passes against itself.
+
 **Non-export prerequisites that the export ledger cannot see.** Three of 8.3's MAC rows need
 internal units as well as engines, and an internal unit has no `libcrypto` symbol for a ledger row to
 move when it lands. They are recorded here so that "no `OSSL_OP_MAC` row moved" is not read as "no

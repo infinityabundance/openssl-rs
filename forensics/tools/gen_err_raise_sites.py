@@ -441,6 +441,11 @@ COVERED_FILES = [
     # is absent for the reason `cipher_cts.c` is: an entry that can never change would read as
     # coverage that does not exist.
     ("providers/implementations/ciphers/cipher_chacha20.c", "PROV_CIPHER_CHACHA20"),
+    # Deliberately *not* covered, with the reason: `cipher_sm4.c` and `cipher_sm4_hw.c` raise
+    # nothing at all in this profile -- there is no failure arm in either -- so an entry would read
+    # as coverage that does not exist. `cipher_aria*.c` is the same and joins the covered set only
+    # if its rows ever grow a raise; the SM4 *primitive* `crypto/sm4/sm4.c` has no failure path
+    # either, `ossl_sm4_set_key` always answering 1.
     ("providers/implementations/macs/cmac_prov.c", "PROV_CMAC_PROV"),
     ("providers/implementations/macs/gmac_prov.c", "PROV_GMAC_PROV"),
     # The row lands with this stratum and its two generated decoders are the only

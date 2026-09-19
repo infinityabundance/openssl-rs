@@ -154,7 +154,7 @@
       "verdict": "pass"
     },
     "RT-CIPHER": {
-      "observations": 4646,
+      "observations": 4887,
       "verdict": "pass"
     },
     "RT-CMAC": {
@@ -398,7 +398,7 @@
     "blocking_dependencies": 25,
     "divergence_names_covered": 35,
     "findings": 0,
-    "language_census": 3107,
+    "language_census": 3111,
     "sealed_census": 57
   },
   "provider_implemented": [
@@ -485,6 +485,11 @@
     "default/OSSL_OP_CIPHER/DES-EDE3-ECB",
     "default/OSSL_OP_CIPHER/DES-EDE3-OFB",
     "default/OSSL_OP_CIPHER/NULL",
+    "default/OSSL_OP_CIPHER/SM4-CBC",
+    "default/OSSL_OP_CIPHER/SM4-CFB",
+    "default/OSSL_OP_CIPHER/SM4-CTR",
+    "default/OSSL_OP_CIPHER/SM4-ECB",
+    "default/OSSL_OP_CIPHER/SM4-OFB",
     "default/OSSL_OP_DIGEST/BLAKE2B-512",
     "default/OSSL_OP_DIGEST/BLAKE2S-256",
     "default/OSSL_OP_DIGEST/KECCAK-224",
@@ -528,10 +533,10 @@
       "13": 39,
       "9": 11
     },
-    "implemented": 118,
-    "open": 192,
+    "implemented": 123,
+    "open": 187,
     "open_by_phase": {
-      "8": 192
+      "8": 187
     },
     "total": 996
   }

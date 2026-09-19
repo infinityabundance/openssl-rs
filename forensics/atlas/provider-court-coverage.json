@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 118,
+        "implemented": 123,
         "unmatched": 0
       }
     },
@@ -20,8 +20,8 @@
         "probe": "courts/phase8/rt_cipher_probe.c"
       }
     ],
-    "directly_courted": 118,
-    "implemented_rows": 118,
+    "directly_courted": 123,
+    "implemented_rows": 123,
     "rows": [
       {
         "algorithm_names": "AES-128-CBC",
@@ -1174,6 +1174,79 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "SM4-CBC",
+        "aliases": [
+          "SM4-CBC",
+          "SM4",
+          "1.2.156.10197.1.104.2"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SM4-CFB",
+        "aliases": [
+          "SM4-CFB",
+          "SM4-CFB128",
+          "1.2.156.10197.1.104.4"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SM4-CTR",
+        "aliases": [
+          "SM4-CTR",
+          "1.2.156.10197.1.104.7"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SM4-ECB",
+        "aliases": [
+          "SM4-ECB",
+          "1.2.156.10197.1.104.1"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SM4-OFB",
+        "aliases": [
+          "SM4-OFB",
+          "SM4-OFB128",
+          "1.2.156.10197.1.104.3"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "BLAKE2B-512",
         "aliases": [
           "BLAKE2B-512",
@@ -1691,7 +1764,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "6811a800532ad2dcc3e09845991aa1a86b362b5fc08922d2fb7fdd2b3c27e324"
+      "sha256": "bd98902adf104ebe8c3044f470349642b80f8002f6e440f87f865d9f166cf9a0"
     },
     {
       "name": "court:RT-DIGEST",
@@ -1701,7 +1774,7 @@
     {
       "name": "court:RT-CIPHER",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "212269c2b28b9f7c97464030f64274e4640f20c2e773522d72d5fab5acd8c708"
+      "sha256": "98122bb1b8b8fa23bb63aa6dd2bd044cdd3dda7ec7839606c09efdc050f7ebbc"
     }
   ],
   "kind": "provider-court-coverage",

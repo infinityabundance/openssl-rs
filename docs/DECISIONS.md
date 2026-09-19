@@ -17308,3 +17308,75 @@ implemented / 576 open / 16 deferred**. The provider census moves **117 -> 118 i
 192 open**, coverage stays **118 / 118 / 0**. The err-site table moves **1943 -> 1950** (the seven
 raises in `cipher_chacha20.c`). `RT-CIPHER` moves **4501 -> 4646** and the pipeline total **28077 ->
 28357**. Unit tests move **582 -> 594**. Full pipeline to `PIPELINE OK`.
+
+## D266 — `SM4` lands, and the standard vector caught two order errors in the primitive
+
+The primitive plus the five block and stream rows, and two defects in the primitive that only a
+published vector could find.
+
+**The primitive is a full transcription, and this unit *is* compiled here.** `libcrypto-lib-sm4.o`
+exists beside `libcrypto-lib-sm4-x86_64.o`, so `crypto/sm4/sm4.c` is a translation unit and its
+`SM4_SBOX_T0`-based arithmetic is what runs when the CPU lacks the SM4 extension — the same shape as
+AES (D209) and Camellia (D222), and unlike ChaCha20's, where the C file is not compiled at all
+(D263). The x86-64 hardware path is declined and recorded: `HWSM4_CAPABLE` and
+`HWSM4_CAPABLE_X86_64` choose a table whose only difference is which pointer `initkey` stores in
+`ctx->block`, and SM4 is a pure function of key and block.
+
+**SM4 has no low-level public API in this authority**, which makes this the first cipher unit here
+that exists *entirely* for provider rows: `nm -D libcrypto.so.3` lists no `SM4_*` symbol,
+`include/crypto/sm4.h` is internal, and its three names are internal functions. So nothing moves in
+`implemented[libcrypto]`.
+
+**The two tables that are literal are generated rather than typed, and the two that are derived are
+checked.** `court/gen-sm4.py` reads `SM4_S` and `SM4_SBOX_T0` out of the pinned `sm4.c` and emits the
+Rust initialisers, so 512 values are read rather than retyped. `SM4_SBOX_T1`..`T3` are computed at
+compile time, and the unit test compares their head values against the authority's own literal ones
+— which is what found the **first** defect.
+
+**Defect one: the rotations run the other way.** `SM4_SBOX_Tk[j]` holds `L(S[j])` with the S-box's
+byte in the top, second, third and bottom position for `k` = 0..3, so `SM4_SBOX_T1` is
+`rotl(SM4_SBOX_T0[j], 24)` and `SM4_SBOX_T3` is `rotl(..., 8)` — the opposite of the obvious
+reading, and the opposite of what was written. The derivation test failed on the first run.
+
+**Defect two: decryption walks its round keys in fours, descending.** The authority's
+`ossl_sm4_decrypt` is `SM4_RNDS(31,30,29,28)`, `(27,26,25,24)`, … `(7,6,5,4)`, `(3,2,1,0)`, while
+encryption walks `(0,1,2,3)`, `(4,5,6,7)`, … `(28,29,30,31)`. A formula `4n..4n+3` was used for both,
+which is right for encryption and ascending-and-shifted for decryption. **The GB/T 32907-2016 /
+RFC 8998 standard vector failed** — `68 1e df 34 d2 06 96 5e 86 b3 e9 4f 53 6e 42 46` — and both
+directions are now written out as the fourteen literal groups the authority writes.
+
+That is the point of the vector and worth stating plainly: **a self-consistent transcription cannot
+find an order error.** Encryption was correct throughout, decryption was a permutation away from
+correct, and a round trip *using the same wrong order twice* would have passed. The published
+ciphertext is the only evidence that both directions and both byte orders are right, and the arm
+prints it (`sm4.ecb.vector.matches=1`).
+
+**The rows.** `cipher_sm4.c` and `cipher_sm4_hw.c`, five of the authority's eight: `SM4-ECB`,
+`SM4-CBC`, `SM4-CTR`, `SM4-OFB`, `SM4-CFB`. Three things about them are particular. The two block
+modes keep a sixteen-byte block size and the three stream modes report **one byte**
+(`128, 8, 128`), which is the difference every alignment-reasoning caller depends on. `initkey`'s
+condition is `ctx->enc || (mode != ECB && mode != CBC)` — so a **decrypting** CTR/OFB/CFB context
+gets the *encrypt* block function, because those modes only ever encrypt the counter or the feedback
+register. And the C branch writes neither `stream.cbc` nor `stream.ecb`, leaving them NULL, which is
+what makes the generic CBC/ECB paths fall through to `block`; the x86-64 branch writes
+`stream.cbc = NULL` explicitly, so the same thing.
+
+**The five `ossl_prov_cipher_hw_sm4_*` selectors are transcribed and uncalled**, and that is a
+consequence of the decline rather than an omission: the authority's `IMPLEMENT_generic_cipher`
+reaches its hw through them, and on the x86-64 path they answer the hardware table. Since the
+assembly is declined, the C table *is* this transcription's answer, so each row installs it directly
+and the selectors exist because `cipher_sm4.h` declares them.
+
+**D244 caught a row identity defect again, on the first attempt.** The five aliases were written as
+the primary names alone; `PROV_NAMES_SM4_ECB` is `"SM4-ECB:1.2.156.10197.1.104.1"`,
+`PROV_NAMES_SM4_CBC` is `"SM4-CBC:SM4:1.2.156.10197.1.104.2"` and three more carry OIDs or aliases.
+The whole alias sequence is the row's identity and the OIDs are what a caller with an OID fetches
+by.
+
+**What this entry moves.** `implemented[libcrypto]` stays **2035 / 5896** and Phase 8 stays **194
+implemented / 576 open / 16 deferred**, because SM4 has no exports. The provider census moves **118
+-> 123 implemented / 192 -> 187 open**, coverage stays **123 / 123 / 0**. The err-site table does
+**not** move: neither `cipher_sm4.c` nor `cipher_sm4_hw.c` raises anything in this profile, and that
+is now stated where the covered set is defined rather than left as an absence. `RT-CIPHER` moves
+**4646 -> 4887** and the pipeline total **28357 -> 28463**. Unit tests move **594 -> 598**. Full
+pipeline to `PIPELINE OK`.
