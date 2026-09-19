@@ -83,11 +83,10 @@ use crate::evp::digest::{
     OSSL_FUNC_DIGEST_INIT, OSSL_FUNC_DIGEST_NEWCTX, OSSL_FUNC_DIGEST_SETTABLE_CTX_PARAMS,
     OSSL_FUNC_DIGEST_SET_CTX_PARAMS, OSSL_FUNC_DIGEST_SQUEEZE, OSSL_FUNC_DIGEST_UPDATE,
 };
-use crate::params::{
-    OsslParam, END, OSSL_PARAM_INTEGER, OSSL_PARAM_OCTET_STRING, OSSL_PARAM_UNMODIFIED,
-    OSSL_PARAM_UNSIGNED_INTEGER,
-};
+use crate::params::{OsslParam, END, OSSL_PARAM_OCTET_STRING, OSSL_PARAM_UNMODIFIED};
+
 use crate::provider::activate::OsslAlgorithm;
+use crate::provider::cipher::{param_int, param_size_t, param_uint};
 use crate::provider::init::FUNC_PROVIDER_QUERY_OPERATION;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc, CRYPTO_zalloc};
@@ -145,34 +144,10 @@ unsafe fn ossl_param_is_empty(params: *const OsslParam) -> bool {
 /// `digest_default_get_params_list` — the four keys `digestcommon.c`'s generated decoder
 /// locates, with the types `produce_param_decoder` assigns them.
 static DIGEST_DEFAULT_GETTABLE_PARAMS: [OsslParam; 5] = [
-    OsslParam {
-        key: OSSL_DIGEST_PARAM_BLOCK_SIZE,
-        data_type: OSSL_PARAM_UNSIGNED_INTEGER,
-        data: ptr::null_mut(),
-        data_size: 0,
-        return_size: OSSL_PARAM_UNMODIFIED,
-    },
-    OsslParam {
-        key: OSSL_DIGEST_PARAM_SIZE,
-        data_type: OSSL_PARAM_UNSIGNED_INTEGER,
-        data: ptr::null_mut(),
-        data_size: 0,
-        return_size: OSSL_PARAM_UNMODIFIED,
-    },
-    OsslParam {
-        key: OSSL_DIGEST_PARAM_XOF,
-        data_type: OSSL_PARAM_INTEGER,
-        data: ptr::null_mut(),
-        data_size: 0,
-        return_size: OSSL_PARAM_UNMODIFIED,
-    },
-    OsslParam {
-        key: OSSL_DIGEST_PARAM_ALGID_ABSENT,
-        data_type: OSSL_PARAM_INTEGER,
-        data: ptr::null_mut(),
-        data_size: 0,
-        return_size: OSSL_PARAM_UNMODIFIED,
-    },
+    param_size_t(OSSL_DIGEST_PARAM_BLOCK_SIZE),
+    param_size_t(OSSL_DIGEST_PARAM_SIZE),
+    param_int(OSSL_DIGEST_PARAM_XOF),
+    param_int(OSSL_DIGEST_PARAM_ALGID_ABSENT),
     END,
 ];
 
@@ -1368,20 +1343,8 @@ mod sha3 {
 
     /// `shake_get_ctx_params_list` / `shake_set_ctx_params_list` — `sha3_prov.c:584-588`.
     static CTX_PARAMS: [OsslParam; 3] = [
-        OsslParam {
-            key: c"xoflen".as_ptr(),
-            data_type: OSSL_PARAM_UNSIGNED_INTEGER,
-            data: ptr::null_mut(),
-            data_size: 0,
-            return_size: OSSL_PARAM_UNMODIFIED,
-        },
-        OsslParam {
-            key: c"size".as_ptr(),
-            data_type: OSSL_PARAM_UNSIGNED_INTEGER,
-            data: ptr::null_mut(),
-            data_size: 0,
-            return_size: OSSL_PARAM_UNMODIFIED,
-        },
+        param_size_t(c"xoflen".as_ptr()),
+        param_size_t(c"size".as_ptr()),
         END,
     ];
 
@@ -1664,13 +1627,9 @@ mod blake2 {
 
     /// `blake_get_ctx_params_list` — `blake2_prov.c:29-32`.
     static CTX_PARAMS: [OsslParam; 2] = [
-        OsslParam {
-            key: OSSL_DIGEST_PARAM_SIZE,
-            data_type: OSSL_PARAM_UNSIGNED_INTEGER,
-            data: ptr::null_mut(),
-            data_size: 0,
-            return_size: OSSL_PARAM_UNMODIFIED,
-        },
+        // `blake_get_ctx_params_list` declares `size` with `OSSL_PARAM_uint`, not
+        // `OSSL_PARAM_size_t`: the same `UNSIGNED_INTEGER` type and a *different* size.
+        param_uint(OSSL_DIGEST_PARAM_SIZE),
         END,
     ];
 

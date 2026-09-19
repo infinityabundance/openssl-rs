@@ -1234,14 +1234,86 @@ unsafe fn ossl_cipher_generic_initkey(
     }
 }
 
-/// A read-only descriptor for a gettable/settable param list.
+/// `OSSL_PARAM_size_t(key, addr)` — `include/openssl/params.h:51-52`: `UNSIGNED_INTEGER` and
+/// `sizeof(size_t)`.
 ///
-/// `pub(crate)` because the provider MAC rows (`src/provider/mac.rs`) publish lists of the same
-/// shape, and one spelling of "a known key with no buffer" is better than two.
-pub(crate) const fn param(key: *const c_char, data_type: c_uint) -> OsslParam {
+/// # Why one constructor per authority macro rather than one `(key, data_type)` helper
+/// A provider's published lists are **observable**: `EVP_CIPHER_gettable_params`,
+/// `EVP_CIPHER_CTX_gettable_params`, `EVP_CIPHER_CTX_settable_params` and the MAC equivalents hand a
+/// caller the descriptor array, and a caller reads `data_size`. The authority's generated lists set
+/// it from the constructor macro, so the only spelling of a list this crate can check against the
+/// authority is the one that carries the macro. The first version of this module took
+/// `(key, data_type)` and defaulted the size to zero, which was wrong for every `uint`, `size_t` and
+/// `int` entry of every list -- thirty extra or missing entries and one hundred and thirty wrong
+/// sizes, none of which any keys-only comparison could see (D253).
+pub(crate) const fn param_size_t(key: *const c_char) -> OsslParam {
     OsslParam {
         key: key.cast(),
-        data_type,
+        data_type: OSSL_PARAM_UNSIGNED_INTEGER,
+        data: ptr::null_mut(),
+        data_size: core::mem::size_of::<usize>(),
+        return_size: OSSL_PARAM_UNMODIFIED,
+    }
+}
+
+/// `OSSL_PARAM_uint(key, addr)` — `include/openssl/params.h:33-35`: `UNSIGNED_INTEGER` and
+/// `sizeof(unsigned int)`.
+///
+/// # Why the size is here and not derived from the type
+/// `OSSL_PARAM_uint` and `OSSL_PARAM_size_t` produce the **same** `data_type` and different
+/// `data_size` (4 and 8), so a table that carried only the type could not be checked against the
+/// authority by reading the type. Both are covered by two constructors here for exactly that
+/// reason, and the provider court prints the size of every published entry.
+pub(crate) const fn param_uint(key: *const c_char) -> OsslParam {
+    OsslParam {
+        key: key.cast(),
+        data_type: OSSL_PARAM_UNSIGNED_INTEGER,
+        data: ptr::null_mut(),
+        data_size: core::mem::size_of::<c_uint>(),
+        return_size: OSSL_PARAM_UNMODIFIED,
+    }
+}
+
+/// `OSSL_PARAM_int(key, addr)` — `params.h:31-32`: `INTEGER` and `sizeof(int)`.
+pub(crate) const fn param_int(key: *const c_char) -> OsslParam {
+    OsslParam {
+        key: key.cast(),
+        data_type: OSSL_PARAM_INTEGER,
+        data: ptr::null_mut(),
+        data_size: core::mem::size_of::<c_int>(),
+        return_size: OSSL_PARAM_UNMODIFIED,
+    }
+}
+
+/// `OSSL_PARAM_utf8_string(key, addr, 0)` — `params.h:60-61`: the generated lists pass a zero
+/// length, so the descriptor's `data_size` is 0.
+pub(crate) const fn param_utf8_string(key: *const c_char) -> OsslParam {
+    OsslParam {
+        key: key.cast(),
+        data_type: OSSL_PARAM_UTF8_STRING,
+        data: ptr::null_mut(),
+        data_size: 0,
+        return_size: OSSL_PARAM_UNMODIFIED,
+    }
+}
+
+/// `OSSL_PARAM_octet_string(key, addr, 0)` — `params.h:62-63`.
+pub(crate) const fn param_octet_string(key: *const c_char) -> OsslParam {
+    OsslParam {
+        key: key.cast(),
+        data_type: OSSL_PARAM_OCTET_STRING,
+        data: ptr::null_mut(),
+        data_size: 0,
+        return_size: OSSL_PARAM_UNMODIFIED,
+    }
+}
+
+/// `OSSL_PARAM_octet_ptr(key, addr, 0)` — `params.h:67-68`. The one list that uses it is the NULL
+/// cipher's `tls-mac`.
+pub(crate) const fn param_octet_ptr(key: *const c_char) -> OsslParam {
+    OsslParam {
+        key: key.cast(),
+        data_type: OSSL_PARAM_OCTET_PTR,
         data: ptr::null_mut(),
         data_size: 0,
         return_size: OSSL_PARAM_UNMODIFIED,
@@ -1251,16 +1323,16 @@ pub(crate) const fn param(key: *const c_char, data_type: c_uint) -> OsslParam {
 /// `ossl_cipher_generic_gettable_params` — `ciphercommon.c.in:48-51`, the ten keys
 /// `produce_param_decoder` locates.
 static CIPHER_GETTABLE_PARAMS: [OsslParam; 11] = [
-    param(OSSL_CIPHER_PARAM_MODE, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_KEYLEN, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_IVLEN, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_BLOCK_SIZE, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_AEAD, OSSL_PARAM_INTEGER),
-    param(OSSL_CIPHER_PARAM_CUSTOM_IV, OSSL_PARAM_INTEGER),
-    param(OSSL_CIPHER_PARAM_CTS, OSSL_PARAM_INTEGER),
-    param(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK, OSSL_PARAM_INTEGER),
-    param(OSSL_CIPHER_PARAM_HAS_RAND_KEY, OSSL_PARAM_INTEGER),
-    param(OSSL_CIPHER_PARAM_ENCRYPT_THEN_MAC, OSSL_PARAM_INTEGER),
+    param_uint(OSSL_CIPHER_PARAM_MODE),
+    param_size_t(OSSL_CIPHER_PARAM_KEYLEN),
+    param_size_t(OSSL_CIPHER_PARAM_IVLEN),
+    param_size_t(OSSL_CIPHER_PARAM_BLOCK_SIZE),
+    param_int(OSSL_CIPHER_PARAM_AEAD),
+    param_int(OSSL_CIPHER_PARAM_CUSTOM_IV),
+    param_int(OSSL_CIPHER_PARAM_CTS),
+    param_int(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK),
+    param_int(OSSL_CIPHER_PARAM_HAS_RAND_KEY),
+    param_int(OSSL_CIPHER_PARAM_ENCRYPT_THEN_MAC),
     END,
 ];
 
@@ -1276,13 +1348,13 @@ pub(crate) unsafe extern "C" fn ossl_cipher_generic_gettable_params(
 
 /// `cipher_generic_get_ctx_params_list` — `ciphercommon.c.in:114-122`.
 static CIPHER_GETTABLE_CTX_PARAMS: [OsslParam; 8] = [
-    param(OSSL_CIPHER_PARAM_KEYLEN, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_IVLEN, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_PADDING, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_NUM, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_IV, OSSL_PARAM_OCTET_STRING),
-    param(OSSL_CIPHER_PARAM_UPDATED_IV, OSSL_PARAM_OCTET_STRING),
-    param(OSSL_CIPHER_PARAM_TLS_MAC, OSSL_PARAM_OCTET_PTR),
+    param_size_t(OSSL_CIPHER_PARAM_KEYLEN),
+    param_size_t(OSSL_CIPHER_PARAM_IVLEN),
+    param_uint(OSSL_CIPHER_PARAM_PADDING),
+    param_uint(OSSL_CIPHER_PARAM_NUM),
+    param_octet_string(OSSL_CIPHER_PARAM_IV),
+    param_octet_string(OSSL_CIPHER_PARAM_UPDATED_IV),
+    param_octet_string(OSSL_CIPHER_PARAM_TLS_MAC),
     END,
 ];
 
@@ -1299,11 +1371,11 @@ pub(crate) unsafe extern "C" fn ossl_cipher_generic_gettable_ctx_params(
 
 /// `cipher_generic_set_ctx_params_list` — `ciphercommon.c.in:133-139`.
 static CIPHER_SETTABLE_CTX_PARAMS: [OsslParam; 6] = [
-    param(OSSL_CIPHER_PARAM_PADDING, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_NUM, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_USE_BITS, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_TLS_VERSION, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_TLS_MAC_SIZE, OSSL_PARAM_UNSIGNED_INTEGER),
+    param_uint(OSSL_CIPHER_PARAM_PADDING),
+    param_uint(OSSL_CIPHER_PARAM_NUM),
+    param_uint(OSSL_CIPHER_PARAM_USE_BITS),
+    param_uint(OSSL_CIPHER_PARAM_TLS_VERSION),
+    param_size_t(OSSL_CIPHER_PARAM_TLS_MAC_SIZE),
     END,
 ];
 
@@ -2372,15 +2444,14 @@ unsafe extern "C" fn ossl_tdes_get_params(
 
 /// `ossl_tdes_gettable_ctx_params` — `CIPHER_DEFAULT_GETTABLE_CTX_PARAMS_*` with the
 /// `RANDOM_KEY` row, `cipher_tdes_common.c:131-134`.
-static TDES_GETTABLE_CTX_PARAMS: [OsslParam; 9] = [
-    param(OSSL_CIPHER_PARAM_KEYLEN, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_IVLEN, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_PADDING, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_NUM, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_IV, OSSL_PARAM_OCTET_STRING),
-    param(OSSL_CIPHER_PARAM_UPDATED_IV, OSSL_PARAM_OCTET_STRING),
-    param(OSSL_CIPHER_PARAM_RANDOM_KEY, OSSL_PARAM_OCTET_STRING),
-    param(OSSL_CIPHER_PARAM_TLS_MAC, OSSL_PARAM_OCTET_PTR),
+static TDES_GETTABLE_CTX_PARAMS: [OsslParam; 8] = [
+    param_size_t(OSSL_CIPHER_PARAM_KEYLEN),
+    param_size_t(OSSL_CIPHER_PARAM_IVLEN),
+    param_uint(OSSL_CIPHER_PARAM_PADDING),
+    param_uint(OSSL_CIPHER_PARAM_NUM),
+    param_octet_string(OSSL_CIPHER_PARAM_IV),
+    param_octet_string(OSSL_CIPHER_PARAM_UPDATED_IV),
+    param_octet_string(OSSL_CIPHER_PARAM_RANDOM_KEY),
     END,
 ];
 
@@ -2396,12 +2467,9 @@ unsafe extern "C" fn ossl_tdes_gettable_ctx_params(
 }
 
 /// `CIPHER_DEFAULT_SETTABLE_CTX_PARAMS_*` for 3DES, `cipher_tdes_common.c:170-172`.
-static TDES_SETTABLE_CTX_PARAMS: [OsslParam; 6] = [
-    param(OSSL_CIPHER_PARAM_PADDING, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_NUM, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_USE_BITS, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_TLS_VERSION, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_TLS_MAC_SIZE, OSSL_PARAM_UNSIGNED_INTEGER),
+static TDES_SETTABLE_CTX_PARAMS: [OsslParam; 3] = [
+    param_uint(OSSL_CIPHER_PARAM_PADDING),
+    param_uint(OSSL_CIPHER_PARAM_NUM),
     END,
 ];
 
@@ -3784,15 +3852,14 @@ unsafe extern "C" fn cts_set_ctx_params(vctx: *mut c_void, params: *const OsslPa
 }
 
 /// `CIPHER_DEFAULT_GETTABLE_CTX_PARAMS_*` with the `cts_mode` row — `cipher_aes_cts.inc:24-26`.
-static CTS_GETTABLE_CTX_PARAMS: [OsslParam; 9] = [
-    param(OSSL_CIPHER_PARAM_KEYLEN, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_IVLEN, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_PADDING, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_NUM, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_IV, OSSL_PARAM_OCTET_STRING),
-    param(OSSL_CIPHER_PARAM_UPDATED_IV, OSSL_PARAM_OCTET_STRING),
-    param(OSSL_CIPHER_PARAM_TLS_MAC, OSSL_PARAM_OCTET_PTR),
-    param(OSSL_CIPHER_PARAM_CTS_MODE, OSSL_PARAM_UTF8_STRING),
+static CTS_GETTABLE_CTX_PARAMS: [OsslParam; 8] = [
+    param_size_t(OSSL_CIPHER_PARAM_KEYLEN),
+    param_size_t(OSSL_CIPHER_PARAM_IVLEN),
+    param_uint(OSSL_CIPHER_PARAM_PADDING),
+    param_uint(OSSL_CIPHER_PARAM_NUM),
+    param_octet_string(OSSL_CIPHER_PARAM_IV),
+    param_octet_string(OSSL_CIPHER_PARAM_UPDATED_IV),
+    param_utf8_string(OSSL_CIPHER_PARAM_CTS_MODE),
     END,
 ];
 
@@ -3808,13 +3875,10 @@ unsafe extern "C" fn cts_gettable_ctx_params(
 }
 
 /// `CIPHER_DEFAULT_SETTABLE_CTX_PARAMS_*` with the `cts_mode` row — `cipher_aes_cts.inc:63-65`.
-static CTS_SETTABLE_CTX_PARAMS: [OsslParam; 7] = [
-    param(OSSL_CIPHER_PARAM_PADDING, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_NUM, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_USE_BITS, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_TLS_VERSION, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_TLS_MAC_SIZE, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_CTS_MODE, OSSL_PARAM_UTF8_STRING),
+static CTS_SETTABLE_CTX_PARAMS: [OsslParam; 4] = [
+    param_uint(OSSL_CIPHER_PARAM_PADDING),
+    param_uint(OSSL_CIPHER_PARAM_NUM),
+    param_utf8_string(OSSL_CIPHER_PARAM_CTS_MODE),
     END,
 ];
 
@@ -4127,10 +4191,7 @@ static AES_XTS_HW: ProvCipherHw = ProvCipherHw {
 };
 
 /// `AES-*-XTS`'s one settable parameter — `cipher_aes_xts.c:244-247`.
-static AES_XTS_SETTABLE_CTX_PARAMS: [OsslParam; 2] = [
-    param(OSSL_CIPHER_PARAM_KEYLEN, OSSL_PARAM_UNSIGNED_INTEGER),
-    END,
-];
+static AES_XTS_SETTABLE_CTX_PARAMS: [OsslParam; 2] = [param_size_t(OSSL_CIPHER_PARAM_KEYLEN), END];
 
 /// `aes_xts_settable_ctx_params` — `cipher_aes_xts.c:249-253`.
 ///
@@ -5276,12 +5337,12 @@ unsafe extern "C" fn aes_ocb_get_ctx_params(vctx: *mut c_void, params: *mut Ossl
 
 /// `cipher_ocb_known_gettable_ctx_params` — `cipher_aes_ocb.c:475-483`.
 static OCB_GETTABLE_CTX_PARAMS: [OsslParam; 7] = [
-    param(OSSL_CIPHER_PARAM_KEYLEN, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_IVLEN, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_AEAD_TAGLEN, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_IV, OSSL_PARAM_OCTET_STRING),
-    param(OSSL_CIPHER_PARAM_UPDATED_IV, OSSL_PARAM_OCTET_STRING),
-    param(OSSL_CIPHER_PARAM_AEAD_TAG, OSSL_PARAM_OCTET_STRING),
+    param_size_t(OSSL_CIPHER_PARAM_KEYLEN),
+    param_size_t(OSSL_CIPHER_PARAM_IVLEN),
+    param_size_t(OSSL_CIPHER_PARAM_AEAD_TAGLEN),
+    param_octet_string(OSSL_CIPHER_PARAM_IV),
+    param_octet_string(OSSL_CIPHER_PARAM_UPDATED_IV),
+    param_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG),
     END,
 ];
 
@@ -5298,9 +5359,9 @@ unsafe extern "C" fn cipher_ocb_gettable_ctx_params(
 
 /// `cipher_ocb_known_settable_ctx_params` — `cipher_aes_ocb.c:490-495`.
 static OCB_SETTABLE_CTX_PARAMS: [OsslParam; 4] = [
-    param(OSSL_CIPHER_PARAM_KEYLEN, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_IVLEN, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_AEAD_TAG, OSSL_PARAM_OCTET_STRING),
+    param_size_t(OSSL_CIPHER_PARAM_KEYLEN),
+    param_size_t(OSSL_CIPHER_PARAM_IVLEN),
+    param_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG),
     END,
 ];
 
@@ -7453,28 +7514,22 @@ unsafe fn ossl_ccm_initctx(ctx: *mut ProvCcmCtx, keybits: usize, hw: *const Prov
 
 /// `cipher_ccm_known_settable_ctx_params` — `ciphercommon_ccm.c:74-79`.
 static CCM_SETTABLE_CTX_PARAMS: [OsslParam; 5] = [
-    param(OSSL_CIPHER_PARAM_IVLEN, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_AEAD_TAG, OSSL_PARAM_OCTET_STRING),
-    param(OSSL_CIPHER_PARAM_AEAD_TLS1_AAD, OSSL_PARAM_OCTET_STRING),
-    param(
-        OSSL_CIPHER_PARAM_AEAD_TLS1_IV_FIXED,
-        OSSL_PARAM_OCTET_STRING,
-    ),
+    param_size_t(OSSL_CIPHER_PARAM_IVLEN),
+    param_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG),
+    param_octet_string(OSSL_CIPHER_PARAM_AEAD_TLS1_AAD),
+    param_octet_string(OSSL_CIPHER_PARAM_AEAD_TLS1_IV_FIXED),
     END,
 ];
 
 /// `cipher_ccm_known_gettable_ctx_params` — `ciphercommon_ccm.c:250-258`.
 static CCM_GETTABLE_CTX_PARAMS: [OsslParam; 8] = [
-    param(OSSL_CIPHER_PARAM_KEYLEN, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_IVLEN, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_AEAD_TAGLEN, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_IV, OSSL_PARAM_OCTET_STRING),
-    param(OSSL_CIPHER_PARAM_UPDATED_IV, OSSL_PARAM_OCTET_STRING),
-    param(OSSL_CIPHER_PARAM_AEAD_TAG, OSSL_PARAM_OCTET_STRING),
-    param(
-        OSSL_CIPHER_PARAM_AEAD_TLS1_AAD_PAD,
-        OSSL_PARAM_UNSIGNED_INTEGER,
-    ),
+    param_size_t(OSSL_CIPHER_PARAM_KEYLEN),
+    param_size_t(OSSL_CIPHER_PARAM_IVLEN),
+    param_size_t(OSSL_CIPHER_PARAM_AEAD_TAGLEN),
+    param_octet_string(OSSL_CIPHER_PARAM_IV),
+    param_octet_string(OSSL_CIPHER_PARAM_UPDATED_IV),
+    param_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG),
+    param_size_t(OSSL_CIPHER_PARAM_AEAD_TLS1_AAD_PAD),
     END,
 ];
 
@@ -8143,9 +8198,9 @@ unsafe extern "C" fn aes_siv_get_ctx_params(vctx: *mut c_void, params: *mut Ossl
 
 /// `cipher_siv_known_gettable_ctx_params` — `cipher_aes_siv.c:185-190`.
 static SIV_GETTABLE_CTX_PARAMS: [OsslParam; 4] = [
-    param(OSSL_CIPHER_PARAM_KEYLEN, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_AEAD_TAGLEN, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_AEAD_TAG, OSSL_PARAM_OCTET_STRING),
+    param_size_t(OSSL_CIPHER_PARAM_KEYLEN),
+    param_size_t(OSSL_CIPHER_PARAM_AEAD_TAGLEN),
+    param_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG),
     END,
 ];
 
@@ -8218,9 +8273,9 @@ unsafe extern "C" fn aes_siv_set_ctx_params(vctx: *mut c_void, params: *const Os
 
 /// `cipher_siv_known_settable_ctx_params` — `cipher_aes_siv.c:235-241`.
 static SIV_SETTABLE_CTX_PARAMS: [OsslParam; 4] = [
-    param(OSSL_CIPHER_PARAM_KEYLEN, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_SPEED, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_AEAD_TAG, OSSL_PARAM_OCTET_STRING),
+    param_size_t(OSSL_CIPHER_PARAM_KEYLEN),
+    param_uint(OSSL_CIPHER_PARAM_SPEED),
+    param_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG),
     END,
 ];
 
@@ -8674,9 +8729,9 @@ unsafe extern "C" fn null_get_params(params: *mut OsslParam) -> c_int {
 
 /// `null_known_gettable_ctx_params` — `cipher_null.c:108-113`.
 static NULL_GETTABLE_CTX_PARAMS: [OsslParam; 4] = [
-    param(OSSL_CIPHER_PARAM_KEYLEN, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_IVLEN, OSSL_PARAM_UNSIGNED_INTEGER),
-    param(OSSL_CIPHER_PARAM_TLS_MAC, OSSL_PARAM_OCTET_PTR),
+    param_size_t(OSSL_CIPHER_PARAM_KEYLEN),
+    param_size_t(OSSL_CIPHER_PARAM_IVLEN),
+    param_octet_ptr(OSSL_CIPHER_PARAM_TLS_MAC),
     END,
 ];
 
@@ -8719,10 +8774,8 @@ unsafe extern "C" fn null_get_ctx_params(vctx: *mut c_void, params: *mut OsslPar
 }
 
 /// `null_known_settable_ctx_params` — `cipher_null.c:147-150`.
-static NULL_SETTABLE_CTX_PARAMS: [OsslParam; 2] = [
-    param(OSSL_CIPHER_PARAM_TLS_MAC_SIZE, OSSL_PARAM_UNSIGNED_INTEGER),
-    END,
-];
+static NULL_SETTABLE_CTX_PARAMS: [OsslParam; 2] =
+    [param_size_t(OSSL_CIPHER_PARAM_TLS_MAC_SIZE), END];
 
 /// `null_settable_ctx_params` — `cipher_null.c:152-157`.
 ///

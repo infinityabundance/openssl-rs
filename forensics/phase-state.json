@@ -417,8 +417,8 @@
         "name": "algorithms",
         "phase": 8,
         "provider_rows": {
-          "implemented": 111,
-          "open": 199,
+          "implemented": 112,
+          "open": 198,
           "owned": 310
         },
         "seal_sha256": null,
@@ -598,7 +598,7 @@
       "not_started": 13
     }
   },
-  "body_hash": "1c68d3f09a46af7e8a7480c25b7bfd460f500d4c1506104615074d94714197c0",
+  "body_hash": "a7eae6da8ed2ede51489a51d8aae2987a32ab9f7535d4b63b9172191b2374705",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

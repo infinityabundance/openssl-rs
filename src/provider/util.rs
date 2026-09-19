@@ -245,16 +245,15 @@ pub(crate) unsafe fn ossl_prov_cipher_engine(pc: *const ProvCipher) -> *mut c_vo
     unsafe { (*pc).engine }
 }
 
-/// The `PROV_DIGEST` half, in its own module so the one dead-code allow below can name the caller
-/// that will land rather than being repeated on nine items.
+/// The `PROV_DIGEST` half, the layer a provider row that receives a digest **name** runs on.
 ///
-/// **Nothing calls this yet, and that is a state rather than an oversight.** `provider_util.c`'s
-/// digest half exists because a provider row receives a digest *name*; the row that does is
-/// `hmac_prov.c`, this stratum's next `OSSL_OP_MAC` row, and it is the caller that removes this
-/// attribute. Landing the layer first keeps that unit to the row rather than to the row plus its
-/// prerequisite, which is the same split D241 made for the cipher half — except that the cipher
-/// half's caller came with it, and this one is a commit away.
-#[allow(dead_code)]
+/// **`hmac_prov.c` is the caller this half was landed for** (D251). It uses five of the eight
+/// functions here: `reset` and `copy` for the row's context, `load` for the `digest`/`properties`
+/// pair, and `md`/`engine` to hand the resolved method to `HMAC_Init_ex` and
+/// `ssl3_cbc_digest_record`. `fetch` is those five's own callee. The remaining two name the callers
+/// that will land rather than being transcribed-and-unused — the rule this crate follows
+/// everywhere — and they are marked individually rather than by putting the allow back on the
+/// module, so that a *new* dead function here cannot hide behind theirs.
 pub(crate) mod prov_digest {
     use super::*;
 
@@ -401,8 +400,13 @@ pub(crate) mod prov_digest {
     /// `int ossl_prov_digest_load_from_params(PROV_DIGEST *pd, const OSSL_PARAM params[],
     /// OSSL_LIB_CTX *ctx)` — `provider_util.c:215-224`.
     ///
+    /// **No caller in this profile yet.** Its four authority callers are `kmac_prov.c` (this
+    /// stratum's, still `open`) and the three KDF rows `hkdf.c`, `pvkkdf.c` and `pbkdf2.c` (Phase
+    /// 10's).
+    ///
     /// # Safety
     /// `pd` is writable; `params` is a terminated array; `ctx` is NULL or live.
+    #[allow(dead_code)] // caller: the `KMAC-128`/`KMAC-256` rows, and the Phase 10 KDF rows
     pub(crate) unsafe fn ossl_prov_digest_load_from_params(
         pd: *mut ProvDigest,
         params: *const OsslParam,
@@ -425,8 +429,13 @@ pub(crate) mod prov_digest {
     /// The caller transfers ownership of `md`, which is why the reset comes first and `alloc_md` takes
     /// the same pointer: a method handed in this way *is* the one to free.
     ///
+    /// **No caller in this profile yet.** Its two authority callers are `drbg_hmac.c` and
+    /// `drbg_hash.c`, the Phase 9 RAND rows, which build their HMAC over a digest they chose rather
+    /// than over one a caller named.
+    ///
     /// # Safety
     /// `pd` is writable; `md` is NULL or live and, if live, the caller gives up its reference.
+    #[allow(dead_code)] // caller: the Phase 9 `DRBG-HMAC`/`DRBG-HASH` rows
     pub(crate) unsafe fn ossl_prov_digest_set_md(pd: *mut ProvDigest, md: *mut EvpMd) {
         // SAFETY: the caller's contract.
         unsafe {
