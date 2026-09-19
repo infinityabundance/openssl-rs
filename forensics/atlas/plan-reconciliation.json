@@ -6,12 +6,12 @@
     ],
     "census": {
       "names_a_file_the_authority_does_not_have": 16,
-      "symbols_not_reached": 9,
+      "symbols_not_reached": 7,
       "units_not_reached": 17
     },
     "census_by_stratum": {
       "8": 27,
-      "9": 15
+      "9": 13
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
@@ -39,9 +39,7 @@
         "ossl_drbg_hash_functions",
         "ossl_drbg_ossl_hmac_functions",
         "ossl_polyval_ghash_init",
-        "ossl_pool_acquire_entropy",
         "ossl_prov_get_capabilities",
-        "ossl_rand_pool_init",
         "xor128_encrypt_n_pad"
       ],
       "units_not_reached": [
@@ -74,7 +72,7 @@
       ],
       "rows_judged": 82,
       "symbols_named_by_a_row": 84,
-      "symbols_reached": 75,
+      "symbols_reached": 77,
       "unit_records": 68,
       "units_named_by_a_record": 71,
       "units_named_by_a_row": 156,
@@ -2339,28 +2337,28 @@
       "transcribed_units": 178
     }
   },
-  "body_hash": "22933b2ae36ef4bc3d95b1d59b680fedf1e119f0d7a28b8b560e5871d2b359a9",
+  "body_hash": "96d53de2d4240b85ab5ea0817a85e1e50521f91e8f83175f0c3ac6224294c42f",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "756e7622eeddb44d2eec3b22ef4c1f332097a2caf4b97132f4af42633f712bae"
+      "sha256": "386e42c2b71293d52b0ef96ef44d053128f147d5d438e8da9636d5da2d5e352f"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "99c82c66f93ac03f2a73c265814e8aa911960fc334b6621c2dc8589692ff1f23"
+      "sha256": "1cb715391d603ef54c7db7fb9a38ea94cb8551b8d3ead967eb3b0cbed33d664c"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "3ad93ed1c8ebfd5f80f4270d123056d762dc22a3ad9197925607268c74e6c565"
+      "sha256": "da293bf9c7272bff4f6fce14565c92eb367b4ec136fc32f6b9d7372e5e9e1a1b"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "7ce33a8e9cb87ea94d4ef11c11c0ed0fa4f350e5cba8791e59bbe85cda19af9c"
+      "sha256": "e0d0a6caa027d707a9c469c9db4a7e8d773ad247ba87ab24c85700d8ee3193a1"
     },
     {
       "name": "prerequisites",

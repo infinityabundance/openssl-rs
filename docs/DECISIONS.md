@@ -19725,3 +19725,48 @@ and the omission was a measurement error in the staging file rather than a bound
 **What this entry does not claim.** The seeding arm itself (`rand_unix.c`) remains staged: its
 integration needs a `// SAFETY:` comment at each of roughly a dozen `unsafe` sites and is the next
 unit rather than this one. No export is implemented and no Phase 9 court has landed.
+
+## D303 -- the seeding arm lands, and its entropy comes from the kernel in the tests
+
+`providers/implementations/rands/seeding/rand_unix.c`, integrated as `src/rand/unix.rs`: both arms
+of `ossl_pool_acquire_entropy` on this profile (`OPENSSL_RAND_SEED_OS` expands to `GETRANDOM` +
+`DEVRANDOM`), `ossl_pool_add_nonce_data`, `ossl_rand_pool_init`/`_cleanup`/
+`_keep_random_devices_open`, the `/dev` device cache with `wait_random_seeded` and the SysV-shm
+probe, and `syscall_random`'s getentropy-then-getrandom shape. **Suite 644 -> 648.**
+
+**This is the unit D298 moved.** `ossl_pool_acquire_entropy` and the pool init/cleanup live here,
+not in `crypto/rand/rand_pool.c`, which is why D287's table named the wrong file for 9.5 and why
+naming it in the plan's 9.5 row was the correction rather than a decoration.
+
+**The arm reaches the kernel, so the tests are the difference between "transcribed" and "works
+here".** They run the real path: a pool acquires from the kernel and holds at least `min_len`
+bytes; a second pool re-runs the arm, which is what exercises the device cache; the nonce is
+appended rather than XORed; and init answers `1` twice with the keep-open flag toggled between.
+Every `libc` call goes through `src/rand/sys.rs`, landed and tested in D302 -- this module declares
+no `extern` block of its own, which is what made its integration a handful of safety comments
+rather than a second platform layer.
+
+**Three findings, each recorded at the site.**
+
+1. **A wrong expectation of mine, corrected against the authority.** `RAND_POOL_426` and
+   `RAND_POOL_431` ("buffer is null", "length is zero") belong to `ossl_rand_pool_adin_mix_in`,
+   **not** to `ossl_pool_add_nonce_data`. `add_nonce_data` ends in `ossl_rand_pool_add`, which
+   appends whatever fits -- so a zero-length pool **accepts** a nonce and grows by the struct's
+   size. The test first asserted a refusal and failed; the transcription was right, and both
+   behaviours are now asserted against the function that has each. This is the same shape as D300's
+   three: the error was in the reading, not the code, and it is exactly the reading a later session
+   would make again.
+2. **`syscall_random`'s `getentropy` probe cannot be reproduced.** The authority declares it
+   `__attribute__((weak))` so libcrypto still links where `getentropy` is absent; Rust has no
+   weak-symbol mechanism. The binding is therefore strong, the divergence is stated on the
+   declaration in `src/rand/sys.rs`, and no weaker shim was invented -- a `dlsym` probe would be a
+   second behaviour to keep true and would not be what the authority does either.
+3. **`fd_set`'s masked index** is the platform layer's one behavioural divergence, asserted as a
+   divergence by `fd_set_masks_an_out_of_range_descriptor_into_the_set` rather than left to be
+   discovered.
+
+**What this entry does not claim.** No export is implemented: this unit is internal, so the
+obligation ledger, the court-coverage atlas and the provider census are all unmoved by it -- its
+landing is visible only through `phase_state.py`'s `PHASE9_MODULES` and the prerequisite gate's
+language census. The four Phase 9 courts remain pending, and `ossl_pool_acquire_entropy` returning
+bytes says nothing about whether the DRBG above it is faithful.

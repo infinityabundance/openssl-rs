@@ -18,3 +18,4 @@
 
 pub(crate) mod pool;
 pub(crate) mod sys;
+pub(crate) mod unix;

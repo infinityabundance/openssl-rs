@@ -964,6 +964,13 @@
         "translation_unit": "crypto/rand/rand_pool.c"
       },
       {
+        "module": "src/rand/unix.rs",
+        "phase": null,
+        "phase_source": null,
+        "share": "5/5",
+        "translation_unit": "providers/implementations/rands/seeding/libdefault-lib-rand_unix.c"
+      },
+      {
         "module": "src/rc2.rs",
         "phase": 8,
         "phase_source": "module-declaration",

@@ -1,0 +1,43 @@
+rand: the seeding arm lands, and its entropy comes from the kernel on both tests (D303)
+
+providers/implementations/rands/seeding/rand_unix.c, integrated as src/rand/unix.rs:
+ossl_pool_acquire_entropy's two arms on this profile (OPENSSL_RAND_SEED_OS expands to
+GETRANDOM + DEVRANDOM), ossl_pool_add_nonce_data, ossl_rand_pool_init/_cleanup and
+_keep_random_devices_open, the /dev device cache with wait_random_seeded and the
+SysV-shm probe, and syscall_random's getentropy-then-getrandom shape. Suite 644 -> 648.
+
+This is the unit D298 moved: ossl_pool_acquire_entropy and the pool init/cleanup are
+here, not in crypto/rand/rand_pool.c, which is why D287's table named the wrong file
+for 9.5. The arm reaches the kernel for entropy, so the tests are the difference
+between "transcribed" and "works here" -- and they run the real path:
+
+  acquire_entropy_fills_the_pool_from_the_kernel   the pool acquires from the kernel
+                                                   and holds at least min_len bytes, and
+                                                   32 bytes from getrandom(2) are not
+                                                   all zero
+  a_second_acquisition_succeeds_...                a second pool re-runs the arm, which
+                                                   is what exercises the device cache
+  add_nonce_data_appends_...                       the nonce is appended, not XORed
+  init_is_idempotent_...                           init answers 1 twice and the
+                                                   keep-open flag does not change that
+
+Every libc call goes through src/rand/sys.rs, landed and tested in D302; this module
+declares no extern block of its own.
+
+Three things the integration found, each recorded at the site:
+
+1. A wrong expectation of MINE, corrected against the authority: the RAND_POOL_426 and
+   RAND_POOL_431 arms ("buffer is null", "length is zero") belong to
+   ossl_rand_pool_adin_mix_in, NOT to ossl_pool_add_nonce_data. add_nonce_data ends in
+   ossl_rand_pool_add, which appends whatever fits -- so a zero-length pool accepts a
+   nonce and grows by the struct's size. The test first asserted a refusal and failed;
+   the transcription was right, and both behaviours are now asserted against the
+   function that has each.
+2. syscall_random's getentropy probe cannot be reproduced: the authority declares
+   getentropy __attribute__((weak)) so libcrypto links where it is absent, and Rust has
+   no weak-symbol mechanism. The binding is strong, the divergence is stated on the
+   declaration in src/rand/sys.rs, and no weaker shim was invented.
+3. fd_set's masked index is the one behavioural divergence in the platform layer, and
+   it is asserted as such rather than left to be discovered.
+
+PIPELINE OK, 85 courts, 31469 observations, 648 unit tests.
