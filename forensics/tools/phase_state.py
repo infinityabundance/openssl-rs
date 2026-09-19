@@ -219,15 +219,22 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
         absent.append(COVERAGE)
 
     # Provider registration rows (D237). The census in `PROVIDER_ALGORITHMS` records every row of
-    # every admitted provider's tables with an `owning_phase` and a `state`, and a stratum may not
-    # be complete while any row it owns is `open`. `deferred` is not `open`: a hand-off names the
-    # phase that will take it and a blocker, and handing work to a later stratum is a decision
-    # this project allows -- silently *not* publishing a row is what it does not.
+    # every admitted provider's tables with an `owning_phase` and an `implementation_state`
+    # (`implemented` / `unimplemented`), and a stratum may not be complete while any row it owns is
+    # unlanded. "Handed on" is not a state a row can carry: it is the census's `projection`, which
+    # counts the unlanded rows the plan gives a *later* stratum, and handing work to a later stratum
+    # is a decision this project allows -- silently *not* publishing a row is what it does not.
+    #
+    # **This rule reads no stratum-relative value** (D295). Until D295 the census stored
+    # `state = "open" if owning_phase == 8 else "deferred"`, which meant this rule's answer for
+    # phase 8 depended on phase 8 happening to be the stratum that was active; activating phase 9
+    # would have made eleven of phase 8's rows read as `deferred` and let the stratum complete with
+    # them unpublished. The projection cannot move under a different active stratum.
     providers = read_json(PROVIDER_ALGORITHMS)
     if providers:
         present.append(PROVIDER_ALGORITHMS)
         owned = [r for r in providers["body"]["rows"] if r["owning_phase"] == phase]
-        open_rows = [r for r in owned if r["state"] == "open"]
+        open_rows = [r for r in owned if r["implementation_state"] == "unimplemented"]
         if open_rows:
             names = sorted({r["algorithm_names"] for r in open_rows})
             shown = ", ".join(names[:6]) + ("..." if len(names) > 6 else "")
@@ -698,14 +705,16 @@ def deferred_rows(phase: int) -> list[str]:
 
 
 def provider_rows_for(phase: int) -> dict | None:
-    """The stratum's provider registration rows, counted by the census's own `state`.
+    """The stratum's provider registration rows, counted by the census's own `implementation_state`.
 
     Machine-readable rather than prose, and on every stratum's row rather than only the one in
     progress, because the *count* is what makes the obligation auditable a year from now: a
-    reader can see that phase 8 owns 311 rows of which 1 is implemented, 110 are open and 200 are
-    handed on -- and the regression guard can watch those numbers instead of watching the state
-    alone. `None` when the atlas is absent, which `evidence_for` already reports as absent
-    evidence rather than as a zero.
+    reader can see that phase 8 owns so many rows of which so many are implemented, and the
+    regression guard can watch those numbers instead of watching the state alone. `None` when the
+    atlas is absent, which `evidence_for` already reports as absent evidence rather than as a zero.
+
+    The `handed_on` count beside them is the census's projection for the same stratum: the unlanded
+    rows the plan gives a *later* phase (D295).
     """
     doc = read_json(PROVIDER_ALGORITHMS)
     if not doc:
@@ -715,8 +724,13 @@ def provider_rows_for(phase: int) -> dict | None:
         return None
     by_state: dict[str, int] = {}
     for row in owned:
-        by_state[row["state"]] = by_state.get(row["state"], 0) + 1
-    return {"owned": len(owned), **{k: by_state[k] for k in sorted(by_state)}}
+        by_state[row["implementation_state"]] = by_state.get(row["implementation_state"], 0) + 1
+    handed_on = doc["body"].get("projection", {}).get("handed_on", {}).get(str(phase))
+    return {
+        "owned": len(owned),
+        **{k: by_state[k] for k in sorted(by_state)},
+        "handed_on": handed_on if handed_on is not None else 0,
+    }
 
 
 def main() -> int:

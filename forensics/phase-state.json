@@ -417,9 +417,10 @@
         "name": "algorithms",
         "phase": 8,
         "provider_rows": {
+          "handed_on": 690,
           "implemented": 166,
-          "open": 140,
-          "owned": 306
+          "owned": 306,
+          "unimplemented": 140
         },
         "seal_sha256": null,
         "state": "in-progress",
@@ -433,8 +434,9 @@
         "name": "rand-drbg",
         "phase": 9,
         "provider_rows": {
-          "deferred": 15,
-          "owned": 15
+          "handed_on": 675,
+          "owned": 15,
+          "unimplemented": 15
         },
         "seal_sha256": null,
         "state": "not-started",
@@ -448,8 +450,9 @@
         "name": "key-formats",
         "phase": 10,
         "provider_rows": {
-          "deferred": 636,
-          "owned": 636
+          "handed_on": 39,
+          "owned": 636,
+          "unimplemented": 636
         },
         "seal_sha256": null,
         "state": "not-started",
@@ -487,8 +490,9 @@
         "name": "legacy",
         "phase": 13,
         "provider_rows": {
-          "deferred": 39,
-          "owned": 39
+          "handed_on": 0,
+          "owned": 39,
+          "unimplemented": 39
         },
         "seal_sha256": null,
         "state": "not-started",
@@ -598,7 +602,7 @@
       "not_started": 13
     }
   },
-  "body_hash": "b4bb1bdf7a9019ba4c2836a41f0140123a4058e980bf13c77e822eefd7658539",
+  "body_hash": "b62fb572dd98f3814ad02646985cdef555116093c4288685a69eb53a3b2cc2bd",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

@@ -210,28 +210,30 @@ def observe() -> dict:
     # implemented rows are tracked as well: deleting a landed provider row moves one
     # identity out of this set and one count down, and both are reported. The reverse
     # direction is scope growth rather than regression and is a movement.
+    #
+    # The per-stratum buckets come from the census's own `projection` rather than from a
+    # state stored on the row (D295). That is a change of *source*, not of meaning: the
+    # numbers here are the same computation Phase 9's activation used to be able to move
+    # by accident, and reading them from the projection is what makes the guard watch the
+    # projected value instead of the literal one.
     providers = read_json(PROVIDER_ALGORITHMS)
     if providers:
         rows = providers["body"]["rows"]
+        projection = providers["body"].get("projection", {})
         by_state: dict[str, int] = {}
-        open_by_phase: dict[str, int] = {}
-        deferred_by_phase: dict[str, int] = {}
         for row in rows:
-            by_state[row["state"]] = by_state.get(row["state"], 0) + 1
-            bucket = {"open": open_by_phase, "deferred": deferred_by_phase}.get(row["state"])
-            if bucket is not None:
-                key = str(row["owning_phase"])
-                bucket[key] = bucket.get(key, 0) + 1
+            key = row["implementation_state"]
+            by_state[key] = by_state.get(key, 0) + 1
         obs["provider_rows"] = {
             "total": len(rows),
             **{k: by_state[k] for k in sorted(by_state)},
-            "open_by_phase": {k: open_by_phase[k] for k in sorted(open_by_phase)},
-            "deferred_by_phase": {k: deferred_by_phase[k] for k in sorted(deferred_by_phase)},
+            "open_by_phase": dict(sorted(projection.get("open", {}).items())),
+            "handed_on_by_phase": dict(sorted(projection.get("handed_on", {}).items())),
         }
         obs["provider_implemented"] = sorted(
             f"{r['provider']}/{r['operation']}/{r['algorithm_names']}"
             for r in rows
-            if r["state"] == "implemented"
+            if r["implementation_state"] == "implemented"
         )
 
     return obs

@@ -103,7 +103,7 @@ def main(argv: list[str]) -> int:
     del args
 
     rows, authority = load_census()
-    implemented = [r for r in rows if r["state"] == "implemented"]
+    implemented = [r for r in rows if r["implementation_state"] == "implemented"]
 
     probes: list[tuple[str, int, str]] = []
     for court, relpath, phase in COURT_PROBES:

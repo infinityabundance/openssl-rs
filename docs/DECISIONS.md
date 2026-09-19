@@ -19304,3 +19304,64 @@ measurement D287 could not make -- the seed-source transcription is what found 4
 `phase-state.json` reports the stratum `not-started`, which is correct until 9.1's commit activates
 it. The subphase table in the staged plan is derived from the dependency chain and the census, and
 the census is what will correct it as each subphase lands -- the way D285 corrected D283's.
+
+## D295 -- the provider census stops storing which stratum was active, and the projection is derived
+
+The precondition D294 recorded for activating Phase 9, discharged before the activation rather than
+after it. `gen_provider_algorithms.py` used to derive each row's state directly:
+
+```python
+row["state"] = "open" if phase == 8 else "deferred"
+```
+
+which is a statement about stratum 8 rather than about the row. The row vocabulary is now
+`implementation_state` -- `implemented` when the crate publishes the row, `unimplemented` when it
+does not -- and whether an unlanded row is *open for* a stratum or *handed on by* it is a **derived
+block in the census body**:
+
+```
+projection.open[N]       unlanded rows the plan gives stratum N
+projection.handed_on[N]  unlanded rows the plan gives a later stratum
+```
+
+Both are functions of `(owning_phase, implementation_state)` alone, so no stratum's activation can
+move them.
+
+**What made `owning_phase` a fact for every row, including landed ones.** The old code consulted the
+plan only for unlanded rows and then gave every landed row `owning_phase = 8` through `setdefault` --
+which was the same stratum-8 assumption in a second place. It is unnecessary: `provider-algorithm-
+plans.json`'s `operation_defaults` covers a whole operation and its `overrides` carve out the rows a
+subphase names differently, so `plan_for` answers for a landed row exactly as it answers for an
+unlanded one. The loop now runs the plan over **every** row, sets `owning_phase` from it, and clears
+`blocked_by` on a landed row rather than leaving the plan's stale reason beside `implemented`.
+
+**The set did not move, and that is the check.** Before: 166 `implemented`, 140 `open`, 690
+`deferred`, summed 996. After: 166 `implemented`, 830 `unimplemented`, `open` = {8: 140, 9: 15,
+10: 636, 13: 39}. The differences are exactly the ones D294 predicted: phase 8's 140 are unchanged,
+and the 15 rows that were invisible as `deferred` while phase 8 was the active stratum are now
+visibly open for the stratum that owns them.
+
+**The consumers, and the one whose vocabulary changed.** `phase_state.py`'s rule becomes "a stratum
+may not be complete while any row it owns is `unimplemented`", which needs no active-stratum notion
+at all; `provider_rows_for` reports `handed_on` beside the counts. `provider_court_coverage.py`
+reads the renamed field. `regression_guard.py` now records `open_by_phase` and `handed_on_by_phase`
+**from the census's own projection** rather than recomputing a phase-relative state, so the guard
+watches the projected number instead of the literal one.
+
+**Both new invariants are fail-closed, and the self-test proves it.** The weak-tier reader (the path
+that validates the committed artefact with the authority absent) now rejects a row carrying the
+retired `state` field -- a hand-edit that reintroduced it would otherwise be silently ignored while
+every other consumer read `implementation_state` -- and checks `projection` against a recomputation
+from the rows, so a drifted or hand-edited projection is a failure rather than a summary. `--self-test`
+provokes both against mutated copies of the real artefact.
+
+**A defect in that self-test, found by running it.** The first version of the two new cases
+reported both invariants "NOT caught" while `weak_tier` was plainly working. The cause was the test's
+own: `OUT = probe` sat inside a nested function without a `global` declaration, so it rebound a
+local and the weak tier kept reading the committed file. That is the same class as the defect it was
+written to catch -- a check that appears to run and reads the wrong thing -- and the fix is recorded
+at the site rather than only here.
+
+**What this entry does not claim.** No provider row landed and none was removed: `implemented` is 166
+before and after. No stratum is activated; Phase 9 is still `not-started`, and its activation is the
+remainder of 9.1.
