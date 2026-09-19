@@ -17779,3 +17779,65 @@ and `CT-DIGEST` (272 / 272) do not move; unit tests stay **604**. Full pipeline 
 `ossl_prov_cache_exported_algorithms`' filtering before the first gated row can land — `deflt_query`
 currently answers `DEFLT_CIPHERS` directly, which is correct only while every landed row is
 unconditional — and the three `AES-*-GCM-SIV` rows. Then 8.4's RSA.
+
+## D274 — the thirteen `AES-*-CBC-HMAC-*` rows are perlasm-backed with no portable arm, and that breaks the pattern every earlier AES decline used
+
+This entry records the reconnaissance that decides how 8.3's last block must be built, because the
+answer is not the one the previous twelve AES-NI declines suggest, and finding that out late would
+have cost a transcription of code this profile does not compile.
+
+**The rows.** `defltprov.c:225-246` publishes thirteen `ALGC` rows: `AES-128/256-CBC-HMAC-SHA1`,
+`AES-128/256-CBC-HMAC-SHA256`, and `AES-128/192/256-CBC-HMAC-{SHA1,SHA256,SHA512}-ETM`. They are the
+provider half of the old `EVP_aes_*_cbc_hmac_sha*` ciphers: a stitched AES-CBC + HMAC over the TLS
+record layout, with `set_tls1_aad` and the `EVP_CTRL_TLS1_1_MULTIBLOCK_*` family as their
+row-specific surface.
+
+**The five capability predicates are runtime CPUID tests, and they are true on this host.**
+`cipher_aes_cbc_hmac_sha1_hw.c:18-29` is
+
+```c
+#if !defined(AES_CBC_HMAC_SHA_CAPABLE) || !defined(AESNI_CAPABLE)
+int ossl_cipher_capable_aes_cbc_hmac_sha1(void) { return 0; }
+const PROV_CIPHER_HW_AES_HMAC_SHA *ossl_prov_cipher_hw_aes_cbc_hmac_sha1(void) { return NULL; }
+#else
+int ossl_cipher_capable_aes_cbc_hmac_sha1(void) {
+    return AESNI_CBC_HMAC_SHA_CAPABLE;
+}
+...the whole implementation...
+#endif
+```
+
+and `include/crypto/aes_platform.h:170-173` defines `AES_CBC_HMAC_SHA_CAPABLE` as **1** for x86-64
+and `AESNI_CBC_HMAC_SHA_CAPABLE` as `OPENSSL_ia32cap_P[1] & (1 << (57 - 32))` — a runtime bit, not a
+compile-time one. So on this authority's own host the predicate is non-zero, the rows *are*
+published, and `EVP_CIPHER_fetch(NULL, "AES-128-CBC-HMAC-SHA1", NULL)` answers a cipher.
+
+**There is no portable arm.** This is the part that does not match the earlier declines. For
+`AES-128-CCM` (D238) and `AES-XTS` the file's `#else` arm is a complete C implementation and the
+AES-NI arm is an *alternative*; the crate declines the assembly, installs the C table, and records
+why the two are behaviourally identical. Here the `#if` arm is a stub that returns `0`/`NULL`, and
+the `#else` arm — the only implementation that exists — calls `sha1_block_data_order` and
+`aesni_cbc_sha1_enc`, both of which are **perlasm** (`crypto/aes/asm/aesni-sha1-x86_64.pl`, with
+`libcrypto-lib-aesni-sha1-x86_64.o` built in the pinned tree). Declining the assembly therefore does
+not leave a fallback behind: it leaves the row with nothing.
+
+**What that implies for the unit.** The row's contract is its observable behaviour, so the crate
+must supply the construction itself — AES-CBC over the payload with the MAC in the record layout
+`aes_set_ctx_params` defines, the constant-time tag comparison, and the four `multiblock` control
+paths — while the *capability predicate* is reproduced as the runtime bit it is, because that is
+observable through the fetch: a candidate whose predicate answered 0 while the authority's answered
+non-zero would be missing thirteen registered rows on the same machine. The precedent to read first
+is D238's, but the conclusion inverts: there, the C table *was* the answer; here, the row must be
+written.
+
+**What this entry moves.** Nothing. It is reconnaissance recorded in the append-only log rather than
+kept in a session, and no source, artefact or court changes. The pipeline is unchanged at **29776
+observations over 83 courts**, and the thirteen rows stay `open` owning Phase 8 with the capability
+predicate as their recorded blocker.
+
+**The order the unit will take.** `ossl_prov_cache_exported_algorithms`' filtering first — already
+recorded as a prerequisite by `provider-algorithms.json`'s `capability_filtering` block, and
+currently absent: `deflt_query` answers `DEFLT_CIPHERS` directly, which is correct only while every
+landed row is unconditional, and every one of the thirteen is not. Then the two non-ETM rows
+(`AES-128/256-CBC-HMAC-SHA1` and `-SHA256`, which share `cipher_aes_cbc_hmac_sha.c`), then the nine
+ETM rows in `cipher_aes_cbc_hmac_sha_etm.c`, one decision entry each.
