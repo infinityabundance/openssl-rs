@@ -21,17 +21,33 @@
           "candidate": "artifacts/phase9/probes/rt_drbg_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 129,
+        "candidate_exit_code": 0,
+        "candidate_observations": 129,
+        "candidate_stderr_tail": [],
+        "court": "RT-RAND",
+        "crashed": false,
+        "probe": "courts/phase9/rt_rand_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase9/probes/rt_rand_probe.authority",
+          "candidate": "artifacts/phase9/probes/rt_rand_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "pending_courts": {
       "CT-DRBG": "9.4 -- the DRBGs' construction vectors, which the pinned tree already carries: `test/recipes/30-test_evp_data/evprand.txt` mirror the NIST CAVP `drbgtestvectors.zip` sets, with the URL written in the file, and `evpkdf_hmac_drbg.txt` carries the HMAC-DRBG KDF cases. No network fetch is needed and none is permitted (docs/AUTHORITY_POLICY.md).",
-      "RT-BN-RAND": "9.1 -- the BN random family against the authority, with a fixed seed source on both sides. It cannot be written before the front exists, because the authority's own `BN_rand` reaches it.",
-      "RT-RAND": "9.2 -- `rand.h`'s twenty-five exports: the method table, the thread-local primary/public/private DRBGs, the file helpers, and the refusal arms. The front's seed-source and per-context half has landed (D309); the exports are what remain."
+      "RT-BN-RAND": "9.1 -- the BN random family against the authority, with a fixed seed source on both sides. It cannot be written before the front exists, because the authority's own `BN_rand` reaches it."
     },
     "summary": {
       "fail": 0,
-      "pass": 1,
-      "total": 1
+      "pass": 2,
+      "total": 2
     }
   },
   "generator": "forensics/tools/phase9_courts.py",
@@ -45,6 +61,11 @@
       "name": "probe",
       "path": "courts/phase9/rt_drbg_probe.c",
       "sha256": "ff28186b339c5d666151332184383080981405286fcac3d38518b3d54e1d5b63"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase9/rt_rand_probe.c",
+      "sha256": "446ce654ced9048505cd809d4b71458e3ad91f21d82074c53f197398fb0f75be"
     }
   ],
   "kind": "phase9-courts",

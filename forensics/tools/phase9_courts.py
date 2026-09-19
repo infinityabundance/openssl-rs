@@ -36,6 +36,20 @@ never built the slot, and the core published none of the eight seeding callbacks
 seeks entropy and nonces through. That is the shape this stratum's evidence is for: the failure
 was invisible to source comparison and unambiguous to a transcript.
 
+`RT-RAND` and why it is a separate court from `RT-DRBG`
+-----------------------------------------------------
+`rt_rand_probe.c` drives `rand.h`'s twenty-five exports: the legacy `RAND_METHOD` table and its
+identity, the public/private byte sources, the per-`OSSL_LIB_CTX` DRBG handles, the configuration
+setters, the mixing entry points and the seed-file helpers. It is not a subset of `RT-DRBG` and
+`RT-DRBG` is not a subset of it: one courts the provider's DRBG *rows* through `EVP_RAND_*`, the
+other courts the `RAND_*` *library front* those rows sit behind. Three of the front's entries
+dispatch in both directions -- `RAND_bytes_ex` reaches a nominated randomness provider, and the
+file helpers reach `RAND_status` -- so the two courts would still not overlap even if the probe
+sources were merged. The order inside `rt_rand_probe.c` is load-bearing and is argued in its own
+header: each setter is observed both before and after the object it guards exists, because
+`RAND_set_DRBG_type` refuses with `RAND_R_ALREADY_INSTANTIATED` once the primary is built and a
+probe that only called it late would measure the refusal on both sides and prove nothing.
+
 SPDX-License-Identifier: Apache-2.0"""
 
 from __future__ import annotations
@@ -71,6 +85,7 @@ RUN_TIMEOUT_S = "60"
 # cannot be committed -- the check below fails instead.
 COURTS: list[tuple[str, str]] = [
     ("RT-DRBG", "rt_drbg_probe.c"),
+    ("RT-RAND", "rt_rand_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here
@@ -80,9 +95,6 @@ PENDING_COURTS: dict[str, str] = {
     "RT-BN-RAND": "9.1 -- the BN random family against the authority, with a fixed seed source "
                   "on both sides. It cannot be written before the front exists, because the "
                   "authority's own `BN_rand` reaches it.",
-    "RT-RAND": "9.2 -- `rand.h`'s twenty-five exports: the method table, the thread-local "
-               "primary/public/private DRBGs, the file helpers, and the refusal arms. The front's "
-               "seed-source and per-context half has landed (D309); the exports are what remain.",
     "CT-DRBG": "9.4 -- the DRBGs' construction vectors, which the pinned tree already carries: "
                "`test/recipes/30-test_evp_data/evprand.txt` mirror the NIST CAVP "
                "`drbgtestvectors.zip` sets, with the URL written in the file, and "

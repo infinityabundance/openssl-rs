@@ -144,11 +144,9 @@ pub(crate) const OSSL_LIB_CTX_BIO_CORE_INDEX: c_int = 17;
 pub(crate) const OSSL_LIB_CTX_NAMEMAP_INDEX: c_int = 4;
 
 /// `OSSL_LIB_CTX_DRBG_INDEX`, from `include/internal/cryptlib.h`. Slot 5: the RAND front's
-/// per-context DRBG holder (`ossl_rand_ctx_new`). **Still unfilled**, and it is the RAND
-/// front's to fill: `context_init` builds it here in the authority the moment
-/// `src/provider`'s DRBG rows need a parent, and `ossl_rand_ctx_new` lands with
-/// `crypto/rand/rand_lib.c` in 9.2. Reading the slot before then answers NULL exactly as an
-/// unbuilt slot does.
+/// per-context DRBG holder. `context_init` fills it through
+/// `crate::rand::rand_lib::ossl_rand_ctx_new`, and `context_deinit` releases it through
+/// `ossl_rand_ctx_free` -- the order `context.c` uses (D309).
 pub(crate) const OSSL_LIB_CTX_DRBG_INDEX: c_int = 5;
 
 /// `OSSL_LIB_CTX_DRBG_NONCE_INDEX`, from `include/internal/cryptlib.h`. Slot 6: the DRBG

@@ -1,60 +1,225 @@
-//! Phase 9 — `crypto/rand/rand_lib.c`, the **seed-source and per-context halves**.
+//! Phase 9 — `crypto/rand/rand_lib.c`, with the two sibling translation units the Phase 9
+//! census assigns to the same `rand.h` stratum: `crypto/rand/rand_meth.c` (the default
+//! `RAND_METHOD` table and `RAND_OpenSSL`) and `crypto/rand/randfile.c` (`RAND_load_file`,
+//! `RAND_write_file`, `RAND_file_name`).
 //!
-//! # Why this is a subset, and which subset
+//! Source authority: `openssl-3.6.4-production`. The build profile is the admitted one:
+//! `FIPS_MODULE` undefined, `OPENSSL_NO_ENGINE` undefined, `OPENSSL_NO_DEPRECATED_3_0`
+//! undefined, `OPENSSL_NO_DEPRECATED_1_1_0` undefined, `OPENSSL_NO_POSIX_IO` undefined,
+//! `OPENSSL_NO_FIPS_JITTER` **defined** (so `rand_new_seed` takes the named-seed-source arm),
+//! `no-trace` (so every `OSSL_TRACE*` call compiles to nothing).
 //!
-//! `rand_lib.c` is one translation unit with two jobs:
+//! ## Integration state
 //!
-//! 1. the per-`OSSL_LIB_CTX` RAND state (`rand_global_st`, its slot-5 constructor, the seed
-//!    source's lock-protected accessor), and
-//! 2. `rand.h`'s twenty-five exports — the method table, the thread-local primary/public/private
-//!    DRBGs, the file helpers and the refusal arms.
+//! Landed in D313 (the integration itself was D312's pass, which measured the front to
+//! zero errors and deliberately left it uncommitted until its court existed): this module
+//! compiles, `src/lib.rs` publishes it, and the authority's raise
+//! coordinates for these three units are generated (`err_sites::RAND_LIB_*` / `RANDFILE_*`). Its
+//! evidence is two courts: `RT-RAND` (`courts/phase9/rt_rand_probe.c`) drives the twenty-five
+//! `rand.h` exports through the public surface, and `RT-DRBG` drives the provider rows this front
+//! fetches. The one class of call still absent is Phase 13's `ENGINE_*`; it is unreachable for
+//! every argument this crate can construct, and each reduction site carries the authority's own
+//! code and the argument for the reduction (docs/DECISIONS.md D312).
 //!
-//! **Only (1) is here.** Job (2) is 9.2's remaining work and is staged at
-//! `court/phase9/rand_lib.rs.txt`. The split is not an accident of effort: (1) is what the DRBG
-//! provider rows need to exist *at all*. A DRBG's instantiate asks the provider for a nonce, the
-//! provider asks the core, and the core's answer runs through `ossl_rand_get_nonce` in
-//! `prov_seed.rs`, which needs the per-context seed source — the object this file builds. Until
-//! the slot is filled, every instantiation of every default-provider DRBG row is refused with
-//! `PROV_R_ERROR_RETRIEVING_NONCE`. RT-DRBG measured exactly that on its first run.
+//! ## Names
 //!
-//! # What is absent, and named
+//! Every export keeps the authority's C name. The authority's file-local `static` helpers are
+//! transcribed under the names this phase was scoped with:
 //!
-//! `do_rand_init`/`RUN_ONCE`, `ossl_rand_cleanup_int`, the seventeen method-table and
-//! thread-local-DRBG functions, `RAND_bytes_ex`, `RAND_priv_bytes_ex`, `RAND_seed`,
-//! `RAND_add`, `RAND_status`, `RAND_poll`, `RAND_get0_primary`/`_public`/`_private`,
-//! `RAND_set0_public`/`_private`, `RAND_set_DRBG_type`, `RAND_set_seed_source_type`,
-//! `RAND_set1_random_provider` and the file helpers are all 9.2's and none is stubbed. Each
-//! remains `rand.h`'s ledger row, so the obligation is counted rather than implied.
+//! | authority                         | this file                          |
+//! | --------------------------------- | ---------------------------------- |
+//! | `rand_get_global`                 | [`rand_ossl_ctx`]                  |
+//! | `rand_get0_primary` (static)      | [`ossl_rand_get0_primary`]         |
+//! | `rand_get0_public` (static)       | [`ossl_rand_get0_public`]          |
+//! | `rand_get0_private` (static)      | [`ossl_rand_get0_private`]         |
+//! | `ossl_lib_ctx_get_concrete`       | [`RAND_get0_libctx`]               |
+//! | the shared `RAND_*_bytes_ex` body | [`rand_bytes_get0`], [`rand_bytes_ex_get0`] |
 //!
-//! SPDX-License-Identifier: Apache-2.0
+//! ## What this module still waits on
+//!
+//! **Phase 13's `ENGINE_*` and nothing else.** The pool and seeding surface (`ossl_rand_pool_*`,
+//! `ossl_pool_acquire_entropy`), the POSIX file bindings (`stat`, `fstat`, `fdopen`, `chmod`,
+//! `setbuf`, `clearerr`, and the variadic `open`), the generated raise sites,
+//! `OSSL_LIB_CTX_DRBG_INDEX` and `EVP_RAND_STATE_READY` are all in the crate now, and
+//! `context_init` builds slot 5 through [`ossl_rand_ctx_new`]. The four `ENGINE_*` call sites are
+//! recorded as unreachable rather than stubbed, and the argument is D312's.
 
-#![allow(dead_code)] // the landing caller is `context_init`'s slot-5 arm (9.2)
+// The authority's names are kept verbatim; the export courts resolve by symbol name.
+#![allow(non_snake_case)]
+// The `RAND_METHOD` callback typedefs are named as the header spells them.
+#![allow(non_camel_case_types)]
 
-use core::ffi::{c_char, c_int, c_void};
+use core::ffi::{c_char, c_double, c_int, c_long, c_uchar, c_uint, c_void};
 use core::ptr;
+use core::sync::atomic::{AtomicBool, AtomicI32, AtomicPtr, Ordering};
 
-use crate::context::lib_ctx_get_data;
-use crate::context::OSSL_LIB_CTX_DRBG_INDEX;
-use crate::evp::rand::EvpRandCtx;
-use crate::provider::OsslProvider;
-use crate::runtime::init::OPENSSL_init_crypto;
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::context::{lib_ctx_get_concrete, lib_ctx_get_data, OSSL_LIB_CTX_DRBG_INDEX};
+use crate::evp::rand::{
+    EVP_RAND_CTX_free, EVP_RAND_CTX_new, EVP_RAND_CTX_settable_params, EVP_RAND_enable_locking,
+    EVP_RAND_fetch, EVP_RAND_free, EVP_RAND_generate, EVP_RAND_get_state, EVP_RAND_instantiate,
+    EVP_RAND_reseed, EvpRandCtx, EVP_RAND_STATE_READY,
+};
+use crate::params::{
+    OSSL_PARAM_construct_end, OSSL_PARAM_construct_int, OSSL_PARAM_construct_time_t,
+    OSSL_PARAM_construct_uint, OSSL_PARAM_construct_utf8_string, OSSL_PARAM_locate_const,
+    OsslParam,
+};
+use crate::provider::activate::ossl_provider_random_bytes;
+use crate::provider::{
+    ossl_provider_find, OSSL_PROVIDER_get0_name, OSSL_PROVIDER_unload, OsslProvider,
+};
+use crate::rand::pool::{
+    ossl_rand_pool_buffer, ossl_rand_pool_entropy, ossl_rand_pool_free, ossl_rand_pool_length,
+    ossl_rand_pool_new, RAND_POOL_MAX_LENGTH,
+};
+use crate::runtime::bio::print::BIO_snprintf;
+// `stat`, `fstat`, `chmod`, `Stat` and `s_isreg` are `crate::rand::sys`'s -- they need the
+// `struct stat` layout, which has one home (D298/D312) and is tested there. The stdio calls
+// `randfile.c` makes (`setbuf`, `clearerr`, `fdopen`) are `bio::sys`'s, beside `fopen`/`fread`.
+use crate::rand::sys::{chmod, fstat, s_isreg, stat, Stat};
+use crate::rand::unix::{
+    ossl_pool_acquire_entropy, ossl_rand_pool_cleanup, ossl_rand_pool_init,
+    ossl_rand_pool_keep_random_devices_open,
+};
+use crate::runtime::bio::sys;
+use crate::runtime::bio::sys::{clearerr, fdopen, setbuf};
+use crate::runtime::conf::lib::{NCONF_get0_libctx, NCONF_get_section};
+use crate::runtime::conf::types::{Conf, ConfValue};
+use crate::runtime::confmod::{
+    CONF_imodule_get_value, CONF_module_add, ConfFinishFn, ConfImodule, ConfInitFn,
+};
+use crate::runtime::err::err_sites::{self, ErrSite};
+use crate::runtime::err::{raise_site, raise_site_data, ERR_pop_to_mark, ERR_set_mark};
+// Not imported: `raise_site_dynamic` is unnecessary here; every rand_lib/randfile raise has a constant
+// reason, so the dynamic form is deliberately not imported.
+use crate::runtime::getenv::ossl_safe_getenv;
+use crate::runtime::init::OPENSSL_INIT_BASE_ONLY;
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc, OPENSSL_cleanse};
+use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value};
+use crate::runtime::str::{OPENSSL_strcasecmp, OPENSSL_strlcat, OPENSSL_strlcpy};
 use crate::runtime::thread::{
-    CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CRYPTO_THREAD_read_lock, CRYPTO_THREAD_unlock,
+    CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CRYPTO_THREAD_read_lock,
+    CRYPTO_THREAD_run_once, CRYPTO_THREAD_unlock, CRYPTO_THREAD_write_lock, CryptoOnce,
     CryptoRwlock,
 };
+use crate::runtime::thread_events::{ossl_init_thread_start, ThreadStopHandlerFn};
+use crate::runtime::threads_common::{
+    CRYPTO_THREAD_get_local_ex, CRYPTO_THREAD_set_local_ex, CRYPTO_THREAD_LOCAL_DRBG_PRIV_KEY,
+    CRYPTO_THREAD_LOCAL_DRBG_PUB_KEY,
+};
+use crate::runtime::time::TimeT;
+
+// ---------------------------------------------------------------------------------------------
+// Translation-unit coordinates, for every allocation this file makes.
+// ---------------------------------------------------------------------------------------------
 
 /// `crypto/rand/rand_lib.c`, as the authority's compiler spelled it.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c".as_ptr();
-/// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
-const LINE: c_int = 0;
+// `FILE_METH` is **not** declared: `rand_meth.c` is not a separate translation unit in this crate
+// (D312) -- `ossl_rand_meth`'s callbacks are `drbg_seed`/`drbg_bytes`/`drbg_add`/`drbg_status`,
+// which `rand_lib.c`'s own transcription carries. `FILE_RANDFILE` is not declared either: every
+// `randfile.c` raise names its site through a generated `ErrSite`, whose `file` field is already
+// the authority's spelling.
 
+const L_CTX_NEW: c_int = 513;
+const L_CTX_PROVIDER_NAME: c_int = 526;
+const L_CTX_ERR_PROVIDER_NAME: c_int = 541;
+const L_CTX_ERR_FREE: c_int = 543;
+const L_CTX_FREE_PROVIDER_NAME: c_int = 558;
+const L_CTX_FREE_RNG_NAME: c_int = 560;
+const L_CTX_FREE_RNG_CIPHER: c_int = 561;
+const L_CTX_FREE_RNG_DIGEST: c_int = 562;
+const L_CTX_FREE_RNG_PROPQ: c_int = 563;
+const L_CTX_FREE_SEED_NAME: c_int = 564;
+const L_CTX_FREE_SEED_PROPQ: c_int = 565;
+const L_CTX_FREE: c_int = 567;
+const L_RANDOM_SET_STRING_DUP: c_int = 951;
+const L_RANDOM_SET_STRING_FREE: c_int = 955;
+const L_PROVIDER_NAME_DUP: c_int = 113;
+
+// ---------------------------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------------------------
+
+/// `RAND_DRBG_STRENGTH` — `include/openssl/rand.h`.
+const RAND_DRBG_STRENGTH: c_int = 256;
+/// `RAND_BUF_SIZE` — `crypto/rand/randfile.c`.
+const RAND_BUF_SIZE: usize = 1024;
+/// `RAND_LOAD_BUF_SIZE` = `RAND_BUF_SIZE + RAND_DRBG_STRENGTH`.
+const RAND_LOAD_BUF_SIZE: usize = RAND_BUF_SIZE + RAND_DRBG_STRENGTH as usize;
+/// `RFILE` — `crypto/rand/randfile.c`.
+const RFILE: *const c_char = c".rnd".as_ptr();
+
+/// `PRIMARY_RESEED_INTERVAL` — `rand_local.h`.
+const PRIMARY_RESEED_INTERVAL: c_uint = 1 << 8;
+/// `SECONDARY_RESEED_INTERVAL` — `rand_local.h`.
+const SECONDARY_RESEED_INTERVAL: c_uint = 1 << 16;
+/// `PRIMARY_RESEED_TIME_INTERVAL` — `rand_local.h`.
+const PRIMARY_RESEED_TIME_INTERVAL: TimeT = 60 * 60;
+/// `SECONDARY_RESEED_TIME_INTERVAL` — `rand_local.h`.
+const SECONDARY_RESEED_TIME_INTERVAL: TimeT = 7 * 60;
+
+/// `OSSL_PROV_RANDOM_PUBLIC` — `include/openssl/rand.h`.
+const OSSL_PROV_RANDOM_PUBLIC: c_int = 0;
+/// `OSSL_PROV_RANDOM_PRIVATE` — `include/openssl/rand.h`.
+const OSSL_PROV_RANDOM_PRIVATE: c_int = 1;
+
+/// `ERR_MAX_DATA_SIZE` — `include/internal/err.h`; the buffer an `ERR_raise_data` message is
+/// formatted into. The crate repeats this literal per module that formats a message.
+const ERR_MAX_DATA_SIZE: usize = 1024;
+
+/// `EINTR` on the admitted platform.
+const EINTR: c_int = 4;
+/// `O_BINARY` — 0 on Linux; the authority defines it to 0 when `<fcntl.h>` does not.
+const O_BINARY: c_int = 0;
+
+/// `OPENSSL_DEFAULT_SEED_SRC`, stringified (`OPENSSL_MSTR`). The configure option leaves it at
+/// the default spelling, `SEED-SRC`.
+const OPENSSL_DEFAULT_SEED_SRC: *const c_char = c"SEED-SRC".as_ptr();
 /// `random_provider_fips_name` — `rand_lib.c`.
 const RANDOM_PROVIDER_FIPS_NAME: *const c_char = c"fips".as_ptr();
 
-/// `OPENSSL_INIT_BASE_ONLY` — internal to the authority, and private in `runtime/init.rs`; the
-/// spelling is repeated here rather than widened because it is not a public macro.
-const OPENSSL_INIT_BASE_ONLY: u64 = 0x0004_0000;
+// `include/openssl/core_names.h`. The DRBG row reuses the algorithm spellings.
+const OSSL_ALG_PARAM_CIPHER: *const c_char = c"cipher".as_ptr();
+const OSSL_ALG_PARAM_DIGEST: *const c_char = c"digest".as_ptr();
+const OSSL_ALG_PARAM_MAC: *const c_char = c"mac".as_ptr();
+const OSSL_ALG_PARAM_PROPERTIES: *const c_char = c"properties".as_ptr();
+const OSSL_DRBG_PARAM_CIPHER: *const c_char = OSSL_ALG_PARAM_CIPHER;
+const OSSL_DRBG_PARAM_DIGEST: *const c_char = OSSL_ALG_PARAM_DIGEST;
+const OSSL_DRBG_PARAM_PROPERTIES: *const c_char = OSSL_ALG_PARAM_PROPERTIES;
+const OSSL_DRBG_PARAM_USE_DF: *const c_char = c"use_derivation_function".as_ptr();
+const OSSL_DRBG_PARAM_RESEED_REQUESTS: *const c_char = c"reseed_requests".as_ptr();
+const OSSL_DRBG_PARAM_RESEED_TIME_INTERVAL: *const c_char = c"reseed_time_interval".as_ptr();
+
+/// `INT_MAX` as the `int` the `RAND_*_bytes_ex` length test compares against.
+const INT_MAX: c_int = c_int::MAX;
+
+// ---------------------------------------------------------------------------------------------
+// `RAND_METHOD` — `struct rand_meth_st` from `include/openssl/rand.h`
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's method table. Field order is the header's, because a caller may hold this
+/// struct by value through `RAND_METHOD *`.
+///
+/// `Option<unsafe extern "C" fn(..)>` is the Rust spelling of a C function pointer that may be
+/// NULL: a NULL callback and an absent callback are the same thing in the authority, and every
+/// call site tests it with `!= NULL`.
+#[repr(C)]
+pub struct RandMethod {
+    /// `int (*seed)(const void *buf, int num)` — mix caller-supplied randomness into the RNG.
+    pub seed: Option<unsafe extern "C" fn(*const c_void, c_int) -> c_int>,
+    /// `int (*bytes)(unsigned char *buf, int num)` — produce `num` bytes.
+    pub bytes: Option<unsafe extern "C" fn(*mut c_uchar, c_int) -> c_int>,
+    /// `void (*cleanup)(void)` — release the method's own state.
+    pub cleanup: Option<unsafe extern "C" fn()>,
+    /// `int (*add)(const void *buf, int num, double randomness)` — the entropy-weighted `seed`.
+    pub add: Option<unsafe extern "C" fn(*const c_void, c_int, c_double) -> c_int>,
+    /// `int (*pseudorand)(unsigned char *buf, int num)` — bytes permitted to be weaker than
+    /// `bytes`; deprecated, and not reached by any landed caller.
+    pub pseudorand: Option<unsafe extern "C" fn(*mut c_uchar, c_int) -> c_int>,
+    /// `int (*status)(void)` — whether the method has been seeded.
+    pub status: Option<unsafe extern "C" fn() -> c_int>,
+}
 
 // ---------------------------------------------------------------------------------------------
 // `RAND_GLOBAL` — `struct rand_global_st` from `rand_lib.c`
@@ -91,104 +256,817 @@ pub(crate) struct RandGlobal {
 }
 
 // ---------------------------------------------------------------------------------------------
+// Module globals
+//
+// The authority's `static` mutable boxes are modelled with atomics: the values are only ever
+// touched under the module's own locks or under `RUN_ONCE`, so the atomic type is storage, not
+// a second synchronisation scheme. `ossl_rand_meth` is the one object whose *address* is part
+// of the contract (`RAND_OpenSSL()` hands it out and `RAND_get_rand_method` compares against
+// it), so it is a stable `UnsafeCell`-backed static.
+// ---------------------------------------------------------------------------------------------
+
+/// `static CRYPTO_ONCE rand_init`.
+static RAND_INIT: AtomicI32 = AtomicI32::new(0);
+/// `DEFINE_RUN_ONCE_STATIC`'s `rand_init_ossl_ret_`.
+static RAND_INIT_RET: AtomicI32 = AtomicI32::new(0);
+/// `static int rand_inited`.
+static RAND_INITED: AtomicBool = AtomicBool::new(false);
+/// `static CRYPTO_RWLOCK *rand_meth_lock`.
+static RAND_METH_LOCK: AtomicPtr<CryptoRwlock> = AtomicPtr::new(ptr::null_mut());
+/// `static const RAND_METHOD *default_RAND_meth`.
+static DEFAULT_RAND_METH: AtomicPtr<RandMethod> = AtomicPtr::new(ptr::null_mut());
+/// `static CRYPTO_RWLOCK *rand_engine_lock`.
+static RAND_ENGINE_LOCK: AtomicPtr<CryptoRwlock> = AtomicPtr::new(ptr::null_mut());
+/// `static ENGINE *funct_ref` — non-NULL if `default_RAND_meth` is ENGINE-provided. The crate
+/// has no `ENGINE` type (Phase 13), so this is an opaque handle, as every engine field in this
+/// crate is.
+static FUNCT_REF: AtomicPtr<c_void> = AtomicPtr::new(ptr::null_mut());
+
+// ---------------------------------------------------------------------------------------------
 // `rand_get_global` — the module's accessor for the per-context state
 // ---------------------------------------------------------------------------------------------
 
-/// `static RAND_GLOBAL *rand_get_global(OSSL_LIB_CTX *libctx)` — the crate's name for the
-/// authority's accessor.
+/// `static RAND_GLOBAL *rand_get_global(OSSL_LIB_CTX *libctx)`.
 ///
-/// # Safety
-/// `libctx` must be NULL or live.
-pub(crate) unsafe fn rand_ossl_ctx(libctx: *mut c_void) -> *mut RandGlobal {
-    // SAFETY: `lib_ctx_get_data` accepts NULL or a live context and resolves NULL to the
-    // thread default, which is what the authority's `rand_get_global` sub-helper does.
+/// The slot index is `OSSL_LIB_CTX_DRBG_INDEX` (5). This is the crate's name for the authority's
+/// `rand_get_global`.
+pub(crate) fn rand_ossl_ctx(libctx: *mut c_void) -> *mut RandGlobal {
+    // `lib_ctx_get_data` is a safe entry point that validates its own argument, and
+    // `OSSL_LIB_CTX_DRBG_INDEX` is `context/mod.rs`'s own named constant for slot 5.
     lib_ctx_get_data(libctx, OSSL_LIB_CTX_DRBG_INDEX).cast::<RandGlobal>()
+}
+
+/// `OSSL_LIB_CTX *ossl_lib_ctx_get_concrete(OSSL_LIB_CTX *ctx)`.
+///
+/// The crate's `lib_ctx_get_concrete` already resolves NULL to the thread default and the
+/// thread default to the concrete object; this wrapper is named for the phase's scoping and is
+/// what `ossl_rand_get0_public`/`ossl_rand_get0_private` call.
+pub(crate) fn RAND_get0_libctx(ctx: *mut c_void) -> *mut c_void {
+    lib_ctx_get_concrete(ctx)
 }
 
 // ---------------------------------------------------------------------------------------------
 // Slot construction and release: `ossl_rand_ctx_new` / `ossl_rand_ctx_free`
 // ---------------------------------------------------------------------------------------------
 
-/// `void *ossl_rand_ctx_new(OSSL_LIB_CTX *libctx)` — the slot-5 constructor.
+/// `void *ossl_rand_ctx_new(OSSL_LIB_CTX *libctx)`.
 ///
-/// The authority's `context_init` calls this (`crypto/context.c:111`) and `context_deinit_objs`
-/// calls [`ossl_rand_ctx_free`] (`:236`); this crate's `context_init` does the same, in the
-/// same position.
-///
-/// # Safety
-/// The `OSSL_LIB_CTX` constructor contract; `libctx` is unused.
-pub(crate) unsafe fn ossl_rand_ctx_new(_libctx: *mut c_void) -> *mut c_void {
-    // SAFETY: the allocation is this frame's and every failure path releases it here.
-    unsafe {
-        let dgbl =
-            CRYPTO_zalloc(core::mem::size_of::<RandGlobal>(), FILE, LINE).cast::<RandGlobal>();
-        if dgbl.is_null() {
-            return ptr::null_mut();
-        }
-
-        // `OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, NULL)`: base thread handling must exist
-        // before this object does.
-        OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, ptr::null());
-
-        let name = CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, FILE, LINE).cast::<c_char>();
-        if name.is_null() {
-            CRYPTO_free(dgbl.cast::<c_void>(), FILE, LINE);
-            return ptr::null_mut();
-        }
-        (*dgbl).random_provider_name = name;
-
-        let lock = CRYPTO_THREAD_lock_new();
-        if lock.is_null() {
-            CRYPTO_free((*dgbl).random_provider_name.cast::<c_void>(), FILE, LINE);
-            CRYPTO_free(dgbl.cast::<c_void>(), FILE, LINE);
-            return ptr::null_mut();
-        }
-        (*dgbl).lock = lock;
-
-        dgbl.cast::<c_void>()
+/// The slot constructor for `OSSL_LIB_CTX_DRBG_INDEX`: `context_init` calls this for slot 5 and
+/// `context_deinit` calls [`ossl_rand_ctx_free`].
+pub(crate) unsafe extern "C" fn ossl_rand_ctx_new(_libctx: *mut c_void) -> *mut c_void {
+    let dgbl =
+        CRYPTO_zalloc(core::mem::size_of::<RandGlobal>(), FILE, L_CTX_NEW).cast::<RandGlobal>();
+    if dgbl.is_null() {
+        return ptr::null_mut();
     }
+
+    // `OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, NULL)`: base thread handling must exist
+    // before this object does.
+    crate::runtime::init::OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, ptr::null());
+
+    // SAFETY: `dgbl` is this call's own fresh zeroed block.
+    let name = unsafe { CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, FILE, L_CTX_PROVIDER_NAME) }
+        .cast::<c_char>();
+    if name.is_null() {
+        // SAFETY: `dgbl` is this call's own allocation and nothing else holds it.
+        unsafe { CRYPTO_free(dgbl.cast::<c_void>(), FILE, L_CTX_ERR_FREE) };
+        return ptr::null_mut();
+    }
+    // SAFETY: `dgbl` is this call's own block, published nowhere yet.
+    unsafe { (*dgbl).random_provider_name = name };
+
+    let lock = CRYPTO_THREAD_lock_new();
+    if lock.is_null() {
+        // SAFETY: both pointers are this call's own and the block was never published.
+        unsafe {
+            CRYPTO_free(
+                (*dgbl).random_provider_name.cast::<c_void>(),
+                FILE,
+                L_CTX_ERR_PROVIDER_NAME,
+            );
+            CRYPTO_free(dgbl.cast::<c_void>(), FILE, L_CTX_ERR_FREE);
+        }
+        return ptr::null_mut();
+    }
+    // SAFETY: as above; the lock is published on this line and nowhere earlier.
+    unsafe { (*dgbl).lock = lock };
+
+    dgbl.cast::<c_void>()
 }
 
 /// `void ossl_rand_ctx_free(void *vdgbl)`.
-///
-/// # Safety
-/// `vdgbl` is NULL or what [`ossl_rand_ctx_new`] returned.
 pub(crate) unsafe fn ossl_rand_ctx_free(vdgbl: *mut c_void) {
     let dgbl = vdgbl.cast::<RandGlobal>();
     if dgbl.is_null() {
         return;
     }
-    // SAFETY: `dgbl` is live per the contract; every field is a plain pointer or a live object
-    // this module owns, and each releaser accepts NULL.
+    // SAFETY: `dgbl` is live per the caller's contract; every field is a plain pointer or a live
+    // object this module owns, and each releaser accepts NULL.
     unsafe {
         CRYPTO_THREAD_lock_free((*dgbl).lock);
-        crate::evp::rand::EVP_RAND_CTX_free((*dgbl).primary);
-        crate::evp::rand::EVP_RAND_CTX_free((*dgbl).seed);
-        CRYPTO_free((*dgbl).random_provider_name.cast::<c_void>(), FILE, LINE);
-        CRYPTO_free((*dgbl).rng_name.cast::<c_void>(), FILE, LINE);
-        CRYPTO_free((*dgbl).rng_cipher.cast::<c_void>(), FILE, LINE);
-        CRYPTO_free((*dgbl).rng_digest.cast::<c_void>(), FILE, LINE);
-        CRYPTO_free((*dgbl).rng_propq.cast::<c_void>(), FILE, LINE);
-        CRYPTO_free((*dgbl).seed_name.cast::<c_void>(), FILE, LINE);
-        CRYPTO_free((*dgbl).seed_propq.cast::<c_void>(), FILE, LINE);
-        CRYPTO_free(dgbl.cast::<c_void>(), FILE, LINE);
+        EVP_RAND_CTX_free((*dgbl).primary);
+        EVP_RAND_CTX_free((*dgbl).seed);
+        CRYPTO_free(
+            (*dgbl).random_provider_name.cast::<c_void>(),
+            FILE,
+            L_CTX_FREE_PROVIDER_NAME,
+        );
+        CRYPTO_free((*dgbl).rng_name.cast::<c_void>(), FILE, L_CTX_FREE_RNG_NAME);
+        CRYPTO_free(
+            (*dgbl).rng_cipher.cast::<c_void>(),
+            FILE,
+            L_CTX_FREE_RNG_CIPHER,
+        );
+        CRYPTO_free(
+            (*dgbl).rng_digest.cast::<c_void>(),
+            FILE,
+            L_CTX_FREE_RNG_DIGEST,
+        );
+        CRYPTO_free(
+            (*dgbl).rng_propq.cast::<c_void>(),
+            FILE,
+            L_CTX_FREE_RNG_PROPQ,
+        );
+        CRYPTO_free(
+            (*dgbl).seed_name.cast::<c_void>(),
+            FILE,
+            L_CTX_FREE_SEED_NAME,
+        );
+        CRYPTO_free(
+            (*dgbl).seed_propq.cast::<c_void>(),
+            FILE,
+            L_CTX_FREE_SEED_PROPQ,
+        );
+        CRYPTO_free(dgbl.cast::<c_void>(), FILE, L_CTX_FREE);
     }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Initialisation: `do_rand_init`, `RUN_ONCE(&rand_init, ...)`, `ossl_rand_cleanup_int`
+// ---------------------------------------------------------------------------------------------
+
+/// `DEFINE_RUN_ONCE_STATIC(do_rand_init)`.
+///
+/// `CRYPTO_THREAD_run_once` in this crate takes a void-returning body and the caller reads the
+/// macro's stored return value (`run_once_rand_init`), mirroring `DEFINE_RUN_ONCE_STATIC`.
+extern "C" fn do_rand_init() {
+    let engine_lock = CRYPTO_THREAD_lock_new();
+    if engine_lock.is_null() {
+        RAND_INIT_RET.store(0, Ordering::Relaxed);
+        return;
+    }
+    RAND_ENGINE_LOCK.store(engine_lock, Ordering::Relaxed);
+
+    let meth_lock = CRYPTO_THREAD_lock_new();
+    if meth_lock.is_null() {
+        // SAFETY: `engine_lock` is this frame's own, created above and not yet published.
+        unsafe { CRYPTO_THREAD_lock_free(engine_lock) };
+        RAND_ENGINE_LOCK.store(ptr::null_mut(), Ordering::Relaxed);
+        RAND_INIT_RET.store(0, Ordering::Relaxed);
+        return;
+    }
+    RAND_METH_LOCK.store(meth_lock, Ordering::Relaxed);
+
+    // `ossl_rand_pool_init` — `crypto/rand/rand_pool.c`.
+    if ossl_rand_pool_init() == 0 {
+        // SAFETY: both locks are this module's, created on the lines above and not yet published
+        // to any other thread beyond these atomics.
+        unsafe {
+            CRYPTO_THREAD_lock_free(meth_lock);
+            CRYPTO_THREAD_lock_free(engine_lock);
+        }
+        RAND_METH_LOCK.store(ptr::null_mut(), Ordering::Relaxed);
+        RAND_ENGINE_LOCK.store(ptr::null_mut(), Ordering::Relaxed);
+        RAND_INIT_RET.store(0, Ordering::Relaxed);
+        return;
+    }
+
+    RAND_INITED.store(true, Ordering::Relaxed);
+    RAND_INIT_RET.store(1, Ordering::Relaxed);
+}
+
+/// `RUN_ONCE(&rand_init, do_rand_init)` — the macro's `run_once(...) ? ret_ : 0`.
+fn run_once_rand_init() -> c_int {
+    // SAFETY: `RAND_INIT` is this module's own once storage and `do_rand_init` is a plain
+    // `extern "C" fn()`, which is what `pthread_once` requires.
+    if unsafe {
+        CRYPTO_THREAD_run_once(RAND_INIT.as_ptr().cast::<CryptoOnce>(), Some(do_rand_init))
+    } == 0
+    {
+        return 0;
+    }
+    RAND_INIT_RET.load(Ordering::Relaxed)
+}
+
+/// `void ossl_rand_cleanup_int(void)`.
+#[allow(dead_code)] // the landing caller is `OPENSSL_cleanup`'s RAND arm (`src/runtime/init.rs`)
+pub(crate) unsafe fn ossl_rand_cleanup_int() {
+    // The authority reads `default_RAND_meth` before the `rand_inited` test; both are copied
+    // here so the order matches.
+    let meth = DEFAULT_RAND_METH.load(Ordering::Relaxed);
+    if !RAND_INITED.load(Ordering::Relaxed) {
+        return;
+    }
+    if !meth.is_null() {
+        // SAFETY: `meth` is a live table whose `cleanup` this module may call.
+        if let Some(f) = unsafe { (*meth).cleanup } {
+            // SAFETY: the callback is the table's own and takes no arguments.
+            unsafe { f() };
+        }
+    }
+    // SAFETY: the method table may hold a method this module owns; the setter releases it.
+    unsafe { RAND_set_rand_method(ptr::null()) };
+
+    ossl_rand_pool_cleanup();
+
+    let engine_lock = RAND_ENGINE_LOCK.swap(ptr::null_mut(), Ordering::Relaxed);
+    // SAFETY: `engine_lock` is NULL or this module's live lock.
+    unsafe { CRYPTO_THREAD_lock_free(engine_lock) };
+    let meth_lock = RAND_METH_LOCK.swap(ptr::null_mut(), Ordering::Relaxed);
+    // SAFETY: as above.
+    unsafe { CRYPTO_THREAD_lock_free(meth_lock) };
+
+    // `ossl_release_default_drbg_ctx()`. The crate's name is `release_default_drbg_ctx`.
+    crate::context::release_default_drbg_ctx();
+    RAND_INITED.store(false, Ordering::Relaxed);
+}
+
+// ---------------------------------------------------------------------------------------------
+// `RAND_keep_random_devices_open` and `RAND_poll`
+// ---------------------------------------------------------------------------------------------
+
+/// `void RAND_keep_random_devices_open(int keep)`.
+#[no_mangle]
+pub extern "C" fn RAND_keep_random_devices_open(keep: c_int) {
+    if run_once_rand_init() != 0 {
+        ossl_rand_pool_keep_random_devices_open(keep);
+    }
+}
+
+/// `int RAND_poll(void)`.
+///
+/// The `#ifndef OPENSSL_NO_DEPRECATED_3_0` arm is compiled on this profile.
+#[no_mangle]
+pub extern "C" fn RAND_poll() -> c_int {
+    // `static const char salt[] = "polling"`. `sizeof(salt)` includes the terminator.
+    let salt = c"polling";
+
+    // SAFETY: the method table is this module's own and the call is the module's contract.
+    let meth = unsafe { RAND_get_rand_method() };
+    // `int ret = meth == RAND_OpenSSL()`: a NULL `meth` is compared as NULL against the table
+    // address and is therefore false, exactly as in C.
+    // SAFETY: `RAND_OpenSSL()` answers this module's own table address.
+    let mut ret = c_int::from(meth == RAND_OpenSSL());
+
+    if meth.is_null() {
+        return 0;
+    }
+
+    if ret == 0 {
+        // Fill the random pool and seed the current legacy RNG.
+        // The third argument is the authority's `(RAND_DRBG_STRENGTH + 7) / 8` -- a byte count --
+        // and `ossl_rand_pool_new` takes `min_len`/`max_len` as `usize` where the authority's `int`
+        // is promoted, so the widening is explicit rather than implicit.
+        let pool = ossl_rand_pool_new(
+            RAND_DRBG_STRENGTH,
+            1,
+            ((RAND_DRBG_STRENGTH + 7) / 8) as usize,
+            RAND_POOL_MAX_LENGTH,
+        );
+        if pool.is_null() {
+            return 0;
+        }
+        // SAFETY: `pool` is the object just created and this frame holds its only reference.
+        if unsafe { ossl_pool_acquire_entropy(pool) } == 0 {
+            // SAFETY: as above; released exactly once on the failure path.
+            unsafe { ossl_rand_pool_free(pool) };
+            return ret;
+        }
+        // SAFETY: `meth` is live and `pool` is the object just created.
+        let added = match unsafe { (*meth).add } {
+            // SAFETY: `f` is the method table's own callback, `pool` is live and exclusively owned
+            // by this frame, and the three accessors are the pool's own.
+            Some(f) => unsafe {
+                f(
+                    ossl_rand_pool_buffer(pool).cast::<c_void>(),
+                    ossl_rand_pool_length(pool) as c_int,
+                    (ossl_rand_pool_entropy(pool) as c_double) / 8.0,
+                )
+            },
+            None => 0,
+        };
+        if added == 0 {
+            // SAFETY: `pool` is live and this frame holds its only reference.
+            unsafe { ossl_rand_pool_free(pool) };
+            return ret;
+        }
+        ret = 1;
+        // SAFETY: as above; released exactly once on the success path.
+        unsafe { ossl_rand_pool_free(pool) };
+        return ret;
+    }
+
+    // `RAND_seed(salt, sizeof(salt))`, with `sizeof(salt)` including the NUL.
+    // SAFETY: `salt` is a `'static` literal and `sizeof(salt)` bounds the read.
+    unsafe {
+        RAND_seed(
+            salt.as_ptr().cast::<c_void>(),
+            salt.to_bytes_with_nul().len() as c_int,
+        )
+    };
+    1
+}
+
+// ---------------------------------------------------------------------------------------------
+// The legacy method table and its accessors (`rand_lib.c`, with `rand_meth.c`'s callbacks)
+// ---------------------------------------------------------------------------------------------
+
+/// `static int rand_set_rand_method_internal(const RAND_METHOD *meth, ENGINE *e)`.
+///
+/// `e` is `ossl_unused` in the authority, and `ENGINE_finish` accepts NULL; MISSING:
+/// `ENGINE_finish` (Phase 13).
+unsafe fn rand_set_rand_method_internal(meth: *const RandMethod, e: *mut c_void) -> c_int {
+    if run_once_rand_init() == 0 {
+        return 0;
+    }
+    let lock = RAND_METH_LOCK.load(Ordering::Relaxed);
+    // SAFETY: `lock` is this module's live lock once the run-once above succeeded.
+    if unsafe { CRYPTO_THREAD_write_lock(lock) } == 0 {
+        return 0;
+    }
+    // The authority releases any engine it is replacing here:
+    //     `if (fref != NULL) ENGINE_finish(fref);`
+    // **That call is unreachable in this crate**, structurally rather than by simplification:
+    // `FUNCT_REF` is written by exactly two sites, `RAND_set_rand_method` (NULL) and
+    // `RAND_set_rand_engine` (whose argument cannot be non-NULL -- see its own note), so `fref` is
+    // NULL on every path reaching this line. `ENGINE_finish` is Phase 13's and the call lands with
+    // it (D312).
+    FUNCT_REF.store(e, Ordering::Relaxed);
+    DEFAULT_RAND_METH.store(meth.cast_mut(), Ordering::Relaxed);
+    // SAFETY: `lock` is held by this call.
+    unsafe { CRYPTO_THREAD_unlock(lock) };
+    1
+}
+
+/// `int RAND_set_rand_method(const RAND_METHOD *meth)`.
+///
+/// # Safety
+/// `meth` must be NULL or point to a table that stays live for as long as it is installed.
+#[no_mangle]
+pub unsafe extern "C" fn RAND_set_rand_method(meth: *const RandMethod) -> c_int {
+    // SAFETY: the caller's contract is `rand_set_rand_method_internal`'s.
+    unsafe { rand_set_rand_method_internal(meth, ptr::null_mut()) }
+}
+
+/// `const RAND_METHOD *RAND_get_rand_method(void)`.
+///
+/// # Safety
+/// No precondition: the answer is this module's own table address, or a table the caller itself
+/// installed through `RAND_set_rand_method`. The pointer is borrowed for as long as that
+/// installation stands.
+#[no_mangle]
+pub unsafe extern "C" fn RAND_get_rand_method() -> *const RandMethod {
+    if run_once_rand_init() == 0 {
+        return ptr::null();
+    }
+    let lock = RAND_METH_LOCK.load(Ordering::Relaxed);
+    if lock.is_null() {
+        return ptr::null();
+    }
+    // SAFETY: `lock` is this module's live lock.
+    if unsafe { CRYPTO_THREAD_read_lock(lock) } == 0 {
+        return ptr::null();
+    }
+    let mut tmp_meth = DEFAULT_RAND_METH.load(Ordering::Relaxed);
+    // SAFETY: `lock` is held by this call.
+    unsafe { CRYPTO_THREAD_unlock(lock) };
+    if !tmp_meth.is_null() {
+        return tmp_meth;
+    }
+
+    // SAFETY: `lock` is this module's live lock.
+    if unsafe { CRYPTO_THREAD_write_lock(lock) } == 0 {
+        return ptr::null();
+    }
+    if DEFAULT_RAND_METH.load(Ordering::Relaxed).is_null() {
+        // The authority asks the ENGINE registry first --
+        //     `ENGINE *e = ENGINE_get_default_RAND();`
+        // -- stores `ENGINE_get_RAND(e)` when that answers non-NULL, releases `e` when it does not,
+        // and stores `ossl_rand_meth()` when there is no engine at all. **In this crate there can
+        // be no default RAND engine**: `ENGINE_get_default_RAND` is `engine.h`'s and Phase 13 does
+        // not implement it, and the crate exports no `ENGINE_add`/`ENGINE_by_id`, so nothing can
+        // register one. The authority's answer for "no engine registered" is `ossl_rand_meth()`,
+        // which is therefore the single reachable arm (D312).
+        DEFAULT_RAND_METH.store(ossl_rand_meth(), Ordering::Relaxed);
+    }
+    tmp_meth = DEFAULT_RAND_METH.load(Ordering::Relaxed);
+    // SAFETY: `lock` is held by this call.
+    unsafe { CRYPTO_THREAD_unlock(lock) };
+    tmp_meth
+}
+
+/// `int RAND_set_rand_engine(ENGINE *engine)`.
+///
+/// # Safety
+/// `engine` must be NULL or a live engine. MISSING: `ENGINE_init`, `ENGINE_get_RAND`,
+/// `ENGINE_finish` (Phase 13).
+#[no_mangle]
+pub unsafe extern "C" fn RAND_set_rand_engine(engine: *mut c_void) -> c_int {
+    let tmp_meth: *const RandMethod = ptr::null();
+
+    if run_once_rand_init() == 0 {
+        return 0;
+    }
+    // The authority's next block is the ENGINE table -- `ENGINE_init(engine)`,
+    // `ENGINE_get_RAND(engine)`, and `ENGINE_finish(engine)` on each failure path. **None of it is
+    // reachable in this crate**: every `ENGINE_*` entry point is Phase 13's and unimplemented, and
+    // the crate exports no `ENGINE_add`/`ENGINE_by_id`, so no object that could be passed here
+    // exists. For every reachable argument -- NULL -- the block is skipped and `tmp_meth` stays
+    // NULL, which is the state below. The block lands with Phase 13 (D312).
+    let lock = RAND_ENGINE_LOCK.load(Ordering::Relaxed);
+    // SAFETY: `lock` is this module's live lock once the run-once above succeeded.
+    if unsafe { CRYPTO_THREAD_write_lock(lock) } == 0 {
+        return 0;
+    }
+    // This function releases any prior engine, so it is called first.
+    // SAFETY: the caller's contract, and the engine lock is held.
+    unsafe { rand_set_rand_method_internal(tmp_meth, engine) };
+    // SAFETY: `lock` is held by this call.
+    unsafe { CRYPTO_THREAD_unlock(lock) };
+    1
+}
+
+// ---------------------------------------------------------------------------------------------
+// `RAND_seed`, `RAND_add`, `RAND_pseudo_bytes`, `RAND_status`
+// ---------------------------------------------------------------------------------------------
+
+/// `void RAND_seed(const void *buf, int num)`.
+///
+/// # Safety
+/// `buf` must be NULL or readable for `num` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn RAND_seed(buf: *const c_void, num: c_int) {
+    // SAFETY: the method table is this module's own.
+    let meth = unsafe { RAND_get_rand_method() };
+    if !meth.is_null() {
+        // SAFETY: `meth` is live and its `seed` is nullable.
+        if let Some(f) = unsafe { (*meth).seed } {
+            // SAFETY: the callback is the table's own; `buf` is the caller's contract.
+            unsafe { f(buf, num) };
+            return;
+        }
+    }
+    // SAFETY: `RAND_get0_primary(NULL)` is the module's own entry point.
+    let drbg = unsafe { RAND_get0_primary(ptr::null_mut()) };
+    if !drbg.is_null() && num > 0 {
+        // SAFETY: `drbg` is live and `buf` is readable for `num` bytes.
+        unsafe { EVP_RAND_reseed(drbg, 0, ptr::null(), 0, buf.cast::<c_uchar>(), num as usize) };
+    }
+}
+
+/// `void RAND_add(const void *buf, int num, double randomness)`.
+///
+/// # Safety
+/// `buf` must be NULL or readable for `num` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn RAND_add(buf: *const c_void, num: c_int, randomness: c_double) {
+    // SAFETY: the method table is this module's own.
+    let meth = unsafe { RAND_get_rand_method() };
+    if !meth.is_null() {
+        // SAFETY: `meth` is live and its `add` is nullable.
+        if let Some(f) = unsafe { (*meth).add } {
+            // SAFETY: the callback is the table's own; `buf` is the caller's contract.
+            unsafe { f(buf, num, randomness) };
+            return;
+        }
+    }
+    // SAFETY: the module's own entry point.
+    let drbg = unsafe { RAND_get0_primary(ptr::null_mut()) };
+    if !drbg.is_null() && num > 0 {
+        // `OPENSSL_RAND_SEED_NONE` is not defined on this profile, so this is the additional-
+        // input arm: `EVP_RAND_reseed(drbg, 0, NULL, 0, buf, num)`.
+        // SAFETY: `drbg` is live and `buf` is readable for `num` bytes.
+        unsafe { EVP_RAND_reseed(drbg, 0, ptr::null(), 0, buf.cast::<c_uchar>(), num as usize) };
+    }
+}
+
+/// `int RAND_pseudo_bytes(unsigned char *buf, int num)`.
+///
+/// # Safety
+/// `buf` must be NULL or writable for `num` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn RAND_pseudo_bytes(buf: *mut c_uchar, num: c_int) -> c_int {
+    // SAFETY: the method table is this module's own.
+    let meth = unsafe { RAND_get_rand_method() };
+    if !meth.is_null() {
+        // SAFETY: `meth` is live and its `pseudorand` is nullable.
+        if let Some(f) = unsafe { (*meth).pseudorand } {
+            // SAFETY: the callback is the table's own; `buf` is the caller's contract.
+            return unsafe { f(buf, num) };
+        }
+    }
+    // SAFETY: a compile-time-constant site and this thread's own error queue.
+    unsafe { raise_site(&err_sites::RAND_LIB_386) };
+    -1
+}
+
+/// `int RAND_status(void)`.
+#[no_mangle]
+pub extern "C" fn RAND_status() -> c_int {
+    // SAFETY: the method table is this module's own.
+    let meth = unsafe { RAND_get_rand_method() };
+    if !meth.is_null() {
+        // SAFETY: `RAND_OpenSSL()` answers this module's own table address.
+        let is_default = meth == RAND_OpenSSL();
+        if !is_default {
+            // SAFETY: `meth` is live and its `status` is nullable; the authority answers 0 when
+            // it is absent.
+            return match unsafe { (*meth).status } {
+                // SAFETY: the callback is the table's own and takes no arguments.
+                Some(f) => unsafe { f() },
+                None => 0,
+            };
+        }
+    }
+
+    // SAFETY: the module's own entry point.
+    let rand = unsafe { RAND_get0_primary(ptr::null_mut()) };
+    if rand.is_null() {
+        return 0;
+    }
+    // SAFETY: `rand` is live.
+    c_int::from(unsafe { EVP_RAND_get_state(rand) } == EVP_RAND_STATE_READY)
+}
+
+// ---------------------------------------------------------------------------------------------
+// The bytes front: `RAND_bytes_ex` / `RAND_priv_bytes_ex` and their wrappers
+// ---------------------------------------------------------------------------------------------
+
+/// The shared body of `RAND_bytes_ex` / `RAND_priv_bytes_ex` **after** the caller's libctx has
+/// been resolved to its `RAND_GLOBAL`.
+///
+/// `which` is `OSSL_PROV_RANDOM_PUBLIC` or `OSSL_PROV_RANDOM_PRIVATE`; it selects both the
+/// provider dispatch argument and which secondary DRBG is used. This factoring is this crate's
+/// (the authority duplicates the body); the two exports below are its only callers.
+///
+/// # Safety
+/// `dgbl` must be live and belong to `ctx`; `buf` NULL or writable for `num` bytes.
+pub(crate) unsafe fn rand_bytes_ex_get0(
+    ctx: *mut c_void,
+    dgbl: *mut RandGlobal,
+    buf: *mut c_uchar,
+    num: usize,
+    strength: c_uint,
+    which: c_int,
+) -> c_int {
+    // `if (dgbl->random_provider != NULL)`, the `#ifndef FIPS_MODULE` arm.
+    // SAFETY: `dgbl` is live per the contract.
+    let prov = unsafe { (*dgbl).random_provider };
+    if !prov.is_null() {
+        // SAFETY: `prov` is live and was nominated through `RAND_set1_random_provider`.
+        return unsafe {
+            ossl_provider_random_bytes(prov, which, buf.cast::<c_void>(), num, strength)
+        };
+    }
+
+    // The `RAND_bytes_ex`'s DRBG fetch: the secondary for the requested class.
+    // SAFETY: the module's own entry points, and `dgbl` is live.
+    let rand = unsafe {
+        if which == OSSL_PROV_RANDOM_PRIVATE {
+            ossl_rand_get0_private(ctx, dgbl)
+        } else {
+            ossl_rand_get0_public(ctx, dgbl)
+        }
+    };
+    if rand.is_null() {
+        return 0;
+    }
+    // SAFETY: `rand` is live and `buf` is writable for `num` bytes.
+    unsafe { EVP_RAND_generate(rand, buf, num, strength, 0, ptr::null(), 0) }
+}
+
+/// The entry point behind both `RAND_bytes_ex` and `RAND_priv_bytes_ex`: resolve the libctx to
+/// its `RAND_GLOBAL`, then run [`rand_bytes_ex_get0`]. The authority inlines the
+/// `rand_get_global` step in each export; this is the crate's shared spelling of it.
+///
+/// # Safety
+/// `ctx` NULL or live; `buf` NULL or writable for `num` bytes.
+pub(crate) unsafe fn rand_bytes_get0(
+    ctx: *mut c_void,
+    buf: *mut c_uchar,
+    num: usize,
+    strength: c_uint,
+    which: c_int,
+) -> c_int {
+    let dgbl = rand_ossl_ctx(ctx);
+    if dgbl.is_null() {
+        return 0;
+    }
+    // SAFETY: `dgbl` is live and belongs to `ctx`; the rest is the caller's contract.
+    unsafe { rand_bytes_ex_get0(ctx, dgbl, buf, num, strength, which) }
+}
+
+/// `int RAND_priv_bytes_ex(OSSL_LIB_CTX *ctx, unsigned char *buf, size_t num,
+/// unsigned int strength)`.
+///
+/// # Safety
+/// `ctx` NULL or live; `buf` NULL or writable for `num` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn RAND_priv_bytes_ex(
+    ctx: *mut c_void,
+    buf: *mut c_uchar,
+    num: usize,
+    strength: c_uint,
+) -> c_int {
+    // SAFETY: the method table is this module's own.
+    let meth = unsafe { RAND_get_rand_method() };
+    if !meth.is_null() {
+        // SAFETY: `RAND_OpenSSL()` answers this module's own table address.
+        let is_default = meth == RAND_OpenSSL();
+        if !is_default {
+            if num > INT_MAX as usize {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::RAND_LIB_430) };
+                return -1;
+            }
+            // SAFETY: `meth` is live and its `bytes` is nullable.
+            if let Some(f) = unsafe { (*meth).bytes } {
+                // SAFETY: the callback is the table's own; `buf` is the caller's contract.
+                return unsafe { f(buf, num as c_int) };
+            }
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::RAND_LIB_435) };
+            return -1;
+        }
+    }
+
+    // SAFETY: the caller's contract; `which` selects the private secondary.
+    unsafe { rand_bytes_get0(ctx, buf, num, strength, OSSL_PROV_RANDOM_PRIVATE) }
+}
+
+/// `int RAND_priv_bytes(unsigned char *buf, int num)`.
+///
+/// # Safety
+/// `buf` NULL or writable for `num` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn RAND_priv_bytes(buf: *mut c_uchar, num: c_int) -> c_int {
+    if num < 0 {
+        return 0;
+    }
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { RAND_priv_bytes_ex(ptr::null_mut(), buf, num as usize, 0) }
+}
+
+/// `int RAND_bytes_ex(OSSL_LIB_CTX *ctx, unsigned char *buf, size_t num,
+/// unsigned int strength)`.
+///
+/// # Safety
+/// `ctx` NULL or live; `buf` NULL or writable for `num` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn RAND_bytes_ex(
+    ctx: *mut c_void,
+    buf: *mut c_uchar,
+    num: usize,
+    strength: c_uint,
+) -> c_int {
+    // SAFETY: the method table is this module's own.
+    let meth = unsafe { RAND_get_rand_method() };
+    if !meth.is_null() {
+        // SAFETY: `RAND_OpenSSL()` answers this module's own table address.
+        let is_default = meth == RAND_OpenSSL();
+        if !is_default {
+            if num > INT_MAX as usize {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::RAND_LIB_473) };
+                return -1;
+            }
+            // SAFETY: `meth` is live and its `bytes` is nullable.
+            if let Some(f) = unsafe { (*meth).bytes } {
+                // SAFETY: the callback is the table's own; `buf` is the caller's contract.
+                return unsafe { f(buf, num as c_int) };
+            }
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::RAND_LIB_478) };
+            return -1;
+        }
+    }
+
+    // SAFETY: the caller's contract; `which` selects the public secondary.
+    unsafe { rand_bytes_get0(ctx, buf, num, strength, OSSL_PROV_RANDOM_PUBLIC) }
+}
+
+/// `int RAND_bytes(unsigned char *buf, int num)`.
+///
+/// # Safety
+/// `buf` NULL or writable for `num` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn RAND_bytes(buf: *mut c_uchar, num: c_int) -> c_int {
+    if num < 0 {
+        return 0;
+    }
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { RAND_bytes_ex(ptr::null_mut(), buf, num as usize, 0) }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Per-thread secondary state
+// ---------------------------------------------------------------------------------------------
+
+/// `static void rand_delete_thread_state(void *arg)`.
+///
+/// Registered by `ossl_init_thread_start` and called when the thread stops; it releases the
+/// two thread-local secondary DRBGs for the context.
+///
+/// # Safety
+/// `arg` must be the `OSSL_LIB_CTX *` the handler was registered with.
+pub(crate) unsafe extern "C" fn rand_delete_thread_state(arg: *mut c_void) {
+    let ctx = arg;
+    let dgbl = rand_ossl_ctx(ctx);
+    if dgbl.is_null() {
+        return;
+    }
+
+    // SAFETY: `ctx` is the context the handler was registered with, and a NULL value from the
+    // accessor is the ordinary case.
+    let rand = unsafe { CRYPTO_THREAD_get_local_ex(CRYPTO_THREAD_LOCAL_DRBG_PUB_KEY, ctx) }
+        .cast::<EvpRandCtx>();
+    // SAFETY: as above; a NULL value is a removal.
+    unsafe { CRYPTO_THREAD_set_local_ex(CRYPTO_THREAD_LOCAL_DRBG_PUB_KEY, ctx, ptr::null_mut()) };
+    // SAFETY: `rand` is NULL or a live context this thread stored.
+    unsafe { EVP_RAND_CTX_free(rand) };
+
+    // SAFETY: as above.
+    let rand = unsafe { CRYPTO_THREAD_get_local_ex(CRYPTO_THREAD_LOCAL_DRBG_PRIV_KEY, ctx) }
+        .cast::<EvpRandCtx>();
+    // SAFETY: as above.
+    unsafe { CRYPTO_THREAD_set_local_ex(CRYPTO_THREAD_LOCAL_DRBG_PRIV_KEY, ctx, ptr::null_mut()) };
+    // SAFETY: as above.
+    unsafe { EVP_RAND_CTX_free(rand) };
+}
+
+// ---------------------------------------------------------------------------------------------
+// DRBG construction
+// ---------------------------------------------------------------------------------------------
+
+/// `static EVP_RAND_CTX *rand_new_seed(OSSL_LIB_CTX *libctx)`.
+///
+/// `OPENSSL_NO_FIPS_JITTER` is defined on this profile, so the named-seed-source arm is taken:
+/// the name is `dgbl->seed_name`, or the stringified `OPENSSL_DEFAULT_SEED_SRC`.
+///
+/// The `SEED-SRC` row `EVP_RAND_fetch` asks for is published by `src/provider/seed_src.rs`, so a
+/// NULL fetch here is a real refusal rather than an empty algorithm store.
+///
+/// # Safety
+/// `libctx` NULL or live.
+unsafe fn rand_new_seed(libctx: *mut c_void) -> *mut EvpRandCtx {
+    let dgbl = rand_ossl_ctx(libctx);
+    if dgbl.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `dgbl` is live.
+    let name = unsafe { (*dgbl).seed_name };
+    let name = if !name.is_null() {
+        name
+    } else {
+        OPENSSL_DEFAULT_SEED_SRC
+    };
+    // SAFETY: `dgbl` is live.
+    let propq = unsafe { (*dgbl).seed_propq };
+
+    // SAFETY: `libctx` is NULL or live and `name`/`propq` are NUL-terminated or NULL.
+    let rand = unsafe { EVP_RAND_fetch(libctx, name, propq) };
+    if rand.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::RAND_LIB_610) };
+        return ptr::null_mut();
+    }
+    // SAFETY: `rand` is live and its parent is NULL.
+    let ctx = unsafe { EVP_RAND_CTX_new(rand, ptr::null_mut()) };
+    // SAFETY: `rand` is live and this frame holds its reference.
+    unsafe { EVP_RAND_free(rand) };
+    if ctx.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::RAND_LIB_616) };
+        return ptr::null_mut();
+    }
+    // SAFETY: `ctx` is live.
+    if unsafe { EVP_RAND_instantiate(ctx, 0, 0, ptr::null(), 0, ptr::null()) } == 0 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::RAND_LIB_620) };
+        // SAFETY: `ctx` is live and this is its only reference.
+        unsafe { EVP_RAND_CTX_free(ctx) };
+        return ptr::null_mut();
+    }
+    ctx
 }
 
 /// `EVP_RAND_CTX *ossl_rand_get0_seed_noncreating(OSSL_LIB_CTX *ctx)` — internal, and built
 /// because `FIPS_MODULE` is undefined.
 ///
-/// **The answer is NULL until `RAND_set_seed_source_type` (9.2) names a seed source**, which is
-/// the normal case for a default-configured process: `ossl_rand_get_user_entropy` and its
-/// siblings then fall back to the platform pool in `prov_seed.rs`. The accessor is here rather
-/// than inlined because the fallback must consult the *same* lock-protected field the setter
-/// will write.
-///
 /// # Safety
-/// `ctx` must be NULL or live.
+/// `ctx` NULL or live.
 pub(crate) unsafe fn ossl_rand_get0_seed_noncreating(ctx: *mut c_void) -> *mut EvpRandCtx {
-    // SAFETY: per the contract.
-    let dgbl = unsafe { rand_ossl_ctx(ctx) };
+    let dgbl = rand_ossl_ctx(ctx);
     if dgbl.is_null() {
         return ptr::null_mut();
     }
@@ -202,3 +1080,1137 @@ pub(crate) unsafe fn ossl_rand_get0_seed_noncreating(ctx: *mut c_void) -> *mut E
     unsafe { CRYPTO_THREAD_unlock((*dgbl).lock) };
     ret
 }
+
+/// `static EVP_RAND_CTX *rand_new_drbg(OSSL_LIB_CTX *libctx, EVP_RAND_CTX *parent,
+/// unsigned int reseed_interval, time_t reseed_time_interval)`.
+///
+/// The DRBG rows `EVP_RAND_fetch` asks for are published by the provider's `rand` module, so a
+/// NULL fetch here is a real refusal rather than an empty algorithm store.
+///
+/// # Safety
+/// `libctx` NULL or live; `parent` NULL or live.
+unsafe fn rand_new_drbg(
+    libctx: *mut c_void,
+    parent: *mut EvpRandCtx,
+    reseed_interval: c_uint,
+    reseed_time_interval: TimeT,
+) -> *mut EvpRandCtx {
+    let dgbl = rand_ossl_ctx(libctx);
+    if dgbl.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `dgbl` is live.
+    let rng_name = unsafe { (*dgbl).rng_name };
+    let name = if !rng_name.is_null() {
+        rng_name
+    } else {
+        c"CTR-DRBG".as_ptr()
+    };
+    // SAFETY: `dgbl` is live.
+    let propq = unsafe { (*dgbl).rng_propq };
+
+    // SAFETY: `libctx` is NULL or live and the strings are NUL-terminated or NULL.
+    let rand = unsafe { EVP_RAND_fetch(libctx, name, propq) };
+    if rand.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::RAND_LIB_664) };
+        return ptr::null_mut();
+    }
+    // SAFETY: `rand` is live; `parent` is NULL or live by the contract.
+    let ctx = unsafe { EVP_RAND_CTX_new(rand, parent) };
+    // SAFETY: `rand` is live and this frame holds its reference.
+    unsafe { EVP_RAND_free(rand) };
+    if ctx.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::RAND_LIB_670) };
+        return ptr::null_mut();
+    }
+
+    // SAFETY: `ctx` is live.
+    let settables = unsafe { EVP_RAND_CTX_settable_params(ctx) };
+    let mut params: [OsslParam; 9] = [OSSL_PARAM_construct_end(); 9];
+    let mut p = 0usize;
+    let mut use_df: c_int = 1;
+    let mut reseed_interval = reseed_interval;
+    let mut reseed_time_interval = reseed_time_interval;
+
+    // SAFETY: `settables` is NULL or a terminated array; the key is a literal.
+    if !unsafe { OSSL_PARAM_locate_const(settables, OSSL_DRBG_PARAM_CIPHER) }.is_null() {
+        // SAFETY: `dgbl` is live.
+        let rng_cipher = unsafe { (*dgbl).rng_cipher };
+        let cipher = if !rng_cipher.is_null() {
+            rng_cipher
+        } else {
+            c"AES-256-CTR".as_ptr().cast_mut()
+        };
+        // SAFETY: the constructor writes one entry; `params` has room.
+        params[p] = unsafe { OSSL_PARAM_construct_utf8_string(OSSL_DRBG_PARAM_CIPHER, cipher, 0) };
+        p += 1;
+    }
+    // SAFETY: `dgbl` is live.
+    let rng_digest = unsafe { (*dgbl).rng_digest };
+    if !rng_digest.is_null() {
+        // SAFETY: `settables` is NULL or terminated.
+        if !unsafe { OSSL_PARAM_locate_const(settables, OSSL_DRBG_PARAM_DIGEST) }.is_null() {
+            // SAFETY: the constructor writes one entry.
+            params[p] =
+                unsafe { OSSL_PARAM_construct_utf8_string(OSSL_DRBG_PARAM_DIGEST, rng_digest, 0) };
+            p += 1;
+        }
+    }
+    // SAFETY: `dgbl` is live.
+    let rng_propq = unsafe { (*dgbl).rng_propq };
+    if !rng_propq.is_null() {
+        // SAFETY: the constructor writes one entry.
+        params[p] =
+            unsafe { OSSL_PARAM_construct_utf8_string(OSSL_DRBG_PARAM_PROPERTIES, rng_propq, 0) };
+        p += 1;
+    }
+    // SAFETY: `settables` is NULL or terminated.
+    if !unsafe { OSSL_PARAM_locate_const(settables, OSSL_ALG_PARAM_MAC) }.is_null() {
+        // SAFETY: the constructor writes one entry; the literal is NUL-terminated.
+        params[p] = unsafe {
+            OSSL_PARAM_construct_utf8_string(OSSL_ALG_PARAM_MAC, c"HMAC".as_ptr().cast_mut(), 0)
+        };
+        p += 1;
+    }
+    // SAFETY: `settables` is NULL or terminated.
+    if !unsafe { OSSL_PARAM_locate_const(settables, OSSL_DRBG_PARAM_USE_DF) }.is_null() {
+        // SAFETY: the constructor writes one entry and `use_df` is this frame's.
+        params[p] = unsafe { OSSL_PARAM_construct_int(OSSL_DRBG_PARAM_USE_DF, &mut use_df) };
+        p += 1;
+    }
+    // SAFETY: the constructor writes one entry and the operand is this frame's.
+    params[p] =
+        unsafe { OSSL_PARAM_construct_uint(OSSL_DRBG_PARAM_RESEED_REQUESTS, &mut reseed_interval) };
+    p += 1;
+    // SAFETY: the constructor writes one entry and the operand is this frame's.
+    params[p] = unsafe {
+        OSSL_PARAM_construct_time_t(
+            OSSL_DRBG_PARAM_RESEED_TIME_INTERVAL,
+            &mut reseed_time_interval,
+        )
+    };
+    p += 1;
+    params[p] = OSSL_PARAM_construct_end();
+
+    // SAFETY: `ctx` is live and `params` is a terminated array of this frame's storage.
+    if unsafe { EVP_RAND_instantiate(ctx, 0, 0, ptr::null(), 0, params.as_ptr()) } == 0 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::RAND_LIB_697) };
+        // SAFETY: `ctx` is live and this is its only reference.
+        unsafe { EVP_RAND_CTX_free(ctx) };
+        return ptr::null_mut();
+    }
+    ctx
+}
+
+// ---------------------------------------------------------------------------------------------
+// The primary, public and private DRBGs
+// ---------------------------------------------------------------------------------------------
+
+/// `static EVP_RAND_CTX *rand_get0_primary(OSSL_LIB_CTX *ctx, RAND_GLOBAL *dgbl)`.
+///
+/// The crate's name for the authority's static. The `FIPS_MODULE` arm
+/// (`rand_new_crngt`) is not built on this profile.
+///
+/// # Safety
+/// `ctx` NULL or live; `dgbl` NULL or live.
+pub(crate) unsafe fn ossl_rand_get0_primary(
+    ctx: *mut c_void,
+    dgbl: *mut RandGlobal,
+) -> *mut EvpRandCtx {
+    if dgbl.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `dgbl` is live and its lock was created with it.
+    if unsafe { CRYPTO_THREAD_read_lock((*dgbl).lock) } == 0 {
+        return ptr::null_mut();
+    }
+    // SAFETY: `dgbl` is live and the lock is held.
+    let (mut ret, mut seed) = unsafe { ((*dgbl).primary, (*dgbl).seed) };
+    // SAFETY: the lock is held by this call.
+    unsafe { CRYPTO_THREAD_unlock((*dgbl).lock) };
+
+    if !ret.is_null() {
+        return ret;
+    }
+
+    // Create a seed source for libcrypto. The mark pair keeps a failed seed construction from
+    // leaving its raise on the queue when the primary is created anyway.
+    let mut newseed: *mut EvpRandCtx = ptr::null_mut();
+    if seed.is_null() {
+        ERR_set_mark();
+        // SAFETY: `ctx` is NULL or live.
+        seed = unsafe { rand_new_seed(ctx) };
+        newseed = seed;
+        let _ = ERR_pop_to_mark();
+    }
+
+    // SAFETY: `ctx` is NULL or live and `seed` is NULL or live.
+    ret = unsafe {
+        rand_new_drbg(
+            ctx,
+            seed,
+            PRIMARY_RESEED_INTERVAL,
+            PRIMARY_RESEED_TIME_INTERVAL,
+        )
+    };
+
+    // The primary may be shared between threads, so locking is enabled.
+    // SAFETY: `ret` is NULL or live.
+    if ret.is_null() || unsafe { EVP_RAND_enable_locking(ret) } == 0 {
+        if !ret.is_null() {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::RAND_LIB_776) };
+            // SAFETY: `ret` is live and this frame owns its reference.
+            unsafe { EVP_RAND_CTX_free(ret) };
+        }
+        if newseed.is_null() {
+            return ptr::null_mut();
+        }
+        // Otherwise carry on and store the seed.
+        ret = ptr::null_mut();
+    }
+
+    // SAFETY: `dgbl` is live.
+    if unsafe { CRYPTO_THREAD_write_lock((*dgbl).lock) } == 0 {
+        return ptr::null_mut();
+    }
+    // SAFETY: `dgbl` is live and the lock is held.
+    let primary = unsafe { (*dgbl).primary };
+    if !primary.is_null() {
+        // SAFETY: the lock is held by this call.
+        unsafe { CRYPTO_THREAD_unlock((*dgbl).lock) };
+        // SAFETY: both are this frame's references.
+        unsafe {
+            EVP_RAND_CTX_free(ret);
+            EVP_RAND_CTX_free(newseed);
+        }
+        return primary;
+    }
+    if !newseed.is_null() {
+        // SAFETY: `dgbl` is live and the lock is held, so this write is the only one racing.
+        unsafe { (*dgbl).seed = newseed };
+    }
+    // SAFETY: as above.
+    unsafe { (*dgbl).primary = ret };
+    // SAFETY: the lock is held by this call.
+    unsafe { CRYPTO_THREAD_unlock((*dgbl).lock) };
+
+    ret
+}
+
+/// `EVP_RAND_CTX *RAND_get0_primary(OSSL_LIB_CTX *ctx)`.
+///
+/// # Safety
+/// `ctx` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn RAND_get0_primary(ctx: *mut c_void) -> *mut EvpRandCtx {
+    let dgbl = rand_ossl_ctx(ctx);
+    if dgbl.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `dgbl` is live and belongs to `ctx`.
+    unsafe { ossl_rand_get0_primary(ctx, dgbl) }
+}
+
+/// `static EVP_RAND_CTX *rand_get0_public(OSSL_LIB_CTX *ctx, RAND_GLOBAL *dgbl)`.
+///
+/// # Safety
+/// `ctx` NULL or live; `dgbl` NULL or live and belonging to `ctx`.
+pub(crate) unsafe fn ossl_rand_get0_public(
+    ctx: *mut c_void,
+    dgbl: *mut RandGlobal,
+) -> *mut EvpRandCtx {
+    if dgbl.is_null() {
+        return ptr::null_mut();
+    }
+    let origctx = ctx;
+    let ctx = RAND_get0_libctx(ctx);
+    if ctx.is_null() {
+        return ptr::null_mut();
+    }
+
+    // SAFETY: `ctx` is concrete and live.
+    let mut rand = unsafe { CRYPTO_THREAD_get_local_ex(CRYPTO_THREAD_LOCAL_DRBG_PUB_KEY, ctx) }
+        .cast::<EvpRandCtx>();
+    if rand.is_null() {
+        // SAFETY: `origctx` is NULL or live and `dgbl` belongs to it.
+        let primary = unsafe { ossl_rand_get0_primary(origctx, dgbl) };
+        if primary.is_null() {
+            return ptr::null_mut();
+        }
+
+        // If the private is also NULL then this is the first time this thread has been used.
+        // SAFETY: `ctx` is concrete and live.
+        let priv_ = unsafe { CRYPTO_THREAD_get_local_ex(CRYPTO_THREAD_LOCAL_DRBG_PRIV_KEY, ctx) };
+        if priv_.is_null() {
+            // SAFETY: `ctx` is live; the handler tolerates being called with this context.
+            if unsafe {
+                ossl_init_thread_start(
+                    ptr::null(),
+                    ctx,
+                    Some(rand_delete_thread_state as ThreadStopHandlerFn),
+                )
+            } == 0
+            {
+                return ptr::null_mut();
+            }
+        }
+        // SAFETY: `ctx` is concrete and live and `primary` owns its own reference.
+        rand = unsafe {
+            rand_new_drbg(
+                ctx,
+                primary,
+                SECONDARY_RESEED_INTERVAL,
+                SECONDARY_RESEED_TIME_INTERVAL,
+            )
+        };
+        // SAFETY: `ctx` is concrete and live; a NULL value is a removal, which the accessor
+        // handles.
+        if unsafe { CRYPTO_THREAD_set_local_ex(CRYPTO_THREAD_LOCAL_DRBG_PUB_KEY, ctx, rand.cast()) }
+            == 0
+        {
+            // SAFETY: `rand` is live and this frame owns its reference.
+            unsafe { EVP_RAND_CTX_free(rand) };
+            rand = ptr::null_mut();
+        }
+    }
+    rand
+}
+
+/// `EVP_RAND_CTX *RAND_get0_public(OSSL_LIB_CTX *ctx)`.
+///
+/// # Safety
+/// `ctx` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn RAND_get0_public(ctx: *mut c_void) -> *mut EvpRandCtx {
+    let dgbl = rand_ossl_ctx(ctx);
+    if dgbl.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `dgbl` is live and belongs to `ctx`.
+    unsafe { ossl_rand_get0_public(ctx, dgbl) }
+}
+
+/// `static EVP_RAND_CTX *rand_get0_private(OSSL_LIB_CTX *ctx, RAND_GLOBAL *dgbl)`.
+///
+/// # Safety
+/// `ctx` NULL or live; `dgbl` NULL or live and belonging to `ctx`.
+pub(crate) unsafe fn ossl_rand_get0_private(
+    ctx: *mut c_void,
+    dgbl: *mut RandGlobal,
+) -> *mut EvpRandCtx {
+    if dgbl.is_null() {
+        return ptr::null_mut();
+    }
+    let origctx = ctx;
+    let ctx = RAND_get0_libctx(ctx);
+    if ctx.is_null() {
+        return ptr::null_mut();
+    }
+
+    // SAFETY: `ctx` is concrete and live.
+    let mut rand = unsafe { CRYPTO_THREAD_get_local_ex(CRYPTO_THREAD_LOCAL_DRBG_PRIV_KEY, ctx) }
+        .cast::<EvpRandCtx>();
+    if rand.is_null() {
+        // SAFETY: `origctx` is NULL or live and `dgbl` belongs to it.
+        let primary = unsafe { ossl_rand_get0_primary(origctx, dgbl) };
+        if primary.is_null() {
+            return ptr::null_mut();
+        }
+
+        // If the public is also NULL then this is the first time this thread has been used.
+        // SAFETY: `ctx` is concrete and live.
+        let pub_ = unsafe { CRYPTO_THREAD_get_local_ex(CRYPTO_THREAD_LOCAL_DRBG_PUB_KEY, ctx) };
+        if pub_.is_null() {
+            // SAFETY: `ctx` is live; the handler tolerates being called with this context.
+            if unsafe {
+                ossl_init_thread_start(
+                    ptr::null(),
+                    ctx,
+                    Some(rand_delete_thread_state as ThreadStopHandlerFn),
+                )
+            } == 0
+            {
+                return ptr::null_mut();
+            }
+        }
+        // SAFETY: `ctx` is concrete and live and `primary` owns its own reference.
+        rand = unsafe {
+            rand_new_drbg(
+                ctx,
+                primary,
+                SECONDARY_RESEED_INTERVAL,
+                SECONDARY_RESEED_TIME_INTERVAL,
+            )
+        };
+        // SAFETY: `ctx` is concrete and live; a NULL value is a removal, which the accessor
+        // handles.
+        if unsafe {
+            CRYPTO_THREAD_set_local_ex(CRYPTO_THREAD_LOCAL_DRBG_PRIV_KEY, ctx, rand.cast())
+        } == 0
+        {
+            // SAFETY: `rand` is live and this frame owns its reference.
+            unsafe { EVP_RAND_CTX_free(rand) };
+            rand = ptr::null_mut();
+        }
+    }
+    rand
+}
+
+/// `EVP_RAND_CTX *RAND_get0_private(OSSL_LIB_CTX *ctx)`.
+///
+/// # Safety
+/// `ctx` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn RAND_get0_private(ctx: *mut c_void) -> *mut EvpRandCtx {
+    let dgbl = rand_ossl_ctx(ctx);
+    if dgbl.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `dgbl` is live and belongs to `ctx`.
+    unsafe { ossl_rand_get0_private(ctx, dgbl) }
+}
+
+/// `int RAND_set0_public(OSSL_LIB_CTX *ctx, EVP_RAND_CTX *rand)`.
+///
+/// # Safety
+/// `ctx` NULL or live; `rand` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn RAND_set0_public(ctx: *mut c_void, rand: *mut EvpRandCtx) -> c_int {
+    let dgbl = rand_ossl_ctx(ctx);
+    if dgbl.is_null() {
+        return 0;
+    }
+    // SAFETY: `ctx` is NULL or live.
+    let old = unsafe { CRYPTO_THREAD_get_local_ex(CRYPTO_THREAD_LOCAL_DRBG_PUB_KEY, ctx) }
+        .cast::<EvpRandCtx>();
+    // SAFETY: as above; `rand` is borrowed by store and released by the caller as before.
+    let r =
+        unsafe { CRYPTO_THREAD_set_local_ex(CRYPTO_THREAD_LOCAL_DRBG_PUB_KEY, ctx, rand.cast()) };
+    if r > 0 {
+        // SAFETY: `old` is NULL or the context the slot held, which this call displaced.
+        unsafe { EVP_RAND_CTX_free(old) };
+    }
+    r
+}
+
+/// `int RAND_set0_private(OSSL_LIB_CTX *ctx, EVP_RAND_CTX *rand)`.
+///
+/// # Safety
+/// `ctx` NULL or live; `rand` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn RAND_set0_private(ctx: *mut c_void, rand: *mut EvpRandCtx) -> c_int {
+    let dgbl = rand_ossl_ctx(ctx);
+    if dgbl.is_null() {
+        return 0;
+    }
+    // SAFETY: `ctx` is NULL or live.
+    let old = unsafe { CRYPTO_THREAD_get_local_ex(CRYPTO_THREAD_LOCAL_DRBG_PRIV_KEY, ctx) }
+        .cast::<EvpRandCtx>();
+    // SAFETY: as above.
+    let r =
+        unsafe { CRYPTO_THREAD_set_local_ex(CRYPTO_THREAD_LOCAL_DRBG_PRIV_KEY, ctx, rand.cast()) };
+    if r > 0 {
+        // SAFETY: `old` is NULL or the context the slot held, which this call displaced.
+        unsafe { EVP_RAND_CTX_free(old) };
+    }
+    r
+}
+
+// ---------------------------------------------------------------------------------------------
+// Configuration surface
+// ---------------------------------------------------------------------------------------------
+
+/// `static int random_set_string(char **p, const char *s)`.
+///
+/// # Safety
+/// `p` must point to a live `char *` slot; `s` NULL or NUL-terminated.
+unsafe fn random_set_string(p: *mut *mut c_char, s: *const c_char) -> c_int {
+    let mut d: *mut c_char = ptr::null_mut();
+    if !s.is_null() {
+        // SAFETY: `s` is NUL-terminated per the contract.
+        d = unsafe { CRYPTO_strdup(s, FILE, L_RANDOM_SET_STRING_DUP) }.cast::<c_char>();
+        if d.is_null() {
+            return 0;
+        }
+    }
+    // SAFETY: `p` is a live slot holding the string this replaces; a NULL value is accepted.
+    unsafe { CRYPTO_free((*p).cast::<c_void>(), FILE, L_RANDOM_SET_STRING_FREE) };
+    // SAFETY: `p` is live per the contract.
+    unsafe { *p = d };
+    1
+}
+
+/// Format a NUL-terminated `"Filename=%s"` message and raise it at `site`.
+///
+/// The `randfile.c` half raises `ERR_raise_data(..., "Filename=%s", file)` six times; this is the
+/// transcription's one spelling of it. `BIO_snprintf` is the formatter the authority's own
+/// `ERR_vset_error` uses.
+///
+/// # Safety
+/// `file` must be NUL-terminated; `site` is a compile-time constant.
+unsafe fn raise_filename(site: &ErrSite, file: *const c_char) {
+    let mut buf = [0 as c_char; ERR_MAX_DATA_SIZE];
+    // SAFETY: `buf` is writable for its full length, the format is NUL-terminated, and `file` is
+    // NUL-terminated per the contract.
+    unsafe {
+        BIO_snprintf(
+            buf.as_mut_ptr(),
+            ERR_MAX_DATA_SIZE,
+            c"Filename=%s".as_ptr(),
+            file,
+        )
+    };
+    // SAFETY: `buf` was NUL-terminated by the call above; `site` is a compile-time constant.
+    unsafe { raise_site_data(site, buf.as_ptr()) };
+}
+
+/// `static int random_conf_init(CONF_IMODULE *md, const CONF *cnf)`.
+///
+/// The two `OSSL_TRACE` calls compile out on this profile.
+///
+/// # Safety
+/// `md` and `cnf` are live per the config module callback contract.
+#[allow(dead_code)] // the landing caller is `ossl_random_add_conf_module`, which `OPENSSL_load_builtin_modules` calls
+unsafe extern "C" fn random_conf_init(md: *mut ConfImodule, cnf: *const Conf) -> c_int {
+    // SAFETY: `cnf` is live per the callback's contract.
+    let libctx = unsafe { NCONF_get0_libctx(cnf) };
+    let dgbl = rand_ossl_ctx(libctx);
+    let mut r: c_int = 1;
+
+    // SAFETY: `md` is live and its value is a NUL-terminated section name; `cnf` is live.
+    let elist = unsafe { NCONF_get_section(cnf, CONF_imodule_get_value(md)) };
+    if elist.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::RAND_LIB_977) };
+        return 0;
+    }
+    if dgbl.is_null() {
+        return 0;
+    }
+
+    // SAFETY: `elist` is the section's own stack.
+    let count = unsafe { OPENSSL_sk_num(elist) };
+    let mut i = 0;
+    while i < count {
+        // SAFETY: `i < count`, so this is one of `elist`'s own entries.
+        let cval = unsafe { OPENSSL_sk_value(elist, i) }.cast::<ConfValue>();
+        // SAFETY: a `CONF_VALUE`'s `name` and `value` are NUL-terminated strings owned by the
+        // configuration.
+        let (name, value) = unsafe { ((*cval).name, (*cval).value) };
+
+        // SAFETY: both strings are NUL-terminated.
+        if unsafe { OPENSSL_strcasecmp(name, c"random".as_ptr()) } == 0 {
+            // SAFETY: `dgbl` is live and the field address is this module's.
+            if unsafe { random_set_string(ptr::addr_of_mut!((*dgbl).rng_name), value) } == 0 {
+                return 0;
+            }
+        // SAFETY: as above.
+        } else if unsafe { OPENSSL_strcasecmp(name, c"cipher".as_ptr()) } == 0 {
+            // SAFETY: as above.
+            if unsafe { random_set_string(ptr::addr_of_mut!((*dgbl).rng_cipher), value) } == 0 {
+                return 0;
+            }
+        // SAFETY: as above.
+        } else if unsafe { OPENSSL_strcasecmp(name, c"digest".as_ptr()) } == 0 {
+            // SAFETY: as above.
+            if unsafe { random_set_string(ptr::addr_of_mut!((*dgbl).rng_digest), value) } == 0 {
+                return 0;
+            }
+        // SAFETY: as above.
+        } else if unsafe { OPENSSL_strcasecmp(name, c"properties".as_ptr()) } == 0 {
+            // SAFETY: as above.
+            if unsafe { random_set_string(ptr::addr_of_mut!((*dgbl).rng_propq), value) } == 0 {
+                return 0;
+            }
+        // SAFETY: as above.
+        } else if unsafe { OPENSSL_strcasecmp(name, c"seed".as_ptr()) } == 0 {
+            // SAFETY: as above.
+            if unsafe { random_set_string(ptr::addr_of_mut!((*dgbl).seed_name), value) } == 0 {
+                return 0;
+            }
+        // SAFETY: as above.
+        } else if unsafe { OPENSSL_strcasecmp(name, c"seed_properties".as_ptr()) } == 0 {
+            // SAFETY: as above.
+            if unsafe { random_set_string(ptr::addr_of_mut!((*dgbl).seed_propq), value) } == 0 {
+                return 0;
+            }
+        // SAFETY: as above.
+        } else if unsafe { OPENSSL_strcasecmp(name, c"random_provider".as_ptr()) } == 0 {
+            // SAFETY: `libctx` is NULL or live and `value` is NUL-terminated; the answer carries
+            // a reference, which is released below either way.
+            let prov = unsafe { ossl_provider_find(libctx, value, 0) };
+            if !prov.is_null() {
+                // SAFETY: `libctx` is NULL or live and `prov` is live with a reference.
+                if unsafe { RAND_set1_random_provider(libctx, prov) } == 0 {
+                    // SAFETY: a compile-time-constant site.
+                    unsafe { raise_site(&err_sites::RAND_LIB_1010) };
+                    // SAFETY: `prov` is live and holds the reference `ossl_provider_find` took.
+                    unsafe { OSSL_PROVIDER_unload(prov) };
+                    return 0;
+                }
+                // Release the `ossl_provider_find` reference. The unload and load hooks keep the
+                // module's own pointer in step across a load/hook/use/unload/reload/reuse cycle.
+                // SAFETY: as above.
+                unsafe { OSSL_PROVIDER_unload(prov) };
+            } else if
+            // SAFETY: `dgbl` is the live global from `rand_ossl_get_global` and `value` is
+            // readable for the section's lifetime.
+            unsafe { set_random_provider_name(dgbl, value) } == 0 {
+                return 0;
+            }
+        } else {
+            // `ERR_raise_data(ERR_LIB_CRYPTO, CRYPTO_R_UNKNOWN_NAME_IN_RANDOM_SECTION,
+            // "name=%s, value=%s", cval->name, cval->value)`.
+            let mut msg = [0 as c_char; ERR_MAX_DATA_SIZE];
+            // SAFETY: `msg` is writable for its length, the format is NUL-terminated, and both
+            // operands are NUL-terminated.
+            unsafe {
+                BIO_snprintf(
+                    msg.as_mut_ptr(),
+                    ERR_MAX_DATA_SIZE,
+                    c"name=%s, value=%s".as_ptr(),
+                    name,
+                    value,
+                )
+            };
+            // SAFETY: `msg` is NUL-terminated and `site` is a compile-time constant.
+            unsafe { raise_site_data(&err_sites::RAND_LIB_1030, msg.as_ptr()) };
+            r = 0;
+        }
+        i += 1;
+    }
+    r
+}
+
+/// `static void random_conf_deinit(CONF_IMODULE *md)`.
+///
+/// The authority's body is one `OSSL_TRACE` that compiles out.
+///
+/// # Safety
+/// `md` is live per the callback contract; nothing is read.
+#[allow(dead_code)] // the landing caller is `ossl_random_add_conf_module`, which `OPENSSL_load_builtin_modules` calls
+unsafe extern "C" fn random_conf_deinit(_md: *mut ConfImodule) {}
+
+/// `void ossl_random_add_conf_module(void)`.
+#[allow(dead_code)] // the landing caller is `OPENSSL_load_builtin_modules` (Phase 6)
+pub(crate) fn ossl_random_add_conf_module() {
+    // SAFETY: a NUL-terminated literal and this module's own callbacks; the module registry is
+    // the config subsystem's and synchronised by it.
+    unsafe {
+        CONF_module_add(
+            c"random".as_ptr(),
+            Some(random_conf_init as ConfInitFn),
+            Some(random_conf_deinit as ConfFinishFn),
+        );
+    }
+}
+
+/// `int RAND_set_DRBG_type(OSSL_LIB_CTX *ctx, const char *drbg, const char *propq,
+/// const char *cipher, const char *digest)`.
+///
+/// # Safety
+/// `ctx` NULL or live; the four strings NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn RAND_set_DRBG_type(
+    ctx: *mut c_void,
+    drbg: *const c_char,
+    propq: *const c_char,
+    cipher: *const c_char,
+    digest: *const c_char,
+) -> c_int {
+    let dgbl = rand_ossl_ctx(ctx);
+    if dgbl.is_null() {
+        return 0;
+    }
+    // SAFETY: `dgbl` is live.
+    if !unsafe { (*dgbl).primary }.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::RAND_LIB_1058) };
+        return 0;
+    }
+    // SAFETY: `dgbl` is live and each field address is this module's; the strings are the
+    // caller's contract.
+    unsafe {
+        let a = random_set_string(ptr::addr_of_mut!((*dgbl).rng_name), drbg);
+        let b = random_set_string(ptr::addr_of_mut!((*dgbl).rng_propq), propq);
+        let c = random_set_string(ptr::addr_of_mut!((*dgbl).rng_cipher), cipher);
+        let d = random_set_string(ptr::addr_of_mut!((*dgbl).rng_digest), digest);
+        c_int::from(a != 0 && b != 0 && c != 0 && d != 0)
+    }
+}
+
+/// `int RAND_set_seed_source_type(OSSL_LIB_CTX *ctx, const char *seed, const char *propq)`.
+///
+/// # Safety
+/// `ctx` NULL or live; the strings NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn RAND_set_seed_source_type(
+    ctx: *mut c_void,
+    seed: *const c_char,
+    propq: *const c_char,
+) -> c_int {
+    let dgbl = rand_ossl_ctx(ctx);
+    if dgbl.is_null() {
+        return 0;
+    }
+    // SAFETY: `dgbl` is live.
+    if !unsafe { (*dgbl).seed }.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::RAND_LIB_1075) };
+        return 0;
+    }
+    // SAFETY: `dgbl` is live and each field address is this module's.
+    unsafe {
+        let a = random_set_string(ptr::addr_of_mut!((*dgbl).seed_name), seed);
+        let b = random_set_string(ptr::addr_of_mut!((*dgbl).seed_propq), propq);
+        c_int::from(a != 0 && b != 0)
+    }
+}
+
+/// `static int set_random_provider_name(RAND_GLOBAL *dgbl, const char *name)`.
+///
+/// # Safety
+/// `dgbl` must be live; `name` NUL-terminated.
+unsafe fn set_random_provider_name(dgbl: *mut RandGlobal, name: *const c_char) -> c_int {
+    // SAFETY: `dgbl` is live.
+    let existing = unsafe { (*dgbl).random_provider_name };
+    if !existing.is_null() {
+        // SAFETY: both are NUL-terminated.
+        if unsafe { OPENSSL_strcasecmp(existing, name) } == 0 {
+            return 1;
+        }
+    }
+    // SAFETY: `existing` is NULL or owned by `dgbl`; the free accepts NULL.
+    unsafe { CRYPTO_free(existing.cast::<c_void>(), FILE, L_PROVIDER_NAME_DUP) };
+    // SAFETY: `name` is NUL-terminated per the contract.
+    let fresh = unsafe { CRYPTO_strdup(name, FILE, L_PROVIDER_NAME_DUP) }.cast::<c_char>();
+    // SAFETY: `dgbl` is live.
+    unsafe { (*dgbl).random_provider_name = fresh };
+    c_int::from(!fresh.is_null())
+}
+
+/// `int RAND_set1_random_provider(OSSL_LIB_CTX *ctx, OSSL_PROVIDER *prov)`.
+///
+/// # Safety
+/// `ctx` NULL or live; `prov` NULL or a live provider the caller keeps a reference to.
+#[no_mangle]
+pub unsafe extern "C" fn RAND_set1_random_provider(
+    ctx: *mut c_void,
+    prov: *mut OsslProvider,
+) -> c_int {
+    let dgbl = rand_ossl_ctx(ctx);
+    if dgbl.is_null() {
+        return 0;
+    }
+
+    if prov.is_null() {
+        // SAFETY: `dgbl` is live and the name is its own allocation.
+        unsafe {
+            CRYPTO_free(
+                (*dgbl).random_provider_name.cast::<c_void>(),
+                FILE,
+                L_PROVIDER_NAME_DUP,
+            );
+            (*dgbl).random_provider_name = ptr::null_mut();
+            (*dgbl).random_provider = ptr::null_mut();
+        }
+        return 1;
+    }
+
+    // SAFETY: `dgbl` is live.
+    if unsafe { (*dgbl).random_provider } == prov {
+        return 1;
+    }
+
+    // SAFETY: `prov` is live.
+    let name = unsafe { OSSL_PROVIDER_get0_name(prov) };
+    // SAFETY: `dgbl` is live and `name` is NUL-terminated.
+    if unsafe { set_random_provider_name(dgbl, name) } == 0 {
+        return 0;
+    }
+    // SAFETY: `dgbl` is live.
+    unsafe { (*dgbl).random_provider = prov };
+    1
+}
+
+/// `int ossl_rand_check_random_provider_on_load(OSSL_LIB_CTX *ctx, OSSL_PROVIDER *prov)`.
+///
+/// # Safety
+/// `ctx` NULL or live; `prov` live.
+#[allow(dead_code)] // the landing caller is `provider_core.c`'s activation path (Phase 6.8c)
+pub(crate) unsafe fn ossl_rand_check_random_provider_on_load(
+    ctx: *mut c_void,
+    prov: *mut OsslProvider,
+) -> c_int {
+    let dgbl = rand_ossl_ctx(ctx);
+    if dgbl.is_null() {
+        return 0;
+    }
+    // SAFETY: `dgbl` is live.
+    let (name, installed) = unsafe { ((*dgbl).random_provider_name, (*dgbl).random_provider) };
+    // No name specified, or one is installed already.
+    if name.is_null() || !installed.is_null() {
+        return 1;
+    }
+    // SAFETY: `prov` is live.
+    let prov_name = unsafe { OSSL_PROVIDER_get0_name(prov) };
+    // SAFETY: both are NUL-terminated. The authority uses `strcmp`, not `OPENSSL_strcasecmp`.
+    if unsafe { crate::runtime::bio::sys::strcmp(name, prov_name) } != 0 {
+        return 1;
+    }
+    // SAFETY: `dgbl` is live.
+    unsafe { (*dgbl).random_provider = prov };
+    1
+}
+
+/// `int ossl_rand_check_random_provider_on_unload(OSSL_LIB_CTX *ctx, OSSL_PROVIDER *prov)`.
+///
+/// # Safety
+/// `ctx` NULL or live; `prov` live.
+#[allow(dead_code)] // the landing caller is `provider_core.c`'s deactivation path (Phase 6.8c)
+pub(crate) unsafe fn ossl_rand_check_random_provider_on_unload(
+    ctx: *mut c_void,
+    prov: *mut OsslProvider,
+) -> c_int {
+    let dgbl = rand_ossl_ctx(ctx);
+    if dgbl.is_null() {
+        return 0;
+    }
+    // SAFETY: `dgbl` is live.
+    if unsafe { (*dgbl).random_provider } == prov {
+        // SAFETY: `dgbl` is live; the field is this module's.
+        unsafe { (*dgbl).random_provider = ptr::null_mut() };
+    }
+    1
+}
+
+// ---------------------------------------------------------------------------------------------
+// `crypto/rand/rand_meth.c` — the default method table
+// ---------------------------------------------------------------------------------------------
+
+/// `static int drbg_add(const void *buf, int num, double randomness)`.
+///
+/// # Safety
+/// `buf` NULL or readable for `num` bytes.
+unsafe extern "C" fn drbg_add(buf: *const c_void, num: c_int, _randomness: c_double) -> c_int {
+    // SAFETY: the module's own entry point.
+    let drbg = unsafe { RAND_get0_primary(ptr::null_mut()) };
+    if drbg.is_null() || num <= 0 {
+        return 0;
+    }
+    // SAFETY: `drbg` is live and `buf` is readable for `num` bytes.
+    unsafe { EVP_RAND_reseed(drbg, 0, ptr::null(), 0, buf.cast::<c_uchar>(), num as usize) }
+}
+
+/// `static int drbg_seed(const void *buf, int num)`.
+///
+/// # Safety
+/// `buf` NULL or readable for `num` bytes.
+unsafe extern "C" fn drbg_seed(buf: *const c_void, num: c_int) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { drbg_add(buf, num, num as c_double) }
+}
+
+/// `static int drbg_status(void)`.
+unsafe extern "C" fn drbg_status() -> c_int {
+    // SAFETY: the module's own entry point.
+    let drbg = unsafe { RAND_get0_primary(ptr::null_mut()) };
+    if drbg.is_null() {
+        return 0;
+    }
+    // SAFETY: `drbg` is live.
+    c_int::from(unsafe { EVP_RAND_get_state(drbg) } == EVP_RAND_STATE_READY)
+}
+
+/// `static int drbg_bytes(unsigned char *out, int count)`.
+///
+/// # Safety
+/// `out` NULL or writable for `count` bytes.
+unsafe extern "C" fn drbg_bytes(out: *mut c_uchar, count: c_int) -> c_int {
+    // SAFETY: the module's own entry point.
+    let drbg = unsafe { RAND_get0_public(ptr::null_mut()) };
+    if drbg.is_null() {
+        return 0;
+    }
+    // SAFETY: `drbg` is live and `out` is writable for `count` bytes.
+    unsafe { EVP_RAND_generate(drbg, out, count as usize, 0, 0, ptr::null(), 0) }
+}
+
+/// `RAND_METHOD ossl_rand_meth`. The address is contract: `RAND_OpenSSL()` hands it out and
+/// `RAND_get_rand_method` compares against it.
+struct StaticRandMethod(core::cell::UnsafeCell<RandMethod>);
+
+// SAFETY: the inner value is fully initialised at compile time and is never written. Every
+// consumer reads one function-pointer field; no `&mut` is ever created.
+unsafe impl Sync for StaticRandMethod {}
+
+static OSSL_RAND_METH: StaticRandMethod =
+    StaticRandMethod(core::cell::UnsafeCell::new(RandMethod {
+        seed: Some(drbg_seed),
+        bytes: Some(drbg_bytes),
+        cleanup: None,
+        add: Some(drbg_add),
+        pseudorand: Some(drbg_bytes),
+        status: Some(drbg_status),
+    }));
+
+/// The stable address of the authority's `ossl_rand_meth` object.
+pub(crate) fn ossl_rand_meth() -> *mut RandMethod {
+    OSSL_RAND_METH.0.get()
+}
+
+/// `RAND_METHOD *RAND_OpenSSL(void)`.
+///
+/// Named for the authority's `rand_meth.c`; the returned pointer is the process-wide table.
+#[no_mangle]
+pub extern "C" fn RAND_OpenSSL() -> *mut RandMethod {
+    ossl_rand_meth()
+}
+
+// ---------------------------------------------------------------------------------------------
+// `crypto/rand/randfile.c`
+// ---------------------------------------------------------------------------------------------
+
+// `randfile.c`'s `struct stat`, `stat`/`fstat`/`chmod`, `S_ISREG` and the three stdio calls are
+// **imported**, not declared here: `crate::rand::sys` owns the measured `struct stat` layout
+// (D298/D312) and `crate::runtime::bio::sys` owns the stdio block. The staging file carried its
+// own copy because neither existed then; a second copy would be a second place for an offset to
+// be wrong.
+
+/// `int RAND_load_file(const char *file, long bytes)`.
+///
+/// # Safety
+/// `file` must be NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn RAND_load_file(file: *const c_char, bytes: c_long) -> c_int {
+    let mut buf = [0u8; RAND_LOAD_BUF_SIZE];
+    let mut ret: c_int = 0;
+
+    if bytes == 0 {
+        return 0;
+    }
+
+    // SAFETY: `file` is NUL-terminated and the mode is a literal.
+    let in_ = unsafe { sys::fopen(file, c"rb".as_ptr()) };
+    if in_.is_null() {
+        // SAFETY: `file` is NUL-terminated and the site is a compile-time constant.
+        unsafe { raise_filename(&err_sites::RANDFILE_106, file) };
+        return -1;
+    }
+
+    // `#ifndef OPENSSL_NO_POSIX_IO`.
+    let mut sb = Stat::ZEROED;
+    // SAFETY: `in_` is live and `sb` is this frame's writable storage.
+    if unsafe { fstat(sys::fileno(in_), &mut sb) } < 0 {
+        // SAFETY: `file` is NUL-terminated.
+        unsafe { raise_filename(&err_sites::RANDFILE_113, file) };
+        // SAFETY: `in_` is live and this frame owns it.
+        unsafe { sys::fclose(in_) };
+        return -1;
+    }
+
+    let mut bytes = bytes;
+    if bytes < 0 {
+        bytes = if s_isreg(sb.st_mode) {
+            sb.st_size
+        } else {
+            RAND_DRBG_STRENGTH as c_long
+        };
+    }
+
+    // Don't buffer: the contents should not be copied around. `setbuf(in, NULL)` is a call this
+    // crate's `bio::sys` declares as `setbuf`.
+    // SAFETY: `in_` is live.
+    unsafe { setbuf(in_, ptr::null_mut()) };
+
+    loop {
+        let n: c_int = if bytes > 0 {
+            if bytes <= RAND_LOAD_BUF_SIZE as c_long {
+                bytes as c_int
+            } else {
+                RAND_BUF_SIZE as c_int
+            }
+        } else {
+            RAND_LOAD_BUF_SIZE as c_int
+        };
+        // SAFETY: `buf` is writable for `n` bytes and `in_` is live.
+        let i =
+            unsafe { sys::fread(buf.as_mut_ptr().cast::<c_void>(), 1, n as usize, in_) } as c_int;
+        // SAFETY: `in_` is the caller's live `FILE *`.
+        if unsafe { sys::ferror(in_) } != 0 && unsafe { sys::errno() } == EINTR {
+            // SAFETY: `in_` is live.
+            unsafe { clearerr(in_) };
+            if i == 0 {
+                continue;
+            }
+        }
+        if i == 0 {
+            break;
+        }
+
+        // SAFETY: `buf` was read for `i` bytes and this is the module's own entry point.
+        unsafe { RAND_add(buf.as_ptr().cast::<c_void>(), i, i as c_double) };
+        ret = ret.wrapping_add(i);
+
+        // If given a byte count and it has been consumed, break.
+        if bytes > 0 {
+            bytes -= i as c_long;
+            if bytes <= 0 {
+                break;
+            }
+        }
+
+        // A signed overflow on the next iteration is possible; stop first.
+        if ret > INT_MAX - RAND_LOAD_BUF_SIZE as c_int {
+            break;
+        }
+    }
+
+    // SAFETY: `buf` is this frame's storage.
+    unsafe {
+        OPENSSL_cleanse(
+            buf.as_mut_ptr().cast::<c_void>(),
+            core::mem::size_of_val(&buf),
+        )
+    };
+    // SAFETY: `in_` is live and this frame owns it.
+    unsafe { sys::fclose(in_) };
+
+    if RAND_status() == 0 {
+        // SAFETY: `file` is NUL-terminated.
+        unsafe { raise_filename(&err_sites::RANDFILE_178, file) };
+        return -1;
+    }
+    ret
+}
+
+/// `int RAND_write_file(const char *file)`.
+///
+/// # Safety
+/// `file` must be NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn RAND_write_file(file: *const c_char) -> c_int {
+    let mut buf = [0u8; RAND_BUF_SIZE];
+
+    // `#ifndef OPENSSL_NO_POSIX_IO`.
+    let mut sb = Stat::ZEROED;
+    // SAFETY: `file` is NUL-terminated and `sb` is excluded from `fstat_raw`'s access.
+    if unsafe { stat(file, &mut sb) } >= 0 && !s_isreg(sb.st_mode) {
+        // SAFETY: `file` is NUL-terminated.
+        unsafe { raise_filename(&err_sites::RANDFILE_194, file) };
+        return -1;
+    }
+
+    // Collect enough random data.
+    // SAFETY: `buf` is writable for its whole length.
+    if unsafe { RAND_priv_bytes(buf.as_mut_ptr(), RAND_BUF_SIZE as c_int) } != 1 {
+        return -1;
+    }
+
+    // `#if defined(O_CREAT) && !defined(OPENSSL_NO_POSIX_IO) && !VMS && !WINDOWS`: permissions
+    // must be restrictive from the start, which is why the file is created by `open` at mode
+    // 0600 rather than by `fopen`.
+    let mut out: *mut sys::FILE = ptr::null_mut();
+    // SAFETY: `file` is NUL-terminated.
+    let fd = unsafe { sys::open(file, sys::O_WRONLY | sys::O_CREAT | O_BINARY, 0o600) };
+    if fd != -1 {
+        // SAFETY: `fd` is a live descriptor and the mode is a literal.
+        out = unsafe { fdopen(fd, c"wb".as_ptr()) };
+        if out.is_null() {
+            // SAFETY: `fd` is live and this frame owns it.
+            unsafe { sys::close(fd) };
+            // SAFETY: `file` is NUL-terminated.
+            unsafe { raise_filename(&err_sites::RANDFILE_219, file) };
+            return -1;
+        }
+    }
+    if out.is_null() {
+        // SAFETY: `file` is NUL-terminated and the mode is a literal.
+        out = unsafe { sys::fopen(file, c"wb".as_ptr()) };
+    }
+    if out.is_null() {
+        // SAFETY: `file` is NUL-terminated.
+        unsafe { raise_filename(&err_sites::RANDFILE_251, file) };
+        return -1;
+    }
+
+    // Late, but better than nothing: the authority's own comment on the ordering.
+    // SAFETY: `file` is NUL-terminated.
+    unsafe { chmod(file, 0o600) };
+
+    // SAFETY: `buf` is readable for `RAND_BUF_SIZE` bytes and `out` is live.
+    let ret = unsafe { sys::fwrite(buf.as_ptr().cast::<c_void>(), 1, RAND_BUF_SIZE, out) } as c_int;
+    // SAFETY: `out` is live and this frame owns it.
+    unsafe { sys::fclose(out) };
+    // SAFETY: `buf` is this frame's storage.
+    unsafe { OPENSSL_cleanse(buf.as_mut_ptr().cast::<c_void>(), RAND_BUF_SIZE) };
+    ret
+}
+
+/// `const char *RAND_file_name(char *buf, size_t size)`.
+///
+/// The `_WIN32` arms are not built on this profile; `DEFAULT_HOME` is not defined either.
+///
+/// The authority uses `strcpy`/`strcat` after proving the length fits; `OPENSSL_strlcpy` /
+/// `OPENSSL_strlcat` are used here with the same `size`, which truncates rather than overflowing
+/// if that proof were ever wrong — a transcription choice recorded in the module report.
+///
+/// # Safety
+/// `buf` must be writable for `size` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn RAND_file_name(buf: *mut c_char, size: usize) -> *const c_char {
+    let mut use_randfile = 1;
+
+    // SAFETY: the literals are NUL-terminated.
+    let mut s = unsafe { ossl_safe_getenv(c"RANDFILE".as_ptr()) };
+    // SAFETY: `s` is NULL or NUL-terminated.
+    if s.is_null() || unsafe { *s } == 0 {
+        use_randfile = 0;
+        // SAFETY: the literal is NUL-terminated.
+        s = unsafe { ossl_safe_getenv(c"HOME".as_ptr()) };
+    }
+    // SAFETY: `s` is NULL or NUL-terminated.
+    if s.is_null() || unsafe { *s } == 0 {
+        return ptr::null();
+    }
+
+    // SAFETY: `s` is NUL-terminated.
+    let len = unsafe { sys::strlen(s) };
+    if use_randfile != 0 {
+        if len + 1 >= size {
+            return ptr::null();
+        }
+        // SAFETY: `buf` is writable for `size` and `s` is NUL-terminated; the length test above
+        // guarantees the copy fits.
+        unsafe { OPENSSL_strlcpy(buf, s, size) };
+    } else {
+        // SAFETY: `RFILE` is NUL-terminated.
+        if len + 1 + unsafe { sys::strlen(RFILE) } + 1 >= size {
+            return ptr::null();
+        }
+        // SAFETY: as above.
+        unsafe {
+            OPENSSL_strlcpy(buf, s, size);
+            OPENSSL_strlcat(buf, c"/".as_ptr(), size);
+            OPENSSL_strlcat(buf, RFILE, size);
+        }
+    }
+    buf
+}
+
+// ---------------------------------------------------------------------------------------------
+// Callers referenced above that are NOT in the crate yet
+// ---------------------------------------------------------------------------------------------
+//
+// `ENGINE_init`, `ENGINE_finish`, `ENGINE_get_RAND`, `ENGINE_get_default_RAND`      — Phase 13
+//
+// These are the only ones left. Each `ENGINE_*` call site is unreachable for every argument this
+// crate can construct, because the crate exports no `ENGINE_add`/`ENGINE_by_id` and so nothing can
+// register an engine for these calls to find; each reduction carries the authority's own code and
+// the argument at the site (docs/DECISIONS.md D312). The DRBG rows `"CTR-DRBG"` and `"SEED-SRC"`
+// that `EVP_RAND_fetch` asks for are published, so `rand_new_seed`/`rand_new_drbg` reach real rows
+// and a NULL fetch is a real refusal rather than an empty algorithm store.

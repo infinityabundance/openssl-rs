@@ -4536,12 +4536,74 @@
           }
         },
         "verdict": "clean"
+      },
+      {
+        "probe": "courts/phase9/rt_rand_probe.c",
+        "sides": {
+          "authority": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 129,
+              "-O1": 129,
+              "-O2": 129
+            },
+            "side": "authority",
+            "verdict": "clean"
+          },
+          "candidate": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 129,
+              "-O1": 129,
+              "-O2": 129
+            },
+            "side": "candidate",
+            "verdict": "clean"
+          }
+        },
+        "verdict": "clean"
       }
     ],
     "runs_per_level": 2,
     "summary": {
-      "clean": 73,
-      "total": 73,
+      "clean": 74,
+      "total": 74,
       "unstable": 0
     }
   },
@@ -4911,6 +4973,11 @@
       "name": "probe",
       "path": "courts/phase9/rt_drbg_probe.c",
       "sha256": "ff28186b339c5d666151332184383080981405286fcac3d38518b3d54e1d5b63"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase9/rt_rand_probe.c",
+      "sha256": "446ce654ced9048505cd809d4b71458e3ad91f21d82074c53f197398fb0f75be"
     }
   ],
   "kind": "probe-hygiene",

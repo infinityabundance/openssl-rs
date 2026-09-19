@@ -217,6 +217,18 @@ RUST_INT_WIDTH = {
     "bool": (1, False),
 }
 
+# The C floating widths, which `core::ffi` spells `c_float`/`c_double`. They are kept apart from
+# `RUST_INT_WIDTH` because the canonical form names the width and the class is `floating` rather
+# than `integer`: `RAND_add`'s third parameter is the first export to carry one (`double`), and a
+# court that could not read `c_double` would report an unreadable name against the authority's
+# `float:8` instead of comparing two types.
+RUST_FLOAT_WIDTH = {
+    "c_float": 4,
+    "f32": 4,
+    "c_double": 8,
+    "f64": 8,
+}
+
 
 def canon_c_type(
     text: str, typedefs: dict[str, str], depth: int = 0, pointee: bool = False
@@ -475,8 +487,8 @@ def canon_rust_type(text: str, aliases: dict[str, str], depth: int = 0) -> str |
         return None if inner is None else f"ptr(const({inner}))"
     if t.startswith("unsafe extern \"C\" fn") or t.startswith("extern \"C\" fn"):
         return canon_rust_fnptr(t, aliases, depth)
-    if t in ("f32", "f64"):
-        return "float:4" if t == "f32" else "float:8"
+    if t in RUST_FLOAT_WIDTH:
+        return f"float:{RUST_FLOAT_WIDTH[t]}"
     if t in RUST_INT_WIDTH:
         b, s = RUST_INT_WIDTH[t]
         return f"int:{b}:{'s' if s else 'u'}"
@@ -486,6 +498,9 @@ def canon_rust_type(text: str, aliases: dict[str, str], depth: int = 0) -> str |
             # `core::ffi::c_uint` and `c_uint` are the same type.
             b, s = RUST_INT_WIDTH[leaf]
             return f"int:{b}:{'s' if s else 'u'}"
+        if leaf != t and leaf in RUST_FLOAT_WIDTH:
+            # `core::ffi::c_double` and `c_double` are the same type.
+            return f"float:{RUST_FLOAT_WIDTH[leaf]}"
         target = aliases.get(t) or aliases.get(leaf)
         if target is not None:
             return canon_rust_type(target, aliases, depth + 1)
@@ -606,7 +621,7 @@ def classify_rust(text: str, aliases: dict[str, str], depth: int = 0) -> str:
         # through the same resolver rather than being string-matched once.
         inner_class = classify_rust(inner, aliases, depth + 1)
         return inner_class if inner_class in ("function_pointer", "pointer") else "unclassified"
-    if t in ("f32", "f64"):
+    if t in RUST_FLOAT_WIDTH:
         return "floating"
     if R_INTEGER.match(t):
         return "integer"
@@ -617,6 +632,8 @@ def classify_rust(text: str, aliases: dict[str, str], depth: int = 0) -> str:
         # `ASN1_tag2bit` as unclassified for that reason alone.
         if leaf != t and R_INTEGER.match(leaf):
             return "integer"
+        if leaf != t and leaf in RUST_FLOAT_WIDTH:
+            return "floating"
         target = aliases.get(t) or aliases.get(leaf)
         if target is not None:
             return classify_rust(target, aliases, depth + 1)
