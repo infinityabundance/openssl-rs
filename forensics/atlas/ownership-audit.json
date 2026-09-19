@@ -305,7 +305,15 @@
             "BIO_f_reliable",
             "EVP_CIPHER_CTX_rand_key",
             "EVP_SealInit",
-            "OSSL_HPKE_get_grease_value"
+            "OSSL_HPKE_get_grease_value",
+            "PEM_ASN1_read",
+            "PEM_ASN1_read_bio",
+            "PEM_ASN1_write",
+            "PEM_ASN1_write_bio",
+            "PEM_ASN1_write_bio_ctx",
+            "PEM_bytes_read_bio",
+            "PEM_bytes_read_bio_secmem",
+            "PEM_do_header"
           ],
           "to_phase": 9
         },
@@ -318,6 +326,7 @@
             "EVP_PKEY_print_private_fp",
             "EVP_PKEY_print_public",
             "EVP_PKEY_print_public_fp",
+            "PEM_write_bio_PrivateKey_traditional",
             "d2i_AutoPrivateKey",
             "d2i_AutoPrivateKey_ex",
             "d2i_PrivateKey",
@@ -419,8 +428,6 @@
             "EVP_bf_cfb64",
             "EVP_bf_ecb",
             "EVP_bf_ofb",
-            "EVP_blake2b512",
-            "EVP_blake2s256",
             "EVP_camellia_128_cbc",
             "EVP_camellia_128_cfb1",
             "EVP_camellia_128_cfb128",
@@ -473,8 +480,6 @@
             "EVP_idea_ecb",
             "EVP_idea_ofb",
             "EVP_md4",
-            "EVP_md5",
-            "EVP_md5_sha1",
             "EVP_mdc2",
             "EVP_rc2_40_cbc",
             "EVP_rc2_64_cbc",
@@ -487,17 +492,10 @@
             "EVP_rc4_hmac_md5",
             "EVP_read_pw_string",
             "EVP_read_pw_string_min",
-            "EVP_ripemd160",
             "EVP_seed_cbc",
             "EVP_seed_cfb128",
             "EVP_seed_ecb",
             "EVP_seed_ofb",
-            "EVP_sha3_224",
-            "EVP_sha3_256",
-            "EVP_sha3_384",
-            "EVP_sha3_512",
-            "EVP_shake128",
-            "EVP_shake256",
             "EVP_sm3",
             "EVP_sm4_cbc",
             "EVP_sm4_cfb128",
@@ -505,15 +503,7 @@
             "EVP_sm4_ecb",
             "EVP_sm4_ofb",
             "EVP_whirlpool",
-            "PEM_ASN1_read",
-            "PEM_ASN1_read_bio",
-            "PEM_ASN1_write",
-            "PEM_ASN1_write_bio",
-            "PEM_ASN1_write_bio_ctx",
-            "PEM_bytes_read_bio",
-            "PEM_bytes_read_bio_secmem",
             "PEM_def_callback",
-            "PEM_do_header",
             "PEM_read_PrivateKey",
             "PEM_read_PrivateKey_ex",
             "PEM_read_bio_Parameters",
@@ -528,8 +518,7 @@
             "PEM_write_bio_PKCS8PrivateKey_nid",
             "PEM_write_bio_Parameters",
             "PEM_write_bio_PrivateKey",
-            "PEM_write_bio_PrivateKey_ex",
-            "PEM_write_bio_PrivateKey_traditional"
+            "PEM_write_bio_PrivateKey_ex"
           ],
           "to_phase": 13
         },
@@ -836,7 +825,15 @@
             "BIO_f_reliable",
             "EVP_CIPHER_CTX_rand_key",
             "EVP_SealInit",
-            "OSSL_HPKE_get_grease_value"
+            "OSSL_HPKE_get_grease_value",
+            "PEM_ASN1_read",
+            "PEM_ASN1_read_bio",
+            "PEM_ASN1_write",
+            "PEM_ASN1_write_bio",
+            "PEM_ASN1_write_bio_ctx",
+            "PEM_bytes_read_bio",
+            "PEM_bytes_read_bio_secmem",
+            "PEM_do_header"
           ],
           "to_phase": 9
         },
@@ -849,6 +846,7 @@
             "EVP_PKEY_print_private_fp",
             "EVP_PKEY_print_public",
             "EVP_PKEY_print_public_fp",
+            "PEM_write_bio_PrivateKey_traditional",
             "d2i_AutoPrivateKey",
             "d2i_AutoPrivateKey_ex",
             "d2i_PrivateKey",
@@ -950,8 +948,6 @@
             "EVP_bf_cfb64",
             "EVP_bf_ecb",
             "EVP_bf_ofb",
-            "EVP_blake2b512",
-            "EVP_blake2s256",
             "EVP_camellia_128_cbc",
             "EVP_camellia_128_cfb1",
             "EVP_camellia_128_cfb128",
@@ -1004,8 +1000,6 @@
             "EVP_idea_ecb",
             "EVP_idea_ofb",
             "EVP_md4",
-            "EVP_md5",
-            "EVP_md5_sha1",
             "EVP_mdc2",
             "EVP_rc2_40_cbc",
             "EVP_rc2_64_cbc",
@@ -1018,17 +1012,10 @@
             "EVP_rc4_hmac_md5",
             "EVP_read_pw_string",
             "EVP_read_pw_string_min",
-            "EVP_ripemd160",
             "EVP_seed_cbc",
             "EVP_seed_cfb128",
             "EVP_seed_ecb",
             "EVP_seed_ofb",
-            "EVP_sha3_224",
-            "EVP_sha3_256",
-            "EVP_sha3_384",
-            "EVP_sha3_512",
-            "EVP_shake128",
-            "EVP_shake256",
             "EVP_sm3",
             "EVP_sm4_cbc",
             "EVP_sm4_cfb128",
@@ -1036,15 +1023,7 @@
             "EVP_sm4_ecb",
             "EVP_sm4_ofb",
             "EVP_whirlpool",
-            "PEM_ASN1_read",
-            "PEM_ASN1_read_bio",
-            "PEM_ASN1_write",
-            "PEM_ASN1_write_bio",
-            "PEM_ASN1_write_bio_ctx",
-            "PEM_bytes_read_bio",
-            "PEM_bytes_read_bio_secmem",
             "PEM_def_callback",
-            "PEM_do_header",
             "PEM_read_PrivateKey",
             "PEM_read_PrivateKey_ex",
             "PEM_read_bio_Parameters",
@@ -1059,8 +1038,7 @@
             "PEM_write_bio_PKCS8PrivateKey_nid",
             "PEM_write_bio_Parameters",
             "PEM_write_bio_PrivateKey",
-            "PEM_write_bio_PrivateKey_ex",
-            "PEM_write_bio_PrivateKey_traditional"
+            "PEM_write_bio_PrivateKey_ex"
           ],
           "to_phase": 13
         },
@@ -1101,7 +1079,7 @@
     },
     "implemented_by_two_strata": [],
     "implemented_exports": {
-      "libcrypto": 2086,
+      "libcrypto": 2097,
       "libssl": 0
     },
     "invariant": "every authority export has exactly one declared owner in forensics/atlas/symbol-ownership.json; every export the atlas gives a stratum appears in that stratum's ledger; every row a stratum's ledger carries for another stratum's export is a hand-off that stratum recorded",
@@ -1183,8 +1161,8 @@
       },
       {
         "atlas": 924,
-        "deferred": 237,
-        "implemented": 713,
+        "deferred": 226,
+        "implemented": 724,
         "ledger": 950,
         "only_in_atlas": 0,
         "only_in_atlas_examples": [],
@@ -4994,7 +4972,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "7036edd2bc3adeff242dcd004ffab11f498c50d6280a076c99ebc244b8a0a067"
+      "sha256": "bfdb215264b7a0ba381e9014b8f408a813590a6d9b12a0f0a76fc86cc9d3bfb2"
     },
     {
       "name": "authority-symbols",
@@ -5009,32 +4987,32 @@
     {
       "name": "ledger-3",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "a82922c3e5dd2bdce941e83e690436c4907337567fbc9f77940a806cba284b26"
+      "sha256": "3cd5e8bcb9437d5b7a655bc07a6f28f0c4fad92a79bb18a973aa556761cd3155"
     },
     {
       "name": "ledger-4",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "59f6c8df33131204ac28d97980f4178a7063ce9c59ab23b0928515c603f2ff26"
+      "sha256": "c1232948043a4501fd6b952bc67d704d5dd7c442bc5e06557e0ba5a98692145f"
     },
     {
       "name": "ledger-5",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "2a0f6d808b23f705581927adc6b5be612652409c8452a6483122e9d7082b6d7b"
+      "sha256": "95140f6a70708ef1145c544cc16c22efb20c27a0309726732febba4a3cbb5228"
     },
     {
       "name": "ledger-6",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "10208c20f33f716ea15d700efeab57a096ae9ff147aafb660493fb78e6f8a81c"
+      "sha256": "9cd76ca595ccd1b4b972d9ddd84dc32fd639a48cb9def34cb962a9e69945ffd3"
     },
     {
       "name": "ledger-7",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "7f3f6f5d31e746da0e1b3ddfd5f4f418575d62378a91e965070bc90c219f28b9"
+      "sha256": "c4e9c7855c0d58ac2bbf8550e90278ab579262c883811657a139a8a8e2ea5790"
     },
     {
       "name": "ledger-8",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "2cd94502aa614f00a740a9f04dedb1d6540c173bb3e88a0c3f9a2cc2e60948b5"
+      "sha256": "fdc72de09406c9adfde2c58a3d01c6a4fcb676c1910e4c7b49b47318d161c887"
     }
   ],
   "kind": "ownership-audit",

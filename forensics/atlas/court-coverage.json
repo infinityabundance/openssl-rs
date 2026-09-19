@@ -8838,10 +8838,10 @@
       {
         "completed": true,
         "counts": {
-          "directly_courted": 713,
-          "directly_courted_called": 653,
+          "directly_courted": 724,
+          "directly_courted_called": 664,
           "directly_courted_referenced": 60,
-          "implemented": 713,
+          "implemented": 724,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -13726,6 +13726,20 @@
           {
             "basis": "called",
             "courts": [
+              "RT-EVP-INTROSPECT"
+            ],
+            "symbol": "EVP_blake2b512"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-INTROSPECT"
+            ],
+            "symbol": "EVP_blake2s256"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-FETCH"
             ],
             "symbol": "EVP_default_properties_enable_fips"
@@ -13779,10 +13793,31 @@
           {
             "basis": "called",
             "courts": [
+              "RT-EVP-INTROSPECT"
+            ],
+            "symbol": "EVP_md5"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-INTROSPECT"
+            ],
+            "symbol": "EVP_md5_sha1"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-EVP-NAMES",
               "RT-FETCH"
             ],
             "symbol": "EVP_md_null"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-INTROSPECT"
+            ],
+            "symbol": "EVP_ripemd160"
           },
           {
             "basis": "called",
@@ -13833,6 +13868,34 @@
             "courts": [
               "RT-EVP-INTROSPECT"
             ],
+            "symbol": "EVP_sha3_224"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-INTROSPECT"
+            ],
+            "symbol": "EVP_sha3_256"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-INTROSPECT"
+            ],
+            "symbol": "EVP_sha3_384"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-INTROSPECT"
+            ],
+            "symbol": "EVP_sha3_512"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-INTROSPECT"
+            ],
             "symbol": "EVP_sha512"
           },
           {
@@ -13848,6 +13911,20 @@
               "RT-EVP-INTROSPECT"
             ],
             "symbol": "EVP_sha512_256"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-INTROSPECT"
+            ],
+            "symbol": "EVP_shake128"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-INTROSPECT"
+            ],
+            "symbol": "EVP_shake256"
           },
           {
             "basis": "called",
@@ -15884,10 +15961,10 @@
       }
     ],
     "totals": {
-      "directly_courted": 2078,
-      "directly_courted_called": 1794,
+      "directly_courted": 2089,
+      "directly_courted_called": 1805,
       "directly_courted_referenced": 284,
-      "implemented": 2086,
+      "implemented": 2097,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -15898,7 +15975,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "7036edd2bc3adeff242dcd004ffab11f498c50d6280a076c99ebc244b8a0a067"
+      "sha256": "bfdb215264b7a0ba381e9014b8f408a813590a6d9b12a0f0a76fc86cc9d3bfb2"
     },
     {
       "name": "symbol-ownership",
@@ -15913,7 +15990,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "a82922c3e5dd2bdce941e83e690436c4907337567fbc9f77940a806cba284b26"
+      "sha256": "3cd5e8bcb9437d5b7a655bc07a6f28f0c4fad92a79bb18a973aa556761cd3155"
     },
     {
       "name": "phase3-courts",
@@ -15923,7 +16000,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "59f6c8df33131204ac28d97980f4178a7063ce9c59ab23b0928515c603f2ff26"
+      "sha256": "c1232948043a4501fd6b952bc67d704d5dd7c442bc5e06557e0ba5a98692145f"
     },
     {
       "name": "phase4-courts",
@@ -15933,7 +16010,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "2a0f6d808b23f705581927adc6b5be612652409c8452a6483122e9d7082b6d7b"
+      "sha256": "95140f6a70708ef1145c544cc16c22efb20c27a0309726732febba4a3cbb5228"
     },
     {
       "name": "phase5-courts",
@@ -15943,7 +16020,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "10208c20f33f716ea15d700efeab57a096ae9ff147aafb660493fb78e6f8a81c"
+      "sha256": "9cd76ca595ccd1b4b972d9ddd84dc32fd639a48cb9def34cb962a9e69945ffd3"
     },
     {
       "name": "phase6-courts",
@@ -15953,17 +16030,17 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "7f3f6f5d31e746da0e1b3ddfd5f4f418575d62378a91e965070bc90c219f28b9"
+      "sha256": "c4e9c7855c0d58ac2bbf8550e90278ab579262c883811657a139a8a8e2ea5790"
     },
     {
       "name": "phase7-courts",
       "path": "artifacts/phase7/COURTS.json",
-      "sha256": "ec0919ff6a1c621a4ce378e9c5ef08e45b7b3b96bc4527bf4e0caf7ddafc877e"
+      "sha256": "58ea57f551a49e42416b5b6ca6e5c53609eb02881002862451d74fbf4dd3a7fc"
     },
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "2cd94502aa614f00a740a9f04dedb1d6540c173bb3e88a0c3f9a2cc2e60948b5"
+      "sha256": "fdc72de09406c9adfde2c58a3d01c6a4fcb676c1910e4c7b49b47318d161c887"
     },
     {
       "name": "phase8-courts",

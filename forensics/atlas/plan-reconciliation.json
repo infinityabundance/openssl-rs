@@ -982,7 +982,9 @@
           "7.3",
           "7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/legacy_blake2.rs"
+        ]
       },
       "crypto/evp/legacy_md4.c": {
         "defines": [],
@@ -1000,7 +1002,9 @@
           "7.3",
           "7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/legacy_md5.rs"
+        ]
       },
       "crypto/evp/legacy_md5_sha1.c": {
         "defines": [],
@@ -1026,7 +1030,9 @@
           "7.3",
           "7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/legacy_ripemd.rs"
+        ]
       },
       "crypto/evp/legacy_sha.c": {
         "defines": [],
@@ -1036,7 +1042,8 @@
           "7.3g"
         ],
         "transcribed_by": [
-          "src/evp/legacy_sha.rs"
+          "src/evp/legacy_sha.rs",
+          "src/evp/legacy_sha3.rs"
         ]
       },
       "crypto/evp/legacy_wp.c": {
@@ -2232,10 +2239,10 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 174
+      "transcribed_units": 177
     }
   },
-  "body_hash": "b25fc178af477264046af4e413ba7b845f179410e5bfe44737b20dbc6c3c7eec",
+  "body_hash": "87d729d33ba0b02434ee728f7e0d2283de1010cdb16bed5ff1c5ac21af4436fc",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -2246,12 +2253,12 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "78ff223cb96578654ff288bfc34d9b11d5b33e271cdd0f4fab6654794f01b4ec"
+      "sha256": "bd4ce920ec14de8a1abde24e832643873d4048f18ad6f82faa422806a9461502"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "7036edd2bc3adeff242dcd004ffab11f498c50d6280a076c99ebc244b8a0a067"
+      "sha256": "bfdb215264b7a0ba381e9014b8f408a813590a6d9b12a0f0a76fc86cc9d3bfb2"
     },
     {
       "name": "phase-state",
@@ -2261,7 +2268,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "1e6ef720cf516b09550e28522bcd6814ab29faf55f8381547b148feb69f6c698"
+      "sha256": "8b6447589c05de51d3c348b7a797291afb3babd325921d847047cf8c7ed5935c"
     },
     {
       "name": "source-manifest",

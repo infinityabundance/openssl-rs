@@ -19197,3 +19197,43 @@ prove the construction is the standard's, and for an OAEP *decoder* that second 
 chosen-ciphertext properties live. The corpus is the next unit's, and it wants the published OAEP
 test vectors rather than a mirror. `RSA_padding_add_PKCS1_OAEP_mgf1` and its sibling remain Phase 9's,
 as do the four `RSA_padding_*` adds and the type-2 check D285 recorded.
+
+## D293 — the remaining legacy digest objects land: MD5, MD5-SHA1, RIPEMD-160, BLAKE2 and SHA-3/SHAKE
+
+Eleven more exports, all of them Phase 7's scaffolded digest surface and all of them the same shape
+as D291's seven: `EVP_md5` and `EVP_md5_sha1` (`legacy_md5.c`, `legacy_md5_sha1.c`),
+`EVP_ripemd160` (`legacy_ripemd.c`), `EVP_blake2b512`/`EVP_blake2s256` (`legacy_blake2.c`), and
+`EVP_sha3_224`/`_256`/`_384`/`_512` with `EVP_shake128`/`EVP_shake256`. `RT-EVP-INTROSPECT` goes 167
+-> 338 observations.
+
+**One correction to D291's account, found while locating these.** There is **no
+`crypto/evp/legacy_sha3.c`**: the six SHA-3 and SHAKE objects live in `legacy_sha.c` itself, under
+`IMPLEMENT_LEGACY_EVP_MD_METH_SHA3` and `_SHAKE` (`legacy_sha.c:29-47`, invocations `:225-231`).
+D291 listed them as "its siblings", which named a file that does not exist; the correction is
+recorded here rather than quietly fixed, because a later reader looking for that file would
+otherwise conclude the objects were unaccounted for.
+
+**Three things about these that differ from the SHA seven.** Their `flags` are **not** uniform: MD5,
+MD5-SHA1, RIPEMD-160 and both BLAKE2 objects write `0`, while the SHA-3 four write
+`EVP_MD_FLAG_DIGALGID_ABSENT` and the two SHAKE objects write
+`EVP_MD_FLAG_XOF | EVP_MD_FLAG_DIGALGID_ABSENT`. Their `pkey_type`s differ too -- both BLAKE2 objects
+and both SHAKE objects write `0`, where every SHA-2 object names a `*WithRSAEncryption` NID -- which
+is the authority's own statement that those four are not registered as signature digests. And
+`EVP_md5_sha1`'s object puts `NID_md5_sha1` in **both** the `type` and `pkey_type` slots. A
+transcription that reused D291's helper without promoting `flags` to a parameter would have written
+`EVP_MD_FLAG_DIGALGID_ABSENT` into MD5; the helper here takes it as an argument for exactly that
+reason.
+
+**A signature mismatch that is the authority's, not the transcription's.** The authority's
+`ossl_blake2b_init`/`ossl_blake2s_init` return `int` and always answer `1`
+(`blake2b_prov.c:125-129`, `blake2s_prov.c:118-123`), while the crate's equivalents return `()`.
+The callbacks call the crate's function and return the authority's constant `1`, with the reason
+stated at the site. That is the same class D284 recorded for `RSA_METHOD_FLAG_NO_CHECK`: a
+signature the authority has and the crate need not, reconciled at the one place it is observable.
+
+**What the court proves and does not.** The arms call each entry point, read the public accessors,
+and hash `"abc"` through `EVP_DigestInit_ex`/`_Update`/`_Final_ex` -- so the objects are exercised
+through the fetch-replacement path D290 established, not merely field-compared. What that does *not*
+prove is that the underlying digest primitives are correct, which is 8.1's `CT-DIGEST` and already
+has its own corpus. The distinction matters here more than usual: thirteen of these arms would pass
+on a correct `EVP_MD` object over a broken SHA-3, and the point of the arm is the object.
