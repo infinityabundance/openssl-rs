@@ -104,6 +104,12 @@ use crate::runtime::thread::{
 };
 use crate::runtime::time::TimeT;
 
+// D310: the two non-DRBG `OSSL_OP_RAND` rows the default provider publishes. They are imported
+// rather than pathed inline because the provider census's reader joins a row's alias sequence to
+// its dispatch expression on **one line**, and a fully-qualified path makes rustfmt break the
+// chain across three lines -- the reader then cannot see rows it must not skip.
+use crate::provider::seed_src::{SEED_SRC_FUNCTIONS, TEST_RNG_FUNCTIONS};
+
 // D307: the three helpers this module reaches that landed in D304/D305, plus the platform clock.
 use crate::context::lib_ctx_get_data as ossl_lib_ctx_get_data;
 use crate::context::OSSL_LIB_CTX_DRBG_NONCE_INDEX;
@@ -5117,7 +5123,7 @@ pub(crate) static DRBG_HMAC_FUNCTIONS: [OsslDispatch; 17] = [
 /// `DEFLT_DIGESTS`/`DEFLT_MACS` write them: the provider census reads a row's whole alias sequence
 /// out of the table rather than trusting a primary name, and an indirection through a `const` it
 /// cannot follow would read as a row-less table (D237's class, from the candidate side).
-pub(crate) static DEFLT_RANDS: [OsslAlgorithm; 4] = [
+pub(crate) static DEFLT_RANDS: [OsslAlgorithm; 6] = [
     OsslAlgorithm {
         // `PROV_NAMES_CTR_DRBG` — `prov/names.h:330`. No alias and no OID.
         algorithm_names: c"CTR-DRBG".as_ptr(),
@@ -5137,6 +5143,25 @@ pub(crate) static DEFLT_RANDS: [OsslAlgorithm; 4] = [
         algorithm_names: c"HMAC-DRBG".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
         implementation: DRBG_HMAC_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SEED_SRC` — `prov/names.h:334`. The same row name the **base** provider
+        // publishes (`baseprov.c:90-96`, `BASE_RANDS`); the default provider carries it too,
+        // which is why the census has two rows for one algorithm.
+        algorithm_names: c"SEED-SRC".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SEED_SRC_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_TEST_RAND` — `prov/names.h:333`. The macro is `PROV_NAMES_TEST_RAND`, not
+        // `PROV_NAMES_TEST_RNG`. This is the row the plan's DRBG courts seed from: with
+        // `test_entropy` and `test_nonce` set it is deterministic, which is what makes its bytes
+        // an observable rather than a comparison of two pools.
+        algorithm_names: c"TEST-RAND".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: TEST_RNG_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {

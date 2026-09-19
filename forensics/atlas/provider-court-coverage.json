@@ -7,7 +7,7 @@
         "unmatched": 0
       },
       "9": {
-        "implemented": 3,
+        "implemented": 5,
         "unmatched": 0
       }
     },
@@ -29,8 +29,8 @@
         "probe": "courts/phase9/rt_drbg_probe.c"
       }
     ],
-    "directly_courted": 169,
-    "implemented_rows": 169,
+    "directly_courted": 171,
+    "implemented_rows": 171,
     "rows": [
       {
         "algorithm_names": "AES-128-CBC",
@@ -2388,6 +2388,32 @@
         "operation": "OSSL_OP_RAND",
         "owning_phase": 9,
         "provider": "default"
+      },
+      {
+        "algorithm_names": "SEED-SRC",
+        "aliases": [
+          "SEED-SRC"
+        ],
+        "courts": [
+          "RT-DRBG"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_RAND",
+        "owning_phase": 9,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "TEST-RAND",
+        "aliases": [
+          "TEST-RAND"
+        ],
+        "courts": [
+          "RT-DRBG"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_RAND",
+        "owning_phase": 9,
+        "provider": "default"
       }
     ],
     "unmatched": 0
@@ -2397,7 +2423,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "cb0dcfbc57c67bfafc99163614e11417f7c57a482cfe460a6cf69c87171774a9"
+      "sha256": "c754b3c08c4403a3389fe2a0017411059f25f7a0936f2f6aca308724c19c7878"
     },
     {
       "name": "court:RT-DIGEST",
@@ -2412,7 +2438,7 @@
     {
       "name": "court:RT-DRBG",
       "path": "courts/phase9/rt_drbg_probe.c",
-      "sha256": "089163564876bbb4a99f98171bb81cf06a487eb9de6fc3be2b108a589ee2d4d9"
+      "sha256": "ff28186b339c5d666151332184383080981405286fcac3d38518b3d54e1d5b63"
     }
   ],
   "kind": "provider-court-coverage",

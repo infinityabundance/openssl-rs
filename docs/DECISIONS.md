@@ -20110,3 +20110,68 @@ not moved toward its ledger: what moved is that a DRBG can be instantiated at al
 differential-compatibility result and says nothing about unpredictability
 (`docs/PHASE-9-SUBPHASES.md` section 3.3), and `CT-DRBG` -- the CAVP construction vectors -- is
 still pending. `RT-RAND` and `RT-BN-RAND` remain pending on the front.
+
+## D310 -- the seed-source rows land, `fips_crng_test.c` is measured out of profile, and TEST-RAND makes an output observable
+
+9.5's provider half: `providers/implementations/rands/seed_src.c` and `test_rng.c` are
+transcribed into `src/provider/seed_src.rs`, and the default provider now publishes **five**
+`OSSL_OP_RAND` rows -- `CTR-DRBG`, `HASH-DRBG`, `HMAC-DRBG`, `SEED-SRC`, `TEST-RAND`. The provider
+census goes from three implemented Phase-9 rows to five, and `provider_court_coverage.py` still
+reports `171 implemented / 171 directly courted / 0 unmatched`, because the probe was extended in
+the same commit.
+
+### Three findings the integration produced, each of which changed the code
+
+1. **`fips_crng_test.c` is not in this profile's build, and that is now measured rather than
+   assumed.** `providers/implementations/rands/build.info` reads
+   `SOURCE[../../libfips.a]=fips_crng_test.c` and nothing else -- the unit is FIPS-module-only,
+   and `configdata.pm` excludes the FIPS module. Its only authority row is `fipsprov.c:445`'s
+   `CRNG-TEST`, and `fipsprov.c` is not an admitted provider, so the provider census has **no
+   `CRNG-TEST` row** for default/base/legacy/null. A unit the profile does not build and whose row
+   is not in the universe has no observable, so it is **recorded rather than transcribed** -- the
+   treatment `#ifdef DSO_NONE`'s `dso_openssl.c` already gets. `docs/PHASE-9-SUBPHASES.md`'s 9.5
+   row is amended in this commit, because it named the unit as this stratum's and that is now known
+   to be wrong. (`seed_src_jitter.c` is the neighbouring case: it *is* in `libdefault.a`, but its
+   row is inside `#ifndef OPENSSL_NO_JITTER` and `OPENSSL_NO_JITTER` is defined, so it publishes
+   nothing either.)
+2. **The staged file's `MISSING` inventory was almost entirely stale, and three sites were off by
+   the class D307 and D308 already named.** The pool primitives, the seeding up-calls, the
+   `OSSL_FUNC_RAND_*` ids and all 56 `PROV_SEED_SRC_*`/`PROV_TEST_RNG_*`/`PROV_FIPS_CRNG_TEST_*`
+   err sites had landed in D304-D309, so the integration was an import block rather than a rewrite.
+   The three that were *not* stale were `.c.in`-vs-build-tree line numbers:
+   `PROV_SEED_SRC_199 -> _269` (`ERR_R_RAND_LIB`), `PROV_SEED_SRC_211 -> _281`
+   (`PROV_R_ENTROPY_SOURCE_STRENGTH_TOO_WEAK`) and `PROV_TEST_RNG_286 -> _285`
+   (`PROV_R_REPEATED_PARAMETER`), each matched by its **reason symbol** rather than by position.
+3. **`crypto/rand/rand_uniform.c` is held back, and it is the one unit here with a missing
+   callee.** Both its helpers draw through `RAND_bytes_ex(NULL, ...)`, which is `rand_lib.c`'s and
+   has not landed; writing them against a missing callee would be a stub wearing a name. They land
+   with the front, and `ossl_assert` -- their only caller in this stratum -- is carried with a
+   `dead_code` allowance that names exactly that.
+
+### TEST-RAND is the first row in this stratum whose *output* is an observation
+
+`SEED-SRC`'s generate polls the platform pool, so its bytes are a comparison of two machines and
+the probe observes only its return codes, states and parameter surface. **`TEST-RAND` is the
+opposite**: with `test_entropy` and `test_nonce` set through `EVP_RAND_CTX_set_params` it is a pure
+function of them, so the probe prints the 32 bytes it generates as hex and they must match. They
+do -- the authority answers `000102...3f`, exactly the seed it was handed -- which is the first
+construction-level observation Phase 9 has. That is also why the plan's `CT-DRBG` becomes
+writable: the seeded-input route now exists on both sides.
+
+### The row and the census reader, again
+
+`DEFLT_RANDS` gained the two rows, and the census reader refused the first attempt: a
+fully-qualified `crate::provider::seed_src::SEED_SRC_FUNCTIONS.as_ptr().cast()` is 62 characters,
+over rustfmt's `chain_width`, so it broke the chain across three lines and the reader -- which
+joins a row's alias sequence to its dispatch expression on one line -- saw 3 of 5 aliased rows and
+**failed closed** rather than skipping two. The tables are now `use`-imported so the chain fits,
+and the reason is written at the import: a reader that silently skipped an unreadable row is the
+`DES3-WRAP` class again.
+
+### What this entry does not claim
+
+No export landed: `rand.h`'s twenty-five are still `open`, and `phase9-obligations.json` is
+unchanged at 0 implemented. The base provider's `SEED-SRC` row is still `unimplemented` -- there is
+no base-provider module, because its other rows are Phase 10's -- and the census says exactly that.
+`RT-DRBG` remains a differential-compatibility result over 361 observations, not a construction
+proof; `CT-DRBG` is the court that will carry the CAVP vectors.

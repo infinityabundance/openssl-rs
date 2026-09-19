@@ -91,6 +91,7 @@ pub(crate) mod digest;
 pub(crate) mod init;
 pub(crate) mod mac;
 pub(crate) mod rand;
+pub(crate) mod seed_src;
 pub(crate) mod seeding;
 pub(crate) mod stores;
 pub(crate) mod util;
