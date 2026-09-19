@@ -92,6 +92,14 @@ extern "C" {
     pub fn write(fd: c_int, buf: *const c_void, n: size_t) -> isize;
     /// `int close(int)`.
     pub fn close(fd: c_int) -> c_int;
+    /// `pid_t getpid(void)` — `<unistd.h>`, `pid_t` being `__S32_TYPE` on this profile.
+    ///
+    /// It lives here rather than in `src/rand/sys.rs` because two unrelated units call it:
+    /// `rand_unix.c`'s nonce mixes the process id in, and `threads_pthread.c`'s
+    /// `openssl_get_fork_id` *is* `getpid()` (docs/DECISIONS.md D304). A declaration in either one
+    /// of the two callers would have made the other import across a stratum for a `<unistd.h>`
+    /// prototype.
+    pub fn getpid() -> c_int;
     /// `off_t lseek(int, off_t, int)`.
     pub fn lseek(fd: c_int, off: i64, whence: c_int) -> i64;
     /// `int open(const char *, int, ...)` — `<fcntl.h>`, in its **variadic** form.

@@ -294,12 +294,6 @@ pub(crate) fn fd_set(fd: c_int, set: &mut FdSet) {
 // ---------------------------------------------------------------------------
 
 extern "C" {
-    /// `pid_t getpid(void)` — `<unistd.h>`. `pid_t` is `__S32_TYPE`
-    /// (`<bits/typesizes.h>`), i.e. `int`. Used to mix the process id into the
-    /// nonce (`rand_unix.c:768`). Called through the safe wrapper below.
-    #[link_name = "getpid"]
-    fn getpid_raw() -> c_int;
-
     /// `int clock_gettime(clockid_t, struct timespec *)` — `<time.h>`.
     /// `clockid_t` is `__S32_TYPE`, i.e. `int` (`<bits/typesizes.h>`). Called
     /// through the safe wrapper below.
@@ -374,6 +368,8 @@ extern "C" {
 // The functions that are *genuinely* unsafe stay unsafe: `shmat`/`shmdt` take a pointer the caller
 // owns, `syscall` is variadic, and `fstat`'s wrapper is safe only because it takes `&mut Stat`
 // rather than a raw pointer.
+
+use crate::runtime::bio::sys::getpid as getpid_raw;
 
 /// `pid_t getpid(void)`.
 pub(crate) fn getpid() -> c_int {

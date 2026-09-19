@@ -28,7 +28,7 @@
       "ossl_rsa_pkey_method -> phase 8 (The `EVP_PKEY_METHOD` half of the same boundary: `crypto/evp/pmeth_lib.c`'s `standard_methods[]` holds the ten `ossl_<alg>_pkey_method` objects of the algorithm strata. `EVP_PKEY_meth_find`'s application half (`evp_pkey_meth_find_added_by_application`) is landed and courted; its `OBJ_bsearch_pmeth_func` half is not, and `EVP_PKEY_meth_get0` and `_get_count` index the table outright, so all three exports are withheld rather than stubbed with an application-count answer.)"
     ],
     "census": {
-      "covered_by_a_divergence": 55,
+      "covered_by_a_divergence": 54,
       "language_surface_not_modelled_by_name": 3139,
       "planned_prerequisites": 14
     },
@@ -41,7 +41,6 @@
         "in": 1,
         "inlen": 1,
         "libctx": 1,
-        "openssl_get_fork_id": 1,
         "openssl_init_fork_handlers": 1,
         "ossl_lib_ctx_default_deinit": 1,
         "ossl_lib_ctx_get_concrete": 5,
@@ -270,7 +269,6 @@
         "in",
         "inlen",
         "libctx",
-        "openssl_get_fork_id",
         "openssl_init_fork_handlers",
         "ossl_lib_ctx_default_deinit",
         "ossl_lib_ctx_get_concrete",
@@ -301,7 +299,8 @@
         "ossl_lib_ctx_is_global_default",
         "ossl_lib_ctx_is_global_default",
         "ossl_lib_ctx_read_lock",
-        "ossl_lib_ctx_read_lock"
+        "ossl_lib_ctx_read_lock",
+        "ossl_lib_ctx_unlock"
       ],
       "language_surface_not_modelled_by_name": [
         "crypto/aria/aria.c:X",
@@ -367,7 +366,7 @@
       "crate_modules": 243,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 24,
-      "divergence_names_covered": 31,
+      "divergence_names_covered": 30,
       "divergence_rows": 5,
       "names_referenced_and_not_built": 16
     },
@@ -485,7 +484,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "1c2fb8164497f180efd4259ff4547a48177bdb3b30860d94ed064df4cc974004",
+  "body_hash": "b69f432d93e0e93a17bf5b43a7be88fa56ccf76fd1e46fa74e0bee0b52e8b6f7",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -506,7 +505,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "1cb715391d603ef54c7db7fb9a38ea94cb8551b8d3ead967eb3b0cbed33d664c"
+      "sha256": "dee909b76dcafe94babf0a1697b52aea1e611990534e05e144c740c0660d9f0e"
     },
     {
       "name": "symbol-ownership",
@@ -521,7 +520,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "da293bf9c7272bff4f6fce14565c92eb367b4ec136fc32f6b9d7372e5e9e1a1b"
+      "sha256": "0d9c8ad472e15db99ba8770d6fdbff9382db4f529dfcd9b9d6cc9dcb5575467a"
     },
     {
       "name": "phase-state",
@@ -531,7 +530,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "1e256f940c5c454cedc20284a40d9a52f862e3a84550110c4e9b6e56fefce0ea"
+      "sha256": "ce8767fe8d4c4472cfc3b68e8ee26681f1677945531abbd1cd1c93759c736aef"
     },
     {
       "name": "crate-source-tree",
