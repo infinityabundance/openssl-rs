@@ -18444,3 +18444,69 @@ unchanged at 6939; `RT-CIPHER-MEM` unchanged at 382; `CT-DIGEST` 272/272; `libcr
 family's one recorded narrowing, on `RAND_bytes_ex`
 (`docs/SECURITY_DIVERGENCE_POLICY.md` D-CBCHMAC-MULTIBLOCK-ENC-1) — and D276's decomposition arm.
 Then 8.4 (RSA).
+
+## D282 — the stitched rows' decomposition lands for eight of twelve vectors, and the other four are measured
+
+D276 called a *decomposition* the primary correctness plane for the four published
+`AES-*-CBC-HMAC-*` rows, with D281 landing the corpus as the second. This is the decomposition, and it
+lands **partially on purpose**: it explains eight of the twelve committed vectors and the arm says
+which, rather than applying a rule it cannot justify to all twelve.
+
+**What it derives.** RFC 2246 §6.2.3.2 with RFC 2104's HMAC, from two primitives the crate separately
+courts: `HMAC(mac_key, aad || payload)`, where the thirteen-octet TLS AAD **is** the `seq_num ||
+type || version || length` header the MAC commits to -- so the MAC input is the vector's own AAD
+followed by the payload, with no reassembled sequence-number column; the minimal padding
+`(16 - ((payload + mac + 1) mod 16)) mod 16` of `pad` octets each *equal to* `pad` followed by one
+octet holding `pad`; and `AES-CBC` under the vector's own key and IV. The MAC size comes from the
+fetched digest rather than from the row's name, so a row whose name and digest disagreed could not
+pass by accident.
+
+**And it is the *recorded* answer where it applies, not a second opinion.** For the eight `0x0301`
+blocks the arm records the decomposition's bytes and requires the fetched row to produce the same
+bytes; a disagreement, or a length difference, is a refusal rather than a pass. So a green vector
+means both that the construction produces the corpus's bytes *and* that the row produces the
+construction's -- and the first of those is now independent of the mirror, which is what D276 was
+asking for.
+
+**The four `0x0302` blocks, and what is honestly known about them.** Their layout is the TLS 1.0
+layout: decrypting the expected record with the vector's own key and IV shows the record's first
+`aadlen` octets to be the caller's buffer **verbatim** (`aadlen` is the AAD's last two octets, 266 or
+256) and the padding to be the minimal one -- 1, 11, 15, 15 for the four. So the payload length, the
+padding rule and the CBC IV are all understood. The **MAC is not**: it is not
+`HMAC(mac_key, header || payload)` for any header length in `0..0xffff`, and the searches below were
+each run against the authority's own `HMAC` out of the pinned prefix and compared with the MAC read
+out of the record:
+
+  * payload ∈ {`aadlen`, `aadlen - 16`} (the two lengths the AAD could be reporting);
+  * the fragment starting at 0 or at 16 (the explicit-IV slot);
+  * the header's version octet being the AAD's `0x0302` or forced to `0x0301`;
+  * the header's length octet being the AAD's value or the payload;
+  * the CBC IV being the `IV` column or the record's own first block, with and without that block
+    prepended to the output;
+  * the MAC key being the corpus's `MACKey`, the cipher key, or the two concatenated.
+
+None of them matches, so the arm does not pretend to a rule it has not found: for `tlsversion >= 0x0302`
+it records the row's own bytes, and the family's `note` -- where a reader of the vectors will meet it --
+says that those four have a corpus-mirrored answer and the other eight have a re-derived one.
+
+**The negative control, and the flaw in the first one.** The first control made the ten `0x0302`
+blocks take the row's path -- and the vectors still passed, because that path also skipped the
+cross-check, so the pass did not depend on the decomposition at all. That is a control that measured
+its own plumbing. The second makes `ct_cbchmac_decompose` refuse unconditionally while leaving
+everything else intact, and it **fails exactly the eight `0x0301` vectors and nothing else** -- the
+four `0x0302` ones still pass, which is the scoping showing up in the result rather than in a comment.
+The first control is recorded here because it is the more instructive of the two: a negative control
+has to disable the *thing claimed*, not the path the claim happens to run through.
+
+**What this entry moves.** `courts/phase8/ct_cipher.c` (the decomposition, the recorded-answer choice,
+the version scoping and the header), `forensics/tools/correctness_vectors.py` (the `cbchmac` family's
+`note`, which is the vector file's own provenance), `forensics/vectors/cbchmac.json`,
+`docs/PHASE-8-SUBPHASES.md`'s 8.3 row, and every derived artefact they feed. Measured: `CT-CIPHER`
+**3190/3190** with eight of those vectors answered by the decomposition; `RT-CIPHER` 6939;
+`RT-CIPHER-MEM` 382; `CT-DIGEST` 272/272; `libcrypto` unchanged at **2035 implemented**.
+
+**What remains of 8.3.** The multiblock *encrypt* parameter of the four published rows -- the family's
+one recorded narrowing, on `RAND_bytes_ex`
+(`docs/SECURITY_DIVERGENCE_POLICY.md` D-CBCHMAC-MULTIBLOCK-ENC-1`) -- and the four `0x0302` vectors'
+independent plane, which is now a precisely-stated open question rather than an unexamined gap. Then
+8.4 (RSA).
