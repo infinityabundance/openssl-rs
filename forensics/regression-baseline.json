@@ -183,7 +183,7 @@
       "verdict": "pass"
     },
     "RT-DRBG": {
-      "observations": 303,
+      "observations": 361,
       "verdict": "pass"
     },
     "RT-DSO": {
@@ -586,23 +586,25 @@
     "default/OSSL_OP_MAC/SIPHASH",
     "default/OSSL_OP_RAND/CTR-DRBG",
     "default/OSSL_OP_RAND/HASH-DRBG",
-    "default/OSSL_OP_RAND/HMAC-DRBG"
+    "default/OSSL_OP_RAND/HMAC-DRBG",
+    "default/OSSL_OP_RAND/SEED-SRC",
+    "default/OSSL_OP_RAND/TEST-RAND"
   ],
   "provider_rows": {
     "handed_on_by_phase": {
       "10": 39,
       "13": 0,
-      "8": 687,
+      "8": 685,
       "9": 675
     },
-    "implemented": 169,
+    "implemented": 171,
     "open_by_phase": {
       "10": 636,
       "13": 39,
       "8": 140,
-      "9": 12
+      "9": 10
     },
     "total": 996,
-    "unimplemented": 827
+    "unimplemented": 825
   }
 }

@@ -7,9 +7,9 @@
     "courts": [
       {
         "authority_exit_code": 0,
-        "authority_observations": 303,
+        "authority_observations": 361,
         "candidate_exit_code": 0,
-        "candidate_observations": 303,
+        "candidate_observations": 361,
         "candidate_stderr_tail": [],
         "court": "RT-DRBG",
         "crashed": false,
@@ -44,7 +44,7 @@
     {
       "name": "probe",
       "path": "courts/phase9/rt_drbg_probe.c",
-      "sha256": "089163564876bbb4a99f98171bb81cf06a487eb9de6fc3be2b108a589ee2d4d9"
+      "sha256": "ff28186b339c5d666151332184383080981405286fcac3d38518b3d54e1d5b63"
     }
   ],
   "kind": "phase9-courts",

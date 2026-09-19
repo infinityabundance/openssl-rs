@@ -313,11 +313,11 @@ Hand-offs received and discharged:
 * from phase 7: 12 symbol(s) — `BIO_f_reliable`, `EVP_CIPHER_CTX_rand_key`, `EVP_SealInit`, `OSSL_HPKE_get_grease_value`, `PEM_ASN1_read`, `PEM_ASN1_read_bio`, `PEM_ASN1_write`, `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx`, `PEM_bytes_read_bio`, `PEM_bytes_read_bio_secmem`, `PEM_do_header`
 * from phase 8: 24 symbol(s) — `DES_random_key`, `DH_generate_key`, `DH_generate_parameters`, `DH_generate_parameters_ex`, `DSA_generate_key`, `DSA_generate_parameters_ex`, `EC_KEY_generate_key`, `RSA_PKCS1_OpenSSL`, `RSA_X931_derive_ex`, `RSA_X931_generate_key_ex`, `RSA_blinding_on`, `RSA_generate_key`, `RSA_generate_key_ex`, `RSA_generate_multi_prime_key`, `RSA_get_default_method`, `RSA_new`, `RSA_new_method`, `RSA_padding_add_PKCS1_OAEP`, `RSA_padding_add_PKCS1_OAEP_mgf1`, `RSA_padding_add_PKCS1_PSS`, `RSA_padding_add_PKCS1_PSS_mgf1`, `RSA_padding_add_PKCS1_type_2`, `RSA_padding_check_PKCS1_type_2`, `RSA_setup_blinding`
 
-Courts: `all pass`, 1 court(s), **303** authority observation(s) over 1 transcript court(s).
+Courts: `all pass`, 1 court(s), **361** authority observation(s) over 1 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
-| RT-DRBG | `pass` | 303 |
+| RT-DRBG | `pass` | 361 |
 
 ## Court coverage
 
