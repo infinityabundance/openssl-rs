@@ -20175,3 +20175,51 @@ unchanged at 0 implemented. The base provider's `SEED-SRC` row is still `unimple
 no base-provider module, because its other rows are Phase 10's -- and the census says exactly that.
 `RT-DRBG` remains a differential-compatibility result over 361 observations, not a construction
 proof; `CT-DRBG` is the court that will carry the CAVP vectors.
+
+## D311 -- the RAND front's cost is measured, and three of its twenty-five exports are Phase 13's
+
+9.2 is the next subphase, so the staged `court/phase9/rand_lib.rs.txt` was integrated against the
+crate as it now stands and **measured rather than guessed**. The copy-in gave **33 errors**, and
+this entry records what they are, because that is what makes the next pass finite. Nothing was
+left half-landed: the working tree is `cc8b2855` and builds, tests and clippies clean.
+
+### The one cross-stratum boundary: ENGINE
+
+The front's `RAND_get_rand_method`, `RAND_set_rand_method` and `RAND_set_rand_engine` read and
+write the `RAND_METHOD`/ENGINE table through `ENGINE_get_default_RAND`, `ENGINE_get_RAND`,
+`ENGINE_init` and `ENGINE_finish`. Those are `engine.h`'s and **Phase 13's**, and this profile
+builds ENGINE in: `nm -D` on the admitted authority's `libcrypto.so.3` shows all four exported
+(and the candidate already scaffolds them). So the boundary is real rather than a staging artefact,
+and the three exports are **withheld** rather than written in halves -- the same treatment
+`EVP_read_pw_string_min` gets for `UI_*` and `EVP_SealInit` gets for the random layer. Six of the
+33 errors were these four names.
+
+### The other 27 are the front's own work, and they are named
+
+* **`src/runtime/bio/sys.rs` has no `stat`, `fstat`, `fdopen`, `clearerr`, `setbuf` or `chmod`.**
+  `RAND_file_name`, `RAND_load_file` and `RAND_write_file` need all six, and `fstat` needs a
+  `struct stat` **layout**, which is architecture-specific: getting it wrong is silent corruption,
+  not a wrong answer, so it is named as its own piece of work rather than folded into "imports".
+* `RAND_POOL_MAX_LENGTH` is private in `src/rand/pool.rs` and `rand_lib.c`'s `RAND_add` clamp
+  reads it -- a visibility widening, not a new constant.
+* `c_ulong` is missing from the staged file's `core::ffi` import (four sites) and
+  `set_random_provider_name` is called without the `unsafe` block the crate requires around an
+  `unsafe fn` call in edition 2024 (one site).
+* The pool and seeding names (`ossl_rand_pool_new`/`_free`/`_length`/`_buffer`/`_entropy`,
+  `ossl_pool_acquire_entropy`, `ossl_rand_pool_init`/`_cleanup`/`_keep_random_devices_open`) all
+  exist in `src/rand/`; the staged file predates them and calls them unqualified.
+
+### What this entry records about process, not about RAND
+
+D310's commit staged `artifacts/` and **not** `courts/`, so its committed
+`artifacts/phase9/COURTS.json` recorded 361 observations from a probe source that, as committed,
+produced 303 -- the both-directions comparison in `run_courts.py` would have failed on that commit
+and passed on the next. `cc8b2855` adds the probe. The general lesson is the one the crate already
+writes down for `git add -- src forensics docs artifacts`: **that list is not the whole tree.**
+`courts/` is a second source directory and belongs in it.
+
+### What this entry does not claim
+
+No export landed. `rand.h`'s twenty-five are all still `open`, the ledger is unchanged at 0
+implemented, and no Phase-9 court beyond `RT-DRBG` has moved. What changed is that 9.2 is now a
+measured job with one named cross-stratum blocker instead of an unknown.
