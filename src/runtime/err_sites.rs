@@ -22412,6 +22412,1806 @@ pub(crate) const RSA_SP800_56B_GEN_454: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `RAND_pseudo_bytes` at `crypto/rand/rand_lib.c:386` (RAND_R_FUNC_NOT_IMPLEMENTED).
+pub(crate) const RAND_LIB_386: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 386,
+    func: c"RAND_pseudo_bytes",
+    lib: 36,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `RAND_priv_bytes_ex` at `crypto/rand/rand_lib.c:430` (RAND_R_ARGUMENT_OUT_OF_RANGE).
+pub(crate) const RAND_LIB_430: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 430,
+    func: c"RAND_priv_bytes_ex",
+    lib: 36,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `RAND_priv_bytes_ex` at `crypto/rand/rand_lib.c:435` (RAND_R_FUNC_NOT_IMPLEMENTED).
+pub(crate) const RAND_LIB_435: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 435,
+    func: c"RAND_priv_bytes_ex",
+    lib: 36,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `RAND_bytes_ex` at `crypto/rand/rand_lib.c:473` (RAND_R_ARGUMENT_OUT_OF_RANGE).
+pub(crate) const RAND_LIB_473: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 473,
+    func: c"RAND_bytes_ex",
+    lib: 36,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `RAND_bytes_ex` at `crypto/rand/rand_lib.c:478` (RAND_R_FUNC_NOT_IMPLEMENTED).
+pub(crate) const RAND_LIB_478: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 478,
+    func: c"RAND_bytes_ex",
+    lib: 36,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `rand_new_seed` at `crypto/rand/rand_lib.c:610` (RAND_R_UNABLE_TO_FETCH_DRBG).
+pub(crate) const RAND_LIB_610: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 610,
+    func: c"rand_new_seed",
+    lib: 36,
+    reason: 144,
+    dynamic_reason: false,
+};
+
+/// `rand_new_seed` at `crypto/rand/rand_lib.c:616` (RAND_R_UNABLE_TO_CREATE_DRBG).
+pub(crate) const RAND_LIB_616: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 616,
+    func: c"rand_new_seed",
+    lib: 36,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `rand_new_seed` at `crypto/rand/rand_lib.c:620` (RAND_R_ERROR_INSTANTIATING_DRBG).
+pub(crate) const RAND_LIB_620: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 620,
+    func: c"rand_new_seed",
+    lib: 36,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `rand_new_drbg` at `crypto/rand/rand_lib.c:664` (RAND_R_UNABLE_TO_FETCH_DRBG).
+pub(crate) const RAND_LIB_664: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 664,
+    func: c"rand_new_drbg",
+    lib: 36,
+    reason: 144,
+    dynamic_reason: false,
+};
+
+/// `rand_new_drbg` at `crypto/rand/rand_lib.c:670` (RAND_R_UNABLE_TO_CREATE_DRBG).
+pub(crate) const RAND_LIB_670: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 670,
+    func: c"rand_new_drbg",
+    lib: 36,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `rand_new_drbg` at `crypto/rand/rand_lib.c:697` (RAND_R_ERROR_INSTANTIATING_DRBG).
+pub(crate) const RAND_LIB_697: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 697,
+    func: c"rand_new_drbg",
+    lib: 36,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `rand_new_crngt` at `crypto/rand/rand_lib.c:712` (RAND_R_UNABLE_TO_FETCH_DRBG).
+pub(crate) const RAND_LIB_712: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 712,
+    func: c"rand_new_crngt",
+    lib: 36,
+    reason: 144,
+    dynamic_reason: false,
+};
+
+/// `rand_new_crngt` at `crypto/rand/rand_lib.c:718` (RAND_R_UNABLE_TO_CREATE_DRBG).
+pub(crate) const RAND_LIB_718: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 718,
+    func: c"rand_new_crngt",
+    lib: 36,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `rand_new_crngt` at `crypto/rand/rand_lib.c:723` (RAND_R_ERROR_INSTANTIATING_DRBG).
+pub(crate) const RAND_LIB_723: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 723,
+    func: c"rand_new_crngt",
+    lib: 36,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `rand_get0_primary` at `crypto/rand/rand_lib.c:776` (EVP_R_UNABLE_TO_ENABLE_LOCKING).
+pub(crate) const RAND_LIB_776: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 776,
+    func: c"rand_get0_primary",
+    lib: 6,
+    reason: 212,
+    dynamic_reason: false,
+};
+
+/// `random_conf_init` at `crypto/rand/rand_lib.c:977` (CRYPTO_R_RANDOM_SECTION_ERROR).
+pub(crate) const RAND_LIB_977: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 977,
+    func: c"random_conf_init",
+    lib: 15,
+    reason: 119,
+    dynamic_reason: false,
+};
+
+/// `random_conf_init` at `crypto/rand/rand_lib.c:1010` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RAND_LIB_1010: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 1010,
+    func: c"random_conf_init",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `random_conf_init` at `crypto/rand/rand_lib.c:1030` (CRYPTO_R_UNKNOWN_NAME_IN_RANDOM_SECTION).
+pub(crate) const RAND_LIB_1030: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 1030,
+    func: c"random_conf_init",
+    lib: 15,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `RAND_set_DRBG_type` at `crypto/rand/rand_lib.c:1058` (RAND_R_ALREADY_INSTANTIATED).
+pub(crate) const RAND_LIB_1058: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 1058,
+    func: c"RAND_set_DRBG_type",
+    lib: 36,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `RAND_set_seed_source_type` at `crypto/rand/rand_lib.c:1075` (RAND_R_ALREADY_INSTANTIATED).
+pub(crate) const RAND_LIB_1075: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 1075,
+    func: c"RAND_set_seed_source_type",
+    lib: 36,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `RAND_load_file` at `crypto/rand/randfile.c:106` (RAND_R_CANNOT_OPEN_FILE).
+pub(crate) const RANDFILE_106: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/randfile.c",
+    line: 106,
+    func: c"RAND_load_file",
+    lib: 36,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `RAND_load_file` at `crypto/rand/randfile.c:113` (RAND_R_INTERNAL_ERROR).
+pub(crate) const RANDFILE_113: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/randfile.c",
+    line: 113,
+    func: c"RAND_load_file",
+    lib: 36,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `RAND_load_file` at `crypto/rand/randfile.c:178` (RAND_R_RESEED_ERROR).
+pub(crate) const RANDFILE_178: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/randfile.c",
+    line: 178,
+    func: c"RAND_load_file",
+    lib: 36,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `RAND_write_file` at `crypto/rand/randfile.c:194` (RAND_R_NOT_A_REGULAR_FILE).
+pub(crate) const RANDFILE_194: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/randfile.c",
+    line: 194,
+    func: c"RAND_write_file",
+    lib: 36,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `RAND_write_file` at `crypto/rand/randfile.c:219` (RAND_R_CANNOT_OPEN_FILE).
+pub(crate) const RANDFILE_219: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/randfile.c",
+    line: 219,
+    func: c"RAND_write_file",
+    lib: 36,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `RAND_write_file` at `crypto/rand/randfile.c:251` (RAND_R_CANNOT_OPEN_FILE).
+pub(crate) const RANDFILE_251: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/randfile.c",
+    line: 251,
+    func: c"RAND_write_file",
+    lib: 36,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `rand_pool_grow` at `crypto/rand/rand_pool.c:205` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RAND_POOL_205: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_pool.c",
+    line: 205,
+    func: c"rand_pool_grow",
+    lib: 36,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_pool_bytes_needed` at `crypto/rand/rand_pool.c:242` (RAND_R_ARGUMENT_OUT_OF_RANGE).
+pub(crate) const RAND_POOL_242: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_pool.c",
+    line: 242,
+    func: c"ossl_rand_pool_bytes_needed",
+    lib: 36,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_pool_bytes_needed` at `crypto/rand/rand_pool.c:250` (RAND_R_RANDOM_POOL_OVERFLOW).
+pub(crate) const RAND_POOL_250: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_pool.c",
+    line: 250,
+    func: c"ossl_rand_pool_bytes_needed",
+    lib: 36,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_pool_add` at `crypto/rand/rand_pool.c:302` (RAND_R_ENTROPY_INPUT_TOO_LONG).
+pub(crate) const RAND_POOL_302: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_pool.c",
+    line: 302,
+    func: c"ossl_rand_pool_add",
+    lib: 36,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_pool_add` at `crypto/rand/rand_pool.c:307` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RAND_POOL_307: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_pool.c",
+    line: 307,
+    func: c"ossl_rand_pool_add",
+    lib: 36,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_pool_add` at `crypto/rand/rand_pool.c:321` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RAND_POOL_321: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_pool.c",
+    line: 321,
+    func: c"ossl_rand_pool_add",
+    lib: 36,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_pool_add_begin` at `crypto/rand/rand_pool.c:359` (RAND_R_RANDOM_POOL_OVERFLOW).
+pub(crate) const RAND_POOL_359: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_pool.c",
+    line: 359,
+    func: c"ossl_rand_pool_add_begin",
+    lib: 36,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_pool_add_begin` at `crypto/rand/rand_pool.c:364` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RAND_POOL_364: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_pool.c",
+    line: 364,
+    func: c"ossl_rand_pool_add_begin",
+    lib: 36,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_pool_add_end` at `crypto/rand/rand_pool.c:395` (RAND_R_RANDOM_POOL_OVERFLOW).
+pub(crate) const RAND_POOL_395: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_pool.c",
+    line: 395,
+    func: c"ossl_rand_pool_add_end",
+    lib: 36,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_pool_adin_mix_in` at `crypto/rand/rand_pool.c:426` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RAND_POOL_426: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_pool.c",
+    line: 426,
+    func: c"ossl_rand_pool_adin_mix_in",
+    lib: 36,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_pool_adin_mix_in` at `crypto/rand/rand_pool.c:431` (RAND_R_RANDOM_POOL_IS_EMPTY).
+pub(crate) const RAND_POOL_431: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_pool.c",
+    line: 431,
+    func: c"ossl_rand_pool_adin_mix_in",
+    lib: 36,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `ossl_drbg_lock_parent` at `providers/implementations/rands/drbg.c:70` (PROV_R_PARENT_LOCKING_NOT_ENABLED).
+pub(crate) const PROV_DRBG_70: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 70,
+    func: c"ossl_drbg_lock_parent",
+    lib: 57,
+    reason: 182,
+    dynamic_reason: false,
+};
+
+/// `get_parent_strength` at `providers/implementations/rands/drbg.c:91` (PROV_R_UNABLE_TO_GET_PARENT_STRENGTH).
+pub(crate) const PROV_DRBG_91: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 91,
+    func: c"get_parent_strength",
+    lib: 57,
+    reason: 199,
+    dynamic_reason: false,
+};
+
+/// `get_parent_strength` at `providers/implementations/rands/drbg.c:97` (PROV_R_UNABLE_TO_LOCK_PARENT).
+pub(crate) const PROV_DRBG_97: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 97,
+    func: c"get_parent_strength",
+    lib: 57,
+    reason: 201,
+    dynamic_reason: false,
+};
+
+/// `get_parent_strength` at `providers/implementations/rands/drbg.c:103` (PROV_R_UNABLE_TO_GET_PARENT_STRENGTH).
+pub(crate) const PROV_DRBG_103: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 103,
+    func: c"get_parent_strength",
+    lib: 57,
+    reason: 199,
+    dynamic_reason: false,
+};
+
+/// `get_parent_reseed_count` at `providers/implementations/rands/drbg.c:117` (PROV_R_UNABLE_TO_LOCK_PARENT).
+pub(crate) const PROV_DRBG_117: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 117,
+    func: c"get_parent_reseed_count",
+    lib: 57,
+    reason: 201,
+    dynamic_reason: false,
+};
+
+/// `ossl_drbg_get_seed` at `providers/implementations/rands/drbg.c:178` (PROV_R_GENERATE_ERROR).
+pub(crate) const PROV_DRBG_178: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 178,
+    func: c"ossl_drbg_get_seed",
+    lib: 57,
+    reason: 191,
+    dynamic_reason: false,
+};
+
+/// `get_entropy` at `providers/implementations/rands/drbg.c:208` (PROV_R_PARENT_CANNOT_SUPPLY_ENTROPY_SEED).
+pub(crate) const PROV_DRBG_208: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 208,
+    func: c"get_entropy",
+    lib: 57,
+    reason: 187,
+    dynamic_reason: false,
+};
+
+/// `get_entropy` at `providers/implementations/rands/drbg.c:218` (PROV_R_PARENT_STRENGTH_TOO_WEAK).
+pub(crate) const PROV_DRBG_218: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 218,
+    func: c"get_entropy",
+    lib: 57,
+    reason: 194,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_instantiate` at `providers/implementations/rands/drbg.c:359` (PROV_R_INSUFFICIENT_DRBG_STRENGTH).
+pub(crate) const PROV_DRBG_359: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 359,
+    func: c"ossl_prov_drbg_instantiate",
+    lib: 57,
+    reason: 181,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_instantiate` at `providers/implementations/rands/drbg.c:371` (PROV_R_PERSONALISATION_STRING_TOO_LONG).
+pub(crate) const PROV_DRBG_371: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 371,
+    func: c"ossl_prov_drbg_instantiate",
+    lib: 57,
+    reason: 195,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_instantiate` at `providers/implementations/rands/drbg.c:377` (PROV_R_IN_ERROR_STATE).
+pub(crate) const PROV_DRBG_377: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 377,
+    func: c"ossl_prov_drbg_instantiate",
+    lib: 57,
+    reason: 192,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_instantiate` at `providers/implementations/rands/drbg.c:379` (PROV_R_ALREADY_INSTANTIATED).
+pub(crate) const PROV_DRBG_379: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 379,
+    func: c"ossl_prov_drbg_instantiate",
+    lib: 57,
+    reason: 185,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_instantiate` at `providers/implementations/rands/drbg.c:391` (PROV_R_ERROR_RETRIEVING_NONCE).
+pub(crate) const PROV_DRBG_391: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 391,
+    func: c"ossl_prov_drbg_instantiate",
+    lib: 57,
+    reason: 190,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_instantiate` at `providers/implementations/rands/drbg.c:396` (PROV_R_ERROR_RETRIEVING_NONCE).
+pub(crate) const PROV_DRBG_396: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 396,
+    func: c"ossl_prov_drbg_instantiate",
+    lib: 57,
+    reason: 190,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_instantiate` at `providers/implementations/rands/drbg.c:400` (PROV_R_ERROR_RETRIEVING_NONCE).
+pub(crate) const PROV_DRBG_400: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 400,
+    func: c"ossl_prov_drbg_instantiate",
+    lib: 57,
+    reason: 190,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_instantiate` at `providers/implementations/rands/drbg.c:423` (PROV_R_ERROR_RETRIEVING_NONCE).
+pub(crate) const PROV_DRBG_423: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 423,
+    func: c"ossl_prov_drbg_instantiate",
+    lib: 57,
+    reason: 190,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_instantiate` at `providers/implementations/rands/drbg.c:442` (PROV_R_ERROR_RETRIEVING_ENTROPY).
+pub(crate) const PROV_DRBG_442: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 442,
+    func: c"ossl_prov_drbg_instantiate",
+    lib: 57,
+    reason: 189,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_instantiate` at `providers/implementations/rands/drbg.c:449` (PROV_R_ERROR_INSTANTIATING_DRBG).
+pub(crate) const PROV_DRBG_449: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 449,
+    func: c"ossl_prov_drbg_instantiate",
+    lib: 57,
+    reason: 188,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_reseed_unlocked` at `providers/implementations/rands/drbg.c:498` (PROV_R_IN_ERROR_STATE).
+pub(crate) const PROV_DRBG_498: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 498,
+    func: c"ossl_prov_drbg_reseed_unlocked",
+    lib: 57,
+    reason: 192,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_reseed_unlocked` at `providers/implementations/rands/drbg.c:502` (PROV_R_NOT_INSTANTIATED).
+pub(crate) const PROV_DRBG_502: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 502,
+    func: c"ossl_prov_drbg_reseed_unlocked",
+    lib: 57,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_reseed_unlocked` at `providers/implementations/rands/drbg.c:509` (RAND_R_ENTROPY_OUT_OF_RANGE).
+pub(crate) const PROV_DRBG_509: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 509,
+    func: c"ossl_prov_drbg_reseed_unlocked",
+    lib: 36,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_reseed_unlocked` at `providers/implementations/rands/drbg.c:514` (RAND_R_ENTROPY_INPUT_TOO_LONG).
+pub(crate) const PROV_DRBG_514: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 514,
+    func: c"ossl_prov_drbg_reseed_unlocked",
+    lib: 36,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_reseed_unlocked` at `providers/implementations/rands/drbg.c:523` (PROV_R_ADDITIONAL_INPUT_TOO_LONG).
+pub(crate) const PROV_DRBG_523: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 523,
+    func: c"ossl_prov_drbg_reseed_unlocked",
+    lib: 57,
+    reason: 184,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_reseed_unlocked` at `providers/implementations/rands/drbg.c:546` (PROV_R_UNABLE_TO_RESEED).
+pub(crate) const PROV_DRBG_546: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 546,
+    func: c"ossl_prov_drbg_reseed_unlocked",
+    lib: 57,
+    reason: 204,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_reseed_unlocked` at `providers/implementations/rands/drbg.c:551` (PROV_R_UNABLE_TO_RESEED).
+pub(crate) const PROV_DRBG_551: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 551,
+    func: c"ossl_prov_drbg_reseed_unlocked",
+    lib: 57,
+    reason: 204,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_reseed_unlocked` at `providers/implementations/rands/drbg.c:566` (PROV_R_ERROR_RETRIEVING_ENTROPY).
+pub(crate) const PROV_DRBG_566: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 566,
+    func: c"ossl_prov_drbg_reseed_unlocked",
+    lib: 57,
+    reason: 189,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_generate` at `providers/implementations/rands/drbg.c:648` (PROV_R_IN_ERROR_STATE).
+pub(crate) const PROV_DRBG_648: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 648,
+    func: c"ossl_prov_drbg_generate",
+    lib: 57,
+    reason: 192,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_generate` at `providers/implementations/rands/drbg.c:652` (PROV_R_NOT_INSTANTIATED).
+pub(crate) const PROV_DRBG_652: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 652,
+    func: c"ossl_prov_drbg_generate",
+    lib: 57,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_generate` at `providers/implementations/rands/drbg.c:657` (PROV_R_INSUFFICIENT_DRBG_STRENGTH).
+pub(crate) const PROV_DRBG_657: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 657,
+    func: c"ossl_prov_drbg_generate",
+    lib: 57,
+    reason: 181,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_generate` at `providers/implementations/rands/drbg.c:662` (PROV_R_REQUEST_TOO_LARGE_FOR_DRBG).
+pub(crate) const PROV_DRBG_662: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 662,
+    func: c"ossl_prov_drbg_generate",
+    lib: 57,
+    reason: 196,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_generate` at `providers/implementations/rands/drbg.c:666` (PROV_R_ADDITIONAL_INPUT_TOO_LONG).
+pub(crate) const PROV_DRBG_666: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 666,
+    func: c"ossl_prov_drbg_generate",
+    lib: 57,
+    reason: 184,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_generate` at `providers/implementations/rands/drbg.c:691` (PROV_R_RESEED_ERROR).
+pub(crate) const PROV_DRBG_691: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 691,
+    func: c"ossl_prov_drbg_generate",
+    lib: 57,
+    reason: 197,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_generate` at `providers/implementations/rands/drbg.c:700` (PROV_R_GENERATE_ERROR).
+pub(crate) const PROV_DRBG_700: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 700,
+    func: c"ossl_prov_drbg_generate",
+    lib: 57,
+    reason: 191,
+    dynamic_reason: false,
+};
+
+/// `ossl_drbg_enable_locking` at `providers/implementations/rands/drbg.c:765` (PROV_R_PARENT_LOCKING_NOT_ENABLED).
+pub(crate) const PROV_DRBG_765: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 765,
+    func: c"ossl_drbg_enable_locking",
+    lib: 57,
+    reason: 182,
+    dynamic_reason: false,
+};
+
+/// `ossl_drbg_enable_locking` at `providers/implementations/rands/drbg.c:770` (PROV_R_FAILED_TO_CREATE_LOCK).
+pub(crate) const PROV_DRBG_770: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 770,
+    func: c"ossl_drbg_enable_locking",
+    lib: 57,
+    reason: 180,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_drbg_new` at `providers/implementations/rands/drbg.c:854` (PROV_R_PARENT_STRENGTH_TOO_WEAK).
+pub(crate) const PROV_DRBG_854: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 854,
+    func: c"ossl_rand_drbg_new",
+    lib: 57,
+    reason: 194,
+    dynamic_reason: false,
+};
+
+/// `ossl_drbg_verify_digest` at `providers/implementations/rands/drbg.c:1014` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_DRBG_1014: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 1014,
+    func: c"ossl_drbg_verify_digest",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `ossl_drbg_verify_digest` at `providers/implementations/rands/drbg.c:1021` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_DRBG_1021: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 1021,
+    func: c"ossl_drbg_verify_digest",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_init` at `providers/implementations/rands/drbg_ctr.c:577` (PROV_R_MISSING_CIPHER).
+pub(crate) const PROV_DRBG_CTR_577: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 577,
+    func: c"drbg_ctr_init",
+    lib: 57,
+    reason: 155,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_init` at `providers/implementations/rands/drbg_ctr.c:586` (ERR_R_EVP_LIB).
+pub(crate) const PROV_DRBG_CTR_586: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 586,
+    func: c"drbg_ctr_init",
+    lib: 57,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_init` at `providers/implementations/rands/drbg_ctr.c:594` (PROV_R_UNABLE_TO_INITIALISE_CIPHERS).
+pub(crate) const PROV_DRBG_CTR_594: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 594,
+    func: c"drbg_ctr_init",
+    lib: 57,
+    reason: 208,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_init` at `providers/implementations/rands/drbg_ctr.c:607` (PROV_R_DERIVATION_FUNCTION_INIT_FAILED).
+pub(crate) const PROV_DRBG_CTR_607: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 607,
+    func: c"drbg_ctr_init",
+    lib: 57,
+    reason: 205,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_init` at `providers/implementations/rands/drbg_ctr.c:625` (ERR_R_EVP_LIB).
+pub(crate) const PROV_DRBG_CTR_625: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 625,
+    func: c"drbg_ctr_init",
+    lib: 57,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_init` at `providers/implementations/rands/drbg_ctr.c:631` (PROV_R_DERIVATION_FUNCTION_INIT_FAILED).
+pub(crate) const PROV_DRBG_CTR_631: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 631,
+    func: c"drbg_ctr_init",
+    lib: 57,
+    reason: 205,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:751` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_751: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 751,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:763` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_763: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 763,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:791` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_791: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 791,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:802` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_802: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 802,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:813` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_813: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 813,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:824` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_824: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 824,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:835` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_835: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 835,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:861` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_861: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 861,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:872` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_872: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 872,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:915` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_915: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 915,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:926` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_926: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 926,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:953` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_953: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 953,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:962` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_962: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 962,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:991` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_991: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 991,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:1002` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_1002: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 1002,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:1015` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_1015: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 1015,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_set_ctx_params_locked` at `providers/implementations/rands/drbg_ctr.c:1105` (PROV_R_REQUIRE_CTR_MODE_CIPHER).
+pub(crate) const PROV_DRBG_CTR_1105: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 1105,
+    func: c"drbg_ctr_set_ctx_params_locked",
+    lib: 57,
+    reason: 206,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_set_ctx_params_locked` at `providers/implementations/rands/drbg_ctr.c:1124` (PROV_R_UNABLE_TO_FIND_CIPHERS).
+pub(crate) const PROV_DRBG_CTR_1124: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 1124,
+    func: c"drbg_ctr_set_ctx_params_locked",
+    lib: 57,
+    reason: 207,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_set_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:1179` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_1179: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 1179,
+    func: c"drbg_ctr_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_set_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:1202` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_1202: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 1202,
+    func: c"drbg_ctr_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_set_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:1213` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_1213: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 1213,
+    func: c"drbg_ctr_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_set_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:1255` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_1255: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 1255,
+    func: c"drbg_ctr_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_set_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:1266` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_1266: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 1266,
+    func: c"drbg_ctr_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_set_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:1284` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_1284: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 1284,
+    func: c"drbg_ctr_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:540` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_540: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 540,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:552` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_552: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 552,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:580` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_580: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 580,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:591` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_591: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 591,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:602` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_602: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 602,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:613` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_613: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 613,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:624` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_624: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 624,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:650` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_650: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 650,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:661` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_661: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 661,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:704` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_704: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 704,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:715` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_715: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 715,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:742` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_742: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 742,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:751` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_751: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 751,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:780` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_780: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 780,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:791` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_791: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 791,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:1011` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_1011: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 1011,
+    func: c"drbg_hash_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:1021` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_1021: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 1021,
+    func: c"drbg_hash_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:1037` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_1037: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 1037,
+    func: c"drbg_hash_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:1060` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_1060: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 1060,
+    func: c"drbg_hash_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:1071` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_1071: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 1071,
+    func: c"drbg_hash_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:1113` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_1113: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 1113,
+    func: c"drbg_hash_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:1124` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_1124: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 1124,
+    func: c"drbg_hash_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_drbg_hmac_init` at `providers/implementations/rands/drbg_hmac.c:129` (PROV_R_MISSING_MAC).
+pub(crate) const PROV_DRBG_HMAC_129: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 129,
+    func: c"ossl_drbg_hmac_init",
+    lib: 57,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:434` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_434: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 434,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:446` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_446: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 446,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:468` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_468: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 468,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:487` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_487: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 487,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:498` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_498: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 498,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:509` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_509: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 509,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:520` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_520: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 520,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:531` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_531: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 531,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:557` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_557: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 557,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:568` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_568: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 568,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:611` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_611: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 611,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:622` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_622: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 622,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:649` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_649: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 649,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:658` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_658: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 658,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:687` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_687: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 687,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:698` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_698: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 698,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:957` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_957: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 957,
+    func: c"drbg_hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:967` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_967: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 967,
+    func: c"drbg_hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:983` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_983: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 983,
+    func: c"drbg_hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:994` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_994: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 994,
+    func: c"drbg_hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:1017` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_1017: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 1017,
+    func: c"drbg_hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:1028` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_1028: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 1028,
+    func: c"drbg_hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:1070` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_1070: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 1070,
+    func: c"drbg_hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:1081` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_1081: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 1081,
+    func: c"drbg_hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `seed_src_new` at `providers/implementations/rands/seed_src.c:55` (PROV_R_SEED_SOURCES_MUST_NOT_HAVE_A_PARENT).
+pub(crate) const PROV_SEED_SRC_55: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/seed_src.c",
+    line: 55,
+    func: c"seed_src_new",
+    lib: 57,
+    reason: 229,
+    dynamic_reason: false,
+};
+
+/// `seed_src_generate` at `providers/implementations/rands/seed_src.c:103` (ERR_raise dynamic reason).
+pub(crate) const PROV_SEED_SRC_103: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/seed_src.c",
+    line: 103,
+    func: c"seed_src_generate",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `seed_src_generate` at `providers/implementations/rands/seed_src.c:111` (ERR_R_RAND_LIB).
+pub(crate) const PROV_SEED_SRC_111: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/seed_src.c",
+    line: 111,
+    func: c"seed_src_generate",
+    lib: 57,
+    reason: 524324,
+    dynamic_reason: false,
+};
+
+/// `seed_src_reseed` at `providers/implementations/rands/seed_src.c:140` (ERR_raise dynamic reason).
+pub(crate) const PROV_SEED_SRC_140: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/seed_src.c",
+    line: 140,
+    func: c"seed_src_reseed",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `seed_src_get_ctx_params_decoder` at `providers/implementations/rands/seed_src.c:183` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SEED_SRC_183: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/seed_src.c",
+    line: 183,
+    func: c"seed_src_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `seed_src_get_ctx_params_decoder` at `providers/implementations/rands/seed_src.c:202` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SEED_SRC_202: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/seed_src.c",
+    line: 202,
+    func: c"seed_src_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `seed_src_get_ctx_params_decoder` at `providers/implementations/rands/seed_src.c:213` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SEED_SRC_213: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/seed_src.c",
+    line: 213,
+    func: c"seed_src_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `seed_get_seed` at `providers/implementations/rands/seed_src.c:269` (ERR_R_RAND_LIB).
+pub(crate) const PROV_SEED_SRC_269: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/seed_src.c",
+    line: 269,
+    func: c"seed_get_seed",
+    lib: 57,
+    reason: 524324,
+    dynamic_reason: false,
+};
+
+/// `seed_get_seed` at `providers/implementations/rands/seed_src.c:281` (PROV_R_ENTROPY_SOURCE_STRENGTH_TOO_WEAK).
+pub(crate) const PROV_SEED_SRC_281: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/seed_src.c",
+    line: 281,
+    func: c"seed_get_seed",
+    lib: 57,
+    reason: 186,
+    dynamic_reason: false,
+};
+
+/// `test_rng_get_ctx_params_decoder` at `providers/implementations/rands/test_rng.c:232` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TEST_RNG_232: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/test_rng.c",
+    line: 232,
+    func: c"test_rng_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `test_rng_get_ctx_params_decoder` at `providers/implementations/rands/test_rng.c:244` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TEST_RNG_244: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/test_rng.c",
+    line: 244,
+    func: c"test_rng_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `test_rng_get_ctx_params_decoder` at `providers/implementations/rands/test_rng.c:255` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TEST_RNG_255: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/test_rng.c",
+    line: 255,
+    func: c"test_rng_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `test_rng_get_ctx_params_decoder` at `providers/implementations/rands/test_rng.c:274` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TEST_RNG_274: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/test_rng.c",
+    line: 274,
+    func: c"test_rng_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `test_rng_get_ctx_params_decoder` at `providers/implementations/rands/test_rng.c:285` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TEST_RNG_285: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/test_rng.c",
+    line: 285,
+    func: c"test_rng_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `test_rng_set_ctx_params_decoder` at `providers/implementations/rands/test_rng.c:373` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TEST_RNG_373: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/test_rng.c",
+    line: 373,
+    func: c"test_rng_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `test_rng_set_ctx_params_decoder` at `providers/implementations/rands/test_rng.c:384` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TEST_RNG_384: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/test_rng.c",
+    line: 384,
+    func: c"test_rng_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `test_rng_set_ctx_params_decoder` at `providers/implementations/rands/test_rng.c:395` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TEST_RNG_395: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/test_rng.c",
+    line: 395,
+    func: c"test_rng_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `test_rng_set_ctx_params_decoder` at `providers/implementations/rands/test_rng.c:426` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TEST_RNG_426: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/test_rng.c",
+    line: 426,
+    func: c"test_rng_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `test_rng_set_ctx_params_decoder` at `providers/implementations/rands/test_rng.c:437` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TEST_RNG_437: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/test_rng.c",
+    line: 437,
+    func: c"test_rng_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `test_rng_enable_locking` at `providers/implementations/rands/test_rng.c:524` (PROV_R_FAILED_TO_CREATE_LOCK).
+pub(crate) const PROV_TEST_RNG_524: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/test_rng.c",
+    line: 524,
+    func: c"test_rng_enable_locking",
+    lib: 57,
+    reason: 180,
+    dynamic_reason: false,
+};
+
+/// `lock_parent` at `providers/implementations/rands/fips_crng_test.c:94` (PROV_R_PARENT_LOCKING_NOT_ENABLED).
+pub(crate) const PROV_FIPS_CRNG_TEST_94: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/fips_crng_test.c",
+    line: 94,
+    func: c"lock_parent",
+    lib: 57,
+    reason: 182,
+    dynamic_reason: false,
+};
+
+/// `crng_test` at `providers/implementations/rands/fips_crng_test.c:172` (PROV_R_ENTROPY_SOURCE_FAILED_CONTINUOUS_TESTS).
+pub(crate) const PROV_FIPS_CRNG_TEST_172: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/fips_crng_test.c",
+    line: 172,
+    func: c"crng_test",
+    lib: 57,
+    reason: 244,
+    dynamic_reason: false,
+};
+
+/// `crng_test_enable_locking` at `providers/implementations/rands/fips_crng_test.c:341` (PROV_R_PARENT_LOCKING_NOT_ENABLED).
+pub(crate) const PROV_FIPS_CRNG_TEST_341: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/fips_crng_test.c",
+    line: 341,
+    func: c"crng_test_enable_locking",
+    lib: 57,
+    reason: 182,
+    dynamic_reason: false,
+};
+
+/// `crng_test_enable_locking` at `providers/implementations/rands/fips_crng_test.c:346` (PROV_R_FAILED_TO_CREATE_LOCK).
+pub(crate) const PROV_FIPS_CRNG_TEST_346: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/fips_crng_test.c",
+    line: 346,
+    func: c"crng_test_enable_locking",
+    lib: 57,
+    reason: 180,
+    dynamic_reason: false,
+};
+
+/// `crng_test_get_ctx_params_decoder` at `providers/implementations/rands/fips_crng_test.c:410` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_FIPS_CRNG_TEST_410: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/fips_crng_test.c",
+    line: 410,
+    func: c"crng_test_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `crng_test_get_ctx_params_decoder` at `providers/implementations/rands/fips_crng_test.c:422` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_FIPS_CRNG_TEST_422: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/fips_crng_test.c",
+    line: 422,
+    func: c"crng_test_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `crng_test_get_ctx_params_decoder` at `providers/implementations/rands/fips_crng_test.c:441` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_FIPS_CRNG_TEST_441: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/fips_crng_test.c",
+    line: 441,
+    func: c"crng_test_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `crng_test_get_ctx_params_decoder` at `providers/implementations/rands/fips_crng_test.c:452` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_FIPS_CRNG_TEST_452: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/fips_crng_test.c",
+    line: 452,
+    func: c"crng_test_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -24661,4 +26461,184 @@ pub(crate) static ALL: &[ErrSite] = &[
     RSA_SP800_56B_GEN_185,
     RSA_SP800_56B_GEN_205,
     RSA_SP800_56B_GEN_454,
+    RAND_LIB_386,
+    RAND_LIB_430,
+    RAND_LIB_435,
+    RAND_LIB_473,
+    RAND_LIB_478,
+    RAND_LIB_610,
+    RAND_LIB_616,
+    RAND_LIB_620,
+    RAND_LIB_664,
+    RAND_LIB_670,
+    RAND_LIB_697,
+    RAND_LIB_712,
+    RAND_LIB_718,
+    RAND_LIB_723,
+    RAND_LIB_776,
+    RAND_LIB_977,
+    RAND_LIB_1010,
+    RAND_LIB_1030,
+    RAND_LIB_1058,
+    RAND_LIB_1075,
+    RANDFILE_106,
+    RANDFILE_113,
+    RANDFILE_178,
+    RANDFILE_194,
+    RANDFILE_219,
+    RANDFILE_251,
+    RAND_POOL_205,
+    RAND_POOL_242,
+    RAND_POOL_250,
+    RAND_POOL_302,
+    RAND_POOL_307,
+    RAND_POOL_321,
+    RAND_POOL_359,
+    RAND_POOL_364,
+    RAND_POOL_395,
+    RAND_POOL_426,
+    RAND_POOL_431,
+    PROV_DRBG_70,
+    PROV_DRBG_91,
+    PROV_DRBG_97,
+    PROV_DRBG_103,
+    PROV_DRBG_117,
+    PROV_DRBG_178,
+    PROV_DRBG_208,
+    PROV_DRBG_218,
+    PROV_DRBG_359,
+    PROV_DRBG_371,
+    PROV_DRBG_377,
+    PROV_DRBG_379,
+    PROV_DRBG_391,
+    PROV_DRBG_396,
+    PROV_DRBG_400,
+    PROV_DRBG_423,
+    PROV_DRBG_442,
+    PROV_DRBG_449,
+    PROV_DRBG_498,
+    PROV_DRBG_502,
+    PROV_DRBG_509,
+    PROV_DRBG_514,
+    PROV_DRBG_523,
+    PROV_DRBG_546,
+    PROV_DRBG_551,
+    PROV_DRBG_566,
+    PROV_DRBG_648,
+    PROV_DRBG_652,
+    PROV_DRBG_657,
+    PROV_DRBG_662,
+    PROV_DRBG_666,
+    PROV_DRBG_691,
+    PROV_DRBG_700,
+    PROV_DRBG_765,
+    PROV_DRBG_770,
+    PROV_DRBG_854,
+    PROV_DRBG_1014,
+    PROV_DRBG_1021,
+    PROV_DRBG_CTR_577,
+    PROV_DRBG_CTR_586,
+    PROV_DRBG_CTR_594,
+    PROV_DRBG_CTR_607,
+    PROV_DRBG_CTR_625,
+    PROV_DRBG_CTR_631,
+    PROV_DRBG_CTR_751,
+    PROV_DRBG_CTR_763,
+    PROV_DRBG_CTR_791,
+    PROV_DRBG_CTR_802,
+    PROV_DRBG_CTR_813,
+    PROV_DRBG_CTR_824,
+    PROV_DRBG_CTR_835,
+    PROV_DRBG_CTR_861,
+    PROV_DRBG_CTR_872,
+    PROV_DRBG_CTR_915,
+    PROV_DRBG_CTR_926,
+    PROV_DRBG_CTR_953,
+    PROV_DRBG_CTR_962,
+    PROV_DRBG_CTR_991,
+    PROV_DRBG_CTR_1002,
+    PROV_DRBG_CTR_1015,
+    PROV_DRBG_CTR_1105,
+    PROV_DRBG_CTR_1124,
+    PROV_DRBG_CTR_1179,
+    PROV_DRBG_CTR_1202,
+    PROV_DRBG_CTR_1213,
+    PROV_DRBG_CTR_1255,
+    PROV_DRBG_CTR_1266,
+    PROV_DRBG_CTR_1284,
+    PROV_DRBG_HASH_540,
+    PROV_DRBG_HASH_552,
+    PROV_DRBG_HASH_580,
+    PROV_DRBG_HASH_591,
+    PROV_DRBG_HASH_602,
+    PROV_DRBG_HASH_613,
+    PROV_DRBG_HASH_624,
+    PROV_DRBG_HASH_650,
+    PROV_DRBG_HASH_661,
+    PROV_DRBG_HASH_704,
+    PROV_DRBG_HASH_715,
+    PROV_DRBG_HASH_742,
+    PROV_DRBG_HASH_751,
+    PROV_DRBG_HASH_780,
+    PROV_DRBG_HASH_791,
+    PROV_DRBG_HASH_1011,
+    PROV_DRBG_HASH_1021,
+    PROV_DRBG_HASH_1037,
+    PROV_DRBG_HASH_1060,
+    PROV_DRBG_HASH_1071,
+    PROV_DRBG_HASH_1113,
+    PROV_DRBG_HASH_1124,
+    PROV_DRBG_HMAC_129,
+    PROV_DRBG_HMAC_434,
+    PROV_DRBG_HMAC_446,
+    PROV_DRBG_HMAC_468,
+    PROV_DRBG_HMAC_487,
+    PROV_DRBG_HMAC_498,
+    PROV_DRBG_HMAC_509,
+    PROV_DRBG_HMAC_520,
+    PROV_DRBG_HMAC_531,
+    PROV_DRBG_HMAC_557,
+    PROV_DRBG_HMAC_568,
+    PROV_DRBG_HMAC_611,
+    PROV_DRBG_HMAC_622,
+    PROV_DRBG_HMAC_649,
+    PROV_DRBG_HMAC_658,
+    PROV_DRBG_HMAC_687,
+    PROV_DRBG_HMAC_698,
+    PROV_DRBG_HMAC_957,
+    PROV_DRBG_HMAC_967,
+    PROV_DRBG_HMAC_983,
+    PROV_DRBG_HMAC_994,
+    PROV_DRBG_HMAC_1017,
+    PROV_DRBG_HMAC_1028,
+    PROV_DRBG_HMAC_1070,
+    PROV_DRBG_HMAC_1081,
+    PROV_SEED_SRC_55,
+    PROV_SEED_SRC_103,
+    PROV_SEED_SRC_111,
+    PROV_SEED_SRC_140,
+    PROV_SEED_SRC_183,
+    PROV_SEED_SRC_202,
+    PROV_SEED_SRC_213,
+    PROV_SEED_SRC_269,
+    PROV_SEED_SRC_281,
+    PROV_TEST_RNG_232,
+    PROV_TEST_RNG_244,
+    PROV_TEST_RNG_255,
+    PROV_TEST_RNG_274,
+    PROV_TEST_RNG_285,
+    PROV_TEST_RNG_373,
+    PROV_TEST_RNG_384,
+    PROV_TEST_RNG_395,
+    PROV_TEST_RNG_426,
+    PROV_TEST_RNG_437,
+    PROV_TEST_RNG_524,
+    PROV_FIPS_CRNG_TEST_94,
+    PROV_FIPS_CRNG_TEST_172,
+    PROV_FIPS_CRNG_TEST_341,
+    PROV_FIPS_CRNG_TEST_346,
+    PROV_FIPS_CRNG_TEST_410,
+    PROV_FIPS_CRNG_TEST_422,
+    PROV_FIPS_CRNG_TEST_441,
+    PROV_FIPS_CRNG_TEST_452,
 ];
