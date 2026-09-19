@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 16,
-      "implemented": 194,
-      "open_in_this_stratum": 576,
+      "implemented": 228,
+      "open_in_this_stratum": 542,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1324,6 +1324,40 @@
       "RIPEMD160_Init",
       "RIPEMD160_Transform",
       "RIPEMD160_Update",
+      "RSA_meth_dup",
+      "RSA_meth_free",
+      "RSA_meth_get0_app_data",
+      "RSA_meth_get0_name",
+      "RSA_meth_get_bn_mod_exp",
+      "RSA_meth_get_finish",
+      "RSA_meth_get_flags",
+      "RSA_meth_get_init",
+      "RSA_meth_get_keygen",
+      "RSA_meth_get_mod_exp",
+      "RSA_meth_get_multi_prime_keygen",
+      "RSA_meth_get_priv_dec",
+      "RSA_meth_get_priv_enc",
+      "RSA_meth_get_pub_dec",
+      "RSA_meth_get_pub_enc",
+      "RSA_meth_get_sign",
+      "RSA_meth_get_verify",
+      "RSA_meth_new",
+      "RSA_meth_set0_app_data",
+      "RSA_meth_set1_name",
+      "RSA_meth_set_bn_mod_exp",
+      "RSA_meth_set_finish",
+      "RSA_meth_set_flags",
+      "RSA_meth_set_init",
+      "RSA_meth_set_keygen",
+      "RSA_meth_set_mod_exp",
+      "RSA_meth_set_multi_prime_keygen",
+      "RSA_meth_set_priv_dec",
+      "RSA_meth_set_priv_enc",
+      "RSA_meth_set_pub_dec",
+      "RSA_meth_set_pub_enc",
+      "RSA_meth_set_sign",
+      "RSA_meth_set_verify",
+      "RSA_null_method",
       "SEED_cbc_encrypt",
       "SEED_cfb128_encrypt",
       "SEED_decrypt",
@@ -4388,204 +4422,6 @@
         "declaring_header": "rsa.h",
         "module": "src/rsa/mod.rs",
         "received_from_phase": null,
-        "symbol": "RSA_meth_dup"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_free"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_get0_app_data"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_get0_name"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_get_bn_mod_exp"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_get_finish"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_get_flags"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_get_init"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_get_keygen"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_get_mod_exp"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_get_multi_prime_keygen"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_get_priv_dec"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_get_priv_enc"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_get_pub_dec"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_get_pub_enc"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_get_sign"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_get_verify"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_new"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_set0_app_data"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_set1_name"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_set_bn_mod_exp"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_set_finish"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_set_flags"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_set_init"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_set_keygen"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_set_mod_exp"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_set_multi_prime_keygen"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_set_priv_dec"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_set_priv_enc"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_set_pub_dec"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_set_pub_enc"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_set_sign"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_meth_set_verify"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
         "symbol": "RSA_new"
       },
       {
@@ -4593,12 +4429,6 @@
         "module": "src/rsa/mod.rs",
         "received_from_phase": null,
         "symbol": "RSA_new_method"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_null_method"
       },
       {
         "declaring_header": "rsa.h",
@@ -5104,12 +4934,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "4eb9b658885578558f7ea6aace56b08e9458a72078b525f4f455667baac3a186"
+      "sha256": "309c416c368e533b14f8245fc06e07c88bf6d2e1b80eb9a5fc23218b04492796"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "b3fb3872ab0a467eb7e37786632681f609359884abd5973c22f476549fde3633"
+      "sha256": "7c662a18386fcadc22ddb8cf22063fef84e3a8e8d02497d131ca03ff989b9433"
     }
   ],
   "kind": "phase8-obligations",

@@ -18562,3 +18562,99 @@ one slice of this block that cannot close inside it.
 
 **What comes next.** Slice A, with `RT-RSA` as its court and the measured offsets as its first unit
 test.
+
+## D284 — 8.4's method table lands, and its allocator attribution is a court rather than a constant
+
+Slice B of 8.4: the thirty-three `RSA_meth_*` labels and `RSA_null_method`, in a new `src/rsa/mod.rs`.
+D283 measured the block as 150 labels in seven slices; this is the one slice of the seven whose
+prerequisites are already in, because **nothing in it does any cryptography**. Every function in the
+authority's `crypto/rsa/rsa_meth.c` allocates a table, stores a pointer in one, or returns one, and
+the file is 279 lines of nothing else. So the transcript this slice can be held to is about *identity
+and ownership* — what a failed duplicate does to the table it was duplicating, what a release
+releases first, which translation unit the allocator sees — and that is a different kind of
+observation from every `RT-*` court before it.
+
+**B before A, and the plan D283 wrote said the opposite.** D283's table gave slice B a dependency on
+slice A. That dependency is real for the *readers* A adds and is not real for anything B publishes:
+B's functions never call an A function. What they do need is the `RSA` object's **shape**, because
+four of `RSA_METHOD`'s fifteen members take `RSA *` in their signatures, and D283 had already
+measured that shape (216 bytes, the offsets listed in D283) precisely so it could be transcribed
+once. So the `RSA` struct, the eight function-pointer typedefs and the two PSS structures ship in
+this slice as types with measured offsets and a size assertion, while slice A's *accessor functions*
+— `RSA_new`, `RSA_free`, `RSA_set0_key`, the flags quartet, `RSA_PKCS1_OpenSSL` — remain open. The
+order in the plan was the order of readers; the order in the crate is the order of build
+dependencies, and this entry records the difference rather than quietly reversing it.
+
+**The method table's shape is measured, and one offset is the reason.** `RSA_METHOD` is **120** bytes
+with `name` 0, the four crypt entry points at 8/16/24/32, `rsa_mod_exp` 40, `bn_mod_exp` 48, `init`
+56, `finish` 64, `flags` **72**, `app_data` 80, `rsa_sign` 88, `rsa_verify` 96, `rsa_keygen` 104 and
+`rsa_multi_prime_keygen` 112. `flags` is an `int` and `app_data` is a pointer, so the four bytes at
+76..80 are padding and the two are **not** adjacent in memory the way their declaration order
+suggests. A transcription that gave `flags` a pointer's width would be eight bytes too wide from
+`rsa_sign` onwards, and the failure would be a method table whose sign callback sat where the
+authority has its verify callback. The unit test asserts the size, the alignment and all fifteen
+offsets; `courts/layout/measure-rsa-ctx.c` is the program that produced the numbers.
+
+**Six of the fifteen members are nullable, and the authority's own tables are the evidence rather
+than a reading of the header.** `rsa_pkcs1_ossl_meth` (`rsa_ossl.c:60-79`) writes the integer `0`
+into `rsa_sign` and `rsa_verify` — not `NULL`, the integer — leaves both `rsa_keygen` members NULL,
+and the header's own comments at `rsa_local.h:112` and `:114` mark `rsa_mod_exp` and `bn_mod_exp`
+"Can be null". So every function-pointer member is an `Option`, and the null is expressed as `None`
+rather than by fabricating an address with the right type. That distinction is not cosmetic: a
+`Some` holding a stub would make a caller's `meth->rsa_keygen != NULL` branch run code the authority
+never runs.
+
+**The three orderings that a set of names would hide, and the probe that compares them.** `RT-RSA`
+installs a caller allocator with `CRYPTO_set_mem_functions` as its first act — the installation
+latches, which is why it cannot be an arm of a court that allocates first — and records, per arm, the
+**ordered** sequence of `(kind, size, file)` the library requests. Order is load-bearing in three of
+these functions:
+
+* `RSA_meth_new` stores `flags` *before* duplicating the name, which is what makes it safe to release
+  the whole table when the duplicate fails. The probe observes the consequence: `RSA_meth_new(NULL, 7)`
+  reaches `CRYPTO_strdup(NULL)`, which the authority answers with NULL *before* allocating, so the
+  window is exactly `M:120` then `F:0` and the answer is NULL.
+* `RSA_meth_set1_name` duplicates **first** and releases second. The failure is reachable without an
+  allocation failure — a NULL argument makes the duplicate refuse — and the arm shows a window with
+  **zero** events and the old name still in place, which is precisely what the reverse order could
+  not produce.
+* `RSA_meth_free` releases the name before the table. The window is two `F:0` events in that order.
+
+`rsa_meth.c` is a **source-tree** file, so `OPENSSL_FILE` in its bodies is
+`../../src/openssl-3.6.4/crypto/rsa/rsa_meth.c` with the prefix present — measured with `strings` on
+`build/crypto/rsa/libcrypto-lib-rsa_meth.o`, the same check D279 and D280 applied to the cipher
+units, and the opposite outcome from the `.c.in` instances those two had to distinguish. The sizes
+are observed too, and they are contract quantities rather than strategy: the allocator receives
+`sizeof(RSA_METHOD)` = 120 for the table and `strlen(name) + 1` for the duplicate. `RT-RSA` passes at
+**104 observations** against the authority's own transcript, with the eleven `Roundtrip`×5 accessor
+arms covering all twenty-four setters and getters.
+
+**What `RT-RSA` deliberately does not observe, and why that is written down.** `RSA_PKCS1_OpenSSL`,
+`RSA_get_default_method`, `RSA_set_default_method` and `RSA_set_method` are slice A's, so they are not
+symbols the candidate shell publishes yet and a probe that called them would fail to *link* rather
+than compare. The observations of `rsa_pkcs1_ossl_meth`'s own members — `flags` holding
+`RSA_FLAG_FIPS_METHOD` (`0x0400`), `rsa_sign`/`rsa_verify` NULL because the table initialises them to
+the integer `0`, both keygen members NULL, `rsa_mod_exp` non-NULL — therefore arrive with slice A's
+probe, in the commit that publishes the table. The probe's own comment names the deferral so that
+"not compared" cannot be read as "compared and equal", which is the same discipline D251 applied to
+the planes a court-coverage atlas cannot see.
+
+**The one constant with no reader yet.** `RSA_METHOD_FLAG_NO_CHECK` (`0x0001`) is transcribed from
+`include/openssl/rsa.h:64` and carries `#[allow(dead_code)]` naming its landing caller: the authority
+tests it in exactly two places, both inside `crypto/rsa/rsa_ameth.c:118-119`, which is 8.8's
+`ossl_rsa_asn1_meth`. Until then the value is held honest by the unit test rather than by a caller,
+and the exception is documented at the constant instead of being silent.
+
+**How it was written, and why the generator is not a shortcut.** The thirty longhand accessors were
+emitted by `court/gen-rsa.py`, which is a transcription aid: this crate forbids `macro_rules!`
+generated *exports* because the ownership and prototype courts read source text and a name that
+exists only after expansion is invisible to them, so the thirty pairs are spelled out. The committed
+artefact is `src/rsa/mod.rs`; the generator lives in the gitignored scratch directory and is
+reproduced in the decision rather than depended on by the build. Regenerating after the
+`#[allow(dead_code)]` edit is what produced the committed file, so the two agree.
+
+**What this entry does not claim.** `libcrypto` moves from 2035 to **2069 identified exports** — the
+ledger says what the arithmetic is; Phase 8's export ledger moves 34 rows from `open` to
+`implemented`. `CT-RSA` remains PENDING: the constructions it will check are slices C's and D's, and a
+correctness court registered before there is a construction to check would be the vacuous kind this
+project has spent three phases removing. `RT-RSA` is the evidence for this slice and nothing more.

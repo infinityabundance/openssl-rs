@@ -140,6 +140,14 @@ CONF_INT = ("not a provider dispatch: a member of the `CONF_METHOD` vtable, whic
 EVP_LEGACY = ("not a provider dispatch: a member of `EVP_CIPHER`'s or `EVP_MD`'s legacy callback "
               "list in `evp.h`, declared as a plain function pointer rather than through "
               "`OSSL_CORE_MAKE_FUNC`")
+# `crypto/rsa/rsa_local.h:102-147` -- the `RSA_METHOD` members (Phase 8.4). Like `evp.h`'s legacy
+# list, the struct declares each callback inline as a plain function pointer; unlike it, the header
+# is *internal*, so the atlas -- whose universe is the installed public surface -- records no
+# `typedef` for any of the eight and there is no authority name for the crate's aliases to link to.
+RSA_METHOD_VTABLE = ("not a provider dispatch: a member of `RSA_METHOD`'s vtable, declared inline "
+                     "in `crypto/rsa/rsa_local.h:102-147` as a plain function pointer rather than "
+                     "through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records "
+                     "no typedef for it")
 LHASH_MACRO = ("not a provider dispatch: `lhash.h.in`'s `LHASH_HASH_FN` / `LHASH_COMP_FN` / "
                "`LHASH_DOALL*` macros generate it per type, so there is no single typedef")
 SK_MACRO = ("not a provider dispatch: `safestack.h.in`'s `sk_*_compfunc` / `freefunc` / "
@@ -267,6 +275,15 @@ NOT_A_DISPATCH: dict[str, str] = {
     "MdLegacyCopyFn": EVP_LEGACY,
     "MdLegacyCleanupFn": EVP_LEGACY,
     "MdLegacyCtrlFn": EVP_LEGACY,
+    # --- `RSA_METHOD`'s vtable (`crypto/rsa/rsa_local.h:102-147`, Phase 8.4) -----------------
+    "RsaCryptFn": RSA_METHOD_VTABLE,
+    "RsaModExpFn": RSA_METHOD_VTABLE,
+    "RsaBnModExpFn": RSA_METHOD_VTABLE,
+    "RsaLifecycleFn": RSA_METHOD_VTABLE,
+    "RsaSignFn": RSA_METHOD_VTABLE,
+    "RsaVerifyFn": RSA_METHOD_VTABLE,
+    "RsaKeygenFn": RSA_METHOD_VTABLE,
+    "RsaMultiPrimeKeygenFn": RSA_METHOD_VTABLE,
     # --- `BIO_meth_set_*`'s inline parameter types (`bio.h`) ---------------------------------
     # The `_ex` two take `char *` where the *core dispatch* typedefs of the same shape take
     # `void *`, and `BIO_meth_set_ctrl` returns `long` where `OSSL_FUNC_BIO_ctrl_fn` returns

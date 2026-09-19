@@ -1,0 +1,363 @@
+/*
+ * RT-RSA -- the differential court for `crypto/rsa/`'s method table (Phase 8.4, slice B).
+ *
+ * This program is compiled **twice**, once against the admitted authority and once against the
+ * candidate distribution shell, and the two `key=value` transcripts are diffed. It never decides
+ * anything: a residual is a difference between two executions, so the expectation cannot drift with
+ * the crate. `forensics/tools/phase8_courts.py` owns the comparison.
+ *
+ * What this court is, and what it is not yet
+ * ------------------------------------------
+ * Slice B is the thirty-three `RSA_meth_*` labels plus `RSA_null_method`, and **every one of the
+ * thirty-four is called below**. Nothing here does any cryptography -- each function allocates a
+ * table, stores a pointer in it, or returns one -- so the transcript is about *identity and
+ * ownership* rather than arithmetic, and that is the whole observable contract of these entry
+ * points.
+ *
+ * **It is deliberately not a court for the default method.** `RSA_PKCS1_OpenSSL`, `RSA_set_method`,
+ * `RSA_get_default_method` and `RSA_set_default_method` are slice A's, and until slice A lands they
+ * are not symbols the candidate shell publishes, so a probe that called them would fail to link
+ * rather than compare. The observations of `rsa_pkcs1_ossl_meth`'s own members -- `rsa_sign` and
+ * `rsa_verify` initialised to the integer `0`, both keygen members NULL, `RSA_FLAG_FIPS_METHOD` in
+ * `flags` -- therefore arrive with slice A's probe, in the commit that publishes the table. The
+ * deferred observation is named here so that "not compared" cannot be read as "compared and equal".
+ *
+ * The allocator-attribution plane
+ * -------------------------------
+ * `CRYPTO_set_mem_functions`'s callbacks take `(size_t num, const char *file, int line)`, and all
+ * three are part of the published contract: an embedder that installs an allocator receives them.
+ * `rsa_meth.c` is a **source-tree** file, so `OPENSSL_FILE` in its bodies is
+ * `../../src/openssl-3.6.4/crypto/rsa/rsa_meth.c` -- the prefix is present, unlike the `.c.in`
+ * instances D279 and D280 had to distinguish. So the first thing this probe does is install an
+ * allocator and record, for each arm, the **ordered sequence of `(kind, size, file)`** the library
+ * requests inside a window that starts before the call and ends after it. That is how the claim
+ * "this unit's allocation is attributed to this unit's translation unit" becomes a diff instead of
+ * a constant in the crate.
+ *
+ * **The sequence, not just the set, is deliberate.** The order is load-bearing in three of these
+ * arms: `RSA_meth_new` stores `flags` *before* duplicating the name, so a failed duplicate can
+ * release the table; `RSA_meth_set1_name` duplicates *first* and releases second, so a failed
+ * duplicate leaves the old name in place; `RSA_meth_free` releases the name *before* the table. A
+ * set of `file` strings would make all three orders invisible.
+ *
+ * The window is a window and not a whole-program trace for the same reason `RT-CIPHER-MEM`'s is:
+ * `CRYPTO_set_mem_functions` latches, and the *rest* of the process -- the error queue, stdio, the
+ * warm-up -- is not what this court is about. The warm-up call before the first window is what
+ * keeps the first window from containing lazy library state.
+ *
+ * No address is ever printed: every function pointer is compared for equality with a local
+ * sentinel and the *result* is printed. stdout is line-buffered, and no NULL-dereferencing entry
+ * point is called -- a probe that aborts the harness compares nothing.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+/* `RSA_meth_*` and `RSA_null_method` are `OSSL_DEPRECATEDIN_3_0`. The deprecation is the
+ * authority's own policy statement about application code, not about a court that must exercise
+ * the entry points it declares; suppressing the diagnostic keeps `-Wall` output readable without
+ * changing a single symbol this probe links. */
+#define OPENSSL_SUPPRESS_DEPRECATED
+#include <openssl/bn.h>
+#include <openssl/crypto.h>
+#include <openssl/err.h>
+#include <openssl/rsa.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+/* ------------------------------------------------------------------ the recorder */
+
+#define EV_MAX 32
+#define EV_NAME 512
+
+/* Each event owns a copy of its `file` string rather than a pointer into the library, so a
+ * release that happens before the window closes cannot leave the transcript reading freed
+ * memory. A NULL `file` is recorded as the literal `<null>` for the same reason: the argument is
+ * itself part of the contract, and dropping the event would hide exactly that. */
+static char ev_file[EV_MAX][EV_NAME];
+static unsigned long ev_size[EV_MAX];
+static char ev_kind[EV_MAX];
+static int nev;
+static int recording;
+
+static void record(char kind, size_t size, const char *file, int line)
+{
+    size_t n;
+
+    if (!recording)
+        return;
+    if (file == NULL) {
+        strcpy(ev_file[nev], "<null>");
+    } else {
+        n = strlen(file);
+        if (n >= EV_NAME)
+            n = EV_NAME - 1;
+        memcpy(ev_file[nev], file, n);
+        ev_file[nev][n] = '\0';
+    }
+    ev_kind[nev] = kind;
+    ev_size[nev] = (unsigned long)size;
+    if (nev < EV_MAX - 1)
+        nev++;
+    else
+        ev_kind[nev] = kind; /* keep the count honest when the ring saturates */
+    (void)line;
+}
+
+static void *my_malloc(size_t n, const char *file, int line)
+{
+    record('M', n, file, line);
+    return malloc(n);
+}
+
+static void *my_realloc(void *p, size_t n, const char *file, int line)
+{
+    record('R', n, file, line);
+    return realloc(p, n);
+}
+
+static void my_free(void *p, const char *file, int line)
+{
+    record('F', 0, file, line);
+    free(p);
+}
+
+static void begin(void)
+{
+    nev = 0;
+    recording = 1;
+}
+
+static void end(const char *arm)
+{
+    int i;
+
+    recording = 0;
+    printf("rsa.%s.ev=%d\n", arm, nev);
+    for (i = 0; i < nev; i++)
+        printf("rsa.%s.ev.%d=%c:%lu:%s\n", arm, i, ev_kind[i], ev_size[i], ev_file[i]);
+}
+
+/* ------------------------------------------------------------------ sentinels */
+
+/* One per distinct function-pointer signature in `RSA_METHOD`. They are stored and compared,
+ * never called: each returns a constant so that a transcription which *did* call one would be
+ * visible in the transcript rather than merely wrong. */
+static int sentinel_crypt(int flen, const unsigned char *from, unsigned char *to, RSA *rsa,
+    int padding)
+{
+    (void)flen; (void)from; (void)to; (void)rsa; (void)padding;
+    return 0;
+}
+
+static int sentinel_modexp(BIGNUM *r0, const BIGNUM *i, RSA *rsa, BN_CTX *ctx)
+{
+    (void)r0; (void)i; (void)rsa; (void)ctx;
+    return 0;
+}
+
+static int sentinel_bnmodexp(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, const BIGNUM *m,
+    BN_CTX *ctx, BN_MONT_CTX *m_ctx)
+{
+    (void)r; (void)a; (void)p; (void)m; (void)ctx; (void)m_ctx;
+    return 0;
+}
+
+static int sentinel_life(RSA *rsa)
+{
+    (void)rsa;
+    return 0;
+}
+
+static int sentinel_sign(int type, const unsigned char *m, unsigned int m_length,
+    unsigned char *sigret, unsigned int *siglen, const RSA *rsa)
+{
+    (void)type; (void)m; (void)m_length; (void)sigret; (void)siglen; (void)rsa;
+    return 0;
+}
+
+static int sentinel_verify(int dtype, const unsigned char *m, unsigned int m_length,
+    const unsigned char *sigbuf, unsigned int siglen, const RSA *rsa)
+{
+    (void)dtype; (void)m; (void)m_length; (void)sigbuf; (void)siglen; (void)rsa;
+    return 0;
+}
+
+static int sentinel_keygen(RSA *rsa, int bits, BIGNUM *e, BN_GENCB *cb)
+{
+    (void)rsa; (void)bits; (void)e; (void)cb;
+    return 0;
+}
+
+static int sentinel_mpkeygen(RSA *rsa, int bits, int primes, BIGNUM *e, BN_GENCB *cb)
+{
+    (void)rsa; (void)bits; (void)primes; (void)e; (void)cb;
+    return 0;
+}
+
+/* The twelve setter/getter pairs, each observed five ways: the member of a fresh table is NULL;
+ * the setter answers 1; the getter then answers the *sentinel* rather than merely non-NULL; the
+ * setter accepts NULL and still answers 1; and the getter is back to NULL. The round trip leaves
+ * the member NULL, which is what lets one table serve all twelve without order dependence. */
+#define ROUNDTRIP(tag, GET, SET, SENT)                                  \
+    do {                                                                \
+        printf("rsa.%s.get_default_is_null=%d\n", tag,                  \
+            (const void *)(GET)(m) == NULL);                            \
+        printf("rsa.%s.set_ret=%d\n", tag, (SET)(m, (SENT)));           \
+        printf("rsa.%s.get_is_sentinel=%d\n", tag,                      \
+            (const void *)(GET)(m) == (const void *)(SENT));            \
+        printf("rsa.%s.set_null_ret=%d\n", tag, (SET)(m, NULL));        \
+        printf("rsa.%s.get_after_null_is_null=%d\n", tag,               \
+            (const void *)(GET)(m) == NULL);                            \
+    } while (0)
+
+int main(void)
+{
+    RSA_METHOD *m = NULL;
+    RSA_METHOD *d = NULL;
+    int app = 7;
+    int flags;
+
+    setvbuf(stdout, NULL, _IOLBF, 0);
+
+    /* The installation must be the program's first crypto act: the first non-zero allocation
+     * through the default path clears `allow_customize` for the life of the process. */
+    if (CRYPTO_set_mem_functions(my_malloc, my_realloc, my_free) != 1) {
+        printf("rsa.install=0\n");
+        return 1;
+    }
+    printf("rsa.install=1\n");
+    ERR_clear_error();
+
+    /* Warm-up. The library lazily builds state on first use -- the error-string table and the
+     * `ERR` thread state among it -- and that traffic is not this court's subject. One throwaway
+     * table through both the allocate and the release path drains it before the first window. */
+    m = RSA_meth_new("warm-up", 0);
+    RSA_meth_free(m);
+    m = NULL;
+    ERR_clear_error();
+
+    /* ---------------------------------------------------------------- RSA_null_method */
+
+    printf("rsa.null_method.is_null=%d\n", (const void *)RSA_null_method() == NULL);
+
+    /* ---------------------------------------------------------------- RSA_meth_new */
+
+    begin();
+    m = RSA_meth_new("openssl-rs-probe", 0x2a);
+    end("new_named");
+    printf("rsa.new_named.is_null=%d\n", (const void *)m == NULL);
+    if (m != NULL) {
+        printf("rsa.new_named.name=%s\n", RSA_meth_get0_name(m));
+        printf("rsa.new_named.flags=%d\n", RSA_meth_get_flags(m));
+    }
+
+    /* A NULL name reaches `CRYPTO_strdup(NULL)`, which the authority answers with NULL *before*
+     * allocating. So the table is built, `flags` is stored, the duplicate refuses, and the table
+     * is released: one M and one F, and a NULL answer. */
+    begin();
+    d = RSA_meth_new(NULL, 7);
+    end("new_unnamed");
+    printf("rsa.new_unnamed.is_null=%d\n", (const void *)d == NULL);
+
+    /* ---------------------------------------------------------------- RSA_meth_free */
+
+    begin();
+    RSA_meth_free(NULL);
+    end("free_null");
+    printf("rsa.free_null.survived=1\n");
+
+    /* ---------------------------------------------------------------- RSA_meth_dup */
+
+    if (m != NULL) {
+        RSA_meth_set0_app_data(m, &app);
+        begin();
+        d = RSA_meth_dup(m);
+        end("dup");
+        printf("rsa.dup.is_null=%d\n", (const void *)d == NULL);
+        if (d != NULL) {
+            printf("rsa.dup.name_equal=%d\n",
+                strcmp(RSA_meth_get0_name(d), RSA_meth_get0_name(m)) == 0);
+            printf("rsa.dup.name_distinct_pointer=%d\n",
+                (const void *)RSA_meth_get0_name(d) != (const void *)RSA_meth_get0_name(m));
+            printf("rsa.dup.flags=%d\n", RSA_meth_get_flags(d));
+            printf("rsa.dup.app_data_shared=%d\n",
+                RSA_meth_get0_app_data(d) == RSA_meth_get0_app_data(m));
+        }
+    }
+
+    /* ---------------------------------------------------------------- RSA_meth_set1_name */
+
+    if (m != NULL) {
+        begin();
+        flags = RSA_meth_set1_name(m, "renamed");
+        end("set1_name");
+        printf("rsa.set1_name.ret=%d\n", flags);
+        printf("rsa.set1_name.name=%s\n", RSA_meth_get0_name(m));
+
+        /* The failure mode, and it is reachable: a NULL argument makes the duplicate refuse
+         * before the old name is released, so nothing is allocated and the name is unchanged.
+         * This is the arm that distinguishes "duplicate first, release second" from the
+         * reverse order, which would free the name and then store a NULL. */
+        begin();
+        flags = RSA_meth_set1_name(m, NULL);
+        end("set1_name_null");
+        printf("rsa.set1_name_null.ret=%d\n", flags);
+        printf("rsa.set1_name_null.name=%s\n", RSA_meth_get0_name(m));
+    }
+
+    /* ---------------------------------------------------------------- flags */
+
+    if (m != NULL) {
+        printf("rsa.set_flags.ret=%d\n", RSA_meth_set_flags(m, 0x0001));
+        printf("rsa.set_flags.get=%d\n", RSA_meth_get_flags(m));
+        printf("rsa.set_flags.ret_zero=%d\n", RSA_meth_set_flags(m, 0));
+        printf("rsa.set_flags.get_zero=%d\n", RSA_meth_get_flags(m));
+    }
+
+    /* ---------------------------------------------------------------- app_data */
+
+    if (m != NULL) {
+        printf("rsa.set0_app_data.ret=%d\n", RSA_meth_set0_app_data(m, &app));
+        printf("rsa.get0_app_data.is_app=%d\n",
+            RSA_meth_get0_app_data(m) == (void *)&app);
+        printf("rsa.set0_app_data.null_ret=%d\n", RSA_meth_set0_app_data(m, NULL));
+        printf("rsa.get0_app_data.after_null_is_null=%d\n",
+            RSA_meth_get0_app_data(m) == NULL);
+    }
+
+    /* ---------------------------------------------------------------- the twelve pairs */
+
+    if (m != NULL) {
+        ROUNDTRIP("pub_enc", RSA_meth_get_pub_enc, RSA_meth_set_pub_enc, sentinel_crypt);
+        ROUNDTRIP("pub_dec", RSA_meth_get_pub_dec, RSA_meth_set_pub_dec, sentinel_crypt);
+        ROUNDTRIP("priv_enc", RSA_meth_get_priv_enc, RSA_meth_set_priv_enc, sentinel_crypt);
+        ROUNDTRIP("priv_dec", RSA_meth_get_priv_dec, RSA_meth_set_priv_dec, sentinel_crypt);
+        ROUNDTRIP("mod_exp", RSA_meth_get_mod_exp, RSA_meth_set_mod_exp, sentinel_modexp);
+        ROUNDTRIP("bn_mod_exp", RSA_meth_get_bn_mod_exp, RSA_meth_set_bn_mod_exp,
+            sentinel_bnmodexp);
+        ROUNDTRIP("init", RSA_meth_get_init, RSA_meth_set_init, sentinel_life);
+        ROUNDTRIP("finish", RSA_meth_get_finish, RSA_meth_set_finish, sentinel_life);
+        ROUNDTRIP("sign", RSA_meth_get_sign, RSA_meth_set_sign, sentinel_sign);
+        ROUNDTRIP("verify", RSA_meth_get_verify, RSA_meth_set_verify, sentinel_verify);
+        ROUNDTRIP("keygen", RSA_meth_get_keygen, RSA_meth_set_keygen, sentinel_keygen);
+        ROUNDTRIP("multi_prime_keygen", RSA_meth_get_multi_prime_keygen,
+            RSA_meth_set_multi_prime_keygen, sentinel_mpkeygen);
+    }
+
+    /* ---------------------------------------------------------------- release */
+
+    /* `RSA_meth_free` releases the name and then the table, both attributed to `rsa_meth.c`. The
+     * window is the last thing this probe records, so the order is compared rather than assumed. */
+    begin();
+    RSA_meth_free(m);
+    end("free_named");
+    begin();
+    RSA_meth_free(d);
+    end("free_dup");
+
+    return 0;
+}

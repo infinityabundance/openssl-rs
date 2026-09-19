@@ -113,6 +113,12 @@ COURTS: list[tuple[str, str]] = [
     # first thing a program does answers 0. `rt_cipher_probe.c` allocates long before any cipher
     # arm of its own would run, so the observation cannot be an arm of `RT-CIPHER` (D280).
     ("RT-CIPHER-MEM", "rt_cipher_mem_probe.c"),
+    # 8.4's method-table court. It is the first `RT-*` here whose subject is *ownership* rather
+    # than arithmetic: the thirty-four `RSA_meth_*`/`RSA_null_method` labels allocate a table,
+    # store a pointer in it, or return one. It is also the second court to install a caller
+    # allocator, and for the same latching reason it must be its own probe -- see the probe's own
+    # note on why it is not a court for the default method, which is slice A's.
+    ("RT-RSA", "rt_rsa_probe.c"),
 ]
 
 # The correctness courts, and the committed vector sets each checks. `CT-DIGEST` is the

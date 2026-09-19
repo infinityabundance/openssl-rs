@@ -57,6 +57,23 @@
         "verdict": "pass"
       },
       {
+        "authority_exit_code": 0,
+        "authority_observations": 104,
+        "candidate_exit_code": 0,
+        "candidate_observations": 104,
+        "candidate_stderr_tail": [],
+        "court": "RT-RSA",
+        "crashed": false,
+        "probe": "courts/phase8/rt_rsa_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase8/probes/rt_rsa_probe.authority",
+          "candidate": "artifacts/phase8/probes/rt_rsa_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
         "algorithms": {
           "blake2b512": {
             "digest_bytes": 64,
@@ -37721,8 +37738,8 @@
     ],
     "summary": {
       "fail": 0,
-      "pass": 5,
-      "total": 5
+      "pass": 6,
+      "total": 6
     }
   },
   "generator": "forensics/tools/phase8_courts.py",
@@ -37746,6 +37763,11 @@
       "name": "probe",
       "path": "courts/phase8/rt_cipher_mem_probe.c",
       "sha256": "25dfc8a2e129ce08d98f12cc71f87af4606da60e24c01935917e6137dc793e36"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase8/rt_rsa_probe.c",
+      "sha256": "909630d29e02f55f82b61c0eb52a458ef3709e2b887c8682b632995d027fdd1f"
     },
     {
       "name": "correctness-probe",

@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 233,
+      "crate_files_read": 234,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -19,7 +19,7 @@
       "signatures_authority_only": 405,
       "signatures_checked": 229,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 109,
+      "signatures_not_a_dispatch": 117,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -3916,6 +3916,46 @@
           "alias": "SkCopyFn",
           "at": "src/provider/mod.rs",
           "why": "not a provider dispatch: `safestack.h.in`'s `sk_*_compfunc` / `freefunc` / `copyfunc` macros generate it per type, so there is no single typedef"
+        },
+        {
+          "alias": "RsaCryptFn",
+          "at": "src/rsa/mod.rs",
+          "why": "not a provider dispatch: a member of `RSA_METHOD`'s vtable, declared inline in `crypto/rsa/rsa_local.h:102-147` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "RsaModExpFn",
+          "at": "src/rsa/mod.rs",
+          "why": "not a provider dispatch: a member of `RSA_METHOD`'s vtable, declared inline in `crypto/rsa/rsa_local.h:102-147` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "RsaBnModExpFn",
+          "at": "src/rsa/mod.rs",
+          "why": "not a provider dispatch: a member of `RSA_METHOD`'s vtable, declared inline in `crypto/rsa/rsa_local.h:102-147` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "RsaLifecycleFn",
+          "at": "src/rsa/mod.rs",
+          "why": "not a provider dispatch: a member of `RSA_METHOD`'s vtable, declared inline in `crypto/rsa/rsa_local.h:102-147` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "RsaSignFn",
+          "at": "src/rsa/mod.rs",
+          "why": "not a provider dispatch: a member of `RSA_METHOD`'s vtable, declared inline in `crypto/rsa/rsa_local.h:102-147` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "RsaVerifyFn",
+          "at": "src/rsa/mod.rs",
+          "why": "not a provider dispatch: a member of `RSA_METHOD`'s vtable, declared inline in `crypto/rsa/rsa_local.h:102-147` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "RsaKeygenFn",
+          "at": "src/rsa/mod.rs",
+          "why": "not a provider dispatch: a member of `RSA_METHOD`'s vtable, declared inline in `crypto/rsa/rsa_local.h:102-147` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "RsaMultiPrimeKeygenFn",
+          "at": "src/rsa/mod.rs",
+          "why": "not a provider dispatch: a member of `RSA_METHOD`'s vtable, declared inline in `crypto/rsa/rsa_local.h:102-147` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
         },
         {
           "alias": "DumpCb",

@@ -444,7 +444,8 @@
               "RT-CIPHER-MEM",
               "RT-MEM",
               "RT-MEM-DEFAULT",
-              "RT-MEM-INSTALL"
+              "RT-MEM-INSTALL",
+              "RT-RSA"
             ],
             "symbol": "CRYPTO_set_mem_functions"
           },
@@ -554,6 +555,7 @@
               "RT-PARAM",
               "RT-PROVIDER",
               "RT-PROVIDER-3P",
+              "RT-RSA",
               "RT-RUNTIME-EXT",
               "RT-SELFTEST",
               "RT-THREADDATA"
@@ -14146,10 +14148,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 186,
-          "directly_courted_called": 186,
+          "directly_courted": 220,
+          "directly_courted_called": 220,
           "directly_courted_referenced": 0,
-          "implemented": 194,
+          "implemented": 228,
           "indirectly_courted": 8,
           "non_observable": 0,
           "unmatched": 0
@@ -15236,6 +15238,244 @@
           {
             "basis": "called",
             "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_get0_app_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_get0_name"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_get_bn_mod_exp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_get_finish"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_get_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_get_init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_get_keygen"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_get_mod_exp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_get_multi_prime_keygen"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_get_priv_dec"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_get_priv_enc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_get_pub_dec"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_get_pub_enc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_get_sign"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_get_verify"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_set0_app_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_set1_name"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_set_bn_mod_exp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_set_finish"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_set_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_set_init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_set_keygen"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_set_mod_exp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_set_multi_prime_keygen"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_set_priv_dec"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_set_priv_enc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_set_pub_dec"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_set_pub_enc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_set_sign"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_meth_set_verify"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSA_null_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-CIPHER"
             ],
             "symbol": "SEED_cbc_encrypt"
@@ -15510,14 +15750,14 @@
         ],
         "non_observable": [],
         "phase": 8,
-        "staged_candidate_probes": 3
+        "staged_candidate_probes": 4
       }
     ],
     "totals": {
-      "directly_courted": 2027,
-      "directly_courted_called": 1743,
+      "directly_courted": 2061,
+      "directly_courted_called": 1777,
       "directly_courted_referenced": 284,
-      "implemented": 2035,
+      "implemented": 2069,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -15528,7 +15768,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "1d0728a7b206169c1b1aa7be8a8bac36fb952e79d50723af51fe2a9fb181bf08"
+      "sha256": "a41069a97fc41f3c88eb360bf6634b9ee02057e6b28ce7ef5d5ee0c21836a957"
     },
     {
       "name": "symbol-ownership",
@@ -15543,7 +15783,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "7a450a3cf87f8474d74b3dc8a77f5d2c42c738ee72bb9613e1f3ba29b79d4aa9"
+      "sha256": "ff53b00024adb1d77b5eeb4db485d301f29ff227634196b051a3ecf0d9585595"
     },
     {
       "name": "phase3-courts",
@@ -15553,7 +15793,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "39cd233f5dfe1dc88488c580534aac35b1f2dda7cffeda6de6b1bb049481d45a"
+      "sha256": "8e922ba347caabc0a3fcfd4235f0bd835ce358592b25ad095248fb0c0d0f130d"
     },
     {
       "name": "phase4-courts",
@@ -15563,7 +15803,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "5618ba3b88b64c041743b5f43b81fcc036ab11564d73465a4840310e85194af0"
+      "sha256": "63e078072d5c7adf5fb6d6cfe85becf40bfaa91daf2f3e8be91a9cc15f640afd"
     },
     {
       "name": "phase5-courts",
@@ -15573,7 +15813,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "1c630eead6b4862756efee54b2f7434bf91419c5f76122962e4165276eee9f87"
+      "sha256": "ef8ccf446fc0709943546ffe783340bc82de5966a0e67c893c2d8e46366c6eae"
     },
     {
       "name": "phase6-courts",
@@ -15583,7 +15823,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "b3fb3872ab0a467eb7e37786632681f609359884abd5973c22f476549fde3633"
+      "sha256": "7c662a18386fcadc22ddb8cf22063fef84e3a8e8d02497d131ca03ff989b9433"
     },
     {
       "name": "phase7-courts",
@@ -15593,12 +15833,12 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "3483825605b51866ec0f1f3afdd6ce5cd18e3d0e614edd8569eda2fa929d35da"
+      "sha256": "44bb3f765a1bd5ba8b4ac103079d62d88a49cac0d0a8b92083703c51809900b7"
     },
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "b411d3bb1c3d098f9e12a0ba8155e4370a9750418a40c47ebdf9837e15a75492"
+      "sha256": "37e9764fd0fcff5668f9f1343b6f732de677aec952a1b9731f88c289e8f40c10"
     }
   ],
   "kind": "court-coverage",

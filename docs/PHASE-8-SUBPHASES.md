@@ -375,7 +375,17 @@ here is. (`forensics/phase8-obligations.json` remains the only complete list.)
 `CRYPTO_ccm128_decrypt_ccm64`, `CRYPTO_ccm128_tag`, `CRYPTO_xts128_encrypt`,
 `CRYPTO_ocb128_new`, `CRYPTO_ocb128_init`, `CRYPTO_ocb128_copy_ctx`, `CRYPTO_ocb128_setiv`,
 `CRYPTO_ocb128_aad`, `CRYPTO_ocb128_encrypt`, `CRYPTO_ocb128_decrypt`, `CRYPTO_ocb128_finish`,
-`CRYPTO_ocb128_tag`, `CRYPTO_ocb128_cleanup`.
+`CRYPTO_ocb128_tag`, `CRYPTO_ocb128_cleanup`, `RSA_meth_new`, `RSA_meth_free`, `RSA_meth_dup`,
+`RSA_meth_get0_name`, `RSA_meth_set1_name`, `RSA_meth_get_flags`, `RSA_meth_set_flags`,
+`RSA_meth_get0_app_data`, `RSA_meth_set0_app_data`, `RSA_meth_get_pub_enc`,
+`RSA_meth_set_pub_enc`, `RSA_meth_get_pub_dec`, `RSA_meth_set_pub_dec`,
+`RSA_meth_get_priv_enc`, `RSA_meth_set_priv_enc`, `RSA_meth_get_priv_dec`,
+`RSA_meth_set_priv_dec`, `RSA_meth_get_mod_exp`, `RSA_meth_set_mod_exp`,
+`RSA_meth_get_bn_mod_exp`, `RSA_meth_set_bn_mod_exp`, `RSA_meth_get_init`,
+`RSA_meth_set_init`, `RSA_meth_get_finish`, `RSA_meth_set_finish`, `RSA_meth_get_sign`,
+`RSA_meth_set_sign`, `RSA_meth_get_verify`, `RSA_meth_set_verify`, `RSA_meth_get_keygen`,
+`RSA_meth_set_keygen`, `RSA_meth_get_multi_prime_keygen`, `RSA_meth_set_multi_prime_keygen`,
+`RSA_null_method`.
 
 **Open exports (checked against the ledger):** `RSA_new`.
 Phase 8.2's cipher families and 8.3's `modes.h` constructions all have their low-level exports in,
@@ -389,6 +399,19 @@ hand-off on the `AES-*-GCM` cipher rows whose modes it will accept. The AES-GCM 
 a recorded Phase 9 hand-off rather than open work, because both its no-IV encrypting arm
 (`ciphercommon_gcm.c.in:423`) and its TLS arm (`:536`) call RAND_bytes_ex, which `rand.h` owns
 (D234) — and then 8.4's RSA object, whose constructor is `RSA_new`.
+
+**8.4 has begun with its method table (D284).** The block D283 measured as 150 labels in seven
+slices has landed **slice B**, the thirty-three `RSA_meth_*` labels plus `RSA_null_method`, in the new
+module `src/rsa/mod.rs`. Nothing in the slice does any cryptography — every entry point allocates a
+method table, stores a pointer in it, or returns one — so it is the one slice whose prerequisites are
+already in, and it is the reason the block's order is B before A rather than the A-before-B that
+D283's table implied: the dependency that table recorded is a dependency of the *readers* (the
+accessors A will add) rather than of any function B publishes, and the `RSA` object's shape had to be
+transcribed here anyway because four of the method table's fifteen members take `RSA *`. Slice A,
+the object's own lifetime and accessors, is next; the padding pairs (C), the encrypt/sign entry
+points (D), the `EVP_PKEY_CTX` controls (E) and the checkers and printers (G) follow, and the four
+`d2i_`/`i2d_` pairs (F) wait for 8.8's ASN.1 method machinery. `RT-RSA` is registered and passing at
+**104 observations**; `CT-RSA` stays PENDING, because the constructions it will check are C's and D's.
 
 **The subphase's own cipher surface is one row smaller than it was (D263, D264, D265).** The
 `ChaCha20` row landed with `cipher_chacha20.c` and `cipher_chacha20_hw.c` transcribed whole, over a
