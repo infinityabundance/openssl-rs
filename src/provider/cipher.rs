@@ -8954,10 +8954,27 @@ alias!(
 );
 
 /// A `deflt_ciphers[]` row.
+/// `ALG(NAMES, FUNC)` over `ALGC(NAMES, FUNC, NULL)` — `providers/defltprov.c:34-35`.
+///
+/// **The property definition is `"provider=default"`, not NULL, and that is observable.** The
+/// authority's two macros are
+///
+/// ```c
+/// #define ALGC(NAMES, FUNC, CHECK) { { NAMES, "provider=default", FUNC }, CHECK }
+/// #define ALG(NAMES, FUNC) ALGC(NAMES, FUNC, NULL)
+/// ```
+///
+/// so every `deflt_ciphers[]` row carries the default provider's own property, and a fetch whose
+/// property query is `provider=default` resolves through it. A NULL here is not the same thing:
+/// measured, `EVP_CIPHER_fetch(NULL, "AES-128-CBC", "provider=default")` answers 1 on the authority
+/// and answered **0** with NULL, and `"provider!=default"` answered **1** where the authority
+/// answers 0 -- the predicate inverted rather than merely absent. The digest and MAC tables already
+/// carried it (`DEFLT_DIGESTS` uses `DEFAULT_PROPERTIES`), which is what made this one row
+/// constructor the whole of the divergence (D247).
 const fn row(names: *const c_char, implementation: *const c_void) -> OsslAlgorithm {
     OsslAlgorithm {
         algorithm_names: names,
-        property_definition: ptr::null(),
+        property_definition: c"provider=default".as_ptr(),
         implementation,
         algorithm_description: ptr::null(),
     }

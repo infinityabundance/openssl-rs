@@ -16433,3 +16433,52 @@ deferred-symbol table: a mutation that does not actually change the input proves
 / 200 open / 686 deferred**, the provider coverage atlas stays **110 / 110 / 0 unmatched**, and no
 court observation moves. What changes is that the candidate half of the census can now see a row it
 was never taught to look for.
+
+## D247 — every default-provider cipher row was published with a NULL property definition, and the property query is observable
+
+D244 tightened the provider row identity to the complete alias sequence, the dispatch association and
+the authority's ordering, and deliberately did **not** compare `property_definition` — the crate's
+cipher rows are built by one constructor, `fn row(names, implementation)`, which set the field to
+`ptr::null()`. This entry is what looking at that cost.
+
+**The divergence, measured before it was fixed.** The authority's two macros in `defltprov.c` are
+
+```c
+#define ALGC(NAMES, FUNC, CHECK) { { NAMES, "provider=default", FUNC }, CHECK }
+#define ALG(NAMES, FUNC) ALGC(NAMES, FUNC, NULL)
+```
+
+so all 82 landed `deflt_ciphers[]` rows carry `"provider=default"`, and a fetch whose property query
+is `provider=default` resolves through it. Measured with a scratch program against both libraries,
+before any change:
+
+```text
+                                  authority   candidate
+EVP_CIPHER_fetch(…, NULL)              1          1
+EVP_CIPHER_fetch(…, "provider=default") 1          0     <- the row stops resolving
+EVP_CIPHER_fetch(…, "provider!=default") 0           1     <- the predicate inverts
+```
+
+That is not a missing string. It is an application that fetches a default-provider cipher with
+`propq = "provider=default"` — a spelling OpenSSL's own callers use — succeeding on the authority and
+failing on the candidate, and the negated query resolving the other way round. `DEFLT_DIGESTS` and
+`DEFLT_MACS` already carried the property (`DEFAULT_PROPERTIES` / an explicit `c"provider=default"`),
+which is why one row constructor was the whole of it.
+
+**The fix is the constructor.** `fn row` now sets `property_definition: c"provider=default"`, which is
+the authority's own expansion, and every one of the 83 rows in `DEFLT_CIPHERS` is built by it — the
+`row(` uses were counted, and all 82 non-terminator ones are inside `DEFLT_CIPHERS`.
+
+**And it is now observed rather than merely fixed.** `RT-CIPHER` gains `rt_deflt_properties`, which
+fetches a cipher, a digest and a MAC under all three queries (`NULL`, `provider=default`,
+`provider!=default`) — nine observations, because the three tables are built by three different pieces
+of code. It fails on the old code in both directions and passes on the new: **1537 -> 1546**
+observations, zero residuals. A court arm is the right home for this rather than the atlas join: the
+property is what a *fetch* resolves through, so the observation that matters is a fetch.
+
+**What this entry moves.** `implemented[libcrypto]` stays **2035 / 5896**, Phase 8 stays **194
+implemented / 576 open / 16 deferred**, the provider census stays **996 rows / 110 implemented / 200
+open / 686 deferred**, and the coverage atlas stays **110 / 110 / 0 unmatched**. `RT-CIPHER` moves
+**1537 -> 1546** and the pipeline reaches 24984 observations. The census join still does not compare
+`property_definition` — that is recorded here rather than implied, and the reason it is not urgent is
+that the property is now courted in both directions.
