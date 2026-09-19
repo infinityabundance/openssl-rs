@@ -117,3 +117,42 @@ not include it a second time.
 | `oracle-polyval.c` | the authority's own POLYVAL answers, through the static archive | D278 |
 | `oracle-chacha20-poly1305-hw.c` | the hw vtable's three base members (**`cipher` and `copyctx` are NULL**) and its four extended offsets | D279 |
 | `oracle-mem-file.c` | the `file` string each provider row hands a `CRYPTO_set_mem_functions` allocator | D279 |
+
+## `oracle-legacy-sha.c` — what `EVP_sha1()` is, and how a contradiction was resolved
+
+The legacy digest method objects (`crypto/evp/legacy_sha.c`'s seven static `EVP_MD` values, and
+`EVP_md5`) are the unblock for the RSA OAEP and PSS default digests, and they look like the easiest
+thing in the tree: `EVP_sha1()` is `return &sha1_md;`, one line, no allocation, no fetch.
+
+They are not, because the initialiser contradicts itself. `LEGACY_EVP_MD_METH_TABLE` expands to
+`init, update, final, NULL, NULL, blksz, 0, ctrl`, and against `struct evp_md_st` that puts
+`SHA_CBLOCK` in `block_size` and **zero in `ctx_size`** — while `evp_md_init_internal` allocates the
+context's `md_data` only when `ctx_size` is non-zero, and `EVP_MD_CTX_get0_md_data` is a bare
+`return ctx->md_data;`. A zero `ctx_size` should therefore make `sha1_init` call `SHA1_Init(NULL)`
+and fail. This oracle measures what actually happens.
+
+Build and run against the installed prefix:
+
+```
+clang -std=c11 -O1 -DNDEBUG -I "$B/include" -o /tmp/oracle-legacy-sha \
+  courts/layout/oracle-legacy-sha.c -L "$B/lib" -lcrypto -Wl,-rpath,"$B/lib"
+/tmp/oracle-legacy-sha
+```
+
+It answers `init_ok=1`, `final_ok=1` and the published `SHA1("abc")` = `a9993e36 4706816a ba3e2571
+7850c26c 9cd0d89d`, so the legacy method is fully functional and the reading above is wrong
+*somewhere*. `EVP_MD_get_ctx_size` is not an exported symbol, so the field itself cannot be read
+through the public surface; the field was read through a local replica of `struct evp_md_st` whose
+offsets the oracle prints, and the contradiction was settled from the authority's source. See
+`docs/DECISIONS.md` D289 for the measurements and D290 for the resolution.
+
+**The resolution, so a reader of this file need not chase it: a legacy method is never used to
+digest.** `evp_md_init_internal` (`crypto/evp/digest.c:258-280`) checks `type->prov == NULL` and, for
+such a method, **fetches the provider implementation by `OBJ_nid2sn(type->type)` and rebinds `type`
+to it** before `ctx->digest = type`. `EVP_sha1()` is therefore a carrier whose callbacks an ENGINE
+may use and whose digest path the library replaces; the digest runs through the provider method's
+`dinit`/`dupdate`/`dfinal` on `ctx->algctx`, so `ctx_size` 0 and a NULL `md_data` are correct and
+irrelevant. The one fact that looked impossible — `SHA1_Init` called with a non-NULL argument — is
+the **provider** method's own `sha1_init` calling it, which an interposer cannot distinguish from
+the legacy callback's call. That ambiguity is the file's own lesson: measuring a symbol does not
+measure which caller reached it.
