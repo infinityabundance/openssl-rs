@@ -154,7 +154,7 @@
       "verdict": "pass"
     },
     "RT-CIPHER": {
-      "observations": 6200,
+      "observations": 6505,
       "verdict": "pass"
     },
     "RT-CMAC": {
@@ -398,12 +398,17 @@
     "blocking_dependencies": 25,
     "divergence_names_covered": 31,
     "findings": 0,
-    "language_census": 3116,
+    "language_census": 3107,
     "sealed_census": 57
   },
   "provider_implemented": [
     "default/OSSL_OP_CIPHER/AES-128-CBC",
     "default/OSSL_OP_CIPHER/AES-128-CBC-CTS",
+    "default/OSSL_OP_CIPHER/AES-128-CBC-HMAC-SHA1",
+    "default/OSSL_OP_CIPHER/AES-128-CBC-HMAC-SHA1-ETM",
+    "default/OSSL_OP_CIPHER/AES-128-CBC-HMAC-SHA256",
+    "default/OSSL_OP_CIPHER/AES-128-CBC-HMAC-SHA256-ETM",
+    "default/OSSL_OP_CIPHER/AES-128-CBC-HMAC-SHA512-ETM",
     "default/OSSL_OP_CIPHER/AES-128-CCM",
     "default/OSSL_OP_CIPHER/AES-128-CFB",
     "default/OSSL_OP_CIPHER/AES-128-CFB1",
@@ -420,6 +425,9 @@
     "default/OSSL_OP_CIPHER/AES-128-XTS",
     "default/OSSL_OP_CIPHER/AES-192-CBC",
     "default/OSSL_OP_CIPHER/AES-192-CBC-CTS",
+    "default/OSSL_OP_CIPHER/AES-192-CBC-HMAC-SHA1-ETM",
+    "default/OSSL_OP_CIPHER/AES-192-CBC-HMAC-SHA256-ETM",
+    "default/OSSL_OP_CIPHER/AES-192-CBC-HMAC-SHA512-ETM",
     "default/OSSL_OP_CIPHER/AES-192-CCM",
     "default/OSSL_OP_CIPHER/AES-192-CFB",
     "default/OSSL_OP_CIPHER/AES-192-CFB1",
@@ -435,6 +443,11 @@
     "default/OSSL_OP_CIPHER/AES-192-WRAP-PAD-INV",
     "default/OSSL_OP_CIPHER/AES-256-CBC",
     "default/OSSL_OP_CIPHER/AES-256-CBC-CTS",
+    "default/OSSL_OP_CIPHER/AES-256-CBC-HMAC-SHA1",
+    "default/OSSL_OP_CIPHER/AES-256-CBC-HMAC-SHA1-ETM",
+    "default/OSSL_OP_CIPHER/AES-256-CBC-HMAC-SHA256",
+    "default/OSSL_OP_CIPHER/AES-256-CBC-HMAC-SHA256-ETM",
+    "default/OSSL_OP_CIPHER/AES-256-CBC-HMAC-SHA512-ETM",
     "default/OSSL_OP_CIPHER/AES-256-CCM",
     "default/OSSL_OP_CIPHER/AES-256-CFB",
     "default/OSSL_OP_CIPHER/AES-256-CFB1",
@@ -559,10 +572,10 @@
       "13": 39,
       "9": 15
     },
-    "implemented": 149,
-    "open": 157,
+    "implemented": 162,
+    "open": 144,
     "open_by_phase": {
-      "8": 157
+      "8": 144
     },
     "total": 996
   }

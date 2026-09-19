@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 149,
+        "implemented": 162,
         "unmatched": 0
       }
     },
@@ -20,8 +20,8 @@
         "probe": "courts/phase8/rt_cipher_probe.c"
       }
     ],
-    "directly_courted": 149,
-    "implemented_rows": 149,
+    "directly_courted": 162,
+    "implemented_rows": 162,
     "rows": [
       {
         "algorithm_names": "AES-128-CBC",
@@ -42,6 +42,71 @@
         "algorithm_names": "AES-128-CBC-CTS",
         "aliases": [
           "AES-128-CBC-CTS"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "AES-128-CBC-HMAC-SHA1",
+        "aliases": [
+          "AES-128-CBC-HMAC-SHA1"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "AES-128-CBC-HMAC-SHA1-ETM",
+        "aliases": [
+          "AES-128-CBC-HMAC-SHA1-ETM"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "AES-128-CBC-HMAC-SHA256",
+        "aliases": [
+          "AES-128-CBC-HMAC-SHA256"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "AES-128-CBC-HMAC-SHA256-ETM",
+        "aliases": [
+          "AES-128-CBC-HMAC-SHA256-ETM"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "AES-128-CBC-HMAC-SHA512-ETM",
+        "aliases": [
+          "AES-128-CBC-HMAC-SHA512-ETM"
         ],
         "courts": [
           "RT-CIPHER"
@@ -276,6 +341,45 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "AES-192-CBC-HMAC-SHA1-ETM",
+        "aliases": [
+          "AES-192-CBC-HMAC-SHA1-ETM"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "AES-192-CBC-HMAC-SHA256-ETM",
+        "aliases": [
+          "AES-192-CBC-HMAC-SHA256-ETM"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "AES-192-CBC-HMAC-SHA512-ETM",
+        "aliases": [
+          "AES-192-CBC-HMAC-SHA512-ETM"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "AES-192-CCM",
         "aliases": [
           "AES-192-CCM",
@@ -476,6 +580,71 @@
         "algorithm_names": "AES-256-CBC-CTS",
         "aliases": [
           "AES-256-CBC-CTS"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "AES-256-CBC-HMAC-SHA1",
+        "aliases": [
+          "AES-256-CBC-HMAC-SHA1"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "AES-256-CBC-HMAC-SHA1-ETM",
+        "aliases": [
+          "AES-256-CBC-HMAC-SHA1-ETM"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "AES-256-CBC-HMAC-SHA256",
+        "aliases": [
+          "AES-256-CBC-HMAC-SHA256"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "AES-256-CBC-HMAC-SHA256-ETM",
+        "aliases": [
+          "AES-256-CBC-HMAC-SHA256-ETM"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "AES-256-CBC-HMAC-SHA512-ETM",
+        "aliases": [
+          "AES-256-CBC-HMAC-SHA512-ETM"
         ],
         "courts": [
           "RT-CIPHER"
@@ -2125,7 +2294,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "2828c587fcbc7f9b5e80ec7887724aeda7eb8c4ed8838bd531ec8608c535cc05"
+      "sha256": "476012b02d640608a69f12a6646903c9c72f2d6aac53e674431d12eb2b1a84d0"
     },
     {
       "name": "court:RT-DIGEST",
@@ -2135,7 +2304,7 @@
     {
       "name": "court:RT-CIPHER",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "b33e90539a434ff3de4cc73903f3dc3f4347af4e43ff1b57bebf2a0fa199c8a1"
+      "sha256": "7e5da92b372248e10d1cc412bb657fb1e9fa0bfe9f19e8952939727a70218aa3"
     }
   ],
   "kind": "provider-court-coverage",

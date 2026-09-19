@@ -2263,19 +2263,20 @@
         "aliases": [
           "AES-128-CBC-HMAC-SHA1"
         ],
-        "blocked_by": "a capability predicate: the row is published only when its capable() answers 1, so the crate must build ossl_prov_cache_exported_algorithms' filtering before it lands a gated row (docs/DECISIONS.md D237, and this file's census carries the predicate).",
+        "blocked_by": null,
         "capability_filtered": true,
         "capability_predicate": "ossl_cipher_capable_aes_cbc_hmac_sha1",
+        "crate_dispatch": "AES128CBC_HMAC_SHA1_FUNCTIONS",
         "dispatch_table_symbol": "ossl_aes128cbc_hmac_sha1_functions",
         "operation": "OSSL_OP_CIPHER",
         "operation_id": 2,
         "owning_phase": 8,
-        "plan_match": "override:capability",
+        "plan_match": "crate-table",
         "property_definition": "provider=default",
         "provider": "default",
         "row_order": 54,
         "source": "providers/defltprov.c",
-        "state": "open",
+        "state": "implemented",
         "table_symbol": "deflt_ciphers"
       },
       {
@@ -2283,19 +2284,20 @@
         "aliases": [
           "AES-256-CBC-HMAC-SHA1"
         ],
-        "blocked_by": "a capability predicate: the row is published only when its capable() answers 1, so the crate must build ossl_prov_cache_exported_algorithms' filtering before it lands a gated row (docs/DECISIONS.md D237, and this file's census carries the predicate).",
+        "blocked_by": null,
         "capability_filtered": true,
         "capability_predicate": "ossl_cipher_capable_aes_cbc_hmac_sha1",
+        "crate_dispatch": "AES256CBC_HMAC_SHA1_FUNCTIONS",
         "dispatch_table_symbol": "ossl_aes256cbc_hmac_sha1_functions",
         "operation": "OSSL_OP_CIPHER",
         "operation_id": 2,
         "owning_phase": 8,
-        "plan_match": "override:capability",
+        "plan_match": "crate-table",
         "property_definition": "provider=default",
         "provider": "default",
         "row_order": 55,
         "source": "providers/defltprov.c",
-        "state": "open",
+        "state": "implemented",
         "table_symbol": "deflt_ciphers"
       },
       {
@@ -2303,19 +2305,20 @@
         "aliases": [
           "AES-128-CBC-HMAC-SHA256"
         ],
-        "blocked_by": "a capability predicate: the row is published only when its capable() answers 1, so the crate must build ossl_prov_cache_exported_algorithms' filtering before it lands a gated row (docs/DECISIONS.md D237, and this file's census carries the predicate).",
+        "blocked_by": null,
         "capability_filtered": true,
         "capability_predicate": "ossl_cipher_capable_aes_cbc_hmac_sha256",
+        "crate_dispatch": "AES128CBC_HMAC_SHA256_FUNCTIONS",
         "dispatch_table_symbol": "ossl_aes128cbc_hmac_sha256_functions",
         "operation": "OSSL_OP_CIPHER",
         "operation_id": 2,
         "owning_phase": 8,
-        "plan_match": "override:capability",
+        "plan_match": "crate-table",
         "property_definition": "provider=default",
         "provider": "default",
         "row_order": 56,
         "source": "providers/defltprov.c",
-        "state": "open",
+        "state": "implemented",
         "table_symbol": "deflt_ciphers"
       },
       {
@@ -2323,19 +2326,20 @@
         "aliases": [
           "AES-256-CBC-HMAC-SHA256"
         ],
-        "blocked_by": "a capability predicate: the row is published only when its capable() answers 1, so the crate must build ossl_prov_cache_exported_algorithms' filtering before it lands a gated row (docs/DECISIONS.md D237, and this file's census carries the predicate).",
+        "blocked_by": null,
         "capability_filtered": true,
         "capability_predicate": "ossl_cipher_capable_aes_cbc_hmac_sha256",
+        "crate_dispatch": "AES256CBC_HMAC_SHA256_FUNCTIONS",
         "dispatch_table_symbol": "ossl_aes256cbc_hmac_sha256_functions",
         "operation": "OSSL_OP_CIPHER",
         "operation_id": 2,
         "owning_phase": 8,
-        "plan_match": "override:capability",
+        "plan_match": "crate-table",
         "property_definition": "provider=default",
         "provider": "default",
         "row_order": 57,
         "source": "providers/defltprov.c",
-        "state": "open",
+        "state": "implemented",
         "table_symbol": "deflt_ciphers"
       },
       {
@@ -2343,19 +2347,20 @@
         "aliases": [
           "AES-128-CBC-HMAC-SHA1-ETM"
         ],
-        "blocked_by": "a capability predicate: the row is published only when its capable() answers 1, so the crate must build ossl_prov_cache_exported_algorithms' filtering before it lands a gated row (docs/DECISIONS.md D237, and this file's census carries the predicate).",
+        "blocked_by": null,
         "capability_filtered": true,
         "capability_predicate": "ossl_cipher_capable_aes_cbc_hmac_sha1_etm",
+        "crate_dispatch": "AES128CBC_HMAC_SHA1_ETM_FUNCTIONS",
         "dispatch_table_symbol": "ossl_aes128cbc_hmac_sha1_etm_functions",
         "operation": "OSSL_OP_CIPHER",
         "operation_id": 2,
         "owning_phase": 8,
-        "plan_match": "override:capability",
+        "plan_match": "crate-table",
         "property_definition": "provider=default",
         "provider": "default",
         "row_order": 58,
         "source": "providers/defltprov.c",
-        "state": "open",
+        "state": "implemented",
         "table_symbol": "deflt_ciphers"
       },
       {
@@ -2363,19 +2368,20 @@
         "aliases": [
           "AES-192-CBC-HMAC-SHA1-ETM"
         ],
-        "blocked_by": "a capability predicate: the row is published only when its capable() answers 1, so the crate must build ossl_prov_cache_exported_algorithms' filtering before it lands a gated row (docs/DECISIONS.md D237, and this file's census carries the predicate).",
+        "blocked_by": null,
         "capability_filtered": true,
         "capability_predicate": "ossl_cipher_capable_aes_cbc_hmac_sha1_etm",
+        "crate_dispatch": "AES192CBC_HMAC_SHA1_ETM_FUNCTIONS",
         "dispatch_table_symbol": "ossl_aes192cbc_hmac_sha1_etm_functions",
         "operation": "OSSL_OP_CIPHER",
         "operation_id": 2,
         "owning_phase": 8,
-        "plan_match": "override:capability",
+        "plan_match": "crate-table",
         "property_definition": "provider=default",
         "provider": "default",
         "row_order": 59,
         "source": "providers/defltprov.c",
-        "state": "open",
+        "state": "implemented",
         "table_symbol": "deflt_ciphers"
       },
       {
@@ -2383,19 +2389,20 @@
         "aliases": [
           "AES-256-CBC-HMAC-SHA1-ETM"
         ],
-        "blocked_by": "a capability predicate: the row is published only when its capable() answers 1, so the crate must build ossl_prov_cache_exported_algorithms' filtering before it lands a gated row (docs/DECISIONS.md D237, and this file's census carries the predicate).",
+        "blocked_by": null,
         "capability_filtered": true,
         "capability_predicate": "ossl_cipher_capable_aes_cbc_hmac_sha1_etm",
+        "crate_dispatch": "AES256CBC_HMAC_SHA1_ETM_FUNCTIONS",
         "dispatch_table_symbol": "ossl_aes256cbc_hmac_sha1_etm_functions",
         "operation": "OSSL_OP_CIPHER",
         "operation_id": 2,
         "owning_phase": 8,
-        "plan_match": "override:capability",
+        "plan_match": "crate-table",
         "property_definition": "provider=default",
         "provider": "default",
         "row_order": 60,
         "source": "providers/defltprov.c",
-        "state": "open",
+        "state": "implemented",
         "table_symbol": "deflt_ciphers"
       },
       {
@@ -2403,19 +2410,20 @@
         "aliases": [
           "AES-128-CBC-HMAC-SHA256-ETM"
         ],
-        "blocked_by": "a capability predicate: the row is published only when its capable() answers 1, so the crate must build ossl_prov_cache_exported_algorithms' filtering before it lands a gated row (docs/DECISIONS.md D237, and this file's census carries the predicate).",
+        "blocked_by": null,
         "capability_filtered": true,
         "capability_predicate": "ossl_cipher_capable_aes_cbc_hmac_sha256_etm",
+        "crate_dispatch": "AES128CBC_HMAC_SHA256_ETM_FUNCTIONS",
         "dispatch_table_symbol": "ossl_aes128cbc_hmac_sha256_etm_functions",
         "operation": "OSSL_OP_CIPHER",
         "operation_id": 2,
         "owning_phase": 8,
-        "plan_match": "override:capability",
+        "plan_match": "crate-table",
         "property_definition": "provider=default",
         "provider": "default",
         "row_order": 61,
         "source": "providers/defltprov.c",
-        "state": "open",
+        "state": "implemented",
         "table_symbol": "deflt_ciphers"
       },
       {
@@ -2423,19 +2431,20 @@
         "aliases": [
           "AES-192-CBC-HMAC-SHA256-ETM"
         ],
-        "blocked_by": "a capability predicate: the row is published only when its capable() answers 1, so the crate must build ossl_prov_cache_exported_algorithms' filtering before it lands a gated row (docs/DECISIONS.md D237, and this file's census carries the predicate).",
+        "blocked_by": null,
         "capability_filtered": true,
         "capability_predicate": "ossl_cipher_capable_aes_cbc_hmac_sha256_etm",
+        "crate_dispatch": "AES192CBC_HMAC_SHA256_ETM_FUNCTIONS",
         "dispatch_table_symbol": "ossl_aes192cbc_hmac_sha256_etm_functions",
         "operation": "OSSL_OP_CIPHER",
         "operation_id": 2,
         "owning_phase": 8,
-        "plan_match": "override:capability",
+        "plan_match": "crate-table",
         "property_definition": "provider=default",
         "provider": "default",
         "row_order": 62,
         "source": "providers/defltprov.c",
-        "state": "open",
+        "state": "implemented",
         "table_symbol": "deflt_ciphers"
       },
       {
@@ -2443,19 +2452,20 @@
         "aliases": [
           "AES-256-CBC-HMAC-SHA256-ETM"
         ],
-        "blocked_by": "a capability predicate: the row is published only when its capable() answers 1, so the crate must build ossl_prov_cache_exported_algorithms' filtering before it lands a gated row (docs/DECISIONS.md D237, and this file's census carries the predicate).",
+        "blocked_by": null,
         "capability_filtered": true,
         "capability_predicate": "ossl_cipher_capable_aes_cbc_hmac_sha256_etm",
+        "crate_dispatch": "AES256CBC_HMAC_SHA256_ETM_FUNCTIONS",
         "dispatch_table_symbol": "ossl_aes256cbc_hmac_sha256_etm_functions",
         "operation": "OSSL_OP_CIPHER",
         "operation_id": 2,
         "owning_phase": 8,
-        "plan_match": "override:capability",
+        "plan_match": "crate-table",
         "property_definition": "provider=default",
         "provider": "default",
         "row_order": 63,
         "source": "providers/defltprov.c",
-        "state": "open",
+        "state": "implemented",
         "table_symbol": "deflt_ciphers"
       },
       {
@@ -2463,19 +2473,20 @@
         "aliases": [
           "AES-128-CBC-HMAC-SHA512-ETM"
         ],
-        "blocked_by": "a capability predicate: the row is published only when its capable() answers 1, so the crate must build ossl_prov_cache_exported_algorithms' filtering before it lands a gated row (docs/DECISIONS.md D237, and this file's census carries the predicate).",
+        "blocked_by": null,
         "capability_filtered": true,
         "capability_predicate": "ossl_cipher_capable_aes_cbc_hmac_sha512_etm",
+        "crate_dispatch": "AES128CBC_HMAC_SHA512_ETM_FUNCTIONS",
         "dispatch_table_symbol": "ossl_aes128cbc_hmac_sha512_etm_functions",
         "operation": "OSSL_OP_CIPHER",
         "operation_id": 2,
         "owning_phase": 8,
-        "plan_match": "override:capability",
+        "plan_match": "crate-table",
         "property_definition": "provider=default",
         "provider": "default",
         "row_order": 64,
         "source": "providers/defltprov.c",
-        "state": "open",
+        "state": "implemented",
         "table_symbol": "deflt_ciphers"
       },
       {
@@ -2483,19 +2494,20 @@
         "aliases": [
           "AES-192-CBC-HMAC-SHA512-ETM"
         ],
-        "blocked_by": "a capability predicate: the row is published only when its capable() answers 1, so the crate must build ossl_prov_cache_exported_algorithms' filtering before it lands a gated row (docs/DECISIONS.md D237, and this file's census carries the predicate).",
+        "blocked_by": null,
         "capability_filtered": true,
         "capability_predicate": "ossl_cipher_capable_aes_cbc_hmac_sha512_etm",
+        "crate_dispatch": "AES192CBC_HMAC_SHA512_ETM_FUNCTIONS",
         "dispatch_table_symbol": "ossl_aes192cbc_hmac_sha512_etm_functions",
         "operation": "OSSL_OP_CIPHER",
         "operation_id": 2,
         "owning_phase": 8,
-        "plan_match": "override:capability",
+        "plan_match": "crate-table",
         "property_definition": "provider=default",
         "provider": "default",
         "row_order": 65,
         "source": "providers/defltprov.c",
-        "state": "open",
+        "state": "implemented",
         "table_symbol": "deflt_ciphers"
       },
       {
@@ -2503,19 +2515,20 @@
         "aliases": [
           "AES-256-CBC-HMAC-SHA512-ETM"
         ],
-        "blocked_by": "a capability predicate: the row is published only when its capable() answers 1, so the crate must build ossl_prov_cache_exported_algorithms' filtering before it lands a gated row (docs/DECISIONS.md D237, and this file's census carries the predicate).",
+        "blocked_by": null,
         "capability_filtered": true,
         "capability_predicate": "ossl_cipher_capable_aes_cbc_hmac_sha512_etm",
+        "crate_dispatch": "AES256CBC_HMAC_SHA512_ETM_FUNCTIONS",
         "dispatch_table_symbol": "ossl_aes256cbc_hmac_sha512_etm_functions",
         "operation": "OSSL_OP_CIPHER",
         "operation_id": 2,
         "owning_phase": 8,
-        "plan_match": "override:capability",
+        "plan_match": "crate-table",
         "property_definition": "provider=default",
         "provider": "default",
         "row_order": 66,
         "source": "providers/defltprov.c",
-        "state": "open",
+        "state": "implemented",
         "table_symbol": "deflt_ciphers"
       },
       {

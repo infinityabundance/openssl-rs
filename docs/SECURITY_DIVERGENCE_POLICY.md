@@ -1147,3 +1147,57 @@ between the authority and the candidate at this site.**
 - **Trigger:** Phase 13's first legacy cipher wrapper. `RT-EVP-PBE`'s
   `pbe.cipher_nid.legacy` marker is where the difference would be measured, and
   `pbe.alg_add.methods_nids` is the arm it holds back.
+
+### D-CBCHMAC-MULTIBLOCK-ENC-1 — the multiblock *encrypt* parameter is refused, because its IVs come from the random layer
+
+- **Obligation:** `EVP_CIPHER_CTX_set_params` with `OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_ENC` (and its
+  `..._ENC_IN` companion) on a fetched `AES-{128,256}-CBC-HMAC-SHA{1,256}` context, and the bytes it
+  writes to the caller's `out` buffer.
+- **Authority:** `aes_set_ctx_params` (`cipher_aes_cbc_hmac_sha.c:150-170`) hands the parameter to
+  `tls1_multiblock_encrypt`, whose body is `tls1_multi_block_encrypt`
+  (`cipher_aes_cbc_hmac_sha1_hw.c:121`) and whose first act is
+  `RAND_bytes_ex(ctx->base.libctx, blocks[0].c, 16 * x4, 0)` (`:146`). Those `x4` sixteen-byte
+  values become each interleaved record's explicit IV, so the written ciphertext is a function of
+  them: with the call answered, the parameter returns 1 and `tls1multi_enclen` becomes the packed
+  length.
+- **Crate:** answers **0** with no error queued, which is the value the authority itself answers when
+  that `RAND_bytes_ex` call fails. `crypto/rand/` is Phase 9's; there is no DRBG, so there is no
+  value to substitute.
+- **Reason:** the dependency is a missing subsystem rather than a choice. `tls1_multiblock_aad` and
+  `tls1_multiblock_max_bufsize` — the other two thirds of the same contract — need no randomness and
+  **are** transcribed and courted by `RT-CIPHER`'s `cbchmac.*.mbaad*` and `cbchmac.*.g.maxbufsz`
+  arms, so the row's stitched surface is narrowed rather than absent. This is the same boundary
+  D234 records for the `AES-*-GCM` rows and D237 for `DES3-WRAP`.
+- **Claim removed:** the `tls1multi_enc` parameter and `tls1multi_enclen` after it are not claimed
+  compatible for these four rows. Every other observable of the rows is: the fetch, the flags, both
+  key/IV/block lengths, all eight settable keys, all nine gettable keys, the multiblock AAD
+  parameter, and the whole TLS 1.0 record including its refusal arm.
+- **Trigger:** Phase 9's first commit that lands `crypto/rand/`. At that point
+  `tls1_multiblock_encrypt` is written from `tls1_multi_block_encrypt` and
+  `RT-CIPHER` gains the `cbchmac.*.mbenc` arm; the entry is removed with the arm's green.
+
+### D-CBCHMAC-MAXBUFSZ-ASSERT-1 — `tls1multi_maxbufsz` before `maxsndfrag` aborts the authority and is answered here
+
+- **Obligation:** `EVP_CIPHER_CTX_get_params` for `OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_MAX_BUFSIZE`
+  on a context whose `multiblock_max_send_fragment` is still zero, which is every context that has
+  not set `OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_MAX_SEND_FRAGMENT`.
+- **Authority:** `aesni_cbc_hmac_sha1_tls1_multiblock_max_bufsize`
+  (`cipher_aes_cbc_hmac_sha1_hw.c:697-704`) begins with
+  `OPENSSL_assert(ctx->multiblock_max_send_fragment != 0)`. The assertion is **live in the pinned
+  build** — measured, not assumed: the arm that read the buffer size first aborted the authority with
+  `cipher_aes_cbc_hmac_sha1_hw.c:701: OpenSSL internal error: assertion failed:
+  ctx->multiblock_max_send_fragment != 0`, exit status 134, which is why `RT-CIPHER` sets the
+  fragment before it reads the size.
+- **Crate:** computes the arithmetic anyway and answers **53** — `5 + 16 + ((0 + 20 + 16) & -16)` —
+  where the authority terminates the process.
+- **Reason:** reproducing an abort is not a compatibility property a library can hold: the crate
+  forbids `panic` in production code for the same reason, and a deliberate `abort()` on a query
+  would turn a caller's diagnostic into a denial of service. The divergence is in the safe
+  direction, and it is recorded rather than left implicit because a *difference* on this path is
+  otherwise invisible: a caller who never sets the fragment sees a number here and a dead process
+  there.
+- **Claim removed:** the abort itself is not claimed compatible. The value the function computes for
+  a **non-zero** fragment is, and `RT-CIPHER`'s `cbchmac.*.g.maxbufsz` arm observes it with the
+  fragment set to 16384, where both sides answer 16437.
+- **Trigger:** none planned: this is a permanent, deliberate safety divergence. If a caller needs
+  parity with the abort, that is `docs/DECISIONS.md` D276's to revisit, not an arm's.

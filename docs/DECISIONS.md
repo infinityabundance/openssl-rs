@@ -17934,3 +17934,102 @@ open of those; `libcrypto` stays at **2035 implemented**.
 `open` on their predicates' host bit and on the absence of a portable arm (D274); the mechanism they
 needed is now in place, so the next entry is the construction itself, one entry for the two non-ETM
 rows and one for the nine ETM rows, in the order D274 records.
+
+## D276 — the thirteen `AES-*-CBC-HMAC-*` rows land, and D274's "all thirteen are published" was wrong
+
+The first block of D274's order, and the measurement that opens it corrects the reconnaissance entry
+it comes from.
+
+**What the authority actually publishes, measured.** D274 concluded that on this host the authority
+publishes all thirteen rows, and that the crate must therefore supply thirteen constructions. It
+publishes **four**. `HWAES_CBC_HMAC_SHA1_ETM_CAPABLE` and its two siblings are defined *inside*
+`#if (defined(__arm__) || defined(__aarch64__) || ...)` (`include/crypto/aes_platform.h:114-121`) and
+`AES_CBC_HMAC_SHA_ETM_CAPABLE` is defined only inside the same block, so on x86-64
+`cipher_aes_cbc_hmac_sha_etm.c:16-20` and each of the three `*_etm_hw.c` files compile their
+`#if !defined(...)` **stub**: every ETM dispatch table is `{ OSSL_DISPATCH_END }` and each ETM
+predicate is `return 0`. The measurement is a fetch against the pinned authority:
+
+```
+AES-128-CBC-HMAC-SHA1       fetch=1 flags=0x700002
+AES-256-CBC-HMAC-SHA1       fetch=1 flags=0x700002
+AES-128-CBC-HMAC-SHA256     fetch=1 flags=0x700002
+AES-256-CBC-HMAC-SHA256     fetch=1 flags=0x700002
+AES-{128,192,256}-CBC-HMAC-SHA{1,256,512}-ETM   fetch=0   (all nine)
+```
+
+and `RT-CIPHER`'s census arm now prints `fetched=0` for all nine on **both** sides, which is what
+makes it an observation rather than a reading of the source. D274's error was reading the capability
+macro's *guard* (`#else` arm exists) as its *answer*; the guard is a compile-time test of a runtime
+bit, and for the ETM rows the compile-time half is false on this platform.
+
+**What that changes about the work, and what it does not.** The four non-ETM rows are exactly as
+D274 describes: the `#else` arm is the only implementation, it calls `aesni_cbc_sha1_enc` and
+`sha1_block_data_order`, both perlasm, and declining the assembly leaves nothing — so the
+construction is written out in `src/provider/cipher.rs`. The nine ETM rows need no construction at
+all: they are *rows*, and the crate now carries them in `deflt_ciphers[]` with empty dispatch tables
+and predicates that refuse, so `ossl_prov_cache_exported_algorithms` drops them and the published
+set is the authority's four.
+
+**The four rows.** `aesni_cbc_hmac_sha1_cipher` and `aesni_cbc_hmac_sha256_cipher` are transcribed
+arm for arm, and the three arms that differ between the two variants are transcribed *as* differing
+because they are observable: the SHA-1 body copies the explicit IV out of the input and shifts both
+pointers past it before decrypting, where the SHA-256 body decrypts the whole buffer first and shifts
+afterwards -- so on a refused record the two leave different bytes in `out[0..16)`. The stitched
+perlasm calls collapse into `SHA1_Update` plus `AES_cbc_encrypt`, which is a *measured* collapse and
+not an approximation: the three `sha1_update` calls around the stitched call cover `[iv, plen)`
+contiguously and the stitched call's own `Nh`/`Nl` advance is what `SHA1_Update` does for the same
+bytes, while AES and SHA touch disjoint state so their interleaving is not observable. The tag
+comparison is the authority's masked loop rather than an equality, because that loop *is* the row's
+constant-time property and a `memcmp` would be a security regression wearing the same answer.
+
+The capability predicates are read from the CPU rather than assumed: `ossl_cipher_capable_aes_cbc_hmac_sha1`
+is `OPENSSL_ia32cap_P[1] & (1 << 25)` and `OPENSSL_cpuid_setup` fills that word from
+`CPUID.(EAX=1).ECX`, so the crate reads the same bit from the same leaf -- and the multiblock AAD
+arm's `OPENSSL_ia32cap_P[2] & (1 << 5)` (AVX2) likewise. Both are measured to agree: the
+`cbchmac.*.mbaad.get` arm prints `il=8 pk=8616`, which is the AVX2 answer, on both sides. The
+`OPENSSL_ia32cap` environment variable's masking is *not* modelled and is recorded.
+
+**What the courts now observe.** `RT-CIPHER` grew from 6049 to **6505** observations (+456) with a
+new `rt_cbchmac_records` arm: per published row, the flags, both lengths and the block size; all
+eight keys of the row's own settable list set through `EVP_CIPHER_CTX_set_params`; all nine keys of
+its gettable list read the same way; the multiblock AAD parameter and the two values it writes back;
+a whole TLS 1.0 record in both directions; and a flipped-ciphertext-byte refusal. TLS 1.0 is chosen
+on purpose: it is the version with no explicit IV, so the record is a pure function of key, MAC key,
+IV and payload and a diff is a defect rather than a random draw. The `deflt_ciphers[]` row census
+gained all thirteen names in position, so the row-coverage gate holds the arm's list to the census in
+both directions.
+
+**The one narrowing, recorded rather than hidden.** The multiblock *encrypt* parameter's body is
+`tls1_multi_block_encrypt`, whose first act is `RAND_bytes_ex(ctx->base.libctx, ...)` and whose every
+subsequent byte depends on those IVs. `crypto/rand/` is Phase 9's, so the arm answers 0 -- the value
+the authority answers when that call fails -- and two entries join
+`docs/SECURITY_DIVERGENCE_POLICY.md` §6: `D-CBCHMAC-MULTIBLOCK-ENC-1` for the narrowing, and
+`D-CBCHMAC-MAXBUFSZ-ASSERT-1` for a second difference the arm found on the way. The second is worth
+naming: `tls1_multiblock_max_bufsize` opens with
+`OPENSSL_assert(ctx->multiblock_max_send_fragment != 0)` and the assertion is **live in the pinned
+build** -- reading the buffer size before setting the fragment aborts the authority with
+exit status 134. The crate answers the arithmetic instead (53 for a zero fragment, 16437 for 16384),
+which is a divergence in the safe direction and is recorded because a caller who never sets the
+fragment otherwise meets a number on one side and a dead process on the other.
+
+**The `scan_typedefs` fix D275 landed is what made this unit's dispatch court clean**, and this unit
+is the first to exercise it: `OSSL_ALGORITHM_CAPABLE` is now in the type universe under its own name,
+which is where the capability mechanism's own type belongs.
+
+**What this entry moves.** `src/provider/cipher.rs` (about 1 900 lines: the contexts, both hw units,
+the row layer, the dispatch macro, the nine empty ETM tables and the thirteen rows),
+`courts/phase8/rt_cipher_probe.c` (the census list and the new arm),
+`courts/layout/measure-cbc-hmac-ctxs.c`, `forensics/tools/gen_err_raise_sites.py` (the row layer's
+eighteen raises), `forensics/tools/gen_prerequisite_atlas.py`'s stale exclusion note,
+`docs/PHASE-8-SUBPHASES.md`'s 8.3 row, `docs/SECURITY_DIVERGENCE_POLICY.md` §6, and every derived
+artefact they feed. Measured: unit tests **605**; provider census **162 implemented / 144 open /
+690 deferred** (up thirteen, exactly this family) with Phase 8 owning 162 of them; `RT-CIPHER`
+**6505**; `RT-DIGEST` 468; `CT-DIGEST` 272/272; `CT-CIPHER` 3123/3123; `libcrypto` unchanged at
+**2035 implemented**, because none of the thirteen is an export.
+
+**What this entry does not move.** `CT-CIPHER` has no arm for these rows yet, and that is the next
+unit rather than an omission: the construction is not a published standard, so its correctness plane
+has to be the *decomposition* -- re-derive the record from the generic AES-CBC cipher and the HMAC
+facility, both of which are separately courted, and compare -- with the pinned corpus's
+`evpciph_aes_stitched.txt` as a second arm whose provenance is stated as the corpus mirroring it is
+rather than as an independent derivation. The `AES-*-GCM-SIV` trio remains 8.3's last open block.

@@ -29,16 +29,17 @@
 //! * the `OSSL_OP_CIPHER` arm of `deflt_query`.
 //!
 //! What is **absent by design**: `deflt_get_params`/`deflt_gettable_params`/
-//! `ossl_prov_get_capabilities`/`provctx` and the `base`/`null` *providers*; the `AES-*-GCM` rows
-//! (`defltprov.c:202-204`, deferred to Phase 9 on `RAND_bytes_ex` -- D234); the
-//! `AES-*-SIV`/`AES-*-GCM-SIV` rows (`defltprov.c:194-201`, whose construction is
-//! `crypto/modes/siv128.c`); the thirteen capability-gated `ALGC(...)` `AES-*-CBC-HMAC` rows
-//! (`defltprov.c:220-...`), which cannot land before D237's filtering is built; ARIA and SM4
-//! (whose low-level constructions do not exist in this profile; D209 §2); ChaCha20
-//! (`cipher_chacha20.c`'s units publish no `libcrypto` symbol); and the asm-selected
-//! `cipher_aes_cbc_hmac_*` TLS dispatch. `deflt_ciphers[]` in the authority carries those rows
-//! too; this half carries the subset the crate can back, and `forensics/atlas/provider-algorithms.json`
-//! (D237) is the census that says so row by row.
+//! `ossl_prov_get_capabilities`/`provctx` and the `base`/`null` *providers*; the `AES-*-GCM` three
+//! (`defltprov.c:202-204`) and the `AES-*-GCM-SIV` three (`:198-200`), all six deferred to Phase 9
+//! on `RAND_bytes_ex` (D234, D237); and the multiblock *encrypt* parameter of the four published
+//! `AES-*-CBC-HMAC-*` rows, which is this module's one recorded narrowing
+//! (`docs/SECURITY_DIVERGENCE_POLICY.md` D-CBCHMAC-MULTIBLOCK-ENC-1). The thirteen CBC-HMAC rows
+//! themselves **are** here -- the four the AES-NI bit publishes with their whole record
+//! construction, and the nine ETM rows as the capability filter's rows with empty dispatch tables,
+//! which is what this profile's `AES_CBC_HMAC_SHA_ETM_CAPABLE` makes them (D276).
+//! `deflt_ciphers[]` in the authority carries those rows too; this half carries the subset the
+//! crate can back, and `forensics/atlas/provider-algorithms.json` (D237) is the census that says
+//! so row by row.
 //!
 //! Two arms the authority has are not transcribed because they are unreachable for these rows
 //! without a caller setting the corresponding context parameter, and each is named rather than
@@ -10214,6 +10215,1930 @@ pub(crate) static NULL_FUNCTIONS: [OsslDispatch; 15] = [
     },
 ];
 
+// =============================================================================================
+// The `AES-*-CBC-HMAC-*` rows — `cipher_aes_cbc_hmac_sha.c`, `cipher_aes_cbc_hmac_sha.h`,
+// `cipher_aes_cbc_hmac_sha1_hw.c`, `cipher_aes_cbc_hmac_sha256_hw.c` and the nine `*_etm_*`
+// units (D274, D276)
+// =============================================================================================
+//
+// The thirteen `ALGC(...)` rows `defltprov.c:220-245` carries are a stitched AES-CBC + HMAC over
+// the TLS record layout, with `set_tls1_aad` and the `EVP_CTRL_TLS1_1_MULTIBLOCK_*` family as their
+// row-specific surface. This section is the whole family on this profile.
+//
+// ## Why the construction is written here rather than selected from an authority arm
+//
+// For the four non-ETM rows the authority's `#if` arm is a stub that returns `0`/`NULL` and the
+// `#else` arm -- the only implementation that exists -- calls `sha1_block_data_order` and
+// `aesni_cbc_sha1_enc`, both **perlasm** (`crypto/aes/asm/aesni-sha1-x86_64.pl`). Declining the
+// assembly therefore leaves the row with nothing, which inverts the pattern every earlier AES-NI
+// decline used (D274). The row's contract is its observable behaviour, so the construction is
+// written out: AES-CBC over the record with the MAC in the layout `set_tls1_aad` defines, the
+// constant-time tag comparison, and the `multiblock` control paths.
+//
+// The two perlasm calls collapse into ordinary operations, and that collapse is *measured* rather
+// than approximated. `aesni_cbc_sha1_enc(in, out, blocks, ks, iv, md, in+iv+off)` hashes
+// `blocks*SHA_CBLOCK` bytes from `in+iv+off` into `md` while encrypting `blocks*SHA_CBLOCK` bytes
+// from `in`; the `sha1_update` calls around it cover `[iv, plen)` contiguously, and the stitched
+// call's own advance of `Nh`/`Nl` is what `SHA1_Update` does for the same bytes. So the pair is
+// `SHA1_Update(md, in+iv, plen-iv)` followed by `AES_cbc_encrypt(in, out, len, ks, iv, 1)` -- which
+// is what this section writes. The stitched form exists for speed; the bytes are the same, and AES
+// and SHA touch disjoint state so their interleaving is not observable.
+//
+// ## The nine ETM rows are dropped by the capability filter on this profile
+//
+// `HWAES_CBC_HMAC_SHA1_ETM_CAPABLE` and its siblings are **aarch64-only**
+// (`include/crypto/aes_platform.h:114-121`) and `AES_CBC_HMAC_SHA_ETM_CAPABLE` is defined only
+// inside that block, so on x86-64 `cipher_aes_cbc_hmac_sha_etm.c:16-20` compiles the stub branch:
+// every ETM dispatch table is `{ OSSL_DISPATCH_END }` and every ETM predicate returns 0. Measured
+// against the pinned authority, `EVP_CIPHER_fetch` answers 1 for the four non-ETM names and 0 for
+// all nine ETM ones. The nine are therefore modelled as what they are -- rows present in
+// `deflt_ciphers[]` with an empty dispatch table and a predicate that refuses -- and
+// `ossl_prov_cache_exported_algorithms` drops them exactly as the authority's does. D274's claim
+// that "on this host the authority publishes all thirteen" was wrong; D276 records the measurement.
+
+use crate::digest::sha1::{SHA1_Final, SHA1_Init, SHA1_Update, ShaCtx};
+use crate::digest::sha2::{SHA256_Final, SHA256_Init, SHA256_Update, Sha256Ctx};
+use crate::params::{
+    OSSL_PARAM_get_size_t, OSSL_PARAM_get_uint, OSSL_PARAM_locate, OSSL_PARAM_locate_const,
+    OSSL_PARAM_set_octet_string_or_ptr, OSSL_PARAM_set_size_t, OSSL_PARAM_set_uint,
+};
+use crate::runtime::constant_time::{constant_time_ge_s, constant_time_select};
+
+/// `NO_PAYLOAD_LENGTH` — `cipher_aes_cbc_hmac_sha.h:63`: `((size_t)-1)`.
+const NO_PAYLOAD_LENGTH: usize = usize::MAX;
+
+/// `SHA_DIGEST_LENGTH` — `include/openssl/sha.h:28`.
+const SHA_DIGEST_LENGTH: usize = 20;
+/// `SHA256_DIGEST_LENGTH` — `include/openssl/sha.h:50`.
+const SHA256_DIGEST_LENGTH: usize = 32;
+/// `SSL3_VERSION` — `include/openssl/prov_ssl.h:23`.
+const SSL3_VERSION: c_uint = 0x0300;
+/// `TLS1_VERSION` — `include/openssl/prov_ssl.h:24`.
+const TLS1_VERSION: c_uint = 0x0301;
+/// `TLS1_1_VERSION` — `include/openssl/prov_ssl.h:25`.
+const TLS1_1_VERSION: c_uint = 0x0302;
+
+/// `OSSL_CIPHER_PARAM_AEAD_MAC_KEY` — `core_names.h:178` (`"mackey"`).
+const OSSL_CIPHER_PARAM_AEAD_MAC_KEY: *const c_char = c"mackey".as_ptr();
+/// `OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_MAX_BUFSIZE` — `core_names.h:216`.
+const OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_MAX_BUFSIZE: *const c_char = c"tls1multi_maxbufsz".as_ptr();
+/// `OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_MAX_SEND_FRAGMENT` — `core_names.h:217`.
+const OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_MAX_SEND_FRAGMENT: *const c_char =
+    c"tls1multi_maxsndfrag".as_ptr();
+/// `OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_INTERLEAVE` — `core_names.h:215`.
+const OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_INTERLEAVE: *const c_char =
+    c"tls1multi_interleave".as_ptr();
+/// `OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_AAD` — `core_names.h:210`.
+const OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_AAD: *const c_char = c"tls1multi_aad".as_ptr();
+/// `OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_AAD_PACKLEN` — `core_names.h:211`.
+const OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_AAD_PACKLEN: *const c_char =
+    c"tls1multi_aadpacklen".as_ptr();
+/// `OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_ENC` — `core_names.h:212`.
+const OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_ENC: *const c_char = c"tls1multi_enc".as_ptr();
+/// `OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_ENC_IN` — `core_names.h:213`.
+const OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_ENC_IN: *const c_char = c"tls1multi_encin".as_ptr();
+/// `OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_ENC_LEN` — `core_names.h:214`.
+const OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_ENC_LEN: *const c_char = c"tls1multi_enclen".as_ptr();
+
+/// `-AES_BLOCK_SIZE` for an `int`, the mask both `..._set_tls1_aad` bodies and the payload-length
+/// test use.
+const AES_BLOCK_MASK: usize = !(AES_BLOCK_SIZE - 1);
+
+// ---------------------------------------------------------------------------------------------
+// `OPENSSL_ia32cap_P`'s two bits, which are this family's capability predicates
+// ---------------------------------------------------------------------------------------------
+
+/// `OPENSSL_ia32cap_P[1] & (1 << 25)` — `include/crypto/aes_platform.h:171`, `:185`.
+///
+/// **It is a runtime bit, and that is observable.** `AESNI_CAPABLE` and `AESNI_CBC_HMAC_SHA_CAPABLE`
+/// are the same expression, and `ossl_cipher_capable_aes_cbc_hmac_sha1` returns it, so on a host
+/// without AES-NI the four non-ETM rows are not published at all. `OPENSSL_cpuid_setup` fills
+/// `OPENSSL_ia32cap_P[1]` from `CPUID.(EAX=1).ECX`, whose bit 25 is the AES-NI feature bit, so the
+/// crate reads the same bit from the same leaf rather than assuming the answer -- which is what
+/// makes the four rows' *presence* a measured fact on any host rather than this one's.
+///
+/// **The `OPENSSL_ia32cap` environment variable's masking is not modelled.** `OPENSSL_cpuid_setup`
+/// clears bits named by that variable, so an environment that clears bit 25 would make the authority
+/// drop all four rows where the crate still publishes them. That is a recorded divergence
+/// (`docs/SECURITY_DIVERGENCE_POLICY.md` §4) rather than an oversight, and it is the same class as
+/// the declines D213 (RC4_options) and D222 (the Camellia table) already carry.
+fn ia32cap_aesni() -> bool {
+    let leaf1 = core::arch::x86_64::__cpuid(1);
+    leaf1.ecx & (1 << 25) != 0
+}
+
+/// `OPENSSL_ia32cap_P[2] & (1 << 5)` — the AVX2 bit the multiblock AAD path tests
+/// (`cipher_aes_cbc_hmac_sha1_hw.c:726`).
+///
+/// `OPENSSL_cpuid_setup` fills `OPENSSL_ia32cap_P[2]` from `CPUID.(EAX=7,ECX=0).EBX`, whose bit 5 is
+/// AVX2. The bit changes the interleave this arm selects for an input of 8192 bytes or more, and
+/// nothing else; it is read here for the same reason its sibling is, with the same recorded
+/// environment-variable divergence.
+fn ia32cap_avx2() -> bool {
+    let leaf7 = core::arch::x86_64::__cpuid_count(7, 0);
+    leaf7.ebx & (1 << 5) != 0
+}
+
+/// `int ossl_cipher_capable_aes_cbc_hmac_sha1(void)` — `cipher_aes_cbc_hmac_sha1_hw.c:40-43`.
+unsafe extern "C" fn ossl_cipher_capable_aes_cbc_hmac_sha1() -> c_int {
+    ia32cap_aesni() as c_int
+}
+
+/// `int ossl_cipher_capable_aes_cbc_hmac_sha256(void)` — the same predicate in its own unit.
+unsafe extern "C" fn ossl_cipher_capable_aes_cbc_hmac_sha256() -> c_int {
+    ia32cap_aesni() as c_int
+}
+
+/// `int ossl_cipher_capable_aes_cbc_hmac_sha1_etm(void)` — `cipher_aes_cbc_hmac_sha1_etm_hw.c:13-16`,
+/// the `#if !defined(AES_CBC_HMAC_SHA_ETM_CAPABLE)` stub this profile compiles.
+///
+/// The three ETM predicates are **not** the AES-NI bit. `HWAES_CBC_HMAC_SHA*_ETM_CAPABLE` is
+/// aarch64-only (`aes_platform.h:116-118`), so on x86-64 the hw files' `#else` arm does not exist
+/// and each predicate is the constant 0. Its observable is the fetch, and all nine rows are dropped.
+unsafe extern "C" fn ossl_cipher_capable_aes_cbc_hmac_sha1_etm() -> c_int {
+    0
+}
+
+/// `int ossl_cipher_capable_aes_cbc_hmac_sha256_etm(void)` — the same stub.
+unsafe extern "C" fn ossl_cipher_capable_aes_cbc_hmac_sha256_etm() -> c_int {
+    0
+}
+
+/// `int ossl_cipher_capable_aes_cbc_hmac_sha512_etm(void)` — the same stub.
+unsafe extern "C" fn ossl_cipher_capable_aes_cbc_hmac_sha512_etm() -> c_int {
+    0
+}
+
+// ---------------------------------------------------------------------------------------------
+// The contexts — `cipher_aes_cbc_hmac_sha.h:43-65`
+// ---------------------------------------------------------------------------------------------
+
+/// `PROV_AES_HMAC_SHA_CTX` — `cipher_aes_cbc_hmac_sha.h:43-56`.
+///
+/// Measured by `courts/layout/measure-cbc-hmac-ctxs.c`: **504** bytes, with `ks` at 192 (the
+/// eight-aligned `AES_KEY` union -- 244 bytes of `AES_KEY` in 248 of object, D269),
+/// `payload_length` at 440, `aux` at 448, `hw` at 464 and the four multiblock members and
+/// `tls_aad_pad` from 472 to 504.
+#[repr(C)]
+pub(crate) struct ProvAesHmacShaCtx {
+    /// `PROV_CIPHER_CTX base`.
+    pub base: ProvCipherCtx,
+    /// `AES_KEY ks`.
+    pub ks: AesKeyUnion,
+    /// `size_t payload_length` — the AAD length in the decrypt case, `NO_PAYLOAD_LENGTH` otherwise.
+    pub payload_length: usize,
+    /// `union { unsigned int tls_ver; unsigned char tls_aad[16]; } aux`.
+    ///
+    /// The sixteen bytes, because both members are read at offset zero and never at the same time:
+    /// `set_tls1_aad`'s encrypting arm writes the version as a 32-bit word there and its decrypting
+    /// arm `memcpy`s the thirteen-byte AAD over it. `aux_tls_ver`/`aux_set_tls_ver` are the word
+    /// accessors the cipher body uses; the AAD bytes are read directly.
+    pub aux: [c_uchar; 16],
+    /// `const PROV_CIPHER_HW_AES_HMAC_SHA *hw` — the extended vtable, which is `base.hw` under a
+    /// wider type. `base_init` is what makes the two agree.
+    pub hw: *const ProvCipherHwAesHmacSha,
+    /// `unsigned int multiblock_interleave`.
+    pub multiblock_interleave: c_uint,
+    /// `unsigned int multiblock_aad_packlen`.
+    pub multiblock_aad_packlen: c_uint,
+    /// `size_t multiblock_max_send_fragment`.
+    pub multiblock_max_send_fragment: usize,
+    /// `size_t multiblock_encrypt_len`.
+    pub multiblock_encrypt_len: usize,
+    /// `size_t tls_aad_pad`.
+    pub tls_aad_pad: usize,
+}
+
+/// `PROV_AES_HMAC_SHA1_CTX` — `cipher_aes_cbc_hmac_sha.h:58-61`. Measured **792** bytes, the three
+/// `SHA_CTX` members at 504, 600 and 696.
+#[repr(C)]
+pub(crate) struct ProvAesHmacSha1Ctx {
+    /// `PROV_AES_HMAC_SHA_CTX base_ctx`.
+    pub base_ctx: ProvAesHmacShaCtx,
+    /// `SHA_CTX head` — the HMAC inner state, seeded with the ipad block.
+    pub head: ShaCtx,
+    /// `SHA_CTX tail` — the HMAC outer state, seeded with the opad block.
+    pub tail: ShaCtx,
+    /// `SHA_CTX md` — the running state the record's payload is hashed into.
+    pub md: ShaCtx,
+}
+
+/// `PROV_AES_HMAC_SHA256_CTX` — `cipher_aes_cbc_hmac_sha.h:63-65`. Measured **840** bytes, the
+/// three `SHA256_CTX` members at 504, 616 and 728.
+#[repr(C)]
+pub(crate) struct ProvAesHmacSha256Ctx {
+    /// `PROV_AES_HMAC_SHA_CTX base_ctx`.
+    pub base_ctx: ProvAesHmacShaCtx,
+    /// `SHA256_CTX head`.
+    pub head: Sha256Ctx,
+    /// `SHA256_CTX tail`.
+    pub tail: Sha256Ctx,
+    /// `SHA256_CTX md`.
+    pub md: Sha256Ctx,
+}
+
+/// `PROV_CIPHER_HW_AES_HMAC_SHA` — `cipher_aes_cbc_hmac_sha.h:19-31`: the generic `PROV_CIPHER_HW`
+/// first (which is why a `PROV_CIPHER_CTX::hw` and this pointer are interchangeable), then the four
+/// row-specific members. Measured **64** bytes.
+#[repr(C)]
+pub(crate) struct ProvCipherHwAesHmacSha {
+    /// `PROV_CIPHER_HW base` — `{ init, cipher, copyctx }`. `copyctx` is NULL: the authority's
+    /// vtable initialiser supplies only the first two members, and this row's `dupctx` is an
+    /// `OPENSSL_memdup` of the whole context rather than a `copyctx` call.
+    pub base: ProvCipherHw,
+    /// `void (*init_mac_key)(void *ctx, const unsigned char *inkey, size_t inlen)`.
+    pub init_mac_key: unsafe extern "C" fn(*mut c_void, *const c_uchar, usize),
+    /// `int (*set_tls1_aad)(void *ctx, unsigned char *aad_rec, int aad_len)`.
+    pub set_tls1_aad: unsafe extern "C" fn(*mut c_void, *mut c_uchar, c_int) -> c_int,
+    /// `int (*tls1_multiblock_max_bufsize)(void *ctx)`.
+    pub tls1_multiblock_max_bufsize: unsafe extern "C" fn(*mut c_void) -> c_int,
+    /// `int (*tls1_multiblock_aad)(void *vctx, EVP_CTRL_TLS1_1_MULTIBLOCK_PARAM *param)`.
+    pub tls1_multiblock_aad:
+        unsafe extern "C" fn(*mut c_void, *mut EvpCtrlTls11MultiblockParam) -> c_int,
+    /// `int (*tls1_multiblock_encrypt)(void *ctx, EVP_CTRL_TLS1_1_MULTIBLOCK_PARAM *param)`.
+    pub tls1_multiblock_encrypt:
+        unsafe extern "C" fn(*mut c_void, *mut EvpCtrlTls11MultiblockParam) -> c_int,
+}
+
+/// `EVP_CTRL_TLS1_1_MULTIBLOCK_PARAM` — `include/openssl/evp.h:463-468`.
+#[repr(C)]
+pub(crate) struct EvpCtrlTls11MultiblockParam {
+    /// `unsigned char *out`.
+    pub out: *mut c_uchar,
+    /// `const unsigned char *inp`.
+    pub inp: *const c_uchar,
+    /// `size_t len`.
+    pub len: usize,
+    /// `unsigned int interleave`.
+    pub interleave: c_uint,
+}
+
+const _: () = {
+    assert!(core::mem::size_of::<ProvAesHmacShaCtx>() == 504);
+    assert!(core::mem::offset_of!(ProvAesHmacShaCtx, ks) == 192);
+    assert!(core::mem::offset_of!(ProvAesHmacShaCtx, payload_length) == 440);
+    assert!(core::mem::offset_of!(ProvAesHmacShaCtx, aux) == 448);
+    assert!(core::mem::offset_of!(ProvAesHmacShaCtx, hw) == 464);
+    assert!(core::mem::offset_of!(ProvAesHmacShaCtx, tls_aad_pad) == 496);
+    assert!(core::mem::size_of::<ProvAesHmacSha1Ctx>() == 792);
+    assert!(core::mem::offset_of!(ProvAesHmacSha1Ctx, head) == 504);
+    assert!(core::mem::offset_of!(ProvAesHmacSha1Ctx, md) == 696);
+    assert!(core::mem::size_of::<ProvAesHmacSha256Ctx>() == 840);
+    assert!(core::mem::offset_of!(ProvAesHmacSha256Ctx, head) == 504);
+    assert!(core::mem::offset_of!(ProvAesHmacSha256Ctx, md) == 728);
+    assert!(core::mem::size_of::<ProvCipherHwAesHmacSha>() == 64);
+};
+
+/// `ctx->aux.tls_ver` — the 32-bit member of the `aux` union, at offset zero.
+///
+/// # Safety
+/// `ctx` is a live `PROV_AES_HMAC_SHA_CTX`.
+unsafe fn aux_tls_ver(ctx: *const ProvAesHmacShaCtx) -> c_uint {
+    // SAFETY: the caller's contract; these four bytes are in bounds of the sixteen.
+    unsafe {
+        let b = (*ctx).aux;
+        u32::from_ne_bytes([b[0], b[1], b[2], b[3]])
+    }
+}
+
+/// `ctx->aux.tls_ver = v` — the assignment `set_tls1_aad` makes on its encrypting arm.
+///
+/// # Safety
+/// `ctx` is a live `PROV_AES_HMAC_SHA_CTX`.
+unsafe fn aux_set_tls_ver(ctx: *mut ProvAesHmacShaCtx, v: c_uint) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        ptr::copy_nonoverlapping(v.to_ne_bytes().as_ptr(), (*ctx).aux.as_mut_ptr(), 4);
+    }
+}
+
+/// `ctx->base.enc` — the `enc` bitfield.
+#[inline]
+fn ctx_enc(ctx: *const ProvCipherCtx) -> bool {
+    bits(ctx) & CTX_ENC != 0
+}
+
+// ---------------------------------------------------------------------------------------------
+// `cipher_aes_cbc_hmac_sha1_hw.c` and `cipher_aes_cbc_hmac_sha256_hw.c`
+// ---------------------------------------------------------------------------------------------
+
+/// The `sha1_update` the hw file uses — `cipher_aes_cbc_hmac_sha1_hw.c:69-98`.
+///
+/// A wrapper that hashes whole blocks through `sha1_block_data_order` and the tail through
+/// `SHA1_Update`, adjusting `Nh`/`Nl` by hand. Its net effect is `SHA1_Update(c, data, len)`
+/// exactly, so the crate calls `SHA1_Update` and the length bookkeeping disappears with the speed.
+///
+/// # Safety
+/// `c` is a live `SHA_CTX`; `data` is readable for `len` bytes.
+unsafe fn sha1_update(c: *mut ShaCtx, data: *const c_void, len: usize) {
+    // SAFETY: the caller's contract.
+    unsafe { SHA1_Update(c, data, len) };
+}
+
+/// The same wrapper for SHA-256 — `cipher_aes_cbc_hmac_sha256_hw.c:73-...`.
+///
+/// # Safety
+/// `c` is a live `SHA256_CTX`; `data` is readable for `len` bytes.
+unsafe fn sha256_update(c: *mut Sha256Ctx, data: *const c_void, len: usize) {
+    // SAFETY: the caller's contract.
+    unsafe { SHA256_Update(c, data, len) };
+}
+
+/// `dst = src` for the digest states, which are `#[repr(C)]` but not `Copy`.
+///
+/// `(*sctx).md = (*sctx).head` is a move out of a raw pointer, which Rust refuses for a type that
+/// is not `Copy`; the authority's assignment is a memcpy of the state, which is what this is.
+///
+/// # Safety
+/// `dst` and `src` are live, distinct, aligned `T`s.
+unsafe fn copy_state<T>(dst: *mut T, src: *const T) {
+    // SAFETY: the caller's contract.
+    unsafe { ptr::copy_nonoverlapping(src, dst, 1) };
+}
+
+/// `aesni_cbc_hmac_sha1_init_key` — `cipher_aes_cbc_hmac_sha1_hw.c:45-67`.
+///
+/// # Safety
+/// The `PROV_CIPHER_HW::init` contract.
+unsafe extern "C" fn aesni_cbc_hmac_sha1_init_key(
+    vctx: *mut ProvCipherCtx,
+    key: *const c_uchar,
+    keylen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract; `vctx` is a `PROV_AES_HMAC_SHA1_CTX`.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesHmacShaCtx>();
+        let sctx = vctx.cast::<ProvAesHmacSha1Ctx>();
+        let ks = ptr::addr_of_mut!((*ctx).ks.ks);
+        let ret = if ctx_enc(vctx) {
+            AES_set_encrypt_key(key, (keylen * 8) as c_int, ks)
+        } else {
+            AES_set_decrypt_key(key, (keylen * 8) as c_int, ks)
+        };
+        SHA1_Init(ptr::addr_of_mut!((*sctx).head));
+        copy_state(ptr::addr_of_mut!((*sctx).tail), ptr::addr_of!((*sctx).head));
+        copy_state(ptr::addr_of_mut!((*sctx).md), ptr::addr_of!((*sctx).head));
+        (*ctx).payload_length = NO_PAYLOAD_LENGTH;
+        (*vctx).removetlspad = 1;
+        (*vctx).removetlsfixed = SHA_DIGEST_LENGTH + AES_BLOCK_SIZE;
+        if ret < 0 {
+            return 0;
+        }
+        1
+    }
+}
+
+/// `aesni_cbc_hmac_sha1_set_mac_key` — `cipher_aes_cbc_hmac_sha1_hw.c:628-656`.
+///
+/// # Safety
+/// `vctx` is a `PROV_AES_HMAC_SHA1_CTX`; `mac` is readable for `len` bytes.
+unsafe extern "C" fn aesni_cbc_hmac_sha1_set_mac_key(
+    vctx: *mut c_void,
+    mac: *const c_uchar,
+    len: usize,
+) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesHmacSha1Ctx>();
+        let mut hmac_key = [0u8; 64];
+
+        if len > hmac_key.len() {
+            SHA1_Init(ptr::addr_of_mut!((*ctx).head));
+            sha1_update(ptr::addr_of_mut!((*ctx).head), mac.cast(), len);
+            SHA1_Final(hmac_key.as_mut_ptr(), ptr::addr_of_mut!((*ctx).head));
+        } else {
+            // SAFETY: `len <= 64` and `mac` is readable for `len`.
+            ptr::copy_nonoverlapping(mac, hmac_key.as_mut_ptr(), len);
+        }
+
+        for b in hmac_key.iter_mut() {
+            *b ^= 0x36;
+        }
+        SHA1_Init(ptr::addr_of_mut!((*ctx).head));
+        sha1_update(
+            ptr::addr_of_mut!((*ctx).head),
+            hmac_key.as_ptr().cast(),
+            hmac_key.len(),
+        );
+
+        for b in hmac_key.iter_mut() {
+            *b ^= 0x36 ^ 0x5c;
+        }
+        SHA1_Init(ptr::addr_of_mut!((*ctx).tail));
+        sha1_update(
+            ptr::addr_of_mut!((*ctx).tail),
+            hmac_key.as_ptr().cast(),
+            hmac_key.len(),
+        );
+
+        // `OPENSSL_cleanse(hmac_key, sizeof(hmac_key))`.
+        ptr::write_bytes(hmac_key.as_mut_ptr(), 0, hmac_key.len());
+    }
+}
+
+/// `aesni_cbc_hmac_sha1_set_tls1_aad` — `cipher_aes_cbc_hmac_sha1_hw.c:659-692`.
+///
+/// Returns `-1` for a wrong `aad_len`, `0` when the version needs an explicit IV the payload cannot
+/// hold, and `1` otherwise. The `-1` is reachable through the parameter surface: `set_ctx_params`
+/// answers 0 for it, because the dispatch layer tests `<= 0`.
+///
+/// # Safety
+/// `vctx` is a `PROV_AES_HMAC_SHA1_CTX`; `aad_rec` is writable for `aad_len` bytes.
+unsafe extern "C" fn aesni_cbc_hmac_sha1_set_tls1_aad(
+    vctx: *mut c_void,
+    aad_rec: *mut c_uchar,
+    aad_len: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesHmacShaCtx>();
+        let sctx = vctx.cast::<ProvAesHmacSha1Ctx>();
+        let p = aad_rec;
+        let aad_len = aad_len as usize;
+
+        if aad_len != EVP_AEAD_TLS1_AAD_LEN {
+            return -1;
+        }
+
+        let mut len = ((*p.add(aad_len - 2)) as c_uint) << 8 | (*p.add(aad_len - 1)) as c_uint;
+
+        if ctx_enc(ctx.cast()) {
+            // The raw record length, *before* the explicit IV is taken out of it.
+            (*ctx).payload_length = len as usize;
+            let ver = ((*p.add(aad_len - 4)) as c_uint) << 8 | (*p.add(aad_len - 3)) as c_uint;
+            aux_set_tls_ver(ctx, ver);
+            if ver >= TLS1_1_VERSION {
+                if (len as usize) < AES_BLOCK_SIZE {
+                    return 0;
+                }
+                len -= AES_BLOCK_SIZE as c_uint;
+                *p.add(aad_len - 2) = (len >> 8) as c_uchar;
+                *p.add(aad_len - 1) = len as c_uchar;
+            }
+            copy_state(ptr::addr_of_mut!((*sctx).md), ptr::addr_of!((*sctx).head));
+            sha1_update(ptr::addr_of_mut!((*sctx).md), p.cast(), aad_len);
+            (*ctx).tls_aad_pad = (((len as usize) + SHA_DIGEST_LENGTH + AES_BLOCK_SIZE)
+                & AES_BLOCK_MASK)
+                - len as usize;
+            1
+        } else {
+            ptr::copy_nonoverlapping(p, (*ctx).aux.as_mut_ptr(), aad_len);
+            (*ctx).payload_length = aad_len;
+            (*ctx).tls_aad_pad = SHA_DIGEST_LENGTH;
+            1
+        }
+    }
+}
+
+/// `aesni_cbc_hmac_sha1_tls1_multiblock_max_bufsize` — `cipher_aes_cbc_hmac_sha1_hw.c:697-704`.
+///
+/// `OPENSSL_assert(ctx->multiblock_max_send_fragment != 0)` is a no-op in the pinned build
+/// (`NDEBUG`), so the arithmetic is what a caller observes. With the member still zero it is
+/// `5 + 16 + ((0 + 20 + 16) & -16)` = **53**, which `RT-CIPHER` measures on both sides.
+///
+/// # Safety
+/// `vctx` is a `PROV_AES_HMAC_SHA_CTX`.
+unsafe extern "C" fn aesni_cbc_hmac_sha1_tls1_multiblock_max_bufsize(vctx: *mut c_void) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesHmacShaCtx>();
+        let frag = (*ctx).multiblock_max_send_fragment as c_int;
+        (5 + 16 + ((frag + 20 + 16) & !(AES_BLOCK_SIZE as c_int - 1))) as c_int
+    }
+}
+
+/// `aesni_cbc_hmac_sha1_tls1_multiblock_aad` — `cipher_aes_cbc_hmac_sha1_hw.c:707-757`.
+///
+/// # Safety
+/// `vctx` is a `PROV_AES_HMAC_SHA_CTX`; `param` is a live parameter block whose `inp` is readable
+/// for at least thirteen bytes.
+unsafe extern "C" fn aesni_cbc_hmac_sha1_tls1_multiblock_aad(
+    vctx: *mut c_void,
+    param: *mut EvpCtrlTls11MultiblockParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesHmacShaCtx>();
+        let sctx = vctx.cast::<ProvAesHmacSha1Ctx>();
+        let mut n4x: c_uint = 1;
+
+        let inp = (*param).inp;
+        let mut inp_len = ((*inp.add(11)) as c_uint) << 8 | (*inp.add(12)) as c_uint;
+        (*ctx).multiblock_interleave = (*param).interleave;
+
+        if !ctx_enc(ctx.cast()) {
+            return -1;
+        }
+        if (((*inp.add(9)) as c_uint) << 8 | (*inp.add(10)) as c_uint) < TLS1_1_VERSION {
+            return -1;
+        }
+
+        if inp_len != 0 {
+            if inp_len < 4096 {
+                return 0; // too short
+            }
+            if inp_len >= 8192 && ia32cap_avx2() {
+                n4x = 2; // AVX2
+            }
+        } else {
+            n4x = (*param).interleave / 4;
+            if n4x != 0 && n4x <= 2 {
+                inp_len = (*param).len as c_uint;
+            } else {
+                return -1;
+            }
+        }
+
+        copy_state(ptr::addr_of_mut!((*sctx).md), ptr::addr_of!((*sctx).head));
+        sha1_update(
+            ptr::addr_of_mut!((*sctx).md),
+            inp.cast(),
+            EVP_AEAD_TLS1_AAD_LEN,
+        );
+
+        let x4: c_uint = 4 * n4x;
+        n4x += 1;
+
+        let mut frag = inp_len >> n4x;
+        let mut last = inp_len + frag - (frag << n4x);
+        if last > frag && ((last + 13 + 9) % 64) < (x4 - 1) {
+            frag += 1;
+            last -= x4 - 1;
+        }
+
+        let mut packlen = 5 + 16 + ((frag + 20 + 16) & (c_uint::MAX - 15));
+        packlen = (packlen << n4x) - packlen;
+        packlen += 5 + 16 + ((last + 20 + 16) & (c_uint::MAX - 15));
+
+        (*param).interleave = x4;
+        (*ctx).multiblock_interleave = x4;
+        (*ctx).multiblock_aad_packlen = packlen;
+        1
+    }
+}
+
+/// `aesni_cbc_hmac_sha1_tls1_multiblock_encrypt` — `cipher_aes_cbc_hmac_sha1_hw.c:760-766`.
+///
+/// **This is the family's one recorded narrowing, and it is a Phase 9 hand-off.** The authority's
+/// body is `tls1_multi_block_encrypt`, whose first act is
+/// `RAND_bytes_ex(ctx->base.libctx, blocks[0].c, 16 * x4, 0)` (`:146`) *and* whose every subsequent
+/// byte depends on those random values: they become each interleaved record's explicit IV. No
+/// version of this arm answers correctly without the random layer, so it answers the value the
+/// authority itself answers when that call fails -- `0`, with no error queued -- and the divergence
+/// is recorded rather than hidden. `crypto/rand/` is Phase 9's, the same blocker `DES3-WRAP`,
+/// `SM4-GCM` and the `ARIA-*-GCM` rows carry (D237, D240).
+///
+/// `tls1_multiblock_aad` and `tls1_multiblock_max_bufsize` above are **not** narrowed: neither
+/// touches the random layer, and both are courted.
+///
+/// # Safety
+/// As `aesni_cbc_hmac_sha1_tls1_multiblock_aad`.
+unsafe extern "C" fn aesni_cbc_hmac_sha1_tls1_multiblock_encrypt(
+    _vctx: *mut c_void,
+    _param: *mut EvpCtrlTls11MultiblockParam,
+) -> c_int {
+    0
+}
+
+/// `aesni_cbc_hmac_sha1_cipher` — `cipher_aes_cbc_hmac_sha1_hw.c:372-625`.
+///
+/// **The arms are the C's arm for arm, including the ones that look redundant.** The three
+/// `sha1_update` calls and the stitched `aesni_cbc_sha1_enc` collapse into one `SHA1_Update` plus
+/// one `AES_cbc_encrypt` (see this section's header), and the tag comparison is the authority's
+/// masked loop rather than an equality, because that loop *is* the row's constant-time property
+/// and a plain `memcmp` would be a security regression wearing the same answer.
+///
+/// The decrypting arm's pointer shifts and the order of the decrypt against the length check are the
+/// SHA-1 variant's: it copies the explicit IV out of the input, shifts both pointers past it, *then*
+/// decrypts. `cipher_aes_cbc_hmac_sha256_hw.c` does neither, so the two variants leave different
+/// bytes in `out[0..16)` on a refusal -- which is why they cannot share a body.
+///
+/// # Safety
+/// The `PROV_CIPHER_HW::cipher` contract.
+unsafe extern "C" fn aesni_cbc_hmac_sha1_cipher(
+    vctx: *mut ProvCipherCtx,
+    out: *mut c_uchar,
+    in_: *const c_uchar,
+    len: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesHmacShaCtx>();
+        let sctx = vctx.cast::<ProvAesHmacSha1Ctx>();
+        let mut plen = (*ctx).payload_length;
+
+        (*ctx).payload_length = NO_PAYLOAD_LENGTH;
+
+        if !len.is_multiple_of(AES_BLOCK_SIZE) {
+            return 0;
+        }
+
+        if ctx_enc(vctx) {
+            let mut iv: usize = 0;
+
+            if plen == NO_PAYLOAD_LENGTH {
+                plen = len;
+            } else if len != ((plen + SHA_DIGEST_LENGTH + AES_BLOCK_SIZE) & AES_BLOCK_MASK) {
+                return 0;
+            } else if aux_tls_ver(ctx) >= TLS1_1_VERSION {
+                iv = AES_BLOCK_SIZE;
+            }
+
+            // The collapse of `sha1_update` + `aesni_cbc_sha1_enc` + `sha1_update`: the three
+            // pieces cover `[iv, plen)` contiguously. `wrapping_sub` because the authority's own
+            // `plen - sha_off` is a `size_t` subtraction that a caller who ignores a failed
+            // `set_tls1_aad` can drive negative; both sides then read out of bounds rather than
+            // one of them panicking.
+            sha1_update(
+                ptr::addr_of_mut!((*sctx).md),
+                in_.add(iv).cast(),
+                plen.wrapping_sub(iv),
+            );
+
+            if plen != len {
+                // "TLS" mode of operation.
+                if in_ != out {
+                    ptr::copy_nonoverlapping(in_, out, plen);
+                }
+
+                // `H(payload)`, then `HMAC = H(opad || H(ipad || payload))`.
+                SHA1_Final(out.add(plen), ptr::addr_of_mut!((*sctx).md));
+                copy_state(ptr::addr_of_mut!((*sctx).md), ptr::addr_of!((*sctx).tail));
+                sha1_update(
+                    ptr::addr_of_mut!((*sctx).md),
+                    out.add(plen).cast(),
+                    SHA_DIGEST_LENGTH,
+                );
+                SHA1_Final(out.add(plen), ptr::addr_of_mut!((*sctx).md));
+
+                // Pad the payload|hmac; every padding byte is `len - plen - 1`.
+                plen += SHA_DIGEST_LENGTH;
+                let l = (len - plen - 1) as c_uchar;
+                while plen < len {
+                    *out.add(plen) = l;
+                    plen += 1;
+                }
+                AES_cbc_encrypt(
+                    out,
+                    out,
+                    len,
+                    ptr::addr_of_mut!((*ctx).ks.ks),
+                    (*vctx).iv.as_mut_ptr(),
+                    1,
+                );
+            } else {
+                AES_cbc_encrypt(
+                    in_,
+                    out,
+                    len,
+                    ptr::addr_of_mut!((*ctx).ks.ks),
+                    (*vctx).iv.as_mut_ptr(),
+                    1,
+                );
+            }
+            1
+        } else {
+            // `union { unsigned int u[5]; unsigned char c[32 + SHA_DIGEST_LENGTH]; } mac`, which the
+            // authority cache-line aligns. The alignment is a performance property; the fifty-two
+            // bytes and their contents are the contract.
+            let mut mac = [0u8; 32 + SHA_DIGEST_LENGTH];
+
+            if plen == NO_PAYLOAD_LENGTH {
+                // Not TLS mode: decrypt and keep hashing the plaintext.
+                AES_cbc_encrypt(
+                    in_,
+                    out,
+                    len,
+                    ptr::addr_of_mut!((*ctx).ks.ks),
+                    (*vctx).iv.as_mut_ptr(),
+                    0,
+                );
+                sha1_update(ptr::addr_of_mut!((*sctx).md), out.cast(), len);
+                return 1;
+            }
+
+            // "TLS" mode of operation.
+            let mut ret: c_int = 1;
+            let mut in_ = in_;
+            let mut out = out;
+            let mut len = len;
+
+            if (aux_aad_byte(ctx, plen - 4) as c_uint) << 8 | aux_aad_byte(ctx, plen - 3) as c_uint
+                >= TLS1_1_VERSION
+            {
+                if len < (AES_BLOCK_SIZE + SHA_DIGEST_LENGTH + 1) {
+                    return 0;
+                }
+                // Omit the explicit IV: it becomes the context's IV, and both pointers move past it.
+                ptr::copy_nonoverlapping(in_, (*vctx).iv.as_mut_ptr(), AES_BLOCK_SIZE);
+                in_ = in_.add(AES_BLOCK_SIZE);
+                out = out.add(AES_BLOCK_SIZE);
+                len -= AES_BLOCK_SIZE;
+            } else if len < (SHA_DIGEST_LENGTH + 1) {
+                return 0;
+            }
+
+            // Decrypt HMAC|padding at once.
+            AES_cbc_encrypt(
+                in_,
+                out,
+                len,
+                ptr::addr_of_mut!((*ctx).ks.ks),
+                (*vctx).iv.as_mut_ptr(),
+                0,
+            );
+
+            // Figure out the payload length. `maxpad` is clamped to 255 with the same mask
+            // arithmetic the authority uses, so a record longer than 276 bytes gets 255 rather
+            // than a truncation.
+            let raw_pad = *out.add(len - 1) as c_uint;
+            let mut maxpad = (len - (SHA_DIGEST_LENGTH + 1)) as c_uint;
+            maxpad |= 255u32.wrapping_sub(maxpad) >> 24;
+            maxpad &= 255;
+
+            let mask = constant_time_ge_s(maxpad as usize, raw_pad as usize) as c_uint;
+            ret &= mask as c_int;
+            // An invalid pad continues anyway, in constant time, using `maxpad` so the pointer
+            // arithmetic below stays well defined.
+            let pad =
+                constant_time_select(mask as usize, raw_pad as usize, maxpad as usize) as c_uchar;
+
+            let inp_len = len - (SHA_DIGEST_LENGTH + pad as usize + 1);
+
+            (*ctx).aux[plen - 2] = (inp_len >> 8) as c_uchar;
+            (*ctx).aux[plen - 1] = inp_len as c_uchar;
+
+            // `H(ipad || aad || payload)`.
+            copy_state(ptr::addr_of_mut!((*sctx).md), ptr::addr_of!((*sctx).head));
+            sha1_update(
+                ptr::addr_of_mut!((*sctx).md),
+                (*ctx).aux.as_ptr().cast(),
+                plen,
+            );
+            sha1_update(ptr::addr_of_mut!((*sctx).md), out.cast(), inp_len);
+            SHA1_Final(mac.as_mut_ptr(), ptr::addr_of_mut!((*sctx).md));
+
+            // The outer HMAC.
+            copy_state(ptr::addr_of_mut!((*sctx).md), ptr::addr_of!((*sctx).tail));
+            sha1_update(
+                ptr::addr_of_mut!((*sctx).md),
+                mac.as_ptr().cast(),
+                SHA_DIGEST_LENGTH,
+            );
+            SHA1_Final(mac.as_mut_ptr(), ptr::addr_of_mut!((*sctx).md));
+
+            // Verify. `p` starts at the record's MAC, `off` is how many bytes of the clamped pad
+            // precede it; the loop compares the MAC bytes against `mac` and the padding bytes
+            // against `pad`, with the two masks choosing which, and ignores everything before `p`.
+            let p = out.add(inp_len).sub((maxpad - pad as c_uint) as usize);
+            let off = (maxpad - pad as c_uint) as usize;
+            let mut res: c_uint = 0;
+            let mut i: usize = 0;
+            let mut j: usize = 0;
+            while j < maxpad as usize + SHA_DIGEST_LENGTH {
+                let c = *p.add(j) as c_uint;
+                let cmask = ((j.wrapping_sub(off).wrapping_sub(SHA_DIGEST_LENGTH)) as u32 as i32
+                    >> 31) as c_uint;
+                res |= (c ^ pad as c_uint) & !cmask;
+                let cmask2 =
+                    cmask & (((off.wrapping_sub(1).wrapping_sub(j)) as u32 as i32 >> 31) as c_uint);
+                res |= (c ^ *mac.as_ptr().add(i) as c_uint) & cmask2;
+                i += (1 & cmask2) as usize;
+                j += 1;
+            }
+            res = 0u32.wrapping_sub(0u32.wrapping_sub(res) >> 31);
+            ret &= !res as c_int;
+            ret
+        }
+    }
+}
+
+/// One byte of `ctx->aux.tls_aad`, the arm `set_tls1_aad` fills on the decrypting side.
+///
+/// # Safety
+/// `ctx` is a live `PROV_AES_HMAC_SHA_CTX` and `i < 16`.
+unsafe fn aux_aad_byte(ctx: *const ProvAesHmacShaCtx, i: usize) -> c_uchar {
+    // SAFETY: the caller's contract.
+    unsafe { (*ctx).aux[i] }
+}
+
+/// `static const PROV_CIPHER_HW_AES_HMAC_SHA cipher_hw_aes_hmac_sha1` —
+/// `cipher_aes_cbc_hmac_sha1_hw.c:770-780`.
+static CIPHER_HW_AES_HMAC_SHA1: ProvCipherHwAesHmacSha = ProvCipherHwAesHmacSha {
+    base: ProvCipherHw {
+        init: aesni_cbc_hmac_sha1_init_key,
+        cipher: aesni_cbc_hmac_sha1_cipher,
+        copyctx: None,
+    },
+    init_mac_key: aesni_cbc_hmac_sha1_set_mac_key,
+    set_tls1_aad: aesni_cbc_hmac_sha1_set_tls1_aad,
+    tls1_multiblock_max_bufsize: aesni_cbc_hmac_sha1_tls1_multiblock_max_bufsize,
+    tls1_multiblock_aad: aesni_cbc_hmac_sha1_tls1_multiblock_aad,
+    tls1_multiblock_encrypt: aesni_cbc_hmac_sha1_tls1_multiblock_encrypt,
+};
+
+/// `const PROV_CIPHER_HW_AES_HMAC_SHA *ossl_prov_cipher_hw_aes_cbc_hmac_sha1(void)` —
+/// `cipher_aes_cbc_hmac_sha1_hw.c:782-785`.
+///
+/// # Safety
+/// None: the pointer is `'static`.
+unsafe fn ossl_prov_cipher_hw_aes_cbc_hmac_sha1() -> *const ProvCipherHwAesHmacSha {
+    &CIPHER_HW_AES_HMAC_SHA1
+}
+
+/// `aesni_cbc_hmac_sha256_init_key`.
+///
+/// # Safety
+/// The `PROV_CIPHER_HW::init` contract.
+unsafe extern "C" fn aesni_cbc_hmac_sha256_init_key(
+    vctx: *mut ProvCipherCtx,
+    key: *const c_uchar,
+    keylen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract; `vctx` is a `PROV_AES_HMAC_SHA256_CTX`.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesHmacShaCtx>();
+        let sctx = vctx.cast::<ProvAesHmacSha256Ctx>();
+        let ks = ptr::addr_of_mut!((*ctx).ks.ks);
+        let ret = if ctx_enc(vctx) {
+            AES_set_encrypt_key(key, (keylen * 8) as c_int, ks)
+        } else {
+            AES_set_decrypt_key(key, (keylen * 8) as c_int, ks)
+        };
+        SHA256_Init(ptr::addr_of_mut!((*sctx).head));
+        copy_state(ptr::addr_of_mut!((*sctx).tail), ptr::addr_of!((*sctx).head));
+        copy_state(ptr::addr_of_mut!((*sctx).md), ptr::addr_of!((*sctx).head));
+        (*ctx).payload_length = NO_PAYLOAD_LENGTH;
+        (*vctx).removetlspad = 1;
+        (*vctx).removetlsfixed = SHA256_DIGEST_LENGTH + AES_BLOCK_SIZE;
+        if ret < 0 {
+            return 0;
+        }
+        1
+    }
+}
+
+/// `aesni_cbc_hmac_sha256_set_mac_key` — `cipher_aes_cbc_hmac_sha256_hw.c:679-708`.
+///
+/// # Safety
+/// `vctx` is a `PROV_AES_HMAC_SHA256_CTX`; `mackey` is readable for `len` bytes.
+unsafe extern "C" fn aesni_cbc_hmac_sha256_set_mac_key(
+    vctx: *mut c_void,
+    mackey: *const c_uchar,
+    len: usize,
+) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesHmacSha256Ctx>();
+        let mut hmac_key = [0u8; 64];
+
+        if len > hmac_key.len() {
+            SHA256_Init(ptr::addr_of_mut!((*ctx).head));
+            sha256_update(ptr::addr_of_mut!((*ctx).head), mackey.cast(), len);
+            SHA256_Final(hmac_key.as_mut_ptr(), ptr::addr_of_mut!((*ctx).head));
+        } else {
+            // SAFETY: `len <= 64` and `mackey` is readable for `len`.
+            ptr::copy_nonoverlapping(mackey, hmac_key.as_mut_ptr(), len);
+        }
+
+        for b in hmac_key.iter_mut() {
+            *b ^= 0x36;
+        }
+        SHA256_Init(ptr::addr_of_mut!((*ctx).head));
+        sha256_update(
+            ptr::addr_of_mut!((*ctx).head),
+            hmac_key.as_ptr().cast(),
+            hmac_key.len(),
+        );
+
+        for b in hmac_key.iter_mut() {
+            *b ^= 0x36 ^ 0x5c;
+        }
+        SHA256_Init(ptr::addr_of_mut!((*ctx).tail));
+        sha256_update(
+            ptr::addr_of_mut!((*ctx).tail),
+            hmac_key.as_ptr().cast(),
+            hmac_key.len(),
+        );
+
+        ptr::write_bytes(hmac_key.as_mut_ptr(), 0, hmac_key.len());
+    }
+}
+
+/// `aesni_cbc_hmac_sha256_set_tls1_aad` — `cipher_aes_cbc_hmac_sha256_hw.c:711-744`.
+///
+/// # Safety
+/// `vctx` is a `PROV_AES_HMAC_SHA256_CTX`; `aad_rec` is writable for `aad_len` bytes.
+unsafe extern "C" fn aesni_cbc_hmac_sha256_set_tls1_aad(
+    vctx: *mut c_void,
+    aad_rec: *mut c_uchar,
+    aad_len: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesHmacShaCtx>();
+        let sctx = vctx.cast::<ProvAesHmacSha256Ctx>();
+        let p = aad_rec;
+        let aad_len = aad_len as usize;
+
+        if aad_len != EVP_AEAD_TLS1_AAD_LEN {
+            return -1;
+        }
+
+        let mut len = ((*p.add(aad_len - 2)) as c_uint) << 8 | (*p.add(aad_len - 1)) as c_uint;
+
+        if ctx_enc(ctx.cast()) {
+            (*ctx).payload_length = len as usize;
+            let ver = ((*p.add(aad_len - 4)) as c_uint) << 8 | (*p.add(aad_len - 3)) as c_uint;
+            aux_set_tls_ver(ctx, ver);
+            if ver >= TLS1_1_VERSION {
+                if (len as usize) < AES_BLOCK_SIZE {
+                    return 0;
+                }
+                len -= AES_BLOCK_SIZE as c_uint;
+                *p.add(aad_len - 2) = (len >> 8) as c_uchar;
+                *p.add(aad_len - 1) = len as c_uchar;
+            }
+            copy_state(ptr::addr_of_mut!((*sctx).md), ptr::addr_of!((*sctx).head));
+            sha256_update(ptr::addr_of_mut!((*sctx).md), p.cast(), aad_len);
+            (*ctx).tls_aad_pad = (((len as usize) + SHA256_DIGEST_LENGTH + AES_BLOCK_SIZE)
+                & AES_BLOCK_MASK)
+                - len as usize;
+            1
+        } else {
+            ptr::copy_nonoverlapping(p, (*ctx).aux.as_mut_ptr(), aad_len);
+            (*ctx).payload_length = aad_len;
+            (*ctx).tls_aad_pad = SHA256_DIGEST_LENGTH;
+            1
+        }
+    }
+}
+
+/// `aesni_cbc_hmac_sha256_tls1_multiblock_max_bufsize` — `:748-756`: `frag + 32 + 16`, twelve more
+/// than its SHA-1 sibling's.
+///
+/// # Safety
+/// `vctx` is a `PROV_AES_HMAC_SHA_CTX`.
+unsafe extern "C" fn aesni_cbc_hmac_sha256_tls1_multiblock_max_bufsize(vctx: *mut c_void) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesHmacShaCtx>();
+        let frag = (*ctx).multiblock_max_send_fragment as c_int;
+        (5 + 16 + ((frag + 32 + 16) & !(AES_BLOCK_SIZE as c_int - 1))) as c_int
+    }
+}
+
+/// `aesni_cbc_hmac_sha256_tls1_multiblock_aad`.
+///
+/// # Safety
+/// As `aesni_cbc_hmac_sha1_tls1_multiblock_aad`.
+unsafe extern "C" fn aesni_cbc_hmac_sha256_tls1_multiblock_aad(
+    vctx: *mut c_void,
+    param: *mut EvpCtrlTls11MultiblockParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesHmacShaCtx>();
+        let sctx = vctx.cast::<ProvAesHmacSha256Ctx>();
+        let mut n4x: c_uint = 1;
+
+        let inp = (*param).inp;
+        let mut inp_len = ((*inp.add(11)) as c_uint) << 8 | (*inp.add(12)) as c_uint;
+        (*ctx).multiblock_interleave = (*param).interleave;
+
+        if !ctx_enc(ctx.cast()) {
+            return -1;
+        }
+        if (((*inp.add(9)) as c_uint) << 8 | (*inp.add(10)) as c_uint) < TLS1_1_VERSION {
+            return -1;
+        }
+
+        if inp_len != 0 {
+            if inp_len < 4096 {
+                return 0; // too short
+            }
+            if inp_len >= 8192 && ia32cap_avx2() {
+                n4x = 2; // AVX2
+            }
+        } else {
+            n4x = (*param).interleave / 4;
+            if n4x != 0 && n4x <= 2 {
+                inp_len = (*param).len as c_uint;
+            } else {
+                return -1;
+            }
+        }
+
+        copy_state(ptr::addr_of_mut!((*sctx).md), ptr::addr_of!((*sctx).head));
+        sha256_update(
+            ptr::addr_of_mut!((*sctx).md),
+            inp.cast(),
+            EVP_AEAD_TLS1_AAD_LEN,
+        );
+
+        let x4: c_uint = 4 * n4x;
+        n4x += 1;
+
+        let mut frag = inp_len >> n4x;
+        let mut last = inp_len + frag - (frag << n4x);
+        if last > frag && ((last + 13 + 9) % 64) < (x4 - 1) {
+            frag += 1;
+            last -= x4 - 1;
+        }
+
+        let mut packlen = 5 + 16 + ((frag + 32 + 16) & (c_uint::MAX - 15));
+        packlen = (packlen << n4x) - packlen;
+        packlen += 5 + 16 + ((last + 32 + 16) & (c_uint::MAX - 15));
+
+        (*param).interleave = x4;
+        (*ctx).multiblock_interleave = x4;
+        (*ctx).multiblock_aad_packlen = packlen;
+        1
+    }
+}
+
+/// `aesni_cbc_hmac_sha256_tls1_multiblock_encrypt` — the same Phase 9 narrowing as its SHA-1
+/// sibling; see `aesni_cbc_hmac_sha1_tls1_multiblock_encrypt`.
+///
+/// # Safety
+/// As `aesni_cbc_hmac_sha1_tls1_multiblock_encrypt`.
+unsafe extern "C" fn aesni_cbc_hmac_sha256_tls1_multiblock_encrypt(
+    _vctx: *mut c_void,
+    _param: *mut EvpCtrlTls11MultiblockParam,
+) -> c_int {
+    0
+}
+
+/// `aesni_cbc_hmac_sha256_cipher` — `cipher_aes_cbc_hmac_sha256_hw.c:395-...`.
+///
+/// **Three arms are deliberately not the SHA-1 body's**, and all three are observable:
+///
+/// * the authority decrypts the whole buffer *before* it tests the payload length, so a refusal
+///   leaves `D(C[0]) ^ IV` in the first block rather than the input ciphertext;
+/// * it shifts `out`/`len` past the explicit IV *after* that decrypt, rather than copying the IV
+///   out and shifting first; and
+/// * its explicit-IV condition is a single `len < iv + 32 + 1` test with `iv` already set, where
+///   SHA-1 has two.
+///
+/// A shared body would have erased all three, which is exactly the class of per-row difference that
+/// a "the two variants are the same cipher" assumption hides.
+///
+/// # Safety
+/// The `PROV_CIPHER_HW::cipher` contract.
+unsafe extern "C" fn aesni_cbc_hmac_sha256_cipher(
+    vctx: *mut ProvCipherCtx,
+    out: *mut c_uchar,
+    in_: *const c_uchar,
+    len: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesHmacShaCtx>();
+        let sctx = vctx.cast::<ProvAesHmacSha256Ctx>();
+        let mut plen = (*ctx).payload_length;
+
+        (*ctx).payload_length = NO_PAYLOAD_LENGTH;
+
+        if !len.is_multiple_of(AES_BLOCK_SIZE) {
+            return 0;
+        }
+
+        if ctx_enc(vctx) {
+            let mut iv: usize = 0;
+
+            if plen == NO_PAYLOAD_LENGTH {
+                plen = len;
+            } else if len != ((plen + SHA256_DIGEST_LENGTH + AES_BLOCK_SIZE) & AES_BLOCK_MASK) {
+                return 0;
+            } else if aux_tls_ver(ctx) >= TLS1_1_VERSION {
+                iv = AES_BLOCK_SIZE;
+            }
+
+            sha1_style_sha256_update(
+                ptr::addr_of_mut!((*sctx).md),
+                in_.add(iv).cast(),
+                plen.wrapping_sub(iv),
+            );
+
+            if plen != len {
+                if in_ != out {
+                    ptr::copy_nonoverlapping(in_, out, plen);
+                }
+
+                SHA256_Final(out.add(plen), ptr::addr_of_mut!((*sctx).md));
+                copy_state(ptr::addr_of_mut!((*sctx).md), ptr::addr_of!((*sctx).tail));
+                sha256_update(
+                    ptr::addr_of_mut!((*sctx).md),
+                    out.add(plen).cast(),
+                    SHA256_DIGEST_LENGTH,
+                );
+                SHA256_Final(out.add(plen), ptr::addr_of_mut!((*sctx).md));
+
+                plen += SHA256_DIGEST_LENGTH;
+                let l = (len - plen - 1) as c_uchar;
+                while plen < len {
+                    *out.add(plen) = l;
+                    plen += 1;
+                }
+                AES_cbc_encrypt(
+                    out,
+                    out,
+                    len,
+                    ptr::addr_of_mut!((*ctx).ks.ks),
+                    (*vctx).iv.as_mut_ptr(),
+                    1,
+                );
+            } else {
+                AES_cbc_encrypt(
+                    in_,
+                    out,
+                    len,
+                    ptr::addr_of_mut!((*ctx).ks.ks),
+                    (*vctx).iv.as_mut_ptr(),
+                    1,
+                );
+            }
+            return 1;
+        }
+
+        // Decrypting: the whole buffer, including the explicit-IV block, and *before* the mode test.
+        AES_cbc_encrypt(
+            in_,
+            out,
+            len,
+            ptr::addr_of_mut!((*ctx).ks.ks),
+            (*vctx).iv.as_mut_ptr(),
+            0,
+        );
+
+        if plen == NO_PAYLOAD_LENGTH {
+            sha256_update(ptr::addr_of_mut!((*sctx).md), out.cast(), len);
+            return 1;
+        }
+
+        let mut mac = [0u8; 64 + SHA256_DIGEST_LENGTH];
+        let mut ret: c_int = 1;
+        let mut iv: usize = 0;
+
+        if (aux_aad_byte(ctx, plen - 4) as c_uint) << 8 | aux_aad_byte(ctx, plen - 3) as c_uint
+            >= TLS1_1_VERSION
+        {
+            iv = AES_BLOCK_SIZE;
+        }
+
+        if len < (iv + SHA256_DIGEST_LENGTH + 1) {
+            return 0;
+        }
+
+        // Omit the explicit IV, after the decrypt above.
+        let out = out.add(iv);
+        let len = len - iv;
+
+        let raw_pad = *out.add(len - 1) as c_uint;
+        let mut maxpad = (len - (SHA256_DIGEST_LENGTH + 1)) as c_uint;
+        maxpad |= 255u32.wrapping_sub(maxpad) >> 24;
+        maxpad &= 255;
+
+        let mask = constant_time_ge_s(maxpad as usize, raw_pad as usize) as c_uint;
+        ret &= mask as c_int;
+        let pad = constant_time_select(mask as usize, raw_pad as usize, maxpad as usize) as c_uchar;
+
+        let inp_len = len - (SHA256_DIGEST_LENGTH + pad as usize + 1);
+
+        (*ctx).aux[plen - 2] = (inp_len >> 8) as c_uchar;
+        (*ctx).aux[plen - 1] = inp_len as c_uchar;
+
+        copy_state(ptr::addr_of_mut!((*sctx).md), ptr::addr_of!((*sctx).head));
+        sha256_update(
+            ptr::addr_of_mut!((*sctx).md),
+            (*ctx).aux.as_ptr().cast(),
+            plen,
+        );
+        sha256_update(ptr::addr_of_mut!((*sctx).md), out.cast(), inp_len);
+        SHA256_Final(mac.as_mut_ptr(), ptr::addr_of_mut!((*sctx).md));
+
+        copy_state(ptr::addr_of_mut!((*sctx).md), ptr::addr_of!((*sctx).tail));
+        sha256_update(
+            ptr::addr_of_mut!((*sctx).md),
+            mac.as_ptr().cast(),
+            SHA256_DIGEST_LENGTH,
+        );
+        SHA256_Final(mac.as_mut_ptr(), ptr::addr_of_mut!((*sctx).md));
+
+        let p = out.add(inp_len).sub((maxpad - pad as c_uint) as usize);
+        let off = (maxpad - pad as c_uint) as usize;
+        let mut res: c_uint = 0;
+        let mut i: usize = 0;
+        let mut j: usize = 0;
+        while j < maxpad as usize + SHA256_DIGEST_LENGTH {
+            let c = *p.add(j) as c_uint;
+            let cmask = ((j.wrapping_sub(off).wrapping_sub(SHA256_DIGEST_LENGTH)) as u32 as i32
+                >> 31) as c_uint;
+            res |= (c ^ pad as c_uint) & !cmask;
+            let cmask2 =
+                cmask & (((off.wrapping_sub(1).wrapping_sub(j)) as u32 as i32 >> 31) as c_uint);
+            res |= (c ^ *mac.as_ptr().add(i) as c_uint) & cmask2;
+            i += (1 & cmask2) as usize;
+            j += 1;
+        }
+        res = 0u32.wrapping_sub(0u32.wrapping_sub(res) >> 31);
+        ret &= !res as c_int;
+        ret
+    }
+}
+
+/// The SHA-256 variant's `sha256_update`, named distinctly from the SHA-1 one only because both are
+/// in this module; `cipher_aes_cbc_hmac_sha256_hw.c:73-...` is the same wrapper.
+///
+/// # Safety
+/// `c` is a live `SHA256_CTX`; `data` is readable for `len` bytes.
+unsafe fn sha1_style_sha256_update(c: *mut Sha256Ctx, data: *const c_void, len: usize) {
+    // SAFETY: the caller's contract.
+    unsafe { sha256_update(c, data, len) };
+}
+
+/// `static const PROV_CIPHER_HW_AES_HMAC_SHA cipher_hw_aes_hmac_sha256`.
+static CIPHER_HW_AES_HMAC_SHA256: ProvCipherHwAesHmacSha = ProvCipherHwAesHmacSha {
+    base: ProvCipherHw {
+        init: aesni_cbc_hmac_sha256_init_key,
+        cipher: aesni_cbc_hmac_sha256_cipher,
+        copyctx: None,
+    },
+    init_mac_key: aesni_cbc_hmac_sha256_set_mac_key,
+    set_tls1_aad: aesni_cbc_hmac_sha256_set_tls1_aad,
+    tls1_multiblock_max_bufsize: aesni_cbc_hmac_sha256_tls1_multiblock_max_bufsize,
+    tls1_multiblock_aad: aesni_cbc_hmac_sha256_tls1_multiblock_aad,
+    tls1_multiblock_encrypt: aesni_cbc_hmac_sha256_tls1_multiblock_encrypt,
+};
+
+/// `const PROV_CIPHER_HW_AES_HMAC_SHA *ossl_prov_cipher_hw_aes_cbc_hmac_sha256(void)`.
+///
+/// # Safety
+/// None: the pointer is `'static`.
+unsafe fn ossl_prov_cipher_hw_aes_cbc_hmac_sha256() -> *const ProvCipherHwAesHmacSha {
+    &CIPHER_HW_AES_HMAC_SHA256
+}
+
+// ---------------------------------------------------------------------------------------------
+// The row layer — `cipher_aes_cbc_hmac_sha.c`
+// ---------------------------------------------------------------------------------------------
+
+/// `__FILE__` for this row's unit, which the allocation-tracking arguments carry.
+///
+/// The generic engine's `FILE` is `ciphercommon.c`'s, because that is where *its* `OPENSSL_zalloc`
+/// calls live; these rows allocate from `cipher_aes_cbc_hmac_sha.c`, so a `CRYPTO_set_mem_functions`
+/// application that reads the `file` argument sees this path. `LINE` is inert in this profile
+/// (`OPENSSL_NO_CRYPTO_MDEBUG`), which is why one constant serves every site here.
+const FILE_CBC_HMAC: *const c_char =
+    c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c".as_ptr();
+
+/// `AES_CBC_HMAC_SHA_FLAGS` — `cipher_aes_cbc_hmac_sha.c:33-34`:
+/// `PROV_CIPHER_FLAG_AEAD | PROV_CIPHER_FLAG_TLS1_MULTIBLOCK`.
+const AES_CBC_HMAC_SHA_FLAGS: u64 = PROV_CIPHER_FLAG_AEAD | PROV_CIPHER_FLAG_TLS1_MULTIBLOCK;
+
+/// `cipher_aes_known_settable_ctx_params` — `cipher_aes_cbc_hmac_sha.c:67-79`.
+///
+/// Eight keys and the terminator. The two `SIZE_T`/`UNSIGNED_INTEGER` pairs are what makes the
+/// `data_size` distinction observable: `param_size_t` is 8 and `param_uint` is 4 on the same
+/// `data_type`, and `RT-CIPHER` prints both.
+static CBC_HMAC_SETTABLE_CTX_PARAMS: [OsslParam; 9] = [
+    param_octet_string(OSSL_CIPHER_PARAM_AEAD_MAC_KEY),
+    param_octet_string(OSSL_CIPHER_PARAM_AEAD_TLS1_AAD),
+    param_size_t(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_MAX_SEND_FRAGMENT),
+    param_size_t(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_AAD),
+    param_uint(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_INTERLEAVE),
+    param_octet_string(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_ENC),
+    param_octet_string(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_ENC_IN),
+    param_size_t(OSSL_CIPHER_PARAM_KEYLEN),
+    END,
+];
+
+/// `aes_settable_ctx_params` — `cipher_aes_cbc_hmac_sha.c:80-84`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_settable_ctx_params(
+    _cctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    CBC_HMAC_SETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `cipher_aes_known_gettable_ctx_params` — `cipher_aes_cbc_hmac_sha.c:285-298`.
+static CBC_HMAC_GETTABLE_CTX_PARAMS: [OsslParam; 10] = [
+    param_size_t(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_MAX_BUFSIZE),
+    param_uint(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_INTERLEAVE),
+    param_uint(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_AAD_PACKLEN),
+    param_size_t(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_ENC_LEN),
+    param_size_t(OSSL_CIPHER_PARAM_AEAD_TLS1_AAD_PAD),
+    param_size_t(OSSL_CIPHER_PARAM_KEYLEN),
+    param_size_t(OSSL_CIPHER_PARAM_IVLEN),
+    param_octet_string(OSSL_CIPHER_PARAM_IV),
+    param_octet_string(OSSL_CIPHER_PARAM_UPDATED_IV),
+    END,
+];
+
+/// `aes_gettable_ctx_params` — `cipher_aes_cbc_hmac_sha.c:299-303`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_gettable_ctx_params(
+    _cctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    CBC_HMAC_GETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `int aes_set_ctx_params(void *vctx, const OSSL_PARAM params[])` —
+/// `cipher_aes_cbc_hmac_sha.c:86-217`.
+///
+/// The order matters: the mac key, the multiblock trio, then the TLS AAD, then `keylen`, then the
+/// TLS version. Each arm that can fail returns `0` *after* raising the authority's own coordinate,
+/// and `fail_at` is that pair.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_set_ctx_params(vctx: *mut c_void, params: *const OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesHmacShaCtx>();
+        let hw = (*ctx).hw;
+
+        if ossl_param_is_empty(params) {
+            return 1;
+        }
+
+        let p = OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_AEAD_MAC_KEY);
+        if !p.is_null() {
+            if (*p).data_type != OSSL_PARAM_OCTET_STRING {
+                return fail_at(&err_sites::PROV_CIPHER_AES_CBC_HMAC_SHA_102);
+            }
+            ((*hw).init_mac_key)(ctx.cast(), (*p).data.cast(), (*p).data_size);
+        }
+
+        let p =
+            OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_MAX_SEND_FRAGMENT);
+        if !p.is_null()
+            && OSSL_PARAM_get_size_t(p, ptr::addr_of_mut!((*ctx).multiblock_max_send_fragment)) == 0
+        {
+            return fail_at(&err_sites::PROV_CIPHER_AES_CBC_HMAC_SHA_113);
+        }
+
+        let p = OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_AAD);
+        if !p.is_null() {
+            let p1 = OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_INTERLEAVE);
+            let mut interleave: c_uint = 0;
+            if (*p).data_type != OSSL_PARAM_OCTET_STRING
+                || p1.is_null()
+                || OSSL_PARAM_get_uint(p1, &mut interleave) == 0
+            {
+                return fail_at(&err_sites::PROV_CIPHER_AES_CBC_HMAC_SHA_132);
+            }
+            let mut mb_param = EvpCtrlTls11MultiblockParam {
+                out: ptr::null_mut(),
+                inp: (*p).data.cast(),
+                len: (*p).data_size,
+                interleave,
+            };
+            if ((*hw).tls1_multiblock_aad)(vctx, &mut mb_param) <= 0 {
+                return 0;
+            }
+        }
+
+        let p = OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_ENC);
+        if !p.is_null() {
+            let p1 = OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_INTERLEAVE);
+            let pin = OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_ENC_IN);
+            let mut interleave: c_uint = 0;
+            if (*p).data_type != OSSL_PARAM_OCTET_STRING
+                || pin.is_null()
+                || (*pin).data_type != OSSL_PARAM_OCTET_STRING
+                || p1.is_null()
+                || OSSL_PARAM_get_uint(p1, &mut interleave) == 0
+            {
+                return fail_at(&err_sites::PROV_CIPHER_AES_CBC_HMAC_SHA_162);
+            }
+            let mut mb_param = EvpCtrlTls11MultiblockParam {
+                out: (*p).data.cast(),
+                inp: (*pin).data.cast(),
+                len: (*pin).data_size,
+                interleave,
+            };
+            if ((*hw).tls1_multiblock_encrypt)(vctx, &mut mb_param) <= 0 {
+                return 0;
+            }
+        }
+
+        let p = OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_AEAD_TLS1_AAD);
+        if !p.is_null() {
+            if (*p).data_type != OSSL_PARAM_OCTET_STRING || (*p).data_size > c_int::MAX as usize {
+                return fail_at(&err_sites::PROV_CIPHER_AES_CBC_HMAC_SHA_176);
+            }
+            if ((*hw).set_tls1_aad)(vctx, (*p).data.cast(), (*p).data_size as c_int) <= 0 {
+                return 0;
+            }
+        }
+
+        let p = OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_KEYLEN);
+        if !p.is_null() {
+            let mut keylen: usize = 0;
+            if OSSL_PARAM_get_size_t(p, &mut keylen) == 0 {
+                return fail_at(&err_sites::PROV_CIPHER_AES_CBC_HMAC_SHA_188);
+            }
+            if (*ctx).base.keylen != keylen {
+                return fail_at(&err_sites::PROV_CIPHER_AES_CBC_HMAC_SHA_192);
+            }
+        }
+
+        let p = OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_TLS_VERSION);
+        if !p.is_null() {
+            if OSSL_PARAM_get_uint(p, ptr::addr_of_mut!((*ctx).base.tlsversion)) == 0 {
+                return fail_at(&err_sites::PROV_CIPHER_AES_CBC_HMAC_SHA_200);
+            }
+            if (*ctx).base.tlsversion == SSL3_VERSION || (*ctx).base.tlsversion == TLS1_VERSION {
+                if (*ctx).base.removetlsfixed < AES_BLOCK_SIZE {
+                    return fail_at(&err_sites::PROV_CIPHER_AES_CBC_HMAC_SHA_206);
+                }
+                // No explicit IV in these versions, so nothing is removed from the buffer.
+                (*ctx).base.removetlsfixed -= AES_BLOCK_SIZE;
+            }
+        }
+        1
+    }
+}
+
+/// `int aes_get_ctx_params(void *vctx, OSSL_PARAM params[])` —
+/// `cipher_aes_cbc_hmac_sha.c:219-283`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_get_ctx_params(vctx: *mut c_void, params: *mut OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesHmacShaCtx>();
+
+        let p = OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_MAX_BUFSIZE);
+        if !p.is_null() {
+            let hw = (*ctx).hw;
+            let len = ((*hw).tls1_multiblock_max_bufsize)(vctx);
+            if OSSL_PARAM_set_size_t(p, len as usize) == 0 {
+                return fail_at(&err_sites::PROV_CIPHER_AES_CBC_HMAC_SHA_231);
+            }
+        }
+
+        let p = OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_INTERLEAVE);
+        if !p.is_null() && OSSL_PARAM_set_uint(p, (*ctx).multiblock_interleave) == 0 {
+            return fail_at(&err_sites::PROV_CIPHER_AES_CBC_HMAC_SHA_238);
+        }
+
+        let p = OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_AAD_PACKLEN);
+        if !p.is_null() && OSSL_PARAM_set_uint(p, (*ctx).multiblock_aad_packlen) == 0 {
+            return fail_at(&err_sites::PROV_CIPHER_AES_CBC_HMAC_SHA_244);
+        }
+
+        let p = OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_ENC_LEN);
+        if !p.is_null() && OSSL_PARAM_set_size_t(p, (*ctx).multiblock_encrypt_len) == 0 {
+            return fail_at(&err_sites::PROV_CIPHER_AES_CBC_HMAC_SHA_250);
+        }
+
+        let p = OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_AEAD_TLS1_AAD_PAD);
+        if !p.is_null() && OSSL_PARAM_set_size_t(p, (*ctx).tls_aad_pad) == 0 {
+            return fail_at(&err_sites::PROV_CIPHER_AES_CBC_HMAC_SHA_257);
+        }
+
+        let p = OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_KEYLEN);
+        if !p.is_null() && OSSL_PARAM_set_size_t(p, (*ctx).base.keylen) == 0 {
+            return fail_at(&err_sites::PROV_CIPHER_AES_CBC_HMAC_SHA_262);
+        }
+
+        let p = OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_IVLEN);
+        if !p.is_null() && OSSL_PARAM_set_size_t(p, (*ctx).base.ivlen) == 0 {
+            return fail_at(&err_sites::PROV_CIPHER_AES_CBC_HMAC_SHA_267);
+        }
+
+        let p = OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_IV);
+        if !p.is_null()
+            && OSSL_PARAM_set_octet_string_or_ptr(
+                p,
+                (*ctx).base.oiv.as_ptr().cast(),
+                (*ctx).base.ivlen,
+            ) == 0
+        {
+            return fail_at(&err_sites::PROV_CIPHER_AES_CBC_HMAC_SHA_273);
+        }
+
+        let p = OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_UPDATED_IV);
+        if !p.is_null()
+            && OSSL_PARAM_set_octet_string_or_ptr(
+                p,
+                (*ctx).base.iv.as_ptr().cast(),
+                (*ctx).base.ivlen,
+            ) == 0
+        {
+            return fail_at(&err_sites::PROV_CIPHER_AES_CBC_HMAC_SHA_279);
+        }
+        1
+    }
+}
+
+/// `static void base_init(...)` — `cipher_aes_cbc_hmac_sha.c:305-314`.
+///
+/// The two lines are the whole trick of this struct: the generic engine is handed `&meths->base`
+/// (a `PROV_CIPHER_HW`), and the row then re-reads the same pointer as the *wider*
+/// `PROV_CIPHER_HW_AES_HMAC_SHA`, which is why the wider type must keep `base` first.
+///
+/// # Safety
+/// `ctx` is a freshly zeroed `PROV_AES_HMAC_SHA_CTX`; `meths` is `'static`.
+unsafe fn cbchmac_base_init(
+    provctx: *mut c_void,
+    ctx: *mut ProvAesHmacShaCtx,
+    meths: *const ProvCipherHwAesHmacSha,
+    kbits: usize,
+    blkbits: usize,
+    ivbits: usize,
+    flags: u64,
+) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        ossl_cipher_generic_initkey(
+            ctx.cast(),
+            kbits,
+            blkbits,
+            ivbits,
+            EVP_CIPH_CBC_MODE,
+            flags,
+            ptr::addr_of!((*meths).base),
+            provctx,
+        );
+        (*ctx).hw = (*ctx).base.hw.cast();
+    }
+}
+
+/// `aes_einit` — `cipher_aes_cbc_hmac_sha.c:49-56`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_einit(
+    ctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if ossl_cipher_generic_einit(ctx, key, keylen, iv, ivlen, ptr::null()) == 0 {
+            return 0;
+        }
+        aes_set_ctx_params(ctx, params)
+    }
+}
+
+/// `aes_dinit` — `cipher_aes_cbc_hmac_sha.c:58-65`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_dinit(
+    ctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if ossl_cipher_generic_dinit(ctx, key, keylen, iv, ivlen, ptr::null()) == 0 {
+            return 0;
+        }
+        aes_set_ctx_params(ctx, params)
+    }
+}
+
+/// `aes_cbc_hmac_sha1_newctx` — `cipher_aes_cbc_hmac_sha.c:316-331`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe fn aes_cbc_hmac_sha1_newctx(
+    provctx: *mut c_void,
+    kbits: usize,
+    blkbits: usize,
+    ivbits: usize,
+    flags: u64,
+) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let ctx = CRYPTO_zalloc(
+            core::mem::size_of::<ProvAesHmacSha1Ctx>(),
+            FILE_CBC_HMAC,
+            LINE,
+        );
+        if !ctx.is_null() {
+            cbchmac_base_init(
+                provctx,
+                ctx.cast::<ProvAesHmacShaCtx>(),
+                ossl_prov_cipher_hw_aes_cbc_hmac_sha1(),
+                kbits,
+                blkbits,
+                ivbits,
+                flags,
+            );
+        }
+        ctx
+    }
+}
+
+/// `aes_cbc_hmac_sha1_dupctx` — `cipher_aes_cbc_hmac_sha.c:333-344`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_cbc_hmac_sha1_dupctx(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 || provctx.is_null() {
+            return ptr::null_mut();
+        }
+        CRYPTO_memdup(
+            provctx,
+            core::mem::size_of::<ProvAesHmacSha1Ctx>(),
+            FILE_CBC_HMAC,
+            LINE,
+        )
+    }
+}
+
+/// `aes_cbc_hmac_sha1_freectx` — `cipher_aes_cbc_hmac_sha.c:346-354`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_cbc_hmac_sha1_freectx(vctx: *mut c_void) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if !vctx.is_null() {
+            ossl_cipher_generic_reset_ctx(vctx.cast());
+            CRYPTO_clear_free(
+                vctx,
+                core::mem::size_of::<ProvAesHmacSha1Ctx>(),
+                FILE_CBC_HMAC,
+                LINE,
+            );
+        }
+    }
+}
+
+/// `aes_cbc_hmac_sha256_newctx` — `cipher_aes_cbc_hmac_sha.c:356-371`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe fn aes_cbc_hmac_sha256_newctx(
+    provctx: *mut c_void,
+    kbits: usize,
+    blkbits: usize,
+    ivbits: usize,
+    flags: u64,
+) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let ctx = CRYPTO_zalloc(
+            core::mem::size_of::<ProvAesHmacSha256Ctx>(),
+            FILE_CBC_HMAC,
+            LINE,
+        );
+        if !ctx.is_null() {
+            cbchmac_base_init(
+                provctx,
+                ctx.cast::<ProvAesHmacShaCtx>(),
+                ossl_prov_cipher_hw_aes_cbc_hmac_sha256(),
+                kbits,
+                blkbits,
+                ivbits,
+                flags,
+            );
+        }
+        ctx
+    }
+}
+
+/// `aes_cbc_hmac_sha256_dupctx` — `cipher_aes_cbc_hmac_sha.c:373-381`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_cbc_hmac_sha256_dupctx(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        CRYPTO_memdup(
+            provctx,
+            core::mem::size_of::<ProvAesHmacSha256Ctx>(),
+            FILE_CBC_HMAC,
+            LINE,
+        )
+    }
+}
+
+/// `aes_cbc_hmac_sha256_freectx` — `cipher_aes_cbc_hmac_sha.c:383-391`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_cbc_hmac_sha256_freectx(vctx: *mut c_void) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if !vctx.is_null() {
+            ossl_cipher_generic_reset_ctx(vctx.cast());
+            CRYPTO_clear_free(
+                vctx,
+                core::mem::size_of::<ProvAesHmacSha256Ctx>(),
+                FILE_CBC_HMAC,
+                LINE,
+            );
+        }
+    }
+}
+
+/// `IMPLEMENT_CIPHER` — `cipher_aes_cbc_hmac_sha.c:393-427`.
+///
+/// One table per row, with the fourteen entries the authority's macro writes and in its order. The
+/// macro form is the authority's own: the four rows differ only in the key size and in which
+/// `newctx`/`freectx`/`dupctx` trio they name, and `aes_update`/`aes_final`/`aes_cipher` are the
+/// generic stream engine's.
+///
+/// **The table carries no `ENCRYPT_SKEY_INIT`/`DECRYPT_SKEY_INIT` arm**, unlike the generic
+/// `cipher_dispatch!` above: this row is not an `IMPLEMENT_generic_cipher` row, and a walker that
+/// found those ids here would be reading a table the authority does not publish.
+macro_rules! cbchmac_dispatch {
+    ($newctx:ident, $getparams:ident, $table:ident, $sub_newctx:path, $freectx:path, $dupctx:path,
+     $kbits:literal, $blkbits:literal, $ivbits:literal) => {
+        unsafe extern "C" fn $newctx(provctx: *mut c_void) -> *mut c_void {
+            // SAFETY: the dispatch contract.
+            unsafe { $sub_newctx(provctx, $kbits, $blkbits, $ivbits, AES_CBC_HMAC_SHA_FLAGS) }
+        }
+
+        unsafe extern "C" fn $getparams(params: *mut OsslParam) -> c_int {
+            // SAFETY: the dispatch contract.
+            unsafe {
+                ossl_cipher_generic_get_params(
+                    params,
+                    EVP_CIPH_CBC_MODE,
+                    AES_CBC_HMAC_SHA_FLAGS,
+                    $kbits,
+                    $blkbits,
+                    $ivbits,
+                )
+            }
+        }
+
+        pub(crate) static $table: [OsslDispatch; 15] = [
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_NEWCTX,
+                function: $newctx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_FREECTX,
+                function: $freectx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: crate::evp::cipher::OSSL_FUNC_CIPHER_DUPCTX,
+                function: $dupctx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_ENCRYPT_INIT,
+                function: aes_einit as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_DECRYPT_INIT,
+                function: aes_dinit as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_UPDATE,
+                function: ossl_cipher_generic_stream_update as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_FINAL,
+                function: ossl_cipher_generic_stream_final as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: crate::evp::cipher::OSSL_FUNC_CIPHER_CIPHER,
+                function: ossl_cipher_generic_cipher as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GET_PARAMS,
+                function: $getparams as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GETTABLE_PARAMS,
+                function: ossl_cipher_generic_gettable_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GET_CTX_PARAMS,
+                function: aes_get_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS,
+                function: aes_gettable_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_SET_CTX_PARAMS,
+                function: aes_set_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS,
+                function: aes_settable_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_DISPATCH_END,
+                function: ptr::null_mut(),
+            },
+        ];
+    };
+}
+
+// `ossl_aes128cbc_hmac_sha1_functions` … `ossl_aes256cbc_hmac_sha256_functions` —
+// `cipher_aes_cbc_hmac_sha.c:431-438`'s four `IMPLEMENT_CIPHER` invocations.
+cbchmac_dispatch!(
+    aes128cbc_hmac_sha1_newctx,
+    aes128cbc_hmac_sha1_get_params,
+    AES128CBC_HMAC_SHA1_FUNCTIONS,
+    aes_cbc_hmac_sha1_newctx,
+    aes_cbc_hmac_sha1_freectx,
+    aes_cbc_hmac_sha1_dupctx,
+    128,
+    128,
+    128
+);
+cbchmac_dispatch!(
+    aes256cbc_hmac_sha1_newctx,
+    aes256cbc_hmac_sha1_get_params,
+    AES256CBC_HMAC_SHA1_FUNCTIONS,
+    aes_cbc_hmac_sha1_newctx,
+    aes_cbc_hmac_sha1_freectx,
+    aes_cbc_hmac_sha1_dupctx,
+    256,
+    128,
+    128
+);
+cbchmac_dispatch!(
+    aes128cbc_hmac_sha256_newctx,
+    aes128cbc_hmac_sha256_get_params,
+    AES128CBC_HMAC_SHA256_FUNCTIONS,
+    aes_cbc_hmac_sha256_newctx,
+    aes_cbc_hmac_sha256_freectx,
+    aes_cbc_hmac_sha256_dupctx,
+    128,
+    128,
+    128
+);
+cbchmac_dispatch!(
+    aes256cbc_hmac_sha256_newctx,
+    aes256cbc_hmac_sha256_get_params,
+    AES256CBC_HMAC_SHA256_FUNCTIONS,
+    aes_cbc_hmac_sha256_newctx,
+    aes_cbc_hmac_sha256_freectx,
+    aes_cbc_hmac_sha256_dupctx,
+    256,
+    128,
+    128
+);
+
+/// The nine ETM dispatch tables, each of which the authority compiles as `{ OSSL_DISPATCH_END }` —
+/// `cipher_aes_cbc_hmac_sha_etm.c:17-20` under `#ifndef AES_CBC_HMAC_SHA_ETM_CAPABLE`.
+///
+/// They are what `deflt_ciphers[]`'s nine `ALGC` rows point at, and they are empty because on this
+/// profile the rows' predicates refuse and no walker ever reaches them. Naming them is what makes
+/// the rows' presence in the census a structural fact rather than a claim, and it is why the nine
+/// are `implemented` rather than `open`: the candidate's `deflt_ciphers[]` carries exactly the rows
+/// the authority's does, with exactly the predicates.
+///
+/// The tables must be distinct `'static` items because the census joins each authority row to a
+/// candidate row by alias and records the dispatch expression it found -- nine rows naming one
+/// table would still join, but it would record a table the authority does not have.
+macro_rules! cbchmac_etm_table {
+    ($table:ident) => {
+        pub(crate) static $table: [OsslDispatch; 1] = [OsslDispatch {
+            function_id: OSSL_DISPATCH_END,
+            function: ptr::null_mut(),
+        }];
+    };
+}
+
+cbchmac_etm_table!(AES128CBC_HMAC_SHA1_ETM_FUNCTIONS);
+cbchmac_etm_table!(AES192CBC_HMAC_SHA1_ETM_FUNCTIONS);
+cbchmac_etm_table!(AES256CBC_HMAC_SHA1_ETM_FUNCTIONS);
+cbchmac_etm_table!(AES128CBC_HMAC_SHA256_ETM_FUNCTIONS);
+cbchmac_etm_table!(AES192CBC_HMAC_SHA256_ETM_FUNCTIONS);
+cbchmac_etm_table!(AES256CBC_HMAC_SHA256_ETM_FUNCTIONS);
+cbchmac_etm_table!(AES128CBC_HMAC_SHA512_ETM_FUNCTIONS);
+cbchmac_etm_table!(AES192CBC_HMAC_SHA512_ETM_FUNCTIONS);
+cbchmac_etm_table!(AES256CBC_HMAC_SHA512_ETM_FUNCTIONS);
+
 // ---------------------------------------------------------------------------------------------
 // `deflt_ciphers[]` — the rows, in `defltprov.c`'s order
 // ---------------------------------------------------------------------------------------------
@@ -10376,6 +12301,21 @@ alias!(
     "AES-128-WRAP-PAD:id-aes128-wrap-pad:AES128-WRAP-PAD:2.16.840.1.101.3.4.1.8"
 );
 alias!(N_AES_256_WRAP_INV, "AES-256-WRAP-INV:AES256-WRAP-INV");
+// The thirteen `AES-*-CBC-HMAC-*` rows, `defltprov.c:220-245`. Each name is a single alias with no
+// OID, per `prov/names.h:92-95` and `:214-222`.
+alias!(N_AES_128_CBC_HMAC_SHA1, "AES-128-CBC-HMAC-SHA1");
+alias!(N_AES_256_CBC_HMAC_SHA1, "AES-256-CBC-HMAC-SHA1");
+alias!(N_AES_128_CBC_HMAC_SHA256, "AES-128-CBC-HMAC-SHA256");
+alias!(N_AES_256_CBC_HMAC_SHA256, "AES-256-CBC-HMAC-SHA256");
+alias!(N_AES_128_CBC_HMAC_SHA1_ETM, "AES-128-CBC-HMAC-SHA1-ETM");
+alias!(N_AES_192_CBC_HMAC_SHA1_ETM, "AES-192-CBC-HMAC-SHA1-ETM");
+alias!(N_AES_256_CBC_HMAC_SHA1_ETM, "AES-256-CBC-HMAC-SHA1-ETM");
+alias!(N_AES_128_CBC_HMAC_SHA256_ETM, "AES-128-CBC-HMAC-SHA256-ETM");
+alias!(N_AES_192_CBC_HMAC_SHA256_ETM, "AES-192-CBC-HMAC-SHA256-ETM");
+alias!(N_AES_256_CBC_HMAC_SHA256_ETM, "AES-256-CBC-HMAC-SHA256-ETM");
+alias!(N_AES_128_CBC_HMAC_SHA512_ETM, "AES-128-CBC-HMAC-SHA512-ETM");
+alias!(N_AES_192_CBC_HMAC_SHA512_ETM, "AES-192-CBC-HMAC-SHA512-ETM");
+alias!(N_AES_256_CBC_HMAC_SHA512_ETM, "AES-256-CBC-HMAC-SHA512-ETM");
 alias!(N_AES_192_WRAP_INV, "AES-192-WRAP-INV:AES192-WRAP-INV");
 alias!(N_AES_128_WRAP_INV, "AES-128-WRAP-INV:AES128-WRAP-INV");
 alias!(
@@ -10438,7 +12378,7 @@ const fn capable_row(
 
 /// `static const OSSL_ALGORITHM_CAPABLE deflt_ciphers[]` — `providers/defltprov.c:161-330`,
 /// restricted to the rows this half implements, in the authority's order.
-pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 115] = [
+pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 128] = [
     row(N_NULL, NULL_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_ECB, AES256ECB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_ECB, AES192ECB_FUNCTIONS.as_ptr().cast()),
@@ -10496,8 +12436,85 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 115] = [
         N_AES_128_WRAP_PAD_INV,
         AES128WRAPPADINV_FUNCTIONS.as_ptr().cast(),
     ),
-    // The `ARIA` family, `defltprov.c:246-274`, between the AES-CBC-HMAC `ALGC` rows (not landed)
-    // and `CAMELLIA`. The six GCM and CCM rows precede these in the authority; the GCM three are
+    // The thirteen `ALGC(...)` `AES-*-CBC-HMAC-*` rows, `defltprov.c:220-245`.
+    //
+    // **Four are published on this host and nine are not, and both facts are reproduced here
+    // rather than assumed.** The four non-ETM rows carry `ossl_cipher_capable_aes_cbc_hmac_sha1` /
+    // `_sha256`, which are `OPENSSL_ia32cap_P[1] & (1 << 25)`; the nine ETM rows carry
+    // `ossl_cipher_capable_aes_cbc_hmac_sha{1,256,512}_etm`, which this profile compiles as the
+    // `AES_CBC_HMAC_SHA_ETM_CAPABLE`-absent stub returning 0, so
+    // `ossl_prov_cache_exported_algorithms` drops them and `EVP_CIPHER_fetch` answers NULL for all
+    // nine. They are listed -- with empty dispatch tables, as the authority's are -- because the
+    // authority's `deflt_ciphers[]` carries them, so the census reads them as the rows they are
+    // instead of as nine omissions. Their ETM predicates are what makes the drop a measurement
+    // rather than a comment.
+    capable_row(
+        N_AES_128_CBC_HMAC_SHA1,
+        AES128CBC_HMAC_SHA1_FUNCTIONS.as_ptr().cast(),
+        Some(ossl_cipher_capable_aes_cbc_hmac_sha1),
+    ),
+    capable_row(
+        N_AES_256_CBC_HMAC_SHA1,
+        AES256CBC_HMAC_SHA1_FUNCTIONS.as_ptr().cast(),
+        Some(ossl_cipher_capable_aes_cbc_hmac_sha1),
+    ),
+    capable_row(
+        N_AES_128_CBC_HMAC_SHA256,
+        AES128CBC_HMAC_SHA256_FUNCTIONS.as_ptr().cast(),
+        Some(ossl_cipher_capable_aes_cbc_hmac_sha256),
+    ),
+    capable_row(
+        N_AES_256_CBC_HMAC_SHA256,
+        AES256CBC_HMAC_SHA256_FUNCTIONS.as_ptr().cast(),
+        Some(ossl_cipher_capable_aes_cbc_hmac_sha256),
+    ),
+    capable_row(
+        N_AES_128_CBC_HMAC_SHA1_ETM,
+        AES128CBC_HMAC_SHA1_ETM_FUNCTIONS.as_ptr().cast(),
+        Some(ossl_cipher_capable_aes_cbc_hmac_sha1_etm),
+    ),
+    capable_row(
+        N_AES_192_CBC_HMAC_SHA1_ETM,
+        AES192CBC_HMAC_SHA1_ETM_FUNCTIONS.as_ptr().cast(),
+        Some(ossl_cipher_capable_aes_cbc_hmac_sha1_etm),
+    ),
+    capable_row(
+        N_AES_256_CBC_HMAC_SHA1_ETM,
+        AES256CBC_HMAC_SHA1_ETM_FUNCTIONS.as_ptr().cast(),
+        Some(ossl_cipher_capable_aes_cbc_hmac_sha1_etm),
+    ),
+    capable_row(
+        N_AES_128_CBC_HMAC_SHA256_ETM,
+        AES128CBC_HMAC_SHA256_ETM_FUNCTIONS.as_ptr().cast(),
+        Some(ossl_cipher_capable_aes_cbc_hmac_sha256_etm),
+    ),
+    capable_row(
+        N_AES_192_CBC_HMAC_SHA256_ETM,
+        AES192CBC_HMAC_SHA256_ETM_FUNCTIONS.as_ptr().cast(),
+        Some(ossl_cipher_capable_aes_cbc_hmac_sha256_etm),
+    ),
+    capable_row(
+        N_AES_256_CBC_HMAC_SHA256_ETM,
+        AES256CBC_HMAC_SHA256_ETM_FUNCTIONS.as_ptr().cast(),
+        Some(ossl_cipher_capable_aes_cbc_hmac_sha256_etm),
+    ),
+    capable_row(
+        N_AES_128_CBC_HMAC_SHA512_ETM,
+        AES128CBC_HMAC_SHA512_ETM_FUNCTIONS.as_ptr().cast(),
+        Some(ossl_cipher_capable_aes_cbc_hmac_sha512_etm),
+    ),
+    capable_row(
+        N_AES_192_CBC_HMAC_SHA512_ETM,
+        AES192CBC_HMAC_SHA512_ETM_FUNCTIONS.as_ptr().cast(),
+        Some(ossl_cipher_capable_aes_cbc_hmac_sha512_etm),
+    ),
+    capable_row(
+        N_AES_256_CBC_HMAC_SHA512_ETM,
+        AES256CBC_HMAC_SHA512_ETM_FUNCTIONS.as_ptr().cast(),
+        Some(ossl_cipher_capable_aes_cbc_hmac_sha512_etm),
+    ),
+    // The `ARIA` family, `defltprov.c:246-274`, after the AES-CBC-HMAC `ALGC` rows and before
+    // `CAMELLIA`. The six GCM and CCM rows precede these in the authority; the GCM three are
     // Phase 9's on `RAND_bytes_ex` and the CCM three are landed below, ahead of the mode rows
     // because that is where the authority puts them.
     row(N_ARIA_256_CCM, ARIA256CCM_FUNCTIONS.as_ptr().cast()),
@@ -10613,13 +12630,13 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 115] = [
 /// against the write. This crate keeps the same discipline: the only writer is
 /// `crate::provider::cipher::cache_exported_ciphers`, called from provider init, and every reader
 /// goes through [`exported_ciphers`].
-static EXPORTED_CIPHERS: SyncCell<[OsslAlgorithm; 115]> = SyncCell(UnsafeCell::new(
+static EXPORTED_CIPHERS: SyncCell<[OsslAlgorithm; 128]> = SyncCell(UnsafeCell::new(
     [OsslAlgorithm {
         algorithm_names: ptr::null(),
         property_definition: ptr::null(),
         implementation: ptr::null(),
         algorithm_description: ptr::null(),
-    }; 115],
+    }; 128],
 ));
 
 /// A `static` the crate mutates once at provider init and shares afterwards, exactly as the
@@ -12368,9 +14385,9 @@ mod tests {
 
     #[test]
     fn the_cipher_table_terminates_and_names_the_rows() {
-        assert_eq!(DEFLT_CIPHERS.len(), 115);
+        assert_eq!(DEFLT_CIPHERS.len(), 128);
         // SAFETY: every entry up to the terminator is initialised.
-        let last = DEFLT_CIPHERS[114].alg.algorithm_names;
+        let last = DEFLT_CIPHERS[127].alg.algorithm_names;
         assert!(last.is_null(), "the table is NULL-name terminated");
         // SAFETY: the first row's name is a `'static` C string.
         let first = unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[0].alg.algorithm_names) };
@@ -12778,20 +14795,62 @@ mod tests {
         let after = unsafe { core::ffi::CStr::from_ptr(out[0].algorithm_names) };
         assert_eq!(after.to_bytes(), b"KEPT-A");
 
-        // And on the **real** table: every landed row is unconditional today, so the filter keeps
-        // all of them and the two tables agree. The day an `ALGC` row lands, this assertion is the
-        // one that will have to change, which is the point of writing it down.
-        let mut real = [NULL_ROW; 115];
-        // SAFETY: `DEFLT_CIPHERS` is `NULL`-named terminated with 114 rows; `real` has 115 slots.
+        // And on the **real** table, where the filter is doing work rather than passing everything
+        // through. Thirteen of the 128 rows carry a predicate: the four non-ETM
+        // `AES-*-CBC-HMAC-*` rows, whose predicate is this host's AES-NI bit, and the nine ETM
+        // rows, whose predicate is the profile's constant 0 because
+        // `AES_CBC_HMAC_SHA_ETM_CAPABLE` is aarch64-only and the hw files compile the stub. The
+        // expected kept sequence is *derived by calling the same predicates*, so the test states
+        // the relation rather than a copy of the table, and the refused set is asserted by name --
+        // which is what makes "the nine ETM rows are dropped on this profile" an observation.
+        let mut real = [NULL_ROW; DEFLT_CIPHERS.len()];
+        // SAFETY: `DEFLT_CIPHERS` is `NULL`-named terminated with 127 rows; `real` has 128 slots.
         unsafe { ossl_prov_cache_exported_algorithms(DEFLT_CIPHERS.as_ptr(), real.as_mut_ptr()) };
-        for (i, row) in DEFLT_CIPHERS.iter().enumerate() {
-            assert!(
-                row.capable.is_none(),
-                "row {i} carries a capability predicate, so `exported_ciphers` is not `deflt_ciphers` \
-                 any more and this test must be updated with the row"
-            );
-            assert_eq!(real[i].algorithm_names, row.alg.algorithm_names);
+
+        let mut kept: Vec<*const c_char> = Vec::new();
+        let mut refused: Vec<&[u8]> = Vec::new();
+        let mut gated = 0usize;
+        for row in DEFLT_CIPHERS.iter().take(DEFLT_CIPHERS.len() - 1) {
+            let accepted = match row.capable {
+                None => true,
+                // SAFETY: a compile-time predicate taking no arguments and holding no state.
+                Some(pred) => (unsafe { pred() }) != 0,
+            };
+            if row.capable.is_some() {
+                gated += 1;
+            }
+            if accepted {
+                kept.push(row.alg.algorithm_names);
+            } else {
+                // SAFETY: the row's name is a `'static` C string literal.
+                refused
+                    .push(unsafe { core::ffi::CStr::from_ptr(row.alg.algorithm_names) }.to_bytes());
+            }
         }
+        assert_eq!(gated, 13, "the thirteen gated rows are the CBC-HMAC family");
+        assert_eq!(
+            refused.len(),
+            9,
+            "the nine ETM rows are the ones the profile's predicates refuse"
+        );
+        for name in &refused {
+            assert!(
+                name.ends_with(b"-ETM".as_slice()),
+                "{name:?} is refused but is not an ETM row, so the profile's predicates changed"
+            );
+        }
+        let got: Vec<*const c_char> = real[..kept.len()]
+            .iter()
+            .map(|r| r.algorithm_names)
+            .collect();
+        assert_eq!(
+            got, kept,
+            "the filter kept exactly the rows whose predicates accepted"
+        );
+        assert!(
+            real[kept.len()].algorithm_names.is_null(),
+            "the terminator is copied too"
+        );
     }
 
     /// A `PROV_CIPHER_CTX` with every field zero, for the two hw tests above. Written out rather

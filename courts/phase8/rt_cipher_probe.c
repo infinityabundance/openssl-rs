@@ -3920,6 +3920,266 @@ static void rt_param_list(const char *tag, const char *noun, const char *kind,
     printf("%s.%s.%s.count=%zu\n", tag, noun, kind, n);
 }
 
+
+/*
+ * The four published `AES-*-CBC-HMAC-*` rows -- `cipher_aes_cbc_hmac_sha.c` with
+ * `cipher_aes_cbc_hmac_sha1_hw.c` and `cipher_aes_cbc_hmac_sha256_hw.c`.
+ *
+ * Nine more rows of the same family sit in `deflt_ciphers[]` and are dropped on this host by
+ * their own capability predicates; the census arm above observes them as `fetched=0`. The four
+ * here are the ones whose predicate is the AES-NI bit, so they are published and their whole
+ * record construction is observable.
+ *
+ * What it observes, per row
+ * -------------------------
+ *   * the published flags, which carry `EVP_CIPH_FLAG_AEAD_CIPHER` and
+ *     `EVP_CIPH_FLAG_TLS1_1_MULTIBLOCK` and are how a caller learns the row is stitched at all;
+ *   * every key of the row's own settable list, set through `EVP_CIPHER_CTX_set_params`, so
+ *     `aes_set_ctx_params`'s arms and their coordinates are reached rather than only its
+ *     signature;
+ *   * every key of its gettable list, read the same way -- including the two values that no other
+ *     row has, `tls1multi_maxbufsz` and `tls1multi_aadpacklen`;
+ *   * a whole TLS 1.0 record: the ciphertext, the decrypting side's acceptance and the plaintext
+ *     it returns, and a refusal when one ciphertext byte is flipped.
+ *
+ * **TLS 1.0 (`0x0301`) is the version chosen on purpose**: it is the one with no explicit IV, so
+ * the record is a pure function of the key, the MAC key, the IV and the payload and a diff is a
+ * defect rather than a random draw. The TLS 1.1+ surface is reached through the multiblock AAD
+ * parameter, which is size arithmetic and therefore deterministic too. The multiblock *encrypt*
+ * parameter is deliberately absent: on the authority it draws its per-record IVs from
+ * `RAND_bytes_ex`, and `crypto/rand/` is Phase 9's -- the row's one recorded narrowing, named in
+ * `docs/SECURITY_DIVERGENCE_POLICY.md` §4 rather than left to be discovered by its absence here.
+ */
+static void rt_cbchmac_records(void)
+{
+    static const char *names[] = {
+        "AES-128-CBC-HMAC-SHA1", "AES-256-CBC-HMAC-SHA1",
+        "AES-128-CBC-HMAC-SHA256", "AES-256-CBC-HMAC-SHA256",
+    };
+    size_t n;
+
+    for (n = 0; n < sizeof(names) / sizeof(names[0]); n++) {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, names[n], NULL);
+        EVP_CIPHER_CTX *ctx;
+        unsigned char key[32], mackey[16], iv[16], aad[13];
+        unsigned char in[64], ct[64], pt[64], mbin[13];
+        int r;
+
+        printf("cbchmac.%s.fetched=%d\n", names[n], c != NULL);
+        if (c == NULL)
+            continue;
+
+        printf("cbchmac.%s.flags=%lu\n", names[n], EVP_CIPHER_get_flags(c));
+        printf("cbchmac.%s.keylen=%d\n", names[n], EVP_CIPHER_get_key_length(c));
+        printf("cbchmac.%s.ivlen=%d\n", names[n], EVP_CIPHER_get_iv_length(c));
+        printf("cbchmac.%s.blocksize=%d\n", names[n], EVP_CIPHER_get_block_size(c));
+
+        rt_fill(key, 32, 71u + (unsigned int)n);
+        rt_fill(mackey, 16, 81u + (unsigned int)n);
+        rt_fill(iv, 16, 91u + (unsigned int)n);
+        rt_fill(in, 32, 101u + (unsigned int)n);
+        memset(in + 32, 0, 32);
+
+        /*
+         * The thirteen-byte TLS AAD: byte 8 is the content type, 9..10 the version and 11..12 the
+         * record length. For TLS 1.0 the length is the payload length, because there is no
+         * explicit IV to subtract; the encrypting side rewrites bytes 11..12 for TLS 1.1 and later,
+         * which is why the same buffer is handed to the decrypting side untouched below.
+         */
+        memset(aad, 0, sizeof(aad));
+        aad[8] = 0x17;
+        aad[9] = 0x03;
+        aad[10] = 0x01;
+        aad[11] = 0;
+        aad[12] = 32;
+
+        ctx = EVP_CIPHER_CTX_new();
+        r = EVP_CipherInit_ex2(ctx, c, key, iv, 1, NULL);
+        printf("cbchmac.%s.einit=%d\n", names[n], r);
+        {
+            /*
+             * `tls1multi_maxbufsz` asserts this is non-zero before it computes
+             * (`cipher_aes_cbc_hmac_sha1_hw.c:701`), and the assertion is live in the pinned
+             * build: reading the buffer size before setting the fragment aborts the *authority*,
+             * so the arm sets it first, in the order a real TLS caller does.
+             */
+            size_t frag = 16384;
+            OSSL_PARAM sp[4];
+
+            sp[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_MAC_KEY, mackey, 16);
+            sp[1] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_TLS1_AAD, aad, 13);
+            sp[2] = OSSL_PARAM_construct_size_t(
+                OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_MAX_SEND_FRAGMENT, &frag);
+            sp[3] = OSSL_PARAM_construct_end();
+            ERR_clear_error();
+            r = EVP_CIPHER_CTX_set_params(ctx, sp);
+            printf("cbchmac.%s.setparams=%d\n", names[n], r);
+        }
+        {
+            size_t maxbufsz = 0, encl = 0, aadpad = 0, kl = 0, ivl = 0;
+            unsigned int il = 0, pk = 0;
+            unsigned char giv[16], guiv[16];
+            OSSL_PARAM gp[10];
+
+            gp[0] = OSSL_PARAM_construct_size_t(
+                OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_MAX_BUFSIZE, &maxbufsz);
+            gp[1] = OSSL_PARAM_construct_uint(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_INTERLEAVE, &il);
+            gp[2] = OSSL_PARAM_construct_uint(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_AAD_PACKLEN, &pk);
+            gp[3] = OSSL_PARAM_construct_size_t(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_ENC_LEN, &encl);
+            gp[4] = OSSL_PARAM_construct_size_t(OSSL_CIPHER_PARAM_AEAD_TLS1_AAD_PAD, &aadpad);
+            gp[5] = OSSL_PARAM_construct_size_t(OSSL_CIPHER_PARAM_KEYLEN, &kl);
+            gp[6] = OSSL_PARAM_construct_size_t(OSSL_CIPHER_PARAM_IVLEN, &ivl);
+            gp[7] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_IV, giv, sizeof(giv));
+            gp[8] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_UPDATED_IV, guiv,
+                                                     sizeof(guiv));
+            gp[9] = OSSL_PARAM_construct_end();
+            memset(giv, 0xee, sizeof(giv));
+            memset(guiv, 0xee, sizeof(guiv));
+            ERR_clear_error();
+            r = EVP_CIPHER_CTX_get_params(ctx, gp);
+            printf("cbchmac.%s.getparams=%d\n", names[n], r);
+            printf("cbchmac.%s.g.maxbufsz=%zu\n", names[n], maxbufsz);
+            printf("cbchmac.%s.g.interleave=%u\n", names[n], il);
+            printf("cbchmac.%s.g.aadpacklen=%u\n", names[n], pk);
+            printf("cbchmac.%s.g.enclen=%zu\n", names[n], encl);
+            printf("cbchmac.%s.g.aadpad=%zu\n", names[n], aadpad);
+            printf("cbchmac.%s.g.keylen=%zu\n", names[n], kl);
+            printf("cbchmac.%s.g.ivlen=%zu\n", names[n], ivl);
+            rt_hexf("cbchmac.g.iv", (int)n, giv, sizeof(giv));
+            rt_hexf("cbchmac.g.uiv", (int)n, guiv, sizeof(guiv));
+        }
+        /*
+         * The multiblock AAD parameter: the TLS 1.1+ surface, and the only part of the multiblock
+         * contract that does not need the random layer. Its input is the thirteen-byte AAD and its
+         * outputs are the interleave and the pack length, both read back through the getter.
+         */
+        {
+            unsigned int il = 4;
+            OSSL_PARAM mp[3];
+
+            memset(mbin, 0, sizeof(mbin));
+            mbin[8] = 0x17;
+            mbin[9] = 0x03;
+            mbin[10] = 0x03;
+            mbin[11] = 0x20;
+            mbin[12] = 0x00;
+            mp[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_AAD, mbin,
+                                                      sizeof(mbin));
+            mp[1] = OSSL_PARAM_construct_uint(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_INTERLEAVE, &il);
+            mp[2] = OSSL_PARAM_construct_end();
+            ERR_clear_error();
+            r = EVP_CIPHER_CTX_set_params(ctx, mp);
+            printf("cbchmac.%s.mbaad=%d\n", names[n], r);
+            {
+                unsigned int il2 = 0, pk2 = 0;
+                OSSL_PARAM gp2[3];
+
+                gp2[0] = OSSL_PARAM_construct_uint(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_INTERLEAVE,
+                                                   &il2);
+                gp2[1] = OSSL_PARAM_construct_uint(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_AAD_PACKLEN,
+                                                   &pk2);
+                gp2[2] = OSSL_PARAM_construct_end();
+                ERR_clear_error();
+                r = EVP_CIPHER_CTX_get_params(ctx, gp2);
+                printf("cbchmac.%s.mbaad.get=%d il=%u pk=%u\n", names[n], r, il2, pk2);
+            }
+        }
+        EVP_CIPHER_CTX_free(ctx);
+
+        /*
+         * The record. The input is sixty-four bytes whose first thirty-two are the payload: the
+         * row's own length test is `len == ((payload + digest + block) & -block)`, which for a
+         * thirty-two-byte payload and a twenty-byte digest is sixty-four, so the arm's buffer is
+         * exactly one record and the cipher fills the rest with the MAC and the padding.
+         */
+        ctx = EVP_CIPHER_CTX_new();
+        r = EVP_CipherInit_ex2(ctx, c, key, iv, 1, NULL);
+        printf("cbchmac.%s.rec.einit=%d\n", names[n], r);
+        {
+            OSSL_PARAM sp[3];
+
+            sp[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_MAC_KEY, mackey, 16);
+            sp[1] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_TLS1_AAD, aad, 13);
+            sp[2] = OSSL_PARAM_construct_end();
+            ERR_clear_error();
+            r = EVP_CIPHER_CTX_set_params(ctx, sp);
+            printf("cbchmac.%s.rec.set=%d\n", names[n], r);
+        }
+        memset(ct, 0xee, sizeof(ct));
+        {
+            int outl = 0, finl = 0;
+
+            ERR_clear_error();
+            r = EVP_CipherUpdate(ctx, ct, &outl, in, 64);
+            printf("cbchmac.%s.rec.enc=%d\n", names[n], r);
+            printf("cbchmac.%s.rec.enc.outl=%d\n", names[n], outl);
+            rt_hexf("cbchmac.rec.ct", (int)n, ct, 64);
+            ERR_clear_error();
+            r = EVP_CipherFinal_ex(ctx, ct + 64, &finl);
+            printf("cbchmac.%s.rec.enc.final=%d\n", names[n], r);
+            printf("cbchmac.%s.rec.enc.finl=%d\n", names[n], finl);
+        }
+        EVP_CIPHER_CTX_free(ctx);
+
+        ctx = EVP_CIPHER_CTX_new();
+        r = EVP_CipherInit_ex2(ctx, c, key, iv, 0, NULL);
+        printf("cbchmac.%s.dec.init=%d\n", names[n], r);
+        {
+            OSSL_PARAM sp[3];
+
+            sp[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_MAC_KEY, mackey, 16);
+            sp[1] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_TLS1_AAD, aad, 13);
+            sp[2] = OSSL_PARAM_construct_end();
+            ERR_clear_error();
+            r = EVP_CIPHER_CTX_set_params(ctx, sp);
+            printf("cbchmac.%s.dec.set=%d\n", names[n], r);
+        }
+        memset(pt, 0xee, sizeof(pt));
+        {
+            int outl = 0;
+
+            ERR_clear_error();
+            r = EVP_CipherUpdate(ctx, pt, &outl, ct, 64);
+            printf("cbchmac.%s.dec=%d\n", names[n], r);
+            printf("cbchmac.%s.dec.outl=%d\n", names[n], outl);
+            rt_hexf("cbchmac.rec.pt", (int)n, pt, 64);
+            printf("cbchmac.%s.dec.match=%d\n", names[n], memcmp(pt, in, 32) == 0);
+        }
+        EVP_CIPHER_CTX_free(ctx);
+
+        /*
+         * The refusal arm: one flipped ciphertext byte must make the constant-time tag comparison
+         * answer 0. It is worth observing separately because the hw returns 0 *after* decrypting,
+         * so the buffer contents on this path are part of the answer too.
+         */
+        ct[40] ^= 0x01;
+        ctx = EVP_CIPHER_CTX_new();
+        r = EVP_CipherInit_ex2(ctx, c, key, iv, 0, NULL);
+        {
+            OSSL_PARAM sp[3];
+
+            sp[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_MAC_KEY, mackey, 16);
+            sp[1] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_TLS1_AAD, aad, 13);
+            sp[2] = OSSL_PARAM_construct_end();
+            ERR_clear_error();
+            r = EVP_CIPHER_CTX_set_params(ctx, sp);
+        }
+        memset(pt, 0xee, sizeof(pt));
+        {
+            int outl = 0;
+
+            ERR_clear_error();
+            r = EVP_CipherUpdate(ctx, pt, &outl, ct, 64);
+            printf("cbchmac.%s.bad=%d\n", names[n], r);
+            printf("cbchmac.%s.bad.outl=%d\n", names[n], outl);
+            rt_hexf("cbchmac.bad.pt", (int)n, pt, 64);
+        }
+        EVP_CIPHER_CTX_free(ctx);
+
+        EVP_CIPHER_free(c);
+    }
+}
+
 static void rt_deflt_row_census(void)
 {
     static const char *rows[] = {
@@ -3935,8 +4195,19 @@ static void rt_deflt_row_census(void)
         "AES-256-WRAP", "AES-192-WRAP", "AES-128-WRAP", "AES-256-WRAP-PAD",
         "AES-192-WRAP-PAD", "AES-128-WRAP-PAD", "AES-256-WRAP-INV", "AES-192-WRAP-INV",
         "AES-128-WRAP-INV", "AES-256-WRAP-PAD-INV", "AES-192-WRAP-PAD-INV", "AES-128-WRAP-PAD-INV",
+        /* The thirteen `ALGC(...)` `AES-*-CBC-HMAC-*` rows, `defltprov.c:220-245`, in their own
+         * order. The four non-ETM rows are published on this host; the nine ETM rows are dropped
+         * by the profile's capability predicates, so their `fetched` is 0 on *both* sides and the
+         * arm's remaining observations are skipped for them (D276). */
+        "AES-128-CBC-HMAC-SHA1", "AES-256-CBC-HMAC-SHA1",
+        "AES-128-CBC-HMAC-SHA256", "AES-256-CBC-HMAC-SHA256",
+        "AES-128-CBC-HMAC-SHA1-ETM", "AES-192-CBC-HMAC-SHA1-ETM", "AES-256-CBC-HMAC-SHA1-ETM",
+        "AES-128-CBC-HMAC-SHA256-ETM", "AES-192-CBC-HMAC-SHA256-ETM",
+        "AES-256-CBC-HMAC-SHA256-ETM",
+        "AES-128-CBC-HMAC-SHA512-ETM", "AES-192-CBC-HMAC-SHA512-ETM",
+        "AES-256-CBC-HMAC-SHA512-ETM",
         /* The authority's `deflt_ciphers[]` order again: the `ARIA-*` rows land between the
-         * AES-CBC-HMAC `ALGC` rows (not landed) and `CAMELLIA`. The three GCM rows precede the CCM
+         * AES-CBC-HMAC `ALGC` rows and `CAMELLIA`. The three GCM rows precede the CCM
          * three in `defltprov.c` and are Phase 9's on `RAND_bytes_ex` (D270). */
         "ARIA-256-CCM", "ARIA-192-CCM", "ARIA-128-CCM",
         "ARIA-256-ECB", "ARIA-192-ECB", "ARIA-128-ECB",
@@ -7374,6 +7645,7 @@ int main(void)
     rt_deflt_ocb();
     rt_deflt_ccm();
     rt_deflt_siv();
+    rt_cbchmac_records();
     rt_deflt_row_census();
     rt_deflt_properties();
     rt_deflt_siphash();

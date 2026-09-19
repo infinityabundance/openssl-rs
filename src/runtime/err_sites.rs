@@ -18802,6 +18802,186 @@ pub(crate) const PROV_CIPHER_SM4_XTS_235: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `aes_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:102` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_102: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 102,
+    func: c"aes_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:113` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_113: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 113,
+    func: c"aes_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:132` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_132: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 132,
+    func: c"aes_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:162` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_162: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 162,
+    func: c"aes_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:176` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_176: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 176,
+    func: c"aes_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:188` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_188: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 188,
+    func: c"aes_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:192` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_192: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 192,
+    func: c"aes_set_ctx_params",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `aes_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:200` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_200: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 200,
+    func: c"aes_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:206` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_206: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 206,
+    func: c"aes_set_ctx_params",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `aes_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:231` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_231: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 231,
+    func: c"aes_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:238` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_238: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 238,
+    func: c"aes_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:244` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_244: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 244,
+    func: c"aes_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:250` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_250: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 250,
+    func: c"aes_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:257` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_257: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 257,
+    func: c"aes_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:262` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_262: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 262,
+    func: c"aes_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:267` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_267: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 267,
+    func: c"aes_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:273` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_273: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 273,
+    func: c"aes_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:279` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_279: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 279,
+    func: c"aes_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
 /// `cmac_get_ctx_params_decoder` at `providers/implementations/macs/cmac_prov.c:245` (PROV_R_REPEATED_PARAMETER).
 pub(crate) const PROV_CMAC_PROV_245: ErrSite = ErrSite {
     file: c"providers/implementations/macs/cmac_prov.c",
@@ -21490,6 +21670,24 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_CIPHER_SM4_XTS_176,
     PROV_CIPHER_SM4_XTS_227,
     PROV_CIPHER_SM4_XTS_235,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_102,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_113,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_132,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_162,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_176,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_188,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_192,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_200,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_206,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_231,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_238,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_244,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_250,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_257,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_262,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_267,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_273,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_279,
     PROV_CMAC_PROV_245,
     PROV_CMAC_PROV_257,
     PROV_CMAC_PROV_269,
