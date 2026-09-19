@@ -18942,6 +18942,66 @@ pub(crate) const PROV_HMAC_PROV_496: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `blake2_get_ctx_decoder` at `providers/implementations/include/prov/blake2_params.inc:46` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_BLAKE2_PARAMS_46: ErrSite = ErrSite {
+    file: c"providers/implementations/include/prov/blake2_params.inc",
+    line: 46,
+    func: c"blake2_get_ctx_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `blake2_get_ctx_decoder` at `providers/implementations/include/prov/blake2_params.inc:57` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_BLAKE2_PARAMS_57: ErrSite = ErrSite {
+    file: c"providers/implementations/include/prov/blake2_params.inc",
+    line: 57,
+    func: c"blake2_get_ctx_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `blake2_mac_set_ctx_decoder` at `providers/implementations/include/prov/blake2_params.inc:105` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_BLAKE2_PARAMS_105: ErrSite = ErrSite {
+    file: c"providers/implementations/include/prov/blake2_params.inc",
+    line: 105,
+    func: c"blake2_mac_set_ctx_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `blake2_mac_set_ctx_decoder` at `providers/implementations/include/prov/blake2_params.inc:116` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_BLAKE2_PARAMS_116: ErrSite = ErrSite {
+    file: c"providers/implementations/include/prov/blake2_params.inc",
+    line: 116,
+    func: c"blake2_mac_set_ctx_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `blake2_mac_set_ctx_decoder` at `providers/implementations/include/prov/blake2_params.inc:131` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_BLAKE2_PARAMS_131: ErrSite = ErrSite {
+    file: c"providers/implementations/include/prov/blake2_params.inc",
+    line: 131,
+    func: c"blake2_mac_set_ctx_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `blake2_mac_set_ctx_decoder` at `providers/implementations/include/prov/blake2_params.inc:142` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_BLAKE2_PARAMS_142: ErrSite = ErrSite {
+    file: c"providers/implementations/include/prov/blake2_params.inc",
+    line: 142,
+    func: c"blake2_mac_set_ctx_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
 /// `siphash_get_ctx_params_decoder` at `providers/implementations/macs/siphash_prov.c:190` (PROV_R_REPEATED_PARAMETER).
 pub(crate) const PROV_SIPHASH_PROV_190: ErrSite = ErrSite {
     file: c"providers/implementations/macs/siphash_prov.c",
@@ -20994,6 +21054,12 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_HMAC_PROV_472,
     PROV_HMAC_PROV_485,
     PROV_HMAC_PROV_496,
+    PROV_BLAKE2_PARAMS_46,
+    PROV_BLAKE2_PARAMS_57,
+    PROV_BLAKE2_PARAMS_105,
+    PROV_BLAKE2_PARAMS_116,
+    PROV_BLAKE2_PARAMS_131,
+    PROV_BLAKE2_PARAMS_142,
     PROV_SIPHASH_PROV_190,
     PROV_SIPHASH_PROV_201,
     PROV_SIPHASH_PROV_212,

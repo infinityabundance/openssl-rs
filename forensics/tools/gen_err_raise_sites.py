@@ -443,6 +443,7 @@ COVERED_FILES = [
     # coordinates exist and no reachable arm uses them -- the same shape as
     # `cmac_prov.c`'s three and `gmac_prov.c`'s.
     ("providers/implementations/macs/hmac_prov.c", "PROV_HMAC_PROV"),
+    ("providers/implementations/include/prov/blake2_params.inc", "PROV_BLAKE2_PARAMS"),
     ("providers/implementations/macs/siphash_prov.c", "PROV_SIPHASH_PROV"),
     # Phase 8's digest half. `digestcommon.c` is generated and shared by every digest
     # row the *default* provider publishes. The other `*_prov.c` units raise nothing in
