@@ -20000,3 +20000,113 @@ of those four**. Representing them as fn-pointer fields and calling them as such
 **What this entry does not claim.** `src/provider/rand.rs` is not in `src/provider/mod.rs`; the
 build and clippy are clean and the module stays staged at 22 measured errors. No export is
 implemented and no Phase 9 court has landed.
+
+## D309 -- the DRBG compiles and publishes its three rows, and RT-DRBG's first run found the seeding chain missing
+
+The DRBG lands: `src/provider/rand.rs` (5,143 lines, three translation units) is declared in
+`src/provider/mod.rs`, the default provider publishes its three `OSSL_OP_RAND` rows, and the
+stratum's **first court is running**. The court's first run is the part worth keeping.
+
+### The 22 errors were one class, and the fix was one pass
+
+D308 predicted it: every one of the 22 was a call site of the four cached virtual functions. They
+are now called as fn pointers, and the aliases' ABI is the authority's own -- `unsafe extern "C"
+fn`, not `unsafe fn` -- so `ossl_rand_drbg_new` receives addresses that match its parameter types.
+Seven of the errors were `OSSL_FUNC_RAND_*` constants called as functions (`OSSL_FUNC_RAND_LOCK()`
+where the constant *is* the id); seven were `*const u8` where `EVP_DigestUpdate` wants
+`*const c_void`. Two further classes were found by the toolchain rather than the compiler: an
+immutable `out` advanced by `out.add(...)` in `hash_df`, and a `let mut md = null_mut()` that was
+only ever overwritten. **Clippy then reported 31 items** -- six `&'static` on `&'static ErrSite`
+tuple-element type consts, three `too_many_arguments`, two collapsible `if`s, a hand-rolled
+`div_ceil`, a `b"ECB\0"` that wants `c"ECB"`, an `(AES_BLOCK_SIZE * 1) + 3`, and eight
+non-snake-case names.
+
+**The names are exempted at file level, not renamed.** `ctr_XOR`, `ctr_BCC_init`,
+`ctr_BCC_block`, `ctr_BCC_blocks`, `ctr_BCC_update`, `ctr_BCC_final` and `V_tmp` are the
+authority's own spellings, and a renamed identifier is indistinguishable to the tooling from an
+absent one -- which is D259's reason and `src/chacha.rs`'s and `src/mac/siphash.rs`'s precedent.
+The three `too_many_arguments` functions carry the crate's `// mirrors the authority's signature
+exactly` allowance rather than a reduced arity.
+
+### The provider rows, and the census reading them
+
+`DEFLT_RANDS`' three rows now spell their alias sequences **inline** (`c"CTR-DRBG"`, ...) rather
+than through `const PROV_NAMES_*` handles, which is what `DEFLT_DIGESTS` and `DEFLT_MACS` do and
+what the provider census's reader can follow: the reader joins on the table's own text, so an
+indirection through a `const` reads as a row-less table -- D237's class, from the candidate side.
+`deflt_query` gained the `OSSL_OP_RAND` arm in the authority's `switch` position (after `MAC`,
+before `KDF`). The census then records **three more rows `implemented`**, owned by Phase 9:
+`CTR-DRBG`, `HASH-DRBG`, `HMAC-DRBG`.
+
+### RT-DRBG, and what its first run found
+
+`courts/phase9/rt_drbg_probe.c` drives all three rows through the public `EVP_RAND_*` surface:
+fetch, name, `is_a`, the gettable/settable parameter lists, the algorithm set each row needs
+(**none of the three has a default**, so a probe that skipped `EVP_RAND_CTX_set_params` would
+measure the refusal path for all three and look identical on both sides), instantiate, the state
+machine, two generates, a re-instantiate, `verify_zeroization`, `uninstantiate`, and the refusal
+arms -- generate before instantiate, instantiate an errored context, an over-strong strength, an
+algorithm name no provider answers. Error-queue state is compared as
+`(ERR_GET_LIB, ERR_GET_REASON)` pairs, which is the portable half of `ERROR_PASS`.
+
+**Its first run produced 180 residual lines and every one was the same defect.** The candidate
+refused every instantiation with `PROV_R_ERROR_RETRIEVING_NONCE` while the authority succeeded.
+Two links were missing, and neither is visible by reading the crate:
+
+1. `context_init` never built slot 6. `prov_drbg_get_nonce` reads
+   `ossl_lib_ctx_get_data(libctx, OSSL_LIB_CTX_DRBG_NONCE_INDEX)` and answers 0 for a NULL slot.
+   D308 had carried the index as a local `const`; D309 moved both DRBG indexes to
+   `src/context/mod.rs` -- their home -- and made `context_init` call
+   `ossl_prov_drbg_nonce_ctx_new`, with `context_deinit_objs` releasing it **immediately after the
+   EVP method store**, which is the authority's P2 order and has to be, because the DRBG the slot
+   holds is fetched *through* that store. Slot 5 (`ossl_rand_ctx_new`) is declared and, unlike
+   slot 6, **deliberately still unfilled**: it is 9.2's.
+2. The core published **none of the eight seeding callbacks**. The provider asks the core for
+   entropy and nonces through
+   `OSSL_FUNC_{GET,CLEANUP}_{USER_,}{ENTROPY,NONCE}`; `src/provider/seeding.rs` had recorded them
+   since D305, and `CORE_DISPATCH` had no entries to record. The core's eight handlers and their
+   table entries now exist in `crypto/provider_core.c`'s own order, and
+   `ossl_default_provider_init` calls `ossl_prov_seeding_from_dispatch(in)` as its first statement
+   the way the authority does.
+
+Landing (2) needed the core side of the up-call, so **`crypto/rand/prov_seed.c` is transcribed**
+(`src/rand/prov_seed.rs`, eight functions) together with `evp_rand_can_seed`,
+`evp_rand_get_seed` and `evp_rand_clear_seed`, whose deferral rows the prerequisite gate then
+reported stale -- and which are retired here. `rand_lib.c`'s per-context and seed-source half is
+landed (`src/rand/rand_lib.rs`): `RandGlobal`, `rand_ossl_ctx`, the slot-5 constructor and
+releaser, and `ossl_rand_get0_seed_noncreating`. Its twenty-five `rand.h` exports, the method
+table, `do_rand_init`/`ossl_rand_cleanup_int` and the two `ossl_rand_check_random_provider_on_*`
+hooks are **9.2's remaining work and are not stubbed**; the three internals the gate then observed
+as unwired are recorded as deferrals with their discharge condition, and the now-reached `units`
+row for `crypto/rand/rand_lib.c` is retired rather than left to double-claim the unit.
+
+**The court passes with zero residuals over 303 observations**, and the working arm is real:
+`instantiate=1`, state `READY`, `generate=1`, `strength=256`, `cipher=AES-256-CTR`,
+`digest=SHA2-256`, and identical parameter values and refusal reasons on both sides.
+
+### The machinery the row made necessary
+
+* `gen_err_raise_sites.py`'s `COVERED_FILES` gains `crypto/rand/prov_seed.c` (`PROV_SEED`), because
+  the file is in `$CRYPTO` of `crypto/rand/build.info` and now has a landing caller. Its two
+  raises become `err_sites::PROV_SEED_28` and `::PROV_SEED_84`.
+* `dispatch_court.py` gains a `DRBG_VTABLE` exemption for the six `ProvDrbg*Fn` aliases: they
+  mirror `struct prov_drbg_st`'s members, which are declared inline in an internal header, so no
+  atlas typedef exists for the convention rule to join on -- `RSA_METHOD`'s and
+  `EVP_PKEY_METHOD`'s shape. The court reported them `unlinked` and failed on it; an alias that is
+  not a provider dispatch belongs in `NOT_A_DISPATCH`, with its reason written out.
+* `provider_court_coverage.py`'s `COURT_PROBES` gains `RT-DRBG` at phase 9, **in the same commit
+  as the rows it covers**, which is what keeps the join preventive: no Phase-9 row can become
+  `implemented` without an observation on that commit. `phase9_courts.py` gains its `court()`
+  runner (Phase 8's shape) and drops `RT-DRBG` from `PENDING_COURTS`.
+* `src/provider/digest.rs`'s `the_default_init_publishes_the_query_entry` now hands the refusal arm
+  a **terminated** table instead of NULL. The init's first statement is the seeding walk, and a
+  NULL there is a dereference the authority would make too; the crate's FFI guard turned it into an
+  abort, which is the honest outcome for a call no caller makes.
+
+### What this entry does not claim
+
+No Phase-9 **export** is implemented (`rand.h`'s twenty-five are still `open`), so the stratum has
+not moved toward its ledger: what moved is that a DRBG can be instantiated at all. `RT-DRBG` is a
+differential-compatibility result and says nothing about unpredictability
+(`docs/PHASE-9-SUBPHASES.md` section 3.3), and `CT-DRBG` -- the CAVP construction vectors -- is
+still pending. `RT-RAND` and `RT-BN-RAND` remain pending on the front.

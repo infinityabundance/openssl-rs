@@ -9,17 +9,6 @@ The method is Phases 3-8's, for the same reason: a unit test encodes what its au
 the contract is, whereas a probe measures what the authority actually does, and the comparison is
 between two *executions* of the same program, so the expectation cannot drift.
 
-**This runner lands with no courts, and that is 9.0's shape rather than an omission.** A stratum
-lands its ledger and its wiring in its first subphase and its first probe in the subphase that
-gives it something to observe -- Phase 6 and Phase 8 both did exactly this, and Phase 8's own
-`COURTS` comment records it. What a probe cannot do here is anything at all: every one of this
-stratum's ninety-three exports is unimplemented, and calling a scaffold aborts the candidate. So
-the runner is honest about the state instead of writing a court that observes nothing: the
-`PENDING_COURTS` table below names each court the plan gives this stratum and the subphase that
-brings it, and every name there is printed on each run. A court that is *not run yet* has to look
-different from a court that passed, which is what Phase 8's `PENDING_CORRECTNESS_COURTS` exists
-for and what this table inherits.
-
 What a differential court can establish here, and what it cannot
 ----------------------------------------------------------------
 A probe can compare, byte for byte: the parameters a DRBG reports, the refusal reason and
@@ -31,12 +20,29 @@ unpredictable, because that is a property of the seeding pool rather than of a t
 `docs/PHASE-9-SUBPHASES.md` section 3.3 records that as not courted rather than leaving it
 implied; a court that compared pool *contents* would be comparing two machines.
 
+`RT-DRBG` and what its first run found
+--------------------------------------
+`rt_drbg_probe.c` drives the three default-provider DRBG rows through the public `EVP_RAND_*`
+surface: fetch, name, the settable/gettable parameter lists, the algorithm set each row needs
+before it will instantiate, the state machine, a generate, a re-instantiate, `verify_zeroization`,
+`uninstantiate` and the refusal arms (generate before instantiate, instantiate an errored context,
+an over-strong strength, an algorithm name no provider answers).
+
+On its first run it produced **180 residual lines** and every one of them was the same defect:
+the candidate refused every instantiation with `PROV_R_ERROR_RETRIEVING_NONCE` while the
+authority succeeded. The cause was a chain of two missing links, both now landed:
+`ossl_lib_ctx_get_data(NULL, OSSL_LIB_CTX_DRBG_NONCE_INDEX)` answered NULL because `context_init`
+never built the slot, and the core published none of the eight seeding callbacks the provider
+seeks entropy and nonces through. That is the shape this stratum's evidence is for: the failure
+was invisible to source comparison and unambiguous to a transcript.
+
 SPDX-License-Identifier: Apache-2.0"""
 
 from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -49,36 +55,171 @@ from atlas_common import (  # noqa: E402
     envelope,
     rel,
     resolve_authority,
+    run,
     write_json,
 )
 
 OUT = REPO_ROOT / "artifacts" / "phase9" / "COURTS.json"
 GENERATOR = "forensics/tools/phase9_courts.py"
 PROBE_DIR = REPO_ROOT / "courts" / "phase9"
+PHASE2 = REPO_ROOT / "artifacts" / "phase2"
+STAGED = REPO_ROOT / "artifacts" / "phase9" / "probes"
+RUN_TIMEOUT_S = "60"
 
-# The differential courts, in the order they will land. `(name, probe filename)`, and the probe
-# is declared in the same commit as the entry, so a runner that names a probe which does not
-# exist cannot be committed -- the check below fails instead.
-COURTS: list[tuple[str, str]] = []
+# The differential courts, in the order they land. `(name, probe filename)`, and the probe is
+# declared in the same commit as the entry, so a runner that names a probe which does not exist
+# cannot be committed -- the check below fails instead.
+COURTS: list[tuple[str, str]] = [
+    ("RT-DRBG", "rt_drbg_probe.c"),
+]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here
 # can pass, and each is printed with the subphase that brings it so that "not run yet" cannot be
-# read as "passed". This is the whole evidence state of the stratum until 9.1 lands.
+# read as "passed".
 PENDING_COURTS: dict[str, str] = {
     "RT-BN-RAND": "9.1 -- the BN random family against the authority, with a fixed seed source "
                   "on both sides. It cannot be written before the front exists, because the "
                   "authority's own `BN_rand` reaches it.",
     "RT-RAND": "9.2 -- `rand.h`'s twenty-five exports: the method table, the thread-local "
-               "primary/public/private DRBGs, the file helpers, and the refusal arms.",
-    "RT-DRBG": "9.3-9.4 -- the DRBG framework and the three instantiations, through the "
-               "provider they are published by, including the parameter surface and the "
-               "state machine.",
+               "primary/public/private DRBGs, the file helpers, and the refusal arms. The front's "
+               "seed-source and per-context half has landed (D309); the exports are what remain.",
     "CT-DRBG": "9.4 -- the DRBGs' construction vectors, which the pinned tree already carries: "
                "`test/recipes/30-test_evp_data/evprand.txt` mirror the NIST CAVP "
                "`drbgtestvectors.zip` sets, with the URL written in the file, and "
                "`evpkdf_hmac_drbg.txt` carries the HMAC-DRBG KDF cases. No network fetch is "
-               "needed and none is permitted (docs/AUTHORITY_POLICY.md)."
+               "needed and none is permitted (docs/AUTHORITY_POLICY.md).",
 }
+
+
+def extra_defs(name: str, libdir: Path) -> list[str]:
+    """Per-side build definitions.
+
+    **None.** Every observation RT-DRBG makes is a return code, a state, a name, a parameter
+    key/type pair or an `ERR_GET_LIB`/`ERR_GET_REASON` pair, so the probe is compiled identically
+    on both sides and a difference in the transcript can only be a difference in behaviour.
+    `extra_defs` is kept because the runner's shape is Phase 8's and a later court here may need
+    one.
+    """
+    del name, libdir
+    return []
+
+
+def compile_probe(
+    src: Path, out: Path, include: Path, libdir: Path, defs: list[str] | None = None
+) -> tuple[bool, str]:
+    res = run([
+        # `-Werror=implicit-function-declaration` is not decoration: without a prototype, C
+        # assumes a function returns `int`, so a probe that forgot an include reads a pointer
+        # return as its low 32 bits and dereferences it. Phases 6 and 7 both paid a run to learn
+        # that, so it is a compile failure here.
+        "clang", "-std=c11", "-Wall", "-Werror=implicit-function-declaration", "-O1",
+        "-D_GNU_SOURCE",
+        *(defs or []),
+        "-I", str(include),
+        "-o", str(out), str(src),
+        "-L", str(libdir), "-lcrypto",
+        f"-Wl,-rpath,{libdir}",
+    ])
+    return res.ok, res.stderr.strip()
+
+
+def run_probe(binary: Path) -> tuple[str, str, int | None]:
+    res = run(["timeout", RUN_TIMEOUT_S, str(binary)])
+    code = res.returncode
+    if code == 124:
+        return res.stdout, res.stderr, None
+    return res.stdout, res.stderr, code
+
+
+def diff(authority: str, candidate: str) -> list[dict]:
+    """Line-wise comparison keyed on `key=value`, so a missing or extra line
+    produces exactly one residual instead of shifting every following line."""
+    def parse(text: str) -> tuple[list[str], dict[str, str]]:
+        order: list[str] = []
+        values: dict[str, str] = {}
+        for line in text.splitlines():
+            if "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            if key not in values:
+                order.append(key)
+                values[key] = value
+            else:
+                values[key] = f"{values[key]}|{value}"
+        return order, values
+
+    a_order, a = parse(authority)
+    c_order, c = parse(candidate)
+    residuals: list[dict] = []
+    for key in a_order:
+        if key not in c:
+            residuals.append({"observation": key, "authority": a[key],
+                              "candidate": None, "class": "missing"})
+        elif a[key] != c[key]:
+            residuals.append({"observation": key, "authority": a[key],
+                              "candidate": c[key], "class": "value"})
+    for key in c_order:
+        if key not in a:
+            residuals.append({"observation": key, "authority": None,
+                              "candidate": c[key], "class": "extra"})
+    return residuals
+
+
+def court(name: str, src: Path, auth, work: Path) -> dict:
+    auth_lib = auth.prefix / "lib"
+    auth_inc = auth.prefix / "include"
+
+    auth_bin = work / f"{src.stem}.authority"
+    cand_bin = work / f"{src.stem}.candidate"
+
+    ok, err = compile_probe(src, auth_bin, auth_inc, auth_lib,
+                            extra_defs(name, auth_lib))
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-authority",
+                "detail": err.splitlines()[:12]}
+    ok, err = compile_probe(src, cand_bin, PHASE2 / "include", PHASE2,
+                            extra_defs(name, PHASE2))
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-candidate",
+                "detail": err.splitlines()[:12]}
+
+    a_out, a_err, a_code = run_probe(auth_bin)
+    c_out, c_err, c_code = run_probe(cand_bin)
+
+    staged = {}
+    STAGED.mkdir(parents=True, exist_ok=True)
+    for side, srcbin in (("authority", auth_bin), ("candidate", cand_bin)):
+        dst = STAGED / f"{srcbin.stem}.{side}"
+        if srcbin.is_file():
+            shutil.copyfile(srcbin, dst)
+            dst.chmod(0o755)
+            staged[side] = rel(dst)
+
+    if not a_out.strip():
+        return {"court": name, "verdict": "fail", "stage": "authority-run",
+                "detail": {"exit_code": a_code,
+                           "stderr": a_err.splitlines()[:12]}}
+
+    residuals = diff(a_out, c_out)
+    # A probe that died on a signal compared nothing beyond the prefix it managed
+    # to print, so two sides dying the same way is not agreement.
+    crashed = a_code is None or a_code < 0 or c_code is None or c_code < 0
+    return {
+        "court": name,
+        "probe": rel(src),
+        "authority_exit_code": a_code,
+        "candidate_exit_code": c_code,
+        "crashed": crashed,
+        "authority_observations": len([l for l in a_out.splitlines() if "=" in l]),
+        "candidate_observations": len([l for l in c_out.splitlines() if "=" in l]),
+        "residual_count": len(residuals),
+        "residuals": residuals,
+        "verdict": (
+            "pass" if not residuals and c_code == a_code and not crashed else "fail"
+        ),
+        "staged_binaries": staged,
+        "candidate_stderr_tail": c_err.splitlines()[-3:],
+    }
 
 
 def main(argv: list[str]) -> int:
@@ -98,13 +239,7 @@ def main(argv: list[str]) -> int:
             records.append({"court": name, "verdict": "fail",
                             "stage": "probe-missing", "detail": rel(src)})
             continue
-        # A probe is added by the subphase that gives it something to observe; when the first one
-        # lands, its runner goes in beside this block rather than into a second file, so the
-        # pending table above shrinks by one in the same commit.
-        raise SystemExit(
-            f"phase9-courts: {name} names {rel(src)}, and this runner has no arm for it yet; "
-            "9.1 adds both together"
-        )
+        records.append(court(name, src, auth, work))
 
     passed = sum(1 for r in records if r["verdict"] == "pass")
     body = {
@@ -115,15 +250,13 @@ def main(argv: list[str]) -> int:
                     "fail": len(records) - passed},
         "pending_courts": PENDING_COURTS,
         "claim": (
-            "**Zero courts have landed.** `courts` is empty because every export this "
-            "stratum owns is unimplemented and a probe that called one would abort the "
-            "candidate, which is not an observation. `all_pass` is therefore true of an "
-            "empty set and is NOT evidence that anything works; `pending_courts` names the "
-            "four courts the plan gives this stratum and the subphase that brings each. A "
-            "passing RT-* court, when one lands, will mean the candidate produced the same "
-            "observable transcript as the authority for the behaviours that probe exercises "
+            "A passing RT-* court means the candidate produced the same observable "
+            "transcript as the authority for the behaviours that probe exercises "
             "-- differential compatibility, NOT that its output is unpredictable "
-            "(docs/PARITY_MODEL.md, docs/PHASE-9-SUBPHASES.md section 3.3)."
+            "(docs/PARITY_MODEL.md, docs/PHASE-9-SUBPHASES.md section 3.3). "
+            "`pending_courts` names the courts the plan gives this stratum that have "
+            "not landed; each is printed on every run so that 'not run yet' cannot be "
+            "read as 'passed'."
         ),
     }
 
@@ -139,9 +272,21 @@ def main(argv: list[str]) -> int:
 
     for r in records:
         if r["verdict"] == "pass":
-            print(f"  {r['court']:<14} pass")
+            print(f"  {r['court']:<14} pass   "
+                  f"({r['authority_observations']} observations)")
         else:
             print(f"  {r['court']:<14} FAIL   stage={r.get('stage', 'compare')}")
+            detail = r.get("detail")
+            if isinstance(detail, dict):
+                print(f"      exit_code={detail.get('exit_code')}")
+                for line in detail.get("stderr", []):
+                    print(f"      {line}")
+            elif isinstance(detail, list):
+                for line in detail[:8]:
+                    print(f"      {line}")
+            for res in r.get("residuals", [])[:12]:
+                print(f"      {res['observation']}: authority={res['authority']!r} "
+                      f"candidate={res['candidate']!r} ({res['class']})")
     for name, needs in PENDING_COURTS.items():
         print(f"  {name:<14} PENDING (not registered as passing) -- {needs}")
     print(f"  -> {rel(OUT)} all_pass={body['all_pass']} over {len(records)} court(s)")

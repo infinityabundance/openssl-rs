@@ -604,6 +604,7 @@
               "RT-ASN1",
               "RT-ASN1-TEMPLATE",
               "RT-ASN1-TIME",
+              "RT-DRBG",
               "RT-ERR",
               "RT-RUNTIME-EXT"
             ],
@@ -8051,6 +8052,7 @@
             "courts": [
               "RT-CIPHER",
               "RT-DIGEST",
+              "RT-DRBG",
               "RT-EVP-PKEY",
               "RT-EVP-PKEY-OPS",
               "RT-EVP-SKEY",
@@ -8137,6 +8139,7 @@
             "basis": "called",
             "courts": [
               "RT-CIPHER",
+              "RT-DRBG",
               "RT-PARAM"
             ],
             "symbol": "OSSL_PARAM_construct_uint"
@@ -8175,6 +8178,7 @@
             "basis": "called",
             "courts": [
               "RT-CIPHER",
+              "RT-DRBG",
               "RT-EVP-PKEY-OPS",
               "RT-PARAM",
               "RT-PROVIDER-3P"
@@ -8589,6 +8593,7 @@
             "basis": "called",
             "courts": [
               "RT-DIGEST",
+              "RT-DRBG",
               "RT-PROVIDER",
               "RT-PROVIDER-3P"
             ],
@@ -8671,6 +8676,7 @@
               "RT-CIPHER",
               "RT-CMAC",
               "RT-DIGEST",
+              "RT-DRBG",
               "RT-EVP-BIO",
               "RT-EVP-CIPHER",
               "RT-EVP-CLASS",
@@ -13211,6 +13217,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DRBG",
               "RT-EVP-RAND"
             ],
             "symbol": "EVP_RAND_CTX_free"
@@ -13225,6 +13232,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DRBG",
               "RT-EVP-RAND"
             ],
             "symbol": "EVP_RAND_CTX_get_params"
@@ -13232,6 +13240,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DRBG",
               "RT-EVP-RAND"
             ],
             "symbol": "EVP_RAND_CTX_gettable_params"
@@ -13239,6 +13248,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DRBG",
               "RT-EVP-RAND"
             ],
             "symbol": "EVP_RAND_CTX_new"
@@ -13246,6 +13256,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DRBG",
               "RT-EVP-RAND"
             ],
             "symbol": "EVP_RAND_CTX_set_params"
@@ -13253,6 +13264,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DRBG",
               "RT-EVP-RAND"
             ],
             "symbol": "EVP_RAND_CTX_settable_params"
@@ -13281,6 +13293,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DRBG",
               "RT-EVP-RAND"
             ],
             "symbol": "EVP_RAND_fetch"
@@ -13288,6 +13301,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DRBG",
               "RT-EVP-RAND"
             ],
             "symbol": "EVP_RAND_free"
@@ -13295,6 +13309,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DRBG",
               "RT-EVP-RAND"
             ],
             "symbol": "EVP_RAND_generate"
@@ -13309,6 +13324,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DRBG",
               "RT-EVP-RAND"
             ],
             "symbol": "EVP_RAND_get0_name"
@@ -13330,6 +13346,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DRBG",
               "RT-EVP-RAND"
             ],
             "symbol": "EVP_RAND_get_state"
@@ -13337,6 +13354,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DRBG",
               "RT-EVP-RAND"
             ],
             "symbol": "EVP_RAND_get_strength"
@@ -13351,6 +13369,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DRBG",
               "RT-EVP-RAND"
             ],
             "symbol": "EVP_RAND_gettable_params"
@@ -13358,6 +13377,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DRBG",
               "RT-EVP-RAND"
             ],
             "symbol": "EVP_RAND_instantiate"
@@ -13365,6 +13385,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DRBG",
               "RT-EVP-RAND"
             ],
             "symbol": "EVP_RAND_is_a"
@@ -13400,6 +13421,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DRBG",
               "RT-EVP-RAND"
             ],
             "symbol": "EVP_RAND_uninstantiate"
@@ -13414,6 +13436,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DRBG",
               "RT-EVP-RAND"
             ],
             "symbol": "EVP_RAND_verify_zeroization"
@@ -15975,7 +15998,7 @@
         "indirectly_courted": [],
         "non_observable": [],
         "phase": 9,
-        "staged_candidate_probes": 0
+        "staged_candidate_probes": 1
       }
     ],
     "totals": {
@@ -15993,7 +16016,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "13c2bf9a6aa8b4d9273b7a0eac4a85786d2451b5f57a18ea200a6ddcb28bb080"
+      "sha256": "41d8fb9ef7cb75a3a052880c0885c6ba1e9b9292d35d9a9c4c64c8d71c0ae797"
     },
     {
       "name": "symbol-ownership",
@@ -16048,7 +16071,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "0c7d7b693da8a219d4d4ba754f64e1d03fe2517835c162697da82226884b27de"
+      "sha256": "99b2bddf03865e4e0c9668c27ab0ab639b9f2c0e89a17998306535ccdbf917d9"
     },
     {
       "name": "phase7-courts",
@@ -16058,7 +16081,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "d5cb818ae6e30e93747a774b72eb9ccb5c0cd894c41c4989759f825636b75e0b"
+      "sha256": "afe88cf240e3ab1d84e8b7b69a816f1fd4ef1bf00d7711b29bcb29edf42ad382"
     },
     {
       "name": "phase8-courts",
@@ -16068,12 +16091,12 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "63f588c55a61782c0450e7d92804c94f6e92ea92fa3d9be5298f6bec3774e3cc"
+      "sha256": "41bd784f49e75697fc8e35824f70cb00d979473834e0ad082a884ca0bfc346b3"
     },
     {
       "name": "phase9-courts",
       "path": "artifacts/phase9/COURTS.json",
-      "sha256": "7e9de317f672173d048d88e8f4bdb7e2ce04eb87733d14592ce24e23589541e4"
+      "sha256": "bc87e92b39a3c4c418dfdf150b0d34c0ea33d037eeec97990013933cdd9f931e"
     }
   ],
   "kind": "court-coverage",

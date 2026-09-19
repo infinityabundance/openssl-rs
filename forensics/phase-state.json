@@ -417,7 +417,7 @@
         "name": "algorithms",
         "phase": 8,
         "provider_rows": {
-          "handed_on": 690,
+          "handed_on": 687,
           "implemented": 166,
           "owned": 306,
           "unimplemented": 140
@@ -450,8 +450,9 @@
         "phase": 9,
         "provider_rows": {
           "handed_on": 675,
+          "implemented": 3,
           "owned": 15,
-          "unimplemented": 15
+          "unimplemented": 12
         },
         "seal_sha256": null,
         "state": "in-progress",
@@ -617,7 +618,7 @@
       "not_started": 12
     }
   },
-  "body_hash": "536317d4318b422da25a01f4d4d1fce190869dbc87e38b67325ed31a332698bd",
+  "body_hash": "cb4fd77dfed3f9a583aa50c088c1056d461ddb05c0b4044dce0fff09c83f0c23",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

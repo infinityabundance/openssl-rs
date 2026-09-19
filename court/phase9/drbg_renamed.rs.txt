@@ -28,7 +28,12 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-#![allow(dead_code)] // the landing caller is the `OSSL_OP_RAND` arm of `deflt_query` (9.4)
+#![allow(dead_code)]
+// the landing caller is the `OSSL_OP_RAND` arm of `deflt_query` (9.4)
+
+// The authority's own spellings survive transcription (`ctr_XOR`, `ctr_BCC_*`, `V_tmp`), because a
+// name the tooling cannot join to a C identifier is indistinguishable from a name that is absent.
+#![allow(non_snake_case)]
 
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_ushort, c_void};
 use core::ptr;
@@ -48,35 +53,36 @@ use crate::evp::digest::{
 };
 use crate::evp::mac::{
     EVP_MAC_CTX_free, EVP_MAC_CTX_get0_mac, EVP_MAC_CTX_new, EVP_MAC_fetch, EVP_MAC_final,
-    EVP_MAC_free, EVP_MAC_get0_name, EVP_MAC_init, EVP_MAC_update, EvpMac, EvpMacCtx,
+    EVP_MAC_free, EVP_MAC_get0_name, EVP_MAC_init, EVP_MAC_update, EvpMacCtx,
 };
 /// The RAND dispatch ids and the nineteen function-pointer types are `src/evp/rand.rs`'s.
 /// **They are currently private `const`s there**, so integration must raise them to
 /// `pub(crate)`; the duplicate-free reference below is the form that wants.
 use crate::evp::rand::{
-    OSSL_FUNC_RAND_NONCE,
-
-    OSSL_FUNC_RAND_CLEAR_SEED, OSSL_FUNC_RAND_ENABLE_LOCKING, OSSL_FUNC_RAND_FREECTX,
-    OSSL_FUNC_RAND_GENERATE, OSSL_FUNC_RAND_GET_CTX_PARAMS, OSSL_FUNC_RAND_GET_SEED,
-    OSSL_FUNC_RAND_GETTABLE_CTX_PARAMS, OSSL_FUNC_RAND_INSTANTIATE, OSSL_FUNC_RAND_LOCK,
-    OSSL_FUNC_RAND_NEWCTX, OSSL_FUNC_RAND_RESEED, OSSL_FUNC_RAND_SETTABLE_CTX_PARAMS,
-    OSSL_FUNC_RAND_SET_CTX_PARAMS, OSSL_FUNC_RAND_UNINSTANTIATE, OSSL_FUNC_RAND_UNLOCK,
-    OSSL_FUNC_RAND_VERIFY_ZEROIZATION, RandClearSeedFn, RandEnableLockingFn, RandFreeCtxFn,
-    RandGenerateFn, RandGetCtxParamsFn, RandGetSeedFn, RandGettableCtxParamsFn, RandInstantiateFn,
-    RandLockFn, RandNewCtxFn, RandNonceFn, RandReseedFn, RandSettableCtxParamsFn,
-    RandUninstantiateFn, RandUnlockFn, RandVerifyZeroizationFn,
+    RandClearSeedFn, RandEnableLockingFn, RandGetCtxParamsFn, RandGetSeedFn, RandLockFn,
+    RandNonceFn, RandUnlockFn, OSSL_FUNC_RAND_CLEAR_SEED, OSSL_FUNC_RAND_ENABLE_LOCKING,
+    OSSL_FUNC_RAND_FREECTX, OSSL_FUNC_RAND_GENERATE, OSSL_FUNC_RAND_GETTABLE_CTX_PARAMS,
+    OSSL_FUNC_RAND_GET_CTX_PARAMS, OSSL_FUNC_RAND_GET_SEED, OSSL_FUNC_RAND_INSTANTIATE,
+    OSSL_FUNC_RAND_LOCK, OSSL_FUNC_RAND_NEWCTX, OSSL_FUNC_RAND_NONCE, OSSL_FUNC_RAND_RESEED,
+    OSSL_FUNC_RAND_SETTABLE_CTX_PARAMS, OSSL_FUNC_RAND_SET_CTX_PARAMS,
+    OSSL_FUNC_RAND_UNINSTANTIATE, OSSL_FUNC_RAND_UNLOCK, OSSL_FUNC_RAND_VERIFY_ZEROIZATION,
 };
 use crate::params::{
-    OsslParam, END, OSSL_PARAM_get_int, OSSL_PARAM_get_time_t, OSSL_PARAM_get_uint,
-    OSSL_PARAM_locate, OSSL_PARAM_locate_const, OSSL_PARAM_set_int, OSSL_PARAM_set_size_t,
-    OSSL_PARAM_set_time_t, OSSL_PARAM_set_uint, OSSL_PARAM_set_utf8_string,
+    OSSL_PARAM_get_int, OSSL_PARAM_get_time_t, OSSL_PARAM_get_uint, OSSL_PARAM_locate_const,
+    OSSL_PARAM_set_int, OSSL_PARAM_set_size_t, OSSL_PARAM_set_time_t, OSSL_PARAM_set_uint,
+    OSSL_PARAM_set_utf8_string, OsslParam, END,
 };
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::cipher::{
-    param_int, param_size_t, param_uint, param_utf8_string, repeated_param_site,
+    param_int,
+    param_size_t,
     // MISSING (needed for the generated lists below): these two constructors are the only
     // authority list entries that `param_int`/`param_size_t` cannot spell faithfully.
-    param_time_t, param_uint64,
+    param_time_t,
+    param_uint,
+    param_uint64,
+    param_utf8_string,
+    repeated_param_site,
 };
 use crate::provider::ctx::{prov_libctx_of, ProvCtx};
 use crate::provider::util::prov_digest::{
@@ -86,29 +92,27 @@ use crate::provider::util::prov_digest::{
 use crate::provider::util::{
     OSSL_ALG_PARAM_CIPHER, OSSL_ALG_PARAM_DIGEST, OSSL_ALG_PARAM_ENGINE, OSSL_ALG_PARAM_PROPERTIES,
 };
-use crate::runtime::err::{err_sites, raise_site, raise_site_data};
-use crate::runtime::mem::{
-    cleanse, CRYPTO_free, CRYPTO_malloc, CRYPTO_strndup, CRYPTO_zalloc,
-};
+use crate::runtime::err::{err_sites, raise_site};
+use crate::runtime::mem::{cleanse, CRYPTO_free, CRYPTO_malloc, CRYPTO_strndup, CRYPTO_zalloc};
 use crate::runtime::secure::{
     CRYPTO_secure_clear_free, CRYPTO_secure_malloc, CRYPTO_secure_zalloc,
 };
 use crate::runtime::str::OPENSSL_strcasecmp;
 use crate::runtime::thread::{
-    CRYPTO_atomic_add, CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CRYPTO_THREAD_read_lock,
-    CRYPTO_THREAD_unlock, CRYPTO_THREAD_write_lock, CryptoRwlock,
+    CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CRYPTO_THREAD_read_lock, CRYPTO_THREAD_unlock,
+    CRYPTO_THREAD_write_lock, CRYPTO_atomic_add, CryptoRwlock,
 };
 use crate::runtime::time::TimeT;
 
 // D307: the three helpers this module reaches that landed in D304/D305, plus the platform clock.
 use crate::context::lib_ctx_get_data as ossl_lib_ctx_get_data;
+use crate::context::OSSL_LIB_CTX_DRBG_NONCE_INDEX;
 use crate::provider::seeding::{
     ossl_prov_cleanup_entropy, ossl_prov_cleanup_nonce, ossl_prov_get_entropy, ossl_prov_get_nonce,
 };
-use crate::provider::util::{ossl_prov_macctx_load, ossl_prov_set_macctx};
+use crate::provider::util::ossl_prov_macctx_load;
 use crate::runtime::bio::sys::time;
 use crate::runtime::thread::openssl_get_fork_id;
-
 
 // =============================================================================================
 // Translation-unit coordinates
@@ -120,7 +124,8 @@ use crate::runtime::thread::openssl_get_fork_id;
 // =============================================================================================
 
 /// `providers/implementations/rands/drbg.c`.
-const FILE_DRBG: *const c_char = c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c".as_ptr();
+const FILE_DRBG: *const c_char =
+    c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c".as_ptr();
 /// `providers/implementations/rands/drbg_ctr.c` (generated from `drbg_ctr.c.in`).
 const FILE_DRBG_CTR: *const c_char = c"providers/implementations/rands/drbg_ctr.c".as_ptr();
 /// `providers/implementations/rands/drbg_hash.c` (generated from `drbg_hash.c.in`).
@@ -130,13 +135,11 @@ const FILE_DRBG_HMAC: *const c_char = c"providers/implementations/rands/drbg_hma
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
 
-/// `OSSL_LIB_CTX_DRBG_NONCE_INDEX` — `include/internal/cryptlib.h:102`, slot **6**.
-///
-/// MISSING(crate): `src/context/mod.rs` declares slots 2, 3, 14 and 17 and not the DRBG pair.
-/// The authority's whole allocation is `OSSL_LIB_CTX_DRBG_INDEX 5` and
-/// `OSSL_LIB_CTX_DRBG_NONCE_INDEX 6` (`:101-102`), so both belong there when this module lands;
-/// the value is carried here so the staging file is compilable against the crate as it is.
-const OSSL_LIB_CTX_DRBG_NONCE_INDEX: c_int = 6;
+// `OSSL_LIB_CTX_DRBG_NONCE_INDEX` — `include/internal/cryptlib.h:102`, slot **6**. **D309 moved it
+// to its home**, `src/context/mod.rs`, which is also where it is filled: `context_init` calls
+// `ossl_prov_drbg_nonce_ctx_new` for every context, exactly as `crypto/context.c:172` does. It is
+// imported at the top of this module; the slot's absence is what `prov_drbg_get_nonce` reports as
+// `PROV_R_ERROR_RETRIEVING_NONCE`.
 
 // =============================================================================================
 // Constants — `providers/implementations/include/prov/drbg.h` and `include/crypto/rand.h`
@@ -402,12 +405,16 @@ unsafe fn get_parent_reseed_count(drbg: *mut ProvDrbg) -> c_uint {
         let parent = (*drbg).parent;
         let mut r: c_uint = 0;
         let mut params: [OsslParam; 2] = [END, END];
-        params[0] = crate::params::OSSL_PARAM_construct_uint(OSSL_DRBG_PARAM_RESEED_COUNTER, &mut r);
+        params[0] =
+            crate::params::OSSL_PARAM_construct_uint(OSSL_DRBG_PARAM_RESEED_COUNTER, &mut r);
         params[1] = END;
         if ossl_drbg_lock_parent(drbg) == 0 {
             raise_site(&err_sites::PROV_DRBG_117);
             // `r = tsan_load(&drbg->reseed_counter) - 2; if (r == 0) r = UINT_MAX;`
-            let mut v = (*drbg).reseed_counter.load(Ordering::Relaxed).wrapping_sub(2);
+            let mut v = (*drbg)
+                .reseed_counter
+                .load(Ordering::Relaxed)
+                .wrapping_sub(2);
             if v == 0 {
                 v = c_uint::MAX;
             }
@@ -446,6 +453,7 @@ pub(crate) unsafe extern "C" fn ossl_drbg_get_seed(
 ) -> usize {
     // SAFETY: `vdrbg` is the `ProvDrbg` the dispatch contract names.
     unsafe {
+        let _ = (adin, adin_len); // `ossl_unused` upstream: the address is the only adin used
         let drbg = vdrbg.cast::<ProvDrbg>();
         let mut bytes_needed = if entropy >= 0 {
             (entropy as usize).wrapping_add(7) / 8
@@ -474,12 +482,7 @@ pub(crate) unsafe extern "C" fn ossl_drbg_get_seed(
             core::mem::size_of::<*mut ProvDrbg>(),
         ) == 0
         {
-            CRYPTO_secure_clear_free(
-                buffer.cast(),
-                bytes_needed,
-                FILE_DRBG,
-                LINE,
-            );
+            CRYPTO_secure_clear_free(buffer.cast(), bytes_needed, FILE_DRBG, LINE);
             raise_site(&err_sites::PROV_DRBG_178);
             return 0;
         }
@@ -536,7 +539,11 @@ unsafe fn get_entropy(
             return 0;
         }
         let parent = (*drbg).parent;
-        let ent = if entropy > 0 { entropy } else { (*drbg).strength as c_int };
+        let ent = if entropy > 0 {
+            entropy
+        } else {
+            (*drbg).strength as c_int
+        };
         let mut identity = drbg;
         let bytes = parent_get_seed(
             parent,
@@ -580,12 +587,8 @@ unsafe fn cleanup_entropy(drbg: *mut ProvDrbg, out: *mut c_uchar, outlen: usize)
 pub(crate) unsafe fn ossl_prov_drbg_nonce_ctx_new(_libctx: *mut c_void) -> *mut c_void {
     // SAFETY: the allocation is this frame's and is released on the failure path.
     unsafe {
-        let dngbl = CRYPTO_zalloc(
-            core::mem::size_of::<ProvDrbgNonceGlobal>(),
-            FILE_DRBG,
-            LINE,
-        )
-        .cast::<ProvDrbgNonceGlobal>();
+        let dngbl = CRYPTO_zalloc(core::mem::size_of::<ProvDrbgNonceGlobal>(), FILE_DRBG, LINE)
+            .cast::<ProvDrbgNonceGlobal>();
         if dngbl.is_null() {
             return ptr::null_mut();
         }
@@ -718,7 +721,7 @@ pub(crate) unsafe fn ossl_prov_drbg_instantiate(
         // and then answers `state == READY`, so both the release and the final test run on
         // *every* exit — success or failure — which is why the failures below `break` rather
         // than `return`.
-        let _ = 'end: {
+        'end: {
             if strength > (*drbg).strength {
                 raise_site(&err_sites::PROV_DRBG_359);
                 break 'end;
@@ -818,7 +821,8 @@ pub(crate) unsafe fn ossl_prov_drbg_instantiate(
                 break 'end;
             }
 
-            if (*drbg).instantiate(drbg, entropy, entropylen, nonce, noncelen, pers, perslen) == 0 {
+            if ((*drbg).instantiate)(drbg, entropy, entropylen, nonce, noncelen, pers, perslen) == 0
+            {
                 cleanup_entropy(drbg, entropy, entropylen);
                 raise_site(&err_sites::PROV_DRBG_449);
                 break 'end;
@@ -828,7 +832,9 @@ pub(crate) unsafe fn ossl_prov_drbg_instantiate(
             (*drbg).state = EVP_RAND_STATE_READY;
             (*drbg).generate_counter = 1;
             (*drbg).reseed_time = time(ptr::null_mut());
-            (*drbg).reseed_counter.store((*drbg).reseed_next_counter, Ordering::Relaxed);
+            (*drbg)
+                .reseed_counter
+                .store((*drbg).reseed_next_counter, Ordering::Relaxed);
         };
 
         if !nonce.is_null() {
@@ -918,7 +924,7 @@ unsafe fn ossl_prov_drbg_reseed_unlocked(
 
         if !ent.is_null() {
             // #ifdef FIPS_MODULE: `reseed(drbg, NULL, 0, ent, ent_len)`.
-            if (*drbg).reseed(drbg, ent, ent_len, adin, adinlen) == 0 {
+            if ((*drbg).reseed)(drbg, ent, ent_len, adin, adinlen) == 0 {
                 raise_site(&err_sites::PROV_DRBG_551);
                 return 0;
             }
@@ -942,7 +948,7 @@ unsafe fn ossl_prov_drbg_reseed_unlocked(
             return 0;
         }
 
-        if (*drbg).reseed(drbg, entropy, entropylen, adin, adinlen) == 0 {
+        if ((*drbg).reseed)(drbg, entropy, entropylen, adin, adinlen) == 0 {
             cleanup_entropy(drbg, entropy, entropylen);
             return 0;
         }
@@ -950,7 +956,9 @@ unsafe fn ossl_prov_drbg_reseed_unlocked(
         (*drbg).state = EVP_RAND_STATE_READY;
         (*drbg).generate_counter = 1;
         (*drbg).reseed_time = time(ptr::null_mut());
-        (*drbg).reseed_counter.store((*drbg).reseed_next_counter, Ordering::Relaxed);
+        (*drbg)
+            .reseed_counter
+            .store((*drbg).reseed_next_counter, Ordering::Relaxed);
         if !(*drbg).parent.is_null() {
             (*drbg).parent_reseed_counter = get_parent_reseed_count(drbg);
         }
@@ -982,7 +990,14 @@ pub(crate) unsafe fn ossl_prov_drbg_reseed(
         if !(*drbg).lock.is_null() && CRYPTO_THREAD_write_lock((*drbg).lock) == 0 {
             return 0;
         }
-        let ret = ossl_prov_drbg_reseed_unlocked(drbg, prediction_resistance, ent, ent_len, adin, adinlen);
+        let ret = ossl_prov_drbg_reseed_unlocked(
+            drbg,
+            prediction_resistance,
+            ent,
+            ent_len,
+            adin,
+            adinlen,
+        );
         if !(*drbg).lock.is_null() {
             CRYPTO_THREAD_unlock((*drbg).lock);
         }
@@ -1072,7 +1087,14 @@ pub(crate) unsafe fn ossl_prov_drbg_generate(
         }
 
         if reseed_required != 0 || prediction_resistance != 0 {
-            if ossl_prov_drbg_reseed_unlocked(drbg, prediction_resistance, ptr::null(), 0, adin, adinlen) == 0
+            if ossl_prov_drbg_reseed_unlocked(
+                drbg,
+                prediction_resistance,
+                ptr::null(),
+                0,
+                adin,
+                adinlen,
+            ) == 0
             {
                 raise_site(&err_sites::PROV_DRBG_691);
                 return generate_fail(drbg);
@@ -1081,7 +1103,7 @@ pub(crate) unsafe fn ossl_prov_drbg_generate(
             adinlen = 0;
         }
 
-        if (*drbg).generate(drbg, out, outlen, adin, adinlen) == 0 {
+        if ((*drbg).generate)(drbg, out, outlen, adin, adinlen) == 0 {
             (*drbg).state = crate::evp::rand::EVP_RAND_STATE_ERROR;
             raise_site(&err_sites::PROV_DRBG_700);
             return generate_fail(drbg);
@@ -1118,7 +1140,7 @@ unsafe fn rand_drbg_restart(drbg: *mut ProvDrbg) -> c_int {
     // SAFETY: `drbg` is live per the contract.
     unsafe {
         if (*drbg).state == crate::evp::rand::EVP_RAND_STATE_ERROR {
-            (*drbg).uninstantiate(drbg);
+            ((*drbg).uninstantiate)(drbg);
         }
         if (*drbg).state == EVP_RAND_STATE_UNINITIALISED {
             ossl_prov_drbg_instantiate(drbg, (*drbg).strength, 0, ptr::null(), 0);
@@ -1188,6 +1210,7 @@ pub(crate) unsafe extern "C" fn ossl_drbg_enable_locking(vctx: *mut c_void) -> c
 /// # Safety
 /// All callback pointers uphold their own contracts; `p_dispatch` is NULL or an
 /// `OSSL_DISPATCH_END`-terminated table.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
 pub(crate) unsafe fn ossl_rand_drbg_new(
     provctx: *mut ProvCtx,
     parent: *mut c_void,
@@ -1204,8 +1227,8 @@ pub(crate) unsafe fn ossl_rand_drbg_new(
         if is_running() == 0 {
             return ptr::null_mut();
         }
-        let drbg = CRYPTO_zalloc(core::mem::size_of::<ProvDrbg>(), FILE_DRBG, LINE)
-            .cast::<ProvDrbg>();
+        let drbg =
+            CRYPTO_zalloc(core::mem::size_of::<ProvDrbg>(), FILE_DRBG, LINE).cast::<ProvDrbg>();
         if drbg.is_null() {
             return ptr::null_mut();
         }
@@ -1218,25 +1241,25 @@ pub(crate) unsafe fn ossl_rand_drbg_new(
         (*drbg).fork_id = openssl_get_fork_id();
 
         (*drbg).parent = parent;
-        if let Some(pfunc) = non_null(find_call(p_dispatch, OSSL_FUNC_RAND_ENABLE_LOCKING())) {
+        if let Some(pfunc) = non_null(find_call(p_dispatch, OSSL_FUNC_RAND_ENABLE_LOCKING)) {
             (*drbg).parent_enable_locking = Some(entry_function(pfunc));
         }
-        if let Some(pfunc) = non_null(find_call(p_dispatch, OSSL_FUNC_RAND_LOCK())) {
+        if let Some(pfunc) = non_null(find_call(p_dispatch, OSSL_FUNC_RAND_LOCK)) {
             (*drbg).parent_lock = Some(entry_function(pfunc));
         }
-        if let Some(pfunc) = non_null(find_call(p_dispatch, OSSL_FUNC_RAND_UNLOCK())) {
+        if let Some(pfunc) = non_null(find_call(p_dispatch, OSSL_FUNC_RAND_UNLOCK)) {
             (*drbg).parent_unlock = Some(entry_function(pfunc));
         }
-        if let Some(pfunc) = non_null(find_call(p_dispatch, OSSL_FUNC_RAND_GET_CTX_PARAMS())) {
+        if let Some(pfunc) = non_null(find_call(p_dispatch, OSSL_FUNC_RAND_GET_CTX_PARAMS)) {
             (*drbg).parent_get_ctx_params = Some(entry_function(pfunc));
         }
-        if let Some(pfunc) = non_null(find_call(p_dispatch, OSSL_FUNC_RAND_NONCE())) {
+        if let Some(pfunc) = non_null(find_call(p_dispatch, OSSL_FUNC_RAND_NONCE)) {
             (*drbg).parent_nonce = Some(entry_function(pfunc));
         }
-        if let Some(pfunc) = non_null(find_call(p_dispatch, OSSL_FUNC_RAND_GET_SEED())) {
+        if let Some(pfunc) = non_null(find_call(p_dispatch, OSSL_FUNC_RAND_GET_SEED)) {
             (*drbg).parent_get_seed = Some(entry_function(pfunc));
         }
-        if let Some(pfunc) = non_null(find_call(p_dispatch, OSSL_FUNC_RAND_CLEAR_SEED())) {
+        if let Some(pfunc) = non_null(find_call(p_dispatch, OSSL_FUNC_RAND_CLEAR_SEED)) {
             (*drbg).parent_clear_seed = Some(entry_function(pfunc));
         }
 
@@ -1654,7 +1677,11 @@ unsafe fn ctr_XOR(ctr: *mut ProvDrbgCtr, in_: *const c_uchar, inlen: usize) {
         if in_.is_null() || inlen == 0 {
             return;
         }
-        let mut n = if inlen < (*ctr).keylen { inlen } else { (*ctr).keylen };
+        let mut n = if inlen < (*ctr).keylen {
+            inlen
+        } else {
+            (*ctr).keylen
+        };
         // `ossl_assert(n <= sizeof(ctr->K))` is `n <= 32` under `NDEBUG`, which is how the
         // authority compiles (`include/internal/common.h`); the crate has no shared symbol and
         // reproduces the live guard inline, as its other sites do.
@@ -1735,7 +1762,7 @@ unsafe fn ctr_BCC_init(ctr: *mut ProvDrbgCtr) -> c_int {
         let mut bltmp = [0u8; 48];
         cleanse((*ctr).kx.as_mut_ptr().cast(), 48);
         let num_of_blk: usize = if (*ctr).keylen == 16 { 2 } else { 3 };
-        bltmp[(AES_BLOCK_SIZE * 1) + 3] = 1;
+        bltmp[AES_BLOCK_SIZE + 3] = 1;
         bltmp[(AES_BLOCK_SIZE * 2) + 3] = 2;
         ctr_BCC_block(
             ctr,
@@ -1786,11 +1813,7 @@ unsafe fn ctr_BCC_update(ctr: *mut ProvDrbgCtr, in_: *const c_uchar, inlen: usiz
         }
 
         if inlen > 0 {
-            ptr::copy_nonoverlapping(
-                in_,
-                (*ctr).bltmp.as_mut_ptr().add((*ctr).bltmp_pos),
-                inlen,
-            );
+            ptr::copy_nonoverlapping(in_, (*ctr).bltmp.as_mut_ptr().add((*ctr).bltmp_pos), inlen);
             (*ctr).bltmp_pos += inlen;
         }
         1
@@ -1847,9 +1870,7 @@ unsafe fn ctr_df(
         if in3.is_null() {
             in3len = 0;
         }
-        let inlen = in1len
-            .wrapping_add(in2len)
-            .wrapping_add(in3len);
+        let inlen = in1len.wrapping_add(in2len).wrapping_add(in3len);
 
         if ctr_BCC_init(ctr) == 0 {
             return 0;
@@ -1884,7 +1905,14 @@ unsafe fn ctr_df(
         }
 
         // Set up key K.
-        if EVP_CipherInit_ex((*ctr).ctx_ecb, ptr::null(), ptr::null_mut(), (*ctr).kx.as_ptr(), ptr::null(), -1) == 0
+        if EVP_CipherInit_ex(
+            (*ctr).ctx_ecb,
+            ptr::null(),
+            ptr::null_mut(),
+            (*ctr).kx.as_ptr(),
+            ptr::null(),
+            -1,
+        ) == 0
         {
             return 0;
         }
@@ -1976,18 +2004,14 @@ unsafe fn ctr_update(
             return 0;
         }
         ptr::copy_nonoverlapping(out.as_ptr(), (*ctr).k.as_mut_ptr(), (*ctr).keylen);
-        ptr::copy_nonoverlapping(
-            out.as_ptr().add((*ctr).keylen),
-            (*ctr).v.as_mut_ptr(),
-            16,
-        );
+        ptr::copy_nonoverlapping(out.as_ptr().add((*ctr).keylen), (*ctr).v.as_mut_ptr(), 16);
 
         if (*ctr).use_df != 0 {
             // If no input, reuse the existing derived value.
-            if !in1.is_null() || !nonce.is_null() || !in2.is_null() {
-                if ctr_df(ctr, in1, in1len, nonce, noncelen, in2, in2len) == 0 {
-                    return 0;
-                }
+            if (!in1.is_null() || !nonce.is_null() || !in2.is_null())
+                && ctr_df(ctr, in1, in1len, nonce, noncelen, in2, in2len) == 0
+            {
+                return 0;
             }
             // If this is a reuse input, in1len != 0.
             if in1len != 0 {
@@ -1998,8 +2022,22 @@ unsafe fn ctr_update(
             ctr_XOR(ctr, in2, in2len);
         }
 
-        if EVP_CipherInit_ex((*ctr).ctx_ecb, ptr::null(), ptr::null_mut(), (*ctr).k.as_ptr(), ptr::null(), -1) == 0
-            || EVP_CipherInit_ex((*ctr).ctx_ctr, ptr::null(), ptr::null_mut(), (*ctr).k.as_ptr(), ptr::null(), -1) == 0
+        if EVP_CipherInit_ex(
+            (*ctr).ctx_ecb,
+            ptr::null(),
+            ptr::null_mut(),
+            (*ctr).k.as_ptr(),
+            ptr::null(),
+            -1,
+        ) == 0
+            || EVP_CipherInit_ex(
+                (*ctr).ctx_ctr,
+                ptr::null(),
+                ptr::null_mut(),
+                (*ctr).k.as_ptr(),
+                ptr::null(),
+                -1,
+            ) == 0
         {
             return 0;
         }
@@ -2013,7 +2051,7 @@ unsafe fn ctr_update(
 ///
 /// # Safety
 /// `drbg` is live with a `ProvDrbgCtr` in `data`.
-unsafe fn drbg_ctr_instantiate(
+unsafe extern "C" fn drbg_ctr_instantiate(
     drbg: *mut ProvDrbg,
     entropy: *const c_uchar,
     entropylen: usize,
@@ -2030,7 +2068,14 @@ unsafe fn drbg_ctr_instantiate(
         }
         cleanse((*ctr).k.as_mut_ptr().cast(), 32);
         cleanse((*ctr).v.as_mut_ptr().cast(), 16);
-        if EVP_CipherInit_ex((*ctr).ctx_ecb, ptr::null(), ptr::null_mut(), (*ctr).k.as_ptr(), ptr::null(), -1) == 0
+        if EVP_CipherInit_ex(
+            (*ctr).ctx_ecb,
+            ptr::null(),
+            ptr::null_mut(),
+            (*ctr).k.as_ptr(),
+            ptr::null(),
+            -1,
+        ) == 0
         {
             return 0;
         }
@@ -2082,7 +2127,7 @@ unsafe extern "C" fn drbg_ctr_instantiate_wrapper(
 ///
 /// # Safety
 /// `drbg` is live with a `ProvDrbgCtr` in `data`.
-unsafe fn drbg_ctr_reseed(
+unsafe extern "C" fn drbg_ctr_reseed(
     drbg: *mut ProvDrbg,
     entropy: *const c_uchar,
     entropylen: usize,
@@ -2156,7 +2201,7 @@ unsafe fn ctr96_inc(counter: *mut c_uchar) {
 ///
 /// # Safety
 /// `drbg` is live with a `ProvDrbgCtr` in `data`; `out` writable for `outlen`.
-unsafe fn drbg_ctr_generate(
+unsafe extern "C" fn drbg_ctr_generate(
     drbg: *mut ProvDrbg,
     out: *mut c_uchar,
     outlen: usize,
@@ -2198,7 +2243,14 @@ unsafe fn drbg_ctr_generate(
         cleanse(out.cast(), outlen);
 
         loop {
-            if EVP_CipherInit_ex((*ctr).ctx_ctr, ptr::null(), ptr::null_mut(), ptr::null(), (*ctr).v.as_ptr(), -1) == 0
+            if EVP_CipherInit_ex(
+                (*ctr).ctx_ctr,
+                ptr::null(),
+                ptr::null_mut(),
+                ptr::null(),
+                (*ctr).v.as_ptr(),
+                -1,
+            ) == 0
             {
                 return 0;
             }
@@ -2209,10 +2261,10 @@ unsafe fn drbg_ctr_generate(
             } else {
                 outlen as c_int
             };
-            let mut blocks: c_uint = ((buflen as u32) + 15) / 16;
+            let mut blocks: c_uint = (buflen as u32).div_ceil(16);
             let mut buflen = buflen;
-            let mut ctr32: c_uint = crate::modes::get_u32_be((*ctr).v.as_ptr().add(12))
-                .wrapping_add(blocks);
+            let mut ctr32: c_uint =
+                crate::modes::get_u32_be((*ctr).v.as_ptr().add(12)).wrapping_add(blocks);
             if ctr32 < blocks {
                 // 32-bit counter overflow into V.
                 if ctr32 != 0 {
@@ -2276,7 +2328,7 @@ unsafe extern "C" fn drbg_ctr_generate_wrapper(
 ///
 /// # Safety
 /// `drbg` is live with a `ProvDrbgCtr` in `data`.
-unsafe fn drbg_ctr_uninstantiate(drbg: *mut ProvDrbg) -> c_int {
+unsafe extern "C" fn drbg_ctr_uninstantiate(drbg: *mut ProvDrbg) -> c_int {
     // SAFETY: `drbg` is live per the contract.
     unsafe {
         let ctr = (*drbg).data.cast::<ProvDrbgCtr>();
@@ -2403,8 +2455,22 @@ unsafe fn drbg_ctr_init(drbg: *mut ProvDrbg) -> c_int {
             (*ctr).ctx_ctr = ptr::null_mut();
             return 0;
         }
-        if EVP_CipherInit_ex((*ctr).ctx_ecb, (*ctr).cipher_ecb, ptr::null_mut(), ptr::null(), ptr::null(), 1) == 0
-            || EVP_CipherInit_ex((*ctr).ctx_ctr, (*ctr).cipher_ctr, ptr::null_mut(), ptr::null(), ptr::null(), 1) == 0
+        if EVP_CipherInit_ex(
+            (*ctr).ctx_ecb,
+            (*ctr).cipher_ecb,
+            ptr::null_mut(),
+            ptr::null(),
+            ptr::null(),
+            1,
+        ) == 0
+            || EVP_CipherInit_ex(
+                (*ctr).ctx_ctr,
+                (*ctr).cipher_ctr,
+                ptr::null_mut(),
+                ptr::null(),
+                ptr::null(),
+                1,
+            ) == 0
         {
             raise_site(&err_sites::PROV_DRBG_CTR_594);
             EVP_CIPHER_CTX_free((*ctr).ctx_ecb);
@@ -2423,9 +2489,9 @@ unsafe fn drbg_ctr_init(drbg: *mut ProvDrbg) -> c_int {
 
         if (*ctr).use_df != 0 {
             const DF_KEY: [c_uchar; 32] = [
-                0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c,
-                0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19,
-                0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+                0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d,
+                0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b,
+                0x1c, 0x1d, 0x1e, 0x1f,
             ];
             if (*ctr).ctx_df.is_null() {
                 (*ctr).ctx_df = EVP_CIPHER_CTX_new();
@@ -2439,7 +2505,14 @@ unsafe fn drbg_ctr_init(drbg: *mut ProvDrbg) -> c_int {
                 return 0;
             }
             // Set the key schedule for df_key.
-            if EVP_CipherInit_ex((*ctr).ctx_df, (*ctr).cipher_ecb, ptr::null_mut(), DF_KEY.as_ptr(), ptr::null(), 1) == 0
+            if EVP_CipherInit_ex(
+                (*ctr).ctx_df,
+                (*ctr).cipher_ecb,
+                ptr::null_mut(),
+                DF_KEY.as_ptr(),
+                ptr::null(),
+                1,
+            ) == 0
             {
                 raise_site(&err_sites::PROV_DRBG_CTR_631);
                 EVP_CIPHER_CTX_free((*ctr).ctx_ecb);
@@ -2457,7 +2530,7 @@ unsafe fn drbg_ctr_init(drbg: *mut ProvDrbg) -> c_int {
 ///
 /// # Safety
 /// `drbg` must be live.
-unsafe fn drbg_ctr_new(drbg: *mut ProvDrbg) -> c_int {
+unsafe extern "C" fn drbg_ctr_new(drbg: *mut ProvDrbg) -> c_int {
     // SAFETY: `drbg` is live per the contract.
     unsafe {
         let ctr = CRYPTO_secure_zalloc(core::mem::size_of::<ProvDrbgCtr>(), FILE_DRBG_CTR, LINE)
@@ -2538,22 +2611,37 @@ unsafe extern "C" fn drbg_ctr_free(vdrbg: *mut c_void) {
 /// the `err_sites::PROV_DRBG_CTR_DECODER_*` names below do not exist yet and must be generated
 /// by the same tool that produced `PROV_CMAC_PROV_*` (reason `PROV_R_REPEATED_PARAMETER`, 252;
 /// function `drbg_ctr_get_ctx_params_decoder`).
-const DRBG_CTR_GET_PARAMS_DECODER_KEYS: [(&'static err_sites::ErrSite, *const c_char); 15] = [
+const DRBG_CTR_GET_PARAMS_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 15] = [
     (&err_sites::PROV_DRBG_CTR_751, OSSL_DRBG_PARAM_CIPHER),
     (&err_sites::PROV_DRBG_CTR_1015, OSSL_DRBG_PARAM_USE_DF),
     (&err_sites::PROV_DRBG_CTR_991, OSSL_RAND_PARAM_STATE),
     (&err_sites::PROV_DRBG_CTR_1002, OSSL_RAND_PARAM_STRENGTH),
     (&err_sites::PROV_DRBG_CTR_835, OSSL_RAND_PARAM_MAX_REQUEST),
-    (&err_sites::PROV_DRBG_CTR_861, OSSL_DRBG_PARAM_MIN_ENTROPYLEN),
-    (&err_sites::PROV_DRBG_CTR_802, OSSL_DRBG_PARAM_MAX_ENTROPYLEN),
+    (
+        &err_sites::PROV_DRBG_CTR_861,
+        OSSL_DRBG_PARAM_MIN_ENTROPYLEN,
+    ),
+    (
+        &err_sites::PROV_DRBG_CTR_802,
+        OSSL_DRBG_PARAM_MAX_ENTROPYLEN,
+    ),
     (&err_sites::PROV_DRBG_CTR_872, OSSL_DRBG_PARAM_MIN_NONCELEN),
     (&err_sites::PROV_DRBG_CTR_813, OSSL_DRBG_PARAM_MAX_NONCELEN),
     (&err_sites::PROV_DRBG_CTR_824, OSSL_DRBG_PARAM_MAX_PERSLEN),
     (&err_sites::PROV_DRBG_CTR_791, OSSL_DRBG_PARAM_MAX_ADINLEN),
-    (&err_sites::PROV_DRBG_CTR_915, OSSL_DRBG_PARAM_RESEED_COUNTER),
+    (
+        &err_sites::PROV_DRBG_CTR_915,
+        OSSL_DRBG_PARAM_RESEED_COUNTER,
+    ),
     (&err_sites::PROV_DRBG_CTR_962, OSSL_DRBG_PARAM_RESEED_TIME),
-    (&err_sites::PROV_DRBG_CTR_926, OSSL_DRBG_PARAM_RESEED_REQUESTS),
-    (&err_sites::PROV_DRBG_CTR_953, OSSL_DRBG_PARAM_RESEED_TIME_INTERVAL),
+    (
+        &err_sites::PROV_DRBG_CTR_926,
+        OSSL_DRBG_PARAM_RESEED_REQUESTS,
+    ),
+    (
+        &err_sites::PROV_DRBG_CTR_953,
+        OSSL_DRBG_PARAM_RESEED_TIME_INTERVAL,
+    ),
 ];
 
 /// `drbg_ctr_get_ctx_params_decoder` — generated by `produce_param_decoder` at
@@ -2576,7 +2664,8 @@ unsafe fn drbg_ctr_get_ctx_params_decoder(
         (*r).df = OSSL_PARAM_locate_const(params, OSSL_DRBG_PARAM_USE_DF) as *mut OsslParam;
         (*r).state = OSSL_PARAM_locate_const(params, OSSL_RAND_PARAM_STATE) as *mut OsslParam;
         (*r).str = OSSL_PARAM_locate_const(params, OSSL_RAND_PARAM_STRENGTH) as *mut OsslParam;
-        (*r).maxreq = OSSL_PARAM_locate_const(params, OSSL_RAND_PARAM_MAX_REQUEST) as *mut OsslParam;
+        (*r).maxreq =
+            OSSL_PARAM_locate_const(params, OSSL_RAND_PARAM_MAX_REQUEST) as *mut OsslParam;
         (*r).minentlen =
             OSSL_PARAM_locate_const(params, OSSL_DRBG_PARAM_MIN_ENTROPYLEN) as *mut OsslParam;
         (*r).maxentlen =
@@ -2626,10 +2715,7 @@ static DRBG_CTR_GET_CTX_PARAMS_LIST: [OsslParam; 16] = [
 ///
 /// # Safety
 /// The `OSSL_FUNC_rand_get_ctx_params_fn` contract.
-unsafe extern "C" fn drbg_ctr_get_ctx_params(
-    vdrbg: *mut c_void,
-    params: *mut OsslParam,
-) -> c_int {
+unsafe extern "C" fn drbg_ctr_get_ctx_params(vdrbg: *mut c_void, params: *mut OsslParam) -> c_int {
     // SAFETY: the dispatch contract.
     unsafe {
         let drbg = vdrbg.cast::<ProvDrbg>();
@@ -2656,15 +2742,15 @@ unsafe extern "C" fn drbg_ctr_get_ctx_params(
             }
             return ret;
         }
-        if !p.cipher.is_null() {
-            if (*ctr).cipher_ctr.is_null()
-                || OSSL_PARAM_set_utf8_string(p.cipher, EVP_CIPHER_get0_name((*ctr).cipher_ctr)) == 0
-            {
-                if !(*drbg).lock.is_null() {
-                    CRYPTO_THREAD_unlock((*drbg).lock);
-                }
-                return ret;
+        if !p.cipher.is_null()
+            && ((*ctr).cipher_ctr.is_null()
+                || OSSL_PARAM_set_utf8_string(p.cipher, EVP_CIPHER_get0_name((*ctr).cipher_ctr))
+                    == 0)
+        {
+            if !(*drbg).lock.is_null() {
+                CRYPTO_THREAD_unlock((*drbg).lock);
             }
+            return ret;
         }
         ret = ossl_drbg_get_ctx_params(drbg, &p);
         if !(*drbg).lock.is_null() {
@@ -2691,13 +2777,22 @@ unsafe extern "C" fn drbg_ctr_gettable_ctx_params(
 /// The set-decoder's repeat raise sites, from the spec at `drbg_ctr.c.in:820-827`: `propq`,
 /// `cipher`, `df`, `prov`, `reseed_req`, `reseed_time`. The generated sites are missing for the
 /// same reason as the get-decoder's.
-const DRBG_CTR_SET_PARAMS_DECODER_KEYS: [(&'static err_sites::ErrSite, *const c_char); 6] = [
+const DRBG_CTR_SET_PARAMS_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 6] = [
     (&err_sites::PROV_DRBG_CTR_1202, OSSL_DRBG_PARAM_PROPERTIES),
     (&err_sites::PROV_DRBG_CTR_1179, OSSL_DRBG_PARAM_CIPHER),
     (&err_sites::PROV_DRBG_CTR_1284, OSSL_DRBG_PARAM_USE_DF),
-    (&err_sites::PROV_DRBG_CTR_1213, OSSL_PROV_PARAM_CORE_PROV_NAME),
-    (&err_sites::PROV_DRBG_CTR_1255, OSSL_DRBG_PARAM_RESEED_REQUESTS),
-    (&err_sites::PROV_DRBG_CTR_1266, OSSL_DRBG_PARAM_RESEED_TIME_INTERVAL),
+    (
+        &err_sites::PROV_DRBG_CTR_1213,
+        OSSL_PROV_PARAM_CORE_PROV_NAME,
+    ),
+    (
+        &err_sites::PROV_DRBG_CTR_1255,
+        OSSL_DRBG_PARAM_RESEED_REQUESTS,
+    ),
+    (
+        &err_sites::PROV_DRBG_CTR_1266,
+        OSSL_DRBG_PARAM_RESEED_TIME_INTERVAL,
+    ),
 ];
 
 /// `drbg_ctr_set_ctx_params_decoder` — generated at `drbg_ctr.c.in:820-827`.
@@ -2742,10 +2837,7 @@ static DRBG_CTR_SET_CTX_PARAMS_LIST: [OsslParam; 7] = [
 ///
 /// # Safety
 /// `ctx` is live and `p` is decoded.
-unsafe fn drbg_ctr_set_ctx_params_locked(
-    ctx: *mut ProvDrbg,
-    p: *const DrbgSetCtxParams,
-) -> c_int {
+unsafe fn drbg_ctr_set_ctx_params_locked(ctx: *mut ProvDrbg, p: *const DrbgSetCtxParams) -> c_int {
     // SAFETY: `ctx` and `p` are per the contract.
     unsafe {
         let ctr = (*ctx).data.cast::<ProvDrbgCtr>();
@@ -2778,7 +2870,10 @@ unsafe fn drbg_ctr_set_ctx_params_locked(
             {
                 return 0;
             }
-            if OPENSSL_strcasecmp(c"CTR".as_ptr(), base.add((*(*p).cipher).data_size - ctr_str_len)) != 0
+            if OPENSSL_strcasecmp(
+                c"CTR".as_ptr(),
+                base.add((*(*p).cipher).data_size - ctr_str_len),
+            ) != 0
             {
                 raise_site(&err_sites::PROV_DRBG_CTR_1105);
                 return 0;
@@ -2788,7 +2883,7 @@ unsafe fn drbg_ctr_set_ctx_params_locked(
                 return 0;
             }
             ptr::copy_nonoverlapping(
-                b"ECB\0".as_ptr().cast::<c_char>(),
+                c"ECB".as_ptr(),
                 ecb.add((*(*p).cipher).data_size - ecb_str_len),
                 4,
             );
@@ -2819,10 +2914,7 @@ unsafe fn drbg_ctr_set_ctx_params_locked(
 ///
 /// # Safety
 /// The `OSSL_FUNC_rand_set_ctx_params_fn` contract.
-unsafe extern "C" fn drbg_ctr_set_ctx_params(
-    vctx: *mut c_void,
-    params: *const OsslParam,
-) -> c_int {
+unsafe extern "C" fn drbg_ctr_set_ctx_params(vctx: *mut c_void, params: *const OsslParam) -> c_int {
     // SAFETY: the dispatch contract.
     unsafe {
         let drbg = vctx.cast::<ProvDrbg>();
@@ -2855,23 +2947,74 @@ unsafe extern "C" fn drbg_ctr_settable_ctx_params(
 
 /// `const OSSL_DISPATCH ossl_drbg_ctr_functions[]` — `drbg_ctr.c:856-879`, sixteen entries.
 pub(crate) static DRBG_CTR_FUNCTIONS: [OsslDispatch; 17] = [
-    OsslDispatch { function_id: OSSL_FUNC_RAND_NEWCTX, function: drbg_ctr_new_wrapper as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_FREECTX, function: drbg_ctr_free as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_INSTANTIATE, function: drbg_ctr_instantiate_wrapper as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_UNINSTANTIATE, function: drbg_ctr_uninstantiate_wrapper as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_GENERATE, function: drbg_ctr_generate_wrapper as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_RESEED, function: drbg_ctr_reseed_wrapper as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_ENABLE_LOCKING, function: ossl_drbg_enable_locking as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_LOCK, function: ossl_drbg_lock as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_UNLOCK, function: ossl_drbg_unlock as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_SETTABLE_CTX_PARAMS, function: drbg_ctr_settable_ctx_params as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_SET_CTX_PARAMS, function: drbg_ctr_set_ctx_params as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_GETTABLE_CTX_PARAMS, function: drbg_ctr_gettable_ctx_params as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_GET_CTX_PARAMS, function: drbg_ctr_get_ctx_params as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_VERIFY_ZEROIZATION, function: drbg_ctr_verify_zeroization as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_GET_SEED, function: ossl_drbg_get_seed as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_CLEAR_SEED, function: ossl_drbg_clear_seed as *mut c_void },
-    OsslDispatch { function_id: OSSL_DISPATCH_END, function: ptr::null_mut() },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_NEWCTX,
+        function: drbg_ctr_new_wrapper as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_FREECTX,
+        function: drbg_ctr_free as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_INSTANTIATE,
+        function: drbg_ctr_instantiate_wrapper as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_UNINSTANTIATE,
+        function: drbg_ctr_uninstantiate_wrapper as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_GENERATE,
+        function: drbg_ctr_generate_wrapper as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_RESEED,
+        function: drbg_ctr_reseed_wrapper as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_ENABLE_LOCKING,
+        function: ossl_drbg_enable_locking as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_LOCK,
+        function: ossl_drbg_lock as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_UNLOCK,
+        function: ossl_drbg_unlock as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_SETTABLE_CTX_PARAMS,
+        function: drbg_ctr_settable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_SET_CTX_PARAMS,
+        function: drbg_ctr_set_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_GETTABLE_CTX_PARAMS,
+        function: drbg_ctr_gettable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_GET_CTX_PARAMS,
+        function: drbg_ctr_get_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_VERIFY_ZEROIZATION,
+        function: drbg_ctr_verify_zeroization as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_GET_SEED,
+        function: ossl_drbg_get_seed as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_CLEAR_SEED,
+        function: ossl_drbg_clear_seed as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_DISPATCH_END,
+        function: ptr::null_mut(),
+    },
 ];
 
 // =============================================================================================
@@ -2910,6 +3053,7 @@ pub(crate) struct ProvDrbgHash {
 ///
 /// # Safety
 /// `drbg` is live with a `ProvDrbgHash` in `data`.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
 unsafe fn hash_df(
     drbg: *mut ProvDrbg,
     out: *mut c_uchar,
@@ -2928,6 +3072,7 @@ unsafe fn hash_df(
         let vtmp = (*hash).vtmp.as_mut_ptr();
         let mut tmp = [0u8; 1 + 4 + 1];
         let mut tmp_sz = 0usize;
+        let mut out = out;
         let mut outlen = (*drbg).seedlen;
         let num_bits_returned = outlen * 8;
 
@@ -2951,9 +3096,9 @@ unsafe fn hash_df(
             let md = ossl_prov_digest_md(&(*hash).digest);
             if EVP_DigestInit_ex(ctx, md, ptr::null_mut()) == 0
                 || EVP_DigestUpdate(ctx, tmp.as_ptr().cast(), tmp_sz) == 0
-                || EVP_DigestUpdate(ctx, in_, inlen) == 0
-                || (!in2.is_null() && EVP_DigestUpdate(ctx, in2, in2len) == 0)
-                || (!in3.is_null() && EVP_DigestUpdate(ctx, in3, in3len) == 0)
+                || EVP_DigestUpdate(ctx, in_.cast::<c_void>(), inlen) == 0
+                || (!in2.is_null() && EVP_DigestUpdate(ctx, in2.cast::<c_void>(), in2len) == 0)
+                || (!in3.is_null() && EVP_DigestUpdate(ctx, in3.cast::<c_void>(), in3len) == 0)
             {
                 return 0;
             }
@@ -2992,7 +3137,19 @@ unsafe fn hash_df1(
     in1len: usize,
 ) -> c_int {
     // SAFETY: the arguments are forwarded under `hash_df`'s contract.
-    unsafe { hash_df(drbg, out, in_byte, in1, in1len, ptr::null(), 0, ptr::null(), 0) }
+    unsafe {
+        hash_df(
+            drbg,
+            out,
+            in_byte,
+            in1,
+            in1len,
+            ptr::null(),
+            0,
+            ptr::null(),
+            0,
+        )
+    }
 }
 
 /// `static int add_bytes(PROV_DRBG *drbg, unsigned char *dst, unsigned char *in, size_t inlen)`
@@ -3055,15 +3212,20 @@ unsafe fn add_hash_to_v(
         let md = ossl_prov_digest_md(&(*hash).digest);
         let seedlen = (*drbg).seedlen;
         if EVP_DigestInit_ex(ctx, md, ptr::null_mut()) == 0
-            || EVP_DigestUpdate(ctx, &inbyte, 1) == 0
-            || EVP_DigestUpdate(ctx, (*hash).v.as_ptr(), seedlen) == 0
-            || (!adin.is_null() && EVP_DigestUpdate(ctx, adin, adinlen) == 0)
+            || EVP_DigestUpdate(ctx, (&inbyte as *const c_uchar).cast::<c_void>(), 1) == 0
+            || EVP_DigestUpdate(ctx, (*hash).v.as_ptr().cast::<c_void>(), seedlen) == 0
+            || (!adin.is_null() && EVP_DigestUpdate(ctx, adin.cast::<c_void>(), adinlen) == 0)
             || EVP_DigestFinal(ctx, (*hash).vtmp.as_mut_ptr(), ptr::null_mut()) == 0
         {
             return 0;
         }
         let blocklen = (*hash).blocklen;
-        add_bytes(drbg, (*hash).v.as_mut_ptr(), (*hash).vtmp.as_mut_ptr(), blocklen)
+        add_bytes(
+            drbg,
+            (*hash).v.as_mut_ptr(),
+            (*hash).vtmp.as_mut_ptr(),
+            blocklen,
+        )
     }
 }
 
@@ -3086,7 +3248,8 @@ unsafe fn hash_gen(drbg: *mut ProvDrbg, out: *mut c_uchar, outlen: usize) -> c_i
         loop {
             let md = ossl_prov_digest_md(&(*hash).digest);
             if EVP_DigestInit_ex((*hash).ctx, md, ptr::null_mut()) == 0
-                || EVP_DigestUpdate((*hash).ctx, (*hash).vtmp.as_ptr(), seedlen) == 0
+                || EVP_DigestUpdate((*hash).ctx, (*hash).vtmp.as_ptr().cast::<c_void>(), seedlen)
+                    == 0
             {
                 return 0;
             }
@@ -3106,7 +3269,12 @@ unsafe fn hash_gen(drbg: *mut ProvDrbg, out: *mut c_uchar, outlen: usize) -> c_i
                 }
                 out = out.add((*hash).blocklen);
             }
-            add_bytes(drbg, (*hash).vtmp.as_mut_ptr(), ptr::addr_of!(one).cast_mut(), 1);
+            add_bytes(
+                drbg,
+                (*hash).vtmp.as_mut_ptr(),
+                ptr::addr_of!(one).cast_mut(),
+                1,
+            );
         }
         1
     }
@@ -3118,7 +3286,7 @@ unsafe fn hash_gen(drbg: *mut ProvDrbg, out: *mut c_uchar, outlen: usize) -> c_i
 ///
 /// # Safety
 /// `drbg` is live with a `ProvDrbgHash` in `data`.
-unsafe fn drbg_hash_instantiate(
+unsafe extern "C" fn drbg_hash_instantiate(
     drbg: *mut ProvDrbg,
     ent: *const c_uchar,
     ent_len: usize,
@@ -3201,7 +3369,7 @@ unsafe extern "C" fn drbg_hash_instantiate_wrapper(
 ///
 /// # Safety
 /// `drbg` is live with a `ProvDrbgHash` in `data`.
-unsafe fn drbg_hash_reseed(
+unsafe extern "C" fn drbg_hash_reseed(
     drbg: *mut ProvDrbg,
     ent: *const c_uchar,
     ent_len: usize,
@@ -3271,7 +3439,7 @@ unsafe extern "C" fn drbg_hash_reseed_wrapper(
 ///
 /// # Safety
 /// `drbg` is live with a `ProvDrbgHash` in `data`; `out` writable for `outlen`.
-unsafe fn drbg_hash_generate(
+unsafe extern "C" fn drbg_hash_generate(
     drbg: *mut ProvDrbg,
     out: *mut c_uchar,
     outlen: usize,
@@ -3304,7 +3472,13 @@ unsafe fn drbg_hash_generate(
             return 0;
         }
         // (Step 5) V = (V + H + C + reseed_counter) mod 2^seedlen_bits.
-        if add_bytes(drbg, (*hash).v.as_mut_ptr(), (*hash).c.as_mut_ptr(), (*drbg).seedlen) == 0 {
+        if add_bytes(
+            drbg,
+            (*hash).v.as_mut_ptr(),
+            (*hash).c.as_mut_ptr(),
+            (*drbg).seedlen,
+        ) == 0
+        {
             return 0;
         }
         add_bytes(drbg, (*hash).v.as_mut_ptr(), counter.as_mut_ptr(), 4)
@@ -3344,7 +3518,7 @@ unsafe extern "C" fn drbg_hash_generate_wrapper(
 ///
 /// # Safety
 /// `drbg` is live with a `ProvDrbgHash` in `data`.
-unsafe fn drbg_hash_uninstantiate(drbg: *mut ProvDrbg) -> c_int {
+unsafe extern "C" fn drbg_hash_uninstantiate(drbg: *mut ProvDrbg) -> c_int {
     // SAFETY: `drbg` is live per the contract.
     unsafe {
         let hash = (*drbg).data.cast::<ProvDrbgHash>();
@@ -3404,7 +3578,7 @@ unsafe extern "C" fn drbg_hash_verify_zeroization(vdrbg: *mut c_void) -> c_int {
 ///
 /// # Safety
 /// `ctx` must be live.
-unsafe fn drbg_hash_new(ctx: *mut ProvDrbg) -> c_int {
+unsafe extern "C" fn drbg_hash_new(ctx: *mut ProvDrbg) -> c_int {
     // SAFETY: `ctx` is live per the contract.
     unsafe {
         let hash = CRYPTO_secure_zalloc(core::mem::size_of::<ProvDrbgHash>(), FILE_DRBG_HASH, LINE)
@@ -3482,21 +3656,36 @@ unsafe extern "C" fn drbg_hash_free(vdrbg: *mut c_void) {
 /// The get-decoder's repeat raise sites, from the spec at `drbg_hash.c.in:480-496`: `digest`,
 /// `state`, `str`, `maxreq`, `minentlen`, `maxentlen`, `minnonlen`, `maxnonlen`, `maxperlen`,
 /// `maxadlen`, `reseed_cnt`, `reseed_time`, `reseed_req`, `reseed_int` (`ind` is absent).
-const DRBG_HASH_GET_PARAMS_DECODER_KEYS: [(&'static err_sites::ErrSite, *const c_char); 14] = [
+const DRBG_HASH_GET_PARAMS_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 14] = [
     (&err_sites::PROV_DRBG_HASH_540, OSSL_DRBG_PARAM_DIGEST),
     (&err_sites::PROV_DRBG_HASH_780, OSSL_RAND_PARAM_STATE),
     (&err_sites::PROV_DRBG_HASH_791, OSSL_RAND_PARAM_STRENGTH),
     (&err_sites::PROV_DRBG_HASH_624, OSSL_RAND_PARAM_MAX_REQUEST),
-    (&err_sites::PROV_DRBG_HASH_650, OSSL_DRBG_PARAM_MIN_ENTROPYLEN),
-    (&err_sites::PROV_DRBG_HASH_591, OSSL_DRBG_PARAM_MAX_ENTROPYLEN),
+    (
+        &err_sites::PROV_DRBG_HASH_650,
+        OSSL_DRBG_PARAM_MIN_ENTROPYLEN,
+    ),
+    (
+        &err_sites::PROV_DRBG_HASH_591,
+        OSSL_DRBG_PARAM_MAX_ENTROPYLEN,
+    ),
     (&err_sites::PROV_DRBG_HASH_661, OSSL_DRBG_PARAM_MIN_NONCELEN),
     (&err_sites::PROV_DRBG_HASH_602, OSSL_DRBG_PARAM_MAX_NONCELEN),
     (&err_sites::PROV_DRBG_HASH_613, OSSL_DRBG_PARAM_MAX_PERSLEN),
     (&err_sites::PROV_DRBG_HASH_580, OSSL_DRBG_PARAM_MAX_ADINLEN),
-    (&err_sites::PROV_DRBG_HASH_704, OSSL_DRBG_PARAM_RESEED_COUNTER),
+    (
+        &err_sites::PROV_DRBG_HASH_704,
+        OSSL_DRBG_PARAM_RESEED_COUNTER,
+    ),
     (&err_sites::PROV_DRBG_HASH_751, OSSL_DRBG_PARAM_RESEED_TIME),
-    (&err_sites::PROV_DRBG_HASH_715, OSSL_DRBG_PARAM_RESEED_REQUESTS),
-    (&err_sites::PROV_DRBG_HASH_742, OSSL_DRBG_PARAM_RESEED_TIME_INTERVAL),
+    (
+        &err_sites::PROV_DRBG_HASH_715,
+        OSSL_DRBG_PARAM_RESEED_REQUESTS,
+    ),
+    (
+        &err_sites::PROV_DRBG_HASH_742,
+        OSSL_DRBG_PARAM_RESEED_TIME_INTERVAL,
+    ),
 ];
 
 /// `drbg_hash_get_ctx_params_decoder` — generated at `drbg_hash.c.in:480-496`.
@@ -3516,7 +3705,8 @@ unsafe fn drbg_hash_get_ctx_params_decoder(
         (*r).digest = OSSL_PARAM_locate_const(params, OSSL_DRBG_PARAM_DIGEST) as *mut OsslParam;
         (*r).state = OSSL_PARAM_locate_const(params, OSSL_RAND_PARAM_STATE) as *mut OsslParam;
         (*r).str = OSSL_PARAM_locate_const(params, OSSL_RAND_PARAM_STRENGTH) as *mut OsslParam;
-        (*r).maxreq = OSSL_PARAM_locate_const(params, OSSL_RAND_PARAM_MAX_REQUEST) as *mut OsslParam;
+        (*r).maxreq =
+            OSSL_PARAM_locate_const(params, OSSL_RAND_PARAM_MAX_REQUEST) as *mut OsslParam;
         (*r).minentlen =
             OSSL_PARAM_locate_const(params, OSSL_DRBG_PARAM_MIN_ENTROPYLEN) as *mut OsslParam;
         (*r).maxentlen =
@@ -3564,10 +3754,7 @@ static DRBG_HASH_GET_CTX_PARAMS_LIST: [OsslParam; 15] = [
 ///
 /// # Safety
 /// The `OSSL_FUNC_rand_get_ctx_params_fn` contract.
-unsafe extern "C" fn drbg_hash_get_ctx_params(
-    vdrbg: *mut c_void,
-    params: *mut OsslParam,
-) -> c_int {
+unsafe extern "C" fn drbg_hash_get_ctx_params(vdrbg: *mut c_void, params: *mut OsslParam) -> c_int {
     // SAFETY: the dispatch contract.
     unsafe {
         let drbg = vdrbg.cast::<ProvDrbg>();
@@ -3629,7 +3816,6 @@ unsafe fn drbg_fetch_digest_from_prov(
 ) -> c_int {
     // SAFETY: the arguments are per the contract.
     unsafe {
-        let mut md: *mut EvpMd = ptr::null_mut();
         let mut ret = 0;
         // #ifndef FIPS_MODULE
         let propquery = if propq.is_null() {
@@ -3648,7 +3834,7 @@ unsafe fn drbg_fetch_digest_from_prov(
         if (*(*p).digest).data_type != crate::params::OSSL_PARAM_UTF8_STRING {
             return ret;
         }
-        md = EVP_MD_fetch(libctx, (*(*p).digest).data.cast(), propquery);
+        let md: *mut EvpMd = EVP_MD_fetch(libctx, (*(*p).digest).data.cast(), propquery);
         if !md.is_null() {
             EVP_MD_free(*digest);
             *digest = md;
@@ -3663,10 +3849,7 @@ unsafe fn drbg_fetch_digest_from_prov(
 ///
 /// # Safety
 /// `ctx` is live and `p` is decoded.
-unsafe fn drbg_hash_set_ctx_params_locked(
-    ctx: *mut ProvDrbg,
-    p: *const DrbgSetCtxParams,
-) -> c_int {
+unsafe fn drbg_hash_set_ctx_params_locked(ctx: *mut ProvDrbg, p: *const DrbgSetCtxParams) -> c_int {
     // SAFETY: `ctx` and `p` are per the contract.
     unsafe {
         let hash = (*ctx).data.cast::<ProvDrbgHash>();
@@ -3687,8 +3870,13 @@ unsafe fn drbg_hash_set_ctx_params_locked(
         if drbg_fetch_digest_from_prov(p, libctx, &mut prov_md, propq) == 0 {
             let _ = crate::runtime::err::ERR_pop_to_mark();
             // Fall back to the full implementation search.
-            if ossl_prov_digest_load(&mut (*hash).digest, (*p).digest, (*p).propq, (*p).engine, libctx)
-                == 0
+            if ossl_prov_digest_load(
+                &mut (*hash).digest,
+                (*p).digest,
+                (*p).propq,
+                (*p).engine,
+                libctx,
+            ) == 0
             {
                 return 0;
             }
@@ -3731,13 +3919,22 @@ unsafe fn drbg_hash_set_ctx_params_locked(
 
 /// The hash set-decoder's repeat raise sites, from the spec at `drbg_hash.c.in:634-642`: `propq`,
 /// `engine` (hidden), `digest`, `prov`, `reseed_req`, `reseed_time` (`ind_d` is absent).
-const DRBG_HASH_SET_PARAMS_DECODER_KEYS: [(&'static err_sites::ErrSite, *const c_char); 6] = [
+const DRBG_HASH_SET_PARAMS_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 6] = [
     (&err_sites::PROV_DRBG_HASH_1060, OSSL_DRBG_PARAM_PROPERTIES),
     (&err_sites::PROV_DRBG_HASH_1037, OSSL_ALG_PARAM_ENGINE),
     (&err_sites::PROV_DRBG_HASH_1021, OSSL_DRBG_PARAM_DIGEST),
-    (&err_sites::PROV_DRBG_HASH_1071, OSSL_PROV_PARAM_CORE_PROV_NAME),
-    (&err_sites::PROV_DRBG_HASH_1113, OSSL_DRBG_PARAM_RESEED_REQUESTS),
-    (&err_sites::PROV_DRBG_HASH_1124, OSSL_DRBG_PARAM_RESEED_TIME_INTERVAL),
+    (
+        &err_sites::PROV_DRBG_HASH_1071,
+        OSSL_PROV_PARAM_CORE_PROV_NAME,
+    ),
+    (
+        &err_sites::PROV_DRBG_HASH_1113,
+        OSSL_DRBG_PARAM_RESEED_REQUESTS,
+    ),
+    (
+        &err_sites::PROV_DRBG_HASH_1124,
+        OSSL_DRBG_PARAM_RESEED_TIME_INTERVAL,
+    ),
 ];
 
 /// `drbg_hash_set_ctx_params_decoder` — generated at `drbg_hash.c.in:634-642`.
@@ -3816,23 +4013,74 @@ unsafe extern "C" fn drbg_hash_settable_ctx_params(
 
 /// `const OSSL_DISPATCH ossl_drbg_hash_functions[]` — `drbg_hash.c:671-694`, sixteen entries.
 pub(crate) static DRBG_HASH_FUNCTIONS: [OsslDispatch; 17] = [
-    OsslDispatch { function_id: OSSL_FUNC_RAND_NEWCTX, function: drbg_hash_new_wrapper as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_FREECTX, function: drbg_hash_free as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_INSTANTIATE, function: drbg_hash_instantiate_wrapper as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_UNINSTANTIATE, function: drbg_hash_uninstantiate_wrapper as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_GENERATE, function: drbg_hash_generate_wrapper as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_RESEED, function: drbg_hash_reseed_wrapper as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_ENABLE_LOCKING, function: ossl_drbg_enable_locking as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_LOCK, function: ossl_drbg_lock as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_UNLOCK, function: ossl_drbg_unlock as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_SETTABLE_CTX_PARAMS, function: drbg_hash_settable_ctx_params as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_SET_CTX_PARAMS, function: drbg_hash_set_ctx_params as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_GETTABLE_CTX_PARAMS, function: drbg_hash_gettable_ctx_params as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_GET_CTX_PARAMS, function: drbg_hash_get_ctx_params as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_VERIFY_ZEROIZATION, function: drbg_hash_verify_zeroization as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_GET_SEED, function: ossl_drbg_get_seed as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_CLEAR_SEED, function: ossl_drbg_clear_seed as *mut c_void },
-    OsslDispatch { function_id: OSSL_DISPATCH_END, function: ptr::null_mut() },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_NEWCTX,
+        function: drbg_hash_new_wrapper as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_FREECTX,
+        function: drbg_hash_free as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_INSTANTIATE,
+        function: drbg_hash_instantiate_wrapper as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_UNINSTANTIATE,
+        function: drbg_hash_uninstantiate_wrapper as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_GENERATE,
+        function: drbg_hash_generate_wrapper as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_RESEED,
+        function: drbg_hash_reseed_wrapper as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_ENABLE_LOCKING,
+        function: ossl_drbg_enable_locking as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_LOCK,
+        function: ossl_drbg_lock as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_UNLOCK,
+        function: ossl_drbg_unlock as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_SETTABLE_CTX_PARAMS,
+        function: drbg_hash_settable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_SET_CTX_PARAMS,
+        function: drbg_hash_set_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_GETTABLE_CTX_PARAMS,
+        function: drbg_hash_gettable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_GET_CTX_PARAMS,
+        function: drbg_hash_get_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_VERIFY_ZEROIZATION,
+        function: drbg_hash_verify_zeroization as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_GET_SEED,
+        function: ossl_drbg_get_seed as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_CLEAR_SEED,
+        function: ossl_drbg_clear_seed as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_DISPATCH_END,
+        function: ptr::null_mut(),
+    },
 ];
 
 // =============================================================================================
@@ -3860,6 +4108,7 @@ pub(crate) struct ProvDrbgHmac {
 ///
 /// # Safety
 /// `hmac` is live and the inputs are readable for their stated lengths (or NULL).
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
 unsafe fn do_hmac(
     hmac: *mut ProvDrbgHmac,
     inbyte: c_uchar,
@@ -3881,14 +4130,24 @@ unsafe fn do_hmac(
             || !(in1.is_null() || in1len == 0 || EVP_MAC_update(ctx, in1, in1len) != 0)
             || !(in2.is_null() || in2len == 0 || EVP_MAC_update(ctx, in2, in2len) != 0)
             || !(in3.is_null() || in3len == 0 || EVP_MAC_update(ctx, in3, in3len) != 0)
-            || EVP_MAC_final(ctx, (*hmac).k.as_mut_ptr(), ptr::null_mut(), EVP_MAX_MD_SIZE) == 0
+            || EVP_MAC_final(
+                ctx,
+                (*hmac).k.as_mut_ptr(),
+                ptr::null_mut(),
+                EVP_MAX_MD_SIZE,
+            ) == 0
         {
             return 0;
         }
         // V = HMAC(K, V).
         if EVP_MAC_init(ctx, (*hmac).k.as_ptr(), blocklen, ptr::null()) == 0
             || EVP_MAC_update(ctx, (*hmac).v.as_ptr(), blocklen) == 0
-            || EVP_MAC_final(ctx, (*hmac).v.as_mut_ptr(), ptr::null_mut(), EVP_MAX_MD_SIZE) == 0
+            || EVP_MAC_final(
+                ctx,
+                (*hmac).v.as_mut_ptr(),
+                ptr::null_mut(),
+                EVP_MAX_MD_SIZE,
+            ) == 0
         {
             return 0;
         }
@@ -3965,7 +4224,7 @@ pub(crate) unsafe fn ossl_drbg_hmac_init(
 ///
 /// # Safety
 /// `drbg` is live with a `ProvDrbgHmac` in `data`.
-unsafe fn drbg_hmac_instantiate(
+unsafe extern "C" fn drbg_hmac_instantiate(
     drbg: *mut ProvDrbg,
     ent: *const c_uchar,
     ent_len: usize,
@@ -4028,7 +4287,7 @@ unsafe extern "C" fn drbg_hmac_instantiate_wrapper(
 ///
 /// # Safety
 /// `drbg` is live with a `ProvDrbgHmac` in `data`.
-unsafe fn drbg_hmac_reseed(
+unsafe extern "C" fn drbg_hmac_reseed(
     drbg: *mut ProvDrbg,
     ent: *const c_uchar,
     ent_len: usize,
@@ -4098,7 +4357,9 @@ pub(crate) unsafe fn ossl_drbg_hmac_generate(
         let mut outlen = outlen;
 
         // (Step 2) if adin != NULL then (K,V) = HMAC_DRBG_Update(adin, K, V).
-        if !adin.is_null() && adin_len > 0 && drbg_hmac_update(hmac, adin, adin_len, ptr::null(), 0, ptr::null(), 0) == 0
+        if !adin.is_null()
+            && adin_len > 0
+            && drbg_hmac_update(hmac, adin, adin_len, ptr::null(), 0, ptr::null(), 0) == 0
         {
             return 0;
         }
@@ -4116,7 +4377,12 @@ pub(crate) unsafe fn ossl_drbg_hmac_generate(
                 }
                 temp = out;
             } else {
-                if EVP_MAC_final(ctx, (*hmac).v.as_mut_ptr(), ptr::null_mut(), EVP_MAX_MD_SIZE) == 0
+                if EVP_MAC_final(
+                    ctx,
+                    (*hmac).v.as_mut_ptr(),
+                    ptr::null_mut(),
+                    EVP_MAX_MD_SIZE,
+                ) == 0
                 {
                     return 0;
                 }
@@ -4140,7 +4406,7 @@ pub(crate) unsafe fn ossl_drbg_hmac_generate(
 ///
 /// # Safety
 /// `drbg` is live with a `ProvDrbgHmac` in `data`.
-unsafe fn drbg_hmac_generate(
+unsafe extern "C" fn drbg_hmac_generate(
     drbg: *mut ProvDrbg,
     out: *mut c_uchar,
     outlen: usize,
@@ -4149,7 +4415,13 @@ unsafe fn drbg_hmac_generate(
 ) -> c_int {
     // SAFETY: `drbg` is live per the contract.
     unsafe {
-        ossl_drbg_hmac_generate((*drbg).data.cast::<ProvDrbgHmac>(), out, outlen, adin, adin_len)
+        ossl_drbg_hmac_generate(
+            (*drbg).data.cast::<ProvDrbgHmac>(),
+            out,
+            outlen,
+            adin,
+            adin_len,
+        )
     }
 }
 
@@ -4186,7 +4458,7 @@ unsafe extern "C" fn drbg_hmac_generate_wrapper(
 ///
 /// # Safety
 /// `drbg` is live with a `ProvDrbgHmac` in `data`.
-unsafe fn drbg_hmac_uninstantiate(drbg: *mut ProvDrbg) -> c_int {
+unsafe extern "C" fn drbg_hmac_uninstantiate(drbg: *mut ProvDrbg) -> c_int {
     // SAFETY: `drbg` is live per the contract.
     unsafe {
         let hmac = (*drbg).data.cast::<ProvDrbgHmac>();
@@ -4242,7 +4514,7 @@ unsafe extern "C" fn drbg_hmac_verify_zeroization(vdrbg: *mut c_void) -> c_int {
 ///
 /// # Safety
 /// `drbg` must be live.
-unsafe fn drbg_hmac_new(drbg: *mut ProvDrbg) -> c_int {
+unsafe extern "C" fn drbg_hmac_new(drbg: *mut ProvDrbg) -> c_int {
     // SAFETY: `drbg` is live per the contract.
     unsafe {
         let hmac = CRYPTO_secure_zalloc(core::mem::size_of::<ProvDrbgHmac>(), FILE_DRBG_HMAC, LINE)
@@ -4320,22 +4592,37 @@ unsafe extern "C" fn drbg_hmac_free(vdrbg: *mut c_void) {
 /// The get-decoder's repeat raise sites, from the spec at `drbg_hmac.c.in:372-389`: `mac`,
 /// `digest`, `state`, `str`, `maxreq`, `minentlen`, `maxentlen`, `minnonlen`, `maxnonlen`,
 /// `maxperlen`, `maxadlen`, `reseed_cnt`, `reseed_time`, `reseed_req`, `reseed_int`.
-const DRBG_HMAC_GET_PARAMS_DECODER_KEYS: [(&'static err_sites::ErrSite, *const c_char); 15] = [
+const DRBG_HMAC_GET_PARAMS_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 15] = [
     (&err_sites::PROV_DRBG_HMAC_468, OSSL_DRBG_PARAM_MAC),
     (&err_sites::PROV_DRBG_HMAC_434, OSSL_DRBG_PARAM_DIGEST),
     (&err_sites::PROV_DRBG_HMAC_687, OSSL_RAND_PARAM_STATE),
     (&err_sites::PROV_DRBG_HMAC_698, OSSL_RAND_PARAM_STRENGTH),
     (&err_sites::PROV_DRBG_HMAC_531, OSSL_RAND_PARAM_MAX_REQUEST),
-    (&err_sites::PROV_DRBG_HMAC_557, OSSL_DRBG_PARAM_MIN_ENTROPYLEN),
-    (&err_sites::PROV_DRBG_HMAC_498, OSSL_DRBG_PARAM_MAX_ENTROPYLEN),
+    (
+        &err_sites::PROV_DRBG_HMAC_557,
+        OSSL_DRBG_PARAM_MIN_ENTROPYLEN,
+    ),
+    (
+        &err_sites::PROV_DRBG_HMAC_498,
+        OSSL_DRBG_PARAM_MAX_ENTROPYLEN,
+    ),
     (&err_sites::PROV_DRBG_HMAC_568, OSSL_DRBG_PARAM_MIN_NONCELEN),
     (&err_sites::PROV_DRBG_HMAC_509, OSSL_DRBG_PARAM_MAX_NONCELEN),
     (&err_sites::PROV_DRBG_HMAC_520, OSSL_DRBG_PARAM_MAX_PERSLEN),
     (&err_sites::PROV_DRBG_HMAC_487, OSSL_DRBG_PARAM_MAX_ADINLEN),
-    (&err_sites::PROV_DRBG_HMAC_611, OSSL_DRBG_PARAM_RESEED_COUNTER),
+    (
+        &err_sites::PROV_DRBG_HMAC_611,
+        OSSL_DRBG_PARAM_RESEED_COUNTER,
+    ),
     (&err_sites::PROV_DRBG_HMAC_658, OSSL_DRBG_PARAM_RESEED_TIME),
-    (&err_sites::PROV_DRBG_HMAC_622, OSSL_DRBG_PARAM_RESEED_REQUESTS),
-    (&err_sites::PROV_DRBG_HMAC_649, OSSL_DRBG_PARAM_RESEED_TIME_INTERVAL),
+    (
+        &err_sites::PROV_DRBG_HMAC_622,
+        OSSL_DRBG_PARAM_RESEED_REQUESTS,
+    ),
+    (
+        &err_sites::PROV_DRBG_HMAC_649,
+        OSSL_DRBG_PARAM_RESEED_TIME_INTERVAL,
+    ),
 ];
 
 /// `drbg_hmac_get_ctx_params_decoder` — generated at `drbg_hmac.c.in:372-389`.
@@ -4356,7 +4643,8 @@ unsafe fn drbg_hmac_get_ctx_params_decoder(
         (*r).digest = OSSL_PARAM_locate_const(params, OSSL_DRBG_PARAM_DIGEST) as *mut OsslParam;
         (*r).state = OSSL_PARAM_locate_const(params, OSSL_RAND_PARAM_STATE) as *mut OsslParam;
         (*r).str = OSSL_PARAM_locate_const(params, OSSL_RAND_PARAM_STRENGTH) as *mut OsslParam;
-        (*r).maxreq = OSSL_PARAM_locate_const(params, OSSL_RAND_PARAM_MAX_REQUEST) as *mut OsslParam;
+        (*r).maxreq =
+            OSSL_PARAM_locate_const(params, OSSL_RAND_PARAM_MAX_REQUEST) as *mut OsslParam;
         (*r).minentlen =
             OSSL_PARAM_locate_const(params, OSSL_DRBG_PARAM_MIN_ENTROPYLEN) as *mut OsslParam;
         (*r).maxentlen =
@@ -4405,10 +4693,7 @@ static DRBG_HMAC_GET_CTX_PARAMS_LIST: [OsslParam; 16] = [
 ///
 /// # Safety
 /// The `OSSL_FUNC_rand_get_ctx_params_fn` contract.
-unsafe extern "C" fn drbg_hmac_get_ctx_params(
-    vdrbg: *mut c_void,
-    params: *mut OsslParam,
-) -> c_int {
+unsafe extern "C" fn drbg_hmac_get_ctx_params(vdrbg: *mut c_void, params: *mut OsslParam) -> c_int {
     // SAFETY: the dispatch contract.
     unsafe {
         let drbg = vdrbg.cast::<ProvDrbg>();
@@ -4486,7 +4771,7 @@ unsafe fn drbg_fetch_algs_from_prov(
 ) -> c_int {
     // SAFETY: the arguments are per the contract.
     unsafe {
-        let mut md: *mut EvpMd = ptr::null_mut();
+        let md: *mut EvpMd;
         let mut ret = 0;
         // #ifndef FIPS_MODULE
         let propquery = if propq.is_null() {
@@ -4535,10 +4820,7 @@ unsafe fn drbg_fetch_algs_from_prov(
 ///
 /// # Safety
 /// `ctx` is live and `p` is decoded.
-unsafe fn drbg_hmac_set_ctx_params_locked(
-    ctx: *mut ProvDrbg,
-    p: *const DrbgSetCtxParams,
-) -> c_int {
+unsafe fn drbg_hmac_set_ctx_params_locked(ctx: *mut ProvDrbg, p: *const DrbgSetCtxParams) -> c_int {
     // SAFETY: `ctx` and `p` are per the contract.
     unsafe {
         let hmac = (*ctx).data.cast::<ProvDrbgHmac>();
@@ -4562,8 +4844,13 @@ unsafe fn drbg_hmac_set_ctx_params_locked(
             // must be released to stay leak-free.
             EVP_MD_free(prov_md);
             // Fall back to the full implementation search.
-            if ossl_prov_digest_load(&mut (*hmac).digest, (*p).digest, (*p).propq, (*p).engine, libctx)
-                == 0
+            if ossl_prov_digest_load(
+                &mut (*hmac).digest,
+                (*p).digest,
+                (*p).propq,
+                (*p).engine,
+                libctx,
+            ) == 0
             {
                 return 0;
             }
@@ -4633,14 +4920,23 @@ unsafe fn drbg_hmac_set_ctx_params_locked(
 
 /// The HMAC set-decoder's repeat raise sites, from the spec at `drbg_hmac.c.in:564-573`: `propq`,
 /// `engine` (hidden), `digest`, `mac`, `prov`, `reseed_req`, `reseed_time` (`ind_d` absent).
-const DRBG_HMAC_SET_PARAMS_DECODER_KEYS: [(&'static err_sites::ErrSite, *const c_char); 7] = [
+const DRBG_HMAC_SET_PARAMS_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 7] = [
     (&err_sites::PROV_DRBG_HMAC_1017, OSSL_DRBG_PARAM_PROPERTIES),
     (&err_sites::PROV_DRBG_HMAC_983, OSSL_ALG_PARAM_ENGINE),
     (&err_sites::PROV_DRBG_HMAC_967, OSSL_DRBG_PARAM_DIGEST),
     (&err_sites::PROV_DRBG_HMAC_994, OSSL_DRBG_PARAM_MAC),
-    (&err_sites::PROV_DRBG_HMAC_1028, OSSL_PROV_PARAM_CORE_PROV_NAME),
-    (&err_sites::PROV_DRBG_HMAC_1070, OSSL_DRBG_PARAM_RESEED_REQUESTS),
-    (&err_sites::PROV_DRBG_HMAC_1081, OSSL_DRBG_PARAM_RESEED_TIME_INTERVAL),
+    (
+        &err_sites::PROV_DRBG_HMAC_1028,
+        OSSL_PROV_PARAM_CORE_PROV_NAME,
+    ),
+    (
+        &err_sites::PROV_DRBG_HMAC_1070,
+        OSSL_DRBG_PARAM_RESEED_REQUESTS,
+    ),
+    (
+        &err_sites::PROV_DRBG_HMAC_1081,
+        OSSL_DRBG_PARAM_RESEED_TIME_INTERVAL,
+    ),
 ];
 
 /// `drbg_hmac_set_ctx_params_decoder` — generated at `drbg_hmac.c.in:564-573`.
@@ -4721,23 +5017,74 @@ unsafe extern "C" fn drbg_hmac_settable_ctx_params(
 
 /// `const OSSL_DISPATCH ossl_drbg_ossl_hmac_functions[]` — `drbg_hmac.c:602-625`, sixteen entries.
 pub(crate) static DRBG_HMAC_FUNCTIONS: [OsslDispatch; 17] = [
-    OsslDispatch { function_id: OSSL_FUNC_RAND_NEWCTX, function: drbg_hmac_new_wrapper as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_FREECTX, function: drbg_hmac_free as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_INSTANTIATE, function: drbg_hmac_instantiate_wrapper as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_UNINSTANTIATE, function: drbg_hmac_uninstantiate_wrapper as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_GENERATE, function: drbg_hmac_generate_wrapper as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_RESEED, function: drbg_hmac_reseed_wrapper as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_ENABLE_LOCKING, function: ossl_drbg_enable_locking as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_LOCK, function: ossl_drbg_lock as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_UNLOCK, function: ossl_drbg_unlock as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_SETTABLE_CTX_PARAMS, function: drbg_hmac_settable_ctx_params as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_SET_CTX_PARAMS, function: drbg_hmac_set_ctx_params as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_GETTABLE_CTX_PARAMS, function: drbg_hmac_gettable_ctx_params as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_GET_CTX_PARAMS, function: drbg_hmac_get_ctx_params as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_VERIFY_ZEROIZATION, function: drbg_hmac_verify_zeroization as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_GET_SEED, function: ossl_drbg_get_seed as *mut c_void },
-    OsslDispatch { function_id: OSSL_FUNC_RAND_CLEAR_SEED, function: ossl_drbg_clear_seed as *mut c_void },
-    OsslDispatch { function_id: OSSL_DISPATCH_END, function: ptr::null_mut() },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_NEWCTX,
+        function: drbg_hmac_new_wrapper as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_FREECTX,
+        function: drbg_hmac_free as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_INSTANTIATE,
+        function: drbg_hmac_instantiate_wrapper as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_UNINSTANTIATE,
+        function: drbg_hmac_uninstantiate_wrapper as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_GENERATE,
+        function: drbg_hmac_generate_wrapper as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_RESEED,
+        function: drbg_hmac_reseed_wrapper as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_ENABLE_LOCKING,
+        function: ossl_drbg_enable_locking as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_LOCK,
+        function: ossl_drbg_lock as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_UNLOCK,
+        function: ossl_drbg_unlock as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_SETTABLE_CTX_PARAMS,
+        function: drbg_hmac_settable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_SET_CTX_PARAMS,
+        function: drbg_hmac_set_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_GETTABLE_CTX_PARAMS,
+        function: drbg_hmac_gettable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_GET_CTX_PARAMS,
+        function: drbg_hmac_get_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_VERIFY_ZEROIZATION,
+        function: drbg_hmac_verify_zeroization as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_GET_SEED,
+        function: ossl_drbg_get_seed as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_RAND_CLEAR_SEED,
+        function: ossl_drbg_clear_seed as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_DISPATCH_END,
+        function: ptr::null_mut(),
+    },
 ];
 
 // =============================================================================================
@@ -4764,29 +5111,30 @@ pub(crate) static DRBG_HMAC_FUNCTIONS: [OsslDispatch; 17] = [
 // `OSSL_OP_RAND` arm to `deflt_query()` (`src/provider/digest.rs:2099-2116`).
 // =============================================================================================
 
-/// `PROV_NAMES_CTR_DRBG` — `prov/names.h:330`. No alias and no OID.
-const PROV_NAMES_CTR_DRBG: *const c_char = c"CTR-DRBG".as_ptr();
-/// `PROV_NAMES_HASH_DRBG` — `prov/names.h:331`.
-const PROV_NAMES_HASH_DRBG: *const c_char = c"HASH-DRBG".as_ptr();
-/// `PROV_NAMES_HMAC_DRBG` — `prov/names.h:332`.
-const PROV_NAMES_HMAC_DRBG: *const c_char = c"HMAC-DRBG".as_ptr();
-
 /// `const OSSL_ALGORITHM deflt_rands[]` — the three rows this unit owns, plus the terminator.
+///
+/// The alias sequences are written inline, as `defltprov.c`'s `PROV_NAMES_*` expand to them and as
+/// `DEFLT_DIGESTS`/`DEFLT_MACS` write them: the provider census reads a row's whole alias sequence
+/// out of the table rather than trusting a primary name, and an indirection through a `const` it
+/// cannot follow would read as a row-less table (D237's class, from the candidate side).
 pub(crate) static DEFLT_RANDS: [OsslAlgorithm; 4] = [
     OsslAlgorithm {
-        algorithm_names: PROV_NAMES_CTR_DRBG,
+        // `PROV_NAMES_CTR_DRBG` — `prov/names.h:330`. No alias and no OID.
+        algorithm_names: c"CTR-DRBG".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
         implementation: DRBG_CTR_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
-        algorithm_names: PROV_NAMES_HASH_DRBG,
+        // `PROV_NAMES_HASH_DRBG` — `prov/names.h:331`.
+        algorithm_names: c"HASH-DRBG".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
         implementation: DRBG_HASH_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
-        algorithm_names: PROV_NAMES_HMAC_DRBG,
+        // `PROV_NAMES_HMAC_DRBG` — `prov/names.h:332`.
+        algorithm_names: c"HMAC-DRBG".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
         implementation: DRBG_HMAC_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),

@@ -75,8 +75,8 @@
       "rows_judged": 82,
       "symbols_named_by_a_row": 86,
       "symbols_reached": 79,
-      "unit_records": 68,
-      "units_named_by_a_record": 71,
+      "unit_records": 67,
+      "units_named_by_a_record": 70,
       "units_named_by_a_row": 158,
       "units_reached": 139
     },
@@ -869,7 +869,7 @@
           "evp_rand_get_number",
           "evp_rand_get_seed"
         ],
-        "recorded_by": "deferral:evp_rand_can_seed",
+        "recorded_by": null,
         "subphases": [
           "7.3",
           "7.3f"
@@ -1687,12 +1687,14 @@
           "ossl_rand_get0_seed_noncreating",
           "ossl_random_add_conf_module"
         ],
-        "recorded_by": "units:crypto/rand/rand_lib.c",
+        "recorded_by": "deferral:ossl_rand_check_random_provider_on_load",
         "subphases": [
           "6.10",
           "9.2"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/rand/rand_lib.rs"
+        ]
       },
       "crypto/rand/rand_pool.c": {
         "defines": [
@@ -2323,11 +2325,6 @@
         "crate_module": "src/provider/mod.rs",
         "owner_phase": null
       },
-      "crypto/rand/rand_lib.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 9
-      },
       "crypto/rcu.c": {
         "class": "does_not_exist_in_this_authority",
         "crate_module": null,
@@ -2352,36 +2349,36 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 178
+      "transcribed_units": 180
     }
   },
-  "body_hash": "e1639b212aba15ff682347831157ed5c37d41aa6769eba42b994b949f9e2ed47",
+  "body_hash": "dc24539d4f84ee98695027831474d98a5a1ae95da6fd31a5490119745d8204b9",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "6a32a08a37ab5b54fb7cf8c6a66bb4aa74aef2625631640acf59176e46483af2"
+      "sha256": "c1209e5c4c7f0fe5f8384cd47ae9a284e2c2f74534d8fdc61fab8364e350a183"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "d396a3175481e69fbd6818cf14890a7267de607aaaa5027221b84e0dc373c98e"
+      "sha256": "2d6eb6c4d905e5cfceff221cd59bff6d2f939e5b0170206efc56271fe9d0ecd7"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "13c2bf9a6aa8b4d9273b7a0eac4a85786d2451b5f57a18ea200a6ddcb28bb080"
+      "sha256": "41d8fb9ef7cb75a3a052880c0885c6ba1e9b9292d35d9a9c4c64c8d71c0ae797"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "3f8cb45bba7da288b99b33e4b6878e79ca838103fc1dfe71593e0d6a31470023"
+      "sha256": "8ecf9819c1b813a6830f430ffca4cf123163dcf245b5e2a59406cd641cc541f8"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "ce8767fe8d4c4472cfc3b68e8ee26681f1677945531abbd1cd1c93759c736aef"
+      "sha256": "df5195743e93ec65de9dc398c56fc22a983a4c4b785b6e8e1bedbe94c657a5c4"
     },
     {
       "name": "source-manifest",

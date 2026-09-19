@@ -59,6 +59,11 @@ OUT = ATLAS / "provider-court-coverage.json"
 COURT_PROBES: list[tuple[str, str, int]] = [
     ("RT-DIGEST", "courts/phase8/rt_digest_probe.c", 8),
     ("RT-CIPHER", "courts/phase8/rt_cipher_probe.c", 8),
+    # Phase 9's first court, landed in D309 with the three default-provider DRBG rows it names.
+    # It is registered here in the same commit as the rows it covers, which is what keeps this
+    # join preventive: a Phase-9 row that becomes `implemented` without an observation is a
+    # failure on that commit rather than at the stratum's seal.
+    ("RT-DRBG", "courts/phase9/rt_drbg_probe.c", 9),
 ]
 
 # The arm whose name list must equal the census's implemented cipher rows. A static list in a probe

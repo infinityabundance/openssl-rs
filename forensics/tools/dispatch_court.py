@@ -178,6 +178,16 @@ XLAT_GET = ("not a provider dispatch: the type of `fix_cipher_md`'s two function
             "its own signature rather than as typedefs; the crate names them to parameterise one "
             "function over `EVP_CIPHER` and `EVP_MD`")
 CRATE_LOCAL = "not an authority type: a crate-local callback shape with no header counterpart"
+# `providers/implementations/include/prov/drbg.h:59-165` -- `struct prov_drbg_st`'s cached virtual
+# functions (`instantiate`, `uninstantiate`, `reseed`, `generate`) and its two `dnew`/`dfree`
+# callbacks. They are declared **inline in the struct as plain function pointers**, exactly as
+# `RSA_METHOD`'s and `EVP_PKEY_METHOD`'s members are, and the header is internal (`prov/`), so the
+# atlas -- whose universe is the installed public surface -- records no typedef for any of them and
+# the convention rule has no name to join on (D309).
+DRBG_VTABLE = ("not a provider dispatch: a member of `struct prov_drbg_st`, declared inline in "
+               "`providers/implementations/include/prov/drbg.h:59-165` as a plain function pointer "
+               "rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas "
+               "records no typedef for it")
 # `cipher_aes_wrp.c:28-30` -- the wrap rows' `aeswrap_fn`, a typedef local to a provider
 # implementation file. The atlas's universe is the installed public surface, so it records no
 # typedef for it, and unlike `block128_f`/`cbc128_f` its name is not declared in a header the
@@ -284,6 +294,13 @@ NOT_A_DISPATCH: dict[str, str] = {
     "RsaVerifyFn": RSA_METHOD_VTABLE,
     "RsaKeygenFn": RSA_METHOD_VTABLE,
     "RsaMultiPrimeKeygenFn": RSA_METHOD_VTABLE,
+    # --- `struct prov_drbg_st`'s vtable (`prov/drbg.h:59-165`, Phase 9.4, D309) -------------
+    "ProvDrbgInstantiateFn": DRBG_VTABLE,
+    "ProvDrbgUninstantiateFn": DRBG_VTABLE,
+    "ProvDrbgReseedFn": DRBG_VTABLE,
+    "ProvDrbgGenerateFn": DRBG_VTABLE,
+    "ProvDrbgNewFn": DRBG_VTABLE,
+    "ProvDrbgFreeFn": DRBG_VTABLE,
     # --- `BIO_meth_set_*`'s inline parameter types (`bio.h`) ---------------------------------
     # The `_ex` two take `char *` where the *core dispatch* typedefs of the same shape take
     # `void *`, and `BIO_meth_set_ctrl` returns `long` where `OSSL_FUNC_BIO_ctrl_fn` returns
