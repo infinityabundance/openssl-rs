@@ -1,0 +1,1366 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "complete": false,
+    "counts": {
+      "atlas_owned": 25,
+      "deferred_to_later_phase": 0,
+      "implemented": 0,
+      "open_in_this_stratum": 93,
+      "owned": 93,
+      "received_by_handoff": 68
+    },
+    "deferred": [],
+    "deferred_by_phase": {},
+    "handoffs_discharged": {
+      "4": [
+        "BIO_f_nbio_test"
+      ],
+      "5": [
+        "BN_BLINDING_convert",
+        "BN_BLINDING_convert_ex",
+        "BN_BLINDING_create_param",
+        "BN_BLINDING_update",
+        "BN_GF2m_mod_solve_quad",
+        "BN_GF2m_mod_solve_quad_arr",
+        "BN_GF2m_mod_sqrt",
+        "BN_GF2m_mod_sqrt_arr",
+        "BN_X931_derive_prime_ex",
+        "BN_X931_generate_Xpq",
+        "BN_X931_generate_prime_ex",
+        "BN_bntest_rand",
+        "BN_check_prime",
+        "BN_generate_dsa_nonce",
+        "BN_generate_prime",
+        "BN_generate_prime_ex",
+        "BN_generate_prime_ex2",
+        "BN_is_prime",
+        "BN_is_prime_ex",
+        "BN_is_prime_fasttest",
+        "BN_is_prime_fasttest_ex",
+        "BN_priv_rand",
+        "BN_priv_rand_ex",
+        "BN_priv_rand_range",
+        "BN_priv_rand_range_ex",
+        "BN_pseudo_rand",
+        "BN_pseudo_rand_range",
+        "BN_rand",
+        "BN_rand_ex",
+        "BN_rand_range",
+        "BN_rand_range_ex"
+      ],
+      "7": [
+        "BIO_f_reliable",
+        "EVP_CIPHER_CTX_rand_key",
+        "EVP_SealInit",
+        "OSSL_HPKE_get_grease_value",
+        "PEM_ASN1_read",
+        "PEM_ASN1_read_bio",
+        "PEM_ASN1_write",
+        "PEM_ASN1_write_bio",
+        "PEM_ASN1_write_bio_ctx",
+        "PEM_bytes_read_bio",
+        "PEM_bytes_read_bio_secmem",
+        "PEM_do_header"
+      ],
+      "8": [
+        "DES_random_key",
+        "DH_generate_key",
+        "DH_generate_parameters",
+        "DH_generate_parameters_ex",
+        "DSA_generate_key",
+        "DSA_generate_parameters_ex",
+        "EC_KEY_generate_key",
+        "RSA_PKCS1_OpenSSL",
+        "RSA_X931_derive_ex",
+        "RSA_X931_generate_key_ex",
+        "RSA_blinding_on",
+        "RSA_generate_key",
+        "RSA_generate_key_ex",
+        "RSA_generate_multi_prime_key",
+        "RSA_get_default_method",
+        "RSA_new",
+        "RSA_new_method",
+        "RSA_padding_add_PKCS1_OAEP",
+        "RSA_padding_add_PKCS1_OAEP_mgf1",
+        "RSA_padding_add_PKCS1_PSS",
+        "RSA_padding_add_PKCS1_PSS_mgf1",
+        "RSA_padding_add_PKCS1_type_2",
+        "RSA_padding_check_PKCS1_type_2",
+        "RSA_setup_blinding"
+      ]
+    },
+    "handoffs_discharged_with_reasons": {
+      "4": [
+        {
+          "declaring_header": "bio.h",
+          "implemented_by_owner": false,
+          "module": "src/runtime/bio/",
+          "owning_phase": 9,
+          "reason": "its read and write call RAND_priv_bytes; RAND is Phase 9",
+          "symbol": "BIO_f_nbio_test"
+        }
+      ],
+      "5": [
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "re-creates the blinding factor through BN_BLINDING_create_param, which draws it from RAND; RAND is Phase 9",
+          "symbol": "BN_BLINDING_convert"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "re-creates the blinding factor through BN_BLINDING_create_param, which draws it from RAND; RAND is Phase 9",
+          "symbol": "BN_BLINDING_convert_ex"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "re-creates the blinding factor through BN_BLINDING_create_param, which draws it from RAND; RAND is Phase 9",
+          "symbol": "BN_BLINDING_create_param"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "re-creates the blinding factor through BN_BLINDING_create_param, which draws it from RAND; RAND is Phase 9",
+          "symbol": "BN_BLINDING_update"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "searches with a random field element; RAND is Phase 9",
+          "symbol": "BN_GF2m_mod_solve_quad"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "searches with a random field element; RAND is Phase 9",
+          "symbol": "BN_GF2m_mod_solve_quad_arr"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "searches with a random field element; RAND is Phase 9",
+          "symbol": "BN_GF2m_mod_sqrt"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "searches with a random field element; RAND is Phase 9",
+          "symbol": "BN_GF2m_mod_sqrt_arr"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws candidates with BN_priv_rand; RAND is Phase 9",
+          "symbol": "BN_X931_derive_prime_ex"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws candidates with BN_priv_rand; RAND is Phase 9",
+          "symbol": "BN_X931_generate_Xpq"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws candidates with BN_priv_rand; RAND is Phase 9",
+          "symbol": "BN_X931_generate_prime_ex"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+          "symbol": "BN_bntest_rand"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "picks Miller-Rabin bases with BN_priv_rand_range; RAND is Phase 9",
+          "symbol": "BN_check_prime"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "derives a nonce from the digest and entropy; RAND is Phase 9",
+          "symbol": "BN_generate_dsa_nonce"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws prime candidates with BN_priv_rand; RAND is Phase 9",
+          "symbol": "BN_generate_prime"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws prime candidates with BN_priv_rand; RAND is Phase 9",
+          "symbol": "BN_generate_prime_ex"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws prime candidates with BN_priv_rand; RAND is Phase 9",
+          "symbol": "BN_generate_prime_ex2"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "picks Miller-Rabin bases with BN_priv_rand_range; RAND is Phase 9",
+          "symbol": "BN_is_prime"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "picks Miller-Rabin bases with BN_priv_rand_range; RAND is Phase 9",
+          "symbol": "BN_is_prime_ex"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "picks Miller-Rabin bases with BN_priv_rand_range; RAND is Phase 9",
+          "symbol": "BN_is_prime_fasttest"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "picks Miller-Rabin bases with BN_priv_rand_range; RAND is Phase 9",
+          "symbol": "BN_is_prime_fasttest_ex"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+          "symbol": "BN_priv_rand"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+          "symbol": "BN_priv_rand_ex"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+          "symbol": "BN_priv_rand_range"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+          "symbol": "BN_priv_rand_range_ex"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+          "symbol": "BN_pseudo_rand"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+          "symbol": "BN_pseudo_rand_range"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+          "symbol": "BN_rand"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+          "symbol": "BN_rand_ex"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+          "symbol": "BN_rand_range"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+          "symbol": "BN_rand_range_ex"
+        }
+      ],
+      "7": [
+        {
+          "binding_phase": 9,
+          "blocked_by": [
+            {
+              "authority_unit": "crypto/rand/rand_lib.c",
+              "kind": "exported",
+              "line": 500,
+              "name": "RAND_bytes",
+              "owning_phase": 9
+            }
+          ],
+          "declaring_header": "evp.h",
+          "owning_phase": 9,
+          "reason": "`crypto/evp/bio_ok.c:127` is `return &methods_ok`, and `methods_ok` (`:112`) is a `BIO_METHOD` whose write path is `ok_write` (`:254`) -> `sig_out` -- and `sig_out` fills the record's digest half with `RAND_bytes(md_data, md_size)` (`:456`). `rand.h` is Phase 9's, and the method struct cannot be published with a callback that has no callee, so the export is withheld rather than the table partial.",
+          "symbol": "BIO_f_reliable"
+        },
+        {
+          "binding_phase": 9,
+          "blocked_by": [
+            {
+              "authority_unit": "crypto/rand/rand_lib.c",
+              "kind": "exported",
+              "line": 420,
+              "name": "RAND_priv_bytes_ex",
+              "owning_phase": 9
+            }
+          ],
+          "declaring_header": "evp.h",
+          "owning_phase": 9,
+          "reason": "`crypto/evp/evp_enc.c:1751` falls through to `RAND_priv_bytes_ex(libctx, key, kl, 0)` (`:1764`) for every cipher without `EVP_CIPH_RAND_KEY`, which is every provider cipher; `rand.h` is Phase 9's. `EVP_SealInit` above is the caller that made this visible, and the `RAND_priv_bytes_ex` row in `forensics/prerequisites.json` names both.",
+          "symbol": "EVP_CIPHER_CTX_rand_key"
+        },
+        {
+          "binding_phase": 9,
+          "blocked_by": [
+            {
+              "authority_unit": "crypto/rand/rand_lib.c",
+              "kind": "exported",
+              "line": 420,
+              "name": "RAND_priv_bytes_ex",
+              "owning_phase": 9
+            }
+          ],
+          "declaring_header": "evp.h",
+          "owning_phase": 9,
+          "reason": "`crypto/evp/p_seal.c:42` takes the session key from `EVP_CIPHER_CTX_rand_key` and `:46` fills the IV with `RAND_priv_bytes_ex(libctx, iv, len, 0)`; `rand.h` is Phase 9's, and `EVP_CIPHER_CTX_rand_key` (`crypto/evp/evp_enc.c:1751`, `:1764`) is itself withheld in this stratum on the same call -- which is why the deferral is Phase 9 and not a same-stratum one. `forensics/prerequisites.json`'s `RAND_priv_bytes_ex` row is this dependency.",
+          "symbol": "EVP_SealInit"
+        },
+        {
+          "binding_phase": 9,
+          "blocked_by": [
+            {
+              "authority_unit": "crypto/rand/rand_lib.c",
+              "kind": "exported",
+              "line": 463,
+              "name": "RAND_bytes_ex",
+              "owning_phase": 9
+            }
+          ],
+          "declaring_header": "hpke.h",
+          "note": "`ossl_rand_uniform_uint32` is internal with no recorded owner phase; `RAND_bytes_ex` is the binding call and is Phase 9's.",
+          "owning_phase": 9,
+          "reason": "`crypto/hpke/hpke.c:1377`'s only observable is whether the GREASE ciphertext gets filled, and it is filled by `RAND_bytes_ex(libctx, ct, ctlen, 0)` (`:1433`) -- `rand.h`, Phase 9. Its random-suite arm additionally reaches `ossl_rand_uniform_uint32` (`crypto/hpke/hpke_util.c:198`, `:220`, `:243`), the same stratum. D195 recorded the withholding and `forensics/prerequisites.json`'s `RAND_bytes_ex` row names both coordinates.",
+          "symbol": "OSSL_HPKE_get_grease_value"
+        },
+        {
+          "binding_phase": 9,
+          "blocked_by": [
+            {
+              "authority_unit": "crypto/rand/rand_lib.c",
+              "kind": "exported",
+              "line": 500,
+              "name": "RAND_bytes",
+              "owning_phase": 9
+            }
+          ],
+          "declaring_header": "pem.h",
+          "owning_phase": 9,
+          "reason": "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and not this stratum's even though `evp.h` declares it. The other seven reach it through one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` (`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
+          "symbol": "PEM_ASN1_read"
+        },
+        {
+          "binding_phase": 9,
+          "blocked_by": [
+            {
+              "authority_unit": "crypto/rand/rand_lib.c",
+              "kind": "exported",
+              "line": 500,
+              "name": "RAND_bytes",
+              "owning_phase": 9
+            }
+          ],
+          "declaring_header": "pem.h",
+          "owning_phase": 9,
+          "reason": "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and not this stratum's even though `evp.h` declares it. The other seven reach it through one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` (`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
+          "symbol": "PEM_ASN1_read_bio"
+        },
+        {
+          "binding_phase": 9,
+          "blocked_by": [
+            {
+              "authority_unit": "crypto/rand/rand_lib.c",
+              "kind": "exported",
+              "line": 500,
+              "name": "RAND_bytes",
+              "owning_phase": 9
+            }
+          ],
+          "declaring_header": "pem.h",
+          "owning_phase": 9,
+          "reason": "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and not this stratum's even though `evp.h` declares it. The other seven reach it through one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` (`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
+          "symbol": "PEM_ASN1_write"
+        },
+        {
+          "binding_phase": 9,
+          "blocked_by": [
+            {
+              "authority_unit": "crypto/rand/rand_lib.c",
+              "kind": "exported",
+              "line": 500,
+              "name": "RAND_bytes",
+              "owning_phase": 9
+            }
+          ],
+          "declaring_header": "pem.h",
+          "owning_phase": 9,
+          "reason": "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and not this stratum's even though `evp.h` declares it. The other seven reach it through one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` (`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
+          "symbol": "PEM_ASN1_write_bio"
+        },
+        {
+          "binding_phase": 9,
+          "blocked_by": [
+            {
+              "authority_unit": "crypto/rand/rand_lib.c",
+              "kind": "exported",
+              "line": 500,
+              "name": "RAND_bytes",
+              "owning_phase": 9
+            }
+          ],
+          "declaring_header": "pem.h",
+          "owning_phase": 9,
+          "reason": "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and not this stratum's even though `evp.h` declares it. The other seven reach it through one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` (`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
+          "symbol": "PEM_ASN1_write_bio_ctx"
+        },
+        {
+          "binding_phase": 9,
+          "blocked_by": [
+            {
+              "authority_unit": "crypto/rand/rand_lib.c",
+              "kind": "exported",
+              "line": 500,
+              "name": "RAND_bytes",
+              "owning_phase": 9
+            }
+          ],
+          "declaring_header": "pem.h",
+          "owning_phase": 9,
+          "reason": "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and not this stratum's even though `evp.h` declares it. The other seven reach it through one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` (`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
+          "symbol": "PEM_bytes_read_bio"
+        },
+        {
+          "binding_phase": 9,
+          "blocked_by": [
+            {
+              "authority_unit": "crypto/rand/rand_lib.c",
+              "kind": "exported",
+              "line": 500,
+              "name": "RAND_bytes",
+              "owning_phase": 9
+            }
+          ],
+          "declaring_header": "pem.h",
+          "owning_phase": 9,
+          "reason": "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and not this stratum's even though `evp.h` declares it. The other seven reach it through one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` (`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
+          "symbol": "PEM_bytes_read_bio_secmem"
+        },
+        {
+          "binding_phase": 9,
+          "blocked_by": [
+            {
+              "authority_unit": "crypto/rand/rand_lib.c",
+              "kind": "exported",
+              "line": 500,
+              "name": "RAND_bytes",
+              "owning_phase": 9
+            }
+          ],
+          "declaring_header": "pem.h",
+          "owning_phase": 9,
+          "reason": "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and not this stratum's even though `evp.h` declares it. The other seven reach it through one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` (`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
+          "symbol": "PEM_do_header"
+        }
+      ],
+      "8": [
+        {
+          "declaring_header": "des.h",
+          "owning_phase": 9,
+          "reason": "`crypto/des/rand_key.c:22` is `RAND_priv_bytes((unsigned char *)ret, sizeof(DES_cblock))` and its failure arm answers 0. `rand.h` is Phase 9's, and this is the one `des.h` export whose body is the random layer rather than the cipher. `DES_string_to_key` and `DES_string_to_2keys` are *not* in this row: they build a key from a string with `DES_cbc_cksum`, which is this stratum's own.",
+          "symbol": "DES_random_key"
+        },
+        {
+          "declaring_header": "dh.h",
+          "owning_phase": 9,
+          "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
+          "symbol": "DH_generate_key"
+        },
+        {
+          "declaring_header": "dh.h",
+          "owning_phase": 9,
+          "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
+          "symbol": "DH_generate_parameters"
+        },
+        {
+          "declaring_header": "dh.h",
+          "owning_phase": 9,
+          "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
+          "symbol": "DH_generate_parameters_ex"
+        },
+        {
+          "declaring_header": "dsa.h",
+          "owning_phase": 9,
+          "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
+          "symbol": "DSA_generate_key"
+        },
+        {
+          "declaring_header": "dsa.h",
+          "owning_phase": 9,
+          "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
+          "symbol": "DSA_generate_parameters_ex"
+        },
+        {
+          "declaring_header": "ec.h",
+          "owning_phase": 9,
+          "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
+          "symbol": "EC_KEY_generate_key"
+        },
+        {
+          "declaring_header": "rsa.h",
+          "owning_phase": 9,
+          "reason": "`rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from `RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence `RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be constructed -- until row (4)'s path exists, which is what makes the *lifetime* follow the padding rather than precede it. `RSA_set_default_method` is *not* in this row: it is a pointer store with no table read and no random call, and it stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. `ossl_rsa_new_with_ctx` is internal and is blocked with `RSA_new`, which it calls into.",
+          "symbol": "RSA_PKCS1_OpenSSL"
+        },
+        {
+          "declaring_header": "rsa.h",
+          "owning_phase": 9,
+          "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
+          "symbol": "RSA_X931_derive_ex"
+        },
+        {
+          "declaring_header": "rsa.h",
+          "owning_phase": 9,
+          "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
+          "symbol": "RSA_X931_generate_key_ex"
+        },
+        {
+          "declaring_header": "rsa.h",
+          "owning_phase": 9,
+          "reason": "`RSA_blinding_on` (`crypto/rsa/rsa_crpt.c:68`) is a lock plus `RSA_setup_blinding`, and `RSA_setup_blinding` (`:104`) ends in `BN_BLINDING_create_param` (`crypto/bn/bn_blind.c`), whose `ai`/`e` values come from `BN_rand_range_ex` -> `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`). So both are blocked on Phase 9 through BN's own random path, and `RSA_blinding_off` is *not* in this row: it frees the object and needs nothing random.",
+          "symbol": "RSA_blinding_on"
+        },
+        {
+          "declaring_header": "rsa.h",
+          "owning_phase": 9,
+          "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
+          "symbol": "RSA_generate_key"
+        },
+        {
+          "declaring_header": "rsa.h",
+          "owning_phase": 9,
+          "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
+          "symbol": "RSA_generate_key_ex"
+        },
+        {
+          "declaring_header": "rsa.h",
+          "owning_phase": 9,
+          "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
+          "symbol": "RSA_generate_multi_prime_key"
+        },
+        {
+          "declaring_header": "rsa.h",
+          "owning_phase": 9,
+          "reason": "`rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from `RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence `RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be constructed -- until row (4)'s path exists, which is what makes the *lifetime* follow the padding rather than precede it. `RSA_set_default_method` is *not* in this row: it is a pointer store with no table read and no random call, and it stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. `ossl_rsa_new_with_ctx` is internal and is blocked with `RSA_new`, which it calls into.",
+          "symbol": "RSA_get_default_method"
+        },
+        {
+          "declaring_header": "rsa.h",
+          "owning_phase": 9,
+          "reason": "`rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from `RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence `RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be constructed -- until row (4)'s path exists, which is what makes the *lifetime* follow the padding rather than precede it. `RSA_set_default_method` is *not* in this row: it is a pointer store with no table read and no random call, and it stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. `ossl_rsa_new_with_ctx` is internal and is blocked with `RSA_new`, which it calls into.",
+          "symbol": "RSA_new"
+        },
+        {
+          "declaring_header": "rsa.h",
+          "owning_phase": 9,
+          "reason": "`rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from `RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence `RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be constructed -- until row (4)'s path exists, which is what makes the *lifetime* follow the padding rather than precede it. `RSA_set_default_method` is *not* in this row: it is a pointer store with no table read and no random call, and it stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. `ossl_rsa_new_with_ctx` is internal and is blocked with `RSA_new`, which it calls into.",
+          "symbol": "RSA_new_method"
+        },
+        {
+          "declaring_header": "rsa.h",
+          "owning_phase": 9,
+          "reason": "`ossl_rsa_padding_add_PKCS1_type_2_ex` (`crypto/rsa/rsa_pk1.c:147`) fills the padding with `RAND_bytes_ex`; `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` (`rsa_oaep.c:122`) generates its seed with it; `RSA_padding_add_PKCS1_PSS_mgf1` (`rsa_pss.c:242`) its salt; and `ossl_rsa_padding_check_PKCS1_type_2_ex` (`rsa_pk1.c:569`) generates a `rand_premaster_secret` with `RAND_priv_bytes_ex` for the implicit-rejection arm. The other three members of the family are *not* in this row and landed in D285: the `none` and X9.31 paddings, PKCS#1 v1.5 type 1, and both OAEP checks -- a padding *check* is a pure function of its input except where the refusal is deliberately randomised, which is why `RSA_padding_check_PKCS1_type_2` is here and `RSA_padding_check_PKCS1_OAEP_mgf1` is not.",
+          "symbol": "RSA_padding_add_PKCS1_OAEP"
+        },
+        {
+          "declaring_header": "rsa.h",
+          "owning_phase": 9,
+          "reason": "`ossl_rsa_padding_add_PKCS1_type_2_ex` (`crypto/rsa/rsa_pk1.c:147`) fills the padding with `RAND_bytes_ex`; `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` (`rsa_oaep.c:122`) generates its seed with it; `RSA_padding_add_PKCS1_PSS_mgf1` (`rsa_pss.c:242`) its salt; and `ossl_rsa_padding_check_PKCS1_type_2_ex` (`rsa_pk1.c:569`) generates a `rand_premaster_secret` with `RAND_priv_bytes_ex` for the implicit-rejection arm. The other three members of the family are *not* in this row and landed in D285: the `none` and X9.31 paddings, PKCS#1 v1.5 type 1, and both OAEP checks -- a padding *check* is a pure function of its input except where the refusal is deliberately randomised, which is why `RSA_padding_check_PKCS1_type_2` is here and `RSA_padding_check_PKCS1_OAEP_mgf1` is not.",
+          "symbol": "RSA_padding_add_PKCS1_OAEP_mgf1"
+        },
+        {
+          "declaring_header": "rsa.h",
+          "owning_phase": 9,
+          "reason": "`ossl_rsa_padding_add_PKCS1_type_2_ex` (`crypto/rsa/rsa_pk1.c:147`) fills the padding with `RAND_bytes_ex`; `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` (`rsa_oaep.c:122`) generates its seed with it; `RSA_padding_add_PKCS1_PSS_mgf1` (`rsa_pss.c:242`) its salt; and `ossl_rsa_padding_check_PKCS1_type_2_ex` (`rsa_pk1.c:569`) generates a `rand_premaster_secret` with `RAND_priv_bytes_ex` for the implicit-rejection arm. The other three members of the family are *not* in this row and landed in D285: the `none` and X9.31 paddings, PKCS#1 v1.5 type 1, and both OAEP checks -- a padding *check* is a pure function of its input except where the refusal is deliberately randomised, which is why `RSA_padding_check_PKCS1_type_2` is here and `RSA_padding_check_PKCS1_OAEP_mgf1` is not.",
+          "symbol": "RSA_padding_add_PKCS1_PSS"
+        },
+        {
+          "declaring_header": "rsa.h",
+          "owning_phase": 9,
+          "reason": "`ossl_rsa_padding_add_PKCS1_type_2_ex` (`crypto/rsa/rsa_pk1.c:147`) fills the padding with `RAND_bytes_ex`; `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` (`rsa_oaep.c:122`) generates its seed with it; `RSA_padding_add_PKCS1_PSS_mgf1` (`rsa_pss.c:242`) its salt; and `ossl_rsa_padding_check_PKCS1_type_2_ex` (`rsa_pk1.c:569`) generates a `rand_premaster_secret` with `RAND_priv_bytes_ex` for the implicit-rejection arm. The other three members of the family are *not* in this row and landed in D285: the `none` and X9.31 paddings, PKCS#1 v1.5 type 1, and both OAEP checks -- a padding *check* is a pure function of its input except where the refusal is deliberately randomised, which is why `RSA_padding_check_PKCS1_type_2` is here and `RSA_padding_check_PKCS1_OAEP_mgf1` is not.",
+          "symbol": "RSA_padding_add_PKCS1_PSS_mgf1"
+        },
+        {
+          "declaring_header": "rsa.h",
+          "owning_phase": 9,
+          "reason": "`ossl_rsa_padding_add_PKCS1_type_2_ex` (`crypto/rsa/rsa_pk1.c:147`) fills the padding with `RAND_bytes_ex`; `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` (`rsa_oaep.c:122`) generates its seed with it; `RSA_padding_add_PKCS1_PSS_mgf1` (`rsa_pss.c:242`) its salt; and `ossl_rsa_padding_check_PKCS1_type_2_ex` (`rsa_pk1.c:569`) generates a `rand_premaster_secret` with `RAND_priv_bytes_ex` for the implicit-rejection arm. The other three members of the family are *not* in this row and landed in D285: the `none` and X9.31 paddings, PKCS#1 v1.5 type 1, and both OAEP checks -- a padding *check* is a pure function of its input except where the refusal is deliberately randomised, which is why `RSA_padding_check_PKCS1_type_2` is here and `RSA_padding_check_PKCS1_OAEP_mgf1` is not.",
+          "symbol": "RSA_padding_add_PKCS1_type_2"
+        },
+        {
+          "declaring_header": "rsa.h",
+          "owning_phase": 9,
+          "reason": "`ossl_rsa_padding_add_PKCS1_type_2_ex` (`crypto/rsa/rsa_pk1.c:147`) fills the padding with `RAND_bytes_ex`; `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` (`rsa_oaep.c:122`) generates its seed with it; `RSA_padding_add_PKCS1_PSS_mgf1` (`rsa_pss.c:242`) its salt; and `ossl_rsa_padding_check_PKCS1_type_2_ex` (`rsa_pk1.c:569`) generates a `rand_premaster_secret` with `RAND_priv_bytes_ex` for the implicit-rejection arm. The other three members of the family are *not* in this row and landed in D285: the `none` and X9.31 paddings, PKCS#1 v1.5 type 1, and both OAEP checks -- a padding *check* is a pure function of its input except where the refusal is deliberately randomised, which is why `RSA_padding_check_PKCS1_type_2` is here and `RSA_padding_check_PKCS1_OAEP_mgf1` is not.",
+          "symbol": "RSA_padding_check_PKCS1_type_2"
+        },
+        {
+          "declaring_header": "rsa.h",
+          "owning_phase": 9,
+          "reason": "`RSA_blinding_on` (`crypto/rsa/rsa_crpt.c:68`) is a lock plus `RSA_setup_blinding`, and `RSA_setup_blinding` (`:104`) ends in `BN_BLINDING_create_param` (`crypto/bn/bn_blind.c`), whose `ai`/`e` values come from `BN_rand_range_ex` -> `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`). So both are blocked on Phase 9 through BN's own random path, and `RSA_blinding_off` is *not* in this row: it frees the object and needs nothing random.",
+          "symbol": "RSA_setup_blinding"
+        }
+      ]
+    },
+    "implemented": [],
+    "module_prefixes": [
+      {
+        "module": "src/bn/rand.rs",
+        "prefixes": [
+          "BN_bntest_rand",
+          "BN_generate_dsa_nonce",
+          "BN_priv_rand",
+          "BN_pseudo_rand",
+          "BN_rand"
+        ]
+      },
+      {
+        "module": "src/bn/blinding.rs",
+        "prefixes": [
+          "BN_BLINDING_"
+        ]
+      },
+      {
+        "module": "src/bn/primes.rs",
+        "prefixes": [
+          "BN_check_prime",
+          "BN_generate_prime",
+          "BN_is_prime",
+          "BN_X931_"
+        ]
+      },
+      {
+        "module": "src/bn/gf2m.rs",
+        "prefixes": [
+          "BN_GF2m_mod_solve_quad",
+          "BN_GF2m_mod_sqrt"
+        ]
+      },
+      {
+        "module": "src/rand/mod.rs",
+        "prefixes": [
+          "RAND_"
+        ]
+      },
+      {
+        "module": "src/des/mod.rs",
+        "prefixes": [
+          "DES_"
+        ]
+      },
+      {
+        "module": "src/rsa/mod.rs",
+        "prefixes": [
+          "RSA_"
+        ]
+      },
+      {
+        "module": "src/dh/mod.rs",
+        "prefixes": [
+          "DH_"
+        ]
+      },
+      {
+        "module": "src/dsa/mod.rs",
+        "prefixes": [
+          "DSA_"
+        ]
+      },
+      {
+        "module": "src/ec/mod.rs",
+        "prefixes": [
+          "EC"
+        ]
+      },
+      {
+        "module": "src/pem/pem_lib.rs",
+        "prefixes": [
+          "PEM_"
+        ]
+      },
+      {
+        "module": "src/hpke/mod.rs",
+        "prefixes": [
+          "OSSL_HPKE_"
+        ]
+      },
+      {
+        "module": "src/evp/bio_enc.rs",
+        "prefixes": [
+          "BIO_"
+        ]
+      },
+      {
+        "module": "src/evp/",
+        "prefixes": [
+          "EVP_"
+        ]
+      }
+    ],
+    "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum, and it starts at the whole working set, which is the honest starting state. Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-9-SUBPHASES.md section 4 decides when the stratum may be called complete.",
+    "open": [
+      {
+        "declaring_header": "bio.h",
+        "module": "src/evp/bio_enc.rs",
+        "received_from_phase": 4,
+        "symbol": "BIO_f_nbio_test"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/bio_enc.rs",
+        "received_from_phase": 7,
+        "symbol": "BIO_f_reliable"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/blinding.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_BLINDING_convert"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/blinding.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_BLINDING_convert_ex"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/blinding.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_BLINDING_create_param"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/blinding.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_BLINDING_update"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/gf2m.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_GF2m_mod_solve_quad"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/gf2m.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_GF2m_mod_solve_quad_arr"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/gf2m.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_GF2m_mod_sqrt"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/gf2m.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_GF2m_mod_sqrt_arr"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/primes.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_X931_derive_prime_ex"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/primes.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_X931_generate_Xpq"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/primes.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_X931_generate_prime_ex"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/rand.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_bntest_rand"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/primes.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_check_prime"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/rand.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_generate_dsa_nonce"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/primes.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_generate_prime"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/primes.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_generate_prime_ex"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/primes.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_generate_prime_ex2"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/primes.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_is_prime"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/primes.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_is_prime_ex"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/primes.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_is_prime_fasttest"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/primes.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_is_prime_fasttest_ex"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/rand.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_priv_rand"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/rand.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_priv_rand_ex"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/rand.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_priv_rand_range"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/rand.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_priv_rand_range_ex"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/rand.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_pseudo_rand"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/rand.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_pseudo_rand_range"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/rand.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_rand"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/rand.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_rand_ex"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/rand.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_rand_range"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/rand.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_rand_range_ex"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": 8,
+        "symbol": "DES_random_key"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": 8,
+        "symbol": "DH_generate_key"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": 8,
+        "symbol": "DH_generate_parameters"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": 8,
+        "symbol": "DH_generate_parameters_ex"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": 8,
+        "symbol": "DSA_generate_key"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": 8,
+        "symbol": "DSA_generate_parameters_ex"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": 8,
+        "symbol": "EC_KEY_generate_key"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/",
+        "received_from_phase": 7,
+        "symbol": "EVP_CIPHER_CTX_rand_key"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/",
+        "received_from_phase": 7,
+        "symbol": "EVP_SealInit"
+      },
+      {
+        "declaring_header": "hpke.h",
+        "module": "src/hpke/mod.rs",
+        "received_from_phase": 7,
+        "symbol": "OSSL_HPKE_get_grease_value"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_lib.rs",
+        "received_from_phase": 7,
+        "symbol": "PEM_ASN1_read"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_lib.rs",
+        "received_from_phase": 7,
+        "symbol": "PEM_ASN1_read_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_lib.rs",
+        "received_from_phase": 7,
+        "symbol": "PEM_ASN1_write"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_lib.rs",
+        "received_from_phase": 7,
+        "symbol": "PEM_ASN1_write_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_lib.rs",
+        "received_from_phase": 7,
+        "symbol": "PEM_ASN1_write_bio_ctx"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_lib.rs",
+        "received_from_phase": 7,
+        "symbol": "PEM_bytes_read_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_lib.rs",
+        "received_from_phase": 7,
+        "symbol": "PEM_bytes_read_bio_secmem"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_lib.rs",
+        "received_from_phase": 7,
+        "symbol": "PEM_do_header"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_OpenSSL"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_add"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_bytes"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_bytes_ex"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_file_name"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_get0_primary"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_get0_private"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_get0_public"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_get_rand_method"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_keep_random_devices_open"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_load_file"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_poll"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_priv_bytes"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_priv_bytes_ex"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_pseudo_bytes"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_seed"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_set0_private"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_set0_public"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_set1_random_provider"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_set_DRBG_type"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_set_rand_engine"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_set_rand_method"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_set_seed_source_type"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_status"
+      },
+      {
+        "declaring_header": "rand.h",
+        "module": "src/rand/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RAND_write_file"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": 8,
+        "symbol": "RSA_PKCS1_OpenSSL"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": 8,
+        "symbol": "RSA_X931_derive_ex"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": 8,
+        "symbol": "RSA_X931_generate_key_ex"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": 8,
+        "symbol": "RSA_blinding_on"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": 8,
+        "symbol": "RSA_generate_key"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": 8,
+        "symbol": "RSA_generate_key_ex"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": 8,
+        "symbol": "RSA_generate_multi_prime_key"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": 8,
+        "symbol": "RSA_get_default_method"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": 8,
+        "symbol": "RSA_new"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": 8,
+        "symbol": "RSA_new_method"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": 8,
+        "symbol": "RSA_padding_add_PKCS1_OAEP"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": 8,
+        "symbol": "RSA_padding_add_PKCS1_OAEP_mgf1"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": 8,
+        "symbol": "RSA_padding_add_PKCS1_PSS"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": 8,
+        "symbol": "RSA_padding_add_PKCS1_PSS_mgf1"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": 8,
+        "symbol": "RSA_padding_add_PKCS1_type_2"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": 8,
+        "symbol": "RSA_padding_check_PKCS1_type_2"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": 8,
+        "symbol": "RSA_setup_blinding"
+      }
+    ],
+    "owned_by_header": {
+      "bio.h": 1,
+      "bn.h": 31,
+      "des.h": 1,
+      "dh.h": 3,
+      "dsa.h": 2,
+      "ec.h": 1,
+      "evp.h": 3,
+      "hpke.h": 1,
+      "pem.h": 8,
+      "rand.h": 25,
+      "rsa.h": 17
+    },
+    "owned_by_module": {
+      "src/bn/blinding.rs": 4,
+      "src/bn/gf2m.rs": 4,
+      "src/bn/primes.rs": 11,
+      "src/bn/rand.rs": 12,
+      "src/des/mod.rs": 1,
+      "src/dh/mod.rs": 3,
+      "src/dsa/mod.rs": 2,
+      "src/ec/mod.rs": 1,
+      "src/evp/": 2,
+      "src/evp/bio_enc.rs": 2,
+      "src/hpke/mod.rs": 1,
+      "src/pem/pem_lib.rs": 8,
+      "src/rand/mod.rs": 25,
+      "src/rsa/mod.rs": 17
+    },
+    "rule": "the stratum's working set is the projection of forensics/atlas/symbol-ownership.json for phase 9, plus every symbol an earlier stratum's ledger records as handed to it: a symbol belongs to the stratum that owns the header declaring it, and a discharged hand-off belongs to the stratum that built it"
+  },
+  "generator": "forensics/tools/phase9_obligations.py",
+  "inputs": [
+    {
+      "name": "authority-symbols",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+      "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+    },
+    {
+      "name": "authority-functions",
+      "path": "forensics/atlas/openssl-3.6.4-production/functions.json",
+      "sha256": "0add7610e574dc030773b0f76a6cc80215d73cfbca411392bd6b64f3f8de80d0"
+    },
+    {
+      "name": "symbol-ownership",
+      "path": "forensics/atlas/symbol-ownership.json",
+      "sha256": "d42d2ba4f459b729139149f7343cb36357959272a38fecce8f20e6e4aa29a137"
+    },
+    {
+      "name": "implemented-surface",
+      "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
+      "sha256": "8cd11f55e7769f2d8e4c0b23331b364543c7334704ed2e6657e12ddd2259e5a8"
+    },
+    {
+      "name": "phase4-obligations",
+      "path": "forensics/phase4-obligations.json",
+      "sha256": "c1232948043a4501fd6b952bc67d704d5dd7c442bc5e06557e0ba5a98692145f"
+    },
+    {
+      "name": "phase5-obligations",
+      "path": "forensics/phase5-obligations.json",
+      "sha256": "95140f6a70708ef1145c544cc16c22efb20c27a0309726732febba4a3cbb5228"
+    },
+    {
+      "name": "phase7-obligations",
+      "path": "forensics/phase7-obligations.json",
+      "sha256": "e5cd5f888a3546f27fcd6309b3adf89a37d0f2d0f92af69950e7a1e169583314"
+    },
+    {
+      "name": "phase8-obligations",
+      "path": "forensics/phase8-obligations.json",
+      "sha256": "3db7f85436dd5f62bb1b8e022b985b52e1ed1279d2240f5a84329fff16936b66"
+    }
+  ],
+  "kind": "phase9-obligations",
+  "schema": "openssl-rs/atlas/phase9-obligations/v1"
+}

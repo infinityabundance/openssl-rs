@@ -103,6 +103,13 @@
           "to_phase": 6
         },
         {
+          "from_phase": 4,
+          "symbols": [
+            "BIO_f_nbio_test"
+          ],
+          "to_phase": 9
+        },
+        {
           "from_phase": 5,
           "symbols": [
             "ASN1_add_oid_module"
@@ -142,76 +149,6 @@
           "to_phase": 7
         },
         {
-          "from_phase": 7,
-          "symbols": [
-            "EVP_PKEY_assign",
-            "EVP_PKEY_decrypt_old",
-            "EVP_PKEY_encrypt_old",
-            "EVP_PKEY_get0_DH",
-            "EVP_PKEY_get0_DSA",
-            "EVP_PKEY_get0_EC_KEY",
-            "EVP_PKEY_get0_RSA",
-            "EVP_PKEY_get0_hmac",
-            "EVP_PKEY_get0_poly1305",
-            "EVP_PKEY_get0_siphash",
-            "EVP_PKEY_get1_DH",
-            "EVP_PKEY_get1_DSA",
-            "EVP_PKEY_get1_EC_KEY",
-            "EVP_PKEY_get1_RSA",
-            "EVP_PKEY_get_ec_point_conv_form",
-            "EVP_PKEY_get_field_type",
-            "EVP_PKEY_meth_find",
-            "EVP_PKEY_meth_get0",
-            "EVP_PKEY_meth_get_count",
-            "EVP_PKEY_set1_DH",
-            "EVP_PKEY_set1_DSA",
-            "EVP_PKEY_set1_EC_KEY",
-            "EVP_PKEY_set1_RSA",
-            "EVP_PKEY_type",
-            "d2i_KeyParams",
-            "d2i_KeyParams_bio",
-            "d2i_PublicKey"
-          ],
-          "to_phase": 8
-        }
-      ],
-      "forward": [
-        {
-          "from_phase": 3,
-          "symbols": [
-            "ASYNC_WAIT_CTX_clear_fd",
-            "ASYNC_WAIT_CTX_free",
-            "ASYNC_WAIT_CTX_get_all_fds",
-            "ASYNC_WAIT_CTX_get_callback",
-            "ASYNC_WAIT_CTX_get_changed_fds",
-            "ASYNC_WAIT_CTX_get_fd",
-            "ASYNC_WAIT_CTX_get_status",
-            "ASYNC_WAIT_CTX_new",
-            "ASYNC_WAIT_CTX_set_callback",
-            "ASYNC_WAIT_CTX_set_status",
-            "ASYNC_WAIT_CTX_set_wait_fd",
-            "ASYNC_block_pause",
-            "ASYNC_cleanup_thread",
-            "ASYNC_get_current_job",
-            "ASYNC_get_mem_functions",
-            "ASYNC_get_wait_ctx",
-            "ASYNC_init_thread",
-            "ASYNC_is_capable",
-            "ASYNC_pause_job",
-            "ASYNC_set_mem_functions",
-            "ASYNC_start_job",
-            "ASYNC_unblock_pause"
-          ],
-          "to_phase": 13
-        },
-        {
-          "from_phase": 4,
-          "symbols": [
-            "BIO_f_nbio_test"
-          ],
-          "to_phase": 9
-        },
-        {
           "from_phase": 5,
           "symbols": [
             "BN_BLINDING_convert",
@@ -247,6 +184,117 @@
             "BN_rand_range_ex"
           ],
           "to_phase": 9
+        },
+        {
+          "from_phase": 7,
+          "symbols": [
+            "EVP_PKEY_assign",
+            "EVP_PKEY_decrypt_old",
+            "EVP_PKEY_encrypt_old",
+            "EVP_PKEY_get0_DH",
+            "EVP_PKEY_get0_DSA",
+            "EVP_PKEY_get0_EC_KEY",
+            "EVP_PKEY_get0_RSA",
+            "EVP_PKEY_get0_hmac",
+            "EVP_PKEY_get0_poly1305",
+            "EVP_PKEY_get0_siphash",
+            "EVP_PKEY_get1_DH",
+            "EVP_PKEY_get1_DSA",
+            "EVP_PKEY_get1_EC_KEY",
+            "EVP_PKEY_get1_RSA",
+            "EVP_PKEY_get_ec_point_conv_form",
+            "EVP_PKEY_get_field_type",
+            "EVP_PKEY_meth_find",
+            "EVP_PKEY_meth_get0",
+            "EVP_PKEY_meth_get_count",
+            "EVP_PKEY_set1_DH",
+            "EVP_PKEY_set1_DSA",
+            "EVP_PKEY_set1_EC_KEY",
+            "EVP_PKEY_set1_RSA",
+            "EVP_PKEY_type",
+            "d2i_KeyParams",
+            "d2i_KeyParams_bio",
+            "d2i_PublicKey"
+          ],
+          "to_phase": 8
+        },
+        {
+          "from_phase": 7,
+          "symbols": [
+            "BIO_f_reliable",
+            "EVP_CIPHER_CTX_rand_key",
+            "EVP_SealInit",
+            "OSSL_HPKE_get_grease_value",
+            "PEM_ASN1_read",
+            "PEM_ASN1_read_bio",
+            "PEM_ASN1_write",
+            "PEM_ASN1_write_bio",
+            "PEM_ASN1_write_bio_ctx",
+            "PEM_bytes_read_bio",
+            "PEM_bytes_read_bio_secmem",
+            "PEM_do_header"
+          ],
+          "to_phase": 9
+        },
+        {
+          "from_phase": 8,
+          "symbols": [
+            "DES_random_key",
+            "DH_generate_key",
+            "DH_generate_parameters",
+            "DH_generate_parameters_ex",
+            "DSA_generate_key",
+            "DSA_generate_parameters_ex",
+            "EC_KEY_generate_key",
+            "RSA_PKCS1_OpenSSL",
+            "RSA_X931_derive_ex",
+            "RSA_X931_generate_key_ex",
+            "RSA_blinding_on",
+            "RSA_generate_key",
+            "RSA_generate_key_ex",
+            "RSA_generate_multi_prime_key",
+            "RSA_get_default_method",
+            "RSA_new",
+            "RSA_new_method",
+            "RSA_padding_add_PKCS1_OAEP",
+            "RSA_padding_add_PKCS1_OAEP_mgf1",
+            "RSA_padding_add_PKCS1_PSS",
+            "RSA_padding_add_PKCS1_PSS_mgf1",
+            "RSA_padding_add_PKCS1_type_2",
+            "RSA_padding_check_PKCS1_type_2",
+            "RSA_setup_blinding"
+          ],
+          "to_phase": 9
+        }
+      ],
+      "forward": [
+        {
+          "from_phase": 3,
+          "symbols": [
+            "ASYNC_WAIT_CTX_clear_fd",
+            "ASYNC_WAIT_CTX_free",
+            "ASYNC_WAIT_CTX_get_all_fds",
+            "ASYNC_WAIT_CTX_get_callback",
+            "ASYNC_WAIT_CTX_get_changed_fds",
+            "ASYNC_WAIT_CTX_get_fd",
+            "ASYNC_WAIT_CTX_get_status",
+            "ASYNC_WAIT_CTX_new",
+            "ASYNC_WAIT_CTX_set_callback",
+            "ASYNC_WAIT_CTX_set_status",
+            "ASYNC_WAIT_CTX_set_wait_fd",
+            "ASYNC_block_pause",
+            "ASYNC_cleanup_thread",
+            "ASYNC_get_current_job",
+            "ASYNC_get_mem_functions",
+            "ASYNC_get_wait_ctx",
+            "ASYNC_init_thread",
+            "ASYNC_is_capable",
+            "ASYNC_pause_job",
+            "ASYNC_set_mem_functions",
+            "ASYNC_start_job",
+            "ASYNC_unblock_pause"
+          ],
+          "to_phase": 13
         },
         {
           "from_phase": 5,
@@ -298,24 +346,6 @@
             "SMIME_write_ASN1_ex"
           ],
           "to_phase": 12
-        },
-        {
-          "from_phase": 7,
-          "symbols": [
-            "BIO_f_reliable",
-            "EVP_CIPHER_CTX_rand_key",
-            "EVP_SealInit",
-            "OSSL_HPKE_get_grease_value",
-            "PEM_ASN1_read",
-            "PEM_ASN1_read_bio",
-            "PEM_ASN1_write",
-            "PEM_ASN1_write_bio",
-            "PEM_ASN1_write_bio_ctx",
-            "PEM_bytes_read_bio",
-            "PEM_bytes_read_bio_secmem",
-            "PEM_do_header"
-          ],
-          "to_phase": 9
         },
         {
           "from_phase": 7,
@@ -521,38 +551,6 @@
             "PEM_write_bio_PrivateKey_ex"
           ],
           "to_phase": 13
-        },
-        {
-          "from_phase": 8,
-          "symbols": [
-            "DES_random_key",
-            "DH_KDF_X9_42",
-            "DH_generate_key",
-            "DH_generate_parameters",
-            "DH_generate_parameters_ex",
-            "DSA_generate_key",
-            "DSA_generate_parameters_ex",
-            "ECDH_KDF_X9_62",
-            "EC_KEY_generate_key",
-            "RSA_PKCS1_OpenSSL",
-            "RSA_X931_derive_ex",
-            "RSA_X931_generate_key_ex",
-            "RSA_blinding_on",
-            "RSA_generate_key",
-            "RSA_generate_key_ex",
-            "RSA_generate_multi_prime_key",
-            "RSA_get_default_method",
-            "RSA_new",
-            "RSA_new_method",
-            "RSA_padding_add_PKCS1_OAEP",
-            "RSA_padding_add_PKCS1_OAEP_mgf1",
-            "RSA_padding_add_PKCS1_PSS",
-            "RSA_padding_add_PKCS1_PSS_mgf1",
-            "RSA_padding_add_PKCS1_type_2",
-            "RSA_padding_check_PKCS1_type_2",
-            "RSA_setup_blinding"
-          ],
-          "to_phase": 9
         }
       ],
       "mismatched": [],
@@ -1046,13 +1044,11 @@
           "from_phase": 8,
           "symbols": [
             "DES_random_key",
-            "DH_KDF_X9_42",
             "DH_generate_key",
             "DH_generate_parameters",
             "DH_generate_parameters_ex",
             "DSA_generate_key",
             "DSA_generate_parameters_ex",
-            "ECDH_KDF_X9_62",
             "EC_KEY_generate_key",
             "RSA_PKCS1_OpenSSL",
             "RSA_X931_derive_ex",
@@ -1184,7 +1180,7 @@
       },
       {
         "atlas": 759,
-        "deferred": 26,
+        "deferred": 24,
         "implemented": 238,
         "ledger": 786,
         "only_in_atlas": 0,
@@ -1202,8 +1198,31 @@
           "EVP_PKEY_get0_poly1305",
           "EVP_PKEY_get0_siphash"
         ],
-        "open": 522,
+        "open": 524,
         "phase": 8
+      },
+      {
+        "atlas": 25,
+        "deferred": 0,
+        "implemented": 0,
+        "ledger": 93,
+        "only_in_atlas": 0,
+        "only_in_atlas_examples": [],
+        "only_in_ledger": 68,
+        "only_in_ledger_examples": [
+          "BIO_f_nbio_test",
+          "BIO_f_reliable",
+          "BN_BLINDING_convert",
+          "BN_BLINDING_convert_ex",
+          "BN_BLINDING_create_param",
+          "BN_BLINDING_update",
+          "BN_GF2m_mod_solve_quad",
+          "BN_GF2m_mod_solve_quad_arr",
+          "BN_GF2m_mod_sqrt",
+          "BN_GF2m_mod_sqrt_arr"
+        ],
+        "open": 93,
+        "phase": 9
       }
     ],
     "ledgers": [
@@ -1230,6 +1249,10 @@
       {
         "ledger": "forensics/phase8-obligations.json",
         "phase": 8
+      },
+      {
+        "ledger": "forensics/phase9-obligations.json",
+        "phase": 9
       }
     ],
     "note": "`unowned_remainder` is not a defect: the strata above Phase 6 have no ledgers yet, so their exports are covered by nothing. It is the scope no ledger has claimed, recorded as a count and in full rather than left implied. `implemented_by_two_strata` and `handoff_reconciliation` are the cross-ledger invariants that stop one piece of work being counted twice or falling between two strata, and `ledger_agreement` is the atlas reconciliation in both directions. Only `problems` is a defect list, and a non-empty one fails this tool.",
@@ -1291,10 +1314,6 @@
             "count": 27
           },
           {
-            "class": "R",
-            "count": 25
-          },
-          {
             "class": "I",
             "count": 18
           },
@@ -1347,8 +1366,8 @@
             "count": 1
           }
         ],
-        "count": 2965,
-        "covered_by_a_ledger": 2931,
+        "count": 2940,
+        "covered_by_a_ledger": 2956,
         "symbols": [
           "ACCESS_DESCRIPTION_free",
           "ACCESS_DESCRIPTION_it",
@@ -2804,31 +2823,6 @@
           "PROXY_POLICY_free",
           "PROXY_POLICY_it",
           "PROXY_POLICY_new",
-          "RAND_OpenSSL",
-          "RAND_add",
-          "RAND_bytes",
-          "RAND_bytes_ex",
-          "RAND_file_name",
-          "RAND_get0_primary",
-          "RAND_get0_private",
-          "RAND_get0_public",
-          "RAND_get_rand_method",
-          "RAND_keep_random_devices_open",
-          "RAND_load_file",
-          "RAND_poll",
-          "RAND_priv_bytes",
-          "RAND_priv_bytes_ex",
-          "RAND_pseudo_bytes",
-          "RAND_seed",
-          "RAND_set0_private",
-          "RAND_set0_public",
-          "RAND_set1_random_provider",
-          "RAND_set_DRBG_type",
-          "RAND_set_rand_engine",
-          "RAND_set_rand_method",
-          "RAND_set_seed_source_type",
-          "RAND_status",
-          "RAND_write_file",
           "SCRYPT_PARAMS_free",
           "SCRYPT_PARAMS_it",
           "SCRYPT_PARAMS_new",
@@ -5007,12 +5001,17 @@
     {
       "name": "ledger-7",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "c4e9c7855c0d58ac2bbf8550e90278ab579262c883811657a139a8a8e2ea5790"
+      "sha256": "e5cd5f888a3546f27fcd6309b3adf89a37d0f2d0f92af69950e7a1e169583314"
     },
     {
       "name": "ledger-8",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "fdc72de09406c9adfde2c58a3d01c6a4fcb676c1910e4c7b49b47318d161c887"
+      "sha256": "3db7f85436dd5f62bb1b8e022b985b52e1ed1279d2240f5a84329fff16936b66"
+    },
+    {
+      "name": "ledger-9",
+      "path": "forensics/phase9-obligations.json",
+      "sha256": "960752f6213c36e9e8ee02922d523f07a1e780f0b56602e2d176d95eaef19c9b"
     }
   ],
   "kind": "ownership-audit",

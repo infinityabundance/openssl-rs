@@ -4,9 +4,9 @@
     "complete": false,
     "counts": {
       "atlas_owned": 759,
-      "deferred_to_later_phase": 26,
+      "deferred_to_later_phase": 24,
       "implemented": 238,
-      "open_in_this_stratum": 522,
+      "open_in_this_stratum": 524,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -16,12 +16,6 @@
         "owning_phase": 9,
         "reason": "`crypto/des/rand_key.c:22` is `RAND_priv_bytes((unsigned char *)ret, sizeof(DES_cblock))` and its failure arm answers 0. `rand.h` is Phase 9's, and this is the one `des.h` export whose body is the random layer rather than the cipher. `DES_string_to_key` and `DES_string_to_2keys` are *not* in this row: they build a key from a string with `DES_cbc_cksum`, which is this stratum's own.",
         "symbol": "DES_random_key"
-      },
-      {
-        "declaring_header": "dh.h",
-        "owning_phase": 9,
-        "reason": "each is an `EVP_KDF` fetch of a *provider* KDF: `crypto/dh/dh_kdf.c:40` asks for `OSSL_KDF_NAME_X942KDF_ASN1` and `crypto/ec/ecdh_kdf.c:34` for `OSSL_KDF_NAME_X963KDF`, then derives through `EVP_KDF_derive`. The `EVP_KDF` object is Phase 7's and every KDF the fetch can find is a provider implementation, so the answer is a later stratum's. Phase 9 is named because it is the stratum the plan puts the provider KDF family in; if that plan names a different stratum, this row is the one to correct, and `docs/DECISIONS.md` D197 says so.",
-        "symbol": "DH_KDF_X9_42"
       },
       {
         "declaring_header": "dh.h",
@@ -52,12 +46,6 @@
         "owning_phase": 9,
         "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
         "symbol": "DSA_generate_parameters_ex"
-      },
-      {
-        "declaring_header": "ec.h",
-        "owning_phase": 9,
-        "reason": "each is an `EVP_KDF` fetch of a *provider* KDF: `crypto/dh/dh_kdf.c:40` asks for `OSSL_KDF_NAME_X942KDF_ASN1` and `crypto/ec/ecdh_kdf.c:34` for `OSSL_KDF_NAME_X963KDF`, then derives through `EVP_KDF_derive`. The `EVP_KDF` object is Phase 7's and every KDF the fetch can find is a provider implementation, so the answer is a later stratum's. Phase 9 is named because it is the stratum the plan puts the provider KDF family in; if that plan names a different stratum, this row is the one to correct, and `docs/DECISIONS.md` D197 says so.",
-        "symbol": "ECDH_KDF_X9_62"
       },
       {
         "declaring_header": "ec.h",
@@ -169,7 +157,7 @@
       }
     ],
     "deferred_by_phase": {
-      "9": 26
+      "9": 24
     },
     "handoffs_discharged": {
       "7": [
@@ -1684,6 +1672,12 @@
         "declaring_header": "dh.h",
         "module": "src/dh/mod.rs",
         "received_from_phase": null,
+        "symbol": "DH_KDF_X9_42"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
         "symbol": "DH_OpenSSL"
       },
       {
@@ -2495,6 +2489,12 @@
         "module": "src/dsa/mod.rs",
         "received_from_phase": null,
         "symbol": "DSAparams_print_fp"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECDH_KDF_X9_62"
       },
       {
         "declaring_header": "ec.h",
@@ -4889,7 +4889,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "c4e9c7855c0d58ac2bbf8550e90278ab579262c883811657a139a8a8e2ea5790"
+      "sha256": "e5cd5f888a3546f27fcd6309b3adf89a37d0f2d0f92af69950e7a1e169583314"
     }
   ],
   "kind": "phase8-obligations",

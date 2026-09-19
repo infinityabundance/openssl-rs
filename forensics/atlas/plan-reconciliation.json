@@ -5,12 +5,13 @@
       "in-progress"
     ],
     "census": {
-      "names_a_file_the_authority_does_not_have": 10,
-      "symbols_not_reached": 4,
-      "units_not_reached": 13
+      "names_a_file_the_authority_does_not_have": 16,
+      "symbols_not_reached": 7,
+      "units_not_reached": 16
     },
     "census_by_stratum": {
-      "8": 27
+      "8": 27,
+      "9": 12
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
@@ -24,16 +25,27 @@
         "docs/PHASE-8-SUBPHASES.md:8.3:courts/layout/oracle-chacha20-poly1305-hw.c",
         "docs/PHASE-8-SUBPHASES.md:8.3:courts/layout/oracle-polyval.c",
         "docs/PHASE-8-SUBPHASES.md:8.3:oracle-mem-file.c",
-        "docs/PHASE-8-SUBPHASES.md:8.3:providers/implementations/macs/cmac_prov.c"
+        "docs/PHASE-8-SUBPHASES.md:8.3:providers/implementations/macs/cmac_prov.c",
+        "docs/PHASE-9-SUBPHASES.md:9.4:drbg_ctr.c",
+        "docs/PHASE-9-SUBPHASES.md:9.4:drbg_hash.c",
+        "docs/PHASE-9-SUBPHASES.md:9.4:drbg_hmac.c",
+        "docs/PHASE-9-SUBPHASES.md:9.5:fips_crng_test.c",
+        "docs/PHASE-9-SUBPHASES.md:9.5:seed_src.c",
+        "docs/PHASE-9-SUBPHASES.md:9.5:test_rng.c"
       ],
       "symbols_not_reached": [
         "ossl_dh_asn1_meth",
+        "ossl_drbg_ctr_functions",
+        "ossl_drbg_hash_functions",
+        "ossl_drbg_ossl_hmac_functions",
         "ossl_polyval_ghash_init",
         "ossl_prov_get_capabilities",
         "xor128_encrypt_n_pad"
       ],
       "units_not_reached": [
+        "crypto/bn/bn_rand.c",
         "crypto/chacha/chacha_enc.c",
+        "crypto/rand/rand_uniform.c",
         "providers/implementations/ciphers/cipher_aes.c",
         "providers/implementations/ciphers/cipher_aes_siv.c",
         "providers/implementations/ciphers/cipher_aria.c",
@@ -45,6 +57,7 @@
         "providers/implementations/ciphers/cipher_tdes_common.c",
         "providers/implementations/ciphers/ciphercommon_block.c",
         "providers/implementations/ciphers/ciphercommon_hw.c",
+        "providers/implementations/rands/drbg.c",
         "test/evp_test.c"
       ]
     },
@@ -53,15 +66,16 @@
         "docs/PHASE-5-SUBPHASES.md",
         "docs/PHASE-6-SUBPHASES.md",
         "docs/PHASE-7-SUBPHASES.md",
-        "docs/PHASE-8-SUBPHASES.md"
+        "docs/PHASE-8-SUBPHASES.md",
+        "docs/PHASE-9-SUBPHASES.md"
       ],
-      "rows_judged": 75,
-      "symbols_named_by_a_row": 79,
+      "rows_judged": 82,
+      "symbols_named_by_a_row": 82,
       "symbols_reached": 75,
-      "unit_records": 67,
-      "units_named_by_a_record": 70,
-      "units_named_by_a_row": 150,
-      "units_reached": 137
+      "unit_records": 68,
+      "units_named_by_a_record": 71,
+      "units_named_by_a_row": 154,
+      "units_reached": 138
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -163,6 +177,17 @@
         "transcribed_by": [
           "src/context/core_bio.rs"
         ]
+      },
+      "crypto/bn/bn_rand.c": {
+        "defines": [
+          "ossl_bn_gen_dsa_nonce_fixed_top",
+          "ossl_bn_priv_rand_range_fixed_top"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "9.1"
+        ],
+        "transcribed_by": []
       },
       "crypto/chacha/chacha_enc.c": {
         "defines": [],
@@ -1661,7 +1686,19 @@
         ],
         "recorded_by": "units:crypto/rand/rand_lib.c",
         "subphases": [
-          "6.10"
+          "6.10",
+          "9.2"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/rand/rand_uniform.c": {
+        "defines": [
+          "ossl_rand_range_uint32",
+          "ossl_rand_uniform_uint32"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "9.2"
         ],
         "transcribed_by": []
       },
@@ -1886,6 +1923,22 @@
         "recorded_by": null,
         "subphases": [
           "8.2"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/rands/crngt.c": {
+        "defines": [],
+        "recorded_by": "units:providers/implementations/rands/crngt.c",
+        "subphases": [
+          "9.5"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/rands/drbg.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "9.3"
         ],
         "transcribed_by": []
       },
@@ -2234,6 +2287,11 @@
         "class": "does_not_exist_in_this_authority",
         "crate_module": null,
         "owner_phase": null
+      },
+      "providers/implementations/rands/crngt.c": {
+        "class": "does_not_exist_in_this_authority",
+        "crate_module": null,
+        "owner_phase": null
       }
     },
     "universes": {
@@ -2242,7 +2300,7 @@
       "transcribed_units": 177
     }
   },
-  "body_hash": "87d729d33ba0b02434ee728f7e0d2283de1010cdb16bed5ff1c5ac21af4436fc",
+  "body_hash": "99a90aaa4a549cfbb46613313f181898e0d7d9304f88cee9050d83bac4d0f047",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -2263,12 +2321,12 @@
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "2502b2e2f4a241faafee5df82116416a0dbee68213e2aba59ed6b353b0794347"
+      "sha256": "1d5287c714bf5e8527935829057e2411bb785d7f69c1af780cbb19d8101a9482"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "8b6447589c05de51d3c348b7a797291afb3babd325921d847047cf8c7ed5935c"
+      "sha256": "1e256f940c5c454cedc20284a40d9a52f862e3a84550110c4e9b6e56fefce0ea"
     },
     {
       "name": "source-manifest",
@@ -2294,6 +2352,11 @@
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
       "sha256": "9b061e88fc685df437b34ccc87b995091e6ae1e25efbb6e8a4a1a387c4fec269"
+    },
+    {
+      "name": "plan-PHASE-9-SUBPHASES",
+      "path": "docs/PHASE-9-SUBPHASES.md",
+      "sha256": "8b6c8eedc5eee5e5ec91b628817f94af8ba928e16a3175212ea4d62d352450f2"
     }
   ],
   "kind": "plan-reconciliation",
