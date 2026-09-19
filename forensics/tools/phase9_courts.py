@@ -64,6 +64,21 @@ it. Every draw is made twice, once with no `BN_CTX` and once with a live one, be
 `RAND_bytes_ex`; the refusal arms are the other half, since a draw that silently answered zero
 where the authority raised looks identical in a success-only transcript.
 
+`RT-RAND-USERS` and why the random layer's callers are a separate court
+----------------------------------------------------------------------
+`rt_rand_users_probe.c` drives the first two names Phase 9 inherited from Phase 7 --
+`EVP_CIPHER_CTX_rand_key` and `EVP_SealInit` -- which are not the RAND front but *callers* of it,
+and the thing worth measuring is that they call it the way the authority does (right `libctx`,
+right length, right refusal). The draws are unobservable, so it compares the contract: the key
+and IV lengths the context reports before and after, whether a cipher is installed, and the error
+queue. `EVP_SealInit`'s four early-return arms are all deterministic and none needs a public key
+(`npubk <= 0` answers 1, `npubk < 0` answers 1, a NULL `type` answers 1, and a positive `npubk`
+with a NULL `pubk` answers 1). **The `npubk > 0` path with a real key is not courted and is
+recorded as owed**: it needs an `EVP_PKEY` with a public part, which the crate can build only once
+RSA key construction and the ASN.1 public-key decoder land, and the authority's own
+`EVP_PKEY_get_size(NULL)` on that path is a null dereference, so a probe must not reach it with a
+NULL key either.
+
 SPDX-License-Identifier: Apache-2.0"""
 
 from __future__ import annotations
@@ -101,6 +116,7 @@ COURTS: list[tuple[str, str]] = [
     ("RT-DRBG", "rt_drbg_probe.c"),
     ("RT-RAND", "rt_rand_probe.c"),
     ("RT-BN-RAND", "rt_bn_rand_probe.c"),
+    ("RT-RAND-USERS", "rt_rand_users_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here
