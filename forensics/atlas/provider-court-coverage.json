@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 114,
+        "implemented": 115,
         "unmatched": 0
       }
     },
@@ -20,8 +20,8 @@
         "probe": "courts/phase8/rt_cipher_probe.c"
       }
     ],
-    "directly_courted": 114,
-    "implemented_rows": 114,
+    "directly_courted": 115,
+    "implemented_rows": 115,
     "rows": [
       {
         "algorithm_names": "AES-128-CBC",
@@ -1615,6 +1615,19 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "POLY1305",
+        "aliases": [
+          "POLY1305"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_MAC",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "SIPHASH",
         "aliases": [
           "SIPHASH"
@@ -1635,7 +1648,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "783554ca99ab1ed93636623e47f33317db2cdddf85bba9103a0b28ac48e94e6a"
+      "sha256": "9791c7140574e3a8faa4a52276bbb8b036edbd73d89a7ef21e728642c1fcdbde"
     },
     {
       "name": "court:RT-DIGEST",
@@ -1645,7 +1658,7 @@
     {
       "name": "court:RT-CIPHER",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "586cd0c851c6abaf7f23ff70676336cbc88621ac9acfcabdda6d53b0383d14cf"
+      "sha256": "700b32cbbb1cb698582deea3da37331abdcd80f04efa1dc4242439b2189079fd"
     }
   ],
   "kind": "provider-court-coverage",

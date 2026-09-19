@@ -3916,6 +3916,7 @@ static void rt_deflt_properties(void)
         { "mac",    "HMAC" },
         { "mac",    "BLAKE2BMAC" },
         { "mac",    "BLAKE2SMAC" },
+        { "mac",    "POLY1305" },
     };
     static const char *props[] = { NULL, "provider=default", "provider!=default" };
     size_t i, j;
@@ -4092,9 +4093,291 @@ static void rt_deflt_siphash(void)
 }
 
 /* The drained queue, normalised the one way both sides can hold: library and reason as numbers,
- * the authority's three debug strings verbatim, and the entry count. Declared before the `BLAKE2`
- * and `HMAC` arms, which drain queues, and defined with the dispatch arm below. */
+ * the authority's three debug strings verbatim, and the entry count. Declared before the `POLY1305`,
+ * `BLAKE2` and `HMAC` arms, which drain queues, and defined with the dispatch arm below. */
 static void rt_errq(const char *tag);
+
+/*
+ * The `POLY1305` row. Two things about it are unlike every other MAC row here.
+ *
+ * It publishes the **provider-level** `GETTABLE_PARAMS`/`GET_PARAMS` pair and no ctx-params getter
+ * at all -- so `EVP_MAC_CTX_gettable_params` answers NULL while `EVP_MAC_gettable_params` answers a
+ * one-entry list. GMAC is the only other row with that shape, and GMAC's row is withheld.
+ *
+ * And its state machine is two flags rather than one. `key_set` gates an update or a final with
+ * `PROV_R_NO_KEY_SET`, and `updated` -- set by *both* of them -- is what makes a second
+ * `EVP_MAC_init` **without a key** refuse. So an update with no key raises *and* leaves `updated`
+ * clear, which is what keeps a later keyless init possible; both halves of that are observed.
+ *
+ * The empty-message case is here because the construction gives its answer directly: with no
+ * message the accumulator is zero and `emit` returns `(0 + nonce) mod 2^128`, so the tag is exactly
+ * the key's second half. That is a check on `Init`'s word order and on `emit` that needs no vector.
+ */
+static void rt_deflt_poly1305(void)
+{
+    static const unsigned char key[32] = {
+        0x85, 0xd6, 0xbe, 0x78, 0x57, 0x55, 0x6d, 0x33, 0x7f, 0x44, 0x52, 0xfe, 0x42, 0xd5,
+        0x06, 0xa8, 0x01, 0x03, 0x80, 0x8a, 0xfb, 0x0d, 0xb2, 0xfd, 0x4a, 0xbf, 0xf6, 0xaf,
+        0x41, 0x49, 0xf5, 0x1b
+    };
+    static const char *msg = "Cryptographic Forum Research Group";
+    EVP_MAC *mac = EVP_MAC_fetch(NULL, "POLY1305", NULL);
+    EVP_MAC_CTX *ctx;
+    unsigned char out[64];
+    OSSL_PARAM list[2], set[3];
+    size_t i, outl;
+
+    printf("defltpoly.fetched=%d\n", mac != NULL);
+    if (mac == NULL)
+        return;
+
+    ctx = EVP_MAC_CTX_new(mac);
+    printf("defltpoly.ctx=%d\n", ctx != NULL);
+    if (ctx == NULL) {
+        EVP_MAC_free(mac);
+        return;
+    }
+
+    /* The provider-level getter list, and the ctx-level pair that is absent. */
+    rt_param_list("defltpoly", "x", "gp", EVP_MAC_gettable_params(mac));
+    rt_param_list("defltpoly", "x", "cgp", EVP_MAC_CTX_gettable_params(ctx));
+    rt_param_list("defltpoly", "x", "csp", EVP_MAC_CTX_settable_params(ctx));
+    /*
+     * The same one-entry descriptor through both getters. The context call returns 1 and leaves
+     * the output untouched because this row has no ctx-level getter at all; the method-level call
+     * is the one that reaches `poly1305_get_params` and writes 16. The pair is the observation
+     * that the row is shaped as a *provider*-level getter.
+     */
+    {
+        size_t sz = 0;
+
+        list[0] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &sz);
+        list[1] = OSSL_PARAM_construct_end();
+        printf("defltpoly.get.size=%d:%zu\n", EVP_MAC_CTX_get_params(ctx, list), sz);
+        sz = 0;
+        list[0] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &sz);
+        list[1] = OSSL_PARAM_construct_end();
+        printf("defltpoly.getp.size=%d:%zu\n", EVP_MAC_get_params(mac, list), sz);
+    }
+
+    /* The RFC 8439 §2.5.2 vector, one-shot. */
+    outl = 0;
+    if (EVP_MAC_init(ctx, key, sizeof(key), NULL) == 1
+        && EVP_MAC_update(ctx, (const unsigned char *)msg, strlen(msg)) == 1
+        && EVP_MAC_final(ctx, out, &outl, sizeof(out)) == 1) {
+        printf("defltpoly.rfc.len=%zu\n", outl);
+        rt_hex("defltpoly.rfc.tag", out, outl);
+    } else {
+        printf("defltpoly.rfc.enclen=0\n");
+    }
+
+    /* The same message split at every boundary, and byte at a time. */
+    for (i = 0; i <= strlen(msg); i++) {
+        EVP_MAC_CTX *c = EVP_MAC_CTX_new(mac);
+
+        outl = 0;
+        if (EVP_MAC_init(c, key, sizeof(key), NULL) == 1
+            && EVP_MAC_update(c, (const unsigned char *)msg, i) == 1
+            && EVP_MAC_update(c, (const unsigned char *)msg + i, strlen(msg) - i) == 1
+            && EVP_MAC_final(c, out, &outl, sizeof(out)) == 1)
+            rt_hex("defltpoly.split", out, outl);
+        else
+            printf("defltpoly.split.enclen=0\n");
+        EVP_MAC_CTX_free(c);
+    }
+    {
+        EVP_MAC_CTX *c = EVP_MAC_CTX_new(mac);
+
+        outl = 0;
+        if (EVP_MAC_init(c, key, sizeof(key), NULL) == 1) {
+            for (i = 0; i < strlen(msg); i++)
+                EVP_MAC_update(c, (const unsigned char *)msg + i, 1);
+            if (EVP_MAC_final(c, out, &outl, sizeof(out)) == 1)
+                rt_hex("defltpoly.bytewise", out, outl);
+            else
+                printf("defltpoly.bytewise.enclen=0\n");
+        }
+        EVP_MAC_CTX_free(c);
+    }
+
+    /* An empty message tags to the key's nonce half, which the construction gives directly. */
+    {
+        EVP_MAC_CTX *c = EVP_MAC_CTX_new(mac);
+
+        outl = 0;
+        if (EVP_MAC_init(c, key, sizeof(key), NULL) == 1
+            && EVP_MAC_final(c, out, &outl, sizeof(out)) == 1) {
+            printf("defltpoly.empty.len=%zu\n", outl);
+            rt_hex("defltpoly.empty.tag", out, outl);
+        } else {
+            printf("defltpoly.empty.enclen=0\n");
+        }
+        EVP_MAC_CTX_free(c);
+    }
+
+    /* A key delivered through the parameter array, and a zero-length update. */
+    {
+        EVP_MAC_CTX *c = EVP_MAC_CTX_new(mac);
+
+        set[0] = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_KEY, (void *)key, sizeof(key));
+        set[1] = OSSL_PARAM_construct_end();
+        printf("defltpoly.pkey.set=%d\n", EVP_MAC_CTX_set_params(c, set));
+        outl = 0;
+        if (EVP_MAC_init(c, NULL, 0, NULL) == 1
+            && EVP_MAC_update(c, (const unsigned char *)msg, 0) == 1
+            && EVP_MAC_update(c, (const unsigned char *)msg, strlen(msg)) == 1
+            && EVP_MAC_final(c, out, &outl, sizeof(out)) == 1) {
+            printf("defltpoly.pkey.len=%zu\n", outl);
+            rt_hex("defltpoly.pkey.tag", out, outl);
+        } else {
+            printf("defltpoly.pkey.enclen=0\n");
+        }
+        EVP_MAC_CTX_free(c);
+    }
+
+    /* The duplicate, mid-message. */
+    {
+        EVP_MAC_CTX *a0 = EVP_MAC_CTX_new(mac);
+        EVP_MAC_CTX *b0;
+        int ok_copy, ok_orig;
+        size_t outl2 = 0;
+
+        printf("defltpoly.dup.init=%d\n", EVP_MAC_init(a0, key, sizeof(key), NULL));
+        printf("defltpoly.dup.update=%d\n", EVP_MAC_update(a0, (const unsigned char *)msg, 16));
+        b0 = EVP_MAC_CTX_dup(a0);
+        printf("defltpoly.dup.made=%d\n", b0 != NULL);
+        if (b0 != NULL) {
+            printf("defltpoly.dup.copy.update=%d\n",
+                   EVP_MAC_update(b0, (const unsigned char *)msg + 16, strlen(msg) - 16));
+            outl = 0;
+            outl2 = 0;
+            ok_copy = EVP_MAC_final(b0, out, &outl, sizeof(out));
+            printf("defltpoly.dup.copy.final=%d\n", ok_copy);
+            if (ok_copy)
+                rt_hex("defltpoly.dup.copytag", out, outl);
+            ok_orig = EVP_MAC_final(a0, out, &outl2, sizeof(out));
+            printf("defltpoly.dup.orig.final=%d\n", ok_orig);
+            if (ok_orig)
+                rt_hex("defltpoly.dup.origtag", out, outl2);
+            EVP_MAC_CTX_free(b0);
+        }
+        EVP_MAC_CTX_free(a0);
+    }
+
+    EVP_MAC_CTX_free(ctx);
+
+    /* The refusals, each with its queue. */
+    {
+        EVP_MAC_CTX *c;
+        int one = 1;
+        OSSL_PARAM a[3];
+
+        /* A key of the wrong length, at both ends: the length half of one raise coordinate. */
+        c = EVP_MAC_CTX_new(mac);
+        ERR_clear_error();
+        printf("defltpoly.key0=%d\n", EVP_MAC_init(c, key, 0, NULL));
+        rt_errq("poly_key0");
+        ERR_clear_error();
+        printf("defltpoly.key31=%d\n", EVP_MAC_init(c, key, 31, NULL));
+        rt_errq("poly_key31");
+        ERR_clear_error();
+        printf("defltpoly.key33=%d\n", EVP_MAC_init(c, key, 33, NULL));
+        rt_errq("poly_key33");
+
+        /*
+         * The NULL half of that *same* coordinate, which `EVP_MAC_init` structurally cannot
+         * reach: a NULL key there takes the keyless re-init path and never calls
+         * `poly1305_setkey`. Only a `key` descriptor whose `data` is NULL reaches it, so that is
+         * what is observed. Two arms for one raise site because they are two distinct public
+         * calls, and observing only the length half would leave the `key == NULL` disjunct
+         * unobserved while looking covered.
+         */
+        ERR_clear_error();
+        a[0] = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_KEY, NULL, sizeof(key));
+        a[1] = OSSL_PARAM_construct_end();
+        printf("defltpoly.set.keynull=%d\n", EVP_MAC_CTX_set_params(c, a));
+        rt_errq("poly_set_keynull");
+
+        /*
+         * `EVP_MAC_init` with a NULL key is *not* a refusal: `poly1305_init` skips `setkey`
+         * entirely and answers `ctx->updated == 0`, so on a context where nothing has been
+         * updated it succeeds -- and `keylen` is ignored rather than checked, which is why this
+         * is printed instead of assumed.
+         */
+        ERR_clear_error();
+        printf("defltpoly.keylessinit=%d\n", EVP_MAC_init(c, NULL, 32, NULL));
+        rt_errq("poly_keylessinit");
+
+        /* An update and a final with no key: two coordinates for one reason. */
+        ERR_clear_error();
+        printf("defltpoly.upd.nokey=%d\n", EVP_MAC_update(c, (const unsigned char *)msg, 1));
+        rt_errq("poly_upd_nokey");
+        ERR_clear_error();
+        outl = 0;
+        printf("defltpoly.fin.nokey=%d\n", EVP_MAC_final(c, out, &outl, sizeof(out)));
+        rt_errq("poly_fin_nokey");
+
+        /*
+         * The keyless second init. `updated` is clear while the updates above were refused, so
+         * this succeeds; after a *successful* update it must not, and both are observed.
+         */
+        printf("defltpoly.reinit.beforekey=%d\n", EVP_MAC_init(c, NULL, 0, NULL));
+        printf("defltpoly.reinit.key=%d\n", EVP_MAC_init(c, key, sizeof(key), NULL));
+        printf("defltpoly.reinit.update=%d\n",
+               EVP_MAC_update(c, (const unsigned char *)msg, 1));
+        ERR_clear_error();
+        printf("defltpoly.reinit.afterupdate=%d\n", EVP_MAC_init(c, NULL, 0, NULL));
+        rt_errq("poly_reinit_afterupdate");
+
+        /* A `key` that is not an octet string, and a repeated one. */
+        ERR_clear_error();
+        a[0] = OSSL_PARAM_construct_int(OSSL_MAC_PARAM_KEY, &one);
+        a[1] = OSSL_PARAM_construct_end();
+        printf("defltpoly.set.keytype=%d\n", EVP_MAC_CTX_set_params(c, a));
+        rt_errq("poly_set_keytype");
+
+        ERR_clear_error();
+        a[0] = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_KEY, (void *)key, sizeof(key));
+        a[1] = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_KEY, (void *)key, sizeof(key));
+        a[2] = OSSL_PARAM_construct_end();
+        printf("defltpoly.set.repeat=%d\n", EVP_MAC_CTX_set_params(c, a));
+        rt_errq("poly_set_repeat");
+
+        /*
+         * The provider-level getter's own repeated-parameter site, reached through
+         * `EVP_MAC_get_params` on the **method**, not `EVP_MAC_CTX_get_params` on the context.
+         * This row publishes no ctx-level getter, so the context call would answer 1 without
+         * entering the row at all -- an arm that reads as coverage and is not.
+         */
+        {
+            size_t sz = 0;
+            OSSL_PARAM g[3];
+
+            g[0] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &sz);
+            g[1] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &sz);
+            g[2] = OSSL_PARAM_construct_end();
+            ERR_clear_error();
+            printf("defltpoly.getp.repeat=%d\n", EVP_MAC_get_params(mac, g));
+            rt_errq("poly_getp_repeat");
+        }
+        EVP_MAC_CTX_free(c);
+    }
+
+    /* A final whose buffer is smaller than the tag, refused by `evp_mac_final` itself. */
+    {
+        EVP_MAC_CTX *c = EVP_MAC_CTX_new(mac);
+
+        EVP_MAC_init(c, key, sizeof(key), NULL);
+        EVP_MAC_update(c, (const unsigned char *)msg, 4);
+        ERR_clear_error();
+        outl = 0;
+        printf("defltpoly.final.short=%d\n", EVP_MAC_final(c, out, &outl, 7));
+        rt_errq("poly_final_short");
+        EVP_MAC_CTX_free(c);
+    }
+
+    EVP_MAC_free(mac);
+}
 
 /*
  * The `BLAKE2BMAC` and `BLAKE2SMAC` rows. One implementation instantiated twice, so the arm takes
@@ -5424,6 +5707,7 @@ int main(void)
     rt_deflt_siphash();
     rt_deflt_hmac();
     rt_deflt_blake2_mac();
+    rt_deflt_poly1305();
     rt_deflt_errors();
     rt_disp_failures();
     return 0;

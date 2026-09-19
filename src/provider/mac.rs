@@ -100,6 +100,10 @@ use crate::mac::hmac::{
     HMAC_CTX_copy, HMAC_CTX_free, HMAC_CTX_new, HMAC_Final, HMAC_Init_ex, HMAC_Update, HMAC_size,
     HmacCtx,
 };
+use crate::mac::poly1305::{
+    Poly1305, Poly1305_Final, Poly1305_Init, Poly1305_Update, POLY1305_DIGEST_SIZE,
+    POLY1305_KEY_SIZE,
+};
 use crate::mac::siphash::{
     SipHash_Final, SipHash_Init, SipHash_Update, SipHash_hash_size, SipHash_set_hash_size, Siphash,
     SIPHASH_C_ROUNDS, SIPHASH_D_ROUNDS, SIPHASH_KEY_SIZE,
@@ -574,7 +578,7 @@ pub(crate) static CMAC_FUNCTIONS: [OsslDispatch; 11] = [
 /// expands through `ALGC(NAMES, FUNC, CHECK) { { NAMES, "provider=default", FUNC }, CHECK }`, and
 /// D247 is what a NULL there cost: a fetch whose property query is `provider=default` stopped
 /// resolving, and `provider!=default` resolved when it should not have.
-pub(crate) static DEFLT_MACS: [OsslAlgorithm; 6] = [
+pub(crate) static DEFLT_MACS: [OsslAlgorithm; 7] = [
     OsslAlgorithm {
         // `PROV_NAMES_BLAKE2BMAC` — `prov/names.h:322`. The OID is part of the row: the
         // census compares the whole alias sequence, not the primary name (D244).
@@ -606,6 +610,20 @@ pub(crate) static DEFLT_MACS: [OsslAlgorithm; 6] = [
         algorithm_names: c"SIPHASH".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
         implementation: SIPHASH_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_POLY1305` — `prov/names.h`, which is the primary name alone: this row
+        // carries no alias and no OID, unlike the two BLAKE2 rows (D256).
+        //
+        // It is the **last** row in `deflt_macs[]` (`defltprov.c:349-351`), after SIPHASH -- the
+        // census rejects a candidate order that is not a subsequence of the authority's, and it
+        // did reject this pair when POLY1305 came first here. The order is part of the row
+        // identity, which is why it is stated rather than left to how the rows happen to be
+        // written.
+        algorithm_names: c"POLY1305".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: POLY1305_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
@@ -1039,7 +1057,8 @@ unsafe extern "C" fn gmac_set_ctx_params(vmacctx: *mut c_void, params: *const Os
 /// the blocker named in `forensics/atlas/provider-algorithm-plans.json`, and the unit tests below
 /// are what keep the transcription honest until then (D243).
 #[allow(dead_code)]
-// The caller that will land: `DEFLT_MACS`'s third row, when the AES-GCM cipher rows land in
+// The caller that will land: the row between CMAC and HMAC in `DEFLT_MACS` (`defltprov.c:342`,
+// the authority's fourth MAC row), when the AES-GCM cipher rows land in
 // Phase 9 and `EVP_MAC_fetch(NULL, "GMAC", NULL)` can be courted against the authority.
 pub(crate) static GMAC_FUNCTIONS: [OsslDispatch; 11] = [
     OsslDispatch {
@@ -2574,6 +2593,360 @@ macro_rules! blake2_mac_row {
 blake2_mac_row!(blake2b_mac, blake2b);
 blake2_mac_row!(blake2s_mac, blake2s);
 
+// ---------------------------------------------------------------------------------------------
+// `POLY1305` — `providers/implementations/macs/poly1305_prov.c`
+// ---------------------------------------------------------------------------------------------
+
+/// The allocation `file` argument for this row: the build-relative spelling, because
+/// `poly1305_prov.c` is generated from `poly1305_prov.c.in` (D235's rule, and the unit test below
+/// binds it to a raise site in the same unit).
+const FILE_POLY1305: *const c_char = c"providers/implementations/macs/poly1305_prov.c".as_ptr();
+
+/// The one key `poly1305_get_params_decoder` locates, with its raise site. The generated decoder
+/// compares the **whole** key (`strcmp("size", s + 0)`) rather than switching on the first byte,
+/// because there is only one.
+const POLY1305_GET_PARAMS_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 1] =
+    [(&err_sites::PROV_POLY1305_PROV_177, OSSL_MAC_PARAM_SIZE)];
+
+/// The one key `poly1305_set_ctx_params_decoder` locates, with its raise site.
+const POLY1305_SET_CTX_PARAMS_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 1] =
+    [(&err_sites::PROV_POLY1305_PROV_234, OSSL_MAC_PARAM_KEY)];
+
+/// `poly1305_get_params_list` — `poly1305_prov.c:153-156`: **one** `OSSL_PARAM_size_t` entry, and
+/// a *provider-level* list rather than a ctx-level one — the row publishes
+/// `GETTABLE_PARAMS`/`GET_PARAMS` and no ctx-params getter at all, exactly as GMAC does and
+/// differently from CMAC, HMAC, SIPHASH and BLAKE2.
+static POLY1305_GETTABLE_PARAMS: [OsslParam; 2] = [param_size_t(OSSL_MAC_PARAM_SIZE), END];
+
+/// `poly1305_set_ctx_params_list` — `poly1305_prov.c:210-213`: the key, and nothing else. There is
+/// no `size`, `cipher`, `custom` or `salt` here.
+static POLY1305_SETTABLE_CTX_PARAMS: [OsslParam; 2] = [param_octet_string(OSSL_MAC_PARAM_KEY), END];
+
+/// `struct poly1305_data_st` — `poly1305_prov.c:44-49`.
+///
+/// The two flags are the row's own state machine and they are *not* interchangeable: `key_set` says
+/// a key has ever been given, and `updated` says the context has been used since the last key.
+/// `updated` is what makes a second `EVP_MAC_init` without a key refuse, and `key_set` is what makes
+/// an `update` or a `final` refuse before that. The embedded `POLY1305` sits at offset 16 — the
+/// layout is verified against the authority's own offsets (0, 8, 12, 16) and its total is 264 bytes,
+/// which is the number an application's allocator is handed.
+#[repr(C)]
+pub(crate) struct Poly1305Data {
+    /// `void *provctx` — stored and never read.
+    pub provctx: *mut c_void,
+    /// `int updated`.
+    pub updated: c_int,
+    /// `int key_set`.
+    pub key_set: c_int,
+    /// `POLY1305 poly1305`.
+    pub poly1305: Poly1305,
+}
+
+/// `static void *poly1305_new(void *provctx)` — `poly1305_prov.c:51-61`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn poly1305_new(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let ctx = CRYPTO_zalloc(core::mem::size_of::<Poly1305Data>(), FILE_POLY1305, LINE)
+            .cast::<Poly1305Data>();
+        if !ctx.is_null() {
+            (*ctx).provctx = provctx;
+        }
+        ctx.cast()
+    }
+}
+
+/// `static void poly1305_free(void *vmacctx)` — `poly1305_prov.c:63-66`.
+///
+/// **A bare `OPENSSL_free`, with no cleanse.** The context holds a Poly1305 key schedule and a
+/// partial block, and the authority does not scrub either — unlike `hmac_free`, which cleanses its
+/// key, and unlike `Poly1305_Final`, which cleanses the inner context. Transcribed as written; the
+/// asymmetry is the authority's.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn poly1305_free(vmacctx: *mut c_void) {
+    // SAFETY: the caller's contract; `vmacctx` is a context `poly1305_new` allocated.
+    unsafe { CRYPTO_free(vmacctx, FILE_POLY1305, LINE) }
+}
+
+/// `static void *poly1305_dup(void *vsrc)` — `poly1305_prov.c:68-81`.
+///
+/// `OPENSSL_malloc` here where `blake2_mac_dup` uses `OPENSSL_zalloc`, and then a whole-struct copy
+/// that overwrites every byte either way. The difference is not observable and is transcribed
+/// because the file spells it.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn poly1305_dup(vsrc: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let dst = CRYPTO_malloc(core::mem::size_of::<Poly1305Data>(), FILE_POLY1305, LINE)
+            .cast::<Poly1305Data>();
+        if dst.is_null() {
+            return ptr::null_mut();
+        }
+        ptr::copy_nonoverlapping(
+            vsrc.cast::<u8>(),
+            dst.cast::<u8>(),
+            core::mem::size_of::<Poly1305Data>(),
+        );
+        dst.cast()
+    }
+}
+
+/// `static size_t poly1305_size(void)` — `poly1305_prov.c:83-86`. A constant: Poly1305's tag is
+/// always sixteen bytes, whatever the message.
+fn poly1305_size() -> usize {
+    POLY1305_DIGEST_SIZE
+}
+
+/// `static int poly1305_setkey(struct poly1305_data_st *ctx, const unsigned char *key,
+/// size_t keylen)` — `poly1305_prov.c:88-99`.
+///
+/// **A NULL key is refused as well as a wrong length**, and the length must be exactly
+/// `POLY1305_KEY_SIZE` — there is no padding and no truncation. Both flags are set here rather than
+/// one: the key is now set, and the context has not been used since.
+///
+/// # Safety
+/// `ctx` is live; `key` is NULL or readable for `keylen` bytes.
+unsafe fn poly1305_setkey(ctx: *mut Poly1305Data, key: *const c_uchar, keylen: usize) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if key.is_null() || keylen != POLY1305_KEY_SIZE {
+            return fail_at(&err_sites::PROV_POLY1305_PROV_92);
+        }
+        Poly1305_Init(ptr::addr_of_mut!((*ctx).poly1305), key);
+        (*ctx).updated = 0;
+        (*ctx).key_set = 1;
+        1
+    }
+}
+
+/// `static int poly1305_init(void *vmacctx, const unsigned char *key, size_t keylen,
+/// const OSSL_PARAM params[])` — `poly1305_prov.c:101-113`.
+///
+/// **The `key == NULL` arm is a refusal once the context has been used.** Given `updated` is set by
+/// both `update` and `final`, a caller that hashed and then calls `EVP_MAC_init` without a key gets
+/// 0, because Poly1305 cannot be re-keyed without a key and cannot be reused either. That is the
+/// row's own rule and it is why a "just restart" re-init is not what happens here, in contrast with
+/// HMAC's row.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn poly1305_init(
+    vmacctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 || poly1305_set_ctx_params(vmacctx, params) == 0 {
+            return 0;
+        }
+        let ctx = vmacctx.cast::<Poly1305Data>();
+        if !key.is_null() {
+            return poly1305_setkey(ctx, key, keylen);
+        }
+        /* no reinitialization of context with the same key is allowed */
+        ((*ctx).updated == 0) as c_int
+    }
+}
+
+/// `static int poly1305_update(void *vmacctx, const unsigned char *data, size_t datalen)` —
+/// `poly1305_prov.c:115-131`.
+///
+/// Note the order: the `key_set` test with its raise comes **first**, then `updated` is set, then a
+/// zero-length update returns 1. So an update with no key raises and does *not* mark the context
+/// used, which is what keeps a later `init` without a key possible.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn poly1305_update(
+    vmacctx: *mut c_void,
+    data: *const c_uchar,
+    datalen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vmacctx.cast::<Poly1305Data>();
+        if (*ctx).key_set == 0 {
+            return fail_at(&err_sites::PROV_POLY1305_PROV_121);
+        }
+        (*ctx).updated = 1;
+        if datalen == 0 {
+            return 1;
+        }
+        /* poly1305 has nothing to return in its update function */
+        Poly1305_Update(ptr::addr_of_mut!((*ctx).poly1305), data, datalen);
+        1
+    }
+}
+
+/// `static int poly1305_final(void *vmacctx, unsigned char *out, size_t *outl, size_t outsize)` —
+/// `poly1305_prov.c:133-148`. The same `key_set` refusal as the update, with its own coordinate
+/// because it is a different line, and the length is written **after** the tag.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn poly1305_final(
+    vmacctx: *mut c_void,
+    out: *mut c_uchar,
+    outl: *mut usize,
+    _outsize: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return 0;
+        }
+        let ctx = vmacctx.cast::<Poly1305Data>();
+        if (*ctx).key_set == 0 {
+            return fail_at(&err_sites::PROV_POLY1305_PROV_141);
+        }
+        (*ctx).updated = 1;
+        Poly1305_Final(ptr::addr_of_mut!((*ctx).poly1305), out);
+        *outl = poly1305_size();
+        1
+    }
+}
+
+/// `static const OSSL_PARAM *poly1305_gettable_params(void *provctx)` — `poly1305_prov.c:189-192`.
+/// No context argument, because this is the provider-level list.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn poly1305_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
+    POLY1305_GETTABLE_PARAMS.as_ptr()
+}
+
+/// `static int poly1305_get_params(OSSL_PARAM params[])` — `poly1305_prov.c:194-205`. One key, and
+/// it answers the constant 16.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn poly1305_get_params(params: *mut OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if let Some(site) = repeated_param_site(params, &POLY1305_GET_PARAMS_DECODER_KEYS) {
+            return fail_at(site);
+        }
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_MAC_PARAM_SIZE);
+        if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, poly1305_size()) == 0 {
+            return 0;
+        }
+        1
+    }
+}
+
+/// `static const OSSL_PARAM *poly1305_settable_ctx_params(void *ctx, void *provctx)` —
+/// `poly1305_prov.c:246-250`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn poly1305_settable_ctx_params(
+    _ctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    POLY1305_SETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `static int poly1305_set_ctx_params(void *vmacctx, const OSSL_PARAM *params)` —
+/// `poly1305_prov.c:252-265`.
+///
+/// The `key` arm short-circuits on a wrong `data_type` *or* a failed `poly1305_setkey`, which is
+/// the same shape HMAC's and BLAKE2's rows use — and note the declaration is
+/// `const OSSL_PARAM *params` here rather than `const OSSL_PARAM params[]`, the same type spelled
+/// two ways.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn poly1305_set_ctx_params(
+    vmacctx: *mut c_void,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vmacctx.is_null() {
+            return 0;
+        }
+        if let Some(site) = repeated_param_site(params, &POLY1305_SET_CTX_PARAMS_DECODER_KEYS) {
+            return fail_at(site);
+        }
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_MAC_PARAM_KEY);
+        if !p.is_null()
+            && ((*p).data_type != OSSL_PARAM_OCTET_STRING
+                || poly1305_setkey(
+                    vmacctx.cast::<Poly1305Data>(),
+                    (*p).data.cast::<c_uchar>(),
+                    (*p).data_size,
+                ) == 0)
+        {
+            return 0;
+        }
+        1
+    }
+}
+
+/// `const OSSL_DISPATCH ossl_poly1305_functions[]` — `poly1305_prov.c:267-280`: ten entries and the
+/// terminator. The fourth and fifth are the **provider-level** params pair, which is what makes this
+/// row's getter surface different from the ctx-level one the other MAC rows publish.
+pub(crate) static POLY1305_FUNCTIONS: [OsslDispatch; 11] = [
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_NEWCTX,
+        function: poly1305_new as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_DUPCTX,
+        function: poly1305_dup as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_FREECTX,
+        function: poly1305_free as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_INIT,
+        function: poly1305_init as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_UPDATE,
+        function: poly1305_update as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_FINAL,
+        function: poly1305_final as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_GETTABLE_PARAMS,
+        function: poly1305_gettable_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_GET_PARAMS,
+        function: poly1305_get_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_SETTABLE_CTX_PARAMS,
+        function: poly1305_settable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_MAC_SET_CTX_PARAMS,
+        function: poly1305_set_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_DISPATCH_END,
+        function: ptr::null_mut(),
+    },
+];
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2581,18 +2954,24 @@ mod tests {
 
     #[test]
     fn the_mac_table_names_its_rows_in_the_authoritys_order() {
-        // The authority's first, second, third, fifth and ninth rows, and **not** appended:
-        // `defltprov.c` lists BLAKE2BMAC first, BLAKE2SMAC second, HMAC fifth and SIPHASH ninth
-        // after GMAC, and the census requires the crate's rows to be a subsequence of the
-        // authority's order (D244). GMAC's engine is transcribed and its registration is held for
-        // Phase 9 (D243), so it is absent here rather than in the wrong place.
-        assert_eq!(DEFLT_MACS.len(), 6);
+        // Six of the authority's nine rows, in its order and **not** appended: `defltprov.c:334-353`
+        // lists BLAKE2BMAC 1st, BLAKE2SMAC 2nd, CMAC 3rd, GMAC 4th, HMAC 5th, KMAC-128 6th,
+        // KMAC-256 7th, SIPHASH 8th and POLY1305 9th, and the census requires the crate's rows to
+        // be a subsequence of it (D244). GMAC is `deferred` to Phase 9 with its blocker named
+        // (D243) and is absent here rather than in the wrong place; `KMAC-128` and `KMAC-256` are
+        // `open`.
+        //
+        // This test asserted the crate's own array and not the authority's, so it stayed green
+        // while SIPHASH and POLY1305 were transposed; `gen_provider_algorithms.py` caught it
+        // because *its* oracle is `defltprov.c`. The expected sequence below is therefore read off
+        // the authority's line numbers rather than off this file.
+        assert_eq!(DEFLT_MACS.len(), 7);
         // SAFETY: the terminator's name is NULL by construction, and each landed row's is a
         // `'static` C string.
         unsafe {
-            assert!(DEFLT_MACS[5].algorithm_names.is_null());
-            assert!(DEFLT_MACS[5].property_definition.is_null());
-            assert!(DEFLT_MACS[5].implementation.is_null());
+            assert!(DEFLT_MACS[6].algorithm_names.is_null());
+            assert!(DEFLT_MACS[6].property_definition.is_null());
+            assert!(DEFLT_MACS[6].implementation.is_null());
             for (row, want) in [
                 (
                     &DEFLT_MACS[0],
@@ -2602,6 +2981,7 @@ mod tests {
                 (&DEFLT_MACS[2], b"CMAC"),
                 (&DEFLT_MACS[3], b"HMAC"),
                 (&DEFLT_MACS[4], b"SIPHASH"),
+                (&DEFLT_MACS[5], b"POLY1305"),
             ] {
                 let name = core::ffi::CStr::from_ptr(row.algorithm_names);
                 assert_eq!(name.to_bytes(), want);
@@ -2627,10 +3007,15 @@ mod tests {
     /// than a comment.
     #[test]
     fn every_allocation_file_constant_is_the_authoritys_own_string() {
-        let cases: [(&str, *const c_char, &err_sites::ErrSite); 6] = [
+        let cases: [(&str, *const c_char, &err_sites::ErrSite); 7] = [
             ("cmac", FILE, &err_sites::PROV_CMAC_PROV_245),
             ("gmac", FILE_GMAC, &err_sites::PROV_GMAC_PROV_200),
             ("hmac", FILE_HMAC, &err_sites::PROV_HMAC_PROV_313),
+            (
+                "poly1305",
+                FILE_POLY1305,
+                &err_sites::PROV_POLY1305_PROV_177,
+            ),
             ("siphash", FILE_SIPHASH, &err_sites::PROV_SIPHASH_PROV_190),
             // The two BLAKE2 rows allocate from `blake2_mac_impl.c`, which is *included* rather
             // than generated, so its `__FILE__` carries the source-tree prefix the four above do

@@ -19052,6 +19052,56 @@ pub(crate) const PROV_BLAKE2_MAC_IMPL_231: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `poly1305_setkey` at `providers/implementations/macs/poly1305_prov.c:92` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_POLY1305_PROV_92: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/poly1305_prov.c",
+    line: 92,
+    func: c"poly1305_setkey",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `poly1305_update` at `providers/implementations/macs/poly1305_prov.c:121` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_POLY1305_PROV_121: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/poly1305_prov.c",
+    line: 121,
+    func: c"poly1305_update",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `poly1305_final` at `providers/implementations/macs/poly1305_prov.c:141` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_POLY1305_PROV_141: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/poly1305_prov.c",
+    line: 141,
+    func: c"poly1305_final",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `poly1305_get_params_decoder` at `providers/implementations/macs/poly1305_prov.c:177` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_POLY1305_PROV_177: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/poly1305_prov.c",
+    line: 177,
+    func: c"poly1305_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `poly1305_set_ctx_params_decoder` at `providers/implementations/macs/poly1305_prov.c:234` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_POLY1305_PROV_234: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/poly1305_prov.c",
+    line: 234,
+    func: c"poly1305_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
 /// `siphash_get_ctx_params_decoder` at `providers/implementations/macs/siphash_prov.c:190` (PROV_R_REPEATED_PARAMETER).
 pub(crate) const PROV_SIPHASH_PROV_190: ErrSite = ErrSite {
     file: c"providers/implementations/macs/siphash_prov.c",
@@ -21115,6 +21165,11 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_BLAKE2_MAC_IMPL_197,
     PROV_BLAKE2_MAC_IMPL_216,
     PROV_BLAKE2_MAC_IMPL_231,
+    PROV_POLY1305_PROV_92,
+    PROV_POLY1305_PROV_121,
+    PROV_POLY1305_PROV_141,
+    PROV_POLY1305_PROV_177,
+    PROV_POLY1305_PROV_234,
     PROV_SIPHASH_PROV_190,
     PROV_SIPHASH_PROV_201,
     PROV_SIPHASH_PROV_212,

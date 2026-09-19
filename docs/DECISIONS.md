@@ -17010,3 +17010,136 @@ buffer should be cleansed on a short key — is not one the authority makes.
 
 **What this entry moves.** Nothing. No count, no census and no court observation moves; the
 observation it describes is part of D256's `RT-CIPHER` movement. Unit tests stay at **574**.
+
+## D258 — the `POLY1305` provider row lands, on the C branch of a unit this profile compiles from perlasm
+
+The ninth and last of 8.3's MAC rows that this stratum owns, and the first whose underlying primitive is
+declined rather than transcribed. The row is `providers/implementations/macs/poly1305_prov.c`'s, the
+primitive is `crypto/poly1305/poly1305.c`'s, and the two are separate decisions.
+
+**The row.** `src/provider/mac.rs` transcribes `poly1305_prov.c` whole: its `struct poly1305_data_st`,
+its eleven dispatch entries and terminator, and its generated `poly1305_get_params_*` /
+`poly1305_set_ctx_params_*` decoder pair with each raise at the authority's own coordinate. Its shape is
+`GMAC`'s rather than `CMAC`'s or `HMAC`'s: it publishes the **provider-level** `GETTABLE_PARAMS` /
+`GET_PARAMS` pair and **no ctx-params getter at all**, so `EVP_MAC_CTX_gettable_params` answers NULL
+while `EVP_MAC_gettable_params` answers a one-entry list. That distinction is observable and is
+observed in both directions — `defltpoly.x.cgp.present=0` next to `defltpoly.x.gp.present=1`, and
+`EVP_MAC_CTX_get_params` returning 1 with the output left untouched next to `EVP_MAC_get_params`
+writing 16.
+
+Its state machine is **two flags**, not one, and the difference is observable. `key_set` gates an
+update and a final with `PROV_R_NO_KEY_SET`; `updated` — set by *both* of them — is what makes a
+second `EVP_MAC_init` **without a key** refuse. So an update that was refused raises *and* leaves
+`updated` clear, which is exactly what keeps a later keyless init possible. Both halves are in the
+probe: `defltpoly.reinit.afterupdate=0` (a refused-and-silent answer, `q.poly_reinit_afterupdate.count=0`)
+sits beside `defltpoly.reinit.beforekey=1`, and both would be wrong under a one-flag transcription.
+
+**`POLY1305_ASM` is defined in this profile, and the arm it selects is declined — deliberately, and
+with the reason stated rather than implied.** The whole translation unit of `poly1305.c` sits inside
+`#ifndef POLY1305_ASM`, and this build's perlasm line carries `-DPOLY1305_ASM`
+(`crypto/poly1305/libcrypto-lib-poly1305-x86_64.o` exists), so what actually compiles is the `#else`
+arm: `poly1305_init` is a perlasm function taking a third argument that selects the block/emit
+implementations, and `Poly1305_Init` stores the resulting pointers into `ctx->func`. This crate
+transcribes the `#ifndef` branch and declines the assembly. Three properties make that a decline of
+*where the arithmetic lives* rather than of what the API does, and each is the reason a different
+plausible approach is not taken:
+
+* The **wrapper logic is identical in both branches.** `Poly1305_Update` and `Poly1305_Final` have the
+  same statements either way; under the assembly the two calls are macro forms dispatching through
+  `ctx->func`. So the declined part is the arithmetic, not the observable.
+* Poly1305 is a **pure function** of its key, nonce and message: the assembly and the C reference
+  compute the same 16-byte tag. Declining it cannot change any observable — a stronger statement than
+  "the tests pass", and the reason this decline is safe where an assembly arm with a *different
+  signature* would not be.
+* `ctx->func` is **still laid out**, because the size is observable: `Poly1305_ctx_size()` answers
+  `sizeof(POLY1305)` and the provider row's allocation is `sizeof(struct poly1305_data_st)` = 264,
+  which reaches `CRYPTO_set_mem_functions`'s `num`. The two pointer fields are never written here,
+  which is the one observable consequence of the decline — the fields keep what `OPENSSL_zalloc` left
+  — and it is a consequence no public surface can inspect.
+
+This is the fourth declined host-selected value after `RC4_options` (D213), the Camellia key table
+(D222) and the AESNI CCM arm (D238), and it is recorded for the same reason: a decline that is not
+written down is indistinguishable from an omission.
+
+**The primitive.** `src/mac/poly1305.rs` transcribes the `u128` branch, which is the branch that
+compiles here (`INT64_MAX` and `INT128_MAX` both hold). Three details of the authority's C are load
+bearing and are transcribed as written rather than "cleaned": `len` need not be a multiple of the block
+size and a trailing partial block is **ignored**; `padbit` is 1 for every whole block except the last,
+where the caller has already appended the `0x01`; and `h2 * s1` / `h2 * r0` are 64-bit products, which
+cannot overflow given the clamp but would be written widened by a defensive transcription. The clamp
+constants differ between the two halves of `r` (`0x0fff_fffc_0fff_ffff` and `0x0fff_fffc_0fff_fffc`),
+and the empty-message arm is in the probe because the construction gives its answer directly: with no
+message the tag is exactly the key's second half, which checks `Init`'s word order and `emit` with no
+vector at all.
+
+**What this entry moves.** `implemented[libcrypto]` stays **2035 / 5896** — `poly1305.c` has no
+`libcrypto` symbol, so no export moves and no obligation ledger row changes: Phase 8 stays **194
+implemented / 576 open / 16 deferred**. The provider census moves **114 -> 115 implemented**, **196 ->
+195 open**, **686 deferred**; provider coverage moves **114 / 114 / 0 -> 115 / 115 / 0**. The err-site
+table moves **1917 -> 1922** (the five raises in `poly1305_prov.c`). `RT-CIPHER` moves **4149 -> 4251**
+observations and the pipeline total **27725 -> 27827**. Unit tests move **574 -> 577** (the vector
+split and byte-at-a-time arms, the empty-message property, and the context size). Full pipeline to
+`PIPELINE OK`.
+
+## D259 — finishing `POLY1305` found three defects, none of them in the primitive
+
+All three were found by machinery that already existed and was pointed at this row, and all three are
+classes rather than incidents.
+
+**1. The MAC table's row order was transposed, and the unit test agreed with the transposition.**
+`deflt_macs[]` (`defltprov.c:334-353`) lists SIPHASH **eighth** and POLY1305 **ninth**; the crate had
+POLY1305 fourth and SIPHASH fifth. `gen_provider_algorithms.py` refused the commit —
+`'SIPHASH' follows 'POLY1305' in the crate and precedes it in the authority` — because its oracle is
+`defltprov.c` and row order is part of the subsequence invariant D244 established.
+
+What made this worth its own entry is *why the unit test did not catch it*.
+`the_mac_table_names_its_rows_in_the_authoritys_order` asserted the crate's own array element by
+element, so it was green while the array was wrong: a test whose expected value is read off the thing
+under test cannot detect that thing being wrong. Its doc comment encoded the same inversion ("POLY1305
+eighth and SIPHASH ninth"), which is the tell — the comment was written from the array rather than
+from the authority. The expected sequence now states the authority's line numbers, and the comment
+says that it does. The general lesson is the one the whole evidence architecture is built on: an
+oracle has to be *outside* the artefact it judges, and a hand-written expectation transcribed from the
+artefact is not an oracle.
+
+**2. Two probe arms tested nothing, in the same way and for the same reason.** Both looked like
+coverage in the source and neither reached the function it named:
+
+* `defltpoly.keynull` called `EVP_MAC_init(c, NULL, 32, NULL)` and printed 1, which was read as "the
+  authority does not refuse a NULL key". It does not *there* — a NULL key in `EVP_MAC_init` takes the
+  keyless re-init path and never calls `poly1305_setkey` at all. The `key == NULL` disjunct of
+  `PROV_R_INVALID_KEY_LENGTH` at `poly1305_prov.c:92` is reachable only through a **descriptor** whose
+  `data` is NULL. The arm is replaced by `defltpoly.set.keynull` (`EVP_MAC_CTX_set_params` with an
+  octet-string `key` of `data == NULL`), which now raises from `:92` — and the old arm is kept,
+  relabelled `defltpoly.keylessinit`, because what it actually observes (a keyless init succeeding and
+  ignoring `keylen`) is a real fact about the row.
+* `defltpoly.get.repeat` called `EVP_MAC_CTX_get_params`, which for this row answers 1 without entering
+  anything, because the row publishes no ctx-level getter. The repeated-parameter raise in
+  `poly1305_get_params_decoder` is reachable only through `EVP_MAC_get_params` on the **method**. The
+  arm is now `defltpoly.getp.repeat` and reaches `:177`.
+
+The lesson is stated as a rule: **before claiming an observation covers a raise site, confirm the
+public call path reaches that function.** Both arms were written by reading the row and assuming the
+call path, and two of two such assumptions were wrong. `RT-CIPHER`'s observation count moved by 102
+for this row, and the two repaired arms are why the count is not the measure — the *queue* lines
+(`q.poly_set_keynull.0`, `q.poly_getp_repeat.0`) are.
+
+**3. A Rustified authority name made the prerequisite gate blind to a definition.** The gate joins a
+crate definition to the authority's translation unit **by name**, and `Poly1305_ctx_size` had been
+written `poly1305_ctx_size` — the only one of the file's four `Poly1305_*` names to be Rustified, the
+other three being authority spellings under the file's `#![allow(non_snake_case)]`. The gate therefore
+reported
+`unwired_function_in_the_current_stratum: crypto/poly1305/poly1305.c -> Poly1305_ctx_size`, which is
+its reading of "nothing in this stratum defines or calls this". The name is restored to the authority's
+spelling, which is both the file's stated convention and what lets the join succeed.
+
+This is the second time this session that a name-level join has been the weak point (D251's `bits`
+increment and D235's per-file `__FILE__` were the others), and the sharper form of the lesson is worth
+recording: **a name the tooling cannot join is indistinguishable from a name that is absent**, so
+Rustifying an authority name for internal style silently converts a *present* definition into a
+*presumed gap*. The gate's finding was correct; the defect was in the crate's naming.
+
+**What this entry moves.** Nothing beyond D258. The three repairs are inside D258's own numbers — the
+row order and the two probe arms are part of `RT-CIPHER`'s **4251** and the provider census's **115**,
+and the rename changes no count at all. Recorded because each is a class, and because the next row will
+meet all three.
