@@ -15,29 +15,36 @@
  * worth measuring is that they call it the way the authority does (the right `libctx`, the right
  * length, the right refusal).
  *
- * What it observes, and the one arm it cannot
- * -------------------------------------------
+ * What it observes, and the arms it cannot reach
+ * ----------------------------------------------
  * The draws themselves are unobservable (two different pools), so what is compared is the
  * contract: return codes, the context's key/IV lengths before and after, whether a cipher is
  * installed, and the error queue. The arms are:
  *
  *   - `EVP_CIPHER_CTX_rand_key` on a fetched provider cipher: the key length it reads (16 for
- *     AES-128-CBC) and the success it answers;
- *   - `EVP_SealInit`'s four early-return arms, all of which are deterministic and none of which
- *     needs a public key: `npubk <= 0` answers **1**, `npubk < 0` answers 1, a NULL `type` with
- *     `npubk <= 0` answers 1, and a non-NULL `npubk` with a NULL `pubk` answers 1;
+ *     AES-128-CBC), the success it answers, and its `kl <= 0` refusal -- reached by fetching the
+ *     provider's `NULL` cipher rather than assuming a zero key length;
+ *   - `EVP_SealInit`'s four early-return arms, all deterministic and none of which needs a public
+ *     key: `npubk <= 0` answers **1**, `npubk < 0` answers 1, a NULL `type` with `npubk <= 0`
+ *     answers 1, and a non-NULL `npubk` with a NULL `pubk` answers 1;
  *   - the context state `EVP_SealInit` leaves behind when it is given a cipher.
  *
- * **The `npubk > 0` path with a real key is not courted**, and that is a measurement rather than
- * an omission: it needs an `EVP_PKEY` with a public part, which the crate can only build once RSA
- * key construction and the ASN.1 public-key decoder land (Phase 8). Both `EVP_PKEY_get_size(NULL)`
- * and `EVP_PKEY_CTX_new_from_pkey(libctx, NULL, NULL)` are on that path, and the first is a null
- * dereference in the authority, so a probe must not reach it with a NULL key either. The arm is
- * recorded as owed, not silently skipped.
+ * Three arms are **not** courted, and each is a measurement rather than an omission:
  *
- * The `EVP_CIPH_RAND_KEY` branch of `EVP_CIPHER_CTX_rand_key` is likewise unreachable here: only
- * `e_des.c` and `e_des3.c` set that flag, and those statics are Phase 13's, so no cipher this
- * build can fetch routes `rand_key` through `EVP_CIPHER_CTX_ctrl`.
+ *   - **`EVP_SealInit` with `npubk > 0` and a real key** needs an `EVP_PKEY` with a public part,
+ *     which the crate can build only once RSA key construction and the ASN.1 public-key decoder
+ *     land, and the authority's own `EVP_PKEY_get_size(NULL)` on that path is a null dereference,
+ *     so a probe must not reach it with a NULL key either.
+ *   - **`EVP_CIPHER_CTX_rand_key`'s `EVP_CIPH_RAND_KEY` branch** is unreachable because only
+ *     `e_des.c` and `e_des3.c` set that flag and those statics are Phase 13's.
+ *   - **`OSSL_HPKE_get_grease_value`** is absent from this probe altogether, and the line below
+ *     says so in the transcript. It was transcribed and measured in D316 and could not land: its
+ *     success path calls `OSSL_HPKE_keygen`, which fetches a **keymgmt by name from the library
+ *     context**, and the default provider's `OSSL_OP_KEYMGMT X25519` row is unimplemented and
+ *     Phase 8's. `RT-HPKE` never sees this because it deliberately runs in a private
+ *     `OSSL_LIB_CTX` carrying its own test provider, so the framework is what that court measures
+ *     and the default provider's algorithm universe is what this one does. The export therefore
+ *     stays open, and landing it would have been an export whose only arm that matters answers 0.
  *
  * What a difference here means
  * ----------------------------
@@ -127,7 +134,7 @@ int main(void)
     /*
      * Before any `EVP_EncryptInit_ex` the context has no cipher, and `rand_key` reads
      * `ctx->cipher->flags` with no test -- so that state is a null dereference in the authority
-     * and is deliberately not called. The length observations below are the pre-image of the one
+     * and is deliberately not called. The length observation below is the pre-image of the one
      * that is.
      */
     printf("rand_key.before_init.key_length=%d\n", EVP_CIPHER_CTX_get_key_length(ctx));
@@ -206,6 +213,11 @@ int main(void)
     EVP_CIPHER_CTX_free(ctx);
 
     EVP_CIPHER_free(cipher);
+
+    /* An export this stratum owes that is not courted here, named so that "not run" cannot be
+     * read as "passed": see the header's third bullet and docs/DECISIONS.md D316. */
+    printf("OSSL_HPKE_get_grease_value=NOT_MEASURED_DEFAULT_PROVIDER_KEYMGMT_X25519_IS_PHASE_8\n");
+
     printf("done=1\n");
     return 0;
 }
