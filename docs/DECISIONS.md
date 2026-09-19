@@ -20586,3 +20586,61 @@ set that waits on **8.5–8.7's asymmetric algorithm objects**: the default prov
 keymgmt and keyexch rows. It is one of the first exports that will fall out of that work rather
 than the other way round, and the eight PEM names and `BIO_f_reliable` remain this stratum's own
 transcriptions.
+
+## D317 -- `BIO_f_reliable` lands, and its write path is measured to need a legacy `EVP_MD`
+
+### What landed
+
+`crypto/evp/bio_ok.c`'s whole unit is transcribed as `src/evp/bio_ok.rs`: `ok_new`, `ok_free`,
+`ok_read`, `ok_write`, `ok_ctrl`, `ok_callback_ctrl`, `longswap`, `sig_out`, `sig_in`, `block_out`,
+`block_in`, the `BIO_OK_CTX` context and the shared `methods_ok` table, with `BIO_f_reliable`
+(`:127`) the one export. The unit is Phase 9's for exactly one reason -- `sig_out` fills the
+record's digest half with `RAND_bytes` (`:456`) -- and the file calls no `ERR_raise` at all, so it
+has no generated raise sites and none were invented.
+
+`RT-RAND-USERS` grew by nineteen observations and passes with **61**. What it can measure is the
+filter's construction and the two digest arms of its `ctrl`: the `BIO_C_SET_MD` refusal with a NULL
+digest (which returns before it sets the BIO's init flag, so the context stays the un-initialised
+one `ok_new` made), the `BIO_C_GET_MD` refusal that follows from that, the acceptance of a real
+digest, the digest read back through the same ctrl, and the filter's own free path.
+
+### The write path cannot be courted, and the authority says why itself
+
+`sig_out` (`crypto/evp/bio_ok.c:431`) begins:
+
+```c
+md_data = EVP_MD_CTX_get0_md_data(md);
+...
+/*
+ * FIXME: there's absolutely no guarantee this makes any sense at all,
+ * particularly now EVP_MD_CTX has been restructured.
+ */
+if (RAND_bytes(md_data, md_size) <= 0)
+    goto berr;
+memcpy(&(ctx->buf[ctx->buf_len]), md_data, md_size);
+```
+
+`EVP_MD_CTX_get0_md_data` answers **NULL for a provider digest**. With
+`EVP_MD_fetch(NULL, "SHA256", NULL)` at `BIO_C_SET_MD`, the authority therefore reaches
+`memcpy(buf, NULL, 32)` on the very first `BIO_write`. That is the authority's own `FIXME` being
+live, and it was **measured rather than inferred**: the probe was first written to drive the full
+round trip (write 70 octets -- two whole SHA-256 records -- flush, drain, and compare the plaintext
+byte for byte), and the authority segfaulted on the first `BIO_write`; it segfaulted again after two
+suspect arms were moved onto their own BIO, which is what ruled out the probe's state and left
+`md_data` as the only explanation.
+
+So the filter needs a **legacy** `EVP_MD` -- `EVP_sha256()` and its family -- and those statics are
+Phase 13's (7.3g handed every one of them to that stratum with its primitive unit named). Until
+they land, `BIO_f_reliable`'s framing path is **owed rather than measurable**, and the probe prints
+`BIO_f_reliable.write_path=NOT_MEASURED_LEGACY_EVP_MD_IS_PHASE_13` so that a reader of the
+transcript cannot read "not run" as "passed". That is the same device D316 used, and it is the
+second time in three commits that an export's *unmeasurable* half turned out to be a dependency on
+a stratum other than this one: the shape of Phase 9's remaining work is a set of exports whose
+bodies are landed and whose decisive arms are somebody else's names.
+
+### Numbers
+
+`implemented[libcrypto]` 2135 -> 2136; `RT-RAND-USERS` 42 -> 61 observations; `PIPELINE OK` over 89
+courts and 32193 observations. `forensics/prerequisites.json`'s `units` row for `bio_ok.c`, which
+recorded it as `deferred_to_later_stratum` to Phase 9, is now discharged by the transcription edge
+`src/evp/bio_ok.rs` -> `crypto/evp/bio_ok.c` rather than by an edit to the row.
