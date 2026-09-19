@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 1881,
+      "sites": 1889,
       "unattributed": 0
     },
     "covered_files": [
@@ -186,6 +186,7 @@
       "providers/implementations/ciphers/ciphercommon_ccm.c",
       "providers/implementations/ciphers/cipher_aes_siv.c",
       "providers/implementations/macs/cmac_prov.c",
+      "providers/implementations/macs/gmac_prov.c",
       "providers/implementations/digests/digestcommon.c"
     ],
     "note": "`file` is the authority's `__FILE__` string, derived from relpath(source_tree, build_dir) of the admitted build record. It is a build artifact of the forensic build, reproduced exactly rather than normalized away, so the candidate's ERR records compare byte-for-byte with the authority's.",
@@ -28386,6 +28387,126 @@
         "rel_source": "providers/implementations/macs/cmac_prov.c"
       },
       {
+        "const_name": "PROV_GMAC_PROV_111",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "providers/implementations/macs/gmac_prov.c",
+        "function": "gmac_setkey",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 111,
+        "macro": "ERR_raise",
+        "reason": 105,
+        "reason_symbol": "PROV_R_INVALID_KEY_LENGTH",
+        "rel_source": "providers/implementations/macs/gmac_prov.c"
+      },
+      {
+        "const_name": "PROV_GMAC_PROV_200",
+        "data_format": "\"param %s is repeated\"",
+        "dynamic_reason": false,
+        "file": "providers/implementations/macs/gmac_prov.c",
+        "function": "gmac_get_params_decoder",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 200,
+        "macro": "ERR_raise_data",
+        "reason": 252,
+        "reason_symbol": "PROV_R_REPEATED_PARAMETER",
+        "rel_source": "providers/implementations/macs/gmac_prov.c"
+      },
+      {
+        "const_name": "PROV_GMAC_PROV_268",
+        "data_format": "\"param %s is repeated\"",
+        "dynamic_reason": false,
+        "file": "providers/implementations/macs/gmac_prov.c",
+        "function": "gmac_set_ctx_params_decoder",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 268,
+        "macro": "ERR_raise_data",
+        "reason": 252,
+        "reason_symbol": "PROV_R_REPEATED_PARAMETER",
+        "rel_source": "providers/implementations/macs/gmac_prov.c"
+      },
+      {
+        "const_name": "PROV_GMAC_PROV_279",
+        "data_format": "\"param %s is repeated\"",
+        "dynamic_reason": false,
+        "file": "providers/implementations/macs/gmac_prov.c",
+        "function": "gmac_set_ctx_params_decoder",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 279,
+        "macro": "ERR_raise_data",
+        "reason": 252,
+        "reason_symbol": "PROV_R_REPEATED_PARAMETER",
+        "rel_source": "providers/implementations/macs/gmac_prov.c"
+      },
+      {
+        "const_name": "PROV_GMAC_PROV_290",
+        "data_format": "\"param %s is repeated\"",
+        "dynamic_reason": false,
+        "file": "providers/implementations/macs/gmac_prov.c",
+        "function": "gmac_set_ctx_params_decoder",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 290,
+        "macro": "ERR_raise_data",
+        "reason": 252,
+        "reason_symbol": "PROV_R_REPEATED_PARAMETER",
+        "rel_source": "providers/implementations/macs/gmac_prov.c"
+      },
+      {
+        "const_name": "PROV_GMAC_PROV_301",
+        "data_format": "\"param %s is repeated\"",
+        "dynamic_reason": false,
+        "file": "providers/implementations/macs/gmac_prov.c",
+        "function": "gmac_set_ctx_params_decoder",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 301,
+        "macro": "ERR_raise_data",
+        "reason": 252,
+        "reason_symbol": "PROV_R_REPEATED_PARAMETER",
+        "rel_source": "providers/implementations/macs/gmac_prov.c"
+      },
+      {
+        "const_name": "PROV_GMAC_PROV_312",
+        "data_format": "\"param %s is repeated\"",
+        "dynamic_reason": false,
+        "file": "providers/implementations/macs/gmac_prov.c",
+        "function": "gmac_set_ctx_params_decoder",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 312,
+        "macro": "ERR_raise_data",
+        "reason": 252,
+        "reason_symbol": "PROV_R_REPEATED_PARAMETER",
+        "rel_source": "providers/implementations/macs/gmac_prov.c"
+      },
+      {
+        "const_name": "PROV_GMAC_PROV_354",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "providers/implementations/macs/gmac_prov.c",
+        "function": "gmac_set_ctx_params",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 354,
+        "macro": "ERR_raise",
+        "reason": 125,
+        "reason_symbol": "PROV_R_INVALID_MODE",
+        "rel_source": "providers/implementations/macs/gmac_prov.c"
+      },
+      {
         "const_name": "PROV_DIGESTCOMMON_56",
         "data_format": "\"param %s is repeated\"",
         "dynamic_reason": false,
@@ -29410,6 +29531,11 @@
       "name": "authority:providers/implementations/macs/cmac_prov.c",
       "path": "forensics/authorities/build/openssl-3.6.4-production/providers/implementations/macs/cmac_prov.c",
       "sha256": "a9d9257c923da7af30933ff7975ca62249c403eb659d345e0d29aa8404ec778f"
+    },
+    {
+      "name": "authority:providers/implementations/macs/gmac_prov.c",
+      "path": "forensics/authorities/build/openssl-3.6.4-production/providers/implementations/macs/gmac_prov.c",
+      "sha256": "40b09a92360d412c52f5ab3ea2ecfe7c4065606bb9b58eefe951a3ad6ffcbbad"
     },
     {
       "name": "authority:providers/implementations/digests/digestcommon.c",

@@ -148,13 +148,13 @@ pub(crate) const OSSL_FUNC_MAC_UPDATE: c_int = 5;
 /// `OSSL_FUNC_MAC_FINAL`.
 pub(crate) const OSSL_FUNC_MAC_FINAL: c_int = 6;
 /// `OSSL_FUNC_MAC_GET_PARAMS`.
-const OSSL_FUNC_MAC_GET_PARAMS: c_int = 7;
+pub(crate) const OSSL_FUNC_MAC_GET_PARAMS: c_int = 7;
 /// `OSSL_FUNC_MAC_GET_CTX_PARAMS`.
 pub(crate) const OSSL_FUNC_MAC_GET_CTX_PARAMS: c_int = 8;
 /// `OSSL_FUNC_MAC_SET_CTX_PARAMS`.
 pub(crate) const OSSL_FUNC_MAC_SET_CTX_PARAMS: c_int = 9;
 /// `OSSL_FUNC_MAC_GETTABLE_PARAMS`.
-const OSSL_FUNC_MAC_GETTABLE_PARAMS: c_int = 10;
+pub(crate) const OSSL_FUNC_MAC_GETTABLE_PARAMS: c_int = 10;
 /// `OSSL_FUNC_MAC_GETTABLE_CTX_PARAMS`.
 pub(crate) const OSSL_FUNC_MAC_GETTABLE_CTX_PARAMS: c_int = 11;
 /// `OSSL_FUNC_MAC_SETTABLE_CTX_PARAMS`.
