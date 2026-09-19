@@ -16161,3 +16161,75 @@ implemented / 576 open / 16 deferred**, and the provider census stays **110 impl
 of 996. `RT-CIPHER` moves **1115 → 1127**. What it adds is a class: after this, landing a provider
 object that acquires a library context without anchoring *where* it acquires it fails the census on
 the commit that lands it, rather than at the next stratum's seal.
+
+## D243 — GMAC's engine is transcribed and its row is not registered, because its only ciphers are another phase's
+
+D241 left eight of `deflt_macs[]`'s nine rows open in this stratum. `GMAC` was next in the
+census's own order, its engine is `gmac_prov.c`'s 278 template lines over machinery this crate
+already has, and transcribing it exposed the fact that the census was wrong about it.
+
+**What GMAC actually requires.** `gmac_set_ctx_params` resolves a `cipher` **name** through
+`ossl_prov_cipher_load` and then refuses every cipher whose mode is not `EVP_CIPH_GCM_MODE`:
+
+```c
+if (EVP_CIPHER_get_mode(ossl_prov_cipher_cipher(&macctx->cipher))
+    != EVP_CIPH_GCM_MODE) {
+    ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_MODE);
+    return 0;
+}
+```
+
+and its tag is not computed by GMAC at all — it is read back out of the cipher context with
+`EVP_CIPHER_CTX_get_params(OSSL_CIPHER_PARAM_AEAD_TAG)` after `EVP_EncryptFinal_ex`. A caller with
+no `cipher` parameter cannot get past `gmac_setkey`, because `EVP_CIPHER_CTX_get_key_length` on a
+context with no cipher is 0 and the key length check raises `PROV_R_INVALID_KEY_LENGTH` — on the
+authority as much as here. So GMAC's usable ciphers are exactly the GCM-mode rows, and this
+profile's GCM-mode rows are `AES-{128,192,256}-GCM`, `ARIA-*-GCM` and `SM4-GCM`. ARIA and SM4
+have no low-level API in this authority and no crate unit, and the AES-GCM rows are **Phase 9's**
+on `RAND_bytes_ex` (D234).
+
+**The census said otherwise, and that is the finding.** `provider-algorithms.json` recorded `GMAC`
+as `open` with `owning_phase: 8` and no blocker — the operation-default owner, applied because
+nothing had looked underneath it. It is not this stratum's own work; it is Phase 9's, behind the
+same `RAND_bytes_ex` boundary the AES-GCM rows are behind. The row now carries an override in
+`provider-algorithm-plans.json` with that chain named, and the census moves **110 implemented /
+201 open / 685 deferred** to **110 / 200 / 686**. This is `DES3-WRAP`'s class (D237) reached from
+the other direction: there, a row was invisible to a symbol census; here, a row was visible but its
+*owner* was wrong, and only reading the engine it dispatches to showed it.
+
+**Why the engine is transcribed anyway, and why the row is not registered.** The transcription is
+real work with a real court: every function, both decoder key tables (one get key, five set keys —
+`cipher`, `engine`, `iv`, `key`, `properties`, in the generated `switch`'s order rather than the
+generator spec's), the four-entry settable list with `engine` deliberately absent, the `INT_MAX`
+update loop, the sixteen-octet tag, and all eight raise sites
+(`PROV_GMAC_PROV_111`/`_200`/`_268`/`_279`/`_290`/`_301`/`_312`/`_354`). Publishing the row,
+however, would be worse than not publishing it:
+
+```text
+candidate registers GMAC
+    EVP_MAC_fetch(NULL, "GMAC", NULL) -> 1   (authority: 1)   <- agrees
+    EVP_MAC_init(..., cipher="AES-128-GCM")  -> 0   (authority: 1)   <- diverges
+```
+
+A fetch-only observation would call that a match. The row is therefore withheld, `GMAC_FUNCTIONS`
+carries an `#[allow(dead_code)]` whose comment names the caller that will land it — `DEFLT_MACS`'s
+third row, in Phase 9 — and four unit tests keep the transcription honest until then: the dispatch
+table's ten ids *including* the provider-level `GETTABLE_PARAMS`/`GET_PARAMS` pair that is the
+shape difference from CMAC, the decoder key order, the settable list's missing `engine`, and the
+one-key provider-level list (`size` alone, no `block-size`). A transcription that had copied
+CMAC's two keys would pass every cipher court and still answer `EVP_MAC_gettable_params` wrongly.
+
+**The three other rows the same reading would catch are left as they are, and each is different.**
+`HMAC` needs a digest, not a cipher, and this stratum's digest rows are landed. `POLY1305` and
+`SIPHASH` need `crypto/poly1305/poly1305.c` and `crypto/siphash/siphash.c`, which are internal
+units with no `libcrypto` symbol and are this stratum's own work. `KMAC-128`/`KMAC-256` need
+`SHAKE128`/`SHAKE256`, which `src/digest/sha3.rs` has. `BLAKE2BMAC`/`BLAKE2SMAC` need
+`blake2_mac_impl.c` over `src/digest/blake2.rs`. So seven rows remain genuinely open here, and the
+census now says seven rather than eight.
+
+**What this entry moves.** `implemented[libcrypto]` stays **2035 / 5896** and Phase 8 stays **194
+implemented / 576 open / 16 deferred** — a vendored engine is not a registered row. The provider
+census moves **110 implemented / 201 open / 685 deferred** to **110 / 200 / 686** of 996 in the
+same 996-row universe; `err-raise-sites.json` moves **1881 → 1889**; and the unit tests move to
+**548 passed, 0 failed**. No court observation moves: `RT-CIPHER` is untouched by this unit and
+`RT-DIGEST` with it.

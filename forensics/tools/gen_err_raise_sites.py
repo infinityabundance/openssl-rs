@@ -434,6 +434,7 @@ COVERED_FILES = [
     ("providers/implementations/ciphers/ciphercommon_ccm.c", "PROV_CIPHERCOMMON_CCM"),
     ("providers/implementations/ciphers/cipher_aes_siv.c", "PROV_CIPHER_AES_SIV"),
     ("providers/implementations/macs/cmac_prov.c", "PROV_CMAC_PROV"),
+    ("providers/implementations/macs/gmac_prov.c", "PROV_GMAC_PROV"),
     # Phase 8's digest half. `digestcommon.c` is generated and shared by every digest
     # row the *default* provider publishes. The other `*_prov.c` units raise nothing in
     # this profile and are deliberately absent (an entry that can never change would read

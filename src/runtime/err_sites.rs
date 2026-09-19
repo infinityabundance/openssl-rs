@@ -18762,6 +18762,86 @@ pub(crate) const PROV_CMAC_PROV_460: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `gmac_setkey` at `providers/implementations/macs/gmac_prov.c:111` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_GMAC_PROV_111: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/gmac_prov.c",
+    line: 111,
+    func: c"gmac_setkey",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `gmac_get_params_decoder` at `providers/implementations/macs/gmac_prov.c:200` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_GMAC_PROV_200: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/gmac_prov.c",
+    line: 200,
+    func: c"gmac_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `gmac_set_ctx_params_decoder` at `providers/implementations/macs/gmac_prov.c:268` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_GMAC_PROV_268: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/gmac_prov.c",
+    line: 268,
+    func: c"gmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `gmac_set_ctx_params_decoder` at `providers/implementations/macs/gmac_prov.c:279` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_GMAC_PROV_279: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/gmac_prov.c",
+    line: 279,
+    func: c"gmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `gmac_set_ctx_params_decoder` at `providers/implementations/macs/gmac_prov.c:290` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_GMAC_PROV_290: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/gmac_prov.c",
+    line: 290,
+    func: c"gmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `gmac_set_ctx_params_decoder` at `providers/implementations/macs/gmac_prov.c:301` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_GMAC_PROV_301: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/gmac_prov.c",
+    line: 301,
+    func: c"gmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `gmac_set_ctx_params_decoder` at `providers/implementations/macs/gmac_prov.c:312` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_GMAC_PROV_312: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/gmac_prov.c",
+    line: 312,
+    func: c"gmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `gmac_set_ctx_params` at `providers/implementations/macs/gmac_prov.c:354` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_GMAC_PROV_354: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/gmac_prov.c",
+    line: 354,
+    func: c"gmac_set_ctx_params",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
 /// `digest_default_get_params_decoder` at `providers/implementations/digests/digestcommon.c:56` (PROV_R_REPEATED_PARAMETER).
 pub(crate) const PROV_DIGESTCOMMON_56: ErrSite = ErrSite {
     file: c"providers/implementations/digests/digestcommon.c",
@@ -20726,6 +20806,14 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_CMAC_PROV_406,
     PROV_CMAC_PROV_449,
     PROV_CMAC_PROV_460,
+    PROV_GMAC_PROV_111,
+    PROV_GMAC_PROV_200,
+    PROV_GMAC_PROV_268,
+    PROV_GMAC_PROV_279,
+    PROV_GMAC_PROV_290,
+    PROV_GMAC_PROV_301,
+    PROV_GMAC_PROV_312,
+    PROV_GMAC_PROV_354,
     PROV_DIGESTCOMMON_56,
     PROV_DIGESTCOMMON_67,
     PROV_DIGESTCOMMON_78,

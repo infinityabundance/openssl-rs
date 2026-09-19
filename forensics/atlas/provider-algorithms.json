@@ -4010,19 +4010,19 @@
           "GMAC",
           "1.0.9797.3.4"
         ],
-        "blocked_by": null,
+        "blocked_by": "the AES-GCM cipher rows: gmac_set_ctx_params resolves a `cipher` name and then refuses every mode but EVP_CIPH_GCM_MODE, and this profile's only GCM ciphers are AES-{128,192,256}-GCM, which are themselves Phase 9's on RAND_bytes_ex (docs/DECISIONS.md D234). GMAC's whole engine is transcribed (src/provider/mac.rs, GMAC_FUNCTIONS); the registration row is withheld because a registered GMAC would answer EVP_MAC_fetch 1 on both sides and then fail every init where the authority succeeds -- the `DES3-WRAP` class one operation over. D243.",
         "capability_filtered": false,
         "capability_predicate": null,
         "dispatch_table_symbol": "ossl_gmac_functions",
         "operation": "OSSL_OP_MAC",
         "operation_id": 3,
-        "owning_phase": 8,
-        "plan_match": "operation-default",
+        "owning_phase": 9,
+        "plan_match": "override:GMAC",
         "property_definition": "provider=default",
         "provider": "default",
         "row_order": 3,
         "source": "providers/defltprov.c",
-        "state": "open",
+        "state": "deferred",
         "table_symbol": "deflt_macs"
       },
       {
