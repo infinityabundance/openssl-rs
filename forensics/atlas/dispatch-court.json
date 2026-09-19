@@ -9,8 +9,8 @@
     },
     "canonical_form": "the authority's typedef body and the crate's alias are both read by `ABI-PROTOTYPE`'s canonicaliser, so pointer depth, pointee constness, integer width and signedness and function-pointer shape are compared while a struct pointee's name is discarded; a C function *type* and a Rust `extern \"C\" fn` item type differ only in the canonical head tag and are compared after normalising it",
     "counts": {
-      "identities_authority_only": 82,
-      "identities_checked": 195,
+      "identities_authority_only": 74,
+      "identities_checked": 203,
       "identities_mismatches": 0,
       "links_convention": 203,
       "links_documented": 8,
@@ -29,10 +29,6 @@
         "OSSL_FUNC_BIO_NEW_MEMBUF",
         "OSSL_FUNC_BIO_VPRINTF",
         "OSSL_FUNC_BIO_VSNPRINTF",
-        "OSSL_FUNC_CLEANUP_ENTROPY",
-        "OSSL_FUNC_CLEANUP_NONCE",
-        "OSSL_FUNC_CLEANUP_USER_ENTROPY",
-        "OSSL_FUNC_CLEANUP_USER_NONCE",
         "OSSL_FUNC_CORE_CLEAR_LAST_ERROR_MARK",
         "OSSL_FUNC_CORE_COUNT_TO_MARK",
         "OSSL_FUNC_CORE_GETTABLE_PARAMS",
@@ -75,10 +71,6 @@
         "OSSL_FUNC_ENCODER_NEWCTX",
         "OSSL_FUNC_ENCODER_SETTABLE_CTX_PARAMS",
         "OSSL_FUNC_ENCODER_SET_CTX_PARAMS",
-        "OSSL_FUNC_GET_ENTROPY",
-        "OSSL_FUNC_GET_NONCE",
-        "OSSL_FUNC_GET_USER_ENTROPY",
-        "OSSL_FUNC_GET_USER_NONCE",
         "OSSL_FUNC_INDICATOR_CB",
         "OSSL_FUNC_OPENSSL_CLEANSE",
         "OSSL_FUNC_PROVIDER_GETTABLE_PARAMS",
@@ -338,6 +330,30 @@
           "symbol": "OSSL_FUNC_CIPHER_UPDATE"
         },
         {
+          "authority": 102,
+          "crate": 102,
+          "crate_at": "src/context/dispatch.rs",
+          "symbol": "OSSL_FUNC_CLEANUP_ENTROPY"
+        },
+        {
+          "authority": 104,
+          "crate": 104,
+          "crate_at": "src/context/dispatch.rs",
+          "symbol": "OSSL_FUNC_CLEANUP_NONCE"
+        },
+        {
+          "authority": 96,
+          "crate": 96,
+          "crate_at": "src/context/dispatch.rs",
+          "symbol": "OSSL_FUNC_CLEANUP_USER_ENTROPY"
+        },
+        {
+          "authority": 97,
+          "crate": 97,
+          "crate_at": "src/context/dispatch.rs",
+          "symbol": "OSSL_FUNC_CLEANUP_USER_NONCE"
+        },
+        {
           "authority": 4,
           "crate": 4,
           "crate_at": "src/provider/child.rs",
@@ -432,6 +448,30 @@
           "crate": 3,
           "crate_at": "src/evp/digest.rs",
           "symbol": "OSSL_FUNC_DIGEST_UPDATE"
+        },
+        {
+          "authority": 101,
+          "crate": 101,
+          "crate_at": "src/context/dispatch.rs",
+          "symbol": "OSSL_FUNC_GET_ENTROPY"
+        },
+        {
+          "authority": 103,
+          "crate": 103,
+          "crate_at": "src/context/dispatch.rs",
+          "symbol": "OSSL_FUNC_GET_NONCE"
+        },
+        {
+          "authority": 98,
+          "crate": 98,
+          "crate_at": "src/context/dispatch.rs",
+          "symbol": "OSSL_FUNC_GET_USER_ENTROPY"
+        },
+        {
+          "authority": 99,
+          "crate": 99,
+          "crate_at": "src/context/dispatch.rs",
+          "symbol": "OSSL_FUNC_GET_USER_NONCE"
         },
         {
           "authority": 5,

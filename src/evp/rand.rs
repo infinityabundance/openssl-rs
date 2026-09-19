@@ -66,7 +66,10 @@ use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 
 /// `OSSL_OP_RAND` — `include/openssl/core_dispatch.h`. The fifth operation the walk visits.
-const OSSL_OP_RAND: c_int = 5;
+///
+/// `pub(crate)` since D299: the Phase 9 provider rows answer `deflt_query(OSSL_OP_RAND)` from
+/// `src/provider/rand.rs`, so the constant is read across modules now rather than only here.
+pub(crate) const OSSL_OP_RAND: c_int = 5;
 
 /// The authority's translation unit, so a failing allocation records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/evp_rand.c".as_ptr();
@@ -86,7 +89,19 @@ const LINE_FREE_CTX: c_int = 399;
 
 /// `EVP_RAND_STATE_ERROR` — `include/openssl/evp.h`. The state `EVP_RAND_get_state` answers when it
 /// cannot ask.
-const EVP_RAND_STATE_ERROR: c_int = 2;
+pub(crate) const EVP_RAND_STATE_ERROR: c_int = 2;
+/// `EVP_RAND_STATE_UNINITIALISED` — `include/openssl/evp.h:1345`.
+#[allow(dead_code)] // the landing caller is `drbg.c`'s `prov_drbg_new`
+pub(crate) const EVP_RAND_STATE_UNINITIALISED: c_int = 0;
+/// `EVP_RAND_STATE_READY` — `include/openssl/evp.h:1346`.
+///
+/// The two non-error states are named rather than folded into a boolean because a DRBG row's
+/// `gettable_ctx_params` reports `state` as a **number** in its parameter array, and the
+/// authority's own `drbg.c` compares against `EVP_RAND_STATE_READY` by name. A transcription that
+/// wrote `1` at one site and the constant at another would agree with itself and disagree with the
+/// authority's spelling the first time either moved.
+#[allow(dead_code)] // the landing caller is `drbg.c`'s `ossl_prov_drbg_generate`
+pub(crate) const EVP_RAND_STATE_READY: c_int = 1;
 
 // ---------------------------------------------------------------------------------------------
 // The dispatch ids and the nineteen function-pointer types.
@@ -97,43 +112,43 @@ const EVP_RAND_STATE_ERROR: c_int = 2;
 // ---------------------------------------------------------------------------------------------
 
 /// `OSSL_FUNC_RAND_NEWCTX`.
-const OSSL_FUNC_RAND_NEWCTX: c_int = 1;
+pub(crate) const OSSL_FUNC_RAND_NEWCTX: c_int = 1;
 /// `OSSL_FUNC_RAND_FREECTX`.
-const OSSL_FUNC_RAND_FREECTX: c_int = 2;
+pub(crate) const OSSL_FUNC_RAND_FREECTX: c_int = 2;
 /// `OSSL_FUNC_RAND_INSTANTIATE`.
-const OSSL_FUNC_RAND_INSTANTIATE: c_int = 3;
+pub(crate) const OSSL_FUNC_RAND_INSTANTIATE: c_int = 3;
 /// `OSSL_FUNC_RAND_UNINSTANTIATE`.
-const OSSL_FUNC_RAND_UNINSTANTIATE: c_int = 4;
+pub(crate) const OSSL_FUNC_RAND_UNINSTANTIATE: c_int = 4;
 /// `OSSL_FUNC_RAND_GENERATE`.
-const OSSL_FUNC_RAND_GENERATE: c_int = 5;
+pub(crate) const OSSL_FUNC_RAND_GENERATE: c_int = 5;
 /// `OSSL_FUNC_RAND_RESEED`.
-const OSSL_FUNC_RAND_RESEED: c_int = 6;
+pub(crate) const OSSL_FUNC_RAND_RESEED: c_int = 6;
 /// `OSSL_FUNC_RAND_NONCE`.
-const OSSL_FUNC_RAND_NONCE: c_int = 7;
+pub(crate) const OSSL_FUNC_RAND_NONCE: c_int = 7;
 /// `OSSL_FUNC_RAND_ENABLE_LOCKING`.
-const OSSL_FUNC_RAND_ENABLE_LOCKING: c_int = 8;
+pub(crate) const OSSL_FUNC_RAND_ENABLE_LOCKING: c_int = 8;
 /// `OSSL_FUNC_RAND_LOCK`.
-const OSSL_FUNC_RAND_LOCK: c_int = 9;
+pub(crate) const OSSL_FUNC_RAND_LOCK: c_int = 9;
 /// `OSSL_FUNC_RAND_UNLOCK`.
-const OSSL_FUNC_RAND_UNLOCK: c_int = 10;
+pub(crate) const OSSL_FUNC_RAND_UNLOCK: c_int = 10;
 /// `OSSL_FUNC_RAND_GETTABLE_PARAMS`.
-const OSSL_FUNC_RAND_GETTABLE_PARAMS: c_int = 11;
+pub(crate) const OSSL_FUNC_RAND_GETTABLE_PARAMS: c_int = 11;
 /// `OSSL_FUNC_RAND_GETTABLE_CTX_PARAMS`.
-const OSSL_FUNC_RAND_GETTABLE_CTX_PARAMS: c_int = 12;
+pub(crate) const OSSL_FUNC_RAND_GETTABLE_CTX_PARAMS: c_int = 12;
 /// `OSSL_FUNC_RAND_SETTABLE_CTX_PARAMS`.
-const OSSL_FUNC_RAND_SETTABLE_CTX_PARAMS: c_int = 13;
+pub(crate) const OSSL_FUNC_RAND_SETTABLE_CTX_PARAMS: c_int = 13;
 /// `OSSL_FUNC_RAND_GET_PARAMS`.
-const OSSL_FUNC_RAND_GET_PARAMS: c_int = 14;
+pub(crate) const OSSL_FUNC_RAND_GET_PARAMS: c_int = 14;
 /// `OSSL_FUNC_RAND_GET_CTX_PARAMS`. One of the three counters — see the module documentation.
-const OSSL_FUNC_RAND_GET_CTX_PARAMS: c_int = 15;
+pub(crate) const OSSL_FUNC_RAND_GET_CTX_PARAMS: c_int = 15;
 /// `OSSL_FUNC_RAND_SET_CTX_PARAMS`.
-const OSSL_FUNC_RAND_SET_CTX_PARAMS: c_int = 16;
+pub(crate) const OSSL_FUNC_RAND_SET_CTX_PARAMS: c_int = 16;
 /// `OSSL_FUNC_RAND_VERIFY_ZEROIZATION`.
-const OSSL_FUNC_RAND_VERIFY_ZEROIZATION: c_int = 17;
+pub(crate) const OSSL_FUNC_RAND_VERIFY_ZEROIZATION: c_int = 17;
 /// `OSSL_FUNC_RAND_GET_SEED`. Filled here, called by Phase 9's `rand_lib.c`.
-const OSSL_FUNC_RAND_GET_SEED: c_int = 18;
+pub(crate) const OSSL_FUNC_RAND_GET_SEED: c_int = 18;
 /// `OSSL_FUNC_RAND_CLEAR_SEED`. Filled here, called by Phase 9's `rand_lib.c`.
-const OSSL_FUNC_RAND_CLEAR_SEED: c_int = 19;
+pub(crate) const OSSL_FUNC_RAND_CLEAR_SEED: c_int = 19;
 
 /// `OSSL_FUNC_rand_newctx_fn` — `void *(*)(void *provctx, void *parent,
 /// const OSSL_DISPATCH *parent_calls)`.

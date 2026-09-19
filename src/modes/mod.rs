@@ -151,7 +151,7 @@ fn ctr96_inc(counter: *mut u8) {
 ///
 /// # Safety
 /// `p` must be readable for four bytes.
-unsafe fn get_u32_be(p: *const u8) -> u32 {
+pub(crate) unsafe fn get_u32_be(p: *const u8) -> u32 {
     // SAFETY: the caller's contract.
     unsafe { u32::from_be_bytes([*p, *p.add(1), *p.add(2), *p.add(3)]) }
 }
@@ -160,7 +160,7 @@ unsafe fn get_u32_be(p: *const u8) -> u32 {
 ///
 /// # Safety
 /// `p` must be writable for four bytes.
-unsafe fn put_u32_be(p: *mut u8, value: u32) {
+pub(crate) unsafe fn put_u32_be(p: *mut u8, value: u32) {
     // SAFETY: the caller's contract.
     unsafe {
         let bytes = value.to_be_bytes();
