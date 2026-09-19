@@ -173,6 +173,7 @@
       "src/asn1/bio_asn1.rs: declared Phase 5, defines exports owned by phase 4",
       "src/context/core_bio.rs: declared Phase 6, defines exports owned by phase 4",
       "src/context/thread_data.rs: declared Phase 6, defines exports owned by phase 3",
+      "src/evp/bio_ok.rs: declared Phase 9, defines exports owned by phase 7",
       "src/evp/pem_bridge.rs: declared Phase 7, defines exports owned by phase 5",
       "src/provider/core_dispatch.rs: declared Phase 6, defines exports owned by phase 4",
       "src/runtime/bio/core_bio.rs: declared Phase 6, defines exports owned by phase 4",

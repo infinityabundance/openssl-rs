@@ -45,6 +45,7 @@
 pub mod algorithm;
 pub mod asymcipher;
 pub mod bio_enc;
+pub mod bio_ok;
 pub mod cipher;
 pub mod cipher_ctx;
 pub mod digest;

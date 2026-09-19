@@ -1,5 +1,5 @@
 /*
- * openssl-rs — the differential probe for the random layer's first two consumers (RT-RAND-USERS).
+ * openssl-rs — the differential probe for the random layer's first three consumers (RT-RAND-USERS).
  *
  * This program is compiled **twice**, once against the admitted authority and once against the
  * candidate distribution shell, and the two `key=value` transcripts are diffed. It decides
@@ -8,18 +8,18 @@
  *
  * Why this court exists
  * ---------------------
- * `EVP_CIPHER_CTX_rand_key` and `EVP_SealInit` are the two smallest names Phase 9 inherited from
- * Phase 7: each was withheld because its body reaches the random layer, and each is now the first
- * thing a key-establishment path calls. They belong to a court of their own rather than to
- * `RT-RAND`, because they are not the `RAND_*` front -- they are *callers* of it, and the thing
- * worth measuring is that they call it the way the authority does (the right `libctx`, the right
- * length, the right refusal).
+ * `EVP_CIPHER_CTX_rand_key`, `EVP_SealInit` and `BIO_f_reliable` are the three smallest names
+ * Phase 9 inherited from Phase 7: each was withheld because its body reaches the random layer, and
+ * each is now the first thing a key-establishment or record-framing path calls. They belong to a
+ * court of their own rather than to `RT-RAND`, because they are not the `RAND_*` front -- they are
+ * *callers* of it, and the thing worth measuring is that they call it the way the authority does
+ * (the right `libctx`, the right length, the right refusal).
  *
  * What it observes, and the arms it cannot reach
  * ----------------------------------------------
  * The draws themselves are unobservable (two different pools), so what is compared is the
- * contract: return codes, the context's key/IV lengths before and after, whether a cipher is
- * installed, and the error queue. The arms are:
+ * contract: return codes, the context's key/IV lengths before and after, whether a cipher or a
+ * digest is installed, and the error queue. The arms are:
  *
  *   - `EVP_CIPHER_CTX_rand_key` on a fetched provider cipher: the key length it reads (16 for
  *     AES-128-CBC), the success it answers, and its `kl <= 0` refusal -- reached by fetching the
@@ -27,9 +27,11 @@
  *   - `EVP_SealInit`'s four early-return arms, all deterministic and none of which needs a public
  *     key: `npubk <= 0` answers **1**, `npubk < 0` answers 1, a NULL `type` with `npubk <= 0`
  *     answers 1, and a non-NULL `npubk` with a NULL `pubk` answers 1;
- *   - the context state `EVP_SealInit` leaves behind when it is given a cipher.
+ *   - the context state `EVP_SealInit` leaves behind when it is given a cipher;
+ *   - `BIO_f_reliable`'s construction and its two `BIO_C_SET_MD`/`BIO_C_GET_MD` arms, which is
+ *     everything about it that can be reached without a **legacy** `EVP_MD`.
  *
- * Three arms are **not** courted, and each is a measurement rather than an omission:
+ * Four arms are **not** courted, and each is a measurement rather than an omission:
  *
  *   - **`EVP_SealInit` with `npubk > 0` and a real key** needs an `EVP_PKEY` with a public part,
  *     which the crate can build only once RSA key construction and the ASN.1 public-key decoder
@@ -37,14 +39,25 @@
  *     so a probe must not reach it with a NULL key either.
  *   - **`EVP_CIPHER_CTX_rand_key`'s `EVP_CIPH_RAND_KEY` branch** is unreachable because only
  *     `e_des.c` and `e_des3.c` set that flag and those statics are Phase 13's.
+ *   - **`BIO_f_reliable`'s write and read paths**, which are the reason the whole `bio_ok.c` unit is
+ *     Phase 9's, and this is the sharpest of the four. `sig_out` does
+ *     `md_data = EVP_MD_CTX_get0_md_data(md)` and then `RAND_bytes(md_data, md_size)`, and that
+ *     accessor answers **NULL for a provider digest** -- the authority's own comment at
+ *     `crypto/evp/bio_ok.c:458` says so ("there's absolutely no guarantee this makes any sense at
+ *     all, particularly now EVP_MD_CTX has been restructured"). With `EVP_MD_fetch(NULL, "SHA256",
+ *     NULL)` the authority segfaults inside `memcpy` on the very first `BIO_write`; measured, not
+ *     inferred -- the probe was written to drive the round trip and the authority died on both the
+ *     first run and the re-run with the extra arms removed. So the filter needs a **legacy**
+ *     `EVP_MD` (`EVP_sha256()` and friends), which is Phase 13's, and until that lands the round
+ *     trip is owed rather than measurable. A probe that drove it would abort the authority side and
+ *     compare only the prefix it managed to print.
  *   - **`OSSL_HPKE_get_grease_value`** is absent from this probe altogether, and the line below
  *     says so in the transcript. It was transcribed and measured in D316 and could not land: its
  *     success path calls `OSSL_HPKE_keygen`, which fetches a **keymgmt by name from the library
  *     context**, and the default provider's `OSSL_OP_KEYMGMT X25519` row is unimplemented and
  *     Phase 8's. `RT-HPKE` never sees this because it deliberately runs in a private
  *     `OSSL_LIB_CTX` carrying its own test provider, so the framework is what that court measures
- *     and the default provider's algorithm universe is what this one does. The export therefore
- *     stays open, and landing it would have been an export whose only arm that matters answers 0.
+ *     and the default provider's algorithm universe is what this one does.
  *
  * What a difference here means
  * ----------------------------
@@ -58,6 +71,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <openssl/bio.h>
 #include <openssl/crypto.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
@@ -82,7 +96,7 @@ static void errs(const char *key)
 
 /*
  * One `EVP_SealInit` call, observed as its arm's contract: the return code, the error queue, and
- * the context state afterwards. `which` only labels the arm; every argument is the caller's.
+ * the context state afterwards. The label only names the arm; every argument is the caller's.
  */
 static void seal(const char *label, EVP_CIPHER_CTX *ctx, const EVP_CIPHER *type,
                  unsigned char **ek, int *ekl, unsigned char *iv,
@@ -167,7 +181,7 @@ int main(void)
      */
     {
         EVP_CIPHER_CTX *nctx = EVP_CIPHER_CTX_new();
-        const EVP_CIPHER *nullc = EVP_CIPHER_fetch(NULL, "NULL", NULL);
+        EVP_CIPHER *nullc = EVP_CIPHER_fetch(NULL, "NULL", NULL);
 
         printf("fetch.NULL=%d\n", nullc != NULL);
         errs("fetch.NULL.err");
@@ -214,8 +228,56 @@ int main(void)
 
     EVP_CIPHER_free(cipher);
 
-    /* An export this stratum owes that is not courted here, named so that "not run" cannot be
-     * read as "passed": see the header's third bullet and docs/DECISIONS.md D316. */
+    /* ---- 3. `BIO_f_reliable`'s construction and digest arms ------------------------ */
+
+    /*
+     * The reliable BIO is a record-framing filter, and its *write* path is why the whole
+     * `bio_ok.c` unit is Phase 9's: `sig_out` fills the record's digest half with `RAND_bytes`.
+     * That path cannot be courted -- see the header's third bullet -- so what is measured here is
+     * the filter's construction and the two digest arms of its `ctrl`, which are exactly the
+     * states a caller must be able to reach before the framing path is usable.
+     */
+    {
+        BIO *b = BIO_new(BIO_f_reliable());
+        EVP_MD *md = EVP_MD_fetch(NULL, "SHA256", NULL);
+        EVP_MD *got = NULL;
+
+        printf("reliable.new=%d\n", b != NULL);
+        errs("reliable.new.err");
+        printf("reliable.md_fetched=%d\n", md != NULL);
+
+        /* A NULL digest is refused: `ok_ctrl`'s `BIO_C_SET_MD` arm returns 0 before it sets the
+         * BIO's init flag, so the context is still the un-initialised one `ok_new` made. */
+        ERR_clear_error();
+        printf("reliable.setmd_null=%ld\n", BIO_ctrl(b, BIO_C_SET_MD, 0, NULL));
+        errs("reliable.setmd_null.err");
+        printf("reliable.after_null.init=%d\n", BIO_get_init(b));
+        /* And with no digest installed, `BIO_C_GET_MD` has nothing to answer. */
+        ERR_clear_error();
+        printf("reliable.getmd_unset=%ld\n", BIO_ctrl(b, BIO_C_GET_MD, 0, &got));
+        errs("reliable.getmd_unset.err");
+        printf("reliable.getmd_unset.null=%d\n", got == NULL);
+
+        /* A real one is accepted, arms the filter, and reads back through the same ctrl. */
+        ERR_clear_error();
+        printf("reliable.setmd=%ld\n", BIO_ctrl(b, BIO_C_SET_MD, 0, md));
+        errs("reliable.setmd.err");
+        printf("reliable.after_set.init=%d\n", BIO_get_init(b));
+        ERR_clear_error();
+        printf("reliable.getmd_set=%ld\n", BIO_ctrl(b, BIO_C_GET_MD, 0, &got));
+        errs("reliable.getmd_set.err");
+        printf("reliable.getmd_set.same=%d\n", got == md);
+
+        /* The filter's own free path, which must release the context and the digest. */
+        ERR_clear_error();
+        printf("reliable.free=%d\n", BIO_free(b));
+        errs("reliable.free.err");
+        EVP_MD_free(md);
+    }
+
+    /* Exports this stratum owes that are not courted here, named so that "not run" cannot be read
+     * as "passed": see the header's last two bullets and docs/DECISIONS.md D316/D317. */
+    printf("BIO_f_reliable.write_path=NOT_MEASURED_LEGACY_EVP_MD_IS_PHASE_13\n");
     printf("OSSL_HPKE_get_grease_value=NOT_MEASURED_DEFAULT_PROVIDER_KEYMGMT_X25519_IS_PHASE_8\n");
 
     printf("done=1\n");

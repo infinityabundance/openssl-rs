@@ -457,7 +457,9 @@
         "subphases": [
           "7.5"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/bio_ok.rs"
+        ]
       },
       "crypto/evp/c_allc.c": {
         "defines": [
@@ -2360,31 +2362,31 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 182
+      "transcribed_units": 183
     }
   },
-  "body_hash": "6a4d1c4a9351b678fb22a481361cc331174a92521dc4f2098765014938fdba13",
+  "body_hash": "8c78f422a50a4e1729ed3f304f178f021dccafa2d70c230144ed5739fe0f39cd",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "c1209e5c4c7f0fe5f8384cd47ae9a284e2c2f74534d8fdc61fab8364e350a183"
+      "sha256": "42245a093ef25aa113a6f2486ecc5103159d59a6d1661e3a3943d4e4aec14374"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "83955617cf4d9458dfa1e5aef72d4ac4bc749140cf68c70bce62706d66687a6b"
+      "sha256": "cc1100631d81f6af5b13221f85cac73c8ccdcba8dd4eeb1cced1389cdf6a50bd"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "33deedd728bd4bd8c0a2fbfebc970300f14b5330bee4a3f76e9a09e102fa8b42"
+      "sha256": "4fe2d2e24e684440eb1f6c3a311349214ded4f77d508ad8d5f97bd548e91ad22"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "16a264b9770fd8818e9015f6bf8d7a0d78fef92b6cb36276d43449b90eb9fee8"
+      "sha256": "2e0c456b15b9f1cbb437c792cdc0ed94338f09c98fb3a76b8d4b185246d4f007"
     },
     {
       "name": "prerequisites",
