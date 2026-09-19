@@ -438,6 +438,8 @@
           "src/rand/pool.rs",
           "src/rand/sys.rs",
           "src/rand/unix.rs",
+          "src/provider/seeding.rs",
+          "src/provider/util.rs",
           "forensics/phase9-obligations.json",
           "artifacts/phase9/COURTS.json",
           "forensics/atlas/court-coverage.json",
@@ -615,7 +617,7 @@
       "not_started": 12
     }
   },
-  "body_hash": "aa26c260dce231665c087999004190ac0a87886f4fe954280dfe3cd2d43b9b9d",
+  "body_hash": "536317d4318b422da25a01f4d4d1fce190869dbc87e38b67325ed31a332698bd",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

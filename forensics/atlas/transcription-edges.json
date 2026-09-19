@@ -943,6 +943,13 @@
         "translation_unit": "crypto/provider_core.c"
       },
       {
+        "module": "src/provider/seeding.rs",
+        "phase": null,
+        "phase_source": null,
+        "share": "5/5",
+        "translation_unit": "providers/common/libdefault-lib-provider_seeding.c"
+      },
+      {
         "module": "src/provider/stores.rs",
         "phase": 6,
         "phase_source": "module-declaration",
@@ -953,7 +960,7 @@
         "module": "src/provider/util.rs",
         "phase": 8,
         "phase_source": "module-declaration",
-        "share": "14/14",
+        "share": "16/16",
         "translation_unit": "providers/common/libdefault-lib-provider_util.c"
       },
       {

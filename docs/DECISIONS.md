@@ -19812,3 +19812,48 @@ key tables.
 
 **What this entry does not claim.** No Phase 9 export is implemented, no Phase 9 court has landed,
 and the DRBG rows the front depends on are still not published.
+
+## D305 -- the provider's seed up-calls and the two MAC-context helpers land
+
+The DRBG's provider-side prerequisites, and the unit D298's measurement named rather than D287's
+scope.
+
+**`src/provider/seeding.rs`** transcribes `providers/common/provider_seeding.c`: the four up-calls
+(`ossl_prov_get_entropy`, `ossl_prov_cleanup_entropy`, `ossl_prov_get_nonce`,
+`ossl_prov_cleanup_nonce`) and `ossl_prov_seeding_from_dispatch`, the walk that records the eight
+`OSSL_FUNC_{GET,CLEANUP}_{USER_,}ENTROPY` and `_NONCE` entries off a provider's own dispatch table
+into the statics the up-calls read. **Those eight ids are the ones D299 landed in
+`src/context/dispatch.rs`**, and this is the function that consumes them -- which is the evidence
+that D299's addition was on the path rather than merely plausible.
+
+**`src/provider/util.rs` gains `ossl_prov_set_macctx` and `ossl_prov_macctx_load`**, the MAC half of
+`provider_util.c` that `drbg_hmac.c` reaches and that the module was missing. Three arms of it are
+**contract rather than detail**, and the code says so at each:
+
+* a NULL `macname` with a `mac` descriptor **locates and reuses the existing context**, so the
+  function can hand new digest and cipher parameters to a context that already exists;
+* a new mac name releases the old context **before** building the new one, and releases the fetched
+  method immediately after `EVP_MAC_CTX_new`, because the context holds its own reference;
+* a `set_ctx_params` refusal releases the context and NULLs it, so a caller cannot be left holding a
+  half-parameterised context.
+
+**Suite stays at 649**: both units are internal and their callers are the DRBG rows, so neither has
+anything to assert against yet. Each carries an `allow(dead_code)` naming that caller.
+
+**Two measurement notes, both about the staging file rather than the authority.**
+
+1. **The staging file's Section 2 was appended after `util.rs`'s `#[cfg(test)]` module, and the
+   crate refuses "items after a test module"** -- a clippy configuration this repository sets, and
+   the first time it has fired in this session. The 166 lines moved above the test module. Worth
+   recording because appending to the end of a file is the obvious thing to do and the file's own
+   layout is what a reader uses to find its tests.
+2. **`ossl_prov_macctx_load` has ten parameters**, which trips `too_many_arguments`. The allow is
+   argued rather than reflexive: four descriptors, four out-parameters, the context and the library
+   context are the authority's own signature, and folding them into a struct would be a
+   representation the authority does not have while the call sites pass them positionally out of a
+   parameter list.
+
+**What this entry does not claim.** Neither unit is called yet, no Phase 9 export is implemented,
+and the DRBG rows the front depends on are still unpublished. The next unit is the decoder key
+tables: mapping the staged `*_ctx_params_decoder` field lists to the real line-numbered raise sites
+in `drbg_{ctr,hash,hmac}.c`, which is the class that holds the parked DRBG at 108 compile errors.
