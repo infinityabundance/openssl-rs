@@ -696,6 +696,10 @@ PHASE9_MODULES = [
     # the running kernel, including the `struct stat` offsets and the `__NR_getrandom` value, which
     # are exactly the two a transcription can get wrong without any caller noticing.
     "src/rand/sys.rs",
+    # 9.5's seeding arm itself: `rand_unix.c`, the unit D298 moved out of
+    # `crypto/rand/rand_pool.c`. It is the only part of this stratum that reaches the kernel for
+    # entropy, so its four tests are the only place `ossl_pool_acquire_entropy` is called at all.
+    "src/rand/unix.rs",
 ]
 
 STRATUM_EVIDENCE: dict[int, StratumEvidence] = {

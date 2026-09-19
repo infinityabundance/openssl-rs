@@ -199,6 +199,7 @@
       "src/ffi/mod.rs",
       "src/lib.rs",
       "src/rand/pool.rs",
+      "src/rand/unix.rs",
       "src/runtime/bsearch.rs",
       "src/runtime/ctype_table.rs",
       "src/runtime/err_reasons.rs",
@@ -34244,6 +34245,7 @@
       "src/provider/digest.rs: providers/implementations/digests/libcommon-lib-digestcommon.c",
       "src/provider/mac.rs: crypto/poly1305/poly1305-x86_64.c",
       "src/provider/util.rs: providers/common/libdefault-lib-provider_util.c",
+      "src/rand/unix.rs: providers/implementations/rands/seeding/libdefault-lib-rand_unix.c",
       "src/rc4.rs: crypto/rc4/rc4-x86_64.c",
       "src/runtime/ctype.rs: crypto/legacy-dso-ctype.c",
       "src/runtime/rdtsc.rs: crypto/legacy-dso-x86_64cpuid.c"
