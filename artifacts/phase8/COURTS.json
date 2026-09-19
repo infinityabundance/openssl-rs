@@ -24,9 +24,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 4251,
+        "authority_observations": 4501,
         "candidate_exit_code": 0,
-        "candidate_observations": 4251,
+        "candidate_observations": 4501,
         "candidate_stderr_tail": [],
         "court": "RT-CIPHER",
         "crashed": false,
@@ -36589,7 +36589,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "700b32cbbb1cb698582deea3da37331abdcd80f04efa1dc4242439b2189079fd"
+      "sha256": "657237de28cbaa683f92a919068a4c41df168bd45ccfc4a75d12e4c59b2ae2fa"
     },
     {
       "name": "correctness-probe",

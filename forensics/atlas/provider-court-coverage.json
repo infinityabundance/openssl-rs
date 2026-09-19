@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 115,
+        "implemented": 117,
         "unmatched": 0
       }
     },
@@ -20,8 +20,8 @@
         "probe": "courts/phase8/rt_cipher_probe.c"
       }
     ],
-    "directly_courted": 115,
-    "implemented_rows": 115,
+    "directly_courted": 117,
+    "implemented_rows": 117,
     "rows": [
       {
         "algorithm_names": "AES-128-CBC",
@@ -1615,6 +1615,36 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "KMAC-128",
+        "aliases": [
+          "KMAC-128",
+          "KMAC128",
+          "2.16.840.1.101.3.4.2.19"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_MAC",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "KMAC-256",
+        "aliases": [
+          "KMAC-256",
+          "KMAC256",
+          "2.16.840.1.101.3.4.2.20"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_MAC",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "POLY1305",
         "aliases": [
           "POLY1305"
@@ -1648,7 +1678,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "9791c7140574e3a8faa4a52276bbb8b036edbd73d89a7ef21e728642c1fcdbde"
+      "sha256": "770cdfa96caf6d33e54d3c9cabf5d62efe67ba9696acee7bfcec8fda21f03745"
     },
     {
       "name": "court:RT-DIGEST",
@@ -1658,7 +1688,7 @@
     {
       "name": "court:RT-CIPHER",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "700b32cbbb1cb698582deea3da37331abdcd80f04efa1dc4242439b2189079fd"
+      "sha256": "657237de28cbaa683f92a919068a4c41df168bd45ccfc4a75d12e4c59b2ae2fa"
     }
   ],
   "kind": "provider-court-coverage",

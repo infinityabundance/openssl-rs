@@ -451,6 +451,14 @@ COVERED_FILES = [
     ("providers/implementations/macs/blake2_mac_impl.c", "PROV_BLAKE2_MAC_IMPL"),
     ("providers/implementations/macs/poly1305_prov.c", "PROV_POLY1305_PROV"),
     ("providers/implementations/macs/siphash_prov.c", "PROV_SIPHASH_PROV"),
+    # The largest MAC unit, and the only one that raises from helper functions rather than from
+    # the row's own bodies: `kmac_prov.c`'s generated text carries twenty-one sites, and five of
+    # them are the encoding helpers' (`right_encode`, `encode_string`) plus `bytepad`'s
+    # passed-NULL guard. Its two generated decoders raise for four keys in this profile --
+    # `block-size`/`size` in the get decoder and `custom`/`key`/`size`/`xof` in the set one -- and
+    # the two `fips` keys each generator also emits are `# if defined(FIPS_MODULE)`-guarded, so
+    # their coordinates exist and no reachable arm uses them, the same shape as `cmac_prov.c`'s.
+    ("providers/implementations/macs/kmac_prov.c", "PROV_KMAC_PROV"),
     # Phase 8's digest half. `digestcommon.c` is generated and shared by every digest
     # row the *default* provider publishes. The other `*_prov.c` units raise nothing in
     # this profile and are deliberately absent (an entry that can never change would read

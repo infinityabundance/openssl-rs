@@ -19172,6 +19172,216 @@ pub(crate) const PROV_SIPHASH_PROV_318: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `kmac_setkey` at `providers/implementations/macs/kmac_prov.c:272` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_KMAC_PROV_272: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 272,
+    func: c"kmac_setkey",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `kmac_setkey` at `providers/implementations/macs/kmac_prov.c:288` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_KMAC_PROV_288: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 288,
+    func: c"kmac_setkey",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `kmac_setkey` at `providers/implementations/macs/kmac_prov.c:295` (PROV_R_INVALID_DIGEST_LENGTH).
+pub(crate) const PROV_KMAC_PROV_295: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 295,
+    func: c"kmac_setkey",
+    lib: 57,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `kmac_init` at `providers/implementations/macs/kmac_prov.c:326` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_KMAC_PROV_326: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 326,
+    func: c"kmac_init",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `kmac_init` at `providers/implementations/macs/kmac_prov.c:335` (PROV_R_INVALID_DIGEST_LENGTH).
+pub(crate) const PROV_KMAC_PROV_335: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 335,
+    func: c"kmac_init",
+    lib: 57,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `kmac_init` at `providers/implementations/macs/kmac_prov.c:351` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_KMAC_PROV_351: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 351,
+    func: c"kmac_init",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `kmac_get_ctx_params_decoder` at `providers/implementations/macs/kmac_prov.c:434` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KMAC_PROV_434: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 434,
+    func: c"kmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kmac_get_ctx_params_decoder` at `providers/implementations/macs/kmac_prov.c:446` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KMAC_PROV_446: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 446,
+    func: c"kmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kmac_get_ctx_params_decoder` at `providers/implementations/macs/kmac_prov.c:458` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KMAC_PROV_458: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 458,
+    func: c"kmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kmac_set_ctx_params_decoder` at `providers/implementations/macs/kmac_prov.c:550` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KMAC_PROV_550: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 550,
+    func: c"kmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kmac_set_ctx_params_decoder` at `providers/implementations/macs/kmac_prov.c:574` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KMAC_PROV_574: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 574,
+    func: c"kmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kmac_set_ctx_params_decoder` at `providers/implementations/macs/kmac_prov.c:584` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KMAC_PROV_584: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 584,
+    func: c"kmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kmac_set_ctx_params_decoder` at `providers/implementations/macs/kmac_prov.c:598` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KMAC_PROV_598: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 598,
+    func: c"kmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kmac_set_ctx_params_decoder` at `providers/implementations/macs/kmac_prov.c:610` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KMAC_PROV_610: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 610,
+    func: c"kmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kmac_set_ctx_params_decoder` at `providers/implementations/macs/kmac_prov.c:621` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KMAC_PROV_621: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 621,
+    func: c"kmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kmac_set_ctx_params` at `providers/implementations/macs/kmac_prov.c:672` (PROV_R_INVALID_OUTPUT_LENGTH).
+pub(crate) const PROV_KMAC_PROV_672: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 672,
+    func: c"kmac_set_ctx_params",
+    lib: 57,
+    reason: 217,
+    dynamic_reason: false,
+};
+
+/// `kmac_set_ctx_params` at `providers/implementations/macs/kmac_prov.c:682` (PROV_R_INVALID_OUTPUT_LENGTH).
+pub(crate) const PROV_KMAC_PROV_682: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 682,
+    func: c"kmac_set_ctx_params",
+    lib: 57,
+    reason: 217,
+    dynamic_reason: false,
+};
+
+/// `kmac_set_ctx_params` at `providers/implementations/macs/kmac_prov.c:699` (PROV_R_INVALID_CUSTOM_LENGTH).
+pub(crate) const PROV_KMAC_PROV_699: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 699,
+    func: c"kmac_set_ctx_params",
+    lib: 57,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `right_encode` at `providers/implementations/macs/kmac_prov.c:741` (PROV_R_LENGTH_TOO_LARGE).
+pub(crate) const PROV_KMAC_PROV_741: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 741,
+    func: c"right_encode",
+    lib: 57,
+    reason: 202,
+    dynamic_reason: false,
+};
+
+/// `encode_string` at `providers/implementations/macs/kmac_prov.c:778` (PROV_R_LENGTH_TOO_LARGE).
+pub(crate) const PROV_KMAC_PROV_778: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 778,
+    func: c"encode_string",
+    lib: 57,
+    reason: 202,
+    dynamic_reason: false,
+};
+
+/// `bytepad` at `providers/implementations/macs/kmac_prov.c:811` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PROV_KMAC_PROV_811: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 811,
+    func: c"bytepad",
+    lib: 57,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
 /// `digest_default_get_params_decoder` at `providers/implementations/digests/digestcommon.c:56` (PROV_R_REPEATED_PARAMETER).
 pub(crate) const PROV_DIGESTCOMMON_56: ErrSite = ErrSite {
     file: c"providers/implementations/digests/digestcommon.c",
@@ -21177,6 +21387,27 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_SIPHASH_PROV_296,
     PROV_SIPHASH_PROV_307,
     PROV_SIPHASH_PROV_318,
+    PROV_KMAC_PROV_272,
+    PROV_KMAC_PROV_288,
+    PROV_KMAC_PROV_295,
+    PROV_KMAC_PROV_326,
+    PROV_KMAC_PROV_335,
+    PROV_KMAC_PROV_351,
+    PROV_KMAC_PROV_434,
+    PROV_KMAC_PROV_446,
+    PROV_KMAC_PROV_458,
+    PROV_KMAC_PROV_550,
+    PROV_KMAC_PROV_574,
+    PROV_KMAC_PROV_584,
+    PROV_KMAC_PROV_598,
+    PROV_KMAC_PROV_610,
+    PROV_KMAC_PROV_621,
+    PROV_KMAC_PROV_672,
+    PROV_KMAC_PROV_682,
+    PROV_KMAC_PROV_699,
+    PROV_KMAC_PROV_741,
+    PROV_KMAC_PROV_778,
+    PROV_KMAC_PROV_811,
     PROV_DIGESTCOMMON_56,
     PROV_DIGESTCOMMON_67,
     PROV_DIGESTCOMMON_78,

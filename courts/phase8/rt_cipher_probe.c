@@ -3917,6 +3917,8 @@ static void rt_deflt_properties(void)
         { "mac",    "BLAKE2BMAC" },
         { "mac",    "BLAKE2SMAC" },
         { "mac",    "POLY1305" },
+        { "mac",    "KMAC-128" },
+        { "mac",    "KMAC-256" },
     };
     static const char *props[] = { NULL, "provider=default", "provider!=default" };
     size_t i, j;
@@ -4377,6 +4379,650 @@ static void rt_deflt_poly1305(void)
     }
 
     EVP_MAC_free(mac);
+}
+
+/*
+ * The `KMAC-128` and `KMAC-256` rows -- one implementation published twice.
+ *
+ * Five things about this arm are the reason it is not a copy of the CMAC one.
+ *
+ * **The row is a shell over the `KECCAK-KMAC-*` digest**, so what the authority's own text does at
+ * `new` is fetch a digest by name from a one-entry descriptor, and a row whose digest fails to resolve
+ * is a row that answers NULL rather than a row that answers a wrong tag. The fetch-by-alias and
+ * fetch-by-OID arms are here because `PROV_NAMES_KMAC_128` carries `KMAC128` and an OID, and D244 is
+ * what a short alias sequence costs.
+ *
+ * **The default customisation string is installed from inside `init`**, through the row's own setter,
+ * with its return value discarded. So a row nobody configured still has a two-byte encoded custom
+ * (`left_encode(0)`), and "no custom" and "empty custom" are the *same* thing here -- unlike
+ * BLAKE2MAC's `custom`, where the descriptor is read directly. The three custom arms below are
+ * "leave it", "set the empty string" and "set twenty-one bytes", and the last two are compared with
+ * each other rather than only with the authority.
+ *
+ * **`size` can change after `init` and before `final`.** The encoded length is written by `final`, not
+ * by `init`, so `EVP_MAC_CTX_set_params(size)` between the two changes the tag *and* the buffer
+ * `evp_mac_final` demands. That is why the `size.afterinit` arm exists rather than being folded into
+ * the one-shot: it is a different code path with a different answer.
+ *
+ * **`final` ignores the `outsize` it is handed.** The bound a caller sees comes from `EVP_MAC_final`'s
+ * `outsize < macsize` test, which reads this row's `size` back through `get_ctx_params`. So a short
+ * buffer is refused at the EVP layer, with an EVP error, before the row runs -- and the arm prints the
+ * queue rather than only the return, because the two layers raise different libraries.
+ *
+ * **The row's digest is fixed and its `digest` parameter is not a settable key.** `hmac_prov.c` has a
+ * `digest` arm that re-fetches; `kmac_prov.c` has none, so `set_params(digest)` is silently ignored
+ * and the tag is unchanged. The `set.digest` arm measures that, because a transcription that had
+ * copied HMAC's key list would answer every other arm identically.
+ *
+ * The NIST vectors are the SP 800-185 samples, and the probe prints the tags rather than the expected
+ * values: the differential court compares this transcript against the authority's, and the published
+ * expectations belong to the construction-vector plane. The inputs are the standard's own
+ * (`K` = `40..5F`, `X` = `00010203` or `00..C7`, `S` = `"My Tagged Application"`).
+ */
+
+/* `K` -- SP 800-185's sample key, `40 41 42 .. 5E 5F`, thirty-two bytes. */
+static const unsigned char kmac_key[32] = {
+    0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f,
+    0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e, 0x5f
+};
+
+/* `X` = `00010203`. */
+static const unsigned char kmac_msg_short[4] = { 0x00, 0x01, 0x02, 0x03 };
+
+/* `S` = `"My Tagged Application"`, twenty-one bytes and no NUL in the descriptor. */
+static const char kmac_custom_text[] = "My Tagged Application";
+
+/* `X` = `00 01 02 .. C7`, the standard's 200-byte sample message. */
+static void kmac_msg_long(unsigned char *out, size_t n)
+{
+    size_t i;
+
+    for (i = 0; i < n; i++)
+        out[i] = (unsigned char)i;
+}
+
+/* A hex line whose name is `<prefix>.<which>`, so a diff localises the arm that moved. */
+static void rt_hex_w(const char *prefix, const char *which, const unsigned char *p, size_t n)
+{
+    char buf[96];
+
+    snprintf(buf, sizeof(buf), "%s.%s", prefix, which);
+    rt_hex(buf, p, n);
+}
+
+/*
+ * One row's whole surface. `outbytes` and `blocksize` are the two numbers the row's *own* digest
+ * determines, so they are parameters rather than constants -- the pair is the whole difference between
+ * the two rows and printing both is what says so.
+ */
+static void rt_deflt_kmac_one(const char *name, const char *label, const char *alias,
+                              const char *oid, size_t outbytes, size_t blocksize)
+{
+    char tag[64];
+    EVP_MAC *mac = EVP_MAC_fetch(NULL, name, NULL);
+    EVP_MAC_CTX *ctx;
+    unsigned char msg[200], out[128];
+    OSSL_PARAM list[4], set[4];
+    size_t i, outl;
+    int one = 1;
+
+    printf("deflt%s.fetched=%d\n", label, mac != NULL);
+    if (mac == NULL)
+        return;
+    /* The whole alias sequence is the contract, not the primary name (D244). */
+    {
+        EVP_MAC *a = EVP_MAC_fetch(NULL, alias, NULL);
+        EVP_MAC *o = EVP_MAC_fetch(NULL, oid, NULL);
+
+        printf("deflt%s.alias=%d\n", label, a != NULL);
+        printf("deflt%s.oid=%d\n", label, o != NULL);
+        EVP_MAC_free(a);
+        EVP_MAC_free(o);
+    }
+
+    ctx = EVP_MAC_CTX_new(mac);
+    printf("deflt%s.ctx=%d\n", label, ctx != NULL);
+    if (ctx == NULL) {
+        EVP_MAC_free(mac);
+        return;
+    }
+
+    /*
+     * The ctx-level pair, which this row *does* publish -- unlike GMAC's and POLY1305's
+     * provider-level one. That distinction is what decides whether `EVP_MAC_CTX_get_mac_size` can
+     * answer at all, and it bounds `EVP_MAC_final`.
+     */
+    rt_param_list("defltkmac", label, "gp", EVP_MAC_CTX_gettable_params(ctx));
+    rt_param_list("defltkmac", label, "sp", EVP_MAC_CTX_settable_params(ctx));
+
+    /* `size` and `block-size`, the second written with `set_int` into a `size_t` list entry. */
+    {
+        size_t sz = 0;
+        int bs = -1;
+
+        list[0] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &sz);
+        list[1] = OSSL_PARAM_construct_int(OSSL_MAC_PARAM_BLOCK_SIZE, &bs);
+        list[2] = OSSL_PARAM_construct_end();
+        printf("deflt%s.get=%d:%zu:%d\n", label, EVP_MAC_CTX_get_params(ctx, list), sz, bs);
+    }
+    /* The same key through a `size_t` descriptor, which is what the *list* declares. */
+    {
+        size_t bs = 0;
+
+        list[0] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_BLOCK_SIZE, &bs);
+        list[1] = OSSL_PARAM_construct_end();
+        printf("deflt%s.getb.szt=%d:%zu\n", label, EVP_MAC_CTX_get_params(ctx, list), bs);
+    }
+    printf("deflt%s.macsize=%zu\n", label, EVP_MAC_CTX_get_mac_size(ctx));
+    printf("deflt%s.blocksize=%zu\n", label, EVP_MAC_CTX_get_block_size(ctx));
+
+    kmac_msg_long(msg, sizeof(msg));
+
+    /*
+     * The fixed-output SP 800-185 samples this row owns, one-shot.
+     *
+     * **The customisation string is passed to `EVP_MAC_init`, not set afterwards.** `kmac_init`
+     * consumes `custom` when it bytepads the digest's prefix, so a `set_params(custom)` *after* the
+     * init cannot change the tag at all -- the first version of this arm did exactly that and every
+     * "different custom" case came out identical to the default, which looks like coverage and is
+     * not. The authority's own comment says the same thing in words ("All other params should be set
+     * before init"). The post-init arm below is kept, and inverted: it asserts the tag is *unchanged*.
+     */
+    {
+        struct {
+            const unsigned char *x;
+            size_t xlen;
+            const char *custom; /* NULL = leave the default */
+        } cases[3];
+        size_t n = 0, c;
+        const char *parts[3];
+        char want[3][48];
+
+        cases[n].x = kmac_msg_short; cases[n].xlen = 4;
+        cases[n].custom = ""; parts[n] = "custom-empty"; n++;
+        cases[n].x = kmac_msg_short; cases[n].xlen = 4;
+        cases[n].custom = kmac_custom_text; parts[n] = "custom-text"; n++;
+        if (strcmp(name, "KMAC-128") == 0) {
+            cases[n].x = msg; cases[n].xlen = 200;
+            cases[n].custom = kmac_custom_text; parts[n] = "long-custom-text"; n++;
+        } else {
+            cases[n].x = msg; cases[n].xlen = 200;
+            cases[n].custom = ""; parts[n] = "long-custom-empty"; n++;
+        }
+        for (c = 0; c < n; c++)
+            snprintf(want[c], sizeof(want[c]), "%s.nist", parts[c]);
+
+        for (c = 0; c < n; c++) {
+            EVP_MAC_CTX *k = EVP_MAC_CTX_new(mac);
+            OSSL_PARAM a[2];
+            const OSSL_PARAM *pp = NULL;
+
+            if (cases[c].custom != NULL) {
+                a[0] = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_CUSTOM,
+                                                         (void *)cases[c].custom,
+                                                         strlen(cases[c].custom));
+                a[1] = OSSL_PARAM_construct_end();
+                pp = a;
+            }
+            outl = 0;
+            if (EVP_MAC_init(k, kmac_key, sizeof(kmac_key), pp) == 1) {
+                printf("deflt%s.%s.init=1\n", label, parts[c]);
+                if (EVP_MAC_update(k, cases[c].x, cases[c].xlen) == 1
+                    && EVP_MAC_final(k, out, &outl, sizeof(out)) == 1) {
+                    printf("deflt%s.%s.len=%zu\n", label, parts[c], outl);
+                    rt_hex_w("defltkmac", want[c], out, outl);
+                } else {
+                    printf("deflt%s.%s.enclen=0\n", label, parts[c]);
+                }
+            } else {
+                printf("deflt%s.%s.init=0\n", label, parts[c]);
+            }
+            EVP_MAC_CTX_free(k);
+        }
+    }
+
+    /* The same message split at every boundary, and byte at a time: the collector, not the tag. */
+    for (i = 0; i <= 4; i++) {
+        EVP_MAC_CTX *k = EVP_MAC_CTX_new(mac);
+
+        outl = 0;
+        if (EVP_MAC_init(k, kmac_key, sizeof(kmac_key), NULL) == 1
+            && EVP_MAC_update(k, kmac_msg_short, i) == 1
+            && EVP_MAC_update(k, kmac_msg_short + i, 4 - i) == 1
+            && EVP_MAC_final(k, out, &outl, sizeof(out)) == 1) {
+            snprintf(tag, sizeof(tag), "split%zu", i);
+            rt_hex_w("defltkmac", tag, out, outl);
+        } else {
+            printf("deflt%s.split%zu=FAIL\n", label, i);
+        }
+        EVP_MAC_CTX_free(k);
+    }
+    {
+        EVP_MAC_CTX *k = EVP_MAC_CTX_new(mac);
+
+        outl = 0;
+        if (EVP_MAC_init(k, kmac_key, sizeof(kmac_key), NULL) == 1) {
+            for (i = 0; i < 4; i++)
+                EVP_MAC_update(k, kmac_msg_short + i, 1);
+            if (EVP_MAC_final(k, out, &outl, sizeof(out)) == 1)
+                rt_hex_w("defltkmac", "bytewise", out, outl);
+            else
+                printf("deflt%s.bytewise=FAIL\n", label);
+        }
+        EVP_MAC_CTX_free(k);
+    }
+
+    /* The two XOF spellings: `EVP_MAC_finalXOF`, and the `xof` control with a plain final. */
+    {
+        EVP_MAC_CTX *k = EVP_MAC_CTX_new(mac);
+
+        if (EVP_MAC_init(k, kmac_key, sizeof(kmac_key), NULL) == 1) {
+            set[0] = OSSL_PARAM_construct_octet_string(
+                OSSL_MAC_PARAM_CUSTOM, (void *)kmac_custom_text, strlen(kmac_custom_text));
+            set[1] = OSSL_PARAM_construct_end();
+            EVP_MAC_CTX_set_params(k, set);
+            if (EVP_MAC_update(k, kmac_msg_short, 4) == 1) {
+                memset(out, 0, sizeof(out));
+                printf("deflt%s.xof.finalxof=%d\n", label,
+                       EVP_MAC_finalXOF(k, out, outbytes));
+                rt_hex_w("defltkmac", "xof.finalxof", out, outbytes);
+            }
+        }
+        EVP_MAC_CTX_free(k);
+    }
+    {
+        EVP_MAC_CTX *k = EVP_MAC_CTX_new(mac);
+
+        if (EVP_MAC_init(k, kmac_key, sizeof(kmac_key), NULL) == 1) {
+            set[0] = OSSL_PARAM_construct_int(OSSL_MAC_PARAM_XOF, &one);
+            set[1] = OSSL_PARAM_construct_end();
+            printf("deflt%s.xof.ctrl=%d\n", label, EVP_MAC_CTX_set_params(k, set));
+            if (EVP_MAC_update(k, kmac_msg_short, 4) == 1) {
+                outl = 0;
+                if (EVP_MAC_final(k, out, &outl, sizeof(out)) == 1)
+                    rt_hex_w("defltkmac", "xof.ctrl", out, outl);
+                else
+                    printf("deflt%s.xof.ctrl.final=0\n", label);
+            }
+        }
+        EVP_MAC_CTX_free(k);
+    }
+    /* A second `xof` read on the same context must keep answering 1 — the flag is sticky. */
+    {
+        EVP_MAC_CTX *k = EVP_MAC_CTX_new(mac);
+
+        if (EVP_MAC_init(k, kmac_key, sizeof(kmac_key), NULL) == 1) {
+            set[0] = OSSL_PARAM_construct_int(OSSL_MAC_PARAM_XOF, &one);
+            set[1] = OSSL_PARAM_construct_end();
+            EVP_MAC_CTX_set_params(k, set);
+            EVP_MAC_CTX_set_params(k, set);
+            if (EVP_MAC_update(k, kmac_msg_short, 4) == 1) {
+                outl = 0;
+                if (EVP_MAC_final(k, out, &outl, sizeof(out)) == 1)
+                    rt_hex_w("defltkmac", "xof.repeat", out, outl);
+            }
+        }
+        EVP_MAC_CTX_free(k);
+    }
+    /* `xof` back to zero after it was set: the flag is a plain assignment, not a one-way latch. */
+    {
+        EVP_MAC_CTX *k = EVP_MAC_CTX_new(mac);
+        int zero = 0;
+
+        if (EVP_MAC_init(k, kmac_key, sizeof(kmac_key), NULL) == 1) {
+            set[0] = OSSL_PARAM_construct_int(OSSL_MAC_PARAM_XOF, &one);
+            set[1] = OSSL_PARAM_construct_end();
+            EVP_MAC_CTX_set_params(k, set);
+            set[0] = OSSL_PARAM_construct_int(OSSL_MAC_PARAM_XOF, &zero);
+            printf("deflt%s.xof.zero=%d\n", label, EVP_MAC_CTX_set_params(k, set));
+            if (EVP_MAC_update(k, kmac_msg_short, 4) == 1) {
+                outl = 0;
+                if (EVP_MAC_final(k, out, &outl, sizeof(out)) == 1)
+                    rt_hex_w("defltkmac", "xof.zero", out, outl);
+            }
+        }
+        EVP_MAC_CTX_free(k);
+    }
+
+    /*
+     * `size` after `init`. The encoded length is written by `final`, so this changes the tag -- and it
+     * changes what `EVP_MAC_CTX_get_mac_size` answers, which is what a caller sizes its buffer from.
+     */
+    {
+        EVP_MAC_CTX *k = EVP_MAC_CTX_new(mac);
+        size_t want = outbytes / 2;
+
+        if (EVP_MAC_init(k, kmac_key, sizeof(kmac_key), NULL) == 1) {
+            set[0] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &want);
+            set[1] = OSSL_PARAM_construct_end();
+            printf("deflt%s.size.afterinit=%d\n", label, EVP_MAC_CTX_set_params(k, set));
+            printf("deflt%s.size.macsize=%zu\n", label, EVP_MAC_CTX_get_mac_size(k));
+            if (EVP_MAC_update(k, kmac_msg_short, 4) == 1) {
+                outl = 0;
+                if (EVP_MAC_final(k, out, &outl, sizeof(out)) == 1) {
+                    printf("deflt%s.size.len=%zu\n", label, outl);
+                    rt_hex_w("defltkmac", "size.half", out, outl);
+                } else {
+                    printf("deflt%s.size.enclen=0\n", label);
+                }
+            }
+        }
+        EVP_MAC_CTX_free(k);
+    }
+
+    /* The `size` cap, one past `KMAC_MAX_OUTPUT_LEN` = `0xFFFFFF / 8`. */
+    {
+        EVP_MAC_CTX *k = EVP_MAC_CTX_new(mac);
+        size_t over = 0xFFFFFF / 8 + 1;
+        size_t at = 0xFFFFFF / 8;
+        OSSL_PARAM p[2];
+
+        EVP_MAC_init(k, kmac_key, sizeof(kmac_key), NULL);
+        ERR_clear_error();
+        p[0] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &over);
+        p[1] = OSSL_PARAM_construct_end();
+        printf("deflt%s.size.over=%d\n", label, EVP_MAC_CTX_set_params(k, p));
+        rt_errq("kmac_size_over");
+        /* The cap itself is accepted, and a refusal leaves the *previous* length in place. */
+        ERR_clear_error();
+        p[0] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &at);
+        printf("deflt%s.size.atcap=%d\n", label, EVP_MAC_CTX_set_params(k, p));
+        rt_errq("kmac_size_atcap");
+        printf("deflt%s.size.atcap.macsize=%zu\n", label, EVP_MAC_CTX_get_mac_size(k));
+        EVP_MAC_CTX_free(k);
+    }
+
+    /* A final buffer one byte short: refused at the EVP layer, before the row. */
+    {
+        EVP_MAC_CTX *k = EVP_MAC_CTX_new(mac);
+
+        EVP_MAC_init(k, kmac_key, sizeof(kmac_key), NULL);
+        EVP_MAC_update(k, kmac_msg_short, 4);
+        ERR_clear_error();
+        outl = 0;
+        printf("deflt%s.final.short=%d\n", label, EVP_MAC_final(k, out, &outl, outbytes - 1));
+        printf("deflt%s.final.short.outl=%zu\n", label, outl);
+        rt_errq("kmac_final_short");
+        EVP_MAC_CTX_free(k);
+    }
+
+    /* The key-length bounds: three below the minimum, the minimum, the maximum, one above. */
+    {
+        EVP_MAC_CTX *k = EVP_MAC_CTX_new(mac);
+        unsigned char big[520];
+
+        memset(big, 0xA5, sizeof(big));
+        ERR_clear_error();
+        printf("deflt%s.key3=%d\n", label, EVP_MAC_init(k, kmac_key, 3, NULL));
+        rt_errq("kmac_key3");
+        ERR_clear_error();
+        printf("deflt%s.key4=%d\n", label, EVP_MAC_init(k, kmac_key, 4, NULL));
+        rt_errq("kmac_key4");
+        ERR_clear_error();
+        printf("deflt%s.key512=%d\n", label, EVP_MAC_init(k, big, 512, NULL));
+        rt_errq("kmac_key512");
+        ERR_clear_error();
+        printf("deflt%s.key513=%d\n", label, EVP_MAC_init(k, big, 513, NULL));
+        rt_errq("kmac_key513");
+        /* A NULL key after one was stored is *not* a refusal: `key_len != 0`. */
+        ERR_clear_error();
+        printf("deflt%s.keynull=%d\n", label, EVP_MAC_init(k, NULL, 0, NULL));
+        rt_errq("kmac_keynull");
+        EVP_MAC_CTX_free(k);
+    }
+
+    /* A context that never had a key. */
+    {
+        EVP_MAC_CTX *k = EVP_MAC_CTX_new(mac);
+
+        ERR_clear_error();
+        printf("deflt%s.nokey=%d\n", label, EVP_MAC_init(k, NULL, 0, NULL));
+        rt_errq("kmac_nokey");
+        EVP_MAC_CTX_free(k);
+    }
+
+    /* A key delivered through the parameter array, then a keyless init that reuses it. */
+    {
+        EVP_MAC_CTX *k = EVP_MAC_CTX_new(mac);
+
+        set[0] = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_KEY, (void *)kmac_key,
+                                                   sizeof(kmac_key));
+        set[1] = OSSL_PARAM_construct_end();
+        printf("deflt%s.pkey.set=%d\n", label, EVP_MAC_CTX_set_params(k, set));
+        outl = 0;
+        if (EVP_MAC_init(k, NULL, 0, NULL) == 1
+            && EVP_MAC_update(k, kmac_msg_short, 4) == 1
+            && EVP_MAC_final(k, out, &outl, sizeof(out)) == 1) {
+            printf("deflt%s.pkey.len=%zu\n", label, outl);
+            rt_hex_w("defltkmac", "pkey", out, outl);
+        } else {
+            printf("deflt%s.pkey=FAIL\n", label);
+        }
+        EVP_MAC_CTX_free(k);
+    }
+
+    /*
+     * The customisation string's arms: set twice before init (last wins), set *after* init (inert),
+     * the wrong type, over the cap, and at the cap. The second is the one that matters -- it is the
+     * authority's own stated rule and the reason the NIST vectors above pass the descriptor to
+     * `EVP_MAC_init`.
+     */
+    {
+        EVP_MAC_CTX *k = EVP_MAC_CTX_new(mac);
+        unsigned char big[600];
+        OSSL_PARAM a[2], pp[2];
+        size_t outl2 = 0;
+
+        memset(big, 0x5A, sizeof(big));
+
+        /* Two customs offered to one init: the decoder raises on the second, so the first wins. */
+        pp[0] = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_CUSTOM,
+                                                  (void *)kmac_custom_text,
+                                                  strlen(kmac_custom_text));
+        pp[1] = OSSL_PARAM_construct_end();
+        ERR_clear_error();
+        a[0] = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_CUSTOM, (void *)"first", 5);
+        a[1] = OSSL_PARAM_construct_end();
+        printf("deflt%s.custom.after.set=%d\n", label, EVP_MAC_CTX_set_params(k, a));
+        rt_errq("kmac_custom_after");
+        /* The post-init set is accepted and changes nothing: the tag is the init-time one. */
+        printf("deflt%s.custom.after.init=%d\n", label,
+               EVP_MAC_init(k, kmac_key, sizeof(kmac_key), pp));
+        a[0] = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_CUSTOM, (void *)"second", 6);
+        printf("deflt%s.custom.after.second=%d\n", label, EVP_MAC_CTX_set_params(k, a));
+        outl2 = 0;
+        if (EVP_MAC_update(k, kmac_msg_short, 4) == 1
+            && EVP_MAC_final(k, out, &outl2, sizeof(out)) == 1)
+            rt_hex_w("defltkmac", "custom.after", out, outl2);
+        EVP_MAC_CTX_free(k);
+
+        /* The wrong type, and the two length boundaries. */
+        k = EVP_MAC_CTX_new(mac);
+        EVP_MAC_init(k, kmac_key, sizeof(kmac_key), NULL);
+
+        ERR_clear_error();
+        a[0] = OSSL_PARAM_construct_int(OSSL_MAC_PARAM_CUSTOM, &one);
+        printf("deflt%s.custom.type=%d\n", label, EVP_MAC_CTX_set_params(k, a));
+        rt_errq("kmac_custom_type");
+
+        ERR_clear_error();
+        a[0] = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_CUSTOM, big, 513);
+        printf("deflt%s.custom.over=%d\n", label, EVP_MAC_CTX_set_params(k, a));
+        rt_errq("kmac_custom_over");
+        /* 512 is the cap itself and is accepted. */
+        ERR_clear_error();
+        a[0] = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_CUSTOM, big, 512);
+        printf("deflt%s.custom.atcap=%d\n", label, EVP_MAC_CTX_set_params(k, a));
+        rt_errq("kmac_custom_atcap");
+        EVP_MAC_CTX_free(k);
+
+        /* A 512-byte custom supplied to the init itself, which is the accepted form. */
+        k = EVP_MAC_CTX_new(mac);
+        pp[0] = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_CUSTOM, big, 512);
+        outl2 = 0;
+        if (EVP_MAC_init(k, kmac_key, sizeof(kmac_key), pp) == 1
+            && EVP_MAC_update(k, kmac_msg_short, 4) == 1
+            && EVP_MAC_final(k, out, &outl2, sizeof(out)) == 1)
+            rt_hex_w("defltkmac", "custom.atcap.tag", out, outl2);
+        else
+            printf("deflt%s.custom.atcap.tag=FAIL\n", label);
+        EVP_MAC_CTX_free(k);
+    }
+
+    /*
+     * The row's digest cannot be changed. `hmac_prov.c` re-fetches on a `digest` key; this unit has no
+     * such arm and the generated decoder has no such key, so the parameter is skipped and the tag is
+     * the one the row would have produced anyway. The arm prints both tags.
+     */
+    {
+        EVP_MAC_CTX *k = EVP_MAC_CTX_new(mac);
+        OSSL_PARAM a[2];
+
+        a[0] = OSSL_PARAM_construct_utf8_string(OSSL_ALG_PARAM_DIGEST, (void *)"SHA256", 0);
+        a[1] = OSSL_PARAM_construct_end();
+        printf("deflt%s.set.digest=%d\n", label, EVP_MAC_CTX_set_params(k, a));
+        outl = 0;
+        if (EVP_MAC_init(k, kmac_key, sizeof(kmac_key), NULL) == 1
+            && EVP_MAC_update(k, kmac_msg_short, 4) == 1
+            && EVP_MAC_final(k, out, &outl, sizeof(out)) == 1)
+            rt_hex_w("defltkmac", "set.digest.tag", out, outl);
+        else
+            printf("deflt%s.set.digest.tag=FAIL\n", label);
+        EVP_MAC_CTX_free(k);
+    }
+    /* The `digest` key is not in the settable list either, which is the same fact from the table. */
+    {
+        const OSSL_PARAM *p = EVP_MAC_CTX_settable_params(ctx);
+        int found = 0;
+
+        for (; p != NULL && p->key != NULL; p++)
+            if (strcmp(p->key, OSSL_ALG_PARAM_DIGEST) == 0)
+                found = 1;
+        printf("deflt%s.settable.digest=%d\n", label, found);
+    }
+
+    /*
+     * The decoder's repeated-parameter sites, one arm each: `xof`, `size`, `key`, `custom` on the
+     * setter and `size`, `block-size` on the getter. The authority raises at the *decoder's*
+     * coordinate, so the probe prints the queue and the court compares the coordinate rather than the
+     * return value alone.
+     */
+    {
+        EVP_MAC_CTX *k = EVP_MAC_CTX_new(mac);
+        size_t sz = 0;
+        int x = 0, bsz = 0;
+        OSSL_PARAM a[3];
+
+        ERR_clear_error();
+        a[0] = OSSL_PARAM_construct_int(OSSL_MAC_PARAM_XOF, &x);
+        a[1] = OSSL_PARAM_construct_int(OSSL_MAC_PARAM_XOF, &x);
+        a[2] = OSSL_PARAM_construct_end();
+        printf("deflt%s.rep.xof=%d\n", label, EVP_MAC_CTX_set_params(k, a));
+        rt_errq("kmac_rep_xof");
+
+        ERR_clear_error();
+        a[0] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &sz);
+        a[1] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &sz);
+        a[2] = OSSL_PARAM_construct_end();
+        printf("deflt%s.rep.size=%d\n", label, EVP_MAC_CTX_set_params(k, a));
+        rt_errq("kmac_rep_size");
+
+        ERR_clear_error();
+        a[0] = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_KEY, (void *)kmac_key,
+                                                 sizeof(kmac_key));
+        a[1] = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_KEY, (void *)kmac_key,
+                                                 sizeof(kmac_key));
+        a[2] = OSSL_PARAM_construct_end();
+        printf("deflt%s.rep.key=%d\n", label, EVP_MAC_CTX_set_params(k, a));
+        rt_errq("kmac_rep_key");
+
+        ERR_clear_error();
+        a[0] = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_CUSTOM, (void *)"a", 1);
+        a[1] = OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_CUSTOM, (void *)"b", 1);
+        a[2] = OSSL_PARAM_construct_end();
+        printf("deflt%s.rep.custom=%d\n", label, EVP_MAC_CTX_set_params(k, a));
+        rt_errq("kmac_rep_custom");
+
+        ERR_clear_error();
+        a[0] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &sz);
+        a[1] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &sz);
+        a[2] = OSSL_PARAM_construct_end();
+        printf("deflt%s.rep.getsize=%d\n", label, EVP_MAC_CTX_get_params(k, a));
+        rt_errq("kmac_rep_getsize");
+
+        ERR_clear_error();
+        a[0] = OSSL_PARAM_construct_int(OSSL_MAC_PARAM_BLOCK_SIZE, &bsz);
+        a[1] = OSSL_PARAM_construct_int(OSSL_MAC_PARAM_BLOCK_SIZE, &bsz);
+        a[2] = OSSL_PARAM_construct_end();
+        printf("deflt%s.rep.getbsize=%d\n", label, EVP_MAC_CTX_get_params(k, a));
+        rt_errq("kmac_rep_getbsize");
+
+        /* A `key` of the wrong type is a bare 0 with **no** raise, unlike every length refusal. */
+        ERR_clear_error();
+        a[0] = OSSL_PARAM_construct_int(OSSL_MAC_PARAM_KEY, &x);
+        a[1] = OSSL_PARAM_construct_end();
+        printf("deflt%s.set.keytype=%d\n", label, EVP_MAC_CTX_set_params(k, a));
+        rt_errq("kmac_set_keytype");
+
+        /* An `xof` of the wrong type is refused by the params layer, which raises its own error. */
+        ERR_clear_error();
+        a[0] = OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_XOF, &sz);
+        a[1] = OSSL_PARAM_construct_end();
+        printf("deflt%s.set.xoftype=%d\n", label, EVP_MAC_CTX_set_params(k, a));
+        rt_errq("kmac_set_xoftype");
+
+        /* A `size` of the wrong type, likewise. */
+        ERR_clear_error();
+        a[0] = OSSL_PARAM_construct_int(OSSL_MAC_PARAM_SIZE, &x);
+        a[1] = OSSL_PARAM_construct_end();
+        printf("deflt%s.set.sizetype=%d\n", label, EVP_MAC_CTX_set_params(k, a));
+        rt_errq("kmac_set_sizetype");
+
+        EVP_MAC_CTX_free(k);
+    }
+
+    /* The duplicate, mid-message. */
+    {
+        EVP_MAC_CTX *a0 = EVP_MAC_CTX_new(mac);
+        EVP_MAC_CTX *b0;
+        int ok_copy, ok_orig;
+        size_t outl2 = 0;
+
+        printf("deflt%s.dup.init=%d\n", label,
+               EVP_MAC_init(a0, kmac_key, sizeof(kmac_key), NULL));
+        printf("deflt%s.dup.update=%d\n", label, EVP_MAC_update(a0, kmac_msg_short, 2));
+        b0 = EVP_MAC_CTX_dup(a0);
+        printf("deflt%s.dup.made=%d\n", label, b0 != NULL);
+        if (b0 != NULL) {
+            printf("deflt%s.dup.copy.update=%d\n", label,
+                   EVP_MAC_update(b0, kmac_msg_short + 2, 2));
+            outl = 0;
+            outl2 = 0;
+            ok_copy = EVP_MAC_final(b0, out, &outl, sizeof(out));
+            printf("deflt%s.dup.copy.final=%d\n", label, ok_copy);
+            if (ok_copy)
+                rt_hex_w("defltkmac", "dup.copy", out, outl);
+            ok_orig = EVP_MAC_final(a0, out, &outl2, sizeof(out));
+            printf("deflt%s.dup.orig.final=%d\n", label, ok_orig);
+            if (ok_orig)
+                rt_hex_w("defltkmac", "dup.orig", out, outl2);
+            EVP_MAC_CTX_free(b0);
+        }
+        EVP_MAC_CTX_free(a0);
+    }
+
+    /* The digest's own size, which is where `out_len`'s default comes from. */
+    printf("deflt%s.defaultsize=%zu\n", label, outbytes);
+    printf("deflt%s.defaultblock=%zu\n", label, blocksize);
+
+    EVP_MAC_CTX_free(ctx);
+    EVP_MAC_free(mac);
+}
+
+static void rt_deflt_kmac(void)
+{
+    rt_deflt_kmac_one("KMAC-128", "kmac128", "KMAC128", "2.16.840.1.101.3.4.2.19", 32, 168);
+    rt_deflt_kmac_one("KMAC-256", "kmac256", "KMAC256", "2.16.840.1.101.3.4.2.20", 64, 136);
 }
 
 /*
@@ -5708,6 +6354,7 @@ int main(void)
     rt_deflt_hmac();
     rt_deflt_blake2_mac();
     rt_deflt_poly1305();
+    rt_deflt_kmac();
     rt_deflt_errors();
     rt_disp_failures();
     return 0;

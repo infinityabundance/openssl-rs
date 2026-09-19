@@ -1297,6 +1297,27 @@ pub(crate) const fn param_utf8_string(key: *const c_char) -> OsslParam {
     }
 }
 
+/// `OSSL_PARAM_utf8_string(key, b, s)` — `params.h:60-61` with its **data** supplied.
+///
+/// The zero-length sibling above is what the generated lists use; this three-argument form is what
+/// a row that hands a caller a fixed string uses, and `kmac_prov.c`'s `kmac128_new`/`kmac256_new` are
+/// the first such place in the crate: they build a one-entry list naming the digest the row is defined
+/// over, with `data_size` = `sizeof` of the literal (the NUL included) rather than a `strlen`.
+///
+pub(crate) const fn param_utf8_string_with(
+    key: *const c_char,
+    data: *mut c_void,
+    data_size: usize,
+) -> OsslParam {
+    OsslParam {
+        key: key.cast(),
+        data_type: OSSL_PARAM_UTF8_STRING,
+        data,
+        data_size,
+        return_size: OSSL_PARAM_UNMODIFIED,
+    }
+}
+
 /// `OSSL_PARAM_octet_string(key, addr, 0)` — `params.h:62-63`.
 pub(crate) const fn param_octet_string(key: *const c_char) -> OsslParam {
     OsslParam {
@@ -1304,6 +1325,28 @@ pub(crate) const fn param_octet_string(key: *const c_char) -> OsslParam {
         data_type: OSSL_PARAM_OCTET_STRING,
         data: ptr::null_mut(),
         data_size: 0,
+        return_size: OSSL_PARAM_UNMODIFIED,
+    }
+}
+
+/// `OSSL_PARAM_octet_string(key, b, s)` — `params.h:62-63` with its **data** supplied.
+///
+/// The zero-length sibling above is the generated lists' form. This one exists for the same reason
+/// `param_utf8_string_with` does, and for one more that is easy to miss: `kmac_init` sets the
+/// default customisation string with `OSSL_PARAM_octet_string(key, "", 0)`, whose `data` is a
+/// **non-NULL** pointer to a zero-length string. `encode_string` branches on `in == NULL`, so a
+/// transcription that passed NULL here would leave `custom_len` at 0 where the authority's is 2
+/// (`[0x01, 0x00]`), and the two produce different tags for the same key and message.
+pub(crate) const fn param_octet_string_with(
+    key: *const c_char,
+    data: *mut c_void,
+    data_size: usize,
+) -> OsslParam {
+    OsslParam {
+        key: key.cast(),
+        data_type: OSSL_PARAM_OCTET_STRING,
+        data,
+        data_size,
         return_size: OSSL_PARAM_UNMODIFIED,
     }
 }
