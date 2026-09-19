@@ -214,12 +214,42 @@ static int sentinel_mpkeygen(RSA *rsa, int bits, int primes, BIGNUM *e, BN_GENCB
             (const void *)(GET)(m) == NULL);                            \
     } while (0)
 
+/* ------------------------------------------------------------------ the padding primitives */
+
+/* Drain the error queue, printing each record's **packed code and coordinate**. The packed code
+ * carries the library and the reason; the coordinate is `ERR_get_error_all`'s file/line/func, which
+ * is the part of the record `gen_err_raise_sites.py` derives and which a court that compared only
+ * the return value could not see at all. */
+static void drain(const char *arm)
+{
+    int n = 0;
+
+    for (;;) {
+        const char *file = NULL;
+        const char *func = NULL;
+        int line = 0;
+        unsigned long e = ERR_get_error_all(&file, &line, &func, NULL, NULL);
+
+        if (e == 0)
+            break;
+        printf("rsa.%s.err.%d=%lu:%s:%d:%s\n", arm, n, e,
+            file != NULL ? file : "(null)", line,
+            func != NULL ? func : "(null)");
+        n++;
+    }
+    printf("rsa.%s.err.count=%d\n", arm, n);
+}
+
 int main(void)
 {
     RSA_METHOD *m = NULL;
     RSA_METHOD *d = NULL;
     int app = 7;
     int flags;
+    unsigned char from[64];
+    unsigned char to[64];
+    unsigned char blk[64];
+    int i;
 
     setvbuf(stdout, NULL, _IOLBF, 0);
 
@@ -347,6 +377,156 @@ int main(void)
         ROUNDTRIP("multi_prime_keygen", RSA_meth_get_multi_prime_keygen,
             RSA_meth_set_multi_prime_keygen, sentinel_mpkeygen);
     }
+
+    /* ---------------------------------------------------------------- the padding primitives */
+
+    for (i = 0; i < 64; i++)
+        from[i] = (unsigned char)(0xa0 + i);
+
+    /* `none`: the message must be exactly the modulus width, and the two disagreements raise
+     * *different* reasons, so both arms are needed to tell the transcription from one that
+     * reused a single reason. */
+    ERR_clear_error();
+    memset(to, 0x5a, sizeof(to));
+    printf("rsa.pad_none.exact=%d\n", RSA_padding_add_none(to, 16, from, 16));
+    printf("rsa.pad_none.exact.body=%d\n", memcmp(to, from, 16) == 0);
+    drain("pad_none_exact");
+    printf("rsa.pad_none.long=%d\n", RSA_padding_add_none(to, 16, from, 17));
+    drain("pad_none_long");
+    printf("rsa.pad_none.short=%d\n", RSA_padding_add_none(to, 16, from, 15));
+    drain("pad_none_short");
+
+    /* `check_none` zero-fills to the *left*, so the message ends up right-aligned in `to`. */
+    ERR_clear_error();
+    memset(to, 0x5a, sizeof(to));
+    printf("rsa.chk_none.ok=%d\n", RSA_padding_check_none(to, 16, from, 16, 16));
+    printf("rsa.chk_none.body=%d\n", memcmp(to, from, 16) == 0);
+    printf("rsa.chk_none.pad=%d\n", RSA_padding_check_none(to, 20, from, 16, 16));
+    printf("rsa.chk_none.lead0=%d\n", to[0] == 0 && to[1] == 0 && to[4] == from[0]);
+    drain("chk_none_ok");
+    ERR_clear_error();
+    printf("rsa.chk_none.long=%d\n", RSA_padding_check_none(to, 16, from, 17, 17));
+    drain("chk_none_long");
+
+    /* X9.31: the one-octet `0x6A` header when there is no room for padding, and the
+     * `0x6B || 0xBB... || 0xBA` run when there is. */
+    ERR_clear_error();
+    memset(blk, 0, sizeof(blk));
+    printf("rsa.pad_x931.tight=%d\n", RSA_padding_add_X931(blk, 16, from, 14));
+    printf("rsa.pad_x931.tight.0=%02x\n", blk[0]);
+    printf("rsa.pad_x931.tight.body=%d\n", memcmp(blk + 1, from, 14) == 0);
+    printf("rsa.pad_x931.tight.last=%02x\n", blk[15]);
+    drain("pad_x931_tight");
+    memset(blk, 0, sizeof(blk));
+    printf("rsa.pad_x931.run=%d\n", RSA_padding_add_X931(blk, 16, from, 6));
+    printf("rsa.pad_x931.run.0=%02x\n", blk[0]);
+    printf("rsa.pad_x931.run.1=%02x\n", blk[1]);
+    printf("rsa.pad_x931.run.8=%02x\n", blk[8]);
+    printf("rsa.pad_x931.run.body=%d\n", memcmp(blk + 9, from, 6) == 0);
+    printf("rsa.pad_x931.run.last=%02x\n", blk[15]);
+    ERR_clear_error();
+    printf("rsa.pad_x931.tight_fail=%d\n", RSA_padding_add_X931(blk, 16, from, 15));
+    drain("pad_x931_fail");
+
+    /* The check, on the tight form `RSA_padding_add_X931` just produced, then on the run form,
+     * then on the three ways it refuses. */
+    ERR_clear_error();
+    (void)RSA_padding_add_X931(blk, 16, from, 14);
+    memset(to, 0x5a, sizeof(to));
+    printf("rsa.chk_x931.tight=%d\n", RSA_padding_check_X931(to, 64, blk, 16, 16));
+    printf("rsa.chk_x931.tight.body=%d\n", memcmp(to, from, 14) == 0);
+    drain("chk_x931_tight");
+    (void)RSA_padding_add_X931(blk, 16, from, 6);
+    printf("rsa.chk_x931.run=%d\n", RSA_padding_check_X931(to, 64, blk, 16, 16));
+    printf("rsa.chk_x931.run.body=%d\n", memcmp(to, from, 6) == 0);
+    drain("chk_x931_run");
+    ERR_clear_error();
+    printf("rsa.chk_x931.short=%d\n", RSA_padding_check_X931(to, 64, blk, 15, 16));
+    drain("chk_x931_short");
+    (void)RSA_padding_add_X931(blk, 16, from, 6);
+    blk[0] = 0x42;
+    printf("rsa.chk_x931.header=%d\n", RSA_padding_check_X931(to, 64, blk, 16, 16));
+    drain("chk_x931_header");
+    /* `0x6B` immediately followed by the terminator: the format requires at least one padding
+     * octet, which is the `i == 0` refusal. */
+    memset(blk, 0xbb, sizeof(blk));
+    blk[0] = 0x6b;
+    blk[1] = 0xba;
+    blk[15] = 0xcc;
+    printf("rsa.chk_x931.nopad=%d\n", RSA_padding_check_X931(to, 64, blk, 16, 16));
+    drain("chk_x931_nopad");
+    memset(blk, 0xbb, sizeof(blk));
+    blk[0] = 0x6b;
+    blk[5] = 0x42;
+    blk[15] = 0xcc;
+    printf("rsa.chk_x931.mid=%d\n", RSA_padding_check_X931(to, 64, blk, 16, 16));
+    drain("chk_x931_mid");
+    (void)RSA_padding_add_X931(blk, 16, from, 14);
+    blk[15] = 0x00;
+    printf("rsa.chk_x931.trailer=%d\n", RSA_padding_check_X931(to, 64, blk, 16, 16));
+    drain("chk_x931_trailer");
+
+    /* The four ISO/IEC 10118 part numbers, and an unknown NID. */
+    printf("rsa.x931_id.sha1=%d\n", RSA_X931_hash_id(64));
+    printf("rsa.x931_id.sha256=%d\n", RSA_X931_hash_id(672));
+    printf("rsa.x931_id.sha384=%d\n", RSA_X931_hash_id(673));
+    printf("rsa.x931_id.sha512=%d\n", RSA_X931_hash_id(674));
+    printf("rsa.x931_id.unknown=%d\n", RSA_X931_hash_id(0));
+
+    /* PKCS#1 v1.5 type 1: `00 01 FF... 00 D`, and the check's six refusals. */
+    ERR_clear_error();
+    memset(blk, 0, sizeof(blk));
+    printf("rsa.pad_t1.ok=%d\n", RSA_padding_add_PKCS1_type_1(blk, 16, from, 5));
+    printf("rsa.pad_t1.0=%02x\n", blk[0]);
+    printf("rsa.pad_t1.1=%02x\n", blk[1]);
+    printf("rsa.pad_t1.2=%02x\n", blk[2]);
+    printf("rsa.pad_t1.10=%02x\n", blk[10]);
+    printf("rsa.pad_t1.body=%d\n", memcmp(blk + 11, from, 5) == 0);
+    drain("pad_t1_ok");
+    ERR_clear_error();
+    printf("rsa.pad_t1.long=%d\n", RSA_padding_add_PKCS1_type_1(blk, 16, from, 6));
+    drain("pad_t1_long");
+
+    ERR_clear_error();
+    (void)RSA_padding_add_PKCS1_type_1(blk, 16, from, 5);
+    memset(to, 0x5a, sizeof(to));
+    printf("rsa.chk_t1.ok=%d\n", RSA_padding_check_PKCS1_type_1(to, 64, blk, 16, 16));
+    printf("rsa.chk_t1.body=%d\n", memcmp(to, from, 5) == 0);
+    drain("chk_t1_ok");
+    /* The same block with the leading zero already stripped: `num == flen + 1`. */
+    printf("rsa.chk_t1.stripped=%d\n", RSA_padding_check_PKCS1_type_1(to, 64, blk + 1, 15, 16));
+    printf("rsa.chk_t1.stripped.body=%d\n", memcmp(to, from, 5) == 0);
+    drain("chk_t1_stripped");
+    ERR_clear_error();
+    printf("rsa.chk_t1.tooshort=%d\n", RSA_padding_check_PKCS1_type_1(to, 64, blk, 8, 8));
+    drain("chk_t1_tooshort");
+    (void)RSA_padding_add_PKCS1_type_1(blk, 16, from, 5);
+    blk[0] = 0x02;
+    printf("rsa.chk_t1.lead=%d\n", RSA_padding_check_PKCS1_type_1(to, 64, blk, 16, 16));
+    drain("chk_t1_lead");
+    blk[0] = 0x00;
+    blk[1] = 0x02;
+    printf("rsa.chk_t1.type=%d\n", RSA_padding_check_PKCS1_type_1(to, 64, blk, 16, 16));
+    drain("chk_t1_type");
+    blk[1] = 0x01;
+    blk[5] = 0x7f;
+    printf("rsa.chk_t1.fixed=%d\n", RSA_padding_check_PKCS1_type_1(to, 64, blk, 16, 16));
+    drain("chk_t1_fixed");
+    /* No null before the data: fourteen `0xff` with `num == flen + 1` so the walk reaches the
+     * end of the padding string without finding the separator. */
+    memset(blk, 0xff, sizeof(blk));
+    blk[0] = 0x00;
+    blk[1] = 0x01;
+    printf("rsa.chk_t1.nonull=%d\n", RSA_padding_check_PKCS1_type_1(to, 64, blk, 15, 15));
+    drain("chk_t1_nonull");
+    /* Seven `0xff` octets, then the separator: below the eight-octet minimum. */
+    memset(blk, 0x00, sizeof(blk));
+    blk[0] = 0x00;
+    blk[1] = 0x01;
+    memset(blk + 2, 0xff, 7);
+    blk[9] = 0x00;
+    printf("rsa.chk_t1.padcount=%d\n", RSA_padding_check_PKCS1_type_1(to, 64, blk, 16, 16));
+    drain("chk_t1_padcount");
 
     /* ---------------------------------------------------------------- release */
 

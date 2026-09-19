@@ -20172,6 +20172,2246 @@ pub(crate) const PROV_DIGESTCOMMON_125: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `rsa_new_intern` at `crypto/rsa/rsa_lib.c:85` (ERR_R_CRYPTO_LIB).
+pub(crate) const RSA_LIB_85: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
+    line: 85,
+    func: c"rsa_new_intern",
+    lib: 4,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `rsa_new_intern` at `crypto/rsa/rsa_lib.c:106` (ERR_R_ENGINE_LIB).
+pub(crate) const RSA_LIB_106: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
+    line: 106,
+    func: c"rsa_new_intern",
+    lib: 4,
+    reason: 524326,
+    dynamic_reason: false,
+};
+
+/// `rsa_new_intern` at `crypto/rsa/rsa_lib.c:116` (ERR_R_ENGINE_LIB).
+pub(crate) const RSA_LIB_116: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
+    line: 116,
+    func: c"rsa_new_intern",
+    lib: 4,
+    reason: 524326,
+    dynamic_reason: false,
+};
+
+/// `rsa_new_intern` at `crypto/rsa/rsa_lib.c:130` (ERR_R_INIT_FAIL).
+pub(crate) const RSA_LIB_130: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
+    line: 130,
+    func: c"rsa_new_intern",
+    lib: 4,
+    reason: 786693,
+    dynamic_reason: false,
+};
+
+/// `int_set_rsa_md_name` at `crypto/rsa/rsa_lib.c:973` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const RSA_LIB_973: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
+    line: 973,
+    func: c"int_set_rsa_md_name",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `int_get_rsa_md_name` at `crypto/rsa/rsa_lib.c:1013` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const RSA_LIB_1013: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
+    line: 1013,
+    func: c"int_get_rsa_md_name",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_set0_rsa_oaep_label` at `crypto/rsa/rsa_lib.c:1188` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const RSA_LIB_1188: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
+    line: 1188,
+    func: c"EVP_PKEY_CTX_set0_rsa_oaep_label",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_get0_rsa_oaep_label` at `crypto/rsa/rsa_lib.c:1221` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const RSA_LIB_1221: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
+    line: 1221,
+    func: c"EVP_PKEY_CTX_get0_rsa_oaep_label",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_set_rsa_pss_keygen_saltlen` at `crypto/rsa/rsa_lib.c:1288` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const RSA_LIB_1288: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
+    line: 1288,
+    func: c"EVP_PKEY_CTX_set_rsa_pss_keygen_saltlen",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_set_rsa_keygen_bits` at `crypto/rsa/rsa_lib.c:1309` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const RSA_LIB_1309: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
+    line: 1309,
+    func: c"EVP_PKEY_CTX_set_rsa_keygen_bits",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_set_rsa_keygen_primes` at `crypto/rsa/rsa_lib.c:1369` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const RSA_LIB_1369: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
+    line: 1369,
+    func: c"EVP_PKEY_CTX_set_rsa_keygen_primes",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `RSA_setup_blinding` at `crypto/rsa/rsa_crpt.c:120` (ERR_R_BN_LIB).
+pub(crate) const RSA_CRPT_120: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_crpt.c",
+    line: 120,
+    func: c"RSA_setup_blinding",
+    lib: 4,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `RSA_setup_blinding` at `crypto/rsa/rsa_crpt.c:127` (RSA_R_NO_PUBLIC_EXPONENT).
+pub(crate) const RSA_CRPT_127: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_crpt.c",
+    line: 127,
+    func: c"RSA_setup_blinding",
+    lib: 4,
+    reason: 140,
+    dynamic_reason: false,
+};
+
+/// `RSA_setup_blinding` at `crypto/rsa/rsa_crpt.c:138` (ERR_R_BN_LIB).
+pub(crate) const RSA_CRPT_138: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_crpt.c",
+    line: 138,
+    func: c"RSA_setup_blinding",
+    lib: 4,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `RSA_setup_blinding` at `crypto/rsa/rsa_crpt.c:149` (ERR_R_BN_LIB).
+pub(crate) const RSA_CRPT_149: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_crpt.c",
+    line: 149,
+    func: c"RSA_setup_blinding",
+    lib: 4,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_add_PKCS1_type_1` at `crypto/rsa/rsa_pk1.c:38` (RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE).
+pub(crate) const RSA_PK1_38: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 38,
+    func: c"RSA_padding_add_PKCS1_type_1",
+    lib: 4,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_type_1` at `crypto/rsa/rsa_pk1.c:78` (RSA_R_INVALID_PADDING).
+pub(crate) const RSA_PK1_78: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 78,
+    func: c"RSA_padding_check_PKCS1_type_1",
+    lib: 4,
+    reason: 138,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_type_1` at `crypto/rsa/rsa_pk1.c:85` (RSA_R_BLOCK_TYPE_IS_NOT_01).
+pub(crate) const RSA_PK1_85: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 85,
+    func: c"RSA_padding_check_PKCS1_type_1",
+    lib: 4,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_type_1` at `crypto/rsa/rsa_pk1.c:97` (RSA_R_BAD_FIXED_HEADER_DECRYPT).
+pub(crate) const RSA_PK1_97: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 97,
+    func: c"RSA_padding_check_PKCS1_type_1",
+    lib: 4,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_type_1` at `crypto/rsa/rsa_pk1.c:105` (RSA_R_NULL_BEFORE_BLOCK_MISSING).
+pub(crate) const RSA_PK1_105: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 105,
+    func: c"RSA_padding_check_PKCS1_type_1",
+    lib: 4,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_type_1` at `crypto/rsa/rsa_pk1.c:110` (RSA_R_BAD_PAD_BYTE_COUNT).
+pub(crate) const RSA_PK1_110: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 110,
+    func: c"RSA_padding_check_PKCS1_type_1",
+    lib: 4,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_type_1` at `crypto/rsa/rsa_pk1.c:116` (RSA_R_DATA_TOO_LARGE).
+pub(crate) const RSA_PK1_116: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 116,
+    func: c"RSA_padding_check_PKCS1_type_1",
+    lib: 4,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_add_PKCS1_type_2_ex` at `crypto/rsa/rsa_pk1.c:132` (RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE).
+pub(crate) const RSA_PK1_132: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 132,
+    func: c"ossl_rsa_padding_add_PKCS1_type_2_ex",
+    lib: 4,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_add_PKCS1_type_2_ex` at `crypto/rsa/rsa_pk1.c:135` (RSA_R_INVALID_LENGTH).
+pub(crate) const RSA_PK1_135: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 135,
+    func: c"ossl_rsa_padding_add_PKCS1_type_2_ex",
+    lib: 4,
+    reason: 181,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_type_2` at `crypto/rsa/rsa_pk1.c:189` (RSA_R_PKCS_DECODING_ERROR).
+pub(crate) const RSA_PK1_189: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 189,
+    func: c"RSA_padding_check_PKCS1_type_2",
+    lib: 4,
+    reason: 159,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_type_2` at `crypto/rsa/rsa_pk1.c:270` (RSA_R_PKCS_DECODING_ERROR).
+pub(crate) const RSA_PK1_270: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 270,
+    func: c"RSA_padding_check_PKCS1_type_2",
+    lib: 4,
+    reason: 159,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_prf` at `crypto/rsa/rsa_pk1.c:294` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_294: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 294,
+    func: c"ossl_rsa_prf",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_prf` at `crypto/rsa/rsa_pk1.c:303` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_303: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 303,
+    func: c"ossl_rsa_prf",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_prf` at `crypto/rsa/rsa_pk1.c:316` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_316: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 316,
+    func: c"ossl_rsa_prf",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_prf` at `crypto/rsa/rsa_pk1.c:321` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_321: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 321,
+    func: c"ossl_rsa_prf",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_prf` at `crypto/rsa/rsa_pk1.c:327` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_327: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 327,
+    func: c"ossl_rsa_prf",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_prf` at `crypto/rsa/rsa_pk1.c:335` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_335: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 335,
+    func: c"ossl_rsa_prf",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_prf` at `crypto/rsa/rsa_pk1.c:339` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_339: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 339,
+    func: c"ossl_rsa_prf",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_prf` at `crypto/rsa/rsa_pk1.c:343` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_343: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 343,
+    func: c"ossl_rsa_prf",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_prf` at `crypto/rsa/rsa_pk1.c:355` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_355: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 355,
+    func: c"ossl_rsa_prf",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_prf` at `crypto/rsa/rsa_pk1.c:361` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_361: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 361,
+    func: c"ossl_rsa_prf",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_check_PKCS1_type_2` at `crypto/rsa/rsa_pk1.c:419` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_419: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 419,
+    func: c"ossl_rsa_padding_check_PKCS1_type_2",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_check_PKCS1_type_2` at `crypto/rsa/rsa_pk1.c:426` (ERR_R_MALLOC_FAILURE).
+pub(crate) const RSA_PK1_426: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 426,
+    func: c"ossl_rsa_padding_check_PKCS1_type_2",
+    lib: 4,
+    reason: 786688,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_check_PKCS1_type_2` at `crypto/rsa/rsa_pk1.c:520` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_520: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 520,
+    func: c"ossl_rsa_padding_check_PKCS1_type_2",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_check_PKCS1_type_2_TLS` at `crypto/rsa/rsa_pk1.c:561` (RSA_R_PKCS_DECODING_ERROR).
+pub(crate) const RSA_PK1_561: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 561,
+    func: c"ossl_rsa_padding_check_PKCS1_type_2_TLS",
+    lib: 4,
+    reason: 159,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_check_PKCS1_type_2_TLS` at `crypto/rsa/rsa_pk1.c:572` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_572: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 572,
+    func: c"ossl_rsa_padding_check_PKCS1_type_2_TLS",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_add_none` at `crypto/rsa/rsa_none.c:24` (RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE).
+pub(crate) const RSA_NONE_24: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_none.c",
+    line: 24,
+    func: c"RSA_padding_add_none",
+    lib: 4,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_add_none` at `crypto/rsa/rsa_none.c:29` (RSA_R_DATA_TOO_SMALL_FOR_KEY_SIZE).
+pub(crate) const RSA_NONE_29: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_none.c",
+    line: 29,
+    func: c"RSA_padding_add_none",
+    lib: 4,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_none` at `crypto/rsa/rsa_none.c:42` (RSA_R_DATA_TOO_LARGE).
+pub(crate) const RSA_NONE_42: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_none.c",
+    line: 42,
+    func: c"RSA_padding_check_none",
+    lib: 4,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_add_X931` at `crypto/rsa/rsa_x931.c:56` (RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE).
+pub(crate) const RSA_X931_56: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_x931.c",
+    line: 56,
+    func: c"RSA_padding_add_X931",
+    lib: 4,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_X931` at `crypto/rsa/rsa_x931.c:87` (RSA_R_INVALID_HEADER).
+pub(crate) const RSA_X931_87: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_x931.c",
+    line: 87,
+    func: c"RSA_padding_check_X931",
+    lib: 4,
+    reason: 137,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_X931` at `crypto/rsa/rsa_x931.c:98` (RSA_R_INVALID_PADDING).
+pub(crate) const RSA_X931_98: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_x931.c",
+    line: 98,
+    func: c"RSA_padding_check_X931",
+    lib: 4,
+    reason: 138,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_X931` at `crypto/rsa/rsa_x931.c:106` (RSA_R_INVALID_PADDING).
+pub(crate) const RSA_X931_106: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_x931.c",
+    line: 106,
+    func: c"RSA_padding_check_X931",
+    lib: 4,
+    reason: 138,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_X931` at `crypto/rsa/rsa_x931.c:115` (RSA_R_INVALID_TRAILER).
+pub(crate) const RSA_X931_115: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_x931.c",
+    line: 115,
+    func: c"RSA_padding_check_X931",
+    lib: 4,
+    reason: 139,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` at `crypto/rsa/rsa_oaep.c:72` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const RSA_OAEP_72: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c",
+    line: 72,
+    func: c"ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex",
+    lib: 4,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` at `crypto/rsa/rsa_oaep.c:82` (RSA_R_DIGEST_NOT_ALLOWED).
+pub(crate) const RSA_OAEP_82: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c",
+    line: 82,
+    func: c"ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex",
+    lib: 4,
+    reason: 145,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` at `crypto/rsa/rsa_oaep.c:86` (RSA_R_MGF1_DIGEST_NOT_ALLOWED).
+pub(crate) const RSA_OAEP_86: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c",
+    line: 86,
+    func: c"ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex",
+    lib: 4,
+    reason: 152,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` at `crypto/rsa/rsa_oaep.c:93` (RSA_R_INVALID_LENGTH).
+pub(crate) const RSA_OAEP_93: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c",
+    line: 93,
+    func: c"ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex",
+    lib: 4,
+    reason: 181,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` at `crypto/rsa/rsa_oaep.c:99` (RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE).
+pub(crate) const RSA_OAEP_99: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c",
+    line: 99,
+    func: c"ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex",
+    lib: 4,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` at `crypto/rsa/rsa_oaep.c:104` (RSA_R_KEY_SIZE_TOO_SMALL).
+pub(crate) const RSA_OAEP_104: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c",
+    line: 104,
+    func: c"ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex",
+    lib: 4,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_OAEP_mgf1` at `crypto/rsa/rsa_oaep.c:189` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const RSA_OAEP_189: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c",
+    line: 189,
+    func: c"RSA_padding_check_PKCS1_OAEP_mgf1",
+    lib: 4,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_OAEP_mgf1` at `crypto/rsa/rsa_oaep.c:200` (RSA_R_DIGEST_NOT_ALLOWED).
+pub(crate) const RSA_OAEP_200: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c",
+    line: 200,
+    func: c"RSA_padding_check_PKCS1_OAEP_mgf1",
+    lib: 4,
+    reason: 145,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_OAEP_mgf1` at `crypto/rsa/rsa_oaep.c:204` (RSA_R_MGF1_DIGEST_NOT_ALLOWED).
+pub(crate) const RSA_OAEP_204: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c",
+    line: 204,
+    func: c"RSA_padding_check_PKCS1_OAEP_mgf1",
+    lib: 4,
+    reason: 152,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_OAEP_mgf1` at `crypto/rsa/rsa_oaep.c:222` (RSA_R_OAEP_DECODING_ERROR).
+pub(crate) const RSA_OAEP_222: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c",
+    line: 222,
+    func: c"RSA_padding_check_PKCS1_OAEP_mgf1",
+    lib: 4,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_OAEP_mgf1` at `crypto/rsa/rsa_oaep.c:332` (RSA_R_OAEP_DECODING_ERROR).
+pub(crate) const RSA_OAEP_332: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c",
+    line: 332,
+    func: c"RSA_padding_check_PKCS1_OAEP_mgf1",
+    lib: 4,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify_PKCS1_PSS_mgf1` at `crypto/rsa/rsa_pss.c:78` (RSA_R_SLEN_CHECK_FAILED).
+pub(crate) const RSA_PSS_78: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c",
+    line: 78,
+    func: c"ossl_rsa_verify_PKCS1_PSS_mgf1",
+    lib: 4,
+    reason: 136,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify_PKCS1_PSS_mgf1` at `crypto/rsa/rsa_pss.c:85` (RSA_R_FIRST_OCTET_INVALID).
+pub(crate) const RSA_PSS_85: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c",
+    line: 85,
+    func: c"ossl_rsa_verify_PKCS1_PSS_mgf1",
+    lib: 4,
+    reason: 133,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify_PKCS1_PSS_mgf1` at `crypto/rsa/rsa_pss.c:93` (RSA_R_DATA_TOO_LARGE).
+pub(crate) const RSA_PSS_93: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c",
+    line: 93,
+    func: c"ossl_rsa_verify_PKCS1_PSS_mgf1",
+    lib: 4,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify_PKCS1_PSS_mgf1` at `crypto/rsa/rsa_pss.c:99` (RSA_R_DATA_TOO_LARGE).
+pub(crate) const RSA_PSS_99: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c",
+    line: 99,
+    func: c"ossl_rsa_verify_PKCS1_PSS_mgf1",
+    lib: 4,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify_PKCS1_PSS_mgf1` at `crypto/rsa/rsa_pss.c:103` (RSA_R_LAST_OCTET_INVALID).
+pub(crate) const RSA_PSS_103: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c",
+    line: 103,
+    func: c"ossl_rsa_verify_PKCS1_PSS_mgf1",
+    lib: 4,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify_PKCS1_PSS_mgf1` at `crypto/rsa/rsa_pss.c:120` (RSA_R_SLEN_RECOVERY_FAILED).
+pub(crate) const RSA_PSS_120: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c",
+    line: 120,
+    func: c"ossl_rsa_verify_PKCS1_PSS_mgf1",
+    lib: 4,
+    reason: 135,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify_PKCS1_PSS_mgf1` at `crypto/rsa/rsa_pss.c:126` (RSA_R_SLEN_CHECK_FAILED).
+pub(crate) const RSA_PSS_126: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c",
+    line: 126,
+    func: c"ossl_rsa_verify_PKCS1_PSS_mgf1",
+    lib: 4,
+    reason: 136,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify_PKCS1_PSS_mgf1` at `crypto/rsa/rsa_pss.c:144` (RSA_R_BAD_SIGNATURE).
+pub(crate) const RSA_PSS_144: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c",
+    line: 144,
+    func: c"ossl_rsa_verify_PKCS1_PSS_mgf1",
+    lib: 4,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_add_PKCS1_PSS_mgf1` at `crypto/rsa/rsa_pss.c:216` (RSA_R_SLEN_CHECK_FAILED).
+pub(crate) const RSA_PSS_216: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c",
+    line: 216,
+    func: c"ossl_rsa_padding_add_PKCS1_PSS_mgf1",
+    lib: 4,
+    reason: 136,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_add_PKCS1_PSS_mgf1` at `crypto/rsa/rsa_pss.c:227` (RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE).
+pub(crate) const RSA_PSS_227: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c",
+    line: 227,
+    func: c"ossl_rsa_padding_add_PKCS1_PSS_mgf1",
+    lib: 4,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_add_PKCS1_PSS_mgf1` at `crypto/rsa/rsa_pss.c:235` (RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE).
+pub(crate) const RSA_PSS_235: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c",
+    line: 235,
+    func: c"ossl_rsa_padding_add_PKCS1_PSS_mgf1",
+    lib: 4,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_encrypt` at `crypto/rsa/rsa_ossl.c:115` (RSA_R_MODULUS_TOO_LARGE).
+pub(crate) const RSA_OSSL_115: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 115,
+    func: c"rsa_ossl_public_encrypt",
+    lib: 4,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_encrypt` at `crypto/rsa/rsa_ossl.c:120` (RSA_R_BAD_E_VALUE).
+pub(crate) const RSA_OSSL_120: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 120,
+    func: c"rsa_ossl_public_encrypt",
+    lib: 4,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_encrypt` at `crypto/rsa/rsa_ossl.c:127` (RSA_R_BAD_E_VALUE).
+pub(crate) const RSA_OSSL_127: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 127,
+    func: c"rsa_ossl_public_encrypt",
+    lib: 4,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_encrypt` at `crypto/rsa/rsa_ossl.c:156` (RSA_R_UNKNOWN_PADDING_TYPE).
+pub(crate) const RSA_OSSL_156: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 156,
+    func: c"rsa_ossl_public_encrypt",
+    lib: 4,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_encrypt` at `crypto/rsa/rsa_ossl.c:183` (RSA_R_DATA_TOO_SMALL).
+pub(crate) const RSA_OSSL_183: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 183,
+    func: c"rsa_ossl_public_encrypt",
+    lib: 4,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_encrypt` at `crypto/rsa/rsa_ossl.c:191` (RSA_R_DATA_TOO_LARGE_FOR_MODULUS).
+pub(crate) const RSA_OSSL_191: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 191,
+    func: c"rsa_ossl_public_encrypt",
+    lib: 4,
+    reason: 132,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_encrypt` at `crypto/rsa/rsa_ossl.c:199` (RSA_R_DATA_TOO_LARGE_FOR_MODULUS).
+pub(crate) const RSA_OSSL_199: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 199,
+    func: c"rsa_ossl_public_encrypt",
+    lib: 4,
+    reason: 132,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_encrypt` at `crypto/rsa/rsa_ossl.c:359` (RSA_R_UNKNOWN_PADDING_TYPE).
+pub(crate) const RSA_OSSL_359: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 359,
+    func: c"rsa_ossl_private_encrypt",
+    lib: 4,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_encrypt` at `crypto/rsa/rsa_ossl.c:370` (RSA_R_DATA_TOO_LARGE_FOR_MODULUS).
+pub(crate) const RSA_OSSL_370: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 370,
+    func: c"rsa_ossl_private_encrypt",
+    lib: 4,
+    reason: 132,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_encrypt` at `crypto/rsa/rsa_ossl.c:382` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_OSSL_382: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 382,
+    func: c"rsa_ossl_private_encrypt",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_encrypt` at `crypto/rsa/rsa_ossl.c:396` (ERR_R_BN_LIB).
+pub(crate) const RSA_OSSL_396: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 396,
+    func: c"rsa_ossl_private_encrypt",
+    lib: 4,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_encrypt` at `crypto/rsa/rsa_ossl.c:400` (RSA_R_MISSING_PRIVATE_KEY).
+pub(crate) const RSA_OSSL_400: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 400,
+    func: c"rsa_ossl_private_encrypt",
+    lib: 4,
+    reason: 179,
+    dynamic_reason: false,
+};
+
+/// `derive_kdk` at `crypto/rsa/rsa_ossl.c:457` (ERR_R_CRYPTO_LIB).
+pub(crate) const RSA_OSSL_457: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 457,
+    func: c"derive_kdk",
+    lib: 4,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `derive_kdk` at `crypto/rsa/rsa_ossl.c:461` (RSA_R_MISSING_PRIVATE_KEY).
+pub(crate) const RSA_OSSL_461: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 461,
+    func: c"derive_kdk",
+    lib: 4,
+    reason: 179,
+    dynamic_reason: false,
+};
+
+/// `derive_kdk` at `crypto/rsa/rsa_ossl.c:467` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_OSSL_467: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 467,
+    func: c"derive_kdk",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `derive_kdk` at `crypto/rsa/rsa_ossl.c:482` (ERR_R_FETCH_FAILED).
+pub(crate) const RSA_OSSL_482: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 482,
+    func: c"derive_kdk",
+    lib: 4,
+    reason: 524557,
+    dynamic_reason: false,
+};
+
+/// `derive_kdk` at `crypto/rsa/rsa_ossl.c:487` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_OSSL_487: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 487,
+    func: c"derive_kdk",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `derive_kdk` at `crypto/rsa/rsa_ossl.c:493` (ERR_R_CRYPTO_LIB).
+pub(crate) const RSA_OSSL_493: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 493,
+    func: c"derive_kdk",
+    lib: 4,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `derive_kdk` at `crypto/rsa/rsa_ossl.c:498` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_OSSL_498: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 498,
+    func: c"derive_kdk",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `derive_kdk` at `crypto/rsa/rsa_ossl.c:505` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_OSSL_505: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 505,
+    func: c"derive_kdk",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `derive_kdk` at `crypto/rsa/rsa_ossl.c:510` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_OSSL_510: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 510,
+    func: c"derive_kdk",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `derive_kdk` at `crypto/rsa/rsa_ossl.c:516` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_OSSL_516: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 516,
+    func: c"derive_kdk",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_decrypt` at `crypto/rsa/rsa_ossl.c:549` (ERR_R_BN_LIB).
+pub(crate) const RSA_OSSL_549: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 549,
+    func: c"rsa_ossl_private_decrypt",
+    lib: 4,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_decrypt` at `crypto/rsa/rsa_ossl.c:562` (RSA_R_DATA_GREATER_THAN_MOD_LEN).
+pub(crate) const RSA_OSSL_562: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 562,
+    func: c"rsa_ossl_private_decrypt",
+    lib: 4,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_decrypt` at `crypto/rsa/rsa_ossl.c:567` (RSA_R_DATA_TOO_SMALL).
+pub(crate) const RSA_OSSL_567: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 567,
+    func: c"rsa_ossl_private_decrypt",
+    lib: 4,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_decrypt` at `crypto/rsa/rsa_ossl.c:591` (RSA_R_DATA_TOO_SMALL).
+pub(crate) const RSA_OSSL_591: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 591,
+    func: c"rsa_ossl_private_decrypt",
+    lib: 4,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_decrypt` at `crypto/rsa/rsa_ossl.c:599` (RSA_R_DATA_TOO_LARGE_FOR_MODULUS).
+pub(crate) const RSA_OSSL_599: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 599,
+    func: c"rsa_ossl_private_decrypt",
+    lib: 4,
+    reason: 132,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_decrypt` at `crypto/rsa/rsa_ossl.c:606` (RSA_R_DATA_TOO_LARGE_FOR_MODULUS).
+pub(crate) const RSA_OSSL_606: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 606,
+    func: c"rsa_ossl_private_decrypt",
+    lib: 4,
+    reason: 132,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_decrypt` at `crypto/rsa/rsa_ossl.c:618` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_OSSL_618: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 618,
+    func: c"rsa_ossl_private_decrypt",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_decrypt` at `crypto/rsa/rsa_ossl.c:633` (ERR_R_BN_LIB).
+pub(crate) const RSA_OSSL_633: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 633,
+    func: c"rsa_ossl_private_decrypt",
+    lib: 4,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_decrypt` at `crypto/rsa/rsa_ossl.c:637` (RSA_R_MISSING_PRIVATE_KEY).
+pub(crate) const RSA_OSSL_637: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 637,
+    func: c"rsa_ossl_private_decrypt",
+    lib: 4,
+    reason: 179,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_decrypt` at `crypto/rsa/rsa_ossl.c:682` (RSA_R_UNKNOWN_PADDING_TYPE).
+pub(crate) const RSA_OSSL_682: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 682,
+    func: c"rsa_ossl_private_decrypt",
+    lib: 4,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_decrypt` at `crypto/rsa/rsa_ossl.c:691` (RSA_R_PADDING_CHECK_FAILED).
+pub(crate) const RSA_OSSL_691: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 691,
+    func: c"rsa_ossl_private_decrypt",
+    lib: 4,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_decrypt` at `crypto/rsa/rsa_ossl.c:712` (RSA_R_MODULUS_TOO_LARGE).
+pub(crate) const RSA_OSSL_712: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 712,
+    func: c"rsa_ossl_public_decrypt",
+    lib: 4,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_decrypt` at `crypto/rsa/rsa_ossl.c:717` (RSA_R_BAD_E_VALUE).
+pub(crate) const RSA_OSSL_717: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 717,
+    func: c"rsa_ossl_public_decrypt",
+    lib: 4,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_decrypt` at `crypto/rsa/rsa_ossl.c:724` (RSA_R_BAD_E_VALUE).
+pub(crate) const RSA_OSSL_724: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 724,
+    func: c"rsa_ossl_public_decrypt",
+    lib: 4,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_decrypt` at `crypto/rsa/rsa_ossl.c:735` (ERR_R_BN_LIB).
+pub(crate) const RSA_OSSL_735: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 735,
+    func: c"rsa_ossl_public_decrypt",
+    lib: 4,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_decrypt` at `crypto/rsa/rsa_ossl.c:748` (RSA_R_DATA_GREATER_THAN_MOD_LEN).
+pub(crate) const RSA_OSSL_748: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 748,
+    func: c"rsa_ossl_public_decrypt",
+    lib: 4,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_decrypt` at `crypto/rsa/rsa_ossl.c:756` (RSA_R_DATA_TOO_LARGE_FOR_MODULUS).
+pub(crate) const RSA_OSSL_756: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 756,
+    func: c"rsa_ossl_public_decrypt",
+    lib: 4,
+    reason: 132,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_decrypt` at `crypto/rsa/rsa_ossl.c:789` (RSA_R_UNKNOWN_PADDING_TYPE).
+pub(crate) const RSA_OSSL_789: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 789,
+    func: c"rsa_ossl_public_decrypt",
+    lib: 4,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_decrypt` at `crypto/rsa/rsa_ossl.c:793` (RSA_R_PADDING_CHECK_FAILED).
+pub(crate) const RSA_OSSL_793: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 793,
+    func: c"rsa_ossl_public_decrypt",
+    lib: 4,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `rsa_multiprime_keygen` at `crypto/rsa/rsa_gen.c:282` (RSA_R_KEY_SIZE_TOO_SMALL).
+pub(crate) const RSA_GEN_282: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_gen.c",
+    line: 282,
+    func: c"rsa_multiprime_keygen",
+    lib: 4,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `rsa_multiprime_keygen` at `crypto/rsa/rsa_gen.c:286` (RSA_R_BAD_E_VALUE).
+pub(crate) const RSA_GEN_286: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_gen.c",
+    line: 286,
+    func: c"rsa_multiprime_keygen",
+    lib: 4,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `rsa_multiprime_keygen` at `crypto/rsa/rsa_gen.c:291` (RSA_R_PUB_EXPONENT_OUT_OF_RANGE).
+pub(crate) const RSA_GEN_291: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_gen.c",
+    line: 291,
+    func: c"rsa_multiprime_keygen",
+    lib: 4,
+    reason: 178,
+    dynamic_reason: false,
+};
+
+/// `rsa_multiprime_keygen` at `crypto/rsa/rsa_gen.c:296` (RSA_R_KEY_PRIME_NUM_INVALID).
+pub(crate) const RSA_GEN_296: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_gen.c",
+    line: 296,
+    func: c"rsa_multiprime_keygen",
+    lib: 4,
+    reason: 165,
+    dynamic_reason: false,
+};
+
+/// `rsa_multiprime_keygen` at `crypto/rsa/rsa_gen.c:602` (ERR_R_BN_LIB).
+pub(crate) const RSA_GEN_602: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_gen.c",
+    line: 602,
+    func: c"rsa_multiprime_keygen",
+    lib: 4,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:31` (RSA_R_VALUE_MISSING).
+pub(crate) const RSA_CHK_31: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 31,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:40` (RSA_R_INVALID_MULTI_PRIME_KEY).
+pub(crate) const RSA_CHK_40: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 40,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 167,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:54` (ERR_R_BN_LIB).
+pub(crate) const RSA_CHK_54: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 54,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:60` (RSA_R_BAD_E_VALUE).
+pub(crate) const RSA_CHK_60: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 60,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:64` (RSA_R_BAD_E_VALUE).
+pub(crate) const RSA_CHK_64: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 64,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:70` (RSA_R_P_NOT_PRIME).
+pub(crate) const RSA_CHK_70: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 70,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:76` (RSA_R_Q_NOT_PRIME).
+pub(crate) const RSA_CHK_76: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 76,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:84` (RSA_R_MP_R_NOT_PRIME).
+pub(crate) const RSA_CHK_84: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 84,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 170,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:103` (RSA_R_N_DOES_NOT_EQUAL_PRODUCT_OF_PRIMES).
+pub(crate) const RSA_CHK_103: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 103,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:105` (RSA_R_N_DOES_NOT_EQUAL_P_Q).
+pub(crate) const RSA_CHK_105: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 105,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 127,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:157` (RSA_R_D_E_NOT_CONGRUENT_TO_1).
+pub(crate) const RSA_CHK_157: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 157,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:172` (RSA_R_DMP1_NOT_CONGRUENT_TO_D).
+pub(crate) const RSA_CHK_172: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 172,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:186` (RSA_R_DMQ1_NOT_CONGRUENT_TO_D).
+pub(crate) const RSA_CHK_186: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 186,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:196` (RSA_R_IQMP_NOT_INVERSE_OF_Q).
+pub(crate) const RSA_CHK_196: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 196,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:213` (RSA_R_MP_EXPONENT_NOT_CONGRUENT_TO_D).
+pub(crate) const RSA_CHK_213: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 213,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 169,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:222` (RSA_R_MP_COEFFICIENT_NOT_INVERSE_OF_R).
+pub(crate) const RSA_CHK_222: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 222,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 168,
+    dynamic_reason: false,
+};
+
+/// `encode_pkcs1` at `crypto/rsa/rsa_sign.c:265` (RSA_R_UNKNOWN_ALGORITHM_TYPE).
+pub(crate) const RSA_SIGN_265: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c",
+    line: 265,
+    func: c"encode_pkcs1",
+    lib: 4,
+    reason: 117,
+    dynamic_reason: false,
+};
+
+/// `encode_pkcs1` at `crypto/rsa/rsa_sign.c:270` (RSA_R_THE_ASN1_OBJECT_IDENTIFIER_IS_NOT_KNOWN_FOR_THIS_MD).
+pub(crate) const RSA_SIGN_270: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c",
+    line: 270,
+    func: c"encode_pkcs1",
+    lib: 4,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `RSA_sign` at `crypto/rsa/rsa_sign.c:307` (RSA_R_INVALID_MESSAGE_LENGTH).
+pub(crate) const RSA_SIGN_307: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c",
+    line: 307,
+    func: c"RSA_sign",
+    lib: 4,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `RSA_sign` at `crypto/rsa/rsa_sign.c:319` (RSA_R_DIGEST_TOO_BIG_FOR_RSA_KEY).
+pub(crate) const RSA_SIGN_319: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c",
+    line: 319,
+    func: c"RSA_sign",
+    lib: 4,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify` at `crypto/rsa/rsa_sign.c:353` (RSA_R_WRONG_SIGNATURE_LENGTH).
+pub(crate) const RSA_SIGN_353: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c",
+    line: 353,
+    func: c"ossl_rsa_verify",
+    lib: 4,
+    reason: 119,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify` at `crypto/rsa/rsa_sign.c:376` (RSA_R_BAD_SIGNATURE).
+pub(crate) const RSA_SIGN_376: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c",
+    line: 376,
+    func: c"ossl_rsa_verify",
+    lib: 4,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify` at `crypto/rsa/rsa_sign.c:385` (RSA_R_INVALID_MESSAGE_LENGTH).
+pub(crate) const RSA_SIGN_385: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c",
+    line: 385,
+    func: c"ossl_rsa_verify",
+    lib: 4,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify` at `crypto/rsa/rsa_sign.c:390` (RSA_R_BAD_SIGNATURE).
+pub(crate) const RSA_SIGN_390: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c",
+    line: 390,
+    func: c"ossl_rsa_verify",
+    lib: 4,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify` at `crypto/rsa/rsa_sign.c:405` (RSA_R_INVALID_MESSAGE_LENGTH).
+pub(crate) const RSA_SIGN_405: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c",
+    line: 405,
+    func: c"ossl_rsa_verify",
+    lib: 4,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify` at `crypto/rsa/rsa_sign.c:410` (RSA_R_BAD_SIGNATURE).
+pub(crate) const RSA_SIGN_410: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c",
+    line: 410,
+    func: c"ossl_rsa_verify",
+    lib: 4,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify` at `crypto/rsa/rsa_sign.c:429` (RSA_R_INVALID_DIGEST_LENGTH).
+pub(crate) const RSA_SIGN_429: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c",
+    line: 429,
+    func: c"ossl_rsa_verify",
+    lib: 4,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify` at `crypto/rsa/rsa_sign.c:441` (RSA_R_BAD_SIGNATURE).
+pub(crate) const RSA_SIGN_441: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c",
+    line: 441,
+    func: c"ossl_rsa_verify",
+    lib: 4,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `RSA_sign_ASN1_OCTET_STRING` at `crypto/rsa/rsa_saos.c:39` (RSA_R_DIGEST_TOO_BIG_FOR_RSA_KEY).
+pub(crate) const RSA_SAOS_39: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_saos.c",
+    line: 39,
+    func: c"RSA_sign_ASN1_OCTET_STRING",
+    lib: 4,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `RSA_verify_ASN1_OCTET_STRING` at `crypto/rsa/rsa_saos.c:68` (RSA_R_WRONG_SIGNATURE_LENGTH).
+pub(crate) const RSA_SAOS_68: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_saos.c",
+    line: 68,
+    func: c"RSA_verify_ASN1_OCTET_STRING",
+    lib: 4,
+    reason: 119,
+    dynamic_reason: false,
+};
+
+/// `RSA_verify_ASN1_OCTET_STRING` at `crypto/rsa/rsa_saos.c:86` (RSA_R_BAD_SIGNATURE).
+pub(crate) const RSA_SAOS_86: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_saos.c",
+    line: 86,
+    func: c"RSA_verify_ASN1_OCTET_STRING",
+    lib: 4,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_sign` at `crypto/rsa/rsa_pmeth.c:151` (RSA_R_INVALID_DIGEST_LENGTH).
+pub(crate) const RSA_PMETH_151: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 151,
+    func: c"pkey_rsa_sign",
+    lib: 4,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_sign` at `crypto/rsa/rsa_pmeth.c:156` (RSA_R_INVALID_DIGEST_LENGTH).
+pub(crate) const RSA_PMETH_156: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 156,
+    func: c"pkey_rsa_sign",
+    lib: 4,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_sign` at `crypto/rsa/rsa_pmeth.c:171` (RSA_R_KEY_SIZE_TOO_SMALL).
+pub(crate) const RSA_PMETH_171: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 171,
+    func: c"pkey_rsa_sign",
+    lib: 4,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_sign` at `crypto/rsa/rsa_pmeth.c:175` (ERR_R_RSA_LIB).
+pub(crate) const RSA_PMETH_175: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 175,
+    func: c"pkey_rsa_sign",
+    lib: 4,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_verifyrecover` at `crypto/rsa/rsa_pmeth.c:234` (RSA_R_ALGORITHM_MISMATCH).
+pub(crate) const RSA_PMETH_234: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 234,
+    func: c"pkey_rsa_verifyrecover",
+    lib: 4,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_verifyrecover` at `crypto/rsa/rsa_pmeth.c:238` (RSA_R_INVALID_DIGEST_LENGTH).
+pub(crate) const RSA_PMETH_238: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 238,
+    func: c"pkey_rsa_verifyrecover",
+    lib: 4,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_verify` at `crypto/rsa/rsa_pmeth.c:283` (RSA_R_INVALID_DIGEST_LENGTH).
+pub(crate) const RSA_PMETH_283: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 283,
+    func: c"pkey_rsa_verify",
+    lib: 4,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_verify` at `crypto/rsa/rsa_pmeth.c:287` (RSA_R_INVALID_DIGEST_LENGTH).
+pub(crate) const RSA_PMETH_287: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 287,
+    func: c"pkey_rsa_verify",
+    lib: 4,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `check_padding_md` at `crypto/rsa/rsa_pmeth.c:405` (RSA_R_INVALID_PADDING_MODE).
+pub(crate) const RSA_PMETH_405: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 405,
+    func: c"check_padding_md",
+    lib: 4,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `check_padding_md` at `crypto/rsa/rsa_pmeth.c:411` (RSA_R_INVALID_X931_DIGEST).
+pub(crate) const RSA_PMETH_411: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 411,
+    func: c"check_padding_md",
+    lib: 4,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `check_padding_md` at `crypto/rsa/rsa_pmeth.c:437` (RSA_R_INVALID_DIGEST).
+pub(crate) const RSA_PMETH_437: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 437,
+    func: c"check_padding_md",
+    lib: 4,
+    reason: 157,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:473` (RSA_R_ILLEGAL_OR_UNSUPPORTED_PADDING_MODE).
+pub(crate) const RSA_PMETH_473: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 473,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 144,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:483` (RSA_R_INVALID_PSS_SALTLEN).
+pub(crate) const RSA_PMETH_483: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 483,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 146,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:494` (RSA_R_INVALID_PSS_SALTLEN).
+pub(crate) const RSA_PMETH_494: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 494,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 146,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:499` (RSA_R_INVALID_DIGEST_LENGTH).
+pub(crate) const RSA_PMETH_499: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 499,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:505` (RSA_R_PSS_SALTLEN_TOO_SMALL).
+pub(crate) const RSA_PMETH_505: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 505,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 164,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:515` (RSA_R_KEY_SIZE_TOO_SMALL).
+pub(crate) const RSA_PMETH_515: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 515,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:523` (RSA_R_BAD_E_VALUE).
+pub(crate) const RSA_PMETH_523: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 523,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:532` (RSA_R_KEY_PRIME_NUM_INVALID).
+pub(crate) const RSA_PMETH_532: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 532,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 165,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:541` (RSA_R_INVALID_PADDING_MODE).
+pub(crate) const RSA_PMETH_541: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 541,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:556` (RSA_R_DIGEST_NOT_ALLOWED).
+pub(crate) const RSA_PMETH_556: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 556,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 145,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:570` (RSA_R_INVALID_MGF1_MD).
+pub(crate) const RSA_PMETH_570: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 570,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 156,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:582` (RSA_R_MGF1_DIGEST_NOT_ALLOWED).
+pub(crate) const RSA_PMETH_582: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 582,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 152,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:591` (RSA_R_INVALID_PADDING_MODE).
+pub(crate) const RSA_PMETH_591: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 591,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:606` (RSA_R_INVALID_PADDING_MODE).
+pub(crate) const RSA_PMETH_606: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 606,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:610` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const RSA_PMETH_610: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 610,
+    func: c"pkey_rsa_ctrl",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:618` (RSA_R_INVALID_PADDING_MODE).
+pub(crate) const RSA_PMETH_618: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 618,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:641` (RSA_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const RSA_PMETH_641: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 641,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 148,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl_str` at `crypto/rsa/rsa_pmeth.c:653` (RSA_R_VALUE_MISSING).
+pub(crate) const RSA_PMETH_653: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 653,
+    func: c"pkey_rsa_ctrl_str",
+    lib: 4,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl_str` at `crypto/rsa/rsa_pmeth.c:672` (RSA_R_UNKNOWN_PADDING_TYPE).
+pub(crate) const RSA_PMETH_672: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 672,
+    func: c"pkey_rsa_ctrl_str",
+    lib: 4,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `pkey_pss_init` at `crypto/rsa/rsa_pmeth.c:883` (RSA_R_INVALID_DIGEST_LENGTH).
+pub(crate) const RSA_PMETH_883: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 883,
+    func: c"pkey_pss_init",
+    lib: 4,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `pkey_pss_init` at `crypto/rsa/rsa_pmeth.c:890` (RSA_R_INVALID_SALT_LENGTH).
+pub(crate) const RSA_PMETH_890: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 890,
+    func: c"pkey_pss_init",
+    lib: 4,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `rsa_priv_encode` at `crypto/rsa/rsa_ameth.c:157` (ERR_R_ASN1_LIB).
+pub(crate) const RSA_AMETH_157: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ameth.c",
+    line: 157,
+    func: c"rsa_priv_encode",
+    lib: 4,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `rsa_priv_encode` at `crypto/rsa/rsa_ameth.c:164` (ERR_R_ASN1_LIB).
+pub(crate) const RSA_AMETH_164: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ameth.c",
+    line: 164,
+    func: c"rsa_priv_encode",
+    lib: 4,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `rsa_pkey_ctrl` at `crypto/rsa/rsa_ameth.c:431` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_AMETH_431: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ameth.c",
+    line: 431,
+    func: c"rsa_pkey_ctrl",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_pss_to_ctx` at `crypto/rsa/rsa_ameth.c:551` (RSA_R_UNSUPPORTED_SIGNATURE_TYPE).
+pub(crate) const RSA_AMETH_551: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ameth.c",
+    line: 551,
+    func: c"ossl_rsa_pss_to_ctx",
+    lib: 4,
+    reason: 155,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_pss_to_ctx` at `crypto/rsa/rsa_ameth.c:558` (RSA_R_INVALID_PSS_PARAMETERS).
+pub(crate) const RSA_AMETH_558: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ameth.c",
+    line: 558,
+    func: c"ossl_rsa_pss_to_ctx",
+    lib: 4,
+    reason: 149,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_pss_to_ctx` at `crypto/rsa/rsa_ameth.c:571` (RSA_R_DIGEST_DOES_NOT_MATCH).
+pub(crate) const RSA_AMETH_571: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ameth.c",
+    line: 571,
+    func: c"ossl_rsa_pss_to_ctx",
+    lib: 4,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `rsa_pss_verify_param` at `crypto/rsa/rsa_ameth.c:596` (RSA_R_INVALID_SALT_LENGTH).
+pub(crate) const RSA_AMETH_596: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ameth.c",
+    line: 596,
+    func: c"rsa_pss_verify_param",
+    lib: 4,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `rsa_pss_verify_param` at `crypto/rsa/rsa_ameth.c:604` (RSA_R_INVALID_TRAILER).
+pub(crate) const RSA_AMETH_604: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ameth.c",
+    line: 604,
+    func: c"rsa_pss_verify_param",
+    lib: 4,
+    reason: 139,
+    dynamic_reason: false,
+};
+
+/// `rsa_item_verify` at `crypto/rsa/rsa_ameth.c:639` (RSA_R_UNSUPPORTED_SIGNATURE_TYPE).
+pub(crate) const RSA_AMETH_639: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ameth.c",
+    line: 639,
+    func: c"rsa_item_verify",
+    lib: 4,
+    reason: 155,
+    dynamic_reason: false,
+};
+
+/// `rsa_int_import_from` at `crypto/rsa/rsa_ameth.c:862` (ERR_R_RSA_LIB).
+pub(crate) const RSA_AMETH_862: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ameth.c",
+    line: 862,
+    func: c"rsa_int_import_from",
+    lib: 5,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fromdata` at `crypto/rsa/rsa_backend.c:83` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const RSA_BACKEND_83: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 83,
+    func: c"ossl_rsa_fromdata",
+    lib: 4,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fromdata` at `crypto/rsa/rsa_backend.c:97` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const RSA_BACKEND_97: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 97,
+    func: c"ossl_rsa_fromdata",
+    lib: 4,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fromdata` at `crypto/rsa/rsa_backend.c:111` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const RSA_BACKEND_111: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 111,
+    func: c"ossl_rsa_fromdata",
+    lib: 4,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fromdata` at `crypto/rsa/rsa_backend.c:139` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const RSA_BACKEND_139: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 139,
+    func: c"ossl_rsa_fromdata",
+    lib: 4,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fromdata` at `crypto/rsa/rsa_backend.c:149` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const RSA_BACKEND_149: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 149,
+    func: c"ossl_rsa_fromdata",
+    lib: 4,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fromdata` at `crypto/rsa/rsa_backend.c:158` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_BACKEND_158: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 158,
+    func: c"ossl_rsa_fromdata",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fromdata` at `crypto/rsa/rsa_backend.c:177` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_BACKEND_177: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 177,
+    func: c"ossl_rsa_fromdata",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fromdata` at `crypto/rsa/rsa_backend.c:190` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_BACKEND_190: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 190,
+    func: c"ossl_rsa_fromdata",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fromdata` at `crypto/rsa/rsa_backend.c:199` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_BACKEND_199: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 199,
+    func: c"ossl_rsa_fromdata",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fromdata` at `crypto/rsa/rsa_backend.c:205` (ERR_R_UNSUPPORTED).
+pub(crate) const RSA_BACKEND_205: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 205,
+    func: c"ossl_rsa_fromdata",
+    lib: 4,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fromdata` at `crypto/rsa/rsa_backend.c:223` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_BACKEND_223: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 223,
+    func: c"ossl_rsa_fromdata",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fromdata` at `crypto/rsa/rsa_backend.c:232` (RSA_R_INVALID_KEYPAIR).
+pub(crate) const RSA_BACKEND_232: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 232,
+    func: c"ossl_rsa_fromdata",
+    lib: 4,
+    reason: 171,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_param_decode` at `crypto/rsa/rsa_backend.c:665` (RSA_R_INVALID_PSS_PARAMETERS).
+pub(crate) const RSA_BACKEND_665: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 665,
+    func: c"ossl_rsa_param_decode",
+    lib: 4,
+    reason: 149,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_key_from_pkcs8` at `crypto/rsa/rsa_backend.c:690` (ERR_R_RSA_LIB).
+pub(crate) const RSA_BACKEND_690: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 690,
+    func: c"ossl_rsa_key_from_pkcs8",
+    lib: 4,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `RSA_print_fp` at `crypto/rsa/rsa_prn.c:28` (ERR_R_BUF_LIB).
+pub(crate) const RSA_PRN_28: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_prn.c",
+    line: 28,
+    func: c"RSA_print_fp",
+    lib: 4,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_public` at `crypto/rsa/rsa_sp800_56b_check.c:294` (RSA_R_MODULUS_TOO_LARGE).
+pub(crate) const RSA_SP800_56B_CHECK_294: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 294,
+    func: c"ossl_rsa_sp800_56b_check_public",
+    lib: 4,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_public` at `crypto/rsa/rsa_sp800_56b_check.c:304` (RSA_R_INVALID_KEY_LENGTH).
+pub(crate) const RSA_SP800_56B_CHECK_304: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 304,
+    func: c"ossl_rsa_sp800_56b_check_public",
+    lib: 4,
+    reason: 173,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_public` at `crypto/rsa/rsa_sp800_56b_check.c:309` (RSA_R_INVALID_MODULUS).
+pub(crate) const RSA_SP800_56B_CHECK_309: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 309,
+    func: c"ossl_rsa_sp800_56b_check_public",
+    lib: 4,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_public` at `crypto/rsa/rsa_sp800_56b_check.c:314` (RSA_R_PUB_EXPONENT_OUT_OF_RANGE).
+pub(crate) const RSA_SP800_56B_CHECK_314: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 314,
+    func: c"ossl_rsa_sp800_56b_check_public",
+    lib: 4,
+    reason: 178,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_public` at `crypto/rsa/rsa_sp800_56b_check.c:329` (RSA_R_INVALID_MODULUS).
+pub(crate) const RSA_SP800_56B_CHECK_329: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 329,
+    func: c"ossl_rsa_sp800_56b_check_public",
+    lib: 4,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_public` at `crypto/rsa/rsa_sp800_56b_check.c:340` (RSA_R_INVALID_MODULUS).
+pub(crate) const RSA_SP800_56B_CHECK_340: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 340,
+    func: c"ossl_rsa_sp800_56b_check_public",
+    lib: 4,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_keypair` at `crypto/rsa/rsa_sp800_56b_check.c:385` (RSA_R_INVALID_REQUEST).
+pub(crate) const RSA_SP800_56B_CHECK_385: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 385,
+    func: c"ossl_rsa_sp800_56b_check_keypair",
+    lib: 4,
+    reason: 175,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_keypair` at `crypto/rsa/rsa_sp800_56b_check.c:396` (RSA_R_INVALID_REQUEST).
+pub(crate) const RSA_SP800_56B_CHECK_396: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 396,
+    func: c"ossl_rsa_sp800_56b_check_keypair",
+    lib: 4,
+    reason: 175,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_keypair` at `crypto/rsa/rsa_sp800_56b_check.c:403` (RSA_R_PUB_EXPONENT_OUT_OF_RANGE).
+pub(crate) const RSA_SP800_56B_CHECK_403: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 403,
+    func: c"ossl_rsa_sp800_56b_check_keypair",
+    lib: 4,
+    reason: 178,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_keypair` at `crypto/rsa/rsa_sp800_56b_check.c:408` (RSA_R_INVALID_KEYPAIR).
+pub(crate) const RSA_SP800_56B_CHECK_408: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 408,
+    func: c"ossl_rsa_sp800_56b_check_keypair",
+    lib: 4,
+    reason: 171,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_keypair` at `crypto/rsa/rsa_sp800_56b_check.c:413` (RSA_R_INVALID_KEYPAIR).
+pub(crate) const RSA_SP800_56B_CHECK_413: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 413,
+    func: c"ossl_rsa_sp800_56b_check_keypair",
+    lib: 4,
+    reason: 171,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_keypair` at `crypto/rsa/rsa_sp800_56b_check.c:427` (RSA_R_INVALID_REQUEST).
+pub(crate) const RSA_SP800_56B_CHECK_427: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 427,
+    func: c"ossl_rsa_sp800_56b_check_keypair",
+    lib: 4,
+    reason: 175,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_keypair` at `crypto/rsa/rsa_sp800_56b_check.c:440` (RSA_R_INVALID_KEYPAIR).
+pub(crate) const RSA_SP800_56B_CHECK_440: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 440,
+    func: c"ossl_rsa_sp800_56b_check_keypair",
+    lib: 4,
+    reason: 171,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fips186_4_gen_prob_primes` at `crypto/rsa/rsa_sp800_56b_gen.c:89` (RSA_R_KEY_SIZE_TOO_SMALL).
+pub(crate) const RSA_SP800_56B_GEN_89: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_gen.c",
+    line: 89,
+    func: c"ossl_rsa_fips186_4_gen_prob_primes",
+    lib: 4,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fips186_4_gen_prob_primes` at `crypto/rsa/rsa_sp800_56b_gen.c:94` (RSA_R_PUB_EXPONENT_OUT_OF_RANGE).
+pub(crate) const RSA_SP800_56B_GEN_94: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_gen.c",
+    line: 94,
+    func: c"ossl_rsa_fips186_4_gen_prob_primes",
+    lib: 4,
+    reason: 178,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_validate_strength` at `crypto/rsa/rsa_sp800_56b_gen.c:180` (RSA_R_INVALID_MODULUS).
+pub(crate) const RSA_SP800_56B_GEN_180: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_gen.c",
+    line: 180,
+    func: c"ossl_rsa_sp800_56b_validate_strength",
+    lib: 4,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_validate_strength` at `crypto/rsa/rsa_sp800_56b_gen.c:185` (RSA_R_INVALID_STRENGTH).
+pub(crate) const RSA_SP800_56B_GEN_185: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_gen.c",
+    line: 185,
+    func: c"ossl_rsa_sp800_56b_validate_strength",
+    lib: 4,
+    reason: 176,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_rng_strength` at `crypto/rsa/rsa_sp800_56b_gen.c:205` (RSA_R_RANDOMNESS_SOURCE_STRENGTH_INSUFFICIENT).
+pub(crate) const RSA_SP800_56B_GEN_205: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_gen.c",
+    line: 205,
+    func: c"rsa_validate_rng_strength",
+    lib: 4,
+    reason: 180,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_pairwise_test` at `crypto/rsa/rsa_sp800_56b_gen.c:454` (RSA_R_PAIRWISE_TEST_FAILURE).
+pub(crate) const RSA_SP800_56B_GEN_454: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_gen.c",
+    line: 454,
+    func: c"ossl_rsa_sp800_56b_pairwise_test",
+    lib: 4,
+    reason: 177,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -22197,4 +24437,228 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_DIGESTCOMMON_115,
     PROV_DIGESTCOMMON_120,
     PROV_DIGESTCOMMON_125,
+    RSA_LIB_85,
+    RSA_LIB_106,
+    RSA_LIB_116,
+    RSA_LIB_130,
+    RSA_LIB_973,
+    RSA_LIB_1013,
+    RSA_LIB_1188,
+    RSA_LIB_1221,
+    RSA_LIB_1288,
+    RSA_LIB_1309,
+    RSA_LIB_1369,
+    RSA_CRPT_120,
+    RSA_CRPT_127,
+    RSA_CRPT_138,
+    RSA_CRPT_149,
+    RSA_PK1_38,
+    RSA_PK1_78,
+    RSA_PK1_85,
+    RSA_PK1_97,
+    RSA_PK1_105,
+    RSA_PK1_110,
+    RSA_PK1_116,
+    RSA_PK1_132,
+    RSA_PK1_135,
+    RSA_PK1_189,
+    RSA_PK1_270,
+    RSA_PK1_294,
+    RSA_PK1_303,
+    RSA_PK1_316,
+    RSA_PK1_321,
+    RSA_PK1_327,
+    RSA_PK1_335,
+    RSA_PK1_339,
+    RSA_PK1_343,
+    RSA_PK1_355,
+    RSA_PK1_361,
+    RSA_PK1_419,
+    RSA_PK1_426,
+    RSA_PK1_520,
+    RSA_PK1_561,
+    RSA_PK1_572,
+    RSA_NONE_24,
+    RSA_NONE_29,
+    RSA_NONE_42,
+    RSA_X931_56,
+    RSA_X931_87,
+    RSA_X931_98,
+    RSA_X931_106,
+    RSA_X931_115,
+    RSA_OAEP_72,
+    RSA_OAEP_82,
+    RSA_OAEP_86,
+    RSA_OAEP_93,
+    RSA_OAEP_99,
+    RSA_OAEP_104,
+    RSA_OAEP_189,
+    RSA_OAEP_200,
+    RSA_OAEP_204,
+    RSA_OAEP_222,
+    RSA_OAEP_332,
+    RSA_PSS_78,
+    RSA_PSS_85,
+    RSA_PSS_93,
+    RSA_PSS_99,
+    RSA_PSS_103,
+    RSA_PSS_120,
+    RSA_PSS_126,
+    RSA_PSS_144,
+    RSA_PSS_216,
+    RSA_PSS_227,
+    RSA_PSS_235,
+    RSA_OSSL_115,
+    RSA_OSSL_120,
+    RSA_OSSL_127,
+    RSA_OSSL_156,
+    RSA_OSSL_183,
+    RSA_OSSL_191,
+    RSA_OSSL_199,
+    RSA_OSSL_359,
+    RSA_OSSL_370,
+    RSA_OSSL_382,
+    RSA_OSSL_396,
+    RSA_OSSL_400,
+    RSA_OSSL_457,
+    RSA_OSSL_461,
+    RSA_OSSL_467,
+    RSA_OSSL_482,
+    RSA_OSSL_487,
+    RSA_OSSL_493,
+    RSA_OSSL_498,
+    RSA_OSSL_505,
+    RSA_OSSL_510,
+    RSA_OSSL_516,
+    RSA_OSSL_549,
+    RSA_OSSL_562,
+    RSA_OSSL_567,
+    RSA_OSSL_591,
+    RSA_OSSL_599,
+    RSA_OSSL_606,
+    RSA_OSSL_618,
+    RSA_OSSL_633,
+    RSA_OSSL_637,
+    RSA_OSSL_682,
+    RSA_OSSL_691,
+    RSA_OSSL_712,
+    RSA_OSSL_717,
+    RSA_OSSL_724,
+    RSA_OSSL_735,
+    RSA_OSSL_748,
+    RSA_OSSL_756,
+    RSA_OSSL_789,
+    RSA_OSSL_793,
+    RSA_GEN_282,
+    RSA_GEN_286,
+    RSA_GEN_291,
+    RSA_GEN_296,
+    RSA_GEN_602,
+    RSA_CHK_31,
+    RSA_CHK_40,
+    RSA_CHK_54,
+    RSA_CHK_60,
+    RSA_CHK_64,
+    RSA_CHK_70,
+    RSA_CHK_76,
+    RSA_CHK_84,
+    RSA_CHK_103,
+    RSA_CHK_105,
+    RSA_CHK_157,
+    RSA_CHK_172,
+    RSA_CHK_186,
+    RSA_CHK_196,
+    RSA_CHK_213,
+    RSA_CHK_222,
+    RSA_SIGN_265,
+    RSA_SIGN_270,
+    RSA_SIGN_307,
+    RSA_SIGN_319,
+    RSA_SIGN_353,
+    RSA_SIGN_376,
+    RSA_SIGN_385,
+    RSA_SIGN_390,
+    RSA_SIGN_405,
+    RSA_SIGN_410,
+    RSA_SIGN_429,
+    RSA_SIGN_441,
+    RSA_SAOS_39,
+    RSA_SAOS_68,
+    RSA_SAOS_86,
+    RSA_PMETH_151,
+    RSA_PMETH_156,
+    RSA_PMETH_171,
+    RSA_PMETH_175,
+    RSA_PMETH_234,
+    RSA_PMETH_238,
+    RSA_PMETH_283,
+    RSA_PMETH_287,
+    RSA_PMETH_405,
+    RSA_PMETH_411,
+    RSA_PMETH_437,
+    RSA_PMETH_473,
+    RSA_PMETH_483,
+    RSA_PMETH_494,
+    RSA_PMETH_499,
+    RSA_PMETH_505,
+    RSA_PMETH_515,
+    RSA_PMETH_523,
+    RSA_PMETH_532,
+    RSA_PMETH_541,
+    RSA_PMETH_556,
+    RSA_PMETH_570,
+    RSA_PMETH_582,
+    RSA_PMETH_591,
+    RSA_PMETH_606,
+    RSA_PMETH_610,
+    RSA_PMETH_618,
+    RSA_PMETH_641,
+    RSA_PMETH_653,
+    RSA_PMETH_672,
+    RSA_PMETH_883,
+    RSA_PMETH_890,
+    RSA_AMETH_157,
+    RSA_AMETH_164,
+    RSA_AMETH_431,
+    RSA_AMETH_551,
+    RSA_AMETH_558,
+    RSA_AMETH_571,
+    RSA_AMETH_596,
+    RSA_AMETH_604,
+    RSA_AMETH_639,
+    RSA_AMETH_862,
+    RSA_BACKEND_83,
+    RSA_BACKEND_97,
+    RSA_BACKEND_111,
+    RSA_BACKEND_139,
+    RSA_BACKEND_149,
+    RSA_BACKEND_158,
+    RSA_BACKEND_177,
+    RSA_BACKEND_190,
+    RSA_BACKEND_199,
+    RSA_BACKEND_205,
+    RSA_BACKEND_223,
+    RSA_BACKEND_232,
+    RSA_BACKEND_665,
+    RSA_BACKEND_690,
+    RSA_PRN_28,
+    RSA_SP800_56B_CHECK_294,
+    RSA_SP800_56B_CHECK_304,
+    RSA_SP800_56B_CHECK_309,
+    RSA_SP800_56B_CHECK_314,
+    RSA_SP800_56B_CHECK_329,
+    RSA_SP800_56B_CHECK_340,
+    RSA_SP800_56B_CHECK_385,
+    RSA_SP800_56B_CHECK_396,
+    RSA_SP800_56B_CHECK_403,
+    RSA_SP800_56B_CHECK_408,
+    RSA_SP800_56B_CHECK_413,
+    RSA_SP800_56B_CHECK_427,
+    RSA_SP800_56B_CHECK_440,
+    RSA_SP800_56B_GEN_89,
+    RSA_SP800_56B_GEN_94,
+    RSA_SP800_56B_GEN_180,
+    RSA_SP800_56B_GEN_185,
+    RSA_SP800_56B_GEN_205,
+    RSA_SP800_56B_GEN_454,
 ];

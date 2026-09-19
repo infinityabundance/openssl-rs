@@ -552,12 +552,22 @@
             "DSA_generate_parameters_ex",
             "ECDH_KDF_X9_62",
             "EC_KEY_generate_key",
+            "RSA_PKCS1_OpenSSL",
             "RSA_X931_derive_ex",
             "RSA_X931_generate_key_ex",
             "RSA_blinding_on",
             "RSA_generate_key",
             "RSA_generate_key_ex",
             "RSA_generate_multi_prime_key",
+            "RSA_get_default_method",
+            "RSA_new",
+            "RSA_new_method",
+            "RSA_padding_add_PKCS1_OAEP",
+            "RSA_padding_add_PKCS1_OAEP_mgf1",
+            "RSA_padding_add_PKCS1_PSS",
+            "RSA_padding_add_PKCS1_PSS_mgf1",
+            "RSA_padding_add_PKCS1_type_2",
+            "RSA_padding_check_PKCS1_type_2",
             "RSA_setup_blinding"
           ],
           "to_phase": 9
@@ -1080,12 +1090,22 @@
             "DSA_generate_parameters_ex",
             "ECDH_KDF_X9_62",
             "EC_KEY_generate_key",
+            "RSA_PKCS1_OpenSSL",
             "RSA_X931_derive_ex",
             "RSA_X931_generate_key_ex",
             "RSA_blinding_on",
             "RSA_generate_key",
             "RSA_generate_key_ex",
             "RSA_generate_multi_prime_key",
+            "RSA_get_default_method",
+            "RSA_new",
+            "RSA_new_method",
+            "RSA_padding_add_PKCS1_OAEP",
+            "RSA_padding_add_PKCS1_OAEP_mgf1",
+            "RSA_padding_add_PKCS1_PSS",
+            "RSA_padding_add_PKCS1_PSS_mgf1",
+            "RSA_padding_add_PKCS1_type_2",
+            "RSA_padding_check_PKCS1_type_2",
             "RSA_setup_blinding"
           ],
           "to_phase": 9
@@ -1095,7 +1115,7 @@
     },
     "implemented_by_two_strata": [],
     "implemented_exports": {
-      "libcrypto": 2069,
+      "libcrypto": 2076,
       "libssl": 0
     },
     "invariant": "every authority export has exactly one declared owner in forensics/atlas/symbol-ownership.json; every export the atlas gives a stratum appears in that stratum's ledger; every row a stratum's ledger carries for another stratum's export is a hand-off that stratum recorded",
@@ -1200,8 +1220,8 @@
       },
       {
         "atlas": 759,
-        "deferred": 16,
-        "implemented": 228,
+        "deferred": 26,
+        "implemented": 235,
         "ledger": 786,
         "only_in_atlas": 0,
         "only_in_atlas_examples": [],
@@ -1218,7 +1238,7 @@
           "EVP_PKEY_get0_poly1305",
           "EVP_PKEY_get0_siphash"
         ],
-        "open": 542,
+        "open": 525,
         "phase": 8
       }
     ],
@@ -4988,7 +5008,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "a41069a97fc41f3c88eb360bf6634b9ee02057e6b28ce7ef5d5ee0c21836a957"
+      "sha256": "e9c5316591d2a0a03bfb63fbdd60ebe5dd6e69a265840389b66a6a6a6b37bbff"
     },
     {
       "name": "authority-symbols",
@@ -5003,32 +5023,32 @@
     {
       "name": "ledger-3",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "ff53b00024adb1d77b5eeb4db485d301f29ff227634196b051a3ecf0d9585595"
+      "sha256": "d9eadfc0074b07386256aef6aa279b3379d262f7846fd6d3f2cf5e3e9a563627"
     },
     {
       "name": "ledger-4",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "8e922ba347caabc0a3fcfd4235f0bd835ce358592b25ad095248fb0c0d0f130d"
+      "sha256": "c9796d0f9d650c3d43c0dd2bed56a01685ea6b2cfcf77fb10995064d693e8844"
     },
     {
       "name": "ledger-5",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "63e078072d5c7adf5fb6d6cfe85becf40bfaa91daf2f3e8be91a9cc15f640afd"
+      "sha256": "e91401937622d35de3a090ca3d1ea0b99ee0e6983275e4197461914b2b549970"
     },
     {
       "name": "ledger-6",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "ef8ccf446fc0709943546ffe783340bc82de5966a0e67c893c2d8e46366c6eae"
+      "sha256": "363d77f6556a3bf9b7da0998fc8b6f593ddb2fef6a5c47c7576a613ffc1e6e53"
     },
     {
       "name": "ledger-7",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "7c662a18386fcadc22ddb8cf22063fef84e3a8e8d02497d131ca03ff989b9433"
+      "sha256": "42476b8121fef1e7340a5aafd9f90609ef0e9e31fc4b44aac1b09de139f6c6ee"
     },
     {
       "name": "ledger-8",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "44bb3f765a1bd5ba8b4ac103079d62d88a49cac0d0a8b92083703c51809900b7"
+      "sha256": "1a5138909b1656c86416e19ab44116c2ad1f047f9f1e471dff23778e9dc6506b"
     }
   ],
   "kind": "ownership-audit",

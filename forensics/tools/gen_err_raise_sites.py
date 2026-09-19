@@ -534,6 +534,41 @@ COVERED_FILES = [
     # translation unit this crate transcribes reaches it. It is named here rather than
     # listed, and it joins the covered set in the legacy provider's stratum.
     ("providers/implementations/digests/digestcommon.c", "PROV_DIGESTCOMMON"),
+    # Phase 8.4: the `crypto/rsa` subsystem. The same rule as `crypto/bn` above -- this is
+    # the *subsystem* set, not a selection of convenient files, because every one of them
+    # raises from a surface Phase 8 owns and a coordinate's `file` string is part of the
+    # observable error record.
+    #
+    # `rsa_meth.c` is deliberately **absent**: D284 measured the whole file as allocations
+    # and stored pointers, so it raises nothing, and an entry that could never change would
+    # read as coverage that does not exist -- the reasoning `mdc2_prov.c` is named under
+    # above. `rsa_err.c` is absent for the generator's own reason: it is the generated
+    # reason-string table, not a raiser.
+    ("crypto/rsa/rsa_lib.c", "RSA_LIB"),
+    ("crypto/rsa/rsa_crpt.c", "RSA_CRPT"),
+    ("crypto/rsa/rsa_pk1.c", "RSA_PK1"),
+    ("crypto/rsa/rsa_none.c", "RSA_NONE"),
+    ("crypto/rsa/rsa_x931.c", "RSA_X931"),
+    ("crypto/rsa/rsa_oaep.c", "RSA_OAEP"),
+    ("crypto/rsa/rsa_pss.c", "RSA_PSS"),
+    ("crypto/rsa/rsa_ossl.c", "RSA_OSSL"),
+    ("crypto/rsa/rsa_gen.c", "RSA_GEN"),
+    ("crypto/rsa/rsa_chk.c", "RSA_CHK"),
+    ("crypto/rsa/rsa_sign.c", "RSA_SIGN"),
+    ("crypto/rsa/rsa_saos.c", "RSA_SAOS"),
+    ("crypto/rsa/rsa_pmeth.c", "RSA_PMETH"),
+    ("crypto/rsa/rsa_ameth.c", "RSA_AMETH"),
+    ("crypto/rsa/rsa_backend.c", "RSA_BACKEND"),
+    ("crypto/rsa/rsa_asn1.c", "RSA_ASN1"),
+    ("crypto/rsa/rsa_mp.c", "RSA_MP"),
+    ("crypto/rsa/rsa_prn.c", "RSA_PRN"),
+    ("crypto/rsa/rsa_sp800_56b_check.c", "RSA_SP800_56B_CHECK"),
+    ("crypto/rsa/rsa_sp800_56b_gen.c", "RSA_SP800_56B_GEN"),
+    ("crypto/rsa/rsa_x931g.c", "RSA_X931G"),
+    ("crypto/rsa/rsa_depr.c", "RSA_DEPR"),
+    ("crypto/rsa/rsa_schemes.c", "RSA_SCHEMES"),
+    ("crypto/rsa/rsa_mp_names.c", "RSA_MP_NAMES"),
+    ("crypto/rsa/rsa_acvp_test_params.c", "RSA_ACVP_TEST_PARAMS"),
     # Deliberately *not* covered yet, with the stratum that owns each: the AEAD
     # template `ciphercommon_gcm.c.in` (9: no row reaches it, because
     # `deflt_ciphers[]` carries no GCM row in this crate -- D234); the

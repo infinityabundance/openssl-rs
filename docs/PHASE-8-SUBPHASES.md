@@ -385,9 +385,11 @@ here is. (`forensics/phase8-obligations.json` remains the only complete list.)
 `RSA_meth_set_init`, `RSA_meth_get_finish`, `RSA_meth_set_finish`, `RSA_meth_get_sign`,
 `RSA_meth_set_sign`, `RSA_meth_get_verify`, `RSA_meth_set_verify`, `RSA_meth_get_keygen`,
 `RSA_meth_set_keygen`, `RSA_meth_get_multi_prime_keygen`, `RSA_meth_set_multi_prime_keygen`,
-`RSA_null_method`.
+`RSA_null_method`, `RSA_padding_add_none`, `RSA_padding_check_none`, `RSA_padding_add_X931`,
+`RSA_padding_check_X931`, `RSA_X931_hash_id`, `RSA_padding_add_PKCS1_type_1`,
+`RSA_padding_check_PKCS1_type_1`.
 
-**Open exports (checked against the ledger):** `RSA_new`.
+**Open exports (checked against the ledger):** `RSA_padding_check_PKCS1_OAEP_mgf1`, `RSA_sign`.
 Phase 8.2's cipher families and 8.3's `modes.h` constructions all have their low-level exports in,
 and the default provider's AEAD half is nearly there: the twelve AES
 key-wrap rows landed in D230, the six CBC-CTS rows in D231, the two AES-XTS rows in D232, the
@@ -398,7 +400,9 @@ SIPHASH, POLY1305 and the two BLAKE2 rows) with no MAC row left open and GMAC a 
 hand-off on the `AES-*-GCM` cipher rows whose modes it will accept. The AES-GCM rows are
 a recorded Phase 9 hand-off rather than open work, because both its no-IV encrypting arm
 (`ciphercommon_gcm.c.in:423`) and its TLS arm (`:536`) call RAND_bytes_ex, which `rand.h` owns
-(D234) — and then 8.4's RSA object, whose constructor is `RSA_new`.
+(D234) — and then 8.4's RSA block, whose object is the first thing that needs the constructor, and
+that constructor is itself a Phase 9 hand-off for the reason D285 measured, so it sits in the
+ledger's deferred list rather than its list of open work.
 
 **8.4 has begun with its method table (D284).** The block D283 measured as 150 labels in seven
 slices has landed **slice B**, the thirty-three `RSA_meth_*` labels plus `RSA_null_method`, in the new
@@ -412,6 +416,30 @@ the object's own lifetime and accessors, is next; the padding pairs (C), the enc
 points (D), the `EVP_PKEY_CTX` controls (E) and the checkers and printers (G) follow, and the four
 `d2i_`/`i2d_` pairs (F) wait for 8.8's ASN.1 method machinery. `RT-RSA` is registered and passing at
 **104 observations**; `CT-RSA` stays PENDING, because the constructions it will check are C's and D's.
+
+**8.4's second unit measured what the rest of the block is actually waiting for (D285), and the
+answer rearranged the plan.** The padding half (slice C) and the crypt entry points (slice D) had
+been expected to need `src/bn/` and little else. They need `RAND_bytes_ex` as well, and not only in
+the obvious places: `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_pk1.c:147`) fills the padding
+randomly, `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` (`rsa_oaep.c:122`) generates its seed,
+`RSA_padding_add_PKCS1_PSS_mgf1` (`rsa_pss.c:242`) its salt, and
+`ossl_rsa_padding_check_PKCS1_type_2_ex` (`rsa_pk1.c:569`) randomises its implicit-rejection answer.
+Those six labels are now recorded Phase 9 hand-offs in `phase8-obligations.py`'s `BLOCKED_HANDOFFS`
+rather than left as open work. The same measurement found a second, less obvious dependency: the
+`RSA` object's own **constructor** is blocked one level further out, because `rsa_new_intern` takes
+its method from `RSA_get_default_method()` (`rsa_lib.c:101`), whose `default_RSA_meth` is
+`&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is
+`rsa_ossl_public_encrypt`, which reaches the type-2 padding call at `rsa_ossl.c:144`. So the lifetime
+follows the padding rather than preceding it, and `RSA_new`, `RSA_new_method`,
+`RSA_get_default_method` and `RSA_PKCS1_OpenSSL` are recorded as hand-offs too. What is landable is
+the half whose output is a pure function of its input, and it has landed: the `none` and X9.31
+paddings, PKCS#1 v1.5 type 1, the X9.31 hash ids — **seven exports, `RT-RSA` at 194 observations,
+every refusal's error coordinate compared as well as its return value**. The error coordinates
+needed a second change: `gen_err_raise_sites.py`'s covered set is now the whole `crypto/rsa`
+subsystem rather than the files one slice happens to touch, because a coordinate's `file` string is
+part of the observable record and adding a unit's files only when its first site is cited would leave
+the subsystem half-covered between commits. `RSA_meth.c` is deliberately absent from that set: D284
+measured it as allocations and stored pointers, and it raises nothing.
 
 **The subphase's own cipher surface is one row smaller than it was (D263, D264, D265).** The
 `ChaCha20` row landed with `cipher_chacha20.c` and `cipher_chacha20_hw.c` transcribed whole, over a

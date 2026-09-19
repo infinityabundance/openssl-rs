@@ -18658,3 +18658,91 @@ ledger says what the arithmetic is; Phase 8's export ledger moves 34 rows from `
 `implemented`. `CT-RSA` remains PENDING: the constructions it will check are slices C's and D's, and a
 correctness court registered before there is a construction to check would be the vacuous kind this
 project has spent three phases removing. `RT-RSA` is the evidence for this slice and nothing more.
+
+## D285 — 8.4's padding half lands, and the measurement rearranged the block: most of it is Phase 9's
+
+Slice C's RAND-free half, plus the measurement that made "RAND-free half" a phrase with content. The
+unit is seven exports — `RSA_padding_add_none`, `RSA_padding_check_none`, `RSA_padding_add_X931`,
+`RSA_padding_check_X931`, `RSA_X931_hash_id`, `RSA_padding_add_PKCS1_type_1` and
+`RSA_padding_check_PKCS1_type_1` — and the finding is larger than the unit.
+
+**What D283's table missed, and how.** D283 gave slice C the dependency "A, and the digest for
+OAEP's MGF1" and slice D "A, C, and `src/bn`'s `BN_mod_exp`/blinding". Neither mentions `rand.h`.
+Measured this time, by reading the eight adds and six checks rather than the slice's name:
+
+| label | anchor | reason |
+| --- | --- | --- |
+| `RSA_padding_add_PKCS1_type_2` | `rsa_pk1.c:147` | `RAND_bytes_ex` fills the padding |
+| `RSA_padding_add_PKCS1_OAEP`, `_mgf1` | `rsa_oaep.c:122` | `RAND_bytes_ex` generates the seed |
+| `RSA_padding_add_PKCS1_PSS`, `_mgf1` | `rsa_pss.c:242` | `RAND_bytes_ex` generates the salt |
+| `RSA_padding_check_PKCS1_type_2` | `rsa_pk1.c:569` | `RAND_priv_bytes_ex` builds the implicit-rejection premaster secret |
+
+So **six of the fifteen** are Phase 9 hand-offs, and they are now rows in
+`forensics/tools/phase8_obligations.py`'s `BLOCKED_HANDOFFS` rather than open work. The other nine
+are landable, and the reason is a rule worth stating: a padding function is a pure function of its
+input **except where the format requires the padding to be unpredictable**, and the two cases where
+a *check* is not pure are the two implicit-rejection arms, which must answer with something an
+attacker cannot distinguish from a real plaintext. That is why `RSA_padding_check_PKCS1_type_2` is a
+hand-off and `RSA_padding_check_PKCS1_OAEP_mgf1`, which has no such arm in this version, is not.
+
+**The second finding is the one that matters more: the `RSA` object's constructor is blocked one
+level further out.** `RSA_new` calls `rsa_new_intern`, which at `rsa_lib.c:101` takes its method from
+`RSA_get_default_method()`. That returns `default_RSA_meth`, which is `&rsa_pkcs1_ossl_meth`
+(`rsa_ossl.c:84`), and that table's **first member is `rsa_ossl_public_encrypt`**, whose type-2
+padding call sits at `rsa_ossl.c:144`. So the dependency chain is
+
+```
+RSA_new -> RSA_get_default_method -> rsa_pkcs1_ossl_meth -> rsa_ossl_public_encrypt
+        -> ossl_rsa_padding_add_PKCS1_type_2_ex -> RAND_bytes_ex
+```
+
+and it means the block's order is the opposite of the plan's in **both** directions. D284 landed B
+before A because B calls no A function; this entry records that A's *lifetime* cannot land before C
+and D, because a method table is a table of function pointers and one of its members pads randomly.
+`RSA_new`, `RSA_new_method`, `RSA_get_default_method` and `RSA_PKCS1_OpenSSL` are therefore recorded
+as Phase 9 hand-offs as well, with that chain as the reason. `RSA_set_default_method` and
+`RSA_set_method` are **not**: both are pointer stores, and neither reads the table.
+
+**A third consequence, recorded because it changes what can be written next.** Slice A's forty-one
+accessors are trivial transcriptions — `RSA_set0_key` is three conditional releases and three flag
+writes — but they cannot be *courted* before the constructor exists, because an `RSA *` has no other
+source: `d2i_RSAPublicKey` is slice F's, `EVP_PKEY_get1_RSA` is slice E's and needs a key to read,
+and `RSA_generate_key_ex` is itself Phase 9's. The court-coverage atlas admits `directly_courted`,
+`indirectly_courted` and `explicitly_non_observable` and nothing else, and an accessor whose effect
+no probe can reach has no honest entry in any of the three. So the accessors land **with** the
+lifetime, not before it, and that ordering is a consequence of the evidence rule rather than a
+preference. This is why they are not in this commit: a version of them was written, measured against
+the covering atlas, and withdrawn rather than landed behind a `non_observable` entry that would have
+been untrue.
+
+**The error coordinates, and why the covered set had to grow.** Every refusal in these seven functions
+raises an authority error, and the authority's coordinate — `__FILE__`, `__LINE__`, `__func__` — is
+part of the error record an application can read back through `ERR_get_error_all`. The crate already
+has that machinery (`gen_err_raise_sites.py`, 2 014 sites), but its covered set is a hand-maintained
+list of translation units, and `crypto/rsa/` was not in it. It is now, as the **whole subsystem**
+rather than the three files this slice happens to raise from: a coordinate's `file` string is part of
+the observable record, and adding a unit's files only when its first site is cited would leave the
+subsystem half-covered between commits, which is the state that makes a later addition look like a
+change in behaviour. `rsa_meth.c` is deliberately absent — D284 measured it as allocations and stored
+pointers and it raises nothing — and `rsa_err.c` is absent because it is the generated reason-string
+table rather than a raiser. That is the same reasoning the list already gives for `mdc2_prov.c`.
+
+**The court.** `RT-RSA` grew from 104 to **194 observations**. Every arm is checked against the
+authority's own text before it is run: the `none` padding's *two different* refusal reasons (too long
+is `DATA_TOO_LARGE_FOR_KEY_SIZE`, too short is `DATA_TOO_SMALL_FOR_KEY_SIZE`); the X9.31 one-octet
+`0x6A` header when there is no room for padding against the `0x6B || 0xBB... || 0xBA` run when there
+is; all four refusals of the X9.31 check, including the `i == 0` arm where an `0x6B` header is
+followed immediately by the terminator; the four ISO/IEC 10118 part numbers with SHA-384 (`0x36`)
+*after* SHA-512 (`0x35`); PKCS#1 v1.5 type 1 with and without its leading zero; and its six
+refusals. Each arm drains the error queue with `ERR_get_error_all` and prints the packed code **and
+the coordinate**, so a transcription that reused one reason for two refusals, or attributed a site to
+the wrong file, fails the court rather than passing on a matching return value.
+
+**What this entry does not claim.** `CT-RSA` remains PENDING. The seven exports are courted
+differentially, which proves the candidate behaves like the authority on these inputs; it does not
+prove the constructions are the standard's, and for padding functions that second plane matters —
+the X9.31 and PKCS#1 v1.5 formats have published test vectors, and they are the natural corpus. That
+is recorded as the next unit rather than implied by this one. And the Phase 9 hand-offs are
+*dependencies*, not estimates: each row names the call and its file and line, and `RSA_new`'s names a
+table member rather than a call in its own body, which is the part D283's plan could not have seen
+from the slice's name.
