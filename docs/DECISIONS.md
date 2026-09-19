@@ -19486,3 +19486,46 @@ below it, and it is now listed with that reasoning recorded at the site.
 **What this entry does not claim.** No Phase 9 export is implemented and no coordinate here is
 *cited* yet: the sites exist so that the subphase which raises from them has a name to cite, which
 is exactly how `crypto/rsa` joined the set in D285 -- ahead of its raisers rather than with them.
+
+## D298 -- the pool and the provider seeding units are staged, and four more of D287's unit names are corrected
+
+Two more Phase 9 transcriptions, staged and deliberately not integrated: `court/phase9/
+rand_pool.rs.txt` (1,256 lines) covering `crypto/rand/rand_pool.c` and the seeding arm that holds
+the pool's acquisition, and `court/phase9/provider_common.rs.txt` (660 lines) covering
+`providers/common/provider_seeding.c` and `provider_util.c`'s MAC half. Neither is watered down to
+compile and neither is integrated, for the same reason D294 gave: the pool cannot be courted
+before the front that calls it exists.
+
+**Four corrections to D287's unit names, each measured against the admitted tree.**
+
+1. **`ossl_pool_acquire_entropy`, `ossl_rand_pool_init`, `_cleanup` and
+   `_keep_random_devices_open` are not in `crypto/rand/rand_pool.c`.** They live in
+   `providers/implementations/rands/seeding/rand_unix.c`, and the acquisition there has two build
+   arms on this profile (`OPENSSL_RAND_SEED_OS` => GETRANDOM + DEVRANDOM). D287 named the pool's
+   file for the whole of 9.5's unit, which is a file-name error of the class D287's own `crngt.c`
+   row was (D294).
+2. **There is no `ossl_rand_pool_add_additional_data` in 3.6.4**, and there is no fork-id or
+   discriminator logic in the nonce function at all. The real name is `ossl_pool_add_nonce_data`
+   and its content is pid, thread id and time; fork safety lives in `drbg.c`'s `drbg->fork_id`
+   comparison against `openssl_get_fork_id()`. A transcription written from D287's description
+   would have invented a function and looked for fork logic in the wrong unit.
+3. **`providers/common/provider_seeding.c` holds the four up-calls the DRBG framework reaches
+   through the provider context** -- `ossl_prov_get_entropy`, `ossl_prov_cleanup_entropy`,
+   `ossl_prov_get_nonce`, `ossl_prov_cleanup_nonce`. D287's table names neither the file nor any
+   of the four, and `drbg.c` cannot be written without them.
+4. **`src/provider/util.rs` already transcribes thirteen of `provider_util.c`'s functions and was
+   missing exactly two the MAC row needs**: `ossl_prov_set_macctx` and `ossl_prov_macctx_load`.
+   Recorded because the file *looked* complete, which is the state in which a later reader
+   concludes the unit is done.
+
+**Also measured.** The eight `OSSL_FUNC_{GET,CLEANUP}_{USER_,}ENTROPY` and `_NONCE` dispatch ids
+are unpublished; `src/context/core_dispatch.rs`'s own module note already records them as Phase
+9's. And neither `provider_seeding.c` nor `seeding/rand_unix.c` calls `ERR_raise`, so neither joins
+the error-coordinate covered set D297 extended -- the rule that list already states for
+`rand_uniform.c`.
+
+**What this entry does not claim.** No export is implemented, no court has landed, and the
+corrections above are to *unit names in a plan*; whether the pool's two acquisition arms can be
+courted with a fixed seed source is 9.5's measurement, not this entry's. The `does_not_exist`
+family of corrections to D287 is now four and they were all found by reading the tree rather than
+by reading the table -- which is the argument for the census being generated.
