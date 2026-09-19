@@ -18732,6 +18732,296 @@ pub(crate) const PROV_CIPHER_CHACHA20_171: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `chacha20_poly1305_get_ctx_params_decoder` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:142` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_142: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 142,
+    func: c"chacha20_poly1305_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_get_ctx_params_decoder` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:153` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_153: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 153,
+    func: c"chacha20_poly1305_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_get_ctx_params_decoder` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:176` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_176: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 176,
+    func: c"chacha20_poly1305_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_get_ctx_params_decoder` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:185` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_185: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 185,
+    func: c"chacha20_poly1305_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_get_ctx_params_decoder` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:197` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_197: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 197,
+    func: c"chacha20_poly1305_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_get_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:221` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_221: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 221,
+    func: c"chacha20_poly1305_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_get_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:227` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_227: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 227,
+    func: c"chacha20_poly1305_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_get_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:233` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_233: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 233,
+    func: c"chacha20_poly1305_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_get_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:239` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_239: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 239,
+    func: c"chacha20_poly1305_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_get_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:245` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_245: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 245,
+    func: c"chacha20_poly1305_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_get_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:249` (PROV_R_TAG_NOT_SET).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_249: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 249,
+    func: c"chacha20_poly1305_get_ctx_params",
+    lib: 57,
+    reason: 119,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_get_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:253` (PROV_R_INVALID_TAG_LENGTH).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_253: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 253,
+    func: c"chacha20_poly1305_get_ctx_params",
+    lib: 57,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params_decoder` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:305` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_305: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 305,
+    func: c"chacha20_poly1305_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params_decoder` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:316` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_316: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 316,
+    func: c"chacha20_poly1305_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params_decoder` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:331` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_331: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 331,
+    func: c"chacha20_poly1305_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params_decoder` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:350` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_350: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 350,
+    func: c"chacha20_poly1305_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params_decoder` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:361` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_361: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 361,
+    func: c"chacha20_poly1305_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:396` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_396: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 396,
+    func: c"chacha20_poly1305_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:400` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_400: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 400,
+    func: c"chacha20_poly1305_set_ctx_params",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:407` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_407: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 407,
+    func: c"chacha20_poly1305_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:411` (PROV_R_INVALID_IV_LENGTH).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_411: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 411,
+    func: c"chacha20_poly1305_set_ctx_params",
+    lib: 57,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:418` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_418: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 418,
+    func: c"chacha20_poly1305_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:422` (PROV_R_INVALID_TAG_LENGTH).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_422: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 422,
+    func: c"chacha20_poly1305_set_ctx_params",
+    lib: 57,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:427` (PROV_R_TAG_NOT_NEEDED).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_427: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 427,
+    func: c"chacha20_poly1305_set_ctx_params",
+    lib: 57,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:437` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_437: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 437,
+    func: c"chacha20_poly1305_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:442` (PROV_R_INVALID_DATA).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_442: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 442,
+    func: c"chacha20_poly1305_set_ctx_params",
+    lib: 57,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:450` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_450: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 450,
+    func: c"chacha20_poly1305_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:456` (PROV_R_INVALID_IV_LENGTH).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_456: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 456,
+    func: c"chacha20_poly1305_set_ctx_params",
+    lib: 57,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_cipher` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:512` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_512: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 512,
+    func: c"chacha20_poly1305_cipher",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
 /// `cipher_hw_aria_initkey` at `providers/implementations/ciphers/cipher_aria_hw.c:25` (PROV_R_KEY_SETUP_FAILED).
 pub(crate) const PROV_CIPHER_ARIA_HW_25: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aria_hw.c",
@@ -21763,6 +22053,35 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_CIPHER_CHACHA20_160,
     PROV_CIPHER_CHACHA20_167,
     PROV_CIPHER_CHACHA20_171,
+    PROV_CIPHER_CHACHA20_POLY1305_142,
+    PROV_CIPHER_CHACHA20_POLY1305_153,
+    PROV_CIPHER_CHACHA20_POLY1305_176,
+    PROV_CIPHER_CHACHA20_POLY1305_185,
+    PROV_CIPHER_CHACHA20_POLY1305_197,
+    PROV_CIPHER_CHACHA20_POLY1305_221,
+    PROV_CIPHER_CHACHA20_POLY1305_227,
+    PROV_CIPHER_CHACHA20_POLY1305_233,
+    PROV_CIPHER_CHACHA20_POLY1305_239,
+    PROV_CIPHER_CHACHA20_POLY1305_245,
+    PROV_CIPHER_CHACHA20_POLY1305_249,
+    PROV_CIPHER_CHACHA20_POLY1305_253,
+    PROV_CIPHER_CHACHA20_POLY1305_305,
+    PROV_CIPHER_CHACHA20_POLY1305_316,
+    PROV_CIPHER_CHACHA20_POLY1305_331,
+    PROV_CIPHER_CHACHA20_POLY1305_350,
+    PROV_CIPHER_CHACHA20_POLY1305_361,
+    PROV_CIPHER_CHACHA20_POLY1305_396,
+    PROV_CIPHER_CHACHA20_POLY1305_400,
+    PROV_CIPHER_CHACHA20_POLY1305_407,
+    PROV_CIPHER_CHACHA20_POLY1305_411,
+    PROV_CIPHER_CHACHA20_POLY1305_418,
+    PROV_CIPHER_CHACHA20_POLY1305_422,
+    PROV_CIPHER_CHACHA20_POLY1305_427,
+    PROV_CIPHER_CHACHA20_POLY1305_437,
+    PROV_CIPHER_CHACHA20_POLY1305_442,
+    PROV_CIPHER_CHACHA20_POLY1305_450,
+    PROV_CIPHER_CHACHA20_POLY1305_456,
+    PROV_CIPHER_CHACHA20_POLY1305_512,
     PROV_CIPHER_ARIA_HW_25,
     PROV_CIPHER_SM4_XTS_54,
     PROV_CIPHER_SM4_XTS_142,

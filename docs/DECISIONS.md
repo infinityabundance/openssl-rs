@@ -18176,3 +18176,122 @@ rows -- the family's one recorded narrowing, on `RAND_bytes_ex`
 (`docs/SECURITY_DIVERGENCE_POLICY.md` D-CBCHMAC-MULTIBLOCK-ENC-1) -- and the CT-CIPHER construction
 arm D276's entry names for those rows. Then `ChaCha20-Poly1305`, whose prerequisite D277 measured as
 already discharged.
+
+## D279 — `ChaCha20-Poly1305` lands, and the differential court caught the TLS slow arm
+
+D277's second half. The last cipher row of 8.3, and the only one in this half that is a **stitching**
+rather than a new primitive: `src/chacha.rs`'s counter block, `src/mac/poly1305.rs`'s one-time
+authenticator and the `ChaCha20` row's own hw, under a record shape of its own. `src/chacha.rs` and
+`src/mac/poly1305.rs` were both already in, which is why D277 measured this row's prerequisite as
+discharged and why this entry is about a *construction* rather than about arithmetic.
+
+**What landed.** `cipher_chacha20_poly1305.c`'s row layer whole — `newctx`, `dupctx` (a
+whole-context `OPENSSL_memdup` with the one `tlsmac` re-duplication), `freectx`, `get_params`, the
+generated get/set decoders' repeated-parameter scans, both five-key parameter lists, the five
+setter arms and their eleven refusals, the five getter arms and their seven, `einit`/`dinit` with
+`hw->initiv` reached **only when an IV was supplied**, the one-shot `cipher`, the zero-length-update
+no-op and the `in == NULL` finish — and `cipher_chacha20_poly1305_hw.c`'s vtable: `initkey`,
+`initiv`, `tls_init`, `tls_iv_set_fixed` and `aead_cipher`, plus a transcription of
+`chacha20_poly1305_tls_cipher`. The row is registered as `deflt_ciphers[]`'s **132nd** row
+(`defltprov.c:327`, a plain `ALG` with no capability predicate, `{"ChaCha20-Poly1305"}` mixed case),
+and `EXPORTED_CIPHERS` grew with it.
+
+**The context and the vtable are measured, not read.** `courts/layout/measure-chacha20-poly1305-ctx.c`
+reports `PROV_CHACHA20_POLY1305_CTX` at **848** bytes with `base` 0, `chacha` 192, `poly1305` 504,
+`nonce` 752, `tag` 764, `tls_aad` 780, `len` 800, the `aad:1`/`mac_inited:1` lane **816**, `tag_len`
+824, `tls_payload_length` 832 and `tls_aad_pad_sz` 840; and `POLY1305` at 248, whose
+`double opaque[24]` is what makes the whole context eight-aligned and puts the four-byte hole at
+820..824 that a packed bitfield lane would not have. `courts/layout/oracle-chacha20-poly1305-hw.c`
+reports the hw vtable at **56** bytes with the four extended members at 24, 32, 40 and 48, all four
+distinct, and — the part that cannot be read with confidence off a brace-elided initialiser —
+`base.init` non-null while **`base.cipher` and `base.copyctx` are both NULL**. That is unlike every
+other cipher row this crate transcribes, whose `base.cipher` is the mode's own entry point, and it is
+recorded where it belongs: `Chacha20Poly1305HwBase` carries the two nulls as `Option`s, and the unit
+test `the_chacha20_poly1305_context_is_the_authoritys_size` asserts both. Making `ProvCipherHw::cipher`
+an `Option` instead would have forced eleven call sites to invent an answer for a null none of them
+can ever see, and this row's `aead_cipher` does not use `base.cipher` at all — it reaches ChaCha20
+through `ctx->chacha.base.hw->cipher`, which `ossl_chacha20_initctx` installed.
+
+**Two enciphering paths, and the second one is entered by a side effect.** A `tlsaad` parameter
+leaves `tls_payload_length` at the record's payload length, and the *next* `EVP_CipherUpdate` is then
+a whole RFC 7905 record: the caller passes `payload + 16` and gets ciphertext plus tag in one call.
+Everywhere else the row is the ordinary incremental AEAD. The TLS path's fast and slow arms are
+chosen at `plen <= 3 * CHACHA_BLK_SIZE` (192) by the `XOR128_HELPERS` guard, which this x86-64
+profile defines; the two helpers it names are perlasm, so their portable equivalent is transcribed —
+`ctr[i] ^= in[i]` with the ciphertext left in `ctr`, a zero pad to sixteen, an advanced pointer —
+which is exactly what the `#else` arm spells out for its own, smaller, threshold. The arms differ in
+which keystream bytes they generate and in nothing else, and the `zero[]` array is kept at the
+compiled arm's four blocks because its `buf_len` reaches `128 + roundup(192, 64)` = 256.
+
+**The defect the differential court found.** The authority rebinds `tohash = ctr` inside the slow
+arm, so the sixteen-byte length block is hashed from wherever `ctr` currently is. The first
+transcription reset `tohash_len` to zero and left `tohash` at `buf + 48`, which hashes sixteen bytes
+of untouched buffer instead. **The ciphertext is identical either way and only the tag differs**, so
+no round-trip test, no encrypt/decrypt self-consistency check and no ciphertext comparison can see
+it; `RT-CIPHER` found it because it compares the *authority's* own record byte for byte, and the
+transcript said so precisely: `chachapoly.tls260.ct` matched for its first 520 hex digits — the whole
+260-octet payload — and differed in exactly the final 32, the tag. That is the second defect in this
+project found by comparing a full record rather than a value, and the first found by comparing the
+two *arms of one function*.
+
+**A protocol convention the probe had to learn first.** The decrypting TLS AAD carries the **record**
+length (payload plus tag) while the encrypting one carries the payload length, because `tls_init`
+discounts `POLY1305_BLOCK_SIZE` itself and rewrites the two octets it will hash. The first draft of
+the arm announced the payload length on both sides and `EVP_DecryptUpdate` refused — measured, on the
+authority, before any of the candidate's code ran. Both conventions are now in the probe with the
+reason, so the next row that reaches this path does not have to rediscover it.
+
+**Evidence.** `RT-CIPHER` grew from 6772 to **6939** observations with `rt_deflt_chacha20_poly1305`:
+the four lengths, the mode and the flags; the three parameter lists; the zero-length-update no-op and
+its `outl`; the four one-key setter refusals with their queues; a whole plain AEAD record in both
+directions with the tag through the classic control; the tag read before any text (an acceptance,
+because this row has no `generated_tag` flag) and the two length refusals; `SET_TAG` on an encrypting
+context and `GET_TAG` on a decrypting one, which are each other's mirror; a flipped tag and a flipped
+ciphertext, both silent; the empty message's tag and its decrypting acceptance; the TLS record at
+**32** octets (the fast arm) and at **260** (the slow arm), each with its round trip, its
+`tlsaadpad` of 16, and a flipped-tag refusal whose in-place zeroing is printed; the fixed IV
+installed two ways with a `same` flag; a wrong-length `tlsivfixed` and a wrong-length `tlsaad`; and a
+`dupctx` taken after the record is announced, whose copy must produce the same record. `CT-CIPHER`
+gained the corpus's **5** `chacha20-poly1305` vectors — `evpciph_chacha.txt`'s `# RFC7539` pair,
+whose 2.8.2 RFC 8439 republished unchanged, plus the four the corpus labels `self-generated vectors`
+— and is now **3178/3178**. The family is registered with **no** independent boundary vectors and a
+note saying why: no independent implementation of this construction is in the pinned court image, and
+a zero-length message's tag is a real Poly1305 over sixteen zero bytes, so inventing a value for it
+would be inventing a construction's answer.
+
+**A second, independent finding: the allocation-tracking `file` argument is misattributed, and it is
+not repaired here.** `courts/layout/oracle-mem-file.c` is a new oracle that installs
+`CRYPTO_set_mem_functions` and prints every distinct `file` string the authority hands the installed
+allocator, per row. It shows that the crate's single `FILE` constant — which names
+`ciphercommon.c` — is **wrong at every one of its 23 call sites**: `ciphercommon.c` never appears in
+the authority's allocation traffic at all, because the rows' `newctx`/`freectx` bodies are generated
+by `IMPLEMENT_generic_cipher`, which `providers/implementations/include/prov/ciphercommon.h:194-225`
+defines and which `cipher_aes.c`, `cipher_camellia.c`, `cipher_tdes_common.c`, `cipher_sm4.c`,
+`cipher_aria.c` and `cipher_idea.c` each *invoke*, so their `__FILE__` is the invoking file. The
+oracle also reproduces the `.c.in` rule end to end: `cipher_chacha20_poly1305.c` appears with **no**
+`../../src/openssl-3.6.4/` prefix while its source-tree sibling `cipher_chacha20.c` appears with one.
+`file` reaches an application through `CRYPTO_set_mem_functions`, so this is a real contract
+divergence and not a cosmetic one; it is recorded here as **measured and unrepaired** rather than
+half-repaired inside this entry, because the repair is a per-row constant on `cipher_row!` and
+`cts_row!` plus their 84 invocations plus the eight hand-written sites, and because a repair with no
+court behind it would be an assertion rather than evidence. The committed oracle is what makes the
+claim checkable in the meantime, and the repair with its own court is the next unit.
+
+**What this entry moves.** `src/provider/cipher.rs` (about 1 250 lines: the context, the two-bit
+lane, the hw base and vtable, the four hw functions, the TLS cipher, `aead_cipher`, the row layer,
+the two generated-decoder key lists, the two parameter lists, the fourteen-entry dispatch table and
+the `deflt_ciphers[]` row), `courts/phase8/rt_cipher_probe.c` (the census list's last row and the new
+arm), `courts/phase8/ct_cipher.c` (the fifth AEAD arm, dispatched first), `courts/layout/` (three new
+programs and the README's table and oracle section), `forensics/tools/gen_err_raise_sites.py` (the
+row layer's 29 raises, the largest single registration in this half), `forensics/tools/correctness_vectors.py`
+(the `chacha20_poly1305` family), `forensics/tools/phase8_courts.py`, `forensics/vectors/chacha20_poly1305.json`,
+`docs/PHASE-8-SUBPHASES.md`'s 8.3 row, and every derived artefact they feed. Measured: unit tests
+**607**; `RT-CIPHER` **6939**; `RT-DIGEST` 468; `CT-DIGEST` 272/272; `CT-CIPHER` **3178/3178**;
+`err-raise-sites` **2014**; `libcrypto` unchanged at **2035 implemented**, because no part of this
+row is an export.
+
+**What remains of 8.3.** The multiblock *encrypt* parameter of the four published `AES-*-CBC-HMAC-*`
+rows — the family's one recorded narrowing, on `RAND_bytes_ex`
+(`docs/SECURITY_DIVERGENCE_POLICY.md` D-CBCHMAC-MULTIBLOCK-ENC-1) — and the CT-CIPHER construction
+arm D276's entry names for those rows. The `file` repair above is a prerequisite of *closing* 8.3
+rather than of continuing it. Then 8.4 (RSA).

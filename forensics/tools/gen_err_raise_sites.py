@@ -441,6 +441,27 @@ COVERED_FILES = [
     # is absent for the reason `cipher_cts.c` is: an entry that can never change would read as
     # coverage that does not exist.
     ("providers/implementations/ciphers/cipher_chacha20.c", "PROV_CIPHER_CHACHA20"),
+    # `cipher_chacha20_poly1305.c` is the *other* kind of generated unit: it is a `.c.in` template
+    # (`cipher_chacha20_poly1305.c.in`), so the build compiles it from the build tree and its
+    # `__FILE__` carries **no** source-tree prefix -- `providers/implementations/ciphers/
+    # cipher_chacha20_poly1305.c` where its source-tree sibling `cipher_chacha20.c` directly above
+    # carries `../../src/openssl-3.6.4/`. Both spellings are measured from the two objects and
+    # confirmed end to end by `courts/layout/oracle-mem-file.c`, which prints the `file` the
+    # authority hands a caller-installed allocator for each row.
+    #
+    # Its raises are its own, and there are **twenty-nine**: five `PROV_R_REPEATED_PARAMETER` in
+    # the getter's generated decoder (`:142`, `:153`, `:176`, `:185`, `:197` -- one per key it
+    # locates) and five in the setter's (`:305`, `:316`, `:331`, `:350`, `:361`); seven in
+    # `chacha20_poly1305_get_ctx_params`' body (`:221`, `:227`, `:233`, `:239` for the four
+    # `PROV_R_FAILED_TO_SET_PARAMETER` writes, then `:245` type, `:249` `PROV_R_TAG_NOT_SET` on a
+    # decrypting context and `:253` `PROV_R_INVALID_TAG_LENGTH`); eleven in
+    # `chacha20_poly1305_set_ctx_params`' body (`:396`, `:407`, `:418`, `:437`, `:450` for the five
+    # `PROV_R_FAILED_TO_GET_PARAMETER`s, `:400` and `:411` for the two length refusals, `:422`
+    # `PROV_R_INVALID_TAG_LENGTH`, `:427` `PROV_R_TAG_NOT_NEEDED`, `:442` `PROV_R_INVALID_DATA` and
+    # `:456` `PROV_R_INVALID_IV_LENGTH`); and the one `PROV_R_OUTPUT_BUFFER_TOO_SMALL` in
+    # `chacha20_poly1305_cipher` (`:512`). The sibling `cipher_chacha20_poly1305_hw.c` raises
+    # **nothing** -- it returns 0 -- so it is absent for the reason `cipher_chacha20_hw.c` is.
+    ("providers/implementations/ciphers/cipher_chacha20_poly1305.c", "PROV_CIPHER_CHACHA20_POLY1305"),
     # `cipher_aria_hw.c` is a **source-tree** file, and unlike `cipher_sm4.c` and `cipher_sm4_hw.c`
     # it *does* have a failure arm: `cipher_hw_aria_initkey` raises `PROV_R_KEY_SETUP_FAILED` at
     # line 25 when the schedule function answers negative. The note this entry replaces said

@@ -1836,6 +1836,32 @@ CIPHER_RECIPE_FAMILIES: list[CipherRecipeFamily] = [
             "`gcm_siv.*` arms and the unit test `the_polyval_helpers_match_the_authority_oracle` "
             "carry the other half."
         )),
+    # 8.3 -- ChaCha20-Poly1305, the last cipher row of the subphase. The corpus carries the RFC
+    # 7539 vectors under a `# RFC7539` banner, which RFC 8439 republished unchanged in its 2.8.2,
+    # and four self-generated ones beside them that move the payload past a block boundary and
+    # past the twelve-octet nonce's leading zeros. **The name is lower case** where every AES row
+    # in the corpus is upper case, so the regex is anchored and case-sensitive: a case-folded test
+    # would answer for a spelling the corpus never wrote.
+    CipherRecipeFamily(
+        "chacha20_poly1305", "test/recipes/30-test_evp_data/evpciph_chacha.txt",
+        r"^chacha20-poly1305$", "RFC 8439 (published as RFC 7539)",
+        "chacha20-poly1305", (),
+        "", "",
+        aead=True,
+        note=(
+            "Candidate-only construction verification: the primary source is RFC 7539, whose "
+            "2.8.2 publishes the first vector here and which RFC 8439 republished unchanged, and "
+            "the bytes are mirrored through the pinned corpus (`corpus_sha256`) rather than "
+            "fetched. The four blocks the corpus labels `self-generated vectors` are the "
+            "mirror's, not a standard's, and the file's own comment says so. Every expected tail "
+            "is `accept || reject`, the probe's own tag-verification arms, so a rejected tag is a "
+            "committed expectation on every vector. **No independent implementation of this "
+            "construction is present in the pinned court image**, so no boundary vector carries "
+            "an independent oracle and the family declares none: a zero-length message's tag is "
+            "a real Poly1305 over sixteen zero bytes, and inventing a value for it would be "
+            "inventing a construction's answer. `RT-CIPHER`'s `chachapoly.*` arms carry the "
+            "record shape and the TLS path, which no corpus vector reaches."
+        )),
     # 8.3 -- GCM. The corpus is NIST SP 800-38D's own test cases plus the boringssl set; every
     # block carries an `AAD` and a `Tag`, and the probe's AEAD path prints the ciphertext, the
     # tag, and its own accept/reject answers, so a rejected tag is a committed expectation

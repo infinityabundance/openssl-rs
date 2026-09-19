@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 165,
+        "implemented": 166,
         "unmatched": 0
       }
     },
@@ -20,8 +20,8 @@
         "probe": "courts/phase8/rt_cipher_probe.c"
       }
     ],
-    "directly_courted": 165,
-    "implemented_rows": 165,
+    "directly_courted": 166,
+    "implemented_rows": 166,
     "rows": [
       {
         "algorithm_names": "AES-128-CBC",
@@ -1566,6 +1566,19 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "ChaCha20-Poly1305",
+        "aliases": [
+          "ChaCha20-Poly1305"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "DES-EDE-CBC",
         "aliases": [
           "DES-EDE-CBC"
@@ -2333,7 +2346,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "a265b8479954a34b0549293e7fb7d1a556d61cec45796b91f81030f69c9aa1a9"
+      "sha256": "3c8d8bcaad6f64d8f8b9cca7314141991bd764950ab98aa71d6bab5ecc3e52e3"
     },
     {
       "name": "court:RT-DIGEST",
@@ -2343,7 +2356,7 @@
     {
       "name": "court:RT-CIPHER",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "0e3b3e2465557a5cbbbe4dac349a963379e60bf977f0f34b150865d4bac0a17b"
+      "sha256": "ef2ab23265f12492907b9db5028d4136fd96f0b93499ba718e819379fb2f86eb"
     }
   ],
   "kind": "provider-court-coverage",

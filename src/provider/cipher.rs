@@ -13462,6 +13462,10 @@ macro_rules! alias {
 }
 alias!(N_NULL, "NULL");
 alias!(N_CHACHA20, "ChaCha20");
+// `defltprov.c:327`, the last cipher row in the authority's table and this crate's. **Mixed
+// case**, like `ChaCha20` above it and unlike every other alias in this list -- which is why the
+// name is copied rather than case-folded.
+alias!(N_CHACHA20_POLY1305, "ChaCha20-Poly1305");
 // The **whole** alias sequence, OIDs included -- `prov/names.h:168-172`. The first version of this
 // block used the primary names alone, which is the short-alias defect D244 exists for.
 alias!(N_SM4_ECB, "SM4-ECB:1.2.156.10197.1.104.1");
@@ -13694,7 +13698,7 @@ const fn capable_row(
 
 /// `static const OSSL_ALGORITHM_CAPABLE deflt_ciphers[]` — `providers/defltprov.c:161-330`,
 /// restricted to the rows this half implements, in the authority's order.
-pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 131] = [
+pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 132] = [
     row(N_NULL, NULL_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_ECB, AES256ECB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_ECB, AES192ECB_FUNCTIONS.as_ptr().cast()),
@@ -13932,6 +13936,10 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 131] = [
     row(N_SM4_CFB, SM4128CFB128_FUNCTIONS.as_ptr().cast()),
     row(N_SM4_XTS, SM4128XTS_FUNCTIONS.as_ptr().cast()),
     row(N_CHACHA20, CHACHA20_FUNCTIONS.as_ptr().cast()),
+    row(
+        N_CHACHA20_POLY1305,
+        CHACHA20_POLY1305_FUNCTIONS.as_ptr().cast(),
+    ),
     OsslAlgorithmCapable {
         alg: OsslAlgorithm {
             algorithm_names: ptr::null(),
@@ -13952,13 +13960,13 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 131] = [
 /// against the write. This crate keeps the same discipline: the only writer is
 /// `crate::provider::cipher::cache_exported_ciphers`, called from provider init, and every reader
 /// goes through [`exported_ciphers`].
-static EXPORTED_CIPHERS: SyncCell<[OsslAlgorithm; 131]> = SyncCell(UnsafeCell::new(
+static EXPORTED_CIPHERS: SyncCell<[OsslAlgorithm; 132]> = SyncCell(UnsafeCell::new(
     [OsslAlgorithm {
         algorithm_names: ptr::null(),
         property_definition: ptr::null(),
         implementation: ptr::null(),
         algorithm_description: ptr::null(),
-    }; 131],
+    }; 132],
 ));
 
 /// A `static` the crate mutates once at provider init and shares afterwards, exactly as the
@@ -14668,6 +14676,1530 @@ pub(crate) static CHACHA20_FUNCTIONS: [OsslDispatch; 15] = [
     OsslDispatch {
         function_id: OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS,
         function: chacha20_settable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_DISPATCH_END,
+        function: ptr::null_mut(),
+    },
+];
+// ---------------------------------------------------------------------------------------------
+// `cipher_chacha20_poly1305.c` and `cipher_chacha20_poly1305_hw.c` — the `ChaCha20-Poly1305` row
+// ---------------------------------------------------------------------------------------------
+//
+// The last row of 8.3, and the one that is a **stitching of three already-landed constructions**
+// rather than a fourth primitive: `src/chacha.rs`'s counter block, `src/mac/poly1305.rs`'s one-time
+// authenticator, and the `ChaCha20` row's own hw. What is new is the *record shape*.
+//
+// `PROV_CIPHER_FLAG_AEAD | PROV_CIPHER_FLAG_CUSTOM_IV` is the whole of the row's outward difference
+// from `ChaCha20`, and it has three consequences a transcription has to keep: `ivlen` is twelve
+// rather than sixteen, so the IV is the caller's nonce and not a block-mode IV; the EVP layer treats
+// the row as an AEAD, so `EVP_Cipher` is the call that can carry a whole record; and the row
+// publishes a `get_ctx_params`/`settable_ctx_params` pair of its own, because the generic list has
+// nothing to say about a tag or about a TLS record.
+//
+// **Two distinct enciphering paths, and only one of them is the plain AEAD one.** Once
+// `set_ctx_params` has seen a `tlsaad` the context holds a *TLS 1.3 record*, and
+// `chacha20_poly1305_aead_cipher` hands the whole record to `chacha20_poly1305_tls_cipher` -- a
+// single-shot construction over `aad || ciphertext || pad || lengths` with the record sequence
+// number merged into the ChaCha20 counter per RFC 7905. Everywhere else the row is the ordinary
+// incremental AEAD: AAD arrives as `in != NULL && out == NULL`, text as `in != NULL && out != NULL`,
+// and the tag is produced on an encrypting `in == NULL` call or checked on a decrypting one.
+//
+// **The TLS path has two compiled arms, and they have to agree byte for byte.**
+// `cipher_chacha20_poly1305_hw.c:107` guards `xor128_encrypt_n_pad`/`xor128_decrypt_n_pad` behind
+// `POLY1305_ASM` on x86-64, which this profile defines, so the arm that is *compiled* is the one
+// with `zero[4 * CHACHA_BLK_SIZE]` and a `plen <= 3 * CHACHA_BLK_SIZE` (192) threshold; the `#else`
+// arm's own threshold is `plen <= CHACHA_BLK_SIZE` and its `zero` is two blocks. The two helpers are
+// perlasm (D263's decline), so this transcription writes their portable equivalent -- `ctr[i] ^= in[i]`
+// with the ciphertext left in `ctr`, then a zero pad to a sixteen-byte boundary and an advanced
+// pointer -- which is exactly what the `#else` arm spells out at `:169-188`. The arms differ in
+// *which* keystream bytes they generate and in the buffer they generate them into, and in nothing
+// else: both hash `aad16 || ciphertext || zero-pad-to-16 || lengths16`. The compiled arm's `zero` is
+// kept at four blocks because its `buf_len` reaches `128 + roundup(192, 64)` = 256, where the
+// `#else` arm's is fixed at 128.
+//
+// **The sixteen-byte AAD the TLS path hashes includes three bytes the AAD does not have.**
+// `EVP_AEAD_TLS1_AAD_LEN` is **13** (`include/openssl/evp.h:461`); `tls_init` copies thirteen bytes
+// into a sixteen-byte `tls_aad`; and the TLS path hashes `POLY1305_BLOCK_SIZE` bytes of it, so
+// thirteen real bytes and three that are zero only because `newctx` zero-allocated them and nothing
+// ever writes them. The *length block* still says thirteen (`ctx->len.aad = EVP_AEAD_TLS1_AAD_LEN`).
+// That asymmetry is the authority's, identically in both arms, and is transcribed rather than
+// tidied.
+//
+// **The hw vtable's `base.cipher` is NULL.** Measured by
+// `courts/layout/oracle-chacha20-poly1305-hw.c`: `init` is `chacha20_poly1305_initkey`, `cipher` and
+// `copyctx` are both null, and the four extended members are four distinct non-null pointers at
+// offsets 24, 32, 40 and 48 of a 56-byte struct. The row's `aead_cipher` reaches ChaCha20 through
+// `ctx->chacha.base.hw->cipher`, which `ossl_chacha20_initctx` installs, so nothing ever calls the
+// null; the type that carries it is declared below, with the reason a `ProvCipherHw` would have been
+// a fabrication.
+
+/// `CHACHA20_POLY1305_KEYLEN` — `cipher_chacha20_poly1305.c:20` (`CHACHA_KEY_SIZE`).
+const CHACHA20_POLY1305_KEYLEN: usize = crate::chacha::CHACHA_KEY_SIZE;
+/// `CHACHA20_POLY1305_BLKLEN` — `cipher_chacha20_poly1305.c:21`. **One byte**, the stream-cipher
+/// shape the `ChaCha20` row also has and the reason the EVP layer treats this row as a stream.
+const CHACHA20_POLY1305_BLKLEN: usize = 1;
+/// `CHACHA20_POLY1305_IVLEN` — `cipher_chacha20_poly1305.h:15`.
+const CHACHA20_POLY1305_IVLEN: usize = 12;
+/// `CHACHA20_POLY1305_MAX_IVLEN` — `cipher_chacha20_poly1305.c:22`. The same twelve, named twice
+/// because the header publishes the first and the row checks against the second.
+const CHACHA20_POLY1305_MAX_IVLEN: usize = 12;
+/// `CHACHA20_POLY1305_MODE` — `cipher_chacha20_poly1305.c:23`. Zero: not an `evp.h` cipher mode.
+const CHACHA20_POLY1305_MODE: c_uint = 0;
+/// `CHACHA20_POLY1305_FLAGS` — `cipher_chacha20_poly1305.c:24-25`.
+const CHACHA20_POLY1305_FLAGS: u64 = PROV_CIPHER_FLAG_AEAD | PROV_CIPHER_FLAG_CUSTOM_IV;
+/// `NO_TLS_PAYLOAD_LENGTH` — `cipher_chacha20_poly1305.h:14`, `(size_t)-1`. The sentinel that
+/// separates the plain AEAD path from the TLS record path, held in the context's
+/// `tls_payload_length`.
+const NO_TLS_PAYLOAD_LENGTH: usize = usize::MAX;
+
+/// The allocation-tracking `file` argument for this row's allocations.
+///
+/// **Measured rather than patterned**: `courts/layout/oracle-mem-file.c` installs
+/// `CRYPTO_set_mem_functions` and reports every distinct `file` the authority passes, and this unit
+/// appears as `providers/implementations/ciphers/cipher_chacha20_poly1305.c` -- **without** the
+/// `../../src/openssl-3.6.4/` prefix, because it is a `.c.in` template the build generates into the
+/// build tree. Its sibling `cipher_chacha20.c` appears with the prefix, and the same program is what
+/// shows that.
+const FILE_CHACHA20_POLY1305: *const c_char =
+    c"providers/implementations/ciphers/cipher_chacha20_poly1305.c".as_ptr();
+
+/// `static const unsigned char zero[4 * CHACHA_BLK_SIZE]` — `cipher_chacha20_poly1305_hw.c:111`.
+/// Four blocks because the compiled arm's `buf_len` reaches 256; see the unit's own note.
+static CHACHA20_POLY1305_ZERO: [c_uchar; 4 * crate::chacha::CHACHA_BLK_SIZE] =
+    [0; 4 * crate::chacha::CHACHA_BLK_SIZE];
+
+/// `POLY1305_BLOCK_SIZE` — `include/crypto/poly1305.h:17`, through the primitive module that
+/// defines it. Kept under the authority's own name because this row uses it for four different
+/// quantities -- the tag length, the poly1305 block size, the AAD pad and the buffer's alignment
+/// mask -- and a renamed alias would hide that they are one constant.
+const POLY1305_BLOCK_SIZE: usize = crate::mac::poly1305::POLY1305_BLOCK_SIZE;
+
+/// The two one-bit members of `PROV_CHACHA20_POLY1305_CTX`, which C packs into one `unsigned int`.
+///
+/// `aad : 1` records that associated data has been fed and still needs its zero pad before the text;
+/// `mac_inited : 1` records that `Poly1305_Init` has run for the current message.
+const CHACHA20_POLY1305_F_AAD: c_uint = 1 << 0;
+const CHACHA20_POLY1305_F_MAC_INITED: c_uint = 1 << 1;
+
+/// `struct { uint64_t aad, text; } len` — `cipher_chacha20_poly1305.h:26-28`.
+///
+/// Both fields are little-endian *on the wire* even on a big-endian host: the authority's
+/// little-endian arms are a `memcpy` of this struct while its big-endian arms write the same
+/// sixteen bytes a byte at a time. Both spellings are transcribed rather than normalised, because
+/// the byte order is what the tag commits to.
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub(crate) struct ChaCha20Poly1305Len {
+    /// `uint64_t aad` — the associated-data length. The TLS arm sets this to
+    /// `EVP_AEAD_TLS1_AAD_LEN` (13) even though it hashes sixteen bytes of `tls_aad`.
+    pub aad: u64,
+    /// `uint64_t text` — the plaintext-or-ciphertext length.
+    pub text: u64,
+}
+
+/// `PROV_CHACHA20_POLY1305_CTX` — `cipher_chacha20_poly1305.h:17-34`.
+///
+/// Measured **848** bytes, with `poly1305` at 504, `nonce` at 752, `tag` at 764, `tls_aad` at 780,
+/// `len` at 800, the bitfield lane at **816**, `tag_len` at 824, `tls_payload_length` at 832 and
+/// `tls_aad_pad_sz` at 840, by `courts/layout/measure-chacha20-poly1305-ctx.c`. The whole struct is
+/// eight-aligned because `POLY1305`'s `double opaque[24]` is, and the four bytes at 820..824 are the
+/// padding that falls out of `usize`'s alignment after a four-byte bitfield lane -- which is why
+/// `len` and the lane are written in that order rather than as one packed word.
+#[repr(C)]
+pub(crate) struct ProvChacha20Poly1305Ctx {
+    /// `PROV_CIPHER_CTX base; /* must be first */`.
+    pub base: ProvCipherCtx,
+    /// `PROV_CHACHA20_CTX chacha` — the row's own ChaCha20, initialised by
+    /// `ossl_chacha20_initctx`, whose hw `cipher` is what enciphers the payload.
+    pub chacha: ProvChacha20Ctx,
+    /// `POLY1305 poly1305` — `crypto/poly1305.h:29-40`'s `struct poly1305_context`.
+    pub poly1305: crate::mac::poly1305::Poly1305,
+    /// `unsigned int nonce[12 / 4]` — the three nonce words `tls_iv_set_fixed` writes and
+    /// `tls_init` merges the sequence number into.
+    pub nonce: [c_uint; CHACHA20_POLY1305_IVLEN / 4],
+    /// `unsigned char tag[POLY1305_BLOCK_SIZE]` — the generated tag.
+    pub tag: [c_uchar; POLY1305_BLOCK_SIZE],
+    /// `unsigned char tls_aad[POLY1305_BLOCK_SIZE]` — sixteen bytes, of which `tls_init` writes
+    /// thirteen and the TLS path hashes all sixteen.
+    pub tls_aad: [c_uchar; POLY1305_BLOCK_SIZE],
+    /// `struct { uint64_t aad, text; } len`.
+    pub len: ChaCha20Poly1305Len,
+    /// `unsigned int aad : 1; unsigned int mac_inited : 1;` — one lane, two bits.
+    pub flags: c_uint,
+    /// `size_t tag_len` — how many bytes of the caller's tag to compare on decrypt. Set by
+    /// `set_ctx_params`' `tag` arm, and read by `get_ctx_params`' `taglen` arm.
+    pub tag_len: usize,
+    /// `size_t tls_payload_length` — the record's payload length, or [`NO_TLS_PAYLOAD_LENGTH`].
+    pub tls_payload_length: usize,
+    /// `size_t tls_aad_pad_sz` — what `tls_init` answered, published as `tlsaadpad`.
+    pub tls_aad_pad_sz: usize,
+}
+
+/// The two-bit lane, read.
+#[inline]
+fn cpp_flag(ctx: *const ProvChacha20Poly1305Ctx, mask: c_uint) -> bool {
+    // SAFETY: the caller holds a live context.
+    unsafe { (*ctx).flags & mask != 0 }
+}
+
+/// The two-bit lane, written — **one bit at a time**, because the authority's `ctx->aad = 0` assigns
+/// the `aad` bitfield and leaves `mac_inited` alone. Clearing the whole lane would be a different
+/// program.
+#[inline]
+fn cpp_set(ctx: *mut ProvChacha20Poly1305Ctx, mask: c_uint, on: bool) {
+    // SAFETY: the caller holds a live context.
+    unsafe {
+        if on {
+            (*ctx).flags |= mask;
+        } else {
+            (*ctx).flags &= !mask;
+        }
+    }
+}
+
+/// `PROV_CIPHER_HW` as *this row's* initialiser leaves it: `init` set, `cipher` **and** `copyctx`
+/// **NULL**.
+///
+/// The authority writes
+///
+/// ```c
+/// static const PROV_CIPHER_HW_CHACHA20_POLY1305 chacha20poly1305_hw = {
+///     { chacha20_poly1305_initkey, NULL },
+///     chacha20_poly1305_aead_cipher,
+///     chacha20_poly1305_initiv,
+///     chacha_poly1305_tls_init,
+///     chacha_poly1305_tls_iv_set_fixed
+/// };
+/// ```
+///
+/// and the inner brace supplies `PROV_CIPHER_HW`'s first two members, so the third is elided to
+/// zero. `courts/layout/oracle-chacha20-poly1305-hw.c` prints all three.
+///
+/// **Why a separate type rather than a `ProvCipherHw`.** `ProvCipherHw::cipher` is a non-nullable
+/// function pointer because every other row in this half has one, and eleven call sites dereference
+/// it; making it an `Option` would force each of those to invent an answer for a null it can never
+/// see. This row's `base.cipher` is genuinely never called, so the null is recorded where it
+/// belongs -- at the row that has it -- and the offsets are held by the size test below.
+#[repr(C)]
+struct Chacha20Poly1305HwBase {
+    /// `int (*init)(PROV_CIPHER_CTX *, const unsigned char *, size_t)` —
+    /// `chacha20_poly1305_initkey`.
+    init: unsafe extern "C" fn(*mut ProvCipherCtx, *const c_uchar, usize) -> c_int,
+    /// `int (*cipher)(PROV_CIPHER_CTX *, unsigned char *, const unsigned char *, size_t)` —
+    /// **NULL**, measured. `None` rather than a raw pointer because a `static` holding this vtable
+    /// has to be `Sync`, and `Option<fn>` is both eight bytes and `Sync` where `*const c_void` is
+    /// not; it is the same device `ProvCipherHw::copyctx` already uses.
+    cipher: Option<
+        unsafe extern "C" fn(*mut ProvCipherCtx, *mut c_uchar, *const c_uchar, usize) -> c_int,
+    >,
+    /// `void (*copyctx)(PROV_CIPHER_CTX *, const PROV_CIPHER_CTX *)` — **NULL**, measured.
+    copyctx: Option<unsafe extern "C" fn(*mut ProvCipherCtx, *const ProvCipherCtx)>,
+}
+
+/// `PROV_CIPHER_HW_CHACHA20_POLY1305` — `cipher_chacha20_poly1305.h:37-44`.
+///
+/// Measured **56** bytes, with the base at 0 and the four function pointers at 24, 32, 40 and 48,
+/// by `courts/layout/oracle-chacha20-poly1305-hw.c` -- which also checks the four are distinct,
+/// so a transcription that shared one initialiser between two members could not pass.
+#[repr(C)]
+struct ProvCipherHwChacha20Poly1305 {
+    /// `PROV_CIPHER_HW base; /* must be first */`.
+    base: Chacha20Poly1305HwBase,
+    /// `int (*aead_cipher)(PROV_CIPHER_CTX *, unsigned char *, size_t *,
+    /// const unsigned char *, size_t)`.
+    aead_cipher: unsafe extern "C" fn(
+        *mut ProvCipherCtx,
+        *mut c_uchar,
+        *mut usize,
+        *const c_uchar,
+        usize,
+    ) -> c_int,
+    /// `int (*initiv)(PROV_CIPHER_CTX *)`.
+    initiv: unsafe extern "C" fn(*mut ProvCipherCtx) -> c_int,
+    /// `int (*tls_init)(PROV_CIPHER_CTX *, unsigned char *, size_t)`.
+    tls_init: unsafe extern "C" fn(*mut ProvCipherCtx, *mut c_uchar, usize) -> c_int,
+    /// `int (*tls_iv_set_fixed)(PROV_CIPHER_CTX *, unsigned char *, size_t)`.
+    tls_iv_set_fixed: unsafe extern "C" fn(*mut ProvCipherCtx, *mut c_uchar, usize) -> c_int,
+}
+
+/// The big-endian spelling of the sixteen-byte length block, `cipher_chacha20_poly1305_hw.c:219-237`
+/// and `:355-373`.
+///
+/// The authority writes these sixteen stores twice, once into the TLS path's `ctr` and once into the
+/// incremental path's `temp`, with identical text. They are factored here rather than duplicated
+/// because a duplicated sixteen-line byte-store sequence is exactly where a transcription typo would
+/// hide, and because the two call sites must produce the same bytes for the two paths of one row to
+/// agree. The little-endian arms are *not* factored: they are a `memcpy` of [`ChaCha20Poly1305Len`]
+/// and have no text to get wrong.
+///
+/// # Safety
+/// `out` is writable for sixteen bytes.
+unsafe fn chacha20_poly1305_len_be(l: &ChaCha20Poly1305Len, out: *mut c_uchar) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut i = 0;
+        while i < 8 {
+            *out.add(i) = (l.aad >> (8 * i)) as c_uchar;
+            *out.add(8 + i) = (l.text >> (8 * i)) as c_uchar;
+            i += 1;
+        }
+    }
+}
+
+/// `static int chacha20_poly1305_initkey(PROV_CIPHER_CTX *bctx, const unsigned char *key,
+/// size_t keylen)` — `cipher_chacha20_poly1305_hw.c:58-73`.
+///
+/// The five resets are **not** a blanket clear. `ctx->aad = 0` assigns the one-bit `aad` lane and
+/// leaves `mac_inited` where it was; the *next* line clears `mac_inited`. `tls_payload_length` goes
+/// back to the sentinel, so a context that had been carrying a TLS record stops doing so.
+///
+/// The key itself is handed to the embedded ChaCha20 through the row's own `einit`/`dinit`, with a
+/// NULL IV and no params, so the recorded direction is `bctx->enc`'s.
+///
+/// # Safety
+/// The hw contract; `bctx` is a live `ProvChacha20Poly1305Ctx`; `key` is readable for `keylen`
+/// bytes.
+unsafe extern "C" fn chacha20_poly1305_initkey(
+    bctx: *mut ProvCipherCtx,
+    key: *const c_uchar,
+    keylen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = bctx.cast::<ProvChacha20Poly1305Ctx>();
+
+        (*ctx).len.aad = 0;
+        (*ctx).len.text = 0;
+        cpp_set(ctx, CHACHA20_POLY1305_F_AAD, false);
+        cpp_set(ctx, CHACHA20_POLY1305_F_MAC_INITED, false);
+        (*ctx).tls_payload_length = NO_TLS_PAYLOAD_LENGTH;
+
+        if bits(bctx) & CTX_ENC != 0 {
+            ossl_chacha20_einit(
+                core::ptr::addr_of_mut!((*ctx).chacha).cast(),
+                key,
+                keylen,
+                ptr::null(),
+                0,
+                ptr::null(),
+            )
+        } else {
+            ossl_chacha20_dinit(
+                core::ptr::addr_of_mut!((*ctx).chacha).cast(),
+                key,
+                keylen,
+                ptr::null(),
+                0,
+                ptr::null(),
+            )
+        }
+    }
+}
+
+/// `static int chacha20_poly1305_initiv(PROV_CIPHER_CTX *bctx)` —
+/// `cipher_chacha20_poly1305_hw.c:75-103`.
+///
+/// **The twelve-byte nonce is left-aligned in a sixteen-byte counter block, not right-aligned.** The
+/// `tempiv` array is zeroed and then `memcpy(tempiv + 16 - 12, bctx->oiv, 12)` puts the nonce at
+/// offset four, which is what makes the block's first word the zero counter and its three remaining
+/// words the nonce -- the shape `ChaCha20_ctr32`'s four-word counter expects. The three nonce words
+/// are then read back *out* of the counter so `tls_init` can merge a sequence number into them.
+///
+/// `bctx->iv_set = 1` is the row's own record that an IV arrived, and it is set
+/// **unconditionally**, even when the embedded init failed -- the authority's order.
+///
+/// # Safety
+/// The hw contract; `bctx` is a live `ProvChacha20Poly1305Ctx`.
+unsafe extern "C" fn chacha20_poly1305_initiv(bctx: *mut ProvCipherCtx) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = bctx.cast::<ProvChacha20Poly1305Ctx>();
+        let mut tempiv = [0 as c_uchar; crate::chacha::CHACHA_CTR_SIZE];
+
+        (*ctx).len.aad = 0;
+        (*ctx).len.text = 0;
+        cpp_set(ctx, CHACHA20_POLY1305_F_AAD, false);
+        cpp_set(ctx, CHACHA20_POLY1305_F_MAC_INITED, false);
+        (*ctx).tls_payload_length = NO_TLS_PAYLOAD_LENGTH;
+
+        ptr::copy_nonoverlapping(
+            (*ctx).base.oiv.as_ptr(),
+            tempiv
+                .as_mut_ptr()
+                .add(crate::chacha::CHACHA_CTR_SIZE - CHACHA20_POLY1305_IVLEN),
+            CHACHA20_POLY1305_IVLEN,
+        );
+
+        let ret = if bits(bctx) & CTX_ENC != 0 {
+            ossl_chacha20_einit(
+                core::ptr::addr_of_mut!((*ctx).chacha).cast(),
+                ptr::null(),
+                0,
+                tempiv.as_ptr(),
+                tempiv.len(),
+                ptr::null(),
+            )
+        } else {
+            ossl_chacha20_dinit(
+                core::ptr::addr_of_mut!((*ctx).chacha).cast(),
+                ptr::null(),
+                0,
+                tempiv.as_ptr(),
+                tempiv.len(),
+                ptr::null(),
+            )
+        };
+        (*ctx).nonce[0] = (*ctx).chacha.counter[1];
+        (*ctx).nonce[1] = (*ctx).chacha.counter[2];
+        (*ctx).nonce[2] = (*ctx).chacha.counter[3];
+        bits_set(bctx, CTX_IV_SET, true);
+        ret
+    }
+}
+
+/// `static int chacha_poly1305_tls_init(PROV_CIPHER_CTX *bctx, unsigned char *aad, size_t alen)` —
+/// `cipher_chacha20_poly1305_hw.c:15-43`.
+///
+/// **Thirteen bytes in, thirteen bytes copied, and the last two of them are rewritten on decrypt.**
+/// The record's own length lives in the AAD's last two bytes (big-endian); the decrypting arm
+/// refuses anything shorter than a tag and then discounts the tag, so the AAD the tag commits to
+/// carries the *plaintext* length. The rewritten bytes go into `ctx->tls_aad`, not into the
+/// caller's buffer -- `aad` is rebound to `ctx->tls_aad` before either store.
+///
+/// The counter merge is RFC 7905's: the record sequence number is the AAD's first eight bytes and is
+/// XORed into the nonce's last two words, leaving `counter[1]` (the block counter's overflow word)
+/// equal to `nonce[0]`.
+///
+/// # Safety
+/// The hw contract; `bctx` is a live `ProvChacha20Poly1305Ctx`; `aad` is readable for `alen` bytes,
+/// or NULL when `alen` is not thirteen.
+unsafe extern "C" fn chacha_poly1305_tls_init(
+    bctx: *mut ProvCipherCtx,
+    aad: *mut c_uchar,
+    alen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = bctx.cast::<ProvChacha20Poly1305Ctx>();
+        let mut len: c_uint;
+
+        if alen != EVP_AEAD_TLS1_AAD_LEN {
+            return 0;
+        }
+
+        ptr::copy_nonoverlapping(aad, (*ctx).tls_aad.as_mut_ptr(), EVP_AEAD_TLS1_AAD_LEN);
+        len = ((*aad.add(EVP_AEAD_TLS1_AAD_LEN - 2) as c_uint) << 8)
+            | (*aad.add(EVP_AEAD_TLS1_AAD_LEN - 1) as c_uint);
+        let aad = (*ctx).tls_aad.as_mut_ptr();
+        if bits(bctx) & CTX_ENC == 0 {
+            if len < POLY1305_BLOCK_SIZE as c_uint {
+                return 0;
+            }
+            len -= POLY1305_BLOCK_SIZE as c_uint;
+            *aad.add(EVP_AEAD_TLS1_AAD_LEN - 2) = (len >> 8) as c_uchar;
+            *aad.add(EVP_AEAD_TLS1_AAD_LEN - 1) = len as c_uchar;
+        }
+        (*ctx).tls_payload_length = len as usize;
+
+        (*ctx).chacha.counter[1] = (*ctx).nonce[0];
+        (*ctx).chacha.counter[2] =
+            (*ctx).nonce[1] ^ crate::chacha::u8tou32(core::slice::from_raw_parts(aad, 4));
+        (*ctx).chacha.counter[3] =
+            (*ctx).nonce[2] ^ crate::chacha::u8tou32(core::slice::from_raw_parts(aad.add(4), 4));
+        cpp_set(ctx, CHACHA20_POLY1305_F_MAC_INITED, false);
+
+        POLY1305_BLOCK_SIZE as c_int
+    }
+}
+
+/// `static int chacha_poly1305_tls_iv_set_fixed(PROV_CIPHER_CTX *bctx, unsigned char *fixed,
+/// size_t flen)` — `cipher_chacha20_poly1305_hw.c:45-56`.
+///
+/// **Writes six words from three**: each nonce word is stored into both `nonce[i]` and
+/// `chacha.counter[i + 1]`, so the fixed IV is live in the counter block *immediately* rather than
+/// waiting for `tls_init` to merge a sequence number into it. `tls_init` then XORs on top.
+///
+/// # Safety
+/// The hw contract; `bctx` is a live `ProvChacha20Poly1305Ctx`; `fixed` is readable for `flen`
+/// bytes, or NULL when `flen` is not twelve.
+unsafe extern "C" fn chacha_poly1305_tls_iv_set_fixed(
+    bctx: *mut ProvCipherCtx,
+    fixed: *mut c_uchar,
+    flen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = bctx.cast::<ProvChacha20Poly1305Ctx>();
+
+        if flen != CHACHA20_POLY1305_IVLEN {
+            return 0;
+        }
+        (*ctx).nonce[0] = crate::chacha::u8tou32(core::slice::from_raw_parts(fixed, 4));
+        (*ctx).chacha.counter[1] = (*ctx).nonce[0];
+        (*ctx).nonce[1] = crate::chacha::u8tou32(core::slice::from_raw_parts(fixed.add(4), 4));
+        (*ctx).chacha.counter[2] = (*ctx).nonce[1];
+        (*ctx).nonce[2] = crate::chacha::u8tou32(core::slice::from_raw_parts(fixed.add(8), 4));
+        (*ctx).chacha.counter[3] = (*ctx).nonce[2];
+        1
+    }
+}
+
+/// `static int chacha20_poly1305_tls_cipher(PROV_CIPHER_CTX *bctx, unsigned char *out,
+/// size_t *out_padlen, const unsigned char *in, size_t len)` —
+/// `cipher_chacha20_poly1305_hw.c:116-261`, the `XOR128_HELPERS` arm with the two perlasm helpers
+/// replaced by their portable equivalent.
+///
+/// **`buf`, `ctr` and `tohash` deliberately overlap.** `tohash` is `buf + 48`, `ctr` is `buf + 64`,
+/// and the AAD is copied into `tohash` before the keystream that would have occupied those sixteen
+/// bytes has been used -- which it never is, because enciphering starts at `ctr`. The ciphertext is
+/// written back into `ctr` as it is produced, so the region `[tohash, ctr + padded_plen)` is exactly
+/// the `aad16 || ciphertext || zero-pad` that Poly1305 hashes, and the length block is written at
+/// the advanced `ctr`. The `plen == 0` case leaves `ctr` at `buf + 64`, which is why the length
+/// block lands right after the AAD instead of after a ciphertext that does not exist.
+///
+/// Two arms, chosen by `plen <= 3 * CHACHA_BLK_SIZE`: the fast one generates
+/// `128 + roundup(plen, 64)` bytes of keystream in one call and enciphers from block *one* of it,
+/// while the slow one generates a single block for the Poly1305 key and then hands the whole
+/// payload to `ChaCha20_ctr32` with the block counter at one. They agree byte for byte; see the
+/// unit's own note.
+///
+/// # Safety
+/// The hw contract: `bctx` is a live `ProvChacha20Poly1305Ctx`; `in` is readable for `len` bytes;
+/// `out` is writable for at least `len` bytes; `out_padlen` is writable. `len` must be the record's
+/// payload length plus sixteen, which `aead_cipher` has already checked.
+unsafe fn chacha20_poly1305_tls_cipher(
+    bctx: *mut ProvCipherCtx,
+    out: *mut c_uchar,
+    out_padlen: *mut usize,
+    in_: *const c_uchar,
+    len: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = bctx.cast::<ProvChacha20Poly1305Ctx>();
+        let poly = core::ptr::addr_of_mut!((*ctx).poly1305);
+        let enc = bits(bctx) & CTX_ENC != 0;
+        let plen = (*ctx).tls_payload_length;
+        let mut in_ = in_;
+        let mut out = out;
+        let mut len = len;
+
+        // `storage[sizeof(zero) + 32]`, aligned as the authority aligns it. The alignment is kept
+        // even though this crate's `ChaCha20_ctr32` is the C reference (D263) and does not need it:
+        // it is part of how the authority's buffer is laid out, and the `+ 32` slack is what the
+        // alignment consumes.
+        let mut storage = [0 as c_uchar; 4 * crate::chacha::CHACHA_BLK_SIZE + 32];
+        let base = storage.as_ptr() as usize;
+        let buf = storage
+            .as_mut_ptr()
+            .add((0usize.wrapping_sub(base)) & (POLY1305_BLOCK_SIZE - 1));
+        let mut ctr = buf.add(crate::chacha::CHACHA_BLK_SIZE);
+        // **`tohash` is rebound, not merely re-length'd, in the slow arm below.** The authority
+        // writes `tohash = ctr` there, so the length block is hashed from wherever `ctr` currently
+        // is -- `buf + 64` in the slow arm, and the advanced end of the padded ciphertext in the
+        // fast one. Leaving it at `buf + 48` and only zeroing `tohash_len` hashes sixteen bytes of
+        // untouched buffer instead of the length block: the ciphertext is unaffected and the tag is
+        // wrong, which is what the differential court caught.
+        let mut tohash = buf.add(crate::chacha::CHACHA_BLK_SIZE - POLY1305_BLOCK_SIZE);
+
+        let buf_len: usize;
+        let mut tohash_len: usize;
+
+        if plen <= 3 * crate::chacha::CHACHA_BLK_SIZE {
+            (*ctx).chacha.counter[0] = 0;
+            buf_len = (plen + 2 * crate::chacha::CHACHA_BLK_SIZE - 1)
+                & (0usize.wrapping_sub(crate::chacha::CHACHA_BLK_SIZE));
+            crate::chacha::ChaCha20_ctr32(
+                buf,
+                CHACHA20_POLY1305_ZERO.as_ptr(),
+                buf_len,
+                (*ctx).chacha.key.as_ptr(),
+                (*ctx).chacha.counter.as_ptr(),
+            );
+            crate::mac::poly1305::Poly1305_Init(poly, buf);
+            (*ctx).chacha.partial_len = 0;
+            ptr::copy_nonoverlapping((*ctx).tls_aad.as_ptr(), tohash, POLY1305_BLOCK_SIZE);
+            tohash_len = POLY1305_BLOCK_SIZE;
+            (*ctx).len.aad = EVP_AEAD_TLS1_AAD_LEN as u64;
+            (*ctx).len.text = plen as u64;
+
+            if plen != 0 {
+                // The portable equivalent of `xor128_{encrypt,decrypt}_n_pad`: XOR the payload with
+                // the keystream from block one, leave the *ciphertext* in `ctr`, then zero-pad and
+                // hand back the advanced pointer.
+                let mut i = 0;
+                if enc {
+                    while i < plen {
+                        let v = *ctr.add(i) ^ *in_.add(i);
+                        *ctr.add(i) = v;
+                        *out.add(i) = v;
+                        i += 1;
+                    }
+                } else {
+                    while i < plen {
+                        let c = *in_.add(i);
+                        *out.add(i) = *ctr.add(i) ^ c;
+                        *ctr.add(i) = c;
+                        i += 1;
+                    }
+                }
+                let tail = (0usize.wrapping_sub(plen)) & (POLY1305_BLOCK_SIZE - 1);
+                ptr::write_bytes(ctr.add(plen), 0, tail);
+                ctr = ctr.add(plen + tail);
+
+                in_ = in_.add(plen);
+                out = out.add(plen);
+                tohash_len = ctr.offset_from(tohash) as usize;
+            }
+        } else {
+            buf_len = crate::chacha::CHACHA_BLK_SIZE;
+            (*ctx).chacha.counter[0] = 0;
+            crate::chacha::ChaCha20_ctr32(
+                buf,
+                CHACHA20_POLY1305_ZERO.as_ptr(),
+                buf_len,
+                (*ctx).chacha.key.as_ptr(),
+                (*ctx).chacha.counter.as_ptr(),
+            );
+            crate::mac::poly1305::Poly1305_Init(poly, buf);
+            (*ctx).chacha.counter[0] = 1;
+            (*ctx).chacha.partial_len = 0;
+            crate::mac::poly1305::Poly1305_Update(
+                poly,
+                (*ctx).tls_aad.as_ptr(),
+                POLY1305_BLOCK_SIZE,
+            );
+            // `tohash = ctr`: the length block goes straight after the single keystream block.
+            tohash = ctr;
+            tohash_len = 0;
+            (*ctx).len.aad = EVP_AEAD_TLS1_AAD_LEN as u64;
+            (*ctx).len.text = plen as u64;
+
+            if enc {
+                crate::chacha::ChaCha20_ctr32(
+                    out,
+                    in_,
+                    plen,
+                    (*ctx).chacha.key.as_ptr(),
+                    (*ctx).chacha.counter.as_ptr(),
+                );
+                crate::mac::poly1305::Poly1305_Update(poly, out, plen);
+            } else {
+                crate::mac::poly1305::Poly1305_Update(poly, in_, plen);
+                crate::chacha::ChaCha20_ctr32(
+                    out,
+                    in_,
+                    plen,
+                    (*ctx).chacha.key.as_ptr(),
+                    (*ctx).chacha.counter.as_ptr(),
+                );
+            }
+
+            in_ = in_.add(plen);
+            out = out.add(plen);
+            let tail = (0usize.wrapping_sub(plen)) & (POLY1305_BLOCK_SIZE - 1);
+            crate::mac::poly1305::Poly1305_Update(poly, CHACHA20_POLY1305_ZERO.as_ptr(), tail);
+        }
+
+        // The length block, at the advanced `ctr` in the fast arm and at `tohash` in the slow one --
+        // which is the same address there.
+        if cfg!(target_endian = "little") {
+            ptr::copy_nonoverlapping(
+                core::ptr::addr_of!((*ctx).len).cast::<c_uchar>(),
+                ctr,
+                POLY1305_BLOCK_SIZE,
+            );
+        } else {
+            chacha20_poly1305_len_be(&(*ctx).len, ctr);
+        }
+        tohash_len += POLY1305_BLOCK_SIZE;
+
+        crate::mac::poly1305::Poly1305_Update(poly, tohash, tohash_len);
+        OPENSSL_cleanse(buf.cast(), buf_len);
+        crate::mac::poly1305::Poly1305_Final(
+            poly,
+            if enc { (*ctx).tag.as_mut_ptr() } else { tohash },
+        );
+
+        (*ctx).tls_payload_length = NO_TLS_PAYLOAD_LENGTH;
+
+        if enc {
+            ptr::copy_nonoverlapping((*ctx).tag.as_ptr(), out, POLY1305_BLOCK_SIZE);
+        } else {
+            if CRYPTO_memcmp(tohash.cast(), in_.cast(), POLY1305_BLOCK_SIZE) != 0 {
+                if len > POLY1305_BLOCK_SIZE {
+                    ptr::write_bytes(
+                        out.sub(len - POLY1305_BLOCK_SIZE),
+                        0,
+                        len - POLY1305_BLOCK_SIZE,
+                    );
+                }
+                return 0;
+            }
+            // Strip the tag.
+            len -= POLY1305_BLOCK_SIZE;
+        }
+
+        *out_padlen = len;
+        1
+    }
+}
+
+/// `static int chacha20_poly1305_aead_cipher(PROV_CIPHER_CTX *bctx, unsigned char *out,
+/// size_t *outl, const unsigned char *in, size_t inl)` —
+/// `cipher_chacha20_poly1305_hw.c:266-399`.
+///
+/// **The row's three calls are three shapes of one function.** The `in == NULL` call is the finish;
+/// `in != NULL && out == NULL` is associated data; `in != NULL && out != NULL` is text. The `goto`s
+/// in the authority are kept as a labelled block so that a failure leaves `*outl` at zero rather
+/// than at the running length, which is what the two labels do.
+///
+/// **`mac_inited` is cleared by the finish and not by the init**, so a context can carry a tag
+/// across a finish and a subsequent `Poly1305_Init`. The `len` block is the little-endian `memcpy`
+/// of the struct on this profile.
+///
+/// # Safety
+/// The hw contract: `bctx` is a live `ProvChacha20Poly1305Ctx`; `outl` is writable; `in` is
+/// readable for `inl` bytes or NULL; `out` is writable for `inl` bytes or NULL.
+unsafe extern "C" fn chacha20_poly1305_aead_cipher(
+    bctx: *mut ProvCipherCtx,
+    out: *mut c_uchar,
+    outl: *mut usize,
+    in_: *const c_uchar,
+    inl: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = bctx.cast::<ProvChacha20Poly1305Ctx>();
+        let poly = core::ptr::addr_of_mut!((*ctx).poly1305);
+        let enc = bits(bctx) & CTX_ENC != 0;
+        let mut plen = (*ctx).tls_payload_length;
+        let mut inl = inl;
+        let mut in_ = in_;
+        let mut out = out;
+        let mut olen: usize = 0;
+        let mut rv: c_int = 0;
+
+        'arm: {
+            if !cpp_flag(ctx, CHACHA20_POLY1305_F_MAC_INITED) {
+                if plen != NO_TLS_PAYLOAD_LENGTH && !out.is_null() {
+                    if inl != plen + POLY1305_BLOCK_SIZE {
+                        break 'arm;
+                    }
+                    return chacha20_poly1305_tls_cipher(bctx, out, outl, in_, inl);
+                }
+
+                (*ctx).chacha.counter[0] = 0;
+                crate::chacha::ChaCha20_ctr32(
+                    (*ctx).chacha.buf.as_mut_ptr(),
+                    CHACHA20_POLY1305_ZERO.as_ptr(),
+                    crate::chacha::CHACHA_BLK_SIZE,
+                    (*ctx).chacha.key.as_ptr(),
+                    (*ctx).chacha.counter.as_ptr(),
+                );
+                crate::mac::poly1305::Poly1305_Init(poly, (*ctx).chacha.buf.as_ptr());
+                (*ctx).chacha.counter[0] = 1;
+                (*ctx).chacha.partial_len = 0;
+                (*ctx).len.aad = 0;
+                (*ctx).len.text = 0;
+                cpp_set(ctx, CHACHA20_POLY1305_F_MAC_INITED, true);
+                if plen != NO_TLS_PAYLOAD_LENGTH {
+                    crate::mac::poly1305::Poly1305_Update(
+                        poly,
+                        (*ctx).tls_aad.as_ptr(),
+                        EVP_AEAD_TLS1_AAD_LEN,
+                    );
+                    (*ctx).len.aad = EVP_AEAD_TLS1_AAD_LEN as u64;
+                    cpp_set(ctx, CHACHA20_POLY1305_F_AAD, true);
+                }
+            }
+
+            if !in_.is_null() {
+                if out.is_null() {
+                    // Associated data. Refused once any text has been seen, because Poly1305 is a
+                    // one-pass hash and the pad between the two halves would already have been fixed.
+                    if (*ctx).len.text != 0 {
+                        break 'arm;
+                    }
+                    crate::mac::poly1305::Poly1305_Update(poly, in_, inl);
+                    (*ctx).len.aad = (*ctx).len.aad.wrapping_add(inl as u64);
+                    cpp_set(ctx, CHACHA20_POLY1305_F_AAD, true);
+                    olen = inl;
+                    rv = 1;
+                    break 'arm;
+                } else {
+                    if cpp_flag(ctx, CHACHA20_POLY1305_F_AAD) {
+                        let rem = ((*ctx).len.aad % POLY1305_BLOCK_SIZE as u64) as usize;
+                        if rem != 0 {
+                            crate::mac::poly1305::Poly1305_Update(
+                                poly,
+                                CHACHA20_POLY1305_ZERO.as_ptr(),
+                                POLY1305_BLOCK_SIZE - rem,
+                            );
+                        }
+                        cpp_set(ctx, CHACHA20_POLY1305_F_AAD, false);
+                    }
+
+                    (*ctx).tls_payload_length = NO_TLS_PAYLOAD_LENGTH;
+                    if plen == NO_TLS_PAYLOAD_LENGTH {
+                        plen = inl;
+                    } else if inl != plen + POLY1305_BLOCK_SIZE {
+                        break 'arm;
+                    }
+
+                    let chacha_hw = (*ctx).chacha.base.hw;
+                    if enc {
+                        ((*chacha_hw).cipher)(
+                            core::ptr::addr_of_mut!((*ctx).chacha.base),
+                            out,
+                            in_,
+                            plen,
+                        );
+                        crate::mac::poly1305::Poly1305_Update(poly, out, plen);
+                        in_ = in_.add(plen);
+                        out = out.add(plen);
+                        (*ctx).len.text = (*ctx).len.text.wrapping_add(plen as u64);
+                    } else {
+                        crate::mac::poly1305::Poly1305_Update(poly, in_, plen);
+                        ((*chacha_hw).cipher)(
+                            core::ptr::addr_of_mut!((*ctx).chacha.base),
+                            out,
+                            in_,
+                            plen,
+                        );
+                        in_ = in_.add(plen);
+                        out = out.add(plen);
+                        (*ctx).len.text = (*ctx).len.text.wrapping_add(plen as u64);
+                    }
+                }
+            }
+
+            // The explicit finish, or the TLS mode's implicit one.
+            if in_.is_null() || inl != plen {
+                let mut temp = [0 as c_uchar; POLY1305_BLOCK_SIZE];
+
+                if cpp_flag(ctx, CHACHA20_POLY1305_F_AAD) {
+                    let rem = ((*ctx).len.aad % POLY1305_BLOCK_SIZE as u64) as usize;
+                    if rem != 0 {
+                        crate::mac::poly1305::Poly1305_Update(
+                            poly,
+                            CHACHA20_POLY1305_ZERO.as_ptr(),
+                            POLY1305_BLOCK_SIZE - rem,
+                        );
+                    }
+                    cpp_set(ctx, CHACHA20_POLY1305_F_AAD, false);
+                }
+                let rem = ((*ctx).len.text % POLY1305_BLOCK_SIZE as u64) as usize;
+                if rem != 0 {
+                    crate::mac::poly1305::Poly1305_Update(
+                        poly,
+                        CHACHA20_POLY1305_ZERO.as_ptr(),
+                        POLY1305_BLOCK_SIZE - rem,
+                    );
+                }
+
+                if cfg!(target_endian = "little") {
+                    crate::mac::poly1305::Poly1305_Update(
+                        poly,
+                        core::ptr::addr_of!((*ctx).len).cast::<c_uchar>(),
+                        POLY1305_BLOCK_SIZE,
+                    );
+                } else {
+                    chacha20_poly1305_len_be(&(*ctx).len, temp.as_mut_ptr());
+                    crate::mac::poly1305::Poly1305_Update(poly, temp.as_ptr(), POLY1305_BLOCK_SIZE);
+                }
+                crate::mac::poly1305::Poly1305_Final(
+                    poly,
+                    if enc {
+                        (*ctx).tag.as_mut_ptr()
+                    } else {
+                        temp.as_mut_ptr()
+                    },
+                );
+                cpp_set(ctx, CHACHA20_POLY1305_F_MAC_INITED, false);
+
+                if !in_.is_null() && inl != plen {
+                    if enc {
+                        ptr::copy_nonoverlapping((*ctx).tag.as_ptr(), out, POLY1305_BLOCK_SIZE);
+                    } else {
+                        if CRYPTO_memcmp(temp.as_ptr().cast(), in_.cast(), POLY1305_BLOCK_SIZE) != 0
+                        {
+                            ptr::write_bytes(out.sub(plen), 0, plen);
+                            break 'arm;
+                        }
+                        // Strip the tag.
+                        inl -= POLY1305_BLOCK_SIZE;
+                    }
+                // The authority spells this as `else if (!bctx->enc) { if (CRYPTO_memcmp(...)) goto
+                // err; }`; the two conditions are one, because a comparison has no side effect.
+                } else if !enc
+                    && CRYPTO_memcmp(
+                        temp.as_ptr().cast(),
+                        (*ctx).tag.as_ptr().cast(),
+                        (*ctx).tag_len,
+                    ) != 0
+                {
+                    break 'arm;
+                }
+            }
+
+            olen = inl;
+            rv = 1;
+        }
+
+        *outl = olen;
+        rv
+    }
+}
+
+/// `static const PROV_CIPHER_HW_CHACHA20_POLY1305 chacha20poly1305_hw` —
+/// `cipher_chacha20_poly1305_hw.c:402-409`, with its measured null `cipher`.
+static CHACHA20_POLY1305_HW: ProvCipherHwChacha20Poly1305 = ProvCipherHwChacha20Poly1305 {
+    base: Chacha20Poly1305HwBase {
+        init: chacha20_poly1305_initkey,
+        cipher: None,
+        copyctx: None,
+    },
+    aead_cipher: chacha20_poly1305_aead_cipher,
+    initiv: chacha20_poly1305_initiv,
+    tls_init: chacha_poly1305_tls_init,
+    tls_iv_set_fixed: chacha_poly1305_tls_iv_set_fixed,
+};
+
+/// `const PROV_CIPHER_HW *ossl_prov_cipher_hw_chacha20_poly1305(size_t keybits)` —
+/// `cipher_chacha20_poly1305_hw.c:411-414`. `keybits` is ignored: one ChaCha20 and one poly1305,
+/// and `courts/layout/oracle-chacha20-poly1305-hw.c` checks that the selector answers the same
+/// pointer for 0 and 256.
+///
+/// The cast is the authority's own `(PROV_CIPHER_HW *)` -- this row does not *have* a
+/// `PROV_CIPHER_HW` to point at, which is the whole reason [`Chacha20Poly1305HwBase`] exists.
+fn ossl_prov_cipher_hw_chacha20_poly1305(_keybits: usize) -> *const ProvCipherHw {
+    core::ptr::addr_of!(CHACHA20_POLY1305_HW.base).cast::<ProvCipherHw>()
+}
+
+/// `static void *chacha20_poly1305_newctx(void *provctx)` —
+/// `cipher_chacha20_poly1305.c:43-60`.
+///
+/// **Three steps and a NULL `provctx`.** `ossl_cipher_generic_initkey` is handed the hw selector's
+/// answer and a **NULL** provider context -- not `provctx` -- so the row's `ctx->base.libctx` is
+/// left NULL exactly as the authority leaves it, and D117's residual applies here as it does to
+/// every other cipher row. `tls_payload_length` is set to the sentinel *after* the generic init,
+/// which does not touch it; and `ossl_chacha20_initctx` initialises the embedded ChaCha20 with the
+/// **`ChaCha20` row's** flags and no provider context of its own.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe fn chacha20_poly1305_newctx(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let ctx = CRYPTO_zalloc(
+            core::mem::size_of::<ProvChacha20Poly1305Ctx>(),
+            FILE_CHACHA20_POLY1305,
+            LINE,
+        )
+        .cast::<ProvChacha20Poly1305Ctx>();
+        if !ctx.is_null() {
+            ossl_cipher_generic_initkey(
+                ctx.cast(),
+                CHACHA20_POLY1305_KEYLEN * 8,
+                CHACHA20_POLY1305_BLKLEN * 8,
+                CHACHA20_POLY1305_IVLEN * 8,
+                CHACHA20_POLY1305_MODE,
+                CHACHA20_POLY1305_FLAGS,
+                ossl_prov_cipher_hw_chacha20_poly1305(CHACHA20_POLY1305_KEYLEN * 8),
+                ptr::null_mut(),
+            );
+            (*ctx).tls_payload_length = NO_TLS_PAYLOAD_LENGTH;
+            ossl_chacha20_initctx(core::ptr::addr_of_mut!((*ctx).chacha));
+        }
+        let _ = provctx;
+        ctx.cast()
+    }
+}
+
+/// `static void *chacha20_poly1305_dupctx(void *provctx)` —
+/// `cipher_chacha20_poly1305.c:62-76`.
+///
+/// A whole-context `OPENSSL_memdup`, with the one field that is a separate allocation re-duplicated
+/// when `alloced` says it belongs to this context. The duplicate carries the embedded ChaCha20 *and*
+/// its `hw` pointer, so a duplicated context resumes the same stream.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn chacha20_poly1305_dupctx(vctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvChacha20Poly1305Ctx>();
+        if ctx.is_null() {
+            return ptr::null_mut();
+        }
+        let dctx = CRYPTO_memdup(
+            ctx.cast(),
+            core::mem::size_of::<ProvChacha20Poly1305Ctx>(),
+            FILE_CHACHA20_POLY1305,
+            LINE,
+        )
+        .cast::<ProvChacha20Poly1305Ctx>();
+        if !dctx.is_null() && !(*dctx).base.tlsmac.is_null() && (*dctx).base.alloced != 0 {
+            (*dctx).base.tlsmac = CRYPTO_memdup(
+                (*dctx).base.tlsmac.cast(),
+                (*dctx).base.tlsmacsize,
+                FILE_CHACHA20_POLY1305,
+                LINE,
+            )
+            .cast::<c_uchar>();
+            if (*dctx).base.tlsmac.is_null() {
+                CRYPTO_free(dctx.cast(), FILE_CHACHA20_POLY1305, LINE);
+                return ptr::null_mut();
+            }
+        }
+        dctx.cast()
+    }
+}
+
+/// `static void chacha20_poly1305_freectx(void *vctx)` —
+/// `cipher_chacha20_poly1305.c:78-86`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn chacha20_poly1305_freectx(vctx: *mut c_void) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if !vctx.is_null() {
+            ossl_cipher_generic_reset_ctx(vctx.cast::<ProvCipherCtx>());
+            CRYPTO_clear_free(
+                vctx,
+                core::mem::size_of::<ProvChacha20Poly1305Ctx>(),
+                FILE_CHACHA20_POLY1305,
+                LINE,
+            );
+        }
+    }
+}
+
+/// `static int chacha20_poly1305_get_params(OSSL_PARAM params[])` —
+/// `cipher_chacha20_poly1305.c:88-94`. `ivbits` is 96, which is the twelve-byte nonce.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn chacha20_poly1305_get_params(params: *mut OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        ossl_cipher_generic_get_params(
+            params,
+            CHACHA20_POLY1305_MODE,
+            CHACHA20_POLY1305_FLAGS,
+            CHACHA20_POLY1305_KEYLEN * 8,
+            CHACHA20_POLY1305_BLKLEN * 8,
+            CHACHA20_POLY1305_IVLEN * 8,
+        )
+    }
+}
+
+/// The five keys the generated `get_ctx_params` decoder locates, each with the raise site of its own
+/// repeated-parameter refusal (`cipher_chacha20_poly1305.c:142`, `:153`, `:176`, `:185`, `:197`).
+const CHACHA20_POLY1305_GET_CTX_PARAMS_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 5] = [
+    (
+        &err_sites::PROV_CIPHER_CHACHA20_POLY1305_142,
+        OSSL_CIPHER_PARAM_IVLEN,
+    ),
+    (
+        &err_sites::PROV_CIPHER_CHACHA20_POLY1305_153,
+        OSSL_CIPHER_PARAM_KEYLEN,
+    ),
+    (
+        &err_sites::PROV_CIPHER_CHACHA20_POLY1305_176,
+        OSSL_CIPHER_PARAM_AEAD_TAGLEN,
+    ),
+    (
+        &err_sites::PROV_CIPHER_CHACHA20_POLY1305_185,
+        OSSL_CIPHER_PARAM_AEAD_TAG,
+    ),
+    (
+        &err_sites::PROV_CIPHER_CHACHA20_POLY1305_197,
+        OSSL_CIPHER_PARAM_AEAD_TLS1_AAD_PAD,
+    ),
+];
+
+/// `chacha20_poly1305_known_gettable_ctx_params` —
+/// `cipher_chacha20_poly1305.c`'s generated list, in its own order: `keylen`, `ivlen`, `taglen`,
+/// `tag`, `tlsaadpad`.
+static CHACHA20_POLY1305_GETTABLE_CTX_PARAMS: [OsslParam; 6] = [
+    param_size_t(OSSL_CIPHER_PARAM_KEYLEN),
+    param_size_t(OSSL_CIPHER_PARAM_IVLEN),
+    param_size_t(OSSL_CIPHER_PARAM_AEAD_TAGLEN),
+    param_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG),
+    param_size_t(OSSL_CIPHER_PARAM_AEAD_TLS1_AAD_PAD),
+    END,
+];
+
+/// `static const OSSL_PARAM *chacha20_poly1305_gettable_ctx_params(void *cctx, void *provctx)` —
+/// `cipher_chacha20_poly1305.c:261-265`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn chacha20_poly1305_gettable_ctx_params(
+    _cctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    CHACHA20_POLY1305_GETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `static int chacha20_poly1305_get_ctx_params(void *vctx, OSSL_PARAM params[])` —
+/// `cipher_chacha20_poly1305.c:204-259`.
+///
+/// **The `tag` arm refuses on three separate grounds and one of them is direction.** A caller
+/// reading the tag from a *decrypting* context gets `PROV_R_TAG_NOT_SET` rather than the tag it
+/// supplied, and one reading it with a buffer outside `1..=16` gets
+/// `PROV_R_INVALID_TAG_LENGTH` -- so `EVP_CTRL_AEAD_GET_TAG` on the wrong side of an operation is a
+/// refusal and not an empty string.
+///
+/// `keylen` and `ivlen` answer the *constants*, not the context's fields, so a context whose
+/// lengths could not be changed still reports them.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn chacha20_poly1305_get_ctx_params(
+    vctx: *mut c_void,
+    params: *mut OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvChacha20Poly1305Ctx>();
+
+        if let Some(site) = repeated_param_site(
+            params.cast_const(),
+            &CHACHA20_POLY1305_GET_CTX_PARAMS_DECODER_KEYS,
+        ) {
+            return fail_at(site);
+        }
+
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_IVLEN);
+        if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, CHACHA20_POLY1305_IVLEN) == 0 {
+            return fail_at(&err_sites::PROV_CIPHER_CHACHA20_POLY1305_221);
+        }
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_KEYLEN);
+        if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, CHACHA20_POLY1305_KEYLEN) == 0 {
+            return fail_at(&err_sites::PROV_CIPHER_CHACHA20_POLY1305_227);
+        }
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_AEAD_TAGLEN);
+        if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, (*ctx).tag_len) == 0 {
+            return fail_at(&err_sites::PROV_CIPHER_CHACHA20_POLY1305_233);
+        }
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_AEAD_TLS1_AAD_PAD);
+        if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, (*ctx).tls_aad_pad_sz) == 0 {
+            return fail_at(&err_sites::PROV_CIPHER_CHACHA20_POLY1305_239);
+        }
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_AEAD_TAG);
+        if !p.is_null() {
+            if (*p).data_type != OSSL_PARAM_OCTET_STRING {
+                return fail_at(&err_sites::PROV_CIPHER_CHACHA20_POLY1305_245);
+            }
+            if bits(core::ptr::addr_of!((*ctx).base)) & CTX_ENC == 0 {
+                return fail_at(&err_sites::PROV_CIPHER_CHACHA20_POLY1305_249);
+            }
+            if (*p).data_size == 0 || (*p).data_size > POLY1305_BLOCK_SIZE {
+                return fail_at(&err_sites::PROV_CIPHER_CHACHA20_POLY1305_253);
+            }
+            ptr::copy_nonoverlapping(
+                (*ctx).tag.as_ptr(),
+                (*p).data.cast::<c_uchar>(),
+                (*p).data_size,
+            );
+        }
+        1
+    }
+}
+
+/// `const OSSL_PARAM *chacha20_poly1305_settable_ctx_params(void *cctx, void *provctx)` —
+/// `cipher_chacha20_poly1305.c:379-383`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn chacha20_poly1305_settable_ctx_params(
+    _cctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    CHACHA20_POLY1305_SETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `chacha20_poly1305_known_settable_ctx_params` —
+/// `cipher_chacha20_poly1305.c`'s generated list: `keylen`, `ivlen`, `tag`, `tlsaad`, `tlsivfixed`.
+static CHACHA20_POLY1305_SETTABLE_CTX_PARAMS: [OsslParam; 6] = [
+    param_size_t(OSSL_CIPHER_PARAM_KEYLEN),
+    param_size_t(OSSL_CIPHER_PARAM_IVLEN),
+    param_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG),
+    param_octet_string(OSSL_CIPHER_PARAM_AEAD_TLS1_AAD),
+    param_octet_string(OSSL_CIPHER_PARAM_AEAD_TLS1_IV_FIXED),
+    END,
+];
+
+/// The five keys the generated `set_ctx_params` decoder locates, with the raise sites of their
+/// repeated-parameter refusals (`cipher_chacha20_poly1305.c:305`, `:316`, `:331`, `:350`, `:361`).
+const CHACHA20_POLY1305_SET_CTX_PARAMS_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 5] = [
+    (
+        &err_sites::PROV_CIPHER_CHACHA20_POLY1305_305,
+        OSSL_CIPHER_PARAM_IVLEN,
+    ),
+    (
+        &err_sites::PROV_CIPHER_CHACHA20_POLY1305_316,
+        OSSL_CIPHER_PARAM_KEYLEN,
+    ),
+    (
+        &err_sites::PROV_CIPHER_CHACHA20_POLY1305_331,
+        OSSL_CIPHER_PARAM_AEAD_TAG,
+    ),
+    (
+        &err_sites::PROV_CIPHER_CHACHA20_POLY1305_350,
+        OSSL_CIPHER_PARAM_AEAD_TLS1_AAD,
+    ),
+    (
+        &err_sites::PROV_CIPHER_CHACHA20_POLY1305_361,
+        OSSL_CIPHER_PARAM_AEAD_TLS1_IV_FIXED,
+    ),
+];
+
+/// `static int chacha20_poly1305_set_ctx_params(void *vctx, const OSSL_PARAM params[])` —
+/// `cipher_chacha20_poly1305.c:383-461`.
+///
+/// Five arms, and **no `ossl_param_is_empty` short-circuit** -- unlike the `ChaCha20` row's setter,
+/// which has one. That is not a difference in what a NULL array does (the generated decoder's own
+/// `if (p != NULL)` guard leaves every field unset, and every `locate` then answers NULL, so the
+/// function returns 1 either way); it is a difference in *text*, kept because a reader comparing the
+/// two rows should see the authority's shape.
+///
+/// **`tag` is length-checked before it is direction-checked, and the direction check only fires when
+/// the caller supplied a pointer.** A decrypting context with a NULL `tag->data` therefore sets
+/// `tag_len` without copying anything -- the idiom `EVP_CTRL_AEAD_SET_TAG` uses with a NULL pointer
+/// in some callers -- while an encrypting one with a non-NULL pointer is refused with
+/// `PROV_R_TAG_NOT_NEEDED`.
+///
+/// **`tlsaad` and `tlsivfixed` go through the hw vtable**, so the AAD arm is where the record
+/// sequence number reaches the counter and where `tls_payload_length` stops being the sentinel --
+/// which is what makes the next `update` a TLS record.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn chacha20_poly1305_set_ctx_params(
+    vctx: *mut c_void,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvChacha20Poly1305Ctx>();
+        let hw = (*ctx).base.hw.cast::<ProvCipherHwChacha20Poly1305>();
+        let mut len: usize = 0;
+
+        if let Some(site) =
+            repeated_param_site(params, &CHACHA20_POLY1305_SET_CTX_PARAMS_DECODER_KEYS)
+        {
+            return fail_at(site);
+        }
+
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_KEYLEN);
+        if !p.is_null() {
+            if crate::params::OSSL_PARAM_get_size_t(p, &mut len) == 0 {
+                return fail_at(&err_sites::PROV_CIPHER_CHACHA20_POLY1305_396);
+            }
+            if len != CHACHA20_POLY1305_KEYLEN {
+                return fail_at(&err_sites::PROV_CIPHER_CHACHA20_POLY1305_400);
+            }
+        }
+
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_IVLEN);
+        if !p.is_null() {
+            if crate::params::OSSL_PARAM_get_size_t(p, &mut len) == 0 {
+                return fail_at(&err_sites::PROV_CIPHER_CHACHA20_POLY1305_407);
+            }
+            if len != CHACHA20_POLY1305_MAX_IVLEN {
+                return fail_at(&err_sites::PROV_CIPHER_CHACHA20_POLY1305_411);
+            }
+        }
+
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_AEAD_TAG);
+        if !p.is_null() {
+            if (*p).data_type != OSSL_PARAM_OCTET_STRING {
+                return fail_at(&err_sites::PROV_CIPHER_CHACHA20_POLY1305_418);
+            }
+            if (*p).data_size == 0 || (*p).data_size > POLY1305_BLOCK_SIZE {
+                return fail_at(&err_sites::PROV_CIPHER_CHACHA20_POLY1305_422);
+            }
+            if !(*p).data.is_null() {
+                if bits(core::ptr::addr_of!((*ctx).base)) & CTX_ENC != 0 {
+                    return fail_at(&err_sites::PROV_CIPHER_CHACHA20_POLY1305_427);
+                }
+                ptr::copy_nonoverlapping(
+                    (*p).data.cast::<c_uchar>(),
+                    (*ctx).tag.as_mut_ptr(),
+                    (*p).data_size,
+                );
+            }
+            (*ctx).tag_len = (*p).data_size;
+        }
+
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_AEAD_TLS1_AAD);
+        if !p.is_null() {
+            if (*p).data_type != OSSL_PARAM_OCTET_STRING {
+                return fail_at(&err_sites::PROV_CIPHER_CHACHA20_POLY1305_437);
+            }
+            len = ((*hw).tls_init)(
+                core::ptr::addr_of_mut!((*ctx).base),
+                (*p).data.cast::<c_uchar>(),
+                (*p).data_size,
+            ) as usize;
+            if len == 0 {
+                return fail_at(&err_sites::PROV_CIPHER_CHACHA20_POLY1305_442);
+            }
+            (*ctx).tls_aad_pad_sz = len;
+        }
+
+        let p =
+            crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_AEAD_TLS1_IV_FIXED);
+        if !p.is_null() {
+            if (*p).data_type != OSSL_PARAM_OCTET_STRING {
+                return fail_at(&err_sites::PROV_CIPHER_CHACHA20_POLY1305_450);
+            }
+            if ((*hw).tls_iv_set_fixed)(
+                core::ptr::addr_of_mut!((*ctx).base),
+                (*p).data.cast::<c_uchar>(),
+                (*p).data_size,
+            ) == 0
+            {
+                return fail_at(&err_sites::PROV_CIPHER_CHACHA20_POLY1305_456);
+            }
+        }
+        1
+    }
+}
+
+/// `static int chacha20_poly1305_einit(void *vctx, const unsigned char *key, size_t keylen,
+/// const unsigned char *iv, size_t ivlen, const OSSL_PARAM params[])` —
+/// `cipher_chacha20_poly1305.c:463-481`.
+///
+/// **Three steps but only two guard conditions.** The generic init runs with a NULL params array and
+/// checks `ossl_prov_is_running()` itself; `hw->initiv` then runs **only when an IV was actually
+/// supplied**, which is what lets a second init without an IV keep the nonce `tls_iv_set_fixed`
+/// installed; and the row's own `set_ctx_params` runs last, so a `tlsivfixed` in the caller's array
+/// is applied *after* `initiv` has collected the counter from `oiv` and therefore wins.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn chacha20_poly1305_einit(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut ret = ossl_cipher_generic_einit(vctx, key, keylen, iv, ivlen, ptr::null());
+        if ret != 0 && !iv.is_null() {
+            let ctx = vctx.cast::<ProvCipherCtx>();
+            let hw = (*ctx).hw.cast::<ProvCipherHwChacha20Poly1305>();
+            ((*hw).initiv)(ctx);
+        }
+        if ret != 0 && chacha20_poly1305_set_ctx_params(vctx, params) == 0 {
+            ret = 0;
+        }
+        ret
+    }
+}
+
+/// `static int chacha20_poly1305_dinit(...)` — `cipher_chacha20_poly1305.c:483-501`. The decrypt
+/// twin, identical but for the generic call it makes.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn chacha20_poly1305_dinit(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut ret = ossl_cipher_generic_dinit(vctx, key, keylen, iv, ivlen, ptr::null());
+        if ret != 0 && !iv.is_null() {
+            let ctx = vctx.cast::<ProvCipherCtx>();
+            let hw = (*ctx).hw.cast::<ProvCipherHwChacha20Poly1305>();
+            ((*hw).initiv)(ctx);
+        }
+        if ret != 0 && chacha20_poly1305_set_ctx_params(vctx, params) == 0 {
+            ret = 0;
+        }
+        ret
+    }
+}
+
+/// `static int chacha20_poly1305_cipher(void *vctx, unsigned char *out, size_t *outl,
+/// size_t outsize, const unsigned char *in, size_t inl)` — `cipher_chacha20_poly1305.c:503-520`.
+///
+/// The one-shot entry point, and the row's only `PROV_R_OUTPUT_BUFFER_TOO_SMALL`. `outl` is written
+/// by `aead_cipher` only on the way out -- a refusal leaves it as the caller left it, which is why
+/// there is no `*outl = 0` here.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn chacha20_poly1305_cipher(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    outl: *mut usize,
+    outsize: usize,
+    in_: *const c_uchar,
+    inl: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvCipherCtx>();
+        let hw = (*ctx).hw.cast::<ProvCipherHwChacha20Poly1305>();
+
+        if is_running() == 0 {
+            return 0;
+        }
+        if outsize < inl {
+            return fail_at(&err_sites::PROV_CIPHER_CHACHA20_POLY1305_512);
+        }
+        if ((*hw).aead_cipher)(ctx, out, outl, in_, inl) == 0 {
+            return 0;
+        }
+        1
+    }
+}
+
+/// `static int chacha20_poly1305_update(void *vctx, unsigned char *out, size_t *outl,
+/// size_t outsize, const unsigned char *in, size_t inl)` — `cipher_chacha20_poly1305.c:522-538`.
+///
+/// **A zero-length update is a no-op that answers `*outl = 0`**, and it is a separate entry point
+/// from `chacha20_poly1305_cipher` only so that this case does not run the running check twice.
+/// `EVP_EncryptUpdate(ctx, out, &outl, in, 0)` therefore succeeds without touching the poly1305
+/// state, which is what lets a caller feed an empty fragment.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn chacha20_poly1305_update(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    outl: *mut usize,
+    outsize: usize,
+    in_: *const c_uchar,
+    inl: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if inl == 0 {
+            if is_running() == 0 {
+                return 0;
+            }
+            *outl = 0;
+            return 1;
+        }
+        chacha20_poly1305_cipher(vctx, out, outl, outsize, in_, inl)
+    }
+}
+
+/// `static int chacha20_poly1305_final(void *vctx, unsigned char *out, size_t *outl,
+/// size_t outsize)` — `cipher_chacha20_poly1305.c:540-554`.
+///
+/// **The tag comes from `aead_cipher` with a NULL input, and `*outl` is forced to zero afterwards.**
+/// Unlike `AES-*-GCM-SIV`, whose finish is a separate hw function, this row's finish *is* the
+/// `in == NULL` shape of the same `aead_cipher` -- so the tag is produced by the very call that also
+/// decides whether a supplied tag matched. `<= 0` rather than `== 0` because the authority writes
+/// `if (... <= 0) return 0;`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn chacha20_poly1305_final(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    outl: *mut usize,
+    _outsize: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvCipherCtx>();
+        let hw = (*ctx).hw.cast::<ProvCipherHwChacha20Poly1305>();
+
+        if is_running() == 0 {
+            return 0;
+        }
+        if ((*hw).aead_cipher)(ctx, out, outl, ptr::null(), 0) <= 0 {
+            return 0;
+        }
+        *outl = 0;
+        1
+    }
+}
+
+/// `const OSSL_DISPATCH ossl_chacha20_ossl_poly1305_functions[]` —
+/// `cipher_chacha20_poly1305.c:556-579`: fourteen function entries and the terminator.
+///
+/// **`update` and `cipher` are different functions here**, where every block-mode row shares one
+/// generic pair. The order is the authority's, and `GETTABLE_PARAMS` is
+/// `ossl_cipher_generic_gettable_params` directly because the row does not override it.
+pub(crate) static CHACHA20_POLY1305_FUNCTIONS: [OsslDispatch; 15] = [
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_NEWCTX,
+        function: chacha20_poly1305_newctx as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_FREECTX,
+        function: chacha20_poly1305_freectx as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_DUPCTX,
+        function: chacha20_poly1305_dupctx as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_ENCRYPT_INIT,
+        function: chacha20_poly1305_einit as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_DECRYPT_INIT,
+        function: chacha20_poly1305_dinit as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_UPDATE,
+        function: chacha20_poly1305_update as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_FINAL,
+        function: chacha20_poly1305_final as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_CIPHER,
+        function: chacha20_poly1305_cipher as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_GET_PARAMS,
+        function: chacha20_poly1305_get_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_GETTABLE_PARAMS,
+        function: ossl_cipher_generic_gettable_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_GET_CTX_PARAMS,
+        function: chacha20_poly1305_get_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS,
+        function: chacha20_poly1305_gettable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_SET_CTX_PARAMS,
+        function: chacha20_poly1305_set_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS,
+        function: chacha20_poly1305_settable_ctx_params as *mut c_void,
     },
     OsslDispatch {
         function_id: OSSL_DISPATCH_END,
@@ -15752,13 +17284,23 @@ mod tests {
 
     #[test]
     fn the_cipher_table_terminates_and_names_the_rows() {
-        assert_eq!(DEFLT_CIPHERS.len(), 131);
+        assert_eq!(DEFLT_CIPHERS.len(), 132);
         // SAFETY: every entry up to the terminator is initialised.
-        let last = DEFLT_CIPHERS[130].alg.algorithm_names;
+        let last = DEFLT_CIPHERS[131].alg.algorithm_names;
         assert!(last.is_null(), "the table is NULL-name terminated");
         // SAFETY: the first row's name is a `'static` C string.
         let first = unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[0].alg.algorithm_names) };
         assert_eq!(first.to_bytes(), b"NULL");
+        // SAFETY: the last *named* row's name is a `'static` C string, and it is the authority's
+        // last cipher row (`defltprov.c:327`).
+        let penultimate =
+            unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[130].alg.algorithm_names) };
+        assert_eq!(penultimate.to_bytes(), b"ChaCha20-Poly1305");
+        // The filtered copy the `OSSL_OP_CIPHER` arm answers is the same length, so the two
+        // cannot drift apart silently.
+        // SAFETY: the cell is a `'static` array of `OsslAlgorithm`; only its length is read.
+        let filtered = unsafe { &*EXPORTED_CIPHERS.0.get() };
+        assert_eq!(filtered.len(), 132);
     }
 
     #[test]
@@ -15837,6 +17379,69 @@ mod tests {
         assert_eq!(CHACHA20_KEYLEN, 32);
         assert_eq!(CHACHA20_BLKLEN, 1);
         assert_eq!(CHACHA20_IVLEN, 16);
+    }
+
+    /// **The `ChaCha20-Poly1305` row's context and vtable.** The numbers are the authority's own,
+    /// measured by `courts/layout/measure-chacha20-poly1305-ctx.c`: 848 bytes, with `base` at 0,
+    /// `chacha` at 192, `poly1305` at 504, `nonce` at 752, `tag` at 764, `tls_aad` at 780, `len` at
+    /// 800, the bitfield lane at 816, `tag_len` at 824, `tls_payload_length` at 832 and
+    /// `tls_aad_pad_sz` at 840.
+    ///
+    /// Three of those offsets carry behaviour rather than bookkeeping. `poly1305` is where the hw's
+    /// `aead_cipher` casts the base pointer onto, so a field out of place there is a silent wrong
+    /// tag. The lane at 816 is followed by four bytes of padding because the next member is a
+    /// `usize`, which is why `len` and the lane are separate fields instead of one packed word. And
+    /// `tag_len` at 824 is where the authority's `unsigned int aad : 1; unsigned int mac_inited : 1;`
+    /// ends up after the compiler has aligned what follows it.
+    ///
+    /// The vtable's shape is measured too -- 56 bytes, base at 0 and the four function pointers at
+    /// 24, 32, 40 and 48 -- by `courts/layout/oracle-chacha20-poly1305-hw.c`, which also prints the
+    /// three base members: `init` non-null, `cipher` and `copyctx` **NULL**. That is why this row's
+    /// base is [`Chacha20Poly1305HwBase`] and not a [`ProvCipherHw`].
+    #[test]
+    fn the_chacha20_poly1305_context_is_the_authoritys_size() {
+        assert_eq!(core::mem::size_of::<ProvChacha20Poly1305Ctx>(), 848);
+        assert_eq!(core::mem::align_of::<ProvChacha20Poly1305Ctx>(), 8);
+        assert_eq!(core::mem::offset_of!(ProvChacha20Poly1305Ctx, base), 0);
+        assert_eq!(core::mem::offset_of!(ProvChacha20Poly1305Ctx, chacha), 192);
+        assert_eq!(
+            core::mem::offset_of!(ProvChacha20Poly1305Ctx, poly1305),
+            504
+        );
+        assert_eq!(core::mem::offset_of!(ProvChacha20Poly1305Ctx, nonce), 752);
+        assert_eq!(core::mem::offset_of!(ProvChacha20Poly1305Ctx, tag), 764);
+        assert_eq!(core::mem::offset_of!(ProvChacha20Poly1305Ctx, tls_aad), 780);
+        assert_eq!(core::mem::offset_of!(ProvChacha20Poly1305Ctx, len), 800);
+        assert_eq!(core::mem::offset_of!(ProvChacha20Poly1305Ctx, flags), 816);
+        assert_eq!(core::mem::offset_of!(ProvChacha20Poly1305Ctx, tag_len), 824);
+        assert_eq!(
+            core::mem::offset_of!(ProvChacha20Poly1305Ctx, tls_payload_length),
+            832
+        );
+        assert_eq!(
+            core::mem::offset_of!(ProvChacha20Poly1305Ctx, tls_aad_pad_sz),
+            840
+        );
+        // `POLY1305` is the authority's `struct poly1305_context`, `double opaque[24]` and all;
+        // 248 bytes is what makes the whole context 848 rather than something smaller.
+        assert_eq!(core::mem::size_of::<crate::mac::poly1305::Poly1305>(), 248);
+        assert_eq!(POLY1305_BLOCK_SIZE, 16);
+        assert_eq!(CHACHA20_POLY1305_KEYLEN, 32);
+        assert_eq!(CHACHA20_POLY1305_BLKLEN, 1);
+        assert_eq!(CHACHA20_POLY1305_IVLEN, 12);
+        assert_eq!(CHACHA20_POLY1305_FLAGS, 3);
+        assert_eq!(NO_TLS_PAYLOAD_LENGTH, usize::MAX);
+
+        assert_eq!(core::mem::size_of::<Chacha20Poly1305HwBase>(), 24);
+        assert_eq!(core::mem::size_of::<ProvCipherHwChacha20Poly1305>(), 56);
+        assert_eq!(core::mem::align_of::<ProvCipherHwChacha20Poly1305>(), 8);
+        // The base is `ProvCipherHw`'s first 24 bytes in the same order, which is what makes the
+        // cast in `ossl_prov_cipher_hw_chacha20_poly1305` a layout equivalence.
+        assert_eq!(core::mem::size_of::<ProvCipherHw>(), 24);
+        assert_eq!(core::mem::offset_of!(Chacha20Poly1305HwBase, init), 0);
+        // The two nulls are `None`, and this is the assertion that says so rather than a comment.
+        assert!(CHACHA20_POLY1305_HW.base.cipher.is_none());
+        assert!(CHACHA20_POLY1305_HW.base.copyctx.is_none());
     }
 
     /// **Every landed provider cipher context, measured against the authority's own compiler.**
