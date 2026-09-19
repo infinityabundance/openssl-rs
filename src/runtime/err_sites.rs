@@ -18842,6 +18842,76 @@ pub(crate) const PROV_GMAC_PROV_354: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `siphash_get_ctx_params_decoder` at `providers/implementations/macs/siphash_prov.c:190` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SIPHASH_PROV_190: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/siphash_prov.c",
+    line: 190,
+    func: c"siphash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `siphash_get_ctx_params_decoder` at `providers/implementations/macs/siphash_prov.c:201` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SIPHASH_PROV_201: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/siphash_prov.c",
+    line: 201,
+    func: c"siphash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `siphash_get_ctx_params_decoder` at `providers/implementations/macs/siphash_prov.c:212` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SIPHASH_PROV_212: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/siphash_prov.c",
+    line: 212,
+    func: c"siphash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `siphash_set_params_decoder` at `providers/implementations/macs/siphash_prov.c:285` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SIPHASH_PROV_285: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/siphash_prov.c",
+    line: 285,
+    func: c"siphash_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `siphash_set_params_decoder` at `providers/implementations/macs/siphash_prov.c:296` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SIPHASH_PROV_296: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/siphash_prov.c",
+    line: 296,
+    func: c"siphash_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `siphash_set_params_decoder` at `providers/implementations/macs/siphash_prov.c:307` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SIPHASH_PROV_307: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/siphash_prov.c",
+    line: 307,
+    func: c"siphash_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `siphash_set_params_decoder` at `providers/implementations/macs/siphash_prov.c:318` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SIPHASH_PROV_318: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/siphash_prov.c",
+    line: 318,
+    func: c"siphash_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
 /// `digest_default_get_params_decoder` at `providers/implementations/digests/digestcommon.c:56` (PROV_R_REPEATED_PARAMETER).
 pub(crate) const PROV_DIGESTCOMMON_56: ErrSite = ErrSite {
     file: c"providers/implementations/digests/digestcommon.c",
@@ -20814,6 +20884,13 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_GMAC_PROV_301,
     PROV_GMAC_PROV_312,
     PROV_GMAC_PROV_354,
+    PROV_SIPHASH_PROV_190,
+    PROV_SIPHASH_PROV_201,
+    PROV_SIPHASH_PROV_212,
+    PROV_SIPHASH_PROV_285,
+    PROV_SIPHASH_PROV_296,
+    PROV_SIPHASH_PROV_307,
+    PROV_SIPHASH_PROV_318,
     PROV_DIGESTCOMMON_56,
     PROV_DIGESTCOMMON_67,
     PROV_DIGESTCOMMON_78,

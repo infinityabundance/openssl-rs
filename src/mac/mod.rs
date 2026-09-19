@@ -11,3 +11,4 @@
 
 pub mod cmac;
 pub mod hmac;
+pub mod siphash;

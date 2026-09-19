@@ -30,7 +30,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 58,
-      "language_surface_not_modelled_by_name": 3130,
+      "language_surface_not_modelled_by_name": 3132,
       "planned_prerequisites": 14
     },
     "census_by_unit": {
@@ -230,6 +230,7 @@
         "crypto/sha/sha1dgst.c": 2,
         "crypto/sha/sha3.c": 5,
         "crypto/sha/sha512.c": 7,
+        "crypto/siphash/siphash.c": 2,
         "crypto/sm3/sm3.c": 16,
         "crypto/sparse_array.c": 7,
         "crypto/stack/stack.c": 18,
@@ -357,8 +358,8 @@
       ]
     },
     "checked": {
-      "authority_units": 168,
-      "crate_modules": 226,
+      "authority_units": 169,
+      "crate_modules": 227,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 25,
       "divergence_names_covered": 34,
@@ -480,7 +481,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "92ef53e6525bc54b73ac0f58c6c87c5564deb423a054ee6ea1fb90af62c729b5",
+  "body_hash": "eadce062e4c8571a55f53083ce4537b8deae4939088709cce81ac56b20a0f1e0",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -501,7 +502,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "f9f518efc5bd64842f57e66f804ed7e127f76d15ae293e6fdc9c1ac45da0632a"
+      "sha256": "a2eab40c1c489c155e56bde21afaef7ffc8eaca5280c583d68f132ef61e7ba27"
     },
     {
       "name": "symbol-ownership",
@@ -516,12 +517,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "2f0259975978530f2e7994af3300a339f751d612ccf71e537b2131fb0dfa6ff1"
+      "sha256": "00ab01fdec7eb5b6392aa35a97d8e885c374dd85e46c6cae4e9d3db17ae6b542"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "766034a12a20ade241a5173d64cae73f8c3f77e6544369a3b473260e32213e7d"
+      "sha256": "cf83539dfe24eee7ab6a403073704fd16ea7497b1131c2785575c48e5a52624e"
     },
     {
       "name": "prerequisites",
