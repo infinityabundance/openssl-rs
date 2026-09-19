@@ -390,6 +390,16 @@ a recorded Phase 9 hand-off rather than open work, because both its no-IV encryp
 (`ciphercommon_gcm.c.in:423`) and its TLS arm (`:536`) call RAND_bytes_ex, which `rand.h` owns
 (D234) — and then 8.4's RSA object, whose constructor is `RSA_new`.
 
+**Non-export prerequisites that the export ledger cannot see.** Three of 8.3's MAC rows need
+internal units as well as engines, and an internal unit has no `libcrypto` symbol for a ledger row to
+move when it lands. They are recorded here so that "no `OSSL_OP_MAC` row moved" is not read as "no
+work happened": `include/internal/constant_time.h`'s seven helpers (D250), `PROV_DIGEST` as the
+digest object `hmac_prov.c` stores (D249), and `ssl/record/methods/ssl3_cbc.c`'s
+`ssl3_cbc_digest_record` (D251), which is HMAC's TLS arm. A fourth, `blake2_mac_impl.c`, is 8.3's
+BLAKE2 MAC rows' and has not landed. Each is evidenced by a tracked expectation table the authority
+itself produced, not by a court observation, because the court-coverage atlas covers exports; see
+D251's closing note, which names the missing plane rather than assuming one.
+
 ### The sixteen recorded hand-offs, and why the four key types are not hand-offs
 
 Sixteen of the 786 rows are deferred to Phase 9 by `forensics/phase8-obligations.py`'s

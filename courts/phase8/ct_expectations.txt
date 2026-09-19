@@ -1,11 +1,11 @@
 # Constant-time helper expectations, generated from the authority's own header.
 #
-# Generator: court/gen-constant-time-values.c (tracked).
+# Generator: courts/phase8/gen-constant-time-values.c (tracked).
 # Command, inside the court container:
 #   A=forensics/authorities/src/openssl-3.6.4
 #   P=forensics/authorities/prefix/openssl-3.6.4-production
 #   clang -std=c11 -O1 -I "$P/include" -I "$A/include" -I "$A" \
-#     -o /tmp/ctvec court/gen-constant-time-values.c && /tmp/ctvec
+#     -o /tmp/ctvec courts/phase8/gen-constant-time-values.c && /tmp/ctvec
 #
 # Every field is hexadecimal, including the expected mask, so the reader has one base.
 # Section markers are kept, so a test can attribute a row to the helper that produced it.

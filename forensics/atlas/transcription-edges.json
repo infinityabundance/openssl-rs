@@ -684,6 +684,13 @@
         "translation_unit": "crypto/siphash/siphash.c"
       },
       {
+        "module": "src/mac/ssl3_cbc.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "1/1",
+        "translation_unit": "ssl/record/methods/libdefault-lib-ssl3_cbc.c"
+      },
+      {
         "module": "src/modes/ccm.rs",
         "phase": 8,
         "phase_source": "module-declaration",
