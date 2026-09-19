@@ -35,12 +35,14 @@ What it reads, and what it derives rather than types
 
 Every row is emitted with the provider, the operation, its position in the table, the
 primary name and aliases, the property definition, the dispatch-table symbol, the
-capability predicate (for the `ALGC(...)` rows), the owning phase, the state and the
-blocker. Only two things are authored, because they are policy rather than measurement:
-`forensics/atlas/provider-algorithm-plans.json`'s per-operation default owner and its
-per-row overrides. **A row with no owner is a failure**, which is the enforcement: a row
-the authority publishes and the crate does not cannot go unnoticed, because it has to be
-classified before this tool will write its output.
+capability predicate (for the `ALGC(...)` rows), the owning phase, the
+`implementation_state` and the blocker, plus a derived `projection` block that says which
+stratum each unlanded row is *open for* and which rows a stratum has *handed on*
+(docs/DECISIONS.md D295). Only two things are authored, because they are policy rather than
+measurement: `forensics/atlas/provider-algorithm-plans.json`'s per-operation default owner and
+its per-row overrides. **A row the plan does not classify is a failure**, which is the
+enforcement: a row the authority publishes and the crate does not cannot go unnoticed, because
+it has to be classified before this tool will write its output.
 
 The capability filter is a prerequisite, not a later repair
 -----------------------------------------------------------
@@ -136,10 +138,12 @@ CLAIM = (
     "inventory, the names, the property definitions, the dispatch symbols, the capability "
     "predicates and the row order are generated from the pinned provider translation units "
     "with the profile's own `configuration.h` guards applied; the dispatch-table symbol is "
-    "never typed. `state` is `implemented` when the crate publishes the row, `open` when it "
-    "is this stratum's remaining work, and `deferred` when it is handed to a later phase, in "
-    "which case `blocked_by` names the blocker. Only the owning phase and the blocker are "
-    "authored, in `provider-algorithm-plans.json`; a row with neither is a failure and no "
+    "never typed. `implementation_state` is `implemented` when the crate publishes the row and "
+    "`unimplemented` when it does not, which is a fact about the row alone; whether such a row "
+    "is *open for* a stratum or *handed on by* it is the `projection` block, derived from "
+    "`owning_phase` rather than stored, and is the same computation under every stratum "
+    "(docs/DECISIONS.md D295). `owning_phase` and `blocked_by` are the only authored inputs, "
+    "in `provider-algorithm-plans.json`; a row the plan does not classify is a failure and no "
     "output is written. A row here is NOT an exported symbol and carries no ABI obligation."
 )
 
@@ -687,6 +691,37 @@ def primary(alias_string: str) -> str:
     return alias_string.split(":")[0]
 
 
+def provider_projection(rows: list[dict]) -> dict:
+    """`open` and `deferred` per stratum, **derived** from `owning_phase` (D295).
+
+    This is the block that replaces a stored phase-relative state. `open[N]` is the number of rows
+    the plan gives stratum N that the crate has not landed -- the row set that blocks N's
+    completion. `handed_on[N]` is the number of unlanded rows the plan gives a *later* stratum,
+    which are the rows N has handed on rather than left undone. Both are functions of the row set
+    alone, so running this census while a different stratum is active cannot move them, which is
+    exactly what the deleted `"open" if phase == 8 else "deferred"` could not promise.
+
+    The strata are the ones the plan names, read from the rows, so a stratum added to
+    `provider-algorithm-plans.json` appears here without an edit -- the same discovery rule the
+    rest of this file follows.
+    """
+    phases = sorted({int(r["owning_phase"]) for r in rows})
+    unlanded = [r for r in rows if r["implementation_state"] == "unimplemented"]
+    return {
+        "open": {str(p): sum(1 for r in unlanded if int(r["owning_phase"]) == p) for p in phases},
+        "handed_on": {
+            str(p): sum(1 for r in unlanded if int(r["owning_phase"]) > p) for p in phases
+        },
+        "what": (
+            "`open[N]` are the rows the plan gives stratum N that the crate does not publish, and "
+            "`handed_on[N]` are the unlanded rows the plan gives a later stratum. Both are derived "
+            "from each row's `owning_phase` and `implementation_state` and are not stored on the "
+            "row, because a stored `open`/`deferred` is a statement about which stratum was "
+            "active on the day the census ran (docs/DECISIONS.md D295)."
+        ),
+    }
+
+
 # --- plans ------------------------------------------------------------------------------------
 
 
@@ -1052,7 +1087,7 @@ def weak_tier() -> int:
     required = {
         "provider", "operation", "operation_id", "row_order", "algorithm_names", "aliases",
         "property_definition", "dispatch_table_symbol", "capability_predicate", "source",
-        "table_symbol", "state", "owning_phase", "blocked_by",
+        "table_symbol", "implementation_state", "owning_phase", "blocked_by",
     }
     problems: list[str] = []
     if body.get("row_count") != len(rows):
@@ -1062,17 +1097,51 @@ def weak_tier() -> int:
         missing = required - set(r)
         if missing:
             problems.append(f"{r.get('algorithm_names')}: missing {sorted(missing)}")
-        if r.get("state") not in ("implemented", "open", "deferred"):
-            problems.append(f"{r.get('algorithm_names')}: illegal state {r.get('state')!r}")
+        if r.get("implementation_state") not in ("implemented", "unimplemented"):
+            problems.append(
+                f"{r.get('algorithm_names')}: illegal implementation_state "
+                f"{r.get('implementation_state')!r}"
+            )
         ident = (r.get("provider"), r.get("operation"), r.get("table_symbol"), r.get("row_order"))
         if ident in identities:
             problems.append(f"double-counted row {ident}")
         identities.add(ident)
+        # **The retired field name is rejected rather than ignored** (D295). A row carrying `state`
+        # is either a stale artefact or a hand-edit that reintroduced the stratum-relative value
+        # this change removed, and a reader that quietly used `implementation_state` beside it
+        # would leave the stale one for every other consumer.
+        if "state" in r:
+            problems.append(
+                f"{r.get('algorithm_names')}: carries the retired `state` field; the row state is "
+                f"`implementation_state` and open/deferred are the `projection` block"
+            )
     for p in body["providers"]:
         if sum(t["rows"] for t in p["tables"]) != len(
             [r for r in rows if r["provider"] == p["provider"]]
         ):
             problems.append(f"provider {p['provider']}: table counts do not sum to its rows")
+
+    # The projection is derived, so it is checked against the rows it is derived from rather than
+    # trusted. A hand-edited or one-generation-stale `projection` is a failure here, which is what
+    # makes the block evidence instead of a summary (docs/DECISIONS.md D295).
+    projection = body.get("projection")
+    if not isinstance(projection, dict) or "open" not in projection or "handed_on" not in projection:
+        problems.append("the `projection` block is absent or incomplete")
+    else:
+        unlanded = [r for r in rows if r["implementation_state"] == "unimplemented"]
+        phases = sorted({int(r["owning_phase"]) for r in rows})
+        want_open = {
+            str(p): sum(1 for r in unlanded if int(r["owning_phase"]) == p) for p in phases
+        }
+        want_handed = {
+            str(p): sum(1 for r in unlanded if int(r["owning_phase"]) > p) for p in phases
+        }
+        if projection.get("open") != want_open:
+            problems.append(f"projection.open {projection.get('open')} != {want_open}")
+        if projection.get("handed_on") != want_handed:
+            problems.append(
+                f"projection.handed_on {projection.get('handed_on')} != {want_handed}"
+            )
     if problems:
         for p in problems[:20]:
             print(f"  {p}", file=sys.stderr)
@@ -1173,12 +1242,56 @@ def self_test(auth: Authority) -> int:
         ],
     )
 
+    # The weak tier's own checks, provoked the same way (D295). It reads the committed artefact
+    # with the authority absent, so both new invariants are exercised against **mutated copies of
+    # the real file**: a row that reintroduces the retired `state` field, and a `projection` block
+    # that has drifted from the rows it is claimed to be derived from. A check nobody can make fail
+    # is not evidence, and these two are the ones a later session would otherwise weaken.
+    global OUT
+    real_out = OUT
+    committed = json.loads(real_out.read_text(encoding="utf-8"))
+
+    def weak_tier_with(label: str, mutate) -> None:
+        # `global OUT` is needed **here as well as in `self_test`**: the rebinding is what the check
+        # under test reads, and a nested function that assigns it without the declaration
+        # silences the check instead of provoking it -- which is how this self-test's first run
+        # reported both invariants as "NOT caught" while the weak tier was reading the real file.
+        global OUT
+        broken = json.loads(json.dumps(committed))
+        mutate(broken)
+        probe = real_out.with_name("provider-algorithms.self-test.json")
+        probe.write_text(json.dumps(broken), encoding="utf-8")
+        OUT = probe
+        try:
+            caught = weak_tier() != 0
+        finally:
+            OUT = real_out
+            probe.unlink(missing_ok=True)
+        if not caught:
+            problems.append(f"weak tier: {label} NOT caught, so the check is not fail-closed")
+        else:
+            print(f"[provider-algorithms] ok   weak tier caught {label}")
+
+    weak_tier_with(
+        "a row carrying the retired `state` field",
+        lambda b: b["body"]["rows"][0].__setitem__("state", "open"),
+    )
+
+    def drift(b: dict) -> None:
+        opens = b["body"]["projection"]["open"]
+        opens[next(iter(opens))] = int(opens[next(iter(opens))]) + 1
+
+    weak_tier_with("a `projection.open` that drifted from the rows", drift)
+
     if problems:
         print("[provider-algorithms] SELF-TEST FAILED:", file=sys.stderr)
         for p in problems:
             print(f"  {p}", file=sys.stderr)
         return 1
-    print("[provider-algorithms] self-test ok: all six ways to defeat the census are caught")
+    print(
+        "[provider-algorithms] self-test ok: all six ways to defeat the acquisition census, and "
+        "both ways to defeat the weak-tier reader, are caught"
+    )
     return 0
 
 
@@ -1272,6 +1385,11 @@ def main(argv: list[str]) -> int:
                     "source": rel_source,
                     "table_symbol": t["table"],
                     "capability_filtered": t["table"] in filtered,
+                    # **The starting state is an assertion, not a default.** Every row of the
+                    # authority's tables is unlanded until the join below proves the crate
+                    # publishes it, so a row that never reaches the join is reported unlanded
+                    # rather than silently missing a field (docs/DECISIONS.md D295).
+                    "implementation_state": "unimplemented",
                 }
                 census_rows.append(entry)
         providers.append(
@@ -1375,31 +1493,49 @@ def main(argv: list[str]) -> int:
                     f"[provider-algorithms] fatal: {provider}/{operation}/{alias} matches "
                     f"{len(hits)} authority rows, so the crate row is ambiguous"
                 )
-            hits[0]["state"] = "implemented"
+            hits[0]["implementation_state"] = "implemented"
             hits[0]["crate_dispatch"] = dispatch
             matched.setdefault((provider, operation), []).append((hits[0], dispatch))
 
+    # --- the owning phase, and the one place this file used to be stratum-relative (D295) ---
+    #
+    # The plan classifies **every** row of every admitted provider's tables -- `operation_defaults`
+    # covers a whole operation and `overrides` carve out the rows a subphase names differently -- so
+    # `plan_for` answers for a row the crate has landed exactly as it answers for one it has not.
+    # That is what makes `owning_phase` a fact about the row rather than about the day it was
+    # written.
+    #
+    # The previous form derived the state directly:
+    #
+    #     row["state"] = "open" if phase == 8 else "deferred"
+    #
+    # which is a statement about stratum 8 rather than about the row. It was correct while exactly
+    # one stratum's provider rows were being landed, and it was wrong the moment a second stratum
+    # became active: phase 9's activation would have reclassified phase 8's eleven open cipher rows
+    # as `deferred`, and `phase_state.py`'s rule -- "a stratum may not be complete while any row it
+    # owns is open" -- would then have let phase 8 reach `open_in_this_stratum == 0` with eleven
+    # rows never published. Whether a row is *open for* a stratum or *handed on by* it is a
+    # projection over `owning_phase` and the stratum being judged, so `state` is gone and
+    # `implementation_state` is a statement the row cannot lose.
     for row in census_rows:
-        if row.get("state") == "implemented":
-            continue
         phase, blocker, matched_by = plan_for(plan, row["provider"], row["operation"], row)
         if phase is None:
             raise CensusError(
                 "[provider-algorithms] fatal: no owning phase for "
                 f"{row['provider']}/{row['operation']}/{row['algorithm_names']} "
                 f"({row['dispatch_table_symbol']}, {row['source']}); a row the authority "
-                "publishes and the crate does not must be classified, not dropped"
+                "publishes must be classified, not dropped"
             )
-        row["state"] = "open" if phase == 8 else "deferred"
         row["owning_phase"] = phase
-        row["blocked_by"] = blocker
-        row["plan_match"] = matched_by
-
-    for row in census_rows:
-        if row["state"] == "implemented":
-            row.setdefault("owning_phase", 8)
-            row.setdefault("blocked_by", None)
-            row.setdefault("plan_match", "crate-table")
+        if row["implementation_state"] == "implemented":
+            # An implemented row is blocked by nothing, and the plan's `blocked_by` for it is the
+            # reason it *was* blocked. Recording a stale reason beside a landed row is a second
+            # thing to keep true, and the census already refuses a `blocked_by` it cannot check.
+            row["blocked_by"] = None
+            row["plan_match"] = "crate-table"
+        else:
+            row["blocked_by"] = blocker
+            row["plan_match"] = matched_by
 
     for (provider, operation), pairs in sorted(matched.items()):
         # The dispatch association, as a partition equality rather than a name comparison.
@@ -1459,7 +1595,8 @@ def main(argv: list[str]) -> int:
     for (provider, operation), names_ in landed.items():
         implemented_here = [
             r for r in census_rows
-            if r["provider"] == provider and r["operation"] == operation and r["state"] == "implemented"
+            if r["provider"] == provider and r["operation"] == operation
+            and r["implementation_state"] == "implemented"
         ]
         if len(implemented_here) != len(names_):
             raise CensusError(
@@ -1494,6 +1631,7 @@ def main(argv: list[str]) -> int:
             ),
         },
         "provider_context": provider_context(auth),
+        "projection": provider_projection(census_rows),
         "rows": census_rows,
     }
     doc = envelope(kind="provider-algorithms", authority=auth.id, inputs=inputs, body=body, generator=GENERATOR)
@@ -1501,11 +1639,13 @@ def main(argv: list[str]) -> int:
 
     by_state: dict[str, int] = {}
     for row in census_rows:
-        by_state[row["state"]] = by_state.get(row["state"], 0) + 1
+        key = row["implementation_state"]
+        by_state[key] = by_state.get(key, 0) + 1
     print(f"[provider-algorithms] authority={auth.id} providers={len(providers)}")
     for p in providers:
         print(f"  {p['provider']:<8} {sum(t['rows'] for t in p['tables']):>4} rows in {len(p['tables'])} table(s)")
-    print(f"  states: {by_state}")
+    print(f"  implementation_state: {by_state}")
+    print(f"  projection: {body['projection']['open']}")
     print(f"  wrote {rel(OUT)}")
     return 0
 

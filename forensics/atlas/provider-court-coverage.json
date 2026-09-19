@@ -2346,7 +2346,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "3c8d8bcaad6f64d8f8b9cca7314141991bd764950ab98aa71d6bab5ecc3e52e3"
+      "sha256": "0407f01ef9b149a35f6862db0103e277bb195747c251934897de5bb309ee94a6"
     },
     {
       "name": "court:RT-DIGEST",
