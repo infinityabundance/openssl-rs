@@ -988,8 +988,15 @@
         "module": "src/rand/rand_lib.rs",
         "phase": 9,
         "phase_source": "module-declaration",
-        "share": "3/3",
+        "share": "28/33",
         "translation_unit": "crypto/rand/rand_lib.c"
+      },
+      {
+        "module": "src/rand/rand_uniform.rs",
+        "phase": 9,
+        "phase_source": "module-declaration",
+        "share": "2/2",
+        "translation_unit": "crypto/rand/rand_uniform.c"
       },
       {
         "module": "src/rand/unix.rs",
@@ -27234,6 +27241,44 @@
           "src/rand/pool.rs"
         ],
         "tu": "crypto/rand/rand_pool.c"
+      },
+      {
+        "identifiers": [
+          "OSSL_LIB_CTX",
+          "RAND_bytes_ex",
+          "char",
+          "const",
+          "ctx",
+          "err",
+          "f",
+          "f2",
+          "for",
+          "i",
+          "if",
+          "include",
+          "int",
+          "j",
+          "lower",
+          "max_followup_iterations",
+          "ossl_assert",
+          "ossl_likely",
+          "ossl_rand_range_uint32",
+          "ossl_rand_uniform_uint32",
+          "ossl_unlikely",
+          "prod",
+          "rand",
+          "return",
+          "sizeof",
+          "uint32_t",
+          "uint64_t",
+          "unsigned",
+          "upper",
+          "xffffffff"
+        ],
+        "modules": [
+          "src/rand/rand_uniform.rs"
+        ],
+        "tu": "crypto/rand/rand_uniform.c"
       },
       {
         "identifiers": [

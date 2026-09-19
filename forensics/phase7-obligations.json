@@ -5,8 +5,10 @@
       "findings": 0,
       "legacy_rows": 146,
       "legacy_unit_claims": 20,
-      "structured_blockers": 57,
-      "structured_rows": 25
+      "structured_blockers": 52,
+      "structured_rows": 20,
+      "unblocked_rows": 5,
+      "unblocked_symbols": 12
     },
     "complete": true,
     "counts": {
@@ -66,18 +68,10 @@
       },
       {
         "binding_phase": 9,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/rand/rand_lib.c",
-            "kind": "exported",
-            "line": 500,
-            "name": "RAND_bytes",
-            "owning_phase": 9
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "evp.h",
         "owning_phase": 9,
-        "reason": "`crypto/evp/bio_ok.c:127` is `return &methods_ok`, and `methods_ok` (`:112`) is a `BIO_METHOD` whose write path is `ok_write` (`:254`) -> `sig_out` -- and `sig_out` fills the record's digest half with `RAND_bytes(md_data, md_size)` (`:456`). `rand.h` is Phase 9's, and the method struct cannot be published with a callback that has no callee, so the export is withheld rather than the table partial.",
+        "reason": "`crypto/evp/bio_ok.c:456`'s `sig_out` fills the record's digest half with `RAND_bytes(md_data, md_size)`, which landed in D313. The whole `bio_ok.c` unit is this stratum's -- `forensics/prerequisites.json`'s `units` block records it as `deferred_to_a_later_stratum` to Phase 9 -- so the export is owed with the unit rather than by the stratum that declares `BIO_f_reliable` in `evp.h`.",
         "symbol": "BIO_f_reliable"
       },
       {
@@ -98,18 +92,10 @@
       },
       {
         "binding_phase": 9,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/rand/rand_lib.c",
-            "kind": "exported",
-            "line": 420,
-            "name": "RAND_priv_bytes_ex",
-            "owning_phase": 9
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "evp.h",
         "owning_phase": 9,
-        "reason": "`crypto/evp/evp_enc.c:1751` falls through to `RAND_priv_bytes_ex(libctx, key, kl, 0)` (`:1764`) for every cipher without `EVP_CIPH_RAND_KEY`, which is every provider cipher; `rand.h` is Phase 9's. `EVP_SealInit` above is the caller that made this visible, and the `RAND_priv_bytes_ex` row in `forensics/prerequisites.json` names both.",
+        "reason": "`crypto/evp/evp_enc.c:1751`'s fall-through for every cipher without `EVP_CIPH_RAND_KEY` is `RAND_priv_bytes_ex(libctx, key, kl, 0)` (`:1764`), which landed in D313. What remains is this stratum's own transcription of the accessor.",
         "symbol": "EVP_CIPHER_CTX_rand_key"
       },
       {
@@ -1319,18 +1305,10 @@
       },
       {
         "binding_phase": 9,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/rand/rand_lib.c",
-            "kind": "exported",
-            "line": 420,
-            "name": "RAND_priv_bytes_ex",
-            "owning_phase": 9
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "evp.h",
         "owning_phase": 9,
-        "reason": "`crypto/evp/p_seal.c:42` takes the session key from `EVP_CIPHER_CTX_rand_key` and `:46` fills the IV with `RAND_priv_bytes_ex(libctx, iv, len, 0)`; `rand.h` is Phase 9's, and `EVP_CIPHER_CTX_rand_key` (`crypto/evp/evp_enc.c:1751`, `:1764`) is itself withheld in this stratum on the same call -- which is why the deferral is Phase 9 and not a same-stratum one. `forensics/prerequisites.json`'s `RAND_priv_bytes_ex` row is this dependency.",
+        "reason": "`crypto/evp/p_seal.c:42` takes the session key from `EVP_CIPHER_CTX_rand_key` and `:46` fills the IV with `RAND_priv_bytes_ex(libctx, iv, len, 0)`. The `RAND_*` front landed in D313, so the blocker this row named is now a landed callee; `EVP_CIPHER_CTX_rand_key` is the second name of this group and is owed with it.",
         "symbol": "EVP_SealInit"
       },
       {
@@ -2607,131 +2585,66 @@
       },
       {
         "binding_phase": 9,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/rand/rand_lib.c",
-            "kind": "exported",
-            "line": 463,
-            "name": "RAND_bytes_ex",
-            "owning_phase": 9
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "hpke.h",
-        "note": "`ossl_rand_uniform_uint32` is internal with no recorded owner phase; `RAND_bytes_ex` is the binding call and is Phase 9's.",
         "owning_phase": 9,
-        "reason": "`crypto/hpke/hpke.c:1377`'s only observable is whether the GREASE ciphertext gets filled, and it is filled by `RAND_bytes_ex(libctx, ct, ctlen, 0)` (`:1433`) -- `rand.h`, Phase 9. Its random-suite arm additionally reaches `ossl_rand_uniform_uint32` (`crypto/hpke/hpke_util.c:198`, `:220`, `:243`), the same stratum. D195 recorded the withholding and `forensics/prerequisites.json`'s `RAND_bytes_ex` row names both coordinates.",
+        "reason": "`crypto/hpke/hpke.c:1433` fills the GREASE ciphertext with `RAND_bytes_ex(libctx, ct, ctlen, 0)`, and its random-suite arm reaches `ossl_rand_uniform_uint32` (`crypto/hpke/hpke_util.c`); both are `crypto/rand/`'s and landed in D313. The remaining dependency is this stratum's own HPKE-utility transcription.",
         "symbol": "OSSL_HPKE_get_grease_value"
       },
       {
         "binding_phase": 9,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/rand/rand_lib.c",
-            "kind": "exported",
-            "line": 500,
-            "name": "RAND_bytes",
-            "owning_phase": 9
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "pem.h",
         "owning_phase": 9,
-        "reason": "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and not this stratum's even though `evp.h` declares it. The other seven reach it through one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` (`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
+        "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer and what is left is this stratum's own `pem_lib.c` transcription.",
         "symbol": "PEM_ASN1_read"
       },
       {
         "binding_phase": 9,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/rand/rand_lib.c",
-            "kind": "exported",
-            "line": 500,
-            "name": "RAND_bytes",
-            "owning_phase": 9
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "pem.h",
         "owning_phase": 9,
-        "reason": "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and not this stratum's even though `evp.h` declares it. The other seven reach it through one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` (`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
+        "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer and what is left is this stratum's own `pem_lib.c` transcription.",
         "symbol": "PEM_ASN1_read_bio"
       },
       {
         "binding_phase": 9,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/rand/rand_lib.c",
-            "kind": "exported",
-            "line": 500,
-            "name": "RAND_bytes",
-            "owning_phase": 9
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "pem.h",
         "owning_phase": 9,
-        "reason": "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and not this stratum's even though `evp.h` declares it. The other seven reach it through one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` (`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
+        "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer and what is left is this stratum's own `pem_lib.c` transcription.",
         "symbol": "PEM_ASN1_write"
       },
       {
         "binding_phase": 9,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/rand/rand_lib.c",
-            "kind": "exported",
-            "line": 500,
-            "name": "RAND_bytes",
-            "owning_phase": 9
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "pem.h",
         "owning_phase": 9,
-        "reason": "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and not this stratum's even though `evp.h` declares it. The other seven reach it through one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` (`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
+        "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer and what is left is this stratum's own `pem_lib.c` transcription.",
         "symbol": "PEM_ASN1_write_bio"
       },
       {
         "binding_phase": 9,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/rand/rand_lib.c",
-            "kind": "exported",
-            "line": 500,
-            "name": "RAND_bytes",
-            "owning_phase": 9
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "pem.h",
         "owning_phase": 9,
-        "reason": "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and not this stratum's even though `evp.h` declares it. The other seven reach it through one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` (`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
+        "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer and what is left is this stratum's own `pem_lib.c` transcription.",
         "symbol": "PEM_ASN1_write_bio_ctx"
       },
       {
         "binding_phase": 9,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/rand/rand_lib.c",
-            "kind": "exported",
-            "line": 500,
-            "name": "RAND_bytes",
-            "owning_phase": 9
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "pem.h",
         "owning_phase": 9,
-        "reason": "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and not this stratum's even though `evp.h` declares it. The other seven reach it through one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` (`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
+        "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer and what is left is this stratum's own `pem_lib.c` transcription.",
         "symbol": "PEM_bytes_read_bio"
       },
       {
         "binding_phase": 9,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/rand/rand_lib.c",
-            "kind": "exported",
-            "line": 500,
-            "name": "RAND_bytes",
-            "owning_phase": 9
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "pem.h",
         "owning_phase": 9,
-        "reason": "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and not this stratum's even though `evp.h` declares it. The other seven reach it through one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` (`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
+        "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer and what is left is this stratum's own `pem_lib.c` transcription.",
         "symbol": "PEM_bytes_read_bio_secmem"
       },
       {
@@ -2753,18 +2666,10 @@
       },
       {
         "binding_phase": 9,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/rand/rand_lib.c",
-            "kind": "exported",
-            "line": 500,
-            "name": "RAND_bytes",
-            "owning_phase": 9
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "pem.h",
         "owning_phase": 9,
-        "reason": "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and not this stratum's even though `evp.h` declares it. The other seven reach it through one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` (`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
+        "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer and what is left is this stratum's own `pem_lib.c` transcription.",
         "symbol": "PEM_do_header"
       },
       {
@@ -4872,7 +4777,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "8cd11f55e7769f2d8e4c0b23331b364543c7334704ed2e6657e12ddd2259e5a8"
+      "sha256": "efb0c8b9683355294b21722f12acac3a69301e6b7b62f3c62f8b9692b55bf81c"
     },
     {
       "name": "export-defining-units",
@@ -4892,12 +4797,12 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "df5195743e93ec65de9dc398c56fc22a983a4c4b785b6e8e1bedbe94c657a5c4"
+      "sha256": "b0b1339585844485589d7acddaa6906e99c0d4609b368c78ee03e57bd1262e80"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "c1d980e2da8d63f55a5fb16add08cb412f825e25d071ec0954b33eeaaad43140"
+      "sha256": "48dc932215b0485aa4dfe246bc64e6791f3de5e55911555711319bbaf8b43634"
     },
     {
       "name": "authority-source-tree-and-crate-source",
@@ -4906,7 +4811,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "95140f6a70708ef1145c544cc16c22efb20c27a0309726732febba4a3cbb5228"
+      "sha256": "789ac8c70fed671045c4620f59c2a9792c24c8b57f2da003aa551f558f80f195"
     }
   ],
   "kind": "phase7-obligations",

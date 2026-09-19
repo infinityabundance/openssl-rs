@@ -585,23 +585,6 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
     ),
     BlockedHandoff(
         symbols=(
-            "EVP_SealInit",
-        ),
-        binding_phase=9,
-        blocked_by=(
-            Blocker("RAND_priv_bytes_ex", "crypto/rand/rand_lib.c", 420, "exported", 9),
-        ),
-        reason=(
-            "`crypto/evp/p_seal.c:42` takes the session key from `EVP_CIPHER_CTX_rand_key` and "
-                "`:46` fills the IV with `RAND_priv_bytes_ex(libctx, iv, len, 0)`; `rand.h` is Phase "
-                "9's, and `EVP_CIPHER_CTX_rand_key` (`crypto/evp/evp_enc.c:1751`, `:1764`) is itself "
-                "withheld in this stratum on the same call -- which is why the deferral is Phase 9 "
-                "and not a same-stratum one. `forensics/prerequisites.json`'s `RAND_priv_bytes_ex` "
-                "row is this dependency."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
             "EVP_read_pw_string", "EVP_read_pw_string_min"
         ),
         binding_phase=13,
@@ -637,38 +620,6 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
     ),
     BlockedHandoff(
         symbols=(
-            "EVP_CIPHER_CTX_rand_key",
-        ),
-        binding_phase=9,
-        blocked_by=(
-            Blocker("RAND_priv_bytes_ex", "crypto/rand/rand_lib.c", 420, "exported", 9),
-        ),
-        reason=(
-            "`crypto/evp/evp_enc.c:1751` falls through to `RAND_priv_bytes_ex(libctx, key, kl, "
-                "0)` (`:1764`) for every cipher without `EVP_CIPH_RAND_KEY`, which is every provider "
-                "cipher; `rand.h` is Phase 9's. `EVP_SealInit` above is the caller that made this "
-                "visible, and the `RAND_priv_bytes_ex` row in `forensics/prerequisites.json` names "
-                "both."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "BIO_f_reliable",
-        ),
-        binding_phase=9,
-        blocked_by=(
-            Blocker("RAND_bytes", "crypto/rand/rand_lib.c", 500, "exported", 9),
-        ),
-        reason=(
-            "`crypto/evp/bio_ok.c:127` is `return &methods_ok`, and `methods_ok` (`:112`) is a "
-                "`BIO_METHOD` whose write path is `ok_write` (`:254`) -> `sig_out` -- and `sig_out` "
-                "fills the record's digest half with `RAND_bytes(md_data, md_size)` (`:456`). "
-                "`rand.h` is Phase 9's, and the method struct cannot be published with a callback "
-                "that has no callee, so the export is withheld rather than the table partial."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
             "EVP_add_alg_module",
         ),
         binding_phase=11,
@@ -682,52 +633,6 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
                 "calls in the handler -- `CONF_imodule_get_value`, `NCONF_get_section`, "
                 "`evp_set_default_properties_int` -- are landed, so Phase 11 is the only blocker, and "
                 "it is the same one the subphase plan names for this name."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "OSSL_HPKE_get_grease_value",
-        ),
-        binding_phase=9,
-        blocked_by=(
-            Blocker("RAND_bytes_ex", "crypto/rand/rand_lib.c", 463, "exported", 9),
-        ),
-        reason=(
-            "`crypto/hpke/hpke.c:1377`'s only observable is whether the GREASE ciphertext gets "
-                "filled, and it is filled by `RAND_bytes_ex(libctx, ct, ctlen, 0)` (`:1433`) -- "
-                "`rand.h`, Phase 9. Its random-suite arm additionally reaches "
-                "`ossl_rand_uniform_uint32` (`crypto/hpke/hpke_util.c:198`, `:220`, `:243`), the same "
-                "stratum. D195 recorded the withholding and `forensics/prerequisites.json`'s "
-                "`RAND_bytes_ex` row names both coordinates."
-        ),
-        note=(
-            "`ossl_rand_uniform_uint32` is internal with no recorded owner phase; `RAND_bytes_ex` "
-                "is the binding call and is Phase 9's."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "PEM_do_header", "PEM_bytes_read_bio", "PEM_bytes_read_bio_secmem",
-            "PEM_ASN1_read", "PEM_ASN1_read_bio", "PEM_ASN1_write", "PEM_ASN1_write_bio",
-            "PEM_ASN1_write_bio_ctx"
-        ),
-        binding_phase=9,
-        blocked_by=(
-            Blocker("RAND_bytes", "crypto/rand/rand_lib.c", 500, "exported", 9),
-        ),
-        reason=(
-            "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with "
-                "`EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is "
-                "`crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- "
-                "which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and "
-                "not this stratum's even though `evp.h` declares it. The other seven reach it through "
-                "one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) "
-                "call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` "
-                "(`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` "
-                "(`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, "
-                "`:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls "
-                "`EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So "
-                "Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight."
         ),
     ),
     BlockedHandoff(
@@ -807,6 +712,77 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
     ),
 ]
 
+
+# ---------------------------------------------------------------------------------------------
+# The third deferral mechanism: a hand-off whose blocker has since landed.
+#
+# `BLOCKED_HANDOFFS` above makes a *structured claim* -- "this export is withheld because file:line
+# calls `X`, and `X` is not in the crate" -- and `blocker_liveness.check_rows` fires the moment `X`
+# lands, because a table that can keep covering a landed blocker can hide the next real gap behind
+# it. The prescription is "retire the row".
+#
+# **Retiring these five rows would be a false statement about this stratum, not a correction of
+# one.** `owning_phase` is the stratum that committed to building the export, and for all twelve
+# names here that is Phase 9: `forensics/phase9-obligations.json` already lists them in its `open`
+# list as hand-offs received from this stratum, and `docs/PHASE-9-SUBPHASES.md` section 9.6 is the
+# row that owes them. Removing the row would move each name into *this* stratum's `open` list and
+# un-seal a stratum whose plan never claimed them; the honest difference is that the *blocker* is
+# gone, not that the hand-off is. So the row is **retargeted** from a blocked claim to an
+# unconditional one -- D173's precedent, "a deferral that had to move" -- and the reason records
+# what landed rather than repeating a claim that no longer holds.
+#
+# The rows are authored as `(symbols, owning_phase, reason)`. They carry no `blocked_by`, so
+# `check_rows` does not run on them and there is nothing left to go stale: an unconditional hand-off
+# is falsified by the owner's ledger, which already counts them, rather than by a file:line.
+# ---------------------------------------------------------------------------------------------
+
+UNBLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
+    (
+        ("EVP_SealInit",),
+        9,
+        "`crypto/evp/p_seal.c:42` takes the session key from `EVP_CIPHER_CTX_rand_key` and `:46` "
+        "fills the IV with `RAND_priv_bytes_ex(libctx, iv, len, 0)`. The `RAND_*` front landed in "
+        "D313, so the blocker this row named is now a landed callee; `EVP_CIPHER_CTX_rand_key` is "
+        "the second name of this group and is owed with it.",
+    ),
+    (
+        ("EVP_CIPHER_CTX_rand_key",),
+        9,
+        "`crypto/evp/evp_enc.c:1751`'s fall-through for every cipher without `EVP_CIPH_RAND_KEY` "
+        "is `RAND_priv_bytes_ex(libctx, key, kl, 0)` (`:1764`), which landed in D313. What remains "
+        "is this stratum's own transcription of the accessor.",
+    ),
+    (
+        ("BIO_f_reliable",),
+        9,
+        "`crypto/evp/bio_ok.c:456`'s `sig_out` fills the record's digest half with "
+        "`RAND_bytes(md_data, md_size)`, which landed in D313. The whole `bio_ok.c` unit is this "
+        "stratum's -- `forensics/prerequisites.json`'s `units` block records it as "
+        "`deferred_to_a_later_stratum` to Phase 9 -- so the export is owed with the unit rather "
+        "than by the stratum that declares `BIO_f_reliable` in `evp.h`.",
+    ),
+    (
+        ("OSSL_HPKE_get_grease_value",),
+        9,
+        "`crypto/hpke/hpke.c:1433` fills the GREASE ciphertext with `RAND_bytes_ex(libctx, ct, "
+        "ctlen, 0)`, and its random-suite arm reaches `ossl_rand_uniform_uint32` "
+        "(`crypto/hpke/hpke_util.c`); both are `crypto/rand/`'s and landed in D313. The remaining "
+        "dependency is this stratum's own HPKE-utility transcription.",
+    ),
+    (
+        (
+            "PEM_do_header", "PEM_bytes_read_bio", "PEM_bytes_read_bio_secmem",
+            "PEM_ASN1_read", "PEM_ASN1_read_bio", "PEM_ASN1_write", "PEM_ASN1_write_bio",
+            "PEM_ASN1_write_bio_ctx",
+        ),
+        9,
+        "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), "
+        "...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s "
+        "DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` "
+        "in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer and what is "
+        "left is this stratum's own `pem_lib.c` transcription.",
+    ),
+]
 
 
 def load(path: Path) -> dict:
@@ -968,6 +944,38 @@ def main(argv: list[str]) -> int:
                 }
     handed_on_names = set(handed_on)
 
+    # The third mechanism (see `UNBLOCKED_HANDOFFS`): a hand-off whose blocker has landed. Same
+    # fail-closed rules as `BLOCKED_HANDOFFS` -- a row naming a symbol outside the working set, or
+    # one the crate now defines, is a stale row rather than a harmless one -- and no liveness proof,
+    # because a row that makes no blocker claim has nothing left to go stale.
+    unblocked_handed_on: dict[str, dict] = {}
+    for symbols, owning_phase, reason in UNBLOCKED_HANDOFFS:
+        for sym in symbols:
+            if sym not in owned:
+                raise SystemExit(
+                    f"phase7-obligations: UNBLOCKED_HANDOFFS names {sym}, which is not in this "
+                    f"stratum's working set (or is not an authority export at all)"
+                )
+            if sym in done:
+                raise SystemExit(
+                    f"phase7-obligations: UNBLOCKED_HANDOFFS hands {sym} to phase "
+                    f"{owning_phase}, but the crate defines it; retire the row"
+                )
+            if sym in handed_on or any(sym in r.symbols for r in BLOCKED_HANDOFFS):
+                raise SystemExit(
+                    f"phase7-obligations: {sym} is handed on by two of the three mechanisms; "
+                    f"one cause per symbol, or the reasons will disagree"
+                )
+            unblocked_handed_on[sym] = {
+                "symbol": sym,
+                "owning_phase": owning_phase,
+                "binding_phase": owning_phase,
+                "declaring_header": owned[sym]["declaring_header"],
+                "blocked_by": [],
+                "reason": reason,
+            }
+    unblocked_handed_on_names = set(unblocked_handed_on)
+
     # The second deferral mechanism, and the fail-closed one: a symbol in `BLOCKED_HANDOFFS` that
     # the crate now defines is a stale row rather than a harmless one, because a table that can
     # keep covering a landed symbol can hide the next real gap behind it. Same rule
@@ -1013,8 +1021,12 @@ def main(argv: list[str]) -> int:
         raise SystemExit(
             "phase7-obligations: blocker liveness failed:\n  " + "\n  ".join(liveness)
         )
-    deferred_names = handed_on_names | set(blocked)
-    deferred: list[dict] = list(handed_on.values()) + list(blocked.values())
+    deferred_names = handed_on_names | set(blocked) | unblocked_handed_on_names
+    deferred: list[dict] = (
+        list(handed_on.values())
+        + list(blocked.values())
+        + list(unblocked_handed_on.values())
+    )
 
     implemented_here = sorted(s for s in owned if s in done and s not in deferred_names)
     open_rows = [
@@ -1058,6 +1070,10 @@ def main(argv: list[str]) -> int:
             "structured_blockers": sum(len(r.blocked_by) for r in BLOCKED_HANDOFFS),
             "legacy_rows": len(handed_on_names),
             "legacy_unit_claims": len(LEGACY_HANDOFFS),
+            # The third mechanism: a hand-off whose blocker has landed, retargeted from a blocked
+            # claim to an unconditional one rather than retired (see `UNBLOCKED_HANDOFFS`).
+            "unblocked_rows": len(UNBLOCKED_HANDOFFS),
+            "unblocked_symbols": len(unblocked_handed_on_names),
             "findings": len(liveness),
         },
         "implemented": implemented_here,

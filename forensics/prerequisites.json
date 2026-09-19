@@ -29,38 +29,11 @@
         "evidence": "src/runtime/defaults.rs module doc"
       },
       {
-        "symbol": "ossl_random_add_conf_module",
-        "owner_phase": 9,
-        "reason": "One of the seven modules `OPENSSL_load_builtin_modules` registers. It is Phase 9's because it lives in crypto/rand/rand_lib.c, and the fan-out's residual -- six of the seven absent -- is already recorded in the Phase 6 subphase plan and the seal; this row is what makes the name visible to the gate rather than only to a reader.",
-        "evidence": "docs/PHASE-6-SUBPHASES.md row 6.10 (the fan-out residual)"
-      },
-      {
         "symbol": "OSSL_provider_init",
         "owner_phase": 13,
         "authority_unit": "providers/legacy-dso-legacyprov.c",
         "reason": "providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.",
         "evidence": "docs/PHASE-6-SUBPHASES.md rows 6.8d and 6.12"
-      },
-      {
-        "symbol": "ossl_rand_check_random_provider_on_load",
-        "owner_phase": 9,
-        "authority_unit": "crypto/rand/rand_lib.c",
-        "reason": "The provider-load hook `crypto/provider_core.c` calls when a provider is activated: it is what makes a provider named by `RAND_set1_random_provider` take over the RAND up-call. D309 landed `rand_lib.c`'s per-context and seed-source half (slot 5, the seed accessor, the slot constructor/releaser) because the DRBG rows cannot instantiate without it; this hook and its unload twin are the *provider-nomination* half, which nothing in the landed surface reaches yet. They are recorded rather than stubbed, and the row is discharged -- and must be retired -- on the commit that lands them.",
-        "evidence": "src/rand/rand_lib.rs module doc, section 'What is absent, and named'; docs/DECISIONS.md D309"
-      },
-      {
-        "symbol": "ossl_rand_check_random_provider_on_unload",
-        "owner_phase": 9,
-        "authority_unit": "crypto/rand/rand_lib.c",
-        "reason": "The releasing half of the provider-nomination pair above: `crypto/provider_core.c` calls it when a provider is deactivated, so that a nominated randomness provider cannot outlive its registration. Same stratum, same boundary, same discharge condition.",
-        "evidence": "src/rand/rand_lib.rs module doc, section 'What is absent, and named'; docs/DECISIONS.md D309"
-      },
-      {
-        "symbol": "ossl_rand_cleanup_int",
-        "owner_phase": 9,
-        "authority_unit": "crypto/rand/rand_lib.c",
-        "reason": "`OPENSSL_cleanup`'s RAND arm, and the counterpart of `do_rand_init`: it frees the two module locks and the method table that `RUN_ONCE(&rand_init, ...)` builds. D309 deliberately landed neither, because the method table it would release is the front's -- `RAND_get_rand_method`/`RAND_set_rand_method` and the `RAND_METHOD` static they compare against are 9.2's remaining work, and a cleanup that released state nothing had built would be a stub wearing a name.",
-        "evidence": "src/rand/rand_lib.rs module doc, section 'What is absent, and named'; docs/DECISIONS.md D309"
       },
       {
         "symbol": "evp_cleanup_int",
@@ -181,28 +154,10 @@
         "evidence": "docs/DECISIONS.md D196; docs/DECISIONS.md D193 and D190; docs/PHASE-7-SUBPHASES.md rows 7.3c and 7.4e"
       },
       {
-        "symbol": "RAND_priv_bytes_ex",
-        "owner_phase": 9,
-        "reason": "`EVP_SealInit` (`crypto/evp/p_seal.c:42` and `:46`) needs the random layer twice: `EVP_CIPHER_CTX_rand_key` for the session key and `RAND_priv_bytes_ex` for the IV. Both land in Phase 9 and `crypto/evp/evp_enc.c`'s `EVP_CIPHER_CTX_rand_key` is itself still an open 7.3c row for the same reason, so `EVP_SealInit` is withheld while its `_Final` half -- which needs no random -- lands with the rest of 7.4l.",
-        "evidence": "docs/DECISIONS.md D193; docs/PHASE-7-SUBPHASES.md rows 7.3c and 7.4l"
-      },
-      {
         "symbol": "UI_new",
         "owner_phase": 13,
         "reason": "`EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`) is a `UI` program -- `UI_new`, `UI_add_input_string`, `UI_add_verify_string`, `UI_process`, `UI_free` -- and `ui.h` is Phase 13's. `EVP_read_pw_string` goes with it because its whole body is a call to `_min`; `EVP_get_pw_prompt`/`EVP_set_pw_prompt` do **not**, because they touch the file's own eighty-byte static and nothing else, and they land.",
         "evidence": "docs/DECISIONS.md D193; docs/PHASE-7-SUBPHASES.md row 7.4l"
-      },
-      {
-        "symbol": "RAND_bytes",
-        "owner_phase": 9,
-        "reason": "`PEM_ASN1_write_bio_internal`'s encrypted arm generates the DEK-Info salt from `RAND_bytes(iv, EVP_CIPHER_get_iv_length(enc))` (`crypto/pem/pem_lib.c:386`), and `rand.h` is Phase 9's. The name blocks `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx` and `PEM_ASN1_write` alongside `EVP_md5`; all three are withheld, and this row records the second of their two blockers rather than a second withheld export. The same argument D165 makes applies in the other direction here: the `enc == NULL` arm of the function is transcribable against landed machinery alone, but an export cannot be half-written, and the encrypted arm is the one every `PEM_write_*PrivateKey*` caller reaches.",
-        "evidence": "docs/DECISIONS.md D194; docs/PHASE-7-SUBPHASES.md row 7.5"
-      },
-      {
-        "symbol": "RAND_bytes_ex",
-        "owner_phase": 9,
-        "reason": "`OSSL_HPKE_get_grease_value` fills the GREASE ciphertext with `RAND_bytes_ex(libctx, ct, ctlen, 0)` (`crypto/hpke/hpke.c:1433`), and its random-suite arm calls `ossl_rand_uniform_uint32` (`crypto/hpke/hpke_util.c:198`, `:220`, `:243`); both are `crypto/rand/`'s and Phase 9's. The whole observable of that export is whether the random fill succeeds, so there is no partial answer to write and it is withheld rather than stubbed. No other `OSSL_HPKE_*` name needs the random layer: the KEM, KDF and AEAD arms all build over landed 7.3 objects, which is what D195 records. This row names the direct callee; `ossl_rand_uniform_uint32` is the same stratum, reached only through `ossl_HPKE_*_INFO_find_random`, whose only caller is the same withheld function.",
-        "evidence": "docs/DECISIONS.md D195; docs/PHASE-7-SUBPHASES.md row 7.6"
       }
     ],
     "divergences": [

@@ -318,6 +318,10 @@
       "observations": 5,
       "verdict": "pass"
     },
+    "RT-RAND": {
+      "observations": 129,
+      "verdict": "pass"
+    },
     "RT-RSA": {
       "observations": 282,
       "verdict": "pass"
@@ -365,7 +369,7 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 2097,
+    "libcrypto": 2122,
     "libssl": 0
   },
   "open_obligations": {
@@ -375,7 +379,7 @@
     "phase6": 0,
     "phase7": 0,
     "phase8": 524,
-    "phase9": 93
+    "phase9": 68
   },
   "owned_obligations": {
     "phase3": 294,
@@ -411,10 +415,10 @@
     "9": "in-progress"
   },
   "prerequisites": {
-    "blocking_dependencies": 24,
+    "blocking_dependencies": 17,
     "divergence_names_covered": 30,
     "findings": 0,
-    "language_census": 3211,
+    "language_census": 3179,
     "sealed_census": 56
   },
   "provider_implemented": [

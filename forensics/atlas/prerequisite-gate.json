@@ -7,9 +7,6 @@
       "OSSL_DECODER_CTX_new_for_pkey -> phase 10 (`crypto/asn1/d2i_pr.c`'s `d2i_PrivateKey_decoder` builds an `OSSL_DECODER_CTX` and is the first thing `d2i_PrivateKey_ex` and `d2i_AutoPrivateKey_ex` try, with the legacy ameth path only as a fallback. The names are declared in `decoder.h`, Phase 10's, so the four `d2i_PrivateKey*`/`d2i_AutoPrivateKey*` exports are withheld.)",
       "OSSL_ENCODER_CTX_new_for_pkey -> phase 10 (`crypto/asn1/i2d_evp.c`'s `i2d_provided` builds an `OSSL_ENCODER_CTX` for a **provider** key, which is the branch every one of `i2d_KeyParams`, `i2d_KeyParams_bio`, `i2d_PrivateKey`, `i2d_PKCS8PrivateKey` and `i2d_PublicKey` takes first. The names are declared in `encoder.h`, Phase 10's, so no provider key can be encoded and the five exports are withheld with the boundary named in `RT-EVP-PKEY`.)",
       "OSSL_provider_init -> phase 13 (providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.)",
-      "RAND_bytes -> phase 9 (`PEM_ASN1_write_bio_internal`'s encrypted arm generates the DEK-Info salt from `RAND_bytes(iv, EVP_CIPHER_get_iv_length(enc))` (`crypto/pem/pem_lib.c:386`), and `rand.h` is Phase 9's. The name blocks `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx` and `PEM_ASN1_write` alongside `EVP_md5`; all three are withheld, and this row records the second of their two blockers rather than a second withheld export. The same argument D165 makes applies in the other direction here: the `enc == NULL` arm of the function is transcribable against landed machinery alone, but an export cannot be half-written, and the encrypted arm is the one every `PEM_write_*PrivateKey*` caller reaches.)",
-      "RAND_bytes_ex -> phase 9 (`OSSL_HPKE_get_grease_value` fills the GREASE ciphertext with `RAND_bytes_ex(libctx, ct, ctlen, 0)` (`crypto/hpke/hpke.c:1433`), and its random-suite arm calls `ossl_rand_uniform_uint32` (`crypto/hpke/hpke_util.c:198`, `:220`, `:243`); both are `crypto/rand/`'s and Phase 9's. The whole observable of that export is whether the random fill succeeds, so there is no partial answer to write and it is withheld rather than stubbed. No other `OSSL_HPKE_*` name needs the random layer: the KEM, KDF and AEAD arms all build over landed 7.3 objects, which is what D195 records. This row names the direct callee; `ossl_rand_uniform_uint32` is the same stratum, reached only through `ossl_HPKE_*_INFO_find_random`, whose only caller is the same withheld function.)",
-      "RAND_priv_bytes_ex -> phase 9 (`EVP_SealInit` (`crypto/evp/p_seal.c:42` and `:46`) needs the random layer twice: `EVP_CIPHER_CTX_rand_key` for the session key and `RAND_priv_bytes_ex` for the IV. Both land in Phase 9 and `crypto/evp/evp_enc.c`'s `EVP_CIPHER_CTX_rand_key` is itself still an open 7.3c row for the same reason, so `EVP_SealInit` is withheld while its `_Final` half -- which needs no random -- lands with the rest of 7.4l.)",
       "UI_new -> phase 13 (`EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`) is a `UI` program -- `UI_new`, `UI_add_input_string`, `UI_add_verify_string`, `UI_process`, `UI_free` -- and `ui.h` is Phase 13's. `EVP_read_pw_string` goes with it because its whole body is a call to `_min`; `EVP_get_pw_prompt`/`EVP_set_pw_prompt` do **not**, because they touch the file's own eighty-byte static and nothing else, and they land.)",
       "d2i_X509_ALGOR -> phase 11 (`EVP_PKEY_CTX_get_algor` (`crypto/evp/evp_lib.c:1455`) decodes the provider's `OSSL_SIGNATURE_PARAM_ALGORITHM_ID` answer with `d2i_X509_ALGOR`, declared in `x509.h` and Phase 11's. **`EVP_CIPHER_CTX_get_algor` (`:1337`) is the same call in the same shape** and is withheld on it too, so this one row covers both accessors and the Phase-7 obligation ledger's two deferral rows name the same coordinate. The record is otherwise unchanged from 7.4e: the accessor is withheld, and its probe line names this coordinate.)",
       "evp_app_cleanup_int -> phase 8 (Defined in `crypto/evp/pmeth_lib.c` and called from `crypto/evp/names.c`'s `EVP_cleanup_int`, so two transcribed units now owe it. Its whole body is `sk_EVP_PKEY_METHOD_pop_free(app_pkey_methods, EVP_PKEY_meth_free)`: both the stack and the destructor belong to the **application-supplied `EVP_PKEY_METHOD` registry**, which is 7.4l's because `EVP_PKEY_meth_find`'s lookup searches `standard_methods[]` -- the table whose contents are Phase 8's objects under D163 and D165. So this is Phase 8's with its sibling rows rather than a same-subphase deferral: there is no 7.4c-ii or 7.4d that could land it, because the two symbols it needs do not exist until Phase 8 does.)",
@@ -20,17 +17,13 @@
       "ossl_get_enginesdir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads)",
       "ossl_get_openssldir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads; so is its sibling)",
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)",
-      "ossl_rand_check_random_provider_on_load -> phase 9 (The provider-load hook `crypto/provider_core.c` calls when a provider is activated: it is what makes a provider named by `RAND_set1_random_provider` take over the RAND up-call. D309 landed `rand_lib.c`'s per-context and seed-source half (slot 5, the seed accessor, the slot constructor/releaser) because the DRBG rows cannot instantiate without it; this hook and its unload twin are the *provider-nomination* half, which nothing in the landed surface reaches yet. They are recorded rather than stubbed, and the row is discharged -- and must be retired -- on the commit that lands them.)",
-      "ossl_rand_check_random_provider_on_unload -> phase 9 (The releasing half of the provider-nomination pair above: `crypto/provider_core.c` calls it when a provider is deactivated, so that a nominated randomness provider cannot outlive its registration. Same stratum, same boundary, same discharge condition.)",
-      "ossl_rand_cleanup_int -> phase 9 (`OPENSSL_cleanup`'s RAND arm, and the counterpart of `do_rand_init`: it frees the two module locks and the method table that `RUN_ONCE(&rand_init, ...)` builds. D309 deliberately landed neither, because the method table it would release is the front's -- `RAND_get_rand_method`/`RAND_set_rand_method` and the `RAND_METHOD` static they compare against are 9.2's remaining work, and a cleanup that released state nothing had built would be a stub wearing a name.)",
-      "ossl_random_add_conf_module -> phase 9 (One of the seven modules `OPENSSL_load_builtin_modules` registers. It is Phase 9's because it lives in crypto/rand/rand_lib.c, and the fan-out's residual -- six of the seven absent -- is already recorded in the Phase 6 subphase plan and the seal; this row is what makes the name visible to the gate rather than only to a reader.)",
       "ossl_rsa_asn1_meths -> phase 8 (The `EVP_PKEY_ASN1_METHOD` half of the `standard_methods[]` contents that `crypto/asn1/ameth_lib.c` searches -- the twelve `ossl_<alg>_asn1_meth` objects. `EVP_PKEY_asn1_find`/`_find_str` are landed and do search it, so their answer is NULL for every standard type until Phase 8 publishes the objects. That is why 7.4l withholds `EVP_PKEY_type`, `d2i_PrivateKey`/`_ex`, `d2i_AutoPrivateKey`/`_ex`, `d2i_PublicKey`, `d2i_KeyParams`/`_bio` and the legacy paths of the five `i2d_*` names rather than stubbing a divergent answer into them. `ossl_rsa_asn1_meths` is named as the first object of the table; the other eleven are the same stratum, same table, same answer.)",
       "ossl_rsa_pkey_method -> phase 8 (The `EVP_PKEY_METHOD` half of the same boundary: `crypto/evp/pmeth_lib.c`'s `standard_methods[]` holds the ten `ossl_<alg>_pkey_method` objects of the algorithm strata. `EVP_PKEY_meth_find`'s application half (`evp_pkey_meth_find_added_by_application`) is landed and courted; its `OBJ_bsearch_pmeth_func` half is not, and `EVP_PKEY_meth_get0` and `_get_count` index the table outright, so all three exports are withheld rather than stubbed with an application-count answer.)"
     ],
     "census": {
       "covered_by_a_divergence": 58,
-      "language_surface_not_modelled_by_name": 3211,
-      "planned_prerequisites": 17
+      "language_surface_not_modelled_by_name": 3179,
+      "planned_prerequisites": 11
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -81,13 +74,13 @@
         "crypto/asn1/ameth_lib.c": 30,
         "crypto/asn1/asn1_gen.c": 27,
         "crypto/asn1/asn1_lib.c": 12,
-        "crypto/asn1/asn_mime.c": 43,
+        "crypto/asn1/asn_mime.c": 42,
         "crypto/asn1/asn_moid.c": 11,
         "crypto/asn1/asn_pack.c": 7,
         "crypto/asn1/bio_asn1.c": 13,
         "crypto/asn1/evp_asn1.c": 15,
         "crypto/asn1/f_int.c": 8,
-        "crypto/asn1/p5_scrypt.c": 28,
+        "crypto/asn1/p5_scrypt.c": 27,
         "crypto/asn1/t_pkey.c": 6,
         "crypto/asn1/tasn_dec.c": 31,
         "crypto/asn1/tasn_enc.c": 23,
@@ -159,7 +152,7 @@
         "crypto/evp/bio_enc.c": 14,
         "crypto/evp/cmeth_lib.c": 6,
         "crypto/evp/encode.c": 6,
-        "crypto/evp/evp_enc.c": 37,
+        "crypto/evp/evp_enc.c": 36,
         "crypto/evp/evp_fetch.c": 19,
         "crypto/evp/evp_key.c": 14,
         "crypto/evp/evp_lib.c": 26,
@@ -188,7 +181,7 @@
         "crypto/ex_data.c": 21,
         "crypto/getenv.c": 2,
         "crypto/hmac/hmac.c": 6,
-        "crypto/hpke/hpke.c": 24,
+        "crypto/hpke/hpke.c": 23,
         "crypto/idea/i_cbc.c": 4,
         "crypto/indicator_core.c": 5,
         "crypto/initthread.c": 18,
@@ -214,7 +207,7 @@
         "crypto/params.c": 22,
         "crypto/params_dup.c": 12,
         "crypto/params_from_text.c": 10,
-        "crypto/pem/pem_lib.c": 56,
+        "crypto/pem/pem_lib.c": 55,
         "crypto/poly1305/poly1305.c": 5,
         "crypto/property/defn_cache.c": 7,
         "crypto/property/property.c": 25,
@@ -225,8 +218,9 @@
         "crypto/provider_conf.c": 28,
         "crypto/provider_core.c": 141,
         "crypto/rand/prov_seed.c": 11,
-        "crypto/rand/rand_lib.c": 66,
+        "crypto/rand/rand_lib.c": 36,
         "crypto/rand/rand_pool.c": 9,
+        "crypto/rand/rand_uniform.c": 3,
         "crypto/rc2/rc2_cbc.c": 3,
         "crypto/ripemd/rmd_dgst.c": 342,
         "crypto/rsa/rsa_meth.c": 11,
@@ -254,11 +248,7 @@
         "evp_pkey_get_legacy": 1,
         "ossl_get_enginesdir": 2,
         "ossl_get_openssldir": 2,
-        "ossl_get_wininstallcontext": 1,
-        "ossl_rand_check_random_provider_on_load": 2,
-        "ossl_rand_check_random_provider_on_unload": 2,
-        "ossl_rand_cleanup_int": 1,
-        "ossl_random_add_conf_module": 1
+        "ossl_get_wininstallcontext": 1
       }
     },
     "census_not_a_failure": "the C language surface is counted and listed, never failed: the crate models C types, macros and reason codes differently on purpose, and a lexical scan cannot tell a rename from a gap",
@@ -358,20 +348,14 @@
         "ossl_get_enginesdir",
         "ossl_get_openssldir",
         "ossl_get_openssldir",
-        "ossl_get_wininstallcontext",
-        "ossl_rand_check_random_provider_on_load",
-        "ossl_rand_check_random_provider_on_load",
-        "ossl_rand_check_random_provider_on_unload",
-        "ossl_rand_check_random_provider_on_unload",
-        "ossl_rand_cleanup_int",
-        "ossl_random_add_conf_module"
+        "ossl_get_wininstallcontext"
       ]
     },
     "checked": {
-      "authority_units": 180,
-      "crate_modules": 248,
+      "authority_units": 181,
+      "crate_modules": 249,
       "deferral_blocker_rows": 5,
-      "deferrals_recorded": 24,
+      "deferrals_recorded": 17,
       "divergence_names_covered": 30,
       "divergence_rows": 5,
       "names_referenced_and_not_built": 17
@@ -490,7 +474,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "61018b1036a826741f531525d1bcfb5bc86e5da51ab6b61f0ee5c5b6c5bfb1dc",
+  "body_hash": "447768587efcb8e5c7ddb8e62503ff65777453500b07a60314fe2b3902f03945",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -511,7 +495,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "2d6eb6c4d905e5cfceff221cd59bff6d2f939e5b0170206efc56271fe9d0ecd7"
+      "sha256": "6cfb7c6110aee75447e2d0f36ad9ba7a872220e2d15a5a1f9f18932635ca8a76"
     },
     {
       "name": "symbol-ownership",
@@ -526,17 +510,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "955d88fbdbf693e8386f8f4513c3233a02c10bf0587b9125899e6b1e76fc35e9"
+      "sha256": "fd2a529846bff555ebbb9c00ff66fec5470d6ef22d73f3c8dfe7931dbd55de60"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "c1d980e2da8d63f55a5fb16add08cb412f825e25d071ec0954b33eeaaad43140"
+      "sha256": "48dc932215b0485aa4dfe246bc64e6791f3de5e55911555711319bbaf8b43634"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "df5195743e93ec65de9dc398c56fc22a983a4c4b785b6e8e1bedbe94c657a5c4"
+      "sha256": "b0b1339585844485589d7acddaa6906e99c0d4609b368c78ee03e57bd1262e80"
     },
     {
       "name": "crate-source-tree",

@@ -20274,3 +20274,115 @@ each site with the authority's code in the comment, and a `modelled_differently`
 committed with their own tests as `8ac19d4f`; `ZEROED` lands here with its landing caller named.
 The front itself is reverted to keep the tree green -- `PIPELINE OK` -- rather than committed with
 its court missing.
+
+## D313 -- the RAND front lands with RT-RAND, and landing it invalidates twelve Phase-7 hand-offs
+
+### What landed
+
+`rand.h`'s twenty-five exports are implemented: `src/rand/rand_lib.rs` (the front, `rand_lib.c`
+with `rand_meth.c` and `randfile.c` folded in, as D312 measured), `src/rand/rand_uniform.rs`
+(`rand_uniform.c`), and the two `pub`-module routing lines in `src/lib.rs` and `src/rand/mod.rs`.
+`implemented[libcrypto]` moves 1841 -> 2122 over the branch, and `phase9-obligations` now reads
+`atlas=25 received=68 owned=93 implemented=25 deferred=0 open=68`. The commit includes `courts/`,
+which D311 found had been left out of the `git add` scope once already.
+
+### RT-RAND, and why it is a second court rather than an arm of RT-DRBG
+
+`courts/phase9/rt_rand_probe.c` compiles twice and diffs a `key=value` transcript. Its **first run
+produced 129 observations and zero residuals**. That is worth stating plainly because the opposite
+was expected: the front is the layer the DRBG rows sit on, so a clean first run is evidence that
+D309-D312 landed the call graph, not evidence that the probe is shallow.
+
+It is a separate court from `RT-DRBG` because the two observe disjoint surfaces -- one the
+provider's DRBG *rows* through `EVP_RAND_*`, the other the `RAND_*` *library front* those rows sit
+behind -- and because the front's order is load-bearing in a way a row-level court cannot see:
+
+* **The setters are called both before and after the object they guard.** `RAND_set_DRBG_type` and
+  `RAND_set_seed_source_type` answer 1 before the primary is built and 0 with
+  `RAND_R_ALREADY_INSTANTIATED` after it. A probe that only called them late would measure the
+  refusal on both sides and agree about nothing.
+* **The method table is observed by shape, not address.** `method.is_openssl` is the
+  `RAND_get_rand_method() == RAND_OpenSSL()` edge; the six callback fields are then read as
+  non-NULL booleans through the header's own `struct rand_meth_st`. `ossl_rand_meth` is
+  `{drbg_seed, drbg_bytes, NULL, drbg_add, drbg_bytes, drbg_status}`, so a candidate that dropped
+  `pseudorand` or `cleanup` is a residual here and nowhere else, and
+  `RAND_set_rand_method(NULL)` followed by `get` observes the self-healing arm.
+* **The randomness-provider dispatch is observed on both sides.** The default provider publishes no
+  `OSSL_FUNC_provider_random_bytes` (`providers/defltprov.c` carries none; only the FIPS module
+  does), so `RAND_set1_random_provider(NULL, default)` followed by `RAND_bytes_ex` answers **0**
+  through the nominated provider on the authority -- and the probe pins that rather than a silent
+  fallback to the crate's own DRBG.
+* **The file helpers run against a temp path the probe unlinks on entry and exit**, so the two
+  sides cannot read each other's bytes: `RAND_write_file` 1024, `RAND_load_file(-1)` 1024, `(100)`
+  100, `(0)` 0, a missing path -1 with `RAND_R_CANNOT_OPEN_FILE`, a directory -1 with
+  `RAND_R_NOT_A_REGULAR_FILE`, and `RAND_file_name`'s length refusal.
+
+### What landing the front did to Phase 7, and why the rows were retargeted rather than retired
+
+`blocker_liveness` fired on **five** of Phase 7's `BLOCKED_HANDOFFS` rows the moment the front
+compiled: `EVP_SealInit`, `EVP_CIPHER_CTX_rand_key`, `BIO_f_reliable`, `OSSL_HPKE_get_grease_value`,
+and the eight-name `PEM_do_header`/`PEM_bytes_read_bio*`/`PEM_ASN1_read*`/`PEM_ASN1_write*` group --
+twelve exports -- because every blocker each row named (`RAND_bytes`, `RAND_bytes_ex`,
+`RAND_priv_bytes_ex`) had landed. The tool's prescription is "retire the row".
+
+**Retiring them would have been a false statement about Phase 7.** All twelve carry
+`owning_phase=9`: `forensics/phase9-obligations.json` already lists them in its `open` list as
+hand-offs received from Phase 7, and `docs/PHASE-9-SUBPHASES.md` section 9.6 is the row that owes
+them. Dropping the Phase-7 row moves each name into *Phase 7's* `open` list, un-seals a stratum
+whose plan never claimed them, and contradicts the hand-off both ledgers already agree on. What
+changed is that the **blocker** is gone, not that the hand-off is. So the twelve are
+**retargeted** from a blocked claim (a `BlockedHandoff` with a `blocked_by` list) to an
+unconditional one (a new authored table, `UNBLOCKED_HANDOFFS`, whose rows carry `blocked_by: []`)
+-- D173's precedent, "a deferral that had to move" -- and each reason now records what landed
+instead of repeating a claim that no longer holds.
+
+The distinction is mechanical rather than rhetorical. `blocker_liveness.check_rows` runs only over
+`BLOCKED_HANDOFFS`, because the thing it falsifies is a **blocker claim**; a row that makes none
+has nothing to go stale, and its truth is instead checked by the owner's own ledger, which counts
+it. `forensics/phase7-obligations.json` is green -- `deferred=226 open=0 complete=True`, liveness
+`findings=0` -- and `ownership_audit` reports `hand-off phase 7 -> 9: 12 discharged` with zero
+mismatched edges.
+
+**These twelve are now this stratum's ordinary work, not a deferred obligation:** `EVP_SealInit`,
+`EVP_CIPHER_CTX_rand_key`, `BIO_f_reliable` (with the whole `bio_ok.c` unit, which
+`forensics/prerequisites.json`'s `units` block already recorded as deferred to Phase 9),
+`OSSL_HPKE_get_grease_value`, and the eight PEM names. None is blocked by anything now; each needs
+only its own transcription.
+
+### Three corrections the landing surfaced
+
+* **The prototype court could not read `c_double`.** `RAND_add`'s third parameter is the first
+  export to carry a C `double`, and the court's Rust map knew `f32`/`f64` but not their
+  `core::ffi` spellings, so the type plane reported the authority's `float:8` against an
+  unreadable name. `RUST_FLOAT_WIDTH` now sits beside `RUST_INT_WIDTH`, and the qualified-path leaf
+  rule that already covered `core::ffi::c_uint` covers `core::ffi::c_double`. It was a court gap,
+  not a signature defect -- the crate's `c_double` is exactly the authority's `double`. The court
+  then reports `type plane: checked=2091 mismatches=0`.
+* **Seven prerequisite rows went stale when the front compiled** -- `RAND_bytes`, `RAND_bytes_ex`,
+  `RAND_priv_bytes_ex`, `ossl_rand_cleanup_int`, `ossl_random_add_conf_module`,
+  `ossl_rand_check_random_provider_on_load`, `ossl_rand_check_random_provider_on_unload` -- and are
+  retired. `blocking_dependencies` moves 25 -> 17.
+* **The staging narrative the front was written under was false by the time it landed.** The module
+  said "this is a **staging** file ... it does not compile as written", carried a `MISSING` list of
+  callees that now exist, and `context/mod.rs` still called slot 5 "**still unfilled**" while
+  `context_init` filled it. All of it is corrected: the header states what is landed and what is
+  owed (Phase 13's `ENGINE_*`, and nothing else), the per-site `MISSING` notes that had become
+  false are gone, `OPENSSL_INIT_BASE_ONLY` is promoted to `pub(crate)` so `ossl_rand_ctx_new`
+  imports it rather than restating the literal `0x0004_0000`, and `EVP_RAND_STATE_READY` is
+  imported from `evp::rand` rather than redeclared as a second literal.
+
+### The `modelled_differently` row D312 promised, and why there is none
+
+D312 said "a `modelled_differently` row belongs in `forensics/prerequisites.json` when the front
+lands", for the three `ENGINE_*` reductions. **Adding one fails the gate, and that is the
+measurement**, so the promise is discharged as an argument rather than as a row.
+
+`prerequisite_gate.py`'s divergence universe is built in its B/C loop, which walks the authority
+unit's called identifiers and observes only those the internal-symbol atlas resolves
+(`owner_tu = symbol_tu.get(name)`). `ENGINE_init`, `ENGINE_get_RAND`, `ENGINE_get_default_RAND` and
+`ENGINE_finish` are **exports**, so `symbol_tu.get` answers None for them and the loop files each
+under `language_surface_not_modelled_by_name` -- a census, not a failure -- before it can reach
+`observed.add(name)`. A divergence row covering them is therefore rejected with
+`divergence_record_does_not_match`, and the gate would refuse the commit. The reduction's record is
+therefore the authority's own code transcribed at each of the three sites, D312's argument, and
+this entry.

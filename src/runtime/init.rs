@@ -208,8 +208,10 @@ const OPENSSL_INIT_LOAD_SSL_STRINGS: u64 = 0x0020_0000;
 /// `OPENSSL_INIT_ATFORK` — accepted: a no-op on this profile.
 #[allow(dead_code)]
 const OPENSSL_INIT_ATFORK: u64 = 0x0002_0000;
-/// `OPENSSL_INIT_BASE_ONLY` — internal to the authority; not a public macro.
-const OPENSSL_INIT_BASE_ONLY: u64 = 0x0004_0000;
+/// `OPENSSL_INIT_BASE_ONLY` — internal to the authority; not a public macro. `pub(crate)` because
+/// `rand_lib.c`'s `ossl_rand_ctx_new` calls `OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, NULL)`,
+/// and a second literal for the same flag is a second thing that can drift.
+pub(crate) const OPENSSL_INIT_BASE_ONLY: u64 = 0x0004_0000;
 /// The two legacy-adder bits, which are **accepted and do nothing yet**.
 ///
 /// The authority's action for `OPENSSL_INIT_ADD_ALL_CIPHERS` is

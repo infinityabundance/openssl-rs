@@ -21,6 +21,7 @@
 
 pub(crate) mod pool;
 pub(crate) mod prov_seed;
-pub(crate) mod rand_lib;
+pub mod rand_lib;
+pub(crate) mod rand_uniform;
 pub(crate) mod sys;
 pub(crate) mod unix;

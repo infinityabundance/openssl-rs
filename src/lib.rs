@@ -88,7 +88,7 @@ pub mod params;
 pub mod pem;
 pub mod property;
 pub mod provider;
-pub(crate) mod rand;
+pub mod rand;
 pub mod rc2;
 pub mod rc4;
 pub mod rsa;
