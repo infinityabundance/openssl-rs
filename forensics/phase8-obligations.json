@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 26,
-      "implemented": 236,
-      "open_in_this_stratum": 524,
+      "implemented": 238,
+      "open_in_this_stratum": 522,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1423,6 +1423,8 @@
       "RSA_padding_add_PKCS1_type_1",
       "RSA_padding_add_X931",
       "RSA_padding_add_none",
+      "RSA_padding_check_PKCS1_OAEP",
+      "RSA_padding_check_PKCS1_OAEP_mgf1",
       "RSA_padding_check_PKCS1_type_1",
       "RSA_padding_check_X931",
       "RSA_padding_check_none",
@@ -4466,18 +4468,6 @@
         "declaring_header": "rsa.h",
         "module": "src/rsa/mod.rs",
         "received_from_phase": null,
-        "symbol": "RSA_padding_check_PKCS1_OAEP"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_padding_check_PKCS1_OAEP_mgf1"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
         "symbol": "RSA_pkey_ctx_ctrl"
       },
       {
@@ -4894,12 +4884,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "c34cf9a3182074c8d2220370a5192555fb20c0a2495bafd09e07e25a073b4b1c"
+      "sha256": "85401a1ee4a5ad81c9b019c3c6e58ad05667529e2ae5e6a604ae83d577c7247d"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "1cfae87711d6c8e464aecb18dcea930d8f39e8153b5bb1c9ebbdc735e03cee74"
+      "sha256": "7f3f6f5d31e746da0e1b3ddfd5f4f418575d62378a91e965070bc90c219f28b9"
     }
   ],
   "kind": "phase8-obligations",

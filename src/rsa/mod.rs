@@ -1200,6 +1200,329 @@ pub unsafe extern "C" fn PKCS1_MGF1(
     }
 }
 
+/// The allocation-tracking `file` argument for `rsa_oaep.c`'s allocations.
+///
+/// Like `crypto/rsa/rsa_meth.c` above, `rsa_oaep.c` is a source-tree file, so its `__FILE__`
+/// carries the `../../src/openssl-3.6.4/` prefix. The string is observable through
+/// `CRYPTO_set_mem_functions`, so the prefix is not cosmetic.
+const FILE_RSA_OAEP: *const c_char = c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c".as_ptr();
+
+/// `int RSA_padding_check_PKCS1_OAEP(unsigned char *to, int tlen, const unsigned char *from,
+/// int flen, int num, const unsigned char *param, int plen)` — `rsa_oaep.c:160-166`.
+///
+/// The default-digest wrapper: it forwards to `RSA_padding_check_PKCS1_OAEP_mgf1` with `md` and
+/// `mgf1md` both NULL, which that function turns into `EVP_sha1()` for both. PKCS #1 v2.2's default
+/// hash is SHA-1, so this is the historical entry point and the `_mgf1` form is the one a caller
+/// uses to choose otherwise.
+///
+/// # Safety
+/// `to` is writable for `tlen` bytes; `from` is readable for `flen` bytes; `param` is readable for
+/// `plen` bytes, and NULL with `plen == 0` is the empty label.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_padding_check_PKCS1_OAEP(
+    to: *mut c_uchar,
+    tlen: c_int,
+    from: *const c_uchar,
+    flen: c_int,
+    num: c_int,
+    param: *const c_uchar,
+    plen: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract, forwarded unchanged; both digest arguments are NULL, which the
+    // callee documents as "use the default".
+    unsafe {
+        RSA_padding_check_PKCS1_OAEP_mgf1(
+            to,
+            tlen,
+            from,
+            flen,
+            num,
+            param,
+            plen,
+            core::ptr::null(),
+            core::ptr::null(),
+        )
+    }
+}
+
+/// `int RSA_padding_check_PKCS1_OAEP_mgf1(unsigned char *to, int tlen, const unsigned char *from,
+/// int flen, int num, const unsigned char *param, int plen, const EVP_MD *md,
+/// const EVP_MD *mgf1md)` — `rsa_oaep.c:168-341`.
+///
+/// PKCS #1 v2.2 section 7.1.2's EME-OAEP decoding check, written the way the authority writes it:
+/// **every validity decision is folded into `good` with the constant-time helpers**, and the
+/// plaintext is written back with a masked, duplicated move so that neither the pass/fail bit nor
+/// the plaintext length leaks through timing.
+///
+/// The authority's own notes, preserved because each explains a non-obvious choice:
+///
+/// * `em` is the encoded message, zero-padded to exactly `num` bytes: `em = Y || maskedSeed ||
+///   maskedDB`.
+/// * `num` is the modulus length and `flen` the encoded message length, so for any `from` that came
+///   out of a decryption `flen <= num` must hold; independently, `num >= 2 * mdlen + 2` must hold
+///   for the modulus, per PKCS #1 v2.2 section 7.1.2. Those two checks leak no side-channel
+///   information.
+/// * The caller is encouraged to hand in a zero-padded message from `BN_bn2binpad`. Because `from`
+///   cannot be read out of bounds, an invariant memory-access pattern is impossible when `from` was
+///   not already zero-padded — so the copy loop advances a pointer under a mask rather than
+///   indexing.
+/// * The first byte must be zero, **and whether it was must not leak**; this is the fix for James
+///   H. Manger's chosen-ciphertext attack ("A Chosen Ciphertext Attack on RSA Optimal Asymmetric
+///   Encryption Padding (OAEP) [...]", CRYPTO 2001).
+/// * Once `good` has absorbed every check it is zero unless the plaintext was valid, so
+///   plaintext-awareness means timing side-channels are no longer a concern.
+/// * The in-place move copies memory back in a way that does not reveal the size of the data being
+///   copied: parts of the buffer are copied multiple times, once per set bit of the real length,
+///   under a mask, so clear bits do an identically-shaped non-copy. Its cost is O(N*log(N)).
+/// * To avoid chosen-ciphertext attacks the error raised on failure must not reveal which kind of
+///   decoding error happened. In FIPS builds libcrypto owns the error stack and the trick below
+///   cannot be used, so the authority there puts no error on the stack at all; the arm reproduced
+///   here is the `#ifndef FIPS_MODULE` one.
+///
+/// # Safety
+/// `to` is writable for `tlen` bytes; `from` is readable for `flen` bytes; `param` is readable for
+/// `plen` bytes (NULL with 0 is the empty label); `md` and `mgf1md` are NULL or live digest
+/// methods.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_padding_check_PKCS1_OAEP_mgf1(
+    to: *mut c_uchar,
+    mut tlen: c_int,
+    from: *const c_uchar,
+    flen: c_int,
+    num: c_int,
+    param: *const c_uchar,
+    plen: c_int,
+    md: *const EvpMd,
+    mgf1md: *const EvpMd,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        // The authority writes `dblen = 0` and `db = NULL` here; neither initial value is ever
+        // read (`dblen` is assigned before the first `goto cleanup`, and `db` is assigned as the
+        // first act of the `'body` block), so Rust declares them where they are first written.
+        let mut mlen: c_int = -1;
+        let mut good: u32 = 0;
+        let db: *mut c_uchar;
+        let mut em: *mut c_uchar = core::ptr::null_mut();
+        let mut seed = [0u8; EVP_MAX_MD_SIZE];
+
+        let mut md = md;
+        if md.is_null() {
+            // The authority's `#ifndef FIPS_MODULE` arm only; this crate has no FIPS branch.
+            md = crate::evp::legacy_sha::EVP_sha1();
+        }
+        let mut mgf1md = mgf1md;
+        if mgf1md.is_null() {
+            mgf1md = md;
+        }
+
+        // SAFETY: `md` is live (the default above when the caller passed NULL).
+        let mdlen: c_int = EVP_MD_get_size(md);
+
+        if tlen <= 0 || flen <= 0 || mdlen <= 0 {
+            return -1;
+        }
+        // `num` is the modulus length and `flen` the encoded message length: `flen <= num` for any
+        // decrypted block, and `num >= 2 * mdlen + 2` for the modulus. Neither check leaks.
+        if num < flen || num < 2 * mdlen + 2 {
+            raise_site(&err_sites::RSA_OAEP_222);
+            return -1;
+        }
+
+        let dblen: c_int = num - mdlen - 1;
+
+        let completed = 'body: {
+            // SAFETY: `dblen` is positive because `num >= 2 * mdlen + 2`.
+            db = crate::runtime::mem::CRYPTO_malloc(dblen as usize, FILE_RSA_OAEP, LINE)
+                .cast::<c_uchar>();
+            if db.is_null() {
+                break 'body false;
+            }
+
+            // SAFETY: `num` is positive.
+            em = crate::runtime::mem::CRYPTO_malloc(num as usize, FILE_RSA_OAEP, LINE)
+                .cast::<c_uchar>();
+            if em.is_null() {
+                break 'body false;
+            }
+
+            // Copy `from` (up to `flen` bytes) into the tail of `em` (`num` bytes): right-aligned,
+            // zero-padded on the left. The source pointer is advanced under a mask so the same
+            // addresses are touched whatever `flen` is, and `from` is never read before its start.
+            let mut from = from;
+            let mut flen = flen;
+            let mut i: c_int;
+            let mut mask: u32;
+            from = from.offset(flen as isize);
+            em = em.offset(num as isize);
+            i = 0;
+            while i < num {
+                mask = !crate::runtime::constant_time::constant_time_is_zero_u32(flen as u32);
+                flen = flen.wrapping_sub((1 & mask) as c_int);
+                from = from.offset(-((1 & mask) as isize));
+                em = em.offset(-1);
+                *em = ((*from) as u32 & mask) as u8;
+                i += 1;
+            }
+
+            // The first byte must be zero; whether it was must not leak. Manger's chosen-ciphertext
+            // attack is the reason.
+            good = crate::runtime::constant_time::constant_time_is_zero_u32(*em as u32);
+
+            let maskedseed = em.offset(1);
+            let maskeddb = em.offset((1 + mdlen) as isize);
+
+            if PKCS1_MGF1(
+                seed.as_mut_ptr(),
+                mdlen as c_long,
+                maskeddb,
+                dblen as c_long,
+                mgf1md,
+            ) != 0
+            {
+                break 'body false;
+            }
+            i = 0;
+            while i < mdlen {
+                seed[i as usize] ^= *maskedseed.offset(i as isize);
+                i += 1;
+            }
+
+            if PKCS1_MGF1(db, dblen as c_long, seed.as_ptr(), mdlen as c_long, mgf1md) != 0 {
+                break 'body false;
+            }
+            i = 0;
+            while i < dblen {
+                *db.offset(i as isize) ^= *maskeddb.offset(i as isize);
+                i += 1;
+            }
+
+            let mut phash = [0u8; EVP_MAX_MD_SIZE];
+            if crate::evp::digest::EVP_Digest(
+                param.cast::<c_void>(),
+                plen as usize,
+                phash.as_mut_ptr(),
+                core::ptr::null_mut(),
+                md,
+                core::ptr::null_mut(),
+            ) == 0
+            {
+                break 'body false;
+            }
+
+            good &= crate::runtime::constant_time::constant_time_is_zero_u32(
+                crate::runtime::mem::CRYPTO_memcmp(
+                    db.cast::<c_void>(),
+                    phash.as_ptr().cast::<c_void>(),
+                    mdlen as usize,
+                ) as u32,
+            );
+
+            let mut found_one_byte: u32 = 0;
+            let mut one_index: c_int = 0;
+            i = mdlen;
+            while i < dblen {
+                // The padding is a number of 0-bytes followed by a 1.
+                let equals1 = crate::runtime::constant_time::constant_time_eq_u32(
+                    *db.offset(i as isize) as u32,
+                    1,
+                );
+                let equals0 = crate::runtime::constant_time::constant_time_is_zero_u32(
+                    *db.offset(i as isize) as u32,
+                );
+                one_index = crate::runtime::constant_time::constant_time_select_int(
+                    !found_one_byte & equals1,
+                    i,
+                    one_index,
+                );
+                found_one_byte |= equals1;
+                good &= found_one_byte | equals0;
+                i += 1;
+            }
+
+            good &= found_one_byte;
+
+            // At this point `good` is zero unless the plaintext was valid, so plaintext-awareness
+            // ensures timing side-channels are no longer a concern.
+            let msg_index = one_index + 1;
+            mlen = dblen - msg_index;
+
+            // For good measure, do this check in constant time as well.
+            good &= crate::runtime::constant_time::constant_time_ge_u32(tlen as u32, mlen as u32);
+
+            // Move the result in place by `dblen - mdlen - 1 - mlen` bytes to the left. Then, if
+            // `good`, move `mlen` bytes from `db + mdlen + 1` to `to`; otherwise leave `to`
+            // unchanged. The copy is arranged so it does not reveal the size of the data being
+            // copied via a timing side channel: parts of the buffer are copied multiple times,
+            // based on the bits set in the real length, and clear bits do a non-copy with an
+            // identical access pattern. Overall complexity O(N*log(N)).
+            tlen = crate::runtime::constant_time::constant_time_select_int(
+                crate::runtime::constant_time::constant_time_lt_u32(
+                    (dblen - mdlen - 1) as u32,
+                    tlen as u32,
+                ),
+                dblen - mdlen - 1,
+                tlen,
+            );
+            let mut msg_index = 1;
+            while msg_index < dblen - mdlen - 1 {
+                mask = !crate::runtime::constant_time::constant_time_eq_u32(
+                    (msg_index & (dblen - mdlen - 1 - mlen)) as u32,
+                    0,
+                );
+                i = mdlen + 1;
+                while i < dblen - msg_index {
+                    let keep = *db.offset(i as isize);
+                    let moved = *db.offset((i + msg_index) as isize);
+                    *db.offset(i as isize) = crate::runtime::constant_time::constant_time_select_8(
+                        mask as u8, moved, keep,
+                    );
+                    i += 1;
+                }
+                msg_index <<= 1;
+            }
+            i = 0;
+            while i < tlen {
+                mask = good
+                    & crate::runtime::constant_time::constant_time_lt_u32(i as u32, mlen as u32);
+                let keep = *to.offset(i as isize);
+                let moved = *db.offset((i + mdlen + 1) as isize);
+                *to.offset(i as isize) =
+                    crate::runtime::constant_time::constant_time_select_8(mask as u8, moved, keep);
+                i += 1;
+            }
+
+            true
+        };
+
+        if completed {
+            // To avoid chosen-ciphertext attacks the error must not reveal which kind of decoding
+            // error happened; `err_clear_last_constant_time` then removes it again when the
+            // plaintext was in fact good. This is the authority's `#ifndef FIPS_MODULE` arm.
+            raise_site(&err_sites::RSA_OAEP_332);
+            crate::runtime::err::err_clear_last_constant_time((1 & good) as c_int);
+        }
+
+        // The authority's `cleanup:` label, reached both by falling through and by every
+        // `break 'body false` above.
+        crate::runtime::mem::cleanse(seed.as_mut_ptr(), EVP_MAX_MD_SIZE);
+        crate::runtime::mem::CRYPTO_clear_free(
+            db.cast::<c_void>(),
+            dblen as usize,
+            FILE_RSA_OAEP,
+            LINE,
+        );
+        crate::runtime::mem::CRYPTO_clear_free(
+            em.cast::<c_void>(),
+            num as usize,
+            FILE_RSA_OAEP,
+            LINE,
+        );
+
+        crate::runtime::constant_time::constant_time_select_int(good, mlen, -1)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

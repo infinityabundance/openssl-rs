@@ -242,6 +242,115 @@ static void drain(const char *arm)
     printf("rsa.%s.err.count=%d\n", arm, n);
 }
 
+/* Build a valid PKCS#1 v1.5 OAEP encoding, deterministically. `RSA_padding_add_PKCS1_OAEP_mgf1`
+ * itself is a Phase 9 hand-off (it draws its seed with RAND_bytes_ex), so a court that wants a
+ * valid encoding to *check* has to build one -- and it can, out of primitives both sides publish:
+ * `PKCS1_MGF1` and `EVP_Digest`. The seed is fixed, which is exactly what makes the arm
+ * reproducible. The construction is RFC 8017 section 7.1.1: EM = 0x00 || maskedSeed || maskedDB
+ * with DB = lHash || PS || 0x01 || M, maskedDB = DB ^ MGF1(seed) and maskedSeed = seed ^
+ * MGF1(maskedDB). */
+static int oaep_encode(unsigned char *em, int num, const unsigned char *msg, int msglen,
+    const unsigned char *seed, int mdlen, const EVP_MD *md, const EVP_MD *mgf1)
+{
+    unsigned char db[256], dbmask[256], seedmask[64], lhash[EVP_MAX_MD_SIZE];
+    int dblen = num - mdlen - 1;
+    int i, pslen;
+
+    /* The caller's buffers are sized by the arms below; only the local `db` has a fixed size. */
+    if (dblen > (int)sizeof(db) || mdlen > (int)sizeof(seedmask))
+        return 0;
+    if (dblen < mdlen + msglen + 1)
+        return 0;
+    if (EVP_Digest(NULL, 0, lhash, NULL, md, NULL) != 1)
+        return 0;
+
+    memcpy(db, lhash, mdlen);
+    pslen = dblen - mdlen - msglen - 1;
+    memset(db + mdlen, 0, (size_t)pslen);
+    db[mdlen + pslen] = 0x01;
+    memcpy(db + mdlen + pslen + 1, msg, (size_t)msglen);
+
+    if (PKCS1_MGF1(dbmask, dblen, seed, mdlen, mgf1) != 0)
+        return 0;
+    for (i = 0; i < dblen; i++)
+        db[i] ^= dbmask[i];
+
+    em[0] = 0x00;
+    memcpy(em + 1 + mdlen, db, (size_t)dblen);
+
+    if (PKCS1_MGF1(seedmask, mdlen, em + 1 + mdlen, dblen, mgf1) != 0)
+        return 0;
+    for (i = 0; i < mdlen; i++)
+        em[1 + i] = (unsigned char)(seed[i] ^ seedmask[i]);
+    return 1;
+}
+
+static void oaep_arms(void)
+{
+    /* The two OAEP checks. `RSA_padding_check_PKCS1_OAEP` is the wrapper that passes NULL for both
+     * digests, which is what makes it reach `EVP_sha1()` -- the export D291 landed and the reason
+     * this unit could not close before it. */
+    const EVP_MD *sha1 = EVP_MD_fetch(NULL, "SHA1", NULL);
+    unsigned char seed[20];
+    unsigned char msg[16];
+    unsigned char em[128];
+    unsigned char out[128];
+    int i, r;
+
+    printf("oaep.md_fetched=%d\n", sha1 != NULL);
+    if (sha1 == NULL)
+        return;
+    for (i = 0; i < 20; i++)
+        seed[i] = (unsigned char)(0x30 + i);
+    for (i = 0; i < 16; i++)
+        msg[i] = (unsigned char)(0xc0 + i);
+
+    ERR_clear_error();
+    memset(em, 0, sizeof(em));
+    printf("oaep.encode=%d\n", oaep_encode(em, 128, msg, 16, seed, 20, sha1, sha1));
+
+    memset(out, 0x5a, sizeof(out));
+    r = RSA_padding_check_PKCS1_OAEP_mgf1(out, 128, em, 128, 128, NULL, 0, sha1, sha1);
+    printf("oaep.mgf1.ok=%d\n", r);
+    printf("oaep.mgf1.body=%d\n", r == 16 && memcmp(out, msg, 16) == 0);
+    drain("oaep_mgf1_ok");
+
+    /* The wrapper: NULL digests mean SHA-1 for both, and the label is empty. */
+    memset(out, 0x5a, sizeof(out));
+    ERR_clear_error();
+    r = RSA_padding_check_PKCS1_OAEP(out, 128, em, 128, 128, NULL, 0);
+    printf("oaep.wrapper.ok=%d\n", r);
+    printf("oaep.wrapper.body=%d\n", r == 16 && memcmp(out, msg, 16) == 0);
+    drain("oaep_wrapper_ok");
+
+    /* A single flipped byte in the data block must be refused through the implicit-rejection
+     * path, which is where `RSA_R_OAEP_DECODING_ERROR` and the constant-time flag clearing live. */
+    ERR_clear_error();
+    em[1 + 20 + 30] ^= 0x01;
+    memset(out, 0x5a, sizeof(out));
+    printf("oaep.flipped=%d\n", RSA_padding_check_PKCS1_OAEP_mgf1(out, 128, em, 128, 128,
+        NULL, 0, sha1, sha1));
+    drain("oaep_flipped");
+
+    /* A first byte that is not zero, and the two size refusals. */
+    printf("oaep.encode2=%d\n", oaep_encode(em, 128, msg, 16, seed, 20, sha1, sha1));
+    ERR_clear_error();
+    em[0] = 0x01;
+    printf("oaep.first=%d\n", RSA_padding_check_PKCS1_OAEP_mgf1(out, 128, em, 128, 128,
+        NULL, 0, sha1, sha1));
+    drain("oaep_first");
+    printf("oaep.encode3=%d\n", oaep_encode(em, 128, msg, 16, seed, 20, sha1, sha1));
+    ERR_clear_error();
+    printf("oaep.short_num=%d\n", RSA_padding_check_PKCS1_OAEP_mgf1(out, 128, em, 128, 40,
+        NULL, 0, sha1, sha1));
+    drain("oaep_short_num");
+    printf("oaep.short_flen=%d\n", RSA_padding_check_PKCS1_OAEP_mgf1(out, 128, em, 127, 128,
+        NULL, 0, sha1, sha1));
+    printf("oaep.zero_tlen=%d\n", RSA_padding_check_PKCS1_OAEP_mgf1(out, 0, em, 128, 128,
+        NULL, 0, sha1, sha1));
+    EVP_MD_free((EVP_MD *)sha1);
+}
+
 int main(void)
 {
     RSA_METHOD *m = NULL;
@@ -579,6 +688,8 @@ int main(void)
         EVP_MD_free((EVP_MD *)md_sha256);
         printf("rsa.mgf1.released=1\n");
     }
+
+    oaep_arms();
 
     /* ---------------------------------------------------------------- release */
 
