@@ -684,6 +684,13 @@ PHASE9_MODULES = [
     "docs/PHASE-9-SUBPHASES.md",
     "forensics/tools/phase9_courts.py",
     "forensics/tools/phase9_obligations.py",
+    # 9.2's first unit, and the only part of this stratum that can land before the front it is
+    # called from: `crypto/rand/rand_pool.c` has no platform dependency, so it compiles and its
+    # ten unit tests run while nothing in the crate calls it. It carries no export, so it adds no
+    # row to the ledger and no edge to the court-coverage atlas -- which is why naming it here is
+    # the only place its landing is visible to the evidence machinery at all.
+    "src/rand/mod.rs",
+    "src/rand/pool.rs",
 ]
 
 STRATUM_EVIDENCE: dict[int, StratumEvidence] = {

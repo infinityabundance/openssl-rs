@@ -74,8 +74,8 @@
       "symbols_reached": 75,
       "unit_records": 68,
       "units_named_by_a_record": 71,
-      "units_named_by_a_row": 154,
-      "units_reached": 138
+      "units_named_by_a_row": 155,
+      "units_reached": 139
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -1691,6 +1691,33 @@
         ],
         "transcribed_by": []
       },
+      "crypto/rand/rand_pool.c": {
+        "defines": [
+          "ossl_rand_pool_add",
+          "ossl_rand_pool_add_begin",
+          "ossl_rand_pool_add_end",
+          "ossl_rand_pool_adin_mix_in",
+          "ossl_rand_pool_attach",
+          "ossl_rand_pool_buffer",
+          "ossl_rand_pool_bytes_needed",
+          "ossl_rand_pool_bytes_remaining",
+          "ossl_rand_pool_detach",
+          "ossl_rand_pool_entropy",
+          "ossl_rand_pool_entropy_available",
+          "ossl_rand_pool_entropy_needed",
+          "ossl_rand_pool_free",
+          "ossl_rand_pool_length",
+          "ossl_rand_pool_new",
+          "ossl_rand_pool_reattach"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "9.2"
+        ],
+        "transcribed_by": [
+          "src/rand/pool.rs"
+        ]
+      },
       "crypto/rand/rand_uniform.c": {
         "defines": [
           "ossl_rand_range_uint32",
@@ -2297,31 +2324,31 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 177
+      "transcribed_units": 178
     }
   },
-  "body_hash": "99a90aaa4a549cfbb46613313f181898e0d7d9304f88cee9050d83bac4d0f047",
+  "body_hash": "b441db58a104d5d3c1f44c0f6bc6aefb3a27869141bbdafe9f49f5924ccc4337",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "1a1e85b8e5945145c414da87ffc44af4020c1c022de29bdcfdc42d0ee6a36b12"
+      "sha256": "756e7622eeddb44d2eec3b22ef4c1f332097a2caf4b97132f4af42633f712bae"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "bd4ce920ec14de8a1abde24e832643873d4048f18ad6f82faa422806a9461502"
+      "sha256": "99c82c66f93ac03f2a73c265814e8aa911960fc334b6621c2dc8589692ff1f23"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "a6502c6a9b01a24eff40fced6f550c12c68f739ed49e846eb5b00ce37df737e8"
+      "sha256": "dbef24d07c2ebce5f2228396cf01de28a50db97af580b7d15580d262528839fd"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "1d5287c714bf5e8527935829057e2411bb785d7f69c1af780cbb19d8101a9482"
+      "sha256": "a021e4c787905997f148bbac3076ee8de700f69093f178f2b6d419318dcb0ab6"
     },
     {
       "name": "prerequisites",
@@ -2356,7 +2383,7 @@
     {
       "name": "plan-PHASE-9-SUBPHASES",
       "path": "docs/PHASE-9-SUBPHASES.md",
-      "sha256": "8b6c8eedc5eee5e5ec91b628817f94af8ba928e16a3175212ea4d62d352450f2"
+      "sha256": "b0cfbc26faf639b5e53f1569b0d64b08136436f4938565d7225e152c6cc6dded"
     }
   ],
   "kind": "plan-reconciliation",
