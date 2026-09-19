@@ -18932,3 +18932,122 @@ than hidden.
 with their caller named, which is the project's recorded idiom for a mechanism whose consumer is the
 next commit. It does not land the OAEP checks, and it does not reopen the rest of Phase 7 — only the
 digest method objects, whose bodies are already transcribed here.
+
+## D289 — the legacy digest objects are the next unblock, and they hide a contradiction that measurement has to settle
+
+The unit D288 pointed at: `crypto/evp/legacy_sha.c`'s seven static `EVP_MD` values and `EVP_md5`,
+which are the default digests of both OAEP adds, PSS's keygen-md family, `RSA_verify_PKCS1_PSS` and
+`PKCS1_MGF1`'s callers. It is the smallest unblock in the tree by the reading — `EVP_sha1()` is
+`return &sha1_md;` — and this entry is why it is not being transcribed today.
+
+**The contradiction, stated exactly.** `LEGACY_EVP_MD_METH_TABLE` (`legacy_meth.h:38-39`) expands to
+`init, update, final, NULL, NULL, blksz, 0, ctrl`. `struct evp_md_st`'s legacy fields
+(`include/crypto/evp.h:258-295`) are, in order, `init`, `update`, `final`, `copy`, `cleanup`,
+`block_size`, `ctx_size`, `md_ctrl`. So `SHA_CBLOCK` lands in `block_size` and **zero lands in
+`ctx_size`**. And `evp_md_init_internal` (`crypto/evp/digest.c:340-347`) allocates the context's
+`md_data` only:
+
+```c
+if (!(ctx->flags & EVP_MD_CTX_FLAG_NO_INIT) && type->ctx_size) {
+    ctx->update = type->update;
+    ctx->md_data = OPENSSL_zalloc(type->ctx_size);
+    ...
+}
+```
+
+with `EVP_MD_CTX_get0_md_data` (`evp_lib.c:1087-1090`) a bare `return ctx->md_data;` and
+`sha1_init(ctx)` a bare `SHA1_Init(EVP_MD_CTX_get0_md_data(ctx))`. A zero `ctx_size` therefore
+leaves `md_data` NULL and makes the legacy init call `SHA1_Init(NULL)`, which raises
+`ERR_R_PASSED_NULL_PARAMETER` and answers 0 — so `EVP_DigestInit_ex(ctx, EVP_sha1(), NULL)` should
+fail.
+
+**It does not, and that is measured rather than argued.** `courts/layout/oracle-legacy-sha.c` is now
+committed and answers, against the pinned prefix: `EVP_sha1()` non-NULL with `type` 64, `size` 20,
+`block_size` 64 and `flags` 8 (`EVP_MD_FLAG_DIGALGID_ABSENT`); `init_ok=1`, `update_ok=1`,
+`final_ok=1`, `outlen=20`, the digest being the published `SHA1("abc")` = `a9993e36 4706816a
+ba3e2571 7850c26c 9cd0d89d`; and an **empty error queue**, so nothing was raised and swallowed. So
+the legacy method is fully functional — not the engine-only stub the file's own comment ("These only
+remain to support engines that can get these methods") invites a reader to assume — and the reading
+above is wrong *somewhere*.
+
+**Why that stops the transcription rather than merely annotating it.** Transcribing `sha1_md` means
+writing a Rust `EvpMd` with a `ctx_size` field set to a number, and the crate's `EVP_MD_CTX` legacy
+path allocates from that number. Writing zero reproduces the contradiction; writing a non-zero value
+means inventing one. Both are guesses about the field the mechanism turns on, and this project's rule
+is that a claim is a fact a reader can recompute. The field cannot be read through the public surface
+either: `EVP_MD_get_ctx_size` is **not an exported symbol** — the oracle's first version failed to
+link on it, which is itself the measurement.
+
+**What it therefore takes, named so the next unit is mechanical.** Either reading the pinned
+authority's own object for `sha1_md`'s `ctx_size` slot (`courts/layout/` already holds programs that
+link the static archive, and this is the same shape), or a second oracle that links
+`libcrypto.a` and reads the field through the internal header. Both are measurements of the same
+number, and either settles it. Until then the seven objects stay unwritten, and the reason is this
+entry rather than their size.
+
+**What this entry does not claim.** It lands no export and reopens nothing: the legacy digest objects
+remain untouched, `EVP_sha1` remains a scaffolded ABI in the shell, and `libcrypto` stays at 2077.
+What it adds is a committed, reproducible measurement of `EVP_sha1()`'s behaviour plus one precisely
+located contradiction — which is the difference between a transcription that is right and one that
+merely compiles.
+
+## D289 — `EVP_sha1()`'s legacy object is measured, and four of its measurements contradict the text
+
+`crypto/evp/legacy_sha.c` is the next unit D288 identified, and it is the last thing between 8.4 and
+the two OAEP checks. This entry does not land it, and the reason is a measurement that four separate
+readings of three files could not turn into a consistent mechanism.
+
+**What the object is, measured.** `EVP_sha1()` is `return &sha1_md;` (`legacy_sha.c:100`), so what
+it returns is a `static const EVP_MD` whose fields are compile-time constants. `courts/layout/oracle-legacy-sha.c`
+reads them off the returned pointer through a local replica of `struct evp_md_st` whose *offsets are
+printed first*, so a replica that had stopped matching the authority would show up as a bad offset
+rather than as a wrong field: `type` 64, `pkey_type` 65 (`NID_sha1WithRSAEncryption`), `md_size` 20,
+`flags` 8 (`EVP_MD_FLAG_DIGALGID_ABSENT`), `origin` 1 (`EVP_ORIG_GLOBAL`), `block_size` **64**,
+`ctx_size` **0**, `copy` and `cleanup` NULL, `init`/`update`/`final`/`md_ctrl` non-NULL.
+
+**The contradiction, in four facts.**
+
+1. `LEGACY_EVP_MD_METH_TABLE(init, update, final, ctrl, blksz)` (`legacy_meth.h:38-39`) expands to
+   `init, update, final, NULL, NULL, blksz, 0, ctrl`, which against those fields places `SHA_CBLOCK`
+   in `block_size` and **zero in `ctx_size`** — and the measurement agrees, `block_size` 64 and
+   `ctx_size` 0.
+2. `evp_md_init_internal` (`digest.c:342`) sets `ctx->update` and allocates `ctx->md_data` only
+   `if (!(ctx->flags & EVP_MD_CTX_FLAG_NO_INIT) && type->ctx_size)`. With `ctx_size` zero, both are
+   left as they were, and `EVP_MD_CTX_get0_md_data` (`evp_lib.c:1087`) is a bare
+   `return ctx->md_data;`.
+3. The measurement agrees with that too: `ctx->md_data` is NULL **before** `EVP_DigestInit_ex` and
+   still NULL **after** it, and `EVP_MD_CTX_get0_md(ctx)` is the *same pointer* `EVP_sha1()`
+   returned — `EVP_MD_fetch(NULL, "SHA1", NULL)` answers a different address, so no provider method
+   was substituted for the legacy one.
+4. And then `EVP_DigestUpdate` and `EVP_DigestFinal_ex` both answer 1 and produce the published
+   SHA-1 of `"abc"`, `a9993e36 4706816a ba3e2571 7850c26c 9cd0d89d`, with an empty error queue.
+   `EVP_DigestUpdate`'s legacy arm (`digest.c:431`) is `return ctx->update != NULL ?
+   ctx->update(ctx, data, count) : 0;`, so that requires `ctx->update` to be non-NULL — which
+   fact 2 says it is not.
+
+Facts 2 and 4 cannot both hold if `md_data` is the only route to the state, and facts 1 and 3 cannot
+both hold if the digest ran through a provider method instead. One of the readings is wrong, and
+which one is not visible from the text in the time available.
+
+**Why that stops the transcription rather than delaying it.** The object has to be reproduced
+*field for field*, including `ctx_size` and the four callbacks, and the two candidate readings imply
+opposite objects: one with `ctx_size` 0 and no legacy state, one with a live legacy state. Writing
+either is a guess, and a guess here is precisely what this project's evidence plane exists to
+prevent — the last four entries each found that the plausible reading was the wrong one. So the
+oracle is committed instead, with the offsets printed, and the next probe is named rather than
+improvised: link the pinned **static** archive (which `oracle-polyval.c` and
+`oracle-chacha20-poly1305-hw.c` already do) so that `sha1_md`'s address and any write to
+`ctx->md_data` can be watched directly, or take a debugger breakpoint on `SHA1_Init` and see what
+argument it is handed. Either answers the question in one run.
+
+**What *is* established, and it is not nothing.** `EVP_sha1()` is **fully functional** — it is not
+the engine-only stub its own file comment ("These only remain to support engines that can get these
+methods") suggests, because a plain `EVP_DigestInit_ex` with no engine produces the correct digest.
+That single fact changes the unit's shape: whatever the mechanism, the seven objects have to work
+standalone, and a transcription that followed the file comment and left them inert would fail the
+first court arm. `EVP_MD_get_ctx_size` is not an exported symbol, which is why the field had to be
+read through a struct replica rather than through the public surface.
+
+**What this entry does not claim.** It does not land `legacy_sha.c`, the two OAEP checks, or
+anything else. It records four measurements, the contradiction between them, and the one probe that
+resolves it.
