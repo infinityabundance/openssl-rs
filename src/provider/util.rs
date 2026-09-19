@@ -30,7 +30,8 @@ use core::ffi::{c_int, c_void};
 use core::ptr;
 
 use crate::evp::cipher::{EVP_CIPHER_fetch, EVP_CIPHER_free, EVP_CIPHER_up_ref, EvpCipher};
-use crate::evp::legacy_evp::EVP_get_cipherbyname;
+use crate::evp::digest::{EVP_MD_fetch, EVP_MD_free, EVP_MD_up_ref, EvpMd};
+use crate::evp::legacy_evp::{EVP_get_cipherbyname, EVP_get_digestbyname};
 use crate::params::{OsslParam, OSSL_PARAM_UTF8_STRING};
 use crate::runtime::err::{ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark};
 
@@ -45,6 +46,9 @@ pub(crate) const OSSL_ALG_PARAM_CIPHER: *const core::ffi::c_char = c"cipher".as_
 pub(crate) const OSSL_ALG_PARAM_PROPERTIES: *const core::ffi::c_char = c"properties".as_ptr();
 /// `OSSL_ALG_PARAM_ENGINE` — `core_names.h:129` (`"engine"`).
 pub(crate) const OSSL_ALG_PARAM_ENGINE: *const core::ffi::c_char = c"engine".as_ptr();
+/// `OSSL_ALG_PARAM_DIGEST` — `core_names.h` (`"digest"`). The digest half's own key, and the one
+/// `hmac_prov.c`'s `set_ctx_params_decoder` locates.
+pub(crate) const OSSL_ALG_PARAM_DIGEST: *const core::ffi::c_char = c"digest".as_ptr();
 
 /// `PROV_CIPHER` — `prov/provider_util.h:16-25`. `cipher` caches the cipher always, while
 /// `alloc_cipher` holds the reference to an explicitly *fetched* one — the distinction
@@ -241,6 +245,217 @@ pub(crate) unsafe fn ossl_prov_cipher_engine(pc: *const ProvCipher) -> *mut c_vo
     unsafe { (*pc).engine }
 }
 
+/// The `PROV_DIGEST` half, in its own module so the one dead-code allow below can name the caller
+/// that will land rather than being repeated on nine items.
+///
+/// **Nothing calls this yet, and that is a state rather than an oversight.** `provider_util.c`'s
+/// digest half exists because a provider row receives a digest *name*; the row that does is
+/// `hmac_prov.c`, this stratum's next `OSSL_OP_MAC` row, and it is the caller that removes this
+/// attribute. Landing the layer first keeps that unit to the row rather than to the row plus its
+/// prerequisite, which is the same split D241 made for the cipher half — except that the cipher
+/// half's caller came with it, and this one is a commit away.
+#[allow(dead_code)]
+pub(crate) mod prov_digest {
+    use super::*;
+
+    // ------------------------------------------------------------------------------------------
+    // `PROV_DIGEST` — the same layer for a *named* digest, and the one `hmac_prov.c` runs on
+    // ------------------------------------------------------------------------------------------
+    //
+    // `ossl_prov_digest_*` is `provider_util.c:146-241`, the cipher half's sibling. Both exist for the
+    // same reason: a provider row receives a **name** and has to resolve it in its own library context.
+    // The two differ in one way that matters -- a digest has a legacy fallback and a cipher has one too,
+    // but the digest's is reached through `EVP_get_digestbyname` and is *rejected* when its `origin` is
+    // `EVP_ORIG_GLOBAL`, because a global `EVP_MD` is the built-in table's and must not be handed out as
+    // if it came from a fetch.
+
+    /// `PROV_DIGEST` — `prov/provider_util.h:34-38`. Three fields, and the `md`/`alloc_md` split is the
+    /// same distinction `PROV_CIPHER` keeps: `md` may be a *looked-up* method that was never fetched, so
+    /// only `alloc_md` may be freed.
+    #[repr(C)]
+    pub(crate) struct ProvDigest {
+        /// `const EVP_MD *md` — what the row will use.
+        pub md: *const EvpMd,
+        /// `EVP_MD *alloc_md` — the fetched method, which the row owns.
+        pub alloc_md: *mut EvpMd,
+        /// `ENGINE *engine` — always NULL here; see the module note on the cipher half's `engine`.
+        pub engine: *mut c_void,
+    }
+
+    /// `void ossl_prov_digest_reset(PROV_DIGEST *pd)` — `provider_util.c:146-155`.
+    ///
+    /// # Safety
+    /// `pd` points at a live, writable `PROV_DIGEST`.
+    pub(crate) unsafe fn ossl_prov_digest_reset(pd: *mut ProvDigest) {
+        // SAFETY: the caller's contract.
+        unsafe {
+            EVP_MD_free((*pd).alloc_md);
+            (*pd).alloc_md = ptr::null_mut();
+            (*pd).md = ptr::null();
+            // The authority's `ENGINE_finish(pd->engine)` is behind `!defined(FIPS_MODULE) &&
+            // !defined(OPENSSL_NO_ENGINE)`, and this crate transcribes no engine registry, so the field
+            // is cleared and nothing is finished -- the same narrowing the cipher half records.
+            (*pd).engine = ptr::null_mut();
+        }
+    }
+
+    /// `int ossl_prov_digest_copy(PROV_DIGEST *dst, const PROV_DIGEST *src)` —
+    /// `provider_util.c:157-171`.
+    ///
+    /// The reference is up'd **before** the fields are written and, on failure, the caller's `dst` is
+    /// left with whatever it had. The `ENGINE_init` arm is narrowed away with the rest of the registry.
+    ///
+    /// # Safety
+    /// `dst` is writable and `src` readable; both point at live `PROV_DIGEST`s.
+    pub(crate) unsafe fn ossl_prov_digest_copy(
+        dst: *mut ProvDigest,
+        src: *const ProvDigest,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            if !(*src).alloc_md.is_null() && EVP_MD_up_ref((*src).alloc_md) == 0 {
+                return 0;
+            }
+            (*dst).engine = (*src).engine;
+            (*dst).md = (*src).md;
+            (*dst).alloc_md = (*src).alloc_md;
+            1
+        }
+    }
+
+    /// `const EVP_MD *ossl_prov_digest_fetch(PROV_DIGEST *pd, OSSL_LIB_CTX *libctx, const char *mdname,
+    /// const char *propquery)` — `provider_util.c:173-180`.
+    ///
+    /// The previous fetch is released **first**, so a failed re-fetch leaves both fields NULL rather than
+    /// leaving the old method in place under a name the caller no longer asked for.
+    ///
+    /// # Safety
+    /// `pd` is writable; `libctx` is NULL or live; `mdname` is NUL-terminated and `propquery` NULL or so.
+    pub(crate) unsafe fn ossl_prov_digest_fetch(
+        pd: *mut ProvDigest,
+        libctx: *mut c_void,
+        mdname: *const core::ffi::c_char,
+        propquery: *const core::ffi::c_char,
+    ) -> *const EvpMd {
+        // SAFETY: the caller's contract.
+        unsafe {
+            EVP_MD_free((*pd).alloc_md);
+            (*pd).alloc_md = EVP_MD_fetch(libctx, mdname, propquery);
+            (*pd).md = (*pd).alloc_md;
+            (*pd).md
+        }
+    }
+
+    /// `int ossl_prov_digest_load(PROV_DIGEST *pd, const OSSL_PARAM *digest, const OSSL_PARAM *propq,
+    /// const OSSL_PARAM *engine, OSSL_LIB_CTX *ctx)` — `provider_util.c:182-213`.
+    ///
+    /// Three arms are contract. A NULL `digest` descriptor is **success** with nothing resolved, which is
+    /// how a caller asks for "no digest yet". The legacy fallback is taken only when the fetch failed
+    /// *and* the looked-up method's `origin` is not `EVP_ORIG_GLOBAL`, because a global method belongs to
+    /// the built-in table and handing it out would make the row's behaviour depend on the process-wide
+    /// table rather than on the fetch. And the error mark is popped on success and cleared on failure, so
+    /// the failed fetch's queue entries do not survive a resolved fallback.
+    ///
+    /// # Safety
+    /// `pd` is writable; the three descriptors are NULL or live; `ctx` is NULL or a live library context.
+    pub(crate) unsafe fn ossl_prov_digest_load(
+        pd: *mut ProvDigest,
+        digest: *const OsslParam,
+        propq: *const OsslParam,
+        engine: *const OsslParam,
+        ctx: *mut c_void,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let mut propquery: *const core::ffi::c_char = ptr::null();
+            if set_propq(propq, &mut propquery) == 0
+                || set_engine(engine, ptr::addr_of_mut!((*pd).engine)) == 0
+            {
+                return 0;
+            }
+            if digest.is_null() {
+                return 1;
+            }
+            if (*digest).data_type != OSSL_PARAM_UTF8_STRING {
+                return 0;
+            }
+
+            ERR_set_mark();
+            ossl_prov_digest_fetch(pd, ctx, (*digest).data.cast(), propquery);
+            if (*pd).md.is_null() {
+                let md = EVP_get_digestbyname((*digest).data.cast());
+                // `Do not use global EVP_MDs` -- the authority's own comment on this line.
+                if !md.is_null() && (*md).origin != EVP_ORIG_GLOBAL {
+                    (*pd).md = md;
+                }
+            }
+            if !(*pd).md.is_null() {
+                ERR_pop_to_mark();
+            } else {
+                ERR_clear_last_mark();
+            }
+            (!(*pd).md.is_null()) as c_int
+        }
+    }
+
+    /// `int ossl_prov_digest_load_from_params(PROV_DIGEST *pd, const OSSL_PARAM params[],
+    /// OSSL_LIB_CTX *ctx)` — `provider_util.c:215-224`.
+    ///
+    /// # Safety
+    /// `pd` is writable; `params` is a terminated array; `ctx` is NULL or live.
+    pub(crate) unsafe fn ossl_prov_digest_load_from_params(
+        pd: *mut ProvDigest,
+        params: *const OsslParam,
+        ctx: *mut c_void,
+    ) -> c_int {
+        // SAFETY: the three descriptors are located in the caller's own array.
+        unsafe {
+            ossl_prov_digest_load(
+                pd,
+                crate::params::OSSL_PARAM_locate_const(params, OSSL_ALG_PARAM_DIGEST),
+                crate::params::OSSL_PARAM_locate_const(params, OSSL_ALG_PARAM_PROPERTIES),
+                crate::params::OSSL_PARAM_locate_const(params, OSSL_ALG_PARAM_ENGINE),
+                ctx,
+            )
+        }
+    }
+
+    /// `void ossl_prov_digest_set_md(PROV_DIGEST *pd, EVP_MD *md)` — `provider_util.c:226-230`.
+    ///
+    /// The caller transfers ownership of `md`, which is why the reset comes first and `alloc_md` takes
+    /// the same pointer: a method handed in this way *is* the one to free.
+    ///
+    /// # Safety
+    /// `pd` is writable; `md` is NULL or live and, if live, the caller gives up its reference.
+    pub(crate) unsafe fn ossl_prov_digest_set_md(pd: *mut ProvDigest, md: *mut EvpMd) {
+        // SAFETY: the caller's contract.
+        unsafe {
+            ossl_prov_digest_reset(pd);
+            (*pd).md = md;
+            (*pd).alloc_md = md;
+        }
+    }
+
+    /// `const EVP_MD *ossl_prov_digest_md(const PROV_DIGEST *pd)` — `provider_util.c:232-235`.
+    ///
+    /// # Safety
+    /// `pd` points at a live `PROV_DIGEST`.
+    pub(crate) unsafe fn ossl_prov_digest_md(pd: *const ProvDigest) -> *const EvpMd {
+        // SAFETY: the caller's contract.
+        unsafe { (*pd).md }
+    }
+
+    /// `ENGINE *ossl_prov_digest_engine(const PROV_DIGEST *pd)` — `provider_util.c:237-241`. Always
+    /// NULL, for the reason the module note gives.
+    ///
+    /// # Safety
+    /// `pd` points at a live `PROV_DIGEST`.
+    pub(crate) unsafe fn ossl_prov_digest_engine(pd: *const ProvDigest) -> *mut c_void {
+        // SAFETY: the caller's contract.
+        unsafe { (*pd).engine }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -330,6 +545,150 @@ mod tests {
                 "no engine registry, so naming one is refused"
             );
             assert!(pc.engine.is_null(), "the narrowing leaves the field NULL");
+        }
+    }
+
+    #[test]
+    fn a_fresh_digest_carries_nothing() {
+        // SAFETY: the struct is this frame's own, and a NULL library context is the global one.
+        unsafe {
+            let mut pd = prov_digest::ProvDigest {
+                md: ptr::null(),
+                alloc_md: ptr::null_mut(),
+                engine: ptr::null_mut(),
+            };
+            assert!(prov_digest::ossl_prov_digest_md(ptr::addr_of!(pd)).is_null());
+            assert!(prov_digest::ossl_prov_digest_engine(ptr::addr_of!(pd)).is_null());
+            // A NULL `digest` descriptor is success with nothing resolved, which is how a caller
+            // says "no digest yet" -- and `set_propq`/`set_engine` must not have refused it.
+            assert_eq!(
+                prov_digest::ossl_prov_digest_load(
+                    ptr::addr_of_mut!(pd),
+                    ptr::null(),
+                    ptr::null(),
+                    ptr::null(),
+                    ptr::null_mut()
+                ),
+                1,
+                "a NULL digest descriptor is a no-op, not a refusal"
+            );
+            assert!(pd.md.is_null());
+            prov_digest::ossl_prov_digest_reset(ptr::addr_of_mut!(pd));
+        }
+    }
+
+    #[test]
+    fn a_named_digest_resolves_and_its_reference_is_owned() {
+        let mut name = *b"SHA256\0";
+        // SAFETY: the name is a local NUL-terminated buffer and the struct is this frame's own.
+        unsafe {
+            let mut pd = prov_digest::ProvDigest {
+                md: ptr::null(),
+                alloc_md: ptr::null_mut(),
+                engine: ptr::null_mut(),
+            };
+            let desc = OsslParam {
+                key: OSSL_ALG_PARAM_DIGEST.cast(),
+                data_type: OSSL_PARAM_UTF8_STRING,
+                data: name.as_mut_ptr().cast(),
+                data_size: 6,
+                return_size: 0,
+            };
+            assert_eq!(
+                prov_digest::ossl_prov_digest_load(
+                    ptr::addr_of_mut!(pd),
+                    ptr::addr_of!(desc),
+                    ptr::null(),
+                    ptr::null(),
+                    ptr::null_mut()
+                ),
+                1
+            );
+            assert!(
+                !pd.md.is_null(),
+                "SHA256 resolves through the default provider"
+            );
+            // A fetched method is the one this struct owns, so both fields point at it.
+            assert_eq!(pd.md, pd.alloc_md.cast_const());
+            prov_digest::ossl_prov_digest_reset(ptr::addr_of_mut!(pd));
+            assert!(pd.md.is_null() && pd.alloc_md.is_null());
+        }
+    }
+
+    #[test]
+    fn a_digest_descriptor_of_the_wrong_type_is_refused() {
+        let mut name = *b"SHA256\0";
+        // SAFETY: local descriptors and a local struct.
+        unsafe {
+            let mut pd = prov_digest::ProvDigest {
+                md: ptr::null(),
+                alloc_md: ptr::null_mut(),
+                engine: ptr::null_mut(),
+            };
+            // An octet-string descriptor where a UTF8 string belongs is a bare refusal, and it is a
+            // *different* arm from a name that fails to resolve.
+            let desc = OsslParam {
+                key: OSSL_ALG_PARAM_DIGEST.cast(),
+                data_type: crate::params::OSSL_PARAM_OCTET_STRING,
+                data: name.as_mut_ptr().cast(),
+                data_size: 6,
+                return_size: 0,
+            };
+            assert_eq!(
+                prov_digest::ossl_prov_digest_load(
+                    ptr::addr_of_mut!(pd),
+                    ptr::addr_of!(desc),
+                    ptr::null(),
+                    ptr::null(),
+                    ptr::null_mut()
+                ),
+                0
+            );
+            assert!(pd.md.is_null(), "the refusal resolves nothing");
+        }
+    }
+
+    #[test]
+    fn a_copy_ups_the_reference_it_shares() {
+        let mut name = *b"SHA256\0";
+        // SAFETY: local structs, and the descriptors are this frame's own.
+        unsafe {
+            let mut src = prov_digest::ProvDigest {
+                md: ptr::null(),
+                alloc_md: ptr::null_mut(),
+                engine: ptr::null_mut(),
+            };
+            let desc = OsslParam {
+                key: OSSL_ALG_PARAM_DIGEST.cast(),
+                data_type: OSSL_PARAM_UTF8_STRING,
+                data: name.as_mut_ptr().cast(),
+                data_size: 6,
+                return_size: 0,
+            };
+            assert_eq!(
+                prov_digest::ossl_prov_digest_load(
+                    ptr::addr_of_mut!(src),
+                    ptr::addr_of!(desc),
+                    ptr::null(),
+                    ptr::null(),
+                    ptr::null_mut()
+                ),
+                1
+            );
+            let mut dst = prov_digest::ProvDigest {
+                md: ptr::null(),
+                alloc_md: ptr::null_mut(),
+                engine: ptr::null_mut(),
+            };
+            assert_eq!(
+                prov_digest::ossl_prov_digest_copy(ptr::addr_of_mut!(dst), ptr::addr_of!(src)),
+                1
+            );
+            assert_eq!(dst.md, src.md);
+            assert_eq!(dst.alloc_md, src.alloc_md);
+            // Both now hold a reference to one method, so both must release it.
+            prov_digest::ossl_prov_digest_reset(ptr::addr_of_mut!(dst));
+            prov_digest::ossl_prov_digest_reset(ptr::addr_of_mut!(src));
         }
     }
 }

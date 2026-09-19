@@ -1585,11 +1585,27 @@ mod tests {
         (&PROVCTX as *const u8 as *mut u8).cast::<c_void>()
     }
 
-    /// The marker every pointer answer is compared against. A `static`'s address, never
-    /// dereferenced: `OsslParam` has no `Sync` impl because no authority-visible one is ever
-    /// shared, so a `static OsslParam` is not expressible and would not be a better marker.
+    /// The marker every pointer answer is compared against.
+    ///
+    /// **It is an aligned, terminated table rather than a `u8`'s address, and that is a repair.**
+    /// It used to be `(&PROVCTX as *const u8).cast::<OsslParam>()` — misaligned for both
+    /// `OsslParam` and `OsslAlgorithm`, and with no terminating row — on the argument that nothing
+    /// dereferenced it. That argument held only while no unit test performed a provider-backed
+    /// fetch after this fake provider was registered. `provider::util`'s digest tests were the
+    /// first, and `evp_generic_fetch` walked this address as an `OsslAlgorithm` table and aborted
+    /// on the misaligned dereference. A one-row table whose first pointer is NULL is still a
+    /// distinguishable address — the assertions compare it and never read it — and it terminates a
+    /// table walk and a params walk alike, because `OsslParam`'s first field is a `key` that is
+    /// NULL for a terminator and `OsslAlgorithm`'s is an `algorithm_names` that is NULL for one.
+    static TABLE_MARKER: [OsslAlgorithm; 1] = [OsslAlgorithm {
+        algorithm_names: ptr::null(),
+        property_definition: ptr::null(),
+        implementation: ptr::null(),
+        algorithm_description: ptr::null(),
+    }];
+
     fn table_marker() -> *const OsslParam {
-        (&PROVCTX as *const u8).cast::<OsslParam>()
+        TABLE_MARKER.as_ptr().cast::<OsslParam>()
     }
 
     /// The provider's own dispatch table, published through `out`.
