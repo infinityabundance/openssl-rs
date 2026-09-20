@@ -11,12 +11,6 @@
     ],
     "deferrals": [
       {
-        "symbol": "ossl_rsa_new_with_ctx",
-        "owner_phase": 9,
-        "reason": "`rsa_lib.c:71-74`'s `RSA *ossl_rsa_new_with_ctx(OSSL_LIB_CTX *libctx)` is `rsa_new_intern(NULL, libctx)` and nothing else, so it cannot be written before `rsa_new_intern`, and `rsa_new_intern` reads `RSA_get_default_method()` (`rsa_lib.c:101`) -- the second half of 8.4's slice A, which `forensics/tools/phase8_obligations.py`'s `BLOCKED_HANDOFFS` row (5) hands to Phase 9 along with `RSA_new`, `RSA_new_method` and `RSA_PKCS1_OpenSSL`. The row is discharged by the same commit that lands those four, at which point it becomes a stale deferral and is retired. `rsa_new_intern` itself is `static` in the authority and so is not owed by name; this is the constructor chain's one non-static name. Measured rather than predicted: `src/rsa/object.rs` is rsa_lib.c's dominant unit, so the prerequisite gate requires the unit's whole non-static internal set, and this is the single name step 2 of D320's integration plan did not account for.",
-        "evidence": "docs/DECISIONS.md D321; court/rsa-object-integration-plan.md section 3; forensics/tools/phase8_obligations.py BLOCKED_HANDOFFS row (5)"
-      },
-      {
         "symbol": "ossl_get_enginesdir",
         "owner_phase": 16,
         "reason": "The OPENSSL_info strings rather than anything the registry reads",
@@ -795,13 +789,6 @@
         "owner_phase": 13,
         "reason": "Row 6.10 names it because it shares `CRYPTO_THREAD_get_local_ex` with the per-context thread-local family, and that sharing is why 6.10a had to land the family. The file itself is the async job framework, which is Phase 13's: every in-tree caller is an asynchronous engine or the SSL async API. `OPENSSL_NO_ASYNC` is not defined in this profile, so this is real functionality waiting for a real dependent rather than a stub.",
         "evidence": "docs/PHASE-6-SUBPHASES.md section 2 (\"Why ASYNC_* is deferred to Phase 13\"); forensics/phase3-obligations.json's ASYNC_* hand-off"
-      },
-      {
-        "unit": "crypto/rsa/rsa_ossl.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 8,
-        "reason": "Named by row 6.10 only as another sharer of `CRYPTO_THREAD_get_local_ex`. The file is RSA's provider-side implementation and belongs to the algorithm stratum.",
-        "evidence": "docs/PHASE-6-SUBPHASES.md row 6.10; forensics/phase-state.json phase 8"
       },
       {
         "unit": "pkey_derive.c",

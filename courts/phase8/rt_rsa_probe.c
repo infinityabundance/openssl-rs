@@ -15,10 +15,18 @@
  * thirty-six exports are called below as well**. Slice C is the sixteen labelling, checking and
  * digesting entry points of the padding family -- `rsa_none.c`, `rsa_x931.c`, `rsa_pk1.c`,
  * `rsa_oaep.c`'s `PKCS1_MGF1` and both OAEP checks, and now the five randomised *adds* and the
- * type-2 *check* -- and **every one of the sixteen is called below**. Nothing here does any
- * cryptography -- each function allocates a table or an object, stores a pointer in one, or reads
- * one, or pads a buffer -- so the transcript is about *identity, ownership and structure* rather
- * than arithmetic, and that is the whole observable contract of these entry points.
+ * type-2 *check* -- and **every one of the sixteen is called below**. Slice D is
+ * `rsa_ossl.c`'s default method: the table itself, the four-name family around it
+ * (`RSA_PKCS1_OpenSSL`, `RSA_get_default_method`, `RSA_set_default_method` and the constructor
+ * pair), and the seven `rsa_ossl_*` entry points, which are driven **through the table's own
+ * `RSA_meth_get_*` accessors** because they are `static` in the authority and have no name to
+ * link. `RSA_setup_blinding` -- `rsa_crpt.c`'s export, and the caller that makes
+ * `ossl_rsa_alloc_blinding` reachable -- is called too. Nothing here does any cryptography
+ * beyond small RSA exponentiations -- each function allocates a table or an object, stores a
+ * pointer in one, reads one, pads a buffer, raises a 12-bit modulus to the 17th power, or runs
+ * one 128-bit CRT private operation -- so the transcript is about *identity, ownership and
+ * structure* rather than arithmetic, and that is the whole observable contract of these entry
+ * points.
  *
  * **The padding arms observe random output without observing a random byte.** Five of the six
  * padding functions added by D323 fill their output from the DRBG, and both runs of this probe are
@@ -31,20 +39,23 @@
  * **recomputation** of the PSS `H` from the salt the block itself encodes; and the refusal arms
  * with their error queues drained. `rt_all_nonzero` and `pss_decodes` below are those predicates.
  *
- * **`RSA` is opaque in the installed header on both sides, and no constructor exists on the
- * candidate side yet**, so the object arms build their subject themselves: the fabrication block
- * below owns the shape, transcribed offset by offset from `courts/layout/measure-rsa-ctx.c` (D283's
- * measurement), and hands both binaries the same bytes, the same genuine `BIGNUM`s and the same
- * genuine `RSA_METHOD` from `RSA_meth_new`. The observation is the *library's* answer, and the
- * `get0_*` identity arms tie the probe's offsets to the library's.
+ * **`RSA` is opaque in the installed header on both sides**, so the object arms that need a
+ * subject of their own build it: the fabrication block below owns the shape, transcribed offset by
+ * offset from `courts/layout/measure-rsa-ctx.c` (D283's measurement), and hands both binaries the
+ * same bytes, the same genuine `BIGNUM`s and the same genuine `RSA_METHOD` from `RSA_meth_new`.
+ * The observation is the *library's* answer, and the `get0_*` identity arms tie the probe's offsets
+ * to the library's. **The constructor arms no longer fabricate anything**: `RSA_new`,
+ * `RSA_new_method` and `RSA_setup_blinding` are landed (D325), so those arms call them.
  *
- * **Four exports are deliberately not called, and are named here.** `RSA_new` and `RSA_new_method`
- * are **OWED**: the candidate does not link them until the commit that lands
- * `RSA_get_default_method`, so a probe that called them would abort the candidate rather than
- * compare. `RSA_get_default_method` and `RSA_PKCS1_OpenSSL` arrive with that same later commit, as
- * do the observations of `rsa_pkcs1_ossl_meth`'s own members -- `rsa_sign`/`rsa_verify` initialised
- * to the integer `0`, both keygen members NULL, `RSA_FLAG_FIPS_METHOD` in `flags`. Naming these four
- * is what keeps "not compared" from being read as "compared and equal".
+ * **Every export of the four slices is called, and the one thing that is not is named here.**
+ * `RSA_new_method` is only ever called with NULL: a non-NULL engine is a fault in the authority
+ * (there is no engine registered, so `ENGINE_get_RSA` answers NULL and `rsa_new_intern` raises
+ * `RSA_LIB_116`) and is ignored by the candidate, which has no `ENGINE` at all -- a difference
+ * this probe cannot compare without an `ENGINE_new`, which is Phase 13's. `RSA_bits` and
+ * `RSA_size` are **not** called on a freshly constructed object either: the authority's
+ * `BN_num_bits` dereferences `b->top` without a NULL test, so `RSA_bits(RSA_new())` is a
+ * segmentation fault there where the candidate answers 0. Both omissions are recorded in
+ * `docs/DECISIONS.md` D325 rather than left as arms that happened to be missing.
  *
  * The allocator-attribution plane
  * -------------------------------
@@ -242,15 +253,16 @@ static int sentinel_mpkeygen(RSA *rsa, int bits, int primes, BIGNUM *e, BN_GENCB
 
 /* ------------------------------------------------------------------ the fabricated RSA object */
 
-/* `RSA` is opaque in the installed header on both sides, and no constructor exists on the candidate
- * side until commit B: `RSA_new`/`RSA_new_method` are OWED until `RSA_get_default_method` lands. So
- * the probe owns the object's shape, transcribed from `courts/layout/measure-rsa-ctx.c` (D283's
- * measurement) with every offset pinned. 27 pointers is exactly 216 bytes and is eight-aligned.
- * Both binaries are handed the same bytes, the same genuine `BIGNUM`s and the same genuine
- * `RSA_METHOD` from `RSA_meth_new`, and the observation is the *library's* answer. `rt_blank`
- * memsets all 216 bytes because `forensics/tools/probe_hygiene.py` recompiles this probe at several
- * optimisation levels and requires an identical transcript, and a partially-initialised object is
- * exactly the bug class it exists to catch. */
+/* `RSA` is opaque in the installed header on both sides, so the arms that need a subject of their
+ * own fabricate one: `rt_blank` owns the shape, transcribed from `courts/layout/measure-rsa-ctx.c`
+ * (D283's measurement) with every offset pinned. 27 pointers is exactly 216 bytes and is
+ * eight-aligned. Both binaries are handed the same bytes, the same genuine `BIGNUM`s and the same
+ * genuine `RSA_METHOD` from `RSA_meth_new`, and the observation is the *library's* answer. The
+ * constructor arms added by D325 need none of this: they call `RSA_new` and `RSA_new_method(NULL)`
+ * and read the result back through the published accessors. `rt_blank` memsets all 216 bytes
+ * because `forensics/tools/probe_hygiene.py` recompiles this probe at several optimisation levels
+ * and requires an identical transcript, and a partially-initialised object is exactly the bug class
+ * it exists to catch. */
 union rt_rsa_object {
     void *p[27];
     unsigned char b[216];
@@ -1238,6 +1250,422 @@ static void rsa_object_arms(void)
     RSA_meth_free(tbl_flags);
 }
 
+/* The 128-bit two-prime key the PKCS#1 private-decrypt arms use, built with the published BN API
+ * so that both binaries compute it identically: p = 2^64 - 59 and q = 2^61 - 1 are both prime,
+ * n = p*q is 125 bits (16 octets, so a full EME-PKCS1-v1_5 block fits), e = 65537 is coprime with
+ * both p-1 and q-1, and d, dmp1, dmq1 and iqmp are the usual CRT parameters.
+ *
+ * **The key is built rather than typed.** A 38-digit decimal `n` written twice is a constant typed
+ * wrong once, and the same `BN_mul`/`BN_mod_inverse` calls run on both sides: the arms below
+ * compare the two libraries, not the probe's arithmetic. A failed inversion would answer NULL and
+ * the arms would then observe the refusals, which is a comparison too. */
+static int rt_key128(BIGNUM **n_out, BIGNUM **e_out, BIGNUM **d_out, BIGNUM **p_out,
+    BIGNUM **q_out, BIGNUM **dmp1_out, BIGNUM **dmq1_out, BIGNUM **iqmp_out)
+{
+    BIGNUM *p = NULL, *q = NULL, *e = NULL, *phi = NULL, *pm1 = NULL, *qm1 = NULL;
+    BIGNUM *n = NULL, *d = NULL, *dmp1 = NULL, *dmq1 = NULL, *iqmp = NULL;
+    BN_CTX *ctx = NULL;
+    int ok = 0;
+
+    p = rt_word(18446744073709551557ULL); /* 2^64 - 59 */
+    q = rt_word(2305843009213693951ULL);  /* 2^61 - 1  */
+    e = rt_word(65537);
+    ctx = BN_CTX_new();
+    pm1 = BN_new();
+    qm1 = BN_new();
+    phi = BN_new();
+    n = BN_new();
+    dmp1 = BN_new();
+    dmq1 = BN_new();
+    iqmp = BN_new();
+    if (p == NULL || q == NULL || e == NULL || ctx == NULL || pm1 == NULL || qm1 == NULL
+        || phi == NULL || n == NULL || dmp1 == NULL || dmq1 == NULL || iqmp == NULL)
+        goto err;
+
+    if (BN_copy(pm1, p) == NULL || BN_copy(qm1, q) == NULL)
+        goto err;
+    if (BN_sub_word(pm1, 1) != 1 || BN_sub_word(qm1, 1) != 1)
+        goto err;
+    if (BN_mul(phi, pm1, qm1, ctx) != 1)
+        goto err;
+    d = BN_mod_inverse(NULL, e, phi, ctx);
+    if (d == NULL)
+        goto err;
+    if (BN_mul(n, p, q, ctx) != 1)
+        goto err;
+    if (BN_mod(dmp1, d, pm1, ctx) != 1 || BN_mod(dmq1, d, qm1, ctx) != 1)
+        goto err;
+    if (BN_mod_inverse(iqmp, q, p, ctx) == NULL)
+        goto err;
+
+    *n_out = n;
+    *e_out = e;
+    *d_out = d;
+    *p_out = p;
+    *q_out = q;
+    *dmp1_out = dmp1;
+    *dmq1_out = dmq1;
+    *iqmp_out = iqmp;
+    n = e = d = p = q = dmp1 = dmq1 = iqmp = NULL;
+    ok = 1;
+
+err:
+    BN_free(p);
+    BN_free(q);
+    BN_free(e);
+    BN_free(phi);
+    BN_free(pm1);
+    BN_free(qm1);
+    BN_free(n);
+    BN_free(d);
+    BN_free(dmp1);
+    BN_free(dmq1);
+    BN_free(iqmp);
+    BN_CTX_free(ctx);
+    return ok;
+}
+
+/* ------------------------------------------------------------------ the default method (slice D) */
+
+/* `crypto/rsa/rsa_ossl.c`'s table, the four-name family around it and the seven entry points it
+ * names.
+ *
+ * **The entry points are `static` in the authority**, so there is no name to link: each is taken
+ * from the table through the `RSA_meth_get_*` accessor that reads that member, and called under the
+ * signature `rsa.h` publishes for it. The arm that observes the accessors returning non-NULL is
+ * therefore also the arm that makes the call possible, and a member that answered the wrong
+ * function would show as a wrong ciphertext rather than as an absent symbol.
+ *
+ * **The key is the textbook two-prime one, small enough to have no unknown in it**: p = 61,
+ * q = 53, n = 3233, e = 17, d = 2753, dmp1 = 2753 mod 60 = 53, dmq1 = 2753 mod 52 = 49,
+ * iqmp = 53^-1 mod 61 = 38. Every operation below is therefore a deterministic function of the
+ * key and the input, and the bytes are printed because nothing in them came from a generator.
+ *
+ * **`RSA_FLAG_NO_BLINDING` is set on the private-key object**, because a blinding factor *is* drawn
+ * from the DRBG and a probe that printed an unblinded result would differ between two runs. The
+ * arm that drives `RSA_setup_blinding` is the one arm on the blinding path, and it observes only
+ * the shape of the answer -- non-NULL and its flags -- never a byte of the factor.
+ *
+ * **No `begin()`/`end()` window wraps these arms, and that is a measured correction.** These are
+ * the first arms in this probe to call a *constructor*, and a constructor allocates more than the
+ * object: `RSA_new` allocates the object (216 bytes, `rsa_lib.c`), a lock and the blinding array.
+ * The lock is the problem -- the authority's `CRYPTO_THREAD_lock_new` is
+ * `OPENSSL_zalloc(sizeof(CRYPTO_RWLOCK))`, 56 bytes attributed to `crypto/threads_pthread.c`, and
+ * the candidate's is a Rust `Box` that a caller-installed allocator never sees (D325) -- so a
+ * window over a constructor is off by exactly one `M` and one `F` on the candidate side, and two
+ * transcripts that differ by a known event are still two transcripts this court refuses to call
+ * equal. The alternative `RT-CIPHER-MEM` takes for its own unit is not available here either: the
+ * object's allocation is the *unit's* and the lock's is not. So the constructor arms observe the
+ * structure the accessors publish -- identity, flags, the engine member, the ordinal of the
+ * default method -- and D325 records the allocator-plane difference as the residual it is. */
+static void rsa_ossl_arms(void)
+{
+    const RSA_METHOD *ro_meth;
+    const RSA_METHOD *bfr;
+    RSA_METHOD *tbl;
+    RSA *r1 = NULL, *r2 = NULL, *o = NULL, *ob = NULL, *om = NULL;
+    BIGNUM *n, *e, *d, *p, *q, *dmp1, *dmq1, *iqmp;
+    BIGNUM *bn = NULL, *be = NULL, *bn_out = NULL, *bn_in = NULL;
+    BIGNUM *kn = NULL, *ke = NULL, *kd = NULL, *kp = NULL, *kq = NULL;
+    BIGNUM *kdmp1 = NULL, *kdmq1 = NULL, *kiqmp = NULL;
+    BN_BLINDING *blinding = NULL;
+    BN_CTX *ctx = NULL;
+    int i, ret, pad, ok;
+    /* 0x0b1a is 2842: smaller than 3233, so a `RSA_NO_PADDING` block of exactly the modulus width
+     * is a plain number and not a padded message. */
+    unsigned char from[4] = { 0x0b, 0x1a, 0x00, 0x00 };
+    unsigned char to[4];
+    unsigned char back[4];
+    unsigned char enc[4];
+    /* The 128-bit key's arms work on 16-octet blocks; the buffers are 32 so that a mistake cannot
+     * read past them on either side. */
+    unsigned char em[32];
+    unsigned char ct[32];
+    unsigned char out[32];
+
+    int (*pub_enc)(int, const unsigned char *, unsigned char *, RSA *, int);
+    int (*pub_dec)(int, const unsigned char *, unsigned char *, RSA *, int);
+    int (*priv_enc)(int, const unsigned char *, unsigned char *, RSA *, int);
+    int (*priv_dec)(int, const unsigned char *, unsigned char *, RSA *, int);
+    int (*mod_exp)(BIGNUM *, const BIGNUM *, RSA *, BN_CTX *);
+    int (*init)(RSA *);
+    int (*finish)(RSA *);
+
+    /* ---------------------------------------------------------------- the table */
+
+    ro_meth = RSA_PKCS1_OpenSSL();
+    printf("rsa.ossl.table.nonnull=%d\n", ro_meth != NULL);
+    printf("rsa.ossl.table.is_default=%d\n", RSA_get_default_method() == RSA_PKCS1_OpenSSL());
+    printf("rsa.ossl.table.name=%s\n", RSA_meth_get0_name(ro_meth));
+    printf("rsa.ossl.table.flags=%d\n", RSA_meth_get_flags(ro_meth));
+    printf("rsa.ossl.table.app_data_is_null=%d\n", RSA_meth_get0_app_data(ro_meth) == NULL);
+    printf("rsa.ossl.table.pub_enc_set=%d\n", RSA_meth_get_pub_enc(ro_meth) != NULL);
+    printf("rsa.ossl.table.pub_dec_set=%d\n", RSA_meth_get_pub_dec(ro_meth) != NULL);
+    printf("rsa.ossl.table.priv_enc_set=%d\n", RSA_meth_get_priv_enc(ro_meth) != NULL);
+    printf("rsa.ossl.table.priv_dec_set=%d\n", RSA_meth_get_priv_dec(ro_meth) != NULL);
+    printf("rsa.ossl.table.mod_exp_set=%d\n", RSA_meth_get_mod_exp(ro_meth) != NULL);
+    /* The table's `bn_mod_exp` is the *Montgomery* function by address, which is what makes
+     * `rsa_ossl_mod_exp` take its `smooth` path. The accessor returns that signature, so this is
+     * the one arm that observes the initialiser's most consequential member. */
+    printf("rsa.ossl.table.bn_mod_exp_is_mont=%d\n",
+        RSA_meth_get_bn_mod_exp(ro_meth) == BN_mod_exp_mont);
+    printf("rsa.ossl.table.init_set=%d\n", RSA_meth_get_init(ro_meth) != NULL);
+    printf("rsa.ossl.table.finish_set=%d\n", RSA_meth_get_finish(ro_meth) != NULL);
+    /* The four members the authority writes as the integer `0` or NULL. */
+    printf("rsa.ossl.table.sign_is_null=%d\n", RSA_meth_get_sign(ro_meth) == NULL);
+    printf("rsa.ossl.table.verify_is_null=%d\n", RSA_meth_get_verify(ro_meth) == NULL);
+    printf("rsa.ossl.table.keygen_is_null=%d\n", RSA_meth_get_keygen(ro_meth) == NULL);
+    printf("rsa.ossl.table.mp_keygen_is_null=%d\n",
+        RSA_meth_get_multi_prime_keygen(ro_meth) == NULL);
+
+    pub_enc = RSA_meth_get_pub_enc(ro_meth);
+    pub_dec = RSA_meth_get_pub_dec(ro_meth);
+    priv_enc = RSA_meth_get_priv_enc(ro_meth);
+    priv_dec = RSA_meth_get_priv_dec(ro_meth);
+    mod_exp = RSA_meth_get_mod_exp(ro_meth);
+    init = RSA_meth_get_init(ro_meth);
+    finish = RSA_meth_get_finish(ro_meth);
+
+    /* ---------------------------------------------------------------- RSA_set_default_method */
+
+    /* A table with no members at all, so what the arm observes is the *store* and the fact that a
+     * constructor reads it: `RSA_new` under this default has no `init`, so its own `flags` word
+     * stays 0 while `RSA_flags` still answers the table's word. */
+    tbl = RSA_meth_new("rt-ossl-default", 0x0008);
+    bfr = RSA_get_default_method();
+    RSA_set_default_method(tbl);
+    printf("rsa.ossl.default.is_tbl=%d\n", RSA_get_default_method() == tbl);
+    printf("rsa.ossl.default.is_not_open_ssl=%d\n",
+        RSA_get_default_method() != RSA_PKCS1_OpenSSL());
+    r2 = RSA_new();
+    printf("rsa.ossl.default.new_nonnull=%d\n", r2 != NULL);
+    printf("rsa.ossl.default.new_uses_tbl=%d\n", RSA_get_method(r2) == tbl);
+    printf("rsa.ossl.default.new_meth_flags=%d\n", RSA_flags(r2));
+    printf("rsa.ossl.default.new_obj_flags=%d\n", RT_FLAGS(r2));
+    RSA_free(r2);
+    RSA_set_default_method(bfr);
+    printf("rsa.ossl.default.restored=%d\n", RSA_get_default_method() == RSA_PKCS1_OpenSSL());
+    RSA_meth_free(tbl);
+
+    /* ---------------------------------------------------------------- the constructors */
+
+    r1 = RSA_new();
+    printf("rsa.ossl.obj_new.nonnull=%d\n", r1 != NULL);
+    printf("rsa.ossl.obj_new.meth_is_default=%d\n",
+        RSA_get_method(r1) == RSA_get_default_method());
+    printf("rsa.ossl.obj_new.meth_is_open_ssl=%d\n", RSA_get_method(r1) == RSA_PKCS1_OpenSSL());
+    printf("rsa.ossl.obj_new.engine_is_null=%d\n", RSA_get0_engine(r1) == NULL);
+    /* The table's word is 0x0400 and the object's is 0x0006: the constructor masks the first out
+     * (`~RSA_FLAG_NON_FIPS_ALLOW`) and then the table's own `init` sets the two cache flags. */
+    printf("rsa.ossl.obj_new.meth_flags=%d\n", RSA_flags(r1));
+    printf("rsa.ossl.obj_new.obj_flags=%d\n", RT_FLAGS(r1));
+
+    r2 = RSA_new_method(NULL);
+    printf("rsa.ossl.obj_new_method.nonnull=%d\n", r2 != NULL);
+    printf("rsa.ossl.obj_new_method.meth_is_default=%d\n",
+        RSA_get_method(r2) == RSA_get_default_method());
+    printf("rsa.ossl.obj_new_method.obj_flags=%d\n", RT_FLAGS(r2));
+
+    RSA_free(r1);
+    printf("rsa.ossl.obj_free_constructed.survived=1\n");
+    RSA_free(r2);
+    printf("rsa.ossl.obj_free_constructed_twice.survived=1\n");
+
+    /* ---------------------------------------------------------------- the entry points */
+
+    n = rt_word(3233);
+    e = rt_word(17);
+    d = rt_word(2753);
+    p = rt_word(61);
+    q = rt_word(53);
+    dmp1 = rt_word(53);
+    dmq1 = rt_word(49);
+    iqmp = rt_word(38);
+
+    o = rt_blank();
+    RT_METH(o) = (RSA_METHOD *)ro_meth;
+    RT_N(o) = n;
+    RT_E(o) = e;
+    RT_D(o) = d;
+    RT_P(o) = p;
+    RT_Q(o) = q;
+    RT_DMP1(o) = dmp1;
+    RT_DMQ1(o) = dmq1;
+    RT_IQMP(o) = iqmp;
+    /* **A real lock, because the cache arms take it.** `init` above sets `RSA_FLAG_CACHE_PUBLIC`,
+     * so the first entry point builds a Montgomery context through `BN_MONT_CTX_set_locked` with
+     * `rsa->lock` -- and the authority's `BN_MONT_CTX_set_locked` takes that lock unconditionally,
+     * so a NULL one is a segmentation fault there. The candidate tolerates NULL, which is exactly
+     * the kind of asymmetry this probe exists to keep out of the transcript: both sides get a lock
+     * `CRYPTO_THREAD_lock_new` built, and `RSA_free` releases it at the end. */
+    RT_LOCK(o) = CRYPTO_THREAD_lock_new();
+    printf("rsa.ossl.key.lock_nonnull=%d\n", RT_LOCK(o) != NULL);
+
+    /* `rsa_ossl_init`: the two cache flags, and always 1. */
+    printf("rsa.ossl.init.no_cache_flags=%d\n", RT_FLAGS(o));
+    printf("rsa.ossl.init.ret=%d\n", init(o));
+    printf("rsa.ossl.init.obj_flags=%d\n", RT_FLAGS(o));
+
+    /* `rsa_ossl_finish` on an object whose four contexts were never built, which is the arm that
+     * observes the hook's answer rather than its releases. */
+    ob = rt_blank();
+    RT_METH(ob) = (RSA_METHOD *)ro_meth;
+    printf("rsa.ossl.finish.ret=%d\n", finish(ob));
+    free(ob);
+
+    /* `rsa_ossl_public_encrypt` with `RSA_NO_PADDING`: the block is the plain number 2842 and the
+     * answer is 2842^17 mod 3233. */
+    memset(to, 0, sizeof(to));
+    printf("rsa.ossl.pub_enc.ret=%d\n", pub_enc(2, from, to, o, RSA_NO_PADDING));
+    printf("rsa.ossl.pub_enc.0=%02x\n", to[0]);
+    printf("rsa.ossl.pub_enc.1=%02x\n", to[1]);
+
+    /* ... and `rsa_ossl_public_decrypt` undoes it, which is the pair's contract. */
+    memset(back, 0, sizeof(back));
+    printf("rsa.ossl.pub_dec.ret=%d\n", pub_dec(2, to, back, o, RSA_NO_PADDING));
+    printf("rsa.ossl.pub_dec.body=%d\n", memcmp(back, from, 2) == 0);
+
+    /* `rsa_ossl_private_encrypt`: the CRT path, because all five of p, q, dmp1, dmq1 and iqmp are
+     * set -- and therefore the arm that drives `rsa_ossl_mod_exp`'s `smooth` path end to end. */
+    RT_FLAGS(o) |= RSA_FLAG_NO_BLINDING;
+    memset(enc, 0, sizeof(enc));
+    printf("rsa.ossl.priv_enc.ret=%d\n", priv_enc(2, from, enc, o, RSA_NO_PADDING));
+    printf("rsa.ossl.priv_enc.0=%02x\n", enc[0]);
+    printf("rsa.ossl.priv_enc.1=%02x\n", enc[1]);
+    memset(back, 0, sizeof(back));
+    printf("rsa.ossl.priv_enc.then_pub_dec.ret=%d\n", pub_dec(2, enc, back, o, RSA_NO_PADDING));
+    printf("rsa.ossl.priv_enc.then_pub_dec.body=%d\n", memcmp(back, from, 2) == 0);
+
+    /* ... the plain path, with the CRT parameters removed, which is the other half of the same
+     * five-way test. `d` is the exponent the plain path uses. */
+    RT_P(o) = NULL;
+    RT_Q(o) = NULL;
+    RT_DMP1(o) = NULL;
+    RT_DMQ1(o) = NULL;
+    RT_IQMP(o) = NULL;
+    memset(back, 0, sizeof(back));
+    printf("rsa.ossl.priv_enc.plain.ret=%d\n", priv_enc(2, from, back, o, RSA_NO_PADDING));
+    printf("rsa.ossl.priv_enc.plain.body=%d\n", memcmp(back, enc, 2) == 0);
+    RT_P(o) = p;
+    RT_Q(o) = q;
+    RT_DMP1(o) = dmp1;
+    RT_DMQ1(o) = dmq1;
+    RT_IQMP(o) = iqmp;
+
+    /* `rsa_ossl_private_decrypt` with no padding: the memcpy arm, over the same ciphertext. */
+    memset(back, 0, sizeof(back));
+    printf("rsa.ossl.priv_dec.none.ret=%d\n", priv_dec(2, to, back, o, RSA_NO_PADDING));
+    printf("rsa.ossl.priv_dec.none.body=%d\n", memcmp(back, from, 2) == 0);
+
+    /* ... and with PKCS#1 v1.5 padding. **The two-octet key cannot be used here at all**: with
+     * `num <= 10` the check's `max_sep_offset = num - 10` wraps to a near-0xFFFF `uint16_t`, so a
+     * candidate length larger than the block is accepted and `msg_index` becomes negative -- the
+     * loop then reads *before* both buffers, which is exactly the bug class
+     * `forensics/tools/probe_hygiene.py` exists to catch. It caught it: the first version of this
+     * arm printed `00 00` at `-O1` and `43 41` at `-O2` on the authority side. So the PKCS#1 arms
+     * use the 128-bit key above, where `max_sep_offset` is 6 and every index is in range. */
+
+    /* `rsa_ossl_private_decrypt` with PKCS#1 v1.5 padding over a **valid** encoding:
+     * `00 02 || 8 non-zero octets || 00 || "hello"`, encrypted with the public key and then
+     * decrypted with the private one. This is the arm that drives the implicit-rejection padding
+     * check's success path end to end. */
+    ok = rt_key128(&kn, &ke, &kd, &kp, &kq, &kdmp1, &kdmq1, &kiqmp);
+    printf("rsa.ossl.key128.built=%d\n", ok);
+    if (ok != 0) {
+        om = rt_blank();
+        RT_METH(om) = (RSA_METHOD *)ro_meth;
+        RT_N(om) = kn;
+        RT_E(om) = ke;
+        RT_D(om) = kd;
+        RT_P(om) = kp;
+        RT_Q(om) = kq;
+        RT_DMP1(om) = kdmp1;
+        RT_DMQ1(om) = kdmq1;
+        RT_IQMP(om) = kiqmp;
+        /* The same real lock the 3233-bit object gets, and for the same reason: an entry point takes
+         * `RSA_FLAG_CACHE_PUBLIC`'s branch into `BN_MONT_CTX_set_locked` with `rsa->lock`. */
+        RT_LOCK(om) = CRYPTO_THREAD_lock_new();
+        printf("rsa.ossl.key128.lock_nonnull=%d\n", RT_LOCK(om) != NULL);
+        printf("rsa.ossl.key128.init_ret=%d\n", init(om));
+        RT_FLAGS(om) |= RSA_FLAG_NO_BLINDING;
+        printf("rsa.ossl.key128.size=%d\n", RSA_size(om));
+
+        memset(em, 0, sizeof(em));
+        em[0] = 0x00;
+        em[1] = 0x02;
+        for (i = 2; i < 10; i++)
+            em[i] = (unsigned char)(0x11 + i);
+        em[10] = 0x00;
+        memcpy(em + 11, "hello", 5);
+
+        memset(ct, 0, sizeof(ct));
+        printf("rsa.ossl.padded.enc_ret=%d\n", pub_enc(16, em, ct, om, RSA_NO_PADDING));
+        memset(out, 0xa5, sizeof(out));
+        ret = priv_dec(16, ct, out, om, RSA_PKCS1_PADDING);
+        printf("rsa.ossl.padded.dec_ret=%d\n", ret);
+        printf("rsa.ossl.padded.dec_body=%d\n", ret == 5 && memcmp(out, "hello", 5) == 0);
+
+        /* ... and over an **invalid** one, which is the implicit rejection: the message that comes
+         * back is `ossl_rsa_prf`'s output under the KDK `derive_kdk` built from `d` and this
+         * ciphertext, so it is a function of both and of nothing else. The octets the check wrote
+         * are the first `ret` of them. */
+        memset(em, 0, sizeof(em));
+        em[0] = 0x00;
+        em[1] = 0x01;
+        for (i = 2; i < 16; i++)
+            em[i] = (unsigned char)i;
+        memset(ct, 0, sizeof(ct));
+        printf("rsa.ossl.reject.enc_ret=%d\n", pub_enc(16, em, ct, om, RSA_NO_PADDING));
+        memset(out, 0xa5, sizeof(out));
+        ret = priv_dec(16, ct, out, om, RSA_PKCS1_PADDING);
+        printf("rsa.ossl.reject.dec_ret=%d\n", ret);
+        for (i = 0; i < ret && i < (int)sizeof(out); i++)
+            printf("rsa.ossl.reject.%d=%02x\n", i, out[i]);
+
+        rt_release(om);
+    }
+
+    /* `rsa_ossl_mod_exp` called directly, so the exponentiation is observed without the entry
+     * points' padding and encoding around it. */
+    bn_in = rt_word(2842);
+    bn_out = BN_new();
+    ctx = BN_CTX_new();
+    printf("rsa.ossl.mod_exp.ret=%d\n", mod_exp(bn_out, bn_in, o, ctx));
+    memset(back, 0, sizeof(back));
+    pad = BN_bn2binpad(bn_out, back, 2);
+    printf("rsa.ossl.mod_exp.pad=%d\n", pad);
+    printf("rsa.ossl.mod_exp.0=%02x\n", back[0]);
+    printf("rsa.ossl.mod_exp.1=%02x\n", back[1]);
+    BN_free(bn_in);
+    BN_free(bn_out);
+    BN_CTX_free(ctx);
+
+    /* `RSA_setup_blinding`: the object's public exponent, an odd modulus, and the answer's shape.
+     * No byte of the blinding factor enters the transcript -- there is no byte of it that two runs
+     * would agree on. */
+    bn = rt_word(3233);
+    be = rt_word(17);
+    ob = rt_blank();
+    RT_METH(ob) = (RSA_METHOD *)ro_meth;
+    RT_N(ob) = bn;
+    RT_E(ob) = be;
+    blinding = RSA_setup_blinding(ob, NULL);
+    printf("rsa.ossl.setup_blinding.nonnull=%d\n", blinding != NULL);
+    printf("rsa.ossl.setup_blinding.flags=%lu\n",
+        blinding == NULL ? 0UL : BN_BLINDING_get_flags(blinding));
+    BN_BLINDING_free(blinding);
+    /* The object is released with plain `free` and its two `BIGNUM`s with `BN_free`, because its
+     * method is the default table: `RSA_free` would run `rsa_ossl_finish` and then release the two
+     * `BIGNUM`s, which this arm has already done. */
+    BN_free(bn);
+    BN_free(be);
+    free(ob);
+
+    /* Last, the key object: `RSA_free` runs the table's `finish` -- releasing the three Montgomery
+     * contexts the arm above built -- and then releases the eight `BIGNUM`s it owns. */
+    rt_release(o);
+}
+
 int main(void)
 {
     RSA_METHOD *m = NULL;
@@ -1663,6 +2091,12 @@ int main(void)
 
     /* The slice A object layer: every export the candidate publishes that needs no constructor. */
     rsa_object_arms();
+
+    /* Slice D's default method, its four-name family and the seven `rsa_ossl_*` entry points. It
+     * runs after `rsa_object_arms` because it registers no ex_data index of its own: the index that
+     * arm registers is what makes the authority's `CRYPTO_free_ex_data` take its non-allocating
+     * path inside the constructor windows below. */
+    rsa_ossl_arms();
 
     /* ---------------------------------------------------------------- release */
 

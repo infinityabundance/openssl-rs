@@ -55,8 +55,11 @@ const LINE: c_int = 0;
 /// `RSA_MAX_PRIME_NUM` — `crypto/rsa/rsa_local.h:16`. The ceiling
 /// [`ossl_rsa_multip_cap`] clamps to, and therefore the largest number of extra primes
 /// an object can be given while the cap still describes it.
-#[allow(dead_code)] // read by `ossl_rsa_multip_cap`, whose first caller is `RSA_security_bits`
-const RSA_MAX_PRIME_NUM: c_int = 5;
+///
+/// `pub(crate)` because `rsa_ossl.c`'s `rsa_ossl_mod_exp` sizes its extra-prime array with it and
+/// refuses a stack wider than `RSA_MAX_PRIME_NUM - 2`. It is declared once, here, and imported
+/// there rather than restated.
+pub(crate) const RSA_MAX_PRIME_NUM: c_int = 5;
 
 /// `void ossl_rsa_multip_info_free_ex(RSA_PRIME_INFO *pinfo)` —
 /// `crypto/rsa/rsa_mp.c:15-19`.

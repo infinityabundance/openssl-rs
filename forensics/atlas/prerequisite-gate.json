@@ -18,13 +18,12 @@
       "ossl_get_openssldir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads; so is its sibling)",
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)",
       "ossl_rsa_asn1_meths -> phase 8 (The `EVP_PKEY_ASN1_METHOD` half of the `standard_methods[]` contents that `crypto/asn1/ameth_lib.c` searches -- the twelve `ossl_<alg>_asn1_meth` objects. `EVP_PKEY_asn1_find`/`_find_str` are landed and do search it, so their answer is NULL for every standard type until Phase 8 publishes the objects. That is why 7.4l withholds `EVP_PKEY_type`, `d2i_PrivateKey`/`_ex`, `d2i_AutoPrivateKey`/`_ex`, `d2i_PublicKey`, `d2i_KeyParams`/`_bio` and the legacy paths of the five `i2d_*` names rather than stubbing a divergent answer into them. `ossl_rsa_asn1_meths` is named as the first object of the table; the other eleven are the same stratum, same table, same answer.)",
-      "ossl_rsa_new_with_ctx -> phase 9 (`rsa_lib.c:71-74`'s `RSA *ossl_rsa_new_with_ctx(OSSL_LIB_CTX *libctx)` is `rsa_new_intern(NULL, libctx)` and nothing else, so it cannot be written before `rsa_new_intern`, and `rsa_new_intern` reads `RSA_get_default_method()` (`rsa_lib.c:101`) -- the second half of 8.4's slice A, which `forensics/tools/phase8_obligations.py`'s `BLOCKED_HANDOFFS` row (5) hands to Phase 9 along with `RSA_new`, `RSA_new_method` and `RSA_PKCS1_OpenSSL`. The row is discharged by the same commit that lands those four, at which point it becomes a stale deferral and is retired. `rsa_new_intern` itself is `static` in the authority and so is not owed by name; this is the constructor chain's one non-static name. Measured rather than predicted: `src/rsa/object.rs` is rsa_lib.c's dominant unit, so the prerequisite gate requires the unit's whole non-static internal set, and this is the single name step 2 of D320's integration plan did not account for.)",
       "ossl_rsa_pkey_method -> phase 8 (The `EVP_PKEY_METHOD` half of the same boundary: `crypto/evp/pmeth_lib.c`'s `standard_methods[]` holds the ten `ossl_<alg>_pkey_method` objects of the algorithm strata. `EVP_PKEY_meth_find`'s application half (`evp_pkey_meth_find_added_by_application`) is landed and courted; its `OBJ_bsearch_pmeth_func` half is not, and `EVP_PKEY_meth_get0` and `_get_count` index the table outright, so all three exports are withheld rather than stubbed with an application-count answer.)"
     ],
     "census": {
       "covered_by_a_divergence": 58,
-      "language_surface_not_modelled_by_name": 3304,
-      "planned_prerequisites": 12
+      "language_surface_not_modelled_by_name": 3291,
+      "planned_prerequisites": 11
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -227,10 +226,10 @@
         "crypto/rand/rand_uniform.c": 3,
         "crypto/rc2/rc2_cbc.c": 3,
         "crypto/ripemd/rmd_dgst.c": 342,
-        "crypto/rsa/rsa_lib.c": 60,
+        "crypto/rsa/rsa_lib.c": 57,
         "crypto/rsa/rsa_meth.c": 11,
         "crypto/rsa/rsa_mp.c": 7,
-        "crypto/rsa/rsa_ossl.c": 31,
+        "crypto/rsa/rsa_ossl.c": 21,
         "crypto/seed/seed.c": 7,
         "crypto/self_test_core.c": 17,
         "crypto/sha/sha1dgst.c": 2,
@@ -255,8 +254,7 @@
         "evp_pkey_get_legacy": 1,
         "ossl_get_enginesdir": 2,
         "ossl_get_openssldir": 2,
-        "ossl_get_wininstallcontext": 1,
-        "ossl_rsa_new_with_ctx": 1
+        "ossl_get_wininstallcontext": 1
       }
     },
     "census_not_a_failure": "the C language surface is counted and listed, never failed: the crate models C types, macros and reason codes differently on purpose, and a lexical scan cannot tell a rename from a gap",
@@ -356,15 +354,14 @@
         "ossl_get_enginesdir",
         "ossl_get_openssldir",
         "ossl_get_openssldir",
-        "ossl_get_wininstallcontext",
-        "ossl_rsa_new_with_ctx"
+        "ossl_get_wininstallcontext"
       ]
     },
     "checked": {
       "authority_units": 187,
       "crate_modules": 254,
       "deferral_blocker_rows": 5,
-      "deferrals_recorded": 18,
+      "deferrals_recorded": 17,
       "divergence_names_covered": 30,
       "divergence_rows": 5,
       "names_referenced_and_not_built": 17
@@ -488,7 +485,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "5ce29a77388b26b7c13a5282d688df4097c23c913a0cf448eee35c65f069bf21",
+  "body_hash": "1391b09446613e4644dfd7273982dd8a03423a3577a443a7141749bae5b2d8eb",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -509,7 +506,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "4697e39fde3d3cb5d44b897886410dc3561f5476d42cf5b53f3aefff809b339f"
+      "sha256": "2f2c34d4d176220141773df9918942302458a9422c2ba21ad12818571af8a880"
     },
     {
       "name": "symbol-ownership",
@@ -524,17 +521,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "10d22b9177fc25399a633595b39e7b10afd4ce976dc951dfc0cad294c87d923e"
+      "sha256": "3456f6d4a0ef4e0439b81e79c2e3601115951a2feb7c521dccf4d1361ccc20b2"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "4282b7dbb042155664c43625c53bef43c8c3c71785747a8e71148122192f3766"
+      "sha256": "9e89d1eb0b2784986b55ae2f9460c88ba440d88b8ae6ed0076b4fb1b751b2fff"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "80e7004ecf5e6b6f749e367bf22daa8d502b84b16be5c85893218d6aa1e323f7"
+      "sha256": "48243c720db0156fb700e3aa42a90b26b15b11b60bf063c39170400938f69dba"
     },
     {
       "name": "crate-source-tree",

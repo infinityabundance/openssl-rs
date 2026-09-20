@@ -4,8 +4,8 @@
     "complete": false,
     "counts": {
       "atlas_owned": 759,
-      "deferred_to_later_phase": 18,
-      "implemented": 278,
+      "deferred_to_later_phase": 12,
+      "implemented": 284,
       "open_in_this_stratum": 490,
       "owned": 786,
       "received_by_handoff": 27
@@ -56,12 +56,6 @@
       {
         "declaring_header": "rsa.h",
         "owning_phase": 9,
-        "reason": "`rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from `RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence `RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be constructed -- until the path that padding call leads into exists, which is what makes the *lifetime* follow the padding rather than precede it. That path landed in D323, so what this row is still waiting on is no longer the random layer: it is the thirteen `rsa_ossl_*` entry points slice D defines and the table that names them, which is the same commit. `RSA_set_default_method` is *not* in this row: it is a pointer store with no table read and no random call, and it stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. `ossl_rsa_new_with_ctx` is internal and is blocked with `RSA_new`, which it calls into.",
-        "symbol": "RSA_PKCS1_OpenSSL"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "owning_phase": 9,
         "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
         "symbol": "RSA_X931_derive_ex"
       },
@@ -70,12 +64,6 @@
         "owning_phase": 9,
         "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
         "symbol": "RSA_X931_generate_key_ex"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "owning_phase": 9,
-        "reason": "`RSA_blinding_on` (`crypto/rsa/rsa_crpt.c:68`) is a lock plus `RSA_setup_blinding`, and `RSA_setup_blinding` (`:104`) ends in `BN_BLINDING_create_param` (`crypto/bn/bn_blind.c`), whose `ai`/`e` values come from `BN_rand_range_ex` -> `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`). So both are blocked on Phase 9 through BN's own random path, and `RSA_blinding_off` is *not* in this row: it frees the object and needs nothing random.",
-        "symbol": "RSA_blinding_on"
       },
       {
         "declaring_header": "rsa.h",
@@ -94,34 +82,10 @@
         "owning_phase": 9,
         "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
         "symbol": "RSA_generate_multi_prime_key"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "owning_phase": 9,
-        "reason": "`rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from `RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence `RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be constructed -- until the path that padding call leads into exists, which is what makes the *lifetime* follow the padding rather than precede it. That path landed in D323, so what this row is still waiting on is no longer the random layer: it is the thirteen `rsa_ossl_*` entry points slice D defines and the table that names them, which is the same commit. `RSA_set_default_method` is *not* in this row: it is a pointer store with no table read and no random call, and it stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. `ossl_rsa_new_with_ctx` is internal and is blocked with `RSA_new`, which it calls into.",
-        "symbol": "RSA_get_default_method"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "owning_phase": 9,
-        "reason": "`rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from `RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence `RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be constructed -- until the path that padding call leads into exists, which is what makes the *lifetime* follow the padding rather than precede it. That path landed in D323, so what this row is still waiting on is no longer the random layer: it is the thirteen `rsa_ossl_*` entry points slice D defines and the table that names them, which is the same commit. `RSA_set_default_method` is *not* in this row: it is a pointer store with no table read and no random call, and it stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. `ossl_rsa_new_with_ctx` is internal and is blocked with `RSA_new`, which it calls into.",
-        "symbol": "RSA_new"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "owning_phase": 9,
-        "reason": "`rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from `RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence `RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be constructed -- until the path that padding call leads into exists, which is what makes the *lifetime* follow the padding rather than precede it. That path landed in D323, so what this row is still waiting on is no longer the random layer: it is the thirteen `rsa_ossl_*` entry points slice D defines and the table that names them, which is the same commit. `RSA_set_default_method` is *not* in this row: it is a pointer store with no table read and no random call, and it stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. `ossl_rsa_new_with_ctx` is internal and is blocked with `RSA_new`, which it calls into.",
-        "symbol": "RSA_new_method"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "owning_phase": 9,
-        "reason": "`RSA_blinding_on` (`crypto/rsa/rsa_crpt.c:68`) is a lock plus `RSA_setup_blinding`, and `RSA_setup_blinding` (`:104`) ends in `BN_BLINDING_create_param` (`crypto/bn/bn_blind.c`), whose `ai`/`e` values come from `BN_rand_range_ex` -> `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`). So both are blocked on Phase 9 through BN's own random path, and `RSA_blinding_off` is *not* in this row: it frees the object and needs nothing random.",
-        "symbol": "RSA_setup_blinding"
       }
     ],
     "deferred_by_phase": {
-      "9": 18
+      "9": 12
     },
     "handoffs_discharged": {
       "7": [
@@ -1337,6 +1301,7 @@
       "RIPEMD160_Init",
       "RIPEMD160_Transform",
       "RIPEMD160_Update",
+      "RSA_PKCS1_OpenSSL",
       "RSA_X931_hash_id",
       "RSA_bits",
       "RSA_clear_flags",
@@ -1357,6 +1322,7 @@
       "RSA_get0_p",
       "RSA_get0_pss_params",
       "RSA_get0_q",
+      "RSA_get_default_method",
       "RSA_get_ex_data",
       "RSA_get_method",
       "RSA_get_multi_prime_extra_count",
@@ -1394,6 +1360,8 @@
       "RSA_meth_set_pub_enc",
       "RSA_meth_set_sign",
       "RSA_meth_set_verify",
+      "RSA_new",
+      "RSA_new_method",
       "RSA_null_method",
       "RSA_padding_add_PKCS1_OAEP",
       "RSA_padding_add_PKCS1_OAEP_mgf1",
@@ -1414,9 +1382,11 @@
       "RSA_set0_factors",
       "RSA_set0_key",
       "RSA_set0_multi_prime_params",
+      "RSA_set_default_method",
       "RSA_set_ex_data",
       "RSA_set_flags",
       "RSA_set_method",
+      "RSA_setup_blinding",
       "RSA_size",
       "RSA_test_flags",
       "RSA_up_ref",
@@ -4322,6 +4292,12 @@
         "declaring_header": "rsa.h",
         "module": "src/rsa/mod.rs",
         "received_from_phase": null,
+        "symbol": "RSA_blinding_on"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
         "symbol": "RSA_check_key"
       },
       {
@@ -4371,12 +4347,6 @@
         "module": "src/rsa/mod.rs",
         "received_from_phase": null,
         "symbol": "RSA_public_encrypt"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_set_default_method"
       },
       {
         "declaring_header": "rsa.h",
@@ -4684,12 +4654,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "86f1d7ba395d81fdcad2f1da4494e819b9196d01aaeef4406f3ac1a9979f975a"
+      "sha256": "f45dceb5336de968f70d9e1f7a0b158acc1534caf4a12fb2740c613eb8a4755a"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "43b8129dda489f05722a4d9c7e465e577afa87bd057ac36d4f4f1069163df34a"
+      "sha256": "8b166a5f5ed3524ba935b3e871c2f9b0a3b3b7cbf144ed63a0a3752df382d515"
     }
   ],
   "kind": "phase8-obligations",

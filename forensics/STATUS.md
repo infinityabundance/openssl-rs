@@ -29,7 +29,7 @@ renderer does not know any phase status.
 | 6 | OSSL_LIB_CTX + provider core | `complete` |  |
 | 7 | EVP framework | `complete` |  |
 | 8 | Native cryptographic primitives | `in-progress` | 490 open obligation(s) of this stratum recorded in forensics/phase8-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
-| 9 | RAND / DRBG + entropy | `in-progress` | 33 open obligation(s) of this stratum recorded in forensics/phase9-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Its working set is ninety-three exports, and only twenty-five are its own header's: the other sixty-eight arrive as recorded hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives in ten earlier strata's modules (docs/DECISIONS.md D294). The court file records `courts: []` and is not evidence that anything works: no Phase 9 court has landed yet (docs/PHASE-9-SUBPHASES.md section 1) |
+| 9 | RAND / DRBG + entropy | `in-progress` | 27 open obligation(s) of this stratum recorded in forensics/phase9-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Its working set is ninety-three exports, and only twenty-five are its own header's: the other sixty-eight arrive as recorded hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives in ten earlier strata's modules (docs/DECISIONS.md D294). The court file records `courts: []` and is not evidence that anything works: no Phase 9 court has landed yet (docs/PHASE-9-SUBPHASES.md section 1) |
 
 Not started: strata 10-21 (12 total).
 
@@ -84,9 +84,9 @@ that name is defined, nothing more.
 
 | library | exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 2191 | 3705 |
+| libcrypto | 5896 | 2197 | 3699 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **2191** | **4308** |
+| **total** | **6499** | **2197** | **4302** |
 
 ### Phase 3 obligation ledger
 
@@ -210,11 +210,11 @@ handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
 * authority exports in the Phase 8 working set: 786
-* implemented: 278
-* deferred to a later phase with a stated reason: 18
+* implemented: 284
+* deferred to a later phase with a stated reason: 12
 * open in this stratum: 490
 
-Deferred to phase 9: `DES_random_key`, `DH_generate_key`, `DH_generate_parameters`, `DH_generate_parameters_ex`, `DSA_generate_key`, `DSA_generate_parameters_ex`, `EC_KEY_generate_key`, `RSA_PKCS1_OpenSSL`, `RSA_X931_derive_ex`, `RSA_X931_generate_key_ex`, `RSA_blinding_on`, `RSA_generate_key`, `RSA_generate_key_ex`, `RSA_generate_multi_prime_key`, `RSA_get_default_method`, `RSA_new`, `RSA_new_method`, `RSA_setup_blinding`
+Deferred to phase 9: `DES_random_key`, `DH_generate_key`, `DH_generate_parameters`, `DH_generate_parameters_ex`, `DSA_generate_key`, `DSA_generate_parameters_ex`, `EC_KEY_generate_key`, `RSA_X931_derive_ex`, `RSA_X931_generate_key_ex`, `RSA_generate_key`, `RSA_generate_key_ex`, `RSA_generate_multi_prime_key`
 
 Hand-offs from phase 7 discharged by this stratum: `EVP_PKEY_assign`, `EVP_PKEY_decrypt_old`, `EVP_PKEY_encrypt_old`, `EVP_PKEY_get0_DH`, `EVP_PKEY_get0_DSA`, `EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get0_RSA`, `EVP_PKEY_get0_hmac`, `EVP_PKEY_get0_poly1305`, `EVP_PKEY_get0_siphash`, `EVP_PKEY_get1_DH`, `EVP_PKEY_get1_DSA`, `EVP_PKEY_get1_EC_KEY`, `EVP_PKEY_get1_RSA`, `EVP_PKEY_get_ec_point_conv_form`, `EVP_PKEY_get_field_type`, `EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0`, `EVP_PKEY_meth_get_count`, `EVP_PKEY_set1_DH`, `EVP_PKEY_set1_DSA`, `EVP_PKEY_set1_EC_KEY`, `EVP_PKEY_set1_RSA`, `EVP_PKEY_type`, `d2i_KeyParams`, `d2i_KeyParams_bio`, `d2i_PublicKey`
 
@@ -225,10 +225,10 @@ ownership atlas assigns Phase 9, or that an earlier stratum
 handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
-* authority exports in the Phase 9 working set: 87
+* authority exports in the Phase 9 working set: 81
 * implemented: 54
 * deferred to a later phase with a stated reason: 0
-* open in this stratum: 33
+* open in this stratum: 27
 
 Hand-offs from phase 4 discharged by this stratum: `BIO_f_nbio_test`
 
@@ -236,7 +236,7 @@ Hand-offs from phase 5 discharged by this stratum: `BN_BLINDING_convert`, `BN_BL
 
 Hand-offs from phase 7 discharged by this stratum: `BIO_f_reliable`, `EVP_CIPHER_CTX_rand_key`, `EVP_SealInit`, `OSSL_HPKE_get_grease_value`, `PEM_ASN1_read`, `PEM_ASN1_read_bio`, `PEM_ASN1_write`, `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx`, `PEM_bytes_read_bio`, `PEM_bytes_read_bio_secmem`, `PEM_do_header`
 
-Hand-offs from phase 8 discharged by this stratum: `DES_random_key`, `DH_generate_key`, `DH_generate_parameters`, `DH_generate_parameters_ex`, `DSA_generate_key`, `DSA_generate_parameters_ex`, `EC_KEY_generate_key`, `RSA_PKCS1_OpenSSL`, `RSA_X931_derive_ex`, `RSA_X931_generate_key_ex`, `RSA_blinding_on`, `RSA_generate_key`, `RSA_generate_key_ex`, `RSA_generate_multi_prime_key`, `RSA_get_default_method`, `RSA_new`, `RSA_new_method`, `RSA_setup_blinding`
+Hand-offs from phase 8 discharged by this stratum: `DES_random_key`, `DH_generate_key`, `DH_generate_parameters`, `DH_generate_parameters_ex`, `DSA_generate_key`, `DSA_generate_parameters_ex`, `EC_KEY_generate_key`, `RSA_X931_derive_ex`, `RSA_X931_generate_key_ex`, `RSA_generate_key`, `RSA_generate_key_ex`, `RSA_generate_multi_prime_key`
 
 ## Symbol reconciliation
 

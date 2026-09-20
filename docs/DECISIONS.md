@@ -21053,3 +21053,152 @@ because the public `BN_mod_inverse` cannot express what `create_param` needs: it
 (`BN_mod_mul_montgomery`, `BN_to_montgomery`), whose values agree and whose top is normalised by the
 crate's own `store`; each substitution is recorded at its call site. `bn_check_top` is a
 `BN_DEBUG`-only macro and is not written, as in every already-landed `bn` module.
+
+## D325 -- 8.4's default method lands, the constructor with it, and the last two stale hand-off rows retire
+
+D320's plan is executed through its steps 7-9: **commit B**. With it, Phase 8's `RSA` object can be
+constructed, the method table it is constructed with exists, and the two `BLOCKED_HANDOFFS` rows
+that withheld both are retired -- because the crate now defines every name they named, and
+`phase8_obligations.py` fails closed on a row that outlives the first symbol it covers.
+
+**What landed.**
+
+* `src/rsa/ossl.rs` gains `rsa_pkcs1_ossl_meth` (`rsa_ossl.c:64-81`, the `#else` arm), the
+  four-name family around it (`RSA_get_default_method` `:91-94`, `RSA_set_default_method` `:86-89`,
+  `RSA_PKCS1_OpenSSL` `:96-99`, and `RSA_null_method`'s already-landed sibling in `crate::rsa`),
+  the seven `rsa_ossl_*` entry points the table's initialiser names
+  (`rsa_ossl_public_encrypt` `:106-223`), `_private_encrypt` `:329-440`, `derive_kdk` `:442-525`,
+  `_private_decrypt` `:527-700`, `_public_decrypt` `:703-800`, `_mod_exp` `:802-1171`, `_init`
+  `:1173-1177`, `_finish` `:1179-1195`), and the helpers they reach: `get_unique_thread_id`
+  `:229-243` (`#else` arm), `ossl_rsa_get_thread_bn_blinding` `:263-269`,
+  `ossl_rsa_set_thread_bn_blinding` `:271-277`, `rsa_get_blinding` `:279-304`,
+  `rsa_blinding_convert` `:306-312`, `rsa_blinding_invert` `:314-326`.
+* **`RSA_setup_blinding`** (`rsa_crpt.c:104-161`) and its static helper `rsa_get_public_exp`
+  (`:76-102`) land in the same module, as an export, because `rsa_ossl.c`'s `rsa_get_blinding` is
+  their only caller in the whole authority: the private entry points cannot be transcribed without
+  them. `RSA_setup_blinding`'s old row is retired with a correction (below).
+* `src/rsa/object.rs` gains the constructor quartet moved out of the staging: `rsa_new_intern`
+  (`rsa_lib.c:76-139`), `RSA_new` (`:35-38`), `RSA_new_method` (`:65-68`) and the internal
+  `ossl_rsa_new_with_ctx` (`:71-74`). The ENGINE block is the reachable answer D320's step 4
+  specifies: `ENGINE_get_default_RSA()` selects from an empty table and answers NULL, so the
+  `if (ret->engine)` block -- the only reader of `ENGINE_get_RSA` -- is unreachable and the whole
+  region reduces to `ret->engine = NULL;` with the `flags` assignment beside it kept.
+* `src/rsa/mod.rs` gains `rsa_pk1.c`'s two remaining internals -- `ossl_rsa_prf` (`:277-373`) and
+  `ossl_rsa_padding_check_PKCS1_type_2` (`:387-523`) -- for the reason the next paragraph gives.
+  `src/rsa/mp.rs`'s `RSA_MAX_PRIME_NUM` and four of `object.rs`'s `RSA_FLAG_*` constants become
+  `pub(crate)` because `rsa_ossl.c` reads them, and `mod ossl` becomes `pub mod ossl` for the
+  reason `pub mod object` already is: the module holds `#[no_mangle]` exports, and a `pub` item in
+  a private module is `unreachable_pub`.
+
+**The callee the task named is not the callee the authority reaches, and this is the entry's one
+substantive correction.** The instruction for this commit said that `rsa_ossl_public_decrypt`'s
+`RSA_PKCS1_WITH_TLS_PADDING` arm reaches `ossl_rsa_padding_check_PKCS1_type_2_TLS`
+(`rsa_pk1.c:546`), "which D323 deliberately did not land because nothing then called it". The
+authority says otherwise on both halves: `rsa_ossl_public_decrypt`'s `switch` has three arms
+(`RSA_PKCS1_PADDING`, `RSA_X931_PADDING`, `RSA_NO_PADDING`) and a `default` that raises
+`RSA_R_UNKNOWN_PADDING_TYPE`, so `RSA_PKCS1_WITH_TLS_PADDING` is a selector **no `rsa_ossl.c` body
+reads at all**; and `ossl_rsa_padding_check_PKCS1_type_2_TLS`'s only caller in the entire authority
+is `providers/implementations/asymciphers/rsa_enc.c.in:307`. The internal that *does* become
+reachable is the one D323's own comment listed and left: **`ossl_rsa_padding_check_PKCS1_type_2`**
+(`rsa_pk1.c:387-523`), called from `rsa_ossl_private_decrypt`'s `RSA_PKCS1_PADDING` arm at `:673`,
+and it is that pair -- with `ossl_rsa_prf` under it -- that lands in `src/rsa/mod.rs` here. The TLS
+name is not landed and is not owed by this stratum: nothing in `crypto/rsa` calls it.
+
+**`BLOCKED_HANDOFFS` row (2) is retired, and it was wrong in this version rather than merely
+stale.** The row withheld `RSA_blinding_on` and `RSA_setup_blinding` on the strength of two claims:
+that `RSA_blinding_on` "is a lock plus `RSA_setup_blinding`", and that `RSA_setup_blinding` ends in
+`BN_BLINDING_create_param` -> `BN_rand_range_ex` -> `RAND_bytes_ex`. Both are false now and the first
+was never true of 3.6.4: `RSA_blinding_on` (`rsa_crpt.c:68-74`) is `rsa->flags |= RSA_FLAG_BLINDING;
+rsa->flags &= ~RSA_FLAG_NO_BLINDING; return 1;` -- the 1.1.1 shape is what the row had read -- and
+the random path it named landed at D313 (`RAND_bytes_ex`) and D324 (`BN_BLINDING_create_param`).
+`RSA_setup_blinding` is therefore implemented here, and `RSA_blinding_on` moves from `deferred` to
+`open`: it is two flag writes with a real reader (`RSA_flags`/`RSA_test_flags`), it is owed by this
+stratum, and this commit did not need it. `RSA_blinding_off` was never in the row and was already
+open.
+
+**Four asymmetries the court arms found, each recorded rather than worked around.**
+
+* **`RSA_new`'s allocator-attribution window cannot be compared, and that is a new measurement about
+  the crate.** The window over a constructor is the object's own allocation (216 bytes,
+  `rsa_lib.c`), a lock, and the blinding array (`sparse_array.c`) -- and the middle one is missing on
+  the candidate side: `CRYPTO_THREAD_lock_new` (`src/runtime/thread.rs`) returns a Rust `Box` where
+  the authority's is `OPENSSL_zalloc(sizeof(CRYPTO_RWLOCK))`, 56 bytes attributed to
+  `crypto/threads_pthread.c`. The candidate's transcript is therefore exactly one `M` short inside
+  the window and one `F` short on release, which is a difference this court calls a residual rather
+  than an agreement. The divergence is real and belongs to the thread layer (Phase 3's, `RT-MEM`'s
+  plane), not to this commit; the arms observe the constructor's published structure and the window
+  is not used. This is the same class as `OBL-BN-ALLOCATOR`, with a different owner.
+* **`RSA_bits(RSA_new())` is a segmentation fault in the authority**, so D320's §4b row 1 ("then
+  `RSA_bits`/`RSA_size` on the result") is not writable as it stands: `RSA_bits` is
+  `BN_num_bits(r->n)` and `r->n` is NULL on a fresh object, and `BN_num_bits`'s first statement is
+  `int i = a->top - 1;`. The candidate answers 0 there (`src/bn/bignum.rs` treats a NULL `BIGNUM` as
+  zero bits), which is *safer* and is not comparable -- an arm that segfaults one side and prints a
+  line on the other cannot be a differential arm. The constructor arms observe the object's identity,
+  flags and engine member, and the modulus-width arms stay where they were: on a fabricated object
+  whose `n` is set.
+* **A fabricated key object must be given a real lock**, or the authority faults and the candidate
+  does not: the first public-key entry point takes `RSA_FLAG_CACHE_PUBLIC`'s branch into
+  `BN_MONT_CTX_set_locked(..., rsa->lock, ...)`, and the authority's lock helpers dereference their
+  argument unconditionally where the candidate's test for NULL. Both sides are handed a
+  `CRYPTO_THREAD_lock_new()` lock, and the arm says why.
+
+* **A two-octet modulus is not a legal subject for the PKCS#1 decrypt arm**, and the first version
+  of that arm proved it: with `num <= 10` the check's `max_sep_offset = flen - 2 - 8` wraps to a
+  near-`0xFFFF` `uint16_t`, so a 16-bit candidate length larger than the block is accepted as the
+  synthetic message's length and `msg_index = flen - synthetic_length` goes **negative** -- the copy
+  loop then reads before both buffers. `forensics/tools/probe_hygiene.py` caught it exactly as
+  designed: the authority printed `00 00` at `-O1` and `43 41` at `-O2`, two transcripts of the same
+  arm. The PKCS#1 arms now use a 128-bit key -- `p = 2^64 - 59`, `q = 2^61 - 1`, `e = 65537`,
+  built by the probe out of `BN_mul`/`BN_mod_inverse` so that both binaries compute it identically --
+  where `max_sep_offset` is 6 and every index is in range; and a valid `00 02 || PS || 00 || "hello"`
+  block fits in its 16 octets, so the arm drives the check's **success** path as well as its implicit
+  rejection.
+
+**Two substitutions, both recorded at their call sites and both already in the prerequisite gate's
+sealed-stratum census.** `rsa_ossl_mod_exp` reaches `bn_from_mont_fixed_top`, `bn_to_mont_fixed_top`,
+`bn_mod_sub_fixed_top`, `bn_mul_mont_fixed_top`, `bn_mul_fixed_top`, `bn_mod_add_fixed_top`,
+`bn_correct_top` and `bn_get_words`; this crate's `BIGNUM` is a normalised limb vector and has no
+"fixed top", so each call is written as the public entry point the authority's own wrapper calls
+(`BN_from_montgomery`, `BN_to_montgomery`, `BN_mod_mul_montgomery`, `BN_mul`, `BN_mod_add`), as a
+signed subtraction with the two conditional additions `bn_mod_sub_fixed_top`'s own comment
+describes, or -- for `bn_correct_top` -- omitted as the no-op it is in a representation that is
+always normalised. `bn_get_words(ret)[0]`'s low-limb read is `bn_get_low_limb`, **not**
+`BN_get_word`, whose answer for a value wider than one limb is `ULONG_MAX` and would take the X9.31
+complement branch on the wrong set of values.
+
+**The two reductions stated at the boundary rather than applied silently.** `rsa->meth->bn_mod_exp`
+and `rsa->meth->rsa_mod_exp` are `Option`s in this crate (D284) and bare pointers in the authority,
+and `rsa_ossl.c` calls both without a NULL test: a NULL member is a fault there and the `goto err`
+failure here, said at each of the seven call sites. And `RSA_new_method`'s engine argument is
+ignored -- the constructor takes no engine at all -- because no state this crate can reach can hold
+an `ENGINE`; the authority would `ENGINE_init` such a pointer and adopt the table `ENGINE_get_RSA`
+answered, or raise `RSA_LIB_116`. `RT-RSA` calls `RSA_new_method(NULL)` and the module note says
+why.
+
+**Bookkeeping, all forced by the code.** `BLOCKED_HANDOFFS` rows (5) and (2) are gone;
+`forensics/prerequisites.json`'s one RSA deferral (`ossl_rsa_new_with_ctx`, added by D321) is
+retired, so the gate reports `stale_deferral` zero -- it reported exactly that one name on the first
+run of this commit's gate, which is the fail-closed mechanism working -- and so is its `units` row
+for `crypto/rsa/rsa_ossl.c`, whose `deferred_to_later_stratum` class was discharged by
+`src/rsa/ossl.rs` becoming that unit's dominant module: the file's own rule is that a row exists for
+a unit no transcription edge reaches, and this one now reaches it. `forensics/
+phase8-obligations.json`: implemented 278 -> **284** (the five default-method names plus
+`RSA_setup_blinding`), deferred 18 -> **12**, open 490 -> **490** (the one name that left `open`,
+`RSA_set_default_method`, is replaced by the one that entered it, `RSA_blinding_on`), owned 786
+unchanged. `forensics/phase9-obligations.json`: `handoffs_discharged[8]` 18 -> **12** and `open` down
+by six, with no mismatched edge in `ownership_audit.py`. The prerequisite gate's
+`blocking_dependencies` 18 -> 17 and its `sealed_stratum_census` unchanged at 59 -- the fixed-top
+names were already counted, so substituting them added nothing. `RT-RSA` goes from **561** to
+**632 observations** (282 until D321's object-layer arms), zero residuals, and
+`court_coverage.py` reports every one of the stratum's 284
+implemented exports courted. `docs/PHASE-8-SUBPHASES.md`'s two anchored clauses name the six landed
+symbols and the one that moved to `open`.
+
+**What is deliberately *not* here, named rather than implied.** `rsa_ossl_s390x_mod_exp`
+(`S390X_MOD_EXP` is not defined on this profile), `get_unique_thread_id`'s TANDEM arm
+(`OPENSSL_SYS_TANDEM` likewise), `ossl_rsa_padding_check_PKCS1_type_2_TLS` (the provider's), the
+`#ifdef FIPS_MODULE` arms of the two range checks and of the padding-failure raise (this crate has no
+FIPS branch, as `mod.rs` already records), and the `RSA_public_encrypt`/`_private_encrypt`/
+`_public_decrypt`/`_private_decrypt` *wrappers* of `rsa_crpt.c:33-60`, which are still `open`: they
+are four one-line `rsa->meth->rsa_*_enc(...)` dispatches with a NULL test each, they are the natural
+first half of 8.4's slice E, and nothing in this commit reads them.

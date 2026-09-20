@@ -282,7 +282,7 @@
         "truncf128",
         "truncf16"
       ],
-      "compiler_emitted_count": 6984,
+      "compiler_emitted_count": 8690,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -290,7 +290,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 2191,
+        "implemented": 2197,
         "implemented_symbols": [
           "AES_bi_ige_encrypt",
           "AES_cbc_encrypt",
@@ -2293,6 +2293,7 @@
           "RIPEMD160_Init",
           "RIPEMD160_Transform",
           "RIPEMD160_Update",
+          "RSA_PKCS1_OpenSSL",
           "RSA_X931_hash_id",
           "RSA_bits",
           "RSA_clear_flags",
@@ -2313,6 +2314,7 @@
           "RSA_get0_p",
           "RSA_get0_pss_params",
           "RSA_get0_q",
+          "RSA_get_default_method",
           "RSA_get_ex_data",
           "RSA_get_method",
           "RSA_get_multi_prime_extra_count",
@@ -2350,6 +2352,8 @@
           "RSA_meth_set_pub_enc",
           "RSA_meth_set_sign",
           "RSA_meth_set_verify",
+          "RSA_new",
+          "RSA_new_method",
           "RSA_null_method",
           "RSA_padding_add_PKCS1_OAEP",
           "RSA_padding_add_PKCS1_OAEP_mgf1",
@@ -2370,9 +2374,11 @@
           "RSA_set0_factors",
           "RSA_set0_key",
           "RSA_set0_multi_prime_params",
+          "RSA_set_default_method",
           "RSA_set_ex_data",
           "RSA_set_flags",
           "RSA_set_method",
+          "RSA_setup_blinding",
           "RSA_size",
           "RSA_test_flags",
           "RSA_up_ref",
@@ -2484,7 +2490,7 @@
           "i2d_DISPLAYTEXT",
           "i2t_ASN1_OBJECT"
         ],
-        "scaffolded": 3705
+        "scaffolded": 3699
       },
       "libssl": {
         "authority_exports": 603,
@@ -2495,18 +2501,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 2191,
-      "scaffolded": 4308
+      "implemented": 2197,
+      "scaffolded": 4302
     }
   },
-  "body_hash": "86f1d7ba395d81fdcad2f1da4494e819b9196d01aaeef4406f3ac1a9979f975a",
+  "body_hash": "f45dceb5336de968f70d9e1f7a0b158acc1534caf4a12fb2740c613eb8a4755a",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "ecc420ece0c870eaea5e02375a32b4bda3e82eb5688569ff11bd6ff8c0d88c0f"
+      "sha256": "c45db1177122ce46c0d398428f84f0b311f356c9dbaaba0c4c9efe1cc45a8eac"
     },
     {
       "name": "authority-exports",

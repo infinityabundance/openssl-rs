@@ -13,11 +13,11 @@ Read from the ledger's `body.counts`.
 | quantity | count |
 |---|---|
 | owned | 786 |
-| implemented | 278 |
-| deferred to a later phase | 18 |
+| implemented | 284 |
+| deferred to a later phase | 12 |
 | open in this stratum | 490 |
 
-The identity `owned = implemented + deferred + open` is `786 = 278 + 18 + 490`, which holds.
+The identity `owned = implemented + deferred + open` is `786 = 284 + 12 + 490`, which holds.
 
 ## The merge gate — what Phase 8 owes to Phase 9
 
@@ -34,19 +34,13 @@ this stratum can be complete.
 | `DSA_generate_key` | `dsa.h` | 9 |
 | `DSA_generate_parameters_ex` | `dsa.h` | 9 |
 | `EC_KEY_generate_key` | `ec.h` | 9 |
-| `RSA_PKCS1_OpenSSL` | `rsa.h` | 9 |
 | `RSA_X931_derive_ex` | `rsa.h` | 9 |
 | `RSA_X931_generate_key_ex` | `rsa.h` | 9 |
-| `RSA_blinding_on` | `rsa.h` | 9 |
 | `RSA_generate_key` | `rsa.h` | 9 |
 | `RSA_generate_key_ex` | `rsa.h` | 9 |
 | `RSA_generate_multi_prime_key` | `rsa.h` | 9 |
-| `RSA_get_default_method` | `rsa.h` | 9 |
-| `RSA_new` | `rsa.h` | 9 |
-| `RSA_new_method` | `rsa.h` | 9 |
-| `RSA_setup_blinding` | `rsa.h` | 9 |
 
-**18** export(s) are deferred, to Phase 9. A
+**12** export(s) are deferred, to Phase 9. A
 stratum cannot be complete while any export it owns is neither implemented
 nor handed to a later phase, and these rows are the ones a later
 Phase 9 landing discharges.
@@ -66,14 +60,6 @@ symbols it covers are listed above it.
 - `DH_generate_key`, `DH_generate_parameters`, `DH_generate_parameters_ex`, `DSA_generate_key`, `DSA_generate_parameters_ex`, `EC_KEY_generate_key`, `RSA_X931_derive_ex`, `RSA_X931_generate_key_ex`, `RSA_generate_key`, `RSA_generate_key_ex`, `RSA_generate_multi_prime_key`:
 
   every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.
-
-- `RSA_PKCS1_OpenSSL`, `RSA_get_default_method`, `RSA_new`, `RSA_new_method`:
-
-  `rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from `RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence `RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be constructed -- until the path that padding call leads into exists, which is what makes the *lifetime* follow the padding rather than precede it. That path landed in D323, so what this row is still waiting on is no longer the random layer: it is the thirteen `rsa_ossl_*` entry points slice D defines and the table that names them, which is the same commit. `RSA_set_default_method` is *not* in this row: it is a pointer store with no table read and no random call, and it stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. `ossl_rsa_new_with_ctx` is internal and is blocked with `RSA_new`, which it calls into.
-
-- `RSA_blinding_on`, `RSA_setup_blinding`:
-
-  `RSA_blinding_on` (`crypto/rsa/rsa_crpt.c:68`) is a lock plus `RSA_setup_blinding`, and `RSA_setup_blinding` (`:104`) ends in `BN_BLINDING_create_param` (`crypto/bn/bn_blind.c`), whose `ai`/`e` values come from `BN_rand_range_ex` -> `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`). So both are blocked on Phase 9 through BN's own random path, and `RSA_blinding_off` is *not* in this row: it frees the object and needs nothing random.
 
 ## The work Phase 8 still owns
 
@@ -112,13 +98,13 @@ Total open symbols listed below: **490**; the ledger's
 `RSAPrivateKey_it`, `RSAPublicKey_dup`, `RSAPublicKey_it`, `RSA_OAEP_PARAMS_free`,
 `RSA_OAEP_PARAMS_it`, `RSA_OAEP_PARAMS_new`, `RSA_PSS_PARAMS_dup`,
 `RSA_PSS_PARAMS_free`, `RSA_PSS_PARAMS_it`, `RSA_PSS_PARAMS_new`, `RSA_blinding_off`,
-`RSA_check_key`, `RSA_check_key_ex`, `RSA_pkey_ctx_ctrl`, `RSA_print`, `RSA_print_fp`,
-`RSA_private_decrypt`, `RSA_private_encrypt`, `RSA_public_decrypt`,
-`RSA_public_encrypt`, `RSA_set_default_method`, `RSA_sign`,
-`RSA_sign_ASN1_OCTET_STRING`, `RSA_verify`, `RSA_verify_ASN1_OCTET_STRING`,
-`RSA_verify_PKCS1_PSS`, `RSA_verify_PKCS1_PSS_mgf1`, `d2i_RSAPrivateKey`,
-`d2i_RSAPublicKey`, `d2i_RSA_OAEP_PARAMS`, `d2i_RSA_PSS_PARAMS`, `i2d_RSAPrivateKey`,
-`i2d_RSAPublicKey`, `i2d_RSA_OAEP_PARAMS`, `i2d_RSA_PSS_PARAMS`
+`RSA_blinding_on`, `RSA_check_key`, `RSA_check_key_ex`, `RSA_pkey_ctx_ctrl`,
+`RSA_print`, `RSA_print_fp`, `RSA_private_decrypt`, `RSA_private_encrypt`,
+`RSA_public_decrypt`, `RSA_public_encrypt`, `RSA_sign`, `RSA_sign_ASN1_OCTET_STRING`,
+`RSA_verify`, `RSA_verify_ASN1_OCTET_STRING`, `RSA_verify_PKCS1_PSS`,
+`RSA_verify_PKCS1_PSS_mgf1`, `d2i_RSAPrivateKey`, `d2i_RSAPublicKey`,
+`d2i_RSA_OAEP_PARAMS`, `d2i_RSA_PSS_PARAMS`, `i2d_RSAPrivateKey`, `i2d_RSAPublicKey`,
+`i2d_RSA_OAEP_PARAMS`, `i2d_RSA_PSS_PARAMS`
 
 ### 8.5 DH and DHX — 94 open
 
@@ -283,7 +269,7 @@ from the export list — the method D114, D118 and D122 established. The
 This document projects `forensics/phase8-obligations.json`, and every row
 of that ledger is an **export**. Cross-stratum *internal* names — a helper
 a module references that is not an export — are recorded in a different
-place: `forensics/prerequisites.json`'s `deferrals` (18 rows, 7 of which name Phase 8 as
+place: `forensics/prerequisites.json`'s `deferrals` (17 rows, 7 of which name Phase 8 as
 owner), and
 `forensics/atlas/prerequisite-gate.json` is the generated view of them.
 A reader who only checks the export ledger has not seen that half of the

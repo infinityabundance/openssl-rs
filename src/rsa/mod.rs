@@ -68,12 +68,16 @@ use core::sync::atomic::AtomicI32;
 use crate::bn::bignum::{BN_num_bits, BigNum};
 use crate::bn::ctx::{BnCtx, BnGencb};
 use crate::bn::mont::MontCtx;
+use crate::digest::sha2::SHA256_DIGEST_LENGTH;
 use crate::evp::digest::{
     EVP_DigestFinal_ex, EVP_DigestInit_ex, EVP_DigestUpdate, EVP_MD_CTX_free, EVP_MD_CTX_new,
-    EVP_MD_get_size, EvpMd, EvpMdCtx,
+    EVP_MD_fetch, EVP_MD_free, EVP_MD_get_size, EvpMd, EvpMdCtx,
 };
 use crate::evp::pkey_asn1::Engine;
 use crate::evp::pkey_ctx::{RSA_PSS_SALTLEN_AUTO, RSA_PSS_SALTLEN_DIGEST, RSA_PSS_SALTLEN_MAX};
+use crate::mac::hmac::{
+    HMAC_CTX_free, HMAC_CTX_new, HMAC_Final, HMAC_Init_ex, HMAC_Update, HmacCtx,
+};
 use crate::rand::rand_lib::RAND_bytes_ex;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
@@ -85,7 +89,7 @@ use crate::runtime::thread::CryptoRwlock;
 
 mod mp;
 pub mod object;
-mod ossl;
+pub mod ossl;
 
 /// `RSA_METHOD_FLAG_NO_CHECK` — `include/openssl/rsa.h:64`. The only `RSA_METHOD_FLAG_*` constant
 /// this authority still defines; its siblings were absorbed into `RSA_FLAG_*`.
@@ -834,10 +838,13 @@ pub extern "C" fn RSA_null_method() -> *const RsaMethod {
 // =============================================================================================
 //
 // Three of the eight padding *add* functions need `RAND_bytes_ex` for the bytes they insert
-// (`rsa_pk1.c:147`, `rsa_oaep.c:122`, `rsa_pss.c`'s salt), and three of the six *checks* need it
-// for implicit rejection. What lands here is the half whose output is a **pure function of its
-// input**: the `none` padding, X9.31, PKCS#1 v1.5 type 1, and the X9.31 hash ids. The other half is
-// a Phase 9 hand-off, recorded in `docs/DECISIONS.md` D285 rather than left as unstated open work.
+// `rsa_pk1.c:147`, `rsa_oaep.c:122`, `rsa_pss.c`'s salt), and three of the six *checks* need it
+// for implicit rejection. What lands here first is the half whose output is a **pure function of
+// its input**: the `none` padding, X9.31, PKCS#1 v1.5 type 1, and the X9.31 hash ids. The other
+// half was recorded as a Phase 9 hand-off in `docs/DECISIONS.md` D285; **that record expired and the
+// half landed in D323**, at the second Slice C banner further down this file. The two functions
+// below are neither half: they are `rsa_pk1.c`'s other two internals, landed last because
+// `rsa_ossl_private_decrypt` is the first caller they ever had (`docs/DECISIONS.md` D325).
 
 /// `RSA_PKCS1_PADDING_SIZE` — `include/openssl/rsa.h:206`. Eleven: the two header octets, eight
 /// mandatory `0xFF` octets and the separating zero.
@@ -1847,6 +1854,355 @@ pub unsafe extern "C" fn RSA_padding_check_PKCS1_type_2(
         crate::runtime::err::err_clear_last_constant_time((1 & good) as c_int);
 
         crate::runtime::constant_time::constant_time_select_int(good, mlen, -1)
+    }
+}
+
+/// `static int ossl_rsa_prf(OSSL_LIB_CTX *ctx, unsigned char *to, int tlen, const char *label,`
+/// `int llen, const unsigned char *kdk, uint16_t bitlen)` — `rsa_pk1.c:277-373`.
+///
+/// The HMAC-SHA256 counter-mode PRF the implicit rejection is built out of: `HMAC(K, ...)` over
+/// `be_iter || label || be_bitlen`, iterated over the output in `SHA256_DIGEST_LENGTH` chunks, and
+/// truncated through an intermediate buffer on the last, unaligned one so that `HMAC_Final` is never
+/// handed a short destination. The hash is hardcoded to SHA-256 for the reason the authority's own
+/// comment gives: a version that migrated its PRF would be a Bleichenbacher oracle, because an
+/// attacker who can see that two versions answer differently for the same ciphertext knows the
+/// message is synthetic.
+///
+/// **`0` is success and `-1` is failure** — the opposite polarity of the `1`/`0` its neighbours
+/// answer — which is why [`ossl_rsa_padding_check_PKCS1_type_2`] tests it with `< 0`.
+///
+/// Every failure but the length disagreement leaves through the authority's `err:` label, and the
+/// label releases both handles whether or not they were ever created: `HMAC_CTX_free(NULL)` and
+/// `EVP_MD_free(NULL)` are no-ops in both libraries.
+///
+/// `bitlen` is a `uint16_t` at the ABI boundary and the authority's `tlen * 8 != bitlen` test is
+/// therefore against the **truncated** product; a caller whose output is longer than 8191 bytes
+/// disagrees with its own length and is refused. Both callers below are inside that bound for every
+/// modulus this library admits (the largest is 16384 bits, 2048 bytes), so the truncation is
+/// transcribed rather than avoided. The `* 8` is a wrapping multiply for the same reason.
+///
+/// # Safety
+/// `ctx` is NULL or live; `to` is writable for `tlen` bytes; `label` is readable for `llen` bytes;
+/// `kdk` is readable for `SHA256_DIGEST_LENGTH` bytes.
+unsafe fn ossl_rsa_prf(
+    ctx: *mut c_void,
+    to: *mut c_uchar,
+    tlen: c_int,
+    label: *const c_char,
+    llen: c_int,
+    kdk: *const c_uchar,
+    bitlen: u16,
+) -> c_int {
+    let mut hmac: *mut HmacCtx = core::ptr::null_mut();
+    let mut md: *mut EvpMd = core::ptr::null_mut();
+    let mut hmac_out = [0u8; SHA256_DIGEST_LENGTH as usize];
+    let mut be_iter = [0u8; 2];
+    let mut be_bitlen = [0u8; 2];
+    let mut iter: u16 = 0;
+
+    // The authority's `int ret = -1;`, which its `err:` label hands back and which its last
+    // statement before that label sets to 0.
+    let mut ret: c_int = -1;
+
+    // SAFETY: the caller's contract: `ctx`, `to`, `label` and `kdk` are as documented, and every
+    // length a callee below is handed is the one `tlen`/`llen`/`bitlen` describes. The two
+    // handles are NULL until they are created and are released at the authority's `err:` label.
+    'body: {
+        // SAFETY: as above.
+        unsafe {
+            if tlen.wrapping_mul(8) != bitlen as c_int {
+                raise_site(&err_sites::RSA_PK1_294);
+                break 'body;
+            }
+
+            be_bitlen[0] = ((bitlen >> 8) & 0xff) as u8;
+            be_bitlen[1] = (bitlen & 0xff) as u8;
+
+            hmac = HMAC_CTX_new();
+            if hmac.is_null() {
+                raise_site(&err_sites::RSA_PK1_303);
+                break 'body;
+            }
+
+            md = EVP_MD_fetch(ctx, c"sha256".as_ptr(), core::ptr::null());
+            if md.is_null() {
+                raise_site(&err_sites::RSA_PK1_316);
+                break 'body;
+            }
+
+            if HMAC_Init_ex(
+                hmac,
+                kdk.cast::<c_void>(),
+                SHA256_DIGEST_LENGTH as c_int,
+                md,
+                core::ptr::null_mut(),
+            ) <= 0
+            {
+                raise_site(&err_sites::RSA_PK1_321);
+                break 'body;
+            }
+
+            // The authority's `for (pos = 0; pos < tlen; pos += SHA256_DIGEST_LENGTH, iter++)`. The
+            // increment is at the foot of this loop for that reason, and `iter` is a `uint16_t` that
+            // wraps exactly as the authority's does.
+            let mut pos: c_int = 0;
+            while pos < tlen {
+                if HMAC_Init_ex(
+                    hmac,
+                    core::ptr::null(),
+                    0,
+                    core::ptr::null(),
+                    core::ptr::null_mut(),
+                ) <= 0
+                {
+                    raise_site(&err_sites::RSA_PK1_327);
+                    break 'body;
+                }
+
+                be_iter[0] = ((iter >> 8) & 0xff) as u8;
+                be_iter[1] = (iter & 0xff) as u8;
+
+                if HMAC_Update(hmac, be_iter.as_ptr(), be_iter.len()) <= 0 {
+                    raise_site(&err_sites::RSA_PK1_335);
+                    break 'body;
+                }
+                if HMAC_Update(hmac, label.cast::<c_uchar>(), llen as usize) <= 0 {
+                    raise_site(&err_sites::RSA_PK1_339);
+                    break 'body;
+                }
+                if HMAC_Update(hmac, be_bitlen.as_ptr(), be_bitlen.len()) <= 0 {
+                    raise_site(&err_sites::RSA_PK1_343);
+                    break 'body;
+                }
+
+                // `HMAC_Final` requires the destination to fit the whole MAC, so the last, unaligned
+                // chunk is finalised into the intermediate buffer and copied out of it.
+                let mut md_len: c_uint = SHA256_DIGEST_LENGTH;
+                if pos + SHA256_DIGEST_LENGTH as c_int > tlen {
+                    if HMAC_Final(hmac, hmac_out.as_mut_ptr(), core::ptr::addr_of_mut!(md_len)) <= 0
+                    {
+                        raise_site(&err_sites::RSA_PK1_355);
+                        break 'body;
+                    }
+                    core::ptr::copy_nonoverlapping(
+                        hmac_out.as_ptr(),
+                        to.offset(pos as isize),
+                        (tlen - pos) as usize,
+                    );
+                } else if HMAC_Final(
+                    hmac,
+                    to.offset(pos as isize),
+                    core::ptr::addr_of_mut!(md_len),
+                ) <= 0
+                {
+                    raise_site(&err_sites::RSA_PK1_361);
+                    break 'body;
+                }
+
+                pos += SHA256_DIGEST_LENGTH as c_int;
+                iter = iter.wrapping_add(1);
+            }
+            // The authority's `ret = 0;` immediately before its `err:` label.
+            ret = 0;
+        }
+    }
+
+    // The authority's `err:` label. Both releases accept NULL, so an early failure runs it whole.
+    // SAFETY: `hmac` and `md` are each NULL or a live handle this call owns.
+    unsafe {
+        HMAC_CTX_free(hmac);
+        EVP_MD_free(md);
+    }
+
+    ret
+}
+
+/// `int ossl_rsa_padding_check_PKCS1_type_2(OSSL_LIB_CTX *ctx, unsigned char *to, int tlen,`
+/// `const unsigned char *from, int flen, int num, unsigned char *kdk)` — `rsa_pk1.c:387-523`.
+/// Internal, and declared in `include/crypto/rsa.h:92-95`.
+///
+/// **The same type-2 check with implicit rejection instead of a refusal.** Where
+/// [`RSA_padding_check_PKCS1_type_2`] raises and answers `-1`, this answers a message derived from
+/// the private exponent and the ciphertext — so a caller that cannot see the plaintext cannot tell
+/// a bad padding from a good one, which is Bleichenbacher's oracle closed on the PKCS#1 v1.5
+/// decryption path. The message is not *random*: it is [`ossl_rsa_prf`]'s output under the KDK
+/// `derive_kdk` computed, so this function is a pure function of its inputs and a court can compare
+/// it byte for byte.
+///
+/// The structure is the authority's: the synthetic message and a 128-candidate synthetic *length*
+/// are produced first, the check over `from` folds into `good`, and `msg_index` is then selected
+/// between the real one and the synthetic one under that same mask. The final copy reads both
+/// buffers on every iteration so that the cache access pattern does not leak which was selected.
+///
+/// `ret < 0` is reachable only for a publicly invalid call (`num != flen`, a non-positive length, or
+/// an allocation failure), which is why the error is raised on the way out rather than in constant
+/// time.
+///
+/// # Safety
+/// `ctx` is NULL or live; `to` is writable for `tlen` bytes; `from` is readable for `flen` bytes;
+/// `kdk` is readable for `SHA256_DIGEST_LENGTH` bytes.
+#[allow(non_snake_case)] // the authority's name, kept verbatim like every other one
+pub(crate) unsafe fn ossl_rsa_padding_check_PKCS1_type_2(
+    ctx: *mut c_void,
+    to: *mut c_uchar,
+    tlen: c_int,
+    from: *const c_uchar,
+    flen: c_int,
+    num: c_int,
+    kdk: *mut c_uchar,
+) -> c_int {
+    /// `MAX_LEN_GEN_TRIES` — `rsa_pk1.c:399`. The number of candidate lengths drawn, 128 of them
+    /// so that the chance none is small enough is 2^-128.
+    const MAX_LEN_GEN_TRIES: usize = 128;
+
+    // SAFETY: the caller's contract.
+    unsafe {
+        // The authority initialises `synthetic` to NULL and immediately overwrites it; that
+        // initialiser is dead and is dropped, exactly as this file's type-2 check drops its own
+        // `em`/`mlen` initialisers. `len_candidate` and `j` are likewise declared where the
+        // authority first assigns them rather than at the top of the block.
+        let mut synthetic_length: c_int;
+        let mut len_candidate: u16;
+        let mut candidate_lengths = [0u8; MAX_LEN_GEN_TRIES * 2];
+        let mut ret: c_int = -1;
+        let mut j: c_int;
+
+        if num != flen || tlen <= 0 || flen <= 0 {
+            raise_site(&err_sites::RSA_PK1_419);
+            return -1;
+        }
+
+        let synthetic = CRYPTO_malloc(flen as usize, FILE_RSA_PK1, LINE).cast::<c_uchar>();
+        if synthetic.is_null() {
+            raise_site(&err_sites::RSA_PK1_426);
+            return -1;
+        }
+
+        // The authority's `sizeof(candidate_lengths)` and `MAX_LEN_GEN_TRIES *
+        // sizeof(len_candidate) * 8` are written as those quantities: the buffers above are the
+        // authority's own sizes. The outcome travels in `ret`, which is what the authority's
+        // `err:` label reads and raises on; the block itself carries nothing.
+        'body: {
+            if ossl_rsa_prf(
+                ctx,
+                synthetic,
+                flen,
+                c"message".as_ptr(),
+                7,
+                kdk,
+                (flen * 8) as u16,
+            ) < 0
+            {
+                break 'body;
+            }
+            if ossl_rsa_prf(
+                ctx,
+                candidate_lengths.as_mut_ptr(),
+                candidate_lengths.len() as c_int,
+                c"length".as_ptr(),
+                6,
+                kdk,
+                (MAX_LEN_GEN_TRIES * 2 * 8) as u16,
+            ) < 0
+            {
+                break 'body;
+            }
+
+            // The largest message the modulus can hold: two header octets and eight mandatory
+            // padding octets are not message.
+            let mut len_mask: u16 = (flen - 2 - 8) as u16;
+            let max_sep_offset: u16 = len_mask;
+            // Propagate the top set bit down, so the mask the candidates are reduced by is one less
+            // than a power of two.
+            len_mask |= len_mask >> 1;
+            len_mask |= len_mask >> 2;
+            len_mask |= len_mask >> 4;
+            len_mask |= len_mask >> 8;
+
+            synthetic_length = 0;
+            let mut i: usize = 0;
+            while i < candidate_lengths.len() {
+                len_candidate =
+                    ((candidate_lengths[i] as u16) << 8) | candidate_lengths[i + 1] as u16;
+                len_candidate &= len_mask;
+
+                synthetic_length = crate::runtime::constant_time::constant_time_select_int(
+                    crate::runtime::constant_time::constant_time_lt_u32(
+                        len_candidate as u32,
+                        max_sep_offset as u32,
+                    ),
+                    len_candidate as c_int,
+                    synthetic_length,
+                );
+                i += 2;
+            }
+
+            let synth_msg_index = flen - synthetic_length;
+
+            let mut good: u32 =
+                crate::runtime::constant_time::constant_time_is_zero_u32(*from as u32);
+            good &= crate::runtime::constant_time::constant_time_eq_u32(*from.offset(1) as u32, 2);
+
+            // The separator is the first zero octet, accumulated rather than branched on.
+            let mut found_zero_byte: u32 = 0;
+            let mut zero_index: c_int = 0;
+            let mut i: c_int = 2;
+            while i < flen {
+                let equals0 = crate::runtime::constant_time::constant_time_is_zero_u32(
+                    *from.offset(i as isize) as u32,
+                );
+                zero_index = crate::runtime::constant_time::constant_time_select_int(
+                    !found_zero_byte & equals0,
+                    i,
+                    zero_index,
+                );
+                found_zero_byte |= equals0;
+                i += 1;
+            }
+
+            // The padding must be at least eight octets long and starts two octets into `from`.
+            good &= crate::runtime::constant_time::constant_time_ge_u32(zero_index as u32, 2 + 8);
+
+            // Skip the separator. This is wrong if there was none, but then the message is not
+            // copied out either.
+            let mut msg_index = zero_index + 1;
+
+            // A message that does not fit is *not* an error here: the synthetic one is returned
+            // instead, because refusing would leak what the refusal was about.
+            good &= crate::runtime::constant_time::constant_time_ge_u32(
+                tlen as u32,
+                (num - msg_index) as u32,
+            );
+
+            msg_index = crate::runtime::constant_time::constant_time_select_int(
+                good,
+                msg_index,
+                synth_msg_index,
+            );
+
+            // Both buffers are read on every pass, so the access pattern is the same whichever
+            // branch `good` selected.
+            j = 0;
+            let mut i = msg_index;
+            while i < flen && j < tlen {
+                *to.offset(j as isize) = crate::runtime::constant_time::constant_time_select_8(
+                    good as u8,
+                    *from.offset(i as isize),
+                    *synthetic.offset(i as isize),
+                );
+                i += 1;
+                j += 1;
+            }
+            ret = j;
+        }
+
+        // The authority's `err:` label. `ret < 0` is the publicly-invalid case, and this is the
+        // only raise on the way out.
+        if ret < 0 {
+            raise_site(&err_sites::RSA_PK1_520);
+        }
+        crate::runtime::mem::CRYPTO_free(synthetic.cast::<c_void>(), FILE_RSA_PK1, LINE);
+        ret
     }
 }
 

@@ -390,9 +390,10 @@ here is. (`forensics/phase8-obligations.json` remains the only complete list.)
 `RSA_padding_check_PKCS1_type_1`, `PKCS1_MGF1`, `RSA_padding_add_PKCS1_type_2`,
 `RSA_padding_check_PKCS1_type_2`, `RSA_padding_add_PKCS1_OAEP`,
 `RSA_padding_add_PKCS1_OAEP_mgf1`, `RSA_padding_add_PKCS1_PSS`,
-`RSA_padding_add_PKCS1_PSS_mgf1`.
+`RSA_padding_add_PKCS1_PSS_mgf1`, `RSA_new`, `RSA_new_method`, `RSA_get_default_method`,
+`RSA_PKCS1_OpenSSL`, `RSA_set_default_method`, `RSA_setup_blinding`.
 
-**Open exports (checked against the ledger):** `RSA_check_key`, `RSA_sign`.
+**Open exports (checked against the ledger):** `RSA_check_key`, `RSA_sign`, `RSA_blinding_on`.
 Phase 8.2's cipher families and 8.3's `modes.h` constructions all have their low-level exports in,
 and the default provider's AEAD half is nearly there: the twelve AES
 key-wrap rows landed in D230, the six CBC-CTS rows in D231, the two AES-XTS rows in D232, the
@@ -439,7 +440,9 @@ its method from `RSA_get_default_method()` (`rsa_lib.c:101`), whose `default_RSA
 `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is
 `rsa_ossl_public_encrypt`, which reaches the type-2 padding call at `rsa_ossl.c:144`. So the lifetime
 follows the padding rather than preceding it, and `RSA_new`, `RSA_new_method`,
-`RSA_get_default_method` and `RSA_PKCS1_OpenSSL` are recorded as hand-offs too. What is landable is
+`RSA_get_default_method` and `RSA_PKCS1_OpenSSL` are recorded as hand-offs too -- **and D325 has
+since landed all four**, with the table that made the record necessary; the paragraph four below
+this one is that commit's. What is landable is
 the half whose output is a pure function of its input, and it has landed: the `none` and X9.31
 paddings, PKCS#1 v1.5 type 1, the X9.31 hash ids — **seven exports, `RT-RSA` at 194 observations,
 every refusal's error coordinate compared as well as its return value**. The error coordinates
@@ -448,6 +451,34 @@ subsystem rather than the files one slice happens to touch, because a coordinate
 part of the observable record and adding a unit's files only when its first site is cited would leave
 the subsystem half-covered between commits. `RSA_meth.c` is deliberately absent from that set: D284
 measured it as allocations and stored pointers, and it raises nothing.
+
+**8.4's block is closed by its default method, and the constructor with it (D325).** `rsa_new_intern`
+(`rsa_lib.c:101`) reads `RSA_get_default_method()`, whose `default_RSA_meth` is
+`&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is
+`rsa_ossl_public_encrypt`; so the table and the seven `rsa_ossl_*` entry points its initialiser
+names were the last thing between this stratum and an `RSA` object. They are in `src/rsa/ossl.rs`
+now, with `RSA_get_default_method`/`RSA_set_default_method`/`RSA_PKCS1_OpenSSL`, with
+`RSA_setup_blinding` (`rsa_crpt.c:104`, whose only authority caller is `rsa_ossl.c`'s
+`rsa_get_blinding`), and with `rsa_pk1.c`'s `ossl_rsa_prf` and `ossl_rsa_padding_check_PKCS1_type_2`
+-- the implicit-rejection half of the PKCS#1 decrypt path. The constructor quartet moved into
+`src/rsa/object.rs`, which retires `BLOCKED_HANDOFFS` row (5) and, in the same commit, row (2):
+that row withheld `RSA_blinding_on` and `RSA_setup_blinding` on a blocker that had landed at D313
+and D324 and on a description of `RSA_blinding_on` that was 1.1.1's rather than 3.6.4's. The ledger:
+phase 8 implemented 278 -> **284**, deferred 18 -> **12**, open 490 -> **490**, and `RT-RSA`
+561 -> **632 observations** (282 before D321's object-layer arms) with no residuals. Five
+measurements came out of the arms rather than
+the code, and each is recorded in D325 with its coordinate: `RSA_new`'s allocator window is one
+`M`/`F` short on the candidate side because the crate's `CRYPTO_THREAD_lock_new` is a Rust `Box`
+where the authority's is 56 bytes of `threads_pthread.c`; `RSA_bits(RSA_new())` is a segmentation
+fault in the authority rather than an observation, so the plan's "then `RSA_bits`/`RSA_size` on the
+result" is not a writable arm; a fabricated key object needs a real lock for the same reason in
+reverse; the internal the PKCS#1 decrypt arm reaches is `ossl_rsa_padding_check_PKCS1_type_2`,
+not the `_TLS` spelling that the plan for this commit named -- the TLS one's only caller is the
+provider's `rsa_enc.c.in:307` and no `rsa_ossl.c` body reads `RSA_PKCS1_WITH_TLS_PADDING` at all;
+and a two-octet modulus is not a legal subject for the PKCS#1 arm, because below eleven octets the
+check's `max_sep_offset` wraps and its synthetic-message index goes negative -- which
+`probe_hygiene.py` caught as an `-O1`/`-O2` difference on the *authority* side, and which is why
+those arms use a 128-bit key the probe builds itself.
 
 **The same measurement now says the gate is systematic across every key type, which is the
 largest plan correction Phase 8 has needed (D286).** DH, DSA and EC each construct their object the

@@ -74,8 +74,8 @@
       "rows_judged": 82,
       "symbols_named_by_a_row": 86,
       "symbols_reached": 79,
-      "unit_records": 67,
-      "units_named_by_a_record": 69,
+      "unit_records": 66,
+      "units_named_by_a_record": 68,
       "units_named_by_a_row": 159,
       "units_reached": 141
     },
@@ -1753,7 +1753,7 @@
           "ossl_rsa_alloc_blinding",
           "ossl_rsa_free_blinding"
         ],
-        "recorded_by": "units:crypto/rsa/rsa_ossl.c",
+        "recorded_by": null,
         "subphases": [
           "6.10"
         ],
@@ -2345,11 +2345,6 @@
         "crate_module": null,
         "owner_phase": null
       },
-      "crypto/rsa/rsa_ossl.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 8
-      },
       "pkey_derive.c": {
         "class": "does_not_exist_in_this_authority",
         "crate_module": null,
@@ -2367,7 +2362,7 @@
       "transcribed_units": 187
     }
   },
-  "body_hash": "64b574bed66823177f05c57d4ddacdc875c7ebb136c7b210a8f2a7809f13eb7a",
+  "body_hash": "02415740d20b0fcd061a9bbb8e69fad797a0a1f48ae9109f18846ededa5ca1c8",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -2378,22 +2373,22 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "4697e39fde3d3cb5d44b897886410dc3561f5476d42cf5b53f3aefff809b339f"
+      "sha256": "2f2c34d4d176220141773df9918942302458a9422c2ba21ad12818571af8a880"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "10d22b9177fc25399a633595b39e7b10afd4ce976dc951dfc0cad294c87d923e"
+      "sha256": "3456f6d4a0ef4e0439b81e79c2e3601115951a2feb7c521dccf4d1361ccc20b2"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "4282b7dbb042155664c43625c53bef43c8c3c71785747a8e71148122192f3766"
+      "sha256": "9e89d1eb0b2784986b55ae2f9460c88ba440d88b8ae6ed0076b4fb1b751b2fff"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "80e7004ecf5e6b6f749e367bf22daa8d502b84b16be5c85893218d6aa1e323f7"
+      "sha256": "48243c720db0156fb700e3aa42a90b26b15b11b60bf063c39170400938f69dba"
     },
     {
       "name": "source-manifest",
@@ -2418,7 +2413,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "40c160ef184be808d573a935e2b7beb8061c9eb214abd42bc747e110e7a13fdb"
+      "sha256": "b5eb1c6fe7cafea3e9ffc8a1c82ae8975b1b7cecb20871da7af62b404d0358cd"
     },
     {
       "name": "plan-PHASE-9-SUBPHASES",
