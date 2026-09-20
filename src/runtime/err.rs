@@ -140,8 +140,8 @@ pub(crate) const ERR_FLAG_CLEAR_FLAG: c_int = ERR_FLAG_CLEAR;
 ///
 /// The caller is `RSA_padding_check_PKCS1_OAEP_mgf1`, which calls it **unconditionally after
 /// raising** — a transcription that guarded it on `good` would get exactly the case the flag exists
-/// for wrong.
-#[allow(dead_code)] // the landing caller is `RSA_padding_check_PKCS1_OAEP_mgf1`, D288's next unit
+/// for wrong. The type-2 check and the OAEP check both call it, so the `#[allow(dead_code)]` this
+/// carried until D323's landing has been removed rather than left to outlive its reason.
 pub(crate) fn err_clear_last_constant_time(clear: c_int) {
     use crate::runtime::constant_time::{constant_time_eq_int, constant_time_select_int};
 
