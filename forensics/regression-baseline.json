@@ -194,6 +194,10 @@
       "observations": 361,
       "verdict": "pass"
     },
+    "RT-DSA": {
+      "observations": 233,
+      "verdict": "pass"
+    },
     "RT-DSO": {
       "observations": 145,
       "verdict": "pass"
@@ -377,11 +381,11 @@
     "phase5": 91,
     "phase6": 0,
     "phase7": 226,
-    "phase8": 4,
+    "phase8": 2,
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 2305,
+    "libcrypto": 2369,
     "libssl": 0
   },
   "open_obligations": {
@@ -390,8 +394,8 @@
     "phase5": 0,
     "phase6": 0,
     "phase7": 0,
-    "phase8": 390,
-    "phase9": 19
+    "phase8": 328,
+    "phase9": 17
   },
   "owned_obligations": {
     "phase3": 294,
@@ -400,7 +404,7 @@
     "phase6": 161,
     "phase7": 950,
     "phase8": 786,
-    "phase9": 73
+    "phase9": 71
   },
   "phases": {
     "0": "complete",
@@ -427,11 +431,11 @@
     "9": "in-progress"
   },
   "prerequisites": {
-    "blocking_dependencies": 17,
+    "blocking_dependencies": 19,
     "divergence_names_covered": 31,
     "findings": 0,
-    "language_census": 3413,
-    "sealed_census": 57
+    "language_census": 3483,
+    "sealed_census": 52
   },
   "provider_implemented": [
     "default/OSSL_OP_CIPHER/AES-128-CBC",

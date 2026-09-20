@@ -229,6 +229,14 @@
       "reason": "D314 gives `crypto/bn/bn_rand.c` a transcription edge (`src/bn/rand.rs`). The gate's sealed census counts authority internals a transcribed unit calls whose own defining unit's stratum has sealed, so transcribing another authority file necessarily enters that file's not-yet-built tail: two names of it appeared -- `ossl_bn_priv_rand_range_fixed_top` (`crypto/bn/bn_rand.c:241-283`) and `ossl_bn_gen_dsa_nonce_fixed_top` (`:293-395`), neither of which the crate defines -- and one left because D314 built it (`ossl_bn_get_libctx`, `crypto/bn/bn_ctx.c:243`). The count rises because a whole authority unit that nothing referenced became visible, which is the cause D132 recorded for the blocking list from the same direction: landing work can move such a count up without any work being undone. Both names are the later slice `src/bn/rand.rs`'s module note already records as not transcribed, and both need `ossl_bn_mask_bits_fixed_top` and the fixed-top representation.",
       "authority_artifact": "forensics/atlas/prerequisite-gate.json",
       "recorded_by": "docs/DECISIONS.md D314"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 17,
+      "after": 19,
+      "reason": "The blocking-dependency census rises by **two**, from 17 to 19, and both names are 8.6's own rather than a later stratum's, which is why they are deferrals with `owner_phase` 8 and therefore countable. `ossl_dsa_sign_int` (`crypto/dsa/dsa_sign.c`) is the one definition of that unit D333 does not carry: its body past its four arguments is `i2d_DSA_SIG`, the DER `DSA-Sig-Value` encoder, and that is `crypto/asn1_dsa.c`'s `ossl_encode_der_dsa_sig` over `crypto/packet.c`'s thirty `WPACKET_*` symbols -- neither unit has a crate module and no stratum's plan row names one. `ossl_dsa_ffc_params_fromdata` (`crypto/dsa/dsa_lib.c:355-365`) is `ossl_ffc_params_fromdata` plus a `dirty_cnt` bump, and that function is `crypto/ffc/ffc_backend.c`'s, the unit D330 and D332 already record as having no module because it calls `crypto/param_build_set.c`'s four `ossl_param_build_set_*`. Both are visible for the first time because D333 gave `dsa_sign.c` and `dsa_lib.c` crate modules, and the gate's rule is about names a transcribed unit defines that no module mentions -- the same *visibility* class as D324's `sealed_census` rise and D132's 11 -> 12: an invariant that cannot tell a legitimate change from a hidden omission. The other two counters moved down with the same commit and need no row: `sealed_census` 57 -> 52, because D333 builds the five names D314 deferred (`ossl_bn_priv_rand_range_fixed_top`, `ossl_bn_gen_dsa_nonce_fixed_top`, `ossl_bn_mask_bits_fixed_top`, `ossl_bn_is_word_fixed_top` and `bn_wexpand`), and `open` in the Phase-8 ledger 390 -> 328.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D333"
     }
   ]
 }

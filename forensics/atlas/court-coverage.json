@@ -446,6 +446,7 @@
             "courts": [
               "RT-CIPHER-MEM",
               "RT-DH",
+              "RT-DSA",
               "RT-MEM",
               "RT-MEM-DEFAULT",
               "RT-MEM-INSTALL",
@@ -532,6 +533,7 @@
               "RT-CONF-MOD",
               "RT-DH",
               "RT-DIGEST",
+              "RT-DSA",
               "RT-DSO",
               "RT-ERR",
               "RT-ERR-BIO",
@@ -632,6 +634,7 @@
               "RT-CONF-MOD",
               "RT-DH",
               "RT-DIGEST",
+              "RT-DSA",
               "RT-DSO",
               "RT-ERR",
               "RT-EVP-BIO",
@@ -5795,6 +5798,7 @@
               "RT-BN",
               "RT-BN-RAND",
               "RT-DH",
+              "RT-DSA",
               "RT-RSA"
             ],
             "symbol": "BN_CTX_free"
@@ -5812,6 +5816,7 @@
               "RT-BN",
               "RT-BN-RAND",
               "RT-DH",
+              "RT-DSA",
               "RT-RSA"
             ],
             "symbol": "BN_CTX_new"
@@ -6072,6 +6077,7 @@
             "basis": "called",
             "courts": [
               "RT-BN",
+              "RT-DSA",
               "RT-RSA"
             ],
             "symbol": "BN_add_word"
@@ -6168,7 +6174,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-DSA"
             ],
             "symbol": "BN_clear_free"
           },
@@ -6179,6 +6186,7 @@
               "RT-BN",
               "RT-BN-RAND",
               "RT-DH",
+              "RT-DSA",
               "RT-RSA"
             ],
             "symbol": "BN_cmp"
@@ -6234,6 +6242,7 @@
             "courts": [
               "RT-BN",
               "RT-DH",
+              "RT-DSA",
               "RT-RSA"
             ],
             "symbol": "BN_dup"
@@ -6254,6 +6263,7 @@
               "RT-BN",
               "RT-BN-RAND",
               "RT-DH",
+              "RT-DSA",
               "RT-PARAM",
               "RT-RSA"
             ],
@@ -6410,7 +6420,8 @@
             "courts": [
               "RT-ASN1",
               "RT-BN",
-              "RT-BN-RAND"
+              "RT-BN-RAND",
+              "RT-DSA"
             ],
             "symbol": "BN_is_negative"
           },
@@ -6420,6 +6431,7 @@
               "RT-BN",
               "RT-BN-RAND",
               "RT-DH",
+              "RT-DSA",
               "RT-RSA"
             ],
             "symbol": "BN_is_odd"
@@ -6438,6 +6450,7 @@
               "RT-BN",
               "RT-BN-RAND",
               "RT-DH",
+              "RT-DSA",
               "RT-RSA"
             ],
             "symbol": "BN_is_word"
@@ -6446,7 +6459,8 @@
             "basis": "called",
             "courts": [
               "RT-BN",
-              "RT-BN-RAND"
+              "RT-BN-RAND",
+              "RT-DSA"
             ],
             "symbol": "BN_is_zero"
           },
@@ -6691,6 +6705,7 @@
               "RT-BN",
               "RT-BN-RAND",
               "RT-DH",
+              "RT-DSA",
               "RT-RSA"
             ],
             "symbol": "BN_new"
@@ -6750,6 +6765,7 @@
               "RT-BN",
               "RT-BN-RAND",
               "RT-DH",
+              "RT-DSA",
               "RT-RSA"
             ],
             "symbol": "BN_num_bits"
@@ -6856,6 +6872,7 @@
               "RT-BN",
               "RT-BN-RAND",
               "RT-DH",
+              "RT-DSA",
               "RT-RSA"
             ],
             "symbol": "BN_set_word"
@@ -6905,7 +6922,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-DSA"
             ],
             "symbol": "BN_sqr"
           },
@@ -14423,10 +14441,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 384,
-          "directly_courted_called": 384,
+          "directly_courted": 448,
+          "directly_courted_called": 448,
           "directly_courted_referenced": 0,
-          "implemented": 392,
+          "implemented": 456,
           "indirectly_courted": 8,
           "non_observable": 0,
           "unmatched": 0
@@ -15338,7 +15356,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-DH"
+              "RT-DH",
+              "RT-DSA"
             ],
             "symbol": "DH_free"
           },
@@ -15380,7 +15399,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-DH"
+              "RT-DH",
+              "RT-DSA"
             ],
             "symbol": "DH_get0_key"
           },
@@ -15394,7 +15414,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-DH"
+              "RT-DH",
+              "RT-DSA"
             ],
             "symbol": "DH_get0_pqg"
           },
@@ -15712,6 +15733,454 @@
               "RT-DH"
             ],
             "symbol": "DH_up_ref"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_OpenSSL"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_SIG_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_SIG_get0"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_SIG_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_SIG_set0"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_bits"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_clear_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_do_sign"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_do_verify"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_dup_DH"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_generate_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_generate_parameters"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_generate_parameters_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_get0_engine"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_get0_g"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_get0_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_get0_p"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_get0_pqg"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_get0_priv_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_get0_pub_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_get0_q"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_get_default_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_get_ex_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_get_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_get0_app_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_get0_name"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_get_bn_mod_exp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_get_finish"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_get_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_get_init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_get_keygen"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_get_mod_exp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_get_paramgen"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_get_sign"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_get_sign_setup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_get_verify"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_set0_app_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_set1_name"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_set_bn_mod_exp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_set_finish"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_set_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_set_init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_set_keygen"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_set_mod_exp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_set_paramgen"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_set_sign"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_set_sign_setup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_meth_set_verify"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_new_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_security_bits"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_set0_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_set0_pqg"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_set_default_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_set_ex_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_set_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_set_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_sign_setup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_test_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSA_up_ref"
           },
           {
             "basis": "called",
@@ -17173,7 +17642,7 @@
         ],
         "non_observable": [],
         "phase": 8,
-        "staged_candidate_probes": 5
+        "staged_candidate_probes": 6
       },
       {
         "completed": false,
@@ -17255,6 +17724,7 @@
             "courts": [
               "RT-BN-RAND",
               "RT-DH",
+              "RT-DSA",
               "RT-RSA"
             ],
             "symbol": "BN_check_prime"
@@ -17575,10 +18045,10 @@
       }
     ],
     "totals": {
-      "directly_courted": 2297,
-      "directly_courted_called": 2016,
+      "directly_courted": 2361,
+      "directly_courted_called": 2080,
       "directly_courted_referenced": 281,
-      "implemented": 2305,
+      "implemented": 2369,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -17589,7 +18059,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "bd479c8cbed69346bfe8acd23c66b820cf540018fd15b168a07a51f644811664"
+      "sha256": "a1775c1e13f1b8c0a1d69a3c05d637f1e167497c9d2cc6580ddf770e9052467c"
     },
     {
       "name": "symbol-ownership",
@@ -17604,7 +18074,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "97df3b535ea326814edea3e70b32affc27fd4ab0db6d780759db9d62a4f5fd35"
+      "sha256": "8e850d30dde9fbf3728a11e82af4178c0683920b3f7b0a36ee4b72cb38e34d1f"
     },
     {
       "name": "phase3-courts",
@@ -17614,7 +18084,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "9d9a62a1811a388c4c489422f98240abfc358cd378a33ef79f08b41154a7d83f"
+      "sha256": "b7fa43651b55dabd7423da4c1880e3da90cb5d564daca7476ee7457567953c3a"
     },
     {
       "name": "phase4-courts",
@@ -17624,7 +18094,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "48e6aa65d61e3bb39f545a95dcc9e2501e6f3cfa8bf7d0a7140b7e157bb67754"
+      "sha256": "62b4ed69260787ccc6e5941233d980c9d05cb4e08129d921780734889acae942"
     },
     {
       "name": "phase5-courts",
@@ -17634,7 +18104,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "fb4ab361293ebe2b9aa177560beccc49c3069ad0035392addd3587a7acbec649"
+      "sha256": "9df031db77c4fcdf3c43f3d96a74c93db3e0af0f39ee2eb3bdc74cdd06481d60"
     },
     {
       "name": "phase6-courts",
@@ -17644,7 +18114,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "92ccc54c2ee681011b494dc8368b95c453ae6e1d29de9fd6309198f5e9dd8902"
+      "sha256": "57821cd9012986bcc6f445297edf78569ff134dccb228bb5356f7ae421af5c84"
     },
     {
       "name": "phase7-courts",
@@ -17654,17 +18124,17 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "cf92bc7a25138db64c9e2521e3d2d1f020cef520f174bc59fc4312b05cc17b6b"
+      "sha256": "12b026c36a48bbd19759cfe5df318f2dae80c63308c4caee59c7378329359fcd"
     },
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "aa05d35f425be397d41ba2a57a195af10286b6457857953ed0be540518a403ed"
+      "sha256": "7b2ab3f044b3acc185017a51103778bdb41ddaed0edcc88497c59d85daabd4f4"
     },
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "709cb19b9f7fcd30dac23ca82a06c44eca502b7516b6a3af99a8bccabf59e597"
+      "sha256": "ebef05d86f8c739db98f45fcb28a988fb21498c8d00976aba72df90acfe979ac"
     },
     {
       "name": "phase9-courts",

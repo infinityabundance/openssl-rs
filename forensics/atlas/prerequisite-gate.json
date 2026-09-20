@@ -14,6 +14,8 @@
       "evp_pkey_copy_downgraded -> phase 8 (The fourth of the seven and the one that makes the other three wait. Its body exports the provider keydata through `evp_keymgmt_export` -- this stratum's -- and then imports it with `(*dest)->ameth->import_from`, synchronising `(*dest)->ameth->dirty_cnt`. Two fields of an `EVP_PKEY_ASN1_METHOD` and one of that struct's function pointers are read directly, so the function cannot be written before an ameth object exists, and the ameth objects are the twelve `crypto/asn1/ameth_lib.c` builds from Phase 8's `standard_methods[]`. It also needs `EVP_PKEY_CTX_new_from_pkey`, which is `pmeth_lib.c`'s and lands in 7.4c *inside* this stratum -- so the order is 7.4c, then Phase 8, then this row.)",
       "evp_pkey_get0_DH_int -> phase 8 (The third of the seven, and the shortest: it is `pkey->type == EVP_PKEY_DH ? evp_pkey_get_legacy(pkey) : NULL`. It is therefore blocked by nothing of its own and inherited entirely from its sibling above -- the DH *type* it compares against is real now, the downgrade it calls is not. Recorded separately rather than folded into `evp_pkey_get_legacy` because the gate owes names, not call graphs, and a reader of the blocking census should see all four rather than three and an implication.)",
       "evp_pkey_get_legacy -> phase 8 (The second of the seven. It downgrades a provider key to a legacy one, so its whole body past the fast paths is `evp_pkey_copy_downgraded`, and the cache it then holds is keyed on `ameth` being non-NULL (`EVP_PKEY_asn1_find` for the type). Both halves are Phase 8's, which is why this name waits on the same registry as its sibling rather than on anything in this stratum.)",
+      "ossl_dsa_ffc_params_fromdata -> phase 8 (`crypto/dsa/dsa_lib.c:355-365`, and the DH half of the same blocker `ossl_ffc_params_todata` names: its body is `ossl_ffc_params_fromdata` plus a `dirty_cnt` bump, and that function is `crypto/ffc/ffc_backend.c`'s -- a unit with no crate module because it calls `crypto/param_build_set.c`'s four `ossl_param_build_set_*`, which no stratum's plan row names. Both of that unit's authority callers are provider backends (`dh_backend.c`, `dsa_backend.c`), so the work it waits on is the provider half of this stratum rather than a callee of 8.6's own.)",
+      "ossl_dsa_sign_int -> phase 8 (`crypto/dsa/dsa_sign.c`'s internal, and the one definition of that file 8.6 does not carry. Its whole body past its four arguments is `i2d_DSA_SIG`, which is the DER `DSA-Sig-Value` encoder, and that is `crypto/asn1_dsa.c`'s `ossl_encode_der_dsa_sig` over `include/internal/packet.h`'s `WPACKET`. Neither unit has a crate module and no stratum's plan row names one: `crypto/packet.c` is the thirty `WPACKET_*` symbols and this crate has no packet writer at all, so writing either would be a new unit rather than a transcription of this one. DSA_size, DSA_sign and DSA_verify -- the three exports that call `ossl_dsa_sign_int` -- stay `open` with it, and RT-DSA does not call them.)",
       "ossl_get_enginesdir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads)",
       "ossl_get_openssldir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads; so is its sibling)",
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)",
@@ -22,8 +24,8 @@
     ],
     "census": {
       "covered_by_a_divergence": 59,
-      "language_surface_not_modelled_by_name": 3413,
-      "planned_prerequisites": 11
+      "language_surface_not_modelled_by_name": 3483,
+      "planned_prerequisites": 13
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -115,14 +117,14 @@
         "crypto/bio/bss_mem.c": 12,
         "crypto/bio/bss_null.c": 4,
         "crypto/bio/ossl_core_bio.c": 6,
-        "crypto/bn/bn_blind.c": 13,
+        "crypto/bn/bn_blind.c": 12,
         "crypto/bn/bn_ctx.c": 14,
         "crypto/bn/bn_dh.c": 4,
         "crypto/bn/bn_gf2m.c": 22,
         "crypto/bn/bn_kron.c": 4,
-        "crypto/bn/bn_lib.c": 27,
-        "crypto/bn/bn_mod.c": 12,
-        "crypto/bn/bn_mont.c": 14,
+        "crypto/bn/bn_lib.c": 26,
+        "crypto/bn/bn_mod.c": 11,
+        "crypto/bn/bn_mont.c": 13,
         "crypto/bn/bn_nist.c": 13,
         "crypto/bn/bn_prime.c": 14,
         "crypto/bn/bn_rand.c": 13,
@@ -150,15 +152,23 @@
         "crypto/des/set_key.c": 9,
         "crypto/dh/dh_check.c": 9,
         "crypto/dh/dh_depr.c": 3,
-        "crypto/dh/dh_gen.c": 9,
+        "crypto/dh/dh_gen.c": 8,
         "crypto/dh/dh_group_params.c": 7,
-        "crypto/dh/dh_key.c": 12,
+        "crypto/dh/dh_key.c": 11,
         "crypto/dh/dh_lib.c": 19,
         "crypto/dh/dh_meth.c": 11,
         "crypto/dh/dh_rfc5114.c": 2,
+        "crypto/dsa/dsa_depr.c": 3,
+        "crypto/dsa/dsa_gen.c": 3,
+        "crypto/dsa/dsa_key.c": 10,
+        "crypto/dsa/dsa_lib.c": 20,
+        "crypto/dsa/dsa_meth.c": 12,
+        "crypto/dsa/dsa_ossl.c": 12,
+        "crypto/dsa/dsa_sign.c": 20,
+        "crypto/dsa/dsa_vrf.c": 2,
         "crypto/dso/dso_dlfcn.c": 16,
         "crypto/dso/dso_lib.c": 15,
-        "crypto/err/err.c": 92,
+        "crypto/err/err.c": 91,
         "crypto/err/err_all_legacy.c": 11,
         "crypto/err/err_save.c": 2,
         "crypto/evp/asymcipher.c": 20,
@@ -185,7 +195,7 @@
         "crypto/evp/names.c": 9,
         "crypto/evp/p5_crpt.c": 16,
         "crypto/evp/p5_crpt2.c": 23,
-        "crypto/evp/p_lib.c": 95,
+        "crypto/evp/p_lib.c": 93,
         "crypto/evp/pbe_scrypt.c": 8,
         "crypto/evp/pmeth_check.c": 7,
         "crypto/evp/pmeth_gn.c": 13,
@@ -224,7 +234,7 @@
         "crypto/o_time.c": 2,
         "crypto/objects/obj_dat.c": 26,
         "crypto/param_build.c": 17,
-        "crypto/params.c": 22,
+        "crypto/params.c": 21,
         "crypto/params_dup.c": 12,
         "crypto/params_from_text.c": 10,
         "crypto/pem/pem_lib.c": 55,
@@ -243,11 +253,11 @@
         "crypto/rand/rand_uniform.c": 3,
         "crypto/rc2/rc2_cbc.c": 3,
         "crypto/ripemd/rmd_dgst.c": 342,
-        "crypto/rsa/rsa_gen.c": 18,
+        "crypto/rsa/rsa_gen.c": 17,
         "crypto/rsa/rsa_lib.c": 29,
         "crypto/rsa/rsa_meth.c": 11,
         "crypto/rsa/rsa_mp.c": 7,
-        "crypto/rsa/rsa_ossl.c": 21,
+        "crypto/rsa/rsa_ossl.c": 20,
         "crypto/rsa/rsa_sign.c": 7,
         "crypto/rsa/rsa_sp800_56b_gen.c": 9,
         "crypto/seed/seed.c": 7,
@@ -272,6 +282,8 @@
         "evp_pkey_copy_downgraded": 1,
         "evp_pkey_get0_DH_int": 1,
         "evp_pkey_get_legacy": 1,
+        "ossl_dsa_ffc_params_fromdata": 1,
+        "ossl_dsa_sign_int": 1,
         "ossl_get_enginesdir": 2,
         "ossl_get_openssldir": 2,
         "ossl_get_wininstallcontext": 1
@@ -370,6 +382,8 @@
         "evp_pkey_copy_downgraded",
         "evp_pkey_get0_DH_int",
         "evp_pkey_get_legacy",
+        "ossl_dsa_ffc_params_fromdata",
+        "ossl_dsa_sign_int",
         "ossl_get_enginesdir",
         "ossl_get_enginesdir",
         "ossl_get_openssldir",
@@ -378,10 +392,10 @@
       ]
     },
     "checked": {
-      "authority_units": 206,
-      "crate_modules": 276,
+      "authority_units": 214,
+      "crate_modules": 284,
       "deferral_blocker_rows": 5,
-      "deferrals_recorded": 17,
+      "deferrals_recorded": 19,
       "divergence_names_covered": 31,
       "divergence_rows": 6,
       "names_referenced_and_not_built": 17
@@ -433,10 +447,7 @@
           "bn_correct_top",
           "bn_correct_top_consttime",
           "bn_expand2",
-          "bn_init",
-          "bn_wexpand",
-          "ossl_bn_is_word_fixed_top",
-          "ossl_bn_mask_bits_fixed_top"
+          "bn_init"
         ],
         "crypto/bn/bn_mod.c": [
           "bn_mod_add_fixed_top",
@@ -449,10 +460,6 @@
           "bn_to_mont_fixed_top",
           "ossl_bn_mont_ctx_eq",
           "ossl_bn_mont_ctx_set"
-        ],
-        "crypto/bn/bn_rand.c": [
-          "ossl_bn_gen_dsa_nonce_fixed_top",
-          "ossl_bn_priv_rand_range_fixed_top"
         ],
         "crypto/bn/bn_recp.c": [
           "BN_RECP_CTX_init"
@@ -491,7 +498,7 @@
         ]
       },
       "definition": "authority internal functions a transcribed unit calls, whose own translation unit's stratum has already sealed. Not a failure: each is either modelled differently by the crate or is work carried across the boundary by a later stratum. The count is held to non-increase by the regression guard.",
-      "names": 57
+      "names": 52
     },
     "universes": {
       "crate_references_checked": 32438,
@@ -501,7 +508,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "c7fe84a306679b08cb2b06f88ebf6d62ea68232bda9398dd8f22a06bc2c1d6fe",
+  "body_hash": "106aaf2b352c4047072fb2d536a9b2b399b54bbbfff2883eccf538d6f663976c",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -522,7 +529,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "19a5beda3e91e504d150de82049a8f44f20bdd86fcecfa525a0f89f8e1eb59be"
+      "sha256": "122064f6246d437be78ac4d337650fe4c9bd793a9bfbe09dbf636f86acc750bb"
     },
     {
       "name": "symbol-ownership",
@@ -537,17 +544,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "bd479c8cbed69346bfe8acd23c66b820cf540018fd15b168a07a51f644811664"
+      "sha256": "a1775c1e13f1b8c0a1d69a3c05d637f1e167497c9d2cc6580ddf770e9052467c"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "60cc646dfcf9d505699ea49a015f1319c153c63ad74c25db14666178e76baba6"
+      "sha256": "7c4d2d5058cbd9bab257ef84f0acbb925a6f69c0b7496467aaafa7c49c2db682"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "b379f2a88a5feda87927d04b5969105d443a75393cd08672d10eeb98a7a5ee27"
+      "sha256": "b13a87b45f11c930a2c2884519512e3b53b22572172af62018b9746aa1613fe3"
     },
     {
       "name": "crate-source-tree",

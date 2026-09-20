@@ -49,6 +49,23 @@ const LINE: c_int = 0;
 /// `BN_FLG_MALLOCED` — set on a `BIGNUM` this library allocated.
 pub(crate) const BN_FLG_MALLOCED: c_int = 0x01;
 
+/// `BN_FLG_CONSTTIME` — `include/openssl/bn.h:67`. The bit that asks constant-time behaviour
+/// from several operations; `dsa_ossl.c`'s blinding and nonce temporaries set it, and
+/// `BN_set_flags`'s own doc names it.
+pub(crate) const BN_FLG_CONSTTIME: c_int = 0x04;
+
+/// `BN_FLG_FIXED_TOP` — `include/openssl/bn.h:60`. Set by `ossl_bn_mask_bits_fixed_top`
+/// (`crypto/bn/bn_lib.c:863-880`) and by the authority's `bn_correct_top`s on the path that
+/// hands a fixed-top temporary back to a caller.
+///
+/// The crate models the *flag* because a caller can read it through `BN_get_flags`, but it
+/// does **not** model the representation the flag describes: this `BIGNUM`'s magnitude is a
+/// normalised limb vector with no `top` of its own, so a "fixed top" — a `top` that is
+/// deliberately wider than the value — cannot be expressed. That is the whole reason
+/// `ossl_bn_mask_bits_fixed_top` and `bn_wexpand` below are ports rather than transcriptions,
+/// and each says so at its site.
+pub(crate) const BN_FLG_FIXED_TOP: c_int = 0x10;
+
 /// `BN_FLG_STATIC_DATA` — `include/openssl/bn.h:59`. Set on a `BIGNUM` whose magnitude
 /// lives in storage the library does not own, so `BN_free` must not release it.
 ///
@@ -1723,6 +1740,130 @@ pub unsafe extern "C" fn BN_security_bits(l: c_int, n: c_int) -> c_int {
     })
 }
 
+/// `bn_get_top(a)` — `crypto/bn/bn_local.h`'s macro over `a->top`, the number of limbs the
+/// value occupies **including** the padding a fixed-top value carries.
+///
+/// Its only authority readers on this crate's paths are `dsa_ossl.c`'s `dsa_sign_setup` and
+/// `crypto/deterministic_nonce.c`, both of which use it to size a `bn_wexpand` and a
+/// `BN_consttime_swap`. In this representation the top *is* `d.len()`, which is the value a
+/// fixed-top caller would have seen only after `bn_correct_top`; the difference is stated on
+/// [`ossl_bn_mask_bits_fixed_top`] rather than hidden here.
+///
+/// # Safety
+///
+/// `a` must be null or point to a live `BIGNUM`.
+pub(crate) unsafe fn bn_get_top(a: *const BigNum) -> c_int {
+    // SAFETY: null-or-live per this function's `# Safety` section.
+    match unsafe { as_ref(a) } {
+        Some(b) => c_int::try_from(b.d.len()).unwrap_or(c_int::MAX),
+        None => 0,
+    }
+}
+
+/// `BIGNUM *bn_wexpand(BIGNUM *a, int words)` — `crypto/bn/bn_lib.c:1163-1166`.
+///
+/// The authority answers `a` when `words <= a->dmax` and grows the limb array otherwise, so a
+/// caller's test is "did the room exist or was it made" rather than "did it work". Here the
+/// magnitude is a `Vec` whose capacity the allocator grows on demand, so this is a port: it
+/// reserves when the request exceeds the current capacity and answers `a`, and it answers NULL
+/// only for a NULL object — which is the one answer a caller branches on. **The reserve moves
+/// no observable state**: `d.len()`, the value, the sign and the flags are untouched, which is
+/// why `dsa_sign_setup`'s two calls are the authority's preallocation and not a computation.
+///
+/// # Safety
+///
+/// `a` must be null or point to a live `BIGNUM`.
+pub(crate) unsafe fn bn_wexpand(a: *mut BigNum, words: c_int) -> *mut BigNum {
+    if a.is_null() {
+        return core::ptr::null_mut();
+    }
+    if words < 0 {
+        return a;
+    }
+    // SAFETY: `a` is live per this function's `# Safety` section.
+    if let Some(b) = unsafe { as_mut(a) } {
+        let words = words as usize;
+        if words > b.d.capacity() {
+            b.d.reserve(words - b.d.len().min(words));
+        }
+    }
+    a
+}
+
+/// `int ossl_bn_mask_bits_fixed_top(BIGNUM *a, int n)` — `crypto/bn/bn_lib.c:863-880`.
+///
+/// **A port, and the only function in this module that is one.** The authority's body sets
+/// `a->top` to `n / BN_BITS2` (or that plus one) *without* correcting it, which is what "fixed
+/// top" means and what lets a caller keep operating on a value whose width it knows. This
+/// representation has no `top` to leave wide — the magnitude is normalised on every store — so
+/// the reachable half of the contract is written and the representational half is named: the
+/// mask is applied, `BN_FLG_FIXED_TOP` is set, and the answer is 0 exactly when the authority's
+/// `w >= a->top` test refuses, i.e. when the requested width starts at or past the value's own
+/// top limb.
+///
+/// The one caller that can tell the two readings apart is `BN_mask_bits`, whose public contract
+/// is this function followed by `bn_correct_top`; `src/bn/arith.rs` writes it as the body behind
+/// that pair, and its doc comment records the same refusal.
+///
+/// # Safety
+///
+/// `a` must be null or point to a live, uniquely-owned `BIGNUM`.
+pub(crate) unsafe fn ossl_bn_mask_bits_fixed_top(a: *mut BigNum, n: c_int) -> c_int {
+    if n < 0 {
+        return 0;
+    }
+    // SAFETY: null-or-live per this function's `# Safety` section.
+    let Some(dst) = (unsafe { as_mut(a) }) else {
+        return 0;
+    };
+    // "if (w >= a->top) return 0;" — the authority tests the word index against the top *limb
+    // count*, so a width the value does not have is reported rather than accepted as a no-op.
+    if (n as usize) / 64 >= dst.d.len() {
+        return 0;
+    }
+    let mask = limbs::sub(&limbs::shl(&[1u64], n as usize), &[1u64]);
+    let masked = limbs::and(&dst.d, &mask);
+    let neg = dst.neg != 0;
+    if !store(Some(dst), masked, neg) {
+        return 0;
+    }
+    dst.flags |= BN_FLG_FIXED_TOP;
+    1
+}
+
+/// `int ossl_bn_is_word_fixed_top(const BIGNUM *a, const BN_ULONG w)` —
+/// `crypto/bn/bn_lib.c:1068-1082`.
+///
+/// Whether a fixed-top value is exactly the word `w`. The authority's loop visits **every**
+/// limb, comparing each with `w` through `constant_time_eq_bn` and folding the answer with
+/// `constant_time_select_int`, so its running time depends only on the top the caller fixed and
+/// not on the value. This is a transcription rather than a port: the same limb walk, the same
+/// two constant-time helpers, and the same early answer for a negative or empty value.
+///
+/// `dsa_ossl.c`'s `dsa_sign_setup` is the caller, and its use is the reason the function is
+/// constant-time: it rejects a nonce of zero, and a `BN_is_zero` there would leak which draw
+/// was refused.
+///
+/// # Safety
+///
+/// `a` must be null or point to a live `BIGNUM`.
+pub(crate) unsafe fn ossl_bn_is_word_fixed_top(a: *const BigNum, w: Limb) -> c_int {
+    use crate::runtime::constant_time::{constant_time_is_zero_s, constant_time_select};
+    // SAFETY: null-or-live per this function's `# Safety` section; `as_ref` reads a null object
+    // as the zero value, whose `neg` and empty magnitude both answer 0 below.
+    let Some(b) = (unsafe { as_ref(a) }) else {
+        return 0;
+    };
+    if b.neg != 0 || b.d.is_empty() {
+        return 0;
+    }
+    let mut res = constant_time_select(constant_time_is_zero_s((b.d[0] ^ w) as usize), 1, 0);
+    for limb in &b.d[1..] {
+        res = constant_time_select(constant_time_is_zero_s(*limb as usize), res, 0);
+    }
+    c_int::try_from(res).unwrap_or(1)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1794,6 +1935,64 @@ mod tests {
         assert_eq!(&buf[4..], &[0, 0x80]);
         // SAFETY: `p` is live.
         unsafe { BN_free(p) };
+    }
+
+    #[test]
+    fn the_fixed_top_helpers_are_the_mask_and_the_word_test() {
+        // SAFETY: every object here is allocated by this test and live; each helper's own
+        // contract is the one its `# Safety` section states.
+        unsafe {
+            // `ossl_bn_mask_bits_fixed_top` refuses a negative width and a width that starts at
+            // or past the value's own top, and it sets the fixed-top flag when it succeeds.
+            let a = BN_new();
+            assert_eq!(ossl_bn_mask_bits_fixed_top(a, -1), 0);
+            BN_set_word(a, 0xff);
+            assert_eq!(
+                ossl_bn_mask_bits_fixed_top(a, 64),
+                0,
+                "64 starts past a 1-limb value"
+            );
+            assert_eq!(ossl_bn_mask_bits_fixed_top(a, 4), 1);
+            assert_eq!(BN_get_word(a), 0x0f);
+            assert_eq!(BN_get_flags(a, BN_FLG_FIXED_TOP), BN_FLG_FIXED_TOP);
+            // The public twin agrees, and it is the one that is *not* a port: `BN_mask_bits`
+            // corrects the top afterwards, which this representation always has corrected.
+            assert_eq!(crate::bn::arith::BN_mask_bits(a, 2), 1);
+            assert_eq!(BN_get_word(a), 0x03);
+            assert_eq!(bn_get_top(a), 1);
+            assert!(!bn_wexpand(a, 8).is_null(), "room is made, and `a` answers");
+            assert_eq!(BN_get_word(a), 0x03, "reserving moves no value");
+            assert!(bn_wexpand(core::ptr::null_mut(), 8).is_null());
+
+            // `ossl_bn_is_word_fixed_top` is a walk over every limb, not a numeric comparison.
+            let b = BN_new();
+            BN_set_word(b, 0);
+            assert_eq!(
+                ossl_bn_is_word_fixed_top(b, 0),
+                0,
+                "an empty magnitude is not the word"
+            );
+            BN_set_word(b, 7);
+            assert_eq!(ossl_bn_is_word_fixed_top(b, 7), 1);
+            assert_eq!(ossl_bn_is_word_fixed_top(b, 8), 0);
+            BN_set_bit(b, 128);
+            assert_eq!(
+                ossl_bn_is_word_fixed_top(b, 7),
+                0,
+                "a higher limb that is not zero"
+            );
+            BN_clear_bit(b, 128);
+            assert_eq!(ossl_bn_is_word_fixed_top(b, 7), 1);
+            BN_set_negative(b, 1);
+            assert_eq!(
+                ossl_bn_is_word_fixed_top(b, 7),
+                0,
+                "a negative value is never the word"
+            );
+
+            BN_free(a);
+            BN_free(b);
+        }
     }
 
     #[test]

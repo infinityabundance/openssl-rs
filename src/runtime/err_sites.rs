@@ -22902,6 +22902,136 @@ pub(crate) const DH_GROUP_PARAMS_47: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `dsa_new_intern` at `crypto/dsa/dsa_lib.c:141` (ERR_R_CRYPTO_LIB).
+pub(crate) const DSA_LIB_141: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_lib.c",
+    line: 141,
+    func: c"dsa_new_intern",
+    lib: 10,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `dsa_new_intern` at `crypto/dsa/dsa_lib.c:158` (ERR_R_ENGINE_LIB).
+pub(crate) const DSA_LIB_158: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_lib.c",
+    line: 158,
+    func: c"dsa_new_intern",
+    lib: 10,
+    reason: 524326,
+    dynamic_reason: false,
+};
+
+/// `dsa_new_intern` at `crypto/dsa/dsa_lib.c:167` (ERR_R_ENGINE_LIB).
+pub(crate) const DSA_LIB_167: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_lib.c",
+    line: 167,
+    func: c"dsa_new_intern",
+    lib: 10,
+    reason: 524326,
+    dynamic_reason: false,
+};
+
+/// `dsa_new_intern` at `crypto/dsa/dsa_lib.c:184` (ERR_R_INIT_FAIL).
+pub(crate) const DSA_LIB_184: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_lib.c",
+    line: 184,
+    func: c"dsa_new_intern",
+    lib: 10,
+    reason: 786693,
+    dynamic_reason: false,
+};
+
+/// `ossl_dsa_do_sign_int` at `crypto/dsa/dsa_ossl.c:195` (ERR_raise dynamic reason).
+pub(crate) const DSA_OSS_195: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ossl.c",
+    line: 195,
+    func: c"ossl_dsa_do_sign_int",
+    lib: 10,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `dsa_sign_setup` at `crypto/dsa/dsa_ossl.c:230` (DSA_R_MISSING_PARAMETERS).
+pub(crate) const DSA_OSS_230: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ossl.c",
+    line: 230,
+    func: c"dsa_sign_setup",
+    lib: 10,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `dsa_sign_setup` at `crypto/dsa/dsa_ossl.c:241` (DSA_R_INVALID_PARAMETERS).
+pub(crate) const DSA_OSS_241: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ossl.c",
+    line: 241,
+    func: c"dsa_sign_setup",
+    lib: 10,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `dsa_sign_setup` at `crypto/dsa/dsa_ossl.c:245` (DSA_R_MISSING_PRIVATE_KEY).
+pub(crate) const DSA_OSS_245: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ossl.c",
+    line: 245,
+    func: c"dsa_sign_setup",
+    lib: 10,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `dsa_sign_setup` at `crypto/dsa/dsa_ossl.c:347` (ERR_R_BN_LIB).
+pub(crate) const DSA_OSS_347: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ossl.c",
+    line: 347,
+    func: c"dsa_sign_setup",
+    lib: 10,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `dsa_do_verify` at `crypto/dsa/dsa_ossl.c:367` (DSA_R_MISSING_PARAMETERS).
+pub(crate) const DSA_OSS_367: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ossl.c",
+    line: 367,
+    func: c"dsa_do_verify",
+    lib: 10,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `dsa_do_verify` at `crypto/dsa/dsa_ossl.c:374` (DSA_R_BAD_Q_VALUE).
+pub(crate) const DSA_OSS_374: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ossl.c",
+    line: 374,
+    func: c"dsa_do_verify",
+    lib: 10,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `dsa_do_verify` at `crypto/dsa/dsa_ossl.c:379` (DSA_R_MODULUS_TOO_LARGE).
+pub(crate) const DSA_OSS_379: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ossl.c",
+    line: 379,
+    func: c"dsa_do_verify",
+    lib: 10,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `dsa_do_verify` at `crypto/dsa/dsa_ossl.c:453` (ERR_R_BN_LIB).
+pub(crate) const DSA_OSS_453: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ossl.c",
+    line: 453,
+    func: c"dsa_do_verify",
+    lib: 10,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
 /// `RAND_pseudo_bytes` at `crypto/rand/rand_lib.c:386` (RAND_R_FUNC_NOT_IMPLEMENTED).
 pub(crate) const RAND_LIB_386: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
@@ -27020,6 +27150,19 @@ pub(crate) static ALL: &[ErrSite] = &[
     DH_CHECK_256,
     DH_CHECK_277,
     DH_GROUP_PARAMS_47,
+    DSA_LIB_141,
+    DSA_LIB_158,
+    DSA_LIB_167,
+    DSA_LIB_184,
+    DSA_OSS_195,
+    DSA_OSS_230,
+    DSA_OSS_241,
+    DSA_OSS_245,
+    DSA_OSS_347,
+    DSA_OSS_367,
+    DSA_OSS_374,
+    DSA_OSS_379,
+    DSA_OSS_453,
     RAND_LIB_386,
     RAND_LIB_430,
     RAND_LIB_435,

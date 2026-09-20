@@ -255,17 +255,22 @@ BLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
     # three reach `BN_priv_rand_ex`/`BN_generate_prime_ex2`, which D324 landed, and the DSA/EC
     # three are the two units that still do not exist. D326's precedent is the shape: the half
     # that left was not the blocker the row named, and what remains keeps its own reason.
+    #
+    # (3) **Split again by D333, and the split is the DSA half leaving.** The row has carried the
+    # DSA/EC pair since D331; D333 lands `DSA_generate_key` (`crypto/dsa/dsa_key.c`) and
+    # `DSA_generate_parameters_ex` (`crypto/dsa/dsa_gen.c`) with the rest of 8.6's DSA layer, so
+    # the split happens once more for D326's reason: a stratum cannot hand a symbol to itself
+    # (D296), the two names' units now exist, and `EC_KEY_generate_key` is `crypto/ec/ec_key.c`
+    # -- Phase 8.7's -- which was never the blocker either of them named.
     (
-        ("DSA_generate_key", "DSA_generate_parameters_ex", "EC_KEY_generate_key"),
+        ("EC_KEY_generate_key",),
         9,
-        "the three units these name do not exist in this crate yet. `DSA_generate_key` and "
-        "`DSA_generate_parameters_ex` are `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c` -- "
-        "Phase 8.6's row, and the `crypto/dsa/` machinery (the `DSA` object, its method table "
-        "and its FFC front end) lands there; `EC_KEY_generate_key` is `crypto/ec/ec_key.c`, "
-        "Phase 8.7's. Both reach the random layer through their own BN calls "
-        "(`BN_priv_rand_range`/`BN_generate_prime_ex2` on the `bnrand` -> `RAND_bytes_ex` path "
-        "that D313/D324 landed), so this row is about the **units** rather than about a callee "
-        "now in: the DH half of the old row retired in D331 precisely because its units landed.",
+        "`crypto/ec/ec_key.c` is Phase 8.7's unit and does not exist in this crate yet: the EC "
+        "stratum's own key layer is what generates an EC key, and 8.7's row owns the `EC_KEY` "
+        "object, the groups, the points and the curve tables it is built on. It reaches the "
+        "random layer through `BN_priv_rand_range` on the `bnrand` -> `RAND_bytes_ex` path that "
+        "D313 landed, so this row is about the **unit** rather than about a callee, which is what "
+        "the DH half retired in D331 and the DSA half retired in D333 both turned out to be.",
     ),
     # (4) **Corrected while building Phase 9's ledger, and the row's own text said how.** This row
     # used to hand `DH_KDF_X9_42` and `ECDH_KDF_X9_62` to phase 9, and it named the condition under

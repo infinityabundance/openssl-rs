@@ -5,12 +5,12 @@
       "in-progress"
     ],
     "census": {
-      "names_a_file_the_authority_does_not_have": 17,
+      "names_a_file_the_authority_does_not_have": 18,
       "symbols_not_reached": 7,
-      "units_not_reached": 22
+      "units_not_reached": 31
     },
     "census_by_stratum": {
-      "8": 32,
+      "8": 42,
       "9": 14
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
@@ -27,6 +27,7 @@
         "docs/PHASE-8-SUBPHASES.md:8.3:oracle-mem-file.c",
         "docs/PHASE-8-SUBPHASES.md:8.3:providers/implementations/macs/cmac_prov.c",
         "docs/PHASE-8-SUBPHASES.md:8.5:courts/layout/measure-ffc-params.c",
+        "docs/PHASE-8-SUBPHASES.md:8.6:crypto/dsa/dsa_ctrl.c",
         "docs/PHASE-9-SUBPHASES.md:9.4:drbg_ctr.c",
         "docs/PHASE-9-SUBPHASES.md:9.4:drbg_hash.c",
         "docs/PHASE-9-SUBPHASES.md:9.4:drbg_hmac.c",
@@ -44,10 +45,19 @@
         "xor128_encrypt_n_pad"
       ],
       "units_not_reached": [
+        "crypto/asn1_dsa.c",
         "crypto/chacha/chacha_enc.c",
         "crypto/dh/dh_asn1.c",
         "crypto/dh/dh_prn.c",
+        "crypto/dsa/dsa_ameth.c",
+        "crypto/dsa/dsa_asn1.c",
+        "crypto/dsa/dsa_backend.c",
+        "crypto/dsa/dsa_check.c",
+        "crypto/dsa/dsa_err.c",
+        "crypto/dsa/dsa_prn.c",
+        "crypto/evp/dsa_ctrl.c",
         "crypto/ffc/ffc_backend.c",
+        "crypto/packet.c",
         "crypto/param_build_set.c",
         "providers/common/provider_seeding.c",
         "providers/common/provider_util.c",
@@ -77,12 +87,12 @@
         "docs/PHASE-9-SUBPHASES.md"
       ],
       "rows_judged": 82,
-      "symbols_named_by_a_row": 87,
-      "symbols_reached": 80,
+      "symbols_named_by_a_row": 88,
+      "symbols_reached": 81,
       "unit_records": 66,
       "units_named_by_a_record": 68,
-      "units_named_by_a_row": 178,
-      "units_reached": 156
+      "units_named_by_a_row": 195,
+      "units_reached": 164
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -157,6 +167,21 @@
         "transcribed_by": [
           "src/asn1/typ.rs"
         ]
+      },
+      "crypto/asn1_dsa.c": {
+        "defines": [
+          "ossl_decode_der_dsa_sig",
+          "ossl_decode_der_integer",
+          "ossl_decode_der_length",
+          "ossl_encode_der_dsa_sig",
+          "ossl_encode_der_integer",
+          "ossl_encode_der_length"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": []
       },
       "crypto/async/async.c": {
         "defines": [
@@ -511,6 +536,162 @@
           "src/dh/rfc5114.rs"
         ]
       },
+      "crypto/dsa/dsa_ameth.c": {
+        "defines": [
+          "ossl_dsa_asn1_meths"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/dsa/dsa_asn1.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/dsa/dsa_backend.c": {
+        "defines": [
+          "ossl_dsa_dup",
+          "ossl_dsa_is_foreign",
+          "ossl_dsa_key_from_pkcs8",
+          "ossl_dsa_key_fromdata"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/dsa/dsa_check.c": {
+        "defines": [
+          "ossl_dsa_check_pairwise",
+          "ossl_dsa_check_params",
+          "ossl_dsa_check_priv_key",
+          "ossl_dsa_check_pub_key",
+          "ossl_dsa_check_pub_key_partial"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/dsa/dsa_depr.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/dsa/depr.rs"
+        ]
+      },
+      "crypto/dsa/dsa_err.c": {
+        "defines": [
+          "ossl_err_load_DSA_strings"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/dsa/dsa_gen.c": {
+        "defines": [
+          "ossl_dsa_generate_ffc_parameters"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/dsa/gen.rs"
+        ]
+      },
+      "crypto/dsa/dsa_key.c": {
+        "defines": [
+          "ossl_dsa_generate_public_key"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/dsa/key.rs"
+        ]
+      },
+      "crypto/dsa/dsa_lib.c": {
+        "defines": [
+          "ossl_dsa_ffc_params_fromdata",
+          "ossl_dsa_get0_params",
+          "ossl_dsa_new",
+          "ossl_dsa_set0_libctx"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/dsa/object.rs"
+        ]
+      },
+      "crypto/dsa/dsa_meth.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/dsa/mod.rs"
+        ]
+      },
+      "crypto/dsa/dsa_ossl.c": {
+        "defines": [
+          "ossl_dsa_do_sign_int"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/dsa/ossl.rs"
+        ]
+      },
+      "crypto/dsa/dsa_prn.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/dsa/dsa_sign.c": {
+        "defines": [
+          "ossl_dsa_sign_int"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/dsa/sign.rs"
+        ]
+      },
+      "crypto/dsa/dsa_vrf.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/dsa/vrf.rs"
+        ]
+      },
       "crypto/dso/dso_dlfcn.c": {
         "defines": [],
         "recorded_by": null,
@@ -691,6 +872,14 @@
           "7.3",
           "7.3a",
           "7.3d"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/dsa_ctrl.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
         ],
         "transcribed_by": []
       },
@@ -1663,6 +1852,35 @@
         "transcribed_by": [
           "src/runtime/time.rs"
         ]
+      },
+      "crypto/packet.c": {
+        "defines": [
+          "WPACKET_allocate_bytes",
+          "WPACKET_cleanup",
+          "WPACKET_close",
+          "WPACKET_fill_lengths",
+          "WPACKET_finish",
+          "WPACKET_get_curr",
+          "WPACKET_get_length",
+          "WPACKET_get_total_written",
+          "WPACKET_init",
+          "WPACKET_init_der",
+          "WPACKET_init_len",
+          "WPACKET_init_null",
+          "WPACKET_init_null_der",
+          "WPACKET_init_static_len",
+          "WPACKET_is_null_buf",
+          "WPACKET_memcpy",
+          "WPACKET_memset",
+          "WPACKET_put_bytes__",
+          "WPACKET_quic_sub_allocate_bytes",
+          "WPACKET_quic_write_vlint"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": []
       },
       "crypto/param_build.c": {
         "defines": [],
@@ -2647,10 +2865,10 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 206
+      "transcribed_units": 214
     }
   },
-  "body_hash": "3f31a7ea83af3e056851f68e3200da071f46d60848098e4f7c78165cc078b8fb",
+  "body_hash": "708b3bfbe9757697b2217cd3f0819c0f973acda3f6ff5797943cd0f518af4323",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -2661,22 +2879,22 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "19a5beda3e91e504d150de82049a8f44f20bdd86fcecfa525a0f89f8e1eb59be"
+      "sha256": "122064f6246d437be78ac4d337650fe4c9bd793a9bfbe09dbf636f86acc750bb"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "bd479c8cbed69346bfe8acd23c66b820cf540018fd15b168a07a51f644811664"
+      "sha256": "a1775c1e13f1b8c0a1d69a3c05d637f1e167497c9d2cc6580ddf770e9052467c"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "60cc646dfcf9d505699ea49a015f1319c153c63ad74c25db14666178e76baba6"
+      "sha256": "7c4d2d5058cbd9bab257ef84f0acbb925a6f69c0b7496467aaafa7c49c2db682"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "b379f2a88a5feda87927d04b5969105d443a75393cd08672d10eeb98a7a5ee27"
+      "sha256": "b13a87b45f11c930a2c2884519512e3b53b22572172af62018b9746aa1613fe3"
     },
     {
       "name": "source-manifest",
@@ -2701,7 +2919,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "58048cb1cfb7731ac247d40b57ffa91cdb046932be4482207c446b8d823c783d"
+      "sha256": "71c1a3cfd8b04bdfe8d9c82e2c675f7e63b1d86e4d5417f2b16cc8acdfb9005b"
     },
     {
       "name": "plan-PHASE-9-SUBPHASES",
