@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 7,
-      "implemented": 290,
-      "open_in_this_stratum": 489,
+      "implemented": 293,
+      "open_in_this_stratum": 486,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1279,6 +1279,9 @@
       "RSA_clear_flags",
       "RSA_flags",
       "RSA_free",
+      "RSA_generate_key",
+      "RSA_generate_key_ex",
+      "RSA_generate_multi_prime_key",
       "RSA_get0_crt_params",
       "RSA_get0_d",
       "RSA_get0_dmp1",
@@ -4286,24 +4289,6 @@
         "declaring_header": "rsa.h",
         "module": "src/rsa/mod.rs",
         "received_from_phase": null,
-        "symbol": "RSA_generate_key"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_generate_key_ex"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_generate_multi_prime_key"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
         "symbol": "RSA_pkey_ctx_ctrl"
       },
       {
@@ -4624,12 +4609,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "ff45cb03aab394b769c655627980ce93cfd87e5daa718fc2e05059e3ac7adbc4"
+      "sha256": "1e42a1037870e466dc88a8cb46e09bf7d684282872c0253920e800ff6927386e"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "ca4580198b22db699add14a0644e9d2444e0e0467ee23cde05457732aa0cd0e5"
+      "sha256": "b2d92010af13922f317e5177a0c903a376c1a04421a8bc8fb065f76cfd58a5b4"
     }
   ],
   "kind": "phase8-obligations",

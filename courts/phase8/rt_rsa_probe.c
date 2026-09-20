@@ -24,9 +24,11 @@
  * `ossl_rsa_alloc_blinding` reachable -- is called too. Slice E is `crypto/rsa/rsa_x931g.c`'s two
  * key generators plus the four `rsa_crpt.c` crypt wrappers, and **all six are called below**: the
  * derivation arm is deterministic (fixed seeds) and the generation arm drives the wrappers as
- * round trips over a key it generated. The three `RSA_generate_*` names of the same slice are not
- * here because they are not in the crate -- `rsa_gen.c`'s common path reaches
- * `ossl_bn_rsa_fips186_4_gen_prob_primes`, a `crypto/bn` unit (`docs/DECISIONS.md` D326). Nothing
+ * round trips over a key it generated. That slice's other three names -- `RSA_generate_key_ex`,
+ * `RSA_generate_multi_prime_key` and `RSA_generate_key` -- were blocked on a `crypto/bn` unit
+ * until D327, and **all three are called below too**, over both generators: the SP800-56B path
+ * (2 primes, at least 2048 bits, an exponent wider than 16 bits) and `rsa_multiprime_keygen`
+ * (more than two primes, or a small exponent). Nothing
  * here does any cryptography
  * beyond small RSA exponentiations -- each function allocates a table or an object, stores a
  * pointer in one, reads one, pads a buffer, raises a 12-bit modulus to the 17th power, or runs
@@ -1968,6 +1970,200 @@ static void rsa_keygen_arms(void)
     BN_CTX_free(ctx);
 }
 
+/* ------------------------------------------------------------------ the RSA_generate_* dispatchers (slice E) */
+
+/* `rsa_gen.c`'s three entry points and `rsa_depr.c`'s deprecated constructor, over the two
+ * generators D326 measured: the SP800-56B path (`primes == 2 && bits >= 2048 &&
+ * BN_num_bits(e) > 16`) and `rsa_multiprime_keygen` (more than two primes, or a small exponent).
+ *
+ * Every key here is drawn, so **nothing below prints a byte of it**. What is printed is the
+ * library's answer *about* the key: the return code; the width (`RSA_bits`, `RSA_size`); the
+ * version word and the extra-prime count, which is the one pair that tells the two generators
+ * apart; primality of the factors through the landed `BN_check_prime`; `n = p*q` (and `p*q*r`
+ * for the multi-prime arm); the exact exponent the caller asked for; and the round trips through
+ * the four `rsa_crpt.c` wrappers. The four refusals are drained, so each one's error coordinate
+ * is compared as well as its return value.
+ *
+ * **`RSA_FLAG_NO_BLINDING` is set before any private operation**, so the private entry points
+ * take their no-blinding arm and no DRBG draw can fail for a reason this court is not about.
+ *
+ * **The multi-prime arm's extra-prime array is the caller's.** `RSA_get0_multi_prime_factors`
+ * writes into an array sized by `RSA_get_multi_prime_extra_count`, which is why the count is
+ * read first. */
+
+/* `n == a * b`, as a boolean, without printing either. */
+static int rt_product_is(const BIGNUM *n, const BIGNUM *a, const BIGNUM *b, BN_CTX *ctx)
+{
+    BIGNUM *p = BN_new();
+    int ok;
+
+    if (p == NULL)
+        return 0;
+    ok = BN_mul(p, a, b, ctx) == 1 && BN_cmp(p, n) == 0;
+    BN_free(p);
+    return ok;
+}
+
+static void rsa_generate_arms(void)
+{
+    RSA *rg = NULL, *rm = NULL, *rd = NULL, *rb = NULL;
+    BIGNUM *e = NULL, *even = NULL;
+    const BIGNUM *kn = NULL, *ke = NULL, *kd = NULL;
+    const BIGNUM *kp = NULL, *kq = NULL;
+    const BIGNUM *mpf[1] = { NULL };
+    BN_CTX *ctx = NULL;
+    unsigned char msg[256], ct[256], out[256];
+    int ret, ret2, size;
+
+    ctx = BN_CTX_new();
+    e = rt_word(65537);
+    even = rt_word(65536);
+    printf("rsa.gen.scratch_built=%d\n", ctx != NULL && e != NULL && even != NULL);
+    if (ctx == NULL || e == NULL || even == NULL)
+        goto done;
+
+    /* ------------------------------------------------ the SP800-56B path (2 primes, e > 16 bits) */
+
+    rg = RSA_new();
+    printf("rsa.gen.sp800.new_nonnull=%d\n", rg != NULL);
+    if (rg != NULL) {
+        ERR_clear_error();
+        printf("rsa.gen.sp800.ret=%d\n", RSA_generate_key_ex(rg, 2048, e, NULL));
+        drain("gen_sp800");
+        printf("rsa.gen.sp800.bits=%d\n", RSA_bits(rg));
+        printf("rsa.gen.sp800.size=%d\n", RSA_size(rg));
+        printf("rsa.gen.sp800.version=%d\n", RSA_get_version(rg));
+        printf("rsa.gen.sp800.extra=%d\n", RSA_get_multi_prime_extra_count(rg));
+        printf("rsa.gen.sp800.dirty_positive=%d\n", RT_DIRTY(rg) > 0);
+
+        RSA_get0_key(rg, &kn, &ke, &kd);
+        RSA_get0_factors(rg, &kp, &kq);
+        printf("rsa.gen.sp800.parts_null=%d\n",
+            kn == NULL || ke == NULL || kd == NULL || kp == NULL || kq == NULL);
+        printf("rsa.gen.sp800.e_is_asked=%d\n", ke != NULL && BN_cmp(ke, e) == 0);
+        printf("rsa.gen.sp800.p_prime=%d\n", BN_check_prime(kp, ctx, NULL));
+        printf("rsa.gen.sp800.q_prime=%d\n", BN_check_prime(kq, ctx, NULL));
+        printf("rsa.gen.sp800.p_ne_q=%d\n", BN_cmp(kp, kq) != 0);
+        printf("rsa.gen.sp800.n_is_pq=%d\n", rt_product_is(kn, kp, kq, ctx));
+
+        RSA_set_flags(rg, RSA_FLAG_NO_BLINDING);
+        size = RSA_size(rg);
+
+        /* The PKCS#1 v1.5 pair: the public operation draws its padding, the private one recovers
+         * this probe's five octets, and neither the ciphertext nor a padding octet is printed. */
+        memcpy(msg, "hello", 5);
+        memset(ct, 0, sizeof(ct));
+        ERR_clear_error();
+        ret = RSA_public_encrypt(5, msg, ct, rg, RSA_PKCS1_PADDING);
+        printf("rsa.gen.sp800.enc_ret=%d\n", ret);
+        printf("rsa.gen.sp800.enc_is_size=%d\n", ret == size);
+        memset(out, 0xa5, sizeof(out));
+        ret2 = RSA_private_decrypt(size, ct, out, rg, RSA_PKCS1_PADDING);
+        printf("rsa.gen.sp800.dec_ret=%d\n", ret2);
+        printf("rsa.gen.sp800.dec_body=%d\n", ret2 == 5 && memcmp(out, msg, 5) == 0);
+        drain("gen_sp800_roundtrip_pkcs1");
+
+        /* The no-padding pair, on a plain number smaller than the modulus. */
+        memset(msg, 0, sizeof(msg));
+        msg[0] = 0x0b;
+        msg[1] = 0x1a;
+        memset(ct, 0, sizeof(ct));
+        ERR_clear_error();
+        ret = RSA_private_encrypt(size, msg, ct, rg, RSA_NO_PADDING);
+        printf("rsa.gen.sp800.priv_enc_ret=%d\n", ret);
+        memset(out, 0xa5, sizeof(out));
+        ret2 = RSA_public_decrypt(size, ct, out, rg, RSA_NO_PADDING);
+        printf("rsa.gen.sp800.pub_dec_ret=%d\n", ret2);
+        printf("rsa.gen.sp800.pub_dec_body=%d\n", ret2 == size && memcmp(out, msg, size) == 0);
+        drain("gen_sp800_roundtrip_none");
+    }
+
+    /* ------------------------------------------------ the multi-prime path (3 primes, 1024 bits) */
+
+    rm = RSA_new();
+    printf("rsa.gen.mp.new_nonnull=%d\n", rm != NULL);
+    if (rm != NULL) {
+        ERR_clear_error();
+        printf("rsa.gen.mp.ret=%d\n", RSA_generate_multi_prime_key(rm, 1024, 3, e, NULL));
+        drain("gen_mp");
+        printf("rsa.gen.mp.bits=%d\n", RSA_bits(rm));
+        printf("rsa.gen.mp.size=%d\n", RSA_size(rm));
+        printf("rsa.gen.mp.version=%d\n", RSA_get_version(rm));
+        printf("rsa.gen.mp.extra=%d\n", RSA_get_multi_prime_extra_count(rm));
+
+        /* The count is one, so a one-element caller array is the exact size. */
+        printf("rsa.gen.mp.factors_ret=%d\n", RSA_get0_multi_prime_factors(rm, mpf));
+        RSA_get0_key(rm, &kn, &ke, &kd);
+        RSA_get0_factors(rm, &kp, &kq);
+        printf("rsa.gen.mp.parts_null=%d\n",
+            kn == NULL || ke == NULL || kp == NULL || kq == NULL || mpf[0] == NULL);
+        printf("rsa.gen.mp.e_is_asked=%d\n", ke != NULL && BN_cmp(ke, e) == 0);
+        printf("rsa.gen.mp.p_prime=%d\n", BN_check_prime(kp, ctx, NULL));
+        printf("rsa.gen.mp.q_prime=%d\n", BN_check_prime(kq, ctx, NULL));
+        printf("rsa.gen.mp.r_prime=%d\n", BN_check_prime(mpf[0], ctx, NULL));
+        {
+            BIGNUM *pq = BN_new();
+            printf("rsa.gen.mp.n_is_pqr=%d\n",
+                pq != NULL && BN_mul(pq, kp, kq, ctx) == 1 && rt_product_is(kn, pq, mpf[0], ctx));
+            BN_free(pq);
+        }
+
+        RSA_set_flags(rm, RSA_FLAG_NO_BLINDING);
+        size = RSA_size(rm);
+        memcpy(msg, "hello", 5);
+        memset(ct, 0, sizeof(ct));
+        ERR_clear_error();
+        ret = RSA_public_encrypt(5, msg, ct, rm, RSA_PKCS1_PADDING);
+        printf("rsa.gen.mp.enc_ret=%d\n", ret);
+        printf("rsa.gen.mp.enc_is_size=%d\n", ret == size);
+        memset(out, 0xa5, sizeof(out));
+        ret2 = RSA_private_decrypt(size, ct, out, rm, RSA_PKCS1_PADDING);
+        printf("rsa.gen.mp.dec_ret=%d\n", ret2);
+        printf("rsa.gen.mp.dec_body=%d\n", ret2 == 5 && memcmp(out, msg, 5) == 0);
+        drain("gen_mp_roundtrip_pkcs1");
+    }
+
+    /* ------------------------------------------------ the deprecated constructor */
+
+    ERR_clear_error();
+    rd = RSA_generate_key(1024, 65537, NULL, NULL);
+    printf("rsa.gen.depr.nonnull=%d\n", rd != NULL);
+    drain("gen_depr");
+    if (rd != NULL) {
+        RSA_get0_key(rd, NULL, &ke, NULL);
+        printf("rsa.gen.depr.bits=%d\n", RSA_bits(rd));
+        printf("rsa.gen.depr.e_is_asked=%d\n", ke != NULL && BN_cmp(ke, e) == 0);
+        printf("rsa.gen.depr.version=%d\n", RSA_get_version(rd));
+    }
+
+    /* ------------------------------------------------ the four refusals, drained */
+
+    rb = RSA_new();
+    if (rb != NULL) {
+        ERR_clear_error();
+        printf("rsa.gen.refuse.bits=%d\n", RSA_generate_multi_prime_key(rb, 256, 2, e, NULL));
+        printf("rsa.gen.refuse.e_null=%d\n", RSA_generate_multi_prime_key(rb, 1024, 2, NULL, NULL));
+        printf("rsa.gen.refuse.e_even=%d\n", RSA_generate_multi_prime_key(rb, 1024, 2, even, NULL));
+        printf("rsa.gen.refuse.primes_low=%d\n", RSA_generate_multi_prime_key(rb, 1024, 1, e, NULL));
+        printf("rsa.gen.refuse.primes_high=%d\n", RSA_generate_multi_prime_key(rb, 1024, 4, e, NULL));
+        /* `RSA_bits` on this object would be the segmentation fault D325 measured, so the
+         * "no key was made" observation is the version word and the extra-prime count, both of
+         * which read a field and not `n`. */
+        printf("rsa.gen.refuse.no_key=%d\n",
+            RSA_get_version(rb) == 0 && RSA_get_multi_prime_extra_count(rb) == 0);
+        drain("gen_refusals");
+    }
+
+done:
+    RSA_free(rb);
+    RSA_free(rd);
+    RSA_free(rm);
+    RSA_free(rg);
+    BN_free(even);
+    BN_free(e);
+    BN_CTX_free(ctx);
+}
+
 int main(void)
 {
     RSA_METHOD *m = NULL;
@@ -2403,6 +2599,10 @@ int main(void)
     /* Slice E's X9.31 generator pair and the four `rsa_crpt.c` crypt wrappers, over a key the
      * generator produced. */
     rsa_keygen_arms();
+
+    /* Slice E's other half: `rsa_gen.c`'s dispatchers and `rsa_depr.c`'s constructor, over both
+     * generators -- the SP800-56B path and the multi-prime path. */
+    rsa_generate_arms();
 
     /* ---------------------------------------------------------------- release */
 

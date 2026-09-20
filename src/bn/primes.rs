@@ -424,6 +424,78 @@ static PRIMES: [PrimeT; NUMPRIMES] = [
     17747, 17749, 17761, 17783, 17789, 17791, 17807, 17827, 17837, 17839, 17851, 17863,
 ];
 
+/// `small_prime_factors[]` — `crypto/bn/bn_prime.c:44-54`, the product of the primes
+/// from 3 to 751, little-endian limb order.
+///
+/// `BN_DEF(lo, hi)` is `(BN_ULONG)hi << 32 | lo` on this `BN_BITS2 == 64` profile, so
+/// each source row is one limb. `SP 800-89 5.3.3 (Step f)` is the reference
+/// `crypto/rsa/rsa_sp800_56b_check.c:327` reaches it through; the test below
+/// re-derives it from [`PRIMES`] so the seventeen limbs are checked rather than
+/// trusted, exactly as the sieve table is.
+#[allow(dead_code)] // read by `ossl_bn_get0_small_factors`, whose only authority caller is not transcribed
+const SMALL_PRIME_FACTORS: [Limb; 17] = [
+    0xC430_9333_3EF4_E3E1,
+    0x7116_1EB6_CD2D_655F,
+    0x95E2_238C_0BF9_4862,
+    0x3EB2_33D3_24F7_912B,
+    0x6B55_514B_BF26_C483,
+    0x0A84_D817_5A14_4871,
+    0x77D1_2FEE_9B82_210A,
+    0xDB5B_93C2_97F0_50B3,
+    0x4ACA_D6B9_4D6C_026B,
+    0xEB77_51F3_54AE_C893,
+    0xDBA5_3368_36BC_85C4,
+    0xD85A_1B28_7F5E_C78E,
+    0x2EB0_72D8_6B32_2244,
+    0xBBA5_1112_5E2B_3AEA,
+    0x36ED_1A6C_0E24_86BF,
+    0x5F27_0460_EC0C_5727,
+    0x0000_0000_0000_17B1,
+];
+
+/// The cached object for [`ossl_bn_get0_small_factors`].
+///
+/// The authority returns the address of a `static const BIGNUM`, so two calls answer
+/// the same pointer; building the object lazily and caching it reproduces that, the
+/// the same way [`nist_prime`] does for the named primes.
+#[allow(dead_code)] // as `SMALL_PRIME_FACTORS`
+static SMALL_FACTORS: AtomicPtr<BigNum> = AtomicPtr::new(core::ptr::null_mut());
+
+/// `const BIGNUM *ossl_bn_get0_small_factors(void)` — `crypto/bn/bn_prime.c:65-68`,
+/// declared in `include/crypto/bn.h:112`.
+///
+/// The product of the primes from 3 to 751, which
+/// `ossl_rsa_sp800_56b_check_public` (`crypto/rsa/rsa_sp800_56b_check.c:327`)
+/// computes a gcd against to refuse a modulus with a small factor. That caller is not
+/// transcribed in this crate yet, so the name lands as the unit's own internal and as
+/// the second half of the sealed-census entry D324's transition row recorded.
+///
+/// # Safety
+///
+/// Takes no pointers. The result is shared storage and must not be modified or freed.
+#[allow(dead_code)] // the only authority caller is `ossl_rsa_sp800_56b_check_public`, not transcribed here
+pub(crate) unsafe fn ossl_bn_get0_small_factors() -> *const BigNum {
+    let existing = SMALL_FACTORS.load(Ordering::Acquire);
+    if !existing.is_null() {
+        return existing;
+    }
+    let fresh = new_owned(SMALL_PRIME_FACTORS.to_vec(), 0);
+    match SMALL_FACTORS.compare_exchange(
+        core::ptr::null_mut(),
+        fresh,
+        Ordering::AcqRel,
+        Ordering::Acquire,
+    ) {
+        Ok(_) => fresh,
+        Err(winner) => {
+            // SAFETY: `fresh` is the object this call allocated and has not been
+            // published, so releasing it here leaves the cached one alone.
+            unsafe { BN_free(fresh) };
+            winner
+        }
+    }
+}
+
 /// The two exits of `ossl_bn_miller_rabin_is_prime`'s inner loop, which the authority
 /// spells `goto outer_loop` and `goto composite`.
 enum Outcome {
@@ -831,6 +903,30 @@ pub unsafe extern "C" fn BN_check_prime(
         // authority's own `checks = 0` and `do_trial_division = 1`.
         unsafe { ossl_bn_check_prime(p, 0, ctx, 1, cb) }
     })
+}
+
+/// `int ossl_bn_check_generated_prime(const BIGNUM *w, int checks, BN_CTX *ctx,`
+/// `BN_GENCB *cb)` — `crypto/bn/bn_prime.c:258-262`, declared in
+/// `include/crypto/bn.h:109`.
+///
+/// "Use this only for key generation." The whole difference from
+/// [`ossl_bn_check_prime`] is that `checks` is **not** clamped to
+/// [`bn_mr_min_checks`]: a key generator has chosen its own round count from the FIPS
+/// 186-5 table, and the trial division is always on. Its one caller in this crate is
+/// `crate::bn::rsa_fips186_4`'s two probable-prime searches.
+///
+/// # Safety
+///
+/// As [`bn_is_prime_int`].
+pub(crate) unsafe fn ossl_bn_check_generated_prime(
+    w: *const BigNum,
+    checks: c_int,
+    ctx: *mut BnCtx,
+    cb: *mut BnGencb,
+) -> c_int {
+    // SAFETY: this function's contract is `bn_is_prime_int`'s, with the authority's
+    // own `do_trial_division = 1` and the caller's un-clamped `checks`.
+    unsafe { bn_is_prime_int(w, checks, ctx, 1, cb) }
 }
 
 /// `int BN_is_prime_ex(const BIGNUM *a, int checks, BN_CTX *ctx_passed,`
@@ -2793,6 +2889,65 @@ mod tests {
         unsafe {
             BN_free(w);
             BN_free(prime);
+            BN_CTX_free(ctx);
+        }
+    }
+
+    /// **The small-factors object is the product of the primes from 3 to 751.** The
+    /// authority's seventeen limbs are transcribed with its own `BN_DEF(lo, hi)`
+    /// grouping, and this test re-derives the value from the sieve table above rather
+    /// than trusting the hexadecimal constants -- the same argument the sieve table's
+    /// own test makes. It also pins the two things a caller of
+    /// `ossl_bn_get0_small_factors` observes: the value is 1037 bits, and two calls
+    /// answer one shared address (it is a `static const BIGNUM` in the authority).
+    #[test]
+    fn the_small_prime_factors_are_the_product_of_the_primes_to_751() {
+        let mut acc = limbs::from_u64(1);
+        for &p in PRIMES.iter() {
+            if p > 751 {
+                break;
+            }
+            if p == 2 {
+                continue; /* the authority's table starts at 3 */
+            }
+            acc = limbs::mul(&acc, &limbs::from_u64(p as u64));
+        }
+        assert_eq!(acc, SMALL_PRIME_FACTORS);
+        assert_eq!(limbs::bit_len(&acc), 1037);
+
+        // SAFETY: the object is shared static storage; two reads are the same address.
+        let a = unsafe { ossl_bn_get0_small_factors() };
+        // SAFETY: as above.
+        let b = unsafe { ossl_bn_get0_small_factors() };
+        assert!(!a.is_null());
+        assert_eq!(a, b);
+        // SAFETY: `a` is live shared storage.
+        assert_eq!(unsafe { BN_num_bits(a) }, 1037);
+    }
+
+    /// **`ossl_bn_check_generated_prime` is `bn_is_prime_int` with trial division on
+    /// and no clamp.** The point of the separate name is the un-clamped round count, so
+    /// a call with `checks = 0` must *not* become `bn_mr_min_checks`: it becomes
+    /// `bn_is_prime_int`'s own `iterations = 0`, which `ossl_bn_miller_rabin_is_prime`
+    /// resolves to the minimum. Both spellings agree on a prime and on a composite
+    /// here, and the value is that the argument reaches the callee unchanged.
+    #[test]
+    fn the_generated_prime_test_is_the_unclamped_spelling() {
+        // SAFETY: every pointer is a fresh object this test owns or null.
+        unsafe {
+            let ctx = BN_CTX_new();
+            assert!(!ctx.is_null());
+            for (value, want) in [(97u64, 1), (91, 0), (2, 1), (1, 0)] {
+                let w = BN_new();
+                assert!(!w.is_null());
+                assert_eq!(crate::bn::bignum::BN_set_word(w, value), 1);
+                assert_eq!(
+                    ossl_bn_check_generated_prime(w, 0, ctx, core::ptr::null_mut()),
+                    want,
+                    "generated-prime test of {value}"
+                );
+                BN_free(w);
+            }
             BN_CTX_free(ctx);
         }
     }

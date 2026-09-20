@@ -21323,3 +21323,150 @@ two `bn_prime.c` internals it calls -- after which no `src/rsa` file needs to ch
 to land, because `RSA_generate_key_ex`/`RSA_generate_multi_prime_key`/`RSA_generate_key` and the
 `rsa_gen.c`/`rsa_sp800_56b_gen.c` bodies they reach are ordinary transcriptions of an ordinary
 callee graph.
+
+## D327 -- The `crypto/bn` unit D326 named lands, and the three `RSA_generate_*` names with it
+
+D326 measured the three ordinary generators to be blocked on a `crypto/bn` unit rather than on
+`BN_generate_prime_ex2`, and named the callee graph: `ossl_bn_rsa_fips186_4_gen_prob_primes`
+and `ossl_bn_rsa_fips186_4_derive_prime` (`crypto/bn/bn_rsa_fips186_4.c`), over
+`ossl_bn_check_generated_prime` and `ossl_bn_get0_small_factors` (`crypto/bn/bn_prime.c:258`,
+`:65`), then `crypto/rsa/rsa_sp800_56b_gen.c`'s five and `crypto/rsa/rsa_gen.c`'s bodies. That
+graph is transcribed here, and `RSA_generate_key_ex`, `RSA_generate_multi_prime_key` and
+`RSA_generate_key` are implemented. Nothing was stubbed: the ledger's `open` list loses all
+three, and the `deferred` list does not gain anything.
+
+**Which modules were added, and the authority unit each corresponds to.** Four new modules, by
+the correspondence the existing tree already has:
+
+* `src/bn/rsa_fips186_4.rs` — `crypto/bn/bn_rsa_fips186_4.c`, whole: the four static table
+  helpers (`bn_rsa_fips186_5_aux_prime_MR_rounds`, `_prime_MR_rounds`,
+  `_aux_prime_min_size`, `_aux_prime_max_sum_size_for_prob_primes`),
+  `bn_rsa_fips186_4_find_aux_prob_prime`, `ossl_bn_rsa_fips186_4_gen_prob_primes`,
+  `ossl_bn_rsa_fips186_4_derive_prime` and `ossl_bn_inv_sqrt_2`. The module declares **Phase
+  5**, not 8, and that is the gate's own ownership rule: the unit is `crypto/bn`'s, and D324's
+  transition row already assigned it to Phase 8 *by reachability* while recording that its
+  declaring stratum is 5.
+* `src/rsa/sp800.rs` — `crypto/rsa/rsa_sp800_56b_gen.c`'s five (`ossl_rsa_fips186_4_gen_prob_primes`,
+  `ossl_rsa_sp800_56b_validate_strength`, the static `rsa_validate_rng_strength`,
+  `ossl_rsa_sp800_56b_derive_params_from_pq`, `ossl_rsa_sp800_56b_generate_key`,
+  `ossl_rsa_sp800_56b_pairwise_test`) **plus the three `rsa_sp800_56b_check.c` helpers the
+  generate path reaches** (`ossl_rsa_check_public_exponent` `:226`, `ossl_rsa_check_pminusq_diff`
+  `:243`, `ossl_rsa_get_lcm` `:266`).
+* `src/rsa/gen.rs` — `crypto/rsa/rsa_gen.c`'s dispatchers and bodies (`RSA_generate_key_ex`,
+  `RSA_generate_multi_prime_key`, `ossl_rsa_multiprime_derive`, the static
+  `rsa_multiprime_keygen`, the static `rsa_keygen`, the static `rsa_keygen_pairwise_test`) plus
+  `crypto/rsa/rsa_depr.c`'s only body, `RSA_generate_key`.
+* `src/bn/primes.rs` gains the two `bn_prime.c` internals, `ossl_bn_get0_small_factors` and
+  `ossl_bn_check_generated_prime`. No new module: `bn_prime.c` already had one.
+
+**The three-helper placement is a prerequisite-gate decision, not a convenience.** The generate
+path reaches exactly three of `rsa_sp800_56b_check.c`'s ten functions; the other seven are
+reachable only from `ossl_rsa_sp800_56b_check_keypair` and the provider's public-key validation,
+which no 8.4 body calls. A module whose dominant unit was `rsa_sp800_56b_check.c` would make those
+seven names *countable* to the gate, and the gate would then report them as unbuilt internals of
+an in-progress stratum's unit -- which is a failure, not a census entry, because the unit's phase
+would be 8. D326's own rule applies: an unreachable transcription is dead code rather than a
+landing. So the dominant unit of `src/rsa/sp800.rs` is `rsa_sp800_56b_gen.c` (five internal
+symbols against three), the three helpers are written beside the generator that calls them, and
+`rsa_sp800_56b_check.c` has no module -- which is the state `transcription-edges.json` records.
+The map already permits this: "a module whose definitions are spread across units is expected".
+
+**`ossl_bn_get0_small_factors` is landed although nothing reaches it, and that is the one
+asymmetry in the prompt's list.** The prompt grouped it with `ossl_bn_check_generated_prime` as
+part of the chain. Reading the authority, its only caller is `ossl_rsa_sp800_56b_check_public`
+(`rsa_sp800_56b_check.c:327`), which is *not* on the generate path and is not transcribed here;
+`ossl_bn_check_generated_prime` is the one the chain really uses, from both probable-prime
+searches. The name is landed anyway because it is one of the unit's own internals and it is the
+other half of the sealed-census entry D324's transition row recorded (`crypto/bn/bn_prime.c`:
+`[ossl_bn_check_generated_prime, ossl_bn_get0_small_factors]`), so landing it retires that
+entry rather than leaving a name counted but unbuilt. It carries `#[allow(dead_code)]` with that
+reason at the site.
+
+**`ossl_bn_inv_sqrt_2` is a function here, not a `static`, and the value is checked rather than
+transcribed.** The authority declares a `const BIGNUM` with `BN_FLG_STATIC_DATA`; this crate's
+`BIGNUM` owns a heap `Vec` and has no C layout to place in `.rodata`. The crate's established
+representation of a static `BIGNUM` is a lazily built cached object returned by reference -- that
+is what `BN_get0_nist_prime_*` already does -- so the constant is `pub(crate) unsafe fn
+ossl_bn_inv_sqrt_2() -> *const BigNum` behind an `AtomicPtr` cache. Its four limbs are the
+authority's own `inv_sqrt_2_val[]`, and the module test re-derives them: it asserts
+`v^2 >= 2^511`, `(v-1)^2 < 2^511` and `BN_num_bits(v) == 256`, which is exactly "the ceiling of
+`2^256/sqrt(2)`" and nothing else.
+
+**Two profile facts the bodies turn on, both recorded at the site.** `RSA_ACVP_TEST` is
+`#define RSA_ACVP_TEST void` outside `FIPS_MODULE && !OPENSSL_NO_ACVP_TESTS`
+(`include/crypto/rsa.h:136`), so the `test`/`info` parameter of
+`ossl_rsa_fips186_4_gen_prob_primes` is `*mut c_void` and is always NULL, and the `info == NULL`
+`p > q` swap in `ossl_rsa_sp800_56b_generate_key` always runs. And `rsa_validate_rng_strength`
+is, outside `FIPS_MODULE`, the `rng == NULL` refusal and nothing else: the strength comparison
+below it is compiled out, which is why its `nbits` parameter is unread here.
+
+**`rsa_keygen_pairwise_test` is transcribed even though this profile never calls it.**
+`rsa_keygen`'s `pairwise_test` argument is set to 1 only by the `FIPS_MODULE` arm, and
+`RSA_generate_multi_prime_key` passes 0. The body is landed because `rsa_keygen`'s
+`if (pairwise_test && ok > 0)` is a *reference*: leaving it out would either drop a branch the
+authority has or leave a dangling name, and D326's "dead code" objection does not apply to a
+function the transcribing body names. Its `OPENSSL_calloc`/`OPENSSL_free` carry
+`rsa_gen.c`'s `__FILE__` (`../../src/openssl-3.6.4/crypto/rsa/rsa_gen.c`, measured with `strings`
+on the authority's object) even though the allocation is unreachable on this profile.
+
+**What the authority disagreed with, all recorded rather than worked around.**
+
+* The prompt and D326 both put `RSA_generate_key` with `rsa_gen.c`. It is `rsa_depr.c`'s, the
+  deprecated wrapper that builds a `BN_GENCB` and assembles the exponent bit by bit from the
+  `unsigned long`; it lands in `src/rsa/gen.rs` because `rsa_gen.c` defines three of the
+  module's symbols and `rsa_depr.c` one, and the map records the dominant unit.
+* `ossl_bn_get0_small_factors` is not on the reachable path, as above.
+* `rsa_sp800_56b_check.c` must **not** get its own module while only three of its ten functions
+  are transcribed, as above.
+* The `#ifdef FIPS_MODULE` arms of `bn_rsa_fips186_4.c`'s and `rsa_sp800_56b_gen.c`'s tables and
+  range checks are not this build's: `bn_rsa_fips186_5_aux_prime_*` answer from the 186-5 table
+  with the `>= 4096` arm, and `rsa_validate_rng_strength` is the NULL test. The 186-4 numbers the
+  file's prose mentions are not what the shipped build runs.
+
+**The court, and what it refuses to print.** `RT-RSA` grows 682 -> **742 observations** with zero
+residuals, over both generators. The SP800-56B arm calls `RSA_generate_key_ex(rsa, 2048, 65537,
+NULL)` and prints the return code, `RSA_bits` (2048), `RSA_size` (256), `RSA_get_version` (0),
+`RSA_get_multi_prime_extra_count` (0), primality of `p` and `q` through the landed
+`BN_check_prime`, `n == p*q`, the asked-for exponent, and the two round trips through the four
+`rsa_crpt.c` wrappers. The multi-prime arm calls `RSA_generate_multi_prime_key(rsa, 1024, 3,
+65537, NULL)` and prints the same, plus `RSA_get_version` (`RSA_ASN1_VERSION_MULTI`) and the
+extra-prime count (1), and reads the third prime through `RSA_get0_multi_prime_factors` into a
+one-element caller array sized by the count. The deprecated constructor's arm calls
+`RSA_generate_key(1024, 65537, NULL, NULL)`. **No arm prints a byte of a key or a ciphertext**:
+each is a return code, a width, a count, a primality verdict or a round trip, and the four
+refusals are drained so their error coordinates are compared too. Two arms are deliberately
+*not* written the obvious way: the refusal arms do not call `RSA_bits` on an object with no
+modulus (D325 measured that as a segmentation fault in the authority), and the private
+operations run with `RSA_FLAG_NO_BLINDING` so no DRBG draw can fail for a reason this court is
+not about.
+
+**The evidence machinery, and the movement the prompt anticipated that did not happen.** The new
+`crypto/bn/rsa_fips186_4.c` unit does not move `sealed_stratum_census`, `blocking_dependencies`
+or any gate finding: every internal it names is either defined in the module that transcribes it
+or is a built export, and the macro/type names it uses fall into the language census, which the
+guard treats as a movement rather than a regression. `sealed_stratum_census` moves **59 -> 57**,
+a *decrease*: `crypto/bn/bn_prime.c`'s two names leave the census because the crate now defines
+them and no new unit contributes one, so **no `ownership-transitions.json` row is needed** (the
+guard requires a row for an increase only). The gate's `blocking_dependencies` is unchanged at
+17 and its `findings` is empty. `crypto/rsa/rsa_sp800_56b_gen.c` and `crypto/rsa/rsa_gen.c` enter
+`language_census_by_unit` as new units, which the guard prints as movements.
+
+**Bookkeeping, read off the regenerated files.** `phase8`: implemented 290 -> **293**, deferred
+7 unchanged, open 489 -> **486**, owned 786 unchanged. `phase9` is unchanged (implemented 54,
+`handoffs_discharged[8]` 7): nothing here was Phase 8's hand-off to Phase 9, because the three
+names were `open` in 8.4 rather than deferred (D326's own reason -- a stratum cannot hand a
+symbol to itself). `docs/PHASE-8-SUBPHASES.md`'s two anchored clauses move the three symbols from
+the open list to the landed list, and the 8.4 paragraph gains the D327 paragraph; the repository
+baseline's `RT-RSA` 682 -> 742, `implemented[libcrypto]` 2203 -> 2206, `open_obligations[phase8]`
+489 -> 486 and `sealed_census` 59 -> 57. `court_coverage.py` reports every one of the stratum's
+293 implemented exports courted (285 directly, 8 indirectly, 0 non-observable), with no
+unmatched name.
+
+**What is deliberately *not* here, named rather than implied.** The seven `rsa_sp800_56b_check.c`
+functions no 8.4 body reaches (`ossl_rsa_check_crt_components`, `ossl_rsa_check_prime_factor`,
+`ossl_rsa_check_prime_factor_range`, `ossl_rsa_check_private_exponent`,
+`ossl_rsa_sp800_56b_check_public`, `ossl_rsa_sp800_56b_check_private`,
+`ossl_rsa_sp800_56b_check_keypair`); `ossl_rsa_check_prime_factor_range`, in particular, is the
+second reader of `ossl_bn_inv_sqrt_2` and is not needed to generate a key. The `#ifdef
+FIPS_MODULE` ACVP arms. And `RSA_check_key`, `RSA_sign` and `RSA_blinding_on` remain 8.4's open
+work, the three names the anchored clause still lists.
