@@ -274,7 +274,7 @@
         "module": "src/bn/gf2m.rs",
         "phase": 5,
         "phase_source": "module-declaration",
-        "share": "15/15",
+        "share": "19/19",
         "translation_unit": "crypto/bn/bn_gf2m.c"
       },
       {

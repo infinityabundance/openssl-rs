@@ -155,7 +155,7 @@
       "verdict": "pass"
     },
     "RT-BN-RAND": {
-      "observations": 425,
+      "observations": 467,
       "verdict": "pass"
     },
     "RT-CIPHER": {
@@ -389,7 +389,7 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 2373,
+    "libcrypto": 2377,
     "libssl": 0
   },
   "open_obligations": {
@@ -399,7 +399,7 @@
     "phase6": 0,
     "phase7": 0,
     "phase8": 324,
-    "phase9": 17
+    "phase9": 13
   },
   "owned_obligations": {
     "phase3": 294,
@@ -438,7 +438,7 @@
     "blocking_dependencies": 19,
     "divergence_names_covered": 32,
     "findings": 0,
-    "language_census": 3527,
+    "language_census": 3523,
     "sealed_census": 52
   },
   "provider_implemented": [

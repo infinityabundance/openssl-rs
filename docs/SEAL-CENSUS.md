@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 2373 | 3523 |
+| libcrypto | 5896 | 2377 | 3519 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **2373** | **4126** |
+| **total** | **6499** | **2377** | **4122** |
 
 ## Ownership atlas, by stratum
 
@@ -34,7 +34,7 @@ declared owner; this is that assignment.
 | 6 | OSSL_LIB_CTX + provider core | `complete` | 137 | 161 | 161 | 0 | 0 |
 | 7 | EVP framework | `complete` | 924 | 950 | 724 | 226 | 0 |
 | 8 | Native cryptographic primitives | `in-progress` | 759 | 786 | 460 | 2 | 324 |
-| 9 | RAND / DRBG + entropy | `in-progress` | 25 | 71 | 54 | 0 | 17 |
+| 9 | RAND / DRBG + entropy | `in-progress` | 25 | 71 | 58 | 0 | 13 |
 | 10 | Key formats + PKCS + STORE | `not-started` | 272 | — | — | — | — |
 | 11 | X.509 + verification | `not-started` | 1455 | — | — | — | — |
 | 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `not-started` | 1024 | — | — | — | — |
@@ -300,14 +300,14 @@ The other 2 compare ELF structure rather than a transcript and observe nothing l
 ## Phase 9 — RAND / DRBG + entropy
 
 * state: `in-progress`
-* blocking: 17 open obligation(s) of this stratum recorded in forensics/phase9-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Its working set is ninety-three exports, and only twenty-five are its own header's: the other sixty-eight arrive as recorded hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives in ten earlier strata's modules (docs/DECISIONS.md D294). The court file records `courts: []` and is not evidence that anything works: no Phase 9 court has landed yet (docs/PHASE-9-SUBPHASES.md section 1)
+* blocking: 13 open obligation(s) of this stratum recorded in forensics/phase9-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Its working set is ninety-three exports, and only twenty-five are its own header's: the other sixty-eight arrive as recorded hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives in ten earlier strata's modules (docs/DECISIONS.md D294). The court file records `courts: []` and is not evidence that anything works: no Phase 9 court has landed yet (docs/PHASE-9-SUBPHASES.md section 1)
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase9-obligations.json`
 * atlas-owned: 25
 * owned working set: 71
-* implemented: 54
+* implemented: 58
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 17**
+* **open in this stratum: 13**
 
 Hand-offs received and discharged:
 
@@ -316,13 +316,13 @@ Hand-offs received and discharged:
 * from phase 7: 12 symbol(s) — `BIO_f_reliable`, `EVP_CIPHER_CTX_rand_key`, `EVP_SealInit`, `OSSL_HPKE_get_grease_value`, `PEM_ASN1_read`, `PEM_ASN1_read_bio`, `PEM_ASN1_write`, `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx`, `PEM_bytes_read_bio`, `PEM_bytes_read_bio_secmem`, `PEM_do_header`
 * from phase 8: 2 symbol(s) — `DES_random_key`, `EC_KEY_generate_key`
 
-Courts: `all pass`, 4 court(s), **976** authority observation(s) over 4 transcript court(s).
+Courts: `all pass`, 4 court(s), **1018** authority observation(s) over 4 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
 | RT-DRBG | `pass` | 361 |
 | RT-RAND | `pass` | 129 |
-| RT-BN-RAND | `pass` | 425 |
+| RT-BN-RAND | `pass` | 467 |
 | RT-RAND-USERS | `pass` | 61 |
 
 ## Court coverage
@@ -344,8 +344,8 @@ are proofs of reference only. See `docs/DECISIONS.md` D199 and D236.
 | 6 | 161 | 161 | 156 | 5 | 0 | 0 | 0 |
 | 7 | 724 | 724 | 664 | 60 | 0 | 0 | 0 |
 | 8 | 460 | 452 | 452 | 0 | 8 | 0 | 0 |
-| 9 | 54 | 54 | 54 | 0 | 0 | 0 | 0 |
-| **total** | **2373** | **2365** | **2084** | **281** | **8** | **0** | **0** |
+| 9 | 58 | 58 | 58 | 0 | 0 | 0 | 0 |
+| **total** | **2377** | **2369** | **2088** | **281** | **8** | **0** | **0** |
 
 ## Atlas/ledger reconciliation
 
