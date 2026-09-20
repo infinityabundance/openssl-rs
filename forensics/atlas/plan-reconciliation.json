@@ -2383,7 +2383,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "e59eb85dda94e43adedd0b948a6825814d26626630e88e1eccac482c8469ec90"
+      "sha256": "716420ace4e27b955322f0e7a321eade41deae9ce79c3d7c5e2ea002836c0a23"
     },
     {
       "name": "phase-state",
@@ -2418,7 +2418,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "31645e545ef97a1800d1dd61565501eca7ede2a1c2cabc04ac7068643813b870"
+      "sha256": "40c160ef184be808d573a935e2b7beb8061c9eb214abd42bc747e110e7a13fdb"
     },
     {
       "name": "plan-PHASE-9-SUBPHASES",
