@@ -4,9 +4,9 @@
     "counts": {
       "installed_headers": 139,
       "internal_only": 407,
-      "owned": 754,
+      "owned": 755,
       "records": 1573,
-      "unowned": 819
+      "unowned": 818
     },
     "definition": "every typedef name the authority's installed and internal headers introduce, with the header that introduces it and that header's owning stratum",
     "installed_headers": [
@@ -10452,7 +10452,7 @@
         ],
         "kind": "typedef",
         "name": "prime_t",
-        "owner_phase": null
+        "owner_phase": 5
       },
       {
         "defined_in": [

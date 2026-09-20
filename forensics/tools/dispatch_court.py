@@ -321,6 +321,15 @@ NOT_A_DISPATCH: dict[str, str] = {
     # --- other inline parameter types in the public headers -----------------------------------
     "DumpCb": _inline("BIO_dump_cb", "int (*cb)(const void *, size_t, void *)"),
     "ErrPrintCb": _inline("ERR_print_errors_cb", "int (*cb)(const char *, size_t, void *)"),
+    # The callback parameter of `BN_BLINDING_create_param` (`include/openssl/bn.h:440-448`).
+    # Like the two above it is a *public header* function pointer with no typedef, so there is
+    # no authority name for the crate's `BnModExp` to link to -- and the convention rule cannot
+    # reach it either, because the parameter is named `bn_mod_exp` where the crate's alias is
+    # `BnModExp`. `BN_mod_exp_mont` has exactly this signature.
+    "BnModExp@src/bn/blinding.rs": _inline(
+        "BN_BLINDING_create_param",
+        "int (*bn_mod_exp)(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, const BIGNUM *m, "
+        "BN_CTX *ctx, BN_MONT_CTX *m_ctx)"),
     "ObjNameHashFn": OBJ_INT,
     "ObjNameCmpFn": OBJ_INT,
     "ObjNameFreeFn": OBJ_INT,

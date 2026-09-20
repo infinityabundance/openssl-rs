@@ -4044,8 +4044,8 @@
         "completed": true,
         "counts": {
           "directly_courted": 474,
-          "directly_courted_called": 381,
-          "directly_courted_referenced": 93,
+          "directly_courted_called": 382,
+          "directly_courted_referenced": 92,
           "implemented": 474,
           "indirectly_courted": 0,
           "non_observable": 0,
@@ -5702,35 +5702,40 @@
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_BLINDING_free"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_BLINDING_get_flags"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-BN-ASN1-REF"
+              "RT-BN-ASN1-REF",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_BLINDING_invert"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_BLINDING_invert_ex"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_BLINDING_is_current_thread"
           },
@@ -5744,7 +5749,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_BLINDING_new"
           },
@@ -5758,7 +5764,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_BLINDING_set_flags"
           },
@@ -5837,28 +5844,32 @@
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_GENCB_free"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_GENCB_get_arg"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_GENCB_new"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_GENCB_set"
           },
@@ -5984,21 +5995,24 @@
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_MONT_CTX_free"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_MONT_CTX_new"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_MONT_CTX_set"
           },
@@ -6165,7 +6179,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_copy"
           },
@@ -6179,7 +6194,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_div"
           },
@@ -6356,6 +6372,7 @@
             "courts": [
               "RT-ASN1",
               "RT-BN",
+              "RT-BN-RAND",
               "RT-PARAM"
             ],
             "symbol": "BN_hex2bn"
@@ -6380,7 +6397,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_is_odd"
           },
@@ -6460,7 +6478,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_mod_exp"
           },
@@ -6516,7 +6535,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_mod_inverse"
           },
@@ -6551,7 +6571,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_mod_mul"
           },
@@ -6586,7 +6607,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_mod_sub"
           },
@@ -6614,7 +6636,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_mul"
           },
@@ -6745,7 +6768,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_rshift1"
           },
@@ -6856,14 +6880,16 @@
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_sub"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-BN-RAND"
             ],
             "symbol": "BN_sub_word"
           },
@@ -16311,10 +16337,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 39,
-          "directly_courted_called": 39,
+          "directly_courted": 54,
+          "directly_courted_called": 54,
           "directly_courted_referenced": 0,
-          "implemented": 39,
+          "implemented": 54,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -16332,7 +16358,112 @@
             "courts": [
               "RT-BN-RAND"
             ],
+            "symbol": "BN_BLINDING_convert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-BN-RAND"
+            ],
+            "symbol": "BN_BLINDING_convert_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-BN-RAND"
+            ],
+            "symbol": "BN_BLINDING_create_param"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-BN-RAND"
+            ],
+            "symbol": "BN_BLINDING_update"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-BN-RAND"
+            ],
+            "symbol": "BN_X931_derive_prime_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-BN-RAND"
+            ],
+            "symbol": "BN_X931_generate_Xpq"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-BN-RAND"
+            ],
+            "symbol": "BN_X931_generate_prime_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-BN-RAND"
+            ],
             "symbol": "BN_bntest_rand"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-BN-RAND"
+            ],
+            "symbol": "BN_check_prime"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-BN-RAND"
+            ],
+            "symbol": "BN_generate_prime"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-BN-RAND"
+            ],
+            "symbol": "BN_generate_prime_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-BN-RAND"
+            ],
+            "symbol": "BN_generate_prime_ex2"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-BN-RAND"
+            ],
+            "symbol": "BN_is_prime"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-BN-RAND"
+            ],
+            "symbol": "BN_is_prime_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-BN-RAND"
+            ],
+            "symbol": "BN_is_prime_fasttest"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-BN-RAND"
+            ],
+            "symbol": "BN_is_prime_fasttest_ex"
           },
           {
             "basis": "called",
@@ -16601,10 +16732,10 @@
       }
     ],
     "totals": {
-      "directly_courted": 2168,
-      "directly_courted_called": 1885,
-      "directly_courted_referenced": 283,
-      "implemented": 2176,
+      "directly_courted": 2183,
+      "directly_courted_called": 1901,
+      "directly_courted_referenced": 282,
+      "implemented": 2191,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -16615,7 +16746,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "716420ace4e27b955322f0e7a321eade41deae9ce79c3d7c5e2ea002836c0a23"
+      "sha256": "10d22b9177fc25399a633595b39e7b10afd4ce976dc951dfc0cad294c87d923e"
     },
     {
       "name": "symbol-ownership",
@@ -16630,7 +16761,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "49a6aa257854db6b0e6477e3d2345d38d3d729ce4c06410bbf67cbf566333862"
+      "sha256": "b93f014681314cfe2dc1f2857db429b6578b25119ca1f9efff826f6fbb7af1c1"
     },
     {
       "name": "phase3-courts",
@@ -16640,7 +16771,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "2af4f831e668093d552f2fd7d5d59b7fe4c797fc7e2e75c0f13c0c3a16a14e94"
+      "sha256": "903fb0a0f02cdbd6ba9d02b0c727cbfb78e2d6ddf39e3a59ddf3d9be857ef471"
     },
     {
       "name": "phase4-courts",
@@ -16650,7 +16781,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "81df5c0b86bba0b897beb44372ef71f828231b7953ce4df97e47787ea49b22a5"
+      "sha256": "1d92b0bcc195d8ac3ca4176476df2a7f039fe6b6d194f40756009e041871f454"
     },
     {
       "name": "phase5-courts",
@@ -16660,7 +16791,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "187f4ac66b50f73d4b31e5894ec1da806a0341cb78bcd91b22022a9fc22c3e1e"
+      "sha256": "17961125a3bb02fa2062a4cc9315158caa799e16f0ebdbd6f0a0a38caae89037"
     },
     {
       "name": "phase6-courts",
@@ -16670,7 +16801,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "055f3924e88f5205cec219682f2b7ce81dfdbc0ed489523045d44a7a224c5dda"
+      "sha256": "43b8129dda489f05722a4d9c7e465e577afa87bd057ac36d4f4f1069163df34a"
     },
     {
       "name": "phase7-courts",
@@ -16680,7 +16811,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "db37ef39f41ef36dd00db34f1f788ff6429063ecfe09182d7228d793979ebd67"
+      "sha256": "93beeaa7707ee1713655d455fc209af131c4559ced6f0cc9ac2e31b2c94859e7"
     },
     {
       "name": "phase8-courts",
@@ -16690,12 +16821,12 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "a110500e99a64544f43c9282fe9ce91c506f367628b885cc4a98f20a00569916"
+      "sha256": "0113c34bda62dd9d4ea7a7363a8fc5af2b48c3c45992697e568c7553874f252c"
     },
     {
       "name": "phase9-courts",
       "path": "artifacts/phase9/COURTS.json",
-      "sha256": "99e5178c44b428c200aa2e41b63f5d2983eac9555dc798b00c44aae112dcfc13"
+      "sha256": "ed0e5710c7a90bd260602aefe353655113e9f6d9848d8116909876ab53db5b2b"
     }
   ],
   "kind": "court-coverage",

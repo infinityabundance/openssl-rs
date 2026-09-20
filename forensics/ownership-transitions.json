@@ -79,6 +79,14 @@
   ],
   "prerequisite_transitions": [
     {
+      "metric": "sealed_census",
+      "before": 57,
+      "after": 59,
+      "reason": "Landing the BN blinding and prime families (D324) gave `crypto/bn/bn_prime.c` a crate module for the first time, so the gate's sealed-stratum census now sees two of that unit's own internals that the crate does not build: `ossl_bn_get0_small_factors` (`bn_prime.c:65`) and `ossl_bn_check_generated_prime` (`:258`). Both are Phase 5's unit, which is complete, and neither is reached by any body this commit transcribes -- their only authority callers are in `crypto/bn/bn_rsa_fips186_4.c`, which is Phase 8's. So the census rose because two names became *countable* when the unit that owns them finally got a module beside them, not because an implementation was lost; a census entry is not a failure, and the gate prints the count rather than gating on it. The same class as D132's 11 -> 12, D134's 12 -> 15 and D130's language census: an invariant that cannot tell a legitimate change from a hidden omission.",
+      "authority_artifact": "forensics/atlas/prerequisite-gate.json",
+      "recorded_by": "docs/DECISIONS.md D324"
+    },
+    {
       "metric": "blocking_dependencies",
       "before": 11,
       "after": 12,

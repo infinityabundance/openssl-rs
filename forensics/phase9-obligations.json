@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 25,
       "deferred_to_later_phase": 0,
-      "implemented": 39,
-      "open_in_this_stratum": 48,
+      "implemented": 54,
+      "open_in_this_stratum": 33,
       "owned": 87,
       "received_by_handoff": 62
     },
@@ -494,7 +494,22 @@
     },
     "implemented": [
       "BIO_f_reliable",
+      "BN_BLINDING_convert",
+      "BN_BLINDING_convert_ex",
+      "BN_BLINDING_create_param",
+      "BN_BLINDING_update",
+      "BN_X931_derive_prime_ex",
+      "BN_X931_generate_Xpq",
+      "BN_X931_generate_prime_ex",
       "BN_bntest_rand",
+      "BN_check_prime",
+      "BN_generate_prime",
+      "BN_generate_prime_ex",
+      "BN_generate_prime_ex2",
+      "BN_is_prime",
+      "BN_is_prime_ex",
+      "BN_is_prime_fasttest",
+      "BN_is_prime_fasttest_ex",
       "BN_priv_rand",
       "BN_priv_rand_ex",
       "BN_priv_rand_range",
@@ -637,30 +652,6 @@
       },
       {
         "declaring_header": "bn.h",
-        "module": "src/bn/blinding.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_BLINDING_convert"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/blinding.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_BLINDING_convert_ex"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/blinding.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_BLINDING_create_param"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/blinding.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_BLINDING_update"
-      },
-      {
-        "declaring_header": "bn.h",
         "module": "src/bn/gf2m.rs",
         "received_from_phase": 5,
         "symbol": "BN_GF2m_mod_solve_quad"
@@ -685,75 +676,9 @@
       },
       {
         "declaring_header": "bn.h",
-        "module": "src/bn/primes.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_X931_derive_prime_ex"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/primes.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_X931_generate_Xpq"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/primes.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_X931_generate_prime_ex"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/primes.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_check_prime"
-      },
-      {
-        "declaring_header": "bn.h",
         "module": "src/bn/rand.rs",
         "received_from_phase": 5,
         "symbol": "BN_generate_dsa_nonce"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/primes.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_generate_prime"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/primes.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_generate_prime_ex"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/primes.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_generate_prime_ex2"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/primes.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_is_prime"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/primes.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_is_prime_ex"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/primes.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_is_prime_fasttest"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/primes.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_is_prime_fasttest_ex"
       },
       {
         "declaring_header": "des.h",
@@ -969,27 +894,27 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "f7be31664fd5130c38499fd24a814fa6604ef2c59dde6e14d22a4d29860aaabe"
+      "sha256": "86f1d7ba395d81fdcad2f1da4494e819b9196d01aaeef4406f3ac1a9979f975a"
     },
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "2af4f831e668093d552f2fd7d5d59b7fe4c797fc7e2e75c0f13c0c3a16a14e94"
+      "sha256": "903fb0a0f02cdbd6ba9d02b0c727cbfb78e2d6ddf39e3a59ddf3d9be857ef471"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "81df5c0b86bba0b897beb44372ef71f828231b7953ce4df97e47787ea49b22a5"
+      "sha256": "1d92b0bcc195d8ac3ca4176476df2a7f039fe6b6d194f40756009e041871f454"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "055f3924e88f5205cec219682f2b7ce81dfdbc0ed489523045d44a7a224c5dda"
+      "sha256": "43b8129dda489f05722a4d9c7e465e577afa87bd057ac36d4f4f1069163df34a"
     },
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "db37ef39f41ef36dd00db34f1f788ff6429063ecfe09182d7228d793979ebd67"
+      "sha256": "93beeaa7707ee1713655d455fc209af131c4559ced6f0cc9ac2e31b2c94859e7"
     }
   ],
   "kind": "phase9-obligations",
