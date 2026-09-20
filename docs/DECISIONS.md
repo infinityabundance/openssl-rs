@@ -20747,3 +20747,41 @@ Padding (`rsa_none.c`/`pk1.c`/`oaep.c`/`pss.c`/`ssl.c`/`x931.c` -- not `rsa_lib.
 exist anywhere in 3.6.4**, which the staging reports rather than inventing; `ossl_rsa_dup`
 (`rsa_backend.c:467`) and `ossl_rsa_get0_libctx` (`rsa_lib.c:205`) are their nearest real
 equivalents.
+
+## D320 -- 8.4's integration plan is written, and it finds two gaps in the evidence machinery
+
+`court/rsa-object-integration-plan.md` (523 lines) is the executable plan for integrating
+`court/rsa-object.rs.txt`, in six numbered sections: the order of operations, every new crate
+symbol with its coordinate and its reuse candidate, the Phase 8/Phase 9 cycle and the minimal
+sequence that breaks it, a per-export decision between "the exact `RT-RSA` arm that observes it" and
+`OWED`, the evidence bookkeeping, and the falsification test for each new fail-closed check.
+
+Its measurement: **34 of the 36 exports can be courted, 2 are `OWED`** -- `RSA_new` and
+`RSA_new_method`, both because they read `RSA_get_default_method`. Thirty-two of the thirty-four
+need only a probe-local fabricated object whose offsets are `_Static_assert`-pinned to the layout
+court's measurement, and `RSA_flags` and `RSA_free` need no object at all. That is a much better
+answer than "slice A cannot be courted", which is what `RT-RSA`'s own header had recorded.
+
+**Two gaps in the evidence machinery, both found by writing the plan rather than by a gate.**
+
+* **Nothing guards a `BLOCKED_HANDOFFS` row's blocker once it lands -- from the other side.**
+  `forensics/prerequisites.json` has **no row at all** for `rsa_lib.c`, `RSA_new` or
+  `RSA_get_default_method`. Its only RSA row is a `units` row for `crypto/rsa/rsa_ossl.c`. And
+  `blocker_liveness.check_rows` is run over `BLOCKED_HANDOFFS` rows and over
+  `forensics/prerequisites.json`'s `deferrals` that carry a `blocked_by` -- so a row whose blocker
+  is *another stratum's export* is checked only by the ledger generator that owns it, and Phase 9's
+  row 5 stayed "blocked" through D313 landing `RAND_bytes_ex` without anything objecting. The
+  lesson is D315's from the other direction: the ledger that owns a blocked row can see its blocker
+  land, and nothing else can. This is recorded as a gap to close rather than a defect to fix
+  in passing, because closing it means deciding what a *cross-stratum* blocker's liveness means.
+* **A reuse candidate that looks right and is wrong by 24 bits.**
+  `ossl_ifc_ffc_compute_security_bits` and `src/bn/bignum.rs`'s `BN_security_bits` agree at 2048
+  bits and disagree at 4096 (**152 vs 128**), so the plan defers the substitution and requires a
+  test rather than recommending it. Had the integration simply reused the existing function -- the
+  obvious move, and the one the "prefer existing patterns" rule invites -- the crate would have
+  answered a wrong security strength for every 4096-bit FFC group.
+
+`src/rsa/mod.rs`'s `references` field must also change type from `c_uint` to an atomic, because the
+staged `RSA_free`/`RSA_up_ref` decrement and increment it and `rsa_new_intern` assigns it; the
+crate's only precedent (`src/evp/pkey.rs`'s `AtomicI32`) uses stronger orderings than the
+authority's `refcount.h` arms, which the plan records rather than silently adopting.
