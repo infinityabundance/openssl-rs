@@ -56,7 +56,7 @@ use core::ptr;
 
 use crate::asn1::a_type::{d2i_ASN1_TYPE, i2d_ASN1_TYPE};
 use crate::asn1::layout::Asn1Type;
-use crate::bn::bignum::{BN_bn2nativepad, BN_num_bits, BigNum};
+use crate::bn::bignum::{BN_bn2nativepad, BN_free, BN_num_bits, BigNum};
 use crate::evp::asymcipher::{EVP_ASYM_CIPHER_get0_provider, EvpAsymCipher};
 use crate::evp::cipher::{EVP_CIPHER_get0_name, EvpCipher};
 use crate::evp::cipher_ctx::X509Algor;
@@ -302,6 +302,16 @@ pub struct EvpPkeyCtx {
     pub(crate) peerkey: *mut EvpPkey,
     /// `void *data` — algorithm-specific, owned by whoever set it.
     pub(crate) data: *mut c_void,
+    /// `BIGNUM *rsa_pubexp` — the authority's own comment: *"Used to support taking custody of
+    /// memory in the case of a provider being used with the deprecated
+    /// `EVP_PKEY_CTX_set_rsa_keygen_pubexp()` API. This member should NOT be used for any other
+    /// purpose and should be removed when said deprecated API is excised completely."*
+    ///
+    /// It is the **last** member of the authority's structure, after the `flag_call_digest_custom`
+    /// bit-field, and it is the only field this crate had left out for a reason other than a missing
+    /// stratum: nothing wrote it until 8.4's slice E landed `EVP_PKEY_CTX_set_rsa_keygen_pubexp`,
+    /// which is its only setter and `EVP_PKEY_CTX_free`'s only reader.
+    pub(crate) rsa_pubexp: *mut BigNum,
 }
 
 impl EvpPkeyCtx {
@@ -316,12 +326,19 @@ impl EvpPkeyCtx {
     }
 
     /// `EVP_PKEY_CTX_IS_ASYM_CIPHER_OP(ctx)`.
-    fn is_asym_cipher_op(&self) -> bool {
+    ///
+    /// `pub(crate)` because `src/rsa/ctrl.rs`'s `EVP_PKEY_CTX_set0_rsa_oaep_label` and
+    /// `EVP_PKEY_CTX_get0_rsa_oaep_label` are the first exports outside this module to spell the
+    /// authority's macro — the same visibility change [`Self::is_legacy`] already carries.
+    pub(crate) fn is_asym_cipher_op(&self) -> bool {
         (self.operation & EVP_PKEY_OP_TYPE_CRYPT) != 0
     }
 
     /// `EVP_PKEY_CTX_IS_GEN_OP(ctx)`.
-    fn is_gen_op(&self) -> bool {
+    ///
+    /// `pub(crate)` for the same reason as [`Self::is_asym_cipher_op`]: three of 8.4's
+    /// `EVP_PKEY_CTX_set_rsa_keygen_*` controls are written in `src/rsa/ctl.rs` and spell it.
+    pub(crate) fn is_gen_op(&self) -> bool {
         (self.operation & EVP_PKEY_OP_TYPE_GEN) != 0
     }
 
@@ -869,8 +886,11 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_free(ctx: *mut EvpPkeyCtx) {
         EVP_PKEY_free(pkey);
         EVP_PKEY_free(peerkey);
     }
-    /* `BN_free(ctx->rsa_pubexp)` is dead here: nothing in this crate sets it, and its only setter is
-     * the deprecated `EVP_PKEY_CTX_set_rsa_keygen_pubexp`, which is Phase 8's. */
+    /* The authority's `BN_free(ctx->rsa_pubexp)`: the deprecated
+     * `EVP_PKEY_CTX_set_rsa_keygen_pubexp` hands the caller's `BIGNUM` to the context on success, so
+     * the context releases it. NULL for every context that never saw that control. */
+    // SAFETY: `rsa_pubexp` is NULL or a `BIGNUM` this context owns.
+    unsafe { BN_free((*ctx).rsa_pubexp) };
     // SAFETY: `ctx` is this object's own allocation.
     unsafe { CRYPTO_free(ctx.cast(), FILE, LINE_FREE_CTX) };
 }
@@ -4437,6 +4457,21 @@ pub(crate) const OSSL_SIGNATURE_PARAM_DIGEST: *const c_char = OSSL_PKEY_PARAM_DI
 pub(crate) const OSSL_KDF_PARAM_DIGEST: *const c_char = OSSL_ALG_PARAM_DIGEST;
 /// `OSSL_ASYM_CIPHER_PARAM_OAEP_DIGEST` = `OSSL_ALG_PARAM_DIGEST` — `include/openssl/core_names.h:142`.
 pub(crate) const OSSL_ASYM_CIPHER_PARAM_OAEP_DIGEST: *const c_char = OSSL_ALG_PARAM_DIGEST;
+/// `OSSL_ASYM_CIPHER_PARAM_OAEP_DIGEST_PROPS` — `include/openssl/core_names.h:143`. `"digest-props"`,
+/// and **not** an alias of `OSSL_PKEY_PARAM_PROPERTIES**: the OAEP digest's property query has a
+/// name of its own, which is why `EVP_PKEY_CTX_set_rsa_oaep_md_name` and
+/// `EVP_PKEY_CTX_set_rsa_mgf1_md_name` build their arrays with different keys.
+pub(crate) const OSSL_ASYM_CIPHER_PARAM_OAEP_DIGEST_PROPS: *const c_char = c"digest-props".as_ptr();
+/// `OSSL_PKEY_PARAM_MGF1_PROPERTIES` — `include/openssl/core_names.h:426`. `"mgf1-properties"`.
+pub(crate) const OSSL_PKEY_PARAM_MGF1_PROPERTIES: *const c_char = c"mgf1-properties".as_ptr();
+/// `OSSL_PKEY_PARAM_RSA_DIGEST` = `OSSL_PKEY_PARAM_DIGEST` — `include/openssl/core_names.h:455`.
+pub(crate) const OSSL_PKEY_PARAM_RSA_DIGEST: *const c_char = OSSL_PKEY_PARAM_DIGEST;
+/// `OSSL_PKEY_PARAM_RSA_DIGEST_PROPS` = `OSSL_PKEY_PARAM_PROPERTIES` =
+/// `OSSL_ALG_PARAM_PROPERTIES` — `include/openssl/core_names.h:456`. The literal is written here
+/// because `OSSL_PKEY_PARAM_PROPERTIES` is private to `src/evp/pkey.rs`; this is the crate's second
+/// reader of the `"properties"` string, and `src/provider/util.rs` keeps a third copy for the same
+/// reason.
+pub(crate) const OSSL_PKEY_PARAM_RSA_DIGEST_PROPS: *const c_char = c"properties".as_ptr();
 
 /// `OSSL_EXCHANGE_PARAM_KDF_TYPE` — `include/openssl/core_names.h:268`.
 pub(crate) const OSSL_EXCHANGE_PARAM_KDF_TYPE: *const c_char = c"kdf-type".as_ptr();
@@ -8083,9 +8118,12 @@ static EVP_PKEY_TRANSLATIONS: [XlatEntry; 41] = [
 /// route — and the authority's comment says so, which is why the test is `is_provided` and not
 /// "is there a method that could fail".
 ///
+/// `pub(crate)` because `src/rsa/ctrl.rs`'s four `int_{set,get}_rsa_md_name`-driven controls are its
+/// first callers outside this module.
+///
 /// # Safety
 /// `ctx` NULL or live; `params` NULL or a NULL-key-terminated array.
-unsafe extern "C" fn evp_pkey_ctx_set_params_strict(
+pub(crate) unsafe extern "C" fn evp_pkey_ctx_set_params_strict(
     ctx: *mut EvpPkeyCtx,
     params: *mut OsslParam,
 ) -> c_int {
@@ -8120,9 +8158,11 @@ unsafe extern "C" fn evp_pkey_ctx_set_params_strict(
 /// uses `settable_ctx_params`. That asymmetry is the provider contract's, not a mistake here: a
 /// method may be able to read a parameter it cannot write.
 ///
+/// `pub(crate)` for the same reason as its sibling above.
+///
 /// # Safety
 /// `ctx` NULL or live; `params` NULL or a NULL-key-terminated array.
-unsafe extern "C" fn evp_pkey_ctx_get_params_strict(
+pub(crate) unsafe extern "C" fn evp_pkey_ctx_get_params_strict(
     ctx: *mut EvpPkeyCtx,
     params: *mut OsslParam,
 ) -> c_int {
@@ -10716,6 +10756,7 @@ mod tests {
             pkey: ptr::null_mut(),
             peerkey: ptr::null_mut(),
             data: ptr::null_mut(),
+            rsa_pubexp: ptr::null_mut(),
         }
     }
 

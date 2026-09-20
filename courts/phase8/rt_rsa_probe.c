@@ -28,7 +28,23 @@
  * `RSA_generate_multi_prime_key` and `RSA_generate_key` -- were blocked on a `crypto/bn` unit
  * until D327, and **all three are called below too**, over both generators: the SP800-56B path
  * (2 primes, at least 2048 bits, an exponent wider than 16 bits) and `rsa_multiprime_keygen`
- * (more than two primes, or a small exponent). Nothing
+ * (more than two primes, or a small exponent).
+ *
+ * **Three of the four sections below were added by D328**, and each brings a unit that has no
+ * other court in this court's family. `rsa_sig_arms` drives `rsa_sign.c`'s and `rsa_saos.c`'s four
+ * entry points, `ossl_rsa_verify`'s recovery arm through the internal, and `rsa_pss.c`'s verifier;
+ * `rsa_chk_arms` drives `rsa_chk.c`'s two checkers and `rsa_crpt.c`'s blinding pair; and
+ * `rsa_ctl_arms` drives `rsa_lib.c`'s `RSA_pkey_ctx_ctrl` and all twenty-three
+ * `EVP_PKEY_CTX_{get,set}_rsa_*` controls. **Every one of the thirty-four is called below.**
+ * `rsa_ctl_arms` is the only one that publishes a provider -- a keymgmt named `COURT-RSA`, so a
+ * control can be asked what it decides about a context that exists -- and its comment says what
+ * that fixture can and cannot reach.
+ *
+ * The signing arms were the first arms in this court that could compare a *signature* rather than
+ * a round trip, and they do it by building the expected block out here: `RSA_X931_derive_ex` over
+ * fixed seeds makes the key a function of the probe's constants, RSASSA-PKCS1-v1_5's encoding is
+ * deterministic, and the SHA-256 `DigestInfo` prefix the arm compares against is RFC 8017 appendix
+ * B.1's own bytes rather than a call into the library. Nothing
  * here does any cryptography
  * beyond small RSA exponentiations -- each function allocates a table or an object, stores a
  * pointer in one, reads one, pads a buffer, raises a 12-bit modulus to the 17th power, or runs
@@ -104,9 +120,14 @@
  * changing a single symbol this probe links. */
 #define OPENSSL_SUPPRESS_DEPRECATED
 #include <openssl/bn.h>
+#include <openssl/core.h>
+#include <openssl/core_dispatch.h>
+#include <openssl/core_names.h>
 #include <openssl/crypto.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
+#include <openssl/params.h>
+#include <openssl/provider.h>
 #include <openssl/rsa.h>
 #include <openssl/sha.h>
 #include <stdio.h>
@@ -2164,6 +2185,801 @@ done:
     BN_CTX_free(ctx);
 }
 
+/* ------------------------------------------------------------------ slice D's remainder */
+
+/* The deterministic signing key every arm in this section uses.
+ *
+ * `RSA_X931_derive_ex` over the same fixed seeds `rsa_keygen_arms` uses makes the whole key a
+ * function of the probe's constants, and RSASSA-PKCS1-v1_5's encoding is deterministic -- unlike
+ * the randomised paddings -- so a *signature* over a fixed message is a fixed byte string. That is
+ * what lets the arms below compare `RSA_sign`'s output octet for octet against an encoding this
+ * probe builds from RFC 8017's published DigestInfo prefix, which is the check a table with one
+ * wrong byte could not survive. */
+static RSA *rt_sign_key(void)
+{
+    BIGNUM *e = NULL, *xp = NULL, *xq = NULL;
+    BIGNUM *xp1 = NULL, *xp2 = NULL, *xq1 = NULL, *xq2 = NULL;
+    BIGNUM *p1 = NULL, *p2 = NULL, *q1 = NULL, *q2 = NULL;
+    RSA *rsa = NULL;
+
+    e = rt_word(65537);
+    xp = rt_bits_top(512, 2, 12345);
+    xq = rt_bits_top(512, 2, 987654321);
+    xp1 = rt_bits_top(101, 1, 12345);
+    xp2 = rt_bits_top(101, 1, 5000011);
+    xq1 = rt_bits_top(101, 1, 777);
+    xq2 = rt_bits_top(101, 1, 9000017);
+    p1 = BN_new();
+    p2 = BN_new();
+    q1 = BN_new();
+    q2 = BN_new();
+    if (e == NULL || xp == NULL || xq == NULL || xp1 == NULL || xp2 == NULL || xq1 == NULL
+        || xq2 == NULL || p1 == NULL || p2 == NULL || q1 == NULL || q2 == NULL)
+        goto done;
+
+    rsa = RSA_new();
+    if (rsa == NULL)
+        goto done;
+    ERR_clear_error();
+    if (RSA_X931_derive_ex(rsa, p1, p2, q1, q2, xp1, xp2, xp, xq1, xq2, xq, e, NULL) != 1) {
+        RSA_free(rsa);
+        rsa = NULL;
+    }
+    ERR_clear_error();
+    /* No private operation below should be able to fail for a reason this court is not about. */
+    if (rsa != NULL)
+        RSA_set_flags(rsa, RSA_FLAG_NO_BLINDING);
+
+done:
+    BN_free(q2);
+    BN_free(q1);
+    BN_free(p2);
+    BN_free(p1);
+    BN_free(xq2);
+    BN_free(xq1);
+    BN_free(xp2);
+    BN_free(xp1);
+    BN_free(xq);
+    BN_free(xp);
+    BN_free(e);
+    return rsa;
+}
+
+/* The SHA-256 `DigestInfo` prefix, without the digest: `SEQUENCE { SEQUENCE { OID, NULL } OCTET
+ * STRING }` with `30 31 30 0d 06 09 60 86 48 01 65 03 04 02 01 05 00 04 20` as its DER. **A
+ * literal, and not a call into the library**, on purpose: it is RFC 8017 appendix B.1's published
+ * encoding, so a transcription of `rsa_sign.c`'s table that got an octet wrong is a difference this
+ * arm sees rather than one it restates. */
+static const unsigned char rt_sha256_digestinfo[19] = {
+    0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, 0x05,
+    0x00, 0x04, 0x20
+};
+
+/* Build the whole PKCS#1 v1.5 signature block out here, so the arm compares the library's
+ * signature against an encoding this probe derived: `00 01 FF... 00 || DigestInfo || digest`. */
+static void rt_expect_pkcs1(unsigned char *expect, int size, const unsigned char *prefix,
+    int prefixlen, const unsigned char *digest, int digestlen)
+{
+    int padlen = size - 3 - prefixlen - digestlen;
+
+    memset(expect, 0, (size_t)size);
+    expect[0] = 0x00;
+    expect[1] = 0x01;
+    memset(expect + 2, 0xff, (size_t)padlen);
+    expect[2 + padlen] = 0x00;
+    memcpy(expect + 3 + padlen, prefix, (size_t)prefixlen);
+    memcpy(expect + 3 + padlen + prefixlen, digest, (size_t)digestlen);
+}
+
+/* The DER-PSS encoder the verifier arms below build their blocks with; defined after them, and
+ * declared here so the two can be read in the order they run. */
+static int rt_pss_encode(unsigned char *em, int emlen, int msbits, const unsigned char *mhash,
+    int hlen, const unsigned char *salt, int slen, const EVP_MD *md, const EVP_MD *mgf1);
+
+static void rsa_sig_arms(void)
+{
+    RSA *rsa = rt_sign_key();
+    const EVP_MD *sha256 = NULL;
+    unsigned char msg[128], sig[256], sig2[256], rec[256], expect[256];
+    unsigned char hash[EVP_MAX_MD_SIZE];
+    unsigned int siglen = 0, siglen2 = 0;
+    int i, size, ret;
+
+    printf("rsa.sig.key_built=%d\n", rsa != NULL);
+    if (rsa == NULL)
+        return;
+    size = RSA_size(rsa);
+    printf("rsa.sig.size=%d\n", size);
+    sha256 = EVP_MD_fetch(NULL, "SHA256", NULL);
+    printf("rsa.sig.md_fetched=%d\n", sha256 != NULL);
+    if (sha256 == NULL)
+        goto done;
+
+    for (i = 0; i < 128; i++)
+        msg[i] = (unsigned char)(i + 1);
+
+    /* The digest the signature must carry, computed through the library's own SHA-256. */
+    ERR_clear_error();
+    printf("rsa.sig.digest_ret=%d\n", EVP_Digest(msg, 64, hash, NULL, sha256, NULL));
+    rt_expect_pkcs1(expect, size, rt_sha256_digestinfo, 19, hash, 32);
+
+    /* ---- RSA_sign / RSA_verify over the fixed key */
+
+    ERR_clear_error();
+    ret = RSA_sign(NID_sha256, msg, 64, sig, &siglen, rsa);
+    printf("rsa.sig.sign.ret=%d\n", ret);
+    printf("rsa.sig.sign.len=%u\n", siglen);
+    printf("rsa.sig.sign.len_is_size=%d\n", ret == 1 && siglen == (unsigned int)size);
+    drain("sign");
+
+    /* `RSA_NO_PADDING`'s public operation gives the padded block back, so the arm can compare it
+     * against the RFC's own encoding rather than against the crate's table. */
+    ERR_clear_error();
+    memset(rec, 0, sizeof(rec));
+    ret = RSA_public_decrypt(size, sig, rec, rsa, RSA_NO_PADDING);
+    printf("rsa.sig.recover.ret=%d\n", ret);
+    printf("rsa.sig.recover.is_expected=%d\n", ret == size && memcmp(rec, expect, (size_t)size) == 0);
+    drain("recover");
+
+    ERR_clear_error();
+    printf("rsa.sig.verify.ok=%d\n", RSA_verify(NID_sha256, msg, 64, sig, siglen, rsa));
+    drain("verify_ok");
+
+    /* A tampered signature octet. */
+    sig[7] ^= 0x01;
+    ERR_clear_error();
+    printf("rsa.sig.verify.tampered=%d\n", RSA_verify(NID_sha256, msg, 64, sig, siglen, rsa));
+    drain("verify_tampered");
+    sig[7] ^= 0x01;
+
+    /* A tampered message: the digest the signature encodes is not this message's. */
+    msg[0] ^= 0x01;
+    ERR_clear_error();
+    printf("rsa.sig.verify.msg=%d\n", RSA_verify(NID_sha256, msg, 64, sig, siglen, rsa));
+    drain("verify_msg");
+    msg[0] ^= 0x01;
+
+    /* A signature one octet short is refused **before anything is allocated**. */
+    ERR_clear_error();
+    printf("rsa.sig.verify.short=%d\n", RSA_verify(NID_sha256, msg, 64, sig, siglen - 1, rsa));
+    drain("verify_short");
+
+    /* ---- the two `encode_pkcs1` refusals, and the size refusal */
+
+    ERR_clear_error();
+    printf("rsa.sig.sign.undef=%d\n", RSA_sign(NID_undef, msg, 64, sig2, &siglen2, rsa));
+    drain("sign_undef");
+
+    /* `NID_md2 + 0x1000` is a NID with no DigestInfo table at all -- nonzero, so it reaches the
+     * table lookup rather than the `NID_undef` test above it. */
+    ERR_clear_error();
+    printf("rsa.sig.sign.unknown=%d\n", RSA_sign(NID_md2 + 0x1000, msg, 64, sig2, &siglen2, rsa));
+    drain("sign_unknown");
+
+    /* 19 + 100 + 11 is 130, one more than this key's width, so the size test refuses it. The
+     * digest length is not checked against the digest's own size, which is why 100 works. */
+    ERR_clear_error();
+    printf("rsa.sig.sign.toobig=%d\n", RSA_sign(NID_sha512, msg, 100, sig2, &siglen2, rsa));
+    drain("sign_toobig");
+
+    /* ---- `NID_md5_sha1`, which has no DigestInfo at all */
+
+    memset(msg, 0x11, sizeof(msg));
+    ERR_clear_error();
+    ret = RSA_sign(NID_md5_sha1, msg, 36, sig, &siglen, rsa);
+    printf("rsa.sig.md5sha1.ret=%d\n", ret);
+    printf("rsa.sig.md5sha1.len_is_size=%d\n", ret == 1 && siglen == (unsigned int)size);
+    drain("md5sha1_sign");
+
+    /* The block is `00 01 FF... 00` followed by the thirty-six octets verbatim. */
+    memset(expect, 0, sizeof(expect));
+    expect[0] = 0x00;
+    expect[1] = 0x01;
+    memset(expect + 2, 0xff, (size_t)(size - 3 - 36));
+    expect[size - 37] = 0x00;
+    memcpy(expect + size - 36, msg, 36);
+    memset(rec, 0, sizeof(rec));
+    ret = RSA_public_decrypt(size, sig, rec, rsa, RSA_NO_PADDING);
+    printf("rsa.sig.md5sha1.block=%d\n", ret == size && memcmp(rec, expect, (size_t)size) == 0);
+    drain("md5sha1_block");
+
+    ERR_clear_error();
+    printf("rsa.sig.md5sha1.verify=%d\n", RSA_verify(NID_md5_sha1, msg, 36, sig, siglen, rsa));
+    drain("md5sha1_verify");
+
+    /* The length is checked before any encoding, and the *verify* side checks it after the
+     * decryption, so the two refusals are different functions with different coordinates. */
+    ERR_clear_error();
+    printf("rsa.sig.md5sha1.short_sign=%d\n", RSA_sign(NID_md5_sha1, msg, 35, sig2, &siglen2, rsa));
+    drain("md5sha1_short_sign");
+    ERR_clear_error();
+    printf("rsa.sig.md5sha1.short_verify=%d\n", RSA_verify(NID_md5_sha1, msg, 35, sig, siglen, rsa));
+    drain("md5sha1_short_verify");
+
+    /* ---- `rsa_saos.c`: the ASN.1 OCTET STRING wrap */
+
+    /* The `type` argument is unused by both entry points, and the two different NIDs below are
+     * the arm that says so. */
+    ERR_clear_error();
+    ret = RSA_sign_ASN1_OCTET_STRING(NID_sha256, msg, 36, sig, &siglen, rsa);
+    printf("rsa.saos.sign.ret=%d\n", ret);
+    printf("rsa.saos.sign.len_is_size=%d\n", ret == 1 && siglen == (unsigned int)size);
+    drain("saos_sign");
+
+    /* The recovered block is `00 01 FF... 00 || 04 24 || the thirty-six octets`: `i2d`'s own DER
+     * for a 36-octet OCTET STRING. */
+    memset(expect, 0, sizeof(expect));
+    expect[0] = 0x00;
+    expect[1] = 0x01;
+    memset(expect + 2, 0xff, (size_t)(size - 3 - 2 - 36));
+    expect[size - 2 - 36 - 1] = 0x00;
+    expect[size - 2 - 36] = 0x04;
+    expect[size - 1 - 36] = 0x24;
+    memcpy(expect + size - 36, msg, 36);
+    memset(rec, 0, sizeof(rec));
+    ret = RSA_public_decrypt(size, sig, rec, rsa, RSA_NO_PADDING);
+    printf("rsa.saos.block=%d\n", ret == size && memcmp(rec, expect, (size_t)size) == 0);
+    drain("saos_block");
+
+    ERR_clear_error();
+    printf("rsa.saos.verify.ok=%d\n", RSA_verify_ASN1_OCTET_STRING(NID_sha256, msg, 36, sig, siglen, rsa));
+    drain("saos_verify_ok");
+    ERR_clear_error();
+    printf("rsa.saos.verify.other_nid=%d\n",
+        RSA_verify_ASN1_OCTET_STRING(NID_sha1, msg, 36, sig, siglen, rsa));
+    drain("saos_verify_other_nid");
+    msg[0] ^= 0x01;
+    ERR_clear_error();
+    printf("rsa.saos.verify.msg=%d\n", RSA_verify_ASN1_OCTET_STRING(NID_sha256, msg, 36, sig, siglen, rsa));
+    drain("saos_verify_msg");
+    msg[0] ^= 0x01;
+    ERR_clear_error();
+    printf("rsa.saos.verify.short=%d\n",
+        RSA_verify_ASN1_OCTET_STRING(NID_sha256, msg, 36, sig, siglen - 1, rsa));
+    drain("saos_verify_short");
+
+    /* A signature that is **not** a DER octet string: a PKCS#1 v1.5 DigestInfo signature fed to
+     * the OCTET STRING verifier, so the `d2i` fails and the answer is the decode's own error. */
+    ERR_clear_error();
+    ret = RSA_sign(NID_sha256, msg, 64, sig2, &siglen2, rsa);
+    printf("rsa.saos.not_der_sign=%d\n", ret);
+    drain("saos_not_der_sign");
+    ERR_clear_error();
+    printf("rsa.saos.not_der=%d\n",
+        RSA_verify_ASN1_OCTET_STRING(NID_sha256, msg, 36, sig2, siglen2, rsa));
+    drain("saos_not_der");
+
+    /* 2 + 118 is 120, above the 117 the width allows. */
+    ERR_clear_error();
+    printf("rsa.saos.sign.toobig=%d\n",
+        RSA_sign_ASN1_OCTET_STRING(NID_sha256, msg, 118, sig, &siglen, rsa));
+    drain("saos_sign_toobig");
+
+    /* ---- `rsa_pss.c`'s verifier, over a block this probe builds with a *fixed* salt */
+
+    {
+        unsigned char em[256], em2[256];
+        unsigned char salt[20];
+        int hlen = EVP_MD_get_size(sha256);
+
+        for (i = 0; i < 20; i++)
+            salt[i] = 0x5a;
+        ERR_clear_error();
+        printf("rsa.pssv.encode=%d\n",
+            rt_pss_encode(em, size, 7, hash, hlen, salt, 20, sha256, sha256));
+
+        ERR_clear_error();
+        printf("rsa.pssv.ok=%d\n", RSA_verify_PKCS1_PSS(rsa, hash, sha256, em, 20));
+        drain("pssv_ok");
+        ERR_clear_error();
+        printf("rsa.pssv.mgf1=%d\n", RSA_verify_PKCS1_PSS_mgf1(rsa, hash, sha256, NULL, em, 20));
+        drain("pssv_mgf1");
+        /* `-2` (AUTO) and `-1` (DIGEST) are answered from the block; `-3` (MAX) is resolved to the
+         * block's own maximum and this block does not use it. */
+        ERR_clear_error();
+        printf("rsa.pssv.auto=%d\n",
+            RSA_verify_PKCS1_PSS(rsa, hash, sha256, em, RSA_PSS_SALTLEN_AUTO));
+        drain("pssv_auto");
+        ERR_clear_error();
+        printf("rsa.pssv.digest=%d\n",
+            RSA_verify_PKCS1_PSS(rsa, hash, sha256, em, RSA_PSS_SALTLEN_DIGEST));
+        drain("pssv_digest");
+        ERR_clear_error();
+        printf("rsa.pssv.max=%d\n",
+            RSA_verify_PKCS1_PSS(rsa, hash, sha256, em, RSA_PSS_SALTLEN_MAX));
+        drain("pssv_max");
+        /* The two ``sLen`` refusals: a length that disagrees with the block (with both numbers in
+         * the message) and a length below the smallest convention. */
+        ERR_clear_error();
+        printf("rsa.pssv.slen_mismatch=%d\n", RSA_verify_PKCS1_PSS(rsa, hash, sha256, em, 19));
+        drain("pssv_slen_mismatch");
+        ERR_clear_error();
+        printf("rsa.pssv.slen_low=%d\n", RSA_verify_PKCS1_PSS(rsa, hash, sha256, em, -5));
+        drain("pssv_slen_low");
+        /* Above the block's maximum: `emLen - hLen - 2` is 94 for this key, so 95 is refused. */
+        ERR_clear_error();
+        printf("rsa.pssv.slen_high=%d\n", RSA_verify_PKCS1_PSS(rsa, hash, sha256, em, 95));
+        drain("pssv_slen_high");
+
+        /* The four perturbations, each reaching exactly one refusal site. The salt is fixed and
+         * every perturbation is a single octet xor, so both runs see the same bytes. */
+        memcpy(em2, em, (size_t)size);
+        em2[size - 1] = 0x00;
+        ERR_clear_error();
+        printf("rsa.pssv.trailer=%d\n", RSA_verify_PKCS1_PSS(rsa, hash, sha256, em2, 20));
+        drain("pssv_trailer");
+
+        memcpy(em2, em, (size_t)size);
+        em2[0] |= 0x80;
+        ERR_clear_error();
+        printf("rsa.pssv.first=%d\n", RSA_verify_PKCS1_PSS(rsa, hash, sha256, em2, 20));
+        drain("pssv_first");
+
+        memcpy(em2, em, (size_t)size);
+        em2[size - 40] ^= 0x01;
+        ERR_clear_error();
+        printf("rsa.pssv.db=%d\n", RSA_verify_PKCS1_PSS(rsa, hash, sha256, em2, 20));
+        drain("pssv_db");
+
+        /* The separator octet itself: `PS || 0x01 || salt`, so the 0x01 sits at
+         * `emLen - sLen - hLen - 2`. Clearing it leaves a `DB` whose first non-zero octet is the
+         * fixed salt `0x5a`, which is not the separator the recovery requires. */
+        memcpy(em2, em, (size_t)size);
+        em2[size - 20 - 32 - 2] = 0x00;
+        ERR_clear_error();
+        printf("rsa.pssv.separator=%d\n", RSA_verify_PKCS1_PSS(rsa, hash, sha256, em2, 20));
+        drain("pssv_separator");
+
+        /* A block whose mask was generated with a **different** digest: the `_mgf1` form with the
+         * mask's digest named agrees, and the `_mgf1`-less wrapper -- which substitutes `Hash` for a
+         * NULL `mgf1Hash` -- does not. */
+        {
+            const EVP_MD *sha1 = EVP_MD_fetch(NULL, "SHA1", NULL);
+            printf("rsa.pssv.sha1_fetched=%d\n", sha1 != NULL);
+            if (sha1 != NULL) {
+                ERR_clear_error();
+                printf("rsa.pssv.mgf1_encode=%d\n",
+                    rt_pss_encode(em2, size, 7, hash, hlen, salt, 20, sha256, sha1));
+                ERR_clear_error();
+                printf("rsa.pssv.mgf1_named=%d\n",
+                    RSA_verify_PKCS1_PSS_mgf1(rsa, hash, sha256, sha1, em2, 20));
+                drain("pssv_mgf1_named");
+                ERR_clear_error();
+                printf("rsa.pssv.mgf1_null=%d\n",
+                    RSA_verify_PKCS1_PSS_mgf1(rsa, hash, sha256, NULL, em2, 20));
+                drain("pssv_mgf1_null");
+                EVP_MD_free((EVP_MD *)sha1);
+            }
+        }
+    }
+
+done:
+    EVP_MD_free((EVP_MD *)sha256);
+    RSA_free(rsa);
+}
+
+/* RFC 8017 section 9.1.1's EMSA-PSS encoding, built out here with a **fixed** salt so that the
+ * verifier arms above compare a block both runs hold identically. `H = Hash(0x00 * 8 || mHash ||
+ * salt)`, `DB = PS || 0x01 || salt`, `maskedDB = DB ^ MGF1(H)` and `EM = maskedDB || H || 0xbc`.
+ * `msbits` is the verifier's own leading-bits count; a zero one would mean EM starts with a spare
+ * octet, and this court's modulus has seven, so the caller passes it and the `base` offset is 0. */
+static int rt_pss_encode(unsigned char *em, int emlen, int msbits, const unsigned char *mhash,
+    int hlen, const unsigned char *salt, int slen, const EVP_MD *md, const EVP_MD *mgf1)
+{
+    unsigned char buf[8 + EVP_MAX_MD_SIZE + 256];
+    unsigned char db[256];
+    int masked_dblen = emlen - hlen - 1;
+    int i;
+
+    if (masked_dblen <= 0 || masked_dblen > (int)sizeof(db) || slen < 0
+        || slen > masked_dblen - 1)
+        return 0;
+    if (8 + hlen + slen > (int)sizeof(buf))
+        return 0;
+
+    memset(buf, 0, 8);
+    memcpy(buf + 8, mhash, (size_t)hlen);
+    if (slen > 0)
+        memcpy(buf + 8 + hlen, salt, (size_t)slen);
+    /* H, written into EM where the verifier will look for it. */
+    if (EVP_Digest(buf, (size_t)(8 + hlen + slen), em + masked_dblen, NULL, md, NULL) != 1)
+        return 0;
+
+    memset(db, 0, (size_t)masked_dblen);
+    db[masked_dblen - slen - 1] = 0x01;
+    if (slen > 0)
+        memcpy(db + masked_dblen - slen, salt, (size_t)slen);
+    if (PKCS1_MGF1(em, masked_dblen, em + masked_dblen, hlen, mgf1) != 0)
+        return 0;
+    for (i = 0; i < masked_dblen; i++)
+        em[i] ^= db[i];
+    if (msbits)
+        em[0] &= (unsigned char)(0xFF >> (8 - msbits));
+    em[emlen - 1] = 0xbc;
+    return 1;
+}
+
+/* ------------------------------------------------------------------ slice G */
+
+/* `RSA_check_key`/`_ex` and the two blinding flag writers.
+ *
+ * The checker's arms are **the answers, not the reasons**, and both a good and a broken key are
+ * driven: a key whose `n` is not `p*q` is the deliberate breakage the whole function exists to
+ * find, and a key with an even exponent is the second, independent one. Every refusal's error
+ * coordinate is drained. `RSA_blinding_on`/`_off` are two flag writes, so the observable is
+ * `RSA_test_flags`'s masked word -- **the object's flags**, where `RSA_flags` reads the method's. */
+static void rsa_chk_arms(void)
+{
+    RSA *good = rt_sign_key();
+    RSA *broken = NULL, *even_e = NULL, *p_only = NULL, *badcrt = NULL;
+    BIGNUM *n = NULL, *e = NULL, *d = NULL, *p = NULL, *q = NULL;
+    BIGNUM *dmp1 = NULL, *dmq1 = NULL, *iqmp = NULL, *two = NULL, *eodd = NULL;
+    const BIGNUM *kp = NULL, *kq = NULL, *kn = NULL;
+    const BIGNUM *kdmp1 = NULL, *kdmq1 = NULL, *kiqmp = NULL;
+    BN_CTX *ctx = NULL;
+    int flags;
+
+    printf("rsa.chk.key_built=%d\n", good != NULL);
+    ctx = BN_CTX_new();
+    two = rt_word(2);
+    eodd = rt_word(65537);
+    printf("rsa.chk.scratch=%d\n", ctx != NULL && two != NULL && eodd != NULL);
+    if (good == NULL || ctx == NULL || two == NULL || eodd == NULL)
+        goto done;
+
+    /* ---- the good key: the one the X9.31 derivation built, unmodified */
+    ERR_clear_error();
+    printf("rsa.chk.good=%d\n", RSA_check_key(good));
+    drain("chk_good");
+    ERR_clear_error();
+    printf("rsa.chk.good_ex=%d\n", RSA_check_key_ex(good, NULL));
+    drain("chk_good_ex");
+
+    /* ---- the blinding pair, on an object whose flags are known */
+    flags = RSA_test_flags(good, RSA_FLAG_BLINDING | RSA_FLAG_NO_BLINDING);
+    printf("rsa.chk.blinding.before=%d\n", flags);
+    RSA_blinding_on(good, NULL);
+    flags = RSA_test_flags(good, RSA_FLAG_BLINDING | RSA_FLAG_NO_BLINDING);
+    printf("rsa.chk.blinding.on=%d\n", flags);
+    RSA_blinding_on(good, ctx);
+    flags = RSA_test_flags(good, RSA_FLAG_BLINDING | RSA_FLAG_NO_BLINDING);
+    printf("rsa.chk.blinding.on_again=%d\n", flags);
+    RSA_blinding_off(good);
+    flags = RSA_test_flags(good, RSA_FLAG_BLINDING | RSA_FLAG_NO_BLINDING);
+    printf("rsa.chk.blinding.off=%d\n", flags);
+    RSA_blinding_off(good);
+    flags = RSA_test_flags(good, RSA_FLAG_BLINDING | RSA_FLAG_NO_BLINDING);
+    printf("rsa.chk.blinding.off_again=%d\n", flags);
+    /* And `RSA_flags` on the same object, which reads the *method's* word and does not move. */
+    printf("rsa.chk.blinding.method_flags=%d\n", RSA_flags(good));
+
+    RSA_get0_key(good, &kn, NULL, NULL);
+    RSA_get0_factors(good, &kp, &kq);
+    RSA_get0_crt_params(good, &kdmp1, &kdmq1, &kiqmp);
+    printf("rsa.chk.parts_read=%d\n",
+        kn != NULL && kp != NULL && kq != NULL && kdmp1 != NULL && kdmq1 != NULL && kiqmp != NULL);
+    if (kn == NULL || kp == NULL || kq == NULL || kdmp1 == NULL || kdmq1 == NULL || kiqmp == NULL)
+        goto done;
+
+    /* ---- four broken keys, each one breakage rather than a combination */
+    broken = RSA_new();
+    even_e = RSA_new();
+    p_only = RSA_new();
+    badcrt = RSA_new();
+    printf("rsa.chk.objects=%d\n",
+        broken != NULL && even_e != NULL && p_only != NULL && badcrt != NULL);
+    if (broken == NULL || even_e == NULL || p_only == NULL || badcrt == NULL)
+        goto done;
+
+    /* `n = p*q + 1`. Every component is a fresh copy, because `RSA_set0_*` takes ownership. */
+    n = BN_dup(kn);
+    e = BN_dup(eodd);
+    d = BN_dup(kdmp1);
+    p = BN_dup(kp);
+    q = BN_dup(kq);
+    dmp1 = BN_dup(kdmp1);
+    dmq1 = BN_dup(kdmq1);
+    iqmp = BN_dup(kiqmp);
+    printf("rsa.chk.copies=%d\n",
+        n != NULL && e != NULL && d != NULL && p != NULL && q != NULL && dmp1 != NULL
+            && dmq1 != NULL && iqmp != NULL);
+    if (n == NULL || e == NULL || d == NULL || p == NULL || q == NULL || dmp1 == NULL
+        || dmq1 == NULL || iqmp == NULL)
+        goto done;
+    BN_add_word(n, 1);
+
+    /* `n != p*q`, with everything else in place: the one check that needs the multiplication.
+     * `n` itself is handed over, so the probe's own pointer is cleared and `broken` owns it. */
+    ERR_clear_error();
+    printf("rsa.chk.broken.set=%d\n",
+        RSA_set0_key(broken, n, BN_dup(eodd), BN_dup(d)) == 1
+            && RSA_set0_factors(broken, BN_dup(p), BN_dup(q)) == 1
+            && RSA_set0_crt_params(broken, BN_dup(dmp1), BN_dup(dmq1), BN_dup(iqmp)) == 1);
+    n = NULL;
+    ERR_clear_error();
+    printf("rsa.chk.broken=%d\n", RSA_check_key(broken));
+    drain("chk_broken_n");
+
+    /* An even public exponent, which `RSA_R_BAD_E_VALUE` refuses before the primality work. */
+    ERR_clear_error();
+    printf("rsa.chk.even_e.set=%d\n",
+        RSA_set0_key(even_e, BN_dup(kn), BN_dup(two), BN_dup(d)) == 1  /* the even one */
+            && RSA_set0_factors(even_e, BN_dup(p), BN_dup(q)) == 1);
+    ERR_clear_error();
+    printf("rsa.chk.even_e=%d\n", RSA_check_key(even_e));
+    drain("chk_even_e");
+
+    /* No `d` at all: the `VALUE_MISSING` guard, which needs none of the arithmetic. */
+    ERR_clear_error();
+    printf("rsa.chk.p_only.set=%d\n",
+        RSA_set0_key(p_only, BN_dup(kn), BN_dup(eodd), NULL) == 1
+            && RSA_set0_factors(p_only, BN_dup(p), BN_dup(q)) == 1);
+    ERR_clear_error();
+    printf("rsa.chk.p_only=%d\n", RSA_check_key(p_only));
+    drain("chk_missing_d");
+
+    /* A CRT parameter that is not `d mod (p-1)`: the congruent test, which is reached only when
+     * all three CRT members are present. */
+    ERR_clear_error();
+    printf("rsa.chk.badcrt.set=%d\n",
+        RSA_set0_key(badcrt, BN_dup(kn), BN_dup(eodd), BN_dup(d)) == 1
+            && RSA_set0_factors(badcrt, BN_dup(p), BN_dup(q)) == 1
+            && RSA_set0_crt_params(badcrt, BN_dup(dmq1), BN_dup(dmq1), BN_dup(iqmp)) == 1);
+    ERR_clear_error();
+    printf("rsa.chk.badcrt=%d\n", RSA_check_key(badcrt));
+    drain("chk_bad_dmp1");
+
+done:
+    BN_free(iqmp);
+    BN_free(dmq1);
+    BN_free(dmp1);
+    BN_free(eodd);
+    BN_free(two);
+    BN_free(q);
+    BN_free(p);
+    BN_free(d);
+    BN_free(e);
+    BN_free(n);
+    BN_CTX_free(ctx);
+    RSA_free(badcrt);
+    RSA_free(p_only);
+    RSA_free(even_e);
+    RSA_free(broken);
+    RSA_free(good);
+}
+
+/* ------------------------------------------------------------------ slice E */
+
+/* The `EVP_PKEY_CTX` controls: `RSA_pkey_ctx_ctrl` and the twenty-three `EVP_PKEY_CTX_{get,set}_rsa_*`
+ * entry points.
+ *
+ * **This is the one court in `crypto/rsa` that publishes a provider**, and the reason is that a
+ * control's body is a *decision about a context*: nineteen of the twenty-three answer differently
+ * for a NULL context, a context with no operation, and a context whose key type is not RSA, and
+ * three of them cannot be handed a NULL context at all. The keymgmt below is the smallest the
+ * structural check accepts -- the same shape `RT-EVP-PKEY-OPS` publishes -- and it is named
+ * `COURT-RSA` rather than `RSA` so that it cannot shadow the default provider's own row in either
+ * binary's method store.
+ *
+ * **What no arm here can reach, named rather than implied.** A control's *successful* path is the
+ * ctrl-to-parameter translation, which needs a context whose key type is RSA and whose operation is
+ * initialised -- and the crate publishes no RSA `EVP_KEYMGMT` at all (8.4's provider half is not
+ * landed), so `EVP_PKEY_CTX_new_from_name(NULL, "RSA", NULL)` answers NULL on the candidate and a
+ * context on the authority. An arm that compared that would be a difference about the missing
+ * provider row rather than about this file, so it is not written. What *is* written is every
+ * control's refusal structure, driven twice: once against a NULL context and once against a live
+ * one, so which of the three refusals each control takes is compared rather than assumed.
+ *
+ * Three controls dereference `ctx` before any test -- `set_rsa_oaep_md` and `get_rsa_oaep_md`
+ * through `EVP_PKEY_CTX_is_a`, and `set1_rsa_keygen_pubexp` through `evp_pkey_ctx_is_legacy` -- so a
+ * NULL context is a **fault** on both sides there and only the live arm exists for them. */
+
+static int ct_marker;
+
+static void *ct_new(void *provctx) { (void) provctx; return malloc(1); }
+static void ct_free(void *keydata) { free(keydata); }
+static int ct_has(const void *keydata, int selection) { (void) keydata; (void) selection; return 1; }
+static int ct_get_params(void *keydata, OSSL_PARAM params[]) { (void) keydata; (void) params; return 1; }
+static const OSSL_PARAM *ct_gettable_params(void *provctx) { (void) provctx; return NULL; }
+static int ct_set_params(void *keydata, const OSSL_PARAM params[]) { (void) keydata; (void) params; return 1; }
+static const OSSL_PARAM *ct_settable_params(void *provctx) { (void) provctx; return NULL; }
+static void *ct_gen_init(void *provctx, int selection, const OSSL_PARAM params[])
+{ (void) provctx; (void) selection; (void) params; return malloc(1); }
+static void ct_gen_cleanup(void *genctx) { free(genctx); }
+static void *ct_gen(void *genctx, OSSL_CALLBACK *cb, void *cbarg)
+{ (void) genctx; (void) cb; (void) cbarg; return malloc(1); }
+static int ct_gen_set_template(void *genctx, void *templ) { (void) genctx; (void) templ; return 1; }
+static int ct_gen_set_params(void *genctx, const OSSL_PARAM params[]) { (void) genctx; (void) params; return 1; }
+static const OSSL_PARAM *ct_gen_settable_params(void *genctx, void *provctx)
+{ (void) genctx; (void) provctx; return NULL; }
+static int ct_gen_get_params(void *genctx, OSSL_PARAM params[]) { (void) genctx; (void) params; return 1; }
+static const OSSL_PARAM *ct_gen_gettable_params(void *genctx, void *provctx)
+{ (void) genctx; (void) provctx; return NULL; }
+static void *ct_load(const void *reference, size_t reference_sz)
+{ (void) reference; (void) reference_sz; return malloc(1); }
+static const char *ct_query_operation_name(int operation_id) { (void) operation_id; return NULL; }
+static void *ct_import(void *keydata, int selection, const OSSL_PARAM params[])
+{ (void) keydata; (void) selection; (void) params; return malloc(1); }
+static const OSSL_PARAM *ct_import_types(int selection) { (void) selection; return NULL; }
+static int ct_export(void *keydata, int selection, OSSL_CALLBACK *cb, void *cbarg)
+{ (void) keydata; (void) selection; (void) cb; (void) cbarg; return 1; }
+static const OSSL_PARAM *ct_export_types(int selection) { (void) selection; return NULL; }
+static void *ct_dup(const void *keydata, int selection) { (void) keydata; (void) selection; return malloc(1); }
+static int ct_validate(const void *keydata, int selection, int checktype)
+{ (void) keydata; (void) selection; (void) checktype; return 1; }
+static int ct_match(const void *a, const void *b, int selection)
+{ (void) a; (void) b; (void) selection; return 1; }
+
+static const OSSL_DISPATCH ct_fns[] = {
+    { OSSL_FUNC_KEYMGMT_NEW, (void (*)(void)) ct_new },
+    { OSSL_FUNC_KEYMGMT_FREE, (void (*)(void)) ct_free },
+    { OSSL_FUNC_KEYMGMT_HAS, (void (*)(void)) ct_has },
+    { OSSL_FUNC_KEYMGMT_GET_PARAMS, (void (*)(void)) ct_get_params },
+    { OSSL_FUNC_KEYMGMT_GETTABLE_PARAMS, (void (*)(void)) ct_gettable_params },
+    { OSSL_FUNC_KEYMGMT_SET_PARAMS, (void (*)(void)) ct_set_params },
+    { OSSL_FUNC_KEYMGMT_SETTABLE_PARAMS, (void (*)(void)) ct_settable_params },
+    { OSSL_FUNC_KEYMGMT_GEN_INIT, (void (*)(void)) ct_gen_init },
+    { OSSL_FUNC_KEYMGMT_GEN_SET_TEMPLATE, (void (*)(void)) ct_gen_set_template },
+    { OSSL_FUNC_KEYMGMT_GEN_SET_PARAMS, (void (*)(void)) ct_gen_set_params },
+    { OSSL_FUNC_KEYMGMT_GEN_SETTABLE_PARAMS, (void (*)(void)) ct_gen_settable_params },
+    { OSSL_FUNC_KEYMGMT_GEN_GET_PARAMS, (void (*)(void)) ct_gen_get_params },
+    { OSSL_FUNC_KEYMGMT_GEN_GETTABLE_PARAMS, (void (*)(void)) ct_gen_gettable_params },
+    { OSSL_FUNC_KEYMGMT_GEN, (void (*)(void)) ct_gen },
+    { OSSL_FUNC_KEYMGMT_GEN_CLEANUP, (void (*)(void)) ct_gen_cleanup },
+    { OSSL_FUNC_KEYMGMT_LOAD, (void (*)(void)) ct_load },
+    { OSSL_FUNC_KEYMGMT_QUERY_OPERATION_NAME, (void (*)(void)) ct_query_operation_name },
+    { OSSL_FUNC_KEYMGMT_IMPORT, (void (*)(void)) ct_import },
+    { OSSL_FUNC_KEYMGMT_IMPORT_TYPES, (void (*)(void)) ct_import_types },
+    { OSSL_FUNC_KEYMGMT_EXPORT, (void (*)(void)) ct_export },
+    { OSSL_FUNC_KEYMGMT_EXPORT_TYPES, (void (*)(void)) ct_export_types },
+    { OSSL_FUNC_KEYMGMT_DUP, (void (*)(void)) ct_dup },
+    { OSSL_FUNC_KEYMGMT_VALIDATE, (void (*)(void)) ct_validate },
+    { OSSL_FUNC_KEYMGMT_MATCH, (void (*)(void)) ct_match },
+    { 0, NULL }
+};
+
+static int ct_teardown(void *provctx) { (void) provctx; return 1; }
+
+static const OSSL_ALGORITHM *ct_query(void *provctx, int operation_id, int *no_cache)
+{
+    static const OSSL_ALGORITHM km[] = {
+        { "COURT-RSA:court-rsa", "provider=court-rsa", ct_fns, "the probe's keymgmt" },
+        { NULL, NULL, NULL, NULL }
+    };
+
+    (void) provctx;
+    *no_cache = 0;
+    if (operation_id == OSSL_OP_KEYMGMT)
+        return km;
+    return NULL;
+}
+
+static const OSSL_DISPATCH ct_dispatch[] = {
+    { OSSL_FUNC_PROVIDER_QUERY_OPERATION, (void (*)(void)) ct_query },
+    { OSSL_FUNC_PROVIDER_TEARDOWN, (void (*)(void)) ct_teardown },
+    { 0, NULL }
+};
+
+static int ct_init(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in,
+    const OSSL_DISPATCH **out, void **provctx)
+{
+    (void) handle;
+    (void) in;
+    *out = ct_dispatch;
+    *provctx = &ct_marker;
+    return 1;
+}
+
+static void rsa_ctl_arms(void)
+{
+    OSSL_PROVIDER *prov;
+    EVP_PKEY_CTX *null_ctx = NULL;
+    EVP_PKEY_CTX *ctx = NULL;
+    const EVP_MD *sha256 = EVP_MD_fetch(NULL, "SHA256", NULL);
+    BIGNUM *pubexp = NULL;
+    unsigned char label[4];
+    unsigned char *out = NULL;
+    char name[64];
+    int pad = 0, saltlen = 0;
+
+    memset(label, 0x5a, sizeof(label));
+    memset(name, 0, sizeof(name));
+
+    printf("rsa.ctl.md_fetched=%d\n", sha256 != NULL);
+
+    /* ---- the NULL-context refusals, and the three that would fault are not called */
+    ERR_clear_error();
+    printf("rsa.ctl.null.padding=%d\n", EVP_PKEY_CTX_set_rsa_padding(null_ctx, 1));
+    printf("rsa.ctl.null.get_padding=%d\n", EVP_PKEY_CTX_get_rsa_padding(null_ctx, &pad));
+    printf("rsa.ctl.null.pss_kg_md=%d\n", EVP_PKEY_CTX_set_rsa_pss_keygen_md(null_ctx, sha256));
+    printf("rsa.ctl.null.pss_kg_md_name=%d\n",
+        EVP_PKEY_CTX_set_rsa_pss_keygen_md_name(null_ctx, "SHA256", NULL));
+    printf("rsa.ctl.null.oaep_md_name=%d\n",
+        EVP_PKEY_CTX_set_rsa_oaep_md_name(null_ctx, "SHA256", NULL));
+    printf("rsa.ctl.null.get_oaep_md_name=%d\n",
+        EVP_PKEY_CTX_get_rsa_oaep_md_name(null_ctx, name, sizeof(name)));
+    printf("rsa.ctl.null.mgf1_md=%d\n", EVP_PKEY_CTX_set_rsa_mgf1_md(null_ctx, sha256));
+    printf("rsa.ctl.null.mgf1_md_name=%d\n",
+        EVP_PKEY_CTX_set_rsa_mgf1_md_name(null_ctx, "SHA256", NULL));
+    printf("rsa.ctl.null.get_mgf1_md_name=%d\n",
+        EVP_PKEY_CTX_get_rsa_mgf1_md_name(null_ctx, name, sizeof(name)));
+    printf("rsa.ctl.null.pss_kg_mgf1_md=%d\n", EVP_PKEY_CTX_set_rsa_pss_keygen_mgf1_md(null_ctx, sha256));
+    printf("rsa.ctl.null.pss_kg_mgf1_md_name=%d\n",
+        EVP_PKEY_CTX_set_rsa_pss_keygen_mgf1_md_name(null_ctx, "SHA256"));
+    printf("rsa.ctl.null.get_mgf1_md=%d\n", EVP_PKEY_CTX_get_rsa_mgf1_md(null_ctx, NULL));
+    printf("rsa.ctl.null.set0_label=%d\n", EVP_PKEY_CTX_set0_rsa_oaep_label(null_ctx, NULL, 0));
+    printf("rsa.ctl.null.get0_label=%d\n", EVP_PKEY_CTX_get0_rsa_oaep_label(null_ctx, &out));
+    printf("rsa.ctl.null.pss_saltlen=%d\n", EVP_PKEY_CTX_set_rsa_pss_saltlen(null_ctx, 20));
+    printf("rsa.ctl.null.get_pss_saltlen=%d\n", EVP_PKEY_CTX_get_rsa_pss_saltlen(null_ctx, &saltlen));
+    printf("rsa.ctl.null.pss_kg_saltlen=%d\n", EVP_PKEY_CTX_set_rsa_pss_keygen_saltlen(null_ctx, 20));
+    printf("rsa.ctl.null.kg_bits=%d\n", EVP_PKEY_CTX_set_rsa_keygen_bits(null_ctx, 2048));
+    printf("rsa.ctl.null.kg_pubexp=%d\n", EVP_PKEY_CTX_set_rsa_keygen_pubexp(null_ctx, NULL));
+    printf("rsa.ctl.null.kg_primes=%d\n", EVP_PKEY_CTX_set_rsa_keygen_primes(null_ctx, 2));
+    printf("rsa.ctl.null.pkey_ctx_ctrl=%d\n",
+        RSA_pkey_ctx_ctrl(null_ctx, EVP_PKEY_OP_TYPE_SIG, 1, 0, NULL));
+    drain("ctl_null");
+    /* **The three NULL calls this probe deliberately does not make** are the ones whose first act is
+     * a dereference: `set_rsa_oaep_md` and `get_rsa_oaep_md` through `EVP_PKEY_CTX_is_a`, and
+     * `set1_rsa_keygen_pubexp` through `evp_pkey_ctx_is_legacy`. Their live arms are below. */
+    printf("rsa.ctl.null.faulting_skipped=%d\n", 3);
+
+    /* ---- the live-context arms, over this probe's own keymgmt */
+    printf("rsa.ctl.provider.add=%d\n", OSSL_PROVIDER_add_builtin(NULL, "court-rsa", ct_init));
+    prov = OSSL_PROVIDER_load(NULL, "court-rsa");
+    printf("rsa.ctl.provider.load=%d\n", prov != NULL);
+    if (prov == NULL)
+        return;
+
+    ERR_clear_error();
+    ctx = EVP_PKEY_CTX_new_from_name(NULL, "COURT-RSA", NULL);
+    printf("rsa.ctl.ctx=%d\n", ctx != NULL);
+    drain("ctl_ctx_new");
+    if (ctx == NULL)
+        return;
+    printf("rsa.ctl.ctx.is_a_rsa=%d\n", EVP_PKEY_CTX_is_a(ctx, "RSA"));
+    printf("rsa.ctl.ctx.is_a_self=%d\n", EVP_PKEY_CTX_is_a(ctx, "COURT-RSA"));
+    printf("rsa.ctl.ctx.operation=%d\n", EVP_PKEY_CTX_get_operation(ctx));
+
+    pubexp = rt_word(65537);
+
+    ERR_clear_error();
+    printf("rsa.ctl.live.padding=%d\n", EVP_PKEY_CTX_set_rsa_padding(ctx, 1));
+    printf("rsa.ctl.live.get_padding=%d\n", EVP_PKEY_CTX_get_rsa_padding(ctx, &pad));
+    printf("rsa.ctl.live.pss_kg_md=%d\n", EVP_PKEY_CTX_set_rsa_pss_keygen_md(ctx, sha256));
+    printf("rsa.ctl.live.pss_kg_md_name=%d\n", EVP_PKEY_CTX_set_rsa_pss_keygen_md_name(ctx, "SHA256", NULL));
+    printf("rsa.ctl.live.oaep_md=%d\n", EVP_PKEY_CTX_set_rsa_oaep_md(ctx, sha256));
+    printf("rsa.ctl.live.oaep_md_name=%d\n", EVP_PKEY_CTX_set_rsa_oaep_md_name(ctx, "SHA256", NULL));
+    printf("rsa.ctl.live.get_oaep_md_name=%d\n", EVP_PKEY_CTX_get_rsa_oaep_md_name(ctx, name, sizeof(name)));
+    printf("rsa.ctl.live.get_oaep_md=%d\n", EVP_PKEY_CTX_get_rsa_oaep_md(ctx, NULL));
+    printf("rsa.ctl.live.mgf1_md=%d\n", EVP_PKEY_CTX_set_rsa_mgf1_md(ctx, sha256));
+    printf("rsa.ctl.live.mgf1_md_name=%d\n", EVP_PKEY_CTX_set_rsa_mgf1_md_name(ctx, "SHA256", NULL));
+    printf("rsa.ctl.live.get_mgf1_md_name=%d\n", EVP_PKEY_CTX_get_rsa_mgf1_md_name(ctx, name, sizeof(name)));
+    printf("rsa.ctl.live.pss_kg_mgf1_md=%d\n", EVP_PKEY_CTX_set_rsa_pss_keygen_mgf1_md(ctx, sha256));
+    printf("rsa.ctl.live.pss_kg_mgf1_md_name=%d\n", EVP_PKEY_CTX_set_rsa_pss_keygen_mgf1_md_name(ctx, "SHA256"));
+    printf("rsa.ctl.live.get_mgf1_md=%d\n", EVP_PKEY_CTX_get_rsa_mgf1_md(ctx, NULL));
+    printf("rsa.ctl.live.set0_label=%d\n", EVP_PKEY_CTX_set0_rsa_oaep_label(ctx, label, 4));
+    printf("rsa.ctl.live.get0_label=%d\n", EVP_PKEY_CTX_get0_rsa_oaep_label(ctx, &out));
+    printf("rsa.ctl.live.pss_saltlen=%d\n", EVP_PKEY_CTX_set_rsa_pss_saltlen(ctx, 20));
+    printf("rsa.ctl.live.get_pss_saltlen=%d\n", EVP_PKEY_CTX_get_rsa_pss_saltlen(ctx, &saltlen));
+    printf("rsa.ctl.live.pss_kg_saltlen=%d\n", EVP_PKEY_CTX_set_rsa_pss_keygen_saltlen(ctx, 20));
+    printf("rsa.ctl.live.kg_bits=%d\n", EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, 2048));
+    printf("rsa.ctl.live.kg_pubexp=%d\n", EVP_PKEY_CTX_set_rsa_keygen_pubexp(ctx, pubexp));
+    printf("rsa.ctl.live.set1_kg_pubexp=%d\n", EVP_PKEY_CTX_set1_rsa_keygen_pubexp(ctx, pubexp));
+    printf("rsa.ctl.live.kg_primes=%d\n", EVP_PKEY_CTX_set_rsa_keygen_primes(ctx, 2));
+    printf("rsa.ctl.live.pkey_ctx_ctrl=%d\n",
+        RSA_pkey_ctx_ctrl(ctx, -1, EVP_PKEY_CTRL_RSA_PADDING, 1, NULL));
+    drain("ctl_live");
+
+    /* The context's own state after all of that: a refused control must not have moved it. */
+    printf("rsa.ctl.live.operation_after=%d\n", EVP_PKEY_CTX_get_operation(ctx));
+    printf("rsa.ctl.live.pkey_null=%d\n", EVP_PKEY_CTX_get0_pkey(ctx) == NULL);
+
+    BN_free(pubexp);
+    EVP_PKEY_CTX_free(ctx);
+    OSSL_PROVIDER_unload(prov);
+    EVP_MD_free((EVP_MD *)sha256);
+}
+
 int main(void)
 {
     RSA_METHOD *m = NULL;
@@ -2603,6 +3419,17 @@ int main(void)
     /* Slice E's other half: `rsa_gen.c`'s dispatchers and `rsa_depr.c`'s constructor, over both
      * generators -- the SP800-56B path and the multi-prime path. */
     rsa_generate_arms();
+
+    /* Slice D's remainder: the two signing entry points, the ASN.1 OCTET STRING pair and the PSS
+     * verifier, over a deterministic key both binaries derive from the same seeds. */
+    rsa_sig_arms();
+
+    /* Slice G: the two checkers and the blinding flag pair. */
+    rsa_chk_arms();
+
+    /* Slice E's controls, over a NULL context and over one this probe's own keymgmt backs. It runs
+     * last because it loads a provider, and the arms above are about the library's own tables. */
+    rsa_ctl_arms();
 
     /* ---------------------------------------------------------------- release */
 

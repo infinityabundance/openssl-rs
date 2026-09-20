@@ -21470,3 +21470,154 @@ functions no 8.4 body reaches (`ossl_rsa_check_crt_components`, `ossl_rsa_check_
 second reader of `ossl_bn_inv_sqrt_2` and is not needed to generate a key. The `#ifdef
 FIPS_MODULE` ACVP arms. And `RSA_check_key`, `RSA_sign` and `RSA_blinding_on` remain 8.4's open
 work, the three names the anchored clause still lists.
+
+## D328 -- 8.4's signing entry points, its key checker and its whole `EVP_PKEY_CTX` control surface land, and a wrong reason code goes with them
+
+The slices `docs/PHASE-8-SUBPHASES.md` records as D, E and G, as far as they are landable: **thirty-four
+exports**, and two names that are not. Nothing is stubbed and nothing is deferred to another
+stratum: the ledger's `deferred` list is unchanged at 7 and every one of the thirty-four leaves
+`open`.
+
+**What landed, and the authority unit each module answers for.**
+
+| module | authority unit | what is in it |
+| --- | --- | --- |
+| `src/rsa/sign.rs` (new) | `crypto/rsa/rsa_sign.c`, dominant, plus `rsa_saos.c` | `RSA_sign`, `RSA_verify`, the internals `ossl_rsa_digestinfo_encoding` and `ossl_rsa_verify`, the statics `encode_pkcs1` and `digest_sz_from_nid`, and the two `rsa_saos.c` exports `RSA_sign_ASN1_OCTET_STRING`/`RSA_verify_ASN1_OCTET_STRING` |
+| `src/rsa/mod.rs` (extended) | `crypto/rsa/rsa_pss.c` and `crypto/rsa/rsa_chk.c` | `ossl_rsa_verify_PKCS1_PSS_mgf1`, `RSA_verify_PKCS1_PSS`, `RSA_verify_PKCS1_PSS_mgf1`; `rsa_validate_keypair_multiprime`, `RSA_check_key_ex`, `RSA_check_key` |
+| `src/rsa/object.rs` (extended) | `crypto/rsa/rsa_crpt.c` | `RSA_blinding_off`, `RSA_blinding_on` |
+| `src/rsa/ctrl.rs` (new) | `crypto/rsa/rsa_lib.c:741-1383` | `RSA_pkey_ctx_ctrl`, the two `int_{set,get}_rsa_md_name` statics, and the twenty-three `EVP_PKEY_CTX_{get,set}_rsa_*` controls |
+
+**`rsa_chk.c` deliberately does not get a module of its own, and `rsa_saos.c` is merged for a
+reason that is not symmetry.** `rsa_chk.c` also defines `ossl_rsa_validate_public`,
+`ossl_rsa_validate_private` and `ossl_rsa_validate_pairwise`, and in this profile the first two
+are one-line calls to `ossl_rsa_sp800_56b_check_public`/`_private` — which D327 deliberately did
+not transcribe, because nothing on the generate path reaches them. An authority unit with a crate
+module makes every internal its text calls countable to `forensics/tools/prerequisite_gate.py`, so
+a module for `rsa_chk.c` would have demanded two functions the same decision calls dead code. Its
+two exports therefore land in `mod.rs`, whose dominant unit stays `rsa_meth.c` — D327's own rule,
+applied to the unit on the other side of the same file. `rsa_saos.c` *is* merged into `sign.rs`
+(`rsa_sign.c`'s 4 symbols against its 2) because its two bodies are the same shape as `rsa_sign.c`'s
+and nothing about it needs a gate argument.
+
+**`src/rsa/ctrl.rs` claims a unit `src/rsa/object.rs` already claims, and that is the atlas's own
+rule rather than a collision.** `forensics/atlas/transcription-edges.json` says in its `rule` field
+that "a module whose definitions are spread across units is expected", and its `modules` list is a
+list per unit. The two halves of `rsa_lib.c` share nothing but a translation unit — the object
+layer is *state*, the control block is a *door* — so splitting them is what makes the module
+documentation say what each half is for. The prerequisite gate reads the union of a unit's modules'
+references, which is all it needs.
+
+**Two names did not land, and both are blocked by a callee rather than by an omission.**
+
+* **`RSA_print` and `RSA_print_fp`** (`rsa_prn.c:22-50`) are the two-line pair
+  `BIO_new(BIO_s_file())` → `RSA_print`, and `RSA_print`'s body is
+  `EVP_PKEY_new` → `EVP_PKEY_set1_RSA` → `EVP_PKEY_print_private`. The last of those is
+  `crypto/evp/p_lib.c:1239` and its `print_pkey` (`:1196`) has exactly two arms:
+  `OSSL_ENCODER_CTX_new_for_pkey` (Phase 10 — the gate already records
+  `OSSL_ENCODER_CTX_new_for_pkey -> phase 10` as a blocking dependency of this stratum) and the
+  legacy fallback `pkey->ameth->priv_print`, which is 8.8's `ossl_rsa_asn1_meth`. A transcription
+  would have to write one of them, so neither printer is written. `EVP_PKEY_set1_RSA` is the second
+  blocker and is named below.
+* **`EVP_PKEY_get0_RSA`, `EVP_PKEY_get1_RSA` and `EVP_PKEY_set1_RSA`** (`crypto/evp/p_legacy.c:25`,
+  `:49`, `:54`) are the twelve key-type accessors' RSA third, and they are the *only* part of slice
+  E the plan named that this commit could not land. `get0`/`get1` are `EVP_PKEY_get0_RSA_int` →
+  `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`), which downgrades a provided key through
+  `evp_pkey_copy_downgraded` (`:2066`) and therefore through `(*dest)->ameth->import_from` — the
+  ameth objects are 8.8's, and `forensics/prerequisites.json` already records
+  `evp_pkey_get_legacy` and `evp_pkey_copy_downgraded` as this stratum's owed work. `set1` is
+  `RSA_up_ref` plus `EVP_PKEY_assign_RSA` = `EVP_PKEY_assign` (`p_lib.c:791`), whose body needs
+  `EVP_PKEY_type` (`crypto/evp/evp_pkey_type.c:63`) to decide the SM2/EC arm and
+  `detect_foreign_key`'s `ossl_rsa_is_foreign`; all three are 8.8's with the ameth objects, and
+  `EVP_PKEY_assign` additionally writes the `pkey` union this crate's `EvpPkey` deliberately does
+  not have (`src/evp/pkey.rs`'s module doc: the legacy-origin state is one this crate cannot
+  enter). So the honest statement is narrower than the plan's: slice E lands its twenty-four
+  `rsa_lib.c` labels and three of its twenty-six are blocked on 8.8, which is what the anchored
+  clause now lists.
+
+**One bug was found by the evidence rather than by reading, and it is in D327's own code.**
+`rsa::gen::tests::a_small_exponent_takes_the_multiprime_path_at_full_width` — a unit test D327
+landed — failed about one run in six, and the failure was always `rsa_gen.c:602`'s `ok == -1`
+raise. `RSA_generate_key_ex(rsa, 2048, e = 17)` answers 0 on the candidate in about one call in
+eight and on the authority **never** (measured over 72 calls of the same program against the
+pinned library). The cause is one constant: `src/rsa/gen.rs` carried
+`BN_R_NO_INVERSE = 106` where `include/openssl/bnerr.h:36` defines **108**. The number is not
+descriptive: `rsa_multiprime_keygen`'s prime search decides "this prime is not invertible modulo
+`e`, draw another" by comparing `ERR_GET_LIB`/`ERR_GET_REASON` against that pair, so with the wrong
+reason the comparison never matched, the retry was skipped and the whole generation failed — and
+`e = 17` makes that happen about one prime in sixteen. It is corrected here, with a unit test that
+drives the *raise* rather than restating the constant: `BN_mod_inverse(r, e, e)` has no inverse, and
+the test asserts that `peek_last_lib()`/`peek_last_reason()` answer exactly the pair the retry
+tests for. The check is one comparison and the finding is the class D324 recorded from the other
+side: a constant that a *branch* reads is not documentation.
+
+**The court, and what it refuses to print.** `RT-RSA` grows 742 -> **976 observations**, zero
+residuals, and every one of the thirty-four is courted (`court_coverage.py`: phase 8 implemented
+327, direct 319, indirect 8, non-observable 0). Four things about the arms are worth naming.
+
+* **The signing arms are deterministic and compare an encoding the probe derived rather than one
+the library returned.** `RSA_X931_derive_ex` over the probe's fixed seeds makes the whole key a
+function of the probe's constants, and RSASSA-PKCS1-v1_5's *signature* encoding is itself
+deterministic — so a fixed message under a fixed key is a fixed byte string. `RSA_sign`'s output is
+then decrypted with `RSA_NO_PADDING` and compared octet for octet against
+`00 01 FF… 00 || DigestInfo || digest`, where the SHA-256 `DigestInfo` prefix is a **literal
+written out of RFC 8017 appendix B.1** and not a call into the library. That is the check a
+transcription of `rsa_sign.c`'s twelve DER tables could not survive with one wrong byte, and it is
+why the tables' own correctness does not rest on a test that restates them.
+* **The PSS verifier's block is built by the probe with a *fixed* salt.** Both runs of a probe are
+single-shot, so a block drawn by `RSA_padding_add_PKCS1_PSS_mgf1` would differ between them; the
+probe therefore contains `rt_pss_encode`, RFC 8017 section 9.1.1's encoding with twenty octets of
+`0x5a`. Every perturbation is a single-octet xor of that block, so each of the verifier's five
+refusal sites is reached *deterministically*: the trailer, the leading bits, a masked-DB octet (the
+`H` comparison), the length that disagrees with the block (whose `ERR_raise_data` message carries
+both numbers), and the separator's removal (the salt's first octet is 0x5a, so the recovery scan
+finds a non-`0x01` byte rather than reading past the buffer).
+* **The checker's broken keys are built by the probe out of copies of a good key's own
+components**, so `p = 1 (mod p1)`-style relations are not needed and the answers are: `1` for the
+key the derivation made, `0` for `n = p*q + 1`, `0` for an even exponent, `0` for a missing `d`,
+and `0` for a `dmp1` that is really `dmq1`. All five are drained, so the differing error
+coordinates are compared as well as the answers.
+* **The control arms publish a provider, and that is the only way to ask a control what it decides.**
+  Nineteen of the twenty-three answer differently for a NULL context, a context with no operation,
+  and a context whose key type is not RSA, and three of them dereference `ctx` before any test —
+  `set_rsa_oaep_md` and `get_rsa_oaep_md` through `EVP_PKEY_CTX_is_a`, `set1_rsa_keygen_pubexp`
+  through `evp_pkey_ctx_is_legacy` — so a NULL context is a **fault** on both sides for those three
+  and only a live arm exists. The live context is `EVP_PKEY_CTX_new_from_name(NULL, "COURT-RSA")`
+  over a keymgmt the probe publishes, the smallest the structural check accepts and the same shape
+  `RT-EVP-PKEY-OPS` already uses, named `COURT-RSA` rather than `RSA` so that it cannot shadow the
+  default provider's own row in either binary's method store. **What no arm can reach is named in
+the probe rather than left to be discovered**: a control's *successful* path is the ctrl-to-parameter
+  translation, which needs an RSA-typed context with an initialised operation, and this crate
+  publishes no RSA `EVP_KEYMGMT` at all (8.4's provider half), so
+  `EVP_PKEY_CTX_new_from_name(NULL, "RSA", NULL)` answers NULL on the candidate and a context on the
+  authority. An arm that compared *that* would be a difference about the missing provider row.
+
+**The `RSA_blinding_on` pair was already open and this commit closes it.** D325 moved
+`RSA_blinding_on` out of `BLOCKED_HANDOFFS` row (2) and into `open` with the reading that 3.6.4's
+body is two flag writes; the arms confirm it and add the part the plan did not have: `RSA_flags`
+reads the *method's* flag word and `RSA_test_flags` the object's, so the pair is observed through
+`RSA_test_flags` and the method's word is printed beside it as the control that does not move.
+No `BLOCKED_HANDOFFS` row names any symbol this commit defines, which the generator checks rather
+than trusts.
+
+**Bookkeeping, read off the regenerated files.** `phase8`: implemented 293 -> **327**, deferred 7
+unchanged, open 486 -> **452**, owned 786 unchanged — thirty-two of the thirty-four leave `open`
+and the other two, `RSA_blinding_on` and `RSA_print`'s neighbours, were there already.
+`forensics/regression-baseline.json` moves `RT-RSA` 742 -> 976, `implemented[libcrypto]`
+2206 -> **2240** and `open_obligations[phase8]` 486 -> **452**; **no other field moves**, so
+`prerequisites[sealed_census]` and `prerequisites[blocking_dependencies]` are unchanged and **no
+`ownership-transitions.json` row is needed**. `docs/PHASE-8-SUBPHASES.md`'s two anchored clauses
+name the thirty-four as landed and the five blocked names as open, and the 8.4 paragraph gains
+this entry's paragraph. `court_coverage.py` reports every one of the stratum's 327 implemented
+exports courted.
+
+**What is deliberately *not* here, named rather than implied.** `ossl_rsa_check_factors`'s
+neighbours in `rsa_sp800_56b_check.c` (D327's list); `ossl_rsa_validate_public`,
+`ossl_rsa_validate_private` and `ossl_rsa_validate_pairwise` (`rsa_chk.c:237-254`), for the reason
+the module table gives; the `#ifdef FIPS_MODULE` arms of `RSA_check_key_ex` and of the two
+`rsa_sign.c` oddball cases (this crate has no FIPS branch, as `mod.rs` already records);
+`RSA_sign`/`RSA_verify`'s method-callback arms are transcribed but **not courted**, because the
+only way to reach them is to install an `RSA_METHOD` whose callbacks the probe supplies, and the
+probe already has that machinery for the seven `rsa_ossl_*` entry points — a `sign`/`verify`
+callback arm is the natural next addition rather than a gap; and the fifteen `EVP_PKEY_CTX_*`
+controls' *translation* into provider parameters, which needs the RSA keymgmt row this stratum has
+not published yet.

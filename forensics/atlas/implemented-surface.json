@@ -282,7 +282,7 @@
         "truncf128",
         "truncf16"
       ],
-      "compiler_emitted_count": 8728,
+      "compiler_emitted_count": 8708,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -290,7 +290,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 2206,
+        "implemented": 2240,
         "implemented_symbols": [
           "AES_bi_ige_encrypt",
           "AES_cbc_encrypt",
@@ -1565,6 +1565,7 @@
           "EVP_PKEY_CTX_get0_pkey",
           "EVP_PKEY_CTX_get0_propq",
           "EVP_PKEY_CTX_get0_provider",
+          "EVP_PKEY_CTX_get0_rsa_oaep_label",
           "EVP_PKEY_CTX_get1_id",
           "EVP_PKEY_CTX_get1_id_len",
           "EVP_PKEY_CTX_get_algor_params",
@@ -1575,6 +1576,12 @@
           "EVP_PKEY_CTX_get_keygen_info",
           "EVP_PKEY_CTX_get_operation",
           "EVP_PKEY_CTX_get_params",
+          "EVP_PKEY_CTX_get_rsa_mgf1_md",
+          "EVP_PKEY_CTX_get_rsa_mgf1_md_name",
+          "EVP_PKEY_CTX_get_rsa_oaep_md",
+          "EVP_PKEY_CTX_get_rsa_oaep_md_name",
+          "EVP_PKEY_CTX_get_rsa_padding",
+          "EVP_PKEY_CTX_get_rsa_pss_saltlen",
           "EVP_PKEY_CTX_get_signature_md",
           "EVP_PKEY_CTX_gettable_params",
           "EVP_PKEY_CTX_hex2ctrl",
@@ -1585,10 +1592,12 @@
           "EVP_PKEY_CTX_new_from_pkey",
           "EVP_PKEY_CTX_new_id",
           "EVP_PKEY_CTX_set0_keygen_info",
+          "EVP_PKEY_CTX_set0_rsa_oaep_label",
           "EVP_PKEY_CTX_set1_hkdf_key",
           "EVP_PKEY_CTX_set1_hkdf_salt",
           "EVP_PKEY_CTX_set1_id",
           "EVP_PKEY_CTX_set1_pbe_pass",
+          "EVP_PKEY_CTX_set1_rsa_keygen_pubexp",
           "EVP_PKEY_CTX_set1_scrypt_salt",
           "EVP_PKEY_CTX_set1_tls1_prf_secret",
           "EVP_PKEY_CTX_set_algor_params",
@@ -1601,6 +1610,20 @@
           "EVP_PKEY_CTX_set_kem_op",
           "EVP_PKEY_CTX_set_mac_key",
           "EVP_PKEY_CTX_set_params",
+          "EVP_PKEY_CTX_set_rsa_keygen_bits",
+          "EVP_PKEY_CTX_set_rsa_keygen_primes",
+          "EVP_PKEY_CTX_set_rsa_keygen_pubexp",
+          "EVP_PKEY_CTX_set_rsa_mgf1_md",
+          "EVP_PKEY_CTX_set_rsa_mgf1_md_name",
+          "EVP_PKEY_CTX_set_rsa_oaep_md",
+          "EVP_PKEY_CTX_set_rsa_oaep_md_name",
+          "EVP_PKEY_CTX_set_rsa_padding",
+          "EVP_PKEY_CTX_set_rsa_pss_keygen_md",
+          "EVP_PKEY_CTX_set_rsa_pss_keygen_md_name",
+          "EVP_PKEY_CTX_set_rsa_pss_keygen_mgf1_md",
+          "EVP_PKEY_CTX_set_rsa_pss_keygen_mgf1_md_name",
+          "EVP_PKEY_CTX_set_rsa_pss_keygen_saltlen",
+          "EVP_PKEY_CTX_set_rsa_pss_saltlen",
           "EVP_PKEY_CTX_set_scrypt_N",
           "EVP_PKEY_CTX_set_scrypt_maxmem_bytes",
           "EVP_PKEY_CTX_set_scrypt_p",
@@ -2298,6 +2321,10 @@
           "RSA_X931_generate_key_ex",
           "RSA_X931_hash_id",
           "RSA_bits",
+          "RSA_blinding_off",
+          "RSA_blinding_on",
+          "RSA_check_key",
+          "RSA_check_key_ex",
           "RSA_clear_flags",
           "RSA_flags",
           "RSA_free",
@@ -2374,6 +2401,7 @@
           "RSA_padding_check_PKCS1_type_2",
           "RSA_padding_check_X931",
           "RSA_padding_check_none",
+          "RSA_pkey_ctx_ctrl",
           "RSA_private_decrypt",
           "RSA_private_encrypt",
           "RSA_public_decrypt",
@@ -2388,9 +2416,15 @@
           "RSA_set_flags",
           "RSA_set_method",
           "RSA_setup_blinding",
+          "RSA_sign",
+          "RSA_sign_ASN1_OCTET_STRING",
           "RSA_size",
           "RSA_test_flags",
           "RSA_up_ref",
+          "RSA_verify",
+          "RSA_verify_ASN1_OCTET_STRING",
+          "RSA_verify_PKCS1_PSS",
+          "RSA_verify_PKCS1_PSS_mgf1",
           "SEED_cbc_encrypt",
           "SEED_cfb128_encrypt",
           "SEED_decrypt",
@@ -2499,7 +2533,7 @@
           "i2d_DISPLAYTEXT",
           "i2t_ASN1_OBJECT"
         ],
-        "scaffolded": 3690
+        "scaffolded": 3656
       },
       "libssl": {
         "authority_exports": 603,
@@ -2510,18 +2544,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 2206,
-      "scaffolded": 4293
+      "implemented": 2240,
+      "scaffolded": 4259
     }
   },
-  "body_hash": "1e42a1037870e466dc88a8cb46e09bf7d684282872c0253920e800ff6927386e",
+  "body_hash": "e6b19f48400f22f1e94711bddd1bf5e75ebadf985a4242f498446a2f74f48d7b",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "1243895bdda7795bd956079700bf10dec76a5330dea702e2dc7ce89e94810e4b"
+      "sha256": "75ae61f14d35e6270ca1db14174e946423a796c921beed3e5ebba5a2cf4aecc2"
     },
     {
       "name": "authority-exports",

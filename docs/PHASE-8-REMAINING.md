@@ -13,11 +13,11 @@ Read from the ledger's `body.counts`.
 | quantity | count |
 |---|---|
 | owned | 786 |
-| implemented | 293 |
+| implemented | 327 |
 | deferred to a later phase | 7 |
-| open in this stratum | 486 |
+| open in this stratum | 452 |
 
-The identity `owned = implemented + deferred + open` is `786 = 293 + 7 + 486`, which holds.
+The identity `owned = implemented + deferred + open` is `786 = 327 + 7 + 452`, which holds.
 
 ## The merge gate — what Phase 8 owes to Phase 9
 
@@ -65,39 +65,25 @@ table, verbatim.
 
 | subphase | owns | open | courts | depends on |
 |---|---|---|---|---|
-| 8.4 RSA | `src/rsa/mod.rs` | 58 | `RT-RSA`, `CT-RSA` | 8.1 (the RSA provider's `SHA`-named digests), 8.3 (its OAEP/PSS modes) |
+| 8.4 RSA | `src/rsa/mod.rs` | 24 | `RT-RSA`, `CT-RSA` | 8.1 (the RSA provider's `SHA`-named digests), 8.3 (its OAEP/PSS modes) |
 | 8.5 DH and DHX | `src/dh/mod.rs` | 94 | `RT-DH`, `CT-DH` | 8.4 (the shared BN/param idiom) |
 | 8.6 DSA | `src/dsa/mod.rs` | 88 | `RT-DSA`, `CT-DSA` | 8.5 |
 | 8.7 EC | `src/ec/mod.rs` | 201 | `RT-EC`, `CT-EC` | 8.6 |
 | 8.8 The ASN.1 method objects and `standard_methods[]` | `src/asn1/ameth.rs` | 15 | `RT-AMETH` | 8.4, 8.5, 8.6, 8.7 |
 | 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals | `src/pem/key_legacy.rs` | 30 | `RT-PEM-KEY` | 8.8 |
 
-Total open symbols listed below: **486**; the ledger's
-`open_in_this_stratum` is 486.
+Total open symbols listed below: **452**; the ledger's
+`open_in_this_stratum` is 452.
 
-### 8.4 RSA — 58 open
+### 8.4 RSA — 24 open
 
-`EVP_PKEY_CTX_get0_rsa_oaep_label`, `EVP_PKEY_CTX_get_rsa_mgf1_md`,
-`EVP_PKEY_CTX_get_rsa_mgf1_md_name`, `EVP_PKEY_CTX_get_rsa_oaep_md`,
-`EVP_PKEY_CTX_get_rsa_oaep_md_name`, `EVP_PKEY_CTX_get_rsa_padding`,
-`EVP_PKEY_CTX_get_rsa_pss_saltlen`, `EVP_PKEY_CTX_set0_rsa_oaep_label`,
-`EVP_PKEY_CTX_set1_rsa_keygen_pubexp`, `EVP_PKEY_CTX_set_rsa_keygen_bits`,
-`EVP_PKEY_CTX_set_rsa_keygen_primes`, `EVP_PKEY_CTX_set_rsa_keygen_pubexp`,
-`EVP_PKEY_CTX_set_rsa_mgf1_md`, `EVP_PKEY_CTX_set_rsa_mgf1_md_name`,
-`EVP_PKEY_CTX_set_rsa_oaep_md`, `EVP_PKEY_CTX_set_rsa_oaep_md_name`,
-`EVP_PKEY_CTX_set_rsa_padding`, `EVP_PKEY_CTX_set_rsa_pss_keygen_md`,
-`EVP_PKEY_CTX_set_rsa_pss_keygen_md_name`, `EVP_PKEY_CTX_set_rsa_pss_keygen_mgf1_md`,
-`EVP_PKEY_CTX_set_rsa_pss_keygen_mgf1_md_name`,
-`EVP_PKEY_CTX_set_rsa_pss_keygen_saltlen`, `EVP_PKEY_CTX_set_rsa_pss_saltlen`,
 `EVP_PKEY_get0_RSA`, `EVP_PKEY_get1_RSA`, `EVP_PKEY_set1_RSA`, `RSAPrivateKey_dup`,
 `RSAPrivateKey_it`, `RSAPublicKey_dup`, `RSAPublicKey_it`, `RSA_OAEP_PARAMS_free`,
 `RSA_OAEP_PARAMS_it`, `RSA_OAEP_PARAMS_new`, `RSA_PSS_PARAMS_dup`,
-`RSA_PSS_PARAMS_free`, `RSA_PSS_PARAMS_it`, `RSA_PSS_PARAMS_new`, `RSA_blinding_off`,
-`RSA_blinding_on`, `RSA_check_key`, `RSA_check_key_ex`, `RSA_pkey_ctx_ctrl`,
-`RSA_print`, `RSA_print_fp`, `RSA_sign`, `RSA_sign_ASN1_OCTET_STRING`, `RSA_verify`,
-`RSA_verify_ASN1_OCTET_STRING`, `RSA_verify_PKCS1_PSS`, `RSA_verify_PKCS1_PSS_mgf1`,
-`d2i_RSAPrivateKey`, `d2i_RSAPublicKey`, `d2i_RSA_OAEP_PARAMS`, `d2i_RSA_PSS_PARAMS`,
-`i2d_RSAPrivateKey`, `i2d_RSAPublicKey`, `i2d_RSA_OAEP_PARAMS`, `i2d_RSA_PSS_PARAMS`
+`RSA_PSS_PARAMS_free`, `RSA_PSS_PARAMS_it`, `RSA_PSS_PARAMS_new`, `RSA_print`,
+`RSA_print_fp`, `d2i_RSAPrivateKey`, `d2i_RSAPublicKey`, `d2i_RSA_OAEP_PARAMS`,
+`d2i_RSA_PSS_PARAMS`, `i2d_RSAPrivateKey`, `i2d_RSAPublicKey`, `i2d_RSA_OAEP_PARAMS`,
+`i2d_RSA_PSS_PARAMS`
 
 ### 8.5 DH and DHX — 94 open
 
