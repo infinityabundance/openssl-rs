@@ -22492,6 +22492,406 @@ pub(crate) const FFC_PARAMS_VALIDATE_178: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `dh_new_intern` at `crypto/dh/dh_lib.c:83` (ERR_R_CRYPTO_LIB).
+pub(crate) const DH_LIB_83: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_lib.c",
+    line: 83,
+    func: c"dh_new_intern",
+    lib: 5,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `dh_new_intern` at `crypto/dh/dh_lib.c:100` (ERR_R_ENGINE_LIB).
+pub(crate) const DH_LIB_100: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_lib.c",
+    line: 100,
+    func: c"dh_new_intern",
+    lib: 5,
+    reason: 524326,
+    dynamic_reason: false,
+};
+
+/// `dh_new_intern` at `crypto/dh/dh_lib.c:109` (ERR_R_ENGINE_LIB).
+pub(crate) const DH_LIB_109: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_lib.c",
+    line: 109,
+    func: c"dh_new_intern",
+    lib: 5,
+    reason: 524326,
+    dynamic_reason: false,
+};
+
+/// `dh_new_intern` at `crypto/dh/dh_lib.c:125` (ERR_R_INIT_FAIL).
+pub(crate) const DH_LIB_125: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_lib.c",
+    line: 125,
+    func: c"dh_new_intern",
+    lib: 5,
+    reason: 786693,
+    dynamic_reason: false,
+};
+
+/// `ossl_dh_compute_key` at `crypto/dh/dh_key.c:48` (DH_R_MODULUS_TOO_LARGE).
+pub(crate) const DH_KEY_48: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 48,
+    func: c"ossl_dh_compute_key",
+    lib: 5,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_dh_compute_key` at `crypto/dh/dh_key.c:54` (DH_R_Q_TOO_LARGE).
+pub(crate) const DH_KEY_54: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 54,
+    func: c"ossl_dh_compute_key",
+    lib: 5,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `ossl_dh_compute_key` at `crypto/dh/dh_key.c:59` (DH_R_MODULUS_TOO_SMALL).
+pub(crate) const DH_KEY_59: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 59,
+    func: c"ossl_dh_compute_key",
+    lib: 5,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `ossl_dh_compute_key` at `crypto/dh/dh_key.c:73` (DH_R_NO_PRIVATE_VALUE).
+pub(crate) const DH_KEY_73: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 73,
+    func: c"ossl_dh_compute_key",
+    lib: 5,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `ossl_dh_compute_key` at `crypto/dh/dh_key.c:88` (ERR_R_BN_LIB).
+pub(crate) const DH_KEY_88: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 88,
+    func: c"ossl_dh_compute_key",
+    lib: 5,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_dh_compute_key` at `crypto/dh/dh_key.c:97` (DH_R_INVALID_SECRET).
+pub(crate) const DH_KEY_97: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 97,
+    func: c"ossl_dh_compute_key",
+    lib: 5,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `generate_key` at `crypto/dh/dh_key.c:276` (DH_R_MODULUS_TOO_LARGE).
+pub(crate) const DH_KEY_276: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 276,
+    func: c"generate_key",
+    lib: 5,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `generate_key` at `crypto/dh/dh_key.c:282` (DH_R_Q_TOO_LARGE).
+pub(crate) const DH_KEY_282: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 282,
+    func: c"generate_key",
+    lib: 5,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `generate_key` at `crypto/dh/dh_key.c:287` (DH_R_MODULUS_TOO_SMALL).
+pub(crate) const DH_KEY_287: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 287,
+    func: c"generate_key",
+    lib: 5,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `generate_key` at `crypto/dh/dh_key.c:379` (ERR_R_BN_LIB).
+pub(crate) const DH_KEY_379: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 379,
+    func: c"generate_key",
+    lib: 5,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_dh_buf2key` at `crypto/dh/dh_key.c:412` (ERR_raise dynamic reason).
+pub(crate) const DH_KEY_412: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 412,
+    func: c"ossl_dh_buf2key",
+    lib: 5,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `ossl_dh_key2buf` at `crypto/dh/dh_key.c:430` (DH_R_INVALID_PUBKEY).
+pub(crate) const DH_KEY_430: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 430,
+    func: c"ossl_dh_key2buf",
+    lib: 5,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_dh_key2buf` at `crypto/dh/dh_key.c:438` (DH_R_INVALID_SIZE).
+pub(crate) const DH_KEY_438: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 438,
+    func: c"ossl_dh_key2buf",
+    lib: 5,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `ossl_dh_key2buf` at `crypto/dh/dh_key.c:453` (DH_R_BN_ERROR).
+pub(crate) const DH_KEY_453: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 453,
+    func: c"ossl_dh_key2buf",
+    lib: 5,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `dh_builtin_genparams` at `crypto/dh/dh_gen.c:164` (DH_R_MODULUS_TOO_LARGE).
+pub(crate) const DH_GEN_164: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_gen.c",
+    line: 164,
+    func: c"dh_builtin_genparams",
+    lib: 5,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `dh_builtin_genparams` at `crypto/dh/dh_gen.c:169` (DH_R_MODULUS_TOO_SMALL).
+pub(crate) const DH_GEN_169: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_gen.c",
+    line: 169,
+    func: c"dh_builtin_genparams",
+    lib: 5,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `dh_builtin_genparams` at `crypto/dh/dh_gen.c:189` (DH_R_BAD_GENERATOR).
+pub(crate) const DH_GEN_189: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_gen.c",
+    line: 189,
+    func: c"dh_builtin_genparams",
+    lib: 5,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `dh_builtin_genparams` at `crypto/dh/dh_gen.c:231` (ERR_R_BN_LIB).
+pub(crate) const DH_GEN_231: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_gen.c",
+    line: 231,
+    func: c"dh_builtin_genparams",
+    lib: 5,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `DH_check_params_ex` at `crypto/dh/dh_check.c:37` (DH_R_CHECK_P_NOT_PRIME).
+pub(crate) const DH_CHECK_37: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 37,
+    func: c"DH_check_params_ex",
+    lib: 5,
+    reason: 117,
+    dynamic_reason: false,
+};
+
+/// `DH_check_params_ex` at `crypto/dh/dh_check.c:39` (DH_R_NOT_SUITABLE_GENERATOR).
+pub(crate) const DH_CHECK_39: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 39,
+    func: c"DH_check_params_ex",
+    lib: 5,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `DH_check_params_ex` at `crypto/dh/dh_check.c:41` (DH_R_MODULUS_TOO_SMALL).
+pub(crate) const DH_CHECK_41: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 41,
+    func: c"DH_check_params_ex",
+    lib: 5,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `DH_check_params_ex` at `crypto/dh/dh_check.c:43` (DH_R_MODULUS_TOO_LARGE).
+pub(crate) const DH_CHECK_43: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 43,
+    func: c"DH_check_params_ex",
+    lib: 5,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `DH_check_ex` at `crypto/dh/dh_check.c:128` (DH_R_NOT_SUITABLE_GENERATOR).
+pub(crate) const DH_CHECK_128: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 128,
+    func: c"DH_check_ex",
+    lib: 5,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `DH_check_ex` at `crypto/dh/dh_check.c:130` (DH_R_CHECK_Q_NOT_PRIME).
+pub(crate) const DH_CHECK_130: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 130,
+    func: c"DH_check_ex",
+    lib: 5,
+    reason: 119,
+    dynamic_reason: false,
+};
+
+/// `DH_check_ex` at `crypto/dh/dh_check.c:132` (DH_R_CHECK_INVALID_Q_VALUE).
+pub(crate) const DH_CHECK_132: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 132,
+    func: c"DH_check_ex",
+    lib: 5,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `DH_check_ex` at `crypto/dh/dh_check.c:134` (DH_R_CHECK_INVALID_J_VALUE).
+pub(crate) const DH_CHECK_134: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 134,
+    func: c"DH_check_ex",
+    lib: 5,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `DH_check_ex` at `crypto/dh/dh_check.c:136` (DH_R_UNABLE_TO_CHECK_GENERATOR).
+pub(crate) const DH_CHECK_136: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 136,
+    func: c"DH_check_ex",
+    lib: 5,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `DH_check_ex` at `crypto/dh/dh_check.c:138` (DH_R_CHECK_P_NOT_PRIME).
+pub(crate) const DH_CHECK_138: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 138,
+    func: c"DH_check_ex",
+    lib: 5,
+    reason: 117,
+    dynamic_reason: false,
+};
+
+/// `DH_check_ex` at `crypto/dh/dh_check.c:140` (DH_R_CHECK_P_NOT_SAFE_PRIME).
+pub(crate) const DH_CHECK_140: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 140,
+    func: c"DH_check_ex",
+    lib: 5,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `DH_check_ex` at `crypto/dh/dh_check.c:142` (DH_R_MODULUS_TOO_SMALL).
+pub(crate) const DH_CHECK_142: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 142,
+    func: c"DH_check_ex",
+    lib: 5,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `DH_check_ex` at `crypto/dh/dh_check.c:144` (DH_R_MODULUS_TOO_LARGE).
+pub(crate) const DH_CHECK_144: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 144,
+    func: c"DH_check_ex",
+    lib: 5,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `DH_check` at `crypto/dh/dh_check.c:171` (DH_R_MODULUS_TOO_LARGE).
+pub(crate) const DH_CHECK_171: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 171,
+    func: c"DH_check",
+    lib: 5,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `DH_check_pub_key_ex` at `crypto/dh/dh_check.c:252` (DH_R_CHECK_PUBKEY_TOO_SMALL).
+pub(crate) const DH_CHECK_252: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 252,
+    func: c"DH_check_pub_key_ex",
+    lib: 5,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `DH_check_pub_key_ex` at `crypto/dh/dh_check.c:254` (DH_R_CHECK_PUBKEY_TOO_LARGE).
+pub(crate) const DH_CHECK_254: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 254,
+    func: c"DH_check_pub_key_ex",
+    lib: 5,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `DH_check_pub_key_ex` at `crypto/dh/dh_check.c:256` (DH_R_CHECK_PUBKEY_INVALID).
+pub(crate) const DH_CHECK_256: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 256,
+    func: c"DH_check_pub_key_ex",
+    lib: 5,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `DH_check_pub_key` at `crypto/dh/dh_check.c:277` (DH_R_MODULUS_TOO_LARGE).
+pub(crate) const DH_CHECK_277: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 277,
+    func: c"DH_check_pub_key",
+    lib: 5,
+    reason: 103,
+    dynamic_reason: false,
+};
+
 /// `RAND_pseudo_bytes` at `crypto/rand/rand_lib.c:386` (RAND_R_FUNC_NOT_IMPLEMENTED).
 pub(crate) const RAND_LIB_386: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
@@ -26569,6 +26969,46 @@ pub(crate) static ALL: &[ErrSite] = &[
     FFC_PARAMS_VALIDATE_125,
     FFC_PARAMS_VALIDATE_172,
     FFC_PARAMS_VALIDATE_178,
+    DH_LIB_83,
+    DH_LIB_100,
+    DH_LIB_109,
+    DH_LIB_125,
+    DH_KEY_48,
+    DH_KEY_54,
+    DH_KEY_59,
+    DH_KEY_73,
+    DH_KEY_88,
+    DH_KEY_97,
+    DH_KEY_276,
+    DH_KEY_282,
+    DH_KEY_287,
+    DH_KEY_379,
+    DH_KEY_412,
+    DH_KEY_430,
+    DH_KEY_438,
+    DH_KEY_453,
+    DH_GEN_164,
+    DH_GEN_169,
+    DH_GEN_189,
+    DH_GEN_231,
+    DH_CHECK_37,
+    DH_CHECK_39,
+    DH_CHECK_41,
+    DH_CHECK_43,
+    DH_CHECK_128,
+    DH_CHECK_130,
+    DH_CHECK_132,
+    DH_CHECK_134,
+    DH_CHECK_136,
+    DH_CHECK_138,
+    DH_CHECK_140,
+    DH_CHECK_142,
+    DH_CHECK_144,
+    DH_CHECK_171,
+    DH_CHECK_252,
+    DH_CHECK_254,
+    DH_CHECK_256,
+    DH_CHECK_277,
     RAND_LIB_386,
     RAND_LIB_430,
     RAND_LIB_435,

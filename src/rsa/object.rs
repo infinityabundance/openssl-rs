@@ -812,7 +812,13 @@ fn ilog_e(v: u64) -> u32 {
         }
         i /= 2;
     }
-    (r.wrapping_mul(SCALE) as u64 / LOG_E as u64) as u32
+    // `r * (uint64_t)scale` — the authority's cast happens **before** the multiply, so the
+    // product is 64-bit and cannot wrap. Multiplying in `u32` and widening afterwards truncates
+    // the logarithm for every `r` above `2^32 / scale`, which is why this is a widening multiply
+    // rather than `wrapping_mul`; the `r` that triggers it is any input below the canonical set
+    // but above a few hundred bits, and `DH_generate_parameters_ex`'s 512-bit group is the first
+    // landed caller to ask (D331).
+    ((r as u64 * SCALE as u64) / LOG_E as u64) as u32
 }
 
 /// `uint16_t ossl_ifc_ffc_compute_security_bits(int n)` — `rsa_lib.c:326-385`.
@@ -2242,6 +2248,15 @@ mod tests {
             assert!(y <= 192, "n = {n} answered {y}");
             assert_eq!(y % 8, 0, "n = {n} answered {y}");
         }
+
+        /* **Two non-canonical values, asserted exactly rather than by band.** The band checks
+         * above cannot tell the formula from the cap: a logarithm truncated by a 32-bit multiply
+         * answers the cap for every small `n`, which is *also* a multiple of eight and at most
+         * 192. These two are read
+         * off the authority's own `DH_generate_parameters_ex(512, 2)`, whose `ret->length` is
+         * `(2s + 24) / 25 * 25` and is 125 for `s = 56` — the numbers D331's `RT-DH` compares. */
+        assert_eq!(ossl_ifc_ffc_compute_security_bits(512), 56);
+        assert_eq!(ossl_ifc_ffc_compute_security_bits(1024), 80);
         for n in [7681, 10000, 15360] {
             let y = ossl_ifc_ffc_compute_security_bits(n);
             assert!(y <= 256, "n = {n} answered {y}");

@@ -583,6 +583,17 @@ COVERED_FILES = [
     # under above.
     ("crypto/ffc/ffc_params_generate.c", "FFC_PARAMS_GENERATE"),
     ("crypto/ffc/ffc_params_validate.c", "FFC_PARAMS_VALIDATE"),
+    # Phase 8.5's `crypto/dh` object layer, key layer, generator and validator. The subsystem
+    # set again, minus the two units that raise nothing: `dh_meth.c` (D329 measured its whole
+    # body as allocations and stored pointers) and `dh_depr.c` (its one function allocates a
+    # context and dispatches), so neither gets an entry that could never change. `dh_kdf.c`,
+    # `dh_asn1.c` and `dh_rfc5114.c` raise nothing either, and `dh_group_params.c`'s one site
+    # belongs to the named-group unit D329/D330 record as a separable follow-up, so no crate
+    # module transcribes it yet.
+    ("crypto/dh/dh_lib.c", "DH_LIB"),
+    ("crypto/dh/dh_key.c", "DH_KEY"),
+    ("crypto/dh/dh_gen.c", "DH_GEN"),
+    ("crypto/dh/dh_check.c", "DH_CHECK"),
     # Phase 9's `crypto/rand` subsystem. **The subsystem set, not a selection of convenient
     # files**, for `crypto/rsa`'s reason and one more of its own: this stratum's symbols are
     # raised from inside bodies whose declaring header belongs to *earlier* strata (`BN_rand`,

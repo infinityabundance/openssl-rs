@@ -13,11 +13,11 @@ Read from the ledger's `body.counts`.
 | quantity | count |
 |---|---|
 | owned | 786 |
-| implemented | 348 |
-| deferred to a later phase | 7 |
-| open in this stratum | 431 |
+| implemented | 387 |
+| deferred to a later phase | 4 |
+| open in this stratum | 395 |
 
-The identity `owned = implemented + deferred + open` is `786 = 348 + 7 + 431`, which holds.
+The identity `owned = implemented + deferred + open` is `786 = 387 + 4 + 395`, which holds.
 
 ## The merge gate — what Phase 8 owes to Phase 9
 
@@ -28,14 +28,11 @@ this stratum can be complete.
 | symbol | declaring header | owning phase |
 |---|---|---|
 | `DES_random_key` | `des.h` | 9 |
-| `DH_generate_key` | `dh.h` | 9 |
-| `DH_generate_parameters` | `dh.h` | 9 |
-| `DH_generate_parameters_ex` | `dh.h` | 9 |
 | `DSA_generate_key` | `dsa.h` | 9 |
 | `DSA_generate_parameters_ex` | `dsa.h` | 9 |
 | `EC_KEY_generate_key` | `ec.h` | 9 |
 
-**7** export(s) are deferred, to Phase 9. A
+**4** export(s) are deferred, to Phase 9. A
 stratum cannot be complete while any export it owns is neither implemented
 nor handed to a later phase, and these rows are the ones a later
 Phase 9 landing discharges.
@@ -52,9 +49,9 @@ symbols it covers are listed above it.
 
   `crypto/des/rand_key.c:22` is `RAND_priv_bytes((unsigned char *)ret, sizeof(DES_cblock))` and its failure arm answers 0. `rand.h` is Phase 9's, and this is the one `des.h` export whose body is the random layer rather than the cipher. `DES_string_to_key` and `DES_string_to_2keys` are *not* in this row: they build a key from a string with `DES_cbc_cksum`, which is this stratum's own.
 
-- `DH_generate_key`, `DH_generate_parameters`, `DH_generate_parameters_ex`, `DSA_generate_key`, `DSA_generate_parameters_ex`, `EC_KEY_generate_key`:
+- `DSA_generate_key`, `DSA_generate_parameters_ex`, `EC_KEY_generate_key`:
 
-  every one of these reaches a BN random primitive: `DH_generate_parameters_ex`'s primes come from `BN_generate_prime_ex2` (`crypto/dh/dh_gen.c:217`), `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the six. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.
+  the three units these name do not exist in this crate yet. `DSA_generate_key` and `DSA_generate_parameters_ex` are `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c` -- Phase 8.6's row, and the `crypto/dsa/` machinery (the `DSA` object, its method table and its FFC front end) lands there; `EC_KEY_generate_key` is `crypto/ec/ec_key.c`, Phase 8.7's. Both reach the random layer through their own BN calls (`BN_priv_rand_range`/`BN_generate_prime_ex2` on the `bnrand` -> `RAND_bytes_ex` path that D313/D324 landed), so this row is about the **units** rather than about a callee now in: the DH half of the old row retired in D331 precisely because its units landed.
 
 ## The work Phase 8 still owns
 
@@ -66,14 +63,14 @@ table, verbatim.
 | subphase | owns | open | courts | depends on |
 |---|---|---|---|---|
 | 8.4 RSA | `src/rsa/mod.rs` | 24 | `RT-RSA`, `CT-RSA` | 8.1 (the RSA provider's `SHA`-named digests), 8.3 (its OAEP/PSS modes) |
-| 8.5 DH and DHX | `src/dh/mod.rs`, `src/dh/mod.rs`, `src/ffc/` | 73 | `RT-DH`, `CT-DH` | 8.4 (the shared BN/param idiom) |
+| 8.5 DH and DHX | `src/dh/mod.rs`, `src/dh/mod.rs`, `src/ffc/`, `src/dh/object.rs` | 37 | `RT-DH`, `CT-DH` | 8.4 (the shared BN/param idiom) |
 | 8.6 DSA | `src/dsa/mod.rs` | 88 | `RT-DSA`, `CT-DSA` | 8.5 |
 | 8.7 EC | `src/ec/mod.rs` | 201 | `RT-EC`, `CT-EC` | 8.6 |
 | 8.8 The ASN.1 method objects and `standard_methods[]` | `src/asn1/ameth.rs` | 15 | `RT-AMETH` | 8.4, 8.5, 8.6, 8.7 |
 | 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals | `src/pem/key_legacy.rs` | 30 | `RT-PEM-KEY` | 8.8 |
 
-Total open symbols listed below: **431**; the ledger's
-`open_in_this_stratum` is 431.
+Total open symbols listed below: **395**; the ledger's
+`open_in_this_stratum` is 395.
 
 ### 8.4 RSA — 24 open
 
@@ -85,23 +82,16 @@ Total open symbols listed below: **431**; the ledger's
 `d2i_RSA_PSS_PARAMS`, `i2d_RSAPrivateKey`, `i2d_RSAPublicKey`, `i2d_RSA_OAEP_PARAMS`,
 `i2d_RSA_PSS_PARAMS`
 
-### 8.5 DH and DHX — 73 open
+### 8.5 DH and DHX — 37 open
 
-`DH_KDF_X9_42`, `DH_OpenSSL`, `DH_bits`, `DH_check`, `DH_check_ex`, `DH_check_params`,
-`DH_check_params_ex`, `DH_check_pub_key`, `DH_check_pub_key_ex`, `DH_clear_flags`,
-`DH_compute_key`, `DH_compute_key_padded`, `DH_free`, `DH_get0_engine`, `DH_get0_g`,
-`DH_get0_key`, `DH_get0_p`, `DH_get0_pqg`, `DH_get0_priv_key`, `DH_get0_pub_key`,
-`DH_get0_q`, `DH_get_1024_160`, `DH_get_2048_224`, `DH_get_2048_256`,
-`DH_get_default_method`, `DH_get_ex_data`, `DH_get_length`, `DH_get_nid`, `DH_new`,
-`DH_new_by_nid`, `DH_new_method`, `DH_security_bits`, `DH_set0_key`, `DH_set0_pqg`,
-`DH_set_default_method`, `DH_set_ex_data`, `DH_set_flags`, `DH_set_length`,
-`DH_set_method`, `DH_size`, `DH_test_flags`, `DH_up_ref`, `DHparams_dup`, `DHparams_it`,
-`DHparams_print`, `DHparams_print_fp`, `EVP_PKEY_CTX_get0_dh_kdf_oid`,
-`EVP_PKEY_CTX_get0_dh_kdf_ukm`, `EVP_PKEY_CTX_get_dh_kdf_md`,
-`EVP_PKEY_CTX_get_dh_kdf_outlen`, `EVP_PKEY_CTX_get_dh_kdf_type`,
-`EVP_PKEY_CTX_set0_dh_kdf_oid`, `EVP_PKEY_CTX_set0_dh_kdf_ukm`,
-`EVP_PKEY_CTX_set_dh_kdf_md`, `EVP_PKEY_CTX_set_dh_kdf_outlen`,
-`EVP_PKEY_CTX_set_dh_kdf_type`, `EVP_PKEY_CTX_set_dh_nid`, `EVP_PKEY_CTX_set_dh_pad`,
+`DH_KDF_X9_42`, `DH_get_1024_160`, `DH_get_2048_224`, `DH_get_2048_256`, `DH_get_nid`,
+`DH_new_by_nid`, `DHparams_dup`, `DHparams_it`, `DHparams_print`, `DHparams_print_fp`,
+`EVP_PKEY_CTX_get0_dh_kdf_oid`, `EVP_PKEY_CTX_get0_dh_kdf_ukm`,
+`EVP_PKEY_CTX_get_dh_kdf_md`, `EVP_PKEY_CTX_get_dh_kdf_outlen`,
+`EVP_PKEY_CTX_get_dh_kdf_type`, `EVP_PKEY_CTX_set0_dh_kdf_oid`,
+`EVP_PKEY_CTX_set0_dh_kdf_ukm`, `EVP_PKEY_CTX_set_dh_kdf_md`,
+`EVP_PKEY_CTX_set_dh_kdf_outlen`, `EVP_PKEY_CTX_set_dh_kdf_type`,
+`EVP_PKEY_CTX_set_dh_nid`, `EVP_PKEY_CTX_set_dh_pad`,
 `EVP_PKEY_CTX_set_dh_paramgen_generator`, `EVP_PKEY_CTX_set_dh_paramgen_gindex`,
 `EVP_PKEY_CTX_set_dh_paramgen_prime_len`, `EVP_PKEY_CTX_set_dh_paramgen_seed`,
 `EVP_PKEY_CTX_set_dh_paramgen_subprime_len`, `EVP_PKEY_CTX_set_dh_paramgen_type`,

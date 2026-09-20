@@ -1,23 +1,35 @@
 /*
- * RT-DH -- the differential court for `crypto/dh/dh_meth.c` (Phase 8.5's first slice).
+ * RT-DH -- the differential court for `crypto/dh/` (Phase 8.5).
  *
  * This program is compiled **twice**, once against the admitted authority and once against the
  * candidate distribution shell, and the two `key=value` transcripts are diffed. It never decides
  * anything: a residual is a difference between two executions, so the expectation cannot drift
  * with the crate. `forensics/tools/phase8_courts.py` owns the comparison.
  *
- * What this court covers, and what it does not
- * --------------------------------------------
- * This slice is the twenty-one `DH_meth_*` labels, and **every one of the twenty-one is called
- * below**. Nothing here does any cryptography: each function allocates a table, stores a pointer
- * in one, duplicates one, releases one, or reads one back. The transcript is therefore about
- * *identity, ownership and structure* rather than arithmetic, and that is the whole observable
- * contract of these entry points.
+ * What this court covers
+ * ----------------------
+ * **Two slices, one probe.** D329's arms are the twenty-one `DH_meth_*` labels of
+ * `crypto/dh/dh_meth.c`, where nothing does any cryptography: each function allocates a table,
+ * stores a pointer in one, duplicates one, releases one, or reads one back, so their transcript is
+ * about *identity, ownership and structure*. D331's arms are the thirty-nine exports of
+ * `dh_lib.c`, `dh_key.c`, `dh_gen.c`, `dh_check.c` and `dh_depr.c` -- the `DH` object and its
+ * accessors, the default-method family, generation, agreement and every validator. **All sixty
+ * exports are called.**
  *
- * The rest of 8.5 -- the `DH` object, `dh_key.c`'s generation and agreement, `dh_gen.c`,
- * `dh_check.c`, the FFC primitives and the named-group tables -- is **not** exercised here,
- * because it is not landed. This court's arms say so by their absence rather than by a transcribed
- * expectation, and `docs/DECISIONS.md` D329 names the dependency that keeps them open.
+ * The second half is arithmetic, and what it observes is chosen so that no random or secret byte
+ * can reach the transcript: a **generated 512-bit safe-prime group** is the parameter set every
+ * key arm uses, and the arms print its *properties* only -- `DH_bits`/`DH_size`/`DH_security_bits`,
+ * the RFC 7919 key length `DH_generate_parameters_ex` stores, the private exponent's bit width
+ * (which `BN_RAND_TOP_ONE` makes exactly that length), the public key's range, two parties'
+ * agreement as an equality, and `DH_compute_key` as the padded function's tail. Every refusal is
+ * observed through **both** its return value and the coordinate `ERR_get_error_all` reports, which
+ * is how the `-1`-vs-`0` asymmetry of `ossl_dh_compute_key`'s three bounds and the **two** records
+ * a bad generator leaves are compared rather than asserted.
+ *
+ * What it does not cover: the FFC primitives (their evidence is their own unit tests, D330), the
+ * named-group tables, `dh_asn1.c`'s ASN.1 machinery, `DH_KDF_X9_42` and the `EVP_PKEY_CTX_*dh*`
+ * controls -- none of which is landed. This court's arms say so by their absence rather than by a
+ * transcribed expectation, and `docs/DECISIONS.md` D329 and D331 name what keeps each open.
  *
  * The allocator-attribution plane
  * -------------------------------
@@ -61,6 +73,7 @@
 #include <openssl/bn.h>
 #include <openssl/crypto.h>
 #include <openssl/dh.h>
+#include <openssl/err.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -190,6 +203,394 @@ static int sentinel_generate_params(DH *dh, int prime_len, int generator, BN_GEN
             (const void *)(GET)(m) == NULL);                            \
     } while (0)
 
+/* ------------------------------------------------------------------ the error queue */
+
+/* Drain the error queue, printing each record's **packed code and coordinate**. The packed code
+ * carries the library and the reason; the coordinate is `ERR_get_error_all`'s file/line/func,
+ * which is the part of the record `gen_err_raise_sites.py` derives and which a court that
+ * compared only the return value could not see at all. */
+static void drain(const char *arm)
+{
+    int n = 0;
+
+    for (;;) {
+        const char *file = NULL;
+        const char *func = NULL;
+        int line = 0;
+        unsigned long e = ERR_get_error_all(&file, &line, &func, NULL, NULL);
+
+        if (e == 0)
+            break;
+        printf("dh.%s.err.%d=%lu:%s:%d:%s\n", arm, n, e,
+            file != NULL ? file : "(null)", line,
+            func != NULL ? func : "(null)");
+        n++;
+    }
+    printf("dh.%s.err.count=%d\n", arm, n);
+}
+
+/* ------------------------------------------------------------------ the object and key layer */
+
+/* A fresh `DH` with `p`, `g` and no `q`, all borrowed from `src` through the public accessors and
+ * duplicated, so the two parties share a group without sharing an object. */
+static DH *dh_peer(const DH *src)
+{
+    const BIGNUM *p = NULL, *q = NULL, *g = NULL;
+    BIGNUM *p2, *g2;
+    DH *peer;
+
+    DH_get0_pqg(src, &p, &q, &g);
+    if (p == NULL || g == NULL)
+        return NULL;
+    p2 = BN_dup(p);
+    g2 = BN_dup(g);
+    if (p2 == NULL || g2 == NULL)
+        return NULL;
+    peer = DH_new();
+    if (peer == NULL) {
+        BN_free(p2);
+        BN_free(g2);
+        return NULL;
+    }
+    if (DH_set0_pqg(peer, p2, NULL, g2) != 1) {
+        BN_free(p2);
+        BN_free(g2);
+        DH_free(peer);
+        return NULL;
+    }
+    return peer;
+}
+
+/* Whether every byte of `a`'s first `n` equals `b`'s. A one-line predicate over bytes the
+ * probe compares itself, so no shared secret enters the transcript. */
+static int bytes_eq(const unsigned char *a, const unsigned char *b, int n)
+{
+    return memcmp(a, b, (size_t)n) == 0;
+}
+
+/* Whether every byte from `off` of `b` equals `a`'s first `n - off`... in other words that the
+ * unpadded secret is the tail of the padded one. */
+static int is_tail(const unsigned char *short_, int short_len,
+                   const unsigned char *long_, int long_len)
+{
+    if (short_len > long_len)
+        return 0;
+    return memcmp(short_, long_ + (long_len - short_len), (size_t)short_len) == 0;
+}
+
+static void dh_object_arms(void)
+{
+    DH *dh = DH_new();
+    DH *out = DH_new();
+    const BIGNUM *p = NULL, *q = NULL, *g = NULL, *pub = NULL, *priv = NULL;
+    void *marker = (void *)0x4321;
+    BIGNUM *one = BN_new();
+    BIGNUM *zero = BN_new();
+    unsigned char k1[256], k2[256], u1[256];
+    int r1, r2;
+
+    printf("dh.obj.scratch_built=%d\n", dh != NULL && out != NULL && one != NULL && zero != NULL);
+    if (dh == NULL || out == NULL || one == NULL || zero == NULL)
+        return;
+    BN_set_word(one, 1);
+    BN_set_word(zero, 0);
+
+    /* ---- the constructor's observable state */
+    printf("dh.obj.new.engine_is_null=%d\n", DH_get0_engine(dh) == NULL);
+    printf("dh.obj.new.cache_mont=%d\n", DH_test_flags(dh, DH_FLAG_CACHE_MONT_P) != 0);
+    printf("dh.obj.new.bits=%d\n", DH_bits(dh));
+    printf("dh.obj.new.size=%d\n", DH_size(dh));
+    printf("dh.obj.new.security_bits=%d\n", DH_security_bits(dh));
+    printf("dh.obj.new.length=%ld\n", DH_get_length(dh));
+    DH_get0_pqg(dh, &p, &q, &g);
+    printf("dh.obj.new.pqg_null=%d\n", p == NULL && q == NULL && g == NULL);
+    DH_get0_key(dh, &pub, &priv);
+    printf("dh.obj.new.key_null=%d\n", pub == NULL && priv == NULL);
+    printf("dh.obj.new.p_null=%d\n", DH_get0_p(dh) == NULL);
+    printf("dh.obj.new.q_null=%d\n", DH_get0_q(dh) == NULL);
+    printf("dh.obj.new.g_null=%d\n", DH_get0_g(dh) == NULL);
+    printf("dh.obj.new.priv_null=%d\n", DH_get0_priv_key(dh) == NULL);
+    printf("dh.obj.new.pub_null=%d\n", DH_get0_pub_key(dh) == NULL);
+
+    /* `DH_new_method(NULL)` is the constructor's only other entry point and answers an object
+     * whose engine member is NULL for the same reason the default constructor's is. */
+    {
+        DH *by_method = DH_new_method(NULL);
+
+        printf("dh.obj.new_method.not_null=%d\n", by_method != NULL);
+        if (by_method != NULL) {
+            printf("dh.obj.new_method.engine_is_null=%d\n", DH_get0_engine(by_method) == NULL);
+            printf("dh.obj.new_method.cache_mont=%d\n",
+                DH_test_flags(by_method, DH_FLAG_CACHE_MONT_P) != 0);
+            DH_free(by_method);
+        }
+    }
+
+    /* ---- the flag trio and the length setter */
+    DH_set_flags(dh, 0x1234);
+    printf("dh.obj.flags.set=%d\n", DH_test_flags(dh, 0x1234));
+    DH_clear_flags(dh, 0x0034);
+    printf("dh.obj.flags.cleared=%d\n", DH_test_flags(dh, 0x1234));
+    printf("dh.obj.flags.remaining=%d\n", DH_test_flags(dh, 0xFFFF));
+    printf("dh.obj.length.set_ret=%d\n", DH_set_length(dh, 42));
+    printf("dh.obj.length.get=%ld\n", DH_get_length(dh));
+
+    /* ---- the method setters and the default-method family */
+    printf("dh.obj.set_method.ret=%d\n", DH_set_method(dh, DH_OpenSSL()));
+    printf("dh.obj.set_method.cache_mont=%d\n",
+        DH_test_flags(dh, DH_FLAG_CACHE_MONT_P) != 0);
+    printf("dh.obj.default.is_openssl=%d\n", DH_get_default_method() == DH_OpenSSL());
+    DH_set_default_method(NULL);
+    printf("dh.obj.default.null_is_null=%d\n", DH_get_default_method() == NULL);
+    DH_set_default_method(DH_OpenSSL());
+    printf("dh.obj.default.restored=%d\n", DH_get_default_method() == DH_OpenSSL());
+
+    /* ---- the ex-data pair, and NULL safety */
+    printf("dh.obj.exdata.set_ret=%d\n", DH_set_ex_data(dh, 0, marker));
+    printf("dh.obj.exdata.get_is_marker=%d\n", DH_get_ex_data(dh, 0) == marker);
+    printf("dh.obj.exdata.unset_is_null=%d\n", DH_get_ex_data(dh, 999) == NULL);
+
+    /* ---- the two refusals `DH_set0_pqg` makes before it stores anything */
+    DH_get0_pqg(out, &p, &q, &g);
+    printf("dh.obj.set0_pqg.all_null_refused=%d\n", DH_set0_pqg(out, NULL, NULL, NULL));
+    printf("dh.obj.set0_pqg.p_only_refused=%d\n",
+        DH_set0_pqg(out, (BIGNUM *)one, NULL, NULL));
+    printf("dh.obj.set0_pqg.p_still_null=%d\n", DH_get0_p(out) == NULL);
+
+    /* ---- references and the two release paths */
+    printf("dh.obj.up_ref.ret=%d\n", DH_up_ref(dh));
+    DH_free(dh);
+    printf("dh.obj.up_ref.survived_first_free=1\n");
+
+    /* ---- generate a 512-bit safe-prime group and key a pair of parties on it */
+    ERR_clear_error();
+    printf("dh.genparams_ex.ret=%d\n", DH_generate_parameters_ex(dh, 512, 2, NULL));
+    drain("genparams_ex");
+    printf("dh.genparams_ex.bits=%d\n", DH_bits(dh));
+    printf("dh.genparams_ex.size=%d\n", DH_size(dh));
+    printf("dh.genparams_ex.security_bits=%d\n", DH_security_bits(dh));
+    printf("dh.genparams_ex.length=%ld\n", DH_get_length(dh));
+    printf("dh.genparams_ex.p_odd=%d\n", BN_is_odd(DH_get0_p(dh)));
+
+    ERR_clear_error();
+    printf("dh.check.ret=%d\n", DH_check(dh, &r1));
+    printf("dh.check.flags=%d\n", r1);
+    drain("check");
+    ERR_clear_error();
+    printf("dh.check_ex.ret=%d\n", DH_check_ex(dh));
+    drain("check_ex");
+
+    ERR_clear_error();
+    printf("dh.check_params.ret=%d\n", DH_check_params(dh, &r1));
+    printf("dh.check_params.flags=%d\n", r1);
+    drain("check_params");
+    ERR_clear_error();
+    printf("dh.check_params_ex.ret=%d\n", DH_check_params_ex(dh));
+    drain("check_params_ex");
+
+    ERR_clear_error();
+    printf("dh.genkey.first.ret=%d\n", DH_generate_key(dh));
+    drain("genkey_first");
+    printf("dh.genkey.first.priv_bits=%d\n", BN_num_bits(DH_get0_priv_key(dh)));
+    printf("dh.genkey.first.pub_null=%d\n", DH_get0_pub_key(dh) == NULL);
+
+    ERR_clear_error();
+    printf("dh.check_pub_key.ret=%d\n", DH_check_pub_key(dh, DH_get0_pub_key(dh), &r1));
+    printf("dh.check_pub_key.flags=%d\n", r1);
+    drain("check_pub_key");
+    ERR_clear_error();
+    printf("dh.check_pub_key_ex.ret=%d\n", DH_check_pub_key_ex(dh, DH_get0_pub_key(dh)));
+    drain("check_pub_key_ex");
+
+    /* ---- the second party and the two agreement functions */
+    {
+        DH *peer = dh_peer(dh);
+
+        if (peer == NULL) {
+            printf("dh.agree.peer_built=0\n");
+        } else {
+            int pad1, pad2, unpad1, size = DH_size(dh);
+
+            printf("dh.agree.peer_built=1\n");
+            ERR_clear_error();
+            printf("dh.agree.peer_genkey=%d\n", DH_generate_key(peer));
+            drain("peer_genkey");
+
+            ERR_clear_error();
+            pad1 = DH_compute_key_padded(k1, DH_get0_pub_key(peer), dh);
+            pad2 = DH_compute_key_padded(k2, DH_get0_pub_key(dh), peer);
+            printf("dh.agree.pad1=%d\n", pad1);
+            printf("dh.agree.pad2=%d\n", pad2);
+            printf("dh.agree.pad_is_size=%d\n", pad1 == size && pad2 == size);
+            printf("dh.agree.secrets_equal=%d\n", pad1 == pad2 && bytes_eq(k1, k2, pad1));
+            drain("agree_padded");
+
+            ERR_clear_error();
+            unpad1 = DH_compute_key(u1, DH_get0_pub_key(peer), dh);
+            printf("dh.agree.unpad1=%d\n", unpad1);
+            printf("dh.agree.unpad_le_pad=%d\n", unpad1 <= pad1);
+            printf("dh.agree.unpad_is_tail=%d\n", is_tail(u1, unpad1, k1, pad1));
+            drain("agree_unpadded");
+
+            DH_free(peer);
+        }
+    }
+
+    /* ---- `DH_generate_parameters`'s own success arm */
+    DH_free(out);
+    ERR_clear_error();
+    out = DH_generate_parameters(512, 2, NULL, NULL);
+    printf("dh.genparams.depr_nonnull=%d\n", out != NULL);
+    drain("genparams_depr");
+    if (out != NULL) {
+        ERR_clear_error();
+        printf("dh.genparams.depr_bits=%d\n", DH_bits(out));
+        printf("dh.genparams.depr_check=%d\n", DH_check(out, &r2));
+        printf("dh.genparams.depr_flags=%d\n", r2);
+        printf("dh.genparams.depr_length=%ld\n", DH_get_length(out));
+        drain("genparams_depr_check");
+        DH_free(out);
+    }
+
+    /* ---- the refusals */
+
+    /* A no-private-value agreement: `DH_compute_key` answers -1 rather than 0 here. */
+    {
+        DH *q_only = dh_peer(dh);
+        if (q_only != NULL) {
+            ERR_clear_error();
+            printf("dh.refuse.no_priv.ret=%d\n",
+                DH_compute_key(u1, DH_get0_pub_key(dh), q_only));
+            drain("no_priv");
+            ERR_clear_error();
+            printf("dh.refuse.no_priv_padded.ret=%d\n",
+                DH_compute_key_padded(u1, DH_get0_pub_key(dh), q_only));
+            drain("no_priv_padded");
+            DH_free(q_only);
+        }
+    }
+
+    /* A 5-bit modulus: every entry point refuses it. */
+    out = DH_new();
+    if (out != NULL) {
+        p = BN_new();
+        g = BN_new();
+        q = BN_new();
+        BN_set_word((BIGNUM *)p, 23);
+        BN_set_word((BIGNUM *)g, 2);
+        BN_set_word((BIGNUM *)q, 11);
+        printf("dh.refuse.tiny_group.built=%d\n", DH_set0_pqg(out, (BIGNUM *)p, (BIGNUM *)q,
+            (BIGNUM *)g));
+        printf("dh.refuse.tiny_group.bits=%d\n", DH_bits(out));
+        printf("dh.refuse.tiny_group.security_bits=%d\n", DH_security_bits(out));
+
+        ERR_clear_error();
+        printf("dh.refuse.tiny_genkey.ret=%d\n", DH_generate_key(out));
+        drain("tiny_genkey");
+
+        ERR_clear_error();
+        printf("dh.refuse.tiny_compute.ret=%d\n", DH_compute_key(u1, one, out));
+        drain("tiny_compute");
+
+        ERR_clear_error();
+        printf("dh.refuse.tiny_params.ret=%d\n", DH_check_params(out, &r1));
+        printf("dh.refuse.tiny_params.flags=%d\n", r1);
+        drain("tiny_params");
+        ERR_clear_error();
+        printf("dh.refuse.tiny_params_ex.ret=%d\n", DH_check_params_ex(out));
+        drain("tiny_params_ex");
+
+        ERR_clear_error();
+        printf("dh.refuse.tiny_check.ret=%d\n", DH_check(out, &r1));
+        printf("dh.refuse.tiny_check.flags=%d\n", r1);
+        drain("tiny_check");
+        ERR_clear_error();
+        printf("dh.refuse.tiny_check_ex.ret=%d\n", DH_check_ex(out));
+        drain("tiny_check_ex");
+
+        /* `1` is too small and `p - 1` is too large: the range check's two ends. */
+        ERR_clear_error();
+        printf("dh.refuse.pub_one.ret=%d\n", DH_check_pub_key(out, one, &r1));
+        printf("dh.refuse.pub_one.flags=%d\n", r1);
+        drain("pub_one");
+        ERR_clear_error();
+        printf("dh.refuse.pub_one_ex.ret=%d\n", DH_check_pub_key_ex(out, one));
+        drain("pub_one_ex");
+
+        p = BN_new();
+        BN_set_word((BIGNUM *)p, 22);
+        ERR_clear_error();
+        printf("dh.refuse.pub_pm1.ret=%d\n", DH_check_pub_key(out, p, &r1));
+        printf("dh.refuse.pub_pm1.flags=%d\n", r1);
+        drain("pub_pm1");
+        BN_free((BIGNUM *)p);
+
+        /* A `q` greater than `p`: both validators report their invalid-value bits. */
+        DH_free(out);
+    }
+
+    /* The parameter generator's own refusals, and the bad-generator arm that leaves two records. */
+    out = DH_new();
+    if (out != NULL) {
+        ERR_clear_error();
+        printf("dh.refuse.genparams_small.ret=%d\n",
+            DH_generate_parameters_ex(out, 256, 2, NULL));
+        drain("genparams_small");
+        ERR_clear_error();
+        printf("dh.refuse.genparams_badgen.ret=%d\n",
+            DH_generate_parameters_ex(out, 512, 1, NULL));
+        drain("genparams_badgen");
+        DH_free(out);
+    }
+
+    ERR_clear_error();
+    out = DH_generate_parameters(256, 2, NULL, NULL);
+    printf("dh.refuse.genparams_depr_small.is_null=%d\n", out == NULL);
+    drain("genparams_depr_small");
+    DH_free(out);
+
+    /* A body with no modulus at all: the structural check answers through `*ret`, not a fault. */
+    out = DH_new();
+    if (out != NULL) {
+        ERR_clear_error();
+        printf("dh.refuse.empty_params.ret=%d\n", DH_check_params(out, &r1));
+        printf("dh.refuse.empty_params.flags=%d\n", r1);
+        drain("empty_params");
+        ERR_clear_error();
+        printf("dh.refuse.empty_params_ex.ret=%d\n", DH_check_params_ex(out));
+        drain("empty_params_ex");
+        ERR_clear_error();
+        printf("dh.refuse.empty_check.ret=%d\n", DH_check(out, &r1));
+        printf("dh.refuse.empty_check.flags=%d\n", r1);
+        drain("empty_check");
+        ERR_clear_error();
+        printf("dh.refuse.empty_pub.ret=%d\n", DH_check_pub_key(out, one, &r1));
+        printf("dh.refuse.empty_pub.flags=%d\n", r1);
+        drain("empty_pub");
+        DH_free(out);
+    }
+
+    /* `DH_set0_key` always answers 1, including for a NULL pair; its object's members do not move
+     * when the argument is NULL, which is what the round trip below observes. */
+    out = DH_new();
+    if (out != NULL) {
+        printf("dh.refuse.set0_key.both_null_ret=%d\n", DH_set0_key(out, NULL, NULL));
+        printf("dh.refuse.set0_key.pub_still_null=%d\n", DH_get0_pub_key(out) == NULL);
+        p = BN_new();
+        BN_set_word((BIGNUM *)p, 7);
+        printf("dh.refuse.set0_key.pub_ret=%d\n", DH_set0_key(out, (BIGNUM *)p, NULL));
+        printf("dh.refuse.set0_key.pub_is_7=%d\n", BN_cmp(DH_get0_pub_key(out), p) == 0);
+        DH_free(out);
+    }
+
+    DH_free(NULL);
+    printf("dh.obj.free_null.survived=1\n");
+
+    BN_free(one);
+    BN_free(zero);
+    DH_free(dh);
+}
+
 int main(void)
 {
     DH_METHOD *m;
@@ -286,6 +687,10 @@ int main(void)
     begin();
     DH_meth_free(NULL);
     end("free_null");
+
+    /* ---- the DH object, its key layer, its generator and its validators (D331) */
+
+    dh_object_arms();
 
     return 0;
 }

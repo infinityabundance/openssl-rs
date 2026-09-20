@@ -21866,3 +21866,170 @@ controls. The object layer still cannot precede `dh_key.c` — `DH_get_default_m
 `generate_key`, whose q-set arm is the `ossl_ffc_params_simple_validate` that now exists — and
 `DH_get_default_method`, `DH_set_default_method` and `DH_OpenSSL` still wait with it. The named-group
 tables wait as D329 said they would, and `ffc_dh.c`/`ffc_backend.c` have no module until they land.
+
+## D331 — 8.5's DH object, key layer, generator and validators land together, the three deferred `DH_generate_*` names retire, and a 32-bit multiply in landed code is found by the court that first exercised it
+
+**Decision.** Phase 8.5 (DH and DHX) lands **five more `crypto/dh/` units** — the object layer, the
+key layer, the parameter generator, the validators and the one deprecated wrapper — as five new
+children of `src/dh/`:
+
+| module | authority unit | defined symbols |
+|---|---|---|
+| `src/dh/object.rs` | `crypto/dh/dh_lib.c` | 30/30 |
+| `src/dh/key.rs` | `crypto/dh/dh_key.c` | 10/10 |
+| `src/dh/gen.rs` | `crypto/dh/dh_gen.c` | 3/3 |
+| `src/dh/check.rs` | `crypto/dh/dh_check.c` | 9/9 |
+| `src/dh/depr.rs` | `crypto/dh/dh_depr.c` | 1/1 |
+
+`share` is `forensics/atlas/transcription-edges.json`'s defined-symbol share; every unit's every
+external definition is transcribed, and the internals the units reach are transcribed with them.
+`src/dh/mod.rs`'s own edge stays 21/21 for `dh_meth.c`, and its [`Dh`] type is now the object's
+real shape rather than the forward declaration D329 left. **Thirty-nine exports land**, and the
+three deferred DH names are among them.
+
+**The object layer and the key layer land together, which is the cycle D329 measured.** `DH_new`
+is `dh_new_intern`, and its first read of a method is `DH_get_default_method()` (`dh_lib.c:95`),
+whose `default_DH_method` is `&dh_ossl` — and `dh_ossl` is `dh_key.c:165-175`, whose `generate_key`
+member is the function that reaches `ossl_ffc_params_simple_validate`. So the table cannot exist
+before the object and the object cannot exist before the table. D329 left `DH_get_default_method`,
+`DH_set_default_method` and `DH_OpenSSL` unlanded rather than installing an empty table; this
+commit lands them beside the table, in `src/dh/key.rs`.
+
+**Two reachable-answer reductions, each stated at its site with the argument.** They are the same
+class as `src/rsa/object.rs`'s `ENGINE_*` reduction (D313) and not a smaller claim.
+
+* **`ENGINE_*`.** `DH_set_method` and `DH_free` call `ENGINE_finish(dh->engine)` and `dh_new_intern`
+  calls `ENGINE_init`/`ENGINE_get_default_DH`/`ENGINE_get_DH`. This crate has no engine registry
+  (Phase 13, D181), so `ENGINE_get_default_DH()` selects from an empty table and answers NULL, the
+  `if (ret->engine)` block — the only reader of `ENGINE_get_DH` — is unreachable, and
+  `ENGINE_finish(NULL)` returns 1 without touching anything. The calls are omitted, the
+  `dh->engine = NULL;` assignments are kept, and the observable half is that `DH_get0_engine`
+  answers NULL for every object this crate can build — which `RT-DH` asserts. The two
+  `ERR_R_ENGINE_LIB` raise sites inside that block (`dh_lib.c:100`, `:109`) are therefore
+  unreachable and no `raise_site` names them; the generated `err_sites::DH_LIB_100`/`_109`
+  coordinates are still emitted by the lexical scan and still carried in `err_sites::ALL`, exactly
+  as D330 records for the two FIPS-only FFC sites.
+* **`DH_get_nid`.** `generate_key` (`dh_key.c:313`), `DH_check` (`dh_check.c:158`) and
+  `ossl_dh_check_priv_key` (`dh_check.c:336`) branch on `DH_get_nid(dh) != NID_undef`, and that
+  function is `crypto/dh/dh_group_params.c:94-100` — the named-group unit, which waits with the
+  two tables D329/D330 left as a separable data transcription. Its body is `return dh->params.nid;`
+  behind a NULL test, so each site is written as the field read it reduces to. The read is
+  `NID_undef` on every object this crate can construct: the field's only two writers
+  (`ossl_dh_cache_named_group`, `ossl_ffc_named_group_set`) are both in that unlanded unit, and
+  `ossl_ffc_params_init` zeroes it. **`DH_set0_pqg`'s `ossl_dh_cache_named_group(dh)` call is
+  reduced the same way and named in D329 before it was reduced here**: its whole reachable effect
+  on these objects is the flush of a field that already holds the flushed value. The day the
+  tables land, the four sites replace the reductions with no other change.
+
+**The three deferred names retire, and the hand-off row is split rather than deleted.** D329 and
+D330 both recorded that `BLOCKED_HANDOFFS` row (3) named the three DH names beside
+`DSA_generate_key`, `DSA_generate_parameters_ex` and `EC_KEY_generate_key`; the generator fails
+closed on a row that outlives its names, so the row is **split** — D326's precedent — and the
+DSA/EC half keeps its own reason, which is that those three units do not exist in the crate at all
+rather than that a callee is missing. The ledger's `deferred` therefore moves **7 -> 4**, and the
+change is proven liveness-preserving rather than asserted: `blocker_liveness.py` checks a
+`BLOCKED_HANDOFFS` row's named symbols, and the row no longer names one the crate defines.
+
+**The court found a real defect in landed code, and it is fixed here.** `src/rsa/object.rs`'s
+`ilog_e` — the fixed-point natural logarithm behind `ossl_ifc_ffc_compute_security_bits` — wrote
+`r.wrapping_mul(SCALE) as u64 / LOG_E as u64`, i.e. it multiplied two 32-bit values in `u32` and
+widened the *wrapped* product. The authority casts first: `(r * (uint64_t)scale) / log_e`
+(`rsa_lib.c:302`). The difference is invisible for the seven canonical moduli, because they return
+before the formula, and for every `n` above `2^32 / scale` it makes the logarithm truncate — so
+`ossl_ifc_ffc_compute_security_bits` answered the **192-bit cap for the whole 8..2047 range**.
+`RT-DH` was the first caller to compare a computed value against the authority: a 512-bit group's
+RFC 7919 key length came out **400** on the candidate and **125** on the authority. The multiply is
+now the authority's widening one, the unit test that only checked bands (`y <= cap`, `y % 8 == 0`,
+both of which the cap satisfies trivially) gains two exact values read off the authority's own
+generator — `512 -> 56`, `1024 -> 80` — and `RSA_security_bits` for a 1024-bit multi-prime key is
+the second reader to benefit. This is recorded as a defect because RT-RSA could not see it: every
+modulus its arms build is canonical.
+
+**What the court observed.** `RT-DH` grows **66 -> 210 observations**, and every one of the sixty
+exports — the twenty-one `DH_meth_*` labels and the thirty-nine this commit adds — is called. The
+new arms are: the object's whole accessor surface and its `-1`/`0` sentinels; `DH_new_method(NULL)`
+beside `DH_new`; the flag trio, the length setter and the ex-data pair; the two `DH_set0_pqg`
+refusals and `DH_set0_key`'s always-1; a **generated 512-bit safe-prime group** whose `DH_bits`,
+`DH_size`, `DH_security_bits` and RFC 7919 key length are printed; a second party constructed from
+the first's `p`/`g` with `BN_dup`, with the two agreeing on a padded shared secret and the unpadded
+`DH_compute_key` proved to be the padded one's tail; `DH_generate_parameters`'s own success arm;
+and eleven refusal arms, each observed through **both** its return value and the coordinate
+`ERR_get_error_all` reports. No random or secret byte is printed: the private exponent is observed
+by its bit width (which `BN_RAND_TOP_ONE` makes exactly `dh->length`), the public key by its range,
+and the shared secrets only by equality and by a tail predicate.
+
+**The refusals are the authority's, including the one whose shape is easy to lose.** A body with
+no modulus and a 5-bit group report through `*ret` rather than dereferencing NULL; `DH_compute_key`
+answers **-1** for a missing private value where `ossl_dh_compute_key`'s two modulus bounds answer
+**-1** and its `DH_MIN_MODULUS_BITS` bound answers **0**; and
+`DH_generate_parameters_ex(512, 1, NULL)` leaves **two** queue records, because
+`dh_builtin_genparams` raises `DH_R_BAD_GENERATOR` and then the shared `err:` label raises
+`ERR_R_BN_LIB` for the `ok == -1` it is still holding. That double record is why the transcription
+uses one labelled block and one epilogue rather than an early return per failure, and `RT-DH`
+compares the two dump lines.
+
+**The layout is measured, not read.** `courts/layout/measure-dh.c` adds `struct dh_st` — **208
+bytes, alignment 8**, sixteen member offsets — to the two objects `measure-ffc-params.c` covers,
+because the object embeds `FFC_PARAMS` **by value** and four of this commit's five units read its
+fields by name. The two offsets that cannot be reasoned about from the declaration are `length` at
+**104** (a four-byte `int32_t`, so 108..112 is padding before `pub_key` at 112) and `ex_data` at
+**152**, because `references` at 144 is a four-byte `_Atomic int`. The unit test
+`the_dh_object_is_the_authoritys_shape` asserts all sixteen.
+
+**Four coordinates the prompt carried are wrong, and the authority is the one corrected to.**
+First, **there is no `crypto/dh/dh_ctrl.c`**: a case-sensitive search of both admitted trees and of
+`crypto/dh/build.info` finds none, because the DH controls are `crypto/evp/dh_ctrl.c` — the
+`EVP_PKEY_CTX_*dh*` ABI surface over `EVP_PKEY_CTX`, which is this stratum's slice E and not this
+slice. Its `EVP_PKEY_CTX_set_dh_kdf_type` is also the only crate reader of the string
+`"X942KDF-ASN1"` (`src/evp/pkey_ctx.rs:3282`). Second, **`DH_generate_parameters` is not in
+`dh_gen.c`**: the deprecated wrapper is the whole of `crypto/dh/dh_depr.c` (`:25-48`), and
+transcribing it is what retires the third deferred name. Third, the prompt's `dh_lib.c` list does
+not name `DH_set_method` or the five internals the file also defines (`dh_new_intern`,
+`ossl_dh_set0_libctx`, `ossl_dh_get_method`, `ossl_dh_get0_params`, `ossl_dh_get0_nid`); all six
+are transcribed, and `dh_lib.c` defines nothing else. Fourth, `DH_KDF_X9_42` **cannot** be
+transcribed now and no fetch was faked: `crypto/dh/dh_kdf.c` calls
+`EVP_KDF_fetch(libctx, OSSL_KDF_NAME_X942KDF_ASN1, …)`, and `forensics/atlas/provider-algorithms.json`
+row 187 records the default provider's `X942KDF-ASN1` row as `implementation_state:
+"unimplemented"` in this crate — `deflt_kdfs` is a table the crate does not publish yet. So the
+function would fetch NULL and refuse every call, which is a fabricated failure rather than a
+transcription; it waits for the `OSSL_OP_KDF` rows.
+
+**The unit changed the product's evidence machinery in two places, both generator inputs.** The
+five units' four raisers join `gen_err_raise_sites.py`'s `COVERED_FILES` —
+`crypto/dh/dh_lib.c`, `dh_key.c`, `dh_gen.c` and `dh_check.c`; `dh_meth.c` and `dh_depr.c` are
+absent because neither raises, the reasoning `rsa_meth.c` is named under — so **forty coordinates
+are added** and `src/runtime/err_sites.rs` moves **2,428 -> 2,468** sites. `crypto/dh/dh_group_params.c`'s
+one raise stays uncovered with its unit.
+
+**D330's subtree-wide `#[allow(dead_code)]` is deleted, exactly as that entry said it would be.**
+`src/lib.rs`'s `pub(crate) mod ffc;` no longer carries it: with `dh_lib.c`, `dh_key.c`, `dh_gen.c`
+and `dh_check.c` in the crate the FFC subtree is reachable from the crate root, so the annotation
+would be hiding real dead code rather than marking a boundary. **Fourteen names are still reached
+by no crate caller, and each now carries its own item-level `#[allow(dead_code)]` with the reader
+it waits for** — the four `FFC_CHECK_*` bits the DSA validators set (`FFC_CHECK_P_NOT_SAFE_PRIME`,
+`FFC_CHECK_UNKNOWN_GENERATOR`, `FFC_CHECK_NOT_SUITABLE_GENERATOR`, `FFC_CHECK_INVALID_J_VALUE`) and
+ten `crypto/dh/dh_asn1.c`/`dh_pmeth.c`/`dh_backend.c`, `crypto/dsa/*` and provider-facing
+accessors (`ossl_ffc_params_set0_j`, `_set_gindex`, `_set_pcounter`, `_set_h`, `_set_flags`,
+`ossl_ffc_set_digest`, `_get_validate_params`, `_cmp`, `_print`, `ossl_ffc_params_full_validate`).
+D327's rule is the one applied: an unreachable transcription is *kept* when the unit around it is
+whole, and the annotation now covers exactly the items that are unreachable rather than the unit.
+
+**Bookkeeping, read off the regenerated files.** `phase8`: implemented 348 -> **387**, deferred 7 ->
+**4**, open 431 -> **395**, owned 786 unchanged.
+`forensics/atlas/implemented-surface.json` moves `libcrypto` implemented 2261 -> **2300**.
+`forensics/atlas/transcription-edges.json` gains five edges, so the gate counts **266 -> 271**
+crate modules and **197 -> 202** authority units, and the gate's `language_census` moves
+**3347 -> 3398**. **`sealed_census` stays 57 and `blocking_dependencies` stays 17**, so **no
+`forensics/ownership-transitions.json` row was needed** — the guard was run both ways and the two
+counts are unchanged against both this branch's previous head and `origin/main`; the guard's
+`implemented[libcrypto]` movement is 2261 -> 2300, which is this commit's own exports. The suite
+stands at **797 tests**, five of them this slice's, and the pipeline ends `PIPELINE OK` with the
+gate at zero findings over 90 courts and 33,349 observations.
+
+**What is left of 8.5, unchanged and now two links shorter.** The named-group unit
+(`dh_group_params.c`) and the two tables it reads wait as D329 and D330 said they would, so
+`DH_get_nid`, `DH_new_by_nid` and `ossl_dh_cache_named_group` are open; `dh_asn1.c`'s
+`d2i_DHparams`/`i2d_DHparams` and the `DHparams_*` family are 8.8's; `dh_kdf.c`'s `DH_KDF_X9_42`
+waits on the provider's `OSSL_OP_KDF` rows; and `crypto/evp/dh_ctrl.c`'s controls plus the
+`EVP_PKEY_*DH` bridges are slice E. `CT-DH` stays PENDING: its PKCS#3 and group vectors now have
+the object they needed, so what remains is the vector corpus rather than a prerequisite.
