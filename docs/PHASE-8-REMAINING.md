@@ -63,7 +63,7 @@ table, verbatim.
 | 8.4 RSA | `src/rsa/mod.rs` | 24 | `RT-RSA`, `CT-RSA` | 8.1 (the RSA provider's `SHA`-named digests), 8.3 (its OAEP/PSS modes) |
 | 8.5 DH and DHX | `src/dh/mod.rs`, `src/dh/mod.rs`, `src/ffc/`, `src/dh/object.rs`, `src/dh/group_params.rs`, `src/dh/rfc5114.rs`, `src/ffc/dh.rs`, `src/bn/dh.rs`, `src/bn/dh_data.rs` | 32 | `RT-DH`, `CT-DH` | 8.4 (the shared BN/param idiom) |
 | 8.6 DSA | `src/dsa/mod.rs`, `src/dsa/mod.rs`, `src/dsa/object.rs`, `src/dsa/ossl.rs`, `src/dsa/key.rs`, `src/dsa/gen.rs`, `src/dsa/sign.rs`, `src/dsa/vrf.rs`, `src/dsa/depr.rs` | 26 | `RT-DSA`, `CT-DSA` | 8.5 |
-| 8.7 EC | `src/ec/mod.rs`, `src/ec/curve.rs`, `src/ec/curve_data.rs`, `src/ec/support.rs` | 197 | `RT-EC`, `CT-EC` | 8.6 |
+| 8.7 EC | `src/ec/mod.rs`, `src/ec/curve.rs`, `src/ec/curve_data.rs`, `src/ec/support.rs`, `src/ec/mod.rs` | 197 | `RT-EC`, `CT-EC` | 8.6 |
 | 8.8 The ASN.1 method objects and `standard_methods[]` | `src/asn1/ameth.rs` | 15 | `RT-AMETH` | 8.4, 8.5, 8.6, 8.7 |
 | 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals | `src/pem/key_legacy.rs` | 30 | `RT-PEM-KEY` | 8.8 |
 

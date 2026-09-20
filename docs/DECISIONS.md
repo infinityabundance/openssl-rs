@@ -22630,3 +22630,126 @@ provider surfaces. `EC_KEY_generate_key` stays the ledger's `deferred` row and i
 `BLOCKED_HANDOFFS` entry is untouched, because this slice lands none of its unit's names.
 `CT-EC` stays PENDING, and its reason is corrected rather than left: the curve tables have landed, so
 what it now waits on is `EC_GROUP`/`EC_POINT` and the vector corpus rather than a prerequisite.
+
+## D335 — 8.7's shapes land measured, and measuring them at the table level shows the layer has exactly one compiling boundary before it is whole
+
+**Decision.** Phase 8.7 lands its **second slice**: the seven shapes `crypto/ec/ec_local.h`
+declares, their offsets, and the seven constants they are sized by, in `src/ec/mod.rs`. A header
+defines no symbol and calls nothing, so **no export lands, the ledger does not move**
+(`phase8`: implemented **460**, deferred **2**, open **324**, owned **786**) and `RT-EC` stays at
+**483 observations** — nothing this slice adds is reachable from a probe, which is the whole reason
+it is a separate slice rather than a part of the next one.
+
+That is a smaller landing than D334's four exports and it is recorded as one rather than dressed up:
+what it buys is the *measurement* below, which decides how the rest of 8.7 is cut.
+
+**The refinement D334 asked for, and it is stronger than the claim it refines.** D334 recorded that
+`EC_GFp_nistz256_method`'s table names `ossl_ec_key_simple_*` (`ec_key.c`),
+`ossl_ecdh_simple_compute_key` (`ecdh_ossl.c`) and `ossl_ecdsa_simple_*` (`ecdsa_ossl.c`), and drew
+the boundary at *that* row. Reading all five tables says the row is not special:
+
+| table | unit | `ossl_ec_key_simple_*` | `ossl_ecdh_simple_compute_key` | `ossl_ecdsa_simple_*` | other units' names |
+|---|---|---|---|---|---|
+| `EC_GFp_simple_method` | `ecp_smpl.c` | 5 | 1 | 3 | `ossl_ec_group_simple_order_bits` (`ec_lib.c`) |
+| `EC_GFp_mont_method` | `ecp_mont.c` | 5 | 1 | 3 | `ossl_ec_group_simple_order_bits`, `ossl_ec_GFp_simple_{blind_coordinates,ladder_pre,step,post}` |
+| `EC_GFp_nist_method` | `ecp_nist.c` | 5 | 1 | 3 | as the mont table's, plus its own two field functions |
+| `EC_GF2m_simple_method` | `ec2_smpl.c` | 5 | 1 | 3 | `ossl_ec_group_simple_order_bits` |
+| `EC_GFp_nistz256_method` | `ecp_nistz256.c` | 5 | 1 | 3 | as the mont table's, plus `ecp_nistz256group_full_init` |
+
+So the dependency is not "the nistz256 row", it is **the table shape itself**: a `static const
+EC_METHOD` written with the authority's own initialiser names three units' symbols in eleven of its
+fifty-five columns, whichever table it is. A partial landing that stopped at `ecp_smpl.c` would have
+to invent eight of `EC_GFp_simple_method`'s entries, and inventing them is exactly the fabricated
+value D334 refused for `curve_list[]`'s fourth column.
+
+**The apparent way out is `ec_kmeth.c`, and it is closed by the same measurement.** `ec_kmeth.c` is
+EC's counterpart to `dh_meth.c` and `dsa_meth.c` — D329's, D331's and D333's first slices, each the
+one unit of its block with no cryptographic callee — and it is **not** landable, for a reason a
+reader of the file would not predict from its name. In DH and DSA the setters/getters and the
+*default table* are in different units: `dh_meth.c` and `dsa_meth.c` hold the accessors, and
+`openssl_dh_meth`/`openssl_dsa_meth` live in `dh_ossl.c`/`dsa_ossl.c`, whose entries are that file's
+own functions. EC fuses the two: `openssl_ec_key_method` is `ec_kmeth.c:24-38`, and it names
+`ossl_ec_key_gen` (`ec_key.c`), `ossl_ecdh_compute_key` (`ecdh_ossl.c`) and all five
+`ossl_ecdsa_{sign,sign_setup,sign_sig,verify,verify_sig}` (`ecdsa_ossl.c`) — **seven** names from
+**three** units that this subphase does not own. `EC_KEY_OpenSSL`, `EC_KEY_get_default_method` and
+`EC_KEY_set_default_method`, three of the unit's nineteen labels, are one `return &openssl_ec_key_method`
+each, so the unit cannot be cut around the table either.
+
+**And the group object's own callees are four units, not one.** `ec_lib.c` is the last unit that
+looked landable on its own, because it reaches every method through a pointer. Its external name set
+says otherwise, and it is short:
+
+* `ossl_ec_GFp_simple_set_Jprojective_coordinates_GFp` and `_get_…` — `ecp_smpl.c`, this item's
+  scope, reached from `EC_POINT_set_Jprojective_coordinates_GFp`/`_get_…` (`:841`, `:858`);
+* `EC_nistz256_pre_comp_free`/`_dup` — `ecp_nistz256.c`, which is perlasm-only and therefore out of
+  scope by D334's own reading, reached from `EC_pre_comp_free` (`:93`) and `EC_GROUP_copy` (`:188`)
+  under `#ifdef ECP_NISTZ256_ASM`, which **is** defined here;
+* `EC_ec_pre_comp_free`/`_dup`, `ossl_ec_wNAF_mul`, `_precompute_mult` and `_have_precompute_mult` —
+  `ec_mult.c`, reached from the same two functions and from `EC_GROUP_precompute_mult`;
+* `ossl_ec_group_todata`, `ossl_ec_encoding_param2id` and `ossl_ec_pt_format_param2id` —
+  `crypto/ec/ec_backend.c`, reached from `EC_GROUP_to_params`/`EC_GROUP_new_from_params` (`:1540`,
+  `:1767`), which are two of the unit's sixty-nine exports.
+
+The four `PCT_nistp224`..`PCT_nistp521` arms are **not** among them and the shapes show why:
+`#ifndef OPENSSL_NO_EC_NISTP_64_GCC_128` holds on this profile, so those four arms compile to empty
+in both switches (`ec_lib.c:109-115`, `:204-210`), and `ecp_nistp224.c`/`_256`/`_384`/`_521` are not
+built at all — which is why the slice could be written at all.
+
+**The conclusion, stated as the boundary rather than as a plan.** There is **no compiling boundary
+between D335 and the whole layer**: the four method tables of items 2 and 3 need items 5 and 6's
+eleven functions, item 6 needs `ec_key.c`, `ec_key.c` needs `ec_lib.c`'s public `EC_POINT_*` and
+`EC_GROUP_*`, and `ec_lib.c` needs `ecp_smpl.c` plus the three units above. So the *next* landing is
+items 2–6 together, and what D335 contributes to it is that the fact is now measured at the table
+level instead of inferred from one row.
+
+**What was measured, and by what.** `courts/layout/measure-ec.c` compiles against the authority's own
+`crypto/ec/ec_local.h` (one extra `-I`, `$S/crypto/ec`, because the authority includes it by bare
+name) and answers:
+
+| object | size | align | the offsets a declaration does not give |
+|---|---|---|---|
+| `struct ec_method_st` | **448** | 8 | two `int`s then **fifty-five** pointers, 8..440; `point_init` **80** / `point_finish` **88** are adjacent and of different return types |
+| `struct ec_group_st` | **184** | 8 | `poly` **72** (five four-byte members at 32..48, then `seed` 48, `seed_len` 56, `field` 64); the union `pre_comp` **160**, after the four-byte discriminator at 152 |
+| `struct ec_point_st` | **48** | 8 | `curve_name` **8**, so 12..16 is padding before `X` |
+| `struct ec_key_st` | **104** | 8 | `version` **16**; `ex_data` **64**, because `references` at 56 is a four-byte `_Atomic int` followed by another four-byte `int` |
+| `struct ec_key_method_st` | **120** | 8 | `flags` **8**, `init` **16** |
+| `struct ECDSA_SIG_st` | **16** | 8 | — |
+| `point_conversion_form_t` | **4** | 4 | the three enumerators are **2**, **4** and **6** |
+
+Four of the six sizes are `OPENSSL_zalloc` allocations an application's `CRYPTO_set_mem_functions`
+callback receives as `num`, and the program is committed beside `measure-ec-builtin-curve.c` with its
+row in `courts/layout/README.md`. The eleven unit tests in `src/ec/mod.rs` assert all four sizes, all
+**117** offsets and the seven constants, because a swap of `point_init` and `point_finish` keeps
+the size and moves two calls.
+
+**The one thing in the header deliberately not transcribed.** `ec_local.h:762-798` ends with three
+`static ossl_inline` helpers — `ec_point_ladder_pre`, `_step` and `_post` — and they are not shapes:
+each is "call `group->meth->ladder_*` or fall back to `EC_POINT_copy`/`EC_POINT_dbl`/`EC_POINT_add`",
+so all three name `ec_lib.c`'s public functions. They are named here and left for item 4, which is
+the first item that can hold them without a stub; `src/ec/mod.rs`'s own module documentation says so
+at the same place.
+
+**The aliases are declared and every one is accounted for.** The forty-five `*Fn` aliases are
+`EC_METHOD`'s and `EC_KEY_METHOD`'s members — the two headers declare each callback inline as a plain
+function pointer, so the atlas, whose universe is the installed public surface, has no `typedef` for
+any of them and no name for a crate alias to link to. They fold the members the authority spells
+identically (one `EcFieldSqrFn` is six `EC_METHOD` columns), and each is registered in
+`forensics/tools/dispatch_court.py` under two new reason families (`EC_METHOD_VTABLE`,
+`EC_KEY_METHOD_VTABLE`) plus a third for `EcFieldModFn`, which is a member of the **group object**
+rather than of a method table. The report is `unlinked=0 exempted=182` with `problems=0`.
+
+**Bookkeeping, read off the regenerated files.** `phase8` is unchanged in all four counts, and so is
+`forensics/atlas/implemented-surface.json` (`libcrypto` implemented stays **2373**) and
+`forensics/atlas/transcription-edges.json` (no new authority unit and no new defining module, so the
+gate counts **288** crate modules and **216** authority units as D334 left them). The gate's
+`language_census` — its count of authority identifiers no crate name models — stays **3,527** and
+`divergence_names_covered` stays **32**, because a header adds no identifier to that universe. The
+suite stands at **857 tests**, eleven of them this slice's, and the pipeline ends `PIPELINE OK` with
+the gate at zero findings over **92 courts** and **34,260 observations**. The guard was run: against
+`origin/main` it reports `sealed_census` **57 -> 52** and `blocking_dependencies` **25 -> 19**, both
+**decreases**, and every other movement is D334's or an earlier stratum's — none of them moves up, so
+**no `forensics/ownership-transitions.json` row was needed**.
+
+**`EC_KEY_generate_key` stays the ledger's `deferred` row, split rather than retired.** Its unit
+(`ec_key.c`) is item 5's and lands nothing here; the shared row D334 named is still shared, and this
+entry adds no reason to it.

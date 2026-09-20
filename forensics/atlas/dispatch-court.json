@@ -19,7 +19,7 @@
       "signatures_authority_only": 397,
       "signatures_checked": 237,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 137,
+      "signatures_not_a_dispatch": 182,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -3762,6 +3762,231 @@
           "alias": "DsoMergerFunc",
           "at": "src/dso/mod.rs",
           "why": "not a provider dispatch: declared in `include/internal/dso.h`, which is not installed, so the atlas has no record of it"
+        },
+        {
+          "alias": "EcGroupInitFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcGroupFinishFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcGroupCopyFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcGroupSetCurveFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcGroupGetCurveFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcGroupQueryFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcGroupCheckDiscriminantFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointInitFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointFinishFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointCopyFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointSetToInfinityFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointSetAffineFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointGetAffineFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointSetCompressedFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPoint2OctFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcOct2PointFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointAddFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointDblFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointUnaryFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointIsAtInfinityFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointIsOnCurveFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointCmpFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointsMakeAffineFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointMulFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPrecomputeMultFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcFieldMulFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcFieldSqrFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPriv2OctFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcOct2PrivFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcKeySetPrivateFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcKeyInitFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcKeyCheckFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcKeyCopyFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcKeyFinishFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcComputeKeyFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcKeySignSetupFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcKeySignSigFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcKeyVerifySigFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcLadderFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcGroupFullInitFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcFieldModFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: `struct ec_group_st`'s `field_mod_func` member (`crypto/ec/ec_local.h:257-258`), a function pointer on the *group object* rather than in a method table, declared inline in an internal header"
+        },
+        {
+          "alias": "EcKeySetGroupFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_KEY_METHOD`'s table, declared inline in `crypto/ec/ec_local.h:664-688` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcKeySetPublicFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_KEY_METHOD`'s table, declared inline in `crypto/ec/ec_local.h:664-688` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcKeySignFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_KEY_METHOD`'s table, declared inline in `crypto/ec/ec_local.h:664-688` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcKeyVerifyFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_KEY_METHOD`'s table, declared inline in `crypto/ec/ec_local.h:664-688` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
         },
         {
           "alias": "AlgorithmPreFn",
