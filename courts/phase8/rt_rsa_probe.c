@@ -1,5 +1,6 @@
 /*
- * RT-RSA -- the differential court for `crypto/rsa/`'s method table (Phase 8.4, slice B).
+ * RT-RSA -- the differential court for `crypto/rsa`'s method table and object layer (Phase 8.4,
+ * slices A and B).
  *
  * This program is compiled **twice**, once against the admitted authority and once against the
  * candidate distribution shell, and the two `key=value` transcripts are diffed. It never decides
@@ -8,19 +9,28 @@
  *
  * What this court is, and what it is not yet
  * ------------------------------------------
- * Slice B is the thirty-three `RSA_meth_*` labels plus `RSA_null_method`, and **every one of the
- * thirty-four is called below**. Nothing here does any cryptography -- each function allocates a
- * table, stores a pointer in it, or returns one -- so the transcript is about *identity and
+ * Two slices of `crypto/rsa` share this court. Slice B is the thirty-three `RSA_meth_*` labels plus
+ * `RSA_null_method`, and **every one of the thirty-four is called below**. Slice A is `rsa_lib.c`'s
+ * object layer plus `rsa_crpt.c`'s three accessors, and **thirty-four of its thirty-six exports are
+ * called below as well**. Nothing here does any cryptography -- each function allocates a table or
+ * an object, stores a pointer in one, or reads one -- so the transcript is about *identity and
  * ownership* rather than arithmetic, and that is the whole observable contract of these entry
  * points.
  *
- * **It is deliberately not a court for the default method.** `RSA_PKCS1_OpenSSL`, `RSA_set_method`,
- * `RSA_get_default_method` and `RSA_set_default_method` are slice A's, and until slice A lands they
- * are not symbols the candidate shell publishes, so a probe that called them would fail to link
- * rather than compare. The observations of `rsa_pkcs1_ossl_meth`'s own members -- `rsa_sign` and
- * `rsa_verify` initialised to the integer `0`, both keygen members NULL, `RSA_FLAG_FIPS_METHOD` in
- * `flags` -- therefore arrive with slice A's probe, in the commit that publishes the table. The
- * deferred observation is named here so that "not compared" cannot be read as "compared and equal".
+ * **`RSA` is opaque in the installed header on both sides, and no constructor exists on the
+ * candidate side yet**, so the object arms build their subject themselves: the fabrication block
+ * below owns the shape, transcribed offset by offset from `courts/layout/measure-rsa-ctx.c` (D283's
+ * measurement), and hands both binaries the same bytes, the same genuine `BIGNUM`s and the same
+ * genuine `RSA_METHOD` from `RSA_meth_new`. The observation is the *library's* answer, and the
+ * `get0_*` identity arms tie the probe's offsets to the library's.
+ *
+ * **Four exports are deliberately not called, and are named here.** `RSA_new` and `RSA_new_method`
+ * are **OWED**: the candidate does not link them until the commit that lands
+ * `RSA_get_default_method`, so a probe that called them would abort the candidate rather than
+ * compare. `RSA_get_default_method` and `RSA_PKCS1_OpenSSL` arrive with that same later commit, as
+ * do the observations of `rsa_pkcs1_ossl_meth`'s own members -- `rsa_sign`/`rsa_verify` initialised
+ * to the integer `0`, both keygen members NULL, `RSA_FLAG_FIPS_METHOD` in `flags`. Naming these four
+ * is what keeps "not compared" from being read as "compared and equal".
  *
  * The allocator-attribution plane
  * -------------------------------
@@ -216,6 +226,121 @@ static int sentinel_mpkeygen(RSA *rsa, int bits, int primes, BIGNUM *e, BN_GENCB
             (const void *)(GET)(m) == NULL);                            \
     } while (0)
 
+/* ------------------------------------------------------------------ the fabricated RSA object */
+
+/* `RSA` is opaque in the installed header on both sides, and no constructor exists on the candidate
+ * side until commit B: `RSA_new`/`RSA_new_method` are OWED until `RSA_get_default_method` lands. So
+ * the probe owns the object's shape, transcribed from `courts/layout/measure-rsa-ctx.c` (D283's
+ * measurement) with every offset pinned. 27 pointers is exactly 216 bytes and is eight-aligned.
+ * Both binaries are handed the same bytes, the same genuine `BIGNUM`s and the same genuine
+ * `RSA_METHOD` from `RSA_meth_new`, and the observation is the *library's* answer. `rt_blank`
+ * memsets all 216 bytes because `forensics/tools/probe_hygiene.py` recompiles this probe at several
+ * optimisation levels and requires an identical transcript, and a partially-initialised object is
+ * exactly the bug class it exists to catch. */
+union rt_rsa_object {
+    void *p[27];
+    unsigned char b[216];
+};
+_Static_assert(sizeof(union rt_rsa_object) == 216, "RSA is 216 bytes");
+
+/* offsets, from courts/layout/measure-rsa-ctx.c:
+   version 16, meth 24, engine 32, n 40, e 48, d 56, p 64, q 72, dmp1 80, dmq1 88, iqmp 96,
+   pss 128, prime_infos 136, ex_data 144, references 160, flags 164, lock 200, dirty_cnt 208;
+   RSA_METHOD::flags is 72. */
+#define RT_OFF(o, n)      ((unsigned char *)(o) + (n))
+#define RT_VERSION(o)     (*(int *)RT_OFF(o, 16))
+#define RT_METH(o)        (*(RSA_METHOD **)RT_OFF(o, 24))
+#define RT_ENGINE(o)      (*(void **)RT_OFF(o, 32))
+#define RT_N(o)           (*(BIGNUM **)RT_OFF(o, 40))
+#define RT_E(o)           (*(BIGNUM **)RT_OFF(o, 48))
+#define RT_D(o)           (*(BIGNUM **)RT_OFF(o, 56))
+#define RT_P(o)           (*(BIGNUM **)RT_OFF(o, 64))
+#define RT_Q(o)           (*(BIGNUM **)RT_OFF(o, 72))
+#define RT_DMP1(o)        (*(BIGNUM **)RT_OFF(o, 80))
+#define RT_DMQ1(o)        (*(BIGNUM **)RT_OFF(o, 88))
+#define RT_IQMP(o)        (*(BIGNUM **)RT_OFF(o, 96))
+#define RT_PSS(o)         (*(void **)RT_OFF(o, 128))
+#define RT_PRIME_INFOS(o) (*(void **)RT_OFF(o, 136))
+#define RT_REFERENCES(o)  (*(int *)RT_OFF(o, 160))
+#define RT_FLAGS(o)       (*(int *)RT_OFF(o, 164))
+#define RT_LOCK(o)        (*(void **)RT_OFF(o, 200))
+#define RT_DIRTY(o)       (*(int *)RT_OFF(o, 208))
+#define RT_METH_FLAGS(m)  (*(int *)((unsigned char *)(m) + 72))
+
+static void *rt_blank(void)
+{
+    void *o = malloc(sizeof(union rt_rsa_object));
+
+    if (o == NULL)
+        return NULL;
+    memset(o, 0, sizeof(union rt_rsa_object));
+    return o;
+}
+
+/* A `BIGNUM` with exactly `bits` significant bits (`0` is the zero value), built through the
+ * public API so the observation is `BN_num_bits`'s own answer. */
+static BIGNUM *rt_bits(int bits)
+{
+    BIGNUM *b = BN_new();
+
+    if (b == NULL)
+        return NULL;
+    if (bits > 0 && BN_set_bit(b, bits - 1) != 1) {
+        BN_free(b);
+        return NULL;
+    }
+    return b;
+}
+
+/* A `BIGNUM` whose value is `v`. The width arms read the *values* 0/1/255/256 rather than a bit
+ * length, because `(bits + 7) / 8` and `bits / 8` only diverge on the value 256. */
+static BIGNUM *rt_word(unsigned long v)
+{
+    BIGNUM *b = BN_new();
+
+    if (b == NULL)
+        return NULL;
+    if (BN_set_word(b, v) != 1) {
+        BN_free(b);
+        return NULL;
+    }
+    return b;
+}
+
+/* The ordering sentinels for `RSA_set_method`: each records its turn in a two-slot sequence, so
+ * "the outgoing table's `finish` fires before the incoming table's `init`" is the numbers 1 and 2
+ * rather than a claim about the source. They are stored in a real table and are never called by the
+ * probe itself. */
+static int rt_seq;
+static int rt_finish_at;
+static int rt_init_at;
+
+static int sentinel_mark_finish(RSA *rsa)
+{
+    (void)rsa;
+    rt_finish_at = ++rt_seq;
+    return 0;
+}
+
+static int sentinel_mark_init(RSA *rsa)
+{
+    (void)rsa;
+    rt_init_at = ++rt_seq;
+    return 0;
+}
+
+/* Release a probe-fabricated object through the library, giving it the reference count `RSA_free`
+ * needs to walk its own order. Only for objects whose `pss` member the probe has not filled: the
+ * candidate reduces `RSA_PSS_PARAMS_free(NULL)` away and the authority calls it, which is fine for a
+ * NULL member and a fault for the probe's sentinel. */
+static void rt_release(void *o)
+{
+    if (o == NULL)
+        return;
+    RT_REFERENCES(o) = 1;
+    RSA_free(o);
+}
+
 /* ------------------------------------------------------------------ the padding primitives */
 
 /* Drain the error queue, printing each record's **packed code and coordinate**. The packed code
@@ -349,6 +474,481 @@ static void oaep_arms(void)
     printf("oaep.zero_tlen=%d\n", RSA_padding_check_PKCS1_OAEP_mgf1(out, 0, em, 128, 128,
         NULL, 0, sha1, sha1));
     EVP_MD_free((EVP_MD *)sha1);
+}
+
+/* ------------------------------------------------------------------ the object layer (slice A) */
+
+/* The thirty-four `rsa_lib.c`/`rsa_crpt.c` exports the candidate publishes. Every subject is
+ * fabricated by the block above; the observations are the library's own answers. The three
+ * `set0_*` refusals and the multi-prime refusals raise nothing, so each of their `drain`
+ * transcripts is an *empty* queue -- the emptiness is the observation, and the `err.count` line is
+ * what records it. */
+static void rsa_object_arms(void)
+{
+    void *o_get = NULL, *o_setm = NULL, *o_fref = NULL, *o_up1 = NULL, *o_up0 = NULL;
+    void *o_exd = NULL, *o_sec = NULL, *o_key = NULL, *o_fac = NULL, *o_crt = NULL;
+    void *o_mp = NULL, *o_mp2 = NULL, *o_full = NULL, *o_pss = NULL, *o_flags = NULL;
+    void *o_bits = NULL;
+    BIGNUM *n, *e, *d, *p, *q, *dmp1, *dmq1, *iqmp;
+    BIGNUM *fn, *fe, *fd, *fp, *fq, *fd1, *fd2, *fi;
+    BIGNUM *a1, *a2, *a3;
+    RSA_METHOD *tbl_get, *tbl_old, *tbl_new, *tbl_flags;
+    const BIGNUM *on, *oe, *od, *op, *oq, *odmp1, *odmq1, *oiqmp;
+    const BIGNUM *mpf[2], *mpe[2], *mpc[2];
+    BIGNUM *mp_primes[1], *mp_exps[1], *mp_coeffs[1];
+    int app = 7, app2 = 9;
+    int i;
+    static const int ladder[7] = { 2048, 3072, 4096, 6144, 7680, 8192, 15360 };
+
+    /* ---------------------------------------------------------------- RSA_get_method */
+
+    tbl_get = RSA_meth_new("rt-obj-get", 0x30);
+    o_get = rt_blank();
+    printf("rsa.obj_get_method.blank_is_null=%d\n",
+        (const void *)RSA_get_method(o_get) == NULL);
+    RT_METH(o_get) = tbl_get;
+    printf("rsa.obj_get_method.sentinel=%d\n",
+        (const void *)RSA_get_method(o_get) == (const void *)tbl_get);
+
+    /* ---------------------------------------------------------------- RSA_set_method */
+
+    /* The outgoing table's `finish` and the incoming table's `init` are distinct sentinels, so the
+     * *order* is an observation rather than an assumption. `engine` must be left 0: a non-NULL
+     * engine would make the authority call `ENGINE_finish` on it. */
+    tbl_old = RSA_meth_new("rt-obj-old", 0x01);
+    tbl_new = RSA_meth_new("rt-obj-new", 0x02);
+    (void)RSA_meth_set_finish(tbl_old, sentinel_mark_finish);
+    (void)RSA_meth_set_init(tbl_new, sentinel_mark_init);
+    o_setm = rt_blank();
+    RT_METH(o_setm) = tbl_old;
+    rt_seq = 0;
+    rt_finish_at = 0;
+    rt_init_at = 0;
+    printf("rsa.obj_set_method.ret=%d\n", RSA_set_method(o_setm, tbl_new));
+    printf("rsa.obj_set_method.store=%d\n",
+        (const void *)RSA_get_method(o_setm) == (const void *)tbl_new);
+    printf("rsa.obj_set_method.finish_fired=%d\n", rt_finish_at == 1);
+    printf("rsa.obj_set_method.init_fired=%d\n", rt_init_at == 2);
+    printf("rsa.obj_set_method.finish_before_init=%d\n", rt_finish_at < rt_init_at);
+    printf("rsa.obj_set_method.engine_is_null=%d\n", RSA_get0_engine(o_setm) == NULL);
+
+    /* ---------------------------------------------------------------- RSA_free */
+
+    begin();
+    RSA_free(NULL);
+    end("obj_free_null");
+    printf("rsa.obj_free_null.survived=1\n");
+
+    /* references == 2: the release order's first rule, so the window is empty and `finish` does
+     * not fire. */
+    o_fref = rt_blank();
+    RT_REFERENCES(o_fref) = 2;
+    RT_METH(o_fref) = tbl_old;
+    rt_seq = 0;
+    rt_finish_at = 0;
+    begin();
+    RSA_free(o_fref);
+    end("obj_free_refs2");
+    printf("rsa.obj_free_refs2.ref_after=%d\n", RT_REFERENCES(o_fref));
+    printf("rsa.obj_free_refs2.finish_fired=%d\n", rt_finish_at != 0);
+    RSA_free(o_fref);
+
+    /* One RSA ex_data index is registered before the last-reference arm so that the authority's
+     * `CRYPTO_free_ex_data` finds a non-empty callback table and takes its `storage == stack` path.
+     * With an empty table it instead `OPENSSL_free`s a NULL local snapshot, and that `free(NULL)`
+     * reaches the caller-installed allocator -- which the candidate's `CRYPTO_free` does not forward
+     * (`src/runtime/mem.rs`'s `dealloc` returns early on NULL; the authority's `CRYPTO_free` calls
+     * `free_impl` unconditionally). The callback is registered with a NULL `free_func`, so it is a
+     * registry entry and nothing else. This keeps the window's subject the object's own release;
+     * the NULL-forwarding difference is a separate, out-of-slice divergence and not this arm's claim. */
+    (void)RSA_get_ex_new_index(0, NULL, NULL, NULL, NULL);
+
+    /* references == 1 on a fabricated heap object: the whole order, ending in the object's own F,
+     * which is attributed to `rsa_lib.c`. */
+    {
+        void *o_last = rt_blank();
+
+        RT_REFERENCES(o_last) = 1;
+        RT_METH(o_last) = tbl_old;
+        rt_seq = 0;
+        rt_finish_at = 0;
+        begin();
+        RSA_free(o_last);
+        end("obj_free_last");
+        printf("rsa.obj_free_last.finish_fired=%d\n", rt_finish_at == 1);
+    }
+
+    /* ---------------------------------------------------------------- RSA_up_ref */
+
+    o_up1 = rt_blank();
+    RT_REFERENCES(o_up1) = 1;
+    printf("rsa.obj_upref.one_ret=%d\n", RSA_up_ref(o_up1));
+    printf("rsa.obj_upref.one_ref_after=%d\n", RT_REFERENCES(o_up1));
+    o_up0 = rt_blank();
+    RT_REFERENCES(o_up0) = 0;
+    printf("rsa.obj_upref.zero_ret=%d\n", RSA_up_ref(o_up0));
+    printf("rsa.obj_upref.zero_ref_after=%d\n", RT_REFERENCES(o_up0));
+
+    /* ---------------------------------------------------------------- RSA_set_ex_data / RSA_get_ex_data */
+
+    o_exd = rt_blank();
+    printf("rsa.obj_ex_data.set0_ret=%d\n", RSA_set_ex_data(o_exd, 0, &app));
+    printf("rsa.obj_ex_data.get0_is_app=%d\n", RSA_get_ex_data(o_exd, 0) == (void *)&app);
+    printf("rsa.obj_ex_data.set_gap_ret=%d\n", RSA_set_ex_data(o_exd, 3, &app2));
+    printf("rsa.obj_ex_data.get_gap_is_app2=%d\n", RSA_get_ex_data(o_exd, 3) == (void *)&app2);
+    printf("rsa.obj_ex_data.gap_pad_is_null=%d\n", RSA_get_ex_data(o_exd, 1) == NULL);
+    printf("rsa.obj_ex_data.get0_survives_gap=%d\n", RSA_get_ex_data(o_exd, 0) == (void *)&app);
+    printf("rsa.obj_ex_data.out_of_range_is_null=%d\n",
+        RSA_get_ex_data(o_exd, 100000) == NULL);
+
+    /* ---------------------------------------------------------------- RSA_security_bits */
+
+    o_sec = rt_blank();
+    for (i = 0; i < 7; i++) {
+        n = rt_bits(ladder[i]);
+        RT_N(o_sec) = n;
+        printf("rsa.obj_security.%d=%d\n", ladder[i], RSA_security_bits(o_sec));
+        RT_N(o_sec) = NULL;
+        BN_free(n);
+    }
+    n = rt_bits(4);
+    RT_N(o_sec) = n;
+    printf("rsa.obj_security.narrow=%d\n", RSA_security_bits(o_sec));
+    RT_N(o_sec) = NULL;
+    BN_free(n);
+    n = rt_bits(687737);
+    RT_N(o_sec) = n;
+    printf("rsa.obj_security.wide=%d\n", RSA_security_bits(o_sec));
+    RT_N(o_sec) = NULL;
+    BN_free(n);
+
+    /* ---------------------------------------------------------------- RSA_set0_key */
+
+    o_key = rt_blank();
+    ERR_clear_error();
+    printf("rsa.obj_set0_key.all_null_ret=%d\n", RSA_set0_key(o_key, NULL, NULL, NULL));
+    drain("obj_set0_key_refuse_all");
+
+    n = BN_new();
+    ERR_clear_error();
+    printf("rsa.obj_set0_key.empty_e_ret=%d\n", RSA_set0_key(o_key, n, NULL, NULL));
+    drain("obj_set0_key_refuse_e");
+    BN_free(n);
+
+    e = BN_new();
+    ERR_clear_error();
+    printf("rsa.obj_set0_key.empty_n_ret=%d\n", RSA_set0_key(o_key, NULL, e, NULL));
+    drain("obj_set0_key_refuse_n");
+    BN_free(e);
+
+    n = BN_new();
+    e = BN_new();
+    d = BN_new();
+    printf("rsa.obj_set0_key.store_ret=%d\n", RSA_set0_key(o_key, n, e, d));
+    printf("rsa.obj_set0_key.d_consttime=%d\n",
+        BN_get_flags(RT_D(o_key), BN_FLG_CONSTTIME) != 0);
+
+    /* `dirty_cnt` bumps even when the guard passes and nothing is stored. */
+    printf("rsa.obj_set0_key.dirty_before=%d\n", RT_DIRTY(o_key));
+    ERR_clear_error();
+    printf("rsa.obj_set0_key.nothing_ret=%d\n", RSA_set0_key(o_key, NULL, NULL, NULL));
+    printf("rsa.obj_set0_key.dirty_after=%d\n", RT_DIRTY(o_key));
+    drain("obj_set0_key_noop");
+
+    /* The replacement. The authority's own transcript for this call is a sequence of `bn_lib.c`
+     * F's (the old `n`/`e`/`d` released), but the candidate's `BIGNUM` is a Rust `Box`/`Vec` and its
+     * `BN_free` never reaches `CRYPTO_set_mem_functions` (`src/bn/bignum.rs`'s `BN_free` is
+     * `Box::from_raw`), so that window can never be equal across the two sides. What *is* comparable
+     * is the store: the three fields become the caller's pointers, `d` gains `BN_FLG_CONSTTIME`, and
+     * `dirty_cnt` moves. */
+    a1 = BN_new();
+    a2 = BN_new();
+    a3 = BN_new();
+    printf("rsa.obj_set0_key.replace_ret=%d\n", RSA_set0_key(o_key, a1, a2, a3));
+    printf("rsa.obj_set0_key.replaced_n=%d\n", RSA_get0_n(o_key) == a1);
+    printf("rsa.obj_set0_key.replaced_e=%d\n", RSA_get0_e(o_key) == a2);
+    printf("rsa.obj_set0_key.replaced_d=%d\n", RSA_get0_d(o_key) == a3);
+    printf("rsa.obj_set0_key.replaced_d_consttime=%d\n",
+        BN_get_flags(RT_D(o_key), BN_FLG_CONSTTIME) != 0);
+    printf("rsa.obj_set0_key.dirty_after_replace=%d\n", RT_DIRTY(o_key));
+
+    /* ---------------------------------------------------------------- RSA_set0_factors */
+
+    o_fac = rt_blank();
+    ERR_clear_error();
+    printf("rsa.obj_set0_factors.all_null_ret=%d\n", RSA_set0_factors(o_fac, NULL, NULL));
+    drain("obj_set0_factors_refuse_all");
+
+    p = BN_new();
+    ERR_clear_error();
+    printf("rsa.obj_set0_factors.empty_q_ret=%d\n", RSA_set0_factors(o_fac, p, NULL));
+    drain("obj_set0_factors_refuse_q");
+    BN_free(p);
+
+    q = BN_new();
+    ERR_clear_error();
+    printf("rsa.obj_set0_factors.empty_p_ret=%d\n", RSA_set0_factors(o_fac, NULL, q));
+    drain("obj_set0_factors_refuse_p");
+    BN_free(q);
+
+    p = BN_new();
+    q = BN_new();
+    printf("rsa.obj_set0_factors.store_ret=%d\n", RSA_set0_factors(o_fac, p, q));
+    printf("rsa.obj_set0_factors.p_consttime=%d\n",
+        BN_get_flags(RT_P(o_fac), BN_FLG_CONSTTIME) != 0);
+    printf("rsa.obj_set0_factors.q_consttime=%d\n",
+        BN_get_flags(RT_Q(o_fac), BN_FLG_CONSTTIME) != 0);
+
+    /* ---------------------------------------------------------------- RSA_set0_crt_params */
+
+    o_crt = rt_blank();
+    ERR_clear_error();
+    printf("rsa.obj_set0_crt.all_null_ret=%d\n", RSA_set0_crt_params(o_crt, NULL, NULL, NULL));
+    drain("obj_set0_crt_refuse_all");
+
+    dmp1 = BN_new();
+    ERR_clear_error();
+    printf("rsa.obj_set0_crt.empty_dmq1_ret=%d\n",
+        RSA_set0_crt_params(o_crt, dmp1, NULL, NULL));
+    drain("obj_set0_crt_refuse_dmq1");
+    BN_free(dmp1);
+
+    dmp1 = BN_new();
+    dmq1 = BN_new();
+    ERR_clear_error();
+    printf("rsa.obj_set0_crt.empty_iqmp_ret=%d\n",
+        RSA_set0_crt_params(o_crt, dmp1, dmq1, NULL));
+    drain("obj_set0_crt_refuse_iqmp");
+    BN_free(dmp1);
+    BN_free(dmq1);
+
+    dmp1 = BN_new();
+    dmq1 = BN_new();
+    iqmp = BN_new();
+    printf("rsa.obj_set0_crt.store_ret=%d\n", RSA_set0_crt_params(o_crt, dmp1, dmq1, iqmp));
+    printf("rsa.obj_set0_crt.dmp1_consttime=%d\n",
+        BN_get_flags(RT_DMP1(o_crt), BN_FLG_CONSTTIME) != 0);
+    printf("rsa.obj_set0_crt.dmq1_consttime=%d\n",
+        BN_get_flags(RT_DMQ1(o_crt), BN_FLG_CONSTTIME) != 0);
+    printf("rsa.obj_set0_crt.iqmp_consttime=%d\n",
+        BN_get_flags(RT_IQMP(o_crt), BN_FLG_CONSTTIME) != 0);
+
+    /* ---------------------------------------------------------------- RSA_set0_multi_prime_params */
+
+    /* p and q must be set *before* the success call, because `ossl_rsa_multip_calc_product`
+     * multiplies them. The refusals raise nothing, so their drains are empty. */
+    o_mp = rt_blank();
+    (void)RSA_set0_factors(o_mp, rt_word(0x0b), rt_word(0x0d));
+    mp_primes[0] = rt_word(0x11);
+    mp_exps[0] = rt_word(0x13);
+    mp_coeffs[0] = rt_word(0x17);
+
+    ERR_clear_error();
+    printf("rsa.obj_set0_mp.primes_null_ret=%d\n",
+        RSA_set0_multi_prime_params(o_mp, NULL, mp_exps, mp_coeffs, 1));
+    drain("obj_set0_mp_refuse_primes");
+    ERR_clear_error();
+    printf("rsa.obj_set0_mp.exps_null_ret=%d\n",
+        RSA_set0_multi_prime_params(o_mp, mp_primes, NULL, mp_coeffs, 1));
+    drain("obj_set0_mp_refuse_exps");
+    ERR_clear_error();
+    printf("rsa.obj_set0_mp.coeffs_null_ret=%d\n",
+        RSA_set0_multi_prime_params(o_mp, mp_primes, mp_exps, NULL, 1));
+    drain("obj_set0_mp_refuse_coeffs");
+    ERR_clear_error();
+    printf("rsa.obj_set0_mp.pnum_zero_ret=%d\n",
+        RSA_set0_multi_prime_params(o_mp, mp_primes, mp_exps, mp_coeffs, 0));
+    drain("obj_set0_mp_refuse_pnum");
+
+    printf("rsa.obj_set0_mp.dirty_before=%d\n", RT_DIRTY(o_mp));
+    RT_N(o_mp) = rt_bits(512);
+    printf("rsa.obj_set0_mp.set_ret=%d\n",
+        RSA_set0_multi_prime_params(o_mp, mp_primes, mp_exps, mp_coeffs, 1));
+    printf("rsa.obj_set0_mp.version=%d\n", RSA_get_version(o_mp));
+    printf("rsa.obj_set0_mp.dirty_after=%d\n", RT_DIRTY(o_mp));
+    printf("rsa.obj_set0_mp.extra_count=%d\n", RSA_get_multi_prime_extra_count(o_mp));
+    mpf[0] = mpe[0] = mpc[0] = NULL;
+    printf("rsa.obj_set0_mp.factors_ret=%d\n", RSA_get0_multi_prime_factors(o_mp, mpf));
+    printf("rsa.obj_set0_mp.factors_is_stored=%d\n", mpf[0] == mp_primes[0]);
+    printf("rsa.obj_set0_mp.crt_ret=%d\n",
+        RSA_get0_multi_prime_crt_params(o_mp, mpe, mpc));
+    printf("rsa.obj_set0_mp.crt_exps_is_stored=%d\n", mpe[0] == mp_exps[0]);
+    printf("rsa.obj_set0_mp.crt_coeffs_is_stored=%d\n", mpc[0] == mp_coeffs[0]);
+
+    /* The multi-prime refusal in `RSA_security_bits`: 512 bits is below 1024, so the cap is 2 and
+     * one extra prime plus the two factors is 3. The modulus is real, so the refusal is the cap and
+     * not a narrow-modulus answer. */
+    printf("rsa.obj_security.mp_refuse_512=%d\n", RSA_security_bits(o_mp));
+
+    /* The same shape at a width the cap permits: 2048 bits, cap 3, one extra prime -> allowed. */
+    o_mp2 = rt_blank();
+    (void)RSA_set0_factors(o_mp2, rt_word(0x0b), rt_word(0x0d));
+    RT_N(o_mp2) = rt_bits(2048);
+    mp_primes[0] = rt_word(0x11);
+    mp_exps[0] = rt_word(0x13);
+    mp_coeffs[0] = rt_word(0x17);
+    printf("rsa.obj_security.mp_allow_2048_set=%d\n",
+        RSA_set0_multi_prime_params(o_mp2, mp_primes, mp_exps, mp_coeffs, 1));
+    printf("rsa.obj_security.mp_allow_2048=%d\n", RSA_security_bits(o_mp2));
+
+    /* ---------------------------------------------------------------- the eleven get0_* readers */
+
+    o_full = rt_blank();
+    fn = rt_word(0x11);
+    fe = rt_word(0x03);
+    fd = rt_word(0x2b);
+    fp = rt_word(0x07);
+    fq = rt_word(0x0d);
+    fd1 = rt_word(0x13);
+    fd2 = rt_word(0x17);
+    fi = rt_word(0x1d);
+    printf("rsa.obj_get0.key_store_ret=%d\n", RSA_set0_key(o_full, fn, fe, fd));
+    printf("rsa.obj_get0.factors_store_ret=%d\n", RSA_set0_factors(o_full, fp, fq));
+    printf("rsa.obj_get0.crt_store_ret=%d\n", RSA_set0_crt_params(o_full, fd1, fd2, fi));
+
+    on = oe = od = NULL;
+    RSA_get0_key(o_full, &on, NULL, &od);
+    printf("rsa.obj_get0.key_optional_n=%d\n", on == fn);
+    printf("rsa.obj_get0.key_optional_d=%d\n", od == fd);
+    oe = NULL;
+    RSA_get0_key(o_full, NULL, &oe, NULL);
+    printf("rsa.obj_get0.key_optional_e=%d\n", oe == fe);
+    RSA_get0_key(o_full, NULL, NULL, NULL);
+    printf("rsa.obj_get0.key_all_null_survived=1\n");
+
+    op = oq = NULL;
+    RSA_get0_factors(o_full, &op, NULL);
+    printf("rsa.obj_get0.factors_optional_p=%d\n", op == fp);
+    oq = NULL;
+    RSA_get0_factors(o_full, NULL, &oq);
+    printf("rsa.obj_get0.factors_optional_q=%d\n", oq == fq);
+
+    odmp1 = odmq1 = oiqmp = NULL;
+    RSA_get0_crt_params(o_full, &odmp1, NULL, &oiqmp);
+    printf("rsa.obj_get0.crt_optional_dmp1=%d\n", odmp1 == fd1);
+    printf("rsa.obj_get0.crt_optional_iqmp=%d\n", oiqmp == fi);
+    odmq1 = NULL;
+    RSA_get0_crt_params(o_full, NULL, &odmq1, NULL);
+    printf("rsa.obj_get0.crt_optional_dmq1=%d\n", odmq1 == fd2);
+
+    /* The identity arms: the pointer the setter stored is the pointer the accessor answers, which
+     * is what ties the probe's fabricated offsets to the library's own. */
+    printf("rsa.obj_components.n=%d\n", RSA_get0_n(o_full) == fn);
+    printf("rsa.obj_components.e=%d\n", RSA_get0_e(o_full) == fe);
+    printf("rsa.obj_components.d=%d\n", RSA_get0_d(o_full) == fd);
+    printf("rsa.obj_components.p=%d\n", RSA_get0_p(o_full) == fp);
+    printf("rsa.obj_components.q=%d\n", RSA_get0_q(o_full) == fq);
+    printf("rsa.obj_components.dmp1=%d\n", RSA_get0_dmp1(o_full) == fd1);
+    printf("rsa.obj_components.dmq1=%d\n", RSA_get0_dmq1(o_full) == fd2);
+    printf("rsa.obj_components.iqmp=%d\n", RSA_get0_iqmp(o_full) == fi);
+
+    /* An object with no extra primes: the count folds -1 to 0, and neither array reader touches its
+     * (all-NULL) output slots. */
+    {
+        void *o_nomp = rt_blank();
+
+        mpf[0] = (const BIGNUM *)&app;
+        mpe[0] = mpc[0] = (const BIGNUM *)&app;
+        printf("rsa.obj_mp_count.blank=%d\n", RSA_get_multi_prime_extra_count(o_nomp));
+        printf("rsa.obj_get0_mp.factors_no_extra_ret=%d\n",
+            RSA_get0_multi_prime_factors(o_nomp, mpf));
+        printf("rsa.obj_get0_mp.factors_untouched=%d\n", mpf[0] == (const BIGNUM *)&app);
+        printf("rsa.obj_get0_mp.crt_no_extra_ret=%d\n",
+            RSA_get0_multi_prime_crt_params(o_nomp, mpe, mpc));
+        printf("rsa.obj_get0_mp.crt_untouched=%d\n",
+            mpe[0] == (const BIGNUM *)&app && mpc[0] == (const BIGNUM *)&app);
+        rt_release(o_nomp);
+    }
+
+    /* ---------------------------------------------------------------- RSA_get0_pss_params */
+
+    o_pss = rt_blank();
+    printf("rsa.obj_pss.blank_is_null=%d\n", RSA_get0_pss_params(o_pss) == NULL);
+    RT_PSS(o_pss) = &app;
+    printf("rsa.obj_pss.sentinel=%d\n",
+        (const void *)RSA_get0_pss_params(o_pss) == (const void *)&app);
+
+    /* ---------------------------------------------------------------- RSA_flag accessors, version, engine */
+
+    o_flags = rt_blank();
+    RT_FLAGS(o_flags) = 0;
+    RSA_set_flags(o_flags, 0x0008);
+    printf("rsa.obj_flags.set_or=%d\n", RT_FLAGS(o_flags));
+    printf("rsa.obj_flags.test_exact=%d\n", RSA_test_flags(o_flags, 0x0008));
+    /* The masked word, not 0/1: one flag set, two asked for, the answer is the flag itself. */
+    printf("rsa.obj_flags.test_masked_word=%d\n", RSA_test_flags(o_flags, 0x000c));
+    printf("rsa.obj_flags.test_absent=%d\n", RSA_test_flags(o_flags, 0x0010));
+    RSA_clear_flags(o_flags, 0x0008);
+    printf("rsa.obj_flags.clear_andnot=%d\n", RT_FLAGS(o_flags));
+    RSA_set_flags(o_flags, 0x000f);
+    printf("rsa.obj_flags.set_accumulate=%d\n", RT_FLAGS(o_flags));
+    RSA_clear_flags(o_flags, 0x0006);
+    printf("rsa.obj_flags.clear_partial=%d\n", RT_FLAGS(o_flags));
+
+    printf("rsa.obj_version.blank=%d\n", RSA_get_version(o_flags));
+    printf("rsa.obj_version.mp_multi=%d\n", RSA_get_version(o_mp));
+    printf("rsa.obj_engine.blank_is_null=%d\n", RSA_get0_engine(o_flags) == NULL);
+    printf("rsa.obj_engine.full_is_null=%d\n", RSA_get0_engine(o_full) == NULL);
+    printf("rsa.obj_engine.mp_is_null=%d\n", RSA_get0_engine(o_mp) == NULL);
+
+    /* ---------------------------------------------------------------- RSA_bits / RSA_size */
+
+    o_bits = rt_blank();
+    RT_N(o_bits) = rt_word(0);
+    printf("rsa.obj_bits_size.bits0=%d\n", RSA_bits(o_bits));
+    printf("rsa.obj_bits_size.size0=%d\n", RSA_size(o_bits));
+    BN_free(RT_N(o_bits));
+    RT_N(o_bits) = rt_word(1);
+    printf("rsa.obj_bits_size.bits1=%d\n", RSA_bits(o_bits));
+    printf("rsa.obj_bits_size.size1=%d\n", RSA_size(o_bits));
+    BN_free(RT_N(o_bits));
+    RT_N(o_bits) = rt_word(255);
+    printf("rsa.obj_bits_size.bits255=%d\n", RSA_bits(o_bits));
+    printf("rsa.obj_bits_size.size255=%d\n", RSA_size(o_bits));
+    BN_free(RT_N(o_bits));
+    RT_N(o_bits) = rt_word(256);
+    printf("rsa.obj_bits_size.bits256=%d\n", RSA_bits(o_bits));
+    printf("rsa.obj_bits_size.size256=%d\n", RSA_size(o_bits));
+
+    /* ---------------------------------------------------------------- RSA_flags */
+
+    /* The only accessor in the slice with a NULL guard, and the object's `flags` word is not what
+     * it answers: `r->meth->flags` is, at offset 72 of the table. */
+    printf("rsa.obj_null_flags=%d\n", RSA_flags(NULL));
+    tbl_flags = RSA_meth_new("rt-obj-flags", 0x4321);
+    RT_METH(o_flags) = tbl_flags;
+    printf("rsa.obj_flags_table.ret=%d\n", RSA_flags(o_flags));
+    printf("rsa.obj_flags_table.is_meth_flags=%d\n",
+        RSA_flags(o_flags) == RSA_meth_get_flags(tbl_flags));
+    printf("rsa.obj_flags_table.not_object_flags=%d\n",
+        RSA_flags(o_flags) != RT_FLAGS(o_flags));
+    printf("rsa.obj_flags_table.probe_offset=%d\n",
+        RT_METH_FLAGS(tbl_flags) == RSA_meth_get_flags(tbl_flags));
+
+    /* ---------------------------------------------------------------- release */
+
+    /* Each fabricated object is the probe's own `malloc`, and the installed `my_free` calls the same
+     * `free`, so `RSA_free`'s own `CRYPTO_free` releases them. The tables come last: the objects
+     * hold pointers into them. */
+    free(o_get);
+    free(o_setm);
+    free(o_up1);
+    free(o_up0);
+    free(o_flags);
+    free(o_pss);
+    rt_release(o_exd);
+    rt_release(o_sec);
+    rt_release(o_key);
+    rt_release(o_fac);
+    rt_release(o_crt);
+    rt_release(o_mp);
+    rt_release(o_mp2);
+    rt_release(o_full);
+    rt_release(o_bits);
+    RSA_meth_free(tbl_get);
+    RSA_meth_free(tbl_old);
+    RSA_meth_free(tbl_new);
+    RSA_meth_free(tbl_flags);
 }
 
 int main(void)
@@ -690,6 +1290,9 @@ int main(void)
     }
 
     oaep_arms();
+
+    /* The slice A object layer: every export the candidate publishes that needs no constructor. */
+    rsa_object_arms();
 
     /* ---------------------------------------------------------------- release */
 

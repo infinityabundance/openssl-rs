@@ -52,6 +52,7 @@
 //! and the null is expressed as `None` rather than by a fabricated address.
 
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
+use core::sync::atomic::AtomicI32;
 
 use crate::bn::bignum::BigNum;
 use crate::bn::ctx::{BnCtx, BnGencb};
@@ -68,6 +69,10 @@ use crate::runtime::mem::{cleanse, CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CR
 use crate::runtime::obj::{NID_sha1, NID_sha256, NID_sha384, NID_sha512};
 use crate::runtime::stack::OpenSslStack;
 use crate::runtime::thread::CryptoRwlock;
+
+mod mp;
+pub mod object;
+mod ossl;
 
 /// `RSA_METHOD_FLAG_NO_CHECK` — `include/openssl/rsa.h:64`. The only `RSA_METHOD_FLAG_*` constant
 /// this authority still defines; its siblings were absorbed into `RSA_FLAG_*`.
@@ -174,8 +179,11 @@ pub struct Rsa {
     pub prime_infos: *mut OpenSslStack,
     /// `CRYPTO_EX_DATA ex_data` — inside `#ifndef FIPS_MODULE`.
     pub ex_data: CryptoExData,
-    /// `CRYPTO_REF_COUNT references` — `_Atomic int` in this profile.
-    pub references: c_uint,
+    /// `CRYPTO_REF_COUNT references` — `_Atomic int` in this profile, which is why the field is
+    /// [`AtomicI32`] and not a plain integer: `RSA_up_ref`/`RSA_free` reach it with an atomic
+    /// read-modify-write. It stays four bytes at offset 160, so the retype is layout-neutral and
+    /// the object's own test below is what proves that rather than asserts it.
+    pub references: AtomicI32,
     /// `int flags`.
     pub flags: c_int,
     /// `BN_MONT_CTX *_method_mod_n`.
@@ -193,6 +201,31 @@ pub struct Rsa {
     /// `int dirty_cnt` — bumped by `RSA_set0_*` so a cached Montgomery value is discarded rather
     /// than reused.
     pub dirty_cnt: c_int,
+}
+
+/// `RSA_PRIME_INFO` — `crypto/rsa/rsa_local.h:18-25`: one extra prime's parameters, held by the
+/// `STACK_OF(RSA_PRIME_INFO)` that `Rsa::prime_infos` points at.
+///
+/// Measured **40** bytes, eight-aligned, five pointers, at the offsets the test below pins. It
+/// lives here, beside [`Rsa`], rather than in the object module: **two** translation units read
+/// and write its members — `rsa_lib.c`'s accessors and `rsa_mp.c`'s five functions — so a second
+/// declaration anywhere else would be a second layout for one object.
+///
+/// `m` is a `BN_MONT_CTX *`, so its type is [`MontCtx`] and not `c_void`: the field is written by
+/// no one in this stratum yet, but typing it as the authority does keeps the day it is written
+/// from being a retype.
+#[repr(C)]
+pub struct RsaPrimeInfo {
+    /// `BIGNUM *r` — the extra prime.
+    pub r: *mut BigNum,
+    /// `BIGNUM *d` — its exponent.
+    pub d: *mut BigNum,
+    /// `BIGNUM *t` — its coefficient.
+    pub t: *mut BigNum,
+    /// `BIGNUM *pp` — "save product of primes prior to this one".
+    pub pp: *mut BigNum,
+    /// `BN_MONT_CTX *m` — the cached Montgomery context.
+    pub m: *mut MontCtx,
 }
 
 /// The five-argument crypt entry points: `rsa_pub_enc`, `rsa_pub_dec`, `rsa_priv_enc` and
@@ -1595,5 +1628,21 @@ mod tests {
         assert_eq!(core::mem::size_of::<RsaPssMaskGen>(), 8);
         assert_eq!(core::mem::size_of::<CryptoExData>(), 16);
         assert_eq!(RSA_METHOD_FLAG_NO_CHECK, 0x0001);
+    }
+
+    /// **`RSA_PRIME_INFO`, field for field.** Five pointers, so 40 bytes and eight-aligned, at the
+    /// offsets `crypto/rsa/rsa_local.h:18-25`'s declaration order gives. The offsets are asserted
+    /// rather than only the size because the two spellings of a wrong order are different bugs: a
+    /// swap of `pp` and `m` keeps the size and moves two reads, and it is exactly the pair a
+    /// reader transcribing from a comment would confuse.
+    #[test]
+    fn the_rsa_prime_info_is_the_authoritys_shape() {
+        assert_eq!(core::mem::size_of::<RsaPrimeInfo>(), 40);
+        assert_eq!(core::mem::align_of::<RsaPrimeInfo>(), 8);
+        assert_eq!(core::mem::offset_of!(RsaPrimeInfo, r), 0);
+        assert_eq!(core::mem::offset_of!(RsaPrimeInfo, d), 8);
+        assert_eq!(core::mem::offset_of!(RsaPrimeInfo, t), 16);
+        assert_eq!(core::mem::offset_of!(RsaPrimeInfo, pp), 24);
+        assert_eq!(core::mem::offset_of!(RsaPrimeInfo, m), 32);
     }
 }
