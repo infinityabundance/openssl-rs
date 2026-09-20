@@ -20990,3 +20990,66 @@ ctrl-string map speaks. The two the PSS add is the only reader of -- `RSA_PSS_SA
 function that reads them, transcribed as the header writes them rather than folded into literals,
 because the authority's own test is `sLen == RSA_PSS_SALTLEN_MAX_SIGN || sLen == RSA_PSS_SALTLEN_AUTO`
 and that is a statement about two names.
+
+## D324 -- Phase 9's BN blinding and prime families land, and they leave Phase 8 with no cross-stratum blocker
+
+Phase 5 handed Phase 9 thirty-one names, and the two families that had not landed were the ones every
+key generator in the project stands on. They are in now: **the blinding family**
+(`BN_BLINDING_convert`, `_convert_ex`, `_create_param`, `_update`, `crypto/bn/bn_blind.c`) and **the
+prime family** (`BN_generate_prime`, `_ex`, `_ex2`, `BN_check_prime`, `BN_is_prime`, `_ex`,
+`_fasttest`, `_fasttest_ex`, `BN_X931_generate_Xpq`, `BN_X931_generate_prime_ex`,
+`BN_X931_derive_prime_ex`, `crypto/bn/bn_prime.c`, `bn_x931p.c`), with the internals their bodies
+reach (`ossl_bn_miller_rabin_is_prime`, `ossl_bn_check_prime`, `bn_is_prime_int`, `probable_prime`,
+`probable_prime_dh`, `bn_x931_derive_pi`, `calc_trial_divisions`, `bn_mr_min_checks`). `RT-BN-RAND`
+grows 173 -> **425** observations, zero residuals, and no existing arm was touched. The ledger:
+`phase9` implemented 39 -> **54**, `open_in_this_stratum` 48 -> **33**, `owned` 87 unchanged.
+
+**The consequence for Phase 8 is larger than the fifteen names, and it is a measurement.** D322
+found that 12 of Phase 8's then-24 deferred rows named only callees the crate already had. The other
+12 named `BN_generate_prime_ex2`, `BN_BLINDING_create_param` or `ossl_ffc_generate_private_key`. Two
+of those three are now in the crate, and the third is **not another stratum's at all**:
+`ossl_ffc_generate_private_key` is `crypto/ffc/`'s and the FFC groups are 8.5's own row. Reading the
+eighteen remaining deferred rows against the crate one by one, every one now names either a callee
+the crate has or a callee this stratum owes itself: the RSA generator rows and the DH/DSA parameter
+rows were `BN_generate_prime_ex2`'s, the RSA blinding pair was `BN_BLINDING_create_param`'s, and
+`RSA_new`/`RSA_new_method`/`RSA_get_default_method`/`RSA_PKCS1_OpenSSL` were slice D's. **So Phase 8
+no longer has a cross-stratum blocker: it has 508 rows of its own work.** The ledger does not say
+this yet -- the 18 rows still sit in `deferred`, because retiring a row is the act of landing the
+code -- but the honest state of the merge gate is that it is a queue of this stratum's work rather
+than a wait on Phase 9.
+
+**Three findings from reading the authority's bodies rather than its signatures.**
+
+* **The blinding identity is not `A*Ai = 1`.** `BN_BLINDING_create_param` sets `A = a^e` and
+  `Ai = a^-1` -- the inverse of the *drawn* value, not of `A` -- so the pair only cancels after the
+  caller exponentiates by the matching `d`: `A^d * Ai = a^(ed-1) = 1` when `ed = 1 (mod m-1)`. The
+  first test asserted the naive identity and failed; the test, the probe and the module note now
+  state the real one, and the probe self-checks its committed `(m, d, e)` triple before relying on
+  it. This is the class of error a signature cannot show and a round trip cannot either.
+* **X9.31's derived prime is `p = Rp (mod p1*p2)`, not `p = Xp`.** `Xp` only picks the first
+  candidate `Yp0`; `Rp = (p2^-1 mod p1)*p2 - (p1^-1 mod p2)*p1`. Both the unit test and the probe
+  recompute `Rp` and check the congruence, and the test also checks `p = 1 (mod p1)`.
+* **`BN_num_bits` reads the magnitude**, so `BN_X931_generate_Xpq`'s separation loop accepts
+  `Xp < Xq`; the arm observes the separation and never its sign. Separately, `BN_generate_prime`'s
+  `err:` path frees the *caller's* destination object -- transcribed exactly as the authority writes
+  it and noted at the call site rather than quietly corrected, because a caller can observe it.
+
+**Two evidence-machinery consequences, both recorded rather than worked around.** The sealed-stratum
+census moved 57 -> 59 because `crypto/bn/bn_prime.c` has a crate module for the first time, which
+makes two of that unit's own unbuilt internals (`ossl_bn_get0_small_factors`, `bn_prime.c:65`, and
+`ossl_bn_check_generated_prime`, `:258`) countable; that is an approved transition in
+`forensics/ownership-transitions.json`, and neither name is reached by any body this commit
+transcribes. And the dispatch court required `BnModExp` (`src/bn/blinding.rs`) to be resolved rather
+than left unlinked: it is the callback parameter of `BN_BLINDING_create_param`, spelled inline in
+`bn.h:440-448` with no typedef for the crate's alias to link to, so it is exempted with that reason
+beside the other inline public-header parameter types (`BIO_dump_cb`, `ERR_print_errors_cb`).
+
+**Internals the crate lacks, and what was done instead of inventing them.** `int_bn_mod_inverse`
+(`bn_gcd.c:197`, called at `bn_blind.c:273`) is written out as a private helper in `blinding.rs`,
+because the public `BN_mod_inverse` cannot express what `create_param` needs: it must raise
+*nothing* and must separate `pnoinv == 1` (not coprime, the retry) from `pnoinv == 0`.
+`bn_mul_mont_fixed_top`, `bn_to_mont_fixed_top`, `bn_correct_top_consttime` and
+`bn_mod_inverse_no_branch` are absent and are covered by their public equivalents
+(`BN_mod_mul_montgomery`, `BN_to_montgomery`), whose values agree and whose top is normalised by the
+crate's own `store`; each substitution is recorded at its call site. `bn_check_top` is a
+`BN_DEBUG`-only macro and is not written, as in every already-landed `bn` module.

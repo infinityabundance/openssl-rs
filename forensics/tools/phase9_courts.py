@@ -52,17 +52,21 @@ probe that only called it late would measure the refusal on both sides and prove
 
 `RT-BN-RAND` and why it observes properties rather than values
 -------------------------------------------------------------
-`rt_bn_rand_probe.c` drives `crypto/bn/bn_rand.c`'s public family -- the ten draw entry points,
-their `_ex` and deprecated spellings, and the range family -- through the authority's own surface.
-It **cannot** compare the drawn values: the two sides seed from different pools, so a byte
-comparison would compare two machines. It compares each arm's *contract* instead -- the return
-code, the error queue, `BN_num_bits(rnd) <= bits`, the pinned top/bottom bits, and
-`BN_cmp(rnd, range) < 0` for the range family -- and at `bits = 1` and `bits = 2` the masks pin
-the value exactly, so those two arms observe the mask arithmetic itself rather than a property of
-it. Every draw is made twice, once with no `BN_CTX` and once with a live one, because
-`bnrand` reads its context's library context through `ossl_bn_get_libctx` and hands it to
-`RAND_bytes_ex`; the refusal arms are the other half, since a draw that silently answered zero
-where the authority raised looks identical in a success-only transcript.
+`rt_bn_rand_probe.c` drives three of Phase 5's hand-offs to this stratum: `crypto/bn/bn_rand.c`'s
+public family -- the ten draw entry points, their `_ex` and deprecated spellings, and the range
+family -- and, since D324, `crypto/bn/bn_blind.c`'s blinding family and `crypto/bn/bn_prime.c`'s
+prime generators and primality tests. It **cannot** compare a drawn or generated value: the two
+sides seed from different pools, so a byte comparison would compare two machines. It compares each
+arm's *contract* instead -- the return code, the error queue, `BN_num_bits(rnd) <= bits`, the pinned
+top/bottom bits, and `BN_cmp(rnd, range) < 0` for the range family -- and at `bits = 1` and
+`bits = 2` the masks pin the value exactly, so those two arms observe the mask arithmetic itself
+rather than a property of it. The same rule governs the two families D324 added: a generated prime
+is observed by its width, its pinned bits, its primality answer and its X9.31 congruences, never by
+its value, and a blinding pair by the identity it must satisfy rather than by the numbers in it.
+Every draw is made twice, once with no `BN_CTX` and once with a live one, because `bnrand` reads its
+context's library context through `ossl_bn_get_libctx` and hands it to `RAND_bytes_ex`; the refusal
+arms are the other half, since a draw that silently answered zero where the authority raised looks
+identical in a success-only transcript.
 
 `RT-RAND-USERS` and why the random layer's callers are a separate court
 ----------------------------------------------------------------------

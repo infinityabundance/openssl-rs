@@ -94,23 +94,21 @@ const LINE: c_int = 0;
 pub(crate) const BN_RAND_TOP_ANY: c_int = -1;
 /// `BN_RAND_TOP_ONE` — `include/openssl/bn.h:81`.
 ///
-/// Nothing in this file reads it; `bn_prime.c:563`, `bn_x931p.c:234` and
-/// `bn_gf2m.c:1042` do, and none of those is transcribed yet.
-#[allow(dead_code)] // read by the prime-generation callers, not yet in this crate
+/// Nothing in this file reads it; `bn_prime.c:563`, `bn_x931p.c:178` and
+/// `bn_x931p.c:234` do, all three transcribed in `crate::bn::primes`.
 pub(crate) const BN_RAND_TOP_ONE: c_int = 0;
 /// `BN_RAND_TOP_TWO` — `include/openssl/bn.h:82`.
 ///
-/// Nothing in this file reads it; `bn_prime.c:496` and `bn_x931p.c:178` do, and
-/// neither is transcribed yet.
-#[allow(dead_code)] // read by the prime-generation callers, not yet in this crate
+/// Nothing in this file reads it; `bn_prime.c:496` and `bn_x931p.c:178` do, both
+/// transcribed in `crate::bn::primes`.
 pub(crate) const BN_RAND_TOP_TWO: c_int = 1;
 /// `BN_RAND_BOTTOM_ANY` — `include/openssl/bn.h:85`.
 pub(crate) const BN_RAND_BOTTOM_ANY: c_int = 0;
 /// `BN_RAND_BOTTOM_ODD` — `include/openssl/bn.h:86`.
 ///
-/// Nothing in this file reads it; `bn_prime.c:496` and `bn_rsa_fips186_4.c:215` do,
-/// and neither is transcribed yet.
-#[allow(dead_code)] // read by the prime-generation callers, not yet in this crate
+/// Nothing in this file reads it; `bn_prime.c:496`, `bn_prime.c:563` and
+/// `bn_rsa_fips186_4.c:215` do. The first two are transcribed in `crate::bn::primes`;
+/// the third is Phase 8's RSA key generation and is not in this crate.
 pub(crate) const BN_RAND_BOTTOM_ODD: c_int = 1;
 
 /// The authority's `BNRAND_FLAG` (`crypto/bn/bn_rand.c:19-23`): which RNG a draw

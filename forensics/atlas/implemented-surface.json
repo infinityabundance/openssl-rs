@@ -282,7 +282,7 @@
         "truncf128",
         "truncf16"
       ],
-      "compiler_emitted_count": 7874,
+      "compiler_emitted_count": 6984,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -290,7 +290,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 2176,
+        "implemented": 2191,
         "implemented_symbols": [
           "AES_bi_ige_encrypt",
           "AES_cbc_encrypt",
@@ -725,6 +725,9 @@
           "BIO_wait",
           "BIO_write",
           "BIO_write_ex",
+          "BN_BLINDING_convert",
+          "BN_BLINDING_convert_ex",
+          "BN_BLINDING_create_param",
           "BN_BLINDING_free",
           "BN_BLINDING_get_flags",
           "BN_BLINDING_invert",
@@ -735,6 +738,7 @@
           "BN_BLINDING_set_current_thread",
           "BN_BLINDING_set_flags",
           "BN_BLINDING_unlock",
+          "BN_BLINDING_update",
           "BN_CTX_end",
           "BN_CTX_free",
           "BN_CTX_get",
@@ -772,6 +776,9 @@
           "BN_RECP_CTX_free",
           "BN_RECP_CTX_new",
           "BN_RECP_CTX_set",
+          "BN_X931_derive_prime_ex",
+          "BN_X931_generate_Xpq",
+          "BN_X931_generate_prime_ex",
           "BN_abs_is_word",
           "BN_add",
           "BN_add_word",
@@ -786,6 +793,7 @@
           "BN_bn2mpi",
           "BN_bn2nativepad",
           "BN_bntest_rand",
+          "BN_check_prime",
           "BN_clear",
           "BN_clear_bit",
           "BN_clear_free",
@@ -801,6 +809,9 @@
           "BN_free",
           "BN_from_montgomery",
           "BN_gcd",
+          "BN_generate_prime",
+          "BN_generate_prime_ex",
+          "BN_generate_prime_ex2",
           "BN_get0_nist_prime_192",
           "BN_get0_nist_prime_224",
           "BN_get0_nist_prime_256",
@@ -822,6 +833,10 @@
           "BN_is_negative",
           "BN_is_odd",
           "BN_is_one",
+          "BN_is_prime",
+          "BN_is_prime_ex",
+          "BN_is_prime_fasttest",
+          "BN_is_prime_fasttest_ex",
           "BN_is_word",
           "BN_is_zero",
           "BN_kronecker",
@@ -2469,7 +2484,7 @@
           "i2d_DISPLAYTEXT",
           "i2t_ASN1_OBJECT"
         ],
-        "scaffolded": 3720
+        "scaffolded": 3705
       },
       "libssl": {
         "authority_exports": 603,
@@ -2480,18 +2495,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 2176,
-      "scaffolded": 4323
+      "implemented": 2191,
+      "scaffolded": 4308
     }
   },
-  "body_hash": "f7be31664fd5130c38499fd24a814fa6604ef2c59dde6e14d22a4d29860aaabe",
+  "body_hash": "86f1d7ba395d81fdcad2f1da4494e819b9196d01aaeef4406f3ac1a9979f975a",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "aadc202a98d5c5d383b5d8e6a906cbbe6c30390c73461105d6a8e50b2ce215f9"
+      "sha256": "ecc420ece0c870eaea5e02375a32b4bda3e82eb5688569ff11bd6ff8c0d88c0f"
     },
     {
       "name": "authority-exports",

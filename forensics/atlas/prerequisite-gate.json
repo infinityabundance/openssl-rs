@@ -23,7 +23,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 58,
-      "language_surface_not_modelled_by_name": 3300,
+      "language_surface_not_modelled_by_name": 3304,
       "planned_prerequisites": 12
     },
     "census_by_unit": {
@@ -115,14 +115,15 @@
         "crypto/bio/bss_mem.c": 12,
         "crypto/bio/bss_null.c": 4,
         "crypto/bio/ossl_core_bio.c": 6,
-        "crypto/bn/bn_blind.c": 20,
+        "crypto/bn/bn_blind.c": 14,
         "crypto/bn/bn_ctx.c": 15,
-        "crypto/bn/bn_gf2m.c": 24,
+        "crypto/bn/bn_gf2m.c": 23,
         "crypto/bn/bn_kron.c": 4,
-        "crypto/bn/bn_lib.c": 30,
-        "crypto/bn/bn_mod.c": 14,
-        "crypto/bn/bn_mont.c": 15,
-        "crypto/bn/bn_nist.c": 15,
+        "crypto/bn/bn_lib.c": 29,
+        "crypto/bn/bn_mod.c": 13,
+        "crypto/bn/bn_mont.c": 14,
+        "crypto/bn/bn_nist.c": 14,
+        "crypto/bn/bn_prime.c": 16,
         "crypto/bn/bn_rand.c": 14,
         "crypto/bn/bn_recp.c": 10,
         "crypto/bsearch.c": 1,
@@ -229,7 +230,7 @@
         "crypto/rsa/rsa_lib.c": 60,
         "crypto/rsa/rsa_meth.c": 11,
         "crypto/rsa/rsa_mp.c": 7,
-        "crypto/rsa/rsa_ossl.c": 32,
+        "crypto/rsa/rsa_ossl.c": 31,
         "crypto/seed/seed.c": 7,
         "crypto/self_test_core.c": 17,
         "crypto/sha/sha1dgst.c": 2,
@@ -360,7 +361,7 @@
       ]
     },
     "checked": {
-      "authority_units": 186,
+      "authority_units": 187,
       "crate_modules": 254,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 18,
@@ -432,6 +433,10 @@
           "ossl_bn_mont_ctx_eq",
           "ossl_bn_mont_ctx_set"
         ],
+        "crypto/bn/bn_prime.c": [
+          "ossl_bn_check_generated_prime",
+          "ossl_bn_get0_small_factors"
+        ],
         "crypto/bn/bn_rand.c": [
           "ossl_bn_gen_dsa_nonce_fixed_top",
           "ossl_bn_priv_rand_range_fixed_top"
@@ -473,7 +478,7 @@
         ]
       },
       "definition": "authority internal functions a transcribed unit calls, whose own translation unit's stratum has already sealed. Not a failure: each is either modelled differently by the crate or is work carried across the boundary by a later stratum. The count is held to non-increase by the regression guard.",
-      "names": 57
+      "names": 59
     },
     "universes": {
       "crate_references_checked": 32438,
@@ -483,7 +488,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "aa05ff1b4f19c5a77063f02f64f8b3d32ac54de65a6ef5ee38c63707fcb6c9b6",
+  "body_hash": "5ce29a77388b26b7c13a5282d688df4097c23c913a0cf448eee35c65f069bf21",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -494,17 +499,17 @@
     {
       "name": "macro-owners",
       "path": "forensics/atlas/macro-owners.json",
-      "sha256": "87cee4b8e3d7897302544122992a2d1a09cb71a12d037cd3950e9bf281176284"
+      "sha256": "d8cd6f71d709cfb3bfefc5a09e687ad125db7d0920908951b7ed501bfd629b79"
     },
     {
       "name": "typedef-owners",
       "path": "forensics/atlas/typedef-owners.json",
-      "sha256": "3f6575f7830fadf9053b40469c06faf8d69288dfa854225e146b253e7f6bd8b7"
+      "sha256": "6d6c5695df5f62d14dd899bf9435318662e023e0c76915666d82629715c1b941"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "b8d37d34253f542d16055237827ab1b7df8c16a3539d26c0ec92373eaf82eb4c"
+      "sha256": "4697e39fde3d3cb5d44b897886410dc3561f5476d42cf5b53f3aefff809b339f"
     },
     {
       "name": "symbol-ownership",
@@ -519,12 +524,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "716420ace4e27b955322f0e7a321eade41deae9ce79c3d7c5e2ea002836c0a23"
+      "sha256": "10d22b9177fc25399a633595b39e7b10afd4ce976dc951dfc0cad294c87d923e"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "ae04794fbc92f2f8aabb84910a557d3f340b002e9c20aed9eed3619c0bd78938"
+      "sha256": "4282b7dbb042155664c43625c53bef43c8c3c71785747a8e71148122192f3766"
     },
     {
       "name": "prerequisites",

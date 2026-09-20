@@ -18,7 +18,13 @@ dependency chain and recorded it as the next unit. This document is that scope, 
 
 ## 1. The measurement this plan rests on
 
-Every number below is read from `forensics/atlas/`, not typed.
+Every number below is read from `forensics/atlas/`, not typed -- and it is **the measurement this
+plan made, and not a current reading**. `forensics/phase9-obligations.json` is authoritative for the
+present, and three later decisions have moved what is below: D296 moved the two X9 KDF wrappers out
+of the phase-8 hand-off row into this stratum's own `open` set, D323 retired the six randomised RSA
+padding names, and D324 landed the blinding and prime families. The table is kept as the record of
+what the plan rested on rather than retyped, because a hand-written count that a landing can move is
+the defect `docs/CI.md` names for a typed count and D205 records for a seal.
 
 **Phase 9's atlas-owned universe is twenty-five exports, and they are all `rand.h`'s.**
 `forensics/atlas/symbol-ownership.json` assigns exactly 25 exports to phase 9, each declaring
@@ -32,9 +38,9 @@ rows whose `owning_phase` is 9) rather than listed here:
 | 4 | 1 | `BIO_f_nbio_test`, whose body is a random-fill |
 | 5 | 31 | the BN random family, the blinding family, the prime generators and the primality tests |
 | 7 | 12 | `EVP_SealInit`, `EVP_CIPHER_CTX_rand_key`, the `PEM_*` file-encryption helpers, `OSSL_HPKE_get_grease_value`, `BIO_f_reliable` |
-| 8 | 26 | the four key types' constructors and generators, the RSA blinding pair, and the six RSA padding functions whose bytes are random |
+| 8 | 26 | the four key types' constructors and generators, the RSA blinding pair, and the six RSA padding functions whose bytes are random (six of these were retired by D323) |
 
-That is a working set of **95 exports**, and the shape of it is the finding: **Phase 9's work
+That is a working set of **95 exports as this plan measured it**, and the shape of it is the finding: **Phase 9's work
 lives in ten earlier strata's modules**. There is no `src/rand/`-only reading of this stratum. A
 `BIO` export, a `PEM` export and four key types' constructors are all *bodies* this stratum owes,
 because the authority wrote the random call inside them.

@@ -4,9 +4,9 @@
     "counts": {
       "installed_headers": 139,
       "internal_only": 2993,
-      "owned": 9562,
+      "owned": 9563,
       "records": 19839,
-      "unowned": 10277
+      "unowned": 10276
     },
     "definition": "every macro and enum member the authority's installed and internal headers define, with the header that defines it and that header's owning stratum",
     "installed_headers": [
@@ -51977,7 +51977,7 @@
         ],
         "kind": "macro",
         "name": "NUMPRIMES",
-        "owner_phase": null
+        "owner_phase": 5
       },
       {
         "defined_in": [
