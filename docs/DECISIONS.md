@@ -22896,3 +22896,64 @@ clean. It was **not** reproduced: the gate passed in every run the orchestrating
 the probe is not one this slice touches. It is recorded as an open question about a Phase 9 probe
 rather than as a finding, because an intermittently failing determinism gate is the class of defect
 that would silently weaken every other claim in this ledger if it went unmentioned.
+
+## D337 — Phase 9 lands `crypto/bn/bn_gf2m.c`'s two solving entries, and the even-degree retry ceiling turns out to be reachable only on a modulus whose trace vanishes
+
+Phase 8.7's integration plan measured that the binary-curve layer needs four Phase 5 hand-offs
+that had not landed: `crypto/ec/ec2_oct.c:69` and `:81` call `BN_GF2m_mod_sqrt_arr` and
+`BN_GF2m_mod_solve_quad_arr`, and `forensics/phase9-obligations.json` carried all four of the
+`_arr`/non-`_arr` pair as `open` rows under `src/bn/gf2m.rs` (`received_from_phase: 5`). They are
+landed here, in the module that already held the rest of the `BN_GF2m_*` family, transcribed from
+`crypto/bn/bn_gf2m.c`'s solving region (`:929-1119`). Nothing was stubbed: the four names leave
+`open`, `deferred` does not gain anything, and no callee was invented.
+
+**What each body is, and the three the transcription had to keep rather than approximate.**
+`BN_GF2m_mod_sqrt_arr` is `a^(2^(m - 1))`, the Frobenius inverse IEEE P1363's A.4.1 names; a
+degree-zero modulus is the `reduction mod 1` arm that answers zero without touching `ctx`.
+`BN_GF2m_mod_solve_quad_arr` answers `z` with `z^2 + z = a`, computing the half-trace directly
+when `m` is odd and, when `m` is even, drawing `rho` and accumulating until the running `w` is
+non-zero (A.4.6), retrying at most `MAX_ITERATIONS` (`:24`, 50) times. Both arms then re-derive
+`z^2 + z` and compare it with `a`; a mismatch raises `BN_R_NO_SOLUTION` (`:1075`), the ceiling
+raises `BN_R_TOO_MANY_ITERATIONS` (`:1065`), and the two non-`_arr` wrappers do the
+`BN_GF2m_poly2arr` conversion with the authority's `max = BN_num_bits(p) + 1` bound and raise
+`BN_R_INVALID_LENGTH` (`:977`, `:1111`) when the modulus is not odd. The header's `BN_GF2m_cmp` is
+`#define BN_GF2m_cmp(a, b) BN_ucmp((a), (b))` (`bn.h:503`), so the check is `BN_ucmp` and no symbol
+is defined for it. The error coordinates the two raises use were already emitted by the lexical
+scan, so `err_sites.rs` and its count are unchanged.
+
+**The one behaviour a reader would not predict, and it is measured rather than reasoned.**
+`BN_R_TOO_MANY_ITERATIONS` is unreachable on an irreducible modulus: the loop redraws while
+`w == 0`, and `w` after the inner loop is the absolute trace of `rho`, which is a non-zero linear
+functional over a field — so about half of all draws clear it and fifty in a row is `2^-50`. It is
+reachable when the modulus is reducible enough that the trace functional vanishes identically,
+and one committed modulus does: `x^6 + x^5 + x^4 + x^3 + x^2 + x + 1 = (x^3 + x + 1)(x^3 + x^2 + 1)`,
+where the two `GF(8)` trace sums cancel (`2 * tr(u) = 0` in characteristic two). The authority was
+asked, not assumed: `BN_GF2m_mod_solve_quad_arr(r, 1, {6,5,4,3,2,1,0}, ctx)` answers `0` with
+`ERR_GET_REASON == 113`, and the court and the unit test both pin that input. The odd-degree
+no-solution arm is `a = 1` (`trace(1) = m mod 2 = 1`), which raises `BN_R_NO_SOLUTION` (`116`).
+
+**What the court observed, and what it deliberately does not print.** `RT-BN-RAND` grows **425 ->
+467 observations** with zero residuals and no existing arm touched. The new section checks the two
+defining relations the aliases promise — `y^2 == a (mod f)` for the square root and `z^2 + z == a
+(mod f)` for the quadratic solve — over committed fields (`x^163 + x^7 + x^6 + x^3 + 1`,
+`x^8 + x^4 + x^3 + x + 1`, and the reducible `x^6 + ... + 1`), through both the `_arr` and the
+`BN_GF2m_poly2arr` spellings, plus the refusals and their drained `ERR_GET_LIB`/`ERR_GET_REASON`
+pairs (`BN_R_NO_SOLUTION`, `BN_R_TOO_MANY_ITERATIONS`, `BN_R_INVALID_LENGTH`) and the two
+degree-zero arms. The square root is deterministic and the odd-degree solve's half-trace is too,
+but no field element is printed: the even-degree solve draws, so only the relation it must satisfy
+enters the transcript, never the root — the same discipline the bootstrapping and prime arms
+already follow. All four exports are **directly courted** (`court_coverage.py`: phase 9 implemented
+58, directly courted 58, unmatched 0). Four unit tests in `src/bn/gf2m.rs` assert the same relations
+and refusal coordinates.
+
+**Bookkeeping, read off the regenerated files.** `phase9`: implemented 54 -> **58**, open
+`in_this_stratum` 17 -> **13**, owned **71** unchanged, `deferred` 0 unchanged. `forensics/atlas/
+implemented-surface.json` moves `libcrypto` implemented by the four exports, to **2,377**; the gate's
+`sealed_census` (**52**) and `blocking_dependencies` (**19**) do not move — every callee the new
+bodies name is already built — so no `prerequisite_transitions` row is added and none is needed.
+No new `err_sites` were needed either: the four coordinates this unit raises from already existed
+in the generated table. The ledger, the atlases,
+`docs/PHASE-8-REMAINING.md` and `forensics/STATUS.md` are regenerated by the pipeline rather than
+hand-edited, and the pipeline ends `PIPELINE OK`. **Nothing here is a completion claim:** Phase 9
+remains `in-progress` with thirteen open rows, and this commit lands four of the ninety-three
+exports the stratum's working set contains.

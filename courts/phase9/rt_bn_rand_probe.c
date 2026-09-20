@@ -1002,6 +1002,200 @@ static void x931_arms(BN_CTX *ctx)
     BN_free(xp);
 }
 
+/*
+ * =============================================================================================
+ * 7. The GF(2^m) square root and quadratic solve
+ *
+ * `crypto/bn/bn_gf2m.c` is the binary-curve layer's field arithmetic, and its two solving
+ * entries -- `BN_GF2m_mod_sqrt` and `BN_GF2m_mod_solve_quad` -- are what `crypto/ec/ec2_oct.c`
+ * reaches to decompress a point. Every observable here is a relation the authority's own
+ * algebra must satisfy, checked from committed fields:
+ *
+ *   - the square root satisfies `y^2 == a (mod f)`;
+ *   - the quadratic solve satisfies `z^2 + z == a (mod f)`;
+ *   - a solve with no root raises `BN_R_NO_SOLUTION`;
+ *   - the even-degree retry loop's ceiling raises `BN_R_TOO_MANY_ITERATIONS` on a modulus
+ *     whose absolute trace vanishes;
+ *   - a modulus `BN_GF2m_poly2arr` cannot represent raises `BN_R_INVALID_LENGTH`; and a
+ *     degree-zero modulus is the `reduction mod 1` arm that answers zero.
+ *
+ * `a` and the modulus are committed, so a relation's answer is the same on both sides. The
+ * square root is `a^(2^(m-1))` and is deterministic; the even-degree solve draws, so its root
+ * is never printed -- only whether it satisfies the relation, which it must on either side.
+ * No field element of a secret enters the transcript, because there is no secret here: every
+ * input is a constant in this file.
+ * =============================================================================================
+ */
+
+/* `x^163 + x^7 + x^6 + x^3 + 1` -- an irreducible odd-degree binary field. */
+static const int GF2M_F163[] = {163, 7, 6, 3, 0, -1};
+/* `x^8 + x^4 + x^3 + x + 1` -- the AES field, even degree. */
+static const int GF2M_F8[] = {8, 4, 3, 1, 0, -1};
+/*
+ * `x^6 + x^5 + x^4 + x^3 + x^2 + x + 1 = (x^3 + x + 1)(x^3 + x^2 + 1)`: reducible, and its
+ * absolute trace functional vanishes identically, so the even-degree loop never sees a
+ * non-zero `w` and reaches `MAX_ITERATIONS`.
+ */
+static const int GF2M_F6_REDUCIBLE[] = {6, 5, 4, 3, 2, 1, 0, -1};
+/* `p[0] == 0`: the `reduction mod 1` arm. */
+static const int GF2M_DEGREE_ZERO[] = {0, -1};
+
+/* The polynomial an exponent list names, as a `BIGNUM`. */
+static BIGNUM *gf2m_field(const int *exps)
+{
+    BIGNUM *b = BN_new();
+
+    for (int i = 0; exps[i] >= 0; i++)
+        BN_set_bit(b, exps[i]);
+    return b;
+}
+
+/* `y^2 == a (mod f)`? */
+static int gf2m_sqrt_relation(const BIGNUM *y, const BIGNUM *a, const int *p, BN_CTX *ctx)
+{
+    BIGNUM *s = BN_new(), *am = BN_new();
+    int ok = 0;
+
+    if (s != NULL && am != NULL && BN_GF2m_mod_sqr_arr(s, y, p, ctx) == 1
+        && BN_GF2m_mod_arr(am, a, p) == 1)
+        ok = BN_ucmp(s, am) == 0;
+    BN_free(s);
+    BN_free(am);
+    return ok;
+}
+
+/* `z^2 + z == a (mod f)`? */
+static int gf2m_quad_relation(const BIGNUM *z, const BIGNUM *a, const int *p, BN_CTX *ctx)
+{
+    BIGNUM *s = BN_new(), *am = BN_new();
+    int ok = 0;
+
+    if (s != NULL && am != NULL && BN_GF2m_mod_sqr_arr(s, z, p, ctx) == 1
+        && BN_GF2m_add(s, s, z) == 1 && BN_GF2m_mod_arr(am, a, p) == 1)
+        ok = BN_ucmp(s, am) == 0;
+    BN_free(s);
+    BN_free(am);
+    return ok;
+}
+
+static void gf2m_arms(BN_CTX *ctx)
+{
+    BIGNUM *a = from_hex("1ABCDEF0123456789ABCDEF0123456789ABCDEF");
+    BIGNUM *a8 = from_hex("57");
+    BIGNUM *one = BN_new();
+    BIGNUM *six = BN_new();
+    BIGNUM *zero_a = BN_new();
+    BIGNUM *y = BN_new();
+    BIGNUM *z = BN_new();
+    BIGNUM *p163 = gf2m_field(GF2M_F163);
+    BIGNUM *peven = BN_new();
+
+    if (a == NULL || a8 == NULL || one == NULL || six == NULL || zero_a == NULL || y == NULL
+        || z == NULL || p163 == NULL || peven == NULL) {
+        printf("gf2m.alloc=0\n");
+        return;
+    }
+    BN_set_word(one, 1);
+    BN_set_word(six, 6);
+    /* The non-odd modulus: `x^8 + x^4`, which `BN_GF2m_poly2arr` refuses. */
+    BN_set_bit(peven, 8);
+    BN_set_bit(peven, 4);
+
+    /* --- 7a. The square root, `_arr` and wrapper -------------------------------------- */
+
+    ERR_clear_error();
+    printf("gf2m.sqrt.arr.ret=%d\n", BN_GF2m_mod_sqrt_arr(y, a, GF2M_F163, ctx));
+    printf("gf2m.sqrt.arr.rel=%d\n", gf2m_sqrt_relation(y, a, GF2M_F163, ctx));
+    errs("gf2m.sqrt.arr.err");
+
+    ERR_clear_error();
+    printf("gf2m.sqrt.bn.ret=%d\n", BN_GF2m_mod_sqrt(y, a, p163, ctx));
+    printf("gf2m.sqrt.bn.rel=%d\n", gf2m_sqrt_relation(y, a, GF2M_F163, ctx));
+    errs("gf2m.sqrt.bn.err");
+
+    ERR_clear_error();
+    printf("gf2m.sqrt.even.ret=%d\n", BN_GF2m_mod_sqrt_arr(y, a8, GF2M_F8, ctx));
+    printf("gf2m.sqrt.even.rel=%d\n", gf2m_sqrt_relation(y, a8, GF2M_F8, ctx));
+    errs("gf2m.sqrt.even.err");
+
+    ERR_clear_error();
+    BN_set_word(y, 0x77);
+    printf("gf2m.sqrt.degree0.ret=%d\n", BN_GF2m_mod_sqrt_arr(y, a, GF2M_DEGREE_ZERO, ctx));
+    printf("gf2m.sqrt.degree0.is_zero=%d\n", BN_is_zero(y));
+    errs("gf2m.sqrt.degree0.err");
+
+    ERR_clear_error();
+    printf("gf2m.sqrt.badmod.ret=%d\n", BN_GF2m_mod_sqrt(y, a, peven, ctx));
+    errs("gf2m.sqrt.badmod.err");
+
+    /* --- 7b. The quadratic solve, odd degree (deterministic half-trace) --------------- */
+
+    ERR_clear_error();
+    printf("gf2m.quad.odd.ret=%d\n", BN_GF2m_mod_solve_quad_arr(z, six, GF2M_F163, ctx));
+    printf("gf2m.quad.odd.rel=%d\n", gf2m_quad_relation(z, six, GF2M_F163, ctx));
+    errs("gf2m.quad.odd.err");
+
+    ERR_clear_error();
+    printf("gf2m.quad.bn.ret=%d\n", BN_GF2m_mod_solve_quad(z, six, p163, ctx));
+    printf("gf2m.quad.bn.rel=%d\n", gf2m_quad_relation(z, six, GF2M_F163, ctx));
+    errs("gf2m.quad.bn.err");
+
+    /* `a = 1` has `trace(1) = m mod 2 = 1`, so no root exists on an odd-degree field. */
+    ERR_clear_error();
+    printf("gf2m.quad.nosol.ret=%d\n", BN_GF2m_mod_solve_quad_arr(z, one, GF2M_F163, ctx));
+    errs("gf2m.quad.nosol.err");
+
+    /* --- 7c. The quadratic solve, even degree (a draw, observed as its relation) ------ */
+
+    ERR_clear_error();
+    printf("gf2m.quad.even.ret=%d\n", BN_GF2m_mod_solve_quad_arr(z, one, GF2M_F8, ctx));
+    printf("gf2m.quad.even.rel=%d\n", gf2m_quad_relation(z, one, GF2M_F8, ctx));
+    errs("gf2m.quad.even.err");
+
+    ERR_clear_error();
+    printf("gf2m.quad.even2.ret=%d\n", BN_GF2m_mod_solve_quad_arr(z, six, GF2M_F8, ctx));
+    printf("gf2m.quad.even2.rel=%d\n", gf2m_quad_relation(z, six, GF2M_F8, ctx));
+    errs("gf2m.quad.even2.err");
+
+    /*
+     * The reducible modulus whose trace vanishes: `w` is zero on every draw, so the loop
+     * runs to `MAX_ITERATIONS` and raises `BN_R_TOO_MANY_ITERATIONS`. The draw count is
+     * not printed -- the reason and the count of errors are the observation.
+     */
+    ERR_clear_error();
+    printf("gf2m.quad.ceiling.ret=%d\n",
+           BN_GF2m_mod_solve_quad_arr(z, one, GF2M_F6_REDUCIBLE, ctx));
+    errs("gf2m.quad.ceiling.err");
+
+    /* --- 7d. The remaining refusals and the zero inputs ------------------------------- */
+
+    ERR_clear_error();
+    printf("gf2m.quad.degree0.ret=%d\n",
+           BN_GF2m_mod_solve_quad_arr(z, one, GF2M_DEGREE_ZERO, ctx));
+    printf("gf2m.quad.degree0.is_zero=%d\n", BN_is_zero(z));
+    errs("gf2m.quad.degree0.err");
+
+    ERR_clear_error();
+    printf("gf2m.quad.badmod.ret=%d\n", BN_GF2m_mod_solve_quad(z, one, peven, ctx));
+    errs("gf2m.quad.badmod.err");
+
+    /* `a == 0` is answered before any work, on both degrees. */
+    ERR_clear_error();
+    printf("gf2m.quad.a0.ret=%d\n", BN_GF2m_mod_solve_quad_arr(z, zero_a, GF2M_F163, ctx));
+    printf("gf2m.quad.a0.is_zero=%d\n", BN_is_zero(z));
+    errs("gf2m.quad.a0.err");
+
+    BN_free(peven);
+    BN_free(p163);
+    BN_free(z);
+    BN_free(y);
+    BN_free(zero_a);
+    BN_free(six);
+    BN_free(one);
+    BN_free(a8);
+    BN_free(a);
+}
+
 int main(void)
 {
     BIGNUM *rnd, *range, *zero, *negative;
@@ -1150,6 +1344,10 @@ int main(void)
     prime_callback_arms(ctx);
     prime_generation_arms(ctx);
     x931_arms(ctx);
+
+    /* ---- 7. The GF(2^m) square root and quadratic solve ------------------------------ */
+
+    gf2m_arms(ctx);
 
     BN_free(rnd);
     BN_free(range);
