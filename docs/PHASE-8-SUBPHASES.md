@@ -391,9 +391,12 @@ here is. (`forensics/phase8-obligations.json` remains the only complete list.)
 `RSA_padding_check_PKCS1_type_2`, `RSA_padding_add_PKCS1_OAEP`,
 `RSA_padding_add_PKCS1_OAEP_mgf1`, `RSA_padding_add_PKCS1_PSS`,
 `RSA_padding_add_PKCS1_PSS_mgf1`, `RSA_new`, `RSA_new_method`, `RSA_get_default_method`,
-`RSA_PKCS1_OpenSSL`, `RSA_set_default_method`, `RSA_setup_blinding`.
+`RSA_PKCS1_OpenSSL`, `RSA_set_default_method`, `RSA_setup_blinding`, `RSA_X931_derive_ex`,
+`RSA_X931_generate_key_ex`, `RSA_public_encrypt`, `RSA_private_encrypt`, `RSA_private_decrypt`,
+`RSA_public_decrypt`.
 
-**Open exports (checked against the ledger):** `RSA_check_key`, `RSA_sign`, `RSA_blinding_on`.
+**Open exports (checked against the ledger):** `RSA_check_key`, `RSA_sign`, `RSA_blinding_on`,
+`RSA_generate_key`, `RSA_generate_key_ex`, `RSA_generate_multi_prime_key`.
 Phase 8.2's cipher families and 8.3's `modes.h` constructions all have their low-level exports in,
 and the default provider's AEAD half is nearly there: the twelve AES
 key-wrap rows landed in D230, the six CBC-CTS rows in D231, the two AES-XTS rows in D232, the
@@ -479,6 +482,29 @@ and a two-octet modulus is not a legal subject for the PKCS#1 arm, because below
 check's `max_sep_offset` wraps and its synthetic-message index goes negative -- which
 `probe_hygiene.py` caught as an `-O1`/`-O2` difference on the *authority* side, and which is why
 those arms use a 128-bit key the probe builds itself.
+
+**The key generators are half landable, and the half that is not is blocked on a `crypto/bn` unit
+rather than the callee the plan named (D326).** `rsa_x931g.c`'s two exports — `RSA_X931_derive_ex`
+and `RSA_X931_generate_key_ex` — are in `src/rsa/mod.rs` now, and so are the four `rsa_crpt.c` crypt
+wrappers `RSA_public_encrypt`, `RSA_private_encrypt`, `RSA_private_decrypt` and
+`RSA_public_decrypt`. The two generator labels are the half of `BLOCKED_HANDOFFS` row (3)'s RSA
+names whose whole reach is the prime layer D324 landed
+(`BN_X931_generate_Xpq`/`BN_X931_generate_prime_ex`/`BN_X931_derive_prime_ex`), and the ledger's
+`deferred` list loses them. **The other three did not land, and the callee that blocks them is not
+the one the row named.** `RSA_generate_key_ex` (`rsa_gen.c:41`) dispatches through
+`RSA_generate_multi_prime_key` (`:50`) to the authority's static `rsa_keygen` (`:611-655`), whose
+non-FIPS branch sends the ordinary `primes == 2 && bits >= 2048 && BN_num_bits(e) > 16` case to
+`ossl_rsa_sp800_56b_generate_key` (`crypto/rsa/rsa_sp800_56b_gen.c:365`) rather than to
+`rsa_multiprime_keygen` — and that generator's primes come from
+`ossl_bn_rsa_fips186_4_gen_prob_primes` (`crypto/bn/bn_rsa_fips186_4.c:184`), over
+`ossl_bn_check_generated_prime` and `ossl_bn_get0_small_factors` (`crypto/bn/bn_prime.c:258`,
+`:65`), none of which is in the crate. So the block is a `crypto/bn` unit and not
+`BN_generate_prime_ex2`, and the three names are `open` in 8.4 rather than deferred to Phase 9,
+because a stratum cannot hand a symbol to itself. `RT-RSA` is **682 observations** with no
+residuals: the derivation arm is deterministic — fixed seeds, so `p = 1 (mod p1)`, `p = -1 (mod p2)`
+and `n = p*q` are values both binaries must compute identically — and the generation arm prints only
+the return code, a width predicate and the two round trips through the new wrappers. The ledger:
+phase 8 implemented 284 -> **290**, deferred 12 -> **7**, open 490 -> **489**.
 
 **The same measurement now says the gate is systematic across every key type, which is the
 largest plan correction Phase 8 has needed (D286).** DH, DSA and EC each construct their object the

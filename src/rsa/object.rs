@@ -214,7 +214,7 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 #![deny(missing_docs)]
 
-use core::ffi::{c_char, c_int, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 use core::sync::atomic::Ordering;
 
@@ -1975,6 +1975,122 @@ pub unsafe extern "C" fn RSA_flags(r: *const Rsa) -> c_int {
     unsafe { (*(*r).meth).flags }
 }
 
+/// The four public crypt entry points: `rsa_crpt.c:33-55`.
+///
+/// **The whole body is one call through the installed table.** There is no NULL test in the
+/// authority — `rsa->meth->rsa_pub_enc(flen, from, to, rsa, padding)` and its three siblings are
+/// each a single expression — so the only decision a transcription has to make is what to do with
+/// the `RSA_METHOD` member itself, which this crate models as an `Option` (`RSA_METHOD`'s six
+/// nullable members are D284's measurement). A NULL member is a **fault** on the authority side and
+/// the `0` failure answer here, the same reduction and for the same reason
+/// `rsa_ossl.c`'s `rsa->meth->bn_mod_exp` call sites take it: a value the crate cannot represent as
+/// a callable must not be invented as one, and every one of the five members is non-NULL on the
+/// default method these entry points are reached through.
+///
+/// **They are dispatchers and nothing else, which is why their arms are round trips.** No arm of
+/// `RT-RSA` can distinguish a faithful transcription from one that reimplemented the operation,
+/// because the answer is whichever `rsa_ossl_*` entry point the table names — so the court observes
+/// the *composition*: a key fed to `RSA_public_encrypt` and then to `RSA_private_decrypt` recovers
+/// its plaintext, and the same key's `RSA_private_encrypt`/`RSA_public_decrypt` pair likewise.
+///
+/// `RSA_public_encrypt` — `rsa_crpt.c:33-37`.
+///
+/// # Safety
+/// `rsa` is a live object whose `meth` is live and whose `rsa_pub_enc` member is callable with
+/// these arguments; `from` is readable for `flen` bytes and `to` writable for the operation's
+/// output width.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_public_encrypt(
+    flen: c_int,
+    from: *const c_uchar,
+    to: *mut c_uchar,
+    rsa: *mut Rsa,
+    padding: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract, forwarded unchanged.
+    unsafe {
+        match (*(*rsa).meth).rsa_pub_enc {
+            Some(f) => f(flen, from, to, rsa, padding),
+            None => 0,
+        }
+    }
+}
+
+/// `int RSA_private_encrypt(int flen, const unsigned char *from, unsigned char *to, RSA *rsa, int
+/// padding)` — `rsa_crpt.c:39-43`. See [`RSA_public_encrypt`] for the shared body and the `Option`
+/// reduction.
+///
+/// # Safety
+/// `rsa` is a live object whose `meth` is live and whose `rsa_priv_enc` member is callable with
+/// these arguments; `from` is readable for `flen` bytes and `to` writable for the operation's
+/// output width.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_private_encrypt(
+    flen: c_int,
+    from: *const c_uchar,
+    to: *mut c_uchar,
+    rsa: *mut Rsa,
+    padding: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract, forwarded unchanged.
+    unsafe {
+        match (*(*rsa).meth).rsa_priv_enc {
+            Some(f) => f(flen, from, to, rsa, padding),
+            None => 0,
+        }
+    }
+}
+
+/// `int RSA_private_decrypt(int flen, const unsigned char *from, unsigned char *to, RSA *rsa, int
+/// padding)` — `rsa_crpt.c:45-49`. See [`RSA_public_encrypt`] for the shared body and the `Option`
+/// reduction.
+///
+/// # Safety
+/// `rsa` is a live object whose `meth` is live and whose `rsa_priv_dec` member is callable with
+/// these arguments; `from` is readable for `flen` bytes and `to` writable for the operation's
+/// output width.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_private_decrypt(
+    flen: c_int,
+    from: *const c_uchar,
+    to: *mut c_uchar,
+    rsa: *mut Rsa,
+    padding: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract, forwarded unchanged.
+    unsafe {
+        match (*(*rsa).meth).rsa_priv_dec {
+            Some(f) => f(flen, from, to, rsa, padding),
+            None => 0,
+        }
+    }
+}
+
+/// `int RSA_public_decrypt(int flen, const unsigned char *from, unsigned char *to, RSA *rsa, int
+/// padding)` — `rsa_crpt.c:51-55`. See [`RSA_public_encrypt`] for the shared body and the `Option`
+/// reduction.
+///
+/// # Safety
+/// `rsa` is a live object whose `meth` is live and whose `rsa_pub_dec` member is callable with
+/// these arguments; `from` is readable for `flen` bytes and `to` writable for the operation's
+/// output width.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_public_decrypt(
+    flen: c_int,
+    from: *const c_uchar,
+    to: *mut c_uchar,
+    rsa: *mut Rsa,
+    padding: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract, forwarded unchanged.
+    unsafe {
+        match (*(*rsa).meth).rsa_pub_dec {
+            Some(f) => f(flen, from, to, rsa, padding),
+            None => 0,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     //! The arms that can be justified **from the source alone**: the constants the header defines,
@@ -2529,6 +2645,116 @@ mod tests {
             OPENSSL_sk_free(primes);
             OPENSSL_sk_free(exps);
             OPENSSL_sk_free(coeffs);
+        }
+    }
+
+    /// **The four crypt wrappers, over a key the constructor quartet can hold.**
+    ///
+    /// The bodies are one dispatch each, so what a unit test can assert is the *composition*: an
+    /// object built by [`RSA_new`], given the 128-bit two-prime key `p = 2^64 - 59`,
+    /// `q = 2^61 - 1`, `e = 65537` through the landed `RSA_set0_*` setters, round-trips
+    /// `RSA_public_encrypt` -> `RSA_private_decrypt` under PKCS#1 v1.5 and
+    /// `RSA_private_encrypt` -> `RSA_public_decrypt` under `RSA_NO_PADDING`.
+    ///
+    /// **The key is built, not typed**, and the modulus is 16 octets for the same reason
+    /// `RT-RSA`'s PKCS#1 arms use it: `num > 10` keeps the type-2 check's `max_sep_offset`
+    /// positive, and a five-octet message is exactly the largest `flen` a 16-octet modulus takes
+    /// under the eleven-octet minimum. The two conversions are deterministic even though the
+    /// PKCS#1 padding is drawn from the DRBG -- the recovered plaintext is what is asserted, not
+    /// the ciphertext.
+    ///
+    /// `RSA_FLAG_NO_BLINDING` is set so the private operations do not draw a blinding factor: the
+    /// answer is the same either way, and an arm that needs no DRBG draw is an arm that cannot
+    /// fail for a reason this test is not about.
+    #[test]
+    fn the_four_crypt_wrappers_round_trip_a_fixed_key() {
+        use crate::bn::arith::{BN_div, BN_mod_inverse, BN_mul, BN_sub};
+        use crate::bn::bignum::{BN_free, BN_value_one};
+        use crate::bn::ctx::{BN_CTX_free, BN_CTX_new};
+        use crate::evp::pkey_ctx::{RSA_NO_PADDING, RSA_PKCS1_PADDING};
+
+        // SAFETY: every pointer below is null-checked or is a fresh allocation whose lifetime this
+        // test owns; the BN calls are the contract of their `# Safety` sections.
+        unsafe {
+            let ctx = BN_CTX_new();
+            assert!(!ctx.is_null());
+
+            let p = BN_new();
+            let q = BN_new();
+            let e = BN_new();
+            assert!(!p.is_null() && !q.is_null() && !e.is_null());
+            assert_eq!(BN_set_word(p, 18446744073709551557), 1); /* 2^64 - 59 */
+            assert_eq!(BN_set_word(q, 2305843009213693951), 1); /* 2^61 - 1  */
+            assert_eq!(BN_set_word(e, 65537), 1);
+
+            let pm1 = BN_new();
+            let qm1 = BN_new();
+            let phi = BN_new();
+            let n = BN_new();
+            let dmp1 = BN_new();
+            let dmq1 = BN_new();
+            let iqmp = BN_new();
+            assert!(
+                !pm1.is_null()
+                    && !qm1.is_null()
+                    && !phi.is_null()
+                    && !n.is_null()
+                    && !dmp1.is_null()
+                    && !dmq1.is_null()
+                    && !iqmp.is_null()
+            );
+            assert_eq!(BN_sub(pm1, p, BN_value_one()), 1);
+            assert_eq!(BN_sub(qm1, q, BN_value_one()), 1);
+            assert_eq!(BN_mul(phi, pm1, qm1, ctx), 1);
+            assert_eq!(BN_mul(n, p, q, ctx), 1);
+            let d = BN_mod_inverse(ptr::null_mut(), e, phi, ctx);
+            assert!(!d.is_null());
+            // Both are the header's `BN_mod` macro: a null quotient slot.
+            assert_eq!(BN_div(ptr::null_mut(), dmp1, d, pm1, ctx), 1);
+            assert_eq!(BN_div(ptr::null_mut(), dmq1, d, qm1, ctx), 1);
+            assert!(!BN_mod_inverse(iqmp, q, p, ctx).is_null());
+
+            let rsa = RSA_new();
+            assert!(!rsa.is_null());
+            assert_eq!(RSA_set0_key(rsa, n, e, d), 1);
+            assert_eq!(RSA_set0_factors(rsa, p, q), 1);
+            assert_eq!(RSA_set0_crt_params(rsa, dmp1, dmq1, iqmp), 1);
+            RSA_set_flags(rsa, RSA_FLAG_NO_BLINDING);
+            assert_eq!(RSA_size(rsa), 16);
+
+            /* `RSA_public_encrypt` -> `RSA_private_decrypt`, under PKCS#1 v1.5. */
+            let msg = b"hello";
+            let mut ct = [0u8; 16];
+            let mut back = [0u8; 16];
+            assert_eq!(
+                RSA_public_encrypt(5, msg.as_ptr(), ct.as_mut_ptr(), rsa, RSA_PKCS1_PADDING),
+                16
+            );
+            assert_eq!(
+                RSA_private_decrypt(16, ct.as_ptr(), back.as_mut_ptr(), rsa, RSA_PKCS1_PADDING),
+                5
+            );
+            assert_eq!(&back[..5], msg);
+
+            /* `RSA_private_encrypt` -> `RSA_public_decrypt`, under `RSA_NO_PADDING`. */
+            let mut pt = [0u8; 16];
+            pt[0] = 0x0b;
+            pt[1] = 0x1a;
+            assert_eq!(
+                RSA_private_encrypt(16, pt.as_ptr(), ct.as_mut_ptr(), rsa, RSA_NO_PADDING),
+                16
+            );
+            assert_eq!(
+                RSA_public_decrypt(16, ct.as_ptr(), back.as_mut_ptr(), rsa, RSA_NO_PADDING),
+                16
+            );
+            assert_eq!(back, pt);
+
+            RSA_free(rsa);
+            BN_free(pm1);
+            BN_free(qm1);
+            BN_free(phi);
+            BN_CTX_free(ctx);
         }
     }
 }

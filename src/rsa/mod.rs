@@ -65,9 +65,13 @@
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
 use core::sync::atomic::AtomicI32;
 
-use crate::bn::bignum::{BN_num_bits, BigNum};
-use crate::bn::ctx::{BnCtx, BnGencb};
+use crate::bn::arith::{BN_div, BN_gcd, BN_mod_inverse, BN_mul, BN_sub};
+use crate::bn::bignum::{BN_dup, BN_new, BN_num_bits, BN_value_one, BigNum};
+use crate::bn::ctx::{
+    BN_CTX_end, BN_CTX_free, BN_CTX_get, BN_CTX_new, BN_CTX_new_ex, BN_CTX_start, BnCtx, BnGencb,
+};
 use crate::bn::mont::MontCtx;
+use crate::bn::primes::{BN_X931_derive_prime_ex, BN_X931_generate_Xpq, BN_X931_generate_prime_ex};
 use crate::digest::sha2::SHA256_DIGEST_LENGTH;
 use crate::evp::digest::{
     EVP_DigestFinal_ex, EVP_DigestInit_ex, EVP_DigestUpdate, EVP_MD_CTX_free, EVP_MD_CTX_new,
@@ -2679,6 +2683,306 @@ pub unsafe extern "C" fn RSA_padding_add_PKCS1_PSS(
     unsafe { RSA_padding_add_PKCS1_PSS_mgf1(rsa, em, m_hash, hash, core::ptr::null(), s_len) }
 }
 
+// =============================================================================================
+// Slice E, first part — the X9.31 key generator (`crypto/rsa/rsa_x931g.c`)
+// =============================================================================================
+//
+// **Two labels, and they are the whole of `rsa_x931g.c`.** `RSA_X931_generate_key_ex` draws its
+// two seed values `Xp`/`Xq` with `BN_X931_generate_Xpq` and derives a prime from each with
+// `BN_X931_generate_prime_ex`; `RSA_X931_derive_ex` is the caller that finishes the object off,
+// and is also a public entry point in its own right because a test program may want to supply
+// some of the parameters and read the rest back. Both bodies are entirely arithmetic over the
+// prime layer D324 landed, so they are reachable now and are the half of 8.4's slice E that needs
+// nothing from `BN_generate_prime_ex2`'s successors.
+//
+// **The generator pair is not the whole of slice E, and the rest is named rather than implied.**
+// `RSA_generate_key_ex`/`RSA_generate_multi_prime_key`/`RSA_generate_key` are `rsa_gen.c`'s and
+// their common path is *not* `rsa_multiprime_keygen`: the authority's static `rsa_keygen` sends
+// `primes == 2 && bits >= 2048 && BN_num_bits(e) > 16` to `ossl_rsa_sp800_56b_generate_key`
+// (`crypto/rsa/rsa_sp800_56b_gen.c:365`), whose prime generation is
+// `ossl_bn_rsa_fips186_4_gen_prob_primes` (`crypto/bn/bn_rsa_fips186_4.c:184`) -- a `crypto/bn`
+// internal this crate does not have, over `ossl_bn_check_generated_prime` and
+// `ossl_bn_get0_small_factors` (`crypto/bn/bn_prime.c:258`, `:65`), which it does not have either.
+// So the block on those three labels is a `crypto/bn` unit and not `BN_generate_prime_ex2`; see
+// `docs/DECISIONS.md` D326.
+
+// There is no `FILE_RSA_X931G` beside `FILE_RSA_METH`/`FILE_RSA_OAEP`, and that is a measurement
+// rather than an omission. The two bodies below allocate only `BN_CTX` and `BIGNUM` objects, and
+// this crate's `BnCtx` and `BigNum` are Rust-native structures that never route an allocation
+// through `CRYPTO_set_mem_functions` (D321 records that plane). So `rsa_x931g.c` has no
+// `OPENSSL_zalloc`/`OPENSSL_malloc` call for a `file` string to attribute.
+
+/// `int RSA_X931_derive_ex(RSA *rsa, BIGNUM *p1, BIGNUM *p2, BIGNUM *q1, BIGNUM *q2,`
+/// `const BIGNUM *Xp1, const BIGNUM *Xp2, const BIGNUM *Xp, const BIGNUM *Xq1,`
+/// `const BIGNUM *Xq2, const BIGNUM *Xq, const BIGNUM *e, BN_GENCB *cb)` -- `rsa_x931g.c:25-148`.
+///
+/// **`2` is a real answer and not a failure.** If only one of `p`/`q` exists after the derivation
+/// -- which is what happens when a caller passes `Xp` or `Xq` alone -- the two primes are not both
+/// present and the object cannot be finished, so the function releases its contexts and answers
+/// `2` with `rsa->p`/`rsa->q` left as they are. A caller that tested `!= 0` would read that as
+/// success, which is why the number is in the signature's contract rather than a detail.
+///
+/// **`e` is a local, and it is reassigned, because a non-NULL `rsa->e` wins.** The authority
+/// overwrites its own parameter when the object already carries an exponent, so the `rsa->e` on
+/// every later line is the *object's* and not the caller's.
+///
+/// **The `err:` label is reached with a NULL context.** The first statement after the `rsa == NULL`
+/// guard allocates `ctx`, so a NULL `rsa` jumps to the release label with `ctx == NULL`, and both
+/// `BN_CTX_end` and `BN_CTX_free` tolerate that here as they do in the authority.
+///
+/// # Safety
+/// `rsa` is NULL or a live object that stays live for the call; `p1`/`p2`/`q1`/`q2` are NULL or
+/// live destinations; the `X` arguments and `e` are NULL or live; `cb` is NULL or a live callback.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+pub unsafe extern "C" fn RSA_X931_derive_ex(
+    rsa: *mut Rsa,
+    p1: *mut BigNum,
+    p2: *mut BigNum,
+    q1: *mut BigNum,
+    q2: *mut BigNum,
+    xp1: *const BigNum,
+    xp2: *const BigNum,
+    xp: *const BigNum,
+    xq1: *const BigNum,
+    xq2: *const BigNum,
+    xq: *const BigNum,
+    e: *const BigNum,
+    cb: *mut BnGencb,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut e = e;
+        let mut ret: c_int = 0;
+        let mut ctx: *mut BnCtx = core::ptr::null_mut();
+        let mut ctx2: *mut BnCtx = core::ptr::null_mut();
+
+        'body: {
+            if rsa.is_null() {
+                break 'body;
+            }
+
+            ctx = BN_CTX_new_ex((*rsa).libctx);
+            if ctx.is_null() {
+                break 'body;
+            }
+            BN_CTX_start(ctx);
+
+            let r0 = BN_CTX_get(ctx);
+            let r1 = BN_CTX_get(ctx);
+            let r2 = BN_CTX_get(ctx);
+            let r3 = BN_CTX_get(ctx);
+            // The authority checks only the fourth, because a failed `BN_CTX_get` leaves the pool
+            // short for every later one -- so this single test is the allocation check, transcribed
+            // rather than widened.
+            if r3.is_null() {
+                break 'body;
+            }
+
+            if (*rsa).e.is_null() {
+                (*rsa).e = BN_dup(e);
+                if (*rsa).e.is_null() {
+                    break 'body;
+                }
+            } else {
+                e = (*rsa).e;
+            }
+
+            if !xp.is_null() && (*rsa).p.is_null() {
+                (*rsa).p = BN_new();
+                if (*rsa).p.is_null() {
+                    break 'body;
+                }
+                if BN_X931_derive_prime_ex((*rsa).p, p1, p2, xp, xp1, xp2, e, ctx, cb) == 0 {
+                    break 'body;
+                }
+            }
+
+            if !xq.is_null() && (*rsa).q.is_null() {
+                (*rsa).q = BN_new();
+                if (*rsa).q.is_null() {
+                    break 'body;
+                }
+                if BN_X931_derive_prime_ex((*rsa).q, q1, q2, xq, xq1, xq2, e, ctx, cb) == 0 {
+                    break 'body;
+                }
+            }
+
+            if (*rsa).p.is_null() || (*rsa).q.is_null() {
+                BN_CTX_end(ctx);
+                BN_CTX_free(ctx);
+                return 2;
+            }
+
+            (*rsa).n = BN_new();
+            if (*rsa).n.is_null() {
+                break 'body;
+            }
+            if BN_mul((*rsa).n, (*rsa).p, (*rsa).q, ctx) == 0 {
+                break 'body;
+            }
+
+            if BN_sub(r1, (*rsa).p, BN_value_one()) == 0 {
+                break 'body;
+            }
+            if BN_sub(r2, (*rsa).q, BN_value_one()) == 0 {
+                break 'body;
+            }
+            if BN_mul(r0, r1, r2, ctx) == 0 {
+                break 'body;
+            }
+
+            if BN_gcd(r3, r1, r2, ctx) == 0 {
+                break 'body;
+            }
+
+            // This is `BN_div(r0, NULL, r0, r3, ctx)` -- the **quotient**, not the header's
+            // `BN_mod` macro: the product is divided by the gcd to give the lcm, and a
+            // transcription that put the result in the remainder slot would compute
+            // `(p-1)(q-1) mod gcd`, which is zero because the gcd divides both factors.
+            if BN_div(r0, core::ptr::null_mut(), r0, r3, ctx) == 0 {
+                break 'body;
+            }
+
+            ctx2 = BN_CTX_new();
+            if ctx2.is_null() {
+                break 'body;
+            }
+
+            (*rsa).d = BN_mod_inverse(core::ptr::null_mut(), (*rsa).e, r0, ctx2);
+            if (*rsa).d.is_null() {
+                break 'body;
+            }
+
+            (*rsa).dmp1 = BN_new();
+            if (*rsa).dmp1.is_null() {
+                break 'body;
+            }
+            if BN_div(core::ptr::null_mut(), (*rsa).dmp1, (*rsa).d, r1, ctx) == 0 {
+                break 'body;
+            }
+
+            (*rsa).dmq1 = BN_new();
+            if (*rsa).dmq1.is_null() {
+                break 'body;
+            }
+            if BN_div(core::ptr::null_mut(), (*rsa).dmq1, (*rsa).d, r2, ctx) == 0 {
+                break 'body;
+            }
+
+            (*rsa).iqmp = BN_mod_inverse(core::ptr::null_mut(), (*rsa).q, (*rsa).p, ctx2);
+            if (*rsa).iqmp.is_null() {
+                break 'body;
+            }
+
+            (*rsa).dirty_cnt += 1;
+            ret = 1;
+        }
+
+        BN_CTX_end(ctx);
+        BN_CTX_free(ctx);
+        BN_CTX_free(ctx2);
+
+        ret
+    }
+}
+
+/// `int RSA_X931_generate_key_ex(RSA *rsa, int bits, const BIGNUM *e, BN_GENCB *cb)` --
+/// `rsa_x931g.c:150-204`.
+///
+/// **The `bits` guard belongs to `BN_X931_generate_Xpq` and not here.** The seed generator accepts
+/// `bits >= 1024` and a multiple of 256 (`(nbits & 0xff) == 0`), and refuses everything else with
+/// `0`; this function turns any refusal into its own `0`. So `RSA_X931_generate_key_ex(rsa, 512, e,
+/// cb)` is a refusal with an **empty error queue**, and that is the authority's behaviour rather
+/// than an omission.
+///
+/// **A refusal leaves `rsa->p`/`rsa->q` allocated and possibly set.** The two `BN_new`s are
+/// unconditional once the seeds exist, and the derivation writes into them; a later refusal does
+/// not undo that, because the authority releases only its `BN_CTX`. That is exactly why the return
+/// code and not the object's state is what a caller must read.
+///
+/// # Safety
+/// `rsa` is a live object with a live `libctx`; `e` is NULL or live; `cb` is NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_X931_generate_key_ex(
+    rsa: *mut Rsa,
+    bits: c_int,
+    e: *const BigNum,
+    cb: *mut BnGencb,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut ok = 0;
+        let ctx = BN_CTX_new_ex((*rsa).libctx);
+
+        if !ctx.is_null() {
+            BN_CTX_start(ctx);
+            let xp = BN_CTX_get(ctx);
+            let xq = BN_CTX_get(ctx);
+
+            if !xq.is_null() && BN_X931_generate_Xpq(xp, xq, bits, ctx) != 0 {
+                (*rsa).p = BN_new();
+                (*rsa).q = BN_new();
+
+                if !(*rsa).p.is_null() && !(*rsa).q.is_null() {
+                    let derived = BN_X931_generate_prime_ex(
+                        (*rsa).p,
+                        core::ptr::null_mut(),
+                        core::ptr::null_mut(),
+                        core::ptr::null_mut(),
+                        core::ptr::null_mut(),
+                        xp,
+                        e,
+                        ctx,
+                        cb,
+                    ) != 0
+                        && BN_X931_generate_prime_ex(
+                            (*rsa).q,
+                            core::ptr::null_mut(),
+                            core::ptr::null_mut(),
+                            core::ptr::null_mut(),
+                            core::ptr::null_mut(),
+                            xq,
+                            e,
+                            ctx,
+                            cb,
+                        ) != 0;
+
+                    if derived
+                        && RSA_X931_derive_ex(
+                            rsa,
+                            core::ptr::null_mut(),
+                            core::ptr::null_mut(),
+                            core::ptr::null_mut(),
+                            core::ptr::null_mut(),
+                            core::ptr::null(),
+                            core::ptr::null(),
+                            core::ptr::null(),
+                            core::ptr::null(),
+                            core::ptr::null(),
+                            core::ptr::null(),
+                            e,
+                            cb,
+                        ) != 0
+                    {
+                        (*rsa).dirty_cnt += 1;
+                        ok = 1;
+                    }
+                }
+            }
+
+            BN_CTX_end(ctx);
+            BN_CTX_free(ctx);
+        }
+
+        if ok != 0 {
+            1
+        } else {
+            0
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -3389,5 +3693,184 @@ mod tests {
 
         // SAFETY: `n` was allocated by `BN_new` in `pss_object` and is not used again.
         unsafe { BN_free(n) };
+    }
+
+    /// **The X9.31 generator's key is assertable by property and not by value.** Every component
+    /// is drawn, so nothing below compares a `BIGNUM` against a constant; what is compared is what
+    /// the algorithm *guarantees*: `p` and `q` are odd primes (`BN_check_prime`, D324's), `n` is
+    /// their product, `d` inverts `e` modulo both `p - 1` and `q - 1`, and the three CRT parameters
+    /// are the residues and the inverse they are named for.
+    ///
+    /// **`RSA_size` is the one width assertion and it is an inequality.** `Xp` carries two set top
+    /// bits and `Yp0` starts at `Xp`, so a 1024-bit request gives a 512-bit seed and the modulus is
+    /// 1023 or 1024 bits -- always 128 octets, never fewer. Asserting the exact `BN_num_bits` would
+    /// be asserting which of the two the DRBG happened to produce.
+    ///
+    /// The refusals are the seed generator's own: `bits < 1024` and a `bits` that is not a multiple
+    /// of 256 both answer `0` with an empty error queue, because the guard is in `BN_X931_generate_Xpq`
+    /// (`crypto/bn/bn_x931p.c:170`) and this function only forwards the refusal.
+    #[test]
+    fn the_x931_generator_builds_a_consistent_key() {
+        use crate::bn::arith::{BN_cmp, BN_div, BN_mul, BN_sub};
+        use crate::bn::bignum::{BN_free, BN_is_one, BN_set_word};
+        use crate::bn::ctx::{BN_CTX_free, BN_CTX_new};
+        use crate::bn::primes::BN_check_prime;
+        use crate::rsa::object::{
+            RSA_free, RSA_get0_crt_params, RSA_get0_factors, RSA_get0_key, RSA_new, RSA_size,
+        };
+
+        // SAFETY: every pointer is a fresh allocation this test owns and every out-parameter below
+        // is a writable local; the BN calls are the contract of their `# Safety` sections.
+        unsafe {
+            let e = BN_new();
+            assert!(!e.is_null());
+            assert_eq!(BN_set_word(e, 65537), 1);
+
+            let rsa = RSA_new();
+            assert!(!rsa.is_null());
+            assert_eq!(
+                RSA_X931_generate_key_ex(rsa, 1024, e, core::ptr::null_mut()),
+                1
+            );
+            assert!(RSA_size(rsa) >= 128);
+
+            let mut n: *const BigNum = core::ptr::null();
+            let mut ep: *const BigNum = core::ptr::null();
+            let mut d: *const BigNum = core::ptr::null();
+            RSA_get0_key(rsa, &mut n, &mut ep, &mut d);
+            let mut p: *const BigNum = core::ptr::null();
+            let mut q: *const BigNum = core::ptr::null();
+            RSA_get0_factors(rsa, &mut p, &mut q);
+            let mut dmp1: *const BigNum = core::ptr::null();
+            let mut dmq1: *const BigNum = core::ptr::null();
+            let mut iqmp: *const BigNum = core::ptr::null();
+            RSA_get0_crt_params(rsa, &mut dmp1, &mut dmq1, &mut iqmp);
+            assert!(!n.is_null() && !ep.is_null() && !d.is_null());
+            assert!(!p.is_null() && !q.is_null());
+            assert!(!dmp1.is_null() && !dmq1.is_null() && !iqmp.is_null());
+
+            let ctx = BN_CTX_new();
+            assert!(!ctx.is_null());
+
+            /* Both factors are the primes the derivation promises. */
+            assert_eq!(BN_check_prime(p, ctx, core::ptr::null_mut()), 1);
+            assert_eq!(BN_check_prime(q, ctx, core::ptr::null_mut()), 1);
+
+            /* `n == p * q`. */
+            let prod = BN_new();
+            assert!(!prod.is_null());
+            assert_eq!(BN_mul(prod, p, q, ctx), 1);
+            assert_eq!(BN_cmp(prod, n), 0);
+
+            /* `dmp1 == d mod (p-1)` and `dmq1 == d mod (q-1)`. */
+            let pm1 = BN_new();
+            let qm1 = BN_new();
+            let t = BN_new();
+            assert!(!pm1.is_null() && !qm1.is_null() && !t.is_null());
+            assert_eq!(BN_sub(pm1, p, BN_value_one()), 1);
+            assert_eq!(BN_sub(qm1, q, BN_value_one()), 1);
+            assert_eq!(BN_div(core::ptr::null_mut(), t, d, pm1, ctx), 1);
+            assert_eq!(BN_cmp(t, dmp1), 0);
+            assert_eq!(BN_div(core::ptr::null_mut(), t, d, qm1, ctx), 1);
+            assert_eq!(BN_cmp(t, dmq1), 0);
+
+            /* `e * d == 1 (mod p-1)` and `(mod q-1)`: `d` is the inverse modulo the *lcm*, which
+             * divides both, so this is the property the CRT path depends on and not a restatement
+             * of the derivation. */
+            let ed = BN_new();
+            assert!(!ed.is_null());
+            assert_eq!(BN_mul(ed, ep, d, ctx), 1);
+            assert_eq!(BN_div(core::ptr::null_mut(), t, ed, pm1, ctx), 1);
+            assert_eq!(BN_is_one(t), 1);
+            assert_eq!(BN_div(core::ptr::null_mut(), t, ed, qm1, ctx), 1);
+            assert_eq!(BN_is_one(t), 1);
+
+            /* `q * iqmp == 1 (mod p)`. */
+            assert_eq!(BN_mul(prod, q, iqmp, ctx), 1);
+            assert_eq!(BN_div(core::ptr::null_mut(), t, prod, p, ctx), 1);
+            assert_eq!(BN_is_one(t), 1);
+
+            /* The two refusals the seed generator owns. */
+            let rsa_small = RSA_new();
+            assert!(!rsa_small.is_null());
+            assert_eq!(
+                RSA_X931_generate_key_ex(rsa_small, 512, e, core::ptr::null_mut()),
+                0
+            );
+            assert_eq!(
+                RSA_X931_generate_key_ex(rsa_small, 1025, e, core::ptr::null_mut()),
+                0
+            );
+
+            RSA_free(rsa_small);
+            RSA_free(rsa);
+            BN_free(prod);
+            BN_free(pm1);
+            BN_free(qm1);
+            BN_free(t);
+            BN_free(ed);
+            BN_free(e);
+            BN_CTX_free(ctx);
+        }
+    }
+
+    /// **`RSA_X931_derive_ex`'s three answers, on the arms that need no arithmetic.** The `2` is
+    /// the one worth pinning: with an exponent and neither `Xp` nor `Xq` the object still has no
+    /// primes, so the function releases its contexts and answers `2` -- a success-looking number
+    /// that means "incomplete", which is why it is in the signature's contract. A NULL `rsa` is the
+    /// `err:` label instead, and it is reached with a NULL context, which is what makes the null
+    /// tolerance of `BN_CTX_end`/`BN_CTX_free` observable here rather than assumed.
+    #[test]
+    fn the_x931_derive_answers_two_and_zero_on_its_two_incomplete_arms() {
+        use crate::bn::bignum::{BN_free, BN_set_word};
+
+        // SAFETY: `e` is a fresh allocation and the null arguments are the contract of each call.
+        unsafe {
+            let e = BN_new();
+            assert!(!e.is_null());
+            assert_eq!(BN_set_word(e, 65537), 1);
+
+            let rsa = crate::rsa::object::RSA_new();
+            assert!(!rsa.is_null());
+            assert_eq!(
+                RSA_X931_derive_ex(
+                    rsa,
+                    core::ptr::null_mut(),
+                    core::ptr::null_mut(),
+                    core::ptr::null_mut(),
+                    core::ptr::null_mut(),
+                    core::ptr::null(),
+                    core::ptr::null(),
+                    core::ptr::null(),
+                    core::ptr::null(),
+                    core::ptr::null(),
+                    core::ptr::null(),
+                    e,
+                    core::ptr::null_mut(),
+                ),
+                2
+            );
+            crate::rsa::object::RSA_free(rsa);
+
+            assert_eq!(
+                RSA_X931_derive_ex(
+                    core::ptr::null_mut(),
+                    core::ptr::null_mut(),
+                    core::ptr::null_mut(),
+                    core::ptr::null_mut(),
+                    core::ptr::null_mut(),
+                    core::ptr::null(),
+                    core::ptr::null(),
+                    core::ptr::null(),
+                    core::ptr::null(),
+                    core::ptr::null(),
+                    core::ptr::null(),
+                    e,
+                    core::ptr::null_mut(),
+                ),
+                0
+            );
+            BN_free(e);
+        }
     }
 }

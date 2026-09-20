@@ -21202,3 +21202,124 @@ FIPS branch, as `mod.rs` already records), and the `RSA_public_encrypt`/`_privat
 `_public_decrypt`/`_private_decrypt` *wrappers* of `rsa_crpt.c:33-60`, which are still `open`: they
 are four one-line `rsa->meth->rsa_*_enc(...)` dispatches with a NULL test each, they are the natural
 first half of 8.4's slice E, and nothing in this commit reads them.
+
+## D326 -- 8.4's key generators are half landable, and the other half is blocked on a `crypto/bn`
+unit rather than on `BN_generate_prime_ex2`
+
+D322 and D324 recorded that the RSA generator rows were `BN_generate_prime_ex2`'s and that landing
+that callee made them Phase 8's own work again. Reading `rsa_gen.c`'s *bodies* rather than its rows
+says otherwise, and this entry is the measurement: the two X9.31 generators land, the four crypt
+wrappers land, and the three `RSA_generate_*` names do not, because the callee they reach is not the
+one the row named.
+
+**What landed.** `src/rsa/mod.rs` gains `RSA_X931_derive_ex` (`rsa_x931g.c:25-148`) and
+`RSA_X931_generate_key_ex` (`:150-204`), and `src/rsa/object.rs` gains the four `rsa_crpt.c:33-55`
+wrappers `RSA_public_encrypt`, `RSA_private_encrypt`, `RSA_private_decrypt` and
+`RSA_public_decrypt`. Six exports and no internals: the two generator labels' entire reach is the
+prime layer D324 landed -- `BN_X931_generate_Xpq`, `BN_X931_generate_prime_ex`,
+`BN_X931_derive_prime_ex` (`crypto/bn/bn_x931p.c`) -- and the wrappers' entire body is one call
+through `rsa->meth`, which `r->meth` cannot be NULL on the default table they are reached through.
+
+**The unit correspondence is `object.rs` for the wrappers, not `mod.rs`.** The instruction for this
+commit suggested `mod.rs` "if their authority unit is `rsa_crpt.c`", and the correspondence the
+existing modules already have decides it the other way: `rsa_crpt.c:23-31`'s `RSA_bits`/`RSA_size`
+and `:57-60`'s `RSA_flags` are in `src/rsa/object.rs` (D321), because D320's plan put the unit's
+whole surface there. So the four labels land beside the three accessors they share a file with, and
+`mod.rs`'s slice-E banner names the split rather than keeping a second `rsa_crpt.c` section.
+
+**The blocker, and how it is not the row's.** `RSA_generate_key_ex` (`rsa_gen.c:41-48`) is
+`rsa->meth->rsa_keygen` if it exists (NULL on both of the authority's own tables) and
+`RSA_generate_multi_prime_key` otherwise; `:50-72` is the method's `rsa_multi_prime_keygen`, then
+its `rsa_keygen`, then the **static** `rsa_keygen` at `:611-655`. That static function's non-FIPS
+branch is:
+
+```c
+if (primes == 2 && bits >= 2048 && (e_value == NULL || BN_num_bits(e_value) > 16))
+    ok = ossl_rsa_sp800_56b_generate_key(rsa, bits, e_value, cb);
+else
+    ok = rsa_multiprime_keygen(rsa, bits, primes, e_value, cb);
+```
+
+so the ordinary `RSA_generate_key_ex(rsa, 2048, e=65537, cb)` -- and every FIPS-adjacent call --
+takes the SP800-56B path, whose prime generation is `ossl_bn_rsa_fips186_4_gen_prob_primes`
+(`crypto/bn/bn_rsa_fips186_4.c:184`), over `ossl_bn_check_generated_prime` (`crypto/bn/bn_prime.c:258`)
+and `ossl_bn_get0_small_factors` (`:65`). None of the three is in the crate, and none is an export
+of any header, so no ledger row names them: the block is a `crypto/bn` unit. **`BN_generate_prime_ex2`
+was never the whole blocker for this row** -- it is the blocker for `rsa_multiprime_keygen`, which
+the entry points reach only for a key below 2048 bits or with `BN_num_bits(e) <= 16`.
+
+**Two names the instruction named that the authority does not have.** `ossl_rsa_keygen` is not in
+`crypto/rsa/rsa_gen.c` and `rsa_ossl_keygen` (and its multi-prime sibling) are not in
+`crypto/rsa/rsa_ossl.c` at all: both of that file's tables -- `rsa_pkcs1_ossl_meth` (`:64-81`) and
+`rsa_fips_ossl_meth` (`:66-81`) -- write `NULL` into `rsa_keygen` and `rsa_multi_prime_keygen`, and
+the generator is `rsa_gen.c`'s static `rsa_keygen`. So there was nothing to land under either name,
+and the reachable set is `rsa_gen.c` plus `rsa_sp800_56b_gen.c`, of which the first half lands here.
+
+**A transcription error the arms caught, and it is the kind a signature cannot show.** The first
+version of `RSA_X931_derive_ex` wrote the lcm step as the header's `BN_mod` macro --
+`BN_div(NULL, r0, r0, r3, ctx)`. The authority's line is `BN_div(r0, NULL, r0, r3, ctx)`: the
+**quotient**, because the lcm is `(p-1)(q-1) / gcd(p-1, q-1)`. The remainder slot returns
+`(p-1)(q-1) mod gcd`, which is zero because the gcd divides both factors, so `d`'s inversion ran on
+a zero modulus and every arm of `RSA_X931_generate_key_ex` answered `0` while `p`, `q` and `n` were
+all set. The unit test's `d` assertions were written after the fix and would have caught it on
+their own; the arm caught it first.
+
+**The court's two halves, and the one congruence the first version got wrong.** `RT-RSA` grows
+632 -> **682 observations** with no residuals. The derivation arm is *deterministic*: fixed 512-bit
+`Xp`/`Xq` and fixed 101-bit `Xp1`/`Xp2`/`Xq1`/`Xq2` make the whole key a function of the probe's
+constants, so `RSA_bits`, `RSA_size`, `dirty_cnt`, primality, `n = p*q`, the CRT parameters and the
+residue relations are values both binaries must compute identically. **The relation is `p = 1
+(mod p1)` and `p = -1 (mod p2)`**, because `Rp = (p2^-1 mod p1)*p2 - (p1^-1 mod p2)*p1` is `1`
+modulo `p1` and `-1` modulo `p2`; the arm's first version asserted `p = 1 (mod p2)` and the
+authority answered `0` to it, which is the class of error D324 recorded for the BN generator from
+the other side. The generation arm draws, so it prints only the return code, a width predicate and
+the two **round trips** -- a generated key through `RSA_public_encrypt`/`RSA_private_decrypt` under
+PKCS#1 v1.5 and through `RSA_private_encrypt`/`RSA_public_decrypt` under `RSA_NO_PADDING` -- plus
+the seed generator's two refusals and `RSA_X931_derive_ex`'s `2` and `0`. **One measurement was
+needed to keep the deterministic arm on its success path:** `bn_x931_derive_pi` answers the first
+odd prime at or above its seed and prime gaps near `2^100` are about a hundred, so two seeds a few
+dozen apart can round to the *same* prime, make `gcd(p1, p2) != 1` and turn the derivation's
+`BN_mod_inverse` into `BN_R_NO_INVERSE`. The arm's seeds are millions apart for that reason, and
+the probe says so at the constants. The arm also guards its object reads on `ret == 1`:
+`RSA_bits`/`RSA_size` on an object whose `n` is NULL is the segmentation fault D325 measured.
+
+**Unit tests, in the two modules, asserting properties and never values.** `mod.rs`'s
+`the_x931_generator_builds_a_consistent_key` generates a 1024-bit key with `e = 65537`, asserts
+`RSA_size >= 128`, checks both factors with the landed `BN_check_prime`, and checks `n = p*q`,
+`e*d = 1 (mod p-1)` and `(mod q-1)`, `dmp1 = d (mod p-1)`, `dmq1 = d (mod q-1)` and
+`q*iqmp = 1 (mod p)`; `the_x931_derive_answers_two_and_zero_on_its_two_incomplete_arms` pins the
+`2` and the `0`. `object.rs`'s `the_four_crypt_wrappers_round_trip_a_fixed_key` builds the 128-bit
+`p = 2^64 - 59`, `q = 2^61 - 1` key through the landed setters and asserts the two wrapper round
+trips, which are deterministic under a fixed key even though the PKCS#1 padding is drawn.
+
+**The ledger, read off the regenerated files, and the one judgement it records.** `phase8`:
+implemented 284 -> **290**, deferred 12 -> **7**, open 490 -> **489**, owned 786 unchanged, and
+`BLOCKED_HANDOFFS` row (3) loses its RSA half. `RSA_X931_generate_key_ex` and `RSA_X931_derive_ex`
+leave `deferred` because they are implemented. `RSA_generate_key`, `RSA_generate_key_ex` and
+`RSA_generate_multi_prime_key` leave it **for `open`**, not for another stratum: their blocker is
+`crypto/bn`'s and D324's own ownership-transition row already assigns that unit to this stratum by
+reachability ("their only authority callers are in `crypto/bn/bn_rsa_fips186_4.c`, which is Phase
+8's"), and a stratum cannot hand a symbol to itself (D296). The other reading -- keeping them deferred
+because `bn_rsa_fips186_4.c` sits in `crypto/bn` -- is the one D324's transition row rules out, and
+it would leave the row naming a blocker in a stratum that does not own the file. `phase9`'s
+`handoffs_discharged[8]` follows at 18 -> **16**. `RT-RSA`'s six new exports are all courted
+(`court_coverage.py`), and `docs/PHASE-8-SUBPHASES.md`'s two anchored clauses name the six as landed
+and the three as open.
+
+**What is deliberately *not* here, named rather than implied.** `rsa_gen.c`'s
+`ossl_rsa_multiprime_derive` and `rsa_multiprime_keygen`, and the static `rsa_keygen` above them,
+are not transcribed: nothing can call them until `ossl_rsa_sp800_56b_generate_key` exists, because
+`rsa_keygen` is the only caller and its SP800-56B branch is the blocked one, and an unreachable
+`rsa_multiprime_keygen` would be dead code rather than a landing. `crypto/rsa/rsa_sp800_56b_gen.c`
+(`ossl_rsa_fips186_4_gen_prob_primes`, `ossl_rsa_sp800_56b_generate_key`,
+`ossl_rsa_sp800_56b_validate_strength`, `ossl_rsa_sp800_56b_derive_params_from_pq`,
+`ossl_rsa_sp800_56b_pairwise_test`) and `rsa_sp800_56b_check.c`'s three
+(`ossl_rsa_check_public_exponent`, `ossl_rsa_check_pminusq_diff`, `ossl_rsa_get_lcm`) are not
+transcribed either: they are reachable only from the blocked path, and landing them without a caller
+would be the same dead code. The named next slice for the three generators is therefore the
+`crypto/bn` unit first -- `ossl_bn_rsa_fips186_4_gen_prob_primes`,
+`ossl_bn_rsa_fips186_4_derive_prime`, `ossl_bn_inv_sqrt_2` (`crypto/bn/bn_rsa_fips186_4.c`) and the
+two `bn_prime.c` internals it calls -- after which no `src/rsa` file needs to change for the three
+to land, because `RSA_generate_key_ex`/`RSA_generate_multi_prime_key`/`RSA_generate_key` and the
+`rsa_gen.c`/`rsa_sp800_56b_gen.c` bodies they reach are ordinary transcriptions of an ordinary
+callee graph.

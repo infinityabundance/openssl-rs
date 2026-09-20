@@ -1037,7 +1037,7 @@
         "module": "src/rsa/mod.rs",
         "phase": 8,
         "phase_source": "export-ownership",
-        "share": "33/54",
+        "share": "33/56",
         "translation_unit": "crypto/rsa/rsa_meth.c"
       },
       {
@@ -1051,7 +1051,7 @@
         "module": "src/rsa/object.rs",
         "phase": 8,
         "phase_source": "module-declaration",
-        "share": "42/45",
+        "share": "42/49",
         "translation_unit": "crypto/rsa/rsa_lib.c"
       },
       {
