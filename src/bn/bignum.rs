@@ -35,6 +35,7 @@
 //! *not* claimed as parity.
 
 use core::ffi::{c_char, c_int, c_ulong};
+use core::sync::atomic::{AtomicPtr, Ordering};
 
 use crate::bn::limbs::{self, Limb};
 use crate::ffi::guard_ffi;
@@ -47,6 +48,18 @@ const LINE: c_int = 0;
 
 /// `BN_FLG_MALLOCED` — set on a `BIGNUM` this library allocated.
 pub(crate) const BN_FLG_MALLOCED: c_int = 0x01;
+
+/// `BN_FLG_STATIC_DATA` — `include/openssl/bn.h:59`. Set on a `BIGNUM` whose magnitude
+/// lives in storage the library does not own, so `BN_free` must not release it.
+///
+/// Two readers make it load-bearing in this crate rather than descriptive:
+/// `crypto/bn/bn_lib.c`'s `BN_free`/`BN_clear_free` test it *first* and skip the whole
+/// release when it is set, and `crate::ffc::params`'s `ffc_bn_cpy` copies the *pointer*
+/// rather than the number when a source carries this bit **without** `BN_FLG_MALLOCED`.
+/// The authority's own `const BIGNUM` objects — `bn_dh.c`'s thirty-two `ossl_bignum_*`
+/// — carry exactly that pair, and `ossl_ffc_named_group_set` hands them to a `DH`
+/// object that will later `BN_free` them.
+pub(crate) const BN_FLG_STATIC_DATA: c_int = 0x02;
 
 /// The authority's `BIGNUM`.
 #[repr(C)]
@@ -102,6 +115,62 @@ pub(crate) fn new_owned(mut d: Vec<Limb>, neg: c_int) -> *mut BigNum {
         neg: if zero { 0 } else { neg },
         flags: BN_FLG_MALLOCED,
     }))
+}
+
+/// A heap `BIGNUM` carrying `BN_FLG_STATIC_DATA`, the crate's model of the authority's
+/// `const BIGNUM` objects in `.rodata`.
+///
+/// The flag pair is the whole point: `BN_FLG_STATIC_DATA` **without** `BN_FLG_MALLOCED`
+/// is what `crypto/bn/bn_lib.c:224-232` tests before it releases anything, and what
+/// `ffc_bn_cpy` tests before it decides to share a pointer rather than duplicate a
+/// number. `crypto/bn/bn_dh.c`'s `make_dh_bn` gives every `ossl_bignum_*` exactly this
+/// pair, which is how the authority hands its RFC 7919 primes to `DH` objects that
+/// later `BN_free` them without freeing `.rodata`.
+///
+/// The object is deliberately **never released**: it is process-lifetime constant
+/// storage, so the caller caches it and leaks exactly one object per constant.
+pub(crate) fn new_static_data(mut d: Vec<Limb>) -> *mut BigNum {
+    limbs::normalise(&mut d);
+    Box::into_raw(Box::new(BigNum {
+        d,
+        neg: 0,
+        flags: BN_FLG_STATIC_DATA,
+    }))
+}
+
+/// The shared object behind one of the authority's `const BIGNUM`s, built once and
+/// cached in `cache`.
+///
+/// `bytes` is the magnitude **big-endian**, which is how `BN_bn2hex` prints it and how
+/// the generators that read a constant back from the authority record it. Two calls
+/// answer the same pointer, which is what a `static` object means in C; a caller that
+/// leaks the pointer (it must not free it) leaks exactly one.
+pub(crate) fn static_data_bignum(cache: &AtomicPtr<BigNum>, bytes: &[u8]) -> *const BigNum {
+    let existing = cache.load(Ordering::Acquire);
+    if !existing.is_null() {
+        return existing;
+    }
+    let mut limbs = vec![0 as Limb; bytes.len().div_ceil(8)];
+    for (i, &byte) in bytes.iter().rev().enumerate() {
+        limbs[i / 8] |= (byte as Limb) << (8 * (i % 8));
+    }
+    let fresh = new_static_data(limbs);
+    match cache.compare_exchange(
+        core::ptr::null_mut(),
+        fresh,
+        Ordering::AcqRel,
+        Ordering::Acquire,
+    ) {
+        Ok(_) => fresh,
+        Err(winner) => {
+            // SAFETY: `fresh` is the object this call built and has not published, and
+            // nothing else has seen it, so releasing it here leaves the cached one
+            // alone. It carries no `BN_FLG_STATIC_DATA`, so dropping the box is the
+            // whole release.
+            drop(unsafe { Box::from_raw(fresh) });
+            winner
+        }
+    }
 }
 
 /// The magnitude and sign of an optional object; `(empty, false)` for null.
@@ -261,6 +330,15 @@ pub unsafe extern "C" fn BN_secure_new() -> *mut BigNum {
 ///
 /// A null pointer is explicitly allowed and does nothing.
 ///
+/// **An object carrying `BN_FLG_STATIC_DATA` is left completely alone**, which is
+/// `crypto/bn/bn_lib.c:224-232`'s first test and the reason the flag exists. In the
+/// authority the two tests there are separable — the magnitude is released unless the
+/// data is static, and the object itself is released only when it is `BN_FLG_MALLOCED`
+/// — but this crate's `BIGNUM` is one box holding both, so a static object's release is
+/// *nothing at all*. The objects that reach that arm are `crypto/bn/bn_dh.c`'s
+/// thirty-two `ossl_bignum_*` constants, which `ossl_ffc_named_group_set` hands to a
+/// `DH` whose own release `BN_free`s them.
+///
 /// # Safety
 ///
 /// `a` must be null or a `BIGNUM` this library allocated and has not freed.
@@ -270,9 +348,14 @@ pub unsafe extern "C" fn BN_free(a: *mut BigNum) {
         if a.is_null() {
             return;
         }
-        // SAFETY: by this function's `# Safety` section `a` came from
-        // `Box::into_raw` in this module and is not yet freed, so reclaiming the
-        // box is exactly what is owed; this is the only read of the pointer.
+        // SAFETY: by this function's `# Safety` section `a` came from `Box::into_raw`
+        // in this module and is not yet freed; this is the only read of the pointer,
+        // and it happens before anything is reclaimed.
+        if (unsafe { (*a).flags } & BN_FLG_STATIC_DATA) != 0 {
+            return;
+        }
+        // SAFETY: as above, and the flag test just established that this object is not
+        // one of the shared constants, so reclaiming the box is exactly what is owed.
         drop(unsafe { Box::from_raw(a) });
     });
 }
@@ -283,6 +366,10 @@ pub unsafe extern "C" fn BN_free(a: *mut BigNum) {
 /// reading freed memory — not a contract — but `BN_clear_free` exists to make the
 /// promise, and a custodian does not quietly drop a security promise it can keep.
 ///
+/// **A `BN_FLG_STATIC_DATA` object is not zeroised either**, which is again the
+/// authority's own first test: `bn_lib.c:216` skips the limb release *and* the zeroise
+/// together, so a shared constant is not scrubbed out from under its other readers.
+///
 /// # Safety
 ///
 /// As `BN_free`.
@@ -290,6 +377,10 @@ pub unsafe extern "C" fn BN_free(a: *mut BigNum) {
 pub unsafe extern "C" fn BN_clear_free(a: *mut BigNum) {
     guard_ffi((), || {
         if a.is_null() {
+            return;
+        }
+        // SAFETY: as `BN_free` — the flag is read before the box is reclaimed.
+        if (unsafe { (*a).flags } & BN_FLG_STATIC_DATA) != 0 {
             return;
         }
         // SAFETY: as `BN_free` — `a` is a live box this module allocated.

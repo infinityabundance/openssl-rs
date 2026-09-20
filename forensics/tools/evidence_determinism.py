@@ -91,6 +91,15 @@ GENERATORS_BEFORE_LEDGERS = [
     # doing only one of the two would have replaced one silent gap with two.
     "forensics/tools/gen_err_raise_sites.py",
     "forensics/tools/gen_bn_primes.py",
+    # Phase 8.5's named-group constants (D332). It is listed here so a stale committed copy
+    # is a failure and not a silent divergence: the whole point of reading 13,536 bytes of
+    # limb data back from the authority instead of transcribing them is defeated by a
+    # generator nothing re-runs. It has two tiers like the two above -- re-derive with the
+    # authority present, rebuild-and-compare from the committed pair without it -- and it
+    # additionally checks `src/bn/dh.rs`'s accessor table against `bn_dh.c`'s own
+    # `make_dh_bn` inventory in **both** tiers, so a hand edit to that table fails on a
+    # runner with no authority too.
+    "forensics/tools/gen_bn_dh.py",
     # The provider algorithm-row census (D237). It reads the authority's provider tables and
     # the crate's two provider modules, and nothing else, so it has no position dependence
     # beyond being after the crate's sources are final; it is listed here so a stale
@@ -205,6 +214,12 @@ COMPARED = [
     # `cargo`-visible file generated from the authority was in neither this list nor the
     # generator list, so it could drift from the atlas without anything noticing.
     "src/runtime/err_sites.rs",
+    # Phase 8.5's named-group constants (D332), for the same reason as the two above and
+    # with one extra property the other generated `.rs` files do not need: this file's
+    # renderer is **`rustfmt`-stable**, so `pipeline.sh` may run it before `cargo fmt`
+    # without the formatter moving a byte. That is what lets it be compared here at all,
+    # and why the two Phase 8 table generators below are deliberately not.
+    "src/bn/dh_data.rs",
 ]
 
 # ---------------------------------------------------------------------------

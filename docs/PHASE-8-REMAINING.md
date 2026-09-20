@@ -13,11 +13,11 @@ Read from the ledger's `body.counts`.
 | quantity | count |
 |---|---|
 | owned | 786 |
-| implemented | 387 |
+| implemented | 392 |
 | deferred to a later phase | 4 |
-| open in this stratum | 395 |
+| open in this stratum | 390 |
 
-The identity `owned = implemented + deferred + open` is `786 = 387 + 4 + 395`, which holds.
+The identity `owned = implemented + deferred + open` is `786 = 392 + 4 + 390`, which holds.
 
 ## The merge gate — what Phase 8 owes to Phase 9
 
@@ -63,14 +63,14 @@ table, verbatim.
 | subphase | owns | open | courts | depends on |
 |---|---|---|---|---|
 | 8.4 RSA | `src/rsa/mod.rs` | 24 | `RT-RSA`, `CT-RSA` | 8.1 (the RSA provider's `SHA`-named digests), 8.3 (its OAEP/PSS modes) |
-| 8.5 DH and DHX | `src/dh/mod.rs`, `src/dh/mod.rs`, `src/ffc/`, `src/dh/object.rs` | 37 | `RT-DH`, `CT-DH` | 8.4 (the shared BN/param idiom) |
+| 8.5 DH and DHX | `src/dh/mod.rs`, `src/dh/mod.rs`, `src/ffc/`, `src/dh/object.rs`, `src/dh/group_params.rs`, `src/dh/rfc5114.rs`, `src/ffc/dh.rs`, `src/bn/dh.rs`, `src/bn/dh_data.rs` | 32 | `RT-DH`, `CT-DH` | 8.4 (the shared BN/param idiom) |
 | 8.6 DSA | `src/dsa/mod.rs` | 88 | `RT-DSA`, `CT-DSA` | 8.5 |
 | 8.7 EC | `src/ec/mod.rs` | 201 | `RT-EC`, `CT-EC` | 8.6 |
 | 8.8 The ASN.1 method objects and `standard_methods[]` | `src/asn1/ameth.rs` | 15 | `RT-AMETH` | 8.4, 8.5, 8.6, 8.7 |
 | 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals | `src/pem/key_legacy.rs` | 30 | `RT-PEM-KEY` | 8.8 |
 
-Total open symbols listed below: **395**; the ledger's
-`open_in_this_stratum` is 395.
+Total open symbols listed below: **390**; the ledger's
+`open_in_this_stratum` is 390.
 
 ### 8.4 RSA — 24 open
 
@@ -82,10 +82,9 @@ Total open symbols listed below: **395**; the ledger's
 `d2i_RSA_PSS_PARAMS`, `i2d_RSAPrivateKey`, `i2d_RSAPublicKey`, `i2d_RSA_OAEP_PARAMS`,
 `i2d_RSA_PSS_PARAMS`
 
-### 8.5 DH and DHX — 37 open
+### 8.5 DH and DHX — 32 open
 
-`DH_KDF_X9_42`, `DH_get_1024_160`, `DH_get_2048_224`, `DH_get_2048_256`, `DH_get_nid`,
-`DH_new_by_nid`, `DHparams_dup`, `DHparams_it`, `DHparams_print`, `DHparams_print_fp`,
+`DH_KDF_X9_42`, `DHparams_dup`, `DHparams_it`, `DHparams_print`, `DHparams_print_fp`,
 `EVP_PKEY_CTX_get0_dh_kdf_oid`, `EVP_PKEY_CTX_get0_dh_kdf_ukm`,
 `EVP_PKEY_CTX_get_dh_kdf_md`, `EVP_PKEY_CTX_get_dh_kdf_outlen`,
 `EVP_PKEY_CTX_get_dh_kdf_type`, `EVP_PKEY_CTX_set0_dh_kdf_oid`,

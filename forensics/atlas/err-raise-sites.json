@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 2468,
+      "sites": 2469,
       "unattributed": 0
     },
     "covered_files": [
@@ -231,6 +231,7 @@
       "crypto/dh/dh_key.c",
       "crypto/dh/dh_gen.c",
       "crypto/dh/dh_check.c",
+      "crypto/dh/dh_group_params.c",
       "crypto/rand/rand_lib.c",
       "crypto/rand/randfile.c",
       "crypto/rand/rand_pool.c",
@@ -34636,6 +34637,21 @@
         "rel_source": "crypto/dh/dh_check.c"
       },
       {
+        "const_name": "DH_GROUP_PARAMS_47",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/dh/dh_group_params.c",
+        "function": "ossl_dh_new_by_nid_ex",
+        "generated": false,
+        "lib": 5,
+        "lib_symbol": "ERR_LIB_DH",
+        "line": 47,
+        "macro": "ERR_raise",
+        "reason": 114,
+        "reason_symbol": "DH_R_INVALID_PARAMETER_NID",
+        "rel_source": "crypto/dh/dh_group_params.c"
+      },
+      {
         "const_name": "RAND_LIB_386",
         "data_format": null,
         "dynamic_reason": false,
@@ -38495,6 +38511,11 @@
       "name": "authority:crypto/dh/dh_check.c",
       "path": "forensics/authorities/src/openssl-3.6.4/crypto/dh/dh_check.c",
       "sha256": "b92f5181b11ea8ab7584b28be70964b9cbfed01b5e2949a6ec113898899dfb19"
+    },
+    {
+      "name": "authority:crypto/dh/dh_group_params.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/dh/dh_group_params.c",
+      "sha256": "e67d17fb98b58e8c50113becaa33aecbdc579f8972390c822dd93bee3871a644"
     },
     {
       "name": "authority:crypto/rand/rand_lib.c",

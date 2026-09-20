@@ -6,20 +6,28 @@
 //! provider's and the ameth's; the two `_check_pub_key` entry points are the ones the object's own
 //! `ossl_dh_buf2key` reaches.
 //!
-//! ## The one reduction, and why the branch is written as its field read
+//! ## `DH_get_nid`, which D331 wrote as its field read and which is now a call
 //!
-//! `DH_check_params` and `DH_check` both begin with `DH_get_nid((DH *)dh)` and answer 1 when the
-//! object names a known group. `DH_get_nid` is `crypto/dh/dh_group_params.c:94-100` — the
-//! named-group unit D329/D330 left as a separable data transcription — and its body is
-//! `return dh->params.nid;` behind a NULL test. The read is therefore written directly, exactly
-//! as `src/dh/key.rs` writes it in `generate_key`, and it is `NID_undef` on every object this
-//! crate can construct because the field's only two writers are in that unlanded unit and
-//! `ossl_ffc_params_init` zeroes it. So the "known group" arm is transcribed in full and is
-//! unreachable here; it becomes live the day the tables land.
+//! `DH_check` (`:158`) and `ossl_dh_check_priv_key` (`:336`) both branch on
+//! `DH_get_nid((DH *)dh) != NID_undef`, and that function is
+//! `crypto/dh/dh_group_params.c:94-100` — the named-group unit D329/D330 left as a
+//! separable data transcription. D331 wrote each branch as the `params.nid` read it
+//! reduces to, with the argument that the field had no writer in the crate; that unit
+//! is landed ([`crate::dh::group_params`]) and both sites are the real calls.
 //!
-//! The `#ifdef FIPS_MODULE` twin of `DH_check_params` (`:49-68`) — which *is* the named-group
-//! check plus `ossl_ffc_params_FIPS186_4_validate` — is not compiled on this profile, so it is
-//! not transcribed; the `#else` arm below is the whole function here.
+//! **The two arms are now reachable and are not the same arm.** `DH_check`'s answers 1
+//! immediately — a group the table names has been validated by construction, so no
+//! primality work happens at all. `ossl_dh_check_priv_key`'s arm is the one that reads
+//! `dh->length`: for a named group whose length is set it caps `two_powN` at `2^length`
+//! before `ossl_ffc_validate_private_key` runs, and for a group whose length is 0 it
+//! does nothing at all. `RT-DH` drives both.
+//!
+//! The `#ifdef FIPS_MODULE` twin of `DH_check_params` (`:49-68`) — which *is* the
+//! named-group check plus `ossl_ffc_params_FIPS186_4_validate` — is not compiled on this
+//! profile, so it is not transcribed; the `#else` arm below is the whole function here.
+//! *(The `#else` arm has no `DH_get_nid` call at all: the named-group shortcut is the
+//! FIPS arm's, and the crate's `DH_check_params` is the authority's `#else` arm. The
+//! module's earlier note said "both begin with it", which was the FIPS twin's shape.)*
 //!
 //! ## Ordering, where the authority's is load-bearing
 //!
@@ -61,6 +69,7 @@ use crate::selftest::{
     OSSL_SELF_TEST_onend, OsslCallback,
 };
 
+use super::group_params::DH_get_nid;
 use super::key::ossl_dh_generate_public_key;
 use super::{
     Dh, DH_CHECK_INVALID_J_VALUE, DH_CHECK_INVALID_Q_VALUE, DH_CHECK_PUBKEY_INVALID,
@@ -264,9 +273,10 @@ pub unsafe extern "C" fn DH_check(dh: *const Dh, ret: *mut c_int) -> c_int {
         }
     }
 
-    /* The authority's `DH_get_nid((DH *)dh)`; see the module documentation for the reduction. */
+    /* The authority's `DH_get_nid((DH *)dh)`: a group the table names is valid by
+     * construction, so no primality work runs for one. */
     // SAFETY: `dh` is live per the contract.
-    let nid = unsafe { (*dh).params.nid };
+    let nid = unsafe { DH_get_nid(dh) };
     if nid != NID_undef {
         return 1;
     }
@@ -543,7 +553,7 @@ pub(crate) unsafe fn ossl_dh_check_priv_key(
     // this call's own.
     unsafe {
         /* Is it from an approved Safe prime group ?*/
-        if (*dh).params.nid != NID_undef && (*dh).length != 0 {
+        if DH_get_nid(dh) != NID_undef && (*dh).length != 0 {
             if BN_lshift(two_pow_n, BN_value_one(), (*dh).length) == 0 {
                 BN_free(two_pow_n);
                 return ok;

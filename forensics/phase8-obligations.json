@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 4,
-      "implemented": 387,
-      "open_in_this_stratum": 395,
+      "implemented": 392,
+      "open_in_this_stratum": 390,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1238,9 +1238,13 @@
       "DH_get0_priv_key",
       "DH_get0_pub_key",
       "DH_get0_q",
+      "DH_get_1024_160",
+      "DH_get_2048_224",
+      "DH_get_2048_256",
       "DH_get_default_method",
       "DH_get_ex_data",
       "DH_get_length",
+      "DH_get_nid",
       "DH_meth_dup",
       "DH_meth_free",
       "DH_meth_get0_app_data",
@@ -1263,6 +1267,7 @@
       "DH_meth_set_generate_params",
       "DH_meth_set_init",
       "DH_new",
+      "DH_new_by_nid",
       "DH_new_method",
       "DH_security_bits",
       "DH_set0_key",
@@ -1702,36 +1707,6 @@
         "module": "src/dh/mod.rs",
         "received_from_phase": null,
         "symbol": "DH_KDF_X9_42"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_get_1024_160"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_get_2048_224"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_get_2048_256"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_get_nid"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_new_by_nid"
       },
       {
         "declaring_header": "dh.h",
@@ -4139,12 +4114,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "7d51b45b43d8fa5b11deda7e697441d2bb7a58b50d42029907c5cbb025b3d133"
+      "sha256": "82883577758c777782a6bb03f61ac8a905407a0d2bafddc33f396784d9234104"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "6f49cc565dc9c81c0fe2fc243fe3177597c3f87546c0953f5af32bb68a5fc3e3"
+      "sha256": "92ccc54c2ee681011b494dc8368b95c453ae6e1d29de9fd6309198f5e9dd8902"
     }
   ],
   "kind": "phase8-obligations",

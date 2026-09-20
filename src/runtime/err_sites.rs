@@ -22892,6 +22892,16 @@ pub(crate) const DH_CHECK_277: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ossl_dh_new_by_nid_ex` at `crypto/dh/dh_group_params.c:47` (DH_R_INVALID_PARAMETER_NID).
+pub(crate) const DH_GROUP_PARAMS_47: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_group_params.c",
+    line: 47,
+    func: c"ossl_dh_new_by_nid_ex",
+    lib: 5,
+    reason: 114,
+    dynamic_reason: false,
+};
+
 /// `RAND_pseudo_bytes` at `crypto/rand/rand_lib.c:386` (RAND_R_FUNC_NOT_IMPLEMENTED).
 pub(crate) const RAND_LIB_386: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
@@ -27009,6 +27019,7 @@ pub(crate) static ALL: &[ErrSite] = &[
     DH_CHECK_254,
     DH_CHECK_256,
     DH_CHECK_277,
+    DH_GROUP_PARAMS_47,
     RAND_LIB_386,
     RAND_LIB_430,
     RAND_LIB_435,

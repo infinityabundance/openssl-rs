@@ -22,7 +22,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 59,
-      "language_surface_not_modelled_by_name": 3398,
+      "language_surface_not_modelled_by_name": 3413,
       "planned_prerequisites": 11
     },
     "census_by_unit": {
@@ -117,6 +117,7 @@
         "crypto/bio/ossl_core_bio.c": 6,
         "crypto/bn/bn_blind.c": 13,
         "crypto/bn/bn_ctx.c": 14,
+        "crypto/bn/bn_dh.c": 4,
         "crypto/bn/bn_gf2m.c": 22,
         "crypto/bn/bn_kron.c": 4,
         "crypto/bn/bn_lib.c": 27,
@@ -147,12 +148,14 @@
         "crypto/cversion.c": 13,
         "crypto/defaults.c": 9,
         "crypto/des/set_key.c": 9,
-        "crypto/dh/dh_check.c": 10,
+        "crypto/dh/dh_check.c": 9,
         "crypto/dh/dh_depr.c": 3,
         "crypto/dh/dh_gen.c": 9,
-        "crypto/dh/dh_key.c": 13,
+        "crypto/dh/dh_group_params.c": 7,
+        "crypto/dh/dh_key.c": 12,
         "crypto/dh/dh_lib.c": 19,
         "crypto/dh/dh_meth.c": 11,
+        "crypto/dh/dh_rfc5114.c": 2,
         "crypto/dso/dso_dlfcn.c": 16,
         "crypto/dso/dso_lib.c": 15,
         "crypto/err/err.c": 92,
@@ -190,6 +193,7 @@
         "crypto/evp/signature.c": 18,
         "crypto/evp/skeymgmt_meth.c": 12,
         "crypto/ex_data.c": 21,
+        "crypto/ffc/ffc_dh.c": 4,
         "crypto/ffc/ffc_key_generate.c": 3,
         "crypto/ffc/ffc_key_validate.c": 3,
         "crypto/ffc/ffc_params.c": 18,
@@ -374,8 +378,8 @@
       ]
     },
     "checked": {
-      "authority_units": 202,
-      "crate_modules": 271,
+      "authority_units": 206,
+      "crate_modules": 276,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 17,
       "divergence_names_covered": 31,
@@ -497,13 +501,13 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "12d7ff1d60fac9f8c1e18a99b73286d5ca1844cde7cda464ab5d2a48bba6a5df",
+  "body_hash": "c7fe84a306679b08cb2b06f88ebf6d62ea68232bda9398dd8f22a06bc2c1d6fe",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "d7431210b39b1c6cf1b1b523435d87e0491877e186c3e41276b85a35a9d1d403"
+      "sha256": "764e86faaaddb57261457a0c579e251a52861031196caf192db253a15d14dae7"
     },
     {
       "name": "macro-owners",
@@ -518,7 +522,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "e4a2fb99a7d9467c19e142ca40037899e4fc8934503fc8ba1a17c027ccaa9b7e"
+      "sha256": "19a5beda3e91e504d150de82049a8f44f20bdd86fcecfa525a0f89f8e1eb59be"
     },
     {
       "name": "symbol-ownership",
@@ -533,17 +537,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "995f81b887ea111dbc3e5836af95e78d4e6ddb3207d20f9e7302672302b81f42"
+      "sha256": "bd479c8cbed69346bfe8acd23c66b820cf540018fd15b168a07a51f644811664"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "f4129be4e713b0168c264983d2a7a406f456b35b4cbb7d472507adc945650b86"
+      "sha256": "60cc646dfcf9d505699ea49a015f1319c153c63ad74c25db14666178e76baba6"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "3c75f1dd7d18116d8b1a898cd7807a01328de41035da9e2716bd4e898fe74b9f"
+      "sha256": "b379f2a88a5feda87927d04b5969105d443a75393cd08672d10eeb98a7a5ee27"
     },
     {
       "name": "crate-source-tree",
