@@ -21,7 +21,13 @@
  * pair), and the seven `rsa_ossl_*` entry points, which are driven **through the table's own
  * `RSA_meth_get_*` accessors** because they are `static` in the authority and have no name to
  * link. `RSA_setup_blinding` -- `rsa_crpt.c`'s export, and the caller that makes
- * `ossl_rsa_alloc_blinding` reachable -- is called too. Nothing here does any cryptography
+ * `ossl_rsa_alloc_blinding` reachable -- is called too. Slice E is `crypto/rsa/rsa_x931g.c`'s two
+ * key generators plus the four `rsa_crpt.c` crypt wrappers, and **all six are called below**: the
+ * derivation arm is deterministic (fixed seeds) and the generation arm drives the wrappers as
+ * round trips over a key it generated. The three `RSA_generate_*` names of the same slice are not
+ * here because they are not in the crate -- `rsa_gen.c`'s common path reaches
+ * `ossl_bn_rsa_fips186_4_gen_prob_primes`, a `crypto/bn` unit (`docs/DECISIONS.md` D326). Nothing
+ * here does any cryptography
  * beyond small RSA exponentiations -- each function allocates a table or an object, stores a
  * pointer in one, reads one, pads a buffer, raises a 12-bit modulus to the 17th power, or runs
  * one 128-bit CRT private operation -- so the transcript is about *identity, ownership and
@@ -1666,6 +1672,302 @@ static void rsa_ossl_arms(void)
     rt_release(o);
 }
 
+/* ------------------------------------------------------------------ the key generators (slice E) */
+
+/* `crypto/rsa/rsa_x931g.c`'s two entry points, and the four `rsa_crpt.c` crypt wrappers over a key
+ * one of them generated.
+ *
+ * **Nothing here prints a random byte, and the two halves observe different things.** The
+ * derivation arm is *deterministic*: `RSA_X931_derive_ex` is handed fixed seeds, so its key is a
+ * function of this probe's constants alone and the congruences, the modulus width and the
+ * exponent relations below are values both binaries must compute identically. The generation arm
+ * draws, so it prints the return code, a width predicate and the **round trips** through
+ * `RSA_public_encrypt`/`RSA_private_decrypt` and `RSA_private_encrypt`/`RSA_public_decrypt`: a
+ * generated key that recovers its own plaintext is one differential observation of all six entry
+ * points at once, and no byte of the key or of a ciphertext enters the transcript.
+ *
+ * **`RSA_FLAG_NO_BLINDING` is set on the generated key** before its private operations. The
+ * answer is the same either way, and an arm that needs no DRBG draw cannot fail for a reason this
+ * court is not about.
+ *
+ * **The `RSA_X931_derive_ex` arm's fixed seeds are deliberately not `BN_X931_generate_Xpq`'s.**
+ * That function's `|Xp - Xq| > 2^(nbits - 100)` contract is what a *key generator* needs; the
+ * derivation itself takes any seed, and a fixed one is what makes the derived `p`, `q` and `n`
+ * printable at all. The 101-bit `Xp1`/`Xp2`/`Xq1`/`Xq2` are the widths `BN_X931_generate_prime_ex`
+ * draws for its own, so the two arms exercise the same `bn_x931_derive_pi` path. */
+
+/* A `BIGNUM` with `bits` significant bits, the top `top` of them set, plus `addend`. Built through
+ * the public API so both binaries compute the same value rather than agreeing about a constant. */
+static BIGNUM *rt_bits_top(int bits, int top, unsigned long addend)
+{
+    BIGNUM *b = BN_new();
+    int i;
+
+    if (b == NULL)
+        return NULL;
+    for (i = 0; i < top; i++) {
+        if (BN_set_bit(b, bits - 1 - i) != 1) {
+            BN_free(b);
+            return NULL;
+        }
+    }
+    if (addend != 0 && BN_add_word(b, addend) != 1) {
+        BN_free(b);
+        return NULL;
+    }
+    return b;
+}
+
+/* `a mod m == want`, as a boolean. `BN_mod` is the header's `BN_div` macro, written out with the
+ * null quotient slot, exactly as the authority spells it. */
+static int rt_mod_is(const BIGNUM *a, const BIGNUM *m, unsigned long want, BN_CTX *ctx)
+{
+    BIGNUM *r = BN_new();
+    int ok;
+
+    if (r == NULL)
+        return 0;
+    ok = BN_div(NULL, r, a, m, ctx) == 1 && BN_is_word(r, want) == 1;
+    BN_free(r);
+    return ok;
+}
+
+/* `a mod m == want`, as a boolean, where `want` is itself a value. */
+static int rt_mod_eq(const BIGNUM *a, const BIGNUM *m, const BIGNUM *want, BN_CTX *ctx)
+{
+    BIGNUM *r = BN_new();
+    int ok;
+
+    if (r == NULL)
+        return 0;
+    ok = BN_div(NULL, r, a, m, ctx) == 1 && BN_cmp(r, want) == 0;
+    BN_free(r);
+    return ok;
+}
+
+/* `(x * y) mod m == want`, so the exponent relations are one line each. */
+static int rt_mul_mod_is(const BIGNUM *x, const BIGNUM *y, const BIGNUM *m, unsigned long want,
+    BN_CTX *ctx)
+{
+    BIGNUM *p = BN_new();
+    int ok;
+
+    if (p == NULL)
+        return 0;
+    ok = BN_mul(p, x, y, ctx) == 1 && rt_mod_is(p, m, want, ctx) == 1;
+    BN_free(p);
+    return ok;
+}
+
+static void rsa_keygen_arms(void)
+{
+    RSA *rd = NULL, *rg = NULL, *rr = NULL, *rn_obj = NULL;
+    BIGNUM *p1 = NULL, *p2 = NULL, *q1 = NULL, *q2 = NULL;
+    BIGNUM *xp1 = NULL, *xp2 = NULL, *xp = NULL, *xq1 = NULL, *xq2 = NULL, *xq = NULL;
+    BIGNUM *e = NULL, *prod = NULL, *pm1 = NULL, *qm1 = NULL, *t = NULL;
+    const BIGNUM *kp = NULL, *kq = NULL, *kn = NULL, *ke = NULL, *kd = NULL;
+    const BIGNUM *kdmp1 = NULL, *kdmq1 = NULL, *kiqmp = NULL;
+    BN_CTX *ctx = NULL;
+    int ret, ret2, size;
+    unsigned char msg[132], ct[132], out[132];
+
+    ctx = BN_CTX_new();
+    e = rt_word(65537);
+    xp = rt_bits_top(512, 2, 12345);
+    xq = rt_bits_top(512, 2, 987654321);
+    /* **The two seeds of a pair are millions apart on purpose.** `bn_x931_derive_pi` answers the
+     * first odd prime at or above its seed, and a prime gap near `2^100` is on the order of a
+     * hundred: two seeds a few hundred apart can round to the *same* prime, which makes
+     * `gcd(p1, p2) != 1` and turns the derivation's `BN_mod_inverse` into `BN_R_NO_INVERSE`. The
+     * separation is what keeps the arm on its success path. */
+    xp1 = rt_bits_top(101, 1, 12345);
+    xp2 = rt_bits_top(101, 1, 5000011);
+    xq1 = rt_bits_top(101, 1, 777);
+    xq2 = rt_bits_top(101, 1, 9000017);
+    printf("rsa.x931d.inputs_built=%d\n",
+        ctx != NULL && e != NULL && xp != NULL && xq != NULL && xp1 != NULL && xp2 != NULL
+            && xq1 != NULL && xq2 != NULL);
+
+    /* ---------------------------------------------------------------- the deterministic derivation */
+
+    if (ctx != NULL && e != NULL && xp != NULL && xq != NULL && xp1 != NULL && xp2 != NULL
+        && xq1 != NULL && xq2 != NULL) {
+        rd = RSA_new();
+        printf("rsa.x931d.new_nonnull=%d\n", rd != NULL);
+        p1 = BN_new();
+        p2 = BN_new();
+        q1 = BN_new();
+        q2 = BN_new();
+        t = BN_new();
+        prod = BN_new();
+        pm1 = BN_new();
+        qm1 = BN_new();
+        printf("rsa.x931d.scratch_built=%d\n",
+            rd != NULL && p1 != NULL && p2 != NULL && q1 != NULL && q2 != NULL && t != NULL
+                && prod != NULL && pm1 != NULL && qm1 != NULL);
+
+        if (rd != NULL && p1 != NULL && p2 != NULL && q1 != NULL && q2 != NULL && t != NULL
+            && prod != NULL && pm1 != NULL && qm1 != NULL) {
+            ERR_clear_error();
+            ret = RSA_X931_derive_ex(rd, p1, p2, q1, q2, xp1, xp2, xp, xq1, xq2, xq, e, NULL);
+            printf("rsa.x931d.ret=%d\n", ret);
+            drain("x931d_derive");
+
+            /* The object's own answers, printed because the inputs are fixed -- **and only when
+             * the derivation answered 1**: a refused derivation leaves `n` NULL, and
+             * `RSA_bits`/`RSA_size` dereference it (D325 measures that arm as a fault on the
+             * authority side), so an unguarded read here would end the transcript. */
+            if (ret == 1) {
+                printf("rsa.x931d.bits=%d\n", RSA_bits(rd));
+                printf("rsa.x931d.size=%d\n", RSA_size(rd));
+                printf("rsa.x931d.dirty=%d\n", RT_DIRTY(rd));
+            }
+
+            RSA_get0_key(rd, &kn, &ke, &kd);
+            RSA_get0_factors(rd, &kp, &kq);
+            RSA_get0_crt_params(rd, &kdmp1, &kdmq1, &kiqmp);
+            printf("rsa.x931d.parts_null=%d\n",
+                kn == NULL || ke == NULL || kd == NULL || kp == NULL || kq == NULL || kdmp1 == NULL
+                    || kdmq1 == NULL || kiqmp == NULL);
+
+            if (ret == 1 && kn != NULL && ke != NULL && kd != NULL && kp != NULL && kq != NULL
+                && kdmp1 != NULL && kdmq1 != NULL && kiqmp != NULL) {
+                /* `bn_x931_derive_pi` finds the first odd prime at or above each seed, so the
+                 * returned `p1`/`p2`/`q1`/`q2` are the *seeds' successors* and not the seeds. */
+                printf("rsa.x931d.p1_odd=%d\n", BN_is_odd(p1));
+                printf("rsa.x931d.p2_odd=%d\n", BN_is_odd(p2));
+                printf("rsa.x931d.q1_odd=%d\n", BN_is_odd(q1));
+                printf("rsa.x931d.q2_odd=%d\n", BN_is_odd(q2));
+                printf("rsa.x931d.p1_prime=%d\n", BN_check_prime(p1, ctx, NULL));
+                printf("rsa.x931d.p2_prime=%d\n", BN_check_prime(p2, ctx, NULL));
+                printf("rsa.x931d.q1_prime=%d\n", BN_check_prime(q1, ctx, NULL));
+                printf("rsa.x931d.q2_prime=%d\n", BN_check_prime(q2, ctx, NULL));
+                printf("rsa.x931d.p_prime=%d\n", BN_check_prime(kp, ctx, NULL));
+                printf("rsa.x931d.q_prime=%d\n", BN_check_prime(kq, ctx, NULL));
+
+                /* The X9.31 congruence: `p = Rp (mod p1*p2)` with
+                 * `Rp = (p2^-1 mod p1)*p2 - (p1^-1 mod p2)*p1`, so `p = 1 (mod p1)` and
+                 * `p = -1 (mod p2)` -- and **not** `p = 1 (mod p2)`, which is the arm the first
+                 * version of this probe got wrong and the authority answered `0` to. Recomputing
+                 * `Rp` and comparing would restate the writer; the two residue classes it factors
+                 * into are the independent statement. */
+                printf("rsa.x931d.p_mod_p1_is_1=%d\n", rt_mod_is(kp, p1, 1, ctx));
+                BN_copy(prod, p2);
+                BN_sub_word(prod, 1);
+                printf("rsa.x931d.p_mod_p2_is_m1=%d\n", rt_mod_eq(kp, p2, prod, ctx));
+                printf("rsa.x931d.q_mod_q1_is_1=%d\n", rt_mod_is(kq, q1, 1, ctx));
+                BN_copy(prod, q2);
+                BN_sub_word(prod, 1);
+                printf("rsa.x931d.q_mod_q2_is_m1=%d\n", rt_mod_eq(kq, q2, prod, ctx));
+
+                /* `n == p*q`, and the two primes are distinct. */
+                printf("rsa.x931d.n_is_pq=%d\n",
+                    BN_mul(prod, kp, kq, ctx) == 1 && BN_cmp(prod, kn) == 0);
+                printf("rsa.x931d.p_ne_q=%d\n", BN_cmp(kp, kq) != 0);
+
+                /* `d` inverts `e` modulo both `p-1` and `q-1`, and the three CRT parameters are
+                 * the residues and the inverse they are named for. */
+                BN_sub(pm1, kp, BN_value_one());
+                BN_sub(qm1, kq, BN_value_one());
+                printf("rsa.x931d.ed_mod_pm1_is_1=%d\n", rt_mul_mod_is(ke, kd, pm1, 1, ctx));
+                printf("rsa.x931d.ed_mod_qm1_is_1=%d\n", rt_mul_mod_is(ke, kd, qm1, 1, ctx));
+                printf("rsa.x931d.dmp1_is_d_mod_pm1=%d\n",
+                    BN_div(NULL, t, kd, pm1, ctx) == 1 && BN_cmp(t, kdmp1) == 0);
+                printf("rsa.x931d.dmq1_is_d_mod_qm1=%d\n",
+                    BN_div(NULL, t, kd, qm1, ctx) == 1 && BN_cmp(t, kdmq1) == 0);
+                printf("rsa.x931d.q_iqmp_mod_p_is_1=%d\n", rt_mul_mod_is(kq, kiqmp, kp, 1, ctx));
+
+                /* The object's flags, so the constructor's table is visible under this arm too. */
+                printf("rsa.x931d.flags=%d\n", RSA_flags(rd));
+            }
+        }
+
+        BN_free(p1);
+        BN_free(p2);
+        BN_free(q1);
+        BN_free(q2);
+        BN_free(t);
+        BN_free(prod);
+        BN_free(pm1);
+        BN_free(qm1);
+        RSA_free(rd);
+    }
+
+    /* ---------------------------------------------------------------- the generator and the wrappers */
+
+    if (ctx != NULL && e != NULL) {
+        rg = RSA_new();
+        printf("rsa.x931g.new_nonnull=%d\n", rg != NULL);
+        if (rg != NULL) {
+            ERR_clear_error();
+            printf("rsa.x931g.ret=%d\n", RSA_X931_generate_key_ex(rg, 1024, e, NULL));
+            drain("x931g_gen");
+            size = RSA_size(rg);
+            printf("rsa.x931g.size_at_least_128=%d\n", size >= 128);
+            RSA_set_flags(rg, RSA_FLAG_NO_BLINDING);
+
+            /* The PKCS#1 v1.5 pair: the public operation draws its padding, the private one
+             * recovers this probe's five octets, and neither the ciphertext nor a padding octet is
+             * printed. */
+            memcpy(msg, "hello", 5);
+            memset(ct, 0, sizeof(ct));
+            ERR_clear_error();
+            ret = RSA_public_encrypt(5, msg, ct, rg, RSA_PKCS1_PADDING);
+            printf("rsa.x931g.enc_ret=%d\n", ret);
+            printf("rsa.x931g.enc_is_size=%d\n", ret == size);
+            memset(out, 0xa5, sizeof(out));
+            ret2 = RSA_private_decrypt(size, ct, out, rg, RSA_PKCS1_PADDING);
+            printf("rsa.x931g.dec_ret=%d\n", ret2);
+            printf("rsa.x931g.dec_body=%d\n", ret2 == 5 && memcmp(out, msg, 5) == 0);
+            drain("x931g_roundtrip_pkcs1");
+
+            /* The no-padding pair, on a plain number smaller than the modulus. */
+            memset(msg, 0, sizeof(msg));
+            msg[0] = 0x0b;
+            msg[1] = 0x1a;
+            memset(ct, 0, sizeof(ct));
+            ERR_clear_error();
+            ret = RSA_private_encrypt(size, msg, ct, rg, RSA_NO_PADDING);
+            printf("rsa.x931g.priv_enc_ret=%d\n", ret);
+            memset(out, 0xa5, sizeof(out));
+            ret2 = RSA_public_decrypt(size, ct, out, rg, RSA_NO_PADDING);
+            printf("rsa.x931g.pub_dec_ret=%d\n", ret2);
+            printf("rsa.x931g.pub_dec_body=%d\n", ret2 == size && memcmp(out, msg, size) == 0);
+            drain("x931g_roundtrip_none");
+        }
+
+        /* The seed generator's two refusals, both with an **empty** queue: the guard is in
+         * `BN_X931_generate_Xpq` and this function only forwards its zero. */
+        rr = RSA_new();
+        printf("rsa.x931g.small_bits_ret=%d\n", RSA_X931_generate_key_ex(rr, 512, e, NULL));
+        printf("rsa.x931g.odd_bits_ret=%d\n", RSA_X931_generate_key_ex(rr, 1025, e, NULL));
+        drain("x931g_refusals");
+        RSA_free(rr);
+
+        /* `RSA_X931_derive_ex`'s two non-arithmetic answers: `2` for an object with an exponent
+         * and no primes, and `0` for a NULL object -- the latter reaching the release label with a
+         * NULL context. */
+        rn_obj = RSA_new();
+        printf("rsa.x931d.incomplete_ret=%d\n",
+            RSA_X931_derive_ex(rn_obj, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                e, NULL));
+        printf("rsa.x931d.null_ret=%d\n",
+            RSA_X931_derive_ex(NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, e,
+                NULL));
+        drain("x931d_incomplete");
+        RSA_free(rn_obj);
+    }
+
+    BN_free(e);
+    BN_free(xp);
+    BN_free(xq);
+    BN_free(xp1);
+    BN_free(xp2);
+    BN_free(xq1);
+    BN_free(xq2);
+    BN_CTX_free(ctx);
+}
+
 int main(void)
 {
     RSA_METHOD *m = NULL;
@@ -2097,6 +2399,10 @@ int main(void)
      * arm registers is what makes the authority's `CRYPTO_free_ex_data` take its non-allocating
      * path inside the constructor windows below. */
     rsa_ossl_arms();
+
+    /* Slice E's X9.31 generator pair and the four `rsa_crpt.c` crypt wrappers, over a key the
+     * generator produced. */
+    rsa_keygen_arms();
 
     /* ---------------------------------------------------------------- release */
 

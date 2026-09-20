@@ -229,22 +229,37 @@ BLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
     # `src/rsa/object.rs` because it is declared in `include/crypto/rsa.h` and not in the installed
     # header.
     #
-    # (3) The four key generators and the parameter generators, all on the same BN path.
+    # (3) **Half retired by D326, and the half that left was not the blocker the row named.**
+    # The five RSA names in this row were here as `BN_generate_prime_ex2`'s (via
+    # `ossl_rsa_keygen`'s primes at `rsa_gen.c:388`). D324 landed that callee, and D326 landed the
+    # two X9.31 generators -- which reach `BN_X931_generate_Xpq`/`_generate_prime_ex` and nothing
+    # else, and are `implemented` now. The three `RSA_generate_*` names could **not** land with
+    # them, and the reason is a callee the row never named: the authority's static `rsa_keygen`
+    # (`rsa_gen.c:611-655`) sends `primes == 2 && bits >= 2048 && (e_value == NULL ||
+    # BN_num_bits(e_value) > 16)` to `ossl_rsa_sp800_56b_generate_key`
+    # (`crypto/rsa/rsa_sp800_56b_gen.c:365`), whose prime generation is
+    # `ossl_bn_rsa_fips186_4_gen_prob_primes` (`crypto/bn/bn_rsa_fips186_4.c:184`) over
+    # `ossl_bn_check_generated_prime` and `ossl_bn_get0_small_factors`
+    # (`crypto/bn/bn_prime.c:258`, `:65`). None of the three is in the crate. That is a
+    # `crypto/bn` unit and **not** another stratum's export, and D324's own ownership-transition
+    # row already assigns it to this stratum by reachability ("their only authority callers are in
+    # `crypto/bn/bn_rsa_fips186_4.c`, which is Phase 8's"), so the three are recorded there as
+    # `open` rather than deferred: a stratum cannot hand a symbol to itself (D296). The RSA half of
+    # this row is therefore gone rather than carried, and what is left is the six parameter
+    # generators.
     (
-        ("RSA_generate_key", "RSA_generate_key_ex", "RSA_generate_multi_prime_key",
-         "RSA_X931_generate_key_ex", "RSA_X931_derive_ex",
-         "DH_generate_key", "DH_generate_parameters", "DH_generate_parameters_ex",
+        ("DH_generate_key", "DH_generate_parameters", "DH_generate_parameters_ex",
          "DSA_generate_key", "DSA_generate_parameters_ex",
          "EC_KEY_generate_key"),
         9,
-        "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come "
-        "from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` "
-        "from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from "
-        "`BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from "
+        "every one of these reaches a BN random primitive: "
+        "`DH_generate_parameters_ex`'s primes come from `BN_generate_prime_ex2` "
+        "(`crypto/dh/dh_gen.c:217`), `DH_generate_key`'s private value from `BN_priv_rand_ex` "
+        "(`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from "
         "`crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and "
         "`EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them "
         "land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so "
-        "Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the "
+        "Phase 9 is the phase that retires the six. `DH_generate_parameters` is the "
         "deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same "
         "reason.",
     ),
