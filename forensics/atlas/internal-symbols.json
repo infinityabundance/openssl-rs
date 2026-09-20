@@ -203,6 +203,7 @@
       "src/provider/seeding.rs",
       "src/rand/pool.rs",
       "src/rand/unix.rs",
+      "src/rsa/mp.rs",
       "src/runtime/bsearch.rs",
       "src/runtime/ctype_table.rs",
       "src/runtime/err_reasons.rs",

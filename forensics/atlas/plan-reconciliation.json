@@ -1757,7 +1757,9 @@
         "subphases": [
           "6.10"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/rsa/ossl.rs"
+        ]
       },
       "crypto/self_test_core.c": {
         "defines": [
@@ -2362,36 +2364,36 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 183
+      "transcribed_units": 186
     }
   },
-  "body_hash": "8c78f422a50a4e1729ed3f304f178f021dccafa2d70c230144ed5739fe0f39cd",
+  "body_hash": "e11ec1da55e37185882014eb33c1aa556a9c6746b5046406f0b235d82098361d",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "42245a093ef25aa113a6f2486ecc5103159d59a6d1661e3a3943d4e4aec14374"
+      "sha256": "d7431210b39b1c6cf1b1b523435d87e0491877e186c3e41276b85a35a9d1d403"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "cc1100631d81f6af5b13221f85cac73c8ccdcba8dd4eeb1cced1389cdf6a50bd"
+      "sha256": "8ee6f5ff6cebb91d2e6e94480653ac292c6e711b7d58f61c4548f7fd594a9e2b"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "4fe2d2e24e684440eb1f6c3a311349214ded4f77d508ad8d5f97bd548e91ad22"
+      "sha256": "e120ccbfc769c0cc1016b621a52e01231562957eadb1d7bbdbca8aad40c5fbfd"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "2e0c456b15b9f1cbb437c792cdc0ed94338f09c98fb3a76b8d4b185246d4f007"
+      "sha256": "b3b226f10fa93415cf72fe1ff9783ea3ac59ed3e51d1e636289253256b4e7252"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "b0b1339585844485589d7acddaa6906e99c0d4609b368c78ee03e57bd1262e80"
+      "sha256": "80e7004ecf5e6b6f749e367bf22daa8d502b84b16be5c85893218d6aa1e323f7"
     },
     {
       "name": "source-manifest",
@@ -2416,7 +2418,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "9b061e88fc685df437b34ccc87b995091e6ae1e25efbb6e8a4a1a387c4fec269"
+      "sha256": "b0bd46074abd9cc9b359a8c36b2aca6ff44f07faf59df909455caeac4cdb4d6f"
     },
     {
       "name": "plan-PHASE-9-SUBPHASES",

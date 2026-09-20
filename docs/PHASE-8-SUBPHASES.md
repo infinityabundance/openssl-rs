@@ -511,6 +511,22 @@ phase number is an inference rather than a reading is the two X9 KDF wrappers: t
 KDF family is not named by any plan yet, so "Phase 9" is where the plan-of-record puts it
 and D197 says the row is the one to correct if a later plan says otherwise.
 
+**8.4's object layer has landed its first half (D321), and it names two translation units no
+slice list had claimed.** `src/rsa/object.rs` holds the thirty-four exports of
+`crypto/rsa/rsa_lib.c` plus `crypto/rsa/rsa_crpt.c`'s three accessors that read no default method,
+`src/rsa/mp.rs` is `crypto/rsa/rsa_mp.c`'s five functions and their two `OPENSSL_sk_freefunc`
+adapter thunks, and `src/rsa/ossl.rs` is `crypto/rsa/rsa_ossl.c`'s blinding allocator and
+destructor. `rsa_mp.c` is named here because **no published slice claimed it**: its five names are
+internals (`ossl_rsa_multip_*`) and so appear in no export list, yet the object layer cannot
+compile without them, which is why the file is named for its unit rather than given a guessed
+slice letter. `RT-RSA` grew 282 -> **428** observations and courts all thirty-four; `RSA_new` and
+`RSA_new_method` are **OWED** here rather than uncourted, because they read
+`RSA_get_default_method` and that is the second commit's, which is why they are the one part of
+8.4's slice A this stratum cannot finish alone. The measurement this slice produced is recorded in
+D321: the installed-allocator plane does not observe the crate's Rust-native structures, so three
+arms court the comparable half of their windows and name the other half rather than narrowing
+silently.
+
 ## 3. What each subphase must honour — authority facts already established
 
 Recorded so they are not re-derived per subphase.

@@ -20785,3 +20785,96 @@ answer than "slice A cannot be courted", which is what `RT-RSA`'s own header had
 staged `RSA_free`/`RSA_up_ref` decrement and increment it and `rsa_new_intern` assigns it; the
 crate's only precedent (`src/evp/pkey.rs`'s `AtomicI32`) uses stronger orderings than the
 authority's `refcount.h` arms, which the plan records rather than silently adopting.
+
+## D321 -- 8.4's object layer lands with 34 exports, and the installed-allocator plane is measured not to observe Rust-native structures
+
+D320's plan is executed through its step 6: **commit A**, the half that reads no default method and
+therefore needs nothing from Phase 9.
+
+**What landed.** `src/rsa/object.rs` is new and holds the thirty-four non-deferred exports of
+`crypto/rsa/rsa_lib.c:32-959` plus `rsa_crpt.c:23-60` -- the object's lifetime (`RSA_free`,
+`RSA_up_ref`), every `RSA_set0_`/`RSA_get0_` accessor including the multi-prime family, the flag and
+version accessors, `RSA_bits`/`RSA_size`/`RSA_security_bits`/`RSA_flags`, and the twelve internals
+(`safe_bn_num_bits`, `mul2`/`icbrt64`/`ilog_e`, `ossl_ifc_ffc_compute_security_bits`,
+`ossl_rsa_get0_libctx`/`_set0_libctx`, `ossl_rsa_set0_pss_params`/`_get0_pss_params_30`,
+`ossl_rsa_set0_all_params`/`_get0_all_params`, `ossl_rsa_check_factors`). `src/rsa/mp.rs` is the
+five functions and two `OPENSSL_sk_freefunc` thunks of `crypto/rsa/rsa_mp.c`, and `src/rsa/ossl.rs`
+is `rsa_ossl.c:244-261`'s blinding allocator and destructor. `src/rsa/mod.rs` gains `RsaPrimeInfo`
+(40 bytes, five pointers, pinned by a new offset test) and the `references` field becomes
+`AtomicI32`; the existing `size_of::<Rsa>() == 216` and `offset_of!(Rsa, lock) == 200` assertions are
+what prove that retype is layout-neutral rather than asserting it.
+
+**Two reductions are written as the reachable answer, not omitted silently.** `RSA_set_method` and
+`RSA_free` do not call `ENGINE_finish`: `ENGINE_*` is Phase 13's (D181) and there is no engine
+registry, so `(*rsa).engine` is NULL on every state the crate can reach and `ENGINE_finish(NULL)`
+returns 1 without touching anything (`eng_init.c:108-111`) -- the reduction `src/evp/pkey_asn1.rs`
+already establishes. `RSA_free` and `ossl_rsa_set0_pss_params` do not call `RSA_PSS_PARAMS_free`:
+no reachable state has a non-NULL `r->pss`, so the call is `free(NULL)` (`tasn_fre.c:36-39`), and the
+symbol is deliberately **not** exported, because a fabricated body on the ABI surface is a symbol a
+consumer could link and call.
+
+**The module declaration is `pub mod object;`, not the plan's `mod object;`.** `unreachable_pub` is
+warn in `Cargo.toml` and `clippy -D warnings` promotes it, so a private module holding thirty-four
+`pub` C exports fails the lint thirty-four times. The crate's own convention for a submodule that
+holds exports is `pub mod` (`src/bn/mod.rs`'s `pub mod bignum`, `src/rand/mod.rs`'s
+`pub mod rand_lib`, `src/evp/mod.rs`'s `pub mod bio_ok`), so the declaration follows the crate and
+no allowance is taken; the alternative on offer was a module-level `#![allow(unreachable_pub)]`,
+which would have been a new kind of allowance in a crate that has none of it.
+
+**The court is written into `RT-RSA` rather than a new court**, and it grew 282 -> **428**
+observations. All thirty-four exports are courted -- two of them (`RSA_flags`, `RSA_free`) need no
+object at all, and the other thirty-two need only the probe-local fabricated object whose offsets
+are `_Static_assert`-pinned to `courts/layout/measure-rsa-ctx.c`'s measurement and memsets all 216
+bytes, which is what `probe_hygiene.py`'s cross-optimisation determinism check requires. `RSA_new`
+and `RSA_new_method` stay **OWED** and are not called: the candidate does not publish them until
+commit B links `RSA_get_default_method`.
+
+**The finding: the installed-allocator plane does not observe the crate's Rust-native structures,
+and there are three measured instances of it.**
+
+* `RSA_free`'s allocation window is `[F crypto/ex_data.c, F rsa_lib.c]` on the authority and
+  `[F rsa_lib.c]` on the candidate.
+* `RSA_set0_key`'s replacement window is five `F crypto/bn/bn_lib.c` events on the authority and
+  none on the candidate.
+* The cause of the first is read rather than inferred: `CRYPTO_free` (`crypto/mem.c:375-381`) tests
+  only whether a caller installed an allocator, never whether the pointer is NULL, so
+  `CRYPTO_free_ex_data`'s `if (storage != stack) OPENSSL_free(storage);` (`crypto/ex_data.c:410-411`)
+  -- for which `storage` is NULL whenever a class has no callbacks -- reaches the embedder's
+  `free_impl` with a NULL. The candidate's `dealloc` (`src/runtime/mem.rs:383-389`) returns on NULL,
+  and its `CRYPTO_free_ex_data` keeps its callbacks in a Rust `Vec`, so no `crypto/ex_data.c` event is
+  emitted at all. The cause of the second is that the candidate's `BigNum` is a Rust `Vec`, so
+  `BN_free` never routes through `CRYPTO_set_mem_functions`.
+
+**The disposition is a recorded divergence, not a repair in this commit, and the reason is the third
+row rather than the first two.** The first two are faithful-transcription gaps in Phase 3 units and
+could be closed; the third is not a gap at all but a property of every Rust-native structure in the
+crate, which already spans `BigNum`, `BnCtx`, `MontCtx` and the Rust side of every object the later
+subphases will add. Making the installed-allocator plane observe them is therefore a memory-strategy
+decision for the whole crate -- whether a Rust reconstruction routes its own allocations through the
+authority's replaceable allocator -- and it is not a side effect one slice may take. The thirty-four
+arms court what *is* comparable (return values, pointer identity, the `BN_FLG_CONSTTIME` marks,
+`dirty_cnt`, the version, the `rsa_lib.c` allocation and free file string, and every refusal's empty
+error queue) and the non-comparable window is named in the arm itself, so "not compared" is not
+readable as "compared and equal". **The named next slice is a dedicated court over the
+installed-allocator plane**, which is where the policy question can be answered with evidence.
+
+**A gap in D320's plan, found by the gate rather than by reading.** The prerequisite gate refused the
+commit with one finding: `crypto/rsa/rsa_lib.c -> ossl_rsa_new_with_ctx
+(src/rsa/object.rs, phase 8, in-progress)`, class `unwired_function_in_the_current_stratum`. Step 2
+of the plan enumerated the unit's missing names and removed seven of them, and step 3's "why" argued
+that the remaining six are exports. **`ossl_rsa_new_with_ctx` is neither**: it is a non-static
+internal defined at `rsa_lib.c:71-74`, so the moment `src/rsa/object.rs` becomes rsa_lib.c's dominant
+unit the gate requires it by name -- and its whole body is `rsa_new_intern(NULL, libctx)`, which
+reads `RSA_get_default_method()` at `rsa_lib.c:101`. `rsa_new_intern` itself is `static` in the
+authority and so is owed by nothing. The disposition is a **deferral row** in
+`forensics/prerequisites.json` (`owner_phase: 9`), which is the mechanism the gate's own
+"recorded exceptions" clause provides and which names the same commit that discharges
+`BLOCKED_HANDOFFS` row (5). So the honest statement of the split is narrower than the plan's: commit
+A is self-contained *except* for this one internal, which belongs to commit B by construction.
+
+**The arithmetic, read off the regenerated ledger:** `phase8` implemented 238 -> **272**, open
+524 -> **490**, `deferred_to_later_phase` 24 unchanged, and the identity
+`owned = implemented + deferred + open` (786) holds. Commit B (`src/rsa/ossl.rs`'s default-method
+static, the seven `rsa_ossl_*` entry points, and the constructor quartet) is Phase 9's and lands on
+`phase9-rand`, retiring `BLOCKED_HANDOFFS` row (5) and returning `RSA_new`, `RSA_new_method`,
+`RSA_get_default_method` and `RSA_PKCS1_OpenSSL` to Phase 8's `implemented` list.

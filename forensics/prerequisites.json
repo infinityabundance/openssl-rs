@@ -11,6 +11,12 @@
     ],
     "deferrals": [
       {
+        "symbol": "ossl_rsa_new_with_ctx",
+        "owner_phase": 9,
+        "reason": "`rsa_lib.c:71-74`'s `RSA *ossl_rsa_new_with_ctx(OSSL_LIB_CTX *libctx)` is `rsa_new_intern(NULL, libctx)` and nothing else, so it cannot be written before `rsa_new_intern`, and `rsa_new_intern` reads `RSA_get_default_method()` (`rsa_lib.c:101`) -- the second half of 8.4's slice A, which `forensics/tools/phase8_obligations.py`'s `BLOCKED_HANDOFFS` row (5) hands to Phase 9 along with `RSA_new`, `RSA_new_method` and `RSA_PKCS1_OpenSSL`. The row is discharged by the same commit that lands those four, at which point it becomes a stale deferral and is retired. `rsa_new_intern` itself is `static` in the authority and so is not owed by name; this is the constructor chain's one non-static name. Measured rather than predicted: `src/rsa/object.rs` is rsa_lib.c's dominant unit, so the prerequisite gate requires the unit's whole non-static internal set, and this is the single name step 2 of D320's integration plan did not account for.",
+        "evidence": "docs/DECISIONS.md D321; court/rsa-object-integration-plan.md section 3; forensics/tools/phase8_obligations.py BLOCKED_HANDOFFS row (5)"
+      },
+      {
         "symbol": "ossl_get_enginesdir",
         "owner_phase": 16,
         "reason": "The OPENSSL_info strings rather than anything the registry reads",
