@@ -20878,3 +20878,48 @@ A is self-contained *except* for this one internal, which belongs to commit B by
 static, the seven `rsa_ossl_*` entry points, and the constructor quartet) is Phase 9's and lands on
 `phase9-rand`, retiring `BLOCKED_HANDOFFS` row (5) and returning `RSA_new`, `RSA_new_method`,
 `RSA_get_default_method` and `RSA_PKCS1_OpenSSL` to Phase 8's `implemented` list.
+
+## D322 -- Phase 8's remaining work is a generated projection, and half of its deferred list is no longer deferred
+
+`forensics/tools/phase8_remaining.py` (new, registered in `evidence_determinism.py`'s
+`GENERATORS_AFTER_LEDGERS`/`COMPARED` and in `pipeline.sh`'s ledger step) renders
+`docs/PHASE-8-REMAINING.md`: totals, the deferred rows grouped by the phase that owns them with each
+`reason` verbatim, the open rows grouped by subphase with every symbol named, and the subphase order.
+It is generated because the project types no status by hand, and `forensics/phase8-obligations.json`
+remains the authority it projects. Its numbers, read from the ledger after D321: owned 786,
+implemented 272, deferred 24, open 490, and open by subphase 8.4 = 62, 8.5 = 94, 8.6 = 88,
+8.7 = 201, 8.8 = 15, 8.9 = 30.
+
+**The deferred list is not a static statement, and half of it has already expired.** A row in
+`deferred` says "this export is handed to another stratum because a callee of its body is that
+stratum's". D320 named the gap that lets such a row outlive its blocker -- nothing runs a liveness
+check over a `BLOCKED_HANDOFFS` row whose blocker is another stratum's export -- and this decision is
+that gap measured rather than restated. Checking each of the 24 rows' named callees against the
+crate:
+
+| blocker the row names | in the crate? |
+|---|---|
+| `RAND_bytes_ex`, `RAND_priv_bytes`, `RAND_priv_bytes_ex` | **yes** -- `src/rand/rand_lib.rs`, landed by D313 |
+| `BN_priv_rand_ex`, `BN_rand_range`, `BN_rand_range_ex`, `BN_priv_rand_range_ex` | **yes** -- `src/bn/rand.rs`, landed by D314 |
+| `BN_generate_prime_ex2` | no |
+| `BN_BLINDING_create_param` | no |
+| `ossl_ffc_generate_private_key` | no -- and it is **not another stratum's**: the FFC groups are 8.5's own work |
+
+So **12 of the 24 name only blockers the crate now has**, and are Phase 8's work again rather than
+another stratum's: `DES_random_key`; `EC_KEY_generate_key`; `RSA_new`, `RSA_new_method`,
+`RSA_get_default_method`, `RSA_PKCS1_OpenSSL`; and the six randomised RSA paddings
+(`RSA_padding_add_PKCS1_type_2`, `_OAEP`, `_OAEP_mgf1`, `_PSS`, `_PSS_mgf1`,
+`RSA_padding_check_PKCS1_type_2`). The other 12 name a callee the crate does not have: the five
+`RSA_generate_*`/`RSA_X931_generate_*`/`RSA_X931_derive_ex` rows and the three
+`DH_generate_parameters*`/`DSA_generate_parameters_ex` rows are `BN_generate_prime_ex2`'s; the two
+blinding rows are `BN_BLINDING_create_param`'s; and `DH_generate_key`/`DSA_generate_key` are
+`ossl_ffc_generate_private_key`'s, which is same-stratum work that 8.5 will do.
+
+**What this means for a merge.** Phase 8 cannot be `complete` while any of the 24 is neither
+implemented nor handed on, so the 24-row list is the gate -- but it is a gate on *this stratum's*
+work, not a queue waiting on Phase 9 to finish. Twelve of the rows were waiting for `RAND_bytes_ex`
+and its siblings and are no longer waiting at all; the six RSA paddings among them are the same
+six BLOCKED_HANDOFFS row (4) names, so landing them should retire that row rather than discharge it
+toward Phase 9. The remaining question -- whether the 12 genuinely-blocked rows are discharged by
+Phase 9 or simply become Phase 8's own -- is the ledger question D320 flagged and is not settled
+here.

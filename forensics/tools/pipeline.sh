@@ -87,6 +87,13 @@ echo "== ledgers =="
 # matching the glob, not an entry in a list somebody has to remember to extend.
 for f in forensics/tools/phase*_obligations.py; do python3 "$f"; done
 
+# The Phase 8 remainder projection (`docs/PHASE-8-REMAINING.md`), immediately after the
+# loop above because it is a projection of the ledger that loop writes: run before it,
+# it would render the previous generation's ledger. `evidence_determinism.py` re-runs it
+# later and compares, so a stale committed copy is a failure rather than a silent
+# divergence.
+python3 forensics/tools/phase8_remaining.py
+
 echo "== court coverage atlas =="
 # After the ledgers and the courts, and before `phase_state.py`, which requires the
 # coverage for a `complete` stratum. See docs/DECISIONS.md D199.
