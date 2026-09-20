@@ -22412,6 +22412,86 @@ pub(crate) const RSA_SP800_56B_GEN_454: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ffc_validate_LN` at `crypto/ffc/ffc_params_generate.c:49` (DH_R_BAD_FFC_PARAMETERS).
+pub(crate) const FFC_PARAMS_GENERATE_49: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ffc/ffc_params_generate.c",
+    line: 49,
+    func: c"ffc_validate_LN",
+    lib: 5,
+    reason: 127,
+    dynamic_reason: false,
+};
+
+/// `ffc_validate_LN` at `crypto/ffc/ffc_params_generate.c:61` (DSA_R_BAD_FFC_PARAMETERS).
+pub(crate) const FFC_PARAMS_GENERATE_61: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ffc/ffc_params_generate.c",
+    line: 61,
+    func: c"ffc_validate_LN",
+    lib: 10,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ffc_validate_LN` at `crypto/ffc/ffc_params_generate.c:77` (DH_R_BAD_FFC_PARAMETERS).
+pub(crate) const FFC_PARAMS_GENERATE_77: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ffc/ffc_params_generate.c",
+    line: 77,
+    func: c"ffc_validate_LN",
+    lib: 5,
+    reason: 127,
+    dynamic_reason: false,
+};
+
+/// `ffc_validate_LN` at `crypto/ffc/ffc_params_generate.c:82` (DSA_R_BAD_FFC_PARAMETERS).
+pub(crate) const FFC_PARAMS_GENERATE_82: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ffc/ffc_params_generate.c",
+    line: 82,
+    func: c"ffc_validate_LN",
+    lib: 10,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ffc_validate_LN` at `crypto/ffc/ffc_params_generate.c:94` (DSA_R_BAD_FFC_PARAMETERS).
+pub(crate) const FFC_PARAMS_GENERATE_94: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ffc/ffc_params_generate.c",
+    line: 94,
+    func: c"ffc_validate_LN",
+    lib: 10,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ossl_ffc_params_simple_validate` at `crypto/ffc/ffc_params_validate.c:125` (DH_R_NOT_SUITABLE_GENERATOR).
+pub(crate) const FFC_PARAMS_VALIDATE_125: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ffc/ffc_params_validate.c",
+    line: 125,
+    func: c"ossl_ffc_params_simple_validate",
+    lib: 5,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `ossl_ffc_params_full_validate` at `crypto/ffc/ffc_params_validate.c:172` (DSA_R_Q_NOT_PRIME).
+pub(crate) const FFC_PARAMS_VALIDATE_172: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ffc/ffc_params_validate.c",
+    line: 172,
+    func: c"ossl_ffc_params_full_validate",
+    lib: 10,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `ossl_ffc_params_full_validate` at `crypto/ffc/ffc_params_validate.c:178` (DSA_R_P_NOT_PRIME).
+pub(crate) const FFC_PARAMS_VALIDATE_178: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ffc/ffc_params_validate.c",
+    line: 178,
+    func: c"ossl_ffc_params_full_validate",
+    lib: 10,
+    reason: 115,
+    dynamic_reason: false,
+};
+
 /// `RAND_pseudo_bytes` at `crypto/rand/rand_lib.c:386` (RAND_R_FUNC_NOT_IMPLEMENTED).
 pub(crate) const RAND_LIB_386: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
@@ -26481,6 +26561,14 @@ pub(crate) static ALL: &[ErrSite] = &[
     RSA_SP800_56B_GEN_185,
     RSA_SP800_56B_GEN_205,
     RSA_SP800_56B_GEN_454,
+    FFC_PARAMS_GENERATE_49,
+    FFC_PARAMS_GENERATE_61,
+    FFC_PARAMS_GENERATE_77,
+    FFC_PARAMS_GENERATE_82,
+    FFC_PARAMS_GENERATE_94,
+    FFC_PARAMS_VALIDATE_125,
+    FFC_PARAMS_VALIDATE_172,
+    FFC_PARAMS_VALIDATE_178,
     RAND_LIB_386,
     RAND_LIB_430,
     RAND_LIB_435,

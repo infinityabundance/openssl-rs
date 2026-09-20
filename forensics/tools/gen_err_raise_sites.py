@@ -569,6 +569,20 @@ COVERED_FILES = [
     ("crypto/rsa/rsa_schemes.c", "RSA_SCHEMES"),
     ("crypto/rsa/rsa_mp_names.c", "RSA_MP_NAMES"),
     ("crypto/rsa/rsa_acvp_test_params.c", "RSA_ACVP_TEST_PARAMS"),
+    # Phase 8.5's `crypto/ffc` subsystem. The same rule as `crypto/rsa` above: these are the
+    # units of the stratum that **raise**, and a coordinate's `file` string is part of the
+    # observable error record. `ffc_params_validate.c` raises the DH
+    # `NOT_SUITABLE_GENERATOR` reason at `:125` and the two DSA prime reasons at `:172` and
+    # `:178`; `ffc_params_generate.c` raises the DH and DSA `BAD_FFC_PARAMETERS` reasons from
+    # its L/N pair test, all three of them on the `#else` arm this profile compiles.
+    #
+    # `ffc_params.c`, `ffc_key_generate.c`, `ffc_key_validate.c`, `ffc_dh.c` and
+    # `ffc_backend.c` are deliberately **absent**: none of them raises anything (they
+    # allocate, copy, compare, print and validate ranges), so an entry for them would read as
+    # coverage that does not exist -- the reasoning `rsa_meth.c` and `mdc2_prov.c` are named
+    # under above.
+    ("crypto/ffc/ffc_params_generate.c", "FFC_PARAMS_GENERATE"),
+    ("crypto/ffc/ffc_params_validate.c", "FFC_PARAMS_VALIDATE"),
     # Phase 9's `crypto/rand` subsystem. **The subsystem set, not a selection of convenient
     # files**, for `crypto/rsa`'s reason and one more of its own: this stratum's symbols are
     # raised from inside bodies whose declaring header belongs to *earlier* strata (`BN_rand`,
@@ -1135,6 +1149,13 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
     # `proverr.h` is an installed header, so this is the same fallthrough-free case as
     # `evperr.h` above.
     "#include <openssl/proverr.h>",
+    # Phase 8.5 needs `DH_R_*` and `DSA_R_*`: `crypto/ffc/ffc_params_validate.c` and
+    # `ffc_params_generate.c` are the shared FFC units, so the DH and DSA layers' reasons are
+    # raised from a `crypto/ffc/` file -- `internal/ffc.h`'s own comment says as much about the
+    # `FFC_CHECK_*`/`FFC_ERROR_*` split. Both headers are installed, so this is `evperr.h`'s
+    # fallthrough-free case again.
+    "#include <openssl/dherr.h>",
+    "#include <openssl/dsaerr.h>",
         # `PROP_R_*` is the first reason family this table needs that lives in an
         # *internal* header rather than an installed one: `internal/propertyerr.h`,
         # which the property grammar raises from. It is resolveable because the

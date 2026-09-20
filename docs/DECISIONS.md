@@ -21721,3 +21721,148 @@ test can check except against the authority itself, which is why `gen_bn_primes.
 constants back from the authority rather than transcribing them. They are a separable follow-up,
 and `DH_set0_pqg`'s named-group cache — the one thing in `dh_lib.c`'s accessor surface that reaches
 them — waits with them rather than landing over a table that does not exist.
+
+## D330 — 8.5's FFC primitives land whole, the prerequisite gate turns one withheld name into a divergence record, and the named-group tables are named rather than approached
+
+**Decision.** Phase 8.5 (DH and DHX) lands the **`crypto/ffc/` primitives** — the layer D329 named as
+the chain's first link rather than half-landing. Five translation units are transcribed whole, in one
+new subtree of five modules:
+
+| module | authority unit | share |
+|---|---|---|
+| `src/ffc/params.rs` | `crypto/ffc/ffc_params.c` | 17/17 |
+| `src/ffc/params_validate.rs` | `crypto/ffc/ffc_params_validate.c` | 5/5 |
+| `src/ffc/params_generate.rs` | `crypto/ffc/ffc_params_generate.c` | 4/4 |
+| `src/ffc/key_generate.rs` | `crypto/ffc/ffc_key_generate.c` | 1/1 |
+| `src/ffc/key_validate.rs` | `crypto/ffc/ffc_key_validate.c` | 3/3 |
+
+`src/ffc/mod.rs` carries the third unit's shared surface: `include/internal/ffc.h`'s constants and the
+`FFC_PARAMS` struct. It defines no authority symbol, so it is in no module-to-unit map, which is what
+the `share` column above is measured against — `forensics/atlas/transcription-edges.json` records the
+five edges and the share of each module's defined symbols that belong to its unit.
+
+**The set is the authority's call graph, not the prompt's list, and the two differ in both
+directions.** The prompt names `ffc_key_generate.c`, `ffc_params_generate.c`, `ffc_params.c`,
+`ffc_key_validate.c` and `ffc_params_validate.c`, which is right; it also asks for
+`ossl_ffc_dh_parameters2keypairs` on the reachability of `ossl_ffc_generate_private_key`, and **no
+such symbol exists in either admitted authority** — a case-sensitive search of the 3.6.4 and 3.6.3
+trees for `parameters2keypairs` returns nothing, and it is not in
+`forensics/atlas/internal-symbols.json`. Nothing was invented for it. In the other direction the
+prompt's description of `ffc_params.c` lists `_dup`, `_set_length`, `_set_nid` and `_is_safe_prime`
+alongside the real lifecycle, and those four are 1.1.1-era names: 3.6.4's `ffc_params.c` has
+`init`, `cleanup`, `set0_pqg`, `get0_pqg`, `set0_j`, `set_seed`, `set_gindex`, `set_pcounter`,
+`set_h`, `set_flags`, `enable_flags`, `ossl_ffc_set_digest`, `set_validate_params`,
+`get_validate_params`, the static `ffc_bn_cpy`, `copy`, `cmp`, `todata` and `print` — nineteen
+definitions, of which eighteen are landed. The prompt's third coordinate, `include/crypto/ffc_params.h`
+and `crypto/ffc/ffc_local.h`, does not exist either: the declarations are in
+`include/internal/ffc.h`, and `crypto/ffc/` has no private header at all.
+
+**One name is withheld, and the gate turned that into a divergence record rather than a smaller
+claim.** The prompt's warning is exact and this is the worked example: the prerequisite gate makes a
+unit's *internals* countable the moment a crate module transcribes it, so `src/ffc/params.rs` made
+`ossl_ffc_params_todata` (`ffc_params.c:219-285`) a finding the first time the pipeline ran —
+`unwired_function_in_the_current_stratum`, because the unit calls it, the crate has a module for the
+unit, and neither that module nor any other mentions it. It cannot be transcribed honestly: it is the
+provider-export half and its callers are `crypto/dh/dh_backend.c:94` and `crypto/dsa/dsa_backend.c`,
+neither of which is on the `dh_lib.c`/`dh_key.c`/`dh_gen.c`/`dh_check.c` path this slice lands, and it
+reaches `crypto/param_build_set.c`'s four `ossl_param_build_set_*` (a unit with no crate module and no
+stratum's plan row) and `crypto/ffc/ffc_dh.c`'s `ossl_ffc_uid_to_dh_named_group`/`_named_group_get_name`,
+which need `crypto/bn/bn_dh.c`'s twenty-six constants. So the finding becomes
+`forensics/prerequisites.json`'s sixth divergence row: class `owned_by_a_later_stratum`,
+`owner_module: src/ffc/params.rs`, `covers: ["ossl_ffc_params_todata"]`, with the two callee units and
+the follow-up named in its `note` and its `evidence`. **The class is the closest of the five and the
+tension is recorded rather than smoothed over** — the work this name waits on is a later *slice of the
+same stratum* plus one unit no stratum claims, and the class set has no label for that. The row
+fail-closes in both directions: if a module for `ffc_dh.c` appears and the name is still uncovered the
+gate reports `divergence_record_does_not_match`; if the name is built, `stale`.
+
+**`ffc_dh.c` and `ffc_backend.c` deliberately have no module, which is D327's
+`rsa_sp800_56b_check.c` precedent.** `ffc_dh.c`'s `dh_named_groups[]` carries
+`&ossl_bignum_ffdhe2048_p`-style pointers into `crypto/bn/bn_dh.c`, which is 1,423 lines of limb data
+whose values only a comparison with the authority can check — the "separable large data transcription"
+D329 records and `gen_bn_primes.py`'s header gives the method for (`BN_get0_nist_prime_*` is *asked of*
+the authority rather than transcribed). `ffc_backend.c`'s `ossl_ffc_params_fromdata` is the other half
+of the pair and shares the same callee set. Neither is reached by a body this slice lands, so neither
+is given a module, and no name of either is written.
+
+**The unit changed the product's evidence machinery in two places, both generator inputs, both
+regenerated in this commit.** `forensics/tools/gen_err_raise_sites.py`'s `COVERED_FILES` gains
+`crypto/ffc/ffc_params_validate.c` and `crypto/ffc/ffc_params_generate.c`, and the symbol resolver's
+include set gains `<openssl/dherr.h>` and `<openssl/dsaerr.h>` — because the FFC unit is the one that
+raises **another library's** reasons: `ffc_params_validate.c:125` raises `ERR_LIB_DH`'s
+`DH_R_NOT_SUITABLE_GENERATOR`, `:172`/`:178` raise `ERR_LIB_DSA`'s two prime reasons, and
+`ffc_params_generate.c:77`/`:82`/`:94` raise the DH and DSA `BAD_FFC_PARAMETERS` reasons from
+`ffc_validate_LN`'s `#else` arm — `include/internal/ffc.h`'s own comment ("Uses Error codes from DH")
+is the reason those three files raise through two other libraries' tables. Nine coordinates are added
+and `src/runtime/err_sites.rs` moves **2,420 -> 2,428** sites. The two FIPS-only sites in the same file
+(`:49`, `:61`) are recorded too, because the scan is lexical, and neither is reached on this profile.
+
+**The struct's shape is measured, not read.** `FFC_PARAMS` is `repr(C)` and the next slice makes that
+load-bearing — `struct dh_st` embeds it **by value** (`crypto/dh/dh_local.h:23`) and `struct dsa_st`
+does the same, so its size is downstream of both constructors' allocation sizes — and
+`ossl_ffc_params_init` memsets `sizeof(*params)`. `courts/layout/measure-ffc-params.c` compiles against
+the authority's own internal header and answers **96 bytes, alignment 8**, and the fourteen offsets; the
+unit test `the_ffc_params_struct_is_the_authoritys_shape` asserts every one. The offset that cannot be
+reasoned about from the declaration is `mdname` at **72**, not 68: `flags` is a four-byte
+`unsigned int` at 64 and `mdname` is a pointer, so 68..72 is padding.
+
+**What the tests do, since this unit has no export and therefore no court arm.** `court_coverage.py`
+requires arms for exports, so this slice's evidence is its own unit tests rather than a new probe:
+**33 tests** — four in `src/ffc/mod.rs`, two in
+`key_generate.rs`, three in `key_validate.rs`, four in `params_generate.rs`, fourteen in `params.rs`
+and six in `params_validate.rs`. Every generator's *properties* are asserted and no
+generated value is: the 2048/256 FIPS 186-4 group is validated through its own seed and counter, a copy
+of it is proved to be a deep copy that validates identically (the deterministic agreement test
+`dh_gen.c:106`'s copy-then-validate path needs), a private key is proved in range by bit width and by
+`ossl_ffc_validate_private_key`, and the two L/N tables are separated by *type* on a synthetic 3072/256
+object. `params_generate.rs` carries four of them of its own, because the two generators are the one
+part of the layer nothing else reaches: the 2048/256 group's **congruences** are asserted on the
+generated object (`q | p - 1`, `p = 1 mod 2q`, both primes, `g^q = 1`, and an odd `p` — which makes
+the top-bit test and the bottom-bit test one assertion), a canonical generation is shown to bind
+**`gindex`** by flipping the index alone and getting `FFC_CHECK_G_MISMATCH`, the 186-2 twin is shown to
+differ from the 186-4 one by asking the *186-4* validator about a group the 186-2 generator produced,
+and the refusals that happen before any arithmetic are asserted with their reasons. Every refusal the FFC code has is asserted with its named reason, and four of the authority's
+own `test/ffc_internal_test.c` vectors are transcribed as the inputs: `dsa_2048_224_sha224`'s
+`p`/`q`/`seed`/`bad_seed`/`counter` (2878), and `dsa_2048_224_sha256`'s `p`/`q`/`g`. Three unit tests
+are written where the authority has none: `full_validate`'s no-seed arm is isolated by *doubling* a
+generated group's `q` — `p` odd prime and `q` odd prime make `e = (p-1)/q` even, so `2q` divides `p-1`
+and `g^(2q) = (g^q)^2 = 1` still passes the `g` check while `BN_check_prime(2q)` cannot — and the
+range-then-order split of `ossl_ffc_params_validate_unverifiable_g` is pinned on `p = 23, q = 11`,
+where `2^11 = 89 * 23 + 1` and `5^11 = 2122961 * 23 + 22` are checkable by hand.
+
+**Two `#[allow(...)]`s are at the site and neither is an inner attribute.** Every item in the subtree
+carries one `#[allow(dead_code)]` — on `pub(crate) mod ffc;` in `src/lib.rs`, not an inner
+`#![allow(...)]` — with its reason: the layer has **no caller until the next slice of 8.5 lands**,
+because `dh_lib.c`, `dh_key.c`, `dh_gen.c` and `dh_check.c` are what call it and none is in the crate
+yet. The attribute is one on the subtree rather than one per item because the exclusion is exactly the
+subtree's boundary, which is the reasoning `src/runtime/ctype_table.rs`'s `mask` module already records
+for its own whole-module annotation, and it must be deleted when `dh_key.c` lands. The seven items whose
+authority names contain `FIPS186_4`/`FIPS186_2`/`LN` carry `#[allow(non_snake_case)]` with the
+authority's name kept **verbatim**, because the name is what the module-to-unit map is measured from: a
+`params_generate.rs` whose four externally-visible functions were renamed to snake case would define no
+symbol of `crypto/ffc/ffc_params_generate.c` at all — that unit's only external names are those four —
+and the edge would vanish from `transcription-edges.json`.
+
+**Bookkeeping, read off the regenerated files.** This unit adds no export, so the ledgers do not move:
+`phase8` is **implemented 348, deferred 7, open 431, owned 786** and
+`forensics/atlas/implemented-surface.json` stays at `libcrypto` **2261** — a `pub(crate)` internal is
+internalised by the compiler and never reaches the archive as a C-style symbol, which is why
+`internal_symbols.c_style` stays at 274. What moves is the gate's planes:
+`forensics/atlas/transcription-edges.json` gains five edges, so the gate counts **260 -> 266** crate
+modules (the five new modules and `src/ffc/mod.rs`, which defines no authority symbol and is in no
+edge) and **192 -> 197** authority units, and the five new units carry 475 identifiers between them; the gate's `language_census` moves
+**3299 -> 3347** (another authority subsection's identifiers entering a census that is explicitly not a
+failure), `divergence_names_covered` **30 -> 31** with the sixth row, and — this is the part that
+matters — **`sealed_census` stays 57 and `blocking_dependencies` stays 17**. **No
+`forensics/ownership-transitions.json` row was needed**, and the guard was run both ways to prove it:
+against this branch's previous head the two counts are unchanged, and against `origin/main` they move
+**25 -> 17** and not at all respectively. The suite stands at **792 tests**, 33 of them this slice's,
+and the pipeline ends `PIPELINE OK` with the gate at zero findings over 90 courts and 33,205
+observations.
+
+**What is left of 8.5, unchanged and now one link shorter.** The order D329 recorded is intact: the
+FFC primitives (this commit), then `dh_lib.c`'s object layer, then `dh_key.c`, `dh_gen.c` and the
+controls. The object layer still cannot precede `dh_key.c` — `DH_get_default_method`'s table carries
+`generate_key`, whose q-set arm is the `ossl_ffc_params_simple_validate` that now exists — and
+`DH_get_default_method`, `DH_set_default_method` and `DH_OpenSSL` still wait with it. The named-group
+tables wait as D329 said they would, and `ffc_dh.c`/`ffc_backend.c` have no module until they land.

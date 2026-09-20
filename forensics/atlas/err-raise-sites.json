@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 2420,
+      "sites": 2428,
       "unattributed": 0
     },
     "covered_files": [
@@ -225,6 +225,8 @@
       "crypto/rsa/rsa_schemes.c",
       "crypto/rsa/rsa_mp_names.c",
       "crypto/rsa/rsa_acvp_test_params.c",
+      "crypto/ffc/ffc_params_generate.c",
+      "crypto/ffc/ffc_params_validate.c",
       "crypto/rand/rand_lib.c",
       "crypto/rand/randfile.c",
       "crypto/rand/rand_pool.c",
@@ -33910,6 +33912,126 @@
         "rel_source": "crypto/rsa/rsa_sp800_56b_gen.c"
       },
       {
+        "const_name": "FFC_PARAMS_GENERATE_49",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/ffc/ffc_params_generate.c",
+        "function": "ffc_validate_LN",
+        "generated": false,
+        "lib": 5,
+        "lib_symbol": "ERR_LIB_DH",
+        "line": 49,
+        "macro": "ERR_raise",
+        "reason": 127,
+        "reason_symbol": "DH_R_BAD_FFC_PARAMETERS",
+        "rel_source": "crypto/ffc/ffc_params_generate.c"
+      },
+      {
+        "const_name": "FFC_PARAMS_GENERATE_61",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/ffc/ffc_params_generate.c",
+        "function": "ffc_validate_LN",
+        "generated": false,
+        "lib": 10,
+        "lib_symbol": "ERR_LIB_DSA",
+        "line": 61,
+        "macro": "ERR_raise",
+        "reason": 114,
+        "reason_symbol": "DSA_R_BAD_FFC_PARAMETERS",
+        "rel_source": "crypto/ffc/ffc_params_generate.c"
+      },
+      {
+        "const_name": "FFC_PARAMS_GENERATE_77",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/ffc/ffc_params_generate.c",
+        "function": "ffc_validate_LN",
+        "generated": false,
+        "lib": 5,
+        "lib_symbol": "ERR_LIB_DH",
+        "line": 77,
+        "macro": "ERR_raise",
+        "reason": 127,
+        "reason_symbol": "DH_R_BAD_FFC_PARAMETERS",
+        "rel_source": "crypto/ffc/ffc_params_generate.c"
+      },
+      {
+        "const_name": "FFC_PARAMS_GENERATE_82",
+        "data_format": "\"N is %zu, but the maximum supported N is 512\"",
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/ffc/ffc_params_generate.c",
+        "function": "ffc_validate_LN",
+        "generated": false,
+        "lib": 10,
+        "lib_symbol": "ERR_LIB_DSA",
+        "line": 82,
+        "macro": "ERR_raise_data",
+        "reason": 114,
+        "reason_symbol": "DSA_R_BAD_FFC_PARAMETERS",
+        "rel_source": "crypto/ffc/ffc_params_generate.c"
+      },
+      {
+        "const_name": "FFC_PARAMS_GENERATE_94",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/ffc/ffc_params_generate.c",
+        "function": "ffc_validate_LN",
+        "generated": false,
+        "lib": 10,
+        "lib_symbol": "ERR_LIB_DSA",
+        "line": 94,
+        "macro": "ERR_raise",
+        "reason": 114,
+        "reason_symbol": "DSA_R_BAD_FFC_PARAMETERS",
+        "rel_source": "crypto/ffc/ffc_params_generate.c"
+      },
+      {
+        "const_name": "FFC_PARAMS_VALIDATE_125",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/ffc/ffc_params_validate.c",
+        "function": "ossl_ffc_params_simple_validate",
+        "generated": false,
+        "lib": 5,
+        "lib_symbol": "ERR_LIB_DH",
+        "line": 125,
+        "macro": "ERR_raise",
+        "reason": 120,
+        "reason_symbol": "DH_R_NOT_SUITABLE_GENERATOR",
+        "rel_source": "crypto/ffc/ffc_params_validate.c"
+      },
+      {
+        "const_name": "FFC_PARAMS_VALIDATE_172",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/ffc/ffc_params_validate.c",
+        "function": "ossl_ffc_params_full_validate",
+        "generated": false,
+        "lib": 10,
+        "lib_symbol": "ERR_LIB_DSA",
+        "line": 172,
+        "macro": "ERR_raise",
+        "reason": 113,
+        "reason_symbol": "DSA_R_Q_NOT_PRIME",
+        "rel_source": "crypto/ffc/ffc_params_validate.c"
+      },
+      {
+        "const_name": "FFC_PARAMS_VALIDATE_178",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/ffc/ffc_params_validate.c",
+        "function": "ossl_ffc_params_full_validate",
+        "generated": false,
+        "lib": 10,
+        "lib_symbol": "ERR_LIB_DSA",
+        "line": 178,
+        "macro": "ERR_raise",
+        "reason": 115,
+        "reason_symbol": "DSA_R_P_NOT_PRIME",
+        "rel_source": "crypto/ffc/ffc_params_validate.c"
+      },
+      {
         "const_name": "RAND_LIB_386",
         "data_format": null,
         "dynamic_reason": false,
@@ -37739,6 +37861,16 @@
       "name": "authority:crypto/rsa/rsa_acvp_test_params.c",
       "path": "forensics/authorities/src/openssl-3.6.4/crypto/rsa/rsa_acvp_test_params.c",
       "sha256": "d52e71d4bd369855bf5203de39b3ddab0cb8dc22dbbed00efd1b9d9641e4850b"
+    },
+    {
+      "name": "authority:crypto/ffc/ffc_params_generate.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/ffc/ffc_params_generate.c",
+      "sha256": "bb78ed0f57905c016706e90cbbc19e90f2349ef65057952398788c8ce69fe3ca"
+    },
+    {
+      "name": "authority:crypto/ffc/ffc_params_validate.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/ffc/ffc_params_validate.c",
+      "sha256": "45169645c421c0283db0e037ebdb3502534661faa5eca8f510bcdcd39815af30"
     },
     {
       "name": "authority:crypto/rand/rand_lib.c",
