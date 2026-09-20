@@ -150,12 +150,20 @@ CIPHER_CORRECTNESS_COURTS: list[tuple[str, tuple[str, ...]]] = [
 # it needs so that "not run yet" cannot be read as "passed". Each entry names the subphase and
 # the prerequisite in one line; the vectors themselves arrive in the subphase that lands the
 # primitive, in the same commit, exactly as `RT-*` probes do.
+#
+# **A reason here is a claim about the crate, so it is reviewed when the subphase it names moves.**
+# Two of the four went stale exactly that way and were corrected rather than left: `CT-RSA` named
+# "the RSA object and its decode/verify paths" after both had landed (D321, D325, D328), and
+# `CT-DH` named "the DH object and the FFC group arithmetic" after both had (D330, D331, D332).
+# What each now names is what is actually left, which for both is the vector corpus and its driver.
 PENDING_CORRECTNESS_COURTS: dict[str, str] = {
-    "CT-RSA": "8.4 -- needs the RSA object and its decode/verify paths; the recorded corpus "
-              "is PKCS#1's own test vectors, with Project Wycheproof's RSA known-attack set "
-              "as the stated follow-up.",
-    "CT-DH": "8.5 -- needs the DH object and the FFC group arithmetic; PKCS#3 and the "
-             "authority's own group vectors are the recorded corpus.",
+    "CT-RSA": "8.4 -- the RSA object and its sign/verify and key-check paths have landed "
+              "(D321, D325, D328), so what remains is the corpus and its driver: PKCS#1's own "
+              "test vectors, with Project Wycheproof's RSA known-attack set as the stated "
+              "follow-up. An arm that needs the ASN.1 decode path waits on 8.8.",
+    "CT-DH": "8.5 -- the DH object layer and the FFC group arithmetic have landed (D330, "
+             "D331, D332), so what remains is the corpus and its driver: PKCS#3 and the "
+             "authority's own group vectors.",
     "CT-DSA": "8.6 -- needs the DSA object; FIPS 186-4 and the authority's own vectors are "
               "the recorded corpus.",
     "CT-EC": "8.7 -- needs EC_KEY/EC_GROUP/EC_POINT; the recorded corpus is the authority's "
