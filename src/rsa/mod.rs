@@ -91,9 +91,11 @@ use crate::runtime::obj::{NID_sha1, NID_sha256, NID_sha384, NID_sha512};
 use crate::runtime::stack::OpenSslStack;
 use crate::runtime::thread::CryptoRwlock;
 
+pub mod gen;
 mod mp;
 pub mod object;
 pub mod ossl;
+pub(crate) mod sp800;
 
 /// `RSA_METHOD_FLAG_NO_CHECK` — `include/openssl/rsa.h:64`. The only `RSA_METHOD_FLAG_*` constant
 /// this authority still defines; its siblings were absorbed into `RSA_FLAG_*`.

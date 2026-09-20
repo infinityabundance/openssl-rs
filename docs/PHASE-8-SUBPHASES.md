@@ -393,10 +393,10 @@ here is. (`forensics/phase8-obligations.json` remains the only complete list.)
 `RSA_padding_add_PKCS1_PSS_mgf1`, `RSA_new`, `RSA_new_method`, `RSA_get_default_method`,
 `RSA_PKCS1_OpenSSL`, `RSA_set_default_method`, `RSA_setup_blinding`, `RSA_X931_derive_ex`,
 `RSA_X931_generate_key_ex`, `RSA_public_encrypt`, `RSA_private_encrypt`, `RSA_private_decrypt`,
-`RSA_public_decrypt`.
+`RSA_public_decrypt`, `RSA_generate_key_ex`, `RSA_generate_multi_prime_key`,
+`RSA_generate_key`.
 
-**Open exports (checked against the ledger):** `RSA_check_key`, `RSA_sign`, `RSA_blinding_on`,
-`RSA_generate_key`, `RSA_generate_key_ex`, `RSA_generate_multi_prime_key`.
+**Open exports (checked against the ledger):** `RSA_check_key`, `RSA_sign`, `RSA_blinding_on`.
 Phase 8.2's cipher families and 8.3's `modes.h` constructions all have their low-level exports in,
 and the default provider's AEAD half is nearly there: the twelve AES
 key-wrap rows landed in D230, the six CBC-CTS rows in D231, the two AES-XTS rows in D232, the
@@ -505,6 +505,18 @@ residuals: the derivation arm is deterministic — fixed seeds, so `p = 1 (mod p
 and `n = p*q` are values both binaries must compute identically — and the generation arm prints only
 the return code, a width predicate and the two round trips through the new wrappers. The ledger:
 phase 8 implemented 284 -> **290**, deferred 12 -> **7**, open 490 -> **489**.
+
+**The `crypto/bn` unit D326 named has landed, and the three `RSA_generate_*` names with it
+(D327).** `crypto/bn/bn_rsa_fips186_4.c` is `src/bn/rsa_fips186_4.rs` — the FIPS 186-4 B.3.6
+probable-prime generators, over `ossl_bn_check_generated_prime` and
+`ossl_bn_get0_small_factors` (`crypto/bn/bn_prime.c:258`, `:65`), which `src/bn/primes.rs` now
+has, and `ossl_bn_inv_sqrt_2`. `crypto/rsa/rsa_sp800_56b_gen.c` is `src/rsa/sp800.rs`, with the
+three `rsa_sp800_56b_check.c` helpers that generator reaches. `crypto/rsa/rsa_gen.c` is
+`src/rsa/gen.rs`, together with `rsa_depr.c`'s only body `RSA_generate_key`. The ledger:
+phase 8 implemented 290 -> **293**, deferred 7 unchanged, open 489 -> **486**; `RT-RSA` grows
+with arms over both generators — the SP800-56B path (2 primes, 2048 bits, `e = 65537`) and the
+multi-prime path (3 primes, 1024 bits), each printing only prime counts, primality, `n`'s
+factorisation and the round trips, and the four refusals drained.
 
 **The same measurement now says the gate is systematic across every key type, which is the
 largest plan correction Phase 8 has needed (D286).** DH, DSA and EC each construct their object the

@@ -45,3 +45,4 @@ pub(crate) mod prime_data;
 pub mod primes;
 pub mod rand;
 pub mod recp;
+pub(crate) mod rsa_fips186_4;

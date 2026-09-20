@@ -22,7 +22,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 58,
-      "language_surface_not_modelled_by_name": 3291,
+      "language_surface_not_modelled_by_name": 3318,
       "planned_prerequisites": 11
     },
     "census_by_unit": {
@@ -114,17 +114,18 @@
         "crypto/bio/bss_mem.c": 12,
         "crypto/bio/bss_null.c": 4,
         "crypto/bio/ossl_core_bio.c": 6,
-        "crypto/bn/bn_blind.c": 14,
-        "crypto/bn/bn_ctx.c": 15,
-        "crypto/bn/bn_gf2m.c": 23,
+        "crypto/bn/bn_blind.c": 13,
+        "crypto/bn/bn_ctx.c": 14,
+        "crypto/bn/bn_gf2m.c": 22,
         "crypto/bn/bn_kron.c": 4,
-        "crypto/bn/bn_lib.c": 29,
-        "crypto/bn/bn_mod.c": 13,
+        "crypto/bn/bn_lib.c": 28,
+        "crypto/bn/bn_mod.c": 12,
         "crypto/bn/bn_mont.c": 14,
         "crypto/bn/bn_nist.c": 14,
-        "crypto/bn/bn_prime.c": 16,
-        "crypto/bn/bn_rand.c": 14,
-        "crypto/bn/bn_recp.c": 10,
+        "crypto/bn/bn_prime.c": 15,
+        "crypto/bn/bn_rand.c": 13,
+        "crypto/bn/bn_recp.c": 9,
+        "crypto/bn/bn_rsa_fips186_4.c": 9,
         "crypto/bsearch.c": 1,
         "crypto/buffer/buffer.c": 12,
         "crypto/camellia/cmll_cfb.c": 3,
@@ -147,7 +148,7 @@
         "crypto/des/set_key.c": 9,
         "crypto/dso/dso_dlfcn.c": 16,
         "crypto/dso/dso_lib.c": 15,
-        "crypto/err/err.c": 93,
+        "crypto/err/err.c": 92,
         "crypto/err/err_all_legacy.c": 11,
         "crypto/err/err_save.c": 2,
         "crypto/evp/asymcipher.c": 20,
@@ -226,10 +227,12 @@
         "crypto/rand/rand_uniform.c": 3,
         "crypto/rc2/rc2_cbc.c": 3,
         "crypto/ripemd/rmd_dgst.c": 342,
+        "crypto/rsa/rsa_gen.c": 18,
         "crypto/rsa/rsa_lib.c": 57,
         "crypto/rsa/rsa_meth.c": 11,
         "crypto/rsa/rsa_mp.c": 7,
         "crypto/rsa/rsa_ossl.c": 21,
+        "crypto/rsa/rsa_sp800_56b_gen.c": 9,
         "crypto/seed/seed.c": 7,
         "crypto/self_test_core.c": 17,
         "crypto/sha/sha1dgst.c": 2,
@@ -358,8 +361,8 @@
       ]
     },
     "checked": {
-      "authority_units": 187,
-      "crate_modules": 254,
+      "authority_units": 190,
+      "crate_modules": 257,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 17,
       "divergence_names_covered": 30,
@@ -430,10 +433,6 @@
           "ossl_bn_mont_ctx_eq",
           "ossl_bn_mont_ctx_set"
         ],
-        "crypto/bn/bn_prime.c": [
-          "ossl_bn_check_generated_prime",
-          "ossl_bn_get0_small_factors"
-        ],
         "crypto/bn/bn_rand.c": [
           "ossl_bn_gen_dsa_nonce_fixed_top",
           "ossl_bn_priv_rand_range_fixed_top"
@@ -475,7 +474,7 @@
         ]
       },
       "definition": "authority internal functions a transcribed unit calls, whose own translation unit's stratum has already sealed. Not a failure: each is either modelled differently by the crate or is work carried across the boundary by a later stratum. The count is held to non-increase by the regression guard.",
-      "names": 59
+      "names": 57
     },
     "universes": {
       "crate_references_checked": 32438,
@@ -485,7 +484,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "1391b09446613e4644dfd7273982dd8a03423a3577a443a7141749bae5b2d8eb",
+  "body_hash": "bfe99fffa419df2048612064722db9bb559386933fbe1a16fded20d30d05a9a0",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -506,7 +505,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "fac280beaf998dbd393cafde7ae5d3c49bb82d95b5233649cda45d9f6fbdbc94"
+      "sha256": "3a666bcb6788183e37bd8a15bc766e291926c926285dd92aabcdd1fede14def4"
     },
     {
       "name": "symbol-ownership",
@@ -521,12 +520,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "16617b6ddbb2e92520f8da0a03bdec7da7dbf8af064fd611dcb78d5f6c78d96c"
+      "sha256": "4ee4ca8357eb6969f787f94a4ef9bc4db74c0e7d2f478610fed341c6e469c3db"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "d3b1788d247b57b9825741a2b638c84d67184618b50e5c8dad7540b4d95b9cfe"
+      "sha256": "b1a167bd9c4f1afe781b01152f11194b58a40ed7a21108c90ba3da064c4daa64"
     },
     {
       "name": "prerequisites",

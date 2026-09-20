@@ -453,6 +453,26 @@ pub(crate) fn peek_last_reason() -> c_ulong {
     }
 }
 
+/// `ERR_GET_LIB(ERR_peek_last_error())` — the library code of the queue's last entry.
+///
+/// The companion of [`peek_last_reason`], for the same kind of caller: `crypto/rsa/
+/// rsa_gen.c`'s multi-prime generator has to distinguish "this prime has no inverse
+/// modulo `e`, so draw another" from any other failure, and the authority spells that
+/// test `ERR_GET_LIB(error) == ERR_LIB_BN && ERR_GET_REASON(error) == BN_R_NO_INVERSE`.
+///
+/// # Safety
+///
+/// There is no precondition: the function takes no arguments and touches only the
+/// calling thread's own queue.
+pub(crate) fn peek_last_lib() -> c_ulong {
+    let e = ERR_peek_last_error();
+    if e == 0 {
+        0
+    } else {
+        get_lib(e)
+    }
+}
+
 /// Duplicate a C string for storage in the ring, or NULL for NULL/empty input.
 ///
 /// # Safety
