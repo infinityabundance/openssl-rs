@@ -108,16 +108,29 @@ pub(crate) const FFC_PARAM_FLAG_VALIDATE_LEGACY: c_uint = 0x04;
 /// `FFC_CHECK_P_NOT_PRIME` — `include/internal/ffc.h:53`.
 pub(crate) const FFC_CHECK_P_NOT_PRIME: c_int = 0x00001;
 /// `FFC_CHECK_P_NOT_SAFE_PRIME` — `include/internal/ffc.h:54`.
+// Unreached in this crate: the reader is in `crypto/dsa/` and the provider keymgmt paths. Kept because the unit around it
+// is whole (D327's rule); D330's subtree-wide allow on `pub(crate) mod ffc;` is deleted in D331.
+#[allow(dead_code)]
 pub(crate) const FFC_CHECK_P_NOT_SAFE_PRIME: c_int = 0x00002;
 /// `FFC_CHECK_UNKNOWN_GENERATOR` — `include/internal/ffc.h:55`.
+// Unreached in this crate: the reader is in `crypto/dsa/dsa_check.c` and the FIPS generator's
+// refusal path. Kept because the unit around it
+// is whole (D327's rule); D330's subtree-wide allow on `pub(crate) mod ffc;` is deleted in D331.
+#[allow(dead_code)]
 pub(crate) const FFC_CHECK_UNKNOWN_GENERATOR: c_int = 0x00004;
 /// `FFC_CHECK_NOT_SUITABLE_GENERATOR` — `include/internal/ffc.h:56`.
+// Unreached in this crate: the reader is in `crypto/dsa/dsa_check.c` and `crypto/ffc/ffc_backend.c`. Kept because the unit around it
+// is whole (D327's rule); D330's subtree-wide allow on `pub(crate) mod ffc;` is deleted in D331.
+#[allow(dead_code)]
 pub(crate) const FFC_CHECK_NOT_SUITABLE_GENERATOR: c_int = 0x00008;
 /// `FFC_CHECK_Q_NOT_PRIME` — `include/internal/ffc.h:57`.
 pub(crate) const FFC_CHECK_Q_NOT_PRIME: c_int = 0x00010;
 /// `FFC_CHECK_INVALID_Q_VALUE` — `include/internal/ffc.h:58`.
 pub(crate) const FFC_CHECK_INVALID_Q_VALUE: c_int = 0x00020;
 /// `FFC_CHECK_INVALID_J_VALUE` — `include/internal/ffc.h:59`.
+// Unreached in this crate: the reader is in `crypto/dsa/dsa_check.c` and `crypto/dh/dh_asn1.c`. Kept because the unit around it
+// is whole (D327's rule); D330's subtree-wide allow on `pub(crate) mod ffc;` is deleted in D331.
+#[allow(dead_code)]
 pub(crate) const FFC_CHECK_INVALID_J_VALUE: c_int = 0x00040;
 // `0x80` and `0x100` are reserved by `include/openssl/dh.h` for check bits that are not
 // relevant to FFC (`include/internal/ffc.h:61-64`), so the enumeration skips them.

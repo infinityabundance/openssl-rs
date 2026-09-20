@@ -247,21 +247,25 @@ BLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
     # `open` rather than deferred: a stratum cannot hand a symbol to itself (D296). The RSA half of
     # this row is therefore gone rather than carried, and what is left is the six parameter
     # generators.
+    # (3) **Split by D331, and the split is the DH half leaving.** This row used to carry six
+    # names, three of them DH's. `DH_generate_key` (crypto/dh/dh_key.c), `DH_generate_parameters`
+    # (crypto/dh/dh_depr.c) and `DH_generate_parameters_ex` (crypto/dh/dh_gen.c) land in D331 with
+    # the rest of 8.5's DH layer, so the row is **split rather than emptied**: a stratum cannot
+    # hand a symbol to itself (D296), and the six names were never one blocker anyway -- the DH
+    # three reach `BN_priv_rand_ex`/`BN_generate_prime_ex2`, which D324 landed, and the DSA/EC
+    # three are the two units that still do not exist. D326's precedent is the shape: the half
+    # that left was not the blocker the row named, and what remains keeps its own reason.
     (
-        ("DH_generate_key", "DH_generate_parameters", "DH_generate_parameters_ex",
-         "DSA_generate_key", "DSA_generate_parameters_ex",
-         "EC_KEY_generate_key"),
+        ("DSA_generate_key", "DSA_generate_parameters_ex", "EC_KEY_generate_key"),
         9,
-        "every one of these reaches a BN random primitive: "
-        "`DH_generate_parameters_ex`'s primes come from `BN_generate_prime_ex2` "
-        "(`crypto/dh/dh_gen.c:217`), `DH_generate_key`'s private value from `BN_priv_rand_ex` "
-        "(`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from "
-        "`crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and "
-        "`EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them "
-        "land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so "
-        "Phase 9 is the phase that retires the six. `DH_generate_parameters` is the "
-        "deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same "
-        "reason.",
+        "the three units these name do not exist in this crate yet. `DSA_generate_key` and "
+        "`DSA_generate_parameters_ex` are `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c` -- "
+        "Phase 8.6's row, and the `crypto/dsa/` machinery (the `DSA` object, its method table "
+        "and its FFC front end) lands there; `EC_KEY_generate_key` is `crypto/ec/ec_key.c`, "
+        "Phase 8.7's. Both reach the random layer through their own BN calls "
+        "(`BN_priv_rand_range`/`BN_generate_prime_ex2` on the `bnrand` -> `RAND_bytes_ex` path "
+        "that D313/D324 landed), so this row is about the **units** rather than about a callee "
+        "now in: the DH half of the old row retired in D331 precisely because its units landed.",
     ),
     # (4) **Corrected while building Phase 9's ledger, and the row's own text said how.** This row
     # used to hand `DH_KDF_X9_42` and `ECDH_KDF_X9_62` to phase 9, and it named the condition under

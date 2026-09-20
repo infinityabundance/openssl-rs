@@ -530,6 +530,7 @@
               "RT-CMAC",
               "RT-COMP",
               "RT-CONF-MOD",
+              "RT-DH",
               "RT-DIGEST",
               "RT-DSO",
               "RT-ERR",
@@ -629,6 +630,7 @@
               "RT-CMAC",
               "RT-CONF",
               "RT-CONF-MOD",
+              "RT-DH",
               "RT-DIGEST",
               "RT-DSO",
               "RT-ERR",
@@ -6174,6 +6176,7 @@
               "RT-ASN1",
               "RT-BN",
               "RT-BN-RAND",
+              "RT-DH",
               "RT-RSA"
             ],
             "symbol": "BN_cmp"
@@ -6228,6 +6231,7 @@
             "basis": "called",
             "courts": [
               "RT-BN",
+              "RT-DH",
               "RT-RSA"
             ],
             "symbol": "BN_dup"
@@ -6247,6 +6251,7 @@
               "RT-ASN1-TEMPLATE",
               "RT-BN",
               "RT-BN-RAND",
+              "RT-DH",
               "RT-PARAM",
               "RT-RSA"
             ],
@@ -6411,6 +6416,7 @@
             "courts": [
               "RT-BN",
               "RT-BN-RAND",
+              "RT-DH",
               "RT-RSA"
             ],
             "symbol": "BN_is_odd"
@@ -6678,6 +6684,7 @@
               "RT-ASN1-TEMPLATE",
               "RT-BN",
               "RT-BN-RAND",
+              "RT-DH",
               "RT-RSA"
             ],
             "symbol": "BN_new"
@@ -6736,6 +6743,7 @@
             "courts": [
               "RT-BN",
               "RT-BN-RAND",
+              "RT-DH",
               "RT-RSA"
             ],
             "symbol": "BN_num_bits"
@@ -6841,6 +6849,7 @@
               "RT-ASN1-TEMPLATE",
               "RT-BN",
               "RT-BN-RAND",
+              "RT-DH",
               "RT-RSA"
             ],
             "symbol": "BN_set_word"
@@ -14408,10 +14417,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 340,
-          "directly_courted_called": 340,
+          "directly_courted": 379,
+          "directly_courted_called": 379,
           "directly_courted_referenced": 0,
-          "implemented": 348,
+          "implemented": 387,
           "indirectly_courted": 8,
           "non_observable": 0,
           "unmatched": 0
@@ -15248,6 +15257,188 @@
             "courts": [
               "RT-DH"
             ],
+            "symbol": "DH_OpenSSL"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_bits"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_check"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_check_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_check_params"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_check_params_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_check_pub_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_check_pub_key_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_clear_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_compute_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_compute_key_padded"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_generate_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_generate_parameters"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_generate_parameters_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_get0_engine"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_get0_g"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_get0_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_get0_p"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_get0_pqg"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_get0_priv_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_get0_pub_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_get0_q"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_get_default_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_get_ex_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_get_length"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
             "symbol": "DH_meth_dup"
           },
           {
@@ -15389,6 +15580,97 @@
               "RT-DH"
             ],
             "symbol": "DH_meth_set_init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_new_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_security_bits"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_set0_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_set0_pqg"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_set_default_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_set_ex_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_set_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_set_length"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_set_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_size"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_test_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_up_ref"
           },
           {
             "basis": "called",
@@ -17251,10 +17533,10 @@
       }
     ],
     "totals": {
-      "directly_courted": 2253,
-      "directly_courted_called": 1972,
+      "directly_courted": 2292,
+      "directly_courted_called": 2011,
       "directly_courted_referenced": 281,
-      "implemented": 2261,
+      "implemented": 2300,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -17265,7 +17547,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "ffd7ab3172a129810efc411de209fcf49b610b6e8c6b42bab2adacf3f79aad3f"
+      "sha256": "995f81b887ea111dbc3e5836af95e78d4e6ddb3207d20f9e7302672302b81f42"
     },
     {
       "name": "symbol-ownership",
@@ -17280,7 +17562,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "9a6f9ac4dee9af8eaa472c610843e8f8ee3da175822b9e5399eeeac768914920"
+      "sha256": "d015b5a38d28c4f7efdb1f1160d8566657012ac5e1ae03619c684b9ba5a5bffb"
     },
     {
       "name": "phase3-courts",
@@ -17290,7 +17572,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "b99e0d27926aae10120a2849e616878336c7c1be2822fda9c1d5ca19891949d9"
+      "sha256": "18c7854912051e0c3f1166965789b806ca2e123d04f95d53fe3920df7463a612"
     },
     {
       "name": "phase4-courts",
@@ -17300,7 +17582,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "54607a640c50bcdc2d6900d09d36cf4bff129fe5712bb5386610e0871f7702a9"
+      "sha256": "3ac59aaac317a80b8092a4dd351694065d49397df64bbdffc0f91cc3fa0e4df9"
     },
     {
       "name": "phase5-courts",
@@ -17310,7 +17592,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "d471972a17021c472e0f2c822f0fb221957e844ee1dafda8883e49bfe4fbee1b"
+      "sha256": "d5dbf3bd2f95694fb9b148d099696f1b5b5b8e0534218a302ee7528b4be57243"
     },
     {
       "name": "phase6-courts",
@@ -17320,7 +17602,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "4ab576668c10f68a92d240467866ab70dd9eeff933e6be8fe67141d57017c2fd"
+      "sha256": "6f49cc565dc9c81c0fe2fc243fe3177597c3f87546c0953f5af32bb68a5fc3e3"
     },
     {
       "name": "phase7-courts",
@@ -17330,17 +17612,17 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "2cdab82e4f4ba4f8d79ea6a47a1eddd82ad39fe2ed7143163ff32a53bb1f38c1"
+      "sha256": "0b9b1aaa2e65d6e4c56f293282a99adc87fc4142e536e602aa36e8c51815dc63"
     },
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "2f4a5f2a59c062a94324d73a078a21fe3b80605ff060c852bba784e3b5f8de32"
+      "sha256": "b384ea1d02c1609581a98a458e6150fdbf913995896e53b6a6c252408d1731e6"
     },
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "a730ce5f2ac43450ed7ed4956c3ab3847f18d931c1ab8390a62e67b08cfb79ee"
+      "sha256": "49ef326f211635bfe705ed8156298af5b57f2f5410fe691e9c126a7c854fc427"
     },
     {
       "name": "phase9-courts",

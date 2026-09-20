@@ -282,7 +282,7 @@
         "truncf128",
         "truncf16"
       ],
-      "compiler_emitted_count": 8720,
+      "compiler_emitted_count": 8757,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -290,7 +290,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 2261,
+        "implemented": 2300,
         "implemented_symbols": [
           "AES_bi_ige_encrypt",
           "AES_cbc_encrypt",
@@ -1137,6 +1137,32 @@
           "DES_string_to_2keys",
           "DES_string_to_key",
           "DES_xcbc_encrypt",
+          "DH_OpenSSL",
+          "DH_bits",
+          "DH_check",
+          "DH_check_ex",
+          "DH_check_params",
+          "DH_check_params_ex",
+          "DH_check_pub_key",
+          "DH_check_pub_key_ex",
+          "DH_clear_flags",
+          "DH_compute_key",
+          "DH_compute_key_padded",
+          "DH_free",
+          "DH_generate_key",
+          "DH_generate_parameters",
+          "DH_generate_parameters_ex",
+          "DH_get0_engine",
+          "DH_get0_g",
+          "DH_get0_key",
+          "DH_get0_p",
+          "DH_get0_pqg",
+          "DH_get0_priv_key",
+          "DH_get0_pub_key",
+          "DH_get0_q",
+          "DH_get_default_method",
+          "DH_get_ex_data",
+          "DH_get_length",
           "DH_meth_dup",
           "DH_meth_free",
           "DH_meth_get0_app_data",
@@ -1158,6 +1184,19 @@
           "DH_meth_set_generate_key",
           "DH_meth_set_generate_params",
           "DH_meth_set_init",
+          "DH_new",
+          "DH_new_method",
+          "DH_security_bits",
+          "DH_set0_key",
+          "DH_set0_pqg",
+          "DH_set_default_method",
+          "DH_set_ex_data",
+          "DH_set_flags",
+          "DH_set_length",
+          "DH_set_method",
+          "DH_size",
+          "DH_test_flags",
+          "DH_up_ref",
           "DIRECTORYSTRING_free",
           "DIRECTORYSTRING_it",
           "DIRECTORYSTRING_new",
@@ -2554,7 +2593,7 @@
           "i2d_DISPLAYTEXT",
           "i2t_ASN1_OBJECT"
         ],
-        "scaffolded": 3635
+        "scaffolded": 3596
       },
       "libssl": {
         "authority_exports": 603,
@@ -2565,18 +2604,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 2261,
-      "scaffolded": 4238
+      "implemented": 2300,
+      "scaffolded": 4199
     }
   },
-  "body_hash": "ea5e8f8e9fe06e89ab1feffd09b533e47b12fcba5e59d204975be17bfa3ed3e9",
+  "body_hash": "7d51b45b43d8fa5b11deda7e697441d2bb7a58b50d42029907c5cbb025b3d133",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "efbe9b0e2947168858eb46a3866e6cfb2f47b1e905c449984ed70244cfef559d"
+      "sha256": "a8218875be5fd1fddad70e5546de029404918d2262167a26f0a0a33666a81797"
     },
     {
       "name": "authority-exports",

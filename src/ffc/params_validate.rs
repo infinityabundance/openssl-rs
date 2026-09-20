@@ -301,6 +301,9 @@ pub(crate) unsafe fn ossl_ffc_params_simple_validate(
 /// # Safety
 ///
 /// `params` must be live and its slots NULL or live; `res` must be NULL or writable.
+// Unreached in this crate: the reader is `crypto/dh/dh_backend.c and crypto/dsa/dsa_backend.c`. Kept because the unit around it
+// is whole (D327's rule); D330's subtree-wide allow on `pub(crate) mod ffc;` is deleted in D331.
+#[allow(dead_code)]
 pub(crate) unsafe fn ossl_ffc_params_full_validate(
     libctx: *mut core::ffi::c_void,
     params: *const FfcParams,
