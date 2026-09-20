@@ -80,6 +80,24 @@ pub mod dh;
 pub mod digest;
 pub mod dso;
 pub mod evp;
+// Phase 8.5's `crypto/ffc/` primitives: the FFC domain-parameter object, its generators and
+// validators, and the private-key generator and validators DH and DSA are built on. Every name
+// in the subtree is internal, so no ledger row moves when it lands.
+//
+// `#[allow(dead_code)]`'s reason, and it is the module's whole status: **the layer has no caller
+// until the next slice of 8.5 lands.** `dh_lib.c` is the first thing that calls
+// `ossl_ffc_params_init`/`_cleanup`, `dh_key.c` the first that calls
+// `ossl_ffc_generate_private_key` and `ossl_ffc_params_simple_validate`, and `dh_gen.c`,
+// `dh_check.c` and `dh_asn1.c` the first that reach the rest; none of them is in the crate yet,
+// so every name here is unreachable from the crate root and rustc is right to say so. It is one
+// attribute on the subtree rather than one per item because the exclusion is exactly the
+// subtree's boundary, which is the reasoning `src/runtime/ctype_table.rs`'s `mask` module records
+// for its own whole-module annotation. It is deleted when `dh_key.c` lands: at that point every
+// name becomes reachable and an allow here would be hiding real dead code. D327's rule is the one
+// being applied — an unreachable transcription is *kept* when the unit around it is whole, and
+// the whole unit is what makes the annotation honest rather than a place to hide an omission.
+#[allow(dead_code)]
+pub(crate) mod ffc;
 pub mod ffi;
 pub mod hpke;
 pub mod idea;

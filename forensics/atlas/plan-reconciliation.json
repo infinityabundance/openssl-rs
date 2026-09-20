@@ -5,12 +5,12 @@
       "in-progress"
     ],
     "census": {
-      "names_a_file_the_authority_does_not_have": 16,
+      "names_a_file_the_authority_does_not_have": 17,
       "symbols_not_reached": 7,
-      "units_not_reached": 20
+      "units_not_reached": 24
     },
     "census_by_stratum": {
-      "8": 29,
+      "8": 34,
       "9": 14
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
@@ -26,6 +26,7 @@
         "docs/PHASE-8-SUBPHASES.md:8.3:courts/layout/oracle-polyval.c",
         "docs/PHASE-8-SUBPHASES.md:8.3:oracle-mem-file.c",
         "docs/PHASE-8-SUBPHASES.md:8.3:providers/implementations/macs/cmac_prov.c",
+        "docs/PHASE-8-SUBPHASES.md:8.5:courts/layout/measure-ffc-params.c",
         "docs/PHASE-9-SUBPHASES.md:9.4:drbg_ctr.c",
         "docs/PHASE-9-SUBPHASES.md:9.4:drbg_hash.c",
         "docs/PHASE-9-SUBPHASES.md:9.4:drbg_hmac.c",
@@ -43,9 +44,13 @@
         "xor128_encrypt_n_pad"
       ],
       "units_not_reached": [
+        "crypto/bn/bn_dh.c",
         "crypto/chacha/chacha_enc.c",
         "crypto/dh/dh_gen.c",
         "crypto/dh/dh_key.c",
+        "crypto/ffc/ffc_backend.c",
+        "crypto/ffc/ffc_dh.c",
+        "crypto/param_build_set.c",
         "providers/common/provider_seeding.c",
         "providers/common/provider_util.c",
         "providers/fips/fipsprov.c",
@@ -74,12 +79,12 @@
         "docs/PHASE-9-SUBPHASES.md"
       ],
       "rows_judged": 82,
-      "symbols_named_by_a_row": 86,
-      "symbols_reached": 79,
+      "symbols_named_by_a_row": 87,
+      "symbols_reached": 80,
       "unit_records": 66,
       "units_named_by_a_record": 68,
-      "units_named_by_a_row": 162,
-      "units_reached": 142
+      "units_named_by_a_row": 171,
+      "units_reached": 147
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -181,6 +186,35 @@
         "transcribed_by": [
           "src/context/core_bio.rs"
         ]
+      },
+      "crypto/bn/bn_dh.c": {
+        "defines": [
+          "ossl_bignum_const_2",
+          "ossl_bignum_dh1024_160_g",
+          "ossl_bignum_dh1024_160_p",
+          "ossl_bignum_dh1024_160_q",
+          "ossl_bignum_dh2048_224_g",
+          "ossl_bignum_dh2048_224_p",
+          "ossl_bignum_dh2048_224_q",
+          "ossl_bignum_dh2048_256_g",
+          "ossl_bignum_dh2048_256_p",
+          "ossl_bignum_dh2048_256_q",
+          "ossl_bignum_ffdhe2048_p",
+          "ossl_bignum_ffdhe2048_q",
+          "ossl_bignum_ffdhe3072_p",
+          "ossl_bignum_ffdhe3072_q",
+          "ossl_bignum_ffdhe4096_p",
+          "ossl_bignum_ffdhe4096_q",
+          "ossl_bignum_ffdhe6144_p",
+          "ossl_bignum_ffdhe6144_q",
+          "ossl_bignum_ffdhe8192_p",
+          "ossl_bignum_ffdhe8192_q"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": []
       },
       "crypto/bn/bn_rand.c": {
         "defines": [
@@ -1385,6 +1419,119 @@
           "src/evp/skeymgmt.rs"
         ]
       },
+      "crypto/ffc/ffc_backend.c": {
+        "defines": [
+          "ossl_ffc_params_fromdata"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/ffc/ffc_dh.c": {
+        "defines": [
+          "ossl_ffc_name_to_dh_named_group",
+          "ossl_ffc_named_group_get_keylength",
+          "ossl_ffc_named_group_get_name",
+          "ossl_ffc_named_group_get_q",
+          "ossl_ffc_named_group_get_uid",
+          "ossl_ffc_named_group_set",
+          "ossl_ffc_numbers_to_dh_named_group",
+          "ossl_ffc_uid_to_dh_named_group"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/ffc/ffc_key_generate.c": {
+        "defines": [
+          "ossl_ffc_generate_private_key"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/ffc/key_generate.rs"
+        ]
+      },
+      "crypto/ffc/ffc_key_validate.c": {
+        "defines": [
+          "ossl_ffc_validate_private_key",
+          "ossl_ffc_validate_public_key",
+          "ossl_ffc_validate_public_key_partial"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/ffc/key_validate.rs"
+        ]
+      },
+      "crypto/ffc/ffc_params.c": {
+        "defines": [
+          "ossl_ffc_params_cleanup",
+          "ossl_ffc_params_cmp",
+          "ossl_ffc_params_copy",
+          "ossl_ffc_params_enable_flags",
+          "ossl_ffc_params_get0_pqg",
+          "ossl_ffc_params_get_validate_params",
+          "ossl_ffc_params_init",
+          "ossl_ffc_params_print",
+          "ossl_ffc_params_set0_j",
+          "ossl_ffc_params_set0_pqg",
+          "ossl_ffc_params_set_flags",
+          "ossl_ffc_params_set_gindex",
+          "ossl_ffc_params_set_h",
+          "ossl_ffc_params_set_pcounter",
+          "ossl_ffc_params_set_seed",
+          "ossl_ffc_params_set_validate_params",
+          "ossl_ffc_params_todata",
+          "ossl_ffc_set_digest"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/ffc/params.rs"
+        ]
+      },
+      "crypto/ffc/ffc_params_generate.c": {
+        "defines": [
+          "ossl_ffc_params_FIPS186_2_gen_verify",
+          "ossl_ffc_params_FIPS186_2_generate",
+          "ossl_ffc_params_FIPS186_4_gen_verify",
+          "ossl_ffc_params_FIPS186_4_generate"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/ffc/params_generate.rs"
+        ]
+      },
+      "crypto/ffc/ffc_params_validate.c": {
+        "defines": [
+          "ossl_ffc_params_FIPS186_2_validate",
+          "ossl_ffc_params_FIPS186_4_validate",
+          "ossl_ffc_params_full_validate",
+          "ossl_ffc_params_simple_validate",
+          "ossl_ffc_params_validate_unverifiable_g"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/ffc/params_validate.rs"
+        ]
+      },
       "crypto/hmac/hmac.c": {
         "defines": [],
         "recorded_by": null,
@@ -1437,6 +1584,22 @@
         "transcribed_by": [
           "src/params/build.rs"
         ]
+      },
+      "crypto/param_build_set.c": {
+        "defines": [
+          "ossl_param_build_set_bn",
+          "ossl_param_build_set_bn_pad",
+          "ossl_param_build_set_int",
+          "ossl_param_build_set_long",
+          "ossl_param_build_set_multi_key_bn",
+          "ossl_param_build_set_octet_string",
+          "ossl_param_build_set_utf8_string"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": []
       },
       "crypto/params.c": {
         "defines": [
@@ -2395,10 +2558,10 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 192
+      "transcribed_units": 197
     }
   },
-  "body_hash": "a94a18ddcb51b4554f5c9223c62a241bdefc801b1e07e78f861f1d876f86bb3b",
+  "body_hash": "dffa674746a45d4346e54bf3ad7d733ae96410b7a6a2618de53343771fa17be4",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -2409,12 +2572,12 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "4da920a2006c76456b2423b6e8448ed13db87333db312511ada67006b494c2db"
+      "sha256": "1f96b85cbbd18cec2fd313a6c8f7e1f37d40cc1df9ab8acb84f6b41592f6fc74"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "af677106ede7a7d76dcaa0162e48be1734875cc5ffa36256b3f2652eb69a6e5c"
+      "sha256": "ffd7ab3172a129810efc411de209fcf49b610b6e8c6b42bab2adacf3f79aad3f"
     },
     {
       "name": "phase-state",
@@ -2424,7 +2587,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "48243c720db0156fb700e3aa42a90b26b15b11b60bf063c39170400938f69dba"
+      "sha256": "3c75f1dd7d18116d8b1a898cd7807a01328de41035da9e2716bd4e898fe74b9f"
     },
     {
       "name": "source-manifest",
@@ -2449,7 +2612,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "896db2146d3df03b9fa36fa7c495685a5ad1fc7b4146c9b0b9c27cc289b70938"
+      "sha256": "2e698b73cb15f829c7cc34e444bd9826d8deacdf8e6f8ca80f3f865306d224f7"
     },
     {
       "name": "plan-PHASE-9-SUBPHASES",
