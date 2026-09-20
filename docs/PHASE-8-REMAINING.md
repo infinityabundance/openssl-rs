@@ -13,11 +13,11 @@ Read from the ledger's `body.counts`.
 | quantity | count |
 |---|---|
 | owned | 786 |
-| implemented | 272 |
-| deferred to a later phase | 24 |
+| implemented | 278 |
+| deferred to a later phase | 18 |
 | open in this stratum | 490 |
 
-The identity `owned = implemented + deferred + open` is `786 = 272 + 24 + 490`, which holds.
+The identity `owned = implemented + deferred + open` is `786 = 278 + 18 + 490`, which holds.
 
 ## The merge gate — what Phase 8 owes to Phase 9
 
@@ -44,15 +44,9 @@ this stratum can be complete.
 | `RSA_get_default_method` | `rsa.h` | 9 |
 | `RSA_new` | `rsa.h` | 9 |
 | `RSA_new_method` | `rsa.h` | 9 |
-| `RSA_padding_add_PKCS1_OAEP` | `rsa.h` | 9 |
-| `RSA_padding_add_PKCS1_OAEP_mgf1` | `rsa.h` | 9 |
-| `RSA_padding_add_PKCS1_PSS` | `rsa.h` | 9 |
-| `RSA_padding_add_PKCS1_PSS_mgf1` | `rsa.h` | 9 |
-| `RSA_padding_add_PKCS1_type_2` | `rsa.h` | 9 |
-| `RSA_padding_check_PKCS1_type_2` | `rsa.h` | 9 |
 | `RSA_setup_blinding` | `rsa.h` | 9 |
 
-**24** export(s) are deferred, to Phase 9. A
+**18** export(s) are deferred, to Phase 9. A
 stratum cannot be complete while any export it owns is neither implemented
 nor handed to a later phase, and these rows are the ones a later
 Phase 9 landing discharges.
@@ -75,15 +69,11 @@ symbols it covers are listed above it.
 
 - `RSA_PKCS1_OpenSSL`, `RSA_get_default_method`, `RSA_new`, `RSA_new_method`:
 
-  `rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from `RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence `RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be constructed -- until row (4)'s path exists, which is what makes the *lifetime* follow the padding rather than precede it. `RSA_set_default_method` is *not* in this row: it is a pointer store with no table read and no random call, and it stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. `ossl_rsa_new_with_ctx` is internal and is blocked with `RSA_new`, which it calls into.
+  `rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from `RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence `RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be constructed -- until the path that padding call leads into exists, which is what makes the *lifetime* follow the padding rather than precede it. That path landed in D323, so what this row is still waiting on is no longer the random layer: it is the thirteen `rsa_ossl_*` entry points slice D defines and the table that names them, which is the same commit. `RSA_set_default_method` is *not* in this row: it is a pointer store with no table read and no random call, and it stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. `ossl_rsa_new_with_ctx` is internal and is blocked with `RSA_new`, which it calls into.
 
 - `RSA_blinding_on`, `RSA_setup_blinding`:
 
   `RSA_blinding_on` (`crypto/rsa/rsa_crpt.c:68`) is a lock plus `RSA_setup_blinding`, and `RSA_setup_blinding` (`:104`) ends in `BN_BLINDING_create_param` (`crypto/bn/bn_blind.c`), whose `ai`/`e` values come from `BN_rand_range_ex` -> `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`). So both are blocked on Phase 9 through BN's own random path, and `RSA_blinding_off` is *not* in this row: it frees the object and needs nothing random.
-
-- `RSA_padding_add_PKCS1_OAEP`, `RSA_padding_add_PKCS1_OAEP_mgf1`, `RSA_padding_add_PKCS1_PSS`, `RSA_padding_add_PKCS1_PSS_mgf1`, `RSA_padding_add_PKCS1_type_2`, `RSA_padding_check_PKCS1_type_2`:
-
-  `ossl_rsa_padding_add_PKCS1_type_2_ex` (`crypto/rsa/rsa_pk1.c:147`) fills the padding with `RAND_bytes_ex`; `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` (`rsa_oaep.c:122`) generates its seed with it; `RSA_padding_add_PKCS1_PSS_mgf1` (`rsa_pss.c:242`) its salt; and `ossl_rsa_padding_check_PKCS1_type_2_ex` (`rsa_pk1.c:569`) generates a `rand_premaster_secret` with `RAND_priv_bytes_ex` for the implicit-rejection arm. The other three members of the family are *not* in this row and landed in D285: the `none` and X9.31 paddings, PKCS#1 v1.5 type 1, and both OAEP checks -- a padding *check* is a pure function of its input except where the refusal is deliberately randomised, which is why `RSA_padding_check_PKCS1_type_2` is here and `RSA_padding_check_PKCS1_OAEP_mgf1` is not.
 
 ## The work Phase 8 still owns
 

@@ -331,7 +331,7 @@
       "verdict": "pass"
     },
     "RT-RSA": {
-      "observations": 428,
+      "observations": 561,
       "verdict": "pass"
     },
     "RT-RUNTIME-EXT": {
@@ -373,11 +373,11 @@
     "phase5": 91,
     "phase6": 0,
     "phase7": 226,
-    "phase8": 24,
+    "phase8": 18,
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 2170,
+    "libcrypto": 2176,
     "libssl": 0
   },
   "open_obligations": {
@@ -387,7 +387,7 @@
     "phase6": 0,
     "phase7": 0,
     "phase8": 490,
-    "phase9": 54
+    "phase9": 48
   },
   "owned_obligations": {
     "phase3": 294,
@@ -396,7 +396,7 @@
     "phase6": 161,
     "phase7": 950,
     "phase8": 786,
-    "phase9": 93
+    "phase9": 87
   },
   "phases": {
     "0": "complete",
@@ -426,7 +426,7 @@
     "blocking_dependencies": 18,
     "divergence_names_covered": 30,
     "findings": 0,
-    "language_census": 3301,
+    "language_census": 3300,
     "sealed_census": 57
   },
   "provider_implemented": [

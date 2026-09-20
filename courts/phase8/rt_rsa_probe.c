@@ -9,13 +9,27 @@
  *
  * What this court is, and what it is not yet
  * ------------------------------------------
- * Two slices of `crypto/rsa` share this court. Slice B is the thirty-three `RSA_meth_*` labels plus
- * `RSA_null_method`, and **every one of the thirty-four is called below**. Slice A is `rsa_lib.c`'s
- * object layer plus `rsa_crpt.c`'s three accessors, and **thirty-four of its thirty-six exports are
- * called below as well**. Nothing here does any cryptography -- each function allocates a table or
- * an object, stores a pointer in one, or reads one -- so the transcript is about *identity and
- * ownership* rather than arithmetic, and that is the whole observable contract of these entry
- * points.
+ * Three slices of `crypto/rsa` share this court. Slice B is the thirty-three `RSA_meth_*` labels
+ * plus `RSA_null_method`, and **every one of the thirty-four is called below**. Slice A is
+ * `rsa_lib.c`'s object layer plus `rsa_crpt.c`'s three accessors, and **thirty-four of its
+ * thirty-six exports are called below as well**. Slice C is the sixteen labelling, checking and
+ * digesting entry points of the padding family -- `rsa_none.c`, `rsa_x931.c`, `rsa_pk1.c`,
+ * `rsa_oaep.c`'s `PKCS1_MGF1` and both OAEP checks, and now the five randomised *adds* and the
+ * type-2 *check* -- and **every one of the sixteen is called below**. Nothing here does any
+ * cryptography -- each function allocates a table or an object, stores a pointer in one, or reads
+ * one, or pads a buffer -- so the transcript is about *identity, ownership and structure* rather
+ * than arithmetic, and that is the whole observable contract of these entry points.
+ *
+ * **The padding arms observe random output without observing a random byte.** Five of the six
+ * padding functions added by D323 fill their output from the DRBG, and both runs of this probe are
+ * single-shot, so any byte derived from that draw would be a residual rather than an observation.
+ * What is printed instead is: the return code; the *structural* predicates over the block (`00 02`,
+ * the non-zero padding run, the terminating zero, the `0xbc` trailer, the zero leading bits a PSS
+ * block must have, the leading PSS version octet); a **round trip** through the landed
+ * `RSA_padding_check_PKCS1_type_2` / `RSA_padding_check_PKCS1_OAEP_mgf1`, whose answers are a
+ * length and a byte comparison and are therefore deterministic functions of the input; a
+ * **recomputation** of the PSS `H` from the salt the block itself encodes; and the refusal arms
+ * with their error queues drained. `rt_all_nonzero` and `pss_decodes` below are those predicates.
  *
  * **`RSA` is opaque in the installed header on both sides, and no constructor exists on the
  * candidate side yet**, so the object arms build their subject themselves: the fabrication block
@@ -341,6 +355,19 @@ static void rt_release(void *o)
     RSA_free(o);
 }
 
+/* Whether every octet of `p` is non-zero. The type-2 padding's retry loop exists to make this
+ * true whatever the DRBG drew, so it is a *deterministic* predicate over random bytes -- which is
+ * what lets a court observe this padding without a byte of it entering the transcript. */
+static int rt_all_nonzero(const unsigned char *p, int n)
+{
+    int i;
+
+    for (i = 0; i < n; i++)
+        if (p[i] == 0)
+            return 0;
+    return 1;
+}
+
 /* ------------------------------------------------------------------ the padding primitives */
 
 /* Drain the error queue, printing each record's **packed code and coordinate**. The packed code
@@ -473,7 +500,267 @@ static void oaep_arms(void)
         NULL, 0, sha1, sha1));
     printf("oaep.zero_tlen=%d\n", RSA_padding_check_PKCS1_OAEP_mgf1(out, 0, em, 128, 128,
         NULL, 0, sha1, sha1));
+
+    /* ------------------------------------------------------------------ the OAEP *adds* */
+
+    /* The adds draw a random seed, so no byte they write can enter the transcript. What can is
+     * the round trip: `RSA_padding_check_PKCS1_OAEP_mgf1` is a pure function of the block it is
+     * handed, so "the message came back, and it is 16 octets long" is a deterministic fact about a
+     * block neither binary can predict. The version octet is not random either. */
+    ERR_clear_error();
+    memset(em, 0, sizeof(em));
+    printf("oaep.add_mgf1.ok=%d\n",
+        RSA_padding_add_PKCS1_OAEP_mgf1(em, 128, msg, 16, NULL, 0, sha1, sha1));
+    printf("oaep.add_mgf1.0=%02x\n", em[0]);
+    memset(out, 0x5a, sizeof(out));
+    r = RSA_padding_check_PKCS1_OAEP_mgf1(out, 128, em, 128, 128, NULL, 0, sha1, sha1);
+    printf("oaep.add_mgf1.rt=%d\n", r);
+    printf("oaep.add_mgf1.rt_body=%d\n", r == 16 && memcmp(out, msg, 16) == 0);
+    drain("oaep_add_mgf1_ok");
+
+    /* The wrapper: both digests NULL, which the callee turns into SHA-1, and the empty label. */
+    ERR_clear_error();
+    memset(em, 0, sizeof(em));
+    printf("oaep.add.ok=%d\n", RSA_padding_add_PKCS1_OAEP(em, 128, msg, 16, NULL, 0));
+    memset(out, 0x5a, sizeof(out));
+    r = RSA_padding_check_PKCS1_OAEP(out, 128, em, 128, 128, NULL, 0);
+    printf("oaep.add.rt=%d\n", r);
+    printf("oaep.add.rt_body=%d\n", r == 16 && memcmp(out, msg, 16) == 0);
+    drain("oaep_add_ok");
+
+    /* A non-empty label, hashed into `DB` by both sides. The same block under the *empty* label
+     * must not decode: that is the hash comparison in the check, and it is the arm that says the
+     * label reached the add rather than merely the check. */
+    {
+        static const unsigned char label[5] = { 0x01, 0x02, 0x03, 0x04, 0x05 };
+
+        ERR_clear_error();
+        memset(em, 0, sizeof(em));
+        printf("oaep.add_label.ok=%d\n",
+            RSA_padding_add_PKCS1_OAEP_mgf1(em, 128, msg, 16, label, 5, sha1, sha1));
+        memset(out, 0x5a, sizeof(out));
+        r = RSA_padding_check_PKCS1_OAEP_mgf1(out, 128, em, 128, 128, label, 5, sha1, sha1);
+        printf("oaep.add_label.rt=%d\n", r);
+        printf("oaep.add_label.rt_body=%d\n", r == 16 && memcmp(out, msg, 16) == 0);
+        drain("oaep_add_label_ok");
+        ERR_clear_error();
+        r = RSA_padding_check_PKCS1_OAEP_mgf1(out, 128, em, 128, 128, NULL, 0, sha1, sha1);
+        printf("oaep.add_label.empty_label=%d\n", r);
+        drain("oaep_add_label_empty");
+    }
+
+    /* The two length refusals. The first is the ordinary one: 87 > 127 - 2*20 - 1. The second is
+     * `emlen < 2*mdlen + 1`, and it is reachable **only** with a negative `flen`: at a modulus too
+     * small for the digest the first test fires for every non-negative message length, so `-1` is
+     * what puts the `RSA_R_KEY_SIZE_TOO_SMALL` site under the court rather than leaving it to a
+     * reader. Neither reaches the copy, which is why `msg`'s 16 octets are enough for both. */
+    ERR_clear_error();
+    printf("oaep.add_long=%d\n",
+        RSA_padding_add_PKCS1_OAEP_mgf1(em, 128, msg, 87, NULL, 0, sha1, sha1));
+    drain("oaep_add_long");
+    ERR_clear_error();
+    printf("oaep.add_small_key=%d\n",
+        RSA_padding_add_PKCS1_OAEP_mgf1(em, 41, msg, -1, NULL, 0, sha1, sha1));
+    drain("oaep_add_small_key");
+
     EVP_MD_free((EVP_MD *)sha1);
+}
+
+/* ------------------------------------------------------------------ the PSS adds */
+
+/* The recovery `ossl_rsa_verify_PKCS1_PSS_mgf1` performs, written out here because that verifier is
+ * `rsa_pss.c`'s other half and is slice D's. It unmasks `DB` with `MGF1(H)`, drops the leading bits
+ * `MSBits` forbids, walks to the `0x01`, and rebuilds `H = Hash(00 * 8 || mHash || salt)`.
+ *
+ * **The salt is the random part and not one byte of it is printed.** The answer is a yes/no about a
+ * recomputation, and it is deterministic because the salt the block encodes is the salt the writer
+ * drew -- a writer that encoded something else answers 0, which is what makes this an observation
+ * rather than a restatement: the only other way to check it would be to print the salt.
+ *
+ * The caller passes `em` already advanced past the leading zero octet and `emlen` already shrunk,
+ * which is what the verifier does when `MSBits == 0`. */
+static int pss_decodes(const unsigned char *em, int emlen, int msbits,
+    const unsigned char *mhash, int hlen, const EVP_MD *md, const EVP_MD *mgf1, int wantslen)
+{
+    unsigned char db[256];
+    unsigned char buf[8 + EVP_MAX_MD_SIZE + 256];
+    unsigned char h2[EVP_MAX_MD_SIZE];
+    const unsigned char *H;
+    int masked_dblen = emlen - hlen - 1;
+    int i, slen;
+
+    if (masked_dblen <= 0 || masked_dblen > (int)sizeof(db))
+        return 0;
+    H = em + masked_dblen;
+    if (PKCS1_MGF1(db, masked_dblen, H, hlen, mgf1) != 0)
+        return 0;
+    for (i = 0; i < masked_dblen; i++)
+        db[i] ^= em[i];
+    if (msbits)
+        db[0] &= 0xFF >> (8 - msbits);
+    /* The authority's own scan, including its "the separator may be the last octet" arm. */
+    for (i = 0; db[i] == 0 && i < (masked_dblen - 1); i++)
+        ;
+    if (db[i++] != 0x1)
+        return 0;
+    slen = masked_dblen - i;
+    if (slen != wantslen)
+        return 0;
+    memset(buf, 0, 8);
+    memcpy(buf + 8, mhash, (size_t)hlen);
+    memcpy(buf + 8 + hlen, db + i, (size_t)slen);
+    if (EVP_Digest(buf, (size_t)(8 + hlen + slen), h2, NULL, md, NULL) != 1)
+        return 0;
+    return memcmp(h2, H, (size_t)hlen) == 0;
+}
+
+/* One PSS arm: the add -- through the `_mgf1` export when `mgf1` is non-NULL and through the
+ * NULL-`mgf1Hash` wrapper when it is not -- then the trailer, the first-octet test the *verifier*
+ * applies (`EM[0] & (0xFF << MSBits) == 0`, which for `MSBits == 0` is the leading zero octet
+ * itself), and the recovery. `emlen` and `base` describe the effective block: for a modulus whose
+ * `BN_num_bits(n) - 1` is a multiple of eight the writer spends one octet on the leading zero and
+ * shrinks `emLen` to match, so `base` is 1 and every position below is relative to it. */
+static void pss_arm(void *o, unsigned char *em, int emlen, int msbits, int base,
+    const unsigned char *mhash, int hlen, const EVP_MD *md, const EVP_MD *mgf1,
+    int requested, int want, const char *tag)
+{
+    int r;
+
+    memset(em, 0, 256);
+    ERR_clear_error();
+    if (mgf1 == NULL)
+        r = RSA_padding_add_PKCS1_PSS(o, em, mhash, md, requested);
+    else
+        r = RSA_padding_add_PKCS1_PSS_mgf1(o, em, mhash, md, mgf1, requested);
+    printf("rsa.pss.%s.ret=%d\n", tag, r);
+    printf("rsa.pss.%s.trailer=%d\n", tag, em[base + emlen - 1] == 0xbc);
+    printf("rsa.pss.%s.lead=%d\n", tag, (em[0] & (0xFF << msbits)) == 0);
+    printf("rsa.pss.%s.decodes=%d\n", tag,
+        pss_decodes(em + base, emlen, msbits, mhash, hlen, md, mgf1 == NULL ? md : mgf1, want));
+    drain(tag);
+}
+
+/* The two PSS adds, over a fabricated object whose `n` is a genuine `BIGNUM` of `bits` bits -- the
+ * only thing the add reads (`BN_num_bits(n)` for the leading bits, `RSA_size` for the width).
+ * `libctx` is left NULL by `rt_blank`, which is the value the export in `rsa_ossl.c` would pass for
+ * an object that has none; the reason the internal reads `rsa->libctx` rather than a parameter is
+ * that a caller *can* put something else there, and that is the one thing this court cannot
+ * observe without a second library context, which this crate does not have yet. */
+static void rsa_pss_arms(void)
+{
+    const EVP_MD *sha1 = EVP_MD_fetch(NULL, "SHA1", NULL);
+    const EVP_MD *sha256 = EVP_MD_fetch(NULL, "SHA256", NULL);
+    unsigned char mhash[64];
+    unsigned char em[256];
+    void *o = rt_blank();
+    void *o2 = rt_blank();
+    void *small = rt_blank();
+    BIGNUM *n = NULL, *n2 = NULL, *n3 = NULL;
+    int i, hlen, hlen256, emlen, emlen2, msbits;
+
+    printf("rsa.pss.md_fetched=%d\n", sha1 != NULL && sha256 != NULL);
+    if (sha1 == NULL || sha256 == NULL)
+        return;
+    for (i = 0; i < 64; i++)
+        mhash[i] = (unsigned char)(0x10 + i);
+
+    /* 1024 bits: `BN_num_bits(n) - 1` is 1023, so `MSBits` is 7 and the block is the whole
+     * `RSA_size`. */
+    n = rt_bits(1024);
+    RT_N(o) = n;
+    printf("rsa.pss.n_1024=%d\n", n != NULL);
+    if (n == NULL)
+        return;
+
+    hlen = EVP_MD_get_size(sha1);
+    hlen256 = EVP_MD_get_size(sha256);
+    emlen = RSA_size(o);
+    msbits = (BN_num_bits(n) - 1) & 0x7;
+    printf("rsa.pss.hlen=%d\n", hlen);
+    printf("rsa.pss.emlen=%d\n", emlen);
+    printf("rsa.pss.msbits=%d\n", msbits);
+
+    /* The five `sLen` conventions and two explicit lengths. `-1` is the digest length; `-2` and
+     * `-3` are the modulus maximum; `-4` is the maximum capped at the digest length, which is the
+     * only one that is a `min` of two rules and therefore the only one that a lost `sLenMax`
+     * changes. Zero exercises the `sLen > 0` guards around the salt allocation and the digest
+     * update. */
+    pss_arm(o, em, emlen, msbits, 0, mhash, hlen, sha1, NULL, RSA_PSS_SALTLEN_DIGEST, hlen,
+        "slen_digest");
+    pss_arm(o, em, emlen, msbits, 0, mhash, hlen, sha1, sha1, RSA_PSS_SALTLEN_MAX,
+        emlen - hlen - 2, "slen_max");
+    pss_arm(o, em, emlen, msbits, 0, mhash, hlen, sha1, sha1, RSA_PSS_SALTLEN_AUTO,
+        emlen - hlen - 2, "slen_auto");
+    pss_arm(o, em, emlen, msbits, 0, mhash, hlen, sha1, sha1, RSA_PSS_SALTLEN_MAX_SIGN,
+        emlen - hlen - 2, "slen_max_sign");
+    pss_arm(o, em, emlen, msbits, 0, mhash, hlen, sha1, sha1, RSA_PSS_SALTLEN_AUTO_DIGEST_MAX,
+        hlen, "slen_auto_digest_max");
+    pss_arm(o, em, emlen, msbits, 0, mhash, hlen, sha1, NULL, hlen, hlen, "slen_digest_explicit");
+    pss_arm(o, em, emlen, msbits, 0, mhash, hlen, sha1, sha1, 0, 0, "slen_zero");
+    pss_arm(o, em, emlen, msbits, 0, mhash, hlen, sha1, NULL, emlen - hlen - 2, emlen - hlen - 2,
+        "slen_max_explicit");
+
+    /* Two different digests. `Hash` decides `hLen` and therefore the split; `mgf1Hash` decides only
+     * the mask, so 128 - 32 - 2 = 94 is the maximum salt under SHA-256 while the mask is SHA-1's. */
+    printf("rsa.pss.hlen_sha256=%d\n", hlen256);
+    pss_arm(o, em, emlen, msbits, 0, mhash, hlen256, sha256, sha1, emlen - hlen256 - 2,
+        emlen - hlen256 - 2, "two_digests");
+    pss_arm(o, em, emlen, msbits, 0, mhash, hlen256, sha256, NULL, hlen256, hlen256,
+        "sha256_only");
+
+    /* The three refusals. A salt length above what the modulus allows; one below the lowest
+     * convention, which is a refusal rather than a clamp; and a modulus too small to hold the hash
+     * plus its two mandatory octets. */
+    memset(em, 0, sizeof(em));
+    ERR_clear_error();
+    printf("rsa.pss.slen_over_max.ret=%d\n",
+        RSA_padding_add_PKCS1_PSS(o, em, mhash, sha1, emlen - hlen - 1));
+    drain("pss_slen_over_max");
+    ERR_clear_error();
+    printf("rsa.pss.slen_below_min.ret=%d\n",
+        RSA_padding_add_PKCS1_PSS_mgf1(o, em, mhash, sha1, sha1, -5));
+    drain("pss_slen_below_min");
+
+    /* 1025 bits: `BN_num_bits(n) - 1` is 1024, so `MSBits` is **zero** and the writer spends one
+     * octet on the leading zero, shrinking `emLen` from 129 to 128. Every offset downstream -- the
+     * trailer included -- is relative to the advanced pointer, which is the arm this object exists
+     * for. */
+    n2 = rt_bits(1025);
+    RT_N(o2) = n2;
+    printf("rsa.pss.n_1025=%d\n", n2 != NULL);
+    if (n2 != NULL) {
+        emlen2 = RSA_size(o2);
+        printf("rsa.pss.emlen_1025=%d\n", emlen2);
+        printf("rsa.pss.msbits_1025=%d\n", (BN_num_bits(n2) - 1) & 0x7);
+        pss_arm(o2, em, emlen2 - 1, 0, 1, mhash, hlen, sha1, sha1, hlen, hlen, "msbits_zero");
+    }
+
+    /* A 64-bit modulus is eight octets, which is less than `hLen + 2` for SHA-1. `MSBits` is 7
+     * there, so the refusal is reached before a byte of `EM` is touched -- which is why the
+     * 256-octet buffer above is more than this arm needs rather than less. */
+    n3 = rt_bits(64);
+    RT_N(small) = n3;
+    printf("rsa.pss.n_64=%d\n", n3 != NULL);
+    if (n3 != NULL) {
+        printf("rsa.pss.emlen_small=%d\n", RSA_size(small));
+        ERR_clear_error();
+        printf("rsa.pss.small_key.ret=%d\n",
+            RSA_padding_add_PKCS1_PSS_mgf1(small, em, mhash, sha1, sha1, 0));
+        drain("pss_small_key");
+    }
+
+    if (n != NULL)
+        BN_free(n);
+    if (n2 != NULL)
+        BN_free(n2);
+    if (n3 != NULL)
+        BN_free(n3);
+    free(o);
+    free(o2);
+    free(small);
+    EVP_MD_free((EVP_MD *)sha1);
+    EVP_MD_free((EVP_MD *)sha256);
+    printf("rsa.pss.released=1\n");
 }
 
 /* ------------------------------------------------------------------ the object layer (slice A) */
@@ -1239,6 +1526,85 @@ int main(void)
     printf("rsa.chk_t1.padcount=%d\n", RSA_padding_check_PKCS1_type_1(to, 64, blk, 16, 16));
     drain("chk_t1_padcount");
 
+    /* PKCS#1 v1.5 type 2: `00 02 nonzero... 00 D`, and **not one of the random padding octets is
+     * printed**. What is printed instead is the predicate the retry loop exists to make true --
+     * every padding octet non-zero -- and then the block is handed to
+     * `RSA_padding_check_PKCS1_type_2`, whose answer is a *length* and a byte comparison rather
+     * than a byte. So the whole arm is a differential observation of a random block without the
+     * transcript ever depending on the randomness. */
+    ERR_clear_error();
+    memset(blk, 0, sizeof(blk));
+    printf("rsa.pad_t2.ok=%d\n", RSA_padding_add_PKCS1_type_2(blk, 16, from, 5));
+    printf("rsa.pad_t2.0=%02x\n", blk[0]);
+    printf("rsa.pad_t2.1=%02x\n", blk[1]);
+    /* `j = 16 - 3 - 5 = 8` padding octets at 2..10. */
+    printf("rsa.pad_t2.pad_nonzero=%d\n", rt_all_nonzero(blk + 2, 8));
+    printf("rsa.pad_t2.sep=%02x\n", blk[10]);
+    printf("rsa.pad_t2.body=%d\n", memcmp(blk + 11, from, 5) == 0);
+    drain("pad_t2_ok");
+
+    /* The two refusals, and they raise *different* reasons: too long is
+     * `RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE`, negative is `RSA_R_INVALID_LENGTH`. The negative one is
+     * reachable from no real caller, which is why the second error site exists at all. */
+    ERR_clear_error();
+    printf("rsa.pad_t2.long=%d\n", RSA_padding_add_PKCS1_type_2(blk, 16, from, 6));
+    drain("pad_t2_long");
+    ERR_clear_error();
+    printf("rsa.pad_t2.neg=%d\n", RSA_padding_add_PKCS1_type_2(blk, 16, from, -1));
+    drain("pad_t2_neg");
+
+    /* The round trip, on the block the arm above produced: the check scans for the *first* zero
+     * octet from index 2, so a padding octet that was left zero would move the separator and the
+     * length would not be 5. */
+    ERR_clear_error();
+    memset(to, 0x5a, sizeof(to));
+    printf("rsa.chk_t2.ok=%d\n", RSA_padding_check_PKCS1_type_2(to, 64, blk, 16, 16));
+    printf("rsa.chk_t2.body=%d\n", memcmp(to, from, 5) == 0);
+    drain("chk_t2_ok");
+
+    /* The two silent size refusals: `-1` with an **empty** queue, which is the observation the
+     * `err.count` line carries. */
+    ERR_clear_error();
+    printf("rsa.chk_t2.tlen0=%d\n", RSA_padding_check_PKCS1_type_2(to, 0, blk, 16, 16));
+    drain("chk_t2_tlen0");
+    ERR_clear_error();
+    printf("rsa.chk_t2.flen0=%d\n", RSA_padding_check_PKCS1_type_2(to, 64, blk, 0, 16));
+    drain("chk_t2_flen0");
+
+    /* And the two that do raise, both from the same site: an octet count under the eleven-octet
+     * minimum, and an encoded message longer than the modulus. */
+    ERR_clear_error();
+    printf("rsa.chk_t2.pad_short=%d\n", RSA_padding_check_PKCS1_type_2(to, 64, blk, 8, 8));
+    drain("chk_t2_pad_short");
+    ERR_clear_error();
+    printf("rsa.chk_t2.toolong=%d\n", RSA_padding_check_PKCS1_type_2(to, 64, blk, 17, 16));
+    drain("chk_t2_toolong");
+
+    /* The constant-time refusal, where the error is left on the queue rather than flagged away.
+     * A padding string one octet short of the eight-octet minimum is the `zero_index >= 2 + 8`
+     * arm; a block type that is not 2 is the header arm; and a block with no zero octet at all
+     * leaves `zero_index` at 0. */
+    memset(blk, 0x11, sizeof(blk));
+    blk[0] = 0x00;
+    blk[1] = 0x02;
+    blk[9] = 0x00;
+    ERR_clear_error();
+    printf("rsa.chk_t2.narrow=%d\n", RSA_padding_check_PKCS1_type_2(to, 64, blk, 16, 16));
+    drain("chk_t2_narrow");
+    memset(blk, 0x11, sizeof(blk));
+    blk[0] = 0x00;
+    blk[1] = 0x03;
+    blk[10] = 0x00;
+    ERR_clear_error();
+    printf("rsa.chk_t2.type=%d\n", RSA_padding_check_PKCS1_type_2(to, 64, blk, 16, 16));
+    drain("chk_t2_type");
+    memset(blk, 0x11, sizeof(blk));
+    blk[0] = 0x00;
+    blk[1] = 0x02;
+    ERR_clear_error();
+    printf("rsa.chk_t2.nosep=%d\n", RSA_padding_check_PKCS1_type_2(to, 64, blk, 16, 16));
+    drain("chk_t2_nosep");
+
     /* PKCS1_MGF1: the counter is big-endian and four octets wide, so the arms are a mask that
      * is exactly one digest, one that spans two blocks (the counter's second value), one that is
      * not a multiple of the digest size (the truncating final block), and a zero length. */
@@ -1290,6 +1656,10 @@ int main(void)
     }
 
     oaep_arms();
+
+    /* The PSS adds, which need a fabricated object of their own: their `RSA *` argument is read for
+     * its modulus, and no constructor exists on the candidate side yet. */
+    rsa_pss_arms();
 
     /* The slice A object layer: every export the candidate publishes that needs no constructor. */
     rsa_object_arms();

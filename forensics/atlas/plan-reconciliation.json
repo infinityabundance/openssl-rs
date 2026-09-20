@@ -2378,17 +2378,17 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "8ee6f5ff6cebb91d2e6e94480653ac292c6e711b7d58f61c4548f7fd594a9e2b"
+      "sha256": "b8d37d34253f542d16055237827ab1b7df8c16a3539d26c0ec92373eaf82eb4c"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "e120ccbfc769c0cc1016b621a52e01231562957eadb1d7bbdbca8aad40c5fbfd"
+      "sha256": "e59eb85dda94e43adedd0b948a6825814d26626630e88e1eccac482c8469ec90"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "b3b226f10fa93415cf72fe1ff9783ea3ac59ed3e51d1e636289253256b4e7252"
+      "sha256": "ae04794fbc92f2f8aabb84910a557d3f340b002e9c20aed9eed3619c0bd78938"
     },
     {
       "name": "prerequisites",
@@ -2418,7 +2418,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "b0bd46074abd9cc9b359a8c36b2aca6ff44f07faf59df909455caeac4cdb4d6f"
+      "sha256": "31645e545ef97a1800d1dd61565501eca7ede2a1c2cabc04ac7068643813b870"
     },
     {
       "name": "plan-PHASE-9-SUBPHASES",

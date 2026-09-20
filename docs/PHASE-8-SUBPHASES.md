@@ -387,7 +387,10 @@ here is. (`forensics/phase8-obligations.json` remains the only complete list.)
 `RSA_meth_set_keygen`, `RSA_meth_get_multi_prime_keygen`, `RSA_meth_set_multi_prime_keygen`,
 `RSA_null_method`, `RSA_padding_add_none`, `RSA_padding_check_none`, `RSA_padding_add_X931`,
 `RSA_padding_check_X931`, `RSA_X931_hash_id`, `RSA_padding_add_PKCS1_type_1`,
-`RSA_padding_check_PKCS1_type_1`, `PKCS1_MGF1`.
+`RSA_padding_check_PKCS1_type_1`, `PKCS1_MGF1`, `RSA_padding_add_PKCS1_type_2`,
+`RSA_padding_check_PKCS1_type_2`, `RSA_padding_add_PKCS1_OAEP`,
+`RSA_padding_add_PKCS1_OAEP_mgf1`, `RSA_padding_add_PKCS1_PSS`,
+`RSA_padding_add_PKCS1_PSS_mgf1`.
 
 **Open exports (checked against the ledger):** `RSA_check_key`, `RSA_sign`.
 Phase 8.2's cipher families and 8.3's `modes.h` constructions all have their low-level exports in,
@@ -423,9 +426,14 @@ been expected to need `src/bn/` and little else. They need `RAND_bytes_ex` as we
 the obvious places: `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_pk1.c:147`) fills the padding
 randomly, `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` (`rsa_oaep.c:122`) generates its seed,
 `RSA_padding_add_PKCS1_PSS_mgf1` (`rsa_pss.c:242`) its salt, and
-`ossl_rsa_padding_check_PKCS1_type_2_ex` (`rsa_pk1.c:569`) randomises its implicit-rejection answer.
-Those six labels are now recorded Phase 9 hand-offs in `phase8-obligations.py`'s `BLOCKED_HANDOFFS`
-rather than left as open work. The same measurement found a second, less obvious dependency: the
+`ossl_rsa_padding_check_PKCS1_type_2_TLS` (`rsa_pk1.c:569`) randomises the implicit-rejection answer
+of the *TLS* check. Those six labels were recorded Phase 9 hand-offs in `phase8-obligations.py`'s
+`BLOCKED_HANDOFFS` rather than left as open work, and **D323 has since retired that row**:
+`RAND_bytes_ex` landed in D313, D322 measured that the row had outlived its blocker, and all six are
+implemented, with `RT-RSA` calling every one of them. D323 also corrects the sixth label's
+coordinate, which this paragraph carried: the randomised function is
+`ossl_rsa_padding_check_PKCS1_type_2_TLS`, a different function from the `RSA_padding_check_PKCS1_type_2`
+the hand-off named, and the latter is a pure function of its input. The same measurement found a second, less obvious dependency: the
 `RSA` object's own **constructor** is blocked one level further out, because `rsa_new_intern` takes
 its method from `RSA_get_default_method()` (`rsa_lib.c:101`), whose `default_RSA_meth` is
 `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is

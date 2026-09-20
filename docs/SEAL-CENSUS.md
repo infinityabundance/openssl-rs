@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 2170 | 3726 |
+| libcrypto | 5896 | 2176 | 3720 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **2170** | **4329** |
+| **total** | **6499** | **2176** | **4323** |
 
 ## Ownership atlas, by stratum
 
@@ -33,8 +33,8 @@ declared owner; this is that assignment.
 | 5 | BN + ASN.1 + DER/PEM | `complete` | 561 | 565 | 474 | 91 | 0 |
 | 6 | OSSL_LIB_CTX + provider core | `complete` | 137 | 161 | 161 | 0 | 0 |
 | 7 | EVP framework | `complete` | 924 | 950 | 724 | 226 | 0 |
-| 8 | Native cryptographic primitives | `in-progress` | 759 | 786 | 272 | 24 | 490 |
-| 9 | RAND / DRBG + entropy | `in-progress` | 25 | 93 | 39 | 0 | 54 |
+| 8 | Native cryptographic primitives | `in-progress` | 759 | 786 | 278 | 18 | 490 |
+| 9 | RAND / DRBG + entropy | `in-progress` | 25 | 87 | 39 | 0 | 48 |
 | 10 | Key formats + PKCS + STORE | `not-started` | 272 | — | — | — | — |
 | 11 | X.509 + verification | `not-started` | 1455 | — | — | — | — |
 | 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `not-started` | 1024 | — | — | — | — |
@@ -268,20 +268,20 @@ Courts: `all pass`, 19 court(s), **2954** authority observation(s) over 19 trans
 * ledger: `forensics/phase8-obligations.json`
 * atlas-owned: 759
 * owned working set: 786
-* implemented: 272
-* deferred to a later stratum with a stated reason: 24
+* implemented: 278
+* deferred to a later stratum with a stated reason: 18
 * **open in this stratum: 490**
 
 Deferred out, by receiving stratum:
 
-* to phase 9: 24 symbol(s)
-  `DES_random_key`, `DH_generate_key`, `DH_generate_parameters`, `DH_generate_parameters_ex`, `DSA_generate_key`, `DSA_generate_parameters_ex`, `EC_KEY_generate_key`, `RSA_PKCS1_OpenSSL`, `RSA_X931_derive_ex`, `RSA_X931_generate_key_ex`, `RSA_blinding_on`, `RSA_generate_key`, `RSA_generate_key_ex`, `RSA_generate_multi_prime_key`, `RSA_get_default_method`, `RSA_new`, `RSA_new_method`, `RSA_padding_add_PKCS1_OAEP`, `RSA_padding_add_PKCS1_OAEP_mgf1`, `RSA_padding_add_PKCS1_PSS`, `RSA_padding_add_PKCS1_PSS_mgf1`, `RSA_padding_add_PKCS1_type_2`, `RSA_padding_check_PKCS1_type_2`, `RSA_setup_blinding`
+* to phase 9: 18 symbol(s)
+  `DES_random_key`, `DH_generate_key`, `DH_generate_parameters`, `DH_generate_parameters_ex`, `DSA_generate_key`, `DSA_generate_parameters_ex`, `EC_KEY_generate_key`, `RSA_PKCS1_OpenSSL`, `RSA_X931_derive_ex`, `RSA_X931_generate_key_ex`, `RSA_blinding_on`, `RSA_generate_key`, `RSA_generate_key_ex`, `RSA_generate_multi_prime_key`, `RSA_get_default_method`, `RSA_new`, `RSA_new_method`, `RSA_setup_blinding`
 
 Hand-offs received and discharged:
 
 * from phase 7: 27 symbol(s) — `EVP_PKEY_assign`, `EVP_PKEY_decrypt_old`, `EVP_PKEY_encrypt_old`, `EVP_PKEY_get0_DH`, `EVP_PKEY_get0_DSA`, `EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get0_RSA`, `EVP_PKEY_get0_hmac`, `EVP_PKEY_get0_poly1305`, `EVP_PKEY_get0_siphash`, `EVP_PKEY_get1_DH`, `EVP_PKEY_get1_DSA`, `EVP_PKEY_get1_EC_KEY`, `EVP_PKEY_get1_RSA`, `EVP_PKEY_get_ec_point_conv_form`, `EVP_PKEY_get_field_type`, `EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0`, `EVP_PKEY_meth_get_count`, `EVP_PKEY_set1_DH`, `EVP_PKEY_set1_DSA`, `EVP_PKEY_set1_EC_KEY`, `EVP_PKEY_set1_RSA`, `EVP_PKEY_type`, `d2i_KeyParams`, `d2i_KeyParams_bio`, `d2i_PublicKey`
 
-Courts: `all pass`, 6 court(s), **8217** authority observation(s) over 4 transcript court(s).
+Courts: `all pass`, 6 court(s), **8350** authority observation(s) over 4 transcript court(s).
 
 The other 2 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
 
@@ -290,28 +290,28 @@ The other 2 compare ELF structure rather than a transcript and observe nothing l
 | RT-DIGEST | `pass` | 468 |
 | RT-CIPHER | `pass` | 6939 |
 | RT-CIPHER-MEM | `pass` | 382 |
-| RT-RSA | `pass` | 428 |
+| RT-RSA | `pass` | 561 |
 | CT-DIGEST | `pass` | — (structural) |
 | CT-CIPHER | `pass` | — (structural) |
 
 ## Phase 9 — RAND / DRBG + entropy
 
 * state: `in-progress`
-* blocking: 54 open obligation(s) of this stratum recorded in forensics/phase9-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Its working set is ninety-three exports, and only twenty-five are its own header's: the other sixty-eight arrive as recorded hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives in ten earlier strata's modules (docs/DECISIONS.md D294). The court file records `courts: []` and is not evidence that anything works: no Phase 9 court has landed yet (docs/PHASE-9-SUBPHASES.md section 1)
+* blocking: 48 open obligation(s) of this stratum recorded in forensics/phase9-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Its working set is ninety-three exports, and only twenty-five are its own header's: the other sixty-eight arrive as recorded hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives in ten earlier strata's modules (docs/DECISIONS.md D294). The court file records `courts: []` and is not evidence that anything works: no Phase 9 court has landed yet (docs/PHASE-9-SUBPHASES.md section 1)
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase9-obligations.json`
 * atlas-owned: 25
-* owned working set: 93
+* owned working set: 87
 * implemented: 39
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 54**
+* **open in this stratum: 48**
 
 Hand-offs received and discharged:
 
 * from phase 4: 1 symbol(s) — `BIO_f_nbio_test`
 * from phase 5: 31 symbol(s) — `BN_BLINDING_convert`, `BN_BLINDING_convert_ex`, `BN_BLINDING_create_param`, `BN_BLINDING_update`, `BN_GF2m_mod_solve_quad`, `BN_GF2m_mod_solve_quad_arr`, `BN_GF2m_mod_sqrt`, `BN_GF2m_mod_sqrt_arr`, `BN_X931_derive_prime_ex`, `BN_X931_generate_Xpq`, `BN_X931_generate_prime_ex`, `BN_bntest_rand`, `BN_check_prime`, `BN_generate_dsa_nonce`, `BN_generate_prime`, `BN_generate_prime_ex`, `BN_generate_prime_ex2`, `BN_is_prime`, `BN_is_prime_ex`, `BN_is_prime_fasttest`, `BN_is_prime_fasttest_ex`, `BN_priv_rand`, `BN_priv_rand_ex`, `BN_priv_rand_range`, `BN_priv_rand_range_ex`, `BN_pseudo_rand`, `BN_pseudo_rand_range`, `BN_rand`, `BN_rand_ex`, `BN_rand_range`, `BN_rand_range_ex`
 * from phase 7: 12 symbol(s) — `BIO_f_reliable`, `EVP_CIPHER_CTX_rand_key`, `EVP_SealInit`, `OSSL_HPKE_get_grease_value`, `PEM_ASN1_read`, `PEM_ASN1_read_bio`, `PEM_ASN1_write`, `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx`, `PEM_bytes_read_bio`, `PEM_bytes_read_bio_secmem`, `PEM_do_header`
-* from phase 8: 24 symbol(s) — `DES_random_key`, `DH_generate_key`, `DH_generate_parameters`, `DH_generate_parameters_ex`, `DSA_generate_key`, `DSA_generate_parameters_ex`, `EC_KEY_generate_key`, `RSA_PKCS1_OpenSSL`, `RSA_X931_derive_ex`, `RSA_X931_generate_key_ex`, `RSA_blinding_on`, `RSA_generate_key`, `RSA_generate_key_ex`, `RSA_generate_multi_prime_key`, `RSA_get_default_method`, `RSA_new`, `RSA_new_method`, `RSA_padding_add_PKCS1_OAEP`, `RSA_padding_add_PKCS1_OAEP_mgf1`, `RSA_padding_add_PKCS1_PSS`, `RSA_padding_add_PKCS1_PSS_mgf1`, `RSA_padding_add_PKCS1_type_2`, `RSA_padding_check_PKCS1_type_2`, `RSA_setup_blinding`
+* from phase 8: 18 symbol(s) — `DES_random_key`, `DH_generate_key`, `DH_generate_parameters`, `DH_generate_parameters_ex`, `DSA_generate_key`, `DSA_generate_parameters_ex`, `EC_KEY_generate_key`, `RSA_PKCS1_OpenSSL`, `RSA_X931_derive_ex`, `RSA_X931_generate_key_ex`, `RSA_blinding_on`, `RSA_generate_key`, `RSA_generate_key_ex`, `RSA_generate_multi_prime_key`, `RSA_get_default_method`, `RSA_new`, `RSA_new_method`, `RSA_setup_blinding`
 
 Courts: `all pass`, 4 court(s), **724** authority observation(s) over 4 transcript court(s).
 
@@ -340,9 +340,9 @@ are proofs of reference only. See `docs/DECISIONS.md` D199 and D236.
 | 5 | 474 | 474 | 381 | 93 | 0 | 0 | 0 |
 | 6 | 161 | 161 | 156 | 5 | 0 | 0 | 0 |
 | 7 | 724 | 724 | 664 | 60 | 0 | 0 | 0 |
-| 8 | 272 | 264 | 264 | 0 | 8 | 0 | 0 |
+| 8 | 278 | 270 | 270 | 0 | 8 | 0 | 0 |
 | 9 | 39 | 39 | 39 | 0 | 0 | 0 | 0 |
-| **total** | **2170** | **2162** | **1879** | **283** | **8** | **0** | **0** |
+| **total** | **2176** | **2168** | **1885** | **283** | **8** | **0** | **0** |
 
 ## Atlas/ledger reconciliation
 
@@ -358,6 +358,6 @@ row for another stratum's export is a hand-off that stratum recorded.
 | 6 | 137 | 161 | 0 | 24 |
 | 7 | 924 | 950 | 0 | 26 |
 | 8 | 759 | 786 | 0 | 27 |
-| 9 | 25 | 93 | 0 | 68 |
+| 9 | 25 | 87 | 0 | 62 |
 
 Problems recorded by the audit: 0.
