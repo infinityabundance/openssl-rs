@@ -22753,3 +22753,146 @@ the gate at zero findings over **92 courts** and **34,260 observations**. The gu
 **`EC_KEY_generate_key` stays the ledger's `deferred` row, split rather than retired.** Its unit
 (`ec_key.c`) is item 5's and lands nothing here; the shared row D334 named is still shared, and this
 entry adds no reason to it.
+
+## D336 — 8.7's export-free half is *not* landable alone, and the measurement that says so is the gate's own direction A rather than its direction B
+
+**Decision.** Phase 8.7 lands **nothing** in this slice. The question it was asked was whether the
+block's field and multiplication layers — units that define no export, so `court_coverage.py` has
+nothing to demand of them, and whose callees live in units with no crate module — can be landed
+standalone and green. They cannot, and this entry records the measurement that says so rather than
+the argument, because the argument that said they could is a *reading* of one branch of
+`forensics/tools/prerequisite_gate.py` and the reading is correct while the conclusion is not.
+
+**The reading was right.** The `unwired_function_in_the_current_stratum` finding (direction B) is
+skipped when the **defining** unit has no crate module, `prerequisite_gate.py:496`:
+
+```python
+owners = unit_modules.get(owner_tu, [])
+if not owners or any(name in refs.get(o, set()) for o in owners):
+    continue          # "The crate has no module for the defining unit at all"
+```
+
+**The conclusion was wrong, and it is wrong in the other direction.** Direction A
+(`undefined_prerequisite`, `:417-466`) consults **no unit at all**: it walks every identifier any
+crate module mentions, keeps those in the gate's own universes
+(`internal-symbols.json` ∪ the macro/typedef universe ∪ `symbol-ownership.json`'s exports) and
+reports every one the crate does not build, whatever unit defines it and whether or not that unit has
+a module. So "the callee's unit has no crate module" buys exactly nothing in direction A, and it
+cannot: the crate has no module to put the callee's *path* in, so a transcription that called it
+would not name-resolve, and one that declared it would be declaring a symbol nothing defines.
+
+**What was measured, and how.** The measurement is a module, not an argument, and it is preserved as
+`court/ec-guard-measurement.rs.txt` with the command that reads it. It is a stand-in for the
+**smallest** unit the brief's own rule allows — `crypto/ec/ecp_oct.c`, 369 lines, **no export**, and
+five callees whose defining units (`crypto/ec/ec_lib.c`, `crypto/ec/ec_oct.c`) have no crate module —
+reproducing that unit's cross-unit reference set and nothing else, because the gate's verdict for a
+module is a function of its identifier set alone. Placed at `src/ec/oct_measurement.rs` and read with
+`python3 forensics/tools/prerequisite_gate.py --no-write` inside the court container:
+
+| run | crate modules | `undefined_prerequisite` | `unwired_function_in_the_current_stratum` |
+|---|---|---|---|
+| before (the committed tree) | 288 | 0 | 0 |
+| with the module present | **289** | **5** | **0** |
+
+The five are `EC_POINT_get_affine_coordinates`, `EC_POINT_is_at_infinity`,
+`EC_POINT_set_affine_coordinates`, `EC_POINT_set_compressed_coordinates` and
+`EC_POINT_set_to_infinity` — the exact five calls `ecp_oct.c` makes at `:148`, `:176`, `:212`,
+`:308` and `:339`/`:359`, every one of them an export of a unit with no crate module, every one of
+them a finding. Direction B's zero is the reading above confirmed by experiment: the same five names
+are *referenced*, so direction B has nothing to say about them, and the internals it would have
+complained about (`ossl_ec_GFp_simple_oct2point` and its two siblings, `:22`, `:159`, `:273`) are
+defined by the module itself. The module was deleted after the run; the tree the commit ships is the
+288-module one.
+
+**The half was smaller than the brief's list, and that is a second, independent reason.** The brief
+says to check each unit's export count first and leave any unit that defines an export. Measured
+against `forensics/atlas/export-defining-units.json`, **four of the six units in the list define
+one**: `ecp_smpl.c` -> `EC_GFp_simple_method`, `ecp_mont.c` -> `EC_GFp_mont_method`, `ecp_nist.c` ->
+`EC_GFp_nist_method` and `ec2_smpl.c` -> `EC_GF2m_simple_method`. Only `ec_mult.c` and `ec2_oct.c`
+are export-free, and both fail direction A on `EC_POINT_*` (`ec_mult.c` on twelve of `ec_lib.c`'s
+exports plus `bn_compute_wNAF`, `ec2_oct.c` on five plus two Phase-9 `BN_GF2m_*` names and its own
+three internals). So the "export-free half" is two units, not six, and neither of them lands.
+
+**What the measurement buys: the export/internal asymmetry, which narrows D335's boundary.** D335
+concluded that "there is no compiling boundary between D335 and the whole layer" and that items 2–6
+are one landing. Reading direction B's two guards says the rule is sharper than that, and the sharp
+version is what makes the layer affordable:
+
+```python
+if name not in symbol_tu and language.get(name) is None:
+    census["language_surface_not_modelled_by_name"].append(f"{tu}:{name}")
+    continue
+```
+
+A unit's **internals** are countable the moment the unit has a module — that is D327's rule, and it
+is why a partial unit is a finding. A unit's **exports** are not: `symbol_tu` is
+`internal-symbols.json`'s universe, so an export is never in it, and an export that is not a macro or
+a typedef falls into `language_surface_not_modelled_by_name` — the census, which the gate itself
+documents as "counted, never a failure". `crypto/ec/ec_curve.c`'s two withheld constructors are
+exports and have been counted this way since D334. So `ec_lib.c` can be given a module with **67 of
+its 69 exports** and all **six** of its internals, and the commit boundary is the closure of the
+units it *calls*, not the list of exports the ledger still owes. `court/ec-integration-plan.md`
+records that closure, unit by unit, as the plan's §3.
+
+**Nothing is probe-reachable, so no court arm is added.** This slice lands no symbol and changes no
+existing one, so `RT-EC` stays at **483 observations** and no arm is written: a probe that observed
+anything here would be observing the D334 slice again, and the brief's instruction is to say so
+rather than to add a vacuous arm. No secret is printed by anything this slice touches, and nothing
+this slice adds is reachable from a probe.
+
+**Two records the plan owes, named here rather than created.** The landing of the layer will need
+`docs/SECURITY_DIVERGENCE_POLICY.md`'s **D-EC-2**, which **supersedes D-EC-1**: `ecp_nistz256.c`'s
+field arithmetic is perlasm-only with no `#else` arm, so its construction is not invented, its
+`EC_METHOD` is not built, and `NID_X9_62_prime256v1`'s row resolves to `EC_GFp_simple_method` like
+every NULL row does — observable as `EC_GROUP_method_of` answering `EC_GFp_simple_method` where the
+authority answers `EC_GFp_nistz256_method`, and as `EC_GROUP_copy`/`EC_pre_comp_free` not
+transcribing their two `#ifdef ECP_NISTZ256_ASM` arms. And the binary-curve layer needs **two
+deferral rows** in `forensics/prerequisites.json` for `BN_GF2m_mod_sqrt_arr` and
+`BN_GF2m_mod_solve_quad_arr` (`crypto/bn/bn_gf2m.c:1065`, `:1089` regions; `bn.h`, Phase 5's;
+already `open` in `forensics/phase9-obligations.json` with `received_from_phase: 5`), because
+`ec2_oct.c:69` and `:81` call them and landing a sealed stratum's ledger backwards is not open to
+this block. Both are written down in the plan and neither is created by this slice, because a
+record that claims crate behaviour the crate does not have is the fabrication D334 refused for
+`curve_list[]`'s fourth column.
+
+**One number in D334 and in the brief does not survive measurement, and it is about the half's size.**
+`forensics/atlas/ec-curves.json` resolves each of `curve_list[]`'s 82 rows to the `EC_CURVE_DATA`
+structure it names: **42 rows are characteristic-two and 40 are prime-field**, over **75** distinct
+structures (7 pairs share one — `_EC_SECG_PRIME_112R1`, `_EC_SECG_PRIME_160R2` and five binary ones),
+of which 38 are prime and 37 binary. D334's "eighty-two rows: 38 prime-field curves and 37
+characteristic-two ones" attaches the 75-structure split to the 82-row list, and the brief's "37 of
+the 82 `curve_list[]` rows are characteristic-two" is 37 structures over **42** rows. Nothing that
+landed here depends on either figure — both halves fail direction A — but the plan records the
+measured one, because it is the only figure that says how large the binary layer is.
+
+**Bookkeeping, read off the regenerated files.** This slice changes no source file under `src/`, no
+court and no tool, so every derived number is D335's: `phase8` implemented **460**, deferred **2**,
+open **324**, owned **786**; `forensics/atlas/implemented-surface.json` `libcrypto` implemented
+**2373**; the gate at **288** crate modules over **216** authority units, `language_census`
+**3,527**, `divergence_names_covered` **32** over **7** rows, `names_referenced_and_not_built`
+**17**, `sealed_census` **52** and `blocking_dependencies` **19**. The suite stands at **857 tests**
+and the pipeline ends `PIPELINE OK` with the gate at zero findings over **92 courts** and **34,260
+observations**. The guard was run: against `origin/main` it reports `sealed_census` **57 -> 52** and
+`blocking_dependencies` **25 -> 19**, both **decreases**, and no movement anywhere is upward, so
+**no `forensics/ownership-transitions.json` row was needed** — and a slice that lands nothing cannot
+move either watched number.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` reads `complete: false` and
+this entry does not change it. What 8.7 has is D334's four exports, D335's measured shapes, this
+entry's negative and the integration plan; what it does not have is one symbol of the group
+object, the field arithmetic, the multiplication ladder, the key layer or the two signature units.
+`CT-EC` stays PENDING and its reason is unchanged from D334.
+
+**The plan is tracked, unlike D320's RSA plan, and the difference is deliberate.** D320's plan lives
+at `court/rsa-object-integration-plan.md` and `court/` is git-ignored by design
+(`docs/REPRODUCIBILITY.md` §1: raw court material never enters the tracked history). A 506-line plan
+that the next several sessions must follow is not raw court material, so this one is committed at
+`docs/PHASE-8-EC-INTEGRATION-PLAN.md`. The two plans differ in that respect and in nothing else.
+
+**One finding reported and not reproduced, recorded because a flaky gate is a defect.**
+`probe_hygiene.py` was observed red on `courts/phase9/rt_drbg_probe.c` at `-O2` — the probe aborted
+with `SIGABRT`, exit `-6` — in two intermediate pipeline runs of this pass, and the final run was
+clean. It was **not** reproduced: the gate passed in every run the orchestrating session made, and
+the probe is not one this slice touches. It is recorded as an open question about a Phase 9 probe
+rather than as a finding, because an intermittently failing determinism gate is the class of defect
+that would silently weaken every other claim in this ledger if it went unmentioned.

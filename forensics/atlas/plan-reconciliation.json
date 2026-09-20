@@ -7,10 +7,10 @@
     "census": {
       "names_a_file_the_authority_does_not_have": 19,
       "symbols_not_reached": 8,
-      "units_not_reached": 37
+      "units_not_reached": 41
     },
     "census_by_stratum": {
-      "8": 50,
+      "8": 54,
       "9": 14
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
@@ -57,11 +57,15 @@
         "crypto/dsa/dsa_check.c",
         "crypto/dsa/dsa_err.c",
         "crypto/dsa/dsa_prn.c",
+        "crypto/ec/ec2_smpl.c",
         "crypto/ec/ec_backend.c",
         "crypto/ec/ec_kmeth.c",
         "crypto/ec/ec_lib.c",
         "crypto/ec/ec_mult.c",
+        "crypto/ec/ecp_mont.c",
+        "crypto/ec/ecp_nist.c",
         "crypto/ec/ecp_nistz256.c",
+        "crypto/ec/ecp_oct.c",
         "crypto/ec/ecp_smpl.c",
         "crypto/evp/dsa_ctrl.c",
         "crypto/ffc/ffc_backend.c",
@@ -99,7 +103,7 @@
       "symbols_reached": 82,
       "unit_records": 66,
       "units_named_by_a_record": 68,
-      "units_named_by_a_row": 202,
+      "units_named_by_a_row": 206,
       "units_reached": 165
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
@@ -738,6 +742,35 @@
         ],
         "transcribed_by": []
       },
+      "crypto/ec/ec2_smpl.c": {
+        "defines": [
+          "ossl_ec_GF2m_simple_add",
+          "ossl_ec_GF2m_simple_cmp",
+          "ossl_ec_GF2m_simple_dbl",
+          "ossl_ec_GF2m_simple_field_div",
+          "ossl_ec_GF2m_simple_field_mul",
+          "ossl_ec_GF2m_simple_field_sqr",
+          "ossl_ec_GF2m_simple_group_check_discriminant",
+          "ossl_ec_GF2m_simple_group_clear_finish",
+          "ossl_ec_GF2m_simple_group_copy",
+          "ossl_ec_GF2m_simple_group_finish",
+          "ossl_ec_GF2m_simple_group_get_curve",
+          "ossl_ec_GF2m_simple_group_get_degree",
+          "ossl_ec_GF2m_simple_group_init",
+          "ossl_ec_GF2m_simple_group_set_curve",
+          "ossl_ec_GF2m_simple_invert",
+          "ossl_ec_GF2m_simple_is_at_infinity",
+          "ossl_ec_GF2m_simple_is_on_curve",
+          "ossl_ec_GF2m_simple_make_affine",
+          "ossl_ec_GF2m_simple_point_clear_finish",
+          "ossl_ec_GF2m_simple_point_copy"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": []
+      },
       "crypto/ec/ec_backend.c": {
         "defines": [
           "ossl_ec_check_group_type_id2name",
@@ -816,11 +849,56 @@
         ],
         "transcribed_by": []
       },
+      "crypto/ec/ecp_mont.c": {
+        "defines": [
+          "ossl_ec_GFp_mont_field_decode",
+          "ossl_ec_GFp_mont_field_encode",
+          "ossl_ec_GFp_mont_field_inv",
+          "ossl_ec_GFp_mont_field_mul",
+          "ossl_ec_GFp_mont_field_set_to_one",
+          "ossl_ec_GFp_mont_field_sqr",
+          "ossl_ec_GFp_mont_group_clear_finish",
+          "ossl_ec_GFp_mont_group_copy",
+          "ossl_ec_GFp_mont_group_finish",
+          "ossl_ec_GFp_mont_group_init",
+          "ossl_ec_GFp_mont_group_set_curve"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/ec/ecp_nist.c": {
+        "defines": [
+          "ossl_ec_GFp_nist_field_mul",
+          "ossl_ec_GFp_nist_field_sqr",
+          "ossl_ec_GFp_nist_group_copy",
+          "ossl_ec_GFp_nist_group_set_curve"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": []
+      },
       "crypto/ec/ecp_nistz256.c": {
         "defines": [
           "EC_GFp_nistz256_method",
           "EC_nistz256_pre_comp_dup",
           "EC_nistz256_pre_comp_free"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/ec/ecp_oct.c": {
+        "defines": [
+          "ossl_ec_GFp_simple_oct2point",
+          "ossl_ec_GFp_simple_point2oct",
+          "ossl_ec_GFp_simple_set_compressed_coordinates"
         ],
         "recorded_by": null,
         "subphases": [
@@ -2998,7 +3076,7 @@
       "transcribed_units": 216
     }
   },
-  "body_hash": "57935abd915f2c4129656b60cbd08a9d689472a33eac26468a9b9d6c82a4335d",
+  "body_hash": "ced89fd89b05c378f2f120f1b0ddeca312bb74891f7cfa951903d112ecf7e5dc",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -3049,7 +3127,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "622af60bafa914361739ad94132d56c93d7780a7fac9bb7a6643a7d53e7958aa"
+      "sha256": "de3579e8f3d70084cf8db7c34c94d133cfa2d17985a57e1ee864a0f6ec56abd6"
     },
     {
       "name": "plan-PHASE-9-SUBPHASES",
