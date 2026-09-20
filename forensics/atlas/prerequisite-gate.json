@@ -23,8 +23,8 @@
       "ossl_rsa_pkey_method -> phase 8 (The `EVP_PKEY_METHOD` half of the same boundary: `crypto/evp/pmeth_lib.c`'s `standard_methods[]` holds the ten `ossl_<alg>_pkey_method` objects of the algorithm strata. `EVP_PKEY_meth_find`'s application half (`evp_pkey_meth_find_added_by_application`) is landed and courted; its `OBJ_bsearch_pmeth_func` half is not, and `EVP_PKEY_meth_get0` and `_get_count` index the table outright, so all three exports are withheld rather than stubbed with an application-count answer.)"
     ],
     "census": {
-      "covered_by_a_divergence": 59,
-      "language_surface_not_modelled_by_name": 3483,
+      "covered_by_a_divergence": 60,
+      "language_surface_not_modelled_by_name": 3527,
       "planned_prerequisites": 13
     },
     "census_by_unit": {
@@ -37,6 +37,7 @@
         "inlen": 1,
         "libctx": 1,
         "openssl_init_fork_handlers": 1,
+        "ossl_ec_curve_nid_from_params": 1,
         "ossl_ffc_params_todata": 1,
         "ossl_lib_ctx_default_deinit": 1,
         "ossl_lib_ctx_get_concrete": 6,
@@ -168,6 +169,7 @@
         "crypto/dsa/dsa_vrf.c": 2,
         "crypto/dso/dso_dlfcn.c": 16,
         "crypto/dso/dso_lib.c": 15,
+        "crypto/ec/ec_curve.c": 43,
         "crypto/err/err.c": 91,
         "crypto/err/err_all_legacy.c": 11,
         "crypto/err/err_save.c": 2,
@@ -175,6 +177,7 @@
         "crypto/evp/bio_enc.c": 14,
         "crypto/evp/bio_ok.c": 16,
         "crypto/evp/cmeth_lib.c": 6,
+        "crypto/evp/ec_support.c": 1,
         "crypto/evp/encode.c": 6,
         "crypto/evp/evp_enc.c": 34,
         "crypto/evp/evp_fetch.c": 19,
@@ -301,6 +304,7 @@
         "inlen",
         "libctx",
         "openssl_init_fork_handlers",
+        "ossl_ec_curve_nid_from_params",
         "ossl_ffc_params_todata",
         "ossl_lib_ctx_default_deinit",
         "ossl_lib_ctx_get_concrete",
@@ -330,8 +334,7 @@
         "ossl_lib_ctx_is_child",
         "ossl_lib_ctx_is_default",
         "ossl_lib_ctx_is_default",
-        "ossl_lib_ctx_is_default",
-        "ossl_lib_ctx_is_global_default"
+        "ossl_lib_ctx_is_default"
       ],
       "language_surface_not_modelled_by_name": [
         "crypto/aria/aria.c:X",
@@ -392,12 +395,12 @@
       ]
     },
     "checked": {
-      "authority_units": 214,
-      "crate_modules": 284,
+      "authority_units": 216,
+      "crate_modules": 288,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 19,
-      "divergence_names_covered": 31,
-      "divergence_rows": 6,
+      "divergence_names_covered": 32,
+      "divergence_rows": 7,
       "names_referenced_and_not_built": 17
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
@@ -508,13 +511,13 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "106aaf2b352c4047072fb2d536a9b2b399b54bbbfff2883eccf538d6f663976c",
+  "body_hash": "2e7ae26f67d9494b6adce4e0a411abc26b2a71dc55e9f5e776ce8a619d53586a",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "764e86faaaddb57261457a0c579e251a52861031196caf192db253a15d14dae7"
+      "sha256": "a3096e3836842168bb3e9178ed438b90995d837c7bc8c086a734047e2a8042af"
     },
     {
       "name": "macro-owners",
@@ -529,7 +532,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "122064f6246d437be78ac4d337650fe4c9bd793a9bfbe09dbf636f86acc750bb"
+      "sha256": "08dedc5e9a0e55fff4df92698254c329e4a73837d348bf6d73e65739bb107558"
     },
     {
       "name": "symbol-ownership",
@@ -544,17 +547,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "a1775c1e13f1b8c0a1d69a3c05d637f1e167497c9d2cc6580ddf770e9052467c"
+      "sha256": "eaa42a089aade9a61e0094d6316937a11ac20e33b3cd0dc46174ea8cf99cabc2"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "7c4d2d5058cbd9bab257ef84f0acbb925a6f69c0b7496467aaafa7c49c2db682"
+      "sha256": "f0738c891e47c90456c057b4b77d5bb2eeec114d5f16c208ef9c06db86fba5bf"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "b13a87b45f11c930a2c2884519512e3b53b22572172af62018b9746aa1613fe3"
+      "sha256": "61d2b707099ae6195692f44eff7d91c83d79e3af2680e3eb864fbf2a15f2f16c"
     },
     {
       "name": "crate-source-tree",

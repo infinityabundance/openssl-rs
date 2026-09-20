@@ -36,6 +36,15 @@ python3 forensics/tools/gen_phase8_cipher_tables.py
 # `evidence_determinism.py` re-runs it later and compares.
 python3 forensics/tools/gen_bn_dh.py
 
+# Phase 8.7's built-in curve parameters (D334). Here for the same reason as the two above -- it
+# reads the authority's `crypto/ec/ec_curve.c`, links a probe against the admitted prefix and
+# writes a `cargo`-visible file, `src/ec/curve_data.rs` -- and with the same property
+# `gen_bn_dh.py` has: its renderer **is** `rustfmt`-stable, so it is also a `COMPARED` entry in
+# `evidence_determinism.py` and the formatter pass below cannot move it. It is invoked here so
+# the build and the courts see the regenerated file rather than the committed one, and
+# `evidence_determinism.py` re-runs it later and compares.
+python3 forensics/tools/gen_ec_curves.py
+
 echo "== fmt =="
 cargo fmt --all
 

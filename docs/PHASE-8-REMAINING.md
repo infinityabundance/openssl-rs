@@ -13,11 +13,11 @@ Read from the ledger's `body.counts`.
 | quantity | count |
 |---|---|
 | owned | 786 |
-| implemented | 456 |
+| implemented | 460 |
 | deferred to a later phase | 2 |
-| open in this stratum | 328 |
+| open in this stratum | 324 |
 
-The identity `owned = implemented + deferred + open` is `786 = 456 + 2 + 328`, which holds.
+The identity `owned = implemented + deferred + open` is `786 = 460 + 2 + 324`, which holds.
 
 ## The merge gate — what Phase 8 owes to Phase 9
 
@@ -63,12 +63,12 @@ table, verbatim.
 | 8.4 RSA | `src/rsa/mod.rs` | 24 | `RT-RSA`, `CT-RSA` | 8.1 (the RSA provider's `SHA`-named digests), 8.3 (its OAEP/PSS modes) |
 | 8.5 DH and DHX | `src/dh/mod.rs`, `src/dh/mod.rs`, `src/ffc/`, `src/dh/object.rs`, `src/dh/group_params.rs`, `src/dh/rfc5114.rs`, `src/ffc/dh.rs`, `src/bn/dh.rs`, `src/bn/dh_data.rs` | 32 | `RT-DH`, `CT-DH` | 8.4 (the shared BN/param idiom) |
 | 8.6 DSA | `src/dsa/mod.rs`, `src/dsa/mod.rs`, `src/dsa/object.rs`, `src/dsa/ossl.rs`, `src/dsa/key.rs`, `src/dsa/gen.rs`, `src/dsa/sign.rs`, `src/dsa/vrf.rs`, `src/dsa/depr.rs` | 26 | `RT-DSA`, `CT-DSA` | 8.5 |
-| 8.7 EC | `src/ec/mod.rs` | 201 | `RT-EC`, `CT-EC` | 8.6 |
+| 8.7 EC | `src/ec/mod.rs`, `src/ec/curve.rs`, `src/ec/curve_data.rs`, `src/ec/support.rs` | 197 | `RT-EC`, `CT-EC` | 8.6 |
 | 8.8 The ASN.1 method objects and `standard_methods[]` | `src/asn1/ameth.rs` | 15 | `RT-AMETH` | 8.4, 8.5, 8.6, 8.7 |
 | 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals | `src/pem/key_legacy.rs` | 30 | `RT-PEM-KEY` | 8.8 |
 
-Total open symbols listed below: **328**; the ledger's
-`open_in_this_stratum` is 328.
+Total open symbols listed below: **324**; the ledger's
+`open_in_this_stratum` is 324.
 
 ### 8.4 RSA — 24 open
 
@@ -107,7 +107,7 @@ Total open symbols listed below: **328**; the ledger's
 `d2i_DSAPublicKey`, `d2i_DSA_SIG`, `d2i_DSAparams`, `i2d_DSAPrivateKey`,
 `i2d_DSAPublicKey`, `i2d_DSA_SIG`, `i2d_DSAparams`
 
-### 8.7 EC — 201 open
+### 8.7 EC — 197 open
 
 `ECDH_KDF_X9_62`, `ECDH_compute_key`, `ECDSA_SIG_free`, `ECDSA_SIG_get0`,
 `ECDSA_SIG_get0_r`, `ECDSA_SIG_get0_s`, `ECDSA_SIG_new`, `ECDSA_SIG_set0`,
@@ -163,17 +163,16 @@ Total open symbols listed below: **328**; the ledger's
 `EC_POINT_set_affine_coordinates_GFp`, `EC_POINT_set_compressed_coordinates`,
 `EC_POINT_set_compressed_coordinates_GF2m`, `EC_POINT_set_compressed_coordinates_GFp`,
 `EC_POINT_set_to_infinity`, `EC_POINTs_make_affine`, `EC_POINTs_mul`,
-`EC_curve_nid2nist`, `EC_curve_nist2nid`, `EC_get_builtin_curves`,
 `EVP_PKEY_CTX_get0_ecdh_kdf_ukm`, `EVP_PKEY_CTX_get_ecdh_cofactor_mode`,
 `EVP_PKEY_CTX_get_ecdh_kdf_md`, `EVP_PKEY_CTX_get_ecdh_kdf_outlen`,
 `EVP_PKEY_CTX_get_ecdh_kdf_type`, `EVP_PKEY_CTX_set0_ecdh_kdf_ukm`,
 `EVP_PKEY_CTX_set_ec_param_enc`, `EVP_PKEY_CTX_set_ec_paramgen_curve_nid`,
 `EVP_PKEY_CTX_set_ecdh_cofactor_mode`, `EVP_PKEY_CTX_set_ecdh_kdf_md`,
 `EVP_PKEY_CTX_set_ecdh_kdf_outlen`, `EVP_PKEY_CTX_set_ecdh_kdf_type`,
-`EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get1_EC_KEY`, `EVP_PKEY_set1_EC_KEY`,
-`OSSL_EC_curve_nid2name`, `d2i_ECDSA_SIG`, `d2i_ECPKParameters`, `d2i_ECParameters`,
-`d2i_ECPrivateKey`, `i2d_ECDSA_SIG`, `i2d_ECPKParameters`, `i2d_ECParameters`,
-`i2d_ECPrivateKey`, `i2o_ECPublicKey`, `o2i_ECPublicKey`
+`EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get1_EC_KEY`, `EVP_PKEY_set1_EC_KEY`, `d2i_ECDSA_SIG`,
+`d2i_ECPKParameters`, `d2i_ECParameters`, `d2i_ECPrivateKey`, `i2d_ECDSA_SIG`,
+`i2d_ECPKParameters`, `i2d_ECParameters`, `i2d_ECPrivateKey`, `i2o_ECPublicKey`,
+`o2i_ECPublicKey`
 
 ### 8.8 The ASN.1 method objects and `standard_methods[]` — 15 open
 

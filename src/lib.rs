@@ -84,6 +84,12 @@ pub mod digest;
 // method objects and the EVP controls.
 pub mod dsa;
 pub mod dso;
+// Phase 8.7's `crypto/ec/` substream: the built-in curve parameters, and the curve-name
+// lookups over them, as the subphase's first slice. Its own module documentation names the
+// boundary — the indivisibility of `ec_lib.c`'s group object with the field arithmetic it
+// dispatches to, and the `curve_list[]` method column that is the authority coordinate
+// deciding it.
+pub mod ec;
 pub mod evp;
 // Phase 8.5's `crypto/ffc/` primitives: the FFC domain-parameter object, its generators and
 // validators, and the private-key generator and validators DH and DSA are built on. Every name

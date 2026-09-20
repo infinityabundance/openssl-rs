@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 2,
-      "implemented": 456,
-      "open_in_this_stratum": 328,
+      "implemented": 460,
+      "open_in_this_stratum": 324,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1332,6 +1332,9 @@
       "DSA_sign_setup",
       "DSA_test_flags",
       "DSA_up_ref",
+      "EC_curve_nid2nist",
+      "EC_curve_nist2nid",
+      "EC_get_builtin_curves",
       "EVP_PKEY_CTX_get0_rsa_oaep_label",
       "EVP_PKEY_CTX_get_rsa_mgf1_md",
       "EVP_PKEY_CTX_get_rsa_mgf1_md_name",
@@ -1377,6 +1380,7 @@
       "MDC2_Final",
       "MDC2_Init",
       "MDC2_Update",
+      "OSSL_EC_curve_nid2name",
       "PKCS1_MGF1",
       "RC2_cbc_encrypt",
       "RC2_cfb64_encrypt",
@@ -2865,24 +2869,6 @@
         "symbol": "EC_POINTs_mul"
       },
       {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_curve_nid2nist"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_curve_nist2nid"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_get_builtin_curves"
-      },
-      {
         "declaring_header": "dh.h",
         "module": "src/dh/mod.rs",
         "received_from_phase": null,
@@ -3259,12 +3245,6 @@
         "module": "src/asn1/ameth.rs",
         "received_from_phase": 7,
         "symbol": "EVP_PKEY_type"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_EC_curve_nid2name"
       },
       {
         "declaring_header": "pem.h",
@@ -3794,12 +3774,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "28e2b15d957feba9a0b5a60b91620375effe69e74c9fa5a17106889c91129a16"
+      "sha256": "9ba7c9e7a6f1d023ab080b11c4f983de0d37fec6d87889180b105e8d0229528a"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "57821cd9012986bcc6f445297edf78569ff134dccb228bb5356f7ae421af5c84"
+      "sha256": "6dadd221fbedba0740346fd16ee01886e16bca3c7c3c8c02ae8d8146f86c7371"
     }
   ],
   "kind": "phase8-obligations",

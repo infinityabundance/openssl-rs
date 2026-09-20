@@ -129,7 +129,22 @@ COURTS: list[tuple[str, str]] = [
     # (the two halves in `[1, q)`) and by the verification verdict rather than by value. Three
     # of its refusal arms leave two queue records, which is the shared `err:` label each unit
     # transcribes rather than an early return per failure.
-    ("RT-DSA", "rt_dsa_probe.c"),
+    (
+        "RT-DSA",
+        "rt_dsa_probe.c",
+    ),
+    # 8.7's curve-table court. Its subject is the four lookups over `ec_curve.c`'s built-in
+    # parameter table and `crypto/evp/ec_support.c`'s two name tables -- `EC_get_builtin_curves`
+    # in all four of its call shapes, and the three name lookups in both directions over all
+    # eighty-two rows and over their refusals. **The curve constants themselves are not courted
+    # here**: `p`, `a`, `b`, `gx`, `gy`, `order`, the cofactor and the seed reach a caller only
+    # through `EC_GROUP_new_by_curve_name`, which is the group object and the field arithmetic
+    # D334 records as one indivisible landing. Their evidence is
+    # `forensics/tools/gen_ec_curves.py` -- which reads every value back from the authority and
+    # checks it against the `data[]` array the authority's own struct declares -- and the unit
+    # tests in `src/ec/curve.rs`. The probe says so in its own header, because a probe that
+    # called a symbol the candidate has not implemented would abort the candidate's side.
+    ("RT-EC", "rt_ec_probe.c"),
 ]
 
 # The correctness courts, and the committed vector sets each checks. `CT-DIGEST` is the
@@ -176,8 +191,11 @@ PENDING_CORRECTNESS_COURTS: dict[str, str] = {
               "corpus and its driver: FIPS 186-4's own parameter and key vectors, with the "
               "authority's vectors as the second source. An arm that needs the DER "
               "`DSA-Sig-Value` path (`DSA_sign`/`DSA_verify`) waits on 8.8.",
-    "CT-EC": "8.7 -- needs EC_KEY/EC_GROUP/EC_POINT; the recorded corpus is the authority's "
-             "own curve vectors plus Project Wycheproof's EC set as a follow-up.",
+    "CT-EC": "8.7 -- the built-in curve tables and the three lookups over them have landed "
+             "(D334), so their evidence is the differential court and the generator; what a "
+             "construction court still needs is `EC_GROUP`/`EC_POINT`, which D334 records as "
+             "one indivisible landing with the field arithmetic. The recorded corpus is the "
+             "authority's own curve vectors plus Project Wycheproof's EC set as a follow-up.",
 }
 
 

@@ -202,6 +202,10 @@
       "observations": 145,
       "verdict": "pass"
     },
+    "RT-EC": {
+      "observations": 483,
+      "verdict": "pass"
+    },
     "RT-ERR": {
       "observations": 3857,
       "verdict": "pass"
@@ -385,7 +389,7 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 2369,
+    "libcrypto": 2373,
     "libssl": 0
   },
   "open_obligations": {
@@ -394,7 +398,7 @@
     "phase5": 0,
     "phase6": 0,
     "phase7": 0,
-    "phase8": 328,
+    "phase8": 324,
     "phase9": 17
   },
   "owned_obligations": {
@@ -432,9 +436,9 @@
   },
   "prerequisites": {
     "blocking_dependencies": 19,
-    "divergence_names_covered": 31,
+    "divergence_names_covered": 32,
     "findings": 0,
-    "language_census": 3483,
+    "language_census": 3527,
     "sealed_census": 52
   },
   "provider_implemented": [

@@ -100,6 +100,14 @@ GENERATORS_BEFORE_LEDGERS = [
     # `make_dh_bn` inventory in **both** tiers, so a hand edit to that table fails on a
     # runner with no authority too.
     "forensics/tools/gen_bn_dh.py",
+    # Phase 8.7's built-in curve parameters (D334). Listed here so a stale committed copy is a
+    # failure and not a silent divergence: the whole point of reading 14,542 bytes of curve
+    # constants back from the authority instead of transcribing them is defeated by a generator
+    # nothing re-runs. It has the same two tiers as the three above -- re-derive with the
+    # authority present, rebuild-and-compare from the committed pair without it -- and it
+    # additionally checks `src/ec/support.rs`'s two name tables against `crypto/evp/ec_support.c`
+    # in **both** tiers, so a hand edit to that module fails on a runner with no authority too.
+    "forensics/tools/gen_ec_curves.py",
     # The provider algorithm-row census (D237). It reads the authority's provider tables and
     # the crate's two provider modules, and nothing else, so it has no position dependence
     # beyond being after the crate's sources are final; it is listed here so a stale
@@ -215,11 +223,16 @@ COMPARED = [
     # generator list, so it could drift from the atlas without anything noticing.
     "src/runtime/err_sites.rs",
     # Phase 8.5's named-group constants (D332), for the same reason as the two above and
+    # `src/bn/dh_data.rs`, for the same reason as the two above and
     # with one extra property the other generated `.rs` files do not need: this file's
     # renderer is **`rustfmt`-stable**, so `pipeline.sh` may run it before `cargo fmt`
     # without the formatter moving a byte. That is what lets it be compared here at all,
     # and why the two Phase 8 table generators below are deliberately not.
     "src/bn/dh_data.rs",
+    # Phase 8.7's built-in curve parameters (D334), the same argument again: a `cargo`-visible
+    # file generated from the authority, whose renderer is `rustfmt`-stable, so a formatter pass
+    # cannot move it. It is 75 `EC_CURVE_DATA` structures and `curve_list[]`'s eighty-two rows.
+    "src/ec/curve_data.rs",
 ]
 
 # ---------------------------------------------------------------------------
