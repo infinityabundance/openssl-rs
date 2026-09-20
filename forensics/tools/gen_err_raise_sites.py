@@ -587,13 +587,15 @@ COVERED_FILES = [
     # set again, minus the two units that raise nothing: `dh_meth.c` (D329 measured its whole
     # body as allocations and stored pointers) and `dh_depr.c` (its one function allocates a
     # context and dispatches), so neither gets an entry that could never change. `dh_kdf.c`,
-    # `dh_asn1.c` and `dh_rfc5114.c` raise nothing either, and `dh_group_params.c`'s one site
-    # belongs to the named-group unit D329/D330 record as a separable follow-up, so no crate
-    # module transcribes it yet.
+    # `dh_asn1.c` and `dh_rfc5114.c` raise nothing either. `dh_group_params.c`'s one site is
+    # D332's: the named-group unit the four earlier slices recorded as a separable follow-up
+    # now has a crate module, so its single `DH_R_INVALID_PARAMETER_NID` at `:47` is covered
+    # like every other landed coordinate.
     ("crypto/dh/dh_lib.c", "DH_LIB"),
     ("crypto/dh/dh_key.c", "DH_KEY"),
     ("crypto/dh/dh_gen.c", "DH_GEN"),
     ("crypto/dh/dh_check.c", "DH_CHECK"),
+    ("crypto/dh/dh_group_params.c", "DH_GROUP_PARAMS"),
     # Phase 9's `crypto/rand` subsystem. **The subsystem set, not a selection of convenient
     # files**, for `crypto/rsa`'s reason and one more of its own: this stratum's symbols are
     # raised from inside bodies whose declaring header belongs to *earlier* strata (`BN_rand`,

@@ -399,7 +399,7 @@
         "stratum": "EVP framework"
       },
       {
-        "blocking": "395 open obligation(s) of this stratum recorded in forensics/phase8-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase",
+        "blocking": "390 open obligation(s) of this stratum recorded in forensics/phase8-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -618,7 +618,7 @@
       "not_started": 12
     }
   },
-  "body_hash": "9c2091fd404df2ab1092eafcc6c23a50595f03f535aecfb4b864c91640f4336d",
+  "body_hash": "06fc8a7a2f680e528bc91a5c47b787295bc2dbf9ab70b3b0b91d5e97b69b7a5a",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

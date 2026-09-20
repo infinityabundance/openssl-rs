@@ -23,21 +23,23 @@
 //! `generate_unverifiable_g` helpers, plus the FIPS 186-2 twin for the `VALIDATE_LEGACY`
 //! flag path.
 //!
-//! **Two `crypto/ffc/` units are deliberately not transcribed, and each is named with the
-//! reach that would be needed.** `crypto/ffc/ffc_dh.c`'s `dh_named_groups[]` is the named
-//! group table: its entries carry `&ossl_bignum_ffdhe2048_p`-style pointers to
-//! `crypto/bn/bn_dh.c`'s twenty-six constants, and that file is 1,423 lines of limb data
-//! whose values only a comparison with the authority can check. D329 records it as a
-//! separable large data transcription left whole for a follow-up, and the crate's
-//! `src/evp/pkey_ctx.rs` already says the same about the table. `crypto/ffc/ffc_backend.c`
-//! (`ossl_ffc_params_fromdata`) and `ffc_params.c`'s `ossl_ffc_params_todata` are the
-//! provider backend's pair: they are reached by `crypto/dh/dh_backend.c`, which is not on
-//! `dh_lib.c`/`dh_key.c`/`dh_gen.c`/`dh_check.c`'s path, and they call
+//! **`crypto/ffc/ffc_dh.c` is transcribed in this subtree, and D332 is when it landed.**
+//! [`dh`] carries `dh_named_groups[]` — fourteen rows read out of the file with its three
+//! macros expanded — and its eight entry points, over the thirty-two `ossl_bignum_*`
+//! constants in [`crate::bn::dh`] and the generated [`crate::bn::dh_data`]. D329 and D330
+//! both named that data as a separable follow-up whose values only a comparison with the
+//! authority can check; `forensics/tools/gen_bn_dh.py` is that comparison, and the unit
+//! tests beside the table are what assert its rows.
+//!
+//! **One `crypto/ffc/` unit is still deliberately not transcribed, and it is named with
+//! the reach that would be needed.** `crypto/ffc/ffc_backend.c`
+//! (`ossl_ffc_params_fromdata`) is reached by `crypto/dh/dh_backend.c`, which is not on the
+//! `dh_lib.c`/`dh_key.c`/`dh_gen.c`/`dh_check.c` path, and it calls
 //! `crypto/param_build_set.c`'s four `ossl_param_build_set_*` — a unit with no crate module
-//! and no implementation — and `ffc_dh.c`'s two lookup functions. So `ffc_dh.c` and
-//! `ffc_backend.c` have **no module here**, which is D327's `rsa_sp800_56b_check.c`
-//! precedent rather than a half-landing; `ossl_ffc_params_todata` is withheld for the same
-//! reason and is the one function of a transcribed unit that is not here.
+//! and no implementation. So `ffc_backend.c` has **no module here**, which is D327's
+//! `rsa_sp800_56b_check.c` precedent rather than a half-landing, and `ossl_ffc_params_todata`
+//! is withheld for the same reason and is the one function of a transcribed unit that is not
+//! here.
 //!
 //! ## The struct, and why its shape is a measurement rather than a reading
 //!
@@ -54,6 +56,7 @@
 //! four-byte `unsigned int` at 64 and `mdname` is a pointer, so the four bytes at 68..72 are
 //! padding and `mdname` sits at 72 rather than the 68 a packed reading would give.
 
+pub(crate) mod dh;
 pub(crate) mod key_generate;
 pub(crate) mod key_validate;
 pub(crate) mod params;

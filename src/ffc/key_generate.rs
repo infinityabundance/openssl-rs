@@ -158,9 +158,11 @@ mod tests {
     /// MODP families' `q`. That shape is what gives `N` room — `qbits` is 2047, not 224 — so the
     /// interval the authority's own test walks is reachable.
     ///
-    /// The group is built from `test/ffc_internal_test.c`'s own prime rather than from a NID,
-    /// because the named-group table is the follow-up D329 records and the crate has no NID to
-    /// build one from yet.
+    /// The group is built from `test/ffc_internal_test.c`'s own prime rather than from a NID.
+    /// That is a choice about *this test's* input, not about the crate: since D332 the
+    /// named-group table is landed and `crate::dh::group_params::DH_new_by_nid` builds the
+    /// same shape from a NID. The authority's own prime is kept here because the interval the
+    /// test walks is the one `test/ffc_internal_test.c:650` asserts over *that* group.
     struct Group {
         params: FfcParams,
     }

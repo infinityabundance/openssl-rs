@@ -20,8 +20,14 @@
 //!   transcribing it is a small unit rather than a large one, but it is *another* unit and
 //!   not this one.
 //! * `ossl_ffc_uid_to_dh_named_group` and `ossl_ffc_named_group_get_name`, which are
-//!   `crypto/ffc/ffc_dh.c:103` and `:140`, and which need that file's `dh_named_groups[]`
-//!   and therefore `crypto/bn/bn_dh.c`'s twenty-six constants.
+//!   `crypto/ffc/ffc_dh.c:103` and `:140`.
+//!
+//! **The second blocker was discharged by D332 and the first was not**, which is the honest
+//! state of the row: `ffc_dh.c` is now transcribed in [`crate::ffc::dh`], so the two lookups
+//! exist, and `ossl_ffc_params_todata` is still withheld for `crypto/param_build_set.c`
+//! alone. Nothing about that changes its body — it is one unit's absence rather than two —
+//! and the divergence record in `forensics/prerequisites.json` still covers exactly this
+//! name.
 //!
 //! A version of it that returned early, or one that skipped the `nid != NID_undef` arm,
 //! would be a fabricated answer for a name a later slice owns; the omission is recorded here
@@ -71,12 +77,10 @@ const FILE_FFC_PARAMS: *const c_char = c"../../src/openssl-3.6.4/crypto/ffc/ffc_
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
 
-/// `BN_FLG_STATIC_DATA` — `include/openssl/bn.h:52`.
-///
-/// The flag the authority sets on the `BIGNUM`s it places in `.rodata`, and the one
-/// `ffc_bn_cpy` tests. `BN_FLG_MALLOCED` (`0x01`) is the crate's own constant in
-/// `src/bn/bignum.rs`.
-const BN_FLG_STATIC_DATA: c_int = 0x02;
+/// `BN_FLG_STATIC_DATA` — the flag the authority sets on the `BIGNUM`s it places in
+/// `.rodata`, and the one `ffc_bn_cpy` tests. Defined once in [`crate::bn::bignum`],
+/// beside the code that now tests it in `BN_free`, rather than copied here.
+const BN_FLG_STATIC_DATA: c_int = crate::bn::bignum::BN_FLG_STATIC_DATA;
 
 /// `void ossl_ffc_params_init(FFC_PARAMS *params)` — `crypto/ffc/ffc_params.c:20-26`.
 ///

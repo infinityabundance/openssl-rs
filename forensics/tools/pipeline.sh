@@ -27,6 +27,15 @@ echo "== phase 8 constant tables =="
 python3 forensics/tools/gen_phase8_tables.py
 python3 forensics/tools/gen_phase8_cipher_tables.py
 
+# Phase 8.5's named-group constants (D332). Here for the same reason as the two above --
+# it reads the authority's `crypto/bn/bn_dh.c` and its admitted prefix and writes a
+# `cargo`-visible file, `src/bn/dh_data.rs` -- but with one difference that matters: its
+# renderer **is** `rustfmt`-stable, so unlike those two it is also a `COMPARED` entry in
+# `evidence_determinism.py` and a formatter pass cannot move it. It is invoked here so the
+# build and the courts see the regenerated file rather than the committed one, and
+# `evidence_determinism.py` re-runs it later and compares.
+python3 forensics/tools/gen_bn_dh.py
+
 echo "== fmt =="
 cargo fmt --all
 

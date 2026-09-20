@@ -14,7 +14,7 @@
 //! three member functions' addresses do. D329 named the cycle; this commit lands both halves at
 //! once, which is why [`crate::dh::key`] exists in the same slice.
 //!
-//! ## The two reachable-answer reductions, and why each is the authority's answer
+//! ## One reachable-answer reduction, and the second one undone
 //!
 //! **1. `ENGINE_*`.** [`DH_set_method`] and [`DH_free`] call `ENGINE_finish(dh->engine)`
 //! (`:43`, `:153`); `dh_new_intern` calls `ENGINE_init`, `ENGINE_get_default_DH` and
@@ -37,17 +37,20 @@
 //! `err_sites::DH_LIB_100`/`DH_LIB_109` coordinates are still emitted by the lexical scan and
 //! still carried in `err_sites::ALL`, which is what D330 records for the two FIPS-only FFC sites.
 //!
-//! **2. `ossl_dh_cache_named_group`.** [`DH_set0_pqg`] calls it (`:242`), and it lives in
-//! `crypto/dh/dh_group_params.c` — the named-group unit D329 and D330 left as a separable data
-//! transcription, because `ossl_ffc_numbers_to_dh_named_group` needs `ffc_dh.c`'s
-//! `dh_named_groups[]` and `crypto/bn/bn_dh.c`'s twenty-six constants. The call is omitted and
-//! the reduction is exact rather than convenient: on every object this crate can construct,
-//! `params.nid` is already `NID_undef` — the only two writers are `ossl_dh_cache_named_group`
-//! and `ossl_ffc_named_group_set`, both in that unlanded unit, and `ossl_ffc_params_init` zeroes
-//! the field — so the cache's whole reachable effect is the flush of a field that already holds
-//! the flushed value. `dh_key.c`'s `DH_get_nid` reads and `DH_check.c`'s do the same are reduced
-//! the same way, with the argument at each site. The day the tables land, the three call sites
-//! replace the omission, exactly as slice F replaces `RSA_PSS_PARAMS_free`'s.
+//! **2. `ossl_dh_cache_named_group` — the reduction D329, D330 and D331 recorded, now a
+//! real call.** [`DH_set0_pqg`] calls it (`:242`), and it lives in
+//! `crypto/dh/dh_group_params.c`, the named-group unit whose two tables (the
+//! `ossl_bignum_*` constants and `ffc_dh.c`'s `dh_named_groups[]`) D329/D330 left as a
+//! separable data transcription. Both tables are landed now
+//! ([`crate::bn::dh`], [`crate::ffc::dh`], [`crate::dh::group_params`]), so the call is
+//! [`crate::dh::group_params::ossl_dh_cache_named_group`] and the three `DH_get_nid`
+//! reads in `dh_key.c`/`dh_check.c` are real calls too. **What the reduction had to say
+//! is still worth keeping**, because it is why the call is observable at all: until this
+//! slice `params.nid` had *no* writer in the crate — the field's only two writers are
+//! `dh_param_init` and `ossl_dh_cache_named_group`, both in that unit — so the cache's
+//! whole effect on a crate-built object was the flush of a field that already held the
+//! flushed value. `RT-DH` now observes the other half: a `DH` built from a group's own
+//! numbers acquires that group's `nid`, `q` and key length.
 //!
 //! ## Ordering, where the authority's is load-bearing
 //!
@@ -90,6 +93,7 @@ use core::ptr;
 use core::sync::atomic::Ordering;
 
 use crate::bn::bignum::{BN_clear_free, BN_num_bits, BN_security_bits, BigNum};
+use crate::dh::group_params::ossl_dh_cache_named_group;
 use crate::evp::pkey_asn1::Engine;
 use crate::ffc::params::{
     ossl_ffc_params_cleanup, ossl_ffc_params_get0_pqg, ossl_ffc_params_init,
@@ -199,14 +203,12 @@ pub unsafe extern "C" fn DH_new_method(engine: *mut Engine) -> *mut Dh {
 
 /// `DH *ossl_dh_new_ex(OSSL_LIB_CTX *libctx)` — `dh_lib.c:69-72`. Internal.
 ///
-/// `#[allow(dead_code)]`'s reason: **its callers are the named-group unit's and the provider
-/// backend's.** The authority calls it from `dh_group_params.c`'s `dh_param_init` and from
-/// `dh_backend.c`, neither of which is in this crate yet.
+/// Read by `dh_group_params.c`'s `dh_param_init` ([`crate::dh::group_params`]) and by the
+/// provider backend's `dh_backend.c`; the first is landed.
 ///
 /// # Safety
 ///
 /// `libctx` is NULL or a live library context that outlives the object.
-#[allow(dead_code)] // read by `dh_group_params.c` and the provider backend, both later slices
 pub(crate) unsafe fn ossl_dh_new_ex(libctx: *mut c_void) -> *mut Dh {
     // SAFETY: neither argument is read by the constructor beyond the store of `libctx`.
     unsafe { dh_new_intern(ptr::null_mut(), libctx) }
@@ -530,8 +532,9 @@ pub unsafe extern "C" fn DH_get0_pqg(
 ///
 /// **Two refusals before anything is stored**: a NULL `p` on an object with no `p`, and a NULL `g`
 /// on an object with no `g`. `q` is explicitly allowed to stay NULL. On success the authority also
-/// refreshes the named-group cache and bumps `dirty_cnt`; the cache call is the reduction this
-/// module documents, and the counter is kept.
+/// refreshes the named-group cache and bumps `dirty_cnt`, and both are here: the cache is
+/// [`crate::dh::group_params::ossl_dh_cache_named_group`], whose effect on a `DH` built from a
+/// group's own numbers is what `RT-DH` observes.
 ///
 /// # Safety
 ///
@@ -551,9 +554,7 @@ pub unsafe extern "C" fn DH_set0_pqg(
         }
 
         ossl_ffc_params_set0_pqg(ptr::addr_of_mut!((*dh).params), p, q, g);
-        // The authority's `ossl_dh_cache_named_group(dh)` is omitted: its whole reachable effect
-        // on this crate's objects is the flush of a `params.nid` that is already `NID_undef`.
-        // See the module documentation.
+        ossl_dh_cache_named_group(dh);
         (*dh).dirty_cnt += 1;
     }
     1

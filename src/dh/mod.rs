@@ -9,7 +9,13 @@
 //! key layer, the generator and the validators are LANDED (D331)**: `crypto/dh/dh_lib.c`,
 //! `dh_key.c`, `dh_gen.c`, `dh_check.c` and `dh_depr.c` are this module's `object`, `key`, `gen`,
 //! `check` and `depr` children, and [`Dh`] below is the object's real shape rather than the
-//! forward declaration D329 left.
+//! forward declaration D329 left. **The named-group unit and its two tables are LANDED (D332)**:
+//! `crypto/dh/dh_group_params.c` is [`group_params`], `crypto/dh/dh_rfc5114.c` is [`rfc5114`],
+//! `crypto/ffc/ffc_dh.c`'s `dh_named_groups[]` is [`crate::ffc::dh`], and the thirty-two
+//! constants it points at are [`crate::bn::dh`] over the generated [`crate::bn::dh_data`].
+//! `DH_new_by_nid`, `DH_get_nid` and the three deprecated `DH_get_*` constructors are exports,
+//! and the four call sites D331 wrote as the `params.nid` field read they reduce to are real
+//! calls again.
 //!
 //! **Why the method table was first, and why it was not the plan's first item.** `docs/PHASE-8-
 //! SUBPHASES.md` orders 8.5's landing as the FFC primitives, then the object layer, then the key
@@ -26,16 +32,11 @@
 //! can precede the other. `DH_get_default_method`, `DH_set_default_method` and `DH_OpenSSL` are
 //! therefore in [`key`] beside the table they name, and the object's constructor reads them.
 //!
-//! **What is still not here, named rather than implied.** `crypto/dh/dh_group_params.c` is the
-//! named-group unit — `DH_get_nid`, `DH_new_by_nid` and `ossl_dh_cache_named_group` — and it
-//! waits with `crypto/bn/bn_dh.c`'s twenty-six constants and `ffc_dh.c`'s `dh_named_groups[]`,
-//! which D329/D330 left as one separable large data transcription; the three sites in this slice
-//! that call `DH_get_nid` and the one that calls the cache are written as the `params.nid` read
-//! they reduce to, and each says so.
-//! `dh_asn1.c`'s `d2i_`/`i2d_DHparams` and the `DHparams_*` family are 8.8's ASN.1 machinery,
-//! `DH_KDF_X9_42` (`dh_kdf.c`) fetches an `OSSL_KDF` name from a provider, and the
-//! `EVP_PKEY_CTX_*dh*` controls of `crypto/evp/dh_ctrl.c` are 8.5's slice E. Everything that is
-//! here is a transcription: no stub, no `todo!()`, and no fabricated value.
+//! **What is still not here, named rather than implied.** `dh_asn1.c`'s `d2i_`/`i2d_DHparams`
+//! and the `DHparams_*` family are 8.8's ASN.1 machinery, `DH_KDF_X9_42` (`dh_kdf.c`) fetches
+//! an `OSSL_KDF` name from a provider, and the `EVP_PKEY_CTX_*dh*` controls of
+//! `crypto/evp/dh_ctrl.c` are 8.5's slice E. Everything that is here is a transcription: no
+//! stub, no `todo!()`, and no fabricated value.
 //!
 //! ## `DH_METHOD` is 72 bytes with nine members, and the shape is the whole contract
 //!
@@ -116,13 +117,10 @@
 //!
 //! Left for the rest of 8.5, each named rather than silently dropped:
 //!
-//! * **`crypto/dh/dh_group_params.c`.** The named-group unit — `DH_get_nid`, `DH_new_by_nid`,
-//!   `ossl_dh_cache_named_group`, `ossl_dh_new_by_nid_ex` — waits with the two tables it reads,
-//!   `crypto/bn/bn_dh.c`'s twenty-six constants and `crypto/ffc/ffc_dh.c`'s `dh_named_groups[]`.
-//!   D329 recorded the wait; D331 lands the three callers of it as the `params.nid` read they
-//!   reduce to and says why at each site.
 //! * **`dh_asn1.c`.** `d2i_DHparams`, `i2d_DHparams` and the `DHparams_*` family are 8.8's ASN.1
 //!   method objects; nothing on this slice's path reaches them.
+//! * **`dh_prn.c`.** `DHparams_print` and its `_fp` twin are the same stratum's printing
+//!   surface, reached only through the ameth's `priv_print` — 8.8's.
 //! * **`dh_kdf.c`.** `DH_KDF_X9_42` fetches `OSSL_KDF_NAME_X942KDF_ASN1` through the provider
 //!   fetch machinery, so it belongs with the provider surfaces rather than with the object.
 //! * **`crypto/evp/dh_ctrl.c`.** The `EVP_PKEY_CTX_*dh*` controls are ABI surfaces over
@@ -144,8 +142,10 @@
 pub mod check;
 pub mod depr;
 pub mod gen;
+pub mod group_params;
 pub mod key;
 pub mod object;
+pub mod rfc5114;
 
 use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::sync::atomic::AtomicI32;

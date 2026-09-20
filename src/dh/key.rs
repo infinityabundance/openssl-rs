@@ -17,7 +17,7 @@
 //! replaces it, and `dh_new_intern` reads it, so this file and `crate::dh::object` land together:
 //! D329 measured the cycle and this slice is its other half.
 //!
-//! ## The two reductions, and the one arm that is written as its field read
+//! ## One reduction, and the one arm that was written as its field read and is now a call
 //!
 //! **1. `rhs->meth->...` is an `Option` and the authority's is a bare pointer.** `DH_generate_key`
 //! (`:225`), `DH_compute_key` (`:123`), `DH_compute_key_padded` (`:152`),
@@ -28,16 +28,17 @@
 //! unreachable for every table this crate builds — `dh_ossl` sets the first three — and is the
 //! same shape as `src/rsa/ossl.rs`'s identical reduction.
 //!
-//! **2. `DH_get_nid`.** `generate_key` (`:313`) branches on `DH_get_nid(dh) != NID_undef`, and
-//! that function is `crypto/dh/dh_group_params.c:94-100` — the named-group unit D329/D330 left as
-//! a separable data transcription, because it needs `ffc_dh.c`'s `dh_named_groups[]` and
-//! `crypto/bn/bn_dh.c`'s twenty-six constants. Its body is `return dh->params.nid;` behind a NULL
-//! test, so the branch is written as the field read it is — and the read is `NID_undef` on every
-//! object this crate can construct, because the field's only two writers
-//! (`ossl_dh_cache_named_group`, `ossl_ffc_named_group_set`) are both in that unlanded unit and
-//! `ossl_ffc_params_init` zeroes it. So the named-group arm is transcribed in full and is
-//! unreachable on this crate's states; the day the tables land it becomes live with no other
-//! change. `src/dh/object.rs` records the same reduction for the same reason.
+//! **2. `DH_get_nid` — the reduction D331 recorded, now a real call.** `generate_key`
+//! (`:313`) branches on `DH_get_nid(dh) != NID_undef`; the function is
+//! `crypto/dh/dh_group_params.c:94-100`, the named-group unit that waited with the two
+//! tables `ffc_dh.c`'s `dh_named_groups[]` reads. D331 wrote the branch as the
+//! `params.nid` field read it reduces to, with the argument that the field had **no
+//! writer** in the crate — `dh_param_init` and `ossl_dh_cache_named_group` are both in
+//! that unit, and `ossl_ffc_params_init` zeroes the field. Both are landed now, so the
+//! branch is the call and the arm is live: `DH_new_by_nid(NID_ffdhe2048)` followed by
+//! `DH_generate_key` takes the named-group path, where `dh->length` is the RFC 7919 key
+//! length the table supplies and `ossl_ffc_generate_private_key` gets its
+//! `max_strength` from `ossl_ifc_ffc_compute_security_bits`. `RT-DH` exercises it.
 //!
 //! ## Ordering, where the authority's is load-bearing
 //!
@@ -81,6 +82,7 @@ use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
 use crate::runtime::obj::NID_undef;
 
 use super::check::ossl_dh_check_pub_key_partial;
+use super::group_params::DH_get_nid;
 use super::object::{DH_get0_key, DH_get0_pqg, DH_set0_key};
 use super::{
     Dh, DhBnModExpFn, DhComputeKeyFn, DhGenerateKeyFn, DhLifecycleFn, DhMethod,
@@ -541,8 +543,9 @@ pub(crate) unsafe fn ossl_dh_generate_public_key(
 /// Three arms on this profile, and the middle one is the authority's own split:
 ///
 /// * the modulus and subgroup bounds, answering 0 with their reasons;
-/// * **a named group**: the `DH_get_nid` branch, reduced to the field read it is and unreachable
-///   on this crate's objects (see the module documentation). It is transcribed in full;
+/// * **a named group**: the `DH_get_nid` branch, live since D332 — a `DH` built by
+///   `DH_new_by_nid` or built from a table row's own numbers takes it, and its exponent
+///   is `dh->length` bits rather than the `l` the explicit arm computes;
 /// * **an explicit group**: with no `q` the exponent is a random `l`-bit value with the two
 ///   top/bottom bit rules, and with a `q` the pair is partially validated and the exponent is
 ///   `ossl_ffc_generate_private_key` over `len(q)` at `MIN_STRENGTH`.
@@ -622,9 +625,8 @@ unsafe extern "C" fn generate_key(dh: *mut Dh) -> c_int {
             }
 
             /* Is it an approved safe prime ? */
-            /* The authority's `DH_get_nid(dh) != NID_undef`, written as the field read it is;
-             * see the module documentation for why the field cannot be anything else here. */
-            if (*dh).params.nid != NID_undef {
+            // SAFETY: `dh` is live per this function's contract.
+            if DH_get_nid(dh) != NID_undef {
                 let max_strength = c_int::from(ossl_ifc_ffc_compute_security_bits(BN_num_bits(
                     (*dh).params.p,
                 )));

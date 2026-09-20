@@ -26,10 +26,16 @@
  * is how the `-1`-vs-`0` asymmetry of `ossl_dh_compute_key`'s three bounds and the **two** records
  * a bad generator leaves are compared rather than asserted.
  *
- * What it does not cover: the FFC primitives (their evidence is their own unit tests, D330), the
- * named-group tables, `dh_asn1.c`'s ASN.1 machinery, `DH_KDF_X9_42` and the `EVP_PKEY_CTX_*dh*`
- * controls -- none of which is landed. This court's arms say so by their absence rather than by a
- * transcribed expectation, and `docs/DECISIONS.md` D329 and D331 name what keeps each open.
+ * What it does not cover: the FFC primitives (their evidence is their own unit tests, D330),
+ * `dh_asn1.c`'s ASN.1 machinery, `DH_KDF_X9_42` and the `EVP_PKEY_CTX_*dh*` controls -- none of
+ * which is landed. D332's named-group arms are the third block: all fourteen rows of
+ * `dh_named_groups[]`, the four `DH_new_by_nid`/`DH_get_nid`-shaped entry points, the three
+ * deprecated constructors, the cache `DH_set0_pqg` reaches, and primality through the landed
+ * `BN_check_prime`. Two names of that unit are **not** reachable from this court and say so:
+ * `ossl_dh_is_named_safe_prime_group`'s one caller is the EVP control translator and
+ * `ossl_dh_check_priv_key`'s is the provider keymgmt, so both are exercised by unit tests rather
+ * than by an arm. This court's arms say so by their absence rather than by a transcribed
+ * expectation, and `docs/DECISIONS.md` D329, D331 and D332 name what keeps each open.
  *
  * The allocator-attribution plane
  * -------------------------------
@@ -74,6 +80,7 @@
 #include <openssl/crypto.h>
 #include <openssl/dh.h>
 #include <openssl/err.h>
+#include <openssl/objects.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -591,6 +598,264 @@ static void dh_object_arms(void)
     DH_free(dh);
 }
 
+/* ------------------------------------------------------------------ the named groups */
+
+/* `dh_group_params.c` and its two tables (D332). Everything here is a *published* constant or
+ * a boolean: a named group is public data, so its widths and its congruence are the whole
+ * observation, and the two values that could identify a key -- a private exponent and a shared
+ * secret -- are never printed. The exponent appears only as a bound and the secret only as an
+ * equality, exactly as the 512-bit arms above treat theirs. */
+static void dh_named_group_arms(void)
+{
+    /* The eleven NID-keyed rows of `dh_named_groups[]`, then the three RFC 5114 uids -- the
+     * rows whose uid is not a NID, and the only place this court can see that an integer no
+     * NID has still names a group. */
+    static const int uids[14] = {
+        NID_ffdhe2048, NID_ffdhe3072, NID_ffdhe4096, NID_ffdhe6144, NID_ffdhe8192,
+        NID_modp_1536, NID_modp_2048, NID_modp_3072, NID_modp_4096, NID_modp_6144,
+        NID_modp_8192, 1, 2, 3
+    };
+    int i;
+
+    for (i = 0; i < 14; i++) {
+        DH *dh = DH_new_by_nid(uids[i]);
+        const BIGNUM *p = NULL, *q = NULL, *g = NULL;
+
+        printf("dh.group.%d.built=%d\n", i, dh != NULL);
+        if (dh == NULL) {
+            drain("group_build");
+            continue;
+        }
+        DH_get0_pqg(dh, &p, &q, &g);
+        printf("dh.group.%d.nid=%d\n", i, DH_get_nid(dh));
+        printf("dh.group.%d.bits=%d\n", i, DH_bits(dh));
+        printf("dh.group.%d.security_bits=%d\n", i, DH_security_bits(dh));
+        printf("dh.group.%d.p_bits=%d\n", i, BN_num_bits(p));
+        printf("dh.group.%d.q_bits=%d\n", i, BN_num_bits(q));
+        printf("dh.group.%d.g_is_two=%d\n", i, g != NULL && BN_is_word(g, 2) != 0);
+        /* The constants are `.rodata` on both sides: `BN_FLG_STATIC_DATA` without
+         * `BN_FLG_MALLOCED` is what makes `DH_free` of one a no-op. */
+        printf("dh.group.%d.p_is_static=%d\n", i,
+            BN_get_flags(p, BN_FLG_STATIC_DATA) != 0
+            && BN_get_flags(p, BN_FLG_MALLOCED) == 0);
+        /* The congruence that makes 2 a member of the order-`q` subgroup: 23 for every
+         * safe-prime row, and something else for the three RFC 5114 ones. */
+        printf("dh.group.%d.p_mod24=%lu\n", i, BN_mod_word(p, 24));
+        printf("dh.group.%d.length=%ld\n", i, DH_get_length(dh));
+        DH_free(dh);
+    }
+
+    /* The one refusal the lookup has: a uid no row carries. Drained, so the reason and its
+     * coordinate are compared rather than the NULL alone. */
+    ERR_clear_error();
+    {
+        DH *none = DH_new_by_nid(0);
+        printf("dh.group.refuse.uid0_is_null=%d\n", none == NULL);
+        DH_free(none);
+    }
+    drain("group_uid0");
+    ERR_clear_error();
+    {
+        DH *none = DH_new_by_nid(4);
+        printf("dh.group.refuse.uid4_is_null=%d\n", none == NULL);
+        DH_free(none);
+    }
+    drain("group_uid4");
+    ERR_clear_error();
+    {
+        DH *none = DH_new_by_nid(12345);
+        printf("dh.group.refuse.uid12345_is_null=%d\n", none == NULL);
+        DH_free(none);
+    }
+    drain("group_uid12345");
+
+    /* **The object graph, as booleans.** Two `DH_new_by_nid` objects of one group hold the
+     * *same* modulus because the constants are shared; two `DH_get_*` objects of one RFC 5114
+     * group hold different ones because `make_dh` duplicates. No address is printed. */
+    {
+        DH *a = DH_new_by_nid(NID_ffdhe2048);
+        DH *b = DH_new_by_nid(NID_ffdhe2048);
+        DH *c = DH_get_2048_256();
+        DH *d = DH_get_2048_256();
+        const BIGNUM *pa = a != NULL ? DH_get0_p(a) : NULL;
+        const BIGNUM *pb = b != NULL ? DH_get0_p(b) : NULL;
+        const BIGNUM *pc = c != NULL ? DH_get0_p(c) : NULL;
+        const BIGNUM *pd = d != NULL ? DH_get0_p(d) : NULL;
+
+        printf("dh.group.identity.named_shared=%d\n", pa != NULL && pa == pb);
+        printf("dh.group.identity.deprecated_own=%d\n",
+            pc != NULL && pd != NULL && pc != pd);
+        printf("dh.group.identity.named_vs_deprecated=%d\n", pa != NULL && pa != pc);
+        DH_free(a);
+        DH_free(b);
+        DH_free(c);
+        DH_free(d);
+    }
+
+    /* The named-group *cache*: a `DH` built from a group's own numbers acquires the group's
+     * `nid`, its `q` -- which the builder did not supply -- and its key length. This is the
+     * call `DH_set0_pqg` makes and the reduction D331 recorded; it is observed through the
+     * public accessors only. */
+    {
+        DH *src = DH_new_by_nid(NID_modp_4096);
+        DH *built = DH_new();
+        const BIGNUM *p = NULL, *g = NULL;
+        BIGNUM *p2 = NULL, *g2 = NULL;
+
+        if (src != NULL) {
+            DH_get0_pqg(src, &p, NULL, &g);
+            p2 = BN_dup(p);
+            g2 = BN_dup(g);
+        }
+        printf("dh.group.cache.built=%d\n", built != NULL && p2 != NULL && g2 != NULL);
+        if (built != NULL && p2 != NULL && g2 != NULL) {
+            printf("dh.group.cache.set0_pqg=%d\n", DH_set0_pqg(built, p2, NULL, g2));
+            printf("dh.group.cache.q_filled=%d\n", DH_get0_q(built) != NULL);
+            printf("dh.group.cache.nid=%d\n", DH_get_nid(built));
+            printf("dh.group.cache.q_is_the_rows=%d\n", DH_get0_q(built) == DH_get0_q(src));
+            printf("dh.group.cache.p_is_the_rows=%d\n", DH_get0_p(built) == p);
+            printf("dh.group.cache.q_bits=%d\n", BN_num_bits(DH_get0_q(built)));
+            DH_free(built);
+        }
+        DH_free(src);
+    }
+
+    /* Primality through the landed `BN_check_prime`, at the two smallest widths the table
+     * holds: the 1536-bit MODP group and the 160-bit RFC 5114 subgroup order. The 2048-bit
+     * and larger rows are 64 Miller-Rabin rounds and up, which is not a court arm. */
+    {
+        BN_CTX *ctx = BN_CTX_new();
+        DH *small = DH_new_by_nid(NID_modp_1536);
+        DH *rfc = DH_new_by_nid(1);
+        BIGNUM *composite = BN_new();
+
+        printf("dh.group.prime.1536_p=%d\n", BN_check_prime(DH_get0_p(small), ctx, NULL));
+        printf("dh.group.prime.1536_q=%d\n", BN_check_prime(DH_get0_q(small), ctx, NULL));
+        printf("dh.group.prime.160_q=%d\n", BN_check_prime(DH_get0_q(rfc), ctx, NULL));
+        /* A negative control: `2q` is even and therefore composite, so an answer of 1 here
+         * would mean the primitive, not the constant, was what the arms above measured. */
+        BN_lshift1(composite, DH_get0_q(rfc));
+        printf("dh.group.prime.composite=%d\n", BN_check_prime(composite, ctx, NULL));
+        BN_free(composite);
+        BN_CTX_free(ctx);
+        DH_free(small);
+        DH_free(rfc);
+    }
+
+    /* `DH_check` and `DH_check_ex` on a named group: the `DH_get_nid` short-circuit, which
+     * answers 1 with no flags and no records because the group is valid by construction.
+     * `DH_check_params` is the `#else` arm and has no such shortcut, so it runs its
+     * structural test -- which a named group passes. */
+    {
+        DH *dh = DH_new_by_nid(NID_ffdhe2048);
+        int flags = -1;
+
+        ERR_clear_error();
+        printf("dh.group.check.named=%d\n", DH_check(dh, &flags));
+        printf("dh.group.check.named_flags=%d\n", flags);
+        drain("group_check_named");
+        ERR_clear_error();
+        printf("dh.group.check_ex.named=%d\n", DH_check_ex(dh));
+        drain("group_check_ex_named");
+        ERR_clear_error();
+        printf("dh.group.check_params.named=%d\n", DH_check_params(dh, &flags));
+        printf("dh.group.check_params.named_flags=%d\n", flags);
+        drain("group_check_params_named");
+        ERR_clear_error();
+        printf("dh.group.check_pub_key.named=%d\n",
+            DH_check_pub_key(dh, DH_get0_p(dh), &flags));
+        printf("dh.group.check_pub_key.named_flags=%d\n", flags);
+        drain("group_check_pub_key_named");
+        DH_free(dh);
+    }
+
+    /* `DH_generate_key` on a named group: the `DH_get_nid` arm of the key layer, whose
+     * exponent length is the group's RFC 7919 key length. Two arms, because the arm's own
+     * bound is a number this court can cross on purpose: a caller-set length below `2 * s`
+     * is refused by `ossl_ffc_generate_private_key`, and the default length is accepted. */
+    {
+        DH *dh = DH_new_by_nid(NID_ffdhe2048);
+
+        ERR_clear_error();
+        printf("dh.group.genkey.short.set_length=%d\n", DH_set_length(dh, 200));
+        printf("dh.group.genkey.short.ret=%d\n", DH_generate_key(dh));
+        drain("group_genkey_short");
+        DH_free(dh);
+    }
+    {
+        DH *dh = DH_new_by_nid(NID_ffdhe2048);
+        DH *peer;
+        unsigned char k1[512], k2[512];
+        int pad1, pad2;
+
+        ERR_clear_error();
+        printf("dh.group.genkey.default.ret=%d\n", DH_generate_key(dh));
+        drain("group_genkey_default");
+        /* The exponent's width is bounded by the table's 225 and the public key's by `p`;
+         * neither is a value and neither identifies a key. */
+        printf("dh.group.genkey.priv_within_225=%d\n",
+            BN_num_bits(DH_get0_priv_key(dh)) <= 225);
+        printf("dh.group.genkey.priv_nonzero=%d\n", DH_get0_priv_key(dh) != NULL);
+        printf("dh.group.genkey.pub_within_p=%d\n",
+            BN_num_bits(DH_get0_pub_key(dh)) <= BN_num_bits(DH_get0_p(dh)));
+
+        peer = dh_peer(dh);
+        printf("dh.group.agree.peer_built=%d\n", peer != NULL);
+        if (peer != NULL) {
+            ERR_clear_error();
+            printf("dh.group.agree.peer_genkey=%d\n", DH_generate_key(peer));
+            drain("group_peer_genkey");
+            ERR_clear_error();
+            pad1 = DH_compute_key_padded(k1, DH_get0_pub_key(peer), dh);
+            pad2 = DH_compute_key_padded(k2, DH_get0_pub_key(dh), peer);
+            printf("dh.group.agree.pad1=%d\n", pad1);
+            printf("dh.group.agree.is_size=%d\n", pad1 == DH_size(dh));
+            printf("dh.group.agree.equal=%d\n",
+                pad1 == pad2 && pad1 > 0 && bytes_eq(k1, k2, pad1));
+            drain("group_agree");
+            DH_free(peer);
+        }
+        DH_free(dh);
+    }
+
+    /* The three deprecated constructors: the same group as `DH_new_by_nid(1..3)`, and the
+     * one asymmetry between the two paths -- `make_dh` assigns the three fields directly, so
+     * the object answers `NID_undef` until something caches it. */
+    {
+        DH *one = DH_get_1024_160();
+        DH *two = DH_get_2048_224();
+        DH *three = DH_get_2048_256();
+
+        printf("dh.group.depr.built=%d\n", one != NULL && two != NULL && three != NULL);
+        printf("dh.group.depr.1024_160_bits=%d\n", DH_bits(one));
+        printf("dh.group.depr.2048_224_bits=%d\n", DH_bits(two));
+        printf("dh.group.depr.2048_256_bits=%d\n", DH_bits(three));
+        printf("dh.group.depr.nid_is_undef=%d\n",
+            DH_get_nid(one) == NID_undef && DH_get_nid(two) == NID_undef
+            && DH_get_nid(three) == NID_undef);
+        DH_free(one);
+        DH_free(two);
+        DH_free(three);
+    }
+
+    /* **There is deliberately no allocation window around `DH_new_by_nid`.** One was written
+     * and removed rather than tuned, because the two sides disagree and the disagreement is
+     * real (docs/DECISIONS.md D332 records it with these numbers):
+     *
+     *   authority  7 events   M:208 dh_lib.c, M:56 threads_pthread.c, F:0 ex_data.c,
+     *                         F:0 ex_data.c, F:0 threads_pthread.c, F:0 ffc_params.c,
+     *                         F:0 dh_lib.c
+     *   candidate  2 events   M:208 dh_lib.c, F:0 dh_lib.c
+     *
+     * Three causes, none of them this unit's: the crate's `CRYPTO_THREAD_lock_new` is a Rust
+     * `Box` over a `Mutex`/`Condvar` pair and never reaches the caller's allocator; its ex-data
+     * registry likewise; and its `CRYPTO_free` does not hand a NULL pointer to an installed
+     * hook where the authority's `free_impl(str, file, line)` does, which is the `F:0` at
+     * `ffc_params.c` -- `ossl_ffc_params_cleanup`'s release of a NULL `seed`. A window that
+     * printed only the two events both sides share would be this court choosing its answer, so
+     * the arm is absent and the measurement is written down instead. */
+}
+
 int main(void)
 {
     DH_METHOD *m;
@@ -691,6 +956,10 @@ int main(void)
     /* ---- the DH object, its key layer, its generator and its validators (D331) */
 
     dh_object_arms();
+
+    /* ---- the named-group unit and its two tables (D332) */
+
+    dh_named_group_arms();
 
     return 0;
 }
