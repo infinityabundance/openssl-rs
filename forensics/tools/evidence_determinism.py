@@ -129,6 +129,13 @@ GENERATORS_AFTER_LEDGERS = [
     "forensics/tools/plan_reconciliation.py",
     "forensics/tools/render_seal_census.py",
     "forensics/tools/render_status.py",
+    # The Phase 8 remainder projection (docs/PHASE-8-REMAINING.md). It reads the Phase 8
+    # obligation ledger the block above just wrote, so it sits after the ledgers rather
+    # than before them, and it is listed here so a stale committed copy is a failure
+    # rather than a silent divergence -- the document exists to answer a planning
+    # question about what is left of the stratum, and a copy nothing re-runs would drift
+    # from the ledger it projects.
+    "forensics/tools/phase8_remaining.py",
 ]
 
 
@@ -187,6 +194,7 @@ COMPARED = [
     "forensics/phase-state.json",
     "forensics/phase-state.md",
     "docs/SEAL-CENSUS.md",
+    "docs/PHASE-8-REMAINING.md",
     "forensics/STATUS.md",
     # Not a JSON artefact and not written by a generator that reads the atlas: it is
     # emitted by `gen_ctype_table.py` above, so it is compared in the same pass. It
