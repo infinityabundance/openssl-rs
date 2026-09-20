@@ -78,8 +78,15 @@ const BN_FLG_CONSTTIME: c_int = 0x04;
 
 /// `ERR_LIB_BN` — `include/openssl/err.h`, the library an `ERR_GET_LIB` test compares.
 const ERR_LIB_BN: c_int = 3;
-/// `BN_R_NO_INVERSE` — `include/openssl/bnerr.h`.
-const BN_R_NO_INVERSE: c_int = 106;
+/// `BN_R_NO_INVERSE` — `include/openssl/bnerr.h:36`, and **not** the 106 an earlier revision of this
+/// module carried. The number is load-bearing rather than descriptive: the retry below is
+/// `ERR_GET_LIB(error) == ERR_LIB_BN && ERR_GET_REASON(error) == BN_R_NO_INVERSE`, and
+/// `BN_mod_inverse`'s only failure raise is that pair, so a wrong reason here turns "this prime has
+/// no inverse modulo `e`, draw another" into "the whole key generation failed". With `e = 17` a
+/// prime has no inverse modulo `e` about one time in sixteen, which made `RSA_generate_key_ex`
+/// answer 0 about one run in eight -- measured over 24 calls, and never on the authority. The unit
+/// test below is the check that the pair this constant spells is the pair the raise produces.
+const BN_R_NO_INVERSE: c_int = 108;
 
 /// `__FILE__` at `rsa_keygen_pairwise_test`'s `OPENSSL_calloc`/`OPENSSL_free`.
 ///
@@ -1379,9 +1386,64 @@ mod tests {
         }
     }
 
+    /// **The retry's reason code is the one `BN_mod_inverse` raises.** `rsa_multiprime_keygen`'s
+    /// prime search draws another candidate when the one it has is not invertible modulo the public
+    /// exponent, and it *decides* that by comparing `ERR_GET_LIB`/`ERR_GET_REASON` against the pair
+    /// `(ERR_LIB_BN, BN_R_NO_INVERSE)`. So the two constants are a contract with a raise site
+    /// rather than a description of one: with the wrong reason the comparison never matches, the
+    /// retry is skipped, and the whole generator answers 0 for a prime it should simply have
+    /// replaced.
+    ///
+    /// The case below is deliberately not a plausible key: `a = e` makes `gcd(a, e) = e`, so no
+    /// inverse exists and the raise is guaranteed. `a = e - 1` is the success control, so the test
+    /// fails if `BN_mod_inverse` were changed to raise unconditionally.
+    #[test]
+    fn the_no_inverse_retry_recognises_the_raise_it_tests_for() {
+        use crate::runtime::err::{ERR_clear_error, ERR_pop_to_mark, ERR_set_mark};
+
+        // SAFETY: every pointer is a fresh object this test owns.
+        unsafe {
+            let e = exponent(17);
+            let r = BN_new();
+            let not_invertible = exponent(17);
+            let invertible = exponent(16);
+            assert!(!r.is_null() && !not_invertible.is_null() && !invertible.is_null());
+
+            ERR_clear_error();
+            ERR_set_mark();
+            assert!(
+                BN_mod_inverse(r, not_invertible, e, core::ptr::null_mut()).is_null(),
+                "17 has no inverse modulo 17"
+            );
+            assert_eq!(peek_last_lib(), ERR_LIB_BN as c_ulong);
+            assert_eq!(peek_last_reason(), BN_R_NO_INVERSE as c_ulong);
+            ERR_pop_to_mark();
+
+            ERR_clear_error();
+            ERR_set_mark();
+            assert!(
+                !BN_mod_inverse(r, invertible, e, core::ptr::null_mut()).is_null(),
+                "16 is invertible modulo 17"
+            );
+            assert_eq!(peek_last_lib(), 0);
+            assert_eq!(peek_last_reason(), 0);
+            ERR_pop_to_mark();
+            ERR_clear_error();
+
+            BN_free(invertible);
+            BN_free(not_invertible);
+            BN_free(r);
+            BN_free(e);
+        }
+    }
+
     /// **A public exponent of 16 or fewer bits stays on the multi-prime generator even
     /// at 2048 bits.** That is `rsa_keygen`'s own condition, and the observable is the
     /// two-prime default `version` plus a key whose width is what was asked for.
+    ///
+    /// **This arm is the one that caught the wrong `BN_R_NO_INVERSE`**, because `e = 17` is small
+    /// enough that "no inverse modulo `e`" happens about one time in sixteen per prime: with the
+    /// retry broken it answered 0 in roughly one run in eight, where the authority never does.
     #[test]
     fn a_small_exponent_takes_the_multiprime_path_at_full_width() {
         // SAFETY: every pointer is a fresh object this test owns.

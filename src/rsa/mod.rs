@@ -65,13 +65,17 @@
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
 use core::sync::atomic::AtomicI32;
 
-use crate::bn::arith::{BN_div, BN_gcd, BN_mod_inverse, BN_mul, BN_sub};
-use crate::bn::bignum::{BN_dup, BN_new, BN_num_bits, BN_value_one, BigNum};
+use crate::bn::arith::{BN_cmp, BN_div, BN_gcd, BN_mod_inverse, BN_mod_mul, BN_mul, BN_sub};
+use crate::bn::bignum::{
+    BN_dup, BN_free, BN_is_odd, BN_is_one, BN_new, BN_num_bits, BN_value_one, BigNum,
+};
 use crate::bn::ctx::{
     BN_CTX_end, BN_CTX_free, BN_CTX_get, BN_CTX_new, BN_CTX_new_ex, BN_CTX_start, BnCtx, BnGencb,
 };
 use crate::bn::mont::MontCtx;
-use crate::bn::primes::{BN_X931_derive_prime_ex, BN_X931_generate_Xpq, BN_X931_generate_prime_ex};
+use crate::bn::primes::{
+    BN_X931_derive_prime_ex, BN_X931_generate_Xpq, BN_X931_generate_prime_ex, BN_check_prime,
+};
 use crate::digest::sha2::SHA256_DIGEST_LENGTH;
 use crate::evp::digest::{
     EVP_DigestFinal_ex, EVP_DigestInit_ex, EVP_DigestUpdate, EVP_MD_CTX_free, EVP_MD_CTX_new,
@@ -85,16 +89,19 @@ use crate::mac::hmac::{
 use crate::rand::rand_lib::RAND_bytes_ex;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
+use crate::runtime::err::raise_site_data;
 use crate::runtime::ex_data::CryptoExData;
 use crate::runtime::mem::{cleanse, CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};
 use crate::runtime::obj::{NID_sha1, NID_sha256, NID_sha384, NID_sha512};
-use crate::runtime::stack::OpenSslStack;
+use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack};
 use crate::runtime::thread::CryptoRwlock;
 
+pub mod ctrl;
 pub mod gen;
 mod mp;
 pub mod object;
 pub mod ossl;
+pub mod sign;
 pub(crate) mod sp800;
 
 /// `RSA_METHOD_FLAG_NO_CHECK` — `include/openssl/rsa.h:64`. The only `RSA_METHOD_FLAG_*` constant
@@ -854,7 +861,11 @@ pub extern "C" fn RSA_null_method() -> *const RsaMethod {
 
 /// `RSA_PKCS1_PADDING_SIZE` — `include/openssl/rsa.h:206`. Eleven: the two header octets, eight
 /// mandatory `0xFF` octets and the separating zero.
-const RSA_PKCS1_PADDING_SIZE: c_int = 11;
+///
+/// `pub(crate)` rather than private because `rsa_sign.c` is its second reader: `RSA_sign` and
+/// `RSA_sign_ASN1_OCTET_STRING` both compare an encoded length plus these eleven octets against
+/// `RSA_size`, and `src/rsa/sign.rs` imports this one rather than declaring a second copy.
+pub(crate) const RSA_PKCS1_PADDING_SIZE: c_int = 11;
 
 /// `int RSA_padding_add_none(unsigned char *to, int tlen, const unsigned char *from, int flen)` —
 /// `rsa_none.c:20-35`.
@@ -2463,6 +2474,274 @@ pub unsafe extern "C" fn RSA_padding_add_PKCS1_OAEP_mgf1(
     }
 }
 
+// =============================================================================================
+// Slice D's remainder, first half — the PSS *verifier* (`crypto/rsa/rsa_pss.c`)
+// =============================================================================================
+//
+// **`rsa_pss.c` publishes three names, and the two adds above are its other half.** The verifier is
+// the encoding's inverse and is a *pure* function of its input -- it draws no randomness, because
+// the salt is read out of the block rather than generated -- so it has no `RAND_bytes_ex` in it at
+// all and was landable with the RAND-free half of slice C. What held it back is that nothing called
+// it: `rsa_ameth.c`'s and the provider's verify paths are 8.8's and the provider's respectively.
+// It lands here with `RSA_sign`/`RSA_verify`, which are reachable from `rsa.h` alone.
+//
+// **The two things a reader gets wrong are both in the salt-length recovery.** The negative
+// conventions are *not* symmetric with the add's: `-1` still means "the digest length", but `-3`
+// (MAX) is the only one that is resolved to a number, and `-2`/`-4` survive into the comparison as
+// the sentinel they are -- the recovery loop then simply reports the salt length it found. And the
+// recovery loop is `for (i = 0; DB[i] == 0 && i < maskedDBLen - 1; i++)`, so a `DB` that is all
+// zeroes leaves `i` at `maskedDBLen - 1` and the following test answers
+// `RSA_R_SLEN_RECOVERY_FAILED` rather than reading past the buffer.
+
+/// Eight zero octets, `rsa_pss.c:25`'s `static const unsigned char zeroes[]`, the prefix of
+/// PKCS #1 v2.2 section 9.1.2's `H = Hash(0x00 * 8 || mHash || salt)`. The add above declares the
+/// same constant inside its own body; the authority has one file-scope copy and this is the second
+/// reader, so it is declared here rather than reached for across a `const` in a function body.
+const PSS_ZEROES: [u8; 8] = [0; 8];
+
+/// `int ossl_rsa_verify_PKCS1_PSS_mgf1(RSA *rsa, const unsigned char *mHash, const EVP_MD *Hash,
+/// const EVP_MD *mgf1Hash, const unsigned char *EM, int *sLenOut)` — `rsa_pss.c:45-156`.
+/// Internal, declared in `include/crypto/rsa.h:45-48`.
+///
+/// RSASSA-PSS's EMSA-PSS-VERIFY as PKCS #1 v2.2 section 9.1.2 writes it, and the `sLenOut` pointer
+/// is what makes it the internal rather than the export: `-2` (AUTO) and `-4`
+/// (AUTO_DIGEST_MAX) are answered with the salt length the block actually encodes, which the two
+/// exports below cannot return because their signatures carry an `int` by value.
+///
+/// **The `MSBits == 0` arm moves the pointer, exactly as in the add.** When `BN_num_bits(n) - 1` is
+/// a multiple of 8 the first octet of `EM` must be zero, and the authority writes the test before
+/// the test's consequence: `EM[0] & (0xFF << MSBits)` with `MSBits == 0` is `EM[0] & 0xFF`, a
+/// *refusal* for a non-zero octet, and only then are `EM` advanced and `emLen` decremented.
+///
+/// **The comparison is `memcmp(H_, H, hLen) != 0`, so a mismatch is a `0` with
+/// `RSA_R_BAD_SIGNATURE`** -- and `*sLenOut` is written on the success *and* the mismatch path,
+/// because the authority's assignment sits after the `if`/`else` rather than in it.
+///
+/// # Safety
+/// `rsa` is a live object with a live `n`; `EM` is readable for `RSA_size(rsa)` bytes; `mHash` is
+/// readable for `EVP_MD_get_size(Hash)` bytes; `Hash` and `mgf1Hash` are NULL or live digest
+/// methods; `sLenOut` is a live `int` the callee writes back.
+#[allow(non_snake_case)] // the authority's name, kept verbatim like every other one
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+pub(crate) unsafe fn ossl_rsa_verify_PKCS1_PSS_mgf1(
+    rsa: *mut Rsa,
+    m_hash: *const c_uchar,
+    hash: *const EvpMd,
+    mgf1_hash: *const EvpMd,
+    em: *const c_uchar,
+    s_len_out: *mut c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut ret: c_int = 0;
+        let mut s_len: c_int = *s_len_out;
+        let mut db: *mut c_uchar = core::ptr::null_mut();
+        let mut h_: [u8; EVP_MAX_MD_SIZE] = [0; EVP_MAX_MD_SIZE];
+        let ctx: *mut EvpMdCtx = EVP_MD_CTX_new();
+
+        'body: {
+            if ctx.is_null() {
+                break 'body;
+            }
+
+            let mut mgf1_hash = mgf1_hash;
+            if mgf1_hash.is_null() {
+                mgf1_hash = hash;
+            }
+
+            // SAFETY: `hash` is NULL or live per this function's contract.
+            let h_len: c_int = EVP_MD_get_size(hash);
+            if h_len <= 0 {
+                break 'body;
+            }
+            // The negative conventions. Unlike the add's, only `-1` is resolved here: `-2` and `-4`
+            // stay as sentinels for the comparison below, and `-3` is resolved after `emLen` is
+            // known.
+            if s_len == RSA_PSS_SALTLEN_DIGEST {
+                s_len = h_len;
+            } else if s_len < RSA_PSS_SALTLEN_AUTO_DIGEST_MAX {
+                raise_site(&err_sites::RSA_PSS_78);
+                break 'body;
+            }
+
+            // SAFETY: `rsa` is live with a live `n`.
+            let msbits = (BN_num_bits((*rsa).n) - 1) & 0x7;
+            // SAFETY: `rsa` is live.
+            let mut em_len = object::RSA_size(rsa);
+            // SAFETY: `em` is readable for `em_len` bytes.
+            if (*em as c_int) & (0xff << msbits) != 0 {
+                raise_site(&err_sites::RSA_PSS_85);
+                break 'body;
+            }
+            let mut em = em;
+            if msbits == 0 {
+                em = em.offset(1);
+                em_len -= 1;
+            }
+            if em_len < h_len + 2 {
+                raise_site(&err_sites::RSA_PSS_93);
+                break 'body;
+            }
+            if s_len == RSA_PSS_SALTLEN_MAX {
+                s_len = em_len - h_len - 2;
+            } else if s_len > em_len - h_len - 2 {
+                // `sLen` can be a small negative here, which is why the test is `>` and not `>=`.
+                raise_site(&err_sites::RSA_PSS_99);
+                break 'body;
+            }
+            if *em.offset((em_len - 1) as isize) != 0xbc {
+                raise_site(&err_sites::RSA_PSS_103);
+                break 'body;
+            }
+            let masked_dblen = em_len - h_len - 1;
+            let h = em.offset(masked_dblen as isize);
+            db = CRYPTO_malloc(masked_dblen as usize, FILE_RSA_PSS, LINE).cast::<c_uchar>();
+            if db.is_null() {
+                break 'body;
+            }
+            // SAFETY: `db` is writable for `masked_dblen` bytes and `h` is readable for `h_len`.
+            if PKCS1_MGF1(db, masked_dblen as c_long, h, h_len as c_long, mgf1_hash) < 0 {
+                break 'body;
+            }
+            let mut i: c_int = 0;
+            while i < masked_dblen {
+                *db.offset(i as isize) ^= *em.offset(i as isize);
+                i += 1;
+            }
+            if msbits != 0 {
+                *db &= (0xff >> (8 - msbits)) as u8;
+            }
+            // `for (i = 0; DB[i] == 0 && i < (maskedDBLen - 1); i++)`: the loop stops one short of
+            // the end, so an all-zero `DB` leaves `i` at `maskedDBLen - 1` and the octet read below
+            // is the last one in the buffer -- a refusal, not an overrun.
+            i = 0;
+            while *db.offset(i as isize) == 0 && i < (masked_dblen - 1) {
+                i += 1;
+            }
+            let sep = *db.offset(i as isize);
+            i += 1;
+            if sep != 0x1 {
+                raise_site(&err_sites::RSA_PSS_120);
+                break 'body;
+            }
+            if s_len != RSA_PSS_SALTLEN_AUTO
+                && s_len != RSA_PSS_SALTLEN_AUTO_DIGEST_MAX
+                && (masked_dblen - i) != s_len
+            {
+                // The authority's only `ERR_raise_data` in this file, and the text is the whole
+                // observation: both numbers the check compared, formatted into one message.
+                let mut msg = [0 as c_char; 64];
+                // SAFETY: `msg` is a 64-byte buffer and the format is the authority's own.
+                crate::runtime::bio::print::BIO_snprintf(
+                    msg.as_mut_ptr(),
+                    msg.len(),
+                    c"expected: %d retrieved: %d".as_ptr(),
+                    s_len,
+                    masked_dblen - i,
+                );
+                // SAFETY: a compile-time-constant site; the message is NUL-terminated.
+                raise_site_data(&err_sites::RSA_PSS_126, msg.as_ptr());
+                break 'body;
+            } else {
+                s_len = masked_dblen - i;
+            }
+            // SAFETY: `hash` is NULL or live and `m_hash` is readable for `h_len` bytes.
+            if EVP_DigestInit_ex(ctx, hash, core::ptr::null_mut()) == 0
+                || EVP_DigestUpdate(ctx, PSS_ZEROES.as_ptr().cast(), PSS_ZEROES.len()) == 0
+                || EVP_DigestUpdate(ctx, m_hash.cast(), h_len as usize) == 0
+            {
+                break 'body;
+            }
+            if s_len != 0 {
+                // SAFETY: `db` has `masked_dblen` bytes and `i + s_len <= masked_dblen`.
+                if EVP_DigestUpdate(
+                    ctx,
+                    db.offset(i as isize).cast_const().cast(),
+                    s_len as usize,
+                ) == 0
+                {
+                    break 'body;
+                }
+            }
+            // SAFETY: `h_` is `EVP_MAX_MD_SIZE` bytes, which is what the digest needs.
+            if EVP_DigestFinal_ex(ctx, h_.as_mut_ptr(), core::ptr::null_mut()) == 0 {
+                break 'body;
+            }
+            // SAFETY: `h` is readable for `h_len` bytes and `h_` for the same.
+            if core::slice::from_raw_parts(h_.as_ptr(), h_len as usize)
+                != core::slice::from_raw_parts(h.cast::<u8>(), h_len as usize)
+            {
+                // The authority's `if (memcmp(...)) { raise; ret = 0; } else { ret = 1; }`, whose
+                // *else* arm is the only place `ret` becomes 1 -- and whose fall-through then
+                // writes `*sLenOut` on **both** arms, which is why a bad signature still reports
+                // the salt length the block encoded.
+                raise_site(&err_sites::RSA_PSS_144);
+            } else {
+                ret = 1;
+            }
+
+            *s_len_out = s_len;
+        }
+
+        // The authority's `err:` label, reached by falling through and by every `goto err` above.
+        // `DB` is NULL when the first one is taken, which `OPENSSL_free` tolerates.
+        // SAFETY: `db` is NULL or this call's own allocation.
+        CRYPTO_free(db.cast(), FILE_RSA_PSS, LINE);
+        // SAFETY: `ctx` is NULL or this call's own object.
+        EVP_MD_CTX_free(ctx);
+
+        ret
+    }
+}
+
+/// `int RSA_verify_PKCS1_PSS_mgf1(RSA *rsa, const unsigned char *mHash, const EVP_MD *Hash,
+/// const EVP_MD *mgf1Hash, const unsigned char *EM, int sLen)` — `rsa_pss.c:38-43`.
+///
+/// The export is the internal with a one-`int` difference: the salt length travels *by value*, so
+/// the value the internal resolved is discarded. That is what makes `RSA_PSS_SALTLEN_AUTO` a legal
+/// argument here and an unobservable one -- a caller that wants the recovered length wants
+/// `EVP_PKEY_CTX_get_rsa_pss_saltlen`'s modern spelling, not this one.
+///
+/// # Safety
+/// `rsa` is a live object with a live `n`; `EM` is readable for `RSA_size(rsa)` bytes; `mHash` is
+/// readable for `EVP_MD_get_size(Hash)` bytes; `Hash` and `mgf1Hash` are NULL or live digest
+/// methods.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_verify_PKCS1_PSS_mgf1(
+    rsa: *mut Rsa,
+    m_hash: *const c_uchar,
+    hash: *const EvpMd,
+    mgf1_hash: *const EvpMd,
+    em: *const c_uchar,
+    s_len: c_int,
+) -> c_int {
+    let mut s_len = s_len;
+    // SAFETY: the caller's contract, forwarded with a local `sLen` the callee may write back.
+    unsafe { ossl_rsa_verify_PKCS1_PSS_mgf1(rsa, m_hash, hash, mgf1_hash, em, &mut s_len) }
+}
+
+/// `int RSA_verify_PKCS1_PSS(RSA *rsa, const unsigned char *mHash, const EVP_MD *Hash, const
+/// unsigned char *EM, int sLen)` — `rsa_pss.c:31-36`.
+///
+/// The `_mgf1` form with a NULL mask generation digest, which the internal turns into `Hash`. It is
+/// the add's mirror image and is *not* the same call: the add's `_mgf1` sibling is
+/// [`RSA_padding_add_PKCS1_PSS_mgf1`] and this one's is the name above.
+///
+/// # Safety
+/// `rsa` is a live object with a live `n`; `EM` is readable for `RSA_size(rsa)` bytes; `mHash` is
+/// readable for `EVP_MD_get_size(Hash)` bytes; `Hash` is NULL or a live digest method.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_verify_PKCS1_PSS(
+    rsa: *mut Rsa,
+    m_hash: *const c_uchar,
+    hash: *const EvpMd,
+    em: *const c_uchar,
+    s_len: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract; a NULL `mgf1Hash` means "the same as `Hash`".
+    unsafe { RSA_verify_PKCS1_PSS_mgf1(rsa, m_hash, hash, core::ptr::null(), em, s_len) }
+}
+
 /// `int ossl_rsa_padding_add_PKCS1_PSS_mgf1(RSA *rsa, unsigned char *EM, const unsigned char
 /// *mHash, const EVP_MD *Hash, const EVP_MD *mgf1Hash, int *sLenOut)` — `rsa_pss.c:173-290`.
 /// Internal, declared in `include/crypto/rsa.h:52-55`.
@@ -2983,6 +3262,347 @@ pub unsafe extern "C" fn RSA_X931_generate_key_ex(
             0
         }
     }
+}
+
+// =============================================================================================
+// Slice G, first half — the key checkers (`crypto/rsa/rsa_chk.c`)
+// =============================================================================================
+//
+// **Two of the file's five functions are here and the other three are named rather than implied.**
+// `rsa_chk.c` defines `ossl_rsa_validate_public`, `ossl_rsa_validate_private` and
+// `ossl_rsa_validate_pairwise` as well, and in this profile the third is a one-line call to
+// `rsa_validate_keypair_multiprime` -- the function below. The first two are one-line calls to
+// `ossl_rsa_sp800_56b_check_public` and `ossl_rsa_sp800_56b_check_private`
+// (`crypto/rsa/rsa_sp800_56b_check.c`), which D327 deliberately did not transcribe because nothing
+// on the generate path reaches them; transcribing them here would be the dead code that decision
+// refused. So they are absent, and their absence is why this file does **not** get a module of its
+// own: an authority unit with a crate module makes every internal its text calls countable to
+// `forensics/tools/prerequisite_gate.py`, and a unit whose own functions cannot be built is a
+// finding rather than a census entry. `RSA_check_key` and `RSA_check_key_ex` therefore land in this
+// module, whose dominant unit stays `rsa_meth.c`.
+//
+// **`rsa_validate_keypair_multiprime` has three answers, not two.** `-1` is "the arithmetic
+// failed" (an allocation, and the authority raises `ERR_R_BN_LIB` for it), `0` is "this key is
+// wrong" and `1` is "this key is right". The `ret = -1` paths are *not* the `ret = 0` paths: the
+// first three refusals (`e == 1`, `e` even, a composite `p`) strip an earlier `1` back to `0` and
+// keep walking, which is what lets one call report several independent problems in the error
+// queue. `RSA_check_key` and `RSA_check_key_ex` hand that number straight back, so a caller sees
+// `-1` as well.
+
+/// `static int rsa_validate_keypair_multiprime(const RSA *key, BN_GENCB *cb)` --
+/// `rsa_chk.c:22-234`.
+///
+/// The non-FIPS half of `RSA_check_key_ex`, and the whole of what this build runs.
+///
+/// **Sixteen error sites and only two of them end the walk.** Every check sets `ret` and keeps
+/// going -- the eight `ret = 0` sites continue so that a key with several faults reports all of
+/// them -- while the eleven arithmetic failures (`ret = -1`) jump to `err:`. That asymmetry is the
+/// function's observable contract: one call populates the queue with every reason the key is wrong
+/// rather than with the first.
+///
+/// **`d*e = 1 mod lambda(n)` is computed with a gcd division, not a multiplication.** The lcm is
+/// built as `(p-1)(q-1) / gcd(p-1, q-1)` with `BN_div`'s **quotient** slot, then folded with each
+/// extra prime's `r-1` the same way. `BN_div(m, NULL, l, m, ctx)` in the authority is the header's
+/// four-argument form, and a transcription that swapped the two result slots would compute a
+/// remainder that is zero by construction and then test `d*e mod 0`.
+///
+/// **The multi-prime count is checked against the *modulus*, not against a constant.**
+/// `ossl_rsa_multip_cap(BN_num_bits(key->n))` is the modulus-dependent ladder `mp.rs` transcribes,
+/// so the refusal for a bad count depends on the key's width.
+///
+/// # Safety
+/// `key` is a live object; `cb` is NULL or a live callback. The `BN_*` calls are the crate's own,
+/// whose contracts are the authority's.
+unsafe fn rsa_validate_keypair_multiprime(key: *const Rsa, cb: *mut BnGencb) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut ret: c_int = 1;
+        let mut ex_primes: c_int = 0;
+        let mut idx: c_int;
+        /* Declared without initialisers and assigned inside the block below, which is the
+         * authority's own shape: the five `BN_new`s and the `BN_CTX_new_ex` happen after the two
+         * early refusals, so a multi-prime key with a bad count never allocates anything. Rust's
+         * definite-assignment analysis accepts this because every `break 'body` below follows the
+         * assignments. */
+        let i: *mut BigNum;
+        let j: *mut BigNum;
+        let k: *mut BigNum;
+        let l: *mut BigNum;
+        let m: *mut BigNum;
+        let ctx: *mut BnCtx;
+
+        // SAFETY: `key` is live per the contract.
+        let (p, q, n, e, d) = ((*key).p, (*key).q, (*key).n, (*key).e, (*key).d);
+        if p.is_null() || q.is_null() || n.is_null() || e.is_null() || d.is_null() {
+            raise_site(&err_sites::RSA_CHK_31);
+            return 0;
+        }
+
+        'body: {
+            // multi-prime?
+            // SAFETY: `key` is live and its `prime_infos` is NULL or its own stack.
+            if (*key).version == object::RSA_ASN1_VERSION_MULTI {
+                // SAFETY: `prime_infos` is NULL or the object's own stack.
+                ex_primes = OPENSSL_sk_num((*key).prime_infos);
+                if ex_primes <= 0 || (ex_primes + 2) > mp::ossl_rsa_multip_cap(BN_num_bits(n)) {
+                    raise_site(&err_sites::RSA_CHK_40);
+                    return 0;
+                }
+            }
+
+            i = BN_new();
+            j = BN_new();
+            k = BN_new();
+            l = BN_new();
+            m = BN_new();
+            // SAFETY: `key` is live and its `libctx` is NULL or live.
+            ctx = BN_CTX_new_ex((*key).libctx);
+            if i.is_null()
+                || j.is_null()
+                || k.is_null()
+                || l.is_null()
+                || m.is_null()
+                || ctx.is_null()
+            {
+                ret = -1;
+                raise_site(&err_sites::RSA_CHK_54);
+                break 'body;
+            }
+
+            if BN_is_one(e) != 0 {
+                ret = 0;
+                raise_site(&err_sites::RSA_CHK_60);
+            }
+            if BN_is_odd(e) == 0 {
+                ret = 0;
+                raise_site(&err_sites::RSA_CHK_64);
+            }
+
+            // p prime?
+            if BN_check_prime(p, ctx, cb) != 1 {
+                ret = 0;
+                raise_site(&err_sites::RSA_CHK_70);
+            }
+
+            // q prime?
+            if BN_check_prime(q, ctx, cb) != 1 {
+                ret = 0;
+                raise_site(&err_sites::RSA_CHK_76);
+            }
+
+            // r_i prime?
+            idx = 0;
+            while idx < ex_primes {
+                // SAFETY: `prime_infos` is the object's own stack, with `ex_primes` live elements.
+                let pinfo = OPENSSL_sk_value((*key).prime_infos, idx).cast::<RsaPrimeInfo>();
+                // SAFETY: `pinfo` is a live record whose `r` is NULL or live.
+                if BN_check_prime((*pinfo).r, ctx, cb) != 1 {
+                    ret = 0;
+                    raise_site(&err_sites::RSA_CHK_84);
+                }
+                idx += 1;
+            }
+
+            // n = p*q * r_3...r_i?
+            if BN_mul(i, p, q, ctx) == 0 {
+                ret = -1;
+                break 'body;
+            }
+            idx = 0;
+            while idx < ex_primes {
+                // SAFETY: as above.
+                let pinfo = OPENSSL_sk_value((*key).prime_infos, idx).cast::<RsaPrimeInfo>();
+                // SAFETY: `pinfo` is live.
+                if BN_mul(i, i, (*pinfo).r, ctx) == 0 {
+                    ret = -1;
+                    break 'body;
+                }
+                idx += 1;
+            }
+            if BN_cmp(i, n) != 0 {
+                ret = 0;
+                if ex_primes != 0 {
+                    raise_site(&err_sites::RSA_CHK_103);
+                } else {
+                    raise_site(&err_sites::RSA_CHK_105);
+                }
+            }
+
+            // d*e = 1 mod \lambda(n)?
+            if BN_sub(i, p, BN_value_one()) == 0 {
+                ret = -1;
+                break 'body;
+            }
+            if BN_sub(j, q, BN_value_one()) == 0 {
+                ret = -1;
+                break 'body;
+            }
+
+            // now compute k = \lambda(n) = LCM(i, j, r_3 - 1...)
+            if BN_mul(l, i, j, ctx) == 0 {
+                ret = -1;
+                break 'body;
+            }
+            if BN_gcd(m, i, j, ctx) == 0 {
+                ret = -1;
+                break 'body;
+            }
+            // The header's macro is `BN_div(NULL, m, l, m, ctx)`; here it is written out for the
+            // reason the doc comment gives -- the quotient is the lcm and the remainder is zero.
+            if BN_div(m, core::ptr::null_mut(), l, m, ctx) == 0 {
+                ret = -1;
+                break 'body;
+            }
+            idx = 0;
+            while idx < ex_primes {
+                // SAFETY: as above.
+                let pinfo = OPENSSL_sk_value((*key).prime_infos, idx).cast::<RsaPrimeInfo>();
+                // SAFETY: `pinfo` is live.
+                if BN_sub(k, (*pinfo).r, BN_value_one()) == 0 {
+                    ret = -1;
+                    break 'body;
+                }
+                if BN_mul(l, m, k, ctx) == 0 {
+                    ret = -1;
+                    break 'body;
+                }
+                if BN_gcd(m, m, k, ctx) == 0 {
+                    ret = -1;
+                    break 'body;
+                }
+                if BN_div(m, core::ptr::null_mut(), l, m, ctx) == 0 {
+                    ret = -1;
+                    break 'body;
+                }
+                idx += 1;
+            }
+            if BN_mod_mul(i, d, e, m, ctx) == 0 {
+                ret = -1;
+                break 'body;
+            }
+
+            if BN_is_one(i) == 0 {
+                ret = 0;
+                raise_site(&err_sites::RSA_CHK_157);
+            }
+
+            // SAFETY: `key` is live; the three CRT members are NULL or live.
+            let have_crt =
+                !(*key).dmp1.is_null() && !(*key).dmq1.is_null() && !(*key).iqmp.is_null();
+            if have_crt {
+                let (dmp1, dmq1, iqmp) =
+                    // SAFETY: `key` is live.
+                    ((*key).dmp1, (*key).dmq1, (*key).iqmp);
+
+                // dmp1 = d mod (p-1)?
+                if BN_sub(i, p, BN_value_one()) == 0 {
+                    ret = -1;
+                    break 'body;
+                }
+                // `BN_mod(j, d, i, ctx)`, the header's macro over `BN_div(NULL, j, d, i, ctx)`.
+                if BN_div(core::ptr::null_mut(), j, d, i, ctx) == 0 {
+                    ret = -1;
+                    break 'body;
+                }
+                if BN_cmp(j, dmp1) != 0 {
+                    ret = 0;
+                    raise_site(&err_sites::RSA_CHK_172);
+                }
+
+                // dmq1 = d mod (q-1)?
+                if BN_sub(i, q, BN_value_one()) == 0 {
+                    ret = -1;
+                    break 'body;
+                }
+                if BN_div(core::ptr::null_mut(), j, d, i, ctx) == 0 {
+                    ret = -1;
+                    break 'body;
+                }
+                if BN_cmp(j, dmq1) != 0 {
+                    ret = 0;
+                    raise_site(&err_sites::RSA_CHK_186);
+                }
+
+                // iqmp = q^-1 mod p?
+                if BN_mod_inverse(i, q, p, ctx).is_null() {
+                    ret = -1;
+                    break 'body;
+                }
+                if BN_cmp(i, iqmp) != 0 {
+                    ret = 0;
+                    raise_site(&err_sites::RSA_CHK_196);
+                }
+            }
+
+            idx = 0;
+            while idx < ex_primes {
+                // SAFETY: as above.
+                let pinfo = OPENSSL_sk_value((*key).prime_infos, idx).cast::<RsaPrimeInfo>();
+                // d_i = d mod (r_i - 1)?
+                if BN_sub(i, (*pinfo).r, BN_value_one()) == 0 {
+                    ret = -1;
+                    break 'body;
+                }
+                if BN_div(core::ptr::null_mut(), j, d, i, ctx) == 0 {
+                    ret = -1;
+                    break 'body;
+                }
+                if BN_cmp(j, (*pinfo).d) != 0 {
+                    ret = 0;
+                    raise_site(&err_sites::RSA_CHK_213);
+                }
+                // t_i = R_i ^ -1 mod r_i?
+                if BN_mod_inverse(i, (*pinfo).pp, (*pinfo).r, ctx).is_null() {
+                    ret = -1;
+                    break 'body;
+                }
+                if BN_cmp(i, (*pinfo).t) != 0 {
+                    ret = 0;
+                    raise_site(&err_sites::RSA_CHK_222);
+                }
+                idx += 1;
+            }
+        }
+
+        // The authority's `err:` label. `BN_free` and `BN_CTX_free` both tolerate NULL, which is
+        // what the five locals and `ctx` are when the allocation check above jumps here.
+        BN_free(i);
+        BN_free(j);
+        BN_free(k);
+        BN_free(l);
+        BN_free(m);
+        BN_CTX_free(ctx);
+        ret
+    }
+}
+
+/// `int RSA_check_key_ex(const RSA *key, BN_GENCB *cb)` -- `rsa_chk.c:261-269`.
+///
+/// `#ifdef FIPS_MODULE` has the three-call chain -- `ossl_rsa_validate_public` &&
+/// `ossl_rsa_validate_private` && `ossl_rsa_validate_pairwise` -- and this build, which has no FIPS
+/// branch, takes the one call below. The failure code a caller sees is therefore `-1` and not `0`
+/// for an arithmetic failure, which the two validators above could not have produced.
+///
+/// # Safety
+/// `key` is a live object; `cb` is NULL or a live callback.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_check_key_ex(key: *const Rsa, cb: *mut BnGencb) -> c_int {
+    // SAFETY: the caller's contract, forwarded unchanged.
+    unsafe { rsa_validate_keypair_multiprime(key, cb) }
+}
+
+/// `int RSA_check_key(const RSA *key)` -- `rsa_chk.c:256-259`.
+///
+/// The `_ex` form with a NULL callback, which every `BN_check_prime` call then treats as "no
+/// progress reporting". The check itself is unchanged, so the two answer the same number for the
+/// same key.
+///
+/// # Safety
+/// `key` is a live object.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_check_key(key: *const Rsa) -> c_int {
+    // SAFETY: the caller's contract; a NULL callback is the no-callback form.
+    unsafe { RSA_check_key_ex(key, core::ptr::null_mut()) }
 }
 
 #[cfg(test)]

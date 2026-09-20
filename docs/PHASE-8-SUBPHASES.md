@@ -394,9 +394,24 @@ here is. (`forensics/phase8-obligations.json` remains the only complete list.)
 `RSA_PKCS1_OpenSSL`, `RSA_set_default_method`, `RSA_setup_blinding`, `RSA_X931_derive_ex`,
 `RSA_X931_generate_key_ex`, `RSA_public_encrypt`, `RSA_private_encrypt`, `RSA_private_decrypt`,
 `RSA_public_decrypt`, `RSA_generate_key_ex`, `RSA_generate_multi_prime_key`,
-`RSA_generate_key`.
+`RSA_generate_key`, `RSA_sign`, `RSA_verify`, `RSA_sign_ASN1_OCTET_STRING`,
+`RSA_verify_ASN1_OCTET_STRING`, `RSA_verify_PKCS1_PSS`, `RSA_verify_PKCS1_PSS_mgf1`,
+`RSA_check_key`, `RSA_check_key_ex`, `RSA_blinding_off`, `RSA_blinding_on`, `RSA_pkey_ctx_ctrl`,
+`EVP_PKEY_CTX_set_rsa_padding`, `EVP_PKEY_CTX_get_rsa_padding`,
+`EVP_PKEY_CTX_set_rsa_pss_keygen_md`, `EVP_PKEY_CTX_set_rsa_pss_keygen_md_name`,
+`EVP_PKEY_CTX_set_rsa_oaep_md`, `EVP_PKEY_CTX_set_rsa_oaep_md_name`,
+`EVP_PKEY_CTX_get_rsa_oaep_md_name`, `EVP_PKEY_CTX_get_rsa_oaep_md`,
+`EVP_PKEY_CTX_set_rsa_mgf1_md`, `EVP_PKEY_CTX_set_rsa_mgf1_md_name`,
+`EVP_PKEY_CTX_get_rsa_mgf1_md_name`, `EVP_PKEY_CTX_set_rsa_pss_keygen_mgf1_md`,
+`EVP_PKEY_CTX_set_rsa_pss_keygen_mgf1_md_name`, `EVP_PKEY_CTX_get_rsa_mgf1_md`,
+`EVP_PKEY_CTX_set0_rsa_oaep_label`, `EVP_PKEY_CTX_get0_rsa_oaep_label`,
+`EVP_PKEY_CTX_set_rsa_pss_saltlen`, `EVP_PKEY_CTX_get_rsa_pss_saltlen`,
+`EVP_PKEY_CTX_set_rsa_pss_keygen_saltlen`, `EVP_PKEY_CTX_set_rsa_keygen_bits`,
+`EVP_PKEY_CTX_set_rsa_keygen_pubexp`, `EVP_PKEY_CTX_set1_rsa_keygen_pubexp`,
+`EVP_PKEY_CTX_set_rsa_keygen_primes`.
 
-**Open exports (checked against the ledger):** `RSA_check_key`, `RSA_sign`, `RSA_blinding_on`.
+**Open exports (checked against the ledger):** `RSA_print`, `RSA_print_fp`, `EVP_PKEY_get0_RSA`,
+`EVP_PKEY_get1_RSA`, `EVP_PKEY_set1_RSA`.
 Phase 8.2's cipher families and 8.3's `modes.h` constructions all have their low-level exports in,
 and the default provider's AEAD half is nearly there: the twelve AES
 key-wrap rows landed in D230, the six CBC-CTS rows in D231, the two AES-XTS rows in D232, the
@@ -517,6 +532,23 @@ phase 8 implemented 290 -> **293**, deferred 7 unchanged, open 489 -> **486**; `
 with arms over both generators — the SP800-56B path (2 primes, 2048 bits, `e = 65537`) and the
 multi-prime path (3 primes, 1024 bits), each printing only prime counts, primality, `n`'s
 factorisation and the round trips, and the four refusals drained.
+
+**The rest of 8.4 that is landable now has landed (D328): the signing entry points, the key
+checker, the blinding pair and the whole `EVP_PKEY_CTX` control surface.** `rsa_sign.c` and
+`rsa_saos.c` are `src/rsa/sign.rs` — `RSA_sign`, `RSA_verify`, the two internals
+`ossl_rsa_digestinfo_encoding` and `ossl_rsa_verify`, and the ASN.1 OCTET STRING pair; `rsa_pss.c`'s
+verifier joins its two adds in `src/rsa/mod.rs`; `rsa_chk.c`'s `RSA_check_key`/`_ex` and the
+`rsa_crpt.c` blinding pair land in `src/rsa/mod.rs` and `src/rsa/object.rs`; and `rsa_lib.c`'s
+control block is `src/rsa/ctrl.rs`. `RT-RSA` grows 742 -> **976 observations**. **Two things are
+named rather than landed**: `RSA_print`/`RSA_print_fp` are blocked on
+`EVP_PKEY_print_private` (`crypto/evp/p_lib.c:1239`), whose `print_pkey` needs both
+`OSSL_ENCODER_CTX_new_for_pkey` (Phase 10, `encoder.h`) and the legacy `pkey->ameth->priv_print`
+(8.8); and the three `EVP_PKEY_{get0,get1,set1}_RSA` bridges are blocked on `evp_pkey_get_legacy`
+(`p_lib.c:2154`), which downgrades a provided key through `evp_pkey_copy_downgraded`'s
+`ameth->import_from` — 8.8's `ossl_rsa_asn1_meth` — and on the `pkey`/`legacy_cache_pkey` union
+this crate's `EvpPkey` deliberately does not have, `EVP_PKEY_set1_RSA` additionally on
+`EVP_PKEY_assign` and `EVP_PKEY_type` (`p_lib.c:791`, `evp_pkey_type.c:63`). The ledger: phase 8
+implemented 293 -> **327**, deferred 7 unchanged, open 486 -> **452**.
 
 **The same measurement now says the gate is systematic across every key type, which is the
 largest plan correction Phase 8 has needed (D286).** DH, DSA and EC each construct their object the

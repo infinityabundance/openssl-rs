@@ -219,6 +219,7 @@ use core::ptr;
 use core::sync::atomic::Ordering;
 
 use crate::bn::bignum::{BN_clear_free, BN_free, BN_num_bits, BN_set_flags, BigNum};
+use crate::bn::ctx::BnCtx;
 use crate::evp::pkey_asn1::Engine;
 use crate::rsa::mp::{
     multip_info_free_ex_thunk, multip_info_free_thunk, ossl_rsa_multip_calc_product,
@@ -2089,6 +2090,54 @@ pub unsafe extern "C" fn RSA_public_decrypt(
             None => 0,
         }
     }
+}
+
+/// `void RSA_blinding_off(RSA *rsa)` — `crypto/rsa/rsa_crpt.c:62-66`.
+///
+/// **Two writes and a contradiction, deliberately.** The object's `RSA_FLAG_BLINDING` bit is
+/// cleared *and* `RSA_FLAG_NO_BLINDING` is set: the first says "do not blind", the second says "do
+/// not blind even if something asks you to", and `rsa_ossl.c`'s `rsa_get_blinding` reads the second
+/// before it would construct a blinding. Setting only the first would leave a later
+/// `RSA_blinding_on` able to turn blinding back on, which is exactly what the second bit prevents.
+///
+/// The answer is `void`, so there is no failure mode to compare and the observable is the object's
+/// word: [`RSA_flags`] reads the *method's* flags and not this one, which is why the court's arm
+/// uses `RSA_test_flags` (the object's `r->flags` masked test) rather than `RSA_flags`.
+///
+/// # Safety
+/// `rsa` is a live object.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_blinding_off(rsa: *mut Rsa) {
+    // SAFETY: `rsa` is live per the contract.
+    unsafe {
+        (*rsa).flags &= !RSA_FLAG_BLINDING;
+        (*rsa).flags |= RSA_FLAG_NO_BLINDING;
+    }
+}
+
+/// `int RSA_blinding_on(RSA *rsa, BN_CTX *ctx)` — `crypto/rsa/rsa_crpt.c:68-74`.
+///
+/// **The 3.6.4 body is two flag writes, and its `ctx` argument is unused.** The blinding itself is
+/// constructed lazily by `rsa_ossl.c`'s `rsa_get_blinding` on the first private operation, which is
+/// why `RSA_setup_blinding` takes a `BN_CTX *` and this function does not use the one it is handed.
+/// The 1.1.1 shape -- a lock plus a `RSA_setup_blinding` call -- is what `BLOCKED_HANDOFFS` row (2)
+/// described, and D325 measures that row's description as wrong for this version.
+///
+/// **It always answers 1**, including for an object on which blinding will never be possible, so a
+/// caller that tests the return value learns nothing. The `RSA_FLAG_BLINDING` set and the
+/// `RSA_FLAG_NO_BLINDING` clear are `RSA_blinding_off`'s exact inverse, which is the property the
+/// court's arm asserts by running both over one object.
+///
+/// # Safety
+/// `rsa` is a live object; `ctx` is NULL or a live `BN_CTX` (**unused**).
+#[no_mangle]
+pub unsafe extern "C" fn RSA_blinding_on(rsa: *mut Rsa, _ctx: *mut BnCtx) -> c_int {
+    // SAFETY: `rsa` is live per the contract.
+    unsafe {
+        (*rsa).flags |= RSA_FLAG_BLINDING;
+        (*rsa).flags &= !RSA_FLAG_NO_BLINDING;
+    }
+    1
 }
 
 #[cfg(test)]
