@@ -22,7 +22,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 58,
-      "language_surface_not_modelled_by_name": 3288,
+      "language_surface_not_modelled_by_name": 3299,
       "planned_prerequisites": 11
     },
     "census_by_unit": {
@@ -146,6 +146,7 @@
         "crypto/cversion.c": 13,
         "crypto/defaults.c": 9,
         "crypto/des/set_key.c": 9,
+        "crypto/dh/dh_meth.c": 11,
         "crypto/dso/dso_dlfcn.c": 16,
         "crypto/dso/dso_lib.c": 15,
         "crypto/err/err.c": 92,
@@ -362,8 +363,8 @@
       ]
     },
     "checked": {
-      "authority_units": 191,
-      "crate_modules": 259,
+      "authority_units": 192,
+      "crate_modules": 260,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 17,
       "divergence_names_covered": 30,
@@ -485,7 +486,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "2c60523a1d5fc8fa4ae0fa8bad8e095e6624f59333fb25fa8919405dd4114724",
+  "body_hash": "3f4fca16fa75fcf67881c56e0ad76ea4a6cfe8cc7e05f0edee67835d43f69bd6",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -506,7 +507,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "63c0a2bfc95541ac766246231f4780121d1fd9d921d21ed169e0265d3960ec63"
+      "sha256": "4da920a2006c76456b2423b6e8448ed13db87333db312511ada67006b494c2db"
     },
     {
       "name": "symbol-ownership",
@@ -521,12 +522,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "6385e8a2c89dc1424f6a22e7c1f00e9c33c6ac030f9d81a29068781bfbd9a0f6"
+      "sha256": "af677106ede7a7d76dcaa0162e48be1734875cc5ffa36256b3f2652eb69a6e5c"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "1e2b323fe4a4ae36171fa72621867ffec083f1ca095fa6595df255d869a585a5"
+      "sha256": "8e95f485a431f81ec36e6292af07bcab295eaa20f3aa7d20fafd03efff0edee2"
     },
     {
       "name": "prerequisites",

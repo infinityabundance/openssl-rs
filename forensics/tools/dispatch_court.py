@@ -148,6 +148,14 @@ RSA_METHOD_VTABLE = ("not a provider dispatch: a member of `RSA_METHOD`'s vtable
                      "in `crypto/rsa/rsa_local.h:102-147` as a plain function pointer rather than "
                      "through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records "
                      "no typedef for it")
+# `crypto/dh/dh_local.h:47-64` -- the `DH_METHOD` members (Phase 8.5). The same shape as
+# `RSA_METHOD`'s vtable: each callback is declared inline as a plain function pointer, the header
+# is internal, and the atlas -- whose universe is the installed public surface -- records no
+# `typedef` for any of the six, so there is no authority name for the crate's aliases to link to.
+DH_METHOD_VTABLE = ("not a provider dispatch: a member of `DH_METHOD`'s vtable, declared inline "
+                    "in `crypto/dh/dh_local.h:47-64` as a plain function pointer rather than "
+                    "through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records "
+                    "no typedef for it")
 LHASH_MACRO = ("not a provider dispatch: `lhash.h.in`'s `LHASH_HASH_FN` / `LHASH_COMP_FN` / "
                "`LHASH_DOALL*` macros generate it per type, so there is no single typedef")
 SK_MACRO = ("not a provider dispatch: `safestack.h.in`'s `sk_*_compfunc` / `freefunc` / "
@@ -294,6 +302,12 @@ NOT_A_DISPATCH: dict[str, str] = {
     "RsaVerifyFn": RSA_METHOD_VTABLE,
     "RsaKeygenFn": RSA_METHOD_VTABLE,
     "RsaMultiPrimeKeygenFn": RSA_METHOD_VTABLE,
+    # --- `DH_METHOD`'s vtable (`crypto/dh/dh_local.h:47-64`, Phase 8.5) ---------------------
+    "DhGenerateKeyFn": DH_METHOD_VTABLE,
+    "DhComputeKeyFn": DH_METHOD_VTABLE,
+    "DhBnModExpFn": DH_METHOD_VTABLE,
+    "DhLifecycleFn": DH_METHOD_VTABLE,
+    "DhGenerateParamsFn": DH_METHOD_VTABLE,
     # --- `struct prov_drbg_st`'s vtable (`prov/drbg.h:59-165`, Phase 9.4, D309) -------------
     "ProvDrbgInstantiateFn": DRBG_VTABLE,
     "ProvDrbgUninstantiateFn": DRBG_VTABLE,

@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 7,
-      "implemented": 327,
-      "open_in_this_stratum": 452,
+      "implemented": 348,
+      "open_in_this_stratum": 431,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1233,6 +1233,27 @@
       "DES_string_to_2keys",
       "DES_string_to_key",
       "DES_xcbc_encrypt",
+      "DH_meth_dup",
+      "DH_meth_free",
+      "DH_meth_get0_app_data",
+      "DH_meth_get0_name",
+      "DH_meth_get_bn_mod_exp",
+      "DH_meth_get_compute_key",
+      "DH_meth_get_finish",
+      "DH_meth_get_flags",
+      "DH_meth_get_generate_key",
+      "DH_meth_get_generate_params",
+      "DH_meth_get_init",
+      "DH_meth_new",
+      "DH_meth_set0_app_data",
+      "DH_meth_set1_name",
+      "DH_meth_set_bn_mod_exp",
+      "DH_meth_set_compute_key",
+      "DH_meth_set_finish",
+      "DH_meth_set_flags",
+      "DH_meth_set_generate_key",
+      "DH_meth_set_generate_params",
+      "DH_meth_set_init",
       "EVP_PKEY_CTX_get0_rsa_oaep_label",
       "EVP_PKEY_CTX_get_rsa_mgf1_md",
       "EVP_PKEY_CTX_get_rsa_mgf1_md_name",
@@ -1822,132 +1843,6 @@
         "module": "src/dh/mod.rs",
         "received_from_phase": null,
         "symbol": "DH_get_nid"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_meth_dup"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_meth_free"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_meth_get0_app_data"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_meth_get0_name"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_meth_get_bn_mod_exp"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_meth_get_compute_key"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_meth_get_finish"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_meth_get_flags"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_meth_get_generate_key"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_meth_get_generate_params"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_meth_get_init"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_meth_new"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_meth_set0_app_data"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_meth_set1_name"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_meth_set_bn_mod_exp"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_meth_set_compute_key"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_meth_set_finish"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_meth_set_flags"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_meth_set_generate_key"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_meth_set_generate_params"
-      },
-      {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_meth_set_init"
       },
       {
         "declaring_header": "dh.h",
@@ -4439,12 +4334,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "e6b19f48400f22f1e94711bddd1bf5e75ebadf985a4242f498446a2f74f48d7b"
+      "sha256": "ea5e8f8e9fe06e89ab1feffd09b533e47b12fcba5e59d204975be17bfa3ed3e9"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "41e701f6553290228ada4d96630cf4fcb199c994d52bc8a763e2201d8343b488"
+      "sha256": "d5ca72454bcf96c709933b5790737f9ee1497b68125e531b359bf5d981ef3825"
     }
   ],
   "kind": "phase8-obligations",
