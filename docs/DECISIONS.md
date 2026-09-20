@@ -21621,3 +21621,103 @@ probe already has that machinery for the seven `rsa_ossl_*` entry points — a `
 callback arm is the natural next addition rather than a gap; and the fifteen `EVP_PKEY_CTX_*`
 controls' *translation* into provider parameters, which needs the RSA keymgmt row this stratum has
 not published yet.
+
+---
+
+## D329 — 8.5 begins with its method table, and the FFC layer is named as the next unit rather than half-landed
+
+**Decision.** Phase 8.5 (DH and DHX) lands its **method table** — the twenty-one `DH_meth_*`
+labels of `crypto/dh/dh_meth.c` — as its first slice, in the new module `src/dh/mod.rs`, with the
+court `RT-DH`. Everything else the row owns stays `open`, and the order the rest lands in is
+recorded rather than performed.
+
+**Why the method table and not the plan's first item.** `docs/PHASE-8-SUBPHASES.md` orders 8.5's
+landing as the `crypto/ffc/` primitives, then `dh_lib.c`'s object layer, then `dh_key.c`'s
+generation and agreement, then `dh_gen.c`, then the controls. The method table is *reachable from
+none of those and blocks none of them*: its twenty-one bodies allocate a table, store a pointer in
+one, duplicate one, release one, or read one back, and they read only `DH_METHOD`'s own shape. So
+it is the one slice of the block whose prerequisites are already in — the same reading, and the
+same precedent, as 8.4's slice B (D284), where the object shape had to be transcribed anyway and
+the method table was the one part that did not also need the crypt layer.
+
+The dependency order is **not** inverted by this commit. `dh_new_intern` takes its method from
+`DH_get_default_method()`, whose table `dh_ossl` (`dh_key.c:180-190`) carries `generate_key`,
+`ossl_dh_compute_key` and `dh_bn_mod_exp`; `generate_key`'s q-set arm reaches
+`ossl_ffc_params_simple_validate`, and that reaches `ossl_ffc_params_FIPS186_4_gen_verify`. So the
+object layer cannot be built without `dh_key.c`, and `dh_key.c` cannot be built without the FFC
+primitives. That is why `DH_get_default_method`, `DH_set_default_method` and `DH_OpenSSL` are **not**
+landed here with an empty table: a table whose three members were anything but the authority's own
+bodies would be a fabricated value. The three labels wait for `dh_key.c`, exactly as the plan says.
+
+**The FFC layer is named, and its size is the reason it is not in this commit.** `crypto/ffc/`'s
+seven units are 8.5's own row (`docs/PHASE-8-SUBPHASES.md` §2). `ossl_ffc_generate_private_key`
+(`ffc_key_generate.c`, 60 lines) and `ossl_ffc_params_simple_validate` (`ffc_params_validate.c`)
+are small, but `simple_validate`'s own reach is `ossl_ffc_params_FIPS186_4_gen_verify`
+(`ffc_params_generate.c`, 291 lines) over `generate_p` (`:198-318`), `generate_q_fips186_4`
+(`:320-394`), `generate_canonical_g` (`:139-195`) and `generate_unverifiable_g` (`:102-128`), plus
+the FIPS 186-2 twin for the `VALIDATE_LEGACY` flag path — one `README`-less unit of about 1,700
+lines of Rust once `ffc_params.c`'s lifecycle, copy, comparison and accessors are added. It is a
+single coherent next slice and this commit does not half-land it: no FFC function is transcribed,
+stubbed or approximated here.
+
+**What the slice is.** `src/dh/mod.rs` holds `struct dh_method` (`dh_local.h:47-64`) and the
+twenty-one entry points, in authority order: `DH_meth_new` (`:20-35`), `DH_meth_free` (`:37-43`),
+`DH_meth_dup` (`:45-60`), `DH_meth_get0_name` (`:62-65`), `DH_meth_set1_name` (`:67-78`),
+`DH_meth_get_flags` (`:80-83`), `DH_meth_set_flags` (`:85-89`), `DH_meth_get0_app_data`
+(`:91-94`), `DH_meth_set0_app_data` (`:96-100`), and the six getter/setter pairs
+`generate_key` (`:102-111`), `compute_key` (`:113-124`), `bn_mod_exp` (`:125-138`), `init`
+(`:139-149`), `finish` (`:150-160`) and `generate_params` (`:161-171`). `DH_meth.c` defines
+**nothing else** — every other definition in the file is one of these — so the unit has no
+internals, and giving it a module adds no name the prerequisite gate has to count (the rule D327
+records).
+
+**`DH_METHOD` is 72 bytes with nine members, measured.** `courts/layout/measure-dh-method.c`
+records `name` 0, `generate_key` 8, `compute_key` 16, `bn_mod_exp` 24, `init` 32, `finish` 40,
+`flags` **48**, `app_data` 56 and `generate_params` 64. The offset that cannot be reasoned about
+from the declaration is `app_data`: `flags` is a four-byte `int`, so the four bytes at 52..56 are
+padding and a pointer-sized reading of `flags` would move every member after it by eight. The unit
+test `the_dh_method_is_the_authoritys_shape` asserts all nine offsets and the size, because a swap
+of `init` and `finish` keeps the size and moves two calls.
+
+**The `DH` type is the forward declaration and nothing more.** `src/dh/mod.rs`'s `Dh` is
+`repr(C)` with a zero-sized private field: `typedef struct dh_st DH;`, opaque at this slice. The
+object's real shape is `dh_lib.c`'s to declare, and a layout written now and changed when that
+lands would be two shapes for one object.
+
+**What `RT-DH` observed.** `courts/phase8/rt_dh_probe.c` calls **all twenty-one exports** and
+produces **66 observations** over two identical transcripts. It installs a caller allocator as its
+first act — `CRYPTO_set_mem_functions` latches — and records the ordered `(kind, size, file)`
+sequence of each arm's window, which is how the claim "this unit's allocation is attributed to
+this unit's translation unit" becomes a diff instead of a constant in the crate. Three facts the
+window order makes visible and a set of files could not: `DH_meth_new` allocates the 72-byte table
+and then the name; `DH_meth_dup` allocates 72, copies, and then a *second* name (so the two name
+pointers differ); `DH_meth_set1_name` allocates the replacement **before** releasing the old one,
+so `DH_meth_set1_name(m, NULL)` answers 0 with an **empty** window and leaves the old name in
+place; and `DH_meth_free` releases the name before the table, and `DH_meth_free(NULL)` records
+nothing. Every function-pointer member is NULL on a fresh table, answers its setter's 1, answers
+the probe's own sentinel, accepts NULL and is NULL again — the sentinels are stored and compared
+and never called, so a transcription that called one would be visible rather than merely wrong. No
+address is printed: the function-pointer comparisons are reduced to a boolean and the two name
+pointers are compared for *inequality*.
+
+**Bookkeeping, read off the regenerated files.** `phase8`: implemented 327 -> **348**, deferred 7
+unchanged, open 452 -> **431**, owned 786 unchanged. `forensics/atlas/implemented-surface.json`
+moves `libcrypto` implemented 2240 -> **2261**. `docs/PHASE-8-SUBPHASES.md`'s two anchored clauses
+name the twenty-one as landed, and the 8.5 row and this paragraph record the slice. `RT-DH`
+registers at 66 observations, so 8.5 now carries the differential half of its two courts;
+`CT-DH` stays PENDING in `forensics/tools/phase8_courts.py` with what it needs, because the
+construction vectors are the FFC group arithmetic this commit does not land. **No `BLOCKED_HANDOFFS`
+row names a symbol this commit defines** — the three deferred DH names (`DH_generate_key`,
+`DH_generate_parameters`, `DH_generate_parameters_ex`) are untouched, because none of them is
+implemented — which the generator checks rather than trusts.
+
+**Two coordinate corrections, recorded rather than carried.** The prompt for this slice names
+`DH_compute_key_hashed` among `dh_key.c`'s exports. **No such symbol exists in this authority**: a
+case-sensitive search of `include/openssl/dh.h` and the whole `crypto/dh/` tree finds none. The
+hashing entry point is the *provider*'s `OSSL_EXCHANGE_PARAM_KDF_TYPE = X9.42` path, not a
+`libcrypto` export. And the named-group tables are not in this commit either, for the reason
+`docs/PHASE-8-SUBPHASES.md`'s 8.5 note gives: they are a large data transcription whose values no
+test can check except against the authority itself, which is why `gen_bn_primes.py` reads its
+constants back from the authority rather than transcribing them. They are a separable follow-up,
+and `DH_set0_pqg`'s named-group cache — the one thing in `dh_lib.c`'s accessor surface that reaches
+them — waits with them rather than landing over a table that does not exist.

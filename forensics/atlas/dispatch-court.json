@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 259,
+      "crate_files_read": 260,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -19,7 +19,7 @@
       "signatures_authority_only": 397,
       "signatures_checked": 237,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 124,
+      "signatures_not_a_dispatch": 129,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -3687,6 +3687,31 @@
           "alias": "NistReduce",
           "at": "src/bn/nist.rs",
           "why": "not an authority type: a crate-local callback shape with no header counterpart"
+        },
+        {
+          "alias": "DhGenerateKeyFn",
+          "at": "src/dh/mod.rs",
+          "why": "not a provider dispatch: a member of `DH_METHOD`'s vtable, declared inline in `crypto/dh/dh_local.h:47-64` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "DhComputeKeyFn",
+          "at": "src/dh/mod.rs",
+          "why": "not a provider dispatch: a member of `DH_METHOD`'s vtable, declared inline in `crypto/dh/dh_local.h:47-64` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "DhBnModExpFn",
+          "at": "src/dh/mod.rs",
+          "why": "not a provider dispatch: a member of `DH_METHOD`'s vtable, declared inline in `crypto/dh/dh_local.h:47-64` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "DhLifecycleFn",
+          "at": "src/dh/mod.rs",
+          "why": "not a provider dispatch: a member of `DH_METHOD`'s vtable, declared inline in `crypto/dh/dh_local.h:47-64` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "DhGenerateParamsFn",
+          "at": "src/dh/mod.rs",
+          "why": "not a provider dispatch: a member of `DH_METHOD`'s vtable, declared inline in `crypto/dh/dh_local.h:47-64` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
         },
         {
           "alias": "DsoNameConverterFunc",

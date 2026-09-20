@@ -445,6 +445,7 @@
             "basis": "called",
             "courts": [
               "RT-CIPHER-MEM",
+              "RT-DH",
               "RT-MEM",
               "RT-MEM-DEFAULT",
               "RT-MEM-INSTALL",
@@ -14407,10 +14408,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 319,
-          "directly_courted_called": 319,
+          "directly_courted": 340,
+          "directly_courted_called": 340,
           "directly_courted_referenced": 0,
-          "implemented": 327,
+          "implemented": 348,
           "indirectly_courted": 8,
           "non_observable": 0,
           "unmatched": 0
@@ -15241,6 +15242,153 @@
               "RT-CIPHER"
             ],
             "symbol": "DES_xcbc_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_meth_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_meth_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_meth_get0_app_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_meth_get0_name"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_meth_get_bn_mod_exp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_meth_get_compute_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_meth_get_finish"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_meth_get_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_meth_get_generate_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_meth_get_generate_params"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_meth_get_init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_meth_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_meth_set0_app_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_meth_set1_name"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_meth_set_bn_mod_exp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_meth_set_compute_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_meth_set_finish"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_meth_set_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_meth_set_generate_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_meth_set_generate_params"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_meth_set_init"
           },
           {
             "basis": "called",
@@ -16702,7 +16850,7 @@
         ],
         "non_observable": [],
         "phase": 8,
-        "staged_candidate_probes": 4
+        "staged_candidate_probes": 5
       },
       {
         "completed": false,
@@ -17103,10 +17251,10 @@
       }
     ],
     "totals": {
-      "directly_courted": 2232,
-      "directly_courted_called": 1951,
+      "directly_courted": 2253,
+      "directly_courted_called": 1972,
       "directly_courted_referenced": 281,
-      "implemented": 2240,
+      "implemented": 2261,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -17117,7 +17265,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "6385e8a2c89dc1424f6a22e7c1f00e9c33c6ac030f9d81a29068781bfbd9a0f6"
+      "sha256": "af677106ede7a7d76dcaa0162e48be1734875cc5ffa36256b3f2652eb69a6e5c"
     },
     {
       "name": "symbol-ownership",
@@ -17132,7 +17280,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "19a4e80853b07724850cda169c15bedbf6a99fd2efbb9f0fb3be6ba97b2f0435"
+      "sha256": "9a6f9ac4dee9af8eaa472c610843e8f8ee3da175822b9e5399eeeac768914920"
     },
     {
       "name": "phase3-courts",
@@ -17142,7 +17290,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "0ee18faf276af9315a62e57bca603e064656c300d4c5cef4f9b611292034ad66"
+      "sha256": "b99e0d27926aae10120a2849e616878336c7c1be2822fda9c1d5ca19891949d9"
     },
     {
       "name": "phase4-courts",
@@ -17152,7 +17300,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "260635d09a0d96edc4b67090d62f27e4451d6f5da69dcd8f9d0bbe432e71e29c"
+      "sha256": "54607a640c50bcdc2d6900d09d36cf4bff129fe5712bb5386610e0871f7702a9"
     },
     {
       "name": "phase5-courts",
@@ -17162,7 +17310,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "ff581d76f4b438884979a947fdd1e5ca967c57903ec224eeeb6f5ec811b8cd13"
+      "sha256": "d471972a17021c472e0f2c822f0fb221957e844ee1dafda8883e49bfe4fbee1b"
     },
     {
       "name": "phase6-courts",
@@ -17172,7 +17320,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "41e701f6553290228ada4d96630cf4fcb199c994d52bc8a763e2201d8343b488"
+      "sha256": "d5ca72454bcf96c709933b5790737f9ee1497b68125e531b359bf5d981ef3825"
     },
     {
       "name": "phase7-courts",
@@ -17182,17 +17330,17 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "c16fabb56bba71f56520f488fce1a9f3bec904d5620bd6622496178e41070b93"
+      "sha256": "2ef5ce266e7fb76f8b0ecbabef54419721d90947acc5810d6aa3ed044a0a0033"
     },
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "8e884943b725fc8e60b7791a7b7087c19dd4bdb9c800e14b267c259ee6fd7d55"
+      "sha256": "2f4a5f2a59c062a94324d73a078a21fe3b80605ff060c852bba784e3b5f8de32"
     },
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "d98dad51f53b2b660d9e8b8a90eeeec748251ee5e5500e803a5ee3ca10d9a523"
+      "sha256": "ab9f1e8229e3f2303d3202d96060837c3e27762e489d69d50ae6be3ddeb5d79e"
     },
     {
       "name": "phase9-courts",

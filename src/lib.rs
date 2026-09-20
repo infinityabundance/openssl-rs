@@ -76,6 +76,7 @@ pub mod chacha;
 pub(crate) mod cipher_tables;
 pub mod context;
 pub mod des;
+pub mod dh;
 pub mod digest;
 pub mod dso;
 pub mod evp;

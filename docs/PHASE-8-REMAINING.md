@@ -13,11 +13,11 @@ Read from the ledger's `body.counts`.
 | quantity | count |
 |---|---|
 | owned | 786 |
-| implemented | 327 |
+| implemented | 348 |
 | deferred to a later phase | 7 |
-| open in this stratum | 452 |
+| open in this stratum | 431 |
 
-The identity `owned = implemented + deferred + open` is `786 = 327 + 7 + 452`, which holds.
+The identity `owned = implemented + deferred + open` is `786 = 348 + 7 + 431`, which holds.
 
 ## The merge gate — what Phase 8 owes to Phase 9
 
@@ -66,14 +66,14 @@ table, verbatim.
 | subphase | owns | open | courts | depends on |
 |---|---|---|---|---|
 | 8.4 RSA | `src/rsa/mod.rs` | 24 | `RT-RSA`, `CT-RSA` | 8.1 (the RSA provider's `SHA`-named digests), 8.3 (its OAEP/PSS modes) |
-| 8.5 DH and DHX | `src/dh/mod.rs` | 94 | `RT-DH`, `CT-DH` | 8.4 (the shared BN/param idiom) |
+| 8.5 DH and DHX | `src/dh/mod.rs`, `src/dh/mod.rs` | 73 | `RT-DH`, `CT-DH` | 8.4 (the shared BN/param idiom) |
 | 8.6 DSA | `src/dsa/mod.rs` | 88 | `RT-DSA`, `CT-DSA` | 8.5 |
 | 8.7 EC | `src/ec/mod.rs` | 201 | `RT-EC`, `CT-EC` | 8.6 |
 | 8.8 The ASN.1 method objects and `standard_methods[]` | `src/asn1/ameth.rs` | 15 | `RT-AMETH` | 8.4, 8.5, 8.6, 8.7 |
 | 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals | `src/pem/key_legacy.rs` | 30 | `RT-PEM-KEY` | 8.8 |
 
-Total open symbols listed below: **452**; the ledger's
-`open_in_this_stratum` is 452.
+Total open symbols listed below: **431**; the ledger's
+`open_in_this_stratum` is 431.
 
 ### 8.4 RSA — 24 open
 
@@ -85,20 +85,14 @@ Total open symbols listed below: **452**; the ledger's
 `d2i_RSA_PSS_PARAMS`, `i2d_RSAPrivateKey`, `i2d_RSAPublicKey`, `i2d_RSA_OAEP_PARAMS`,
 `i2d_RSA_PSS_PARAMS`
 
-### 8.5 DH and DHX — 94 open
+### 8.5 DH and DHX — 73 open
 
 `DH_KDF_X9_42`, `DH_OpenSSL`, `DH_bits`, `DH_check`, `DH_check_ex`, `DH_check_params`,
 `DH_check_params_ex`, `DH_check_pub_key`, `DH_check_pub_key_ex`, `DH_clear_flags`,
 `DH_compute_key`, `DH_compute_key_padded`, `DH_free`, `DH_get0_engine`, `DH_get0_g`,
 `DH_get0_key`, `DH_get0_p`, `DH_get0_pqg`, `DH_get0_priv_key`, `DH_get0_pub_key`,
 `DH_get0_q`, `DH_get_1024_160`, `DH_get_2048_224`, `DH_get_2048_256`,
-`DH_get_default_method`, `DH_get_ex_data`, `DH_get_length`, `DH_get_nid`, `DH_meth_dup`,
-`DH_meth_free`, `DH_meth_get0_app_data`, `DH_meth_get0_name`, `DH_meth_get_bn_mod_exp`,
-`DH_meth_get_compute_key`, `DH_meth_get_finish`, `DH_meth_get_flags`,
-`DH_meth_get_generate_key`, `DH_meth_get_generate_params`, `DH_meth_get_init`,
-`DH_meth_new`, `DH_meth_set0_app_data`, `DH_meth_set1_name`, `DH_meth_set_bn_mod_exp`,
-`DH_meth_set_compute_key`, `DH_meth_set_finish`, `DH_meth_set_flags`,
-`DH_meth_set_generate_key`, `DH_meth_set_generate_params`, `DH_meth_set_init`, `DH_new`,
+`DH_get_default_method`, `DH_get_ex_data`, `DH_get_length`, `DH_get_nid`, `DH_new`,
 `DH_new_by_nid`, `DH_new_method`, `DH_security_bits`, `DH_set0_key`, `DH_set0_pqg`,
 `DH_set_default_method`, `DH_set_ex_data`, `DH_set_flags`, `DH_set_length`,
 `DH_set_method`, `DH_size`, `DH_test_flags`, `DH_up_ref`, `DHparams_dup`, `DHparams_it`,

@@ -119,6 +119,10 @@ COURTS: list[tuple[str, str]] = [
     # allocator, and for the same latching reason it must be its own probe -- see the probe's own
     # note on why it is not a court for the default method, which is slice A's.
     ("RT-RSA", "rt_rsa_probe.c"),
+    # 8.5's method-table court. It is the first `RT-*` here whose subject is the DH method table:
+    # the twenty-one `DH_meth_*` labels allocate a table, store a pointer in it, or return one, so
+    # it is the slice of 8.5 whose prerequisites are already in, exactly as slice B was for 8.4.
+    ("RT-DH", "rt_dh_probe.c"),
 ]
 
 # The correctness courts, and the committed vector sets each checks. `CT-DIGEST` is the
