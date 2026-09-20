@@ -20644,3 +20644,53 @@ bodies are landed and whose decisive arms are somebody else's names.
 courts and 32193 observations. `forensics/prerequisites.json`'s `units` row for `bio_ok.c`, which
 recorded it as `deferred_to_later_stratum` to Phase 9, is now discharged by the transcription edge
 `src/evp/bio_ok.rs` -> `crypto/evp/bio_ok.c` rather than by an edit to the row.
+
+## D318 -- the PEM read and write halves are staged, and their four remaining callees are named
+
+### What is staged, and why it is staged rather than integrated
+
+`court/pem-read.rs.txt` (1056 lines) and `court/pem-write.rs.txt` (915 lines) carry the last eight
+names D313 retargeted: `PEM_do_header`, `pem_bytes_read_bio_flags` with its `PEM_bytes_read_bio`
+and `PEM_bytes_read_bio_secmem` wrappers, `check_pem`, `pem_free`, `PEM_ASN1_read`,
+`PEM_ASN1_read_bio` (`pem_oth.c:20`), and the write half's `PEM_ASN1_write_bio_internal`,
+`PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx` and `PEM_ASN1_write` -- together with every static
+they need and their refusal arms.
+
+They are **staged and not integrated**, which is this project's established shape (`court/bn-rand.rs`
+waited for D313's front; `court/phase9/*.rs.txt` waited for their strata). Both files say in their own
+header that they do not compile and why, list the callees they are missing with coordinates and
+owners, and carry tests for the arms that need no randomness and no provider fetch. Nothing under
+`src/` was touched, so `PIPELINE OK` is unaffected by this commit and that is the point: a staging
+file cannot make the tree red, and the next pass integrates it in the commit that lands its court.
+
+### The four callees they are waiting on, and this is the finding
+
+Both halves name **`PEM_def_callback`** (`crypto/pem/pem_lib.c:36-69`), whose own blocker is
+`EVP_read_pw_string_min` -- a `UI` program, and therefore **Phase 13's**, which is D194's pair and
+the same dependency `src/evp/p_legacy.rs` already records. The read half additionally names:
+
+* **`ERR_add_error_data`** -- a printf-style **C-variadic** (`crypto/err/err.c`), used at `:260` to
+  append `Expecting: <name>` to a `PEM_R_NO_START_LINE`. Rust cannot call a C-variadic, and the
+  crate's adapter declares the symbol for the C side only; the crate's own
+  `runtime::err::ERR_add_error_txt` is the spelling it will use instead. **Phase 2's.**
+* **`ERR_GET_REASON`** -- a mask-and-cast macro read at `:259` against the **oldest** queued entry.
+  The crate has a private `get_reason` and a *last*-entry `peek_last_reason`, and the second is a
+  different read, so neither was substituted. **Phase 2's.**
+* **`ENGINE_finish`** -- Phase 13's, in `check_pem` at `:170` under `#ifndef OPENSSL_NO_ENGINE`.
+
+and the write half names **`OsslI2dOfVoidCtx`** (`include/openssl/asn1.h.in:334`), the ctx twin of
+the `I2dOfVoid` the unit also takes; `src/asn1/layout.rs` holds the other two aliases and no third,
+and its owner is the ASN.1 stratum that already owns them (**Phase 10**'s other user is
+`encode_key2any.c.in`).
+
+### The measurement this staging makes
+
+Four of Phase 9's remaining names now have a **named, machine-checkable owner outside this
+stratum** rather than "not done yet": `PEM_def_callback`'s `UI` dependency is Phase 13, the two
+`ERR_*` spellings are Phase 2, and the encoder-ctx alias is the ASN.1 stratum's. That is three
+strata for eight names, and it is the same shape D316 and D317 found from the other direction: the
+random layer's remainder is mostly other people's names. Both files describe the macros they had to
+expand (`IMPLEMENT_PEM_*`, `PEM_write_fnsig`, `_body_fallback`) so that the integration pass does
+not have to re-derive them, and the write half records one measured asymmetry it did **not**
+correct: `_cb_to` uses the `_cb` fallback for the non-`_ex` spelling and the plain one for `_ex`, so
+an `_ex` callback caller reaching the legacy arm gets no cipher and no passphrase.
