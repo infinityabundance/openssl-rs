@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 276,
+      "crate_files_read": 284,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -19,7 +19,7 @@
       "signatures_authority_only": 397,
       "signatures_checked": 237,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 129,
+      "signatures_not_a_dispatch": 137,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -3712,6 +3712,46 @@
           "alias": "DhGenerateParamsFn",
           "at": "src/dh/mod.rs",
           "why": "not a provider dispatch: a member of `DH_METHOD`'s vtable, declared inline in `crypto/dh/dh_local.h:47-64` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "DsaDoSignFn",
+          "at": "src/dsa/mod.rs",
+          "why": "not a provider dispatch: a member of `DSA_METHOD`'s vtable, declared inline in `crypto/dsa/dsa_local.h:46-70` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "DsaSignSetupFn",
+          "at": "src/dsa/mod.rs",
+          "why": "not a provider dispatch: a member of `DSA_METHOD`'s vtable, declared inline in `crypto/dsa/dsa_local.h:46-70` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "DsaDoVerifyFn",
+          "at": "src/dsa/mod.rs",
+          "why": "not a provider dispatch: a member of `DSA_METHOD`'s vtable, declared inline in `crypto/dsa/dsa_local.h:46-70` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "DsaModExpFn",
+          "at": "src/dsa/mod.rs",
+          "why": "not a provider dispatch: a member of `DSA_METHOD`'s vtable, declared inline in `crypto/dsa/dsa_local.h:46-70` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "DsaBnModExpFn",
+          "at": "src/dsa/mod.rs",
+          "why": "not a provider dispatch: a member of `DSA_METHOD`'s vtable, declared inline in `crypto/dsa/dsa_local.h:46-70` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "DsaLifecycleFn",
+          "at": "src/dsa/mod.rs",
+          "why": "not a provider dispatch: a member of `DSA_METHOD`'s vtable, declared inline in `crypto/dsa/dsa_local.h:46-70` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "DsaParamgenFn",
+          "at": "src/dsa/mod.rs",
+          "why": "not a provider dispatch: a member of `DSA_METHOD`'s vtable, declared inline in `crypto/dsa/dsa_local.h:46-70` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "DsaKeygenFn",
+          "at": "src/dsa/mod.rs",
+          "why": "not a provider dispatch: a member of `DSA_METHOD`'s vtable, declared inline in `crypto/dsa/dsa_local.h:46-70` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
         },
         {
           "alias": "DsoNameConverterFunc",

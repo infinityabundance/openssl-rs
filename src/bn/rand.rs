@@ -36,14 +36,20 @@
 //!
 //! The file continues past line 239 with `ossl_bn_priv_rand_range_fixed_top`
 //! (`:241-283`), `ossl_bn_gen_dsa_nonce_fixed_top` (`:293-395`) and
-//! `BN_generate_dsa_nonce` (`:397-412`). Those are **not** transcribed here: the
-//! first needs `ossl_bn_mask_bits_fixed_top` and the fixed-top representation in
-//! `bn_lib.c`, and the other two need the EVP digest front and `SHA512`
-//! (Phase 6/7), so `BN_generate_dsa_nonce` is the one name of Phase 9's twelve
-//! `src/bn/rand.rs` obligations that this module does **not** discharge. Their error
-//! sites are already generated (`BN_RAND_248`, `_253`, `_271`, `_332`, `_338`,
-//! `_385` in `src/runtime/err_sites.rs`), so the later slice lands on arranged ground
-//! rather than guessing coordinates.
+//! `BN_generate_dsa_nonce` (`:397-412`). **D314 deferred the first two and D333 landed them,
+//! because their first caller arrived**: they are `crypto/dsa/dsa_ossl.c`'s nonce draws, and
+//! without them the `DSA` method table's own `dsa_do_sign`/`dsa_sign_setup` members have no
+//! body — which would have left the whole `crypto/dsa/` object layer with no table to read.
+//! What D314 recorded about them is still true and is why they are ports rather than
+//! transcriptions: the first needs `ossl_bn_mask_bits_fixed_top` and the fixed-top
+//! representation in `bn_lib.c`, and the second is the same plus the EVP digest front and
+//! `SHA512`, which Phase 6/7 landed. Both sites say which half is written and which is named.
+//! **`BN_generate_dsa_nonce` is still not transcribed**: it is an *export* of `bn.h`, its own
+//! obligation in `forensics/phase9-obligations.json`, and its whole body is the second function
+//! plus `bn_correct_top` — so landing it here would move another stratum's ledger for the sake
+//! of one line, which is the boundary D327's rule draws. Its error
+//! sites (`BN_RAND_332`, `_338`, `_385`) are generated and unused, exactly as they were when
+//! D314 arranged them.
 //!
 //! ## Macro spellings, checked rather than assumed
 //!
@@ -71,17 +77,20 @@
 
 use core::ffi::{c_int, c_uchar, c_uint, c_void};
 
-use crate::bn::arith::{BN_cmp, BN_sub};
+use crate::bn::arith::{BN_cmp, BN_sub, BN_ucmp};
 use crate::bn::bignum::{
-    as_ref, BN_bin2bn, BN_is_bit_set, BN_is_zero, BN_num_bits, BN_zero_ex, BigNum,
+    as_ref, BN_bin2bn, BN_is_bit_set, BN_is_zero, BN_num_bits, BN_set_flags, BN_zero_ex, BigNum,
+    BN_FLG_CONSTTIME,
 };
 use crate::bn::ctx::BnCtx;
 use crate::ffi::guard_ffi;
 use crate::rand::rand_lib::{RAND_bytes_ex, RAND_priv_bytes_ex};
 use crate::runtime::err::err_sites::{
-    BN_RAND_140, BN_RAND_145, BN_RAND_180, BN_RAND_193, BN_RAND_98,
+    BN_RAND_140, BN_RAND_145, BN_RAND_180, BN_RAND_193, BN_RAND_248, BN_RAND_253, BN_RAND_271,
+    BN_RAND_332, BN_RAND_338, BN_RAND_385, BN_RAND_98,
 };
 use crate::runtime::err::raise_site;
+use crate::runtime::mem::OPENSSL_cleanse;
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc};
 
 /// The authority translation unit, for the `CRYPTO_malloc`/`CRYPTO_clear_free`
@@ -683,6 +692,378 @@ pub unsafe extern "C" fn BN_pseudo_rand(
 pub unsafe extern "C" fn BN_pseudo_rand_range(rnd: *mut BigNum, range: *const BigNum) -> c_int {
     // SAFETY: `BN_rand_range`'s contract is this function's contract.
     unsafe { BN_rand_range(rnd, range) }
+}
+
+/// `int ossl_bn_priv_rand_range_fixed_top(BIGNUM *r, const BIGNUM *range,`
+/// `unsigned int strength, BN_CTX *ctx)` — `crypto/bn/bn_rand.c:241-283`.
+///
+/// A private draw in `[0, range)` that carries `BN_FLG_CONSTTIME` and keeps the value at a fixed
+/// width, so a caller can use it as a scalar without the width moving with the value. The
+/// authority's two callers are `crypto/dsa/dsa_ossl.c`'s `dsa_sign_setup` (the no-digest arm) and
+/// `crypto/ec/ecdsa_ossl.c`'s twin.
+///
+/// **The two statements this port cannot carry are named rather than dropped.** The authority
+/// sets `r`'s top to a `BN_BITS2` multiple ("fixed top") and this representation has no top to
+/// set; `bn_correct_top` is under `BN_DEBUG`, which this profile does not define; and
+/// `ossl_bn_mask_bits_fixed_top` is [`crate::bn::bignum::ossl_bn_mask_bits_fixed_top`], which
+/// says the same thing at its own site. Everything else is statement for statement: the two
+/// refusals, `BN_zero` for a one-bit range, the flag, the draw, the count and the rejection
+/// loop.
+///
+/// # Safety
+///
+/// `r` must be null or live and uniquely owned; `range` must be null or live (a null reads as
+/// zero and is refused by the range test, which is the crate's `as_ref` convention rather than a
+/// claim about the authority's null dereference); `ctx` must be null or live.
+pub(crate) unsafe fn ossl_bn_priv_rand_range_fixed_top(
+    r: *mut BigNum,
+    range: *const BigNum,
+    strength: c_uint,
+    ctx: *mut BnCtx,
+) -> c_int {
+    let mut count = 100;
+
+    if r.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&BN_RAND_248) };
+        return 0;
+    }
+    // SAFETY: `range` is null or live per this function's `# Safety` section.
+    let range_neg = match unsafe { as_ref(range) } {
+        Some(b) => b.neg,
+        None => 0,
+    };
+    // SAFETY: `range` is null or live; `as_ref` reads a null object as zero.
+    if range_neg != 0 || unsafe { BN_is_zero(range) } != 0 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&BN_RAND_253) };
+        return 0;
+    }
+
+    // SAFETY: `range` is null or live.
+    let n = unsafe { BN_num_bits(range) }; /* n > 0 */
+    if n == 1 {
+        // SAFETY: `r` is non-null and live, checked above.
+        unsafe { BN_zero_ex(r) };
+    } else {
+        // SAFETY: `r` is non-null and live, checked above.
+        unsafe { BN_set_flags(r, BN_FLG_CONSTTIME) };
+        loop {
+            // SAFETY: `flag`, `strength` and the two bit settings are values; `r`, `range` and
+            // `ctx` are null or live per this function's `# Safety` section.
+            if unsafe {
+                bnrand(
+                    BnrandFlag::Private,
+                    r,
+                    n.wrapping_add(1),
+                    BN_RAND_TOP_ONE,
+                    BN_RAND_BOTTOM_ANY,
+                    strength,
+                    ctx,
+                )
+            } == 0
+            {
+                return 0;
+            }
+
+            count -= 1;
+            if count == 0 {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&BN_RAND_271) };
+                return 0;
+            }
+            // SAFETY: `r` is live and non-null; `n` is its own bit count's upper bound.
+            unsafe { crate::bn::bignum::ossl_bn_mask_bits_fixed_top(r, n) };
+
+            // SAFETY: `r` and `range` are live per this function's `# Safety` section.
+            if unsafe { BN_ucmp(r, range) } < 0 {
+                break;
+            }
+        }
+    }
+
+    1
+}
+
+/// The authority's `end:` label of [`ossl_bn_gen_dsa_nonce_fixed_top`]: the context, the fetched
+/// digest, the key buffer and the three local buffers are released in that order on **every**
+/// exit, which is why that body jumps here rather than repeating the six calls at each of its
+/// failure arms.
+///
+/// # Safety
+///
+/// `mdctx` and `md` are NULL or live; `k_bytes` is NULL or owns `num_k_bytes` bytes; the three
+/// buffers are live locals of the lengths their own call sites pass.
+unsafe fn dsa_nonce_end(
+    mdctx: *mut crate::evp::digest::EvpMdCtx,
+    md: *mut crate::evp::digest::EvpMd,
+    k_bytes: *mut u8,
+    num_k_bytes: usize,
+    digest: &mut [u8],
+    random_bytes: &mut [u8],
+    private_bytes: &mut [u8],
+) {
+    use crate::evp::digest::{EVP_MD_CTX_free, EVP_MD_free};
+
+    // SAFETY: the caller guarantees every pointer is NULL or live and every buffer is a local of
+    // the stated length.
+    unsafe {
+        EVP_MD_CTX_free(mdctx);
+        EVP_MD_free(md);
+        CRYPTO_clear_free(k_bytes.cast(), num_k_bytes, FILE.as_ptr(), LINE);
+        OPENSSL_cleanse(digest.as_mut_ptr().cast(), digest.len());
+        OPENSSL_cleanse(random_bytes.as_mut_ptr().cast(), random_bytes.len());
+        OPENSSL_cleanse(private_bytes.as_mut_ptr().cast(), private_bytes.len());
+    }
+}
+
+/// `int ossl_bn_gen_dsa_nonce_fixed_top(BIGNUM *out, const BIGNUM *range, const BIGNUM *priv,`
+/// `const unsigned char *message, size_t message_len, BN_CTX *ctx)` —
+/// `crypto/bn/bn_rand.c:293-395`.
+///
+/// The nonce DSA and ECDSA sign with, drawn so that an RNG failure is not fatal while the private
+/// key stays secret: each candidate is `SHA512(i || priv_padded || message || random)`, rejected
+/// until it is below `range`. SHA-512 is fetched by name from the library context the `BN_CTX`
+/// carries, which is the reason the digest front had to exist before this could.
+///
+/// The fixed-top half is the port [`ossl_bn_priv_rand_range_fixed_top`] describes, and the buffer
+/// widths are the authority's: a 64-byte draw per digest, a 96-byte private-key buffer whose
+/// size is deliberately independent of the key's own length, and `len(range) + 1` bytes of output
+/// whose first byte is pinned to `0xff` so `BN_bin2bn` reads a fixed width.
+///
+/// # Safety
+///
+/// `out` must be live and writable; `range` and `priv` must be live; `message` must be readable
+/// for `message_len` bytes; `ctx` must be null or live.
+pub(crate) unsafe fn ossl_bn_gen_dsa_nonce_fixed_top(
+    out: *mut BigNum,
+    range: *const BigNum,
+    priv_: *const BigNum,
+    message: *const c_uchar,
+    message_len: usize,
+    ctx: *mut BnCtx,
+) -> c_int {
+    use crate::bn::bignum::{BN_bin2bn, BN_bn2binpad};
+    use crate::digest::sha2::SHA512_DIGEST_LENGTH;
+    use crate::evp::digest::{
+        EVP_DigestFinal_ex, EVP_DigestInit_ex, EVP_DigestUpdate, EVP_MD_CTX_new, EVP_MD_fetch,
+        EvpMd, EvpMdCtx,
+    };
+
+    // SAFETY: `EVP_MD_CTX_new` takes no pointers.
+    let mdctx: *mut EvpMdCtx = EVP_MD_CTX_new();
+    /*
+     * We use 512 bits of random data per iteration to ensure that we have at least |range| bits
+     * of randomness.
+     */
+    let mut random_bytes = [0u8; 64];
+    let mut digest = [0u8; SHA512_DIGEST_LENGTH as usize];
+    /* We generate |range|+1 bytes of random output. */
+    // `BN_num_bytes(range)` is `(BN_num_bits(range) + 7) / 8`.
+    // SAFETY: `range` is live per this function's `# Safety` section.
+    let num_k_bytes = (((unsafe { BN_num_bits(range) }) + 7) / 8 + 1) as usize;
+    let mut private_bytes = [0u8; 96];
+    const MAX_N: c_int = 64; /* Pr(failure to generate) < 2^max_n */
+    let mut ret: c_int = 0;
+    let mut md: *mut EvpMd = core::ptr::null_mut();
+    // SAFETY: `ctx` is null or live; the accessor reads the field `BN_CTX_new_ex` stored.
+    let libctx = unsafe { crate::bn::ctx::ossl_bn_get_libctx(ctx) };
+
+    if mdctx.is_null() {
+        return 0;
+    }
+
+    // SAFETY: `CRYPTO_malloc` reads no caller pointer.
+    let k_bytes = CRYPTO_malloc(num_k_bytes, FILE.as_ptr(), LINE).cast::<u8>();
+    if k_bytes.is_null() {
+        // SAFETY: `mdctx` is this call's own and `md` is still NULL.
+        unsafe {
+            dsa_nonce_end(
+                mdctx,
+                md,
+                k_bytes,
+                num_k_bytes,
+                &mut digest,
+                &mut random_bytes,
+                &mut private_bytes,
+            )
+        };
+        return 0;
+    }
+    /* Ensure top byte is set to avoid non-constant time in bin2bn */
+    // SAFETY: `k_bytes` owns `num_k_bytes` writable bytes.
+    unsafe { *k_bytes = 0xff };
+
+    /* We copy |priv| into a local buffer to avoid exposing its length. */
+    // SAFETY: `priv_` is live and `private_bytes` is a local of exactly this size; the authority
+    // refuses a key that does not fit rather than leaking its length.
+    if unsafe {
+        BN_bn2binpad(
+            priv_,
+            private_bytes.as_mut_ptr(),
+            private_bytes.len() as c_int,
+        )
+    } < 0
+    {
+        /*
+         * No reasonable DSA or ECDSA key should have a private key this large and we don't
+         * handle this case in order to avoid leaking the length of the private key.
+         */
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&BN_RAND_332) };
+        // SAFETY: the context and the buffer are this call's own; `md` is still NULL.
+        unsafe {
+            dsa_nonce_end(
+                mdctx,
+                md,
+                k_bytes,
+                num_k_bytes,
+                &mut digest,
+                &mut random_bytes,
+                &mut private_bytes,
+            )
+        };
+        return 0;
+    }
+
+    // SAFETY: `libctx` is NULL or the context the caller's `BN_CTX` carries; the name is a
+    // NUL-terminated literal and the property query is NULL as the authority passes it.
+    md = unsafe { EVP_MD_fetch(libctx, c"SHA512".as_ptr(), core::ptr::null()) };
+    if md.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&BN_RAND_338) };
+        // SAFETY: every argument is NULL or this call's own.
+        unsafe {
+            dsa_nonce_end(
+                mdctx,
+                md,
+                k_bytes,
+                num_k_bytes,
+                &mut digest,
+                &mut random_bytes,
+                &mut private_bytes,
+            )
+        };
+        return 0;
+    }
+    for _n in 0..MAX_N {
+        let mut i: u8 = 0;
+        let mut done: usize = 1;
+
+        while done < num_k_bytes {
+            // SAFETY: `libctx` is NULL or live, `random_bytes` is a local buffer of the length
+            // passed, and the strength is the authority's zero.
+            if unsafe {
+                RAND_priv_bytes_ex(libctx, random_bytes.as_mut_ptr(), random_bytes.len(), 0)
+            } <= 0
+            {
+                // SAFETY: every argument is NULL or this call's own.
+                unsafe {
+                    dsa_nonce_end(
+                        mdctx,
+                        md,
+                        k_bytes,
+                        num_k_bytes,
+                        &mut digest,
+                        &mut random_bytes,
+                        &mut private_bytes,
+                    )
+                };
+                return 0;
+            }
+
+            // SAFETY: `mdctx` and `md` are live, and each buffer's length is the `count` passed.
+            let ok = unsafe {
+                EVP_DigestInit_ex(mdctx, md, core::ptr::null_mut()) != 0
+                    && EVP_DigestUpdate(
+                        mdctx,
+                        core::ptr::addr_of!(i).cast(),
+                        core::mem::size_of::<u8>(),
+                    ) != 0
+                    && EVP_DigestUpdate(mdctx, private_bytes.as_ptr().cast(), private_bytes.len())
+                        != 0
+                    && (message.is_null()
+                        || EVP_DigestUpdate(mdctx, message.cast(), message_len) != 0)
+                    && EVP_DigestUpdate(mdctx, random_bytes.as_ptr().cast(), random_bytes.len())
+                        != 0
+                    && EVP_DigestFinal_ex(mdctx, digest.as_mut_ptr(), core::ptr::null_mut()) != 0
+            };
+            if !ok {
+                // SAFETY: every argument is NULL or this call's own.
+                unsafe {
+                    dsa_nonce_end(
+                        mdctx,
+                        md,
+                        k_bytes,
+                        num_k_bytes,
+                        &mut digest,
+                        &mut random_bytes,
+                        &mut private_bytes,
+                    )
+                };
+                return 0;
+            }
+
+            let mut todo = num_k_bytes - done;
+            if todo > SHA512_DIGEST_LENGTH as usize {
+                todo = SHA512_DIGEST_LENGTH as usize;
+            }
+            // SAFETY: `k_bytes` owns `num_k_bytes` bytes and `done + todo <= num_k_bytes`;
+            // `digest` holds `todo <= 64` written bytes.
+            unsafe { core::ptr::copy_nonoverlapping(digest.as_ptr(), k_bytes.add(done), todo) };
+            done += todo;
+            i += 1;
+        }
+
+        // SAFETY: `k_bytes` owns `num_k_bytes` bytes and `out` is live and writable.
+        if unsafe { BN_bin2bn(k_bytes, num_k_bytes as c_int, out) }.is_null() {
+            // SAFETY: every argument is NULL or this call's own.
+            unsafe {
+                dsa_nonce_end(
+                    mdctx,
+                    md,
+                    k_bytes,
+                    num_k_bytes,
+                    &mut digest,
+                    &mut random_bytes,
+                    &mut private_bytes,
+                )
+            };
+            return 0;
+        }
+
+        /* Clear out the top bits and rejection filter into range */
+        // SAFETY: `out` is live and `range` is live.
+        unsafe {
+            BN_set_flags(out, BN_FLG_CONSTTIME);
+            crate::bn::bignum::ossl_bn_mask_bits_fixed_top(out, BN_num_bits(range));
+        }
+
+        // SAFETY: `out` and `range` are live.
+        if unsafe { BN_ucmp(out, range) } < 0 {
+            ret = 1;
+            break;
+        }
+    }
+    if ret == 0 {
+        /* Failed to generate anything */
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&BN_RAND_385) };
+    }
+
+    // SAFETY: every argument is NULL or this call's own.
+    unsafe {
+        dsa_nonce_end(
+            mdctx,
+            md,
+            k_bytes,
+            num_k_bytes,
+            &mut digest,
+            &mut random_bytes,
+            &mut private_bytes,
+        )
+    };
+    ret
 }
 
 // =============================================================================================

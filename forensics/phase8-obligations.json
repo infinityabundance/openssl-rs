@@ -4,9 +4,9 @@
     "complete": false,
     "counts": {
       "atlas_owned": 759,
-      "deferred_to_later_phase": 4,
-      "implemented": 392,
-      "open_in_this_stratum": 390,
+      "deferred_to_later_phase": 2,
+      "implemented": 456,
+      "open_in_this_stratum": 328,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -18,26 +18,14 @@
         "symbol": "DES_random_key"
       },
       {
-        "declaring_header": "dsa.h",
-        "owning_phase": 9,
-        "reason": "the three units these name do not exist in this crate yet. `DSA_generate_key` and `DSA_generate_parameters_ex` are `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c` -- Phase 8.6's row, and the `crypto/dsa/` machinery (the `DSA` object, its method table and its FFC front end) lands there; `EC_KEY_generate_key` is `crypto/ec/ec_key.c`, Phase 8.7's. Both reach the random layer through their own BN calls (`BN_priv_rand_range`/`BN_generate_prime_ex2` on the `bnrand` -> `RAND_bytes_ex` path that D313/D324 landed), so this row is about the **units** rather than about a callee now in: the DH half of the old row retired in D331 precisely because its units landed.",
-        "symbol": "DSA_generate_key"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "owning_phase": 9,
-        "reason": "the three units these name do not exist in this crate yet. `DSA_generate_key` and `DSA_generate_parameters_ex` are `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c` -- Phase 8.6's row, and the `crypto/dsa/` machinery (the `DSA` object, its method table and its FFC front end) lands there; `EC_KEY_generate_key` is `crypto/ec/ec_key.c`, Phase 8.7's. Both reach the random layer through their own BN calls (`BN_priv_rand_range`/`BN_generate_prime_ex2` on the `bnrand` -> `RAND_bytes_ex` path that D313/D324 landed), so this row is about the **units** rather than about a callee now in: the DH half of the old row retired in D331 precisely because its units landed.",
-        "symbol": "DSA_generate_parameters_ex"
-      },
-      {
         "declaring_header": "ec.h",
         "owning_phase": 9,
-        "reason": "the three units these name do not exist in this crate yet. `DSA_generate_key` and `DSA_generate_parameters_ex` are `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c` -- Phase 8.6's row, and the `crypto/dsa/` machinery (the `DSA` object, its method table and its FFC front end) lands there; `EC_KEY_generate_key` is `crypto/ec/ec_key.c`, Phase 8.7's. Both reach the random layer through their own BN calls (`BN_priv_rand_range`/`BN_generate_prime_ex2` on the `bnrand` -> `RAND_bytes_ex` path that D313/D324 landed), so this row is about the **units** rather than about a callee now in: the DH half of the old row retired in D331 precisely because its units landed.",
+        "reason": "`crypto/ec/ec_key.c` is Phase 8.7's unit and does not exist in this crate yet: the EC stratum's own key layer is what generates an EC key, and 8.7's row owns the `EC_KEY` object, the groups, the points and the curve tables it is built on. It reaches the random layer through `BN_priv_rand_range` on the `bnrand` -> `RAND_bytes_ex` path that D313 landed, so this row is about the **unit** rather than about a callee, which is what the DH half retired in D331 and the DSA half retired in D333 both turned out to be.",
         "symbol": "EC_KEY_generate_key"
       }
     ],
     "deferred_by_phase": {
-      "9": 4
+      "9": 2
     },
     "handoffs_discharged": {
       "7": [
@@ -1280,6 +1268,70 @@
       "DH_size",
       "DH_test_flags",
       "DH_up_ref",
+      "DSA_OpenSSL",
+      "DSA_SIG_free",
+      "DSA_SIG_get0",
+      "DSA_SIG_new",
+      "DSA_SIG_set0",
+      "DSA_bits",
+      "DSA_clear_flags",
+      "DSA_do_sign",
+      "DSA_do_verify",
+      "DSA_dup_DH",
+      "DSA_free",
+      "DSA_generate_key",
+      "DSA_generate_parameters",
+      "DSA_generate_parameters_ex",
+      "DSA_get0_engine",
+      "DSA_get0_g",
+      "DSA_get0_key",
+      "DSA_get0_p",
+      "DSA_get0_pqg",
+      "DSA_get0_priv_key",
+      "DSA_get0_pub_key",
+      "DSA_get0_q",
+      "DSA_get_default_method",
+      "DSA_get_ex_data",
+      "DSA_get_method",
+      "DSA_meth_dup",
+      "DSA_meth_free",
+      "DSA_meth_get0_app_data",
+      "DSA_meth_get0_name",
+      "DSA_meth_get_bn_mod_exp",
+      "DSA_meth_get_finish",
+      "DSA_meth_get_flags",
+      "DSA_meth_get_init",
+      "DSA_meth_get_keygen",
+      "DSA_meth_get_mod_exp",
+      "DSA_meth_get_paramgen",
+      "DSA_meth_get_sign",
+      "DSA_meth_get_sign_setup",
+      "DSA_meth_get_verify",
+      "DSA_meth_new",
+      "DSA_meth_set0_app_data",
+      "DSA_meth_set1_name",
+      "DSA_meth_set_bn_mod_exp",
+      "DSA_meth_set_finish",
+      "DSA_meth_set_flags",
+      "DSA_meth_set_init",
+      "DSA_meth_set_keygen",
+      "DSA_meth_set_mod_exp",
+      "DSA_meth_set_paramgen",
+      "DSA_meth_set_sign",
+      "DSA_meth_set_sign_setup",
+      "DSA_meth_set_verify",
+      "DSA_new",
+      "DSA_new_method",
+      "DSA_security_bits",
+      "DSA_set0_key",
+      "DSA_set0_pqg",
+      "DSA_set_default_method",
+      "DSA_set_ex_data",
+      "DSA_set_flags",
+      "DSA_set_method",
+      "DSA_sign_setup",
+      "DSA_test_flags",
+      "DSA_up_ref",
       "EVP_PKEY_CTX_get0_rsa_oaep_label",
       "EVP_PKEY_CTX_get_rsa_mgf1_md",
       "EVP_PKEY_CTX_get_rsa_mgf1_md_name",
@@ -1736,318 +1788,6 @@
         "declaring_header": "dsa.h",
         "module": "src/dsa/mod.rs",
         "received_from_phase": null,
-        "symbol": "DSA_OpenSSL"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_SIG_free"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_SIG_get0"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_SIG_new"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_SIG_set0"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_bits"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_clear_flags"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_do_sign"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_do_verify"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_dup_DH"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_free"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_generate_parameters"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_get0_engine"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_get0_g"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_get0_key"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_get0_p"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_get0_pqg"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_get0_priv_key"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_get0_pub_key"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_get0_q"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_get_default_method"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_get_ex_data"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_get_method"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_dup"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_free"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_get0_app_data"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_get0_name"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_get_bn_mod_exp"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_get_finish"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_get_flags"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_get_init"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_get_keygen"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_get_mod_exp"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_get_paramgen"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_get_sign"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_get_sign_setup"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_get_verify"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_new"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_set0_app_data"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_set1_name"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_set_bn_mod_exp"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_set_finish"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_set_flags"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_set_init"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_set_keygen"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_set_mod_exp"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_set_paramgen"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_set_sign"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_set_sign_setup"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_meth_set_verify"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_new"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_new_method"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
         "symbol": "DSA_print"
       },
       {
@@ -2060,73 +1800,13 @@
         "declaring_header": "dsa.h",
         "module": "src/dsa/mod.rs",
         "received_from_phase": null,
-        "symbol": "DSA_security_bits"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_set0_key"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_set0_pqg"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_set_default_method"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_set_ex_data"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_set_flags"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_set_method"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
         "symbol": "DSA_sign"
       },
       {
         "declaring_header": "dsa.h",
         "module": "src/dsa/mod.rs",
         "received_from_phase": null,
-        "symbol": "DSA_sign_setup"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
         "symbol": "DSA_size"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_test_flags"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_up_ref"
       },
       {
         "declaring_header": "dsa.h",
@@ -4114,12 +3794,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "82883577758c777782a6bb03f61ac8a905407a0d2bafddc33f396784d9234104"
+      "sha256": "28e2b15d957feba9a0b5a60b91620375effe69e74c9fa5a17106889c91129a16"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "92ccc54c2ee681011b494dc8368b95c453ae6e1d29de9fd6309198f5e9dd8902"
+      "sha256": "57821cd9012986bcc6f445297edf78569ff134dccb228bb5356f7ae421af5c84"
     }
   ],
   "kind": "phase8-obligations",

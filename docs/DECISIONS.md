@@ -22238,3 +22238,189 @@ only through the ameth's `priv_print` and waits with it; `dh_kdf.c`'s `DH_KDF_X9
 provider's `OSSL_OP_KDF` rows; and `crypto/evp/dh_ctrl.c`'s controls plus the `EVP_PKEY_*DH`
 bridges are slice E. `CT-DH` stays PENDING: its PKCS#3 and group vectors now have both the object
 and the group table they needed, so what remains is the vector corpus rather than a prerequisite.
+
+## D333 — 8.6's DSA object, method table, key layer, parameter generator and signature surface land together, and the two deferred DSA names retire
+
+**Decision.** Phase 8.6 (DSA) lands the block's core as **eight children of `src/dsa/`**:
+
+| module | authority unit | defined symbols |
+|---|---|---|
+| `src/dsa/mod.rs` | `crypto/dsa/dsa_meth.c` | 27/27 |
+| `src/dsa/object.rs` | `crypto/dsa/dsa_lib.c` | 27/27 |
+| `src/dsa/ossl.rs` | `crypto/dsa/dsa_ossl.c` | 4/4 |
+| `src/dsa/key.rs` | `crypto/dsa/dsa_key.c` | 2/2 |
+| `src/dsa/gen.rs` | `crypto/dsa/dsa_gen.c` | 2/2 |
+| `src/dsa/sign.rs` | `crypto/dsa/dsa_sign.c` | 6/6 |
+| `src/dsa/vrf.rs` | `crypto/dsa/dsa_vrf.c` | 1/1 |
+| `src/dsa/depr.rs` | `crypto/dsa/dsa_depr.c` | 1/1 |
+
+`share` is `forensics/atlas/transcription-edges.json`'s defined-symbol share; every unit's every
+external definition is transcribed, and the internals the units reach are transcribed with them.
+**Sixty-four exports land**, and the two DSA names `forensics/phase8-obligations.json` had recorded
+as `deferred` are among them.
+
+**The object layer and the `dsa_ossl` table land together, which is the cycle D329 measured and
+D331 closed for DH.** `dsa_new_intern` (`crypto/dsa/dsa_lib.c:153`) reads
+`DSA_get_default_method()`, whose `default_DSA_method` is `&openssl_dsa_meth` — and
+`openssl_dsa_meth` is `crypto/dsa/dsa_ossl.c:53-67`, not `dsa_lib.c`. So the constructor cannot be
+transcribed before the table exists and the table cannot be built before its five member functions'
+addresses do. D329 left `DH_get_default_method`/`DH_set_default_method`/`DH_OpenSSL` unlanded
+rather than installing an empty table; this commit lands the table and the default-method family in
+`src/dsa/ossl.rs` beside `src/dsa/object.rs`, and `src/dsa/mod.rs` carries `dsa_meth.c`'s
+twenty-seven labels as D284 and D329 did for their blocks.
+
+**The dispatch is a fall-through, not a call, and that is what made key generation landable.**
+`openssl_dsa_meth` leaves `dsa_keygen` and `dsa_paramgen` **NULL** (`dsa_ossl.c:65-66`), and both
+entry points test the member before using it: `DSA_generate_key` answers
+`dsa->meth->dsa_keygen(dsa)` when it is non-NULL and calls `dsa_key.c`'s static `dsa_keygen`
+otherwise, and `DSA_generate_parameters_ex` falls through to `dsa_gen.c`'s FFC generator the same
+way. The authority's own NULLs are therefore kept rather than replaced with calls — the member test
+is transcribed because a caller that installs its own table must get its own member called — and
+`RT-DSA` observes that both members are `None` on the default table. Key generation needed neither
+the signing path to be reachable nor a second table, which is why the FFC layer D330 landed is the
+whole of what it waits on.
+
+**Three nonce draws, and the third is a recorded reduction rather than a transcription.**
+`dsa_sign_setup` draws `k` on one of three arms: no digest, where it is
+`ossl_bn_priv_rand_range_fixed_top` with the constant-time flag set; a digest with
+`nonce_type != 1`, where it is `ossl_bn_gen_dsa_nonce_fixed_top` over SHA-512 of the padded private
+key, the digest and a fresh draw; and a digest with `nonce_type == 1`, where the authority calls
+`crypto/deterministic_nonce.c`'s `ossl_gen_deterministic_nonce_rfc6979`. The first two are
+transcribed in `src/bn/rand.rs` (D314 deferred them; their first caller arrived here, and landing
+them is why `sealed_census` falls by five). The third is written as the refusal it reduces to, and
+the argument is that its reachable answer is the same either way: that function's first act is
+`EVP_KDF_fetch(libctx, "HMAC-DRBG-KDF", propq)` (`deterministic_nonce.c:140`), whose `kdf_setup`
+returns NULL when the fetch does, so the arm fails through the same `goto err`; the default
+provider's `HMAC-DRBG-KDF` row is `implementation_state: "unimplemented"` in
+`forensics/atlas/provider-algorithms.json`, and `crypto/deterministic_nonce.c` itself has **no
+crate module and no plan row**. Its only authority caller that passes `nonce_type == 1` is
+`crypto/dsa/dsa_pmeth.c`, which is slice E. What unblocks it is the `OSSL_OP_KDF` rows.
+
+**One reachable-answer reduction, and it is the ENGINE one D313 and D331 recorded.** `DSA_set_method`
+and `DSA_free` call `ENGINE_finish(dsa->engine)` and `dsa_new_intern` calls
+`ENGINE_init`/`ENGINE_get_default_DSA`/`ENGINE_get_DSA`. This crate has no engine registry
+(Phase 13, D181), so `ENGINE_get_default_DSA()` selects from an empty table and answers NULL, the
+`if (ret->engine)` block — the only reader of `ENGINE_get_DSA` — is unreachable, and
+`ENGINE_finish(NULL)` returns 1 without touching anything. The calls are omitted, the
+`dsa->engine = NULL;` assignments are kept, and the observable half is that `DSA_get0_engine`
+answers NULL for every object this crate can build, which `RT-DSA` asserts. The two
+`ERR_R_ENGINE_LIB` raise sites inside that block (`dsa_lib.c:158`, `:167`) are therefore
+unreachable and no `raise_site` names them; the generated `err_sites::DSA_LIB_158`/`_167`
+coordinates are still emitted by the lexical scan and still carried in `err_sites::ALL`, exactly as
+D330 records for the two FIPS-only FFC sites and D331 for `DH_LIB_100`/`_109`.
+
+**Two internals are withheld, each named with its own blocker, and both become deferral rows.**
+`ossl_dsa_sign_int` (`crypto/dsa/dsa_sign.c`) is the one definition of that unit this commit does
+not carry: its body past its four arguments is `i2d_DSA_SIG`, the DER `DSA-Sig-Value` encoder,
+which is `crypto/asn1_dsa.c`'s `ossl_encode_der_dsa_sig` over `crypto/packet.c`'s thirty
+`WPACKET_*` symbols — **neither unit has a crate module and no stratum's plan row names one**. The
+three exports that call it (`DSA_size`, `DSA_sign`, `DSA_verify`) stay `open` with it.
+`ossl_dsa_ffc_params_fromdata` (`crypto/dsa/dsa_lib.c:355-365`) is `ossl_ffc_params_fromdata` plus
+a `dirty_cnt` bump, and that function is `crypto/ffc/ffc_backend.c`'s — the unit D330 and D332
+already record as having no module because it calls `crypto/param_build_set.c`'s four
+`ossl_param_build_set_*`. No fetch was faked for either: a transcription that called a name the
+crate does not define would be a divergence record pretending to be code.
+
+**The deferred names retire, and the hand-off row is split rather than emptied.** D331's split left
+`BLOCKED_HANDOFFS` row (3) naming `DSA_generate_key`, `DSA_generate_parameters_ex` and
+`EC_KEY_generate_key`, and the generator fails closed on a row that outlives its names. The row is
+**split again** — D326's precedent, which D331 used for the DH half — and the DSA pair leaves with
+their units: the hand-off became a same-stratum fact, and a stratum cannot hand a symbol to itself
+(D296). `EC_KEY_generate_key` keeps its own reason, which was never the DSA three's either.
+`deferred` therefore moves **4 -> 2**.
+
+**What the court observed.** `RT-DSA` is registered in `forensics/tools/phase8_courts.py` for the
+first time and passes at **233 observations** with zero residuals. The object's whole accessor
+surface and its `-1`/`0` sentinels; `DSA_new_method(NULL)` beside `DSA_new`; the flag trio with the
+fresh object's flags proved to be exactly `DSA_FLAG_CACHE_MONT_P`; the ex-data pair; the three
+`DSA_set0_pqg` refusals and `DSA_set0_key`'s NULL-pair refusal; `DSA_up_ref`'s survival through one
+free; `ENGINE` answering NULL; a **generated 1024-bit group** whose `p`/`q`/`g` widths, oddness,
+primality (with `q²` as the negative control) and `DSA_bits`/`DSA_security_bits` are printed;
+`DSA_generate_key`'s private exponent by its bit width and its public value by its range; a
+sign-then-verify round trip, a tampered signature refusing, a second digest refusing and the
+original verifying again; and eleven refusal arms, each observed through **both** its return value
+and the coordinate `ERR_get_error_all` reports. No random or secret byte is printed: the private
+exponent appears only as a bound, the public value only as a range, and the signature only through
+`DSA_do_verify`'s answer. The method-table arm walks all twenty-seven labels with sentinel-returning
+stubs, so a transcription that called one would print the sentinel rather than crash.
+
+**The layout is measured, not read.** `courts/layout/measure-dsa.c` adds `struct dsa_st` — **200
+bytes, alignment 8**, sixteen member offsets — beside `struct dsa_method` — **96 bytes** with
+twelve members — and `struct DSA_SIG_st` at **16 bytes**. The two object offsets that cannot be
+reasoned about from the declaration are `method_mont_p` at **128** (`flags` is a four-byte `int` at
+120, so 124..128 is padding) and `ex_data` at **144** (`references` is a four-byte `_Atomic int` at
+136). In the method table the offset a wrong order moves without moving the size is `app_data` at
+**72** (`flags` at 64 plus padding). The unit tests assert every one of them.
+
+**The unit changed the product's evidence machinery in three places, all generator inputs.**
+`crypto/dsa/dsa_lib.c` and `crypto/dsa/dsa_ossl.c` join `gen_err_raise_sites.py`'s
+`COVERED_FILES` — `dsa_meth.c`, `dsa_sign.c`, `dsa_vrf.c`, `dsa_key.c`, `dsa_gen.c` and
+`dsa_depr.c` are absent because none of them raises — so **thirteen coordinates are added** and
+`src/runtime/err_sites.rs` moves **2,469 -> 2,482** sites; eleven of the thirteen are raised by the
+crate, `DSA_OSS_195` is the authority's only **dynamic-reason** site in this stratum (its one
+shared `err:` label carries the reason code), and `DSA_LIB_158`/`_167` are the unreachable ENGINE
+pair above. The dispatch court gains the eight `DSA_METHOD` vtable aliases `src/dsa/mod.rs`
+declares, which is the **fourth** vtable of that shape after `EVP_CIPHER`/`EVP_MD`'s legacy lists,
+`RSA_METHOD`'s and `DH_METHOD`'s: `crypto/dsa/dsa_local.h:46-70` declares each callback inline as
+a plain function pointer and the header is internal, so the atlas records no typedef for any of
+them. `dispatch_court.py` receives a `DSA_METHOD_VTABLE` reason and **its `unlinked` count returns
+to 0** (`checked` 229 -> **237**, `exempted` 129 -> **137**). This was the one step the slice had
+left failing: without the reason the dispatch court reports eight unlinked aliases and exits 1, so
+the pipeline stops there with no message after the court's own success lines — which is exactly why
+the row is a *reason* rather than a filter.
+
+**Bookkeeping, read off the regenerated files.** `phase8`: implemented 392 -> **456**, deferred 4 ->
+**2**, open 390 -> **328**, owned 786 unchanged. `forensics/atlas/implemented-surface.json` moves
+`libcrypto` implemented 2305 -> **2369**, and `internal_symbols.c_style` stays at **274** (the
+accessors `src/dsa/object.rs` publishes as `pub(crate)` are internalised and never reach the
+archive as C-style symbols). `forensics/atlas/transcription-edges.json` gains eight edges, so the
+gate counts **276 -> 284** crate modules and **206 -> 214** authority units; the gate's
+`language_census` moves **3,413 -> 3,483**, and `divergence_names_covered` stays **31**. The guard's
+watch item fires in one direction only: **`blocking_dependencies` moves 17 -> 19** — the two
+deferrals above, both visible for the first time because `dsa_sign.c` and `dsa_lib.c` now have
+modules — so `forensics/ownership-transitions.json` gains one `prerequisite_transitions` row for
+exactly that pair; **`sealed_census` moves 57 -> 52**, a decrease, which needs no row, and both
+numbers are read from the guard rather than asserted. The suite stands at **836 tests**, of which
+`src/dsa/mod.rs` contributes **12** (the object's measured shape, the method table's shape and
+its round trips, the constructor's state, and the sign/tamper round trip) and the slice's
+`crypto/bn` additions carry the fixed-top helpers' test in `src/bn/bignum.rs`; the pipeline ends
+`PIPELINE OK` with the gate at zero findings over **91 courts** and **33,777 observations**.
+
+**Four coordinates the prompt carried are wrong, and a fifth thing cannot be transcribed.** First,
+**there is no `crypto/dsa/dsa_ctrl.c`**: the DSA controls are `crypto/evp/dsa_ctrl.c` — the
+`EVP_PKEY_CTX_*dsa*` ABI surface over `EVP_PKEY_CTX` — which is this stratum's slice E and not this
+slice, exactly as D331 corrected `dh_ctrl.c`. Second, **`DSA_sign`, `DSA_verify` and `DSA_size`
+cannot be transcribed now**: all three reach `i2d_DSA_SIG`/`d2i_DSA_SIG`, whose whole body is
+`crypto/asn1_dsa.c`'s two encoders over `crypto/packet.c`, and neither unit has a crate module or a
+plan row; the prompt's "`DSA_sign`/`_verify`, `DSA_size`" is the one part of its list that is not
+landable. Third, **`DSA_security_bits` calls `BN_security_bits`, not
+`ossl_ifc_ffc_compute_security_bits`** — the prompt asks for the latter to be imported, and it is
+the *RSA* reader (`RSA_security_bits` calls it; D320's 128-vs-152 diversion is that function's).
+Fourth, **`DSA_generate_parameters` is not in `dsa_gen.c`**: the deprecated wrapper is the whole of
+`crypto/dsa/dsa_depr.c`, and it is transcribed there, which is where `crypto/dh/dh_depr.c` sits for
+the same reason. Fifth, and the other direction, `dsa_key.c`'s FIPS-only pairwise and known-answer
+tests (`:60-141`) are **not compiled on this profile** — the whole block is `#ifdef FIPS_MODULE` —
+so the two definitions transcribed from that file are the export and the static generator.
+
+**Two authority behaviours a reader would not predict, and both are court arms rather than
+comments.** `DSA_generate_key` on a **512-bit** group returns **0**, because the FFC validator
+requires `L >= 1024` for DSA — while `DSA_generate_parameters_ex(512, …)` **succeeds**. And
+`DSA_sign_setup`'s `*rp` must be a live `BIGNUM`: the authority writes `r` through it and crashes
+on NULL in *all* its arms, refusals included, so the probe allocates it before every call. A third
+is recorded rather than courted, because the probe cannot exercise it without either crashing or
+printing allocator state: a `DSA_new` -> `DSA_set0_pqg` -> `DSA_free` sequence **immediately after
+an earlier `DSA_free`** aborts inside the authority (glibc reports "double free in tcache 2";
+reproduced with the allocator hook installed), while `DSA_new`/`DSA_free` alone and
+generate-then-free are both clean, and a fresh process is clean. The probe never frees a
+`new -> set0_pqg -> free` object and records the residue in its own comment instead of asserting
+an answer the authority does not have.
+
+**What is left of 8.6, and it is the whole provider-facing half.** `dsa_sign.c`'s
+`i2d_DSA_SIG`/`d2i_DSA_SIG`, `DSA_size`, `DSA_sign` and `DSA_verify` stay `open` on
+`crypto/asn1_dsa.c`/`crypto/packet.c`; `dsa_asn1.c`'s `d2i_DSAparams`/`i2d_DSAparams` and the
+`d2i_`/`i2d_` key family are 8.8's; `dsa_ameth.c` and `dsa_prn.c` are 8.8's ASN.1 method machinery,
+reached through `standard_methods[]`; `dsa_check.c`, `dsa_backend.c` and `dsa_err.c` are the
+provider-facing half; and `crypto/evp/dsa_ctrl.c`'s controls plus the `EVP_PKEY_CTX_*dsa*`
+spellings are slice E. `CT-DSA` stays PENDING: its object layer, method table and FFC generators
+have landed, so what remains is the vector corpus and its driver rather than a prerequisite, with
+any arm that needs the DER `DSA-Sig-Value` path waiting on 8.8.

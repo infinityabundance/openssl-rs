@@ -78,6 +78,11 @@ pub mod context;
 pub mod des;
 pub mod dh;
 pub mod digest;
+// Phase 8.6's `crypto/dsa/` substream: the `DSA` object, its method table and its key, generation
+// and signature layers. Its first slice is D333's, and its own module documentation names what is
+// landed and what waits — the DER `DSA-Sig-Value` codec behind `DSA_sign`/`DSA_verify`, the ASN.1
+// method objects and the EVP controls.
+pub mod dsa;
 pub mod dso;
 pub mod evp;
 // Phase 8.5's `crypto/ffc/` primitives: the FFC domain-parameter object, its generators and

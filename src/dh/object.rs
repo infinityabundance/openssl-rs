@@ -749,15 +749,17 @@ pub unsafe extern "C" fn DH_get0_engine(dh: *mut Dh) -> *mut Engine {
 
 /// `FFC_PARAMS *ossl_dh_get0_params(DH *dh)` — `dh_lib.c:329-332`. Internal.
 ///
-/// The bridge the key layer, the validator and the provider all use to reach the embedded
-/// parameters. `#[allow(dead_code)]`'s reason: **every caller is a later slice's** —
-/// `dh_backend.c`, `dh_check.c`'s `DH_check_pub_key` reaches it through the object directly, and
-/// the provider keymgmt unit — so nothing in this crate calls it yet.
+/// The bridge the key layer, the validator, the provider and 8.6's `DSA_dup_DH` use to reach the
+/// embedded parameters. **D333 is when the annotation came off**: its stated reader was "the
+/// provider backend/keymgmt", and `crypto/dsa/dsa_lib.c`'s `DSA_dup_DH` — a core-side unit, not a
+/// provider one — is the first crate caller, so the allow would now be hiding real dead code
+/// rather than marking a boundary (D327's rule, the same reasoning that removed D330's
+/// subtree-wide allow in D331). The provider callers of `dh_backend.c` are still later slices, and
+/// this accessor's `dh`-shaped half of them is what 8.6's `DSA_dup_DH` stands in for.
 ///
 /// # Safety
 ///
 /// `dh` is a live object. The returned pointer is borrowed from it.
-#[allow(dead_code)] // read by the provider backend/keymgmt, which are later slices
 pub(crate) unsafe fn ossl_dh_get0_params(dh: *mut Dh) -> *mut FfcParams {
     // SAFETY: `dh` is live per the contract.
     unsafe { ptr::addr_of_mut!((*dh).params) }

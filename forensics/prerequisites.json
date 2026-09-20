@@ -158,6 +158,18 @@
         "owner_phase": 13,
         "reason": "`EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`) is a `UI` program -- `UI_new`, `UI_add_input_string`, `UI_add_verify_string`, `UI_process`, `UI_free` -- and `ui.h` is Phase 13's. `EVP_read_pw_string` goes with it because its whole body is a call to `_min`; `EVP_get_pw_prompt`/`EVP_set_pw_prompt` do **not**, because they touch the file's own eighty-byte static and nothing else, and they land.",
         "evidence": "docs/DECISIONS.md D193; docs/PHASE-7-SUBPHASES.md row 7.4l"
+      },
+      {
+        "symbol": "ossl_dsa_sign_int",
+        "owner_phase": 8,
+        "reason": "`crypto/dsa/dsa_sign.c`'s internal, and the one definition of that file 8.6 does not carry. Its whole body past its four arguments is `i2d_DSA_SIG`, which is the DER `DSA-Sig-Value` encoder, and that is `crypto/asn1_dsa.c`'s `ossl_encode_der_dsa_sig` over `include/internal/packet.h`'s `WPACKET`. Neither unit has a crate module and no stratum's plan row names one: `crypto/packet.c` is the thirty `WPACKET_*` symbols and this crate has no packet writer at all, so writing either would be a new unit rather than a transcription of this one. DSA_size, DSA_sign and DSA_verify -- the three exports that call `ossl_dsa_sign_int` -- stay `open` with it, and RT-DSA does not call them.",
+        "evidence": "docs/DECISIONS.md D333; crypto/dsa/dsa_sign.c:164-189; crypto/asn1_dsa.c:92-125; include/internal/packet.h"
+      },
+      {
+        "symbol": "ossl_dsa_ffc_params_fromdata",
+        "owner_phase": 8,
+        "reason": "`crypto/dsa/dsa_lib.c:355-365`, and the DH half of the same blocker `ossl_ffc_params_todata` names: its body is `ossl_ffc_params_fromdata` plus a `dirty_cnt` bump, and that function is `crypto/ffc/ffc_backend.c`'s -- a unit with no crate module because it calls `crypto/param_build_set.c`'s four `ossl_param_build_set_*`, which no stratum's plan row names. Both of that unit's authority callers are provider backends (`dh_backend.c`, `dsa_backend.c`), so the work it waits on is the provider half of this stratum rather than a callee of 8.6's own.",
+        "evidence": "docs/DECISIONS.md D333; docs/DECISIONS.md D330 and D332; crypto/dsa/dsa_lib.c:355-365; forensics/prerequisites.json divergence row 'ossl_ffc_params_todata'"
       }
     ],
     "divergences": [

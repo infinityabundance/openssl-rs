@@ -399,7 +399,7 @@
         "stratum": "EVP framework"
       },
       {
-        "blocking": "390 open obligation(s) of this stratum recorded in forensics/phase8-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase",
+        "blocking": "328 open obligation(s) of this stratum recorded in forensics/phase8-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -427,7 +427,7 @@
         "stratum": "Native cryptographic primitives"
       },
       {
-        "blocking": "19 open obligation(s) of this stratum recorded in forensics/phase9-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Its working set is ninety-three exports, and only twenty-five are its own header's: the other sixty-eight arrive as recorded hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives in ten earlier strata's modules (docs/DECISIONS.md D294). The court file records `courts: []` and is not evidence that anything works: no Phase 9 court has landed yet (docs/PHASE-9-SUBPHASES.md section 1)",
+        "blocking": "17 open obligation(s) of this stratum recorded in forensics/phase9-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Its working set is ninety-three exports, and only twenty-five are its own header's: the other sixty-eight arrive as recorded hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives in ten earlier strata's modules (docs/DECISIONS.md D294). The court file records `courts: []` and is not evidence that anything works: no Phase 9 court has landed yet (docs/PHASE-9-SUBPHASES.md section 1)",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -618,7 +618,7 @@
       "not_started": 12
     }
   },
-  "body_hash": "06fc8a7a2f680e528bc91a5c47b787295bc2dbf9ab70b3b0b91d5e97b69b7a5a",
+  "body_hash": "66e04d9dbc397fdb335db38d2a25a9cddc36f783cb7e667c11b6865eac2f80aa",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

@@ -123,6 +123,13 @@ COURTS: list[tuple[str, str]] = [
     # the twenty-one `DH_meth_*` labels allocate a table, store a pointer in it, or return one, so
     # it is the slice of 8.5 whose prerequisites are already in, exactly as slice B was for 8.4.
     ("RT-DH", "rt_dh_probe.c"),
+    # 8.6's method-table and object court. Its subject is the twenty-seven `DSA_meth_*` labels
+    # plus the `DSA` object, its parameter and key generation, and the sign/verify pair -- so it
+    # is the first `RT-*` here that has to observe a *signature*, and it does so by properties
+    # (the two halves in `[1, q)`) and by the verification verdict rather than by value. Three
+    # of its refusal arms leave two queue records, which is the shared `err:` label each unit
+    # transcribes rather than an early return per failure.
+    ("RT-DSA", "rt_dsa_probe.c"),
 ]
 
 # The correctness courts, and the committed vector sets each checks. `CT-DIGEST` is the
@@ -164,8 +171,11 @@ PENDING_CORRECTNESS_COURTS: dict[str, str] = {
     "CT-DH": "8.5 -- the DH object layer and the FFC group arithmetic have landed (D330, "
              "D331, D332), so what remains is the corpus and its driver: PKCS#3 and the "
              "authority's own group vectors.",
-    "CT-DSA": "8.6 -- needs the DSA object; FIPS 186-4 and the authority's own vectors are "
-              "the recorded corpus.",
+    "CT-DSA": "8.6 -- the DSA object layer, its method table and the FFC parameter/key "
+              "generators they dispatch to have landed (D330, D333), so what remains is the "
+              "corpus and its driver: FIPS 186-4's own parameter and key vectors, with the "
+              "authority's vectors as the second source. An arm that needs the DER "
+              "`DSA-Sig-Value` path (`DSA_sign`/`DSA_verify`) waits on 8.8.",
     "CT-EC": "8.7 -- needs EC_KEY/EC_GROUP/EC_POINT; the recorded corpus is the authority's "
              "own curve vectors plus Project Wycheproof's EC set as a follow-up.",
 }

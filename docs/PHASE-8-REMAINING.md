@@ -13,11 +13,11 @@ Read from the ledger's `body.counts`.
 | quantity | count |
 |---|---|
 | owned | 786 |
-| implemented | 392 |
-| deferred to a later phase | 4 |
-| open in this stratum | 390 |
+| implemented | 456 |
+| deferred to a later phase | 2 |
+| open in this stratum | 328 |
 
-The identity `owned = implemented + deferred + open` is `786 = 392 + 4 + 390`, which holds.
+The identity `owned = implemented + deferred + open` is `786 = 456 + 2 + 328`, which holds.
 
 ## The merge gate — what Phase 8 owes to Phase 9
 
@@ -28,11 +28,9 @@ this stratum can be complete.
 | symbol | declaring header | owning phase |
 |---|---|---|
 | `DES_random_key` | `des.h` | 9 |
-| `DSA_generate_key` | `dsa.h` | 9 |
-| `DSA_generate_parameters_ex` | `dsa.h` | 9 |
 | `EC_KEY_generate_key` | `ec.h` | 9 |
 
-**4** export(s) are deferred, to Phase 9. A
+**2** export(s) are deferred, to Phase 9. A
 stratum cannot be complete while any export it owns is neither implemented
 nor handed to a later phase, and these rows are the ones a later
 Phase 9 landing discharges.
@@ -49,9 +47,9 @@ symbols it covers are listed above it.
 
   `crypto/des/rand_key.c:22` is `RAND_priv_bytes((unsigned char *)ret, sizeof(DES_cblock))` and its failure arm answers 0. `rand.h` is Phase 9's, and this is the one `des.h` export whose body is the random layer rather than the cipher. `DES_string_to_key` and `DES_string_to_2keys` are *not* in this row: they build a key from a string with `DES_cbc_cksum`, which is this stratum's own.
 
-- `DSA_generate_key`, `DSA_generate_parameters_ex`, `EC_KEY_generate_key`:
+- `EC_KEY_generate_key`:
 
-  the three units these name do not exist in this crate yet. `DSA_generate_key` and `DSA_generate_parameters_ex` are `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c` -- Phase 8.6's row, and the `crypto/dsa/` machinery (the `DSA` object, its method table and its FFC front end) lands there; `EC_KEY_generate_key` is `crypto/ec/ec_key.c`, Phase 8.7's. Both reach the random layer through their own BN calls (`BN_priv_rand_range`/`BN_generate_prime_ex2` on the `bnrand` -> `RAND_bytes_ex` path that D313/D324 landed), so this row is about the **units** rather than about a callee now in: the DH half of the old row retired in D331 precisely because its units landed.
+  `crypto/ec/ec_key.c` is Phase 8.7's unit and does not exist in this crate yet: the EC stratum's own key layer is what generates an EC key, and 8.7's row owns the `EC_KEY` object, the groups, the points and the curve tables it is built on. It reaches the random layer through `BN_priv_rand_range` on the `bnrand` -> `RAND_bytes_ex` path that D313 landed, so this row is about the **unit** rather than about a callee, which is what the DH half retired in D331 and the DSA half retired in D333 both turned out to be.
 
 ## The work Phase 8 still owns
 
@@ -64,13 +62,13 @@ table, verbatim.
 |---|---|---|---|---|
 | 8.4 RSA | `src/rsa/mod.rs` | 24 | `RT-RSA`, `CT-RSA` | 8.1 (the RSA provider's `SHA`-named digests), 8.3 (its OAEP/PSS modes) |
 | 8.5 DH and DHX | `src/dh/mod.rs`, `src/dh/mod.rs`, `src/ffc/`, `src/dh/object.rs`, `src/dh/group_params.rs`, `src/dh/rfc5114.rs`, `src/ffc/dh.rs`, `src/bn/dh.rs`, `src/bn/dh_data.rs` | 32 | `RT-DH`, `CT-DH` | 8.4 (the shared BN/param idiom) |
-| 8.6 DSA | `src/dsa/mod.rs` | 88 | `RT-DSA`, `CT-DSA` | 8.5 |
+| 8.6 DSA | `src/dsa/mod.rs`, `src/dsa/mod.rs`, `src/dsa/object.rs`, `src/dsa/ossl.rs`, `src/dsa/key.rs`, `src/dsa/gen.rs`, `src/dsa/sign.rs`, `src/dsa/vrf.rs`, `src/dsa/depr.rs` | 26 | `RT-DSA`, `CT-DSA` | 8.5 |
 | 8.7 EC | `src/ec/mod.rs` | 201 | `RT-EC`, `CT-EC` | 8.6 |
 | 8.8 The ASN.1 method objects and `standard_methods[]` | `src/asn1/ameth.rs` | 15 | `RT-AMETH` | 8.4, 8.5, 8.6, 8.7 |
 | 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals | `src/pem/key_legacy.rs` | 30 | `RT-PEM-KEY` | 8.8 |
 
-Total open symbols listed below: **390**; the ledger's
-`open_in_this_stratum` is 390.
+Total open symbols listed below: **328**; the ledger's
+`open_in_this_stratum` is 328.
 
 ### 8.4 RSA — 24 open
 
@@ -98,25 +96,9 @@ Total open symbols listed below: **390**; the ledger's
 `EVP_PKEY_get1_DH`, `EVP_PKEY_set1_DH`, `d2i_DHparams`, `d2i_DHxparams`, `i2d_DHparams`,
 `i2d_DHxparams`
 
-### 8.6 DSA — 88 open
+### 8.6 DSA — 26 open
 
-`DSA_OpenSSL`, `DSA_SIG_free`, `DSA_SIG_get0`, `DSA_SIG_new`, `DSA_SIG_set0`,
-`DSA_bits`, `DSA_clear_flags`, `DSA_do_sign`, `DSA_do_verify`, `DSA_dup_DH`, `DSA_free`,
-`DSA_generate_parameters`, `DSA_get0_engine`, `DSA_get0_g`, `DSA_get0_key`,
-`DSA_get0_p`, `DSA_get0_pqg`, `DSA_get0_priv_key`, `DSA_get0_pub_key`, `DSA_get0_q`,
-`DSA_get_default_method`, `DSA_get_ex_data`, `DSA_get_method`, `DSA_meth_dup`,
-`DSA_meth_free`, `DSA_meth_get0_app_data`, `DSA_meth_get0_name`,
-`DSA_meth_get_bn_mod_exp`, `DSA_meth_get_finish`, `DSA_meth_get_flags`,
-`DSA_meth_get_init`, `DSA_meth_get_keygen`, `DSA_meth_get_mod_exp`,
-`DSA_meth_get_paramgen`, `DSA_meth_get_sign`, `DSA_meth_get_sign_setup`,
-`DSA_meth_get_verify`, `DSA_meth_new`, `DSA_meth_set0_app_data`, `DSA_meth_set1_name`,
-`DSA_meth_set_bn_mod_exp`, `DSA_meth_set_finish`, `DSA_meth_set_flags`,
-`DSA_meth_set_init`, `DSA_meth_set_keygen`, `DSA_meth_set_mod_exp`,
-`DSA_meth_set_paramgen`, `DSA_meth_set_sign`, `DSA_meth_set_sign_setup`,
-`DSA_meth_set_verify`, `DSA_new`, `DSA_new_method`, `DSA_print`, `DSA_print_fp`,
-`DSA_security_bits`, `DSA_set0_key`, `DSA_set0_pqg`, `DSA_set_default_method`,
-`DSA_set_ex_data`, `DSA_set_flags`, `DSA_set_method`, `DSA_sign`, `DSA_sign_setup`,
-`DSA_size`, `DSA_test_flags`, `DSA_up_ref`, `DSA_verify`, `DSAparams_dup`,
+`DSA_print`, `DSA_print_fp`, `DSA_sign`, `DSA_size`, `DSA_verify`, `DSAparams_dup`,
 `DSAparams_print`, `DSAparams_print_fp`, `EVP_PKEY_CTX_set_dsa_paramgen_bits`,
 `EVP_PKEY_CTX_set_dsa_paramgen_gindex`, `EVP_PKEY_CTX_set_dsa_paramgen_md`,
 `EVP_PKEY_CTX_set_dsa_paramgen_md_props`, `EVP_PKEY_CTX_set_dsa_paramgen_q_bits`,
@@ -231,7 +213,7 @@ from the export list — the method D114, D118 and D122 established. The
 This document projects `forensics/phase8-obligations.json`, and every row
 of that ledger is an **export**. Cross-stratum *internal* names — a helper
 a module references that is not an export — are recorded in a different
-place: `forensics/prerequisites.json`'s `deferrals` (17 rows, 7 of which name Phase 8 as
+place: `forensics/prerequisites.json`'s `deferrals` (19 rows, 9 of which name Phase 8 as
 owner), and
 `forensics/atlas/prerequisite-gate.json` is the generated view of them.
 A reader who only checks the export ledger has not seen that half of the

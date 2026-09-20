@@ -596,6 +596,17 @@ COVERED_FILES = [
     ("crypto/dh/dh_gen.c", "DH_GEN"),
     ("crypto/dh/dh_check.c", "DH_CHECK"),
     ("crypto/dh/dh_group_params.c", "DH_GROUP_PARAMS"),
+    # Phase 8.6's `crypto/dsa` object layer and its `dsa_ossl.c`. The subsystem set again, minus
+    # the five units that raise nothing: `dsa_meth.c` (D333 measured its whole body as allocations
+    # and stored pointers), `dsa_gen.c` (every failure is a `return 0` and the reason a caller sees
+    # is the FFC generator's own site -- the reasoning `dh_kdf.c` and `dh_asn1.c` were named
+    # under), `dsa_key.c` (its only `ERR_raise`s are inside `#ifdef FIPS_MODULE`), `dsa_sign.c`
+    # and `dsa_vrf.c` (dispatch) and `dsa_depr.c` (allocation and dispatch). `dsa_ossl.c` is where
+    # the sign and verify reasons are raised -- nine sites, one of them the authority's only
+    # dynamic-reason site in this stratum -- and `dsa_lib.c` is where the constructor's two
+    # refusals are.
+    ("crypto/dsa/dsa_lib.c", "DSA_LIB"),
+    ("crypto/dsa/dsa_ossl.c", "DSA_OSS"),
     # Phase 9's `crypto/rand` subsystem. **The subsystem set, not a selection of convenient
     # files**, for `crypto/rsa`'s reason and one more of its own: this stratum's symbols are
     # raised from inside bodies whose declaring header belongs to *earlier* strata (`BN_rand`,
