@@ -23032,6 +23032,166 @@ pub(crate) const DSA_OSS_453: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2876` (ERR_R_BN_LIB).
+pub(crate) const EC_CURVE_2876: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2876,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2888` (ERR_R_EC_LIB).
+pub(crate) const EC_CURVE_2888: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2888,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2893` (ERR_R_EC_LIB).
+pub(crate) const EC_CURVE_2893: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2893,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2907` (ERR_R_BN_LIB).
+pub(crate) const EC_CURVE_2907: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2907,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2913` (ERR_R_EC_LIB).
+pub(crate) const EC_CURVE_2913: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2913,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2918` (ERR_R_EC_LIB).
+pub(crate) const EC_CURVE_2918: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2918,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2927` (ERR_R_EC_LIB).
+pub(crate) const EC_CURVE_2927: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2927,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2936` (ERR_R_EC_LIB).
+pub(crate) const EC_CURVE_2936: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2936,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2942` (ERR_R_BN_LIB).
+pub(crate) const EC_CURVE_2942: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2942,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2946` (ERR_R_EC_LIB).
+pub(crate) const EC_CURVE_2946: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2946,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2951` (ERR_R_BN_LIB).
+pub(crate) const EC_CURVE_2951: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2951,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2955` (ERR_R_EC_LIB).
+pub(crate) const EC_CURVE_2955: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2955,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2960` (ERR_R_EC_LIB).
+pub(crate) const EC_CURVE_2960: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2960,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2982` (ERR_R_OBJ_LIB).
+pub(crate) const EC_CURVE_2982: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2982,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524296,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_by_curve_name_ex` at `crypto/ec/ec_curve.c:3027` (EC_R_UNKNOWN_GROUP).
+pub(crate) const EC_CURVE_3027: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 3027,
+    func: c"EC_GROUP_new_by_curve_name_ex",
+    lib: 16,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_by_curve_name_ex` at `crypto/ec/ec_curve.c:3030` (EC_R_UNKNOWN_GROUP).
+pub(crate) const EC_CURVE_3030: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 3030,
+    func: c"EC_GROUP_new_by_curve_name_ex",
+    lib: 16,
+    reason: 129,
+    dynamic_reason: false,
+};
+
 /// `RAND_pseudo_bytes` at `crypto/rand/rand_lib.c:386` (RAND_R_FUNC_NOT_IMPLEMENTED).
 pub(crate) const RAND_LIB_386: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
@@ -27163,6 +27323,22 @@ pub(crate) static ALL: &[ErrSite] = &[
     DSA_OSS_374,
     DSA_OSS_379,
     DSA_OSS_453,
+    EC_CURVE_2876,
+    EC_CURVE_2888,
+    EC_CURVE_2893,
+    EC_CURVE_2907,
+    EC_CURVE_2913,
+    EC_CURVE_2918,
+    EC_CURVE_2927,
+    EC_CURVE_2936,
+    EC_CURVE_2942,
+    EC_CURVE_2946,
+    EC_CURVE_2951,
+    EC_CURVE_2955,
+    EC_CURVE_2960,
+    EC_CURVE_2982,
+    EC_CURVE_3027,
+    EC_CURVE_3030,
     RAND_LIB_386,
     RAND_LIB_430,
     RAND_LIB_435,

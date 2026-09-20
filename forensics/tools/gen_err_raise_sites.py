@@ -607,6 +607,18 @@ COVERED_FILES = [
     # refusals are.
     ("crypto/dsa/dsa_lib.c", "DSA_LIB"),
     ("crypto/dsa/dsa_ossl.c", "DSA_OSS"),
+    # Phase 8.7's `crypto/ec` curve tables and `crypto/evp/ec_support.c`. The subsystem set again,
+    # restricted to the two units D334 gives a crate module: `ec_curve.c` raises from the group
+    # constructors (four `ERR_R_EC_LIB`/`ERR_R_BN_LIB`/`ERR_R_OBJ_LIB` sites in
+    # `ec_group_new_from_data`'s `#ifndef FIPS_MODULE` tail and the `ERR_raise_data`/
+    # `EC_R_UNKNOWN_GROUP` pair in `EC_GROUP_new_by_curve_name_ex`), and `ec_support.c` raises
+    # nothing -- it is listed with an empty site set rather than omitted, so a later raise in it
+    # cannot be invisible. **The lexical scan emits every site whether or not a landed path reaches
+    # it**, which is the same treatment D330 records for the two FIPS-only FFC coordinates: the
+    # constructors themselves are `open` in this slice, so these coordinates are carried for the
+    # slice that lands them rather than reached by anything here.
+    ("crypto/ec/ec_curve.c", "EC_CURVE"),
+    ("crypto/evp/ec_support.c", "EC_SUPPORT"),
     # Phase 9's `crypto/rand` subsystem. **The subsystem set, not a selection of convenient
     # files**, for `crypto/rsa`'s reason and one more of its own: this stratum's symbols are
     # raised from inside bodies whose declaring header belongs to *earlier* strata (`BN_rand`,
@@ -1180,6 +1192,12 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
     # fallthrough-free case again.
     "#include <openssl/dherr.h>",
     "#include <openssl/dsaerr.h>",
+    # Phase 8.7 needs `EC_R_UNKNOWN_GROUP`: `crypto/ec/ec_curve.c`'s
+    # `EC_GROUP_new_by_curve_name_ex` raises it through `ERR_raise_data`, and the resolver reads
+    # the reason's *name* out of the header rather than its value out of the build, so the header
+    # has to be in this include set even though the constructor itself is `open` in this slice.
+    # `ecerr.h` is installed, so this is `dherr.h`'s case again.
+    "#include <openssl/ecerr.h>",
         # `PROP_R_*` is the first reason family this table needs that lives in an
         # *internal* header rather than an installed one: `internal/propertyerr.h`,
         # which the property grammar raises from. It is resolveable because the

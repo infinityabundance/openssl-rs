@@ -198,6 +198,8 @@
       "src/bn/dh_data.rs",
       "src/bn/prime_data.rs",
       "src/context/dispatch.rs",
+      "src/ec/curve_data.rs",
+      "src/ec/mod.rs",
       "src/ffi/mod.rs",
       "src/lib.rs",
       "src/provider/rand.rs",

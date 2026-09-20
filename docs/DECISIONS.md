@@ -22424,3 +22424,209 @@ provider-facing half; and `crypto/evp/dsa_ctrl.c`'s controls plus the `EVP_PKEY_
 spellings are slice E. `CT-DSA` stays PENDING: its object layer, method table and FFC generators
 have landed, so what remains is the vector corpus and its driver rather than a prerequisite, with
 any arm that needs the DER `DSA-Sig-Value` path waiting on 8.8.
+
+## D334 — 8.7 opens with the built-in curve tables, and the group object turns out to be indivisible from the field arithmetic that `curve_list[]` names
+
+**Decision.** Phase 8.7 (EC) lands the block's **first slice**: `crypto/ec/ec_curve.c`'s built-in
+curve parameters and `crypto/evp/ec_support.c`'s two name tables, as four children of a new
+`src/ec/`:
+
+| module | authority unit | defined symbols |
+|---|---|---|
+| `src/ec/curve.rs` | `crypto/ec/ec_curve.c` | 3/3 (of the exports it defines) |
+| `src/ec/curve_data.rs` | — | generated data, in no edge |
+| `src/ec/support.rs` | `crypto/evp/ec_support.c` | 4/4 |
+| `src/ec/mod.rs` | — | defines no authority symbol, in no edge |
+
+`share` is `forensics/atlas/transcription-edges.json`'s defined-symbol share. **Four exports land**
+— `EC_get_builtin_curves`, `EC_curve_nid2nist`, `EC_curve_nist2nid` and
+`OSSL_EC_curve_nid2name` — and `RT-EC` is registered for the first time and passes at **483
+observations** with zero residuals.
+
+**The plan said this block's first item was "the curve tables", and reading the authority says the
+item is not separable from the two after it.** That is the reconnaissance this entry records,
+because it decides what the next slice is and because it is the *first* time in this stratum that
+D327's rule — a unit given a crate module makes every internal it defines countable, so transcribe
+whole units or do not claim the unit — met a unit whose **data** is landable and whose **functions**
+are not.
+
+* `ec_curve.c`'s `curve_list[]` has four columns and the fourth is a method constructor. On this
+  profile `ec_nistp_64_gcc_128` is disabled and `ECP_NISTZ256_ASM` is defined, so **exactly one of
+  the eighty-two rows is non-NULL**: `NID_X9_62_prime256v1` names `EC_GFp_nistz256_method`. That
+  symbol is `ec_local.h`'s internal and **not** a DSO export — `nm -D` on the admitted prefix has no
+  `EC_GFp_nistz256_method` while the four `EC_GFp_mont_method`/`EC_GFp_nist_method`/
+  `EC_GFp_simple_method`/`EC_GF2m_simple_method` are there — and its `EC_METHOD` table
+  (`ecp_nistz256.c:1569-1630`) names `ossl_ec_key_simple_priv2oct`, `_oct2priv`, `_generate_key`,
+  `_check_key` and `_generate_public_key` (`ec_key.c`), `ossl_ecdh_simple_compute_key`
+  (`ecdh_ossl.c`) and `ossl_ecdsa_simple_sign_setup`/`_sign_sig`/`_verify_sig` (`ecdsa_ossl.c`).
+* So a `curve_list[]` transcribed with a NULL where the authority writes a function is a
+  **fabricated value**, and the two constructors that read the column —
+  `EC_GROUP_new_by_curve_name_ex` and its static `ec_group_new_from_data` — cannot be landed either,
+  because `ec_group_new_from_data`'s body *branches on* `curve.meth`: dropping the branch would give
+  `NID_X9_62_prime256v1` a different `EC_GROUP_method_of` than the authority the moment either
+  constructor exists.
+* And the group object cannot be landed ahead of the tables, because `ossl_ec_group_new_ex` — the
+  one constructor every other one funnels through — reaches `meth->group_init`, and every one of the
+  five method tables (`ecp_smpl.c`, `ecp_mont.c`, `ecp_nist.c`, `ecp_nistz256.c`, `ec2_smpl.c`) is a
+  unit this slice does not own.
+
+**The curve table, the group object and the field arithmetic are therefore one landing**, and this
+entry writes that down rather than starting any of them. The order the rest takes is:
+`ec_lib.c`'s group and point objects **with** `ecp_smpl.c` and `ecp_mont.c` (the two method tables
+`EC_GFp_mont_method` needs, which is what `ec_curve.c`'s NULL rows resolve to through
+`EC_GROUP_new_curve_GFp`), then `ecp_nist.c` and the nistz256 method, then `ec_key.c`, then the
+`ecdsa_*`/`ecdh_*` units — which is the plan's own order with the reason it was needed recorded.
+
+**The constants are generated, and the generator's two derivations are independent.** D329's
+argument for `crypto/bn/bn_dh.c` is the reason and it is stronger here, because a curve table's
+*pairing* is also data: a curve whose `b` came from the row below it would round-trip through every
+property test anyone would think to write. `forensics/tools/gen_ec_curves.py` therefore
+
+* asks the **authority** for every value: a probe linked against the admitted prefix walks
+  `EC_get_builtin_curves` (which is also the enumeration, so the NID list is not typed anywhere),
+  builds each group with `EC_GROUP_new_by_curve_name`, and prints `BN_bn2hex` of `p`, `a`, `b`,
+  `gx`, `gy`, `order`, the cofactor and the seed, plus the field type, the degree and the group's
+  own method identity;
+* reads the **inventory and widths** out of `ec_curve.c` itself: each `EC_CURVE_DATA` initialiser's
+  `{ field_type, seed_len, param_len, cofactor }` header, the `data[N]` array each struct declares,
+  and `curve_list[]`'s rows with their `#if`/`#elif` method column resolved against this profile's
+  macros — which the generator reads from `configdata.pm` and the build's own `ec_curve.o` compile
+  line rather than typing;
+* **fails unless the two agree**, per curve and per member: the read-back `p` must be exactly
+  `param_len` bytes, the field type and cofactor must be the header's, the seed must be the array's
+  first `seed_len` bytes, and each of the six parameters must be the array's own slice at its own
+  offset. It also checks the resolved method column against the probe's method observation — one
+  non-NULL row, and it is `NID_X9_62_prime256v1` — and checks the NID column against
+  `obj_mac.h`'s `SN_<name>` strings, so `NID_X9_62_prime192v1` being `prime192v1` and
+  `NID_ipsec3` being `Oakley-EC2N-3` are derived rather than assumed.
+
+`src/ec/curve_data.rs` is 75 `EC_CURVE_DATA` structures over **14,542 bytes** and `curve_list[]`'s
+eighty-two rows: 38 prime-field curves and 37 characteristic-two ones, 26 distinct `param_len`
+values from 14 to 72 bytes, and `seed_len` either 0 or 20. The generator is registered in
+`evidence_determinism.py`'s `GENERATORS_BEFORE_LEDGERS` and in `pipeline.sh`'s Phase-8 table block,
+and `src/ec/curve_data.rs` is a `COMPARED` entry — possible because its renderer is
+**`rustfmt`-stable**, which the first version was not: rustc's `non_upper_case_globals` fires for
+`_EC_brainpoolP512t1` and not for `_EC_NIST_PRIME_192`, so the generator derives the item-level
+`#[allow(non_upper_case_globals)]` from the name's case rather than writing 31 of them.
+
+**One row of the table is not six fields, and the generator found it rather than a reader.**
+`_EC_X9_62_PRIME_256V1` declares `data[20 + 32 * 8]`: the nistz256 method's own
+`ecp_nistz256group_full_init` reads a seventh and an eighth field (`params + 6 * param_len` and
+`+ 7 * param_len`) which are the two Montgomery `RR` constants its `ossl_bn_mont_ctx_set` calls
+take. They have **no public accessor** — the perlasm-backed method is their only reader — so they
+are the one part of the emitted array whose value comes from the source rather than from the
+read-back, and the atlas records that fact as `montgomery_fields_from_the_source:
+["_EC_X9_62_PRIME_256V1"]` with the width still checked against the declared array. A first version
+of the generator modelled every curve as `seed_len + 6 * param_len` and failed on this row, which is
+how it was found.
+
+**One unit is partially claimed, and this entry records it because D327's rule has no case for it.**
+`ec_curve.c` defines six functions and this slice carries three of them plus the whole data half.
+The other three are accounted for rather than dropped: `EC_GROUP_new_by_curve_name_ex` and
+`EC_GROUP_new_by_curve_name` are **exports** and stay `open` in
+`forensics/phase8-obligations.json` with the method column as their blocker, and
+`ossl_ec_curve_nid_from_params` — the unit's one internal — is
+`forensics/prerequisites.json`'s **seventh divergence row** (class `owned_by_a_later_stratum`,
+`owner_module: src/ec/curve.rs`), which is what turns the gate's
+`unwired_function_in_the_current_stratum` finding into a decision. Its body is nine `ec_lib.c` calls
+(`EC_GROUP_get_curve_name`, `EC_GROUP_get_field_type`, `EC_GROUP_get_seed_len`, `EC_GROUP_get0_seed`,
+`EC_GROUP_get0_cofactor`, `EC_GROUP_get_curve`, `EC_GROUP_get0_generator`,
+`EC_POINT_get_affine_coordinates`, `EC_GROUP_get_order`), and a transcription that returned
+`NID_undef` early would be a fabricated answer for a name the group object owns. **The class is the
+closest of the five and the tension is recorded rather than smoothed over**, exactly as D330's row
+for `ossl_ffc_params_todata` records it: the work waits on a later slice of the *same* stratum.
+
+**What the court observed, and the boundary it is drawn on.** `RT-EC` grew to **483 observations**
+over these four exports: `EC_get_builtin_curves` in all four of its call shapes (a NULL table with a
+non-zero `nitems`, a zero-length one, a one-entry one whose untouched second slot is printed, and a
+full-size one), then all eighty-two rows in order with each row's `nid`, `OBJ_nid2sn` short name and
+`comment` verbatim, then both lookups over every row and over their refusals — `0`, `-1`, a NID no
+object has, a curve with no NIST spelling, the lower-case spelling, a trailing space, the right shape
+with the wrong number, a SECG name in neither table, the `SM2` spelling that is only in the other
+table and the empty string — and the drained error queue, which the two refusals do not touch.
+
+**The curve constants are not courted, and the probe says so rather than implying it.** They reach a
+caller only through `EC_GROUP_get_curve`, `EC_GROUP_get_order`, `EC_GROUP_get0_cofactor`,
+`EC_GROUP_get0_seed` and `EC_POINT_get_affine_coordinates`, all of which need
+`EC_GROUP_new_by_curve_name` — the group object this slice does not land, and a probe that called it
+would abort the *candidate's* side with a diagnostic rather than compare anything. Their evidence is
+the generator (which does compare against the authority's own arrays, member for member and width for
+width) and the unit tests in `src/ec/curve.rs`, which is where a value with no public reader has to be
+checked: every row's array is a seed plus whole fields, `param_len` is **tight** against the wider of
+`p` and the order in one direction and slack in the other (the authority's own rule, stated in
+`ossl_ec_curve_nid_from_params`'s comment), `p` is odd, `b`/`gx`/`gy`/`order` are non-zero, and each
+comment's `over a NNN bit (prime|binary) field` is cross-checked against the bit width of the curve's
+own `p` — which is `NNN` for a prime field and `NNN + 1` for a binary one, whose `p` is the reduction
+polynomial `x^NNN + ...`. Two of the authority's own facts are recorded because a reader would not
+predict them: `param_len` is *not* the width of `p` — `secp160k1`'s is 21 bytes for a 160-bit field,
+because its order is 161 bits — and `secp112r2` and `secp128r2` are the two prime-field curves whose
+cofactor is 4 rather than 1.
+
+**Two units' `ec_support.c` tables are hand-written and checked, in both tiers.**
+`src/ec/support.rs` holds `curve_list[]`'s eighty-two `(name, nid)` rows and `nist_curves[]`'s
+fifteen, as `(&CStr, c_int)` tuples so that `OSSL_EC_curve_nid2name` can hand a caller the
+`.rodata` pointer the authority does. The generator parses both arrays out of the module, **by their
+own declarations rather than by every matching tuple** — the module's tests quote rows too, and the
+first version of this check read them as table members and failed on a right module — and compares
+them against `ec_support.c` row for row and in order. `ossl_ec_curve_name2nid` carries an
+item-level `#[allow(dead_code)]` naming its two authority callers (`crypto/ec/ec_backend.c` and
+`crypto/evp/ctrl_params_translate.c`, the latter slice E), and the two lookups' *difference* is
+asserted rather than described: `ossl_ec_curve_name2nid` folds case and consults the NIST table
+first, `ossl_ec_curve_nist2nid_int` is a plain `strcmp`, so `"b-163"` is `NID_undef` and `"B-163"`
+is not.
+
+**The unit changed the product's evidence machinery in three places, all generator inputs.**
+`crypto/ec/ec_curve.c` and `crypto/evp/ec_support.c` join `gen_err_raise_sites.py`'s
+`COVERED_FILES` — **sixteen coordinates are added** and `src/runtime/err_sites.rs` moves
+**2,482 -> 2,498** sites. Fifteen of them are `ec_group_new_from_data`'s and the constructor's:
+five `ERR_R_BN_LIB`, nine `ERR_R_EC_LIB`, one `ERR_R_OBJ_LIB` and the
+`ERR_raise_data`/`EC_R_UNKNOWN_GROUP` pair at `:3027`/`:3030`, the two arms of
+`EC_GROUP_new_by_curve_name_ex`'s `#ifndef FIPS_MODULE`. All sixteen are emitted by the lexical
+scan and carried in `err_sites::ALL` whether or not a landed path reaches them, exactly as D330
+records for the two FIPS-only FFC sites and D331 for `DH_LIB_100`/`_109` — and here that is
+*every* one of them, because the two constructors are `open` in this slice. `ec_support.c` raises
+nothing, so no coordinate of that unit's exists to add; it is listed with an empty site set rather
+than omitted. The resolver's include set gains `<openssl/ecerr.h>`, which is the third time a unit
+has needed a reason header that is not the file's own library's (`dherr.h`/`dsaerr.h` were D330's)
+— without it the resolver cannot read `EC_R_UNKNOWN_GROUP`'s *name* and fails before any site is
+counted. The new `gen_ec_curves.py` joins `evidence_determinism.py`'s
+`GENERATORS_BEFORE_LEDGERS`, `pipeline.sh`'s Phase-8 table block and the `COMPARED` set. And
+`docs/SECURITY_DIVERGENCE_POLICY.md` gains `D-EC-1`, which is the *method column*: the crate's table
+does not carry it and the authority's does, which is invisible through every export this slice lands
+and observable through `EC_GROUP_method_of` the day the group object does.
+
+**Bookkeeping, read off the regenerated files.** `phase8`: implemented 456 -> **460**, deferred 2
+unchanged, open 328 -> **324**, owned 786 unchanged.
+`forensics/atlas/implemented-surface.json` moves `libcrypto` implemented 2369 -> **2373**.
+`forensics/atlas/transcription-edges.json` gains two edges, so the gate counts **284 -> 288** crate
+modules and **214 -> 216** authority units; the gate's `language_census` moves **3,483 -> 3,527**,
+and `divergence_names_covered` moves **31 -> 32** with the seventh row. **`sealed_census` stays 52
+and `blocking_dependencies` stays 19**, so **no `forensics/ownership-transitions.json` row was
+needed** — the guard was run and reports four movements, all of them this slice's own
+(`implemented[libcrypto]` +4, `open_obligations[phase8]` -4, `divergence_names_covered` +1 and
+`language_census` +44), and neither watched number among them. Against `origin/main` the two watched
+numbers both move **down** — `sealed_census` 57 -> **52** and `blocking_dependencies` 25 -> **19** —
+which is a decrease and needs no row. The suite stands at **846 tests**,
+ten of them this slice's (three in `src/ec/support.rs`, seven in `src/ec/curve.rs`), and the pipeline
+ends `PIPELINE OK` with the gate at zero findings over **92 courts** and **34,260 observations**.
+
+**The one ABI structure this slice exposes is measured, not read.** `EC_builtin_curve` is a
+caller-allocated array element — `EC_get_builtin_curves`'s documented idiom is `EC_builtin_curve
+r[82]` on the *caller's* stack, so the object's size and offsets are part of the contract and its
+four padding bytes at 4..8 are the profile's rather than the declaration's.
+`courts/layout/measure-ec-builtin-curve.c` compiles against the authority's own headers and answers
+**16 bytes, alignment 8**, `nid` at **0** and `comment` at **8**, and the unit test
+`the_builtin_curve_structure_is_the_authoritys_shape` asserts all four. A probe could not have found
+a wrong layout here: it would have been reading its own wrong layout back on both sides.
+
+**What is left of 8.7, and it is now one named block rather than a list.** The group and point
+objects (`ec_lib.c`, sixty-nine labels) with `ecp_smpl.c` and `ecp_mont.c`; `ecp_nist.c` and the
+nistz256 method, whose field arithmetic is perlasm-only and therefore D274's case — the crate
+supplies the construction and `RT-EC` is the court that proves it is *this* implementation's
+observable behaviour; `ec_key.c`'s thirty-three labels; the `ecdsa_*`/`ecdh_*` units; `ec_asn1.c`'s
+`d2i_`/`i2d_` and the `ECParameters`/`ECPKParameters` family with `ec_ameth.c` and `eck_prn.c`
+(8.8's); `ec2_*`'s binary-field arithmetic; `crypto/evp/ec_ctrl.c`'s controls (slice E); and the EC
+provider surfaces. `EC_KEY_generate_key` stays the ledger's `deferred` row and its
+`BLOCKED_HANDOFFS` entry is untouched, because this slice lands none of its unit's names.
+`CT-EC` stays PENDING, and its reason is corrected rather than left: the curve tables have landed, so
+what it now waits on is `EC_GROUP`/`EC_POINT` and the vector corpus rather than a prerequisite.

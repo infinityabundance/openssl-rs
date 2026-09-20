@@ -1201,3 +1201,42 @@ between the authority and the candidate at this site.**
   fragment set to 16384, where both sides answer 16437.
 - **Trigger:** none planned: this is a permanent, deliberate safety divergence. If a caller needs
   parity with the abort, that is `docs/DECISIONS.md` D276's to revisit, not an arm's.
+
+### D-EC-1 — `curve_list[]`'s method column is not transcribed, because its one non-NULL value is a perlasm-only method whose table names units 8.7 does not own
+
+- **Obligation:** `EC_GROUP_new_by_curve_name(nid)`'s answer for `NID_X9_62_prime256v1`, and the
+  method identity `EC_GROUP_method_of` reports for it.
+- **Authority:** `crypto/ec/ec_curve.c:2678-2688` gives that row `EC_GFp_nistz256_method`, because
+  `ECP_NISTZ256_ASM` is defined on this profile; the other eighty-one rows' fourth column resolves
+  to `0`. The one non-NULL symbol is `ec_local.h`'s internal and **not** a DSO export — measured,
+  not read: `nm -D` on the admitted prefix lists `EC_GF2m_simple_method`, `EC_GFp_mont_method`,
+  `EC_GFp_nist_method` and `EC_GFp_simple_method` and no `EC_GFp_nistz256_method`.
+- **Crate:** the built-in curve table, `curve_list[]`'s rows, `EC_get_builtin_curves`,
+  `EC_curve_nid2nist`, `EC_curve_nist2nid` and `OSSL_EC_curve_nid2name` are transcribed and courted
+  (`RT-EC`, 483 observations); the method column is recorded per row in
+  `forensics/atlas/ec-curves.json` with the profile's `#if` resolution and the probe's own method
+  observation beside it, and `src/ec/curve.rs`'s module documentation says why at the field it would
+  occupy.
+- **Reason:** a `None` in that column where the authority has a function would be a *fabricated
+  value*, which is a stronger prohibition than an omission. The column's only two readers are
+  `EC_GROUP_new_by_curve_name_ex` and its static `ec_group_new_from_data`, and
+  `ec_group_new_from_data` **branches on** `curve.meth` — so writing the branch over a NULL would
+  give `NID_X9_62_prime256v1` a different `EC_GROUP_method_of` than the authority the moment either
+  constructor exists. Building the column needs `EC_GFp_nistz256_method`, whose `EC_METHOD` table
+  (`ecp_nistz256.c:1569-1630`) names `ossl_ec_key_simple_*` (`ec_key.c`),
+  `ossl_ecdh_simple_compute_key` (`ecdh_ossl.c`) and `ossl_ecdsa_simple_*` (`ecdsa_ossl.c`) — the
+  key layer and the two units `docs/PHASE-8-SUBPHASES.md` puts after this block. Its field
+  arithmetic is itself perlasm-only, so D274's rule applies to it: the crate supplies the
+  construction and `RT-EC` becomes the court that proves it is *this* implementation's observable
+  behaviour.
+- **Claim removed:** the method column, and therefore `EC_GROUP_method_of` on a
+  `NID_X9_62_prime256v1` group. **Nothing else**: every other column of every row, the whole
+  eighty-two-row order, the two group constructors' *absence* (they are `open` in
+  `forensics/phase8-obligations.json`, not divergent) and all three name lookups are claimed and
+  courted.
+- **Trigger:** the slice that lands `ec_key.c`, `ecdh_ossl.c` and `ecdsa_ossl.c` — at which point
+  the column is written, the `EcListElement` field is added, and the divergence is removed with the
+  arm that observes `EC_GROUP_method_of(EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1))`. The
+  unit test `the_table_is_the_authoritys_eighty_two_rows_in_order` and the generator's
+  `method_column_has_one_non_null_row` check are the tripwires: both name this row, so the next
+  person cannot add the field without reading this entry.

@@ -28,7 +28,7 @@ renderer does not know any phase status.
 | 5 | BN + ASN.1 + DER/PEM | `complete` |  |
 | 6 | OSSL_LIB_CTX + provider core | `complete` |  |
 | 7 | EVP framework | `complete` |  |
-| 8 | Native cryptographic primitives | `in-progress` | 328 open obligation(s) of this stratum recorded in forensics/phase8-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
+| 8 | Native cryptographic primitives | `in-progress` | 324 open obligation(s) of this stratum recorded in forensics/phase8-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
 | 9 | RAND / DRBG + entropy | `in-progress` | 17 open obligation(s) of this stratum recorded in forensics/phase9-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Its working set is ninety-three exports, and only twenty-five are its own header's: the other sixty-eight arrive as recorded hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives in ten earlier strata's modules (docs/DECISIONS.md D294). The court file records `courts: []` and is not evidence that anything works: no Phase 9 court has landed yet (docs/PHASE-9-SUBPHASES.md section 1) |
 
 Not started: strata 10-21 (12 total).
@@ -84,9 +84,9 @@ that name is defined, nothing more.
 
 | library | exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 2369 | 3527 |
+| libcrypto | 5896 | 2373 | 3523 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **2369** | **4130** |
+| **total** | **6499** | **2373** | **4126** |
 
 ### Phase 3 obligation ledger
 
@@ -210,9 +210,9 @@ handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
 * authority exports in the Phase 8 working set: 786
-* implemented: 456
+* implemented: 460
 * deferred to a later phase with a stated reason: 2
-* open in this stratum: 328
+* open in this stratum: 324
 
 Deferred to phase 9: `DES_random_key`, `EC_KEY_generate_key`
 
