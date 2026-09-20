@@ -186,17 +186,16 @@ BLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
         "`DES_string_to_key` and `DES_string_to_2keys` are *not* in this row: they build a "
         "key from a string with `DES_cbc_cksum`, which is this stratum's own.",
     ),
-    # (2) The RSA blinding pair, which is the BN blinding object's random path.
-    (
-        ("RSA_blinding_on", "RSA_setup_blinding"),
-        9,
-        "`RSA_blinding_on` (`crypto/rsa/rsa_crpt.c:68`) is a lock plus "
-        "`RSA_setup_blinding`, and `RSA_setup_blinding` (`:104`) ends in "
-        "`BN_BLINDING_create_param` (`crypto/bn/bn_blind.c`), whose `ai`/`e` values come from "
-        "`BN_rand_range_ex` -> `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`). So both "
-        "are blocked on Phase 9 through BN's own random path, and `RSA_blinding_off` is *not* "
-        "in this row: it frees the object and needs nothing random.",
-    ),
+    # (2) **Retired by D325, and the row was wrong in this version rather than merely stale.**
+    # `RSA_blinding_on` and `RSA_setup_blinding` were here because the row read the *1.1.1* shape
+    # of `rsa_crpt.c`: `RSA_blinding_on` is **not** "a lock plus `RSA_setup_blinding`" in 3.6.4 --
+    # it is two flag writes and `return 1` (`rsa_crpt.c:68-74`) -- and `RSA_setup_blinding`'s own
+    # blocker, `BN_BLINDING_create_param` -> `BN_rand_range_ex` -> `RAND_bytes_ex`, landed in D313
+    # and D324. D325 lands `RSA_setup_blinding` (an export: `include/openssl/rsa.h:383`) because
+    # `rsa_ossl.c`'s `rsa_get_blinding` is its only caller in the whole authority and the private
+    # entry points cannot be transcribed without it; `RSA_blinding_on` is not landed and is
+    # therefore `open` rather than deferred. `RSA_blinding_off` was never in this row.
+    #
     # (4) **Retired by D323, and how it stopped being true is the entry's finding.** D285 put the
     # six randomised padding labels here because five of them fill their output with
     # `RAND_bytes_ex` and it read `RAND_priv_bytes_ex` into the sixth. `RAND_bytes_ex` landed in
@@ -216,26 +215,20 @@ BLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
     #     installed header's, and the one that would be Phase 9's -- the TLS arm's
     #     `RAND_priv_bytes_ex` -- is reached by no export of `rsa.h` at all.
     #
-    # (5) The `RSA` object's own constructor, which is blocked one level further out: not by a
-    # random call in its own body but by the table its body reads.
-    (
-        ("RSA_new", "RSA_new_method", "RSA_get_default_method", "RSA_PKCS1_OpenSSL"),
-        9,
-        "`rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from "
-        "`RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` "
-        "(`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which "
-        "reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence "
-        "`RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be "
-        "constructed -- until the path that padding call leads into exists, which is what makes "
-        "the *lifetime* follow the padding rather than precede it. That path landed in D323, so "
-        "what this row is still waiting on is no longer the random layer: it is the thirteen "
-        "`rsa_ossl_*` entry points slice D defines and the table that names them, which is the "
-        "same commit. `RSA_set_default_method` is "
-        "*not* in this row: it is a pointer store with no table read and no random call, and it "
-        "stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. "
-        "`ossl_rsa_new_with_ctx` is internal and is blocked with "
-        "`RSA_new`, which it calls into.",
-    ),
+    # (5) **Retired by D325, which lands the row's four names and the table the last one answers.**
+    # The row was right about the cycle and right to record it rather than carry it: `rsa_new_intern`
+    # (`rsa_lib.c:101`) reads `RSA_get_default_method()`, whose `default_RSA_meth` is
+    # `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is
+    # `rsa_ossl_public_encrypt`, which reaches `ossl_rsa_padding_add_PKCS1_type_2_ex`
+    # (`rsa_ossl.c:144`). D323 landed the padding path, so what the row was still waiting on when
+    # D320 wrote it down was the thirteen `rsa_ossl_*` entry points and the table that names them --
+    # which is one commit, and D325 is it. `RSA_set_default_method` was never in this row ("a
+    # pointer store with no table read and no random call") and lands with it because there is now
+    # a table for it to store; `ossl_rsa_new_with_ctx` is internal, moves out of
+    # `forensics/prerequisites.json`'s `deferrals` in the same commit, and is `pub(crate)` in
+    # `src/rsa/object.rs` because it is declared in `include/crypto/rsa.h` and not in the installed
+    # header.
+    #
     # (3) The four key generators and the parameter generators, all on the same BN path.
     (
         ("RSA_generate_key", "RSA_generate_key_ex", "RSA_generate_multi_prime_key",

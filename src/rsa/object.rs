@@ -13,18 +13,17 @@
 //!
 //! ## What this commit lands, and what a later commit owns
 //!
-//! `RSA_new`, `RSA_new_method`, `rsa_new_intern` and `ossl_rsa_new_with_ctx` are **not** here.
-//! Their bodies are transcribed in the staged file and land in the commit that first makes
-//! `RSA_get_default_method` reachable, because `rsa_new_intern` reads it (`rsa_lib.c:101`) and the
-//! default method's table is `crypto/rsa/rsa_ossl.c`'s. Nothing else in this file reads the
-//! default method, so the object's whole *accessor* surface is complete without it: every function
-//! below touches only the object's own fields, `src/bn/`, the runtime, and the two callee modules
-//! `crate::rsa::mp` and `crate::rsa::ossl`.
+//! `RSA_new`, `RSA_new_method`, the static `rsa_new_intern` and the internal
+//! [`ossl_rsa_new_with_ctx`] are **here**, and they are the last of the file: D325 landed the
+//! default method table they read (`crate::rsa::ossl`'s `RSA_get_default_method`), which is the
+//! second half of 8.4's slice A and the only name in this file that was ever blocked on anything.
+//! Nothing else in this file reads the default method, so the object's whole surface — lifetime,
+//! accessors and constructor — is now in one place.
 //!
 //! ## The two reductions, and why the reachable answer is the answer
 //!
 //! **1. `ENGINE_*`.** [`RSA_set_method`] and [`RSA_free`] call `ENGINE_finish(rsa->engine)` in the
-//! authority (`rsa_lib.c:56`, `:157`); `rsa_new_intern` additionally calls `ENGINE_init`,
+//! authority (`rsa_lib.c:56`, `:157`); [`rsa_new_intern`] additionally calls `ENGINE_init`,
 //! `ENGINE_get_default_RSA` and `ENGINE_get_RSA` (`:105`, `:111`, `:114`). None of the four is in
 //! this crate. `#ifndef OPENSSL_NO_ENGINE` is **undefined** on this profile, so the authority's
 //! blocks are compiled, but `ENGINE_*` is Phase 13's (`docs/DECISIONS.md` D181) and there is no
@@ -35,6 +34,18 @@
 //! answer: omitted, with `rsa->engine = NULL;` kept where the authority sets it. This is
 //! `src/evp/pkey_asn1.rs:54-60`'s established reduction and D313's argument, and its observable
 //! half is that [`RSA_get0_engine`] answers NULL for every object the crate can build.
+//!
+//! The constructor's three calls reduce the same way and one step further: with
+//! `ENGINE_get_default_RSA()` answering NULL, the `if (ret->engine)` block — the only reader of
+//! `ENGINE_get_RSA` — is unreachable, so the whole `#ifndef OPENSSL_NO_ENGINE` block becomes
+//! `ret->engine = NULL;` with the `flags` assignment beside it kept. **The consequence is
+//! observable and is named here rather than left implicit**: a caller who passes a non-NULL
+//! `engine` to [`RSA_new_method`] gets an object whose `engine` member is NULL, where the authority
+//! would `ENGINE_init` that pointer and adopt the table `ENGINE_get_RSA` answered — or raise
+//! `RSA_LIB_116` and release the object if it answered NULL. No state this crate can reach can
+//! hold an `ENGINE` (there is no registry and no constructor), so the difference is unreachable by
+//! any caller that got its pointer legitimately; `RT-RSA` calls `RSA_new_method(NULL)` and nothing
+//! else, and D325 records why.
 //!
 //! **2. `RSA_PSS_PARAMS_free`.** [`RSA_free`] and [`ossl_rsa_set0_pss_params`] call it
 //! (`rsa_lib.c:186`, `:702`). No state this crate can reach has a non-NULL `r->pss`: the field's
@@ -107,13 +118,14 @@
 //! * [`ossl_rsa_set0_all_params`] (`:867`): the same pair of facts, with `old_infos` saved
 //!   *before* the loop rather than inside it.
 //!
-//! The third, `rsa_new_intern`'s (`:136`), lands with the constructor in the later commit. It is
+//! The third, [`rsa_new_intern`]'s (`:136`), landed with the constructor in D325. It is
 //! safe there for the same reason: by the time each of its five failures is reached the reference
 //! count is already 1 and every field set so far is one [`RSA_free`] knows how to release.
 //!
 //! ## Scope: what is transcribed, and what is deliberately left
 //!
-//! Transcribed here, in authority order: [`RSA_get_method`] (`:40-43`), [`RSA_set_method`]
+//! Transcribed here, in authority order: [`rsa_new_intern`] (`:76-139`), [`RSA_new`] (`:35-38`),
+//! [`RSA_get_method`] (`:40-43`), [`RSA_set_method`]
 //! (`:45-63`), [`RSA_free`] (`:141-191`), [`RSA_up_ref`] (`:193-203`), the
 //! [`ossl_rsa_get0_libctx`]/[`ossl_rsa_set0_libctx`] pair (`:205-213`),
 //! [`RSA_set_ex_data`]/[`RSA_get_ex_data`] (`:216-224`), the fixed-point arithmetic and
@@ -136,8 +148,8 @@
 //!   by name and by construction.
 //! * **Everything that belongs to the provider.** The nine `ossl_*` symbols `rsa_lib.c` defines
 //!   are all here (the three pure field accessors, the three "all params" helpers,
-//!   [`ossl_rsa_set0_pss_params`], [`ossl_rsa_new_with_ctx`]'s is deferred with the constructor,
-//!   and [`ossl_ifc_ffc_compute_security_bits`]). What is *not* here is any `ossl_rsa_*` that
+//!   [`ossl_rsa_set0_pss_params`], [`ossl_rsa_new_with_ctx`], and
+//!   [`ossl_ifc_ffc_compute_security_bits`]). What is *not* here is any `ossl_rsa_*` that
 //!   reaches the provider layer, and there is none left in the file: every other definition is a
 //!   public `RSA_*` entry point or the static `rsa_new_intern` and its arithmetic.
 //! * **`RSA_generate_key_ex` is not in this file at all.** It is `crypto/rsa/rsa_gen.c:41`, and it
@@ -149,8 +161,9 @@
 //!   copy), [`ossl_rsa_get0_libctx`] (`:205` here), and the `RSA_meth_*` family's
 //!   `RSA_meth_get0_name` (`rsa_meth.c:62`). The default method family — `RSA_get_default_method`,
 //!   `RSA_set_default_method`, `RSA_PKCS1_OpenSSL`, `RSA_null_method` — is
-//!   `crypto/rsa/rsa_ossl.c:86-102` and **not** `rsa_lib.c`; three of the four are Phase 9's
-//!   hand-off, and the fourth, `RSA_null_method`, is already landed in `crate::rsa`.
+//!   `crypto/rsa/rsa_ossl.c:86-102` and **not** `rsa_lib.c`; `RSA_null_method` is landed in
+//!   `crate::rsa` (slice B) and the other three are landed in `crate::rsa::ossl` (slice D, D325),
+//!   which is where this file's constructor reads the first of them from.
 //! * **The `RSA_meth_*` family** is `crypto/rsa/rsa_meth.c:20-279`, already transcribed in
 //!   `crate::rsa` (slice B, D284).
 //! * **`RSA_padding_add_*` / `RSA_padding_check_*` and the `RSA_PKCS1_*` padding selectors** live in
@@ -164,12 +177,11 @@
 //!
 //! ## The court that will drive it: `RT-RSA`
 //!
-//! `courts/phase8/rt_rsa_probe.c` has **no arm for any export in this file** yet, and that is not
-//! an oversight: every arm it has calls a symbol from `rsa_meth.c`, `rsa_none.c`, `rsa_x931.c`,
-//! `rsa_pk1.c` or `rsa_oaep.c` — slice B's and slice C's — and the probe never calls one from
-//! `rsa_lib.c` or `rsa_crpt.c`. Its header says why the nearest names are absent: `RSA_set_method`,
-//! `RSA_get_default_method` and `RSA_set_default_method` "are slice A's, and until slice A lands
-//! they are not symbols the candidate shell publishes".
+//! `courts/phase8/rt_rsa_probe.c` **calls every export in this file** as of D325, and the arms for
+//! the constructor are that commit's: `RSA_new()` and `RSA_new_method(NULL)` are built, read back
+//! through `RSA_get_method`/`RSA_get0_engine`/`RSA_flags`, and released. Before D325 every arm it
+//! had called a symbol from `rsa_meth.c`, `rsa_none.c`, `rsa_x931.c`, `rsa_pk1.c` or `rsa_oaep.c`
+//! — slice B's and slice C's — or fabricated its subject, because no constructor existed to call.
 //!
 //! What the probe already supplies is the machinery those arms need, and the observability is worth
 //! writing down before the arms are written:
@@ -182,11 +194,17 @@
 //! * `begin()`/`end()` with an installed `CRYPTO_set_mem_functions` is the allocator-attribution
 //!   plane [`RSA_free`] needs, and the plane on which its `BN_free`-for-`n`/`e` asymmetry is
 //!   visible at all.
-//! * An arm for any accessor needs an `RSA *`, and no constructor exists on the candidate side
-//!   until the later commit. The integration plan's §4a supplies the object by fabricating it in the
-//!   probe — 216 bytes, `memset`, every offset pinned by a `_Static_assert` — and holds it to the
-//!   same bytes on both sides; the layout tests in `crate::rsa` are what pin the *candidate's*
-//!   offsets against that fabric.
+//! * An arm for any accessor needs an `RSA *`, and until D325 no constructor existed on the
+//!   candidate side; the integration plan's §4a supplied the object by fabricating it in the probe
+//!   — 216 bytes, `memset`, every offset pinned by a `_Static_assert` — and holds it to the same
+//!   bytes on both sides. The layout tests in `crate::rsa` are what pin the *candidate's* offsets
+//!   against that fabric. The constructor arms added by D325 need none of it: they call
+//!   [`RSA_new`].
+//! * The probe's arms **do not** wrap a constructor or a crypt entry point in an
+//!   allocator-attribution window, and D325 measured why: `RSA_new` allocates a lock, whose
+//!   allocation the candidate routes through Rust's allocator rather than `CRYPTO_malloc`, so the
+//!   windows differ by exactly one event. The windows it does have are over `rsa_meth.c`'s own
+//!   arms.
 //! * [`RSA_bits`]/[`RSA_size`]/[`RSA_security_bits`] are pure functions of `n`, and
 //!   [`RSA_flags`]/[`RSA_free`] need no object at all (their NULL arms), so those are the arms that
 //!   need no fabrication. The unit tests below are their Rust-side half.
@@ -206,10 +224,12 @@ use crate::rsa::mp::{
     multip_info_free_ex_thunk, multip_info_free_thunk, ossl_rsa_multip_calc_product,
     ossl_rsa_multip_cap, ossl_rsa_multip_info_free, ossl_rsa_multip_info_new,
 };
-use crate::rsa::ossl::ossl_rsa_free_blinding;
+use crate::rsa::ossl::{ossl_rsa_alloc_blinding, ossl_rsa_free_blinding, RSA_get_default_method};
 use crate::rsa::{Rsa, RsaMethod, RsaPrimeInfo, RsaPssParams, RsaPssParams30};
+use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::ex_data::{
-    CRYPTO_free_ex_data, CRYPTO_get_ex_data, CRYPTO_set_ex_data, CRYPTO_EX_INDEX_RSA,
+    CRYPTO_free_ex_data, CRYPTO_get_ex_data, CRYPTO_new_ex_data, CRYPTO_set_ex_data,
+    CRYPTO_EX_INDEX_RSA,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::stack::{
@@ -217,7 +237,7 @@ use crate::runtime::stack::{
     OPENSSL_sk_num, OPENSSL_sk_pop, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_value,
     OpenSslStack,
 };
-use crate::runtime::thread::CRYPTO_THREAD_lock_free;
+use crate::runtime::thread::{CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new};
 
 /// `__FILE__` at `rsa_lib.c`'s allocation and free sites, for the `CRYPTO_zalloc`/`CRYPTO_free`
 /// records [`RSA_free`] and [`ossl_rsa_set0_all_params`] make. `rsa_lib.c` is a source-tree file,
@@ -232,30 +252,45 @@ const RSA_ASN1_VERSION_DEFAULT: i32 = 0;
 /// `RSA_ASN1_VERSION_MULTI` — `include/openssl/rsa.h:62`. Set by [`RSA_set0_multi_prime_params`] and
 /// by [`ossl_rsa_set0_all_params`] when there are more than two primes, and the flag
 /// [`RSA_security_bits`] reads before trusting `prime_infos`.
-const RSA_ASN1_VERSION_MULTI: i32 = 1;
+///
+/// `pub(crate)` because `rsa_ossl.c`'s entry points read it too: `rsa_ossl_mod_exp` and the two
+/// private-key entry points all take the CRT path when the object's version says the key is
+/// multi-prime, and they are `crate::rsa::ossl`'s.
+pub(crate) const RSA_ASN1_VERSION_MULTI: i32 = 1;
 
 /// `RSA_FLAG_CACHE_PUBLIC` — `include/openssl/rsa.h:65`.
-#[allow(dead_code)] // read by slice D's crypt entry points, not yet in this crate
-const RSA_FLAG_CACHE_PUBLIC: c_int = 0x0002;
-/// `RSA_FLAG_CACHE_PRIVATE` — `include/openssl/rsa.h:66`.
-#[allow(dead_code)] // read by slice D's crypt entry points, not yet in this crate
-const RSA_FLAG_CACHE_PRIVATE: c_int = 0x0004;
+///
+/// `pub(crate)` because two modules read it: this one's `set0_*` path stores it, and
+/// `crate::rsa::ossl`'s three public-key entry points test it before building a Montgomery context
+/// for `n` — which is also what [`rsa_ossl_init`] sets.
+///
+/// [`rsa_ossl_init`]: crate::rsa::ossl::RSA_PKCS1_OpenSSL
+pub(crate) const RSA_FLAG_CACHE_PUBLIC: c_int = 0x0002;
+/// `RSA_FLAG_CACHE_PRIVATE` — `include/openssl/rsa.h:66`. Read by `rsa_ossl_init`'s flag word and
+/// by `rsa_ossl_mod_exp`'s cache arm, both in `crate::rsa::ossl`.
+pub(crate) const RSA_FLAG_CACHE_PRIVATE: c_int = 0x0004;
 /// `RSA_FLAG_BLINDING` — `include/openssl/rsa.h:67`.
-#[allow(dead_code)] // read by RSA_blinding_on/_off, which are Phase 9's (BLOCKED_HANDOFFS row 2)
+#[allow(dead_code)] // set and cleared by `RSA_blinding_on`/`_off`, which are open work in this stratum
 const RSA_FLAG_BLINDING: c_int = 0x0008;
 /// `RSA_FLAG_THREAD_SAFE` — `include/openssl/rsa.h:68`.
-#[allow(dead_code)] // read by slice D's crypt entry points, not yet in this crate
+#[allow(dead_code)] // read by `rsa_pmeth.c`'s controls, which are 8.4's slice E
 const RSA_FLAG_THREAD_SAFE: c_int = 0x0010;
-/// `RSA_FLAG_EXT_PKEY` — `include/openssl/rsa.h:75`.
-#[allow(dead_code)] // read by slice D's crypt entry points, not yet in this crate
-const RSA_FLAG_EXT_PKEY: c_int = 0x0020;
-/// `RSA_FLAG_NO_BLINDING` — `include/openssl/rsa.h:83`.
-#[allow(dead_code)] // read by RSA_blinding_on/_off, which are Phase 9's (BLOCKED_HANDOFFS row 2)
-const RSA_FLAG_NO_BLINDING: c_int = 0x0080;
+/// `RSA_FLAG_EXT_PKEY` — `include/openssl/rsa.h:75`. Read by `rsa_ossl_private_encrypt`/`_decrypt`'s
+/// CRT test and by `rsa_ossl_private_decrypt`'s padding-selector rewrite, both in
+/// `crate::rsa::ossl`.
+pub(crate) const RSA_FLAG_EXT_PKEY: c_int = 0x0020;
+/// `RSA_FLAG_NO_BLINDING` — `include/openssl/rsa.h:83`. Read by the two private-key entry points in
+/// `crate::rsa::ossl`, which skip the blinding store entirely when it is set — which is what makes
+/// a court able to drive them deterministically.
+pub(crate) const RSA_FLAG_NO_BLINDING: c_int = 0x0080;
 /// `RSA_FLAG_NON_FIPS_ALLOW` — `include/openssl/rsa.h:476`. The **only** flag this slice reads: the
 /// constructor masks it *out* of the method's flags twice, so an engine cannot make a key
 /// non-FIPS-allowing by supplying a table that sets it.
-#[allow(dead_code)] // read by the constructor (`rsa_new_intern`), which lands in a later commit
+///
+/// It is numerically the same bit as `RSA_FLAG_FIPS_METHOD`, which is what the default table
+/// carries — so the archive's own default object has this bit cleared from its `flags` the moment
+/// `rsa_new_intern` stores it, and `RSA_flags` (which reads the *table*) is the only place a caller
+/// can see the `0x0400`.
 const RSA_FLAG_NON_FIPS_ALLOW: c_int = 0x0400;
 /// `RSA_FLAG_TYPE_MASK` — `include/openssl/rsa.h:117`.
 #[allow(dead_code)] // read by rsa_ameth.c's ASN.1 method, which is 8.8's
@@ -294,6 +329,148 @@ unsafe fn safe_bn_num_bits(k: *const BigNum) -> c_int {
         // SAFETY: `k` is non-NULL and live per the caller's contract.
         unsafe { BN_num_bits(k) }
     }
+}
+
+/// `static RSA *rsa_new_intern(ENGINE *engine, OSSL_LIB_CTX *libctx)` — `rsa_lib.c:76-139`.
+///
+/// The single place an `RSA` is made. Four things about it are the contract rather than the
+/// implementation:
+///
+/// * **The order of the two early failures.** A failed `CRYPTO_THREAD_lock_new` raises
+///   `RSA_LIB_85` and frees the object *inline*; the reference count's construction cannot fail
+///   on this profile (`CRYPTO_NEW_REF` is the header's fallback arm), so its branch is written as
+///   the assignment it reduces to, with no unreachable code left behind. The failures below that
+///   point all answer `RSA_free` instead — the `err:` label — and reach [`RSA_free`] with a count
+///   of 1, which is why `RSA_free` is not "free an unfinished object" but "release the reference
+///   the constructor is holding".
+/// * **`flags` is assigned twice**, once inside the `#if !defined(OPENSSL_NO_ENGINE) &&
+///   !defined(FIPS_MODULE)` block and once after it, because an engine may have replaced `meth`
+///   in between. Both are transcribed; on the no-engine path they compute the same word.
+/// * **The engine block is written as the reachable answer.** `ENGINE_init(engine)`,
+///   `ENGINE_get_default_RSA()` and `ENGINE_get_RSA(ret->engine)` are the three calls inside
+///   `#ifndef OPENSSL_NO_ENGINE`, which **is** compiled on this profile, but `ENGINE_*` is Phase
+///   13's (`docs/DECISIONS.md` D181) and there is no engine registry to register one in. With no
+///   engine registered, `ENGINE_get_default_RSA()` selects from an empty table and answers NULL
+///   (`tb_rsa.c:59`), so `ret->engine` is NULL on the else arm and the `if (ret->engine)` block —
+///   the only reader of `ENGINE_get_RSA` — is unreachable. So the block reduces to
+///   `ret->engine = NULL;`, and the `flags` assignment beside it is kept. A caller-supplied
+///   non-NULL `engine` therefore has no effect here where the authority would call `ENGINE_init`
+///   on it and then adopt the table `ENGINE_get_RSA` answers: no state this crate can reach can
+///   hold one, because nothing in it can build an `ENGINE`. That edge is a recorded reduction of
+///   the same shape as the two `ENGINE_finish` omissions, not a silent difference.
+/// * **`RSA_get_default_method` is read, not tested.** The authority checks the table for NULL
+///   only after an engine supplied it; on the no-engine path a caller who has made the default
+///   method NULL gets the fault the authority's own `ret->meth->flags` would take. That is
+///   transcribed as written rather than hardened — `RSA_set_default_method(NULL)` followed by
+///   `RSA_new()` is a caller's bug in both libraries.
+///
+/// # Safety
+/// `engine` is NULL and is ignored; `libctx` is NULL or a live library context.
+unsafe fn rsa_new_intern(_engine: *mut Engine, libctx: *mut c_void) -> *mut Rsa {
+    // `OPENSSL_zalloc` is `CRYPTO_zalloc(.., OPENSSL_FILE, OPENSSL_LINE)` in this profile, and
+    // `CRYPTO_zalloc` is a *safe* function in this crate (D113), so this call needs no guard.
+    let ret = CRYPTO_zalloc(core::mem::size_of::<Rsa>(), FILE_RSA_LIB, LINE).cast::<Rsa>();
+    if ret.is_null() {
+        return ptr::null_mut();
+    }
+
+    // SAFETY: `CRYPTO_THREAD_lock_new` reads no caller pointer.
+    let lock = CRYPTO_THREAD_lock_new();
+    // SAFETY: `ret` is this call's own allocation.
+    unsafe { (*ret).lock = lock };
+    if lock.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::RSA_LIB_85) };
+        // SAFETY: `ret` is this call's own allocation and nothing else holds it.
+        unsafe { CRYPTO_free(ret.cast(), FILE_RSA_LIB, LINE) };
+        return ptr::null_mut();
+    }
+
+    // `if (!CRYPTO_NEW_REF(&ret->references, 1))` — the header's fallback arm on this profile is
+    // `refcnt->val = n; return 1;`, so the test is the assignment and the branch is unreachable
+    // rather than omitted. The store is `Relaxed` because the fallback arm's write is a plain
+    // store into a field nothing else can see yet. The two `CRYPTO_THREAD_lock_free`/
+    // `OPENSSL_free` statements inside the untaken branch are therefore dead code, not a path
+    // this transcription dropped.
+    // SAFETY: `references` is a field of this call's own allocation.
+    unsafe { (*ret).references.store(1, Ordering::Relaxed) };
+
+    // The authority's `err:` label (`:136`), reached by the failures below and by none above it.
+    // It answers `RSA_free(ret)`: every field set on the way in is one `RSA_free` releases.
+    let built = 'build: {
+        // SAFETY: `ossl_rsa_alloc_blinding` reads no caller pointer and answers a fresh handle or
+        // NULL.
+        let blindings = unsafe { ossl_rsa_alloc_blinding() };
+        if blindings.is_null() {
+            break 'build false;
+        }
+        // SAFETY: `ret` is this call's own allocation.
+        unsafe { (*ret).blindings_sa = blindings };
+
+        // SAFETY: `ret` is this call's own allocation; `libctx` is the caller's, stored as the
+        // authority stores it and never read here.
+        unsafe { (*ret).libctx = libctx };
+        // SAFETY: `RSA_get_default_method` takes no pointers.
+        let meth = RSA_get_default_method();
+        // SAFETY: `ret` is this call's own allocation.
+        unsafe { (*ret).meth = meth };
+
+        /* `#if !defined(OPENSSL_NO_ENGINE) && !defined(FIPS_MODULE)` — compiled here, and reduced:
+         * see this function's doc comment. */
+        // SAFETY: `meth` is the table the getter answered, read exactly as the authority reads it.
+        unsafe { (*ret).flags = (*meth).flags & !RSA_FLAG_NON_FIPS_ALLOW };
+        // The authority's `ENGINE_init(engine)`/`ENGINE_get_default_RSA()`/`ENGINE_get_RSA`
+        // block is omitted; `ret->engine` is NULL on every state this crate can reach.
+        // SAFETY: `ret` is this call's own allocation.
+        unsafe { (*ret).engine = ptr::null_mut() };
+
+        // The second assignment, and the one that matters when an engine replaced the table.
+        // SAFETY: `ret` is this call's own allocation and `meth` its own member.
+        unsafe { (*ret).flags = (*(*ret).meth).flags & !RSA_FLAG_NON_FIPS_ALLOW };
+
+        // SAFETY: `ret` is this call's own allocation and `ex_data` is a field of it.
+        if unsafe {
+            CRYPTO_new_ex_data(
+                CRYPTO_EX_INDEX_RSA,
+                ret.cast(),
+                ptr::addr_of_mut!((*ret).ex_data),
+            )
+        } == 0
+        {
+            break 'build false;
+        }
+
+        // SAFETY: `ret` is this call's own allocation and `meth` is a member of it.
+        if let Some(init) = unsafe { (*(*ret).meth).init } {
+            // SAFETY: the table's own initialiser, handed this object as the authority hands it.
+            if unsafe { init(ret) } == 0 {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::RSA_LIB_130) };
+                break 'build false;
+            }
+        }
+        true
+    };
+
+    if !built {
+        // SAFETY: `ret` is this call's own object and the authority's `err:` label releases it
+        // through `RSA_free` on exactly these paths.
+        unsafe { RSA_free(ret) };
+        return ptr::null_mut();
+    }
+    ret
+}
+
+/// `RSA *RSA_new(void)` — `rsa_lib.c:35-38`. `rsa_new_intern(NULL, NULL)`: no engine, and the
+/// library context the default one.
+///
+/// # Safety
+/// This function can be called from any context; it takes no pointer.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_new() -> *mut Rsa {
+    // SAFETY: neither argument is read by the constructor beyond the store of `libctx`, which is
+    // NULL here.
+    unsafe { rsa_new_intern(ptr::null_mut(), ptr::null_mut()) }
 }
 
 /// `const RSA_METHOD *RSA_get_method(const RSA *rsa)` — `rsa_lib.c:40-43`.
@@ -352,6 +529,40 @@ pub unsafe extern "C" fn RSA_set_method(rsa: *mut Rsa, meth: *const RsaMethod) -
         unsafe { init(rsa) };
     }
     1
+}
+
+/// `RSA *RSA_new_method(ENGINE *engine)` — `rsa_lib.c:65-68`.
+///
+/// **The engine argument is ignored**, which is what the constructor's doc comment records: the
+/// crate has no `ENGINE` to hand `ENGINE_init`, and `RSA_new_method(NULL)` is therefore this
+/// function's whole reachable surface. A caller who passes a non-NULL pointer gets an object whose
+/// `engine` member is NULL, exactly as `RSA_new` answers.
+///
+/// # Safety
+/// `engine` is NULL and is ignored.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_new_method(engine: *mut Engine) -> *mut Rsa {
+    // SAFETY: `engine` is not read; the library context is NULL as the authority passes it.
+    unsafe { rsa_new_intern(engine, ptr::null_mut()) }
+}
+
+/// `RSA *ossl_rsa_new_with_ctx(OSSL_LIB_CTX *libctx)` — `rsa_lib.c:71-74`.
+///
+/// The internal form, and the only way a library context enters the object at construction: the
+/// public pair above keeps passing NULL. Internal, so it is `pub(crate)` rather than an export —
+/// it is declared in `include/crypto/rsa.h`, not in `include/openssl/rsa.h`.
+///
+/// `#[allow(dead_code)]`'s reason: **its callers are the provider stratum's.** The authority calls
+/// it from `crypto/rsa/rsa_backend.c` and `rsa_kmgmt.c`, both of which are beyond this phase; the
+/// constructor chain it belongs to is what this commit lands, and the name is transcribed with it
+/// rather than left as the one member of the quartet with no body.
+///
+/// # Safety
+/// `libctx` is NULL or a live library context that outlives the object.
+#[allow(dead_code)] // read by the provider keymgmt/backend, which are a later stratum
+pub(crate) unsafe fn ossl_rsa_new_with_ctx(libctx: *mut c_void) -> *mut Rsa {
+    // SAFETY: neither argument is read by the constructor beyond the store of `libctx`.
+    unsafe { rsa_new_intern(ptr::null_mut(), libctx) }
 }
 
 /// `void RSA_free(RSA *r)` — `rsa_lib.c:141-191`.
