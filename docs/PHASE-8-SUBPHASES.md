@@ -574,25 +574,23 @@ the plan's FFC-first order. `RT-DH` is registered and passing at **66 observatio
 all twenty-one: it installs a caller allocator and records the ordered `(kind, size, file)`
 sequence of each arm, which is how `DH_meth_new`, `DH_meth_dup`, `DH_meth_set1_name` and
 `DH_meth_free`'s three load-bearing orders — allocate-then-name, duplicate-then-release,
-`DH_meth_set1_name`, and `DH_meth_free`'s three load-bearing orders — allocate-then-name, duplicate-then-release,
-name-then-table — are observed rather than asserted. `CT-DH` stays PENDING, because its
-construction vectors are the FFC group arithmetic this slice does not land. **The FFC primitives have
-now landed (D330)**, so `CT-DH`'s remaining prerequisite is the DH object layer rather than the
-group arithmetic. **The order the rest
-of 8.5 lands in is unchanged and is now a recorded dependency, not a hope**: the `crypto/ffc/`
-primitives (`ossl_ffc_generate_private_key`, `ossl_ffc_params_simple_validate` and the
-`FIPS186_4_gen_verify` generators behind it — about 1,700 lines across `ffc_params.c`,
-`ffc_key_generate.c`, `ffc_key_validate.c`, `ffc_params_validate.c` and `ffc_params_generate.c`),
-then `dh_lib.c`'s object layer, then `dh_key.c`, `dh_gen.c` and the controls. The object layer
-cannot precede the FFC layer because `DH_get_default_method`'s table carries
-`dh_key.c`'s `generate_key`, whose q-set arm reaches `ossl_ffc_params_simple_validate`; that is why
-`DH_get_default_method`, `DH_set_default_method` and `DH_OpenSSL` are not landed with an empty
-table. **The named-group tables** (`crypto/bn/bn_dh.c`'s constants and `ffc_dh.c`'s
-`dh_named_groups[]`) are a separable large data transcription whose values only a comparison with
-the authority can check. They were left whole for a follow-up rather than half-landed, and D332 is
-that follow-up: `gen_bn_dh.py` reads the thirty-two constants back from the authority, and
-`DH_set0_pqg`'s named-group cache is a real call. The ledger: phase 8
-implemented 327 -> **348**, deferred 7 unchanged, open 452 -> **431**.
+name-then-table — are observed rather than asserted. `CT-DH` stays PENDING, and its reason names
+what is actually left rather than a prerequisite that has since landed: the DH object layer and
+the FFC group arithmetic are both in now (D330–D332), so the corpus and its driver are what remain.
+**The order the rest of 8.5 landed in was the order D329 recorded, and it was a dependency rather
+than a preference (D330–D332).** The `crypto/ffc/` primitives came first
+(`ossl_ffc_generate_private_key`, `ossl_ffc_params_simple_validate` and the `FIPS186_4_gen_verify`
+generators behind them, across `ffc_params.c`, `ffc_key_generate.c`, `ffc_key_validate.c`,
+`ffc_params_validate.c` and `ffc_params_generate.c`), then `dh_lib.c`'s object layer with
+`dh_key.c`, `dh_gen.c`, `dh_check.c` and `dh_depr.c`, then the named-group tables. The object layer
+could not precede the FFC layer because `DH_get_default_method`'s table carries `dh_key.c`'s
+`generate_key`, whose q-set arm reaches `ossl_ffc_params_simple_validate` — which is why
+`DH_get_default_method`, `DH_set_default_method` and `DH_OpenSSL` did not land with an empty table.
+**The named-group tables** (`crypto/bn/bn_dh.c`'s constants and `ffc_dh.c`'s `dh_named_groups[]`)
+were left whole for a follow-up rather than half-landed, and D332 is that follow-up: `gen_bn_dh.py`
+reads the thirty-two constants back from the authority, and `DH_set0_pqg`'s named-group cache is a
+real call. The ledger across the three units: phase 8 implemented 348 -> **392**, deferred 7 -> **4**,
+open 431 -> **390**.
 
 **The FFC primitives have landed (D330), which discharges the first link of that chain rather than
 reordering it.** The five units D329 named are five modules — `src/ffc/params.rs`,
