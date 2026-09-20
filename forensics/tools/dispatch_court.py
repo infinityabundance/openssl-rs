@@ -164,6 +164,31 @@ DSA_METHOD_VTABLE = ("not a provider dispatch: a member of `DSA_METHOD`'s vtable
                      "in `crypto/dsa/dsa_local.h:46-70` as a plain function pointer rather than "
                      "through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records "
                      "no typedef for it")
+# `crypto/ec/ec_local.h:43-200` -- the `EC_METHOD` members (Phase 8.7). The fourth of the same
+# shape, and the largest: **fifty-five** callbacks declared inline as plain function pointers in an
+# internal header, so the atlas -- whose universe is the installed public surface -- records no
+# `typedef` for any of them. The crate's aliases fold the ones the authority spells identically
+# (`EcGroupFinishFn` is both `group_finish` and `group_clear_finish`, `EcFieldSqrFn` is six
+# members), which is why thirty aliases cover fifty-five members.
+EC_METHOD_VTABLE = ("not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline "
+                    "in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than "
+                    "through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records "
+                    "no typedef for it")
+# `crypto/ec/ec_local.h:664-688` -- the `EC_KEY_METHOD` members. The same shape again; the four
+# aliases below are the ones only this table declares (the other nine members reuse an `EC_METHOD`
+# alias, because the authority spells `set_private`, `keygen`, `compute_key`, `sign_setup`,
+# `sign_sig` and `verify_sig` identically in both).
+EC_KEY_METHOD_VTABLE = ("not a provider dispatch: a member of `EC_KEY_METHOD`'s table, declared "
+                        "inline in `crypto/ec/ec_local.h:664-688` as a plain function pointer "
+                        "rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the "
+                        "atlas records no typedef for it")
+# `crypto/ec/ec_local.h:257-258` -- `struct ec_group_st`'s `field_mod_func`. Not a method table at
+# all: it is a function pointer **member of the group object**, stored by
+# `ossl_ec_GFp_nist_group_set_curve` (one of `BN_nist_mod_192`..`_521`) and called through
+# `group` rather than through `group->meth`.
+EC_GROUP_FIELD_MOD = ("not a provider dispatch: `struct ec_group_st`'s `field_mod_func` member "
+                      "(`crypto/ec/ec_local.h:257-258`), a function pointer on the *group object* "
+                      "rather than in a method table, declared inline in an internal header")
 LHASH_MACRO = ("not a provider dispatch: `lhash.h.in`'s `LHASH_HASH_FN` / `LHASH_COMP_FN` / "
                "`LHASH_DOALL*` macros generate it per type, so there is no single typedef")
 SK_MACRO = ("not a provider dispatch: `safestack.h.in`'s `sk_*_compfunc` / `freefunc` / "
@@ -325,6 +350,55 @@ NOT_A_DISPATCH: dict[str, str] = {
     "DsaLifecycleFn": DSA_METHOD_VTABLE,
     "DsaParamgenFn": DSA_METHOD_VTABLE,
     "DsaKeygenFn": DSA_METHOD_VTABLE,
+    # --- `EC_METHOD`'s vtable (`crypto/ec/ec_local.h:43-200`, Phase 8.7) ---------------------
+    "EcGroupInitFn": EC_METHOD_VTABLE,
+    "EcGroupFinishFn": EC_METHOD_VTABLE,
+    "EcGroupCopyFn": EC_METHOD_VTABLE,
+    "EcGroupSetCurveFn": EC_METHOD_VTABLE,
+    "EcGroupGetCurveFn": EC_METHOD_VTABLE,
+    "EcGroupQueryFn": EC_METHOD_VTABLE,
+    "EcGroupCheckDiscriminantFn": EC_METHOD_VTABLE,
+    "EcGroupFullInitFn": EC_METHOD_VTABLE,
+    "EcPointInitFn": EC_METHOD_VTABLE,
+    "EcPointFinishFn": EC_METHOD_VTABLE,
+    "EcPointCopyFn": EC_METHOD_VTABLE,
+    "EcPointSetToInfinityFn": EC_METHOD_VTABLE,
+    "EcPointSetAffineFn": EC_METHOD_VTABLE,
+    "EcPointGetAffineFn": EC_METHOD_VTABLE,
+    "EcPointSetCompressedFn": EC_METHOD_VTABLE,
+    "EcPoint2OctFn": EC_METHOD_VTABLE,
+    "EcOct2PointFn": EC_METHOD_VTABLE,
+    "EcPointAddFn": EC_METHOD_VTABLE,
+    "EcPointDblFn": EC_METHOD_VTABLE,
+    "EcPointUnaryFn": EC_METHOD_VTABLE,
+    "EcPointIsAtInfinityFn": EC_METHOD_VTABLE,
+    "EcPointIsOnCurveFn": EC_METHOD_VTABLE,
+    "EcPointCmpFn": EC_METHOD_VTABLE,
+    "EcPointsMakeAffineFn": EC_METHOD_VTABLE,
+    "EcPointMulFn": EC_METHOD_VTABLE,
+    "EcPrecomputeMultFn": EC_METHOD_VTABLE,
+    "EcFieldMulFn": EC_METHOD_VTABLE,
+    "EcFieldSqrFn": EC_METHOD_VTABLE,
+    "EcPriv2OctFn": EC_METHOD_VTABLE,
+    "EcOct2PrivFn": EC_METHOD_VTABLE,
+    "EcComputeKeyFn": EC_METHOD_VTABLE,
+    "EcKeyInitFn": EC_METHOD_VTABLE,
+    "EcKeyCheckFn": EC_METHOD_VTABLE,
+    "EcKeyCopyFn": EC_METHOD_VTABLE,
+    "EcKeyFinishFn": EC_METHOD_VTABLE,
+    "EcKeySignSetupFn": EC_METHOD_VTABLE,
+    "EcKeySignSigFn": EC_METHOD_VTABLE,
+    "EcKeyVerifySigFn": EC_METHOD_VTABLE,
+    "EcLadderFn": EC_METHOD_VTABLE,
+    # --- `EC_KEY_METHOD`'s table (`crypto/ec/ec_local.h:664-688`, Phase 8.7) ------------------
+    "EcKeySetGroupFn": EC_KEY_METHOD_VTABLE,
+    "EcKeySetPublicFn": EC_KEY_METHOD_VTABLE,
+    "EcKeySignFn": EC_KEY_METHOD_VTABLE,
+    "EcKeyVerifyFn": EC_KEY_METHOD_VTABLE,
+    # `set_private` is the one member both tables declare with the same signature.
+    "EcKeySetPrivateFn": EC_METHOD_VTABLE,
+    # --- `struct ec_group_st`'s `field_mod_func` (`crypto/ec/ec_local.h:257-258`, Phase 8.7) --
+    "EcFieldModFn": EC_GROUP_FIELD_MOD,
     # --- `struct prov_drbg_st`'s vtable (`prov/drbg.h:59-165`, Phase 9.4, D309) -------------
     "ProvDrbgInstantiateFn": DRBG_VTABLE,
     "ProvDrbgUninstantiateFn": DRBG_VTABLE,

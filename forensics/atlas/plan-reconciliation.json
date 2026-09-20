@@ -5,12 +5,12 @@
       "in-progress"
     ],
     "census": {
-      "names_a_file_the_authority_does_not_have": 18,
-      "symbols_not_reached": 7,
-      "units_not_reached": 31
+      "names_a_file_the_authority_does_not_have": 19,
+      "symbols_not_reached": 8,
+      "units_not_reached": 37
     },
     "census_by_stratum": {
-      "8": 42,
+      "8": 50,
       "9": 14
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
@@ -28,6 +28,7 @@
         "docs/PHASE-8-SUBPHASES.md:8.3:providers/implementations/macs/cmac_prov.c",
         "docs/PHASE-8-SUBPHASES.md:8.5:courts/layout/measure-ffc-params.c",
         "docs/PHASE-8-SUBPHASES.md:8.6:crypto/dsa/dsa_ctrl.c",
+        "docs/PHASE-8-SUBPHASES.md:8.7:courts/layout/measure-ec.c",
         "docs/PHASE-9-SUBPHASES.md:9.4:drbg_ctr.c",
         "docs/PHASE-9-SUBPHASES.md:9.4:drbg_hash.c",
         "docs/PHASE-9-SUBPHASES.md:9.4:drbg_hmac.c",
@@ -40,6 +41,7 @@
         "ossl_drbg_ctr_functions",
         "ossl_drbg_hash_functions",
         "ossl_drbg_ossl_hmac_functions",
+        "ossl_ecdh_simple_compute_key",
         "ossl_polyval_ghash_init",
         "ossl_prov_get_capabilities",
         "xor128_encrypt_n_pad"
@@ -55,6 +57,12 @@
         "crypto/dsa/dsa_check.c",
         "crypto/dsa/dsa_err.c",
         "crypto/dsa/dsa_prn.c",
+        "crypto/ec/ec_backend.c",
+        "crypto/ec/ec_kmeth.c",
+        "crypto/ec/ec_lib.c",
+        "crypto/ec/ec_mult.c",
+        "crypto/ec/ecp_nistz256.c",
+        "crypto/ec/ecp_smpl.c",
         "crypto/evp/dsa_ctrl.c",
         "crypto/ffc/ffc_backend.c",
         "crypto/packet.c",
@@ -87,11 +95,11 @@
         "docs/PHASE-9-SUBPHASES.md"
       ],
       "rows_judged": 82,
-      "symbols_named_by_a_row": 89,
+      "symbols_named_by_a_row": 90,
       "symbols_reached": 82,
       "unit_records": 66,
       "units_named_by_a_record": 68,
-      "units_named_by_a_row": 196,
+      "units_named_by_a_row": 202,
       "units_reached": 165
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
@@ -730,6 +738,32 @@
         ],
         "transcribed_by": []
       },
+      "crypto/ec/ec_backend.c": {
+        "defines": [
+          "ossl_ec_check_group_type_id2name",
+          "ossl_ec_encoding_name2id",
+          "ossl_ec_encoding_param2id",
+          "ossl_ec_group_fromdata",
+          "ossl_ec_group_todata",
+          "ossl_ec_key_dup",
+          "ossl_ec_key_from_pkcs8",
+          "ossl_ec_key_fromdata",
+          "ossl_ec_key_is_foreign",
+          "ossl_ec_key_otherparams_fromdata",
+          "ossl_ec_key_param_from_x509_algor",
+          "ossl_ec_pt_format_id2name",
+          "ossl_ec_pt_format_name2id",
+          "ossl_ec_pt_format_param2id",
+          "ossl_ec_set_check_group_type_from_name",
+          "ossl_ec_set_ecdh_cofactor_mode",
+          "ossl_x509_algor_is_sm2"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": []
+      },
       "crypto/ec/ec_curve.c": {
         "defines": [
           "ossl_ec_curve_nid_from_params"
@@ -741,6 +775,87 @@
         "transcribed_by": [
           "src/ec/curve.rs"
         ]
+      },
+      "crypto/ec/ec_kmeth.c": {
+        "defines": [
+          "ossl_ec_key_new_method_int"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/ec/ec_lib.c": {
+        "defines": [
+          "EC_pre_comp_free",
+          "ossl_ec_group_do_inverse_ord",
+          "ossl_ec_group_new_ex",
+          "ossl_ec_group_set_params",
+          "ossl_ec_group_simple_order_bits",
+          "ossl_ec_point_blind_coordinates"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/ec/ec_mult.c": {
+        "defines": [
+          "EC_ec_pre_comp_dup",
+          "EC_ec_pre_comp_free",
+          "ossl_ec_scalar_mul_ladder",
+          "ossl_ec_wNAF_have_precompute_mult",
+          "ossl_ec_wNAF_mul",
+          "ossl_ec_wNAF_precompute_mult"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/ec/ecp_nistz256.c": {
+        "defines": [
+          "EC_GFp_nistz256_method",
+          "EC_nistz256_pre_comp_dup",
+          "EC_nistz256_pre_comp_free"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/ec/ecp_smpl.c": {
+        "defines": [
+          "ossl_ec_GFp_simple_add",
+          "ossl_ec_GFp_simple_blind_coordinates",
+          "ossl_ec_GFp_simple_cmp",
+          "ossl_ec_GFp_simple_dbl",
+          "ossl_ec_GFp_simple_field_inv",
+          "ossl_ec_GFp_simple_field_mul",
+          "ossl_ec_GFp_simple_field_sqr",
+          "ossl_ec_GFp_simple_get_Jprojective_coordinates_GFp",
+          "ossl_ec_GFp_simple_group_check_discriminant",
+          "ossl_ec_GFp_simple_group_clear_finish",
+          "ossl_ec_GFp_simple_group_copy",
+          "ossl_ec_GFp_simple_group_finish",
+          "ossl_ec_GFp_simple_group_get_curve",
+          "ossl_ec_GFp_simple_group_get_degree",
+          "ossl_ec_GFp_simple_group_init",
+          "ossl_ec_GFp_simple_group_set_curve",
+          "ossl_ec_GFp_simple_invert",
+          "ossl_ec_GFp_simple_is_at_infinity",
+          "ossl_ec_GFp_simple_is_on_curve",
+          "ossl_ec_GFp_simple_ladder_post"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": []
       },
       "crypto/err/err.c": {
         "defines": [
@@ -2883,7 +2998,7 @@
       "transcribed_units": 216
     }
   },
-  "body_hash": "68a4aec5335a8676e3add61abdae17ce1f9b9bd3f783785c6745ee09190a54b1",
+  "body_hash": "57935abd915f2c4129656b60cbd08a9d689472a33eac26468a9b9d6c82a4335d",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -2899,7 +3014,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "eaa42a089aade9a61e0094d6316937a11ac20e33b3cd0dc46174ea8cf99cabc2"
+      "sha256": "489567fa2633f0c4a25369f4fe68dd2d5b860374d68e94f52077a60b670d083d"
     },
     {
       "name": "phase-state",
@@ -2934,7 +3049,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "00a8cb93942b707e92380077bb677ef5399899a5181c8ab872811d6b6a376ebc"
+      "sha256": "622af60bafa914361739ad94132d56c93d7780a7fac9bb7a6643a7d53e7958aa"
     },
     {
       "name": "plan-PHASE-9-SUBPHASES",

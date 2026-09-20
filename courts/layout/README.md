@@ -82,6 +82,17 @@ clang -std=c11 \
   -o /tmp/measure courts/layout/measure-provider-ctxs.c && /tmp/measure
 ```
 
+The programs whose subject is a `crypto/<type>/<type>_local.h` header need one more `-I`, the
+directory the header itself lives in, because the authority includes it as `"ec_local.h"`:
+
+```sh
+clang -std=c11 -I "$B/include" -I "$B" -I "$S" -I "$S/crypto" -I "$S/crypto/ec" \
+  -o /tmp/measure-ec courts/layout/measure-ec.c && /tmp/measure-ec
+```
+
+`measure-dh.c` and `measure-dsa.c` are the same shape with `-I "$S/crypto/dh"` and
+`-I "$S/crypto/dsa"` in place of the last one.
+
 The two static-archive oracles add the archive in place of a `-l` flag, because their subjects are
 internal functions with no dynamic symbol:
 
@@ -116,6 +127,7 @@ not include it a second time.
 | `measure-ffc-params.c` | `FFC_PARAMS` (**96** bytes, fourteen member offsets), the object `struct dh_st` and `struct dsa_st` each embed **by value**, so its size is downstream of both constructors' allocation sizes. The offset that cannot be read off the declaration is `mdname` at **72**, not 68: `flags` is a four-byte `unsigned int` at 64 and `mdname` is a pointer | D330 |
 | `measure-dh.c` | `struct dh_st` (**208** bytes, sixteen member offsets) — the allocation `DH_new` makes and the object four of 8.5's units read field by field — plus `struct dh_method` beside `measure-dh-method.c` and `DH_MIN_MODULUS_BITS` (**512**). The two offsets that cannot be read off the declaration are `length` at **104** (a four-byte `int32_t`, so 108..112 is padding before `pub_key`) and `ex_data` at **152** (`references` is a four-byte `_Atomic int` at 144) | D331 |
 | `measure-ec-builtin-curve.c` | `EC_builtin_curve` (**16** bytes, alignment 8, `nid` at **0** and `comment` at **8**). It is the one ABI structure 8.7's first slice exposes — `EC_get_builtin_curves` writes these into a **caller-allocated** array, so the four bytes of padding at 4..8 are the caller's contract and not the crate's private business | D334 |
+| `measure-ec.c` | the seven `crypto/ec/ec_local.h` shapes: `struct ec_method_st` (**448** bytes, fifty-five callbacks), `struct ec_group_st` (**184**, `poly` at **72** and the `pre_comp` union at **160**), `struct ec_point_st` (**48**), `struct ec_key_st` (**104**, `ex_data` at **64**), `struct ec_key_method_st` (**120**, `init` at **16**), `struct ECDSA_SIG_st` and `point_conversion_form_t` (**4**), plus the seven constants (`EC_FLAGS_*`, `EC_KEY_METHOD_DYNAMIC`, the three `POINT_CONVERSION_*` and the seven `PCT_*` discriminators). Four of the six sizes are `OPENSSL_zalloc` allocations a caller's `CRYPTO_set_mem_functions` receives as `num` | D335 |
 | `measure-cbc-hmac-ctxs.c` | the three `PROV_AES_HMAC_SHA*_CTX` allocations, whose `SHA_CTX` members are the reason the 256-bit row is 840 bytes | D276 |
 | `oracle-polyval.c` | the authority's own POLYVAL answers, through the static archive | D278 |
 | `oracle-chacha20-poly1305-hw.c` | the hw vtable's three base members (**`cipher` and `copyctx` are NULL**) and its four extended offsets | D279 |
