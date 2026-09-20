@@ -20694,3 +20694,56 @@ expand (`IMPLEMENT_PEM_*`, `PEM_write_fnsig`, `_body_fallback`) so that the inte
 not have to re-derive them, and the write half records one measured asymmetry it did **not**
 correct: `_cb_to` uses the `_cb` fallback for the non-`_ex` spelling and the plain one for `_ex`, so
 an `_ex` callback caller reaching the legacy arm gets no cipher and no passphrase.
+
+## D319 -- the RSA object layer is staged, and its constructor turns out to be Phase 9's dependency
+
+`court/rsa-object.rs.txt` (2478 lines) carries 8.4's first slice as Phase 8's plan names it --
+"the `RSA` object and `RSA_*`": thirty-six exports from `crypto/rsa/rsa_lib.c` (the lifecycle
+`RSA_new`/`RSA_new_method`/`RSA_free`/`RSA_up_ref`, every `RSA_get0_*`/`RSA_set0_*` including the
+multi-prime family, `RSA_bits`/`RSA_size`/`RSA_security_bits`/`RSA_flags` from `rsa_crpt.c`, the
+flag and version accessors) with sixteen internals, the `RSA_METHOD` vtable, `RSA_PRIME_INFO`, and
+twelve unit tests for the arms that need no real key. It is staged, not integrated, for the same
+reason D318's two files are: it cannot redden the tree, and it says in its own header what it is
+missing and why.
+
+### What it establishes, and it is three things
+
+**1. `RSA_new` is blocked on Phase 9, not the other way round.** `rsa_new_intern` calls
+`RSA_get_default_method` (`rsa_ossl.c:91`), which is Phase 9's `BLOCKED_HANDOFFS` row 5 -- the same
+row that withholds `RSA_new`, `RSA_new_method` and `RSA_PKCS1_OpenSSL`. So the two strata are each
+waiting on the other, and the cycle is explicit rather than implicit: 8.4's constructor needs the
+legacy `RSA_METHOD` static, and Phase 9's row says it cannot build that static until 8.4's object
+exists to name. The resolution is the one D313 used for the RAND front: the object lands first and
+the method static follows inside the same arc, because the static's only precondition is a struct
+this slice defines. That is recorded rather than deferred, and it is the first real cycle this
+project has had to name.
+
+**2. Thirteen callees are missing, and four owners are named.** `RSA_get_default_method` and
+`RSA_set_default_method` are Phase 9's; `ENGINE_init`/`ENGINE_get_default_RSA`/`ENGINE_get_RSA`/
+`ENGINE_finish` are Phase 13's D181 (and `#ifndef OPENSSL_NO_ENGINE` is undefined here, so both
+blocks compile); `ossl_rsa_alloc_blinding`/`_free_blinding` are 8.4's slice D;
+`RSA_PSS_PARAMS_free` is 8.4's slice F; and `rsa_mp.c`'s five (`ossl_rsa_mult_info_new`/`_free`/
+`_free_ex`, `ossl_rsa_multip_calc_product`, `ossl_rsa_multip_cap`) are **inside 8.4 but claimed by
+no published slice** -- the staging names the file rather than guessing a letter, which is the
+honest answer and a plan gap the next pass should close.
+
+**3. No existing `RT-RSA` arm covers a single export in this slice.** `courts/phase8/rt_rsa_probe.c`
+passes with 282 observations, and every one of its arms calls `rsa_meth.c`, `rsa_none.c`,
+`rsa_x931.c`, `rsa_pk1.c` or `rsa_oaep.c`; its own header already records that slice A's names "are
+not symbols the candidate shell publishes". So the 36 exports here have **no court edge yet**, and
+the integration pass must add arms for the ones that are observable without a key from the
+constructor (`RSA_bits`, `RSA_size`, `RSA_security_bits`, the flag accessors, and the `set0_*`
+ownership rules through the ex-data surface) while recording the rest as owed with named arms. That
+is the same shape D317 found one stratum over, and it is the thing to plan for before 8.4's first
+integration commit rather than after it.
+
+### What is left out, and it is the boundary the next pass needs
+
+Padding (`rsa_none.c`/`pk1.c`/`oaep.c`/`pss.c`/`ssl.c`/`x931.c` -- not `rsa_lib.c`), `RSA_meth_*`
+(`rsa_meth.c`, already landed), the default-method family (`rsa_ossl.c`, slices D and 9),
+`RSA_pkey_ctx_ctrl`, the two `int_*_rsa_md_name` tables, the twenty-three `EVP_PKEY_CTX_*` controls
+(slice E) and `RSA_generate_key_ex` (`rsa_gen.c`). Five names the plan's own wording implies --
+`RSA_get0_provider`, `RSA_get0_libctx`, `RSA_dup`, `RSA_PKCS1_SSLeay`, `RSA_method_name` -- **do not
+exist anywhere in 3.6.4**, which the staging reports rather than inventing; `ossl_rsa_dup`
+(`rsa_backend.c:467`) and `ossl_rsa_get0_libctx` (`rsa_lib.c:205`) are their nearest real
+equivalents.
