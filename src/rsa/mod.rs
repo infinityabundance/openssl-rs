@@ -2,26 +2,37 @@
 //!
 //! This module is Phase 8.4's, and it is being built in the slices D283 measured rather than all at
 //! once, because the block is 150 labels and its parts have different prerequisites. What is here
-//! now is the **method table** (`crypto/rsa/rsa_meth.c`, D284) and **the half of the padding
-//! functions whose output is a pure function of its input** (`rsa_none.c`, `rsa_x931.c` and the
-//! type-1 pair in `rsa_pk1.c`, D285).
+//! now is the **method table** (`crypto/rsa/rsa_meth.c`, D284), the **object layer**
+//! (`crypto/rsa/rsa_lib.c` plus `rsa_crpt.c`'s accessors, D321), and **all fifteen of the padding
+//! functions** (`rsa_none.c`, `rsa_x931.c`, `rsa_pk1.c`'s two add/check pairs, `rsa_oaep.c`'s
+//! `PKCS1_MGF1` with its two adds and two checks, and `rsa_pss.c`'s two adds) -- the RAND-free
+//! half in D285 and the randomised half in D323.
 //!
-//! **The block is much more Phase 9-bound than D283's table implied, and D285 measured it.**
-//! `RAND_bytes_ex` is Phase 9's, and it is reached by five of the padding *add* functions (the type
-//! 2, both OAEP and both PSS adds), by the type-2 *check*'s implicit rejection, and — one level
-//! further out — by the `RSA` object's own constructor, because `rsa_new_intern` takes its method
-//! from `RSA_get_default_method()` and that table's first member is `rsa_ossl_public_encrypt`,
-//! which pads randomly. Those six padding labels and the four constructor labels are recorded
-//! Phase 9 hand-offs in `forensics/tools/phase8_obligations.py`'s `BLOCKED_HANDOFFS`.
+//! **The padding family's block expired rather than being worked around.** D285 measured five of
+//! the randomised *add* labels plus the type-2 *check* as Phase 9 hand-offs on `RAND_bytes_ex` and
+//! recorded the deferral; D313 landed the random layer, D322 measured that the deferral was no
+//! longer a deferral at all, and D323 lands them. One of D285's coordinates is corrected by it:
+//! the function whose refusal is randomised is `ossl_rsa_padding_check_PKCS1_type_2_TLS`
+//! (`rsa_pk1.c:546`, whose `RAND_priv_bytes_ex` sits at `:569`), **not**
+//! `RSA_padding_check_PKCS1_type_2` (`:170`), which is a pure function of its input and always
+//! was -- it was in the hand-off list under the TLS function's call.
+//!
+//! **D285's second finding is unchanged by that correction, and it is why the constructor is still
+//! open.** `RAND_bytes_ex` is reached by the five randomised adds and — one level further out — by
+//! the `RSA` object's own constructor, because `rsa_new_intern` takes its method from
+//! `RSA_get_default_method()` and that table's first member is `rsa_ossl_public_encrypt`, which
+//! pads randomly through `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`). So the four
+//! constructor labels remain recorded Phase 9 hand-offs in
+//! `forensics/tools/phase8_obligations.py`'s `BLOCKED_HANDOFFS`, and the table they would occupy
+//! is what still cannot be built.
 //!
 //! The other six slices, and what each still needs:
 //!
 //! * **B**, 33 labels, **landed** (D284): the method table.
-//! * **C**, the padding add/check pairs for the five paddings (15) -- **its RAND-free half landed in
-//!   D285**: `RSA_padding_add_none`, `_check_none`, `_add_X931`, `_check_X931`, `RSA_X931_hash_id`,
-//!   `_add_PKCS1_type_1`, `_check_PKCS1_type_1`. What remains is the five randomised *adds* and the
-//!   randomised type-2 *check* -- six Phase 9 hand-offs on `RAND_bytes_ex` -- plus the two OAEP
-//!   checks and `PKCS1_MGF1`, which D285 measured as landable and which are not yet transcribed;
+//! * **C**, the padding add/check pairs for the five paddings (15) -- **landed** (D285 for the
+//!   RAND-free half, D323 for the rest): the `none` and X9.31 paddings, `RSA_X931_hash_id`,
+//!   PKCS#1 v1.5 type 1, the two OAEP checks and `PKCS1_MGF1` in D285's commit, then the five
+//!   randomised adds and the type-2 check in D323;
 //! * **D**, `RSA_public_encrypt`/`_decrypt`, `RSA_private_*`, `RSA_sign`/`RSA_verify`, the two
 //!   `PKCS1_PSS` verifiers and `PKCS1_MGF1` (11) -- and this is also where `RSA_PKCS1_OpenSSL`'s
 //!   table belongs, because thirteen of its fifteen members are `rsa_ossl_*` entry points that
@@ -54,14 +65,16 @@
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
 use core::sync::atomic::AtomicI32;
 
-use crate::bn::bignum::BigNum;
+use crate::bn::bignum::{BN_num_bits, BigNum};
 use crate::bn::ctx::{BnCtx, BnGencb};
 use crate::bn::mont::MontCtx;
 use crate::evp::digest::{
     EVP_DigestFinal_ex, EVP_DigestInit_ex, EVP_DigestUpdate, EVP_MD_CTX_free, EVP_MD_CTX_new,
-    EVP_MD_get_size, EvpMd,
+    EVP_MD_get_size, EvpMd, EvpMdCtx,
 };
 use crate::evp::pkey_asn1::Engine;
+use crate::evp::pkey_ctx::{RSA_PSS_SALTLEN_AUTO, RSA_PSS_SALTLEN_DIGEST, RSA_PSS_SALTLEN_MAX};
+use crate::rand::rand_lib::RAND_bytes_ex;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::ex_data::CryptoExData;
@@ -1556,6 +1569,760 @@ pub unsafe extern "C" fn RSA_padding_check_PKCS1_OAEP_mgf1(
     }
 }
 
+// Slice C, second part — the randomised half of the padding functions (D323)
+// =============================================================================================
+//
+// The other six of the fifteen. Five are *adds* whose inserted bytes the format requires to be
+// unpredictable — the type-2 padding, both OAEP seeds and both PSS salts — and they reach
+// `RAND_bytes_ex` through the context their caller supplies. The sixth is the PKCS#1 v1.5 type-2
+// *check*, and it is here because D285's table said so rather than because it is randomised: the
+// `RAND_priv_bytes_ex` that put the label in the hand-off list is
+// `ossl_rsa_padding_check_PKCS1_type_2_TLS`'s (`rsa_pk1.c:569`), a different function in the same
+// file whose body answers a *TLS* decoding failure with a random premaster secret. This one's
+// refusal is a constant-time `-1` and a raised error, and its body is a pure function of its
+// input — which is why it could have landed with D285's half, and why it is landed here rather
+// than left for a stratum that has nothing to do with it.
+
+/// The allocation-tracking `file` argument for `rsa_pk1.c`'s allocation.
+///
+/// Measured the same way as [`FILE_RSA_METH`] and [`FILE_RSA_OAEP`]: `strings` on
+/// `forensics/authorities/build/openssl-3.6.4-production/crypto/rsa/libcrypto-lib-rsa_pk1.o`
+/// carries the `../../src/openssl-3.6.4/` prefix. The string reaches an application through
+/// `CRYPTO_set_mem_functions`, so the prefix is part of the observable contract and not cosmetic.
+const FILE_RSA_PK1: *const c_char = c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c".as_ptr();
+
+/// The allocation-tracking `file` argument for `rsa_pss.c`'s salt buffer.
+const FILE_RSA_PSS: *const c_char = c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c".as_ptr();
+
+/// `int ossl_rsa_padding_add_PKCS1_type_2_ex(OSSL_LIB_CTX *libctx, unsigned char *to, int tlen,
+/// const unsigned char *from, int flen)` — `rsa_pk1.c:124-162`. Internal, and declared in
+/// `crypto/rsa/rsa_local.h:195-197`.
+///
+/// `00 || 02 || nonzero random || 00 || D`, and **the retry loop is the whole point**. The first
+/// `RAND_bytes_ex` fills all `j` padding octets in one request, and then each octet that came back
+/// zero is re-drawn **one octet at a time** until it is non-zero. A transcription that stopped
+/// after the first request would emit a block whose first zero octet is inside the padding, so the
+/// type-2 check would read the message as starting there; and the loop is written as `do { } while`
+/// rather than `while` so that a re-drawn zero is *itself* re-drawn rather than accepted.
+///
+/// **The `libctx` is the caller's and not the object's.** That is the whole reason the `_ex` form
+/// exists: [`RSA_padding_add_PKCS1_type_2`] below passes NULL and `rsa_ossl.c:144` passes
+/// `rsa->libctx`, and both land in this one body with a different random context.
+///
+/// # Safety
+/// `libctx` is NULL or live; `to` is writable for `tlen` bytes; `from` is readable for `flen`
+/// bytes.
+#[allow(non_snake_case)] // the authority's name, kept verbatim like every other one
+pub(crate) unsafe fn ossl_rsa_padding_add_PKCS1_type_2_ex(
+    libctx: *mut c_void,
+    to: *mut c_uchar,
+    tlen: c_int,
+    from: *const c_uchar,
+    flen: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if flen > (tlen - RSA_PKCS1_PADDING_SIZE) {
+            raise_site(&err_sites::RSA_PK1_132);
+            return 0;
+        } else if flen < 0 {
+            raise_site(&err_sites::RSA_PK1_135);
+            return 0;
+        }
+
+        let mut p = to;
+
+        *p = 0;
+        p = p.offset(1);
+        *p = 2; // Public Key BT (Block Type)
+        p = p.offset(1);
+
+        // `j >= 8` here: the two refusals above leave `0 <= flen <= tlen - 11`, so `j` is
+        // `tlen - 3 - flen >= 8` and the length the random call is handed is never negative.
+        let j = tlen - 3 - flen;
+
+        if RAND_bytes_ex(libctx, p, j as usize, 0) <= 0 {
+            return 0;
+        }
+        let mut i: c_int = 0;
+        while i < j {
+            if *p == 0 {
+                // The authority's `do { ... } while (*p == '\0')`.
+                loop {
+                    if RAND_bytes_ex(libctx, p, 1, 0) <= 0 {
+                        return 0;
+                    }
+                    if *p != 0 {
+                        break;
+                    }
+                }
+            }
+            p = p.offset(1);
+            i += 1;
+        }
+
+        *p = 0;
+        p = p.offset(1);
+        core::ptr::copy_nonoverlapping(from, p, flen as usize);
+        1
+    }
+}
+
+/// `int RSA_padding_add_PKCS1_type_2(unsigned char *to, int tlen, const unsigned char *from,
+/// int flen)` — `rsa_pk1.c:164-168`.
+///
+/// The default-context wrapper: NULL in, the block out. It is a separate exported function in the
+/// authority because it is the one callers already had, and the `_ex` form was added underneath it
+/// when RSA grew a libctx.
+///
+/// # Safety
+/// `to` is writable for `tlen` bytes; `from` is readable for `flen` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_padding_add_PKCS1_type_2(
+    to: *mut c_uchar,
+    tlen: c_int,
+    from: *const c_uchar,
+    flen: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract, forwarded with the default context.
+    unsafe { ossl_rsa_padding_add_PKCS1_type_2_ex(core::ptr::null_mut(), to, tlen, from, flen) }
+}
+
+/// `int RSA_padding_check_PKCS1_type_2(unsigned char *to, int tlen, const unsigned char *from,
+/// int flen, int num)` — `rsa_pk1.c:170-275`.
+///
+/// PKCS #1 v2.2 section 7.2.2's EME-PKCS1-v1_5 decoding check. **Its refusal is an error and a
+/// `-1`, not a random premaster secret**: the Bleichenbacher mitigation that answers with random
+/// bytes is `ossl_rsa_padding_check_PKCS1_type_2_TLS` (`:546`), a different function in the same
+/// file that only the TLS record layer calls, and it is D285's `RAND_priv_bytes_ex` coordinate that
+/// put this label into the Phase 9 hand-off list (D323).
+///
+/// The structure is the same one the OAEP check above uses, and for the same reason: `flen <= num`
+/// and `num >= RSA_PKCS1_PADDING_SIZE` are checked in the clear because they leak nothing about
+/// the plaintext, everything after that is folded into `good`, and the message is moved back with
+/// a masked, duplicated copy so that neither the pass/fail bit nor the message length is visible in
+/// timing. The one place this differs from OAEP is the error: this check **raises and then flags**
+/// the record rather than removing it, so a caller that ignores the return value still finds the
+/// error on the queue, and a successful decode has it cleared again.
+///
+/// Two of the authority's initialisers are dropped, and both are dead rather than load-bearing:
+/// `em`'s `NULL` is overwritten by the allocation before anything reads it, and `mlen`'s `-1` is
+/// overwritten by `num - msg_index` on every path that reaches its readers. `zero_index`'s `0` is
+/// **not** dead -- it is what the constant-time accumulator starts from and what a block with no
+/// zero octet at all answers with -- so it keeps its initial value here.
+///
+/// # Safety
+/// `to` is writable for `tlen` bytes; `from` is readable for `flen` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_padding_check_PKCS1_type_2(
+    to: *mut c_uchar,
+    mut tlen: c_int,
+    from: *const c_uchar,
+    flen: c_int,
+    num: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut i: c_int;
+        let mut found_zero_byte: u32;
+        let mut mask: u32;
+        let mut zero_index: c_int = 0;
+        let mut msg_index: c_int;
+
+        if tlen <= 0 || flen <= 0 {
+            return -1;
+        }
+
+        if flen > num || num < RSA_PKCS1_PADDING_SIZE {
+            raise_site(&err_sites::RSA_PK1_189);
+            return -1;
+        }
+
+        // `num >= RSA_PKCS1_PADDING_SIZE` above, so this is a non-zero request.
+        let mut em = CRYPTO_malloc(num as usize, FILE_RSA_PK1, LINE).cast::<c_uchar>();
+        if em.is_null() {
+            return -1;
+        }
+
+        // Copy `from` (up to `flen` bytes) into the tail of `em` (`num` bytes): right-aligned,
+        // zero-padded on the left, with the source pointer advanced under a mask so that the same
+        // addresses are touched whatever `flen` is. The loop's `*--em` leaves `em` back at the
+        // start when it ends, which is why the cleanup below can hand it over unchanged.
+        let mut from = from;
+        let mut flen = flen;
+        from = from.offset(flen as isize);
+        em = em.offset(num as isize);
+        i = 0;
+        while i < num {
+            mask = !crate::runtime::constant_time::constant_time_is_zero_u32(flen as u32);
+            flen = flen.wrapping_sub((1 & mask) as c_int);
+            from = from.offset(-((1 & mask) as isize));
+            em = em.offset(-1);
+            *em = ((*from) as u32 & mask) as u8;
+            i += 1;
+        }
+
+        let mut good: u32 = crate::runtime::constant_time::constant_time_is_zero_u32(*em as u32);
+        good &= crate::runtime::constant_time::constant_time_eq_u32(*em.offset(1) as u32, 2);
+
+        // Scan over the padding string for the first zero octet, which is the separator.
+        found_zero_byte = 0;
+        i = 2;
+        while i < num {
+            let equals0 = crate::runtime::constant_time::constant_time_is_zero_u32(
+                *em.offset(i as isize) as u32,
+            );
+            zero_index = crate::runtime::constant_time::constant_time_select_int(
+                !found_zero_byte & equals0,
+                i,
+                zero_index,
+            );
+            found_zero_byte |= equals0;
+            i += 1;
+        }
+
+        // The padding string must be at least 8 octets and starts two octets into `em`. If no zero
+        // octet was found then `zero_index` is 0 and this also fails.
+        good &= crate::runtime::constant_time::constant_time_ge_u32(zero_index as u32, 2 + 8);
+
+        // Skip the separator. This is wrong if there was none, but then the message is not copied
+        // out either.
+        msg_index = zero_index + 1;
+        let mlen = num - msg_index;
+
+        // For good measure, do this check in constant time as well.
+        good &= crate::runtime::constant_time::constant_time_ge_u32(tlen as u32, mlen as u32);
+
+        // Move the result in place by `num - RSA_PKCS1_PADDING_SIZE - mlen` bytes to the left, then
+        // if `good` move `mlen` bytes from `em + RSA_PKCS1_PADDING_SIZE` to `to`; otherwise leave
+        // `to` unchanged. The copy is arranged so that it does not reveal the size of the data
+        // being copied through a timing side channel: parts of the buffer are copied multiple
+        // times, once per set bit of the real length, under a mask, so clear bits do an
+        // identically-shaped non-copy. Overall cost O(N*log(N)).
+        tlen = crate::runtime::constant_time::constant_time_select_int(
+            crate::runtime::constant_time::constant_time_lt_u32(
+                (num - RSA_PKCS1_PADDING_SIZE) as u32,
+                tlen as u32,
+            ),
+            num - RSA_PKCS1_PADDING_SIZE,
+            tlen,
+        );
+        msg_index = 1;
+        while msg_index < num - RSA_PKCS1_PADDING_SIZE {
+            mask = !crate::runtime::constant_time::constant_time_eq_u32(
+                (msg_index & (num - RSA_PKCS1_PADDING_SIZE - mlen)) as u32,
+                0,
+            );
+            i = RSA_PKCS1_PADDING_SIZE;
+            while i < num - msg_index {
+                let keep = *em.offset(i as isize);
+                let moved = *em.offset((i + msg_index) as isize);
+                *em.offset(i as isize) =
+                    crate::runtime::constant_time::constant_time_select_8(mask as u8, moved, keep);
+                i += 1;
+            }
+            msg_index <<= 1;
+        }
+        i = 0;
+        while i < tlen {
+            mask =
+                good & crate::runtime::constant_time::constant_time_lt_u32(i as u32, mlen as u32);
+            let keep = *to.offset(i as isize);
+            let moved = *em.offset((i + RSA_PKCS1_PADDING_SIZE) as isize);
+            *to.offset(i as isize) =
+                crate::runtime::constant_time::constant_time_select_8(mask as u8, moved, keep);
+            i += 1;
+        }
+
+        crate::runtime::mem::CRYPTO_clear_free(
+            em.cast::<c_void>(),
+            num as usize,
+            FILE_RSA_PK1,
+            LINE,
+        );
+        // The authority's `#ifndef FIPS_MODULE` arm: raise, then *flag* the record rather than
+        // remove it when the plaintext was in fact good. A transcription that guarded the raise on
+        // `!good` would get exactly the case the flag exists for wrong.
+        raise_site(&err_sites::RSA_PK1_270);
+        crate::runtime::err::err_clear_last_constant_time((1 & good) as c_int);
+
+        crate::runtime::constant_time::constant_time_select_int(good, mlen, -1)
+    }
+}
+
+/// `RSA_PSS_SALTLEN_AUTO_DIGEST_MAX` — `include/openssl/rsa.h:144`.
+///
+/// **`rsa.h` defines five salt-length names and only four distinct values.**
+/// `RSA_PSS_SALTLEN_DIGEST` is -1, `AUTO` is -2, `MAX` is -3, this one is -4, and
+/// `RSA_PSS_SALTLEN_MAX_SIGN` is -2 again under the header's own gloss "old compatible max salt
+/// length for sign only". `src/evp/pkey_ctx.rs` already publishes the three the ctrl-string map
+/// speaks; the two this pair adds are declared here because `rsa_pss.c`'s *add* is their reader,
+/// and they are transcribed as the header writes them rather than folded into `-2`/`-4` literals at
+/// the use site, because the authority's own `sLen == MAX_SIGN || sLen == AUTO` test is a
+/// statement about two names.
+const RSA_PSS_SALTLEN_AUTO_DIGEST_MAX: c_int = -4;
+
+/// `RSA_PSS_SALTLEN_MAX_SIGN` — `include/openssl/rsa.h:146`. See
+/// [`RSA_PSS_SALTLEN_AUTO_DIGEST_MAX`] for why it is a name here and not the literal `-2`.
+const RSA_PSS_SALTLEN_MAX_SIGN: c_int = -2;
+
+/// `int ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex(OSSL_LIB_CTX *libctx, unsigned char *to, int tlen,
+/// const unsigned char *from, int flen, const unsigned char *param, int plen, const EVP_MD *md,
+/// const EVP_MD *mgf1md)` — `rsa_oaep.c:54-149`.
+///
+/// NIST SP 800-56B section 7.2.2.3's EME-OAEP encoding, with the step letters the authority's own
+/// comments carry so the two can be read side by side. The shape a reader has to get right is that
+/// **`EM` is built in the caller's buffer and the two masks are applied in place**: `DB` lives at
+/// `to + mdlen + 1` and is masked with `MGF1(seed)`, and then `seed` at `to + 1` is masked with
+/// `MGF1(maskedDB)` — so the second mask is computed over the *already masked* data block, which
+/// is what makes the encoding invertible by the check above.
+///
+/// **The `libctx` is the caller's.** Same reason as the type-2 `_ex` above: the two exports below
+/// pass NULL and the provider's decrypt path passes the operation's context.
+///
+/// The `#ifdef FIPS_MODULE` arms of the authority are not transcribed, and this is the second file
+/// to say so: this crate has no FIPS branch, so the `EVP_MD_xof` refusals (`:79-89`) do not exist
+/// here. The `md == NULL` arm is the `#ifndef FIPS_MODULE` one, which is `EVP_sha1()`.
+///
+/// # Safety
+/// `libctx` is NULL or live; `to` is writable for `tlen` bytes; `from` is readable for `flen`
+/// bytes; `param` is readable for `plen` bytes (NULL with 0 is the empty label); `md` and `mgf1md`
+/// are NULL or live digest methods.
+#[allow(non_snake_case)] // the authority's name, kept verbatim like every other one
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+pub(crate) unsafe fn ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex(
+    libctx: *mut c_void,
+    to: *mut c_uchar,
+    tlen: c_int,
+    from: *const c_uchar,
+    flen: c_int,
+    param: *const c_uchar,
+    plen: c_int,
+    md: *const EvpMd,
+    mgf1md: *const EvpMd,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let emlen: c_int = tlen - 1;
+        let mut dbmask: *mut c_uchar = core::ptr::null_mut();
+        let mut seedmask = [0u8; EVP_MAX_MD_SIZE];
+        let mut dbmask_len: c_int = 0;
+
+        let mut md = md;
+        if md.is_null() {
+            // The authority's `#ifndef FIPS_MODULE` arm only; this crate has no FIPS branch.
+            md = crate::evp::legacy_sha::EVP_sha1();
+        }
+        let mut mgf1md = mgf1md;
+        if mgf1md.is_null() {
+            mgf1md = md;
+        }
+
+        // SAFETY: `md` is live (the default above when the caller passed NULL).
+        let mdlen: c_int = EVP_MD_get_size(md);
+        if mdlen <= 0 {
+            raise_site(&err_sites::RSA_OAEP_93);
+            return 0;
+        }
+
+        // step 2b: check KLen > nLen - 2 HLen - 2
+        if flen > emlen - 2 * mdlen - 1 {
+            raise_site(&err_sites::RSA_OAEP_99);
+            return 0;
+        }
+
+        if emlen < 2 * mdlen + 1 {
+            raise_site(&err_sites::RSA_OAEP_104);
+            return 0;
+        }
+
+        // step 3i: EM = 00000000 || maskedMGF || maskedDB
+        *to = 0;
+        let seed = to.offset(1);
+        let db = to.offset((mdlen + 1) as isize);
+
+        let completed = 'body: {
+            // step 3a: hash the additional input
+            if crate::evp::digest::EVP_Digest(
+                param.cast::<c_void>(),
+                plen as usize,
+                db,
+                core::ptr::null_mut(),
+                md,
+                core::ptr::null_mut(),
+            ) == 0
+            {
+                break 'body false;
+            }
+            // step 3b: zero bytes array of length nLen - KLen - 2 HLen - 2
+            core::ptr::write_bytes(
+                db.offset(mdlen as isize),
+                0,
+                (emlen - flen - 2 * mdlen - 1) as usize,
+            );
+            // step 3c: DB = HA || PS || 00000001 || K
+            *db.offset((emlen - flen - mdlen - 1) as isize) = 0x01;
+            core::ptr::copy_nonoverlapping(
+                from,
+                db.offset((emlen - flen - mdlen) as isize),
+                flen as usize,
+            );
+            // step 3d: generate random byte string
+            if RAND_bytes_ex(libctx, seed, mdlen as usize, 0) <= 0 {
+                break 'body false;
+            }
+
+            dbmask_len = emlen - mdlen;
+            dbmask = CRYPTO_malloc(dbmask_len as usize, FILE_RSA_OAEP, LINE).cast::<c_uchar>();
+            if dbmask.is_null() {
+                break 'body false;
+            }
+
+            // step 3e: dbMask = MGF(mgfSeed, nLen - HLen - 1)
+            if PKCS1_MGF1(dbmask, dbmask_len as c_long, seed, mdlen as c_long, mgf1md) < 0 {
+                break 'body false;
+            }
+            // step 3f: maskedDB = DB XOR dbMask
+            let mut i: c_int = 0;
+            while i < dbmask_len {
+                *db.offset(i as isize) ^= *dbmask.offset(i as isize);
+                i += 1;
+            }
+
+            // step 3g: mgfSeed = MGF(maskedDB, HLen)
+            if PKCS1_MGF1(
+                seedmask.as_mut_ptr(),
+                mdlen as c_long,
+                db,
+                dbmask_len as c_long,
+                mgf1md,
+            ) < 0
+            {
+                break 'body false;
+            }
+            // step 3h: maskedMGFSeed = mgfSeed XOR mgfSeedMask
+            i = 0;
+            while i < mdlen {
+                *seed.offset(i as isize) ^= seedmask[i as usize];
+                i += 1;
+            }
+            true
+        };
+
+        // The authority's `err:` label, reached by falling through and by every `goto err` in the
+        // block above. `dbmask_len` is 0 when the first `goto err` is taken, so the release is
+        // `(NULL, 0)` there -- the authority's own argument, transcribed rather than folded.
+        cleanse(seedmask.as_mut_ptr(), EVP_MAX_MD_SIZE);
+        crate::runtime::mem::CRYPTO_clear_free(
+            dbmask.cast::<c_void>(),
+            dbmask_len as usize,
+            FILE_RSA_OAEP,
+            LINE,
+        );
+        if completed {
+            1
+        } else {
+            0
+        }
+    }
+}
+
+/// `int RSA_padding_add_PKCS1_OAEP(unsigned char *to, int tlen, const unsigned char *from,
+/// int flen, const unsigned char *param, int plen)` — `rsa_oaep.c:39-45`.
+///
+/// Both digest arguments are NULL, so the `_ex` body substitutes `EVP_sha1()` for both. PKCS #1
+/// v2.2's default hash is SHA-1, which is what makes this the historical entry point and the
+/// `_mgf1` form the one a caller uses to choose otherwise.
+///
+/// # Safety
+/// `to` is writable for `tlen` bytes; `from` is readable for `flen` bytes; `param` is readable for
+/// `plen` bytes, and NULL with `plen == 0` is the empty label.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_padding_add_PKCS1_OAEP(
+    to: *mut c_uchar,
+    tlen: c_int,
+    from: *const c_uchar,
+    flen: c_int,
+    param: *const c_uchar,
+    plen: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract, forwarded unchanged; both digest arguments are NULL, which
+    // the callee documents as "use the default".
+    unsafe {
+        ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex(
+            core::ptr::null_mut(),
+            to,
+            tlen,
+            from,
+            flen,
+            param,
+            plen,
+            core::ptr::null(),
+            core::ptr::null(),
+        )
+    }
+}
+
+/// `int RSA_padding_add_PKCS1_OAEP_mgf1(unsigned char *to, int tlen, const unsigned char *from,
+/// int flen, const unsigned char *param, int plen, const EVP_MD *md, const EVP_MD *mgf1md)` —
+/// `rsa_oaep.c:151-158`.
+///
+/// The same wrapper with the caller's digests: NULL `libctx`, everything else forwarded. The
+/// NULL-digest defaults are the `_ex` body's, so a caller that passes NULL `mgf1md` gets `md`.
+///
+/// # Safety
+/// `to` is writable for `tlen` bytes; `from` is readable for `flen` bytes; `param` is readable for
+/// `plen` bytes (NULL with 0 is the empty label); `md` and `mgf1md` are NULL or live digest
+/// methods.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_padding_add_PKCS1_OAEP_mgf1(
+    to: *mut c_uchar,
+    tlen: c_int,
+    from: *const c_uchar,
+    flen: c_int,
+    param: *const c_uchar,
+    plen: c_int,
+    md: *const EvpMd,
+    mgf1md: *const EvpMd,
+) -> c_int {
+    // SAFETY: the caller's contract, forwarded with the default context.
+    unsafe {
+        ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex(
+            core::ptr::null_mut(),
+            to,
+            tlen,
+            from,
+            flen,
+            param,
+            plen,
+            md,
+            mgf1md,
+        )
+    }
+}
+
+/// `int ossl_rsa_padding_add_PKCS1_PSS_mgf1(RSA *rsa, unsigned char *EM, const unsigned char
+/// *mHash, const EVP_MD *Hash, const EVP_MD *mgf1Hash, int *sLenOut)` — `rsa_pss.c:173-290`.
+/// Internal, declared in `include/crypto/rsa.h:52-55`.
+///
+/// RSASSA-PSS's EMSA-PSS encoding as PKCS #1 v2.2 section 9.1.1 writes it, and the two things a
+/// reader gets wrong are both length decisions rather than bytes:
+///
+/// * **`sLen` is an in/out parameter and the negative values are conventions, not lengths.** `-1`
+///   means "the digest length", `-2` and `-3` both mean "the maximum the modulus allows", and
+///   `-4` means the maximum *capped at the digest length* — which is the one that needs
+///   `sLenMax`, because it is the only convention that is `min(hLen, maximum)` rather than one of
+///   the two on its own. A value below `-4` is a refusal, not a clamp.
+/// * **`MSBits` can be zero, and then the encoding moves.** When `BN_num_bits(n) - 1` is a
+///   multiple of 8 the top octet of `EM` must be zero, so the authority writes it, advances `EM`
+///   *and* decrements `emLen`. After that every offset in the function is relative to the advanced
+///   pointer, including the `0xbc` trailer. A transcription that advanced without decrementing, or
+///   the reverse, puts the trailer one octet out and the block still "looks" like a PSS encoding.
+///
+/// The salt is drawn with `RAND_bytes_ex(rsa->libctx, ...)` — **the object's context, not a
+/// parameter's** — and only when `sLen > 0`, which is why `salt != NULL` implies `sLen > 0` and why
+/// the cleanup can pass the resolved `sLen`.
+///
+/// # Safety
+/// `rsa` is a live object with a live `n`; `EM` is writable for `RSA_size(rsa)` bytes; `mHash` is
+/// readable for `EVP_MD_get_size(Hash)` bytes; `Hash` and `mgf1Hash` are NULL or live digest
+/// methods; `sLenOut` is a live `int` the callee may write back.
+#[allow(non_snake_case)] // the authority's name, kept verbatim like every other one
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+pub(crate) unsafe fn ossl_rsa_padding_add_PKCS1_PSS_mgf1(
+    rsa: *mut Rsa,
+    em: *mut c_uchar,
+    m_hash: *const c_uchar,
+    hash: *const EvpMd,
+    mgf1_hash: *const EvpMd,
+    s_len_out: *mut c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        // `rsa_pss.c:25`'s `static const unsigned char zeroes[] = { 0, ... }`, the eight octets
+        // PKCS #1 v2.2 section 9.1.1's `H = Hash(0x00 * 8 || mHash || salt)` starts with.
+        const ZEROES: [u8; 8] = [0; 8];
+
+        let mut s_len: c_int = *s_len_out;
+        let mut s_len_max: c_int = -1;
+        let mut salt: *mut c_uchar = core::ptr::null_mut();
+        let mut ctx: *mut EvpMdCtx = core::ptr::null_mut();
+
+        let mut mgf1_hash = mgf1_hash;
+        if mgf1_hash.is_null() {
+            mgf1_hash = hash;
+        }
+
+        // SAFETY: `hash` is NULL or live per this function's contract.
+        let h_len: c_int = EVP_MD_get_size(hash);
+
+        let completed = 'body: {
+            if h_len <= 0 {
+                break 'body false;
+            }
+            // The negative `sLen` conventions. The `-4` arm is the only one that keeps the digest
+            // length as a *cap* rather than as the value, which is what `sLenMax` carries.
+            if s_len == RSA_PSS_SALTLEN_DIGEST {
+                s_len = h_len;
+            } else if s_len == RSA_PSS_SALTLEN_MAX_SIGN || s_len == RSA_PSS_SALTLEN_AUTO {
+                s_len = RSA_PSS_SALTLEN_MAX;
+            } else if s_len == RSA_PSS_SALTLEN_AUTO_DIGEST_MAX {
+                s_len = RSA_PSS_SALTLEN_MAX;
+                s_len_max = h_len;
+            } else if s_len < RSA_PSS_SALTLEN_AUTO_DIGEST_MAX {
+                raise_site(&err_sites::RSA_PSS_216);
+                break 'body false;
+            }
+
+            // SAFETY: `rsa` is live with a live `n`; `RSA_size` reads it as `BN_num_bytes` is
+            // written out in `object.rs`.
+            let msbits = (BN_num_bits((*rsa).n) - 1) & 0x7;
+            let mut em_len = object::RSA_size(rsa);
+            // The encoding moves when `MSBits` is zero: one octet of `EM` is spent on the leading
+            // zero and `emLen` shrinks to match.
+            let mut em = em;
+            if msbits == 0 {
+                *em = 0;
+                em = em.offset(1);
+                em_len -= 1;
+            }
+            if em_len < h_len + 2 {
+                raise_site(&err_sites::RSA_PSS_227);
+                break 'body false;
+            }
+            if s_len == RSA_PSS_SALTLEN_MAX {
+                s_len = em_len - h_len - 2;
+                if s_len_max >= 0 && s_len > s_len_max {
+                    s_len = s_len_max;
+                }
+            } else if s_len > em_len - h_len - 2 {
+                raise_site(&err_sites::RSA_PSS_235);
+                break 'body false;
+            }
+            if s_len > 0 {
+                salt = CRYPTO_malloc(s_len as usize, FILE_RSA_PSS, LINE).cast::<c_uchar>();
+                if salt.is_null() {
+                    break 'body false;
+                }
+                // SAFETY: `salt` is writable for `s_len` bytes and `rsa` is live; the context is
+                // the object's own, which is the `_ex`-less half of the pair's whole point.
+                if RAND_bytes_ex((*rsa).libctx, salt, s_len as usize, 0) <= 0 {
+                    break 'body false;
+                }
+            }
+            let masked_dblen = em_len - h_len - 1;
+            let h = em.offset(masked_dblen as isize);
+
+            ctx = EVP_MD_CTX_new();
+            if ctx.is_null() {
+                break 'body false;
+            }
+            if EVP_DigestInit_ex(ctx, hash, core::ptr::null_mut()) == 0
+                || EVP_DigestUpdate(ctx, ZEROES.as_ptr().cast(), ZEROES.len()) == 0
+                || EVP_DigestUpdate(ctx, m_hash.cast(), h_len as usize) == 0
+            {
+                break 'body false;
+            }
+            if s_len != 0 && EVP_DigestUpdate(ctx, salt.cast_const().cast(), s_len as usize) == 0 {
+                break 'body false;
+            }
+            if EVP_DigestFinal_ex(ctx, h, core::ptr::null_mut()) == 0 {
+                break 'body false;
+            }
+
+            // Generate dbMask in place then perform XOR on it.
+            if PKCS1_MGF1(em, masked_dblen as c_long, h, h_len as c_long, mgf1_hash) != 0 {
+                break 'body false;
+            }
+
+            let mut p = em;
+            // Initial PS XORs with all zeroes which is a NOP so just update pointer. Note from a
+            // test above this value is guaranteed to be non-negative.
+            p = p.offset((em_len - s_len - h_len - 2) as isize);
+            *p ^= 0x1;
+            p = p.offset(1);
+            if s_len > 0 {
+                let mut i: c_int = 0;
+                while i < s_len {
+                    *p ^= *salt.offset(i as isize);
+                    p = p.offset(1);
+                    i += 1;
+                }
+            }
+            if msbits != 0 {
+                *em &= (0xff >> (8 - msbits)) as u8;
+            }
+
+            // H is already in place so just set final 0xbc.
+            *em.offset((em_len - 1) as isize) = 0xbc;
+
+            *s_len_out = s_len;
+            true
+        };
+
+        // The authority's `err:` label. `sLen` here is the *resolved* value, which is what the
+        // authority's `(size_t)sLen` sees too; `salt != NULL` implies it is positive.
+        EVP_MD_CTX_free(ctx);
+        crate::runtime::mem::CRYPTO_clear_free(
+            salt.cast::<c_void>(),
+            s_len as usize,
+            FILE_RSA_PSS,
+            LINE,
+        );
+        if completed {
+            1
+        } else {
+            0
+        }
+    }
+}
+
+/// `int RSA_padding_add_PKCS1_PSS_mgf1(RSA *rsa, unsigned char *EM, const unsigned char *mHash,
+/// const EVP_MD *Hash, const EVP_MD *mgf1Hash, int sLen)` — `rsa_pss.c:165-171`.
+///
+/// The export is the same `sLen` convention on the outside and a *pointer* on the inside: the
+/// internal takes `int *sLenOut` so that it can answer with the value it resolved. This wrapper is
+/// the whole of that difference, plus the NULL context the header's signature does not carry.
+///
+/// # Safety
+/// `rsa` is a live object with a live `n`; `EM` is writable for `RSA_size(rsa)` bytes; `mHash` is
+/// readable for `EVP_MD_get_size(Hash)` bytes; `Hash` and `mgf1Hash` are NULL or live digest
+/// methods.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_padding_add_PKCS1_PSS_mgf1(
+    rsa: *mut Rsa,
+    em: *mut c_uchar,
+    m_hash: *const c_uchar,
+    hash: *const EvpMd,
+    mgf1_hash: *const EvpMd,
+    s_len: c_int,
+) -> c_int {
+    let mut s_len = s_len;
+    // SAFETY: the caller's contract, forwarded with a local `sLen` the callee may write back.
+    unsafe { ossl_rsa_padding_add_PKCS1_PSS_mgf1(rsa, em, m_hash, hash, mgf1_hash, &mut s_len) }
+}
+
+/// `int RSA_padding_add_PKCS1_PSS(RSA *rsa, unsigned char *EM, const unsigned char *mHash,
+/// const EVP_MD *Hash, int sLen)` — `rsa_pss.c:158-163`.
+///
+/// The `_mgf1` form with `mgf1Hash` NULL, which the internal turns into `Hash`. A caller that
+/// wants a mask generation function other than the message digest wants the other name.
+///
+/// # Safety
+/// `rsa` is a live object with a live `n`; `EM` is writable for `RSA_size(rsa)` bytes; `mHash` is
+/// readable for `EVP_MD_get_size(Hash)` bytes; `Hash` is NULL or a live digest method.
+#[no_mangle]
+pub unsafe extern "C" fn RSA_padding_add_PKCS1_PSS(
+    rsa: *mut Rsa,
+    em: *mut c_uchar,
+    m_hash: *const c_uchar,
+    hash: *const EvpMd,
+    s_len: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract; a NULL `mgf1Hash` means "the same as `Hash`".
+    unsafe { RSA_padding_add_PKCS1_PSS_mgf1(rsa, em, m_hash, hash, core::ptr::null(), s_len) }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1644,5 +2411,627 @@ mod tests {
         assert_eq!(core::mem::offset_of!(RsaPrimeInfo, t), 16);
         assert_eq!(core::mem::offset_of!(RsaPrimeInfo, pp), 24);
         assert_eq!(core::mem::offset_of!(RsaPrimeInfo, m), 32);
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Slice C's randomised half (D323): the round trips the format makes possible, and the
+    // refusals. **Nothing below asserts a random byte**: the padding octets, the OAEP seed and
+    // the PSS salt are all drawn from the DRBG, so every arm is either a return code, a
+    // structural predicate over the block, or an add-then-check round trip whose *answer* is
+    // deterministic even though the bytes between the two calls are not.
+    // ---------------------------------------------------------------------------------------
+
+    /// `flen` octets of a recognisable, non-zero message.
+    const MSG: [u8; 64] = [
+        0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae,
+        0xaf, 0xb0, 0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd,
+        0xbe, 0xbf, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, 0xc8, 0xc9, 0xca, 0xcb, 0xcc,
+        0xcd, 0xce, 0xcf, 0xd0, 0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8, 0xd9, 0xda, 0xdb,
+        0xdc, 0xdd, 0xde, 0xdf,
+    ];
+
+    /// **The type-2 add's block and its round trip through the type-2 check.**
+    ///
+    /// The structural assertions are the format: `00 02`, then `tlen - flen - 3` padding octets
+    /// **none of which is zero**, then the separating zero, then the message. The non-zero
+    /// assertion is the retry loop's whole observable effect and it is deterministic -- the loop
+    /// exists precisely to make it true whatever the DRBG drew.
+    ///
+    /// The round trip is the part that would catch a transcription error the format alone would
+    /// not: the check scans for the *first* zero octet from index 2, so a padding octet that was
+    /// allowed to stay zero would move `msg_index` and the check would answer a different length
+    /// than the one written.
+    #[test]
+    fn the_type_2_padding_round_trips_through_its_check() {
+        let mut block = [0u8; 16];
+        let mut out = [0x5au8; 64];
+
+        // SAFETY: `block` is 16 writable octets, `MSG` is 5 readable ones.
+        let added =
+            unsafe { RSA_padding_add_PKCS1_type_2(block.as_mut_ptr(), 16, MSG.as_ptr(), 5) };
+        assert_eq!(added, 1);
+        assert_eq!(block[0], 0x00);
+        assert_eq!(block[1], 0x02);
+        /* `j = 16 - 3 - 5 = 8` padding octets at 2..10, then the separator at 10. */
+        assert!(block[2..10].iter().all(|b| *b != 0));
+        assert_eq!(block[10], 0x00);
+        assert_eq!(&block[11..16], &MSG[..5]);
+
+        // SAFETY: `block` is 16 readable octets, `out` is 64 writable ones.
+        let checked =
+            unsafe { RSA_padding_check_PKCS1_type_2(out.as_mut_ptr(), 64, block.as_ptr(), 16, 16) };
+        assert_eq!(checked, 5);
+        assert_eq!(&out[..5], &MSG[..5]);
+
+        /* A block whose padding string is eight octets wide is the *minimum* the check accepts,
+         * and it is the case `zero_index >= 2 + 8` exists for. One octet narrower must fail. */
+        let mut narrow = [0x11u8; 16];
+        narrow[0] = 0x00;
+        narrow[1] = 0x02;
+        narrow[9] = 0x00;
+        // SAFETY: as above.
+        let checked = unsafe {
+            RSA_padding_check_PKCS1_type_2(out.as_mut_ptr(), 64, narrow.as_ptr(), 16, 16)
+        };
+        assert_eq!(checked, -1);
+    }
+
+    /// **The type-2 pair's refusals, and how many of them raise.**
+    ///
+    /// The two add refusals raise *different* reasons -- too long is
+    /// `RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE` and negative is `RSA_R_INVALID_LENGTH` -- and they are
+    /// checked in that order, so a negative `flen` at a `tlen` under the padding size is the
+    /// *first* refusal rather than the second. `flen < 0` is otherwise unreachable from a caller
+    /// with a real message, which is why it is written here: it is the arm the second error site
+    /// exists for.
+    #[test]
+    fn the_type_2_padding_refuses_what_the_authority_refuses() {
+        let mut block = [0u8; 16];
+        let mut out = [0u8; 64];
+
+        // SAFETY: every buffer is at least as long as the length argument, and each refusal is
+        // decided before the message is read.
+        unsafe {
+            /* `flen > tlen - RSA_PKCS1_PADDING_SIZE`: 6 > 16 - 11. */
+            assert_eq!(
+                RSA_padding_add_PKCS1_type_2(block.as_mut_ptr(), 16, MSG.as_ptr(), 6),
+                0
+            );
+            /* `flen < 0`, which the first test above does not catch. */
+            assert_eq!(
+                RSA_padding_add_PKCS1_type_2(block.as_mut_ptr(), 16, MSG.as_ptr(), -1),
+                0
+            );
+            /* A `tlen` exactly at the padding size: the maximum message is `tlen - 11` octets,
+             * so a one-octet message is already too long and this is the first arm again rather
+             * than the `flen < 0` one. */
+            assert_eq!(
+                RSA_padding_add_PKCS1_type_2(block.as_mut_ptr(), 11, MSG.as_ptr(), 1),
+                0
+            );
+
+            /* The check's two silent refusals: `tlen <= 0 || flen <= 0` answers `-1` and
+             * raises nothing. */
+            assert_eq!(
+                RSA_padding_check_PKCS1_type_2(out.as_mut_ptr(), 0, block.as_ptr(), 16, 16),
+                -1
+            );
+            assert_eq!(
+                RSA_padding_check_PKCS1_type_2(out.as_mut_ptr(), 64, block.as_ptr(), 0, 16),
+                -1
+            );
+            assert_eq!(
+                RSA_padding_check_PKCS1_type_2(out.as_mut_ptr(), 64, block.as_ptr(), 16, 16),
+                -1
+            );
+        }
+
+        /* `num < RSA_PKCS1_PADDING_SIZE`, which raises: eight octets cannot hold the eleven-octet
+         * minimum. */
+        assert_eq!(
+            // SAFETY: `block` is 16 readable octets and `out` is 64 writable ones.
+            unsafe { RSA_padding_check_PKCS1_type_2(out.as_mut_ptr(), 64, block.as_ptr(), 8, 8) },
+            -1
+        );
+
+        /* A header that is not `00 02`, and a padding string with no separator at all. Both are
+         * the constant-time refusal: `-1`, and the error left on the queue rather than cleared. */
+        let mut block = [0x11u8; 16];
+        block[0] = 0x01;
+        block[1] = 0x02;
+        assert_eq!(
+            // SAFETY: as above.
+            unsafe { RSA_padding_check_PKCS1_type_2(out.as_mut_ptr(), 64, block.as_ptr(), 16, 16) },
+            -1
+        );
+        block[0] = 0x00;
+        block[1] = 0x03;
+        assert_eq!(
+            // SAFETY: as above.
+            unsafe { RSA_padding_check_PKCS1_type_2(out.as_mut_ptr(), 64, block.as_ptr(), 16, 16) },
+            -1
+        );
+        block[1] = 0x02;
+        assert_eq!(
+            // SAFETY: as above; no octet of `block` is zero, so the scan finds no separator.
+            unsafe { RSA_padding_check_PKCS1_type_2(out.as_mut_ptr(), 64, block.as_ptr(), 16, 16) },
+            -1
+        );
+    }
+
+    /// **The OAEP adds round-trip through the already-landed OAEP checks.**
+    ///
+    /// The check is a pure function of its input, so this is a genuine differential observation in
+    /// both courts and a genuine round trip here: the seed is random, the *answer* is not. Both
+    /// entry points are exercised, because they reach the same body through different NULL
+    /// substitutions -- `RSA_padding_add_PKCS1_OAEP` takes SHA-1 for both digests, and the `_mgf1`
+    /// form takes the caller's and defaults only `mgf1md` to `md`.
+    #[test]
+    fn the_oaep_padding_round_trips_through_its_check() {
+        let md = crate::evp::legacy_sha::EVP_sha1();
+        let label: [u8; 5] = [0x01, 0x02, 0x03, 0x04, 0x05];
+        let mut em = [0u8; 128];
+        let mut out = [0x5au8; 128];
+
+        // SAFETY: `em` is 128 writable octets, the message and label are as long as they say, and
+        // `md` is a live method the padding layer reads.
+        unsafe {
+            assert_eq!(
+                RSA_padding_add_PKCS1_OAEP_mgf1(
+                    em.as_mut_ptr(),
+                    128,
+                    MSG.as_ptr(),
+                    16,
+                    label.as_ptr(),
+                    5,
+                    md,
+                    md,
+                ),
+                1
+            );
+            /* The one structural fact that is not random: `EM`'s first octet is the version. */
+            assert_eq!(em[0], 0x00);
+            let checked = RSA_padding_check_PKCS1_OAEP_mgf1(
+                out.as_mut_ptr(),
+                128,
+                em.as_ptr(),
+                128,
+                128,
+                label.as_ptr(),
+                5,
+                md,
+                md,
+            );
+            assert_eq!(checked, 16);
+            assert_eq!(&out[..16], &MSG[..16]);
+
+            /* The wrapper: NULL digests mean SHA-1 for both, and the label is empty. */
+            assert_eq!(
+                RSA_padding_add_PKCS1_OAEP(
+                    em.as_mut_ptr(),
+                    128,
+                    MSG.as_ptr(),
+                    16,
+                    core::ptr::null(),
+                    0,
+                ),
+                1
+            );
+            let checked = RSA_padding_check_PKCS1_OAEP(
+                out.as_mut_ptr(),
+                128,
+                em.as_ptr(),
+                128,
+                128,
+                core::ptr::null(),
+                0,
+            );
+            assert_eq!(checked, 16);
+            assert_eq!(&out[..16], &MSG[..16]);
+
+            /* A label the two sides disagree about must not decode: the label is hashed into
+             * `DB`, so the hash comparison is what refuses it. */
+            assert_eq!(
+                RSA_padding_add_PKCS1_OAEP_mgf1(
+                    em.as_mut_ptr(),
+                    128,
+                    MSG.as_ptr(),
+                    16,
+                    label.as_ptr(),
+                    5,
+                    md,
+                    md,
+                ),
+                1
+            );
+            let checked = RSA_padding_check_PKCS1_OAEP_mgf1(
+                out.as_mut_ptr(),
+                128,
+                em.as_ptr(),
+                128,
+                128,
+                core::ptr::null(),
+                0,
+                md,
+                md,
+            );
+            assert_eq!(checked, -1);
+        }
+    }
+
+    /// **The OAEP add's two length refusals, and the reason one of them needs a negative `flen`.**
+    ///
+    /// `emlen` is `tlen - 1` and the two checks are ordered, so at any modulus too small for the
+    /// digest the *first* one fires for every non-negative message length: `emlen < 2*mdlen + 1`
+    /// means the largest accepted `flen` is `emlen - 2*mdlen - 1 <= -1`. The
+    /// `RSA_R_KEY_SIZE_TOO_SMALL` site is therefore reachable only through the `flen < 0` the
+    /// authority never checks for, and this arm is what says so rather than leaving the site
+    /// unexercised.
+    #[test]
+    fn the_oaep_padding_refuses_the_two_lengths_it_names() {
+        let md = crate::evp::legacy_sha::EVP_sha1();
+        let mut em = [0u8; 128];
+
+        // SAFETY: `em` is 128 writable octets and every refusal below is decided before `MSG` is
+        // read, so the length arguments do not have to be real message lengths.
+        unsafe {
+            /* `flen (87) > emlen (127) - 2*mdlen (40) - 1 (86)`. */
+            assert_eq!(
+                RSA_padding_add_PKCS1_OAEP_mgf1(
+                    em.as_mut_ptr(),
+                    128,
+                    MSG.as_ptr(),
+                    87,
+                    core::ptr::null(),
+                    0,
+                    md,
+                    md,
+                ),
+                0
+            );
+            /* `emlen (40) < 2*mdlen + 1 (41)`, reached only with `flen == -1`. */
+            assert_eq!(
+                RSA_padding_add_PKCS1_OAEP_mgf1(
+                    em.as_mut_ptr(),
+                    41,
+                    MSG.as_ptr(),
+                    -1,
+                    core::ptr::null(),
+                    0,
+                    md,
+                    md,
+                ),
+                0
+            );
+            /* The largest length the 128-octet modulus takes is 86, and it must be accepted. */
+            assert_eq!(
+                RSA_padding_add_PKCS1_OAEP_mgf1(
+                    em.as_mut_ptr(),
+                    128,
+                    MSG.as_ptr(),
+                    64,
+                    core::ptr::null(),
+                    0,
+                    md,
+                    md,
+                ),
+                1
+            );
+        }
+    }
+
+    /// An `RSA` with only `n` set, which is all the PSS add reads: `BN_num_bits(n)` for the
+    /// leading bits and `RSA_size` for the block width. The rest is zeroed for the reason
+    /// `object.rs`'s own `blank_object` gives -- an all-zero bit pattern is a valid `Rsa` -- and
+    /// the object is never passed to `RSA_free`.
+    fn pss_object(bits: c_int) -> (Rsa, *mut BigNum) {
+        use crate::bn::bignum::{BN_new, BN_set_bit};
+
+        // SAFETY: `Rsa` is a plain aggregate of integers, pointers and pointer-only data structs.
+        let mut rsa: Rsa = unsafe { core::mem::zeroed() };
+        // SAFETY: `BN_new` answers a fresh object or NULL, which is asserted.
+        let n = unsafe { BN_new() };
+        assert!(!n.is_null());
+        // SAFETY: `n` is live and `bits >= 1` at every call site below.
+        assert_eq!(unsafe { BN_set_bit(n, bits - 1) }, 1);
+        rsa.n = n;
+        (rsa, n)
+    }
+
+    /// **The recovery `ossl_rsa_verify_PKCS1_PSS_mgf1` performs, written out here** because that
+    /// verifier is slice D's and is not landed: unmask `DB` with `MGF1(H)`, drop the bits `MSBits`
+    /// forbids, find the `0x01`, and recompute `H = Hash(0x00 * 8 || mHash || salt)`.
+    ///
+    /// **This is a round trip and not a restatement of the writer.** A block that fails it is one
+    /// the authority's own verifier refuses, and the property it checks is exactly the one the
+    /// salt's randomness makes unprintable: the recovered salt has to be the octets the writer
+    /// drew, and the only way to know that without reading randomness is to hash them again.
+    fn pss_block_decodes(
+        em: &[u8],
+        msbits: c_int,
+        m_hash: &[u8],
+        h_len: usize,
+        md: *const EvpMd,
+        mgf1: *const EvpMd,
+        want_s_len: c_int,
+    ) -> bool {
+        let Some(masked_dblen) = em.len().checked_sub(h_len + 1) else {
+            return false;
+        };
+        let mut db = [0u8; 256];
+        if masked_dblen == 0 || masked_dblen > db.len() {
+            return false;
+        }
+        let h = &em[masked_dblen..masked_dblen + h_len];
+
+        // SAFETY: every buffer is the length `PKCS1_MGF1` is told, `h_len` is a digest size and
+        // `mgf1` is a live method.
+        if unsafe {
+            PKCS1_MGF1(
+                db.as_mut_ptr(),
+                masked_dblen as c_long,
+                h.as_ptr(),
+                h_len as c_long,
+                mgf1,
+            )
+        } != 0
+        {
+            return false;
+        }
+        for i in 0..masked_dblen {
+            db[i] ^= em[i];
+        }
+        if msbits != 0 {
+            db[0] &= (0xffu16 >> (8 - msbits)) as u8;
+        }
+
+        /* The authority's own scan, including its "the separator may be the last octet" arm. */
+        let mut i = 0usize;
+        while i < masked_dblen - 1 && db[i] == 0 {
+            i += 1;
+        }
+        if db[i] != 0x1 {
+            return false;
+        }
+        i += 1;
+        let s_len = masked_dblen - i;
+        if s_len != want_s_len as usize {
+            return false;
+        }
+
+        let mut buf = [0u8; 8 + EVP_MAX_MD_SIZE + 256];
+        buf[8..8 + m_hash.len()].copy_from_slice(m_hash);
+        buf[8 + m_hash.len()..8 + m_hash.len() + s_len].copy_from_slice(&db[i..i + s_len]);
+        let mut h2 = [0u8; EVP_MAX_MD_SIZE];
+        // SAFETY: `buf` is `8 + m_hash.len() + s_len` readable octets, which is the length passed;
+        // `h2` is `EVP_MAX_MD_SIZE` and the digest is no wider; `md` is live.
+        let ok = unsafe {
+            crate::evp::digest::EVP_Digest(
+                buf.as_ptr().cast(),
+                8 + m_hash.len() + s_len,
+                h2.as_mut_ptr(),
+                core::ptr::null_mut(),
+                md,
+                core::ptr::null_mut(),
+            )
+        } == 1;
+        ok && &h2[..h_len] == h
+    }
+
+    /// **The PSS add round-trips through that recovery, and the salt-length conventions are the
+    /// observation.**
+    ///
+    /// The cases are the five negative spellings -- `-1` is the digest length, `-2`/`-3` the
+    /// modulus maximum, `-4` the maximum capped at the digest length -- plus a positive length, at
+    /// two moduli: one whose `MSBits` is 7 (a 1024-bit `n`) and one whose `MSBits` **is zero** (a
+    /// 1025-bit `n`), which is the case that spends an octet on a leading zero and shrinks `emLen`
+    /// to match. That arm is the reason the effective block below is offset by one.
+    #[test]
+    fn the_pss_padding_writes_a_block_its_own_recovery_accepts() {
+        use crate::bn::bignum::BN_free;
+
+        let md = crate::evp::legacy_sha::EVP_sha1();
+        let m_hash = [0x5au8; 20];
+        let h_len = 20usize;
+
+        /* (modulus bits, requested sLen, resolved sLen) */
+        let cases: [(c_int, c_int, c_int); 7] = [
+            (1024, 20, 20),
+            (1024, RSA_PSS_SALTLEN_DIGEST, 20),
+            (1024, RSA_PSS_SALTLEN_MAX, 106),
+            (1024, RSA_PSS_SALTLEN_AUTO, 106),
+            (1024, RSA_PSS_SALTLEN_MAX_SIGN, 106),
+            (1024, RSA_PSS_SALTLEN_AUTO_DIGEST_MAX, 20),
+            (1025, 20, 20),
+        ];
+
+        for (bits, s_len, want) in cases {
+            let (mut rsa, n) = pss_object(bits);
+            let mut em = [0u8; 129];
+
+            // SAFETY: `n` is live at `bits` bits, so `RSA_size` is at most 129 and `em` holds the
+            // whole block; `m_hash` is `EVP_MD_get_size(EVP_sha1())` octets; `md` is live.
+            let added = unsafe {
+                RSA_padding_add_PKCS1_PSS(&mut rsa, em.as_mut_ptr(), m_hash.as_ptr(), md, s_len)
+            };
+            assert_eq!(added, 1, "the add refused sLen {s_len} at {bits} bits");
+
+            // SAFETY: `n` is live, so `BN_num_bits` reads a valid `BIGNUM`.
+            let msbits = unsafe { (BN_num_bits(n) - 1) & 0x7 };
+            let base = if msbits == 0 { 1usize } else { 0usize };
+            // SAFETY: `rsa` is live with a live `n`, which is all `RSA_size` reads.
+            let em_len = unsafe { object::RSA_size(&rsa) } as usize - base;
+
+            /* The authority's first-octet test, `EM[0] & (0xFF << MSBits) == 0`: with `MSBits`
+             * zero that mask is `0xFF`, so the test is the leading zero octet itself. */
+            assert_eq!(em[0] as u32 & (0xffu32 << msbits), 0);
+            /* The trailer, once. */
+            assert_eq!(em[em_len + base - 1], 0xbc);
+
+            assert!(
+                pss_block_decodes(
+                    &em[base..base + em_len],
+                    msbits,
+                    &m_hash,
+                    h_len,
+                    md,
+                    md,
+                    want
+                ),
+                "sLen {s_len} at {bits} bits did not decode back to its own salt length"
+            );
+
+            // SAFETY: `n` was allocated by `BN_new` in `pss_object` and is not used again.
+            unsafe { BN_free(n) };
+        }
+    }
+
+    /// **The internal's `sLenOut` write-back, and the one `sLenMax` exists for.** `-4` is the only
+    /// convention that is `min(hLen, maximum)` rather than one of the two, so a transcription that
+    /// lost `sLenMax` would answer 106 here where the authority answers 20 -- and the block would
+    /// still verify, because the recovery uses whatever length the block encodes.
+    #[test]
+    fn the_pss_internal_answers_with_the_salt_length_it_resolved() {
+        use crate::bn::bignum::BN_free;
+
+        let md = crate::evp::legacy_sha::EVP_sha1();
+        let m_hash = [0x5au8; 20];
+        let (mut rsa, n) = pss_object(1024);
+
+        for (requested, resolved) in [
+            (RSA_PSS_SALTLEN_DIGEST, 20),
+            (RSA_PSS_SALTLEN_MAX, 106),
+            (RSA_PSS_SALTLEN_AUTO_DIGEST_MAX, 20),
+            (0, 0),
+            (106, 106),
+        ] {
+            let mut s_len: c_int = requested;
+            let mut em = [0u8; 128];
+            // SAFETY: the same contract as the round-trip test above; `s_len` is a live local the
+            // callee may write back.
+            let ret = unsafe {
+                ossl_rsa_padding_add_PKCS1_PSS_mgf1(
+                    &mut rsa,
+                    em.as_mut_ptr(),
+                    m_hash.as_ptr(),
+                    md,
+                    md,
+                    &mut s_len,
+                )
+            };
+            assert_eq!(ret, 1, "the internal refused sLen {requested}");
+            assert_eq!(s_len, resolved, "sLen {requested} resolved differently");
+            /* A zero-length salt is legal and draws nothing: the trailer is still written. */
+            assert_eq!(em[127], 0xbc);
+        }
+
+        // SAFETY: `n` was allocated by `BN_new` in `pss_object` and is not used again.
+        unsafe { BN_free(n) };
+    }
+
+    /// **The PSS add's three refusals.** A salt length below the lowest convention, a salt length
+    /// above what the modulus allows, and a modulus too small to hold the hash plus the two
+    /// mandatory octets -- each a different error site.
+    #[test]
+    fn the_pss_padding_refuses_an_impossible_salt_length() {
+        use crate::bn::bignum::BN_free;
+
+        let md = crate::evp::legacy_sha::EVP_sha1();
+        let m_hash = [0x5au8; 20];
+        let (mut rsa, n) = pss_object(1024);
+        let mut em = [0u8; 129];
+
+        // SAFETY: `rsa` has a live 1024-bit `n`, so `RSA_size` is 128 and `em` holds it; every
+        // refusal below is decided before the salt is drawn or the block is written.
+        unsafe {
+            /* `sLen (107) > emLen (128) - hLen (20) - 2 (106)`. */
+            assert_eq!(
+                RSA_padding_add_PKCS1_PSS(&mut rsa, em.as_mut_ptr(), m_hash.as_ptr(), md, 107),
+                0
+            );
+            /* `-5 < RSA_PSS_SALTLEN_AUTO_DIGEST_MAX (-4)`: a refusal, not a clamp. */
+            assert_eq!(
+                RSA_padding_add_PKCS1_PSS(&mut rsa, em.as_mut_ptr(), m_hash.as_ptr(), md, -5),
+                0
+            );
+        }
+
+        // SAFETY: `n` was allocated by `BN_new` in `pss_object` and is not used again.
+        unsafe { BN_free(n) };
+
+        /* A 64-bit modulus is eight octets, which is less than `hLen + 2` for SHA-1 -- and the
+         * refusal is reached before the block is touched, so the eight-octet buffer is enough. */
+        let (mut small, n) = pss_object(64);
+        let mut tiny = [0u8; 8];
+        assert_eq!(
+            unsafe {
+                // SAFETY: `small` has a live 64-bit `n`, so `RSA_size` is 8 and `tiny` holds it;
+                // the refusal is decided before the block is written, so `tiny` is never read.
+                RSA_padding_add_PKCS1_PSS_mgf1(
+                    &mut small,
+                    tiny.as_mut_ptr(),
+                    m_hash.as_ptr(),
+                    md,
+                    md,
+                    0,
+                )
+            },
+            0
+        );
+        // SAFETY: `n` was allocated by `BN_new` in `pss_object` and is not used again.
+        unsafe { BN_free(n) };
+    }
+
+    /// **The PSS add with two different digests.** `Hash` decides `hLen` and therefore the block's
+    /// split; `mgf1Hash` decides only the mask. A transcription that used one for the other would
+    /// produce a block that still carries the trailer and the leading bits, so the recovery is the
+    /// arm that catches it.
+    #[test]
+    fn the_pss_padding_takes_its_two_digests_separately() {
+        use crate::bn::bignum::BN_free;
+
+        let hash = crate::evp::legacy_sha::EVP_sha256();
+        let mgf1 = crate::evp::legacy_sha::EVP_sha1();
+        let m_hash = [0x5au8; 32];
+        let (mut rsa, n) = pss_object(1024);
+        let mut em = [0u8; 128];
+
+        /* `hLen` is the *hash*'s 32, so the maximum salt is 128 - 32 - 2 = 94. */
+        // SAFETY: `rsa` has a live 1024-bit `n`; `m_hash` is `EVP_MD_get_size(EVP_sha256())`
+        // octets; both methods are live.
+        let added = unsafe {
+            RSA_padding_add_PKCS1_PSS_mgf1(
+                &mut rsa,
+                em.as_mut_ptr(),
+                m_hash.as_ptr(),
+                hash,
+                mgf1,
+                94,
+            )
+        };
+        assert_eq!(added, 1);
+        assert_eq!(em[127], 0xbc);
+        assert!(pss_block_decodes(
+            &em[..128],
+            7,
+            &m_hash,
+            32,
+            hash,
+            mgf1,
+            94
+        ));
+        /* The same block under the wrong MGF1 hash is a different block. */
+        assert!(!pss_block_decodes(
+            &em[..128],
+            7,
+            &m_hash,
+            32,
+            hash,
+            hash,
+            94
+        ));
+
+        // SAFETY: `n` was allocated by `BN_new` in `pss_object` and is not used again.
+        unsafe { BN_free(n) };
     }
 }

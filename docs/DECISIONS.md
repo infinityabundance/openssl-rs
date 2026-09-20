@@ -20923,3 +20923,70 @@ six BLOCKED_HANDOFFS row (4) names, so landing them should retire that row rathe
 toward Phase 9. The remaining question -- whether the 12 genuinely-blocked rows are discharged by
 Phase 9 or simply become Phase 8's own -- is the ledger question D320 flagged and is not settled
 here.
+
+## D323 -- 8.4's randomised padding half lands, and landing it corrected D285's own coordinate for it
+
+D285's deferral expired rather than being worked around. The unit is the six exports that half of
+slice C names -- `RSA_padding_add_PKCS1_type_2`, `RSA_padding_check_PKCS1_type_2`,
+`RSA_padding_add_PKCS1_OAEP`, `RSA_padding_add_PKCS1_OAEP_mgf1`, `RSA_padding_add_PKCS1_PSS`,
+`RSA_padding_add_PKCS1_PSS_mgf1` -- plus the three internals their bodies reach,
+`ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_pk1.c:124`),
+`ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` (`rsa_oaep.c:54`) and
+`ossl_rsa_padding_add_PKCS1_PSS_mgf1` (`rsa_pss.c:173`). D313 landed the random layer, D322
+measured that the row had no liveness check and could therefore outlive its blocker, and this entry
+is the landing plus the two places where reading the authority's bodies contradicted D285's table.
+
+**The first correction is which function is randomised.** D285 recorded
+`RSA_padding_check_PKCS1_type_2` (`rsa_pk1.c:170`) as a hand-off because
+"`RAND_priv_bytes_ex` builds the implicit-rejection premaster secret". The call at `:569` is in
+`ossl_rsa_padding_check_PKCS1_type_2_TLS` (`:546`), a *different* function in the same file that
+only the TLS record layer calls; `RSA_padding_check_PKCS1_type_2`'s refusal is a constant-time `-1`,
+a `RSA_R_PKCS_DECODING_ERROR` and an `err_clear_last_constant_time` flag, and its body is a pure
+function of its input. It could have landed with D285's half, and it is landed here only because the
+hand-off list was what named it. The distinction is not cosmetic: it is the difference between "a
+padding check is a pure function of its input" -- which is the rule D285 stated and which the OAEP
+check's exemption was derived from -- and a rule with an exception that does not exist. The real
+exception is a function the `rsa.h` surface does not export at all.
+
+**The second is a name that does not exist.** D285, D322 and the retired row all spell the type-2
+check's internal `ossl_rsa_padding_check_PKCS1_type_2_ex`. `crypto/rsa/rsa_pk1.c`'s non-static
+internals are `ossl_rsa_padding_add_PKCS1_type_2_ex`, `ossl_rsa_prf`, `ossl_rsa_padding_check_PKCS1_type_2`
+and `ossl_rsa_padding_check_PKCS1_type_2_TLS`, and `include/crypto/rsa.h:92-99` declares the last two
+without the suffix. The three the six landed exports reach are the adds; neither check internal is
+transcribed, and that is a measurement rather than an omission: nothing in this stratum calls them,
+they are declared in `include/crypto/rsa.h` rather than an installed header, and the one whose
+refusal is randomised is reached by no export of `rsa.h`. They are the same stratum's open work
+whenever something does call them.
+
+**The ledger, read off the regenerated files.** `phase8`: implemented 272 -> **278**, deferred 24 ->
+**18**, open 490 **unchanged**, and `BLOCKED_HANDOFFS` row (4) is retired rather than discharged --
+which is forced rather than chosen, because its own generator fails closed on a row naming a symbol
+the crate defines, so the row and the code cannot land separately. `phase9`: `received_by_handoff`
+68 -> **62** and `handoffs_discharged["8"]` 24 -> **18**. Row (5) -- the `RSA` object's constructor
+and `RSA_PKCS1_OpenSSL` -- stays, and its reason text now says what it is waiting on: not the random
+layer, which is here, but the thirteen `rsa_ossl_*` entry points slice D defines and the table that
+names them.
+
+**How a court observes a random block without printing a random byte.** `RT-RSA` grows 428 -> **561**
+observations over the six exports, and both runs of the probe are single-shot, so nothing derived
+from a `RAND_bytes_ex` draw can enter the transcript. What enters it instead is: the return codes;
+the structural predicates over the output (`00 02`, every padding octet non-zero -- the retry loop's
+whole observable effect -- the separating zero, the `0xbc` trailer, the zero leading bits a PSS
+block must have, the leading PSS version octet); **round trips** through checks whose answers are
+deterministic even though their inputs are not (`RSA_padding_check_PKCS1_type_2` for the type-2 add,
+`RSA_padding_check_PKCS1_OAEP_mgf1` for both OAEP adds, at two labels); a **recomputation** of the
+PSS `H` from the salt the block itself encodes, which is the authority's own verifier's recovery
+written out in the probe; and the refusal arms with their error queues drained, including the two
+silent size refusals whose *empty* queue is the observation. Two arms are refusals that no real
+caller can reach and that are recorded because they are error sites: a negative `flen` for the
+type-2 add, and a negative `flen` for the OAEP add, which is the only way to reach
+`RSA_R_KEY_SIZE_TOO_SMALL` there -- at a modulus too small for the digest the length test above it
+fires for every non-negative message length, so the site is otherwise dead code.
+
+**What has to be said about the constants.** `include/openssl/rsa.h:138-146` defines five
+salt-length names and only four values, and `src/evp/pkey_ctx.rs` already published the three the
+ctrl-string map speaks. The two the PSS add is the only reader of -- `RSA_PSS_SALTLEN_AUTO_DIGEST_MAX`
+(`-4`) and `RSA_PSS_SALTLEN_MAX_SIGN` (`-2` again) -- are declared in `src/rsa/mod.rs` beside the
+function that reads them, transcribed as the header writes them rather than folded into literals,
+because the authority's own test is `sLen == RSA_PSS_SALTLEN_MAX_SIGN || sLen == RSA_PSS_SALTLEN_AUTO`
+and that is a statement about two names.

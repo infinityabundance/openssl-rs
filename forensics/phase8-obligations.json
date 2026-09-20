@@ -4,8 +4,8 @@
     "complete": false,
     "counts": {
       "atlas_owned": 759,
-      "deferred_to_later_phase": 24,
-      "implemented": 272,
+      "deferred_to_later_phase": 18,
+      "implemented": 278,
       "open_in_this_stratum": 490,
       "owned": 786,
       "received_by_handoff": 27
@@ -56,7 +56,7 @@
       {
         "declaring_header": "rsa.h",
         "owning_phase": 9,
-        "reason": "`rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from `RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence `RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be constructed -- until row (4)'s path exists, which is what makes the *lifetime* follow the padding rather than precede it. `RSA_set_default_method` is *not* in this row: it is a pointer store with no table read and no random call, and it stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. `ossl_rsa_new_with_ctx` is internal and is blocked with `RSA_new`, which it calls into.",
+        "reason": "`rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from `RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence `RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be constructed -- until the path that padding call leads into exists, which is what makes the *lifetime* follow the padding rather than precede it. That path landed in D323, so what this row is still waiting on is no longer the random layer: it is the thirteen `rsa_ossl_*` entry points slice D defines and the table that names them, which is the same commit. `RSA_set_default_method` is *not* in this row: it is a pointer store with no table read and no random call, and it stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. `ossl_rsa_new_with_ctx` is internal and is blocked with `RSA_new`, which it calls into.",
         "symbol": "RSA_PKCS1_OpenSSL"
       },
       {
@@ -98,56 +98,20 @@
       {
         "declaring_header": "rsa.h",
         "owning_phase": 9,
-        "reason": "`rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from `RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence `RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be constructed -- until row (4)'s path exists, which is what makes the *lifetime* follow the padding rather than precede it. `RSA_set_default_method` is *not* in this row: it is a pointer store with no table read and no random call, and it stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. `ossl_rsa_new_with_ctx` is internal and is blocked with `RSA_new`, which it calls into.",
+        "reason": "`rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from `RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence `RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be constructed -- until the path that padding call leads into exists, which is what makes the *lifetime* follow the padding rather than precede it. That path landed in D323, so what this row is still waiting on is no longer the random layer: it is the thirteen `rsa_ossl_*` entry points slice D defines and the table that names them, which is the same commit. `RSA_set_default_method` is *not* in this row: it is a pointer store with no table read and no random call, and it stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. `ossl_rsa_new_with_ctx` is internal and is blocked with `RSA_new`, which it calls into.",
         "symbol": "RSA_get_default_method"
       },
       {
         "declaring_header": "rsa.h",
         "owning_phase": 9,
-        "reason": "`rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from `RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence `RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be constructed -- until row (4)'s path exists, which is what makes the *lifetime* follow the padding rather than precede it. `RSA_set_default_method` is *not* in this row: it is a pointer store with no table read and no random call, and it stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. `ossl_rsa_new_with_ctx` is internal and is blocked with `RSA_new`, which it calls into.",
+        "reason": "`rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from `RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence `RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be constructed -- until the path that padding call leads into exists, which is what makes the *lifetime* follow the padding rather than precede it. That path landed in D323, so what this row is still waiting on is no longer the random layer: it is the thirteen `rsa_ossl_*` entry points slice D defines and the table that names them, which is the same commit. `RSA_set_default_method` is *not* in this row: it is a pointer store with no table read and no random call, and it stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. `ossl_rsa_new_with_ctx` is internal and is blocked with `RSA_new`, which it calls into.",
         "symbol": "RSA_new"
       },
       {
         "declaring_header": "rsa.h",
         "owning_phase": 9,
-        "reason": "`rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from `RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence `RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be constructed -- until row (4)'s path exists, which is what makes the *lifetime* follow the padding rather than precede it. `RSA_set_default_method` is *not* in this row: it is a pointer store with no table read and no random call, and it stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. `ossl_rsa_new_with_ctx` is internal and is blocked with `RSA_new`, which it calls into.",
+        "reason": "`rsa_new_intern` (`crypto/rsa/rsa_lib.c:101`) takes its method from `RSA_get_default_method()`, whose `default_RSA_meth` is `&rsa_pkcs1_ossl_meth` (`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence `RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be constructed -- until the path that padding call leads into exists, which is what makes the *lifetime* follow the padding rather than precede it. That path landed in D323, so what this row is still waiting on is no longer the random layer: it is the thirteen `rsa_ossl_*` entry points slice D defines and the table that names them, which is the same commit. `RSA_set_default_method` is *not* in this row: it is a pointer store with no table read and no random call, and it stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. `ossl_rsa_new_with_ctx` is internal and is blocked with `RSA_new`, which it calls into.",
         "symbol": "RSA_new_method"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "owning_phase": 9,
-        "reason": "`ossl_rsa_padding_add_PKCS1_type_2_ex` (`crypto/rsa/rsa_pk1.c:147`) fills the padding with `RAND_bytes_ex`; `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` (`rsa_oaep.c:122`) generates its seed with it; `RSA_padding_add_PKCS1_PSS_mgf1` (`rsa_pss.c:242`) its salt; and `ossl_rsa_padding_check_PKCS1_type_2_ex` (`rsa_pk1.c:569`) generates a `rand_premaster_secret` with `RAND_priv_bytes_ex` for the implicit-rejection arm. The other three members of the family are *not* in this row and landed in D285: the `none` and X9.31 paddings, PKCS#1 v1.5 type 1, and both OAEP checks -- a padding *check* is a pure function of its input except where the refusal is deliberately randomised, which is why `RSA_padding_check_PKCS1_type_2` is here and `RSA_padding_check_PKCS1_OAEP_mgf1` is not.",
-        "symbol": "RSA_padding_add_PKCS1_OAEP"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "owning_phase": 9,
-        "reason": "`ossl_rsa_padding_add_PKCS1_type_2_ex` (`crypto/rsa/rsa_pk1.c:147`) fills the padding with `RAND_bytes_ex`; `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` (`rsa_oaep.c:122`) generates its seed with it; `RSA_padding_add_PKCS1_PSS_mgf1` (`rsa_pss.c:242`) its salt; and `ossl_rsa_padding_check_PKCS1_type_2_ex` (`rsa_pk1.c:569`) generates a `rand_premaster_secret` with `RAND_priv_bytes_ex` for the implicit-rejection arm. The other three members of the family are *not* in this row and landed in D285: the `none` and X9.31 paddings, PKCS#1 v1.5 type 1, and both OAEP checks -- a padding *check* is a pure function of its input except where the refusal is deliberately randomised, which is why `RSA_padding_check_PKCS1_type_2` is here and `RSA_padding_check_PKCS1_OAEP_mgf1` is not.",
-        "symbol": "RSA_padding_add_PKCS1_OAEP_mgf1"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "owning_phase": 9,
-        "reason": "`ossl_rsa_padding_add_PKCS1_type_2_ex` (`crypto/rsa/rsa_pk1.c:147`) fills the padding with `RAND_bytes_ex`; `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` (`rsa_oaep.c:122`) generates its seed with it; `RSA_padding_add_PKCS1_PSS_mgf1` (`rsa_pss.c:242`) its salt; and `ossl_rsa_padding_check_PKCS1_type_2_ex` (`rsa_pk1.c:569`) generates a `rand_premaster_secret` with `RAND_priv_bytes_ex` for the implicit-rejection arm. The other three members of the family are *not* in this row and landed in D285: the `none` and X9.31 paddings, PKCS#1 v1.5 type 1, and both OAEP checks -- a padding *check* is a pure function of its input except where the refusal is deliberately randomised, which is why `RSA_padding_check_PKCS1_type_2` is here and `RSA_padding_check_PKCS1_OAEP_mgf1` is not.",
-        "symbol": "RSA_padding_add_PKCS1_PSS"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "owning_phase": 9,
-        "reason": "`ossl_rsa_padding_add_PKCS1_type_2_ex` (`crypto/rsa/rsa_pk1.c:147`) fills the padding with `RAND_bytes_ex`; `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` (`rsa_oaep.c:122`) generates its seed with it; `RSA_padding_add_PKCS1_PSS_mgf1` (`rsa_pss.c:242`) its salt; and `ossl_rsa_padding_check_PKCS1_type_2_ex` (`rsa_pk1.c:569`) generates a `rand_premaster_secret` with `RAND_priv_bytes_ex` for the implicit-rejection arm. The other three members of the family are *not* in this row and landed in D285: the `none` and X9.31 paddings, PKCS#1 v1.5 type 1, and both OAEP checks -- a padding *check* is a pure function of its input except where the refusal is deliberately randomised, which is why `RSA_padding_check_PKCS1_type_2` is here and `RSA_padding_check_PKCS1_OAEP_mgf1` is not.",
-        "symbol": "RSA_padding_add_PKCS1_PSS_mgf1"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "owning_phase": 9,
-        "reason": "`ossl_rsa_padding_add_PKCS1_type_2_ex` (`crypto/rsa/rsa_pk1.c:147`) fills the padding with `RAND_bytes_ex`; `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` (`rsa_oaep.c:122`) generates its seed with it; `RSA_padding_add_PKCS1_PSS_mgf1` (`rsa_pss.c:242`) its salt; and `ossl_rsa_padding_check_PKCS1_type_2_ex` (`rsa_pk1.c:569`) generates a `rand_premaster_secret` with `RAND_priv_bytes_ex` for the implicit-rejection arm. The other three members of the family are *not* in this row and landed in D285: the `none` and X9.31 paddings, PKCS#1 v1.5 type 1, and both OAEP checks -- a padding *check* is a pure function of its input except where the refusal is deliberately randomised, which is why `RSA_padding_check_PKCS1_type_2` is here and `RSA_padding_check_PKCS1_OAEP_mgf1` is not.",
-        "symbol": "RSA_padding_add_PKCS1_type_2"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "owning_phase": 9,
-        "reason": "`ossl_rsa_padding_add_PKCS1_type_2_ex` (`crypto/rsa/rsa_pk1.c:147`) fills the padding with `RAND_bytes_ex`; `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` (`rsa_oaep.c:122`) generates its seed with it; `RSA_padding_add_PKCS1_PSS_mgf1` (`rsa_pss.c:242`) its salt; and `ossl_rsa_padding_check_PKCS1_type_2_ex` (`rsa_pk1.c:569`) generates a `rand_premaster_secret` with `RAND_priv_bytes_ex` for the implicit-rejection arm. The other three members of the family are *not* in this row and landed in D285: the `none` and X9.31 paddings, PKCS#1 v1.5 type 1, and both OAEP checks -- a padding *check* is a pure function of its input except where the refusal is deliberately randomised, which is why `RSA_padding_check_PKCS1_type_2` is here and `RSA_padding_check_PKCS1_OAEP_mgf1` is not.",
-        "symbol": "RSA_padding_check_PKCS1_type_2"
       },
       {
         "declaring_header": "rsa.h",
@@ -157,7 +121,7 @@
       }
     ],
     "deferred_by_phase": {
-      "9": 24
+      "9": 18
     },
     "handoffs_discharged": {
       "7": [
@@ -1431,12 +1395,18 @@
       "RSA_meth_set_sign",
       "RSA_meth_set_verify",
       "RSA_null_method",
+      "RSA_padding_add_PKCS1_OAEP",
+      "RSA_padding_add_PKCS1_OAEP_mgf1",
+      "RSA_padding_add_PKCS1_PSS",
+      "RSA_padding_add_PKCS1_PSS_mgf1",
       "RSA_padding_add_PKCS1_type_1",
+      "RSA_padding_add_PKCS1_type_2",
       "RSA_padding_add_X931",
       "RSA_padding_add_none",
       "RSA_padding_check_PKCS1_OAEP",
       "RSA_padding_check_PKCS1_OAEP_mgf1",
       "RSA_padding_check_PKCS1_type_1",
+      "RSA_padding_check_PKCS1_type_2",
       "RSA_padding_check_X931",
       "RSA_padding_check_none",
       "RSA_security_bits",
@@ -4714,12 +4684,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "1016509c12f2104df760c88985dd93aa7e5b3875583cb1e9b732c71253a0707f"
+      "sha256": "f7be31664fd5130c38499fd24a814fa6604ef2c59dde6e14d22a4d29860aaabe"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "06086447e4c0418e54b272ea048f7eb91b147c74daabc146feaed8c99ea2f6ba"
+      "sha256": "055f3924e88f5205cec219682f2b7ce81dfdbc0ed489523045d44a7a224c5dda"
     }
   ],
   "kind": "phase8-obligations",

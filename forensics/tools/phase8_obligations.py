@@ -197,25 +197,25 @@ BLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
         "are blocked on Phase 9 through BN's own random path, and `RSA_blinding_off` is *not* "
         "in this row: it frees the object and needs nothing random.",
     ),
-    # (4) 8.4's padding *add* functions whose bytes are random, and the one check whose refusal
-    # is randomised. Measured by D285, which is the entry that named the whole dependency.
-    (
-        ("RSA_padding_add_PKCS1_type_2",
-         "RSA_padding_add_PKCS1_OAEP", "RSA_padding_add_PKCS1_OAEP_mgf1",
-         "RSA_padding_add_PKCS1_PSS", "RSA_padding_add_PKCS1_PSS_mgf1",
-         "RSA_padding_check_PKCS1_type_2"),
-        9,
-        "`ossl_rsa_padding_add_PKCS1_type_2_ex` (`crypto/rsa/rsa_pk1.c:147`) fills the padding "
-        "with `RAND_bytes_ex`; `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` (`rsa_oaep.c:122`) "
-        "generates its seed with it; `RSA_padding_add_PKCS1_PSS_mgf1` (`rsa_pss.c:242`) its "
-        "salt; and `ossl_rsa_padding_check_PKCS1_type_2_ex` (`rsa_pk1.c:569`) generates a "
-        "`rand_premaster_secret` with `RAND_priv_bytes_ex` for the implicit-rejection arm. "
-        "The other three members of the family are *not* in this row and landed in D285: the "
-        "`none` and X9.31 paddings, PKCS#1 v1.5 type 1, and both OAEP checks -- a padding "
-        "*check* is a pure function of its input except where the refusal is deliberately "
-        "randomised, which is why `RSA_padding_check_PKCS1_type_2` is here and "
-        "`RSA_padding_check_PKCS1_OAEP_mgf1` is not.",
-    ),
+    # (4) **Retired by D323, and how it stopped being true is the entry's finding.** D285 put the
+    # six randomised padding labels here because five of them fill their output with
+    # `RAND_bytes_ex` and it read `RAND_priv_bytes_ex` into the sixth. `RAND_bytes_ex` landed in
+    # D313, D322 measured that a `BLOCKED_HANDOFFS` row whose blocker is another stratum's export
+    # has nothing checking it for liveness, and D323 landed the six. Two corrections are recorded
+    # with the retirement rather than carried:
+    #
+    #   * the randomised refusal is `ossl_rsa_padding_check_PKCS1_type_2_TLS` (`rsa_pk1.c:546`,
+    #     whose `RAND_priv_bytes_ex` is at `:569`), **not** `RSA_padding_check_PKCS1_type_2`
+    #     (`:170`), which is a pure function of its input and belonged with D285's half;
+    #   * `ossl_rsa_padding_check_PKCS1_type_2_ex` does not exist in this authority. The non-static
+    #     internals in `rsa_pk1.c` are `ossl_rsa_padding_add_PKCS1_type_2_ex` (`:124`),
+    #     `ossl_rsa_prf` (`:277`), `ossl_rsa_padding_check_PKCS1_type_2` (`:387`) and
+    #     `ossl_rsa_padding_check_PKCS1_type_2_TLS` (`:546`), and the six landed exports reach
+    #     exactly one of them, the first. The two `_check` internals are still not transcribed:
+    #     nothing in this stratum calls them, they are `include/crypto/rsa.h`'s rather than an
+    #     installed header's, and the one that would be Phase 9's -- the TLS arm's
+    #     `RAND_priv_bytes_ex` -- is reached by no export of `rsa.h` at all.
+    #
     # (5) The `RSA` object's own constructor, which is blocked one level further out: not by a
     # random call in its own body but by the table its body reads.
     (
@@ -226,8 +226,11 @@ BLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
         "(`rsa_ossl.c:84`), and that table's first member is `rsa_ossl_public_encrypt`, which "
         "reaches `ossl_rsa_padding_add_PKCS1_type_2_ex` (`rsa_ossl.c:144`) and hence "
         "`RAND_bytes_ex`. So the table cannot be built -- and therefore the object cannot be "
-        "constructed -- until row (4)'s path exists, which is what makes the *lifetime* follow "
-        "the padding rather than precede it. `RSA_set_default_method` is "
+        "constructed -- until the path that padding call leads into exists, which is what makes "
+        "the *lifetime* follow the padding rather than precede it. That path landed in D323, so "
+        "what this row is still waiting on is no longer the random layer: it is the thirteen "
+        "`rsa_ossl_*` entry points slice D defines and the table that names them, which is the "
+        "same commit. `RSA_set_default_method` is "
         "*not* in this row: it is a pointer store with no table read and no random call, and it "
         "stays open only because `RSA_PKCS1_OpenSSL`'s table is what it would store. "
         "`ossl_rsa_new_with_ctx` is internal and is blocked with "
