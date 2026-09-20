@@ -1,0 +1,915 @@
+//! Phase 9 — `crypto/pem/pem_lib.c`'s **write half**: `PEM_ASN1_write_bio_internal` and the three
+//! spellings that reach it.
+//!
+//! Authority: `forensics/authorities/src/openssl-3.6.4/crypto/pem/pem_lib.c`, lines **302-444** —
+//! the `#ifndef OPENSSL_NO_STDIO` at `:302` through `PEM_ASN1_write_bio_ctx`'s closing brace at
+//! `:443`. Transcribed: `PEM_ASN1_write_bio_internal` (`:322-426`), `PEM_ASN1_write_bio`
+//! (`:428-434`), `PEM_ASN1_write_bio_ctx` (`:436-443`), and `PEM_ASN1_write` (`:303-319`), the
+//! `FILE *` spelling that is inside the stdio guard this profile satisfies.
+//!
+//! ## This file does not compile, on purpose
+//!
+//! Two symbols it needs do not exist in the crate — the passphrase reader `PEM_def_callback`
+//! (whose own callee `EVP_read_pw_string_min` is a `UI` program, Phase 13's) and the ASN.1 type
+//! alias for `OSSL_i2d_of_void_ctx` (called `OsslI2dOfVoidCtx` below; the crate holds the other
+//! two of the three `asn1.h` aliases and not this one). Both are named in the list below with
+//! their authority coordinate and the stratum that will land them, and both are *called as the
+//! authority spells them* rather than being replaced by a local stand-in. Nothing here is
+//! watered down to compile: a version of `PEM_def_callback` that answered only its
+//! `userdata != NULL` arm would be a different observable contract, not a smaller one.
+//!
+//! The two calls that put this unit in the **Phase 9** ledger instead of 7.5's are landed:
+//! `crate::rand::rand_lib::RAND_bytes` for the `DEK-Info` salt (`pem_lib.c:386`) and
+//! `crate::evp::legacy_md5::EVP_md5` for the key derivation (`:392`). Everything else the four
+//! functions call is in the crate today with the authority's signature, and the list of those
+//! paths is at the end of this header.
+//!
+//! ## Missing callees, named
+//!
+//! * **`crate::pem::pem_lib::PEM_def_callback`** — `crypto/pem/pem_lib.c:36-69`, called here at
+//!   `:372` (`klen = PEM_def_callback(buf, PEM_BUFSIZE, 1, u)`), the `callback == NULL` arm of
+//!   the passphrase read. It is withheld on `EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`),
+//!   which is a `UI` program, so the landing stratum is **Phase 13**; `docs/DECISIONS.md`'s 7.5
+//!   row (D194) records this pair, and `src/pem/mod.rs`'s header names the same dependency. The
+//!   transitively needed `crate::evp::p_legacy::EVP_read_pw_string_min` is likewise absent.
+//! * **`crate::asn1::layout::OsslI2dOfVoidCtx`** — the type of the authority's
+//!   `OSSL_i2d_of_void_ctx` (`include/openssl/asn1.h.in:334`:
+//!   `int OSSL_i2d_of_void_ctx(const void *, unsigned char **, void *vctx)`), the ctx twin of the
+//!   `i2d_of_void *` this unit also takes. `src/asn1/layout.rs:303` and `:309` hold `D2iOfVoid`
+//!   and `I2dOfVoid`; there is no third alias, and both `:324` and `:436` take this type while
+//!   `:356` and `:367` call through it. It belongs beside the other two in the ASN.1 stratum that
+//!   already owns them — its other authority user is
+//!   `providers/implementations/encode_decode/encode_key2any.c.in` (Phase 10), which is why the
+//!   PEM stratum does not own it.
+//!
+//! ## The `IMPLEMENT_PEM_*` macros that reach this unit, expanded
+//!
+//! Both headers that spell a caller were read, because the *expanded* argument list is what these
+//! four signatures have to accept:
+//!
+//! * `include/openssl/pem.h:84-217` — `IMPLEMENT_PEM_write_fp` (`:124`) and
+//!   `IMPLEMENT_PEM_write_cb_fp` (`:135`) emit `PEM_write_<name>(FILE *, ...)` and call
+//!   `PEM_ASN1_write((i2d_of_void *)i2d_<asn1>, str, out, x, NULL, NULL, 0, NULL, NULL)` and
+//!   `PEM_ASN1_write(..., x, enc, kstr, klen, cb, u)` respectively; `IMPLEMENT_PEM_write_bio`
+//!   (`:156`) and `IMPLEMENT_PEM_write_cb_bio` (`:168`) are the same pair over `BIO *` and
+//!   `PEM_ASN1_write_bio`; `IMPLEMENT_PEM_write` (`:180`) and `IMPLEMENT_PEM_write_cb` (`:190`)
+//!   emit both halves, and `PEM_write_fnsig` (`:84`) / `PEM_write_cb_fnsig` (`:86`) spell the two
+//!   signatures. The instantiations read are `crypto/pem/pem_all.c:39`, `:88`, `:117`, `:161`,
+//!   `:178`, `:179` — so the enc-NULL leg reaches `PEM_ASN1_write_bio` with five literal NULLs
+//!   and the `_cb` leg with the caller's five arguments, order unchanged.
+//! * `crypto/pem/pem_local.h:42-164` — the provided-encoder writers. Their `legacy:` arm is
+//!   `IMPLEMENT_PEM_provided_write_body_fallback` (`:84`) or `..._fallback_cb` (`:89`), and the
+//!   callee name is the macro's last argument, `writename`: `PEM_ASN1_write_bio` or
+//!   `PEM_ASN1_write`. Above them sit `IMPLEMENT_PEM_provided_write_to` (`:95`), `_cb_to` (`:112`),
+//!   `_write_bio` (`:145`), `_write_cb_bio` (`:147`), `_write` (`:150`), `_write_cb` (`:154`),
+//!   `_rw` (`:158`), `_rw_cb` (`:162`) and the fragments `_body_vars`/`_body_pass`/`_body_main`
+//!   (`:42`, `:52`, `:80`).
+//!
+//! One measured consequence of that second family, which is a fact about *this* signature and
+//! worth recording where the signature is: `_body_fallback` passes `NULL, NULL, 0, NULL, NULL`,
+//! while `_body_fallback_cb` passes `enc, kstr, klen, cb, u`. `IMPLEMENT_PEM_provided_write_cb_to`
+//! uses the `_cb` fragment for the non-`_ex` spelling and the *plain* one for the `_ex` spelling,
+//! so `PEM_write_bio_<x>_ex(bio, x, enc, kstr, klen, cb, u, libctx, propq)` that reaches the
+//! legacy arm calls this unit with no cipher and no passphrase — the four arguments the caller
+//! supplied stop at the encoder layer. The `legacy:` arm is only reached when
+//! `OSSL_ENCODER_CTX_get_num_encoders(ctx) == 0` (`pem_local.h:46`, Phase 10's surface), so
+//! nothing in this file can observe it; it is transcribed as it stands and not corrected.
+//!
+//! ## Constants this file declares for itself, and why
+//!
+//! `EVP_MAX_KEY_LENGTH`, `EVP_MAX_IV_LENGTH` and `EVP_MAX_BLOCK_LENGTH` exist in the crate
+//! (`src/evp/p_legacy.rs:109-111`, `src/evp/cipher_ctx.rs:94`) but every copy is private to its
+//! module, so they are declared here against `include/openssl/evp.h:35-37`. `BIO_NOCLOSE` is the
+//! same case with a sharper reason: the crate's is a `c_int` (`src/runtime/bio/mod.rs:151`) and
+//! `BIO_ctrl`'s `larg` is a `c_long` (`src/runtime/bio/iolib.rs:878`), which is why
+//! `src/evp/pem_bridge.rs:135` declares the `c_long` twin privately for the identical
+//! `BIO_set_fp` prelude this file needs. `PEM_BUFSIZE` and `PEM_TYPE_ENCRYPTED` *are* imported —
+//! `src/pem/pem_lib.rs:38`, `:40` — because `pem_lib.c`'s own module holds them in this crate.
+//!
+//! ## The `goto err` shape
+//!
+//! The authority has one `err:` label, reached by eight `goto`s (`:347`, `:354`, `:360`, `:365`,
+//! `:377`, `:387`, `:393`, `:410` in `PEM_ASN1_write_bio_internal`), and what it does is fixed:
+//! cleanse `key`, cleanse `iv`, free the cipher context, cleanse `buf`, clear-free `data` with
+//! **`dsize`** as the length (not the `dsize + EVP_MAX_BLOCK_LENGTH` that was allocated), answer
+//! `ret`. The order is preserved below and the paths differ only in what is already initialised
+//! when they arrive: the three refusals before the allocation reach the label with `dsize == 0` and
+//! `data == NULL`, so the clear-free is a no-op, and `EVP_CIPHER_CTX_free` accepts the NULL
+//! context that every refusal before the encryption leaves behind. `ret` is **1** on a successful
+//! write whatever the encoded length was: the length `PEM_write_bio` answered goes into `i`, and
+//! `i` is not the answer.
+//!
+//! ## What the tests do and do not drive
+//!
+//! The refusal arms that need neither randomness nor a provider fetch are covered: the null
+//! encoder pair, the zero-length sizing pass, the cipher the `DEK-Info` header cannot hold, the
+//! refused passphrase read (which is *before* `RAND_bytes`, so the arm proves its own ordering),
+//! and the whole unencrypted success path end to end through `PEM_write_bio` and
+//! `PEM_read_bio_ex`. The encrypted success arm cannot be driven without `RAND_bytes` drawing,
+//! and the `callback == NULL` arm cannot be driven at all until `PEM_def_callback` lands; both are
+//! named here rather than implied.
+//!
+//! SPDX-License-Identifier: Apache-2.0
+
+#![deny(unsafe_op_in_unsafe_fn)]
+#![deny(missing_docs)]
+
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void, CStr};
+use core::ptr::{null, null_mut};
+
+use crate::asn1::layout::{I2dOfVoid, OsslI2dOfVoidCtx};
+use crate::evp::cipher::{EVP_CIPHER_get0_name, EVP_CIPHER_get_iv_length, EvpCipher};
+use crate::evp::cipher_ctx::{
+    EVP_CIPHER_CTX_free, EVP_CIPHER_CTX_new, EVP_EncryptFinal_ex, EVP_EncryptInit_ex,
+    EVP_EncryptUpdate, EvpCipherCtx,
+};
+use crate::evp::legacy_md5::EVP_md5;
+use crate::evp::p_legacy::EVP_BytesToKey;
+use crate::evp::pem_bridge::{PemPasswordCb, PEM_write_bio};
+use crate::pem::pem_lib::{PEM_dek_info, PEM_proc_type, PEM_BUFSIZE, PEM_TYPE_ENCRYPTED};
+use crate::rand::rand_lib::RAND_bytes;
+use crate::runtime::bio::bss_file::BIO_s_file;
+use crate::runtime::bio::{BIO_ctrl, BIO_free, BIO_new, Bio, BIO_C_SET_FILE_PTR};
+use crate::runtime::err::{err_sites, raise_site};
+use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc, OPENSSL_cleanse};
+
+/// `EVP_MAX_KEY_LENGTH` — `include/openssl/evp.h:35`. The length of `PEM_ASN1_write_bio_internal`'s
+/// `key`, which is **not** the cipher's key length: only the latter is written by
+/// `EVP_BytesToKey`, and the whole array is cleansed at `err:`.
+const EVP_MAX_KEY_LENGTH: c_int = 64;
+/// `EVP_MAX_IV_LENGTH` — `include/openssl/evp.h:36`. Both the salt buffer's length and the bound
+/// the `DEK-Info` check tests the cipher's IV length against.
+const EVP_MAX_IV_LENGTH: c_int = 16;
+/// `EVP_MAX_BLOCK_LENGTH` — `include/openssl/evp.h:37`. The headroom `OPENSSL_malloc` is given, so
+/// that the in-place `EVP_EncryptFinal_ex` can add its whole block to `data`.
+const EVP_MAX_BLOCK_LENGTH: c_int = 32;
+/// `PEM_BUFSIZE` as the buffer's length.
+const BUF_LEN: usize = PEM_BUFSIZE as usize;
+/// `BIO_NOCLOSE` — `include/openssl/bio.h`, as a `c_long` because `BIO_ctrl`'s `larg` is one. The
+/// crate's `crate::runtime::bio::BIO_NOCLOSE` is a `c_int` and cannot be passed there; see the
+/// module note, and `src/evp/pem_bridge.rs:135` for the same declaration.
+const BIO_NOCLOSE: c_long = 0x00;
+/// The authority's translation unit, so a failing allocation records its coordinates.
+const FILE_PEM_LIB: *const c_char = c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c".as_ptr();
+/// `PEM_ASN1_write_bio_internal`'s `OPENSSL_malloc((unsigned int)dsize + EVP_MAX_BLOCK_LENGTH)`
+/// (`pem_lib.c:363`).
+const LINE_WRITE_MALLOC: c_int = 363;
+/// `PEM_ASN1_write_bio_internal`'s `OPENSSL_clear_free(data, (unsigned int)dsize)`
+/// (`pem_lib.c:424`).
+const LINE_WRITE_CLEAR_FREE: c_int = 424;
+
+/// The authority's `i2d != NULL ? i2d(x, p) : i2d_ctx(x, p, vctx)` — `crypto/pem/pem_lib.c:356`
+/// (sizing, with `p` NULL) and `:367` (filling, with `p` the cursor's address).
+///
+/// The ternary appears twice in the authority and this is both occurrences: the two passes differ
+/// only in what `p` points at.
+///
+/// The pair is refused by the caller before either pass, so the `(None, None)` arm is unreachable;
+/// the authority would dereference a NULL there. Answering `0` makes the helper total without
+/// turning a NULL encoder into a call, which is the same treatment `src/evp/p_legacy.rs` gives
+/// `EVP_BytesToKey`'s active `OPENSSL_assert`s.
+///
+/// # Safety
+///
+/// Whichever encoder is supplied must be live, must match `x`'s type, and — for the ctx spelling —
+/// must expect `vctx`. `p` must be NULL or writable for a `*mut c_uchar`.
+unsafe fn encode_with(
+    i2d: Option<I2dOfVoid>,
+    i2d_ctx: Option<OsslI2dOfVoidCtx>,
+    x: *const c_void,
+    p: *mut *mut c_uchar,
+    vctx: *mut c_void,
+) -> c_int {
+    if let Some(f) = i2d {
+        // SAFETY: `f` is the caller's encoder, `x` its value and `p` its cursor.
+        unsafe { f(x, p) }
+    } else if let Some(f) = i2d_ctx {
+        // SAFETY: `f` is the caller's ctx encoder, `x` its value, `p` its cursor and `vctx` the
+        // context it was selected with.
+        unsafe { f(x, p, vctx) }
+    } else {
+        0
+    }
+}
+
+/// `static int PEM_ASN1_write_bio_internal(i2d_of_void *i2d, OSSL_i2d_of_void_ctx *i2d_ctx,
+/// void *vctx, const char *name, BIO *bp, const void *x, const EVP_CIPHER *enc,
+/// const unsigned char *kstr, int klen, pem_password_cb *callback, void *u)` —
+/// `crypto/pem/pem_lib.c:322-426`.
+///
+/// The whole write half is here. In order:
+///
+/// * **The cipher check** (`:336-349`), before anything is encoded: a cipher whose name is
+///   unresolvable, whose IV length is zero, whose IV length exceeds `EVP_MAX_IV_LENGTH`, or whose
+///   `Proc-Type: 4,Encrypted\nDEK-Info: <name>,<hex-iv>\n` would not fit `buf` is refused with
+///   `PEM_R_UNSUPPORTED_CIPHER` at `:346`. The four clauses are one `||` chain and the
+///   short-circuit order is kept, as is the fact that `EVP_CIPHER_get_iv_length` is called once
+///   per clause.
+/// * **The null encoder pair** (`:351-355`): `i2d` and `i2d_ctx` both NULL is
+///   `CRYPTO_R_INVALID_NULL_ARGUMENT` at `:352`. This is *after* the cipher check, and the court
+///   can see the order: a caller passing both a bad cipher and a null pair gets the cipher's code.
+/// * **The two encoding passes** (`:356`, `:367`): size with a NULL cursor, allocate
+///   `(unsigned int)dsize + EVP_MAX_BLOCK_LENGTH` — "enough space for one extra cipher block" —
+///   then fill through a cursor. A sizing answer of `0` or less is `ERR_R_ASN1_LIB` at `:358` and
+///   sets `dsize` to 0 so that the `err:` clear-free is a no-op on a length that was never an
+///   allocation size. The *filling* answer is not tested, exactly as in the authority.
+/// * **The passphrase** (`:369-384`): only when `kstr` is NULL; the callback is handed
+///   `(buf, PEM_BUFSIZE, 1, u)` — `1` is "encryption", which is why `PEM_def_callback` applies its
+///   `MIN_LENGTH` floor here and not on the read side — and an answer of `0` or less is
+///   `PEM_R_READ_KEY` at `:376`. The authority then converts the passphrase from EBCDIC under
+///   `#ifdef CHARSET_EBCDIC`, which this profile does not define.
+/// * **The salt** (`:386`): `RAND_bytes(iv, EVP_CIPHER_get_iv_length(enc))`, the cipher's own IV
+///   length and not a fixed eight bytes; a refusal is a plain `goto err` with **no raise**, so a
+///   failing RNG is distinguishable from every other failure here only by the absence of a record.
+/// * **The key** (`:392`): `EVP_BytesToKey(enc, EVP_md5(), iv, kstr, klen, 1, key, NULL)` — count
+///   1, no IV output, and the same `iv` array used as the salt. The comment the authority leaves
+///   at `:388-391` is the contract: the IV is used as the IV *and* as the salt, and it is not
+///   taken from `BytesToKey`.
+/// * **The header** (`:395-400`), in this order: cleanse `buf` **only** if the passphrase lives
+///   there (`kstr == (unsigned char *)buf`), set `buf[0] = '\0'`, `PEM_proc_type(buf,
+///   PEM_TYPE_ENCRYPTED)`, `PEM_dek_info(buf, objstr, EVP_CIPHER_get_iv_length(enc), (char *)iv)`.
+///   Both formatters are landed and both *append*, so an unencrypted call writes an empty header
+///   through the same `buf[0] = '\0'`.
+/// * **The encryption** (`:403-411`): four calls share one `ret`, and the `||` order is the
+///   authority's. A NULL context leaves `j` at 0 and `i` at the plaintext length; the ciphertext
+///   length is `i += j` afterwards, where `i` has been overwritten by
+///   `EVP_EncryptFinal_ex(ctx, &(data[j]), &i)`. `EVP_EncryptUpdate` reads and writes `data` in
+///   place, which is why the buffer is the cursor's `i` bytes and the same pointer is both `out`
+///   and `in_`.
+/// * **The write** (`:416-418`): `PEM_write_bio(bp, name, buf, data, i)`, whose answer lands in
+///   `i`; a value of `0` or less clears `ret`. The return value is `ret`, and on the encrypted arm
+///   it is `1` for any successful write.
+///
+/// # Safety
+///
+/// `bp` must be a live writable BIO; `name` NUL-terminated. `x` must be readable by whichever of
+/// `i2d`/`i2d_ctx` is supplied, and exactly one of them must be live when the other is NULL. `enc`
+/// must be NULL or a live cipher whose provider is fetchable if it is encrypted. `kstr` must be
+/// NULL or readable for `klen` bytes, and `klen` non-negative. `callback` must be NULL or live,
+/// and `u` whatever that callback documents.
+pub(crate) unsafe fn PEM_ASN1_write_bio_internal(
+    i2d: Option<I2dOfVoid>,
+    i2d_ctx: Option<OsslI2dOfVoidCtx>,
+    vctx: *mut c_void,
+    name: *const c_char,
+    bp: *mut Bio,
+    x: *const c_void,
+    enc: *const EvpCipher,
+    kstr: *const c_uchar,
+    klen: c_int,
+    callback: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> c_int {
+    let mut ctx: *mut EvpCipherCtx = null_mut();
+    let mut dsize: c_int = 0;
+    let mut i: c_int = 0;
+    let mut j: c_int = 0;
+    let mut ret: c_int = 0;
+    let mut data: *mut c_uchar = null_mut();
+    let mut objstr: *const c_char = null();
+    // The authority's `char buf[PEM_BUFSIZE]` is uninitialised and this is zeroed. Nothing can
+    // tell: every reader of the buffer either starts at `buf + strlen(buf)` after the authority
+    // wrote `buf[0] = '\0'`, or is `OPENSSL_cleanse` at `err:`.
+    let mut buf: [c_char; BUF_LEN] = [0; BUF_LEN];
+    // `unsigned char key[EVP_MAX_KEY_LENGTH]` and `iv[EVP_MAX_IV_LENGTH]`, both of which `err:`
+    // cleanses whole.
+    let mut key = [0 as c_uchar; EVP_MAX_KEY_LENGTH as usize];
+    let mut iv = [0 as c_uchar; EVP_MAX_IV_LENGTH as usize];
+    // The authority assigns over both parameters; a Rust parameter is not a place.
+    let mut kstr = kstr;
+    let mut klen = klen;
+
+    // The authority's function body. Every `goto err` in it is a `break 'body` here, and the
+    // statements after the block are its `err:` label — which the success path falls into as well.
+    'body: {
+        if !enc.is_null() {
+            // SAFETY: `enc` is live per this function's `# Safety` section.
+            objstr = unsafe { EVP_CIPHER_get0_name(enc) };
+            // The authority repeats the getter in each clause and the repetition is kept: it is
+            // what makes the first false clause the one that stops the chain.
+            // SAFETY: `enc` is live; the getter takes nothing else, and `objstr` is non-NULL in
+            // the last clause because the first one has already tested it.
+            let unsupported = objstr.is_null()
+                || unsafe { EVP_CIPHER_get_iv_length(enc) } == 0
+                || unsafe { EVP_CIPHER_get_iv_length(enc) } > EVP_MAX_IV_LENGTH
+                || {
+                    // SAFETY: `objstr` is non-NULL and therefore NUL-terminated.
+                    let nlen = unsafe { CStr::from_ptr(objstr) }.to_bytes().len();
+                    // The authority's `strlen(objstr) + 23 + 2 * ivlen + 13 > sizeof(buf)`, which
+                    // its own comment reads as the length of
+                    // `Proc-Type: 4,Encrypted\nDEK-Info: objstr,hex-iv\n`.
+                    let ivlen = unsafe { EVP_CIPHER_get_iv_length(enc) } as usize;
+                    nlen + 23 + 2 * ivlen + 13 > BUF_LEN
+                };
+            if unsupported {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::PEM_LIB_346) };
+                break 'body;
+            }
+        }
+
+        if i2d.is_none() && i2d_ctx.is_none() {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::PEM_LIB_352) };
+            dsize = 0;
+            break 'body;
+        }
+        // SAFETY: exactly one encoder is live per the contract, `x` is its value, and a NULL
+        // cursor is the authority's sizing pass.
+        dsize = unsafe { encode_with(i2d, i2d_ctx, x, null_mut(), vctx) };
+        if dsize <= 0 {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::PEM_LIB_358) };
+            dsize = 0;
+            break 'body;
+        }
+        // Allocate enough space for one extra cipher block.
+        // `OPENSSL_malloc((unsigned int)dsize + EVP_MAX_BLOCK_LENGTH)`; the addition is done in
+        // `unsigned int` and cannot overflow a `usize` afterwards.
+        let alloc = (dsize as c_uint).wrapping_add(EVP_MAX_BLOCK_LENGTH as c_uint) as usize;
+        // SAFETY: `CRYPTO_malloc` takes no caller pointer beyond its record's, and answers null
+        // on failure.
+        data = CRYPTO_malloc(alloc, FILE_PEM_LIB, LINE_WRITE_MALLOC).cast::<c_uchar>();
+        if data.is_null() {
+            break 'body;
+        }
+        let mut p = data;
+        // SAFETY: as the sizing pass; `p` is this frame's own cursor into the block just
+        // allocated, which is `dsize + EVP_MAX_BLOCK_LENGTH` bytes.
+        i = unsafe { encode_with(i2d, i2d_ctx, x, &mut p, vctx) };
+
+        if !enc.is_null() {
+            if kstr.is_null() {
+                // The authority's `callback == NULL ? PEM_def_callback(...) : (*callback)(...)`,
+                // both with `(buf, PEM_BUFSIZE, 1, u)` — the `1` is "encrypting", which is what
+                // gives `PEM_def_callback` its `MIN_LENGTH` floor.
+                klen = match callback {
+                    // The callee does not exist in the crate yet — see "Missing callees, named"
+                    // — so this is the call spelled as the authority spells it, at its intended
+                    // home.
+                    // SAFETY: `buf` is `PEM_BUFSIZE` writable bytes this frame owns and `u` is
+                    // whatever the default callback's contract says it is.
+                    None => unsafe {
+                        crate::pem::pem_lib::PEM_def_callback(buf.as_mut_ptr(), PEM_BUFSIZE, 1, u)
+                    },
+                    // SAFETY: `f` is the caller's callback, `buf` as above, and the `1` is the
+                    // authority's own flag.
+                    Some(f) => unsafe { f(buf.as_mut_ptr(), PEM_BUFSIZE, 1, u) },
+                };
+                if klen <= 0 {
+                    // SAFETY: a compile-time-constant site.
+                    unsafe { raise_site(&err_sites::PEM_LIB_376) };
+                    break 'body;
+                }
+                // `#ifdef CHARSET_EBCDIC` converts the passphrase here; this profile does not
+                // define it, as `src/evp/encode.rs:211-219` records for its own table.
+                kstr = buf.as_ptr().cast::<c_uchar>();
+            }
+            // Generate a salt. `iv` is the cipher's own IV length, which the check above bounded
+            // by `EVP_MAX_IV_LENGTH`.
+            // SAFETY: `iv` is `EVP_MAX_IV_LENGTH` bytes, `enc` is live, and the length is the
+            // cipher's own and no larger.
+            if unsafe { RAND_bytes(iv.as_mut_ptr(), EVP_CIPHER_get_iv_length(enc)) } <= 0 {
+                break 'body;
+            }
+            // The 'iv' is used as the iv and as a salt. It is NOT taken from the BytesToKey
+            // function.
+            // SAFETY: `enc` is live, `iv` holds the salt just drawn, `kstr` is readable for `klen`
+            // bytes (it was the caller's, or `buf`, which the callback wrote), and `key` is
+            // `EVP_MAX_KEY_LENGTH` bytes while `null_mut()` is the authority's request for no IV
+            // output.
+            if unsafe {
+                EVP_BytesToKey(
+                    enc,
+                    EVP_md5(),
+                    iv.as_ptr(),
+                    kstr,
+                    klen,
+                    1,
+                    key.as_mut_ptr(),
+                    null_mut(),
+                )
+            } == 0
+            {
+                break 'body;
+            }
+
+            if kstr == buf.as_ptr().cast::<c_uchar>() {
+                // The passphrase was in `buf` and the cipher has taken its copy.
+                // SAFETY: `buf` is this frame's own `PEM_BUFSIZE` bytes.
+                unsafe { OPENSSL_cleanse(buf.as_mut_ptr().cast(), BUF_LEN) };
+            }
+
+            buf[0] = 0;
+            // SAFETY: `buf` is a NUL-terminated `PEM_BUFSIZE` buffer this frame owns.
+            unsafe { PEM_proc_type(buf.as_mut_ptr(), PEM_TYPE_ENCRYPTED) };
+            // SAFETY: `objstr` is the live cipher's own NUL-terminated name, `buf` as above, the
+            // length is the cipher's IV length — the count of readable bytes in `iv` — and
+            // `PEM_dek_info` appends `DEK-Info: <name>,<2 * ivlen hex digits>\n`.
+            unsafe {
+                PEM_dek_info(
+                    buf.as_mut_ptr(),
+                    objstr,
+                    EVP_CIPHER_get_iv_length(enc),
+                    iv.as_ptr().cast::<c_char>(),
+                )
+            };
+            /* k=strlen(buf); */
+
+            ret = 1;
+            // SAFETY: `EVP_CIPHER_CTX_new` takes no argument and answers null or a block this
+            // frame then owns.
+            ctx = unsafe { EVP_CIPHER_CTX_new() };
+            // Four calls, one `ret`, and the authority's `||` order. A null context short-circuits
+            // before the encryption is reached, leaving `j` at 0 and `i` at the plaintext length.
+            // SAFETY: `ctx` is the context just created or null; `enc`, `key` and `iv` are the
+            // values derived above with `enc`'s own key and IV lengths; `data` is the block
+            // `CRYPTO_malloc` returned, holding `i` readable bytes, and `EVP_EncryptUpdate` and
+            // `EVP_EncryptFinal_ex` read and write it in place; `j` and `i` are this frame's.
+            let failed = unsafe {
+                ctx.is_null()
+                    || EVP_EncryptInit_ex(ctx, enc, null_mut(), key.as_ptr(), iv.as_ptr()) == 0
+                    || EVP_EncryptUpdate(ctx, data, &mut j, data, i) == 0
+                    || EVP_EncryptFinal_ex(ctx, data.add(j as usize), &mut i) == 0
+            };
+            if failed {
+                ret = 0;
+            }
+            if ret == 0 {
+                break 'body;
+            }
+            i += j;
+        } else {
+            ret = 1;
+            buf[0] = 0;
+        }
+        // SAFETY: `bp` is a live writable BIO per the contract, `name` and the now-terminated
+        // `buf` are NUL-terminated, `data` is readable for `i` bytes, and `i` is non-negative.
+        i = unsafe { PEM_write_bio(bp, name, buf.as_ptr(), data, i as c_long) };
+        if i <= 0 {
+            ret = 0;
+        }
+    }
+
+    // `err:` — the five releases, in the authority's order, reached by every path above.
+    // SAFETY: `key` and `iv` are this frame's own arrays, of the lengths cleansed.
+    unsafe { OPENSSL_cleanse(key.as_mut_ptr().cast(), EVP_MAX_KEY_LENGTH as usize) };
+    // SAFETY: as above.
+    unsafe { OPENSSL_cleanse(iv.as_mut_ptr().cast(), EVP_MAX_IV_LENGTH as usize) };
+    // SAFETY: `ctx` is this frame's own context or null, and `EVP_CIPHER_CTX_free` accepts null.
+    unsafe { EVP_CIPHER_CTX_free(ctx) };
+    // SAFETY: `buf` is this frame's own `PEM_BUFSIZE` bytes.
+    unsafe { OPENSSL_cleanse(buf.as_mut_ptr().cast(), BUF_LEN) };
+    // SAFETY: `data` is this frame's own block or null. The length is the authority's
+    // `(unsigned int)dsize`, which is 0 for every refusal that got here before the allocation.
+    unsafe {
+        CRYPTO_clear_free(
+            data.cast(),
+            dsize as c_uint as usize,
+            FILE_PEM_LIB,
+            LINE_WRITE_CLEAR_FREE,
+        )
+    };
+    ret
+}
+
+/// `int PEM_ASN1_write_bio(i2d_of_void *i2d, const char *name, BIO *bp, const void *x,
+/// const EVP_CIPHER *enc, const unsigned char *kstr, int klen, pem_password_cb *callback,
+/// void *u)` — `crypto/pem/pem_lib.c:428-434`.
+///
+/// The plain spelling: the internal is given `i2d_ctx == NULL` and `vctx == NULL`, so a caller
+/// whose `i2d` is NULL meets the pair refusal at `:352` and never an encoder call.
+///
+/// # Safety
+///
+/// As [`PEM_ASN1_write_bio_internal`], with `i2d` the only encoder.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_ASN1_write_bio(
+    i2d: Option<I2dOfVoid>,
+    name: *const c_char,
+    bp: *mut Bio,
+    x: *const c_void,
+    enc: *const EvpCipher,
+    kstr: *const c_uchar,
+    klen: c_int,
+    callback: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> c_int {
+    // SAFETY: every argument is forwarded under this function's contract, and the two nulls are
+    // the authority's own literals.
+    unsafe {
+        PEM_ASN1_write_bio_internal(
+            i2d, None, null_mut(), name, bp, x, enc, kstr, klen, callback, u,
+        )
+    }
+}
+
+/// `int PEM_ASN1_write_bio_ctx(OSSL_i2d_of_void_ctx *i2d, void *vctx, const char *name, BIO *bp,
+/// const void *x, const EVP_CIPHER *enc, const unsigned char *kstr, int klen,
+/// pem_password_cb *callback, void *u)` — `crypto/pem/pem_lib.c:436-443`.
+///
+/// The ctx spelling, and the mirror image of [`PEM_ASN1_write_bio`]: `i2d` is NULL here and the
+/// ctx encoder is the caller's. Note the two argument orders the authority uses — this one takes
+/// `i2d, vctx` before `name`, while the internal takes `i2d, i2d_ctx, vctx` before it too.
+///
+/// # Safety
+///
+/// As [`PEM_ASN1_write_bio_internal`], with `i2d_ctx` the only encoder and `vctx` the context it
+/// was selected with.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_ASN1_write_bio_ctx(
+    i2d: Option<OsslI2dOfVoidCtx>,
+    vctx: *mut c_void,
+    name: *const c_char,
+    bp: *mut Bio,
+    x: *const c_void,
+    enc: *const EvpCipher,
+    kstr: *const c_uchar,
+    klen: c_int,
+    callback: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> c_int {
+    // SAFETY: every argument is forwarded under this function's contract, and the first null is
+    // the authority's own literal.
+    unsafe {
+        PEM_ASN1_write_bio_internal(
+            None, i2d, vctx, name, bp, x, enc, kstr, klen, callback, u,
+        )
+    }
+}
+
+/// `int PEM_ASN1_write(i2d_of_void *i2d, const char *name, FILE *fp, const void *x,
+/// const EVP_CIPHER *enc, const unsigned char *kstr, int klen, pem_password_cb *callback,
+/// void *u)` — `crypto/pem/pem_lib.c:303-319`.
+///
+/// The `FILE *` spelling, under the `#ifndef OPENSSL_NO_STDIO` this profile satisfies: wrap the
+/// stream in a file BIO that will not close it, run the `BIO *` spelling, release the BIO, answer
+/// what it answered. A failing `BIO_new` is `ERR_R_BUF_LIB` at `:312` and answers 0 without
+/// touching the stream.
+///
+/// The three lines are the same prelude `src/evp/pem_bridge.rs`'s `bio_from_fp` performs for
+/// `PEM_read`/`PEM_write`; that helper is private to its module, so the prelude is written out
+/// here as the authority writes it out.
+///
+/// # Safety
+///
+/// `fp` must be an open writable stream that outlives the call (the BIO does not close it);
+/// `i2d`, `name`, `x`, `enc`, `kstr`, `klen`, `callback` and `u` as
+/// [`PEM_ASN1_write_bio_internal`].
+#[no_mangle]
+pub unsafe extern "C" fn PEM_ASN1_write(
+    i2d: Option<I2dOfVoid>,
+    name: *const c_char,
+    fp: *mut c_void,
+    x: *const c_void,
+    enc: *const EvpCipher,
+    kstr: *const c_uchar,
+    klen: c_int,
+    callback: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> c_int {
+    // SAFETY: `BIO_s_file` is a static method table.
+    let b = unsafe { BIO_new(BIO_s_file()) };
+    if b.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::PEM_LIB_312) };
+        return 0;
+    }
+    // `BIO_set_fp(b, fp, BIO_NOCLOSE)`.
+    // SAFETY: `b` is the live file BIO just created and `fp` is the caller's stream.
+    unsafe { BIO_ctrl(b, BIO_C_SET_FILE_PTR, BIO_NOCLOSE, fp) };
+    // SAFETY: `b` is a live file BIO over `fp` and the rest are the caller's arguments.
+    let ret = unsafe { PEM_ASN1_write_bio(i2d, name, b, x, enc, kstr, klen, callback, u) };
+    // SAFETY: `b` is this frame's own BIO and it was created with `BIO_NOCLOSE`, so `fp` is the
+    // caller's again afterwards.
+    unsafe { BIO_free(b) };
+    ret
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use core::sync::atomic::{AtomicI32, Ordering};
+
+    use crate::evp::cipher::{
+        EVP_CIPHER_meth_free, EVP_CIPHER_meth_new, EVP_CIPHER_meth_set_iv_length,
+    };
+    use crate::evp::pem_bridge::{PEM_read_bio_ex, PEM_FLAG_EAY_COMPATIBLE};
+    use crate::runtime::bio::bss_mem::BIO_s_mem;
+    use crate::runtime::err::{ERR_clear_error, ERR_peek_last_error_all};
+    use crate::runtime::mem::CRYPTO_free;
+
+    /// `ERR_REASON_MASK` — `src/runtime/err.rs:177`, which is private to its module. Used to read
+    /// the reason back out of `ERR_peek_last_error_all`'s packed answer, whose layout is
+    /// `(lib & 0xff) << 23 | (reason & 0x7fffff)`.
+    const ERR_REASON_MASK: core::ffi::c_ulong = 0x7f_ffff;
+
+    /// The coordinate and reason of the last error raised, against a recorded site. The three
+    /// strings are what `ERR_get_error_all` hands a caller, and the reason is what
+    /// `ERR_GET_REASON` extracts from the same packed value.
+    fn assert_site(site: &err_sites::ErrSite) {
+        let mut file: *const c_char = null();
+        let mut line: c_int = 0;
+        let mut func: *const c_char = null();
+        let mut data: *const c_char = null();
+        let mut flags: c_int = 0;
+        // SAFETY: every output pointer is this frame's own storage.
+        let code = unsafe {
+            ERR_peek_last_error_all(&mut file, &mut line, &mut func, &mut data, &mut flags)
+        };
+        assert_ne!(code, 0, "an error was raised");
+        // SAFETY: the call wrote a NUL-terminated string the error state still owns.
+        assert_eq!(unsafe { CStr::from_ptr(file) }, site.file, "file");
+        assert_eq!(line, site.line, "line");
+        // SAFETY: as above.
+        assert_eq!(unsafe { CStr::from_ptr(func) }, site.func, "function");
+        assert_eq!(
+            code & ERR_REASON_MASK,
+            site.reason as core::ffi::c_ulong,
+            "reason"
+        );
+    }
+
+    /// The three bytes an `i2d`-shaped encoder reports, in the crate's `I2dOfVoid` shape: the
+    /// length for a NULL cursor (the sizing pass) and the bytes plus an advanced cursor for a
+    /// non-NULL one (the filling pass), which is the contract the internal relies on when it
+    /// ignores the filling answer.
+    static ENCODED: [c_uchar; 3] = [0x01, 0x02, 0x03];
+
+    /// [`ENCODED`] as an encoder.
+    unsafe extern "C" fn i2d_three(x: *const c_void, out: *mut *mut c_uchar) -> c_int {
+        // This encoder reads nothing from its value; the tests pass a real pointer for contract's
+        // sake and the authority's `i2d`s would read it.
+        let _ = x;
+        if out.is_null() {
+            return 3;
+        }
+        // SAFETY: `out` is the caller's cursor, writable per the encoder contract, and the caller
+        // allocated room for the three bytes this encoder reports.
+        unsafe {
+            core::ptr::copy_nonoverlapping(ENCODED.as_ptr(), *out, 3);
+            *out = (*out).add(3);
+        }
+        3
+    }
+
+    /// An encoder that answers 0 to both passes, which no `i2d` in the authority does — it is the
+    /// sizing answer `:357` refuses.
+    unsafe extern "C" fn i2d_zero(_x: *const c_void, _out: *mut *mut c_uchar) -> c_int {
+        0
+    }
+
+    /// The `rwflag` the last passphrase callback was handed.
+    static SEEN_RWFLAG: AtomicI32 = AtomicI32::new(-1);
+    /// What the passphrase callback answers.
+    static CB_ANSWER: AtomicI32 = AtomicI32::new(0);
+
+    /// A `pem_password_cb` that records its `rwflag` and refuses. `PEM_ASN1_write_bio_internal`
+    /// hands it `(buf, PEM_BUFSIZE, 1, u)`, and reads its answer with `klen <= 0`.
+    unsafe extern "C" fn cb_record_and_refuse(
+        buf: *mut c_char,
+        size: c_int,
+        rwflag: c_int,
+        u: *mut c_void,
+    ) -> c_int {
+        let _ = (buf, size, u);
+        SEEN_RWFLAG.store(rwflag, Ordering::SeqCst);
+        CB_ANSWER.load(Ordering::SeqCst)
+    }
+
+    /// A cipher method with a non-zero IV length, built the way `src/evp/pem_bridge.rs`'s tests
+    /// build one. `EVP_CIPHER_meth_new(0, 8, 8)` leaves the IV length at 0 until it is set.
+    ///
+    /// # Safety
+    /// The returned method is this test's own and must be released by [`EVP_CIPHER_meth_free`].
+    unsafe fn cipher_with_iv_len(iv_len: c_int) -> *mut EvpCipher {
+        // SAFETY: `EVP_CIPHER_meth_new` allocates its own object and validates nothing else.
+        let enc = unsafe { EVP_CIPHER_meth_new(0, 8, 8) };
+        assert!(!enc.is_null());
+        // SAFETY: `enc` is the method just created.
+        assert_eq!(unsafe { EVP_CIPHER_meth_set_iv_length(enc, iv_len) }, 1);
+        enc
+    }
+
+    /// `if (i2d == NULL && i2d_ctx == NULL)` (`pem_lib.c:351-355`): the plain spelling can only
+    /// supply a NULL `i2d_ctx`, so a NULL `i2d` is the refusal — `CRYPTO_R_INVALID_NULL_ARGUMENT`
+    /// at `:352`, and `0`. Nothing has been encoded, so `x` and `bp` are never read; the BIO is
+    /// still a real one so the frame's own contract holds.
+    #[test]
+    fn a_null_encoder_pair_is_refused() {
+        // SAFETY: the BIO is this test's own object and every other pointer is null or a static.
+        unsafe {
+            ERR_clear_error();
+            let bp = BIO_new(BIO_s_mem());
+            assert!(!bp.is_null());
+            let ret = PEM_ASN1_write_bio(
+                None,
+                c"TEST ITEM".as_ptr(),
+                bp,
+                null(),
+                null(),
+                null(),
+                0,
+                None,
+                null_mut(),
+            );
+            assert_eq!(ret, 0);
+            assert_site(&err_sites::PEM_LIB_352);
+            assert_eq!(BIO_free(bp), 1);
+        }
+    }
+
+    /// `if (dsize <= 0)` (`pem_lib.c:357-361`): an encoder that reports no length is
+    /// `ERR_R_ASN1_LIB` at `:358`, `dsize` is set to 0 so that `err:`'s clear-free has nothing to
+    /// free, and the answer is 0. The second pass is never reached.
+    #[test]
+    fn a_zero_length_encoding_is_refused() {
+        // SAFETY: the BIO is this test's own object; the encoder is a static and reads nothing.
+        unsafe {
+            ERR_clear_error();
+            let bp = BIO_new(BIO_s_mem());
+            assert!(!bp.is_null());
+            let ret = PEM_ASN1_write_bio(
+                Some(i2d_zero),
+                c"TEST ITEM".as_ptr(),
+                bp,
+                null(),
+                null(),
+                null(),
+                0,
+                None,
+                null_mut(),
+            );
+            assert_eq!(ret, 0);
+            assert_site(&err_sites::PEM_LIB_358);
+            assert_eq!(BIO_free(bp), 1);
+        }
+    }
+
+    /// The cipher check comes **before** the null-pair check, and its answer is the cipher's:
+    /// `PEM_R_UNSUPPORTED_CIPHER` at `:346`, not the null argument's code. Two clauses can fire on
+    /// this method — its name resolves to `"UNDEF"` through `OBJ_nid2sn(0)` because
+    /// `EVP_CIPHER_meth_new(0, ...)` sets the NID to 0, and its IV length is 0 — and both are the
+    /// same line and the same reason, which is what this arm measures.
+    #[test]
+    fn a_cipher_with_a_zero_iv_length_is_refused() {
+        // SAFETY: the method is this test's own object and is released below.
+        unsafe {
+            ERR_clear_error();
+            let enc = cipher_with_iv_len(0);
+            let bp = BIO_new(BIO_s_mem());
+            assert!(!bp.is_null());
+            // `i2d` is NULL as well: the cipher is refused first.
+            let ret = PEM_ASN1_write_bio(
+                None,
+                c"TEST ITEM".as_ptr(),
+                bp,
+                null(),
+                enc,
+                null(),
+                0,
+                None,
+                null_mut(),
+            );
+            assert_eq!(ret, 0);
+            assert_site(&err_sites::PEM_LIB_346);
+            assert_eq!(BIO_free(bp), 1);
+            EVP_CIPHER_meth_free(enc);
+        }
+    }
+
+    /// `klen <= 0` after the callback (`pem_lib.c:370-378`): `PEM_R_READ_KEY` at `:376`, `0`, and
+    /// no salt drawn.
+    ///
+    /// This arm is the one that proves its own ordering: the refusal is *before* `RAND_bytes` at
+    /// `:386`, so it needs no RNG and answers the same however the RNG would have. It also proves
+    /// that `EVP_CIPHER_get0_name` on this method is non-NULL — a NULL name would have stopped at
+    /// `:346` — and that the callback is handed `rwflag == 1`.
+    #[test]
+    fn a_refused_passphrase_read_stops_before_the_salt_is_drawn() {
+        // SAFETY: the method is this test's own object and is released below; the callback is a
+        // static and reads only its own atomics.
+        unsafe {
+            ERR_clear_error();
+            let enc = cipher_with_iv_len(8);
+            let bp = BIO_new(BIO_s_mem());
+            assert!(!bp.is_null());
+            SEEN_RWFLAG.store(-1, Ordering::SeqCst);
+            CB_ANSWER.store(-1, Ordering::SeqCst);
+            let x: c_int = 7;
+            let ret = PEM_ASN1_write_bio(
+                Some(i2d_three),
+                c"TEST ITEM".as_ptr(),
+                bp,
+                (&x as *const c_int).cast(),
+                enc,
+                null(),
+                0,
+                Some(cb_record_and_refuse),
+                null_mut(),
+            );
+            assert_eq!(ret, 0);
+            assert_site(&err_sites::PEM_LIB_376);
+            assert_eq!(
+                SEEN_RWFLAG.load(Ordering::SeqCst),
+                1,
+                "encryption is rwflag 1, which is what gives `PEM_def_callback` its minimum length"
+            );
+            assert_eq!(BIO_free(bp), 1);
+            EVP_CIPHER_meth_free(enc);
+        }
+    }
+
+    /// `klen <= 0` covers a **zero** answer as well as a negative one, which is the `<=` the
+    /// authority wrote and the arm a `callback` returning 0 would otherwise slip past.
+    #[test]
+    fn a_zero_length_passphrase_read_is_refused_too() {
+        // SAFETY: as the test above.
+        unsafe {
+            ERR_clear_error();
+            let enc = cipher_with_iv_len(8);
+            let bp = BIO_new(BIO_s_mem());
+            assert!(!bp.is_null());
+            CB_ANSWER.store(0, Ordering::SeqCst);
+            let x: c_int = 7;
+            let ret = PEM_ASN1_write_bio(
+                Some(i2d_three),
+                c"TEST ITEM".as_ptr(),
+                bp,
+                (&x as *const c_int).cast(),
+                enc,
+                null(),
+                0,
+                Some(cb_record_and_refuse),
+                null_mut(),
+            );
+            assert_eq!(ret, 0);
+            assert_site(&err_sites::PEM_LIB_376);
+            assert_eq!(BIO_free(bp), 1);
+            EVP_CIPHER_meth_free(enc);
+        }
+    }
+
+    /// The `enc == NULL` arm end to end: three encoded bytes go through `PEM_write_bio` into a
+    /// memory BIO, the answer is **1** rather than the encoded length, and the block reads back
+    /// with an empty header and the three bytes intact.
+    ///
+    /// The empty header is the `buf[0] = '\0'` of `:414` — the unencrypted arm writes no
+    /// `Proc-Type` and no `DEK-Info`, and `PEM_write_bio` skips a zero-length header. No provider
+    /// is fetched and no randomness is drawn: base64 is `EVP_ENCODE_CTX`'s.
+    #[test]
+    fn the_unencrypted_arm_writes_the_block_and_answers_one() {
+        // SAFETY: every pointer below is one of this test's own objects, and the buffers
+        // `PEM_read_bio_ex` fills are released with the allocator it used.
+        unsafe {
+            ERR_clear_error();
+            let bp = BIO_new(BIO_s_mem());
+            assert!(!bp.is_null());
+            let x: c_int = 7;
+            let ret = PEM_ASN1_write_bio(
+                Some(i2d_three),
+                c"TEST ITEM".as_ptr(),
+                bp,
+                (&x as *const c_int).cast(),
+                null(),
+                null(),
+                0,
+                None,
+                null_mut(),
+            );
+            assert_eq!(ret, 1, "the answer is `ret`, and `i` is the write's length");
+
+            let mut name: *mut c_char = null_mut();
+            let mut header: *mut c_char = null_mut();
+            let mut data: *mut c_uchar = null_mut();
+            let mut len: c_long = 0;
+            assert_eq!(
+                PEM_read_bio_ex(
+                    bp,
+                    &mut name,
+                    &mut header,
+                    &mut data,
+                    &mut len,
+                    PEM_FLAG_EAY_COMPATIBLE,
+                ),
+                1
+            );
+            // SAFETY: the reader wrote NUL-terminated strings it still owns.
+            assert_eq!(CStr::from_ptr(name).to_bytes(), b"TEST ITEM");
+            // SAFETY: as above.
+            assert_eq!(CStr::from_ptr(header).to_bytes(), b"");
+            assert_eq!(len, 3);
+            // SAFETY: `data` holds `len` bytes the reader allocated.
+            assert_eq!(core::slice::from_raw_parts(data, len as usize), &ENCODED[..]);
+
+            // SAFETY: the three blocks came from `CRYPTO_malloc` in the reader, which is this
+            // allocator, and nothing else owns them.
+            CRYPTO_free(name.cast(), FILE_PEM_LIB, 0);
+            // SAFETY: as above.
+            CRYPTO_free(header.cast(), FILE_PEM_LIB, 0);
+            // SAFETY: as above.
+            CRYPTO_free(data.cast(), FILE_PEM_LIB, 0);
+            assert_eq!(BIO_free(bp), 1);
+        }
+    }
+}
