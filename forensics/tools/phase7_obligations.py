@@ -577,26 +577,6 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
     ),
     BlockedHandoff(
         symbols=(
-            "EVP_read_pw_string", "EVP_read_pw_string_min"
-        ),
-        binding_phase=13,
-        blocked_by=(
-            Blocker("UI_new", "crypto/ui/ui_lib.c", 18, "exported", 13),
-            Blocker("UI_add_input_string", "crypto/ui/ui_lib.c", 196, "exported", 13),
-            Blocker("UI_add_verify_string", "crypto/ui/ui_lib.c", 226, "exported", 13),
-            Blocker("UI_process", "crypto/ui/ui_lib.c", 476, "exported", 13),
-            Blocker("UI_free", "crypto/ui/ui_lib.c", 71, "exported", 13),
-        ),
-        reason=(
-            "`EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`) is `UI_new` (`:56`), "
-                "`UI_add_input_string` (`:62`), `UI_add_verify_string` (`:70`), `UI_process` (`:78`) "
-                "and `UI_free` (`:84`), and `ui.h` is Phase 13's. `EVP_read_pw_string` (`:47`) is its "
-                "one-line spelling. `EVP_get_pw_prompt`/`EVP_set_pw_prompt` are this file's too and "
-                "did land: they touch the file's own eighty-byte static and no `UI` at all."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
             "EVP_add_alg_module",
         ),
         binding_phase=11,
@@ -610,29 +590,6 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
                 "calls in the handler -- `CONF_imodule_get_value`, `NCONF_get_section`, "
                 "`evp_set_default_properties_int` -- are landed, so Phase 11 is the only blocker, and "
                 "it is the same one the subphase plan names for this name."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "PEM_def_callback",
-        ),
-        binding_phase=13,
-        blocked_by=(
-            Blocker("UI_new", "crypto/ui/ui_lib.c", 18, "exported", 13),
-        ),
-        reason=(
-            "`crypto/pem/pem_lib.c:36`'s `userdata == NULL` arm is `EVP_read_pw_string_min(buf, "
-                "min_len, num, prompt, rwflag)` (`:62`), the `UI` program two rows above, and `ui.h` "
-                "is Phase 13's. The `userdata != NULL` arm is a `strlen`/`memcpy` with `num` as the "
-                "clamp and needs nothing foreign, but an export cannot be half-written and the arm "
-                "every `PEM_write_*PrivateKey*` caller reaches is the other one. D194 recorded this "
-                "and kept `forensics/prerequisites.json`'s `UI_new` row rather than adding one naming "
-                "`EVP_read_pw_string_min`, which is a Phase-7-owned export and may not appear there."
-        ),
-        note=(
-            "`PEM_def_callback`'s own call is `EVP_read_pw_string_min`, a Phase-7-owned export "
-                "withheld by row 16; the root blocker both share is the `UI` program, and `UI_new` is "
-                "its Phase-13 name."
         ),
     ),
     BlockedHandoff(
@@ -756,8 +713,16 @@ UNBLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
         "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), "
         "...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s "
         "DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` "
-        "in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer and what is "
-        "left is this stratum's own `pem_lib.c` transcription.",
+        "in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer. **D350 corrects "
+        "what this reason left out:** `PEM_do_header` (`crypto/pem/pem_lib.c:467`) and the write trio "
+        "(`:372`) also call `PEM_def_callback` (`:36-69`), whose own chain is `EVP_read_pw_string_min` "
+        "(`crypto/evp/evp_key.c:52`, Phase 7) -> the `UI_*` objects (`crypto/ui/ui_lib.c`, Phase 13), "
+        "so the eight were blocked on Phase 13 and not on this stratum's transcription alone. D350 "
+        "lands that closure (`src/ui/`, `src/evp/p_legacy.rs`, `src/pem/pem_lib.rs`), so all eight are "
+        "in Phase 9's `implemented` list and the row stands as the hand-off **edge** rather than being "
+        "retired: retiring it would move eight built exports into this sealed stratum's `implemented` "
+        "list on the strength of work it did not do, and drop them from Phase 9's "
+        "`received_by_handoff`.",
     ),
     (
         ("EVP_PKEY_CTX_get_algor", "EVP_CIPHER_CTX_get_algor"),

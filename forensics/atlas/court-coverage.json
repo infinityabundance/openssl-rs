@@ -25,6 +25,242 @@
         "symbol": "PKCS8_pkey_set0"
       },
       {
+        "owner_phase": 13,
+        "symbol": "UI_OpenSSL"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_add_error_string"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_add_info_string"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_add_input_boolean"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_add_input_string"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_add_user_data"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_add_verify_string"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_construct_prompt"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_create_method"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_ctrl"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_destroy_method"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_dup_error_string"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_dup_info_string"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_dup_input_boolean"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_dup_input_string"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_dup_user_data"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_dup_verify_string"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_free"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_get0_action_string"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_get0_output_string"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_get0_result"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_get0_result_string"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_get0_test_string"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_get0_user_data"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_get_default_method"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_get_ex_data"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_get_input_flags"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_get_method"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_get_result_length"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_get_result_maxsize"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_get_result_minsize"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_get_result_string_length"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_get_string_type"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_method_get_closer"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_method_get_data_destructor"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_method_get_data_duplicator"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_method_get_ex_data"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_method_get_flusher"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_method_get_opener"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_method_get_prompt_constructor"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_method_get_reader"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_method_get_writer"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_method_set_closer"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_method_set_data_duplicator"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_method_set_ex_data"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_method_set_flusher"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_method_set_opener"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_method_set_prompt_constructor"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_method_set_reader"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_method_set_writer"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_new"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_new_method"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_null"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_process"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_set_default_method"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_set_ex_data"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_set_method"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_set_result"
+      },
+      {
+        "owner_phase": 13,
+        "symbol": "UI_set_result_ex"
+      },
+      {
         "owner_phase": 11,
         "symbol": "X509_ALGORS_it"
       },
@@ -334,6 +570,7 @@
               "RT-MEM-DEFAULT",
               "RT-MEM-INSTALL",
               "RT-PARAM",
+              "RT-PEM-KEY",
               "RT-RSA"
             ],
             "symbol": "CRYPTO_free"
@@ -2400,6 +2637,7 @@
               "RT-EVP-BIO",
               "RT-EVP-PEM",
               "RT-PARAM",
+              "RT-PEM-KEY",
               "RT-RAND-USERS"
             ],
             "symbol": "BIO_ctrl"
@@ -2634,6 +2872,7 @@
               "RT-LHASH",
               "RT-OBJ-STREAM",
               "RT-PARAM",
+              "RT-PEM-KEY",
               "RT-RAND-USERS",
               "RT-RUNTIME-EXT"
             ],
@@ -3083,6 +3322,7 @@
               "RT-EVP-PEM",
               "RT-LHASH",
               "RT-PARAM",
+              "RT-PEM-KEY",
               "RT-RAND-USERS",
               "RT-RUNTIME-EXT"
             ],
@@ -3157,7 +3397,8 @@
             "courts": [
               "RT-BIO",
               "RT-CONF",
-              "RT-OBJ-STREAM"
+              "RT-OBJ-STREAM",
+              "RT-PEM-KEY"
             ],
             "symbol": "BIO_new_mem_buf"
           },
@@ -3400,6 +3641,7 @@
               "RT-EVP-PEM",
               "RT-LHASH",
               "RT-PARAM",
+              "RT-PEM-KEY",
               "RT-RUNTIME-EXT"
             ],
             "symbol": "BIO_s_mem"
@@ -6372,6 +6614,7 @@
               "RT-BN",
               "RT-DH",
               "RT-DSA",
+              "RT-PEM-KEY",
               "RT-RSA"
             ],
             "symbol": "BN_dup"
@@ -6395,6 +6638,7 @@
               "RT-DSA",
               "RT-EC",
               "RT-PARAM",
+              "RT-PEM-KEY",
               "RT-RSA"
             ],
             "symbol": "BN_free"
@@ -6838,6 +7082,7 @@
               "RT-DH",
               "RT-DSA",
               "RT-EC",
+              "RT-PEM-KEY",
               "RT-RSA"
             ],
             "symbol": "BN_new"
@@ -7008,6 +7253,7 @@
               "RT-DH",
               "RT-DSA",
               "RT-EC",
+              "RT-PEM-KEY",
               "RT-RSA"
             ],
             "symbol": "BN_set_word"
@@ -9123,10 +9369,10 @@
       {
         "completed": true,
         "counts": {
-          "directly_courted": 724,
-          "directly_courted_called": 665,
+          "directly_courted": 727,
+          "directly_courted_called": 668,
           "directly_courted_referenced": 59,
-          "implemented": 724,
+          "implemented": 727,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -9656,6 +9902,7 @@
               "RT-EVP-PBE",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
+              "RT-PEM-KEY",
               "RT-RAND-USERS"
             ],
             "symbol": "EVP_CIPHER_fetch"
@@ -9671,6 +9918,7 @@
               "RT-EVP-PBE",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
+              "RT-PEM-KEY",
               "RT-RAND-USERS"
             ],
             "symbol": "EVP_CIPHER_free"
@@ -14161,6 +14409,20 @@
           {
             "basis": "called",
             "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "EVP_read_pw_string"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "EVP_read_pw_string_min"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-EVP-INTROSPECT"
             ],
             "symbol": "EVP_ripemd160"
@@ -14513,6 +14775,13 @@
           {
             "basis": "called",
             "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_def_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-EVP-PEM"
             ],
             "symbol": "PEM_get_EVP_CIPHER_INFO"
@@ -14631,10 +14900,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 713,
-          "directly_courted_called": 713,
+          "directly_courted": 737,
+          "directly_courted_called": 737,
           "directly_courted_referenced": 0,
-          "implemented": 721,
+          "implemented": 745,
           "indirectly_courted": 8,
           "non_observable": 0,
           "unmatched": 0
@@ -15561,7 +15830,8 @@
             "basis": "called",
             "courts": [
               "RT-DH",
-              "RT-DSA"
+              "RT-DSA",
+              "RT-PEM-KEY"
             ],
             "symbol": "DH_free"
           },
@@ -15619,7 +15889,8 @@
             "basis": "called",
             "courts": [
               "RT-DH",
-              "RT-DSA"
+              "RT-DSA",
+              "RT-PEM-KEY"
             ],
             "symbol": "DH_get0_pqg"
           },
@@ -15647,7 +15918,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-DH"
+              "RT-DH",
+              "RT-PEM-KEY"
             ],
             "symbol": "DH_get_1024_160"
           },
@@ -16039,14 +16311,16 @@
           {
             "basis": "called",
             "courts": [
-              "RT-DSA"
+              "RT-DSA",
+              "RT-PEM-KEY"
             ],
             "symbol": "DSA_free"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-DSA"
+              "RT-DSA",
+              "RT-PEM-KEY"
             ],
             "symbol": "DSA_generate_key"
           },
@@ -16333,7 +16607,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-DSA"
+              "RT-DSA",
+              "RT-PEM-KEY"
             ],
             "symbol": "DSA_new"
           },
@@ -16361,7 +16636,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-DSA"
+              "RT-DSA",
+              "RT-PEM-KEY"
             ],
             "symbol": "DSA_set0_pqg"
           },
@@ -16704,7 +16980,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EC"
+              "RT-EC",
+              "RT-PEM-KEY"
             ],
             "symbol": "EC_GROUP_free"
           },
@@ -16886,7 +17163,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EC"
+              "RT-EC",
+              "RT-PEM-KEY"
             ],
             "symbol": "EC_GROUP_new_by_curve_name"
           },
@@ -17145,14 +17423,16 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EC"
+              "RT-EC",
+              "RT-PEM-KEY"
             ],
             "symbol": "EC_KEY_free"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-EC"
+              "RT-EC",
+              "RT-PEM-KEY"
             ],
             "symbol": "EC_KEY_generate_key"
           },
@@ -17243,7 +17523,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EC"
+              "RT-EC",
+              "RT-PEM-KEY"
             ],
             "symbol": "EC_KEY_new_by_curve_name"
           },
@@ -18251,6 +18532,174 @@
           {
             "basis": "called",
             "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_read_DHparams"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_read_DSAparams"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_read_ECPKParameters"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_read_RSAPublicKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_read_bio_DHparams"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_read_bio_DSAparams"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_read_bio_ECPKParameters"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_read_bio_RSAPublicKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_write_DHparams"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_write_DHxparams"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_write_DSAPrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_write_DSAparams"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_write_ECPKParameters"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_write_ECPrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_write_RSAPrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_write_RSAPublicKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_write_bio_DHparams"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_write_bio_DHxparams"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_write_bio_DSAPrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_write_bio_DSAparams"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_write_bio_ECPKParameters"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_write_bio_ECPrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_write_bio_RSAPrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_write_bio_RSAPublicKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-RSA"
             ],
             "symbol": "PKCS1_MGF1"
@@ -18517,6 +18966,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-PEM-KEY",
               "RT-RSA"
             ],
             "symbol": "RSA_free"
@@ -18531,6 +18981,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-PEM-KEY",
               "RT-RSA"
             ],
             "symbol": "RSA_generate_key_ex"
@@ -18916,6 +19367,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-PEM-KEY",
               "RT-RSA"
             ],
             "symbol": "RSA_new"
@@ -19427,7 +19879,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-DH"
+              "RT-DH",
+              "RT-PEM-KEY"
             ],
             "symbol": "d2i_DHparams"
           },
@@ -19441,7 +19894,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-DSA"
+              "RT-DSA",
+              "RT-PEM-KEY"
             ],
             "symbol": "d2i_DSAPrivateKey"
           },
@@ -19490,13 +19944,15 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EC"
+              "RT-EC",
+              "RT-PEM-KEY"
             ],
             "symbol": "d2i_ECPrivateKey"
           },
           {
             "basis": "called",
             "courts": [
+              "RT-PEM-KEY",
               "RT-RSA"
             ],
             "symbol": "d2i_RSAPrivateKey"
@@ -19525,7 +19981,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-DH"
+              "RT-DH",
+              "RT-PEM-KEY"
             ],
             "symbol": "i2d_DHparams"
           },
@@ -19687,15 +20144,15 @@
         ],
         "non_observable": [],
         "phase": 8,
-        "staged_candidate_probes": 7
+        "staged_candidate_probes": 8
       },
       {
         "completed": false,
         "counts": {
-          "directly_courted": 58,
-          "directly_courted_called": 58,
+          "directly_courted": 66,
+          "directly_courted_called": 66,
           "directly_courted_referenced": 0,
-          "implemented": 58,
+          "implemented": 66,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -19938,6 +20395,62 @@
           {
             "basis": "called",
             "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_ASN1_read"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_ASN1_read_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_ASN1_write"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_ASN1_write_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_ASN1_write_bio_ctx"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_bytes_read_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_bytes_read_bio_secmem"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY"
+            ],
+            "symbol": "PEM_do_header"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-RAND"
             ],
             "symbol": "RAND_OpenSSL"
@@ -20118,10 +20631,10 @@
       }
     ],
     "totals": {
-      "directly_courted": 2630,
-      "directly_courted_called": 2350,
+      "directly_courted": 2665,
+      "directly_courted_called": 2385,
       "directly_courted_referenced": 280,
-      "implemented": 2638,
+      "implemented": 2673,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -20132,7 +20645,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "060055e24cd41a27552f412b2880b651cb0ec71c4b13036fad355025febcb8c6"
+      "sha256": "e1f21cdbb1111423b565ea4fa5bf3ebbfcb4237cd902f1d391e6faae4d511579"
     },
     {
       "name": "symbol-ownership",
@@ -20147,7 +20660,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "3858f616971192f7a68046a03bb0f340a09130a9d9580d3b33212f4200ca5587"
+      "sha256": "8bb8caa3ad72740ea7e7501f8a87c7d8d4654f3ca9a29f4a0a1401af63a2858a"
     },
     {
       "name": "phase3-courts",
@@ -20157,7 +20670,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "ce75f4e20ce392adc5823be316f43ac1c69773fdc584d2ee03f999058eaee773"
+      "sha256": "98669533ba7bb7b8b3d951656dde7c872c0f7519ee30915236555a5648f38c13"
     },
     {
       "name": "phase4-courts",
@@ -20167,7 +20680,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "195fb000a72a2ad8bea0c4e5897969a68200bb70ca00613a3721d0b10401db19"
+      "sha256": "270b92a8b54cb15ddcb485a31b4bdf65ca14c4b9d504d3eef613e1108b85790d"
     },
     {
       "name": "phase5-courts",
@@ -20177,7 +20690,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "2d3b7f49f86d2d45219d9a754d7ea1abd44d5aad34f7532bd0aa3d8952afd29f"
+      "sha256": "ed3a6b20413c42e409849caf3818a71a62bca14c3b806535749c33b53d102d99"
     },
     {
       "name": "phase6-courts",
@@ -20187,7 +20700,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "41188014033a8f3d1bdaaf529263eda135864cda7650d5b9bd564bc446105aa9"
+      "sha256": "dd81edf7e35cc63a470dd702481e3a06c94cf3776c0173aa937c4710e73ab13a"
     },
     {
       "name": "phase7-courts",
@@ -20197,17 +20710,17 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "a5d91d94b2d40e9c060b0898721b5c7c658a9fc2b17e301605e31d78af08a72b"
+      "sha256": "7a9436f5cdb80217b4c1049d21fb998fe11b02ce0a42ff34130d6ca354a3900f"
     },
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "b7e010dd97066cf126a008b1f1fbf7a21220abdcb4afdb1b4e0e1cda6d699617"
+      "sha256": "8cc3299e8141b6edade8fadeebac371aaae74563ccffa751b511ade8f524fbcd"
     },
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "e0bd33fc070285a14b2a52e4f8a355a2f57b7dd77221a0329f4591a747a6ea46"
+      "sha256": "d1afa678fef91a9e98e8d0dfdb32c7a2c06b7ccb08f840151335cd6b136fc0ae"
     },
     {
       "name": "phase9-courts",

@@ -730,6 +730,21 @@ COVERED_FILES = [
     # `cipher_rc2.c`, `cipher_rc4_hmac_md5.c`, `cipher_rc5.c` and the
     # `cipher_aes_cbc_hmac_*` family are not this profile's rows. Their raises stay
     # visible as uncovered sites until those strata land.
+    #
+    # Phase 13 staging: `crypto/ui/ui_lib.c` and `crypto/ui/ui_openssl.c`. The `UI` program lands
+    # ahead of its stratum (D350) because `EVP_read_pw_string_min` is its only caller and the PEM
+    # hinge needs it. Both files raise from surfaces the crate now has: `ui_lib.c`'s twenty sites
+    # are `ERR_LIB_UI` with the generic `ERR_R_*` codes and the eleven `UI_R_*` ones, and
+    # `ui_openssl.c`'s single reachable site is the `tcgetattr` errno fallback
+    # (`UI_R_UNKNOWN_TTYGET_ERRNO_VALUE`). `ui_err.c` defines no site (it is the reason-string
+    # `ui_err.c` defines no site (it is the reason-string
+    # table) and `ui_null.c` raises nothing, so neither is covered.
+    ("crypto/ui/ui_lib.c", "UI_LIB"),
+    ("crypto/ui/ui_openssl.c", "UI_OPENSSL"),
+    # Phase 8.9's `crypto/pem/pem_all.c`. The `IMPLEMENT_PEM_*` expansions raise nothing --
+    # they are one call to a `PEM_ASN1_*` -- so the two sites are the two hand-written readers'
+    # (`PEM_read_bio_DHparams` at `:201`, `PEM_read_DHparams` at `:214`).
+    ("crypto/pem/pem_all.c", "PEM_ALL"),
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`
@@ -1263,6 +1278,9 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
     # has to be in this include set even though the constructor itself is `open` in this slice.
     # `ecerr.h` is installed, so this is `dherr.h`'s case again.
     "#include <openssl/ecerr.h>",
+    # Phase 13 staging: `UI_R_*` for `crypto/ui/ui_lib.c` and `ui_openssl.c`, which D350
+    # transcribes. `uierr.h` is an installed header, so this is `ecerr.h`'s case again.
+    "#include <openssl/uierr.h>",
         # `PROP_R_*` is the first reason family this table needs that lives in an
         # *internal* header rather than an installed one: `internal/propertyerr.h`,
         # which the property grammar raises from. It is resolveable because the

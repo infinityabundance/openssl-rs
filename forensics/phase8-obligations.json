@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 0,
-      "implemented": 721,
-      "open_in_this_stratum": 65,
+      "implemented": 745,
+      "open_in_this_stratum": 41,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1572,6 +1572,30 @@
       "MDC2_Init",
       "MDC2_Update",
       "OSSL_EC_curve_nid2name",
+      "PEM_read_DHparams",
+      "PEM_read_DSAparams",
+      "PEM_read_ECPKParameters",
+      "PEM_read_RSAPublicKey",
+      "PEM_read_bio_DHparams",
+      "PEM_read_bio_DSAparams",
+      "PEM_read_bio_ECPKParameters",
+      "PEM_read_bio_RSAPublicKey",
+      "PEM_write_DHparams",
+      "PEM_write_DHxparams",
+      "PEM_write_DSAPrivateKey",
+      "PEM_write_DSAparams",
+      "PEM_write_ECPKParameters",
+      "PEM_write_ECPrivateKey",
+      "PEM_write_RSAPrivateKey",
+      "PEM_write_RSAPublicKey",
+      "PEM_write_bio_DHparams",
+      "PEM_write_bio_DHxparams",
+      "PEM_write_bio_DSAPrivateKey",
+      "PEM_write_bio_DSAparams",
+      "PEM_write_bio_ECPKParameters",
+      "PEM_write_bio_ECPrivateKey",
+      "PEM_write_bio_RSAPrivateKey",
+      "PEM_write_bio_RSAPublicKey",
       "PKCS1_MGF1",
       "RC2_cbc_encrypt",
       "RC2_cfb64_encrypt",
@@ -2174,25 +2198,7 @@
         "declaring_header": "pem.h",
         "module": "src/pem/key_legacy.rs",
         "received_from_phase": null,
-        "symbol": "PEM_read_DHparams"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
         "symbol": "PEM_read_DSAPrivateKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_DSAparams"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_ECPKParameters"
       },
       {
         "declaring_header": "pem.h",
@@ -2210,31 +2216,7 @@
         "declaring_header": "pem.h",
         "module": "src/pem/key_legacy.rs",
         "received_from_phase": null,
-        "symbol": "PEM_read_RSAPublicKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_bio_DHparams"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
         "symbol": "PEM_read_bio_DSAPrivateKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_bio_DSAparams"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_bio_ECPKParameters"
       },
       {
         "declaring_header": "pem.h",
@@ -2247,108 +2229,6 @@
         "module": "src/pem/key_legacy.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_bio_RSAPrivateKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_bio_RSAPublicKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_DHparams"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_DHxparams"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_DSAPrivateKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_DSAparams"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_ECPKParameters"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_ECPrivateKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_RSAPrivateKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_RSAPublicKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_bio_DHparams"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_bio_DHxparams"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_bio_DSAPrivateKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_bio_DSAparams"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_bio_ECPKParameters"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_bio_ECPrivateKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_bio_RSAPrivateKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_bio_RSAPublicKey"
       },
       {
         "declaring_header": "rsa.h",
@@ -2452,12 +2332,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "b9c4c7ba9217dd9c736b83e720a499ad194ef4d809a83a843c3d13b0056db455"
+      "sha256": "ffa53cbac2981cdac433e8162b052340c2ffa0bfbfe6acc6adb74d01f6a1e0e7"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "41188014033a8f3d1bdaaf529263eda135864cda7650d5b9bd564bc446105aa9"
+      "sha256": "dd81edf7e35cc63a470dd702481e3a06c94cf3776c0173aa937c4710e73ab13a"
     }
   ],
   "kind": "phase8-obligations",

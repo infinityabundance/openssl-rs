@@ -29832,6 +29832,276 @@ pub(crate) const PROV_FIPS_CRNG_TEST_452: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `UI_new_method` at `crypto/ui/ui_lib.c:32` (ERR_R_CRYPTO_LIB).
+pub(crate) const UI_LIB_32: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 32,
+    func: c"UI_new_method",
+    lib: 40,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `general_allocate_prompt` at `crypto/ui/ui_lib.c:103` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const UI_LIB_103: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 103,
+    func: c"general_allocate_prompt",
+    lib: 40,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `general_allocate_prompt` at `crypto/ui/ui_lib.c:107` (UI_R_NO_RESULT_BUFFER).
+pub(crate) const UI_LIB_107: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 107,
+    func: c"general_allocate_prompt",
+    lib: 40,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `general_allocate_boolean` at `crypto/ui/ui_lib.c:159` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const UI_LIB_159: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 159,
+    func: c"general_allocate_boolean",
+    lib: 40,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `general_allocate_boolean` at `crypto/ui/ui_lib.c:161` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const UI_LIB_161: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 161,
+    func: c"general_allocate_boolean",
+    lib: 40,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `general_allocate_boolean` at `crypto/ui/ui_lib.c:165` (UI_R_COMMON_OK_AND_CANCEL_CHARACTERS).
+pub(crate) const UI_LIB_165: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 165,
+    func: c"general_allocate_boolean",
+    lib: 40,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `UI_dup_user_data` at `crypto/ui/ui_lib.c:415` (UI_R_USER_DATA_DUPLICATION_UNSUPPORTED).
+pub(crate) const UI_LIB_415: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 415,
+    func: c"UI_dup_user_data",
+    lib: 40,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `UI_dup_user_data` at `crypto/ui/ui_lib.c:421` (ERR_R_UI_LIB).
+pub(crate) const UI_LIB_421: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 421,
+    func: c"UI_dup_user_data",
+    lib: 40,
+    reason: 524328,
+    dynamic_reason: false,
+};
+
+/// `UI_get0_result` at `crypto/ui/ui_lib.c:439` (UI_R_INDEX_TOO_SMALL).
+pub(crate) const UI_LIB_439: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 439,
+    func: c"UI_get0_result",
+    lib: 40,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `UI_get0_result` at `crypto/ui/ui_lib.c:443` (UI_R_INDEX_TOO_LARGE).
+pub(crate) const UI_LIB_443: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 443,
+    func: c"UI_get0_result",
+    lib: 40,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `UI_get_result_length` at `crypto/ui/ui_lib.c:452` (UI_R_INDEX_TOO_SMALL).
+pub(crate) const UI_LIB_452: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 452,
+    func: c"UI_get_result_length",
+    lib: 40,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `UI_get_result_length` at `crypto/ui/ui_lib.c:456` (UI_R_INDEX_TOO_LARGE).
+pub(crate) const UI_LIB_456: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 456,
+    func: c"UI_get_result_length",
+    lib: 40,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `UI_process` at `crypto/ui/ui_lib.c:553` (UI_R_PROCESSING_ERROR).
+pub(crate) const UI_LIB_553: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 553,
+    func: c"UI_process",
+    lib: 40,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `UI_ctrl` at `crypto/ui/ui_lib.c:560` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const UI_LIB_560: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 560,
+    func: c"UI_ctrl",
+    lib: 40,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `UI_ctrl` at `crypto/ui/ui_lib.c:577` (UI_R_UNKNOWN_CONTROL_COMMAND).
+pub(crate) const UI_LIB_577: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 577,
+    func: c"UI_ctrl",
+    lib: 40,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `UI_create_method` at `crypto/ui/ui_lib.c:617` (ERR_R_CRYPTO_LIB).
+pub(crate) const UI_LIB_617: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 617,
+    func: c"UI_create_method",
+    lib: 40,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `UI_set_result_ex` at `crypto/ui/ui_lib.c:898` (UI_R_RESULT_TOO_SMALL).
+pub(crate) const UI_LIB_898: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 898,
+    func: c"UI_set_result_ex",
+    lib: 40,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `UI_set_result_ex` at `crypto/ui/ui_lib.c:906` (UI_R_RESULT_TOO_LARGE).
+pub(crate) const UI_LIB_906: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 906,
+    func: c"UI_set_result_ex",
+    lib: 40,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `UI_set_result_ex` at `crypto/ui/ui_lib.c:914` (UI_R_NO_RESULT_BUFFER).
+pub(crate) const UI_LIB_914: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 914,
+    func: c"UI_set_result_ex",
+    lib: 40,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `UI_set_result_ex` at `crypto/ui/ui_lib.c:927` (UI_R_NO_RESULT_BUFFER).
+pub(crate) const UI_LIB_927: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 927,
+    func: c"UI_set_result_ex",
+    lib: 40,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `open_console` at `crypto/ui/ui_openssl.c:457` (UI_R_UNKNOWN_TTYGET_ERRNO_VALUE).
+pub(crate) const UI_OPENSSL_457: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_openssl.c",
+    line: 457,
+    func: c"open_console",
+    lib: 40,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `open_console` at `crypto/ui/ui_openssl.c:468` (UI_R_SYSASSIGN_ERROR).
+pub(crate) const UI_OPENSSL_468: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_openssl.c",
+    line: 468,
+    func: c"open_console",
+    lib: 40,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `noecho_console` at `crypto/ui/ui_openssl.c:502` (UI_R_SYSQIOW_ERROR).
+pub(crate) const UI_OPENSSL_502: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_openssl.c",
+    line: 502,
+    func: c"noecho_console",
+    lib: 40,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `echo_console` at `crypto/ui/ui_openssl.c:534` (UI_R_SYSQIOW_ERROR).
+pub(crate) const UI_OPENSSL_534: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_openssl.c",
+    line: 534,
+    func: c"echo_console",
+    lib: 40,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `close_console` at `crypto/ui/ui_openssl.c:561` (UI_R_SYSDASSGN_ERROR).
+pub(crate) const UI_OPENSSL_561: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_openssl.c",
+    line: 561,
+    func: c"close_console",
+    lib: 40,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `PEM_read_bio_DHparams` at `crypto/pem/pem_all.c:201` (ERR_R_ASN1_LIB).
+pub(crate) const PEM_ALL_201: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_all.c",
+    line: 201,
+    func: c"PEM_read_bio_DHparams",
+    lib: 9,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PEM_read_DHparams` at `crypto/pem/pem_all.c:214` (ERR_R_BUF_LIB).
+pub(crate) const PEM_ALL_214: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_all.c",
+    line: 214,
+    func: c"PEM_read_DHparams",
+    lib: 9,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -32823,4 +33093,31 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_FIPS_CRNG_TEST_422,
     PROV_FIPS_CRNG_TEST_441,
     PROV_FIPS_CRNG_TEST_452,
+    UI_LIB_32,
+    UI_LIB_103,
+    UI_LIB_107,
+    UI_LIB_159,
+    UI_LIB_161,
+    UI_LIB_165,
+    UI_LIB_415,
+    UI_LIB_421,
+    UI_LIB_439,
+    UI_LIB_443,
+    UI_LIB_452,
+    UI_LIB_456,
+    UI_LIB_553,
+    UI_LIB_560,
+    UI_LIB_577,
+    UI_LIB_617,
+    UI_LIB_898,
+    UI_LIB_906,
+    UI_LIB_914,
+    UI_LIB_927,
+    UI_OPENSSL_457,
+    UI_OPENSSL_468,
+    UI_OPENSSL_502,
+    UI_OPENSSL_534,
+    UI_OPENSSL_561,
+    PEM_ALL_201,
+    PEM_ALL_214,
 ];

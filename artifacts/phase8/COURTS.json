@@ -125,6 +125,23 @@
         "verdict": "pass"
       },
       {
+        "authority_exit_code": 0,
+        "authority_observations": 102,
+        "candidate_exit_code": 0,
+        "candidate_observations": 102,
+        "candidate_stderr_tail": [],
+        "court": "RT-PEM-KEY",
+        "crashed": false,
+        "probe": "courts/phase8/rt_pem_key_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase8/probes/rt_pem_key_probe.authority",
+          "candidate": "artifacts/phase8/probes/rt_pem_key_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
         "algorithms": {
           "blake2b512": {
             "digest_bytes": 64,
@@ -37789,8 +37806,8 @@
     ],
     "summary": {
       "fail": 0,
-      "pass": 9,
-      "total": 9
+      "pass": 10,
+      "total": 10
     }
   },
   "generator": "forensics/tools/phase8_courts.py",
@@ -37834,6 +37851,11 @@
       "name": "probe",
       "path": "courts/phase8/rt_ec_probe.c",
       "sha256": "a4743265ad9974cb53a199482b66f4a1349701198d0a11362ea193e313335d19"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase8/rt_pem_key_probe.c",
+      "sha256": "dc5bd284f41e1c0dce5530e4aefcc0c56a473886793c0436434eef2107b572ea"
     },
     {
       "name": "correctness-probe",

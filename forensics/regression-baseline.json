@@ -322,6 +322,10 @@
       "observations": 37,
       "verdict": "pass"
     },
+    "RT-PEM-KEY": {
+      "observations": 102,
+      "verdict": "pass"
+    },
     "RT-PROVIDER": {
       "observations": 83,
       "verdict": "pass"
@@ -384,12 +388,12 @@
     "phase4": 23,
     "phase5": 91,
     "phase6": 0,
-    "phase7": 226,
+    "phase7": 223,
     "phase8": 0,
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 2659,
+    "libcrypto": 2753,
     "libssl": 0
   },
   "open_obligations": {
@@ -398,8 +402,8 @@
     "phase5": 0,
     "phase6": 0,
     "phase7": 0,
-    "phase8": 65,
-    "phase9": 11
+    "phase8": 41,
+    "phase9": 3
   },
   "owned_obligations": {
     "phase3": 294,
@@ -435,10 +439,10 @@
     "9": "in-progress"
   },
   "prerequisites": {
-    "blocking_dependencies": 18,
-    "divergence_names_covered": 59,
+    "blocking_dependencies": 17,
+    "divergence_names_covered": 60,
     "findings": 0,
-    "language_census": 4188,
+    "language_census": 4241,
     "sealed_census": 56
   },
   "provider_implemented": [

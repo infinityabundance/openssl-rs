@@ -24402,3 +24402,180 @@ with **65** names open, 8.8's fifteen, the four key types' printer families and 
 helpers among them. What this slice is, is the six accessors the method objects name, the three
 layouts they read and the cache the courts give them -- not 8.8, not the method objects, and not a
 claim about the stratum's work being nearly done.
+
+## D350 — the PEM hinge opens in three stages: `crypto/ui/` and `EVP_read_pw_string*` land first, `PEM_def_callback` and the Phase-9 PEM plumbing next, and 8.9's thirty `crypto/pem/pem_all.c` rows last -- twenty-four of them, the other six withheld on two independent absences
+
+**Decision.** One commit, three stages, in dependency order, the whole pipeline re-run at each
+boundary. The brief's chain is verified against the admitted authority coordinate by coordinate
+before anything is written; a landing the brief calls eight is eight, and two phrasings in it are
+corrected below.
+
+**Stage 1 -- the UI program and `EVP_read_pw_string_min`.** `crypto/ui/ui_lib.c` is transcribed
+**whole** as `src/ui/ui_lib.rs` -- the `UI`/`UI_STRING`/`UI_METHOD` objects, their constructors and
+destructors, the processing loop and the `UI_PKEY_*`/`UI_get0_*` accessors (`transcription-edges.json`:
+`share 55/55`). `crypto/ui/ui_openssl.c` is `src/ui/ui_openssl.rs`, the **admitted `linux-x86_64`
+profile's** method only -- termios, `sigaction` and `/dev/tty`; the Windows and `OPENSSL_SYS_*` arms
+are `#ifdef`-absent from this profile and are not invented (`share 3/3`). `crypto/ui/ui_null.c` is
+`src/ui/ui_null.rs` (`1/1`), and `src/ui/mod.rs` declares a **new `src/ui/` tree**. `EVP_read_pw_string_min`
+(`crypto/evp/evp_key.c:52`) and its `EVP_read_pw_string` wrapper (`:47`) join `src/evp/p_legacy.rs`, the
+module the atlas already attributes `crypto/evp/evp_key.c` to.
+
+**The brief's line counts and its phase label for the two `EVP_read_pw_string*` are corrected by the
+authority.** The brief says `ui_lib.c` is "~430 lines" and `ui_openssl.c` "~330"; they are **949** and
+**730**. The brief calls `EVP_read_pw_string*` "Phase 13's names"; `symbol-ownership.json` gives them
+`owner_phase: 7` (`evp.h`), and the Phase-13 names are the `UI_*` ones (`ui.h`) the brief does not
+distinguish from them. So the landing moves the **Phase 7** ledger, implemented **724 -> 727** -- the
+pair, plus `PEM_def_callback`, which Phase 5's ledger hands to Phase 7 ("reads a pass phrase through
+`EVP_read_pw_string_min`, which Phase 7 owns") and whose only caller chain it is -- and **no Phase-8
+count**: the `UI_*` names are Phase 13's and Phase 13 has no obligation ledger (`"not-yet-written"`).
+
+**Two measured corrections inside stage 1.** `UI_get_default_method()` is `&ui_openssl` on both
+sides: a first court arm comparing it to `UI_null()` was measured as a residual and removed, because
+`UI_new_method` never falls through to the null method -- `UI_null` is reachable only through the
+probe's own explicit `UI_set_default_method(UI_null())` -- and `UI_open_session`'s difference needs a
+Linux `TIOCSCTTY` and is deliberately not observed. And `EVP_read_pw_string*` answer **`-2`**, not
+`-1`, for a cancelled prompt: `UI_process` returns `-2` when the method has no reader, and
+`PEM_def_callback`'s prompt arm converts that to its own `-1` (`pem_lib.c:63`, `if (i != 0)`). A unit
+test that asserted `-1` was corrected to `-2` by the measurement rather than the other way round.
+
+**Stage 2 -- `PEM_def_callback` and the Phase-9 PEM plumbing.** `crypto/pem/pem_lib.c`'s slice is
+appended to `src/pem/pem_lib.rs`, the module the atlas already attributes that unit to, whose Phase-5
+half is preserved: `PEM_def_callback` (`:36-69`), `pem_bytes_read_bio_flags` (`:243`),
+`PEM_bytes_read_bio` (`:286`), `PEM_bytes_read_bio_secmem` (`:294`), `PEM_ASN1_write` (`:303`),
+`PEM_ASN1_write_bio_internal` (`:323`), `PEM_ASN1_write_bio` (`:428`), `PEM_ASN1_write_bio_ctx`
+(`:436`), `PEM_do_header` (`:445`) and `check_pem` (`:128`) -- the last three of those file-local.
+`crypto/pem/pem_oth.c`'s one export, `PEM_ASN1_read_bio` (`:20`), becomes a module of its **own**,
+`src/pem/pem_oth.rs`. **That is a choice, and here is the measurement behind it:** the crate's rule is
+one authority unit per module and `plan_reconciliation.py`'s P1 fails a unit with no module, while
+`phase9-obligations.json`'s `src/pem/pem_lib.rs` is a `MODULE_PREFIXES` **label** (the `PEM_` prefix)
+and not an ownership claim -- the atlas's own `transcription-edges.json` maps `crypto/pem/pem_oth.c`
+to `src/pem/pem_oth.rs` (`phase 9`, `share 1/1`). `check_pem`'s `ENGINE_finish` (`pem_lib.c:170`,
+`#ifndef OPENSSL_NO_ENGINE`) is handled the way this crate already handles it -- D181's reduction,
+`*pe = NULL` written at the site with the reason, as `src/evp/pkey_asn1.rs` does -- and is not treated
+as a blocker.
+
+**Eight rows move, not ten, and the brief's own list is where the ten comes from.** The brief's
+stage-2 sentence enumerates **eleven** function names in the two units; three of them --
+`pem_bytes_read_bio_flags`, `check_pem` and `PEM_ASN1_write_bio_internal` -- are file-local and have
+no `libcrypto` symbol, so they are no ledger row. The eight **exports** (`PEM_do_header`,
+`PEM_bytes_read_bio`, `PEM_bytes_read_bio_secmem`, `PEM_ASN1_read`, `PEM_ASN1_read_bio`,
+`PEM_ASN1_write`, `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx`) are the eight rows, all
+`received_from_phase: 7`, and Phase 9 moves open **11 -> 3**, implemented **58 -> 66**.
+`ossl_pw_pem_password` and `ossl_pw_set_pem_password_cb`, which the brief asks about, are **not on
+this path**: `PEM_def_callback`'s prompt arm calls `EVP_read_pw_string_min` (`pem_lib.c:62`) directly,
+and neither name is in `symbol-ownership.json`'s universe, so nothing is transcribed for them.
+
+**Stage 3 -- 8.9's rows, twenty-four of thirty, written out.** `crypto/pem/pem_all.c` is
+`src/pem/key_legacy.rs`; the crate has no C preprocessor, so the `IMPLEMENT_PEM_*` expansions are
+written **out** -- one function per name, each the single `PEM_ASN1_read`/`_read_bio`/`_write`/
+`_write_bio` call the macro produced, with a one-line `(d2i_of_void *)`/`(i2d_of_void *)` shim per
+decoder/encoder the macro names (`share 24/24`). The brief's **14 readers and 16 writers** is confirmed
+by measurement: eight macro invocations carry a Phase-8 name -- three `IMPLEMENT_PEM_rw`
+(`RSAPublicKey`, `DSAparams`, `ECPKParameters`; 6 readers + 6 writers), three `IMPLEMENT_PEM_write_cb`
+(the `RSA`/`DSA`/`EC` private keys; 6 writers) and two `IMPLEMENT_PEM_write` (`DHparams`, `DHxparams`;
+4 writers) -- plus **eight hand-written readers** (`pem_all.c:69`, `:79`, `:109`, `:120`, `:150`,
+`:165`, `:183`, `:208`). The brief's reading of the plain writers is right and is *why* they reach no
+callback: `IMPLEMENT_PEM_write` passes `enc == NULL, NULL, 0, NULL, NULL`, so
+`PEM_ASN1_write_bio_internal` skips both of its `enc != NULL` blocks (`:336`, `:369`), and
+`PEM_do_header` reaches `PEM_def_callback` only when `cipher->cipher != NULL` (`:464-467`); the three
+`_cb` writers are the ones whose signature carries `enc` and so can reach it.
+
+**The six withheld readers wait on two independent absences, and the brief names only one.**
+`PEM_read[_bio]_RSAPrivateKey`/`_DSAPrivateKey`/`_ECPrivateKey` are each `PEM_read[_bio]_PrivateKey`
+followed by one of the file's three `pkey_get_*` helpers. The helpers call `EVP_PKEY_get1_RSA` /
+`_get1_DSA` / `_get1_EC_KEY` -- **Phase 8's own open rows**, which wait on the `standard_methods[]`
+table and D341's cycle -- and that is the absence the brief names. The `PEM_read[_bio]_PrivateKey`
+pair the readers wrap is `crypto/pem/pem_pkey.c`'s, **Phase 7's**, handed on to Phase 10/13, and
+equally unlanded: the **second, independent** absence, and the later of the two. A reader cannot be
+written that calls a function no module defines, so the six are **withheld**, named in the module doc
+with their coordinates (`pkey_get_rsa` `:53-67` over `PEM_read_bio_RSAPrivateKey` `:69-75` and
+`PEM_read_RSAPrivateKey` `:79-84`; `pkey_get_dsa` `:93-107` over `:109-115` and `:120-125`;
+`pkey_get_eckey` `:134-148` over `:150-156` and `:165-171`), and not stubbed. Phase 8 moves implemented
+**721 -> 745**, deferred 0, open **65 -> 41**, over the same **786** owned.
+
+**One coordinate in the brief is a call site, not a definition.** Every other coordinate checks out
+-- `pem_lib.c:36-69`, `:445`, `:286`, `:111`, `:303`, `:428`, `pem_oth.c:20`, `pem_lib.c:170`,
+`evp_key.c:52` -- but the brief's `PEM_ASN1_write_bio_internal (pem_lib.c:372)` is the
+`klen = PEM_def_callback(...)` **call site** inside the function; the definition is `pem_lib.c:323`.
+
+**The court: `RT-PEM-KEY` is registered and passes at 102 observations, zero residual.** The plan
+named it and nothing registered it; `courts/phase8/rt_pem_key_probe.c` is new and
+`forensics/tools/phase8_courts.py`'s `COURTS` now carries `("RT-PEM-KEY", "rt_pem_key_probe.c")`, so
+`court_coverage.py` finds a staged probe whose `.dynsym` directly covers the new exports. The probe is
+compiled twice and the transcripts diffed, so it decides nothing on its own. Its arms are
+deterministic and print no secret: every `DH`/`DHx`/`EC` block is written from a **public named
+parameter set** (`DH_get_1024_160()`, `EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1)`), so its
+bytes are a constant of the probe's own inputs and only the begin line and length are printed; the
+`DSA` parameter block comes from `DSA_generate_parameters_ex` over a **fixed seed**; and the
+`RSA`/`DSA`/`EC` **private** writers print the return code, the presence of the `Proc-Type`/`DEK-Info`
+header lines, the decrypted length and whether a block decodes back at all -- **never the DER bytes**
+(D347's rule). The read side synthesises its input from the probe's own writer output. It **never
+reaches the interactive prompt**: its first act is `UI_set_default_method(UI_null())`, so
+`PEM_def_callback`'s `userdata == NULL` arm, `EVP_read_pw_string` and `EVP_read_pw_string_min` all
+reach a method with no reader and answer the cancellation code instead of reading `/dev/tty`. The
+encrypted-block **read-back** is deliberately absent: `PEM_get_EVP_CIPHER_INFO` resolves the
+`DEK-Info` name through `EVP_get_cipherbyname`, whose legacy `OBJ_NAME` table does not hold the
+default provider's rows in the candidate (pre-existing, and Phase 13's). `probe_hygiene.py` reads the
+probe clean.
+
+**The `UNBLOCKED_HANDOFFS` row that hands the eight PEM names to Phase 9 is corrected, not retired --
+and the measurement is what says so.** The brief calls that row "measured to be wrong": it is, in
+its **reason** and not in its existence. The reason said both blockers it named had landed (`EVP_md5`
+in D293, the `RAND_*` front in D313) "so what is left is this stratum's own `pem_lib.c`
+transcription" -- omitting that `PEM_do_header` (`:467`) and the write trio (`:372`) also call
+`PEM_def_callback`, whose own chain is `EVP_read_pw_string_min` (`evp.h`, owner 7) -> the `UI_*`
+objects (`ui.h`, owner **13**), so the eight were blocked on **Phase 13** and not on this stratum's
+transcription alone. The row **stays**, because `phase7_obligations.py`'s own third mechanism says
+what retiring it would do: the row is the hand-off **edge** that puts the eight symbols in Phase 9's
+working set, and retiring it the moment they are built would move eight built exports into Phase 7's
+`implemented` list on the strength of work Phase 7 did not do -- and take them off Phase 9's books, as
+`received_by_handoff` would fall 44 -> 36. So **only the reason changed**, to record the missed third
+dependency and that D350 lands it; the counts are unmoved (`deferred_to_later_phase` **223**,
+`blocker_liveness.findings` **0**), which is why the sealed stratum's numbers are exactly where they
+were.
+
+**Bookkeeping, read off the regenerated files.** `forensics/atlas/implemented-surface.json`'s
+`libcrypto` implemented **2659 -> 2753** (+94: `ui_lib.c`'s 55, `ui_openssl.c`'s 3, `ui_null.c`'s 1,
+`pem_lib.c`'s 8, `pem_oth.c`'s 1, `pem_all.c`'s 24 and `evp_key.c`'s 2), and `internal_symbols.c_style`
+stays **327** (the internals are `pub(crate)` Rust functions with no `#[no_mangle]`).
+`transcription-edges.json` reads **292** modules over **261** units (was 287/256). `court-coverage.py`
+reports phase 8 at **745** implemented (**737** directly courted, **8** indirect, **0** unmatched) and
+phase 9 at **66** (**66** direct); its `not_yet_begun` list -- the class D348 added for an implemented
+export whose owner phase has no ledger -- grows **21 -> 80**, because the 59 `phase 13` names the
+`UI_*` slice lands are now implemented and Phase 13 has no ledger. The prerequisite gate ends at
+**zero findings** over **13 rows / 60 names** (the 60th is `stdin`, whose
+`shadowed_by_a_crate_identifier` row `src/ui/ui_openssl.rs` extends and whose record
+`forensics/prerequisites.json` carries), `blocking_dependencies` **17** and `sealed_stratum_census`
+**56**. `gen_err_raise_sites.py`'s `COVERED_FILES` gains `crypto/ui/ui_lib.c`, `crypto/ui/ui_openssl.c`
+and `crypto/pem/pem_all.c`, so `src/runtime/err_sites.rs` and `forensics/atlas/err-raise-sites.json`
+carry the new sites, and the `uierr.h` include set is joined for the `UI_R_*` reasons. Two
+`forensics/prerequisites.json` records are **retired** because the landing made them stale: the
+`UI_new` deferral (`D193`/`D194`) the `UI` program discharges, and the `crypto/pem/pem_oth.c` *unit*
+row, which `plan_reconciliation.py`'s P1 now reaches through `src/pem/pem_oth.rs`.
+`regression_guard.py --baseline-ref origin/main` reports no regression over **93** courts and **36750**
+observations, up from 92 and 36648 by exactly `RT-PEM-KEY`'s 102. `docs/PHASE-8-SUBPHASES.md`'s 8.9 row
+records this entry; its two anchored §4 clauses are **unchanged** and still consistent in both
+directions, since the 24 landed names are not named there and a sample is not required to grow.
+
+**Recorded rather than edited, in the sealed strata.** `phase7_obligations.py`'s
+`PEM_read[_bio]_PrivateKey` row still lists `UI_new` among its blockers (`:605-609`), and `UI_new` has
+now landed. The row **stands**: its two `OSSL_*_CTX_new_for_pkey` blockers are still absent, so
+`blocker_liveness.check_rows`' rule 4 ("every blocker has landed") does not fire, its binding phase is
+still 13 and Phase 13 has not begun. Only the row's blocker list is now one entry out of date. Nothing
+there is falsified, and the sealed ledger's numbers must not move in this commit.
+
+**What is deliberately *not* here, named rather than implied.** `crypto/ui/ui_util.c` and
+`crypto/ui/ui_err.c` have no module: `UI_UTIL_read_pw*` is not on `PEM_def_callback`'s path, and
+`ui_err.c` defines no raise site (it is the reason-string table). The six private-key readers are
+withheld with their two blockers above. The ten `*_PUBKEY`/`X509_*` rows `pem_all.c` also expands
+(`X509_REQ`, `X509_REQ_NEW`, `X509_CRL`, `X509_PUBKEY`, `PKCS7`, `NETSCAPE_CERT_SEQUENCE`,
+`RSA_PUBKEY`, `DSA_PUBKEY`, `EC_PUBKEY`, `PUBKEY`) are **Phase 11's** per `symbol-ownership.json` and
+are not 8.9's. The `*_asn1_meth` bodies 8.9's title also names are untouched -- the method objects
+still cannot exist before Phase 11's `X509_PUBKEY`/`PKCS8_PRIV_KEY_INFO` (D341). And the
+encrypted-block **read-back** is Phase 13's, on the legacy `OBJ_NAME` cipher table above.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete: false`
+with **41** names open -- the six withheld private-key readers, the `*_asn1_meth` objects and the four
+key types' printer families among them. What this entry is, is the hinge opening: the `UI` program,
+`PEM_def_callback`, the Phase-9 PEM plumbing and twenty-four of 8.9's thirty rows -- not 8.9, not the
+method objects, and not a claim that the stratum's work is nearly done.
