@@ -7,10 +7,10 @@
     "census": {
       "names_a_file_the_authority_does_not_have": 19,
       "symbols_not_reached": 8,
-      "units_not_reached": 41
+      "units_not_reached": 44
     },
     "census_by_stratum": {
-      "8": 54,
+      "8": 57,
       "9": 14
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
@@ -59,9 +59,12 @@
         "crypto/dsa/dsa_prn.c",
         "crypto/ec/ec2_smpl.c",
         "crypto/ec/ec_backend.c",
+        "crypto/ec/ec_key.c",
         "crypto/ec/ec_kmeth.c",
         "crypto/ec/ec_lib.c",
         "crypto/ec/ec_mult.c",
+        "crypto/ec/ecdsa_sign.c",
+        "crypto/ec/ecdsa_vrf.c",
         "crypto/ec/ecp_mont.c",
         "crypto/ec/ecp_nist.c",
         "crypto/ec/ecp_nistz256.c",
@@ -103,7 +106,7 @@
       "symbols_reached": 84,
       "unit_records": 66,
       "units_named_by_a_record": 68,
-      "units_named_by_a_row": 208,
+      "units_named_by_a_row": 211,
       "units_reached": 167
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
@@ -841,6 +844,29 @@
           "src/ec/curve.rs"
         ]
       },
+      "crypto/ec/ec_key.c": {
+        "defines": [
+          "ossl_ec_generate_key_dhkem",
+          "ossl_ec_key_gen",
+          "ossl_ec_key_get0_propq",
+          "ossl_ec_key_get_libctx",
+          "ossl_ec_key_pairwise_check",
+          "ossl_ec_key_private_check",
+          "ossl_ec_key_public_check",
+          "ossl_ec_key_public_check_quick",
+          "ossl_ec_key_set0_libctx",
+          "ossl_ec_key_simple_check_key",
+          "ossl_ec_key_simple_generate_key",
+          "ossl_ec_key_simple_generate_public_key",
+          "ossl_ec_key_simple_oct2priv",
+          "ossl_ec_key_simple_priv2oct"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": []
+      },
       "crypto/ec/ec_kmeth.c": {
         "defines": [
           "ossl_ec_key_new_method_int"
@@ -875,6 +901,22 @@
           "ossl_ec_wNAF_mul",
           "ossl_ec_wNAF_precompute_mult"
         ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/ec/ecdsa_sign.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/ec/ecdsa_vrf.c": {
+        "defines": [],
         "recorded_by": null,
         "subphases": [
           "8.7"
@@ -3108,7 +3150,7 @@
       "transcribed_units": 218
     }
   },
-  "body_hash": "b866160dae57ed1bee48e181d3849081b40403f7f2b530978ec58d6d7eaa546c",
+  "body_hash": "c2b9fc4cfa36b321ba043afe36c7de5eb27ea90b765dd4172e832614210753df",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -3159,7 +3201,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "2d66ae5cdafebd0ae3baad6f5c73ce22a291f7f47f95820c3c1773bd8867b48d"
+      "sha256": "b5acd7104f0504787e116e43497324e343a5da5bc42a7f53a4f4e0af8177257c"
     },
     {
       "name": "plan-PHASE-9-SUBPHASES",
