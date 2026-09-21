@@ -93,6 +93,7 @@
 //! than merely wrong.
 
 pub mod asn1;
+pub mod backend;
 pub mod ctrl;
 pub mod depr;
 pub mod gen;

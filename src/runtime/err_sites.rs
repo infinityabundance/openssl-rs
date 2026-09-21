@@ -23542,6 +23542,26 @@ pub(crate) const DH_GROUP_PARAMS_47: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ossl_dh_key_from_pkcs8` at `crypto/dh/dh_backend.c:222` (DH_R_BN_ERROR).
+pub(crate) const DH_BACKEND_222: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_backend.c",
+    line: 222,
+    func: c"ossl_dh_key_from_pkcs8",
+    lib: 5,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_dh_key_from_pkcs8` at `crypto/dh/dh_backend.c:235` (DH_R_DECODE_ERROR).
+pub(crate) const DH_BACKEND_235: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_backend.c",
+    line: 235,
+    func: c"ossl_dh_key_from_pkcs8",
+    lib: 5,
+    reason: 104,
+    dynamic_reason: false,
+};
+
 /// `dsa_new_intern` at `crypto/dsa/dsa_lib.c:141` (ERR_R_CRYPTO_LIB).
 pub(crate) const DSA_LIB_141: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_lib.c",
@@ -23669,6 +23689,66 @@ pub(crate) const DSA_OSS_453: ErrSite = ErrSite {
     func: c"dsa_do_verify",
     lib: 10,
     reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_dsa_key_from_pkcs8` at `crypto/dsa/dsa_backend.c:154` (DSA_R_BN_ERROR).
+pub(crate) const DSA_BACKEND_154: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_backend.c",
+    line: 154,
+    func: c"ossl_dsa_key_from_pkcs8",
+    lib: 10,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `ossl_dsa_key_from_pkcs8` at `crypto/dsa/dsa_backend.c:159` (ERR_R_BN_LIB).
+pub(crate) const DSA_BACKEND_159: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_backend.c",
+    line: 159,
+    func: c"ossl_dsa_key_from_pkcs8",
+    lib: 10,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_dsa_key_from_pkcs8` at `crypto/dsa/dsa_backend.c:163` (ERR_R_BN_LIB).
+pub(crate) const DSA_BACKEND_163: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_backend.c",
+    line: 163,
+    func: c"ossl_dsa_key_from_pkcs8",
+    lib: 10,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_dsa_key_from_pkcs8` at `crypto/dsa/dsa_backend.c:171` (DSA_R_BN_ERROR).
+pub(crate) const DSA_BACKEND_171: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_backend.c",
+    line: 171,
+    func: c"ossl_dsa_key_from_pkcs8",
+    lib: 10,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `ossl_dsa_key_from_pkcs8` at `crypto/dsa/dsa_backend.c:175` (ERR_R_INTERNAL_ERROR).
+pub(crate) const DSA_BACKEND_175: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_backend.c",
+    line: 175,
+    func: c"ossl_dsa_key_from_pkcs8",
+    lib: 10,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_dsa_key_from_pkcs8` at `crypto/dsa/dsa_backend.c:182` (DSA_R_DECODE_ERROR).
+pub(crate) const DSA_BACKEND_182: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_backend.c",
+    line: 182,
+    func: c"ossl_dsa_key_from_pkcs8",
+    lib: 10,
+    reason: 104,
     dynamic_reason: false,
 };
 
@@ -32464,6 +32544,8 @@ pub(crate) static ALL: &[ErrSite] = &[
     DH_CHECK_256,
     DH_CHECK_277,
     DH_GROUP_PARAMS_47,
+    DH_BACKEND_222,
+    DH_BACKEND_235,
     DSA_LIB_141,
     DSA_LIB_158,
     DSA_LIB_167,
@@ -32477,6 +32559,12 @@ pub(crate) static ALL: &[ErrSite] = &[
     DSA_OSS_374,
     DSA_OSS_379,
     DSA_OSS_453,
+    DSA_BACKEND_154,
+    DSA_BACKEND_159,
+    DSA_BACKEND_163,
+    DSA_BACKEND_171,
+    DSA_BACKEND_175,
+    DSA_BACKEND_182,
     EC_CURVE_2876,
     EC_CURVE_2888,
     EC_CURVE_2893,

@@ -687,6 +687,161 @@ pub(crate) unsafe fn ossl_ffc_params_print(
     1
 }
 
+/// `int ossl_ffc_params_todata(const FFC_PARAMS *ffc, OSSL_PARAM_BLD *bld, OSSL_PARAM params[])`
+/// — `crypto/ffc/ffc_params.c:219-285`. Internal, declared in `include/internal/ffc.h`.
+///
+/// The writer [`crate::dh::backend::ossl_dh_params_todata`] serialises its parameters with, and
+/// the last function of this unit to land: `src/ffc/mod.rs` and the divergence row in
+/// `forensics/prerequisites.json` both recorded it as withheld, because the `nid != NID_undef`
+/// arm reaches two lookups in `crypto/ffc/ffc_dh.c` and the whole body reaches
+/// `crypto/param_build_set.c`'s four helpers. D332 landed `ffc_dh.c` in [`super::dh`] and D340
+/// landed `param_build_set.c`, so both blockers are gone; D351 lands the function and retires the
+/// row.
+///
+/// **The three `flags` bits are written as `int`s, not as the bit set.** Each is `(flags & FLAG)
+/// != 0` — a 0 or a 1 — so a recipient reads "validate or do not", and the object's own `0x01`-style
+/// bit set is not what travels. That is why the three lines exist separately rather than one
+/// `ossl_param_build_set_int` of `ffc->flags`.
+///
+/// **`nid` is the one parameter with a lookup in it**, and it is skipped entirely when the object
+/// carries no named group: `NID_undef` means "these are explicit parameters", and writing a
+/// `group` name for them would be a claim about a group the caller never named. A `nid` that
+/// resolves to no row and one whose row has no name are both refusals (`return 0`), because the
+/// authority's `name == NULL || !set_utf8_string(...)` is one `if`.
+///
+/// # Safety
+/// `ffc` is a live object; `bld` is NULL or a live builder; `params` is NULL or a key-terminated
+/// descriptor array.
+pub(crate) unsafe fn ossl_ffc_params_todata(
+    ffc: *const FfcParams,
+    bld: *mut crate::params::build::OSSL_PARAM_BLD,
+    params: *mut crate::params::OsslParam,
+) -> c_int {
+    use crate::evp::pkey_ctx::{
+        OSSL_PKEY_PARAM_FFC_COFACTOR, OSSL_PKEY_PARAM_FFC_DIGEST, OSSL_PKEY_PARAM_FFC_DIGEST_PROPS,
+        OSSL_PKEY_PARAM_FFC_G, OSSL_PKEY_PARAM_FFC_GINDEX, OSSL_PKEY_PARAM_FFC_H,
+        OSSL_PKEY_PARAM_FFC_P, OSSL_PKEY_PARAM_FFC_PCOUNTER, OSSL_PKEY_PARAM_FFC_Q,
+        OSSL_PKEY_PARAM_FFC_SEED, OSSL_PKEY_PARAM_FFC_VALIDATE_G,
+        OSSL_PKEY_PARAM_FFC_VALIDATE_LEGACY, OSSL_PKEY_PARAM_FFC_VALIDATE_PQ,
+        OSSL_PKEY_PARAM_GROUP_NAME,
+    };
+    use crate::ffc::dh::{ossl_ffc_named_group_get_name, ossl_ffc_uid_to_dh_named_group};
+    use crate::ffc::{
+        FFC_PARAM_FLAG_VALIDATE_G, FFC_PARAM_FLAG_VALIDATE_LEGACY, FFC_PARAM_FLAG_VALIDATE_PQ,
+    };
+    use crate::param_build_set::{
+        ossl_param_build_set_bn, ossl_param_build_set_int, ossl_param_build_set_octet_string,
+        ossl_param_build_set_utf8_string,
+    };
+    use crate::runtime::obj::NID_undef;
+
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut test_flags: c_int;
+
+        if !(*ffc).p.is_null()
+            && ossl_param_build_set_bn(bld, params, OSSL_PKEY_PARAM_FFC_P, (*ffc).p) == 0
+        {
+            return 0;
+        }
+        if !(*ffc).q.is_null()
+            && ossl_param_build_set_bn(bld, params, OSSL_PKEY_PARAM_FFC_Q, (*ffc).q) == 0
+        {
+            return 0;
+        }
+        if !(*ffc).g.is_null()
+            && ossl_param_build_set_bn(bld, params, OSSL_PKEY_PARAM_FFC_G, (*ffc).g) == 0
+        {
+            return 0;
+        }
+        if !(*ffc).j.is_null()
+            && ossl_param_build_set_bn(bld, params, OSSL_PKEY_PARAM_FFC_COFACTOR, (*ffc).j) == 0
+        {
+            return 0;
+        }
+        if ossl_param_build_set_int(bld, params, OSSL_PKEY_PARAM_FFC_GINDEX, (*ffc).gindex) == 0 {
+            return 0;
+        }
+        if ossl_param_build_set_int(bld, params, OSSL_PKEY_PARAM_FFC_PCOUNTER, (*ffc).pcounter) == 0
+        {
+            return 0;
+        }
+        if ossl_param_build_set_int(bld, params, OSSL_PKEY_PARAM_FFC_H, (*ffc).h) == 0 {
+            return 0;
+        }
+        if !(*ffc).seed.is_null()
+            && ossl_param_build_set_octet_string(
+                bld,
+                params,
+                OSSL_PKEY_PARAM_FFC_SEED,
+                (*ffc).seed,
+                (*ffc).seedlen,
+            ) == 0
+        {
+            return 0;
+        }
+        if (*ffc).nid != NID_undef {
+            let group = ossl_ffc_uid_to_dh_named_group((*ffc).nid);
+            let name = ossl_ffc_named_group_get_name(group);
+
+            if name.is_null()
+                || ossl_param_build_set_utf8_string(bld, params, OSSL_PKEY_PARAM_GROUP_NAME, name)
+                    == 0
+            {
+                return 0;
+            }
+        }
+        test_flags = if ((*ffc).flags & FFC_PARAM_FLAG_VALIDATE_PQ) != 0 {
+            1
+        } else {
+            0
+        };
+        if ossl_param_build_set_int(bld, params, OSSL_PKEY_PARAM_FFC_VALIDATE_PQ, test_flags) == 0 {
+            return 0;
+        }
+        test_flags = if ((*ffc).flags & FFC_PARAM_FLAG_VALIDATE_G) != 0 {
+            1
+        } else {
+            0
+        };
+        if ossl_param_build_set_int(bld, params, OSSL_PKEY_PARAM_FFC_VALIDATE_G, test_flags) == 0 {
+            return 0;
+        }
+        test_flags = if ((*ffc).flags & FFC_PARAM_FLAG_VALIDATE_LEGACY) != 0 {
+            1
+        } else {
+            0
+        };
+        if ossl_param_build_set_int(bld, params, OSSL_PKEY_PARAM_FFC_VALIDATE_LEGACY, test_flags)
+            == 0
+        {
+            return 0;
+        }
+
+        if !(*ffc).mdname.is_null()
+            && ossl_param_build_set_utf8_string(
+                bld,
+                params,
+                OSSL_PKEY_PARAM_FFC_DIGEST,
+                (*ffc).mdname,
+            ) == 0
+        {
+            return 0;
+        }
+        if !(*ffc).mdprops.is_null()
+            && ossl_param_build_set_utf8_string(
+                bld,
+                params,
+                OSSL_PKEY_PARAM_FFC_DIGEST_PROPS,
+                (*ffc).mdprops,
+            ) == 0
+        {
+            return 0;
+        }
+        1
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1228,6 +1383,118 @@ mod tests {
             assert!(seed_at < counter_at, "the counter is printed last");
 
             BIO_free(bio);
+        }
+    }
+
+    /// `ossl_ffc_params_todata`'s families, read back through the builder it filled.
+    ///
+    /// The object is built here rather than imported, so the arm is the writer's alone: a modulus
+    /// and a generator from `BN_set_word`, the `gindex`/`pcounter`/`h` scalars, the default
+    /// `VALIDATE_PQG` flags and one explicit digest name. The builder's own `to_param` is the
+    /// reader, and the keys it is asked for are the `OSSL_PKEY_PARAM_FFC_*` constants — a writer
+    /// that misspelled one would be a missing key rather than a wrong value.
+    #[test]
+    fn the_todata_writer_fills_the_parameter_families() {
+        use crate::evp::pkey_ctx::{
+            OSSL_PKEY_PARAM_FFC_DIGEST, OSSL_PKEY_PARAM_FFC_G, OSSL_PKEY_PARAM_FFC_GINDEX,
+            OSSL_PKEY_PARAM_FFC_H, OSSL_PKEY_PARAM_FFC_P, OSSL_PKEY_PARAM_FFC_PCOUNTER,
+            OSSL_PKEY_PARAM_FFC_VALIDATE_G, OSSL_PKEY_PARAM_FFC_VALIDATE_LEGACY,
+            OSSL_PKEY_PARAM_FFC_VALIDATE_PQ,
+        };
+        use crate::params::build::{
+            OSSL_PARAM_BLD_free, OSSL_PARAM_BLD_new, OSSL_PARAM_BLD_to_param,
+        };
+        use crate::params::dup::OSSL_PARAM_free;
+        use crate::params::{OSSL_PARAM_get_int, OSSL_PARAM_locate};
+
+        let mut p = Params::new();
+        let bld = OSSL_PARAM_BLD_new();
+        assert!(!bld.is_null());
+        // SAFETY: every object here is live and owned by this test.
+        unsafe {
+            let f = &mut *p.as_mut();
+            f.p = BN_new();
+            f.g = BN_new();
+            assert!(!f.p.is_null() && !f.g.is_null());
+            assert_eq!(BN_set_word(f.p, 23), 1);
+            assert_eq!(BN_set_word(f.g, 2), 1);
+            f.gindex = 3;
+            f.pcounter = 4;
+            f.h = 5;
+            f.mdname = c"sha256".as_ptr();
+
+            assert_eq!(
+                ossl_ffc_params_todata(p.as_ref(), bld, core::ptr::null_mut()),
+                1
+            );
+
+            let params = OSSL_PARAM_BLD_to_param(bld);
+            assert!(!params.is_null());
+
+            let mut gindex: c_int = 0;
+            let mut pcounter: c_int = 0;
+            let mut h: c_int = 0;
+            let mut vpq: c_int = 0;
+            let mut vg: c_int = 0;
+            let mut vl: c_int = 0;
+            assert_eq!(
+                OSSL_PARAM_get_int(
+                    OSSL_PARAM_locate(params, OSSL_PKEY_PARAM_FFC_GINDEX),
+                    &mut gindex
+                ),
+                1
+            );
+            assert_eq!(gindex, 3);
+            assert_eq!(
+                OSSL_PARAM_get_int(
+                    OSSL_PARAM_locate(params, OSSL_PKEY_PARAM_FFC_PCOUNTER),
+                    &mut pcounter
+                ),
+                1
+            );
+            assert_eq!(pcounter, 4);
+            assert_eq!(
+                OSSL_PARAM_get_int(OSSL_PARAM_locate(params, OSSL_PKEY_PARAM_FFC_H), &mut h),
+                1
+            );
+            assert_eq!(h, 5);
+
+            /* The three flags travel as 0/1, not as the object's bit set. */
+            assert_eq!(
+                OSSL_PARAM_get_int(
+                    OSSL_PARAM_locate(params, OSSL_PKEY_PARAM_FFC_VALIDATE_PQ),
+                    &mut vpq
+                ),
+                1
+            );
+            assert_eq!(
+                OSSL_PARAM_get_int(
+                    OSSL_PARAM_locate(params, OSSL_PKEY_PARAM_FFC_VALIDATE_G),
+                    &mut vg
+                ),
+                1
+            );
+            assert_eq!(
+                OSSL_PARAM_get_int(
+                    OSSL_PARAM_locate(params, OSSL_PKEY_PARAM_FFC_VALIDATE_LEGACY),
+                    &mut vl
+                ),
+                1
+            );
+            assert_eq!(vpq, 1);
+            assert_eq!(vg, 1);
+            assert_eq!(vl, 0);
+
+            assert!(!OSSL_PARAM_locate(params, OSSL_PKEY_PARAM_FFC_P).is_null());
+            assert!(!OSSL_PARAM_locate(params, OSSL_PKEY_PARAM_FFC_G).is_null());
+            assert!(!OSSL_PARAM_locate(params, OSSL_PKEY_PARAM_FFC_DIGEST).is_null());
+            /* The seed is NULL on this object, so its key is absent rather than empty. */
+            assert!(
+                OSSL_PARAM_locate(params, crate::evp::pkey_ctx::OSSL_PKEY_PARAM_FFC_SEED).is_null()
+            );
+
+            OSSL_PARAM_free(params);
+            OSSL_PARAM_BLD_free(bld);
         }
     }
 }

@@ -31,15 +31,18 @@
 //! authority can check; `forensics/tools/gen_bn_dh.py` is that comparison, and the unit
 //! tests beside the table are what assert its rows.
 //!
-//! **One `crypto/ffc/` unit is still deliberately not transcribed, and it is named with
-//! the reach that would be needed.** `crypto/ffc/ffc_backend.c`
-//! (`ossl_ffc_params_fromdata`) is reached by `crypto/dh/dh_backend.c`, which is not on the
-//! `dh_lib.c`/`dh_key.c`/`dh_gen.c`/`dh_check.c` path, and it calls
-//! `crypto/param_build_set.c`'s four `ossl_param_build_set_*` — a unit with no crate module
-//! and no implementation. So `ffc_backend.c` has **no module here**, which is D327's
-//! `rsa_sp800_56b_check.c` precedent rather than a half-landing, and `ossl_ffc_params_todata`
-//! is withheld for the same reason and is the one function of a transcribed unit that is not
-//! here.
+//! **One `crypto/ffc/` unit was deliberately not transcribed until D351, and it is named with
+//! the reach that was needed.** `crypto/ffc/ffc_backend.c` (`ossl_ffc_params_fromdata`) is reached
+//! by `crypto/dh/dh_backend.c` and `crypto/dsa/dsa_backend.c`, which are not on the
+//! `dh_lib.c`/`dh_key.c`/`dh_gen.c`/`dh_check.c` path this module's first slice landed, and it
+//! calls `crypto/param_build_set.c`'s four `ossl_param_build_set_*` — a unit with no crate module
+//! and no implementation at the time. So it had **no module here**, which is D327's
+//! `rsa_sp800_56b_check.c` precedent rather than a half-landing, and `ossl_ffc_params_todata` was
+//! withheld for the same reason. **D340 landed `crypto/param_build_set.c`; D351 lands the two
+//! backends that reach this unit, so [`backend`] is the file's own module and
+//! [`params::ossl_ffc_params_todata`] is transcribed in the module that owns its unit.** The
+//! `forensics/prerequisites.json` divergence row that recorded the omission, and the deferral row
+//! that recorded `ossl_dsa_ffc_params_fromdata`, are both retired by that commit.
 //!
 //! ## The struct, and why its shape is a measurement rather than a reading
 //!
@@ -56,6 +59,7 @@
 //! four-byte `unsigned int` at 64 and `mdname` is a pointer, so the four bytes at 68..72 are
 //! padding and `mdname` sits at 72 rather than the 68 a packed reading would give.
 
+pub(crate) mod backend;
 pub(crate) mod dh;
 pub(crate) mod key_generate;
 pub(crate) mod key_validate;

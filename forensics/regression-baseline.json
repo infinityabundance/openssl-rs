@@ -439,10 +439,10 @@
     "9": "in-progress"
   },
   "prerequisites": {
-    "blocking_dependencies": 17,
-    "divergence_names_covered": 60,
+    "blocking_dependencies": 15,
+    "divergence_names_covered": 57,
     "findings": 0,
-    "language_census": 4241,
+    "language_census": 4301,
     "sealed_census": 56
   },
   "provider_implemented": [

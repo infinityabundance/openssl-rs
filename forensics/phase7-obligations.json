@@ -5,10 +5,10 @@
       "findings": 0,
       "legacy_rows": 146,
       "legacy_unit_claims": 20,
-      "structured_blockers": 43,
-      "structured_rows": 16,
-      "unblocked_rows": 6,
-      "unblocked_symbols": 14
+      "structured_blockers": 41,
+      "structured_rows": 15,
+      "unblocked_rows": 7,
+      "unblocked_symbols": 15
     },
     "complete": true,
     "counts": {
@@ -100,26 +100,10 @@
       },
       {
         "binding_phase": 8,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/evp/evp_pkey_type.c",
-            "kind": "exported",
-            "line": 63,
-            "name": "EVP_PKEY_type",
-            "owning_phase": 7
-          },
-          {
-            "authority_unit": "crypto/dh/dh_backend.c",
-            "kind": "internal",
-            "line": 122,
-            "name": "ossl_dh_is_foreign",
-            "owning_phase": 8
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "evp.h",
-        "note": "D340 records `crypto/dh/dh_backend.c` as phase 8's, because `ossl_dh_is_foreign` is the only Phase-8 blocker this body still has and it had no owner phase anywhere in the atlases. The row was blocked by `EC_KEY_get0_group` and `EC_GROUP_get_curve_name` until D340 landed them; a row whose every blocker has landed is stale by definition, which is what `blocker_liveness` reported and this edit answers.",
         "owning_phase": 8,
-        "reason": "`crypto/evp/p_lib.c:791` calls `EVP_PKEY_type` (`:797`, the `standard_methods[]` walk `crypto/evp/evp_pkey_type.c:63` is the export for), and then `detect_foreign_key` -> `ossl_dh_is_foreign` (`:782`, `crypto/dh/dh_backend.c:122`) once a key is attached. The two `EC_KEY_get0_group`/`EC_GROUP_get_curve_name` calls between them (`:801`, `:803`) landed with D340, which is why this row names the two blockers that are still absent rather than the two that left: `EVP_PKEY_type` is this stratum's own withheld export and `ossl_dh_is_foreign` is the DH provider backend's, which `forensics/prerequisites.json` now records at phase 8 so the row's phase can be checked. The `EVP_PKEY_set_type` call between them is landed. `EVP_PKEY_assign_RSA`/`_DSA`/`_DH`/`_EC_KEY` are `#define`s over this function (`include/openssl/evp.h`), so the four `set1_*` names in the first row wait on it too.",
+        "reason": "`crypto/evp/p_lib.c:791`'s body is `EVP_PKEY_type` (`:797`), the two `EC_KEY_get0_group`/`EC_GROUP_get_curve_name` calls (`:801`, `:803`), `EVP_PKEY_set_type` (`:816`) and `detect_foreign_key` (`:819`), whose four `is_foreign` calls are `ossl_ec_key_is_foreign`, `ossl_dsa_is_foreign`, `ossl_rsa_is_foreign` and `ossl_dh_is_foreign` (`crypto/evp/p_lib.c:760-787`). **Every one of the four landed with D340 or D351** (`src/ec/backend.rs`, `src/dsa/backend.rs` and `src/rsa/backend.rs` in D351, `src/dh/backend.rs` with the same), and the two `EC_KEY_get0_group`/`EC_GROUP_get_curve_name` calls landed with D340, so the only name this export still waits on is Phase 8's own `EVP_PKEY_type` -- which is not another stratum's blocker but the `standard_methods[]` cycle D341 measured, and the same cycle that keeps the fifteen in `src/asn1/ameth.rs`. So the row moves here from `BLOCKED_HANDOFFS` rather than being retired: the export is still Phase 8's to write, and only the authority *blockers* have landed. `EVP_PKEY_assign_RSA`/`_DSA`/`_DH`/`_EC_KEY` are `#define`s over it (`include/openssl/evp.h`), so the four `set1_*` names in the first row wait on it too.",
         "symbol": "EVP_PKEY_assign"
       },
       {
@@ -4655,7 +4639,7 @@
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "162a817a008bf7c94cce737e5172104ef7d001c0577b51ac57c5ada3840c3dca"
+      "sha256": "0e0043a1a8123079e6c43a45b8045172dd77a1be342b7a29e67103f5009e9b7d"
     },
     {
       "name": "typedef-owners",
@@ -4665,7 +4649,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "b6751c025b7528098cde6a02b293d5d63ab2d18a65183f953269ec69701d79e0"
+      "sha256": "a60254c0b54cab1d36caf79a85eb8e022dff8d167fe915370da21496ebb4ac62"
     },
     {
       "name": "phase-state",

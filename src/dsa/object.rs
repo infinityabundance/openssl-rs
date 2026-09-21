@@ -32,14 +32,15 @@
 //! coordinates are still emitted by the lexical scan and still carried in `err_sites::ALL`,
 //! exactly as D330 records for the two FIPS-only FFC sites and D331 for `DH_LIB_100`/`_109`.
 //!
-//! ## One internal is withheld, and it is the same blocker `DH_KDF_X9_42` names
+//! ## One internal was withheld until D351, and it was the same blocker `DH_KDF_X9_42` named
 //!
-//! `ossl_dsa_ffc_params_fromdata` (`:355-365`) is `ossl_ffc_params_fromdata` plus a `dirty_cnt`
-//! bump, and that function is `crypto/ffc/ffc_backend.c`'s — a unit with **no crate module**, for
-//! the reason D330 and D332 record: it calls `crypto/param_build_set.c`'s four
-//! `ossl_param_build_set_*`, a unit no stratum's plan row names. It is one of the two names this
-//! slice records in `forensics/prerequisites.json` as a deferral rather than approximating, and
-//! the row names its own blocker.
+//! `ossl_dsa_ffc_params_fromdata` (`:352-361`) is `ossl_ffc_params_fromdata` plus a `dirty_cnt`
+//! bump, and that function is `crypto/ffc/ffc_backend.c`'s — a unit that had **no crate module**,
+//! for the reason D330 and D332 record: it calls `crypto/param_build_set.c`'s four
+//! `ossl_param_build_set_*`, a unit no stratum's plan row named. **D340 landed
+//! `crypto/param_build_set.c` and D351 lands `crypto/ffc/ffc_backend.c` with its two callers**, so
+//! this function is transcribed below, its `forensics/prerequisites.json` deferral row is retired,
+//! and the `ossl_ffc_params_todata` divergence row that named the same blocker is retired too.
 //!
 //! ## Ordering, where the authority's is load-bearing
 //!
@@ -88,6 +89,7 @@ use crate::ffc::params::{
     ossl_ffc_params_set0_pqg,
 };
 use crate::ffc::FfcParams;
+use crate::params::OsslParam;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::ex_data::{
@@ -786,4 +788,116 @@ pub unsafe extern "C" fn DSA_bits(dsa: *const Dsa) -> c_int {
 pub(crate) unsafe fn ossl_dsa_get0_params(dsa: *mut Dsa) -> *mut FfcParams {
     // SAFETY: `dsa` is live per the contract.
     unsafe { ptr::addr_of_mut!((*dsa).params) }
+}
+
+/// `int ossl_dsa_ffc_params_fromdata(DSA *dsa, const OSSL_PARAM params[])` —
+/// `dsa_lib.c:352-361`. Internal, declared in `include/crypto/dsa.h`.
+///
+/// The DSA member of the FFC-import trio, and the **only difference from the DH twin is what gets
+/// bumped**: where `crypto/dh/dh_backend.c`'s `dh_ffc_params_fromdata` refreshes the named-group
+/// cache (whose own body increments `dh->dirty_cnt`), this one increments `dsa->dirty_cnt`
+/// directly, because DSA has no named-group cache to refresh. Both call the same
+/// [`crate::ffc::backend::ossl_ffc_params_fromdata`].
+///
+/// The `dirty_cnt` bump is **on success only**: the authority's `if (ret)` wraps it, so a failed
+/// import leaves the counter alone and a caller's cached state is not invalidated by a refusal.
+///
+/// `#[allow(dead_code)]`'s reason: **the provider keymgmt's `import`/`import_from` are its
+/// readers**, and 8.8's `dsa_ameth.c` reaches the same layer through `dsa_pmeth.c`. The
+/// `forensics/prerequisites.json` deferral row that named this function is **retired** by this
+/// commit: the name is built now, and its own reason named the two units it waited for, both of
+/// which are in the crate.
+///
+/// # Safety
+/// `dsa` is a live object; `params` is a key-terminated descriptor array.
+#[allow(dead_code)] // read by the provider keymgmt's `import`/`import_from`
+pub(crate) unsafe fn ossl_dsa_ffc_params_fromdata(
+    dsa: *mut Dsa,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: `dsa` is live per the contract; `ossl_dsa_get0_params` answers the embedded params.
+    unsafe {
+        let ffc = ossl_dsa_get0_params(dsa);
+
+        let ret = crate::ffc::backend::ossl_ffc_params_fromdata(ffc, params);
+        if ret != 0 {
+            (*dsa).dirty_cnt += 1;
+        }
+        ret
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::params::{OSSL_PARAM_construct_BN, OSSL_PARAM_construct_end};
+    use crate::runtime::obj::NID_undef;
+
+    /// A live `DSA`, freed on drop.
+    struct OwnedDsa(*mut Dsa);
+
+    impl OwnedDsa {
+        fn new() -> Self {
+            // SAFETY: `DSA_new` answers a fresh object or NULL; the assertion covers the second
+            // case.
+            let dsa = unsafe { DSA_new() };
+            assert!(!dsa.is_null());
+            OwnedDsa(dsa)
+        }
+    }
+
+    impl Drop for OwnedDsa {
+        fn drop(&mut self) {
+            // SAFETY: `self.0` is a live object this test owns.
+            unsafe { DSA_free(self.0) };
+        }
+    }
+
+    /// `ossl_dsa_ffc_params_fromdata`'s whole difference from the DH twin: it bumps `dirty_cnt`
+    /// **on success only**. Both directions are asserted here, because the guard around the bump
+    /// is what makes a failed import non-invalidating.
+    #[test]
+    fn the_params_import_bumps_the_dirty_counter_only_when_it_succeeds() {
+        let mut p_buf = [0x17u8];
+        // SAFETY: the buffer outlives the array.
+        let params = unsafe {
+            [
+                OSSL_PARAM_construct_BN(
+                    crate::evp::pkey_ctx::OSSL_PKEY_PARAM_FFC_P,
+                    p_buf.as_mut_ptr(),
+                    p_buf.len(),
+                ),
+                OSSL_PARAM_construct_end(),
+            ]
+        };
+
+        let dsa = OwnedDsa::new();
+        // SAFETY: the object is live and the array is key-terminated.
+        unsafe {
+            let before = (*dsa.0).dirty_cnt;
+            assert_eq!(ossl_dsa_ffc_params_fromdata(dsa.0, params.as_ptr()), 1);
+            assert_eq!((*dsa.0).dirty_cnt, before + 1);
+            assert!(!(*dsa.0).params.p.is_null());
+            assert_eq!((*dsa.0).params.nid, NID_undef);
+        }
+
+        /* A refusal: a group name that resolves to no row. The counter must not move. */
+        let mut bogus = *b"no-such-group\0";
+        // SAFETY: the buffer outlives the array.
+        let params = unsafe {
+            [
+                crate::params::OSSL_PARAM_construct_utf8_string(
+                    crate::evp::pkey_ctx::OSSL_PKEY_PARAM_GROUP_NAME,
+                    bogus.as_mut_ptr().cast(),
+                    0,
+                ),
+                OSSL_PARAM_construct_end(),
+            ]
+        };
+        // SAFETY: as above.
+        unsafe {
+            let before = (*dsa.0).dirty_cnt;
+            assert_eq!(ossl_dsa_ffc_params_fromdata(dsa.0, params.as_ptr()), 0);
+            assert_eq!((*dsa.0).dirty_cnt, before);
+        }
+    }
 }

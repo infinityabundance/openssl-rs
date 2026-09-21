@@ -4414,6 +4414,22 @@ pub(crate) const OSSL_PKEY_PARAM_FFC_SEED: *const c_char = c"seed".as_ptr();
 /// `OSSL_PKEY_PARAM_FFC_DIGEST_PROPS` = `OSSL_PKEY_PARAM_PROPERTIES` =
 /// `OSSL_ALG_PARAM_PROPERTIES` — `include/openssl/core_names.h:402`.
 pub(crate) const OSSL_PKEY_PARAM_FFC_DIGEST_PROPS: *const c_char = OSSL_ALG_PARAM_PROPERTIES;
+/// `OSSL_PKEY_PARAM_FFC_PCOUNTER` — `include/openssl/core_names.h:408`. The counter `p` was
+/// found at in a verifiable generation, or `-1`.
+pub(crate) const OSSL_PKEY_PARAM_FFC_PCOUNTER: *const c_char = c"pcounter".as_ptr();
+/// `OSSL_PKEY_PARAM_FFC_COFACTOR` — `include/openssl/core_names.h:400`. The DH X9.42 subgroup
+/// factor `j`, whose spelling is the bare `"j"`.
+pub(crate) const OSSL_PKEY_PARAM_FFC_COFACTOR: *const c_char = c"j".as_ptr();
+/// `OSSL_PKEY_PARAM_FFC_H` — `include/openssl/core_names.h:405`. The unverifiable-`g` search's
+/// loop counter; note the spelling, `hindex` and **not** `h`, which is what the header says.
+pub(crate) const OSSL_PKEY_PARAM_FFC_H: *const c_char = c"hindex".as_ptr();
+/// `OSSL_PKEY_PARAM_FFC_VALIDATE_PQ` — `include/openssl/core_names.h:415`. One of the three
+/// `validate-*` booleans `ossl_ffc_params_fromdata` reads into `FFC_PARAM_FLAG_VALIDATE_*`.
+pub(crate) const OSSL_PKEY_PARAM_FFC_VALIDATE_PQ: *const c_char = c"validate-pq".as_ptr();
+/// `OSSL_PKEY_PARAM_FFC_VALIDATE_G` — `include/openssl/core_names.h:413`.
+pub(crate) const OSSL_PKEY_PARAM_FFC_VALIDATE_G: *const c_char = c"validate-g".as_ptr();
+/// `OSSL_PKEY_PARAM_FFC_VALIDATE_LEGACY` — `include/openssl/core_names.h:414`.
+pub(crate) const OSSL_PKEY_PARAM_FFC_VALIDATE_LEGACY: *const c_char = c"validate-legacy".as_ptr();
 pub(crate) const OSSL_PKEY_PARAM_FFC_P: *const c_char = c"p".as_ptr();
 pub(crate) const OSSL_PKEY_PARAM_FFC_Q: *const c_char = c"q".as_ptr();
 pub(crate) const OSSL_PKEY_PARAM_FFC_G: *const c_char = c"g".as_ptr();
@@ -4421,6 +4437,12 @@ pub(crate) const OSSL_PKEY_PARAM_FFC_G: *const c_char = c"g".as_ptr();
 pub(crate) const OSSL_PKEY_PARAM_GROUP_NAME: *const c_char = c"group".as_ptr();
 /// `OSSL_PKEY_PARAM_DH_GENERATOR` — `include/openssl/core_names.h:372`.
 pub(crate) const OSSL_PKEY_PARAM_DH_GENERATOR: *const c_char = c"safeprime-generator".as_ptr();
+/// `OSSL_PKEY_PARAM_DH_PRIV_LEN` — `include/openssl/core_names.h:373`. The generated private
+/// key's *maximum* length, which `DH_set_length` stores and `ossl_dh_params_todata` writes back
+/// as a `long`. Its reader arrived with D351's `crypto/dh/dh_backend.c` transcription; the
+/// constant is kept here beside its siblings because every `core_names.h` name this crate has
+/// needed lives here.
+pub(crate) const OSSL_PKEY_PARAM_DH_PRIV_LEN: *const c_char = c"priv_len".as_ptr();
 /// `OSSL_PKEY_PARAM_EC_ENCODING` — `include/openssl/core_names.h:387`.
 pub(crate) const OSSL_PKEY_PARAM_EC_ENCODING: *const c_char = c"encoding".as_ptr();
 /// `OSSL_PKEY_EC_ENCODING_EXPLICIT` — `include/openssl/core_names.h:101`.
@@ -4436,8 +4458,18 @@ pub(crate) const OSSL_PKEY_PARAM_EC_DECODED_FROM_EXPLICIT_PARAMS: *const c_char 
     c"decoded-from-explicit".as_ptr();
 /// `OSSL_PKEY_PARAM_PAD_MODE` — `include/openssl/core_names.h:438`.
 pub(crate) const OSSL_PKEY_PARAM_PAD_MODE: *const c_char = c"pad-mode".as_ptr();
+/// `OSSL_PKEY_PARAM_MASKGENFUNC` — `include/openssl/core_names.h:423`. The mask generation
+/// function's own name ("mgf1" for RSA), which `ossl_rsa_pss_params_30_fromdata` compares
+/// case-insensitively against `ossl_rsa_mgf_nid2name`'s answer.
+pub(crate) const OSSL_PKEY_PARAM_MASKGENFUNC: *const c_char = c"mgf".as_ptr();
+/// `OSSL_PKEY_PARAM_RSA_MASKGENFUNC` = `OSSL_PKEY_PARAM_MASKGENFUNC` —
+/// `include/openssl/core_names.h:480`.
+pub(crate) const OSSL_PKEY_PARAM_RSA_MASKGENFUNC: *const c_char = OSSL_PKEY_PARAM_MASKGENFUNC;
 /// `OSSL_PKEY_PARAM_MGF1_DIGEST` — `include/openssl/core_names.h:425`.
 pub(crate) const OSSL_PKEY_PARAM_MGF1_DIGEST: *const c_char = c"mgf1-digest".as_ptr();
+/// `OSSL_PKEY_PARAM_RSA_MGF1_DIGEST` = `OSSL_PKEY_PARAM_MGF1_DIGEST` —
+/// `include/openssl/core_names.h:481`.
+pub(crate) const OSSL_PKEY_PARAM_RSA_MGF1_DIGEST: *const c_char = OSSL_PKEY_PARAM_MGF1_DIGEST;
 /// `OSSL_PKEY_PARAM_RSA_PSS_SALTLEN` — `include/openssl/core_names.h:484`.
 pub(crate) const OSSL_PKEY_PARAM_RSA_PSS_SALTLEN: *const c_char = c"saltlen".as_ptr();
 /// `OSSL_SIGNATURE_PARAM_PSS_SALTLEN` — `include/openssl/core_names.h:568`. The **same string** as
@@ -4452,6 +4484,10 @@ pub(crate) const OSSL_PKEY_PARAM_BITS: *const c_char = c"bits".as_ptr();
 pub(crate) const OSSL_PKEY_PARAM_RSA_BITS: *const c_char = OSSL_PKEY_PARAM_BITS;
 /// `OSSL_PKEY_PARAM_RSA_E` — `include/openssl/core_names.h:457`.
 pub(crate) const OSSL_PKEY_PARAM_RSA_E: *const c_char = c"e".as_ptr();
+/// `OSSL_PKEY_PARAM_RSA_DERIVE_FROM_PQ` — `include/openssl/core_names.h:454`. The provider's
+/// request that `d`, `dmp1`, `dmq1` and `iqmp` be derived from `p` and `q` rather than supplied;
+/// `ossl_rsa_fromdata` reads it as an `int` and takes a different path when it is non-zero.
+pub(crate) const OSSL_PKEY_PARAM_RSA_DERIVE_FROM_PQ: *const c_char = c"rsa-derive-from-pq".as_ptr();
 /// `OSSL_PKEY_PARAM_RSA_PRIMES` — `include/openssl/core_names.h:483`.
 pub(crate) const OSSL_PKEY_PARAM_RSA_PRIMES: *const c_char = c"primes".as_ptr();
 /// `OSSL_PKEY_PARAM_RSA_N` — `include/openssl/core_names.h:482`.
@@ -4478,6 +4514,25 @@ pub(crate) const OSSL_ASYM_CIPHER_PARAM_OAEP_DIGEST_PROPS: *const c_char = c"dig
 pub(crate) const OSSL_PKEY_PARAM_MGF1_PROPERTIES: *const c_char = c"mgf1-properties".as_ptr();
 /// `OSSL_PKEY_PARAM_RSA_DIGEST` = `OSSL_PKEY_PARAM_DIGEST` — `include/openssl/core_names.h:455`.
 pub(crate) const OSSL_PKEY_PARAM_RSA_DIGEST: *const c_char = OSSL_PKEY_PARAM_DIGEST;
+/// `OSSL_DIGEST_NAME_SHA1` — `include/openssl/core_names.h:37`. One of the seven entries of
+/// `crypto/rsa/rsa_schemes.c`'s `oaeppss_name_nid_map`, which is why the digest *name* family
+/// is here rather than beside the provider digest tables: `ossl_rsa_oaeppss_md2nid` asks whether
+/// a fetched `EVP_MD` *is* one of these names, and `ossl_rsa_oaeppss_nid2name` answers with one.
+pub(crate) const OSSL_DIGEST_NAME_SHA1: *const c_char = c"SHA1".as_ptr();
+/// `OSSL_DIGEST_NAME_SHA2_224` — `include/openssl/core_names.h:38`.
+pub(crate) const OSSL_DIGEST_NAME_SHA2_224: *const c_char = c"SHA2-224".as_ptr();
+/// `OSSL_DIGEST_NAME_SHA2_256` — `include/openssl/core_names.h:39`.
+pub(crate) const OSSL_DIGEST_NAME_SHA2_256: *const c_char = c"SHA2-256".as_ptr();
+/// `OSSL_DIGEST_NAME_SHA2_384` — `include/openssl/core_names.h:41`.
+pub(crate) const OSSL_DIGEST_NAME_SHA2_384: *const c_char = c"SHA2-384".as_ptr();
+/// `OSSL_DIGEST_NAME_SHA2_512` — `include/openssl/core_names.h:42`.
+pub(crate) const OSSL_DIGEST_NAME_SHA2_512: *const c_char = c"SHA2-512".as_ptr();
+/// `OSSL_DIGEST_NAME_SHA2_512_224` — `include/openssl/core_names.h:43`.
+pub(crate) const OSSL_DIGEST_NAME_SHA2_512_224: *const c_char = c"SHA2-512/224".as_ptr();
+/// `OSSL_DIGEST_NAME_SHA2_512_256` — `include/openssl/core_names.h:44`. The `_256_192` sibling
+/// (`SHA2-256/192`) is deliberately absent: `oaeppss_name_nid_map` has seven rows and that is
+/// not one of them.
+pub(crate) const OSSL_DIGEST_NAME_SHA2_512_256: *const c_char = c"SHA2-512/256".as_ptr();
 /// `OSSL_PKEY_PARAM_RSA_DIGEST_PROPS` = `OSSL_PKEY_PARAM_PROPERTIES` =
 /// `OSSL_ALG_PARAM_PROPERTIES` — `include/openssl/core_names.h:456`. The literal is written here
 /// because `OSSL_PKEY_PARAM_PROPERTIES` is private to `src/evp/pkey.rs`; this is the crate's second

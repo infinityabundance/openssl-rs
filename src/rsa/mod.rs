@@ -79,17 +79,15 @@ use crate::bn::primes::{
 use crate::digest::sha2::SHA256_DIGEST_LENGTH;
 use crate::evp::digest::{
     EVP_DigestFinal_ex, EVP_DigestInit_ex, EVP_DigestUpdate, EVP_MD_CTX_free, EVP_MD_CTX_new,
-    EVP_MD_fetch, EVP_MD_free, EVP_MD_get_size, EvpMd, EvpMdCtx,
+    EVP_MD_fetch, EVP_MD_free, EVP_MD_get_size, EvpMd,
 };
 use crate::evp::pkey_asn1::Engine;
-use crate::evp::pkey_ctx::{RSA_PSS_SALTLEN_AUTO, RSA_PSS_SALTLEN_DIGEST, RSA_PSS_SALTLEN_MAX};
 use crate::mac::hmac::{
     HMAC_CTX_free, HMAC_CTX_new, HMAC_Final, HMAC_Init_ex, HMAC_Update, HmacCtx,
 };
 use crate::rand::rand_lib::RAND_bytes_ex;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::err::raise_site_data;
 use crate::runtime::ex_data::CryptoExData;
 use crate::runtime::mem::{cleanse, CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};
 use crate::runtime::obj::{NID_sha1, NID_sha256, NID_sha384, NID_sha512};
@@ -97,11 +95,15 @@ use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack};
 use crate::runtime::thread::CryptoRwlock;
 
 pub mod asn1;
+pub(crate) mod backend;
 pub mod ctrl;
 pub mod gen;
 mod mp;
+pub(crate) mod mp_names;
 pub mod object;
 pub mod ossl;
+pub mod pss;
+pub(crate) mod schemes;
 pub mod sign;
 pub(crate) mod sp800;
 
@@ -1645,9 +1647,6 @@ pub unsafe extern "C" fn RSA_padding_check_PKCS1_OAEP_mgf1(
 /// `CRYPTO_set_mem_functions`, so the prefix is part of the observable contract and not cosmetic.
 const FILE_RSA_PK1: *const c_char = c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c".as_ptr();
 
-/// The allocation-tracking `file` argument for `rsa_pss.c`'s salt buffer.
-const FILE_RSA_PSS: *const c_char = c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c".as_ptr();
-
 /// `int ossl_rsa_padding_add_PKCS1_type_2_ex(OSSL_LIB_CTX *libctx, unsigned char *to, int tlen,
 /// const unsigned char *from, int flen)` — `rsa_pk1.c:124-162`. Internal, and declared in
 /// `crypto/rsa/rsa_local.h:195-197`.
@@ -2259,15 +2258,16 @@ pub(crate) unsafe fn ossl_rsa_padding_check_PKCS1_type_2(
 /// `RSA_PSS_SALTLEN_DIGEST` is -1, `AUTO` is -2, `MAX` is -3, this one is -4, and
 /// `RSA_PSS_SALTLEN_MAX_SIGN` is -2 again under the header's own gloss "old compatible max salt
 /// length for sign only". `src/evp/pkey_ctx.rs` already publishes the three the ctrl-string map
-/// speaks; the two this pair adds are declared here because `rsa_pss.c`'s *add* is their reader,
-/// and they are transcribed as the header writes them rather than folded into `-2`/`-4` literals at
-/// the use site, because the authority's own `sLen == MAX_SIGN || sLen == AUTO` test is a
-/// statement about two names.
-const RSA_PSS_SALTLEN_AUTO_DIGEST_MAX: c_int = -4;
+/// speaks; the two this pair adds are declared here because the authority's `rsa_pss.c` is their
+/// reader -- they are `pub(crate)` since that unit is now [`crate::rsa::pss`] -- and they are
+/// transcribed as the header writes them rather than folded into `-2`/`-4` literals at the use
+/// site, because the authority's own `sLen == MAX_SIGN || sLen == AUTO` test is a statement about
+/// two names.
+pub(crate) const RSA_PSS_SALTLEN_AUTO_DIGEST_MAX: c_int = -4;
 
 /// `RSA_PSS_SALTLEN_MAX_SIGN` — `include/openssl/rsa.h:146`. See
 /// [`RSA_PSS_SALTLEN_AUTO_DIGEST_MAX`] for why it is a name here and not the literal `-2`.
-const RSA_PSS_SALTLEN_MAX_SIGN: c_int = -2;
+pub(crate) const RSA_PSS_SALTLEN_MAX_SIGN: c_int = -2;
 
 /// `int ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex(OSSL_LIB_CTX *libctx, unsigned char *to, int tlen,
 /// const unsigned char *from, int flen, const unsigned char *param, int plen, const EVP_MD *md,
@@ -2502,496 +2502,6 @@ pub unsafe extern "C" fn RSA_padding_add_PKCS1_OAEP_mgf1(
             mgf1md,
         )
     }
-}
-
-// =============================================================================================
-// Slice D's remainder, first half — the PSS *verifier* (`crypto/rsa/rsa_pss.c`)
-// =============================================================================================
-//
-// **`rsa_pss.c` publishes three names, and the two adds above are its other half.** The verifier is
-// the encoding's inverse and is a *pure* function of its input -- it draws no randomness, because
-// the salt is read out of the block rather than generated -- so it has no `RAND_bytes_ex` in it at
-// all and was landable with the RAND-free half of slice C. What held it back is that nothing called
-// it: `rsa_ameth.c`'s and the provider's verify paths are 8.8's and the provider's respectively.
-// It lands here with `RSA_sign`/`RSA_verify`, which are reachable from `rsa.h` alone.
-//
-// **The two things a reader gets wrong are both in the salt-length recovery.** The negative
-// conventions are *not* symmetric with the add's: `-1` still means "the digest length", but `-3`
-// (MAX) is the only one that is resolved to a number, and `-2`/`-4` survive into the comparison as
-// the sentinel they are -- the recovery loop then simply reports the salt length it found. And the
-// recovery loop is `for (i = 0; DB[i] == 0 && i < maskedDBLen - 1; i++)`, so a `DB` that is all
-// zeroes leaves `i` at `maskedDBLen - 1` and the following test answers
-// `RSA_R_SLEN_RECOVERY_FAILED` rather than reading past the buffer.
-
-/// Eight zero octets, `rsa_pss.c:25`'s `static const unsigned char zeroes[]`, the prefix of
-/// PKCS #1 v2.2 section 9.1.2's `H = Hash(0x00 * 8 || mHash || salt)`. The add above declares the
-/// same constant inside its own body; the authority has one file-scope copy and this is the second
-/// reader, so it is declared here rather than reached for across a `const` in a function body.
-const PSS_ZEROES: [u8; 8] = [0; 8];
-
-/// `int ossl_rsa_verify_PKCS1_PSS_mgf1(RSA *rsa, const unsigned char *mHash, const EVP_MD *Hash,
-/// const EVP_MD *mgf1Hash, const unsigned char *EM, int *sLenOut)` — `rsa_pss.c:45-156`.
-/// Internal, declared in `include/crypto/rsa.h:45-48`.
-///
-/// RSASSA-PSS's EMSA-PSS-VERIFY as PKCS #1 v2.2 section 9.1.2 writes it, and the `sLenOut` pointer
-/// is what makes it the internal rather than the export: `-2` (AUTO) and `-4`
-/// (AUTO_DIGEST_MAX) are answered with the salt length the block actually encodes, which the two
-/// exports below cannot return because their signatures carry an `int` by value.
-///
-/// **The `MSBits == 0` arm moves the pointer, exactly as in the add.** When `BN_num_bits(n) - 1` is
-/// a multiple of 8 the first octet of `EM` must be zero, and the authority writes the test before
-/// the test's consequence: `EM[0] & (0xFF << MSBits)` with `MSBits == 0` is `EM[0] & 0xFF`, a
-/// *refusal* for a non-zero octet, and only then are `EM` advanced and `emLen` decremented.
-///
-/// **The comparison is `memcmp(H_, H, hLen) != 0`, so a mismatch is a `0` with
-/// `RSA_R_BAD_SIGNATURE`** -- and `*sLenOut` is written on the success *and* the mismatch path,
-/// because the authority's assignment sits after the `if`/`else` rather than in it.
-///
-/// # Safety
-/// `rsa` is a live object with a live `n`; `EM` is readable for `RSA_size(rsa)` bytes; `mHash` is
-/// readable for `EVP_MD_get_size(Hash)` bytes; `Hash` and `mgf1Hash` are NULL or live digest
-/// methods; `sLenOut` is a live `int` the callee writes back.
-#[allow(non_snake_case)] // the authority's name, kept verbatim like every other one
-#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
-pub(crate) unsafe fn ossl_rsa_verify_PKCS1_PSS_mgf1(
-    rsa: *mut Rsa,
-    m_hash: *const c_uchar,
-    hash: *const EvpMd,
-    mgf1_hash: *const EvpMd,
-    em: *const c_uchar,
-    s_len_out: *mut c_int,
-) -> c_int {
-    // SAFETY: the caller's contract.
-    unsafe {
-        let mut ret: c_int = 0;
-        let mut s_len: c_int = *s_len_out;
-        let mut db: *mut c_uchar = core::ptr::null_mut();
-        let mut h_: [u8; EVP_MAX_MD_SIZE] = [0; EVP_MAX_MD_SIZE];
-        let ctx: *mut EvpMdCtx = EVP_MD_CTX_new();
-
-        'body: {
-            if ctx.is_null() {
-                break 'body;
-            }
-
-            let mut mgf1_hash = mgf1_hash;
-            if mgf1_hash.is_null() {
-                mgf1_hash = hash;
-            }
-
-            // SAFETY: `hash` is NULL or live per this function's contract.
-            let h_len: c_int = EVP_MD_get_size(hash);
-            if h_len <= 0 {
-                break 'body;
-            }
-            // The negative conventions. Unlike the add's, only `-1` is resolved here: `-2` and `-4`
-            // stay as sentinels for the comparison below, and `-3` is resolved after `emLen` is
-            // known.
-            if s_len == RSA_PSS_SALTLEN_DIGEST {
-                s_len = h_len;
-            } else if s_len < RSA_PSS_SALTLEN_AUTO_DIGEST_MAX {
-                raise_site(&err_sites::RSA_PSS_78);
-                break 'body;
-            }
-
-            // SAFETY: `rsa` is live with a live `n`.
-            let msbits = (BN_num_bits((*rsa).n) - 1) & 0x7;
-            // SAFETY: `rsa` is live.
-            let mut em_len = object::RSA_size(rsa);
-            // SAFETY: `em` is readable for `em_len` bytes.
-            if (*em as c_int) & (0xff << msbits) != 0 {
-                raise_site(&err_sites::RSA_PSS_85);
-                break 'body;
-            }
-            let mut em = em;
-            if msbits == 0 {
-                em = em.offset(1);
-                em_len -= 1;
-            }
-            if em_len < h_len + 2 {
-                raise_site(&err_sites::RSA_PSS_93);
-                break 'body;
-            }
-            if s_len == RSA_PSS_SALTLEN_MAX {
-                s_len = em_len - h_len - 2;
-            } else if s_len > em_len - h_len - 2 {
-                // `sLen` can be a small negative here, which is why the test is `>` and not `>=`.
-                raise_site(&err_sites::RSA_PSS_99);
-                break 'body;
-            }
-            if *em.offset((em_len - 1) as isize) != 0xbc {
-                raise_site(&err_sites::RSA_PSS_103);
-                break 'body;
-            }
-            let masked_dblen = em_len - h_len - 1;
-            let h = em.offset(masked_dblen as isize);
-            db = CRYPTO_malloc(masked_dblen as usize, FILE_RSA_PSS, LINE).cast::<c_uchar>();
-            if db.is_null() {
-                break 'body;
-            }
-            // SAFETY: `db` is writable for `masked_dblen` bytes and `h` is readable for `h_len`.
-            if PKCS1_MGF1(db, masked_dblen as c_long, h, h_len as c_long, mgf1_hash) < 0 {
-                break 'body;
-            }
-            let mut i: c_int = 0;
-            while i < masked_dblen {
-                *db.offset(i as isize) ^= *em.offset(i as isize);
-                i += 1;
-            }
-            if msbits != 0 {
-                *db &= (0xff >> (8 - msbits)) as u8;
-            }
-            // `for (i = 0; DB[i] == 0 && i < (maskedDBLen - 1); i++)`: the loop stops one short of
-            // the end, so an all-zero `DB` leaves `i` at `maskedDBLen - 1` and the octet read below
-            // is the last one in the buffer -- a refusal, not an overrun.
-            i = 0;
-            while *db.offset(i as isize) == 0 && i < (masked_dblen - 1) {
-                i += 1;
-            }
-            let sep = *db.offset(i as isize);
-            i += 1;
-            if sep != 0x1 {
-                raise_site(&err_sites::RSA_PSS_120);
-                break 'body;
-            }
-            if s_len != RSA_PSS_SALTLEN_AUTO
-                && s_len != RSA_PSS_SALTLEN_AUTO_DIGEST_MAX
-                && (masked_dblen - i) != s_len
-            {
-                // The authority's only `ERR_raise_data` in this file, and the text is the whole
-                // observation: both numbers the check compared, formatted into one message.
-                let mut msg = [0 as c_char; 64];
-                // SAFETY: `msg` is a 64-byte buffer and the format is the authority's own.
-                crate::runtime::bio::print::BIO_snprintf(
-                    msg.as_mut_ptr(),
-                    msg.len(),
-                    c"expected: %d retrieved: %d".as_ptr(),
-                    s_len,
-                    masked_dblen - i,
-                );
-                // SAFETY: a compile-time-constant site; the message is NUL-terminated.
-                raise_site_data(&err_sites::RSA_PSS_126, msg.as_ptr());
-                break 'body;
-            } else {
-                s_len = masked_dblen - i;
-            }
-            // SAFETY: `hash` is NULL or live and `m_hash` is readable for `h_len` bytes.
-            if EVP_DigestInit_ex(ctx, hash, core::ptr::null_mut()) == 0
-                || EVP_DigestUpdate(ctx, PSS_ZEROES.as_ptr().cast(), PSS_ZEROES.len()) == 0
-                || EVP_DigestUpdate(ctx, m_hash.cast(), h_len as usize) == 0
-            {
-                break 'body;
-            }
-            if s_len != 0 {
-                // SAFETY: `db` has `masked_dblen` bytes and `i + s_len <= masked_dblen`.
-                if EVP_DigestUpdate(
-                    ctx,
-                    db.offset(i as isize).cast_const().cast(),
-                    s_len as usize,
-                ) == 0
-                {
-                    break 'body;
-                }
-            }
-            // SAFETY: `h_` is `EVP_MAX_MD_SIZE` bytes, which is what the digest needs.
-            if EVP_DigestFinal_ex(ctx, h_.as_mut_ptr(), core::ptr::null_mut()) == 0 {
-                break 'body;
-            }
-            // SAFETY: `h` is readable for `h_len` bytes and `h_` for the same.
-            if core::slice::from_raw_parts(h_.as_ptr(), h_len as usize)
-                != core::slice::from_raw_parts(h.cast::<u8>(), h_len as usize)
-            {
-                // The authority's `if (memcmp(...)) { raise; ret = 0; } else { ret = 1; }`, whose
-                // *else* arm is the only place `ret` becomes 1 -- and whose fall-through then
-                // writes `*sLenOut` on **both** arms, which is why a bad signature still reports
-                // the salt length the block encoded.
-                raise_site(&err_sites::RSA_PSS_144);
-            } else {
-                ret = 1;
-            }
-
-            *s_len_out = s_len;
-        }
-
-        // The authority's `err:` label, reached by falling through and by every `goto err` above.
-        // `DB` is NULL when the first one is taken, which `OPENSSL_free` tolerates.
-        // SAFETY: `db` is NULL or this call's own allocation.
-        CRYPTO_free(db.cast(), FILE_RSA_PSS, LINE);
-        // SAFETY: `ctx` is NULL or this call's own object.
-        EVP_MD_CTX_free(ctx);
-
-        ret
-    }
-}
-
-/// `int RSA_verify_PKCS1_PSS_mgf1(RSA *rsa, const unsigned char *mHash, const EVP_MD *Hash,
-/// const EVP_MD *mgf1Hash, const unsigned char *EM, int sLen)` — `rsa_pss.c:38-43`.
-///
-/// The export is the internal with a one-`int` difference: the salt length travels *by value*, so
-/// the value the internal resolved is discarded. That is what makes `RSA_PSS_SALTLEN_AUTO` a legal
-/// argument here and an unobservable one -- a caller that wants the recovered length wants
-/// `EVP_PKEY_CTX_get_rsa_pss_saltlen`'s modern spelling, not this one.
-///
-/// # Safety
-/// `rsa` is a live object with a live `n`; `EM` is readable for `RSA_size(rsa)` bytes; `mHash` is
-/// readable for `EVP_MD_get_size(Hash)` bytes; `Hash` and `mgf1Hash` are NULL or live digest
-/// methods.
-#[no_mangle]
-pub unsafe extern "C" fn RSA_verify_PKCS1_PSS_mgf1(
-    rsa: *mut Rsa,
-    m_hash: *const c_uchar,
-    hash: *const EvpMd,
-    mgf1_hash: *const EvpMd,
-    em: *const c_uchar,
-    s_len: c_int,
-) -> c_int {
-    let mut s_len = s_len;
-    // SAFETY: the caller's contract, forwarded with a local `sLen` the callee may write back.
-    unsafe { ossl_rsa_verify_PKCS1_PSS_mgf1(rsa, m_hash, hash, mgf1_hash, em, &mut s_len) }
-}
-
-/// `int RSA_verify_PKCS1_PSS(RSA *rsa, const unsigned char *mHash, const EVP_MD *Hash, const
-/// unsigned char *EM, int sLen)` — `rsa_pss.c:31-36`.
-///
-/// The `_mgf1` form with a NULL mask generation digest, which the internal turns into `Hash`. It is
-/// the add's mirror image and is *not* the same call: the add's `_mgf1` sibling is
-/// [`RSA_padding_add_PKCS1_PSS_mgf1`] and this one's is the name above.
-///
-/// # Safety
-/// `rsa` is a live object with a live `n`; `EM` is readable for `RSA_size(rsa)` bytes; `mHash` is
-/// readable for `EVP_MD_get_size(Hash)` bytes; `Hash` is NULL or a live digest method.
-#[no_mangle]
-pub unsafe extern "C" fn RSA_verify_PKCS1_PSS(
-    rsa: *mut Rsa,
-    m_hash: *const c_uchar,
-    hash: *const EvpMd,
-    em: *const c_uchar,
-    s_len: c_int,
-) -> c_int {
-    // SAFETY: the caller's contract; a NULL `mgf1Hash` means "the same as `Hash`".
-    unsafe { RSA_verify_PKCS1_PSS_mgf1(rsa, m_hash, hash, core::ptr::null(), em, s_len) }
-}
-
-/// `int ossl_rsa_padding_add_PKCS1_PSS_mgf1(RSA *rsa, unsigned char *EM, const unsigned char
-/// *mHash, const EVP_MD *Hash, const EVP_MD *mgf1Hash, int *sLenOut)` — `rsa_pss.c:173-290`.
-/// Internal, declared in `include/crypto/rsa.h:52-55`.
-///
-/// RSASSA-PSS's EMSA-PSS encoding as PKCS #1 v2.2 section 9.1.1 writes it, and the two things a
-/// reader gets wrong are both length decisions rather than bytes:
-///
-/// * **`sLen` is an in/out parameter and the negative values are conventions, not lengths.** `-1`
-///   means "the digest length", `-2` and `-3` both mean "the maximum the modulus allows", and
-///   `-4` means the maximum *capped at the digest length* — which is the one that needs
-///   `sLenMax`, because it is the only convention that is `min(hLen, maximum)` rather than one of
-///   the two on its own. A value below `-4` is a refusal, not a clamp.
-/// * **`MSBits` can be zero, and then the encoding moves.** When `BN_num_bits(n) - 1` is a
-///   multiple of 8 the top octet of `EM` must be zero, so the authority writes it, advances `EM`
-///   *and* decrements `emLen`. After that every offset in the function is relative to the advanced
-///   pointer, including the `0xbc` trailer. A transcription that advanced without decrementing, or
-///   the reverse, puts the trailer one octet out and the block still "looks" like a PSS encoding.
-///
-/// The salt is drawn with `RAND_bytes_ex(rsa->libctx, ...)` — **the object's context, not a
-/// parameter's** — and only when `sLen > 0`, which is why `salt != NULL` implies `sLen > 0` and why
-/// the cleanup can pass the resolved `sLen`.
-///
-/// # Safety
-/// `rsa` is a live object with a live `n`; `EM` is writable for `RSA_size(rsa)` bytes; `mHash` is
-/// readable for `EVP_MD_get_size(Hash)` bytes; `Hash` and `mgf1Hash` are NULL or live digest
-/// methods; `sLenOut` is a live `int` the callee may write back.
-#[allow(non_snake_case)] // the authority's name, kept verbatim like every other one
-#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
-pub(crate) unsafe fn ossl_rsa_padding_add_PKCS1_PSS_mgf1(
-    rsa: *mut Rsa,
-    em: *mut c_uchar,
-    m_hash: *const c_uchar,
-    hash: *const EvpMd,
-    mgf1_hash: *const EvpMd,
-    s_len_out: *mut c_int,
-) -> c_int {
-    // SAFETY: the caller's contract.
-    unsafe {
-        // `rsa_pss.c:25`'s `static const unsigned char zeroes[] = { 0, ... }`, the eight octets
-        // PKCS #1 v2.2 section 9.1.1's `H = Hash(0x00 * 8 || mHash || salt)` starts with.
-        const ZEROES: [u8; 8] = [0; 8];
-
-        let mut s_len: c_int = *s_len_out;
-        let mut s_len_max: c_int = -1;
-        let mut salt: *mut c_uchar = core::ptr::null_mut();
-        let mut ctx: *mut EvpMdCtx = core::ptr::null_mut();
-
-        let mut mgf1_hash = mgf1_hash;
-        if mgf1_hash.is_null() {
-            mgf1_hash = hash;
-        }
-
-        // SAFETY: `hash` is NULL or live per this function's contract.
-        let h_len: c_int = EVP_MD_get_size(hash);
-
-        let completed = 'body: {
-            if h_len <= 0 {
-                break 'body false;
-            }
-            // The negative `sLen` conventions. The `-4` arm is the only one that keeps the digest
-            // length as a *cap* rather than as the value, which is what `sLenMax` carries.
-            if s_len == RSA_PSS_SALTLEN_DIGEST {
-                s_len = h_len;
-            } else if s_len == RSA_PSS_SALTLEN_MAX_SIGN || s_len == RSA_PSS_SALTLEN_AUTO {
-                s_len = RSA_PSS_SALTLEN_MAX;
-            } else if s_len == RSA_PSS_SALTLEN_AUTO_DIGEST_MAX {
-                s_len = RSA_PSS_SALTLEN_MAX;
-                s_len_max = h_len;
-            } else if s_len < RSA_PSS_SALTLEN_AUTO_DIGEST_MAX {
-                raise_site(&err_sites::RSA_PSS_216);
-                break 'body false;
-            }
-
-            // SAFETY: `rsa` is live with a live `n`; `RSA_size` reads it as `BN_num_bytes` is
-            // written out in `object.rs`.
-            let msbits = (BN_num_bits((*rsa).n) - 1) & 0x7;
-            let mut em_len = object::RSA_size(rsa);
-            // The encoding moves when `MSBits` is zero: one octet of `EM` is spent on the leading
-            // zero and `emLen` shrinks to match.
-            let mut em = em;
-            if msbits == 0 {
-                *em = 0;
-                em = em.offset(1);
-                em_len -= 1;
-            }
-            if em_len < h_len + 2 {
-                raise_site(&err_sites::RSA_PSS_227);
-                break 'body false;
-            }
-            if s_len == RSA_PSS_SALTLEN_MAX {
-                s_len = em_len - h_len - 2;
-                if s_len_max >= 0 && s_len > s_len_max {
-                    s_len = s_len_max;
-                }
-            } else if s_len > em_len - h_len - 2 {
-                raise_site(&err_sites::RSA_PSS_235);
-                break 'body false;
-            }
-            if s_len > 0 {
-                salt = CRYPTO_malloc(s_len as usize, FILE_RSA_PSS, LINE).cast::<c_uchar>();
-                if salt.is_null() {
-                    break 'body false;
-                }
-                // SAFETY: `salt` is writable for `s_len` bytes and `rsa` is live; the context is
-                // the object's own, which is the `_ex`-less half of the pair's whole point.
-                if RAND_bytes_ex((*rsa).libctx, salt, s_len as usize, 0) <= 0 {
-                    break 'body false;
-                }
-            }
-            let masked_dblen = em_len - h_len - 1;
-            let h = em.offset(masked_dblen as isize);
-
-            ctx = EVP_MD_CTX_new();
-            if ctx.is_null() {
-                break 'body false;
-            }
-            if EVP_DigestInit_ex(ctx, hash, core::ptr::null_mut()) == 0
-                || EVP_DigestUpdate(ctx, ZEROES.as_ptr().cast(), ZEROES.len()) == 0
-                || EVP_DigestUpdate(ctx, m_hash.cast(), h_len as usize) == 0
-            {
-                break 'body false;
-            }
-            if s_len != 0 && EVP_DigestUpdate(ctx, salt.cast_const().cast(), s_len as usize) == 0 {
-                break 'body false;
-            }
-            if EVP_DigestFinal_ex(ctx, h, core::ptr::null_mut()) == 0 {
-                break 'body false;
-            }
-
-            // Generate dbMask in place then perform XOR on it.
-            if PKCS1_MGF1(em, masked_dblen as c_long, h, h_len as c_long, mgf1_hash) != 0 {
-                break 'body false;
-            }
-
-            let mut p = em;
-            // Initial PS XORs with all zeroes which is a NOP so just update pointer. Note from a
-            // test above this value is guaranteed to be non-negative.
-            p = p.offset((em_len - s_len - h_len - 2) as isize);
-            *p ^= 0x1;
-            p = p.offset(1);
-            if s_len > 0 {
-                let mut i: c_int = 0;
-                while i < s_len {
-                    *p ^= *salt.offset(i as isize);
-                    p = p.offset(1);
-                    i += 1;
-                }
-            }
-            if msbits != 0 {
-                *em &= (0xff >> (8 - msbits)) as u8;
-            }
-
-            // H is already in place so just set final 0xbc.
-            *em.offset((em_len - 1) as isize) = 0xbc;
-
-            *s_len_out = s_len;
-            true
-        };
-
-        // The authority's `err:` label. `sLen` here is the *resolved* value, which is what the
-        // authority's `(size_t)sLen` sees too; `salt != NULL` implies it is positive.
-        EVP_MD_CTX_free(ctx);
-        crate::runtime::mem::CRYPTO_clear_free(
-            salt.cast::<c_void>(),
-            s_len as usize,
-            FILE_RSA_PSS,
-            LINE,
-        );
-        if completed {
-            1
-        } else {
-            0
-        }
-    }
-}
-
-/// `int RSA_padding_add_PKCS1_PSS_mgf1(RSA *rsa, unsigned char *EM, const unsigned char *mHash,
-/// const EVP_MD *Hash, const EVP_MD *mgf1Hash, int sLen)` — `rsa_pss.c:165-171`.
-///
-/// The export is the same `sLen` convention on the outside and a *pointer* on the inside: the
-/// internal takes `int *sLenOut` so that it can answer with the value it resolved. This wrapper is
-/// the whole of that difference, plus the NULL context the header's signature does not carry.
-///
-/// # Safety
-/// `rsa` is a live object with a live `n`; `EM` is writable for `RSA_size(rsa)` bytes; `mHash` is
-/// readable for `EVP_MD_get_size(Hash)` bytes; `Hash` and `mgf1Hash` are NULL or live digest
-/// methods.
-#[no_mangle]
-pub unsafe extern "C" fn RSA_padding_add_PKCS1_PSS_mgf1(
-    rsa: *mut Rsa,
-    em: *mut c_uchar,
-    m_hash: *const c_uchar,
-    hash: *const EvpMd,
-    mgf1_hash: *const EvpMd,
-    s_len: c_int,
-) -> c_int {
-    let mut s_len = s_len;
-    // SAFETY: the caller's contract, forwarded with a local `sLen` the callee may write back.
-    unsafe { ossl_rsa_padding_add_PKCS1_PSS_mgf1(rsa, em, m_hash, hash, mgf1_hash, &mut s_len) }
-}
-
-/// `int RSA_padding_add_PKCS1_PSS(RSA *rsa, unsigned char *EM, const unsigned char *mHash,
-/// const EVP_MD *Hash, int sLen)` — `rsa_pss.c:158-163`.
-///
-/// The `_mgf1` form with `mgf1Hash` NULL, which the internal turns into `Hash`. A caller that
-/// wants a mask generation function other than the message digest wants the other name.
-///
-/// # Safety
-/// `rsa` is a live object with a live `n`; `EM` is writable for `RSA_size(rsa)` bytes; `mHash` is
-/// readable for `EVP_MD_get_size(Hash)` bytes; `Hash` is NULL or a live digest method.
-#[no_mangle]
-pub unsafe extern "C" fn RSA_padding_add_PKCS1_PSS(
-    rsa: *mut Rsa,
-    em: *mut c_uchar,
-    m_hash: *const c_uchar,
-    hash: *const EvpMd,
-    s_len: c_int,
-) -> c_int {
-    // SAFETY: the caller's contract; a NULL `mgf1Hash` means "the same as `Hash`".
-    unsafe { RSA_padding_add_PKCS1_PSS_mgf1(rsa, em, m_hash, hash, core::ptr::null(), s_len) }
 }
 
 // =============================================================================================
@@ -3638,6 +3148,12 @@ pub unsafe extern "C" fn RSA_check_key(key: *const Rsa) -> c_int {
 #[cfg(test)]
 mod tests {
     use super::*;
+    // The PSS pair moved to its own module with D351, so the arms below name it explicitly.
+    use crate::evp::pkey_ctx::{RSA_PSS_SALTLEN_AUTO, RSA_PSS_SALTLEN_DIGEST, RSA_PSS_SALTLEN_MAX};
+    use crate::rsa::pss::{
+        ossl_rsa_padding_add_PKCS1_PSS_mgf1, RSA_padding_add_PKCS1_PSS,
+        RSA_padding_add_PKCS1_PSS_mgf1,
+    };
 
     /// **`RSA_METHOD`, field for field.** The numbers are `courts/layout/measure-rsa-ctx.c`'s: 120
     /// bytes with `name` 0, the four crypt entry points at 8/16/24/32, the two mod-exp members at
@@ -4050,9 +3566,10 @@ mod tests {
         (rsa, n)
     }
 
-    /// **The recovery `ossl_rsa_verify_PKCS1_PSS_mgf1` performs, written out here** because that
-    /// verifier is slice D's and is not landed: unmask `DB` with `MGF1(H)`, drop the bits `MSBits`
-    /// forbids, find the `0x01`, and recompute `H = Hash(0x00 * 8 || mHash || salt)`.
+    /// **The recovery `ossl_rsa_verify_PKCS1_PSS_mgf1` performs, written out here** because this
+    /// module is `rsa_meth.c`'s and the verifier is [`crate::rsa::pss`]'s: unmask `DB` with
+    /// `MGF1(H)`, drop the bits `MSBits` forbids, find the `0x01`, and recompute
+    /// `H = Hash(0x00 * 8 || mHash || salt)`.
     ///
     /// **This is a round trip and not a restatement of the writer.** A block that fails it is one
     /// the authority's own verifier refuses, and the property it checks is exactly the one the

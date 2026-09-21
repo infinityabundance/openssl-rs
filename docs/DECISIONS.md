@@ -24579,3 +24579,193 @@ with **41** names open -- the six withheld private-key readers, the `*_asn1_meth
 key types' printer families among them. What this entry is, is the hinge opening: the `UI` program,
 `PEM_def_callback`, the Phase-9 PEM plumbing and twenty-four of 8.9's thirty rows -- not 8.9, not the
 method objects, and not a claim that the stratum's work is nearly done.
+
+---
+
+## D351 — the provider-side key backends land whole: seven new modules for `crypto/rsa/rsa_backend.c`, `rsa_pss.c`, `rsa_schemes.c` and `rsa_mp_names.c`, `crypto/dh/dh_backend.c`, `crypto/dsa/dsa_backend.c` and `crypto/ffc/ffc_backend.c`, four withheld internals join three existing modules, and **no ledger count moves** because every one of them is an internal
+
+**Decision.** The five `EVP_PKEY_ASN1_METHOD` objects and the `standard_methods[]` tables they
+populate are the next slice, and this entry lands the piece their callback columns call into:
+the **provider-side key backends**, transcribed **whole** -- every function the authority
+defines in each unit, not only the ones a callback currently names. Seven new modules, and three
+existing modules gain one withheld internal each. Because none of it is an export, this entry moves
+**no** obligation count; it is the precondition of the step that does, and nothing below should be read
+as Phase 8 progress.
+
+**The units and their modules, with the atlas's own measurement.**
+
+* `crypto/rsa/rsa_backend.c` is `src/rsa/backend.rs` (new, `share 10/10`): `ossl_rsa_fromdata`,
+  `ossl_rsa_todata`, `ossl_rsa_pss_params_30_todata`, `ossl_rsa_pss_params_30_fromdata`,
+  `ossl_rsa_is_foreign`, `ossl_rsa_dup`, `ossl_rsa_pss_decode`, `ossl_rsa_sync_to_pss_params_30`,
+  `ossl_rsa_pss_get_param_unverified`, `ossl_rsa_param_decode`, `ossl_rsa_key_from_pkcs8`, plus
+  the file-locals `collect_numbers` and `rsa_bn_dup_check`.
+* `crypto/rsa/rsa_pss.c` is `src/rsa/pss.rs` (new, `share 18/18`): the four
+  `RSA_verify_PKCS1_PSS*`/`RSA_padding_add_PKCS1_PSS*` **exports**, their two `ossl_*_mgf1`
+  internals -- both pairs **moved out of `src/rsa/mod.rs`, where the atlas had mis-attributed
+  them** -- and the twelve `ossl_rsa_pss_params_30_*` parameter helpers `rsa_ameth.c` and
+  `rsa_pmeth.c` both call.
+* `crypto/rsa/rsa_schemes.c` is `src/rsa/schemes.rs` (new, `3/3`): `ossl_rsa_oaeppss_md2nid`,
+  `ossl_rsa_oaeppss_nid2name`, `ossl_rsa_mgf_nid2name` over the file-locals `meth2nid`,
+  `nid2name` and `md_is_a`.
+* `crypto/rsa/rsa_mp_names.c` is `src/rsa/mp_names.rs` (new): the three fixed tables
+  `ossl_rsa_mp_factor_names`, `ossl_rsa_mp_exp_names` and `ossl_rsa_mp_coeff_names`.
+* `crypto/dh/dh_backend.c` is `src/dh/backend.rs` (new, `7/7`): `ossl_dh_params_fromdata`,
+  `ossl_dh_key_fromdata`, `ossl_dh_params_todata`, `ossl_dh_key_todata`, `ossl_dh_is_foreign`,
+  `ossl_dh_dup`, `ossl_dh_key_from_pkcs8`, plus the file-locals `dh_ffc_params_fromdata` and
+  `dh_bn_dup_check`.
+* `crypto/dsa/dsa_backend.c` is `src/dsa/backend.rs` (new, `4/4`): `ossl_dsa_key_fromdata`,
+  `ossl_dsa_is_foreign`, `ossl_dsa_dup`, `ossl_dsa_key_from_pkcs8`, plus `dsa_bn_dup_check`.
+* `crypto/ffc/ffc_backend.c` is `src/ffc/backend.rs` (new, `1/1`): `ossl_ffc_params_fromdata`.
+* `crypto/ec/ec_backend.c` gains its two withheld internals in `src/ec/backend.rs` (now
+  `share 16/16`): `ossl_ec_key_param_from_x509_algor` and `ossl_ec_key_from_pkcs8`.
+
+Two existing modules each gain one withheld internal: `crypto/dsa/dsa_lib.c`'s
+`ossl_dsa_ffc_params_fromdata` joins `src/dsa/object.rs` (now `28/28`), and
+`crypto/ffc/ffc_params.c`'s `ossl_ffc_params_todata` joins `src/ffc/params.rs` (now `18/18`) --
+the last name that unit was withholding. `src/evp/pkey_ctx.rs` gains the `core_names.h`
+constants the new code reads (`OSSL_PKEY_PARAM_DH_PRIV_LEN`, the six
+`OSSL_PKEY_PARAM_FFC_{PCOUNTER,COFACTOR,H,VALIDATE_PQ,G,LEGACY}` spellings,
+`OSSL_PKEY_PARAM_MASKGENFUNC` and its `_RSA_MASKGENFUNC`, `OSSL_PKEY_PARAM_MGF1_DIGEST` and its
+`_RSA_MGF1_DIGEST`, `OSSL_PKEY_PARAM_RSA_DERIVE_FROM_PQ`, and the seven `OSSL_DIGEST_NAME_*`),
+and `src/rsa/object.rs` widens `RSA_FLAG_TYPE_MASK`/`_RSA`/`_RSASSAPSS` from file-private to
+`pub(crate)` so `rsa_backend.c`'s `ossl_rsa_is_foreign` can read them; no value changes.
+
+**What the authority corrected in the brief.**
+
+* `ossl_dsa_ffc_params_fromdata` goes to `src/dsa/object.rs` and not the brief's
+  `src/dsa/mod.rs`: `transcription-edges.json` already attributes `crypto/dsa/dsa_lib.c` to
+  `src/dsa/object.rs`, and the one-unit-per-module rule decides it.
+* `crypto/rsa/rsa_mp_names.c` defines **no function at all** -- three `const char *[]` tables
+  only -- so no `transcription-edges` unit row and no plan row reaches it, and `transcription-edges.json`
+  maps no module to it. The module exists and is recorded here; inventing a unit mapping the atlas
+  does not have would be a claim, not a measurement.
+* The brief describes `crypto/rsa/rsa_pss.c` as "the PSS parameter object helpers ... both call".
+  The twelve `ossl_rsa_pss_params_30_*` are those, and the unit also defines the four `RSA_*PKCS1_PSS*`
+  exports and their two file-local `_mgf1` bodies -- which is why its edge is `18/18` and not `12/12`.
+* The brief's "`crypto/ffc/ffc_params.c` / others -- include only if an above unit's closure requires
+  it": exactly one did. Measured, `ffc_params.c`'s `ossl_ffc_params_todata` has one caller in the
+  whole authority, `crypto/dh/dh_backend.c:94` -- so the unit's closure requires it; no other unit was
+  reached. `crypto/param_build_set.c`
+  (D340) is **reused**, not re-transcribed.
+
+**The authority's own text, transcribed rather than corrected, and recorded here so a reader does
+not think a defect was missed.** Three coordinates inside these units are the authority's own:
+`ossl_rsa_pss_params_30_fromdata` passes `param_mgf` to `OSSL_PARAM_get_utf8_ptr` where the
+surrounding code reads `param_md` and `param_mgf1md` (`rsa_backend.c:414` and `:428`); `ossl_rsa_dup`
+tests `dupkey->pss->maskGenAlgorithm == NULL` after the dup without a NULL check on `dupkey->pss`
+(`:543-544`); and `ossl_dh_dup`/`ossl_dsa_dup`'s `(selection & DOMAIN_PARAMETERS) == 0 || dup_check(...)`
+guards mean a `SELECT_ALL` selection skips the key halves entirely (`dh_backend.c:150-162`,
+`dsa_backend.c:91-103`).
+Each is carried verbatim with a comment naming the coordinate, and each is pinned by a unit test that
+records the consequence rather than "fixing" it -- the authority's contract, including its faults, is
+the thing being reconstructed. One modelling note that is ours rather than the authority's: the crate's
+`OSSL_PARAM_UNSIGNED_INTEGER` handling is native-endian exactly as the authority's is, so a multi-byte
+integer test buffer produces a byte-reversed `BIGNUM`; the tests use one-byte buffers and say why.
+
+**No ledger count moves, and that is the point.** `forensics/phase8-obligations.json` reads implemented
+**745**, deferred **0**, open **41**, owned **786**, `complete: false` -- byte-for-byte the numbers D350
+left. `implemented-surface.json`'s `libcrypto` implemented is **2753**, unchanged, and
+`internal_symbols.c_style` stays **327**: every function landed here is a `pub(crate)` Rust function
+with no `#[no_mangle]`, so it has no `.dynsym` entry and no ledger row. What the landing does move is
+the *atlas*: `transcription-edges.json` reads **298** modules over **267** units (was 292/261), and
+`internal-symbols.json`'s `modules_without_a_stratum` census grows 25 -> **31** by the six new
+internals-only modules.
+
+**Prerequisite gate: two deferral rows retire, one divergence row retires, one shrinks, and one record
+is restored rather than left dropped.** `forensics/prerequisites.json`'s deferrals fall **17 -> 15**:
+the `ossl_dsa_ffc_params_fromdata` row (the name is built) and the `ossl_dh_is_foreign` row (likewise)
+retire, and `blocking_dependencies` falls with them, **17 -> 15**. The divergence block loses the
+`src/ffc/params.rs` row (`ossl_ffc_params_todata`, built) and the `src/ec/backend.rs` row **shrinks from
+three names to one**: `ossl_ec_key_param_from_x509_algor` and `ossl_ec_key_from_pkcs8` are built and
+leave, and `ossl_x509_algor_is_sm2` stays -- withheld, because its body reaches `d2i_ECPKParameters`
+and its only caller in the whole authority is the provider half (`providers/implementations/keymgmt/ec_kmgmt.c`),
+which this crate does not carry, so a transcription would be a function no landed path reaches. That is
+D340's reason, unchanged, and the row's note now records D351's measurement rather than the whole
+`#ifndef FIPS_MODULE` tail.
+
+**One divergence record the working tree had dropped is restored, because the gate says it was never
+stale.** The `src/runtime/thread_events.rs` row for `CRYPTO_THREAD_clean_local` was absent from the tree
+this entry was written on. Restoring it verbatim leaves the gate at **zero findings** over **12 rows /
+57 names** -- so the record matched, and its absence was not a retirement but a weakening: with the row,
+the name sits in `census.covered_by_a_divergence` (**85**); without it, `CRYPTO_THREAD_clean_local` falls
+through to `sealed_stratum_census`, which grows **56 -> 57** and is compared *never* -- the one census
+D327 built to track rather than fail. The row is written to keep that call from being deleted again
+without someone reading why it is there, and it is restored for the same reason.
+
+**The `EVP_PKEY_assign` row moves to the file's third mechanism, and the finding is what says so.**
+`forensics/tools/phase7_obligations.py` had `EVP_PKEY_assign` in `BLOCKED_HANDOFFS` with two blockers:
+`EVP_PKEY_type` (exported, `crypto/evp/evp_pkey_type.c:63`, owning phase 7) and `ossl_dh_is_foreign`
+(internal, `crypto/dh/dh_backend.c:122`, owning phase 8, `binding_phase` 8). Once D351 builds
+`ossl_dh_is_foreign` the name leaves the atlases' owned sets, so `blocker_liveness.check_row` can no
+longer phase it and the row fails outright -- measured by reinstating the committed row against the
+current atlas: **"blocker `ossl_dh_is_foreign` (internal) has no owner phase in the atlases or in
+`forensics/prerequisites.json`, so the row's phase cannot be checked; record the stratum that lands
+it"**. The export is still owed -- `crypto/evp/p_lib.c:791`'s body is `EVP_PKEY_type`, the two
+`EC_KEY_get0_group`/`EC_GROUP_get_curve_name` calls, `EVP_PKEY_set_type` and `detect_foreign_key`, and
+the only name left is this stratum's own `EVP_PKEY_type`, which is open on D341's `standard_methods[]`
+cycle -- so the row is not retired, it **moves to `UNBLOCKED_HANDOFFS` with `owning_phase 8`**, the
+mechanism for "the blocker has landed and the export is still this stratum's to write". The sealed
+ledger does not move: `deferred_to_later_phase` stays **223**, `implemented` **727**, `received_by_handoff`
+**26**, and `blocker_liveness` reads structured_rows **16 -> 15**, structured_blockers **43 -> 41**,
+unblocked_rows **6 -> 7**, unblocked_symbols **14 -> 15**, findings **0**.
+
+**Raise sites.** `forensics/tools/gen_err_raise_sites.py`'s `COVERED_FILES` gains
+`crypto/dh/dh_backend.c` and `crypto/dsa/dsa_backend.c` (2 and 6 sites), so `src/runtime/err_sites.rs`
+and `forensics/atlas/err-raise-sites.json` move **3007 -> 3015** sites with **0** unattributed, and
+eight constants are new: `DH_BACKEND_222`, `DH_BACKEND_235`, `DSA_BACKEND_154`, `DSA_BACKEND_159`,
+`DSA_BACKEND_163`, `DSA_BACKEND_171`, `DSA_BACKEND_175`, `DSA_BACKEND_182`. The other units are already
+in the tool's list and add no site: `crypto/rsa/rsa_backend.c` (14 sites), `crypto/rsa/rsa_pss.c` (11)
+and `crypto/ec/ec_backend.c` (23) were covered before this landing, `crypto/rsa/rsa_schemes.c` and
+`crypto/rsa/rsa_mp_names.c` are listed and raise nothing, and `crypto/ffc/ffc_backend.c` is
+deliberately **absent** for the same reason.
+
+**The courts: there is nothing new to court, and no arm could reach what landed.** `court_coverage.py`
+is unchanged -- phase 8 at **745** implemented (**737** directly courted, every one of them *called* by
+an arm, **8** indirect, **0** unmatched), phase 9 at **66**, `not_yet_begun` at **80** -- because no
+export landed: the four `RSA_*PKCS1_PSS*` names `src/rsa/pss.rs` now owns were already in the ledger
+and already called by `RT-RSA` (`court_coverage` reports `direct=737` with `called=737`,
+`referenced=0`). The rest are `pub(crate)` internals whose callers are the `*_ameth.c` objects and the
+provider key management units, neither landed, so no probe can name them and no `.dynsym` holds them.
+The evidence for them is the unit tests, which is exactly the disposition D330, D332 and D340 recorded
+for the same shape: **29** new unit tests -- `rsa::backend` 4, `rsa::pss` 3, `rsa::schemes` 4,
+`rsa::mp_names` 2, `dh::backend` 4, `dsa::backend` 3, `ffc::backend` 4, `ec::backend` 3,
+`dsa::object` 1, and `ffc::params`' `the_todata_writer_fills_the_parameter_families` -- each pinning a
+measured consequence (the `fromdata` round trip, the `todata` writer's parameter families, the two
+duplicators' selection halves, `ossl_ec_key_param_from_x509_algor`'s refusal paths) rather than a call.
+`regression_guard.py --baseline-ref origin/main` reports no regression over **93** courts and
+**36750** observations.
+
+**What is deliberately *not* here, named rather than implied.** The five `EVP_PKEY_ASN1_METHOD`
+objects and `standard_methods[]` are untouched -- that is the next slice, and D341 measured why it
+cannot be cut to a compiling boundary. The `*_pmeth.c` units are untouched. `ossl_x509_algor_is_sm2`
+is withheld with its reason above. `crypto/ec/ecx_key.c`, `crypto/ec/ecx_backend.c`,
+`crypto/ec/curve25519.c` and the whole of `crypto/ec/curve448/` are untouched: the ECX rows of 8.8
+need them, and this landing does not name them: measured, `crypto/ec/ec_backend.c` contains no
+`ecx_*` symbol at all. `crypto/param_build_set.c` is re-used, not duplicated (D340).
+
+**The edges out of these units, into the units that are not yet landed.**
+`rsa_backend.c`'s `ossl_rsa_fromdata`/`_todata`, `ossl_rsa_pss_params_30_{to,from}data` and
+`ossl_rsa_param_decode` are called by `crypto/rsa/rsa_ameth.c` and `crypto/rsa/rsa_pmeth.c`;
+`ossl_rsa_key_from_pkcs8` by `rsa_ameth.c:176` and the RSA key management; `ossl_rsa_dup` by
+`rsa_ameth.c:957`'s `dup` column and `rsa_kmgmt.c:685`'s `dup`, and `ossl_rsa_is_foreign` by
+`crypto/evp/p_lib.c:763`'s `detect_foreign_key`.
+`rsa_schemes.c`'s three lookups are called by `rsa_pmeth.c` and `rsa_ameth.c`; `rsa_mp_names.c`'s three
+tables by `rsa_backend.c` itself (`:125-129` and `:285-290`). `dh_backend.c`'s bodies by
+`crypto/dh/dh_ameth.c` (its `dup` column at `:549`) and
+`providers/implementations/keymgmt/dh_kmgmt.c` (`:848`), and `ossl_dh_is_foreign` by
+`crypto/evp/p_lib.c:782`'s `detect_foreign_key`; `dsa_backend.c`'s by `crypto/dsa/dsa_ameth.c`
+(`:505`) and `dsa_kmgmt.c` (`:721`), and `ossl_dsa_is_foreign` by `crypto/evp/p_lib.c:776`.
+`ffc_backend.c`'s `ossl_ffc_params_fromdata` by `dh_backend.c:36` and `dsa_lib.c:357`'s
+`ossl_dsa_ffc_params_fromdata` (both landed here).
+`ec_backend.c`'s two land into `crypto/ec/ec_ameth.c` (8.8) and `ec_kmgmt.c`; measured, neither of them
+names any `ecx_*` symbol, so the X25519/X448 edge into `ecx_key.c` belongs to the ameth/keymgmt half of
+`ec_backend.c`'s callers and not to this unit. `src/rsa/pss.rs`'s
+twelve `ossl_rsa_pss_params_30_*` helpers are called by `rsa_pmeth.c` and `rsa_ameth.c`, and its four
+exports are already courted exports, not edges.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete: false`
+with **41** names open -- 8.8's fifteen, the twelve legacy `EVP_PKEY_{get0,get1,set1}_*` accessors, the
+eight `RSA_print`/`DSA_print`/`EC_KEY_print` family printers and the six PEM private-key readers among
+them -- and the counts this entry reaches are exactly D350's, because the eight units it lands are
+internals. What this slice is, is the provider-side key backends the ASN.1 method objects will read,
+whole: not the method objects, not `standard_methods[]`, not a Phase-8 count, and not a step toward one.

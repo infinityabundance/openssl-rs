@@ -12,8 +12,6 @@
       "evp_pkey_copy_downgraded -> phase 8 (The fourth of the seven and the one that makes the other three wait. Its body exports the provider keydata through `evp_keymgmt_export` -- this stratum's -- and then imports it with `(*dest)->ameth->import_from`, synchronising `(*dest)->ameth->dirty_cnt`. Two fields of an `EVP_PKEY_ASN1_METHOD` and one of that struct's function pointers are read directly, so the function cannot be written before an ameth object exists, and the ameth objects are the twelve `crypto/asn1/ameth_lib.c` builds from Phase 8's `standard_methods[]`. It also needs `EVP_PKEY_CTX_new_from_pkey`, which is `pmeth_lib.c`'s and lands in 7.4c *inside* this stratum -- so the order is 7.4c, then Phase 8, then this row.)",
       "evp_pkey_get0_DH_int -> phase 8 (The third of the seven, and the shortest: it is `pkey->type == EVP_PKEY_DH ? evp_pkey_get_legacy(pkey) : NULL`. It is therefore blocked by nothing of its own and inherited entirely from its sibling above -- the DH *type* it compares against is real now, the downgrade it calls is not. Recorded separately rather than folded into `evp_pkey_get_legacy` because the gate owes names, not call graphs, and a reader of the blocking census should see all four rather than three and an implication.)",
       "evp_pkey_get_legacy -> phase 8 (The second of the seven. It downgrades a provider key to a legacy one, so its whole body past the fast paths is `evp_pkey_copy_downgraded`, and the cache it then holds is keyed on `ameth` being non-NULL (`EVP_PKEY_asn1_find` for the type). Both halves are Phase 8's, which is why this name waits on the same registry as its sibling rather than on anything in this stratum.)",
-      "ossl_dh_is_foreign -> phase 8 (`crypto/dh/dh_backend.c`'s (line 122), and recorded here because two Phase-7 rows need it as a *named* blocker rather than because the crate references it. `crypto/evp/p_lib.c`'s static `detect_foreign_key` calls it (with the DSA and RSA twins) whenever a legacy key is attached to an `EVP_PKEY`, which is what `EVP_PKEY_assign` and `EVP_PKEY_set_type` do. The unit is the DH counterpart of `crypto/ec/ec_backend.c` and it is unlanded: it reaches `ossl_ffc_params_todata` and therefore `crypto/param_build_set.c`, which D330 and D331 recorded as having no plan row. D340 gives it this row so `EVP_PKEY_assign`'s deferral names a blocker the atlas can resolve and check rather than the two Phase-8 exports D340 landed.)",
-      "ossl_dsa_ffc_params_fromdata -> phase 8 (`crypto/dsa/dsa_lib.c:355-365`, and the DH half of the same blocker `ossl_ffc_params_todata` names: its body is `ossl_ffc_params_fromdata` plus a `dirty_cnt` bump, and that function is `crypto/ffc/ffc_backend.c`'s -- a unit with no crate module because it calls `crypto/param_build_set.c`'s four `ossl_param_build_set_*`, which no stratum's plan row names. Both of that unit's authority callers are provider backends (`dh_backend.c`, `dsa_backend.c`), so the work it waits on is the provider half of this stratum rather than a callee of 8.6's own. **D340 landed that unit**: `crypto/param_build_set.c`'s seven definitions are `src/param_build_set.rs`, reached by `src/ec/backend.rs` for the four `ossl_param_build_set_*`. The row stands anyway, because what it withholds is 8.5's provider-export half and D340 lands no Phase-8 export that reaches `crypto/dh/dh_backend.c` or `crypto/dsa/dsa_backend.c`.)",
       "ossl_get_enginesdir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads)",
       "ossl_get_openssldir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads; so is its sibling)",
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)",
@@ -21,9 +19,9 @@
       "ossl_rsa_pkey_method -> phase 8 (The `EVP_PKEY_METHOD` half of the same boundary: `crypto/evp/pmeth_lib.c`'s `standard_methods[]` holds the ten `ossl_<alg>_pkey_method` objects of the algorithm strata. `EVP_PKEY_meth_find`'s application half (`evp_pkey_meth_find_added_by_application`) is landed and courted; its `OBJ_bsearch_pmeth_func` half is not, and `EVP_PKEY_meth_get0` and `_get_count` index the table outright, so all three exports are withheld rather than stubbed with an application-count answer.)"
     ],
     "census": {
-      "covered_by_a_divergence": 88,
-      "language_surface_not_modelled_by_name": 4241,
-      "planned_prerequisites": 13
+      "covered_by_a_divergence": 85,
+      "language_surface_not_modelled_by_name": 4301,
+      "planned_prerequisites": 12
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -49,9 +47,6 @@
         "ossl_dh_asn1_meth": 1,
         "ossl_dhx_asn1_meth": 1,
         "ossl_ec_generate_key_dhkem": 1,
-        "ossl_ec_key_from_pkcs8": 1,
-        "ossl_ec_key_param_from_x509_algor": 1,
-        "ossl_ffc_params_todata": 1,
         "ossl_i2d_DH_PUBKEY": 1,
         "ossl_i2d_DHx_PUBKEY": 1,
         "ossl_i2d_ED25519_PUBKEY": 1,
@@ -183,8 +178,9 @@
         "crypto/defaults.c": 9,
         "crypto/der_writer.c": 4,
         "crypto/des/set_key.c": 9,
-        "crypto/dh/dh_ameth.c": 26,
+        "crypto/dh/dh_ameth.c": 25,
         "crypto/dh/dh_asn1.c": 16,
+        "crypto/dh/dh_backend.c": 12,
         "crypto/dh/dh_check.c": 8,
         "crypto/dh/dh_depr.c": 3,
         "crypto/dh/dh_gen.c": 7,
@@ -196,6 +192,7 @@
         "crypto/dh/dh_prn.c": 4,
         "crypto/dh/dh_rfc5114.c": 2,
         "crypto/dsa/dsa_asn1.c": 11,
+        "crypto/dsa/dsa_backend.c": 14,
         "crypto/dsa/dsa_depr.c": 3,
         "crypto/dsa/dsa_gen.c": 3,
         "crypto/dsa/dsa_key.c": 10,
@@ -265,10 +262,11 @@
         "crypto/evp/signature.c": 18,
         "crypto/evp/skeymgmt_meth.c": 12,
         "crypto/ex_data.c": 21,
+        "crypto/ffc/ffc_backend.c": 4,
         "crypto/ffc/ffc_dh.c": 4,
         "crypto/ffc/ffc_key_generate.c": 3,
         "crypto/ffc/ffc_key_validate.c": 3,
-        "crypto/ffc/ffc_params.c": 15,
+        "crypto/ffc/ffc_params.c": 9,
         "crypto/ffc/ffc_params_generate.c": 17,
         "crypto/ffc/ffc_params_validate.c": 9,
         "crypto/getenv.c": 2,
@@ -321,11 +319,14 @@
         "crypto/rc2/rc2_cbc.c": 3,
         "crypto/ripemd/rmd_dgst.c": 342,
         "crypto/rsa/rsa_asn1.c": 21,
+        "crypto/rsa/rsa_backend.c": 23,
         "crypto/rsa/rsa_gen.c": 17,
         "crypto/rsa/rsa_lib.c": 28,
         "crypto/rsa/rsa_meth.c": 11,
         "crypto/rsa/rsa_mp.c": 7,
         "crypto/rsa/rsa_ossl.c": 20,
+        "crypto/rsa/rsa_pss.c": 10,
+        "crypto/rsa/rsa_schemes.c": 4,
         "crypto/rsa/rsa_sign.c": 7,
         "crypto/rsa/rsa_sp800_56b_gen.c": 9,
         "crypto/seed/seed.c": 7,
@@ -356,7 +357,6 @@
         "evp_pkey_copy_downgraded": 1,
         "evp_pkey_get0_DH_int": 2,
         "evp_pkey_get_legacy": 1,
-        "ossl_dsa_ffc_params_fromdata": 1,
         "ossl_get_enginesdir": 2,
         "ossl_get_openssldir": 2,
         "ossl_get_wininstallcontext": 1
@@ -388,9 +388,6 @@
         "ossl_dh_asn1_meth",
         "ossl_dhx_asn1_meth",
         "ossl_ec_generate_key_dhkem",
-        "ossl_ec_key_from_pkcs8",
-        "ossl_ec_key_param_from_x509_algor",
-        "ossl_ffc_params_todata",
         "ossl_i2d_DH_PUBKEY",
         "ossl_i2d_DHx_PUBKEY",
         "ossl_i2d_ED25519_PUBKEY",
@@ -404,6 +401,9 @@
         "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_concrete",
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data"
       ],
       "language_surface_not_modelled_by_name": [
@@ -456,7 +456,6 @@
         "evp_pkey_get0_DH_int",
         "evp_pkey_get0_DH_int",
         "evp_pkey_get_legacy",
-        "ossl_dsa_ffc_params_fromdata",
         "ossl_get_enginesdir",
         "ossl_get_enginesdir",
         "ossl_get_openssldir",
@@ -465,12 +464,12 @@
       ]
     },
     "checked": {
-      "authority_units": 261,
-      "crate_modules": 337,
+      "authority_units": 267,
+      "crate_modules": 344,
       "deferral_blocker_rows": 5,
-      "deferrals_recorded": 17,
-      "divergence_names_covered": 60,
-      "divergence_rows": 13,
+      "deferrals_recorded": 15,
+      "divergence_names_covered": 57,
+      "divergence_rows": 12,
       "names_referenced_and_not_built": 19
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
@@ -587,13 +586,13 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "8b4376452a04fa352cd766396090dfdc4dbee0328d4c01f5676cf4f22c8ee101",
+  "body_hash": "5ab652ff7013ddc79af19f22ed618763e86c9cd50a36c20f76bdc382f976ec45",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "162a817a008bf7c94cce737e5172104ef7d001c0577b51ac57c5ada3840c3dca"
+      "sha256": "0e0043a1a8123079e6c43a45b8045172dd77a1be342b7a29e67103f5009e9b7d"
     },
     {
       "name": "macro-owners",
@@ -608,7 +607,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "0fe318fadf465822892f3a312b92630f5e21f075fa653f9925836236c2b9d61d"
+      "sha256": "94f3da9b0bdf3c21a1d6187d4d7985c4494ad4c7960bfebd26eb3494742b399e"
     },
     {
       "name": "symbol-ownership",
@@ -623,7 +622,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "e1f21cdbb1111423b565ea4fa5bf3ebbfcb4237cd902f1d391e6faae4d511579"
+      "sha256": "35a20de55f2c45ad196b47b3abee677efcaaff8115c04bbf14da59cb9250bc4b"
     },
     {
       "name": "phase-state",
@@ -633,7 +632,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "b6751c025b7528098cde6a02b293d5d63ab2d18a65183f953269ec69701d79e0"
+      "sha256": "a60254c0b54cab1d36caf79a85eb8e022dff8d167fe915370da21496ebb4ac62"
     },
     {
       "name": "crate-source-tree",

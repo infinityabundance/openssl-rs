@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 3007,
+      "sites": 3015,
       "unattributed": 0
     },
     "covered_files": [
@@ -235,8 +235,10 @@
       "crypto/dh/dh_gen.c",
       "crypto/dh/dh_check.c",
       "crypto/dh/dh_group_params.c",
+      "crypto/dh/dh_backend.c",
       "crypto/dsa/dsa_lib.c",
       "crypto/dsa/dsa_ossl.c",
+      "crypto/dsa/dsa_backend.c",
       "crypto/ec/ec_curve.c",
       "crypto/evp/ec_support.c",
       "crypto/ec/ec_lib.c",
@@ -35644,6 +35646,36 @@
         "rel_source": "crypto/dh/dh_group_params.c"
       },
       {
+        "const_name": "DH_BACKEND_222",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/dh/dh_backend.c",
+        "function": "ossl_dh_key_from_pkcs8",
+        "generated": false,
+        "lib": 5,
+        "lib_symbol": "ERR_LIB_DH",
+        "line": 222,
+        "macro": "ERR_raise",
+        "reason": 106,
+        "reason_symbol": "DH_R_BN_ERROR",
+        "rel_source": "crypto/dh/dh_backend.c"
+      },
+      {
+        "const_name": "DH_BACKEND_235",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/dh/dh_backend.c",
+        "function": "ossl_dh_key_from_pkcs8",
+        "generated": false,
+        "lib": 5,
+        "lib_symbol": "ERR_LIB_DH",
+        "line": 235,
+        "macro": "ERR_raise",
+        "reason": 104,
+        "reason_symbol": "DH_R_DECODE_ERROR",
+        "rel_source": "crypto/dh/dh_backend.c"
+      },
+      {
         "const_name": "DSA_LIB_141",
         "data_format": null,
         "dynamic_reason": false,
@@ -35837,6 +35869,96 @@
         "reason": 524291,
         "reason_symbol": "ERR_R_BN_LIB",
         "rel_source": "crypto/dsa/dsa_ossl.c"
+      },
+      {
+        "const_name": "DSA_BACKEND_154",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/dsa/dsa_backend.c",
+        "function": "ossl_dsa_key_from_pkcs8",
+        "generated": false,
+        "lib": 10,
+        "lib_symbol": "ERR_LIB_DSA",
+        "line": 154,
+        "macro": "ERR_raise",
+        "reason": 109,
+        "reason_symbol": "DSA_R_BN_ERROR",
+        "rel_source": "crypto/dsa/dsa_backend.c"
+      },
+      {
+        "const_name": "DSA_BACKEND_159",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/dsa/dsa_backend.c",
+        "function": "ossl_dsa_key_from_pkcs8",
+        "generated": false,
+        "lib": 10,
+        "lib_symbol": "ERR_LIB_DSA",
+        "line": 159,
+        "macro": "ERR_raise",
+        "reason": 524291,
+        "reason_symbol": "ERR_R_BN_LIB",
+        "rel_source": "crypto/dsa/dsa_backend.c"
+      },
+      {
+        "const_name": "DSA_BACKEND_163",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/dsa/dsa_backend.c",
+        "function": "ossl_dsa_key_from_pkcs8",
+        "generated": false,
+        "lib": 10,
+        "lib_symbol": "ERR_LIB_DSA",
+        "line": 163,
+        "macro": "ERR_raise",
+        "reason": 524291,
+        "reason_symbol": "ERR_R_BN_LIB",
+        "rel_source": "crypto/dsa/dsa_backend.c"
+      },
+      {
+        "const_name": "DSA_BACKEND_171",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/dsa/dsa_backend.c",
+        "function": "ossl_dsa_key_from_pkcs8",
+        "generated": false,
+        "lib": 10,
+        "lib_symbol": "ERR_LIB_DSA",
+        "line": 171,
+        "macro": "ERR_raise",
+        "reason": 109,
+        "reason_symbol": "DSA_R_BN_ERROR",
+        "rel_source": "crypto/dsa/dsa_backend.c"
+      },
+      {
+        "const_name": "DSA_BACKEND_175",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/dsa/dsa_backend.c",
+        "function": "ossl_dsa_key_from_pkcs8",
+        "generated": false,
+        "lib": 10,
+        "lib_symbol": "ERR_LIB_DSA",
+        "line": 175,
+        "macro": "ERR_raise",
+        "reason": 786691,
+        "reason_symbol": "ERR_R_INTERNAL_ERROR",
+        "rel_source": "crypto/dsa/dsa_backend.c"
+      },
+      {
+        "const_name": "DSA_BACKEND_182",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/dsa/dsa_backend.c",
+        "function": "ossl_dsa_key_from_pkcs8",
+        "generated": false,
+        "lib": 10,
+        "lib_symbol": "ERR_LIB_DSA",
+        "line": 182,
+        "macro": "ERR_raise",
+        "reason": 104,
+        "reason_symbol": "DSA_R_DECODE_ERROR",
+        "rel_source": "crypto/dsa/dsa_backend.c"
       },
       {
         "const_name": "EC_CURVE_2876",
@@ -46635,6 +46757,11 @@
       "sha256": "e67d17fb98b58e8c50113becaa33aecbdc579f8972390c822dd93bee3871a644"
     },
     {
+      "name": "authority:crypto/dh/dh_backend.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/dh/dh_backend.c",
+      "sha256": "75e57174b65babbfcce387f82471c40662cb95c60dfa90becb3a86d123712cc4"
+    },
+    {
       "name": "authority:crypto/dsa/dsa_lib.c",
       "path": "forensics/authorities/src/openssl-3.6.4/crypto/dsa/dsa_lib.c",
       "sha256": "9858ca68a25f61d5e933eab0db71b2e606e4101cbfebabb22242e15a5e007266"
@@ -46643,6 +46770,11 @@
       "name": "authority:crypto/dsa/dsa_ossl.c",
       "path": "forensics/authorities/src/openssl-3.6.4/crypto/dsa/dsa_ossl.c",
       "sha256": "f3a877db434943e738d1768317ed74f037d97098be4348510dc8a9c74dd1266b"
+    },
+    {
+      "name": "authority:crypto/dsa/dsa_backend.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/dsa/dsa_backend.c",
+      "sha256": "bf6784b93d58398c6f4409386dcfee2af4c5c430ae3fb539e5f5d0557b13e610"
     },
     {
       "name": "authority:crypto/ec/ec_curve.c",
