@@ -189,6 +189,12 @@ EC_KEY_METHOD_VTABLE = ("not a provider dispatch: a member of `EC_KEY_METHOD`'s 
 EC_GROUP_FIELD_MOD = ("not a provider dispatch: `struct ec_group_st`'s `field_mod_func` member "
                       "(`crypto/ec/ec_local.h:257-258`), a function pointer on the *group object* "
                       "rather than in a method table, declared inline in an internal header")
+# `crypto/ec/ec_curve.c:2536` -- `curve_list[]`'s fourth column, `const EC_METHOD *(*meth)(void)`,
+# declared inline in the internal `_ec_list_element_st` rather than through `OSSL_CORE_MAKE_FUNC`.
+EC_CURVE_METHOD_COLUMN = ("not a provider dispatch: `curve_list[]`'s fourth column "
+                          "(`crypto/ec/ec_curve.c:2536`), a plain function pointer declared inline "
+                          "in the internal `_ec_list_element_st` rather than through "
+                          "`OSSL_CORE_MAKE_FUNC`")
 LHASH_MACRO = ("not a provider dispatch: `lhash.h.in`'s `LHASH_HASH_FN` / `LHASH_COMP_FN` / "
                "`LHASH_DOALL*` macros generate it per type, so there is no single typedef")
 SK_MACRO = ("not a provider dispatch: `safestack.h.in`'s `sk_*_compfunc` / `freefunc` / "
@@ -379,6 +385,11 @@ NOT_A_DISPATCH: dict[str, str] = {
     "EcPrecomputeMultFn": EC_METHOD_VTABLE,
     "EcFieldMulFn": EC_METHOD_VTABLE,
     "EcFieldSqrFn": EC_METHOD_VTABLE,
+    # The one three-argument `EC_METHOD` column: `int (*field_set_to_one)(const EC_GROUP *,
+    # BIGNUM *, BN_CTX *)` (`ec_local.h:165`). It is a separate crate alias from `EcFieldSqrFn`
+    # because it takes no multiplicand, and the convention rule has no authority name to join on --
+    # the header is internal and the atlas records no typedef for it (D333's rule).
+    "EcFieldSetToOneFn": EC_METHOD_VTABLE,
     "EcPriv2OctFn": EC_METHOD_VTABLE,
     "EcOct2PrivFn": EC_METHOD_VTABLE,
     "EcComputeKeyFn": EC_METHOD_VTABLE,
@@ -399,6 +410,15 @@ NOT_A_DISPATCH: dict[str, str] = {
     "EcKeySetPrivateFn": EC_METHOD_VTABLE,
     # --- `struct ec_group_st`'s `field_mod_func` (`crypto/ec/ec_local.h:257-258`, Phase 8.7) --
     "EcFieldModFn": EC_GROUP_FIELD_MOD,
+    # `curve_list[]`'s fourth-column type (`crypto/ec/ec_curve.c:2536`), the one alias this tranche
+    # adds: a plain function pointer in the internal `_ec_list_element_st` rather than through
+    # `OSSL_CORE_MAKE_FUNC`, so the convention rule has no authority name to join on.
+    "EcMethodCtor": EC_CURVE_METHOD_COLUMN,
+    # `ECDH_compute_key`'s inline `KDF` parameter type (`crypto/ec/ec_kmeth.c:148-151`), a plain
+    # function pointer the authority spells in its own signature rather than through
+    # `OSSL_CORE_MAKE_FUNC`, so the convention rule has no name to join on.
+    "EcdhKdfFn": _inline("ECDH_compute_key",
+                         "void *(*KDF)(const void *in, size_t inlen, void *out, size_t *outlen)"),
     # --- `struct prov_drbg_st`'s vtable (`prov/drbg.h:59-165`, Phase 9.4, D309) -------------
     "ProvDrbgInstantiateFn": DRBG_VTABLE,
     "ProvDrbgUninstantiateFn": DRBG_VTABLE,

@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 290,
+      "crate_files_read": 307,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -19,7 +19,7 @@
       "signatures_authority_only": 397,
       "signatures_checked": 237,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 182,
+      "signatures_not_a_dispatch": 185,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -3764,6 +3764,16 @@
           "why": "not a provider dispatch: declared in `include/internal/dso.h`, which is not installed, so the atlas has no record of it"
         },
         {
+          "alias": "EcMethodCtor",
+          "at": "src/ec/curve.rs",
+          "why": "not a provider dispatch: `curve_list[]`'s fourth column (`crypto/ec/ec_curve.c:2536`), a plain function pointer declared inline in the internal `_ec_list_element_st` rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "EcdhKdfFn",
+          "at": "src/ec/kmeth.rs",
+          "why": "not a provider dispatch: the type of a parameter of `ECDH_compute_key`, spelled `void *(*KDF)(const void *in, size_t inlen, void *out, size_t *outlen)` inline in the header rather than as a typedef"
+        },
+        {
           "alias": "EcGroupInitFn",
           "at": "src/ec/mod.rs",
           "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
@@ -3895,6 +3905,11 @@
         },
         {
           "alias": "EcFieldSqrFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcFieldSetToOneFn",
           "at": "src/ec/mod.rs",
           "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
         },

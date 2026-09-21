@@ -72,8 +72,24 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+pub mod asn1;
+pub mod backend;
+pub mod check;
 pub mod curve;
 pub(crate) mod curve_data;
+pub mod cvt;
+pub mod ecdh_ossl;
+pub mod ecdsa;
+pub mod ecdsa_ossl;
+pub mod key;
+pub mod kmeth;
+pub mod lib;
+pub mod mont;
+pub mod mult;
+pub mod nist;
+pub mod oct;
+pub mod smpl;
+pub mod smpl2;
 pub mod support;
 
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void};
@@ -91,16 +107,18 @@ use crate::runtime::ex_data::CryptoExData;
 pub const EC_FLAGS_DEFAULT_OCT: c_int = 0x1;
 
 /// `EC_FLAGS_CUSTOM_CURVE` — `crypto/ec/ec_local.h:29`. Set by a provider that supplies its
-/// own `EC_GROUP` format; no unit on this profile sets it.
-///
-/// `#[allow(dead_code)]`'s reason: **its readers are `ec_ameth.c` and `ec_asn1.c`'s
-/// parameter decoders**, which are 8.8's, and the class of unit that would set it — an
-/// ENGINE's or a provider's custom method — is not in this stratum.
-#[allow(dead_code)] // read by `ec_ameth.c`/`ec_asn1.c`, which are 8.8's
+/// own `EC_GROUP` format; **no unit on this profile sets it**, and its readers are
+/// `ec_lib.c`'s `ossl_ec_group_new_ex`, `EC_GROUP_copy` and `EC_GROUP_cmp` (which skip the
+/// `order`/`cofactor` allocations and the curve comparison for such a group), plus
+/// `ec_ameth.c`'s and `ec_asn1.c`'s parameter decoders, which are 8.8's.
 pub const EC_FLAGS_CUSTOM_CURVE: c_int = 0x2;
 
-/// `EC_FLAGS_NO_SIGN` — `crypto/ec/ec_local.h:32`. A curve that does not support signing;
-/// the SM2 table and the s390x tables are the authority's readers.
+/// `EC_FLAGS_NO_SIGN` — `crypto/ec/ec_local.h:32`. A curve that does not support signing.
+///
+/// `#[allow(dead_code)]`'s reason: **its only reader is `ec_key.c`'s `EC_KEY_can_sign`**, which
+/// is a later item of 8.7, and **no method table on this profile sets it**: the SM2 and s390x
+/// tables that would are not built here, so the bit is carried and never observed.
+#[allow(dead_code)] // read by `ec_key.c`'s `EC_KEY_can_sign`, which is a later item of 8.7
 pub const EC_FLAGS_NO_SIGN: c_int = 0x4;
 
 /// `EC_KEY_METHOD_DYNAMIC` — `crypto/ec/ec_local.h:690`. `EC_KEY_METHOD_new` sets it on
@@ -158,11 +176,13 @@ pub enum Pct {
 ///
 /// **448 bytes**, alignment 8, measured by `courts/layout/measure-ec.c`: two four-byte `int`s
 /// at 0 and 4 and **fifty-five** function pointers from 8 to 440. Every member is
-/// `Option<...>` because every one of the authority's five tables leaves some of them NULL —
-/// `EC_GFp_simple_method`'s `mul`, `precompute_mult`, `have_precompute_mult`, `field_div`,
-/// `field_encode`, `field_decode`, `field_set_to_one`, `set_private`, `keycopy`, `keyfinish`
-/// and `field_inverse_mod_ord` are eleven of them — and a NULL read back through
-/// `EC_GROUP_method_of` is the authority's answer rather than a defect.
+/// `Option<...>` because every one of the authority's five tables leaves some of them NULL, and
+/// a NULL read back through `EC_GROUP_method_of` is the authority's answer rather than a defect.
+/// `EC_GFp_simple_method` leaves **fourteen** NULL: `mul`, `precompute_mult`,
+/// `have_precompute_mult`, `field_div`, `field_encode`, `field_decode`, `field_set_to_one`,
+/// `set_private`, `keycopy`, `keyfinish` and `field_inverse_mod_ord` are eleven of them, and
+/// `point_set_compressed_coordinates`, `point2oct` and `oct2point` are the other three — the
+/// ones its [`EC_FLAGS_DEFAULT_OCT`] bit defers to `ec_oct.c`'s defaults rather than the table.
 ///
 /// The member order is load-bearing in a way the size alone does not show: `point_init` at
 /// **80** and `point_finish` at **88** are adjacent pointers to *different* callbacks (one
@@ -253,7 +273,7 @@ pub struct EcMethod {
     /// `int (*field_decode)(const EC_GROUP *, BIGNUM *, const BIGNUM *, BN_CTX *)`.
     pub field_decode: Option<EcFieldSqrFn>,
     /// `int (*field_set_to_one)(const EC_GROUP *, BIGNUM *, BN_CTX *)`.
-    pub field_set_to_one: Option<EcFieldSqrFn>,
+    pub field_set_to_one: Option<EcFieldSetToOneFn>,
     /// `size_t (*priv2oct)(const EC_KEY *, unsigned char *, size_t)`.
     pub priv2oct: Option<EcPriv2OctFn>,
     /// `int (*oct2priv)(EC_KEY *, const unsigned char *, size_t)`.
@@ -427,14 +447,16 @@ pub type EcPointsMakeAffineFn = unsafe extern "C" fn(
 ) -> c_int;
 /// `int (*)(const EC_GROUP *, EC_POINT *, const BIGNUM *, size_t, const EC_POINT *[],
 /// const BIGNUM *[], BN_CTX *)` — `ec_local.h:135-137`. `points` and `scalars` are each an
-/// `const X *[]`, so each is `*const *const X`.
+/// `const X *[]`: the array *decays* to a pointer to its `const X *` element, so the outer
+/// pointer is the decayed one and is not itself const — `*mut *const X`, which is what
+/// `ABI-PROTOTYPE` reports for the authority.
 pub type EcPointMulFn = unsafe extern "C" fn(
     group: *const EcGroup,
     r: *mut EcPoint,
     scalar: *const BigNum,
     num: usize,
-    points: *const *const EcPoint,
-    scalars: *const *const BigNum,
+    points: *mut *const EcPoint,
+    scalars: *mut *const BigNum,
     ctx: *mut BnCtx,
 ) -> c_int;
 /// `int (*)(EC_GROUP *, BN_CTX *)` — `ec_local.h:138`.
@@ -448,15 +470,23 @@ pub type EcFieldMulFn = unsafe extern "C" fn(
     b: *const BigNum,
     ctx: *mut BnCtx,
 ) -> c_int;
-/// `int (*)(const EC_GROUP *, BIGNUM *, const BIGNUM *, BN_CTX *)` — `ec_local.h:149-165`
-/// and `:187-188`, one type for `field_sqr`, `field_inv`, `field_encode`, `field_decode`,
-/// `field_set_to_one` and `field_inverse_mod_ord`.
+/// `int (*)(const EC_GROUP *, BIGNUM *, const BIGNUM *, BN_CTX *)` — `ec_local.h:149`,
+/// `:158`, `:160-161`, `:163-164` and `:187-188`, one type for `field_sqr`, `field_inv`,
+/// `field_encode`, `field_decode` and `field_inverse_mod_ord`.
 pub type EcFieldSqrFn = unsafe extern "C" fn(
     group: *const EcGroup,
     r: *mut BigNum,
     a: *const BigNum,
     ctx: *mut BnCtx,
 ) -> c_int;
+/// `int (*)(const EC_GROUP *, BIGNUM *, BN_CTX *)` — `ec_local.h:165`.
+///
+/// A **separate type from [`EcFieldSqrFn`]**, because the authority's `field_set_to_one`
+/// takes no multiplicand: it is the one three-argument `EC_METHOD` column, so folding it
+/// into the four-argument `EcFieldSqrFn` would drop an argument at every call site. Only
+/// `EC_GFp_mont_method` names it; the other four tables leave it NULL.
+pub type EcFieldSetToOneFn =
+    unsafe extern "C" fn(group: *const EcGroup, r: *mut BigNum, ctx: *mut BnCtx) -> c_int;
 /// `size_t (*)(const EC_KEY *, unsigned char *, size_t)` — `ec_local.h:167`.
 pub type EcPriv2OctFn =
     unsafe extern "C" fn(eckey: *const EcKey, buf: *mut c_uchar, len: usize) -> usize;
@@ -553,16 +583,21 @@ pub union EcPreComp {
     pub ec: PreCompPtr,
 }
 
-/// `BIGNUM *(*)(BIGNUM *, const BIGNUM *, const BIGNUM *, BN_CTX *)` — `ec_local.h:257-258`.
+/// `int (*)(BIGNUM *, const BIGNUM *, const BIGNUM *, BN_CTX *)` — `ec_local.h:257-258`,
+/// and the same shape as `bn.h:541`'s `int BN_nist_mod_192(...)` family it is stored from.
 /// The `field_mod_func` member of [`EcGroup`], which is **not** a method-table entry: the
 /// nist table stores one of `BN_nist_mod_192`..`_521` here directly and
 /// `ossl_ec_GFp_nist_field_mul` calls it through the group rather than through the table.
+///
+/// The return is `int`, not `*mut BIGNUM`: the five `BN_nist_mod_*` functions answer a
+/// status and write their result into `r`, so a pointer return would be a different ABI at
+/// every call `ossl_ec_GFp_nist_field_mul` makes through this member.
 pub type EcFieldModFn = unsafe extern "C" fn(
     r: *mut BigNum,
     a: *const BigNum,
     p: *const BigNum,
     ctx: *mut BnCtx,
-) -> *mut BigNum;
+) -> c_int;
 
 /// `struct ec_group_st` — `crypto/ec/ec_local.h:212-287`.
 ///
@@ -637,14 +672,16 @@ pub struct EcGroup {
 /// four-byte `_Atomic int references` at 56 is followed by another four-byte `int flags`, so
 /// the two-pointer `CRYPTO_EX_DATA` that follows them is eight-aligned rather than adjacent.
 ///
-/// `engine` and `ex_data` are inside `#ifndef FIPS_MODULE` and this profile is not FIPS, so
-/// both are present; `dirty_cnt` is the provider's `size_t` change counter, which is why the
-/// object ends at 104 rather than at 96.
+/// `engine` is the one member the declaration gives unconditionally; `ex_data` is the one
+/// that sits inside `#ifndef FIPS_MODULE`, and this profile is not FIPS, so both are present
+/// in the authority's own object and here. `dirty_cnt` is the provider's `size_t` change
+/// counter, which is why the object ends at 104 rather than at 96.
 #[repr(C)]
 pub struct EcKey {
     /// `const EC_KEY_METHOD *meth` — borrowed, and what `EC_KEY_get_method` returns.
     pub(crate) meth: *const EcKeyMethod,
-    /// `ENGINE *engine` — inside `#ifndef FIPS_MODULE`. NULL on every object this crate can
+    /// `ENGINE *engine` — the declaration's second member, and **not** inside
+    /// `#ifndef FIPS_MODULE` (only `ex_data` is). NULL on every object this crate can
     /// build, because `ENGINE_get_default_EC` returns NULL without an engine registry and the
     /// authority's own `ossl_ec_key_new_method_int` leaves it so in that case.
     pub(crate) engine: *mut Engine,
@@ -797,18 +834,11 @@ pub type EcKeyVerifyFn = unsafe extern "C" fn(
 /// share a method and neither has a curve name or the two names agree. It is here because it
 /// reads nothing but the four fields [`EcGroup`] and [`EcPoint`] hold, and it is the check
 /// `EC_POINT_cmp`, `EC_POINT_add`, `EC_POINT_dbl` and `EC_GROUP_set_generator` make before
-/// any arithmetic.
-///
-/// `#[allow(dead_code)]`'s reason: **its callers are `ec_lib.c`'s and the five method-table
-/// units'**, which are the rest of 8.7 and are `open` in `forensics/phase8-obligations.json`.
-/// The shape is transcribed with the rest of the header because it decides nothing on its own;
-/// the same allowance, with the same shape of reason, is what `src/ec/support.rs` carries on
-/// `ossl_ec_curve_name2nid`.
+/// any arithmetic. Its callers are `ec_lib.c`'s exports and the five method-table units'.
 ///
 /// # Safety
 ///
 /// `point` and `group` are valid, non-NULL and fully initialised.
-#[allow(dead_code)] // called by `ec_lib.c` and the five method tables, the rest of 8.7
 pub(crate) unsafe fn ec_point_is_compat(point: *const EcPoint, group: *const EcGroup) -> bool {
     // SAFETY: the caller's contract.
     unsafe {

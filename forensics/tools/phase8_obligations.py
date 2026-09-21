@@ -256,22 +256,16 @@ BLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
     # three are the two units that still do not exist. D326's precedent is the shape: the half
     # that left was not the blocker the row named, and what remains keeps its own reason.
     #
-    # (3) **Split again by D333, and the split is the DSA half leaving.** The row has carried the
-    # DSA/EC pair since D331; D333 lands `DSA_generate_key` (`crypto/dsa/dsa_key.c`) and
-    # `DSA_generate_parameters_ex` (`crypto/dsa/dsa_gen.c`) with the rest of 8.6's DSA layer, so
-    # the split happens once more for D326's reason: a stratum cannot hand a symbol to itself
-    # (D296), the two names' units now exist, and `EC_KEY_generate_key` is `crypto/ec/ec_key.c`
-    # -- Phase 8.7's -- which was never the blocker either of them named.
-    (
-        ("EC_KEY_generate_key",),
-        9,
-        "`crypto/ec/ec_key.c` is Phase 8.7's unit and does not exist in this crate yet: the EC "
-        "stratum's own key layer is what generates an EC key, and 8.7's row owns the `EC_KEY` "
-        "object, the groups, the points and the curve tables it is built on. It reaches the "
-        "random layer through `BN_priv_rand_range` on the `bnrand` -> `RAND_bytes_ex` path that "
-        "D313 landed, so this row is about the **unit** rather than about a callee, which is what "
-        "the DH half retired in D331 and the DSA half retired in D333 both turned out to be.",
-    ),
+    # (3) **Retired by D340, and both halves left with the unit they waited on.** The row has
+    # carried the DSA/EC pair since D331; D333 split the DSA half out, D326's reason once more (a
+    # stratum cannot hand a symbol to itself, D296, and the two names' units now exist), and D340
+    # lands `crypto/ec/ec_key.c` whole, so `EC_KEY_generate_key` is implemented and this row is
+    # gone rather than narrowed. What it waited on was the **unit** rather than a callee -- the EC
+    # stratum's own key layer, which is the same shape the DH half retired in D331 and the DSA
+    # half retired in D333 both turned out to be -- and the random layer it reaches through
+    # `BN_priv_rand_range` on the `bnrand` -> `RAND_bytes_ex` path had already landed in D313.
+    # `RT-EC`'s key arm generates a key and asserts the public point is on the curve rather than
+    # comparing a value, so nothing here depends on the scalar the draw produces.
     # (4) **Corrected while building Phase 9's ledger, and the row's own text said how.** This row
     # used to hand `DH_KDF_X9_42` and `ECDH_KDF_X9_62` to phase 9, and it named the condition under
     # which that would be wrong: *"Phase 9 is named because it is the stratum the plan puts the

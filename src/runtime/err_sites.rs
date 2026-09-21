@@ -23192,6 +23192,4016 @@ pub(crate) const EC_CURVE_3030: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ossl_ec_group_new_ex` at `crypto/ec/ec_lib.c:36` (EC_R_SLOT_FULL).
+pub(crate) const EC_LIB_36: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 36,
+    func: c"ossl_ec_group_new_ex",
+    lib: 16,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_group_new_ex` at `crypto/ec/ec_lib.c:40` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_40: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 40,
+    func: c"ossl_ec_group_new_ex",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_copy` at `crypto/ec/ec_lib.c:165` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_165: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 165,
+    func: c"EC_GROUP_copy",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_copy` at `crypto/ec/ec_lib.c:169` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_169: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 169,
+    func: c"EC_GROUP_copy",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_set_generator` at `crypto/ec/ec_lib.c:374` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_LIB_374: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 374,
+    func: c"EC_GROUP_set_generator",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_set_generator` at `crypto/ec/ec_lib.c:381` (EC_R_INVALID_FIELD).
+pub(crate) const EC_LIB_381: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 381,
+    func: c"EC_GROUP_set_generator",
+    lib: 16,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_set_generator` at `crypto/ec/ec_lib.c:392` (EC_R_INVALID_GROUP_ORDER).
+pub(crate) const EC_LIB_392: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 392,
+    func: c"EC_GROUP_set_generator",
+    lib: 16,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_set_generator` at `crypto/ec/ec_lib.c:402` (EC_R_UNKNOWN_COFACTOR).
+pub(crate) const EC_LIB_402: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 402,
+    func: c"EC_GROUP_set_generator",
+    lib: 16,
+    reason: 164,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_set_curve` at `crypto/ec/ec_lib.c:563` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_563: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 563,
+    func: c"EC_GROUP_set_curve",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_curve` at `crypto/ec/ec_lib.c:573` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_573: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 573,
+    func: c"EC_GROUP_get_curve",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_degree` at `crypto/ec/ec_lib.c:610` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_610: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 610,
+    func: c"EC_GROUP_get_degree",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_check_discriminant` at `crypto/ec/ec_lib.c:619` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_619: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 619,
+    func: c"EC_GROUP_check_discriminant",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_new` at `crypto/ec/ec_lib.c:721` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_LIB_721: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 721,
+    func: c"EC_POINT_new",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_new` at `crypto/ec/ec_lib.c:725` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_725: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 725,
+    func: c"EC_POINT_new",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_copy` at `crypto/ec/ec_lib.c:773` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_773: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 773,
+    func: c"EC_POINT_copy",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_copy` at `crypto/ec/ec_lib.c:780` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_780: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 780,
+    func: c"EC_POINT_copy",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_set_to_infinity` at `crypto/ec/ec_lib.c:817` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_817: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 817,
+    func: c"EC_POINT_set_to_infinity",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_set_to_infinity` at `crypto/ec/ec_lib.c:821` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_821: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 821,
+    func: c"EC_POINT_set_to_infinity",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_set_Jprojective_coordinates_GFp` at `crypto/ec/ec_lib.c:834` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_834: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 834,
+    func: c"EC_POINT_set_Jprojective_coordinates_GFp",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_set_Jprojective_coordinates_GFp` at `crypto/ec/ec_lib.c:838` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_838: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 838,
+    func: c"EC_POINT_set_Jprojective_coordinates_GFp",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_get_Jprojective_coordinates_GFp` at `crypto/ec/ec_lib.c:851` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_851: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 851,
+    func: c"EC_POINT_get_Jprojective_coordinates_GFp",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_get_Jprojective_coordinates_GFp` at `crypto/ec/ec_lib.c:855` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_855: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 855,
+    func: c"EC_POINT_get_Jprojective_coordinates_GFp",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_set_affine_coordinates` at `crypto/ec/ec_lib.c:868` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_868: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 868,
+    func: c"EC_POINT_set_affine_coordinates",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_set_affine_coordinates` at `crypto/ec/ec_lib.c:872` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_872: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 872,
+    func: c"EC_POINT_set_affine_coordinates",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_set_affine_coordinates` at `crypto/ec/ec_lib.c:879` (EC_R_POINT_IS_NOT_ON_CURVE).
+pub(crate) const EC_LIB_879: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 879,
+    func: c"EC_POINT_set_affine_coordinates",
+    lib: 16,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_get_affine_coordinates` at `crypto/ec/ec_lib.c:908` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_908: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 908,
+    func: c"EC_POINT_get_affine_coordinates",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_get_affine_coordinates` at `crypto/ec/ec_lib.c:912` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_912: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 912,
+    func: c"EC_POINT_get_affine_coordinates",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_get_affine_coordinates` at `crypto/ec/ec_lib.c:916` (EC_R_POINT_AT_INFINITY).
+pub(crate) const EC_LIB_916: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 916,
+    func: c"EC_POINT_get_affine_coordinates",
+    lib: 16,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_add` at `crypto/ec/ec_lib.c:944` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_944: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 944,
+    func: c"EC_POINT_add",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_add` at `crypto/ec/ec_lib.c:949` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_949: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 949,
+    func: c"EC_POINT_add",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_dbl` at `crypto/ec/ec_lib.c:959` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_959: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 959,
+    func: c"EC_POINT_dbl",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_dbl` at `crypto/ec/ec_lib.c:963` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_963: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 963,
+    func: c"EC_POINT_dbl",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_invert` at `crypto/ec/ec_lib.c:972` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_972: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 972,
+    func: c"EC_POINT_invert",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_invert` at `crypto/ec/ec_lib.c:976` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_976: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 976,
+    func: c"EC_POINT_invert",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_is_at_infinity` at `crypto/ec/ec_lib.c:985` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_985: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 985,
+    func: c"EC_POINT_is_at_infinity",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_is_at_infinity` at `crypto/ec/ec_lib.c:989` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_989: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 989,
+    func: c"EC_POINT_is_at_infinity",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_is_on_curve` at `crypto/ec/ec_lib.c:1006` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_1006: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1006,
+    func: c"EC_POINT_is_on_curve",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_is_on_curve` at `crypto/ec/ec_lib.c:1010` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_1010: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1010,
+    func: c"EC_POINT_is_on_curve",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_cmp` at `crypto/ec/ec_lib.c:1020` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_1020: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1020,
+    func: c"EC_POINT_cmp",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_cmp` at `crypto/ec/ec_lib.c:1024` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_1024: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1024,
+    func: c"EC_POINT_cmp",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_make_affine` at `crypto/ec/ec_lib.c:1034` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_1034: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1034,
+    func: c"EC_POINT_make_affine",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_make_affine` at `crypto/ec/ec_lib.c:1038` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_1038: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1038,
+    func: c"EC_POINT_make_affine",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINTs_make_affine` at `crypto/ec/ec_lib.c:1050` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_1050: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1050,
+    func: c"EC_POINTs_make_affine",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINTs_make_affine` at `crypto/ec/ec_lib.c:1055` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_1055: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1055,
+    func: c"EC_POINTs_make_affine",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINTs_mul` at `crypto/ec/ec_lib.c:1081` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_1081: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1081,
+    func: c"EC_POINTs_mul",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINTs_mul` at `crypto/ec/ec_lib.c:1090` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_1090: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1090,
+    func: c"EC_POINTs_mul",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINTs_mul` at `crypto/ec/ec_lib.c:1100` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC_LIB_1100: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1100,
+    func: c"EC_POINTs_mul",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_mul` at `crypto/ec/ec_lib.c:1128` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_1128: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1128,
+    func: c"EC_POINT_mul",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_mul` at `crypto/ec/ec_lib.c:1140` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC_LIB_1140: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1140,
+    func: c"EC_POINT_mul",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_trinomial_basis` at `crypto/ec/ec_lib.c:1357` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_1357: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1357,
+    func: c"EC_GROUP_get_trinomial_basis",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_pentanomial_basis` at `crypto/ec/ec_lib.c:1377` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_1377: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1377,
+    func: c"EC_GROUP_get_pentanomial_basis",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `group_new_from_name` at `crypto/ec/ec_lib.c:1495` (EC_R_INVALID_CURVE).
+pub(crate) const EC_LIB_1495: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1495,
+    func: c"group_new_from_name",
+    lib: 16,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_group_set_params` at `crypto/ec/ec_lib.c:1513` (EC_R_INVALID_FORM).
+pub(crate) const EC_LIB_1513: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1513,
+    func: c"ossl_ec_group_set_params",
+    lib: 16,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_group_set_params` at `crypto/ec/ec_lib.c:1522` (EC_R_INVALID_FORM).
+pub(crate) const EC_LIB_1522: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1522,
+    func: c"ossl_ec_group_set_params",
+    lib: 16,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_group_set_params` at `crypto/ec/ec_lib.c:1533` (EC_R_INVALID_SEED).
+pub(crate) const EC_LIB_1533: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1533,
+    func: c"ossl_ec_group_set_params",
+    lib: 16,
+    reason: 175,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1574` (EC_R_WRONG_CURVE_PARAMETERS).
+pub(crate) const EC_LIB_1574: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1574,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 145,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1582` (EC_R_EXPLICIT_PARAMS_NOT_SUPPORTED).
+pub(crate) const EC_LIB_1582: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1582,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 127,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1588` (ERR_R_BN_LIB).
+pub(crate) const EC_LIB_1588: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1588,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1598` (ERR_R_BN_LIB).
+pub(crate) const EC_LIB_1598: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1598,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1604` (EC_R_INVALID_FIELD).
+pub(crate) const EC_LIB_1604: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1604,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1615` (EC_R_UNSUPPORTED_FIELD).
+pub(crate) const EC_LIB_1615: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1615,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1621` (EC_R_INVALID_A).
+pub(crate) const EC_LIB_1621: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1621,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 168,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1626` (EC_R_INVALID_B).
+pub(crate) const EC_LIB_1626: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1626,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 169,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1633` (EC_R_INVALID_P).
+pub(crate) const EC_LIB_1633: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1633,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1639` (EC_R_INVALID_P).
+pub(crate) const EC_LIB_1639: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1639,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1644` (EC_R_FIELD_TOO_LARGE).
+pub(crate) const EC_LIB_1644: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1644,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1652` (EC_R_GF2M_NOT_SUPPORTED).
+pub(crate) const EC_LIB_1652: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1652,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1660` (EC_R_FIELD_TOO_LARGE).
+pub(crate) const EC_LIB_1660: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1660,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1668` (ERR_R_EC_LIB).
+pub(crate) const EC_LIB_1668: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1668,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1676` (EC_R_INVALID_SEED).
+pub(crate) const EC_LIB_1676: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1676,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 175,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1688` (EC_R_INVALID_GENERATOR).
+pub(crate) const EC_LIB_1688: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1688,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 173,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1697` (EC_R_INVALID_GENERATOR).
+pub(crate) const EC_LIB_1697: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1697,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 173,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1706` (EC_R_INVALID_GROUP_ORDER).
+pub(crate) const EC_LIB_1706: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1706,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1715` (EC_R_INVALID_COFACTOR).
+pub(crate) const EC_LIB_1715: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1715,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 171,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1722` (EC_R_INVALID_GENERATOR).
+pub(crate) const EC_LIB_1722: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1722,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 173,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1728` (EC_R_INVALID_NAMED_GROUP_CONVERSION).
+pub(crate) const EC_LIB_1728: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1728,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1739` (EC_R_INVALID_ENCODING).
+pub(crate) const EC_LIB_1739: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1739,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1743` (EC_R_INVALID_ENCODING).
+pub(crate) const EC_LIB_1743: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1743,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_group_set_curve` at `crypto/ec/ecp_smpl.c:151` (EC_R_INVALID_FIELD).
+pub(crate) const ECP_SMPL_151: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_smpl.c",
+    line: 151,
+    func: c"ossl_ec_GFp_simple_group_set_curve",
+    lib: 16,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_group_check_discriminant` at `crypto/ec/ecp_smpl.c:261` (ERR_R_BN_LIB).
+pub(crate) const ECP_SMPL_261: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_smpl.c",
+    line: 261,
+    func: c"ossl_ec_GFp_simple_group_check_discriminant",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_point_set_affine_coordinates` at `crypto/ec/ecp_smpl.c:492` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ECP_SMPL_492: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_smpl.c",
+    line: 492,
+    func: c"ossl_ec_GFp_simple_point_set_affine_coordinates",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_point_get_affine_coordinates` at `crypto/ec/ecp_smpl.c:511` (EC_R_POINT_AT_INFINITY).
+pub(crate) const ECP_SMPL_511: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_smpl.c",
+    line: 511,
+    func: c"ossl_ec_GFp_simple_point_get_affine_coordinates",
+    lib: 16,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_point_get_affine_coordinates` at `crypto/ec/ecp_smpl.c:561` (ERR_R_BN_LIB).
+pub(crate) const ECP_SMPL_561: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_smpl.c",
+    line: 561,
+    func: c"ossl_ec_GFp_simple_point_get_affine_coordinates",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_make_affine` at `crypto/ec/ecp_smpl.c:1193` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ECP_SMPL_1193: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_smpl.c",
+    line: 1193,
+    func: c"ossl_ec_GFp_simple_make_affine",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_points_make_affine` at `crypto/ec/ecp_smpl.c:1273` (ERR_R_BN_LIB).
+pub(crate) const ECP_SMPL_1273: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_smpl.c",
+    line: 1273,
+    func: c"ossl_ec_GFp_simple_points_make_affine",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_field_inv` at `crypto/ec/ecp_smpl.c:1405` (EC_R_CANNOT_INVERT).
+pub(crate) const ECP_SMPL_1405: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_smpl.c",
+    line: 1405,
+    func: c"ossl_ec_GFp_simple_field_inv",
+    lib: 16,
+    reason: 165,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_blind_coordinates` at `crypto/ec/ecp_smpl.c:1438` (ERR_R_BN_LIB).
+pub(crate) const ECP_SMPL_1438: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_smpl.c",
+    line: 1438,
+    func: c"ossl_ec_GFp_simple_blind_coordinates",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_mont_group_set_curve` at `crypto/ec/ecp_mont.c:166` (ERR_R_BN_LIB).
+pub(crate) const ECP_MONT_166: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_mont.c",
+    line: 166,
+    func: c"ossl_ec_GFp_mont_group_set_curve",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_mont_field_mul` at `crypto/ec/ecp_mont.c:200` (EC_R_NOT_INITIALIZED).
+pub(crate) const ECP_MONT_200: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_mont.c",
+    line: 200,
+    func: c"ossl_ec_GFp_mont_field_mul",
+    lib: 16,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_mont_field_sqr` at `crypto/ec/ecp_mont.c:211` (EC_R_NOT_INITIALIZED).
+pub(crate) const ECP_MONT_211: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_mont.c",
+    line: 211,
+    func: c"ossl_ec_GFp_mont_field_sqr",
+    lib: 16,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_mont_field_inv` at `crypto/ec/ecp_mont.c:255` (EC_R_CANNOT_INVERT).
+pub(crate) const ECP_MONT_255: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_mont.c",
+    line: 255,
+    func: c"ossl_ec_GFp_mont_field_inv",
+    lib: 16,
+    reason: 165,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_mont_field_encode` at `crypto/ec/ecp_mont.c:271` (EC_R_NOT_INITIALIZED).
+pub(crate) const ECP_MONT_271: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_mont.c",
+    line: 271,
+    func: c"ossl_ec_GFp_mont_field_encode",
+    lib: 16,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_mont_field_decode` at `crypto/ec/ecp_mont.c:282` (EC_R_NOT_INITIALIZED).
+pub(crate) const ECP_MONT_282: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_mont.c",
+    line: 282,
+    func: c"ossl_ec_GFp_mont_field_decode",
+    lib: 16,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_mont_field_set_to_one` at `crypto/ec/ecp_mont.c:293` (EC_R_NOT_INITIALIZED).
+pub(crate) const ECP_MONT_293: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_mont.c",
+    line: 293,
+    func: c"ossl_ec_GFp_mont_field_set_to_one",
+    lib: 16,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_nist_group_set_curve` at `crypto/ec/ecp_nist.c:116` (EC_R_NOT_A_NIST_PRIME).
+pub(crate) const ECP_NIST_116: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_nist.c",
+    line: 116,
+    func: c"ossl_ec_GFp_nist_group_set_curve",
+    lib: 16,
+    reason: 135,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_nist_field_mul` at `crypto/ec/ecp_nist.c:135` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ECP_NIST_135: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_nist.c",
+    line: 135,
+    func: c"ossl_ec_GFp_nist_field_mul",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_nist_field_sqr` at `crypto/ec/ecp_nist.c:160` (EC_R_PASSED_NULL_PARAMETER).
+pub(crate) const ECP_NIST_160: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_nist.c",
+    line: 160,
+    func: c"ossl_ec_GFp_nist_field_sqr",
+    lib: 16,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:157` (EC_R_UNKNOWN_ORDER).
+pub(crate) const EC_MULT_157: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 157,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:161` (EC_R_UNKNOWN_COFACTOR).
+pub(crate) const EC_MULT_161: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 161,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 164,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:169` (ERR_R_EC_LIB).
+pub(crate) const EC_MULT_169: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 169,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:175` (ERR_R_EC_LIB).
+pub(crate) const EC_MULT_175: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 175,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:180` (ERR_R_EC_LIB).
+pub(crate) const EC_MULT_180: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 180,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:193` (ERR_R_BN_LIB).
+pub(crate) const EC_MULT_193: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 193,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:198` (ERR_R_BN_LIB).
+pub(crate) const EC_MULT_198: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 198,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:212` (ERR_R_BN_LIB).
+pub(crate) const EC_MULT_212: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 212,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:217` (ERR_R_BN_LIB).
+pub(crate) const EC_MULT_217: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 217,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:229` (ERR_R_BN_LIB).
+pub(crate) const EC_MULT_229: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 229,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:235` (ERR_R_BN_LIB).
+pub(crate) const EC_MULT_235: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 235,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:240` (ERR_R_BN_LIB).
+pub(crate) const EC_MULT_240: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 240,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:260` (ERR_R_BN_LIB).
+pub(crate) const EC_MULT_260: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 260,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:266` (ERR_R_EC_LIB).
+pub(crate) const EC_MULT_266: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 266,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:272` (EC_R_LADDER_PRE_FAILURE).
+pub(crate) const EC_MULT_272: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 272,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 153,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:353` (EC_R_LADDER_STEP_FAILURE).
+pub(crate) const EC_MULT_353: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 353,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 162,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:368` (EC_R_LADDER_POST_FAILURE).
+pub(crate) const EC_MULT_368: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 368,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 136,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_mul` at `crypto/ec/ec_mult.c:464` (EC_R_UNDEFINED_GENERATOR).
+pub(crate) const EC_MULT_464: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 464,
+    func: c"ossl_ec_wNAF_mul",
+    lib: 16,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_mul` at `crypto/ec/ec_mult.c:491` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC_MULT_491: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 491,
+    func: c"ossl_ec_wNAF_mul",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_mul` at `crypto/ec/ec_mult.c:543` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC_MULT_543: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 543,
+    func: c"ossl_ec_wNAF_mul",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_mul` at `crypto/ec/ec_mult.c:552` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC_MULT_552: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 552,
+    func: c"ossl_ec_wNAF_mul",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_mul` at `crypto/ec/ec_mult.c:595` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC_MULT_595: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 595,
+    func: c"ossl_ec_wNAF_mul",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_mul` at `crypto/ec/ec_mult.c:610` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC_MULT_610: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 610,
+    func: c"ossl_ec_wNAF_mul",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_mul` at `crypto/ec/ec_mult.c:633` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC_MULT_633: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 633,
+    func: c"ossl_ec_wNAF_mul",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_mul` at `crypto/ec/ec_mult.c:668` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC_MULT_668: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 668,
+    func: c"ossl_ec_wNAF_mul",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_mul` at `crypto/ec/ec_mult.c:749` (EC_R_POINT_COORDINATES_BLIND_FAILURE).
+pub(crate) const EC_MULT_749: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 749,
+    func: c"ossl_ec_wNAF_mul",
+    lib: 16,
+    reason: 163,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_precompute_mult` at `crypto/ec/ec_mult.c:837` (EC_R_UNDEFINED_GENERATOR).
+pub(crate) const EC_MULT_837: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 837,
+    func: c"ossl_ec_wNAF_precompute_mult",
+    lib: 16,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_precompute_mult` at `crypto/ec/ec_mult.c:855` (EC_R_UNKNOWN_ORDER).
+pub(crate) const EC_MULT_855: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 855,
+    func: c"ossl_ec_wNAF_precompute_mult",
+    lib: 16,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_precompute_mult` at `crypto/ec/ec_mult.c:889` (ERR_R_EC_LIB).
+pub(crate) const EC_MULT_889: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 889,
+    func: c"ossl_ec_wNAF_precompute_mult",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_precompute_mult` at `crypto/ec/ec_mult.c:896` (ERR_R_EC_LIB).
+pub(crate) const EC_MULT_896: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 896,
+    func: c"ossl_ec_wNAF_precompute_mult",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_precompute_mult` at `crypto/ec/ec_mult.c:928` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC_MULT_928: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 928,
+    func: c"ossl_ec_wNAF_precompute_mult",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_set_compressed_coordinates` at `crypto/ec/ecp_oct.c:112` (EC_R_INVALID_COMPRESSED_POINT).
+pub(crate) const ECP_OCT_112: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 112,
+    func: c"ossl_ec_GFp_simple_set_compressed_coordinates",
+    lib: 16,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_set_compressed_coordinates` at `crypto/ec/ecp_oct.c:117` (ERR_R_BN_LIB).
+pub(crate) const ECP_OCT_117: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 117,
+    func: c"ossl_ec_GFp_simple_set_compressed_coordinates",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_set_compressed_coordinates` at `crypto/ec/ecp_oct.c:132` (EC_R_INVALID_COMPRESSION_BIT).
+pub(crate) const ECP_OCT_132: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 132,
+    func: c"ossl_ec_GFp_simple_set_compressed_coordinates",
+    lib: 16,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_set_compressed_coordinates` at `crypto/ec/ecp_oct.c:137` (EC_R_INVALID_COMPRESSED_POINT).
+pub(crate) const ECP_OCT_137: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 137,
+    func: c"ossl_ec_GFp_simple_set_compressed_coordinates",
+    lib: 16,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_set_compressed_coordinates` at `crypto/ec/ecp_oct.c:144` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ECP_OCT_144: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 144,
+    func: c"ossl_ec_GFp_simple_set_compressed_coordinates",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_point2oct` at `crypto/ec/ecp_oct.c:172` (EC_R_INVALID_FORM).
+pub(crate) const ECP_OCT_172: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 172,
+    func: c"ossl_ec_GFp_simple_point2oct",
+    lib: 16,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_point2oct` at `crypto/ec/ecp_oct.c:180` (EC_R_BUFFER_TOO_SMALL).
+pub(crate) const ECP_OCT_180: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 180,
+    func: c"ossl_ec_GFp_simple_point2oct",
+    lib: 16,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_point2oct` at `crypto/ec/ecp_oct.c:195` (EC_R_BUFFER_TOO_SMALL).
+pub(crate) const ECP_OCT_195: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 195,
+    func: c"ossl_ec_GFp_simple_point2oct",
+    lib: 16,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_point2oct` at `crypto/ec/ecp_oct.c:226` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ECP_OCT_226: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 226,
+    func: c"ossl_ec_GFp_simple_point2oct",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_point2oct` at `crypto/ec/ecp_oct.c:236` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ECP_OCT_236: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 236,
+    func: c"ossl_ec_GFp_simple_point2oct",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_point2oct` at `crypto/ec/ecp_oct.c:244` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ECP_OCT_244: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 244,
+    func: c"ossl_ec_GFp_simple_point2oct",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_point2oct` at `crypto/ec/ecp_oct.c:256` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ECP_OCT_256: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 256,
+    func: c"ossl_ec_GFp_simple_point2oct",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_oct2point` at `crypto/ec/ecp_oct.c:285` (EC_R_BUFFER_TOO_SMALL).
+pub(crate) const ECP_OCT_285: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 285,
+    func: c"ossl_ec_GFp_simple_oct2point",
+    lib: 16,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_oct2point` at `crypto/ec/ecp_oct.c:294` (EC_R_INVALID_ENCODING).
+pub(crate) const ECP_OCT_294: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 294,
+    func: c"ossl_ec_GFp_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_oct2point` at `crypto/ec/ecp_oct.c:298` (EC_R_INVALID_ENCODING).
+pub(crate) const ECP_OCT_298: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 298,
+    func: c"ossl_ec_GFp_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_oct2point` at `crypto/ec/ecp_oct.c:304` (EC_R_INVALID_ENCODING).
+pub(crate) const ECP_OCT_304: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 304,
+    func: c"ossl_ec_GFp_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_oct2point` at `crypto/ec/ecp_oct.c:315` (EC_R_INVALID_ENCODING).
+pub(crate) const ECP_OCT_315: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 315,
+    func: c"ossl_ec_GFp_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_oct2point` at `crypto/ec/ecp_oct.c:334` (EC_R_INVALID_ENCODING).
+pub(crate) const ECP_OCT_334: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 334,
+    func: c"ossl_ec_GFp_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_oct2point` at `crypto/ec/ecp_oct.c:345` (EC_R_INVALID_ENCODING).
+pub(crate) const ECP_OCT_345: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 345,
+    func: c"ossl_ec_GFp_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_oct2point` at `crypto/ec/ecp_oct.c:350` (EC_R_INVALID_ENCODING).
+pub(crate) const ECP_OCT_350: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 350,
+    func: c"ossl_ec_GFp_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_set_compressed_coordinates` at `crypto/ec/ec_oct.c:29` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_OCT_29: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_oct.c",
+    line: 29,
+    func: c"EC_POINT_set_compressed_coordinates",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_set_compressed_coordinates` at `crypto/ec/ec_oct.c:33` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_OCT_33: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_oct.c",
+    line: 33,
+    func: c"EC_POINT_set_compressed_coordinates",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_set_compressed_coordinates` at `crypto/ec/ec_oct.c:43` (EC_R_GF2M_NOT_SUPPORTED).
+pub(crate) const EC_OCT_43: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_oct.c",
+    line: 43,
+    func: c"EC_POINT_set_compressed_coordinates",
+    lib: 16,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_point2oct` at `crypto/ec/ec_oct.c:78` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_OCT_78: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_oct.c",
+    line: 78,
+    func: c"EC_POINT_point2oct",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_point2oct` at `crypto/ec/ec_oct.c:83` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_OCT_83: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_oct.c",
+    line: 83,
+    func: c"EC_POINT_point2oct",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_point2oct` at `crypto/ec/ec_oct.c:87` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_OCT_87: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_oct.c",
+    line: 87,
+    func: c"EC_POINT_point2oct",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_point2oct` at `crypto/ec/ec_oct.c:97` (EC_R_GF2M_NOT_SUPPORTED).
+pub(crate) const EC_OCT_97: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_oct.c",
+    line: 97,
+    func: c"EC_POINT_point2oct",
+    lib: 16,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_oct2point` at `crypto/ec/ec_oct.c:114` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_OCT_114: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_oct.c",
+    line: 114,
+    func: c"EC_POINT_oct2point",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_oct2point` at `crypto/ec/ec_oct.c:118` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_OCT_118: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_oct.c",
+    line: 118,
+    func: c"EC_POINT_oct2point",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_oct2point` at `crypto/ec/ec_oct.c:127` (EC_R_GF2M_NOT_SUPPORTED).
+pub(crate) const EC_OCT_127: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_oct.c",
+    line: 127,
+    func: c"EC_POINT_oct2point",
+    lib: 16,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_group_set_curve` at `crypto/ec/ec2_smpl.c:110` (EC_R_UNSUPPORTED_FIELD).
+pub(crate) const EC2_SMPL_110: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_smpl.c",
+    line: 110,
+    func: c"ossl_ec_GF2m_simple_group_set_curve",
+    lib: 16,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_group_check_discriminant` at `crypto/ec/ec2_smpl.c:189` (ERR_R_BN_LIB).
+pub(crate) const EC2_SMPL_189: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_smpl.c",
+    line: 189,
+    func: c"ossl_ec_GF2m_simple_group_check_discriminant",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_point_set_affine_coordinates` at `crypto/ec/ec2_smpl.c:294` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC2_SMPL_294: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_smpl.c",
+    line: 294,
+    func: c"ossl_ec_GF2m_simple_point_set_affine_coordinates",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_point_get_affine_coordinates` at `crypto/ec/ec2_smpl.c:326` (EC_R_POINT_AT_INFINITY).
+pub(crate) const EC2_SMPL_326: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_smpl.c",
+    line: 326,
+    func: c"ossl_ec_GF2m_simple_point_get_affine_coordinates",
+    lib: 16,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_point_get_affine_coordinates` at `crypto/ec/ec2_smpl.c:331` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC2_SMPL_331: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_smpl.c",
+    line: 331,
+    func: c"ossl_ec_GF2m_simple_point_get_affine_coordinates",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `ec_GF2m_simple_ladder_pre` at `crypto/ec/ec2_smpl.c:731` (ERR_R_BN_LIB).
+pub(crate) const EC2_SMPL_731: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_smpl.c",
+    line: 731,
+    func: c"ec_GF2m_simple_ladder_pre",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ec_GF2m_simple_ladder_pre` at `crypto/ec/ec2_smpl.c:746` (ERR_R_BN_LIB).
+pub(crate) const EC2_SMPL_746: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_smpl.c",
+    line: 746,
+    func: c"ec_GF2m_simple_ladder_pre",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ec_GF2m_simple_ladder_post` at `crypto/ec/ec2_smpl.c:813` (ERR_R_EC_LIB).
+pub(crate) const EC2_SMPL_813: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_smpl.c",
+    line: 813,
+    func: c"ec_GF2m_simple_ladder_post",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_GF2m_simple_ladder_post` at `crypto/ec/ec2_smpl.c:824` (ERR_R_BN_LIB).
+pub(crate) const EC2_SMPL_824: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_smpl.c",
+    line: 824,
+    func: c"ec_GF2m_simple_ladder_post",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ec_GF2m_simple_points_mul` at `crypto/ec/ec2_smpl.c:902` (ERR_R_EC_LIB).
+pub(crate) const EC2_SMPL_902: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_smpl.c",
+    line: 902,
+    func: c"ec_GF2m_simple_points_mul",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_GF2m_simple_field_inv` at `crypto/ec/ec2_smpl.c:929` (EC_R_CANNOT_INVERT).
+pub(crate) const EC2_SMPL_929: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_smpl.c",
+    line: 929,
+    func: c"ec_GF2m_simple_field_inv",
+    lib: 16,
+    reason: 165,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_set_compressed_coordinates` at `crypto/ec/ec2_oct.c:88` (EC_R_INVALID_COMPRESSED_POINT).
+pub(crate) const EC2_OCT_88: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 88,
+    func: c"ossl_ec_GF2m_simple_set_compressed_coordinates",
+    lib: 16,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_set_compressed_coordinates` at `crypto/ec/ec2_oct.c:93` (ERR_R_BN_LIB).
+pub(crate) const EC2_OCT_93: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 93,
+    func: c"ossl_ec_GF2m_simple_set_compressed_coordinates",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_point2oct` at `crypto/ec/ec2_oct.c:141` (EC_R_INVALID_FORM).
+pub(crate) const EC2_OCT_141: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 141,
+    func: c"ossl_ec_GF2m_simple_point2oct",
+    lib: 16,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_point2oct` at `crypto/ec/ec2_oct.c:149` (EC_R_BUFFER_TOO_SMALL).
+pub(crate) const EC2_OCT_149: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 149,
+    func: c"ossl_ec_GF2m_simple_point2oct",
+    lib: 16,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_point2oct` at `crypto/ec/ec2_oct.c:164` (EC_R_BUFFER_TOO_SMALL).
+pub(crate) const EC2_OCT_164: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 164,
+    func: c"ossl_ec_GF2m_simple_point2oct",
+    lib: 16,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_point2oct` at `crypto/ec/ec2_oct.c:199` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC2_OCT_199: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 199,
+    func: c"ossl_ec_GF2m_simple_point2oct",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_point2oct` at `crypto/ec/ec2_oct.c:209` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC2_OCT_209: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 209,
+    func: c"ossl_ec_GF2m_simple_point2oct",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_point2oct` at `crypto/ec/ec2_oct.c:217` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC2_OCT_217: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 217,
+    func: c"ossl_ec_GF2m_simple_point2oct",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_point2oct` at `crypto/ec/ec2_oct.c:229` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC2_OCT_229: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 229,
+    func: c"ossl_ec_GF2m_simple_point2oct",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_oct2point` at `crypto/ec/ec2_oct.c:268` (EC_R_BUFFER_TOO_SMALL).
+pub(crate) const EC2_OCT_268: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 268,
+    func: c"ossl_ec_GF2m_simple_oct2point",
+    lib: 16,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_oct2point` at `crypto/ec/ec2_oct.c:289` (EC_R_INVALID_ENCODING).
+pub(crate) const EC2_OCT_289: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 289,
+    func: c"ossl_ec_GF2m_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_oct2point` at `crypto/ec/ec2_oct.c:293` (EC_R_INVALID_ENCODING).
+pub(crate) const EC2_OCT_293: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 293,
+    func: c"ossl_ec_GF2m_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_oct2point` at `crypto/ec/ec2_oct.c:300` (EC_R_INVALID_ENCODING).
+pub(crate) const EC2_OCT_300: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 300,
+    func: c"ossl_ec_GF2m_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_oct2point` at `crypto/ec/ec2_oct.c:312` (EC_R_INVALID_ENCODING).
+pub(crate) const EC2_OCT_312: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 312,
+    func: c"ossl_ec_GF2m_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_oct2point` at `crypto/ec/ec2_oct.c:334` (EC_R_INVALID_ENCODING).
+pub(crate) const EC2_OCT_334: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 334,
+    func: c"ossl_ec_GF2m_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_oct2point` at `crypto/ec/ec2_oct.c:345` (EC_R_INVALID_ENCODING).
+pub(crate) const EC2_OCT_345: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 345,
+    func: c"ossl_ec_GF2m_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_oct2point` at `crypto/ec/ec2_oct.c:356` (EC_R_INVALID_ENCODING).
+pub(crate) const EC2_OCT_356: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 356,
+    func: c"ossl_ec_GF2m_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_oct2point` at `crypto/ec/ec2_oct.c:363` (EC_R_INVALID_ENCODING).
+pub(crate) const EC2_OCT_363: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 363,
+    func: c"ossl_ec_GF2m_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `EC_KEY_copy` at `crypto/ec/ec_key.c:109` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_KEY_109: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 109,
+    func: c"EC_KEY_copy",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EC_KEY_generate_key` at `crypto/ec/ec_key.c:212` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_KEY_212: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 212,
+    func: c"EC_KEY_generate_key",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EC_KEY_generate_key` at `crypto/ec/ec_key.c:224` (EC_R_OPERATION_NOT_SUPPORTED).
+pub(crate) const EC_KEY_224: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 224,
+    func: c"EC_KEY_generate_key",
+    lib: 16,
+    reason: 152,
+    dynamic_reason: false,
+};
+
+/// `EC_KEY_check_key` at `crypto/ec/ec_key.c:419` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_KEY_419: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 419,
+    func: c"EC_KEY_check_key",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EC_KEY_check_key` at `crypto/ec/ec_key.c:424` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_KEY_424: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 424,
+    func: c"EC_KEY_check_key",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_public_check_quick` at `crypto/ec/ec_key.c:480` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_KEY_480: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 480,
+    func: c"ossl_ec_key_public_check_quick",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_public_check_quick` at `crypto/ec/ec_key.c:486` (EC_R_POINT_AT_INFINITY).
+pub(crate) const EC_KEY_486: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 486,
+    func: c"ossl_ec_key_public_check_quick",
+    lib: 16,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_public_check_quick` at `crypto/ec/ec_key.c:492` (EC_R_COORDINATES_OUT_OF_RANGE).
+pub(crate) const EC_KEY_492: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 492,
+    func: c"ossl_ec_key_public_check_quick",
+    lib: 16,
+    reason: 146,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_public_check_quick` at `crypto/ec/ec_key.c:498` (EC_R_POINT_IS_NOT_ON_CURVE).
+pub(crate) const EC_KEY_498: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 498,
+    func: c"ossl_ec_key_public_check_quick",
+    lib: 16,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_public_check` at `crypto/ec/ec_key.c:529` (EC_R_INVALID_GROUP_ORDER).
+pub(crate) const EC_KEY_529: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 529,
+    func: c"ossl_ec_key_public_check",
+    lib: 16,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_public_check` at `crypto/ec/ec_key.c:534` (ERR_R_EC_LIB).
+pub(crate) const EC_KEY_534: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 534,
+    func: c"ossl_ec_key_public_check",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_public_check` at `crypto/ec/ec_key.c:538` (EC_R_WRONG_ORDER).
+pub(crate) const EC_KEY_538: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 538,
+    func: c"ossl_ec_key_public_check",
+    lib: 16,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_private_check` at `crypto/ec/ec_key.c:555` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_KEY_555: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 555,
+    func: c"ossl_ec_key_private_check",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_private_check` at `crypto/ec/ec_key.c:560` (EC_R_INVALID_PRIVATE_KEY).
+pub(crate) const EC_KEY_560: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 560,
+    func: c"ossl_ec_key_private_check",
+    lib: 16,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_pairwise_check` at `crypto/ec/ec_key.c:580` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_KEY_580: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 580,
+    func: c"ossl_ec_key_pairwise_check",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_pairwise_check` at `crypto/ec/ec_key.c:589` (ERR_R_EC_LIB).
+pub(crate) const EC_KEY_589: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 589,
+    func: c"ossl_ec_key_pairwise_check",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_pairwise_check` at `crypto/ec/ec_key.c:593` (EC_R_INVALID_PRIVATE_KEY).
+pub(crate) const EC_KEY_593: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 593,
+    func: c"ossl_ec_key_pairwise_check",
+    lib: 16,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_simple_check_key` at `crypto/ec/ec_key.c:618` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_KEY_618: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 618,
+    func: c"ossl_ec_key_simple_check_key",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EC_KEY_set_public_key_affine_coordinates` at `crypto/ec/ec_key.c:647` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_KEY_647: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 647,
+    func: c"EC_KEY_set_public_key_affine_coordinates",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EC_KEY_set_public_key_affine_coordinates` at `crypto/ec/ec_key.c:675` (EC_R_COORDINATES_OUT_OF_RANGE).
+pub(crate) const EC_KEY_675: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 675,
+    func: c"EC_KEY_set_public_key_affine_coordinates",
+    lib: 16,
+    reason: 146,
+    dynamic_reason: false,
+};
+
+/// `EC_KEY_priv2oct` at `crypto/ec/ec_key.c:944` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_KEY_944: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 944,
+    func: c"EC_KEY_priv2oct",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_simple_priv2oct` at `crypto/ec/ec_key.c:967` (EC_R_BUFFER_TOO_SMALL).
+pub(crate) const EC_KEY_967: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 967,
+    func: c"ossl_ec_key_simple_priv2oct",
+    lib: 16,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `EC_KEY_oct2priv` at `crypto/ec/ec_key.c:981` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_KEY_981: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 981,
+    func: c"EC_KEY_oct2priv",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_simple_oct2priv` at `crypto/ec/ec_key.c:994` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const EC_KEY_994: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 994,
+    func: c"ossl_ec_key_simple_oct2priv",
+    lib: 16,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_simple_oct2priv` at `crypto/ec/ec_key.c:1000` (ERR_R_BN_LIB).
+pub(crate) const EC_KEY_1000: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 1000,
+    func: c"ossl_ec_key_simple_oct2priv",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_simple_oct2priv` at `crypto/ec/ec_key.c:1004` (ERR_R_BN_LIB).
+pub(crate) const EC_KEY_1004: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 1004,
+    func: c"ossl_ec_key_simple_oct2priv",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_new_method_int` at `crypto/ec/ec_kmeth.c:104` (ERR_R_ENGINE_LIB).
+pub(crate) const EC_KMETH_104: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_kmeth.c",
+    line: 104,
+    func: c"ossl_ec_key_new_method_int",
+    lib: 16,
+    reason: 524326,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_new_method_int` at `crypto/ec/ec_kmeth.c:113` (ERR_R_ENGINE_LIB).
+pub(crate) const EC_KMETH_113: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_kmeth.c",
+    line: 113,
+    func: c"ossl_ec_key_new_method_int",
+    lib: 16,
+    reason: 524326,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_new_method_int` at `crypto/ec/ec_kmeth.c:125` (ERR_R_CRYPTO_LIB).
+pub(crate) const EC_KMETH_125: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_kmeth.c",
+    line: 125,
+    func: c"ossl_ec_key_new_method_int",
+    lib: 16,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_new_method_int` at `crypto/ec/ec_kmeth.c:131` (ERR_R_INIT_FAIL).
+pub(crate) const EC_KMETH_131: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_kmeth.c",
+    line: 131,
+    func: c"ossl_ec_key_new_method_int",
+    lib: 16,
+    reason: 786693,
+    dynamic_reason: false,
+};
+
+/// `ECDH_compute_key` at `crypto/ec/ec_kmeth.c:156` (EC_R_OPERATION_NOT_SUPPORTED).
+pub(crate) const EC_KMETH_156: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_kmeth.c",
+    line: 156,
+    func: c"ECDH_compute_key",
+    lib: 16,
+    reason: 152,
+    dynamic_reason: false,
+};
+
+/// `ECDH_compute_key` at `crypto/ec/ec_kmeth.c:160` (EC_R_INVALID_OUTPUT_LENGTH).
+pub(crate) const EC_KMETH_160: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_kmeth.c",
+    line: 160,
+    func: c"ECDH_compute_key",
+    lib: 16,
+    reason: 161,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:43` (EC_R_CURVE_DOES_NOT_SUPPORT_ECDSA).
+pub(crate) const ECDSA_OSSL_43: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 43,
+    func: c"ossl_ecdsa_sign_setup",
+    lib: 16,
+    reason: 170,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_sign_sig` at `crypto/ec/ecdsa_ossl.c:55` (EC_R_CURVE_DOES_NOT_SUPPORT_ECDSA).
+pub(crate) const ECDSA_OSSL_55: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 55,
+    func: c"ossl_ecdsa_sign_sig",
+    lib: 16,
+    reason: 170,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_verify_sig` at `crypto/ec/ecdsa_ossl.c:67` (EC_R_CURVE_DOES_NOT_SUPPORT_ECDSA).
+pub(crate) const ECDSA_OSSL_67: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 67,
+    func: c"ossl_ecdsa_verify_sig",
+    lib: 16,
+    reason: 170,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_deterministic_sign` at `crypto/ec/ecdsa_ossl.c:106` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ECDSA_OSSL_106: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 106,
+    func: c"ossl_ecdsa_deterministic_sign",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_deterministic_sign` at `crypto/ec/ecdsa_ossl.c:110` (EC_R_INVALID_DIGEST).
+pub(crate) const ECDSA_OSSL_110: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 110,
+    func: c"ossl_ecdsa_deterministic_sign",
+    lib: 16,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:148` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ECDSA_OSSL_148: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 148,
+    func: c"ecdsa_sign_setup",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:152` (EC_R_MISSING_PRIVATE_KEY).
+pub(crate) const ECDSA_OSSL_152: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 152,
+    func: c"ecdsa_sign_setup",
+    lib: 16,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:157` (EC_R_CURVE_DOES_NOT_SUPPORT_SIGNING).
+pub(crate) const ECDSA_OSSL_157: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 157,
+    func: c"ecdsa_sign_setup",
+    lib: 16,
+    reason: 159,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:163` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_163: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 163,
+    func: c"ecdsa_sign_setup",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:172` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_172: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 172,
+    func: c"ecdsa_sign_setup",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:176` (ERR_R_EC_LIB).
+pub(crate) const ECDSA_OSSL_176: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 176,
+    func: c"ecdsa_sign_setup",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:181` (ERR_R_EC_LIB).
+pub(crate) const ECDSA_OSSL_181: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 181,
+    func: c"ecdsa_sign_setup",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:214` (EC_R_RANDOM_NUMBER_GENERATION_FAILED).
+pub(crate) const ECDSA_OSSL_214: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 214,
+    func: c"ecdsa_sign_setup",
+    lib: 16,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:221` (ERR_R_EC_LIB).
+pub(crate) const ECDSA_OSSL_221: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 221,
+    func: c"ecdsa_sign_setup",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:226` (ERR_R_EC_LIB).
+pub(crate) const ECDSA_OSSL_226: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 226,
+    func: c"ecdsa_sign_setup",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:231` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_231: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 231,
+    func: c"ecdsa_sign_setup",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:238` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_238: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 238,
+    func: c"ecdsa_sign_setup",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:285` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ECDSA_OSSL_285: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 285,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:289` (EC_R_MISSING_PRIVATE_KEY).
+pub(crate) const ECDSA_OSSL_289: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 289,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:294` (EC_R_CURVE_DOES_NOT_SUPPORT_SIGNING).
+pub(crate) const ECDSA_OSSL_294: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 294,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 159,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:300` (ERR_R_ECDSA_LIB).
+pub(crate) const ECDSA_OSSL_300: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 300,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 524330,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:306` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_306: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 306,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:313` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_313: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 313,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:318` (ERR_R_EC_LIB).
+pub(crate) const ECDSA_OSSL_318: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 318,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:329` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_329: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 329,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:334` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_334: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 334,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:341` (ERR_R_ECDSA_LIB).
+pub(crate) const ECDSA_OSSL_341: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 341,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 524330,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:348` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_348: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 348,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:362` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_362: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 362,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:366` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_366: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 366,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:375` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_375: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 375,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:385` (EC_R_NEED_NEW_SETUP_VALUES).
+pub(crate) const ECDSA_OSSL_385: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 385,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 157,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:390` (EC_R_TOO_MANY_RETRIES).
+pub(crate) const ECDSA_OSSL_390: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 390,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 176,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:455` (EC_R_MISSING_PARAMETERS).
+pub(crate) const ECDSA_OSSL_455: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 455,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:460` (EC_R_CURVE_DOES_NOT_SUPPORT_SIGNING).
+pub(crate) const ECDSA_OSSL_460: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 460,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 159,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:466` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_466: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 466,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:475` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_475: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 475,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:481` (ERR_R_EC_LIB).
+pub(crate) const ECDSA_OSSL_481: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 481,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:486` (EC_R_BAD_SIGNATURE).
+pub(crate) const ECDSA_OSSL_486: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 486,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 156,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:492` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_492: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 492,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:503` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_503: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 503,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:508` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_508: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 508,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:513` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_513: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 513,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:518` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_518: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 518,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:523` (ERR_R_EC_LIB).
+pub(crate) const ECDSA_OSSL_523: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 523,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:527` (ERR_R_EC_LIB).
+pub(crate) const ECDSA_OSSL_527: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 527,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:532` (ERR_R_EC_LIB).
+pub(crate) const ECDSA_OSSL_532: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 532,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:537` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_537: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 537,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdh_compute_key` at `crypto/ec/ecdh_ossl.c:32` (EC_R_CURVE_DOES_NOT_SUPPORT_ECDH).
+pub(crate) const ECDH_OSSL_32: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdh_ossl.c",
+    line: 32,
+    func: c"ossl_ecdh_compute_key",
+    lib: 16,
+    reason: 160,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdh_simple_compute_key` at `crypto/ec/ecdh_ossl.c:66` (ERR_R_BN_LIB).
+pub(crate) const ECDH_OSSL_66: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdh_ossl.c",
+    line: 66,
+    func: c"ossl_ecdh_simple_compute_key",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdh_simple_compute_key` at `crypto/ec/ecdh_ossl.c:72` (EC_R_MISSING_PRIVATE_KEY).
+pub(crate) const ECDH_OSSL_72: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdh_ossl.c",
+    line: 72,
+    func: c"ossl_ecdh_simple_compute_key",
+    lib: 16,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdh_simple_compute_key` at `crypto/ec/ecdh_ossl.c:84` (ERR_R_EC_LIB).
+pub(crate) const ECDH_OSSL_84: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdh_ossl.c",
+    line: 84,
+    func: c"ossl_ecdh_simple_compute_key",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdh_simple_compute_key` at `crypto/ec/ecdh_ossl.c:88` (ERR_R_BN_LIB).
+pub(crate) const ECDH_OSSL_88: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdh_ossl.c",
+    line: 88,
+    func: c"ossl_ecdh_simple_compute_key",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdh_simple_compute_key` at `crypto/ec/ecdh_ossl.c:95` (ERR_R_EC_LIB).
+pub(crate) const ECDH_OSSL_95: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdh_ossl.c",
+    line: 95,
+    func: c"ossl_ecdh_simple_compute_key",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdh_simple_compute_key` at `crypto/ec/ecdh_ossl.c:100` (EC_R_POINT_ARITHMETIC_FAILURE).
+pub(crate) const ECDH_OSSL_100: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdh_ossl.c",
+    line: 100,
+    func: c"ossl_ecdh_simple_compute_key",
+    lib: 16,
+    reason: 155,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdh_simple_compute_key` at `crypto/ec/ecdh_ossl.c:110` (EC_R_POINT_ARITHMETIC_FAILURE).
+pub(crate) const ECDH_OSSL_110: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdh_ossl.c",
+    line: 110,
+    func: c"ossl_ecdh_simple_compute_key",
+    lib: 16,
+    reason: 155,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdh_simple_compute_key` at `crypto/ec/ecdh_ossl.c:121` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ECDH_OSSL_121: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdh_ossl.c",
+    line: 121,
+    func: c"ossl_ecdh_simple_compute_key",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdh_simple_compute_key` at `crypto/ec/ecdh_ossl.c:129` (ERR_R_BN_LIB).
+pub(crate) const ECDH_OSSL_129: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdh_ossl.c",
+    line: 129,
+    func: c"ossl_ecdh_simple_compute_key",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ECDSA_do_sign_ex` at `crypto/ec/ecdsa_sign.c:31` (EC_R_OPERATION_NOT_SUPPORTED).
+pub(crate) const ECDSA_SIGN_31: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_sign.c",
+    line: 31,
+    func: c"ECDSA_do_sign_ex",
+    lib: 16,
+    reason: 152,
+    dynamic_reason: false,
+};
+
+/// `ECDSA_sign_ex` at `crypto/ec/ecdsa_sign.c:46` (EC_R_OPERATION_NOT_SUPPORTED).
+pub(crate) const ECDSA_SIGN_46: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_sign.c",
+    line: 46,
+    func: c"ECDSA_sign_ex",
+    lib: 16,
+    reason: 152,
+    dynamic_reason: false,
+};
+
+/// `ECDSA_sign_setup` at `crypto/ec/ecdsa_sign.c:55` (EC_R_OPERATION_NOT_SUPPORTED).
+pub(crate) const ECDSA_SIGN_55: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_sign.c",
+    line: 55,
+    func: c"ECDSA_sign_setup",
+    lib: 16,
+    reason: 152,
+    dynamic_reason: false,
+};
+
+/// `ECDSA_do_verify` at `crypto/ec/ecdsa_vrf.c:31` (EC_R_OPERATION_NOT_SUPPORTED).
+pub(crate) const ECDSA_VRF_31: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_vrf.c",
+    line: 31,
+    func: c"ECDSA_do_verify",
+    lib: 16,
+    reason: 152,
+    dynamic_reason: false,
+};
+
+/// `ECDSA_verify` at `crypto/ec/ecdsa_vrf.c:47` (EC_R_OPERATION_NOT_SUPPORTED).
+pub(crate) const ECDSA_VRF_47: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_vrf.c",
+    line: 47,
+    func: c"ECDSA_verify",
+    lib: 16,
+    reason: 152,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_check_named_curve` at `crypto/ec/ec_check.c:26` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_CHECK_26: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_check.c",
+    line: 26,
+    func: c"EC_GROUP_check_named_curve",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_check_named_curve` at `crypto/ec/ec_check.c:33` (ERR_R_BN_LIB).
+pub(crate) const EC_CHECK_33: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_check.c",
+    line: 33,
+    func: c"EC_GROUP_check_named_curve",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_check` at `crypto/ec/ec_check.c:61` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_CHECK_61: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_check.c",
+    line: 61,
+    func: c"EC_GROUP_check",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_check` at `crypto/ec/ec_check.c:72` (ERR_R_BN_LIB).
+pub(crate) const EC_CHECK_72: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_check.c",
+    line: 72,
+    func: c"EC_GROUP_check",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_check` at `crypto/ec/ec_check.c:79` (EC_R_DISCRIMINANT_IS_ZERO).
+pub(crate) const EC_CHECK_79: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_check.c",
+    line: 79,
+    func: c"EC_GROUP_check",
+    lib: 16,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_check` at `crypto/ec/ec_check.c:85` (EC_R_UNDEFINED_GENERATOR).
+pub(crate) const EC_CHECK_85: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_check.c",
+    line: 85,
+    func: c"EC_GROUP_check",
+    lib: 16,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_check` at `crypto/ec/ec_check.c:89` (EC_R_POINT_IS_NOT_ON_CURVE).
+pub(crate) const EC_CHECK_89: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_check.c",
+    line: 89,
+    func: c"EC_GROUP_check",
+    lib: 16,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_check` at `crypto/ec/ec_check.c:100` (EC_R_UNDEFINED_ORDER).
+pub(crate) const EC_CHECK_100: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_check.c",
+    line: 100,
+    func: c"EC_GROUP_check",
+    lib: 16,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_check` at `crypto/ec/ec_check.c:107` (EC_R_INVALID_GROUP_ORDER).
+pub(crate) const EC_CHECK_107: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_check.c",
+    line: 107,
+    func: c"EC_GROUP_check",
+    lib: 16,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:174` (EC_R_GF2M_NOT_SUPPORTED).
+pub(crate) const EC_BACKEND_174: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 174,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:180` (EC_R_INVALID_FIELD).
+pub(crate) const EC_BACKEND_180: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 180,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:193` (ERR_R_BN_LIB).
+pub(crate) const EC_BACKEND_193: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 193,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:198` (EC_R_INVALID_CURVE).
+pub(crate) const EC_BACKEND_198: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 198,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:204` (ERR_R_CRYPTO_LIB).
+pub(crate) const EC_BACKEND_204: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 204,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:214` (EC_R_INVALID_GROUP_ORDER).
+pub(crate) const EC_BACKEND_214: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 214,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:219` (ERR_R_CRYPTO_LIB).
+pub(crate) const EC_BACKEND_219: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 219,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:229` (ERR_R_CRYPTO_LIB).
+pub(crate) const EC_BACKEND_229: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 229,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:241` (EC_R_INVALID_GENERATOR).
+pub(crate) const EC_BACKEND_241: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 241,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 173,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:246` (EC_R_INVALID_GENERATOR).
+pub(crate) const EC_BACKEND_246: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 246,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 173,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:252` (ERR_R_CRYPTO_LIB).
+pub(crate) const EC_BACKEND_252: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 252,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:264` (ERR_R_CRYPTO_LIB).
+pub(crate) const EC_BACKEND_264: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 264,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:279` (ERR_R_CRYPTO_LIB).
+pub(crate) const EC_BACKEND_279: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 279,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_group_todata` at `crypto/ec/ec_backend.c:298` (EC_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_BACKEND_298: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 298,
+    func: c"ossl_ec_group_todata",
+    lib: 16,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_group_todata` at `crypto/ec/ec_backend.c:308` (EC_R_INVALID_FORM).
+pub(crate) const EC_BACKEND_308: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 308,
+    func: c"ossl_ec_group_todata",
+    lib: 16,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_group_todata` at `crypto/ec/ec_backend.c:317` (EC_R_INVALID_ENCODING).
+pub(crate) const EC_BACKEND_317: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 317,
+    func: c"ossl_ec_group_todata",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_group_todata` at `crypto/ec/ec_backend.c:345` (EC_R_INVALID_CURVE).
+pub(crate) const EC_BACKEND_345: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 345,
+    func: c"ossl_ec_group_todata",
+    lib: 16,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `ec_key_point_format_fromdata` at `crypto/ec/ec_backend.c:524` (EC_R_INVALID_FORM).
+pub(crate) const EC_BACKEND_524: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 524,
+    func: c"ec_key_point_format_fromdata",
+    lib: 16,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_dup` at `crypto/ec/ec_backend.c:599` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_BACKEND_599: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 599,
+    func: c"ossl_ec_key_dup",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_param_from_x509_algor` at `crypto/ec/ec_backend.c:769` (ERR_R_EC_LIB).
+pub(crate) const EC_BACKEND_769: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 769,
+    func: c"ossl_ec_key_param_from_x509_algor",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_param_from_x509_algor` at `crypto/ec/ec_backend.c:779` (EC_R_DECODE_ERROR).
+pub(crate) const EC_BACKEND_779: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 779,
+    func: c"ossl_ec_key_param_from_x509_algor",
+    lib: 16,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_param_from_x509_algor` at `crypto/ec/ec_backend.c:797` (EC_R_DECODE_ERROR).
+pub(crate) const EC_BACKEND_797: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 797,
+    func: c"ossl_ec_key_param_from_x509_algor",
+    lib: 16,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_from_pkcs8` at `crypto/ec/ec_backend.c:825` (EC_R_DECODE_ERROR).
+pub(crate) const EC_BACKEND_825: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 825,
+    func: c"ossl_ec_key_from_pkcs8",
+    lib: 16,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:194` (ERR_R_OBJ_LIB).
+pub(crate) const EC_ASN1_194: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 194,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 524296,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:200` (ERR_R_BN_LIB).
+pub(crate) const EC_ASN1_200: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 200,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:205` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_205: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 205,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:211` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_211: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 211,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:217` (EC_R_GF2M_NOT_SUPPORTED).
+pub(crate) const EC_ASN1_217: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 217,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:229` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_229: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 229,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:238` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_238: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 238,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:243` (ERR_R_OBJ_LIB).
+pub(crate) const EC_ASN1_243: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 243,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 524296,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:255` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_255: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 255,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:259` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_259: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 259,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:270` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_270: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 270,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:283` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_283: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 283,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:290` (EC_R_UNSUPPORTED_FIELD).
+pub(crate) const EC_ASN1_290: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 290,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2curve` at `crypto/ec/ec_asn1.c:312` (ERR_R_BN_LIB).
+pub(crate) const EC_ASN1_312: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 312,
+    func: c"ec_asn1_group2curve",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2curve` at `crypto/ec/ec_asn1.c:318` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_318: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 318,
+    func: c"ec_asn1_group2curve",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2curve` at `crypto/ec/ec_asn1.c:333` (ERR_R_BN_LIB).
+pub(crate) const EC_ASN1_333: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 333,
+    func: c"ec_asn1_group2curve",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2curve` at `crypto/ec/ec_asn1.c:340` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_340: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 340,
+    func: c"ec_asn1_group2curve",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2curve` at `crypto/ec/ec_asn1.c:348` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_348: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 348,
+    func: c"ec_asn1_group2curve",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2curve` at `crypto/ec/ec_asn1.c:354` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_354: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 354,
+    func: c"ec_asn1_group2curve",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_ecparameters` at `crypto/ec/ec_asn1.c:385` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_385: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 385,
+    func: c"EC_GROUP_get_ecparameters",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_ecparameters` at `crypto/ec/ec_asn1.c:396` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_396: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 396,
+    func: c"EC_GROUP_get_ecparameters",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_ecparameters` at `crypto/ec/ec_asn1.c:402` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_402: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 402,
+    func: c"EC_GROUP_get_ecparameters",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_ecparameters` at `crypto/ec/ec_asn1.c:408` (EC_R_UNDEFINED_GENERATOR).
+pub(crate) const EC_ASN1_408: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 408,
+    func: c"EC_GROUP_get_ecparameters",
+    lib: 16,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_ecparameters` at `crypto/ec/ec_asn1.c:416` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_416: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 416,
+    func: c"EC_GROUP_get_ecparameters",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_ecparameters` at `crypto/ec/ec_asn1.c:421` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_421: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 421,
+    func: c"EC_GROUP_get_ecparameters",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_ecparameters` at `crypto/ec/ec_asn1.c:429` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_429: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 429,
+    func: c"EC_GROUP_get_ecparameters",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_ecparameters` at `crypto/ec/ec_asn1.c:435` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_435: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 435,
+    func: c"EC_GROUP_get_ecparameters",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_ecparameters` at `crypto/ec/ec_asn1.c:445` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_445: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 445,
+    func: c"EC_GROUP_get_ecparameters",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_ecpkparameters` at `crypto/ec/ec_asn1.c:466` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_466: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 466,
+    func: c"EC_GROUP_get_ecpkparameters",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_ecpkparameters` at `crypto/ec/ec_asn1.c:487` (EC_R_MISSING_OID).
+pub(crate) const EC_ASN1_487: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 487,
+    func: c"EC_GROUP_get_ecpkparameters",
+    lib: 16,
+    reason: 167,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:523` (EC_R_ASN1_ERROR).
+pub(crate) const EC_ASN1_523: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 523,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:536` (EC_R_ASN1_ERROR).
+pub(crate) const EC_ASN1_536: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 536,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:541` (ERR_R_BN_LIB).
+pub(crate) const EC_ASN1_541: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 541,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:546` (ERR_R_BN_LIB).
+pub(crate) const EC_ASN1_546: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 546,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:555` (EC_R_GF2M_NOT_SUPPORTED).
+pub(crate) const EC_ASN1_555: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 555,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:566` (EC_R_FIELD_TOO_LARGE).
+pub(crate) const EC_ASN1_566: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 566,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:571` (ERR_R_BN_LIB).
+pub(crate) const EC_ASN1_571: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 571,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:582` (EC_R_ASN1_ERROR).
+pub(crate) const EC_ASN1_582: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 582,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:589` (EC_R_INVALID_TRINOMIAL_BASIS).
+pub(crate) const EC_ASN1_589: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 589,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 137,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:605` (EC_R_ASN1_ERROR).
+pub(crate) const EC_ASN1_605: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 605,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:611` (EC_R_INVALID_PENTANOMIAL_BASIS).
+pub(crate) const EC_ASN1_611: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 611,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 132,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:627` (EC_R_NOT_IMPLEMENTED).
+pub(crate) const EC_ASN1_627: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 627,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:631` (EC_R_ASN1_ERROR).
+pub(crate) const EC_ASN1_631: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 631,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:643` (EC_R_ASN1_ERROR).
+pub(crate) const EC_ASN1_643: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 643,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:648` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_648: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 648,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:653` (EC_R_INVALID_FIELD).
+pub(crate) const EC_ASN1_653: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 653,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:659` (EC_R_FIELD_TOO_LARGE).
+pub(crate) const EC_ASN1_659: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 659,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:666` (EC_R_INVALID_FIELD).
+pub(crate) const EC_ASN1_666: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 666,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:671` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_671: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 671,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:684` (EC_R_ASN1_ERROR).
+pub(crate) const EC_ASN1_684: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 684,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:699` (EC_R_ASN1_ERROR).
+pub(crate) const EC_ASN1_699: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 699,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:712` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_712: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 712,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:718` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_718: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 718,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:722` (EC_R_INVALID_GROUP_ORDER).
+pub(crate) const EC_ASN1_722: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 722,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:726` (EC_R_INVALID_GROUP_ORDER).
+pub(crate) const EC_ASN1_726: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 726,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:735` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_735: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 735,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:740` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_740: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 740,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:757` (ERR_R_BN_LIB).
+pub(crate) const EC_ASN1_757: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 757,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:763` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_763: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 763,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:788` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_788: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 788,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecpkparameters` at `crypto/ec/ec_asn1.c:840` (EC_R_MISSING_PARAMETERS).
+pub(crate) const EC_ASN1_840: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 840,
+    func: c"EC_GROUP_new_from_ecpkparameters",
+    lib: 16,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecpkparameters` at `crypto/ec/ec_asn1.c:848` (EC_R_EC_GROUP_NEW_BY_NAME_FAILURE).
+pub(crate) const EC_ASN1_848: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 848,
+    func: c"EC_GROUP_new_from_ecpkparameters",
+    lib: 16,
+    reason: 119,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecpkparameters` at `crypto/ec/ec_asn1.c:856` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_856: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 856,
+    func: c"EC_GROUP_new_from_ecpkparameters",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecpkparameters` at `crypto/ec/ec_asn1.c:864` (EC_R_ASN1_ERROR).
+pub(crate) const EC_ASN1_864: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 864,
+    func: c"EC_GROUP_new_from_ecpkparameters",
+    lib: 16,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `i2d_ECPKParameters` at `crypto/ec/ec_asn1.c:907` (EC_R_GROUP2PKPARAMETERS_FAILURE).
+pub(crate) const EC_ASN1_907: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 907,
+    func: c"i2d_ECPKParameters",
+    lib: 16,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `i2d_ECPKParameters` at `crypto/ec/ec_asn1.c:911` (EC_R_I2D_ECPKPARAMETERS_FAILURE).
+pub(crate) const EC_ASN1_911: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 911,
+    func: c"i2d_ECPKParameters",
+    lib: 16,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `d2i_ECPrivateKey` at `crypto/ec/ec_asn1.c:932` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_932: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 932,
+    func: c"d2i_ECPrivateKey",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `d2i_ECPrivateKey` at `crypto/ec/ec_asn1.c:947` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_947: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 947,
+    func: c"d2i_ECPrivateKey",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `d2i_ECPrivateKey` at `crypto/ec/ec_asn1.c:960` (EC_R_MISSING_PRIVATE_KEY).
+pub(crate) const EC_ASN1_960: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 960,
+    func: c"d2i_ECPrivateKey",
+    lib: 16,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `d2i_ECPrivateKey` at `crypto/ec/ec_asn1.c:970` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_970: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 970,
+    func: c"d2i_ECPrivateKey",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `d2i_ECPrivateKey` at `crypto/ec/ec_asn1.c:981` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_981: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 981,
+    func: c"d2i_ECPrivateKey",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `i2d_ECPrivateKey` at `crypto/ec/ec_asn1.c:1015` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_ASN1_1015: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1015,
+    func: c"i2d_ECPrivateKey",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `i2d_ECPrivateKey` at `crypto/ec/ec_asn1.c:1020` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_1020: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1020,
+    func: c"i2d_ECPrivateKey",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `i2d_ECPrivateKey` at `crypto/ec/ec_asn1.c:1029` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_1029: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1029,
+    func: c"i2d_ECPrivateKey",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `i2d_ECPrivateKey` at `crypto/ec/ec_asn1.c:1040` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_1040: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1040,
+    func: c"i2d_ECPrivateKey",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `i2d_ECPrivateKey` at `crypto/ec/ec_asn1.c:1048` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_1048: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1048,
+    func: c"i2d_ECPrivateKey",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `i2d_ECPrivateKey` at `crypto/ec/ec_asn1.c:1055` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_1055: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1055,
+    func: c"i2d_ECPrivateKey",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `i2d_ECPrivateKey` at `crypto/ec/ec_asn1.c:1065` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_1065: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1065,
+    func: c"i2d_ECPrivateKey",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `i2d_ECParameters` at `crypto/ec/ec_asn1.c:1079` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_ASN1_1079: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1079,
+    func: c"i2d_ECParameters",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `d2i_ECParameters` at `crypto/ec/ec_asn1.c:1090` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_ASN1_1090: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1090,
+    func: c"d2i_ECParameters",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `d2i_ECParameters` at `crypto/ec/ec_asn1.c:1096` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_1096: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1096,
+    func: c"d2i_ECParameters",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `o2i_ECPublicKey` at `crypto/ec/ec_asn1.c:1129` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_ASN1_1129: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1129,
+    func: c"o2i_ECPublicKey",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `o2i_ECPublicKey` at `crypto/ec/ec_asn1.c:1135` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_1135: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1135,
+    func: c"o2i_ECPublicKey",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `i2o_ECPublicKey` at `crypto/ec/ec_asn1.c:1148` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_ASN1_1148: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1148,
+    func: c"i2o_ECPublicKey",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `i2o_ECPublicKey` at `crypto/ec/ec_asn1.c:1156` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const EC_ASN1_1156: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1156,
+    func: c"i2o_ECPublicKey",
+    lib: 16,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `i2o_ECPublicKey` at `crypto/ec/ec_asn1.c:1170` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_1170: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1170,
+    func: c"i2o_ECPublicKey",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_param_build_set_bn_pad` at `crypto/param_build_set.c:82` (CRYPTO_R_TOO_SMALL_BUFFER).
+pub(crate) const PARAM_BUILD_SET_82: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build_set.c",
+    line: 82,
+    func: c"ossl_param_build_set_bn_pad",
+    lib: 15,
+    reason: 116,
+    dynamic_reason: false,
+};
+
 /// `RAND_pseudo_bytes` at `crypto/rand/rand_lib.c:386` (RAND_R_FUNC_NOT_IMPLEMENTED).
 pub(crate) const RAND_LIB_386: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
@@ -27339,6 +31349,407 @@ pub(crate) static ALL: &[ErrSite] = &[
     EC_CURVE_2982,
     EC_CURVE_3027,
     EC_CURVE_3030,
+    EC_LIB_36,
+    EC_LIB_40,
+    EC_LIB_165,
+    EC_LIB_169,
+    EC_LIB_374,
+    EC_LIB_381,
+    EC_LIB_392,
+    EC_LIB_402,
+    EC_LIB_563,
+    EC_LIB_573,
+    EC_LIB_610,
+    EC_LIB_619,
+    EC_LIB_721,
+    EC_LIB_725,
+    EC_LIB_773,
+    EC_LIB_780,
+    EC_LIB_817,
+    EC_LIB_821,
+    EC_LIB_834,
+    EC_LIB_838,
+    EC_LIB_851,
+    EC_LIB_855,
+    EC_LIB_868,
+    EC_LIB_872,
+    EC_LIB_879,
+    EC_LIB_908,
+    EC_LIB_912,
+    EC_LIB_916,
+    EC_LIB_944,
+    EC_LIB_949,
+    EC_LIB_959,
+    EC_LIB_963,
+    EC_LIB_972,
+    EC_LIB_976,
+    EC_LIB_985,
+    EC_LIB_989,
+    EC_LIB_1006,
+    EC_LIB_1010,
+    EC_LIB_1020,
+    EC_LIB_1024,
+    EC_LIB_1034,
+    EC_LIB_1038,
+    EC_LIB_1050,
+    EC_LIB_1055,
+    EC_LIB_1081,
+    EC_LIB_1090,
+    EC_LIB_1100,
+    EC_LIB_1128,
+    EC_LIB_1140,
+    EC_LIB_1357,
+    EC_LIB_1377,
+    EC_LIB_1495,
+    EC_LIB_1513,
+    EC_LIB_1522,
+    EC_LIB_1533,
+    EC_LIB_1574,
+    EC_LIB_1582,
+    EC_LIB_1588,
+    EC_LIB_1598,
+    EC_LIB_1604,
+    EC_LIB_1615,
+    EC_LIB_1621,
+    EC_LIB_1626,
+    EC_LIB_1633,
+    EC_LIB_1639,
+    EC_LIB_1644,
+    EC_LIB_1652,
+    EC_LIB_1660,
+    EC_LIB_1668,
+    EC_LIB_1676,
+    EC_LIB_1688,
+    EC_LIB_1697,
+    EC_LIB_1706,
+    EC_LIB_1715,
+    EC_LIB_1722,
+    EC_LIB_1728,
+    EC_LIB_1739,
+    EC_LIB_1743,
+    ECP_SMPL_151,
+    ECP_SMPL_261,
+    ECP_SMPL_492,
+    ECP_SMPL_511,
+    ECP_SMPL_561,
+    ECP_SMPL_1193,
+    ECP_SMPL_1273,
+    ECP_SMPL_1405,
+    ECP_SMPL_1438,
+    ECP_MONT_166,
+    ECP_MONT_200,
+    ECP_MONT_211,
+    ECP_MONT_255,
+    ECP_MONT_271,
+    ECP_MONT_282,
+    ECP_MONT_293,
+    ECP_NIST_116,
+    ECP_NIST_135,
+    ECP_NIST_160,
+    EC_MULT_157,
+    EC_MULT_161,
+    EC_MULT_169,
+    EC_MULT_175,
+    EC_MULT_180,
+    EC_MULT_193,
+    EC_MULT_198,
+    EC_MULT_212,
+    EC_MULT_217,
+    EC_MULT_229,
+    EC_MULT_235,
+    EC_MULT_240,
+    EC_MULT_260,
+    EC_MULT_266,
+    EC_MULT_272,
+    EC_MULT_353,
+    EC_MULT_368,
+    EC_MULT_464,
+    EC_MULT_491,
+    EC_MULT_543,
+    EC_MULT_552,
+    EC_MULT_595,
+    EC_MULT_610,
+    EC_MULT_633,
+    EC_MULT_668,
+    EC_MULT_749,
+    EC_MULT_837,
+    EC_MULT_855,
+    EC_MULT_889,
+    EC_MULT_896,
+    EC_MULT_928,
+    ECP_OCT_112,
+    ECP_OCT_117,
+    ECP_OCT_132,
+    ECP_OCT_137,
+    ECP_OCT_144,
+    ECP_OCT_172,
+    ECP_OCT_180,
+    ECP_OCT_195,
+    ECP_OCT_226,
+    ECP_OCT_236,
+    ECP_OCT_244,
+    ECP_OCT_256,
+    ECP_OCT_285,
+    ECP_OCT_294,
+    ECP_OCT_298,
+    ECP_OCT_304,
+    ECP_OCT_315,
+    ECP_OCT_334,
+    ECP_OCT_345,
+    ECP_OCT_350,
+    EC_OCT_29,
+    EC_OCT_33,
+    EC_OCT_43,
+    EC_OCT_78,
+    EC_OCT_83,
+    EC_OCT_87,
+    EC_OCT_97,
+    EC_OCT_114,
+    EC_OCT_118,
+    EC_OCT_127,
+    EC2_SMPL_110,
+    EC2_SMPL_189,
+    EC2_SMPL_294,
+    EC2_SMPL_326,
+    EC2_SMPL_331,
+    EC2_SMPL_731,
+    EC2_SMPL_746,
+    EC2_SMPL_813,
+    EC2_SMPL_824,
+    EC2_SMPL_902,
+    EC2_SMPL_929,
+    EC2_OCT_88,
+    EC2_OCT_93,
+    EC2_OCT_141,
+    EC2_OCT_149,
+    EC2_OCT_164,
+    EC2_OCT_199,
+    EC2_OCT_209,
+    EC2_OCT_217,
+    EC2_OCT_229,
+    EC2_OCT_268,
+    EC2_OCT_289,
+    EC2_OCT_293,
+    EC2_OCT_300,
+    EC2_OCT_312,
+    EC2_OCT_334,
+    EC2_OCT_345,
+    EC2_OCT_356,
+    EC2_OCT_363,
+    EC_KEY_109,
+    EC_KEY_212,
+    EC_KEY_224,
+    EC_KEY_419,
+    EC_KEY_424,
+    EC_KEY_480,
+    EC_KEY_486,
+    EC_KEY_492,
+    EC_KEY_498,
+    EC_KEY_529,
+    EC_KEY_534,
+    EC_KEY_538,
+    EC_KEY_555,
+    EC_KEY_560,
+    EC_KEY_580,
+    EC_KEY_589,
+    EC_KEY_593,
+    EC_KEY_618,
+    EC_KEY_647,
+    EC_KEY_675,
+    EC_KEY_944,
+    EC_KEY_967,
+    EC_KEY_981,
+    EC_KEY_994,
+    EC_KEY_1000,
+    EC_KEY_1004,
+    EC_KMETH_104,
+    EC_KMETH_113,
+    EC_KMETH_125,
+    EC_KMETH_131,
+    EC_KMETH_156,
+    EC_KMETH_160,
+    ECDSA_OSSL_43,
+    ECDSA_OSSL_55,
+    ECDSA_OSSL_67,
+    ECDSA_OSSL_106,
+    ECDSA_OSSL_110,
+    ECDSA_OSSL_148,
+    ECDSA_OSSL_152,
+    ECDSA_OSSL_157,
+    ECDSA_OSSL_163,
+    ECDSA_OSSL_172,
+    ECDSA_OSSL_176,
+    ECDSA_OSSL_181,
+    ECDSA_OSSL_214,
+    ECDSA_OSSL_221,
+    ECDSA_OSSL_226,
+    ECDSA_OSSL_231,
+    ECDSA_OSSL_238,
+    ECDSA_OSSL_285,
+    ECDSA_OSSL_289,
+    ECDSA_OSSL_294,
+    ECDSA_OSSL_300,
+    ECDSA_OSSL_306,
+    ECDSA_OSSL_313,
+    ECDSA_OSSL_318,
+    ECDSA_OSSL_329,
+    ECDSA_OSSL_334,
+    ECDSA_OSSL_341,
+    ECDSA_OSSL_348,
+    ECDSA_OSSL_362,
+    ECDSA_OSSL_366,
+    ECDSA_OSSL_375,
+    ECDSA_OSSL_385,
+    ECDSA_OSSL_390,
+    ECDSA_OSSL_455,
+    ECDSA_OSSL_460,
+    ECDSA_OSSL_466,
+    ECDSA_OSSL_475,
+    ECDSA_OSSL_481,
+    ECDSA_OSSL_486,
+    ECDSA_OSSL_492,
+    ECDSA_OSSL_503,
+    ECDSA_OSSL_508,
+    ECDSA_OSSL_513,
+    ECDSA_OSSL_518,
+    ECDSA_OSSL_523,
+    ECDSA_OSSL_527,
+    ECDSA_OSSL_532,
+    ECDSA_OSSL_537,
+    ECDH_OSSL_32,
+    ECDH_OSSL_66,
+    ECDH_OSSL_72,
+    ECDH_OSSL_84,
+    ECDH_OSSL_88,
+    ECDH_OSSL_95,
+    ECDH_OSSL_100,
+    ECDH_OSSL_110,
+    ECDH_OSSL_121,
+    ECDH_OSSL_129,
+    ECDSA_SIGN_31,
+    ECDSA_SIGN_46,
+    ECDSA_SIGN_55,
+    ECDSA_VRF_31,
+    ECDSA_VRF_47,
+    EC_CHECK_26,
+    EC_CHECK_33,
+    EC_CHECK_61,
+    EC_CHECK_72,
+    EC_CHECK_79,
+    EC_CHECK_85,
+    EC_CHECK_89,
+    EC_CHECK_100,
+    EC_CHECK_107,
+    EC_BACKEND_174,
+    EC_BACKEND_180,
+    EC_BACKEND_193,
+    EC_BACKEND_198,
+    EC_BACKEND_204,
+    EC_BACKEND_214,
+    EC_BACKEND_219,
+    EC_BACKEND_229,
+    EC_BACKEND_241,
+    EC_BACKEND_246,
+    EC_BACKEND_252,
+    EC_BACKEND_264,
+    EC_BACKEND_279,
+    EC_BACKEND_298,
+    EC_BACKEND_308,
+    EC_BACKEND_317,
+    EC_BACKEND_345,
+    EC_BACKEND_524,
+    EC_BACKEND_599,
+    EC_BACKEND_769,
+    EC_BACKEND_779,
+    EC_BACKEND_797,
+    EC_BACKEND_825,
+    EC_ASN1_194,
+    EC_ASN1_200,
+    EC_ASN1_205,
+    EC_ASN1_211,
+    EC_ASN1_217,
+    EC_ASN1_229,
+    EC_ASN1_238,
+    EC_ASN1_243,
+    EC_ASN1_255,
+    EC_ASN1_259,
+    EC_ASN1_270,
+    EC_ASN1_283,
+    EC_ASN1_290,
+    EC_ASN1_312,
+    EC_ASN1_318,
+    EC_ASN1_333,
+    EC_ASN1_340,
+    EC_ASN1_348,
+    EC_ASN1_354,
+    EC_ASN1_385,
+    EC_ASN1_396,
+    EC_ASN1_402,
+    EC_ASN1_408,
+    EC_ASN1_416,
+    EC_ASN1_421,
+    EC_ASN1_429,
+    EC_ASN1_435,
+    EC_ASN1_445,
+    EC_ASN1_466,
+    EC_ASN1_487,
+    EC_ASN1_523,
+    EC_ASN1_536,
+    EC_ASN1_541,
+    EC_ASN1_546,
+    EC_ASN1_555,
+    EC_ASN1_566,
+    EC_ASN1_571,
+    EC_ASN1_582,
+    EC_ASN1_589,
+    EC_ASN1_605,
+    EC_ASN1_611,
+    EC_ASN1_627,
+    EC_ASN1_631,
+    EC_ASN1_643,
+    EC_ASN1_648,
+    EC_ASN1_653,
+    EC_ASN1_659,
+    EC_ASN1_666,
+    EC_ASN1_671,
+    EC_ASN1_684,
+    EC_ASN1_699,
+    EC_ASN1_712,
+    EC_ASN1_718,
+    EC_ASN1_722,
+    EC_ASN1_726,
+    EC_ASN1_735,
+    EC_ASN1_740,
+    EC_ASN1_757,
+    EC_ASN1_763,
+    EC_ASN1_788,
+    EC_ASN1_840,
+    EC_ASN1_848,
+    EC_ASN1_856,
+    EC_ASN1_864,
+    EC_ASN1_907,
+    EC_ASN1_911,
+    EC_ASN1_932,
+    EC_ASN1_947,
+    EC_ASN1_960,
+    EC_ASN1_970,
+    EC_ASN1_981,
+    EC_ASN1_1015,
+    EC_ASN1_1020,
+    EC_ASN1_1029,
+    EC_ASN1_1040,
+    EC_ASN1_1048,
+    EC_ASN1_1055,
+    EC_ASN1_1065,
+    EC_ASN1_1079,
+    EC_ASN1_1090,
+    EC_ASN1_1096,
+    EC_ASN1_1129,
+    EC_ASN1_1135,
+    EC_ASN1_1148,
+    EC_ASN1_1156,
+    EC_ASN1_1170,
+    PARAM_BUILD_SET_82,
     RAND_LIB_386,
     RAND_LIB_430,
     RAND_LIB_435,

@@ -4,9 +4,9 @@
     "complete": false,
     "counts": {
       "atlas_owned": 759,
-      "deferred_to_later_phase": 2,
-      "implemented": 460,
-      "open_in_this_stratum": 324,
+      "deferred_to_later_phase": 1,
+      "implemented": 612,
+      "open_in_this_stratum": 173,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -16,16 +16,10 @@
         "owning_phase": 9,
         "reason": "`crypto/des/rand_key.c:22` is `RAND_priv_bytes((unsigned char *)ret, sizeof(DES_cblock))` and its failure arm answers 0. `rand.h` is Phase 9's, and this is the one `des.h` export whose body is the random layer rather than the cipher. `DES_string_to_key` and `DES_string_to_2keys` are *not* in this row: they build a key from a string with `DES_cbc_cksum`, which is this stratum's own.",
         "symbol": "DES_random_key"
-      },
-      {
-        "declaring_header": "ec.h",
-        "owning_phase": 9,
-        "reason": "`crypto/ec/ec_key.c` is Phase 8.7's unit and does not exist in this crate yet: the EC stratum's own key layer is what generates an EC key, and 8.7's row owns the `EC_KEY` object, the groups, the points and the curve tables it is built on. It reaches the random layer through `BN_priv_rand_range` on the `bnrand` -> `RAND_bytes_ex` path that D313 landed, so this row is about the **unit** rather than about a callee, which is what the DH half retired in D331 and the DSA half retired in D333 both turned out to be.",
-        "symbol": "EC_KEY_generate_key"
       }
     ],
     "deferred_by_phase": {
-      "9": 2
+      "9": 1
     },
     "handoffs_discharged": {
       "7": [
@@ -64,24 +58,24 @@
           "binding_phase": 8,
           "blocked_by": [
             {
-              "authority_unit": "crypto/ec/ec_key.c",
+              "authority_unit": "crypto/evp/evp_pkey_type.c",
               "kind": "exported",
-              "line": 711,
-              "name": "EC_KEY_get0_group",
-              "owning_phase": 8
+              "line": 63,
+              "name": "EVP_PKEY_type",
+              "owning_phase": 7
             },
             {
-              "authority_unit": "crypto/ec/ec_lib.c",
-              "kind": "exported",
-              "line": 495,
-              "name": "EC_GROUP_get_curve_name",
+              "authority_unit": "crypto/dh/dh_backend.c",
+              "kind": "internal",
+              "line": 122,
+              "name": "ossl_dh_is_foreign",
               "owning_phase": 8
             }
           ],
           "declaring_header": "evp.h",
-          "note": "`EVP_PKEY_type` is this stratum's own withheld export and `ossl_dh_is_foreign` has no recorded owner phase, so the two Phase-8 exports that can carry the claim are named; `EVP_PKEY_set_type`, the call between them, is landed.",
+          "note": "D340 records `crypto/dh/dh_backend.c` as phase 8's, because `ossl_dh_is_foreign` is the only Phase-8 blocker this body still has and it had no owner phase anywhere in the atlases. The row was blocked by `EC_KEY_get0_group` and `EC_GROUP_get_curve_name` until D340 landed them; a row whose every blocker has landed is stale by definition, which is what `blocker_liveness` reported and this edit answers.",
           "owning_phase": 8,
-          "reason": "`crypto/evp/p_lib.c:791` calls `EVP_PKEY_type` (`:797`, the `standard_methods[]` walk `crypto/evp/evp_pkey_type.c:63` is the export for), `EC_KEY_get0_group` and `EC_GROUP_get_curve_name` (`:801`, `:803`) on the incoming key, and then `detect_foreign_key` -> `ossl_dh_is_foreign` (`:819`, `:782`). Every one is Phase 8's; the `EVP_PKEY_set_type` call between them is landed. `EVP_PKEY_assign_RSA`/`_DSA`/`_DH`/`_EC_KEY` are `#define`s over this function (`include/openssl/evp.h`), so the four `set1_*` names in the first row wait on it too.",
+          "reason": "`crypto/evp/p_lib.c:791` calls `EVP_PKEY_type` (`:797`, the `standard_methods[]` walk `crypto/evp/evp_pkey_type.c:63` is the export for), and then `detect_foreign_key` -> `ossl_dh_is_foreign` (`:782`, `crypto/dh/dh_backend.c:122`) once a key is attached. The two `EC_KEY_get0_group`/`EC_GROUP_get_curve_name` calls between them (`:801`, `:803`) landed with D340, which is why this row names the two blockers that are still absent rather than the two that left: `EVP_PKEY_type` is this stratum's own withheld export and `ossl_dh_is_foreign` is the DH provider backend's, which `forensics/prerequisites.json` now records at phase 8 so the row's phase can be checked. The `EVP_PKEY_set_type` call between them is landed. `EVP_PKEY_assign_RSA`/`_DSA`/`_DH`/`_EC_KEY` are `#define`s over this function (`include/openssl/evp.h`), so the four `set1_*` names in the first row wait on it too.",
           "symbol": "EVP_PKEY_assign"
         },
         {
@@ -635,60 +629,46 @@
           "binding_phase": 8,
           "blocked_by": [
             {
-              "authority_unit": "crypto/ec/ec_key.c",
+              "authority_unit": "crypto/evp/p_legacy.c",
               "kind": "exported",
-              "line": 855,
-              "name": "EC_KEY_get_conv_form",
-              "owning_phase": 8
+              "line": 45,
+              "name": "EVP_PKEY_get0_EC_KEY",
+              "owning_phase": 7
             },
             {
-              "authority_unit": "crypto/ec/ec_key.c",
-              "kind": "exported",
-              "line": 711,
-              "name": "EC_KEY_get0_group",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/ec/ec_lib.c",
-              "kind": "exported",
-              "line": 505,
-              "name": "EC_GROUP_get_field_type",
+              "authority_unit": "crypto/evp/p_lib.c",
+              "kind": "internal",
+              "line": 2154,
+              "name": "evp_pkey_get_legacy",
               "owning_phase": 8
             }
           ],
           "declaring_header": "evp.h",
           "owning_phase": 8,
-          "reason": "each opens with `pkey->keymgmt == NULL || pkey->keydata == NULL` and answers its legacy arm -- `EVP_PKEY_get0_EC_KEY` then `EC_KEY_get_conv_form` (`crypto/evp/p_lib.c:2472`, `:2477`) or `EC_KEY_get0_group` then `EC_GROUP_get_field_type` (`:2512`, `:2517`, `:2521`). The provider arm above those needs nothing foreign, but the legacy arm is compiled in and the crate's `EVP_PKEY_get0_EC_KEY` is itself withheld in this stratum, so both are Phase 8's.",
+          "reason": "each opens with `pkey->keymgmt == NULL || pkey->keydata == NULL` and answers its legacy arm -- `EVP_PKEY_get0_EC_KEY` then `EC_KEY_get_conv_form` (`crypto/evp/p_lib.c:2472`, `:2477`) or `EC_KEY_get0_group` then `EC_GROUP_get_field_type` (`:2512`, `:2517`, `:2521`). The three EC accessors landed with D340; what is still absent is `EVP_PKEY_get0_EC_KEY` itself, this stratum's own withheld export, whose whole body is `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) -- so the row names the accessor and its one dependency, which is what it actually waits on.",
           "symbol": "EVP_PKEY_get_ec_point_conv_form"
         },
         {
           "binding_phase": 8,
           "blocked_by": [
             {
-              "authority_unit": "crypto/ec/ec_key.c",
+              "authority_unit": "crypto/evp/p_legacy.c",
               "kind": "exported",
-              "line": 855,
-              "name": "EC_KEY_get_conv_form",
-              "owning_phase": 8
+              "line": 45,
+              "name": "EVP_PKEY_get0_EC_KEY",
+              "owning_phase": 7
             },
             {
-              "authority_unit": "crypto/ec/ec_key.c",
-              "kind": "exported",
-              "line": 711,
-              "name": "EC_KEY_get0_group",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/ec/ec_lib.c",
-              "kind": "exported",
-              "line": 505,
-              "name": "EC_GROUP_get_field_type",
+              "authority_unit": "crypto/evp/p_lib.c",
+              "kind": "internal",
+              "line": 2154,
+              "name": "evp_pkey_get_legacy",
               "owning_phase": 8
             }
           ],
           "declaring_header": "evp.h",
           "owning_phase": 8,
-          "reason": "each opens with `pkey->keymgmt == NULL || pkey->keydata == NULL` and answers its legacy arm -- `EVP_PKEY_get0_EC_KEY` then `EC_KEY_get_conv_form` (`crypto/evp/p_lib.c:2472`, `:2477`) or `EC_KEY_get0_group` then `EC_GROUP_get_field_type` (`:2512`, `:2517`, `:2521`). The provider arm above those needs nothing foreign, but the legacy arm is compiled in and the crate's `EVP_PKEY_get0_EC_KEY` is itself withheld in this stratum, so both are Phase 8's.",
+          "reason": "each opens with `pkey->keymgmt == NULL || pkey->keydata == NULL` and answers its legacy arm -- `EVP_PKEY_get0_EC_KEY` then `EC_KEY_get_conv_form` (`crypto/evp/p_lib.c:2472`, `:2477`) or `EC_KEY_get0_group` then `EC_GROUP_get_field_type` (`:2512`, `:2517`, `:2521`). The three EC accessors landed with D340; what is still absent is `EVP_PKEY_get0_EC_KEY` itself, this stratum's own withheld export, whose whole body is `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) -- so the row names the accessor and its one dependency, which is what it actually waits on.",
           "symbol": "EVP_PKEY_get_field_type"
         },
         {
@@ -1332,6 +1312,156 @@
       "DSA_sign_setup",
       "DSA_test_flags",
       "DSA_up_ref",
+      "ECDH_compute_key",
+      "ECDSA_SIG_free",
+      "ECDSA_SIG_get0",
+      "ECDSA_SIG_new",
+      "ECDSA_SIG_set0",
+      "ECDSA_do_sign",
+      "ECDSA_do_sign_ex",
+      "ECDSA_do_verify",
+      "ECDSA_sign",
+      "ECDSA_sign_ex",
+      "ECDSA_sign_setup",
+      "ECDSA_size",
+      "ECDSA_verify",
+      "EC_GF2m_simple_method",
+      "EC_GFp_mont_method",
+      "EC_GFp_nist_method",
+      "EC_GFp_simple_method",
+      "EC_GROUP_check",
+      "EC_GROUP_check_discriminant",
+      "EC_GROUP_check_named_curve",
+      "EC_GROUP_clear_free",
+      "EC_GROUP_cmp",
+      "EC_GROUP_copy",
+      "EC_GROUP_dup",
+      "EC_GROUP_free",
+      "EC_GROUP_get0_cofactor",
+      "EC_GROUP_get0_field",
+      "EC_GROUP_get0_generator",
+      "EC_GROUP_get0_order",
+      "EC_GROUP_get0_seed",
+      "EC_GROUP_get_asn1_flag",
+      "EC_GROUP_get_basis_type",
+      "EC_GROUP_get_cofactor",
+      "EC_GROUP_get_curve",
+      "EC_GROUP_get_curve_GF2m",
+      "EC_GROUP_get_curve_GFp",
+      "EC_GROUP_get_curve_name",
+      "EC_GROUP_get_degree",
+      "EC_GROUP_get_field_type",
+      "EC_GROUP_get_mont_data",
+      "EC_GROUP_get_order",
+      "EC_GROUP_get_pentanomial_basis",
+      "EC_GROUP_get_point_conversion_form",
+      "EC_GROUP_get_seed_len",
+      "EC_GROUP_get_trinomial_basis",
+      "EC_GROUP_have_precompute_mult",
+      "EC_GROUP_method_of",
+      "EC_GROUP_new",
+      "EC_GROUP_new_by_curve_name",
+      "EC_GROUP_new_by_curve_name_ex",
+      "EC_GROUP_new_curve_GF2m",
+      "EC_GROUP_new_curve_GFp",
+      "EC_GROUP_new_from_params",
+      "EC_GROUP_order_bits",
+      "EC_GROUP_precompute_mult",
+      "EC_GROUP_set_asn1_flag",
+      "EC_GROUP_set_curve",
+      "EC_GROUP_set_curve_GF2m",
+      "EC_GROUP_set_curve_GFp",
+      "EC_GROUP_set_curve_name",
+      "EC_GROUP_set_generator",
+      "EC_GROUP_set_point_conversion_form",
+      "EC_GROUP_set_seed",
+      "EC_GROUP_to_params",
+      "EC_KEY_METHOD_free",
+      "EC_KEY_METHOD_get_compute_key",
+      "EC_KEY_METHOD_get_init",
+      "EC_KEY_METHOD_get_keygen",
+      "EC_KEY_METHOD_get_sign",
+      "EC_KEY_METHOD_get_verify",
+      "EC_KEY_METHOD_new",
+      "EC_KEY_METHOD_set_compute_key",
+      "EC_KEY_METHOD_set_init",
+      "EC_KEY_METHOD_set_keygen",
+      "EC_KEY_METHOD_set_sign",
+      "EC_KEY_METHOD_set_verify",
+      "EC_KEY_OpenSSL",
+      "EC_KEY_can_sign",
+      "EC_KEY_check_key",
+      "EC_KEY_clear_flags",
+      "EC_KEY_copy",
+      "EC_KEY_decoded_from_explicit_params",
+      "EC_KEY_dup",
+      "EC_KEY_free",
+      "EC_KEY_generate_key",
+      "EC_KEY_get0_engine",
+      "EC_KEY_get0_group",
+      "EC_KEY_get0_private_key",
+      "EC_KEY_get0_public_key",
+      "EC_KEY_get_conv_form",
+      "EC_KEY_get_default_method",
+      "EC_KEY_get_enc_flags",
+      "EC_KEY_get_ex_data",
+      "EC_KEY_get_flags",
+      "EC_KEY_get_method",
+      "EC_KEY_key2buf",
+      "EC_KEY_new",
+      "EC_KEY_new_by_curve_name",
+      "EC_KEY_new_by_curve_name_ex",
+      "EC_KEY_new_ex",
+      "EC_KEY_new_method",
+      "EC_KEY_oct2key",
+      "EC_KEY_oct2priv",
+      "EC_KEY_precompute_mult",
+      "EC_KEY_priv2buf",
+      "EC_KEY_priv2oct",
+      "EC_KEY_set_asn1_flag",
+      "EC_KEY_set_conv_form",
+      "EC_KEY_set_default_method",
+      "EC_KEY_set_enc_flags",
+      "EC_KEY_set_ex_data",
+      "EC_KEY_set_flags",
+      "EC_KEY_set_group",
+      "EC_KEY_set_method",
+      "EC_KEY_set_private_key",
+      "EC_KEY_set_public_key",
+      "EC_KEY_set_public_key_affine_coordinates",
+      "EC_KEY_up_ref",
+      "EC_METHOD_get_field_type",
+      "EC_POINT_add",
+      "EC_POINT_clear_free",
+      "EC_POINT_cmp",
+      "EC_POINT_copy",
+      "EC_POINT_dbl",
+      "EC_POINT_dup",
+      "EC_POINT_free",
+      "EC_POINT_get_Jprojective_coordinates_GFp",
+      "EC_POINT_get_affine_coordinates",
+      "EC_POINT_get_affine_coordinates_GF2m",
+      "EC_POINT_get_affine_coordinates_GFp",
+      "EC_POINT_invert",
+      "EC_POINT_is_at_infinity",
+      "EC_POINT_is_on_curve",
+      "EC_POINT_make_affine",
+      "EC_POINT_method_of",
+      "EC_POINT_mul",
+      "EC_POINT_new",
+      "EC_POINT_oct2point",
+      "EC_POINT_point2buf",
+      "EC_POINT_point2oct",
+      "EC_POINT_set_Jprojective_coordinates_GFp",
+      "EC_POINT_set_affine_coordinates",
+      "EC_POINT_set_affine_coordinates_GF2m",
+      "EC_POINT_set_affine_coordinates_GFp",
+      "EC_POINT_set_compressed_coordinates",
+      "EC_POINT_set_compressed_coordinates_GF2m",
+      "EC_POINT_set_compressed_coordinates_GFp",
+      "EC_POINT_set_to_infinity",
+      "EC_POINTs_make_affine",
+      "EC_POINTs_mul",
       "EC_curve_nid2nist",
       "EC_curve_nist2nid",
       "EC_get_builtin_curves",
@@ -1540,7 +1670,9 @@
       "WHIRLPOOL_BitUpdate",
       "WHIRLPOOL_Final",
       "WHIRLPOOL_Init",
-      "WHIRLPOOL_Update"
+      "WHIRLPOOL_Update",
+      "d2i_ECDSA_SIG",
+      "i2d_ECDSA_SIG"
     ],
     "module_prefixes": [
       {
@@ -1846,24 +1978,6 @@
         "declaring_header": "ec.h",
         "module": "src/ec/mod.rs",
         "received_from_phase": null,
-        "symbol": "ECDH_compute_key"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "ECDSA_SIG_free"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "ECDSA_SIG_get0"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
         "symbol": "ECDSA_SIG_get0_r"
       },
       {
@@ -1871,66 +1985,6 @@
         "module": "src/ec/mod.rs",
         "received_from_phase": null,
         "symbol": "ECDSA_SIG_get0_s"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "ECDSA_SIG_new"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "ECDSA_SIG_set0"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "ECDSA_do_sign"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "ECDSA_do_sign_ex"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "ECDSA_do_verify"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "ECDSA_sign"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "ECDSA_sign_ex"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "ECDSA_sign_setup"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "ECDSA_size"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "ECDSA_verify"
       },
       {
         "declaring_header": "ec.h",
@@ -1996,156 +2050,6 @@
         "declaring_header": "ec.h",
         "module": "src/ec/mod.rs",
         "received_from_phase": null,
-        "symbol": "EC_GF2m_simple_method"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GFp_mont_method"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GFp_nist_method"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GFp_simple_method"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_check"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_check_discriminant"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_check_named_curve"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_clear_free"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_cmp"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_copy"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_dup"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_free"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_get0_cofactor"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_get0_field"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_get0_generator"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_get0_order"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_get0_seed"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_get_asn1_flag"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_get_basis_type"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_get_cofactor"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_get_curve"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_get_curve_GF2m"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_get_curve_GFp"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_get_curve_name"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_get_degree"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
         "symbol": "EC_GROUP_get_ecparameters"
       },
       {
@@ -2153,90 +2057,6 @@
         "module": "src/ec/mod.rs",
         "received_from_phase": null,
         "symbol": "EC_GROUP_get_ecpkparameters"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_get_field_type"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_get_mont_data"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_get_order"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_get_pentanomial_basis"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_get_point_conversion_form"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_get_seed_len"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_get_trinomial_basis"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_have_precompute_mult"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_method_of"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_new"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_new_by_curve_name"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_new_by_curve_name_ex"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_new_curve_GF2m"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_new_curve_GFp"
       },
       {
         "declaring_header": "ec.h",
@@ -2254,312 +2074,6 @@
         "declaring_header": "ec.h",
         "module": "src/ec/mod.rs",
         "received_from_phase": null,
-        "symbol": "EC_GROUP_new_from_params"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_order_bits"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_precompute_mult"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_set_asn1_flag"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_set_curve"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_set_curve_GF2m"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_set_curve_GFp"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_set_curve_name"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_set_generator"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_set_point_conversion_form"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_set_seed"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_to_params"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_METHOD_free"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_METHOD_get_compute_key"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_METHOD_get_init"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_METHOD_get_keygen"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_METHOD_get_sign"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_METHOD_get_verify"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_METHOD_new"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_METHOD_set_compute_key"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_METHOD_set_init"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_METHOD_set_keygen"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_METHOD_set_sign"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_METHOD_set_verify"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_OpenSSL"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_can_sign"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_check_key"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_clear_flags"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_copy"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_decoded_from_explicit_params"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_dup"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_free"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_get0_engine"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_get0_group"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_get0_private_key"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_get0_public_key"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_get_conv_form"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_get_default_method"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_get_enc_flags"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_get_ex_data"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_get_flags"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_get_method"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_key2buf"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_new"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_new_by_curve_name"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_new_by_curve_name_ex"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_new_ex"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_new_method"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_oct2key"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_oct2priv"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_precompute_mult"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
         "symbol": "EC_KEY_print"
       },
       {
@@ -2572,163 +2086,7 @@
         "declaring_header": "ec.h",
         "module": "src/ec/mod.rs",
         "received_from_phase": null,
-        "symbol": "EC_KEY_priv2buf"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_priv2oct"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_set_asn1_flag"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_set_conv_form"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_set_default_method"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_set_enc_flags"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_set_ex_data"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_set_flags"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_set_group"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_set_method"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_set_private_key"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_set_public_key"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_set_public_key_affine_coordinates"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_up_ref"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_METHOD_get_field_type"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_add"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
         "symbol": "EC_POINT_bn2point"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_clear_free"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_cmp"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_copy"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_dbl"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_dup"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_free"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_get_Jprojective_coordinates_GFp"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_get_affine_coordinates"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_get_affine_coordinates_GF2m"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_get_affine_coordinates_GFp"
       },
       {
         "declaring_header": "ec.h",
@@ -2740,133 +2098,13 @@
         "declaring_header": "ec.h",
         "module": "src/ec/mod.rs",
         "received_from_phase": null,
-        "symbol": "EC_POINT_invert"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_is_at_infinity"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_is_on_curve"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_make_affine"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_method_of"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_mul"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_new"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_oct2point"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
         "symbol": "EC_POINT_point2bn"
       },
       {
         "declaring_header": "ec.h",
         "module": "src/ec/mod.rs",
         "received_from_phase": null,
-        "symbol": "EC_POINT_point2buf"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
         "symbol": "EC_POINT_point2hex"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_point2oct"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_set_Jprojective_coordinates_GFp"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_set_affine_coordinates"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_set_affine_coordinates_GF2m"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_set_affine_coordinates_GFp"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_set_compressed_coordinates"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_set_compressed_coordinates_GF2m"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_set_compressed_coordinates_GFp"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINT_set_to_infinity"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINTs_make_affine"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_POINTs_mul"
       },
       {
         "declaring_header": "dh.h",
@@ -3544,12 +2782,6 @@
         "declaring_header": "ec.h",
         "module": "src/ec/mod.rs",
         "received_from_phase": null,
-        "symbol": "d2i_ECDSA_SIG"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
         "symbol": "d2i_ECPKParameters"
       },
       {
@@ -3641,12 +2873,6 @@
         "module": "src/dsa/mod.rs",
         "received_from_phase": null,
         "symbol": "i2d_DSAparams"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_ECDSA_SIG"
       },
       {
         "declaring_header": "ec.h",
@@ -3774,12 +3000,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "86016c9c772e5f6b2b2dfa4c2efe025c6039bf2aac1719449dddec5574d2282c"
+      "sha256": "13cbb704f293790f1ed4920771884e314ffb8359c4d67aa652c270733cf5780f"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "ed137081a51dc514c3ee66bde040431c5804a92bbac273210007ae8035639423"
+      "sha256": "485e1dc354c833af01a0491d5b63abb5fbb9ca42317ce1a02f4c9ed6d84be2c6"
     }
   ],
   "kind": "phase8-obligations",

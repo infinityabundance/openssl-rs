@@ -20,7 +20,7 @@
 //! own `data[]` slice, member for member and width for width, so the two derivations have
 //! to agree before the file is written.
 //!
-//! ## `curve_list[]`'s fourth column is recorded and not transcribed, and this is why
+//! ## `curve_list[]`'s fourth column is resolved in code, and the one non-NULL row is `D-EC-2`
 //!
 //! The authority's row is
 //!
@@ -33,37 +33,25 @@
 //! } ec_list_element;
 //! ```
 //!
-//! and its `meth` column is deliberately the one column this module does not carry.
-//! `ec_nistp_64_gcc_128` is disabled in this profile and `ECP_NISTZ256_ASM` is defined, so
-//! **exactly one** of the eighty-two rows resolves to a function — `NID_X9_62_prime256v1`
-//! names `EC_GFp_nistz256_method` — and the rest are `0`. That symbol is `ec_local.h`'s
-//! internal and not a DSO export, and its `EC_METHOD` table (`ecp_nistz256.c:1569-1630`)
-//! names `ossl_ec_key_simple_priv2oct`/`_oct2priv`/`_generate_key`/`_check_key`/
-//! `_generate_public_key` (`ec_key.c`), `ossl_ecdh_simple_compute_key` (`ecdh_ossl.c`) and
-//! `ossl_ecdsa_simple_sign_setup`/`_sign_sig`/`_verify_sig` (`ecdsa_ossl.c`).
+//! and its `meth` column is resolved by [`curve_list_method`], a function of the row's NID rather
+//! than a field of the generated [`crate::ec::curve_data`] table. `ec_nistp_64_gcc_128` is disabled
+//! in this profile and `ECP_NISTZ256_ASM` is defined, so **exactly one** of the eighty-two rows is
+//! non-NULL in the authority — `NID_X9_62_prime256v1` names `EC_GFp_nistz256_method` — and the rest
+//! are `0`. That symbol is `ec_local.h`'s internal and not a DSO export, its field arithmetic is
+//! `crypto/ec/ecp_nistz256-x86_64.s` with no portable arm, and its Montgomery representation is
+//! observable, so it is neither transcribable nor inventable (D334's rule, applied one level down).
 //!
-//! `ec_key.c`, `ecdh_ossl.c` and `ecdsa_ossl.c` are **not this subphase's** — 8.7's row
-//! claims `ec_key.c` and this slice does not land it, and `ecdh_*`/`ecdsa_*` are the unit
-//! `docs/PHASE-8-SUBPHASES.md` defers. So the method cannot be built, and a row that wrote
-//! `None` where the authority writes a function would be a fabricated value — the one thing
-//! this project refuses more firmly than an omission. The column is therefore **recorded in
-//! `forensics/atlas/ec-curves.json`** for every row, with the profile's `#if`/`#elif`
-//! resolution written out and the probe's own method observation beside it (the group's
-//! `EC_GROUP_method_of` identity, which is `other` for the one nistz256 curve and one of the
-//! four exported constructors for the rest), so the claim "exactly one non-NULL row, and it
-//! is `NID_X9_62_prime256v1`" is a measurement rather than a reading.
+//! The landing therefore resolves that one row to `EC_GFp_simple_method`, exactly as every NULL row
+//! resolves through `EC_GROUP_new_curve_GFp`, and records the difference as
+//! `docs/SECURITY_DIVERGENCE_POLICY.md`'s **`D-EC-2`**, which **supersedes `D-EC-1`**. D-EC-1 named
+//! the column as "not transcribed"; D-EC-2 is the same boundary with the answer the landing
+//! actually gives — a stated behaviour a court can compare rather than a NULL. The consequences and
+//! the trigger are written out on [`curve_list_method`].
 //!
-//! **What it blocks, stated as the authority coordinate rather than as a symptom.**
-//! `EC_GROUP_new_by_curve_name_ex` and its static `ec_group_new_from_data` are the only
-//! readers of the column, and they are the two labels of this unit that stay `open`
-//! because of it: `ec_group_new_from_data`'s body branches on `curve.meth`, so a
-//! transcription that dropped the branch would give `NID_X9_62_prime256v1` a *different*
-//! `EC_GROUP_method_of` than the authority — an observable difference the moment
-//! `EC_GROUP_new_by_curve_name` exists. `EC_get_builtin_curves`, whose answer is
-//! `(nid, comment)` and which never reads the column, is unaffected and is landed here.
-//! The divergence is `docs/SECURITY_DIVERGENCE_POLICY.md`'s `D-EC-1`, which names the
-//! slice that removes it and the two tripwires that stop the field being added without
-//! reading it.
+//! `ec_group_new_from_data`'s `curve.meth` branch is therefore real: on this profile it takes the
+//! `Some` arm for `NID_X9_62_prime256v1` (whose `group_full_init` column is NULL, so the generic
+//! `group_set_curve` path runs) and the `None` arm for every other row. The `if let Some(meth)`
+//! shape is the authority's own and nothing is short-circuited.
 //!
 //! ## `EC_curve_nid2nist` and `EC_curve_nist2nid` are three-line wrappers, and their unit is
 //! elsewhere
@@ -88,9 +76,43 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::{c_char, c_int, CStr};
+use core::ptr;
 
+use crate::asn1::prim::ASN1_OBJECT_free;
+use crate::bn::bignum::{
+    BN_bin2bn, BN_bn2binpad, BN_free, BN_is_word, BN_is_zero, BN_num_bits, BN_set_word, BigNum,
+};
+use crate::bn::ctx::{BN_CTX_end, BN_CTX_free, BN_CTX_get, BN_CTX_new_ex, BN_CTX_start, BnCtx};
 use crate::ec::curve_data::EC_LIST_ELEMENTS;
+use crate::ec::cvt::{EC_GROUP_new_curve_GF2m, EC_GROUP_new_curve_GFp};
+use crate::ec::lib::{
+    ossl_ec_group_new_ex, EC_GROUP_free, EC_GROUP_get0_cofactor, EC_GROUP_get0_generator,
+    EC_GROUP_get0_seed, EC_GROUP_get_asn1_flag, EC_GROUP_get_curve, EC_GROUP_get_curve_name,
+    EC_GROUP_get_field_type, EC_GROUP_get_order, EC_GROUP_get_seed_len, EC_GROUP_set_asn1_flag,
+    EC_GROUP_set_curve_name, EC_GROUP_set_generator, EC_GROUP_set_seed, EC_POINT_free,
+    EC_POINT_get_affine_coordinates, EC_POINT_new, EC_POINT_set_affine_coordinates,
+};
+use crate::ec::smpl::EC_GFp_simple_method;
 use crate::ec::support;
+use crate::ec::{EcGroup, EcMethod, EcPoint};
+use crate::evp::pkey_ctx::{OPENSSL_EC_EXPLICIT_CURVE, OPENSSL_EC_NAMED_CURVE};
+use crate::runtime::bio::print::BIO_snprintf;
+use crate::runtime::err::err_sites;
+use crate::runtime::err::raise_site;
+use crate::runtime::err::raise_site_data;
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc_array};
+use crate::runtime::obj::{
+    NID_X9_62_prime256v1, NID_X9_62_prime_field, NID_undef, OBJ_length, OBJ_nid2obj, OBJ_nid2sn,
+};
+
+extern "C" {
+    /// `int memcmp(const void *, const void *, size_t)`.
+    fn memcmp(a: *const core::ffi::c_void, b: *const core::ffi::c_void, n: usize) -> c_int;
+}
+
+/// The translation-unit coordinate the one `OPENSSL_malloc_array`/`OPENSSL_free` pair in
+/// `ossl_ec_curve_nid_from_params` is attributed to, as the allocator reports it.
+const FILE: *const c_char = c"crypto/ec/ec_curve.c".as_ptr();
 
 /// `typedef struct { int nid; const char *comment; } EC_builtin_curve` —
 /// `include/openssl/ec.h:537-540`.
@@ -160,13 +182,12 @@ impl EcCurveData {
 /// `typedef struct _ec_list_element_st { ... } ec_list_element` —
 /// `crypto/ec/ec_curve.c:2533-2538`, with its `nid`, `data` and `comment` columns.
 ///
-/// **The `meth` column is deliberately absent**, and its reason is the module
-/// documentation's: a `None` where the authority has a function would be a fabricated
-/// value, and the one non-NULL row's function belongs to units this subphase does not
-/// own. `EC_get_builtin_curves`, the only landed reader of this table, does not read it.
-/// The column is recorded per row in `forensics/atlas/ec-curves.json` until the slice
-/// that can build `EC_GFp_nistz256_method` lands it here —
-/// `docs/SECURITY_DIVERGENCE_POLICY.md`'s `D-EC-1`.
+/// **The `meth` column is not a field of this type**, and its reason is the module
+/// documentation's: the one non-NULL row's authority value (`EC_GFp_nistz256_method`) belongs to
+/// units this subphase does not own and is not inventable. The column is therefore resolved by
+/// [`curve_list_method`] — a function of the row's NID — rather than stored per row, so the
+/// generated [`crate::ec::curve_data`] table keeps its three transcribed columns and the fourth is
+/// the one place `D-EC-2` is written down.
 pub struct EcListElement {
     /// `nid` — the curve's NID, which is the lookup key and the first thing
     /// `EC_get_builtin_curves` hands back.
@@ -178,6 +199,51 @@ pub struct EcListElement {
     /// `&CStr` rather than a `&str` because `EC_get_builtin_curves` hands the caller a
     /// `const char *` that points into `.rodata`, and a Rust `&str` is not NUL-terminated.
     pub comment: &'static CStr,
+}
+
+/// `const EC_METHOD *(*meth)(void)` — `crypto/ec/ec_curve.c:2536`, the type of `curve_list[]`'s
+/// fourth column.
+///
+/// A **safe** `extern "C"` function pointer, because the four constructors it can hold are safe
+/// functions in this crate (`EC_GFp_simple_method()` takes no pointer and dereferences none) and
+/// the authority's call `curve.meth()` is not one of its guarded calls either.
+pub type EcMethodCtor = extern "C" fn() -> *const EcMethod;
+
+/// `curve_list[]`'s fourth column, resolved for this profile — `crypto/ec/ec_curve.c:2615-2837`.
+///
+/// The authority leaves the column NULL for every one of its eighty-two rows except
+/// `NID_X9_62_prime256v1`, whose row resolves to `EC_GFp_nistz256_method` (`ECP_NISTZ256_ASM` is
+/// defined here and `ec_nistp_64_gcc_128` is not). That symbol is `ec_local.h`'s internal rather
+/// than a DSO export, its field arithmetic is `crypto/ec/ecp_nistz256-x86_64.s` with no portable
+/// arm (D334), and its representation is observable through every subsequent multiplication — so
+/// it is **not transcribable** and its construction is not inventable. The landing therefore
+/// resolves that one row to [`EC_GFp_simple_method`], exactly as every NULL row resolves through
+/// `EC_GROUP_new_curve_GFp`, and records the difference as
+/// `docs/SECURITY_DIVERGENCE_POLICY.md`'s **`D-EC-2`**, which **supersedes `D-EC-1`**:
+///
+/// * **Obligation:** the method identity `EC_GROUP_method_of` reports for
+///   `EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1)`, and every point operation on that group.
+/// * **Authority:** `EC_GFp_nistz256_method`, the column's one non-NULL value.
+/// * **Crate:** this function answers `EC_GFp_simple_method` for that NID, so
+///   [`ec_group_new_from_data`]'s `curve.meth` branch is real and the field it reads is the
+///   divergence.
+/// * **Observable consequences:** (a) `EC_GROUP_method_of` answers `EC_GFp_simple_method` where the
+///   authority answers `EC_GFp_nistz256_method`; (b) a `secp256r1` signature is the same *value* on
+///   both sides — the group is the same — but not the same *code path*; (c) `EC_nistz256_pre_comp_free`
+///   and `_dup` are not defined, so `EC_GROUP_copy` and `EC_pre_comp_free` do not transcribe their
+///   two `#ifdef ECP_NISTZ256_ASM` arms, an omission unreachable while no nistz256 group exists.
+/// * **Trigger:** the slice that supplies a construction for the perlasm unit, at which point the
+///   column is written with the real constructor and this function returns it.
+///
+/// The mapping is written for this profile's macros; the generator records the same resolution per
+/// row in `forensics/atlas/ec-curves.json`, which is the measurement this function's single branch
+/// is checked against.
+pub(crate) fn curve_list_method(nid: c_int) -> Option<EcMethodCtor> {
+    if nid == NID_X9_62_prime256v1 {
+        Some(EC_GFp_simple_method)
+    } else {
+        None
+    }
 }
 
 /// `size_t EC_get_builtin_curves(EC_builtin_curve *r, size_t nitems)` —
@@ -240,6 +306,401 @@ pub extern "C" fn EC_curve_nid2nist(nid: c_int) -> *const c_char {
 pub unsafe extern "C" fn EC_curve_nist2nid(name: *const c_char) -> c_int {
     // SAFETY: this function's own contract.
     unsafe { support::ossl_ec_curve_nist2nid_int(name) }
+}
+
+/// `static const ec_list_element *ec_curve_nid2curve(int nid)` —
+/// `crypto/ec/ec_curve.c:2842-2854`.
+///
+/// A linear walk of `curve_list[]` in table order. A non-positive NID answers NULL without
+/// walking, which is the authority's own guard and not an optimisation: `NID_undef` is 0 and
+/// `NID_undef` is what `ec_group_explicit_to_named` tests for.
+///
+/// # Safety
+///
+/// None: the table is `'static` and the answer points into it.
+unsafe fn ec_curve_nid2curve(nid: c_int) -> *const EcListElement {
+    if nid <= 0 {
+        return ptr::null();
+    }
+
+    for row in EC_LIST_ELEMENTS.iter() {
+        if row.nid == nid {
+            return row as *const EcListElement;
+        }
+    }
+    ptr::null()
+}
+
+/// `static EC_GROUP *ec_group_new_from_data(OSSL_LIB_CTX *libctx, const char *propq,
+/// const ec_list_element curve)` — `crypto/ec/ec_curve.c:2856-3016`.
+///
+/// The one constructor that reads `curve_list[]`'s `data` column and, for a row that names a
+/// method, its fourth column too. The method read is the **divergence `D-EC-1`**: see the
+/// binding below and [`EcListElement`]'s documentation. Everything else is the authority's own
+/// order — the seed and the six `param_len`-wide numbers are parsed from the row's array, the
+/// curve is set, the base point read and checked, the order and cofactor set, and the seed kept
+/// — with the authority's ASN.1 flag adjustment for a curve with no OID under
+/// `#ifndef FIPS_MODULE`, which is compiled here.
+///
+/// The authority's `curve.data == NULL` arm (its first statement) is **not writable**: the crate
+/// carries [`EcListElement::data`] as a `&'static`, so no row can have a NULL data column and
+/// the arm is unreachable for all eighty-two rows rather than dropped.
+///
+/// # Safety
+///
+/// `libctx` is NULL or a live library context; `propq` is NULL or a NUL-terminated string;
+/// `curve` is a row of [`EC_LIST_ELEMENTS`].
+unsafe fn ec_group_new_from_data(
+    libctx: *mut core::ffi::c_void,
+    propq: *const c_char,
+    curve: &'static EcListElement,
+) -> *mut EcGroup {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used here.
+    unsafe {
+        let mut group: *mut EcGroup = ptr::null_mut();
+        let mut p: *mut BigNum = ptr::null_mut();
+        let mut a: *mut BigNum = ptr::null_mut();
+        let mut b: *mut BigNum = ptr::null_mut();
+        let mut x: *mut BigNum = ptr::null_mut();
+        let mut y: *mut BigNum = ptr::null_mut();
+        let mut order: *mut BigNum = ptr::null_mut();
+        let mut point: *mut EcPoint = ptr::null_mut();
+        let mut ok = false;
+
+        // `curve.meth` — `curve_list[]`'s fourth column, resolved by [`curve_list_method`]: every
+        // row is NULL on this profile except `NID_X9_62_prime256v1`, whose authority value is the
+        // perlasm-only `EC_GFp_nistz256_method` and whose crate value is `EC_GFp_simple_method` —
+        // `D-EC-2`. The branch below is therefore the authority's own and the field it reads is
+        // the divergence.
+        let curve_meth: Option<EcMethodCtor> = curve_list_method(curve.nid);
+
+        let ctx = BN_CTX_new_ex(libctx);
+        if ctx.is_null() {
+            // SAFETY: a compile-time-constant site (`ec_curve.c:2876`, ERR_R_BN_LIB).
+            raise_site(&err_sites::EC_CURVE_2876);
+            return ptr::null_mut();
+        }
+
+        let data = curve.data;
+        let seed_len = data.seed_len;
+        let param_len = data.param_len;
+        let seed = data.data.as_ptr(); /* `(const unsigned char *)(data + 1)` */
+        let params = seed.add(seed_len as usize); /* `params += seed_len` */
+
+        'build: {
+            if let Some(meth) = curve_meth {
+                let meth = meth();
+                group = ossl_ec_group_new_ex(libctx, propq, meth);
+                if group.is_null() {
+                    // SAFETY: a compile-time-constant site (`ec_curve.c:2888`, ERR_R_EC_LIB).
+                    raise_site(&err_sites::EC_CURVE_2888);
+                    break 'build;
+                }
+                if let Some(group_full_init) = (*meth).group_full_init {
+                    if group_full_init(group, params) == 0 {
+                        // SAFETY: a compile-time-constant site (`ec_curve.c:2893`, ERR_R_EC_LIB).
+                        raise_site(&err_sites::EC_CURVE_2893);
+                        break 'build;
+                    }
+                    EC_GROUP_set_curve_name(group, curve.nid);
+                    BN_CTX_free(ctx);
+                    return group;
+                }
+            }
+
+            /* params += seed_len */
+            p = BN_bin2bn(params.add(0), param_len, ptr::null_mut());
+            a = BN_bin2bn(params.add(param_len as usize), param_len, ptr::null_mut());
+            b = BN_bin2bn(
+                params.add(2 * param_len as usize),
+                param_len,
+                ptr::null_mut(),
+            );
+            if p.is_null() || a.is_null() || b.is_null() {
+                // SAFETY: a compile-time-constant site (`ec_curve.c:2907`, ERR_R_BN_LIB).
+                raise_site(&err_sites::EC_CURVE_2907);
+                break 'build;
+            }
+
+            if !group.is_null() {
+                let Some(set_curve) = (*(*group).meth).group_set_curve else {
+                    // A NULL `group_set_curve` cannot occur on a landed table.
+                    raise_site(&err_sites::EC_CURVE_2913);
+                    break 'build;
+                };
+                if set_curve(group, p, a, b, ctx) == 0 {
+                    // SAFETY: a compile-time-constant site (`ec_curve.c:2913`, ERR_R_EC_LIB).
+                    raise_site(&err_sites::EC_CURVE_2913);
+                    break 'build;
+                }
+            } else if data.field_type == NID_X9_62_prime_field {
+                group = EC_GROUP_new_curve_GFp(p, a, b, ctx);
+                if group.is_null() {
+                    // SAFETY: a compile-time-constant site (`ec_curve.c:2918`, ERR_R_EC_LIB).
+                    raise_site(&err_sites::EC_CURVE_2918);
+                    break 'build;
+                }
+            } else {
+                /* field_type == NID_X9_62_characteristic_two_field */
+                group = EC_GROUP_new_curve_GF2m(p, a, b, ctx);
+                if group.is_null() {
+                    // SAFETY: a compile-time-constant site (`ec_curve.c:2927`, ERR_R_EC_LIB).
+                    raise_site(&err_sites::EC_CURVE_2927);
+                    break 'build;
+                }
+            }
+
+            EC_GROUP_set_curve_name(group, curve.nid);
+
+            point = EC_POINT_new(group);
+            if point.is_null() {
+                // SAFETY: a compile-time-constant site (`ec_curve.c:2936`, ERR_R_EC_LIB).
+                raise_site(&err_sites::EC_CURVE_2936);
+                break 'build;
+            }
+
+            x = BN_bin2bn(
+                params.add(3 * param_len as usize),
+                param_len,
+                ptr::null_mut(),
+            );
+            y = BN_bin2bn(
+                params.add(4 * param_len as usize),
+                param_len,
+                ptr::null_mut(),
+            );
+            if x.is_null() || y.is_null() {
+                // SAFETY: a compile-time-constant site (`ec_curve.c:2942`, ERR_R_BN_LIB).
+                raise_site(&err_sites::EC_CURVE_2942);
+                break 'build;
+            }
+            if EC_POINT_set_affine_coordinates(group, point, x, y, ctx) == 0 {
+                // SAFETY: a compile-time-constant site (`ec_curve.c:2946`, ERR_R_EC_LIB).
+                raise_site(&err_sites::EC_CURVE_2946);
+                break 'build;
+            }
+            order = BN_bin2bn(
+                params.add(5 * param_len as usize),
+                param_len,
+                ptr::null_mut(),
+            );
+            if order.is_null() || BN_set_word(x, data.cofactor as core::ffi::c_ulong) == 0 {
+                // SAFETY: a compile-time-constant site (`ec_curve.c:2951`, ERR_R_BN_LIB).
+                raise_site(&err_sites::EC_CURVE_2951);
+                break 'build;
+            }
+            if EC_GROUP_set_generator(group, point, order, x) == 0 {
+                // SAFETY: a compile-time-constant site (`ec_curve.c:2955`, ERR_R_EC_LIB).
+                raise_site(&err_sites::EC_CURVE_2955);
+                break 'build;
+            }
+            if seed_len != 0 && EC_GROUP_set_seed(group, seed, seed_len as usize) == 0 {
+                // SAFETY: a compile-time-constant site (`ec_curve.c:2960`, ERR_R_EC_LIB).
+                raise_site(&err_sites::EC_CURVE_2960);
+                break 'build;
+            }
+
+            if EC_GROUP_get_asn1_flag(group) == OPENSSL_EC_NAMED_CURVE {
+                let asn1obj = OBJ_nid2obj(curve.nid);
+                if asn1obj.is_null() {
+                    // SAFETY: a compile-time-constant site (`ec_curve.c:2982`, ERR_R_OBJ_LIB).
+                    raise_site(&err_sites::EC_CURVE_2982);
+                    break 'build;
+                }
+                if OBJ_length(asn1obj) == 0 {
+                    EC_GROUP_set_asn1_flag(group, OPENSSL_EC_EXPLICIT_CURVE);
+                }
+                ASN1_OBJECT_free(asn1obj);
+            }
+
+            ok = true;
+        }
+
+        if !ok {
+            EC_GROUP_free(group);
+            group = ptr::null_mut();
+        }
+        EC_POINT_free(point);
+        BN_CTX_free(ctx);
+        BN_free(p);
+        BN_free(a);
+        BN_free(b);
+        BN_free(order);
+        BN_free(x);
+        BN_free(y);
+        group
+    }
+}
+
+/// `EC_GROUP *EC_GROUP_new_by_curve_name_ex(OSSL_LIB_CTX *libctx, const char *propq, int nid)`
+/// — `crypto/ec/ec_curve.c:3018-3036`.
+///
+/// The lookup and the constructor are one expression in the authority, so a name that resolves
+/// but whose data fails answers the same `EC_R_UNKNOWN_GROUP` as a name that does not resolve.
+/// On this profile (`#ifndef FIPS_MODULE`) the raise carries `name=<sn>` through
+/// `ERR_raise_data`; the crate's `raise_site_data` is the same path.
+///
+/// # Safety
+///
+/// `libctx` is NULL or a live library context; `propq` is NULL or a NUL-terminated string.
+#[no_mangle]
+pub unsafe extern "C" fn EC_GROUP_new_by_curve_name_ex(
+    libctx: *mut core::ffi::c_void,
+    propq: *const c_char,
+    nid: c_int,
+) -> *mut EcGroup {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used here.
+    unsafe {
+        let curve = ec_curve_nid2curve(nid);
+        let ret = if !curve.is_null() {
+            ec_group_new_from_data(libctx, propq, &*curve)
+        } else {
+            ptr::null_mut()
+        };
+        if curve.is_null() || ret.is_null() {
+            // `ERR_raise_data(ERR_LIB_EC, EC_R_UNKNOWN_GROUP, "name=%s", OBJ_nid2sn(nid))`
+            // (`ec_curve.c:3027`): the reason is carried by the site and the short name is the
+            // formatted data argument. The `#else` arm at `:3030` is the FIPS one and is not
+            // compiled here.
+            let mut msg = [0 as c_char; 128];
+            // SAFETY: `msg` is a 128-byte buffer and the format is the authority's own.
+            BIO_snprintf(
+                msg.as_mut_ptr(),
+                msg.len(),
+                c"name=%s".as_ptr(),
+                OBJ_nid2sn(nid),
+            );
+            // SAFETY: a compile-time-constant site; the message is NUL-terminated.
+            raise_site_data(&err_sites::EC_CURVE_3027, msg.as_ptr());
+            return ptr::null_mut();
+        }
+        ret
+    }
+}
+
+/// `EC_GROUP *EC_GROUP_new_by_curve_name(int nid)` — `crypto/ec/ec_curve.c:3039-3042`.
+///
+/// `#ifndef FIPS_MODULE`, compiled here. The default library context and no property query.
+#[no_mangle]
+pub extern "C" fn EC_GROUP_new_by_curve_name(nid: c_int) -> *mut EcGroup {
+    // SAFETY: this function takes no pointer; the two NULLs are the authority's own.
+    unsafe { EC_GROUP_new_by_curve_name_ex(ptr::null_mut(), ptr::null(), nid) }
+}
+
+/// `int ossl_ec_curve_nid_from_params(const EC_GROUP *group, BN_CTX *ctx)` —
+/// `crypto/ec/ec_curve.c:3081-3178`.
+///
+/// Reconstructs `(p, a, b, x, y, order)` from the group, zero-pads each to the widest of
+/// `BN_num_bytes(order)` and `BN_num_bytes(field)`, and walks `curve_list[]` for a row whose
+/// field type, width, NID (unless the group has none), cofactor and seed all agree and whose
+/// packed parameters are byte-equal. The answer is the matching NID, `NID_undef` when none
+/// matches, and **−1** only when a step fails before the walk.
+///
+/// `BN_num_bytes` is `(BN_num_bits + 7) / 8`; the crate does not export it as a function and
+/// the inline form is used here, exactly as `src/bn/rand.rs` does.
+///
+/// # Safety
+///
+/// `group` is a live group; `ctx` is a live `BN_CTX`.
+#[no_mangle]
+pub unsafe extern "C" fn ossl_ec_curve_nid_from_params(
+    group: *const EcGroup,
+    ctx: *mut BnCtx,
+) -> c_int {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used here.
+    unsafe {
+        let mut ret = -1;
+        const NUM_BN_FIELDS: usize = 6;
+        let mut bn: [*mut BigNum; NUM_BN_FIELDS] = [ptr::null_mut(); NUM_BN_FIELDS];
+
+        /* Use the optional named curve nid as a search field */
+        let nid = EC_GROUP_get_curve_name(group);
+        let field_type = EC_GROUP_get_field_type(group);
+        let seed_len = EC_GROUP_get_seed_len(group);
+        let seed = EC_GROUP_get0_seed(group);
+        let cofactor = EC_GROUP_get0_cofactor(group);
+
+        BN_CTX_start(ctx);
+
+        /*
+         * The built-in curves hold (p, a, b, x, y, order) zero-padded to the wider of the field
+         * modulus and the group order.
+         */
+        let mut param_len = (BN_num_bits((*group).order) + 7) / 8;
+        let len = (BN_num_bits((*group).field) + 7) / 8;
+        if len > param_len {
+            param_len = len;
+        }
+
+        let param_bytes = CRYPTO_malloc_array(NUM_BN_FIELDS, param_len as usize, FILE, 3114)
+            .cast::<core::ffi::c_uchar>();
+
+        'walk: {
+            if param_bytes.is_null() {
+                break 'walk;
+            }
+
+            for slot in bn.iter_mut() {
+                *slot = BN_CTX_get(ctx);
+                if slot.is_null() {
+                    break 'walk;
+                }
+            }
+
+            /* p, a, b */
+            let generator = EC_GROUP_get0_generator(group);
+            if generator.is_null() {
+                break 'walk;
+            }
+            if EC_GROUP_get_curve(group, bn[0], bn[1], bn[2], ctx) == 0
+                /* x, y */
+                || EC_POINT_get_affine_coordinates(group, generator, bn[3], bn[4], ctx) == 0
+                /* order */
+                || EC_GROUP_get_order(group, bn[5], ctx) == 0
+            {
+                break 'walk;
+            }
+
+            for (i, value) in bn.iter().enumerate() {
+                if BN_bn2binpad(*value, param_bytes.add(i * param_len as usize), param_len) <= 0 {
+                    break 'walk;
+                }
+            }
+
+            for row in EC_LIST_ELEMENTS.iter() {
+                let data = row.data;
+                /* `params_seed = (const unsigned char *)(data + 1)`, then `params += seed_len` */
+                let params_seed = data.data.as_ptr();
+                let params = params_seed.add(data.seed_len as usize);
+
+                if data.field_type == field_type
+                    && param_len == data.param_len
+                    && (nid <= 0 || nid == row.nid)
+                    && (cofactor.is_null()
+                        || BN_is_zero(cofactor) != 0
+                        || BN_is_word(cofactor, data.cofactor as core::ffi::c_ulong) != 0)
+                    && (data.seed_len == 0
+                        || seed_len == 0
+                        || (data.seed_len as usize == seed_len
+                            && memcmp(params_seed.cast(), seed.cast(), seed_len) == 0))
+                    && memcmp(
+                        param_bytes.cast(),
+                        params.cast(),
+                        param_len as usize * NUM_BN_FIELDS,
+                    ) == 0
+                {
+                    ret = row.nid;
+                    break 'walk;
+                }
+            }
+            /* Gets here if the group was not found */
+            ret = NID_undef;
+        }
+
+        CRYPTO_free(param_bytes.cast(), FILE, 3175);
+        BN_CTX_end(ctx);
+        ret
+    }
 }
 
 #[cfg(test)]

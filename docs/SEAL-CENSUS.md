@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 2377 | 3519 |
+| libcrypto | 5896 | 2529 | 3367 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **2377** | **4122** |
+| **total** | **6499** | **2529** | **3970** |
 
 ## Ownership atlas, by stratum
 
@@ -33,8 +33,8 @@ declared owner; this is that assignment.
 | 5 | BN + ASN.1 + DER/PEM | `complete` | 561 | 565 | 474 | 91 | 0 |
 | 6 | OSSL_LIB_CTX + provider core | `complete` | 137 | 161 | 161 | 0 | 0 |
 | 7 | EVP framework | `complete` | 924 | 950 | 724 | 226 | 0 |
-| 8 | Native cryptographic primitives | `in-progress` | 759 | 786 | 460 | 2 | 324 |
-| 9 | RAND / DRBG + entropy | `in-progress` | 25 | 71 | 58 | 0 | 13 |
+| 8 | Native cryptographic primitives | `in-progress` | 759 | 786 | 612 | 1 | 173 |
+| 9 | RAND / DRBG + entropy | `in-progress` | 25 | 70 | 58 | 0 | 12 |
 | 10 | Key formats + PKCS + STORE | `not-started` | 272 | — | — | — | — |
 | 11 | X.509 + verification | `not-started` | 1455 | — | — | — | — |
 | 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `not-started` | 1024 | — | — | — | — |
@@ -263,25 +263,25 @@ Courts: `all pass`, 19 court(s), **2954** authority observation(s) over 19 trans
 ## Phase 8 — Native cryptographic primitives
 
 * state: `in-progress`
-* blocking: 324 open obligation(s) of this stratum recorded in forensics/phase8-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase
+* blocking: 173 open obligation(s) of this stratum recorded in forensics/phase8-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase8-obligations.json`
 * atlas-owned: 759
 * owned working set: 786
-* implemented: 460
-* deferred to a later stratum with a stated reason: 2
-* **open in this stratum: 324**
+* implemented: 612
+* deferred to a later stratum with a stated reason: 1
+* **open in this stratum: 173**
 
 Deferred out, by receiving stratum:
 
-* to phase 9: 2 symbol(s)
-  `DES_random_key`, `EC_KEY_generate_key`
+* to phase 9: 1 symbol(s)
+  `DES_random_key`
 
 Hand-offs received and discharged:
 
 * from phase 7: 27 symbol(s) — `EVP_PKEY_assign`, `EVP_PKEY_decrypt_old`, `EVP_PKEY_encrypt_old`, `EVP_PKEY_get0_DH`, `EVP_PKEY_get0_DSA`, `EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get0_RSA`, `EVP_PKEY_get0_hmac`, `EVP_PKEY_get0_poly1305`, `EVP_PKEY_get0_siphash`, `EVP_PKEY_get1_DH`, `EVP_PKEY_get1_DSA`, `EVP_PKEY_get1_EC_KEY`, `EVP_PKEY_get1_RSA`, `EVP_PKEY_get_ec_point_conv_form`, `EVP_PKEY_get_field_type`, `EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0`, `EVP_PKEY_meth_get_count`, `EVP_PKEY_set1_DH`, `EVP_PKEY_set1_DSA`, `EVP_PKEY_set1_EC_KEY`, `EVP_PKEY_set1_RSA`, `EVP_PKEY_type`, `d2i_KeyParams`, `d2i_KeyParams_bio`, `d2i_PublicKey`
 
-Courts: `all pass`, 9 court(s), **9886** authority observation(s) over 7 transcript court(s).
+Courts: `all pass`, 9 court(s), **11537** authority observation(s) over 7 transcript court(s).
 
 The other 2 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
 
@@ -293,28 +293,28 @@ The other 2 compare ELF structure rather than a transcript and observe nothing l
 | RT-RSA | `pass` | 976 |
 | RT-DH | `pass` | 405 |
 | RT-DSA | `pass` | 233 |
-| RT-EC | `pass` | 483 |
+| RT-EC | `pass` | 2134 |
 | CT-DIGEST | `pass` | — (structural) |
 | CT-CIPHER | `pass` | — (structural) |
 
 ## Phase 9 — RAND / DRBG + entropy
 
 * state: `in-progress`
-* blocking: 13 open obligation(s) of this stratum recorded in forensics/phase9-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Its working set is ninety-three exports, and only twenty-five are its own header's: the other sixty-eight arrive as recorded hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives in ten earlier strata's modules (docs/DECISIONS.md D294). The court file records `courts: []` and is not evidence that anything works: no Phase 9 court has landed yet (docs/PHASE-9-SUBPHASES.md section 1)
+* blocking: 12 open obligation(s) of this stratum recorded in forensics/phase9-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Its working set is ninety-three exports, and only twenty-five are its own header's: the other sixty-eight arrive as recorded hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives in ten earlier strata's modules (docs/DECISIONS.md D294). The court file records `courts: []` and is not evidence that anything works: no Phase 9 court has landed yet (docs/PHASE-9-SUBPHASES.md section 1)
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase9-obligations.json`
 * atlas-owned: 25
-* owned working set: 71
+* owned working set: 70
 * implemented: 58
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 13**
+* **open in this stratum: 12**
 
 Hand-offs received and discharged:
 
 * from phase 4: 1 symbol(s) — `BIO_f_nbio_test`
 * from phase 5: 31 symbol(s) — `BN_BLINDING_convert`, `BN_BLINDING_convert_ex`, `BN_BLINDING_create_param`, `BN_BLINDING_update`, `BN_GF2m_mod_solve_quad`, `BN_GF2m_mod_solve_quad_arr`, `BN_GF2m_mod_sqrt`, `BN_GF2m_mod_sqrt_arr`, `BN_X931_derive_prime_ex`, `BN_X931_generate_Xpq`, `BN_X931_generate_prime_ex`, `BN_bntest_rand`, `BN_check_prime`, `BN_generate_dsa_nonce`, `BN_generate_prime`, `BN_generate_prime_ex`, `BN_generate_prime_ex2`, `BN_is_prime`, `BN_is_prime_ex`, `BN_is_prime_fasttest`, `BN_is_prime_fasttest_ex`, `BN_priv_rand`, `BN_priv_rand_ex`, `BN_priv_rand_range`, `BN_priv_rand_range_ex`, `BN_pseudo_rand`, `BN_pseudo_rand_range`, `BN_rand`, `BN_rand_ex`, `BN_rand_range`, `BN_rand_range_ex`
 * from phase 7: 12 symbol(s) — `BIO_f_reliable`, `EVP_CIPHER_CTX_rand_key`, `EVP_SealInit`, `OSSL_HPKE_get_grease_value`, `PEM_ASN1_read`, `PEM_ASN1_read_bio`, `PEM_ASN1_write`, `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx`, `PEM_bytes_read_bio`, `PEM_bytes_read_bio_secmem`, `PEM_do_header`
-* from phase 8: 2 symbol(s) — `DES_random_key`, `EC_KEY_generate_key`
+* from phase 8: 1 symbol(s) — `DES_random_key`
 
 Courts: `all pass`, 4 court(s), **1018** authority observation(s) over 4 transcript court(s).
 
@@ -343,9 +343,9 @@ are proofs of reference only. See `docs/DECISIONS.md` D199 and D236.
 | 5 | 474 | 474 | 383 | 91 | 0 | 0 | 0 |
 | 6 | 161 | 161 | 156 | 5 | 0 | 0 | 0 |
 | 7 | 724 | 724 | 664 | 60 | 0 | 0 | 0 |
-| 8 | 460 | 452 | 452 | 0 | 8 | 0 | 0 |
+| 8 | 612 | 604 | 604 | 0 | 8 | 0 | 0 |
 | 9 | 58 | 58 | 58 | 0 | 0 | 0 | 0 |
-| **total** | **2377** | **2369** | **2088** | **281** | **8** | **0** | **0** |
+| **total** | **2529** | **2521** | **2240** | **281** | **8** | **0** | **0** |
 
 ## Atlas/ledger reconciliation
 
@@ -361,6 +361,6 @@ row for another stratum's export is a hand-off that stratum recorded.
 | 6 | 137 | 161 | 0 | 24 |
 | 7 | 924 | 950 | 0 | 26 |
 | 8 | 759 | 786 | 0 | 27 |
-| 9 | 25 | 71 | 0 | 46 |
+| 9 | 25 | 70 | 0 | 45 |
 
 Problems recorded by the audit: 0.

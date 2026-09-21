@@ -5,7 +5,7 @@
       "findings": 0,
       "legacy_rows": 146,
       "legacy_unit_claims": 20,
-      "structured_blockers": 52,
+      "structured_blockers": 51,
       "structured_rows": 20,
       "unblocked_rows": 5,
       "unblocked_symbols": 12
@@ -118,24 +118,24 @@
         "binding_phase": 8,
         "blocked_by": [
           {
-            "authority_unit": "crypto/ec/ec_key.c",
+            "authority_unit": "crypto/evp/evp_pkey_type.c",
             "kind": "exported",
-            "line": 711,
-            "name": "EC_KEY_get0_group",
-            "owning_phase": 8
+            "line": 63,
+            "name": "EVP_PKEY_type",
+            "owning_phase": 7
           },
           {
-            "authority_unit": "crypto/ec/ec_lib.c",
-            "kind": "exported",
-            "line": 495,
-            "name": "EC_GROUP_get_curve_name",
+            "authority_unit": "crypto/dh/dh_backend.c",
+            "kind": "internal",
+            "line": 122,
+            "name": "ossl_dh_is_foreign",
             "owning_phase": 8
           }
         ],
         "declaring_header": "evp.h",
-        "note": "`EVP_PKEY_type` is this stratum's own withheld export and `ossl_dh_is_foreign` has no recorded owner phase, so the two Phase-8 exports that can carry the claim are named; `EVP_PKEY_set_type`, the call between them, is landed.",
+        "note": "D340 records `crypto/dh/dh_backend.c` as phase 8's, because `ossl_dh_is_foreign` is the only Phase-8 blocker this body still has and it had no owner phase anywhere in the atlases. The row was blocked by `EC_KEY_get0_group` and `EC_GROUP_get_curve_name` until D340 landed them; a row whose every blocker has landed is stale by definition, which is what `blocker_liveness` reported and this edit answers.",
         "owning_phase": 8,
-        "reason": "`crypto/evp/p_lib.c:791` calls `EVP_PKEY_type` (`:797`, the `standard_methods[]` walk `crypto/evp/evp_pkey_type.c:63` is the export for), `EC_KEY_get0_group` and `EC_GROUP_get_curve_name` (`:801`, `:803`) on the incoming key, and then `detect_foreign_key` -> `ossl_dh_is_foreign` (`:819`, `:782`). Every one is Phase 8's; the `EVP_PKEY_set_type` call between them is landed. `EVP_PKEY_assign_RSA`/`_DSA`/`_DH`/`_EC_KEY` are `#define`s over this function (`include/openssl/evp.h`), so the four `set1_*` names in the first row wait on it too.",
+        "reason": "`crypto/evp/p_lib.c:791` calls `EVP_PKEY_type` (`:797`, the `standard_methods[]` walk `crypto/evp/evp_pkey_type.c:63` is the export for), and then `detect_foreign_key` -> `ossl_dh_is_foreign` (`:782`, `crypto/dh/dh_backend.c:122`) once a key is attached. The two `EC_KEY_get0_group`/`EC_GROUP_get_curve_name` calls between them (`:801`, `:803`) landed with D340, which is why this row names the two blockers that are still absent rather than the two that left: `EVP_PKEY_type` is this stratum's own withheld export and `ossl_dh_is_foreign` is the DH provider backend's, which `forensics/prerequisites.json` now records at phase 8 so the row's phase can be checked. The `EVP_PKEY_set_type` call between them is landed. `EVP_PKEY_assign_RSA`/`_DSA`/`_DH`/`_EC_KEY` are `#define`s over this function (`include/openssl/evp.h`), so the four `set1_*` names in the first row wait on it too.",
         "symbol": "EVP_PKEY_assign"
       },
       {
@@ -719,60 +719,46 @@
         "binding_phase": 8,
         "blocked_by": [
           {
-            "authority_unit": "crypto/ec/ec_key.c",
+            "authority_unit": "crypto/evp/p_legacy.c",
             "kind": "exported",
-            "line": 855,
-            "name": "EC_KEY_get_conv_form",
-            "owning_phase": 8
+            "line": 45,
+            "name": "EVP_PKEY_get0_EC_KEY",
+            "owning_phase": 7
           },
           {
-            "authority_unit": "crypto/ec/ec_key.c",
-            "kind": "exported",
-            "line": 711,
-            "name": "EC_KEY_get0_group",
-            "owning_phase": 8
-          },
-          {
-            "authority_unit": "crypto/ec/ec_lib.c",
-            "kind": "exported",
-            "line": 505,
-            "name": "EC_GROUP_get_field_type",
+            "authority_unit": "crypto/evp/p_lib.c",
+            "kind": "internal",
+            "line": 2154,
+            "name": "evp_pkey_get_legacy",
             "owning_phase": 8
           }
         ],
         "declaring_header": "evp.h",
         "owning_phase": 8,
-        "reason": "each opens with `pkey->keymgmt == NULL || pkey->keydata == NULL` and answers its legacy arm -- `EVP_PKEY_get0_EC_KEY` then `EC_KEY_get_conv_form` (`crypto/evp/p_lib.c:2472`, `:2477`) or `EC_KEY_get0_group` then `EC_GROUP_get_field_type` (`:2512`, `:2517`, `:2521`). The provider arm above those needs nothing foreign, but the legacy arm is compiled in and the crate's `EVP_PKEY_get0_EC_KEY` is itself withheld in this stratum, so both are Phase 8's.",
+        "reason": "each opens with `pkey->keymgmt == NULL || pkey->keydata == NULL` and answers its legacy arm -- `EVP_PKEY_get0_EC_KEY` then `EC_KEY_get_conv_form` (`crypto/evp/p_lib.c:2472`, `:2477`) or `EC_KEY_get0_group` then `EC_GROUP_get_field_type` (`:2512`, `:2517`, `:2521`). The three EC accessors landed with D340; what is still absent is `EVP_PKEY_get0_EC_KEY` itself, this stratum's own withheld export, whose whole body is `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) -- so the row names the accessor and its one dependency, which is what it actually waits on.",
         "symbol": "EVP_PKEY_get_ec_point_conv_form"
       },
       {
         "binding_phase": 8,
         "blocked_by": [
           {
-            "authority_unit": "crypto/ec/ec_key.c",
+            "authority_unit": "crypto/evp/p_legacy.c",
             "kind": "exported",
-            "line": 855,
-            "name": "EC_KEY_get_conv_form",
-            "owning_phase": 8
+            "line": 45,
+            "name": "EVP_PKEY_get0_EC_KEY",
+            "owning_phase": 7
           },
           {
-            "authority_unit": "crypto/ec/ec_key.c",
-            "kind": "exported",
-            "line": 711,
-            "name": "EC_KEY_get0_group",
-            "owning_phase": 8
-          },
-          {
-            "authority_unit": "crypto/ec/ec_lib.c",
-            "kind": "exported",
-            "line": 505,
-            "name": "EC_GROUP_get_field_type",
+            "authority_unit": "crypto/evp/p_lib.c",
+            "kind": "internal",
+            "line": 2154,
+            "name": "evp_pkey_get_legacy",
             "owning_phase": 8
           }
         ],
         "declaring_header": "evp.h",
         "owning_phase": 8,
-        "reason": "each opens with `pkey->keymgmt == NULL || pkey->keydata == NULL` and answers its legacy arm -- `EVP_PKEY_get0_EC_KEY` then `EC_KEY_get_conv_form` (`crypto/evp/p_lib.c:2472`, `:2477`) or `EC_KEY_get0_group` then `EC_GROUP_get_field_type` (`:2512`, `:2517`, `:2521`). The provider arm above those needs nothing foreign, but the legacy arm is compiled in and the crate's `EVP_PKEY_get0_EC_KEY` is itself withheld in this stratum, so both are Phase 8's.",
+        "reason": "each opens with `pkey->keymgmt == NULL || pkey->keydata == NULL` and answers its legacy arm -- `EVP_PKEY_get0_EC_KEY` then `EC_KEY_get_conv_form` (`crypto/evp/p_lib.c:2472`, `:2477`) or `EC_KEY_get0_group` then `EC_GROUP_get_field_type` (`:2512`, `:2517`, `:2521`). The three EC accessors landed with D340; what is still absent is `EVP_PKEY_get0_EC_KEY` itself, this stratum's own withheld export, whose whole body is `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) -- so the row names the accessor and its one dependency, which is what it actually waits on.",
         "symbol": "EVP_PKEY_get_field_type"
       },
       {
@@ -4777,7 +4763,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "86016c9c772e5f6b2b2dfa4c2efe025c6039bf2aac1719449dddec5574d2282c"
+      "sha256": "13cbb704f293790f1ed4920771884e314ffb8359c4d67aa652c270733cf5780f"
     },
     {
       "name": "export-defining-units",
@@ -4787,7 +4773,7 @@
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "a3096e3836842168bb3e9178ed438b90995d837c7bc8c086a734047e2a8042af"
+      "sha256": "771fafbb714de8444591837d4e70d60321505e8ac650733ca1ebdf5f21c59968"
     },
     {
       "name": "typedef-owners",
@@ -4797,12 +4783,12 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "857c0bf9ee3bc776586cac82e8dc5ba508aff6ff5644ab9f336a4f568c1b01bd"
+      "sha256": "ae4bafdafacd1de68a358e4b998487916c427b69dab3a5260ff1c197a80e4bf7"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "c89cc7b30883495037e561ea13f760d2d1b38f755773e6f14abcefd1a45381f8"
+      "sha256": "000aceeec7615574d4bdde513e329fc7e9c4bf9ead54613a2fd7143871704613"
     },
     {
       "name": "authority-source-tree-and-crate-source",
@@ -4811,7 +4797,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "6f6aab6d396c2b3a90320a1b5fff1a307f4a9daf86f226c275bbdb49ba79f11d"
+      "sha256": "560d0ab49db30b962f15956bc43f0ec5aee0eee7160d1e005bdbf53abbd0372f"
     }
   ],
   "kind": "phase7-obligations",

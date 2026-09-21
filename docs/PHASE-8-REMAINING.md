@@ -13,11 +13,11 @@ Read from the ledger's `body.counts`.
 | quantity | count |
 |---|---|
 | owned | 786 |
-| implemented | 460 |
-| deferred to a later phase | 2 |
-| open in this stratum | 324 |
+| implemented | 612 |
+| deferred to a later phase | 1 |
+| open in this stratum | 173 |
 
-The identity `owned = implemented + deferred + open` is `786 = 460 + 2 + 324`, which holds.
+The identity `owned = implemented + deferred + open` is `786 = 612 + 1 + 173`, which holds.
 
 ## The merge gate — what Phase 8 owes to Phase 9
 
@@ -28,9 +28,8 @@ this stratum can be complete.
 | symbol | declaring header | owning phase |
 |---|---|---|
 | `DES_random_key` | `des.h` | 9 |
-| `EC_KEY_generate_key` | `ec.h` | 9 |
 
-**2** export(s) are deferred, to Phase 9. A
+**1** export(s) are deferred, to Phase 9. A
 stratum cannot be complete while any export it owns is neither implemented
 nor handed to a later phase, and these rows are the ones a later
 Phase 9 landing discharges.
@@ -47,10 +46,6 @@ symbols it covers are listed above it.
 
   `crypto/des/rand_key.c:22` is `RAND_priv_bytes((unsigned char *)ret, sizeof(DES_cblock))` and its failure arm answers 0. `rand.h` is Phase 9's, and this is the one `des.h` export whose body is the random layer rather than the cipher. `DES_string_to_key` and `DES_string_to_2keys` are *not* in this row: they build a key from a string with `DES_cbc_cksum`, which is this stratum's own.
 
-- `EC_KEY_generate_key`:
-
-  `crypto/ec/ec_key.c` is Phase 8.7's unit and does not exist in this crate yet: the EC stratum's own key layer is what generates an EC key, and 8.7's row owns the `EC_KEY` object, the groups, the points and the curve tables it is built on. It reaches the random layer through `BN_priv_rand_range` on the `bnrand` -> `RAND_bytes_ex` path that D313 landed, so this row is about the **unit** rather than about a callee, which is what the DH half retired in D331 and the DSA half retired in D333 both turned out to be.
-
 ## The work Phase 8 still owns
 
 Grouped by subphase, in numeric order. `open` counts the ledger's `open`
@@ -63,12 +58,12 @@ table, verbatim.
 | 8.4 RSA | `src/rsa/mod.rs` | 24 | `RT-RSA`, `CT-RSA` | 8.1 (the RSA provider's `SHA`-named digests), 8.3 (its OAEP/PSS modes) |
 | 8.5 DH and DHX | `src/dh/mod.rs`, `src/dh/mod.rs`, `src/ffc/`, `src/dh/object.rs`, `src/dh/group_params.rs`, `src/dh/rfc5114.rs`, `src/ffc/dh.rs`, `src/bn/dh.rs`, `src/bn/dh_data.rs` | 32 | `RT-DH`, `CT-DH` | 8.4 (the shared BN/param idiom) |
 | 8.6 DSA | `src/dsa/mod.rs`, `src/dsa/mod.rs`, `src/dsa/object.rs`, `src/dsa/ossl.rs`, `src/dsa/key.rs`, `src/dsa/gen.rs`, `src/dsa/sign.rs`, `src/dsa/vrf.rs`, `src/dsa/depr.rs` | 26 | `RT-DSA`, `CT-DSA` | 8.5 |
-| 8.7 EC | `src/ec/mod.rs`, `src/ec/curve.rs`, `src/ec/curve_data.rs`, `src/ec/support.rs`, `src/ec/mod.rs`, `src/bn/intern.rs`, `src/bn/bignum.rs`, `src/bn/exp.rs`, `src/ec/key.rs` | 197 | `RT-EC`, `CT-EC` | 8.6 |
+| 8.7 EC | `src/ec/mod.rs`, `src/ec/curve.rs`, `src/ec/curve_data.rs`, `src/ec/support.rs`, `src/ec/mod.rs`, `src/bn/intern.rs`, `src/bn/bignum.rs`, `src/bn/exp.rs`, `src/ec/key.rs`, `src/ec/lib.rs`, `src/ec/smpl.rs`, `src/ec/mult.rs`, `src/ec/oct.rs`, `src/ec/cvt.rs`, `src/ec/key.rs`, `src/ec/ecdsa.rs`, `src/param_build_set.rs` | 46 | `RT-EC`, `CT-EC` | 8.6 |
 | 8.8 The ASN.1 method objects and `standard_methods[]` | `src/asn1/ameth.rs` | 15 | `RT-AMETH` | 8.4, 8.5, 8.6, 8.7 |
 | 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals | `src/pem/key_legacy.rs` | 30 | `RT-PEM-KEY` | 8.8 |
 
-Total open symbols listed below: **324**; the ledger's
-`open_in_this_stratum` is 324.
+Total open symbols listed below: **173**; the ledger's
+`open_in_this_stratum` is 173.
 
 ### 8.4 RSA — 24 open
 
@@ -107,72 +102,24 @@ Total open symbols listed below: **324**; the ledger's
 `d2i_DSAPublicKey`, `d2i_DSA_SIG`, `d2i_DSAparams`, `i2d_DSAPrivateKey`,
 `i2d_DSAPublicKey`, `i2d_DSA_SIG`, `i2d_DSAparams`
 
-### 8.7 EC — 197 open
+### 8.7 EC — 46 open
 
-`ECDH_KDF_X9_62`, `ECDH_compute_key`, `ECDSA_SIG_free`, `ECDSA_SIG_get0`,
-`ECDSA_SIG_get0_r`, `ECDSA_SIG_get0_s`, `ECDSA_SIG_new`, `ECDSA_SIG_set0`,
-`ECDSA_do_sign`, `ECDSA_do_sign_ex`, `ECDSA_do_verify`, `ECDSA_sign`, `ECDSA_sign_ex`,
-`ECDSA_sign_setup`, `ECDSA_size`, `ECDSA_verify`, `ECPARAMETERS_free`,
+`ECDH_KDF_X9_62`, `ECDSA_SIG_get0_r`, `ECDSA_SIG_get0_s`, `ECPARAMETERS_free`,
 `ECPARAMETERS_it`, `ECPARAMETERS_new`, `ECPKPARAMETERS_free`, `ECPKPARAMETERS_it`,
 `ECPKPARAMETERS_new`, `ECPKParameters_print`, `ECPKParameters_print_fp`,
-`ECParameters_print`, `ECParameters_print_fp`, `EC_GF2m_simple_method`,
-`EC_GFp_mont_method`, `EC_GFp_nist_method`, `EC_GFp_simple_method`, `EC_GROUP_check`,
-`EC_GROUP_check_discriminant`, `EC_GROUP_check_named_curve`, `EC_GROUP_clear_free`,
-`EC_GROUP_cmp`, `EC_GROUP_copy`, `EC_GROUP_dup`, `EC_GROUP_free`,
-`EC_GROUP_get0_cofactor`, `EC_GROUP_get0_field`, `EC_GROUP_get0_generator`,
-`EC_GROUP_get0_order`, `EC_GROUP_get0_seed`, `EC_GROUP_get_asn1_flag`,
-`EC_GROUP_get_basis_type`, `EC_GROUP_get_cofactor`, `EC_GROUP_get_curve`,
-`EC_GROUP_get_curve_GF2m`, `EC_GROUP_get_curve_GFp`, `EC_GROUP_get_curve_name`,
-`EC_GROUP_get_degree`, `EC_GROUP_get_ecparameters`, `EC_GROUP_get_ecpkparameters`,
-`EC_GROUP_get_field_type`, `EC_GROUP_get_mont_data`, `EC_GROUP_get_order`,
-`EC_GROUP_get_pentanomial_basis`, `EC_GROUP_get_point_conversion_form`,
-`EC_GROUP_get_seed_len`, `EC_GROUP_get_trinomial_basis`,
-`EC_GROUP_have_precompute_mult`, `EC_GROUP_method_of`, `EC_GROUP_new`,
-`EC_GROUP_new_by_curve_name`, `EC_GROUP_new_by_curve_name_ex`,
-`EC_GROUP_new_curve_GF2m`, `EC_GROUP_new_curve_GFp`, `EC_GROUP_new_from_ecparameters`,
-`EC_GROUP_new_from_ecpkparameters`, `EC_GROUP_new_from_params`, `EC_GROUP_order_bits`,
-`EC_GROUP_precompute_mult`, `EC_GROUP_set_asn1_flag`, `EC_GROUP_set_curve`,
-`EC_GROUP_set_curve_GF2m`, `EC_GROUP_set_curve_GFp`, `EC_GROUP_set_curve_name`,
-`EC_GROUP_set_generator`, `EC_GROUP_set_point_conversion_form`, `EC_GROUP_set_seed`,
-`EC_GROUP_to_params`, `EC_KEY_METHOD_free`, `EC_KEY_METHOD_get_compute_key`,
-`EC_KEY_METHOD_get_init`, `EC_KEY_METHOD_get_keygen`, `EC_KEY_METHOD_get_sign`,
-`EC_KEY_METHOD_get_verify`, `EC_KEY_METHOD_new`, `EC_KEY_METHOD_set_compute_key`,
-`EC_KEY_METHOD_set_init`, `EC_KEY_METHOD_set_keygen`, `EC_KEY_METHOD_set_sign`,
-`EC_KEY_METHOD_set_verify`, `EC_KEY_OpenSSL`, `EC_KEY_can_sign`, `EC_KEY_check_key`,
-`EC_KEY_clear_flags`, `EC_KEY_copy`, `EC_KEY_decoded_from_explicit_params`,
-`EC_KEY_dup`, `EC_KEY_free`, `EC_KEY_get0_engine`, `EC_KEY_get0_group`,
-`EC_KEY_get0_private_key`, `EC_KEY_get0_public_key`, `EC_KEY_get_conv_form`,
-`EC_KEY_get_default_method`, `EC_KEY_get_enc_flags`, `EC_KEY_get_ex_data`,
-`EC_KEY_get_flags`, `EC_KEY_get_method`, `EC_KEY_key2buf`, `EC_KEY_new`,
-`EC_KEY_new_by_curve_name`, `EC_KEY_new_by_curve_name_ex`, `EC_KEY_new_ex`,
-`EC_KEY_new_method`, `EC_KEY_oct2key`, `EC_KEY_oct2priv`, `EC_KEY_precompute_mult`,
-`EC_KEY_print`, `EC_KEY_print_fp`, `EC_KEY_priv2buf`, `EC_KEY_priv2oct`,
-`EC_KEY_set_asn1_flag`, `EC_KEY_set_conv_form`, `EC_KEY_set_default_method`,
-`EC_KEY_set_enc_flags`, `EC_KEY_set_ex_data`, `EC_KEY_set_flags`, `EC_KEY_set_group`,
-`EC_KEY_set_method`, `EC_KEY_set_private_key`, `EC_KEY_set_public_key`,
-`EC_KEY_set_public_key_affine_coordinates`, `EC_KEY_up_ref`, `EC_METHOD_get_field_type`,
-`EC_POINT_add`, `EC_POINT_bn2point`, `EC_POINT_clear_free`, `EC_POINT_cmp`,
-`EC_POINT_copy`, `EC_POINT_dbl`, `EC_POINT_dup`, `EC_POINT_free`,
-`EC_POINT_get_Jprojective_coordinates_GFp`, `EC_POINT_get_affine_coordinates`,
-`EC_POINT_get_affine_coordinates_GF2m`, `EC_POINT_get_affine_coordinates_GFp`,
-`EC_POINT_hex2point`, `EC_POINT_invert`, `EC_POINT_is_at_infinity`,
-`EC_POINT_is_on_curve`, `EC_POINT_make_affine`, `EC_POINT_method_of`, `EC_POINT_mul`,
-`EC_POINT_new`, `EC_POINT_oct2point`, `EC_POINT_point2bn`, `EC_POINT_point2buf`,
-`EC_POINT_point2hex`, `EC_POINT_point2oct`, `EC_POINT_set_Jprojective_coordinates_GFp`,
-`EC_POINT_set_affine_coordinates`, `EC_POINT_set_affine_coordinates_GF2m`,
-`EC_POINT_set_affine_coordinates_GFp`, `EC_POINT_set_compressed_coordinates`,
-`EC_POINT_set_compressed_coordinates_GF2m`, `EC_POINT_set_compressed_coordinates_GFp`,
-`EC_POINT_set_to_infinity`, `EC_POINTs_make_affine`, `EC_POINTs_mul`,
+`ECParameters_print`, `ECParameters_print_fp`, `EC_GROUP_get_ecparameters`,
+`EC_GROUP_get_ecpkparameters`, `EC_GROUP_new_from_ecparameters`,
+`EC_GROUP_new_from_ecpkparameters`, `EC_KEY_print`, `EC_KEY_print_fp`,
+`EC_POINT_bn2point`, `EC_POINT_hex2point`, `EC_POINT_point2bn`, `EC_POINT_point2hex`,
 `EVP_PKEY_CTX_get0_ecdh_kdf_ukm`, `EVP_PKEY_CTX_get_ecdh_cofactor_mode`,
 `EVP_PKEY_CTX_get_ecdh_kdf_md`, `EVP_PKEY_CTX_get_ecdh_kdf_outlen`,
 `EVP_PKEY_CTX_get_ecdh_kdf_type`, `EVP_PKEY_CTX_set0_ecdh_kdf_ukm`,
 `EVP_PKEY_CTX_set_ec_param_enc`, `EVP_PKEY_CTX_set_ec_paramgen_curve_nid`,
 `EVP_PKEY_CTX_set_ecdh_cofactor_mode`, `EVP_PKEY_CTX_set_ecdh_kdf_md`,
 `EVP_PKEY_CTX_set_ecdh_kdf_outlen`, `EVP_PKEY_CTX_set_ecdh_kdf_type`,
-`EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get1_EC_KEY`, `EVP_PKEY_set1_EC_KEY`, `d2i_ECDSA_SIG`,
-`d2i_ECPKParameters`, `d2i_ECParameters`, `d2i_ECPrivateKey`, `i2d_ECDSA_SIG`,
-`i2d_ECPKParameters`, `i2d_ECParameters`, `i2d_ECPrivateKey`, `i2o_ECPublicKey`,
-`o2i_ECPublicKey`
+`EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get1_EC_KEY`, `EVP_PKEY_set1_EC_KEY`,
+`d2i_ECPKParameters`, `d2i_ECParameters`, `d2i_ECPrivateKey`, `i2d_ECPKParameters`,
+`i2d_ECParameters`, `i2d_ECPrivateKey`, `i2o_ECPublicKey`, `o2i_ECPublicKey`
 
 ### 8.8 The ASN.1 method objects and `standard_methods[]` — 15 open
 
@@ -212,7 +159,7 @@ from the export list — the method D114, D118 and D122 established. The
 This document projects `forensics/phase8-obligations.json`, and every row
 of that ledger is an **export**. Cross-stratum *internal* names — a helper
 a module references that is not an export — are recorded in a different
-place: `forensics/prerequisites.json`'s `deferrals` (19 rows, 9 of which name Phase 8 as
+place: `forensics/prerequisites.json`'s `deferrals` (20 rows, 10 of which name Phase 8 as
 owner), and
 `forensics/atlas/prerequisite-gate.json` is the generated view of them.
 A reader who only checks the export ledger has not seen that half of the
