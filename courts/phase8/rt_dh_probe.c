@@ -27,15 +27,18 @@
  * a bad generator leaves are compared rather than asserted.
  *
  * What it does not cover: the FFC primitives (their evidence is their own unit tests, D330),
- * `dh_asn1.c`'s ASN.1 machinery, `DH_KDF_X9_42` and the `EVP_PKEY_CTX_*dh*` controls -- none of
- * which is landed. D332's named-group arms are the third block: all fourteen rows of
+ * `dh_asn1.c`'s ASN.1 machinery, and `DH_KDF_X9_42`. D332's named-group arms are the third block:
+ * all fourteen rows of
  * `dh_named_groups[]`, the four `DH_new_by_nid`/`DH_get_nid`-shaped entry points, the three
  * deprecated constructors, the cache `DH_set0_pqg` reaches, and primality through the landed
  * `BN_check_prime`. Two names of that unit are **not** reachable from this court and say so:
  * `ossl_dh_is_named_safe_prime_group`'s one caller is the EVP control translator and
  * `ossl_dh_check_priv_key`'s is the provider keymgmt, so both are exercised by unit tests rather
- * than by an arm. This court's arms say so by their absence rather than by a transcribed
- * expectation, and `docs/DECISIONS.md` D329, D331 and D332 name what keeps each open.
+ * than by an arm. D343 lands `crypto/evp/dh_ctrl.c`'s twenty controls, and the last block of arms
+ * is theirs: a NULL context, a live context with no operation, one with a generation operation and
+ * one with a derivation operation, and the five getter-backed round trips. This court's arms say
+ * so by their absence rather than by a transcribed expectation, and `docs/DECISIONS.md` D329, D331,
+ * D332 and D343 name what keeps each open.
  *
  * The allocator-attribution plane
  * -------------------------------
@@ -77,10 +80,17 @@
  * probe links. */
 #define OPENSSL_SUPPRESS_DEPRECATED
 #include <openssl/bn.h>
+#include <openssl/core.h>
+#include <openssl/core_dispatch.h>
+#include <openssl/core_names.h>
 #include <openssl/crypto.h>
 #include <openssl/dh.h>
 #include <openssl/err.h>
+#include <openssl/evp.h>
 #include <openssl/objects.h>
+#include <openssl/params.h>
+#include <openssl/provider.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -234,6 +244,545 @@ static void drain(const char *arm)
         n++;
     }
     printf("dh.%s.err.count=%d\n", arm, n);
+}
+
+/* ------------------------------------------------------------------ the control court's provider
+ *
+ * The `EVP_PKEY_CTX_*dh*` controls of `crypto/evp/dh_ctrl.c` are decisions *about a context*, so
+ * they need a context to decide about. This crate publishes no DH `EVP_KEYMGMT` and no DH
+ * `EVP_KEYEXCH` (8.5's provider half is not landed), so `EVP_PKEY_CTX_new_from_name(NULL, "DH",
+ * NULL)` answers NULL on the candidate and a context on the authority -- an arm that compared that
+ * would be a difference about a missing provider row rather than about the controls. The provider
+ * below supplies the smallest keymgmt and keyexch the structural check accepts, named `COURT-DH`
+ * rather than `DH` so that it cannot shadow the default provider's own row in either binary's
+ * method store. Every parameter the controls send is *echoed* by the callback that receives it, so
+ * the transcript observes the parameter array the library built and not merely its return code; no
+ * echoed value is a secret -- they are FFC sizes, digest and group names, a probe-chosen seed and a
+ * probe-chosen UKM, all of which the probe itself supplies. */
+
+struct court_ctx {
+    int have_gindex;
+    int gindex;
+    int have_gen;
+    int gen;
+    int have_pbits;
+    unsigned long pbits;
+    int have_qbits;
+    unsigned long qbits;
+    int have_seed;
+    unsigned long seedlen;
+    int have_type;
+    char type[64];
+    int have_digest;
+    char digest[64];
+    int have_props;
+    char props[64];
+    int have_pad;
+    unsigned int pad;
+    int have_outlen;
+    unsigned long outlen;
+    int have_kdftype;
+    char kdftype[64];
+    int have_md;
+    char md[64];
+    int have_oid;
+    char oid[80];
+    int have_ukm;
+    unsigned long ukmlen;
+    unsigned char ukm[64];
+};
+
+static struct court_ctx *court_new(void)
+{
+    struct court_ctx *c = malloc(sizeof(*c));
+
+    if (c == NULL)
+        return NULL;
+    memset(c, 0, sizeof(*c));
+    /* The defaults a fresh context answers with. `kdf-type` is the empty string, which
+     * `fix_dh_kdf_type`'s table maps back to `EVP_PKEY_DH_KDF_NONE`; `kdf-outlen` is zero, which is
+     * the one value `EVP_PKEY_CTX_get_dh_kdf_outlen` reports as a success. */
+    strcpy(c->kdftype, "");
+    strcpy(c->md, "SHA256");
+    strcpy(c->oid, "1.3.133.16.840.63.0.2");
+    return c;
+}
+
+/* Print every parameter the library sent, one `key=value` line per entry. The rendering is by
+ * `data_type`, so a wrong type is visible as well as a wrong value, and the five `OSSL_PARAM`
+ * types the controls use are each rendered their own way. */
+static void court_dump(const char *arm, const OSSL_PARAM params[])
+{
+    int i;
+
+    for (i = 0; params != NULL && params[i].key != NULL; i++) {
+        const OSSL_PARAM *p = &params[i];
+
+        if (p->data_type == OSSL_PARAM_INTEGER) {
+            int64_t v = 0;
+            OSSL_PARAM_get_int64(p, &v);
+            printf("dh.%s.p.%d=%s:int:%lld\n", arm, i, p->key, (long long)v);
+        } else if (p->data_type == OSSL_PARAM_UNSIGNED_INTEGER) {
+            uint64_t v = 0;
+            OSSL_PARAM_get_uint64(p, &v);
+            printf("dh.%s.p.%d=%s:uint:%llu\n", arm, i, p->key, (unsigned long long)v);
+        } else if (p->data_type == OSSL_PARAM_UTF8_STRING) {
+            printf("dh.%s.p.%d=%s:utf8:%s\n", arm, i, p->key,
+                p->data != NULL ? (const char *)p->data : "<null>");
+        } else if (p->data_type == OSSL_PARAM_OCTET_STRING) {
+            printf("dh.%s.p.%d=%s:octet:%zu\n", arm, i, p->key, p->data_size);
+        } else {
+            printf("dh.%s.p.%d=%s:type%u:%zu\n", arm, i, p->key, p->data_type,
+                p->data_size);
+        }
+    }
+    printf("dh.%s.p.count=%d\n", arm, i);
+}
+
+/* Remember the parameters a getter will be asked for, by copying the value rather than the
+ * pointer: the arrays the controls build point at stack locals in the *calling* frame, so a stored
+ * pointer would be stale the moment the call returns. */
+static void court_store(struct court_ctx *c, const OSSL_PARAM params[])
+{
+    int i;
+
+    for (i = 0; params != NULL && params[i].key != NULL; i++) {
+        const OSSL_PARAM *p = &params[i];
+
+        if (strcmp(p->key, "gindex") == 0) {
+            int64_t v = 0;
+            OSSL_PARAM_get_int64(p, &v);
+            c->have_gindex = 1;
+            c->gindex = (int)v;
+        } else if (strcmp(p->key, "safeprime-generator") == 0) {
+            int64_t v = 0;
+            OSSL_PARAM_get_int64(p, &v);
+            c->have_gen = 1;
+            c->gen = (int)v;
+        } else if (strcmp(p->key, "pbits") == 0) {
+            uint64_t v = 0;
+            OSSL_PARAM_get_uint64(p, &v);
+            c->have_pbits = 1;
+            c->pbits = (unsigned long)v;
+        } else if (strcmp(p->key, "qbits") == 0) {
+            uint64_t v = 0;
+            OSSL_PARAM_get_uint64(p, &v);
+            c->have_qbits = 1;
+            c->qbits = (unsigned long)v;
+        } else if (strcmp(p->key, "seed") == 0) {
+            c->have_seed = 1;
+            c->seedlen = p->data_size;
+        } else if (strcmp(p->key, "type") == 0) {
+            c->have_type = 1;
+            snprintf(c->type, sizeof(c->type), "%s", (const char *)p->data);
+        } else if (strcmp(p->key, "digest") == 0) {
+            c->have_digest = 1;
+            snprintf(c->digest, sizeof(c->digest), "%s", (const char *)p->data);
+        } else if (strcmp(p->key, "properties") == 0) {
+            c->have_props = 1;
+            snprintf(c->props, sizeof(c->props), "%s", (const char *)p->data);
+        } else if (strcmp(p->key, "pad") == 0) {
+            uint64_t v = 0;
+            OSSL_PARAM_get_uint64(p, &v);
+            c->have_pad = 1;
+            c->pad = (unsigned int)v;
+        } else if (strcmp(p->key, "kdf-outlen") == 0) {
+            uint64_t v = 0;
+            OSSL_PARAM_get_uint64(p, &v);
+            c->have_outlen = 1;
+            c->outlen = (unsigned long)v;
+        } else if (strcmp(p->key, "kdf-type") == 0) {
+            c->have_kdftype = 1;
+            snprintf(c->kdftype, sizeof(c->kdftype), "%s", (const char *)p->data);
+        } else if (strcmp(p->key, "kdf-digest") == 0) {
+            c->have_md = 1;
+            snprintf(c->md, sizeof(c->md), "%s", (const char *)p->data);
+        } else if (strcmp(p->key, "cekalg") == 0) {
+            c->have_oid = 1;
+            snprintf(c->oid, sizeof(c->oid), "%s", (const char *)p->data);
+        } else if (strcmp(p->key, "kdf-ukm") == 0) {
+            c->have_ukm = 1;
+            c->ukmlen = p->data_size;
+            if (p->data != NULL && p->data_size <= sizeof(c->ukm))
+                memcpy(c->ukm, p->data, p->data_size);
+        }
+    }
+}
+
+static int court_get(struct court_ctx *c, OSSL_PARAM params[])
+{
+    int i;
+
+    for (i = 0; params != NULL && params[i].key != NULL; i++) {
+        OSSL_PARAM *p = &params[i];
+
+        if (strcmp(p->key, "kdf-outlen") == 0)
+            OSSL_PARAM_set_uint64(p, (uint64_t)c->outlen);
+        else if (strcmp(p->key, "kdf-type") == 0)
+            OSSL_PARAM_set_utf8_string(p, c->kdftype);
+        else if (strcmp(p->key, "kdf-digest") == 0)
+            OSSL_PARAM_set_utf8_string(p, c->md);
+        else if (strcmp(p->key, "cekalg") == 0)
+            OSSL_PARAM_set_utf8_string(p, c->oid);
+        else if (strcmp(p->key, "kdf-ukm") == 0)
+            OSSL_PARAM_set_octet_ptr(p, c->ukm, c->ukmlen);
+    }
+    return 1;
+}
+
+/* The settable and gettable lists, as the structural check reads them. The `data` pointers are
+ * NULL and `data_size` is the width the *control* builds, which is all a list of names needs. */
+static const OSSL_PARAM court_gen_settable[] = {
+    { "gindex", OSSL_PARAM_INTEGER, NULL, sizeof(int), 0 },
+    { "safeprime-generator", OSSL_PARAM_INTEGER, NULL, sizeof(int), 0 },
+    { "pbits", OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0 },
+    { "qbits", OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0 },
+    { "seed", OSSL_PARAM_OCTET_STRING, NULL, 0, 0 },
+    { "type", OSSL_PARAM_UTF8_STRING, NULL, 0, 0 },
+    { "digest", OSSL_PARAM_UTF8_STRING, NULL, 0, 0 },
+    { "properties", OSSL_PARAM_UTF8_STRING, NULL, 0, 0 },
+    { "group", OSSL_PARAM_UTF8_STRING, NULL, 0, 0 },
+    { NULL, 0, NULL, 0, 0 }
+};
+static const OSSL_PARAM court_gen_gettable[] = {
+    { NULL, 0, NULL, 0, 0 }
+};
+static const OSSL_PARAM court_kex_settable[] = {
+    { "pad", OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(unsigned int), 0 },
+    { "kdf-outlen", OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0 },
+    { "kdf-type", OSSL_PARAM_UTF8_STRING, NULL, 0, 0 },
+    { "kdf-digest", OSSL_PARAM_UTF8_STRING, NULL, 0, 0 },
+    { "cekalg", OSSL_PARAM_UTF8_STRING, NULL, 0, 0 },
+    { "kdf-ukm", OSSL_PARAM_OCTET_STRING, NULL, 0, 0 },
+    { NULL, 0, NULL, 0, 0 }
+};
+static const OSSL_PARAM court_kex_gettable[] = {
+    { "kdf-outlen", OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0 },
+    { "kdf-type", OSSL_PARAM_UTF8_STRING, NULL, 0, 0 },
+    { "kdf-digest", OSSL_PARAM_UTF8_STRING, NULL, 0, 0 },
+    { "cekalg", OSSL_PARAM_UTF8_STRING, NULL, 0, 0 },
+    { "kdf-ukm", OSSL_PARAM_OCTET_PTR, NULL, 0, 0 },
+    { NULL, 0, NULL, 0, 0 }
+};
+
+/* The keymgmt: only the generation callbacks carry state, because every control that reaches a
+ * keymgmt does so through `EVP_PKEY_CTX_set_params` on a generation operation. */
+static int court_marker;
+
+static void *ck_new(void *provctx) { (void)provctx; return court_new(); }
+static void ck_free(void *keydata) { free(keydata); }
+static int ck_has(const void *keydata, int selection)
+{ (void)keydata; (void)selection; return 1; }
+static int ck_get_params(void *keydata, OSSL_PARAM params[])
+{ (void)keydata; (void)params; return 1; }
+static const OSSL_PARAM *ck_gettable_params(void *provctx) { (void)provctx; return NULL; }
+static int ck_set_params(void *keydata, const OSSL_PARAM params[])
+{ (void)keydata; (void)params; return 1; }
+static const OSSL_PARAM *ck_settable_params(void *provctx) { (void)provctx; return NULL; }
+static void *ck_gen_init(void *provctx, int selection, const OSSL_PARAM params[])
+{ (void)provctx; (void)selection; (void)params; return court_new(); }
+static void ck_gen_cleanup(void *genctx) { free(genctx); }
+static void *ck_gen(void *genctx, OSSL_CALLBACK *cb, void *cbarg)
+{ (void)genctx; (void)cb; (void)cbarg; return malloc(1); }
+static int ck_gen_set_template(void *genctx, void *templ)
+{ (void)genctx; (void)templ; return 1; }
+static int ck_gen_set_params(void *genctx, const OSSL_PARAM params[])
+{ court_dump("gen.set", params); court_store(genctx, params); return 1; }
+static const OSSL_PARAM *ck_gen_settable_params(void *genctx, void *provctx)
+{ (void)genctx; (void)provctx; return court_gen_settable; }
+static int ck_gen_get_params(void *genctx, OSSL_PARAM params[])
+{ court_dump("gen.get", params); return court_get(genctx, params); }
+static const OSSL_PARAM *ck_gen_gettable_params(void *genctx, void *provctx)
+{ (void)genctx; (void)provctx; return court_gen_gettable; }
+static void *ck_load(const void *reference, size_t reference_sz)
+{ (void)reference; (void)reference_sz; return malloc(1); }
+static const char *ck_query_operation_name(int operation_id)
+{ (void)operation_id; return NULL; }
+static void *ck_import(void *keydata, int selection, const OSSL_PARAM params[])
+{ (void)keydata; (void)selection; (void)params; return malloc(1); }
+static const OSSL_PARAM *ck_import_types(int selection) { (void)selection; return NULL; }
+static int ck_export(void *keydata, int selection, OSSL_CALLBACK *cb, void *cbarg)
+{ (void)keydata; (void)selection; (void)cb; (void)cbarg; return 1; }
+static const OSSL_PARAM *ck_export_types(int selection) { (void)selection; return NULL; }
+static void *ck_dup(const void *keydata, int selection)
+{ (void)keydata; (void)selection; return malloc(1); }
+static int ck_validate(const void *keydata, int selection, int checktype)
+{ (void)keydata; (void)selection; (void)checktype; return 1; }
+static int ck_match(const void *a, const void *b, int selection)
+{ (void)a; (void)b; (void)selection; return 1; }
+
+/* The keyexch: the ten key-derivation controls reach `EVP_PKEY_CTX_set_params`/`_get_params` on a
+ * derivation operation, which dispatch to `set_ctx_params`/`get_ctx_params`. */
+static void *cx_newctx(void *provctx) { (void)provctx; return court_new(); }
+static int cx_init(void *algctx) { (void)algctx; return 1; }
+static int cx_set_peer(void *algctx, void *peerkey)
+{ (void)algctx; (void)peerkey; return 1; }
+static int cx_derive(void *algctx, unsigned char *secret, size_t *secretlen, size_t outlen)
+{ (void)algctx; (void)secret; (void)secretlen; (void)outlen; return 1; }
+static void cx_freectx(void *algctx) { free(algctx); }
+static int cx_set_ctx_params(void *algctx, const OSSL_PARAM params[])
+{ court_dump("der.set", params); court_store(algctx, params); return 1; }
+static const OSSL_PARAM *cx_settable_ctx_params(void *algctx, void *provctx)
+{ (void)algctx; (void)provctx; return court_kex_settable; }
+static int cx_get_ctx_params(void *algctx, OSSL_PARAM params[])
+{ court_dump("der.get", params); return court_get(algctx, params); }
+static const OSSL_PARAM *cx_gettable_ctx_params(void *algctx, void *provctx)
+{ (void)algctx; (void)provctx; return court_kex_gettable; }
+
+static const OSSL_DISPATCH court_keymgmt_fns[] = {
+    { OSSL_FUNC_KEYMGMT_NEW, (void (*)(void))ck_new },
+    { OSSL_FUNC_KEYMGMT_FREE, (void (*)(void))ck_free },
+    { OSSL_FUNC_KEYMGMT_HAS, (void (*)(void))ck_has },
+    { OSSL_FUNC_KEYMGMT_GET_PARAMS, (void (*)(void))ck_get_params },
+    { OSSL_FUNC_KEYMGMT_GETTABLE_PARAMS, (void (*)(void))ck_gettable_params },
+    { OSSL_FUNC_KEYMGMT_SET_PARAMS, (void (*)(void))ck_set_params },
+    { OSSL_FUNC_KEYMGMT_SETTABLE_PARAMS, (void (*)(void))ck_settable_params },
+    { OSSL_FUNC_KEYMGMT_GEN_INIT, (void (*)(void))ck_gen_init },
+    { OSSL_FUNC_KEYMGMT_GEN_SET_TEMPLATE, (void (*)(void))ck_gen_set_template },
+    { OSSL_FUNC_KEYMGMT_GEN_SET_PARAMS, (void (*)(void))ck_gen_set_params },
+    { OSSL_FUNC_KEYMGMT_GEN_SETTABLE_PARAMS, (void (*)(void))ck_gen_settable_params },
+    { OSSL_FUNC_KEYMGMT_GEN_GET_PARAMS, (void (*)(void))ck_gen_get_params },
+    { OSSL_FUNC_KEYMGMT_GEN_GETTABLE_PARAMS, (void (*)(void))ck_gen_gettable_params },
+    { OSSL_FUNC_KEYMGMT_GEN, (void (*)(void))ck_gen },
+    { OSSL_FUNC_KEYMGMT_GEN_CLEANUP, (void (*)(void))ck_gen_cleanup },
+    { OSSL_FUNC_KEYMGMT_LOAD, (void (*)(void))ck_load },
+    { OSSL_FUNC_KEYMGMT_QUERY_OPERATION_NAME, (void (*)(void))ck_query_operation_name },
+    { OSSL_FUNC_KEYMGMT_IMPORT, (void (*)(void))ck_import },
+    { OSSL_FUNC_KEYMGMT_IMPORT_TYPES, (void (*)(void))ck_import_types },
+    { OSSL_FUNC_KEYMGMT_EXPORT, (void (*)(void))ck_export },
+    { OSSL_FUNC_KEYMGMT_EXPORT_TYPES, (void (*)(void))ck_export_types },
+    { OSSL_FUNC_KEYMGMT_DUP, (void (*)(void))ck_dup },
+    { OSSL_FUNC_KEYMGMT_VALIDATE, (void (*)(void))ck_validate },
+    { OSSL_FUNC_KEYMGMT_MATCH, (void (*)(void))ck_match },
+    { 0, NULL }
+};
+
+static const OSSL_DISPATCH court_keyexch_fns[] = {
+    { OSSL_FUNC_KEYEXCH_NEWCTX, (void (*)(void))cx_newctx },
+    { OSSL_FUNC_KEYEXCH_INIT, (void (*)(void))cx_init },
+    { OSSL_FUNC_KEYEXCH_DERIVE, (void (*)(void))cx_derive },
+    { OSSL_FUNC_KEYEXCH_SET_PEER, (void (*)(void))cx_set_peer },
+    { OSSL_FUNC_KEYEXCH_FREECTX, (void (*)(void))cx_freectx },
+    { OSSL_FUNC_KEYEXCH_SET_CTX_PARAMS, (void (*)(void))cx_set_ctx_params },
+    { OSSL_FUNC_KEYEXCH_SETTABLE_CTX_PARAMS, (void (*)(void))cx_settable_ctx_params },
+    { OSSL_FUNC_KEYEXCH_GET_CTX_PARAMS, (void (*)(void))cx_get_ctx_params },
+    { OSSL_FUNC_KEYEXCH_GETTABLE_CTX_PARAMS, (void (*)(void))cx_gettable_ctx_params },
+    { 0, NULL }
+};
+
+static const OSSL_ALGORITHM *court_query(void *provctx, int operation_id, int *no_cache)
+{
+    static const OSSL_ALGORITHM km[] = {
+        { "COURT-DH:court-dh", "provider=court-dh", court_keymgmt_fns,
+          "the probe's keymgmt" },
+        { NULL, NULL, NULL, NULL }
+    };
+    static const OSSL_ALGORITHM kx[] = {
+        { "COURT-DH:court-dh", "provider=court-dh", court_keyexch_fns,
+          "the probe's keyexch" },
+        { NULL, NULL, NULL, NULL }
+    };
+
+    (void)provctx;
+    *no_cache = 0;
+    if (operation_id == OSSL_OP_KEYMGMT)
+        return km;
+    if (operation_id == OSSL_OP_KEYEXCH)
+        return kx;
+    return NULL;
+}
+
+static int court_teardown(void *provctx) { (void)provctx; return 1; }
+
+static const OSSL_DISPATCH court_dispatch[] = {
+    { OSSL_FUNC_PROVIDER_QUERY_OPERATION, (void (*)(void))court_query },
+    { OSSL_FUNC_PROVIDER_TEARDOWN, (void (*)(void))court_teardown },
+    { 0, NULL }
+};
+
+static int court_init(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in,
+    const OSSL_DISPATCH **out, void **provctx)
+{
+    (void)handle;
+    (void)in;
+    *out = court_dispatch;
+    *provctx = &court_marker;
+    return 1;
+}
+
+/* The twenty controls, three ways. Every one is called with a NULL context and with a live one; the
+ * live context is then given a generation operation for the nine generation controls and a
+ * derivation operation for the ten derivation ones, so the *successful* path of each is observed as
+ * the parameter array the library builds. The round trips are the five getter-backed pairs, and
+ * every refusal drains its queue. */
+static void dh_ctl_arms(void)
+{
+    OSSL_PROVIDER *prov;
+    EVP_PKEY_CTX *null_ctx = NULL;
+    EVP_PKEY_CTX *fresh = NULL;
+    EVP_PKEY_CTX *gen = NULL;
+    EVP_PKEY_CTX *der = NULL;
+    const EVP_MD *sha256 = EVP_MD_fetch(NULL, "SHA256", NULL);
+    const EVP_MD *pmd = NULL;
+    ASN1_OBJECT *oid = NULL;
+    ASN1_OBJECT *goid = NULL;
+    unsigned char seed[4];
+    unsigned char *ukm, *out = NULL;
+    int outlen = -1, kdftype, ret;
+
+    memset(seed, 0x5a, sizeof(seed));
+    oid = OBJ_txt2obj("1.3.133.16.840.63.0.2", 1);
+    printf("dh.ctl.md_fetched=%d\n", sha256 != NULL);
+    printf("dh.ctl.oid_built=%d\n", oid != NULL);
+
+    /* ---- the NULL-context refusals: the two gates answer -2, the nine ctrl wrappers reach
+     * `EVP_PKEY_CTX_ctrl`'s own NULL test, also -2, and every one leaves a coordinate. */
+    ERR_clear_error();
+    printf("dh.ctl.null.gindex=%d\n", EVP_PKEY_CTX_set_dh_paramgen_gindex(null_ctx, 5));
+    printf("dh.ctl.null.seed=%d\n", EVP_PKEY_CTX_set_dh_paramgen_seed(null_ctx, seed, 4));
+    printf("dh.ctl.null.type=%d\n", EVP_PKEY_CTX_set_dh_paramgen_type(null_ctx, 2));
+    printf("dh.ctl.null.prime_len=%d\n", EVP_PKEY_CTX_set_dh_paramgen_prime_len(null_ctx, 2048));
+    printf("dh.ctl.null.subprime_len=%d\n",
+        EVP_PKEY_CTX_set_dh_paramgen_subprime_len(null_ctx, 256));
+    printf("dh.ctl.null.generator=%d\n", EVP_PKEY_CTX_set_dh_paramgen_generator(null_ctx, 2));
+    printf("dh.ctl.null.rfc5114=%d\n", EVP_PKEY_CTX_set_dh_rfc5114(null_ctx, 1));
+    printf("dh.ctl.null.dhx_rfc5114=%d\n", EVP_PKEY_CTX_set_dhx_rfc5114(null_ctx, 1));
+    printf("dh.ctl.null.nid=%d\n", EVP_PKEY_CTX_set_dh_nid(null_ctx, 1));
+    printf("dh.ctl.null.pad=%d\n", EVP_PKEY_CTX_set_dh_pad(null_ctx, 1));
+    printf("dh.ctl.null.set_kdf_type=%d\n", EVP_PKEY_CTX_set_dh_kdf_type(null_ctx, 2));
+    printf("dh.ctl.null.get_kdf_type=%d\n", EVP_PKEY_CTX_get_dh_kdf_type(null_ctx));
+    printf("dh.ctl.null.set0_oid=%d\n", EVP_PKEY_CTX_set0_dh_kdf_oid(null_ctx, oid));
+    printf("dh.ctl.null.get0_oid=%d\n", EVP_PKEY_CTX_get0_dh_kdf_oid(null_ctx, &goid));
+    printf("dh.ctl.null.kdf_md=%d\n", EVP_PKEY_CTX_set_dh_kdf_md(null_ctx, sha256));
+    printf("dh.ctl.null.get_kdf_md=%d\n", EVP_PKEY_CTX_get_dh_kdf_md(null_ctx, &pmd));
+    printf("dh.ctl.null.kdf_outlen=%d\n", EVP_PKEY_CTX_set_dh_kdf_outlen(null_ctx, 32));
+    printf("dh.ctl.null.get_kdf_outlen=%d\n", EVP_PKEY_CTX_get_dh_kdf_outlen(null_ctx, &outlen));
+    printf("dh.ctl.null.set0_ukm=%d\n", EVP_PKEY_CTX_set0_dh_kdf_ukm(null_ctx, NULL, 0));
+    printf("dh.ctl.null.get0_ukm=%d\n", EVP_PKEY_CTX_get0_dh_kdf_ukm(null_ctx, &out));
+    drain("ctl_null");
+
+    /* ---- the provider, and the live context with no operation at all */
+    printf("dh.ctl.provider.add=%d\n", OSSL_PROVIDER_add_builtin(NULL, "court-dh", court_init));
+    prov = OSSL_PROVIDER_load(NULL, "court-dh");
+    printf("dh.ctl.provider.load=%d\n", prov != NULL);
+    if (prov == NULL)
+        return;
+
+    fresh = EVP_PKEY_CTX_new_from_name(NULL, "COURT-DH", NULL);
+    printf("dh.ctl.fresh=%d\n", fresh != NULL);
+    if (fresh == NULL)
+        return;
+    printf("dh.ctl.fresh.is_a_self=%d\n", EVP_PKEY_CTX_is_a(fresh, "COURT-DH"));
+    printf("dh.ctl.fresh.operation=%d\n", EVP_PKEY_CTX_get_operation(fresh));
+
+    /* On an operation-less context the two gates refuse -2 and the ctrl wrappers refuse -1 with
+     * `EVP_R_NO_OPERATION_SET`, so the two families are told apart by the return value. */
+    ERR_clear_error();
+    printf("dh.ctl.fresh.gindex=%d\n", EVP_PKEY_CTX_set_dh_paramgen_gindex(fresh, 5));
+    printf("dh.ctl.fresh.pad=%d\n", EVP_PKEY_CTX_set_dh_pad(fresh, 1));
+    printf("dh.ctl.fresh.kdf_outlen=%d\n", EVP_PKEY_CTX_set_dh_kdf_outlen(fresh, 32));
+    printf("dh.ctl.fresh.type=%d\n", EVP_PKEY_CTX_set_dh_paramgen_type(fresh, 2));
+    printf("dh.ctl.fresh.nid=%d\n", EVP_PKEY_CTX_set_dh_nid(fresh, 1));
+    printf("dh.ctl.fresh.kdf_type=%d\n", EVP_PKEY_CTX_set_dh_kdf_type(fresh, 2));
+    drain("ctl_fresh");
+
+    /* ---- the generation controls on a parameter-generation operation: six `OSSL_PARAM` builders
+     * and three ctrl wrappers, each of which now succeeds and echoes the parameter it built. */
+    ERR_clear_error();
+    gen = EVP_PKEY_CTX_new_from_name(NULL, "COURT-DH", NULL);
+    printf("dh.ctl.gen=%d\n", gen != NULL);
+    printf("dh.ctl.gen.init=%d\n", EVP_PKEY_paramgen_init(gen));
+    printf("dh.ctl.gen.operation=%d\n", EVP_PKEY_CTX_get_operation(gen));
+    ERR_clear_error();
+    printf("dh.ctl.gen.gindex=%d\n", EVP_PKEY_CTX_set_dh_paramgen_gindex(gen, 5));
+    printf("dh.ctl.gen.seed=%d\n", EVP_PKEY_CTX_set_dh_paramgen_seed(gen, seed, 4));
+    printf("dh.ctl.gen.prime_len=%d\n", EVP_PKEY_CTX_set_dh_paramgen_prime_len(gen, 2048));
+    printf("dh.ctl.gen.subprime_len=%d\n", EVP_PKEY_CTX_set_dh_paramgen_subprime_len(gen, 256));
+    printf("dh.ctl.gen.generator=%d\n", EVP_PKEY_CTX_set_dh_paramgen_generator(gen, 2));
+    printf("dh.ctl.gen.type=%d\n", EVP_PKEY_CTX_set_dh_paramgen_type(gen, 2));
+    printf("dh.ctl.gen.rfc5114=%d\n", EVP_PKEY_CTX_set_dh_rfc5114(gen, 1));
+    printf("dh.ctl.gen.dhx_rfc5114=%d\n", EVP_PKEY_CTX_set_dhx_rfc5114(gen, 1));
+    printf("dh.ctl.gen.nid=%d\n", EVP_PKEY_CTX_set_dh_nid(gen, 1));
+    drain("ctl_gen");
+
+    /* ---- the derivation controls on a derivation operation, and the five round trips */
+    ERR_clear_error();
+    der = EVP_PKEY_CTX_new_from_name(NULL, "COURT-DH", NULL);
+    printf("dh.ctl.der=%d\n", der != NULL);
+    printf("dh.ctl.der.init=%d\n", EVP_PKEY_derive_init(der));
+    printf("dh.ctl.der.operation=%d\n", EVP_PKEY_CTX_get_operation(der));
+    drain("ctl_der_init");
+
+    /* The defaults a fresh derivation context answers with. */
+    ERR_clear_error();
+    printf("dh.ctl.der.default_kdf_outlen=%d\n",
+        EVP_PKEY_CTX_get_dh_kdf_outlen(der, &outlen));
+    printf("dh.ctl.der.default_outlen=%d\n", outlen);
+    printf("dh.ctl.der.default_kdf_type=%d\n", EVP_PKEY_CTX_get_dh_kdf_type(der));
+    drain("ctl_der_default");
+
+    /* pad, then the four set/get pairs, then the UKM pair. */
+    ERR_clear_error();
+    printf("dh.ctl.der.pad=%d\n", EVP_PKEY_CTX_set_dh_pad(der, 1));
+    printf("dh.ctl.der.set_kdf_outlen=%d\n", EVP_PKEY_CTX_set_dh_kdf_outlen(der, 32));
+    printf("dh.ctl.der.get_kdf_outlen=%d\n", EVP_PKEY_CTX_get_dh_kdf_outlen(der, &outlen));
+    printf("dh.ctl.der.outlen=%d\n", outlen);
+    printf("dh.ctl.der.set_kdf_type=%d\n", EVP_PKEY_CTX_set_dh_kdf_type(der, 2));
+    kdftype = EVP_PKEY_CTX_get_dh_kdf_type(der);
+    printf("dh.ctl.der.get_kdf_type=%d\n", kdftype);
+    printf("dh.ctl.der.kdf_type_is_x942=%d\n", kdftype == 2);
+    printf("dh.ctl.der.set_kdf_md=%d\n", EVP_PKEY_CTX_set_dh_kdf_md(der, sha256));
+    ret = EVP_PKEY_CTX_get_dh_kdf_md(der, &pmd);
+    printf("dh.ctl.der.get_kdf_md=%d\n", ret);
+    /* **The digest the getter hands back is not compared, and the callee that blocks it is named
+     * rather than hidden.** `fix_md`'s GET arm resolves the method's name through
+     * `evp_get_digestbyname_ex` (`crypto/evp/names.c`), whose legacy `OBJ_NAME` table this crate
+     * leaves empty: `src/runtime/init.rs`'s `add_all_legacy_methods` is a no-op and
+     * `src/context/namemap.rs` records the whole legacy-database pre-population as Phase 13's work.
+     * So the candidate answers a NULL method where the authority answers SHA-256, for a reason that
+     * is not `dh_ctrl.c`'s, and an arm that compared it would be a residual about that deferral. The
+     * parameter-level round trip *is* observed: `dh.der.set.p.0=kdf-digest` and `dh.der.get.p.0` show
+     * the name the setter sent and the getter asked for. `docs/DECISIONS.md` D343 records the
+     * coordinate. */
+    printf("dh.ctl.der.get_kdf_md_digest_skipped=%d\n", 1);
+    printf("dh.ctl.der.set0_oid=%d\n", EVP_PKEY_CTX_set0_dh_kdf_oid(der, oid));
+    ret = EVP_PKEY_CTX_get0_dh_kdf_oid(der, &goid);
+    printf("dh.ctl.der.get0_oid=%d\n", ret);
+    printf("dh.ctl.der.goid_is_null=%d\n", goid == NULL);
+    drain("ctl_der_pairs");
+
+    /* The UKM pair: `set0` takes custody on success, so the probe allocates through the same
+     * allocator the control releases through, and frees only when the control did not. */
+    ERR_clear_error();
+    ukm = OPENSSL_malloc(4);
+    if (ukm != NULL)
+        memset(ukm, 0x5a, 4);
+    ret = EVP_PKEY_CTX_set0_dh_kdf_ukm(der, ukm, 4);
+    printf("dh.ctl.der.set0_ukm=%d\n", ret);
+    if (ret != 1)
+        OPENSSL_free(ukm);
+    out = NULL;
+    printf("dh.ctl.der.get0_ukm=%d\n", EVP_PKEY_CTX_get0_dh_kdf_ukm(der, &out));
+    printf("dh.ctl.der.ukm_is_null=%d\n", out == NULL);
+    drain("ctl_der_ukm");
+
+    /* The refusals that are not a `-2` from a gate: a non-positive output length is `-2` with **no
+     * raise**, and a negative UKM length is `-1` before the context is tested. */
+    ERR_clear_error();
+    printf("dh.ctl.der.zero_outlen=%d\n", EVP_PKEY_CTX_set_dh_kdf_outlen(der, 0));
+    printf("dh.ctl.der.neg_outlen=%d\n", EVP_PKEY_CTX_set_dh_kdf_outlen(der, -1));
+    printf("dh.ctl.der.neg_ukm=%d\n", EVP_PKEY_CTX_set0_dh_kdf_ukm(der, NULL, -1));
+    drain("ctl_der_refusals");
+
+    EVP_PKEY_CTX_free(der);
+    EVP_PKEY_CTX_free(gen);
+    EVP_PKEY_CTX_free(fresh);
+    ASN1_OBJECT_free(goid);
+    ASN1_OBJECT_free(oid);
+    if (pmd != NULL)
+        EVP_MD_free((EVP_MD *)pmd);
+    EVP_MD_free((EVP_MD *)sha256);
+    OSSL_PROVIDER_unload(prov);
 }
 
 /* ------------------------------------------------------------------ the object and key layer */
@@ -960,6 +1509,10 @@ int main(void)
     /* ---- the named-group unit and its two tables (D332) */
 
     dh_named_group_arms();
+
+    /* ---- the `crypto/evp/dh_ctrl.c` controls (slice E) */
+
+    dh_ctl_arms();
 
     return 0;
 }

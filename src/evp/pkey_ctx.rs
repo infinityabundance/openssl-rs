@@ -4393,6 +4393,10 @@ pub(crate) const DH_PARAMGEN_TYPE_GROUP: c_int = 3;
 pub(crate) const OSSL_ALG_PARAM_DIGEST: *const c_char = c"digest".as_ptr();
 /// `OSSL_ALG_PARAM_CIPHER` — `include/openssl/core_names.h:127`.
 pub(crate) const OSSL_ALG_PARAM_CIPHER: *const c_char = c"cipher".as_ptr();
+/// `OSSL_ALG_PARAM_PROPERTIES` — `include/openssl/core_names.h:132`. The FFC digest's property query
+/// and the RSA/OAEP ones are aliases of it, which is why they are spelled as aliases below rather
+/// than as literals.
+pub(crate) const OSSL_ALG_PARAM_PROPERTIES: *const c_char = c"properties".as_ptr();
 
 /// `OSSL_PKEY_PARAM_DIST_ID` — `include/openssl/core_names.h:376`.
 pub(crate) const OSSL_PKEY_PARAM_DIST_ID: *const c_char = c"distid".as_ptr();
@@ -4402,6 +4406,14 @@ pub(crate) const OSSL_PKEY_PARAM_FFC_TYPE: *const c_char = c"type".as_ptr();
 pub(crate) const OSSL_PKEY_PARAM_FFC_PBITS: *const c_char = c"pbits".as_ptr();
 /// `OSSL_PKEY_PARAM_FFC_QBITS` — `include/openssl/core_names.h:410`.
 pub(crate) const OSSL_PKEY_PARAM_FFC_QBITS: *const c_char = c"qbits".as_ptr();
+/// `OSSL_PKEY_PARAM_FFC_GINDEX` — `include/openssl/core_names.h:404`. Read by the DH and DSA
+/// `set_paramgen_gindex` controls.
+pub(crate) const OSSL_PKEY_PARAM_FFC_GINDEX: *const c_char = c"gindex".as_ptr();
+/// `OSSL_PKEY_PARAM_FFC_SEED` — `include/openssl/core_names.h:411`. The verifiable-generation seed.
+pub(crate) const OSSL_PKEY_PARAM_FFC_SEED: *const c_char = c"seed".as_ptr();
+/// `OSSL_PKEY_PARAM_FFC_DIGEST_PROPS` = `OSSL_PKEY_PARAM_PROPERTIES` =
+/// `OSSL_ALG_PARAM_PROPERTIES` — `include/openssl/core_names.h:402`.
+pub(crate) const OSSL_PKEY_PARAM_FFC_DIGEST_PROPS: *const c_char = OSSL_ALG_PARAM_PROPERTIES;
 pub(crate) const OSSL_PKEY_PARAM_FFC_P: *const c_char = c"p".as_ptr();
 pub(crate) const OSSL_PKEY_PARAM_FFC_Q: *const c_char = c"q".as_ptr();
 pub(crate) const OSSL_PKEY_PARAM_FFC_G: *const c_char = c"g".as_ptr();
@@ -4639,14 +4651,14 @@ fn ossl_dh_gen_type_id2name(id: c_int) -> *const c_char {
 /// hypothetical getter into a quiet 0; the table has no getter for this ctrl, and `default_check`
 /// would refuse one anyway for the same reason.
 ///
-/// **The lookup is absent, and this is the one remaining fixer whose absence is reachable.** The
+/// **The lookup was absent until D343, and the absence was this stratum's to close.** The
 /// authority's `ossl_ffc_named_group_get_name(ossl_ffc_uid_to_dh_named_group(ctx->p1))` is two
-/// functions over `crypto/ffc/ffc_dh.c`'s `dh_named_groups[]`, a table whose entries carry each
-/// group's *prime*, *subgroup order* and *generator* as BIGNUMs. Those are Phase 8's
-/// (`docs/DECISIONS.md` D163), and transcribing only the table's `name` and `uid` columns would be
-/// the partial copy that reads as complete and is not — a later slice adding `p` would find the
-/// table already "here" and the two halves would be free to disagree. So the arm answers what the
-/// authority answers for a UID with no group at all, `EVP_R_INVALID_VALUE`, for every UID.
+/// functions over `crypto/ffc/ffc_dh.c`'s `dh_named_groups[]`, and D332 landed that unit
+/// (`src/ffc/dh.rs`) with both lookups. Until D343 the arm answered `EVP_R_INVALID_VALUE` for every
+/// UID, because the table's prime material was not yet transcribed; D332 put it in, and the
+/// `#[allow(dead_code)]` on `ossl_ffc_named_group_get_name` named `ctrl_params_translate.c:1012` as
+/// its reader. So the two calls are made and a UID with no group still answers `EVP_R_INVALID_VALUE`
+/// — the authority's own answer.
 ///
 /// # Safety
 /// `translation` NULL or live; `ctx` live.
@@ -4668,9 +4680,20 @@ pub(crate) unsafe extern "C" fn fix_dh_nid(
     }
 
     if state == XlatState::PreCtrlToParams {
-        // SAFETY: a compile-time-constant site.
-        unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_1013) };
-        return 0;
+        /* SAFETY: `ctx` is live; the lookup takes the integer the ctrl carried. */
+        let group = unsafe { crate::ffc::dh::ossl_ffc_uid_to_dh_named_group((*ctx).p1) };
+        // SAFETY: `group` is NULL or a table entry.
+        let name = unsafe { crate::ffc::dh::ossl_ffc_named_group_get_name(group) };
+        if name.is_null() {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_1013) };
+            return 0;
+        }
+        /* SAFETY: `name` is a static NUL-terminated string borrowed from the table. */
+        unsafe {
+            (*ctx).p2 = name.cast_mut().cast::<c_void>();
+            (*ctx).p1 = 0;
+        }
     }
 
     // SAFETY: `translation` and `ctx` are as the contract states.
@@ -4685,9 +4708,9 @@ pub(crate) unsafe extern "C" fn fix_dh_nid(
 /// the string arm is the caller-error guard, and it is **before** the lookup rather than after it,
 /// so a NULL value answers 0 with no error raised.
 ///
-/// The lookup itself is absent for the reason `fix_dh_nid` records: RFC 5114's three groups are
-/// three more rows of the same `dh_named_groups[]` table, uid 1, 2 and 3, and their prime material
-/// is what keeps the table out of this stratum.
+/// The lookup is the same pair D343 wires into `fix_dh_nid`: RFC 5114's three groups are three more
+/// rows of `dh_named_groups[]`, and the two lookups are what `ossl_ffc_named_group_get_name`'s
+/// `#[allow(dead_code)]` reason names as its reader in this file.
 ///
 /// # Safety
 /// `translation` NULL or live; `ctx` live, with `p2` NULL or NUL-terminated in the
@@ -4711,19 +4734,43 @@ pub(crate) unsafe extern "C" fn fix_dh_nid5114(
 
     match state {
         XlatState::PreCtrlToParams => {
-            // SAFETY: a compile-time-constant site.
-            unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_1039) };
-            return 0;
+            // SAFETY: `ctx` is live; the lookup takes the integer the ctrl carried.
+            let group = unsafe { crate::ffc::dh::ossl_ffc_uid_to_dh_named_group((*ctx).p1) };
+            // SAFETY: `group` is NULL or a table entry.
+            let name = unsafe { crate::ffc::dh::ossl_ffc_named_group_get_name(group) };
+            if name.is_null() {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_1039) };
+                return 0;
+            }
+            /* SAFETY: `name` is a static NUL-terminated string borrowed from the table. */
+            unsafe {
+                (*ctx).p2 = name.cast_mut().cast::<c_void>();
+                (*ctx).p1 = 0;
+            }
         }
         XlatState::PreCtrlStrToParams => {
             // SAFETY: `ctx` is live.
             if unsafe { (*ctx).p2 }.is_null() {
                 return 0;
             }
-            /* `atoi(ctx->p2)` is the UID the absent lookup would be given. */
-            // SAFETY: a compile-time-constant site.
-            unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_1050) };
-            return 0;
+            /* `atoi(ctx->p2)` is the UID the lookup is given. */
+            // SAFETY: `ctx` is live and `p2` is the caller's NUL-terminated value.
+            let uid = unsafe { atoi((*ctx).p2.cast::<c_char>()) };
+            // SAFETY: the lookup takes an integer.
+            let group = unsafe { crate::ffc::dh::ossl_ffc_uid_to_dh_named_group(uid) };
+            // SAFETY: `group` is NULL or a table entry.
+            let name = unsafe { crate::ffc::dh::ossl_ffc_named_group_get_name(group) };
+            if name.is_null() {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_1050) };
+                return 0;
+            }
+            /* SAFETY: `name` is a static NUL-terminated string borrowed from the table. */
+            unsafe {
+                (*ctx).p2 = name.cast_mut().cast::<c_void>();
+                (*ctx).p1 = 0;
+            }
         }
         _ => {}
     }

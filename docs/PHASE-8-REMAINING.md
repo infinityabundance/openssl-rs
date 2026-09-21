@@ -13,11 +13,11 @@ Read from the ledger's `body.counts`.
 | quantity | count |
 |---|---|
 | owned | 786 |
-| implemented | 617 |
+| implemented | 644 |
 | deferred to a later phase | 1 |
-| open in this stratum | 168 |
+| open in this stratum | 141 |
 
-The identity `owned = implemented + deferred + open` is `786 = 617 + 1 + 168`, which holds.
+The identity `owned = implemented + deferred + open` is `786 = 644 + 1 + 141`, which holds.
 
 ## The merge gate — what Phase 8 owes to Phase 9
 
@@ -56,14 +56,14 @@ table, verbatim.
 | subphase | owns | open | courts | depends on |
 |---|---|---|---|---|
 | 8.4 RSA | `src/rsa/mod.rs` | 24 | `RT-RSA`, `CT-RSA` | 8.1 (the RSA provider's `SHA`-named digests), 8.3 (its OAEP/PSS modes) |
-| 8.5 DH and DHX | `src/dh/mod.rs`, `src/dh/mod.rs`, `src/ffc/`, `src/dh/object.rs`, `src/dh/group_params.rs`, `src/dh/rfc5114.rs`, `src/ffc/dh.rs`, `src/bn/dh.rs`, `src/bn/dh_data.rs` | 32 | `RT-DH`, `CT-DH` | 8.4 (the shared BN/param idiom) |
-| 8.6 DSA | `src/dsa/mod.rs`, `src/dsa/mod.rs`, `src/dsa/object.rs`, `src/dsa/ossl.rs`, `src/dsa/key.rs`, `src/dsa/gen.rs`, `src/dsa/sign.rs`, `src/dsa/vrf.rs`, `src/dsa/depr.rs`, `src/asn1_dsa.rs`, `src/packet.rs`, `src/quic_vlint.rs` | 21 | `RT-DSA`, `CT-DSA` | 8.5 |
+| 8.5 DH and DHX | `src/dh/mod.rs`, `src/dh/mod.rs`, `src/ffc/`, `src/dh/object.rs`, `src/dh/group_params.rs`, `src/dh/rfc5114.rs`, `src/ffc/dh.rs`, `src/bn/dh.rs`, `src/bn/dh_data.rs`, `src/dh/ctrl.rs`, `src/ffc/dh.rs` | 12 | `RT-DH`, `CT-DH` | 8.4 (the shared BN/param idiom) |
+| 8.6 DSA | `src/dsa/mod.rs`, `src/dsa/mod.rs`, `src/dsa/object.rs`, `src/dsa/ossl.rs`, `src/dsa/key.rs`, `src/dsa/gen.rs`, `src/dsa/sign.rs`, `src/dsa/vrf.rs`, `src/dsa/depr.rs`, `src/asn1_dsa.rs`, `src/packet.rs`, `src/quic_vlint.rs`, `src/dsa/ctrl.rs` | 14 | `RT-DSA`, `CT-DSA` | 8.5 |
 | 8.7 EC | `src/ec/mod.rs`, `src/ec/curve.rs`, `src/ec/curve_data.rs`, `src/ec/support.rs`, `src/ec/mod.rs`, `src/bn/intern.rs`, `src/bn/bignum.rs`, `src/bn/exp.rs`, `src/ec/key.rs`, `src/ec/lib.rs`, `src/ec/smpl.rs`, `src/ec/mult.rs`, `src/ec/oct.rs`, `src/ec/cvt.rs`, `src/ec/key.rs`, `src/ec/ecdsa.rs`, `src/param_build_set.rs` | 46 | `RT-EC`, `CT-EC` | 8.6 |
 | 8.8 The ASN.1 method objects and `standard_methods[]` | `src/asn1/ameth.rs` | 15 | `RT-AMETH` | 8.4, 8.5, 8.6, 8.7 |
 | 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals | `src/pem/key_legacy.rs` | 30 | `RT-PEM-KEY` | 8.8 |
 
-Total open symbols listed below: **168**; the ledger's
-`open_in_this_stratum` is 168.
+Total open symbols listed below: **141**; the ledger's
+`open_in_this_stratum` is 141.
 
 ### 8.4 RSA — 24 open
 
@@ -75,31 +75,18 @@ Total open symbols listed below: **168**; the ledger's
 `d2i_RSA_PSS_PARAMS`, `i2d_RSAPrivateKey`, `i2d_RSAPublicKey`, `i2d_RSA_OAEP_PARAMS`,
 `i2d_RSA_PSS_PARAMS`
 
-### 8.5 DH and DHX — 32 open
+### 8.5 DH and DHX — 12 open
 
 `DH_KDF_X9_42`, `DHparams_dup`, `DHparams_it`, `DHparams_print`, `DHparams_print_fp`,
-`EVP_PKEY_CTX_get0_dh_kdf_oid`, `EVP_PKEY_CTX_get0_dh_kdf_ukm`,
-`EVP_PKEY_CTX_get_dh_kdf_md`, `EVP_PKEY_CTX_get_dh_kdf_outlen`,
-`EVP_PKEY_CTX_get_dh_kdf_type`, `EVP_PKEY_CTX_set0_dh_kdf_oid`,
-`EVP_PKEY_CTX_set0_dh_kdf_ukm`, `EVP_PKEY_CTX_set_dh_kdf_md`,
-`EVP_PKEY_CTX_set_dh_kdf_outlen`, `EVP_PKEY_CTX_set_dh_kdf_type`,
-`EVP_PKEY_CTX_set_dh_nid`, `EVP_PKEY_CTX_set_dh_pad`,
-`EVP_PKEY_CTX_set_dh_paramgen_generator`, `EVP_PKEY_CTX_set_dh_paramgen_gindex`,
-`EVP_PKEY_CTX_set_dh_paramgen_prime_len`, `EVP_PKEY_CTX_set_dh_paramgen_seed`,
-`EVP_PKEY_CTX_set_dh_paramgen_subprime_len`, `EVP_PKEY_CTX_set_dh_paramgen_type`,
-`EVP_PKEY_CTX_set_dh_rfc5114`, `EVP_PKEY_CTX_set_dhx_rfc5114`, `EVP_PKEY_get0_DH`,
-`EVP_PKEY_get1_DH`, `EVP_PKEY_set1_DH`, `d2i_DHparams`, `d2i_DHxparams`, `i2d_DHparams`,
-`i2d_DHxparams`
+`EVP_PKEY_get0_DH`, `EVP_PKEY_get1_DH`, `EVP_PKEY_set1_DH`, `d2i_DHparams`,
+`d2i_DHxparams`, `i2d_DHparams`, `i2d_DHxparams`
 
-### 8.6 DSA — 21 open
+### 8.6 DSA — 14 open
 
 `DSA_print`, `DSA_print_fp`, `DSAparams_dup`, `DSAparams_print`, `DSAparams_print_fp`,
-`EVP_PKEY_CTX_set_dsa_paramgen_bits`, `EVP_PKEY_CTX_set_dsa_paramgen_gindex`,
-`EVP_PKEY_CTX_set_dsa_paramgen_md`, `EVP_PKEY_CTX_set_dsa_paramgen_md_props`,
-`EVP_PKEY_CTX_set_dsa_paramgen_q_bits`, `EVP_PKEY_CTX_set_dsa_paramgen_seed`,
-`EVP_PKEY_CTX_set_dsa_paramgen_type`, `EVP_PKEY_get0_DSA`, `EVP_PKEY_get1_DSA`,
-`EVP_PKEY_set1_DSA`, `d2i_DSAPrivateKey`, `d2i_DSAPublicKey`, `d2i_DSAparams`,
-`i2d_DSAPrivateKey`, `i2d_DSAPublicKey`, `i2d_DSAparams`
+`EVP_PKEY_get0_DSA`, `EVP_PKEY_get1_DSA`, `EVP_PKEY_set1_DSA`, `d2i_DSAPrivateKey`,
+`d2i_DSAPublicKey`, `d2i_DSAparams`, `i2d_DSAPrivateKey`, `i2d_DSAPublicKey`,
+`i2d_DSAparams`
 
 ### 8.7 EC — 46 open
 

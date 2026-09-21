@@ -49,6 +49,7 @@
       "units_not_reached": [
         "crypto/chacha/chacha_enc.c",
         "crypto/dh/dh_asn1.c",
+        "crypto/dh/dh_backend.c",
         "crypto/dh/dh_prn.c",
         "crypto/dsa/dsa_ameth.c",
         "crypto/dsa/dsa_asn1.c",
@@ -62,7 +63,6 @@
         "crypto/ec/eck_prn.c",
         "crypto/ec/ecp_nistz256.c",
         "crypto/ec/ecx_meth.c",
-        "crypto/evp/dsa_ctrl.c",
         "crypto/ffc/ffc_backend.c",
         "providers/common/provider_seeding.c",
         "providers/common/provider_util.c",
@@ -92,12 +92,12 @@
         "docs/PHASE-9-SUBPHASES.md"
       ],
       "rows_judged": 82,
-      "symbols_named_by_a_row": 92,
-      "symbols_reached": 85,
+      "symbols_named_by_a_row": 93,
+      "symbols_reached": 86,
       "unit_records": 66,
       "units_named_by_a_record": 68,
-      "units_named_by_a_row": 223,
-      "units_reached": 189
+      "units_named_by_a_row": 225,
+      "units_reached": 191
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -459,6 +459,22 @@
         "defines": [
           "d2i_int_dhx",
           "i2d_int_dhx"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/dh/dh_backend.c": {
+        "defines": [
+          "ossl_dh_dup",
+          "ossl_dh_is_foreign",
+          "ossl_dh_key_from_pkcs8",
+          "ossl_dh_key_fromdata",
+          "ossl_dh_key_todata",
+          "ossl_dh_params_fromdata",
+          "ossl_dh_params_todata"
         ],
         "recorded_by": null,
         "subphases": [
@@ -1276,6 +1292,16 @@
         ],
         "transcribed_by": []
       },
+      "crypto/evp/dh_ctrl.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/dh/ctrl.rs"
+        ]
+      },
       "crypto/evp/dh_support.c": {
         "defines": [
           "ossl_dh_gen_type_id2name",
@@ -1311,7 +1337,9 @@
         "subphases": [
           "8.6"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/dsa/ctrl.rs"
+        ]
       },
       "crypto/evp/e_aes.c": {
         "defines": [],
@@ -3318,10 +3346,10 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 238
+      "transcribed_units": 240
     }
   },
-  "body_hash": "21bef4596e2a3212ff890a9faf46901bbfbbdee898cbdf376f4c78f5214ca189",
+  "body_hash": "ec32b2728b793f5b21ebcfe17a484b16ec9976accc0c427956bc18c6ea5138af",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -3332,17 +3360,17 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "423767999f566b4c9cfe02355a9b947f3924ddc9c55a4d93a1aa3f41d7208c61"
+      "sha256": "af8d4f059211b32cafae97b5548aeb4110384dbb47dff7bab180f889545b14c9"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "ef6455171ab23e06ba37208cb19854b69cca9c66565dd35f1970ac37414a41f2"
+      "sha256": "bede8477cce264c160f17059127d2648a536513fde6d54e4d90c77cb7f6dd8d8"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "043a607ccc9b3e554ceb60d11be32042cbe31941a13f3bac2458005028f2f88b"
+      "sha256": "52e6a45f6c4ddaa800a3bc954f4e498a6620cf58adef19f316bf676f4a959589"
     },
     {
       "name": "prerequisites",
@@ -3372,7 +3400,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "aef06fadea247181a42a9be6bee55f78e71b59ec31498f023a377f2d37445fd9"
+      "sha256": "6c011273710923bfd56e418aba2fce19161fbee04d9dfc7f192981888ebb83ec"
     },
     {
       "name": "plan-PHASE-9-SUBPHASES",

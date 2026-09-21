@@ -87,6 +87,7 @@
 //! constant so that a transcription which *did* call one would be visible in the transcript rather
 //! than merely wrong.
 
+pub mod ctrl;
 pub mod depr;
 pub mod gen;
 pub mod key;

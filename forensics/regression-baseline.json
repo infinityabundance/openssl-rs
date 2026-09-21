@@ -183,7 +183,7 @@
       "verdict": "pass"
     },
     "RT-DH": {
-      "observations": 405,
+      "observations": 550,
       "verdict": "pass"
     },
     "RT-DIGEST": {
@@ -195,7 +195,7 @@
       "verdict": "pass"
     },
     "RT-DSA": {
-      "observations": 262,
+      "observations": 319,
       "verdict": "pass"
     },
     "RT-DSO": {
@@ -389,7 +389,7 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 2534,
+    "libcrypto": 2561,
     "libssl": 0
   },
   "open_obligations": {
@@ -398,7 +398,7 @@
     "phase5": 0,
     "phase6": 0,
     "phase7": 0,
-    "phase8": 168,
+    "phase8": 141,
     "phase9": 12
   },
   "owned_obligations": {
@@ -438,7 +438,7 @@
     "blocking_dependencies": 19,
     "divergence_names_covered": 45,
     "findings": 0,
-    "language_census": 3824,
+    "language_census": 3835,
     "sealed_census": 52
   },
   "provider_implemented": [

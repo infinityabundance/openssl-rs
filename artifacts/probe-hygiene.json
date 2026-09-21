@@ -4375,9 +4375,9 @@
               "-O2"
             ],
             "observations": {
-              "-O0": 405,
-              "-O1": 405,
-              "-O2": 405
+              "-O0": 512,
+              "-O1": 512,
+              "-O2": 512
             },
             "side": "authority",
             "verdict": "clean"
@@ -4403,9 +4403,9 @@
               "-O2"
             ],
             "observations": {
-              "-O0": 405,
-              "-O1": 405,
-              "-O2": 405
+              "-O0": 512,
+              "-O1": 512,
+              "-O2": 512
             },
             "side": "candidate",
             "verdict": "clean"
@@ -4499,9 +4499,9 @@
               "-O2"
             ],
             "observations": {
-              "-O0": 262,
-              "-O1": 262,
-              "-O2": 262
+              "-O0": 305,
+              "-O1": 305,
+              "-O2": 305
             },
             "side": "authority",
             "verdict": "clean"
@@ -4527,9 +4527,9 @@
               "-O2"
             ],
             "observations": {
-              "-O0": 262,
-              "-O1": 262,
-              "-O2": 262
+              "-O0": 305,
+              "-O1": 305,
+              "-O2": 305
             },
             "side": "candidate",
             "verdict": "clean"
@@ -5272,7 +5272,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_dh_probe.c",
-      "sha256": "2f513a0e274fafa0cc8bccf8c309e7c5e7e32285c809b47c46b43a64bf818732"
+      "sha256": "ff3d9c03e1aeb57dcedd826660e927dc3d546f054b3f058c75533defb917468f"
     },
     {
       "name": "probe",
@@ -5282,7 +5282,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_dsa_probe.c",
-      "sha256": "c2ee7e01bc38ced0931688b2cdacd3269bca1c13596b808f0cac194e005ef4bd"
+      "sha256": "4bec9bd4c7a50c79f2ba3d43a3e2eff2bcdbe72bb2ae8cadeb7ff96e6aa466a9"
     },
     {
       "name": "probe",

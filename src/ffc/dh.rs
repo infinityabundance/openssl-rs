@@ -423,17 +423,16 @@ pub(crate) unsafe fn ossl_ffc_named_group_get_uid(group: *const DhNamedGroup) ->
 /// `const char *ossl_ffc_named_group_get_name(const DH_NAMED_GROUP *group)` —
 /// `crypto/ffc/ffc_dh.c:140-145`.
 ///
-/// `#[allow(dead_code)]`'s reason: **its readers are the provider and export halves.**
-/// `crypto/ffc/ffc_params.c:252` is inside `ossl_ffc_params_todata`, which this crate
-/// withholds (`src/ffc/params.rs` records why);
-/// `crypto/evp/ctrl_params_translate.c:1012`-`:1531` is 8.5's slice E; and
-/// `crypto/encode_decode/encoder_lib.c:818` is Phase 10's. The DSA half of the same
-/// provider pair is what the fourth caller belongs to.
+/// Its reader is now **the EVP ctrl translator**: `crypto/evp/ctrl_params_translate.c`'s
+/// `fix_dh_nid` and `fix_dh_nid5114` are what D343 wires to it (`src/evp/pkey_ctx.rs`), which is the
+/// reader the `#[allow(dead_code)]` that stood here before D343 named. The other callers remain
+/// later strata: `crypto/ffc/ffc_params.c:252` is inside `ossl_ffc_params_todata`, which this crate
+/// withholds (`src/ffc/params.rs` records why), and `crypto/encode_decode/encoder_lib.c:818` is
+/// Phase 10's.
 ///
 /// # Safety
 ///
 /// As [`ossl_ffc_named_group_get_uid`].
-#[allow(dead_code)] // read by `ossl_ffc_params_todata`, the EVP translator and the encoder
 pub(crate) unsafe fn ossl_ffc_named_group_get_name(group: *const DhNamedGroup) -> *const c_char {
     // SAFETY: NULL-or-live per this function's contract.
     match unsafe { group.as_ref() } {
