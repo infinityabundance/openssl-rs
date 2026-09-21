@@ -23611,3 +23611,161 @@ retired or split, which the generator checks rather than trusts.
 with **129** names open, 8.8's fifteen and the four key types' ASN.1 and printer families among them.
 What this slice is, is the EC EVP control surface and the one digest-by-name deferral its getter
 reaches — not 8.7, and not 8.8.
+
+
+---
+
+## D345 — 8.4's, 8.5's, 8.6's and 8.7's ASN.1 and codec residue lands, and the brief's expectation that two of those units are blocked is corrected by the authority's own measurement
+
+**Decision.** The same-stratum residue D344 measured and D341 named is landed where it is one
+closure (D327's rule). **Twenty-nine exports** leave `open` for `implemented`, across all four key
+types and seven authority units:
+
+* **RSA — eight.** The plain-key half of `crypto/rsa/rsa_asn1.c` is the new module
+  `src/rsa/asn1.rs`: the two templates `RSAPublicKey` (`n`, `e`) and `RSAPrivateKey` (the version
+  word, `n`, `e`, `d`, `p`, `q`, `dmp1`, `dmq1`, `iqmp` and the optional multi-prime
+  `prime_infos`), the `RSA_PRIME_INFO` item they nest, the two item accessors `RSAPublicKey_it` and
+  `RSAPrivateKey_it`, the four encode entry points, and the two dups. The unit is **partial**: its
+  other two templates, `RSA_PSS_PARAMS` and `RSA_OAEP_PARAMS`, carry `X509_ALGOR` fields and call
+  `X509_ALGOR_free`, which is `x509.h`'s and Phase 11's, so they are left unlanded and named.
+* **EC — six.** The two `ec_print.c` hex codecs `EC_POINT_point2hex`/`EC_POINT_hex2point` are the
+  new module `src/ec/print.rs`; the two `ec_deprecated.c` codecs
+  `EC_POINT_point2bn`/`EC_POINT_bn2point` are the new module `src/ec/depr.rs`; and `ec_asn1.c`'s
+  `ECDSA_SIG_get0_r`/`ECDSA_SIG_get0_s` join the other three `ECDSA_SIG_*` accessors in
+  `src/ec/ecdsa.rs`, where D340 already put the object's constructor, destructor and pair accessor.
+  Every callee is in (`EC_POINT_point2buf`, `EC_POINT_oct2point`, `EC_POINT_new`,
+  `EC_POINT_clear_free`, `BN_bin2bn`, `BN_bn2binpad`, `OPENSSL_hexstr2buf_ex` and `ossl_to_hex`),
+  which is the reading D344 measured.
+* **DH — eight.** `crypto/dh/dh_asn1.c` lands **whole** as the new module `src/dh/asn1.rs`: the
+  `DHparams` item and its encode pair (`DHparams_it`, `d2i_DHparams`, `i2d_DHparams`) and the X9.42
+  `DHxparams` pair translated to and from a real `DH` (`d2i_DHxparams`, `i2d_DHxparams`), with the
+  two private structures `int_dhvparams`/`int_dhx942_dh` and their items. The three `dh_ameth.c`
+  and `dh_prn.c` exports that reach no Phase 11 name land too: `DHparams_dup` and `DHparams_print`
+  in the new **partial** module `src/dh/ameth.rs` (with the two file-local helpers they reach,
+  `int_dh_param_copy` and `do_dh_print`), and `DHparams_print_fp` in the new module `src/dh/prn.rs`.
+* **DSA — seven.** `crypto/dsa/dsa_asn1.c` lands **whole** as the new module `src/dsa/asn1.rs`: the
+  three templates `DSAPrivateKey`, `DSAPublicKey` and `DSAparams` (six encode entry points) and
+  `DSAparams_dup`.
+
+**The templates are transcribed, not approximated, and the machinery was already in.** Each unit is
+an `ASN1_SEQUENCE_cb`-shaped item over a measured structure: `ASN1_EMBED(RSA, version, INT32)` at
+offset 16 with the nine component pointers from 40 to 96 and `prime_infos` at 136;
+`ASN1_EMBED(DSA, version, INT32)` at 4, the `params.p`/`params.q`/`params.g` pointers at 8/16/24 and
+`pub_key`/`priv_key` at 104/112; and for DH `params.p`/`params.g` at 8/24 with
+`ASN1_OPT_EMBED(DH, length, ZINT32)` at 104. The offsets are `core::mem::offset_of!` and the
+`assert!` blocks make a layout change a compile error. The `rsa_cb`/`dsa_cb`/`dh_cb` callbacks are
+`ASN1_AUX` blocks; `rsa_cb`'s `ASN1_OP_D2I_POST` computes a multi-prime key's CRT product through
+`ossl_rsa_multip_calc_product` and fails the decode if it cannot, and `dh_cb`'s clears and sets the
+`DH_FLAG_TYPE_*` word, caches the named group and bumps `dirty_cnt`. RSAPrivateKey's
+`ASN1_SEQUENCE_OF_OPT(RSA, prime_infos, RSA_PRIME_INFO)` is the crate's first `SEQUENCE OF` template
+outside `crypto/asn1`'s own items, and the interpreter supports it. The item interpreter, the
+`ASN1_AUX` path and the numeric items (`INT32_it`, `ZINT32_it`, `BIGNUM_it`, `CBIGNUM_it`) are all
+Phase 5's and were already landed, which is why D341's lexical measurement — `dsa_asn1.c` "has no
+non-Phase-8 reference at all", `dh_asn1.c` "needs only Phase 5", `rsa_asn1.c` needing `X509_ALGOR_free`
+"only for its two PSS/OAEP templates" — is the one this commit acts on. `Asn1Aux` is not `Sync`, so
+each module wraps its one shared aux in a `#[repr(transparent)]` `SyncAux` with the same `unsafe
+impl` claim `src/asn1/layout.rs` makes for `Asn1Item` and `Asn1Template`.
+
+**Two findings the courts and the unit tests produced, recorded rather than smoothed.**
+
+* **`EC_POINT_hex2point(group, "00")` is not a refusal.** The first attempt asserted one — a
+  one-octet encoding "cannot be a point" — and the probe's own run said otherwise on **both** sides:
+  `ossl_ec_GFp_simple_oct2point` treats `form == 0` at `len == 1` as the **point at infinity** and
+  answers success, and `EC_POINT_bn2point` widens a zero `BIGNUM` to that same one octet. The arm
+  now prints `zero_is_infinity` and a wrong-width string (`"04FF"`) is the refusal instead, and the
+  unit tests assert the same. This is the class of finding D344 recorded for an uninitialised read:
+  a value the author assumed rather than measured.
+* **`d2i_DHparams` answers an object with a `q` even though the `DHparams` template has none.**
+  `dh_cb`'s `ASN1_OP_D2I_POST` runs `ossl_dh_cache_named_group`, which finds the FFDHE row by `p`
+  and fills `q` from `dh_named_groups[]`. A probe arm named `q_absent` printed **0**; it is now
+  `q_filled_by_the_cache`, comparing the decoded `q` with the source's, and the unit test says so.
+  The template's three fields and the decoded object are therefore not the same list.
+
+**The two raise sites are reconstructed from the authority's own `__FILE__`/`__LINE__`/`__func__`,
+and one reason constant had to be read off the court.** `dh_ameth.c` and `dh_prn.c` are not in
+`gen_err_raise_sites.py`'s `COVERED_FILES`, so there is no `err_sites::*` constant for either.
+`src/dh/ameth.rs`'s `raise_at_do_dh_print` and `src/dh/prn.rs`'s `raise_at_dh_prn_28` write the
+authority's `ERR_raise_data` expansion (`ERR_new`, `ERR_set_debug`, `ERR_set_error`) with the unit,
+line and enclosing `__func__`. The first run of `RT-DH` caught a wrong constant: `ERR_R_FATAL` is
+`ERR_RFLAG_FATAL | ERR_RFLAG_COMMON` (`err.h:353`), not `ERR_RFLAG_FATAL` alone, so
+`ERR_R_PASSED_NULL_PARAMETER` is `258 | 0xC0000` and not `258 | 0x40000`; the drained code differed
+by exactly the `ERR_RFLAG_COMMON` bit and the arm now matches the authority byte for byte. RSA's and
+the three ASN.1 units' raise their own errors through the already-landed Phase 5 sites, so no
+reconstruction was needed for them.
+
+**The brief is corrected, and the authority is the one that corrects it.** This session's brief said
+to "expect `crypto/dsa/dsa_asn1.c` and `crypto/dh/dh_asn1.c` to be blocked on 8.8/Phase 11 (D341)"
+and to name them rather than land them. The measurement is the opposite, and three of the project's
+own records say so: `forensics/phase8-obligations.json` labels all thirteen of these names to
+`src/dsa/mod.rs` and `src/dh/mod.rs` (8.6 and 8.5), `docs/PHASE-8-AMETH-INTEGRATION-PLAN.md` §6
+names `d2i_DSAPublicKey` as one of the three callees 8.8's `d2i_PublicKey` waits on **and assigns it
+to 8.6**, and D341 itself calls these the "landable residue" whose closure is Phase 8's. What the
+plan's 8.5 and 8.6 rows call "8.8's ASN.1 method machinery" is `dsa_ameth.c`/`dh_ameth.c` — the
+objects whose callbacks read Phase 11's `X509_PUBKEY`/`X509_ALGOR`/`PKCS8_PRIV_KEY_INFO` — and not
+the template units beside them. The brief's own item 3, "any other open row whose closure is
+entirely within Phase 8", is what puts RSA's plain-key half in the same commit: D341 names
+`rsa_asn1.c`'s plain templates in the same residue paragraph, and their closure is `RSA_new`/
+`RSA_free`, `ossl_rsa_multip_calc_product` and the Phase 5 item layer.
+
+**`src/dh/ameth.rs` is a partial unit, and the partiality is measured rather than hidden.** Giving
+`crypto/dh/dh_ameth.c` a crate module makes the gate's direction B inspect every identifier the
+unit's bodies reference, and two of them — the `EVP_PKEY_ASN1_METHOD` objects `ossl_dh_asn1_meth`
+and `ossl_dhx_asn1_meth` — are this stratum's and unlanded. They are recorded in
+`forensics/prerequisites.json`'s `divergences` with class `owned_by_a_later_stratum`, which is the
+`src/ec/asn1.rs`/`src/ec/backend.rs` shape, and the gate's own count moves from **10 rows covering
+45 names** to **11 rows covering 47**. The rest of the unit — the decode/encode callbacks,
+`dh_cmp_parameters`, `dh_pub_cmp` and the three prints — is left unlanded and named rather than
+stubbed. **`src/rsa/asn1.rs` is partial in the same way and needs no row, and the difference is
+recorded because it is a real asymmetry**: the two withheld RSA templates' seven export names
+(`RSA_PSS_PARAMS_*`, `RSA_OAEP_PARAMS_*`) are produced by `IMPLEMENT_ASN1_FUNCTIONS` and never
+appear as identifiers, so direction B never sees them and a row covering them would be rejected by
+the gate's own direction D ("a row may not cover a name the gate did not observe"). The omission of
+the two PSS/OAEP templates is therefore recorded in that module's own documentation and here, and
+not in the gate's tables.
+
+**The courts, and what they refuse to print.** `RT-RSA` grows 976 -> **1002 observations**, `RT-EC`
+2324 -> **2367**, `RT-DH` 550 -> **578**, `RT-DSA` 319 -> **342**, all zero residual. `RT-RSA`'s new
+block builds a structural key, round-trips it through both templates and both dups and observes the
+consumed length; `RT-EC`'s clears the queue, round-trips a P-256 point through the hex and BN codecs
+(`EC_POINT_cmp`, the 130-digit width, the uppercase digits, both in-place identities and six
+refusals whose drained coordinates are the callees' own — `crypto/o_str.c` and `ecp_oct.c`, because
+neither codec unit raises), and drives `ECDSA_SIG_get0_r`/`_s` against the pair accessor's fields;
+`RT-DH`'s round-trips a FFDHE-2048 group through both templates and `DHparams_dup`, drives
+`DHparams_it`, prints into a memory BIO and a `FILE *`, and drains the null-`p` refusal at
+`dh_ameth.c:297`; and `RT-DSA`'s round-trips a small structural group through all three templates
+and `DSAparams_dup`. **No arm prints a secret**: every observation is a return code, a width, a byte
+count, an in-place identity or an equality the probe computes itself, and the `DHparams_print` arm
+prints whether the first bytes are the four-space indent and `DH` rather than any of the text, which
+carries the parameters.
+
+**Bookkeeping, read off the regenerated files.** `phase8` moves implemented 656 -> **685**, deferred
+1 unchanged, open 129 -> **100**, owned 786 unchanged; `forensics/atlas/implemented-surface.json`
+moves `libcrypto` implemented 2573 -> **2602**; `forensics/atlas/transcription-edges.json` gains the
+seven edges, over **278** crate modules and **247** authority units. `court_coverage.py` reports
+every one of the stratum's **685** implemented exports courted (677 directly, 8 indirectly, 0
+non-observable). The prerequisite gate ends at **zero findings**, `sealed_census` stays **52** and
+`blocking_dependencies` stays **19**; the pipeline's own `regression_guard.py --baseline-ref
+origin/main` records both *falling* against the older branch baseline (57 -> 52 and 25 -> 19), which
+is a decrease and needs no approved-transition row. `docs/PHASE-8-SUBPHASES.md`'s 8.4, 8.5, 8.6 and
+8.7 rows record this entry, its two anchored clauses move the twenty-nine names from the `open`
+paragraph to the landed one, and its `docs/PHASE-8-REMAINING.md` projection is regenerated. No name
+in `forensics/tools/phase8_obligations.py`'s `BLOCKED_HANDOFFS` is defined by this commit, so no row
+is retired or split, which the generator checks rather than trusts.
+
+**What is deliberately *not* here, named rather than implied.** 8.4's `RSA_PSS_PARAMS_*` and
+`RSA_OAEP_PARAMS_*` templates and `RSA_print`/`RSA_print_fp`; 8.5's `DH_KDF_X9_42` and the two
+`dh_ameth.c` method objects, with the rest of that unit's callbacks; 8.6's four `dsa_prn.c` printers
+and `dsa_ameth.c`, all withheld on `EVP_PKEY_set1_DSA` and therefore Phase 11; the twelve
+`EVP_PKEY_get0_*`/`get1_*`/`set1_*` legacy accessors of the four key types, which wait on
+`evp_pkey_get_legacy`/`EVP_PKEY_assign`; 8.7's `ec_asn1.c` ASN.1 template machinery and `eck_prn.c`
+printers, which D344 keeps with 8.8 and Phase 11; `ECDH_KDF_X9_62`, whose whole body is an
+`EVP_KDF_fetch` of the X9.63 KDF, which is Phase 9's; and
+`EVP_PKEY_CTX_get_{dh,ecdh}_kdf_md`'s digest-by-name path, whose callee `evp_get_digestbyname_ex`
+has no populated legacy `OBJ_NAME` table until Phase 13. The two `dh_ameth.c` objects are
+additionally recorded in `forensics/prerequisites.json` so their absence is a decision rather than
+an omission.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete:
+false` with **100** names open, 8.8's fifteen and the four key types' ASN.1 and printer families
+among them. What this slice is, is the same-stratum ASN.1 and codec residue and the boundary
+measurement that separated it from 8.8's — not 8.4, not 8.5, not 8.6, not 8.7, and not 8.8.

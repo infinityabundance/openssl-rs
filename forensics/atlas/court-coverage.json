@@ -247,7 +247,8 @@
               "RT-MEM",
               "RT-MEM-DEFAULT",
               "RT-MEM-INSTALL",
-              "RT-PARAM"
+              "RT-PARAM",
+              "RT-RSA"
             ],
             "symbol": "CRYPTO_free"
           },
@@ -2303,6 +2304,7 @@
               "RT-BIO-PAIR",
               "RT-BIO-PRINT",
               "RT-CONF",
+              "RT-DH",
               "RT-EVP-BIO",
               "RT-EVP-PEM",
               "RT-PARAM",
@@ -2532,6 +2534,7 @@
               "RT-BIO-PAIR",
               "RT-BIO-PRINT",
               "RT-CONF",
+              "RT-DH",
               "RT-ERR-BIO",
               "RT-EVP-PEM",
               "RT-LHASH",
@@ -2978,6 +2981,7 @@
               "RT-BIO-PAIR",
               "RT-BIO-PRINT",
               "RT-CONF",
+              "RT-DH",
               "RT-ERR-BIO",
               "RT-EVP-BIO",
               "RT-EVP-PEM",
@@ -3291,6 +3295,7 @@
               "RT-BIO-FILTER",
               "RT-BIO-PRINT",
               "RT-CONF",
+              "RT-DH",
               "RT-ERR-BIO",
               "RT-EVP-BIO",
               "RT-EVP-PEM",
@@ -14514,10 +14519,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 648,
-          "directly_courted_called": 648,
+          "directly_courted": 677,
+          "directly_courted_called": 677,
           "directly_courted_referenced": 0,
-          "implemented": 656,
+          "implemented": 685,
           "indirectly_courted": 8,
           "non_observable": 0,
           "unmatched": 0
@@ -15810,6 +15815,34 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DHparams_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DHparams_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DHparams_print"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DHparams_print_fp"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-DSA"
             ],
             "symbol": "DSA_OpenSSL"
@@ -16279,6 +16312,13 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "DSAparams_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-EC"
             ],
             "symbol": "ECDH_compute_key"
@@ -16296,6 +16336,20 @@
               "RT-EC"
             ],
             "symbol": "ECDSA_SIG_get0"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "ECDSA_SIG_get0_r"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "ECDSA_SIG_get0_s"
           },
           {
             "basis": "called",
@@ -17121,6 +17175,13 @@
             "courts": [
               "RT-EC"
             ],
+            "symbol": "EC_POINT_bn2point"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
             "symbol": "EC_POINT_clear_free"
           },
           {
@@ -17191,6 +17252,13 @@
             "courts": [
               "RT-EC"
             ],
+            "symbol": "EC_POINT_hex2point"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
             "symbol": "EC_POINT_invert"
           },
           {
@@ -17247,7 +17315,21 @@
             "courts": [
               "RT-EC"
             ],
+            "symbol": "EC_POINT_point2bn"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
             "symbol": "EC_POINT_point2buf"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_point2hex"
           },
           {
             "basis": "called",
@@ -18046,6 +18128,34 @@
               "RT-DIGEST"
             ],
             "symbol": "RIPEMD160_Update"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSAPrivateKey_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSAPrivateKey_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSAPublicKey_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "RSAPublicKey_it"
           },
           {
             "basis": "called",
@@ -19037,9 +19147,44 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DH"
+            ],
+            "symbol": "d2i_DHparams"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "d2i_DHxparams"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "d2i_DSAPrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "d2i_DSAPublicKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-DSA"
             ],
             "symbol": "d2i_DSA_SIG"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "d2i_DSAparams"
           },
           {
             "basis": "called",
@@ -19051,6 +19196,48 @@
           {
             "basis": "called",
             "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "d2i_RSAPrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "d2i_RSAPublicKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "i2d_DHparams"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "i2d_DHxparams"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "i2d_DSAPrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "i2d_DSAPublicKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-DSA"
             ],
             "symbol": "i2d_DSA_SIG"
@@ -19058,9 +19245,30 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DSA"
+            ],
+            "symbol": "i2d_DSAparams"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-EC"
             ],
             "symbol": "i2d_ECDSA_SIG"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "i2d_RSAPrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-RSA"
+            ],
+            "symbol": "i2d_RSAPublicKey"
           }
         ],
         "indirectly_courted": [
@@ -19546,10 +19754,10 @@
       }
     ],
     "totals": {
-      "directly_courted": 2565,
-      "directly_courted_called": 2285,
+      "directly_courted": 2594,
+      "directly_courted_called": 2314,
       "directly_courted_referenced": 280,
-      "implemented": 2573,
+      "implemented": 2602,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -19560,7 +19768,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "3a2468ecf19717942c40a35490a8c78db69d8c50baf4c8a5784cf0b01b24e275"
+      "sha256": "95087bf8f10bd0ae654e24e41821166d25f9601e516167356a701799ad763d91"
     },
     {
       "name": "symbol-ownership",
@@ -19575,7 +19783,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "d6b8a7d564d0210034d676e314d84517bbb192f21e9963671a96fe4814be3c56"
+      "sha256": "afcbfe4d9eeaec1f4a86dca976531dfa4e4d647f6a77e4598c1f381e459dec23"
     },
     {
       "name": "phase3-courts",
@@ -19585,7 +19793,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "7f523eb7d8c6721f99afa549ebdee5dc874b594c06374480be5afed95f685583"
+      "sha256": "bd0d950cf06af9c4f1067a7640b615f81f61c201327474db0c2c7a1e6724d8f2"
     },
     {
       "name": "phase4-courts",
@@ -19595,7 +19803,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "28b908d8a66ed923677373224028b48785c22d0701a2a9fbcaa0669d862692e5"
+      "sha256": "e6ba7b69ec1e1bf86369ebb1fd7380fd0885c7da48826c7cada10e1eeac7a39c"
     },
     {
       "name": "phase5-courts",
@@ -19605,7 +19813,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "e5cadcec410c09b4714d4bd51f4cec8e24c6fc10d9b7eecb79ff8add5252eb68"
+      "sha256": "c17525c22e4950227c48e917434f5f91d3eb4c8a51f62d181c6063d33aab0bb5"
     },
     {
       "name": "phase6-courts",
@@ -19615,7 +19823,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "367ccdcb2ba5f3f67a95d52d3c902c5a6e18bc6d6ba42005dea1d2f5fd58eeeb"
+      "sha256": "a96cabdb14be0c7d0e52f27b55f3adf5525345599f8f404d2b49aa15bb9e456e"
     },
     {
       "name": "phase7-courts",
@@ -19625,17 +19833,17 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "21e36e133b3130a8c9cac27a14c57d9c160ddf13b92b71cd6df2b6428ca23add"
+      "sha256": "5cdb5773f884f358901830aeb8acf38101b2dea9e85e37d36e43d2eeec1246d4"
     },
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "fdb26689d7f460d4b713ae56d1e0a170e64550f5738b118b735240a1d410649a"
+      "sha256": "0d11109e60e9ed1fd218c45790673ff5b149aac07ffaa551d9eed7308ddb1c8a"
     },
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "15e5775931bfa21551d8905b7a84373db479c2cd8ffee1d9493ce70d14447fb4"
+      "sha256": "8b860b80ed36e190b6ac0003b142237f8d6e1167d786f1b6d1803a3b2caaae6e"
     },
     {
       "name": "phase9-courts",

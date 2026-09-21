@@ -58,9 +58,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 976,
+        "authority_observations": 1002,
         "candidate_exit_code": 0,
-        "candidate_observations": 976,
+        "candidate_observations": 1002,
         "candidate_stderr_tail": [],
         "court": "RT-RSA",
         "crashed": false,
@@ -75,9 +75,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 550,
+        "authority_observations": 578,
         "candidate_exit_code": 0,
-        "candidate_observations": 550,
+        "candidate_observations": 578,
         "candidate_stderr_tail": [],
         "court": "RT-DH",
         "crashed": false,
@@ -92,9 +92,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 319,
+        "authority_observations": 342,
         "candidate_exit_code": 0,
-        "candidate_observations": 319,
+        "candidate_observations": 342,
         "candidate_stderr_tail": [],
         "court": "RT-DSA",
         "crashed": false,
@@ -109,9 +109,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 2324,
+        "authority_observations": 2367,
         "candidate_exit_code": 0,
-        "candidate_observations": 2324,
+        "candidate_observations": 2367,
         "candidate_stderr_tail": [],
         "court": "RT-EC",
         "crashed": false,
@@ -37818,22 +37818,22 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_rsa_probe.c",
-      "sha256": "079645fc70ce6771f5b0f93ad03187f4d81c41eac21c60b1010b4722d0342179"
+      "sha256": "ff951741b6d8d411e089e11b9528404e25fb563d0519ae447b6cf73bf3f1f75e"
     },
     {
       "name": "probe",
       "path": "courts/phase8/rt_dh_probe.c",
-      "sha256": "ff3d9c03e1aeb57dcedd826660e927dc3d546f054b3f058c75533defb917468f"
+      "sha256": "e096df2657cc91ae7f42000a4933887cb16327710bf71d3082446cb950c9c635"
     },
     {
       "name": "probe",
       "path": "courts/phase8/rt_dsa_probe.c",
-      "sha256": "4bec9bd4c7a50c79f2ba3d43a3e2eff2bcdbe72bb2ae8cadeb7ff96e6aa466a9"
+      "sha256": "13b4cba4f56fcd74c53dfc7a5f3408a61254bfc1fcf9cd26c1a9b5eb589baed0"
     },
     {
       "name": "probe",
       "path": "courts/phase8/rt_ec_probe.c",
-      "sha256": "77fe62c2c2276b27e36969d818138e5dbd0c5f0b6173a794450ca178c26fe2be"
+      "sha256": "4a633860681b5300dc62cb4a204fc0570298d3ba95fbe47753eab9c8be78e738"
     },
     {
       "name": "correctness-probe",

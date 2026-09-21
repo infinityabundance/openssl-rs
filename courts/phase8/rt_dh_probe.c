@@ -27,7 +27,10 @@
  * a bad generator leaves are compared rather than asserted.
  *
  * What it does not cover: the FFC primitives (their evidence is their own unit tests, D330),
- * `dh_asn1.c`'s ASN.1 machinery, and `DH_KDF_X9_42`. D332's named-group arms are the third block:
+ * `DH_KDF_X9_42` and the `dh_ameth.c` ASN.1 method objects (`ossl_dh_asn1_meth`, `ossl_dhx_asn1_meth`).
+ * D345 lands `crypto/dh/dh_asn1.c` **whole** and the two `dh_ameth.c` exports that reach no Phase 11
+ * name — `DHparams_dup` and `DHparams_print` — plus `dh_prn.c`'s `FILE *` wrapper, and the fourth
+ * block of arms is theirs. D332's named-group arms are the third block:
  * all fourteen rows of
  * `dh_named_groups[]`, the four `DH_new_by_nid`/`DH_get_nid`-shaped entry points, the three
  * deprecated constructors, the cache `DH_set0_pqg` reaches, and primality through the landed
@@ -38,7 +41,7 @@
  * is theirs: a NULL context, a live context with no operation, one with a generation operation and
  * one with a derivation operation, and the five getter-backed round trips. This court's arms say
  * so by their absence rather than by a transcribed expectation, and `docs/DECISIONS.md` D329, D331,
- * D332 and D343 name what keeps each open.
+ * D332, D343 and D345 name what keeps each open.
  *
  * The allocator-attribution plane
  * -------------------------------
@@ -79,6 +82,7 @@
  * suppressing the diagnostic keeps `-Wall` output readable without changing a single symbol this
  * probe links. */
 #define OPENSSL_SUPPRESS_DEPRECATED
+#include <openssl/bio.h>
 #include <openssl/bn.h>
 #include <openssl/core.h>
 #include <openssl/core_dispatch.h>
@@ -1405,6 +1409,163 @@ static void dh_named_group_arms(void)
      * the arm is absent and the measurement is written down instead. */
 }
 
+/* ------------------------------------------------------------------ the ASN.1 unit (D345)
+ *
+ * `crypto/dh/dh_asn1.c` is whole in this crate now: the `DHparams` item and its encode pair, the
+ * X9.42 `DHxparams` pair translated to and from a real `DH`, and the `DHparams_dup`/`DHparams_print`
+ * pair of `dh_ameth.c` plus `dh_prn.c`'s `FILE *` wrapper. Every arm below is a verdict on the
+ * values the probe re-reads -- a return code, a decoded length, an equality of two `BIGNUM`s it
+ * already holds -- or on a byte count; **no private key, shared secret or group seed is printed**,
+ * and the one text arm is reduced to "the print's first byte is `D`" rather than its bytes. */
+static void dh_asn1_arms(void)
+{
+    DH *src = DH_new_by_nid(NID_ffdhe2048);
+    unsigned char *der = NULL;
+    const unsigned char *cp;
+    int n;
+
+    printf("dh.asn1.group.built=%d\n", src != NULL);
+    if (src == NULL)
+        return;
+
+    /* `DHparams_it` is an item accessor: it answers a pointer, and two calls answer the same one. */
+    printf("dh.asn1.it.notnull=%d\n", DHparams_it() != NULL);
+    printf("dh.asn1.it.stable=%d\n", DHparams_it() == DHparams_it());
+
+    /* ---- the `DHparams` template: `p`, `g` and the optional length word ---- */
+    printf("dh.asn1.params.measure_positive=%d\n", i2d_DHparams(src, NULL) > 0);
+    n = i2d_DHparams(src, &der);
+    printf("dh.asn1.params.i2d_ret=%d\n", n > 0 && der != NULL);
+    printf("dh.asn1.params.starts_sequence=%d\n", der != NULL && der[0] == 0x30);
+    cp = der;
+    {
+        DH *round = d2i_DHparams(NULL, &cp, (long)n);
+        const BIGNUM *rp = NULL, *rq = NULL, *rg = NULL;
+        const BIGNUM *sp = NULL, *sq = NULL, *sg = NULL;
+
+        DH_get0_pqg(src, &sp, &sq, &sg);
+        printf("dh.asn1.params.d2i_notnull=%d\n", round != NULL);
+        if (round != NULL) {
+            DH_get0_pqg(round, &rp, &rq, &rg);
+            printf("dh.asn1.params.round_trip=%d\n",
+                rp != NULL && rg != NULL && sp != NULL && sg != NULL
+                && BN_cmp(rp, sp) == 0 && BN_cmp(rg, sg) == 0);
+            /* **The template carries no `q`, but the decoded object has one**: `dh_cb`'s
+             * `ASN1_OP_D2I_POST` runs `ossl_dh_cache_named_group`, which finds the FFDHE-2048 row
+             * by `p` and fills `q` from it. This arm observes that rather than the template's
+             * three fields. */
+            printf("dh.asn1.params.q_filled_by_the_cache=%d\n",
+                rq != NULL && sq != NULL && BN_cmp(rq, sq) == 0);
+            printf("dh.asn1.params.consumed_all=%d\n", (int)(cp - der) == n);
+            DH_free(round);
+        }
+    }
+    OPENSSL_free(der);
+    der = NULL;
+
+    /* ---- the `DHxparams` template: `p`, `g`, `q` in that order ---- */
+    n = i2d_DHxparams(src, &der);
+    printf("dh.asn1.xparams.i2d_ret=%d\n", n > 0 && der != NULL);
+    cp = der;
+    {
+        DH *round = d2i_DHxparams(NULL, &cp, (long)n);
+        const BIGNUM *rp = NULL, *rq = NULL, *rg = NULL;
+        const BIGNUM *sp = NULL, *sq = NULL, *sg = NULL;
+
+        DH_get0_pqg(src, &sp, &sq, &sg);
+        printf("dh.asn1.xparams.d2i_notnull=%d\n", round != NULL);
+        if (round != NULL) {
+            DH_get0_pqg(round, &rp, &rq, &rg);
+            printf("dh.asn1.xparams.round_trip=%d\n",
+                rp != NULL && rq != NULL && rg != NULL
+                && sp != NULL && sq != NULL && sg != NULL
+                && BN_cmp(rp, sp) == 0 && BN_cmp(rq, sq) == 0 && BN_cmp(rg, sg) == 0);
+            printf("dh.asn1.xparams.consumed_all=%d\n", (int)(cp - der) == n);
+            DH_free(round);
+        }
+    }
+    OPENSSL_free(der);
+    der = NULL;
+
+    /* ---- `DHparams_dup`: a fresh object with the same FFC parameters ---- */
+    {
+        DH *dup = DHparams_dup(src);
+        const BIGNUM *rp = NULL, *rq = NULL, *rg = NULL;
+        const BIGNUM *sp = NULL, *sq = NULL, *sg = NULL;
+
+        DH_get0_pqg(src, &sp, &sq, &sg);
+        printf("dh.asn1.dup.notnull=%d\n", dup != NULL);
+        if (dup != NULL) {
+            DH_get0_pqg(dup, &rp, &rq, &rg);
+            printf("dh.asn1.dup.match=%d\n",
+                rp != NULL && rq != NULL && rg != NULL
+                && sp != NULL && sq != NULL && sg != NULL
+                && BN_cmp(rp, sp) == 0 && BN_cmp(rq, sq) == 0 && BN_cmp(rg, sg) == 0);
+            DH_free(dup);
+        }
+    }
+
+    /* ---- `DHparams_print` into a memory BIO: the verdict, the byte count, the first byte ---- */
+    {
+        BIO *bp = BIO_new(BIO_s_mem());
+
+        printf("dh.asn1.print.bio=%d\n", bp != NULL);
+        if (bp != NULL) {
+            char *data = NULL;
+            long len;
+
+            printf("dh.asn1.print.ret=%d\n", DHparams_print(bp, src));
+            len = BIO_ctrl(bp, BIO_CTRL_INFO, 0, &data);
+            printf("dh.asn1.print.len_positive=%d\n", len > 0);
+            /* `do_dh_print` writes the four-space `indent` before its label, so the buffer opens
+             * with the indent and not with `D`. */
+            printf("dh.asn1.print.starts_indented_D=%d\n",
+                data != NULL && len > 6 && data[0] == ' ' && data[4] == 'D' && data[5] == 'H');
+            BIO_free(bp);
+        }
+    }
+
+    /* ---- `DHparams_print_fp` to a temporary `FILE *`: the verdict only, since the bytes are the
+     * same print and the file is discarded ---- */
+    {
+        FILE *fp = tmpfile();
+
+        printf("dh.asn1.print_fp.file=%d\n", fp != NULL);
+        if (fp != NULL) {
+            printf("dh.asn1.print_fp.ret=%d\n", DHparams_print_fp(fp, src));
+            fclose(fp);
+        }
+    }
+
+    /* ---- the two refusals, each through its return value and the drained coordinate ---- */
+
+    /* A body with no `p` prints nothing: `do_dh_print`'s first guard answers 0 and raises
+     * `ERR_R_PASSED_NULL_PARAMETER` at `dh_ameth.c:297`. */
+    {
+        DH *empty = DH_new();
+        BIO *bp = BIO_new(BIO_s_mem());
+
+        ERR_clear_error();
+        printf("dh.asn1.print.no_p_ret=%d\n", DHparams_print(bp, empty));
+        drain("asn1_print_no_p");
+        BIO_free(bp);
+        DH_free(empty);
+    }
+
+    /* A negative length refuses before anything is read. */
+    {
+        unsigned char buf[1] = { 0x30 };
+
+        cp = buf;
+        ERR_clear_error();
+        printf("dh.asn1.params.d2i_negative_is_null=%d\n",
+            d2i_DHparams(NULL, &cp, -1) == NULL);
+        drain("asn1_d2i_negative");
+    }
+
+    DH_free(src);
+}
+
 int main(void)
 {
     DH_METHOD *m;
@@ -1513,6 +1674,10 @@ int main(void)
     /* ---- the `crypto/evp/dh_ctrl.c` controls (slice E) */
 
     dh_ctl_arms();
+
+    /* ---- the ASN.1 unit and the two `DHparams_*` exports it unblocks (D345) */
+
+    dh_asn1_arms();
 
     return 0;
 }
