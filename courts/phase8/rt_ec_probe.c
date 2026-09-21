@@ -699,6 +699,70 @@ static void ec_ctl_arms(void)
     OSSL_PROVIDER_unload(prov);
 }
 
+/* A hex printer for the KDF arm below. The EC probe prints no private key, `k` or shared secret;
+ * this helper exists only for `ECDH_KDF_X9_62`'s derived bytes over the constants
+ * `ec_kdf_arms` sets, which is a test vector and not a secret. */
+static void rt_hex_bytes(const unsigned char *p, size_t n)
+{
+    size_t i;
+
+    for (i = 0; i < n; i++)
+        printf("%02x", p[i]);
+}
+
+/*
+ * `ECDH_KDF_X9_62` (D346). Its whole body forwards to `ossl_ecdh_kdf_X9_63`, which fetches the
+ * `X963KDF` row and drives it. The `Z`, `sinfo` and digest are constants in this file, so the
+ * derived bytes are the authority's own answer and the differential court compares them byte for
+ * byte. `Z` here is a caller's shared secret only by name: the arm never calls `ECDH_compute_key`,
+ * so nothing on the wire is disclosed.
+ */
+static void ec_kdf_arms(void)
+{
+    unsigned char z[32], sinfo[16], out[32];
+    const EVP_MD *md;
+    size_t i;
+
+    for (i = 0; i < sizeof(z); i++)
+        z[i] = (unsigned char)(3 * i + 1);
+    for (i = 0; i < sizeof(sinfo); i++)
+        sinfo[i] = (unsigned char)(7 * i + 3);
+
+    md = EVP_MD_fetch(NULL, "SHA256", NULL);
+    printf("ecdh_kdf.md=%d\n", md != NULL);
+
+    memset(out, 0, sizeof(out));
+    ERR_clear_error();
+    printf("ecdh_kdf.x963.ret=%d\n",
+           ECDH_KDF_X9_62(out, sizeof(out), z, sizeof(z), sinfo, sizeof(sinfo), md));
+    printf("ecdh_kdf.x963.key=");
+    rt_hex_bytes(out, sizeof(out));
+    printf("\n");
+
+    /* The empty `sinfo` is the `info` field's zero-length arm, which the row's encoder still
+     * writes as a present octet string. */
+    memset(out, 0, sizeof(out));
+    ERR_clear_error();
+    printf("ecdh_kdf.x963.noinfo.ret=%d\n",
+           ECDH_KDF_X9_62(out, sizeof(out), z, sizeof(z), NULL, 0, md));
+    printf("ecdh_kdf.x963.noinfo.key=");
+    rt_hex_bytes(out, sizeof(out));
+    printf("\n");
+
+    {
+        unsigned long e;
+        int records = 0;
+
+        while ((e = ERR_get_error()) != 0) {
+            records++;
+            (void)e;
+        }
+        printf("ecdh_kdf.err.queue_records=%d\n", records);
+    }
+
+    EVP_MD_free((EVP_MD *)md);
+}
+
 int main(void)
 {
     size_t n, i;
@@ -1465,6 +1529,9 @@ layer_done:
     EC_KEY_free(key2);
     free(mem);
 }
+
+    /* ---- `ECDH_KDF_X9_62` and the `X963KDF` row it fetches (D346) ---- */
+    ec_kdf_arms();
 
     free(table);
     return 0;

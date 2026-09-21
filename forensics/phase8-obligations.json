@@ -4,23 +4,14 @@
     "complete": false,
     "counts": {
       "atlas_owned": 759,
-      "deferred_to_later_phase": 1,
-      "implemented": 685,
-      "open_in_this_stratum": 100,
+      "deferred_to_later_phase": 0,
+      "implemented": 688,
+      "open_in_this_stratum": 98,
       "owned": 786,
       "received_by_handoff": 27
     },
-    "deferred": [
-      {
-        "declaring_header": "des.h",
-        "owning_phase": 9,
-        "reason": "`crypto/des/rand_key.c:22` is `RAND_priv_bytes((unsigned char *)ret, sizeof(DES_cblock))` and its failure arm answers 0. `rand.h` is Phase 9's, and this is the one `des.h` export whose body is the random layer rather than the cipher. `DES_string_to_key` and `DES_string_to_2keys` are *not* in this row: they build a key from a string with `DES_cbc_cksum`, which is this stratum's own.",
-        "symbol": "DES_random_key"
-      }
-    ],
-    "deferred_by_phase": {
-      "9": 1
-    },
+    "deferred": [],
+    "deferred_by_phase": {},
     "handoffs_discharged": {
       "7": [
         "EVP_PKEY_assign",
@@ -1176,6 +1167,7 @@
       "DES_options",
       "DES_pcbc_encrypt",
       "DES_quad_cksum",
+      "DES_random_key",
       "DES_set_key",
       "DES_set_key_checked",
       "DES_set_key_unchecked",
@@ -1183,6 +1175,7 @@
       "DES_string_to_2keys",
       "DES_string_to_key",
       "DES_xcbc_encrypt",
+      "DH_KDF_X9_42",
       "DH_OpenSSL",
       "DH_bits",
       "DH_check",
@@ -1320,6 +1313,7 @@
       "DSA_up_ref",
       "DSA_verify",
       "DSAparams_dup",
+      "ECDH_KDF_X9_62",
       "ECDH_compute_key",
       "ECDSA_SIG_free",
       "ECDSA_SIG_get0",
@@ -1964,12 +1958,6 @@
     "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum, and it starts at the whole working set, which is the honest starting state. Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-8-SUBPHASES.md §4 decides when the stratum may be called complete.",
     "open": [
       {
-        "declaring_header": "dh.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DH_KDF_X9_42"
-      },
-      {
         "declaring_header": "dsa.h",
         "module": "src/dsa/mod.rs",
         "received_from_phase": null,
@@ -1992,12 +1980,6 @@
         "module": "src/dsa/mod.rs",
         "received_from_phase": null,
         "symbol": "DSAparams_print_fp"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "ECDH_KDF_X9_62"
       },
       {
         "declaring_header": "ec.h",
@@ -2635,12 +2617,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "ce54400e1845611c262fe5214c05e696153387f18f611c66cef44a7121dbfdf2"
+      "sha256": "1027a1d2126a3ec9c5fc7305050d7836405fd7048701ff707f903937a4139076"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "a96cabdb14be0c7d0e52f27b55f3adf5525345599f8f404d2b49aa15bb9e456e"
+      "sha256": "f0b6f6aa8dd664de0d931651e01025305168576537e0353e8219e1a922ea795b"
     }
   ],
   "kind": "phase8-obligations",

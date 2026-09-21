@@ -13,11 +13,11 @@ Read from the ledger's `body.counts`.
 | quantity | count |
 |---|---|
 | owned | 786 |
-| implemented | 685 |
-| deferred to a later phase | 1 |
-| open in this stratum | 100 |
+| implemented | 688 |
+| deferred to a later phase | 0 |
+| open in this stratum | 98 |
 
-The identity `owned = implemented + deferred + open` is `786 = 685 + 1 + 100`, which holds.
+The identity `owned = implemented + deferred + open` is `786 = 688 + 0 + 98`, which holds.
 
 ## The merge gate — what Phase 8 owes to Phase 9
 
@@ -27,24 +27,11 @@ this stratum can be complete.
 
 | symbol | declaring header | owning phase |
 |---|---|---|
-| `DES_random_key` | `des.h` | 9 |
 
-**1** export(s) are deferred, to Phase 9. A
+**0** export(s) are deferred, to Phases . A
 stratum cannot be complete while any export it owns is neither implemented
 nor handed to a later phase, and these rows are the ones a later
-Phase 9 landing discharges.
-
-### Owning Phase 9 — reasons, verbatim
-
-These are the ledger's `reason` strings, unchanged: they are the
-evidence for the hand-off and are not summarised here. Eleven of the
-twenty-four deferred rows share one reason because they are one row of
-`BLOCKED_HANDOFFS`, so each distinct reason is printed once and the
-symbols it covers are listed above it.
-
-- `DES_random_key`:
-
-  `crypto/des/rand_key.c:22` is `RAND_priv_bytes((unsigned char *)ret, sizeof(DES_cblock))` and its failure arm answers 0. `rand.h` is Phase 9's, and this is the one `des.h` export whose body is the random layer rather than the cipher. `DES_string_to_key` and `DES_string_to_2keys` are *not* in this row: they build a key from a string with `DES_cbc_cksum`, which is this stratum's own.
+Phases  landing discharges.
 
 ## The work Phase 8 still owns
 
@@ -56,14 +43,14 @@ table, verbatim.
 | subphase | owns | open | courts | depends on |
 |---|---|---|---|---|
 | 8.4 RSA | `src/rsa/asn1.rs`, `src/rsa/mod.rs` | 16 | `RT-RSA`, `CT-RSA` | 8.1 (the RSA provider's `SHA`-named digests), 8.3 (its OAEP/PSS modes) |
-| 8.5 DH and DHX | `src/dh/mod.rs`, `src/dh/mod.rs`, `src/ffc/`, `src/dh/object.rs`, `src/dh/group_params.rs`, `src/dh/rfc5114.rs`, `src/ffc/dh.rs`, `src/bn/dh.rs`, `src/bn/dh_data.rs`, `src/dh/ctrl.rs`, `src/ffc/dh.rs`, `src/dh/asn1.rs` | 4 | `RT-DH`, `CT-DH` | 8.4 (the shared BN/param idiom) |
+| 8.5 DH and DHX | `src/dh/mod.rs`, `src/dh/mod.rs`, `src/ffc/`, `src/dh/object.rs`, `src/dh/group_params.rs`, `src/dh/rfc5114.rs`, `src/ffc/dh.rs`, `src/bn/dh.rs`, `src/bn/dh_data.rs`, `src/dh/ctrl.rs`, `src/ffc/dh.rs`, `src/dh/asn1.rs`, `src/dh/kdf.rs` | 3 | `RT-DH`, `CT-DH` | 8.4 (the shared BN/param idiom) |
 | 8.6 DSA | `src/dsa/mod.rs`, `src/dsa/mod.rs`, `src/dsa/object.rs`, `src/dsa/ossl.rs`, `src/dsa/key.rs`, `src/dsa/gen.rs`, `src/dsa/sign.rs`, `src/dsa/vrf.rs`, `src/dsa/depr.rs`, `src/asn1_dsa.rs`, `src/packet.rs`, `src/quic_vlint.rs`, `src/dsa/asn1.rs`, `src/dsa/ctrl.rs` | 7 | `RT-DSA`, `CT-DSA` | 8.5 |
-| 8.7 EC | `src/ec/mod.rs`, `src/ec/curve.rs`, `src/ec/curve_data.rs`, `src/ec/support.rs`, `src/ec/mod.rs`, `src/bn/intern.rs`, `src/bn/bignum.rs`, `src/bn/exp.rs`, `src/ec/key.rs`, `src/ec/lib.rs`, `src/ec/smpl.rs`, `src/ec/mult.rs`, `src/ec/oct.rs`, `src/ec/cvt.rs`, `src/ec/key.rs`, `src/ec/ecdsa.rs`, `src/param_build_set.rs`, `src/ec/print.rs`, `src/ec/depr.rs`, `src/ec/ecdsa.rs`, `src/ec/ctrl.rs` | 28 | `RT-EC`, `CT-EC` | 8.6 |
+| 8.7 EC | `src/ec/mod.rs`, `src/ec/curve.rs`, `src/ec/curve_data.rs`, `src/ec/support.rs`, `src/ec/mod.rs`, `src/bn/intern.rs`, `src/bn/bignum.rs`, `src/bn/exp.rs`, `src/ec/key.rs`, `src/ec/lib.rs`, `src/ec/smpl.rs`, `src/ec/mult.rs`, `src/ec/oct.rs`, `src/ec/cvt.rs`, `src/ec/key.rs`, `src/ec/ecdsa.rs`, `src/param_build_set.rs`, `src/ec/print.rs`, `src/ec/depr.rs`, `src/ec/ecdsa.rs`, `src/ec/ctrl.rs`, `src/ec/kdf.rs` | 27 | `RT-EC`, `CT-EC` | 8.6 |
 | 8.8 The ASN.1 method objects and `standard_methods[]` | `src/asn1/ameth.rs` | 15 | `RT-AMETH` | 8.4, 8.5, 8.6, 8.7 |
 | 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals | `src/pem/key_legacy.rs` | 30 | `RT-PEM-KEY` | 8.8 |
 
-Total open symbols listed below: **100**; the ledger's
-`open_in_this_stratum` is 100.
+Total open symbols listed below: **98**; the ledger's
+`open_in_this_stratum` is 98.
 
 ### 8.4 RSA — 16 open
 
@@ -73,21 +60,21 @@ Total open symbols listed below: **100**; the ledger's
 `RSA_print_fp`, `d2i_RSA_OAEP_PARAMS`, `d2i_RSA_PSS_PARAMS`, `i2d_RSA_OAEP_PARAMS`,
 `i2d_RSA_PSS_PARAMS`
 
-### 8.5 DH and DHX — 4 open
+### 8.5 DH and DHX — 3 open
 
-`DH_KDF_X9_42`, `EVP_PKEY_get0_DH`, `EVP_PKEY_get1_DH`, `EVP_PKEY_set1_DH`
+`EVP_PKEY_get0_DH`, `EVP_PKEY_get1_DH`, `EVP_PKEY_set1_DH`
 
 ### 8.6 DSA — 7 open
 
 `DSA_print`, `DSA_print_fp`, `DSAparams_print`, `DSAparams_print_fp`,
 `EVP_PKEY_get0_DSA`, `EVP_PKEY_get1_DSA`, `EVP_PKEY_set1_DSA`
 
-### 8.7 EC — 28 open
+### 8.7 EC — 27 open
 
-`ECDH_KDF_X9_62`, `ECPARAMETERS_free`, `ECPARAMETERS_it`, `ECPARAMETERS_new`,
-`ECPKPARAMETERS_free`, `ECPKPARAMETERS_it`, `ECPKPARAMETERS_new`,
-`ECPKParameters_print`, `ECPKParameters_print_fp`, `ECParameters_print`,
-`ECParameters_print_fp`, `EC_GROUP_get_ecparameters`, `EC_GROUP_get_ecpkparameters`,
+`ECPARAMETERS_free`, `ECPARAMETERS_it`, `ECPARAMETERS_new`, `ECPKPARAMETERS_free`,
+`ECPKPARAMETERS_it`, `ECPKPARAMETERS_new`, `ECPKParameters_print`,
+`ECPKParameters_print_fp`, `ECParameters_print`, `ECParameters_print_fp`,
+`EC_GROUP_get_ecparameters`, `EC_GROUP_get_ecpkparameters`,
 `EC_GROUP_new_from_ecparameters`, `EC_GROUP_new_from_ecpkparameters`, `EC_KEY_print`,
 `EC_KEY_print_fp`, `EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get1_EC_KEY`,
 `EVP_PKEY_set1_EC_KEY`, `d2i_ECPKParameters`, `d2i_ECParameters`, `d2i_ECPrivateKey`,

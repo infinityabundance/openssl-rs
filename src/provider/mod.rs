@@ -89,6 +89,7 @@ pub(crate) mod child;
 pub(crate) mod core_dispatch;
 pub(crate) mod digest;
 pub(crate) mod init;
+pub(crate) mod kdf;
 pub(crate) mod mac;
 pub(crate) mod rand;
 pub(crate) mod seed_src;

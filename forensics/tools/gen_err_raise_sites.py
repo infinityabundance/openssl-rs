@@ -534,6 +534,16 @@ COVERED_FILES = [
     # translation unit this crate transcribes reaches it. It is named here rather than
     # listed, and it joins the covered set in the legacy provider's stratum.
     ("providers/implementations/digests/digestcommon.c", "PROV_DIGESTCOMMON"),
+    # Phase 8's KDF half (D346). The two rows `DH_KDF_X9_42` and `ECDH_KDF_X9_62` fetch are
+    # `X942KDF-ASN1` and `X963KDF`, and this stratum publishes both, so the two units'
+    # raises are coordinates this crate now has. Both are `.c.in`-generated, so (D235's
+    # finding, confirmed by `strings` on the two objects) their `__FILE__` is the bare
+    # build-relative path and their line numbers are the generated text's, not the
+    # template's. `sskdf.c` raises from `sskdf_size`/`sskdf_derive`/`x963kdf_derive` and from
+    # the two generated decoders; `x942kdf.c` raises from `find_alg_id`, `x942kdf_size`,
+    # `x942kdf_derive`, `x942kdf_hash_kdm` and its two decoders.
+    ("providers/implementations/kdfs/sskdf.c", "PROV_SSKDF"),
+    ("providers/implementations/kdfs/x942kdf.c", "PROV_X942KDF"),
     # Phase 8.4: the `crypto/rsa` subsystem. The same rule as `crypto/bn` above -- this is
     # the *subsystem* set, not a selection of convenient files, because every one of them
     # raises from a surface Phase 8 owns and a coordinate's `file` string is part of the

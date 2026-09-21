@@ -176,16 +176,15 @@ MODULE_PREFIXES: list[tuple[str, tuple[str, ...]]] = [
 # ---------------------------------------------------------------------------------------------
 
 BLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
-    # (1) `DES_random_key`, which is one call and one stratum.
-    (
-        ("DES_random_key",),
-        9,
-        "`crypto/des/rand_key.c:22` is `RAND_priv_bytes((unsigned char *)ret, "
-        "sizeof(DES_cblock))` and its failure arm answers 0. `rand.h` is Phase 9's, and this "
-        "is the one `des.h` export whose body is the random layer rather than the cipher. "
-        "`DES_string_to_key` and `DES_string_to_2keys` are *not* in this row: they build a "
-        "key from a string with `DES_cbc_cksum`, which is this stratum's own.",
-    ),
+    # (1) **Retired by D346, and the retirement is the entry's finding.** `DES_random_key` stood
+    # here against phase 9 because its body is `RAND_priv_bytes`, and the row was right about
+    # the callee. It was wrong about the stratum: `RAND_priv_bytes` landed in D313
+    # (`src/rand/rand_lib.rs`), which is exactly the liveness D322 measured the mechanism was
+    # missing -- nothing runs a check over a `BLOCKED_HANDOFFS` row whose blocker is another
+    # stratum's export, so the row outlived the name that justified it. D346 lands the export
+    # and removes the row rather than splitting it: it was never shared. The list is empty
+    # now, which is the honest state and not a scaffolding -- a row that can keep covering a
+    # landed symbol can hide the next real gap behind it.
     # (2) **Retired by D325, and the row was wrong in this version rather than merely stale.**
     # `RSA_blinding_on` and `RSA_setup_blinding` were here because the row read the *1.1.1* shape
     # of `rsa_crpt.c`: `RSA_blinding_on` is **not** "a lock plus `RSA_setup_blinding`" in 3.6.4 --

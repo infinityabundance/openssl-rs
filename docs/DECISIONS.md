@@ -23769,3 +23769,105 @@ an omission.
 false` with **100** names open, 8.8's fifteen and the four key types' ASN.1 and printer families
 among them. What this slice is, is the same-stratum ASN.1 and codec residue and the boundary
 measurement that separated it from 8.8's — not 8.4, not 8.5, not 8.6, not 8.7, and not 8.8.
+
+---
+
+## D346 — 8.2's `DES_random_key` and 8.5's/8.7's X9 wrappers land, the provider KDF rows they fetch are published, and a landed helper's length answer is corrected by the first court that exercised it
+
+**Decision.** Three exports leave `open`/`deferred` for `implemented`, and the default provider
+gains its whole `OSSL_OP_KDF` operation: `DES_random_key` (8.2's module, `src/des/mod.rs`),
+`DH_KDF_X9_42` (`src/dh/kdf.rs`) and `ECDH_KDF_X9_62` (`src/ec/kdf.rs`). The two wrappers are
+`EVP_KDF_fetch` of `X942KDF-ASN1` and `X963KDF` and nothing else, so the same commit publishes
+both rows — with `SSKDF`, the sibling in the same translation unit — through a new `DEFLT_KDFS` and
+a fifth `deflt_query` arm. The ledger moves implemented 685 -> **688**, deferred 1 -> **0**, open
+100 -> **98** over the same **786** owned.
+
+**The census is the authority, and it answers this session's brief rather than the brief answering
+it.** The brief asked whether the two KDF rows are "genuinely 8.8's or a later stratum's". They are
+not: `forensics/atlas/provider-algorithm-plans.json`'s `operation_defaults` gives `default /
+OSSL_OP_KDF` to **phase 8**, the census's `plan_match` for all three rows is `operation-default`,
+and the projection moves `open[8]` 140 -> 137. **D345 was wrong on this and the row that says so is
+its own "what is deliberately not here" paragraph**, which called the X9.63 algorithm *"Phase 9's"*
+and so withheld `ECDH_KDF_X9_62` on a stratum the plan does not give it to; §4's clause repeated it.
+D296's correction — the one this session was told to check — is the reading that holds.
+
+**`DES_random_key`'s deferral row is retired, and D322's test is what retired it.** The row had
+been `deferred` to phase 9 since the bootstrap because its body is `RAND_priv_bytes`; that callee
+landed in D313, D322 measured that nothing runs a liveness check over a `BLOCKED_HANDOFFS` row whose
+blocker is another stratum's export, and this is the last row in the table. It is removed rather
+than split (`forensics/tools/phase8_obligations.py`'s `BLOCKED_HANDOFFS` is now empty), so
+`deferred_by_phase` is empty and the stratum has no hand-offs left to discharge.
+
+**The closure reached three units no stratum's plan row owns, and each is landed or joined where
+its file already lives (D342's rule).** `crypto/der_writer.c` — 198 lines, nine internal functions —
+is `src/der_writer.rs`, transcribed whole, because `x942kdf.c`'s `x942_encode_otherinfo` is a
+`WPACKET` program over `ossl_DER_w_*` and its only other callers are Phase 10's encoder helpers.
+`providers/common/der/der_wrap_gen.c`'s four wrap OIDs are the `KEK_ALGS` table's constants, written
+where the row that reads them lives. `providers/common/provider_util.c`'s `ossl_prov_memdup` joins
+`src/provider/util.rs`, the module that already transcribes that file.
+
+**The provider units are transcribed whole and their generated decoders by the crate's reading of
+one.** `providers/implementations/kdfs/sskdf.c` (SSKDF and X963KDF) and
+`providers/implementations/kdfs/x942kdf.c` (X942KDF-ASN1) are `src/provider/kdf.rs`. The
+`produce_param_decoder` output is **not** transcribed switch-for-switch — the crate's reading is
+`repeated_param_site` over the keys and their raise sites (D305, D241) — and one difference is
+reproduced rather than glossed: both generated decoders route **two** key names onto one field
+(`secret`/`key`, and `ukm`/`partyu-info`) and raise at the second occurrence of either, so the
+seen-set is keyed on the field rather than the name. The FIPS arms are all `#ifdef FIPS_MODULE` and
+absent. The two `.c.in` units are generated, so their `__FILE__` is the bare build-relative path:
+the two files join `gen_err_raise_sites.py`'s `COVERED_FILES`, which is what gives the transcription
+its twenty-eight exact raise coordinates rather than reconstructed ones.
+
+**A landed helper was wrong, and the first court to exercise it is what found it.**
+`src/params/mod.rs`'s `ossl_param_get1_concat_octet_string` answered `*out_len = 1` on its
+zero-length arm; the authority's `fin:` label writes `sz`, which is **0** there, and the early arm
+jumps to it without changing it. Nothing had called the function: the two KDF units are its first
+callers, and `RT-EC`'s `ecdh_kdf.x963.noinfo` arm — `ECDH_KDF_X9_62` with a NULL `sinfo` — derived
+`SHA256(z || counter || 00)` on the candidate and `SHA256(z || counter)` on the authority. The arm
+is the **only** one that could see it, because `x963kdf.c`'s `info` field is where the length lands,
+and the fix is the authority's own `*out_len = sz`. This is D344's and D345's class reached from the
+candidate side: a value the author assumed rather than measured, invisible until something calls it.
+
+**The courts, and what they refuse to print.** `RT-DIGEST` grows 468 -> **480 observations** and
+names the three new rows as literals (`SSKDF`, `X963KDF`, `X942KDF-ASN1`) plus both aliases
+(`X942KDF-CONCAT`, `X942KDF`) and a property query no row carries, so
+`provider_court_coverage.py` reports **174** implemented rows, **174** directly courted, **0**
+unmatched. `RT-CIPHER` grows 6939 -> **6946**: `DES_random_key`'s arm prints no key — the draws are
+random on both sides — and observes the properties instead (every byte odd-parity, the weak-key
+refusal, the parity fix, two draws that differ, and that `DES_set_key` accepts the result). `RT-DH`
+grows 578 -> **588** and `RT-EC` 2367 -> **2373** with the two deterministic arms: `DH_KDF_X9_42`
+over the `id-aes128-wrap` OID and `ECDH_KDF_X9_62` with and without `sinfo`, each printing the
+derived bytes the differential court diffs. Those inputs are constants in the probe, so the bytes
+are the authority's own test vector and not a secret; no arm prints the shared secret it is *named*
+after, because no arm calls `ECDH_compute_key`.
+
+**What the authority disagreed with, all recorded rather than worked around.**
+
+* **The brief names `providers/implementations/kdfs/x963kdf.c`.** There is no such unit in this
+authority: X963KDF is `sskdf.c`'s, whose row's dispatch symbol is `ossl_kdf_x963_kdf_functions`,
+and the file was renamed when SSKDF and X963KDF were merged. The transcription follows the unit the
+authority publishes, not the brief's spelling.
+* **D345 called the X9.63 algorithm Phase 9's** (§4's clause and its "what is deliberately not
+here" list). The census says phase 8; the clause above is corrected in the same commit.
+* **The two internal wrappers had to keep the authority's spelling.** `ossl_dh_kdf_X9_42_asn1` and
+`ossl_ecdh_kdf_X9_63` were first written snake_case and the prerequisite gate's direction B reported
+them as `unwired_function_in_the_current_stratum`, because a crate *definition* the atlas cannot
+name by its own symbol is a name the gate cannot see. Both are the authority's spelling with
+`#[allow(non_snake_case)]`, which is how `src/ec/mont.rs` already carries `ossl_ec_GFp_*`.
+
+**Bookkeeping, read off the regenerated files.** `phase8` implemented 685 -> **688**, deferred
+1 -> **0**, open 100 -> **98**, owned **786**; `forensics/atlas/implemented-surface.json` moves
+`libcrypto` implemented 2602 -> **2605**; `forensics/atlas/transcription-edges.json` gains the four
+new units. `court_coverage.py` reports every one of the stratum's **688** implemented exports courted
+(680 directly, 8 indirectly, 0 non-observable). The prerequisite gate ends at **zero findings**,
+`sealed_stratum_census` stays **52** and `blocking_dependencies` stays **19** — no move, so no
+`ownership-transitions.json` row is needed in either direction. `forensics/phase7-obligations.json`
+and `phase9-obligations.json` are regenerated with `DES_random_key` gone from phase 9's discharged
+hand-offs, which is what `ownership_audit.py`'s hand-off check requires. `docs/PHASE-8-SUBPHASES.md`'s
+8.2, 8.5 and 8.7 rows record this entry and its two anchored clauses move the three names from the
+`open` paragraph to the landed one, and its `docs/PHASE-8-REMAINING.md` projection is regenerated.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete:
+false` with **98** names open, 8.8's fifteen and the four key types' ASN.1 and printer families among
+them. What this slice is, is the provider KDF operation and the three wrappers that fetch it — not
+8.8, and not a claim about the stratum's work being nearly done.

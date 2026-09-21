@@ -668,6 +668,40 @@ static void rt_des(void)
         rt_hex("des.string_to_2keys.k2", (const unsigned char *)&k2, 8);
     }
 
+    /*
+     * `DES_random_key` (D346). The one `des.h` export whose body is the random layer: it draws
+     * with `RAND_priv_bytes` and loops until the draw is not one of the sixteen weak or
+     * semi-weak keys, then fixes the parity. **No draw is printed** -- the value is random on
+     * both sides and could not be compared -- so every arm is a property a caller relies on and
+     * a boolean is the observation. The refusal path is the weak-key rejection: `not_weak`
+     * observes that the loop exited on a key the weak test refuses, and `check_parity` observes
+     * the parity fix that follows it.
+     */
+    {
+        DES_cblock r1, r2;
+        int i, all_odd = 1, draw_ok;
+
+        memset(r1, 0, sizeof(r1));
+        memset(r2, 0, sizeof(r2));
+        printf("des.random_key.ret1=%d\n", DES_random_key(&r1));
+        printf("des.random_key.ret2=%d\n", DES_random_key(&r2));
+        for (i = 0; i < 8; i++) {
+            int j, bit = 0;
+
+            for (j = 0; j < 8; j++)
+                bit ^= (r1[i] >> j) & 1u;
+            if (bit != 1)
+                all_odd = 0;
+        }
+        printf("des.random_key.odd_parity=%d\n", all_odd);
+        printf("des.random_key.not_weak=%d\n", DES_is_weak_key(&r1) == 0);
+        printf("des.random_key.check_parity=%d\n", DES_check_key_parity(&r1));
+        printf("des.random_key.two_draws_differ=%d\n", memcmp(r1, r2, sizeof(r1)) != 0);
+        /* The setter that consumes a drawn key accepts it: the loop's whole purpose. */
+        draw_ok = DES_set_key(&r1, &ks2);
+        printf("des.random_key.set_key=%d\n", draw_ok);
+    }
+
     /* The crypt(3) spelling, whose `fcrypt_body` is a distinct 25-iteration loop. */
     {
         char ret[14];

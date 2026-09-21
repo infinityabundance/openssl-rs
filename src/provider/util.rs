@@ -639,6 +639,55 @@ pub(crate) unsafe fn ossl_prov_macctx_load(
     }
 }
 
+// ---------------------------------------------------------------------------------------------
+// `providers/common/provider_util.c` -- the memory-copy helper (docs/DECISIONS.md D346)
+// ---------------------------------------------------------------------------------------------
+//
+// It is here for the reason the MAC-context half above is: the file is already this module. Its
+// two callers in this crate are the KDF rows `sskdf.c` and `x942kdf.c` transcribe, each of whose
+// `dupctx` copies its own secret and info buffers with it.
+
+/// `__FILE__` for `provider_util.c`, as the default provider's object carries it. The file is a
+/// **source-tree** unit, so `strings` on `providers/common/libdefault-lib-provider_util.o`
+/// answers the `../../src/openssl-3.6.4/`-prefixed spelling — the opposite of the `.c.in`-generated
+/// provider units' bare build-relative path, and measured rather than assumed (D235's class).
+const FILE_PROVIDER_UTIL: *const c_char =
+    c"../../src/openssl-3.6.4/providers/common/provider_util.c".as_ptr();
+
+/// `int ossl_prov_memdup(const void *src, size_t src_len, unsigned char **dest,
+/// size_t *dest_len)` — `provider_util.c:353-365`.
+///
+/// **A NULL `src` is a success that clears the destination**, not a failure: `*dest` is set NULL
+/// and `*dest_len` zero. That is the arm `dupctx` relies on for a context that never had a secret.
+/// A non-NULL `src` is `OPENSSL_memdup`'s copy, and a failed allocation is the only refusal.
+///
+/// # Safety
+/// `src` is NULL or readable for `src_len` bytes; `dest`/`dest_len` are writable and `*dest` is
+/// either NULL or a block this allocator owns.
+pub(crate) unsafe fn ossl_prov_memdup(
+    src: *const c_void,
+    src_len: usize,
+    dest: *mut *mut u8,
+    dest_len: *mut usize,
+) -> c_int {
+    // SAFETY: the out-parameters are this frame's caller's own, and `src` is readable per the
+    // contract; `CRYPTO_memdup` is the authority's `OPENSSL_memdup`.
+    unsafe {
+        if !src.is_null() {
+            let copy = crate::runtime::mem::CRYPTO_memdup(src, src_len, FILE_PROVIDER_UTIL, 0);
+            if copy.is_null() {
+                return 0;
+            }
+            *dest = copy.cast::<u8>();
+            *dest_len = src_len;
+        } else {
+            *dest = ptr::null_mut();
+            *dest_len = 0;
+        }
+    }
+    1
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

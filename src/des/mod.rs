@@ -26,11 +26,12 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_long, c_uint};
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint};
 
 use crate::cipher_tables::{
     DES_CON_SALT, DES_COV_2CHAR, DES_ODD_PARITY, DES_SHIFTS2, DES_SKB, DES_SPTRANS, DES_WEAK_KEYS,
 };
+use crate::rand::rand_lib::RAND_priv_bytes;
 
 /// `DES_ENCRYPT` — `include/openssl/des.h:55`.
 pub const DES_ENCRYPT: c_int = 1;
@@ -228,6 +229,34 @@ unsafe fn l2cn(l1: c_uint, l2: c_uint, p: *mut u8, n: c_uint) {
 #[no_mangle]
 pub unsafe extern "C" fn DES_options() -> *const c_char {
     c"des(int)".as_ptr()
+}
+
+/// `int DES_random_key(DES_cblock *ret)` — `crypto/des/rand_key.c:19-27`.
+///
+/// The one `des.h` export whose body is the random layer rather than the cipher, and the
+/// only one `crypto/des/` holds whose callee is not this stratum's: it draws eight bytes
+/// with `RAND_priv_bytes` and **rejects a weak key**, looping until the draw is not one of
+/// the sixteen weak or semi-weak keys, then fixes the parity. A failed draw is a `0` answer
+/// with `ret` holding whatever the call left; the loop's `while` is the authority's own
+/// refusal path and is why a caller never sees a weak key here.
+///
+/// # Safety
+/// `ret` writable for eight bytes.
+#[no_mangle]
+pub unsafe extern "C" fn DES_random_key(ret: *mut [u8; 8]) -> c_int {
+    // SAFETY: the caller's contract; `ret` is eight writable bytes.
+    unsafe {
+        loop {
+            if RAND_priv_bytes(ret.cast::<c_uchar>(), 8) != 1 {
+                return 0;
+            }
+            if DES_is_weak_key(ret) == 0 {
+                break;
+            }
+        }
+        DES_set_odd_parity(ret);
+        1
+    }
 }
 
 /// `void DES_set_odd_parity(DES_cblock *key)` — `crypto/des/set_key.c:59-65`.
@@ -1803,6 +1832,41 @@ pub unsafe extern "C" fn DES_crypt(buf: *const c_char, salt: *const c_char) -> *
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn des_random_key_observes_the_properties_and_never_the_draw() {
+        // `crypto/des/rand_key.c:19-27`. The value is random on both sides of the differential
+        // court, so this test asserts what a caller relies on rather than the bytes: the loop
+        // rejects weak keys, and the parity fix follows it.
+        let mut a = [0u8; 8];
+        let mut b = [0u8; 8];
+        // SAFETY: two live eight-byte buffers.
+        unsafe {
+            assert_eq!(DES_random_key(core::ptr::addr_of_mut!(a)), 1);
+            assert_eq!(DES_random_key(core::ptr::addr_of_mut!(b)), 1);
+        }
+        // The loop's exit condition: the draw is not one of the sixteen weak keys.
+        // SAFETY: `a` is a live eight-byte buffer.
+        let weak = unsafe { DES_is_weak_key(core::ptr::addr_of_mut!(a)) };
+        assert_eq!(weak, 0);
+        // The parity fix after it.
+        // SAFETY: `a` is a live eight-byte buffer.
+        let parity = unsafe { DES_check_key_parity(core::ptr::addr_of_mut!(a)) };
+        assert_eq!(parity, 1);
+        for byte in a {
+            assert_eq!(byte.count_ones() % 2, 1, "every byte is odd-parity");
+        }
+        // Two draws differ with probability 1 - 2^-64; a transcription that answered a constant
+        // would fail here, and no arm compares the values themselves.
+        assert_ne!(a, b);
+        // The key is one `DES_set_key` accepts, which is the loop's whole purpose.
+        let mut ks = DesKeySchedule {
+            ks: [DesKs { deslong: [0; 2] }; 16],
+        };
+        // SAFETY: `a` and `ks` are live locals.
+        let set = unsafe { DES_set_key(core::ptr::addr_of_mut!(a), &mut ks) };
+        assert_eq!(set, 0);
+    }
 
     fn schedule_from(key: &[u8; 8]) -> DesKeySchedule {
         let mut ks = DesKeySchedule {
