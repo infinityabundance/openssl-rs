@@ -60,6 +60,10 @@ pub mod i2d;
 pub mod items;
 pub mod layout;
 pub mod new;
+// Phase 8.8's `crypto/asn1/p8_pkey.c` pair, `PKCS8_pkey_set0`/`PKCS8_pkey_get0`, and the
+// `PKCS8_PRIV_KEY_INFO` layout (D349). Partial: the item template waits on Phase 11's
+// `X509_ATTRIBUTE_it`, and the `add1_attr` family on `crypto/x509/x509_att.c`.
+pub mod p8_pkey;
 pub mod prim;
 pub mod string;
 pub mod t_pkey;

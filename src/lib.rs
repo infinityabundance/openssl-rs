@@ -139,3 +139,8 @@ pub mod seed;
 pub mod selftest;
 pub mod sm4;
 pub mod status;
+// Phase 8.8's `crypto/x509/` substream (D349): the accessor slices of `x_pubkey.c`,
+// `x509_set.c` and `t_x509.c` that the ASN.1 method objects call by name. The directory
+// is new here; each module is a partial transcription and names what it withholds in
+// `forensics/prerequisites.json`.
+pub mod x509;

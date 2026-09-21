@@ -89,8 +89,8 @@
       "rows_judged": 82,
       "symbols_named_by_a_row": 96,
       "symbols_reached": 90,
-      "unit_records": 66,
-      "units_named_by_a_record": 68,
+      "unit_records": 62,
+      "units_named_by_a_record": 64,
       "units_named_by_a_row": 232,
       "units_reached": 202
     },
@@ -1895,7 +1895,7 @@
       },
       "crypto/evp/legacy_blake2.c": {
         "defines": [],
-        "recorded_by": "units:crypto/evp/legacy_blake2.c",
+        "recorded_by": null,
         "subphases": [
           "7.3",
           "7.3g"
@@ -1915,7 +1915,7 @@
       },
       "crypto/evp/legacy_md5.c": {
         "defines": [],
-        "recorded_by": "units:crypto/evp/legacy_md5.c",
+        "recorded_by": null,
         "subphases": [
           "7.3",
           "7.3g"
@@ -1943,7 +1943,7 @@
       },
       "crypto/evp/legacy_ripemd.c": {
         "defines": [],
-        "recorded_by": "units:crypto/evp/legacy_ripemd.c",
+        "recorded_by": null,
         "subphases": [
           "7.3",
           "7.3g"
@@ -1954,7 +1954,7 @@
       },
       "crypto/evp/legacy_sha.c": {
         "defines": [],
-        "recorded_by": "units:crypto/evp/legacy_sha.c",
+        "recorded_by": null,
         "subphases": [
           "7.3",
           "7.3g"
@@ -3294,17 +3294,7 @@
         "crate_module": "src/evp/kdf.rs",
         "owner_phase": null
       },
-      "crypto/evp/legacy_blake2.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
-      },
       "crypto/evp/legacy_md4.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
-      },
-      "crypto/evp/legacy_md5.c": {
         "class": "deferred_to_later_stratum",
         "crate_module": null,
         "owner_phase": 13
@@ -3315,16 +3305,6 @@
         "owner_phase": 13
       },
       "crypto/evp/legacy_mdc2.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
-      },
-      "crypto/evp/legacy_ripemd.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
-      },
-      "crypto/evp/legacy_sha.c": {
         "class": "deferred_to_later_stratum",
         "crate_module": null,
         "owner_phase": 13
@@ -3438,10 +3418,10 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 252
+      "transcribed_units": 256
     }
   },
-  "body_hash": "07abaffbccfd34a60b75454cbc5d78ed125085529306752bf139f0e6040c15bc",
+  "body_hash": "d95ef19a747252b8cd6c4d25338fd4499af927640b1c9837603bb7a1eed57905",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -3452,12 +3432,12 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "5d9e568f714a2d34a7d23189f7354a36e3a0bfa4e4247ea446ddeac91bc5a075"
+      "sha256": "b6a1765063d5b786dda227820e6bd0ebdd3b6a4eaf6c78b06c347d6f430e2581"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "a941b224deb1b1c0f2353a5026abecb3d8a98177620b8040ac67d37e431762c7"
+      "sha256": "060055e24cd41a27552f412b2880b651cb0ec71c4b13036fad355025febcb8c6"
     },
     {
       "name": "phase-state",
@@ -3467,7 +3447,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "13f965eaa37691e6eddfc75978112c9c81667737e23060e7df5e9b9b762fcaba"
+      "sha256": "4157f2ae8fe2929e64f75adfe5f5479c55a2a0a33cb6404ac662228b573ed75c"
     },
     {
       "name": "source-manifest",

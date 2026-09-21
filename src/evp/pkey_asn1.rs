@@ -106,25 +106,29 @@ const ASN1_PKEY_ALIAS: c_long = 0x1;
 const ASN1_PKEY_DYNAMIC: c_long = 0x2;
 
 // ---------------------------------------------------------------------------------------------
-// The five types this module names that the crate has not transcribed yet, plus one re-export.
+// The four types this module names that the crate had left as placeholders, plus one
+// re-export that is still one.
 //
-// Each of the five is `#[repr(C)]` and empty, which is this crate's documented idiom for a type
-// that appears in a signature — here, in a struct's member — before its body is. It is honest here
-// rather than a shortcut: these accessors store and return the struct and never call through these
-// members. `X509Algor` was the sixth of these until D348: `crypto/asn1/x_algor.c` now has a crate
-// module, and this site imports the authority's own two-field definition instead of a placeholder.
+// Each of the four was `#[repr(C)]` and empty, which is this crate's documented idiom for a
+// type that appears in a signature — here, in a struct's member — before its body is. That
+// was honest while the bodies were Phase 10's; now that the authority units defining them
+// have crate modules, a placeholder would be a second, divergent declaration, so the
+// canonical definition is re-exported instead (D348's rule for `X509Algor`, extended to the
+// other three by D349).
+//
+// `Asn1BitString` is the fifth and is deliberately **not** made real here: the authority's
+// `ASN1_BIT_STRING` is a `typedef` of the same `struct asn1_string_st` as `ASN1_STRING`, and
+// the crate writes every `ASN1_BIT_STRING *` it *takes* as `*mut Asn1String`
+// (`src/asn1/bitstr.rs`). This name survives only for the two `item_sign`/`item_verify`
+// callback signatures below, where a distinct type name is wanted and no field is read; it is
+// not this slice's and D349 records it.
 // ---------------------------------------------------------------------------------------------
 
-/// `X509_PUBKEY` — Phase 10's object.
-#[repr(C)]
-pub struct X509Pubkey {
-    _private: [u8; 0],
-}
-/// `PKCS8_PRIV_KEY_INFO` — Phase 10's object.
-#[repr(C)]
-pub struct Pkcs8PrivKeyInfo {
-    _private: [u8; 0],
-}
+/// `PKCS8_PRIV_KEY_INFO` — `include/crypto/x509.h:291-297`, re-exported.
+///
+/// The `priv_decode`/`priv_encode` callback signatures below name `PKCS8_PRIV_KEY_INFO *`;
+/// the canonical definition and its offsets live in [`crate::asn1::p8_pkey`] (D349).
+pub use crate::asn1::p8_pkey::Pkcs8PrivKeyInfo;
 /// `X509_ALGOR` — the authority's own definition, re-exported (D348).
 ///
 /// The fifteen `EVP_PKEY_asn1_set_*` signatures below name `X509_ALGOR *` and nothing here ever
@@ -132,11 +136,16 @@ pub struct Pkcs8PrivKeyInfo {
 /// With the real item in the crate the placeholder would be a second, divergent declaration, so
 /// the canonical struct is re-exported instead.
 pub use crate::asn1::x_algor::X509Algor;
-/// `X509_SIG_INFO` — Phase 10's object.
-#[repr(C)]
-pub struct X509SigInfo {
-    _private: [u8; 0],
-}
+/// `X509_SIG_INFO` — `include/crypto/x509.h:50-59`, re-exported.
+///
+/// The `sig_print` callback signature below names `X509_SIG_INFO *`; the canonical definition
+/// and its offsets live in [`crate::x509::x509_set`] (D349).
+pub use crate::x509::x509_set::X509SigInfo;
+/// `X509_PUBKEY` — `crypto/x509/x_pubkey.c:31-43`'s `struct X509_pubkey_st`, re-exported.
+///
+/// The `pub_encode`/`pub_decode` callback signatures below name `X509_PUBKEY *`; the
+/// canonical definition and its offsets live in [`crate::x509::x_pubkey`] (D349).
+pub use crate::x509::x_pubkey::X509Pubkey;
 /// `ASN1_BIT_STRING` — Phase 5's object, and the one of the five whose body is in a header this
 /// project has already read.
 #[repr(C)]
