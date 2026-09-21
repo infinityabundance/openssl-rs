@@ -23049,3 +23049,68 @@ generated table.
 arithmetic, the multiplication ladder, the key layer, the two signature units and the five
 `EC_METHOD` tables are **not landed**. What this slice is, is the plan's step 2 executed with the
 closure it was justified by measured rather than assumed.
+
+## D339 — 8.7's cycle-is-only-through-the-method-tables hypothesis is falsified, and `crypto/ec/ec_key.c` is the unit that falsifies it
+
+**Decision.** Phase 8.7 lands **nothing** in this slice. The hypothesis was that the EC layer's mutual
+dependency is carried *only* by `EC_METHOD`/`EC_KEY_METHOD` function-pointer columns, so every unit
+could land except the five tables, `curve_list[]`'s `meth` column, `ec_kmeth.c`'s default table,
+`EC_GROUP_new_by_curve_name`/`_ex` and `ec_cvt.c`'s two constructors — a small final commit. It is
+false. The unit the brief named as safest, `crypto/ec/ec_key.c`, is the one that falsifies it, and the
+falsification is a measurement rather than a reading.
+
+**The measurement.** A faithful transcription of `ec_key.c` was placed at `src/ec/key.rs`, undeclared by
+`src/ec/mod.rs` so the crate never compiled it, exactly as D336's `crypto/ec/ecp_oct.c` measurement was
+placed. `gen_prerequisite_atlas.py` maps it to `crypto/ec/ec_key.c` at share **48/48** (fourteen
+internals and thirty-four exports), and `prerequisite_gate.py` reports:
+
+| | crate modules | authority units | `undefined_prerequisite` | `unwired_function_in_the_current_stratum` |
+|---|---|---|---|---|
+| without the module (committed) | 290 | 218 | 0 | 0 |
+| with the module | 291 | 219 | **32** | **0** |
+
+The zero in direction B is the module defining or referencing all fourteen of the unit's internals, so
+D327's rule is satisfied; the **32** in direction A is the answer, because direction A consults no unit
+and no table — it reports every referenced-but-unbuilt name in its universes. The module is preserved as
+`court/ec-key-measurement.rs.txt` with the command, and deleted from `src/` before the pipeline run.
+
+**Every one of the 32 is a direct call, and these are the coordinates.** The 26 from `ec_lib.c` are the
+twelve `EC_GROUP_*` (`copy` `:132`; `dup` `:721`; `free` `:98`, `:127`, `:720`; `get0_cofactor` `:513`;
+`get0_order` `:278`, `:751`; `get_curve_name` `:722`; `get_degree` `:462`; `get_field_type` `:454`;
+`order_bits` `:956`; `precompute_mult` `:878`; `set_asn1_flag` `:870`; `set_point_conversion_form`
+`:864`) and the thirteen `EC_POINT_*` (`cmp` `:592`; `copy` `:141`; `dup` `:840`; `free` `:99`, `:137`,
+`:345`, `:543`, `:598`, `:691`, `:839`; `get_affine_coordinates` `:451`, `:667`; `is_at_infinity` `:485`,
+`:537`; `is_on_curve` `:497`; `mul` `:315`, `:406`, `:533`, `:588`; `new` `:138`, `:308`, `:523`, `:584`,
+`:655`, `:920`; `oct2point` `:923`; `point2buf` `:911`; `set_affine_coordinates` `:665`;
+`set_to_infinity` `:342`, `:383`) plus the internal `ossl_ec_group_new_ex` `:128`. The other six are
+`EC_GROUP_new_by_curve_name_ex` (`ec_curve.c:51`) and `ECDSA_do_sign` (`ecdsa_sign.c`) /
+`ECDSA_do_verify` (`ecdsa_vrf.c`) at `:1063`/`:1069`; `ossl_ec_key_new_method_int` (`ec_kmeth.c`, from
+`:36`/`:42`); `ossl_ec_key_dup` (`ec_backend.c:594`, from `:189`); and `ossl_ec_dhkem_derive_private`
+(`providers/implementations/kem/libdefault-lib-ec_kem.c`, from `:367`). `EC_KEY_free` (`:98`, `:99`)
+alone defeats the hypothesis: it frees its group and its point by calling `EC_GROUP_free` and
+`EC_POINT_free` **by name**, and neither is a constructor nor a `static` initialiser.
+
+**Why the residue cannot be trimmed to the brief's list.** `ec_key.c` needs 26 of `ec_lib.c`'s names
+before it links, and `ec_lib.c` cannot land alone either: the plan's own section 3 already measured that
+it and `ecp_smpl.c` call each other directly eight times each way, which is the same shape one level
+down. So the small final commit is not small, and the integration plan's single commit for steps 2-6 is
+the boundary rather than a conservative cut. D338's step 2 remains the last landing because it is the
+only step whose closure is *empty*.
+
+**Bookkeeping, read off the regenerated files.** No export lands, so `forensics/phase8-obligations.json`
+is unchanged (phase8: implemented **460**, deferred **2**, open **324**, owned **786**),
+`forensics/atlas/implemented-surface.json` is unchanged, and `RT-EC` stays at **483 observations** with
+no arm added — nothing this slice transcribes is reachable from a probe, because nothing it transcribes
+is built. `forensics/atlas/transcription-edges.json` is back at **290** crate modules over **218**
+authority units once the measurement module is deleted; `language_census` **3553**,
+`divergence_names_covered` **33** over **8** rows, `names_referenced_and_not_built` **17**,
+`sealed_census` **52** and `blocking_dependencies` **19** are D338's. No `forensics/prerequisites.json`
+row is added: the measurement module was reverted, so the tree carries none of its references. The guard
+moves nothing upward, so no `forensics/ownership-transitions.json` row is needed. `EC_KEY_generate_key`
+stays the ledger's `deferred` row and `forensics/tools/phase8_obligations.py`'s `BLOCKED_HANDOFFS` row
+is untouched, because the half did not land and the brief says to split it only when it does.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete: false`,
+`CT-EC` stays PENDING, and the group object, the field arithmetic, the multiplication ladder, the key
+layer, the two signature units and the five `EC_METHOD` tables are **not landed**. What this slice is,
+is the hypothesis tested with the gate's own universes and refuted at the first unit it named.
