@@ -577,22 +577,6 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
     ),
     BlockedHandoff(
         symbols=(
-            "EVP_PKEY_CTX_get_algor",
-        ),
-        binding_phase=11,
-        blocked_by=(
-            Blocker("d2i_X509_ALGOR", "crypto/asn1/x_algor.c", 26, "exported", 11),
-        ),
-        reason=(
-            "`crypto/evp/evp_lib.c:1455` decodes the provider's "
-                "`OSSL_SIGNATURE_PARAM_ALGORITHM_ID` answer with `d2i_X509_ALGOR` (`:1490`), which is "
-                "`crypto/asn1/x_algor.c:26`'s generated `IMPLEMENT_ASN1_FUNCTIONS` export and Phase "
-                "11's. `forensics/prerequisites.json` carries `d2i_X509_ALGOR` with this coordinate; "
-                "D190 recorded the withholding and D193 restated it."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
             "EVP_read_pw_string", "EVP_read_pw_string_min"
         ),
         binding_phase=13,
@@ -609,21 +593,6 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
                 "and `UI_free` (`:84`), and `ui.h` is Phase 13's. `EVP_read_pw_string` (`:47`) is its "
                 "one-line spelling. `EVP_get_pw_prompt`/`EVP_set_pw_prompt` are this file's too and "
                 "did land: they touch the file's own eighty-byte static and no `UI` at all."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "EVP_CIPHER_CTX_get_algor",
-        ),
-        binding_phase=11,
-        blocked_by=(
-            Blocker("d2i_X509_ALGOR", "crypto/asn1/x_algor.c", 26, "exported", 11),
-        ),
-        reason=(
-            "`crypto/evp/evp_lib.c:1337` is `EVP_PKEY_CTX_get_algor`'s cipher-side twin and "
-                "decodes the same `OSSL_SIGNATURE_PARAM_ALGORITHM_ID` octet string with the same "
-                "`d2i_X509_ALGOR` (`:1372`), `crypto/asn1/x_algor.c:26`'s and Phase 11's. One "
-                "`forensics/prerequisites.json` row covers both accessors."
         ),
     ),
     BlockedHandoff(
@@ -789,6 +758,19 @@ UNBLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
         "DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` "
         "in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer and what is "
         "left is this stratum's own `pem_lib.c` transcription.",
+    ),
+    (
+        ("EVP_PKEY_CTX_get_algor", "EVP_CIPHER_CTX_get_algor"),
+        11,
+        "Both accessors decode an `OSSL_SIGNATURE_PARAM_ALGORITHM_ID` octet string with "
+        "`d2i_X509_ALGOR` (`crypto/evp/evp_lib.c:1490`, `:1372`), the single blocker the old rows "
+        "named. D348 transcribed `crypto/asn1/x_algor.c` whole as `src/asn1/x_algor.rs`, so that "
+        "export is landed and the blocker is gone -- which is why the rows move here from "
+        "`BLOCKED_HANDOFFS` rather than being retired: the exports are still this stratum's to "
+        "write, and only the authority *blocker* has landed. The one remaining dependency is the "
+        "legacy `OBJ_NAME` digest lookup the decoded identifier is read through, which is Phase 13's "
+        "(D343, D344), not a file:line in `x_algor.c` -- so a `Blocker` row would be stale on the "
+        "day it was written.",
     ),
 ]
 

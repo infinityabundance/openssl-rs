@@ -231,11 +231,16 @@ COVERED_FILES = [
     # Deliberately *not* covered, with the stratum that owns each: `a_digest.c`,
     # `ameth_lib.c` (Phase 7); `d2i_param.c`, `d2i_pr.c`, `d2i_pu.c`, `i2d_evp.c`,
     # `n_pkey.c`, `p5_pbe.c`, `p5_pbev2.c` (Phase 10 or 11 as their exports say); `a_sign.c`,
-    # `a_verify.c`, `x_algor.c`, `x_pkey.c` (Phase 11); the rest of `asn_mime.c`
+    # `a_verify.c`, `x_pkey.c` (Phase 11); the rest of `asn_mime.c`
     # (Phase 12; the file is covered above for the two coordinates a Phase 5 export
     # raises);
     # `nsseq.c` (Phase 13). Their raises are visible as uncovered sites in
     # `forensics/atlas/err-raise-sites.json` until those phases land.
+    #
+    # `x_algor.c` was on this list ("Phase 11") and is not any more: D348 transcribes
+    # `crypto/asn1/x_algor.c` whole as `src/asn1/x_algor.rs`, so its one raise --
+    # `ossl_x509_algor_get_md`'s `ASN1_R_UNKNOWN_DIGEST` at `:165` -- is a coordinate a
+    # crate module can reach and is covered below.
     #
     # `p5_scrypt.c` was on this list and is not any more: 7.4c lands
     # `PKCS5_v2_scrypt_keyivgen`/`_ex`, which are that file's and Phase 7's by its
@@ -579,6 +584,11 @@ COVERED_FILES = [
     ("crypto/rsa/rsa_schemes.c", "RSA_SCHEMES"),
     ("crypto/rsa/rsa_mp_names.c", "RSA_MP_NAMES"),
     ("crypto/rsa/rsa_acvp_test_params.c", "RSA_ACVP_TEST_PARAMS"),
+    # Phase 8.8's `crypto/asn1/x_algor.c` (D348). The unit is transcribed whole as
+    # `src/asn1/x_algor.rs`, and it raises once: `ossl_x509_algor_get_md`'s
+    # `ASN1_R_UNKNOWN_DIGEST` at `:165`, the coordinate a caller sees when an OID
+    # resolves to no digest method.
+    ("crypto/asn1/x_algor.c", "X_ALGOR"),
     # Phase 8.5's `crypto/ffc` subsystem. The same rule as `crypto/rsa` above: these are the
     # units of the stratum that **raise**, and a coordinate's `file` string is part of the
     # observable error record. `ffc_params_validate.c` raises the DH

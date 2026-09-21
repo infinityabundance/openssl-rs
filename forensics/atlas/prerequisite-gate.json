@@ -8,7 +8,6 @@
       "OSSL_ENCODER_CTX_new_for_pkey -> phase 10 (`crypto/asn1/i2d_evp.c`'s `i2d_provided` builds an `OSSL_ENCODER_CTX` for a **provider** key, which is the branch every one of `i2d_KeyParams`, `i2d_KeyParams_bio`, `i2d_PrivateKey`, `i2d_PKCS8PrivateKey` and `i2d_PublicKey` takes first. The names are declared in `encoder.h`, Phase 10's, so no provider key can be encoded and the five exports are withheld with the boundary named in `RT-EVP-PKEY`.)",
       "OSSL_provider_init -> phase 13 (providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.)",
       "UI_new -> phase 13 (`EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`) is a `UI` program -- `UI_new`, `UI_add_input_string`, `UI_add_verify_string`, `UI_process`, `UI_free` -- and `ui.h` is Phase 13's. `EVP_read_pw_string` goes with it because its whole body is a call to `_min`; `EVP_get_pw_prompt`/`EVP_set_pw_prompt` do **not**, because they touch the file's own eighty-byte static and nothing else, and they land.)",
-      "d2i_X509_ALGOR -> phase 11 (`EVP_PKEY_CTX_get_algor` (`crypto/evp/evp_lib.c:1455`) decodes the provider's `OSSL_SIGNATURE_PARAM_ALGORITHM_ID` answer with `d2i_X509_ALGOR`, declared in `x509.h` and Phase 11's. **`EVP_CIPHER_CTX_get_algor` (`:1337`) is the same call in the same shape** and is withheld on it too, so this one row covers both accessors and the Phase-7 obligation ledger's two deferral rows name the same coordinate. The record is otherwise unchanged from 7.4e: the accessor is withheld, and its probe line names this coordinate.)",
       "evp_app_cleanup_int -> phase 8 (Defined in `crypto/evp/pmeth_lib.c` and called from `crypto/evp/names.c`'s `EVP_cleanup_int`, so two transcribed units now owe it. Its whole body is `sk_EVP_PKEY_METHOD_pop_free(app_pkey_methods, EVP_PKEY_meth_free)`: both the stack and the destructor belong to the **application-supplied `EVP_PKEY_METHOD` registry**, which is 7.4l's because `EVP_PKEY_meth_find`'s lookup searches `standard_methods[]` -- the table whose contents are Phase 8's objects under D163 and D165. So this is Phase 8's with its sibling rows rather than a same-subphase deferral: there is no 7.4c-ii or 7.4d that could land it, because the two symbols it needs do not exist until Phase 8 does.)",
       "evp_cleanup_int -> phase 8 (Internal, called only by `OPENSSL_cleanup`, and **owed to Phase 8 through `evp_app_cleanup_int`**. Its body is seven calls -- four `OBJ_NAME_cleanup`, then `EVP_PBE_cleanup`, then `OBJ_sigid_free`, then `evp_app_cleanup_int` -- and the first six are landed: `EVP_PBE_cleanup` is `crypto/evp/evp_pbe.c`'s and landed with 7.4c's PBE remainder (D192), which is the dependency this row was written against. What is left is the seventh, and `evp_app_cleanup_int` (`crypto/evp/pmeth_lib.c`) is Phase 8's because its whole body pops the **application-supplied `EVP_PKEY_METHOD` registry** against `EVP_PKEY_meth_free`, and `EVP_PKEY_meth_find` searches `standard_methods[]` (D165, D193). So the row is retargeted rather than discharged: the name cannot be written before Phase 8, and leaving it pinned to this stratum would have made a Phase-7 gap out of a Phase-8 dependency on the day this stratum sealed.)",
       "evp_pkey_copy_downgraded -> phase 8 (The fourth of the seven and the one that makes the other three wait. Its body exports the provider keydata through `evp_keymgmt_export` -- this stratum's -- and then imports it with `(*dest)->ameth->import_from`, synchronising `(*dest)->ameth->dirty_cnt`. Two fields of an `EVP_PKEY_ASN1_METHOD` and one of that struct's function pointers are read directly, so the function cannot be written before an ameth object exists, and the ameth objects are the twelve `crypto/asn1/ameth_lib.c` builds from Phase 8's `standard_methods[]`. It also needs `EVP_PKEY_CTX_new_from_pkey`, which is `pmeth_lib.c`'s and lands in 7.4c *inside* this stratum -- so the order is 7.4c, then Phase 8, then this row.)",
@@ -24,7 +23,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 67,
-      "language_surface_not_modelled_by_name": 3913,
+      "language_surface_not_modelled_by_name": 3926,
       "planned_prerequisites": 13
     },
     "census_by_unit": {
@@ -91,7 +90,7 @@
         "crypto/asn1/bio_asn1.c": 13,
         "crypto/asn1/evp_asn1.c": 13,
         "crypto/asn1/f_int.c": 8,
-        "crypto/asn1/p5_scrypt.c": 25,
+        "crypto/asn1/p5_scrypt.c": 23,
         "crypto/asn1/t_pkey.c": 5,
         "crypto/asn1/tasn_dec.c": 30,
         "crypto/asn1/tasn_enc.c": 23,
@@ -99,6 +98,7 @@
         "crypto/asn1/tasn_new.c": 22,
         "crypto/asn1/tasn_prn.c": 22,
         "crypto/asn1/tasn_typ.c": 29,
+        "crypto/asn1/x_algor.c": 20,
         "crypto/asn1_dsa.c": 3,
         "crypto/bf/bf_enc.c": 4,
         "crypto/bio/bf_buff.c": 11,
@@ -162,7 +162,7 @@
         "crypto/defaults.c": 9,
         "crypto/der_writer.c": 4,
         "crypto/des/set_key.c": 9,
-        "crypto/dh/dh_ameth.c": 30,
+        "crypto/dh/dh_ameth.c": 29,
         "crypto/dh/dh_asn1.c": 16,
         "crypto/dh/dh_check.c": 8,
         "crypto/dh/dh_depr.c": 3,
@@ -187,7 +187,7 @@
         "crypto/dso/dso_lib.c": 15,
         "crypto/ec/ec2_smpl.c": 13,
         "crypto/ec/ec_asn1.c": 45,
-        "crypto/ec/ec_backend.c": 40,
+        "crypto/ec/ec_backend.c": 39,
         "crypto/ec/ec_check.c": 6,
         "crypto/ec/ec_curve.c": 19,
         "crypto/ec/ec_cvt.c": 4,
@@ -220,7 +220,7 @@
         "crypto/evp/evp_enc.c": 34,
         "crypto/evp/evp_fetch.c": 19,
         "crypto/evp/evp_key.c": 14,
-        "crypto/evp/evp_lib.c": 26,
+        "crypto/evp/evp_lib.c": 25,
         "crypto/evp/evp_pbe.c": 23,
         "crypto/evp/evp_rand.c": 33,
         "crypto/evp/exchange.c": 21,
@@ -297,9 +297,9 @@
         "crypto/rand/rand_uniform.c": 3,
         "crypto/rc2/rc2_cbc.c": 3,
         "crypto/ripemd/rmd_dgst.c": 342,
-        "crypto/rsa/rsa_asn1.c": 22,
+        "crypto/rsa/rsa_asn1.c": 21,
         "crypto/rsa/rsa_gen.c": 17,
-        "crypto/rsa/rsa_lib.c": 29,
+        "crypto/rsa/rsa_lib.c": 28,
         "crypto/rsa/rsa_meth.c": 11,
         "crypto/rsa/rsa_mp.c": 7,
         "crypto/rsa/rsa_ossl.c": 20,
@@ -436,10 +436,10 @@
       ]
     },
     "checked": {
-      "authority_units": 251,
-      "crate_modules": 325,
+      "authority_units": 252,
+      "crate_modules": 326,
       "deferral_blocker_rows": 5,
-      "deferrals_recorded": 19,
+      "deferrals_recorded": 18,
       "divergence_names_covered": 39,
       "divergence_rows": 10,
       "names_referenced_and_not_built": 18
@@ -552,7 +552,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "70d5f8a4ac0ca6eda4bcddfef9ff916d00d307872096ab2b3d2622b679664fd6",
+  "body_hash": "72a011c4223c6bda6edb78e4b237a2305ec6feadbe142b34149b749fd9922a92",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -573,7 +573,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "ae2fcd5522bcb1b13f0a82e6a1faf1526ab170c057ab9e68cac6277f735bf962"
+      "sha256": "5d9e568f714a2d34a7d23189f7354a36e3a0bfa4e4247ea446ddeac91bc5a075"
     },
     {
       "name": "symbol-ownership",
@@ -588,17 +588,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "1ca2465831d55c42a44b95480ffd51ad6b6d17bede5e5bcd5790b768f15f6440"
+      "sha256": "a941b224deb1b1c0f2353a5026abecb3d8a98177620b8040ac67d37e431762c7"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "7c05b49abbdad89ee0333413156a0b1ab9f109e47946855e49ac9cc089b70c9c"
+      "sha256": "94e9f6368cc186f34eabc013dc99c81b931b530d08cb6d325c4f6432fb8027ad"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "259bc8b41b9ec0a9f8e75caa5ae6d7aaaa3af4c1e5dab96e2a87792c2c2e0f12"
+      "sha256": "13f965eaa37691e6eddfc75978112c9c81667737e23060e7df5e9b9b762fcaba"
     },
     {
       "name": "crate-source-tree",

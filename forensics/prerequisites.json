@@ -148,12 +148,6 @@
         "evidence": "docs/DECISIONS.md D193; docs/PHASE-7-SUBPHASES.md row 7.4l"
       },
       {
-        "symbol": "d2i_X509_ALGOR",
-        "owner_phase": 11,
-        "reason": "`EVP_PKEY_CTX_get_algor` (`crypto/evp/evp_lib.c:1455`) decodes the provider's `OSSL_SIGNATURE_PARAM_ALGORITHM_ID` answer with `d2i_X509_ALGOR`, declared in `x509.h` and Phase 11's. **`EVP_CIPHER_CTX_get_algor` (`:1337`) is the same call in the same shape** and is withheld on it too, so this one row covers both accessors and the Phase-7 obligation ledger's two deferral rows name the same coordinate. The record is otherwise unchanged from 7.4e: the accessor is withheld, and its probe line names this coordinate.",
-        "evidence": "docs/DECISIONS.md D196; docs/DECISIONS.md D193 and D190; docs/PHASE-7-SUBPHASES.md rows 7.3c and 7.4e"
-      },
-      {
         "symbol": "UI_new",
         "owner_phase": 13,
         "reason": "`EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`) is a `UI` program -- `UI_new`, `UI_add_input_string`, `UI_add_verify_string`, `UI_process`, `UI_free` -- and `ui.h` is Phase 13's. `EVP_read_pw_string` goes with it because its whole body is a call to `_min`; `EVP_get_pw_prompt`/`EVP_set_pw_prompt` do **not**, because they touch the file's own eighty-byte static and nothing else, and they land.",

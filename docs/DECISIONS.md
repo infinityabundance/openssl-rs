@@ -24044,3 +24044,141 @@ diffed. The arm now observes the rule the length demonstrates, over the bytes it
 nondeterministic print and one weaker predicate stood, so the fix is a strengthening rather than a
 deletion, and `RT-DH` moves 588 -> **589** observations. `probe_hygiene.py` ends `all_clean=True`
 with `rt_dh_probe.c` read as `clean (551, 551)`.
+
+---
+
+## D348 — 8.8's root unit lands first: `crypto/asn1/x_algor.c` is transcribed whole as `src/asn1/x_algor.rs`, the two `X509_ALGOR` declarations are reconciled into one, and `crypto/rsa/rsa_asn1.c`'s PSS/OAEP half joins it
+
+**Decision.** Two units land in one commit, because the second needs the first:
+
+* **`crypto/asn1/x_algor.c` becomes `src/asn1/x_algor.rs`, transcribed whole** — 199 lines, its
+  **14 exports** (`X509_ALGOR_new`/`_free`/`_dup`/`_it`/`_set0`/`_get0`/`_set_md`/`_cmp`/`_copy`,
+  `X509_ALGORS_it`, `d2i_`/`i2d_X509_ALGOR`, `d2i_`/`i2d_X509_ALGORS`) and its **five internals**
+  (`ossl_X509_ALGOR_from_nid`, `ossl_x509_algor_new_from_md`/`_get_md`/`_mgf1_decode`/`_md_to_mgf1`).
+  It is **8.8's true root**: its own missing-callee set is empty — every callee it reaches was
+  already in the crate — which is what made it the one unit of the closure that could land before
+  Phase 11's `X509_PUBKEY`/`PKCS8_PRIV_KEY_INFO` bodies.
+* **`crypto/rsa/rsa_asn1.c`'s withheld half joins `src/rsa/asn1.rs`** — the `RSA_PSS_PARAMS` and
+  `RSA_OAEP_PARAMS` templates, their two `FREE_PRE` callbacks, and the **11 exports**
+  `IMPLEMENT_ASN1_FUNCTIONS`/`_DUP_FUNCTION` generate over them: `RSA_PSS_PARAMS_new`/`_free`/
+  `_dup`/`_it`/`d2i_`/`i2d_` and the five `RSA_OAEP_PARAMS_*` equivalents (which have no dup).
+  `crypto/rsa/rsa_asn1.c` is **whole**.
+
+The Phase 8 ledger moves implemented 710 -> **721**, deferred **0**, open 76 -> **65** over the same
+**786** owned; `forensics/atlas/implemented-surface.json` moves `libcrypto` implemented 2627 ->
+**2652**; `forensics/atlas/transcription-edges.json` gains the `src/asn1/x_algor.rs ->
+crypto/asn1/x_algor.c` edge and reads 283 modules over 252 translation units.
+
+**The two `X509_ALGOR` declarations are reconciled into one, and the authority's layout decides
+which.** The crate had a real two-field `X509Algor` in `src/evp/cipher_ctx.rs` and an opaque
+`_private: [u8; 0]` placeholder of the same name in `src/evp/pkey_asn1.rs`. The authority's
+`struct X509_algor_st` (`include/openssl/x509.h`) is `ASN1_OBJECT *algorithm` then `ASN1_TYPE
+*parameter`, which is the first; so that definition **moves to the module whose authority file owns
+it** — `src/asn1/x_algor.rs` — the earlier site becomes `pub use crate::asn1::x_algor::X509Algor`
+and the later one too, and no third struct exists. The `p5_crpt2.rs` private `X509_ALGOR_it`
+descriptor that stood in for the accessor while it was Phase 11's is deleted with it: the two
+`PBE2PARAM`/`PBKDF2PARAM` templates now point at the real `X509_ALGOR_it`, which is the authority's
+one item rather than a second copy of its template.
+
+**The brief's Unit B count is corrected by the ledger, and the measurement is the nine-name
+difference.** The brief expected implemented 710 -> **717** and open 76 -> **69** — "seven/eight"
+rows. `crypto/rsa/rsa_asn1.c`'s `open` rows are **eleven**, not seven: six `RSA_PSS_PARAMS_*`
+(`_new`, `_free`, `_dup`, `_it`, `d2i_`, `i2d_`) and five `RSA_OAEP_PARAMS_*` (`_new`, `_free`, `_it`,
+`d2i_`, `i2d_`), all eleven present in the authority DSO (`symbols-libcrypto.json`, `dso.present`
+true). Landing them moves implemented to 721 and open to 65, which is what the regenerated ledger
+reads.
+
+**The Unit A exports are Phase 11's, and the commit does not claim a Phase 8 movement for them.**
+`forensics/atlas/symbol-ownership.json` resolves all fourteen to `owner_phase: 11` by their `x509.h`
+declaration, and it carries `"ledger": "not-yet-written"` — Phase 11 has no obligation ledger. So
+they are in no Phase 8 ledger list, and this entry records their landing against
+`implemented-surface.json` rather than as a phase movement, exactly as the brief asked. **This is
+where one real cross-stratum case surfaced, and `court_coverage.py` is where it did.** That tool's
+documented universe is *"every implemented export of a stratum that has **begun**"*, but its
+manifest-versus-ledger assertion assumed every implemented export is owned by a begun stratum; with
+fourteen Phase-11 exports implemented and no Phase-11 ledger, the assertion failed with *"in the
+manifest but in no ledger"*. The tool now scopes that assertion to symbols whose atlas owner has a
+ledger and records the others, visibly, in a new `not_yet_begun` list: everything owned by a begun
+stratum is still held to exactly the ledger union, so the invariant is unchanged for every stratum
+the tool was written to cover, and the fourteen leave the list the day Phase 11's ledger exists (it
+will already carry them in `implemented`). The alternative — moving the fourteen into Phase 8's
+working set — was rejected because it would contradict `docs/PHASE-8-SUBPHASES.md` and
+`docs/PHASE-8-AMETH-INTEGRATION-PLAN.md`, both of which give them to Phase 11, and because it would
+un-seal a boundary the plan drew.
+
+**`RSA_free`'s and `ossl_rsa_set0_pss_params`'s omitted `RSA_PSS_PARAMS_free` call is re-measured,
+and it is still unreachable.** D319 recorded the omission because no state the crate could reach had
+a non-NULL `r->pss`; the reason it gave was that *every* `RSA_PSS_PARAMS *` came from
+`d2i_RSA_PSS_PARAMS`, which was unlanded. That decoder — and `RSA_PSS_PARAMS_free` itself — are
+landed now, so the reason had to be re-derived rather than left standing. The field's only writer is
+`ossl_rsa_set0_pss_params` (`crypto/rsa/rsa_lib.c:697-706`), and its only authority caller is
+`ossl_rsa_param_decode` (`crypto/rsa/rsa_backend.c:649-674`, at `:669`), which is not transcribed.
+A decoder nothing calls does not make the field non-NULL, so the call stays omitted — **with the
+correct coordinate this time**, `rsa_backend.c:669`, and the two comments and the module
+paragraph in `src/rsa/object.rs` now say so. The calls are restored the day
+`crypto/rsa/rsa_backend.c`'s `ossl_rsa_param_decode` lands.
+
+**The one raise is generated, and the file it comes from joins the generator's covered set.**
+`ossl_x509_algor_get_md` raises `ASN1_R_UNKNOWN_DIGEST` at `x_algor.c:165`; `crypto/asn1/x_algor.c`
+is added to `gen_err_raise_sites.py`'s `COVERED_FILES` (and removed from its "deliberately not
+covered" list, where it stood as "Phase 11"), so the coordinate is `err_sites::X_ALGOR_165` and
+`err-raise-sites.json`/`src/runtime/err_sites.rs` are regenerated with it.
+
+**The digest-by-name path is named rather than courted around.** `ossl_x509_algor_get_md` resolves a
+non-NULL OID through `EVP_get_digestbyobj`, which `include/openssl/evp.h` defines as
+`EVP_get_digestbyname(OBJ_nid2sn(OBJ_obj2nid(a)))`. This crate answers NULL for **every** built-in
+digest name, because the legacy `OBJ_NAME` database is empty — `src/runtime/init.rs`'s
+`add_all_legacy_methods` is a no-op and `src/context/namemap.rs` records the legacy pre-population as
+**Phase 13's** — the same coordinate D343 and D344 record for `EVP_PKEY_CTX_get_dh_kdf_md` and
+`_get_ecdh_kdf_md`. So the non-NULL-OID path of `ossl_x509_algor_get_md` is incomparable: neither the
+court nor a unit test asserts the returned `EVP_MD *` for a SHA-256 identifier, the SHA1 default (a
+direct static, no lookup) and the identifier's OID are what are checked, and the five internals are
+declared `#[allow(dead_code)]` with those readers named. None of them is an export, so
+`court_coverage.py` does not require them to be courted.
+
+**Unit A is courted in `RT-ASN1-TEMPLATE`, the phase-5 probe that already drives `ASN1_item_*`.**
+That probe's whole method is to declare its own structures and drive them through the public item
+entry points, because "the shape of the item **is** the thing under test"; `X509_ALGOR` is the first
+*installed* descriptor it drives, so the arms are the crate's own item rather than a local stand-in:
+`set0`/`get0` (the OID, the type word, and the absent-parameter early return), the `i2d`/`d2i`
+round trip with the DER printed in full, `cmp`, `copy`, `dup`, the two `_it` accessors, and an
+`X509_ALGORS` `SEQUENCE OF` two identifiers decoded and compared element by element. `RT-ASN1-
+TEMPLATE` grows 100 -> **120 observations**, zero residual. **Unit B is courted in `RT-RSA`**, which
+grows 1002 -> **1021**: the arms build an `RSA_PSS_PARAMS` from constants (a SHA-256 `hashAlgorithm`
+with an explicit `NULL`, `saltLength` 32, `trailerField` 1), print its DER — a public constant, not
+a secret, so printing it is the differential evidence and not a leak — decode it back, re-encode
+byte-for-byte, drive `RSA_PSS_PARAMS_dup`, and round-trip an `RSA_OAEP_PARAMS`. The DER matches the
+authority byte-for-byte on both sides, which is also what proves the `ASN1_EXP_OPT` fields carry
+`ASN1_TFLG_EXPLICIT` (context-specific `a0`/`a2` tags) rather than a reduced `EXPTAG`-only flag.
+`court_coverage.py` reports every one of the stratum's **721** implemented exports courted (713
+directly, 8 indirectly, 0 non-observable), and the new `not_yet_begun` list holds exactly the
+fourteen Phase 11 names above.
+
+**The hand-off rows the landed blocker falsifies are retargeted, not left to go stale.**
+`forensics/prerequisites.json`'s `d2i_X509_ALGOR` deferral row is **retired** — the name is built
+now — and Phase 7's two `BlockedHandoff` rows for `EVP_PKEY_CTX_get_algor` and
+`EVP_CIPHER_CTX_get_algor`, whose sole blocker was `d2i_X509_ALGOR`, move to `UNBLOCKED_HANDOFFS`
+(the file's third deferral mechanism, D173's precedent): the export is still Phase 11's to write,
+only the *blocker* has landed, and the reason says so. The prerequisite gate ends at **zero
+findings**, `blocking_dependencies` moves 19 -> **18** (the retired prerequisite row), and
+`sealed_stratum_census` stays **52**.
+
+**Bookkeeping, read off the regenerated files.** `phase8` implemented 710 -> **721**, deferred
+**0**, open 76 -> **65**, owned **786**; `implemented-surface.json` `libcrypto` 2627 -> **2652**;
+`court_coverage.py` reports phase 8 at 713 direct + 8 indirect over **721**. `docs/PHASE-8-
+SUBPHASES.md`'s 8.4 row records this entry and its two anchored clauses are checked against the
+ledger, and `docs/PHASE-8-REMAINING.md` is regenerated. `probe_hygiene.py` reads the two touched
+probes clean.
+
+**What is deliberately *not* here, named rather than implied.** `X509_PUBKEY` and
+`PKCS8_PRIV_KEY_INFO` stay `_private: [u8; 0]` and `crypto/x509/x_pubkey.c` and
+`crypto/asn1/p8_pkey.c` have no crate module, so 8.8's `standard_methods[]` objects still cannot be
+built and `RT-AMETH` stays unregistered; `ossl_x509_algor_get_md`'s digest-by-name path is the
+recorded Phase-13 deferral above; and the nine `crypto/rsa/rsa_asn1.c` exports that were already
+landed, plus `RSA_get0_pss_params`/`ossl_rsa_set0_pss_params`, are untouched. No `crypto/rsa` file
+other than `rsa_asn1.c` and no `crypto/asn1` file other than `x_algor.c` is reached.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete:
+false` with **65** names open, 8.8's fifteen and the four key types' printer families among them.
+What this slice is, is 8.8's root unit and the RSA half that named it — not 8.8, and not a claim
+about the stratum's work being nearly done.

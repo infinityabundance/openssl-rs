@@ -75,7 +75,7 @@
       "verdict": "pass"
     },
     "RT-ASN1-TEMPLATE": {
-      "observations": 100,
+      "observations": 120,
       "verdict": "pass"
     },
     "RT-ASN1-TIME": {
@@ -343,7 +343,7 @@
       "verdict": "pass"
     },
     "RT-RSA": {
-      "observations": 1002,
+      "observations": 1021,
       "verdict": "pass"
     },
     "RT-RUNTIME-EXT": {
@@ -389,7 +389,7 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 2627,
+    "libcrypto": 2652,
     "libssl": 0
   },
   "open_obligations": {
@@ -398,7 +398,7 @@
     "phase5": 0,
     "phase6": 0,
     "phase7": 0,
-    "phase8": 76,
+    "phase8": 65,
     "phase9": 11
   },
   "owned_obligations": {
@@ -435,10 +435,10 @@
     "9": "in-progress"
   },
   "prerequisites": {
-    "blocking_dependencies": 19,
+    "blocking_dependencies": 18,
     "divergence_names_covered": 39,
     "findings": 0,
-    "language_census": 3913,
+    "language_census": 3926,
     "sealed_census": 52
   },
   "provider_implemented": [

@@ -155,11 +155,40 @@ pub struct RsaPssMaskGen {
 }
 
 /// `RSA_PSS_PARAMS` — the ASN.1-restriction form, declared in `rsa.h` and defined in
-/// `crypto/rsa/rsa_asn1.c`. Opaque here because nothing in this slice dereferences it; slice F's
-/// `d2i_`/`i2d_` pair and `RSA_PSS_PARAMS_dup` are where its members acquire a user.
+/// `crypto/rsa/rsa_asn1.c`. Five pointers: the four `ASN1_*` fields the `RSA_PSS_PARAMS` template
+/// encodes, plus `maskHash`, the decoded hash the `rsa_pss_cb` free hook releases and the template
+/// never touches.
+///
+/// It was opaque here until D348, because nothing in this slice dereferenced one: slice F's
+/// `d2i_`/`i2d_` pair and `RSA_PSS_PARAMS_dup` are where its members acquire a user, and this
+/// commit lands them. The offsets are the authority's field order, asserted in `src/rsa/asn1.rs`.
 #[repr(C)]
 pub struct RsaPssParams {
-    _private: [u8; 0],
+    /// `X509_ALGOR *hashAlgorithm`.
+    pub hash_algorithm: *mut crate::asn1::x_algor::X509Algor,
+    /// `X509_ALGOR *maskGenAlgorithm`.
+    pub mask_gen_algorithm: *mut crate::asn1::x_algor::X509Algor,
+    /// `ASN1_INTEGER *saltLength`.
+    pub salt_length: *mut crate::asn1::layout::Asn1String,
+    /// `ASN1_INTEGER *trailerField`.
+    pub trailer_field: *mut crate::asn1::layout::Asn1String,
+    /// `X509_ALGOR *maskHash` — "Decoded hash algorithm from maskGenAlgorithm".
+    pub mask_hash: *mut crate::asn1::x_algor::X509Algor,
+}
+
+/// `RSA_OAEP_PARAMS` — the OAEP counterpart of [`RsaPssParams`], declared in `rsa.h` and defined in
+/// `crypto/rsa/rsa_asn1.c`. Four pointers: the three `X509_ALGOR` fields the template encodes and
+/// the `maskHash` the `rsa_oaep_cb` free hook releases.
+#[repr(C)]
+pub struct RsaOaepParams {
+    /// `X509_ALGOR *hashFunc`.
+    pub hash_func: *mut crate::asn1::x_algor::X509Algor,
+    /// `X509_ALGOR *maskGenFunc`.
+    pub mask_gen_func: *mut crate::asn1::x_algor::X509Algor,
+    /// `X509_ALGOR *pSourceFunc`.
+    pub p_source_func: *mut crate::asn1::x_algor::X509Algor,
+    /// `X509_ALGOR *maskHash` — "Decoded hash algorithm from maskGenFunc".
+    pub mask_hash: *mut crate::asn1::x_algor::X509Algor,
 }
 
 /// `struct rsa_st` — `crypto/rsa/rsa_local.h:22-101`.

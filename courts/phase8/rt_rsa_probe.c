@@ -126,10 +126,12 @@
 #include <openssl/crypto.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
+#include <openssl/objects.h>
 #include <openssl/params.h>
 #include <openssl/provider.h>
 #include <openssl/rsa.h>
 #include <openssl/sha.h>
+#include <openssl/x509.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -433,6 +435,22 @@ static void drain(const char *arm)
         n++;
     }
     printf("rsa.%s.err.count=%d\n", arm, n);
+}
+
+/* A lowercase-hex printer. Every value an arm below prints through it is a public constant the
+ * probe itself built -- a parameter encoding, an OID, a return-code byte -- and never a secret. */
+static void hex(const char *key, const unsigned char *p, int n)
+{
+    int i;
+
+    printf("%s=", key);
+    if (p == NULL) {
+        printf("<null>\n");
+        return;
+    }
+    for (i = 0; i < n; i++)
+        printf("%02x", p[i]);
+    printf("\n");
 }
 
 /* Build a valid PKCS#1 v1.5 OAEP encoding, deterministically. `RSA_padding_add_PKCS1_OAEP_mgf1`
@@ -2916,6 +2934,114 @@ static void rsa_asn1_arms(void)
     RSA_free(k);
 }
 
+/* ------------------------------------------------------ the PSS/OAEP parameter codecs (D348)
+ *
+ * `crypto/rsa/rsa_asn1.c`'s other two items: `RSA_PSS_PARAMS` and `RSA_OAEP_PARAMS`, the templates
+ * and the seven/six `IMPLEMENT_ASN1_FUNCTIONS` exports over them. The observation is the *DER*, built
+ * from constants the probe owns: an `RSA_PSS_PARAMS` with a SHA-256 `hashAlgorithm` (an explicit
+ * `NULL` parameter), `saltLength` 32 and `trailerField` 1, encoded and printed in full -- it is a
+ * public constant, not a secret -- then decoded back and re-encoded byte-for-byte, with the two
+ * item accessors and `RSA_PSS_PARAMS_dup` driven as well. Nothing here is a draw: every byte is a
+ * function of the constants above and of the library under test. */
+static void rsa_pss_oaep_arms(void)
+{
+    RSA_PSS_PARAMS *pss = RSA_PSS_PARAMS_new();
+    printf("rsa.pss.new=%d\n", pss != NULL);
+    printf("rsa.pss.it.stable=%d\n", RSA_PSS_PARAMS_it() == RSA_PSS_PARAMS_it());
+    printf("rsa.oaep.it.stable=%d\n", RSA_OAEP_PARAMS_it() == RSA_OAEP_PARAMS_it());
+    printf("rsa.pss.it.distinct=%d\n",
+        RSA_PSS_PARAMS_it() != RSA_OAEP_PARAMS_it());
+
+    if (pss != NULL) {
+        X509_ALGOR *alg = X509_ALGOR_new();
+        ASN1_INTEGER *salt = ASN1_INTEGER_new();
+        ASN1_INTEGER *trailer = ASN1_INTEGER_new();
+
+        X509_ALGOR_set0(alg, OBJ_nid2obj(NID_sha256), V_ASN1_NULL, NULL);
+        ASN1_INTEGER_set(salt, 32);
+        ASN1_INTEGER_set(trailer, 1);
+        pss->hashAlgorithm = alg;
+        pss->saltLength = salt;
+        pss->trailerField = trailer;
+
+        {
+            unsigned char *der = NULL;
+            const unsigned char *cp;
+            int n = i2d_RSA_PSS_PARAMS(pss, NULL);
+
+            printf("rsa.pss.measure=%d\n", n > 0);
+            n = i2d_RSA_PSS_PARAMS(pss, &der);
+            printf("rsa.pss.i2d_ret=%d\n", n > 0 && der != NULL);
+            printf("rsa.pss.starts_sequence=%d\n", der != NULL && der[0] == 0x30);
+            hex("rsa.pss.der", der, n);
+            cp = der;
+            {
+                RSA_PSS_PARAMS *back = d2i_RSA_PSS_PARAMS(NULL, &cp, n);
+
+                printf("rsa.pss.d2i_notnull=%d\n", back != NULL);
+                if (back != NULL) {
+                    unsigned char *der2 = NULL;
+                    int n2;
+
+                    printf("rsa.pss.round_trip=%d\n",
+                        back->hashAlgorithm != NULL && back->saltLength != NULL
+                        && back->trailerField != NULL
+                        && back->hashAlgorithm->algorithm != NULL
+                        && OBJ_obj2nid(back->hashAlgorithm->algorithm) == NID_sha256
+                        && ASN1_INTEGER_get(back->saltLength) == 32
+                        && ASN1_INTEGER_get(back->trailerField) == 1
+                        && back->maskGenAlgorithm == NULL);
+                    printf("rsa.pss.consumed_all=%d\n", (int)(cp - der) == n);
+                    n2 = i2d_RSA_PSS_PARAMS(back, &der2);
+                    printf("rsa.pss.reencode=%d\n",
+                        n2 == n && der2 != NULL && memcmp(der, der2, (size_t)n) == 0);
+                    OPENSSL_free(der2);
+                    {
+                        RSA_PSS_PARAMS *dup = RSA_PSS_PARAMS_dup(back);
+
+                        printf("rsa.pss.dup.notnull=%d\n", dup != NULL);
+                        if (dup != NULL) {
+                            printf("rsa.pss.dup.fresh=%d\n",
+                                dup->saltLength != back->saltLength
+                                && dup->saltLength != NULL
+                                && ASN1_INTEGER_get(dup->saltLength) == 32);
+                            RSA_PSS_PARAMS_free(dup);
+                        }
+                    }
+                    RSA_PSS_PARAMS_free(back);
+                }
+            }
+            OPENSSL_free(der);
+        }
+        RSA_PSS_PARAMS_free(pss);
+    }
+
+    {
+        RSA_OAEP_PARAMS *oaep = RSA_OAEP_PARAMS_new();
+
+        printf("rsa.oaep.new=%d\n", oaep != NULL);
+        if (oaep != NULL) {
+            unsigned char *oder = NULL;
+            const unsigned char *op;
+            int m = i2d_RSA_OAEP_PARAMS(oaep, &oder);
+
+            printf("rsa.oaep.i2d_ret=%d\n", m == 2);
+            hex("rsa.oaep.der", oder, m);
+            op = oder;
+            {
+                RSA_OAEP_PARAMS *oback = d2i_RSA_OAEP_PARAMS(NULL, &op, m);
+
+                printf("rsa.oaep.d2i_notnull=%d\n", oback != NULL);
+                printf("rsa.oaep.consumed_all=%d\n",
+                    oback != NULL && (int)(op - oder) == m);
+                RSA_OAEP_PARAMS_free(oback);
+            }
+            OPENSSL_free(oder);
+        }
+        RSA_OAEP_PARAMS_free(oaep);
+    }
+}
+
 static void *ct_new(void *provctx) { (void) provctx; return malloc(1); }
 static void ct_free(void *keydata) { free(keydata); }
 static int ct_has(const void *keydata, int selection) { (void) keydata; (void) selection; return 1; }
@@ -3568,8 +3694,12 @@ int main(void)
     rsa_chk_arms();
 
     /* The plain-key ASN.1 codec: the two templates and the two dups of `crypto/rsa/rsa_asn1.c`
-     * (D345). The PSS/OAEP templates of the same unit are Phase 11's and are not called. */
+     * (D345). */
     rsa_asn1_arms();
+
+    /* The same unit's other half: the `RSA_PSS_PARAMS`/`RSA_OAEP_PARAMS` templates, which D348
+     * lands with `crypto/asn1/x_algor.c`'s `X509_ALGOR`. */
+    rsa_pss_oaep_arms();
 
     /* Slice E's controls, over a NULL context and over one this probe's own keymgmt backs. It runs
      * last because it loads a provider, and the arms above are about the library's own tables. */

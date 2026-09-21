@@ -68,6 +68,7 @@ pub mod text;
 pub mod time;
 pub mod typ;
 pub mod utl;
+pub mod x_algor;
 pub mod x_bignum;
 pub mod x_int64;
 pub mod x_long;

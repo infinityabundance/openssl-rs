@@ -23042,6 +23042,16 @@ pub(crate) const RSA_SP800_56B_GEN_454: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ossl_x509_algor_get_md` at `crypto/asn1/x_algor.c:165` (ASN1_R_UNKNOWN_DIGEST).
+pub(crate) const X_ALGOR_165: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/x_algor.c",
+    line: 165,
+    func: c"ossl_x509_algor_get_md",
+    lib: 13,
+    reason: 229,
+    dynamic_reason: false,
+};
+
 /// `ffc_validate_LN` at `crypto/ffc/ffc_params_generate.c:49` (DH_R_BAD_FFC_PARAMETERS).
 pub(crate) const FFC_PARAMS_GENERATE_49: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/ffc/ffc_params_generate.c",
@@ -32134,6 +32144,7 @@ pub(crate) static ALL: &[ErrSite] = &[
     RSA_SP800_56B_GEN_185,
     RSA_SP800_56B_GEN_205,
     RSA_SP800_56B_GEN_454,
+    X_ALGOR_165,
     FFC_PARAMS_GENERATE_49,
     FFC_PARAMS_GENERATE_61,
     FFC_PARAMS_GENERATE_77,
