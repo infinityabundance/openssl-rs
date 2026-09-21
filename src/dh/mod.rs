@@ -32,11 +32,13 @@
 //! can precede the other. `DH_get_default_method`, `DH_set_default_method` and `DH_OpenSSL` are
 //! therefore in [`key`] beside the table they name, and the object's constructor reads them.
 //!
-//! **What is still not here, named rather than implied.** `dh_asn1.c`'s `d2i_`/`i2d_DHparams`
-//! and the `DHparams_*` family are 8.8's ASN.1 machinery, `DH_KDF_X9_42` (`dh_kdf.c`) fetches
-//! an `OSSL_KDF` name from a provider, and the `EVP_PKEY_CTX_*dh*` controls of
-//! `crypto/evp/dh_ctrl.c` are 8.5's slice E. Everything that is here is a transcription: no
-//! stub, no `todo!()`, and no fabricated value.
+//! **What is still not here, named rather than implied.** `dh_asn1.c`'s ASN.1 unit is **LANDED
+//! (D345)** as [`asn1`], together with the two `dh_ameth.c` exports that reach no Phase 11 name
+//! ([`ameth::DHparams_dup`], [`ameth::DHparams_print`]) and `dh_prn.c`'s [`prn::DHparams_print_fp`];
+//! what remains of `dh_ameth.c` is its two `EVP_PKEY_ASN1_METHOD` objects and the callbacks they
+//! name, which are Phase 11's and are recorded in `forensics/prerequisites.json`. `DH_KDF_X9_42`
+//! (`dh_kdf.c`) fetches an `OSSL_KDF` name from a provider. Everything that is here is a
+//! transcription: no stub, no `todo!()`, and no fabricated value.
 //!
 //! ## `DH_METHOD` is 72 bytes with nine members, and the shape is the whole contract
 //!
@@ -139,6 +141,8 @@
 //! and the coordinate `ERR_get_error_all` reports. `docs/PHASE-8-SUBPHASES.md`'s two anchored
 //! clauses and `docs/DECISIONS.md` D329/D331 record what the court observed.
 
+pub mod ameth;
+pub mod asn1;
 pub mod check;
 pub mod ctrl;
 pub mod depr;
@@ -146,6 +150,7 @@ pub mod gen;
 pub mod group_params;
 pub mod key;
 pub mod object;
+pub mod prn;
 pub mod rfc5114;
 
 use core::ffi::{c_char, c_int, c_uchar, c_void};

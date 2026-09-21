@@ -61,9 +61,14 @@
 //! Left for the rest of 8.6, each named rather than silently dropped:
 //!
 //! * **`dsa_ameth.c` and `dsa_prn.c`.** The `EVP_PKEY_ASN1_METHOD` object and the two printers are
-//!   8.8's ASN.1 method machinery, reached through `standard_methods[]`.
-//! * **`dsa_asn1.c`.** `d2i_DSAparams`/`i2d_DSAparams` and the four key encoders are that
-//!   stratum's ASN.1 surface. **`dsa_sign.c`'s `i2d_DSA_SIG`/`d2i_DSA_SIG` are not in that file**:
+//!   8.8's ASN.1 method machinery, reached through `standard_methods[]` and through
+//!   `EVP_PKEY_set1_DSA`.
+//! * **`dsa_asn1.c` is LANDED (D345).** [`asn1`] carries the three templates — `DSAPrivateKey`,
+//!   `DSAPublicKey` and `DSAparams` — and `DSAparams_dup`, transcribed whole. It is not 8.8's:
+//!   D341 measured the unit's closure as this stratum's own, and
+//!   `docs/PHASE-8-AMETH-INTEGRATION-PLAN.md` §6 names `d2i_DSAPublicKey` as one of the three
+//!   callees `d2i_PublicKey` waits on and assigns it here. **`dsa_sign.c`'s
+//!   `i2d_DSA_SIG`/`d2i_DSA_SIG` are not in that file**:
 //!   the sig encoder and decoder are defined *inside* `dsa_sign.c` — it is one of the FIPS-shared
 //!   `$COMMON` units of `crypto/dsa/build.info` — so they live in [`sign`] rather than with the
 //!   method objects, which is what `DSA_size`, `DSA_sign` and `DSA_verify` require, since all
@@ -87,6 +92,7 @@
 //! constant so that a transcription which *did* call one would be visible in the transcript rather
 //! than merely wrong.
 
+pub mod asn1;
 pub mod ctrl;
 pub mod depr;
 pub mod gen;

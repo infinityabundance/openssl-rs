@@ -2776,6 +2776,146 @@ done:
 
 static int ct_marker;
 
+/* ------------------------------------------------------------------ the plain-key ASN.1 codec (D345)
+ *
+ * `crypto/rsa/rsa_asn1.c`'s two `RSAPublicKey`/`RSAPrivateKey` templates and the two dups. A small
+ * structural key is enough -- the templates do not validate the numbers -- and every arm is a
+ * return code, a consumed-length predicate or an equality the probe computes: **no modulus,
+ * exponent, prime or private component is printed**. The PSS/OAEP templates of the same unit are
+ * Phase 11's and are not called. */
+static void rsa_asn1_arms(void)
+{
+    RSA *k = RSA_new();
+    BIGNUM *n = BN_new(), *e = BN_new(), *d = BN_new();
+    BIGNUM *p = BN_new(), *q = BN_new();
+    BIGNUM *dmp1 = BN_new(), *dmq1 = BN_new(), *iqmp = BN_new();
+    unsigned char *der = NULL;
+    const unsigned char *cp;
+    int len;
+
+    BN_set_word(n, 3233); /* 61 * 53 */
+    BN_set_word(e, 17);
+    BN_set_word(d, 2753);
+    BN_set_word(p, 61);
+    BN_set_word(q, 53);
+    BN_set_word(dmp1, 53);
+    BN_set_word(dmq1, 49);
+    BN_set_word(iqmp, 38);
+    printf("rsa.asn1.key=%d\n",
+        RSA_set0_key(k, n, e, d) == 1
+        && RSA_set0_factors(k, p, q) == 1
+        && RSA_set0_crt_params(k, dmp1, dmq1, iqmp) == 1);
+
+    /* The two item accessors answer a pointer, and two calls answer the same one. */
+    printf("rsa.asn1.public_it.notnull=%d\n", RSAPublicKey_it() != NULL);
+    printf("rsa.asn1.public_it.stable=%d\n", RSAPublicKey_it() == RSAPublicKey_it());
+    printf("rsa.asn1.private_it.stable=%d\n", RSAPrivateKey_it() == RSAPrivateKey_it());
+
+    /* ---- the public template: `n` and `e`, and nothing else ---- */
+    printf("rsa.asn1.public.measure_positive=%d\n", i2d_RSAPublicKey(k, NULL) > 0);
+    len = i2d_RSAPublicKey(k, &der);
+    printf("rsa.asn1.public.i2d_ret=%d\n", len > 0 && der != NULL);
+    printf("rsa.asn1.public.starts_sequence=%d\n", der != NULL && der[0] == 0x30);
+    cp = der;
+    {
+        RSA *back = d2i_RSAPublicKey(NULL, &cp, (long)len);
+        const BIGNUM *bn = NULL, *be = NULL, *bd = NULL;
+
+        printf("rsa.asn1.public.d2i_notnull=%d\n", back != NULL);
+        if (back != NULL) {
+            RSA_get0_key(back, &bn, &be, &bd);
+            printf("rsa.asn1.public.round_trip=%d\n",
+                bn != NULL && be != NULL && BN_cmp(bn, n) == 0 && BN_cmp(be, e) == 0);
+            printf("rsa.asn1.public.no_private=%d\n", bd == NULL);
+            printf("rsa.asn1.public.consumed_all=%d\n", (int)(cp - der) == len);
+            RSA_free(back);
+        }
+    }
+    OPENSSL_free(der);
+    der = NULL;
+
+    /* ---- the private template: the version word and all nine components ---- */
+    len = i2d_RSAPrivateKey(k, &der);
+    printf("rsa.asn1.private.i2d_ret=%d\n", len > 0 && der != NULL);
+    printf("rsa.asn1.private.starts_sequence=%d\n", der != NULL && der[0] == 0x30);
+    cp = der;
+    {
+        RSA *back = d2i_RSAPrivateKey(NULL, &cp, (long)len);
+        const BIGNUM *bn = NULL, *be = NULL, *bd = NULL;
+        const BIGNUM *bp = NULL, *bq = NULL;
+        const BIGNUM *b1 = NULL, *b2 = NULL, *b3 = NULL;
+
+        printf("rsa.asn1.private.d2i_notnull=%d\n", back != NULL);
+        if (back != NULL) {
+            RSA_get0_key(back, &bn, &be, &bd);
+            RSA_get0_factors(back, &bp, &bq);
+            RSA_get0_crt_params(back, &b1, &b2, &b3);
+            printf("rsa.asn1.private.round_trip=%d\n",
+                bn != NULL && be != NULL && bd != NULL && bp != NULL && bq != NULL
+                && b1 != NULL && b2 != NULL && b3 != NULL
+                && BN_cmp(bn, n) == 0 && BN_cmp(be, e) == 0 && BN_cmp(bd, d) == 0
+                && BN_cmp(bp, p) == 0 && BN_cmp(bq, q) == 0
+                && BN_cmp(b1, dmp1) == 0 && BN_cmp(b2, dmq1) == 0 && BN_cmp(b3, iqmp) == 0);
+            printf("rsa.asn1.private.consumed_all=%d\n", (int)(cp - der) == len);
+            RSA_free(back);
+        }
+    }
+    OPENSSL_free(der);
+    der = NULL;
+
+    /* ---- the two dups: an encode-then-decode each, so both answer fresh objects ---- */
+    {
+        RSA *dup = RSAPublicKey_dup(k);
+
+        printf("rsa.asn1.public_dup.notnull=%d\n", dup != NULL);
+        if (dup != NULL) {
+            const BIGNUM *bn = NULL, *be = NULL;
+
+            RSA_get0_key(dup, &bn, &be, NULL);
+            printf("rsa.asn1.public_dup.match=%d\n",
+                bn != NULL && be != NULL && BN_cmp(bn, n) == 0 && BN_cmp(be, e) == 0);
+            RSA_free(dup);
+        }
+    }
+    {
+        RSA *dup = RSAPrivateKey_dup(k);
+
+        printf("rsa.asn1.private_dup.notnull=%d\n", dup != NULL);
+        if (dup != NULL) {
+            const BIGNUM *bn = NULL, *be = NULL, *bd = NULL;
+            const BIGNUM *bp = NULL, *bq = NULL;
+
+            RSA_get0_key(dup, &bn, &be, &bd);
+            RSA_get0_factors(dup, &bp, &bq);
+            printf("rsa.asn1.private_dup.match=%d\n",
+                bn != NULL && be != NULL && bd != NULL && bp != NULL && bq != NULL
+                && BN_cmp(bn, n) == 0 && BN_cmp(be, e) == 0 && BN_cmp(bd, d) == 0
+                && BN_cmp(bp, p) == 0 && BN_cmp(bq, q) == 0);
+            RSA_free(dup);
+        }
+    }
+
+    /* ---- the refusals: an object with no components cannot be encoded, and a negative length is
+     * refused before anything is read ---- */
+    {
+        RSA *empty = RSA_new();
+        unsigned char *none = NULL;
+
+        ERR_clear_error();
+        printf("rsa.asn1.private.i2d_empty_ret=%d\n", i2d_RSAPrivateKey(empty, &none));
+        drain("asn1_i2d_empty");
+        OPENSSL_free(none);
+        cp = der;
+        ERR_clear_error();
+        printf("rsa.asn1.public.d2i_negative_is_null=%d\n",
+            d2i_RSAPublicKey(NULL, &cp, -1) == NULL);
+        drain("asn1_d2i_negative");
+        RSA_free(empty);
+    }
+
+    RSA_free(k);
+}
+
 static void *ct_new(void *provctx) { (void) provctx; return malloc(1); }
 static void ct_free(void *keydata) { free(keydata); }
 static int ct_has(const void *keydata, int selection) { (void) keydata; (void) selection; return 1; }
@@ -3426,6 +3566,10 @@ int main(void)
 
     /* Slice G: the two checkers and the blinding flag pair. */
     rsa_chk_arms();
+
+    /* The plain-key ASN.1 codec: the two templates and the two dups of `crypto/rsa/rsa_asn1.c`
+     * (D345). The PSS/OAEP templates of the same unit are Phase 11's and are not called. */
+    rsa_asn1_arms();
 
     /* Slice E's controls, over a NULL context and over one this probe's own keymgmt backs. It runs
      * last because it loads a provider, and the arms above are about the library's own tables. */

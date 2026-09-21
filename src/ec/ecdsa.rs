@@ -301,6 +301,38 @@ pub unsafe extern "C" fn ECDSA_SIG_get0(
     }
 }
 
+/// `const BIGNUM *ECDSA_SIG_get0_r(const ECDSA_SIG *sig)` — `crypto/ec/ec_asn1.c:1280-1283`.
+///
+/// The single-component half of [`ECDSA_SIG_get0`], and the one of the pair that reads a
+/// component the caller cannot otherwise reach without allocating two output slots. It is
+/// `ec_asn1.c`'s, and it lands in this module with the other three `ECDSA_SIG` accessors rather
+/// than in [`crate::ec::asn1`] with that unit's DER codec, for the reason the module note gives:
+/// the object is what this module's functions return.
+///
+/// # Safety
+///
+/// `sig` is a live object.
+#[no_mangle]
+pub unsafe extern "C" fn ECDSA_SIG_get0_r(sig: *const EcdsaSig) -> *const BigNum {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used here.
+    unsafe { (*sig).r }
+}
+
+/// `const BIGNUM *ECDSA_SIG_get0_s(const ECDSA_SIG *sig)` — `crypto/ec/ec_asn1.c:1285-1288`.
+///
+/// The `s` half of the same pair. The authority writes the two out separately rather than
+/// sharing a body, and this transcription keeps the two functions separate for the same reason
+/// the wire-visible contract does: each answers exactly one field of the object.
+///
+/// # Safety
+///
+/// `sig` is a live object.
+#[no_mangle]
+pub unsafe extern "C" fn ECDSA_SIG_get0_s(sig: *const EcdsaSig) -> *const BigNum {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used here.
+    unsafe { (*sig).s }
+}
+
 /// `int ECDSA_SIG_set0(ECDSA_SIG *sig, BIGNUM *r, BIGNUM *s)` — `crypto/ec/ec_asn1.c:1290-1300`.
 ///
 /// Both scalars must be non-NULL, and the object **takes ownership** of them: the old pair is
@@ -326,4 +358,36 @@ pub unsafe extern "C" fn ECDSA_SIG_set0(
         (*sig).s = s;
     }
     1
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::bn::bignum::{BN_new, BN_set_word};
+
+    /// The two single-field accessors answer the same `BIGNUM` pointers the pair accessor writes,
+    /// which is the identity `ec_asn1.c` gives the pair.
+    #[test]
+    fn the_single_field_accessors_answer_the_objects_fields() {
+        // SAFETY: every pointer below is this test's own live object.
+        unsafe {
+            let sig = ECDSA_SIG_new();
+            assert!(!sig.is_null());
+            let r = BN_new();
+            let s = BN_new();
+            assert_eq!(BN_set_word(r, 3), 1);
+            assert_eq!(BN_set_word(s, 5), 1);
+            assert_eq!(ECDSA_SIG_set0(sig, r, s), 1);
+
+            let mut pr: *const BigNum = ptr::null();
+            let mut ps: *const BigNum = ptr::null();
+            ECDSA_SIG_get0(sig, &mut pr, &mut ps);
+            assert_eq!(ECDSA_SIG_get0_r(sig), pr);
+            assert_eq!(ECDSA_SIG_get0_s(sig), ps);
+            assert_eq!(pr, r);
+            assert_eq!(ps, s);
+
+            ECDSA_SIG_free(sig);
+        }
+    }
 }

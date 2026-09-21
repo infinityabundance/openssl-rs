@@ -34,8 +34,10 @@
  * `ERR_R_BN_LIB` from `ossl_dsa_do_sign_int`'s epilogue, and a `q` narrower than
  * `MIN_DSA_SIGN_QBITS` raises `ERR_R_BN_LIB` twice from two different lines.
  *
- * What it does not cover, named rather than implied: the ASN.1 method objects (`dsa_ameth.c`,
- * `dsa_prn.c`) are 8.8's. D343 lands slice E's seven `crypto/evp/dsa_ctrl.c` controls, and the last
+ * What it does not cover, named rather than implied: the ASN.1 method objects (`dsa_ameth.c`) and
+ * the two `dsa_prn.c` printers, which reach `EVP_PKEY_set1_DSA` and therefore Phase 11. D345 lands
+ * `crypto/dsa/dsa_asn1.c` **whole** — the three templates and `DSAparams_dup` — and a block of arms
+ * is theirs. D343 lands slice E's seven `crypto/evp/dsa_ctrl.c` controls, and the last
  * block of arms is theirs: a NULL context, a live context with no operation, and one with a
  * parameter-generation operation, where every control's built parameter array is echoed by the
  * probe's own keymgmt. `DSA_sign`, `DSA_verify` and `DSA_size`
@@ -1172,6 +1174,122 @@ static void dsa_primitive_arms(void)
             printf("dsa.dup_dh.g_nonnull=%d\n", dg != NULL);
             printf("dsa.dup_dh.key_present=%d\n", dpub != NULL && dpriv != NULL);
             DH_free(dh);
+        }
+    }
+
+    /* ---- D345: `crypto/dsa/dsa_asn1.c` -- the three templates and `DSAparams_dup`. Each arm is a
+     * verdict on the values the probe re-reads, never a byte of an encoding: no parameter, key,
+     * private scalar or signature half is printed. */
+    {
+        unsigned char *der = NULL;
+        const unsigned char *cp;
+        int n;
+
+        /* The `DSAparams` template over the generated group. */
+        printf("dsa.asn1.params.measure_positive=%d\n", i2d_DSAparams(dsa, NULL) > 0);
+        n = i2d_DSAparams(dsa, &der);
+        printf("dsa.asn1.params.i2d_ret=%d\n", n > 0 && der != NULL);
+        printf("dsa.asn1.params.starts_sequence=%d\n", der != NULL && der[0] == 0x30);
+        cp = der;
+        {
+            DSA *round = d2i_DSAparams(NULL, &cp, (long)n);
+            const BIGNUM *rp = NULL, *rq = NULL, *rg = NULL;
+
+            printf("dsa.asn1.params.d2i_notnull=%d\n", round != NULL);
+            if (round != NULL) {
+                DSA_get0_pqg(round, &rp, &rq, &rg);
+                printf("dsa.asn1.params.round_trip=%d\n",
+                    rp != NULL && rq != NULL && rg != NULL
+                    && BN_cmp(rp, p) == 0 && BN_cmp(rq, q) == 0 && BN_cmp(rg, g) == 0);
+                printf("dsa.asn1.params.consumed_all=%d\n", (int)(cp - der) == n);
+                DSA_free(round);
+            }
+        }
+        OPENSSL_free(der);
+        der = NULL;
+
+        /* The `DSAPublicKey` template: `y`, `p`, `q`, `g` in the authority's order. */
+        n = i2d_DSAPublicKey(dsa, &der);
+        printf("dsa.asn1.pub.i2d_ret=%d\n", n > 0 && der != NULL);
+        cp = der;
+        {
+            DSA *round = d2i_DSAPublicKey(NULL, &cp, (long)n);
+            const BIGNUM *rp = NULL, *rq = NULL, *rg = NULL, *rpub = NULL, *rpriv = NULL;
+
+            printf("dsa.asn1.pub.d2i_notnull=%d\n", round != NULL);
+            if (round != NULL) {
+                DSA_get0_pqg(round, &rp, &rq, &rg);
+                DSA_get0_key(round, &rpub, &rpriv);
+                printf("dsa.asn1.pub.round_trip=%d\n",
+                    rp != NULL && rq != NULL && rg != NULL && rpub != NULL
+                    && BN_cmp(rp, p) == 0 && BN_cmp(rq, q) == 0 && BN_cmp(rg, g) == 0
+                    && pub != NULL && BN_cmp(rpub, pub) == 0);
+                printf("dsa.asn1.pub.no_private=%d\n", rpriv == NULL);
+                DSA_free(round);
+            }
+        }
+        OPENSSL_free(der);
+        der = NULL;
+
+        /* The `DSAPrivateKey` template: the version word, the three parameters, `y` and `x`. The
+         * private scalar is compared with `BN_cmp` and never printed. */
+        n = i2d_DSAPrivateKey(dsa, &der);
+        printf("dsa.asn1.priv.i2d_ret=%d\n", n > 0 && der != NULL);
+        printf("dsa.asn1.priv.starts_sequence=%d\n", der != NULL && der[0] == 0x30);
+        cp = der;
+        {
+            DSA *round = d2i_DSAPrivateKey(NULL, &cp, (long)n);
+            const BIGNUM *rp = NULL, *rq = NULL, *rg = NULL, *rpub = NULL, *rpriv = NULL;
+
+            printf("dsa.asn1.priv.d2i_notnull=%d\n", round != NULL);
+            if (round != NULL) {
+                DSA_get0_pqg(round, &rp, &rq, &rg);
+                DSA_get0_key(round, &rpub, &rpriv);
+                printf("dsa.asn1.priv.round_trip=%d\n",
+                    rp != NULL && rq != NULL && rg != NULL && rpub != NULL && rpriv != NULL
+                    && BN_cmp(rp, p) == 0 && BN_cmp(rq, q) == 0 && BN_cmp(rg, g) == 0
+                    && pub != NULL && priv != NULL
+                    && BN_cmp(rpub, pub) == 0 && BN_cmp(rpriv, priv) == 0);
+                DSA_free(round);
+            }
+        }
+        OPENSSL_free(der);
+        der = NULL;
+
+        /* `DSAparams_dup`: an encode-then-decode, so the answer is a fresh `DSA` with the three
+         * parameters and no key. */
+        {
+            DSA *dup = DSAparams_dup(dsa);
+            const BIGNUM *rp = NULL, *rq = NULL, *rg = NULL, *dpub = NULL, *dpriv = NULL;
+
+            printf("dsa.asn1.params_dup.notnull=%d\n", dup != NULL);
+            if (dup != NULL) {
+                DSA_get0_pqg(dup, &rp, &rq, &rg);
+                DSA_get0_key(dup, &dpub, &dpriv);
+                printf("dsa.asn1.params_dup.match=%d\n",
+                    rp != NULL && rq != NULL && rg != NULL
+                    && BN_cmp(rp, p) == 0 && BN_cmp(rq, q) == 0 && BN_cmp(rg, g) == 0);
+                printf("dsa.asn1.params_dup.no_key=%d\n", dpub == NULL && dpriv == NULL);
+                DSA_free(dup);
+            }
+        }
+
+        /* The refusals: an object with no parameters cannot be encoded, and a negative length is
+         * refused before anything is read. */
+        {
+            DSA *empty = DSA_new();
+            unsigned char *none = NULL;
+
+            ERR_clear_error();
+            printf("dsa.asn1.params.i2d_empty_ret=%d\n", i2d_DSAparams(empty, &none));
+            drain("asn1_i2d_empty");
+            OPENSSL_free(none);
+            cp = der;
+            ERR_clear_error();
+            printf("dsa.asn1.params.d2i_negative_is_null=%d\n",
+                d2i_DSAparams(NULL, &cp, -1) == NULL);
+            drain("asn1_d2i_negative");
+            DSA_free(empty);
         }
     }
 

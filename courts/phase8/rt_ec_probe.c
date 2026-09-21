@@ -66,6 +66,15 @@
  * `EVP_PKEY_CTX_get_ecdh_kdf_md`, whose `fix_md` GET arm calls `evp_get_digestbyname_ex` -- prints
  * a constant and names the callee (D344), exactly as `RT-DH` does for its sibling.
  *
+ * D345's arms, the block after the group-parameter ones, cover 8.7's remaining same-stratum work:
+ * the two `EC_POINT` hex codecs of `crypto/ec/ec_print.c`, the two `EC_POINT`/`BIGNUM` codecs of
+ * `crypto/ec/ec_deprecated.c`, and `ECDSA_SIG_get0_r`/`_s` through the existing `ecdsa` block. Each
+ * codec arm is a round trip compared by `EC_POINT_cmp`, a width, an in-place identity, or a
+ * refusal; the refusals drain the callees' own coordinates (`crypto/o_str.c` and `ecp_oct.c`,
+ * because neither codec unit raises) and the block clears the queue first so its drain carries only
+ * its own records. **A single `00` octet is the point-at-infinity encoding, not a refusal**, which
+ * is recorded rather than smoothed: this court observed it and the crate agrees.
+ *
  * No secret is printed and none can be: this slice has no key, no nonce and no shared value. No
  * address is printed either -- every lookup answers a `const char *` into `.rodata`, and the probe
  * prints the *string* or the word `NULL`, never the pointer. stdout is line-buffered, and no
@@ -1094,6 +1103,106 @@ int main(void)
     group_params_arms(g2, bctx);
     layer_drain("gparams");
 
+    /* ---- the `EC_POINT` hex and BN codecs: `crypto/ec/ec_print.c` and
+     * `crypto/ec/ec_deprecated.c` (D345). Every arm is a round trip compared by `EC_POINT_cmp`,
+     * a width, or a refusal; **no coordinate is printed** and no pointer is compared except for
+     * the in-place identities the two `bn`/`hex` entry points guarantee. The queue is cleared
+     * first so the drain below carries this block's own refusals and no earlier arm's. */
+    ERR_clear_error();
+    {
+        size_t octlen = EC_POINT_point2oct(g2, P, POINT_CONVERSION_UNCOMPRESSED, NULL, 0, bctx);
+        char *hex = EC_POINT_point2hex(g2, P, POINT_CONVERSION_UNCOMPRESSED, bctx);
+
+        printf("codec.hex.notnull=%d\n", hex != NULL);
+        if (hex != NULL) {
+            EC_POINT *hp = EC_POINT_new(g2);
+            EC_POINT *again = EC_POINT_hex2point(g2, hex, NULL, bctx);
+
+            printf("codec.hex.len_is_twice_oct=%d\n", strlen(hex) == octlen * 2);
+            printf("codec.hex.upper_case=%d\n",
+                strspn(hex, "0123456789ABCDEF") == strlen(hex));
+            printf("codec.hex2point.notnull=%d\n", again != NULL);
+            printf("codec.hex.round_trip=%d\n",
+                again != NULL && EC_POINT_cmp(g2, P, again, bctx) == 0);
+            /* A caller-supplied point is written in place and answered back. */
+            printf("codec.hex2point.in_place=%d\n",
+                hp != NULL && EC_POINT_hex2point(g2, hex, hp, bctx) == hp
+                && EC_POINT_cmp(g2, P, hp, bctx) == 0);
+            /* The refusals, each the callee's own: a NULL group and a NULL string return before
+             * allocating, an odd digit count and a non-hex byte refuse in the decoder, and a
+             * two-octet string whose first byte says "uncompressed" refuses because the width is
+             * wrong. A single `00` octet is **not** a refusal: it is the point-at-infinity
+             * encoding, which `ossl_ec_GFp_simple_oct2point` accepts at exactly one octet. */
+            printf("codec.hex2point.null_group=%d\n",
+                EC_POINT_hex2point(NULL, hex, NULL, bctx) == NULL);
+            printf("codec.hex2point.null_hex=%d\n",
+                EC_POINT_hex2point(g2, NULL, NULL, bctx) == NULL);
+            printf("codec.hex2point.odd_len=%d\n",
+                EC_POINT_hex2point(g2, "04A", NULL, bctx) == NULL);
+            printf("codec.hex2point.bad_digit=%d\n",
+                EC_POINT_hex2point(g2, "04ZZ", NULL, bctx) == NULL);
+            printf("codec.hex2point.wrong_width=%d\n",
+                EC_POINT_hex2point(g2, "04FF", NULL, bctx) == NULL);
+            {
+                EC_POINT *inf = EC_POINT_hex2point(g2, "00", NULL, bctx);
+
+                printf("codec.hex2point.zero_is_infinity=%d\n",
+                    inf != NULL && EC_POINT_is_at_infinity(g2, inf));
+                EC_POINT_free(inf);
+            }
+            EC_POINT_free(again);
+            EC_POINT_free(hp);
+            OPENSSL_free(hex);
+        }
+
+        {
+            BIGNUM *bn = EC_POINT_point2bn(g2, P, POINT_CONVERSION_UNCOMPRESSED, NULL, bctx);
+            EC_POINT *bp2 = NULL;
+
+            printf("codec.bn.notnull=%d\n", bn != NULL);
+            printf("codec.bn.width_is_oct=%d\n",
+                bn != NULL && (size_t)BN_num_bytes(bn) == octlen);
+            if (bn != NULL) {
+                BIGNUM *reuse = BN_new();
+                EC_POINT *inplace = EC_POINT_new(g2);
+
+                bp2 = EC_POINT_bn2point(g2, bn, NULL, bctx);
+                printf("codec.bn2point.notnull=%d\n", bp2 != NULL);
+                printf("codec.bn.round_trip=%d\n",
+                    bp2 != NULL && EC_POINT_cmp(g2, P, bp2, bctx) == 0);
+                printf("codec.bn2point.in_place=%d\n",
+                    inplace != NULL && EC_POINT_bn2point(g2, bn, inplace, bctx) == inplace
+                    && EC_POINT_cmp(g2, P, inplace, bctx) == 0);
+                printf("codec.point2bn.reuse=%d\n",
+                    reuse != NULL
+                    && EC_POINT_point2bn(g2, P, POINT_CONVERSION_UNCOMPRESSED, reuse, bctx) == reuse);
+                /* A zero `BIGNUM` is widened to one octet, which is the point at infinity; a
+                 * single non-zero octet carries the `y_bit` an uncompressed form must not. */
+                {
+                    BIGNUM *zero = BN_new();
+                    BIGNUM *one = BN_new();
+                    EC_POINT *inf;
+
+                    BN_set_word(zero, 0);
+                    BN_set_word(one, 1);
+                    inf = EC_POINT_bn2point(g2, zero, NULL, bctx);
+                    printf("codec.bn2point.zero_is_infinity=%d\n",
+                        inf != NULL && EC_POINT_is_at_infinity(g2, inf));
+                    printf("codec.bn2point.one_refused=%d\n",
+                        EC_POINT_bn2point(g2, one, NULL, bctx) == NULL);
+                    EC_POINT_free(inf);
+                    BN_free(one);
+                    BN_free(zero);
+                }
+                EC_POINT_free(inplace);
+                BN_free(reuse);
+            }
+            EC_POINT_free(bp2);
+            BN_free(bn);
+        }
+    }
+    layer_drain("codec");
+
     /* ---- the key layer ---- */
     key = EC_KEY_new_by_curve_name_ex(NULL, NULL, NID_X9_62_prime256v1);
     printf("key.new_by_curve_name_ex=%d\n", key != NULL);
@@ -1256,6 +1365,10 @@ int main(void)
                 const BIGNUM *er = NULL, *es_ = NULL;
                 ECDSA_SIG_get0(es, &er, &es_);
                 printf("ecdsa.parts=%d\n", er != NULL && es_ != NULL);
+                /* D345's two single-field accessors answer the same `BIGNUM` pointers the pair
+                 * accessor just wrote, which is the identity `ec_asn1.c` gives them. */
+                printf("ecdsa.get0_r_is_field=%d\n", ECDSA_SIG_get0_r(es) == er);
+                printf("ecdsa.get0_s_is_field=%d\n", ECDSA_SIG_get0_s(es) == es_);
             }
             /* The encoded length is *not* printed: a `r` or `s` with its top bit set gains a
              * leading zero byte, so the length of a fresh signature varies run to run. Only the

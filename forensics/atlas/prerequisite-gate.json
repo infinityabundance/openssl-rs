@@ -23,9 +23,9 @@
       "ossl_rsa_pkey_method -> phase 8 (The `EVP_PKEY_METHOD` half of the same boundary: `crypto/evp/pmeth_lib.c`'s `standard_methods[]` holds the ten `ossl_<alg>_pkey_method` objects of the algorithm strata. `EVP_PKEY_meth_find`'s application half (`evp_pkey_meth_find_added_by_application`) is landed and courted; its `OBJ_bsearch_pmeth_func` half is not, and `EVP_PKEY_meth_get0` and `_get_count` index the table outright, so all three exports are withheld rather than stubbed with an application-count answer.)"
     ],
     "census": {
-      "covered_by_a_divergence": 73,
-      "language_surface_not_modelled_by_name": 3843,
-      "planned_prerequisites": 12
+      "covered_by_a_divergence": 75,
+      "language_surface_not_modelled_by_name": 3917,
+      "planned_prerequisites": 13
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -46,6 +46,8 @@
         "inlen": 1,
         "libctx": 1,
         "openssl_init_fork_handlers": 1,
+        "ossl_dh_asn1_meth": 1,
+        "ossl_dhx_asn1_meth": 1,
         "ossl_ec_generate_key_dhkem": 1,
         "ossl_ec_key_from_pkcs8": 1,
         "ossl_ec_key_param_from_x509_algor": 1,
@@ -78,9 +80,9 @@
       "language_surface_not_modelled_by_name": {
         "crypto/aria/aria.c": 3,
         "crypto/asn1/a_bitstr.c": 6,
-        "crypto/asn1/a_d2i_fp.c": 12,
+        "crypto/asn1/a_d2i_fp.c": 11,
         "crypto/asn1/a_dup.c": 14,
-        "crypto/asn1/a_i2d_fp.c": 12,
+        "crypto/asn1/a_i2d_fp.c": 11,
         "crypto/asn1/a_int.c": 14,
         "crypto/asn1/a_mbstr.c": 9,
         "crypto/asn1/a_print.c": 4,
@@ -91,7 +93,7 @@
         "crypto/asn1/ameth_lib.c": 30,
         "crypto/asn1/asn1_gen.c": 27,
         "crypto/asn1/asn1_lib.c": 12,
-        "crypto/asn1/asn_mime.c": 42,
+        "crypto/asn1/asn_mime.c": 41,
         "crypto/asn1/asn_moid.c": 11,
         "crypto/asn1/asn_pack.c": 7,
         "crypto/asn1/bio_asn1.c": 13,
@@ -99,7 +101,7 @@
         "crypto/asn1/f_int.c": 8,
         "crypto/asn1/p5_scrypt.c": 25,
         "crypto/asn1/t_pkey.c": 6,
-        "crypto/asn1/tasn_dec.c": 31,
+        "crypto/asn1/tasn_dec.c": 30,
         "crypto/asn1/tasn_enc.c": 23,
         "crypto/asn1/tasn_fre.c": 20,
         "crypto/asn1/tasn_new.c": 22,
@@ -154,8 +156,8 @@
         "crypto/cmac/cmac.c": 8,
         "crypto/comp/comp_lib.c": 7,
         "crypto/conf/conf_api.c": 22,
-        "crypto/conf/conf_def.c": 39,
-        "crypto/conf/conf_lib.c": 20,
+        "crypto/conf/conf_def.c": 38,
+        "crypto/conf/conf_lib.c": 19,
         "crypto/conf/conf_mod.c": 33,
         "crypto/conf/conf_sap.c": 3,
         "crypto/conf/conf_ssl.c": 13,
@@ -167,14 +169,18 @@
         "crypto/cversion.c": 13,
         "crypto/defaults.c": 9,
         "crypto/des/set_key.c": 9,
-        "crypto/dh/dh_check.c": 9,
+        "crypto/dh/dh_ameth.c": 30,
+        "crypto/dh/dh_asn1.c": 16,
+        "crypto/dh/dh_check.c": 8,
         "crypto/dh/dh_depr.c": 3,
-        "crypto/dh/dh_gen.c": 8,
-        "crypto/dh/dh_group_params.c": 7,
-        "crypto/dh/dh_key.c": 11,
-        "crypto/dh/dh_lib.c": 19,
+        "crypto/dh/dh_gen.c": 7,
+        "crypto/dh/dh_group_params.c": 6,
+        "crypto/dh/dh_key.c": 10,
+        "crypto/dh/dh_lib.c": 18,
         "crypto/dh/dh_meth.c": 11,
+        "crypto/dh/dh_prn.c": 4,
         "crypto/dh/dh_rfc5114.c": 2,
+        "crypto/dsa/dsa_asn1.c": 11,
         "crypto/dsa/dsa_depr.c": 3,
         "crypto/dsa/dsa_gen.c": 3,
         "crypto/dsa/dsa_key.c": 10,
@@ -186,23 +192,24 @@
         "crypto/dso/dso_dlfcn.c": 16,
         "crypto/dso/dso_lib.c": 15,
         "crypto/ec/ec2_smpl.c": 14,
-        "crypto/ec/ec_asn1.c": 66,
+        "crypto/ec/ec_asn1.c": 64,
         "crypto/ec/ec_backend.c": 44,
         "crypto/ec/ec_check.c": 6,
         "crypto/ec/ec_curve.c": 20,
         "crypto/ec/ec_cvt.c": 4,
+        "crypto/ec/ec_deprecated.c": 9,
         "crypto/ec/ec_key.c": 24,
         "crypto/ec/ec_kmeth.c": 23,
         "crypto/ec/ec_lib.c": 41,
         "crypto/ec/ec_mult.c": 19,
         "crypto/ec/ec_oct.c": 10,
+        "crypto/ec/ec_print.c": 7,
         "crypto/ec/ecdh_ossl.c": 11,
         "crypto/ec/ecdsa_ossl.c": 14,
-        "crypto/ec/ecdsa_sign.c": 7,
         "crypto/ec/ecp_mont.c": 8,
         "crypto/ec/ecp_nist.c": 7,
         "crypto/ec/ecp_smpl.c": 13,
-        "crypto/err/err.c": 91,
+        "crypto/err/err.c": 89,
         "crypto/err/err_all_legacy.c": 11,
         "crypto/err/err_save.c": 2,
         "crypto/evp/asymcipher.c": 20,
@@ -245,8 +252,8 @@
         "crypto/ffc/ffc_key_generate.c": 3,
         "crypto/ffc/ffc_key_validate.c": 3,
         "crypto/ffc/ffc_params.c": 15,
-        "crypto/ffc/ffc_params_generate.c": 18,
-        "crypto/ffc/ffc_params_validate.c": 10,
+        "crypto/ffc/ffc_params_generate.c": 17,
+        "crypto/ffc/ffc_params_validate.c": 9,
         "crypto/getenv.c": 2,
         "crypto/hmac/hmac.c": 6,
         "crypto/hpke/hpke.c": 23,
@@ -277,7 +284,7 @@
         "crypto/params.c": 21,
         "crypto/params_dup.c": 12,
         "crypto/params_from_text.c": 10,
-        "crypto/pem/pem_lib.c": 55,
+        "crypto/pem/pem_lib.c": 54,
         "crypto/poly1305/poly1305.c": 5,
         "crypto/property/defn_cache.c": 7,
         "crypto/property/property.c": 25,
@@ -294,6 +301,7 @@
         "crypto/rand/rand_uniform.c": 3,
         "crypto/rc2/rc2_cbc.c": 3,
         "crypto/ripemd/rmd_dgst.c": 342,
+        "crypto/rsa/rsa_asn1.c": 22,
         "crypto/rsa/rsa_gen.c": 17,
         "crypto/rsa/rsa_lib.c": 29,
         "crypto/rsa/rsa_meth.c": 11,
@@ -321,7 +329,7 @@
         "evp_app_cleanup_int": 2,
         "evp_cleanup_int": 1,
         "evp_pkey_copy_downgraded": 1,
-        "evp_pkey_get0_DH_int": 1,
+        "evp_pkey_get0_DH_int": 2,
         "evp_pkey_get_legacy": 1,
         "ossl_dsa_ffc_params_fromdata": 1,
         "ossl_get_enginesdir": 2,
@@ -350,6 +358,8 @@
         "inlen",
         "libctx",
         "openssl_init_fork_handlers",
+        "ossl_dh_asn1_meth",
+        "ossl_dhx_asn1_meth",
         "ossl_ec_generate_key_dhkem",
         "ossl_ec_key_from_pkcs8",
         "ossl_ec_key_param_from_x509_algor",
@@ -361,8 +371,6 @@
         "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_concrete",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data",
@@ -388,7 +396,6 @@
         "crypto/asn1/a_d2i_fp.c:BIO_set_fp",
         "crypto/asn1/a_d2i_fp.c:BUF_MEM",
         "crypto/asn1/a_d2i_fp.c:ERR_LIB_ASN1",
-        "crypto/asn1/a_d2i_fp.c:ERR_R_BUF_LIB",
         "crypto/asn1/a_d2i_fp.c:ERR_raise",
         "crypto/asn1/a_d2i_fp.c:OSSL_LIB_CTX",
         "crypto/asn1/a_d2i_fp.c:UINT32_MAX",
@@ -413,13 +420,15 @@
         "crypto/asn1/a_i2d_fp.c:ASN1_VALUE",
         "crypto/asn1/a_i2d_fp.c:BIO",
         "crypto/asn1/a_i2d_fp.c:BIO_set_fp",
-        "crypto/asn1/a_i2d_fp.c:ERR_LIB_ASN1"
+        "crypto/asn1/a_i2d_fp.c:ERR_LIB_ASN1",
+        "crypto/asn1/a_i2d_fp.c:ERR_R_ASN1_LIB"
       ],
       "planned_prerequisites": [
         "evp_app_cleanup_int",
         "evp_app_cleanup_int",
         "evp_cleanup_int",
         "evp_pkey_copy_downgraded",
+        "evp_pkey_get0_DH_int",
         "evp_pkey_get0_DH_int",
         "evp_pkey_get_legacy",
         "ossl_dsa_ffc_params_fromdata",
@@ -431,12 +440,12 @@
       ]
     },
     "checked": {
-      "authority_units": 241,
-      "crate_modules": 313,
+      "authority_units": 247,
+      "crate_modules": 320,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 19,
-      "divergence_names_covered": 45,
-      "divergence_rows": 10,
+      "divergence_names_covered": 47,
+      "divergence_rows": 11,
       "names_referenced_and_not_built": 18
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
@@ -547,7 +556,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "ce07e58d1384f411629eb4338e76d1f55e2ae62730e12cfc7f4d5cc7a65aaab1",
+  "body_hash": "407b3523199ac85b033a8f92047607e6dc3e85c29cec9d29ea2c866fecd8e285",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -568,7 +577,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "77841472b1c4958229fdabab9bf7dd34e1bbed54b925fca7367adc88bcf4a593"
+      "sha256": "003af4991808811cb81e13f3b1fec6bd82c85863a8a1493fc11b785d75dcd805"
     },
     {
       "name": "symbol-ownership",
@@ -583,17 +592,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "3a2468ecf19717942c40a35490a8c78db69d8c50baf4c8a5784cf0b01b24e275"
+      "sha256": "95087bf8f10bd0ae654e24e41821166d25f9601e516167356a701799ad763d91"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "18464342e5e871f168a86dadec9dab72c2ece9b8fb2a953a69d198ee9182b9e5"
+      "sha256": "ff386ecf528f55cd3ab0446177bf884173567b43c0e638b20cef87d81283b8ba"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "e6bd9b90c69000cfe2c33003dbfca920a48fc711ca487f31cb226280a52a810d"
+      "sha256": "a9eb8bdc50faf4d291c40f925fa41cbde98272cf848b50efdcbcc39ac8db3ce4"
     },
     {
       "name": "crate-source-tree",

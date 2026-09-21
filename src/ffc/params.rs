@@ -216,9 +216,7 @@ pub(crate) unsafe fn ossl_ffc_params_get0_pqg(
 ///
 /// `d` must be live and writable; `j` must be NULL or a live `BIGNUM` whose ownership the
 /// caller transfers.
-// Unreached in this crate: the reader is `crypto/dh/dh_asn1.c:115`. Kept because the unit around it
-// is whole (D327's rule); D330's subtree-wide allow on `pub(crate) mod ffc;` is deleted in D331.
-#[allow(dead_code)]
+// Reached: the reader is `src/dh/asn1.rs`'s `d2i_DHxparams`, which is `crypto/dh/dh_asn1.c:115`.
 pub(crate) unsafe fn ossl_ffc_params_set0_j(d: *mut FfcParams, j: *mut BigNum) {
     // SAFETY: `d` is live and `j` is NULL or live per this function's `# Safety` section.
     unsafe {
@@ -424,9 +422,7 @@ pub(crate) unsafe fn ossl_ffc_params_set_validate_params(
 /// # Safety
 ///
 /// `params` must be live; each out-parameter must be NULL or writable for its type.
-// Unreached in this crate: the reader is `crypto/dh/dh_asn1.c:148`. Kept because the unit around it
-// is whole (D327's rule); D330's subtree-wide allow on `pub(crate) mod ffc;` is deleted in D331.
-#[allow(dead_code)]
+// Reached: the reader is `src/dh/asn1.rs`'s `i2d_DHxparams`, which is `crypto/dh/dh_asn1.c:148`.
 pub(crate) unsafe fn ossl_ffc_params_get_validate_params(
     params: *const FfcParams,
     seed: *mut *mut u8,
@@ -595,9 +591,8 @@ pub(crate) unsafe fn ossl_ffc_params_cmp(
 /// # Safety
 ///
 /// `bp` must be a live `BIO`; `ffc` must be live.
-// Unreached in this crate: the reader is `crypto/dh/dh_prn.c and crypto/dsa/dsa_prn.c`. Kept because the unit around it
-// is whole (D327's rule); D330's subtree-wide allow on `pub(crate) mod ffc;` is deleted in D331.
-#[allow(dead_code)]
+// Reached: the readers are `src/dh/ameth.rs`'s `do_dh_print` (via `crypto/dh/dh_ameth.c:283`) and
+// the DSA printer, which `crypto/dh/dh_prn.c` and `crypto/dsa/dsa_prn.c` reach through them.
 pub(crate) unsafe fn ossl_ffc_params_print(
     bp: *mut crate::runtime::bio::Bio,
     ffc: *const FfcParams,

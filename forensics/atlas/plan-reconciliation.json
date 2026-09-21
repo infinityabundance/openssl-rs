@@ -6,11 +6,11 @@
     ],
     "census": {
       "names_a_file_the_authority_does_not_have": 20,
-      "symbols_not_reached": 7,
-      "units_not_reached": 34
+      "symbols_not_reached": 6,
+      "units_not_reached": 30
     },
     "census_by_stratum": {
-      "8": 47,
+      "8": 42,
       "9": 14
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
@@ -38,7 +38,6 @@
         "docs/PHASE-9-SUBPHASES.md:9.5:test_rng.c"
       ],
       "symbols_not_reached": [
-        "ossl_dh_asn1_meth",
         "ossl_drbg_ctr_functions",
         "ossl_drbg_hash_functions",
         "ossl_drbg_ossl_hmac_functions",
@@ -48,17 +47,13 @@
       ],
       "units_not_reached": [
         "crypto/chacha/chacha_enc.c",
-        "crypto/dh/dh_asn1.c",
         "crypto/dh/dh_backend.c",
-        "crypto/dh/dh_prn.c",
         "crypto/dsa/dsa_ameth.c",
-        "crypto/dsa/dsa_asn1.c",
         "crypto/dsa/dsa_backend.c",
         "crypto/dsa/dsa_check.c",
         "crypto/dsa/dsa_err.c",
         "crypto/dsa/dsa_prn.c",
-        "crypto/ec/ec_deprecated.c",
-        "crypto/ec/ec_print.c",
+        "crypto/ec/ecdsa_sign.c",
         "crypto/ec/ecdsa_vrf.c",
         "crypto/ec/eck_prn.c",
         "crypto/ec/ecp_nistz256.c",
@@ -92,12 +87,12 @@
         "docs/PHASE-9-SUBPHASES.md"
       ],
       "rows_judged": 82,
-      "symbols_named_by_a_row": 93,
-      "symbols_reached": 86,
+      "symbols_named_by_a_row": 94,
+      "symbols_reached": 88,
       "unit_records": 66,
       "units_named_by_a_record": 68,
-      "units_named_by_a_row": 226,
-      "units_reached": 192
+      "units_named_by_a_row": 228,
+      "units_reached": 198
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -455,6 +450,19 @@
           "src/context/namemap.rs"
         ]
       },
+      "crypto/dh/dh_ameth.c": {
+        "defines": [
+          "ossl_dh_asn1_meth",
+          "ossl_dhx_asn1_meth"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/dh/ameth.rs"
+        ]
+      },
       "crypto/dh/dh_asn1.c": {
         "defines": [
           "d2i_int_dhx",
@@ -464,7 +472,9 @@
         "subphases": [
           "8.5"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/dh/asn1.rs"
+        ]
       },
       "crypto/dh/dh_backend.c": {
         "defines": [
@@ -580,7 +590,9 @@
         "subphases": [
           "8.5"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/dh/prn.rs"
+        ]
       },
       "crypto/dh/dh_rfc5114.c": {
         "defines": [],
@@ -608,7 +620,9 @@
         "subphases": [
           "8.6"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/dsa/asn1.rs"
+        ]
       },
       "crypto/dsa/dsa_backend.c": {
         "defines": [
@@ -848,7 +862,8 @@
           "8.7"
         ],
         "transcribed_by": [
-          "src/ec/asn1.rs"
+          "src/ec/asn1.rs",
+          "src/ec/ecdsa.rs"
         ]
       },
       "crypto/ec/ec_backend.c": {
@@ -917,7 +932,9 @@
         "subphases": [
           "8.7"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ec/depr.rs"
+        ]
       },
       "crypto/ec/ec_key.c": {
         "defines": [
@@ -1006,7 +1023,9 @@
         "subphases": [
           "8.7"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ec/print.rs"
+        ]
       },
       "crypto/ec/ecdh_ossl.c": {
         "defines": [
@@ -1047,9 +1066,7 @@
         "subphases": [
           "8.7"
         ],
-        "transcribed_by": [
-          "src/ec/ecdsa.rs"
-        ]
+        "transcribed_by": []
       },
       "crypto/ec/ecdsa_vrf.c": {
         "defines": [],
@@ -2745,6 +2762,18 @@
         ],
         "transcribed_by": []
       },
+      "crypto/rsa/rsa_asn1.c": {
+        "defines": [
+          "RSA_PRIME_INFO_it"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.4"
+        ],
+        "transcribed_by": [
+          "src/rsa/asn1.rs"
+        ]
+      },
       "crypto/rsa/rsa_ossl.c": {
         "defines": [
           "ossl_rsa_alloc_blinding",
@@ -3356,10 +3385,10 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 241
+      "transcribed_units": 247
     }
   },
-  "body_hash": "bd9ded8342221b7759bc15a56c78a57a196a9c7a13386aad86d67007a599392b",
+  "body_hash": "d5bec11ab6a656f9f2b59977acec25834134ff2fbb3befd90d0cf296fa7985b9",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -3370,22 +3399,22 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "77841472b1c4958229fdabab9bf7dd34e1bbed54b925fca7367adc88bcf4a593"
+      "sha256": "003af4991808811cb81e13f3b1fec6bd82c85863a8a1493fc11b785d75dcd805"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "3a2468ecf19717942c40a35490a8c78db69d8c50baf4c8a5784cf0b01b24e275"
+      "sha256": "95087bf8f10bd0ae654e24e41821166d25f9601e516167356a701799ad763d91"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "18464342e5e871f168a86dadec9dab72c2ece9b8fb2a953a69d198ee9182b9e5"
+      "sha256": "ff386ecf528f55cd3ab0446177bf884173567b43c0e638b20cef87d81283b8ba"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "e6bd9b90c69000cfe2c33003dbfca920a48fc711ca487f31cb226280a52a810d"
+      "sha256": "a9eb8bdc50faf4d291c40f925fa41cbde98272cf848b50efdcbcc39ac8db3ce4"
     },
     {
       "name": "source-manifest",
@@ -3410,7 +3439,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "84a22d480c7863b4f362b4c9b2fadc97512fdbb6fec585298fdce17dc5dfa948"
+      "sha256": "d3f33d41e693f3d91e5f345901397e0af5e1eed0528a591091b98a2ea598e23f"
     },
     {
       "name": "plan-PHASE-9-SUBPHASES",
