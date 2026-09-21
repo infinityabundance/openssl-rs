@@ -96,8 +96,8 @@
       "symbols_reached": 86,
       "unit_records": 66,
       "units_named_by_a_record": 68,
-      "units_named_by_a_row": 225,
-      "units_reached": 191
+      "units_named_by_a_row": 226,
+      "units_reached": 192
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -1522,6 +1522,16 @@
           "7.3g"
         ],
         "transcribed_by": []
+      },
+      "crypto/evp/ec_ctrl.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/ec/ctrl.rs"
+        ]
       },
       "crypto/evp/ec_support.c": {
         "defines": [
@@ -3346,10 +3356,10 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 240
+      "transcribed_units": 241
     }
   },
-  "body_hash": "ec32b2728b793f5b21ebcfe17a484b16ec9976accc0c427956bc18c6ea5138af",
+  "body_hash": "bd9ded8342221b7759bc15a56c78a57a196a9c7a13386aad86d67007a599392b",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -3360,17 +3370,17 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "af8d4f059211b32cafae97b5548aeb4110384dbb47dff7bab180f889545b14c9"
+      "sha256": "77841472b1c4958229fdabab9bf7dd34e1bbed54b925fca7367adc88bcf4a593"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "bede8477cce264c160f17059127d2648a536513fde6d54e4d90c77cb7f6dd8d8"
+      "sha256": "3a2468ecf19717942c40a35490a8c78db69d8c50baf4c8a5784cf0b01b24e275"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "52e6a45f6c4ddaa800a3bc954f4e498a6620cf58adef19f316bf676f4a959589"
+      "sha256": "18464342e5e871f168a86dadec9dab72c2ece9b8fb2a953a69d198ee9182b9e5"
     },
     {
       "name": "prerequisites",
@@ -3400,7 +3410,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "6c011273710923bfd56e418aba2fce19161fbee04d9dfc7f192981888ebb83ec"
+      "sha256": "84a22d480c7863b4f362b4c9b2fadc97512fdbb6fec585298fdce17dc5dfa948"
     },
     {
       "name": "plan-PHASE-9-SUBPHASES",

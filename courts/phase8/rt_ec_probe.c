@@ -49,6 +49,23 @@
  *     name of the right shape and the wrong number, a SECG name that is in neither table, the SM2
  *     spelling that is only in the *other* table, and the empty string.
  *
+ * D344's arms, added to the same probe, cover `crypto/evp/ec_ctrl.c`'s twelve
+ * `EVP_PKEY_CTX_{get,set}_ec*` controls. Like 8.5's and 8.6's control courts, they need a context
+ * to decide about, and this crate publishes no EC `EVP_KEYMGMT` and no EC `EVP_KEYEXCH` (8.7's
+ * provider half is not landed), so `EVP_PKEY_CTX_new_from_name(NULL, "EC", NULL)` answers NULL on
+ * the candidate and a context on the authority. The probe therefore publishes its own keymgmt
+ * **and** keyexch named `COURT-EC` -- the smallest the structural check accepts and named after the
+ * court so it cannot shadow the default provider's own row in either binary's store -- and every
+ * parameter the controls send is *echoed* by the callback that receives it, so the transcript
+ * observes the parameter array the library built and not merely its return code. Each control is
+ * asked against a NULL context, a live context with no operation, a parameter-generation operation
+ * and a derivation operation; the round trips are the getter-backed pairs, and every refusal drains
+ * its queue and compares the coordinate. **No arm prints a secret**: the cofactor mode, the output
+ * length, the KDF type, a digest name, a curve name, an encoding name and a probe-chosen UKM are
+ * all supplied by the probe itself. The one getter whose pointer answer cannot be compared --
+ * `EVP_PKEY_CTX_get_ecdh_kdf_md`, whose `fix_md` GET arm calls `evp_get_digestbyname_ex` -- prints
+ * a constant and names the callee (D344), exactly as `RT-DH` does for its sibling.
+ *
  * No secret is printed and none can be: this slice has no key, no nonce and no shared value. No
  * address is printed either -- every lookup answers a `const char *` into `.rodata`, and the probe
  * prints the *string* or the word `NULL`, never the pointer. stdout is line-buffered, and no
@@ -67,14 +84,19 @@
  * not about a court that must exercise the entry points it declares; suppressing the diagnostic
  * keeps `-Wall` output readable without changing a single symbol this probe links. */
 #define OPENSSL_SUPPRESS_DEPRECATED
+#include <openssl/core.h>
+#include <openssl/core_dispatch.h>
+#include <openssl/core_names.h>
 #include <openssl/crypto.h>
 #include <openssl/ec.h>
 #include <openssl/bn.h>
 #include <openssl/engine.h>
 #include <openssl/err.h>
+#include <openssl/evp.h>
 #include <openssl/params.h>
 #include <openssl/param_build.h>
 #include <openssl/objects.h>
+#include <openssl/provider.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -183,6 +205,491 @@ static void group_params_arms(const EC_GROUP *named, BN_CTX *bctx)
     OPENSSL_free(params);
 }
 
+/* ------------------------------------------------------------------ the control court's provider
+ *
+ * The twelve `EVP_PKEY_CTX_*ec*` controls of `crypto/evp/ec_ctrl.c` are decisions *about a
+ * context*, so they need a context to decide about -- and six of them are derivation decisions and
+ * six are generation ones, so the probe publishes **both** a keyexch and a keymgmt. This crate
+ * publishes neither for EC (8.7's provider half is not landed), so
+ * `EVP_PKEY_CTX_new_from_name(NULL, "EC", NULL)` answers NULL on the candidate and a context on the
+ * authority -- an arm that compared that would be a difference about a missing provider row rather
+ * than about the controls. Both are the smallest the structural check accepts, named `COURT-EC`
+ * rather than `EC` so that neither can shadow the default provider's own row in either binary's
+ * method store. Every parameter the controls send is *echoed* by the callback that receives it, so
+ * the transcript observes the parameter array the library built and not merely its return code; no
+ * echoed value is a secret -- they are a cofactor mode, an output length, a KDF type, a digest
+ * name, a curve name, an encoding name and a probe-chosen UKM, all of which the probe supplies. */
+
+struct court_ctx {
+    int have_cofactor;
+    int cofactor;
+    int have_outlen;
+    unsigned long outlen;
+    int have_kdftype;
+    char kdftype[64];
+    int have_md;
+    char md[64];
+    int have_ukm;
+    unsigned long ukmlen;
+    unsigned char ukm[64];
+    int have_group;
+    char group[64];
+    int have_encoding;
+    char encoding[64];
+};
+
+static struct court_ctx *court_new(void)
+{
+    struct court_ctx *c = malloc(sizeof(*c));
+
+    if (c == NULL)
+        return NULL;
+    memset(c, 0, sizeof(*c));
+    /* The defaults a fresh derivation context answers with. `kdf-type` is the empty string, which
+     * `fix_ec_kdf_type`'s table maps back to `EVP_PKEY_ECDH_KDF_NONE`; `kdf-outlen` and the
+     * cofactor mode are zero, which are the two values the getters report as successes. */
+    strcpy(c->kdftype, "");
+    strcpy(c->md, "SHA256");
+    return c;
+}
+
+/* Print every parameter the library sent, one `key=value` line per entry. The rendering is by
+ * `data_type`, so a wrong type is visible as well as a wrong value. **One GET parameter's value is
+ * deliberately not printed**: `EVP_PKEY_CTX_get_ecdh_cofactor_mode` passes the address of an
+ * UNINITIALIZED `int mode` to the getter, so the pre-write contents are whatever the previous call
+ * left on the stack -- stack layout, not a behaviour -- and the authority's own transcript differs
+ * from run to run (it happened to read back the preceding `set`'s `1`). The type and width are
+ * still observed, and the arm that *returns* the mode observes the real behaviour. */
+static void court_dump(const char *arm, const OSSL_PARAM params[])
+{
+    int i;
+
+    for (i = 0; params != NULL && params[i].key != NULL; i++) {
+        const OSSL_PARAM *p = &params[i];
+
+        if (strcmp(arm, "der.get") == 0 && strcmp(p->key, "ecdh-cofactor-mode") == 0) {
+            printf("ec.%s.p.%d=%s:integer_unwritten:%zu\n", arm, i, p->key, p->data_size);
+        } else if (p->data_type == OSSL_PARAM_INTEGER) {
+            int64_t v = 0;
+            OSSL_PARAM_get_int64(p, &v);
+            printf("ec.%s.p.%d=%s:int:%lld\n", arm, i, p->key, (long long)v);
+        } else if (p->data_type == OSSL_PARAM_UNSIGNED_INTEGER) {
+            uint64_t v = 0;
+            OSSL_PARAM_get_uint64(p, &v);
+            printf("ec.%s.p.%d=%s:uint:%llu\n", arm, i, p->key, (unsigned long long)v);
+        } else if (p->data_type == OSSL_PARAM_UTF8_STRING) {
+            printf("ec.%s.p.%d=%s:utf8:%s\n", arm, i, p->key,
+                p->data != NULL ? (const char *)p->data : "<null>");
+        } else if (p->data_type == OSSL_PARAM_OCTET_STRING) {
+            printf("ec.%s.p.%d=%s:octet:%zu\n", arm, i, p->key, p->data_size);
+        } else {
+            printf("ec.%s.p.%d=%s:type%u:%zu\n", arm, i, p->key, p->data_type,
+                p->data_size);
+        }
+    }
+    printf("ec.%s.p.count=%d\n", arm, i);
+}
+
+/* Remember the parameters a getter will be asked for, by copying the value rather than the
+ * pointer: the arrays the controls build point at stack locals in the *calling* frame, so a stored
+ * pointer would be stale the moment the call returns. */
+static void court_store(struct court_ctx *c, const OSSL_PARAM params[])
+{
+    int i;
+
+    for (i = 0; params != NULL && params[i].key != NULL; i++) {
+        const OSSL_PARAM *p = &params[i];
+
+        if (strcmp(p->key, "ecdh-cofactor-mode") == 0) {
+            int64_t v = 0;
+            OSSL_PARAM_get_int64(p, &v);
+            c->have_cofactor = 1;
+            c->cofactor = (int)v;
+        } else if (strcmp(p->key, "kdf-outlen") == 0) {
+            uint64_t v = 0;
+            OSSL_PARAM_get_uint64(p, &v);
+            c->have_outlen = 1;
+            c->outlen = (unsigned long)v;
+        } else if (strcmp(p->key, "kdf-type") == 0) {
+            c->have_kdftype = 1;
+            snprintf(c->kdftype, sizeof(c->kdftype), "%s", (const char *)p->data);
+        } else if (strcmp(p->key, "kdf-digest") == 0) {
+            c->have_md = 1;
+            snprintf(c->md, sizeof(c->md), "%s", (const char *)p->data);
+        } else if (strcmp(p->key, "kdf-ukm") == 0) {
+            c->have_ukm = 1;
+            c->ukmlen = p->data_size;
+            if (p->data != NULL && p->data_size <= sizeof(c->ukm))
+                memcpy(c->ukm, p->data, p->data_size);
+        } else if (strcmp(p->key, "group") == 0) {
+            c->have_group = 1;
+            snprintf(c->group, sizeof(c->group), "%s", (const char *)p->data);
+        } else if (strcmp(p->key, "encoding") == 0) {
+            c->have_encoding = 1;
+            snprintf(c->encoding, sizeof(c->encoding), "%s", (const char *)p->data);
+        }
+    }
+}
+
+static int court_get(struct court_ctx *c, OSSL_PARAM params[])
+{
+    int i;
+
+    for (i = 0; params != NULL && params[i].key != NULL; i++) {
+        OSSL_PARAM *p = &params[i];
+
+        if (strcmp(p->key, "ecdh-cofactor-mode") == 0)
+            OSSL_PARAM_set_int(p, c->cofactor);
+        else if (strcmp(p->key, "kdf-outlen") == 0)
+            OSSL_PARAM_set_uint64(p, (uint64_t)c->outlen);
+        else if (strcmp(p->key, "kdf-type") == 0)
+            OSSL_PARAM_set_utf8_string(p, c->kdftype);
+        else if (strcmp(p->key, "kdf-digest") == 0)
+            OSSL_PARAM_set_utf8_string(p, c->md);
+        else if (strcmp(p->key, "kdf-ukm") == 0)
+            OSSL_PARAM_set_octet_ptr(p, c->ukm, c->ukmlen);
+    }
+    return 1;
+}
+
+/* The settable and gettable lists, as the structural check reads them. The `data` pointers are
+ * NULL and `data_size` is the width the *control* builds, which is all a list of names needs. */
+static const OSSL_PARAM court_gen_settable[] = {
+    { "group", OSSL_PARAM_UTF8_STRING, NULL, 0, 0 },
+    { "encoding", OSSL_PARAM_UTF8_STRING, NULL, 0, 0 },
+    { NULL, 0, NULL, 0, 0 }
+};
+static const OSSL_PARAM court_gen_gettable[] = {
+    { NULL, 0, NULL, 0, 0 }
+};
+static const OSSL_PARAM court_kex_settable[] = {
+    { "ecdh-cofactor-mode", OSSL_PARAM_INTEGER, NULL, sizeof(int), 0 },
+    { "kdf-outlen", OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0 },
+    { "kdf-type", OSSL_PARAM_UTF8_STRING, NULL, 0, 0 },
+    { "kdf-digest", OSSL_PARAM_UTF8_STRING, NULL, 0, 0 },
+    { "kdf-ukm", OSSL_PARAM_OCTET_STRING, NULL, 0, 0 },
+    { NULL, 0, NULL, 0, 0 }
+};
+static const OSSL_PARAM court_kex_gettable[] = {
+    { "ecdh-cofactor-mode", OSSL_PARAM_INTEGER, NULL, sizeof(int), 0 },
+    { "kdf-outlen", OSSL_PARAM_UNSIGNED_INTEGER, NULL, sizeof(size_t), 0 },
+    { "kdf-type", OSSL_PARAM_UTF8_STRING, NULL, 0, 0 },
+    { "kdf-digest", OSSL_PARAM_UTF8_STRING, NULL, 0, 0 },
+    { "kdf-ukm", OSSL_PARAM_OCTET_PTR, NULL, 0, 0 },
+    { NULL, 0, NULL, 0, 0 }
+};
+
+/* The keymgmt: only the generation callbacks carry state, because the two generation controls
+ * reach the keymgmt through `EVP_PKEY_CTX_ctrl` on a generation operation. */
+static int court_marker;
+
+static void *ck_new(void *provctx) { (void)provctx; return court_new(); }
+static void ck_free(void *keydata) { free(keydata); }
+static int ck_has(const void *keydata, int selection)
+{ (void)keydata; (void)selection; return 1; }
+static int ck_get_params(void *keydata, OSSL_PARAM params[])
+{ (void)keydata; (void)params; return 1; }
+static const OSSL_PARAM *ck_gettable_params(void *provctx) { (void)provctx; return NULL; }
+static int ck_set_params(void *keydata, const OSSL_PARAM params[])
+{ (void)keydata; (void)params; return 1; }
+static const OSSL_PARAM *ck_settable_params(void *provctx) { (void)provctx; return NULL; }
+static void *ck_gen_init(void *provctx, int selection, const OSSL_PARAM params[])
+{ (void)provctx; (void)selection; (void)params; return court_new(); }
+static void ck_gen_cleanup(void *genctx) { free(genctx); }
+static void *ck_gen(void *genctx, OSSL_CALLBACK *cb, void *cbarg)
+{ (void)genctx; (void)cb; (void)cbarg; return malloc(1); }
+static int ck_gen_set_template(void *genctx, void *templ)
+{ (void)genctx; (void)templ; return 1; }
+static int ck_gen_set_params(void *genctx, const OSSL_PARAM params[])
+{ court_dump("gen.set", params); court_store(genctx, params); return 1; }
+static const OSSL_PARAM *ck_gen_settable_params(void *genctx, void *provctx)
+{ (void)genctx; (void)provctx; return court_gen_settable; }
+static int ck_gen_get_params(void *genctx, OSSL_PARAM params[])
+{ court_dump("gen.get", params); return court_get(genctx, params); }
+static const OSSL_PARAM *ck_gen_gettable_params(void *genctx, void *provctx)
+{ (void)genctx; (void)provctx; return court_gen_gettable; }
+static void *ck_load(const void *reference, size_t reference_sz)
+{ (void)reference; (void)reference_sz; return malloc(1); }
+static const char *ck_query_operation_name(int operation_id)
+{ (void)operation_id; return NULL; }
+static void *ck_import(void *keydata, int selection, const OSSL_PARAM params[])
+{ (void)keydata; (void)selection; (void)params; return malloc(1); }
+static const OSSL_PARAM *ck_import_types(int selection) { (void)selection; return NULL; }
+static int ck_export(void *keydata, int selection, OSSL_CALLBACK *cb, void *cbarg)
+{ (void)keydata; (void)selection; (void)cb; (void)cbarg; return 1; }
+static const OSSL_PARAM *ck_export_types(int selection) { (void)selection; return NULL; }
+static void *ck_dup(const void *keydata, int selection)
+{ (void)keydata; (void)selection; return malloc(1); }
+static int ck_validate(const void *keydata, int selection, int checktype)
+{ (void)keydata; (void)selection; (void)checktype; return 1; }
+static int ck_match(const void *a, const void *b, int selection)
+{ (void)a; (void)b; (void)selection; return 1; }
+
+/* The keyexch: the six derivation controls reach `EVP_PKEY_CTX_set_params`/`_get_params` on a
+ * derivation operation, which dispatch to `set_ctx_params`/`get_ctx_params`. */
+static void *cx_newctx(void *provctx) { (void)provctx; return court_new(); }
+static int cx_init(void *algctx) { (void)algctx; return 1; }
+static int cx_set_peer(void *algctx, void *peerkey)
+{ (void)algctx; (void)peerkey; return 1; }
+static int cx_derive(void *algctx, unsigned char *secret, size_t *secretlen, size_t outlen)
+{ (void)algctx; (void)secret; (void)secretlen; (void)outlen; return 1; }
+static void cx_freectx(void *algctx) { free(algctx); }
+static int cx_set_ctx_params(void *algctx, const OSSL_PARAM params[])
+{ court_dump("der.set", params); court_store(algctx, params); return 1; }
+static const OSSL_PARAM *cx_settable_ctx_params(void *algctx, void *provctx)
+{ (void)algctx; (void)provctx; return court_kex_settable; }
+static int cx_get_ctx_params(void *algctx, OSSL_PARAM params[])
+{ court_dump("der.get", params); return court_get(algctx, params); }
+static const OSSL_PARAM *cx_gettable_ctx_params(void *algctx, void *provctx)
+{ (void)algctx; (void)provctx; return court_kex_gettable; }
+
+static const OSSL_DISPATCH court_keymgmt_fns[] = {
+    { OSSL_FUNC_KEYMGMT_NEW, (void (*)(void))ck_new },
+    { OSSL_FUNC_KEYMGMT_FREE, (void (*)(void))ck_free },
+    { OSSL_FUNC_KEYMGMT_HAS, (void (*)(void))ck_has },
+    { OSSL_FUNC_KEYMGMT_GET_PARAMS, (void (*)(void))ck_get_params },
+    { OSSL_FUNC_KEYMGMT_GETTABLE_PARAMS, (void (*)(void))ck_gettable_params },
+    { OSSL_FUNC_KEYMGMT_SET_PARAMS, (void (*)(void))ck_set_params },
+    { OSSL_FUNC_KEYMGMT_SETTABLE_PARAMS, (void (*)(void))ck_settable_params },
+    { OSSL_FUNC_KEYMGMT_GEN_INIT, (void (*)(void))ck_gen_init },
+    { OSSL_FUNC_KEYMGMT_GEN_SET_TEMPLATE, (void (*)(void))ck_gen_set_template },
+    { OSSL_FUNC_KEYMGMT_GEN_SET_PARAMS, (void (*)(void))ck_gen_set_params },
+    { OSSL_FUNC_KEYMGMT_GEN_SETTABLE_PARAMS, (void (*)(void))ck_gen_settable_params },
+    { OSSL_FUNC_KEYMGMT_GEN_GET_PARAMS, (void (*)(void))ck_gen_get_params },
+    { OSSL_FUNC_KEYMGMT_GEN_GETTABLE_PARAMS, (void (*)(void))ck_gen_gettable_params },
+    { OSSL_FUNC_KEYMGMT_GEN, (void (*)(void))ck_gen },
+    { OSSL_FUNC_KEYMGMT_GEN_CLEANUP, (void (*)(void))ck_gen_cleanup },
+    { OSSL_FUNC_KEYMGMT_LOAD, (void (*)(void))ck_load },
+    { OSSL_FUNC_KEYMGMT_QUERY_OPERATION_NAME, (void (*)(void))ck_query_operation_name },
+    { OSSL_FUNC_KEYMGMT_IMPORT, (void (*)(void))ck_import },
+    { OSSL_FUNC_KEYMGMT_IMPORT_TYPES, (void (*)(void))ck_import_types },
+    { OSSL_FUNC_KEYMGMT_EXPORT, (void (*)(void))ck_export },
+    { OSSL_FUNC_KEYMGMT_EXPORT_TYPES, (void (*)(void))ck_export_types },
+    { OSSL_FUNC_KEYMGMT_DUP, (void (*)(void))ck_dup },
+    { OSSL_FUNC_KEYMGMT_VALIDATE, (void (*)(void))ck_validate },
+    { OSSL_FUNC_KEYMGMT_MATCH, (void (*)(void))ck_match },
+    { 0, NULL }
+};
+
+static const OSSL_DISPATCH court_keyexch_fns[] = {
+    { OSSL_FUNC_KEYEXCH_NEWCTX, (void (*)(void))cx_newctx },
+    { OSSL_FUNC_KEYEXCH_INIT, (void (*)(void))cx_init },
+    { OSSL_FUNC_KEYEXCH_DERIVE, (void (*)(void))cx_derive },
+    { OSSL_FUNC_KEYEXCH_SET_PEER, (void (*)(void))cx_set_peer },
+    { OSSL_FUNC_KEYEXCH_FREECTX, (void (*)(void))cx_freectx },
+    { OSSL_FUNC_KEYEXCH_SET_CTX_PARAMS, (void (*)(void))cx_set_ctx_params },
+    { OSSL_FUNC_KEYEXCH_SETTABLE_CTX_PARAMS, (void (*)(void))cx_settable_ctx_params },
+    { OSSL_FUNC_KEYEXCH_GET_CTX_PARAMS, (void (*)(void))cx_get_ctx_params },
+    { OSSL_FUNC_KEYEXCH_GETTABLE_CTX_PARAMS, (void (*)(void))cx_gettable_ctx_params },
+    { 0, NULL }
+};
+
+static const OSSL_ALGORITHM *court_query(void *provctx, int operation_id, int *no_cache)
+{
+    static const OSSL_ALGORITHM km[] = {
+        { "COURT-EC:court-ec", "provider=court-ec", court_keymgmt_fns,
+          "the probe's keymgmt" },
+        { NULL, NULL, NULL, NULL }
+    };
+    static const OSSL_ALGORITHM kx[] = {
+        { "COURT-EC:court-ec", "provider=court-ec", court_keyexch_fns,
+          "the probe's keyexch" },
+        { NULL, NULL, NULL, NULL }
+    };
+
+    (void)provctx;
+    *no_cache = 0;
+    if (operation_id == OSSL_OP_KEYMGMT)
+        return km;
+    if (operation_id == OSSL_OP_KEYEXCH)
+        return kx;
+    return NULL;
+}
+
+static int court_teardown(void *provctx) { (void)provctx; return 1; }
+
+static const OSSL_DISPATCH court_dispatch[] = {
+    { OSSL_FUNC_PROVIDER_QUERY_OPERATION, (void (*)(void))court_query },
+    { OSSL_FUNC_PROVIDER_TEARDOWN, (void (*)(void))court_teardown },
+    { 0, NULL }
+};
+
+static int court_init(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in,
+    const OSSL_DISPATCH **out, void **provctx)
+{
+    (void)handle;
+    (void)in;
+    *out = court_dispatch;
+    *provctx = &court_marker;
+    return 1;
+}
+
+/* The twelve controls, four ways: a NULL context, a live one with no operation, one with a
+ * parameter-generation operation (the two generation controls) and one with a derivation operation
+ * (the ten ECDH ones), so the *successful* path of each is observed as the parameter array the
+ * library builds. The round trips are the getter-backed pairs and every refusal drains its queue. */
+static void ec_ctl_arms(void)
+{
+    OSSL_PROVIDER *prov;
+    EVP_PKEY_CTX *null_ctx = NULL;
+    EVP_PKEY_CTX *fresh = NULL;
+    EVP_PKEY_CTX *gen = NULL;
+    EVP_PKEY_CTX *der = NULL;
+    const EVP_MD *sha256 = EVP_MD_fetch(NULL, "SHA256", NULL);
+    const EVP_MD *pmd = NULL;
+    unsigned char *ukm, *out = NULL;
+    int outlen = -1, kdftype, mode, ret;
+
+    printf("ec.ctl.md_fetched=%d\n", sha256 != NULL);
+
+    /* ---- the NULL-context refusals: the gate answers -2 for the six `OSSL_PARAM` builders, and
+     * the six ctrl wrappers reach `EVP_PKEY_CTX_ctrl`'s own NULL test, also -2. */
+    ERR_clear_error();
+    printf("ec.ctl.null.set_cofactor=%d\n", EVP_PKEY_CTX_set_ecdh_cofactor_mode(null_ctx, 1));
+    printf("ec.ctl.null.get_cofactor=%d\n", EVP_PKEY_CTX_get_ecdh_cofactor_mode(null_ctx));
+    printf("ec.ctl.null.set_kdf_type=%d\n", EVP_PKEY_CTX_set_ecdh_kdf_type(null_ctx, 2));
+    printf("ec.ctl.null.get_kdf_type=%d\n", EVP_PKEY_CTX_get_ecdh_kdf_type(null_ctx));
+    printf("ec.ctl.null.set_kdf_md=%d\n", EVP_PKEY_CTX_set_ecdh_kdf_md(null_ctx, sha256));
+    printf("ec.ctl.null.get_kdf_md=%d\n", EVP_PKEY_CTX_get_ecdh_kdf_md(null_ctx, &pmd));
+    printf("ec.ctl.null.set_outlen=%d\n", EVP_PKEY_CTX_set_ecdh_kdf_outlen(null_ctx, 32));
+    printf("ec.ctl.null.get_outlen=%d\n", EVP_PKEY_CTX_get_ecdh_kdf_outlen(null_ctx, &outlen));
+    printf("ec.ctl.null.set0_ukm=%d\n", EVP_PKEY_CTX_set0_ecdh_kdf_ukm(null_ctx, NULL, 0));
+    printf("ec.ctl.null.get0_ukm=%d\n", EVP_PKEY_CTX_get0_ecdh_kdf_ukm(null_ctx, &out));
+    printf("ec.ctl.null.curve_nid=%d\n",
+        EVP_PKEY_CTX_set_ec_paramgen_curve_nid(null_ctx, NID_X9_62_prime256v1));
+    printf("ec.ctl.null.param_enc=%d\n",
+        EVP_PKEY_CTX_set_ec_param_enc(null_ctx, OPENSSL_EC_NAMED_CURVE));
+    layer_drain("ctl_null");
+
+    /* ---- the provider, and the live context with no operation at all */
+    printf("ec.ctl.provider.add=%d\n", OSSL_PROVIDER_add_builtin(NULL, "court-ec", court_init));
+    prov = OSSL_PROVIDER_load(NULL, "court-ec");
+    printf("ec.ctl.provider.load=%d\n", prov != NULL);
+    if (prov == NULL)
+        return;
+
+    fresh = EVP_PKEY_CTX_new_from_name(NULL, "COURT-EC", NULL);
+    printf("ec.ctl.fresh=%d\n", fresh != NULL);
+    if (fresh == NULL)
+        return;
+    printf("ec.ctl.fresh.is_a_self=%d\n", EVP_PKEY_CTX_is_a(fresh, "COURT-EC"));
+    printf("ec.ctl.fresh.operation=%d\n", EVP_PKEY_CTX_get_operation(fresh));
+
+    /* On an operation-less context the gate refuses -2 and the ctrl wrappers refuse -1 with
+     * `EVP_R_NO_OPERATION_SET`, so the two families are told apart by the return value. */
+    ERR_clear_error();
+    printf("ec.ctl.fresh.cofactor=%d\n", EVP_PKEY_CTX_set_ecdh_cofactor_mode(fresh, 1));
+    printf("ec.ctl.fresh.outlen=%d\n", EVP_PKEY_CTX_set_ecdh_kdf_outlen(fresh, 32));
+    printf("ec.ctl.fresh.kdf_type=%d\n", EVP_PKEY_CTX_set_ecdh_kdf_type(fresh, 2));
+    printf("ec.ctl.fresh.curve_nid=%d\n",
+        EVP_PKEY_CTX_set_ec_paramgen_curve_nid(fresh, NID_X9_62_prime256v1));
+    printf("ec.ctl.fresh.param_enc=%d\n",
+        EVP_PKEY_CTX_set_ec_param_enc(fresh, OPENSSL_EC_NAMED_CURVE));
+    layer_drain("ctl_fresh");
+
+    /* ---- the two generation controls on a parameter-generation operation, each of which now
+     * succeeds and echoes the parameter it built. The SM2 spelling takes the SM2 curve row. */
+    ERR_clear_error();
+    gen = EVP_PKEY_CTX_new_from_name(NULL, "COURT-EC", NULL);
+    printf("ec.ctl.gen=%d\n", gen != NULL);
+    printf("ec.ctl.gen.init=%d\n", EVP_PKEY_paramgen_init(gen));
+    printf("ec.ctl.gen.operation=%d\n", EVP_PKEY_CTX_get_operation(gen));
+    ERR_clear_error();
+    printf("ec.ctl.gen.curve_nid=%d\n",
+        EVP_PKEY_CTX_set_ec_paramgen_curve_nid(gen, NID_X9_62_prime256v1));
+    printf("ec.ctl.gen.curve_nid_sm2=%d\n",
+        EVP_PKEY_CTX_set_ec_paramgen_curve_nid(gen, EVP_PKEY_SM2));
+    printf("ec.ctl.gen.param_enc_named=%d\n",
+        EVP_PKEY_CTX_set_ec_param_enc(gen, OPENSSL_EC_NAMED_CURVE));
+    printf("ec.ctl.gen.param_enc_explicit=%d\n",
+        EVP_PKEY_CTX_set_ec_param_enc(gen, OPENSSL_EC_EXPLICIT_CURVE));
+    layer_drain("ctl_gen");
+
+    /* ---- the ten derivation controls on a derivation operation, and the five round trips */
+    ERR_clear_error();
+    der = EVP_PKEY_CTX_new_from_name(NULL, "COURT-EC", NULL);
+    printf("ec.ctl.der=%d\n", der != NULL);
+    printf("ec.ctl.der.init=%d\n", EVP_PKEY_derive_init(der));
+    printf("ec.ctl.der.operation=%d\n", EVP_PKEY_CTX_get_operation(der));
+    layer_drain("ctl_der_init");
+
+    /* The defaults a fresh derivation context answers with. `kdf-outlen` is the empty string's
+     * zero, `kdf-type` the empty KDF's one, and the cofactor mode zero. */
+    ERR_clear_error();
+    printf("ec.ctl.der.default_outlen=%d\n", EVP_PKEY_CTX_get_ecdh_kdf_outlen(der, &outlen));
+    printf("ec.ctl.der.default_outlen_value=%d\n", outlen);
+    printf("ec.ctl.der.default_cofactor=%d\n", EVP_PKEY_CTX_get_ecdh_cofactor_mode(der));
+    printf("ec.ctl.der.default_kdf_type=%d\n", EVP_PKEY_CTX_get_ecdh_kdf_type(der));
+    layer_drain("ctl_der_default");
+
+    /* the three plain getter-backed pairs, then the digest pair and the UKM pair. */
+    ERR_clear_error();
+    printf("ec.ctl.der.set_cofactor=%d\n", EVP_PKEY_CTX_set_ecdh_cofactor_mode(der, 1));
+    mode = EVP_PKEY_CTX_get_ecdh_cofactor_mode(der);
+    printf("ec.ctl.der.get_cofactor=%d\n", mode);
+    printf("ec.ctl.der.cofactor_is_one=%d\n", mode == 1);
+    printf("ec.ctl.der.set_outlen=%d\n", EVP_PKEY_CTX_set_ecdh_kdf_outlen(der, 32));
+    printf("ec.ctl.der.get_outlen=%d\n", EVP_PKEY_CTX_get_ecdh_kdf_outlen(der, &outlen));
+    printf("ec.ctl.der.outlen=%d\n", outlen);
+    printf("ec.ctl.der.set_kdf_type=%d\n", EVP_PKEY_CTX_set_ecdh_kdf_type(der, 2));
+    kdftype = EVP_PKEY_CTX_get_ecdh_kdf_type(der);
+    printf("ec.ctl.der.get_kdf_type=%d\n", kdftype);
+    printf("ec.ctl.der.kdf_type_is_x963=%d\n", kdftype == 2);
+    printf("ec.ctl.der.set_kdf_md=%d\n", EVP_PKEY_CTX_set_ecdh_kdf_md(der, sha256));
+    ret = EVP_PKEY_CTX_get_ecdh_kdf_md(der, &pmd);
+    printf("ec.ctl.der.get_kdf_md=%d\n", ret);
+    /* **The digest the getter hands back is not compared, and the callee that blocks it is named
+     * rather than hidden.** `fix_md`'s GET arm resolves the method's name through
+     * `evp_get_digestbyname_ex` (`crypto/evp/names.c`), whose legacy `OBJ_NAME` table this crate
+     * leaves empty (`src/context/namemap.rs` records the whole legacy pre-population as Phase 13's
+     * work, and `src/runtime/init.rs`'s `add_all_legacy_methods` is a no-op). So the candidate
+     * answers a NULL method where the authority answers SHA-256, for a reason that is not
+     * `ec_ctrl.c`'s, and an arm that compared it would be a residual about that deferral. The
+     * parameter-level round trip *is* observed: `ec.der.set.p.0=kdf-digest` and `ec.der.get.p.0`
+     * show the name the setter sent and the getter asked for. `docs/DECISIONS.md` D344 records the
+     * coordinate. */
+    printf("ec.ctl.der.get_kdf_md_digest_skipped=%d\n", 1);
+    layer_drain("ctl_der_pairs");
+
+    /* The UKM pair: `set0` takes custody on success, so the probe allocates through the same
+     * allocator the control releases through, and frees only when the control did not. */
+    ERR_clear_error();
+    ukm = OPENSSL_malloc(4);
+    if (ukm != NULL)
+        memset(ukm, 0x5a, 4);
+    ret = EVP_PKEY_CTX_set0_ecdh_kdf_ukm(der, ukm, 4);
+    printf("ec.ctl.der.set0_ukm=%d\n", ret);
+    if (ret != 1)
+        OPENSSL_free(ukm);
+    out = NULL;
+    printf("ec.ctl.der.get0_ukm=%d\n", EVP_PKEY_CTX_get0_ecdh_kdf_ukm(der, &out));
+    printf("ec.ctl.der.ukm_is_null=%d\n", out == NULL);
+    layer_drain("ctl_der_ukm");
+
+    /* The refusals that are not a `-2` from a gate: a cofactor mode outside `-1..=1` and a
+     * non-positive output length are each `-2` with **no raise**, before the strict setter runs. */
+    ERR_clear_error();
+    printf("ec.ctl.der.cofactor_high=%d\n", EVP_PKEY_CTX_set_ecdh_cofactor_mode(der, 2));
+    printf("ec.ctl.der.cofactor_low=%d\n", EVP_PKEY_CTX_set_ecdh_cofactor_mode(der, -2));
+    printf("ec.ctl.der.zero_outlen=%d\n", EVP_PKEY_CTX_set_ecdh_kdf_outlen(der, 0));
+    printf("ec.ctl.der.neg_outlen=%d\n", EVP_PKEY_CTX_set_ecdh_kdf_outlen(der, -1));
+    layer_drain("ctl_der_refusals");
+
+    /* The generation-side refusal: an encoding that is neither explicit nor named is -2, and the
+     * raise is `fix_ec_param_enc`'s, so it carries the translator's own coordinate. */
+    ERR_clear_error();
+    printf("ec.ctl.gen.param_enc_bad=%d\n", EVP_PKEY_CTX_set_ec_param_enc(gen, 7));
+    layer_drain("ctl_gen_refusal");
+
+    EVP_PKEY_CTX_free(der);
+    EVP_PKEY_CTX_free(gen);
+    EVP_PKEY_CTX_free(fresh);
+    if (pmd != NULL)
+        EVP_MD_free((EVP_MD *)pmd);
+    EVP_MD_free((EVP_MD *)sha256);
+    OSSL_PROVIDER_unload(prov);
+}
+
 int main(void)
 {
     size_t n, i;
@@ -268,6 +775,8 @@ int main(void)
         printf("err.queue_records=%d\n", records);
     }
 
+    /* D344's arms: the twelve `crypto/evp/ec_ctrl.c` controls, over the probe's own provider. */
+    ec_ctl_arms();
 
 /* ==================== Phase 8.7's remaining layer ==================== */
 /* Every export the group object, the field arithmetic, the point encoders, the key layer, the

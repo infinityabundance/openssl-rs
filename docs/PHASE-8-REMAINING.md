@@ -13,11 +13,11 @@ Read from the ledger's `body.counts`.
 | quantity | count |
 |---|---|
 | owned | 786 |
-| implemented | 644 |
+| implemented | 656 |
 | deferred to a later phase | 1 |
-| open in this stratum | 141 |
+| open in this stratum | 129 |
 
-The identity `owned = implemented + deferred + open` is `786 = 644 + 1 + 141`, which holds.
+The identity `owned = implemented + deferred + open` is `786 = 656 + 1 + 129`, which holds.
 
 ## The merge gate — what Phase 8 owes to Phase 9
 
@@ -58,12 +58,12 @@ table, verbatim.
 | 8.4 RSA | `src/rsa/mod.rs` | 24 | `RT-RSA`, `CT-RSA` | 8.1 (the RSA provider's `SHA`-named digests), 8.3 (its OAEP/PSS modes) |
 | 8.5 DH and DHX | `src/dh/mod.rs`, `src/dh/mod.rs`, `src/ffc/`, `src/dh/object.rs`, `src/dh/group_params.rs`, `src/dh/rfc5114.rs`, `src/ffc/dh.rs`, `src/bn/dh.rs`, `src/bn/dh_data.rs`, `src/dh/ctrl.rs`, `src/ffc/dh.rs` | 12 | `RT-DH`, `CT-DH` | 8.4 (the shared BN/param idiom) |
 | 8.6 DSA | `src/dsa/mod.rs`, `src/dsa/mod.rs`, `src/dsa/object.rs`, `src/dsa/ossl.rs`, `src/dsa/key.rs`, `src/dsa/gen.rs`, `src/dsa/sign.rs`, `src/dsa/vrf.rs`, `src/dsa/depr.rs`, `src/asn1_dsa.rs`, `src/packet.rs`, `src/quic_vlint.rs`, `src/dsa/ctrl.rs` | 14 | `RT-DSA`, `CT-DSA` | 8.5 |
-| 8.7 EC | `src/ec/mod.rs`, `src/ec/curve.rs`, `src/ec/curve_data.rs`, `src/ec/support.rs`, `src/ec/mod.rs`, `src/bn/intern.rs`, `src/bn/bignum.rs`, `src/bn/exp.rs`, `src/ec/key.rs`, `src/ec/lib.rs`, `src/ec/smpl.rs`, `src/ec/mult.rs`, `src/ec/oct.rs`, `src/ec/cvt.rs`, `src/ec/key.rs`, `src/ec/ecdsa.rs`, `src/param_build_set.rs` | 46 | `RT-EC`, `CT-EC` | 8.6 |
+| 8.7 EC | `src/ec/mod.rs`, `src/ec/curve.rs`, `src/ec/curve_data.rs`, `src/ec/support.rs`, `src/ec/mod.rs`, `src/bn/intern.rs`, `src/bn/bignum.rs`, `src/bn/exp.rs`, `src/ec/key.rs`, `src/ec/lib.rs`, `src/ec/smpl.rs`, `src/ec/mult.rs`, `src/ec/oct.rs`, `src/ec/cvt.rs`, `src/ec/key.rs`, `src/ec/ecdsa.rs`, `src/param_build_set.rs`, `src/ec/ctrl.rs` | 34 | `RT-EC`, `CT-EC` | 8.6 |
 | 8.8 The ASN.1 method objects and `standard_methods[]` | `src/asn1/ameth.rs` | 15 | `RT-AMETH` | 8.4, 8.5, 8.6, 8.7 |
 | 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals | `src/pem/key_legacy.rs` | 30 | `RT-PEM-KEY` | 8.8 |
 
-Total open symbols listed below: **141**; the ledger's
-`open_in_this_stratum` is 141.
+Total open symbols listed below: **129**; the ledger's
+`open_in_this_stratum` is 129.
 
 ### 8.4 RSA — 24 open
 
@@ -88,7 +88,7 @@ Total open symbols listed below: **141**; the ledger's
 `d2i_DSAPublicKey`, `d2i_DSAparams`, `i2d_DSAPrivateKey`, `i2d_DSAPublicKey`,
 `i2d_DSAparams`
 
-### 8.7 EC — 46 open
+### 8.7 EC — 34 open
 
 `ECDH_KDF_X9_62`, `ECDSA_SIG_get0_r`, `ECDSA_SIG_get0_s`, `ECPARAMETERS_free`,
 `ECPARAMETERS_it`, `ECPARAMETERS_new`, `ECPKPARAMETERS_free`, `ECPKPARAMETERS_it`,
@@ -97,12 +97,6 @@ Total open symbols listed below: **141**; the ledger's
 `EC_GROUP_get_ecpkparameters`, `EC_GROUP_new_from_ecparameters`,
 `EC_GROUP_new_from_ecpkparameters`, `EC_KEY_print`, `EC_KEY_print_fp`,
 `EC_POINT_bn2point`, `EC_POINT_hex2point`, `EC_POINT_point2bn`, `EC_POINT_point2hex`,
-`EVP_PKEY_CTX_get0_ecdh_kdf_ukm`, `EVP_PKEY_CTX_get_ecdh_cofactor_mode`,
-`EVP_PKEY_CTX_get_ecdh_kdf_md`, `EVP_PKEY_CTX_get_ecdh_kdf_outlen`,
-`EVP_PKEY_CTX_get_ecdh_kdf_type`, `EVP_PKEY_CTX_set0_ecdh_kdf_ukm`,
-`EVP_PKEY_CTX_set_ec_param_enc`, `EVP_PKEY_CTX_set_ec_paramgen_curve_nid`,
-`EVP_PKEY_CTX_set_ecdh_cofactor_mode`, `EVP_PKEY_CTX_set_ecdh_kdf_md`,
-`EVP_PKEY_CTX_set_ecdh_kdf_outlen`, `EVP_PKEY_CTX_set_ecdh_kdf_type`,
 `EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get1_EC_KEY`, `EVP_PKEY_set1_EC_KEY`,
 `d2i_ECPKParameters`, `d2i_ECParameters`, `d2i_ECPrivateKey`, `i2d_ECPKParameters`,
 `i2d_ECParameters`, `i2d_ECPrivateKey`, `i2o_ECPublicKey`, `o2i_ECPublicKey`

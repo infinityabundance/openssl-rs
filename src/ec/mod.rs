@@ -75,6 +75,7 @@
 pub mod asn1;
 pub mod backend;
 pub mod check;
+pub mod ctrl;
 pub mod curve;
 pub(crate) mod curve_data;
 pub mod cvt;
