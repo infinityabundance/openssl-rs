@@ -68,6 +68,7 @@
 #include <openssl/sha.h>
 #include <openssl/whrlpool.h>
 #include <openssl/evp.h>
+#include <openssl/kdf.h>
 #include <openssl/provider.h>
 #include <openssl/params.h>
 #include <openssl/core_names.h>
@@ -837,6 +838,95 @@ static void rt_disp_errors(void)
     OSSL_PROVIDER_unload(prov);
 }
 
+/* The four default-provider KDF registration rows `DH_KDF_X9_42` and `ECDH_KDF_X9_62` fetch
+ * (docs/DECISIONS.md D296, D346). Every input is a constant in this file, so the derived bytes
+ * are a test vector the authority's own implementation produces and not a secret: the arm
+ * prints them and the differential court diffs them. */
+static void rt_kdf_rows(void)
+{
+    unsigned char z[32], ukm[8], sinfo[16], out[32];
+    const char *mdname = "SHA256";
+    EVP_KDF *kdf;
+    EVP_KDF_CTX *kctx;
+    OSSL_PARAM params[5];
+    size_t i;
+
+    for (i = 0; i < sizeof(z); i++)
+        z[i] = (unsigned char)(3 * i + 1);
+    for (i = 0; i < sizeof(ukm); i++)
+        ukm[i] = (unsigned char)(5 * i + 2);
+    for (i = 0; i < sizeof(sinfo); i++)
+        sinfo[i] = (unsigned char)(7 * i + 3);
+
+    /* X963KDF, the row `ECDH_KDF_X9_62` fetches. */
+    kdf = EVP_KDF_fetch(NULL, "X963KDF", NULL);
+    printf("kdf.x963.fetch=%d\n", kdf != NULL);
+    kctx = EVP_KDF_CTX_new(kdf);
+    params[0] = OSSL_PARAM_construct_utf8_string(OSSL_KDF_PARAM_DIGEST, (char *)mdname, 0);
+    params[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_KEY, z, sizeof(z));
+    params[2] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_INFO, sinfo, sizeof(sinfo));
+    params[3] = OSSL_PARAM_construct_end();
+    memset(out, 0, sizeof(out));
+    printf("kdf.x963.derive=%d\n", EVP_KDF_derive(kctx, out, sizeof(out), params));
+    printf("kdf.x963.key=");
+    rt_print_hex(out, sizeof(out));
+    printf("\n");
+    EVP_KDF_CTX_free(kctx);
+    EVP_KDF_free(kdf);
+
+    /* `X942KDF-CONCAT` is the same row's second alias, so it fetches the same implementation. */
+    kdf = EVP_KDF_fetch(NULL, "X942KDF-CONCAT", NULL);
+    printf("kdf.x963.alias.fetch=%d\n", kdf != NULL);
+    EVP_KDF_free(kdf);
+
+    /* X942KDF-ASN1, the row `DH_KDF_X9_42` fetches. `cekalg` names the wrapping algorithm whose
+     * OID is what the wrapper hands the row. */
+    kdf = EVP_KDF_fetch(NULL, "X942KDF-ASN1", NULL);
+    printf("kdf.x942.fetch=%d\n", kdf != NULL);
+    kctx = EVP_KDF_CTX_new(kdf);
+    params[0] = OSSL_PARAM_construct_utf8_string(OSSL_KDF_PARAM_DIGEST, (char *)mdname, 0);
+    params[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_KEY, z, sizeof(z));
+    params[2] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_UKM, ukm, sizeof(ukm));
+    params[3] = OSSL_PARAM_construct_utf8_string(OSSL_KDF_PARAM_CEK_ALG,
+                                                (char *)"AES-128-WRAP", 0);
+    params[4] = OSSL_PARAM_construct_end();
+    memset(out, 0, sizeof(out));
+    printf("kdf.x942.derive=%d\n", EVP_KDF_derive(kctx, out, 16, params));
+    printf("kdf.x942.key=");
+    rt_print_hex(out, 16);
+    printf("\n");
+    EVP_KDF_CTX_free(kctx);
+    EVP_KDF_free(kdf);
+
+    /* `X942KDF` is that row's second alias. */
+    kdf = EVP_KDF_fetch(NULL, "X942KDF", NULL);
+    printf("kdf.x942.alias.fetch=%d\n", kdf != NULL);
+    EVP_KDF_free(kdf);
+
+    /* SSKDF shares the unit with X963KDF and is published by the same table. Its hash form needs
+     * only a digest and a secret. */
+    kdf = EVP_KDF_fetch(NULL, "SSKDF", NULL);
+    printf("kdf.sskdf.fetch=%d\n", kdf != NULL);
+    kctx = EVP_KDF_CTX_new(kdf);
+    params[0] = OSSL_PARAM_construct_utf8_string(OSSL_KDF_PARAM_DIGEST, (char *)mdname, 0);
+    params[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_SECRET, z, sizeof(z));
+    params[2] = OSSL_PARAM_construct_end();
+    memset(out, 0, sizeof(out));
+    printf("kdf.sskdf.derive=%d\n", EVP_KDF_derive(kctx, out, sizeof(out), params));
+    printf("kdf.sskdf.key=");
+    rt_print_hex(out, sizeof(out));
+    printf("\n");
+    EVP_KDF_CTX_free(kctx);
+    EVP_KDF_free(kdf);
+
+    /* A property query that no KDF row carries is a refusal, so the fetch path's negative
+     * selection is crossed on the same name. */
+    kdf = EVP_KDF_fetch(NULL, "X963KDF", "provider=nonexistent");
+    printf("kdf.x963.badprop.fetch=%d\n", kdf != NULL);
+    EVP_KDF_free(kdf);
+}
+
+/* The KDF rows are observed from `main`; the comment above is this probe's own. */
 int main(void)
 {
     size_t i;
@@ -852,6 +942,7 @@ int main(void)
     rt_one_shot_exports_legacy();
     rt_provider_section();
     rt_disp_errors();
+    rt_kdf_rows();
 
     return 0;
 }

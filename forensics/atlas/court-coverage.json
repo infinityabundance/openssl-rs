@@ -8320,6 +8320,7 @@
             "basis": "called",
             "courts": [
               "RT-CIPHER",
+              "RT-DIGEST",
               "RT-DRBG",
               "RT-EVP-PKEY-OPS",
               "RT-PARAM",
@@ -10286,6 +10287,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DIGEST",
               "RT-EVP-KDF"
             ],
             "symbol": "EVP_KDF_CTX_free"
@@ -10321,6 +10323,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DIGEST",
               "RT-EVP-KDF"
             ],
             "symbol": "EVP_KDF_CTX_new"
@@ -10356,6 +10359,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DIGEST",
               "RT-EVP-KDF"
             ],
             "symbol": "EVP_KDF_derive"
@@ -10377,6 +10381,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DIGEST",
               "RT-EVP-KDF"
             ],
             "symbol": "EVP_KDF_fetch"
@@ -10384,6 +10389,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DIGEST",
               "RT-EVP-KDF"
             ],
             "symbol": "EVP_KDF_free"
@@ -14519,10 +14525,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 677,
-          "directly_courted_called": 677,
+          "directly_courted": 680,
+          "directly_courted_called": 680,
           "directly_courted_referenced": 0,
-          "implemented": 685,
+          "implemented": 688,
           "indirectly_courted": 8,
           "non_observable": 0,
           "unmatched": 0
@@ -15310,6 +15316,13 @@
             "courts": [
               "RT-CIPHER"
             ],
+            "symbol": "DES_random_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
             "symbol": "DES_set_key"
           },
           {
@@ -15353,6 +15366,13 @@
               "RT-CIPHER"
             ],
             "symbol": "DES_xcbc_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DH"
+            ],
+            "symbol": "DH_KDF_X9_42"
           },
           {
             "basis": "called",
@@ -16315,6 +16335,13 @@
               "RT-DSA"
             ],
             "symbol": "DSAparams_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "ECDH_KDF_X9_62"
           },
           {
             "basis": "called",
@@ -19754,10 +19781,10 @@
       }
     ],
     "totals": {
-      "directly_courted": 2594,
-      "directly_courted_called": 2314,
+      "directly_courted": 2597,
+      "directly_courted_called": 2317,
       "directly_courted_referenced": 280,
-      "implemented": 2602,
+      "implemented": 2605,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -19768,7 +19795,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "95087bf8f10bd0ae654e24e41821166d25f9601e516167356a701799ad763d91"
+      "sha256": "4be218f1ab30b94afe5738a07a857dd5bab0b9c31892beb191d7749b3c62d435"
     },
     {
       "name": "symbol-ownership",
@@ -19783,7 +19810,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "afcbfe4d9eeaec1f4a86dca976531dfa4e4d647f6a77e4598c1f381e459dec23"
+      "sha256": "199cd48cf4b169f3cdb5199b6704fe5045e1b62a10bfb9d855862fd5c15a78fe"
     },
     {
       "name": "phase3-courts",
@@ -19793,7 +19820,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "bd0d950cf06af9c4f1067a7640b615f81f61c201327474db0c2c7a1e6724d8f2"
+      "sha256": "6994c5d7ecdd5fc3220bcd152d2a59af0cf1598dc4e43cbd4ed6c35706f8b6bc"
     },
     {
       "name": "phase4-courts",
@@ -19803,7 +19830,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "e6ba7b69ec1e1bf86369ebb1fd7380fd0885c7da48826c7cada10e1eeac7a39c"
+      "sha256": "1e5293b588789953b1e98888530bbd4b5fcd18021d55b74e94dfc2bb10a58434"
     },
     {
       "name": "phase5-courts",
@@ -19813,7 +19840,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "c17525c22e4950227c48e917434f5f91d3eb4c8a51f62d181c6063d33aab0bb5"
+      "sha256": "e8c4088625d087c0d747b684febc2864f270b920d459ae26578b9b9d0f83be1e"
     },
     {
       "name": "phase6-courts",
@@ -19823,7 +19850,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "a96cabdb14be0c7d0e52f27b55f3adf5525345599f8f404d2b49aa15bb9e456e"
+      "sha256": "f0b6f6aa8dd664de0d931651e01025305168576537e0353e8219e1a922ea795b"
     },
     {
       "name": "phase7-courts",
@@ -19833,17 +19860,17 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "5cdb5773f884f358901830aeb8acf38101b2dea9e85e37d36e43d2eeec1246d4"
+      "sha256": "64b8a5d690d02eff469757e51b6af4c58bb3d2851eaf2be8543cd8e43f39c487"
     },
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "0d11109e60e9ed1fd218c45790673ff5b149aac07ffaa551d9eed7308ddb1c8a"
+      "sha256": "cc11681cf3c2afc6c5a8c898092c6c12b170b81996e33c7ab5ed014a69a081ce"
     },
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "8b860b80ed36e190b6ac0003b142237f8d6e1167d786f1b6d1803a3b2caaae6e"
+      "sha256": "0e7d27df360938c151210bc68b9df8f8793cbd9df4a92fdcb6b634ac03650fb2"
     },
     {
       "name": "phase9-courts",

@@ -79,6 +79,7 @@ pub mod chacha;
 // structure.
 pub(crate) mod cipher_tables;
 pub mod context;
+pub(crate) mod der_writer;
 pub mod des;
 pub mod dh;
 pub mod digest;

@@ -148,6 +148,7 @@ pub mod ctrl;
 pub mod depr;
 pub mod gen;
 pub mod group_params;
+pub mod kdf;
 pub mod key;
 pub mod object;
 pub mod prn;

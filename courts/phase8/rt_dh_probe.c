@@ -83,6 +83,7 @@
  * probe links. */
 #define OPENSSL_SUPPRESS_DEPRECATED
 #include <openssl/bio.h>
+#include <openssl/asn1.h>
 #include <openssl/bn.h>
 #include <openssl/core.h>
 #include <openssl/core_dispatch.h>
@@ -160,6 +161,16 @@ static void begin(void)
 {
     nev = 0;
     recording = 1;
+}
+
+/* A hex printer for the KDF arms. The DH/EC probe prints no key, group or shared secret; this
+ * helper exists only for `DH_KDF_X9_42`'s derived bytes over the constants `dh_kdf_arms` sets. */
+static void rt_hex_bytes(const unsigned char *p, size_t n)
+{
+    size_t i;
+
+    for (i = 0; i < n; i++)
+        printf("%02x", p[i]);
 }
 
 static void end(const char *arm)
@@ -1566,6 +1577,62 @@ static void dh_asn1_arms(void)
     DH_free(src);
 }
 
+/*
+ * `DH_KDF_X9_42` (D346). The wrapper renders an `ASN1_OBJECT` as the `cekalg` name the
+ * `X942KDF-ASN1` row's `find_alg_id` resolves, then fetches and drives that row. The input `Z`,
+ * `ukm` and digest are constants in this file, so the derived bytes are the authority's own test
+ * vector and printing them is the strongest observation available rather than the disclosure of
+ * a secret. The `id-aes128-wrap` OID (`2.16.840.1.101.3.4.1.5`) is the `AES-128-WRAP` row's
+ * alias, which is what the row's own name check compares against.
+ */
+static void dh_kdf_arms(void)
+{
+    unsigned char z[32], ukm[8], out[32];
+    ASN1_OBJECT *oid;
+    const EVP_MD *md;
+    size_t i;
+
+    for (i = 0; i < sizeof(z); i++)
+        z[i] = (unsigned char)(3 * i + 1);
+    for (i = 0; i < sizeof(ukm); i++)
+        ukm[i] = (unsigned char)(5 * i + 2);
+
+    md = EVP_MD_fetch(NULL, "SHA256", NULL);
+    printf("dh.kdf.md=%d\n", md != NULL);
+
+    oid = OBJ_txt2obj("2.16.840.1.101.3.4.1.5", 1);
+    printf("dh.kdf.oid=%d\n", oid != NULL);
+
+    memset(out, 0, sizeof(out));
+    ERR_clear_error();
+    printf("dh.kdf.x942.ret=%d\n",
+        DH_KDF_X9_42(out, sizeof(out), z, sizeof(z), oid, ukm, sizeof(ukm), md));
+    printf("dh.kdf.x942.key=");
+    rt_hex_bytes(out, sizeof(out));
+    printf("\n");
+    drain("dh_kdf_x942");
+
+    /* The UKM is optional: with none, `x942kdf.c`'s encoder leaves the field out and the same
+     * inputs must still derive. */
+    memset(out, 0, sizeof(out));
+    ERR_clear_error();
+    printf("dh.kdf.x942.noukm.ret=%d\n",
+        DH_KDF_X9_42(out, sizeof(out), z, sizeof(z), oid, NULL, 0, md));
+    printf("dh.kdf.x942.noukm.key=");
+    rt_hex_bytes(out, sizeof(out));
+    printf("\n");
+    drain("dh_kdf_x942_noukm");
+
+    /* A NULL object is `OBJ_obj2txt`'s refusal, before any fetch. */
+    ERR_clear_error();
+    printf("dh.kdf.x942.nulloid.ret=%d\n",
+        DH_KDF_X9_42(out, sizeof(out), z, sizeof(z), NULL, ukm, sizeof(ukm), md));
+    drain("dh_kdf_x942_nulloid");
+
+    ASN1_OBJECT_free(oid);
+    EVP_MD_free((EVP_MD *)md);
+}
+
 int main(void)
 {
     DH_METHOD *m;
@@ -1678,6 +1745,10 @@ int main(void)
     /* ---- the ASN.1 unit and the two `DHparams_*` exports it unblocks (D345) */
 
     dh_asn1_arms();
+
+    /* ---- `DH_KDF_X9_42` and the `X942KDF-ASN1` row it fetches (D346) */
+
+    dh_kdf_arms();
 
     return 0;
 }

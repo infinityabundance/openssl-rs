@@ -7,9 +7,9 @@
     "courts": [
       {
         "authority_exit_code": 0,
-        "authority_observations": 468,
+        "authority_observations": 480,
         "candidate_exit_code": 0,
-        "candidate_observations": 468,
+        "candidate_observations": 480,
         "candidate_stderr_tail": [],
         "court": "RT-DIGEST",
         "crashed": false,
@@ -24,9 +24,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 6939,
+        "authority_observations": 6946,
         "candidate_exit_code": 0,
-        "candidate_observations": 6939,
+        "candidate_observations": 6946,
         "candidate_stderr_tail": [],
         "court": "RT-CIPHER",
         "crashed": false,
@@ -75,9 +75,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 578,
+        "authority_observations": 588,
         "candidate_exit_code": 0,
-        "candidate_observations": 578,
+        "candidate_observations": 588,
         "candidate_stderr_tail": [],
         "court": "RT-DH",
         "crashed": false,
@@ -109,9 +109,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 2367,
+        "authority_observations": 2373,
         "candidate_exit_code": 0,
-        "candidate_observations": 2367,
+        "candidate_observations": 2373,
         "candidate_stderr_tail": [],
         "court": "RT-EC",
         "crashed": false,
@@ -37803,12 +37803,12 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_digest_probe.c",
-      "sha256": "f3670778e6e4b44c043d39630a778afb64427e7908c6699d9321b66199aaab9b"
+      "sha256": "15d0e30f6afc946c3ddca672b3e53bdac0a0a38bbf17b82285ef8a8b053f2d2d"
     },
     {
       "name": "probe",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "ef2ab23265f12492907b9db5028d4136fd96f0b93499ba718e819379fb2f86eb"
+      "sha256": "17b30e936dbcf463c5cc73f77d4189e59bd4a22e74a39cdfb87f9a894ff80fac"
     },
     {
       "name": "probe",
@@ -37823,7 +37823,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_dh_probe.c",
-      "sha256": "e096df2657cc91ae7f42000a4933887cb16327710bf71d3082446cb950c9c635"
+      "sha256": "5cbc89eb14561260264974a0d452dd9c5c533b51e75641a52d8812bf30d379a7"
     },
     {
       "name": "probe",
@@ -37833,7 +37833,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_ec_probe.c",
-      "sha256": "4a633860681b5300dc62cb4a204fc0570298d3ba95fbe47753eab9c8be78e738"
+      "sha256": "2269a97d1d88050141c25ab76a08163e21d3e877b7ca9ce19f3f0e0b68038f60"
     },
     {
       "name": "correctness-probe",

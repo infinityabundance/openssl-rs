@@ -2085,8 +2085,8 @@ static DEFLT_DIGESTS: [OsslAlgorithm; 28] = [
 ];
 
 /// `static const OSSL_ALGORITHM *deflt_query(void *provctx, int operation_id, int *no_cache)` —
-/// `providers/defltprov.c`, with the `OSSL_OP_DIGEST`, `OSSL_OP_CIPHER`, `OSSL_OP_MAC` and
-/// `OSSL_OP_RAND` arms.
+/// `providers/defltprov.c`, with the `OSSL_OP_DIGEST`, `OSSL_OP_CIPHER`, `OSSL_OP_MAC`,
+/// `OSSL_OP_KDF` and `OSSL_OP_RAND` arms.
 ///
 /// The other operations the authority answers are other subphases' and are absent, not stubbed.
 /// The arms are in the authority's own `switch` order (`defltprov.c:706-734`).
@@ -2097,7 +2097,7 @@ static DEFLT_DIGESTS: [OsslAlgorithm; 28] = [
 /// row (D275).
 ///
 /// # Safety
-/// `no_cache` must be writable; `provctx` is ignored by all four arms.
+/// `no_cache` must be writable; `provctx` is ignored by all five arms.
 unsafe extern "C" fn deflt_query(
     _provctx: *mut c_void,
     operation_id: c_int,
@@ -2113,6 +2113,9 @@ unsafe extern "C" fn deflt_query(
     }
     if operation_id == crate::provider::mac::OSSL_OP_MAC {
         return crate::provider::mac::DEFLT_MACS.as_ptr();
+    }
+    if operation_id == crate::provider::kdf::OSSL_OP_KDF {
+        return crate::provider::kdf::DEFLT_KDFS.as_ptr();
     }
     if operation_id == crate::evp::rand::OSSL_OP_RAND {
         return crate::provider::rand::DEFLT_RANDS.as_ptr();
@@ -2289,7 +2292,8 @@ mod tests {
         let none = unsafe { deflt_query(ptr::null_mut(), 14, &mut no_cache) };
         assert!(
             none.is_null(),
-            "only OSSL_OP_DIGEST, OSSL_OP_CIPHER, OSSL_OP_MAC and OSSL_OP_RAND are answered"
+            "only OSSL_OP_DIGEST, OSSL_OP_CIPHER, OSSL_OP_MAC, OSSL_OP_KDF and OSSL_OP_RAND \
+             are answered"
         );
 
         // The cipher half answers too, and its table starts at `deflt_ciphers[]`'s first row.

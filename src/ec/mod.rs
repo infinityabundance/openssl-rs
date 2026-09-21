@@ -83,6 +83,7 @@ pub mod depr;
 pub mod ecdh_ossl;
 pub mod ecdsa;
 pub mod ecdsa_ossl;
+pub mod kdf;
 pub mod key;
 pub mod kmeth;
 pub mod lib;

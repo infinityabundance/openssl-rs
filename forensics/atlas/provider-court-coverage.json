@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 166,
+        "implemented": 169,
         "unmatched": 0
       },
       "9": {
@@ -29,8 +29,8 @@
         "probe": "courts/phase9/rt_drbg_probe.c"
       }
     ],
-    "directly_courted": 171,
-    "implemented_rows": 171,
+    "directly_courted": 174,
+    "implemented_rows": 174,
     "rows": [
       {
         "algorithm_names": "AES-128-CBC",
@@ -269,6 +269,7 @@
           "2.16.840.1.101.3.4.1.5"
         ],
         "courts": [
+          "RT-DIGEST",
           "RT-CIPHER"
         ],
         "coverage": "direct",
@@ -2240,6 +2241,47 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "SSKDF",
+        "aliases": [
+          "SSKDF"
+        ],
+        "courts": [
+          "RT-DIGEST"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KDF",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "X942KDF-ASN1",
+        "aliases": [
+          "X942KDF-ASN1",
+          "X942KDF"
+        ],
+        "courts": [
+          "RT-DIGEST"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KDF",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "X963KDF",
+        "aliases": [
+          "X963KDF",
+          "X942KDF-CONCAT"
+        ],
+        "courts": [
+          "RT-DIGEST"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KDF",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "BLAKE2BMAC",
         "aliases": [
           "BLAKE2BMAC",
@@ -2423,17 +2465,17 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "c754b3c08c4403a3389fe2a0017411059f25f7a0936f2f6aca308724c19c7878"
+      "sha256": "517e00849f32e84aed13cb6a4839c01082ee703ae73f8a02af57fbc47d127c28"
     },
     {
       "name": "court:RT-DIGEST",
       "path": "courts/phase8/rt_digest_probe.c",
-      "sha256": "f3670778e6e4b44c043d39630a778afb64427e7908c6699d9321b66199aaab9b"
+      "sha256": "15d0e30f6afc946c3ddca672b3e53bdac0a0a38bbf17b82285ef8a8b053f2d2d"
     },
     {
       "name": "court:RT-CIPHER",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "ef2ab23265f12492907b9db5028d4136fd96f0b93499ba718e819379fb2f86eb"
+      "sha256": "17b30e936dbcf463c5cc73f77d4189e59bd4a22e74a39cdfb87f9a894ff80fac"
     },
     {
       "name": "court:RT-DRBG",

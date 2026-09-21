@@ -3110,7 +3110,10 @@ pub(crate) unsafe fn ossl_param_get1_concat_octet_string(
         return 0;
     }
     if sz == 0 {
-        // `OPENSSL_zalloc(1)` — one byte, so the caller has something to release.
+        // `OPENSSL_zalloc(1)` — one byte, so the caller has something to release. **`*out_len`
+        // stays `sz` (zero)**, because the authority's `fin:` label writes `sz` and the early arm
+        // jumps to it without changing it; a length of one here made `X963KDF` hash a stray zero
+        // byte (D346).
         let z = CRYPTO_zalloc(1, FILE.as_ptr(), LINE);
         if z.is_null() {
             return 0;
@@ -3126,7 +3129,7 @@ pub(crate) unsafe fn ossl_param_get1_concat_octet_string(
                 );
             }
             *out = z.cast();
-            *out_len = 1;
+            *out_len = sz;
         }
         return 1;
     }

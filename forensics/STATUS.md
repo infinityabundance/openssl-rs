@@ -28,8 +28,8 @@ renderer does not know any phase status.
 | 5 | BN + ASN.1 + DER/PEM | `complete` |  |
 | 6 | OSSL_LIB_CTX + provider core | `complete` |  |
 | 7 | EVP framework | `complete` |  |
-| 8 | Native cryptographic primitives | `in-progress` | 100 open obligation(s) of this stratum recorded in forensics/phase8-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
-| 9 | RAND / DRBG + entropy | `in-progress` | 12 open obligation(s) of this stratum recorded in forensics/phase9-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Its working set is ninety-three exports, and only twenty-five are its own header's: the other sixty-eight arrive as recorded hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives in ten earlier strata's modules (docs/DECISIONS.md D294). The court file records `courts: []` and is not evidence that anything works: no Phase 9 court has landed yet (docs/PHASE-9-SUBPHASES.md section 1) |
+| 8 | Native cryptographic primitives | `in-progress` | 98 open obligation(s) of this stratum recorded in forensics/phase8-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
+| 9 | RAND / DRBG + entropy | `in-progress` | 11 open obligation(s) of this stratum recorded in forensics/phase9-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Its working set is ninety-three exports, and only twenty-five are its own header's: the other sixty-eight arrive as recorded hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives in ten earlier strata's modules (docs/DECISIONS.md D294). The court file records `courts: []` and is not evidence that anything works: no Phase 9 court has landed yet (docs/PHASE-9-SUBPHASES.md section 1) |
 
 Not started: strata 10-21 (12 total).
 
@@ -84,9 +84,9 @@ that name is defined, nothing more.
 
 | library | exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 2602 | 3294 |
+| libcrypto | 5896 | 2605 | 3291 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **2602** | **3897** |
+| **total** | **6499** | **2605** | **3894** |
 
 ### Phase 3 obligation ledger
 
@@ -210,11 +210,9 @@ handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
 * authority exports in the Phase 8 working set: 786
-* implemented: 685
-* deferred to a later phase with a stated reason: 1
-* open in this stratum: 100
-
-Deferred to phase 9: `DES_random_key`
+* implemented: 688
+* deferred to a later phase with a stated reason: 0
+* open in this stratum: 98
 
 Hand-offs from phase 7 discharged by this stratum: `EVP_PKEY_assign`, `EVP_PKEY_decrypt_old`, `EVP_PKEY_encrypt_old`, `EVP_PKEY_get0_DH`, `EVP_PKEY_get0_DSA`, `EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get0_RSA`, `EVP_PKEY_get0_hmac`, `EVP_PKEY_get0_poly1305`, `EVP_PKEY_get0_siphash`, `EVP_PKEY_get1_DH`, `EVP_PKEY_get1_DSA`, `EVP_PKEY_get1_EC_KEY`, `EVP_PKEY_get1_RSA`, `EVP_PKEY_get_ec_point_conv_form`, `EVP_PKEY_get_field_type`, `EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0`, `EVP_PKEY_meth_get_count`, `EVP_PKEY_set1_DH`, `EVP_PKEY_set1_DSA`, `EVP_PKEY_set1_EC_KEY`, `EVP_PKEY_set1_RSA`, `EVP_PKEY_type`, `d2i_KeyParams`, `d2i_KeyParams_bio`, `d2i_PublicKey`
 
@@ -225,18 +223,16 @@ ownership atlas assigns Phase 9, or that an earlier stratum
 handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
-* authority exports in the Phase 9 working set: 70
+* authority exports in the Phase 9 working set: 69
 * implemented: 58
 * deferred to a later phase with a stated reason: 0
-* open in this stratum: 12
+* open in this stratum: 11
 
 Hand-offs from phase 4 discharged by this stratum: `BIO_f_nbio_test`
 
 Hand-offs from phase 5 discharged by this stratum: `BN_BLINDING_convert`, `BN_BLINDING_convert_ex`, `BN_BLINDING_create_param`, `BN_BLINDING_update`, `BN_GF2m_mod_solve_quad`, `BN_GF2m_mod_solve_quad_arr`, `BN_GF2m_mod_sqrt`, `BN_GF2m_mod_sqrt_arr`, `BN_X931_derive_prime_ex`, `BN_X931_generate_Xpq`, `BN_X931_generate_prime_ex`, `BN_bntest_rand`, `BN_check_prime`, `BN_generate_dsa_nonce`, `BN_generate_prime`, `BN_generate_prime_ex`, `BN_generate_prime_ex2`, `BN_is_prime`, `BN_is_prime_ex`, `BN_is_prime_fasttest`, `BN_is_prime_fasttest_ex`, `BN_priv_rand`, `BN_priv_rand_ex`, `BN_priv_rand_range`, `BN_priv_rand_range_ex`, `BN_pseudo_rand`, `BN_pseudo_rand_range`, `BN_rand`, `BN_rand_ex`, `BN_rand_range`, `BN_rand_range_ex`
 
 Hand-offs from phase 7 discharged by this stratum: `BIO_f_reliable`, `EVP_CIPHER_CTX_rand_key`, `EVP_SealInit`, `OSSL_HPKE_get_grease_value`, `PEM_ASN1_read`, `PEM_ASN1_read_bio`, `PEM_ASN1_write`, `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx`, `PEM_bytes_read_bio`, `PEM_bytes_read_bio_secmem`, `PEM_do_header`
-
-Hand-offs from phase 8 discharged by this stratum: `DES_random_key`
 
 ## Symbol reconciliation
 

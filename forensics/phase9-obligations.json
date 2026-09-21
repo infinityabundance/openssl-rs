@@ -6,9 +6,9 @@
       "atlas_owned": 25,
       "deferred_to_later_phase": 0,
       "implemented": 58,
-      "open_in_this_stratum": 12,
-      "owned": 70,
-      "received_by_handoff": 45
+      "open_in_this_stratum": 11,
+      "owned": 69,
+      "received_by_handoff": 44
     },
     "deferred": [],
     "deferred_by_phase": {},
@@ -62,9 +62,6 @@
         "PEM_bytes_read_bio",
         "PEM_bytes_read_bio_secmem",
         "PEM_do_header"
-      ],
-      "8": [
-        "DES_random_key"
       ]
     },
     "handoffs_discharged_with_reasons": {
@@ -363,14 +360,6 @@
           "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer and what is left is this stratum's own `pem_lib.c` transcription.",
           "symbol": "PEM_do_header"
         }
-      ],
-      "8": [
-        {
-          "declaring_header": "des.h",
-          "owning_phase": 9,
-          "reason": "`crypto/des/rand_key.c:22` is `RAND_priv_bytes((unsigned char *)ret, sizeof(DES_cblock))` and its failure arm answers 0. `rand.h` is Phase 9's, and this is the one `des.h` export whose body is the random layer rather than the cipher. `DES_string_to_key` and `DES_string_to_2keys` are *not* in this row: they build a key from a string with `DES_cbc_cksum`, which is this stratum's own.",
-          "symbol": "DES_random_key"
-        }
       ]
     },
     "implemented": [
@@ -542,12 +531,6 @@
         "symbol": "BN_generate_dsa_nonce"
       },
       {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": 8,
-        "symbol": "DES_random_key"
-      },
-      {
         "declaring_header": "hpke.h",
         "module": "src/hpke/mod.rs",
         "received_from_phase": 7,
@@ -605,7 +588,6 @@
     "owned_by_header": {
       "bio.h": 1,
       "bn.h": 31,
-      "des.h": 1,
       "evp.h": 3,
       "hpke.h": 1,
       "pem.h": 8,
@@ -616,7 +598,6 @@
       "src/bn/gf2m.rs": 4,
       "src/bn/primes.rs": 11,
       "src/bn/rand.rs": 12,
-      "src/des/mod.rs": 1,
       "src/evp/": 2,
       "src/evp/bio_enc.rs": 2,
       "src/hpke/mod.rs": 1,
@@ -645,27 +626,22 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "ce54400e1845611c262fe5214c05e696153387f18f611c66cef44a7121dbfdf2"
+      "sha256": "1027a1d2126a3ec9c5fc7305050d7836405fd7048701ff707f903937a4139076"
     },
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "bd0d950cf06af9c4f1067a7640b615f81f61c201327474db0c2c7a1e6724d8f2"
+      "sha256": "6994c5d7ecdd5fc3220bcd152d2a59af0cf1598dc4e43cbd4ed6c35706f8b6bc"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "e6ba7b69ec1e1bf86369ebb1fd7380fd0885c7da48826c7cada10e1eeac7a39c"
+      "sha256": "1e5293b588789953b1e98888530bbd4b5fcd18021d55b74e94dfc2bb10a58434"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "a96cabdb14be0c7d0e52f27b55f3adf5525345599f8f404d2b49aa15bb9e456e"
-    },
-    {
-      "name": "phase8-obligations",
-      "path": "forensics/phase8-obligations.json",
-      "sha256": "5cdb5773f884f358901830aeb8acf38101b2dea9e85e37d36e43d2eeec1246d4"
+      "sha256": "f0b6f6aa8dd664de0d931651e01025305168576537e0353e8219e1a922ea795b"
     }
   ],
   "kind": "phase9-obligations",
