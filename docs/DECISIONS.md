@@ -23394,3 +23394,110 @@ of it changes. `courts/phase8/rt_dsa_probe.c`'s own header no longer says the th
 **Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete: false` with
 **168** names open, 8.8's fifteen and the DSA ASN.1 family among them. What this slice is, is the DER codec
 8.6 was waiting on and the five exports it holds -- not 8.6, and not 8.8.
+
+---
+
+## D343 — 8.5's and 8.6's EVP control slices land together, the DH control block gets the group lookup D332's table made landable, and a digest-by-name deferral is named rather than courted
+
+**Decision.** The two residue units D342 named as landable but not landed are landed, each **whole** (D327's
+rule): `crypto/evp/dh_ctrl.c` is the new module `src/dh/ctrl.rs` and `crypto/evp/dsa_ctrl.c` is the new
+module `src/dsa/ctrl.rs`. **Twenty-seven exports** leave `open` for `implemented` — the DH file's twenty and
+the DSA file's seven — together with their three statics (`dh_paramgen_check`, `dh_param_derive_check` and
+`dsa_paramgen_check`), and one callee this stratum owns becomes reachable as a result: the DH named-group
+lookup the ctrl translator had been answering `EVP_R_INVALID_VALUE` for.
+
+**Where the two modules live, and why they are new modules rather than text in `mod.rs`.** The ledger's
+`module` label for all twenty-seven is `src/dh/mod.rs` or `src/dsa/mod.rs`, because the label is measured
+from the **declaring header** (`dh.h`, `dsa.h`) and not from the translation unit — the DH and DSA controls
+live beside every other key type's under `crypto/evp/`, and there is no `crypto/dh/dh_ctrl.c` or
+`crypto/dsa/dsa_ctrl.c` in either admitted authority. The split follows `src/rsa/ctrl.rs`, D328's precedent
+for 8.4's own slice E: the two halves of a key type's control surface share nothing with the object or
+method layer but a header, `forensics/atlas/transcription-edges.json`'s own `rule` says *"a module whose
+definitions are spread across units is expected"*, and giving each unit a module is what makes the atlas say
+which authority file the control half answers for. The two new edges are `src/dh/ctrl.rs -> crypto/evp/dh_ctrl.c`
+(share 20/20) and `src/dsa/ctrl.rs -> crypto/evp/dsa_ctrl.c` (share 7/7); the ledger's own labels are
+unchanged, which is what the `module` column means.
+
+**The DH file is three shapes and the DSA file is one, and both are classified in their module docs.** The
+DH controls are (1) nine `EVP_PKEY_CTX_ctrl` wrappers over `ctrl_params_translate.c`'s table, (2) ten
+`OSSL_PARAM` builders handed to `evp_pkey_ctx_{set,get}_params_strict` — which is what makes their refusal a
+`-2` rather than a ctrl result — and (3) the two gates. The DSA controls are six builders handed to the
+**non-strict** `EVP_PKEY_CTX_set_params` plus the one `EVP_PKEY_CTX_ctrl` wrapper, `set_dsa_paramgen_md`.
+
+**Both gates lose the same clause, and the DSA one differs from the DH pair in a way worth naming.** The
+DH gates test `evp_pkey_ctx_is_legacy(ctx) && ctx->pmeth->pkey_id != EVP_PKEY_DH && ... != EVP_PKEY_DHX`,
+and the DSA gate tests `ctx->pmeth != NULL && ctx->pmeth->pkey_id != EVP_PKEY_DSA` — **without** the legacy
+test. This crate's `EvpPkeyCtx` carries no `pmeth` at all (`src/evp/pkey_ctx.rs` records why), and
+`int_ctx_new` refuses to return a context whose `keymgmt` is NULL, so in both files the `pmeth`-dependent
+clause is unreachable for every context that arrives: the DH conjunction's first clause is false and the
+short-circuit never reads `pmeth`, and the DSA conjunction's first clause is false because `pmeth` is always
+absent. Both reductions are recorded at the site rather than written as a dead branch — the `src/rsa/ctrl.rs`
+reduction, applied to the two spellings the two files use.
+
+**The DH named-group lookup was wired, and its absence was this stratum's to close.** `EVP_PKEY_CTX_set_dh_nid`
+and `EVP_PKEY_CTX_set_dh_rfc5114`/`set_dhx_rfc5114` build their `group` parameter from the ctrl's UID through
+`fix_dh_nid`/`fix_dh_nid5114` (`crypto/evp/ctrl_params_translate.c:998`, `:1023`), and until this commit the
+crate's two fixers raised `EVP_R_INVALID_VALUE` and answered `0` for **every** UID: the authority's lookup is
+`ossl_ffc_named_group_get_name(ossl_ffc_uid_to_dh_named_group(uid))`, two functions over
+`crypto/ffc/ffc_dh.c`'s `dh_named_groups[]`, and D332 landed that unit (`src/ffc/dh.rs`) with both — which is
+what the `#[allow(dead_code)]` on `ossl_ffc_named_group_get_name` had been saying, naming
+`ctrl_params_translate.c:1012` as its reader. So the two calls are made, `p1` is zeroed exactly as the
+authority zeroes it, a UID with no group still answers `EVP_R_INVALID_VALUE` at the same two coordinates
+(`:1013`, `:1039`), and the str door's decimal `atoi` arm is wired too (`:1050`). This is the fourth call site
+D332 wrote as a reduction that became a real call; the three controls' *successful* path is now courted.
+
+**One callee is left unlanded, and it is named with its coordinate rather than courted around.** `get_dh_kdf_md`
+reads the method's `digest` name and turns it back into an `EVP_MD *` through `fix_md`'s GET arm, which calls
+`evp_get_digestbyname_ex` (`crypto/evp/names.c`) — and this crate answers NULL for **every** built-in digest
+name, because the legacy `OBJ_NAME` database is empty: `src/runtime/init.rs`'s `add_all_legacy_methods` is a
+no-op and `src/context/namemap.rs` records the whole legacy pre-population and its ordering as **Phase 13's**.
+So `EVP_PKEY_CTX_get_dh_kdf_md` answers `1` with a NULL method on the candidate where the authority answers
+SHA-256. That is a recorded deferral in a unit no stratum of 8.5 owns, not a `dh_ctrl.c` defect, so the court
+observes the control's return value and the *parameter-level* round trip (`kdf-digest` set and asked for, both
+visible in the keyexch's echo) and **not** the returned `EVP_MD *`; the probe says so in its own comment and
+this entry records the coordinate. The same lookup is what `EVP_PKEY_CTX_set_dh_kdf_md` does not need — its
+Set arm only reads `EVP_MD_get0_name` on the caller's method, which is why its half of the pair is fully
+courted.
+
+**The court, and what it refuses to print.** `RT-DH` grows 405 -> **550 observations** and `RT-DSA` 262 ->
+**319**, both zero residual. Each probe publishes a provider of its own — `RT-DH` a keymgmt **and** a keyexch
+named `COURT-DH`, `RT-DSA` a keymgmt named `COURT-DSA`, each the smallest the structural check accepts and
+each named after the court so it cannot shadow the default provider's own row in either binary's store. A
+control is then asked three ways: against a NULL context, against a live one with no operation at all, and
+against one whose operation is the generation or derivation family the control names — and the provider's own
+callback **echoes every parameter array the library built**, so the transcript observes the *translation* and
+not merely a return code. Two families are told apart by their answers: a gate refuses `-2` with
+`EVP_R_COMMAND_NOT_SUPPORTED` where a ctrl wrapper refuses `-1` with `EVP_R_NO_OPERATION_SET`, and every
+refusal drains its queue and compares the coordinate (`dh_ctrl.c:22`, `:37`, `:166`, `pmeth_lib.c:1309`,
+`:1346`, `dsa_ctrl.c:20`). The round trips are the getter-backed pairs: `kdf-outlen` (whose fresh value is the
+`UINT_MAX` the authority seeds it with, and whose non-positive refusal is the bare `-2` with no raise), the
+bidirectional `kdf-type`, the `cekalg` OID pair, and the `kdf-ukm` pair that exists only under
+`#ifndef OPENSSL_NO_DEPRECATED_3_0`. Where a getter's answer cannot be compared for the reason above, the
+arm prints a constant and the probe names the callee: **no arm prints a secret** — the echoed values are FFC
+sizes, group and digest names, a probe-chosen seed and a probe-chosen UKM, all supplied by the probe itself.
+
+**Bookkeeping, read off the regenerated files.** `phase8` moves implemented 617 -> **644**, deferred 1
+unchanged, open 168 -> **141**, owned 786 unchanged; `forensics/atlas/implemented-surface.json` moves
+`libcrypto` implemented 2534 -> **2561**; `forensics/atlas/transcription-edges.json` gains the two edges,
+over **270** crate modules and **240** authority units. `court_coverage.py` reports every one of the
+stratum's **644** implemented exports courted (636 directly, 8 indirectly, 0 non-observable). The
+prerequisite gate ends at **zero findings**, `sealed_census` stays **52** and `blocking_dependencies` stays
+**19**, so **no `forensics/ownership-transitions.json` row was needed**; it is the pipeline's own
+`regression_guard.py --baseline-ref origin/main` that proves the two counts did not move. `docs/PHASE-8-
+SUBPHASES.md`'s 8.5 and 8.6 rows record this entry, its two anchored clauses carry the landed names, and its
+`docs/PHASE-8-REMAINING.md` projection is regenerated.
+
+**What is deliberately *not* here, named rather than implied.** 8.5's `dh_asn1.c`, `dh_prn.c` and
+`DH_KDF_X9_42`, and 8.6's `dsa_asn1.c`, `dsa_prn.c`, `dsa_check.c`, `dsa_backend.c` and `dsa_err.c`, all
+unchanged and each with its own row; the two provider halves (`dh_backend.c`/`dsa_backend.c`) and the two
+keymgmts, which are why the court publishes its own; the `EVP_PKEY_get0_DH`/`get1_DH`/`set1_DH` and
+`EVP_PKEY_get0_DSA`/`get1_DSA`/`set1_DSA` accessors, which are `p_legacy.c`'s and reach
+`evp_pkey_get_legacy`/`EVP_PKEY_assign` — 8.8's, and therefore Phase 11's by D341's coordinate — and are
+**not** reached by any control this commit lands; and the `get_dh_kdf_md` digest-by-name path named above.
+No name in `forensics/tools/phase8_obligations.py`'s `BLOCKED_HANDOFFS` is defined by this commit, so no row
+is retired or split, which the generator checks rather than trusts.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete: false` with
+**141** names open, 8.8's fifteen and the four key types' ASN.1 and printer families among them. What this
+slice is, is the EVP control surface of two key types and the one lookup their closure required — not 8.5,
+not 8.6, and not 8.8.

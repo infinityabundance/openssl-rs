@@ -335,7 +335,7 @@
         "truncf128",
         "truncf16"
       ],
-      "compiler_emitted_count": 9424,
+      "compiler_emitted_count": 9430,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -343,7 +343,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 2534,
+        "implemented": 2561,
         "implemented_symbols": [
           "AES_bi_ige_encrypt",
           "AES_cbc_encrypt",
@@ -1902,6 +1902,8 @@
           "EVP_PKEY_CTX_ctrl_uint64",
           "EVP_PKEY_CTX_dup",
           "EVP_PKEY_CTX_free",
+          "EVP_PKEY_CTX_get0_dh_kdf_oid",
+          "EVP_PKEY_CTX_get0_dh_kdf_ukm",
           "EVP_PKEY_CTX_get0_libctx",
           "EVP_PKEY_CTX_get0_peerkey",
           "EVP_PKEY_CTX_get0_pkey",
@@ -1914,6 +1916,9 @@
           "EVP_PKEY_CTX_get_app_data",
           "EVP_PKEY_CTX_get_cb",
           "EVP_PKEY_CTX_get_data",
+          "EVP_PKEY_CTX_get_dh_kdf_md",
+          "EVP_PKEY_CTX_get_dh_kdf_outlen",
+          "EVP_PKEY_CTX_get_dh_kdf_type",
           "EVP_PKEY_CTX_get_group_name",
           "EVP_PKEY_CTX_get_keygen_info",
           "EVP_PKEY_CTX_get_operation",
@@ -1933,6 +1938,8 @@
           "EVP_PKEY_CTX_new_from_name",
           "EVP_PKEY_CTX_new_from_pkey",
           "EVP_PKEY_CTX_new_id",
+          "EVP_PKEY_CTX_set0_dh_kdf_oid",
+          "EVP_PKEY_CTX_set0_dh_kdf_ukm",
           "EVP_PKEY_CTX_set0_keygen_info",
           "EVP_PKEY_CTX_set0_rsa_oaep_label",
           "EVP_PKEY_CTX_set1_hkdf_key",
@@ -1946,6 +1953,26 @@
           "EVP_PKEY_CTX_set_app_data",
           "EVP_PKEY_CTX_set_cb",
           "EVP_PKEY_CTX_set_data",
+          "EVP_PKEY_CTX_set_dh_kdf_md",
+          "EVP_PKEY_CTX_set_dh_kdf_outlen",
+          "EVP_PKEY_CTX_set_dh_kdf_type",
+          "EVP_PKEY_CTX_set_dh_nid",
+          "EVP_PKEY_CTX_set_dh_pad",
+          "EVP_PKEY_CTX_set_dh_paramgen_generator",
+          "EVP_PKEY_CTX_set_dh_paramgen_gindex",
+          "EVP_PKEY_CTX_set_dh_paramgen_prime_len",
+          "EVP_PKEY_CTX_set_dh_paramgen_seed",
+          "EVP_PKEY_CTX_set_dh_paramgen_subprime_len",
+          "EVP_PKEY_CTX_set_dh_paramgen_type",
+          "EVP_PKEY_CTX_set_dh_rfc5114",
+          "EVP_PKEY_CTX_set_dhx_rfc5114",
+          "EVP_PKEY_CTX_set_dsa_paramgen_bits",
+          "EVP_PKEY_CTX_set_dsa_paramgen_gindex",
+          "EVP_PKEY_CTX_set_dsa_paramgen_md",
+          "EVP_PKEY_CTX_set_dsa_paramgen_md_props",
+          "EVP_PKEY_CTX_set_dsa_paramgen_q_bits",
+          "EVP_PKEY_CTX_set_dsa_paramgen_seed",
+          "EVP_PKEY_CTX_set_dsa_paramgen_type",
           "EVP_PKEY_CTX_set_group_name",
           "EVP_PKEY_CTX_set_hkdf_md",
           "EVP_PKEY_CTX_set_hkdf_mode",
@@ -2880,7 +2907,7 @@
           "i2d_ECDSA_SIG",
           "i2t_ASN1_OBJECT"
         ],
-        "scaffolded": 3362
+        "scaffolded": 3335
       },
       "libssl": {
         "authority_exports": 603,
@@ -2891,18 +2918,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 2534,
-      "scaffolded": 3965
+      "implemented": 2561,
+      "scaffolded": 3938
     }
   },
-  "body_hash": "a33a02028e3208b5962dacc603a2e9c31459e8ab36afce580ddb26a439541263",
+  "body_hash": "05735fe2520b8ebdfc2112929fdaba2179d0f34b99c90c807d88ec0a3e77cf66",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "7e09e372f8c05e2bfccb427be7300cda9d04074a81fe5f3827812ad8113a75e9"
+      "sha256": "17060eb776b70ab3af20c30efc11969beb6657a6795dddff5330e20c38a385c2"
     },
     {
       "name": "authority-exports",

@@ -140,6 +140,7 @@
 //! clauses and `docs/DECISIONS.md` D329/D331 record what the court observed.
 
 pub mod check;
+pub mod ctrl;
 pub mod depr;
 pub mod gen;
 pub mod group_params;
