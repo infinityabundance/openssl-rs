@@ -274,22 +274,6 @@
         "evidence": "docs/DECISIONS.md D340; crypto/ec/ec_backend.c:729-833; crypto/ec/ec_asn1.c's ECPKPARAMETERS/ECPRIVATEKEY template objects; forensics/atlas/transcription-edges.json's `crypto/ec/ec_backend.c` edge"
       },
       {
-        "owner_module": "src/ec/asn1.rs",
-        "class": "owned_by_a_later_stratum",
-        "covers": [
-          "EC_PRIVATEKEY_free",
-          "EC_PRIVATEKEY_new",
-          "X9_62_CHARACTERISTIC_TWO_new",
-          "X9_62_PENTANOMIAL_new",
-          "d2i_ECPKPARAMETERS",
-          "d2i_EC_PRIVATEKEY",
-          "i2d_ECPKPARAMETERS",
-          "i2d_EC_PRIVATEKEY"
-        ],
-        "note": "**Withheld rather than stubbed.** `src/ec/asn1.rs` lands the three `ec.h` DER exports a landed unit needs -- `ECDSA_size`, `i2d_ECDSA_SIG` and `d2i_ECDSA_SIG`, which `crypto/ec/ecdsa_ossl.c`'s `ossl_ecdsa_sign`/`ossl_ecdsa_verify` reach -- and is therefore a module for `crypto/ec/ec_asn1.c`, which makes the unit's template objects countable (D327's rule). These eight are the ones the lexical scan sees: the `_new` members of `X9_62_PENTANOMIAL`/`X9_62_CHARACTERISTIC_TWO`/`EC_PRIVATEKEY`, `EC_PRIVATEKEY_free`, and the `d2i_`/`i2d_` members of `ECPKPARAMETERS` and `EC_PRIVATEKEY`. Each is produced by `IMPLEMENT_ASN1_ALLOC_FUNCTIONS`/`DECLARE_ASN1_FUNCTIONS` and needs the ASN.1 item machinery over `crypto/asn1/tasn_*.c` that the `ECParameters`/`ECPKParameters`/`EC_PRIVATEKEY` family -- 8.8's, with `ec_ameth.c` and `eck_prn.c` -- is built from. The two `_free` members the macros generate for `X9_62_PENTANOMIAL` and `X9_62_CHARACTERISTIC_TWO` are **not** in this list because the lexical scan never sees them, so the gate never owes them. A transcription that returned NULL or dropped a template would be a fabricated answer for names that family owns, so the eight are absent rather than approximated. **The class is the closest of the five and the tension is recorded rather than smoothed over**: the work this name waits on is a later slice of the *same* stratum, exactly as `ossl_ffc_params_todata`'s row records for D330.",
-        "evidence": "docs/DECISIONS.md D340; crypto/ec/ec_asn1.c:102-168 and :1182-1185; forensics/atlas/transcription-edges.json's `crypto/ec/ec_asn1.c` edge"
-      },
-      {
         "owner_module": "src/bn/intern.rs",
         "class": "modelled_differently",
         "covers": [

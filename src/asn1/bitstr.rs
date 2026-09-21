@@ -76,7 +76,7 @@ pub(crate) const LINE: c_int = 0;
 /// # Safety
 ///
 /// `a` must be a live `ASN1_STRING`.
-unsafe fn set_bits_left(a: *mut Asn1String, num: c_int) {
+pub(crate) unsafe fn set_bits_left(a: *mut Asn1String, num: c_int) {
     // SAFETY: the caller guarantees `a` is live and uniquely owned here.
     if let Some(s) = unsafe { as_str_mut(a) } {
         s.flags &= !0x07;

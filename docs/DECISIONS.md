@@ -23871,3 +23871,176 @@ hand-offs, which is what `ownership_audit.py`'s hand-off check requires. `docs/P
 false` with **98** names open, 8.8's fifteen and the four key types' ASN.1 and printer families among
 them. What this slice is, is the provider KDF operation and the three wrappers that fetch it — not
 8.8, and not a claim about the stratum's work being nearly done.
+
+---
+
+## D347 — 8.7's `ECParameters`/`ECPKParameters`/`EC_PRIVATEKEY` DER family and the four printers land, `crypto/ec/ec_asn1.c` becomes whole and one divergence row retires, and the frontier that keeps the last five open is measured rather than argued
+
+**Decision.** **Twenty-two exports** leave `open` for `implemented`, and `src/ec/asn1.rs` grows from
+three exports to the whole of `crypto/ec/ec_asn1.c`, with `src/ec/prn.rs` new for the printers:
+
+* **The parameters family — eighteen.** The six ASN.1 templates and the internals the
+  `DECLARE_ASN1_*`/`IMPLEMENT_ASN1_*` macros generate from them: `X9_62_PENTANOMIAL`,
+  `X9_62_CHARACTERISTIC_TWO`, `X9_62_FIELDID`, `X9_62_CURVE`, `ECPARAMETERS` and
+  `ECPKPARAMETERS`, over `X9_62_PENTANOMIAL_new`/`_free`, `X9_62_CHARACTERISTIC_TWO_new`/`_free`,
+  `EC_PRIVATEKEY_new`/`_free`, `d2i_ECPKPARAMETERS`/`i2d_ECPKPARAMETERS` and
+  `d2i_EC_PRIVATEKEY`/`i2d_EC_PRIVATEKEY`; the four `ec.h` allocators and item accessors
+  (`ECPARAMETERS_new`/`_free`/`_it`, `ECPKPARAMETERS_new`/`_free`/`_it`); the four `EC_GROUP_*`
+  builders (`EC_GROUP_get_ecparameters`, `EC_GROUP_get_ecpkparameters`,
+  `EC_GROUP_new_from_ecparameters`, `EC_GROUP_new_from_ecpkparameters`); the four DER entry points
+  (`d2i_ECPKParameters`/`i2d_ECPKParameters`, `d2i_ECParameters`/`i2d_ECParameters`); the SEC1
+  private-key pair (`d2i_ECPrivateKey`/`i2d_ECPrivateKey`) and the two public-point codecs
+  (`o2i_ECPublicKey`/`i2o_ECPublicKey`).
+* **The printers — four.** `ECPKParameters_print`, `ECPKParameters_print_fp`,
+  `ECParameters_print_fp` and `ECParameters_print`.
+
+The ledger moves implemented 688 -> **710**, deferred **0**, open 98 -> **76** over the same **786**
+owned. `forensics/atlas/implemented-surface.json` moves `libcrypto` implemented 2605 -> **2627**,
+which is the twenty-two and nothing else.
+
+**`crypto/ec/ec_asn1.c` is whole, and the `ASN1_ADB` machinery is the crate's first.** The unit is
+1,324 lines; every export and every internal is now named here. The two `ANY DEFINED BY` templates
+are transcribed with the authority's own macro shape: `X9_62_CHARACTERISTIC_TWO` and `X9_62_FIELDID`
+carry an `ASN1_ADB` whose selector offset, table of `(NID, template)` rows, default template and
+never-present null template are `Asn1Adb`/`Asn1AdbTable` built as `static`s — the machinery
+(`Asn1Template`, `ASN1_TFLG_ADB_OID`, `call_item_exp`, `do_adb`) was already landed in Phase 5, and no
+module had constructed one before. The seven structures the templates are laid out over are
+`#[repr(C)]` and their offsets are `core::mem::offset_of!` with a `const _: () = { assert!(...) }`
+block, the same rule D345 records for RSA/DH/DSA: `X9_62_PENTANOMIAL` 12, `X9_62_CHARACTERISTIC_TWO`
+24, `X9_62_FIELDID` 16, `X9_62_CURVE` 24, `ECPARAMETERS` 48, `ECPKPARAMETERS` 16,
+`EC_PRIVATEKEY` 32. The CHOICE's `utype` is its selector offset (0), which is what the crate's
+`get_choice_selector` reads.
+
+**Two of the brief's coordinates are corrected by the authority, and neither correction is padded.**
+The brief named `ec_asn1_group2pkparameters`, `ec_asn1_pkparameters2group`,
+`ec_asn1_group2parameters` and `ossl_ec_group_new_from_ecparameters` as "the file-local helpers they
+call". **None of the four exists in this authority.** `grep -n` over `crypto/ec/ec_asn1.c` answers two
+file-local builders — `ec_asn1_group2fieldid` (`:179-299`) and `ec_asn1_group2curve` (`:301-370`) —
+and the four "helpers" are the exports' own names (`EC_GROUP_get_ecparameters` and its three
+siblings), which the file defines directly rather than through a static. The names are older
+OpenSSL's, and the only authority is the vendored 3.6.4 source, so nothing was invented to match
+them. The brief also placed `ECParameters_print` in `crypto/ec/eck_prn.c`; its authority body is
+`crypto/ec/ec_ameth.c:717-720`, the `EC_KEY_PRINT_PARAM` arm of that unit's `static do_EC_KEY_print`.
+It is transcribed where it is reachable — `src/ec/prn.rs` — with its own coordinate in its doc
+comment, and written out as that one arm rather than as a three-way `do_EC_KEY_print`, because the
+other two arms are `EC_KEY_print`'s, below.
+
+**The raise coordinates are generated rather than reconstructed.** `crypto/ec/eck_prn.c` and
+`crypto/ec/ec_ameth.c` both join `gen_err_raise_sites.py`'s `COVERED_FILES` with this module, so the
+four printer sites (`ECK_PRN_27`, `_42`, `_57`) and the dynamic tail (`ECK_PRN_214`, the computed
+`reason`) and `ECParameters_print`'s two (`EC_AMETH_292`, `EC_AMETH_341`) are the generator's own
+constants. That is deliberately **not** the hand-written `ERR_raise_data` expansion D345 used for
+`dh_ameth.c`/`dh_prn.c`: those units raise from a file no crate module names, and these two raise from
+files this commit gives modules. `err_sites.rs` is regenerated with them, and
+`forensics/atlas/err-raise-sites.json` grows by the two units' sites.
+
+**The frontier is measured, and the measurement is what the last five wait on.** For each of the
+remaining **76** open rows, its defining authority unit and the identifiers that unit **calls** which
+the crate does not define — `court/p8-frontier.py`, tightened from `court/p8-critical-path.py`'s
+identifier scan to real C call sites whose names are in the internal-symbol or export universe. The
+seventy-six rows group into **14 defining units**; the missing callees number **37**, and by the
+owner the ownership atlas gives each: Phase 5 **1** (`PEM_bytes_read_bio`), Phase 7 **11**
+(`EVP_PKEY_type`, the four `EVP_PKEY_get1_*`, `EVP_PKEY_set1_{DSA,RSA}`, the three
+`EVP_PKEY_print_*`, `PEM_read_PrivateKey`/`PEM_read_bio_PrivateKey`), Phase 8 **1** (`EC_KEY_print`),
+Phase 10 **4** (`OSSL_ENCODER_CTX_new_for_pkey`, `OSSL_ENCODER_CTX_get_num_encoders`,
+`OSSL_ENCODER_to_bio`, `OSSL_ENCODER_CTX_free`), Phase 11 **4** (`X509_PUBKEY_get0_param`,
+`X509_PUBKEY_set0_param`, `X509_ALGOR_free`, `PKCS8_pkey_set0`), Phase 13 **5** (the `ENGINE_*`
+family), and **11** internal names with no atlas row (`evp_pkey_get0_EC_KEY_int`,
+`evp_pkey_get0_RSA_int`, `ossl_ec_key_from_pkcs8`, `ossl_ec_key_param_from_x509_algor`,
+`ossl_x509_PUBKEY_get0_libctx`, `ossl_ecx_key_up_ref`, `ossl_x509at_dup` and the four
+`*_is_foreign` twins). **Per unit, the frontier is:** `crypto/asn1/d2i_param.c` (`d2i_KeyParams`/`d2i_KeyParams_bio`) and
+`crypto/evp/p_legacy.c` (six) call nothing the crate lacks — their bodies reach only landed names, so
+what holds them open is the `standard_methods[]` table below and not a callee; `crypto/asn1/d2i_pu.c`
+(`d2i_PublicKey`) needs `evp_pkey_copy_downgraded`; `crypto/ec/eck_prn.c` (`EC_KEY_print_fp`) needs
+`EC_KEY_print`; `crypto/rsa/rsa_prn.c` (`RSA_print`/`RSA_print_fp`) needs `EVP_PKEY_print_private`
+and `EVP_PKEY_set1_RSA`; `crypto/dsa/dsa_prn.c` (four) needs
+`EVP_PKEY_print_params`/`EVP_PKEY_print_private`/`EVP_PKEY_set1_DSA`; `crypto/rsa/rsa_asn1.c`
+(eleven) needs `X509_ALGOR_free`; `crypto/ec/ec_ameth.c` (`EC_KEY_print`) needs
+`X509_PUBKEY_get0_param`, `X509_PUBKEY_set0_param`, `PKCS8_pkey_set0`, `EVP_PKEY_get0_EC_KEY`,
+`evp_pkey_get0_EC_KEY_int`, `ossl_ec_key_from_pkcs8`, `ossl_ec_key_param_from_x509_algor` and
+`ossl_x509_PUBKEY_get0_libctx`; `crypto/evp/p_dec.c` and `p_enc.c`
+(`EVP_PKEY_decrypt_old`/`EVP_PKEY_encrypt_old`) need `evp_pkey_get0_RSA_int`;
+`crypto/evp/evp_pkey_type.c` (`EVP_PKEY_type`) needs `ENGINE_finish`; `crypto/evp/pmeth_lib.c`
+(three) needs the four `ENGINE_*` names and `EVP_PKEY_type`; `crypto/evp/p_lib.c` (twelve) needs
+fourteen; and `crypto/pem/pem_all.c` (thirty) needs `EVP_PKEY_get1_DSA`/`EVP_PKEY_get1_EC_KEY`/
+`EVP_PKEY_get1_RSA` plus `PEM_bytes_read_bio`/`PEM_read_PrivateKey`/`PEM_read_bio_PrivateKey`.
+
+The three headlines the brief named re-check:
+
+* **`EVP_PKEY_type` resolves through `standard_methods[]`, and the table is empty here.**
+  `crypto/evp/evp_pkey_type.c:63` calls `EVP_PKEY_asn1_find`, whose standard half searches
+  `crypto/asn1/ameth_lib.c`'s `standard_methods[]`; `src/evp/pkey_asn1.rs` carries that term as
+  **zero** by the recorded `D-PKEY-AMETH-1` divergence (its own §"the first term is **zero here**"),
+  so every legacy-key accessor in 8.4-8.7 and all fifteen of 8.8 wait on that table. The call graph
+  cannot show it — a table read is not a call — which is why the frontier script lists
+  `EVP_PKEY_type`'s only *call* as `ENGINE_finish` and the reason is stated here instead.
+* **`EVP_PKEY_print_private`/`_print_params`/`_print_public` are deferred by Phase 7 to Phase 10**,
+  on `OSSL_ENCODER_CTX_new_for_pkey`/`OSSL_ENCODER_CTX_get_num_encoders`/`OSSL_ENCODER_to_bio`
+  (`forensics/phase7-obligations.json`'s `deferred` rows, `owning_phase: 10`). So `RSA_print`,
+  `RSA_print_fp`, `DSA_print`, `DSAparams_print`, `DSA_print_fp`, `DSAparams_print_fp` and
+  `EC_KEY_print` cannot be written before Phase 10's encoder path.
+* **`X509_PUBKEY_get0_param`, `X509_PUBKEY_set0_param`, `X509_ALGOR_get0` and `PKCS8_pkey_set0` are
+  Phase 11's with no crate module.** `symbol-ownership.json` assigns all four `owner_phase: 11` and
+  no `translation_unit` — the atlas's `not-yet-written` shape — and they are defined in
+  `crypto/x509/x_pubkey.c`, `crypto/asn1/x_algor.c` and `crypto/asn1/p8_pkey.c`, none of which has a
+  crate module. They are the `ec_ameth.c` closure's Phase-11 end and the reason `EC_KEY_print`
+  stays open even though its own unit now has a module.
+
+**The courts, and what they refuse to print.** `RT-EC` grows 2373 -> **2419 observations** with zero
+residuals. The new block drives every one of the twenty-two: the two allocators and item accessors,
+`EC_GROUP_get_ecpkparameters`/`get_ecparameters` filling a caller's object, `i2d_ECPKParameters` of a
+named curve **printed in full** (the ten-octet OID is a public constant, so printing it is not a
+secret), the `d2i_ECPKParameters`/`d2i_ECParameters` round trips with their exact cursors,
+`i2d_ECParameters` over a key compared byte-for-byte with the group's,
+`i2o_ECPublicKey`/`o2i_ECPublicKey` on the generated public point (compared by `EC_POINT_cmp`), and
+`i2d_ECPrivateKey`/`d2i_ECPrivateKey` observed **by width and round trip only — the bytes are never
+printed**, because a private key's DER carries the scalar. The four printers run into a memory BIO
+and a `tmpfile()`; the named-curve arm checks the four-space indent and `ASN1 OID:`, and the drained
+coordinate is `ECPKParameters_print(NULL)`'s at `eck_prn.c:214`. Three unit tests in `src/ec/asn1.rs`
+assert the six items' names and `sizeof`s, the CHOICE selector offset, the ten-octet P-256 OID and
+its `EC_GROUP_cmp`-equal round trip, and that a fresh `ECPARAMETERS` has its nested items.
+
+**Bookkeeping, read off the regenerated files.** `phase8` implemented 688 -> **710**, deferred 0,
+open 98 -> **76**, owned **786**; `implemented-surface.json` `libcrypto` 2605 -> **2627**;
+`transcription-edges.json` gains nothing in module count beyond `src/ec/prn.rs`, and
+`court_coverage.py` reports every one of the stratum's **710** implemented exports courted. The
+prerequisite gate ends at **zero findings** over **10 divergence rows / 39 names** — the
+`src/ec/asn1.rs` row D340 wrote is **retired**, because all eight names it covered (`EC_PRIVATEKEY_new`,
+`EC_PRIVATEKEY_free`, `X9_62_PENTANOMIAL_new`, `X9_62_CHARACTERISTIC_TWO_new`, `d2i_ECPKPARAMETERS`,
+`i2d_ECPKPARAMETERS`, `d2i_EC_PRIVATEKEY`, `i2d_EC_PRIVATEKEY`) are now built by the authority's own
+spelling, which is the fail-closed direction the gate's direction D exists for. `docs/PHASE-8-
+SUBPHASES.md`'s 8.7 row records this entry, its two anchored clauses move the twenty-two names from the
+`open` paragraph to the landed one, and `docs/PHASE-8-REMAINING.md` is regenerated.
+
+**What is deliberately *not* here, named rather than implied.** `EC_KEY_print`
+(`crypto/ec/ec_ameth.c:709-714`) and `EC_KEY_print_fp` (`crypto/ec/eck_prn.c:36-49`), which are the
+`EC_KEY_PRINT_PRIVATE` arm of `do_EC_KEY_print` and reach the `EVP_PKEY_ASN1_METHOD` object and the
+`standard_methods[]` table above; and the three legacy accessors `EVP_PKEY_get0_EC_KEY`,
+`EVP_PKEY_get1_EC_KEY` and `EVP_PKEY_set1_EC_KEY`, which wait on
+`evp_pkey_get_legacy`/`EVP_PKEY_assign` (`crypto/evp/p_lib.c`), Phase 11's. Those are the five of
+8.7's twenty-seven that stay open. `crypto/ec/ec_ameth.c`'s other exports — the ASN.1 method object
+and its callbacks — are untouched, as is the whole of 8.8.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete:
+false` with **76** names open, 8.8's fifteen, the four key types' printer families and the thirty
+`pem.h` helpers among them. What this slice is, is 8.7's DER parameters family, its two ADB tables,
+its SEC1 codecs and its four printers -- not 8.8, not the PEM layer, and not a claim about the
+stratum's work being nearly done.
+
+**A probe arm printed a length drawn from a random secret, and removing it is what retires the
+intermittency D340, D342 and D346 each saw once.** `courts/phase8/rt_dh_probe.c`'s
+`dh.agree.unpad1` arm printed `DH_compute_key`'s answer for an unpadded agreement. That answer is
+`BN_num_bytes(p)` minus the secret's leading zero bytes -- `crypto/dh/dh_key.c:114-140`'s
+`ret -= npad`, counted with the constant-time mask loop above it -- and **both exponents are drawn
+inside the probe**: `DH_generate_parameters_ex(dh, 512, 2, NULL)` picks `p` and `DH_generate_key`
+picks two private values, so the number printed was a function of the draw rather than of the
+library under test. `probe_hygiene.py` caught it as `dh.agree.unpad1: '64' then '63'` at `-O2`, and
+the same draw gave `RT-DH` a latent spurious-mismatch rate of about one run in two hundred and
+fifty-six, because the authority and candidate sides draw independently and the transcript is
+diffed. The arm now observes the rule the length demonstrates, over the bytes it holds:
+`dh.agree.unpad1_strips_leading_zeros` is `unpad1 == pad1 - leading_zeros(k1, pad1)`,
+`dh.agree.unpad1_first_nonzero` is `unpad1 > 0 && u1[0] != 0`, and `dh.agree.unpad1_le_pad` and
+`dh.agree.unpad_is_tail` are unchanged. That is **four** deterministic observations where one
+nondeterministic print and one weaker predicate stood, so the fix is a strengthening rather than a
+deletion, and `RT-DH` moves 588 -> **589** observations. `probe_hygiene.py` ends `all_clean=True`
+with `rt_dh_probe.c` read as `clean (551, 551)`.

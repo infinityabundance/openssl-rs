@@ -92,6 +92,7 @@ pub mod mult;
 pub mod nist;
 pub mod oct;
 pub mod print;
+pub mod prn;
 pub mod smpl;
 pub mod smpl2;
 pub mod support;

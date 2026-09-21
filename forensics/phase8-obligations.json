@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 0,
-      "implemented": 688,
-      "open_in_this_stratum": 98,
+      "implemented": 710,
+      "open_in_this_stratum": 76,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1329,6 +1329,16 @@
       "ECDSA_sign_setup",
       "ECDSA_size",
       "ECDSA_verify",
+      "ECPARAMETERS_free",
+      "ECPARAMETERS_it",
+      "ECPARAMETERS_new",
+      "ECPKPARAMETERS_free",
+      "ECPKPARAMETERS_it",
+      "ECPKPARAMETERS_new",
+      "ECPKParameters_print",
+      "ECPKParameters_print_fp",
+      "ECParameters_print",
+      "ECParameters_print_fp",
       "EC_GF2m_simple_method",
       "EC_GFp_mont_method",
       "EC_GFp_nist_method",
@@ -1354,6 +1364,8 @@
       "EC_GROUP_get_curve_GFp",
       "EC_GROUP_get_curve_name",
       "EC_GROUP_get_degree",
+      "EC_GROUP_get_ecparameters",
+      "EC_GROUP_get_ecpkparameters",
       "EC_GROUP_get_field_type",
       "EC_GROUP_get_mont_data",
       "EC_GROUP_get_order",
@@ -1368,6 +1380,8 @@
       "EC_GROUP_new_by_curve_name_ex",
       "EC_GROUP_new_curve_GF2m",
       "EC_GROUP_new_curve_GFp",
+      "EC_GROUP_new_from_ecparameters",
+      "EC_GROUP_new_from_ecpkparameters",
       "EC_GROUP_new_from_params",
       "EC_GROUP_order_bits",
       "EC_GROUP_precompute_mult",
@@ -1729,6 +1743,9 @@
       "d2i_DSA_SIG",
       "d2i_DSAparams",
       "d2i_ECDSA_SIG",
+      "d2i_ECPKParameters",
+      "d2i_ECParameters",
+      "d2i_ECPrivateKey",
       "d2i_RSAPrivateKey",
       "d2i_RSAPublicKey",
       "i2d_DHparams",
@@ -1738,8 +1755,13 @@
       "i2d_DSA_SIG",
       "i2d_DSAparams",
       "i2d_ECDSA_SIG",
+      "i2d_ECPKParameters",
+      "i2d_ECParameters",
+      "i2d_ECPrivateKey",
       "i2d_RSAPrivateKey",
-      "i2d_RSAPublicKey"
+      "i2d_RSAPublicKey",
+      "i2o_ECPublicKey",
+      "o2i_ECPublicKey"
     ],
     "module_prefixes": [
       {
@@ -1980,90 +2002,6 @@
         "module": "src/dsa/mod.rs",
         "received_from_phase": null,
         "symbol": "DSAparams_print_fp"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "ECPARAMETERS_free"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "ECPARAMETERS_it"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "ECPARAMETERS_new"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "ECPKPARAMETERS_free"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "ECPKPARAMETERS_it"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "ECPKPARAMETERS_new"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "ECPKParameters_print"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "ECPKParameters_print_fp"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "ECParameters_print"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "ECParameters_print_fp"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_get_ecparameters"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_get_ecpkparameters"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_new_from_ecparameters"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_GROUP_new_from_ecpkparameters"
       },
       {
         "declaring_header": "ec.h",
@@ -2456,24 +2394,6 @@
         "symbol": "RSA_print_fp"
       },
       {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_ECPKParameters"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_ECParameters"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_ECPrivateKey"
-      },
-      {
         "declaring_header": "evp.h",
         "module": "src/asn1/ameth.rs",
         "received_from_phase": 7,
@@ -2504,24 +2424,6 @@
         "symbol": "d2i_RSA_PSS_PARAMS"
       },
       {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_ECPKParameters"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_ECParameters"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_ECPrivateKey"
-      },
-      {
         "declaring_header": "rsa.h",
         "module": "src/rsa/mod.rs",
         "received_from_phase": null,
@@ -2532,18 +2434,6 @@
         "module": "src/rsa/mod.rs",
         "received_from_phase": null,
         "symbol": "i2d_RSA_PSS_PARAMS"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "i2o_ECPublicKey"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "o2i_ECPublicKey"
       }
     ],
     "owned_by_header": {
@@ -2617,12 +2507,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "1027a1d2126a3ec9c5fc7305050d7836405fd7048701ff707f903937a4139076"
+      "sha256": "ecbcd03b9683cbc56d32a3e13434c8685c8edf246d1a3405ff0f49d215c9b7da"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "f0b6f6aa8dd664de0d931651e01025305168576537e0353e8219e1a922ea795b"
+      "sha256": "049a6e0e9169d7d75587a8e9f669ea6483dd9edae56b8436ad2e8f99c39f594e"
     }
   ],
   "kind": "phase8-obligations",

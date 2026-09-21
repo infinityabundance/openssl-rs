@@ -839,6 +839,20 @@ static int bytes_eq(const unsigned char *a, const unsigned char *b, int n)
     return memcmp(a, b, (size_t)n) == 0;
 }
 
+/* How many leading zero bytes `a`'s first `n` has. `DH_compute_key`'s unpad pass is exactly
+ * `ret -= npad`, so this is what the two lengths must differ by, and it is a property of the
+ * bytes rather than a length drawn from a random secret. */
+static int leading_zeros(const unsigned char *a, int n)
+{
+    int i;
+
+    for (i = 0; i < n; i++) {
+        if (a[i] != 0)
+            break;
+    }
+    return i;
+}
+
 /* Whether every byte from `off` of `b` equals `a`'s first `n - off`... in other words that the
  * unpadded secret is the tail of the padded one. */
 static int is_tail(const unsigned char *short_, int short_len,
@@ -998,8 +1012,15 @@ static void dh_object_arms(void)
 
             ERR_clear_error();
             unpad1 = DH_compute_key(u1, DH_get0_pub_key(peer), dh);
-            printf("dh.agree.unpad1=%d\n", unpad1);
-            printf("dh.agree.unpad_le_pad=%d\n", unpad1 <= pad1);
+            /* `unpad1` itself is the padded length minus the secret's leading zero bytes, and
+             * the secret is drawn from a freshly generated key, so printing it would make the
+             * transcript a function of the draw rather than of the library. The two predicates
+             * below are the rule it demonstrates -- `ret -= npad` -- stated over the bytes, and
+             * they are deterministic however many leading zeros the draw happens to have. */
+            printf("dh.agree.unpad1_le_pad=%d\n", unpad1 <= pad1);
+            printf("dh.agree.unpad1_strips_leading_zeros=%d\n",
+                unpad1 == pad1 - leading_zeros(k1, pad1));
+            printf("dh.agree.unpad1_first_nonzero=%d\n", unpad1 > 0 && u1[0] != 0);
             printf("dh.agree.unpad_is_tail=%d\n", is_tail(u1, unpad1, k1, pad1));
             drain("agree_unpadded");
 

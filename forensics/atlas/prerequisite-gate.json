@@ -23,25 +23,17 @@
       "ossl_rsa_pkey_method -> phase 8 (The `EVP_PKEY_METHOD` half of the same boundary: `crypto/evp/pmeth_lib.c`'s `standard_methods[]` holds the ten `ossl_<alg>_pkey_method` objects of the algorithm strata. `EVP_PKEY_meth_find`'s application half (`evp_pkey_meth_find_added_by_application`) is landed and courted; its `OBJ_bsearch_pmeth_func` half is not, and `EVP_PKEY_meth_get0` and `_get_count` index the table outright, so all three exports are withheld rather than stubbed with an application-count answer.)"
     ],
     "census": {
-      "covered_by_a_divergence": 75,
-      "language_surface_not_modelled_by_name": 3931,
+      "covered_by_a_divergence": 67,
+      "language_surface_not_modelled_by_name": 3913,
       "planned_prerequisites": 13
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
         "CRYPTO_THREAD_clean_local": 2,
-        "EC_PRIVATEKEY_free": 1,
-        "EC_PRIVATEKEY_new": 1,
         "F": 1,
-        "X9_62_CHARACTERISTIC_TWO_new": 1,
-        "X9_62_PENTANOMIAL_new": 1,
         "arg": 1,
         "bn_set_static_words": 1,
         "cb_arg": 1,
-        "d2i_ECPKPARAMETERS": 1,
-        "d2i_EC_PRIVATEKEY": 1,
-        "i2d_ECPKPARAMETERS": 1,
-        "i2d_EC_PRIVATEKEY": 1,
         "in": 1,
         "inlen": 1,
         "libctx": 1,
@@ -193,26 +185,27 @@
         "crypto/dsa/dsa_vrf.c": 2,
         "crypto/dso/dso_dlfcn.c": 16,
         "crypto/dso/dso_lib.c": 15,
-        "crypto/ec/ec2_smpl.c": 14,
-        "crypto/ec/ec_asn1.c": 64,
-        "crypto/ec/ec_backend.c": 44,
+        "crypto/ec/ec2_smpl.c": 13,
+        "crypto/ec/ec_asn1.c": 45,
+        "crypto/ec/ec_backend.c": 40,
         "crypto/ec/ec_check.c": 6,
-        "crypto/ec/ec_curve.c": 20,
+        "crypto/ec/ec_curve.c": 19,
         "crypto/ec/ec_cvt.c": 4,
         "crypto/ec/ec_deprecated.c": 9,
-        "crypto/ec/ec_key.c": 24,
+        "crypto/ec/ec_key.c": 23,
         "crypto/ec/ec_kmeth.c": 23,
-        "crypto/ec/ec_lib.c": 41,
-        "crypto/ec/ec_mult.c": 19,
+        "crypto/ec/ec_lib.c": 40,
+        "crypto/ec/ec_mult.c": 18,
         "crypto/ec/ec_oct.c": 10,
         "crypto/ec/ec_print.c": 7,
         "crypto/ec/ecdh_kdf.c": 6,
-        "crypto/ec/ecdh_ossl.c": 11,
-        "crypto/ec/ecdsa_ossl.c": 14,
+        "crypto/ec/ecdh_ossl.c": 10,
+        "crypto/ec/ecdsa_ossl.c": 13,
+        "crypto/ec/eck_prn.c": 13,
         "crypto/ec/ecp_mont.c": 8,
         "crypto/ec/ecp_nist.c": 7,
         "crypto/ec/ecp_smpl.c": 13,
-        "crypto/err/err.c": 89,
+        "crypto/err/err.c": 88,
         "crypto/err/err_all_legacy.c": 11,
         "crypto/err/err_save.c": 2,
         "crypto/evp/asymcipher.c": 20,
@@ -345,18 +338,10 @@
       "covered_by_a_divergence": [
         "CRYPTO_THREAD_clean_local",
         "CRYPTO_THREAD_clean_local",
-        "EC_PRIVATEKEY_free",
-        "EC_PRIVATEKEY_new",
         "F",
-        "X9_62_CHARACTERISTIC_TWO_new",
-        "X9_62_PENTANOMIAL_new",
         "arg",
         "bn_set_static_words",
         "cb_arg",
-        "d2i_ECPKPARAMETERS",
-        "d2i_EC_PRIVATEKEY",
-        "i2d_ECPKPARAMETERS",
-        "i2d_EC_PRIVATEKEY",
         "in",
         "inlen",
         "libctx",
@@ -382,7 +367,15 @@
         "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data"
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_descriptor",
+        "ossl_lib_ctx_get_descriptor",
+        "ossl_lib_ctx_get_ex_data_global"
       ],
       "language_surface_not_modelled_by_name": [
         "crypto/aria/aria.c:X",
@@ -443,12 +436,12 @@
       ]
     },
     "checked": {
-      "authority_units": 250,
-      "crate_modules": 324,
+      "authority_units": 251,
+      "crate_modules": 325,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 19,
-      "divergence_names_covered": 47,
-      "divergence_rows": 11,
+      "divergence_names_covered": 39,
+      "divergence_rows": 10,
       "names_referenced_and_not_built": 18
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
@@ -559,7 +552,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "5b2a04b7f07c34ecc57683a15ec113e3e7dc7896d91043b9bca54d5e23e39c2c",
+  "body_hash": "70d5f8a4ac0ca6eda4bcddfef9ff916d00d307872096ab2b3d2622b679664fd6",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -580,7 +573,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "25abb57b643b31cd4642d5021969d63384d2fb556df409b108c3f3cc307ea1b2"
+      "sha256": "ae2fcd5522bcb1b13f0a82e6a1faf1526ab170c057ab9e68cac6277f735bf962"
     },
     {
       "name": "symbol-ownership",
@@ -595,17 +588,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "4be218f1ab30b94afe5738a07a857dd5bab0b9c31892beb191d7749b3c62d435"
+      "sha256": "1ca2465831d55c42a44b95480ffd51ad6b6d17bede5e5bcd5790b768f15f6440"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "75ed797c3e1703a7b8de77df37c68d943cd093ea5c399bc3218001bcbe916da6"
+      "sha256": "7c05b49abbdad89ee0333413156a0b1ab9f109e47946855e49ac9cc089b70c9c"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "a9eb8bdc50faf4d291c40f925fa41cbde98272cf848b50efdcbcc39ac8db3ce4"
+      "sha256": "259bc8b41b9ec0a9f8e75caa5ae6d7aaaa3af4c1e5dab96e2a87792c2c2e0f12"
     },
     {
       "name": "crate-source-tree",
