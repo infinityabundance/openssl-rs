@@ -15,17 +15,17 @@
 //! * `ossl_ec_key_dup`, the group and key copier [`crate::ec::key::EC_KEY_dup`] calls, which is
 //!   the one name of this unit another *landed* module reads.
 //!
-//! ## Three internals are withheld, and the coordinates are the ASN.1/X.509 half
+//! ## The ASN.1/X.509 tail landed with D351, and the divergence row shrank to one name
 //!
-//! `ossl_x509_algor_is_sm2`, `ossl_ec_key_param_from_x509_algor` and `ossl_ec_key_from_pkcs8` are
-//! **not** transcribed. Their bodies reach `X509_ALGOR_get0`, `d2i_ECPKParameters`,
-//! `d2i_ECParameters`, `d2i_ECPrivateKey` and `PKCS8_pkey_get0` — `crypto/ec/ec_asn1.c`'s
-//! `ECParameters`/`ECPKParameters` template machinery and `crypto/x509`'s algorithm object, which
-//! are 8.8's and slice E's. A transcription that returned early would be a fabricated answer for
-//! names the ASN.1 layer owns, so the three are recorded in `forensics/prerequisites.json` as
-//! divergence rows with their module, which is what turns the prerequisite gate's
-//! `unwired_function_in_the_current_stratum` finding into a decision. `ossl_x509_algor_is_sm2`'s
-//! only caller is the provider half; the other two are the PKCS#8 and `X509_ALGOR` decoders.
+//! `ossl_ec_key_param_from_x509_algor` and `ossl_ec_key_from_pkcs8` are the unit's
+//! `#ifndef FIPS_MODULE` tail. Their bodies reach `X509_ALGOR_get0`, `d2i_ECParameters`,
+//! `d2i_ECPrivateKey` and `PKCS8_pkey_get0` — `crypto/ec/ec_asn1.c`'s template machinery and
+//! `crypto/x509`'s algorithm object, which were 8.8's and slice E's when D340 withheld them.
+//! **Both are in the crate now** (D345's `ec_asn1.c` family, D348's `x_algor.c`, D349's
+//! `p8_pkey.c`), so D351 transcribes the pair and the `forensics/prerequisites.json` divergence
+//! row that covered these names shrinks to `ossl_x509_algor_is_sm2` — which stays withheld, and
+//! for the reason D340 gave: its body reaches `d2i_ECPKParameters` and its only caller is the
+//! provider half, which is not in this crate.
 //!
 //! The unit's one refusal coordinate `CRYPTO_R_TOO_SMALL_BUFFER` belongs to
 //! [`crate::param_build_set`], not here; every raise below is an `EC_R_*`/`ERR_R_*` site from
@@ -33,14 +33,20 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_uint, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void};
 use core::ptr;
 
+use crate::asn1::layout::Asn1String;
+use crate::asn1::p8_pkey::{PKCS8_pkey_get0, Pkcs8PrivKeyInfo};
+use crate::asn1::x_algor::{X509Algor, X509_ALGOR_get0};
 use crate::bn::bignum::{
     bn_get_top, bn_wexpand, BN_clear_free, BN_copy, BN_is_one, BN_is_zero, BN_new, BN_secure_new,
     BN_set_flags, BigNum, BN_FLG_CONSTTIME,
 };
 use crate::bn::ctx::{BN_CTX_free, BN_CTX_get, BN_CTX_new_ex, BnCtx};
+use crate::ec::asn1::{d2i_ECParameters, d2i_ECPrivateKey};
+use crate::ec::curve::EC_GROUP_new_by_curve_name_ex;
+use crate::ec::key::EC_KEY_new_ex;
 use crate::ec::key::{
     ossl_ec_key_get0_propq, ossl_ec_key_get_libctx, EC_KEY_clear_flags, EC_KEY_free,
     EC_KEY_get0_group, EC_KEY_get_enc_flags, EC_KEY_set_conv_form, EC_KEY_set_enc_flags,
@@ -49,6 +55,7 @@ use crate::ec::key::{
     EC_FLAG_COFACTOR_ECDH, EC_PKEY_NO_PUBKEY,
 };
 use crate::ec::kmeth::{ossl_ec_key_new_method_int, EC_KEY_OpenSSL, EC_KEY_get_method};
+use crate::ec::lib::EC_GROUP_set_asn1_flag;
 use crate::ec::lib::{
     ossl_ec_group_new_ex, EC_GROUP_copy, EC_GROUP_free, EC_GROUP_get0_cofactor,
     EC_GROUP_get0_generator, EC_GROUP_get0_order, EC_GROUP_get0_seed, EC_GROUP_get_asn1_flag,
@@ -73,7 +80,9 @@ use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::ex_data::{CRYPTO_dup_ex_data, CRYPTO_EX_INDEX_EC_KEY};
 use crate::runtime::mem::CRYPTO_free;
-use crate::runtime::obj::{NID_X9_62_characteristic_two_field, NID_X9_62_prime_field, NID_undef};
+use crate::runtime::obj::{
+    Asn1Object, NID_X9_62_characteristic_two_field, NID_X9_62_prime_field, NID_undef, OBJ_obj2nid,
+};
 use crate::runtime::str::OPENSSL_strcasecmp;
 
 /// The translation-unit coordinate the `OPENSSL_free` sites in this unit are attributed to.
@@ -1042,10 +1051,251 @@ pub unsafe extern "C" fn ossl_ec_pt_format_param2id(p: *const OsslParam, id: *mu
     }
 }
 
-// The three internals `ossl_x509_algor_is_sm2`, `ossl_ec_key_param_from_x509_algor` and
-// `ossl_ec_key_from_pkcs8` (`ec_backend.c:729-833`, `#ifndef FIPS_MODULE`) are **withheld**.
-// Their bodies reach `X509_ALGOR_get0`, `OBJ_obj2nid`, `d2i_ECPKParameters`, `d2i_ECParameters`,
-// `d2i_ECPrivateKey` and `PKCS8_pkey_get0`, which are `crypto/ec/ec_asn1.c`'s template machinery
-// and `crypto/x509`'s algorithm object — 8.8's and slice E's. They are recorded in
-// `forensics/prerequisites.json`'s divergence list with this module, which is the coordinate
-// rather than a stub.
+// `V_ASN1_UNDEF`/`V_ASN1_SEQUENCE`/`V_ASN1_OBJECT` are read through `crate::asn1::layout`.
+
+/// `EC_KEY *ossl_ec_key_param_from_x509_algor(const X509_ALGOR *palg, OSSL_LIB_CTX *libctx, const
+/// char *propq)` — `ec_backend.c:759-807`. Internal, inside `#ifndef FIPS_MODULE`.
+///
+/// The `ECParameters` decoder's front door, and the **three-way dispatch on the parameter's type**
+/// is the whole function's shape:
+///
+/// * `V_ASN1_SEQUENCE` — explicit parameters: the parameter is an `ASN1_STRING` holding DER, and
+///   `d2i_ECParameters` decodes it **into the key it is handed** (`&eckey`), which is why the
+///   failure test is against the returned pointer rather than against `eckey`.
+/// * `V_ASN1_OBJECT` — a named curve: the identifier is the parameter, the group is looked up by
+///   NID, and — the half a reader gets wrong — the group is marked `OPENSSL_EC_NAMED_CURVE`
+///   **before** it is installed, because the flag is the group's and not the key's.
+/// * anything else — the same `EC_R_DECODE_ERROR` a failed `d2i_ECParameters` answers.
+///
+/// The key is allocated **before** the dispatch, so every one of the three arms falls into the
+/// same `ecerr:` label, which releases the key and the group. In the named-curve arm the group is
+/// released on the success path too — *after* `EC_KEY_set_group` has copied what it needs — so
+/// `group` is NULL there by the time `ecerr:` could run.
+///
+/// `#[allow(dead_code)]`'s reason: **its callers are [`ossl_ec_key_from_pkcs8`] below and 8.8's
+/// `ec_ameth.c` `priv_decode`**, and the PKCS#8 path is unreached until that callback lands.
+///
+/// # Safety
+/// `palg` is a live `X509_ALGOR`; `libctx` is NULL or live; `propq` is NULL or NUL-terminated. On
+/// success the answer is a new `EC_KEY` the caller owns.
+#[allow(dead_code)] // read by ossl_ec_key_from_pkcs8 and 8.8's ec_ameth.c `priv_decode`
+pub(crate) unsafe fn ossl_ec_key_param_from_x509_algor(
+    palg: *const X509Algor,
+    libctx: *mut c_void,
+    propq: *const c_char,
+) -> *mut EcKey {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut ptype: c_int = 0;
+        let mut pval: *const c_void = ptr::null();
+        let mut group: *mut EcGroup = ptr::null_mut();
+
+        X509_ALGOR_get0(ptr::null_mut(), &mut ptype, &mut pval, palg);
+        let mut eckey = EC_KEY_new_ex(libctx, propq);
+        if eckey.is_null() {
+            raise_site(&err_sites::EC_BACKEND_769);
+            return ecerr(eckey, group);
+        }
+
+        if ptype == crate::asn1::layout::V_ASN1_SEQUENCE {
+            let pstr = pval.cast::<Asn1String>();
+            let mut pm = (*pstr).data.cast_const();
+            let pmlen = (*pstr).length;
+
+            // `&eckey` is the authority's `&eckey`: the decoder writes the slot back when it
+            // succeeds, and leaves it alone when it fails, which is why the release below still
+            // sees the key it allocated.
+            if d2i_ECParameters(&mut eckey, &mut pm, pmlen as core::ffi::c_long).is_null() {
+                raise_site(&err_sites::EC_BACKEND_779);
+                return ecerr(eckey, group);
+            }
+        } else if ptype == crate::asn1::layout::V_ASN1_OBJECT {
+            let poid = pval.cast::<Asn1Object>();
+
+            /*
+             * type == V_ASN1_OBJECT => the parameters are given by an asn1 OID
+             */
+            group = EC_GROUP_new_by_curve_name_ex(libctx, propq, OBJ_obj2nid(poid));
+            if group.is_null() {
+                return ecerr(eckey, group);
+            }
+            EC_GROUP_set_asn1_flag(group, OPENSSL_EC_NAMED_CURVE);
+            if EC_KEY_set_group(eckey, group) == 0 {
+                return ecerr(eckey, group);
+            }
+            EC_GROUP_free(group);
+        } else {
+            raise_site(&err_sites::EC_BACKEND_797);
+            return ecerr(eckey, group);
+        }
+
+        eckey
+    }
+}
+
+/// The authority's `ecerr:` label of [`ossl_ec_key_param_from_x509_algor`].
+///
+/// # Safety
+/// `eckey` and `group` are each NULL or this call's own.
+unsafe fn ecerr(eckey: *mut EcKey, group: *mut EcGroup) -> *mut EcKey {
+    // SAFETY: each pointer is NULL or this call's own, per the contract.
+    unsafe {
+        EC_KEY_free(eckey);
+        EC_GROUP_free(group);
+    }
+    ptr::null_mut()
+}
+
+/// `EC_KEY *ossl_ec_key_from_pkcs8(const PKCS8_PRIV_KEY_INFO *p8inf, OSSL_LIB_CTX *libctx, const
+/// char *propq)` — `ec_backend.c:809-833`. Internal, inside `#ifndef FIPS_MODULE`.
+///
+/// The PKCS#8 decoder's EC half, and its shape is the **two-step** one the DH and DSA twins also
+/// have, with one difference worth naming: the parameters and the private scalar are read by two
+/// different entry points whose ownership rules differ. `ossl_ec_key_param_from_x509_algor`
+/// returns a fresh key that already carries the group, and `d2i_ECPrivateKey` then decodes **into**
+/// that key — which is why a failure there releases the whole object rather than a partial one and
+/// why the group the first call installed is not re-created.
+///
+/// `libctx` and `propq` are forwarded rather than unused: the parameter lookup needs them to
+/// resolve a named curve through the provider's group constructors.
+///
+/// `#[allow(dead_code)]`'s reason: **8.8's `ec_ameth.c` `priv_decode` callback is its reader**.
+///
+/// # Safety
+/// `p8inf` is a live `PKCS8_PRIV_KEY_INFO`; on success the answer is a new `EC_KEY` the caller
+/// owns.
+#[allow(dead_code)] // read by 8.8's ec_ameth.c `priv_decode`
+pub(crate) unsafe fn ossl_ec_key_from_pkcs8(
+    p8inf: *const Pkcs8PrivKeyInfo,
+    libctx: *mut c_void,
+    propq: *const c_char,
+) -> *mut EcKey {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut p: *const c_uchar = ptr::null();
+        let mut pklen: c_int = 0;
+        let mut palg: *const X509Algor = ptr::null();
+
+        if PKCS8_pkey_get0(ptr::null_mut(), &mut p, &mut pklen, &mut palg, p8inf) == 0 {
+            return ptr::null_mut();
+        }
+        let mut eckey = ossl_ec_key_param_from_x509_algor(palg, libctx, propq);
+        if eckey.is_null() {
+            return ecerr(eckey, ptr::null_mut());
+        }
+
+        /* We have parameters now set private key */
+        if d2i_ECPrivateKey(&mut eckey, &mut p, pklen as core::ffi::c_long).is_null() {
+            raise_site(&err_sites::EC_BACKEND_825);
+            return ecerr(eckey, ptr::null_mut());
+        }
+
+        eckey
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::asn1::x_algor::{X509_ALGOR_free, X509_ALGOR_new};
+    use crate::ec::key::EC_KEY_get0_group;
+    use crate::ec::lib::{EC_GROUP_get_asn1_flag, EC_GROUP_get_curve_name};
+    use crate::runtime::obj::{NID_X9_62_prime256v1, NID_undef};
+
+    /// **The `V_ASN1_OBJECT` arm is the one that can be driven without DER**: an algorithm
+    /// identifier whose parameter *is* a curve OID resolves through
+    /// `EC_GROUP_new_by_curve_name_ex`, and — the half a reader gets wrong — the group is marked
+    /// `OPENSSL_EC_NAMED_CURVE` before it is installed.
+    #[test]
+    fn a_named_curve_identifier_produces_a_key_with_that_group() {
+        // SAFETY: `X509_ALGOR_new` answers a fresh object or NULL; `OBJ_nid2obj` an object or
+        // NULL. Both are asserted.
+        unsafe {
+            let alg = X509_ALGOR_new();
+            assert!(!alg.is_null());
+            let obj = crate::runtime::obj::OBJ_nid2obj(NID_X9_62_prime256v1);
+            assert!(!obj.is_null());
+            assert_eq!(
+                crate::asn1::x_algor::X509_ALGOR_set0(
+                    alg,
+                    obj,
+                    crate::asn1::layout::V_ASN1_OBJECT,
+                    obj.cast()
+                ),
+                1
+            );
+
+            let key = ossl_ec_key_param_from_x509_algor(alg, ptr::null_mut(), ptr::null());
+            assert!(!key.is_null());
+            let group = EC_KEY_get0_group(key);
+            assert!(!group.is_null());
+            assert_eq!(EC_GROUP_get_curve_name(group), NID_X9_62_prime256v1);
+            assert_eq!(
+                EC_GROUP_get_asn1_flag(group),
+                crate::evp::pkey_ctx::OPENSSL_EC_NAMED_CURVE
+            );
+            EC_KEY_free(key);
+            X509_ALGOR_free(alg);
+        }
+    }
+
+    /// **The `else` arm is a refusal with an error raised**, and the object it allocated first is
+    /// released by the shared `ecerr:` label. A `V_ASN1_NULL` parameter is the cheapest way to
+    /// reach it, and it is what an identifier with no parameters at all looks like.
+    #[test]
+    fn an_identifier_that_is_neither_a_sequence_nor_an_object_is_refused() {
+        // SAFETY: both calls answer a fresh object or NULL, which is asserted.
+        unsafe {
+            let alg = X509_ALGOR_new();
+            assert!(!alg.is_null());
+            let obj = crate::runtime::obj::OBJ_nid2obj(NID_X9_62_prime256v1);
+            assert!(!obj.is_null());
+            assert_eq!(
+                crate::asn1::x_algor::X509_ALGOR_set0(
+                    alg,
+                    obj,
+                    crate::asn1::layout::V_ASN1_NULL,
+                    ptr::null_mut()
+                ),
+                1
+            );
+
+            let key = ossl_ec_key_param_from_x509_algor(alg, ptr::null_mut(), ptr::null());
+            assert!(key.is_null());
+            X509_ALGOR_free(alg);
+        }
+    }
+
+    /// A named curve that does not exist is the same refusal reached one step later, from inside
+    /// the `V_ASN1_OBJECT` arm: `EC_GROUP_new_by_curve_name_ex` answers NULL and the label
+    /// releases the key. `NID_undef` is the OID this crate answers for an unresolvable
+    /// identifier.
+    #[test]
+    fn a_curve_oid_that_resolves_to_no_group_is_refused() {
+        // SAFETY: as above.
+        unsafe {
+            let alg = X509_ALGOR_new();
+            let obj = crate::runtime::obj::OBJ_nid2obj(NID_undef);
+            assert!(!alg.is_null() && !obj.is_null());
+            assert_eq!(
+                crate::asn1::x_algor::X509_ALGOR_set0(
+                    alg,
+                    obj,
+                    crate::asn1::layout::V_ASN1_OBJECT,
+                    ptr::null_mut()
+                ),
+                1
+            );
+
+            let key = ossl_ec_key_param_from_x509_algor(alg, ptr::null_mut(), ptr::null());
+            assert!(key.is_null());
+            X509_ALGOR_free(alg);
+        }
+    }
+
+    // **`ossl_ec_key_from_pkcs8` has no arm here, and the reason is the container.** Its first act
+    // is `PKCS8_pkey_get0`, so a test needs a live `PKCS8_PRIV_KEY_INFO` carrying an
+    // `ECPrivateKey` — which means the `ECParameters`/`ECPrivateKey` DER encoders and a key to
+    // encode. `RT-EC` already drives `d2i_ECPrivateKey` and `i2d_ECPrivateKey` over a generated
+    // key, and D351's entry records that the PKCS#8 wrapper's own evidence is that arm plus this
+    // module's two above; a hand-built container here would be a test of the test.
+}

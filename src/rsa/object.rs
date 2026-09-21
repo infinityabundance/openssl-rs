@@ -294,14 +294,14 @@ pub(crate) const RSA_FLAG_NO_BLINDING: c_int = 0x0080;
 /// can see the `0x0400`.
 const RSA_FLAG_NON_FIPS_ALLOW: c_int = 0x0400;
 /// `RSA_FLAG_TYPE_MASK` — `include/openssl/rsa.h:117`.
-#[allow(dead_code)] // read by rsa_ameth.c's ASN.1 method, which is 8.8's
-const RSA_FLAG_TYPE_MASK: c_int = 0xF000;
+#[allow(dead_code)] // read by rsa_ameth.c's ASN.1 method and by rsa_backend.c's PKCS#8 decoder
+pub(crate) const RSA_FLAG_TYPE_MASK: c_int = 0xF000;
 /// `RSA_FLAG_TYPE_RSA` — `include/openssl/rsa.h:118`.
-#[allow(dead_code)] // read by rsa_ameth.c's ASN.1 method, which is 8.8's
-const RSA_FLAG_TYPE_RSA: c_int = 0x0000;
+#[allow(dead_code)] // as `RSA_FLAG_TYPE_MASK`
+pub(crate) const RSA_FLAG_TYPE_RSA: c_int = 0x0000;
 /// `RSA_FLAG_TYPE_RSASSAPSS` — `include/openssl/rsa.h:119`.
-#[allow(dead_code)] // read by rsa_ameth.c's ASN.1 method, which is 8.8's
-const RSA_FLAG_TYPE_RSASSAPSS: c_int = 0x1000;
+#[allow(dead_code)] // as `RSA_FLAG_TYPE_MASK`
+pub(crate) const RSA_FLAG_TYPE_RSASSAPSS: c_int = 0x1000;
 /// `RSA_FLAG_TYPE_RSAESOAEP` — `include/openssl/rsa.h:120`.
 #[allow(dead_code)] // read by rsa_ameth.c's ASN.1 method, which is 8.8's
 const RSA_FLAG_TYPE_RSAESOAEP: c_int = 0x2000;
