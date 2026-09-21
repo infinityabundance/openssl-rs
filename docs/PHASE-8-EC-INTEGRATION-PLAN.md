@@ -70,7 +70,7 @@ stratum's module names a later stratum's function and the record is the coordina
 approximation. The gate's `deferral_target_not_ahead` check passes (9 > 8) and its `deferral_blocker_is_stale`
 check is satisfied by naming that work.
 
-**3. `court/ec-integration-plan.md` (this file) and the nistz256 divergence record.** A plan that is
+**3. `docs/PHASE-8-EC-INTEGRATION-PLAN.md` (this file) and the nistz256 divergence record.** A plan that is
 written after the commit it describes is a description, not a plan.
 
 **4. `src/ec/lib.rs`, `src/ec/smpl.rs`, `src/ec/mult.rs`, `src/ec/oct.rs`, `src/ec/cvt.rs`

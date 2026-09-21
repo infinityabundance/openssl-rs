@@ -22831,7 +22831,7 @@ a typedef falls into `language_surface_not_modelled_by_name` — the census, whi
 documents as "counted, never a failure". `crypto/ec/ec_curve.c`'s two withheld constructors are
 exports and have been counted this way since D334. So `ec_lib.c` can be given a module with **67 of
 its 69 exports** and all **six** of its internals, and the commit boundary is the closure of the
-units it *calls*, not the list of exports the ledger still owes. `court/ec-integration-plan.md`
+units it *calls*, not the list of exports the ledger still owes. `docs/PHASE-8-EC-INTEGRATION-PLAN.md`
 records that closure, unit by unit, as the plan's §3.
 
 **Nothing is probe-reachable, so no court arm is added.** This slice lands no symbol and changes no
@@ -22957,3 +22957,95 @@ in the generated table. The ledger, the atlases,
 hand-edited, and the pipeline ends `PIPELINE OK`. **Nothing here is a completion claim:** Phase 9
 remains `in-progress` with thirteen open rows, and this commit lands four of the ninety-three
 exports the stratum's working set contains.
+## D338 — 8.7's integration plan's step 2 lands alone, and three of the plan's own coordinates do not survive measurement
+
+**Decision.** Phase 8.7 lands `docs/PHASE-8-EC-INTEGRATION-PLAN.md`'s **step 2** and nothing else:
+`crypto/bn/bn_intern.c`'s internals as `src/bn/intern.rs` and `crypto/bn/bn_exp.c`'s one internal as
+`src/bn/exp.rs`. **No export lands**, so the ledger does not move (`phase8`: implemented **460**,
+deferred **2**, open **324**, owned **786**), `forensics/atlas/implemented-surface.json` does not
+move, `RT-EC` stays at **483 observations**, and no court arm is written — both modules are
+internals with no DSO export, so nothing in either is reachable from a probe, which is D336's own
+reason for adding no arm rather than a vacuous one.
+
+**Why step 2 and not the layer, stated as a measurement rather than as a preference.** The plan's
+§1 puts steps 2–6 in one commit and the closure they form is nine units: `ec_lib.c` 1,800 lines,
+`ecp_smpl.c` 1,720, `ec_key.c` 1,078, `ec2_smpl.c` 997, `ec_mult.c` 978, `ecdsa_ossl.c` 547,
+`ec2_oct.c` 386, `ecp_oct.c` 369, `ec_kmeth.c` 336, `ecdh_ossl.c` 147, `ec_oct.c` 156 and `ec_cvt.c`
+89 — **about 9,100 lines of authority C** before `ecp_mont.c`, `ecp_nist.c` and `ec_curve.c`'s two
+withheld constructors. That is one landing and it is not this session's: what this session adds
+instead is the one step the plan itself justifies as separable ("small enough to land alone", §1
+step 2) and whose **closure is empty** — every name in it is either already built or already the
+crate's, which is the property the EC units do not have and the reason they cannot be cut.
+
+**What landed in `src/bn/intern.rs`, and the one name that was already somewhere else.**
+`bn_compute_wNAF` (`:22-134`, the modified wNAF `ec_mult.c:530`/`:560` will call, transcribed
+whole, with the authority's six `ERR_R_INTERNAL_ERROR` refusals at their own coordinates `:41`,
+`:53`, `:97`, `:109`, `:120`, `:126` and its `ERR_R_BN_LIB` at `:187`), `bn_get_dmax`,
+`bn_set_all_zero`, `bn_copy_words`, `bn_get_words` and `bn_set_words`. **`bn_get_top` is `:137`,
+it is `bn_intern.c`'s, and it was already transcribed at `src/bn/bignum.rs:1755`** because
+`crypto/dsa/dsa_ossl.c`'s `dsa_sign_setup` and `crypto/deterministic_nonce.c` reached it in 8.6 and
+7.4 — so the plan's §2e, "none of them implemented", is true of seven of the eight and false of
+this one, and this module **imports and calls it** rather than defining a second copy the two doc
+comments could drift apart. The gate's direction B accepts exactly that (`prerequisite_gate.py:500`,
+"the module that does own it answers for the name").
+
+**The one name withheld rather than approximated, and it is a storage-model divergence.**
+`bn_set_static_words` (`:171-182`) aliases the caller's `const BN_ULONG *` into `a->d` under
+`BN_FLG_STATIC_DATA`. This crate's `BIGNUM` owns its magnitude (`d: Vec<Limb>`, `src/bn/bignum.rs:83`)
+and `:67` already records that the representation the flag describes is not modelled, so a
+transcription would either copy — a different function, since a later write through the caller's
+array is not seen — or hand out a pointer `BN_free`'s static-data path then declines to release.
+It is recorded rather than written, as a new `forensics/prerequisites.json` divergence row
+(`src/bn/intern.rs`, `modelled_differently`, one name) — the shape D334 used for `ec_curve.c`'s
+withheld internal — and the row's note names the reason it is *unreachable*: the authority has no
+caller for this function anywhere outside its own definition.
+
+**What `src/bn/exp.rs` is, and why it is a substitution.** `bn_exp.c` is 1,379 lines and eighteen
+definitions, seventeen of them exports that 8.4 and 8.5 already landed and one of them
+`bn_mod_exp_mont_fixed_top` (`:604-943`). The authority's own `BN_mod_exp_mont_consttime`
+(`:1146-1157`) is that function plus a `bn_correct_top`, and this representation corrects top on
+every store, so the reachable half is exactly the crate's `BN_mod_exp_mont_consttime` — **including
+its even-modulus refusal at `bn_exp.c:622`**, which is this name's coordinate and *not*
+`BN_mod_exp_mont`'s (`:327`). The two unit tests assert the packed error value rather than the
+reason, so the site is checked and not merely claimed. The named-and-not-written half is the
+`top > BN_CONSTTIME_SIZE_LIMIT` forward (`:624-627`) and the fixed-top discipline itself, which is
+the class `src/bn/gf2m.rs` already records for its own missing blinding.
+
+**Three of the plan's own coordinates do not survive measurement, and one of the brief's.**
+* The plan's §2e attributes `bn_mod_exp_mont_fixed_top`'s call to `ecp_smpl.c`'s `field_inv`. It is
+  **`crypto/ec/ec_lib.c:1271`**, `ossl_ec_group_do_inverse_ord`; `ecp_smpl.c`'s inversion reaches
+  `BN_mod_inverse`. The module that lands the name is the same either way, and the correction is
+  written into `src/bn/exp.rs`'s module documentation.
+* §2e's "none of them implemented" is false for `bn_get_top`, as above.
+* §1 step 3 and the plan's own §8 name the plan as `court/ec-integration-plan.md`; the committed
+  file is **`docs/PHASE-8-EC-INTEGRATION-PLAN.md`**, which is what D336's own path paragraph explains
+  and what the 8.7 row now says.
+* The brief's step order begins at `ecp_smpl.c` and does not name the two BN units at all, while
+  the plan's §1 step 2 puts them first and the gate's direction A is why: a callee belonging to
+  another stratum's directory has to exist before the module that names it does. The plan is
+  followed; the omission is recorded because the next session will read both.
+
+**The measured size of the rest, so the next session starts from a number.** Of `bn_intern.c`'s
+eight internals, **three** have a caller anywhere in the remaining EC closure — `bn_compute_wNAF`
+(`ec_mult.c`), `bn_set_all_zero` (`ec2_smpl.c`, the binary-curve `group_copy`) and
+`bn_mod_exp_mont_fixed_top` (`ec_lib.c`) — while `bn_copy_words`, `bn_get_words` and `bn_set_words`
+are `ecp_nistz256.c`'s and `ecp_sm2p256.c`'s, which D-EC-2 excludes, and `bn_get_dmax` and
+`bn_set_static_words` have no caller in the authority at all. The unit lands whole because D327's
+rule makes a partial `bn_intern.c` a finding rather than a smaller landing.
+
+**Bookkeeping, read off the regenerated files.** `forensics/atlas/transcription-edges.json` gains
+two edges: the gate moves **288 -> 290** crate modules over **216 -> 218** authority units, exactly
+as the plan's §4 table predicts, and **`sealed_stratum_census` stays 52 names over 19 defining
+units and `blocking_dependencies` stays 19** — so no `forensics/ownership-transitions.json`
+`prerequisite_transitions` row was needed, in either direction. `language_census` moves 3,527 ->
+3,553 and `divergence_names_covered` 32 -> 33 over **7 -> 8** rows, both census figures rather than
+failures; `prerequisite_gate.py` reports **zero findings**. The suite moves **861 -> 870** tests,
+nine of them this slice's. `forensics/tools/gen_err_raise_sites.py` needed no change: both units
+were already in its `COVERED_FILES` and every coordinate this slice raises from was already in the
+generated table.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads
+`complete: false`, 8.7's ledger is untouched, `CT-EC` stays PENDING, and the group object, the field
+arithmetic, the multiplication ladder, the key layer, the two signature units and the five
+`EC_METHOD` tables are **not landed**. What this slice is, is the plan's step 2 executed with the
+closure it was justified by measured rather than assumed.
