@@ -160,12 +160,6 @@
         "evidence": "docs/DECISIONS.md D193; docs/PHASE-7-SUBPHASES.md row 7.4l"
       },
       {
-        "symbol": "ossl_dsa_sign_int",
-        "owner_phase": 8,
-        "reason": "`crypto/dsa/dsa_sign.c`'s internal, and the one definition of that file 8.6 does not carry. Its whole body past its four arguments is `i2d_DSA_SIG`, which is the DER `DSA-Sig-Value` encoder, and that is `crypto/asn1_dsa.c`'s `ossl_encode_der_dsa_sig` over `include/internal/packet.h`'s `WPACKET`. Neither unit has a crate module and no stratum's plan row names one: `crypto/packet.c` is the thirty `WPACKET_*` symbols and this crate has no packet writer at all, so writing either would be a new unit rather than a transcription of this one. DSA_size, DSA_sign and DSA_verify -- the three exports that call `ossl_dsa_sign_int` -- stay `open` with it, and RT-DSA does not call them.",
-        "evidence": "docs/DECISIONS.md D333; crypto/dsa/dsa_sign.c:164-189; crypto/asn1_dsa.c:92-125; include/internal/packet.h"
-      },
-      {
         "symbol": "ossl_dsa_ffc_params_fromdata",
         "owner_phase": 8,
         "reason": "`crypto/dsa/dsa_lib.c:355-365`, and the DH half of the same blocker `ossl_ffc_params_todata` names: its body is `ossl_ffc_params_fromdata` plus a `dirty_cnt` bump, and that function is `crypto/ffc/ffc_backend.c`'s -- a unit with no crate module because it calls `crypto/param_build_set.c`'s four `ossl_param_build_set_*`, which no stratum's plan row names. Both of that unit's authority callers are provider backends (`dh_backend.c`, `dsa_backend.c`), so the work it waits on is the provider half of this stratum rather than a callee of 8.6's own. **D340 landed that unit**: `crypto/param_build_set.c`'s seven definitions are `src/param_build_set.rs`, reached by `src/ec/backend.rs` for the four `ossl_param_build_set_*`. The row stands anyway, because what it withholds is 8.5's provider-export half and D340 lands no Phase-8 export that reaches `crypto/dh/dh_backend.c` or `crypto/dsa/dsa_backend.c`.",

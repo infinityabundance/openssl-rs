@@ -34,11 +34,11 @@
  * `ERR_R_BN_LIB` from `ossl_dsa_do_sign_int`'s epilogue, and a `q` narrower than
  * `MIN_DSA_SIGN_QBITS` raises `ERR_R_BN_LIB` twice from two different lines.
  *
- * What it does not cover, named rather than implied: `DSA_sign`, `DSA_verify` and `DSA_size` are
- * **not called**, because their DER `DSA-Sig-Value` codec (`i2d_DSA_SIG`/`d2i_DSA_SIG`) needs
- * `crypto/packet.c` and `crypto/asn1_dsa.c`, neither of which has a crate module or a plan row --
- * `docs/DECISIONS.md` D333 records the blocker and `forensics/prerequisites.json` the deferral. The
- * ASN.1 method objects (`dsa_ameth.c`, `dsa_prn.c`) and the EVP controls are 8.8 and slice E.
+ * What it does not cover, named rather than implied: the ASN.1 method objects (`dsa_ameth.c`,
+ * `dsa_prn.c`) and the EVP controls are 8.8 and slice E. `DSA_sign`, `DSA_verify` and `DSA_size`
+ * **are** called, since D342 landed the DER `DSA-Sig-Value` codec they need (`crypto/packet.c` and
+ * `crypto/asn1_dsa.c`); their arms print only the width the group fixes and the verdicts, never a
+ * byte of a signature. D333 recorded the block this replaced.
  *
  * The allocator-attribution plane
  * -------------------------------
@@ -699,6 +699,139 @@ static void dsa_primitive_arms(void)
         DSA_SIG_get0(fresh, &fr, &fs);
         printf("dsa.sig.still_null_after_refusals=%d\n", fr == NULL && fs == NULL);
         DSA_SIG_free(fresh);
+    }
+
+    /* ---- the DER `DSA-Sig-Value` pair and the size measurement (D342) ----
+     *
+     * `DSA_size`, `DSA_sign` and `DSA_verify` reach `i2d_DSA_SIG`/`d2i_DSA_SIG`, whose whole body
+     * is `crypto/asn1_dsa.c` over `crypto/packet.c`. The signature bytes are random, so the
+     * transcript records only the width the group fixes and the verdicts; no byte of any
+     * signature is ever printed, only the two comparisons the probe performs itself. */
+    {
+        /* The generated group fixes a 160-bit `q`, so each INTEGER is 21 content bytes and the
+         * sequence is one constant width -- `DSA_size` is a property of `q`, not of the draw. */
+        int size = DSA_size(dsa);
+        unsigned char der[256];
+        unsigned int derlen = 0;
+
+        printf("dsa.der.size.ret=%d\n", size);
+        /* A body with no `q` answers **-1**, not 0: the authority's `ret` starts there. */
+        {
+            DSA *empty = DSA_new();
+
+            printf("dsa.der.size.no_q_ret=%d\n", DSA_size(empty));
+            DSA_free(empty);
+        }
+
+        /* The sizing call: a NULL buffer answers 1 and sets `*siglen` to `DSA_size`. */
+        ERR_clear_error();
+        printf("dsa.der.sign.size_ret=%d\n",
+            DSA_sign(0, dgst, (int)sizeof(dgst), NULL, &derlen, dsa));
+        drain("der_sign_size");
+        printf("dsa.der.sign.size_matches=%d\n", (int)derlen == size);
+
+        /* The real signing call, through the method table and the DER encoder. */
+        ERR_clear_error();
+        derlen = 0;
+        printf("dsa.der.sign.ret=%d\n",
+            DSA_sign(0, dgst, (int)sizeof(dgst), der, &derlen, dsa));
+        drain("der_sign");
+        printf("dsa.der.sign.len_within_size=%d\n", derlen > 0 && (int)derlen <= size);
+        printf("dsa.der.sign.starts_sequence=%d\n", derlen > 0 && der[0] == 0x30);
+
+        /* The bytes just produced verify. */
+        ERR_clear_error();
+        printf("dsa.der.verify.ret=%d\n",
+            DSA_verify(0, dgst, (int)sizeof(dgst), der, (int)derlen, dsa));
+        drain("der_verify");
+
+        /* A truncation refuses in the decoder, and an appended byte refuses through the
+         * re-encode strictness check -- two different `err:` paths, neither of which is a value. */
+        ERR_clear_error();
+        printf("dsa.der.verify.truncated_ret=%d\n",
+            DSA_verify(0, dgst, (int)sizeof(dgst), der, (int)derlen - 1, dsa));
+        drain("der_verify_truncated");
+        {
+            unsigned char garbage[257];
+
+            memcpy(garbage, der, derlen);
+            garbage[derlen] = 0x00;
+            ERR_clear_error();
+            printf("dsa.der.verify.trailing_ret=%d\n",
+                DSA_verify(0, dgst, (int)sizeof(dgst), garbage, (int)derlen + 1, dsa));
+            drain("der_verify_trailing");
+        }
+
+        /* A sequence header whose short-form length claims more content than the buffer holds:
+         * the decoder refuses it on the bounds check rather than reading past the end. */
+        {
+            unsigned char lying[64];
+            size_t i;
+
+            for (i = 0; i < sizeof(lying); i++)
+                lying[i] = 0x00;
+            lying[0] = 0x30;
+            lying[1] = 0x7f; /* 127 content bytes declared, 62 present */
+            ERR_clear_error();
+            printf("dsa.der.verify.overlong_ret=%d\n",
+                DSA_verify(0, dgst, (int)sizeof(dgst), lying, (int)sizeof(lying), dsa));
+            drain("der_verify_overlong");
+        }
+
+        /* An empty body: `DSA_sign` answers 0 and zeroes `*siglen` through the sign epilogue. */
+        {
+            DSA *empty = DSA_new();
+
+            derlen = 0;
+            ERR_clear_error();
+            printf("dsa.der.sign.empty_ret=%d\n",
+                DSA_sign(0, dgst, (int)sizeof(dgst), der, &derlen, empty));
+            drain("der_sign_empty");
+            printf("dsa.der.sign.empty_siglen_zero=%d\n", derlen == 0);
+            DSA_free(empty);
+        }
+
+        /* ---- the codec's own entry points, `i2d_DSA_SIG`/`d2i_DSA_SIG`, called
+         * directly so the coverage atlas sees them as courted and the round trip is a
+         * verdict rather than a byte comparison. */
+        {
+            unsigned char *pp = NULL;
+            const unsigned char *cp;
+            DSA_SIG *decoded = NULL;
+            DSA_SIG *reused = NULL;
+            int n;
+
+            /* The measuring shape: a NULL `ppout` answers the length and allocates nothing. */
+            printf("dsa.der.i2d.measure_positive=%d\n", i2d_DSA_SIG(sig, NULL) > 0);
+
+            /* `*ppout == NULL`: the encoder grows a `BUF_MEM` and hands its buffer to the
+             * caller, detaching it, so the caller frees it with `OPENSSL_free`. */
+            n = i2d_DSA_SIG(sig, &pp);
+            printf("dsa.der.i2d.alloc_ret=%d\n", n > 0 && pp != NULL);
+            printf("dsa.der.i2d.alloc_starts_sequence=%d\n", pp != NULL && pp[0] == 0x30);
+
+            /* Decode it back and re-verify: the DER round trip is the identity on the two
+             * halves as far as the verdict can see, since no half is ever printed. */
+            cp = pp;
+            printf("dsa.der.d2i.ret_notnull=%d\n",
+                d2i_DSA_SIG(&decoded, &cp, (long)n) != NULL);
+            printf("dsa.der.d2i.consumed_all=%d\n", (int)(cp - pp) == n);
+            printf("dsa.der.d2i.verify_ret=%d\n",
+                decoded != NULL ? DSA_do_verify(dgst, (int)sizeof(dgst), decoded, dsa) : -99);
+
+            /* A live `*psig` is reused rather than replaced, so the answer is that object. */
+            reused = DSA_SIG_new();
+            cp = pp;
+            printf("dsa.der.d2i.reuse_returns_the_object=%d\n",
+                reused != NULL && d2i_DSA_SIG(&reused, &cp, (long)n) == reused);
+            /* A negative length refuses before anything is allocated. */
+            printf("dsa.der.d2i.negative_len_refused=%d\n",
+                d2i_DSA_SIG(&decoded, &cp, -1) == NULL);
+
+            DSA_SIG_free(reused);
+            DSA_SIG_free(decoded);
+            OPENSSL_free(pp);
+        }
     }
 
     /* ---- `DSA_dup_DH`: the parameters and the key survive the change of type */

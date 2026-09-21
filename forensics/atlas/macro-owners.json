@@ -4,9 +4,9 @@
     "counts": {
       "installed_headers": 139,
       "internal_only": 2993,
-      "owned": 9563,
+      "owned": 9599,
       "records": 19839,
-      "unowned": 10276
+      "unowned": 10240
     },
     "definition": "every macro and enum member the authority's installed and internal headers define, with the header that defines it and that header's owning stratum",
     "installed_headers": [
@@ -73493,7 +73493,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_INTERNAL_PACKET_H",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -73605,7 +73605,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_INTERNAL_QUIC_VLINT_H",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -78485,7 +78485,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_QUIC_VLINT_1B_MAX",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -78493,7 +78493,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_QUIC_VLINT_1B_MIN",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -78501,7 +78501,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_QUIC_VLINT_2B_MAX",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -78509,7 +78509,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_QUIC_VLINT_2B_MIN",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -78517,7 +78517,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_QUIC_VLINT_4B_MAX",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -78525,7 +78525,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_QUIC_VLINT_4B_MIN",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -78533,7 +78533,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_QUIC_VLINT_8B_MAX",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -78541,7 +78541,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_QUIC_VLINT_8B_MIN",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -78549,7 +78549,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_QUIC_VLINT_MAX",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133240,7 +133240,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_FLAGS_ABANDON_ON_ZERO_LENGTH",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133248,7 +133248,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_FLAGS_NONE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133256,7 +133256,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_FLAGS_NON_ZERO_LENGTH",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133264,7 +133264,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_FLAGS_QUIC_VLINT",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133272,7 +133272,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_put_bytes_u16",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133280,7 +133280,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_put_bytes_u24",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133288,7 +133288,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_put_bytes_u32",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133296,7 +133296,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_put_bytes_u64",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133304,7 +133304,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_put_bytes_u8",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133312,7 +133312,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_start_sub_packet_u16",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133320,7 +133320,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_start_sub_packet_u24",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133328,7 +133328,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_start_sub_packet_u32",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133336,7 +133336,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_start_sub_packet_u8",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133344,7 +133344,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_sub_allocate_bytes_u16",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133352,7 +133352,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_sub_allocate_bytes_u24",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133360,7 +133360,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_sub_allocate_bytes_u32",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133368,7 +133368,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_sub_allocate_bytes_u8",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133376,7 +133376,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_sub_memcpy_u16",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133384,7 +133384,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_sub_memcpy_u24",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133392,7 +133392,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_sub_memcpy_u32",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133400,7 +133400,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_sub_memcpy_u8",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133408,7 +133408,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_sub_reserve_bytes_u16",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133416,7 +133416,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_sub_reserve_bytes_u24",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133424,7 +133424,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_sub_reserve_bytes_u32",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133432,7 +133432,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_sub_reserve_bytes_u8",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [

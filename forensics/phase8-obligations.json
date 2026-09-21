@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 1,
-      "implemented": 612,
-      "open_in_this_stratum": 173,
+      "implemented": 617,
+      "open_in_this_stratum": 168,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1309,9 +1309,12 @@
       "DSA_set_ex_data",
       "DSA_set_flags",
       "DSA_set_method",
+      "DSA_sign",
       "DSA_sign_setup",
+      "DSA_size",
       "DSA_test_flags",
       "DSA_up_ref",
+      "DSA_verify",
       "ECDH_compute_key",
       "ECDSA_SIG_free",
       "ECDSA_SIG_get0",
@@ -1671,7 +1674,9 @@
       "WHIRLPOOL_Final",
       "WHIRLPOOL_Init",
       "WHIRLPOOL_Update",
+      "d2i_DSA_SIG",
       "d2i_ECDSA_SIG",
+      "i2d_DSA_SIG",
       "i2d_ECDSA_SIG"
     ],
     "module_prefixes": [
@@ -1931,24 +1936,6 @@
         "module": "src/dsa/mod.rs",
         "received_from_phase": null,
         "symbol": "DSA_print_fp"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_sign"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_size"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_verify"
       },
       {
         "declaring_header": "dsa.h",
@@ -2770,12 +2757,6 @@
         "declaring_header": "dsa.h",
         "module": "src/dsa/mod.rs",
         "received_from_phase": null,
-        "symbol": "d2i_DSA_SIG"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
         "symbol": "d2i_DSAparams"
       },
       {
@@ -2861,12 +2842,6 @@
         "module": "src/dsa/mod.rs",
         "received_from_phase": null,
         "symbol": "i2d_DSAPublicKey"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_DSA_SIG"
       },
       {
         "declaring_header": "dsa.h",
@@ -3000,12 +2975,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "13cbb704f293790f1ed4920771884e314ffb8359c4d67aa652c270733cf5780f"
+      "sha256": "a33a02028e3208b5962dacc603a2e9c31459e8ab36afce580ddb26a439541263"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "485e1dc354c833af01a0491d5b63abb5fbb9ca42317ce1a02f4c9ed6d84be2c6"
+      "sha256": "716f2116bdee22cd5a3710d166a0d0e610d458515532260b74f67c558a7f5422"
     }
   ],
   "kind": "phase8-obligations",

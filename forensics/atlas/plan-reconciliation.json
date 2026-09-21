@@ -5,9 +5,9 @@
       "in-progress"
     ],
     "census": {
-      "names_a_file_the_authority_does_not_have": 19,
+      "names_a_file_the_authority_does_not_have": 20,
       "symbols_not_reached": 7,
-      "units_not_reached": 35
+      "units_not_reached": 34
     },
     "census_by_stratum": {
       "8": 47,
@@ -29,6 +29,7 @@
         "docs/PHASE-8-SUBPHASES.md:8.5:courts/layout/measure-ffc-params.c",
         "docs/PHASE-8-SUBPHASES.md:8.6:crypto/dsa/dsa_ctrl.c",
         "docs/PHASE-8-SUBPHASES.md:8.7:courts/layout/measure-ec.c",
+        "docs/PHASE-8-SUBPHASES.md:8.8:_ameth.c",
         "docs/PHASE-9-SUBPHASES.md:9.4:drbg_ctr.c",
         "docs/PHASE-9-SUBPHASES.md:9.4:drbg_hash.c",
         "docs/PHASE-9-SUBPHASES.md:9.4:drbg_hmac.c",
@@ -46,7 +47,6 @@
         "xor128_encrypt_n_pad"
       ],
       "units_not_reached": [
-        "crypto/asn1_dsa.c",
         "crypto/chacha/chacha_enc.c",
         "crypto/dh/dh_asn1.c",
         "crypto/dh/dh_prn.c",
@@ -61,9 +61,9 @@
         "crypto/ec/ecdsa_vrf.c",
         "crypto/ec/eck_prn.c",
         "crypto/ec/ecp_nistz256.c",
+        "crypto/ec/ecx_meth.c",
         "crypto/evp/dsa_ctrl.c",
         "crypto/ffc/ffc_backend.c",
-        "crypto/packet.c",
         "providers/common/provider_seeding.c",
         "providers/common/provider_util.c",
         "providers/fips/fipsprov.c",
@@ -96,8 +96,8 @@
       "symbols_reached": 85,
       "unit_records": 66,
       "units_named_by_a_record": 68,
-      "units_named_by_a_row": 221,
-      "units_reached": 186
+      "units_named_by_a_row": 223,
+      "units_reached": 189
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -143,7 +143,8 @@
         ],
         "recorded_by": "units:crypto/asn1/d2i_pr.c",
         "subphases": [
-          "7.4"
+          "7.4",
+          "8.8"
         ],
         "transcribed_by": []
       },
@@ -159,7 +160,8 @@
         "defines": [],
         "recorded_by": "units:crypto/asn1/i2d_evp.c",
         "subphases": [
-          "7.4"
+          "7.4",
+          "8.8"
         ],
         "transcribed_by": []
       },
@@ -186,7 +188,9 @@
         "subphases": [
           "8.6"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/asn1_dsa.rs"
+        ]
       },
       "crypto/async/async.c": {
         "defines": [
@@ -1138,6 +1142,23 @@
         "transcribed_by": [
           "src/ec/smpl.rs"
         ]
+      },
+      "crypto/ec/ecx_meth.c": {
+        "defines": [
+          "ossl_ecx25519_asn1_meth",
+          "ossl_ecx25519_pkey_method",
+          "ossl_ecx448_asn1_meth",
+          "ossl_ecx448_pkey_method",
+          "ossl_ed25519_asn1_meth",
+          "ossl_ed25519_pkey_method",
+          "ossl_ed448_asn1_meth",
+          "ossl_ed448_pkey_method"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.8"
+        ],
+        "transcribed_by": []
       },
       "crypto/err/err.c": {
         "defines": [
@@ -2292,7 +2313,9 @@
         "subphases": [
           "8.6"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/packet.rs"
+        ]
       },
       "crypto/param_build.c": {
         "defines": [],
@@ -2600,6 +2623,21 @@
           "6.8b"
         ],
         "transcribed_by": []
+      },
+      "crypto/quic_vlint.c": {
+        "defines": [
+          "ossl_quic_vlint_decode",
+          "ossl_quic_vlint_decode_unchecked",
+          "ossl_quic_vlint_encode",
+          "ossl_quic_vlint_encode_n"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/quic_vlint.rs"
+        ]
       },
       "crypto/rand/rand_lib.c": {
         "defines": [
@@ -3280,10 +3318,10 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 235
+      "transcribed_units": 238
     }
   },
-  "body_hash": "424a77836759bb96490ac382e905240303067689e7dce4b35620ab38b71841c5",
+  "body_hash": "21bef4596e2a3212ff890a9faf46901bbfbbdee898cbdf376f4c78f5214ca189",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -3294,22 +3332,22 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "f49a11f0bed037d31222ff25471d5db96922ebcee3c5c318b9067bc6c72f3577"
+      "sha256": "423767999f566b4c9cfe02355a9b947f3924ddc9c55a4d93a1aa3f41d7208c61"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "3c707359a18348b266496248c76bd5a80ae6e92408acd2652d1f749eb145f0de"
+      "sha256": "ef6455171ab23e06ba37208cb19854b69cca9c66565dd35f1970ac37414a41f2"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "000aceeec7615574d4bdde513e329fc7e9c4bf9ead54613a2fd7143871704613"
+      "sha256": "043a607ccc9b3e554ceb60d11be32042cbe31941a13f3bac2458005028f2f88b"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "ae4bafdafacd1de68a358e4b998487916c427b69dab3a5260ff1c197a80e4bf7"
+      "sha256": "e6bd9b90c69000cfe2c33003dbfca920a48fc711ca487f31cb226280a52a810d"
     },
     {
       "name": "source-manifest",
@@ -3334,7 +3372,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "2a2c7e5ccb4df8259539eba45dedf579efd183bb01521b4a1d2866b336332f68"
+      "sha256": "aef06fadea247181a42a9be6bee55f78e71b59ec31498f023a377f2d37445fd9"
     },
     {
       "name": "plan-PHASE-9-SUBPHASES",

@@ -13,11 +13,11 @@ Read from the ledger's `body.counts`.
 | quantity | count |
 |---|---|
 | owned | 786 |
-| implemented | 612 |
+| implemented | 617 |
 | deferred to a later phase | 1 |
-| open in this stratum | 173 |
+| open in this stratum | 168 |
 
-The identity `owned = implemented + deferred + open` is `786 = 612 + 1 + 173`, which holds.
+The identity `owned = implemented + deferred + open` is `786 = 617 + 1 + 168`, which holds.
 
 ## The merge gate — what Phase 8 owes to Phase 9
 
@@ -57,13 +57,13 @@ table, verbatim.
 |---|---|---|---|---|
 | 8.4 RSA | `src/rsa/mod.rs` | 24 | `RT-RSA`, `CT-RSA` | 8.1 (the RSA provider's `SHA`-named digests), 8.3 (its OAEP/PSS modes) |
 | 8.5 DH and DHX | `src/dh/mod.rs`, `src/dh/mod.rs`, `src/ffc/`, `src/dh/object.rs`, `src/dh/group_params.rs`, `src/dh/rfc5114.rs`, `src/ffc/dh.rs`, `src/bn/dh.rs`, `src/bn/dh_data.rs` | 32 | `RT-DH`, `CT-DH` | 8.4 (the shared BN/param idiom) |
-| 8.6 DSA | `src/dsa/mod.rs`, `src/dsa/mod.rs`, `src/dsa/object.rs`, `src/dsa/ossl.rs`, `src/dsa/key.rs`, `src/dsa/gen.rs`, `src/dsa/sign.rs`, `src/dsa/vrf.rs`, `src/dsa/depr.rs` | 26 | `RT-DSA`, `CT-DSA` | 8.5 |
+| 8.6 DSA | `src/dsa/mod.rs`, `src/dsa/mod.rs`, `src/dsa/object.rs`, `src/dsa/ossl.rs`, `src/dsa/key.rs`, `src/dsa/gen.rs`, `src/dsa/sign.rs`, `src/dsa/vrf.rs`, `src/dsa/depr.rs`, `src/asn1_dsa.rs`, `src/packet.rs`, `src/quic_vlint.rs` | 21 | `RT-DSA`, `CT-DSA` | 8.5 |
 | 8.7 EC | `src/ec/mod.rs`, `src/ec/curve.rs`, `src/ec/curve_data.rs`, `src/ec/support.rs`, `src/ec/mod.rs`, `src/bn/intern.rs`, `src/bn/bignum.rs`, `src/bn/exp.rs`, `src/ec/key.rs`, `src/ec/lib.rs`, `src/ec/smpl.rs`, `src/ec/mult.rs`, `src/ec/oct.rs`, `src/ec/cvt.rs`, `src/ec/key.rs`, `src/ec/ecdsa.rs`, `src/param_build_set.rs` | 46 | `RT-EC`, `CT-EC` | 8.6 |
 | 8.8 The ASN.1 method objects and `standard_methods[]` | `src/asn1/ameth.rs` | 15 | `RT-AMETH` | 8.4, 8.5, 8.6, 8.7 |
 | 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals | `src/pem/key_legacy.rs` | 30 | `RT-PEM-KEY` | 8.8 |
 
-Total open symbols listed below: **173**; the ledger's
-`open_in_this_stratum` is 173.
+Total open symbols listed below: **168**; the ledger's
+`open_in_this_stratum` is 168.
 
 ### 8.4 RSA — 24 open
 
@@ -91,16 +91,15 @@ Total open symbols listed below: **173**; the ledger's
 `EVP_PKEY_get1_DH`, `EVP_PKEY_set1_DH`, `d2i_DHparams`, `d2i_DHxparams`, `i2d_DHparams`,
 `i2d_DHxparams`
 
-### 8.6 DSA — 26 open
+### 8.6 DSA — 21 open
 
-`DSA_print`, `DSA_print_fp`, `DSA_sign`, `DSA_size`, `DSA_verify`, `DSAparams_dup`,
-`DSAparams_print`, `DSAparams_print_fp`, `EVP_PKEY_CTX_set_dsa_paramgen_bits`,
-`EVP_PKEY_CTX_set_dsa_paramgen_gindex`, `EVP_PKEY_CTX_set_dsa_paramgen_md`,
-`EVP_PKEY_CTX_set_dsa_paramgen_md_props`, `EVP_PKEY_CTX_set_dsa_paramgen_q_bits`,
-`EVP_PKEY_CTX_set_dsa_paramgen_seed`, `EVP_PKEY_CTX_set_dsa_paramgen_type`,
-`EVP_PKEY_get0_DSA`, `EVP_PKEY_get1_DSA`, `EVP_PKEY_set1_DSA`, `d2i_DSAPrivateKey`,
-`d2i_DSAPublicKey`, `d2i_DSA_SIG`, `d2i_DSAparams`, `i2d_DSAPrivateKey`,
-`i2d_DSAPublicKey`, `i2d_DSA_SIG`, `i2d_DSAparams`
+`DSA_print`, `DSA_print_fp`, `DSAparams_dup`, `DSAparams_print`, `DSAparams_print_fp`,
+`EVP_PKEY_CTX_set_dsa_paramgen_bits`, `EVP_PKEY_CTX_set_dsa_paramgen_gindex`,
+`EVP_PKEY_CTX_set_dsa_paramgen_md`, `EVP_PKEY_CTX_set_dsa_paramgen_md_props`,
+`EVP_PKEY_CTX_set_dsa_paramgen_q_bits`, `EVP_PKEY_CTX_set_dsa_paramgen_seed`,
+`EVP_PKEY_CTX_set_dsa_paramgen_type`, `EVP_PKEY_get0_DSA`, `EVP_PKEY_get1_DSA`,
+`EVP_PKEY_set1_DSA`, `d2i_DSAPrivateKey`, `d2i_DSAPublicKey`, `d2i_DSAparams`,
+`i2d_DSAPrivateKey`, `i2d_DSAPublicKey`, `i2d_DSAparams`
 
 ### 8.7 EC — 46 open
 
@@ -159,7 +158,7 @@ from the export list — the method D114, D118 and D122 established. The
 This document projects `forensics/phase8-obligations.json`, and every row
 of that ledger is an **export**. Cross-stratum *internal* names — a helper
 a module references that is not an export — are recorded in a different
-place: `forensics/prerequisites.json`'s `deferrals` (20 rows, 10 of which name Phase 8 as
+place: `forensics/prerequisites.json`'s `deferrals` (19 rows, 9 of which name Phase 8 as
 owner), and
 `forensics/atlas/prerequisite-gate.json` is the generated view of them.
 A reader who only checks the export ledger has not seen that half of the

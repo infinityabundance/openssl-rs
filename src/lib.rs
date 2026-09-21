@@ -65,6 +65,10 @@
 pub mod aes;
 pub mod aria;
 pub mod asn1;
+// Phase 8's `crypto/asn1_dsa.c`: the DER `DSA-Sig-Value` codec. It has no stratum's plan row and
+// arrived with the DSA landing, because `dsa_sign.c`'s `i2d_DSA_SIG`/`d2i_DSA_SIG` are its whole
+// body (D342).
+pub(crate) mod asn1_dsa;
 pub mod blowfish;
 pub mod bn;
 pub mod camellia;
@@ -114,9 +118,17 @@ pub mod params;
 // crate reaches; `crypto/ffc/ffc_backend.c`'s withheld `ossl_ffc_params_todata` reaches the same
 // four, so the unit lands whole rather than as the reachable subset (D327's rule).
 pub(crate) mod param_build_set;
+// Phase 8's `crypto/packet.c`: the write-side packet builder. It has no stratum's plan row and
+// arrived with the DSA landing, because `dsa_sign.c`'s `i2d_DSA_SIG` is a `WPACKET` program. It is
+// transcribed whole, QUIC half and all (D342).
+pub(crate) mod packet;
 pub mod pem;
 pub mod property;
 pub mod provider;
+// Phase 8's `crypto/quic_vlint.c`: the QUIC variable-length integer codec, transcribed whole
+// because `crypto/packet.c`'s QUIC half calls it and `OPENSSL_NO_QUIC` is absent from the admitted
+// profile (D342).
+pub(crate) mod quic_vlint;
 pub mod rand;
 pub mod rc2;
 pub mod rc4;
