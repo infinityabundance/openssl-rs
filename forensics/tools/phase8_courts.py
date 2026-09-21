@@ -145,6 +145,15 @@ COURTS: list[tuple[str, str]] = [
     # tests in `src/ec/curve.rs`. The probe says so in its own header, because a probe that
     # called a symbol the candidate has not implemented would abort the candidate's side.
     ("RT-EC", "rt_ec_probe.c"),
+    # 8.9's `pem.h` helper court. Its subject is the thirty `crypto/pem/pem_all.c` rows -- the
+    # `IMPLEMENT_PEM_*` expansions for the DH, DSA, EC and RSA key families -- together with the
+    # PEM plumbing they call (`PEM_bytes_read_bio`, `PEM_do_header`, `PEM_def_callback`,
+    # `PEM_ASN1_*`) and `pem_oth.c`'s `PEM_ASN1_read_bio`. Six of the thirty are
+    # **withheld** and named in `src/pem/key_legacy.rs`: the private-key readers need
+    # `EVP_PKEY_get1_{RSA,DSA,EC_KEY}` and `PEM_read[_bio]_PrivateKey`, neither landed, so the
+    # probe drives the twenty-four that are and says which are absent. Every writer arm prints a
+    # public parameter set's block or, for a private key, only its header lines and round trip.
+    ("RT-PEM-KEY", "rt_pem_key_probe.c"),
 ]
 
 # The correctness courts, and the committed vector sets each checks. `CT-DIGEST` is the

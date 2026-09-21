@@ -28,9 +28,13 @@
 //!     `EVP_CIPHER_CTX` and `EVP_PKEY_decrypt`/`encrypt` calls, all landed. `EVP_SealInit`'s two
 //!     former blockers have both landed (D315): `RAND_priv_bytes_ex` (`crypto/rand/rand_lib.c`,
 //!     Phase 9) directly at `p_seal.c:46`, and `EVP_CIPHER_CTX_rand_key` at `:42`.
-//!   * **`EVP_read_pw_string`** and **`EVP_read_pw_string_min`** are **not** here: they are the
-//!     `UI`-backed pair and `ui.h` is Phase 13. They are withheld rather than stubbed, and
-//!     `EVP_read_pw_string` goes with them because its whole body is a call to `_min`.
+//!   * **`EVP_read_pw_string`** and **`EVP_read_pw_string_min`** are the `UI`-backed pair, and
+//!     they **land here now** (D350), with `crypto/ui/ui_lib.c` behind them: `UI_new`,
+//!     `UI_add_input_string`, `UI_add_verify_string`, `UI_process` and `UI_free` are landed and
+//!     the five `ui_lib.c` call sites are transcribed directly. The pair was withheld until the
+//!     UI program existed, because `EVP_read_pw_string_min`'s body *is* that program; the
+//!     `ui.h`-is-Phase-13 sentence that stood here is now recorded as a resolved boundary in
+//!     `docs/DECISIONS.md` D350 rather than as an open one.
 //!   * **`EVP_get_pw_prompt`** and **`EVP_set_pw_prompt`** *do* land: they touch the file's
 //!     eighty-byte static and nothing else, so the `UI` boundary does not reach them. This is the
 //!     one place the row's prefix grouping and the dependency boundary disagree, and the measurement
@@ -102,6 +106,10 @@ use crate::provider::ossl_provider_libctx;
 use crate::rand::rand_lib::RAND_priv_bytes_ex;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc, OPENSSL_cleanse};
+use crate::ui::ui_lib::{UI_add_input_string, UI_add_verify_string, UI_free, UI_new, UI_process};
+
+/// `BUFSIZ` — `<stdio.h>` on this platform; `EVP_read_pw_string_min`'s local buffer length.
+const BUFSIZ: usize = 8192;
 
 /// `EVP_MAX_MD_SIZE` — `include/openssl/evp.h:34`.
 const EVP_MAX_MD_SIZE: usize = 64;
@@ -337,6 +345,81 @@ pub unsafe extern "C" fn EVP_get_pw_prompt() -> *mut c_char {
         return ptr::null_mut();
     }
     ptr::addr_of_mut!(PROMPT_STRING).cast::<c_char>()
+}
+
+/// `int EVP_read_pw_string(char *buf, int len, const char *prompt, int verify)` —
+/// `crypto/evp/evp_key.c:47`.
+///
+/// One line: the minimum accepted length is 0, so the whole contract is the `_min` spelling's.
+///
+/// # Safety
+/// `buf` writable for `len` bytes plus a NUL; `prompt` NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_read_pw_string(
+    buf: *mut c_char,
+    len: c_int,
+    prompt: *const c_char,
+    verify: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe { EVP_read_pw_string_min(buf, 0, len, prompt, verify) }
+}
+
+/// `int EVP_read_pw_string_min(char *buf, int min, int len, const char *prompt, int verify)` —
+/// `crypto/evp/evp_key.c:52`.
+///
+/// The `UI` program and nothing else: create, add the prompt (and, for a verify, the confirmation
+/// prompt checked against `buf`), process, free. The `len` clamp is the authority's own — a `len`
+/// at or above `BUFSIZ` becomes `BUFSIZ - 1` — and a NULL `prompt` falls back to the file's
+/// `prompt_string` static when it is non-empty.
+///
+/// The `goto end` on a failed `UI_add_*` **skips** the `OPENSSL_cleanse(buff, BUFSIZ)`: the
+/// authority cleanses `buff` on the success path only, after `UI_process`, and that path is
+/// reproduced here rather than tidied into a single exit.
+///
+/// # Safety
+/// `buf` writable for `len` bytes plus a NUL; `prompt` NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_read_pw_string_min(
+    buf: *mut c_char,
+    min: c_int,
+    len: c_int,
+    prompt: *const c_char,
+    verify: c_int,
+) -> c_int {
+    let mut ret: c_int = -1;
+    let mut buff = [0 as c_char; BUFSIZ];
+    let mut prompt = prompt;
+
+    // SAFETY: `PROMPT_STRING` is this module's own static.
+    if prompt.is_null() && unsafe { PROMPT_STRING[0] } != 0 {
+        prompt = ptr::addr_of!(PROMPT_STRING).cast::<c_char>();
+    }
+    // SAFETY: `UI_new` allocates its own object.
+    let ui = unsafe { UI_new() };
+    if ui.is_null() {
+        return ret;
+    }
+    let max = if len >= BUFSIZ as c_int {
+        BUFSIZ as c_int - 1
+    } else {
+        len
+    };
+    // SAFETY: `ui` is live and `buf`/`buff` are the caller's buffers.
+    let added = unsafe { UI_add_input_string(ui, prompt, 0, buf, min, max) } >= 0
+        && (verify == 0
+            // SAFETY: `ui` is live; the verify buffer is this frame's own.
+            || unsafe { UI_add_verify_string(ui, prompt, 0, buff.as_mut_ptr(), min, max, buf) }
+                >= 0);
+    if added {
+        // SAFETY: `ui` is live.
+        ret = unsafe { UI_process(ui) };
+        // SAFETY: `buff` is this frame's own array; the cleanse is the success path's only.
+        unsafe { OPENSSL_cleanse(buff.as_mut_ptr().cast::<c_void>(), BUFSIZ) };
+    }
+    // SAFETY: `ui` is a live object this call created.
+    unsafe { UI_free(ui) };
+    ret
 }
 
 /// `int EVP_SignFinal_ex(EVP_MD_CTX *ctx, unsigned char *sigret, unsigned int *siglen,

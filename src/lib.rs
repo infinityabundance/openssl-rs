@@ -144,3 +144,8 @@ pub mod status;
 // is new here; each module is a partial transcription and names what it withholds in
 // `forensics/prerequisites.json`.
 pub mod x509;
+// Phase 13 staging — `crypto/ui/`: the `UI` program the password path is built on. It lands
+// ahead of its stratum because `EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`) is `UI_new`,
+// two `UI_add_*_string` calls, `UI_process` and `UI_free`, and that function is the whole of
+// `PEM_def_callback`'s prompting arm — the hinge the next commit opens. D350 records it.
+pub mod ui;

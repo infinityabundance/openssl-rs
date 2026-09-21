@@ -433,6 +433,27 @@ fn get_reason(e: c_ulong) -> c_ulong {
     }
 }
 
+/// `ERR_GET_REASON(ERR_peek_error())` — the reason code of the queue's **first** entry.
+///
+/// The first-entry twin of [`peek_last_reason`], and the one `crypto/pem/pem_lib.c`'s
+/// `pem_bytes_read_bio_flags` needs: it asks whether the reader's *oldest* queued error is
+/// `PEM_R_NO_START_LINE` — meaning it scanned to end-of-input without finding a BEGIN line —
+/// and, when it is, appends the name it was looking for. Reading the newest entry instead
+/// would answer a different question on a queue holding more than one record.
+///
+/// # Safety
+///
+/// There is no precondition: the function takes no arguments and touches only the
+/// calling thread's own queue.
+pub(crate) fn peek_first_reason() -> c_ulong {
+    let e = ERR_peek_error();
+    if e == 0 {
+        0
+    } else {
+        get_reason(e)
+    }
+}
+
 /// `ERR_GET_REASON(ERR_peek_last_error())` — the reason code of the queue's last entry.
 ///
 /// Exists because one caller has to *branch* on a reason rather than report it:

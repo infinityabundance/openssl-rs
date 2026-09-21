@@ -256,6 +256,14 @@ TDES_TSTREAM_FN = (
     "not a provider dispatch: the type of `PROV_TDES_CTX`'s `tstream` union member "
     "(`cipher_tdes.h:26-29`), written inline in the struct rather than introduced with a "
     "`typedef`, so the atlas records no name for it")
+# `crypto/ui/ui_local.h:20-59` -- the `UI_METHOD` members (Phase 13 staging, D350). The same shape
+# as `RSA_METHOD`'s vtable: each callback is declared inline as a plain function pointer in an
+# internal header, and the atlas -- whose universe is the installed public surface -- records no
+# `typedef` for any of them, so there is no authority name for the crate's aliases to link to.
+UI_METHOD_VTABLE = ("not a provider dispatch: a member of `UI_METHOD`'s vtable, declared inline "
+                    "in `crypto/ui/ui_local.h:20-59` as a plain function pointer rather than "
+                    "through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records "
+                    "no typedef for it")
 
 
 def _inline(fn: str, spelling: str) -> str:
@@ -443,6 +451,12 @@ NOT_A_DISPATCH: dict[str, str] = {
                              "int (*f)(BIO *, BIO_MSG *, size_t, size_t, uint64_t, size_t *)"),
     "BioCallbackCtrlFn": _inline("BIO_meth_set_callback_ctrl",
                                  "long (*callback_ctrl)(BIO *, int, BIO_info_cb *)"),
+    # --- `UI_METHOD`'s vtable (`crypto/ui/ui_local.h:20-59`, Phase 13 staging, D350) ---------
+    "UiOpenSessionFn": UI_METHOD_VTABLE,
+    "UiWriteStringFn": UI_METHOD_VTABLE,
+    "UiDuplicateDataFn": UI_METHOD_VTABLE,
+    "UiDestroyDataFn": UI_METHOD_VTABLE,
+    "UiConstructPromptFn": UI_METHOD_VTABLE,
     # --- other inline parameter types in the public headers -----------------------------------
     "DumpCb": _inline("BIO_dump_cb", "int (*cb)(const void *, size_t, void *)"),
     "ErrPrintCb": _inline("ERR_print_errors_cb", "int (*cb)(const char *, size_t, void *)"),

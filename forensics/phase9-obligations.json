@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 25,
       "deferred_to_later_phase": 0,
-      "implemented": 58,
-      "open_in_this_stratum": 11,
+      "implemented": 66,
+      "open_in_this_stratum": 3,
       "owned": 69,
       "received_by_handoff": 44
     },
@@ -301,7 +301,7 @@
           "blocked_by": [],
           "declaring_header": "pem.h",
           "owning_phase": 9,
-          "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer and what is left is this stratum's own `pem_lib.c` transcription.",
+          "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer. **D350 corrects what this reason left out:** `PEM_do_header` (`crypto/pem/pem_lib.c:467`) and the write trio (`:372`) also call `PEM_def_callback` (`:36-69`), whose own chain is `EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`, Phase 7) -> the `UI_*` objects (`crypto/ui/ui_lib.c`, Phase 13), so the eight were blocked on Phase 13 and not on this stratum's transcription alone. D350 lands that closure (`src/ui/`, `src/evp/p_legacy.rs`, `src/pem/pem_lib.rs`), so all eight are in Phase 9's `implemented` list and the row stands as the hand-off **edge** rather than being retired: retiring it would move eight built exports into this sealed stratum's `implemented` list on the strength of work it did not do, and drop them from Phase 9's `received_by_handoff`.",
           "symbol": "PEM_ASN1_read"
         },
         {
@@ -309,7 +309,7 @@
           "blocked_by": [],
           "declaring_header": "pem.h",
           "owning_phase": 9,
-          "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer and what is left is this stratum's own `pem_lib.c` transcription.",
+          "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer. **D350 corrects what this reason left out:** `PEM_do_header` (`crypto/pem/pem_lib.c:467`) and the write trio (`:372`) also call `PEM_def_callback` (`:36-69`), whose own chain is `EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`, Phase 7) -> the `UI_*` objects (`crypto/ui/ui_lib.c`, Phase 13), so the eight were blocked on Phase 13 and not on this stratum's transcription alone. D350 lands that closure (`src/ui/`, `src/evp/p_legacy.rs`, `src/pem/pem_lib.rs`), so all eight are in Phase 9's `implemented` list and the row stands as the hand-off **edge** rather than being retired: retiring it would move eight built exports into this sealed stratum's `implemented` list on the strength of work it did not do, and drop them from Phase 9's `received_by_handoff`.",
           "symbol": "PEM_ASN1_read_bio"
         },
         {
@@ -317,7 +317,7 @@
           "blocked_by": [],
           "declaring_header": "pem.h",
           "owning_phase": 9,
-          "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer and what is left is this stratum's own `pem_lib.c` transcription.",
+          "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer. **D350 corrects what this reason left out:** `PEM_do_header` (`crypto/pem/pem_lib.c:467`) and the write trio (`:372`) also call `PEM_def_callback` (`:36-69`), whose own chain is `EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`, Phase 7) -> the `UI_*` objects (`crypto/ui/ui_lib.c`, Phase 13), so the eight were blocked on Phase 13 and not on this stratum's transcription alone. D350 lands that closure (`src/ui/`, `src/evp/p_legacy.rs`, `src/pem/pem_lib.rs`), so all eight are in Phase 9's `implemented` list and the row stands as the hand-off **edge** rather than being retired: retiring it would move eight built exports into this sealed stratum's `implemented` list on the strength of work it did not do, and drop them from Phase 9's `received_by_handoff`.",
           "symbol": "PEM_ASN1_write"
         },
         {
@@ -325,7 +325,7 @@
           "blocked_by": [],
           "declaring_header": "pem.h",
           "owning_phase": 9,
-          "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer and what is left is this stratum's own `pem_lib.c` transcription.",
+          "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer. **D350 corrects what this reason left out:** `PEM_do_header` (`crypto/pem/pem_lib.c:467`) and the write trio (`:372`) also call `PEM_def_callback` (`:36-69`), whose own chain is `EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`, Phase 7) -> the `UI_*` objects (`crypto/ui/ui_lib.c`, Phase 13), so the eight were blocked on Phase 13 and not on this stratum's transcription alone. D350 lands that closure (`src/ui/`, `src/evp/p_legacy.rs`, `src/pem/pem_lib.rs`), so all eight are in Phase 9's `implemented` list and the row stands as the hand-off **edge** rather than being retired: retiring it would move eight built exports into this sealed stratum's `implemented` list on the strength of work it did not do, and drop them from Phase 9's `received_by_handoff`.",
           "symbol": "PEM_ASN1_write_bio"
         },
         {
@@ -333,7 +333,7 @@
           "blocked_by": [],
           "declaring_header": "pem.h",
           "owning_phase": 9,
-          "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer and what is left is this stratum's own `pem_lib.c` transcription.",
+          "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer. **D350 corrects what this reason left out:** `PEM_do_header` (`crypto/pem/pem_lib.c:467`) and the write trio (`:372`) also call `PEM_def_callback` (`:36-69`), whose own chain is `EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`, Phase 7) -> the `UI_*` objects (`crypto/ui/ui_lib.c`, Phase 13), so the eight were blocked on Phase 13 and not on this stratum's transcription alone. D350 lands that closure (`src/ui/`, `src/evp/p_legacy.rs`, `src/pem/pem_lib.rs`), so all eight are in Phase 9's `implemented` list and the row stands as the hand-off **edge** rather than being retired: retiring it would move eight built exports into this sealed stratum's `implemented` list on the strength of work it did not do, and drop them from Phase 9's `received_by_handoff`.",
           "symbol": "PEM_ASN1_write_bio_ctx"
         },
         {
@@ -341,7 +341,7 @@
           "blocked_by": [],
           "declaring_header": "pem.h",
           "owning_phase": 9,
-          "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer and what is left is this stratum's own `pem_lib.c` transcription.",
+          "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer. **D350 corrects what this reason left out:** `PEM_do_header` (`crypto/pem/pem_lib.c:467`) and the write trio (`:372`) also call `PEM_def_callback` (`:36-69`), whose own chain is `EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`, Phase 7) -> the `UI_*` objects (`crypto/ui/ui_lib.c`, Phase 13), so the eight were blocked on Phase 13 and not on this stratum's transcription alone. D350 lands that closure (`src/ui/`, `src/evp/p_legacy.rs`, `src/pem/pem_lib.rs`), so all eight are in Phase 9's `implemented` list and the row stands as the hand-off **edge** rather than being retired: retiring it would move eight built exports into this sealed stratum's `implemented` list on the strength of work it did not do, and drop them from Phase 9's `received_by_handoff`.",
           "symbol": "PEM_bytes_read_bio"
         },
         {
@@ -349,7 +349,7 @@
           "blocked_by": [],
           "declaring_header": "pem.h",
           "owning_phase": 9,
-          "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer and what is left is this stratum's own `pem_lib.c` transcription.",
+          "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer. **D350 corrects what this reason left out:** `PEM_do_header` (`crypto/pem/pem_lib.c:467`) and the write trio (`:372`) also call `PEM_def_callback` (`:36-69`), whose own chain is `EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`, Phase 7) -> the `UI_*` objects (`crypto/ui/ui_lib.c`, Phase 13), so the eight were blocked on Phase 13 and not on this stratum's transcription alone. D350 lands that closure (`src/ui/`, `src/evp/p_legacy.rs`, `src/pem/pem_lib.rs`), so all eight are in Phase 9's `implemented` list and the row stands as the hand-off **edge** rather than being retired: retiring it would move eight built exports into this sealed stratum's `implemented` list on the strength of work it did not do, and drop them from Phase 9's `received_by_handoff`.",
           "symbol": "PEM_bytes_read_bio_secmem"
         },
         {
@@ -357,7 +357,7 @@
           "blocked_by": [],
           "declaring_header": "pem.h",
           "owning_phase": 9,
-          "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer and what is left is this stratum's own `pem_lib.c` transcription.",
+          "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer. **D350 corrects what this reason left out:** `PEM_do_header` (`crypto/pem/pem_lib.c:467`) and the write trio (`:372`) also call `PEM_def_callback` (`:36-69`), whose own chain is `EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`, Phase 7) -> the `UI_*` objects (`crypto/ui/ui_lib.c`, Phase 13), so the eight were blocked on Phase 13 and not on this stratum's transcription alone. D350 lands that closure (`src/ui/`, `src/evp/p_legacy.rs`, `src/pem/pem_lib.rs`), so all eight are in Phase 9's `implemented` list and the row stands as the hand-off **edge** rather than being retired: retiring it would move eight built exports into this sealed stratum's `implemented` list on the strength of work it did not do, and drop them from Phase 9's `received_by_handoff`.",
           "symbol": "PEM_do_header"
         }
       ]
@@ -396,6 +396,14 @@
       "BN_rand_range_ex",
       "EVP_CIPHER_CTX_rand_key",
       "EVP_SealInit",
+      "PEM_ASN1_read",
+      "PEM_ASN1_read_bio",
+      "PEM_ASN1_write",
+      "PEM_ASN1_write_bio",
+      "PEM_ASN1_write_bio_ctx",
+      "PEM_bytes_read_bio",
+      "PEM_bytes_read_bio_secmem",
+      "PEM_do_header",
       "RAND_OpenSSL",
       "RAND_add",
       "RAND_bytes",
@@ -535,54 +543,6 @@
         "module": "src/hpke/mod.rs",
         "received_from_phase": 7,
         "symbol": "OSSL_HPKE_get_grease_value"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_lib.rs",
-        "received_from_phase": 7,
-        "symbol": "PEM_ASN1_read"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_lib.rs",
-        "received_from_phase": 7,
-        "symbol": "PEM_ASN1_read_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_lib.rs",
-        "received_from_phase": 7,
-        "symbol": "PEM_ASN1_write"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_lib.rs",
-        "received_from_phase": 7,
-        "symbol": "PEM_ASN1_write_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_lib.rs",
-        "received_from_phase": 7,
-        "symbol": "PEM_ASN1_write_bio_ctx"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_lib.rs",
-        "received_from_phase": 7,
-        "symbol": "PEM_bytes_read_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_lib.rs",
-        "received_from_phase": 7,
-        "symbol": "PEM_bytes_read_bio_secmem"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_lib.rs",
-        "received_from_phase": 7,
-        "symbol": "PEM_do_header"
       }
     ],
     "owned_by_header": {
@@ -626,22 +586,22 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "b9c4c7ba9217dd9c736b83e720a499ad194ef4d809a83a843c3d13b0056db455"
+      "sha256": "ffa53cbac2981cdac433e8162b052340c2ffa0bfbfe6acc6adb74d01f6a1e0e7"
     },
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "ce75f4e20ce392adc5823be316f43ac1c69773fdc584d2ee03f999058eaee773"
+      "sha256": "98669533ba7bb7b8b3d951656dde7c872c0f7519ee30915236555a5648f38c13"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "195fb000a72a2ad8bea0c4e5897969a68200bb70ca00613a3721d0b10401db19"
+      "sha256": "270b92a8b54cb15ddcb485a31b4bdf65ca14c4b9d504d3eef613e1108b85790d"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "41188014033a8f3d1bdaaf529263eda135864cda7650d5b9bd564bc446105aa9"
+      "sha256": "dd81edf7e35cc63a470dd702481e3a06c94cf3776c0173aa937c4710e73ab13a"
     }
   ],
   "kind": "phase9-obligations",

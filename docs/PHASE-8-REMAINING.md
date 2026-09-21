@@ -13,11 +13,11 @@ Read from the ledger's `body.counts`.
 | quantity | count |
 |---|---|
 | owned | 786 |
-| implemented | 721 |
+| implemented | 745 |
 | deferred to a later phase | 0 |
-| open in this stratum | 65 |
+| open in this stratum | 41 |
 
-The identity `owned = implemented + deferred + open` is `786 = 721 + 0 + 65`, which holds.
+The identity `owned = implemented + deferred + open` is `786 = 745 + 0 + 41`, which holds.
 
 ## The merge gate — what Phase 8 owes to Phase 9
 
@@ -47,10 +47,10 @@ table, verbatim.
 | 8.6 DSA | `src/dsa/mod.rs`, `src/dsa/mod.rs`, `src/dsa/object.rs`, `src/dsa/ossl.rs`, `src/dsa/key.rs`, `src/dsa/gen.rs`, `src/dsa/sign.rs`, `src/dsa/vrf.rs`, `src/dsa/depr.rs`, `src/asn1_dsa.rs`, `src/packet.rs`, `src/quic_vlint.rs`, `src/dsa/asn1.rs`, `src/dsa/ctrl.rs` | 7 | `RT-DSA`, `CT-DSA` | 8.5 |
 | 8.7 EC | `src/ec/mod.rs`, `src/ec/curve.rs`, `src/ec/curve_data.rs`, `src/ec/support.rs`, `src/ec/mod.rs`, `src/bn/intern.rs`, `src/bn/bignum.rs`, `src/bn/exp.rs`, `src/ec/key.rs`, `src/ec/lib.rs`, `src/ec/smpl.rs`, `src/ec/mult.rs`, `src/ec/oct.rs`, `src/ec/cvt.rs`, `src/ec/key.rs`, `src/ec/ecdsa.rs`, `src/param_build_set.rs`, `src/ec/print.rs`, `src/ec/depr.rs`, `src/ec/ecdsa.rs`, `src/ec/ctrl.rs`, `src/ec/kdf.rs`, `src/ec/asn1.rs`, `src/ec/prn.rs`, `src/ec/asn1.rs` | 5 | `RT-EC`, `CT-EC` | 8.6 |
 | 8.8 The ASN.1 method objects and `standard_methods[]` | `src/asn1/ameth.rs` | 15 | `RT-AMETH` | 8.4, 8.5, 8.6, 8.7 |
-| 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals | `src/pem/key_legacy.rs` | 30 | `RT-PEM-KEY` | 8.8 |
+| 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals | `src/pem/key_legacy.rs`, `src/pem/key_legacy.rs` | 6 | `RT-PEM-KEY` | 8.8 |
 
-Total open symbols listed below: **65**; the ledger's
-`open_in_this_stratum` is 65.
+Total open symbols listed below: **41**; the ledger's
+`open_in_this_stratum` is 41.
 
 ### 8.4 RSA — 5 open
 
@@ -79,19 +79,10 @@ Total open symbols listed below: **65**; the ledger's
 `EVP_PKEY_meth_get_count`, `EVP_PKEY_type`, `d2i_KeyParams`, `d2i_KeyParams_bio`,
 `d2i_PublicKey`
 
-### 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals — 30 open
+### 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals — 6 open
 
-`PEM_read_DHparams`, `PEM_read_DSAPrivateKey`, `PEM_read_DSAparams`,
-`PEM_read_ECPKParameters`, `PEM_read_ECPrivateKey`, `PEM_read_RSAPrivateKey`,
-`PEM_read_RSAPublicKey`, `PEM_read_bio_DHparams`, `PEM_read_bio_DSAPrivateKey`,
-`PEM_read_bio_DSAparams`, `PEM_read_bio_ECPKParameters`, `PEM_read_bio_ECPrivateKey`,
-`PEM_read_bio_RSAPrivateKey`, `PEM_read_bio_RSAPublicKey`, `PEM_write_DHparams`,
-`PEM_write_DHxparams`, `PEM_write_DSAPrivateKey`, `PEM_write_DSAparams`,
-`PEM_write_ECPKParameters`, `PEM_write_ECPrivateKey`, `PEM_write_RSAPrivateKey`,
-`PEM_write_RSAPublicKey`, `PEM_write_bio_DHparams`, `PEM_write_bio_DHxparams`,
-`PEM_write_bio_DSAPrivateKey`, `PEM_write_bio_DSAparams`,
-`PEM_write_bio_ECPKParameters`, `PEM_write_bio_ECPrivateKey`,
-`PEM_write_bio_RSAPrivateKey`, `PEM_write_bio_RSAPublicKey`
+`PEM_read_DSAPrivateKey`, `PEM_read_ECPrivateKey`, `PEM_read_RSAPrivateKey`,
+`PEM_read_bio_DSAPrivateKey`, `PEM_read_bio_ECPrivateKey`, `PEM_read_bio_RSAPrivateKey`
 
 ## The subphase order
 
@@ -109,7 +100,7 @@ from the export list — the method D114, D118 and D122 established. The
 This document projects `forensics/phase8-obligations.json`, and every row
 of that ledger is an **export**. Cross-stratum *internal* names — a helper
 a module references that is not an export — are recorded in a different
-place: `forensics/prerequisites.json`'s `deferrals` (18 rows, 9 of which name Phase 8 as
+place: `forensics/prerequisites.json`'s `deferrals` (17 rows, 9 of which name Phase 8 as
 owner), and
 `forensics/atlas/prerequisite-gate.json` is the generated view of them.
 A reader who only checks the export ledger has not seen that half of the

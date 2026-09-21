@@ -148,12 +148,6 @@
         "evidence": "docs/DECISIONS.md D193; docs/PHASE-7-SUBPHASES.md row 7.4l"
       },
       {
-        "symbol": "UI_new",
-        "owner_phase": 13,
-        "reason": "`EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`) is a `UI` program -- `UI_new`, `UI_add_input_string`, `UI_add_verify_string`, `UI_process`, `UI_free` -- and `ui.h` is Phase 13's. `EVP_read_pw_string` goes with it because its whole body is a call to `_min`; `EVP_get_pw_prompt`/`EVP_set_pw_prompt` do **not**, because they touch the file's own eighty-byte static and nothing else, and they land.",
-        "evidence": "docs/DECISIONS.md D193; docs/PHASE-7-SUBPHASES.md row 7.4l"
-      },
-      {
         "symbol": "ossl_dsa_ffc_params_fromdata",
         "owner_phase": 8,
         "reason": "`crypto/dsa/dsa_lib.c:355-365`, and the DH half of the same blocker `ossl_ffc_params_todata` names: its body is `ossl_ffc_params_fromdata` plus a `dirty_cnt` bump, and that function is `crypto/ffc/ffc_backend.c`'s -- a unit with no crate module because it calls `crypto/param_build_set.c`'s four `ossl_param_build_set_*`, which no stratum's plan row names. Both of that unit's authority callers are provider backends (`dh_backend.c`, `dsa_backend.c`), so the work it waits on is the provider half of this stratum rather than a callee of 8.6's own. **D340 landed that unit**: `crypto/param_build_set.c`'s seven definitions are `src/param_build_set.rs`, reached by `src/ec/backend.rs` for the four `ossl_param_build_set_*`. The row stands anyway, because what it withholds is 8.5's provider-export half and D340 lands no Phase-8 export that reaches `crypto/dh/dh_backend.c` or `crypto/dsa/dsa_backend.c`.",
@@ -229,13 +223,14 @@
           "sleep",
           "src",
           "stderr",
+          "stdin",
           "type",
           "u16",
           "u32",
           "u64",
           "u8"
         ],
-        "note": "Each of these is a name the authority's *non-installed* headers introduce -- `#define F(x)` in crypto/md4/md4_local.h and crypto/sha/sha_local.h, `u8`/`u16`/`u32`/`u64` in crypto/aes/aes_local.h, macro-body and parameter names in include/internal/list.h, quic_*.h and sha3.h, and `sleep` in include/internal/e_os.h, which is EINTR-retry shim over the C library's -- and each also appears in this crate as an ordinary Rust identifier: a generic parameter, a local binding, a width alias, or a word inside a doc comment. A lexical scan of either side cannot separate those two facts, which is why this is a recorded class rather than a narrower matcher: a matcher tuned to drop `u8` would also drop a real collision. The gate holds the list exact, so a new member has to be looked at. Three earlier members -- `cbc` (D239), `initkey` (D242) and `now` -- and the one-member `not_in_this_profile` row that carried `initiv` (D265) were retired at D275: each was a *struct-member function-pointer field*, not a type, and `scan_typedefs` had taken the field's name out of the enclosing struct body. The grammar now reads a typedef's name from after the closing brace of a struct/union/enum body, so all four left the type universe and the records that existed only to cover them are gone. `initiv`'s own record had already said the honest disposition of that lexical false positive was to fix the atlas.",
+        "note": "Each of these is a name the authority's *non-installed* headers introduce -- `#define F(x)` in crypto/md4/md4_local.h and crypto/sha/sha_local.h, `u8`/`u16`/`u32`/`u64` in crypto/aes/aes_local.h, macro-body and parameter names in include/internal/list.h, quic_*.h and sha3.h, and `sleep` in include/internal/e_os.h, which is EINTR-retry shim over the C library's -- and each also appears in this crate as an ordinary Rust identifier: a generic parameter, a local binding, a width alias, or a word inside a doc comment. A lexical scan of either side cannot separate those two facts, which is why this is a recorded class rather than a narrower matcher: a matcher tuned to drop `u8` would also drop a real collision. The gate holds the list exact, so a new member has to be looked at. **`stdin` joined at D350**, with `src/ui/ui_openssl.rs`: `include/internal/e_os.h` spells `stdin`/`stdout`/`stderr` as macros for the systems whose C library has no `FILE *` stream objects (VMS, MSDOS), and the console method compares its session's input stream against `stdin` and falls back to it, so the crate declares the libc `static mut stdin` exactly where it needs it -- the same shadowing `stderr` has had since Phase 4. Three earlier members -- `cbc` (D239), `initkey` (D242) and `now` -- and the one-member `not_in_this_profile` row that carried `initiv` (D265) were retired at D275: each was a *struct-member function-pointer field*, not a type, and `scan_typedefs` had taken the field's name out of the enclosing struct body. The grammar now reads a typedef's name from after the closing brace of a struct/union/enum body, so all four left the type universe and the records that existed only to cover them are gone. `initiv`'s own record had already said the honest disposition of that lexical false positive was to fix the atlas.",
         "evidence": "forensics/atlas/macro-owners.json (defined_in for each name); the gate's first-run report, recorded in docs/DECISIONS.md D123; docs/DECISIONS.md D275 (the `scan_typedefs` grammar fix and the four retirements)"
       },
       {
@@ -747,13 +742,6 @@
         "class": "deferred_to_later_stratum",
         "owner_phase": 9,
         "reason": "Its single export is `BIO_f_reliable` (`crypto/evp/bio_ok.c:127`), which answers `&methods_ok` (`:112`) -- a `BIO_METHOD` whose write path is `ok_write` (`:254`) and `sig_out`, and `sig_out` fills the record's digest half with `RAND_bytes(md_data, md_size)` (`:456`). `rand.h` is Phase 9's, and a method struct cannot be published with a callback that has no callee.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
-      },
-      {
-        "unit": "crypto/pem/pem_oth.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 13,
-        "reason": "Its single export is `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`), which is a call to `PEM_bytes_read_bio` (`:28`) and then an `i2d`/callback pair. `PEM_bytes_read_bio` is one of the eight names `EVP_md5` withholds (`crypto/pem/pem_lib.c:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s -- handed to Phase 13 by 7.3g with its primitive unit named.",
         "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
       },
       {

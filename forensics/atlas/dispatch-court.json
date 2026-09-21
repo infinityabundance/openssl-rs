@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 331,
+      "crate_files_read": 337,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -12,14 +12,14 @@
       "identities_authority_only": 74,
       "identities_checked": 203,
       "identities_mismatches": 0,
-      "links_convention": 203,
+      "links_convention": 204,
       "links_documented": 12,
       "links_explicit": 15,
       "problems": 0,
-      "signatures_authority_only": 397,
-      "signatures_checked": 237,
+      "signatures_authority_only": 396,
+      "signatures_checked": 238,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 185,
+      "signatures_not_a_dispatch": 190,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -1511,7 +1511,6 @@
         "OSSL_STORE_open_ex_fn",
         "OSSL_STORE_open_fn",
         "OSSL_STORE_post_process_info_fn",
-        "OSSL_i2d_of_void_ctx",
         "PKCS12_create_cb",
         "SSL_CTX_alpn_select_cb_func",
         "SSL_CTX_decrypt_session_ticket_fn",
@@ -3370,6 +3369,14 @@
           "how": "convention"
         },
         {
+          "alias": "OsslI2dOfVoidCtx",
+          "at": "src/pem/pem_lib.rs",
+          "authority": "OSSL_i2d_of_void_ctx",
+          "authority_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(ptr(int:1:u)), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(ptr(int:1:u)), ptr(opaque))",
+          "how": "convention"
+        },
+        {
           "alias": "ProviderRandomBytesFn",
           "at": "src/provider/activate.rs",
           "authority": "OSSL_FUNC_provider_random_bytes_fn",
@@ -4592,6 +4599,31 @@
           "alias": "FreeThunk",
           "at": "src/runtime/stack.rs",
           "why": "not a provider dispatch: `safestack.h.in`'s `sk_*_compfunc` / `freefunc` / `copyfunc` macros generate it per type, so there is no single typedef"
+        },
+        {
+          "alias": "UiOpenSessionFn",
+          "at": "src/ui/ui_lib.rs",
+          "why": "not a provider dispatch: a member of `UI_METHOD`'s vtable, declared inline in `crypto/ui/ui_local.h:20-59` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "UiWriteStringFn",
+          "at": "src/ui/ui_lib.rs",
+          "why": "not a provider dispatch: a member of `UI_METHOD`'s vtable, declared inline in `crypto/ui/ui_local.h:20-59` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "UiDuplicateDataFn",
+          "at": "src/ui/ui_lib.rs",
+          "why": "not a provider dispatch: a member of `UI_METHOD`'s vtable, declared inline in `crypto/ui/ui_local.h:20-59` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "UiDestroyDataFn",
+          "at": "src/ui/ui_lib.rs",
+          "why": "not a provider dispatch: a member of `UI_METHOD`'s vtable, declared inline in `crypto/ui/ui_local.h:20-59` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "UiConstructPromptFn",
+          "at": "src/ui/ui_lib.rs",
+          "why": "not a provider dispatch: a member of `UI_METHOD`'s vtable, declared inline in `crypto/ui/ui_local.h:20-59` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
         }
       ],
       "unlinked": [],
