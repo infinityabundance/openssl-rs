@@ -75,7 +75,7 @@
       "verdict": "pass"
     },
     "RT-ASN1-TEMPLATE": {
-      "observations": 120,
+      "observations": 153,
       "verdict": "pass"
     },
     "RT-ASN1-TIME": {
@@ -389,7 +389,7 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 2652,
+    "libcrypto": 2659,
     "libssl": 0
   },
   "open_obligations": {
@@ -436,10 +436,10 @@
   },
   "prerequisites": {
     "blocking_dependencies": 18,
-    "divergence_names_covered": 39,
+    "divergence_names_covered": 59,
     "findings": 0,
-    "language_census": 3926,
-    "sealed_census": 52
+    "language_census": 4188,
+    "sealed_census": 56
   },
   "provider_implemented": [
     "default/OSSL_OP_CIPHER/AES-128-CBC",

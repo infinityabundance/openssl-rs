@@ -23962,8 +23962,14 @@ and `EVP_PKEY_set1_RSA`; `crypto/dsa/dsa_prn.c` (four) needs
 (`EVP_PKEY_decrypt_old`/`EVP_PKEY_encrypt_old`) need `evp_pkey_get0_RSA_int`;
 `crypto/evp/evp_pkey_type.c` (`EVP_PKEY_type`) needs `ENGINE_finish`; `crypto/evp/pmeth_lib.c`
 (three) needs the four `ENGINE_*` names and `EVP_PKEY_type`; `crypto/evp/p_lib.c` (twelve) needs
-fourteen; and `crypto/pem/pem_all.c` (thirty) needs `EVP_PKEY_get1_DSA`/`EVP_PKEY_get1_EC_KEY`/
-`EVP_PKEY_get1_RSA` plus `PEM_bytes_read_bio`/`PEM_read_PrivateKey`/`PEM_read_bio_PrivateKey`.
+fourteen; and `crypto/pem/pem_all.c` (thirty) needs **ten**: `EVP_PKEY_get1_DSA`/
+`EVP_PKEY_get1_EC_KEY`/`EVP_PKEY_get1_RSA` plus
+`PEM_bytes_read_bio`/`PEM_read_PrivateKey`/`PEM_read_bio_PrivateKey`, and — invisible to this
+scan, because the file reaches them only through `include/openssl/pem.h`'s `IMPLEMENT_PEM_*`
+macros, which expand to them — `PEM_ASN1_read`/`PEM_ASN1_read_bio`/`PEM_ASN1_write`/
+`PEM_ASN1_write_bio` (`crypto/pem/pem_lib.c` and `pem_oth.c`). The first count of six was the
+identifier scan's, and a scan of a `.c` cannot see a name only a macro introduces; D349
+corrects it.
 
 The three headlines the brief named re-check:
 
@@ -24182,3 +24188,217 @@ other than `rsa_asn1.c` and no `crypto/asn1` file other than `x_algor.c` is reac
 false` with **65** names open, 8.8's fifteen and the four key types' printer families among them.
 What this slice is, is 8.8's root unit and the RSA half that named it — not 8.8, and not a claim
 about the stratum's work being nearly done.
+
+---
+
+## D349 — 8.8's accessor slice lands: `crypto/x509/x_pubkey.c`, `x509_set.c`, `t_x509.c` and `crypto/asn1/p8_pkey.c` each gain a partial module, three placeholder structs become the authority's own layouts, and two measured errors in the record are corrected
+
+**Decision.** **Seven exports and one internal** become `implemented`, across four authority units,
+each as a **partial** module that names what it withholds:
+
+* **`crypto/x509/x_pubkey.c` -> `src/x509/x_pubkey.rs`.** The three accessors every one of the five
+  ASN.1 method objects calls by name -- `X509_PUBKEY_set0_public_key` (`:1010-1015`),
+  `X509_PUBKEY_set0_param` (`:1017-1026`) and `X509_PUBKEY_get0_param` (`:1028-1041`) -- plus the
+  internal `ossl_x509_PUBKEY_get0_libctx` (`:1071-1079`). **21 of the unit's 24 exports and 16 of
+  its 17 internals are withheld.**
+* **`crypto/x509/x509_set.c` -> `src/x509/x509_set.rs`.** `X509_SIG_INFO_set` (`:200-207`).
+  **20 of 21 exports and both internals withheld.**
+* **`crypto/x509/t_x509.c` -> `src/x509/t_x509.rs`.** `X509_signature_dump` (`:269-290`).
+  **9 of 10 exports and both internals withheld.**
+* **`crypto/asn1/p8_pkey.c` -> `src/asn1/p8_pkey.rs`.** `PKCS8_pkey_set0` (`:53-69`) and
+  `PKCS8_pkey_get0` (`:71-84`). **9 of 11 exports withheld.**
+
+`src/x509/` is a **new directory**, created here with its `mod.rs`. It did not exist before D349;
+the crate's rule is the atlas's own (`gen_prerequisite_atlas.build_edges`: "the unit is the dominant
+authority translation unit among the symbols the module defines, so the map is measured from the code
+rather than read out of a doc comment"), so each unit gets one module named for its file, exactly as
+`src/asn1/x_algor.rs` does for `crypto/asn1/x_algor.c`. `crypto/asn1/p8_pkey.c` maps to
+`src/asn1/p8_pkey.rs` because `src/asn1/` already holds the `crypto/asn1/` units.
+
+**This slice moves no `phase<N>-obligations.json` count, and that is the first thing to say.** All
+seven exports are `owner_phase: 11` in `forensics/atlas/symbol-ownership.json` with
+`"ledger": "not-yet-written"` -- Phase 11 has no obligation ledger -- so they are in no Phase 8 (or
+any) ledger list, exactly as D348's fourteen `X509_ALGOR_*` were. `forensics/phase8-obligations.json`
+stays implemented **721**, deferred **0**, open **65**, owned **786**, `complete: false`; phases 7 and
+9 are unchanged. What moves is the crate's own surface: `forensics/atlas/implemented-surface.json`'s
+`libcrypto` implemented 2652 -> **2659**, which is the seven exports and nothing else (the one
+internal is a `pub(crate)` Rust function with no `#[no_mangle]`, so `internal_symbols.c_style` stays
+**327**); `transcription-edges.json` reads **287** modules over **256** translation units (was
+283/252); and `court-coverage.py`'s `not_yet_begun` list -- the Phase-11-export class D348 added --
+grows 14 -> **21**.
+
+**Each partial unit is a decision rather than an omission, and the mechanism is D345's divergence
+row.** A row per module whose `covers` is exact in both directions:
+
+* `src/x509/x_pubkey.rs` -- **16** names, the `ossl_d2i_*_PUBKEY`/`ossl_i2d_*_PUBKEY` family
+  (fourteen, each a body that builds a temporary `EVP_PKEY` and calls `EVP_PKEY_assign`, whose
+  `pkey->ameth = EVP_PKEY_asn1_find(NULL, type)` reads the empty `standard_methods[]` -- D341's
+  cycle) plus `ossl_d2i_X509_PUBKEY_INTERNAL`/`ossl_X509_PUBKEY_INTERNAL_free` (the item's decoder
+  and free path, reached only by the withheld `d2i_PUBKEY` family).
+* `src/x509/x509_set.rs` -- **2** names (`ossl_x509_init_sig_info`, `ossl_x509_set1_time`).
+* `src/x509/t_x509.rs` -- **2** names (`ossl_serial_number_print`, `ossl_x509_print_ex_brief`).
+
+The class is `owned_by_a_later_stratum`. The withheld work is Phase 11's, and the tension the class
+cannot express -- that it is the *same* stratum's next slice rather than a later one -- is recorded
+in each row's note, as the `ossl_ffc_params_todata` and `ossl_ec_generate_key_dhkem` rows do.
+`crypto/asn1/p8_pkey.c` needs **no** row: it defines no internal symbol at all (its only file-local
+function is the `static pkey_cb`, which is not in the internal-symbol universe), so its
+direction-B set is empty. That is the one measured asymmetry among the four, and the gate reports it
+as such. `forensics/atlas/prerequisite-gate.json` now reads **13 rows / 59 names**, **zero findings**,
+`blocking_dependencies` **18**, `sealed_stratum_census` **56**.
+
+**What each unit's withheld remainder is, named so a reader does not have to infer it.**
+`x_pubkey.c`'s twenty-one exports are the `i2d_*_PUBKEY`/`d2i_*_PUBKEY` family and the
+`X509_PUBKEY_{new,new_ex,free,dup,it,get,get0,set,eq}` object layer, and its `#ifndef
+OPENSSL_NO_ECX` half additionally reaches `OSSL_DECODER_CTX_new_for_pkey`/`OSSL_ENCODER_CTX_*`,
+Phase 10's and already a `blocking_dependency`. `x509_set.c`'s twenty are the `X509` object's
+mutator layer (`X509_get_version`/`X509_set_version`, the four `X509_set_issuer_name`/
+`_subject_name`/`_pubkey`/`_serialNumber` setters, the six `notBefore`/`notAfter` accessors,
+`X509_get0_extensions`, `X509_get0_uids`,
+`X509_get0_tbs_sigalg`, `X509_get_X509_PUBKEY`, `X509_get_signature_info`, `X509_SIG_INFO_get`,
+`X509_up_ref`, `X509_get_signature_type`). `t_x509.c`'s nine are the printers, whose `do_print_ex`
+reads nearly every field of an `X509`. `p8_pkey.c`'s nine split three ways and the brief's count of
+"other three" is corrected by the measurement: **five** are
+`IMPLEMENT_ASN1_FUNCTIONS(PKCS8_PRIV_KEY_INFO)`'s (`_new`, `_free`, `_it`, `d2i_`, `i2d_`), which
+an identifier scan of the file cannot see because a macro generates them; they are **blocked
+rather than withheld by preference**, because the template they come from,
+`ASN1_SEQUENCE_cb(PKCS8_PRIV_KEY_INFO, pkey_cb)` (`:43-49`), names `X509_ATTRIBUTE_it` for its
+`attributes` field and `crypto/x509/x_attrib.c` is Phase 11's with no crate module -- a `static`
+naming an item function the crate does not define does not compile. `PKCS8_pkey_get0_attrs`
+(`:86-90`) is the `attributes` reader and is withheld with them; and the three `PKCS8_pkey_add1_attr*`
+the brief names are each one call to `X509at_add1_attr_by_NID`/`_by_OBJ`/`X509at_add1_attr`,
+all three of them `crypto/x509/x509_att.c`'s (`:118`, `:151`, `:187`) and unlanded, with no
+partial form because each body *is* that one call -- and the brief's companion unit
+`crypto/x509/x_attrib.c` is reached by the **template's** `X509_ATTRIBUTE_it`, not by these
+three.
+
+**Three placeholder structs are replaced by the authority's own layouts, one canonical definition
+each.** `src/evp/pkey_asn1.rs` declared `X509Pubkey`, `Pkcs8PrivKeyInfo`, `X509Algor` and
+`X509SigInfo` as `#[repr(C)]` with `_private: [u8; 0]`; D348 gave `X509Algor` its real definition in
+`src/asn1/x_algor.rs` and left the other three. This commit finishes the set and each definition
+lands in the module whose authority **unit** defines it:
+
+* `X509Pubkey` -> `src/x509/x_pubkey.rs`, from `struct X509_pubkey_st` (`crypto/x509/x_pubkey.c:31-43`,
+  the file's own definition, so the fields are crate-private). Offsets 0/8/16/24/32/40, size 48, in
+  a `const _: () = { assert!(...) }` block; `flag_force_legacy` is a `c_uint` because a C bitfield
+  has no Rust spelling and only its four-byte storage is projected. The brief's coordinate `:63-78`
+  is the `ASN1_SEQUENCE(X509_PUBKEY_INTERNAL)` template and `ossl_d2i_X509_PUBKEY_INTERNAL`, which
+  restate the same two leading fields as item columns; the accessors read the *struct*, and the item
+  is withheld with its decoder. The brief's `X509_PUBKEY_INTERNAL` coordinate and the struct the
+  functions dereference are therefore two different coordinates, and this entry records which one
+  the slice needs.
+* `Pkcs8PrivKeyInfo` -> `src/asn1/p8_pkey.rs`, from `struct pkcs8_priv_key_info_st`
+  (`include/crypto/x509.h:291-297`). Offsets 0/8/16/24/32, size 40; `attributes` is
+  `STACK_OF(X509_ATTRIBUTE) *`, written `*mut OpenSslStack` as `EvpPkey`'s stack fields are.
+* `X509SigInfo` -> `src/x509/x509_set.rs`, from `struct x509_sig_info_st`
+  (`include/crypto/x509.h:50-59`), the setter's unit. Offsets 0/4/8/12, size 16.
+
+`src/evp/pkey_asn1.rs` now `pub use`s all four instead of declaring three placeholders, so no second
+declaration exists. **The fifth placeholder there, `Asn1BitString`, is deliberately left as it is,
+and the reason is measured:** the authority's `ASN1_BIT_STRING` is a `typedef` of the same
+`struct asn1_string_st` as `ASN1_STRING`, and the crate writes every `ASN1_BIT_STRING *` it *takes*
+as `*mut Asn1String` (`src/asn1/bitstr.rs` is the precedent). The name survives only for the two
+`item_sign`/`item_verify` callback signatures, where a distinct type name is wanted and no field is
+read; making it a `pub use` of `Asn1String` would be a naming change in a signature this slice does
+not otherwise touch, so it is recorded rather than done.
+
+**The prototype court corrected a signature, and it is the class only that court sees.** The first
+build ran `prototype_court.py` to `TYPE-MISMATCH X509_PUBKEY_get0_param`: the authority's first
+parameter is `ASN1_OBJECT **ppkalg` -- a **non-const** pointee -- and the transcription had written
+`*mut *const Asn1Object`, which is `ptr(ptr(const(opaque)))` where the authority reads
+`ptr(ptr(opaque))`. No behavioural court could see it: the two differ only in a qualifier the
+function writes *through*, and every arm reads the same value back. `PKCS8_pkey_get0`'s `ppkalg`
+*is* `const ASN1_OBJECT **` and was already right, which is why the pair is worth stating together.
+The type was corrected and the probe's own local was widened from `const ASN1_OBJECT *` to
+`ASN1_OBJECT *` to match. This is D347's and D344's class reached from the signature side.
+
+**The court: `RT-ASN1-TEMPLATE` grows 120 -> 153 observations, zero residual.** The arms live in
+`courts/phase5/rt_asn1_template_probe.c`, the probe D348 already extended for `X509_ALGOR`, because
+an `X509_PUBKEY` and a `PKCS8_PRIV_KEY_INFO` cannot be built through any landed entry point -- both
+units' `_new` families are withheld -- so the probe declares the authority's own
+`struct X509_pubkey_st`, `struct pkcs8_priv_key_info_st` and `struct x509_sig_info_st` locally,
+allocates one, fills its ASN.1 members with the library's own constructors, and drives the six
+accessors. That is this probe's established method ("the shape of the item **is** the thing under
+test"), and it makes each arm a **layout** observation as well as an accessor one: the accessors
+read fields by offset, so a candidate that placed one differently would read the wrong address and
+the transcript would differ. What the arms print is a return code, an OID the probe compares itself,
+the four bytes of a public constant the file chose, and the hex of a `BIO` the library filled --
+never an address and never a key. The `X509_signature_dump` arms are the strongest of the six:
+twenty, nineteen and zero octets make the `i % 18` line break, the `BIO_indent(0)` no-op and the
+trailing newline all observable, and the **zero-octet** arm is what shows that the dump is the
+trailing newline *alone* -- the loop never runs, so no indent is written. The probe's own comment
+and `src/x509/t_x509.rs`'s module doc were both corrected to say that after the first run measured
+it. `probe_hygiene.py` reads the probe clean at `-O0`/`-O1`/`-O2`, and the transcript is identical on
+both sides.
+
+**No raise site was generated, because none of the eight functions raises.** `X509_PUBKEY_set0_param`,
+`PKCS8_pkey_set0` and `X509_signature_dump` answer `0` on their failure arms and the other five
+always answer `1`; no authority path reaches `ERR_raise`. So none of the four translation units joins
+`gen_err_raise_sites.py`'s `COVERED_FILES`, `src/runtime/err_sites.rs` is unchanged, and
+`forensics/atlas/err-raise-sites.json` gains nothing. That is deliberately the opposite of D347's
+choice for the two EC printers, and the difference is the measurement above rather than a preference.
+
+**Two measured errors in the record are corrected in the same commit.**
+
+* **D347's frontier sentence named six names for the thirty `crypto/pem/pem_all.c` rows; the true
+  number is ten.** The four it could not see are `PEM_ASN1_read`, `PEM_ASN1_read_bio`,
+  `PEM_ASN1_write` and `PEM_ASN1_write_bio` (`crypto/pem/pem_lib.c`, `pem_oth.c`), and the cause is
+  **macro-blindness**: `pem_all.c` reaches them only through `include/openssl/pem.h`'s
+  `IMPLEMENT_PEM_rw`/`IMPLEMENT_PEM_write`/`IMPLEMENT_PEM_write_cb`/`IMPLEMENT_PEM_provided_write`
+  macros, whose bodies expand to `PEM_ASN1_read`/`_read_bio`/`_write`/`_write_bio`, so an identifier
+  scan of the `.c` cannot see a name a macro introduces. All four are verified absent from
+  `implemented-surface.json`, as the six D347 named are. The sentence now says ten and names the
+  cause.
+* **`forensics/prerequisites.json`'s `units` block carried four stale `legacy_*` rows, not one.** The
+  brief named `crypto/evp/legacy_md5.c`; the measurement is that **four** of the eight `legacy_*`
+  rows have the same defect. `crypto/evp/legacy_md5.c`, `legacy_blake2.c`, `legacy_ripemd.c` and
+  `legacy_sha.c` each now have a crate module (`src/evp/legacy_md5.rs`, `legacy_blake2.rs`,
+  `legacy_ripemd.rs`, `legacy_sha.rs`, all Phase 7) and every one of their exports is in
+  `implemented-surface.json` (`EVP_md5`; `EVP_blake2b512`/`EVP_blake2s256`; `EVP_ripemd160`; the
+  thirteen `EVP_sha*`/`EVP_shake*`), so the rows' own premise -- "no module transcribes it" -- is
+  false and they are **retired** (66 -> **62** rows). The other four stay, each for a measured
+  reason: `legacy_md4.c`, `legacy_mdc2.c` and `legacy_wp.c` implement none of their exports, and
+  `legacy_md5_sha1.c` has no transcription edge of its own (its one export `EVP_md5_sha1` is built
+  in `src/evp/legacy_md5.rs`, which the atlas attributes to `legacy_md5.c`), so retiring its row would
+  make the unit unreached and `plan_reconciliation.py`'s P1 would fire -- Phase 7 is `complete`.
+
+**What is stale in the sealed strata, recorded rather than edited.** Two phase-7 records name
+`EVP_md5` as a Phase-13 blocker, and `EVP_md5` landed in **D293** (the crate's own
+`phase7_obligations.py`'s `UNBLOCKED_HANDOFFS` already says so). They are left untouched because
+both belong to sealed strata and their committed evidence must not move in this commit, but the next
+reader should find them here: `courts/phase7/rt_evp_pem_probe.c`'s `not_measured()` prints
+`PEM_do_header=NOT_MEASURED_EVP_md5_IS_PHASE_13_legacy_md5_c_36_pem_lib_c_479` (`:1129`) and
+`PEM_ASN1_write_bio`/`PEM_ASN1_write_bio_ctx=NOT_MEASURED_EVP_md5_IS_PHASE_13_...` (`:1134-1135`),
+where the `NOT_MEASURED` **status** is still correct and only the named blocker is stale; and
+`forensics/tools/phase7_obligations.py`'s `PEM_write_bio_PrivateKey_traditional` row reason (`:683`)
+says `PEM_ASN1_write_bio` is "Phase 13 behind `EVP_md5` and Phase 9 behind `RAND_bytes`". That row's
+*structured* blockers (`evp_pkey_copy_downgraded`, `OSSL_ENCODER_CTX_new_for_pkey`, `RAND_bytes`) are
+still live, so `blocker_liveness.check_rows` does not fire on it -- only the prose is stale.
+
+**Bookkeeping, read off the regenerated files.** `forensics/atlas/implemented-surface.json`
+`libcrypto` 2652 -> **2659**; `transcription-edges.json` **287** modules over **256** units;
+`court-coverage.py` reports phase 8 at **721** implemented (713 direct, 8 indirect) and phase 7 at
+724, with the 21 `not_yet_begun` names published rather than asserted away; the prerequisite gate
+ends at **zero findings** over **13 rows / 59 names**, `blocking_dependencies` **18** and
+`sealed_stratum_census` **56**; and `regression_guard.py --baseline-ref origin/main` reports no
+regression -- `sealed_census` moves 57 -> 56 against that baseline, a *decrease*, so no
+`ownership-transitions.json` prerequisite-transition row is needed. `docs/PHASE-8-SUBPHASES.md`'s two
+anchored clauses are unchanged and still consistent in both directions (no Phase-8 ledger symbol
+moved), and `docs/PHASE-8-REMAINING.md` is regenerated at 721/0/65.
+
+**What is deliberately *not* here, named rather than implied.** The five `EVP_PKEY_ASN1_METHOD`
+objects and `standard_methods[]` are untouched: building them still needs
+`crypto/{rsa,dh,dsa,ec}/*_backend.c`, `rsa_pss.c`, and for the ECX rows
+`crypto/ec/ecx_key.c`, `ecx_backend.c`, `curve25519.c` and the whole of `crypto/ec/curve448/`, all of
+which are Phase 8's provider half or later. `crypto/x509/x_pubkey.c`'s twenty-one other exports,
+`x509_set.c`'s twenty, `t_x509.c`'s nine and `p8_pkey.c`'s nine are withheld with the reasons above
+and their internals are the three divergence rows; `src/evp/pkey_asn1.rs`'s `Asn1BitString`
+placeholder is left as it is for the reason recorded above; and `ossl_x509_PUBKEY_get0_libctx`'s
+two authority callers, `crypto/ec/ec_ameth.c:109` and `crypto/x509/v3_skid.c:69`, are both
+unlanded, so the accessor carries an item-level `#[allow(dead_code)]` naming them.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete: false`
+with **65** names open, 8.8's fifteen, the four key types' printer families and the thirty `pem.h`
+helpers among them. What this slice is, is the six accessors the method objects name, the three
+layouts they read and the cache the courts give them -- not 8.8, not the method objects, and not a
+claim about the stratum's work being nearly done.

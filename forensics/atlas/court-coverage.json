@@ -18,6 +18,14 @@
     "not_yet_begun": [
       {
         "owner_phase": 11,
+        "symbol": "PKCS8_pkey_get0"
+      },
+      {
+        "owner_phase": 11,
+        "symbol": "PKCS8_pkey_set0"
+      },
+      {
+        "owner_phase": 11,
         "symbol": "X509_ALGORS_it"
       },
       {
@@ -55,6 +63,26 @@
       {
         "owner_phase": 11,
         "symbol": "X509_ALGOR_set_md"
+      },
+      {
+        "owner_phase": 11,
+        "symbol": "X509_PUBKEY_get0_param"
+      },
+      {
+        "owner_phase": 11,
+        "symbol": "X509_PUBKEY_set0_param"
+      },
+      {
+        "owner_phase": 11,
+        "symbol": "X509_PUBKEY_set0_public_key"
+      },
+      {
+        "owner_phase": 11,
+        "symbol": "X509_SIG_INFO_set"
+      },
+      {
+        "owner_phase": 11,
+        "symbol": "X509_signature_dump"
       },
       {
         "owner_phase": 11,
@@ -538,6 +566,7 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-PRINT",
+              "RT-ASN1-TEMPLATE",
               "RT-MEM",
               "RT-MEM-DEFAULT"
             ],
@@ -2584,6 +2613,7 @@
               "RT-ASN1-MIME",
               "RT-ASN1-PRINT",
               "RT-ASN1-STR",
+              "RT-ASN1-TEMPLATE",
               "RT-ASN1-TIME",
               "RT-BIO",
               "RT-BIO-ASN1",
@@ -3032,6 +3062,7 @@
               "RT-ASN1-MIME",
               "RT-ASN1-PRINT",
               "RT-ASN1-STR",
+              "RT-ASN1-TEMPLATE",
               "RT-ASN1-TIME",
               "RT-BIO",
               "RT-BIO-ASN1",
@@ -3249,6 +3280,7 @@
               "RT-ASN1-MIME",
               "RT-ASN1-PRINT",
               "RT-ASN1-STR",
+              "RT-ASN1-TEMPLATE",
               "RT-ASN1-TIME",
               "RT-BIO",
               "RT-BIO-ASN1",
@@ -3353,6 +3385,7 @@
               "RT-ASN1-MIME",
               "RT-ASN1-PRINT",
               "RT-ASN1-STR",
+              "RT-ASN1-TEMPLATE",
               "RT-ASN1-TIME",
               "RT-BIO",
               "RT-BIO-ASN1",
@@ -4159,7 +4192,8 @@
             "basis": "called",
             "courts": [
               "RT-ASN1",
-              "RT-ASN1-PRINT"
+              "RT-ASN1-PRINT",
+              "RT-ASN1-TEMPLATE"
             ],
             "symbol": "ASN1_BIT_STRING_free"
           },
@@ -4189,7 +4223,8 @@
             "basis": "called",
             "courts": [
               "RT-ASN1",
-              "RT-ASN1-PRINT"
+              "RT-ASN1-PRINT",
+              "RT-ASN1-TEMPLATE"
             ],
             "symbol": "ASN1_BIT_STRING_new"
           },
@@ -4450,6 +4485,7 @@
             "courts": [
               "RT-ASN1",
               "RT-ASN1-PRINT",
+              "RT-ASN1-TEMPLATE",
               "RT-EVP-PEM"
             ],
             "symbol": "ASN1_INTEGER_free"
@@ -4610,7 +4646,8 @@
             "basis": "called",
             "courts": [
               "RT-ASN1",
-              "RT-ASN1-PRINT"
+              "RT-ASN1-PRINT",
+              "RT-ASN1-TEMPLATE"
             ],
             "symbol": "ASN1_OCTET_STRING_free"
           },
@@ -20095,7 +20132,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "a941b224deb1b1c0f2353a5026abecb3d8a98177620b8040ac67d37e431762c7"
+      "sha256": "060055e24cd41a27552f412b2880b651cb0ec71c4b13036fad355025febcb8c6"
     },
     {
       "name": "symbol-ownership",
@@ -20110,7 +20147,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "63f2967ac06ee0a6fd57730517d74d630c9976c9519abdab3a325422cb8a9fb9"
+      "sha256": "3858f616971192f7a68046a03bb0f340a09130a9d9580d3b33212f4200ca5587"
     },
     {
       "name": "phase3-courts",
@@ -20120,7 +20157,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "436e213e034fdbf832245baec10a8a44acf4e99b5ee9da025761ee5d900ff486"
+      "sha256": "ce75f4e20ce392adc5823be316f43ac1c69773fdc584d2ee03f999058eaee773"
     },
     {
       "name": "phase4-courts",
@@ -20130,17 +20167,17 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "f906f5d201762fba74683620731b6f89dc2c137ecbb13268ddd95429c008ad3d"
+      "sha256": "195fb000a72a2ad8bea0c4e5897969a68200bb70ca00613a3721d0b10401db19"
     },
     {
       "name": "phase5-courts",
       "path": "artifacts/phase5/COURTS.json",
-      "sha256": "5fd50483e264cf0217e20c87954bd92e91bb27e59fb98df5140ba3506faabfd1"
+      "sha256": "6143e4e4fb76c61da6b0ad18885f66a488e0eef33b7f44bf490557b712af3eed"
     },
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "7a021bd38661cce51670414a8545a8a876fa89de3d7766a8d95593e770042c8c"
+      "sha256": "2d3b7f49f86d2d45219d9a754d7ea1abd44d5aad34f7532bd0aa3d8952afd29f"
     },
     {
       "name": "phase6-courts",
@@ -20150,7 +20187,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "7b5810442de1327ac0b6ea57cc0d5992559772af157d21f822e7d90b17337b83"
+      "sha256": "41188014033a8f3d1bdaaf529263eda135864cda7650d5b9bd564bc446105aa9"
     },
     {
       "name": "phase7-courts",
@@ -20160,7 +20197,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "b26f1bb32c025b0c8e463304899868e997e69ef40d145f9071a71d0d07979cc8"
+      "sha256": "a5d91d94b2d40e9c060b0898721b5c7c658a9fc2b17e301605e31d78af08a72b"
     },
     {
       "name": "phase8-courts",
@@ -20170,7 +20207,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "b91490e09d5daf7cb641aa930ebc0b375cea4c601975b774012ae3bf50afd7c5"
+      "sha256": "e0bd33fc070285a14b2a52e4f8a355a2f57b7dd77221a0329f4591a747a6ea46"
     },
     {
       "name": "phase9-courts",

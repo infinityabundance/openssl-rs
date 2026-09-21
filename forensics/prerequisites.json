@@ -285,6 +285,50 @@
         ],
         "note": "**Withheld rather than stubbed.** `src/dh/ameth.rs` lands the two `dh_ameth.c` exports that reach no Phase 11 name -- `DHparams_dup` and `DHparams_print` -- and is therefore a module for `crypto/dh/dh_ameth.c`, which makes the unit's unwired internals countable (D327's rule). These two are the ones the lexical scan sees: the `EVP_PKEY_ASN1_METHOD` objects `ossl_dh_asn1_meth` and `ossl_dhx_asn1_meth` (`dh_ameth.c:426-585`), whose `pub_decode`/`pub_encode`/`priv_encode`/`import_from` columns read `X509_PUBKEY`/`X509_ALGOR`/`PKCS8_PRIV_KEY_INFO` fields -- the three bodies D341 measured as Phase 11's. A `const EVP_PKEY_ASN1_METHOD` names its callbacks by address, so neither object can exist until Phase 11's `X509_PUBKEY_get0_param`/`X509_ALGOR_get0`/`X509_PUBKEY_set0_param`/`PKCS8_pkey_set0` do; the eight `X509_*`/`PKCS8_*` coordinates are D341's table and the plan's §5. The rest of the unit -- the decode/encode callbacks, `dh_cmp_parameters`, `dh_pub_cmp` and the three prints -- is unlanded and named here rather than approximated, and the two objects are absent rather than returned as NULLs. **The class is the closest of the five and the tension is recorded rather than smoothed over**: the work these two wait on is the ASN.1 method objects of the *same* stratum, exactly as `src/ec/asn1.rs`'s row records for the EC half.",
         "evidence": "docs/DECISIONS.md D341 and D345; crypto/dh/dh_ameth.c:426-585; docs/PHASE-8-AMETH-INTEGRATION-PLAN.md §5; forensics/atlas/transcription-edges.json's `crypto/dh/dh_ameth.c` edge"
+      },
+      {
+        "owner_module": "src/x509/x_pubkey.rs",
+        "class": "owned_by_a_later_stratum",
+        "covers": [
+          "ossl_X509_PUBKEY_INTERNAL_free",
+          "ossl_d2i_DH_PUBKEY",
+          "ossl_d2i_DHx_PUBKEY",
+          "ossl_d2i_DSA_PUBKEY",
+          "ossl_d2i_ED25519_PUBKEY",
+          "ossl_d2i_ED448_PUBKEY",
+          "ossl_d2i_PUBKEY_legacy",
+          "ossl_d2i_X25519_PUBKEY",
+          "ossl_d2i_X448_PUBKEY",
+          "ossl_d2i_X509_PUBKEY_INTERNAL",
+          "ossl_i2d_DH_PUBKEY",
+          "ossl_i2d_DHx_PUBKEY",
+          "ossl_i2d_ED25519_PUBKEY",
+          "ossl_i2d_ED448_PUBKEY",
+          "ossl_i2d_X25519_PUBKEY",
+          "ossl_i2d_X448_PUBKEY"
+        ],
+        "note": "**Withheld rather than stubbed, and this row is what the prerequisite gate's `unwired_function_in_the_current_stratum` findings become once the omission is a decision rather than an oversight.** `src/x509/x_pubkey.rs` lands the three `x_pubkey.c` accessors the ASN.1 method objects call by name -- `X509_PUBKEY_set0_public_key` (`:1010-1015`), `X509_PUBKEY_set0_param` (`:1017-1026`) and `X509_PUBKEY_get0_param` (`:1028-1041`) -- plus the internal `ossl_x509_PUBKEY_get0_libctx` (`:1071-1079`), and is therefore a module for `crypto/x509/x_pubkey.c`, which makes the unit's unwired internals countable (D327's rule). These sixteen are the ones the lexical scan sees. Fourteen are the `ossl_d2i_*_PUBKEY`/`ossl_i2d_*_PUBKEY` bodies, each of which builds a temporary `EVP_PKEY` and calls `EVP_PKEY_assign`; that function sets `pkey->ameth = EVP_PKEY_asn1_find(NULL, type)`, whose standard half searches `crypto/asn1/ameth_lib.c`'s `standard_methods[]` -- the table of Phase 8's objects that is empty in this crate (`src/evp/pkey_asn1.rs`'s `D-PKEY-AMETH-1`, D341's cycle). `ossl_d2i_X509_PUBKEY_INTERNAL` is the `ASN1_SEQUENCE(X509_PUBKEY_INTERNAL)` item's decoder (`:68-78`) and `ossl_X509_PUBKEY_INTERNAL_free` (`:80-83`) its free path; both are reached only by the withheld `d2i_PUBKEY`/`X509_PUBKEY_new` family, so landing them would be an item no landed function can build. The unit's `#ifndef OPENSSL_NO_ECX` half additionally reaches `OSSL_DECODER_CTX_new_for_pkey`/`OSSL_ENCODER_CTX_new_for_pkey`, Phase 10's and already a `blocking_dependency`. A transcription that reached through the cycle, or that returned early, would be a fabricated answer for names Phase 11's own object layer owns; that is the class, and the class set has no label for \"the same stratum's next slice\", exactly as the `ossl_ffc_params_todata` and `ossl_ec_generate_key_dhkem` rows record. The row fail-closes in both directions: if any of the sixteen is ever built the gate reports it as `stale` until the row is removed, and if `src/x509/x_pubkey.rs` stopped owning the unit the record would stop matching.",
+        "evidence": "docs/DECISIONS.md D349 and D341; crypto/x509/x_pubkey.c:1010-1041 and :1071-1079 (the slice) against :31-43 and :63-83 (the struct and the internal item); src/evp/pkey_asn1.rs's `D-PKEY-AMETH-1`; forensics/atlas/prerequisite-gate.json's `blocking_dependencies`; forensics/atlas/transcription-edges.json's `crypto/x509/x_pubkey.c` edge"
+      },
+      {
+        "owner_module": "src/x509/x509_set.rs",
+        "class": "owned_by_a_later_stratum",
+        "covers": [
+          "ossl_x509_init_sig_info",
+          "ossl_x509_set1_time"
+        ],
+        "note": "**Withheld rather than stubbed.** `src/x509/x509_set.rs` lands the one `x509_set.c` export the ASN.1 method objects call -- `X509_SIG_INFO_set` (`:200-207`), which `rsa_ameth.c:771` and `ecx_meth.c:586`/`:602` reach -- and is therefore a module for `crypto/x509/x509_set.c`, which makes the unit's unwired internals countable (D327's rule). These two are the ones the lexical scan sees. `ossl_x509_init_sig_info` (`:305-309`) is a one-line delegation to the file-local `static x509_sig_info_init` (`:217`); its only caller is `crypto/x509/v3_purp.c:659`, inside `X509_check_purpose`, and the `X509_SIG_INFO` it fills is read back by `X509_SIG_INFO_get` (`:186-198`). `ossl_x509_set1_time` (`:78-92`) duplicates one `ASN1_TIME` with `ASN1_STRING_dup`, frees the old one and sets a caller's `*modified` flag; the two `X509_set1_notBefore`/`_notAfter` exports (`:98`, `:106`) and three `crypto/x509/x509cset.c` setters call it. Neither has a caller in this crate, so a transcription would be a function no landed path reaches; the row records the omission rather than leaving it as a finding, and fail-closes both ways the same as its siblings.",
+        "evidence": "docs/DECISIONS.md D349; crypto/x509/x509_set.c:78-92 and :305-309 (the two internals) against :200-207 (the slice); crypto/x509/v3_purp.c:659 and crypto/x509/x509cset.c:47/54/156 (the internals' callers); src/x509/x509_set.rs's module documentation; forensics/atlas/transcription-edges.json's `crypto/x509/x509_set.c` edge"
+      },
+      {
+        "owner_module": "src/x509/t_x509.rs",
+        "class": "owned_by_a_later_stratum",
+        "covers": [
+          "ossl_serial_number_print",
+          "ossl_x509_print_ex_brief"
+        ],
+        "note": "**Withheld rather than stubbed.** `src/x509/t_x509.rs` lands the one `t_x509.c` export the `rsa_ameth.c` and `dsa_ameth.c` method objects call -- `X509_signature_dump` (`:269-290`) -- and is therefore a module for `crypto/x509/t_x509.c`, which makes the unit's unwired internals countable (D327's rule). These two are the ones the lexical scan sees. `ossl_serial_number_print` (`:519-559`) prints an `ASN1_INTEGER` serial as decimal plus hex, falling back to colon-separated hex when it does not fit an `int64`; it is called from `crypto/x509/t_x509.c:96` (inside `X509_print_ex`'s `do_print_ex`) and `crypto/x509/v3_rolespec.c:49`. `ossl_x509_print_ex_brief` (`:383-411`) is the brief-print tail, called from `crypto/x509/t_x509.c:424`/`:493` and `crypto/cmp/cmp_vfy.c:57`. Nine of the unit's ten exports are the printers, whose `do_print_ex` reads nearly every field of an `X509` and which are withheld with the object layer (Phase 11's). Neither internal has a caller in this crate, so a transcription would be a printer no landed path reaches; the row records the omission rather than leaving it as a finding, and fail-closes both ways the same as its siblings.",
+        "evidence": "docs/DECISIONS.md D349; crypto/x509/t_x509.c:519-559 and :383-411 (the two internals) against :269-290 (the slice); crypto/x509/v3_rolespec.c:49 and crypto/cmp/cmp_vfy.c:57 (the internals' other callers); src/x509/t_x509.rs's module documentation; forensics/atlas/transcription-edges.json's `crypto/x509/t_x509.c` edge"
       }
     ],
     "units": [
@@ -408,24 +452,10 @@
         "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
       },
       {
-        "unit": "crypto/evp/legacy_blake2.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 13,
-        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 2 export(s) are legacy method statics whose callbacks call `crypto/blake2/`'s own primitives (`ossl_blake2b_init`/`ossl_blake2s_init`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
-      },
-      {
         "unit": "crypto/evp/legacy_md4.c",
         "class": "deferred_to_later_stratum",
         "owner_phase": 13,
         "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 1 export(s) are legacy method statics whose callbacks call `crypto/md4/`'s own primitives (`MD4_Init`/`MD4_Update`/`MD4_Final`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
-      },
-      {
-        "unit": "crypto/evp/legacy_md5.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 13,
-        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 1 export(s) are legacy method statics whose callbacks call `crypto/md5/`'s own primitives (`MD5_Init`/`MD5_Update`/`MD5_Final`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
         "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
       },
       {
@@ -440,20 +470,6 @@
         "class": "deferred_to_later_stratum",
         "owner_phase": 13,
         "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 1 export(s) are legacy method statics whose callbacks call `crypto/mdc2/` over `crypto/des/`'s own primitives (`MDC2_Init`/`MDC2_Update` over the DES block), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
-      },
-      {
-        "unit": "crypto/evp/legacy_ripemd.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 13,
-        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 1 export(s) are legacy method statics whose callbacks call `crypto/ripemd/`'s own primitives (`RIPEMD160_Init`/`_Update`/`_Final`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
-      },
-      {
-        "unit": "crypto/evp/legacy_sha.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 13,
-        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 13 export(s) are legacy method statics whose callbacks call `crypto/sha/`'s own primitives (`SHA1_Init` through the SHA-3 and SHAKE one-shots, one table), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
         "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
       },
       {

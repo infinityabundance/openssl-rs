@@ -22,8 +22,8 @@
       "ossl_rsa_pkey_method -> phase 8 (The `EVP_PKEY_METHOD` half of the same boundary: `crypto/evp/pmeth_lib.c`'s `standard_methods[]` holds the ten `ossl_<alg>_pkey_method` objects of the algorithm strata. `EVP_PKEY_meth_find`'s application half (`evp_pkey_meth_find_added_by_application`) is landed and courted; its `OBJ_bsearch_pmeth_func` half is not, and `EVP_PKEY_meth_get0` and `_get_count` index the table outright, so all three exports are withheld rather than stubbed with an application-count answer.)"
     ],
     "census": {
-      "covered_by_a_divergence": 67,
-      "language_surface_not_modelled_by_name": 3926,
+      "covered_by_a_divergence": 87,
+      "language_surface_not_modelled_by_name": 4188,
       "planned_prerequisites": 13
     },
     "census_by_unit": {
@@ -37,12 +37,28 @@
         "inlen": 1,
         "libctx": 1,
         "openssl_init_fork_handlers": 1,
+        "ossl_X509_PUBKEY_INTERNAL_free": 1,
+        "ossl_d2i_DH_PUBKEY": 1,
+        "ossl_d2i_DHx_PUBKEY": 1,
+        "ossl_d2i_DSA_PUBKEY": 1,
+        "ossl_d2i_ED25519_PUBKEY": 1,
+        "ossl_d2i_ED448_PUBKEY": 1,
+        "ossl_d2i_PUBKEY_legacy": 1,
+        "ossl_d2i_X25519_PUBKEY": 1,
+        "ossl_d2i_X448_PUBKEY": 1,
+        "ossl_d2i_X509_PUBKEY_INTERNAL": 1,
         "ossl_dh_asn1_meth": 1,
         "ossl_dhx_asn1_meth": 1,
         "ossl_ec_generate_key_dhkem": 1,
         "ossl_ec_key_from_pkcs8": 1,
         "ossl_ec_key_param_from_x509_algor": 1,
         "ossl_ffc_params_todata": 1,
+        "ossl_i2d_DH_PUBKEY": 1,
+        "ossl_i2d_DHx_PUBKEY": 1,
+        "ossl_i2d_ED25519_PUBKEY": 1,
+        "ossl_i2d_ED448_PUBKEY": 1,
+        "ossl_i2d_X25519_PUBKEY": 1,
+        "ossl_i2d_X448_PUBKEY": 1,
         "ossl_lib_ctx_default_deinit": 1,
         "ossl_lib_ctx_get_concrete": 6,
         "ossl_lib_ctx_get_data": 14,
@@ -55,7 +71,11 @@
         "ossl_lib_ctx_unlock": 2,
         "ossl_lib_ctx_write_lock": 2,
         "ossl_release_default_drbg_ctx": 2,
+        "ossl_serial_number_print": 1,
         "ossl_x509_algor_is_sm2": 1,
+        "ossl_x509_init_sig_info": 1,
+        "ossl_x509_print_ex_brief": 1,
+        "ossl_x509_set1_time": 1,
         "out_len": 1,
         "outlen": 1,
         "pkt": 1,
@@ -91,6 +111,7 @@
         "crypto/asn1/evp_asn1.c": 13,
         "crypto/asn1/f_int.c": 8,
         "crypto/asn1/p5_scrypt.c": 23,
+        "crypto/asn1/p8_pkey.c": 24,
         "crypto/asn1/t_pkey.c": 5,
         "crypto/asn1/tasn_dec.c": 30,
         "crypto/asn1/tasn_enc.c": 23,
@@ -162,7 +183,7 @@
         "crypto/defaults.c": 9,
         "crypto/der_writer.c": 4,
         "crypto/des/set_key.c": 9,
-        "crypto/dh/dh_ameth.c": 29,
+        "crypto/dh/dh_ameth.c": 26,
         "crypto/dh/dh_asn1.c": 16,
         "crypto/dh/dh_check.c": 8,
         "crypto/dh/dh_depr.c": 3,
@@ -187,7 +208,7 @@
         "crypto/dso/dso_lib.c": 15,
         "crypto/ec/ec2_smpl.c": 13,
         "crypto/ec/ec_asn1.c": 45,
-        "crypto/ec/ec_backend.c": 39,
+        "crypto/ec/ec_backend.c": 38,
         "crypto/ec/ec_check.c": 6,
         "crypto/ec/ec_curve.c": 19,
         "crypto/ec/ec_cvt.c": 4,
@@ -319,7 +340,10 @@
         "crypto/threads_common.c": 8,
         "crypto/threads_pthread.c": 24,
         "crypto/trace.c": 24,
-        "crypto/whrlpool/wp_dgst.c": 3
+        "crypto/whrlpool/wp_dgst.c": 3,
+        "crypto/x509/t_x509.c": 109,
+        "crypto/x509/x509_set.c": 49,
+        "crypto/x509/x_pubkey.c": 84
       },
       "planned_prerequisites": {
         "evp_app_cleanup_int": 2,
@@ -346,12 +370,28 @@
         "inlen",
         "libctx",
         "openssl_init_fork_handlers",
+        "ossl_X509_PUBKEY_INTERNAL_free",
+        "ossl_d2i_DH_PUBKEY",
+        "ossl_d2i_DHx_PUBKEY",
+        "ossl_d2i_DSA_PUBKEY",
+        "ossl_d2i_ED25519_PUBKEY",
+        "ossl_d2i_ED448_PUBKEY",
+        "ossl_d2i_PUBKEY_legacy",
+        "ossl_d2i_X25519_PUBKEY",
+        "ossl_d2i_X448_PUBKEY",
+        "ossl_d2i_X509_PUBKEY_INTERNAL",
         "ossl_dh_asn1_meth",
         "ossl_dhx_asn1_meth",
         "ossl_ec_generate_key_dhkem",
         "ossl_ec_key_from_pkcs8",
         "ossl_ec_key_param_from_x509_algor",
         "ossl_ffc_params_todata",
+        "ossl_i2d_DH_PUBKEY",
+        "ossl_i2d_DHx_PUBKEY",
+        "ossl_i2d_ED25519_PUBKEY",
+        "ossl_i2d_ED448_PUBKEY",
+        "ossl_i2d_X25519_PUBKEY",
+        "ossl_i2d_X448_PUBKEY",
         "ossl_lib_ctx_default_deinit",
         "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_concrete",
@@ -359,23 +399,7 @@
         "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_concrete",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_descriptor",
-        "ossl_lib_ctx_get_descriptor",
-        "ossl_lib_ctx_get_ex_data_global"
+        "ossl_lib_ctx_get_data"
       ],
       "language_surface_not_modelled_by_name": [
         "crypto/aria/aria.c:X",
@@ -436,12 +460,12 @@
       ]
     },
     "checked": {
-      "authority_units": 252,
-      "crate_modules": 326,
+      "authority_units": 256,
+      "crate_modules": 331,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 18,
-      "divergence_names_covered": 39,
-      "divergence_rows": 10,
+      "divergence_names_covered": 59,
+      "divergence_rows": 13,
       "names_referenced_and_not_built": 18
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
@@ -518,6 +542,12 @@
           "ossl_err_load_ERR_strings",
           "ossl_err_string_int"
         ],
+        "crypto/evp/p_lib.c": [
+          "ossl_evp_pkey_get1_ED25519",
+          "ossl_evp_pkey_get1_ED448",
+          "ossl_evp_pkey_get1_X25519",
+          "ossl_evp_pkey_get1_X448"
+        ],
         "crypto/ex_data.c": [
           "ossl_crypto_alloc_ex_data_intern",
           "ossl_crypto_cleanup_all_ex_data_int",
@@ -542,7 +572,7 @@
         ]
       },
       "definition": "authority internal functions a transcribed unit calls, whose own translation unit's stratum has already sealed. Not a failure: each is either modelled differently by the crate or is work carried across the boundary by a later stratum. The count is held to non-increase by the regression guard.",
-      "names": 52
+      "names": 56
     },
     "universes": {
       "crate_references_checked": 32438,
@@ -552,7 +582,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "72a011c4223c6bda6edb78e4b237a2305ec6feadbe142b34149b749fd9922a92",
+  "body_hash": "b363f1c6696424a06ce6242c657cf68b69bd8a4940d2e47af7df0ade3a4ad005",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -573,7 +603,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "5d9e568f714a2d34a7d23189f7354a36e3a0bfa4e4247ea446ddeac91bc5a075"
+      "sha256": "b6a1765063d5b786dda227820e6bd0ebdd3b6a4eaf6c78b06c347d6f430e2581"
     },
     {
       "name": "symbol-ownership",
@@ -588,7 +618,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "a941b224deb1b1c0f2353a5026abecb3d8a98177620b8040ac67d37e431762c7"
+      "sha256": "060055e24cd41a27552f412b2880b651cb0ec71c4b13036fad355025febcb8c6"
     },
     {
       "name": "phase-state",
@@ -598,7 +628,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "13f965eaa37691e6eddfc75978112c9c81667737e23060e7df5e9b9b762fcaba"
+      "sha256": "4157f2ae8fe2929e64f75adfe5f5479c55a2a0a33cb6404ac662228b573ed75c"
     },
     {
       "name": "crate-source-tree",
