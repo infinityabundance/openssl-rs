@@ -23501,3 +23501,113 @@ is retired or split, which the generator checks rather than trusts.
 **141** names open, 8.8's fifteen and the four key types' ASN.1 and printer families among them. What this
 slice is, is the EVP control surface of two key types and the one lookup their closure required — not 8.5,
 not 8.6, and not 8.8.
+
+---
+
+## D344 — 8.7's `crypto/evp/ec_ctrl.c` control slice lands, its one unlanded callee is named with its coordinate, and the brief's count of what EC has left is corrected
+
+**Decision.** The EC half of the residue D343 named is landed **whole** (D327's rule):
+`crypto/evp/ec_ctrl.c` becomes the new module `src/ec/ctrl.rs`. **Twelve exports** leave `open` for
+`implemented` — the six `OSSL_PARAM` builders and six `EVP_PKEY_CTX_ctrl` wrappers the file defines
+— together with their one `static ossl_inline` gate `evp_pkey_ctx_getset_ecdh_param_checks`. No
+callee of the twelve is unlanded except the digest-by-name path named below, so nothing is stubbed
+and nothing is deferred to another stratum: the ledger's `deferred` list stays at **1**.
+
+**Where the module lives, and why it is a new module rather than text in `mod.rs`.** The ledger's
+`module` label for all twelve is `src/ec/mod.rs`, because the label is measured from the **declaring
+header** (`ec.h`) and not from the translation unit — the EC controls live beside every other key
+type's under `crypto/evp/`, and there is no `crypto/ec/ec_ctrl.c` in either admitted authority. The
+split follows `src/rsa/ctrl.rs` (D328) and `src/{dh,dsa}/ctrl.rs` (D343): the two halves of a key
+type's control surface share nothing but a header, `forensics/atlas/transcription-edges.json`'s own
+rule says *"a module whose definitions are spread across units is expected"*, and giving the unit a
+module is what makes the atlas say which authority file the control half answers for. The new edge
+is `src/ec/ctrl.rs -> crypto/evp/ec_ctrl.c` (share 12/12); the ledger's own label is unchanged,
+which is what the `module` column means.
+
+**Two shapes and one gate, and the gate loses the same clause its two siblings lose.** Six of the
+twelve are `OSSL_PARAM` builders handed to `evp_pkey_ctx_{set,get}_params_strict` — which is what
+makes their refusal for a parameter the method does not list a `-2` rather than a ctrl result — and
+six are `EVP_PKEY_CTX_ctrl` wrappers, one of which (`set_ec_paramgen_curve_nid`) computes its **own**
+key type from its argument (`nid == EVP_PKEY_SM2 ? EVP_PKEY_SM2 : EVP_PKEY_EC`). The gate is
+`evp_pkey_ctx_getset_ecdh_param_checks`: a NULL context or one whose operation is not a derivation
+one is `-2` with `EVP_R_COMMAND_NOT_SUPPORTED`, and its key-type clause
+(`evp_pkey_ctx_is_legacy(ctx) && ctx->pmeth != NULL && ctx->pmeth->pkey_id != EVP_PKEY_EC`) is
+unreachable for the reason D343 records for the DSA spelling — `evp_pkey_ctx_is_legacy` is
+`keymgmt == NULL`, `int_ctx_new` never returns such a context, and `ctx->pmeth` is absent from this
+crate's `EvpPkeyCtx` so the `&&` never reaches it.
+
+**`set0_ecdh_kdf_ukm` is not its DH sibling, and the difference is transcribed rather than
+smoothed.** `crypto/evp/dh_ctrl.c`'s `set0_dh_kdf_ukm` refuses a negative `len` with `-1` **before**
+the gate; `ec_ctrl.c`'s has no such test, so a negative `len` is widened to `size_t` and handed to
+the method. The court observes the difference by *not* carrying the DH pair's negative-length arm,
+and this entry records why that absence is deliberate rather than an omission.
+
+**One callee is left unlanded, and it is named with its coordinate rather than courted around.**
+`EVP_PKEY_CTX_get_ecdh_kdf_md` reads the method's `kdf-digest` name and turns it back into an
+`EVP_MD *` through `fix_md`'s GET arm, which calls `evp_get_digestbyname_ex`
+(`crypto/evp/names.c`) — and this crate answers NULL for **every** built-in digest name, because the
+legacy `OBJ_NAME` database is empty: `src/runtime/init.rs`'s `add_all_legacy_methods` is a no-op and
+`src/context/namemap.rs` records the whole legacy pre-population and its ordering as **Phase 13's**.
+So `EVP_PKEY_CTX_get_ecdh_kdf_md` answers `1` with a NULL method on the candidate where the
+authority answers SHA-256 — the same coordinate D343 records for `EVP_PKEY_CTX_get_dh_kdf_md`. That
+is a recorded deferral in a unit no stratum of 8.7 owns, not an `ec_ctrl.c` defect, so the court
+observes the control's return value and the *parameter-level* round trip (`kdf-digest` set and asked
+for, both visible in the keyexch's echo) and **not** the returned `EVP_MD *`; the probe says so in
+its own comment. The same lookup is what `EVP_PKEY_CTX_set_ecdh_kdf_md` does not need — its Set arm
+only reads `EVP_MD_get0_name` on the caller's method, which is why its half of the pair is fully
+courted.
+
+**The court, and what it refuses to print.** `RT-EC` grows 2134 -> **2324 observations**, zero
+residual. The probe publishes a provider of its own — a keymgmt **and** a keyexch named `COURT-EC`,
+each the smallest the structural check accepts and each named after the court so it cannot shadow
+the default provider's own row in either binary's store (the crate publishes no EC `EVP_KEYMGMT` or
+`EVP_KEYEXCH`; 8.7's provider half is not landed). A control is then asked four ways — a NULL
+context, a live one with no operation, one with a parameter-generation operation and one with a
+derivation operation — and the provider's own callbacks **echo every parameter array the library
+built**, so the transcript observes the *translation* and not merely a return code. Two families are
+told apart by their answers: a gate refuses `-2` with `EVP_R_COMMAND_NOT_SUPPORTED` where a ctrl
+wrapper refuses `-1` with `EVP_R_NO_OPERATION_SET`, and every refusal drains its queue and compares
+the coordinate (`ec_ctrl.c:26`, `:65`, `:86`, `:171`, `:193`, `:231`, `:260`, plus
+`ctrl_params_translate.c:1134` for the one out-of-range encoding and `pmeth_lib.c:1309`/`:1346` for
+the ctrl wrappers). **One GET parameter's value is deliberately not compared, and the reason is a
+finding about the authority**: `EVP_PKEY_CTX_get_ecdh_cofactor_mode` passes the address of an
+**uninitialized** `int mode` to the getter, so its pre-write contents are stack layout rather than a
+behaviour — the authority's own run read back the preceding `set`'s `1` and the candidate's zero —
+which is why the probe prints that one entry's type and width and not its value, while the arm that
+*returns* the mode observes the real behaviour. **No arm prints a secret**: the echoed values are a
+cofactor mode, an output length, a KDF type, a digest name, a curve name, an encoding name and a
+probe-chosen UKM, all supplied by the probe itself.
+
+**Bookkeeping, read off the regenerated files.** `phase8` moves implemented 644 -> **656**, deferred
+1 unchanged, open 141 -> **129**, owned 786 unchanged;
+`forensics/atlas/implemented-surface.json` moves `libcrypto` implemented 2561 -> **2573**;
+`forensics/atlas/transcription-edges.json` gains the edge, over **271** crate modules and **241**
+authority units. `court_coverage.py` reports every one of the stratum's **656** implemented exports
+courted (648 directly, 8 indirectly, 0 non-observable). The prerequisite gate ends at **zero
+findings**, `sealed_census` stays **52** and `blocking_dependencies` stays **19**, so **no
+`forensics/ownership-transitions.json` row was needed**; the pipeline's own
+`regression_guard.py --baseline-ref origin/main` records both counts *falling* against the older
+branch baseline (57 -> 52 and 25 -> 19), which is a decrease and needs no approved-transition row.
+`docs/PHASE-8-SUBPHASES.md`'s 8.7 row records this entry, its two anchored clauses carry the twelve
+landed names, and its `docs/PHASE-8-REMAINING.md` projection is regenerated.
+
+**What is deliberately *not* here, named rather than implied, and where this entry corrects the
+brief.** The brief expected the 34 remaining `src/ec/mod.rs` names to be "ASN.1/template work that
+needs Phase 11" plus the three `EVP_PKEY_*_EC_KEY` accessors. **Twenty-seven** fit that reading:
+twenty-four ASN.1/template and DER names (`ec_asn1.c`'s `ECPARAMETERS_*`/`ECPKPARAMETERS_*`,
+`EC_GROUP_get_ecparameters`/`_get_ecpkparameters`/`_new_from_ecparameters`/`_new_from_ecpkparameters`
+and the `d2i_`/`i2d_`/`o2i_`/`i2o_` entry points, with `eck_prn.c`'s six printers) and the three
+accessors that wait on `evp_pkey_get_legacy`/`EVP_PKEY_assign` — all Phase 11's by D341's coordinate,
+because the ASN.1 method objects need Phase 11's `X509_PUBKEY`/`X509_ALGOR`/`PKCS8_PRIV_KEY_INFO`
+bodies. But **six do not**, and that is the correction: `ec_print.c`/`ec_deprecated.c`'s four
+`EC_POINT_*` hex/BN codecs and `ec_asn1.c`'s `ECDSA_SIG_get0_r`/`_s` reach only landed names
+(`EC_POINT_point2buf`, `EC_POINT_oct2point`, `BN_bin2bn`, `BN_bn2binpad`, `ossl_to_hex`) and are
+**same-stratum work a later EC slice can land**, not Phase 11's; and `ECDH_KDF_X9_62`, whose whole
+body is an `EVP_KDF_fetch` of the X9.63 KDF, is **Phase 9's**. No name in
+`forensics/tools/phase8_obligations.py`'s `BLOCKED_HANDOFFS` is defined by this commit, so no row is
+retired or split, which the generator checks rather than trusts.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete: false`
+with **129** names open, 8.8's fifteen and the four key types' ASN.1 and printer families among them.
+What this slice is, is the EC EVP control surface and the one digest-by-name deferral its getter
+reaches — not 8.7, and not 8.8.

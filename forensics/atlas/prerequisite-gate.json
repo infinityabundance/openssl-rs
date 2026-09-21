@@ -24,7 +24,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 73,
-      "language_surface_not_modelled_by_name": 3835,
+      "language_surface_not_modelled_by_name": 3843,
       "planned_prerequisites": 12
     },
     "census_by_unit": {
@@ -211,6 +211,7 @@
         "crypto/evp/cmeth_lib.c": 6,
         "crypto/evp/dh_ctrl.c": 8,
         "crypto/evp/dsa_ctrl.c": 6,
+        "crypto/evp/ec_ctrl.c": 8,
         "crypto/evp/ec_support.c": 1,
         "crypto/evp/encode.c": 6,
         "crypto/evp/evp_enc.c": 34,
@@ -430,8 +431,8 @@
       ]
     },
     "checked": {
-      "authority_units": 240,
-      "crate_modules": 312,
+      "authority_units": 241,
+      "crate_modules": 313,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 19,
       "divergence_names_covered": 45,
@@ -546,7 +547,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "b42fb6e495ffc9a598bba8631cbab5fd56d2a2bdcf65b421f40eba1c1813d96b",
+  "body_hash": "ce07e58d1384f411629eb4338e76d1f55e2ae62730e12cfc7f4d5cc7a65aaab1",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -567,7 +568,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "af8d4f059211b32cafae97b5548aeb4110384dbb47dff7bab180f889545b14c9"
+      "sha256": "77841472b1c4958229fdabab9bf7dd34e1bbed54b925fca7367adc88bcf4a593"
     },
     {
       "name": "symbol-ownership",
@@ -582,12 +583,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "bede8477cce264c160f17059127d2648a536513fde6d54e4d90c77cb7f6dd8d8"
+      "sha256": "3a2468ecf19717942c40a35490a8c78db69d8c50baf4c8a5784cf0b01b24e275"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "52e6a45f6c4ddaa800a3bc954f4e498a6620cf58adef19f316bf676f4a959589"
+      "sha256": "18464342e5e871f168a86dadec9dab72c2ece9b8fb2a953a69d198ee9182b9e5"
     },
     {
       "name": "prerequisites",
