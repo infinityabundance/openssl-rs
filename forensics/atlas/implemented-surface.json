@@ -335,7 +335,7 @@
         "truncf128",
         "truncf16"
       ],
-      "compiler_emitted_count": 9498,
+      "compiler_emitted_count": 9520,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -343,7 +343,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 2605,
+        "implemented": 2627,
         "implemented_symbols": [
           "AES_bi_ige_encrypt",
           "AES_cbc_encrypt",
@@ -1370,6 +1370,16 @@
           "ECDSA_sign_setup",
           "ECDSA_size",
           "ECDSA_verify",
+          "ECPARAMETERS_free",
+          "ECPARAMETERS_it",
+          "ECPARAMETERS_new",
+          "ECPKPARAMETERS_free",
+          "ECPKPARAMETERS_it",
+          "ECPKPARAMETERS_new",
+          "ECPKParameters_print",
+          "ECPKParameters_print_fp",
+          "ECParameters_print",
+          "ECParameters_print_fp",
           "EC_GF2m_simple_method",
           "EC_GFp_mont_method",
           "EC_GFp_nist_method",
@@ -1395,6 +1405,8 @@
           "EC_GROUP_get_curve_GFp",
           "EC_GROUP_get_curve_name",
           "EC_GROUP_get_degree",
+          "EC_GROUP_get_ecparameters",
+          "EC_GROUP_get_ecpkparameters",
           "EC_GROUP_get_field_type",
           "EC_GROUP_get_mont_data",
           "EC_GROUP_get_order",
@@ -1409,6 +1421,8 @@
           "EC_GROUP_new_by_curve_name_ex",
           "EC_GROUP_new_curve_GF2m",
           "EC_GROUP_new_curve_GFp",
+          "EC_GROUP_new_from_ecparameters",
+          "EC_GROUP_new_from_ecpkparameters",
           "EC_GROUP_new_from_params",
           "EC_GROUP_order_bits",
           "EC_GROUP_precompute_mult",
@@ -2909,6 +2923,9 @@
           "d2i_DSA_SIG",
           "d2i_DSAparams",
           "d2i_ECDSA_SIG",
+          "d2i_ECPKParameters",
+          "d2i_ECParameters",
+          "d2i_ECPrivateKey",
           "d2i_RSAPrivateKey",
           "d2i_RSAPublicKey",
           "err_free_strings_int",
@@ -2947,11 +2964,16 @@
           "i2d_DSA_SIG",
           "i2d_DSAparams",
           "i2d_ECDSA_SIG",
+          "i2d_ECPKParameters",
+          "i2d_ECParameters",
+          "i2d_ECPrivateKey",
           "i2d_RSAPrivateKey",
           "i2d_RSAPublicKey",
-          "i2t_ASN1_OBJECT"
+          "i2o_ECPublicKey",
+          "i2t_ASN1_OBJECT",
+          "o2i_ECPublicKey"
         ],
-        "scaffolded": 3291
+        "scaffolded": 3269
       },
       "libssl": {
         "authority_exports": 603,
@@ -2962,18 +2984,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 2605,
-      "scaffolded": 3894
+      "implemented": 2627,
+      "scaffolded": 3872
     }
   },
-  "body_hash": "1027a1d2126a3ec9c5fc7305050d7836405fd7048701ff707f903937a4139076",
+  "body_hash": "ecbcd03b9683cbc56d32a3e13434c8685c8edf246d1a3405ff0f49d215c9b7da",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "fecb73d36b8e007b58d45be203780b62c990001f2b4fd749304f857727c09f01"
+      "sha256": "025ef886a55394224868c24c291102e7ae7e27e9d4df9b110afcea9dd1f6557d"
     },
     {
       "name": "authority-exports",

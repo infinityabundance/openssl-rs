@@ -27822,6 +27822,176 @@ pub(crate) const EC_ASN1_1170: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `eckey_param2type` at `crypto/ec/ec_ameth.c:35` (EC_R_MISSING_PARAMETERS).
+pub(crate) const EC_AMETH_35: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 35,
+    func: c"eckey_param2type",
+    lib: 16,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `eckey_param2type` at `crypto/ec/ec_ameth.c:45` (EC_R_MISSING_OID).
+pub(crate) const EC_AMETH_45: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 45,
+    func: c"eckey_param2type",
+    lib: 16,
+    reason: 167,
+    dynamic_reason: false,
+};
+
+/// `eckey_param2type` at `crypto/ec/ec_ameth.c:59` (ERR_R_EC_LIB).
+pub(crate) const EC_AMETH_59: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 59,
+    func: c"eckey_param2type",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `eckey_pub_encode` at `crypto/ec/ec_ameth.c:77` (ERR_R_EC_LIB).
+pub(crate) const EC_AMETH_77: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 77,
+    func: c"eckey_pub_encode",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `eckey_pub_decode` at `crypto/ec/ec_ameth.c:119` (EC_R_DECODE_ERROR).
+pub(crate) const EC_AMETH_119: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 119,
+    func: c"eckey_pub_decode",
+    lib: 16,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `eckey_priv_encode` at `crypto/ec/ec_ameth.c:171` (EC_R_DECODE_ERROR).
+pub(crate) const EC_AMETH_171: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 171,
+    func: c"eckey_priv_encode",
+    lib: 16,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `eckey_priv_encode` at `crypto/ec/ec_ameth.c:186` (ERR_R_EC_LIB).
+pub(crate) const EC_AMETH_186: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 186,
+    func: c"eckey_priv_encode",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `eckey_priv_encode` at `crypto/ec/ec_ameth.c:192` (ERR_R_ASN1_LIB).
+pub(crate) const EC_AMETH_192: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 192,
+    func: c"eckey_priv_encode",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `do_EC_KEY_print` at `crypto/ec/ec_ameth.c:292` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_AMETH_292: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 292,
+    func: c"do_EC_KEY_print",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `do_EC_KEY_print` at `crypto/ec/ec_ameth.c:341` (ERR_R_EC_LIB).
+pub(crate) const EC_AMETH_341: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 341,
+    func: c"do_EC_KEY_print",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_pkey_check` at `crypto/ec/ec_ameth.c:430` (EC_R_MISSING_PRIVATE_KEY).
+pub(crate) const EC_AMETH_430: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 430,
+    func: c"ec_pkey_check",
+    lib: 16,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `ec_pkey_param_check` at `crypto/ec/ec_ameth.c:459` (EC_R_MISSING_PARAMETERS).
+pub(crate) const EC_AMETH_459: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 459,
+    func: c"ec_pkey_param_check",
+    lib: 16,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `ec_pkey_import_from` at `crypto/ec/ec_ameth.c:615` (ERR_R_EC_LIB).
+pub(crate) const EC_AMETH_615: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 615,
+    func: c"ec_pkey_import_from",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ECPKParameters_print_fp` at `crypto/ec/eck_prn.c:27` (ERR_R_BUF_LIB).
+pub(crate) const ECK_PRN_27: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/eck_prn.c",
+    line: 27,
+    func: c"ECPKParameters_print_fp",
+    lib: 16,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `EC_KEY_print_fp` at `crypto/ec/eck_prn.c:42` (ERR_R_BIO_LIB).
+pub(crate) const ECK_PRN_42: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/eck_prn.c",
+    line: 42,
+    func: c"EC_KEY_print_fp",
+    lib: 16,
+    reason: 524320,
+    dynamic_reason: false,
+};
+
+/// `ECParameters_print_fp` at `crypto/ec/eck_prn.c:57` (ERR_R_BIO_LIB).
+pub(crate) const ECK_PRN_57: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/eck_prn.c",
+    line: 57,
+    func: c"ECParameters_print_fp",
+    lib: 16,
+    reason: 524320,
+    dynamic_reason: false,
+};
+
+/// `ECPKParameters_print` at `crypto/ec/eck_prn.c:214` (ERR_raise dynamic reason).
+pub(crate) const ECK_PRN_214: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/eck_prn.c",
+    line: 214,
+    func: c"ECPKParameters_print",
+    lib: 16,
+    reason: 0,
+    dynamic_reason: true,
+};
+
 /// `ossl_param_build_set_bn_pad` at `crypto/param_build_set.c:82` (CRYPTO_R_TOO_SMALL_BUFFER).
 pub(crate) const PARAM_BUILD_SET_82: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/param_build_set.c",
@@ -32442,6 +32612,23 @@ pub(crate) static ALL: &[ErrSite] = &[
     EC_ASN1_1148,
     EC_ASN1_1156,
     EC_ASN1_1170,
+    EC_AMETH_35,
+    EC_AMETH_45,
+    EC_AMETH_59,
+    EC_AMETH_77,
+    EC_AMETH_119,
+    EC_AMETH_171,
+    EC_AMETH_186,
+    EC_AMETH_192,
+    EC_AMETH_292,
+    EC_AMETH_341,
+    EC_AMETH_430,
+    EC_AMETH_459,
+    EC_AMETH_615,
+    ECK_PRN_27,
+    ECK_PRN_42,
+    ECK_PRN_57,
+    ECK_PRN_214,
     PARAM_BUILD_SET_82,
     RAND_LIB_386,
     RAND_LIB_430,

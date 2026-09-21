@@ -659,6 +659,15 @@ COVERED_FILES = [
     # DER entry points `ecdsa_ossl.c` reaches (`ECDSA_size`, `i2d_ECDSA_SIG`, `d2i_ECDSA_SIG`).
     ("crypto/ec/ec_backend.c", "EC_BACKEND"),
     ("crypto/ec/ec_asn1.c", "EC_ASN1"),
+    # `ec_ameth.c` is the `EVP_PKEY_ASN1_METHOD` object unit; the one export of it this stratum
+    # lands, `ECParameters_print`, is the `EC_KEY_PRINT_PARAM` arm of its static
+    # `do_EC_KEY_print`, and it raises at `:292` and `:341`. Covering the unit gives those two
+    # coordinates their generated constants rather than a hand-written reconstruction.
+    ("crypto/ec/ec_ameth.c", "EC_AMETH"),
+    # `eck_prn.c` is the deprecated printer unit `ec_asn1.c`'s parameter family is printed
+    # through: `ECPKParameters_print`/`_print_fp` and `ECParameters_print_fp` raise their own
+    # records. Its four sites are the coordinates the printer transcription reproduces.
+    ("crypto/ec/eck_prn.c", "ECK_PRN"),
     # `crypto/param_build_set.c` is the unit `ec_backend.c` reaches for its four
     # `ossl_param_build_set_*` helpers. D330 and D331 both recorded it as having no crate
     # module and no plan row; 8.7's backend is the first caller that needs it, so it joins the

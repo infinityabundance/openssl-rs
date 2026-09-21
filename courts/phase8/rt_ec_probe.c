@@ -1509,6 +1509,192 @@ int main(void)
         }
     }
 
+    /* ---- the DER parameters family and the four printers: `crypto/ec/ec_asn1.c` and
+     * `crypto/ec/eck_prn.c` (D347). A named curve's `ECPKPARAMETERS` is the OID alone -- a public
+     * constant -- so it is printed in full; a private key's DER carries the scalar and only its
+     * width and the round trip's public-point equality are observed, never its bytes. The queue is
+     * drained under its own tag after the block so its null refusal's coordinate is this block's
+     * own. `key` is the generated P-256 key, so its public point is the source every round trip
+     * compares against. */
+    {
+        ECPARAMETERS *ep;
+        ECPKPARAMETERS *pk;
+        unsigned char *der = NULL, *privder = NULL, *puboct = NULL;
+        int derlen, privlen, publen;
+        size_t k;
+
+        /* the two allocators and the two item accessors */
+        ep = ECPARAMETERS_new();
+        pk = ECPKPARAMETERS_new();
+        printf("ecasn1.ep_new=%d\n", ep != NULL);
+        printf("ecasn1.pk_new=%d\n", pk != NULL);
+        printf("ecasn1.ep_it=%d\n", ECPARAMETERS_it() != NULL);
+        printf("ecasn1.pk_it=%d\n", ECPKPARAMETERS_it() != NULL);
+        /* `EC_GROUP_get_ecparameters`/`_ecpkparameters` fill a caller's object and answer it back. */
+        printf("ecasn1.get_ecparams=%d\n", EC_GROUP_get_ecparameters(g2, ep) == ep);
+        printf("ecasn1.get_ecpk=%d\n", EC_GROUP_get_ecpkparameters(g2, pk) == pk);
+        /* the two builders, driven directly on the objects just filled */
+        {
+            EC_GROUP *back = EC_GROUP_new_from_ecpkparameters(pk);
+
+            printf("ecasn1.new_from_ecpk=%d\n", back != NULL);
+            printf("ecasn1.new_from_ecpk_cmp=%d\n",
+                back != NULL && EC_GROUP_cmp(g2, back, bctx) == 0);
+            EC_GROUP_free(back);
+        }
+        {
+            EC_GROUP *back = EC_GROUP_new_from_ecparameters(ep);
+
+            printf("ecasn1.new_from_ecparams=%d\n", back != NULL);
+            printf("ecasn1.new_from_ecparams_cmp=%d\n",
+                back != NULL && EC_GROUP_cmp(g2, back, bctx) == 0);
+            EC_GROUP_free(back);
+        }
+        ECPARAMETERS_free(ep);
+        ECPKPARAMETERS_free(pk);
+
+        /* `i2d_ECPKParameters` of a named curve: the ten-octet OID, printed in full. */
+        derlen = i2d_ECPKParameters(g2, NULL);
+        printf("ecasn1.pk_derlen=%d\n", derlen);
+        der = malloc(derlen > 0 ? (size_t)derlen : 1);
+        {
+            unsigned char *p = der;
+
+            printf("ecasn1.pk_i2d=%d\n", i2d_ECPKParameters(g2, &p) == derlen);
+            printf("ecasn1.pk_der=");
+            for (k = 0; k < (size_t)derlen; k++)
+                printf("%02x", der[k]);
+            printf("\n");
+        }
+
+        /* `d2i_ECPKParameters` round trip: equal group, exact cursor. */
+        {
+            const unsigned char *p = der;
+            EC_GROUP *back = d2i_ECPKParameters(NULL, &p, derlen);
+
+            printf("ecasn1.pk_d2i=%d\n", back != NULL);
+            printf("ecasn1.pk_consumed=%d\n", (int)(p - der) == derlen);
+            printf("ecasn1.pk_cmp=%d\n", back != NULL && EC_GROUP_cmp(g2, back, bctx) == 0);
+            EC_GROUP_free(back);
+        }
+
+        /* `d2i_ECParameters` builds a key from the same DER. */
+        {
+            const unsigned char *p = der;
+            EC_KEY *k2 = d2i_ECParameters(NULL, &p, derlen);
+
+            printf("ecasn1.params_d2i=%d\n", k2 != NULL);
+            printf("ecasn1.params_group_cmp=%d\n",
+                k2 != NULL && EC_GROUP_cmp(g2, EC_KEY_get0_group(k2), bctx) == 0);
+            EC_KEY_free(k2);
+        }
+
+        /* `i2d_ECParameters` over a key is the same ten octets. */
+        {
+            unsigned char *q = NULL;
+            int n = i2d_ECParameters(key, &q);
+
+            printf("ecasn1.key_params_len=%d\n", n);
+            printf("ecasn1.key_params_same=%d\n",
+                n == derlen && q != NULL && memcmp(q, der, (size_t)n) == 0);
+            OPENSSL_free(q);
+        }
+
+        /* the public point: `i2o_ECPublicKey` then `o2i_ECPublicKey` */
+        publen = i2o_ECPublicKey(key, NULL);
+        printf("ecasn1.pub_len=%d\n", publen);
+        puboct = malloc(publen > 0 ? (size_t)publen : 1);
+        {
+            unsigned char *p = puboct;
+            EC_KEY *k2 = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+
+            printf("ecasn1.pub_i2o=%d\n", i2o_ECPublicKey(key, &p) == publen);
+            /* the first octet is the point conversion form, a constant of the encoding */
+            printf("ecasn1.pub_form=%d\n", puboct[0]);
+            {
+                const unsigned char *r = puboct;
+
+                printf("ecasn1.pub_o2i=%d\n", o2i_ECPublicKey(&k2, &r, publen) == k2);
+                printf("ecasn1.pub_consumed=%d\n", (int)(r - puboct) == publen);
+                printf("ecasn1.pub_cmp=%d\n",
+                    EC_POINT_cmp(g2, EC_KEY_get0_public_key(key),
+                                 EC_KEY_get0_public_key(k2), bctx) == 0);
+            }
+            EC_KEY_free(k2);
+        }
+
+        /* the private key: width and round trip only; its bytes are never printed. */
+        privlen = i2d_ECPrivateKey(key, NULL);
+        printf("ecasn1.priv_len=%d\n", privlen);
+        privder = malloc(privlen > 0 ? (size_t)privlen : 1);
+        {
+            unsigned char *p = privder;
+
+            printf("ecasn1.priv_i2d=%d\n", i2d_ECPrivateKey(key, &p) == privlen);
+            {
+                const unsigned char *r = privder;
+                EC_KEY *k3 = d2i_ECPrivateKey(NULL, &r, privlen);
+
+                printf("ecasn1.priv_d2i=%d\n", k3 != NULL);
+                printf("ecasn1.priv_consumed=%d\n", (int)(r - privder) == privlen);
+                printf("ecasn1.priv_cmp=%d\n",
+                    k3 != NULL && EC_POINT_cmp(g2, EC_KEY_get0_public_key(key),
+                                               EC_KEY_get0_public_key(k3), bctx) == 0);
+                EC_KEY_free(k3);
+            }
+        }
+
+        /* the printers: a named curve prints its OID behind the four-space indent */
+        {
+            BIO *bpm = BIO_new(BIO_s_mem());
+            char *data = NULL;
+            long blen;
+
+            printf("ecasn1.pk_print=%d\n", ECPKParameters_print(bpm, g2, 4));
+            blen = BIO_ctrl(bpm, BIO_CTRL_INFO, 0, &data);
+            printf("ecasn1.pk_print_len_positive=%d\n", blen > 0);
+            printf("ecasn1.pk_print_prefix=%d\n",
+                data != NULL && blen > 12 && strncmp(data + 4, "ASN1 OID:", 9) == 0);
+            BIO_free(bpm);
+        }
+        {
+            BIO *bpm = BIO_new(BIO_s_mem());
+
+            printf("ecasn1.params_print=%d\n", ECParameters_print(bpm, key));
+            BIO_free(bpm);
+        }
+        {
+            FILE *fp = tmpfile();
+
+            printf("ecasn1.pk_print_fp_file=%d\n", fp != NULL);
+            if (fp != NULL) {
+                printf("ecasn1.pk_print_fp=%d\n", ECPKParameters_print_fp(fp, g2, 4));
+                fclose(fp);
+            }
+        }
+        {
+            FILE *fp = tmpfile();
+
+            printf("ecasn1.params_print_fp_file=%d\n", fp != NULL);
+            if (fp != NULL) {
+                printf("ecasn1.params_print_fp=%d\n", ECParameters_print_fp(fp, key));
+                fclose(fp);
+            }
+        }
+
+        free(der);
+        free(privder);
+        free(puboct);
+    }
+    /* `ECPKParameters_print(NULL)` refuses at `eck_prn.c:214` with the null-parameter reason. */
+    {
+        BIO *bpm = BIO_new(BIO_s_mem());
+
+        printf("ecasn1.pk_print_null=%d\n", ECPKParameters_print(bpm, NULL, 4));
+        BIO_free(bpm);
+    }
+    layer_drain("ecasn1");
+
     layer_drain("layer");
 
 layer_done:

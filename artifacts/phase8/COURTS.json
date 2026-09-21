@@ -75,9 +75,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 588,
+        "authority_observations": 589,
         "candidate_exit_code": 0,
-        "candidate_observations": 588,
+        "candidate_observations": 589,
         "candidate_stderr_tail": [],
         "court": "RT-DH",
         "crashed": false,
@@ -109,9 +109,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 2373,
+        "authority_observations": 2419,
         "candidate_exit_code": 0,
-        "candidate_observations": 2373,
+        "candidate_observations": 2419,
         "candidate_stderr_tail": [],
         "court": "RT-EC",
         "crashed": false,
@@ -37823,7 +37823,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_dh_probe.c",
-      "sha256": "5cbc89eb14561260264974a0d452dd9c5c533b51e75641a52d8812bf30d379a7"
+      "sha256": "aa0de6afbb87777c31854cac3f00b20cb83cebfd27e0acd0370e7c3a647dea41"
     },
     {
       "name": "probe",
@@ -37833,7 +37833,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_ec_probe.c",
-      "sha256": "2269a97d1d88050141c25ab76a08163e21d3e877b7ca9ce19f3f0e0b68038f60"
+      "sha256": "a4743265ad9974cb53a199482b66f4a1349701198d0a11362ea193e313335d19"
     },
     {
       "name": "correctness-probe",
