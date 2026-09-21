@@ -326,23 +326,30 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
         ),
         binding_phase=8,
         blocked_by=(
-            Blocker("EC_KEY_get0_group", "crypto/ec/ec_key.c", 711, "exported", 8),
-            Blocker("EC_GROUP_get_curve_name", "crypto/ec/ec_lib.c", 495, "exported", 8),
+            Blocker("EVP_PKEY_type", "crypto/evp/evp_pkey_type.c", 63, "exported", 7),
+            Blocker("ossl_dh_is_foreign", "crypto/dh/dh_backend.c", 122, "internal", 8),
         ),
         reason=(
             "`crypto/evp/p_lib.c:791` calls `EVP_PKEY_type` (`:797`, the `standard_methods[]` "
-                "walk `crypto/evp/evp_pkey_type.c:63` is the export for), `EC_KEY_get0_group` and "
-                "`EC_GROUP_get_curve_name` (`:801`, `:803`) on the incoming key, and then "
-                "`detect_foreign_key` -> `ossl_dh_is_foreign` (`:819`, `:782`). Every one is Phase "
-                "8's; the `EVP_PKEY_set_type` call between them is landed. "
-                "`EVP_PKEY_assign_RSA`/`_DSA`/`_DH`/`_EC_KEY` are `#define`s over this function "
-                "(`include/openssl/evp.h`), so the four `set1_*` names in the first row wait on it "
-                "too."
+                "walk `crypto/evp/evp_pkey_type.c:63` is the export for), and then "
+                "`detect_foreign_key` -> `ossl_dh_is_foreign` (`:782`, `crypto/dh/dh_backend.c:122`) "
+                "once a key is attached. The two `EC_KEY_get0_group`/`EC_GROUP_get_curve_name` "
+                "calls between them (`:801`, `:803`) landed with D340, which is why this row names "
+                "the two blockers that are still absent rather than the two that left: "
+                "`EVP_PKEY_type` is this stratum's own withheld export and `ossl_dh_is_foreign` is "
+                "the DH provider backend's, which `forensics/prerequisites.json` now records at "
+                "phase 8 so the row's phase can be checked. The `EVP_PKEY_set_type` call between "
+                "them is landed. `EVP_PKEY_assign_RSA`/`_DSA`/`_DH`/`_EC_KEY` are `#define`s over "
+                "this function (`include/openssl/evp.h`), so the four `set1_*` names in the first "
+                "row wait on it too."
         ),
         note=(
-            "`EVP_PKEY_type` is this stratum's own withheld export and `ossl_dh_is_foreign` has "
-                "no recorded owner phase, so the two Phase-8 exports that can carry the claim are "
-                "named; `EVP_PKEY_set_type`, the call between them, is landed."
+            "D340 records `crypto/dh/dh_backend.c` as phase 8's, because `ossl_dh_is_foreign` is "
+                "the only Phase-8 blocker this body still has and it had no owner phase anywhere "
+                "in the atlases. The row was blocked by `EC_KEY_get0_group` and "
+                "`EC_GROUP_get_curve_name` until D340 landed them; a row whose every blocker has "
+                "landed is stale by definition, which is what `blocker_liveness` reported and this "
+                "edit answers."
         ),
     ),
     BlockedHandoff(
@@ -374,17 +381,18 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
         ),
         binding_phase=8,
         blocked_by=(
-            Blocker("EC_KEY_get_conv_form", "crypto/ec/ec_key.c", 855, "exported", 8),
-            Blocker("EC_KEY_get0_group", "crypto/ec/ec_key.c", 711, "exported", 8),
-            Blocker("EC_GROUP_get_field_type", "crypto/ec/ec_lib.c", 505, "exported", 8),
+            Blocker("EVP_PKEY_get0_EC_KEY", "crypto/evp/p_legacy.c", 45, "exported", 7),
+            Blocker("evp_pkey_get_legacy", "crypto/evp/p_lib.c", 2154, "internal", 8),
         ),
         reason=(
             "each opens with `pkey->keymgmt == NULL || pkey->keydata == NULL` and answers its "
                 "legacy arm -- `EVP_PKEY_get0_EC_KEY` then `EC_KEY_get_conv_form` "
                 "(`crypto/evp/p_lib.c:2472`, `:2477`) or `EC_KEY_get0_group` then "
-                "`EC_GROUP_get_field_type` (`:2512`, `:2517`, `:2521`). The provider arm above those "
-                "needs nothing foreign, but the legacy arm is compiled in and the crate's "
-                "`EVP_PKEY_get0_EC_KEY` is itself withheld in this stratum, so both are Phase 8's."
+                "`EC_GROUP_get_field_type` (`:2512`, `:2517`, `:2521`). The three EC accessors "
+                "landed with D340; what is still absent is `EVP_PKEY_get0_EC_KEY` itself, this "
+                "stratum's own withheld export, whose whole body is `evp_pkey_get_legacy` "
+                "(`crypto/evp/p_lib.c:2154`) -- so the row names the accessor and its one "
+                "dependency, which is what it actually waits on."
         ),
     ),
     BlockedHandoff(

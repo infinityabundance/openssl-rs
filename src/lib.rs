@@ -109,6 +109,11 @@ pub mod idea;
 pub mod mac;
 pub mod modes;
 pub mod params;
+// Phase 8.7's `crypto/param_build_set.c`: the two-way key-management writers a provider's
+// `export()` and `get_params()` methods share. `crypto/ec/ec_backend.c` is the first caller the
+// crate reaches; `crypto/ffc/ffc_backend.c`'s withheld `ossl_ffc_params_todata` reaches the same
+// four, so the unit lands whole rather than as the reachable subset (D327's rule).
+pub(crate) mod param_build_set;
 pub mod pem;
 pub mod property;
 pub mod provider;

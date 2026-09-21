@@ -237,6 +237,7 @@
               "RT-BN",
               "RT-CONF",
               "RT-DSO",
+              "RT-EC",
               "RT-EVP-MAC",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
@@ -637,6 +638,7 @@
               "RT-DIGEST",
               "RT-DSA",
               "RT-DSO",
+              "RT-EC",
               "RT-ERR",
               "RT-EVP-BIO",
               "RT-EVP-PBE",
@@ -5801,6 +5803,7 @@
               "RT-BN-RAND",
               "RT-DH",
               "RT-DSA",
+              "RT-EC",
               "RT-RSA"
             ],
             "symbol": "BN_CTX_free"
@@ -5819,6 +5822,7 @@
               "RT-BN-RAND",
               "RT-DH",
               "RT-DSA",
+              "RT-EC",
               "RT-RSA"
             ],
             "symbol": "BN_CTX_new"
@@ -6180,7 +6184,8 @@
             "basis": "called",
             "courts": [
               "RT-BN",
-              "RT-DSA"
+              "RT-DSA",
+              "RT-EC"
             ],
             "symbol": "BN_clear_free"
           },
@@ -6192,6 +6197,7 @@
               "RT-BN-RAND",
               "RT-DH",
               "RT-DSA",
+              "RT-EC",
               "RT-RSA"
             ],
             "symbol": "BN_cmp"
@@ -6269,6 +6275,7 @@
               "RT-BN-RAND",
               "RT-DH",
               "RT-DSA",
+              "RT-EC",
               "RT-PARAM",
               "RT-RSA"
             ],
@@ -6398,7 +6405,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-BN"
+              "RT-BN",
+              "RT-EC"
             ],
             "symbol": "BN_get_word"
           },
@@ -6711,6 +6719,7 @@
               "RT-BN-RAND",
               "RT-DH",
               "RT-DSA",
+              "RT-EC",
               "RT-RSA"
             ],
             "symbol": "BN_new"
@@ -6771,6 +6780,7 @@
               "RT-BN-RAND",
               "RT-DH",
               "RT-DSA",
+              "RT-EC",
               "RT-RSA"
             ],
             "symbol": "BN_num_bits"
@@ -6879,6 +6889,7 @@
               "RT-BN-RAND",
               "RT-DH",
               "RT-DSA",
+              "RT-EC",
               "RT-RSA"
             ],
             "symbol": "BN_set_word"
@@ -7005,6 +7016,7 @@
             "basis": "called",
             "courts": [
               "RT-BN-ASN1-REF",
+              "RT-EC",
               "RT-RSA"
             ],
             "symbol": "BN_value_one"
@@ -8004,6 +8016,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-EC",
               "RT-PARAM"
             ],
             "symbol": "OSSL_PARAM_BLD_free"
@@ -8011,6 +8024,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-EC",
               "RT-PARAM"
             ],
             "symbol": "OSSL_PARAM_BLD_new"
@@ -14448,10 +14462,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 452,
-          "directly_courted_called": 452,
+          "directly_courted": 604,
+          "directly_courted_called": 604,
           "directly_courted_referenced": 0,
-          "implemented": 460,
+          "implemented": 612,
           "indirectly_courted": 8,
           "non_observable": 0,
           "unmatched": 0
@@ -16194,6 +16208,1056 @@
             "courts": [
               "RT-EC"
             ],
+            "symbol": "ECDH_compute_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "ECDSA_SIG_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "ECDSA_SIG_get0"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "ECDSA_SIG_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "ECDSA_SIG_set0"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "ECDSA_do_sign"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "ECDSA_do_sign_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "ECDSA_do_verify"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "ECDSA_sign"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "ECDSA_sign_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "ECDSA_sign_setup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "ECDSA_size"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "ECDSA_verify"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GF2m_simple_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GFp_mont_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GFp_nist_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GFp_simple_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_check"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_check_discriminant"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_check_named_curve"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_clear_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_cmp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_copy"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_get0_cofactor"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_get0_field"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_get0_generator"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_get0_order"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_get0_seed"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_get_asn1_flag"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_get_basis_type"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_get_cofactor"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_get_curve"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_get_curve_GF2m"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_get_curve_GFp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_get_curve_name"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_get_degree"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_get_field_type"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_get_mont_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_get_order"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_get_pentanomial_basis"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_get_point_conversion_form"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_get_seed_len"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_get_trinomial_basis"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_have_precompute_mult"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_method_of"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_new_by_curve_name"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_new_by_curve_name_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_new_curve_GF2m"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_new_curve_GFp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_new_from_params"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_order_bits"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_precompute_mult"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_set_asn1_flag"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_set_curve"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_set_curve_GF2m"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_set_curve_GFp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_set_curve_name"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_set_generator"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_set_point_conversion_form"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_set_seed"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_GROUP_to_params"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_METHOD_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_METHOD_get_compute_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_METHOD_get_init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_METHOD_get_keygen"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_METHOD_get_sign"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_METHOD_get_verify"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_METHOD_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_METHOD_set_compute_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_METHOD_set_init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_METHOD_set_keygen"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_METHOD_set_sign"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_METHOD_set_verify"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_OpenSSL"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_can_sign"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_check_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_clear_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_copy"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_decoded_from_explicit_params"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_generate_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_get0_engine"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_get0_group"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_get0_private_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_get0_public_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_get_conv_form"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_get_default_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_get_enc_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_get_ex_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_get_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_get_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_key2buf"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_new_by_curve_name"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_new_by_curve_name_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_new_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_new_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_oct2key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_oct2priv"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_precompute_mult"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_priv2buf"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_priv2oct"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_set_asn1_flag"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_set_conv_form"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_set_default_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_set_enc_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_set_ex_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_set_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_set_group"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_set_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_set_private_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_set_public_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_set_public_key_affine_coordinates"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_KEY_up_ref"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_METHOD_get_field_type"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_add"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_clear_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_cmp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_copy"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_dbl"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_get_Jprojective_coordinates_GFp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_get_affine_coordinates"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_get_affine_coordinates_GF2m"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_get_affine_coordinates_GFp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_invert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_is_at_infinity"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_is_on_curve"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_make_affine"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_method_of"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_mul"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_oct2point"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_point2buf"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_point2oct"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_set_Jprojective_coordinates_GFp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_set_affine_coordinates"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_set_affine_coordinates_GF2m"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_set_affine_coordinates_GFp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_set_compressed_coordinates"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_set_compressed_coordinates_GF2m"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_set_compressed_coordinates_GFp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINT_set_to_infinity"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINTs_make_affine"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "EC_POINTs_mul"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
             "symbol": "EC_curve_nid2nist"
           },
           {
@@ -17623,6 +18687,20 @@
               "RT-DIGEST"
             ],
             "symbol": "WHIRLPOOL_Update"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "d2i_ECDSA_SIG"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EC"
+            ],
+            "symbol": "i2d_ECDSA_SIG"
           }
         ],
         "indirectly_courted": [
@@ -18108,10 +19186,10 @@
       }
     ],
     "totals": {
-      "directly_courted": 2369,
-      "directly_courted_called": 2088,
+      "directly_courted": 2521,
+      "directly_courted_called": 2240,
       "directly_courted_referenced": 281,
-      "implemented": 2377,
+      "implemented": 2529,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -18122,7 +19200,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "1dd0aca8b620017e75a227a612718c7f1db31bf5ee8b6677175165cd5299d4d4"
+      "sha256": "3c707359a18348b266496248c76bd5a80ae6e92408acd2652d1f749eb145f0de"
     },
     {
       "name": "symbol-ownership",
@@ -18137,7 +19215,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "88d6d875afbb63998e8f81d2a13645e386d0fb4ecbd8e82d69dbf34699e7f6d8"
+      "sha256": "ba1d9e73ec53ca7041d4a0ae963e08a28f11eff3e20d02f7ba509183b8cd5762"
     },
     {
       "name": "phase3-courts",
@@ -18147,7 +19225,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "bea1e4f07a58c48de212357f7a261ae1b7da5fcb386d3cfa8cecc429b412bf5d"
+      "sha256": "d7592c4e2fe15efdee056a56ebdac2a4cb7269ea636e1c35934fd1a5f104ba78"
     },
     {
       "name": "phase4-courts",
@@ -18157,7 +19235,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "6f6aab6d396c2b3a90320a1b5fff1a307f4a9daf86f226c275bbdb49ba79f11d"
+      "sha256": "560d0ab49db30b962f15956bc43f0ec5aee0eee7160d1e005bdbf53abbd0372f"
     },
     {
       "name": "phase5-courts",
@@ -18167,7 +19245,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "b98e1bc86d28cb7deae80eedc574d51e1c54fadb6951d46965ee48718bc5d9f8"
+      "sha256": "b7d8fa071a8e3677905ca99660e07cc542cd5eb5f9bd6f5a14df647b2feefec1"
     },
     {
       "name": "phase6-courts",
@@ -18177,7 +19255,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "ed137081a51dc514c3ee66bde040431c5804a92bbac273210007ae8035639423"
+      "sha256": "485e1dc354c833af01a0491d5b63abb5fbb9ca42317ce1a02f4c9ed6d84be2c6"
     },
     {
       "name": "phase7-courts",
@@ -18187,17 +19265,17 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "02a498dcf1038d8d3221babe8a1781415a95bd2540ae55608baef8e18c467efb"
+      "sha256": "364f55ab19b6c4afdcaa5aec0925636318f4720813d846fbe078198056d1efa7"
     },
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "0799876d1f64905c6531bf8f612bc24779e6bee02d27bf16eadf4455375e773f"
+      "sha256": "f08cb5d62199cfbc226993a67acc06a588f068d2d4d93520e6a95e6199872cb0"
     },
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "e3a72273f3e82f8a9c43410509bbcf024cbd7068edd4124cb396fd785090978e"
+      "sha256": "baa11d1ed5bc8d3171c7d0aaf5f526837bf166aab809bcfe908c843981eeb581"
     },
     {
       "name": "phase9-courts",

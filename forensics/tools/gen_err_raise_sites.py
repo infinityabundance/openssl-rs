@@ -619,6 +619,42 @@ COVERED_FILES = [
     # slice that lands them rather than reached by anything here.
     ("crypto/ec/ec_curve.c", "EC_CURVE"),
     ("crypto/evp/ec_support.c", "EC_SUPPORT"),
+    # Phase 8.7's remaining `crypto/ec` layer — the group and point objects, the field arithmetic
+    # they dispatch to, the multiplication ladder, the point-encoding units, the key layer, the
+    # two signature/shared-secret units, the provider backend and the `ec.h` DER entry points.
+    # D334 registered only the two units its first slice gave a crate module; D340 lands the rest
+    # of the block, so the subsystem set is now complete. The same rule as `crypto/rsa` and
+    # `crypto/dsa` above applies: a coordinate's `file` string is part of the observable error
+    # record, so every unit of the stratum that **raises** is listed. `ec_cvt.c` raises nothing
+    # and is listed with an empty site set rather than omitted, `ec_support.c`'s case above.
+    ("crypto/ec/ec_lib.c", "EC_LIB"),
+    ("crypto/ec/ecp_smpl.c", "ECP_SMPL"),
+    ("crypto/ec/ecp_mont.c", "ECP_MONT"),
+    ("crypto/ec/ecp_nist.c", "ECP_NIST"),
+    ("crypto/ec/ec_mult.c", "EC_MULT"),
+    ("crypto/ec/ecp_oct.c", "ECP_OCT"),
+    ("crypto/ec/ec_oct.c", "EC_OCT"),
+    ("crypto/ec/ec2_smpl.c", "EC2_SMPL"),
+    ("crypto/ec/ec2_oct.c", "EC2_OCT"),
+    ("crypto/ec/ec_key.c", "EC_KEY"),
+    ("crypto/ec/ec_kmeth.c", "EC_KMETH"),
+    ("crypto/ec/ecdsa_ossl.c", "ECDSA_OSSL"),
+    ("crypto/ec/ecdh_ossl.c", "ECDH_OSSL"),
+    ("crypto/ec/ecdsa_sign.c", "ECDSA_SIGN"),
+    ("crypto/ec/ecdsa_vrf.c", "ECDSA_VRF"),
+    ("crypto/ec/ec_check.c", "EC_CHECK"),
+    ("crypto/ec/ec_cvt.c", "EC_CVT"),
+    # `ec_backend.c` is the provider group/key backend the group object reaches through
+    # `EC_GROUP_to_params`/`EC_GROUP_new_from_params`, and `ec_asn1.c` supplies the three `ec.h`
+    # DER entry points `ecdsa_ossl.c` reaches (`ECDSA_size`, `i2d_ECDSA_SIG`, `d2i_ECDSA_SIG`).
+    ("crypto/ec/ec_backend.c", "EC_BACKEND"),
+    ("crypto/ec/ec_asn1.c", "EC_ASN1"),
+    # `crypto/param_build_set.c` is the unit `ec_backend.c` reaches for its four
+    # `ossl_param_build_set_*` helpers. D330 and D331 both recorded it as having no crate
+    # module and no plan row; 8.7's backend is the first caller that needs it, so it joins the
+    # covered set here. Its one reason is `CRYPTO_R_TOO_SMALL_BUFFER` (`cryptoerr.h`, already in
+    # the resolver's include set).
+    ("crypto/param_build_set.c", "PARAM_BUILD_SET"),
     # Phase 9's `crypto/rand` subsystem. **The subsystem set, not a selection of convenient
     # files**, for `crypto/rsa`'s reason and one more of its own: this stratum's symbols are
     # raised from inside bodies whose declaring header belongs to *earlier* strata (`BN_rand`,

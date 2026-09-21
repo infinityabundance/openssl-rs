@@ -203,7 +203,7 @@
       "verdict": "pass"
     },
     "RT-EC": {
-      "observations": 483,
+      "observations": 2134,
       "verdict": "pass"
     },
     "RT-ERR": {
@@ -385,11 +385,11 @@
     "phase5": 91,
     "phase6": 0,
     "phase7": 226,
-    "phase8": 2,
+    "phase8": 1,
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 2377,
+    "libcrypto": 2529,
     "libssl": 0
   },
   "open_obligations": {
@@ -398,8 +398,8 @@
     "phase5": 0,
     "phase6": 0,
     "phase7": 0,
-    "phase8": 324,
-    "phase9": 13
+    "phase8": 173,
+    "phase9": 12
   },
   "owned_obligations": {
     "phase3": 294,
@@ -408,7 +408,7 @@
     "phase6": 161,
     "phase7": 950,
     "phase8": 786,
-    "phase9": 71
+    "phase9": 70
   },
   "phases": {
     "0": "complete",
@@ -435,10 +435,10 @@
     "9": "in-progress"
   },
   "prerequisites": {
-    "blocking_dependencies": 19,
-    "divergence_names_covered": 33,
+    "blocking_dependencies": 20,
+    "divergence_names_covered": 45,
     "findings": 0,
-    "language_census": 3553,
+    "language_census": 3830,
     "sealed_census": 52
   },
   "provider_implemented": [
