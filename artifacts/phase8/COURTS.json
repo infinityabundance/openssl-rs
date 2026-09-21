@@ -58,9 +58,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 1002,
+        "authority_observations": 1021,
         "candidate_exit_code": 0,
-        "candidate_observations": 1002,
+        "candidate_observations": 1021,
         "candidate_stderr_tail": [],
         "court": "RT-RSA",
         "crashed": false,
@@ -37818,7 +37818,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_rsa_probe.c",
-      "sha256": "ff951741b6d8d411e089e11b9528404e25fb563d0519ae447b6cf73bf3f1f75e"
+      "sha256": "b6a9462a419e19117fd1540c7b1d3b26b9ca166a2112bcaa6a4c7442a88be12b"
     },
     {
       "name": "probe",

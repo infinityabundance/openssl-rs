@@ -106,11 +106,13 @@ const ASN1_PKEY_ALIAS: c_long = 0x1;
 const ASN1_PKEY_DYNAMIC: c_long = 0x2;
 
 // ---------------------------------------------------------------------------------------------
-// The six types this struct names that the crate has not transcribed yet.
+// The five types this module names that the crate has not transcribed yet, plus one re-export.
 //
-// Each is `#[repr(C)]` and empty, which is this crate's documented idiom for a type that appears in
-// a signature — here, in a struct's member — before its body is. It is honest here rather than a
-// shortcut: these accessors store and return the struct and never call through these members.
+// Each of the five is `#[repr(C)]` and empty, which is this crate's documented idiom for a type
+// that appears in a signature — here, in a struct's member — before its body is. It is honest here
+// rather than a shortcut: these accessors store and return the struct and never call through these
+// members. `X509Algor` was the sixth of these until D348: `crypto/asn1/x_algor.c` now has a crate
+// module, and this site imports the authority's own two-field definition instead of a placeholder.
 // ---------------------------------------------------------------------------------------------
 
 /// `X509_PUBKEY` — Phase 10's object.
@@ -123,17 +125,19 @@ pub struct X509Pubkey {
 pub struct Pkcs8PrivKeyInfo {
     _private: [u8; 0],
 }
-/// `X509_ALGOR` — Phase 10's object.
-#[repr(C)]
-pub struct X509Algor {
-    _private: [u8; 0],
-}
+/// `X509_ALGOR` — the authority's own definition, re-exported (D348).
+///
+/// The fifteen `EVP_PKEY_asn1_set_*` signatures below name `X509_ALGOR *` and nothing here ever
+/// dereferences one; until `src/asn1/x_algor.rs` landed, that was reason enough for a placeholder.
+/// With the real item in the crate the placeholder would be a second, divergent declaration, so
+/// the canonical struct is re-exported instead.
+pub use crate::asn1::x_algor::X509Algor;
 /// `X509_SIG_INFO` — Phase 10's object.
 #[repr(C)]
 pub struct X509SigInfo {
     _private: [u8; 0],
 }
-/// `ASN1_BIT_STRING` — Phase 5's object, and the one of the six whose body is in a header this
+/// `ASN1_BIT_STRING` — Phase 5's object, and the one of the five whose body is in a header this
 /// project has already read.
 #[repr(C)]
 pub struct Asn1BitString {

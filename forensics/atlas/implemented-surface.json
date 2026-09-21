@@ -335,7 +335,7 @@
         "truncf128",
         "truncf16"
       ],
-      "compiler_emitted_count": 9520,
+      "compiler_emitted_count": 9282,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -343,7 +343,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 2627,
+        "implemented": 2652,
         "implemented_symbols": [
           "AES_bi_ige_encrypt",
           "AES_cbc_encrypt",
@@ -2730,7 +2730,14 @@
           "RSAPrivateKey_it",
           "RSAPublicKey_dup",
           "RSAPublicKey_it",
+          "RSA_OAEP_PARAMS_free",
+          "RSA_OAEP_PARAMS_it",
+          "RSA_OAEP_PARAMS_new",
           "RSA_PKCS1_OpenSSL",
+          "RSA_PSS_PARAMS_dup",
+          "RSA_PSS_PARAMS_free",
+          "RSA_PSS_PARAMS_it",
+          "RSA_PSS_PARAMS_new",
           "RSA_X931_derive_ex",
           "RSA_X931_generate_key_ex",
           "RSA_X931_hash_id",
@@ -2879,6 +2886,16 @@
           "WHIRLPOOL_Final",
           "WHIRLPOOL_Init",
           "WHIRLPOOL_Update",
+          "X509_ALGORS_it",
+          "X509_ALGOR_cmp",
+          "X509_ALGOR_copy",
+          "X509_ALGOR_dup",
+          "X509_ALGOR_free",
+          "X509_ALGOR_get0",
+          "X509_ALGOR_it",
+          "X509_ALGOR_new",
+          "X509_ALGOR_set0",
+          "X509_ALGOR_set_md",
           "ZINT32_it",
           "ZINT64_it",
           "ZLONG_it",
@@ -2928,6 +2945,10 @@
           "d2i_ECPrivateKey",
           "d2i_RSAPrivateKey",
           "d2i_RSAPublicKey",
+          "d2i_RSA_OAEP_PARAMS",
+          "d2i_RSA_PSS_PARAMS",
+          "d2i_X509_ALGOR",
+          "d2i_X509_ALGORS",
           "err_free_strings_int",
           "i2a_ASN1_ENUMERATED",
           "i2a_ASN1_INTEGER",
@@ -2969,11 +2990,15 @@
           "i2d_ECPrivateKey",
           "i2d_RSAPrivateKey",
           "i2d_RSAPublicKey",
+          "i2d_RSA_OAEP_PARAMS",
+          "i2d_RSA_PSS_PARAMS",
+          "i2d_X509_ALGOR",
+          "i2d_X509_ALGORS",
           "i2o_ECPublicKey",
           "i2t_ASN1_OBJECT",
           "o2i_ECPublicKey"
         ],
-        "scaffolded": 3269
+        "scaffolded": 3244
       },
       "libssl": {
         "authority_exports": 603,
@@ -2984,18 +3009,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 2627,
-      "scaffolded": 3872
+      "implemented": 2652,
+      "scaffolded": 3847
     }
   },
-  "body_hash": "ecbcd03b9683cbc56d32a3e13434c8685c8edf246d1a3405ff0f49d215c9b7da",
+  "body_hash": "8458459f076ba9906e02065764aed9eabf58a3425a7fd955d3f09f1f32ca3fea",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "025ef886a55394224868c24c291102e7ae7e27e9d4df9b110afcea9dd1f6557d"
+      "sha256": "e85e9260d3f53b521e975e3b203bade2ab85668cd76435fd447818e0c8edd0f3"
     },
     {
       "name": "authority-exports",

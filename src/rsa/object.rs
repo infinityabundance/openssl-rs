@@ -50,12 +50,12 @@
 //! **2. `RSA_PSS_PARAMS_free`.** [`RSA_free`] and [`ossl_rsa_set0_pss_params`] call it
 //! (`rsa_lib.c:186`, `:702`). No state this crate can reach has a non-NULL `r->pss`: the field's
 //! only writer is [`ossl_rsa_set0_pss_params`], whose only authority caller is
-//! `crypto/rsa/rsa_backend.c:669`, and every `RSA_PSS_PARAMS *` comes from slice F's
-//! `d2i_RSA_PSS_PARAMS`, which needs 8.8's `ASN1_ITEM` machinery. Both omitted calls are
-//! `free(NULL)`, which `ossl_asn1_item_embed_free` answers by returning immediately
-//! (`tasn_fre.c:36-39`). The symbol is **not** defined as an export either: a fabricated
-//! `RSA_PSS_PARAMS_free` would put a wrong body on the ABI surface, which a consumer could link
-//! and call. The day slice F lands, the calls replace the omission.
+//! `crypto/rsa/rsa_backend.c:669` — `ossl_rsa_param_decode` — and that unit has no crate module, so
+//! the writer is never reached. `d2i_RSA_PSS_PARAMS` and `RSA_PSS_PARAMS_free` themselves **are**
+//! now landed (D348), which changes nothing about the reachability: a decoder that nothing calls
+//! still leaves the field NULL. Both omitted calls are `free(NULL)`, which
+//! `ossl_asn1_item_embed_free` answers by returning immediately (`tasn_fre.c:36-39`). The calls are
+//! restored the day `crypto/rsa/rsa_backend.c`'s `ossl_rsa_param_decode` is transcribed.
 //!
 //! Neither reduction is a `forensics/prerequisites.json` `divergences` row: the gate resolves
 //! **internal** symbols only, so a row covering an export is refused with
@@ -589,8 +589,9 @@ pub(crate) unsafe fn ossl_rsa_new_with_ctx(libctx: *mut c_void) -> *mut Rsa {
 /// there is no engine registry in this crate, so `r->engine` is NULL and `ENGINE_finish(NULL)`
 /// returns 1 without touching anything (`eng_init.c:108-111`) — the
 /// `src/evp/pkey_asn1.rs:54-60` reduction. `RSA_PSS_PARAMS_free(r->pss)` is not a call either: no
-/// state this crate can reach has a non-NULL `r->pss`, so it is `free(NULL)`, which returns
-/// immediately (`tasn_fre.c:36-39`).
+/// state this crate can reach has a non-NULL `r->pss` — its only writer's only authority caller is
+/// `crypto/rsa/rsa_backend.c:669`, a unit with no crate module — so it is `free(NULL)`, which
+/// returns immediately (`tasn_fre.c:36-39`, and D348 for the re-measurement).
 ///
 /// # Safety
 /// `r` is NULL or a live object, and must not be used again after this call unless a reference
@@ -657,8 +658,9 @@ pub unsafe extern "C" fn RSA_free(r: *mut Rsa) {
     }
 
     // The authority's `RSA_PSS_PARAMS_free(r->pss)` is omitted: `r->pss` is NULL on every state
-    // this crate can reach, so the call is `free(NULL)`, which returns immediately
-    // (`tasn_fre.c:36-39`). See the module documentation.
+    // this crate can reach — its only writer's only authority caller is `rsa_backend.c:669`, a unit
+    // with no crate module — so the call is `free(NULL)`, which returns immediately
+    // (`tasn_fre.c:36-39`). See the module documentation and D348.
 
     // SAFETY: `prime_infos` is NULL or the object's own stack, whose elements are `RSA_PRIME_INFO`
     // records this object owns in their entirety — the *full* destructor, unlike the two `err:`
@@ -1481,10 +1483,11 @@ pub unsafe extern "C" fn RSA_get0_pss_params(r: *const Rsa) -> *const RsaPssPara
 ///
 /// **The release is written as the reachable answer.** The authority calls
 /// `RSA_PSS_PARAMS_free(r->pss)`, which would be `free(NULL)` on every state this crate can reach —
-/// this function's own writer is the only way `r->pss` becomes non-NULL, its caller is
-/// `crypto/rsa/rsa_backend.c:669`, and every `RSA_PSS_PARAMS *` comes from slice F's
-/// `d2i_RSA_PSS_PARAMS`, which is not landed. The call is therefore omitted, and
-/// `RSA_PSS_PARAMS_free` is not exported at all. See the module documentation.
+/// this function's own store is the only way `r->pss` becomes non-NULL, and its only authority
+/// caller is `crypto/rsa/rsa_backend.c:669`, a unit with no crate module. `d2i_RSA_PSS_PARAMS` and
+/// `RSA_PSS_PARAMS_free` themselves landed in D348, but a decoder nothing calls does not make the
+/// field non-NULL, so the re-measurement leaves the call omitted. It is restored the day
+/// `rsa_backend.c`'s `ossl_rsa_param_decode` is transcribed. See the module documentation.
 ///
 /// `#[allow(dead_code)]`'s reason: **the first reader is Phase 9's**
 /// `ossl_rsa_set0_all_params`/`rsa_backend.c` key loader (`:669`); nothing in this commit calls it.
@@ -1495,7 +1498,8 @@ pub unsafe extern "C" fn RSA_get0_pss_params(r: *const Rsa) -> *const RsaPssPara
 pub(crate) unsafe fn ossl_rsa_set0_pss_params(r: *mut Rsa, pss: *mut RsaPssParams) -> c_int {
     // SAFETY: `r` is live and `pss` is the caller's, whose ownership this call takes. The
     // authority's `RSA_PSS_PARAMS_free(r->pss)` is omitted — it is `free(NULL)` on every reachable
-    // state (`tasn_fre.c:36-39`).
+    // state, because the only authority caller of this function is a unit with no crate module
+    // (`tasn_fre.c:36-39`, D348).
     unsafe { (*r).pss = pss };
     1
 }

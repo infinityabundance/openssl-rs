@@ -225,19 +225,14 @@ const LINE_FREE_AID: c_int = 1517;
 
 /// `struct x509_algor_st` — `X509_ALGOR`, from `include/openssl/x509.h`.
 ///
-/// **Phase 11 owns this type** (`X509_ALGOR_it` and its two codecs are that stratum's), and two
-/// functions in this file need one thing from it: the layout. `EVP_CIPHER_CTX_get_algor_params`
-/// and `_set_algor_params` take a caller's `X509_ALGOR *`, read or write `parameter`, and pass it
-/// to `d2i_ASN1_TYPE`/`i2d_ASN1_TYPE` — Phase 5's, and present. So the struct is declared here
-/// with the authority's two fields and the reason it is declared rather than deferred, and the
-/// one function that would need Phase 11's *decoder* is deferred instead.
-#[repr(C)]
-pub struct X509Algor {
-    /// `const ASN1_OBJECT *algorithm` — the OID, which neither function here reads.
-    pub algorithm: *const crate::runtime::obj::Asn1Object,
-    /// `ASN1_TYPE *parameter` — the value, which both functions here do.
-    pub parameter: *mut Asn1Type,
-}
+/// **The definition is [`crate::asn1::x_algor::X509Algor`]'s and this is a re-export (D348).**
+/// Two functions in this file need the type: `EVP_CIPHER_CTX_get_algor_params` and
+/// `_set_algor_params` take a caller's `X509_ALGOR *`, read or write `parameter`, and pass it to
+/// `d2i_ASN1_TYPE`/`i2d_ASN1_TYPE` — Phase 5's, and present. It was declared here before
+/// `crypto/asn1/x_algor.c` had a module; now that it does, the authority's own translation unit
+/// owns the struct and both this site and `src/evp/pkey_asn1.rs` import it rather than declaring
+/// a second one.
+pub use crate::asn1::x_algor::X509Algor;
 
 /// `struct evp_cipher_ctx_st` — `EVP_CIPHER_CTX`, from `crypto/evp/evp_local.h`.
 ///
@@ -3029,7 +3024,7 @@ unsafe fn evp_cipher_param_to_asn1_ex(
     // SAFETY: `cipher` is NULL or the live method this context holds.
     } else if !(unsafe { (*cipher).prov }).is_null() {
         let mut alg = X509Algor {
-            algorithm: ptr::null(),
+            algorithm: ptr::null_mut(),
             parameter: type_,
         };
         // SAFETY: `c` is live and `alg` is this frame's own.
@@ -3092,7 +3087,7 @@ unsafe fn evp_cipher_asn1_to_param_ex(
     // SAFETY: `cipher` is NULL or the live method this context holds.
     } else if !(unsafe { (*cipher).prov }).is_null() {
         let alg = X509Algor {
-            algorithm: ptr::null(),
+            algorithm: ptr::null_mut(),
             parameter: type_,
         };
         // SAFETY: `c` is live and `alg` is this frame's own.

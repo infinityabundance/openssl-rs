@@ -5,10 +5,10 @@
       "findings": 0,
       "legacy_rows": 146,
       "legacy_unit_claims": 20,
-      "structured_blockers": 51,
-      "structured_rows": 20,
-      "unblocked_rows": 5,
-      "unblocked_symbols": 12
+      "structured_blockers": 49,
+      "structured_rows": 18,
+      "unblocked_rows": 6,
+      "unblocked_symbols": 14
     },
     "complete": true,
     "counts": {
@@ -76,18 +76,10 @@
       },
       {
         "binding_phase": 11,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/asn1/x_algor.c",
-            "kind": "exported",
-            "line": 26,
-            "name": "d2i_X509_ALGOR",
-            "owning_phase": 11
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "evp.h",
         "owning_phase": 11,
-        "reason": "`crypto/evp/evp_lib.c:1337` is `EVP_PKEY_CTX_get_algor`'s cipher-side twin and decodes the same `OSSL_SIGNATURE_PARAM_ALGORITHM_ID` octet string with the same `d2i_X509_ALGOR` (`:1372`), `crypto/asn1/x_algor.c:26`'s and Phase 11's. One `forensics/prerequisites.json` row covers both accessors.",
+        "reason": "Both accessors decode an `OSSL_SIGNATURE_PARAM_ALGORITHM_ID` octet string with `d2i_X509_ALGOR` (`crypto/evp/evp_lib.c:1490`, `:1372`), the single blocker the old rows named. D348 transcribed `crypto/asn1/x_algor.c` whole as `src/asn1/x_algor.rs`, so that export is landed and the blocker is gone -- which is why the rows move here from `BLOCKED_HANDOFFS` rather than being retired: the exports are still this stratum's to write, and only the authority *blocker* has landed. The one remaining dependency is the legacy `OBJ_NAME` digest lookup the decoded identifier is read through, which is Phase 13's (D343, D344), not a file:line in `x_algor.c` -- so a `Blocker` row would be stale on the day it was written.",
         "symbol": "EVP_CIPHER_CTX_get_algor"
       },
       {
@@ -100,18 +92,10 @@
       },
       {
         "binding_phase": 11,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/asn1/x_algor.c",
-            "kind": "exported",
-            "line": 26,
-            "name": "d2i_X509_ALGOR",
-            "owning_phase": 11
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "evp.h",
         "owning_phase": 11,
-        "reason": "`crypto/evp/evp_lib.c:1455` decodes the provider's `OSSL_SIGNATURE_PARAM_ALGORITHM_ID` answer with `d2i_X509_ALGOR` (`:1490`), which is `crypto/asn1/x_algor.c:26`'s generated `IMPLEMENT_ASN1_FUNCTIONS` export and Phase 11's. `forensics/prerequisites.json` carries `d2i_X509_ALGOR` with this coordinate; D190 recorded the withholding and D193 restated it.",
+        "reason": "Both accessors decode an `OSSL_SIGNATURE_PARAM_ALGORITHM_ID` octet string with `d2i_X509_ALGOR` (`crypto/evp/evp_lib.c:1490`, `:1372`), the single blocker the old rows named. D348 transcribed `crypto/asn1/x_algor.c` whole as `src/asn1/x_algor.rs`, so that export is landed and the blocker is gone -- which is why the rows move here from `BLOCKED_HANDOFFS` rather than being retired: the exports are still this stratum's to write, and only the authority *blocker* has landed. The one remaining dependency is the legacy `OBJ_NAME` digest lookup the decoded identifier is read through, which is Phase 13's (D343, D344), not a file:line in `x_algor.c` -- so a `Blocker` row would be stale on the day it was written.",
         "symbol": "EVP_PKEY_CTX_get_algor"
       },
       {
@@ -4763,7 +4747,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "ecbcd03b9683cbc56d32a3e13434c8685c8edf246d1a3405ff0f49d215c9b7da"
+      "sha256": "8458459f076ba9906e02065764aed9eabf58a3425a7fd955d3f09f1f32ca3fea"
     },
     {
       "name": "export-defining-units",
@@ -4783,12 +4767,12 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "259bc8b41b9ec0a9f8e75caa5ae6d7aaaa3af4c1e5dab96e2a87792c2c2e0f12"
+      "sha256": "13f965eaa37691e6eddfc75978112c9c81667737e23060e7df5e9b9b762fcaba"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "7c05b49abbdad89ee0333413156a0b1ab9f109e47946855e49ac9cc089b70c9c"
+      "sha256": "94e9f6368cc186f34eabc013dc99c81b931b530d08cb6d325c4f6432fb8027ad"
     },
     {
       "name": "authority-source-tree-and-crate-source",
@@ -4797,7 +4781,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "6f05a2151cc03e9bb2f5fd4c8d83e73b72faab8c0b5dc5ff7f577c9898624ed6"
+      "sha256": "f906f5d201762fba74683620731b6f89dc2c137ecbb13268ddd95429c008ad3d"
     }
   ],
   "kind": "phase7-obligations",

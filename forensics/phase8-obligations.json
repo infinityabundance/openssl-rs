@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 0,
-      "implemented": 710,
-      "open_in_this_stratum": 76,
+      "implemented": 721,
+      "open_in_this_stratum": 65,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1592,7 +1592,14 @@
       "RSAPrivateKey_it",
       "RSAPublicKey_dup",
       "RSAPublicKey_it",
+      "RSA_OAEP_PARAMS_free",
+      "RSA_OAEP_PARAMS_it",
+      "RSA_OAEP_PARAMS_new",
       "RSA_PKCS1_OpenSSL",
+      "RSA_PSS_PARAMS_dup",
+      "RSA_PSS_PARAMS_free",
+      "RSA_PSS_PARAMS_it",
+      "RSA_PSS_PARAMS_new",
       "RSA_X931_derive_ex",
       "RSA_X931_generate_key_ex",
       "RSA_X931_hash_id",
@@ -1748,6 +1755,8 @@
       "d2i_ECPrivateKey",
       "d2i_RSAPrivateKey",
       "d2i_RSAPublicKey",
+      "d2i_RSA_OAEP_PARAMS",
+      "d2i_RSA_PSS_PARAMS",
       "i2d_DHparams",
       "i2d_DHxparams",
       "i2d_DSAPrivateKey",
@@ -1760,6 +1769,8 @@
       "i2d_ECPrivateKey",
       "i2d_RSAPrivateKey",
       "i2d_RSAPublicKey",
+      "i2d_RSA_OAEP_PARAMS",
+      "i2d_RSA_PSS_PARAMS",
       "i2o_ECPublicKey",
       "o2i_ECPublicKey"
     ],
@@ -2343,48 +2354,6 @@
         "declaring_header": "rsa.h",
         "module": "src/rsa/mod.rs",
         "received_from_phase": null,
-        "symbol": "RSA_OAEP_PARAMS_free"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_OAEP_PARAMS_it"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_OAEP_PARAMS_new"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_PSS_PARAMS_dup"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_PSS_PARAMS_free"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_PSS_PARAMS_it"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_PSS_PARAMS_new"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
         "symbol": "RSA_print"
       },
       {
@@ -2410,30 +2379,6 @@
         "module": "src/asn1/ameth.rs",
         "received_from_phase": 7,
         "symbol": "d2i_PublicKey"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_RSA_OAEP_PARAMS"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_RSA_PSS_PARAMS"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_RSA_OAEP_PARAMS"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_RSA_PSS_PARAMS"
       }
     ],
     "owned_by_header": {
@@ -2507,12 +2452,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "ecbcd03b9683cbc56d32a3e13434c8685c8edf246d1a3405ff0f49d215c9b7da"
+      "sha256": "8458459f076ba9906e02065764aed9eabf58a3425a7fd955d3f09f1f32ca3fea"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "049a6e0e9169d7d75587a8e9f669ea6483dd9edae56b8436ad2e8f99c39f594e"
+      "sha256": "7b5810442de1327ac0b6ea57cc0d5992559772af157d21f822e7d90b17337b83"
     }
   ],
   "kind": "phase8-obligations",

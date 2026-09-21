@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 2979,
+      "sites": 2980,
       "unattributed": 0
     },
     "covered_files": [
@@ -227,6 +227,7 @@
       "crypto/rsa/rsa_schemes.c",
       "crypto/rsa/rsa_mp_names.c",
       "crypto/rsa/rsa_acvp_test_params.c",
+      "crypto/asn1/x_algor.c",
       "crypto/ffc/ffc_params_generate.c",
       "crypto/ffc/ffc_params_validate.c",
       "crypto/dh/dh_lib.c",
@@ -34890,6 +34891,21 @@
         "rel_source": "crypto/rsa/rsa_sp800_56b_gen.c"
       },
       {
+        "const_name": "X_ALGOR_165",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/asn1/x_algor.c",
+        "function": "ossl_x509_algor_get_md",
+        "generated": false,
+        "lib": 13,
+        "lib_symbol": "ERR_LIB_ASN1",
+        "line": 165,
+        "macro": "ERR_raise",
+        "reason": 229,
+        "reason_symbol": "ASN1_R_UNKNOWN_DIGEST",
+        "rel_source": "crypto/asn1/x_algor.c"
+      },
+      {
         "const_name": "FFC_PARAMS_GENERATE_49",
         "data_format": null,
         "dynamic_reason": false,
@@ -46169,6 +46185,11 @@
       "name": "authority:crypto/rsa/rsa_acvp_test_params.c",
       "path": "forensics/authorities/src/openssl-3.6.4/crypto/rsa/rsa_acvp_test_params.c",
       "sha256": "d52e71d4bd369855bf5203de39b3ddab0cb8dc22dbbed00efd1b9d9641e4850b"
+    },
+    {
+      "name": "authority:crypto/asn1/x_algor.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/asn1/x_algor.c",
+      "sha256": "ffb86b0d5712f17c0c86a358fbda9abd8c2c97bbebc33918dc3a7113037d0541"
     },
     {
       "name": "authority:crypto/ffc/ffc_params_generate.c",

@@ -41,7 +41,11 @@
 #include <openssl/asn1.h>
 #include <openssl/asn1t.h>
 #include <openssl/bn.h>
+#include <openssl/crypto.h>
 #include <openssl/err.h>
+#include <openssl/objects.h>
+#include <openssl/stack.h>
+#include <openssl/x509.h>
 
 #include <stdint.h>
 #include <stdio.h>
@@ -655,6 +659,111 @@ static void part_type_pairs(void)
     clear_queue();
 }
 
+/* ------------------------------- g. the installed `X509_ALGOR` family (D348)
+ *
+ * `crypto/asn1/x_algor.c`'s own item, and the first *installed* descriptor this
+ * probe drives: until D348 every template here was the probe's own declaration, which
+ * is deliberate -- "the shape of the item is the thing under test". `X509_ALGOR` is the
+ * shape an installed header publishes, so driving it checks that the crate's item, its
+ * two codecs, its dup and its four hand-written functions answer as the authority's do.
+ * `X509_ALGORS` is the `SEQUENCE OF` wrapper over it. Every observation is a return
+ * code, a decoded length, an OID comparison the probe computes itself, or the DER of a
+ * value the probe built from constants -- no address and no secret. */
+static void part_x509_algor(void)
+{
+    X509_ALGOR *alg = X509_ALGOR_new();
+    X509_ALGOR *dup, *dst, *back;
+    unsigned char *der = NULL;
+    const unsigned char *p;
+    int n, ptype;
+    const ASN1_OBJECT *o;
+    const void *pval;
+
+    printf("g.it.stable=%d\n",
+        X509_ALGOR_it() == X509_ALGOR_it()
+        && X509_ALGORS_it() == X509_ALGORS_it()
+        && X509_ALGOR_it() != X509_ALGORS_it());
+    printf("g.new_notnull=%d\n", alg != NULL);
+
+    printf("g.set0=%d\n",
+        X509_ALGOR_set0(alg, OBJ_nid2obj(NID_sha256), V_ASN1_NULL, NULL) == 1);
+
+    o = NULL;
+    ptype = -99;
+    pval = NULL;
+    X509_ALGOR_get0(&o, &ptype, &pval, alg);
+    printf("g.get0.oid=%d\n", o != NULL && OBJ_obj2nid(o) == NID_sha256);
+    printf("g.get0.ptype=%d\n", ptype);
+    printf("g.get0.pval=%d\n", pval == NULL);
+
+    n = i2d_X509_ALGOR(alg, NULL);
+    printf("g.measure=%d\n", n > 0);
+    n = i2d_X509_ALGOR(alg, &der);
+    hex("g.der", der, n);
+    p = der;
+    back = d2i_X509_ALGOR(NULL, &p, n);
+    printf("g.d2i=%d\n", back != NULL);
+    if (back != NULL) {
+        printf("g.cmp=%d\n", X509_ALGOR_cmp(alg, back) == 0);
+        printf("g.consumed_all=%d\n", (int)(p - der) == n);
+        X509_ALGOR_free(back);
+    }
+    OPENSSL_free(der);
+    der = NULL;
+
+    dst = X509_ALGOR_new();
+    printf("g.copy=%d\n",
+        X509_ALGOR_copy(dst, alg) == 1 && X509_ALGOR_cmp(dst, alg) == 0);
+    dup = X509_ALGOR_dup(alg);
+    printf("g.dup=%d\n", dup != NULL && X509_ALGOR_cmp(dup, alg) == 0);
+    X509_ALGOR_free(dup);
+    X509_ALGOR_free(dst);
+
+    /* An identifier with no parameter reports `V_ASN1_UNDEF`. */
+    {
+        X509_ALGOR *a2 = X509_ALGOR_new();
+
+        ptype = -99;
+        X509_ALGOR_set0(a2, OBJ_nid2obj(NID_sha1), V_ASN1_UNDEF, NULL);
+        X509_ALGOR_get0(NULL, &ptype, NULL, a2);
+        printf("g.absent_ptype=%d\n", ptype == V_ASN1_UNDEF);
+        X509_ALGOR_free(a2);
+    }
+    X509_ALGOR_free(alg);
+
+    /* `X509_ALGORS`: a `SEQUENCE OF` two identifiers. */
+    {
+        X509_ALGORS *sk = (X509_ALGORS *)OPENSSL_sk_new_null();
+        X509_ALGOR *a0 = X509_ALGOR_new();
+        X509_ALGOR *a1 = X509_ALGOR_new();
+
+        X509_ALGOR_set0(a0, OBJ_nid2obj(NID_sha256), V_ASN1_NULL, NULL);
+        X509_ALGOR_set0(a1, OBJ_nid2obj(NID_sha1), V_ASN1_UNDEF, NULL);
+        OPENSSL_sk_push(sk, a0);
+        OPENSSL_sk_push(sk, a1);
+
+        n = i2d_X509_ALGORS(sk, &der);
+        printf("g.algors.i2d=%d\n", n > 0 && der != NULL);
+        hex("g.algors.der", der, n);
+        p = der;
+        {
+            X509_ALGORS *bsk = d2i_X509_ALGORS(NULL, &p, n);
+
+            printf("g.algors.d2i_notnull=%d\n", bsk != NULL);
+            if (bsk != NULL) {
+                printf("g.algors.num=%d\n", OPENSSL_sk_num(bsk) == 2);
+                printf("g.algors.consumed_all=%d\n", (int)(p - der) == n);
+                printf("g.algors.cmp=%d\n",
+                    X509_ALGOR_cmp((X509_ALGOR *)OPENSSL_sk_value(bsk, 0), a0) == 0
+                    && X509_ALGOR_cmp((X509_ALGOR *)OPENSSL_sk_value(bsk, 1), a1) == 0);
+                OPENSSL_sk_pop_free(bsk, (OPENSSL_sk_freefunc)X509_ALGOR_free);
+            }
+        }
+        OPENSSL_free(der);
+        OPENSSL_sk_pop_free(sk, (OPENSSL_sk_freefunc)X509_ALGOR_free);
+    }
+}
+
 int main(void)
 {
     part_sequence();
@@ -663,6 +772,7 @@ int main(void)
     part_any();
     part_numbers();
     part_type_pairs();
+    part_x509_algor();
     printf("done=1\n");
     return 0;
 }
