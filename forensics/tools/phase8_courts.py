@@ -189,8 +189,8 @@ PENDING_CORRECTNESS_COURTS: dict[str, str] = {
     "CT-DSA": "8.6 -- the DSA object layer, its method table and the FFC parameter/key "
               "generators they dispatch to have landed (D330, D333), so what remains is the "
               "corpus and its driver: FIPS 186-4's own parameter and key vectors, with the "
-              "authority's vectors as the second source. An arm that needs the DER "
-              "`DSA-Sig-Value` path (`DSA_sign`/`DSA_verify`) waits on 8.8.",
+              "authority's vectors as the second source. The DER `DSA-Sig-Value` path "
+              "(`DSA_sign`/`DSA_verify`) landed with D342 and `RT-DSA` courts it.",
     "CT-EC": "8.7 -- the built-in curve tables and the three lookups over them have landed "
              "(D334), so their evidence is the differential court and the generator; what a "
              "construction court still needs is `EC_GROUP`/`EC_POINT`, which D334 records as "

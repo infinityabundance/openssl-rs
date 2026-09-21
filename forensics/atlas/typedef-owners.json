@@ -4,9 +4,9 @@
     "counts": {
       "installed_headers": 139,
       "internal_only": 407,
-      "owned": 755,
+      "owned": 758,
       "records": 1573,
-      "unowned": 818
+      "unowned": 815
     },
     "definition": "every typedef name the authority's installed and internal headers introduce, with the header that introduces it and that header's owning stratum",
     "installed_headers": [
@@ -7039,7 +7039,7 @@
         ],
         "kind": "typedef",
         "name": "PACKET",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -9095,7 +9095,7 @@
         ],
         "kind": "typedef",
         "name": "WPACKET",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -9103,7 +9103,7 @@
         ],
         "kind": "typedef",
         "name": "WPACKET_SUB",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [

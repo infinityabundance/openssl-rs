@@ -23238,3 +23238,159 @@ still reads `complete: false` with **173** names open and `CT-EC` PENDING. `EVP_
 deferral, the `standard_methods[]` objects of 8.8, `ec_asn1.c`'s template machinery, `ec_print.c`'s
 and `ec_deprecated.c`'s four codecs, the six `eck_prn.c` printers and `ECDH_KDF_X9_62` are what is
 left, and none of them is this commit's.
+
+## D341 — 8.8's `standard_methods[]` cannot be cut to a compiling boundary: the objects' callbacks need Phase 11's `X509_PUBKEY`, `X509_ALGOR` and `PKCS8_PRIV_KEY_INFO` bodies, and the table is fifteen rows rather than twelve
+
+**Decision.** Phase 8.8 lands **nothing** in this slice. The subphase's acceptance claim — that it
+"retires the 27 Phase-8 rows in Phase 7's `deferred_by_phase`" — is true, but it is true *conditionally*,
+and the condition is another stratum's: the `crypto/asn1/ameth_lib.c` table is a `const` array of
+`EVP_PKEY_ASN1_METHOD` objects whose `pub_decode`/`pub_encode`/`priv_encode` **columns are function
+pointers**, and every one of the five object-bearing units has callbacks that read
+`X509_PUBKEY`/`X509_ALGOR`/`PKCS8_PRIV_KEY_INFO` fields the crate declares as `_private: [u8; 0]`
+because their bodies are Phase 11's. This is D339's shape one stratum later: the small-looking final
+commit is not small, and the boundary is chosen by a measurement rather than by the tidier reading.
+The plan is `docs/PHASE-8-AMETH-INTEGRATION-PLAN.md`.
+
+**The measurement.** The lexical closure was taken by resolving every identifier in each unit against
+`forensics/atlas/symbol-ownership.json`, then reading each hitting function's body for the Phase 10
+and Phase 11 names. The five object-bearing units, and the functions in each that reach Phase 11:
+
+| unit | lines | functions | reaching Phase 11 | first coordinates |
+|---|---|---|---|---|
+| `crypto/rsa/rsa_ameth.c` | 1,053 | 36 | 7 | `X509_PUBKEY_set0_param:67`, `X509_PUBKEY_get0_param:83`, `PKCS8_pkey_set0:162`, `X509_ALGOR_free:295`, `X509_signature_dump:416`, `X509_ALGOR_set0:680`, `d2i_X509_ALGOR:707`, `X509_SIG_INFO_set:771` |
+| `crypto/dh/dh_ameth.c` | 648 | 33 | 3 | `X509_PUBKEY_get0_param:72`, `X509_ALGOR_get0:74`, `X509_PUBKEY_set0_param:147`, `PKCS8_pkey_set0:215` |
+| `crypto/dsa/dsa_ameth.c` | 579 | 26 | 4 | `X509_PUBKEY_get0_param:41`, `X509_ALGOR_get0:43`, `X509_PUBKEY_set0_param:134`, `PKCS8_pkey_set0:205`, `X509_signature_dump:408` |
+| `crypto/ec/ec_ameth.c` | 720 | 31 | 3 | `X509_PUBKEY_set0_param:90`, `X509_PUBKEY_get0_param:110`, `PKCS8_pkey_set0:190` |
+| `crypto/ec/ecx_meth.c` | 1,468 | 55 | 7 | `X509_PUBKEY_set0_param:45`, `X509_PUBKEY_get0_param:62`, `PKCS8_pkey_set0:120`, `X509_ALGOR_get0:551`, `X509_ALGOR_set0:568`, `X509_SIG_INFO_set:586` |
+
+The three units whose closure is empty of Phase 10/11 names are `crypto/asn1/d2i_pu.c` (98 lines,
+`d2i_PublicKey`), `crypto/asn1/d2i_param.c` (64, `d2i_KeyParams`/`_bio`) and
+`crypto/evp/evp_pkey_type.c` (88, `EVP_PKEY_type`); their only cross-stratum names are Phase 3/4/5/7
+ones already landed, plus `ENGINE_finish` on the third, and **the engine arm cannot fire** — the
+`src/evp/pkey_asn1.rs` precedent writes the `*pe = NULL` that follows it and no `ENGINE` call.
+
+**Why the table cannot land first, and it is the function-pointer column rather than the data.** A
+`const EVP_PKEY_ASN1_METHOD` literal names its callbacks' *addresses*, so each callback must exist
+before the object does; each callback's body reads a Phase-11 field, so it cannot be transcribed; so
+the objects cannot exist, and neither can the two exports that read the table — `EVP_PKEY_type`
+(`evp_pkey_type.c:70`, `ameth->pkey_id`) and `EVP_PKEY_assign` (`p_lib.c:791`, which sets
+`pkey->ameth = EVP_PKEY_asn1_find(NULL, type)`). The twelve key-type accessors that wait on
+`evp_pkey_get_legacy` wait on the same registry, because its cache is keyed on `ameth` being non-NULL
+and `evp_pkey_copy_downgraded` reads `ameth->import_from` and `ameth->dirty_cnt` directly. That is the
+whole of the 27-row claim, and it lands **with** Phase 11's `X509_PUBKEY`, `X509_ALGOR` and
+`PKCS8_PRIV_KEY_INFO` bodies — the coordinate the brief's own rule points at rather than a stub.
+
+**Two disagreements with the plan and this brief, recorded rather than smoothed over.**
+* The row and the brief both say **twelve** objects. The authority's `crypto/asn1/standard_methods.h`
+  holds **fifteen rows over eleven named objects**, because `OPENSSL_NO_ECX`, `OPENSSL_NO_SM2`,
+  `OPENSSL_NO_DH`, `OPENSSL_NO_DSA` and `OPENSSL_NO_EC` are all **absent** from the admitted
+  `configuration.h` — D340 read that file for the same reason. The four `ossl_ecx{25519,448}_asn1_meth`
+  and `ossl_ed{25519,448}_asn1_meth` rows are `crypto/ec/ecx_meth.c`'s and the SM2 row is
+  `ec_ameth.c:702`'s; `crypto/ec/ecx_meth.c` (1,468 lines) has **no crate module and no stratum's plan
+  row**, though D316 records its provider half as 8's.
+* The brief names `crypto/asn1/d2i_pr.c` and `i2d_evp.c` as units to land "if the `ameth` callbacks
+  reach them". They do not: no `*_ameth.c` callback calls `d2i_PrivateKey*` or `i2d_PublicKey*`. Both
+  units are Phase 7's, and both are already withheld on Phase 10 in `forensics/prerequisites.json`
+  (`OSSL_DECODER_CTX_new_for_pkey`, `OSSL_ENCODER_CTX_new_for_pkey`). The plan lands neither and says so.
+
+**A landable residue, named rather than folded in.** `crypto/dsa/dsa_asn1.c` (72 lines) has no
+non-Phase-8 reference at all; `dh_asn1.c` needs only Phase 5; `ec_asn1.c`'s closure is Phase 3/4/5; and
+`rsa_asn1.c` needs `X509_ALGOR_free` only for its two PSS/OAEP templates. So the plain
+`RSAPublicKey`/`RSAPrivateKey`/`DHparams`/`DSAparams`/EC templates and the four `*_pmeth.c` units are
+closer than the ASN.1 half. They are **not** landed here, because the ledger assigns them to
+`src/{rsa,dh,dsa,ec}/mod.rs` — 8.4, 8.5, 8.6 and 8.7's modules — and landing them from 8.8 would move
+four other rows' modules. The plan records the cut so the decision is made rather than assumed.
+
+**The court, and why `RT-AMETH` stays unregistered.** `forensics/tools/phase8_courts.py`'s own note
+says a runner that names a probe which does not exist cannot be committed, and an arm calling
+`EVP_PKEY_asn1_find(NULL, EVP_PKEY_RSA)` would print a method object from the authority and NULL from
+the crate — a residual, not an observation. So the six arms the court will carry (the count and index
+walk, the fifteen `find` answers and the `find_str` refusals, the alias chain through `EVP_PKEY_type`,
+`EVP_PKEY_assign` observed through `EVP_PKEY_get0_asn1`, the size/bits/security-bits trio through a
+buildable key, and every refusal with its drained coordinate and never a secret) are written into the
+plan instead of the registry.
+
+**Bookkeeping, read off the regenerated files.** No export lands, so `forensics/phase8-obligations.json`
+is unchanged — implemented **612**, deferred **1**, open **173**, owned **786** over **786** owned, and
+all fifteen stay in `src/asn1/ameth.rs`; `forensics/tools/phase8_obligations.py`'s two `BLOCKED_HANDOFFS`
+rows are untouched because the brief says to split one only when a name lands. `forensics/prerequisites.json`
+gains **no** row: nothing new references a later stratum's name, and the gate rejects a divergence record
+for a name it did not observe. `forensics/atlas/prerequisite-gate.json` stays at **307** crate modules
+over **235** authority units with `sealed_stratum_census` **52** and `blocking_dependencies` **20** — no
+move, so no `forensics/ownership-transitions.json` `prerequisite_transitions` row is needed in either
+direction. `forensics/phase7-obligations.json`'s `deferred_by_phase["8"]` stays **27**.
+`docs/PHASE-8-SUBPHASES.md`'s two anchored clauses are untouched: no symbol moved between `landed` and
+`open`.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` is the only authority and it
+still reads `complete: false` with **173** names open and 8.8's fifteen among them. What this slice is,
+is the subphase's boundary measured and the coordinate of everything it waits on named, which is the
+honest state rather than a fabricated method table.
+
+---
+
+## D342 — 8.6's DER `DSA-Sig-Value` tail lands with the three units no stratum's plan row owned: `crypto/asn1_dsa.c`, `crypto/packet.c` and `crypto/quic_vlint.c`
+
+**Decision.** The residue D341 named as *landable but not landed* is landed where it is one closure: the
+DER `DSA-Sig-Value` codec 8.6's `crypto/dsa/dsa_sign.c` reaches -- `crypto/asn1_dsa.c`, its writer
+`crypto/packet.c`, and the QUIC variable-length codec `crypto/packet.c`'s QUIC half calls -- are
+`src/asn1_dsa.rs`, `src/packet.rs` and `src/quic_vlint.rs`, and the five exports they hold are
+implemented: `i2d_DSA_SIG`, `d2i_DSA_SIG`, `DSA_size`, `DSA_sign` and `DSA_verify`. All three units are
+**transcribed whole** (D327's rule): every external definition of each file, plus the `static ossl_inline`
+family of `include/internal/packet.h` and `include/internal/quic_vlint.h` that the units read and the
+authority's object does not carry.
+
+**Why these three and not the rest of D341's residue.** D333 recorded `ossl_dsa_sign_int` --
+`crypto/dsa/dsa_sign.c:153-178` -- as a deferral in `forensics/prerequisites.json` whose reason was that
+`i2d_DSA_SIG`/`d2i_DSA_SIG` are `crypto/asn1_dsa.c`'s over `crypto/packet.c`'s `WPACKET`, and neither
+unit had a crate module or a plan row. That record is what this decision resolves, and it is the whole of
+what landing it requires: the two units and their one callee. D341's other residue -- `dsa_asn1.c`,
+`dh_asn1.c` and `rsa_asn1.c`'s plain-key templates, and `crypto/evp/dh_ctrl.c`/`dsa_ctrl.c` -- is **not
+landed here**, and the reason is D341's own: the ledger assigns those names to `src/{rsa,dh,dsa,ec}/mod.rs`
+(8.4's, 8.5's, 8.6's and 8.7's modules), their bodies are the ASN.1 template machinery and the EVP control
+surface rather than this codec, and moving them would move four other rows' modules. They are not
+half-landed either.
+The plain-key templates and the two `*_ctrl.c` units stay `open` in their own strata's modules, named with
+their coordinates rather than half-landed.
+
+**Two transcription defects the unit tests and the authority caught, recorded because they are the kind a
+codec hides.** Both are in code with no external observable until a caller encodes a value wider than a
+byte:
+
+* `crypto/packet.c`'s `put_value` (`:211-227`) advances `data += len - 1` **before** its loop and writes
+  back to front, so a multi-byte field's most significant byte lands at the field's first byte. A
+  transcription that started the cursor at `data` shifted every `WPACKET_put_bytes_u16` and every
+  `lenbytes > 1` length field by `len - 1`, overwriting the bytes before it -- invisible to a byte-wide
+  write and to any round-trip test, and caught by the `WPACKET` unit test that writes a `u16`. `RT-DSA`'s
+  new DER arms write a two-byte sequence length, so the court sees it as well as the unit test does.
+* `PACKET_get_sub_packet` (`include/internal/packet.h:121-130`) refuses when
+  `PACKET_remaining(pkt) < len`; the crate's `Packet::get_sub` omitted that check, so a short-form DER
+  length longer than the buffer underflowed the parent's `remaining` (a panic in a debug build, a wrap in
+  a release one) and read past the end. Fixed to the header's own refusal, which is what makes the
+  malformed-length arm of `RT-DSA` a refusal rather than a fault on both sides.
+
+**The court.** `RT-DSA` grows from 233 to **262 observations** with arms for the five exports, and they
+observe only what a random signature can: `DSA_size` (a constant for the 160-bit `q` the generated group
+fixes, and **-1** for a body with no `q`), the sizing call's `*siglen`, the DER length's bound and its
+`0x30` first byte, the sign-then-verify verdict, the truncation and trailing-byte refusals, a sequence
+header whose declared length exceeds the buffer, the empty-body refusal, and `i2d_DSA_SIG`/`d2i_DSA_SIG`
+called directly -- their three call shapes, the round trip's consumed length, its re-verified verdict and
+the reuse and negative-length arms. The length is only ever compared as a **bound** against `DSA_size`:
+an earlier arm comparing the two for equality was removed after a pipeline run found it flapping, because
+the two halves of a signature draw narrower than `q` at random and the DER width follows the draw. No byte
+of any signature and no half of any `DSA_SIG` is printed: every arm is a return code, a comparison the
+probe performs itself, or a length bound. The `RT-AMETH` note D341 wrote is unchanged -- that court still
+cannot be registered.
+
+**Bookkeeping.** `forensics/phase8-obligations.json` moves to implemented **617**, deferred **1**, open
+**168** over the same **786** owned: the five names leave `src/dsa/mod.rs`'s `open` list for `implemented`
+and nothing else moves. `ossl_dsa_sign_int` leaves `forensics/prerequisites.json`'s `deferrals` -- the
+prerequisite gate's `stale_deferral` rule is exactly the check that a landed deferral must retire -- and no
+row is added, because no new name references a later stratum. `docs/PHASE-8-SUBPHASES.md`'s two anchored
+clauses move the five symbols from the `open` paragraph to the landed one, and its 8.6 row records this
+entry. The three units have no plan row, so `docs/PHASE-8-REMAINING.md` is regenerated as usual and no row
+of it changes. `courts/phase8/rt_dsa_probe.c`'s own header no longer says the three exports are not called.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete: false` with
+**168** names open, 8.8's fifteen and the DSA ASN.1 family among them. What this slice is, is the DER codec
+8.6 was waiting on and the five exports it holds -- not 8.6, and not 8.8.
