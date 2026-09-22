@@ -26553,3 +26553,105 @@ findings** over **9** deferrals, **12** divergence rows / **58** names,
 Phase 8; the count this entry reaches is implemented **780** of **786** owned, and the decoder
 framework the last six wait on now has **three of its four units whole** -- what is left is
 `decoder_lib.c`'s chain-building block, `decoder_pkey.c`'s pkey half, and `pem_pkey.c`.
+
+## D367 — the decoder chain closes: `decoder_lib.c`'s chain builder and the pkey half of
+`decoder_pkey.c` land, and the six `PEM_read[_bio]_*PrivateKey` readers are measured as **not**
+reachable this pass
+
+**Decision.** Land `crypto/encode_decode/decoder_lib.c`'s **chain-building block** in
+`src/decoder_lib.rs` -- `collect_extra_decoder_data_st` (`:411-426`), `collect_all_decoders`
+(`:430-437`), `collect_extra_decoder` (`:439-546`), `decoder_sk_cmp` (`:548-554`),
+`OSSL_DECODER_CTX_add_extra` (`:556-678`), `decoder_process_data_st` (`:26-43`), `decoder_process`
+(`:798-1165`), `OSSL_DECODER_from_bio` (`:47-119`), `bio_from_file` (`:122-133`),
+`OSSL_DECODER_from_fp` (`:134-145`) and `OSSL_DECODER_from_data` (`:147-167`) -- and
+`crypto/encode_decode/decoder_pkey.c`'s **pkey half** in `src/decoder_pkey.rs` --
+`decoder_pkey_data_st` (`:60-69`), `decoder_construct_pkey` (`:71-202`),
+`decoder_clean_pkey_construct_arg` (`:204-214`), `collect_data_st` (`:216-229`),
+`collect_decoder_keymgmt` (`:235-311`), `collect_decoder` (`:313-358`), `check_keymgmt`
+(`:364-401`), `collect_keymgmt` (`:403-424`), `ossl_decoder_ctx_setup_for_pkey` (`:431-557`),
+`keymgmt_dup` (`:560-566`), `ossl_decoder_ctx_for_pkey_dup` (`:574-663`), the cache lookup
+(`:820-969`) and `OSSL_DECODER_CTX_new_for_pkey` (`:820-969`). **Both units are now whole**: every
+function of `decoder_lib.c` and `decoder_pkey.c` is in the crate. Five exports land
+(`OSSL_DECODER_from_bio`, `_from_fp`, `_from_data`, `OSSL_DECODER_CTX_add_extra`,
+`OSSL_DECODER_CTX_new_for_pkey`); **no Phase 8 or Phase 7 count moves.**
+
+**The two blocks are mutually recursive and had to land together.** `decoder_process` calls
+`OSSL_DECODER_CTX_add_extra` (`:1103`), `add_extra` calls `OSSL_DECODER_do_all_provided`, and
+`decoder_pkey.c`'s `ossl_decoder_ctx_setup_for_pkey` calls both `OSSL_DECODER_do_all_provided` and
+`OSSL_DECODER_CTX_get_num_decoders`, while `collect_decoder_keymgmt` registers
+`decoder_construct_pkey` through `OSSL_DECODER_CTX_set_construct`. Splitting them would have landed
+half a cycle; D366 already landed the recursion's base (the fetch block), so this entry is that
+block's first caller's closure and nothing else.
+
+**Three shapes a transcription gets wrong, and this one keeps.** `decoder_process` is
+`OSSL_CALLBACK`-shaped rather than `OSSL_DECODER_CONSTRUCT`-shaped, and it dispatches on whether
+`params` is NULL: the NULL arm only prepares the walk, and the non-NULL arm runs the context's
+constructor **first** and stops when it succeeds, so `data->flag_construct_called` is what
+`OSSL_DECODER_from_bio` reads to tell a constructed object from a failed walk. The three
+`ERR_set_mark`/`ERR_pop_to_mark`/`ERR_clear_last_mark` sites are that distinction's error-queue
+discipline, and the loop is the encoder's twin's shape -- `for (i = n; i-- > 0;)` reproduced so a
+normally-exhausted loop leaves `i == -1` while a `break` leaves the index that broke -- with the
+authority's `goto end` sites as `break` out of the surrounding block so the tail
+(`ossl_core_bio_free`, `BIO_free(new_data.bio)`, `ctx->start_input_type = start_input_type`) runs
+on every path. The "type-specific" data-structure drop is kept exactly: it fires only when the data
+type is **also** non-NULL, and the comparison is guarded by that short-circuit rather than computed
+unconditionally.
+
+**What the authority corrected in the brief: item (b) cannot land this pass, and the brief's
+`6 -> 0` is wrong for a measurable reason.** The six `PEM_read[_bio]_{RSA,DSA,EC}PrivateKey` readers
+are `PEM_read[_bio]_PrivateKey` followed by one `pkey_get_*` helper (`crypto/pem/pem_all.c:69-84`,
+`:109-125`, `:150-171`). `PEM_read_bio_PrivateKey` is **not** Phase 8's: `symbol-ownership.json`
+resolves it through `rule: pem-typed-object` to `evp.h` and **Phase 7**, which defers it to Phase 10
+and Phase 13, and Phase 8's ledger does not own it -- so landing the reader requires landing a
+Phase-7 export, not a Phase-8 one. And `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`) is the
+readers' only entry: its first leg is `pem_read_bio_key_decoder` (`:35`) ->
+`OSSL_DECODER_CTX_new_for_pkey` (Phase 10, **landed here**) and its fallback is
+`pem_read_bio_key_legacy` (`:101`), whose closure is `PEM_bytes_read_bio[_secmem]` (landed),
+`evp_pkcs82pkey_legacy` (`crypto/evp/evp_pkey.c:30`), `ossl_d2i_PrivateKey_legacy`
+(`crypto/asn1/d2i_pr.c:102`) and `ossl_d2i_PUBKEY_legacy` (`crypto/x509/x_pubkey.c:535`) -- three
+**unlanded** units of other strata -- plus `d2i_PKCS8_PRIV_KEY_INFO` and `PKCS8_decrypt`, neither
+of which exists in the crate. A partial `pem_pkey.c` that withheld `pem_read_bio_key_legacy`
+could not land `pem_read_bio_key` either, because that function's body calls it, and every one of
+the sixteen `pem.h` exports in the unit reaches `pem_read_bio_key`. So the unit is withheld whole
+with this coordinate rather than stubbed: **there is no honest partial here**, and a reader that
+returned early would be a fabricated answer for a name Phase 7 owns.
+
+**The prerequisite ledgers follow the landing, in both directions.** Landing
+`OSSL_DECODER_CTX_new_for_pkey` falsified two rows in `forensics/tools/phase7_obligations.py`'s
+`BLOCKED_HANDOFFS` -- the four `d2i_PrivateKey*`/`d2i_AutoPrivateKey*` exports and the fifteen
+`PEM_read_*`/`PEM_write_*` exports -- and the generator's liveness check fired on both, exactly as
+D196 designed. They move to `UNBLOCKED_HANDOFFS` rather than retiring, for the reason the
+`EVP_PKEY_assign` row gives: retiring them would move built exports into a sealed stratum's
+`implemented` list on the strength of work it did not do. `forensics/prerequisites.json`'s single
+deferral for the name is retargeted to the four `d2i_PrivateKey*` exports with no `blocked_by` and
+a reason that says the decoder prerequisite landed -- the shape
+`evp_app_cleanup_int` already carries -- and the gate is back to **zero findings**.
+
+**Courts.** No probe was needed and that is measured: the five exports are `decoder.h`'s and Phase
+10's, so `court_coverage.py` records them under `not_yet_begun` **157 -> 162** -- the same
+arrangement D366 used for its two -- while every active stratum stays fully courted (phase 7
+733/733, phase 8 780 direct). Totals do not move: **94** courts and **37221** observations. The
+units' evidence is their unit tests: the pkey half's cache entry can now be built and retrieved
+(`OSSL_DECODER_CTX_new_for_pkey` on a crate that publishes no provider decoder answers a context
+whose `OSSL_DECODER_CTX_get_num_decoders` is **0**), and the `from_*` family refuses a NULL BIO and
+a zero-length chain without reading anything else.
+
+**What is deliberately not here.** `crypto/pem/pem_pkey.c` as its own module and the six readers,
+for the measured reason above; and the four ECX rows remain withheld from both
+`standard_methods[]` tables under `D-PKEY-AMETH-3`, unchanged. `docs/PHASE-8-SUBPHASES.md` §4's
+two anchored clauses are untouched because the Phase 8 ledger did not move, so the 8.9 row's note
+is extended rather than rewritten.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads
+`complete: false` with **6** names open: implemented **780**, deferred **0**, owned **786** --
+unchanged from D362 through D366. The regenerated counts: `implemented-surface.json`'s `libcrypto`
+implemented moves **2871 -> 2876** and its `internal_symbols.c_style` stays **344**;
+`transcription-edges.json` stays **319** modules over **288** units, with `src/decoder_lib.rs`'s
+share at **27/27** and `src/decoder_pkey.rs`'s at **8/8**; `court_coverage.py`'s `not_yet_begun`
+**157 -> 162**; the prerequisite gate is back to **zero findings** over **9** deferrals, **12**
+divergence rows / **58** names, `blocking_dependencies` **9** and `sealed_stratum_census` **55**;
+phase 7 reads **733** implemented / **217** deferred / **0** open of **950** owned. It is not
+Phase 8 and not nearly Phase 8; the count this entry reaches is implemented **780** of **786**
+owned, and the decoder framework the last six wait on now has **all four units whole** -- what is
+left is `pem_pkey.c`, which needs a Phase-7 export and three unlanded units, and the six readers
+that sit on top of it.

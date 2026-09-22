@@ -797,8 +797,8 @@ COVERED_FILES = [
     # Phase 10's `crypto/encode_decode/decoder_lib.c` -- the `OSSL_DECODER_INSTANCE` and
     # `OSSL_DECODER_CTX` object layer.
     ("crypto/encode_decode/decoder_lib.c", "DECODER_LIB"),
-    # Phase 10's `crypto/encode_decode/decoder_pkey.c` -- the decoder cache and the four
-    # passphrase setters, with the pkey half withheld.
+    # Phase 10's `crypto/encode_decode/decoder_pkey.c` -- the decoder cache, the pkey half that
+    # `OSSL_DECODER_CTX_new_for_pkey` builds, and the four passphrase setters.
     ("crypto/encode_decode/decoder_pkey.c", "DECODER_PKEY"),
 ]
 
