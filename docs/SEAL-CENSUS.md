@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 2813 | 3083 |
+| libcrypto | 5896 | 2835 | 3061 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **2813** | **3686** |
+| **total** | **6499** | **2835** | **3664** |
 
 ## Ownership atlas, by stratum
 
@@ -32,8 +32,8 @@ declared owner; this is that assignment.
 | 4 | BIO + CONF + object database | `complete` | 256 | 272 | 249 | 23 | 0 |
 | 5 | BN + ASN.1 + DER/PEM | `complete` | 561 | 565 | 474 | 91 | 0 |
 | 6 | OSSL_LIB_CTX + provider core | `complete` | 137 | 161 | 161 | 0 | 0 |
-| 7 | EVP framework | `complete` | 924 | 950 | 727 | 223 | 0 |
-| 8 | Native cryptographic primitives | `in-progress` | 759 | 786 | 772 | 0 | 14 |
+| 7 | EVP framework | `complete` | 924 | 950 | 733 | 217 | 0 |
+| 8 | Native cryptographic primitives | `in-progress` | 759 | 786 | 780 | 0 | 6 |
 | 9 | RAND / DRBG + entropy | `in-progress` | 25 | 69 | 66 | 0 | 3 |
 | 10 | Key formats + PKCS + STORE | `not-started` | 272 | — | — | — | — |
 | 11 | X.509 + verification | `not-started` | 1455 | — | — | — | — |
@@ -215,8 +215,8 @@ Courts: `all pass`, 10 court(s), **2040** authority observation(s) over 10 trans
 * ledger: `forensics/phase7-obligations.json`
 * atlas-owned: 924
 * owned working set: 950
-* implemented: 727
-* deferred to a later stratum with a stated reason: 223
+* implemented: 733
+* deferred to a later stratum with a stated reason: 217
 * **open in this stratum: 0**
 
 Deferred out, by receiving stratum:
@@ -225,8 +225,8 @@ Deferred out, by receiving stratum:
   `EVP_PKEY_assign`, `EVP_PKEY_decrypt_old`, `EVP_PKEY_encrypt_old`, `EVP_PKEY_get0_DH`, `EVP_PKEY_get0_DSA`, `EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get0_RSA`, `EVP_PKEY_get0_hmac`, `EVP_PKEY_get0_poly1305`, `EVP_PKEY_get0_siphash`, `EVP_PKEY_get1_DH`, `EVP_PKEY_get1_DSA`, `EVP_PKEY_get1_EC_KEY`, `EVP_PKEY_get1_RSA`, `EVP_PKEY_get_ec_point_conv_form`, `EVP_PKEY_get_field_type`, `EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0`, `EVP_PKEY_meth_get_count`, `EVP_PKEY_set1_DH`, `EVP_PKEY_set1_DSA`, `EVP_PKEY_set1_EC_KEY`, `EVP_PKEY_set1_RSA`, `EVP_PKEY_type`, `d2i_KeyParams`, `d2i_KeyParams_bio`, `d2i_PublicKey`
 * to phase 9: 12 symbol(s)
   `BIO_f_reliable`, `EVP_CIPHER_CTX_rand_key`, `EVP_SealInit`, `OSSL_HPKE_get_grease_value`, `PEM_ASN1_read`, `PEM_ASN1_read_bio`, `PEM_ASN1_write`, `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx`, `PEM_bytes_read_bio`, `PEM_bytes_read_bio_secmem`, `PEM_do_header`
-* to phase 10: 16 symbol(s)
-  `EVP_PKEY_print_params`, `EVP_PKEY_print_params_fp`, `EVP_PKEY_print_private`, `EVP_PKEY_print_private_fp`, `EVP_PKEY_print_public`, `EVP_PKEY_print_public_fp`, `PEM_write_bio_PrivateKey_traditional`, `d2i_AutoPrivateKey`, `d2i_AutoPrivateKey_ex`, `d2i_PrivateKey`, `d2i_PrivateKey_ex`, `i2d_KeyParams`, `i2d_KeyParams_bio`, `i2d_PKCS8PrivateKey`, `i2d_PrivateKey`, `i2d_PublicKey`
+* to phase 10: 10 symbol(s)
+  `PEM_write_bio_PrivateKey_traditional`, `d2i_AutoPrivateKey`, `d2i_AutoPrivateKey_ex`, `d2i_PrivateKey`, `d2i_PrivateKey_ex`, `i2d_KeyParams`, `i2d_KeyParams_bio`, `i2d_PKCS8PrivateKey`, `i2d_PrivateKey`, `i2d_PublicKey`
 * to phase 11: 5 symbol(s)
   `ASN1_item_sign_ex`, `ASN1_item_verify_ex`, `EVP_CIPHER_CTX_get_algor`, `EVP_PKEY_CTX_get_algor`, `EVP_add_alg_module`
 * to phase 13: 163 symbol(s)
@@ -263,20 +263,20 @@ Courts: `all pass`, 19 court(s), **2954** authority observation(s) over 19 trans
 ## Phase 8 — Native cryptographic primitives
 
 * state: `in-progress`
-* blocking: 14 open obligation(s) of this stratum recorded in forensics/phase8-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase
+* blocking: 6 open obligation(s) of this stratum recorded in forensics/phase8-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase8-obligations.json`
 * atlas-owned: 759
 * owned working set: 786
-* implemented: 772
+* implemented: 780
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 14**
+* **open in this stratum: 6**
 
 Hand-offs received and discharged:
 
 * from phase 7: 27 symbol(s) — `EVP_PKEY_assign`, `EVP_PKEY_decrypt_old`, `EVP_PKEY_encrypt_old`, `EVP_PKEY_get0_DH`, `EVP_PKEY_get0_DSA`, `EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get0_RSA`, `EVP_PKEY_get0_hmac`, `EVP_PKEY_get0_poly1305`, `EVP_PKEY_get0_siphash`, `EVP_PKEY_get1_DH`, `EVP_PKEY_get1_DSA`, `EVP_PKEY_get1_EC_KEY`, `EVP_PKEY_get1_RSA`, `EVP_PKEY_get_ec_point_conv_form`, `EVP_PKEY_get_field_type`, `EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0`, `EVP_PKEY_meth_get_count`, `EVP_PKEY_set1_DH`, `EVP_PKEY_set1_DSA`, `EVP_PKEY_set1_EC_KEY`, `EVP_PKEY_set1_RSA`, `EVP_PKEY_type`, `d2i_KeyParams`, `d2i_KeyParams_bio`, `d2i_PublicKey`
 
-Courts: `all pass`, 11 court(s), **12701** authority observation(s) over 9 transcript court(s).
+Courts: `all pass`, 11 court(s), **12752** authority observation(s) over 9 transcript court(s).
 
 The other 2 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
 
@@ -289,7 +289,7 @@ The other 2 compare ELF structure rather than a transcript and observe nothing l
 | RT-DH | `pass` | 589 |
 | RT-DSA | `pass` | 342 |
 | RT-EC | `pass` | 2419 |
-| RT-AMETH | `pass` | 420 |
+| RT-AMETH | `pass` | 471 |
 | RT-PEM-KEY | `pass` | 102 |
 | CT-DIGEST | `pass` | — (structural) |
 | CT-CIPHER | `pass` | — (structural) |
@@ -338,10 +338,10 @@ are proofs of reference only. See `docs/DECISIONS.md` D199 and D236.
 | 4 | 249 | 249 | 213 | 36 | 0 | 0 | 0 |
 | 5 | 474 | 474 | 383 | 91 | 0 | 0 | 0 |
 | 6 | 161 | 161 | 156 | 5 | 0 | 0 | 0 |
-| 7 | 727 | 727 | 673 | 54 | 0 | 0 | 0 |
-| 8 | 772 | 764 | 764 | 0 | 8 | 0 | 0 |
+| 7 | 733 | 733 | 679 | 54 | 0 | 0 | 0 |
+| 8 | 780 | 772 | 772 | 0 | 8 | 0 | 0 |
 | 9 | 66 | 66 | 66 | 0 | 0 | 0 | 0 |
-| **total** | **2700** | **2692** | **2417** | **275** | **8** | **0** | **0** |
+| **total** | **2714** | **2706** | **2431** | **275** | **8** | **0** | **0** |
 
 ## Atlas/ledger reconciliation
 

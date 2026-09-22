@@ -703,6 +703,33 @@ unsafe extern "C" fn eckey_priv_print(
     unsafe { do_ec_key_print(bp, (*pkey).pkey.cast::<EcKey>(), indent, EcPrintT::Private) }
 }
 
+/// `int EC_KEY_print(BIO *bp, const EC_KEY *x, int off)` — `crypto/ec/ec_ameth.c:709-714`.
+///
+/// The legacy `EC_KEY` printer D347 withheld with the ameth surface: the `ktype` is **private when
+/// the key holds a private scalar**, public otherwise, and both arms are the same [`do_ec_key_print`]
+/// the three `*_print` callbacks above use. It is what [`crate::ec::prn::EC_KEY_print_fp`] wraps.
+///
+/// # Safety
+/// `bp` and `x` are live.
+#[no_mangle]
+pub unsafe extern "C" fn EC_KEY_print(bp: *mut Bio, x: *const EcKey, off: c_int) -> c_int {
+    // SAFETY: `x` is live per the contract.
+    let private = unsafe { !EC_KEY_get0_private_key(x).is_null() };
+    // SAFETY: `bp` and `x` are live; the `ktype` is this function's own choice.
+    unsafe {
+        do_ec_key_print(
+            bp,
+            x,
+            off,
+            if private {
+                EcPrintT::Private
+            } else {
+                EcPrintT::Public
+            },
+        )
+    }
+}
+
 /// `static int old_ec_priv_decode(EVP_PKEY *pkey, const unsigned char **pder, int derlen)` —
 /// `crypto/ec/ec_ameth.c:381-390`.
 ///

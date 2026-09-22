@@ -128,6 +128,7 @@ pub(crate) mod packet;
 // `src/passphrase.rs` did, because the eight Phase-8 printers reach it through `print_pkey`.
 pub mod encoder_lib;
 pub mod encoder_meth;
+pub mod encoder_pkey;
 pub mod passphrase;
 pub mod pem;
 pub mod property;

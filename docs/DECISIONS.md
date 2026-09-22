@@ -26088,3 +26088,116 @@ deferred **223**, received_by_handoff **26**. The open fourteen are still the ei
 six `crypto/pem/` private-key readers. It is not Phase 8 and not nearly Phase 8; the count this entry
 reaches is implemented **772** of **786** owned, and the units it moved into the crate are two of the
 three the printers need.
+
+## D362 — the encoder chain closes and the eight printers land: `crypto/encode_decode/encoder_pkey.c`,
+`encoder_meth.c`'s fetch block, `p_lib.c`'s `print_pkey` and its six exports, `rsa_prn.c`/`dsa_prn.c`
+and `ec_ameth.c`'s `EC_KEY_print`; Phase 8 moves to implemented **780**, open **6**
+
+**Decision.** Land the third encoder unit, the fetch block that waited for its first caller, and the
+whole printer chain that the encoder framework makes reachable -- in one commit, because the encoder
+framework with no *implementations* registered answers a zero-encoder context on every path this
+crate can build, which is exactly what sends `print_pkey` down the authority's own fall-through to
+`pkey->ameth->priv_print`/`params_print`/`pub_print`. What lands:
+
+* `crypto/encode_decode/encoder_pkey.c` as `src/encoder_pkey.rs` -- six exports,
+  `OSSL_ENCODER_CTX_new_for_pkey` (`:342`) among them, with the two-pass collection
+  (`ossl_encoder_ctx_setup_for_pkey`, `:227-340`), the cached name-map ids and the one legacy-key arm;
+* `src/encoder_meth.rs`'s fetch and construct block -- the ~250 lines D361 named (`encoder_data_st`,
+  the seven `ossl_method_construct` callbacks, `inner_ossl_encoder_fetch`, `OSSL_ENCODER_fetch`,
+  `do_one`, `OSSL_ENCODER_do_all_provided`) -- which lands here because
+  `ossl_encoder_ctx_setup_for_pkey` is `do_all_provided`'s first caller;
+* `crypto/evp/p_lib.c`'s `print_set_indent` (`:1162`), `print_reset_indent` (`:1150`), `unsup_alg`
+  (`:1187`), `print_pkey` (`:1196`) and the six `EVP_PKEY_print_public`/`_private`/`_params` and
+  their three `_fp` twins (`:1231`-`:1293`) in `src/evp/pkey.rs` -- Phase 7's deferred-to-Phase-10
+  exports, so this landing moves Phase 7's ledger too;
+* the eight printers: `crypto/rsa/rsa_prn.c` as `src/rsa/prn.rs`, `crypto/dsa/dsa_prn.c` as
+  `src/dsa/prn.rs`, `crypto/ec/eck_prn.c:36`'s `EC_KEY_print_fp` in `src/ec/prn.rs` and
+  `crypto/ec/ec_ameth.c:709`'s `EC_KEY_print` in `src/ec/ameth.rs`.
+
+Twenty-two exports land. Phase 8 moves implemented **772 -> 780** and open **14 -> 6** over the same
+**786** owned; Phase 7 moves implemented **727 -> 733** and deferred **223 -> 217** over the same
+**950** owned.
+
+**The reduction is not taken, and no divergence record is needed.** D353 measured the `:1211`
+reduction as *defensible* and withheld the printers anyway, because `EVP_PKEY_print_private` was
+absent from `target/release/libopenssl_rs.a`. D355 then measured the encoder closure as unlandable.
+Both measurements are now discharged the other way: the framework is **written**, `print_pkey` calls
+it, and `OSSL_ENCODER_CTX_get_num_encoders` answers **0** because `provider-algorithms.json` records
+all 482 `OSSL_OP_ENCODER` rows as `unimplemented` -- so a single forward call is taken through the
+authority's own code and the legacy arm is reached on its own terms. This is *not* D313's `ENGINE_*`
+shape (a call site rewritten to skip an absent subsystem) and it needs no `divergences` row, because
+nothing is covered up: `print_pkey` is transcribed whole, including the `ret != -2` test that decides
+the fall-through.
+
+**The three internals, and what each is for.** `print_set_indent` is the reason the eight printers
+print *at all* where a bare `do_*_print` would not: `BIO_set_indent` on a memory BIO answers <= 0, so
+a `BIO_f_prefix` is pushed and the indent is set a **second** time on the filter, which is what makes
+even the arms whose own `BIO_indent` is conditional (`do_dsa_print`'s `ptype == 0` arm prints no
+indent itself) come out indented. `print_reset_indent` restores the saved indent and pops the filter.
+`unsup_alg` is the one line a key with neither encoder nor legacy callback reaches, and RSA reaches it
+for real: `ossl_rsa_asn1_meths`' `param_print` slot is `0`, so `EVP_PKEY_print_params` on an RSA key
+prints `Public Key algorithm "rsaEncryption" unsupported`. The court asserts that string, not that the
+call "worked".
+
+**The landing's one fidelity note.** `ossl_encoder_ctx_setup_for_pkey` declares `propquery` and never
+reads it -- it is the *caller* (`OSSL_ENCODER_CTX_new_for_pkey`, `:388`) that threads it on to
+`OSSL_ENCODER_CTX_add_extra`. The Rust parameter is `_propquery` with that fact written above it,
+rather than a body invented to use it.
+
+**Courts.** `RT-AMETH` grows **420 -> 471 observations** with zero residuals, and the new arms are the
+print ones `docs/PHASE-8-AMETH-INTEGRATION-PLAN.md` section 7 named: each of the eight printers and the
+six `EVP_PKEY_print_*` is called directly, on a key built from a **fixed, non-secret 32-byte probe
+constant** (plus 65537), and each arm observes a return code, a length reduced to a boolean and
+`memmem` verdicts over the buffer -- the four-space indent `BIO_f_prefix` installs and the header line
+(`RSA Private-Key: (256 bit, 2 primes)`, `Private-Key: (256 bit)`, `Public-Key: (256 bit)`,
+`algorithm "rsaEncryption" unsupported`). **The buffer is never printed**, so no arm prints a byte of
+any key; the `_fp` twins go through a `tmpfile()` so the `FILE *` leg is exercised rather than assumed.
+`court_coverage.py` moves phase 8 to **780** implemented, **772** directly courted (**772** called),
+**8** indirectly, **0** unmatched, and `not_yet_begun` **113 -> 121** (the eight Phase-10 encoder names
+of `encoder_pkey.rs`). Totals: **94** courts and **37170 -> 37221 observations**.
+
+**Raise sites.** `crypto/dsa/dsa_prn.c` joins `gen_err_raise_sites.py`'s `COVERED_FILES` as `DSA_PRN`
+so its two refusals (`:28`, `:43`, both `ERR_LIB_DSA`/`ERR_R_BUF_LIB`) are the generator's own
+constants rather than a hand-written expansion; `crypto/rsa/rsa_prn.c` was already covered as
+`RSA_PRN`, and `crypto/encode_decode/encoder_pkey.c` as `ENCODER_PKEY`. The site count moves
+**3106 -> 3114**: the two `encoder_pkey.c` sites that landed with the fetch block and the two
+`dsa_prn.c` ones. `src/ec/prn.rs` reuses the generated `ECK_PRN_42`.
+
+**Prerequisite gate: one deferral retires, two `BLOCKED_HANDOFFS` rows move.**
+`OSSL_ENCODER_CTX_new_for_pkey` is now built, so its `forensics/prerequisites.json` deferral retires
+under direction A (`stale_deferral`) -- deferrals **10 -> 9** and `blocking_dependencies` **10 -> 9**.
+In `forensics/tools/phase7_obligations.py`, the `EVP_PKEY_print_*` row's six symbols are now
+*defined*, so the row is **retired** rather than retargeted (the exports are `p_lib.c`'s, this
+stratum's own module, so their landing is Phase 7's work and not Phase 8's), while the `i2d_*` row and
+the `PEM_write_bio_PrivateKey_traditional` row -- whose blockers all landed and whose symbols are
+still unwritten -- **move to `UNBLOCKED_HANDOFFS`**, the mechanism D355 introduced. The gate stays at
+**zero findings** over **9** deferrals, **12** divergence rows / **58** names and
+`sealed_stratum_census` **56**.
+
+**What the authority corrected in the brief.** One thing, and it is the brief's own 22-export count:
+the six `EVP_PKEY_print_*` are Phase 7's, not Phase 8's, so the ledger movement is **8 Phase-8 rows**
+(14 -> 6) and **6 Phase-7 rows** (deferred 223 -> 217), not one stratum's twenty-two. The other
+correction is a measurement: the brief allowed a `p_lib.c:1211` reduction "in the way D313 recorded
+the `ENGINE_*` reduction". Writing the framework is strictly more faithful and no more expensive, so
+the reduction was not taken and no record covers it.
+
+**What is deliberately not here.** The decoder units (`decoder_meth.c`, `decoder_lib.c`,
+`decoder_pkey.c`) and the six `crypto/pem/pem_pkey.c` private-key readers, which are this stratum's
+last open six and are reached through `OSSL_DECODER_CTX_new_for_pkey` -- Phase 10's, and the next
+pass's measurement. The four `crypto/ec/ecx_meth.c` rows of *both* `standard_methods[]` tables stay
+withheld under `D-PKEY-AMETH-3`, unchanged, with their observable (X25519/X448/ED25519/ED448 answer
+NULL from `EVP_PKEY_asn1_find`/`_find_str`, `EVP_PKEY_type` and `EVP_PKEY_meth_find`). The ameth
+objects, the `EVP_PKEY_METHOD` table and the twelve legacy accessors are unchanged from D353/D355.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete: false`
+with **6** names open: implemented **780**, deferred **0**, owned **786**. The regenerated counts:
+`implemented-surface.json`'s `libcrypto` implemented moves **2813 -> 2835** and its
+`internal_symbols.c_style` stays **341** (this landing adds no new internal C symbol);
+`transcription-edges.json` **312 -> 316** modules over **281 -> 285** units, the four new edges being
+`src/rsa/prn.rs -> crypto/rsa/rsa_prn.c` (2/2), `src/dsa/prn.rs -> crypto/dsa/dsa_prn.c` (4/4),
+`src/ec/ameth.rs -> crypto/ec/ec_ameth.c` (1/1) and
+`src/encoder_pkey.rs -> crypto/encode_decode/encoder_pkey.c` (6/6); Phase 7's ledger reads implemented
+**733**, deferred **217**, received_by_handoff **26**. The six open are the
+`PEM_read[_bio]_{RSA,DSA,EC}PrivateKey` readers. It is not Phase 8 and not nearly Phase 8; the count
+this entry reaches is implemented **780** of **786** owned, and what it moved into the crate is the
+framework and the printer pair the last six wait on.

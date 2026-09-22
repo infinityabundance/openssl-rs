@@ -266,31 +266,6 @@ LEGACY_HANDOFFS: list[tuple[tuple[str, ...], str, str]] = [
 BLOCKED_HANDOFFS: list[BlockedHandoff] = [
     BlockedHandoff(
         symbols=(
-            "EVP_PKEY_print_params", "EVP_PKEY_print_params_fp", "EVP_PKEY_print_private",
-            "EVP_PKEY_print_private_fp", "EVP_PKEY_print_public", "EVP_PKEY_print_public_fp",
-        ),
-        binding_phase=10,
-        blocked_by=(
-            Blocker("OSSL_ENCODER_CTX_new_for_pkey", "crypto/encode_decode/encoder_pkey.c", 342, "exported", 10),
-            Blocker("OSSL_ENCODER_CTX_get_num_encoders", "crypto/encode_decode/encoder_lib.c", 345, "exported", 10),
-            Blocker("OSSL_ENCODER_to_bio", "crypto/encode_decode/encoder_lib.c", 68, "exported", 10),
-        ),
-        reason=(
-            "the three `_fp` twins are `BIO_new_fp` around the three others, and all six reach "
-            "`print_pkey` (`crypto/evp/p_lib.c:1196`), whose first statement is "
-            "`OSSL_ENCODER_CTX_new_for_pkey` (`:1211`) followed by `OSSL_ENCODER_CTX_get_num_encoders` "
-            "(`:1213`) and `OSSL_ENCODER_to_bio` (`:1214`). Those three are `encoder.h`'s and Phase "
-            "10's, and the call is unconditional -- it is not the legacy fallback that decides whether "
-            "the export can be written. The fallback arm below it "
-            "(`pkey->ameth->pub_print`/`priv_print`/`param_print`, at `:1233`, `:1241`, `:1249`) is "
-            "Phase 8's ameth *contents*, so Phase 8 also feeds these six; the struct and its three "
-            "function-pointer fields are already declared, which is why Phase 10 is the binding one. "
-            "**D353 retired the `ossl_rsa_asn1_meths` blocker**, so the ameth side of these six is no "
-            "longer absent and the row's `blocked_by` is now the three Phase 10 encoder names alone."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
             "EVP_PKEY_get0_engine", "EVP_PKEY_set1_engine",
         ),
         binding_phase=13,
@@ -327,30 +302,6 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
             "cannot be half-written, and the half that runs first is the decoder. **D353 retired the "
             "`ossl_rsa_asn1_meths` blocker**, so the ameth side is no longer absent and the row's "
             "`blocked_by` is the decoder alone."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "i2d_KeyParams", "i2d_KeyParams_bio", "i2d_PKCS8PrivateKey", "i2d_PrivateKey",
-            "i2d_PublicKey",
-        ),
-        binding_phase=10,
-        blocked_by=(
-            Blocker("OSSL_ENCODER_CTX_new_for_pkey", "crypto/encode_decode/encoder_pkey.c", 342, "exported", 10),
-            Blocker("OSSL_ENCODER_to_data", "crypto/encode_decode/encoder_lib.c", 119, "exported", 10),
-            Blocker("OSSL_ENCODER_CTX_free", "crypto/encode_decode/encoder_meth.c", 645, "exported", 10),
-        ),
-        reason=(
-            "all five reach `i2d_provided` (`crypto/asn1/i2d_evp.c:33`) whenever the key is provided, "
-            "and that function is `OSSL_ENCODER_CTX_new_for_pkey` (`:53`) + `OSSL_ENCODER_to_data` "
-            "(`:59`) + `OSSL_ENCODER_CTX_free` (`:64`), `encoder.h`'s and Phase 10's. Their non-provided "
-            "arms are Phase 8's as well -- `i2d_PublicKey`'s `switch` calls "
-            "`i2d_RSAPublicKey`/`i2d_DSAPublicKey`/`i2o_ECPublicKey` (`:159`, `:162`, `:165`) through "
-            "`EVP_PKEY_get0_RSA`/`_DSA`/`_EC_KEY`, and `i2d_PrivateKey_impl`'s calls "
-            "`a->ameth->old_priv_encode` (`:106`) and `EVP_PKEY2PKCS8` (`crypto/evp/evp_pkey.c:129`, "
-            "itself an encoder context) -- so Phase 8 feeds these five too and Phase 10 is the binding "
-            "one. **D353 retired the `ossl_rsa_asn1_meths` blocker**, so the ameth side is no longer "
-            "absent and the row's `blocked_by` is the three Phase 10 encoder names alone."
         ),
     ),
     BlockedHandoff(
@@ -420,27 +371,6 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
             "(`:91`) is Phase 13. So Phase 10 is what these fifteen are reached through **first** -- "
             "which is what 7.5's `NOT_MEASURED` lines say -- and Phase 13 is the phase that retires "
             "them, because the fallback legs cannot be omitted."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "PEM_write_bio_PrivateKey_traditional",
-        ),
-        binding_phase=10,
-        blocked_by=(
-            Blocker("OSSL_ENCODER_CTX_new_for_pkey", "crypto/encode_decode/encoder_pkey.c", 342, "exported", 10),
-            Blocker("RAND_bytes", "crypto/rand/rand_lib.c", 500, "exported", 9),
-        ),
-        reason=(
-            "`crypto/pem/pem_pkey.c:342` needs `evp_pkey_copy_downgraded` (`:356`, Phase 8, for the "
-            "provided-key copy), `x->ameth->old_priv_encode`/`x->ameth->pem_str` (`:359`, `:364`, Phase "
-            "8's ameth contents), the `i2d_PrivateKey` function pointer (`:365`, Phase 10) and "
-            "`PEM_ASN1_write_bio` (`:365`, Phase 13 behind `EVP_md5` and Phase 9 behind `RAND_bytes`). "
-            "Four strata feed it and Phase 13 is the latest, so Phase 13 retires it. D194 named this as "
-            "the one name of the private-key family that needs the ameth *before* it needs the encoder, "
-            "and this row is the four-dependency version of that sentence. **D353 retired the "
-            "`evp_pkey_copy_downgraded` blocker**, so the row's `blocked_by` is the encoder and the "
-            "`RAND_bytes` the write path already has."
         ),
     ),
 ]
@@ -641,6 +571,38 @@ UNBLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
         "ledger's arithmetic, and retiring the row would move three built exports into phase 7's "
         "`implemented` on the strength of a phase-8 landing. The application half of the registry "
         "was already landed and courted here (D193).",
+    ),
+    (
+        (
+            "i2d_KeyParams", "i2d_KeyParams_bio", "i2d_PKCS8PrivateKey", "i2d_PrivateKey",
+            "i2d_PublicKey",
+        ),
+        10,
+        "all five reach `i2d_provided` (`crypto/asn1/i2d_evp.c:33`) whenever the key is provided, and "
+        "that function is `OSSL_ENCODER_CTX_new_for_pkey` (`:53`) + `OSSL_ENCODER_to_data` (`:59`) + "
+        "`OSSL_ENCODER_CTX_free` (`:64`). **D362 landed all three of those names** -- the encoder "
+        "framework's three units (`crypto/encode_decode/encoder_meth.c`, `encoder_lib.c`, "
+        "`encoder_pkey.c`) are now transcribed in `src/encoder_meth.rs`, `src/encoder_lib.rs` and "
+        "`src/encoder_pkey.rs` -- so every blocker this row named has landed and the row moves here "
+        "from `BLOCKED_HANDOFFS` rather than retiring: the five exports are still Phase 10's to write "
+        "in the ledger's arithmetic, and only the authority *blocker* has landed. The non-provided "
+        "arms remain Phase 8's (`i2d_PublicKey`'s `i2d_RSAPublicKey`/`i2d_DSAPublicKey`/"
+        "`i2o_ECPublicKey`, `i2d_PrivateKey_impl`'s `ameth->old_priv_encode`/`EVP_PKEY2PKCS8`), so a "
+        "`Blocker` row would be stale on the day it was written.",
+    ),
+    (
+        ("PEM_write_bio_PrivateKey_traditional",),
+        10,
+        "`crypto/pem/pem_pkey.c:342` needs `evp_pkey_copy_downgraded` (`:356`, Phase 8), "
+        "`x->ameth->old_priv_encode`/`x->ameth->pem_str` (`:359`, `:364`, Phase 8's ameth contents), "
+        "the `i2d_PrivateKey` function pointer (`:365`, Phase 10) and `PEM_ASN1_write_bio` (`:365`, "
+        "Phase 13 behind `EVP_md5` and Phase 9 behind `RAND_bytes`). **D362 landed the encoder blocker** "
+        "(`OSSL_ENCODER_CTX_new_for_pkey`) and D353 retired the `evp_pkey_copy_downgraded` one, so the "
+        "two names the old `blocked_by` carried are both built and the row moves here from "
+        "`BLOCKED_HANDOFFS` rather than retiring. The remaining dependency is `PEM_ASN1_write_bio`, "
+        "which is this stratum's to write behind the Phase 13 `UI` and the Phase 9 `RAND_*` front -- "
+        "neither a file:line in `pem_pkey.c`, so a `Blocker` row would be stale on the day it was "
+        "written.",
     ),
 ]
 

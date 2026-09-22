@@ -28,7 +28,7 @@ renderer does not know any phase status.
 | 5 | BN + ASN.1 + DER/PEM | `complete` |  |
 | 6 | OSSL_LIB_CTX + provider core | `complete` |  |
 | 7 | EVP framework | `complete` |  |
-| 8 | Native cryptographic primitives | `in-progress` | 14 open obligation(s) of this stratum recorded in forensics/phase8-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
+| 8 | Native cryptographic primitives | `in-progress` | 6 open obligation(s) of this stratum recorded in forensics/phase8-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
 | 9 | RAND / DRBG + entropy | `in-progress` | 3 open obligation(s) of this stratum recorded in forensics/phase9-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Its working set is ninety-three exports, and only twenty-five are its own header's: the other sixty-eight arrive as recorded hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives in ten earlier strata's modules (docs/DECISIONS.md D294). The court file records `courts: []` and is not evidence that anything works: no Phase 9 court has landed yet (docs/PHASE-9-SUBPHASES.md section 1) |
 
 Not started: strata 10-21 (12 total).
@@ -84,9 +84,9 @@ that name is defined, nothing more.
 
 | library | exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 2813 | 3083 |
+| libcrypto | 5896 | 2835 | 3061 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **2813** | **3686** |
+| **total** | **6499** | **2835** | **3664** |
 
 ### Phase 3 obligation ledger
 
@@ -186,15 +186,15 @@ handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
 * authority exports in the Phase 7 working set: 950
-* implemented: 727
-* deferred to a later phase with a stated reason: 223
+* implemented: 733
+* deferred to a later phase with a stated reason: 217
 * open in this stratum: 0
 
 Deferred to phase 8: `EVP_PKEY_assign`, `EVP_PKEY_decrypt_old`, `EVP_PKEY_encrypt_old`, `EVP_PKEY_get0_DH`, `EVP_PKEY_get0_DSA`, `EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get0_RSA`, `EVP_PKEY_get0_hmac`, `EVP_PKEY_get0_poly1305`, `EVP_PKEY_get0_siphash`, `EVP_PKEY_get1_DH`, `EVP_PKEY_get1_DSA`, `EVP_PKEY_get1_EC_KEY`, `EVP_PKEY_get1_RSA`, `EVP_PKEY_get_ec_point_conv_form`, `EVP_PKEY_get_field_type`, `EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0`, `EVP_PKEY_meth_get_count`, `EVP_PKEY_set1_DH`, `EVP_PKEY_set1_DSA`, `EVP_PKEY_set1_EC_KEY`, `EVP_PKEY_set1_RSA`, `EVP_PKEY_type`, `d2i_KeyParams`, `d2i_KeyParams_bio`, `d2i_PublicKey`
 
 Deferred to phase 9: `BIO_f_reliable`, `EVP_CIPHER_CTX_rand_key`, `EVP_SealInit`, `OSSL_HPKE_get_grease_value`, `PEM_ASN1_read`, `PEM_ASN1_read_bio`, `PEM_ASN1_write`, `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx`, `PEM_bytes_read_bio`, `PEM_bytes_read_bio_secmem`, `PEM_do_header`
 
-Deferred to phase 10: `EVP_PKEY_print_params`, `EVP_PKEY_print_params_fp`, `EVP_PKEY_print_private`, `EVP_PKEY_print_private_fp`, `EVP_PKEY_print_public`, `EVP_PKEY_print_public_fp`, `PEM_write_bio_PrivateKey_traditional`, `d2i_AutoPrivateKey`, `d2i_AutoPrivateKey_ex`, `d2i_PrivateKey`, `d2i_PrivateKey_ex`, `i2d_KeyParams`, `i2d_KeyParams_bio`, `i2d_PKCS8PrivateKey`, `i2d_PrivateKey`, `i2d_PublicKey`
+Deferred to phase 10: `PEM_write_bio_PrivateKey_traditional`, `d2i_AutoPrivateKey`, `d2i_AutoPrivateKey_ex`, `d2i_PrivateKey`, `d2i_PrivateKey_ex`, `i2d_KeyParams`, `i2d_KeyParams_bio`, `i2d_PKCS8PrivateKey`, `i2d_PrivateKey`, `i2d_PublicKey`
 
 Deferred to phase 11: `ASN1_item_sign_ex`, `ASN1_item_verify_ex`, `EVP_CIPHER_CTX_get_algor`, `EVP_PKEY_CTX_get_algor`, `EVP_add_alg_module`
 
@@ -210,9 +210,9 @@ handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
 * authority exports in the Phase 8 working set: 786
-* implemented: 772
+* implemented: 780
 * deferred to a later phase with a stated reason: 0
-* open in this stratum: 14
+* open in this stratum: 6
 
 Hand-offs from phase 7 discharged by this stratum: `EVP_PKEY_assign`, `EVP_PKEY_decrypt_old`, `EVP_PKEY_encrypt_old`, `EVP_PKEY_get0_DH`, `EVP_PKEY_get0_DSA`, `EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get0_RSA`, `EVP_PKEY_get0_hmac`, `EVP_PKEY_get0_poly1305`, `EVP_PKEY_get0_siphash`, `EVP_PKEY_get1_DH`, `EVP_PKEY_get1_DSA`, `EVP_PKEY_get1_EC_KEY`, `EVP_PKEY_get1_RSA`, `EVP_PKEY_get_ec_point_conv_form`, `EVP_PKEY_get_field_type`, `EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0`, `EVP_PKEY_meth_get_count`, `EVP_PKEY_set1_DH`, `EVP_PKEY_set1_DSA`, `EVP_PKEY_set1_EC_KEY`, `EVP_PKEY_set1_RSA`, `EVP_PKEY_type`, `d2i_KeyParams`, `d2i_KeyParams_bio`, `d2i_PublicKey`
 

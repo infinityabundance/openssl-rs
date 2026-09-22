@@ -107,6 +107,8 @@ pub mod pss;
 // Phase 8.8's `crypto/rsa/rsa_pmeth.c` (D355): the `RSA` and `RSA-PSS` `EVP_PKEY_METHOD` objects and
 // their callbacks, published as `PMETH_STANDARD_METHODS`' rows 6 and 912.
 pub mod pmeth;
+// Phase 8.4's `crypto/rsa/rsa_prn.c` (D362): the two `RSA` printers.
+pub mod prn;
 pub(crate) mod schemes;
 pub mod sign;
 pub(crate) mod sp800;

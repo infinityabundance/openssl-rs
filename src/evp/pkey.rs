@@ -73,7 +73,7 @@ use core::ffi::{c_char, c_int, c_long, c_uchar, c_void, CStr};
 use core::ptr;
 use core::sync::atomic::{AtomicI32, Ordering};
 
-use crate::asn1::layout::Asn1String;
+use crate::asn1::layout::{Asn1Pctx, Asn1String};
 use crate::bn::bignum::BigNum;
 use crate::dh::backend::ossl_dh_is_foreign;
 use crate::dh::group_params::ossl_dh_is_named_safe_prime_group;
@@ -86,6 +86,9 @@ use crate::ec::backend::ossl_ec_key_is_foreign;
 use crate::ec::key::{EC_KEY_get0_group, EC_KEY_get_conv_form};
 use crate::ec::lib::{EC_GROUP_get_curve_name, EC_GROUP_get_field_type};
 use crate::ec::EcKey;
+use crate::encoder_lib::{OSSL_ENCODER_CTX_get_num_encoders, OSSL_ENCODER_to_bio};
+use crate::encoder_meth::OSSL_ENCODER_CTX_free;
+use crate::encoder_pkey::OSSL_ENCODER_CTX_new_for_pkey;
 use crate::evp::cipher::EVP_CIPHER_get0_name;
 use crate::evp::cipher::EvpCipher;
 use crate::evp::digest::{
@@ -119,6 +122,12 @@ use crate::provider::{ossl_provider_libctx, OsslProvider};
 use crate::rsa::backend::ossl_rsa_is_foreign;
 use crate::rsa::Rsa;
 use crate::runtime::bio::print::BIO_snprintf;
+use crate::runtime::bio::{
+    bf_prefix::BIO_f_prefix,
+    print::{BIO_indent, BIO_printf},
+    BIO_ctrl, BIO_free, BIO_new, BIO_new_fp, BIO_pop, BIO_push, Bio, BIO_CTRL_GET_INDENT,
+    BIO_CTRL_SET_INDENT, BIO_NOCLOSE,
+};
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
 use crate::runtime::err::{ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark};
 use crate::runtime::ex_data::{
@@ -129,7 +138,7 @@ use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_
 use crate::runtime::obj::{
     NID_X9_62_characteristic_two_field, NID_X9_62_id_ecPublicKey, NID_X9_62_prime_field,
     NID_dhKeyAgreement, NID_dhpublicnumber, NID_dsa, NID_hmac, NID_poly1305, NID_rsaEncryption,
-    NID_rsassaPss, NID_siphash, NID_sm2, NID_undef, OBJ_ln2nid, OBJ_nid2sn, OBJ_sn2nid,
+    NID_rsassaPss, NID_siphash, NID_sm2, NID_undef, OBJ_ln2nid, OBJ_nid2ln, OBJ_nid2sn, OBJ_sn2nid,
     NID_ED25519, NID_ED448, NID_X25519, NID_X448,
 };
 use crate::runtime::str::OPENSSL_strlcpy;
@@ -4090,6 +4099,373 @@ pub unsafe extern "C" fn EVP_PKEY_get_field_type(pkey: *const EvpPkey) -> c_int 
         }
     }
     0
+}
+
+// ---------------------------------------------------------------------------------------------
+// The printers (`crypto/evp/p_lib.c:1150-1293`)
+// ---------------------------------------------------------------------------------------------
+
+/// `EVP_PKEY_KEY_PARAMETERS` — `include/openssl/evp.h:106`, which expands to
+/// `OSSL_KEYMGMT_SELECT_ALL_PARAMETERS`, the union of the domain and other descriptors.
+const EVP_PKEY_KEY_PARAMETERS: c_int =
+    OSSL_KEYMGMT_SELECT_DOMAIN_PARAMETERS | OSSL_KEYMGMT_SELECT_OTHER_PARAMETERS;
+/// `EVP_PKEY_PRIVATE_KEY` — `include/openssl/evp.h:108`, `KEY_PARAMETERS | SELECT_PRIVATE_KEY`.
+const EVP_PKEY_PRIVATE_KEY: c_int = EVP_PKEY_KEY_PARAMETERS | OSSL_KEYMGMT_SELECT_PRIVATE_KEY;
+/// `EVP_PKEY_PUBLIC_KEY` — `include/openssl/evp.h:110`, `KEY_PARAMETERS | SELECT_PUBLIC_KEY`.
+const EVP_PKEY_PUBLIC_KEY: c_int = EVP_PKEY_KEY_PARAMETERS | OSSL_KEYMGMT_SELECT_PUBLIC_KEY;
+
+/// `static int print_reset_indent(BIO **out, int pop_f_prefix, long saved_indent)` —
+/// `crypto/evp/p_lib.c:1150-1160`.
+///
+/// Restores the saved indent and, when a prefix BIO was pushed on, pops and frees it. The
+/// `BIO_set_indent` the authority spells is this crate's `BIO_ctrl` with `BIO_CTRL_SET_INDENT`,
+/// which is what the header macro expands to.
+///
+/// # Safety
+/// `out` must point at a live `BIO *`.
+unsafe fn print_reset_indent(
+    out: *mut *mut Bio,
+    pop_f_prefix: c_int,
+    saved_indent: c_long,
+) -> c_int {
+    // SAFETY: `out` points at a live `BIO *` per the contract.
+    unsafe {
+        BIO_ctrl(*out, BIO_CTRL_SET_INDENT, saved_indent, ptr::null_mut());
+        if pop_f_prefix != 0 {
+            let next = BIO_pop(*out);
+            BIO_free(*out);
+            *out = next;
+        }
+    }
+    1
+}
+
+/// `static int print_set_indent(BIO **out, int *pop_f_prefix, long *saved_indent, long indent)` —
+/// `crypto/evp/p_lib.c:1162-1185`.
+///
+/// A positive `indent` is saved, then set **twice**: when the sink refuses the first set a
+/// `BIO_f_prefix` is pushed on and the set retried. The second attempt is what makes a plain memory
+/// BIO take the indent through the prefix filter, and the authority's own comment on the first
+/// attempt's failure path is why the prefix BIO exists at all.
+///
+/// # Safety
+/// `out` must point at a live `BIO *`; `pop_f_prefix` and `saved_indent` must be writable.
+unsafe fn print_set_indent(
+    out: *mut *mut Bio,
+    pop_f_prefix: *mut c_int,
+    saved_indent: *mut c_long,
+    indent: c_long,
+) -> c_int {
+    // SAFETY: the two out-parameters are writable and `out` points at a live `BIO *`.
+    unsafe {
+        *pop_f_prefix = 0;
+        *saved_indent = 0;
+        if indent > 0 {
+            let i = BIO_ctrl(*out, BIO_CTRL_GET_INDENT, 0, ptr::null_mut());
+            *saved_indent = if i < 0 { 0 } else { i };
+            if BIO_ctrl(*out, BIO_CTRL_SET_INDENT, indent, ptr::null_mut()) <= 0 {
+                let prefbio = BIO_new(BIO_f_prefix());
+                if prefbio.is_null() {
+                    return 0;
+                }
+                *out = BIO_push(prefbio, *out);
+                *pop_f_prefix = 1;
+            }
+            if BIO_ctrl(*out, BIO_CTRL_SET_INDENT, indent, ptr::null_mut()) <= 0 {
+                print_reset_indent(out, *pop_f_prefix, *saved_indent);
+                return 0;
+            }
+        }
+    }
+    1
+}
+
+/// `static int unsup_alg(BIO *out, const EVP_PKEY *pkey, int indent, const char *kstr)` —
+/// `crypto/evp/p_lib.c:1187-1194`.
+///
+/// The one line a key with neither an encoder nor a legacy print callback reaches: the indent, then
+/// `"<kstr> algorithm \"<long name>\" unsupported"` with the key's own type's long name.
+///
+/// # Safety
+/// `out` and `pkey` must be live; `kstr` NUL-terminated.
+unsafe fn unsup_alg(
+    out: *mut Bio,
+    pkey: *const EvpPkey,
+    indent: c_int,
+    kstr: *const c_char,
+) -> c_int {
+    // SAFETY: `out` and `pkey` are live, and `kstr` is a NUL-terminated static at both call sites.
+    unsafe {
+        c_int::from(
+            BIO_indent(out, indent, 128) != 0
+                && BIO_printf(
+                    out,
+                    c"%s algorithm \"%s\" unsupported\n".as_ptr(),
+                    kstr,
+                    OBJ_nid2ln((*pkey).type_),
+                ) > 0,
+        )
+    }
+}
+
+/// `static int print_pkey(const EVP_PKEY *pkey, BIO *out, int indent, int selection,
+/// const char *propquery, int (*legacy_print)(BIO *, const EVP_PKEY *, int, ASN1_PCTX *),
+/// ASN1_PCTX *legacy_pctx)` — `crypto/evp/p_lib.c:1196-1229`.
+///
+/// **The encoder-first arm is the authority's, not a reduction.** The context is built and asked
+/// for its encoder count, and only when that count is **0** — which is every key this crate can
+/// build, because no provider encoder implementation is registered here — does `ret` stay `-2` and
+/// the legacy branch run. `-2` is the authority's own "unsupported" default and the value that
+/// decides the fall-through, so the printers reach `ameth->priv_print`/`params_print`/`pub_print`
+/// **through this function's own code path**.
+///
+/// `propquery` is NULL from all six callers below, which is also what makes the `"TEXT"`/NULL
+/// constructor arm the one taken.
+///
+/// # Safety
+/// `pkey` must be live; `out` a live BIO; `propquery` NULL or NUL-terminated; `legacy_print` the
+/// ameth's own callback, which must be a live function pointer.
+unsafe fn print_pkey(
+    pkey: *const EvpPkey,
+    mut out: *mut Bio,
+    indent: c_int,
+    selection: c_int,
+    propquery: *const c_char,
+    legacy_print: Option<
+        unsafe extern "C" fn(*mut Bio, *const EvpPkey, c_int, *mut Asn1Pctx) -> c_int,
+    >,
+    legacy_pctx: *mut Asn1Pctx,
+) -> c_int {
+    let mut pop_f_prefix: c_int = 0;
+    let mut saved_indent: c_long = 0;
+    /* The authority's sentinel: anything other than -2 means an arm above answered. */
+    let mut ret = -2;
+
+    // SAFETY: `out`'s address and both out-parameters are this frame's; `pkey` is live.
+    if unsafe {
+        print_set_indent(
+            &mut out,
+            &mut pop_f_prefix,
+            &mut saved_indent,
+            indent as c_long,
+        )
+    } == 0
+    {
+        return 0;
+    }
+
+    // SAFETY: `pkey` is live, `"TEXT"` is a static, and `propquery` is NULL or NUL-terminated.
+    let ctx = unsafe {
+        OSSL_ENCODER_CTX_new_for_pkey(pkey, selection, c"TEXT".as_ptr(), ptr::null(), propquery)
+    };
+    // SAFETY: `ctx` is NULL or a live context, and the count answers 0 for NULL.
+    if unsafe { OSSL_ENCODER_CTX_get_num_encoders(ctx) } != 0 {
+        // SAFETY: `ctx` is live and `out` is the caller's BIO.
+        ret = unsafe { OSSL_ENCODER_to_bio(ctx, out) };
+    }
+    // SAFETY: `ctx` is NULL or live, and this call owns the reference the constructor took.
+    unsafe { OSSL_ENCODER_CTX_free(ctx) };
+
+    if ret != -2 {
+        // SAFETY: `out` is live and both out-parameters are this frame's.
+        unsafe { print_reset_indent(&mut out, pop_f_prefix, saved_indent) };
+        return ret;
+    }
+
+    /* legacy fallback */
+    if let Some(legacy_print) = legacy_print {
+        // SAFETY: `legacy_print` is the ameth's own callback, and `out`/`pkey` are live.
+        ret = unsafe { legacy_print(out, pkey, 0, legacy_pctx) };
+    } else {
+        // SAFETY: `out` and `pkey` are live; the string is a static.
+        ret = unsafe { unsup_alg(out, pkey, 0, c"Public Key".as_ptr()) };
+    }
+
+    // SAFETY: `out` is live and both out-parameters are this frame's.
+    unsafe { print_reset_indent(&mut out, pop_f_prefix, saved_indent) };
+    ret
+}
+
+/// `int EVP_PKEY_print_public(BIO *out, const EVP_PKEY *pkey, int indent, ASN1_PCTX *pctx)` —
+/// `crypto/evp/p_lib.c:1231-1236`.
+///
+/// The `EVP_PKEY_PUBLIC_KEY` selection and the ameth's `pub_print`.
+///
+/// # Safety
+/// `out` and `pkey` must be live; `pctx` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_print_public(
+    out: *mut Bio,
+    pkey: *const EvpPkey,
+    indent: c_int,
+    pctx: *mut Asn1Pctx,
+) -> c_int {
+    // SAFETY: `pkey` is live; the ameth pointer is NULL or live and its callback field is copied out.
+    let legacy_print = unsafe {
+        if (*pkey).ameth.is_null() {
+            None
+        } else {
+            (*((*pkey).ameth)).pub_print
+        }
+    };
+    // SAFETY: every argument's preconditions are the caller's, checked above or by the contract.
+    unsafe {
+        print_pkey(
+            pkey,
+            out,
+            indent,
+            EVP_PKEY_PUBLIC_KEY,
+            ptr::null(),
+            legacy_print,
+            pctx,
+        )
+    }
+}
+
+/// `int EVP_PKEY_print_private(BIO *out, const EVP_PKEY *pkey, int indent, ASN1_PCTX *pctx)` —
+/// `crypto/evp/p_lib.c:1238-1243`.
+///
+/// The `EVP_PKEY_PRIVATE_KEY` selection and the ameth's `priv_print`.
+///
+/// # Safety
+/// `out` and `pkey` must be live; `pctx` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_print_private(
+    out: *mut Bio,
+    pkey: *const EvpPkey,
+    indent: c_int,
+    pctx: *mut Asn1Pctx,
+) -> c_int {
+    // SAFETY: `pkey` is live; the ameth pointer is NULL or live and its callback field is copied out.
+    let legacy_print = unsafe {
+        if (*pkey).ameth.is_null() {
+            None
+        } else {
+            (*((*pkey).ameth)).priv_print
+        }
+    };
+    // SAFETY: every argument's preconditions are the caller's, checked above or by the contract.
+    unsafe {
+        print_pkey(
+            pkey,
+            out,
+            indent,
+            EVP_PKEY_PRIVATE_KEY,
+            ptr::null(),
+            legacy_print,
+            pctx,
+        )
+    }
+}
+
+/// `int EVP_PKEY_print_params(BIO *out, const EVP_PKEY *pkey, int indent, ASN1_PCTX *pctx)` —
+/// `crypto/evp/p_lib.c:1245-1250`.
+///
+/// The `EVP_PKEY_KEY_PARAMETERS` selection and the ameth's `param_print`.
+///
+/// # Safety
+/// `out` and `pkey` must be live; `pctx` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_print_params(
+    out: *mut Bio,
+    pkey: *const EvpPkey,
+    indent: c_int,
+    pctx: *mut Asn1Pctx,
+) -> c_int {
+    // SAFETY: `pkey` is live; the ameth pointer is NULL or live and its callback field is copied out.
+    let legacy_print = unsafe {
+        if (*pkey).ameth.is_null() {
+            None
+        } else {
+            (*((*pkey).ameth)).param_print
+        }
+    };
+    // SAFETY: every argument's preconditions are the caller's, checked above or by the contract.
+    unsafe {
+        print_pkey(
+            pkey,
+            out,
+            indent,
+            EVP_PKEY_KEY_PARAMETERS,
+            ptr::null(),
+            legacy_print,
+            pctx,
+        )
+    }
+}
+
+/// `int EVP_PKEY_print_public_fp(FILE *fp, const EVP_PKEY *pkey, int indent, ASN1_PCTX *pctx)` —
+/// `crypto/evp/p_lib.c:1253-1264`.
+///
+/// A `FILE` BIO with `BIO_NOCLOSE` around `EVP_PKEY_print_public`; the caller's `FILE` is left open.
+///
+/// # Safety
+/// `fp` must be a live `FILE *`; `pkey` live; `pctx` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_print_public_fp(
+    fp: *mut c_void,
+    pkey: *const EvpPkey,
+    indent: c_int,
+    pctx: *mut Asn1Pctx,
+) -> c_int {
+    // SAFETY: `fp` is a live `FILE *` per the contract.
+    let b = unsafe { BIO_new_fp(fp, BIO_NOCLOSE) };
+    if b.is_null() {
+        return 0;
+    }
+    // SAFETY: `b` is a live BIO and `pkey` is live.
+    let ret = unsafe { EVP_PKEY_print_public(b, pkey, indent, pctx) };
+    // SAFETY: `b` is this frame's own BIO.
+    unsafe { BIO_free(b) };
+    ret
+}
+
+/// `int EVP_PKEY_print_private_fp(FILE *fp, const EVP_PKEY *pkey, int indent, ASN1_PCTX *pctx)` —
+/// `crypto/evp/p_lib.c:1266-1277`.
+///
+/// # Safety
+/// `fp` must be a live `FILE *`; `pkey` live; `pctx` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_print_private_fp(
+    fp: *mut c_void,
+    pkey: *const EvpPkey,
+    indent: c_int,
+    pctx: *mut Asn1Pctx,
+) -> c_int {
+    // SAFETY: `fp` is a live `FILE *` per the contract.
+    let b = unsafe { BIO_new_fp(fp, BIO_NOCLOSE) };
+    if b.is_null() {
+        return 0;
+    }
+    // SAFETY: `b` is a live BIO and `pkey` is live.
+    let ret = unsafe { EVP_PKEY_print_private(b, pkey, indent, pctx) };
+    // SAFETY: `b` is this frame's own BIO.
+    unsafe { BIO_free(b) };
+    ret
+}
+
+/// `int EVP_PKEY_print_params_fp(FILE *fp, const EVP_PKEY *pkey, int indent, ASN1_PCTX *pctx)` —
+/// `crypto/evp/p_lib.c:1279-1290`.
+///
+/// # Safety
+/// `fp` must be a live `FILE *`; `pkey` live; `pctx` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_print_params_fp(
+    fp: *mut c_void,
+    pkey: *const EvpPkey,
+    indent: c_int,
+    pctx: *mut Asn1Pctx,
+) -> c_int {
+    // SAFETY: `fp` is a live `FILE *` per the contract.
+    let b = unsafe { BIO_new_fp(fp, BIO_NOCLOSE) };
+    if b.is_null() {
+        return 0;
+    }
+    // SAFETY: `b` is a live BIO and `pkey` is live.
+    let ret = unsafe { EVP_PKEY_print_params(b, pkey, indent, pctx) };
+    // SAFETY: `b` is this frame's own BIO.
+    unsafe { BIO_free(b) };
+    ret
 }
 
 // SPDX-License-Identifier: Apache-2.0

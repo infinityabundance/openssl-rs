@@ -5,16 +5,16 @@
       "findings": 0,
       "legacy_rows": 146,
       "legacy_unit_claims": 20,
-      "structured_blockers": 18,
-      "structured_rows": 8,
-      "unblocked_rows": 14,
-      "unblocked_symbols": 41
+      "structured_blockers": 10,
+      "structured_rows": 5,
+      "unblocked_rows": 16,
+      "unblocked_symbols": 47
     },
     "complete": true,
     "counts": {
       "atlas_owned": 924,
-      "deferred_to_later_phase": 223,
-      "implemented": 727,
+      "deferred_to_later_phase": 217,
+      "implemented": 733,
       "open_in_this_stratum": 0,
       "owned": 950,
       "received_by_handoff": 26
@@ -279,186 +279,6 @@
         "owning_phase": 8,
         "reason": "`EVP_PKEY_meth_find` (`crypto/evp/pmeth_lib.c:106`) searches the **second** `standard_methods[]` (`:54`) with `OBJ_bsearch_pmeth_func` (`:114`); `EVP_PKEY_meth_get_count` (`:646`) answers `OSSL_NELEM(standard_methods)` plus the application stack; `EVP_PKEY_meth_get0` (`:655`) indexes the table outright before it touches that stack. The row's single `blocked_by` name was `ossl_rsa_pkey_method` (`crypto/rsa/rsa_pmeth.c:851`), **and D355 landed it** together with the other five in-reach `ossl_<alg>_pkey_method` objects and the table they populate -- so the row moves here from `BLOCKED_HANDOFFS` rather than retiring, and for the reason the `EVP_PKEY_assign` row gives: the three exports are still this stratum's to write in the ledger's arithmetic, and retiring the row would move three built exports into phase 7's `implemented` on the strength of a phase-8 landing. The application half of the registry was already landed and courted here (D193).",
         "symbol": "EVP_PKEY_meth_get_count"
-      },
-      {
-        "binding_phase": 10,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_lib.c",
-            "kind": "exported",
-            "line": 345,
-            "name": "OSSL_ENCODER_CTX_get_num_encoders",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_lib.c",
-            "kind": "exported",
-            "line": 68,
-            "name": "OSSL_ENCODER_to_bio",
-            "owning_phase": 10
-          }
-        ],
-        "declaring_header": "evp.h",
-        "owning_phase": 10,
-        "reason": "the three `_fp` twins are `BIO_new_fp` around the three others, and all six reach `print_pkey` (`crypto/evp/p_lib.c:1196`), whose first statement is `OSSL_ENCODER_CTX_new_for_pkey` (`:1211`) followed by `OSSL_ENCODER_CTX_get_num_encoders` (`:1213`) and `OSSL_ENCODER_to_bio` (`:1214`). Those three are `encoder.h`'s and Phase 10's, and the call is unconditional -- it is not the legacy fallback that decides whether the export can be written. The fallback arm below it (`pkey->ameth->pub_print`/`priv_print`/`param_print`, at `:1233`, `:1241`, `:1249`) is Phase 8's ameth *contents*, so Phase 8 also feeds these six; the struct and its three function-pointer fields are already declared, which is why Phase 10 is the binding one. **D353 retired the `ossl_rsa_asn1_meths` blocker**, so the ameth side of these six is no longer absent and the row's `blocked_by` is now the three Phase 10 encoder names alone.",
-        "symbol": "EVP_PKEY_print_params"
-      },
-      {
-        "binding_phase": 10,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_lib.c",
-            "kind": "exported",
-            "line": 345,
-            "name": "OSSL_ENCODER_CTX_get_num_encoders",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_lib.c",
-            "kind": "exported",
-            "line": 68,
-            "name": "OSSL_ENCODER_to_bio",
-            "owning_phase": 10
-          }
-        ],
-        "declaring_header": "evp.h",
-        "owning_phase": 10,
-        "reason": "the three `_fp` twins are `BIO_new_fp` around the three others, and all six reach `print_pkey` (`crypto/evp/p_lib.c:1196`), whose first statement is `OSSL_ENCODER_CTX_new_for_pkey` (`:1211`) followed by `OSSL_ENCODER_CTX_get_num_encoders` (`:1213`) and `OSSL_ENCODER_to_bio` (`:1214`). Those three are `encoder.h`'s and Phase 10's, and the call is unconditional -- it is not the legacy fallback that decides whether the export can be written. The fallback arm below it (`pkey->ameth->pub_print`/`priv_print`/`param_print`, at `:1233`, `:1241`, `:1249`) is Phase 8's ameth *contents*, so Phase 8 also feeds these six; the struct and its three function-pointer fields are already declared, which is why Phase 10 is the binding one. **D353 retired the `ossl_rsa_asn1_meths` blocker**, so the ameth side of these six is no longer absent and the row's `blocked_by` is now the three Phase 10 encoder names alone.",
-        "symbol": "EVP_PKEY_print_params_fp"
-      },
-      {
-        "binding_phase": 10,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_lib.c",
-            "kind": "exported",
-            "line": 345,
-            "name": "OSSL_ENCODER_CTX_get_num_encoders",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_lib.c",
-            "kind": "exported",
-            "line": 68,
-            "name": "OSSL_ENCODER_to_bio",
-            "owning_phase": 10
-          }
-        ],
-        "declaring_header": "evp.h",
-        "owning_phase": 10,
-        "reason": "the three `_fp` twins are `BIO_new_fp` around the three others, and all six reach `print_pkey` (`crypto/evp/p_lib.c:1196`), whose first statement is `OSSL_ENCODER_CTX_new_for_pkey` (`:1211`) followed by `OSSL_ENCODER_CTX_get_num_encoders` (`:1213`) and `OSSL_ENCODER_to_bio` (`:1214`). Those three are `encoder.h`'s and Phase 10's, and the call is unconditional -- it is not the legacy fallback that decides whether the export can be written. The fallback arm below it (`pkey->ameth->pub_print`/`priv_print`/`param_print`, at `:1233`, `:1241`, `:1249`) is Phase 8's ameth *contents*, so Phase 8 also feeds these six; the struct and its three function-pointer fields are already declared, which is why Phase 10 is the binding one. **D353 retired the `ossl_rsa_asn1_meths` blocker**, so the ameth side of these six is no longer absent and the row's `blocked_by` is now the three Phase 10 encoder names alone.",
-        "symbol": "EVP_PKEY_print_private"
-      },
-      {
-        "binding_phase": 10,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_lib.c",
-            "kind": "exported",
-            "line": 345,
-            "name": "OSSL_ENCODER_CTX_get_num_encoders",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_lib.c",
-            "kind": "exported",
-            "line": 68,
-            "name": "OSSL_ENCODER_to_bio",
-            "owning_phase": 10
-          }
-        ],
-        "declaring_header": "evp.h",
-        "owning_phase": 10,
-        "reason": "the three `_fp` twins are `BIO_new_fp` around the three others, and all six reach `print_pkey` (`crypto/evp/p_lib.c:1196`), whose first statement is `OSSL_ENCODER_CTX_new_for_pkey` (`:1211`) followed by `OSSL_ENCODER_CTX_get_num_encoders` (`:1213`) and `OSSL_ENCODER_to_bio` (`:1214`). Those three are `encoder.h`'s and Phase 10's, and the call is unconditional -- it is not the legacy fallback that decides whether the export can be written. The fallback arm below it (`pkey->ameth->pub_print`/`priv_print`/`param_print`, at `:1233`, `:1241`, `:1249`) is Phase 8's ameth *contents*, so Phase 8 also feeds these six; the struct and its three function-pointer fields are already declared, which is why Phase 10 is the binding one. **D353 retired the `ossl_rsa_asn1_meths` blocker**, so the ameth side of these six is no longer absent and the row's `blocked_by` is now the three Phase 10 encoder names alone.",
-        "symbol": "EVP_PKEY_print_private_fp"
-      },
-      {
-        "binding_phase": 10,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_lib.c",
-            "kind": "exported",
-            "line": 345,
-            "name": "OSSL_ENCODER_CTX_get_num_encoders",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_lib.c",
-            "kind": "exported",
-            "line": 68,
-            "name": "OSSL_ENCODER_to_bio",
-            "owning_phase": 10
-          }
-        ],
-        "declaring_header": "evp.h",
-        "owning_phase": 10,
-        "reason": "the three `_fp` twins are `BIO_new_fp` around the three others, and all six reach `print_pkey` (`crypto/evp/p_lib.c:1196`), whose first statement is `OSSL_ENCODER_CTX_new_for_pkey` (`:1211`) followed by `OSSL_ENCODER_CTX_get_num_encoders` (`:1213`) and `OSSL_ENCODER_to_bio` (`:1214`). Those three are `encoder.h`'s and Phase 10's, and the call is unconditional -- it is not the legacy fallback that decides whether the export can be written. The fallback arm below it (`pkey->ameth->pub_print`/`priv_print`/`param_print`, at `:1233`, `:1241`, `:1249`) is Phase 8's ameth *contents*, so Phase 8 also feeds these six; the struct and its three function-pointer fields are already declared, which is why Phase 10 is the binding one. **D353 retired the `ossl_rsa_asn1_meths` blocker**, so the ameth side of these six is no longer absent and the row's `blocked_by` is now the three Phase 10 encoder names alone.",
-        "symbol": "EVP_PKEY_print_public"
-      },
-      {
-        "binding_phase": 10,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_lib.c",
-            "kind": "exported",
-            "line": 345,
-            "name": "OSSL_ENCODER_CTX_get_num_encoders",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_lib.c",
-            "kind": "exported",
-            "line": 68,
-            "name": "OSSL_ENCODER_to_bio",
-            "owning_phase": 10
-          }
-        ],
-        "declaring_header": "evp.h",
-        "owning_phase": 10,
-        "reason": "the three `_fp` twins are `BIO_new_fp` around the three others, and all six reach `print_pkey` (`crypto/evp/p_lib.c:1196`), whose first statement is `OSSL_ENCODER_CTX_new_for_pkey` (`:1211`) followed by `OSSL_ENCODER_CTX_get_num_encoders` (`:1213`) and `OSSL_ENCODER_to_bio` (`:1214`). Those three are `encoder.h`'s and Phase 10's, and the call is unconditional -- it is not the legacy fallback that decides whether the export can be written. The fallback arm below it (`pkey->ameth->pub_print`/`priv_print`/`param_print`, at `:1233`, `:1241`, `:1249`) is Phase 8's ameth *contents*, so Phase 8 also feeds these six; the struct and its three function-pointer fields are already declared, which is why Phase 10 is the binding one. **D353 retired the `ossl_rsa_asn1_meths` blocker**, so the ameth side of these six is no longer absent and the row's `blocked_by` is now the three Phase 10 encoder names alone.",
-        "symbol": "EVP_PKEY_print_public_fp"
       },
       {
         "binding_phase": 8,
@@ -2246,25 +2066,10 @@
       },
       {
         "binding_phase": 10,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/rand/rand_lib.c",
-            "kind": "exported",
-            "line": 500,
-            "name": "RAND_bytes",
-            "owning_phase": 9
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "pem.h",
         "owning_phase": 10,
-        "reason": "`crypto/pem/pem_pkey.c:342` needs `evp_pkey_copy_downgraded` (`:356`, Phase 8, for the provided-key copy), `x->ameth->old_priv_encode`/`x->ameth->pem_str` (`:359`, `:364`, Phase 8's ameth contents), the `i2d_PrivateKey` function pointer (`:365`, Phase 10) and `PEM_ASN1_write_bio` (`:365`, Phase 13 behind `EVP_md5` and Phase 9 behind `RAND_bytes`). Four strata feed it and Phase 13 is the latest, so Phase 13 retires it. D194 named this as the one name of the private-key family that needs the ameth *before* it needs the encoder, and this row is the four-dependency version of that sentence. **D353 retired the `evp_pkey_copy_downgraded` blocker**, so the row's `blocked_by` is the encoder and the `RAND_bytes` the write path already has.",
+        "reason": "`crypto/pem/pem_pkey.c:342` needs `evp_pkey_copy_downgraded` (`:356`, Phase 8), `x->ameth->old_priv_encode`/`x->ameth->pem_str` (`:359`, `:364`, Phase 8's ameth contents), the `i2d_PrivateKey` function pointer (`:365`, Phase 10) and `PEM_ASN1_write_bio` (`:365`, Phase 13 behind `EVP_md5` and Phase 9 behind `RAND_bytes`). **D362 landed the encoder blocker** (`OSSL_ENCODER_CTX_new_for_pkey`) and D353 retired the `evp_pkey_copy_downgraded` one, so the two names the old `blocked_by` carried are both built and the row moves here from `BLOCKED_HANDOFFS` rather than retiring. The remaining dependency is `PEM_ASN1_write_bio`, which is this stratum's to write behind the Phase 13 `UI` and the Phase 9 `RAND_*` front -- neither a file:line in `pem_pkey.c`, so a `Blocker` row would be stale on the day it was written.",
         "symbol": "PEM_write_bio_PrivateKey_traditional"
       },
       {
@@ -2357,159 +2162,49 @@
       },
       {
         "binding_phase": 10,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_lib.c",
-            "kind": "exported",
-            "line": 119,
-            "name": "OSSL_ENCODER_to_data",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_meth.c",
-            "kind": "exported",
-            "line": 645,
-            "name": "OSSL_ENCODER_CTX_free",
-            "owning_phase": 10
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "evp.h",
         "owning_phase": 10,
-        "reason": "all five reach `i2d_provided` (`crypto/asn1/i2d_evp.c:33`) whenever the key is provided, and that function is `OSSL_ENCODER_CTX_new_for_pkey` (`:53`) + `OSSL_ENCODER_to_data` (`:59`) + `OSSL_ENCODER_CTX_free` (`:64`), `encoder.h`'s and Phase 10's. Their non-provided arms are Phase 8's as well -- `i2d_PublicKey`'s `switch` calls `i2d_RSAPublicKey`/`i2d_DSAPublicKey`/`i2o_ECPublicKey` (`:159`, `:162`, `:165`) through `EVP_PKEY_get0_RSA`/`_DSA`/`_EC_KEY`, and `i2d_PrivateKey_impl`'s calls `a->ameth->old_priv_encode` (`:106`) and `EVP_PKEY2PKCS8` (`crypto/evp/evp_pkey.c:129`, itself an encoder context) -- so Phase 8 feeds these five too and Phase 10 is the binding one. **D353 retired the `ossl_rsa_asn1_meths` blocker**, so the ameth side is no longer absent and the row's `blocked_by` is the three Phase 10 encoder names alone.",
+        "reason": "all five reach `i2d_provided` (`crypto/asn1/i2d_evp.c:33`) whenever the key is provided, and that function is `OSSL_ENCODER_CTX_new_for_pkey` (`:53`) + `OSSL_ENCODER_to_data` (`:59`) + `OSSL_ENCODER_CTX_free` (`:64`). **D362 landed all three of those names** -- the encoder framework's three units (`crypto/encode_decode/encoder_meth.c`, `encoder_lib.c`, `encoder_pkey.c`) are now transcribed in `src/encoder_meth.rs`, `src/encoder_lib.rs` and `src/encoder_pkey.rs` -- so every blocker this row named has landed and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the five exports are still Phase 10's to write in the ledger's arithmetic, and only the authority *blocker* has landed. The non-provided arms remain Phase 8's (`i2d_PublicKey`'s `i2d_RSAPublicKey`/`i2d_DSAPublicKey`/`i2o_ECPublicKey`, `i2d_PrivateKey_impl`'s `ameth->old_priv_encode`/`EVP_PKEY2PKCS8`), so a `Blocker` row would be stale on the day it was written.",
         "symbol": "i2d_KeyParams"
       },
       {
         "binding_phase": 10,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_lib.c",
-            "kind": "exported",
-            "line": 119,
-            "name": "OSSL_ENCODER_to_data",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_meth.c",
-            "kind": "exported",
-            "line": 645,
-            "name": "OSSL_ENCODER_CTX_free",
-            "owning_phase": 10
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "evp.h",
         "owning_phase": 10,
-        "reason": "all five reach `i2d_provided` (`crypto/asn1/i2d_evp.c:33`) whenever the key is provided, and that function is `OSSL_ENCODER_CTX_new_for_pkey` (`:53`) + `OSSL_ENCODER_to_data` (`:59`) + `OSSL_ENCODER_CTX_free` (`:64`), `encoder.h`'s and Phase 10's. Their non-provided arms are Phase 8's as well -- `i2d_PublicKey`'s `switch` calls `i2d_RSAPublicKey`/`i2d_DSAPublicKey`/`i2o_ECPublicKey` (`:159`, `:162`, `:165`) through `EVP_PKEY_get0_RSA`/`_DSA`/`_EC_KEY`, and `i2d_PrivateKey_impl`'s calls `a->ameth->old_priv_encode` (`:106`) and `EVP_PKEY2PKCS8` (`crypto/evp/evp_pkey.c:129`, itself an encoder context) -- so Phase 8 feeds these five too and Phase 10 is the binding one. **D353 retired the `ossl_rsa_asn1_meths` blocker**, so the ameth side is no longer absent and the row's `blocked_by` is the three Phase 10 encoder names alone.",
+        "reason": "all five reach `i2d_provided` (`crypto/asn1/i2d_evp.c:33`) whenever the key is provided, and that function is `OSSL_ENCODER_CTX_new_for_pkey` (`:53`) + `OSSL_ENCODER_to_data` (`:59`) + `OSSL_ENCODER_CTX_free` (`:64`). **D362 landed all three of those names** -- the encoder framework's three units (`crypto/encode_decode/encoder_meth.c`, `encoder_lib.c`, `encoder_pkey.c`) are now transcribed in `src/encoder_meth.rs`, `src/encoder_lib.rs` and `src/encoder_pkey.rs` -- so every blocker this row named has landed and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the five exports are still Phase 10's to write in the ledger's arithmetic, and only the authority *blocker* has landed. The non-provided arms remain Phase 8's (`i2d_PublicKey`'s `i2d_RSAPublicKey`/`i2d_DSAPublicKey`/`i2o_ECPublicKey`, `i2d_PrivateKey_impl`'s `ameth->old_priv_encode`/`EVP_PKEY2PKCS8`), so a `Blocker` row would be stale on the day it was written.",
         "symbol": "i2d_KeyParams_bio"
       },
       {
         "binding_phase": 10,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_lib.c",
-            "kind": "exported",
-            "line": 119,
-            "name": "OSSL_ENCODER_to_data",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_meth.c",
-            "kind": "exported",
-            "line": 645,
-            "name": "OSSL_ENCODER_CTX_free",
-            "owning_phase": 10
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "evp.h",
         "owning_phase": 10,
-        "reason": "all five reach `i2d_provided` (`crypto/asn1/i2d_evp.c:33`) whenever the key is provided, and that function is `OSSL_ENCODER_CTX_new_for_pkey` (`:53`) + `OSSL_ENCODER_to_data` (`:59`) + `OSSL_ENCODER_CTX_free` (`:64`), `encoder.h`'s and Phase 10's. Their non-provided arms are Phase 8's as well -- `i2d_PublicKey`'s `switch` calls `i2d_RSAPublicKey`/`i2d_DSAPublicKey`/`i2o_ECPublicKey` (`:159`, `:162`, `:165`) through `EVP_PKEY_get0_RSA`/`_DSA`/`_EC_KEY`, and `i2d_PrivateKey_impl`'s calls `a->ameth->old_priv_encode` (`:106`) and `EVP_PKEY2PKCS8` (`crypto/evp/evp_pkey.c:129`, itself an encoder context) -- so Phase 8 feeds these five too and Phase 10 is the binding one. **D353 retired the `ossl_rsa_asn1_meths` blocker**, so the ameth side is no longer absent and the row's `blocked_by` is the three Phase 10 encoder names alone.",
+        "reason": "all five reach `i2d_provided` (`crypto/asn1/i2d_evp.c:33`) whenever the key is provided, and that function is `OSSL_ENCODER_CTX_new_for_pkey` (`:53`) + `OSSL_ENCODER_to_data` (`:59`) + `OSSL_ENCODER_CTX_free` (`:64`). **D362 landed all three of those names** -- the encoder framework's three units (`crypto/encode_decode/encoder_meth.c`, `encoder_lib.c`, `encoder_pkey.c`) are now transcribed in `src/encoder_meth.rs`, `src/encoder_lib.rs` and `src/encoder_pkey.rs` -- so every blocker this row named has landed and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the five exports are still Phase 10's to write in the ledger's arithmetic, and only the authority *blocker* has landed. The non-provided arms remain Phase 8's (`i2d_PublicKey`'s `i2d_RSAPublicKey`/`i2d_DSAPublicKey`/`i2o_ECPublicKey`, `i2d_PrivateKey_impl`'s `ameth->old_priv_encode`/`EVP_PKEY2PKCS8`), so a `Blocker` row would be stale on the day it was written.",
         "symbol": "i2d_PKCS8PrivateKey"
       },
       {
         "binding_phase": 10,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_lib.c",
-            "kind": "exported",
-            "line": 119,
-            "name": "OSSL_ENCODER_to_data",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_meth.c",
-            "kind": "exported",
-            "line": 645,
-            "name": "OSSL_ENCODER_CTX_free",
-            "owning_phase": 10
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "evp.h",
         "owning_phase": 10,
-        "reason": "all five reach `i2d_provided` (`crypto/asn1/i2d_evp.c:33`) whenever the key is provided, and that function is `OSSL_ENCODER_CTX_new_for_pkey` (`:53`) + `OSSL_ENCODER_to_data` (`:59`) + `OSSL_ENCODER_CTX_free` (`:64`), `encoder.h`'s and Phase 10's. Their non-provided arms are Phase 8's as well -- `i2d_PublicKey`'s `switch` calls `i2d_RSAPublicKey`/`i2d_DSAPublicKey`/`i2o_ECPublicKey` (`:159`, `:162`, `:165`) through `EVP_PKEY_get0_RSA`/`_DSA`/`_EC_KEY`, and `i2d_PrivateKey_impl`'s calls `a->ameth->old_priv_encode` (`:106`) and `EVP_PKEY2PKCS8` (`crypto/evp/evp_pkey.c:129`, itself an encoder context) -- so Phase 8 feeds these five too and Phase 10 is the binding one. **D353 retired the `ossl_rsa_asn1_meths` blocker**, so the ameth side is no longer absent and the row's `blocked_by` is the three Phase 10 encoder names alone.",
+        "reason": "all five reach `i2d_provided` (`crypto/asn1/i2d_evp.c:33`) whenever the key is provided, and that function is `OSSL_ENCODER_CTX_new_for_pkey` (`:53`) + `OSSL_ENCODER_to_data` (`:59`) + `OSSL_ENCODER_CTX_free` (`:64`). **D362 landed all three of those names** -- the encoder framework's three units (`crypto/encode_decode/encoder_meth.c`, `encoder_lib.c`, `encoder_pkey.c`) are now transcribed in `src/encoder_meth.rs`, `src/encoder_lib.rs` and `src/encoder_pkey.rs` -- so every blocker this row named has landed and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the five exports are still Phase 10's to write in the ledger's arithmetic, and only the authority *blocker* has landed. The non-provided arms remain Phase 8's (`i2d_PublicKey`'s `i2d_RSAPublicKey`/`i2d_DSAPublicKey`/`i2o_ECPublicKey`, `i2d_PrivateKey_impl`'s `ameth->old_priv_encode`/`EVP_PKEY2PKCS8`), so a `Blocker` row would be stale on the day it was written.",
         "symbol": "i2d_PrivateKey"
       },
       {
         "binding_phase": 10,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_lib.c",
-            "kind": "exported",
-            "line": 119,
-            "name": "OSSL_ENCODER_to_data",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_meth.c",
-            "kind": "exported",
-            "line": 645,
-            "name": "OSSL_ENCODER_CTX_free",
-            "owning_phase": 10
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "evp.h",
         "owning_phase": 10,
-        "reason": "all five reach `i2d_provided` (`crypto/asn1/i2d_evp.c:33`) whenever the key is provided, and that function is `OSSL_ENCODER_CTX_new_for_pkey` (`:53`) + `OSSL_ENCODER_to_data` (`:59`) + `OSSL_ENCODER_CTX_free` (`:64`), `encoder.h`'s and Phase 10's. Their non-provided arms are Phase 8's as well -- `i2d_PublicKey`'s `switch` calls `i2d_RSAPublicKey`/`i2d_DSAPublicKey`/`i2o_ECPublicKey` (`:159`, `:162`, `:165`) through `EVP_PKEY_get0_RSA`/`_DSA`/`_EC_KEY`, and `i2d_PrivateKey_impl`'s calls `a->ameth->old_priv_encode` (`:106`) and `EVP_PKEY2PKCS8` (`crypto/evp/evp_pkey.c:129`, itself an encoder context) -- so Phase 8 feeds these five too and Phase 10 is the binding one. **D353 retired the `ossl_rsa_asn1_meths` blocker**, so the ameth side is no longer absent and the row's `blocked_by` is the three Phase 10 encoder names alone.",
+        "reason": "all five reach `i2d_provided` (`crypto/asn1/i2d_evp.c:33`) whenever the key is provided, and that function is `OSSL_ENCODER_CTX_new_for_pkey` (`:53`) + `OSSL_ENCODER_to_data` (`:59`) + `OSSL_ENCODER_CTX_free` (`:64`). **D362 landed all three of those names** -- the encoder framework's three units (`crypto/encode_decode/encoder_meth.c`, `encoder_lib.c`, `encoder_pkey.c`) are now transcribed in `src/encoder_meth.rs`, `src/encoder_lib.rs` and `src/encoder_pkey.rs` -- so every blocker this row named has landed and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the five exports are still Phase 10's to write in the ledger's arithmetic, and only the authority *blocker* has landed. The non-provided arms remain Phase 8's (`i2d_PublicKey`'s `i2d_RSAPublicKey`/`i2d_DSAPublicKey`/`i2o_ECPublicKey`, `i2d_PrivateKey_impl`'s `ameth->old_priv_encode`/`EVP_PKEY2PKCS8`), so a `Blocker` row would be stale on the day it was written.",
         "symbol": "i2d_PublicKey"
       }
     ],
     "deferred_by_phase": {
       "8": 27,
       "9": 12,
-      "10": 16,
+      "10": 10,
       "11": 5,
       "13": 163
     },
@@ -3239,6 +2934,12 @@
       "EVP_PKEY_parameters_eq",
       "EVP_PKEY_paramgen",
       "EVP_PKEY_paramgen_init",
+      "EVP_PKEY_print_params",
+      "EVP_PKEY_print_params_fp",
+      "EVP_PKEY_print_private",
+      "EVP_PKEY_print_private_fp",
+      "EVP_PKEY_print_public",
+      "EVP_PKEY_print_public_fp",
       "EVP_PKEY_private_check",
       "EVP_PKEY_public_check",
       "EVP_PKEY_public_check_quick",
@@ -3745,7 +3446,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "f6a6924cab270cf5319648443f50141a3de0202f630f891c96bbc2bc7f720803"
+      "sha256": "3a9833e6c51e6e5e945f26b63431ef4922d650e5e32fdb87b840f7ad7b55ce0a"
     },
     {
       "name": "export-defining-units",
@@ -3755,7 +3456,7 @@
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "2554500d4cf89b76bc42eb61e91561e457e0cff0607cdf83aa3907d917500d77"
+      "sha256": "478b36dbf4fc965d707d74de7730f369e97b5348351f805d374a42a7bc3d13c2"
     },
     {
       "name": "typedef-owners",
@@ -3765,12 +3466,12 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "3cb6d006a8d54df9e85c3a8e01ad0af3aede7526a87395c084fae37f7b1c8ce2"
+      "sha256": "1bd98690c837100f708693dcd60472f46ea74d40a2c4e78e940b0de4ae97b5fc"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "09717edb63758357bd92e78ce20bf13d384fecc82e24a7b6d3791505f037b3ce"
+      "sha256": "32148e7ef0798cc07e8a9140a9c5ade123abc2f442eb61cdefc04cdc2c96a756"
     },
     {
       "name": "authority-source-tree-and-crate-source",
@@ -3779,7 +3480,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "76c762be80d5bf3312ee597fa43152c1f011272a1c266974b6ff8f41c9d2442a"
+      "sha256": "b2c025dba936299d12435536b4bfc83ad47a0ae9f4a64e3ad250329323ca3dfd"
     }
   ],
   "kind": "phase7-obligations",

@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 3106,
+      "sites": 3114,
       "unattributed": 0
     },
     "covered_files": [
@@ -223,6 +223,7 @@
       "crypto/rsa/rsa_asn1.c",
       "crypto/rsa/rsa_mp.c",
       "crypto/rsa/rsa_prn.c",
+      "crypto/dsa/dsa_prn.c",
       "crypto/rsa/rsa_sp800_56b_check.c",
       "crypto/rsa/rsa_sp800_56b_gen.c",
       "crypto/rsa/rsa_x931g.c",
@@ -284,7 +285,8 @@
       "crypto/pem/pem_all.c",
       "crypto/passphrase.c",
       "crypto/encode_decode/encoder_meth.c",
-      "crypto/encode_decode/encoder_lib.c"
+      "crypto/encode_decode/encoder_lib.c",
+      "crypto/encode_decode/encoder_pkey.c"
     ],
     "note": "`file` is the authority's `__FILE__` string, derived from relpath(source_tree, build_dir) of the admitted build record. It is a build artifact of the forensic build, reproduced exactly rather than normalized away, so the candidate's ERR records compare byte-for-byte with the authority's.",
     "prefix": "../../src/openssl-3.6.4/",
@@ -34919,6 +34921,36 @@
         "rel_source": "crypto/rsa/rsa_prn.c"
       },
       {
+        "const_name": "DSA_PRN_28",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/dsa/dsa_prn.c",
+        "function": "DSA_print_fp",
+        "generated": false,
+        "lib": 10,
+        "lib_symbol": "ERR_LIB_DSA",
+        "line": 28,
+        "macro": "ERR_raise",
+        "reason": 524295,
+        "reason_symbol": "ERR_R_BUF_LIB",
+        "rel_source": "crypto/dsa/dsa_prn.c"
+      },
+      {
+        "const_name": "DSA_PRN_43",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/dsa/dsa_prn.c",
+        "function": "DSAparams_print_fp",
+        "generated": false,
+        "lib": 10,
+        "lib_symbol": "ERR_LIB_DSA",
+        "line": 43,
+        "macro": "ERR_raise",
+        "reason": 524295,
+        "reason_symbol": "ERR_R_BUF_LIB",
+        "rel_source": "crypto/dsa/dsa_prn.c"
+      },
+      {
         "const_name": "RSA_SP800_56B_CHECK_294",
         "data_format": null,
         "dynamic_reason": false,
@@ -46977,6 +47009,96 @@
         "reason": 786691,
         "reason_symbol": "ERR_R_INTERNAL_ERROR",
         "rel_source": "crypto/encode_decode/encoder_lib.c"
+      },
+      {
+        "const_name": "ENCODER_PKEY_239",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/encode_decode/encoder_pkey.c",
+        "function": "ossl_encoder_ctx_setup_for_pkey",
+        "generated": false,
+        "lib": 59,
+        "lib_symbol": "ERR_LIB_OSSL_ENCODER",
+        "line": 239,
+        "macro": "ERR_raise",
+        "reason": 786690,
+        "reason_symbol": "ERR_R_PASSED_NULL_PARAMETER",
+        "rel_source": "crypto/encode_decode/encoder_pkey.c"
+      },
+      {
+        "const_name": "ENCODER_PKEY_261",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/encode_decode/encoder_pkey.c",
+        "function": "ossl_encoder_ctx_setup_for_pkey",
+        "generated": false,
+        "lib": 59,
+        "lib_symbol": "ERR_LIB_OSSL_ENCODER",
+        "line": 261,
+        "macro": "ERR_raise",
+        "reason": 524303,
+        "reason_symbol": "ERR_R_CRYPTO_LIB",
+        "rel_source": "crypto/encode_decode/encoder_pkey.c"
+      },
+      {
+        "const_name": "ENCODER_PKEY_316",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/encode_decode/encoder_pkey.c",
+        "function": "ossl_encoder_ctx_setup_for_pkey",
+        "generated": false,
+        "lib": 59,
+        "lib_symbol": "ERR_LIB_OSSL_ENCODER",
+        "line": 316,
+        "macro": "ERR_raise",
+        "reason": 524303,
+        "reason_symbol": "ERR_R_CRYPTO_LIB",
+        "rel_source": "crypto/encode_decode/encoder_pkey.c"
+      },
+      {
+        "const_name": "ENCODER_PKEY_352",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/encode_decode/encoder_pkey.c",
+        "function": "OSSL_ENCODER_CTX_new_for_pkey",
+        "generated": false,
+        "lib": 59,
+        "lib_symbol": "ERR_LIB_OSSL_ENCODER",
+        "line": 352,
+        "macro": "ERR_raise",
+        "reason": 786690,
+        "reason_symbol": "ERR_R_PASSED_NULL_PARAMETER",
+        "rel_source": "crypto/encode_decode/encoder_pkey.c"
+      },
+      {
+        "const_name": "ENCODER_PKEY_357",
+        "data_format": "\"The passed EVP_PKEY must be assigned a key\"",
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/encode_decode/encoder_pkey.c",
+        "function": "OSSL_ENCODER_CTX_new_for_pkey",
+        "generated": false,
+        "lib": 59,
+        "lib_symbol": "ERR_LIB_OSSL_ENCODER",
+        "line": 357,
+        "macro": "ERR_raise_data",
+        "reason": 524550,
+        "reason_symbol": "ERR_R_PASSED_INVALID_ARGUMENT",
+        "rel_source": "crypto/encode_decode/encoder_pkey.c"
+      },
+      {
+        "const_name": "ENCODER_PKEY_363",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/encode_decode/encoder_pkey.c",
+        "function": "OSSL_ENCODER_CTX_new_for_pkey",
+        "generated": false,
+        "lib": 59,
+        "lib_symbol": "ERR_LIB_OSSL_ENCODER",
+        "line": 363,
+        "macro": "ERR_raise",
+        "reason": 524347,
+        "reason_symbol": "ERR_R_OSSL_ENCODER_LIB",
+        "rel_source": "crypto/encode_decode/encoder_pkey.c"
       }
     ],
     "unattributed": [],
@@ -48070,6 +48192,11 @@
       "sha256": "86ad4622f8a266181a06b2ba937255877e307585c9e0dcd7a3c9e25eda446158"
     },
     {
+      "name": "authority:crypto/dsa/dsa_prn.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/dsa/dsa_prn.c",
+      "sha256": "f994ef25648f7f53ad8225fee1c31c8b8758435312abe19949825e78d82c89be"
+    },
+    {
       "name": "authority:crypto/rsa/rsa_sp800_56b_check.c",
       "path": "forensics/authorities/src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
       "sha256": "8dad637222dc9737a48f9426e4643f40f4f31b083ff9dcdf4507d76d8895aacc"
@@ -48378,6 +48505,11 @@
       "name": "authority:crypto/encode_decode/encoder_lib.c",
       "path": "forensics/authorities/src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
       "sha256": "4dfebdf8910236104281e0ae829ac17399ec079a973ae21ebdb7d959d6f23dbc"
+    },
+    {
+      "name": "authority:crypto/encode_decode/encoder_pkey.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/encode_decode/encoder_pkey.c",
+      "sha256": "7c1c70b1a9b1a649cb9ad0096f4ddfc675187e3598acd82e2387fc699fca769f"
     }
   ],
   "kind": "err-raise-sites",

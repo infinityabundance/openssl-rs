@@ -27,11 +27,14 @@
  * answered is reachable there -- a boolean, which the two sides agree on because the eleven shared
  * rows are the same objects.
  *
- * **The eight `RSA_print`/`DSA_print`/`EC_KEY_print` family printers.** They call
- * `EVP_PKEY_print_private`/`_params`, which are `crypto/evp/p_lib.c`'s exports and **absent from this
- * crate's compiled surface** -- measured with `nm` on `target/release/libopenssl_rs.a`, not read from
- * a ledger. A probe cannot link, let alone call, a symbol that is not there, so the print arms the
- * integration plan's section 7 lists are withheld with the eight printers themselves.
+ * **The eight `RSA_print`/`DSA_print`/`EC_KEY_print` family printers are observed, not withheld.**
+ * D362 landed `crypto/encode_decode/`'s framework and `print_pkey` (`crypto/evp/p_lib.c:1196`), so
+ * the encoder-first arm answers a context whose `OSSL_ENCODER_CTX_get_num_encoders` is **0** on
+ * every key this crate can build -- no provider encoder is registered here -- and the authority's
+ * own fall-through to `ameth->priv_print`/`params_print`/`pub_print` is the live path. Arm 9 calls
+ * the eight printers and the six `EVP_PKEY_print_*` entry points directly, builds each key from a
+ * fixed non-secret probe constant, and observes only a return code, a length reduced to a boolean
+ * and `memmem` verdicts over a buffer it never prints.
  *
  * **`EVP_PKEY_meth_find`/`_get0`/`_get_count` are observed, not withheld.** The second
  * `standard_methods[]` — `crypto/evp/pmeth_lib.c`'s array of `pmeth_fn` accessors — landed with
@@ -60,6 +63,7 @@
 
 #include <openssl/asn1.h>
 #include <openssl/bio.h>
+#include <openssl/bn.h>
 #include <openssl/crypto.h>
 #include <openssl/dh.h>
 #include <openssl/dsa.h>
@@ -699,6 +703,340 @@ static void coverage_arms(void)
         DH_free(dh);
 }
 
+/* ------------------------------------------------------------------ arm 9: the printers */
+
+/* A fixed, non-secret 32-byte probe constant, so each printer takes the header path that names its
+ * key rather than the "no value" refusal: `BN_num_bits` of it is 256 on both sides. 65537 is its
+ * public exponent. These are **the probe's own constants**, not any library value. */
+static const unsigned char FIXED32[32] = {
+    0x0b, 0xad, 0xf0, 0x0d, 0x53, 0x78, 0x9e, 0x21,
+    0x46, 0x93, 0xc1, 0x7e, 0x2a, 0xd4, 0x88, 0x35,
+    0x9f, 0x60, 0x3c, 0xb7, 0x14, 0xe2, 0x7d, 0xa8,
+    0x50, 0x8b, 0x6f, 0xd1, 0x39, 0x26, 0xc4, 0x7b
+};
+static const unsigned char EXP65537[3] = { 0x01, 0x00, 0x01 };
+
+/* Is `needle` present in the first `n` bytes of `buf`? Only the verdict reaches the transcript. */
+static int has(const char *buf, int n, const char *needle)
+{
+    size_t L = strlen(needle);
+
+    return L <= (size_t)n && memmem(buf, (size_t)n, needle, L) != NULL;
+}
+
+/* The buffer a memory BIO holds, reduced to its length; the bytes are never printed. */
+static int drain_bio(BIO *b, char *buf, int cap)
+{
+    int n = BIO_read(b, buf, cap - 1);
+
+    if (n < 0)
+        n = 0;
+    buf[n] = '\0';
+    return n;
+}
+
+/* The leading four spaces `print_set_indent` (`crypto/evp/p_lib.c:1162`) installs through a
+ * `BIO_f_prefix`, reduced to a boolean. */
+static int indent4(const char *buf, int n)
+{
+    return n >= 4 && buf[0] == ' ' && buf[1] == ' ' && buf[2] == ' ' && buf[3] == ' ';
+}
+
+/* The eight printers and the six `EVP_PKEY_print_*` entry points they reach. Each arm builds its
+ * key from `FIXED32`, observes a return code and three `memmem` verdicts, and discards the buffer
+ * unprinted -- **no arm prints a byte of any key**. The `_fp` twins go through a `tmpfile()` so the
+ * `FILE *` leg is exercised rather than assumed. */
+static void print_arms(void)
+{
+    char buf[512];
+    int n;
+
+    /* RSA: `n`, `e` and `d` set, so `pkey_rsa_print`'s private arm prints the "Private-Key" header. */
+    {
+        RSA *rsa = RSA_new();
+        BIO *b = BIO_new(BIO_s_mem());
+        BIGNUM *nn = NULL, *ee = NULL, *dd = NULL;
+        int ok;
+
+        if (rsa != NULL) {
+            nn = BN_bin2bn(FIXED32, (int)sizeof(FIXED32), NULL);
+            ee = BN_bin2bn(EXP65537, (int)sizeof(EXP65537), NULL);
+            dd = BN_bin2bn(FIXED32, (int)sizeof(FIXED32), NULL);
+        }
+        ok = b != NULL && rsa != NULL && nn != NULL && ee != NULL && dd != NULL
+            && RSA_set0_key(rsa, nn, ee, dd) == 1;
+        printf("ameth.print.rsa.built=%d\n", ok);
+        if (ok) {
+            nn = ee = dd = NULL; /* the RSA owns them now */
+            printf("ameth.print.rsa.ret=%d\n", RSA_print(b, rsa, 4));
+            n = drain_bio(b, buf, (int)sizeof(buf));
+            printf("ameth.print.rsa.len_pos=%d\n", n > 0);
+            printf("ameth.print.rsa.indent4=%d\n", indent4(buf, n));
+            printf("ameth.print.rsa.header=%d\n",
+                has(buf, n, "RSA Private-Key: (256 bit, 2 primes)"));
+        }
+        BN_free(nn);
+        BN_free(ee);
+        BN_free(dd);
+        RSA_free(rsa);
+        BIO_free(b);
+    }
+
+    /* DSA: `p`/`q`/`g` and both keys set, so `do_dsa_print`'s ptype-2 arm prints "Private-Key". */
+    {
+        DSA *dsa = DSA_new();
+        BIO *b = BIO_new(BIO_s_mem());
+        BIO *b2 = BIO_new(BIO_s_mem());
+        BIGNUM *p = NULL, *q = NULL, *g = NULL, *pub = NULL, *priv = NULL;
+        int ok;
+
+        if (dsa != NULL) {
+            p = BN_bin2bn(FIXED32, (int)sizeof(FIXED32), NULL);
+            q = BN_bin2bn(FIXED32, (int)sizeof(FIXED32), NULL);
+            g = BN_bin2bn(FIXED32, (int)sizeof(FIXED32), NULL);
+            pub = BN_bin2bn(FIXED32, (int)sizeof(FIXED32), NULL);
+            priv = BN_bin2bn(FIXED32, (int)sizeof(FIXED32), NULL);
+        }
+        ok = b != NULL && b2 != NULL && dsa != NULL && p != NULL && q != NULL && g != NULL
+            && pub != NULL && priv != NULL && DSA_set0_pqg(dsa, p, q, g) == 1
+            && DSA_set0_key(dsa, pub, priv) == 1;
+        printf("ameth.print.dsa.built=%d\n", ok);
+        if (ok) {
+            p = q = g = pub = priv = NULL; /* the DSA owns them now */
+            printf("ameth.print.dsa.ret=%d\n", DSA_print(b, dsa, 4));
+            n = drain_bio(b, buf, (int)sizeof(buf));
+            printf("ameth.print.dsa.len_pos=%d\n", n > 0);
+            printf("ameth.print.dsa.indent4=%d\n", indent4(buf, n));
+            printf("ameth.print.dsa.header=%d\n", has(buf, n, "Private-Key: (256 bit)"));
+
+            /* `DSAparams_print` selects ptype 0, whose header line is the authority's own
+             * "Public-Key" -- the indent still comes from the prefix filter, not the arm. */
+            printf("ameth.print.dsaparams.ret=%d\n", DSAparams_print(b2, dsa));
+            n = drain_bio(b2, buf, (int)sizeof(buf));
+            printf("ameth.print.dsaparams.len_pos=%d\n", n > 0);
+            printf("ameth.print.dsaparams.indent4=%d\n", indent4(buf, n));
+            printf("ameth.print.dsaparams.header=%d\n", has(buf, n, "Public-Key: (256 bit)"));
+        }
+        BN_free(p);
+        BN_free(q);
+        BN_free(g);
+        BN_free(pub);
+        BN_free(priv);
+        DSA_free(dsa);
+        BIO_free(b);
+        BIO_free(b2);
+    }
+
+    /* EC: a named curve with no key material, so `EC_KEY_print` takes the public arm and the
+     * header names the group's order -- a public constant. */
+    {
+        EC_KEY *ec = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+        BIO *b = BIO_new(BIO_s_mem());
+        int ok = b != NULL && ec != NULL;
+
+        printf("ameth.print.ec.built=%d\n", ok);
+        if (ok) {
+            printf("ameth.print.ec.ret=%d\n", EC_KEY_print(b, ec, 4));
+            n = drain_bio(b, buf, (int)sizeof(buf));
+            printf("ameth.print.ec.len_pos=%d\n", n > 0);
+            printf("ameth.print.ec.indent4=%d\n", indent4(buf, n));
+            printf("ameth.print.ec.header=%d\n", has(buf, n, "Public-Key: (256 bit)"));
+        }
+        EC_KEY_free(ec);
+        BIO_free(b);
+    }
+
+    /* The three `_fp` twins. A `tmpfile()` is rewound and read once; the bytes are reduced to
+     * verdicts and the file is closed unread by the transcript. */
+    {
+        RSA *rsa = RSA_new();
+        BIGNUM *nn = NULL, *ee = NULL, *dd = NULL;
+        FILE *fp = tmpfile();
+        int ok;
+
+        if (rsa != NULL) {
+            nn = BN_bin2bn(FIXED32, (int)sizeof(FIXED32), NULL);
+            ee = BN_bin2bn(EXP65537, (int)sizeof(EXP65537), NULL);
+            dd = BN_bin2bn(FIXED32, (int)sizeof(FIXED32), NULL);
+        }
+        ok = fp != NULL && rsa != NULL && nn != NULL && ee != NULL && dd != NULL
+            && RSA_set0_key(rsa, nn, ee, dd) == 1;
+        printf("ameth.print.rsa_fp.built=%d\n", ok);
+        if (ok) {
+            size_t got;
+
+            nn = ee = dd = NULL;
+            printf("ameth.print.rsa_fp.ret=%d\n", RSA_print_fp(fp, rsa, 4));
+            fflush(fp);
+            fseek(fp, 0, SEEK_SET);
+            got = fread(buf, 1, sizeof(buf) - 1, fp);
+            buf[got] = '\0';
+            printf("ameth.print.rsa_fp.len_pos=%d\n", got > 0);
+            printf("ameth.print.rsa_fp.indent4=%d\n", indent4(buf, (int)got));
+            printf("ameth.print.rsa_fp.header=%d\n",
+                has(buf, (int)got, "RSA Private-Key: (256 bit, 2 primes)"));
+        }
+        BN_free(nn);
+        BN_free(ee);
+        BN_free(dd);
+        RSA_free(rsa);
+        if (fp != NULL)
+            fclose(fp);
+    }
+
+    {
+        DSA *dsa = DSA_new();
+        BIGNUM *p = NULL, *q = NULL, *g = NULL, *pub = NULL, *priv = NULL;
+        FILE *fp = tmpfile();
+        FILE *fp2 = tmpfile();
+        int ok;
+
+        if (dsa != NULL) {
+            p = BN_bin2bn(FIXED32, (int)sizeof(FIXED32), NULL);
+            q = BN_bin2bn(FIXED32, (int)sizeof(FIXED32), NULL);
+            g = BN_bin2bn(FIXED32, (int)sizeof(FIXED32), NULL);
+            pub = BN_bin2bn(FIXED32, (int)sizeof(FIXED32), NULL);
+            priv = BN_bin2bn(FIXED32, (int)sizeof(FIXED32), NULL);
+        }
+        ok = fp != NULL && fp2 != NULL && dsa != NULL && p != NULL && q != NULL && g != NULL
+            && pub != NULL && priv != NULL && DSA_set0_pqg(dsa, p, q, g) == 1
+            && DSA_set0_key(dsa, pub, priv) == 1;
+        printf("ameth.print.dsa_fp.built=%d\n", ok);
+        if (ok) {
+            size_t got, got2;
+
+            p = q = g = pub = priv = NULL;
+            printf("ameth.print.dsa_fp.ret=%d\n", DSA_print_fp(fp, dsa, 4));
+            fflush(fp);
+            fseek(fp, 0, SEEK_SET);
+            got = fread(buf, 1, sizeof(buf) - 1, fp);
+            buf[got] = '\0';
+            printf("ameth.print.dsa_fp.len_pos=%d\n", got > 0);
+            printf("ameth.print.dsa_fp.indent4=%d\n", indent4(buf, (int)got));
+            printf("ameth.print.dsa_fp.header=%d\n", has(buf, (int)got, "Private-Key: (256 bit)"));
+
+            printf("ameth.print.dsaparams_fp.ret=%d\n", DSAparams_print_fp(fp2, dsa));
+            fflush(fp2);
+            fseek(fp2, 0, SEEK_SET);
+            got2 = fread(buf, 1, sizeof(buf) - 1, fp2);
+            buf[got2] = '\0';
+            printf("ameth.print.dsaparams_fp.len_pos=%d\n", got2 > 0);
+            printf("ameth.print.dsaparams_fp.indent4=%d\n", indent4(buf, (int)got2));
+            printf("ameth.print.dsaparams_fp.header=%d\n",
+                has(buf, (int)got2, "Public-Key: (256 bit)"));
+        }
+        BN_free(p);
+        BN_free(q);
+        BN_free(g);
+        BN_free(pub);
+        BN_free(priv);
+        DSA_free(dsa);
+        if (fp != NULL)
+            fclose(fp);
+        if (fp2 != NULL)
+            fclose(fp2);
+    }
+
+    {
+        EC_KEY *ec = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+        FILE *fp = tmpfile();
+        int ok = fp != NULL && ec != NULL;
+
+        printf("ameth.print.ec_fp.built=%d\n", ok);
+        if (ok) {
+            size_t got;
+
+            printf("ameth.print.ec_fp.ret=%d\n", EC_KEY_print_fp(fp, ec, 4));
+            fflush(fp);
+            fseek(fp, 0, SEEK_SET);
+            got = fread(buf, 1, sizeof(buf) - 1, fp);
+            buf[got] = '\0';
+            printf("ameth.print.ec_fp.len_pos=%d\n", got > 0);
+            printf("ameth.print.ec_fp.indent4=%d\n", indent4(buf, (int)got));
+            printf("ameth.print.ec_fp.header=%d\n", has(buf, (int)got, "Public-Key: (256 bit)"));
+        }
+        EC_KEY_free(ec);
+        if (fp != NULL)
+            fclose(fp);
+    }
+
+    /* The six `EVP_PKEY_print_*` entry points directly, on the RSA key above. The private and public
+     * spellings reach `rsa_priv_print`/`rsa_pub_print`; `_params` reaches no `param_print` on RSA,
+     * so it takes `unsup_alg`'s own line -- both are observations, not failures. */
+    {
+        EVP_PKEY *pk = EVP_PKEY_new();
+        RSA *rsa = RSA_new();
+        BIGNUM *nn = NULL, *ee = NULL, *dd = NULL;
+        BIO *b = BIO_new(BIO_s_mem());
+        int ok;
+
+        if (rsa != NULL) {
+            nn = BN_bin2bn(FIXED32, (int)sizeof(FIXED32), NULL);
+            ee = BN_bin2bn(EXP65537, (int)sizeof(EXP65537), NULL);
+            dd = BN_bin2bn(FIXED32, (int)sizeof(FIXED32), NULL);
+        }
+        ok = b != NULL && pk != NULL && rsa != NULL && nn != NULL && ee != NULL && dd != NULL
+            && RSA_set0_key(rsa, nn, ee, dd) == 1
+            && EVP_PKEY_assign(pk, EVP_PKEY_RSA, rsa) == 1;
+        printf("ameth.print.pkey.built=%d\n", ok);
+        if (ok) {
+            nn = ee = dd = NULL;
+            rsa = NULL; /* the EVP_PKEY owns it now */
+            printf("ameth.print.pkey.private=%d\n", EVP_PKEY_print_private(b, pk, 4, NULL));
+            n = drain_bio(b, buf, (int)sizeof(buf));
+            printf("ameth.print.pkey.private_indent4=%d\n", indent4(buf, n));
+            printf("ameth.print.pkey.private_header=%d\n",
+                has(buf, n, "RSA Private-Key: (256 bit, 2 primes)"));
+
+            BIO_free(b);
+            b = BIO_new(BIO_s_mem());
+            printf("ameth.print.pkey.public=%d\n", EVP_PKEY_print_public(b, pk, 4, NULL));
+            n = drain_bio(b, buf, (int)sizeof(buf));
+            printf("ameth.print.pkey.public_indent4=%d\n", indent4(buf, n));
+            printf("ameth.print.pkey.public_header=%d\n",
+                has(buf, n, "RSA Public-Key: (256 bit)"));
+
+            BIO_free(b);
+            b = BIO_new(BIO_s_mem());
+            printf("ameth.print.pkey.params=%d\n", EVP_PKEY_print_params(b, pk, 4, NULL));
+            n = drain_bio(b, buf, (int)sizeof(buf));
+            printf("ameth.print.pkey.params_indent4=%d\n", indent4(buf, n));
+            printf("ameth.print.pkey.params_unsup=%d\n",
+                has(buf, n, "algorithm \"rsaEncryption\" unsupported"));
+
+            /* The three `_fp` twins directly, each through its own `tmpfile()`. */
+            {
+                FILE *fp = tmpfile();
+                int r1 = -1, r2 = -1, r3 = -1;
+
+                if (fp != NULL) {
+                    r1 = EVP_PKEY_print_private_fp(fp, pk, 4, NULL);
+                    fclose(fp);
+                }
+                fp = tmpfile();
+                if (fp != NULL) {
+                    r2 = EVP_PKEY_print_public_fp(fp, pk, 4, NULL);
+                    fclose(fp);
+                }
+                fp = tmpfile();
+                if (fp != NULL) {
+                    r3 = EVP_PKEY_print_params_fp(fp, pk, 4, NULL);
+                    fclose(fp);
+                }
+                printf("ameth.print.pkey.private_fp=%d\n", r1);
+                printf("ameth.print.pkey.public_fp=%d\n", r2);
+                printf("ameth.print.pkey.params_fp=%d\n", r3);
+            }
+        }
+        BN_free(nn);
+        BN_free(ee);
+        BN_free(dd);
+        RSA_free(rsa);
+        BIO_free(b);
+        EVP_PKEY_free(pk);
+    }
+}
+
 int main(void)
 {
     table_arms();
@@ -710,5 +1048,6 @@ int main(void)
     d2i_arms();
     pmeth_arms();
     coverage_arms();
+    print_arms();
     return 0;
 }
