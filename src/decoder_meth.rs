@@ -37,16 +37,17 @@
 //!
 //! ## What this pass withholds, and why each block cannot land before the next unit
 //!
-//! * **The fetch and construct-method block** -- `decoder_data_st`, `get_tmp_decoder_store`,
-//!   `dealloc_tmp_decoder_store`, `get_decoder_store`, `reserve_decoder_store`,
-//!   `unreserve_decoder_store`, `get_decoder_from_store`, `put_decoder_in_store`,
-//!   `construct_decoder`, `destruct_decoder`, `up_ref_decoder`, `free_decoder`,
-//!   `inner_ossl_decoder_fetch`, `OSSL_DECODER_fetch`, `do_one_data_st`/`do_one`,
-//!   `OSSL_DECODER_do_all_provided` and the two `ossl_decoder_up_ref`/`ossl_decoder_free`
-//!   thunks (`:88-231`, `:298-438`, `:552-608`). Every non-block caller of it is
-//!   `crypto/encode_decode/decoder_lib.c` (`OSSL_DECODER_do_all_provided` and
-//!   `OSSL_DECODER_fetch` from `OSSL_DECODER_CTX_add_extra`) or
-//!   `crypto/encode_decode/decoder_pkey.c`, which are items 3 and 4 of this chain.
+//! * **The fetch and construct-method block landed in D366.** `decoder_data_st`,
+//!   `get_tmp_decoder_store`, `dealloc_tmp_decoder_store`, `get_decoder_store`,
+//!   `reserve_decoder_store`, `unreserve_decoder_store`, `get_decoder_from_store`,
+//!   `put_decoder_in_store`, `construct_decoder`, `destruct_decoder`, `up_ref_decoder`,
+//!   `free_decoder`, `inner_ossl_decoder_fetch`, `OSSL_DECODER_fetch`, `do_one_data_st`/`do_one`,
+//!   `OSSL_DECODER_do_all_provided` and the two `ossl_decoder_up_ref`/`ossl_decoder_free` thunks
+//!   (`:88-231`, `:298-438`, `:552-608`) are below. Its first real callers are
+//!   `src/decoder_lib.rs`'s `OSSL_DECODER_CTX_add_extra` and `src/decoder_pkey.rs`'s
+//!   `OSSL_DECODER_CTX_new_for_pkey`; it lands before them because `do_all_provided` is what they
+//!   call, and it is self-contained -- every callee it reaches was landed with Phase 6, 7 or the
+//!   encoder chain.
 //! * **The context trio and the two context shapes landed in D364**, with `src/decoder_lib.rs`:
 //!   `OSSL_DECODER_CTX_new` (`:628`), `OSSL_DECODER_CTX_set_params` (`:637`) and
 //!   `OSSL_DECODER_CTX_free` (`:665`) are below, together with `OsslDecoderInstance` and
@@ -70,16 +71,26 @@ use core::sync::atomic::Ordering;
 
 use crate::context::dispatch::{entry_function, OsslDispatch, OSSL_DISPATCH_END};
 use crate::context::namemap::{
-    ossl_namemap_doall_names, ossl_namemap_name2num, ossl_namemap_stored,
+    ossl_namemap_add_names, ossl_namemap_doall_names, ossl_namemap_name2num,
+    ossl_namemap_name2num_n, ossl_namemap_num2name, ossl_namemap_stored,
 };
+use crate::context::{lib_ctx_get_data, lib_ctx_get_descriptor, OSSL_LIB_CTX_DECODER_STORE_INDEX};
 use crate::encoder_meth::OsslEndecodeBase;
 use crate::evp::algorithm::ossl_algorithm_get1_first_name;
+use crate::evp::method_store::{ossl_method_construct, OsslMethodConstructMethod};
 use crate::params::OsslParam;
 use crate::passphrase::OsslPassphraseData;
 use crate::property::list::OsslPropertyList;
 use crate::property::parse::ossl_parse_property;
+use crate::property::store::{
+    ossl_method_lock_store, ossl_method_store_add, ossl_method_store_cache_get,
+    ossl_method_store_cache_set, ossl_method_store_do_all, ossl_method_store_fetch,
+    ossl_method_store_free, ossl_method_store_new, ossl_method_unlock_store, OsslMethodStore,
+};
+use crate::provider::activate::OsslAlgorithm;
 use crate::provider::{ossl_provider_libctx, ossl_provider_up_ref, OsslProvider};
-use crate::runtime::err::{err_sites, raise_site};
+use crate::runtime::bio::print::BIO_snprintf;
+use crate::runtime::err::{err_sites, raise_site, raise_site_dynamic_data};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::stack::OpenSslStack;
 use crate::selftest::OsslCallback;
@@ -95,9 +106,6 @@ const NAME_SEPARATOR: c_char = b':' as c_char;
 ///
 /// **Twenty-one, not twenty**: the `OSSL_OP_*` ids skip 6-9 and the encoder's twenty is the
 /// neighbouring row, so a transcription that reused it would ask the method store for encoders.
-/// The fetch block that uses it is withheld with its reason above; the constant is here so the
-/// block lands complete.
-#[allow(dead_code)] // read by the withheld fetch block, next pass
 const OSSL_OP_DECODER: c_int = 21;
 
 // ---------------------------------------------------------------------------
@@ -284,7 +292,7 @@ pub unsafe extern "C" fn OSSL_DECODER_free(decoder: *mut OsslDecoder) {
 /// # Safety
 /// `algodef` must be a live algorithm definition whose `implementation` is a terminated dispatch
 /// table; `prov` must be NULL or live.
-#[allow(dead_code)] // read by the withheld fetch block and by `src/decoder_lib.rs`, next pass
+#[allow(dead_code)] // read by the withheld pkey half and by `decoder_lib.c`'s `collect_extra_decoder`
 pub(crate) unsafe fn ossl_decoder_from_algorithm(
     id: c_int,
     algodef: *const crate::provider::activate::OsslAlgorithm,
@@ -814,6 +822,522 @@ pub unsafe extern "C" fn OSSL_DECODER_CTX_free(ctx: *mut OsslDecoderCtx) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// The fetch and construct-method block — `decoder_meth.c:88-231`, `:298-438`, `:552-608`
+// ---------------------------------------------------------------------------
+
+/// `static void ossl_decoder_free(void *data)` — `decoder_meth.c:29-32`.
+///
+/// # Safety
+/// `data` must be a live `OsslDecoder`.
+unsafe extern "C" fn ossl_decoder_free(data: *mut c_void) {
+    // SAFETY: `data` is live per the contract.
+    unsafe { OSSL_DECODER_free(data.cast::<OsslDecoder>()) };
+}
+
+/// `static int ossl_decoder_up_ref(void *data)` — `decoder_meth.c:34-37`.
+///
+/// # Safety
+/// `data` must be a live `OsslDecoder`.
+unsafe extern "C" fn ossl_decoder_up_ref(data: *mut c_void) -> c_int {
+    // SAFETY: `data` is live per the contract.
+    unsafe { OSSL_DECODER_up_ref(data.cast::<OsslDecoder>()) }
+}
+
+/// `struct decoder_data_st` — `decoder_meth.c:76-86`.
+///
+/// The walk's state. `id`, `names` and `propquery` are filled by `inner_ossl_decoder_fetch` for the
+/// **get** callback's benefit; `tmp_store` is the temporary store the walk may create and
+/// [`dealloc_tmp_decoder_store`] releases; `flag_construct_error_occurred` is the one-bit flag that
+/// lets the fetch tell an unsupported algorithm from a failed constructor, projected as its
+/// four-byte storage.
+struct DecoderDataSt {
+    /// `OSSL_LIB_CTX *libctx`.
+    libctx: *mut c_void,
+    /// `int id`.
+    id: c_int,
+    /// `const char *names`.
+    names: *const c_char,
+    /// `const char *propquery`.
+    propquery: *const c_char,
+    /// `OSSL_METHOD_STORE *tmp_store`.
+    tmp_store: *mut OsslMethodStore,
+    /// `unsigned int flag_construct_error_occurred : 1`.
+    flag_construct_error_occurred: c_int,
+}
+
+/// The length of the first `':'`-separated name in `names`.
+///
+/// # Safety
+/// `names` must be NUL-terminated.
+unsafe fn first_name_len(names: *const c_char) -> usize {
+    let mut l = 0usize;
+    // SAFETY: `names` is NUL-terminated per the contract, so the scan stays inside it.
+    unsafe {
+        while *names.add(l) != 0 && *names.add(l) != NAME_SEPARATOR {
+            l += 1;
+        }
+    }
+    l
+}
+
+/// `static void *get_tmp_decoder_store(void *data)` — `decoder_meth.c:95-101`.
+///
+/// # Safety
+/// `data` must be a live `DecoderDataSt`.
+unsafe extern "C" fn get_tmp_decoder_store(data: *mut c_void) -> *mut c_void {
+    let methdata = data.cast::<DecoderDataSt>();
+    // SAFETY: `methdata` is live per the contract.
+    unsafe {
+        if (*methdata).tmp_store.is_null() {
+            (*methdata).tmp_store = ossl_method_store_new((*methdata).libctx);
+        }
+        (*methdata).tmp_store.cast::<c_void>()
+    }
+}
+
+/// `static void dealloc_tmp_decoder_store(void *store)` — `decoder_meth.c:103-107`.
+///
+/// # Safety
+/// `store` must be NULL or a store this file created.
+unsafe extern "C" fn dealloc_tmp_decoder_store(store: *mut c_void) {
+    if !store.is_null() {
+        // SAFETY: `store` is a store `get_tmp_decoder_store` created and nobody else released.
+        unsafe { ossl_method_store_free(store.cast::<OsslMethodStore>()) };
+    }
+}
+
+/// `static OSSL_METHOD_STORE *get_decoder_store(OSSL_LIB_CTX *libctx)` — `decoder_meth.c:110-113`.
+fn get_decoder_store(libctx: *mut c_void) -> *mut OsslMethodStore {
+    // `lib_ctx_get_data` is a SAFE function in this crate (D113), so the read is not guarded.
+    lib_ctx_get_data(libctx, OSSL_LIB_CTX_DECODER_STORE_INDEX).cast::<OsslMethodStore>()
+}
+
+/// `static int reserve_decoder_store(void *store, void *data)` — `decoder_meth.c:115-124`.
+///
+/// # Safety
+/// `store` NULL or a live store; `data` a live `DecoderDataSt`.
+unsafe extern "C" fn reserve_decoder_store(store: *mut c_void, data: *mut c_void) -> c_int {
+    let methdata = data.cast::<DecoderDataSt>();
+    let mut store = store.cast::<OsslMethodStore>();
+    if store.is_null() {
+        // SAFETY: `methdata` is live per the contract.
+        store = get_decoder_store(unsafe { (*methdata).libctx });
+        if store.is_null() {
+            return 0;
+        }
+    }
+    // SAFETY: `store` is live here.
+    unsafe { ossl_method_lock_store(store) }
+}
+
+/// `static int unreserve_decoder_store(void *store, void *data)` — `decoder_meth.c:126-135`.
+///
+/// # Safety
+/// As [`reserve_decoder_store`].
+unsafe extern "C" fn unreserve_decoder_store(store: *mut c_void, data: *mut c_void) -> c_int {
+    let methdata = data.cast::<DecoderDataSt>();
+    let mut store = store.cast::<OsslMethodStore>();
+    if store.is_null() {
+        // SAFETY: `methdata` is live per the contract.
+        store = get_decoder_store(unsafe { (*methdata).libctx });
+        if store.is_null() {
+            return 0;
+        }
+    }
+    // SAFETY: `store` is live here.
+    unsafe { ossl_method_unlock_store(store) }
+}
+
+/// `static void *get_decoder_from_store(void *store, const OSSL_PROVIDER **prov, void *data)` —
+/// `decoder_meth.c:138-172`.
+///
+/// # Safety
+/// `store` NULL or live; `prov` NULL or writable; `data` a live `DecoderDataSt`.
+unsafe extern "C" fn get_decoder_from_store(
+    store: *mut c_void,
+    prov: *mut *const OsslProvider,
+    data: *mut c_void,
+) -> *mut c_void {
+    let methdata = data.cast::<DecoderDataSt>();
+    let mut store = store.cast::<OsslMethodStore>();
+    let mut method: *mut c_void = ptr::null_mut();
+
+    // SAFETY: `methdata` is live per the contract.
+    unsafe {
+        let mut id = (*methdata).id;
+        if id == 0 && !(*methdata).names.is_null() {
+            let namemap = ossl_namemap_stored((*methdata).libctx);
+            if namemap.is_null() {
+                return ptr::null_mut();
+            }
+            let l = first_name_len((*methdata).names);
+            id = ossl_namemap_name2num_n(namemap, (*methdata).names, l);
+        }
+
+        if id == 0 {
+            return ptr::null_mut();
+        }
+
+        if store.is_null() {
+            store = get_decoder_store((*methdata).libctx);
+            if store.is_null() {
+                return ptr::null_mut();
+            }
+        }
+
+        if ossl_method_store_fetch(store, id, (*methdata).propquery, prov, &mut method) == 0 {
+            return ptr::null_mut();
+        }
+    }
+    method
+}
+
+/// `static int put_decoder_in_store(void *store, void *method, const OSSL_PROVIDER *prov,
+/// const char *names, const char *propdef, void *data)` — `decoder_meth.c:174-211`.
+///
+/// # Safety
+/// `store` NULL or live; `method` live; `prov` live; `names` NULL or NUL-terminated; `propdef` NULL
+/// or NUL-terminated; `data` a live `DecoderDataSt`.
+unsafe extern "C" fn put_decoder_in_store(
+    store: *mut c_void,
+    method: *mut c_void,
+    prov: *const OsslProvider,
+    names: *const c_char,
+    propdef: *const c_char,
+    data: *mut c_void,
+) -> c_int {
+    let methdata = data.cast::<DecoderDataSt>();
+    let mut store = store.cast::<OsslMethodStore>();
+
+    // SAFETY: `names` is NULL or NUL-terminated per the contract.
+    let l = if !names.is_null() {
+        // SAFETY: `names` is non-NULL and NUL-terminated here.
+        unsafe { first_name_len(names) }
+    } else {
+        0
+    };
+
+    // SAFETY: `methdata` is live per the contract.
+    unsafe {
+        let namemap = ossl_namemap_stored((*methdata).libctx);
+        if namemap.is_null() {
+            return 0;
+        }
+        let id = ossl_namemap_name2num_n(namemap, names, l);
+        if id == 0 {
+            return 0;
+        }
+
+        if store.is_null() {
+            store = get_decoder_store((*methdata).libctx);
+            if store.is_null() {
+                return 0;
+            }
+        }
+
+        ossl_method_store_add(
+            store,
+            prov,
+            id,
+            propdef,
+            method,
+            ossl_decoder_up_ref,
+            ossl_decoder_free,
+        )
+    }
+}
+
+/// `static void *construct_decoder(const OSSL_ALGORITHM *algodef, OSSL_PROVIDER *prov,
+/// void *data)` — `decoder_meth.c:298-333`.
+///
+/// # Safety
+/// `algodef` and `prov` must be live; `data` a live `DecoderDataSt`.
+unsafe extern "C" fn construct_decoder(
+    algodef: *const OsslAlgorithm,
+    prov: *mut OsslProvider,
+    data: *mut c_void,
+) -> *mut c_void {
+    let methdata = data.cast::<DecoderDataSt>();
+    // SAFETY: `prov` is live per the contract.
+    let libctx = unsafe { ossl_provider_libctx(prov) };
+    let namemap = ossl_namemap_stored(libctx);
+    // SAFETY: `algodef` is live per the contract.
+    let names = unsafe { (*algodef).algorithm_names };
+    // SAFETY: `namemap` is live or NULL, which `ossl_namemap_add_names` refuses.
+    let id = unsafe { ossl_namemap_add_names(namemap, 0, names, NAME_SEPARATOR) };
+    let method = if id != 0 {
+        // SAFETY: `algodef` and `prov` are live, and `id` is the number the name map just gave.
+        unsafe { ossl_decoder_from_algorithm(id, algodef, prov) }
+    } else {
+        ptr::null_mut()
+    };
+
+    if method.is_null() {
+        // SAFETY: `methdata` is live per the contract.
+        unsafe { (*methdata).flag_construct_error_occurred = 1 };
+    }
+    method.cast::<c_void>()
+}
+
+/// `static void destruct_decoder(void *method, void *data)` — `decoder_meth.c:336-339`.
+///
+/// # Safety
+/// `method` must be a live `OsslDecoder`; `data` is unused.
+unsafe extern "C" fn destruct_decoder(method: *mut c_void, _data: *mut c_void) {
+    // SAFETY: `method` is live per the contract.
+    unsafe { OSSL_DECODER_free(method.cast::<OsslDecoder>()) };
+}
+
+/// `static int up_ref_decoder(void *method)` — `decoder_meth.c:341-344`.
+///
+/// # Safety
+/// `method` must be a live `OsslDecoder`.
+unsafe extern "C" fn up_ref_decoder(method: *mut c_void) -> c_int {
+    // SAFETY: `method` is live per the contract.
+    unsafe { OSSL_DECODER_up_ref(method.cast::<OsslDecoder>()) }
+}
+
+/// `static void free_decoder(void *method)` — `decoder_meth.c:346-349`.
+///
+/// # Safety
+/// `method` must be a live `OsslDecoder`.
+unsafe extern "C" fn free_decoder(method: *mut c_void) {
+    // SAFETY: `method` is live per the contract.
+    unsafe { OSSL_DECODER_free(method.cast::<OsslDecoder>()) };
+}
+
+/// `ERR_RFLAG_COMMON` — `include/openssl/err.h`, the bit every `ERR_R_*` common reason carries.
+const ERR_RFLAG_COMMON: c_int = 0x2 << 18;
+
+/// `ERR_R_FETCH_FAILED`, taken from the generated site rather than typed: the value is the
+/// authority's own, resolved through its headers by `gen_err_raise_sites.py`.
+const ERR_R_FETCH_FAILED: c_int = err_sites::EVP_FETCH_352.reason;
+
+/// `ERR_R_UNSUPPORTED` (`err.h`): `(268 | ERR_RFLAG_COMMON)`.
+const ERR_R_UNSUPPORTED: c_int = 268 | ERR_RFLAG_COMMON;
+
+/// `static OSSL_DECODER *inner_ossl_decoder_fetch(struct decoder_data_st *methdata,
+/// const char *name, const char *properties)` — `decoder_meth.c:351-421`.
+///
+/// The **cache is consulted first**, and only a miss runs the walk. `unsupported` starts as "no
+/// name resolved" and is *replaced* by `!flag_construct_error_occurred` after a miss, so a walk
+/// that never entered the constructor means "unsupported" and one that failed inside it means
+/// `ERR_R_FETCH_FAILED`.
+///
+/// # Safety
+/// `methdata` must point at a live, initialised `DecoderDataSt`; `name` and `properties` NULL or
+/// NUL-terminated.
+unsafe fn inner_ossl_decoder_fetch(
+    methdata: *mut DecoderDataSt,
+    name: *const c_char,
+    properties: *const c_char,
+) -> *mut OsslDecoder {
+    // SAFETY: `methdata` is live per the contract.
+    let libctx = unsafe { (*methdata).libctx };
+    let store = get_decoder_store(libctx);
+    let namemap = ossl_namemap_stored(libctx);
+    let propq: *const c_char = if !properties.is_null() {
+        properties
+    } else {
+        c"".as_ptr()
+    };
+    let mut method: *mut c_void = ptr::null_mut();
+
+    if store.is_null() || namemap.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::DECODER_METH_356) };
+        return ptr::null_mut();
+    }
+
+    // SAFETY: `namemap` is live and `name` is NULL or NUL-terminated.
+    let mut id = if !name.is_null() {
+        // SAFETY: `namemap` is live and `name` is non-NULL and NUL-terminated here.
+        unsafe { ossl_namemap_name2num(namemap, name) }
+    } else {
+        0
+    };
+
+    /* If we haven't found the name yet, chances are that the algorithm to be fetched is unsupported. */
+    let mut unsupported = id == 0;
+
+    // SAFETY: `store` and `namemap` are live; `methdata` is live.
+    unsafe {
+        if id == 0
+            || ossl_method_store_cache_get(store, ptr::null_mut(), id, propq, &mut method) == 0
+        {
+            let mcm = OsslMethodConstructMethod {
+                get_tmp_store: get_tmp_decoder_store,
+                lock_store: reserve_decoder_store,
+                unlock_store: unreserve_decoder_store,
+                get: get_decoder_from_store,
+                put: put_decoder_in_store,
+                construct: construct_decoder,
+                destruct: destruct_decoder,
+            };
+            let mut prov: *mut OsslProvider = ptr::null_mut();
+
+            (*methdata).id = id;
+            (*methdata).names = name;
+            (*methdata).propquery = propq;
+            (*methdata).flag_construct_error_occurred = 0;
+            method = ossl_method_construct(
+                (*methdata).libctx,
+                OSSL_OP_DECODER,
+                &mut prov,
+                0, /* !force_cache */
+                &mcm,
+                methdata.cast::<c_void>(),
+            );
+            if !method.is_null() {
+                if id == 0 {
+                    id = ossl_namemap_name2num(namemap, name);
+                }
+                ossl_method_store_cache_set(
+                    store,
+                    prov,
+                    id,
+                    propq,
+                    method,
+                    up_ref_decoder,
+                    free_decoder,
+                );
+            }
+
+            /*
+             * If we never were in the constructor, the algorithm to be fetched is unsupported.
+             */
+            unsupported = (*methdata).flag_construct_error_occurred == 0;
+        }
+
+        if (id != 0 || !name.is_null()) && method.is_null() {
+            let code = if unsupported {
+                ERR_R_UNSUPPORTED
+            } else {
+                ERR_R_FETCH_FAILED
+            };
+            let reported = if name.is_null() {
+                ossl_namemap_num2name(namemap, id, 0)
+            } else {
+                name
+            };
+            let mut msg = [0 as c_char; 1024];
+            BIO_snprintf(
+                msg.as_mut_ptr(),
+                msg.len(),
+                c"%s, Name (%s : %d), Properties (%s)".as_ptr(),
+                lib_ctx_get_descriptor((*methdata).libctx),
+                if reported.is_null() {
+                    c"<null>".as_ptr()
+                } else {
+                    reported
+                },
+                id,
+                if properties.is_null() {
+                    c"<null>".as_ptr()
+                } else {
+                    properties
+                },
+            );
+            raise_site_dynamic_data(&err_sites::DECODER_METH_414, code, msg.as_ptr());
+        }
+    }
+
+    method.cast::<OsslDecoder>()
+}
+
+/// `OSSL_DECODER *OSSL_DECODER_fetch(OSSL_LIB_CTX *libctx, const char *name,
+/// const char *properties)` — `decoder_meth.c:423-435`.
+///
+/// # Safety
+/// `libctx` NULL or live; `name` and `properties` NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_DECODER_fetch(
+    libctx: *mut c_void,
+    name: *const c_char,
+    properties: *const c_char,
+) -> *mut OsslDecoder {
+    let mut methdata = DecoderDataSt {
+        libctx,
+        id: 0,
+        names: ptr::null(),
+        propquery: ptr::null(),
+        tmp_store: ptr::null_mut(),
+        flag_construct_error_occurred: 0,
+    };
+    // SAFETY: `methdata` is live and initialised per the contract.
+    let method = unsafe { inner_ossl_decoder_fetch(&mut methdata, name, properties) };
+    // SAFETY: `methdata.tmp_store` is NULL or a store this call created.
+    unsafe { dealloc_tmp_decoder_store(methdata.tmp_store.cast::<c_void>()) };
+    method
+}
+
+/// `struct do_one_data_st` — `decoder_meth.c:540-543`.
+struct DoOneData {
+    /// `void (*user_fn)(OSSL_DECODER *decoder, void *arg)`.
+    user_fn: unsafe extern "C" fn(*mut OsslDecoder, *mut c_void),
+    /// `void *user_arg`.
+    user_arg: *mut c_void,
+}
+
+/// `static void do_one(int id, void *method, void *arg)` — `decoder_meth.c:545-550`.
+///
+/// # Safety
+/// `method` must be a live `OsslDecoder` and `arg` a live `DoOneData`.
+unsafe extern "C" fn do_one(_id: c_int, method: *mut c_void, arg: *mut c_void) {
+    // SAFETY: `arg` is a live `DoOneData` per the contract.
+    let data = arg.cast::<DoOneData>();
+    // SAFETY: `data` is live; `user_fn` is the caller's own callback.
+    unsafe { ((*data).user_fn)(method.cast::<OsslDecoder>(), (*data).user_arg) };
+}
+
+/// `void OSSL_DECODER_do_all_provided(OSSL_LIB_CTX *libctx,
+/// void (*user_fn)(OSSL_DECODER *decoder, void *arg), void *user_arg)` — `decoder_meth.c:552-577`.
+///
+/// The **fetch runs first**, which is what fills the temporary store, and only then are both the
+/// temporary store's methods and the permanent store's walked. The temporary store is released
+/// last. In this crate the walk finds nothing -- all `OSSL_OP_DECODER` provider rows are
+/// `unimplemented` -- so no callback is invoked, but the code path is the authority's.
+///
+/// # Safety
+/// `libctx` NULL or live; `user_fn` a valid callback; `user_arg` opaque to this file.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_DECODER_do_all_provided(
+    libctx: *mut c_void,
+    user_fn: unsafe extern "C" fn(*mut OsslDecoder, *mut c_void),
+    user_arg: *mut c_void,
+) {
+    let mut methdata = DecoderDataSt {
+        libctx,
+        id: 0,
+        names: ptr::null(),
+        propquery: ptr::null(),
+        tmp_store: ptr::null_mut(),
+        flag_construct_error_occurred: 0,
+    };
+    // SAFETY: `methdata` is live; `inner_ossl_decoder_fetch`'s contract is met with NULLs.
+    unsafe { inner_ossl_decoder_fetch(&mut methdata, ptr::null(), ptr::null()) };
+
+    let mut data = DoOneData { user_fn, user_arg };
+    // SAFETY: each store is NULL or live and `data` is this frame's own.
+    unsafe {
+        if !methdata.tmp_store.is_null() {
+            ossl_method_store_do_all(
+                methdata.tmp_store,
+                Some(do_one),
+                ptr::addr_of_mut!(data).cast::<c_void>(),
+            );
+        }
+        ossl_method_store_do_all(
+            get_decoder_store(libctx),
+            Some(do_one),
+            ptr::addr_of_mut!(data).cast::<c_void>(),
+        );
+    }
+    // SAFETY: `methdata.tmp_store` is NULL or a store this call created.
+    unsafe { dealloc_tmp_decoder_store(methdata.tmp_store.cast::<c_void>()) };
+}
+
 // SPDX-License-Identifier: Apache-2.0
 
 #[cfg(test)]
@@ -899,6 +1423,46 @@ mod tests {
             OSSL_DECODER_free(decoder);
             OSSL_DECODER_free(decoder);
         }
+    }
+
+    /// The fetch block's two entry points, on a crate that publishes no provider decoder: the fetch
+    /// of an unknown name answers NULL and **raises** (the walk found no constructor, so the reason
+    /// is the unsupported one), and the do-all walk invokes the caller's callback **zero** times
+    /// while still walking both stores. A callback that counted its invocations is the observation.
+    #[test]
+    fn a_fetch_of_an_unknown_name_refuses_and_the_walk_finds_nothing() {
+        // SAFETY: the argument is a NUL-terminated literal and NULL is the default context.
+        let got = unsafe {
+            OSSL_DECODER_fetch(
+                ptr::null_mut(),
+                c"openssl-rs-not-a-decoder".as_ptr(),
+                ptr::null(),
+            )
+        };
+        assert!(got.is_null(), "no provider decoder is registered");
+        assert_ne!(
+            crate::runtime::err::ERR_peek_error(),
+            0,
+            "the refusal raises"
+        );
+        crate::runtime::err::ERR_clear_error();
+
+        // SAFETY: the callback is a plain counter over a live `c_int`.
+        unsafe extern "C" fn count(_decoder: *mut OsslDecoder, arg: *mut c_void) {
+            // SAFETY: `arg` is the `c_int` the caller passed.
+            unsafe { *arg.cast::<c_int>() += 1 };
+        }
+        let mut seen: c_int = 0;
+        // SAFETY: `seen` is this frame's own and outlives the call.
+        unsafe {
+            OSSL_DECODER_do_all_provided(
+                ptr::null_mut(),
+                count,
+                ptr::addr_of_mut!(seen).cast::<c_void>(),
+            );
+        }
+        assert_eq!(seen, 0, "every OSSL_OP_DECODER row is unimplemented here");
+        crate::runtime::err::ERR_clear_error();
     }
 
     /// This unit's two store bridges and the third decoder bridge are transcribed in

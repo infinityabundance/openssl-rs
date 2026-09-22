@@ -26486,3 +26486,70 @@ deferrals, **12** divergence rows / **58** names and `blocking_dependencies` **9
 `sealed_stratum_census` **56 -> 55**. It is not Phase 8 and not nearly Phase 8; the count this entry
 reaches is implemented **780** of **786** owned, and three of the four units the last six wait on are
 now in the crate.
+
+## D366 — `decoder_meth.c` becomes whole: the fetch and construct-method block lands, and the
+remaining three decoder pieces plus `pem_pkey.c` are named as what the last six still wait on
+
+**Decision.** Land `crypto/encode_decode/decoder_meth.c`'s **fetch and construct-method block** in
+`src/decoder_meth.rs`: `decoder_data_st`, `get_tmp_decoder_store`, `dealloc_tmp_decoder_store`,
+`get_decoder_store`, `reserve_decoder_store`, `unreserve_decoder_store`, `get_decoder_from_store`,
+`put_decoder_in_store`, the two `ossl_decoder_up_ref`/`ossl_decoder_free` thunks,
+`construct_decoder`, `destruct_decoder`, `up_ref_decoder`, `free_decoder`,
+`inner_ossl_decoder_fetch`, `OSSL_DECODER_fetch`, `do_one`/`do_one_data_st` and
+`OSSL_DECODER_do_all_provided`. Two exports land; **the unit is now whole** -- every function of
+`decoder_meth.c` is in the crate. **No Phase 8 or Phase 7 count moves.**
+
+**It lands before its callers, and that is a measurement rather than a preference.** The brief's
+item 1 puts this block with `decoder_lib.c`'s `add_extra`/`decoder_process`/`from_*` block and
+`decoder_pkey.c`'s pkey half because they are one path. They are -- but only the *other two* are
+mutually recursive with each other: `add_extra` calls `OSSL_DECODER_do_all_provided` and
+`OSSL_DECODER_fetch`, and `decoder_process` calls `add_extra`; `decoder_pkey.c`'s
+`ossl_decoder_ctx_setup_for_pkey` calls `OSSL_DECODER_do_all_provided`. This block is the **base**
+of that recursion, not a member of it: every callee it reaches was already landed
+(`ossl_method_construct` and the property store from Phase 6/7, `ossl_namemap_*` from Phase 6, and
+its own object and accessors from D363), so it is a unit that can land alone, and it is strictly
+what the other two need. Landing it first is therefore the only order in which the next slice
+starts with its base in place.
+
+**The three flags the encoder's twin taught, kept the same.** The cache is consulted **first**
+(`ossl_method_store_cache_get`), and only a miss runs the walk; `unsupported` starts as "no name
+resolved" and is **replaced** by `!flag_construct_error_occurred` after a miss, so a walk that never
+entered the constructor means `ERR_R_UNSUPPORTED` and one that failed inside it means
+`ERR_R_FETCH_FAILED`; and the provider the walk settled on is written back into the cache set so a
+later cache hit still names a provider. The `do_all_provided` walk is the authority's order too:
+**fetch first** (which fills the temporary store), then the temporary store's methods and the
+permanent store's, then release the temporary store.
+
+**Courts.** No probe was needed and that is measured: the two exports are `decoder.h`'s and Phase
+10's, so `court_coverage.py` records them under `not_yet_begun` **155 -> 157**. Totals do not move:
+**94** courts and **37221** observations. The unit's evidence is its fifth unit test, which drives
+both entry points on a crate that publishes no provider decoder: the fetch of an unknown name
+answers NULL and raises, and the do-all walk invokes a counting callback **zero** times while still
+walking both stores.
+
+**What the authority corrected in the brief.** One thing, and it is the grouping rather than any
+body: item 1's "those three are one path" is right about the dependency but wrong about the
+*landing order*. `decoder_meth.c`'s block is the recursion's base and the other two are its members,
+so the three cannot go in as one commit without landing the base first anyway. The two that remain
+-- `decoder_lib.c`'s `OSSL_DECODER_CTX_add_extra`/`collect_all_decoders`/`collect_extra_decoder`/
+`decoder_sk_cmp`/`decoder_process`/`from_bio`/`from_fp`/`from_data` block and `decoder_pkey.c`'s
+`decoder_construct_pkey`-through-`OSSL_DECODER_CTX_new_for_pkey` half -- are the next slice's, and
+their shape is now fully bounded: everything they call exists except each other.
+
+**What is deliberately not here.** Those two blocks, and then `crypto/pem/pem_pkey.c` as its own
+module with the six `PEM_read[_bio]_{RSA,DSA,EC}PrivateKey` readers in `src/pem/key_legacy.rs`, whose
+first leg `OSSL_DECODER_CTX_new_for_pkey` is. `docs/PHASE-8-SUBPHASES.md` §4's two anchored clauses
+are untouched because the Phase 8 ledger did not move, so the 8.9 row's note is extended rather than
+rewritten.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete: false`
+with **6** names open: implemented **780**, deferred **0**, owned **786** -- unchanged from D362
+through D365. The regenerated counts: `implemented-surface.json`'s `libcrypto` implemented moves
+**2869 -> 2871** and its `internal_symbols.c_style` stays **344**; `transcription-edges.json` stays
+**319** modules over **288** units, with `src/decoder_meth.rs`'s share moving 18/18 -> **20/20**;
+`court_coverage.py`'s `not_yet_begun` **155 -> 157**; the prerequisite gate stays at **zero
+findings** over **9** deferrals, **12** divergence rows / **58** names,
+`blocking_dependencies` **9** and `sealed_stratum_census` **55**. It is not Phase 8 and not nearly
+Phase 8; the count this entry reaches is implemented **780** of **786** owned, and the decoder
+framework the last six wait on now has **three of its four units whole** -- what is left is
+`decoder_lib.c`'s chain-building block, `decoder_pkey.c`'s pkey half, and `pem_pkey.c`.
