@@ -781,6 +781,10 @@ COVERED_FILES = [
     # even though those six functions are withheld, because a raise site is a property of the
     # translation unit rather than of the subset a stratum has reached.
     ("crypto/passphrase.c", "PASSPHRASE"),
+    # Phase 10 staging: the three `crypto/encode_decode/encoder_*` units (D360). Each raises from
+    # bodies the encoder landing writes, so the three entries land with the code. Their counts are
+    # 6 (`encoder_meth.c`), 14 (`encoder_lib.c`) and 2 (`encoder_pkey.c`).
+    ("crypto/encode_decode/encoder_meth.c", "ENCODER_METH"),
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`

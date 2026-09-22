@@ -123,6 +123,10 @@ pub(crate) mod param_build_set;
 // arrived with the DSA landing, because `dsa_sign.c`'s `i2d_DSA_SIG` is a `WPACKET` program. It is
 // transcribed whole, QUIC half and all (D342).
 pub(crate) mod packet;
+// Phase 10's `crypto/encode_decode/encoder_meth.c`: the `OSSL_ENCODER` method object and the
+// `OSSL_FUNC_ENCODER_*` dispatch scan (D360). It lands ahead of its stratum, as `src/ui/` and
+// `src/passphrase.rs` did, because the eight Phase-8 printers reach it through `print_pkey`.
+pub mod encoder_meth;
 pub mod passphrase;
 pub mod pem;
 pub mod property;

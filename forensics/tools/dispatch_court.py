@@ -305,6 +305,12 @@ LINKS: dict[str, tuple[str, ...]] = {
     # `include/openssl/modes.h:40-44`'s `ccm128_f`. The authority's name ends `_f` rather than
     # `_fn`, so the convention rule (which strips only `_fn`) cannot reach it.
     "Ccm128Fn": ("ccm128_f",),
+    # `encoder.h`'s two libcrypto-side callbacks for an encoder chain. They are not `OSSL_FUNC_*`
+    # provider dispatch functions -- they are what a *caller* of `OSSL_ENCODER_CTX_set_construct`
+    # supplies -- and the authority's names end `_CONSTRUCT`/`_CLEANUP` rather than `_fn`, so the
+    # convention rule cannot reach them. Landed with the encoder method object (D360).
+    "EncoderConstructFn": ("OSSL_ENCODER_CONSTRUCT",),
+    "EncoderCleanupFn": ("OSSL_ENCODER_CLEANUP",),
 }
 
 # ---------------------------------------------------------------------------------------------
