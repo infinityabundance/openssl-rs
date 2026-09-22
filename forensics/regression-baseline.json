@@ -210,6 +210,10 @@
       "observations": 2419,
       "verdict": "pass"
     },
+    "RT-ECX": {
+      "observations": 183,
+      "verdict": "pass"
+    },
     "RT-ERR": {
       "observations": 3857,
       "verdict": "pass"
@@ -448,10 +452,10 @@
   },
   "prerequisites": {
     "blocking_dependencies": 9,
-    "divergence_names_covered": 51,
+    "divergence_names_covered": 43,
     "findings": 0,
-    "language_census": 4731,
-    "sealed_census": 54
+    "language_census": 4797,
+    "sealed_census": 50
   },
   "provider_implemented": [
     "default/OSSL_OP_CIPHER/AES-128-CBC",

@@ -97,7 +97,9 @@ const EVP_PKEY_RSA_PSS: c_int = NID_rsassaPss;
 /// `EVP_PKEY_RSA2` = `NID_rsa` — `include/openssl/evp.h:64`.
 const EVP_PKEY_RSA2: c_int = crate::runtime::obj::NID_rsa;
 /// `X509_SIG_INFO_TLS` — `include/openssl/x509.h.in:68`.
-const X509_SIG_INFO_TLS: u32 = 0x2;
+/// `X509_SIG_INFO_TLS` — `include/openssl/x509.h.in:68`. `pub(crate)` since D372: `crypto/ec/ecx_meth.c`'s
+/// `ecd_sig_info_set25519`/`_448` are the readers after this unit's own.
+pub(crate) const X509_SIG_INFO_TLS: u32 = 0x2;
 /// `OSSL_SIGNATURE_PARAM_ALGORITHM_ID` — `include/openssl/core_names.h`.
 const OSSL_SIGNATURE_PARAM_ALGORITHM_ID: *const c_char = c"algorithm-id".as_ptr();
 /// The authority's translation unit, for the `OPENSSL_clear_free` site below.

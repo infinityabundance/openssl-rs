@@ -4662,6 +4662,68 @@
         "verdict": "clean"
       },
       {
+        "probe": "courts/phase8/rt_ecx_probe.c",
+        "sides": {
+          "authority": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 183,
+              "-O1": 183,
+              "-O2": 183
+            },
+            "side": "authority",
+            "verdict": "clean"
+          },
+          "candidate": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 183,
+              "-O1": 183,
+              "-O2": 183
+            },
+            "side": "candidate",
+            "verdict": "clean"
+          }
+        },
+        "verdict": "clean"
+      },
+      {
         "probe": "courts/phase8/rt_pem_key_probe.c",
         "sides": {
           "authority": {
@@ -5098,8 +5160,8 @@
     ],
     "runs_per_level": 2,
     "summary": {
-      "clean": 82,
-      "total": 82,
+      "clean": 83,
+      "total": 83,
       "unstable": 0
     }
   },
@@ -5448,7 +5510,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_ameth_probe.c",
-      "sha256": "1169ba8d31b2a9540f5093b49645a2abe86324b2ef57972e453711403d3715bc"
+      "sha256": "89e4d4637edd2ef6a11e6422c0bf44079a937bb10f6843bad9770c4b47bb2b40"
     },
     {
       "name": "probe",
@@ -5479,6 +5541,11 @@
       "name": "probe",
       "path": "courts/phase8/rt_ec_probe.c",
       "sha256": "a4743265ad9974cb53a199482b66f4a1349701198d0a11362ea193e313335d19"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase8/rt_ecx_probe.c",
+      "sha256": "506b00b804661bedbd6c209d861ce97c4841d4dd93af86943520689660f356aa"
     },
     {
       "name": "probe",

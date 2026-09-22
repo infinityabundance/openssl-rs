@@ -107,6 +107,7 @@ use crate::dh::object::DH_free;
 use crate::dh::Dh;
 use crate::dsa::object::{DSA_free, DSA_get0_pqg};
 use crate::dsa::Dsa;
+use crate::ec::ecx_key::{ossl_ecx_key_free, EcxKey};
 use crate::ec::key::EC_KEY_free;
 use crate::ec::EcKey;
 use crate::encoder_lib::{
@@ -116,13 +117,15 @@ use crate::encoder_meth::OSSL_ENCODER_CTX_free;
 use crate::encoder_pkey::OSSL_ENCODER_CTX_new_for_pkey;
 use crate::evp::p_legacy_assign::{EVP_PKEY_get1_EC_KEY, EVP_PKEY_get1_RSA};
 use crate::evp::pkey::{
-    evp_pkey_is_provided, EVP_PKEY_assign, EVP_PKEY_dup, EVP_PKEY_eq, EVP_PKEY_free,
-    EVP_PKEY_get1_DH, EVP_PKEY_get1_DSA, EVP_PKEY_get_id, EVP_PKEY_new, EVP_PKEY_set_type,
-    EVP_PKEY_up_ref, EvpPkey, OSSL_KEYMGMT_SELECT_DOMAIN_PARAMETERS,
+    evp_pkey_is_provided, ossl_evp_pkey_get1_ED25519, ossl_evp_pkey_get1_ED448,
+    ossl_evp_pkey_get1_X25519, ossl_evp_pkey_get1_X448, EVP_PKEY_assign, EVP_PKEY_dup, EVP_PKEY_eq,
+    EVP_PKEY_free, EVP_PKEY_get1_DH, EVP_PKEY_get1_DSA, EVP_PKEY_get_id, EVP_PKEY_new,
+    EVP_PKEY_set_type, EVP_PKEY_up_ref, EvpPkey, OSSL_KEYMGMT_SELECT_DOMAIN_PARAMETERS,
     OSSL_KEYMGMT_SELECT_OTHER_PARAMETERS, OSSL_KEYMGMT_SELECT_PUBLIC_KEY,
 };
 use crate::evp::pkey_ctx::{
-    EVP_PKEY_DH, EVP_PKEY_DHX, EVP_PKEY_DSA, EVP_PKEY_EC, EVP_PKEY_RSA, EVP_PKEY_SM2,
+    EVP_PKEY_DH, EVP_PKEY_DHX, EVP_PKEY_DSA, EVP_PKEY_EC, EVP_PKEY_ED25519, EVP_PKEY_ED448,
+    EVP_PKEY_RSA, EVP_PKEY_SM2, EVP_PKEY_X25519, EVP_PKEY_X448,
 };
 use crate::rsa::object::RSA_free;
 use crate::rsa::Rsa;
@@ -1774,6 +1777,299 @@ pub unsafe extern "C" fn i2d_EC_PUBKEY(a: *const EcKey, pp: *mut *mut c_uchar) -
     /* `EVP_PKEY_assign_EC_KEY(pktmp, (EC_KEY *)a)`. */
     // SAFETY: `pktmp` is live and `a` is the key being wrapped; the return is discarded.
     unsafe { EVP_PKEY_assign(pktmp, EVP_PKEY_EC, a as *mut c_void) };
+    // SAFETY: `pktmp` is live.
+    let ret = unsafe { i2d_PUBKEY(pktmp, pp) };
+    // SAFETY: `pktmp` is live; the borrowed member is cleared before free.
+    unsafe {
+        (*pktmp).pkey = ptr::null_mut();
+        EVP_PKEY_free(pktmp);
+    }
+    ret
+}
+
+// ---------------------------------------------------------------------------------------------
+// The `#ifndef OPENSSL_NO_ECX` half — `crypto/x509/x_pubkey.c:838-1008`
+//
+// Eight internals the four `crypto/ec/ecx_meth.c`-backed `d2i`/`i2d` pairs name. They land
+// with D372: the `d2i` half reads `ossl_evp_pkey_get1_*` (`crypto/evp/p_lib.c`, landed in
+// `src/evp/pkey.rs`) and the `i2d` half wraps the key in a temporary `EVP_PKEY` through
+// `EVP_PKEY_assign`, whose `EVP_PKEY_set_type` lookup now finds the four ECX rows in
+// `standard_methods[]`. Nothing is withheld here any more.
+// ---------------------------------------------------------------------------------------------
+
+/// `ECX_KEY *ossl_d2i_ED25519_PUBKEY(ECX_KEY **a, const unsigned char **pp, long length)` —
+/// `crypto/x509/x_pubkey.c:839-858`.
+///
+/// Unlike its three siblings, this one does **not** test `EVP_PKEY_get_id` first: the type
+/// check is `ossl_evp_pkey_get1_ED25519`'s own `EVP_R_EXPECTING_A_ECX_KEY` refusal, which the
+/// authority relies on being the first thing reached.
+///
+/// # Safety
+/// `a` is NULL or a writable `ECX_KEY *` slot; `pp` points at a readable cursor for `length`.
+#[no_mangle]
+pub unsafe extern "C" fn ossl_d2i_ED25519_PUBKEY(
+    a: *mut *mut EcxKey,
+    pp: *mut *const c_uchar,
+    length: c_long,
+) -> *mut EcxKey {
+    // SAFETY: `pp` is the caller's readable cursor.
+    let mut q = unsafe { *pp };
+    // SAFETY: `q` is this frame's cursor.
+    let pkey = unsafe { ossl_d2i_PUBKEY_legacy(ptr::null_mut(), &raw mut q, length) };
+    if pkey.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `pkey` is live.
+    let key = unsafe { ossl_evp_pkey_get1_ED25519(pkey) };
+    // SAFETY: `pkey` is this call's own live key.
+    unsafe { EVP_PKEY_free(pkey) };
+    if key.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `pp` is the caller's writable cursor.
+    unsafe { *pp = q };
+    if !a.is_null() {
+        // SAFETY: `a` is a live slot.
+        unsafe {
+            ossl_ecx_key_free(*a);
+            *a = key;
+        }
+    }
+    key
+}
+
+/// `int ossl_i2d_ED25519_PUBKEY(const ECX_KEY *a, unsigned char **pp)` —
+/// `crypto/x509/x_pubkey.c:860-876`.
+///
+/// # Safety
+/// `a` is NULL or a live `ECX_KEY`; `pp` is NULL or a writable cursor.
+#[no_mangle]
+pub unsafe extern "C" fn ossl_i2d_ED25519_PUBKEY(a: *const EcxKey, pp: *mut *mut c_uchar) -> c_int {
+    if a.is_null() {
+        return 0;
+    }
+    // SAFETY: no preconditions.
+    let pktmp = unsafe { EVP_PKEY_new() };
+    if pktmp.is_null() {
+        // SAFETY: a compile-time-constant site (`x_pubkey.c:871`).
+        unsafe { raise_site(&err_sites::X509_PUBKEY_871) };
+        return -1;
+    }
+    // SAFETY: `pktmp` is live and `a` is the key being wrapped; the return is discarded.
+    unsafe { EVP_PKEY_assign(pktmp, EVP_PKEY_ED25519, a.cast::<c_void>().cast_mut()) };
+    // SAFETY: `pktmp` is live.
+    let ret = unsafe { i2d_PUBKEY(pktmp, pp) };
+    // SAFETY: `pktmp` is live; the borrowed member is cleared before free.
+    unsafe {
+        (*pktmp).pkey = ptr::null_mut();
+        EVP_PKEY_free(pktmp);
+    }
+    ret
+}
+
+/// `ECX_KEY *ossl_d2i_ED448_PUBKEY(ECX_KEY **a, const unsigned char **pp, long length)` —
+/// `crypto/x509/x_pubkey.c:878-899`.
+///
+/// # Safety
+/// `a` is NULL or a writable `ECX_KEY *` slot; `pp` points at a readable cursor for `length`.
+#[no_mangle]
+pub unsafe extern "C" fn ossl_d2i_ED448_PUBKEY(
+    a: *mut *mut EcxKey,
+    pp: *mut *const c_uchar,
+    length: c_long,
+) -> *mut EcxKey {
+    // SAFETY: `pp` is the caller's readable cursor.
+    let mut q = unsafe { *pp };
+    // SAFETY: `q` is this frame's cursor.
+    let pkey = unsafe { ossl_d2i_PUBKEY_legacy(ptr::null_mut(), &raw mut q, length) };
+    if pkey.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `pkey` is live.
+    let mut key: *mut EcxKey = ptr::null_mut();
+    // SAFETY: `pkey` is live; the type test guards the accessor.
+    if unsafe { EVP_PKEY_get_id(pkey) } == EVP_PKEY_ED448 {
+        // SAFETY: `pkey` is live.
+        key = unsafe { ossl_evp_pkey_get1_ED448(pkey) };
+    }
+    // SAFETY: `pkey` is this call's own live key.
+    unsafe { EVP_PKEY_free(pkey) };
+    if key.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `pp` is the caller's writable cursor.
+    unsafe { *pp = q };
+    if !a.is_null() {
+        // SAFETY: `a` is a live slot.
+        unsafe {
+            ossl_ecx_key_free(*a);
+            *a = key;
+        }
+    }
+    key
+}
+
+/// `int ossl_i2d_ED448_PUBKEY(const ECX_KEY *a, unsigned char **pp)` —
+/// `crypto/x509/x_pubkey.c:901-917`.
+///
+/// # Safety
+/// `a` is NULL or a live `ECX_KEY`; `pp` is NULL or a writable cursor.
+#[no_mangle]
+pub unsafe extern "C" fn ossl_i2d_ED448_PUBKEY(a: *const EcxKey, pp: *mut *mut c_uchar) -> c_int {
+    if a.is_null() {
+        return 0;
+    }
+    // SAFETY: no preconditions.
+    let pktmp = unsafe { EVP_PKEY_new() };
+    if pktmp.is_null() {
+        // SAFETY: a compile-time-constant site (`x_pubkey.c:913`).
+        unsafe { raise_site(&err_sites::X509_PUBKEY_913) };
+        return -1;
+    }
+    // SAFETY: `pktmp` is live and `a` is the key being wrapped; the return is discarded.
+    unsafe { EVP_PKEY_assign(pktmp, EVP_PKEY_ED448, a.cast::<c_void>().cast_mut()) };
+    // SAFETY: `pktmp` is live.
+    let ret = unsafe { i2d_PUBKEY(pktmp, pp) };
+    // SAFETY: `pktmp` is live; the borrowed member is cleared before free.
+    unsafe {
+        (*pktmp).pkey = ptr::null_mut();
+        EVP_PKEY_free(pktmp);
+    }
+    ret
+}
+
+/// `ECX_KEY *ossl_d2i_X25519_PUBKEY(ECX_KEY **a, const unsigned char **pp, long length)` —
+/// `crypto/x509/x_pubkey.c:919-940`.
+///
+/// # Safety
+/// `a` is NULL or a writable `ECX_KEY *` slot; `pp` points at a readable cursor for `length`.
+#[no_mangle]
+pub unsafe extern "C" fn ossl_d2i_X25519_PUBKEY(
+    a: *mut *mut EcxKey,
+    pp: *mut *const c_uchar,
+    length: c_long,
+) -> *mut EcxKey {
+    // SAFETY: `pp` is the caller's readable cursor.
+    let mut q = unsafe { *pp };
+    // SAFETY: `q` is this frame's cursor.
+    let pkey = unsafe { ossl_d2i_PUBKEY_legacy(ptr::null_mut(), &raw mut q, length) };
+    if pkey.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `pkey` is live.
+    let mut key: *mut EcxKey = ptr::null_mut();
+    // SAFETY: `pkey` is live; the type test guards the accessor.
+    if unsafe { EVP_PKEY_get_id(pkey) } == EVP_PKEY_X25519 {
+        // SAFETY: `pkey` is live.
+        key = unsafe { ossl_evp_pkey_get1_X25519(pkey) };
+    }
+    // SAFETY: `pkey` is this call's own live key.
+    unsafe { EVP_PKEY_free(pkey) };
+    if key.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `pp` is the caller's writable cursor.
+    unsafe { *pp = q };
+    if !a.is_null() {
+        // SAFETY: `a` is a live slot.
+        unsafe {
+            ossl_ecx_key_free(*a);
+            *a = key;
+        }
+    }
+    key
+}
+
+/// `int ossl_i2d_X25519_PUBKEY(const ECX_KEY *a, unsigned char **pp)` —
+/// `crypto/x509/x_pubkey.c:942-958`.
+///
+/// # Safety
+/// `a` is NULL or a live `ECX_KEY`; `pp` is NULL or a writable cursor.
+#[no_mangle]
+pub unsafe extern "C" fn ossl_i2d_X25519_PUBKEY(a: *const EcxKey, pp: *mut *mut c_uchar) -> c_int {
+    if a.is_null() {
+        return 0;
+    }
+    // SAFETY: no preconditions.
+    let pktmp = unsafe { EVP_PKEY_new() };
+    if pktmp.is_null() {
+        // SAFETY: a compile-time-constant site (`x_pubkey.c:955`).
+        unsafe { raise_site(&err_sites::X509_PUBKEY_955) };
+        return -1;
+    }
+    // SAFETY: `pktmp` is live and `a` is the key being wrapped; the return is discarded.
+    unsafe { EVP_PKEY_assign(pktmp, EVP_PKEY_X25519, a.cast::<c_void>().cast_mut()) };
+    // SAFETY: `pktmp` is live.
+    let ret = unsafe { i2d_PUBKEY(pktmp, pp) };
+    // SAFETY: `pktmp` is live; the borrowed member is cleared before free.
+    unsafe {
+        (*pktmp).pkey = ptr::null_mut();
+        EVP_PKEY_free(pktmp);
+    }
+    ret
+}
+
+/// `ECX_KEY *ossl_d2i_X448_PUBKEY(ECX_KEY **a, const unsigned char **pp, long length)` —
+/// `crypto/x509/x_pubkey.c:960-981`.
+///
+/// # Safety
+/// `a` is NULL or a writable `ECX_KEY *` slot; `pp` points at a readable cursor for `length`.
+#[no_mangle]
+pub unsafe extern "C" fn ossl_d2i_X448_PUBKEY(
+    a: *mut *mut EcxKey,
+    pp: *mut *const c_uchar,
+    length: c_long,
+) -> *mut EcxKey {
+    // SAFETY: `pp` is the caller's readable cursor.
+    let mut q = unsafe { *pp };
+    // SAFETY: `q` is this frame's cursor.
+    let pkey = unsafe { ossl_d2i_PUBKEY_legacy(ptr::null_mut(), &raw mut q, length) };
+    if pkey.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `pkey` is live.
+    let mut key: *mut EcxKey = ptr::null_mut();
+    // SAFETY: `pkey` is live; the type test guards the accessor.
+    if unsafe { EVP_PKEY_get_id(pkey) } == EVP_PKEY_X448 {
+        // SAFETY: `pkey` is live.
+        key = unsafe { ossl_evp_pkey_get1_X448(pkey) };
+    }
+    // SAFETY: `pkey` is this call's own live key.
+    unsafe { EVP_PKEY_free(pkey) };
+    if key.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `pp` is the caller's writable cursor.
+    unsafe { *pp = q };
+    if !a.is_null() {
+        // SAFETY: `a` is a live slot.
+        unsafe {
+            ossl_ecx_key_free(*a);
+            *a = key;
+        }
+    }
+    key
+}
+
+/// `int ossl_i2d_X448_PUBKEY(const ECX_KEY *a, unsigned char **pp)` —
+/// `crypto/x509/x_pubkey.c:983-999`.
+///
+/// # Safety
+/// `a` is NULL or a live `ECX_KEY`; `pp` is NULL or a writable cursor.
+#[no_mangle]
+pub unsafe extern "C" fn ossl_i2d_X448_PUBKEY(a: *const EcxKey, pp: *mut *mut c_uchar) -> c_int {
+    if a.is_null() {
+        return 0;
+    }
+    // SAFETY: no preconditions.
+    let pktmp = unsafe { EVP_PKEY_new() };
+    if pktmp.is_null() {
+        // SAFETY: a compile-time-constant site (`x_pubkey.c:997`).
+        unsafe { raise_site(&err_sites::X509_PUBKEY_997) };
+        return -1;
+    }
+    // SAFETY: `pktmp` is live and `a` is the key being wrapped; the return is discarded.
+    unsafe { EVP_PKEY_assign(pktmp, EVP_PKEY_X448, a.cast::<c_void>().cast_mut()) };
     // SAFETY: `pktmp` is live.
     let ret = unsafe { i2d_PUBKEY(pktmp, pp) };
     // SAFETY: `pktmp` is live; the borrowed member is cleared before free.

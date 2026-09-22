@@ -822,6 +822,18 @@ COVERED_FILES = [
     # D349 had the unit deliberately absent because the four functions then landed raised
     # nothing; the completion is what changes that.
     ("crypto/x509/x_pubkey.c", "X509_PUBKEY"),
+    # Phase 8.7's ECX key objects (D372): `crypto/ec/ecx_key.c` (the `ECX_KEY` object and
+    # `ossl_ecx_compute_key`) and `crypto/ec/ecx_backend.c` (the backend the legacy methods and
+    # the providers share). The first is `ERR_LIB_PROV` with the four `PROV_R_*` reasons on the
+    # X25519/X448 agreement path; the second is `ERR_LIB_EC` with `ERR_R_EC_LIB`,
+    # `EC_R_INVALID_ENCODING` and `EC_R_FAILED_MAKING_PUBLIC_KEY`.
+    ("crypto/ec/ecx_key.c", "ECX_KEY"),
+    ("crypto/ec/ecx_backend.c", "ECX_BACKEND"),
+    # `crypto/ec/ecx_meth.c` (D372), the two method tables' four rows: `EVP_PKEY_ASN1_METHOD`
+    # and `EVP_PKEY_METHOD` for X25519, X448, Ed25519 and Ed448. Its thirty-one sites are
+    # `ERR_LIB_EC`, `ERR_LIB_DH` and `ERR_LIB_ASN1` with the `EC_R_*`/`ERR_R_*` reasons the two
+    # tables' decode, sign and key-generation arms carry.
+    ("crypto/ec/ecx_meth.c", "ECX_METH"),
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`

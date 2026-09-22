@@ -177,22 +177,6 @@
         "evidence": "crypto/bn/bn_intern.c:171-182; src/bn/bignum.rs:67 and :83 (the representation, and the flag it declines to model); src/bn/intern.rs's module documentation (the three representational gaps); docs/DECISIONS.md D338"
       },
       {
-        "owner_module": "src/x509/x_pubkey.rs",
-        "class": "owned_by_a_later_stratum",
-        "covers": [
-          "ossl_d2i_ED25519_PUBKEY",
-          "ossl_d2i_ED448_PUBKEY",
-          "ossl_d2i_X25519_PUBKEY",
-          "ossl_d2i_X448_PUBKEY",
-          "ossl_i2d_ED25519_PUBKEY",
-          "ossl_i2d_ED448_PUBKEY",
-          "ossl_i2d_X25519_PUBKEY",
-          "ossl_i2d_X448_PUBKEY"
-        ],
-        "note": "**One block now, and it is the ECX half D349 named as the street beyond D353.** D349 wrote this row for the sixteen internals of `crypto/x509/x_pubkey.c` that the lexical scan saw unbuilt, and withheld them because the `i2d_*_PUBKEY`/`d2i_*_PUBKEY` family builds a temporary `EVP_PKEY` and calls `EVP_PKEY_assign`, whose `EVP_PKEY_set_type` lookup reads `standard_methods[]` -- empty in this crate then (`D-PKEY-AMETH-1`, D341's cycle). **That cycle is gone.** D353 published the eleven in-reach `standard_methods[]` rows, D354/D355 closed the two `d2i`/`pmeth` readers, D362 landed the encoder chain and D367 the decoder's pkey half, so D369 transcribes the unit: `src/x509/x_pubkey.rs` now carries the `X509_PUBKEY` object layer, its `ASN1_ITYPE_EXTERN` item group, `X509_PUBKEY_INTERNAL` and its decoder, `x509_pubkey_decode`, `d2i_PUBKEY_legacy`/`d2i_PUBKEY[_ex]`/`i2d_PUBKEY` and the type-specific `d2i`/`i2d` family. Nine of the seventeen internals are built, so eight names leave this row and it shrinks rather than standing -- the row would otherwise report nine landed names as a record that keeps covering what the crate has since fixed. What is left is the `#ifndef OPENSSL_NO_ECX` half and nothing else: the four `ossl_d2i_*_PUBKEY` for ED25519/ED448/X25519/X448 read `ossl_evp_pkey_get1_ED25519`/`_ED448`/`_X25519`/`_X448` (`crypto/ec/ecx_backend.c`), which no crate module defines, and the four `ossl_i2d_*_PUBKEY` twins call `EVP_PKEY_assign(pktmp, EVP_PKEY_ED25519, ...)` and then `i2d_PUBKEY`, which answers `-1` where the authority answers the encoded length because the four `crypto/ec/ecx_meth.c` rows are withheld from both `standard_methods[]` tables under `D-PKEY-AMETH-3`. A transcription would answer differently from the authority's, which is the class the row exists to name. The row fail-closes in both directions: if any of the eight is ever built the gate reports it as `stale` until the row is removed, and if `src/x509/x_pubkey.rs` stopped owning the unit the record would stop matching.",
-        "evidence": "docs/DECISIONS.md D349, D353, D369; crypto/x509/x_pubkey.c:31-43 and :63-83 (the struct and the internal item) against :839-1008 (the ECX half); crypto/ec/ecx_backend.c as `ossl_evp_pkey_get1_*`'s unit; docs/SECURITY_DIVERGENCE_POLICY.md `D-PKEY-AMETH-3`; forensics/atlas/transcription-edges.json's `crypto/x509/x_pubkey.c` edge"
-      },
-      {
         "owner_module": "src/x509/x509_set.rs",
         "class": "owned_by_a_later_stratum",
         "covers": [
