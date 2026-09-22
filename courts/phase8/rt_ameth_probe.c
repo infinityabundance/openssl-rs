@@ -37,6 +37,12 @@
  * pmeth_lib.c` is untouched (`ossl_rsa_pkey_method` stays a recorded deferral), so those three names
  * are withheld and cannot be named here.
  *
+ * **The `crypto/asn1/d2i_param.c`/`d2i_pu.c` readers are observed, not withheld.**
+ * `d2i_KeyParams`/`d2i_KeyParams_bio`/`d2i_PublicKey` landed together (`docs/DECISIONS.md` D354),
+ * and arm 7 exercises the two refusals that need no encoding at all: a type whose method carries no
+ * `param_decode` (`EVP_PKEY_RSA` and the `EVP_PKEY_SM2` alias) and a type outside `d2i_PublicKey`'s
+ * three-arm switch (`EVP_PKEY_DH`).
+ *
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -430,6 +436,74 @@ static void refusal_arms(void)
     }
 }
 
+/* ------------------------------------------------------------------ arm 7: the d2i readers */
+
+/* `d2i_KeyParams`'s third refusal is the one a probe can reach without an encoding: a type whose
+ * method carries no `param_decode` -- `EVP_PKEY_RSA` (6) and the `EVP_PKEY_SM2` alias (1172) both do
+ * not -- is refused with `ASN1_R_UNSUPPORTED_TYPE` at `d2i_param.c:33` before the callback is
+ * reached. `d2i_PublicKey` refuses a type outside its three-arm `switch` with
+ * `ASN1_R_UNKNOWN_PUBLIC_KEY_TYPE` at `d2i_pu.c:86`. `d2i_KeyParams_bio` is the same refusal reached
+ * through a `BUF_MEM` read of a complete DER `NULL`. Every observation is a return code, a slot
+ * test, or the drained coordinate. */
+static void d2i_arms(void)
+{
+    /* A complete DER `NULL`, which `asn1_d2i_read_bio` reads whole before `d2i_KeyParams` sees it. */
+    static const unsigned char der_null[] = { 0x05, 0x00 };
+
+    /* RSA has no `param_decode`, so :33 is the refusal and nothing else is raised. */
+    {
+        const unsigned char *p = der_null;
+        EVP_PKEY *pk = NULL;
+
+        ERR_clear_error();
+        printf("ameth.d2i_keyparams.rsa.notnull=%d\n",
+            d2i_KeyParams(EVP_PKEY_RSA, &pk, &p, (long)sizeof(der_null)) != NULL);
+        printf("ameth.d2i_keyparams.rsa.slot_null=%d\n", pk == NULL);
+        drain("d2i_keyparams_rsa");
+    }
+
+    /* The SM2 alias is the same shape, and it is a row the crate carries. */
+    {
+        const unsigned char *p = der_null;
+        EVP_PKEY *pk = NULL;
+
+        ERR_clear_error();
+        printf("ameth.d2i_keyparams.sm2.notnull=%d\n",
+            d2i_KeyParams(EVP_PKEY_SM2, &pk, &p, (long)sizeof(der_null)) != NULL);
+        printf("ameth.d2i_keyparams.sm2.slot_null=%d\n", pk == NULL);
+        drain("d2i_keyparams_sm2");
+    }
+
+    /* `d2i_PublicKey`: DH is outside the RSA/DSA/EC switch, so the default arm refuses. */
+    {
+        const unsigned char *p = der_null;
+        EVP_PKEY *pk = NULL;
+
+        ERR_clear_error();
+        printf("ameth.d2i_publickey.dh.notnull=%d\n",
+            d2i_PublicKey(EVP_PKEY_DH, &pk, &p, (long)sizeof(der_null)) != NULL);
+        printf("ameth.d2i_publickey.dh.slot_null=%d\n", pk == NULL);
+        drain("d2i_publickey_dh");
+    }
+
+    /* `d2i_KeyParams_bio`: the same RSA refusal through the `BUF_MEM` reader, which releases the
+     * buffer on both paths. */
+    {
+        BIO *b = BIO_new_mem_buf(der_null, (int)sizeof(der_null));
+        EVP_PKEY *pk = NULL;
+
+        ERR_clear_error();
+        printf("ameth.d2i_keyparams_bio.built=%d\n", b != NULL);
+        if (b != NULL) {
+            printf("ameth.d2i_keyparams_bio.rsa.notnull=%d\n",
+                d2i_KeyParams_bio(EVP_PKEY_RSA, &pk, b) != NULL);
+            printf("ameth.d2i_keyparams_bio.rsa.slot_null=%d\n", pk == NULL);
+            drain("d2i_keyparams_bio_rsa");
+        }
+        BIO_free(b);
+    }
+}
+
 /* ------------------------------------------------------------------ the accessor family */
 
 /* `court_coverage.py` requires every implemented export of a begun stratum to be **called** by
@@ -571,6 +645,7 @@ int main(void)
     assign_arms();
     params_arms();
     refusal_arms();
+    d2i_arms();
     coverage_arms();
     return 0;
 }

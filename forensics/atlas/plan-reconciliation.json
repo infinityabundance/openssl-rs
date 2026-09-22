@@ -127,9 +127,12 @@
         "defines": [],
         "recorded_by": "units:crypto/asn1/d2i_param.c",
         "subphases": [
-          "7.4"
+          "7.4",
+          "8.8"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/asn1/d2i_param.rs"
+        ]
       },
       "crypto/asn1/d2i_pr.c": {
         "defines": [
@@ -146,9 +149,12 @@
         "defines": [],
         "recorded_by": "units:crypto/asn1/d2i_pu.c",
         "subphases": [
-          "7.4"
+          "7.4",
+          "8.8"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/asn1/d2i_pu.rs"
+        ]
       },
       "crypto/asn1/i2d_evp.c": {
         "defines": [],
@@ -3570,10 +3576,10 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 271
+      "transcribed_units": 273
     }
   },
-  "body_hash": "d7a7d52dceca4dd43f634f5587a7af9c95e9d5553000071f4b331c519dd77773",
+  "body_hash": "8bb3df69d39a222dcd8169017520c731161bbf42545fb6ff2b766a0b6665d678",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -3584,17 +3590,17 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "5688cde6e4e880b2ff62ed36f942a93e163603b803c1881954c80cd5f20c288c"
+      "sha256": "5d168c71026987aa95cfe3572dbcbfdb0d41e8fde18a73161b7e0224d2bee807"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "b90f837cb41e7f7fee0785300cf3369904908aca54e2a551919501def5f0b4da"
+      "sha256": "961e31c41ea334a18190fff9ae682942f330b8e2e308e4036c226a6e0323275e"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "d2f43f2b81a3d5df56aaea81a954f586426d3ed73b0aa97cd269c6a23ceb7dc4"
+      "sha256": "f02f1fb1be2f67afb39942d49e8758926565d1ce9b8a0be08d78afd518e77ff7"
     },
     {
       "name": "prerequisites",
@@ -3624,7 +3630,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "1605b62981dcdbe5050afe849bc252e092a70ededf95e53b04c26b21cec614c1"
+      "sha256": "08c8f0207ed407a0b791150ae064ba9e9f68afe084d83eaf15116f9e4dfcb741"
     },
     {
       "name": "plan-PHASE-9-SUBPHASES",

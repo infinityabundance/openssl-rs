@@ -59,7 +59,7 @@
       "verdict": "pass"
     },
     "RT-AMETH": {
-      "observations": 275,
+      "observations": 291,
       "verdict": "pass"
     },
     "RT-ASN1": {
@@ -397,7 +397,7 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 2774,
+    "libcrypto": 2777,
     "libssl": 0
   },
   "open_obligations": {
@@ -406,7 +406,7 @@
     "phase5": 0,
     "phase6": 0,
     "phase7": 0,
-    "phase8": 20,
+    "phase8": 17,
     "phase9": 3
   },
   "owned_obligations": {
@@ -446,7 +446,7 @@
     "blocking_dependencies": 11,
     "divergence_names_covered": 55,
     "findings": 0,
-    "language_census": 4311,
+    "language_census": 4324,
     "sealed_census": 56
   },
   "provider_implemented": [

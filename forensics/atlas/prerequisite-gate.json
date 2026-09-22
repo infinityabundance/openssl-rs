@@ -16,7 +16,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 83,
-      "language_surface_not_modelled_by_name": 4311,
+      "language_surface_not_modelled_by_name": 4324,
       "planned_prerequisites": 8
     },
     "census_by_unit": {
@@ -97,6 +97,8 @@
         "crypto/asn1/asn_moid.c": 11,
         "crypto/asn1/asn_pack.c": 7,
         "crypto/asn1/bio_asn1.c": 13,
+        "crypto/asn1/d2i_param.c": 8,
+        "crypto/asn1/d2i_pu.c": 5,
         "crypto/asn1/evp_asn1.c": 13,
         "crypto/asn1/f_int.c": 8,
         "crypto/asn1/p5_scrypt.c": 23,
@@ -455,8 +457,8 @@
       ]
     },
     "checked": {
-      "authority_units": 271,
-      "crate_modules": 350,
+      "authority_units": 273,
+      "crate_modules": 352,
       "deferral_blocker_rows": 2,
       "deferrals_recorded": 11,
       "divergence_names_covered": 55,
@@ -577,7 +579,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "06f9abe0207397d1063e4411e874b0f028538a47ce68432d838a458243b6dc7b",
+  "body_hash": "109ece9765b9415d2eb12eb2fcf08ab0992db57cd4f02bf8c8eb2bedc17995df",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -598,7 +600,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "5688cde6e4e880b2ff62ed36f942a93e163603b803c1881954c80cd5f20c288c"
+      "sha256": "5d168c71026987aa95cfe3572dbcbfdb0d41e8fde18a73161b7e0224d2bee807"
     },
     {
       "name": "symbol-ownership",
@@ -613,12 +615,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "b90f837cb41e7f7fee0785300cf3369904908aca54e2a551919501def5f0b4da"
+      "sha256": "961e31c41ea334a18190fff9ae682942f330b8e2e308e4036c226a6e0323275e"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "d2f43f2b81a3d5df56aaea81a954f586426d3ed73b0aa97cd269c6a23ceb7dc4"
+      "sha256": "f02f1fb1be2f67afb39942d49e8758926565d1ce9b8a0be08d78afd518e77ff7"
     },
     {
       "name": "prerequisites",
