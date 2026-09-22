@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 170,
+        "implemented": 179,
         "unmatched": 0
       },
       "9": {
@@ -29,8 +29,8 @@
         "probe": "courts/phase9/rt_drbg_probe.c"
       }
     ],
-    "directly_courted": 175,
-    "implemented_rows": 175,
+    "directly_courted": 184,
+    "implemented_rows": 184,
     "rows": [
       {
         "algorithm_names": "AES-128-CBC",
@@ -2241,6 +2241,91 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "HKDF",
+        "aliases": [
+          "HKDF"
+        ],
+        "courts": [
+          "RT-DIGEST"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KDF",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "HKDF-SHA256",
+        "aliases": [
+          "HKDF-SHA256",
+          "id-alg-hkdf-with-sha256",
+          "1.2.840.113549.1.9.16.3.28"
+        ],
+        "courts": [
+          "RT-DIGEST"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KDF",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "HKDF-SHA384",
+        "aliases": [
+          "HKDF-SHA384",
+          "id-alg-hkdf-with-sha384",
+          "1.2.840.113549.1.9.16.3.29"
+        ],
+        "courts": [
+          "RT-DIGEST"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KDF",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "HKDF-SHA512",
+        "aliases": [
+          "HKDF-SHA512",
+          "id-alg-hkdf-with-sha512",
+          "1.2.840.113549.1.9.16.3.30"
+        ],
+        "courts": [
+          "RT-DIGEST"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KDF",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "KBKDF",
+        "aliases": [
+          "KBKDF"
+        ],
+        "courts": [
+          "RT-DIGEST"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KDF",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "PBKDF2",
+        "aliases": [
+          "PBKDF2",
+          "1.2.840.113549.1.5.12"
+        ],
+        "courts": [
+          "RT-DIGEST"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KDF",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "PKCS12KDF",
         "aliases": [
           "PKCS12KDF"
@@ -2254,9 +2339,48 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "SSHKDF",
+        "aliases": [
+          "SSHKDF"
+        ],
+        "courts": [
+          "RT-DIGEST"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KDF",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "SSKDF",
         "aliases": [
           "SSKDF"
+        ],
+        "courts": [
+          "RT-DIGEST"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KDF",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "TLS1-PRF",
+        "aliases": [
+          "TLS1-PRF"
+        ],
+        "courts": [
+          "RT-DIGEST"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KDF",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "TLS13-KDF",
+        "aliases": [
+          "TLS13-KDF"
         ],
         "courts": [
           "RT-DIGEST"
@@ -2341,6 +2465,7 @@
           "HMAC"
         ],
         "courts": [
+          "RT-DIGEST",
           "RT-CIPHER",
           "RT-DRBG"
         ],
@@ -2385,6 +2510,7 @@
           "POLY1305"
         ],
         "courts": [
+          "RT-DIGEST",
           "RT-CIPHER"
         ],
         "coverage": "direct",
@@ -2478,12 +2604,12 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "5d35ca87b313f16c8f9352a2a90dc0ea05d1fd7e487badb4beb5f80e0967e046"
+      "sha256": "3834d5289b424d8d2defdd5718e4e2c72da5d3736915640b7d2e7ef6343d3b5f"
     },
     {
       "name": "court:RT-DIGEST",
       "path": "courts/phase8/rt_digest_probe.c",
-      "sha256": "bf7bdeb565e185f7c77fdec3bb10814cd811f5d038288c29f4d99d0811a3b241"
+      "sha256": "f548587bda418903d04f4922578238f1095858ba8c4e09018f71f8826eb40720"
     },
     {
       "name": "court:RT-CIPHER",

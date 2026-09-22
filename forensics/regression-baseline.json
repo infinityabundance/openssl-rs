@@ -191,7 +191,7 @@
       "verdict": "pass"
     },
     "RT-DIGEST": {
-      "observations": 487,
+      "observations": 566,
       "verdict": "pass"
     },
     "RT-DRBG": {
@@ -616,8 +616,17 @@
     "default/OSSL_OP_DIGEST/SHAKE-128",
     "default/OSSL_OP_DIGEST/SHAKE-256",
     "default/OSSL_OP_DIGEST/SM3",
+    "default/OSSL_OP_KDF/HKDF",
+    "default/OSSL_OP_KDF/HKDF-SHA256",
+    "default/OSSL_OP_KDF/HKDF-SHA384",
+    "default/OSSL_OP_KDF/HKDF-SHA512",
+    "default/OSSL_OP_KDF/KBKDF",
+    "default/OSSL_OP_KDF/PBKDF2",
     "default/OSSL_OP_KDF/PKCS12KDF",
+    "default/OSSL_OP_KDF/SSHKDF",
     "default/OSSL_OP_KDF/SSKDF",
+    "default/OSSL_OP_KDF/TLS1-PRF",
+    "default/OSSL_OP_KDF/TLS13-KDF",
     "default/OSSL_OP_KDF/X942KDF-ASN1",
     "default/OSSL_OP_KDF/X963KDF",
     "default/OSSL_OP_MAC/BLAKE2BMAC",
@@ -641,14 +650,14 @@
       "8": 685,
       "9": 675
     },
-    "implemented": 175,
+    "implemented": 184,
     "open_by_phase": {
       "10": 636,
       "13": 39,
-      "8": 136,
+      "8": 127,
       "9": 10
     },
     "total": 996,
-    "unimplemented": 821
+    "unimplemented": 812
   }
 }

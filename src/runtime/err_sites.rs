@@ -20922,6 +20922,1246 @@ pub(crate) const PROV_PKCS12KDF_451: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `fips_digest_check_passed` at `providers/implementations/kdfs/sshkdf.c:151` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_SSHKDF_151: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 151,
+    func: c"fips_digest_check_passed",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `fips_key_check_passed` at `providers/implementations/kdfs/sshkdf.c:167` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_SSHKDF_167: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 167,
+    func: c"fips_key_check_passed",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `kdf_sshkdf_derive` at `providers/implementations/kdfs/sshkdf.c:186` (PROV_R_MISSING_MESSAGE_DIGEST).
+pub(crate) const PROV_SSHKDF_186: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 186,
+    func: c"kdf_sshkdf_derive",
+    lib: 57,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `kdf_sshkdf_derive` at `providers/implementations/kdfs/sshkdf.c:190` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_SSHKDF_190: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 190,
+    func: c"kdf_sshkdf_derive",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `kdf_sshkdf_derive` at `providers/implementations/kdfs/sshkdf.c:194` (PROV_R_MISSING_XCGHASH).
+pub(crate) const PROV_SSHKDF_194: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 194,
+    func: c"kdf_sshkdf_derive",
+    lib: 57,
+    reason: 135,
+    dynamic_reason: false,
+};
+
+/// `kdf_sshkdf_derive` at `providers/implementations/kdfs/sshkdf.c:198` (PROV_R_MISSING_SESSION_ID).
+pub(crate) const PROV_SSHKDF_198: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 198,
+    func: c"kdf_sshkdf_derive",
+    lib: 57,
+    reason: 133,
+    dynamic_reason: false,
+};
+
+/// `kdf_sshkdf_derive` at `providers/implementations/kdfs/sshkdf.c:202` (PROV_R_MISSING_TYPE).
+pub(crate) const PROV_SSHKDF_202: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 202,
+    func: c"kdf_sshkdf_derive",
+    lib: 57,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sshkdf.c:291` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSHKDF_291: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 291,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sshkdf.c:301` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSHKDF_301: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 301,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sshkdf.c:317` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSHKDF_317: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 317,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sshkdf.c:341` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSHKDF_341: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 341,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sshkdf.c:351` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSHKDF_351: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 351,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sshkdf.c:364` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSHKDF_364: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 364,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sshkdf.c:375` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSHKDF_375: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 375,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sshkdf.c:386` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSHKDF_386: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 386,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sshkdf.c:397` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSHKDF_397: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 397,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_sshkdf_set_ctx_params` at `providers/implementations/kdfs/sshkdf.c:435` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_SSHKDF_435: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 435,
+    func: c"kdf_sshkdf_set_ctx_params",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `kdf_sshkdf_set_ctx_params` at `providers/implementations/kdfs/sshkdf.c:472` (PROV_R_VALUE_ERROR).
+pub(crate) const PROV_SSHKDF_472: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 472,
+    func: c"kdf_sshkdf_set_ctx_params",
+    lib: 57,
+    reason: 138,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_get_ctx_params_decoder` at `providers/implementations/kdfs/sshkdf.c:524` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSHKDF_524: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 524,
+    func: c"sshkdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_get_ctx_params_decoder` at `providers/implementations/kdfs/sshkdf.c:536` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSHKDF_536: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 536,
+    func: c"sshkdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `fips_lower_bound_check_passed` at `providers/implementations/kdfs/pbkdf2.c:227` (ERR_raise dynamic reason).
+pub(crate) const PROV_PBKDF2_227: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 227,
+    func: c"fips_lower_bound_check_passed",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `lower_bound_check_passed` at `providers/implementations/kdfs/pbkdf2.c:248` (ERR_raise dynamic reason).
+pub(crate) const PROV_PBKDF2_248: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 248,
+    func: c"lower_bound_check_passed",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `lower_bound_check_passed` at `providers/implementations/kdfs/pbkdf2.c:252` (PROV_R_INVALID_ITERATION_COUNT).
+pub(crate) const PROV_PBKDF2_252: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 252,
+    func: c"lower_bound_check_passed",
+    lib: 57,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `kdf_pbkdf2_derive` at `providers/implementations/kdfs/pbkdf2.c:270` (PROV_R_MISSING_PASS).
+pub(crate) const PROV_PBKDF2_270: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 270,
+    func: c"kdf_pbkdf2_derive",
+    lib: 57,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `kdf_pbkdf2_derive` at `providers/implementations/kdfs/pbkdf2.c:275` (PROV_R_MISSING_SALT).
+pub(crate) const PROV_PBKDF2_275: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 275,
+    func: c"kdf_pbkdf2_derive",
+    lib: 57,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `pbkdf2_set_ctx_params_decoder` at `providers/implementations/kdfs/pbkdf2.c:327` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PBKDF2_327: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 327,
+    func: c"pbkdf2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pbkdf2_set_ctx_params_decoder` at `providers/implementations/kdfs/pbkdf2.c:338` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PBKDF2_338: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 338,
+    func: c"pbkdf2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pbkdf2_set_ctx_params_decoder` at `providers/implementations/kdfs/pbkdf2.c:349` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PBKDF2_349: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 349,
+    func: c"pbkdf2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pbkdf2_set_ctx_params_decoder` at `providers/implementations/kdfs/pbkdf2.c:364` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PBKDF2_364: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 364,
+    func: c"pbkdf2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pbkdf2_set_ctx_params_decoder` at `providers/implementations/kdfs/pbkdf2.c:375` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PBKDF2_375: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 375,
+    func: c"pbkdf2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pbkdf2_set_ctx_params_decoder` at `providers/implementations/kdfs/pbkdf2.c:386` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PBKDF2_386: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 386,
+    func: c"pbkdf2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pbkdf2_set_ctx_params_decoder` at `providers/implementations/kdfs/pbkdf2.c:398` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PBKDF2_398: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 398,
+    func: c"pbkdf2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_pbkdf2_set_ctx_params` at `providers/implementations/kdfs/pbkdf2.c:431` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_PBKDF2_431: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 431,
+    func: c"kdf_pbkdf2_set_ctx_params",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `pbkdf2_get_ctx_params_decoder` at `providers/implementations/kdfs/pbkdf2.c:513` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PBKDF2_513: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 513,
+    func: c"pbkdf2_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pbkdf2_get_ctx_params_decoder` at `providers/implementations/kdfs/pbkdf2.c:525` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PBKDF2_525: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 525,
+    func: c"pbkdf2_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pbkdf2_derive` at `providers/implementations/kdfs/pbkdf2.c:606` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_PBKDF2_606: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 606,
+    func: c"pbkdf2_derive",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `kdf_hkdf_size` at `providers/implementations/kdfs/hkdf.c:199` (PROV_R_MISSING_MESSAGE_DIGEST).
+pub(crate) const PROV_HKDF_199: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 199,
+    func: c"kdf_hkdf_size",
+    lib: 57,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `fips_hkdf_key_check_passed` at `providers/implementations/kdfs/hkdf.c:219` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_HKDF_219: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 219,
+    func: c"fips_hkdf_key_check_passed",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `kdf_hkdf_derive` at `providers/implementations/kdfs/hkdf.c:239` (PROV_R_MISSING_MESSAGE_DIGEST).
+pub(crate) const PROV_HKDF_239: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 239,
+    func: c"kdf_hkdf_derive",
+    lib: 57,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `kdf_hkdf_derive` at `providers/implementations/kdfs/hkdf.c:243` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_HKDF_243: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 243,
+    func: c"kdf_hkdf_derive",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `kdf_hkdf_derive` at `providers/implementations/kdfs/hkdf.c:247` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_HKDF_247: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 247,
+    func: c"kdf_hkdf_derive",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `hkdf_common_set_ctx_params` at `providers/implementations/kdfs/hkdf.c:299` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_HKDF_299: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 299,
+    func: c"hkdf_common_set_ctx_params",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `hkdf_common_set_ctx_params` at `providers/implementations/kdfs/hkdf.c:313` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_HKDF_313: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 313,
+    func: c"hkdf_common_set_ctx_params",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `hkdf_common_set_ctx_params` at `providers/implementations/kdfs/hkdf.c:320` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_HKDF_320: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 320,
+    func: c"hkdf_common_set_ctx_params",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `hkdf_common_set_ctx_params` at `providers/implementations/kdfs/hkdf.c:325` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_HKDF_325: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 325,
+    func: c"hkdf_common_set_ctx_params",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `hkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:407` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_407: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 407,
+    func: c"hkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:418` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_418: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 418,
+    func: c"hkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:429` (PROV_R_TOO_MANY_RECORDS).
+pub(crate) const PROV_HKDF_429: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 429,
+    func: c"hkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `hkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:453` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_453: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 453,
+    func: c"hkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:463` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_463: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 463,
+    func: c"hkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:476` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_476: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 476,
+    func: c"hkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:487` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_487: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 487,
+    func: c"hkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:498` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_498: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 498,
+    func: c"hkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_get_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:586` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_586: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 586,
+    func: c"hkdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_get_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:598` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_598: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 598,
+    func: c"hkdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_get_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:610` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_610: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 610,
+    func: c"hkdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_get_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:621` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_621: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 621,
+    func: c"hkdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_get_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:636` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_636: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 636,
+    func: c"hkdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_get_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:647` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_647: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 647,
+    func: c"hkdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_fixed_digest_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:825` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_825: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 825,
+    func: c"hkdf_fixed_digest_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_fixed_digest_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:836` (PROV_R_TOO_MANY_RECORDS).
+pub(crate) const PROV_HKDF_836: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 836,
+    func: c"hkdf_fixed_digest_set_ctx_params_decoder",
+    lib: 57,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `hkdf_fixed_digest_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:860` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_860: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 860,
+    func: c"hkdf_fixed_digest_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_fixed_digest_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:870` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_870: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 870,
+    func: c"hkdf_fixed_digest_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_fixed_digest_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:883` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_883: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 883,
+    func: c"hkdf_fixed_digest_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_fixed_digest_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:894` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_894: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 894,
+    func: c"hkdf_fixed_digest_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_hkdf_fixed_digest_set_ctx_params` at `providers/implementations/kdfs/hkdf.c:916` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_HKDF_916: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 916,
+    func: c"kdf_hkdf_fixed_digest_set_ctx_params",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `HKDF_Extract` at `providers/implementations/kdfs/hkdf.c:1055` (PROV_R_WRONG_OUTPUT_BUFFER_SIZE).
+pub(crate) const PROV_HKDF_1055: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1055,
+    func: c"HKDF_Extract",
+    lib: 57,
+    reason: 139,
+    dynamic_reason: false,
+};
+
+/// `fips_tls1_3_digest_check_passed` at `providers/implementations/kdfs/hkdf.c:1294` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_HKDF_1294: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1294,
+    func: c"fips_tls1_3_digest_check_passed",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `fips_tls1_3_key_check_passed` at `providers/implementations/kdfs/hkdf.c:1330` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_HKDF_1330: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1330,
+    func: c"fips_tls1_3_key_check_passed",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_derive` at `providers/implementations/kdfs/hkdf.c:1349` (PROV_R_MISSING_MESSAGE_DIGEST).
+pub(crate) const PROV_HKDF_1349: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1349,
+    func: c"kdf_tls1_3_derive",
+    lib: 57,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:1440` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_1440: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1440,
+    func: c"kdf_tls1_3_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:1472` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_1472: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1472,
+    func: c"kdf_tls1_3_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:1482` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_1482: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1482,
+    func: c"kdf_tls1_3_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:1498` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_1498: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1498,
+    func: c"kdf_tls1_3_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:1522` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_1522: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1522,
+    func: c"kdf_tls1_3_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:1532` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_1532: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1532,
+    func: c"kdf_tls1_3_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:1545` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_1545: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1545,
+    func: c"kdf_tls1_3_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:1556` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_1556: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1556,
+    func: c"kdf_tls1_3_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:1575` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_1575: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1575,
+    func: c"kdf_tls1_3_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:1586` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_1586: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1586,
+    func: c"kdf_tls1_3_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:1599` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_1599: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1599,
+    func: c"kdf_tls1_3_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_set_ctx_params` at `providers/implementations/kdfs/hkdf.c:1629` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_HKDF_1629: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1629,
+    func: c"kdf_tls1_3_set_ctx_params",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `fips_ems_check_passed` at `providers/implementations/kdfs/tls1_prf.c:205` (PROV_R_EMS_NOT_ENABLED).
+pub(crate) const PROV_TLS1_PRF_205: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 205,
+    func: c"fips_ems_check_passed",
+    lib: 57,
+    reason: 233,
+    dynamic_reason: false,
+};
+
+/// `fips_digest_check_passed` at `providers/implementations/kdfs/tls1_prf.c:230` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_TLS1_PRF_230: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 230,
+    func: c"fips_digest_check_passed",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `fips_key_check_passed` at `providers/implementations/kdfs/tls1_prf.c:246` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_TLS1_PRF_246: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 246,
+    func: c"fips_key_check_passed",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_prf_derive` at `providers/implementations/kdfs/tls1_prf.c:263` (PROV_R_MISSING_MESSAGE_DIGEST).
+pub(crate) const PROV_TLS1_PRF_263: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 263,
+    func: c"kdf_tls1_prf_derive",
+    lib: 57,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_prf_derive` at `providers/implementations/kdfs/tls1_prf.c:267` (PROV_R_MISSING_SECRET).
+pub(crate) const PROV_TLS1_PRF_267: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 267,
+    func: c"kdf_tls1_prf_derive",
+    lib: 57,
+    reason: 132,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_prf_derive` at `providers/implementations/kdfs/tls1_prf.c:271` (PROV_R_MISSING_SEED).
+pub(crate) const PROV_TLS1_PRF_271: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 271,
+    func: c"kdf_tls1_prf_derive",
+    lib: 57,
+    reason: 140,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_prf_derive` at `providers/implementations/kdfs/tls1_prf.c:275` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_TLS1_PRF_275: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 275,
+    func: c"kdf_tls1_prf_derive",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `tls1prf_set_ctx_params_decoder` at `providers/implementations/kdfs/tls1_prf.c:372` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TLS1_PRF_372: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 372,
+    func: c"tls1prf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `tls1prf_set_ctx_params_decoder` at `providers/implementations/kdfs/tls1_prf.c:382` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TLS1_PRF_382: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 382,
+    func: c"tls1prf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `tls1prf_set_ctx_params_decoder` at `providers/implementations/kdfs/tls1_prf.c:403` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TLS1_PRF_403: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 403,
+    func: c"tls1prf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `tls1prf_set_ctx_params_decoder` at `providers/implementations/kdfs/tls1_prf.c:415` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TLS1_PRF_415: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 415,
+    func: c"tls1prf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `tls1prf_set_ctx_params_decoder` at `providers/implementations/kdfs/tls1_prf.c:428` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TLS1_PRF_428: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 428,
+    func: c"tls1prf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `tls1prf_set_ctx_params_decoder` at `providers/implementations/kdfs/tls1_prf.c:440` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TLS1_PRF_440: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 440,
+    func: c"tls1prf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `tls1prf_set_ctx_params_decoder` at `providers/implementations/kdfs/tls1_prf.c:459` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TLS1_PRF_459: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 459,
+    func: c"tls1prf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `tls1prf_set_ctx_params_decoder` at `providers/implementations/kdfs/tls1_prf.c:470` (PROV_R_TOO_MANY_RECORDS).
+pub(crate) const PROV_TLS1_PRF_470: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 470,
+    func: c"tls1prf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_prf_set_ctx_params` at `providers/implementations/kdfs/tls1_prf.c:537` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_TLS1_PRF_537: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 537,
+    func: c"kdf_tls1_prf_set_ctx_params",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `tls1prf_get_ctx_params_decoder` at `providers/implementations/kdfs/tls1_prf.c:655` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TLS1_PRF_655: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 655,
+    func: c"tls1prf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `tls1prf_get_ctx_params_decoder` at `providers/implementations/kdfs/tls1_prf.c:667` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TLS1_PRF_667: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 667,
+    func: c"tls1prf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `fips_kbkdf_key_check_passed` at `providers/implementations/kdfs/kbkdf.c:203` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_KBKDF_203: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 203,
+    func: c"fips_kbkdf_key_check_passed",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_derive` at `providers/implementations/kdfs/kbkdf.c:315` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_KBKDF_315: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 315,
+    func: c"kbkdf_derive",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_derive` at `providers/implementations/kdfs/kbkdf.c:320` (PROV_R_MISSING_MAC).
+pub(crate) const PROV_KBKDF_320: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 320,
+    func: c"kbkdf_derive",
+    lib: 57,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_derive` at `providers/implementations/kdfs/kbkdf.c:326` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_KBKDF_326: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 326,
+    func: c"kbkdf_derive",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_derive` at `providers/implementations/kdfs/kbkdf.c:341` (PROV_R_INVALID_SEED_LENGTH).
+pub(crate) const PROV_KBKDF_341: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 341,
+    func: c"kbkdf_derive",
+    lib: 57,
+    reason: 154,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_derive` at `providers/implementations/kdfs/kbkdf.c:349` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_KBKDF_349: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 349,
+    func: c"kbkdf_derive",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:432` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_432: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 432,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:443` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_443: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 443,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:454` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_454: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 454,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:465` (PROV_R_TOO_MANY_RECORDS).
+pub(crate) const PROV_KBKDF_465: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 465,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:489` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_489: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 489,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:499` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_499: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 499,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:516` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_516: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 516,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:527` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_527: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 527,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:539` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_539: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 539,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:552` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_552: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 552,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:567` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_567: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 567,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:578` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_578: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 578,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:608` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_608: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 608,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:619` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_619: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 619,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params` at `providers/implementations/kdfs/kbkdf.c:667` (PROV_R_INVALID_MAC).
+pub(crate) const PROV_KBKDF_667: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 667,
+    func: c"kbkdf_set_ctx_params",
+    lib: 57,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params` at `providers/implementations/kdfs/kbkdf.c:680` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_KBKDF_680: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 680,
+    func: c"kbkdf_set_ctx_params",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_get_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:778` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_778: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 778,
+    func: c"kbkdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_get_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:790` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_790: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 790,
+    func: c"kbkdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
 /// `rsa_new_intern` at `crypto/rsa/rsa_lib.c:85` (ERR_R_CRYPTO_LIB).
 pub(crate) const RSA_LIB_85: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
@@ -35022,6 +36262,130 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_PKCS12KDF_354,
     PROV_PKCS12KDF_366,
     PROV_PKCS12KDF_451,
+    PROV_SSHKDF_151,
+    PROV_SSHKDF_167,
+    PROV_SSHKDF_186,
+    PROV_SSHKDF_190,
+    PROV_SSHKDF_194,
+    PROV_SSHKDF_198,
+    PROV_SSHKDF_202,
+    PROV_SSHKDF_291,
+    PROV_SSHKDF_301,
+    PROV_SSHKDF_317,
+    PROV_SSHKDF_341,
+    PROV_SSHKDF_351,
+    PROV_SSHKDF_364,
+    PROV_SSHKDF_375,
+    PROV_SSHKDF_386,
+    PROV_SSHKDF_397,
+    PROV_SSHKDF_435,
+    PROV_SSHKDF_472,
+    PROV_SSHKDF_524,
+    PROV_SSHKDF_536,
+    PROV_PBKDF2_227,
+    PROV_PBKDF2_248,
+    PROV_PBKDF2_252,
+    PROV_PBKDF2_270,
+    PROV_PBKDF2_275,
+    PROV_PBKDF2_327,
+    PROV_PBKDF2_338,
+    PROV_PBKDF2_349,
+    PROV_PBKDF2_364,
+    PROV_PBKDF2_375,
+    PROV_PBKDF2_386,
+    PROV_PBKDF2_398,
+    PROV_PBKDF2_431,
+    PROV_PBKDF2_513,
+    PROV_PBKDF2_525,
+    PROV_PBKDF2_606,
+    PROV_HKDF_199,
+    PROV_HKDF_219,
+    PROV_HKDF_239,
+    PROV_HKDF_243,
+    PROV_HKDF_247,
+    PROV_HKDF_299,
+    PROV_HKDF_313,
+    PROV_HKDF_320,
+    PROV_HKDF_325,
+    PROV_HKDF_407,
+    PROV_HKDF_418,
+    PROV_HKDF_429,
+    PROV_HKDF_453,
+    PROV_HKDF_463,
+    PROV_HKDF_476,
+    PROV_HKDF_487,
+    PROV_HKDF_498,
+    PROV_HKDF_586,
+    PROV_HKDF_598,
+    PROV_HKDF_610,
+    PROV_HKDF_621,
+    PROV_HKDF_636,
+    PROV_HKDF_647,
+    PROV_HKDF_825,
+    PROV_HKDF_836,
+    PROV_HKDF_860,
+    PROV_HKDF_870,
+    PROV_HKDF_883,
+    PROV_HKDF_894,
+    PROV_HKDF_916,
+    PROV_HKDF_1055,
+    PROV_HKDF_1294,
+    PROV_HKDF_1330,
+    PROV_HKDF_1349,
+    PROV_HKDF_1440,
+    PROV_HKDF_1472,
+    PROV_HKDF_1482,
+    PROV_HKDF_1498,
+    PROV_HKDF_1522,
+    PROV_HKDF_1532,
+    PROV_HKDF_1545,
+    PROV_HKDF_1556,
+    PROV_HKDF_1575,
+    PROV_HKDF_1586,
+    PROV_HKDF_1599,
+    PROV_HKDF_1629,
+    PROV_TLS1_PRF_205,
+    PROV_TLS1_PRF_230,
+    PROV_TLS1_PRF_246,
+    PROV_TLS1_PRF_263,
+    PROV_TLS1_PRF_267,
+    PROV_TLS1_PRF_271,
+    PROV_TLS1_PRF_275,
+    PROV_TLS1_PRF_372,
+    PROV_TLS1_PRF_382,
+    PROV_TLS1_PRF_403,
+    PROV_TLS1_PRF_415,
+    PROV_TLS1_PRF_428,
+    PROV_TLS1_PRF_440,
+    PROV_TLS1_PRF_459,
+    PROV_TLS1_PRF_470,
+    PROV_TLS1_PRF_537,
+    PROV_TLS1_PRF_655,
+    PROV_TLS1_PRF_667,
+    PROV_KBKDF_203,
+    PROV_KBKDF_315,
+    PROV_KBKDF_320,
+    PROV_KBKDF_326,
+    PROV_KBKDF_341,
+    PROV_KBKDF_349,
+    PROV_KBKDF_432,
+    PROV_KBKDF_443,
+    PROV_KBKDF_454,
+    PROV_KBKDF_465,
+    PROV_KBKDF_489,
+    PROV_KBKDF_499,
+    PROV_KBKDF_516,
+    PROV_KBKDF_527,
+    PROV_KBKDF_539,
+    PROV_KBKDF_552,
+    PROV_KBKDF_567,
+    PROV_KBKDF_578,
+    PROV_KBKDF_608,
+    PROV_KBKDF_619,
+    PROV_KBKDF_667,
+    PROV_KBKDF_680,
+    PROV_KBKDF_778,
+    PROV_KBKDF_790,
     RSA_LIB_85,
     RSA_LIB_106,
     RSA_LIB_116,

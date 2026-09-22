@@ -554,6 +554,39 @@ COVERED_FILES = [
     # It raises from `pkcs12kdf_derive` (`:69`, `:75`), `kdf_pkcs12_derive` (`:234`, `:239`) and
     # its two generated decoders (`:288`-`:366`, `:451`).
     ("providers/implementations/kdfs/pkcs12kdf.c", "PROV_PKCS12KDF"),
+    # The SSH KDF (8.10's second provider-KDF row). `sshkdf.c` is `.c.in`-generated too, so its
+    # `__FILE__` is bare and its line numbers are the generated text's. It raises from
+    # `kdf_sshkdf_derive` (`:186`, `:190`, `:194`, `:198`, `:202`), `kdf_sshkdf_set_ctx_params`
+    # (`:435`, `:472`) and its two generated decoders (`:301`-`:397`, `:536`).
+    ("providers/implementations/kdfs/sshkdf.c", "PROV_SSHKDF"),
+    # PBKDF2 (8.10's third provider-KDF row). `pbkdf2.c` is `.c.in`-generated, so its `__FILE__` is
+    # bare and its line numbers are the generated text's. It raises from `lower_bound_check_passed`
+    # (`:248`, the *variable* reason the lower-bound function selected, and `:252`),
+    # `kdf_pbkdf2_derive` (`:270`, `:275`), `kdf_pbkdf2_set_ctx_params` (`:431`) and its two
+    # generated decoders (`:327`-`:398`, `:525`), plus `pbkdf2_derive`'s own overflow guard
+    # (`:606`).
+    ("providers/implementations/kdfs/pbkdf2.c", "PROV_PBKDF2"),
+    # HKDF and TLS13-KDF (8.10's fourth unit, five rows). `hkdf.c` is `.c.in`-generated, so its
+    # `__FILE__` is bare and its line numbers are the generated text's. It raises from
+    # `kdf_hkdf_size` (`:199`), `kdf_hkdf_derive` (`:239`, `:243`, `:247`),
+    # `hkdf_common_set_ctx_params` (`:299`, `:313`, `:320`, `:325`), `HKDF_Extract` (`:1055`),
+    # `kdf_tls1_3_derive` (`:1349`), `kdf_tls1_3_set_ctx_params` (`:1629`) and its four generated
+    # decoders (`:407`-`:498` and the info counter at `:429`; `:586`-`:647`; `:825`-`:894` and its
+    # counter at `:836`; `:1440`-`:1599`).
+    ("providers/implementations/kdfs/hkdf.c", "PROV_HKDF"),
+    # TLS1-PRF (8.10's fifth provider-KDF row). `tls1_prf.c` is `.c.in`-generated, so its
+    # `__FILE__` is bare and its line numbers are the generated text's. It raises from
+    # `fips_ems_check_passed` (`:205`), `fips_digest_check_passed` (`:230`),
+    # `fips_key_check_passed` (`:246`), `kdf_tls1_prf_derive` (`:263`, `:267`, `:271`, `:275`),
+    # `kdf_tls1_prf_set_ctx_params` (`:537`) and its two generated decoders
+    # (`:372`-`:470`, `:655`-`:667`).
+    ("providers/implementations/kdfs/tls1_prf.c", "PROV_TLS1_PRF"),
+    # KBKDF (8.10's sixth provider-KDF row). `kbkdf.c` is `.c.in`-generated, so its `__FILE__` is
+    # bare and its line numbers are the generated text's. It raises from
+    # `fips_kbkdf_key_check_passed` (`:203`), `kbkdf_derive` (`:315`, `:320`, `:326`, `:341`,
+    # `:349`), `kbkdf_set_ctx_params` (`:667`, `:680`) and its two generated decoders
+    # (`:432`-`:619` and the info counter at `:465`; `:778`-`:790`).
+    ("providers/implementations/kdfs/kbkdf.c", "PROV_KBKDF"),
     # Phase 8.4: the `crypto/rsa` subsystem. The same rule as `crypto/bn` above -- this is
     # the *subsystem* set, not a selection of convenient files, because every one of them
     # raises from a surface Phase 8 owns and a coordinate's `file` string is part of the

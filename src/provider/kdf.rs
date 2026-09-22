@@ -1,21 +1,27 @@
-//! Phase 8 — the default provider's `OSSL_OP_KDF` rows, and the two algorithm units behind
-//! them.
+//! Phase 8 — the default provider's `OSSL_OP_KDF` rows, and the algorithm units behind them.
 //!
-//! Three registration rows of `providers/defltprov.c`'s `deflt_kdfs[]` are published here:
-//! `SSKDF` and `X963KDF`, whose units are `providers/implementations/kdfs/sskdf.c`, and
-//! `X942KDF-ASN1`, whose unit is `providers/implementations/kdfs/x942kdf.c`. Both units are
-//! transcribed **whole** (D327's rule) and the two rows `DH_KDF_X9_42` and `ECDH_KDF_X9_62`
-//! fetch are among them: `DH_KDF_X9_42` reaches `X942KDF-ASN1` and `ECDH_KDF_X9_62` reaches
-//! `X963KDF`, so with this module both wrappers have a real provider row to fetch
-//! (`docs/DECISIONS.md` D296, D346).
+//! Thirteen registration rows of `providers/defltprov.c`'s `deflt_kdfs[]` are published here:
+//! `HKDF`, `HKDF-SHA256`, `HKDF-SHA384`, `HKDF-SHA512` and `TLS13-KDF`, whose unit is
+//! `providers/implementations/kdfs/hkdf.c` (D376); `SSKDF` and `X963KDF`, whose unit is
+//! `providers/implementations/kdfs/sskdf.c`; `X942KDF-ASN1`, whose unit is
+//! `providers/implementations/kdfs/x942kdf.c`; `PKCS12KDF`, whose unit is
+//! `providers/implementations/kdfs/pkcs12kdf.c` (`docs/DECISIONS.md` D373); `SSHKDF`, whose unit
+//! is `providers/implementations/kdfs/sshkdf.c` (D374); `PBKDF2`, whose unit is
+//! `providers/implementations/kdfs/pbkdf2.c` (D375); `TLS1-PRF`, whose unit is
+//! `providers/implementations/kdfs/tls1_prf.c`; and `KBKDF`, whose unit is
+//! `providers/implementations/kdfs/kbkdf.c`. Each unit is transcribed **whole** (D327's rule),
+//! and the two rows `DH_KDF_X9_42` and `ECDH_KDF_X9_62` fetch are among them: `DH_KDF_X9_42`
+//! reaches `X942KDF-ASN1` and `ECDH_KDF_X9_62` reaches `X963KDF`, so with this module both
+//! wrappers have a real provider row to fetch (`docs/DECISIONS.md` D296, D346).
 //!
 //! ## The provider rows, and the census's order
 //!
-//! `deflt_kdfs[]` carries nineteen rows on this profile and the three published here are its
-//! sixth (`SSKDF`), tenth (`X963KDF`) and thirteenth (`X942KDF-ASN1`) — so the table below is
-//! the authority's order and a **subsequence** of it, which `gen_provider_algorithms.py`
-//! checks (D244). Each row's alias sequence is `prov/names.h`'s: `SSKDF` carries no alias,
-//! `X963KDF` carries `X942KDF-CONCAT` and `X942KDF-ASN1` carries `X942KDF`.
+//! `deflt_kdfs[]` carries nineteen rows on this profile and the thirteen published here are its
+//! first five (`HKDF`, `HKDF-SHA256`, `HKDF-SHA384`, `HKDF-SHA512`, `TLS13-KDF`), then its sixth
+//! (`SSKDF`), seventh (`PBKDF2`), eighth (`PKCS12KDF`), ninth (`SSHKDF`), tenth (`X963KDF`),
+//! eleventh (`TLS1-PRF`), twelfth (`KBKDF`) and thirteenth (`X942KDF-ASN1`) — so the table below
+//! is the authority's order and a **subsequence** of it, which `gen_provider_algorithms.py`
+//! checks (D244). Each row's alias sequence is `prov/names.h`'s.
 //!
 //! ## What is modelled, and what is not
 //!
@@ -35,7 +41,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_void, CStr};
+use core::ffi::{c_char, c_int, c_uint, c_ulong, c_void, CStr};
 use core::ptr;
 
 use crate::context::dispatch::{OsslDispatch, OSSL_DISPATCH_END};
@@ -46,7 +52,8 @@ use crate::der_writer::{
 use crate::evp::cipher::{EVP_CIPHER_fetch, EVP_CIPHER_free, EVP_CIPHER_is_a};
 use crate::evp::digest::{
     EVP_DigestFinal_ex, EVP_DigestInit, EVP_DigestInit_ex, EVP_DigestUpdate, EVP_MD_CTX_copy_ex,
-    EVP_MD_CTX_free, EVP_MD_CTX_new, EVP_MD_get_block_size, EVP_MD_get_size, EVP_MD_xof,
+    EVP_MD_CTX_free, EVP_MD_CTX_new, EVP_MD_get0_name, EVP_MD_get_block_size, EVP_MD_get_size,
+    EVP_MD_xof,
 };
 use crate::evp::kdf::{
     OSSL_FUNC_KDF_DERIVE, OSSL_FUNC_KDF_DUPCTX, OSSL_FUNC_KDF_FREECTX,
@@ -55,17 +62,28 @@ use crate::evp::kdf::{
 };
 use crate::evp::mac::{
     EVP_MAC_CTX_dup, EVP_MAC_CTX_free, EVP_MAC_CTX_get0_mac, EVP_MAC_CTX_get_mac_size,
-    EVP_MAC_CTX_set_params, EVP_MAC_final, EVP_MAC_init, EVP_MAC_is_a, EVP_MAC_update, EvpMacCtx,
+    EVP_MAC_CTX_set_params, EVP_MAC_final, EVP_MAC_init, EVP_MAC_is_a, EVP_MAC_update, EVP_Q_mac,
+    EvpMacCtx,
+};
+use crate::evp::pkey_ctx::{
+    EVP_KDF_HKDF_MODE_EXPAND_ONLY, EVP_KDF_HKDF_MODE_EXTRACT_AND_EXPAND,
+    EVP_KDF_HKDF_MODE_EXTRACT_ONLY,
+};
+use crate::mac::hmac::{
+    HMAC_CTX_copy, HMAC_CTX_free, HMAC_CTX_new, HMAC_Final, HMAC_Init_ex, HMAC_Update, HmacCtx,
 };
 use crate::packet::{
-    WPACKET_cleanup, WPACKET_finish, WPACKET_get_curr, WPACKET_get_total_written, WPACKET_init_der,
-    WPACKET_init_null_der, Wpacket,
+    WPACKET_cleanup, WPACKET_close, WPACKET_finish, WPACKET_get_curr, WPACKET_get_total_written,
+    WPACKET_init_der, WPACKET_init_null_der, WPACKET_init_static_len, WPACKET_memcpy,
+    WPACKET_put_bytes_u16, WPACKET_start_sub_packet_len__, WPACKET_sub_memcpy__, Wpacket,
 };
 use crate::params::{
     ossl_param_get1_concat_octet_string, ossl_param_get1_octet_string_from_param,
     OSSL_PARAM_construct_end, OSSL_PARAM_construct_octet_string, OSSL_PARAM_construct_size_t,
-    OSSL_PARAM_get_int, OSSL_PARAM_get_octet_string, OSSL_PARAM_get_size_t, OSSL_PARAM_get_uint64,
-    OSSL_PARAM_get_utf8_string_ptr, OSSL_PARAM_set_size_t, OsslParam, END,
+    OSSL_PARAM_construct_utf8_string, OSSL_PARAM_get_int, OSSL_PARAM_get_octet_string,
+    OSSL_PARAM_get_octet_string_ptr, OSSL_PARAM_get_size_t, OSSL_PARAM_get_uint64,
+    OSSL_PARAM_get_utf8_string_ptr, OSSL_PARAM_set_int, OSSL_PARAM_set_octet_string,
+    OSSL_PARAM_set_size_t, OSSL_PARAM_set_utf8_string, OsslParam, END, OSSL_PARAM_UTF8_STRING,
 };
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::cipher::{
@@ -73,12 +91,16 @@ use crate::provider::cipher::{
 };
 use crate::provider::ctx::prov_libctx_of;
 use crate::provider::util::prov_digest::{
-    ossl_prov_digest_copy, ossl_prov_digest_load, ossl_prov_digest_md, ossl_prov_digest_reset,
-    ProvDigest,
+    ossl_prov_digest_copy, ossl_prov_digest_load, ossl_prov_digest_load_from_params,
+    ossl_prov_digest_md, ossl_prov_digest_reset, ProvDigest,
 };
 use crate::provider::util::{ossl_prov_macctx_load, ossl_prov_memdup};
-use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{cleanse, CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::err::err_reasons;
+use crate::runtime::err::{err_sites, raise_site, raise_site_dynamic};
+use crate::runtime::mem::{
+    cleanse, CRYPTO_clear_free, CRYPTO_clear_realloc, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc,
+};
+use crate::runtime::str::{OPENSSL_strcasecmp, OPENSSL_strncasecmp};
 
 /// `OSSL_OP_KDF` — `include/openssl/core_dispatch.h`.
 pub(crate) const OSSL_OP_KDF: c_int = 4;
@@ -147,6 +169,39 @@ const OSSL_KDF_PARAM_PASSWORD: *const c_char = c"pass".as_ptr();
 const OSSL_KDF_PARAM_ITER: *const c_char = c"iter".as_ptr();
 /// `OSSL_KDF_PARAM_PKCS12_ID` — `core_names.h:300` (`"id"`).
 const OSSL_KDF_PARAM_PKCS12_ID: *const c_char = c"id".as_ptr();
+/// `OSSL_KDF_PARAM_SSHKDF_XCGHASH` — `core_names.h:314`.
+const OSSL_KDF_PARAM_SSHKDF_XCGHASH: *const c_char = c"xcghash".as_ptr();
+/// `OSSL_KDF_PARAM_SSHKDF_SESSION_ID` — `core_names.h:312`.
+const OSSL_KDF_PARAM_SSHKDF_SESSION_ID: *const c_char = c"session_id".as_ptr();
+/// `OSSL_KDF_PARAM_SSHKDF_TYPE` — `core_names.h:313`.
+const OSSL_KDF_PARAM_SSHKDF_TYPE: *const c_char = c"type".as_ptr();
+/// `OSSL_KDF_PARAM_PKCS5` — `core_names.h:301` (`"pkcs5"`).
+const OSSL_KDF_PARAM_PKCS5: *const c_char = c"pkcs5".as_ptr();
+/// `SN_sha1` — `include/openssl/obj_mac.h`, the short name `ossl_prov_digest_load_from_params`
+/// is asked for. The authority spells it `"SHA1"`, not `"SHA-1"` or `"sha1"`.
+const SN_SHA1: *const c_char = c"SHA1".as_ptr();
+/// `PKCS5_DEFAULT_ITER` — `include/openssl/evp.h:45`.
+const PKCS5_DEFAULT_ITER: u64 = 2048;
+/// `KDF_PBKDF2_MIN_KEY_LEN_BITS` — `pbkdf2.c:39`.
+const KDF_PBKDF2_MIN_KEY_LEN_BITS: usize = 112;
+/// `KDF_PBKDF2_MAX_KEY_LEN_DIGEST_RATIO` — `pbkdf2.c:40`.
+const KDF_PBKDF2_MAX_KEY_LEN_DIGEST_RATIO: usize = 0xFFFF_FFFF;
+/// `KDF_PBKDF2_MIN_ITERATIONS` — `pbkdf2.c:41`.
+const KDF_PBKDF2_MIN_ITERATIONS: u64 = 1000;
+/// `KDF_PBKDF2_MIN_SALT_LEN` — `pbkdf2.c:42`, `(128 / 8)`.
+const KDF_PBKDF2_MIN_SALT_LEN: c_int = 128 / 8;
+/// `HKDF_MAXBUF` — `hkdf.c:42`, the static buffer `prov_tls13_hkdf_expand` packs into.
+const HKDF_MAXBUF: usize = 2048;
+/// `HKDF_MAX_INFOS` — `hkdf.c:44`.
+const HKDF_MAX_INFOS: usize = 5;
+/// `OSSL_KDF_PARAM_MODE` — `core_names.h:298`.
+const OSSL_KDF_PARAM_MODE: *const c_char = c"mode".as_ptr();
+/// `OSSL_KDF_PARAM_PREFIX` — `core_names.h:302`.
+const OSSL_KDF_PARAM_PREFIX: *const c_char = c"prefix".as_ptr();
+/// `OSSL_KDF_PARAM_LABEL` — `core_names.h:295`.
+const OSSL_KDF_PARAM_LABEL: *const c_char = c"label".as_ptr();
+/// `OSSL_KDF_PARAM_DATA` — `core_names.h:280`.
+const OSSL_KDF_PARAM_DATA: *const c_char = c"data".as_ptr();
 /// `OSSL_ALG_PARAM_ENGINE` — `core_names.h:129`, a decoder key and deliberately not a
 /// settable-list entry (`provider_util.h`'s `hidden` form in the generation spec).
 const OSSL_ALG_PARAM_ENGINE: *const c_char = c"engine".as_ptr();
@@ -161,6 +216,12 @@ const FILE_SSKDF: *const c_char = c"providers/implementations/kdfs/sskdf.c".as_p
 const FILE_X942: *const c_char = c"providers/implementations/kdfs/x942kdf.c".as_ptr();
 /// `__FILE__` for `pkcs12kdf.c`, measured the same way.
 const FILE_PKCS12KDF: *const c_char = c"providers/implementations/kdfs/pkcs12kdf.c".as_ptr();
+/// `__FILE__` for `sshkdf.c`, measured the same way.
+const FILE_SSHKDF: *const c_char = c"providers/implementations/kdfs/sshkdf.c".as_ptr();
+/// `__FILE__` for `pbkdf2.c`, measured the same way.
+const FILE_PBKDF2: *const c_char = c"providers/implementations/kdfs/pbkdf2.c".as_ptr();
+/// `__FILE__` for `hkdf.c`, measured the same way.
+const FILE_HKDF: *const c_char = c"providers/implementations/kdfs/hkdf.c".as_ptr();
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
 
@@ -2805,19 +2866,4190 @@ pub(crate) static PKCS12KDF_FUNCTIONS: [OsslDispatch; 10] = [
     },
 ];
 
+// =============================================================================================
+// `providers/implementations/kdfs/sshkdf.c` — SSHKDF (RFC 4253 §7.2)
+// =============================================================================================
+
+/// `struct KDF_SSHKDF` — `sshkdf.c:46-57`, without its FIPS indicator field.
+#[repr(C)]
+pub(crate) struct KdfSshkdf {
+    /// `void *provctx`.
+    pub provctx: *mut c_void,
+    /// `PROV_DIGEST digest`.
+    pub digest: ProvDigest,
+    /// `unsigned char *key` / `size_t key_len` — `K`.
+    pub key: *mut u8,
+    pub key_len: usize,
+    /// `unsigned char *xcghash` / `size_t xcghash_len` — `H`.
+    pub xcghash: *mut u8,
+    pub xcghash_len: usize,
+    /// `char type` — `X`, one of `'A'`..`'F'`.
+    pub type_: c_char,
+    /// `unsigned char *session_id` / `size_t session_id_len`.
+    pub session_id: *mut u8,
+    pub session_id_len: usize,
+}
+
+/// The `sshkdf_set_ctx_params_decoder` keys this profile's generated switch raises for, each with
+/// its (field id, raise site). The two FIPS `*-check` keys (`:291`, `:341`) are compiled out. Every
+/// key names its own field, so the field id is the site's own identity; the generated `strcmp`-tree
+/// at `sshkdf.c:259-403` raises `PROV_R_REPEATED_PARAMETER` at the second occurrence of any one.
+const SSHKDF_SET_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char, u32); 7] = [
+    (&err_sites::PROV_SSHKDF_301, OSSL_KDF_PARAM_DIGEST, 0),
+    (&err_sites::PROV_SSHKDF_317, OSSL_ALG_PARAM_ENGINE, 1),
+    (&err_sites::PROV_SSHKDF_351, OSSL_KDF_PARAM_KEY, 2),
+    (&err_sites::PROV_SSHKDF_364, OSSL_KDF_PARAM_PROPERTIES, 3),
+    (
+        &err_sites::PROV_SSHKDF_375,
+        OSSL_KDF_PARAM_SSHKDF_SESSION_ID,
+        4,
+    ),
+    (&err_sites::PROV_SSHKDF_386, OSSL_KDF_PARAM_SSHKDF_TYPE, 5),
+    (
+        &err_sites::PROV_SSHKDF_397,
+        OSSL_KDF_PARAM_SSHKDF_XCGHASH,
+        6,
+    ),
+];
+
+/// The `sshkdf_get_ctx_params_decoder` key, `sshkdf.c:533-541` (the FIPS `fips-indicator` at
+/// `:524` is compiled out).
+const SSHKDF_GET_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char, u32); 1] =
+    [(&err_sites::PROV_SSHKDF_536, OSSL_KDF_PARAM_SIZE, 0)];
+
+/// `static const OSSL_PARAM sshkdf_set_ctx_params_list[]` — `sshkdf.c:215-229`, without the two
+/// FIPS entries.
+static SSHKDF_SETTABLE_CTX_PARAMS: [OsslParam; 7] = [
+    param_utf8_string(OSSL_KDF_PARAM_PROPERTIES),
+    param_utf8_string(OSSL_KDF_PARAM_DIGEST),
+    param_octet_string(OSSL_KDF_PARAM_KEY),
+    param_octet_string(OSSL_KDF_PARAM_SSHKDF_XCGHASH),
+    param_octet_string(OSSL_KDF_PARAM_SSHKDF_SESSION_ID),
+    param_utf8_string(OSSL_KDF_PARAM_SSHKDF_TYPE),
+    END,
+];
+
+/// `static const OSSL_PARAM sshkdf_get_ctx_params_list[]` — `sshkdf.c:489-495`, without its FIPS
+/// entry.
+static SSHKDF_GETTABLE_CTX_PARAMS: [OsslParam; 2] = [param_size_t(OSSL_KDF_PARAM_SIZE), END];
+
+/// `static int SSHKDF(...)` — `sshkdf.c:586-660`. RFC 4253 §7.2's key derivation: the first hash
+/// covers `K || H || X || session_id`, and every later block re-hashes `K || H || <key so far>`.
+/// The authority's `goto out` is a labelled block whose single exit does the same
+/// `EVP_MD_CTX_free` and `OPENSSL_cleanse`.
+///
+/// # Safety
+/// `md_type` is a live digest; `key`/`xcghash`/`session_id` are live for their lengths; `okey` is
+/// writable for `okey_len` bytes.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+unsafe fn sshkdf(
+    md_type: *const crate::evp::digest::EvpMd,
+    key: *const u8,
+    key_len: usize,
+    xcghash: *const u8,
+    xcghash_len: usize,
+    session_id: *const u8,
+    session_id_len: usize,
+    type_: c_char,
+    okey: *mut u8,
+    okey_len: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut digest = [0u8; EVP_MAX_MD_SIZE];
+        let mut dsize: c_uint = 0;
+        let mut ret: c_int = 0;
+
+        let md = EVP_MD_CTX_new();
+        if md.is_null() {
+            return 0;
+        }
+
+        'out: {
+            if EVP_DigestInit_ex(md, md_type, ptr::null_mut()) == 0 {
+                break 'out;
+            }
+            if EVP_DigestUpdate(md, key.cast(), key_len) == 0 {
+                break 'out;
+            }
+            if EVP_DigestUpdate(md, xcghash.cast(), xcghash_len) == 0 {
+                break 'out;
+            }
+            if EVP_DigestUpdate(md, ptr::addr_of!(type_).cast(), 1) == 0 {
+                break 'out;
+            }
+            if EVP_DigestUpdate(md, session_id.cast(), session_id_len) == 0 {
+                break 'out;
+            }
+            if EVP_DigestFinal_ex(md, digest.as_mut_ptr(), &mut dsize) == 0 {
+                break 'out;
+            }
+
+            if okey_len < dsize as usize {
+                ptr::copy_nonoverlapping(digest.as_ptr(), okey, okey_len);
+                ret = 1;
+                break 'out;
+            }
+
+            ptr::copy_nonoverlapping(digest.as_ptr(), okey, dsize as usize);
+
+            let mut cursize = dsize as usize;
+            while cursize < okey_len {
+                if EVP_DigestInit_ex(md, md_type, ptr::null_mut()) == 0 {
+                    break 'out;
+                }
+                if EVP_DigestUpdate(md, key.cast(), key_len) == 0 {
+                    break 'out;
+                }
+                if EVP_DigestUpdate(md, xcghash.cast(), xcghash_len) == 0 {
+                    break 'out;
+                }
+                if EVP_DigestUpdate(md, okey.cast(), cursize) == 0 {
+                    break 'out;
+                }
+                if EVP_DigestFinal_ex(md, digest.as_mut_ptr(), &mut dsize) == 0 {
+                    break 'out;
+                }
+
+                if okey_len < cursize + dsize as usize {
+                    ptr::copy_nonoverlapping(
+                        digest.as_ptr(),
+                        okey.add(cursize),
+                        okey_len - cursize,
+                    );
+                    ret = 1;
+                    break 'out;
+                }
+
+                ptr::copy_nonoverlapping(digest.as_ptr(), okey.add(cursize), dsize as usize);
+                cursize += dsize as usize;
+            }
+
+            ret = 1;
+        }
+
+        EVP_MD_CTX_free(md);
+        cleanse(digest.as_mut_ptr(), EVP_MAX_MD_SIZE);
+        ret
+    }
+}
+
+/// `static void *kdf_sshkdf_new(void *provctx)` — `sshkdf.c:59-71`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn sshkdf_new(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let ctx =
+            CRYPTO_zalloc(core::mem::size_of::<KdfSshkdf>(), FILE_SSHKDF, LINE).cast::<KdfSshkdf>();
+        if !ctx.is_null() {
+            (*ctx).provctx = provctx;
+        }
+        ctx.cast()
+    }
+}
+
+/// `static void kdf_sshkdf_reset(void *vctx)` — `sshkdf.c:83-94`. The `provctx` is saved across
+/// the `memset` because the whole struct is cleared.
+///
+/// # Safety
+/// `vctx` is a context `sshkdf_new` allocated.
+unsafe fn sshkdf_reset(vctx: *mut c_void) {
+    // SAFETY: `vctx` is a live context per the contract.
+    unsafe {
+        let ctx = vctx.cast::<KdfSshkdf>();
+        let provctx = (*ctx).provctx;
+
+        ossl_prov_digest_reset(ptr::addr_of_mut!((*ctx).digest));
+        CRYPTO_clear_free((*ctx).key.cast(), (*ctx).key_len, FILE_SSHKDF, LINE);
+        CRYPTO_clear_free((*ctx).xcghash.cast(), (*ctx).xcghash_len, FILE_SSHKDF, LINE);
+        CRYPTO_clear_free(
+            (*ctx).session_id.cast(),
+            (*ctx).session_id_len,
+            FILE_SSHKDF,
+            LINE,
+        );
+        ptr::write_bytes(vctx.cast::<u8>(), 0, core::mem::size_of::<KdfSshkdf>());
+        (*ctx).provctx = provctx;
+    }
+}
+
+/// `static void kdf_sshkdf_free(void *vctx)` — `sshkdf.c:73-81`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn sshkdf_free(vctx: *mut c_void) {
+    // SAFETY: `vctx` is NULL or a live context.
+    unsafe {
+        if !vctx.is_null() {
+            sshkdf_reset(vctx);
+            CRYPTO_free(vctx, FILE_SSHKDF, LINE);
+        }
+    }
+}
+
+/// `static void *kdf_sshkdf_dup(void *vctx)` — `sshkdf.c:96-119`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn sshkdf_dup(vctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let src = vctx.cast::<KdfSshkdf>();
+        let dest = sshkdf_new((*src).provctx).cast::<KdfSshkdf>();
+        if dest.is_null() {
+            return ptr::null_mut();
+        }
+        if ossl_prov_memdup(
+            (*src).key.cast(),
+            (*src).key_len,
+            ptr::addr_of_mut!((*dest).key),
+            ptr::addr_of_mut!((*dest).key_len),
+        ) == 0
+            || ossl_prov_memdup(
+                (*src).xcghash.cast(),
+                (*src).xcghash_len,
+                ptr::addr_of_mut!((*dest).xcghash),
+                ptr::addr_of_mut!((*dest).xcghash_len),
+            ) == 0
+            || ossl_prov_memdup(
+                (*src).session_id.cast(),
+                (*src).session_id_len,
+                ptr::addr_of_mut!((*dest).session_id),
+                ptr::addr_of_mut!((*dest).session_id_len),
+            ) == 0
+            || ossl_prov_digest_copy(
+                ptr::addr_of_mut!((*dest).digest),
+                ptr::addr_of!((*src).digest),
+            ) == 0
+        {
+            sshkdf_free(dest.cast());
+            return ptr::null_mut();
+        }
+        (*dest).type_ = (*src).type_;
+        dest.cast()
+    }
+}
+
+/// `static int sshkdf_set_membuf(unsigned char **dst, size_t *dst_len,
+/// const OSSL_PARAM *p)` — `sshkdf.c:121-128`.
+///
+/// # Safety
+/// `dst`/`dst_len` are live; `p` is a live parameter.
+unsafe fn sshkdf_set_membuf(dst: *mut *mut u8, dst_len: *mut usize, p: *const OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        CRYPTO_clear_free((*dst).cast(), *dst_len, FILE_SSHKDF, LINE);
+        *dst = ptr::null_mut();
+        *dst_len = 0;
+        OSSL_PARAM_get_octet_string(p.cast_mut(), dst.cast(), 0, dst_len)
+    }
+}
+
+/// `static int kdf_sshkdf_derive(void *vctx, unsigned char *key, size_t keylen, const OSSL_PARAM
+/// params[])` — `sshkdf.c:175-210`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn sshkdf_ctx_derive(
+    vctx: *mut c_void,
+    key: *mut u8,
+    keylen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 || sshkdf_set_ctx_params(vctx, params) == 0 {
+            return 0;
+        }
+        let ctx = vctx.cast::<KdfSshkdf>();
+        let md = ossl_prov_digest_md(ptr::addr_of!((*ctx).digest));
+        if md.is_null() {
+            return fail_at(&err_sites::PROV_SSHKDF_186);
+        }
+        if (*ctx).key.is_null() {
+            return fail_at(&err_sites::PROV_SSHKDF_190);
+        }
+        if (*ctx).xcghash.is_null() {
+            return fail_at(&err_sites::PROV_SSHKDF_194);
+        }
+        if (*ctx).session_id.is_null() {
+            return fail_at(&err_sites::PROV_SSHKDF_198);
+        }
+        if (*ctx).type_ == 0 {
+            return fail_at(&err_sites::PROV_SSHKDF_202);
+        }
+        sshkdf(
+            md,
+            (*ctx).key,
+            (*ctx).key_len,
+            (*ctx).xcghash,
+            (*ctx).xcghash_len,
+            (*ctx).session_id,
+            (*ctx).session_id_len,
+            (*ctx).type_,
+            key,
+            keylen,
+        )
+    }
+}
+
+/// `static int kdf_sshkdf_set_ctx_params(void *vctx, const OSSL_PARAM params[])` —
+/// `sshkdf.c:410-478`, with its generated switch replaced by the field-keyed repeat check and one
+/// `OSSL_PARAM_locate_const` per key (D305's reading). The FIPS arms are absent.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn sshkdf_set_ctx_params(vctx: *mut c_void, params: *const OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vctx.is_null() {
+            return 0;
+        }
+        if let Some(site) = repeated_param_site_by_field(params, &SSHKDF_SET_DECODER_KEYS) {
+            return fail_at(site);
+        }
+        let ctx = vctx.cast::<KdfSshkdf>();
+        let provctx = prov_libctx_of((*ctx).provctx);
+
+        let digest = locate_const(params, OSSL_KDF_PARAM_DIGEST);
+        if !digest.is_null() {
+            if ossl_prov_digest_load(
+                ptr::addr_of_mut!((*ctx).digest),
+                digest,
+                locate_const(params, OSSL_KDF_PARAM_PROPERTIES),
+                locate_const(params, OSSL_ALG_PARAM_ENGINE),
+                provctx,
+            ) == 0
+            {
+                return 0;
+            }
+            let md = ossl_prov_digest_md(ptr::addr_of!((*ctx).digest));
+            if EVP_MD_xof(md) != 0 {
+                raise_site(&err_sites::PROV_SSHKDF_435);
+                return 0;
+            }
+        }
+
+        let key = locate_const(params, OSSL_KDF_PARAM_KEY);
+        if !key.is_null()
+            && sshkdf_set_membuf(
+                ptr::addr_of_mut!((*ctx).key),
+                ptr::addr_of_mut!((*ctx).key_len),
+                key,
+            ) == 0
+        {
+            return 0;
+        }
+
+        let xcg = locate_const(params, OSSL_KDF_PARAM_SSHKDF_XCGHASH);
+        if !xcg.is_null()
+            && sshkdf_set_membuf(
+                ptr::addr_of_mut!((*ctx).xcghash),
+                ptr::addr_of_mut!((*ctx).xcghash_len),
+                xcg,
+            ) == 0
+        {
+            return 0;
+        }
+
+        let sid = locate_const(params, OSSL_KDF_PARAM_SSHKDF_SESSION_ID);
+        if !sid.is_null()
+            && sshkdf_set_membuf(
+                ptr::addr_of_mut!((*ctx).session_id),
+                ptr::addr_of_mut!((*ctx).session_id_len),
+                sid,
+            ) == 0
+        {
+            return 0;
+        }
+
+        let type_param = locate_const(params, OSSL_KDF_PARAM_SSHKDF_TYPE);
+        if !type_param.is_null() {
+            let mut kdftype: *const c_char = ptr::null();
+            if OSSL_PARAM_get_utf8_string_ptr(type_param, &mut kdftype) == 0 {
+                return 0;
+            }
+            /* Expect one character (byte in this case). */
+            if kdftype.is_null() || (*type_param).data_size != 1 {
+                return 0;
+            }
+            if *kdftype < 65 || *kdftype > 70 {
+                raise_site(&err_sites::PROV_SSHKDF_472);
+                return 0;
+            }
+            (*ctx).type_ = *kdftype;
+        }
+        1
+    }
+}
+
+/// `static int kdf_sshkdf_get_ctx_params(void *vctx, OSSL_PARAM params[])` —
+/// `sshkdf.c:549-563`, without its FIPS arm.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn sshkdf_get_ctx_params(vctx: *mut c_void, params: *mut OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vctx.is_null() {
+            return 0;
+        }
+        if let Some(site) =
+            repeated_param_site_by_field(params.cast_const(), &SSHKDF_GET_DECODER_KEYS)
+        {
+            return fail_at(site);
+        }
+        let p = locate_const(params, OSSL_KDF_PARAM_SIZE);
+        if !p.is_null() && OSSL_PARAM_set_size_t(p.cast_mut(), usize::MAX) == 0 {
+            return 0;
+        }
+        1
+    }
+}
+
+/// `static const OSSL_PARAM *kdf_sshkdf_settable_ctx_params(void *ctx, void *p_ctx)` —
+/// `sshkdf.c:480-484`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn sshkdf_settable_ctx_params(
+    _ctx: *mut c_void,
+    _p_ctx: *mut c_void,
+) -> *const OsslParam {
+    SSHKDF_SETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `static const OSSL_PARAM *kdf_sshkdf_gettable_ctx_params(void *ctx, void *p_ctx)` —
+/// `sshkdf.c:565-569`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn sshkdf_gettable_ctx_params(
+    _ctx: *mut c_void,
+    _p_ctx: *mut c_void,
+) -> *const OsslParam {
+    SSHKDF_GETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `const OSSL_DISPATCH ossl_kdf_sshkdf_functions[]` — `sshkdf.c:333-346`.
+pub(crate) static SSHKDF_FUNCTIONS: [OsslDispatch; 10] = [
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_NEWCTX,
+        function: sshkdf_new as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DUPCTX,
+        function: sshkdf_dup as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_FREECTX,
+        function: sshkdf_free as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_RESET,
+        function: sshkdf_reset as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DERIVE,
+        function: sshkdf_ctx_derive as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS,
+        function: sshkdf_settable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SET_CTX_PARAMS,
+        function: sshkdf_set_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS,
+        function: sshkdf_gettable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GET_CTX_PARAMS,
+        function: sshkdf_get_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_DISPATCH_END,
+        function: ptr::null_mut(),
+    },
+];
+
+// =============================================================================================
+// `providers/implementations/kdfs/pbkdf2.c` — PBKDF2
+// =============================================================================================
+
+/// `struct KDF_PBKDF2` — `pbkdf2.c:54-64`, without its FIPS indicator field.
+#[repr(C)]
+pub(crate) struct KdfPbkdf2 {
+    /// `void *provctx`.
+    pub provctx: *mut c_void,
+    /// `unsigned char *pass` / `size_t pass_len`.
+    pub pass: *mut u8,
+    pub pass_len: usize,
+    /// `unsigned char *salt` / `size_t salt_len`.
+    pub salt: *mut u8,
+    pub salt_len: usize,
+    /// `uint64_t iter`.
+    pub iter: u64,
+    /// `PROV_DIGEST digest`.
+    pub digest: ProvDigest,
+    /// `int lower_bound_checks` — SP800-132's checks, on when `pkcs5` is 0 (`pbkdf2.c:327`).
+    pub lower_bound_checks: c_int,
+}
+
+/// The `pbkdf2_set_ctx_params_decoder` keys, each with its (field id, raise site). Every key names
+/// its own field; the generated `strcmp`-tree at `pbkdf2.c:320-404` raises
+/// `PROV_R_REPEATED_PARAMETER` at the second occurrence of any one.
+const PBKDF2_SET_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char, u32); 7] = [
+    (&err_sites::PROV_PBKDF2_327, OSSL_KDF_PARAM_DIGEST, 0),
+    (&err_sites::PROV_PBKDF2_338, OSSL_ALG_PARAM_ENGINE, 1),
+    (&err_sites::PROV_PBKDF2_349, OSSL_KDF_PARAM_ITER, 2),
+    (&err_sites::PROV_PBKDF2_375, OSSL_KDF_PARAM_PKCS5, 3),
+    (&err_sites::PROV_PBKDF2_386, OSSL_KDF_PARAM_PROPERTIES, 4),
+    (&err_sites::PROV_PBKDF2_364, OSSL_KDF_PARAM_PASSWORD, 5),
+    (&err_sites::PROV_PBKDF2_398, OSSL_KDF_PARAM_SALT, 6),
+];
+
+/// The `pbkdf2_get_ctx_params_decoder` key, `pbkdf2.c:522-530`.
+const PBKDF2_GET_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char, u32); 1] =
+    [(&err_sites::PROV_PBKDF2_525, OSSL_KDF_PARAM_SIZE, 0)];
+
+/// `static const OSSL_PARAM pbkdf2_set_ctx_params_list[]` — `pbkdf2.c:288-296`.
+static PBKDF2_SETTABLE_CTX_PARAMS: [OsslParam; 7] = [
+    param_utf8_string(OSSL_KDF_PARAM_PROPERTIES),
+    param_utf8_string(OSSL_KDF_PARAM_DIGEST),
+    param_octet_string(OSSL_KDF_PARAM_PASSWORD),
+    param_octet_string(OSSL_KDF_PARAM_SALT),
+    param_uint64(OSSL_KDF_PARAM_ITER),
+    param_int(OSSL_KDF_PARAM_PKCS5),
+    END,
+];
+
+/// `static const OSSL_PARAM pbkdf2_get_ctx_params_list[]` — `pbkdf2.c:478-484`, without its FIPS
+/// entry.
+static PBKDF2_GETTABLE_CTX_PARAMS: [OsslParam; 2] = [param_size_t(OSSL_KDF_PARAM_SIZE), END];
+
+/// `static int pbkdf2_lower_bound_check_passed(int saltlen, uint64_t iter, size_t keylen,
+/// int *error, const char **desc)` — `pbkdf2.c:189-213`. The `desc` out-parameter is set only for
+/// the FIPS arm's message and is absent here; every non-FIPS caller passes NULL.
+///
+/// `keylen * 8` is `wrapping_mul` because the authority relies on the wrap: two of its three call
+/// sites pass `SIZE_MAX` and only one check is meant to be able to fail at each.
+///
+/// # Safety
+/// `error` is writable.
+unsafe fn pbkdf2_lower_bound_check_passed(
+    saltlen: c_int,
+    iter: u64,
+    keylen: usize,
+    error: *mut c_int,
+) -> c_int {
+    // SAFETY: `error` is writable per the contract.
+    unsafe {
+        if keylen.wrapping_mul(8) < KDF_PBKDF2_MIN_KEY_LEN_BITS {
+            *error = err_reasons::PROV_R_KEY_SIZE_TOO_SMALL;
+            return 0;
+        }
+        if saltlen < KDF_PBKDF2_MIN_SALT_LEN {
+            *error = err_reasons::PROV_R_INVALID_SALT_LENGTH;
+            return 0;
+        }
+        if iter < KDF_PBKDF2_MIN_ITERATIONS {
+            *error = err_reasons::PROV_R_INVALID_ITERATION_COUNT;
+            return 0;
+        }
+        1
+    }
+}
+
+/// `static int lower_bound_check_passed(KDF_PBKDF2 *ctx, int saltlen, uint64_t iter,
+/// size_t keylen, int lower_bound_checks)` — `pbkdf2.c:237-260`, non-FIPS arm: the SP800-132
+/// checks when `lower_bound_checks` is on (raised with the *variable* reason the lower-bound
+/// function selected), and the iteration-count floor of one when it is off.
+///
+/// # Safety
+/// `_ctx` is unused on this profile; the caller's contract otherwise.
+unsafe fn lower_bound_check_passed(
+    _ctx: *mut KdfPbkdf2,
+    saltlen: c_int,
+    iter: u64,
+    keylen: usize,
+    lower_bound_checks: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if lower_bound_checks != 0 {
+            let mut error: c_int = 0;
+            let passed = pbkdf2_lower_bound_check_passed(saltlen, iter, keylen, &mut error);
+            if passed == 0 {
+                raise_site_dynamic(&err_sites::PROV_PBKDF2_248, error);
+                return 0;
+            }
+        } else if iter < 1 {
+            raise_site(&err_sites::PROV_PBKDF2_252);
+            return 0;
+        }
+        1
+    }
+}
+
+/// `static int pbkdf2_derive(KDF_PBKDF2 *ctx, const char *pass, size_t passlen, const unsigned
+/// char *salt, int saltlen, uint64_t iter, const EVP_MD *digest, unsigned char *key, size_t
+/// keylen, int lower_bound_checks)` — `pbkdf2.c:586-660`. The authority's `goto err` is a labelled
+/// block whose single exit frees both HMAC contexts in the authority's order.
+///
+/// # Safety
+/// The arguments are the authority's: `pass` live for `passlen`, `salt` for `saltlen`, `key`
+/// writable for `keylen`, `digest` a live digest.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+unsafe fn pbkdf2_derive(
+    ctx: *mut KdfPbkdf2,
+    pass: *const c_char,
+    passlen: usize,
+    salt: *const u8,
+    saltlen: c_int,
+    iter: u64,
+    digest: *const crate::evp::digest::EvpMd,
+    key: *mut u8,
+    keylen: usize,
+    lower_bound_checks: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut ret: c_int = 0;
+        let mut digtmp = [0u8; EVP_MAX_MD_SIZE];
+        let mut itmp = [0u8; 4];
+        let mut hctx: *mut HmacCtx = ptr::null_mut();
+
+        let mdlen = EVP_MD_get_size(digest);
+        if mdlen <= 0 {
+            return 0;
+        }
+
+        /*
+         * This check should always be done because keylen / mdlen >= (2^32 - 1)
+         * results in an overflow of the loop counter 'i'.
+         */
+        if (keylen / mdlen as usize) >= KDF_PBKDF2_MAX_KEY_LEN_DIGEST_RATIO {
+            return fail_at(&err_sites::PROV_PBKDF2_606);
+        }
+
+        if lower_bound_check_passed(ctx, saltlen, iter, keylen, lower_bound_checks) == 0 {
+            return 0;
+        }
+
+        let hctx_tpl = HMAC_CTX_new();
+        if hctx_tpl.is_null() {
+            return 0;
+        }
+        let mut p = key;
+        let mut tkeylen = keylen as c_int;
+
+        'err: {
+            if HMAC_Init_ex(
+                hctx_tpl,
+                pass.cast(),
+                passlen as c_int,
+                digest,
+                ptr::null_mut(),
+            ) == 0
+            {
+                break 'err;
+            }
+            hctx = HMAC_CTX_new();
+            if hctx.is_null() {
+                break 'err;
+            }
+            let mut i: c_ulong = 1;
+            while tkeylen != 0 {
+                let cplen = if tkeylen > mdlen { mdlen } else { tkeylen };
+                /*
+                 * We are unlikely to ever use more than 256 blocks (5120 bits!) but
+                 * just in case...
+                 */
+                itmp[0] = ((i >> 24) & 0xff) as u8;
+                itmp[1] = ((i >> 16) & 0xff) as u8;
+                itmp[2] = ((i >> 8) & 0xff) as u8;
+                itmp[3] = (i & 0xff) as u8;
+                if HMAC_CTX_copy(hctx, hctx_tpl) == 0 {
+                    break 'err;
+                }
+                if HMAC_Update(hctx, salt.cast(), saltlen as usize) == 0
+                    || HMAC_Update(hctx, itmp.as_ptr().cast(), 4) == 0
+                    || HMAC_Final(hctx, digtmp.as_mut_ptr(), ptr::null_mut()) == 0
+                {
+                    break 'err;
+                }
+                ptr::copy_nonoverlapping(digtmp.as_ptr(), p, cplen as usize);
+                let mut j: u64 = 1;
+                while j < iter {
+                    if HMAC_CTX_copy(hctx, hctx_tpl) == 0 {
+                        break 'err;
+                    }
+                    if HMAC_Update(hctx, digtmp.as_ptr().cast(), mdlen as usize) == 0
+                        || HMAC_Final(hctx, digtmp.as_mut_ptr(), ptr::null_mut()) == 0
+                    {
+                        break 'err;
+                    }
+                    for (k, byte) in digtmp.iter().enumerate().take(cplen as usize) {
+                        *p.add(k) ^= byte;
+                    }
+                    j += 1;
+                }
+                tkeylen -= cplen;
+                i += 1;
+                p = p.add(cplen as usize);
+            }
+            ret = 1;
+        }
+
+        HMAC_CTX_free(hctx);
+        HMAC_CTX_free(hctx_tpl);
+        ret
+    }
+}
+
+/// `static void kdf_pbkdf2_init(KDF_PBKDF2 *ctx)` — `pbkdf2.c:154-170`. A failed SHA-1 load is an
+/// error with no way to report it, so the digest is reset and the context keeps going.
+///
+/// # Safety
+/// `ctx` is a live context.
+unsafe fn pbkdf2_init(ctx: *mut KdfPbkdf2) {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe {
+        let provctx = prov_libctx_of((*ctx).provctx);
+        let mut params = [END, END];
+        params[0] = OSSL_PARAM_construct_utf8_string(OSSL_KDF_PARAM_DIGEST, SN_SHA1.cast_mut(), 0);
+        if ossl_prov_digest_load_from_params(
+            ptr::addr_of_mut!((*ctx).digest),
+            params.as_ptr(),
+            provctx,
+        ) == 0
+        {
+            ossl_prov_digest_reset(ptr::addr_of_mut!((*ctx).digest));
+        }
+        (*ctx).iter = PKCS5_DEFAULT_ITER;
+        (*ctx).lower_bound_checks = 0;
+    }
+}
+
+/// `static void *kdf_pbkdf2_new_no_init(void *provctx)` — `pbkdf2.c:73-86`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pbkdf2_new_no_init(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let ctx =
+            CRYPTO_zalloc(core::mem::size_of::<KdfPbkdf2>(), FILE_PBKDF2, LINE).cast::<KdfPbkdf2>();
+        if ctx.is_null() {
+            return ptr::null_mut();
+        }
+        (*ctx).provctx = provctx;
+        ctx.cast()
+    }
+}
+
+/// `static void *kdf_pbkdf2_new(void *provctx)` — `pbkdf2.c:88-95`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pbkdf2_new(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = pbkdf2_new_no_init(provctx).cast::<KdfPbkdf2>();
+        if !ctx.is_null() {
+            pbkdf2_init(ctx);
+        }
+        ctx.cast()
+    }
+}
+
+/// `static void kdf_pbkdf2_cleanup(KDF_PBKDF2 *ctx)` — `pbkdf2.c:97-107`, without the
+/// `OPENSSL_PEDANTIC_ZEROIZATION` arm's `clear_free` of the salt.
+///
+/// # Safety
+/// `ctx` is a live context.
+unsafe fn pbkdf2_cleanup(ctx: *mut KdfPbkdf2) {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe {
+        ossl_prov_digest_reset(ptr::addr_of_mut!((*ctx).digest));
+        CRYPTO_free((*ctx).salt.cast(), FILE_PBKDF2, LINE);
+        CRYPTO_clear_free((*ctx).pass.cast(), (*ctx).pass_len, FILE_PBKDF2, LINE);
+        ptr::write_bytes(ctx.cast::<u8>(), 0, core::mem::size_of::<KdfPbkdf2>());
+    }
+}
+
+/// `static void kdf_pbkdf2_free(void *vctx)` — `pbkdf2.c:109-117`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pbkdf2_free(vctx: *mut c_void) {
+    // SAFETY: `vctx` is NULL or a live context.
+    unsafe {
+        if !vctx.is_null() {
+            pbkdf2_cleanup(vctx.cast::<KdfPbkdf2>());
+            CRYPTO_free(vctx, FILE_PBKDF2, LINE);
+        }
+    }
+}
+
+/// `static void kdf_pbkdf2_reset(void *vctx)` — `pbkdf2.c:119-127`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pbkdf2_reset(vctx: *mut c_void) {
+    // SAFETY: `vctx` is a live context per the contract.
+    unsafe {
+        let ctx = vctx.cast::<KdfPbkdf2>();
+        let provctx = (*ctx).provctx;
+        pbkdf2_cleanup(ctx);
+        (*ctx).provctx = provctx;
+        pbkdf2_init(ctx);
+    }
+}
+
+/// `static void *kdf_pbkdf2_dup(void *vctx)` — `pbkdf2.c:129-152`. The duplicate is built
+/// **uninitialised**, because every initialised field is copied over it.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pbkdf2_dup(vctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let src = vctx.cast::<KdfPbkdf2>();
+        let dest = pbkdf2_new_no_init((*src).provctx).cast::<KdfPbkdf2>();
+        if dest.is_null() {
+            return ptr::null_mut();
+        }
+        if ossl_prov_memdup(
+            (*src).salt.cast(),
+            (*src).salt_len,
+            ptr::addr_of_mut!((*dest).salt),
+            ptr::addr_of_mut!((*dest).salt_len),
+        ) == 0
+            || ossl_prov_memdup(
+                (*src).pass.cast(),
+                (*src).pass_len,
+                ptr::addr_of_mut!((*dest).pass),
+                ptr::addr_of_mut!((*dest).pass_len),
+            ) == 0
+            || ossl_prov_digest_copy(
+                ptr::addr_of_mut!((*dest).digest),
+                ptr::addr_of!((*src).digest),
+            ) == 0
+        {
+            pbkdf2_free(dest.cast());
+            return ptr::null_mut();
+        }
+        (*dest).iter = (*src).iter;
+        (*dest).lower_bound_checks = (*src).lower_bound_checks;
+        dest.cast()
+    }
+}
+
+/// `static int pbkdf2_set_membuf(unsigned char **buffer, size_t *buflen,
+/// const OSSL_PARAM *p)` — `pbkdf2.c:172-187`.
+///
+/// # Safety
+/// `buffer`/`buflen` are live; `p` is a live parameter.
+unsafe fn pbkdf2_set_membuf(
+    buffer: *mut *mut u8,
+    buflen: *mut usize,
+    p: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        CRYPTO_clear_free((*buffer).cast(), *buflen, FILE_PBKDF2, LINE);
+        *buffer = ptr::null_mut();
+        *buflen = 0;
+
+        if (*p).data_size == 0 {
+            let m = CRYPTO_malloc(1, FILE_PBKDF2, LINE).cast::<u8>();
+            if m.is_null() {
+                return 0;
+            }
+            *buffer = m;
+        } else if !(*p).data.is_null()
+            && OSSL_PARAM_get_octet_string(p.cast_mut(), buffer.cast(), 0, buflen) == 0
+        {
+            return 0;
+        }
+        1
+    }
+}
+
+/// `static int kdf_pbkdf2_derive(void *vctx, unsigned char *key, size_t keylen, const OSSL_PARAM
+/// params[])` — `pbkdf2.c:262-285`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pbkdf2_ctx_derive(
+    vctx: *mut c_void,
+    key: *mut u8,
+    keylen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 || pbkdf2_set_ctx_params(vctx, params) == 0 {
+            return 0;
+        }
+        let ctx = vctx.cast::<KdfPbkdf2>();
+        if (*ctx).pass.is_null() {
+            return fail_at(&err_sites::PROV_PBKDF2_270);
+        }
+        if (*ctx).salt.is_null() {
+            return fail_at(&err_sites::PROV_PBKDF2_275);
+        }
+        let md = ossl_prov_digest_md(ptr::addr_of!((*ctx).digest));
+        pbkdf2_derive(
+            ctx,
+            (*ctx).pass.cast(),
+            (*ctx).pass_len,
+            (*ctx).salt,
+            (*ctx).salt_len as c_int,
+            (*ctx).iter,
+            md,
+            key,
+            keylen,
+            (*ctx).lower_bound_checks,
+        )
+    }
+}
+
+/// `static int kdf_pbkdf2_set_ctx_params(void *vctx, const OSSL_PARAM params[])` —
+/// `pbkdf2.c:412-478`, with the generated switch replaced by the field-keyed repeat check and one
+/// `OSSL_PARAM_locate_const` per key (D305's reading). The FIPS arms are absent.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pbkdf2_set_ctx_params(vctx: *mut c_void, params: *const OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vctx.is_null() {
+            return 0;
+        }
+        if let Some(site) = repeated_param_site_by_field(params, &PBKDF2_SET_DECODER_KEYS) {
+            return fail_at(site);
+        }
+        let ctx = vctx.cast::<KdfPbkdf2>();
+        let provctx = prov_libctx_of((*ctx).provctx);
+
+        let digest = locate_const(params, OSSL_KDF_PARAM_DIGEST);
+        if !digest.is_null() {
+            if ossl_prov_digest_load(
+                ptr::addr_of_mut!((*ctx).digest),
+                digest,
+                locate_const(params, OSSL_KDF_PARAM_PROPERTIES),
+                locate_const(params, OSSL_ALG_PARAM_ENGINE),
+                provctx,
+            ) == 0
+            {
+                return 0;
+            }
+            let md = ossl_prov_digest_md(ptr::addr_of!((*ctx).digest));
+            if EVP_MD_xof(md) != 0 {
+                raise_site(&err_sites::PROV_PBKDF2_431);
+                return 0;
+            }
+        }
+
+        let pkcs5 = locate_const(params, OSSL_KDF_PARAM_PKCS5);
+        if !pkcs5.is_null() {
+            let mut v: c_int = 0;
+            if OSSL_PARAM_get_int(pkcs5, &mut v) == 0 {
+                return 0;
+            }
+            (*ctx).lower_bound_checks = (v == 0) as c_int;
+        }
+
+        let pw = locate_const(params, OSSL_KDF_PARAM_PASSWORD);
+        if !pw.is_null()
+            && pbkdf2_set_membuf(
+                ptr::addr_of_mut!((*ctx).pass),
+                ptr::addr_of_mut!((*ctx).pass_len),
+                pw,
+            ) == 0
+        {
+            return 0;
+        }
+
+        let salt = locate_const(params, OSSL_KDF_PARAM_SALT);
+        if !salt.is_null() {
+            if lower_bound_check_passed(
+                ctx,
+                (*salt).data_size as c_int,
+                u64::MAX,
+                usize::MAX,
+                (*ctx).lower_bound_checks,
+            ) == 0
+            {
+                return 0;
+            }
+            if pbkdf2_set_membuf(
+                ptr::addr_of_mut!((*ctx).salt),
+                ptr::addr_of_mut!((*ctx).salt_len),
+                salt,
+            ) == 0
+            {
+                return 0;
+            }
+        }
+
+        let iter = locate_const(params, OSSL_KDF_PARAM_ITER);
+        if !iter.is_null() {
+            let mut v: u64 = 0;
+            if OSSL_PARAM_get_uint64(iter, &mut v) == 0 {
+                return 0;
+            }
+            if lower_bound_check_passed(ctx, c_int::MAX, v, usize::MAX, (*ctx).lower_bound_checks)
+                == 0
+            {
+                return 0;
+            }
+            (*ctx).iter = v;
+        }
+        1
+    }
+}
+
+/// `static int kdf_pbkdf2_get_ctx_params(void *vctx, OSSL_PARAM params[])` —
+/// `pbkdf2.c:538-552`, without its FIPS arm.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pbkdf2_get_ctx_params(vctx: *mut c_void, params: *mut OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vctx.is_null() {
+            return 0;
+        }
+        if let Some(site) =
+            repeated_param_site_by_field(params.cast_const(), &PBKDF2_GET_DECODER_KEYS)
+        {
+            return fail_at(site);
+        }
+        let p = locate_const(params, OSSL_KDF_PARAM_SIZE);
+        if !p.is_null() && OSSL_PARAM_set_size_t(p.cast_mut(), usize::MAX) == 0 {
+            return 0;
+        }
+        1
+    }
+}
+
+/// `static const OSSL_PARAM *kdf_pbkdf2_settable_ctx_params(void *ctx, void *p_ctx)` —
+/// `pbkdf2.c:456-460`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pbkdf2_settable_ctx_params(
+    _ctx: *mut c_void,
+    _p_ctx: *mut c_void,
+) -> *const OsslParam {
+    PBKDF2_SETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `static const OSSL_PARAM *kdf_pbkdf2_gettable_ctx_params(void *ctx, void *p_ctx)` —
+/// `pbkdf2.c:482-486`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pbkdf2_gettable_ctx_params(
+    _ctx: *mut c_void,
+    _p_ctx: *mut c_void,
+) -> *const OsslParam {
+    PBKDF2_GETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `const OSSL_DISPATCH ossl_kdf_pbkdf2_functions[]` — `pbkdf2.c:392-405`.
+pub(crate) static PBKDF2_FUNCTIONS: [OsslDispatch; 10] = [
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_NEWCTX,
+        function: pbkdf2_new as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DUPCTX,
+        function: pbkdf2_dup as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_FREECTX,
+        function: pbkdf2_free as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_RESET,
+        function: pbkdf2_reset as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DERIVE,
+        function: pbkdf2_ctx_derive as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS,
+        function: pbkdf2_settable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SET_CTX_PARAMS,
+        function: pbkdf2_set_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS,
+        function: pbkdf2_gettable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GET_CTX_PARAMS,
+        function: pbkdf2_get_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_DISPATCH_END,
+        function: ptr::null_mut(),
+    },
+];
+
+// =============================================================================================
+// `providers/implementations/kdfs/hkdf.c` — HKDF, its three fixed-digest spellings, and TLS13-KDF
+// =============================================================================================
+
+/// `struct KDF_HKDF` — `hkdf.c:81-99`, without its FIPS indicator field.
+#[repr(C)]
+pub(crate) struct KdfHkdf {
+    /// `void *provctx`.
+    pub provctx: *mut c_void,
+    /// `int mode` — `EVP_KDF_HKDF_MODE_*`.
+    pub mode: c_int,
+    /// `PROV_DIGEST digest`.
+    pub digest: ProvDigest,
+    /// `unsigned char *salt` / `size_t salt_len`.
+    pub salt: *mut u8,
+    pub salt_len: usize,
+    /// `unsigned char *key` / `size_t key_len` — HKDF's `IKM`/`PRK`, TLS13's secret.
+    pub key: *mut u8,
+    pub key_len: usize,
+    /// `unsigned char *prefix` / `size_t prefix_len` — TLS13-KDF only.
+    pub prefix: *mut u8,
+    pub prefix_len: usize,
+    /// `unsigned char *label` / `size_t label_len` — TLS13-KDF only.
+    pub label: *mut u8,
+    pub label_len: usize,
+    /// `unsigned char *data` / `size_t data_len` — TLS13-KDF only.
+    pub data: *mut u8,
+    pub data_len: usize,
+    /// `unsigned char *info` / `size_t info_len`.
+    pub info: *mut u8,
+    pub info_len: usize,
+    /// `int fixed_digest` — 1 for the three `HKDF-SHA*` rows, whose digest cannot be reset.
+    pub fixed_digest: c_int,
+}
+
+/// `struct hkdf_all_set_ctx_params_st` — `hkdf.c:267-283`, without its two FIPS fields. The three
+/// set decoders share one target struct; a decoder fills only the fields its own list names.
+#[derive(Default)]
+struct HkdfSetCtxParams {
+    mode: *const OsslParam,
+    propq: *const OsslParam,
+    engine: *const OsslParam,
+    digest: *const OsslParam,
+    key: *const OsslParam,
+    salt: *const OsslParam,
+    prefix: *const OsslParam,
+    label: *const OsslParam,
+    data: *const OsslParam,
+    info: [*const OsslParam; HKDF_MAX_INFOS],
+    num_info: c_int,
+}
+
+// `struct hkdf_get_ctx_params_st` — `hkdf.c:558-568`, without its FIPS `ind` field. The get
+// decoder's keys are located directly in `hkdf_common_get_ctx_params`, so only the key list below
+// is needed; there is no target struct on this profile.
+
+/// The `hkdf_set_ctx_params_decoder` keys, each with its (field id, raise site). `mode` is one
+/// field spelled by two descriptors (`utf8_string` and `int`), which is why the key list has one
+/// entry for it: the generated decoder raises on the second occurrence of either type. `info` is
+/// absent because its repetition is a list, not an error, up to `HKDF_MAX_INFOS`.
+const HKDF_SET_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char, u32); 6] = [
+    (&err_sites::PROV_HKDF_407, OSSL_KDF_PARAM_DIGEST, 0),
+    (&err_sites::PROV_HKDF_418, OSSL_ALG_PARAM_ENGINE, 1),
+    (&err_sites::PROV_HKDF_463, OSSL_KDF_PARAM_KEY, 2),
+    (&err_sites::PROV_HKDF_476, OSSL_KDF_PARAM_MODE, 3),
+    (&err_sites::PROV_HKDF_487, OSSL_KDF_PARAM_PROPERTIES, 4),
+    (&err_sites::PROV_HKDF_498, OSSL_KDF_PARAM_SALT, 5),
+];
+
+/// The `hkdf_get_ctx_params_decoder` keys, `hkdf.c:571-809`.
+const HKDF_GET_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char, u32); 5] = [
+    (&err_sites::PROV_HKDF_586, OSSL_KDF_PARAM_DIGEST, 0),
+    (&err_sites::PROV_HKDF_610, OSSL_KDF_PARAM_INFO, 1),
+    (&err_sites::PROV_HKDF_621, OSSL_KDF_PARAM_MODE, 2),
+    (&err_sites::PROV_HKDF_636, OSSL_KDF_PARAM_SALT, 3),
+    (&err_sites::PROV_HKDF_647, OSSL_KDF_PARAM_SIZE, 4),
+];
+
+/// The `hkdf_fixed_digest_set_ctx_params_decoder` keys, `hkdf.c:810-1420`. Its `digest` key is
+/// decoded even though setting it is then refused (`PROV_R_DIGEST_NOT_ALLOWED`, `:916`).
+const HKDF_FIXED_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char, u32); 4] = [
+    (&err_sites::PROV_HKDF_825, OSSL_KDF_PARAM_DIGEST, 0),
+    (&err_sites::PROV_HKDF_870, OSSL_KDF_PARAM_KEY, 1),
+    (&err_sites::PROV_HKDF_883, OSSL_KDF_PARAM_MODE, 2),
+    (&err_sites::PROV_HKDF_894, OSSL_KDF_PARAM_SALT, 3),
+];
+
+/// The `kdf_tls1_3_set_ctx_params_decoder` keys, `hkdf.c:1421-1692`.
+const TLS13_SET_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char, u32); 9] = [
+    (&err_sites::PROV_HKDF_1440, OSSL_KDF_PARAM_DATA, 0),
+    (&err_sites::PROV_HKDF_1482, OSSL_KDF_PARAM_DIGEST, 1),
+    (&err_sites::PROV_HKDF_1498, OSSL_ALG_PARAM_ENGINE, 2),
+    (&err_sites::PROV_HKDF_1532, OSSL_KDF_PARAM_KEY, 3),
+    (&err_sites::PROV_HKDF_1545, OSSL_KDF_PARAM_LABEL, 4),
+    (&err_sites::PROV_HKDF_1556, OSSL_KDF_PARAM_MODE, 5),
+    (&err_sites::PROV_HKDF_1575, OSSL_KDF_PARAM_PREFIX, 6),
+    (&err_sites::PROV_HKDF_1586, OSSL_KDF_PARAM_PROPERTIES, 7),
+    (&err_sites::PROV_HKDF_1599, OSSL_KDF_PARAM_SALT, 8),
+];
+
+/// `static const OSSL_PARAM hkdf_set_ctx_params_list[]` — `hkdf.c:360-372`, without the FIPS entry.
+static HKDF_SETTABLE_CTX_PARAMS: [OsslParam; 8] = [
+    param_utf8_string(OSSL_KDF_PARAM_MODE),
+    param_int(OSSL_KDF_PARAM_MODE),
+    param_utf8_string(OSSL_KDF_PARAM_PROPERTIES),
+    param_utf8_string(OSSL_KDF_PARAM_DIGEST),
+    param_octet_string(OSSL_KDF_PARAM_KEY),
+    param_octet_string(OSSL_KDF_PARAM_SALT),
+    param_octet_string(OSSL_KDF_PARAM_INFO),
+    END,
+];
+
+/// `static const OSSL_PARAM hkdf_get_ctx_params_list[]` — `hkdf.c:543-556`, without its FIPS entry.
+static HKDF_GETTABLE_CTX_PARAMS: [OsslParam; 7] = [
+    param_size_t(OSSL_KDF_PARAM_SIZE),
+    param_utf8_string(OSSL_KDF_PARAM_DIGEST),
+    param_utf8_string(OSSL_KDF_PARAM_MODE),
+    param_int(OSSL_KDF_PARAM_MODE),
+    param_octet_string(OSSL_KDF_PARAM_SALT),
+    param_octet_string(OSSL_KDF_PARAM_INFO),
+    END,
+];
+
+/// `static const OSSL_PARAM hkdf_fixed_digest_set_ctx_params_list[]` — `hkdf.c:782-794`.
+static HKDF_FIXED_SETTABLE_CTX_PARAMS: [OsslParam; 6] = [
+    param_utf8_string(OSSL_KDF_PARAM_MODE),
+    param_int(OSSL_KDF_PARAM_MODE),
+    param_octet_string(OSSL_KDF_PARAM_KEY),
+    param_octet_string(OSSL_KDF_PARAM_SALT),
+    param_octet_string(OSSL_KDF_PARAM_INFO),
+    END,
+];
+
+/// `static const OSSL_PARAM kdf_tls1_3_set_ctx_params_list[]` — `hkdf.c:1380-1399`, without the two
+/// FIPS entries.
+static TLS13_SETTABLE_CTX_PARAMS: [OsslParam; 10] = [
+    param_utf8_string(OSSL_KDF_PARAM_MODE),
+    param_int(OSSL_KDF_PARAM_MODE),
+    param_utf8_string(OSSL_KDF_PARAM_PROPERTIES),
+    param_utf8_string(OSSL_KDF_PARAM_DIGEST),
+    param_octet_string(OSSL_KDF_PARAM_KEY),
+    param_octet_string(OSSL_KDF_PARAM_SALT),
+    param_octet_string(OSSL_KDF_PARAM_PREFIX),
+    param_octet_string(OSSL_KDF_PARAM_LABEL),
+    param_octet_string(OSSL_KDF_PARAM_DATA),
+    END,
+];
+
+/// The generated decoders' non-FIPS behaviour, one per set list: locate each key with
+/// `OSSL_PARAM_locate_const` and collect the `info` records against `HKDF_MAX_INFOS`. The five-info
+/// count is the one rule `repeated_param_site_by_field` cannot express; a sixth raises
+/// `PROV_R_TOO_MANY_RECORDS` at `hkdf.c:429` (the common list) or `:836` (the fixed one).
+///
+/// # Safety
+/// `params` is NULL or a key-terminated array; `r` is writable.
+unsafe fn hkdf_collect_info(
+    params: *const OsslParam,
+    r: &mut HkdfSetCtxParams,
+    site: &'static err_sites::ErrSite,
+) -> c_int {
+    // SAFETY: the walk stops at the NULL key.
+    unsafe {
+        if params.is_null() {
+            return 1;
+        }
+        let mut p = params;
+        while !(*p).key.is_null() {
+            if CStr::from_ptr((*p).key).to_bytes() == CStr::from_ptr(OSSL_KDF_PARAM_INFO).to_bytes()
+            {
+                if r.num_info as usize >= HKDF_MAX_INFOS {
+                    raise_site(site);
+                    return 0;
+                }
+                r.info[r.num_info as usize] = p;
+                r.num_info += 1;
+            }
+            p = p.add(1);
+        }
+    }
+    1
+}
+
+/// The `hkdf_set_ctx_params_decoder`'s target, key by key.
+///
+/// # Safety
+/// `params` is NULL or a key-terminated array; `r` is writable.
+unsafe fn hkdf_set_ctx_params_decode(params: *const OsslParam, r: &mut HkdfSetCtxParams) -> c_int {
+    // SAFETY: the walk stops at the NULL key.
+    unsafe {
+        r.digest = crate::params::OSSL_PARAM_locate_const(params, OSSL_KDF_PARAM_DIGEST);
+        r.engine = crate::params::OSSL_PARAM_locate_const(params, OSSL_ALG_PARAM_ENGINE);
+        r.key = crate::params::OSSL_PARAM_locate_const(params, OSSL_KDF_PARAM_KEY);
+        r.mode = crate::params::OSSL_PARAM_locate_const(params, OSSL_KDF_PARAM_MODE);
+        r.propq = crate::params::OSSL_PARAM_locate_const(params, OSSL_KDF_PARAM_PROPERTIES);
+        r.salt = crate::params::OSSL_PARAM_locate_const(params, OSSL_KDF_PARAM_SALT);
+        hkdf_collect_info(params, r, &err_sites::PROV_HKDF_429)
+    }
+}
+
+/// The `hkdf_fixed_digest_set_ctx_params_decoder`'s target.
+///
+/// # Safety
+/// `params` is NULL or a key-terminated array; `r` is writable.
+unsafe fn hkdf_fixed_set_ctx_params_decode(
+    params: *const OsslParam,
+    r: &mut HkdfSetCtxParams,
+) -> c_int {
+    // SAFETY: the walk stops at the NULL key.
+    unsafe {
+        r.digest = crate::params::OSSL_PARAM_locate_const(params, OSSL_KDF_PARAM_DIGEST);
+        r.key = crate::params::OSSL_PARAM_locate_const(params, OSSL_KDF_PARAM_KEY);
+        r.mode = crate::params::OSSL_PARAM_locate_const(params, OSSL_KDF_PARAM_MODE);
+        r.salt = crate::params::OSSL_PARAM_locate_const(params, OSSL_KDF_PARAM_SALT);
+        hkdf_collect_info(params, r, &err_sites::PROV_HKDF_836)
+    }
+}
+
+/// The `kdf_tls1_3_set_ctx_params_decoder`'s target.
+///
+/// # Safety
+/// `params` is NULL or a key-terminated array; `r` is writable.
+unsafe fn tls13_set_ctx_params_decode(params: *const OsslParam, r: &mut HkdfSetCtxParams) -> c_int {
+    // SAFETY: the walk stops at the NULL key.
+    unsafe {
+        r.data = crate::params::OSSL_PARAM_locate_const(params, OSSL_KDF_PARAM_DATA);
+        r.digest = crate::params::OSSL_PARAM_locate_const(params, OSSL_KDF_PARAM_DIGEST);
+        r.engine = crate::params::OSSL_PARAM_locate_const(params, OSSL_ALG_PARAM_ENGINE);
+        r.key = crate::params::OSSL_PARAM_locate_const(params, OSSL_KDF_PARAM_KEY);
+        r.label = crate::params::OSSL_PARAM_locate_const(params, OSSL_KDF_PARAM_LABEL);
+        r.mode = crate::params::OSSL_PARAM_locate_const(params, OSSL_KDF_PARAM_MODE);
+        r.prefix = crate::params::OSSL_PARAM_locate_const(params, OSSL_KDF_PARAM_PREFIX);
+        r.propq = crate::params::OSSL_PARAM_locate_const(params, OSSL_KDF_PARAM_PROPERTIES);
+        r.salt = crate::params::OSSL_PARAM_locate_const(params, OSSL_KDF_PARAM_SALT);
+    }
+    1
+}
+
+/// `static int HKDF_Extract(...)` — `hkdf.c:1044-1057`. `PRK = HMAC-Hash(salt, IKM)` through the
+/// one-shot `EVP_Q_mac`.
+///
+/// # Safety
+/// `evp_md` is a live digest; `salt`/`ikm` are live for their lengths; `prk` is writable for
+/// `prk_len`.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+unsafe fn hkdf_extract(
+    libctx: *mut c_void,
+    evp_md: *const crate::evp::digest::EvpMd,
+    salt: *const u8,
+    salt_len: usize,
+    ikm: *const u8,
+    ikm_len: usize,
+    prk: *mut u8,
+    prk_len: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let sz = EVP_MD_get_size(evp_md);
+        if sz <= 0 {
+            return 0;
+        }
+        if prk_len != sz as usize {
+            raise_site(&err_sites::PROV_HKDF_1055);
+            return 0;
+        }
+        (!EVP_Q_mac(
+            libctx,
+            c"HMAC".as_ptr(),
+            ptr::null(),
+            EVP_MD_get0_name(evp_md),
+            ptr::null(),
+            salt.cast(),
+            salt_len,
+            ikm,
+            ikm_len,
+            prk,
+            EVP_MD_get_size(evp_md) as usize,
+            ptr::null_mut(),
+        )
+        .is_null()) as c_int
+    }
+}
+
+/// `static int HKDF_Expand(const EVP_MD *evp_md, const unsigned char *prk, size_t prk_len, const
+/// unsigned char *info, size_t info_len, unsigned char *okm, size_t okm_len)` —
+/// `hkdf.c:1104-1167`. `N = ceil(L/HashLen)`, `T(i) = HMAC-Hash(PRK, T(i-1) | info | i)`.
+///
+/// # Safety
+/// `evp_md` live; `prk`/`info` live for their lengths; `okm` writable for `okm_len`.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+unsafe fn hkdf_expand(
+    evp_md: *const crate::evp::digest::EvpMd,
+    prk: *const u8,
+    prk_len: usize,
+    info: *const u8,
+    info_len: usize,
+    okm: *mut u8,
+    okm_len: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut ret: c_int = 0;
+        let mut prev = [0u8; EVP_MAX_MD_SIZE];
+        let mut done_len: usize = 0;
+
+        let sz = EVP_MD_get_size(evp_md);
+        if sz <= 0 {
+            return 0;
+        }
+        let dig_len = sz as usize;
+
+        /* calc: N = ceil(L/HashLen) */
+        let mut n = okm_len / dig_len;
+        if !okm_len.is_multiple_of(dig_len) {
+            n += 1;
+        }
+
+        if n > 255 || okm.is_null() {
+            return 0;
+        }
+
+        let hmac = HMAC_CTX_new();
+        if hmac.is_null() {
+            return 0;
+        }
+
+        'err: {
+            if HMAC_Init_ex(hmac, prk.cast(), prk_len as c_int, evp_md, ptr::null_mut()) == 0 {
+                break 'err;
+            }
+
+            let mut i: c_uint = 1;
+            while i <= n as c_uint {
+                let ctr = [i as u8];
+                /* calc: T(i) = HMAC-Hash(PRK, T(i - 1) | info | i) */
+                if i > 1 {
+                    if HMAC_Init_ex(hmac, ptr::null(), 0, ptr::null(), ptr::null_mut()) == 0 {
+                        break 'err;
+                    }
+                    if HMAC_Update(hmac, prev.as_ptr().cast(), dig_len) == 0 {
+                        break 'err;
+                    }
+                }
+                if HMAC_Update(hmac, info.cast(), info_len) == 0 {
+                    break 'err;
+                }
+                if HMAC_Update(hmac, ctr.as_ptr().cast(), 1) == 0 {
+                    break 'err;
+                }
+                if HMAC_Final(hmac, prev.as_mut_ptr(), ptr::null_mut()) == 0 {
+                    break 'err;
+                }
+
+                let copy_len = if dig_len > okm_len - done_len {
+                    okm_len - done_len
+                } else {
+                    dig_len
+                };
+                ptr::copy_nonoverlapping(prev.as_ptr(), okm.add(done_len), copy_len);
+                done_len += copy_len;
+                i += 1;
+            }
+            ret = 1;
+        }
+
+        cleanse(prev.as_mut_ptr(), EVP_MAX_MD_SIZE);
+        HMAC_CTX_free(hmac);
+        ret
+    }
+}
+
+/// `static int HKDF(...)` — `hkdf.c:1013-1038`: extract, then expand into the caller's buffer.
+///
+/// # Safety
+/// The arguments are `HKDF_Extract`'s and `HKDF_Expand`'s together.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+unsafe fn hkdf_derive_okm(
+    libctx: *mut c_void,
+    evp_md: *const crate::evp::digest::EvpMd,
+    salt: *const u8,
+    salt_len: usize,
+    ikm: *const u8,
+    ikm_len: usize,
+    info: *const u8,
+    info_len: usize,
+    okm: *mut u8,
+    okm_len: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut prk = [0u8; EVP_MAX_MD_SIZE];
+
+        let sz = EVP_MD_get_size(evp_md);
+        if sz <= 0 {
+            return 0;
+        }
+        let prk_len = sz as usize;
+
+        /* Step 1: HKDF-Extract(salt, IKM) -> PRK */
+        if hkdf_extract(
+            libctx,
+            evp_md,
+            salt,
+            salt_len,
+            ikm,
+            ikm_len,
+            prk.as_mut_ptr(),
+            prk_len,
+        ) == 0
+        {
+            return 0;
+        }
+
+        /* Step 2: HKDF-Expand(PRK, info, L) -> OKM */
+        let ret = hkdf_expand(evp_md, prk.as_ptr(), prk_len, info, info_len, okm, okm_len);
+        cleanse(prk.as_mut_ptr(), EVP_MAX_MD_SIZE);
+        ret
+    }
+}
+
+/// `static int prov_tls13_hkdf_expand(...)` — `hkdf.c:1212-1246`. The TLS 1.3 `HkdfLabel`
+/// structure, packed with `WPACKET`: `uint16 length, opaque label<7..255>, opaque context<0..255>`.
+///
+/// # Safety
+/// `md` live; `key`/`prefix`/`label`/`data` live for their lengths; `out` writable for `outlen`.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+unsafe fn prov_tls13_hkdf_expand(
+    md: *const crate::evp::digest::EvpMd,
+    key: *const u8,
+    keylen: usize,
+    prefix: *const u8,
+    prefixlen: usize,
+    label: *const u8,
+    labellen: usize,
+    data: *const u8,
+    datalen: usize,
+    out: *mut u8,
+    outlen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut hkdflabel = [0u8; HKDF_MAXBUF];
+        let mut hkdflabellen: usize = 0;
+        let mut pkt = core::mem::MaybeUninit::<Wpacket>::uninit();
+        let pkt = pkt.as_mut_ptr();
+
+        if WPACKET_init_static_len(pkt, hkdflabel.as_mut_ptr(), HKDF_MAXBUF, 0) == 0
+            || WPACKET_put_bytes_u16(pkt, outlen as u16) == 0
+            || WPACKET_start_sub_packet_len__(pkt, 1) == 0
+            || WPACKET_memcpy(pkt, prefix.cast(), prefixlen) == 0
+            || WPACKET_memcpy(pkt, label.cast(), labellen) == 0
+            || WPACKET_close(pkt) == 0
+            || WPACKET_sub_memcpy__(
+                pkt,
+                data.cast(),
+                if data.is_null() { 0 } else { datalen },
+                1,
+            ) == 0
+            || WPACKET_get_total_written(pkt, &mut hkdflabellen) == 0
+            || WPACKET_finish(pkt) == 0
+        {
+            WPACKET_cleanup(pkt);
+            return 0;
+        }
+
+        hkdf_expand(
+            md,
+            key,
+            keylen,
+            hkdflabel.as_ptr(),
+            hkdflabellen,
+            out,
+            outlen,
+        )
+    }
+}
+
+/// `static int prov_tls13_hkdf_generate_secret(...)` — `hkdf.c:1246-1307`. When `prevsecret` is
+/// given, its pre-extract secret is this expand of the **hash of no messages**; the extract then
+/// runs over it and `insecret`. The authority compares the *pointer* to know whether to cleanse the
+/// pre-extract secret, which is a flag here.
+///
+/// # Safety
+/// The arguments are the authority's.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+unsafe fn prov_tls13_hkdf_generate_secret(
+    libctx: *mut c_void,
+    md: *const crate::evp::digest::EvpMd,
+    prevsecret: *const u8,
+    prevsecretlen: usize,
+    insecret: *const u8,
+    insecretlen: usize,
+    prefix: *const u8,
+    prefixlen: usize,
+    label: *const u8,
+    labellen: usize,
+    out: *mut u8,
+    outlen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut preextractsec = [0u8; EVP_MAX_MD_SIZE];
+        /* Always filled with zeros. */
+        let default_zeros = [0u8; EVP_MAX_MD_SIZE];
+
+        let ret = EVP_MD_get_size(md);
+        if ret <= 0 {
+            return 0;
+        }
+        let mdlen = ret as usize;
+
+        let mut insecret = insecret;
+        let mut insecretlen = insecretlen;
+        if insecret.is_null() {
+            insecret = default_zeros.as_ptr();
+            insecretlen = mdlen;
+        }
+
+        let mut prevsecret = prevsecret;
+        let mut prevsecretlen = prevsecretlen;
+        let mut used_preextract = false;
+        if prevsecret.is_null() {
+            prevsecret = default_zeros.as_ptr();
+            prevsecretlen = mdlen;
+        } else {
+            let mctx = EVP_MD_CTX_new();
+            let mut hash = [0u8; EVP_MAX_MD_SIZE];
+
+            /* The pre-extract derive step uses a hash of no messages. */
+            if mctx.is_null()
+                || EVP_DigestInit_ex(mctx, md, ptr::null_mut()) <= 0
+                || EVP_DigestFinal_ex(mctx, hash.as_mut_ptr(), ptr::null_mut()) <= 0
+            {
+                EVP_MD_CTX_free(mctx);
+                return 0;
+            }
+            EVP_MD_CTX_free(mctx);
+
+            /* Generate the pre-extract secret. */
+            if prov_tls13_hkdf_expand(
+                md,
+                prevsecret,
+                prevsecretlen,
+                prefix,
+                prefixlen,
+                label,
+                labellen,
+                hash.as_ptr(),
+                mdlen,
+                preextractsec.as_mut_ptr(),
+                mdlen,
+            ) == 0
+            {
+                return 0;
+            }
+            prevsecret = preextractsec.as_ptr();
+            prevsecretlen = mdlen;
+            used_preextract = true;
+        }
+
+        let ret = hkdf_extract(
+            libctx,
+            md,
+            prevsecret,
+            prevsecretlen,
+            insecret,
+            insecretlen,
+            out,
+            outlen,
+        );
+
+        if used_preextract {
+            cleanse(preextractsec.as_mut_ptr(), mdlen);
+        }
+        ret
+    }
+}
+
+/// `static size_t kdf_hkdf_size(KDF_HKDF *ctx)` — `hkdf.c:192-209`.
+///
+/// # Safety
+/// `ctx` live.
+unsafe fn hkdf_size(ctx: *mut KdfHkdf) -> usize {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe {
+        if (*ctx).mode != EVP_KDF_HKDF_MODE_EXTRACT_ONLY {
+            return usize::MAX;
+        }
+        let md = ossl_prov_digest_md(ptr::addr_of!((*ctx).digest));
+        if md.is_null() {
+            raise_site(&err_sites::PROV_HKDF_199);
+            return 0;
+        }
+        let sz = EVP_MD_get_size(md);
+        if sz <= 0 {
+            return 0;
+        }
+        sz as usize
+    }
+}
+
+/// `static void *kdf_hkdf_new(void *provctx)` — `hkdf.c:101-113`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn hkdf_new(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let ctx = CRYPTO_zalloc(core::mem::size_of::<KdfHkdf>(), FILE_HKDF, LINE).cast::<KdfHkdf>();
+        if !ctx.is_null() {
+            (*ctx).provctx = provctx;
+        }
+        ctx.cast()
+    }
+}
+
+/// `static void kdf_hkdf_reset_ex(void *vctx, int on_free)` — `hkdf.c:130-158`. A fixed-digest row
+/// saves and restores only its `PROV_DIGEST`; every other field is cleared. `PROV_DIGEST` is not
+/// `Copy`, so the saved copy is made field by field.
+///
+/// # Safety
+/// `vctx` is a live context.
+unsafe fn hkdf_reset_ex(vctx: *mut c_void, on_free: c_int) {
+    // SAFETY: `vctx` is live per the contract.
+    unsafe {
+        let ctx = vctx.cast::<KdfHkdf>();
+        let provctx = (*ctx).provctx;
+        let preserve_digest = if on_free != 0 { 0 } else { (*ctx).fixed_digest };
+        let saved = ProvDigest {
+            md: (*ctx).digest.md,
+            alloc_md: (*ctx).digest.alloc_md,
+            engine: (*ctx).digest.engine,
+        };
+
+        if preserve_digest != 0 {
+            /* For fixed digests just save and restore the PROV_DIGEST object. */
+        } else {
+            ossl_prov_digest_reset(ptr::addr_of_mut!((*ctx).digest));
+        }
+
+        CRYPTO_free((*ctx).salt.cast(), FILE_HKDF, LINE);
+        CRYPTO_free((*ctx).prefix.cast(), FILE_HKDF, LINE);
+        CRYPTO_free((*ctx).label.cast(), FILE_HKDF, LINE);
+        CRYPTO_clear_free((*ctx).data.cast(), (*ctx).data_len, FILE_HKDF, LINE);
+        CRYPTO_clear_free((*ctx).key.cast(), (*ctx).key_len, FILE_HKDF, LINE);
+        CRYPTO_clear_free((*ctx).info.cast(), (*ctx).info_len, FILE_HKDF, LINE);
+        ptr::write_bytes(vctx.cast::<u8>(), 0, core::mem::size_of::<KdfHkdf>());
+        (*ctx).provctx = provctx;
+        if preserve_digest != 0 {
+            (*ctx).fixed_digest = preserve_digest;
+            (*ctx).digest.md = saved.md;
+            (*ctx).digest.alloc_md = saved.alloc_md;
+            (*ctx).digest.engine = saved.engine;
+        }
+    }
+}
+
+/// `static void kdf_hkdf_reset(void *vctx)` — `hkdf.c:125-128`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn hkdf_reset(vctx: *mut c_void) {
+    // SAFETY: the caller's contract.
+    unsafe { hkdf_reset_ex(vctx, 0) }
+}
+
+/// `static void kdf_hkdf_free(void *vctx)` — `hkdf.c:115-123`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn hkdf_free(vctx: *mut c_void) {
+    // SAFETY: `vctx` is NULL or a live context.
+    unsafe {
+        if !vctx.is_null() {
+            hkdf_reset_ex(vctx, 1);
+            CRYPTO_free(vctx, FILE_HKDF, LINE);
+        }
+    }
+}
+
+/// `static void *kdf_hkdf_dup(void *vctx)` — `hkdf.c:160-190`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn hkdf_dup(vctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let src = vctx.cast::<KdfHkdf>();
+        let dest = hkdf_new((*src).provctx).cast::<KdfHkdf>();
+        if dest.is_null() {
+            return ptr::null_mut();
+        }
+        if ossl_prov_memdup(
+            (*src).salt.cast(),
+            (*src).salt_len,
+            ptr::addr_of_mut!((*dest).salt),
+            ptr::addr_of_mut!((*dest).salt_len),
+        ) == 0
+            || ossl_prov_memdup(
+                (*src).key.cast(),
+                (*src).key_len,
+                ptr::addr_of_mut!((*dest).key),
+                ptr::addr_of_mut!((*dest).key_len),
+            ) == 0
+            || ossl_prov_memdup(
+                (*src).prefix.cast(),
+                (*src).prefix_len,
+                ptr::addr_of_mut!((*dest).prefix),
+                ptr::addr_of_mut!((*dest).prefix_len),
+            ) == 0
+            || ossl_prov_memdup(
+                (*src).label.cast(),
+                (*src).label_len,
+                ptr::addr_of_mut!((*dest).label),
+                ptr::addr_of_mut!((*dest).label_len),
+            ) == 0
+            || ossl_prov_memdup(
+                (*src).data.cast(),
+                (*src).data_len,
+                ptr::addr_of_mut!((*dest).data),
+                ptr::addr_of_mut!((*dest).data_len),
+            ) == 0
+            || ossl_prov_memdup(
+                (*src).info.cast(),
+                (*src).info_len,
+                ptr::addr_of_mut!((*dest).info),
+                ptr::addr_of_mut!((*dest).info_len),
+            ) == 0
+            || ossl_prov_digest_copy(
+                ptr::addr_of_mut!((*dest).digest),
+                ptr::addr_of!((*src).digest),
+            ) == 0
+        {
+            hkdf_free(dest.cast());
+            return ptr::null_mut();
+        }
+        (*dest).mode = (*src).mode;
+        (*dest).fixed_digest = (*src).fixed_digest;
+        dest.cast()
+    }
+}
+
+/// `static int hkdf_common_set_ctx_params(KDF_HKDF *ctx, struct hkdf_all_set_ctx_params_st *p)` —
+/// `hkdf.c:287-355`. The digest/XOF arm, the two-typed `mode` arm, and the key/salt/info arms.
+///
+/// # Safety
+/// `ctx` live; `p` this frame's; `params` the caller's array is not read here.
+unsafe fn hkdf_common_set_ctx_params(ctx: *mut KdfHkdf, p: *const HkdfSetCtxParams) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe {
+        let libctx = prov_libctx_of((*ctx).provctx);
+
+        if !(*p).digest.is_null() {
+            if ossl_prov_digest_load(
+                ptr::addr_of_mut!((*ctx).digest),
+                (*p).digest,
+                (*p).propq,
+                (*p).engine,
+                libctx,
+            ) == 0
+            {
+                return 0;
+            }
+            let md = ossl_prov_digest_md(ptr::addr_of!((*ctx).digest));
+            if EVP_MD_xof(md) != 0 {
+                raise_site(&err_sites::PROV_HKDF_299);
+                return 0;
+            }
+        }
+
+        if !(*p).mode.is_null() {
+            let mut n: c_int = 0;
+            if (*(*p).mode).data_type == OSSL_PARAM_UTF8_STRING {
+                let value = (*(*p).mode).data.cast::<c_char>();
+                if OPENSSL_strcasecmp(value, c"EXTRACT_AND_EXPAND".as_ptr()) == 0 {
+                    (*ctx).mode = EVP_KDF_HKDF_MODE_EXTRACT_AND_EXPAND;
+                } else if OPENSSL_strcasecmp(value, c"EXTRACT_ONLY".as_ptr()) == 0 {
+                    (*ctx).mode = EVP_KDF_HKDF_MODE_EXTRACT_ONLY;
+                } else if OPENSSL_strcasecmp(value, c"EXPAND_ONLY".as_ptr()) == 0 {
+                    (*ctx).mode = EVP_KDF_HKDF_MODE_EXPAND_ONLY;
+                } else {
+                    raise_site(&err_sites::PROV_HKDF_313);
+                    return 0;
+                }
+            } else if OSSL_PARAM_get_int((*p).mode, &mut n) != 0 {
+                if n != EVP_KDF_HKDF_MODE_EXTRACT_AND_EXPAND
+                    && n != EVP_KDF_HKDF_MODE_EXTRACT_ONLY
+                    && n != EVP_KDF_HKDF_MODE_EXPAND_ONLY
+                {
+                    raise_site(&err_sites::PROV_HKDF_320);
+                    return 0;
+                }
+                (*ctx).mode = n;
+            } else {
+                raise_site(&err_sites::PROV_HKDF_325);
+                return 0;
+            }
+        }
+
+        if !(*p).key.is_null()
+            && ossl_param_get1_octet_string_from_param(
+                (*p).key,
+                ptr::addr_of_mut!((*ctx).key),
+                ptr::addr_of_mut!((*ctx).key_len),
+            ) == 0
+        {
+            return 0;
+        }
+
+        if !(*p).salt.is_null()
+            && ossl_param_get1_octet_string_from_param(
+                (*p).salt,
+                ptr::addr_of_mut!((*ctx).salt),
+                ptr::addr_of_mut!((*ctx).salt_len),
+            ) == 0
+        {
+            return 0;
+        }
+
+        /* Only relevant for HKDF not to the TLS 1.3 KDF. */
+        let infos: [*const OsslParam; HKDF_MAX_INFOS] = (*p).info;
+        if ossl_param_get1_concat_octet_string(
+            (*p).num_info as usize,
+            infos.as_ptr(),
+            ptr::addr_of_mut!((*ctx).info),
+            ptr::addr_of_mut!((*ctx).info_len),
+        ) == 0
+        {
+            return 0;
+        }
+
+        1
+    }
+}
+
+/// `static int kdf_hkdf_derive(void *vctx, unsigned char *key, size_t keylen, const OSSL_PARAM
+/// params[])` — `hkdf.c:229-267`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn hkdf_ctx_derive(
+    vctx: *mut c_void,
+    key: *mut u8,
+    keylen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 || hkdf_ctx_set_ctx_params(vctx, params) == 0 {
+            return 0;
+        }
+        let ctx = vctx.cast::<KdfHkdf>();
+        let libctx = prov_libctx_of((*ctx).provctx);
+
+        let md = ossl_prov_digest_md(ptr::addr_of!((*ctx).digest));
+        if md.is_null() {
+            return fail_at(&err_sites::PROV_HKDF_239);
+        }
+        if (*ctx).key.is_null() {
+            return fail_at(&err_sites::PROV_HKDF_243);
+        }
+        if keylen == 0 {
+            return fail_at(&err_sites::PROV_HKDF_247);
+        }
+
+        if (*ctx).mode == EVP_KDF_HKDF_MODE_EXTRACT_ONLY {
+            hkdf_extract(
+                libctx,
+                md,
+                (*ctx).salt,
+                (*ctx).salt_len,
+                (*ctx).key,
+                (*ctx).key_len,
+                key,
+                keylen,
+            )
+        } else if (*ctx).mode == EVP_KDF_HKDF_MODE_EXPAND_ONLY {
+            hkdf_expand(
+                md,
+                (*ctx).key,
+                (*ctx).key_len,
+                (*ctx).info,
+                (*ctx).info_len,
+                key,
+                keylen,
+            )
+        } else {
+            hkdf_derive_okm(
+                libctx,
+                md,
+                (*ctx).salt,
+                (*ctx).salt_len,
+                (*ctx).key,
+                (*ctx).key_len,
+                (*ctx).info,
+                (*ctx).info_len,
+                key,
+                keylen,
+            )
+        }
+    }
+}
+
+/// `static int kdf_hkdf_set_ctx_params(void *vctx, const OSSL_PARAM params[])` —
+/// `hkdf.c:506-524`. The FIPS `ind_k` arm is absent.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn hkdf_ctx_set_ctx_params(vctx: *mut c_void, params: *const OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vctx.is_null() {
+            return 0;
+        }
+        if let Some(site) = repeated_param_site_by_field(params, &HKDF_SET_DECODER_KEYS) {
+            return fail_at(site);
+        }
+        let mut p = HkdfSetCtxParams::default();
+        if hkdf_set_ctx_params_decode(params, &mut p) == 0 {
+            return 0;
+        }
+        hkdf_common_set_ctx_params(vctx.cast::<KdfHkdf>(), &p)
+    }
+}
+
+/// `static int hkdf_common_get_ctx_params(void *vctx, OSSL_PARAM params[])` — `hkdf.c:667-736`,
+/// without its FIPS arm.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn hkdf_common_get_ctx_params(
+    vctx: *mut c_void,
+    params: *mut OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vctx.is_null() {
+            return 0;
+        }
+        if let Some(site) =
+            repeated_param_site_by_field(params.cast_const(), &HKDF_GET_DECODER_KEYS)
+        {
+            return fail_at(site);
+        }
+        let ctx = vctx.cast::<KdfHkdf>();
+
+        let p_size = locate_const(params, OSSL_KDF_PARAM_SIZE);
+        if !p_size.is_null() {
+            let sz = hkdf_size(ctx);
+            if sz == 0 {
+                return 0;
+            }
+            if OSSL_PARAM_set_size_t(p_size.cast_mut(), sz) == 0 {
+                return 0;
+            }
+        }
+
+        let p_digest = locate_const(params, OSSL_KDF_PARAM_DIGEST);
+        if !p_digest.is_null() {
+            let md = ossl_prov_digest_md(ptr::addr_of!((*ctx).digest));
+            if md.is_null() {
+                return 0;
+            }
+            if OSSL_PARAM_set_utf8_string(p_digest.cast_mut(), EVP_MD_get0_name(md)) == 0 {
+                return 0;
+            }
+        }
+
+        /* OSSL_KDF_PARAM_MODE has multiple parameter types, so look for all instances. */
+        let p_mode = locate_const(params, OSSL_KDF_PARAM_MODE);
+        if !p_mode.is_null() {
+            if (*p_mode).data_type == OSSL_PARAM_UTF8_STRING {
+                let name = match (*ctx).mode {
+                    EVP_KDF_HKDF_MODE_EXTRACT_AND_EXPAND => c"EXTRACT_AND_EXPAND".as_ptr(),
+                    EVP_KDF_HKDF_MODE_EXTRACT_ONLY => c"EXTRACT_ONLY".as_ptr(),
+                    EVP_KDF_HKDF_MODE_EXPAND_ONLY => c"EXPAND_ONLY".as_ptr(),
+                    _ => return 0,
+                };
+                if OSSL_PARAM_set_utf8_string(p_mode.cast_mut(), name) == 0 {
+                    return 0;
+                }
+            } else if OSSL_PARAM_set_int(p_mode.cast_mut(), (*ctx).mode) == 0 {
+                return 0;
+            }
+        }
+
+        let p_salt = locate_const(params, OSSL_KDF_PARAM_SALT);
+        if !p_salt.is_null() {
+            if (*ctx).salt.is_null() || (*ctx).salt_len == 0 {
+                (*p_salt.cast_mut()).return_size = 0;
+            } else if OSSL_PARAM_set_octet_string(
+                p_salt.cast_mut(),
+                (*ctx).salt.cast(),
+                (*ctx).salt_len,
+            ) == 0
+            {
+                return 0;
+            }
+        }
+
+        let p_info = locate_const(params, OSSL_KDF_PARAM_INFO);
+        if !p_info.is_null() {
+            if (*ctx).info.is_null() || (*ctx).info_len == 0 {
+                (*p_info.cast_mut()).return_size = 0;
+            } else if OSSL_PARAM_set_octet_string(
+                p_info.cast_mut(),
+                (*ctx).info.cast(),
+                (*ctx).info_len,
+            ) == 0
+            {
+                return 0;
+            }
+        }
+
+        1
+    }
+}
+
+/// `static const OSSL_PARAM *kdf_hkdf_settable_ctx_params(void *ctx, void *provctx)` —
+/// `hkdf.c:497-503`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn hkdf_settable_ctx_params(
+    _ctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    HKDF_SETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `static const OSSL_PARAM *hkdf_gettable_ctx_params(void *ctx, void *provctx)` —
+/// `hkdf.c:540-543`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn hkdf_gettable_ctx_params(
+    _ctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    HKDF_GETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `static void *kdf_hkdf_fixed_digest_new(void *provctx, const char *digest)` —
+/// `hkdf.c:655-679`. A successful load fixes the digest; failures release the context.
+///
+/// # Safety
+/// The dispatch contract; `digest` is NUL-terminated.
+unsafe fn hkdf_fixed_digest_new(provctx: *mut c_void, digest: *const c_char) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = hkdf_new(provctx).cast::<KdfHkdf>();
+        if ctx.is_null() {
+            return ptr::null_mut();
+        }
+        let mut params = [END, END];
+        params[0] = OSSL_PARAM_construct_utf8_string(OSSL_KDF_PARAM_DIGEST, digest.cast_mut(), 0);
+        let libctx = prov_libctx_of((*ctx).provctx);
+        if ossl_prov_digest_load_from_params(
+            ptr::addr_of_mut!((*ctx).digest),
+            params.as_ptr(),
+            libctx,
+        ) == 0
+        {
+            hkdf_free(ctx.cast());
+            return ptr::null_mut();
+        }
+        /* Now the digest can no longer be changed. */
+        (*ctx).fixed_digest = 1;
+        ctx.cast()
+    }
+}
+
+/// `static void *kdf_hkdf_sha256_new(void *provctx)` — the `KDF_HKDF_FIXED_DIGEST_NEW` expansion,
+/// `hkdf.c:646-652`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn hkdf_sha256_new(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe { hkdf_fixed_digest_new(provctx, c"SHA256".as_ptr()) }
+}
+
+/// `static void *kdf_hkdf_sha384_new(void *provctx)`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn hkdf_sha384_new(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe { hkdf_fixed_digest_new(provctx, c"SHA384".as_ptr()) }
+}
+
+/// `static void *kdf_hkdf_sha512_new(void *provctx)`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn hkdf_sha512_new(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe { hkdf_fixed_digest_new(provctx, c"SHA512".as_ptr()) }
+}
+
+/// `static int kdf_hkdf_fixed_digest_set_ctx_params(void *vctx, const OSSL_PARAM params[])` —
+/// `hkdf.c:712-740`. Setting the digest is refused; everything else goes through the common arm.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn hkdf_fixed_digest_set_ctx_params(
+    vctx: *mut c_void,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vctx.is_null() {
+            return 0;
+        }
+        if let Some(site) = repeated_param_site_by_field(params, &HKDF_FIXED_DECODER_KEYS) {
+            return fail_at(site);
+        }
+        let mut p = HkdfSetCtxParams::default();
+        if hkdf_fixed_set_ctx_params_decode(params, &mut p) == 0 {
+            return 0;
+        }
+        if !p.digest.is_null() {
+            return fail_at(&err_sites::PROV_HKDF_916);
+        }
+        hkdf_common_set_ctx_params(vctx.cast::<KdfHkdf>(), &p)
+    }
+}
+
+/// `static const OSSL_PARAM *kdf_hkdf_fixed_digest_settable_ctx_params(void *ctx, void *provctx)` —
+/// `hkdf.c:741-745`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn hkdf_fixed_digest_settable_ctx_params(
+    _ctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    HKDF_FIXED_SETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `static int kdf_tls1_3_derive(void *vctx, unsigned char *key, size_t keylen, const OSSL_PARAM
+/// params[])` — `hkdf.c:1310-1344`. `EXTRACT_AND_EXPAND` is refused rather than defaulted.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn tls13_derive(
+    vctx: *mut c_void,
+    key: *mut u8,
+    keylen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 || tls13_set_ctx_params(vctx, params) == 0 {
+            return 0;
+        }
+        let ctx = vctx.cast::<KdfHkdf>();
+        let md = ossl_prov_digest_md(ptr::addr_of!((*ctx).digest));
+        if md.is_null() {
+            return fail_at(&err_sites::PROV_HKDF_1349);
+        }
+
+        if (*ctx).mode == EVP_KDF_HKDF_MODE_EXTRACT_ONLY {
+            prov_tls13_hkdf_generate_secret(
+                prov_libctx_of((*ctx).provctx),
+                md,
+                (*ctx).salt,
+                (*ctx).salt_len,
+                (*ctx).key,
+                (*ctx).key_len,
+                (*ctx).prefix,
+                (*ctx).prefix_len,
+                (*ctx).label,
+                (*ctx).label_len,
+                key,
+                keylen,
+            )
+        } else if (*ctx).mode == EVP_KDF_HKDF_MODE_EXPAND_ONLY {
+            prov_tls13_hkdf_expand(
+                md,
+                (*ctx).key,
+                (*ctx).key_len,
+                (*ctx).prefix,
+                (*ctx).prefix_len,
+                (*ctx).label,
+                (*ctx).label_len,
+                (*ctx).data,
+                (*ctx).data_len,
+                key,
+                keylen,
+            )
+        } else {
+            0
+        }
+    }
+}
+
+/// `static int kdf_tls1_3_set_ctx_params(void *vctx, const OSSL_PARAM params[])` —
+/// `hkdf.c:1352-1420`, without its two FIPS arms.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn tls13_set_ctx_params(vctx: *mut c_void, params: *const OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vctx.is_null() {
+            return 0;
+        }
+        if let Some(site) = repeated_param_site_by_field(params, &TLS13_SET_DECODER_KEYS) {
+            return fail_at(site);
+        }
+        let mut p = HkdfSetCtxParams::default();
+        if tls13_set_ctx_params_decode(params, &mut p) == 0 {
+            return 0;
+        }
+        if hkdf_common_set_ctx_params(vctx.cast::<KdfHkdf>(), &p) == 0 {
+            return 0;
+        }
+        let ctx = vctx.cast::<KdfHkdf>();
+        if (*ctx).mode == EVP_KDF_HKDF_MODE_EXTRACT_AND_EXPAND {
+            return fail_at(&err_sites::PROV_HKDF_1629);
+        }
+
+        if !p.prefix.is_null()
+            && ossl_param_get1_octet_string_from_param(
+                p.prefix,
+                ptr::addr_of_mut!((*ctx).prefix),
+                ptr::addr_of_mut!((*ctx).prefix_len),
+            ) == 0
+        {
+            return 0;
+        }
+        if !p.label.is_null()
+            && ossl_param_get1_octet_string_from_param(
+                p.label,
+                ptr::addr_of_mut!((*ctx).label),
+                ptr::addr_of_mut!((*ctx).label_len),
+            ) == 0
+        {
+            return 0;
+        }
+        if !p.data.is_null()
+            && ossl_param_get1_octet_string_from_param(
+                p.data,
+                ptr::addr_of_mut!((*ctx).data),
+                ptr::addr_of_mut!((*ctx).data_len),
+            ) == 0
+        {
+            return 0;
+        }
+        1
+    }
+}
+
+/// `static const OSSL_PARAM *kdf_tls1_3_settable_ctx_params(void *ctx, void *provctx)` —
+/// `hkdf.c:1694-1698`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn tls13_settable_ctx_params(
+    _ctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    TLS13_SETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `const OSSL_DISPATCH ossl_kdf_hkdf_functions[]` — `hkdf.c:645-652`.
+pub(crate) static HKDF_FUNCTIONS: [OsslDispatch; 10] = [
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_NEWCTX,
+        function: hkdf_new as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DUPCTX,
+        function: hkdf_dup as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_FREECTX,
+        function: hkdf_free as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_RESET,
+        function: hkdf_reset as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DERIVE,
+        function: hkdf_ctx_derive as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS,
+        function: hkdf_settable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SET_CTX_PARAMS,
+        function: hkdf_ctx_set_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS,
+        function: hkdf_gettable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GET_CTX_PARAMS,
+        function: hkdf_common_get_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_DISPATCH_END,
+        function: ptr::null_mut(),
+    },
+];
+
+/// `const OSSL_DISPATCH ossl_kdf_hkdf_sha256_functions[]` — the
+/// `MAKE_KDF_HKDF_FIXED_DIGEST_FUNCTIONS` expansion, `hkdf.c:588-604`.
+pub(crate) static HKDF_SHA256_FUNCTIONS: [OsslDispatch; 10] = [
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_NEWCTX,
+        function: hkdf_sha256_new as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DUPCTX,
+        function: hkdf_dup as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_FREECTX,
+        function: hkdf_free as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_RESET,
+        function: hkdf_reset as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DERIVE,
+        function: hkdf_ctx_derive as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS,
+        function: hkdf_fixed_digest_settable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SET_CTX_PARAMS,
+        function: hkdf_fixed_digest_set_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS,
+        function: hkdf_gettable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GET_CTX_PARAMS,
+        function: hkdf_common_get_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_DISPATCH_END,
+        function: ptr::null_mut(),
+    },
+];
+
+/// `const OSSL_DISPATCH ossl_kdf_hkdf_sha384_functions[]`.
+pub(crate) static HKDF_SHA384_FUNCTIONS: [OsslDispatch; 10] = [
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_NEWCTX,
+        function: hkdf_sha384_new as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DUPCTX,
+        function: hkdf_dup as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_FREECTX,
+        function: hkdf_free as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_RESET,
+        function: hkdf_reset as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DERIVE,
+        function: hkdf_ctx_derive as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS,
+        function: hkdf_fixed_digest_settable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SET_CTX_PARAMS,
+        function: hkdf_fixed_digest_set_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS,
+        function: hkdf_gettable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GET_CTX_PARAMS,
+        function: hkdf_common_get_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_DISPATCH_END,
+        function: ptr::null_mut(),
+    },
+];
+
+/// `const OSSL_DISPATCH ossl_kdf_hkdf_sha512_functions[]`.
+pub(crate) static HKDF_SHA512_FUNCTIONS: [OsslDispatch; 10] = [
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_NEWCTX,
+        function: hkdf_sha512_new as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DUPCTX,
+        function: hkdf_dup as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_FREECTX,
+        function: hkdf_free as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_RESET,
+        function: hkdf_reset as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DERIVE,
+        function: hkdf_ctx_derive as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS,
+        function: hkdf_fixed_digest_settable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SET_CTX_PARAMS,
+        function: hkdf_fixed_digest_set_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS,
+        function: hkdf_gettable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GET_CTX_PARAMS,
+        function: hkdf_common_get_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_DISPATCH_END,
+        function: ptr::null_mut(),
+    },
+];
+
+/// `const OSSL_DISPATCH ossl_kdf_tls1_3_kdf_functions[]` — `hkdf.c:1700-1713`.
+pub(crate) static TLS13_KDF_FUNCTIONS: [OsslDispatch; 10] = [
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_NEWCTX,
+        function: hkdf_new as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DUPCTX,
+        function: hkdf_dup as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_FREECTX,
+        function: hkdf_free as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_RESET,
+        function: hkdf_reset as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DERIVE,
+        function: tls13_derive as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS,
+        function: tls13_settable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SET_CTX_PARAMS,
+        function: tls13_set_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS,
+        function: hkdf_gettable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GET_CTX_PARAMS,
+        function: hkdf_common_get_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_DISPATCH_END,
+        function: ptr::null_mut(),
+    },
+];
+
+// =============================================================================================
+// `providers/implementations/kdfs/tls1_prf.c` — TLS1-PRF (RFC 2246 §5, RFC 5246 §5)
+// =============================================================================================
+
+/// `OSSL_DIGEST_NAME_MD5_SHA1` — `include/openssl/core_names.h:36`. The one digest name that
+/// switches `kdf_tls1_prf_set_ctx_params` onto the two-MAC TLS v1.0/v1.1 arm.
+const OSSL_DIGEST_NAME_MD5_SHA1: *const c_char = c"MD5-SHA1".as_ptr();
+
+/// `OSSL_DIGEST_NAME_MD5` — `include/openssl/core_names.h:35`.
+const OSSL_DIGEST_NAME_MD5: *const c_char = c"MD5".as_ptr();
+
+/// `OSSL_DIGEST_NAME_SHA1` — `include/openssl/core_names.h:37`.
+const OSSL_DIGEST_NAME_SHA1: *const c_char = c"SHA1".as_ptr();
+
+/// `OSSL_KDF_PARAM_SEED` — `include/openssl/core_names.h:310`.
+const OSSL_KDF_PARAM_SEED: *const c_char = c"seed".as_ptr();
+
+/// `FILE_TLS1_PRF` — the unit's own `__FILE__`.
+const FILE_TLS1_PRF: *const c_char = c"providers/implementations/kdfs/tls1_prf.c".as_ptr();
+
+/// `TLSPRF_MAX_SEEDS` — `tls1_prf.c:100`.
+const TLSPRF_MAX_SEEDS: usize = 6;
+
+/// `safe_add_size_t(a, b, &err)` — `internal/safe_math.h`'s `OSSL_SAFE_MATH_UNSIGNED(size_t,
+/// size_t)` expansion for the add case: `a + b`, with `*err` set and 0 returned on overflow. The
+/// `seed` fields' concatenation is the one caller, and it must not wrap a length.
+fn safe_add_size_t(a: usize, b: usize, err: &mut c_int) -> usize {
+    match a.checked_add(b) {
+        Some(v) => v,
+        None => {
+            *err = 1;
+            0
+        }
+    }
+}
+
+/// `struct TLS1_PRF` — `tls1_prf.c:103-119`, without its FIPS indicator field.
+#[repr(C)]
+pub(crate) struct Tls1Prf {
+    /// `void *provctx`.
+    pub provctx: *mut c_void,
+    /// `EVP_MAC_CTX *P_hash` — the main digest's MAC context.
+    pub p_hash: *mut EvpMacCtx,
+    /// `EVP_MAC_CTX *P_sha1` — the SHA-1 MAC context for the MD5/SHA-1 combined PRF.
+    pub p_sha1: *mut EvpMacCtx,
+    /// `unsigned char *sec` / `size_t seclen`.
+    pub sec: *mut u8,
+    pub seclen: usize,
+    /// `unsigned char *seed` / `size_t seedlen` — the concatenated seed data.
+    pub seed: *mut u8,
+    pub seedlen: usize,
+}
+
+/// `struct tls1prf_set_ctx_params_st` — `tls1_prf.c:311-329`, without its three FIPS fields.
+#[derive(Default)]
+struct Tls1PrfSetCtxParams {
+    digest: *const OsslParam,
+    engine: *const OsslParam,
+    propq: *const OsslParam,
+    secret: *const OsslParam,
+    seed: [*const OsslParam; TLSPRF_MAX_SEEDS],
+    num_seed: c_int,
+}
+
+/// The `tls1prf_set_ctx_params_decoder` keys this profile's generated switch raises for, each with
+/// its (field id, raise site). The three FIPS `*-check` keys (`:372`, `:403`, `:428`) are compiled
+/// out, and `seed` is absent because its repetition is a **list**, not an error, up to
+/// `TLSPRF_MAX_SEEDS` (collected below against the `:470` raise). The generated `strcmp`-tree at
+/// `tls1_prf.c:337-477` raises `PROV_R_REPEATED_PARAMETER` at the second occurrence of any one of
+/// these four.
+const TLS1_PRF_SET_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char, u32); 4] = [
+    (&err_sites::PROV_TLS1_PRF_382, OSSL_KDF_PARAM_DIGEST, 0),
+    (&err_sites::PROV_TLS1_PRF_415, OSSL_ALG_PARAM_ENGINE, 1),
+    (&err_sites::PROV_TLS1_PRF_440, OSSL_KDF_PARAM_PROPERTIES, 2),
+    (&err_sites::PROV_TLS1_PRF_459, OSSL_KDF_PARAM_SECRET, 3),
+];
+
+/// The `tls1prf_get_ctx_params_decoder` key, `tls1_prf.c:657-673` (the FIPS `fips-indicator` at
+/// `:655` is compiled out).
+const TLS1_PRF_GET_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char, u32); 1] =
+    [(&err_sites::PROV_TLS1_PRF_667, OSSL_KDF_PARAM_SIZE, 0)];
+
+/// `static const OSSL_PARAM tls1prf_set_ctx_params_list[]` — `tls1_prf.c:293-308`, without its
+/// three FIPS entries.
+static TLS1_PRF_SETTABLE_CTX_PARAMS: [OsslParam; 5] = [
+    param_utf8_string(OSSL_KDF_PARAM_PROPERTIES),
+    param_utf8_string(OSSL_KDF_PARAM_DIGEST),
+    param_octet_string(OSSL_KDF_PARAM_SECRET),
+    param_octet_string(OSSL_KDF_PARAM_SEED),
+    END,
+];
+
+/// `static const OSSL_PARAM tls1prf_get_ctx_params_list[]` — `tls1_prf.c:674-680`, without its
+/// FIPS entry.
+static TLS1_PRF_GETTABLE_CTX_PARAMS: [OsslParam; 2] = [param_size_t(OSSL_KDF_PARAM_SIZE), END];
+
+/// The generated set decoder's seed rule, the one thing `repeated_param_site_by_field` cannot
+/// express: `seed` is a **list**, and a seventh record raises `PROV_R_TOO_MANY_RECORDS` at
+/// `tls1_prf.c:470`.
+///
+/// # Safety
+/// `params` is NULL or a key-terminated array; `r` is writable.
+unsafe fn tls1_prf_collect_seed(params: *const OsslParam, r: &mut Tls1PrfSetCtxParams) -> c_int {
+    // SAFETY: the walk stops at the NULL key.
+    unsafe {
+        if params.is_null() {
+            return 1;
+        }
+        let mut p = params;
+        while !(*p).key.is_null() {
+            if CStr::from_ptr((*p).key).to_bytes() == CStr::from_ptr(OSSL_KDF_PARAM_SEED).to_bytes()
+            {
+                if r.num_seed as usize >= TLSPRF_MAX_SEEDS {
+                    raise_site(&err_sites::PROV_TLS1_PRF_470);
+                    return 0;
+                }
+                r.seed[r.num_seed as usize] = p;
+                r.num_seed += 1;
+            }
+            p = p.add(1);
+        }
+    }
+    1
+}
+
+/// `static int tls1_prf_P_hash(EVP_MAC_CTX *ctx_init, const unsigned char *sec, size_t sec_len,
+/// const unsigned char *seed, size_t seed_len, unsigned char *out, size_t olen)` —
+/// `tls1_prf.c:503-567`. `A(0) = seed`, `A(i) = HMAC(sec, A(i-1))`, `out = HMAC(sec, A(i) || seed)
+/// || ...` until `olen` bytes are produced. The authority's `goto err` is a labelled block whose
+/// single exit frees both MAC contexts and cleanses the bounce buffer.
+///
+/// # Safety
+/// `ctx_init` is a live MAC context; `sec`/`seed` are live for their lengths; `out` is writable
+/// for `olen` bytes.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+unsafe fn tls1_prf_p_hash(
+    ctx_init: *mut EvpMacCtx,
+    sec: *const u8,
+    sec_len: usize,
+    seed: *const u8,
+    seed_len: usize,
+    out: *mut u8,
+    olen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut ctx: *mut EvpMacCtx = ptr::null_mut();
+        let mut ctx_ai: *mut EvpMacCtx = ptr::null_mut();
+        let mut ai = [0u8; EVP_MAX_MD_SIZE];
+        let mut ai_len: usize = 0;
+        let mut ret: c_int = 0;
+
+        'err: {
+            if EVP_MAC_init(ctx_init, sec, sec_len, ptr::null()) == 0 {
+                break 'err;
+            }
+            let chunk = EVP_MAC_CTX_get_mac_size(ctx_init);
+            if chunk == 0 {
+                break 'err;
+            }
+            /* A(0) = seed */
+            ctx_ai = EVP_MAC_CTX_dup(ctx_init);
+            if ctx_ai.is_null() {
+                break 'err;
+            }
+            if !seed.is_null() && EVP_MAC_update(ctx_ai, seed, seed_len) == 0 {
+                break 'err;
+            }
+
+            let mut out_p = out;
+            let mut olen_rem = olen;
+            loop {
+                /* calc: A(i) = HMAC_<hash>(secret, A(i-1)) */
+                if EVP_MAC_final(ctx_ai, ai.as_mut_ptr(), &mut ai_len, EVP_MAX_MD_SIZE) == 0 {
+                    break 'err;
+                }
+                EVP_MAC_CTX_free(ctx_ai);
+                ctx_ai = ptr::null_mut();
+
+                /* calc next chunk: HMAC_<hash>(secret, A(i) + seed) */
+                ctx = EVP_MAC_CTX_dup(ctx_init);
+                if ctx.is_null() {
+                    break 'err;
+                }
+                if EVP_MAC_update(ctx, ai.as_ptr(), ai_len) == 0 {
+                    break 'err;
+                }
+                /* save state for calculating next A(i) value */
+                if olen_rem > chunk {
+                    ctx_ai = EVP_MAC_CTX_dup(ctx);
+                    if ctx_ai.is_null() {
+                        break 'err;
+                    }
+                }
+                if !seed.is_null() && EVP_MAC_update(ctx, seed, seed_len) == 0 {
+                    break 'err;
+                }
+                if olen_rem <= chunk {
+                    /* last chunk - use Ai as temp bounce buffer */
+                    if EVP_MAC_final(ctx, ai.as_mut_ptr(), &mut ai_len, EVP_MAX_MD_SIZE) == 0 {
+                        break 'err;
+                    }
+                    ptr::copy_nonoverlapping(ai.as_ptr(), out_p, olen_rem);
+                    break;
+                }
+                if EVP_MAC_final(ctx, out_p, ptr::null_mut(), olen_rem) == 0 {
+                    break 'err;
+                }
+                EVP_MAC_CTX_free(ctx);
+                ctx = ptr::null_mut();
+                out_p = out_p.add(chunk);
+                olen_rem -= chunk;
+            }
+            ret = 1;
+        }
+
+        EVP_MAC_CTX_free(ctx);
+        EVP_MAC_CTX_free(ctx_ai);
+        cleanse(ai.as_mut_ptr(), EVP_MAX_MD_SIZE);
+        ret
+    }
+}
+
+/// `static int tls1_prf_alg(EVP_MAC_CTX *mdctx, EVP_MAC_CTX *sha1ctx, const unsigned char *sec,
+/// size_t slen, const unsigned char *seed, size_t seed_len, unsigned char *out, size_t olen)` —
+/// `tls1_prf.c:589-625`. With a `sha1ctx` the TLS v1.0/v1.1 arm splits the secret in halves and
+/// XORs the MD5 and SHA-1 expansions; otherwise it is the single-hash TLS v1.2 arm.
+///
+/// # Safety
+/// The two MAC contexts are live; `sec`/`seed` are live for their lengths; `out` is writable for
+/// `olen` bytes.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+unsafe fn tls1_prf_alg(
+    mdctx: *mut EvpMacCtx,
+    sha1ctx: *mut EvpMacCtx,
+    sec: *const u8,
+    slen: usize,
+    seed: *const u8,
+    seed_len: usize,
+    out: *mut u8,
+    olen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if !sha1ctx.is_null() {
+            /* TLS v1.0 and TLS v1.1 */
+            /* calc: L_S1 = L_S2 = ceil(L_S / 2) */
+            let l_s1 = slen.div_ceil(2);
+            let l_s2 = l_s1;
+
+            if tls1_prf_p_hash(mdctx, sec, l_s1, seed, seed_len, out, olen) == 0 {
+                return 0;
+            }
+
+            let tmp = CRYPTO_malloc(olen, FILE_TLS1_PRF, LINE).cast::<u8>();
+            if tmp.is_null() {
+                return 0;
+            }
+
+            if tls1_prf_p_hash(
+                sha1ctx,
+                sec.add(slen - l_s2),
+                l_s2,
+                seed,
+                seed_len,
+                tmp,
+                olen,
+            ) == 0
+            {
+                CRYPTO_clear_free(tmp.cast(), olen, FILE_TLS1_PRF, LINE);
+                return 0;
+            }
+            for i in 0..olen {
+                *out.add(i) ^= *tmp.add(i);
+            }
+            CRYPTO_clear_free(tmp.cast(), olen, FILE_TLS1_PRF, LINE);
+            return 1;
+        }
+
+        /* TLS v1.2 */
+        if tls1_prf_p_hash(mdctx, sec, slen, seed, seed_len, out, olen) == 0 {
+            return 0;
+        }
+
+        1
+    }
+}
+
+/// `static void *kdf_tls1_prf_new(void *provctx)` — `tls1_prf.c:121-133`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn tls1_prf_new(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let ctx =
+            CRYPTO_zalloc(core::mem::size_of::<Tls1Prf>(), FILE_TLS1_PRF, LINE).cast::<Tls1Prf>();
+        if !ctx.is_null() {
+            (*ctx).provctx = provctx;
+        }
+        ctx.cast()
+    }
+}
+
+/// `static void kdf_tls1_prf_reset(void *vctx)` — `tls1_prf.c:145-156`. The `provctx` is saved
+/// across the `memset` because the whole struct is cleared.
+///
+/// # Safety
+/// `vctx` is a context `tls1_prf_new` allocated.
+unsafe fn tls1_prf_reset(vctx: *mut c_void) {
+    // SAFETY: `vctx` is a live context per the contract.
+    unsafe {
+        let ctx = vctx.cast::<Tls1Prf>();
+        let provctx = (*ctx).provctx;
+
+        EVP_MAC_CTX_free((*ctx).p_hash);
+        EVP_MAC_CTX_free((*ctx).p_sha1);
+        CRYPTO_clear_free((*ctx).sec.cast(), (*ctx).seclen, FILE_TLS1_PRF, LINE);
+        CRYPTO_clear_free((*ctx).seed.cast(), (*ctx).seedlen, FILE_TLS1_PRF, LINE);
+        ptr::write_bytes(vctx.cast::<u8>(), 0, core::mem::size_of::<Tls1Prf>());
+        (*ctx).provctx = provctx;
+    }
+}
+
+/// `static void kdf_tls1_prf_free(void *vctx)` — `tls1_prf.c:135-143`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn tls1_prf_free(vctx: *mut c_void) {
+    // SAFETY: `vctx` is NULL or a live context.
+    unsafe {
+        if !vctx.is_null() {
+            tls1_prf_reset(vctx);
+            CRYPTO_free(vctx, FILE_TLS1_PRF, LINE);
+        }
+    }
+}
+
+/// `static void *kdf_tls1_prf_dup(void *vctx)` — `tls1_prf.c:158-183`. Each MAC context is
+/// duplicated only when the source held one, because a NULL source field must stay NULL.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn tls1_prf_dup(vctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let src = vctx.cast::<Tls1Prf>();
+        let dest = tls1_prf_new((*src).provctx).cast::<Tls1Prf>();
+        if dest.is_null() {
+            return ptr::null_mut();
+        }
+        if !(*src).p_hash.is_null() {
+            (*dest).p_hash = EVP_MAC_CTX_dup((*src).p_hash);
+            if (*dest).p_hash.is_null() {
+                tls1_prf_free(dest.cast());
+                return ptr::null_mut();
+            }
+        }
+        if !(*src).p_sha1.is_null() {
+            (*dest).p_sha1 = EVP_MAC_CTX_dup((*src).p_sha1);
+            if (*dest).p_sha1.is_null() {
+                tls1_prf_free(dest.cast());
+                return ptr::null_mut();
+            }
+        }
+        if ossl_prov_memdup(
+            (*src).sec.cast(),
+            (*src).seclen,
+            ptr::addr_of_mut!((*dest).sec),
+            ptr::addr_of_mut!((*dest).seclen),
+        ) == 0
+            || ossl_prov_memdup(
+                (*src).seed.cast(),
+                (*src).seedlen,
+                ptr::addr_of_mut!((*dest).seed),
+                ptr::addr_of_mut!((*dest).seedlen),
+            ) == 0
+        {
+            tls1_prf_free(dest.cast());
+            return ptr::null_mut();
+        }
+        dest.cast()
+    }
+}
+
+/// `static int kdf_tls1_prf_derive(void *vctx, unsigned char *key, size_t keylen, const OSSL_PARAM
+/// params[])` — `tls1_prf.c:256-290`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn tls1_prf_ctx_derive(
+    vctx: *mut c_void,
+    key: *mut u8,
+    keylen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 || tls1_prf_set_ctx_params(vctx, params) == 0 {
+            return 0;
+        }
+        let ctx = vctx.cast::<Tls1Prf>();
+        if (*ctx).p_hash.is_null() {
+            return fail_at(&err_sites::PROV_TLS1_PRF_263);
+        }
+        if (*ctx).sec.is_null() {
+            return fail_at(&err_sites::PROV_TLS1_PRF_267);
+        }
+        if (*ctx).seedlen == 0 {
+            return fail_at(&err_sites::PROV_TLS1_PRF_271);
+        }
+        if keylen == 0 {
+            return fail_at(&err_sites::PROV_TLS1_PRF_275);
+        }
+        tls1_prf_alg(
+            (*ctx).p_hash,
+            (*ctx).p_sha1,
+            (*ctx).sec,
+            (*ctx).seclen,
+            (*ctx).seed,
+            (*ctx).seedlen,
+            key,
+            keylen,
+        )
+    }
+}
+
+/// `static int kdf_tls1_prf_set_ctx_params(void *vctx, const OSSL_PARAM params[])` —
+/// `tls1_prf.c:485-616`, with the generated switch replaced by the field-keyed repeat check, one
+/// `OSSL_PARAM_locate_const` per key and the seed list rule (D305's reading). The FIPS arms are
+/// absent.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn tls1_prf_set_ctx_params(vctx: *mut c_void, params: *const OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vctx.is_null() {
+            return 0;
+        }
+        if let Some(site) = repeated_param_site_by_field(params, &TLS1_PRF_SET_DECODER_KEYS) {
+            return fail_at(site);
+        }
+        let ctx = vctx.cast::<Tls1Prf>();
+        let libctx = prov_libctx_of((*ctx).provctx);
+        let mut p = Tls1PrfSetCtxParams {
+            digest: locate_const(params, OSSL_KDF_PARAM_DIGEST),
+            engine: locate_const(params, OSSL_ALG_PARAM_ENGINE),
+            propq: locate_const(params, OSSL_KDF_PARAM_PROPERTIES),
+            secret: locate_const(params, OSSL_KDF_PARAM_SECRET),
+            ..Default::default()
+        };
+        if tls1_prf_collect_seed(params, &mut p) == 0 {
+            return 0;
+        }
+
+        if !p.digest.is_null() {
+            let mut digest: ProvDigest = core::mem::zeroed();
+            let mut dgst: *const c_char = ptr::null();
+
+            if OSSL_PARAM_get_utf8_string_ptr(p.digest, &mut dgst) == 0 {
+                return 0;
+            }
+
+            if OPENSSL_strcasecmp(dgst, OSSL_DIGEST_NAME_MD5_SHA1) == 0 {
+                if ossl_prov_macctx_load(
+                    ptr::addr_of_mut!((*ctx).p_hash),
+                    ptr::null(),
+                    ptr::null(),
+                    ptr::null(),
+                    p.propq,
+                    p.engine,
+                    OSSL_MAC_NAME_HMAC,
+                    ptr::null(),
+                    OSSL_DIGEST_NAME_MD5,
+                    libctx,
+                ) == 0
+                {
+                    return 0;
+                }
+                if ossl_prov_macctx_load(
+                    ptr::addr_of_mut!((*ctx).p_sha1),
+                    ptr::null(),
+                    ptr::null(),
+                    ptr::null(),
+                    p.propq,
+                    p.engine,
+                    OSSL_MAC_NAME_HMAC,
+                    ptr::null(),
+                    OSSL_DIGEST_NAME_SHA1,
+                    libctx,
+                ) == 0
+                {
+                    return 0;
+                }
+            } else {
+                EVP_MAC_CTX_free((*ctx).p_sha1);
+                (*ctx).p_sha1 = ptr::null_mut();
+                if ossl_prov_macctx_load(
+                    ptr::addr_of_mut!((*ctx).p_hash),
+                    ptr::null(),
+                    ptr::null(),
+                    p.digest,
+                    p.propq,
+                    p.engine,
+                    OSSL_MAC_NAME_HMAC,
+                    ptr::null(),
+                    ptr::null(),
+                    libctx,
+                ) == 0
+                {
+                    return 0;
+                }
+            }
+
+            if ossl_prov_digest_load(
+                ptr::addr_of_mut!(digest),
+                p.digest,
+                p.propq,
+                p.engine,
+                libctx,
+            ) == 0
+            {
+                return 0;
+            }
+
+            let md = ossl_prov_digest_md(ptr::addr_of!(digest));
+            if EVP_MD_xof(md) != 0 {
+                raise_site(&err_sites::PROV_TLS1_PRF_537);
+                ossl_prov_digest_reset(ptr::addr_of_mut!(digest));
+                return 0;
+            }
+
+            ossl_prov_digest_reset(ptr::addr_of_mut!(digest));
+        }
+
+        if !p.secret.is_null() {
+            CRYPTO_clear_free((*ctx).sec.cast(), (*ctx).seclen, FILE_TLS1_PRF, LINE);
+            (*ctx).sec = ptr::null_mut();
+            if OSSL_PARAM_get_octet_string(
+                p.secret,
+                ptr::addr_of_mut!((*ctx).sec).cast(),
+                0,
+                ptr::addr_of_mut!((*ctx).seclen),
+            ) == 0
+            {
+                return 0;
+            }
+        }
+
+        /*
+         * The seed fields concatenate across set calls, so process them all
+         * but only reallocate once.
+         */
+        if p.num_seed > 0 {
+            let mut vals: [*const c_void; TLSPRF_MAX_SEEDS] = [ptr::null(); TLSPRF_MAX_SEEDS];
+            let mut sizes: [usize; TLSPRF_MAX_SEEDS] = [0; TLSPRF_MAX_SEEDS];
+            let mut seedlen = (*ctx).seedlen;
+            let mut n: usize = 0;
+
+            for i in 0..p.num_seed as usize {
+                sizes[i] = 0;
+                vals[i] = ptr::null();
+                if (*p.seed[i]).data_size != 0 && !(*p.seed[i]).data.is_null() {
+                    let mut err: c_int = 0;
+
+                    if OSSL_PARAM_get_octet_string_ptr(
+                        p.seed[i],
+                        ptr::addr_of_mut!(vals[n]),
+                        ptr::addr_of_mut!(sizes[n]),
+                    ) == 0
+                    {
+                        return 0;
+                    }
+
+                    seedlen = safe_add_size_t(seedlen, sizes[n], &mut err);
+                    if err != 0 {
+                        return 0;
+                    }
+                    n += 1;
+                }
+            }
+
+            if seedlen != (*ctx).seedlen {
+                let seed = CRYPTO_clear_realloc(
+                    (*ctx).seed.cast(),
+                    (*ctx).seedlen,
+                    seedlen,
+                    FILE_TLS1_PRF,
+                    LINE,
+                )
+                .cast::<u8>();
+
+                if seed.is_null() {
+                    return 0;
+                }
+                (*ctx).seed = seed;
+
+                /* No errors are possible, so copy them across */
+                for i in 0..n {
+                    ptr::copy_nonoverlapping(
+                        vals[i].cast::<u8>(),
+                        (*ctx).seed.add((*ctx).seedlen),
+                        sizes[i],
+                    );
+                    (*ctx).seedlen += sizes[i];
+                }
+            }
+        }
+
+        1
+    }
+}
+
+/// `static int kdf_tls1_prf_get_ctx_params(void *vctx, OSSL_PARAM params[])` —
+/// `tls1_prf.c:683-698`, without its FIPS arm.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn tls1_prf_get_ctx_params(vctx: *mut c_void, params: *mut OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vctx.is_null() {
+            return 0;
+        }
+        if let Some(site) =
+            repeated_param_site_by_field(params.cast_const(), &TLS1_PRF_GET_DECODER_KEYS)
+        {
+            return fail_at(site);
+        }
+        let p = locate_const(params, OSSL_KDF_PARAM_SIZE);
+        if !p.is_null() && OSSL_PARAM_set_size_t(p.cast_mut(), usize::MAX) == 0 {
+            return 0;
+        }
+        1
+    }
+}
+
+/// `static const OSSL_PARAM *kdf_tls1_prf_settable_ctx_params(void *ctx, void *provctx)` —
+/// `tls1_prf.c:618-623`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn tls1_prf_settable_ctx_params(
+    _ctx: *mut c_void,
+    _p_ctx: *mut c_void,
+) -> *const OsslParam {
+    TLS1_PRF_SETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `static const OSSL_PARAM *kdf_tls1_prf_gettable_ctx_params(void *ctx, void *provctx)` —
+/// `tls1_prf.c:700-705`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn tls1_prf_gettable_ctx_params(
+    _ctx: *mut c_void,
+    _p_ctx: *mut c_void,
+) -> *const OsslParam {
+    TLS1_PRF_GETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `const OSSL_DISPATCH ossl_kdf_tls1_prf_functions[]` — `tls1_prf.c:466-481`.
+pub(crate) static TLS1_PRF_FUNCTIONS: [OsslDispatch; 10] = [
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_NEWCTX,
+        function: tls1_prf_new as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DUPCTX,
+        function: tls1_prf_dup as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_FREECTX,
+        function: tls1_prf_free as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_RESET,
+        function: tls1_prf_reset as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DERIVE,
+        function: tls1_prf_ctx_derive as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS,
+        function: tls1_prf_settable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SET_CTX_PARAMS,
+        function: tls1_prf_set_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS,
+        function: tls1_prf_gettable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GET_CTX_PARAMS,
+        function: tls1_prf_get_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_DISPATCH_END,
+        function: ptr::null_mut(),
+    },
+];
+
+// =============================================================================================
+// `providers/implementations/kdfs/kbkdf.c` — KBKDF (NIST SP 800-108 counter and feedback modes)
+// =============================================================================================
+
+/// `OSSL_KDF_PARAM_CIPHER` — `include/openssl/core_names.h:278` (`OSSL_ALG_PARAM_CIPHER`,
+/// `"cipher"`), the CMAC arm's cipher name.
+const OSSL_KDF_PARAM_CIPHER: *const c_char = c"cipher".as_ptr();
+
+/// `OSSL_KDF_PARAM_KBKDF_USE_L` — `include/openssl/core_names.h:292`.
+const OSSL_KDF_PARAM_KBKDF_USE_L: *const c_char = c"use-l".as_ptr();
+
+/// `OSSL_KDF_PARAM_KBKDF_USE_SEPARATOR` — `include/openssl/core_names.h:293`.
+const OSSL_KDF_PARAM_KBKDF_USE_SEPARATOR: *const c_char = c"use-separator".as_ptr();
+
+/// `OSSL_KDF_PARAM_KBKDF_R` — `include/openssl/core_names.h:291`.
+const OSSL_KDF_PARAM_KBKDF_R: *const c_char = c"r".as_ptr();
+
+/// `OSSL_MAC_NAME_CMAC` — `include/openssl/core_names.h:60`.
+const OSSL_MAC_NAME_CMAC: *const c_char = c"CMAC".as_ptr();
+
+/// `FILE_KBKDF` — the unit's own `__FILE__`.
+const FILE_KBKDF: *const c_char = c"providers/implementations/kdfs/kbkdf.c".as_ptr();
+
+/// `KBKDF_MAX_INFOS` — `kbkdf.c:57`.
+const KBKDF_MAX_INFOS: usize = 5;
+
+/// `COUNTER` — `kbkdf.c:60`, SP800-108 section 5.1.
+const KBKDF_COUNTER: c_int = 0;
+
+/// `FEEDBACK` — `kbkdf.c:61`, SP800-108 section 5.2.
+const KBKDF_FEEDBACK: c_int = 1;
+
+/// `struct KBKDF` — `kbkdf.c:65-84`, without its FIPS indicator field.
+#[repr(C)]
+pub(crate) struct Kbkdf {
+    /// `void *provctx`.
+    pub provctx: *mut c_void,
+    /// `kbkdf_mode mode`.
+    pub mode: c_int,
+    /// `EVP_MAC_CTX *ctx_init`.
+    pub ctx_init: *mut EvpMacCtx,
+    /// `int r` — the counter length in bits, one of 8, 16, 24, 32.
+    pub r: c_int,
+    /// `unsigned char *ki` / `size_t ki_len` — the key `K_I`.
+    pub ki: *mut u8,
+    pub ki_len: usize,
+    /// `unsigned char *label` / `size_t label_len` — SP800-108's `Label`, from `salt`.
+    pub label: *mut u8,
+    pub label_len: usize,
+    /// `unsigned char *context` / `size_t context_len` — the concatenated `info` records.
+    pub context: *mut u8,
+    pub context_len: usize,
+    /// `unsigned char *iv` / `size_t iv_len` — the feedback-mode `K(0)`, from `seed`.
+    pub iv: *mut u8,
+    pub iv_len: usize,
+    /// `int use_l` — whether `L` is appended to the fixed input data.
+    pub use_l: c_int,
+    /// `int is_kmac` — whether the loaded MAC is KMAC128/KMAC256 rather than HMAC/CMAC.
+    pub is_kmac: c_int,
+    /// `int use_separator` — whether the `0x00` separation indicator is appended.
+    pub use_separator: c_int,
+}
+
+/// `struct kbkdf_set_ctx_params_st` — `kbkdf.c:395-412`, without its FIPS field.
+#[derive(Default)]
+struct KbkdfSetCtxParams {
+    cipher: *const OsslParam,
+    digest: *const OsslParam,
+    engine: *const OsslParam,
+    info: [*const OsslParam; KBKDF_MAX_INFOS],
+    num_info: c_int,
+    key: *const OsslParam,
+    mac: *const OsslParam,
+    mode: *const OsslParam,
+    propq: *const OsslParam,
+    r: *const OsslParam,
+    salt: *const OsslParam,
+    seed: *const OsslParam,
+    sep: *const OsslParam,
+    use_l: *const OsslParam,
+}
+
+/// The `kbkdf_set_ctx_params_decoder` keys this profile's generated switch raises for, each with
+/// its (field id, raise site). The FIPS `key-check` key (`:489`) is compiled out, and `info` is
+/// absent because its repetition is a **list**, not an error, up to `KBKDF_MAX_INFOS` (collected
+/// below against the `:465` raise). The generated `strcmp`-tree at `kbkdf.c:419-630` raises
+/// `PROV_R_REPEATED_PARAMETER` at the second occurrence of any one of these twelve.
+const KBKDF_SET_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char, u32); 12] = [
+    (&err_sites::PROV_KBKDF_432, OSSL_KDF_PARAM_CIPHER, 0),
+    (&err_sites::PROV_KBKDF_443, OSSL_KDF_PARAM_DIGEST, 1),
+    (&err_sites::PROV_KBKDF_454, OSSL_ALG_PARAM_ENGINE, 2),
+    (&err_sites::PROV_KBKDF_499, OSSL_KDF_PARAM_KEY, 3),
+    (&err_sites::PROV_KBKDF_516, OSSL_KDF_PARAM_MAC, 4),
+    (&err_sites::PROV_KBKDF_527, OSSL_KDF_PARAM_MODE, 5),
+    (&err_sites::PROV_KBKDF_539, OSSL_KDF_PARAM_PROPERTIES, 6),
+    (&err_sites::PROV_KBKDF_552, OSSL_KDF_PARAM_KBKDF_R, 7),
+    (&err_sites::PROV_KBKDF_567, OSSL_KDF_PARAM_SALT, 8),
+    (&err_sites::PROV_KBKDF_578, OSSL_KDF_PARAM_SEED, 9),
+    (&err_sites::PROV_KBKDF_608, OSSL_KDF_PARAM_KBKDF_USE_L, 10),
+    (
+        &err_sites::PROV_KBKDF_619,
+        OSSL_KDF_PARAM_KBKDF_USE_SEPARATOR,
+        11,
+    ),
+];
+
+/// The `kbkdf_get_ctx_params_decoder` key, `kbkdf.c:776-796` (the FIPS `fips-indicator` at `:778`
+/// is compiled out).
+const KBKDF_GET_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char, u32); 1] =
+    [(&err_sites::PROV_KBKDF_790, OSSL_KDF_PARAM_SIZE, 0)];
+
+/// `static const OSSL_PARAM kbkdf_set_ctx_params_list[]` — `kbkdf.c:374-391`, without its FIPS
+/// entry.
+static KBKDF_SETTABLE_CTX_PARAMS: [OsslParam; 13] = [
+    param_octet_string(OSSL_KDF_PARAM_INFO),
+    param_octet_string(OSSL_KDF_PARAM_SALT),
+    param_octet_string(OSSL_KDF_PARAM_KEY),
+    param_octet_string(OSSL_KDF_PARAM_SEED),
+    param_utf8_string(OSSL_KDF_PARAM_DIGEST),
+    param_utf8_string(OSSL_KDF_PARAM_CIPHER),
+    param_utf8_string(OSSL_KDF_PARAM_MAC),
+    param_utf8_string(OSSL_KDF_PARAM_MODE),
+    param_utf8_string(OSSL_KDF_PARAM_PROPERTIES),
+    param_int(OSSL_KDF_PARAM_KBKDF_USE_L),
+    param_int(OSSL_KDF_PARAM_KBKDF_USE_SEPARATOR),
+    param_int(OSSL_KDF_PARAM_KBKDF_R),
+    END,
+];
+
+/// `static const OSSL_PARAM kbkdf_get_ctx_params_list[]` — `kbkdf.c:743-749`, without its FIPS
+/// entry.
+static KBKDF_GETTABLE_CTX_PARAMS: [OsslParam; 2] = [param_size_t(OSSL_KDF_PARAM_SIZE), END];
+
+/// `static uint32_t be32(uint32_t host)` — `kbkdf.c:98-111`. The authority's `IS_LITTLE_ENDIAN`
+/// arm byteswaps; `to_be` is the value whose in-memory bytes are big-endian on any host, which is
+/// what the byte-addressed `EVP_MAC_update` calls below read.
+fn be32(host: u32) -> u32 {
+    host.to_be()
+}
+
+/// `static void init(KBKDF *ctx)` — `kbkdf.c:113-119`.
+///
+/// # Safety
+/// `ctx` is a live context.
+unsafe fn kbkdf_init(ctx: *mut Kbkdf) {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe {
+        (*ctx).r = 32;
+        (*ctx).use_l = 1;
+        (*ctx).use_separator = 1;
+        (*ctx).is_kmac = 0;
+    }
+}
+
+/// `static int derive(EVP_MAC_CTX *ctx_init, kbkdf_mode mode, unsigned char *iv, size_t iv_len,
+/// unsigned char *label, size_t label_len, unsigned char *context, size_t context_len,
+/// unsigned char *k_i, size_t h, uint32_t l, int has_separator, unsigned char *ko, size_t ko_len,
+/// int r)` — `kbkdf.c:214-273`. SP800-108 sections 5.1/5.2 in one body: the counter (or the
+/// previous block, in feedback mode) is fed first, then the fixed input data `Label || 0x00 ||
+/// Context || L`. The authority's `goto done` is a labelled block.
+///
+/// # Safety
+/// `ctx_init` is a live MAC context; `iv`/`label`/`context` are live for their lengths; `k_i` is
+/// writable for `h` bytes and `ko` for `ko_len`.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+unsafe fn kbkdf_derive_inner(
+    ctx_init: *mut EvpMacCtx,
+    mode: c_int,
+    iv: *const u8,
+    iv_len: usize,
+    label: *const u8,
+    label_len: usize,
+    context: *const u8,
+    context_len: usize,
+    k_i: *mut u8,
+    h: usize,
+    l: u32,
+    has_separator: c_int,
+    ko: *mut u8,
+    ko_len: usize,
+    r: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut ret: c_int = 0;
+        let mut ctx: *mut EvpMacCtx = ptr::null_mut();
+        let mut written: usize = 0;
+        let mut k_i_len: usize = iv_len;
+        let zero: u8 = 0;
+        /* One or more of the fixed input data fields may be omitted: `l == 0` omits `L` and
+         * `has_separator == 0` omits the `0x00` separation indicator. */
+        let has_l = (l != 0) as c_int;
+
+        /* Setup K(0) for feedback mode. */
+        if iv_len > 0 {
+            ptr::copy_nonoverlapping(iv, k_i, iv_len);
+        }
+
+        'done: {
+            let mut counter: u32 = 1;
+            while written < ko_len {
+                let i = be32(counter);
+
+                ctx = EVP_MAC_CTX_dup(ctx_init);
+                if ctx.is_null() {
+                    break 'done;
+                }
+
+                /* Perform feedback, if appropriate. */
+                if mode == KBKDF_FEEDBACK && EVP_MAC_update(ctx, k_i, k_i_len) == 0 {
+                    break 'done;
+                }
+
+                let off = (4 - (r / 8)) as usize;
+                if EVP_MAC_update(
+                    ctx,
+                    ptr::addr_of!(i).cast::<u8>().add(off),
+                    (r / 8) as usize,
+                ) == 0
+                    || EVP_MAC_update(ctx, label, label_len) == 0
+                    || (has_separator != 0 && EVP_MAC_update(ctx, ptr::addr_of!(zero), 1) == 0)
+                    || EVP_MAC_update(ctx, context, context_len) == 0
+                    || (has_l != 0 && EVP_MAC_update(ctx, ptr::addr_of!(l).cast::<u8>(), 4) == 0)
+                    || EVP_MAC_final(ctx, k_i, ptr::null_mut(), h) == 0
+                {
+                    break 'done;
+                }
+
+                let to_write = ko_len - written;
+                ptr::copy_nonoverlapping(k_i, ko.add(written), core::cmp::min(to_write, h));
+                written += h;
+
+                k_i_len = h;
+                EVP_MAC_CTX_free(ctx);
+                ctx = ptr::null_mut();
+                counter += 1;
+            }
+
+            ret = 1;
+        }
+        EVP_MAC_CTX_free(ctx);
+        ret
+    }
+}
+
+/// `static int kmac_init(EVP_MAC_CTX *ctx, const unsigned char *custom, size_t customlen)` —
+/// `kbkdf.c:276-286`.
+///
+/// # Safety
+/// `ctx` is a live MAC context; `custom` is NULL or live for `customlen`.
+unsafe fn kbkdf_kmac_init(ctx: *mut EvpMacCtx, custom: *const u8, customlen: usize) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if custom.is_null() || customlen == 0 {
+            return 1;
+        }
+        let mut params = [END, END];
+        params[0] = OSSL_PARAM_construct_octet_string(
+            OSSL_MAC_PARAM_CUSTOM,
+            custom.cast_mut().cast(),
+            customlen,
+        );
+        params[1] = OSSL_PARAM_construct_end();
+        (EVP_MAC_CTX_set_params(ctx, params.as_ptr()) > 0) as c_int
+    }
+}
+
+/// `static int kmac_derive(EVP_MAC_CTX *ctx, unsigned char *out, size_t outlen, const unsigned
+/// char *context, size_t contextlen)` — `kbkdf.c:288-298`.
+///
+/// # Safety
+/// `ctx` is a live MAC context; `context` is NULL or live for `contextlen`; `out` is writable for
+/// `outlen`.
+unsafe fn kbkdf_kmac_derive(
+    ctx: *mut EvpMacCtx,
+    out: *mut u8,
+    outlen: usize,
+    context: *const u8,
+    contextlen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut params = [END, END];
+        params[0] =
+            OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, ptr::addr_of!(outlen).cast_mut());
+        params[1] = OSSL_PARAM_construct_end();
+        (EVP_MAC_CTX_set_params(ctx, params.as_ptr()) > 0
+            && EVP_MAC_update(ctx, context, contextlen) != 0
+            && EVP_MAC_final(ctx, out, ptr::null_mut(), outlen) != 0) as c_int
+    }
+}
+
+/// `static void *kbkdf_new(void *provctx)` — `kbkdf.c:121-136`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn kbkdf_new(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let ctx = CRYPTO_zalloc(core::mem::size_of::<Kbkdf>(), FILE_KBKDF, LINE).cast::<Kbkdf>();
+        if ctx.is_null() {
+            return ptr::null_mut();
+        }
+        (*ctx).provctx = provctx;
+        kbkdf_init(ctx);
+        ctx.cast()
+    }
+}
+
+/// `static void kbkdf_reset(void *vctx)` — `kbkdf.c:148-161`. The `provctx` is saved across the
+/// `memset`, and `init` runs again because the whole configuration is the struct.
+///
+/// # Safety
+/// `vctx` is a context `kbkdf_new` allocated.
+unsafe fn kbkdf_reset(vctx: *mut c_void) {
+    // SAFETY: `vctx` is a live context per the contract.
+    unsafe {
+        let ctx = vctx.cast::<Kbkdf>();
+        let provctx = (*ctx).provctx;
+
+        EVP_MAC_CTX_free((*ctx).ctx_init);
+        CRYPTO_clear_free((*ctx).context.cast(), (*ctx).context_len, FILE_KBKDF, LINE);
+        CRYPTO_clear_free((*ctx).label.cast(), (*ctx).label_len, FILE_KBKDF, LINE);
+        CRYPTO_clear_free((*ctx).ki.cast(), (*ctx).ki_len, FILE_KBKDF, LINE);
+        CRYPTO_clear_free((*ctx).iv.cast(), (*ctx).iv_len, FILE_KBKDF, LINE);
+        ptr::write_bytes(vctx.cast::<u8>(), 0, core::mem::size_of::<Kbkdf>());
+        (*ctx).provctx = provctx;
+        kbkdf_init(ctx);
+    }
+}
+
+/// `static void kbkdf_free(void *vctx)` — `kbkdf.c:138-146`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn kbkdf_free(vctx: *mut c_void) {
+    // SAFETY: `vctx` is NULL or a live context.
+    unsafe {
+        if !vctx.is_null() {
+            kbkdf_reset(vctx);
+            CRYPTO_free(vctx, FILE_KBKDF, LINE);
+        }
+    }
+}
+
+/// `static void *kbkdf_dup(void *vctx)` — `kbkdf.c:163-193`. `EVP_MAC_CTX_dup` is called
+/// unconditionally, exactly as the authority does: a NULL `ctx_init` faults on both sides, which
+/// is the authority's own contract (`EVP_MAC_CTX_dup` dereferences its argument).
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn kbkdf_dup(vctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let src = vctx.cast::<Kbkdf>();
+        let dest = kbkdf_new((*src).provctx).cast::<Kbkdf>();
+        if dest.is_null() {
+            return ptr::null_mut();
+        }
+        (*dest).ctx_init = EVP_MAC_CTX_dup((*src).ctx_init);
+        if (*dest).ctx_init.is_null()
+            || ossl_prov_memdup(
+                (*src).ki.cast(),
+                (*src).ki_len,
+                ptr::addr_of_mut!((*dest).ki),
+                ptr::addr_of_mut!((*dest).ki_len),
+            ) == 0
+            || ossl_prov_memdup(
+                (*src).label.cast(),
+                (*src).label_len,
+                ptr::addr_of_mut!((*dest).label),
+                ptr::addr_of_mut!((*dest).label_len),
+            ) == 0
+            || ossl_prov_memdup(
+                (*src).context.cast(),
+                (*src).context_len,
+                ptr::addr_of_mut!((*dest).context),
+                ptr::addr_of_mut!((*dest).context_len),
+            ) == 0
+            || ossl_prov_memdup(
+                (*src).iv.cast(),
+                (*src).iv_len,
+                ptr::addr_of_mut!((*dest).iv),
+                ptr::addr_of_mut!((*dest).iv_len),
+            ) == 0
+        {
+            kbkdf_free(dest.cast());
+            return ptr::null_mut();
+        }
+        (*dest).mode = (*src).mode;
+        (*dest).r = (*src).r;
+        (*dest).use_l = (*src).use_l;
+        (*dest).use_separator = (*src).use_separator;
+        (*dest).is_kmac = (*src).is_kmac;
+        dest.cast()
+    }
+}
+
+/// The generated set decoder's `info` rule: a list, and a sixth record raises
+/// `PROV_R_TOO_MANY_RECORDS` at `kbkdf.c:465`.
+///
+/// # Safety
+/// `params` is NULL or a key-terminated array; `r` is writable.
+unsafe fn kbkdf_collect_info(params: *const OsslParam, r: &mut KbkdfSetCtxParams) -> c_int {
+    // SAFETY: the walk stops at the NULL key.
+    unsafe {
+        if params.is_null() {
+            return 1;
+        }
+        let mut p = params;
+        while !(*p).key.is_null() {
+            if CStr::from_ptr((*p).key).to_bytes() == CStr::from_ptr(OSSL_KDF_PARAM_INFO).to_bytes()
+            {
+                if r.num_info as usize >= KBKDF_MAX_INFOS {
+                    raise_site(&err_sites::PROV_KBKDF_465);
+                    return 0;
+                }
+                r.info[r.num_info as usize] = p;
+                r.num_info += 1;
+            }
+            p = p.add(1);
+        }
+    }
+    1
+}
+
+/// `static int kbkdf_derive(void *vctx, unsigned char *key, size_t keylen, const OSSL_PARAM
+/// params[])` — `kbkdf.c:300-371`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn kbkdf_ctx_derive(
+    vctx: *mut c_void,
+    key: *mut u8,
+    keylen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<Kbkdf>();
+        let mut ret: c_int = 0;
+        let mut k_i: *mut u8 = ptr::null_mut();
+        let mut l: u32 = 0;
+        let mut h: usize = 0;
+
+        if is_running() == 0 || kbkdf_set_ctx_params(vctx, params) == 0 {
+            return 0;
+        }
+
+        /* label, context, and iv are permitted to be empty.  Check everything else. */
+        if (*ctx).ctx_init.is_null() {
+            if (*ctx).ki_len == 0 || (*ctx).ki.is_null() {
+                return fail_at(&err_sites::PROV_KBKDF_315);
+            }
+            /* Could either be missing MAC or missing message digest or missing cipher -
+             * arbitrarily, I pick this one. */
+            return fail_at(&err_sites::PROV_KBKDF_320);
+        }
+
+        /* Fail if the output length is zero */
+        if keylen == 0 {
+            return fail_at(&err_sites::PROV_KBKDF_326);
+        }
+
+        'done: {
+            if (*ctx).is_kmac != 0 {
+                ret = kbkdf_kmac_derive(
+                    (*ctx).ctx_init,
+                    key,
+                    keylen,
+                    (*ctx).context,
+                    (*ctx).context_len,
+                );
+                break 'done;
+            }
+
+            h = EVP_MAC_CTX_get_mac_size((*ctx).ctx_init);
+            if h == 0 {
+                break 'done;
+            }
+
+            if (*ctx).iv_len != 0 && (*ctx).iv_len != h {
+                raise_site(&err_sites::PROV_KBKDF_341);
+                break 'done;
+            }
+
+            if (*ctx).mode == KBKDF_COUNTER {
+                /* Fail if keylen is too large for r */
+                let counter_max: u64 = 1u64 << ((*ctx).r as u64);
+                if (keylen / h) as u64 >= counter_max {
+                    raise_site(&err_sites::PROV_KBKDF_349);
+                    break 'done;
+                }
+            }
+
+            if (*ctx).use_l != 0 {
+                l = be32(keylen.wrapping_mul(8) as u32);
+            }
+
+            k_i = CRYPTO_zalloc(h, FILE_KBKDF, LINE).cast::<u8>();
+            if k_i.is_null() {
+                break 'done;
+            }
+
+            ret = kbkdf_derive_inner(
+                (*ctx).ctx_init,
+                (*ctx).mode,
+                (*ctx).iv,
+                (*ctx).iv_len,
+                (*ctx).label,
+                (*ctx).label_len,
+                (*ctx).context,
+                (*ctx).context_len,
+                k_i,
+                h,
+                l,
+                (*ctx).use_separator,
+                key,
+                keylen,
+                (*ctx).r,
+            );
+        }
+        if ret != 1 {
+            cleanse(key, keylen);
+        }
+        CRYPTO_clear_free(k_i.cast(), h, FILE_KBKDF, LINE);
+        ret
+    }
+}
+
+/// `static int kbkdf_set_ctx_params(void *vctx, const OSSL_PARAM params[])` —
+/// `kbkdf.c:392-488`, with the generated switch replaced by the field-keyed repeat check, one
+/// `OSSL_PARAM_locate_const` per key and the `info` list rule (D305's reading). The FIPS arm is
+/// absent.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn kbkdf_set_ctx_params(vctx: *mut c_void, params: *const OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vctx.is_null() {
+            return 0;
+        }
+        if let Some(site) = repeated_param_site_by_field(params, &KBKDF_SET_DECODER_KEYS) {
+            return fail_at(site);
+        }
+        let ctx = vctx.cast::<Kbkdf>();
+        let mut p = KbkdfSetCtxParams {
+            cipher: locate_const(params, OSSL_KDF_PARAM_CIPHER),
+            digest: locate_const(params, OSSL_KDF_PARAM_DIGEST),
+            engine: locate_const(params, OSSL_ALG_PARAM_ENGINE),
+            key: locate_const(params, OSSL_KDF_PARAM_KEY),
+            mac: locate_const(params, OSSL_KDF_PARAM_MAC),
+            mode: locate_const(params, OSSL_KDF_PARAM_MODE),
+            propq: locate_const(params, OSSL_KDF_PARAM_PROPERTIES),
+            r: locate_const(params, OSSL_KDF_PARAM_KBKDF_R),
+            salt: locate_const(params, OSSL_KDF_PARAM_SALT),
+            seed: locate_const(params, OSSL_KDF_PARAM_SEED),
+            sep: locate_const(params, OSSL_KDF_PARAM_KBKDF_USE_SEPARATOR),
+            use_l: locate_const(params, OSSL_KDF_PARAM_KBKDF_USE_L),
+            ..Default::default()
+        };
+        if kbkdf_collect_info(params, &mut p) == 0 {
+            return 0;
+        }
+
+        let libctx = prov_libctx_of((*ctx).provctx);
+
+        if ossl_prov_macctx_load(
+            ptr::addr_of_mut!((*ctx).ctx_init),
+            p.mac,
+            p.cipher,
+            p.digest,
+            p.propq,
+            p.engine,
+            ptr::null(),
+            ptr::null(),
+            ptr::null(),
+            libctx,
+        ) == 0
+        {
+            return 0;
+        }
+
+        if !(*ctx).ctx_init.is_null() {
+            (*ctx).is_kmac = 0;
+            let mac = EVP_MAC_CTX_get0_mac((*ctx).ctx_init);
+            if EVP_MAC_is_a(mac, OSSL_MAC_NAME_KMAC128) != 0
+                || EVP_MAC_is_a(mac, OSSL_MAC_NAME_KMAC256) != 0
+            {
+                (*ctx).is_kmac = 1;
+            } else if EVP_MAC_is_a(mac, OSSL_MAC_NAME_HMAC) == 0
+                && EVP_MAC_is_a(mac, OSSL_MAC_NAME_CMAC) == 0
+            {
+                raise_site(&err_sites::PROV_KBKDF_667);
+                return 0;
+            }
+        }
+
+        if !p.mode.is_null() {
+            let mut s: *const c_char = ptr::null();
+            if OSSL_PARAM_get_utf8_string_ptr(p.mode, &mut s) == 0 {
+                return 0;
+            }
+            if OPENSSL_strncasecmp(c"counter".as_ptr(), s, (*p.mode).data_size) == 0 {
+                (*ctx).mode = KBKDF_COUNTER;
+            } else if OPENSSL_strncasecmp(c"feedback".as_ptr(), s, (*p.mode).data_size) == 0 {
+                (*ctx).mode = KBKDF_FEEDBACK;
+            } else {
+                raise_site(&err_sites::PROV_KBKDF_680);
+                return 0;
+            }
+        }
+
+        if ossl_param_get1_octet_string_from_param(
+            p.key,
+            ptr::addr_of_mut!((*ctx).ki),
+            ptr::addr_of_mut!((*ctx).ki_len),
+        ) == 0
+        {
+            return 0;
+        }
+
+        if ossl_param_get1_octet_string_from_param(
+            p.salt,
+            ptr::addr_of_mut!((*ctx).label),
+            ptr::addr_of_mut!((*ctx).label_len),
+        ) == 0
+        {
+            return 0;
+        }
+
+        if ossl_param_get1_concat_octet_string(
+            p.num_info as usize,
+            p.info.as_ptr(),
+            ptr::addr_of_mut!((*ctx).context),
+            ptr::addr_of_mut!((*ctx).context_len),
+        ) == 0
+        {
+            return 0;
+        }
+
+        if ossl_param_get1_octet_string_from_param(
+            p.seed,
+            ptr::addr_of_mut!((*ctx).iv),
+            ptr::addr_of_mut!((*ctx).iv_len),
+        ) == 0
+        {
+            return 0;
+        }
+
+        if !p.use_l.is_null() && OSSL_PARAM_get_int(p.use_l, ptr::addr_of_mut!((*ctx).use_l)) == 0 {
+            return 0;
+        }
+
+        if !p.r.is_null() {
+            let mut new_r: c_int = 0;
+
+            if OSSL_PARAM_get_int(p.r, &mut new_r) == 0 {
+                return 0;
+            }
+            if new_r != 8 && new_r != 16 && new_r != 24 && new_r != 32 {
+                return 0;
+            }
+            (*ctx).r = new_r;
+        }
+
+        if !p.sep.is_null()
+            && OSSL_PARAM_get_int(p.sep, ptr::addr_of_mut!((*ctx).use_separator)) == 0
+        {
+            return 0;
+        }
+
+        /* Set up digest context, if we can. */
+        if !(*ctx).ctx_init.is_null()
+            && (*ctx).ki_len != 0
+            && (((*ctx).is_kmac != 0
+                && kbkdf_kmac_init((*ctx).ctx_init, (*ctx).label, (*ctx).label_len) == 0)
+                || EVP_MAC_init((*ctx).ctx_init, (*ctx).ki, (*ctx).ki_len, ptr::null()) == 0)
+        {
+            return 0;
+        }
+        1
+    }
+}
+
+/// `static int kbkdf_get_ctx_params(void *vctx, OSSL_PARAM params[])` — `kbkdf.c:503-518`,
+/// without its FIPS arm.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn kbkdf_get_ctx_params(vctx: *mut c_void, params: *mut OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vctx.is_null() {
+            return 0;
+        }
+        if let Some(site) =
+            repeated_param_site_by_field(params.cast_const(), &KBKDF_GET_DECODER_KEYS)
+        {
+            return fail_at(site);
+        }
+        /* KBKDF can produce results as large as you like. */
+        let p = locate_const(params, OSSL_KDF_PARAM_SIZE);
+        if !p.is_null() && OSSL_PARAM_set_size_t(p.cast_mut(), usize::MAX) == 0 {
+            return 0;
+        }
+        1
+    }
+}
+
+/// `static const OSSL_PARAM *kbkdf_settable_ctx_params(void *ctx, void *provctx)` —
+/// `kbkdf.c:490-494`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn kbkdf_settable_ctx_params(
+    _ctx: *mut c_void,
+    _p_ctx: *mut c_void,
+) -> *const OsslParam {
+    KBKDF_SETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `static const OSSL_PARAM *kbkdf_gettable_ctx_params(void *ctx, void *provctx)` —
+/// `kbkdf.c:520-524`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn kbkdf_gettable_ctx_params(
+    _ctx: *mut c_void,
+    _p_ctx: *mut c_void,
+) -> *const OsslParam {
+    KBKDF_GETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `const OSSL_DISPATCH ossl_kdf_kbkdf_functions[]` — `kbkdf.c:526-539`.
+pub(crate) static KBKDF_FUNCTIONS: [OsslDispatch; 10] = [
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_NEWCTX,
+        function: kbkdf_new as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DUPCTX,
+        function: kbkdf_dup as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_FREECTX,
+        function: kbkdf_free as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_RESET,
+        function: kbkdf_reset as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DERIVE,
+        function: kbkdf_ctx_derive as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS,
+        function: kbkdf_settable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SET_CTX_PARAMS,
+        function: kbkdf_set_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS,
+        function: kbkdf_gettable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GET_CTX_PARAMS,
+        function: kbkdf_get_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_DISPATCH_END,
+        function: ptr::null_mut(),
+    },
+];
+
 /// `static const OSSL_ALGORITHM deflt_kdfs[]` — `providers/defltprov.c:355-375`, restricted to
-/// the rows this module implements, **in the authority's order**: `SSKDF` is row 5, `PBKDF2` row
-/// 6 and `PKCS12KDF` row 7 precede `X963KDF` row 9 and `X942KDF-ASN1` row 12, so the table is a
-/// subsequence (D244).
+/// the rows this module implements, **in the authority's order**: `HKDF` rows 0-4, `SSKDF` row 5,
+/// `PBKDF2` row 6, `PKCS12KDF` row 7, `SSHKDF` row 8, `X963KDF` row 9, `TLS1-PRF` row 10,
+/// `KBKDF` row 11 and `X942KDF-ASN1` row 12, so the table is a subsequence (D244).
 ///
 /// **The property definition is `"provider=default"` on every row**, which is `defltprov.c`'s
 /// `ALG` macro (D247).
-pub(crate) static DEFLT_KDFS: [OsslAlgorithm; 5] = [
+pub(crate) static DEFLT_KDFS: [OsslAlgorithm; 14] = [
+    OsslAlgorithm {
+        // `PROV_NAMES_HKDF` — the primary name alone.
+        algorithm_names: c"HKDF".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: HKDF_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_HKDF_SHA256` — the two aliases are part of the row.
+        algorithm_names: c"HKDF-SHA256:id-alg-hkdf-with-sha256:1.2.840.113549.1.9.16.3.28".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: HKDF_SHA256_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_HKDF_SHA384` — the two aliases are part of the row.
+        algorithm_names: c"HKDF-SHA384:id-alg-hkdf-with-sha384:1.2.840.113549.1.9.16.3.29".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: HKDF_SHA384_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_HKDF_SHA512` — the two aliases are part of the row.
+        algorithm_names: c"HKDF-SHA512:id-alg-hkdf-with-sha512:1.2.840.113549.1.9.16.3.30".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: HKDF_SHA512_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_TLS1_3_KDF` — the primary name alone.
+        algorithm_names: c"TLS13-KDF".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: TLS13_KDF_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
     OsslAlgorithm {
         // `PROV_NAMES_SSKDF` — `prov/names.h`, the primary name alone.
         algorithm_names: c"SSKDF".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
         implementation: SSKDF_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_PBKDF2` — the alias `1.2.840.113549.1.5.12` is part of the row.
+        algorithm_names: c"PBKDF2:1.2.840.113549.1.5.12".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: PBKDF2_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
@@ -2828,10 +7060,31 @@ pub(crate) static DEFLT_KDFS: [OsslAlgorithm; 5] = [
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
+        // `PROV_NAMES_SSHKDF` — the primary name alone.
+        algorithm_names: c"SSHKDF".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SSHKDF_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
         // `PROV_NAMES_X963KDF` — the alias `X942KDF-CONCAT` is part of the row.
         algorithm_names: c"X963KDF:X942KDF-CONCAT".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
         implementation: X963KDF_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_TLS1_PRF` — the primary name alone.
+        algorithm_names: c"TLS1-PRF".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: TLS1_PRF_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_KBKDF` — the primary name alone.
+        algorithm_names: c"KBKDF".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: KBKDF_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
@@ -2859,16 +7112,34 @@ mod tests {
     /// are `prov/names.h`'s expansions, checked against the census rather than this file.
     #[test]
     fn the_kdf_table_names_its_rows_in_the_authoritys_order() {
-        assert_eq!(DEFLT_KDFS.len(), 5);
+        assert_eq!(DEFLT_KDFS.len(), 14);
         // SAFETY: the terminator's fields are NULL by construction and each landed row's name is a
         // `'static` C string.
         unsafe {
-            assert!(DEFLT_KDFS[4].algorithm_names.is_null());
+            assert!(DEFLT_KDFS[13].algorithm_names.is_null());
             for (row, want) in [
-                (&DEFLT_KDFS[0], b"SSKDF".as_slice()),
-                (&DEFLT_KDFS[1], b"PKCS12KDF"),
-                (&DEFLT_KDFS[2], b"X963KDF:X942KDF-CONCAT"),
-                (&DEFLT_KDFS[3], b"X942KDF-ASN1:X942KDF"),
+                (&DEFLT_KDFS[0], b"HKDF".as_slice()),
+                (
+                    &DEFLT_KDFS[1],
+                    b"HKDF-SHA256:id-alg-hkdf-with-sha256:1.2.840.113549.1.9.16.3.28",
+                ),
+                (
+                    &DEFLT_KDFS[2],
+                    b"HKDF-SHA384:id-alg-hkdf-with-sha384:1.2.840.113549.1.9.16.3.29",
+                ),
+                (
+                    &DEFLT_KDFS[3],
+                    b"HKDF-SHA512:id-alg-hkdf-with-sha512:1.2.840.113549.1.9.16.3.30",
+                ),
+                (&DEFLT_KDFS[4], b"TLS13-KDF"),
+                (&DEFLT_KDFS[5], b"SSKDF"),
+                (&DEFLT_KDFS[6], b"PBKDF2:1.2.840.113549.1.5.12"),
+                (&DEFLT_KDFS[7], b"PKCS12KDF"),
+                (&DEFLT_KDFS[8], b"SSHKDF"),
+                (&DEFLT_KDFS[9], b"X963KDF:X942KDF-CONCAT"),
+                (&DEFLT_KDFS[10], b"TLS1-PRF"),
+                (&DEFLT_KDFS[11], b"KBKDF"),
+                (&DEFLT_KDFS[12], b"X942KDF-ASN1:X942KDF"),
             ] {
                 assert_eq!(
                     core::ffi::CStr::from_ptr(row.algorithm_names).to_bytes(),
@@ -2893,6 +7164,15 @@ mod tests {
             &X963KDF_FUNCTIONS,
             &X942KDF_FUNCTIONS,
             &PKCS12KDF_FUNCTIONS,
+            &SSHKDF_FUNCTIONS,
+            &PBKDF2_FUNCTIONS,
+            &HKDF_FUNCTIONS,
+            &HKDF_SHA256_FUNCTIONS,
+            &HKDF_SHA384_FUNCTIONS,
+            &HKDF_SHA512_FUNCTIONS,
+            &TLS13_KDF_FUNCTIONS,
+            &TLS1_PRF_FUNCTIONS,
+            &KBKDF_FUNCTIONS,
         ] {
             assert_eq!(table.len(), 10);
             assert_eq!(
