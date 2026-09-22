@@ -790,6 +790,10 @@ COVERED_FILES = [
     ("crypto/encode_decode/encoder_meth.c", "ENCODER_METH"),
     ("crypto/encode_decode/encoder_lib.c", "ENCODER_LIB"),
     ("crypto/encode_decode/encoder_pkey.c", "ENCODER_PKEY"),
+    # Phase 10's `crypto/encode_decode/decoder_meth.c` -- the `OSSL_DECODER` object. It raises
+    # `ERR_R_INVALID_PROVIDER_FUNCTIONS` at `:280` and `ERR_R_PASSED_NULL_PARAMETER` at its four
+    # accessor sites.
+    ("crypto/encode_decode/decoder_meth.c", "DECODER_METH"),
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`

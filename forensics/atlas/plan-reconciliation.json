@@ -7,10 +7,10 @@
     "census": {
       "names_a_file_the_authority_does_not_have": 22,
       "symbols_not_reached": 6,
-      "units_not_reached": 27
+      "units_not_reached": 28
     },
     "census_by_stratum": {
-      "8": 41,
+      "8": 42,
       "9": 14
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
@@ -58,6 +58,7 @@
         "crypto/ec/ecx_backend.c",
         "crypto/ec/ecx_key.c",
         "crypto/ec/ecx_meth.c",
+        "crypto/encode_decode/decoder_lib.c",
         "providers/common/provider_seeding.c",
         "providers/common/provider_util.c",
         "providers/fips/fipsprov.c",
@@ -90,8 +91,8 @@
       "symbols_reached": 101,
       "unit_records": 61,
       "units_named_by_a_record": 63,
-      "units_named_by_a_row": 246,
-      "units_reached": 219
+      "units_named_by_a_row": 249,
+      "units_reached": 221
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -1352,6 +1353,51 @@
         "recorded_by": null,
         "subphases": [
           "8.8"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/encode_decode/decoder_lib.c": {
+        "defines": [
+          "ossl_decoder_ctx_add_decoder_inst",
+          "ossl_decoder_ctx_get_harderr",
+          "ossl_decoder_ctx_set_harderr",
+          "ossl_decoder_instance_dup",
+          "ossl_decoder_instance_free",
+          "ossl_decoder_instance_new",
+          "ossl_decoder_instance_new_forprov"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.9"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/encode_decode/decoder_meth.c": {
+        "defines": [
+          "ossl_decoder_fast_is_a",
+          "ossl_decoder_from_algorithm",
+          "ossl_decoder_get_number",
+          "ossl_decoder_parsed_properties",
+          "ossl_decoder_store_cache_flush",
+          "ossl_decoder_store_remove_all_provided"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.9"
+        ],
+        "transcribed_by": [
+          "src/decoder_meth.rs"
+        ]
+      },
+      "crypto/encode_decode/decoder_pkey.c": {
+        "defines": [
+          "ossl_decoder_cache_flush",
+          "ossl_decoder_cache_free",
+          "ossl_decoder_cache_new"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.9"
         ],
         "transcribed_by": []
       },
@@ -3641,10 +3687,10 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 285
+      "transcribed_units": 286
     }
   },
-  "body_hash": "026b870c890894cd1f00a656799091471c25cd39d02cf815684e66d84b1b3e25",
+  "body_hash": "f1546e55abc8aaa1ec44d6bb5f95fe7506d1a7f1340bddfe86503e8b45e47050",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -3655,12 +3701,12 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "d43742721366f912887c454694a1f966290a22d22ce9561f286f85ecea0fcf6f"
+      "sha256": "d7df03d3c556d872f3e0d72cb00ac1d61aa8c98c331955def09b4bee9afc87a5"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "4844649def495af0b72a920c429dd7a006a7ddd76301d4f9ce3a9fc84f39a3da"
+      "sha256": "d71b3aa550a0dd6542e8b53ea9a32762c85537bbba1360ce4bbe1ff0c5dbc32e"
     },
     {
       "name": "phase-state",
@@ -3695,7 +3741,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "cd96255d679746a43e3743df9e1697c28c6a1028f6d71f9eb123964b559b47f8"
+      "sha256": "7394d8e8a182921c42dbae18c73265dab6c7c712714d7f7a6625dbd3a89f1169"
     },
     {
       "name": "plan-PHASE-9-SUBPHASES",

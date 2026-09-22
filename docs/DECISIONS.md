@@ -26201,3 +26201,103 @@ with **6** names open: implemented **780**, deferred **0**, owned **786**. The r
 `PEM_read[_bio]_{RSA,DSA,EC}PrivateKey` readers. It is not Phase 8 and not nearly Phase 8; the count
 this entry reaches is implemented **780** of **786** owned, and what it moved into the crate is the
 framework and the printer pair the last six wait on.
+
+## D363 — the decoder chain opens: `crypto/encode_decode/decoder_meth.c` lands as `src/decoder_meth.rs`,
+and the measured order of the four decoder units corrects the brief's numbering
+
+**Decision.** Land `crypto/encode_decode/decoder_meth.c`'s **object, dispatch scan, accessors and
+by-name pass-throughs** as `src/decoder_meth.rs` -- the D360 shape of the encoder chain -- with the
+fetch/construct-method block and the context trio withheld as two named blocks. Eleven exports land
+(`OSSL_DECODER_up_ref`, `_free`, `_get0_provider`, `_get0_properties`, `_get0_name`,
+`_get0_description`, `_is_a`, `_names_do_all`, `_gettable_params`, `_get_params`,
+`_settable_ctx_params`), plus the unit's internals `ossl_decoder_new`, `ossl_decoder_from_algorithm`,
+`ossl_decoder_parsed_properties`, `ossl_decoder_get_number`, `resolve_name` and
+`ossl_decoder_fast_is_a`. **No Phase 8 or Phase 7 count moves**: Phase 8 stays implemented **780** /
+open **6**, Phase 7 at **733 / 217 / 26**.
+
+**The brief's numbering does not match the dependency graph, and that is measured rather than
+argued.** The brief ordered the pass *decoder cache (slot 20) -> `decoder_meth.c` -> `decoder_lib.c`
+-> `decoder_pkey.c`,* on the reasoning that the cache is the decoder twin of D357's store slot. The
+cache cannot go first, and the reason is a call in its own free path:
+`decoder_cache_entry_free` (`decoder_pkey.c:681-691`) calls `OSSL_DECODER_CTX_free`, which is
+`decoder_meth.c:665-675`'s export; and that export calls `ossl_decoder_instance_free`, which is
+`decoder_lib.c:301-311`'s. There is no partial form of that body -- the entry owns a
+`OSSL_DECODER_CTX *template` and releasing the entry is releasing the context, so withholding
+`OSSL_DECODER_CTX_free` would mean a cache whose `free`/`flush` call a function that does not exist.
+The chain's real order is **`decoder_meth` (object) -> `decoder_lib` + the meth trio ->
+`decoder_pkey` (cache, `new_for_pkey`) -> `pem_pkey.c`**, which is exactly the order the encoder
+chain took across D360/D361/D362, and this entry starts at its first unit.
+
+**The nine identities are 1, 2, 3, 4, 5, 6, 10, 11, 20 -- the same trap as the encoder's, with a
+different tail.** `decoder_meth.c`'s scan switches on ids from `core_dispatch.h:984-992`; a
+transcription that numbered them `1..9` would store `decode` in `does_selection`'s slot and
+`export_object` in `decode`'s. One unit test pins the two that a sequential renumbering would swap
+against a synthetic table, and the same test pins `OSSL_OP_DECODER` at **21** -- the encoder's
+neighbouring row is 20, so a reused constant would ask the method store for encoders.
+
+**One place the decoder is not the encoder's twin, and the difference is the authority's.**
+`decoder_meth.c:275-279`'s sanity check has **two** clauses -- the `newctx`/`freectx` pair must be
+both-or-neither and `decode` must be present -- because a decoder carries `export_object` (a single
+callback) where the encoder carries `import_object`/`free_object` (a pair). `src/encoder_meth.rs`
+spells a four-clause form; this module does not copy it, because the decoder's authority body has
+two clauses and only two.
+
+**What is withheld, each as one named block with its coordinate.**
+
+* **The fetch and construct-method block** (`decoder_meth.c:88-231`, `:298-438`, `:552-608`):
+  `decoder_data_st`, `get_tmp_decoder_store`, `dealloc_tmp_decoder_store`, `get_decoder_store`,
+  `reserve_decoder_store`, `unreserve_decoder_store`, `get_decoder_from_store`,
+  `put_decoder_in_store`, `construct_decoder`, `destruct_decoder`, `up_ref_decoder`, `free_decoder`,
+  `inner_ossl_decoder_fetch`, `OSSL_DECODER_fetch`, `do_one_data_st`/`do_one`,
+  `OSSL_DECODER_do_all_provided` and the two thunks. Every non-block caller is
+  `decoder_lib.c` (`OSSL_DECODER_do_all_provided` and `OSSL_DECODER_fetch` from
+  `OSSL_DECODER_CTX_add_extra`) or `decoder_pkey.c`, which are the next two units.
+* **The context trio** (`:628`, `:637`, `:665`): `OSSL_DECODER_CTX_new`, `_set_params`, `_free`.
+  `_free` needs `ossl_decoder_instance_free` and `_set_params` needs
+  `OSSL_DECODER_CTX_get_num_decoders`/`OSSL_DECODER_INSTANCE_get_decoder`/`_get_decoder_ctx`, all
+  `decoder_lib.c`'s -- so the trio lands with that unit.
+
+The unit's two **store bridges** are not duplicated: `ossl_decoder_store_cache_flush` and
+`ossl_decoder_store_remove_all_provided` stay in `src/provider/stores.rs` (D357), still asserting
+their slot unfilled, and the new module's test **calls both by name** so the two units' answers stay
+joined. Slot 11 and slot 20 stay unfilled this pass, which is why `ossl_decoder_cache_flush` still
+answers its authority's cache-specific **0**.
+
+**Raise sites.** `crypto/encode_decode/decoder_meth.c` joins `gen_err_raise_sites.py`'s
+`COVERED_FILES` as `DECODER_METH`; the file raises at eight lines and the site count moves
+**3114 -> 3122**. Five of the eight are referenced by this pass's landed bodies (`:280`, `:463`,
+`:473`, `:484`, `:494` -- the scan's refusal and the four accessors' `ERR_R_PASSED_NULL_PARAMETER`);
+the other three belong to the withheld fetch block and trio and are enumerated by the
+`#[allow(dead_code)] ALL` table exactly as every other unreached site is.
+
+**Courts.** **No probe was needed, and that is measured:** the eleven exports are `decoder.h`'s and
+Phase 10's, which has no ledger, so `court_coverage.py` records them under `not_yet_begun` --
+**121 -> 132** -- exactly as every Phase-10 encoder export before them. The totals do not move:
+**94** courts and **37221** observations. The unit's evidence is its four `src/decoder_meth.rs`
+unit tests: the nine ids and `OSSL_OP_DECODER`, the dispatch scan's two non-sequential entries
+landing in the fields their names say (with the two pointers asserted distinct), a fresh object's
+live reference count and `None` callbacks, and the two store bridges' absent-slot answers.
+
+**What the authority corrected in the brief.** The ordering, above, and one number: the decoder
+cache's flush answers **0** for an absent cache where its three sibling bridges answer 1, which is
+the authority's own `if (cache == NULL) return 0;` at `decoder_pkey.c:805-806` and is already what
+`src/provider/stores.rs` records. A pass that filled slot 20 without noticing would have changed
+that answer.
+
+**What is deliberately not here.** `crypto/encode_decode/decoder_lib.c`, `decoder_pkey.c` (and with
+it the cache and slots 11/20), the meth fetch block and context trio, `crypto/pem/pem_pkey.c` and
+the six `PEM_read[_bio]_{RSA,DSA,EC}PrivateKey` readers. `docs/PHASE-8-SUBPHASES.md` §4's two
+anchored clauses are untouched because the Phase 8 ledger did not move; D363 is recorded in the 8.9
+row only as a note that this chain's first unit landed.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete: false`
+with **6** names open: implemented **780**, deferred **0**, owned **786** -- the same numbers D362
+reached, because this landing is Phase 10's work and Phase 10 has no ledger. The regenerated counts:
+`implemented-surface.json`'s `libcrypto` implemented moves **2835 -> 2846** and its
+`internal_symbols.c_style` stays **341**; `transcription-edges.json` **316 -> 317** modules over
+**285 -> 286** units, the new edge `src/decoder_meth.rs -> crypto/encode_decode/decoder_meth.c` at
+share 15/15; `court_coverage.py`'s `not_yet_begun` moves **121 -> 132**; the prerequisite gate stays
+at **zero findings** over **9** deferrals, **12** divergence rows / **58** names,
+`blocking_dependencies` **9** and `sealed_stratum_census` **56**. It is not Phase 8 and not nearly
+Phase 8; the count this entry reaches is implemented **780** of **786** owned, and what it moved
+into the crate is the first of the four units the last six wait on.

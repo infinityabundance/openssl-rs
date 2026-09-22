@@ -2,22 +2,22 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 363,
+      "crate_files_read": 364,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
     },
     "canonical_form": "the authority's typedef body and the crate's alias are both read by `ABI-PROTOTYPE`'s canonicaliser, so pointer depth, pointee constness, integer width and signedness and function-pointer shape are compared while a struct pointee's name is discarded; a C function *type* and a Rust `extern \"C\" fn` item type differ only in the canonical head tag and are compared after normalising it",
     "counts": {
-      "identities_authority_only": 64,
-      "identities_checked": 213,
+      "identities_authority_only": 55,
+      "identities_checked": 222,
       "identities_mismatches": 0,
-      "links_convention": 215,
+      "links_convention": 224,
       "links_documented": 12,
       "links_explicit": 17,
       "problems": 0,
-      "signatures_authority_only": 383,
-      "signatures_checked": 251,
+      "signatures_authority_only": 374,
+      "signatures_checked": 260,
       "signatures_mismatches": 0,
       "signatures_not_a_dispatch": 191,
       "signatures_unlinked": 0,
@@ -52,15 +52,6 @@
         "OSSL_FUNC_CRYPTO_SECURE_MALLOC",
         "OSSL_FUNC_CRYPTO_SECURE_ZALLOC",
         "OSSL_FUNC_CRYPTO_ZALLOC",
-        "OSSL_FUNC_DECODER_DECODE",
-        "OSSL_FUNC_DECODER_DOES_SELECTION",
-        "OSSL_FUNC_DECODER_EXPORT_OBJECT",
-        "OSSL_FUNC_DECODER_FREECTX",
-        "OSSL_FUNC_DECODER_GETTABLE_PARAMS",
-        "OSSL_FUNC_DECODER_GET_PARAMS",
-        "OSSL_FUNC_DECODER_NEWCTX",
-        "OSSL_FUNC_DECODER_SETTABLE_CTX_PARAMS",
-        "OSSL_FUNC_DECODER_SET_CTX_PARAMS",
         "OSSL_FUNC_INDICATOR_CB",
         "OSSL_FUNC_OPENSSL_CLEANSE",
         "OSSL_FUNC_PROVIDER_GETTABLE_PARAMS",
@@ -348,6 +339,60 @@
           "crate": 4,
           "crate_at": "src/provider/child.rs",
           "symbol": "OSSL_FUNC_CORE_GET_LIBCTX"
+        },
+        {
+          "authority": 11,
+          "crate": 11,
+          "crate_at": "src/decoder_meth.rs",
+          "symbol": "OSSL_FUNC_DECODER_DECODE"
+        },
+        {
+          "authority": 10,
+          "crate": 10,
+          "crate_at": "src/decoder_meth.rs",
+          "symbol": "OSSL_FUNC_DECODER_DOES_SELECTION"
+        },
+        {
+          "authority": 20,
+          "crate": 20,
+          "crate_at": "src/decoder_meth.rs",
+          "symbol": "OSSL_FUNC_DECODER_EXPORT_OBJECT"
+        },
+        {
+          "authority": 2,
+          "crate": 2,
+          "crate_at": "src/decoder_meth.rs",
+          "symbol": "OSSL_FUNC_DECODER_FREECTX"
+        },
+        {
+          "authority": 4,
+          "crate": 4,
+          "crate_at": "src/decoder_meth.rs",
+          "symbol": "OSSL_FUNC_DECODER_GETTABLE_PARAMS"
+        },
+        {
+          "authority": 3,
+          "crate": 3,
+          "crate_at": "src/decoder_meth.rs",
+          "symbol": "OSSL_FUNC_DECODER_GET_PARAMS"
+        },
+        {
+          "authority": 1,
+          "crate": 1,
+          "crate_at": "src/decoder_meth.rs",
+          "symbol": "OSSL_FUNC_DECODER_NEWCTX"
+        },
+        {
+          "authority": 6,
+          "crate": 6,
+          "crate_at": "src/decoder_meth.rs",
+          "symbol": "OSSL_FUNC_DECODER_SETTABLE_CTX_PARAMS"
+        },
+        {
+          "authority": 5,
+          "crate": 5,
+          "crate_at": "src/decoder_meth.rs",
+          "symbol": "OSSL_FUNC_DECODER_SET_CTX_PARAMS"
         },
         {
           "authority": 15,
@@ -1506,15 +1551,6 @@
         "OSSL_FUNC_core_set_error_mark_fn",
         "OSSL_FUNC_core_thread_start_fn",
         "OSSL_FUNC_core_vset_error_fn",
-        "OSSL_FUNC_decoder_decode_fn",
-        "OSSL_FUNC_decoder_does_selection_fn",
-        "OSSL_FUNC_decoder_export_object_fn",
-        "OSSL_FUNC_decoder_freectx_fn",
-        "OSSL_FUNC_decoder_get_params_fn",
-        "OSSL_FUNC_decoder_gettable_params_fn",
-        "OSSL_FUNC_decoder_newctx_fn",
-        "OSSL_FUNC_decoder_set_ctx_params_fn",
-        "OSSL_FUNC_decoder_settable_ctx_params_fn",
         "OSSL_FUNC_indicator_cb_fn",
         "OSSL_FUNC_provider_get_capabilities_fn",
         "OSSL_FUNC_provider_get_params_fn",
@@ -1899,6 +1935,78 @@
           "authority": "OSSL_FUNC_BIO_free_fn",
           "authority_signature": "fptr(int:4:s; ptr(opaque))",
           "crate_signature": "fptr(int:4:s; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "DecoderNewCtxFn",
+          "at": "src/decoder_meth.rs",
+          "authority": "OSSL_FUNC_decoder_newctx_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "DecoderFreeCtxFn",
+          "at": "src/decoder_meth.rs",
+          "authority": "OSSL_FUNC_decoder_freectx_fn",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "DecoderGetParamsFn",
+          "at": "src/decoder_meth.rs",
+          "authority": "OSSL_FUNC_decoder_get_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "DecoderGettableParamsFn",
+          "at": "src/decoder_meth.rs",
+          "authority": "OSSL_FUNC_decoder_gettable_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "DecoderSetCtxParamsFn",
+          "at": "src/decoder_meth.rs",
+          "authority": "OSSL_FUNC_decoder_set_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "DecoderSettableCtxParamsFn",
+          "at": "src/decoder_meth.rs",
+          "authority": "OSSL_FUNC_decoder_settable_ctx_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "DecoderDoesSelectionFn",
+          "at": "src/decoder_meth.rs",
+          "authority": "OSSL_FUNC_decoder_does_selection_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), int:4:s)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "DecoderDecodeFn",
+          "at": "src/decoder_meth.rs",
+          "authority": "OSSL_FUNC_decoder_decode_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), int:4:s, fptr(int:4:s; ptr(const(opaque)), ptr(opaque)), ptr(opaque), fptr(int:4:s; ptr(int:1:s), int:8:u, ptr(int:8:u), ptr(const(opaque)), ptr(opaque)), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), int:4:s, fptr(int:4:s; ptr(const(opaque)), ptr(opaque)), ptr(opaque), fptr(int:4:s; ptr(int:1:s), int:8:u, ptr(int:8:u), ptr(const(opaque)), ptr(opaque)), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "DecoderExportObjectFn",
+          "at": "src/decoder_meth.rs",
+          "authority": "OSSL_FUNC_decoder_export_object_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), int:8:u, fptr(int:4:s; ptr(const(opaque)), ptr(opaque)), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), int:8:u, fptr(int:4:s; ptr(const(opaque)), ptr(opaque)), ptr(opaque))",
           "how": "convention"
         },
         {

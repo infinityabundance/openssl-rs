@@ -31172,6 +31172,86 @@ pub(crate) const ENCODER_PKEY_363: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ossl_decoder_from_algorithm` at `crypto/encode_decode/decoder_meth.c:280` (ERR_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const DECODER_METH_280: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+    line: 280,
+    func: c"ossl_decoder_from_algorithm",
+    lib: 60,
+    reason: 786696,
+    dynamic_reason: false,
+};
+
+/// `inner_ossl_decoder_fetch` at `crypto/encode_decode/decoder_meth.c:356` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const DECODER_METH_356: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+    line: 356,
+    func: c"inner_ossl_decoder_fetch",
+    lib: 60,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `inner_ossl_decoder_fetch` at `crypto/encode_decode/decoder_meth.c:414` (ERR_raise_data dynamic reason).
+pub(crate) const DECODER_METH_414: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+    line: 414,
+    func: c"inner_ossl_decoder_fetch",
+    lib: 60,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `OSSL_DECODER_get0_provider` at `crypto/encode_decode/decoder_meth.c:463` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_METH_463: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+    line: 463,
+    func: c"OSSL_DECODER_get0_provider",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_get0_properties` at `crypto/encode_decode/decoder_meth.c:473` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_METH_473: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+    line: 473,
+    func: c"OSSL_DECODER_get0_properties",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_parsed_properties` at `crypto/encode_decode/decoder_meth.c:484` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_METH_484: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+    line: 484,
+    func: c"ossl_decoder_parsed_properties",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_get_number` at `crypto/encode_decode/decoder_meth.c:494` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_METH_494: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+    line: 494,
+    func: c"ossl_decoder_get_number",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_set_params` at `crypto/encode_decode/decoder_meth.c:644` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_METH_644: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+    line: 644,
+    func: c"OSSL_DECODER_CTX_set_params",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -34297,4 +34377,12 @@ pub(crate) static ALL: &[ErrSite] = &[
     ENCODER_PKEY_352,
     ENCODER_PKEY_357,
     ENCODER_PKEY_363,
+    DECODER_METH_280,
+    DECODER_METH_356,
+    DECODER_METH_414,
+    DECODER_METH_463,
+    DECODER_METH_473,
+    DECODER_METH_484,
+    DECODER_METH_494,
+    DECODER_METH_644,
 ];
