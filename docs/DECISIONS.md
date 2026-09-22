@@ -24769,3 +24769,124 @@ eight `RSA_print`/`DSA_print`/`EC_KEY_print` family printers and the six PEM pri
 them -- and the counts this entry reaches are exactly D350's, because the eight units it lands are
 internals. What this slice is, is the provider-side key backends the ASN.1 method objects will read,
 whole: not the method objects, not `standard_methods[]`, not a Phase-8 count, and not a step toward one.
+
+---
+
+## D352 — 8.8's cross-stratum closure is re-measured **complete** and the blocker that remains is the crate's own `EVP_PKEY` legacy block, not Phase 11's: the method objects are withheld with their coordinates and **no count moves**
+
+**Decision.** Phase 8.8 lands **nothing** in this slice. This entry is the **re-measurement** D341's
+brief asked for rather than a restatement of D341. D341 recorded that the `standard_methods[]` objects
+could not be built because their callbacks read Phase 11's `X509_PUBKEY`/`X509_ALGOR`/
+`PKCS8_PRIV_KEY_INFO` bodies. **Every one of those names has since landed** -- D348
+`crypto/asn1/x_algor.c`, D349 `crypto/x509/x_pubkey.c`, `crypto/x509/x509_set.c`,
+`crypto/x509/t_x509.c` and `crypto/asn1/p8_pkey.c`, D351 the four provider key backends -- so the
+**cross-stratum call closure is now empty** for the four non-ECX object-bearing units. What blocks the
+objects is **not another stratum**: it is the crate's own deliberate omission of `struct evp_pkey_st`'s
+legacy block. That is the correction this entry makes to D341's reason, and it is the reason the slice
+still cannot be cut.
+
+**The measurement, name by name, from the authority rather than from memory.** Each callback body of
+the four units was read and each identifier resolved against the crate, the way D341's closure was taken:
+
+| unit | names the callbacks reach | where they are now |
+|---|---|---|
+| `crypto/rsa/rsa_ameth.c` | `X509_PUBKEY_set0_param`, `X509_PUBKEY_get0_param`; `X509_ALGOR_set0`, `X509_ALGOR_free`, `d2i_X509_ALGOR`; `PKCS8_pkey_set0`; `X509_signature_dump`; `X509_SIG_INFO_set`; `ossl_rsa_param_decode`, `ossl_rsa_key_from_pkcs8`, `ossl_rsa_todata`, `ossl_rsa_fromdata`, `ossl_rsa_dup`, `ossl_rsa_pss_get_param_unverified`; `ossl_x509_algor_mgf1_decode`/`_new_from_md`/`_md_to_mgf1` | D348/D349/D351, all landed |
+| `crypto/dh/dh_ameth.c` | `X509_PUBKEY_get0_param`, `X509_ALGOR_get0`, `X509_PUBKEY_set0_param`, `PKCS8_pkey_set0`; `ossl_dh_key_from_pkcs8`, `ossl_dh_params_fromdata`, `ossl_dh_key_fromdata`, `ossl_dh_dup`, `ossl_dh_is_foreign`; `ossl_dh_buf2key`/`_key2buf`; `DH_check_ex`/`DH_check_pub_key_ex` | D349/D351 and `src/dh/`, all landed |
+| `crypto/dsa/dsa_ameth.c` | `X509_PUBKEY_get0_param`, `X509_ALGOR_get0`, `X509_PUBKEY_set0_param`, `PKCS8_pkey_set0`, `X509_signature_dump`; `ossl_dsa_key_from_pkcs8`, `ossl_dsa_ffc_params_fromdata`, `ossl_dsa_key_fromdata`, `ossl_dsa_dup`, `ossl_dsa_is_foreign` | D349/D351, all landed |
+| `crypto/ec/ec_ameth.c` | `X509_PUBKEY_set0_param`, `X509_PUBKEY_get0_param`, `PKCS8_pkey_set0`; `ossl_x509_PUBKEY_get0_libctx`; `ossl_ec_key_param_from_x509_algor`, `ossl_ec_key_from_pkcs8`, `ossl_ec_group_todata`/`_fromdata`, `ossl_ec_key_fromdata`/`_otherparams_fromdata`; `EC_KEY_dup`/`_key2buf`/`_priv2buf`/`_oct2key`/`_check_key`; `d2i_`/`i2d_ECParameters`, `d2i_`/`i2d_ECPrivateKey`, `o2i_`/`i2o_ECPublicKey`, `ECParameters_print` | D349/D351 and `src/ec/`, all landed |
+
+The one name any of the four **defines itself** and does not find elsewhere is
+`ossl_rsa_pss_params_create` (`rsa_ameth.c:494-520`); it is a file-local of the unit and lands with it.
+Every other name is present, which is what makes the closure empty rather than nearly empty.
+
+**The blocker, and it is a sentence already in `src/evp/pkey.rs`.** That file's `EvpPkey` doc
+(`src/evp/pkey.rs:225-241`) records that the legacy block is **absent**: `engine`, `pmeth_engine`, the
+`pkey` / `legacy_cache_pkey` **union**, `attributes` and `foreign` are not fields, because
+`EVP_PKEY_ASN1_METHOD` was Phase 8's (now landed: D176, D165) and `ENGINE` is Phase 13's. Every one of
+the roughly one hundred and thirty callback bodies of the four units reads `pkey->pkey.<alg>` -- the
+union's per-type member -- so no object can be transcribed until that block exists. Landing it is not
+just five fields: it is the union plus `EVP_PKEY_assign` (`p_lib.c:791`, which sets `pkey->pkey.ptr`),
+`detect_foreign_key` (`:757`, which sets `pkey->foreign`), `evp_pkey_copy_downgraded` (`:2066`, which
+reads `ameth->import_from`/`dirty_cnt`), `evp_pkey_get_legacy` (`:2154`, which caches into
+`legacy_cache_pkey` under `pk->lock`) and `evp_pkey_free_legacy` (`:1777`), plus the twelve
+`EVP_PKEY_{get0,get1,set1}_*` accessors (nine in `p_lib.c`, three in `p_legacy.c`) and the three
+`EVP_PKEY_get0_{hmac,poly1305,siphash}` readers that also call `evp_pkey_get_legacy`. That is the whole
+of D341's cycle, one layer below the coordinate D341 gave it: the boundary is the crate's own object
+model, not Phase 11's `X509_PUBKEY`.
+
+**The four ECX rows and the SM2 row, measured, and the disposition taken for each.**
+
+* **The four `crypto/ec/ecx_meth.c` rows are withheld**, and the measurement is their closure rather
+  than a preference: `ecx_meth.c` is 1,468 lines and 55 functions, and its callbacks reach
+  `crypto/ec/ecx_key.c`, `crypto/ec/ecx_backend.c`, `crypto/ec/curve25519.c` (about 5,900 lines) and
+  all of `crypto/ec/curve448/` (about 3,400) -- roughly **9,000 authority lines** with no crate module
+  and no stratum's plan row today (D316 names only its provider half). Landing them is a second unit of
+  work the size of this one. **The exact observable consequence of withholding them, once the four
+  in-reach rows would land, is that `EVP_PKEY_asn1_find`/`_find_str` answer NULL and `EVP_PKEY_type`
+  answers `NID_undef` for `EVP_PKEY_X25519`, `_X448`, `_ED25519`, `_ED448`** -- the four rows the
+  authority's `standard_methods.h` carries under `#ifndef OPENSSL_NO_ECX`, which is **absent** from the
+  admitted `configuration.h` (D340 read that file for the same fact). The callers that see it are
+  `EVP_PKEY_type`, `EVP_PKEY_assign`/`_set_type`/`_set_type_str`, and every `*_PUBKEY` `d2i_*` that
+  assigns an X25519/X448/Ed25519/Ed448 key through them; the four ECX key types would be unnameable
+  and unassignable from this crate. Because **this slice lands nothing**, that consequence is not yet
+  reachable and is recorded as the cost a future landing must either pay or narrow.
+* **The SM2 row is in reach, and that is measured rather than assumed.** `ossl_sm2_asn1_meth`
+  (`ec_ameth.c:702-707`) is a **three-line alias** -- `{ EVP_PKEY_SM2, EVP_PKEY_EC, ASN1_PKEY_ALIAS }`
+  -- with no callback fields at all, so its only closure is the object literal itself, and it lands the
+  day `ec_ameth.c` does. It is withheld here only because the unit it lives in is: landing SM2 alone
+  would be a method object for a type `EVP_PKEY_assign` cannot yet assign.
+
+**Two corrections to this brief's own coordinates, recorded rather than followed.**
+
+* `EVP_PKEY_decrypt_old` and `EVP_PKEY_encrypt_old`, which the brief places in `crypto/evp/p_lib.c`, are
+  defined in `crypto/evp/p_dec.c:21` and `crypto/evp/p_enc.c:21`. Both bodies are `evp_pkey_get0_RSA_int`
+  plus one `RSA_*_decrypt`/`_encrypt` call, so they belong to their own units and not to `p_lib.c`'s.
+* `EVP_PKEY_set1_DH`/`set1_DSA`/`get0_DH`/`get1_DH`/`get0_DSA`/`get1_DSA` **are** `p_lib.c`'s and not
+  `p_legacy.c`'s, as the brief says; the six `crypto/evp/p_legacy.c` exports are
+  `EVP_PKEY_{set1_RSA,get0_RSA,get1_RSA,set1_EC_KEY,get0_EC_KEY,get1_EC_KEY}` plus the two
+  `crypto/evp.h` internals `evp_pkey_get0_RSA_int`/`evp_pkey_get0_EC_KEY_int`.
+
+**Why nothing lands rather than a subset, since the brief offers a narrowing.** D341's rule is that a
+table may not carry a row whose callback field is not the authority's, and the objects cannot be cut
+from the table: the table names the objects by address and the objects' callbacks call `EVP_PKEY_assign`,
+which calls `EVP_PKEY_type`, which searches the table -- a cycle Rust resolves inside one crate and
+refuses to resolve across two. So the landing is one commit of the object model, the four units and the
+table, or nothing. A subset that landed only, say, the DH rows would make `EVP_PKEY_assign` answer 0 for
+`EVP_PKEY_RSA`/`_DSA`/`_EC` and `EVP_PKEY_type` answer `NID_undef` for them -- **the divergence the
+register already records as `D-PKEY-AMETH-1`, produced deliberately rather than retired**, which is a
+fabrication in the sense `docs/PHASE-8-SUBPHASES.md` §4 and the brief's fifth rule forbid. The four
+in-reach rows are exactly the four whose closures this entry measured complete, so the honest state is
+the unchanged one and the coordinates above are what a landing commit needs.
+
+**The raise-site generator gains nothing, because no unit lands.** `crypto/rsa/rsa_ameth.c` and
+`crypto/ec/ec_ameth.c` are already in `gen_err_raise_sites.py`'s covered set; `crypto/dh/dh_ameth.c` and
+`crypto/dsa/dsa_ameth.c` are not, and adding them was measured to carry 14 and 16 sites
+(`DH_AMETH_*`, `DSA_AMETH_*`) -- the difference a later landing would make to
+`src/runtime/err_sites.rs`, recorded here rather than landed. `crypto/evp/{p_lib,p_legacy}.c` are both
+already covered, so the evp half of the closure needs no generator change either.
+
+**`RT-AMETH` stays unregistered, for D341's reason unchanged.** `forensics/tools/phase8_courts.py`
+refuses a runner that names a probe which does not exist, and an arm calling
+`EVP_PKEY_asn1_find(NULL, EVP_PKEY_RSA)` would print a real method object from the authority and a NULL
+from the crate -- a residual, not an observation. The six arms the court will carry are the ones
+`docs/PHASE-8-AMETH-INTEGRATION-PLAN.md` §7 lists, and they stay there.
+
+**Bookkeeping, read off the regenerated files.** No source file changes, so no generated artifact moves:
+`forensics/phase8-obligations.json` stays implemented **745**, deferred **0**, open **41**, owned **786**,
+`complete: false` -- byte-for-byte D351's numbers; `forensics/atlas/implemented-surface.json`'s
+`libcrypto` implemented stays **2753**; `internal_symbols.c_style` stays **327**;
+`transcription-edges.json` stays **298** modules over **267** units; `court_coverage.py` stays phase 8 at
+**745** implemented (737 direct, 8 indirect, 0 unmatched) and phase 9 at **66**, `not_yet_begun` at
+**80**; `forensics/atlas/prerequisite-gate.json` stays at **12 rows / 57 names**, `blocking_dependencies`
+**15**, `sealed_stratum_census` **57**, zero findings -- the `ossl_rsa_asn1_meths`, `ossl_rsa_pkey_method`,
+`evp_pkey_get_legacy`, `evp_pkey_get0_DH_int` and `evp_pkey_copy_downgraded` deferrals stay live, because
+none of the names they own was built; and `docs/PHASE-8-SUBPHASES.md`'s two anchored clauses are
+untouched, because no symbol moved between `landed` and `open` in either direction.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete: false`
+with **41** names open -- 8.8's fifteen, the twelve legacy `EVP_PKEY_{get0,get1,set1}_*` accessors, the
+eight `RSA_print`/`DSA_print`/`EC_KEY_print` family printers and the six PEM private-key readers among
+them. What this slice is, is the subphase's boundary measured a second time and **corrected**: the
+cross-stratum closure D341 named is closed, the blocker is the crate's own `EVP_PKEY` legacy block and
+the four `crypto/ec/ecx_meth.c` rows' nine thousand lines, and the coordinates are named rather than
+stubbed. It is not 8.8, not a Phase-8 count, and not a claim about the stratum's work being nearly done.

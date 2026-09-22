@@ -7,10 +7,10 @@
     "census": {
       "names_a_file_the_authority_does_not_have": 20,
       "symbols_not_reached": 6,
-      "units_not_reached": 27
+      "units_not_reached": 30
     },
     "census_by_stratum": {
-      "8": 39,
+      "8": 42,
       "9": 14
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
@@ -51,10 +51,13 @@
         "crypto/dsa/dsa_check.c",
         "crypto/dsa/dsa_err.c",
         "crypto/dsa/dsa_prn.c",
+        "crypto/ec/curve25519.c",
         "crypto/ec/ec_ameth.c",
         "crypto/ec/ecdsa_sign.c",
         "crypto/ec/ecdsa_vrf.c",
         "crypto/ec/ecp_nistz256.c",
+        "crypto/ec/ecx_backend.c",
+        "crypto/ec/ecx_key.c",
         "crypto/ec/ecx_meth.c",
         "providers/common/provider_seeding.c",
         "providers/common/provider_util.c",
@@ -84,12 +87,12 @@
         "docs/PHASE-9-SUBPHASES.md"
       ],
       "rows_judged": 82,
-      "symbols_named_by_a_row": 97,
-      "symbols_reached": 91,
+      "symbols_named_by_a_row": 98,
+      "symbols_reached": 92,
       "unit_records": 61,
       "units_named_by_a_record": 63,
-      "units_named_by_a_row": 233,
-      "units_reached": 206
+      "units_named_by_a_row": 240,
+      "units_reached": 210
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -157,6 +160,16 @@
         ],
         "transcribed_by": []
       },
+      "crypto/asn1/p8_pkey.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.8"
+        ],
+        "transcribed_by": [
+          "src/asn1/p8_pkey.rs"
+        ]
+      },
       "crypto/asn1/tasn_typ.c": {
         "defines": [],
         "recorded_by": null,
@@ -177,7 +190,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.4"
+          "8.4",
+          "8.8"
         ],
         "transcribed_by": [
           "src/asn1/x_algor.rs"
@@ -830,6 +844,21 @@
         ],
         "transcribed_by": []
       },
+      "crypto/ec/curve25519.c": {
+        "defines": [
+          "ossl_ed25519_pubkey_verify",
+          "ossl_ed25519_public_from_private",
+          "ossl_ed25519_sign",
+          "ossl_ed25519_verify",
+          "ossl_x25519",
+          "ossl_x25519_public_from_private"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.8"
+        ],
+        "transcribed_by": []
+      },
       "crypto/ec/ec2_oct.c": {
         "defines": [
           "ossl_ec_GF2m_simple_oct2point",
@@ -880,7 +909,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8.7",
+          "8.8"
         ],
         "transcribed_by": []
       },
@@ -1230,6 +1260,35 @@
         "transcribed_by": [
           "src/ec/smpl.rs"
         ]
+      },
+      "crypto/ec/ecx_backend.c": {
+        "defines": [
+          "ossl_ecx_key_dup",
+          "ossl_ecx_key_from_pkcs8",
+          "ossl_ecx_key_fromdata",
+          "ossl_ecx_key_op",
+          "ossl_ecx_public_from_private"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.8"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/ec/ecx_key.c": {
+        "defines": [
+          "ossl_ecx_compute_key",
+          "ossl_ecx_key_allocate_privkey",
+          "ossl_ecx_key_free",
+          "ossl_ecx_key_new",
+          "ossl_ecx_key_set0_libctx",
+          "ossl_ecx_key_up_ref"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.8"
+        ],
+        "transcribed_by": []
       },
       "crypto/ec/ecx_meth.c": {
         "defines": [
@@ -2104,7 +2163,8 @@
         "subphases": [
           "7.4",
           "7.4a",
-          "7.4e"
+          "7.4e",
+          "8.8"
         ],
         "transcribed_by": [
           "src/evp/pkey.rs"
@@ -2955,6 +3015,60 @@
           "src/runtime/thread.rs"
         ]
       },
+      "crypto/x509/t_x509.c": {
+        "defines": [
+          "ossl_serial_number_print",
+          "ossl_x509_print_ex_brief"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.8"
+        ],
+        "transcribed_by": [
+          "src/x509/t_x509.rs"
+        ]
+      },
+      "crypto/x509/x509_set.c": {
+        "defines": [
+          "ossl_x509_init_sig_info",
+          "ossl_x509_set1_time"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.8"
+        ],
+        "transcribed_by": [
+          "src/x509/x509_set.rs"
+        ]
+      },
+      "crypto/x509/x_pubkey.c": {
+        "defines": [
+          "ossl_X509_PUBKEY_INTERNAL_free",
+          "ossl_d2i_DH_PUBKEY",
+          "ossl_d2i_DHx_PUBKEY",
+          "ossl_d2i_DSA_PUBKEY",
+          "ossl_d2i_ED25519_PUBKEY",
+          "ossl_d2i_ED448_PUBKEY",
+          "ossl_d2i_PUBKEY_legacy",
+          "ossl_d2i_X25519_PUBKEY",
+          "ossl_d2i_X448_PUBKEY",
+          "ossl_d2i_X509_PUBKEY_INTERNAL",
+          "ossl_i2d_DH_PUBKEY",
+          "ossl_i2d_DHx_PUBKEY",
+          "ossl_i2d_ED25519_PUBKEY",
+          "ossl_i2d_ED448_PUBKEY",
+          "ossl_i2d_X25519_PUBKEY",
+          "ossl_i2d_X448_PUBKEY",
+          "ossl_x509_PUBKEY_get0_libctx"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.8"
+        ],
+        "transcribed_by": [
+          "src/x509/x_pubkey.rs"
+        ]
+      },
       "pkey_derive.c": {
         "defines": [],
         "recorded_by": "units:pkey_derive.c",
@@ -3433,7 +3547,7 @@
       "transcribed_units": 267
     }
   },
-  "body_hash": "915db081fd54cba062b6a9a205e637678b0dea4251e24f8ee3b49e51db263423",
+  "body_hash": "a7e97040fac02c4610ce80042e5d75d95380d62a9da6f404a8f542c52e384ea8",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -3484,7 +3598,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "6c3127c0892ea17c53901ea5b37db409d9ec9c8b43d637c48e671f9ed67be9c3"
+      "sha256": "934feec2bdd3dc96e1bb40669aae4397b5385f17506521a5acbba4f3c76b9091"
     },
     {
       "name": "plan-PHASE-9-SUBPHASES",
