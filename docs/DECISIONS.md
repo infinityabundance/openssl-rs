@@ -25957,3 +25957,134 @@ deferrals, **11** divergence rows / **55** names, `blocking_dependencies` **10**
 `crypto/pem/` private-key readers. It is not Phase 8 and not nearly Phase 8; the count this entry
 reaches is implemented **772** of **786** owned, and the unit it moved into the crate is one of the
 three the printers need.
+
+## D361 — the second encoder unit lands: `src/encoder_lib.rs`, the context chain and its three-valued
+recursive walk, plus `encoder_meth.c`'s context trio; the fetch block is the last thing before the
+printers
+
+**Decision.** Land `crypto/encode_decode/encoder_lib.c` as `src/encoder_lib.rs` -- **18 exports and
+the unit's five internal functions** -- together with `crypto/encode_decode/encoder_meth.c`'s
+context trio (`OSSL_ENCODER_CTX_new` `:608`, `_set_params` `:616`, `_free` `:645`), which D360
+measured as unlandable without this unit's `ossl_encoder_instance_free` and two
+`OSSL_ENCODER_INSTANCE_get_*` and which lands here. The three `ossl_bio_print_*` helpers are
+withheld as one named block with a `divergences` row. **No Phase 8 or Phase 7 count moves**: Phase 8
+stays implemented **772** / open **14**, Phase 7 at **727 / 223 / 26**. Two of the three encoder
+units are now in the crate.
+
+**The walk, and the three things a transcription gets wrong.** `encoder_process` (`:417-704`) is the
+unit's centre and the reason it is not mechanical:
+
+* **The loop is a reverse walk that recurses before deciding.** `for (i = data->current_encoder_inst_index; i-- > 0;)`
+  visits the instances from the *last* to the *first*, and every iteration recurses with `i` as the
+  next index, so the chain is built by the **deepest** call first -- which is why
+  `ossl_encoder_ctx_setup_for_pkey` places the same-provider encoders *last*. Only the top call sets
+  `top`, and `top` decides whether the output type is compared against the caller's desired type or
+  against the **name of the next encoder** (`OSSL_ENCODER_is_a`).
+* **`ok` is three-valued and read as three cases.** `-1` means the recursion found nothing and *this*
+  level should be tried; `0` means it failed and this level is skipped; `1` means it succeeded and
+  this level uses the result. The loop breaks on `ok != 0`, which is **not** "on success" -- a `-1`
+  breaks it too.
+* **`count_output_structure` counts matches, and `-1` and `0` are different states.** No desired
+  structure starts at `-1`; a desired one starts at `0` and is incremented only by a *matching*
+  instance, so `0` in the `case -1:` arm means "a structure was asked for and nothing matched" and is
+  a hard `return 0`.
+
+The authority's `for` loop plus its post-loop `if (i < 0) ... else switch (ok)` is a `goto` pattern
+Rust has no spelling for. The transcription is a `loop` whose test reproduces `i-- > 0` **exactly** --
+the decrement happens even on the iteration that leaves the loop, so a normally-exhausted walk
+leaves `i == -1` while a `break` leaves the index that broke, and the post-loop half is one `if` --
+and the three `continue`s in the body are Rust `continue`s, which reach the same decrement. The tail
+(`running_output` free, the memory-BIO steal, `BIO_free`, the `construct_data` cleanup) runs on
+**every** path including the `return 0`, which is why it is written once at the end rather than
+duplicated at each exit.
+
+**What landed.** `OSSL_ENCODER_to_bio` (`:68`, whose two refusals mean different things -- no
+encoders at all is `OSSL_ENCODER_R_ENCODER_NOT_FOUND` with the "did you forget to load the default
+providers?" message and is the arm `print_pkey` never reaches because it tests the count first;
+encoders with no constructor is `ERR_R_INIT_FAIL`), `bio_from_file` (`:94`), `_to_fp` (`:106`),
+`_to_data` (`:119`, whose three arms include the deliberately **un-updated** `*pdata_len` on a
+too-small buffer and the stolen memory-BIO allocation), the three context setters (`:170`, `:186`,
+`:198` -- a zero selection is refused, not accepted as "encode nothing"),
+`ossl_encoder_instance_new` (`:210`, which is where the mandatory `"output"` property and the
+optional `"structure"` one are read), `ossl_encoder_instance_free` (`:268`),
+`ossl_encoder_ctx_add_encoder_inst` (`:280`), `OSSL_ENCODER_CTX_add_encoder` (`:307`),
+`_add_extra` (`:339`, a bare `return 1;` in this revision), `_get_num_encoders` (`:345`, the
+`ctx == NULL || ctx->encoder_insts == NULL ? 0` arm `print_pkey` depends on), `_set_construct`
+(`:352`), `_set_construct_data` (`:363`), `_set_cleanup` (`:374`), the four
+`OSSL_ENCODER_INSTANCE_get_*` (`:385`-`:415`) and `encoder_process`. The context trio joins
+`src/encoder_meth.rs`, with `OSSL_ENCODER_CTX_set_params` keeping the authority's **and** of the
+instances' answers and its **empty chain is a success** arm, and `OSSL_ENCODER_CTX_free` releasing
+the chain, the construct data, the passphrase bridge D356/D358 landed and the context itself.
+
+**What is withheld, as one named block.** `ossl_bio_print_labeled_bignum` (`:706`),
+`ossl_bio_print_labeled_buf` (`:785`) and `ossl_bio_print_ffc_params` (`:813`) print a labelled
+`BIGNUM` as decimal plus hex, a labelled byte buffer in `LABELED_BUF_PRINT_WIDTH`-octet lines, and an
+`FFC_PARAMS` in the `X9.42` layout. Their callers are **provider encoder implementations** -- the
+default provider's `encoder_text.c` and its siblings -- of which this crate publishes none:
+`provider-algorithms.json` records all **482** `OSSL_OP_ENCODER` rows as `unimplemented`. They are
+three functions no landed path can call, so they are recorded in a `divergences` row
+(`owner_module` `src/encoder_lib.rs`, class `owned_by_a_later_stratum`, `covers` the three) rather
+than written dead, and they join the landing that brings the first provider encoder. That row is
+why `divergence_names_covered` moves **55 -> 58** and the row count **11 -> 12**.
+
+**The remaining block, named, and it is the last one before the printers.** `src/encoder_meth.rs`
+still withholds the fetch and construct-method block -- `encoder_data_st`, the seven
+`ossl_method_construct` callbacks, `construct_encoder`/`destruct_encoder`/`up_ref_encoder`/
+`free_encoder`, `inner_ossl_encoder_fetch`, `OSSL_ENCODER_fetch`, `do_one` and
+`OSSL_ENCODER_do_all_provided`. It cannot land alone: `do_all_provided` calls
+`inner_ossl_encoder_fetch` first (`:549`) and the fetch is the seven callbacks' only caller. It lands
+with `src/encoder_pkey.rs`, whose `ossl_encoder_ctx_setup_for_pkey` is `do_all_provided`'s first
+caller -- and that unit, with `print_pkey`, the six `EVP_PKEY_print_*` and the eight printers, is the
+whole of the next pass.
+
+**Raise sites.** `crypto/encode_decode/encoder_lib.c` joins `gen_err_raise_sites.py`'s
+`COVERED_FILES` as `ENCODER_LIB`; the file raises at eighteen lines and the site count moves
+**3088 -> 3106**. All eighteen are referenced by this pass's bodies -- the two `raise_site_data`
+messages among them are pre-formatted into a stack buffer with `BIO_snprintf`, the pattern
+`src/evp/signature.rs:412-433` established. A second change was needed to the generator: the
+symbol-resolver program it compiles could not resolve `OSSL_ENCODER_R_ENCODER_NOT_FOUND`, so
+`encodererr.h` joins its include list beside `uierr.h`. That is the *first* time an
+`OSSL_ENCODER_R_*` reason has been raised in this crate, which is why the header was missing rather
+than wrong.
+
+**Courts.** **No probe was needed, and that is measured:** the eighteen exports are `encoder.h`'s and
+Phase 10's, which has no ledger, so `court_coverage.py` records them under `not_yet_begun` --
+**94 -> 113** -- exactly as D350's, D358's and D360's exports were. Nothing else moved: **94** courts
+and **37170** observations, `RT-AMETH` at 420. The unit is covered by three new
+`src/encoder_lib.rs` unit tests (a fresh context answering 0 encoders, the setters' refusals
+including a zero selection and a NULL output structure, and `to_bio`'s encoder-less refusal) plus the
+three `src/encoder_meth.rs` tests, which now exercise the trio: `a_fresh_context_has_no_encoders` and
+`to_bio_without_encoders_refuses` both build and free a real `OSSL_ENCODER_CTX`. Every value printed
+is a return code, a count or a pointer identity, never key material.
+
+**What the authority corrected in the brief.** One thing. The brief said the context trio "lands with
+this unit", and that is right, but the correction is *why*: it is not that the trio is naturally
+`encoder_lib.c`'s, it is that `OSSL_ENCODER_CTX_set_params` and `_free` call three functions this unit
+defines, so the trio's *unit* is still `encoder_meth.c` and only its *commit* moves. Both facts are
+recorded: the functions sit in `src/encoder_meth.rs` with their authority coordinates, and
+`src/encoder_meth.rs`'s module doc names the dependency rather than pretending the trio is
+self-contained.
+
+**What is deliberately not here.** `crypto/encode_decode/encoder_pkey.c`, the meth fetch block,
+`print_pkey`, the six `EVP_PKEY_print_*`, the eight printers, the decoder units and the six
+`crypto/pem/` readers. `docs/PHASE-8-SUBPHASES.md` is untouched: no Phase 8 row's evidence moved, and
+§4's two anchored clauses stay consistent with the ledger in both directions because the ledger did
+not move. `docs/CI.md`'s hand-written "plain C identifiers" count is corrected **340 -> 341**:
+`ossl_encoder_instance_free` is the one new internal C symbol this unit contributes, the rest of the
+landing being exports.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete: false`
+with **14** names open: implemented **772**, deferred **0**, owned **786**. The regenerated counts:
+`implemented-surface.json`'s `libcrypto` implemented moves **2794 -> 2813** (the eighteen Phase-10
+exports plus the trio) and its `internal_symbols.c_style` **340 -> 341**;
+`transcription-edges.json` **311 -> 312** modules over **280 -> 281** units, the new edge
+`src/encoder_lib.rs -> crypto/encode_decode/encoder_lib.c` at share 17/17;
+`internal-symbols.json`'s `modules_without_a_stratum` stays **38**; `court_coverage.py` reports
+phase 8 at **772** (**764** directly courted, all *called*, **8** indirectly, **0** unmatched),
+phase 7 at **727**, and `not_yet_begun` **94 -> 113**; the prerequisite gate stays at **zero
+findings** over **10** deferrals, **12** divergence rows / **58** names, `blocking_dependencies`
+**10** and `sealed_stratum_census` **56**; phase 7's ledger does **not** move -- implemented **727**,
+deferred **223**, received_by_handoff **26**. The open fourteen are still the eight printers and the
+six `crypto/pem/` private-key readers. It is not Phase 8 and not nearly Phase 8; the count this entry
+reaches is implemented **772** of **786** owned, and the units it moved into the crate are two of the
+three the printers need.

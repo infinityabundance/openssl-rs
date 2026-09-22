@@ -30912,6 +30912,186 @@ pub(crate) const ENCODER_METH_624: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `OSSL_ENCODER_to_bio` at `crypto/encode_decode/encoder_lib.c:78` (OSSL_ENCODER_R_ENCODER_NOT_FOUND).
+pub(crate) const ENCODER_LIB_78: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 78,
+    func: c"OSSL_ENCODER_to_bio",
+    lib: 59,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_to_bio` at `crypto/encode_decode/encoder_lib.c:86` (ERR_R_INIT_FAIL).
+pub(crate) const ENCODER_LIB_86: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 86,
+    func: c"OSSL_ENCODER_to_bio",
+    lib: 59,
+    reason: 786693,
+    dynamic_reason: false,
+};
+
+/// `bio_from_file` at `crypto/encode_decode/encoder_lib.c:99` (ERR_R_BUF_LIB).
+pub(crate) const ENCODER_LIB_99: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 99,
+    func: c"bio_from_file",
+    lib: 59,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_to_data` at `crypto/encode_decode/encoder_lib.c:127` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_LIB_127: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 127,
+    func: c"OSSL_ENCODER_to_data",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_CTX_set_selection` at `crypto/encode_decode/encoder_lib.c:173` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_LIB_173: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 173,
+    func: c"OSSL_ENCODER_CTX_set_selection",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_CTX_set_selection` at `crypto/encode_decode/encoder_lib.c:178` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const ENCODER_LIB_178: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 178,
+    func: c"OSSL_ENCODER_CTX_set_selection",
+    lib: 59,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_CTX_set_output_type` at `crypto/encode_decode/encoder_lib.c:190` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_LIB_190: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 190,
+    func: c"OSSL_ENCODER_CTX_set_output_type",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_CTX_set_output_structure` at `crypto/encode_decode/encoder_lib.c:202` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_LIB_202: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 202,
+    func: c"OSSL_ENCODER_CTX_set_output_structure",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_encoder_instance_new` at `crypto/encode_decode/encoder_lib.c:220` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_LIB_220: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 220,
+    func: c"ossl_encoder_instance_new",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_encoder_instance_new` at `crypto/encode_decode/encoder_lib.c:228` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ENCODER_LIB_228: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 228,
+    func: c"ossl_encoder_instance_new",
+    lib: 59,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_encoder_instance_new` at `crypto/encode_decode/encoder_lib.c:236` (ERR_R_INVALID_PROPERTY_DEFINITION).
+pub(crate) const ENCODER_LIB_236: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 236,
+    func: c"ossl_encoder_instance_new",
+    lib: 60,
+    reason: 524558,
+    dynamic_reason: false,
+};
+
+/// `ossl_encoder_instance_new` at `crypto/encode_decode/encoder_lib.c:246` (ERR_R_INVALID_PROPERTY_DEFINITION).
+pub(crate) const ENCODER_LIB_246: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 246,
+    func: c"ossl_encoder_instance_new",
+    lib: 60,
+    reason: 524558,
+    dynamic_reason: false,
+};
+
+/// `ossl_encoder_ctx_add_encoder_inst` at `crypto/encode_decode/encoder_lib.c:287` (ERR_R_CRYPTO_LIB).
+pub(crate) const ENCODER_LIB_287: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 287,
+    func: c"ossl_encoder_ctx_add_encoder_inst",
+    lib: 59,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_CTX_add_encoder` at `crypto/encode_decode/encoder_lib.c:315` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_LIB_315: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 315,
+    func: c"OSSL_ENCODER_CTX_add_encoder",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_CTX_set_construct` at `crypto/encode_decode/encoder_lib.c:356` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_LIB_356: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 356,
+    func: c"OSSL_ENCODER_CTX_set_construct",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_CTX_set_construct_data` at `crypto/encode_decode/encoder_lib.c:367` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_LIB_367: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 367,
+    func: c"OSSL_ENCODER_CTX_set_construct_data",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_CTX_set_cleanup` at `crypto/encode_decode/encoder_lib.c:378` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_LIB_378: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 378,
+    func: c"OSSL_ENCODER_CTX_set_cleanup",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `encoder_process` at `crypto/encode_decode/encoder_lib.c:614` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ENCODER_LIB_614: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 614,
+    func: c"encoder_process",
+    lib: 59,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -34011,4 +34191,22 @@ pub(crate) static ALL: &[ErrSite] = &[
     ENCODER_METH_489,
     ENCODER_METH_499,
     ENCODER_METH_624,
+    ENCODER_LIB_78,
+    ENCODER_LIB_86,
+    ENCODER_LIB_99,
+    ENCODER_LIB_127,
+    ENCODER_LIB_173,
+    ENCODER_LIB_178,
+    ENCODER_LIB_190,
+    ENCODER_LIB_202,
+    ENCODER_LIB_220,
+    ENCODER_LIB_228,
+    ENCODER_LIB_236,
+    ENCODER_LIB_246,
+    ENCODER_LIB_287,
+    ENCODER_LIB_315,
+    ENCODER_LIB_356,
+    ENCODER_LIB_367,
+    ENCODER_LIB_378,
+    ENCODER_LIB_614,
 ];

@@ -14,8 +14,8 @@
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)"
     ],
     "census": {
-      "covered_by_a_divergence": 85,
-      "language_surface_not_modelled_by_name": 4453,
+      "covered_by_a_divergence": 88,
+      "language_surface_not_modelled_by_name": 4472,
       "planned_prerequisites": 8
     },
     "census_by_unit": {
@@ -30,6 +30,9 @@
         "libctx": 1,
         "openssl_init_fork_handlers": 1,
         "ossl_X509_PUBKEY_INTERNAL_free": 1,
+        "ossl_bio_print_ffc_params": 1,
+        "ossl_bio_print_labeled_bignum": 1,
+        "ossl_bio_print_labeled_buf": 1,
         "ossl_d2i_DH_PUBKEY": 1,
         "ossl_d2i_DHx_PUBKEY": 1,
         "ossl_d2i_DSA_PUBKEY": 1,
@@ -221,7 +224,8 @@
         "crypto/ec/ecp_mont.c": 8,
         "crypto/ec/ecp_nist.c": 7,
         "crypto/ec/ecp_smpl.c": 13,
-        "crypto/encode_decode/encoder_meth.c": 31,
+        "crypto/encode_decode/encoder_lib.c": 32,
+        "crypto/encode_decode/encoder_meth.c": 25,
         "crypto/err/err.c": 88,
         "crypto/err/err_all_legacy.c": 11,
         "crypto/err/err_save.c": 2,
@@ -256,7 +260,7 @@
         "crypto/evp/p_dec.c": 5,
         "crypto/evp/p_enc.c": 5,
         "crypto/evp/p_legacy.c": 8,
-        "crypto/evp/p_lib.c": 67,
+        "crypto/evp/p_lib.c": 64,
         "crypto/evp/pbe_scrypt.c": 7,
         "crypto/evp/pmeth_check.c": 7,
         "crypto/evp/pmeth_gn.c": 13,
@@ -355,7 +359,7 @@
         "crypto/whrlpool/wp_dgst.c": 3,
         "crypto/x509/t_x509.c": 109,
         "crypto/x509/x509_set.c": 47,
-        "crypto/x509/x_pubkey.c": 79
+        "crypto/x509/x_pubkey.c": 75
       },
       "planned_prerequisites": {
         "evp_app_cleanup_int": 2,
@@ -379,6 +383,9 @@
         "libctx",
         "openssl_init_fork_handlers",
         "ossl_X509_PUBKEY_INTERNAL_free",
+        "ossl_bio_print_ffc_params",
+        "ossl_bio_print_labeled_bignum",
+        "ossl_bio_print_labeled_buf",
         "ossl_d2i_DH_PUBKEY",
         "ossl_d2i_DHx_PUBKEY",
         "ossl_d2i_DSA_PUBKEY",
@@ -402,9 +409,6 @@
         "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_concrete",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data"
@@ -463,12 +467,12 @@
       ]
     },
     "checked": {
-      "authority_units": 280,
-      "crate_modules": 359,
+      "authority_units": 281,
+      "crate_modules": 360,
       "deferral_blocker_rows": 1,
       "deferrals_recorded": 10,
-      "divergence_names_covered": 55,
-      "divergence_rows": 11,
+      "divergence_names_covered": 58,
+      "divergence_rows": 12,
       "names_referenced_and_not_built": 19
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
@@ -585,7 +589,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "0e0831e4c897e824942b593457c00d9f45683831452da43d8434097e646b6b75",
+  "body_hash": "fb038247eba7490a6d5c080857d8daba392b1b29ed2b4a12be38af009c4bc22d",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -606,7 +610,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "e27268a47e8d67a19634ca61b9a7406bc0c9402e697c50b4b16e708177450c6a"
+      "sha256": "b40a4c685bbad2059b46db3882c95620c49095490c5e150ae453e3be6b698beb"
     },
     {
       "name": "symbol-ownership",
@@ -621,7 +625,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "89d4e195a70b3850ea144133f7727e11721b5ebb373ee4b50ca1d955dbd2bb50"
+      "sha256": "e811c21e531f9cddd46306c3921e32afd26f0be033b791bca24a260f45f72e3e"
     },
     {
       "name": "phase-state",
@@ -631,7 +635,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "affdf002f48c4cf879ddb8070f226daaf74b0464776328ea267782b8e2614420"
+      "sha256": "3cb6d006a8d54df9e85c3a8e01ad0af3aede7526a87395c084fae37f7b1c8ce2"
     },
     {
       "name": "crate-source-tree",
