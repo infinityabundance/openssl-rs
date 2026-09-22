@@ -5,10 +5,10 @@
       "findings": 0,
       "legacy_rows": 146,
       "legacy_unit_claims": 20,
-      "structured_blockers": 10,
-      "structured_rows": 5,
-      "unblocked_rows": 16,
-      "unblocked_symbols": 47
+      "structured_blockers": 6,
+      "structured_rows": 3,
+      "unblocked_rows": 18,
+      "unblocked_symbols": 66
     },
     "complete": true,
     "counts": {
@@ -1616,452 +1616,122 @@
       },
       {
         "binding_phase": 13,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/decoder_pkey.c",
-            "kind": "exported",
-            "line": 821,
-            "name": "OSSL_DECODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/ui/ui_lib.c",
-            "kind": "exported",
-            "line": 18,
-            "name": "UI_new",
-            "owning_phase": 13
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "pem.h",
         "owning_phase": 13,
-        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- which is the eighth name of the row above and therefore Phase 13. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. So Phase 10 is what these fifteen are reached through **first** -- which is what 7.5's `NOT_MEASURED` lines say -- and Phase 13 is the phase that retires them, because the fallback legs cannot be omitted.",
+        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
         "symbol": "PEM_read_PrivateKey"
       },
       {
         "binding_phase": 13,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/decoder_pkey.c",
-            "kind": "exported",
-            "line": 821,
-            "name": "OSSL_DECODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/ui/ui_lib.c",
-            "kind": "exported",
-            "line": 18,
-            "name": "UI_new",
-            "owning_phase": 13
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "pem.h",
         "owning_phase": 13,
-        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- which is the eighth name of the row above and therefore Phase 13. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. So Phase 10 is what these fifteen are reached through **first** -- which is what 7.5's `NOT_MEASURED` lines say -- and Phase 13 is the phase that retires them, because the fallback legs cannot be omitted.",
+        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
         "symbol": "PEM_read_PrivateKey_ex"
       },
       {
         "binding_phase": 13,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/decoder_pkey.c",
-            "kind": "exported",
-            "line": 821,
-            "name": "OSSL_DECODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/ui/ui_lib.c",
-            "kind": "exported",
-            "line": 18,
-            "name": "UI_new",
-            "owning_phase": 13
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "pem.h",
         "owning_phase": 13,
-        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- which is the eighth name of the row above and therefore Phase 13. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. So Phase 10 is what these fifteen are reached through **first** -- which is what 7.5's `NOT_MEASURED` lines say -- and Phase 13 is the phase that retires them, because the fallback legs cannot be omitted.",
+        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
         "symbol": "PEM_read_bio_Parameters"
       },
       {
         "binding_phase": 13,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/decoder_pkey.c",
-            "kind": "exported",
-            "line": 821,
-            "name": "OSSL_DECODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/ui/ui_lib.c",
-            "kind": "exported",
-            "line": 18,
-            "name": "UI_new",
-            "owning_phase": 13
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "pem.h",
         "owning_phase": 13,
-        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- which is the eighth name of the row above and therefore Phase 13. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. So Phase 10 is what these fifteen are reached through **first** -- which is what 7.5's `NOT_MEASURED` lines say -- and Phase 13 is the phase that retires them, because the fallback legs cannot be omitted.",
+        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
         "symbol": "PEM_read_bio_Parameters_ex"
       },
       {
         "binding_phase": 13,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/decoder_pkey.c",
-            "kind": "exported",
-            "line": 821,
-            "name": "OSSL_DECODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/ui/ui_lib.c",
-            "kind": "exported",
-            "line": 18,
-            "name": "UI_new",
-            "owning_phase": 13
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "pem.h",
         "owning_phase": 13,
-        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- which is the eighth name of the row above and therefore Phase 13. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. So Phase 10 is what these fifteen are reached through **first** -- which is what 7.5's `NOT_MEASURED` lines say -- and Phase 13 is the phase that retires them, because the fallback legs cannot be omitted.",
+        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
         "symbol": "PEM_read_bio_PrivateKey"
       },
       {
         "binding_phase": 13,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/decoder_pkey.c",
-            "kind": "exported",
-            "line": 821,
-            "name": "OSSL_DECODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/ui/ui_lib.c",
-            "kind": "exported",
-            "line": 18,
-            "name": "UI_new",
-            "owning_phase": 13
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "pem.h",
         "owning_phase": 13,
-        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- which is the eighth name of the row above and therefore Phase 13. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. So Phase 10 is what these fifteen are reached through **first** -- which is what 7.5's `NOT_MEASURED` lines say -- and Phase 13 is the phase that retires them, because the fallback legs cannot be omitted.",
+        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
         "symbol": "PEM_read_bio_PrivateKey_ex"
       },
       {
         "binding_phase": 13,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/decoder_pkey.c",
-            "kind": "exported",
-            "line": 821,
-            "name": "OSSL_DECODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/ui/ui_lib.c",
-            "kind": "exported",
-            "line": 18,
-            "name": "UI_new",
-            "owning_phase": 13
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "pem.h",
         "owning_phase": 13,
-        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- which is the eighth name of the row above and therefore Phase 13. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. So Phase 10 is what these fifteen are reached through **first** -- which is what 7.5's `NOT_MEASURED` lines say -- and Phase 13 is the phase that retires them, because the fallback legs cannot be omitted.",
+        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
         "symbol": "PEM_write_PKCS8PrivateKey"
       },
       {
         "binding_phase": 13,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/decoder_pkey.c",
-            "kind": "exported",
-            "line": 821,
-            "name": "OSSL_DECODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/ui/ui_lib.c",
-            "kind": "exported",
-            "line": 18,
-            "name": "UI_new",
-            "owning_phase": 13
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "pem.h",
         "owning_phase": 13,
-        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- which is the eighth name of the row above and therefore Phase 13. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. So Phase 10 is what these fifteen are reached through **first** -- which is what 7.5's `NOT_MEASURED` lines say -- and Phase 13 is the phase that retires them, because the fallback legs cannot be omitted.",
+        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
         "symbol": "PEM_write_PKCS8PrivateKey_nid"
       },
       {
         "binding_phase": 13,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/decoder_pkey.c",
-            "kind": "exported",
-            "line": 821,
-            "name": "OSSL_DECODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/ui/ui_lib.c",
-            "kind": "exported",
-            "line": 18,
-            "name": "UI_new",
-            "owning_phase": 13
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "pem.h",
         "owning_phase": 13,
-        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- which is the eighth name of the row above and therefore Phase 13. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. So Phase 10 is what these fifteen are reached through **first** -- which is what 7.5's `NOT_MEASURED` lines say -- and Phase 13 is the phase that retires them, because the fallback legs cannot be omitted.",
+        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
         "symbol": "PEM_write_PrivateKey"
       },
       {
         "binding_phase": 13,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/decoder_pkey.c",
-            "kind": "exported",
-            "line": 821,
-            "name": "OSSL_DECODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/ui/ui_lib.c",
-            "kind": "exported",
-            "line": 18,
-            "name": "UI_new",
-            "owning_phase": 13
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "pem.h",
         "owning_phase": 13,
-        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- which is the eighth name of the row above and therefore Phase 13. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. So Phase 10 is what these fifteen are reached through **first** -- which is what 7.5's `NOT_MEASURED` lines say -- and Phase 13 is the phase that retires them, because the fallback legs cannot be omitted.",
+        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
         "symbol": "PEM_write_PrivateKey_ex"
       },
       {
         "binding_phase": 13,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/decoder_pkey.c",
-            "kind": "exported",
-            "line": 821,
-            "name": "OSSL_DECODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/ui/ui_lib.c",
-            "kind": "exported",
-            "line": 18,
-            "name": "UI_new",
-            "owning_phase": 13
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "pem.h",
         "owning_phase": 13,
-        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- which is the eighth name of the row above and therefore Phase 13. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. So Phase 10 is what these fifteen are reached through **first** -- which is what 7.5's `NOT_MEASURED` lines say -- and Phase 13 is the phase that retires them, because the fallback legs cannot be omitted.",
+        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
         "symbol": "PEM_write_bio_PKCS8PrivateKey"
       },
       {
         "binding_phase": 13,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/decoder_pkey.c",
-            "kind": "exported",
-            "line": 821,
-            "name": "OSSL_DECODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/ui/ui_lib.c",
-            "kind": "exported",
-            "line": 18,
-            "name": "UI_new",
-            "owning_phase": 13
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "pem.h",
         "owning_phase": 13,
-        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- which is the eighth name of the row above and therefore Phase 13. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. So Phase 10 is what these fifteen are reached through **first** -- which is what 7.5's `NOT_MEASURED` lines say -- and Phase 13 is the phase that retires them, because the fallback legs cannot be omitted.",
+        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
         "symbol": "PEM_write_bio_PKCS8PrivateKey_nid"
       },
       {
         "binding_phase": 13,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/decoder_pkey.c",
-            "kind": "exported",
-            "line": 821,
-            "name": "OSSL_DECODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/ui/ui_lib.c",
-            "kind": "exported",
-            "line": 18,
-            "name": "UI_new",
-            "owning_phase": 13
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "pem.h",
         "owning_phase": 13,
-        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- which is the eighth name of the row above and therefore Phase 13. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. So Phase 10 is what these fifteen are reached through **first** -- which is what 7.5's `NOT_MEASURED` lines say -- and Phase 13 is the phase that retires them, because the fallback legs cannot be omitted.",
+        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
         "symbol": "PEM_write_bio_Parameters"
       },
       {
         "binding_phase": 13,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/decoder_pkey.c",
-            "kind": "exported",
-            "line": 821,
-            "name": "OSSL_DECODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/ui/ui_lib.c",
-            "kind": "exported",
-            "line": 18,
-            "name": "UI_new",
-            "owning_phase": 13
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "pem.h",
         "owning_phase": 13,
-        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- which is the eighth name of the row above and therefore Phase 13. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. So Phase 10 is what these fifteen are reached through **first** -- which is what 7.5's `NOT_MEASURED` lines say -- and Phase 13 is the phase that retires them, because the fallback legs cannot be omitted.",
+        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
         "symbol": "PEM_write_bio_PrivateKey"
       },
       {
         "binding_phase": 13,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/decoder_pkey.c",
-            "kind": "exported",
-            "line": 821,
-            "name": "OSSL_DECODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/encode_decode/encoder_pkey.c",
-            "kind": "exported",
-            "line": 342,
-            "name": "OSSL_ENCODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          },
-          {
-            "authority_unit": "crypto/ui/ui_lib.c",
-            "kind": "exported",
-            "line": 18,
-            "name": "UI_new",
-            "owning_phase": 13
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "pem.h",
         "owning_phase": 13,
-        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- which is the eighth name of the row above and therefore Phase 13. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. So Phase 10 is what these fifteen are reached through **first** -- which is what 7.5's `NOT_MEASURED` lines say -- and Phase 13 is the phase that retires them, because the fallback legs cannot be omitted.",
+        "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
         "symbol": "PEM_write_bio_PrivateKey_ex"
       },
       {
@@ -2074,34 +1744,18 @@
       },
       {
         "binding_phase": 10,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/decoder_pkey.c",
-            "kind": "exported",
-            "line": 821,
-            "name": "OSSL_DECODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "evp.h",
         "owning_phase": 10,
-        "reason": "all four are `d2i_PrivateKey_decoder` then, if it answered NULL, `ossl_d2i_PrivateKey_legacy` (`crypto/asn1/d2i_pr.c:172`-`:175`, `:247`-`:250`). The decoder builds an `OSSL_DECODER_CTX` with `OSSL_DECODER_CTX_new_for_pkey` (`:78`), which is `decoder.h`'s and Phase 10's and is called **first**; the fallback reads `ret->ameth->old_priv_decode`/`priv_decode`/`priv_decode_ex` (`:130`, `:132`) and calls `evp_pkcs82pkey_legacy` (`crypto/evp/evp_pkey.c:52`-`:59` is the same fields again), which is Phase 8's. So both phases feed these four and Phase 10 is the binding one: an export cannot be half-written, and the half that runs first is the decoder. **D353 retired the `ossl_rsa_asn1_meths` blocker**, so the ameth side is no longer absent and the row's `blocked_by` is the decoder alone.",
+        "reason": "all four are `d2i_PrivateKey_decoder` then, if it answered NULL, `ossl_d2i_PrivateKey_legacy` (`crypto/asn1/d2i_pr.c:172`-`:175`, `:247`-`:250`). The decoder builds an `OSSL_DECODER_CTX` with `OSSL_DECODER_CTX_new_for_pkey` (`:78`), which is `decoder.h`'s and Phase 10's and is called **first**; the fallback reads `ret->ameth->old_priv_decode`/`priv_decode`/`priv_decode_ex` (`:130`, `:132`) and calls `evp_pkcs82pkey_legacy` (`crypto/evp/evp_pkey.c:52`-`:59`), which is Phase 8's. **D367 landed `OSSL_DECODER_CTX_new_for_pkey`** -- the decoder chain's four units are transcribed in `src/decoder_meth.rs`, `src/decoder_lib.rs` and `src/decoder_pkey.rs` -- so the row's single `blocked_by` name is now a landed callee and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the four exports are still Phase 10's to write in the ledger's arithmetic. The legacy leg is still Phase 8's, so a `Blocker` row would be stale on the day it was written.",
         "symbol": "d2i_AutoPrivateKey"
       },
       {
         "binding_phase": 10,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/decoder_pkey.c",
-            "kind": "exported",
-            "line": 821,
-            "name": "OSSL_DECODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "evp.h",
         "owning_phase": 10,
-        "reason": "all four are `d2i_PrivateKey_decoder` then, if it answered NULL, `ossl_d2i_PrivateKey_legacy` (`crypto/asn1/d2i_pr.c:172`-`:175`, `:247`-`:250`). The decoder builds an `OSSL_DECODER_CTX` with `OSSL_DECODER_CTX_new_for_pkey` (`:78`), which is `decoder.h`'s and Phase 10's and is called **first**; the fallback reads `ret->ameth->old_priv_decode`/`priv_decode`/`priv_decode_ex` (`:130`, `:132`) and calls `evp_pkcs82pkey_legacy` (`crypto/evp/evp_pkey.c:52`-`:59` is the same fields again), which is Phase 8's. So both phases feed these four and Phase 10 is the binding one: an export cannot be half-written, and the half that runs first is the decoder. **D353 retired the `ossl_rsa_asn1_meths` blocker**, so the ameth side is no longer absent and the row's `blocked_by` is the decoder alone.",
+        "reason": "all four are `d2i_PrivateKey_decoder` then, if it answered NULL, `ossl_d2i_PrivateKey_legacy` (`crypto/asn1/d2i_pr.c:172`-`:175`, `:247`-`:250`). The decoder builds an `OSSL_DECODER_CTX` with `OSSL_DECODER_CTX_new_for_pkey` (`:78`), which is `decoder.h`'s and Phase 10's and is called **first**; the fallback reads `ret->ameth->old_priv_decode`/`priv_decode`/`priv_decode_ex` (`:130`, `:132`) and calls `evp_pkcs82pkey_legacy` (`crypto/evp/evp_pkey.c:52`-`:59`), which is Phase 8's. **D367 landed `OSSL_DECODER_CTX_new_for_pkey`** -- the decoder chain's four units are transcribed in `src/decoder_meth.rs`, `src/decoder_lib.rs` and `src/decoder_pkey.rs` -- so the row's single `blocked_by` name is now a landed callee and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the four exports are still Phase 10's to write in the ledger's arithmetic. The legacy leg is still Phase 8's, so a `Blocker` row would be stale on the day it was written.",
         "symbol": "d2i_AutoPrivateKey_ex"
       },
       {
@@ -2122,34 +1776,18 @@
       },
       {
         "binding_phase": 10,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/decoder_pkey.c",
-            "kind": "exported",
-            "line": 821,
-            "name": "OSSL_DECODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "evp.h",
         "owning_phase": 10,
-        "reason": "all four are `d2i_PrivateKey_decoder` then, if it answered NULL, `ossl_d2i_PrivateKey_legacy` (`crypto/asn1/d2i_pr.c:172`-`:175`, `:247`-`:250`). The decoder builds an `OSSL_DECODER_CTX` with `OSSL_DECODER_CTX_new_for_pkey` (`:78`), which is `decoder.h`'s and Phase 10's and is called **first**; the fallback reads `ret->ameth->old_priv_decode`/`priv_decode`/`priv_decode_ex` (`:130`, `:132`) and calls `evp_pkcs82pkey_legacy` (`crypto/evp/evp_pkey.c:52`-`:59` is the same fields again), which is Phase 8's. So both phases feed these four and Phase 10 is the binding one: an export cannot be half-written, and the half that runs first is the decoder. **D353 retired the `ossl_rsa_asn1_meths` blocker**, so the ameth side is no longer absent and the row's `blocked_by` is the decoder alone.",
+        "reason": "all four are `d2i_PrivateKey_decoder` then, if it answered NULL, `ossl_d2i_PrivateKey_legacy` (`crypto/asn1/d2i_pr.c:172`-`:175`, `:247`-`:250`). The decoder builds an `OSSL_DECODER_CTX` with `OSSL_DECODER_CTX_new_for_pkey` (`:78`), which is `decoder.h`'s and Phase 10's and is called **first**; the fallback reads `ret->ameth->old_priv_decode`/`priv_decode`/`priv_decode_ex` (`:130`, `:132`) and calls `evp_pkcs82pkey_legacy` (`crypto/evp/evp_pkey.c:52`-`:59`), which is Phase 8's. **D367 landed `OSSL_DECODER_CTX_new_for_pkey`** -- the decoder chain's four units are transcribed in `src/decoder_meth.rs`, `src/decoder_lib.rs` and `src/decoder_pkey.rs` -- so the row's single `blocked_by` name is now a landed callee and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the four exports are still Phase 10's to write in the ledger's arithmetic. The legacy leg is still Phase 8's, so a `Blocker` row would be stale on the day it was written.",
         "symbol": "d2i_PrivateKey"
       },
       {
         "binding_phase": 10,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/encode_decode/decoder_pkey.c",
-            "kind": "exported",
-            "line": 821,
-            "name": "OSSL_DECODER_CTX_new_for_pkey",
-            "owning_phase": 10
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "evp.h",
         "owning_phase": 10,
-        "reason": "all four are `d2i_PrivateKey_decoder` then, if it answered NULL, `ossl_d2i_PrivateKey_legacy` (`crypto/asn1/d2i_pr.c:172`-`:175`, `:247`-`:250`). The decoder builds an `OSSL_DECODER_CTX` with `OSSL_DECODER_CTX_new_for_pkey` (`:78`), which is `decoder.h`'s and Phase 10's and is called **first**; the fallback reads `ret->ameth->old_priv_decode`/`priv_decode`/`priv_decode_ex` (`:130`, `:132`) and calls `evp_pkcs82pkey_legacy` (`crypto/evp/evp_pkey.c:52`-`:59` is the same fields again), which is Phase 8's. So both phases feed these four and Phase 10 is the binding one: an export cannot be half-written, and the half that runs first is the decoder. **D353 retired the `ossl_rsa_asn1_meths` blocker**, so the ameth side is no longer absent and the row's `blocked_by` is the decoder alone.",
+        "reason": "all four are `d2i_PrivateKey_decoder` then, if it answered NULL, `ossl_d2i_PrivateKey_legacy` (`crypto/asn1/d2i_pr.c:172`-`:175`, `:247`-`:250`). The decoder builds an `OSSL_DECODER_CTX` with `OSSL_DECODER_CTX_new_for_pkey` (`:78`), which is `decoder.h`'s and Phase 10's and is called **first**; the fallback reads `ret->ameth->old_priv_decode`/`priv_decode`/`priv_decode_ex` (`:130`, `:132`) and calls `evp_pkcs82pkey_legacy` (`crypto/evp/evp_pkey.c:52`-`:59`), which is Phase 8's. **D367 landed `OSSL_DECODER_CTX_new_for_pkey`** -- the decoder chain's four units are transcribed in `src/decoder_meth.rs`, `src/decoder_lib.rs` and `src/decoder_pkey.rs` -- so the row's single `blocked_by` name is now a landed callee and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the four exports are still Phase 10's to write in the ledger's arithmetic. The legacy leg is still Phase 8's, so a `Blocker` row would be stale on the day it was written.",
         "symbol": "d2i_PrivateKey_ex"
       },
       {
@@ -3446,7 +3084,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "c139a3d1981946e81ede6b7f71ea6e27ded8f513366136c5e60eb1183ff29bf7"
+      "sha256": "35da0d587fc72a4ce704769d26388c429f696c23aee5d35bc214ff523ba74ee2"
     },
     {
       "name": "export-defining-units",
@@ -3466,7 +3104,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "1bd98690c837100f708693dcd60472f46ea74d40a2c4e78e940b0de4ae97b5fc"
+      "sha256": "84d3c5d2eeeda9640c674dc1bfcfe186552e8e5443ff9e14213ed247a7caa250"
     },
     {
       "name": "phase-state",
@@ -3480,7 +3118,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "627ea309be475e39b1d9936f2643633367322a23d33e614bc4ccb49fa7370e8e"
+      "sha256": "3f285d10e87dda15441bd557c0ed232f3d8ac8e65303846c0830000c08b8704a"
     }
   ],
   "kind": "phase7-obligations",

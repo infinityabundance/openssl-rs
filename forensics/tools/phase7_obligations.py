@@ -284,28 +284,6 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
     ),
     BlockedHandoff(
         symbols=(
-            "d2i_AutoPrivateKey", "d2i_AutoPrivateKey_ex", "d2i_PrivateKey",
-            "d2i_PrivateKey_ex",
-        ),
-        binding_phase=10,
-        blocked_by=(
-            Blocker("OSSL_DECODER_CTX_new_for_pkey", "crypto/encode_decode/decoder_pkey.c", 821, "exported", 10),
-        ),
-        reason=(
-            "all four are `d2i_PrivateKey_decoder` then, if it answered NULL, "
-            "`ossl_d2i_PrivateKey_legacy` (`crypto/asn1/d2i_pr.c:172`-`:175`, `:247`-`:250`). The "
-            "decoder builds an `OSSL_DECODER_CTX` with `OSSL_DECODER_CTX_new_for_pkey` (`:78`), which is "
-            "`decoder.h`'s and Phase 10's and is called **first**; the fallback reads "
-            "`ret->ameth->old_priv_decode`/`priv_decode`/`priv_decode_ex` (`:130`, `:132`) and calls "
-            "`evp_pkcs82pkey_legacy` (`crypto/evp/evp_pkey.c:52`-`:59` is the same fields again), which "
-            "is Phase 8's. So both phases feed these four and Phase 10 is the binding one: an export "
-            "cannot be half-written, and the half that runs first is the decoder. **D353 retired the "
-            "`ossl_rsa_asn1_meths` blocker**, so the ameth side is no longer absent and the row's "
-            "`blocked_by` is the decoder alone."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
             "ASN1_item_sign_ex", "ASN1_item_verify_ex",
         ),
         binding_phase=11,
@@ -339,38 +317,6 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
             "in the handler -- `CONF_imodule_get_value`, `NCONF_get_section`, "
             "`evp_set_default_properties_int` -- are landed, so Phase 11 is the only blocker, and it is "
             "the same one the subphase plan names for this name."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "PEM_read_PrivateKey", "PEM_read_PrivateKey_ex", "PEM_read_bio_Parameters",
-            "PEM_read_bio_Parameters_ex", "PEM_read_bio_PrivateKey",
-            "PEM_read_bio_PrivateKey_ex", "PEM_write_PKCS8PrivateKey",
-            "PEM_write_PKCS8PrivateKey_nid", "PEM_write_PrivateKey", "PEM_write_PrivateKey_ex",
-            "PEM_write_bio_PKCS8PrivateKey", "PEM_write_bio_PKCS8PrivateKey_nid",
-            "PEM_write_bio_Parameters", "PEM_write_bio_PrivateKey",
-            "PEM_write_bio_PrivateKey_ex",
-        ),
-        binding_phase=13,
-        blocked_by=(
-            Blocker("OSSL_DECODER_CTX_new_for_pkey", "crypto/encode_decode/decoder_pkey.c", 821, "exported", 10),
-            Blocker("OSSL_ENCODER_CTX_new_for_pkey", "crypto/encode_decode/encoder_pkey.c", 342, "exported", 10),
-            Blocker("UI_new", "crypto/ui/ui_lib.c", 18, "exported", 13),
-        ),
-        reason=(
-            "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt "
-            "is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, "
-            "`decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> "
-            "`PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- which is the "
-            "eighth name of the row above and therefore Phase 13. The six writers expand "
-            "`IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is "
-            "Phase 10 and whose `legacy:` label reaches "
-            "`PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); "
-            "the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose "
-            "`OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` "
-            "(`:91`) is Phase 13. So Phase 10 is what these fifteen are reached through **first** -- "
-            "which is what 7.5's `NOT_MEASURED` lines say -- and Phase 13 is the phase that retires "
-            "them, because the fallback legs cannot be omitted."
         ),
     ),
 ]
@@ -603,6 +549,53 @@ UNBLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
         "which is this stratum's to write behind the Phase 13 `UI` and the Phase 9 `RAND_*` front -- "
         "neither a file:line in `pem_pkey.c`, so a `Blocker` row would be stale on the day it was "
         "written.",
+    ),
+    (
+        (
+            "d2i_AutoPrivateKey", "d2i_AutoPrivateKey_ex", "d2i_PrivateKey",
+            "d2i_PrivateKey_ex",
+        ),
+        10,
+        "all four are `d2i_PrivateKey_decoder` then, if it answered NULL, "
+        "`ossl_d2i_PrivateKey_legacy` (`crypto/asn1/d2i_pr.c:172`-`:175`, `:247`-`:250`). The "
+        "decoder builds an `OSSL_DECODER_CTX` with `OSSL_DECODER_CTX_new_for_pkey` (`:78`), which is "
+        "`decoder.h`'s and Phase 10's and is called **first**; the fallback reads "
+        "`ret->ameth->old_priv_decode`/`priv_decode`/`priv_decode_ex` (`:130`, `:132`) and calls "
+        "`evp_pkcs82pkey_legacy` (`crypto/evp/evp_pkey.c:52`-`:59`), which is Phase 8's. **D367 landed "
+        "`OSSL_DECODER_CTX_new_for_pkey`** -- the decoder chain's four units are transcribed in "
+        "`src/decoder_meth.rs`, `src/decoder_lib.rs` and `src/decoder_pkey.rs` -- so the row's single "
+        "`blocked_by` name is now a landed callee and the row moves here from `BLOCKED_HANDOFFS` "
+        "rather than retiring: the four exports are still Phase 10's to write in the ledger's "
+        "arithmetic. The legacy leg is still Phase 8's, so a `Blocker` row would be stale on the day "
+        "it was written.",
+    ),
+    (
+        (
+            "PEM_read_PrivateKey", "PEM_read_PrivateKey_ex", "PEM_read_bio_Parameters",
+            "PEM_read_bio_Parameters_ex", "PEM_read_bio_PrivateKey",
+            "PEM_read_bio_PrivateKey_ex", "PEM_write_PKCS8PrivateKey",
+            "PEM_write_PKCS8PrivateKey_nid", "PEM_write_PrivateKey", "PEM_write_PrivateKey_ex",
+            "PEM_write_bio_PKCS8PrivateKey", "PEM_write_bio_PKCS8PrivateKey_nid",
+            "PEM_write_bio_Parameters", "PEM_write_bio_PrivateKey",
+            "PEM_write_bio_PrivateKey_ex",
+        ),
+        13,
+        "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt "
+        "is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, "
+        "`decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> "
+        "`PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six "
+        "writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose "
+        "encoder call is Phase 10 and whose `legacy:` label reaches "
+        "`PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); "
+        "the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose "
+        "`OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` "
+        "(`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- "
+        "`OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and "
+        "`UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than "
+        "retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and "
+        "retiring the row would move them into this sealed stratum's `implemented` list on the "
+        "strength of work it did not do. The fallback legs cannot be omitted, which is why the "
+        "receiving stratum is the latest of the three.",
     ),
 ]
 

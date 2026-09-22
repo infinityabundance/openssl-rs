@@ -99,7 +99,6 @@ use crate::selftest::OsslCallback;
 ///
 /// A decoder can carry several names in one colon-separated string, and the fetch block splits it
 /// with `strchr`: only the *first* name is used for the name-map id.
-#[allow(dead_code)] // read by the withheld fetch block, next pass
 const NAME_SEPARATOR: c_char = b':' as c_char;
 
 /// `#define OSSL_OP_DECODER 21` — `include/openssl/core_dispatch.h:296`.
@@ -292,7 +291,6 @@ pub unsafe extern "C" fn OSSL_DECODER_free(decoder: *mut OsslDecoder) {
 /// # Safety
 /// `algodef` must be a live algorithm definition whose `implementation` is a terminated dispatch
 /// table; `prov` must be NULL or live.
-#[allow(dead_code)] // read by the withheld pkey half and by `decoder_lib.c`'s `collect_extra_decoder`
 pub(crate) unsafe fn ossl_decoder_from_algorithm(
     id: c_int,
     algodef: *const crate::provider::activate::OsslAlgorithm,
@@ -436,7 +434,6 @@ pub unsafe extern "C" fn OSSL_DECODER_get0_properties(
 ///
 /// # Safety
 /// `decoder` must be null-or-live; a NULL is a diagnosed `ERR_R_PASSED_NULL_PARAMETER`.
-#[allow(dead_code)] // read by decoder_lib.c's `ossl_decoder_instance_new`, next pass
 pub(crate) unsafe fn ossl_decoder_parsed_properties(
     decoder: *const OsslDecoder,
 ) -> *mut OsslPropertyList {
@@ -453,7 +450,7 @@ pub(crate) unsafe fn ossl_decoder_parsed_properties(
 ///
 /// # Safety
 /// `decoder` must be null-or-live; a NULL is a diagnosed `ERR_R_PASSED_NULL_PARAMETER`.
-#[allow(dead_code)] // read by `ossl_decoder_fast_is_a` and by decoder_lib.c, next pass
+#[allow(dead_code)] // read by this module's own unit test; the authority's callers are `store_result.c`'s
 pub(crate) unsafe fn ossl_decoder_get_number(decoder: *const OsslDecoder) -> c_int {
     if decoder.is_null() {
         // SAFETY: a compile-time-constant site.
