@@ -20802,6 +20802,126 @@ pub(crate) const PROV_X942KDF_951: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `pkcs12kdf_derive` at `providers/implementations/kdfs/pkcs12kdf.c:67` (ERR_R_EVP_LIB).
+pub(crate) const PROV_PKCS12KDF_67: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pkcs12kdf.c",
+    line: 67,
+    func: c"pkcs12kdf_derive",
+    lib: 57,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `pkcs12kdf_derive` at `providers/implementations/kdfs/pkcs12kdf.c:73` (PROV_R_INVALID_DIGEST_SIZE).
+pub(crate) const PROV_PKCS12KDF_73: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pkcs12kdf.c",
+    line: 73,
+    func: c"pkcs12kdf_derive",
+    lib: 57,
+    reason: 218,
+    dynamic_reason: false,
+};
+
+/// `kdf_pkcs12_derive` at `providers/implementations/kdfs/pkcs12kdf.c:232` (PROV_R_MISSING_PASS).
+pub(crate) const PROV_PKCS12KDF_232: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pkcs12kdf.c",
+    line: 232,
+    func: c"kdf_pkcs12_derive",
+    lib: 57,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `kdf_pkcs12_derive` at `providers/implementations/kdfs/pkcs12kdf.c:237` (PROV_R_MISSING_SALT).
+pub(crate) const PROV_PKCS12KDF_237: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pkcs12kdf.c",
+    line: 237,
+    func: c"kdf_pkcs12_derive",
+    lib: 57,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_set_ctx_params_decoder` at `providers/implementations/kdfs/pkcs12kdf.c:288` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PKCS12KDF_288: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pkcs12kdf.c",
+    line: 288,
+    func: c"pkcs12_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_set_ctx_params_decoder` at `providers/implementations/kdfs/pkcs12kdf.c:299` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PKCS12KDF_299: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pkcs12kdf.c",
+    line: 299,
+    func: c"pkcs12_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_set_ctx_params_decoder` at `providers/implementations/kdfs/pkcs12kdf.c:316` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PKCS12KDF_316: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pkcs12kdf.c",
+    line: 316,
+    func: c"pkcs12_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_set_ctx_params_decoder` at `providers/implementations/kdfs/pkcs12kdf.c:327` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PKCS12KDF_327: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pkcs12kdf.c",
+    line: 327,
+    func: c"pkcs12_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_set_ctx_params_decoder` at `providers/implementations/kdfs/pkcs12kdf.c:343` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PKCS12KDF_343: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pkcs12kdf.c",
+    line: 343,
+    func: c"pkcs12_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_set_ctx_params_decoder` at `providers/implementations/kdfs/pkcs12kdf.c:354` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PKCS12KDF_354: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pkcs12kdf.c",
+    line: 354,
+    func: c"pkcs12_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_set_ctx_params_decoder` at `providers/implementations/kdfs/pkcs12kdf.c:366` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PKCS12KDF_366: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pkcs12kdf.c",
+    line: 366,
+    func: c"pkcs12_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_get_ctx_params_decoder` at `providers/implementations/kdfs/pkcs12kdf.c:451` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PKCS12KDF_451: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pkcs12kdf.c",
+    line: 451,
+    func: c"pkcs12_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
 /// `rsa_new_intern` at `crypto/rsa/rsa_lib.c:85` (ERR_R_CRYPTO_LIB).
 pub(crate) const RSA_LIB_85: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
@@ -34890,6 +35010,18 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_X942KDF_842,
     PROV_X942KDF_939,
     PROV_X942KDF_951,
+    PROV_PKCS12KDF_67,
+    PROV_PKCS12KDF_73,
+    PROV_PKCS12KDF_232,
+    PROV_PKCS12KDF_237,
+    PROV_PKCS12KDF_288,
+    PROV_PKCS12KDF_299,
+    PROV_PKCS12KDF_316,
+    PROV_PKCS12KDF_327,
+    PROV_PKCS12KDF_343,
+    PROV_PKCS12KDF_354,
+    PROV_PKCS12KDF_366,
+    PROV_PKCS12KDF_451,
     RSA_LIB_85,
     RSA_LIB_106,
     RSA_LIB_116,

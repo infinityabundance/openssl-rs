@@ -549,6 +549,11 @@ COVERED_FILES = [
     # `x942kdf_derive`, `x942kdf_hash_kdm` and its two decoders.
     ("providers/implementations/kdfs/sskdf.c", "PROV_SSKDF"),
     ("providers/implementations/kdfs/x942kdf.c", "PROV_X942KDF"),
+    # The PKCS12 KDF (8.10's first provider-KDF row). `pkcs12kdf.c` is `.c.in`-generated, so its
+    # `__FILE__` is the bare build-relative path and its line numbers are the generated text's.
+    # It raises from `pkcs12kdf_derive` (`:69`, `:75`), `kdf_pkcs12_derive` (`:234`, `:239`) and
+    # its two generated decoders (`:288`-`:366`, `:451`).
+    ("providers/implementations/kdfs/pkcs12kdf.c", "PROV_PKCS12KDF"),
     # Phase 8.4: the `crypto/rsa` subsystem. The same rule as `crypto/bn` above -- this is
     # the *subsystem* set, not a selection of convenient files, because every one of them
     # raises from a surface Phase 8 owns and a coordinate's `file` string is part of the

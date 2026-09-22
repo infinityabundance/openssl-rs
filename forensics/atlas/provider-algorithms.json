@@ -82,7 +82,7 @@
       "open": {
         "10": 636,
         "13": 39,
-        "8": 137,
+        "8": 136,
         "9": 10
       },
       "what": "`open[N]` are the rows the plan gives stratum N that the crate does not publish, and `handed_on[N]` are the unlanded rows the plan gives a later stratum. Both are derived from each row's `owning_phase` and `implementation_state` and are not stored on the row, because a stored `open`/`deferred` is a statement about which stratum was active on the day the census ran (docs/DECISIONS.md D295)."
@@ -4467,12 +4467,13 @@
         "blocked_by": null,
         "capability_filtered": false,
         "capability_predicate": null,
+        "crate_dispatch": "PKCS12KDF_FUNCTIONS",
         "dispatch_table_symbol": "ossl_kdf_pkcs12_functions",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_KDF",
         "operation_id": 4,
         "owning_phase": 8,
-        "plan_match": "operation-default",
+        "plan_match": "crate-table",
         "property_definition": "provider=default",
         "provider": "default",
         "row_order": 7,

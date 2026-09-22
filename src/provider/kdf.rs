@@ -45,8 +45,8 @@ use crate::der_writer::{
 };
 use crate::evp::cipher::{EVP_CIPHER_fetch, EVP_CIPHER_free, EVP_CIPHER_is_a};
 use crate::evp::digest::{
-    EVP_DigestFinal_ex, EVP_DigestInit, EVP_DigestUpdate, EVP_MD_CTX_copy_ex, EVP_MD_CTX_free,
-    EVP_MD_CTX_new, EVP_MD_get_size, EVP_MD_xof,
+    EVP_DigestFinal_ex, EVP_DigestInit, EVP_DigestInit_ex, EVP_DigestUpdate, EVP_MD_CTX_copy_ex,
+    EVP_MD_CTX_free, EVP_MD_CTX_new, EVP_MD_get_block_size, EVP_MD_get_size, EVP_MD_xof,
 };
 use crate::evp::kdf::{
     OSSL_FUNC_KDF_DERIVE, OSSL_FUNC_KDF_DUPCTX, OSSL_FUNC_KDF_FREECTX,
@@ -64,11 +64,13 @@ use crate::packet::{
 use crate::params::{
     ossl_param_get1_concat_octet_string, ossl_param_get1_octet_string_from_param,
     OSSL_PARAM_construct_end, OSSL_PARAM_construct_octet_string, OSSL_PARAM_construct_size_t,
-    OSSL_PARAM_get_int, OSSL_PARAM_get_octet_string, OSSL_PARAM_get_size_t,
+    OSSL_PARAM_get_int, OSSL_PARAM_get_octet_string, OSSL_PARAM_get_size_t, OSSL_PARAM_get_uint64,
     OSSL_PARAM_get_utf8_string_ptr, OSSL_PARAM_set_size_t, OsslParam, END,
 };
 use crate::provider::activate::OsslAlgorithm;
-use crate::provider::cipher::{param_int, param_octet_string, param_size_t, param_utf8_string};
+use crate::provider::cipher::{
+    param_int, param_octet_string, param_size_t, param_uint64, param_utf8_string,
+};
 use crate::provider::ctx::prov_libctx_of;
 use crate::provider::util::prov_digest::{
     ossl_prov_digest_copy, ossl_prov_digest_load, ossl_prov_digest_md, ossl_prov_digest_reset,
@@ -76,7 +78,7 @@ use crate::provider::util::prov_digest::{
 };
 use crate::provider::util::{ossl_prov_macctx_load, ossl_prov_memdup};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{cleanse, CRYPTO_clear_free, CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem::{cleanse, CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 
 /// `OSSL_OP_KDF` — `include/openssl/core_dispatch.h`.
 pub(crate) const OSSL_OP_KDF: c_int = 4;
@@ -139,6 +141,12 @@ const OSSL_KDF_PARAM_X942_SUPP_PRIVINFO: *const c_char = c"supp-privinfo".as_ptr
 const OSSL_KDF_PARAM_X942_SUPP_PUBINFO: *const c_char = c"supp-pubinfo".as_ptr();
 /// `OSSL_KDF_PARAM_X942_USE_KEYBITS` — `core_names.h:322`.
 const OSSL_KDF_PARAM_X942_USE_KEYBITS: *const c_char = c"use-keybits".as_ptr();
+/// `OSSL_KDF_PARAM_PASSWORD` — `core_names.h:299` (`"pass"`).
+const OSSL_KDF_PARAM_PASSWORD: *const c_char = c"pass".as_ptr();
+/// `OSSL_KDF_PARAM_ITER` — `core_names.h:290` (`"iter"`).
+const OSSL_KDF_PARAM_ITER: *const c_char = c"iter".as_ptr();
+/// `OSSL_KDF_PARAM_PKCS12_ID` — `core_names.h:300` (`"id"`).
+const OSSL_KDF_PARAM_PKCS12_ID: *const c_char = c"id".as_ptr();
 /// `OSSL_ALG_PARAM_ENGINE` — `core_names.h:129`, a decoder key and deliberately not a
 /// settable-list entry (`provider_util.h`'s `hidden` form in the generation spec).
 const OSSL_ALG_PARAM_ENGINE: *const c_char = c"engine".as_ptr();
@@ -151,6 +159,8 @@ const OSSL_ALG_PARAM_PROPERTIES: *const c_char = c"properties".as_ptr();
 const FILE_SSKDF: *const c_char = c"providers/implementations/kdfs/sskdf.c".as_ptr();
 /// `__FILE__` for `x942kdf.c`, measured the same way.
 const FILE_X942: *const c_char = c"providers/implementations/kdfs/x942kdf.c".as_ptr();
+/// `__FILE__` for `pkcs12kdf.c`, measured the same way.
+const FILE_PKCS12KDF: *const c_char = c"providers/implementations/kdfs/pkcs12kdf.c".as_ptr();
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
 
@@ -2288,18 +2298,533 @@ pub(crate) static X942KDF_FUNCTIONS: [OsslDispatch; 10] = [
     },
 ];
 
+// =============================================================================================
+// `providers/implementations/kdfs/pkcs12kdf.c` — PKCS12KDF
+// =============================================================================================
+
+/// `struct KDF_PKCS12` — `pkcs12kdf.c:42-51`.
+#[repr(C)]
+pub(crate) struct KdfPkcs12 {
+    /// `void *provctx`.
+    pub provctx: *mut c_void,
+    /// `PROV_DIGEST digest`.
+    pub digest: ProvDigest,
+    /// `unsigned char *pass` / `size_t pass_len`.
+    pub pass: *mut u8,
+    pub pass_len: usize,
+    /// `unsigned char *salt` / `size_t salt_len`.
+    pub salt: *mut u8,
+    pub salt_len: usize,
+    /// `uint64_t iter`.
+    pub iter: u64,
+    /// `int id` — the PKCS12 id byte (`pkcs12kdf.c:49`).
+    pub id: c_int,
+}
+
+/// The `pkcs12_set_ctx_params_decoder` keys this profile's generated switch raises for, each with
+/// its (field id, raise site). Every key names its own field, so the field id is the order the
+/// generated struct declares them in; the generated `strcmp`-tree at `pkcs12kdf.c:284-372`
+/// raises `PROV_R_REPEATED_PARAMETER` at the site of the *second* occurrence of any one.
+const PKCS12_SET_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char, u32); 7] = [
+    (&err_sites::PROV_PKCS12KDF_288, OSSL_KDF_PARAM_DIGEST, 0),
+    (&err_sites::PROV_PKCS12KDF_299, OSSL_ALG_PARAM_ENGINE, 1),
+    (&err_sites::PROV_PKCS12KDF_316, OSSL_KDF_PARAM_PKCS12_ID, 2),
+    (&err_sites::PROV_PKCS12KDF_327, OSSL_KDF_PARAM_ITER, 3),
+    (&err_sites::PROV_PKCS12KDF_343, OSSL_KDF_PARAM_PASSWORD, 4),
+    (&err_sites::PROV_PKCS12KDF_354, OSSL_KDF_PARAM_PROPERTIES, 5),
+    (&err_sites::PROV_PKCS12KDF_366, OSSL_KDF_PARAM_SALT, 6),
+];
+
+/// The `pkcs12_get_ctx_params_decoder` key, `pkcs12kdf.c:448-456`.
+const PKCS12_GET_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char, u32); 1] =
+    [(&err_sites::PROV_PKCS12KDF_451, OSSL_KDF_PARAM_SIZE, 0)];
+
+/// `static const OSSL_PARAM pkcs12_set_ctx_params_list[]` — `pkcs12kdf.c:249-257`.
+static PKCS12_SETTABLE_CTX_PARAMS: [OsslParam; 7] = [
+    param_utf8_string(OSSL_KDF_PARAM_PROPERTIES),
+    param_utf8_string(OSSL_KDF_PARAM_DIGEST),
+    param_octet_string(OSSL_KDF_PARAM_PASSWORD),
+    param_octet_string(OSSL_KDF_PARAM_SALT),
+    param_uint64(OSSL_KDF_PARAM_ITER),
+    param_int(OSSL_KDF_PARAM_PKCS12_ID),
+    END,
+];
+
+/// `static const OSSL_PARAM pkcs12_get_ctx_params_list[]` — `pkcs12kdf.c:427-430`.
+static PKCS12_GETTABLE_CTX_PARAMS: [OsslParam; 2] = [param_size_t(OSSL_KDF_PARAM_SIZE), END];
+
+/// `static int pkcs12kdf_derive(...)` — `pkcs12kdf.c:55-141`. **PKCS12 compatible key/IV
+/// generation**: the authority's construction, transcribed with its `goto end` as a labelled
+/// block whose single exit does the same four `OPENSSL_free`s and the `EVP_MD_CTX_free`.
+///
+/// # Safety
+/// `md_type` is a live digest; `pass`/`salt` are live for their lengths; `out` is writable for
+/// `n` bytes.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+unsafe fn pkcs12kdf_derive(
+    pass: *const u8,
+    passlen: usize,
+    salt: *const u8,
+    saltlen: usize,
+    id: c_int,
+    iter: u64,
+    md_type: *const crate::evp::digest::EvpMd,
+    out: *mut u8,
+    n_in: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = EVP_MD_CTX_new();
+        let mut b: *mut u8 = ptr::null_mut();
+        let mut d: *mut u8 = ptr::null_mut();
+        let mut i_buf: *mut u8 = ptr::null_mut();
+        let mut ai: *mut u8 = ptr::null_mut();
+        let mut ret: c_int = 0;
+        let mut n = n_in;
+        let mut out = out;
+
+        if ctx.is_null() {
+            raise_site(&err_sites::PROV_PKCS12KDF_67);
+        } else {
+            let vi = EVP_MD_get_block_size(md_type);
+            let ui = EVP_MD_get_size(md_type);
+            'end: {
+                if ui <= 0 || vi <= 0 {
+                    raise_site(&err_sites::PROV_PKCS12KDF_73);
+                    break 'end;
+                }
+                let u = ui as usize;
+                let v = vi as usize;
+                d = CRYPTO_malloc(v, FILE_PKCS12KDF, LINE).cast();
+                ai = CRYPTO_malloc(u, FILE_PKCS12KDF, LINE).cast();
+                b = CRYPTO_malloc(v + 1, FILE_PKCS12KDF, LINE).cast();
+                let slen = v * saltlen.div_ceil(v);
+                let plen = if passlen != 0 {
+                    v * passlen.div_ceil(v)
+                } else {
+                    0
+                };
+                let ilen = slen + plen;
+                i_buf = CRYPTO_malloc(ilen, FILE_PKCS12KDF, LINE).cast();
+                if d.is_null() || ai.is_null() || b.is_null() || i_buf.is_null() {
+                    break 'end;
+                }
+                for i in 0..v {
+                    *d.add(i) = id as u8;
+                }
+                let mut p = i_buf;
+                for i in 0..slen {
+                    *p = *salt.add(i % saltlen);
+                    p = p.add(1);
+                }
+                for i in 0..plen {
+                    *p = *pass.add(i % passlen);
+                    p = p.add(1);
+                }
+                loop {
+                    if EVP_DigestInit_ex(ctx, md_type, ptr::null_mut()) == 0
+                        || EVP_DigestUpdate(ctx, d.cast(), v) == 0
+                        || EVP_DigestUpdate(ctx, i_buf.cast(), ilen) == 0
+                        || EVP_DigestFinal_ex(ctx, ai, ptr::null_mut()) == 0
+                    {
+                        break 'end;
+                    }
+                    let mut iter_cnt: u64 = 1;
+                    while iter_cnt < iter {
+                        if EVP_DigestInit_ex(ctx, md_type, ptr::null_mut()) == 0
+                            || EVP_DigestUpdate(ctx, ai.cast(), u) == 0
+                            || EVP_DigestFinal_ex(ctx, ai, ptr::null_mut()) == 0
+                        {
+                            break 'end;
+                        }
+                        iter_cnt += 1;
+                    }
+                    let copy = if n < u { n } else { u };
+                    ptr::copy_nonoverlapping(ai, out, copy);
+                    if u >= n {
+                        ret = 1;
+                        break;
+                    }
+                    n -= u;
+                    out = out.add(u);
+                    for j in 0..v {
+                        *b.add(j) = *ai.add(j % u);
+                    }
+                    let mut j = 0usize;
+                    while j < ilen {
+                        let ij = i_buf.add(j);
+                        let mut c: u16 = 1;
+                        let mut k = v;
+                        while k > 0 {
+                            k -= 1;
+                            c += *ij.add(k) as u16 + *b.add(k) as u16;
+                            *ij.add(k) = c as u8;
+                            c >>= 8;
+                        }
+                        j += v;
+                    }
+                }
+            }
+        }
+
+        CRYPTO_free(ai.cast(), FILE_PKCS12KDF, LINE);
+        CRYPTO_free(b.cast(), FILE_PKCS12KDF, LINE);
+        CRYPTO_free(d.cast(), FILE_PKCS12KDF, LINE);
+        CRYPTO_free(i_buf.cast(), FILE_PKCS12KDF, LINE);
+        EVP_MD_CTX_free(ctx);
+        ret
+    }
+}
+
+/// `static void *kdf_pkcs12_new(void *provctx)` — `pkcs12kdf.c:143-155`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pkcs12kdf_new(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let ctx = CRYPTO_zalloc(core::mem::size_of::<KdfPkcs12>(), FILE_PKCS12KDF, LINE)
+            .cast::<KdfPkcs12>();
+        if ctx.is_null() {
+            return ptr::null_mut();
+        }
+        (*ctx).provctx = provctx;
+        ctx.cast()
+    }
+}
+
+/// `static void kdf_pkcs12_cleanup(KDF_PKCS12 *ctx)` — `pkcs12kdf.c:157-163`.
+///
+/// # Safety
+/// `ctx` is a live context.
+unsafe fn pkcs12kdf_cleanup(ctx: *mut KdfPkcs12) {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe {
+        ossl_prov_digest_reset(ptr::addr_of_mut!((*ctx).digest));
+        CRYPTO_free((*ctx).salt.cast(), FILE_PKCS12KDF, LINE);
+        CRYPTO_clear_free((*ctx).pass.cast(), (*ctx).pass_len, FILE_PKCS12KDF, LINE);
+        ptr::write_bytes(ctx.cast::<u8>(), 0, core::mem::size_of::<KdfPkcs12>());
+    }
+}
+
+/// `static void kdf_pkcs12_free(void *vctx)` — `pkcs12kdf.c:165-173`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pkcs12kdf_free(vctx: *mut c_void) {
+    // SAFETY: `vctx` is NULL or a live context.
+    unsafe {
+        if !vctx.is_null() {
+            pkcs12kdf_cleanup(vctx.cast::<KdfPkcs12>());
+            CRYPTO_free(vctx, FILE_PKCS12KDF, LINE);
+        }
+    }
+}
+
+/// `static void kdf_pkcs12_reset(void *vctx)` — `pkcs12kdf.c:175-182`. The `provctx` is saved
+/// across the cleanup's `memset` because the whole struct is cleared.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pkcs12kdf_reset(vctx: *mut c_void) {
+    // SAFETY: `vctx` is a live context per the contract.
+    unsafe {
+        let ctx = vctx.cast::<KdfPkcs12>();
+        let provctx = (*ctx).provctx;
+        pkcs12kdf_cleanup(ctx);
+        (*ctx).provctx = provctx;
+    }
+}
+
+/// `static void *kdf_pkcs12_dup(void *vctx)` — `pkcs12kdf.c:184-205`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pkcs12kdf_dup(vctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let src = vctx.cast::<KdfPkcs12>();
+        let dest = pkcs12kdf_new((*src).provctx).cast::<KdfPkcs12>();
+        if dest.is_null() {
+            return ptr::null_mut();
+        }
+        if ossl_prov_memdup(
+            (*src).salt.cast(),
+            (*src).salt_len,
+            ptr::addr_of_mut!((*dest).salt),
+            ptr::addr_of_mut!((*dest).salt_len),
+        ) == 0
+            || ossl_prov_memdup(
+                (*src).pass.cast(),
+                (*src).pass_len,
+                ptr::addr_of_mut!((*dest).pass),
+                ptr::addr_of_mut!((*dest).pass_len),
+            ) == 0
+            || ossl_prov_digest_copy(
+                ptr::addr_of_mut!((*dest).digest),
+                ptr::addr_of!((*src).digest),
+            ) == 0
+        {
+            pkcs12kdf_free(dest.cast());
+            return ptr::null_mut();
+        }
+        (*dest).iter = (*src).iter;
+        (*dest).id = (*src).id;
+        dest.cast()
+    }
+}
+
+/// `static int pkcs12kdf_set_membuf(unsigned char **buffer, size_t *buflen,
+/// const OSSL_PARAM *p)` — `pkcs12kdf.c:207-222`.
+///
+/// # Safety
+/// `buffer`/`buflen` are live; `p` is a live parameter.
+unsafe fn pkcs12kdf_set_membuf(
+    buffer: *mut *mut u8,
+    buflen: *mut usize,
+    p: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        CRYPTO_clear_free((*buffer).cast(), *buflen, FILE_PKCS12KDF, LINE);
+        *buffer = ptr::null_mut();
+        *buflen = 0;
+
+        if (*p).data_size == 0 {
+            let m = CRYPTO_malloc(1, FILE_PKCS12KDF, LINE).cast::<u8>();
+            if m.is_null() {
+                return 0;
+            }
+            *buffer = m;
+        } else if !(*p).data.is_null()
+            && OSSL_PARAM_get_octet_string(p.cast_mut(), buffer.cast(), 0, buflen) == 0
+        {
+            return 0;
+        }
+        1
+    }
+}
+
+/// `static int kdf_pkcs12_derive(void *vctx, unsigned char *key, size_t keylen, const OSSL_PARAM
+/// params[])` — `pkcs12kdf.c:224-246`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pkcs12kdf_ctx_derive(
+    vctx: *mut c_void,
+    key: *mut u8,
+    keylen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 || pkcs12kdf_set_ctx_params(vctx, params) == 0 {
+            return 0;
+        }
+        let ctx = vctx.cast::<KdfPkcs12>();
+        if (*ctx).pass.is_null() {
+            return fail_at(&err_sites::PROV_PKCS12KDF_232);
+        }
+        if (*ctx).salt.is_null() {
+            return fail_at(&err_sites::PROV_PKCS12KDF_237);
+        }
+        let md = ossl_prov_digest_md(ptr::addr_of!((*ctx).digest));
+        pkcs12kdf_derive(
+            (*ctx).pass,
+            (*ctx).pass_len,
+            (*ctx).salt,
+            (*ctx).salt_len,
+            (*ctx).id,
+            (*ctx).iter,
+            md,
+            key,
+            keylen,
+        )
+    }
+}
+
+/// `static int kdf_pkcs12_set_ctx_params(void *vctx, const OSSL_PARAM params[])` —
+/// `pkcs12kdf.c:260-297`, with its generated switch replaced by the field-keyed repeat check and
+/// one `OSSL_PARAM_locate_const` per key (D305's reading).
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pkcs12kdf_set_ctx_params(
+    vctx: *mut c_void,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vctx.is_null() {
+            return 0;
+        }
+        if let Some(site) = repeated_param_site_by_field(params, &PKCS12_SET_DECODER_KEYS) {
+            return fail_at(site);
+        }
+        let ctx = vctx.cast::<KdfPkcs12>();
+        let provctx = prov_libctx_of((*ctx).provctx);
+
+        if ossl_prov_digest_load(
+            ptr::addr_of_mut!((*ctx).digest),
+            locate_const(params, OSSL_KDF_PARAM_DIGEST),
+            locate_const(params, OSSL_KDF_PARAM_PROPERTIES),
+            locate_const(params, OSSL_ALG_PARAM_ENGINE),
+            provctx,
+        ) == 0
+        {
+            return 0;
+        }
+
+        let pw = locate_const(params, OSSL_KDF_PARAM_PASSWORD);
+        if !pw.is_null()
+            && pkcs12kdf_set_membuf(
+                ptr::addr_of_mut!((*ctx).pass),
+                ptr::addr_of_mut!((*ctx).pass_len),
+                pw,
+            ) == 0
+        {
+            return 0;
+        }
+
+        let salt = locate_const(params, OSSL_KDF_PARAM_SALT);
+        if !salt.is_null()
+            && pkcs12kdf_set_membuf(
+                ptr::addr_of_mut!((*ctx).salt),
+                ptr::addr_of_mut!((*ctx).salt_len),
+                salt,
+            ) == 0
+        {
+            return 0;
+        }
+
+        let p12id = locate_const(params, OSSL_KDF_PARAM_PKCS12_ID);
+        if !p12id.is_null() && OSSL_PARAM_get_int(p12id, ptr::addr_of_mut!((*ctx).id)) == 0 {
+            return 0;
+        }
+
+        let iter = locate_const(params, OSSL_KDF_PARAM_ITER);
+        if !iter.is_null() && OSSL_PARAM_get_uint64(iter, ptr::addr_of_mut!((*ctx).iter)) == 0 {
+            return 0;
+        }
+        1
+    }
+}
+
+/// `static int kdf_pkcs12_get_ctx_params(void *vctx, OSSL_PARAM params[])` —
+/// `pkcs12kdf.c:311-322`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pkcs12kdf_get_ctx_params(vctx: *mut c_void, params: *mut OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vctx.is_null() {
+            return 0;
+        }
+        if let Some(site) =
+            repeated_param_site_by_field(params.cast_const(), &PKCS12_GET_DECODER_KEYS)
+        {
+            return fail_at(site);
+        }
+        let p = locate_const(params, OSSL_KDF_PARAM_SIZE);
+        if !p.is_null() && OSSL_PARAM_set_size_t(p.cast_mut(), usize::MAX) == 0 {
+            return 0;
+        }
+        1
+    }
+}
+
+/// `static const OSSL_PARAM *kdf_pkcs12_settable_ctx_params(void *ctx, void *provctx)` —
+/// `pkcs12kdf.c:299-303`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pkcs12kdf_settable_ctx_params(
+    _ctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    PKCS12_SETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `static const OSSL_PARAM *kdf_pkcs12_gettable_ctx_params(void *ctx, void *provctx)` —
+/// `pkcs12kdf.c:324-328`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pkcs12kdf_gettable_ctx_params(
+    _ctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    PKCS12_GETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `const OSSL_DISPATCH ossl_kdf_pkcs12_functions[]` — `pkcs12kdf.c:330-343`.
+pub(crate) static PKCS12KDF_FUNCTIONS: [OsslDispatch; 10] = [
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_NEWCTX,
+        function: pkcs12kdf_new as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DUPCTX,
+        function: pkcs12kdf_dup as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_FREECTX,
+        function: pkcs12kdf_free as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_RESET,
+        function: pkcs12kdf_reset as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DERIVE,
+        function: pkcs12kdf_ctx_derive as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS,
+        function: pkcs12kdf_settable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SET_CTX_PARAMS,
+        function: pkcs12kdf_set_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS,
+        function: pkcs12kdf_gettable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GET_CTX_PARAMS,
+        function: pkcs12kdf_get_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_DISPATCH_END,
+        function: ptr::null_mut(),
+    },
+];
+
 /// `static const OSSL_ALGORITHM deflt_kdfs[]` — `providers/defltprov.c:355-375`, restricted to
-/// the rows this module implements, **in the authority's order**: `SSKDF` is row 5,
-/// `X963KDF` row 9 and `X942KDF-ASN1` row 12, so the table is a subsequence (D244).
+/// the rows this module implements, **in the authority's order**: `SSKDF` is row 5, `PBKDF2` row
+/// 6 and `PKCS12KDF` row 7 precede `X963KDF` row 9 and `X942KDF-ASN1` row 12, so the table is a
+/// subsequence (D244).
 ///
 /// **The property definition is `"provider=default"` on every row**, which is `defltprov.c`'s
 /// `ALG` macro (D247).
-pub(crate) static DEFLT_KDFS: [OsslAlgorithm; 4] = [
+pub(crate) static DEFLT_KDFS: [OsslAlgorithm; 5] = [
     OsslAlgorithm {
         // `PROV_NAMES_SSKDF` — `prov/names.h`, the primary name alone.
         algorithm_names: c"SSKDF".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
         implementation: SSKDF_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_PKCS12KDF` — the primary name alone.
+        algorithm_names: c"PKCS12KDF".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: PKCS12KDF_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
@@ -2334,15 +2859,16 @@ mod tests {
     /// are `prov/names.h`'s expansions, checked against the census rather than this file.
     #[test]
     fn the_kdf_table_names_its_rows_in_the_authoritys_order() {
-        assert_eq!(DEFLT_KDFS.len(), 4);
+        assert_eq!(DEFLT_KDFS.len(), 5);
         // SAFETY: the terminator's fields are NULL by construction and each landed row's name is a
         // `'static` C string.
         unsafe {
-            assert!(DEFLT_KDFS[3].algorithm_names.is_null());
+            assert!(DEFLT_KDFS[4].algorithm_names.is_null());
             for (row, want) in [
                 (&DEFLT_KDFS[0], b"SSKDF".as_slice()),
-                (&DEFLT_KDFS[1], b"X963KDF:X942KDF-CONCAT"),
-                (&DEFLT_KDFS[2], b"X942KDF-ASN1:X942KDF"),
+                (&DEFLT_KDFS[1], b"PKCS12KDF"),
+                (&DEFLT_KDFS[2], b"X963KDF:X942KDF-CONCAT"),
+                (&DEFLT_KDFS[3], b"X942KDF-ASN1:X942KDF"),
             ] {
                 assert_eq!(
                     core::ffi::CStr::from_ptr(row.algorithm_names).to_bytes(),
@@ -2361,8 +2887,13 @@ mod tests {
     /// Each dispatch table is the authority's nine entries plus the terminator, and the two SSKDF
     /// tables differ in exactly the derive slot — `sskdf.c:747-775`.
     #[test]
-    fn the_three_dispatch_tables_carry_nine_entries_and_terminate() {
-        for table in [&SSKDF_FUNCTIONS, &X963KDF_FUNCTIONS, &X942KDF_FUNCTIONS] {
+    fn the_dispatch_tables_carry_nine_entries_and_terminate() {
+        for table in [
+            &SSKDF_FUNCTIONS,
+            &X963KDF_FUNCTIONS,
+            &X942KDF_FUNCTIONS,
+            &PKCS12KDF_FUNCTIONS,
+        ] {
             assert_eq!(table.len(), 10);
             assert_eq!(
                 table[9].function_id,

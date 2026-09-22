@@ -848,7 +848,7 @@ static void rt_kdf_rows(void)
     const char *mdname = "SHA256";
     EVP_KDF *kdf;
     EVP_KDF_CTX *kctx;
-    OSSL_PARAM params[5];
+    OSSL_PARAM params[8];
     size_t i;
 
     for (i = 0; i < sizeof(z); i++)
@@ -917,6 +917,56 @@ static void rt_kdf_rows(void)
     rt_print_hex(out, sizeof(out));
     printf("\n");
     EVP_KDF_CTX_free(kctx);
+    EVP_KDF_free(kdf);
+
+    /* PKCS12KDF, the row 8.10 lands — the PKCS12 compatible key/IV generation,
+     * `providers/implementations/kdfs/pkcs12kdf.c`. Every input is a constant in this file, so the
+     * derived bytes are a vector the authority's own implementation produces and not a secret.
+     * The `id` byte is PKCS#12's 1 (key), the iteration count is small so the arm is fast, and
+     * the gettable `size` is `SIZE_MAX` because the row's answer is unbounded (D327's "transcribe
+     * the unit whole" includes the row's parameter contract, not only its bytes). */
+    kdf = EVP_KDF_fetch(NULL, "PKCS12KDF", NULL);
+    printf("kdf.p12.fetch=%d\n", kdf != NULL);
+    {
+        unsigned int p12id = 1;
+        uint64_t iter = 2;
+        size_t sz = 0;
+        OSSL_PARAM gp[2];
+
+        kctx = EVP_KDF_CTX_new(kdf);
+        params[0] = OSSL_PARAM_construct_utf8_string(OSSL_KDF_PARAM_DIGEST, (char *)mdname, 0);
+        params[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_PASSWORD,
+                                                      (void *)"password", 8);
+        params[2] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_SALT, sinfo, sizeof(sinfo));
+        params[3] = OSSL_PARAM_construct_int(OSSL_KDF_PARAM_PKCS12_ID, &p12id);
+        params[4] = OSSL_PARAM_construct_uint64(OSSL_KDF_PARAM_ITER, &iter);
+        params[5] = OSSL_PARAM_construct_end();
+        memset(out, 0, sizeof(out));
+        printf("kdf.p12.derive=%d\n", EVP_KDF_derive(kctx, out, sizeof(out), params));
+        printf("kdf.p12.key=");
+        rt_print_hex(out, sizeof(out));
+        printf("\n");
+
+        gp[0] = OSSL_PARAM_construct_size_t(OSSL_KDF_PARAM_SIZE, &sz);
+        gp[1] = OSSL_PARAM_construct_end();
+        printf("kdf.p12.size.ret=%d\n", EVP_KDF_CTX_get_params(kctx, gp));
+        printf("kdf.p12.size=%zu\n", sz);
+        EVP_KDF_CTX_free(kctx);
+
+        /* A fresh context with no password, then one with no salt, are both refused —
+         * `kdf_pkcs12_derive`'s `PROV_R_MISSING_PASS` / `PROV_R_MISSING_SALT`. */
+        kctx = EVP_KDF_CTX_new(kdf);
+        params[1] = OSSL_PARAM_construct_end();
+        printf("kdf.p12.nopass.derive=%d\n", EVP_KDF_derive(kctx, out, sizeof(out), params));
+        EVP_KDF_CTX_free(kctx);
+
+        kctx = EVP_KDF_CTX_new(kdf);
+        params[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_PASSWORD,
+                                                      (void *)"password", 8);
+        params[2] = OSSL_PARAM_construct_end();
+        printf("kdf.p12.nosalt.derive=%d\n", EVP_KDF_derive(kctx, out, sizeof(out), params));
+        EVP_KDF_CTX_free(kctx);
+    }
     EVP_KDF_free(kdf);
 
     /* A property query that no KDF row carries is a refusal, so the fetch path's negative
