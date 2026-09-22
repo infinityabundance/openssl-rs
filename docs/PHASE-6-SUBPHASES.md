@@ -125,7 +125,7 @@ symbol ledgers can see a *field* that was never filled. The table is the record.
 | 4 | `namemap` | **filled by 6.6b** |
 | 5 | `drbg` | Phase 9 |
 | 6 | `drbg_nonce` | Phase 9 |
-| 10 | `encoder_store` | Phase 7 |
+| 10 | `encoder_store` | **filled by D357** |
 | 11 | `decoder_store` | Phase 7 |
 | 12 | `self_test_cb` | **filled by 6.11** |
 | 14 | `global_properties` | **filled by 6.7a** |
