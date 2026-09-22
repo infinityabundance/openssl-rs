@@ -1096,6 +1096,20 @@ between the authority and the candidate at this site.**
 
 ### D-PKEY-AMETH-3 — the four `crypto/ec/ecx_meth.c` rows are withheld, so the two `find` functions answer NULL and `EVP_PKEY_type` answers `NID_undef` for X25519, X448, Ed25519 and Ed448
 
+> **Superseded by D372** for the four rows this entry withholds. `crypto/ec/ecx_meth.c` and the
+> ~9,000 lines its callbacks name are transcribed (`src/ec/ecx_meth.rs`, `src/ec/ecx_key.rs`,
+> `src/ec/ecx_backend.rs`, `src/ec/curve25519.rs`, `src/ec/curve448.rs`, the four
+> `ossl_evp_pkey_get1_*` accessors of `crypto/evp/p_lib.c` in `src/evp/pkey.rs`, and the eight
+> `ossl_*_PUBKEY` internals in `src/x509/x_pubkey.rs`), its four `EVP_PKEY_ASN1_METHOD` objects are
+> in `src/evp/pkey_asn1.rs`'s `STANDARD_METHODS` and its four `EVP_PKEY_METHOD` accessors in
+> `src/evp/pkey_ctx.rs`'s `PMETH_STANDARD_METHODS`, so both tables carry the authority's own
+> **fifteen** and **ten** rows. The four observables below move to their authority answers:
+> `EVP_PKEY_asn1_find`/`_find_str` answer the four objects, `EVP_PKEY_type` answers their four
+> NIDs, `EVP_PKEY_asn1_get0(10)` answers `&ossl_ecx25519_asn1_meth` where it answered
+> `ossl_sm2_asn1_meth`, and the two `get_count`s answer **15** and **10** where they answered 11
+> and 6. The entry is kept rather than deleted, as its two siblings are, because the paragraphs
+> below are the state before that landing and are what **`RT-ECX`** now observes the absence of.
+
 - **Obligation:** `EVP_PKEY_asn1_find(NULL, type)`, `EVP_PKEY_asn1_find_str(NULL, name, len)`,
   `EVP_PKEY_type(type)`, `EVP_PKEY_asn1_get0(idx)` and `EVP_PKEY_asn1_get_count()` for the four
   `crypto/ec/ecx_meth.c` key types -- `EVP_PKEY_X25519` (1034), `EVP_PKEY_X448` (1035),

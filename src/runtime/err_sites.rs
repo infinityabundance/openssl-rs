@@ -32332,6 +32332,476 @@ pub(crate) const X509_PUBKEY_997: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ossl_ecx_compute_key` at `crypto/ec/ecx_key.c:116` (PROV_R_MISSING_KEY).
+pub(crate) const ECX_KEY_116: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c",
+    line: 116,
+    func: c"ossl_ecx_compute_key",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_compute_key` at `crypto/ec/ecx_key.c:122` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const ECX_KEY_122: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c",
+    line: 122,
+    func: c"ossl_ecx_compute_key",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_compute_key` at `crypto/ec/ecx_key.c:131` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const ECX_KEY_131: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c",
+    line: 131,
+    func: c"ossl_ecx_compute_key",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_compute_key` at `crypto/ec/ecx_key.c:140` (PROV_R_FAILED_DURING_DERIVATION).
+pub(crate) const ECX_KEY_140: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c",
+    line: 140,
+    func: c"ossl_ecx_compute_key",
+    lib: 57,
+    reason: 164,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_compute_key` at `crypto/ec/ecx_key.c:146` (PROV_R_FAILED_DURING_DERIVATION).
+pub(crate) const ECX_KEY_146: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c",
+    line: 146,
+    func: c"ossl_ecx_compute_key",
+    lib: 57,
+    reason: 164,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_compute_key` at `crypto/ec/ecx_key.c:154` (PROV_R_FAILED_DURING_DERIVATION).
+pub(crate) const ECX_KEY_154: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c",
+    line: 154,
+    func: c"ossl_ecx_compute_key",
+    lib: 57,
+    reason: 164,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_compute_key` at `crypto/ec/ecx_key.c:160` (PROV_R_FAILED_DURING_DERIVATION).
+pub(crate) const ECX_KEY_160: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c",
+    line: 160,
+    func: c"ossl_ecx_compute_key",
+    lib: 57,
+    reason: 164,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_public_from_private` at `crypto/ec/ecx_backend.c:37` (EC_R_FAILED_MAKING_PUBLIC_KEY).
+pub(crate) const ECX_BACKEND_37: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_backend.c",
+    line: 37,
+    func: c"ossl_ecx_public_from_private",
+    lib: 16,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_public_from_private` at `crypto/ec/ecx_backend.c:47` (EC_R_FAILED_MAKING_PUBLIC_KEY).
+pub(crate) const ECX_BACKEND_47: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_backend.c",
+    line: 47,
+    func: c"ossl_ecx_public_from_private",
+    lib: 16,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_key_dup` at `crypto/ec/ecx_backend.c:133` (ERR_R_EC_LIB).
+pub(crate) const ECX_BACKEND_133: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_backend.c",
+    line: 133,
+    func: c"ossl_ecx_key_dup",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_key_op` at `crypto/ec/ecx_backend.c:163` (EC_R_INVALID_ENCODING).
+pub(crate) const ECX_BACKEND_163: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_backend.c",
+    line: 163,
+    func: c"ossl_ecx_key_op",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_key_op` at `crypto/ec/ecx_backend.c:169` (EC_R_INVALID_ENCODING).
+pub(crate) const ECX_BACKEND_169: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_backend.c",
+    line: 169,
+    func: c"ossl_ecx_key_op",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_key_op` at `crypto/ec/ecx_backend.c:175` (EC_R_INVALID_ENCODING).
+pub(crate) const ECX_BACKEND_175: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_backend.c",
+    line: 175,
+    func: c"ossl_ecx_key_op",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_key_op` at `crypto/ec/ecx_backend.c:182` (ERR_R_EC_LIB).
+pub(crate) const ECX_BACKEND_182: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_backend.c",
+    line: 182,
+    func: c"ossl_ecx_key_op",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_key_op` at `crypto/ec/ecx_backend.c:192` (ERR_R_EC_LIB).
+pub(crate) const ECX_BACKEND_192: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_backend.c",
+    line: 192,
+    func: c"ossl_ecx_key_op",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_key_op` at `crypto/ec/ecx_backend.c:212` (EC_R_FAILED_MAKING_PUBLIC_KEY).
+pub(crate) const ECX_BACKEND_212: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_backend.c",
+    line: 212,
+    func: c"ossl_ecx_key_op",
+    lib: 16,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `ecx_pub_encode` at `crypto/ec/ecx_meth.c:37` (EC_R_INVALID_KEY).
+pub(crate) const ECX_METH_37: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 37,
+    func: c"ecx_pub_encode",
+    lib: 16,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `ecx_pub_encode` at `crypto/ec/ecx_meth.c:48` (ERR_R_X509_LIB).
+pub(crate) const ECX_METH_48: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 48,
+    func: c"ecx_pub_encode",
+    lib: 16,
+    reason: 524299,
+    dynamic_reason: false,
+};
+
+/// `ecx_priv_encode` at `crypto/ec/ecx_meth.c:106` (EC_R_INVALID_PRIVATE_KEY).
+pub(crate) const ECX_METH_106: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 106,
+    func: c"ecx_priv_encode",
+    lib: 16,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `ecx_priv_encode` at `crypto/ec/ecx_meth.c:116` (ERR_R_ASN1_LIB).
+pub(crate) const ECX_METH_116: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 116,
+    func: c"ecx_priv_encode",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `ecx_priv_encode` at `crypto/ec/ecx_meth.c:123` (ERR_R_ASN1_LIB).
+pub(crate) const ECX_METH_123: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 123,
+    func: c"ecx_priv_encode",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `ecx_generic_import_from` at `crypto/ec/ecx_meth.c:395` (ERR_R_EC_LIB).
+pub(crate) const ECX_METH_395: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 395,
+    func: c"ecx_generic_import_from",
+    lib: 5,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ecd_item_verify` at `crypto/ec/ecx_meth.c:554` (EC_R_INVALID_ENCODING).
+pub(crate) const ECX_METH_554: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 554,
+    func: c"ecd_item_verify",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `validate_ecx_derive` at `crypto/ec/ecx_meth.c:733` (EC_R_KEYS_NOT_SET).
+pub(crate) const ECX_METH_733: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 733,
+    func: c"validate_ecx_derive",
+    lib: 16,
+    reason: 140,
+    dynamic_reason: false,
+};
+
+/// `validate_ecx_derive` at `crypto/ec/ecx_meth.c:739` (EC_R_INVALID_PRIVATE_KEY).
+pub(crate) const ECX_METH_739: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 739,
+    func: c"validate_ecx_derive",
+    lib: 16,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `validate_ecx_derive` at `crypto/ec/ecx_meth.c:743` (EC_R_INVALID_PEER_KEY).
+pub(crate) const ECX_METH_743: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 743,
+    func: c"validate_ecx_derive",
+    lib: 16,
+    reason: 133,
+    dynamic_reason: false,
+};
+
+/// `pkey_ecd_digestsign25519` at `crypto/ec/ecx_meth.c:813` (EC_R_INVALID_KEY).
+pub(crate) const ECX_METH_813: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 813,
+    func: c"pkey_ecd_digestsign25519",
+    lib: 16,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `pkey_ecd_digestsign25519` at `crypto/ec/ecx_meth.c:822` (EC_R_BUFFER_TOO_SMALL).
+pub(crate) const ECX_METH_822: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 822,
+    func: c"pkey_ecd_digestsign25519",
+    lib: 16,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `pkey_ecd_digestsign448` at `crypto/ec/ecx_meth.c:843` (EC_R_INVALID_KEY).
+pub(crate) const ECX_METH_843: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 843,
+    func: c"pkey_ecd_digestsign448",
+    lib: 16,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `pkey_ecd_digestsign448` at `crypto/ec/ecx_meth.c:852` (EC_R_BUFFER_TOO_SMALL).
+pub(crate) const ECX_METH_852: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 852,
+    func: c"pkey_ecd_digestsign448",
+    lib: 16,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `pkey_ecd_digestverify25519` at `crypto/ec/ecx_meth.c:871` (EC_R_INVALID_KEY).
+pub(crate) const ECX_METH_871: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 871,
+    func: c"pkey_ecd_digestverify25519",
+    lib: 16,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `pkey_ecd_digestverify448` at `crypto/ec/ecx_meth.c:891` (EC_R_INVALID_KEY).
+pub(crate) const ECX_METH_891: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 891,
+    func: c"pkey_ecd_digestverify448",
+    lib: 16,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `pkey_ecd_ctrl` at `crypto/ec/ecx_meth.c:909` (EC_R_INVALID_DIGEST_TYPE).
+pub(crate) const ECX_METH_909: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 909,
+    func: c"pkey_ecd_ctrl",
+    lib: 16,
+    reason: 138,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecx_keygen25519` at `crypto/ec/ecx_meth.c:955` (ERR_R_EC_LIB).
+pub(crate) const ECX_METH_955: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 955,
+    func: c"s390x_pkey_ecx_keygen25519",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecx_keygen25519` at `crypto/ec/ecx_meth.c:963` (ERR_R_EC_LIB).
+pub(crate) const ECX_METH_963: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 963,
+    func: c"s390x_pkey_ecx_keygen25519",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecx_keygen448` at `crypto/ec/ecx_meth.c:998` (ERR_R_EC_LIB).
+pub(crate) const ECX_METH_998: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 998,
+    func: c"s390x_pkey_ecx_keygen448",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecx_keygen448` at `crypto/ec/ecx_meth.c:1006` (ERR_R_EC_LIB).
+pub(crate) const ECX_METH_1006: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 1006,
+    func: c"s390x_pkey_ecx_keygen448",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecd_keygen25519` at `crypto/ec/ecx_meth.c:1076` (ERR_R_EC_LIB).
+pub(crate) const ECX_METH_1076: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 1076,
+    func: c"s390x_pkey_ecd_keygen25519",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecd_keygen25519` at `crypto/ec/ecx_meth.c:1084` (ERR_R_EC_LIB).
+pub(crate) const ECX_METH_1084: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 1084,
+    func: c"s390x_pkey_ecd_keygen25519",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecd_keygen448` at `crypto/ec/ecx_meth.c:1143` (ERR_R_EC_LIB).
+pub(crate) const ECX_METH_1143: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 1143,
+    func: c"s390x_pkey_ecd_keygen448",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecd_keygen448` at `crypto/ec/ecx_meth.c:1151` (ERR_R_EC_LIB).
+pub(crate) const ECX_METH_1151: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 1151,
+    func: c"s390x_pkey_ecd_keygen448",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecd_digestsign25519` at `crypto/ec/ecx_meth.c:1238` (EC_R_INVALID_KEY).
+pub(crate) const ECX_METH_1238: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 1238,
+    func: c"s390x_pkey_ecd_digestsign25519",
+    lib: 16,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecd_digestsign25519` at `crypto/ec/ecx_meth.c:1248` (EC_R_BUFFER_TOO_SMALL).
+pub(crate) const ECX_METH_1248: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 1248,
+    func: c"s390x_pkey_ecd_digestsign25519",
+    lib: 16,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecd_digestsign448` at `crypto/ec/ecx_meth.c:1283` (EC_R_INVALID_KEY).
+pub(crate) const ECX_METH_1283: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 1283,
+    func: c"s390x_pkey_ecd_digestsign448",
+    lib: 16,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecd_digestsign448` at `crypto/ec/ecx_meth.c:1293` (EC_R_BUFFER_TOO_SMALL).
+pub(crate) const ECX_METH_1293: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 1293,
+    func: c"s390x_pkey_ecd_digestsign448",
+    lib: 16,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecd_digestverify25519` at `crypto/ec/ecx_meth.c:1330` (EC_R_INVALID_KEY).
+pub(crate) const ECX_METH_1330: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 1330,
+    func: c"s390x_pkey_ecd_digestverify25519",
+    lib: 16,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecd_digestverify448` at `crypto/ec/ecx_meth.c:1365` (EC_R_INVALID_KEY).
+pub(crate) const ECX_METH_1365: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 1365,
+    func: c"s390x_pkey_ecd_digestverify448",
+    lib: 16,
+    reason: 116,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -35573,4 +36043,51 @@ pub(crate) static ALL: &[ErrSite] = &[
     X509_PUBKEY_913,
     X509_PUBKEY_955,
     X509_PUBKEY_997,
+    ECX_KEY_116,
+    ECX_KEY_122,
+    ECX_KEY_131,
+    ECX_KEY_140,
+    ECX_KEY_146,
+    ECX_KEY_154,
+    ECX_KEY_160,
+    ECX_BACKEND_37,
+    ECX_BACKEND_47,
+    ECX_BACKEND_133,
+    ECX_BACKEND_163,
+    ECX_BACKEND_169,
+    ECX_BACKEND_175,
+    ECX_BACKEND_182,
+    ECX_BACKEND_192,
+    ECX_BACKEND_212,
+    ECX_METH_37,
+    ECX_METH_48,
+    ECX_METH_106,
+    ECX_METH_116,
+    ECX_METH_123,
+    ECX_METH_395,
+    ECX_METH_554,
+    ECX_METH_733,
+    ECX_METH_739,
+    ECX_METH_743,
+    ECX_METH_813,
+    ECX_METH_822,
+    ECX_METH_843,
+    ECX_METH_852,
+    ECX_METH_871,
+    ECX_METH_891,
+    ECX_METH_909,
+    ECX_METH_955,
+    ECX_METH_963,
+    ECX_METH_998,
+    ECX_METH_1006,
+    ECX_METH_1076,
+    ECX_METH_1084,
+    ECX_METH_1143,
+    ECX_METH_1151,
+    ECX_METH_1238,
+    ECX_METH_1248,
+    ECX_METH_1283,
+    ECX_METH_1293,
+    ECX_METH_1330,
+    ECX_METH_1365,
 ];

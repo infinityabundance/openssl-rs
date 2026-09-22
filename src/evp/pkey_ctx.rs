@@ -8,8 +8,8 @@
 //!
 //! **The three exports that read `standard_methods[]` are here as of 8.8's `EVP_PKEY_METHOD`
 //! slice** (`docs/DECISIONS.md` D355): `EVP_PKEY_meth_find`, `_get0` and `_get_count`, over
-//! [`PMETH_STANDARD_METHODS`], whose contents are the four `*_pmeth.c` units' `ossl_<alg>_pkey_method`
-//! objects. The *application* half of the registry landed here earlier:
+//! [`PMETH_STANDARD_METHODS`], whose contents are the four `*_pmeth.c` units' and, since D372, the
+//! four `crypto/ec/ecx_meth.c` units' `ossl_<alg>_pkey_method` objects. The *application* half of the registry landed here earlier:
 //! `evp_pkey_meth_find_added_by_application` is now `EVP_PKEY_meth_find`'s first question, so a
 //! caller that installs its own method with `EVP_PKEY_meth_add0` is found before the table is
 //! searched. What is **not** yet here is `int_ctx_new`'s `pmeth` arm, so no context is built from
@@ -109,7 +109,7 @@ use crate::runtime::mem::{
 };
 use crate::runtime::obj::{
     NID_X9_62_id_ecPublicKey, NID_dhKeyAgreement, NID_dhpublicnumber, NID_dsa, NID_rsaEncryption,
-    NID_rsassaPss, NID_sm2, NID_undef, NID_X25519, NID_X448,
+    NID_rsassaPss, NID_sm2, NID_undef, NID_ED25519, NID_ED448, NID_X25519, NID_X448,
 };
 use crate::runtime::obj::{OBJ_nid2sn, OBJ_sn2nid};
 use crate::runtime::obj::{OBJ_obj2txt, OBJ_txt2obj};
@@ -1790,6 +1790,13 @@ const EVP_PKEY_FLAG_DYNAMIC: c_int = 1;
 /// word, which is what `RT-AMETH`'s pmeth arms observe.
 pub(crate) const EVP_PKEY_FLAG_AUTOARGLEN: c_int = 2;
 
+/// `EVP_PKEY_FLAG_SIGCTX_CUSTOM` — `include/openssl/evp.h:1834`.
+///
+/// The flag the two EdDSA `EVP_PKEY_METHOD` objects set, because their `digestsign`/`digestverify`
+/// slots drive the signature themselves rather than a digest-then-sign pair. It is what
+/// `EVP_PKEY_meth_get0_info` publishes for `ossl_ed25519_pkey_method` and its Ed448 sibling.
+pub(crate) const EVP_PKEY_FLAG_SIGCTX_CUSTOM: c_int = 4;
+
 /// `app_pkey_methods` — the application-registered methods, sorted by `pmeth_cmp`.
 static mut APP_PKEY_METHODS: *mut OpenSslStack = ptr::null_mut();
 
@@ -1872,31 +1879,29 @@ pub(crate) unsafe fn evp_pkey_meth_find_added_by_application(type_: c_int) -> *c
 /// than `standard_methods[idx]`.
 pub(crate) type PmethFn = unsafe extern "C" fn() -> *const EvpPkeyMethod;
 
-/// `static pmeth_fn standard_methods[]` — `crypto/evp/pmeth_lib.c:53-75`, the **six in-reach rows**
-/// of the authority's ten.
+/// `static pmeth_fn standard_methods[]` — `crypto/evp/pmeth_lib.c:53-75`, the authority's **ten
+/// rows**.
 ///
 /// "This array needs to be in order of NIDs" is the authority's own comment, and the order below is
 /// that one: `EVP_PKEY_RSA` 6, `EVP_PKEY_DH` 28, `EVP_PKEY_DSA` 116, `EVP_PKEY_EC` 408,
-/// `EVP_PKEY_RSA_PSS` 912, `EVP_PKEY_DHX` 920.
+/// `EVP_PKEY_RSA_PSS` 912, `EVP_PKEY_DHX` 920, then `EVP_PKEY_X25519` 1034, `EVP_PKEY_X448` 1035,
+/// `EVP_PKEY_ED25519` 1087 and `EVP_PKEY_ED448` 1088.
 ///
-/// **The four `crypto/ec/ecx_meth.c` rows are withheld**, and this is the second table to carry that
-/// narrowing: `ossl_ecx25519_pkey_method` (1034), `ossl_ecx448_pkey_method` (1035),
-/// `ossl_ed25519_pkey_method` (1087) and `ossl_ed448_pkey_method` (1088) need `ecx_key.c`,
-/// `ecx_backend.c`, `curve25519.c` and `crypto/ec/curve448/`, about 9,000 authority lines with no
-/// crate module and no stratum's plan row. The observable is named rather than implied:
-/// `EVP_PKEY_meth_find(EVP_PKEY_X25519)` and its three siblings answer **NULL**, and
-/// `EVP_PKEY_meth_get_count` answers **6** where the authority answers 10, so an
-/// `EVP_PKEY_CTX_new_id(EVP_PKEY_X25519)` that the authority would route through
-/// `ossl_ecx25519_pkey_method` gets a `keymgmt` fetch on this side. The record is
-/// `docs/SECURITY_DIVERGENCE_POLICY.md`'s `D-PKEY-AMETH-3`, which the ameth half cites for the same
-/// four units.
-pub(crate) static PMETH_STANDARD_METHODS: [PmethFn; 6] = [
+/// D355 landed the six in-reach rows and withheld the four `crypto/ec/ecx_meth.c` accessors under
+/// `docs/SECURITY_DIVERGENCE_POLICY.md`'s `D-PKEY-AMETH-3`; **D372 appends them**, so
+/// `EVP_PKEY_meth_find(EVP_PKEY_X25519)` and its three siblings answer the authority's own methods
+/// and `EVP_PKEY_meth_get_count` answers **10** where it used to answer 6, with no narrowing left.
+pub(crate) static PMETH_STANDARD_METHODS: [PmethFn; 10] = [
     crate::rsa::pmeth::ossl_rsa_pkey_method,
     crate::dh::pmeth::ossl_dh_pkey_method,
     crate::dsa::pmeth::ossl_dsa_pkey_method,
     crate::ec::pmeth::ossl_ec_pkey_method,
     crate::rsa::pmeth::ossl_rsa_pss_pkey_method,
     crate::dh::pmeth::ossl_dhx_pkey_method,
+    crate::ec::ecx_meth::ossl_ecx25519_pkey_method,
+    crate::ec::ecx_meth::ossl_ecx448_pkey_method,
+    crate::ec::ecx_meth::ossl_ed25519_pkey_method,
+    crate::ec::ecx_meth::ossl_ed448_pkey_method,
 ];
 
 /// `static int pmeth_func_cmp(const EVP_PKEY_METHOD *const *a, pmeth_fn const *b)` —
@@ -1965,9 +1970,9 @@ pub unsafe extern "C" fn EVP_PKEY_meth_find(type_: c_int) -> *const EvpPkeyMetho
 
 /// `size_t EVP_PKEY_meth_get_count(void)` — `crypto/evp/pmeth_lib.c:646`.
 ///
-/// `OSSL_NELEM(standard_methods)` plus the application stack. The answer is **6** here and **10** on
-/// the authority, which is the withheld-rows narrowing [`PMETH_STANDARD_METHODS`] records; a caller
-/// that enumerates by index sees a shorter table rather than a wrong one.
+/// `OSSL_NELEM(standard_methods)` plus the application stack. **10** here and on the authority
+/// since D372 appended the four `crypto/ec/ecx_meth.c` rows; the withheld-rows narrowing this
+/// number used to record is gone.
 ///
 /// # Safety
 /// Nothing: both tables are this module's own.
@@ -1985,8 +1990,7 @@ pub unsafe extern "C" fn EVP_PKEY_meth_get_count() -> usize {
 /// `const EVP_PKEY_METHOD *EVP_PKEY_meth_get0(size_t idx)` — `crypto/evp/pmeth_lib.c:655`.
 ///
 /// The table is indexed **outright** before the application stack is touched, so an index inside
-/// `OSSL_NELEM(standard_methods)` never consults it — which is what makes the withheld rows
-/// observable here as a shorter table rather than as a miss.
+/// `OSSL_NELEM(standard_methods)` — `0..10` since D372 — never consults it.
 ///
 /// # Safety
 /// Nothing: both tables are this module's own.
@@ -4420,8 +4424,12 @@ pub(crate) const EVP_PKEY_EC: c_int = NID_X9_62_id_ecPublicKey;
 pub(crate) const EVP_PKEY_SM2: c_int = NID_sm2;
 /// `EVP_PKEY_X25519` = `NID_X25519` — `include/openssl/evp.h:82`.
 pub(crate) const EVP_PKEY_X25519: c_int = NID_X25519;
+/// `EVP_PKEY_ED25519` = `NID_ED25519` — `include/openssl/evp.h:83`.
+pub(crate) const EVP_PKEY_ED25519: c_int = NID_ED25519;
 /// `EVP_PKEY_X448` = `NID_X448` — `include/openssl/evp.h:84`.
 pub(crate) const EVP_PKEY_X448: c_int = NID_X448;
+/// `EVP_PKEY_ED448` = `NID_ED448` — `include/openssl/evp.h:85`.
+pub(crate) const EVP_PKEY_ED448: c_int = NID_ED448;
 
 /// `EVP_PKEY_CTRL_MD` — `include/openssl/evp.h:1807`.
 pub(crate) const EVP_PKEY_CTRL_MD: c_int = 1;

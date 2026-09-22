@@ -1442,6 +1442,7 @@
               "RT-DSA",
               "RT-DSO",
               "RT-EC",
+              "RT-ECX",
               "RT-EVP-MAC",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
@@ -1855,6 +1856,7 @@
               "RT-DSA",
               "RT-DSO",
               "RT-EC",
+              "RT-ECX",
               "RT-ERR",
               "RT-EVP-BIO",
               "RT-EVP-PBE",
@@ -13314,6 +13316,7 @@
             "basis": "called",
             "courts": [
               "RT-AMETH",
+              "RT-ECX",
               "RT-EVP-REF"
             ],
             "symbol": "EVP_PKEY_asn1_find"
@@ -13322,6 +13325,7 @@
             "basis": "called",
             "courts": [
               "RT-AMETH",
+              "RT-ECX",
               "RT-EVP-REF"
             ],
             "symbol": "EVP_PKEY_asn1_find_str"
@@ -13338,6 +13342,7 @@
             "basis": "called",
             "courts": [
               "RT-AMETH",
+              "RT-ECX",
               "RT-EVP-REF"
             ],
             "symbol": "EVP_PKEY_asn1_get0"
@@ -13346,6 +13351,7 @@
             "basis": "called",
             "courts": [
               "RT-AMETH",
+              "RT-ECX",
               "RT-EVP-INTROSPECT",
               "RT-EVP-REF"
             ],
@@ -13355,6 +13361,7 @@
             "basis": "called",
             "courts": [
               "RT-AMETH",
+              "RT-ECX",
               "RT-EVP-REF"
             ],
             "symbol": "EVP_PKEY_asn1_get_count"
@@ -13689,6 +13696,7 @@
             "basis": "called",
             "courts": [
               "RT-AMETH",
+              "RT-ECX",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-EVP-PKEY-OPS",
@@ -13778,6 +13786,7 @@
             "basis": "called",
             "courts": [
               "RT-AMETH",
+              "RT-ECX",
               "RT-EVP-PKEY"
             ],
             "symbol": "EVP_PKEY_get_base_id"
@@ -13785,6 +13794,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ECX",
               "RT-EVP-PKEY"
             ],
             "symbol": "EVP_PKEY_get_bits"
@@ -13807,6 +13817,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ECX",
               "RT-EVP-PKEY"
             ],
             "symbol": "EVP_PKEY_get_default_digest_nid"
@@ -13830,6 +13841,7 @@
             "basis": "called",
             "courts": [
               "RT-AMETH",
+              "RT-ECX",
               "RT-EVP-PKEY",
               "RT-PUBKEY"
             ],
@@ -13875,6 +13887,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ECX",
               "RT-EVP-PKEY"
             ],
             "symbol": "EVP_PKEY_get_security_bits"
@@ -13889,6 +13902,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ECX",
               "RT-EVP-PKEY"
             ],
             "symbol": "EVP_PKEY_get_size"
@@ -13967,6 +13981,7 @@
             "basis": "called",
             "courts": [
               "RT-AMETH",
+              "RT-ECX",
               "RT-EVP-PKEY"
             ],
             "symbol": "EVP_PKEY_meth_get0_info"
@@ -19512,21 +19527,24 @@
           {
             "basis": "called",
             "courts": [
-              "RT-AMETH"
+              "RT-AMETH",
+              "RT-ECX"
             ],
             "symbol": "EVP_PKEY_meth_find"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-AMETH"
+              "RT-AMETH",
+              "RT-ECX"
             ],
             "symbol": "EVP_PKEY_meth_get0"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-AMETH"
+              "RT-AMETH",
+              "RT-ECX"
             ],
             "symbol": "EVP_PKEY_meth_get_count"
           },
@@ -19561,7 +19579,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-AMETH"
+              "RT-AMETH",
+              "RT-ECX"
             ],
             "symbol": "EVP_PKEY_type"
           },
@@ -21424,7 +21443,7 @@
         ],
         "non_observable": [],
         "phase": 8,
-        "staged_candidate_probes": 10
+        "staged_candidate_probes": 11
       },
       {
         "completed": false,
@@ -21926,7 +21945,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "c7839f8ec8530824da7fab941842ab033c454203f2088d98a77ee1252d810e97"
+      "sha256": "5c853f6fb6a0f65955b57649a21e123f4bac130a535a2fa6e794a3881b6fe962"
     },
     {
       "name": "symbol-ownership",
@@ -21981,7 +22000,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "ef2f2e220fc204cf8cfadf5978fa754de16c8d9c5557455145a6f4adc03d6fe6"
+      "sha256": "3d85e8241958cf95a50d748003979d003bf61cc3379cb41941b5e70cf46c0c59"
     },
     {
       "name": "phase7-courts",
@@ -21991,17 +22010,17 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "556c9af5679309ee01146b48a94ea1d544bb75fac68de9b2b3d52da19d14c390"
+      "sha256": "6a8e39c77ea359284652f31ab4c576f95b543f37932c02a7d30266fd59a393c5"
     },
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "c2d2a166f01e7dcb4d1c920782c29463d50df52d4646adc26acc4accb5ec9178"
+      "sha256": "dc5fba73f17c2f55a3b904a48d63a67e56856bda8ad7840c59262716d68e1f85"
     },
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "5fd66f6c19f47ba6a34ef356f23fe56b3b88af64c2aaaeb515a8e7054dba6087"
+      "sha256": "621f14410310e5404ccc9c44b95502b9d7ebc46fd8ab49c4636ad8000ce61669"
     },
     {
       "name": "phase9-courts",

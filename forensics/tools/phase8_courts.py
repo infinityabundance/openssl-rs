@@ -146,16 +146,16 @@ COURTS: list[tuple[str, str]] = [
     # called a symbol the candidate has not implemented would abort the candidate's side.
     ("RT-EC", "rt_ec_probe.c"),
     # 8.8's registry court. Its subject is `crypto/asn1/standard_methods[]` -- the eleven
-    # `EVP_PKEY_ASN1_METHOD` rows the crate carries -- and the `crypto/evp` layer they close over:
-    # the five `EVP_PKEY_asn1_*` accessors, `EVP_PKEY_type`, `EVP_PKEY_assign` with
+    # `EVP_PKEY_ASN1_METHOD` rows D353 landed -- and the `crypto/evp` layer they close over: the
+    # five `EVP_PKEY_asn1_*` accessors, `EVP_PKEY_type`, `EVP_PKEY_assign` with
     # `EVP_PKEY_get0_asn1`, the twelve legacy accessors' four refusals, and the
-    # `param_missing`/`param_cmp`/`param_copy` columns through a built FFDHE-2048 key. **The count
-    # and the four withheld `crypto/ec/ecx_meth.c` rows are not carried as arms**: they must differ
-    # between the two sides (D353's narrowing), and a differential court's residual set must be
-    # empty, so the table is observed through the eleven `pkey_id`s both sides share. The eight
-    # `RSA_print`/`DSA_print`/`EC_KEY_print` printers are withheld -- `EVP_PKEY_print_private` is
-    # absent from the crate's compiled surface -- and so are the three `EVP_PKEY_meth_*` names. The
-    # probe's own header states both omissions.
+    # `param_missing`/`param_cmp`/`param_copy` columns through a built FFDHE-2048 key. **D372
+    # completed the table to the authority's fifteen rows**, so this probe's arms stay as they
+    # are -- they print booleans and the eleven `pkey_id`s both sides have always shared -- and
+    # the four ECX rows are carried by **`RT-ECX`**, the court below, whose subject they are.
+    # The eight `RSA_print`/`DSA_print`/`EC_KEY_print` printers are withheld --
+    # `EVP_PKEY_print_private` is absent from the crate's compiled surface -- and so are the
+    # three `EVP_PKEY_meth_*` names. The probe's own header states both omissions.
     ("RT-AMETH", "rt_ameth_probe.c"),
     # 8.9's `pem.h` helper court. Its subject is the thirty `crypto/pem/pem_all.c` rows -- the
     # `IMPLEMENT_PEM_*` expansions for the DH, DSA, EC and RSA key families -- together with the
@@ -175,6 +175,21 @@ COURTS: list[tuple[str, str]] = [
     # two `PEM_read_bio_Parameters*` spellings are withheld rather than courted, because their only
     # successful arm on this revision is that same decoder.
     ("RT-PUBKEY", "rt_pubkey_probe.c"),
+    # D372's court, and the last of 8.8's three. Its subject is the four
+    # `crypto/ec/ecx_meth.c` rows D353/D355 withheld from both `standard_methods[]` tables:
+    # `ossl_ecx{25519,448}_asn1_meth` and `ossl_ed{25519,448}_asn1_meth` in the ameth table, and
+    # `ossl_ecx25519_pkey_method`/`_ecx448_`/`_ed25519_`/`_ed448_pkey_method` in the pmeth one.
+    # The arms are the two `find` functions, `EVP_PKEY_type`, both `get0` walks and both
+    # `get_count`s -- the four observables `D-PKEY-AMETH-3` named -- plus four fixed
+    # `SubjectPublicKeyInfo` decodes that reach the seven per-type `EVP_PKEY_ASN1_METHOD`
+    # columns (`ecx_pub_decode`, `ecx_pub_encode`, `ecx_bits`, `ecx_size`, `ecx_security_bits`,
+    # `ecd_ctrl`, `ecx_ctrl`). **Three omissions are deliberate and the probe's header names
+    # them**: the eight `ossl_*_PUBKEY` internals, which are not in either library's dynamic
+    # symbol table and are reached through `d2i_PUBKEY`/`i2d_PUBKEY` instead; the private-key
+    # arms, whose evidence is `src/ec/ecx_backend.rs`'s RFC 7748 unit test; and any
+    # context-building arm, because `int_ctx_new`'s legacy `pmeth` arm is not this landing's
+    # subject (D355).
+    ("RT-ECX", "rt_ecx_probe.c"),
 ]
 
 # The correctness courts, and the committed vector sets each checks. `CT-DIGEST` is the

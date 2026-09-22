@@ -41,16 +41,16 @@
 //! else from `src`. A transcription that copied the whole struct would alias `src`'s strings into
 //! `dst` and then free them twice.
 //!
-//! ## The two `find` functions: the eleven rows, and the engine arm that cannot fire
+//! ## The two `find` functions: all fifteen rows, and the engine arm that cannot fire
 //!
 //! `pkey_asn1_find` asks `app_methods` first and then `standard_methods[]`, which D353 populated
-//! with **eleven of the authority's fifteen rows** -- the four `crypto/ec/ecx_meth.c` rows are
-//! withheld. So `EVP_PKEY_asn1_find`/`_find_str` answer the authority's own method for every legacy
-//! type except `EVP_PKEY_X25519`, `_X448`, `_ED25519` and `_ED448`, where they answer NULL: the
-//! narrowing recorded in `docs/DECISIONS.md` D353 and stated at [`STANDARD_METHODS`]. Both
-//! functions are defined rather than withheld, for the reason the whole project defines rather than
-//! withholds: a consumer that calls them must link, and the answer is right in every state this
-//! crate can reach.
+//! with eleven of the authority's fifteen rows and **D372 completes to all fifteen** by landing
+//! `crypto/ec/ecx_meth.c`'s four. So `EVP_PKEY_asn1_find`/`_find_str` answer the authority's own
+//! method for every legacy type including `EVP_PKEY_X25519`, `_X448`, `_ED25519` and `_ED448`, and
+//! `EVP_PKEY_type` answers their NIDs; the withheld-row narrowing D353 recorded at
+//! [`STANDARD_METHODS`] and in `docs/DECISIONS.md` is gone. Both functions are defined rather than
+//! withheld, for the reason the whole project defines rather than withholds: a consumer that calls
+//! them must link, and the answer is right in every state this crate can reach.
 //!
 //! The engine arm is **absent and cannot fire**. `OPENSSL_NO_ENGINE` is undefined in this profile, so
 //! the authority's `ENGINE_get_pkey_asn1_meth_engine` / `ENGINE_pkey_asn1_find_str` /
@@ -321,19 +321,19 @@ unsafe impl Sync for EvpPkeyAsn1Method {}
 
 /// `standard_methods[]` — `crypto/asn1/ameth_lib.c`'s table, from `crypto/asn1/standard_methods.h`.
 ///
-/// **Eleven of the authority's fifteen rows, over seven of its eleven named objects**, in ascending
-/// `pkey_id` order, which `OBJ_bsearch_ameth` requires. The four withheld rows are
-/// `crypto/ec/ecx_meth.c`'s `ossl_ecx{25519,448}_asn1_meth` and `ossl_ed{25519,448}_asn1_meth`
-/// (`EVP_PKEY_X25519` 1034, `_X448` 1035, `_ED25519` 1087, `_ED448` 1088): that unit and the
-/// ~9,000 lines it needs (`ecx_key.c`, `ecx_backend.c`, `curve25519.c`, `crypto/ec/curve448/`) are
-/// a separate landing, and the narrowing is recorded in `docs/DECISIONS.md` D353. Their absence is
-/// the one observable this table has that the authority's does not: `EVP_PKEY_asn1_find`/`_find_str`
-/// answer NULL and `EVP_PKEY_type` `NID_undef` for those four types. Every other row is the
-/// authority's object by address.
+/// **All fifteen of the authority's rows, over all eleven of its named objects**, in ascending
+/// `pkey_id` order, which `OBJ_bsearch_ameth` requires. D353 landed eleven of them and withheld the
+/// four `crypto/ec/ecx_meth.c` rows (`EVP_PKEY_X25519` 1034, `_X448` 1035, `_ED25519` 1087,
+/// `_ED448` 1088) under `docs/SECURITY_DIVERGENCE_POLICY.md`'s `D-PKEY-AMETH-3`; **D372 lands
+/// `crypto/ec/ecx_meth.c` and its four rows**, so `EVP_PKEY_asn1_find`/`_find_str` answer the
+/// authority's own objects for the four ECX types, `EVP_PKEY_type` answers their NIDs,
+/// `EVP_PKEY_asn1_get0(10)` answers `&ossl_ecx25519_asn1_meth` where it used to answer
+/// `ossl_sm2_asn1_meth`, and this table has no narrowing left. Every row is the authority's object
+/// by address.
 ///
 /// The count `EVP_PKEY_asn1_get_count` reports is this table's length plus the application count,
 /// which is the authority's own arithmetic.
-pub const STANDARD_METHODS: [*const EvpPkeyAsn1Method; 11] = [
+pub const STANDARD_METHODS: [*const EvpPkeyAsn1Method; 15] = [
     &raw const crate::rsa::ameth::ossl_rsa_asn1_meths[0],
     &raw const crate::rsa::ameth::ossl_rsa_asn1_meths[1],
     &raw const crate::dh::ameth::ossl_dh_asn1_meth,
@@ -344,6 +344,10 @@ pub const STANDARD_METHODS: [*const EvpPkeyAsn1Method; 11] = [
     &raw const crate::ec::ameth::ossl_eckey_asn1_meth,
     &raw const crate::rsa::ameth::ossl_rsa_pss_asn1_meth,
     &raw const crate::dh::ameth::ossl_dhx_asn1_meth,
+    &raw const crate::ec::ecx_meth::ossl_ecx25519_asn1_meth,
+    &raw const crate::ec::ecx_meth::ossl_ecx448_asn1_meth,
+    &raw const crate::ec::ecx_meth::ossl_ed25519_asn1_meth,
+    &raw const crate::ec::ecx_meth::ossl_ed448_asn1_meth,
     &raw const crate::ec::ameth::ossl_sm2_asn1_meth,
 ];
 
@@ -377,9 +381,8 @@ unsafe extern "C" fn ameth_cmp(a: *const c_void, b: *const c_void) -> c_int {
 
 /// `int EVP_PKEY_asn1_get_count(void)` — `crypto/asn1/ameth_lib.c:40`.
 ///
-/// `OSSL_NELEM(standard_methods)` plus the application count -- the first term is **eleven here**
-/// where the authority's is fifteen, because the four `crypto/ec/ecx_meth.c` rows are withheld. The
-/// narrowing is recorded at [`STANDARD_METHODS`] and in `docs/DECISIONS.md` D353.
+/// `OSSL_NELEM(standard_methods)` plus the application count -- **fifteen** plus the application
+/// count since D372 landed `crypto/ec/ecx_meth.c`'s four rows, which is the authority's own answer.
 ///
 /// # Safety
 /// Nothing: it touches no pointer argument.
@@ -397,9 +400,9 @@ pub unsafe extern "C" fn EVP_PKEY_asn1_get_count() -> c_int {
 /// `const EVP_PKEY_ASN1_METHOD *EVP_PKEY_asn1_get0(int idx)` — `crypto/asn1/ameth_lib.c:48`.
 ///
 /// `idx < 0` answers NULL and the standard methods come first, so the two halves of the count are
-/// two halves of the index space: indices `0..11` land in [`STANDARD_METHODS`] and the rest in
-/// `app_methods`. (The authority's standard half is fifteen wide; the four withheld rows move the
-/// boundary, which is the count's narrowing and not a second divergence.)
+/// two halves of the index space: indices `0..15` land in [`STANDARD_METHODS`] and the rest in
+/// `app_methods`. (D372 moved the boundary from 11 to the authority's own 15 by landing the four
+/// `crypto/ec/ecx_meth.c` rows, so `EVP_PKEY_asn1_get0(10)` is now `&ossl_ecx25519_asn1_meth`.)
 ///
 /// # Safety
 /// Nothing: it touches no pointer argument. It is an `unsafe fn` because every export in this crate

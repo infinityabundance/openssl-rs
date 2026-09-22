@@ -83,6 +83,7 @@ use crate::dsa::backend::ossl_dsa_is_foreign;
 use crate::dsa::object::{DSA_free, DSA_up_ref};
 use crate::dsa::Dsa;
 use crate::ec::backend::ossl_ec_key_is_foreign;
+use crate::ec::ecx_key::{ossl_ecx_key_up_ref, EcxKey};
 use crate::ec::key::{EC_KEY_get0_group, EC_KEY_get_conv_form};
 use crate::ec::lib::{EC_GROUP_get_curve_name, EC_GROUP_get_field_type};
 use crate::ec::EcKey;
@@ -108,7 +109,8 @@ use crate::evp::pkey_asn1::{EVP_PKEY_type, Engine, EvpPkeyAsn1Method};
 use crate::evp::pkey_ctx::{
     EVP_PKEY_CTX_free, EVP_PKEY_CTX_new_from_name, EVP_PKEY_CTX_new_from_pkey,
     EVP_PKEY_CTX_set_params, EvpPkeyCtx, EVP_PKEY_DH, EVP_PKEY_DHX, EVP_PKEY_DSA, EVP_PKEY_EC,
-    EVP_PKEY_RSA, EVP_PKEY_RSA_PSS, EVP_PKEY_SM2,
+    EVP_PKEY_ED25519, EVP_PKEY_ED448, EVP_PKEY_RSA, EVP_PKEY_RSA_PSS, EVP_PKEY_SM2,
+    EVP_PKEY_X25519, EVP_PKEY_X448,
 };
 use crate::evp::pmeth_gn::{
     EVP_PKEY_fromdata, EVP_PKEY_fromdata_init, EVP_PKEY_generate, EVP_PKEY_keygen_init,
@@ -1039,8 +1041,9 @@ unsafe fn pkey_dup_done(dup_pk: *mut EvpPkey, pkey: *const EvpPkey) -> *mut EvpP
 
 /// `OSSL_KEYMGMT_SELECT_ALL` — `include/openssl/core_dispatch.h`, spelled out as the authority
 /// composes it: the key pair (`PRIVATE_KEY | PUBLIC_KEY`) and all parameters
-/// (`DOMAIN_PARAMETERS | OTHER_PARAMETERS`).
-const OSSL_KEYMGMT_SELECT_ALL: c_int = (0x01 | 0x02) | (0x04 | 0x80);
+/// (`DOMAIN_PARAMETERS | OTHER_PARAMETERS`). `pub(crate)` since D372: `crypto/ec/ecx_meth.c`'s
+/// `ecx_pkey_copy` passes it to [`crate::ec::ecx_backend::ossl_ecx_key_dup`].
+pub(crate) const OSSL_KEYMGMT_SELECT_ALL: c_int = (0x01 | 0x02) | (0x04 | 0x80);
 /// `OSSL_KEYMGMT_SELECT_ALL` under its authority spelling, for the `*_ameth.c` `export_to`
 /// callbacks. `OSS_L_KEYMGMT_SELECT_ALL` is the same value; the private name above is kept for the
 /// call sites that read the macro as the authority spells it there.
@@ -3930,6 +3933,87 @@ pub unsafe extern "C" fn EVP_PKEY_get1_DSA(pkey: *mut EvpPkey) -> *mut Dsa {
         return ptr::null_mut();
     }
     ret
+}
+
+/// `static const ECX_KEY *evp_pkey_get0_ECX_KEY(const EVP_PKEY *pkey, int type)` —
+/// `crypto/evp/p_lib.c:926`.
+///
+/// The type test is `EVP_PKEY_get_base_id(pkey) != type`, **not** a direct `pkey->type`
+/// comparison: an Ed25519 key carries `EVP_PKEY_ED25519` at both `type` and `save_type`, so the
+/// two spellings agree here, but the authority writes the base-id form and this is it.
+///
+/// # Safety
+/// `pkey` must be live.
+#[allow(non_snake_case)] // the authority's own internal name
+unsafe fn evp_pkey_get0_ECX_KEY(pkey: *const EvpPkey, type_: c_int) -> *const EcxKey {
+    // SAFETY: `pkey` is live per the contract.
+    if unsafe { EVP_PKEY_get_base_id(pkey) } != type_ {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::P_LIB_930) };
+        return ptr::null();
+    }
+    // SAFETY: `pkey` is live, cast to the mutable form the accessor takes.
+    unsafe { evp_pkey_get_legacy(pkey as *mut EvpPkey) }.cast::<EcxKey>()
+}
+
+/// `static ECX_KEY *evp_pkey_get1_ECX_KEY(EVP_PKEY *pkey, int type)` —
+/// `crypto/evp/p_lib.c:935`.
+///
+/// # Safety
+/// `pkey` must be live.
+#[allow(non_snake_case)] // the authority's own internal name
+unsafe fn evp_pkey_get1_ECX_KEY(pkey: *mut EvpPkey, type_: c_int) -> *mut EcxKey {
+    // SAFETY: `pkey` is live per the contract.
+    let mut ret = unsafe { evp_pkey_get0_ECX_KEY(pkey, type_) } as *mut EcxKey;
+    // SAFETY: `ret` is NULL or live.
+    if !ret.is_null() && unsafe { ossl_ecx_key_up_ref(ret) } == 0 {
+        ret = ptr::null_mut();
+    }
+    ret
+}
+
+/// `ECX_KEY *ossl_evp_pkey_get1_X25519(EVP_PKEY *pkey)` — `crypto/evp/p_lib.c:943`, the
+/// `IMPLEMENT_ECX_VARIANT(X25519)` expansion.
+///
+/// # Safety
+/// `pkey` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn ossl_evp_pkey_get1_X25519(pkey: *mut EvpPkey) -> *mut EcxKey {
+    // SAFETY: `pkey` is live per the contract.
+    unsafe { evp_pkey_get1_ECX_KEY(pkey, EVP_PKEY_X25519) }
+}
+
+/// `ECX_KEY *ossl_evp_pkey_get1_X448(EVP_PKEY *pkey)` — `crypto/evp/p_lib.c:944`, the
+/// `IMPLEMENT_ECX_VARIANT(X448)` expansion.
+///
+/// # Safety
+/// `pkey` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn ossl_evp_pkey_get1_X448(pkey: *mut EvpPkey) -> *mut EcxKey {
+    // SAFETY: `pkey` is live per the contract.
+    unsafe { evp_pkey_get1_ECX_KEY(pkey, EVP_PKEY_X448) }
+}
+
+/// `ECX_KEY *ossl_evp_pkey_get1_ED25519(EVP_PKEY *pkey)` — `crypto/evp/p_lib.c:945`, the
+/// `IMPLEMENT_ECX_VARIANT(ED25519)` expansion.
+///
+/// # Safety
+/// `pkey` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn ossl_evp_pkey_get1_ED25519(pkey: *mut EvpPkey) -> *mut EcxKey {
+    // SAFETY: `pkey` is live per the contract.
+    unsafe { evp_pkey_get1_ECX_KEY(pkey, EVP_PKEY_ED25519) }
+}
+
+/// `ECX_KEY *ossl_evp_pkey_get1_ED448(EVP_PKEY *pkey)` — `crypto/evp/p_lib.c:946`, the
+/// `IMPLEMENT_ECX_VARIANT(ED448)` expansion.
+///
+/// # Safety
+/// `pkey` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn ossl_evp_pkey_get1_ED448(pkey: *mut EvpPkey) -> *mut EcxKey {
+    // SAFETY: `pkey` is live per the contract.
+    unsafe { evp_pkey_get1_ECX_KEY(pkey, EVP_PKEY_ED448) }
 }
 
 /// `DH *evp_pkey_get0_DH_int(const EVP_PKEY *pkey)` — `crypto/evp/p_lib.c:998`.

@@ -27033,3 +27033,127 @@ and this one adds none.
 **No ledger moves, and that is the ledger's answer.** The ECX names are not Phase-8 ledger rows: `forensics/phase8-obligations.json` reads implemented **786**, deferred **0**, open **0** over **786** owned, `complete: true`, **unchanged from D369 through this entry**; `forensics/phase7-obligations.json` reads **733**/**217**/**0** of **950**, unchanged. `D-PKEY-AMETH-3` is **not** retired: the four `crypto/ec/ecx_meth.c` rows are still withheld from both `standard_methods[]` tables. Because the ledger did not move, `docs/PHASE-8-SUBPHASES.md`'s two anchored status clauses are untouched and still exact in both directions. Courts **95**, observations **37358**, `PIPELINE OK` run twice.
 
 **What this entry does not claim, and what is left.** No ECX key is verified by any differential court. Two units of the brief remain: `ecx_key.c` (166) + `ecx_backend.c` (253) with the four `ossl_evp_pkey_get1_*` internals of `crypto/evp/p_lib.c`, which both curve units now unblock; then `crypto/ec/ecx_meth.c` with both table halves, at which point the four ameth and four pmeth rows open, `D-PKEY-AMETH-3` retires, and the eight ECX internals `src/x509/x_pubkey.rs` withholds get their write side.
+
+## D372 — the ECX chain closes: `ecx_key.c`, `ecx_backend.c` and all of `ecx_meth.c` land, the eight `ossl_*_PUBKEY` internals and both four-row table halves open, `D-PKEY-AMETH-3` is superseded and a real decoder defect is fixed; still no ledger moves
+
+**Decision.** Take the three units D371's closing paragraph left: `crypto/ec/ecx_key.c` (166) +
+`crypto/ec/ecx_backend.c` (253) with the four `ossl_evp_pkey_get1_*` internals of
+`crypto/evp/p_lib.c:926-955`, then `crypto/ec/ecx_meth.c` (1,468, **both halves**), then the eight
+`ossl_d2i_*_PUBKEY`/`ossl_i2d_*_PUBKEY` internals `src/x509/x_pubkey.rs` withheld under its own
+divergence record. This is the last thing between Phase 8's export working set and drop-in
+equivalence on the ECX axis.
+
+**What landed, unit by unit.**
+
+* **`crypto/ec/ecx_key.c` -> [`src/ec/ecx_key.rs`].** Six internals: `ossl_ecx_key_new`,
+  `ossl_ecx_key_free`, `ossl_ecx_key_set0_libctx`, `ossl_ecx_key_up_ref`,
+  `ossl_ecx_key_allocate_privkey`, `ossl_ecx_compute_key`. [`EcxKey`] models the authority's
+  `unsigned int haspubkey : 1` as its storage unit and `references` as `AtomicI32`, both recorded
+  at the field; `OPENSSL_PEDANTIC_ZEROIZATION` is undefined on this profile so the pubkey cleanse
+  is not compiled, exactly as the C.
+* **`crypto/ec/ecx_backend.c` -> [`src/ec/ecx_backend.rs`].** Five internals:
+  `ossl_ecx_public_from_private` (the four-arm switch over `ECX_KEY_TYPE`),
+  `ossl_ecx_key_fromdata`, `ossl_ecx_key_dup`, and the `#ifndef FIPS_MODULE` tail
+  `ossl_ecx_key_op` + `ossl_ecx_key_from_pkcs8`. `KEYLENID`/`KEYNID2TYPE` are
+  `crypto/ec/ecx_backend.h`'s, **not** `ecx_meth.c`'s: the brief attributed them to
+  `ecx_meth.c:31`/`:35` and the unit that owns them is this one, so they are [`keylenid`] and
+  [`keynid2type`] here.
+* **The four `ossl_evp_pkey_get1_{X25519,X448,ED25519,ED448}` -> [`src/evp/pkey.rs`].**
+  `internal-symbols.json` attributes them to `crypto/evp/p_lib.c`, so they belong beside
+  `EVP_PKEY_get1_DSA` rather than in an EC module; `evp_pkey_get0_ECX_KEY`'s type test is
+  `EVP_PKEY_get_base_id(pkey) != type`, which is the authority's own spelling.
+* **`crypto/ec/ecx_meth.c` -> [`src/ec/ecx_meth.rs`].** All **eight** internals: the four
+  `EVP_PKEY_ASN1_METHOD` objects (`ossl_ecx{25519,448}_asn1_meth`, `ossl_ed{25519,448}_asn1_meth`)
+  and the four `EVP_PKEY_METHOD` accessors, over forty-seven private callbacks. The
+  `#ifdef S390X_EC_ASM` block is 24 of the file's 55 functions and is not compiled on this
+  profile, so its 10 `ERR_raise` sites are generated but unreferenced; the 17 portable sites are
+  all referenced. `KEYTYPE2NID` (`include/crypto/ecx.h:51`) is **not** transcribed because nothing
+  in the whole authority calls it -- the module says so at the site rather than leaving a silent
+  gap.
+* **The eight ECX internals of `crypto/x509/x_pubkey.c` -> [`src/x509/x_pubkey.rs`].**
+  `ossl_d2i_{ED25519,ED448,X25519,X448}_PUBKEY` and their four `i2d` twins; the `ED25519` pair
+  relies on `ossl_evp_pkey_get1_ED25519`'s own `EVP_R_EXPECTING_A_ECX_KEY` refusal where its
+  three siblings test `EVP_PKEY_get_id` first, which is the C's asymmetry and is transcribed as it
+  stands.
+* **Both `standard_methods[]` tables open.** `src/evp/pkey_asn1.rs`'s `STANDARD_METHODS` goes
+  **11 -> 15** (1034, 1035, 1087, 1088 between `ossl_dhx_asn1_meth` at 920 and
+  `ossl_sm2_asn1_meth` at 1172) and `src/evp/pkey_ctx.rs`'s `PMETH_STANDARD_METHODS` **6 -> 10**,
+  each in the authority's own ascending `pkey_id` order. So `EVP_PKEY_asn1_find`/`_find_str` answer
+  the four objects, `EVP_PKEY_type` answers **`NID_X25519` 1034 / `NID_X448` 1035 / `NID_ED25519`
+  1087 / `NID_ED448` 1088**, `EVP_PKEY_asn1_get0(10)` answers `&ossl_ecx25519_asn1_meth` where it
+  answered `ossl_sm2_asn1_meth`, and the two `get_count`s answer **15** and **10** where they
+  answered 11 and 6. `D-PKEY-AMETH-3` is **superseded** by a blockquote in
+  `docs/SECURITY_DIVERGENCE_POLICY.md` (the file's convention for a retired entry, the one
+  `D-PKEY-AMETH-1`, `-2` and `D-EC-1` already follow; its own `Trigger` line asked for a removal
+  and the convention wins, which is stated in the blockquote).
+* **The `src/x509/x_pubkey.rs` divergence record is removed, not resized.** Its eight remaining
+  names are now built, so `forensics/prerequisites.json` loses the whole record: the gate's
+  divergence count moves **13 rows / 51 names -> 12 rows / 43 names**, and `covers` is exact in
+  both directions because there is no record left to be inexact. `deferrals` stays **9**.
+
+**A real defect the new court found, and fixed.** `RT-ECX`'s `d2i_PUBKEY` arm drains the error
+queue, and the first run failed on two coordinates: the authority raised
+`crypto/asn1/tasn_dec.c:712:asn1_template_noexp_d2i` where the candidate raised `:703` of the *same*
+function, same packed code, same queue length. The cause is a **pre-existing transcription defect**
+in [`src/asn1/d2i.rs`]: the authority's `asn1_template_noexp_d2i` has two arms --
+`flags & ASN1_TFLG_IMPTAG` raising at `:703` and the "nothing special" arm raising at `:712` -- and
+the crate collapsed both onto `err_sites::TASN_DEC_703`, so the plain arm reported the
+implicit-tag arm's coordinate. [`TASN_DEC_712`] was generated and **referenced nowhere**. The two
+arms now raise their own sites. This is a behaviour change in a Phase-4/5 unit
+(`crypto/asn1/tasn_dec.c`) and the only one this entry makes outside the ECX chain; the unit's 998
+tests, `RT-PUBKEY` and the two `d2i` courts that walk that path are unchanged, and the fix is
+recorded here rather than in a divergence because the two sides now agree.
+
+**The court, and what it deliberately omits.** `RT-ECX` (`courts/phase8/rt_ecx_probe.c`) is
+registered and passing at **183 observations** with zero residuals: the two `find` functions,
+`EVP_PKEY_type`, both `get0` walks and both `get_count`s, and four fixed
+`SubjectPublicKeyInfo` decodes -- RFC 7748 §6.1/§6.2's and RFC 8032 §7.1/§7.4's **published public
+keys**, which are public values rather than secrets -- that reach `ecx_pub_decode`,
+`ecx_pub_encode`, `ecx_bits`/`ecx_size`/`ecx_security_bits` and `ecd_ctrl`/`ecx_ctrl` through
+`d2i_PUBKEY`/`i2d_PUBKEY` and compare the re-encoding byte for byte. Three omissions are named in
+the probe's own header: the eight `ossl_*_PUBKEY` internals are not in either library's dynamic
+symbol table and are reached through the public pair instead; the private-key arms are the unit
+tests' (`src/ec/ecx_backend.rs` drives `ossl_ecx_key_op` + `ossl_ecx_compute_key` over RFC 7748
+§6.1's published key pair and asserts the shared secret); and no context-building arm, because
+`int_ctx_new`'s legacy `pmeth` arm is not this landing's subject (D355).
+
+**`COVERED_FILES`, and which of the three units raises.** `gen_err_raise_sites.py` gains
+`crypto/ec/ecx_key.c` (`ECX_KEY`), `crypto/ec/ecx_backend.c` (`ECX_BACKEND`) and
+`crypto/ec/ecx_meth.c` (`ECX_METH`): `err-raise-sites.json` moves **3230 -> 3277** sites. The two
+curve units are still absent for D370/D371's measured reason (they raise nothing), and
+`curve448_tables.c` stays generated by `gen_curve448_tables.py` rather than transcribed, as D371
+recorded.
+
+**The regenerated counts, and the one hand-written figure.** `implemented-surface.json`'s
+`libcrypto` implemented is **2960**, unchanged -- no export lands -- and its
+`internal_symbols.c_style` moves **423 -> 446**: the twenty-three new `#[no_mangle]`
+C-identifier internals (6 + 5 + 8 + 4). The `ecx_meth.c` objects and accessors are `pub static`
+and `pub(crate) extern "C"` without `#[no_mangle]`, so they are counted the way
+`ossl_ec_pkey_method` and `ossl_eckey_asn1_meth` always have been. `transcription-edges.json`
+moves **329 -> 332** modules over **297 -> 300** units -- three new modules, each with a source
+file behind it. `docs/CI.md`'s "the 423 plain C identifiers" becomes 446, the only hand-written
+figure this entry moves. Courts **95 -> 96**, observations **37358 -> 37541**.
+
+**The prerequisite gate, and the census that moved down rather than up.** Zero findings. Its
+counts are **12** divergence rows / **43** names, **9** deferrals, `blocking_dependencies` **9**,
+and `sealed_stratum_census` **50** names over **17** units -- the census is held to non-increase
+and it moved down from 54/18 because the three new modules put four names on units Phase 8 owns
+rather than on sealed strata. That is a census, not a finding.
+
+**No ledger moves, and that is the ledger's answer.** The ECX names are not Phase-8 ledger rows
+and this entry lands no export: `forensics/phase8-obligations.json` reads implemented **786**,
+deferred **0**, open **0** over **786** owned, `complete: true`, **unchanged from D369 through
+this entry**; `forensics/phase7-obligations.json` reads **733**/**217**/**0** of **950**,
+unchanged. Because the ledger did not move, `docs/PHASE-8-SUBPHASES.md`'s two anchored status
+clauses are untouched and still exact in both directions; the four plan-row notes that described
+the withheld rows are updated in place to record that clause's closure.
+
+**What is now true that was not, and what is still not claimed.** The eight ECX internals are
+built; both `standard_methods[]` tables carry the authority's own fifteen and ten rows;
+`EVP_PKEY_type` answers 1034/1035/1087/1088 for X25519/X448/Ed25519/Ed448 where it answered
+`NID_undef`; `D-PKEY-AMETH-3` is superseded; `RT-ECX` observes it all against the authority at 183
+observations; and a defect in `crypto/asn1/tasn_dec.c`'s error coordinates is fixed. What is **not**
+claimed: no ledger count moved, the 137 provider registration rows and the twenty-eight
+`x509.h`/`pem.h` exports D369 named are still in `court_coverage.py`'s `not_yet_begun`,
+`forensics/phase-state.json` still reads phase 8 `in-progress`, and this entry does not claim the
+crate is drop-in equivalent on any axis beyond the observables `RT-ECX` prints.

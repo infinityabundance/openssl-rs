@@ -12,20 +12,19 @@
  *
  * ## What this court deliberately does not observe
  *
- * **The count, and the four rows it is short of.** `crypto/asn1/standard_methods.h` carries fifteen
- * rows under this profile's guards; the crate carries eleven. The four withheld rows are
- * `crypto/ec/ecx_meth.c`'s `ossl_ecx{25519,448}_asn1_meth` and `ossl_ed{25519,448}_asn1_meth`
- * (`EVP_PKEY_X25519` 1034, `_X448` 1035, `_ED25519` 1087, `_ED448` 1088), and their absence is the
- * narrowing D353 records: `EVP_PKEY_asn1_find`/`_find_str` answer NULL and `EVP_PKEY_type`
- * `NID_undef` for those four. An arm that compared `EVP_PKEY_asn1_get_count()` outright, or walked
- * the table by index and printed the `pkey_id` at each index, would therefore **have to differ**
- * between the two sides -- which a differential court cannot carry (`docs/SECURITY_DIVERGENCE_
- * POLICY.md` D-EC-2 states the rule: a residual is a failure, so an arm that must differ is a known
- * failure rather than an observation). So the table is observed through a **fixed list of the eleven
- * `pkey_id`s the crate carries**, resolved with `EVP_PKEY_asn1_find`, and `EVP_PKEY_asn1_get0` is
+ * **The four `crypto/ec/ecx_meth.c` rows, which are D372's and are carried by `RT-ECX`.** This
+ * probe's design was written while the crate's `standard_methods[]` was eleven rows short of the
+ * authority's fifteen: the four ECX rows were withheld (`D-PKEY-AMETH-3`), so an arm comparing
+ * `EVP_PKEY_asn1_get_count()` outright, or walking the table by index and printing the `pkey_id`
+ * at each index, would **have had to differ** between the two sides -- which a differential court
+ * cannot carry (`docs/SECURITY_DIVERGENCE_POLICY.md` D-EC2 states the rule: a residual is a
+ * failure, so an arm that must differ is a known failure rather than an observation). D372 landed
+ * the four rows, so the count no longer differs; the arms below are still kept to booleans and to
+ * the eleven `pkey_id`s both sides have always shared, because the four ECX ids are `RT-ECX`'s
+ * subject and there is no reason to observe one thing in two courts. `EVP_PKEY_asn1_get0` is
  * exercised by scanning the whole index space on each side and asking whether the object `_find`
- * answered is reachable there -- a boolean, which the two sides agree on because the eleven shared
- * rows are the same objects.
+ * answered is reachable there -- a boolean, which the two sides agree on because the rows are the
+ * same objects.
  *
  * **The eight `RSA_print`/`DSA_print`/`EC_KEY_print` family printers are observed, not withheld.**
  * D362 landed `crypto/encode_decode/`'s framework and `print_pkey` (`crypto/evp/p_lib.c:1196`), so
@@ -39,10 +38,11 @@
  * **`EVP_PKEY_meth_find`/`_get0`/`_get_count` are observed, not withheld.** The second
  * `standard_methods[]` — `crypto/evp/pmeth_lib.c`'s array of `pmeth_fn` accessors — landed with
  * `docs/DECISIONS.md` D355, and arm 8 exercises the three over the **six in-reach rows**
- * (`EVP_PKEY_RSA` 6, `_DH` 28, `_DSA` 116, `_EC` 408, `_RSA_PSS` 912, `_DHX` 920). The four
- * `crypto/ec/ecx_meth.c` rows are withheld under the same record as arm 7's,
- * `D-PKEY-AMETH-3`, so the arm observes no index and no count the two sides would answer
- * differently: `EVP_PKEY_meth_get0(6)` is never queried and `EVP_PKEY_meth_get_count()` is only
+ * (`EVP_PKEY_RSA` 6, `_DH` 28, `_DSA` 116, `_EC` 408, `_RSA_PSS` 912, `_DHX` 920). D372 appended
+ * the four `crypto/ec/ecx_meth.c` rows, so the table is the authority's ten; this arm is left on
+ * the six it has always carried, because the four ECX ids are `RT-ECX`'s subject, and it observes
+ * no index and no count the two sides would answer differently:
+ * `EVP_PKEY_meth_get0(6)` is never queried and `EVP_PKEY_meth_get_count()` is only
  * ever reduced to a boolean.
  *
  * **The `crypto/asn1/d2i_param.c`/`d2i_pu.c` readers are observed, not withheld.**
@@ -76,9 +76,10 @@
 #include <stdio.h>
 #include <string.h>
 
-/* The eleven `pkey_id`s the crate's `standard_methods[]` carries, in ascending order -- the
- * authority's fifteen minus the four `crypto/ec/ecx_meth.c` rows D353 withholds. Symbolic, so the
- * probe reads them from the same `obj_mac.h` on both sides. */
+/* The eleven `pkey_id`s this probe carries, in ascending order. The authority's table has
+ * fifteen rows since D372 landed the four `crypto/ec/ecx_meth.c` ones, and those four are
+ * `RT-ECX`'s subject; this probe stays on the eleven its own arms were written for. Symbolic, so
+ * the probe reads them from the same `obj_mac.h` on both sides. */
 static const int IDS[] = {
     NID_rsaEncryption,           /* EVP_PKEY_RSA            6    */
     NID_rsa,                     /* EVP_PKEY_RSA2          19    (alias) */
@@ -189,8 +190,8 @@ static void table_arms(void)
 
 /* The case-insensitive PEM-name walk and its refusals. The three refusals are the ones the plan
  * names: a wrong length, a string that is a prefix of a PEM name, and a name no row carries. No
- * query names a withheld ECX PEM spelling, because the authority would find one and the crate would
- * not -- the D353 narrowing, measured elsewhere rather than carried as an arm. */
+ * query names an ECX PEM spelling: the four of those are `RT-ECX`'s arms, and keeping them out of
+ * this probe is how the two courts stay one subject each. */
 static void find_str_arms(void)
 {
     static const struct {
@@ -231,8 +232,8 @@ static void find_str_arms(void)
 /* ------------------------------------------------------------------ arm 3: EVP_PKEY_type */
 
 /* `EVP_PKEY_type` is `EVP_PKEY_asn1_find`'s answer, unaliased: it follows `pkey_base_id` while the
- * row carries `ASN1_PKEY_ALIAS`, so an alias's own id is never returned. The four withheld ids are
- * not queried (they would differ); the two synthetic values are. */
+ * row carries `ASN1_PKEY_ALIAS`, so an alias's own id is never returned. The four ECX ids are
+ * `RT-ECX`'s; the two synthetic values are this arm's. */
 static void type_arms(void)
 {
     int i;

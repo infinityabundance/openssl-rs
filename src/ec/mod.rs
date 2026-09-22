@@ -88,6 +88,10 @@ pub mod depr;
 pub mod ecdh_ossl;
 pub mod ecdsa;
 pub mod ecdsa_ossl;
+// Phase 8.7's ECX chain (D370-D372): `crypto/ec/ecx_key.c` and `crypto/ec/ecx_backend.c`.
+pub mod ecx_backend;
+pub mod ecx_key;
+pub mod ecx_meth;
 pub mod kdf;
 pub mod key;
 pub mod kmeth;
