@@ -1,26 +1,27 @@
 //! `crypto/ec/eck_prn.c` — the deprecated `ECPKParameters` printers — and `ec_ameth.c`'s
-//! `ECParameters_print`, Phase 8.7 (D347).
+//! `ECParameters_print`, Phase 8.7 (D347), completed by D362.
 //!
-//! **Four exports and one file-local helper, and one withheld function named rather than
-//! stubbed.** `crypto/ec/eck_prn.c` is 259 lines whose whole body sits inside
-//! `#ifndef OPENSSL_NO_DEPRECATED_3_0`; it defines `ECPKParameters_print` (`:70-221`) and its
-//! three `FILE *`/key wrappers `ECPKParameters_print_fp` (`:21-34`), `EC_KEY_print_fp`
+//! **Five exports and one file-local helper.** `crypto/ec/eck_prn.c` is 259 lines whose whole body
+//! sits inside `#ifndef OPENSSL_NO_DEPRECATED_3_0`; it defines `ECPKParameters_print` (`:70-221`)
+//! and its three `FILE *`/key wrappers `ECPKParameters_print_fp` (`:21-34`), `EC_KEY_print_fp`
 //! (`:36-49`) and `ECParameters_print_fp` (`:51-64`), plus the file-local `print_bin`
-//! (`:223-258`). The four landed here are those minus `EC_KEY_print_fp`:
+//! (`:223-258`). All five landed here:
 //!
 //! * [`ECPKParameters_print`] — `crypto/ec/eck_prn.c:70-221`;
 //! * [`ECPKParameters_print_fp`] — `:21-34`;
+//! * [`EC_KEY_print_fp`] — `:36-49`, which wraps the `FILE *` and calls `ec_ameth.c`'s
+//!   [`crate::ec::ameth::EC_KEY_print`];
 //! * [`ECParameters_print_fp`] — `:51-64`, which wraps the `FILE *` and calls the next;
 //! * [`ECParameters_print`] — `crypto/ec/ec_ameth.c:717-720`, the `EC_KEY_PRINT_PARAM` arm of
 //!   that unit's `static do_EC_KEY_print` (`:283-345`).
 //!
-//! ## `EC_KEY_print_fp` is withheld, and why
+//! ## `EC_KEY_print_fp`'s callee is `ec_ameth.c`'s, and it landed with the ameth table
 //!
-//! `EC_KEY_print_fp` (`eck_prn.c:36-49`) calls `EC_KEY_print` (`ec_ameth.c:709-714`), which is
-//! the `EC_KEY_PRINT_PRIVATE` arm of `do_EC_KEY_print`. That export is **not** this module's and
-//! is withheld with the rest of `ec_ameth.c`'s `EVP_PKEY_ASN1_METHOD` surface (D341): the object
-//! whose callbacks reach it is the one Phase 11 unblocks. It is named here rather than
-//! transcribed as a wrapper for a symbol the crate does not define.
+//! `EC_KEY_print_fp` (`eck_prn.c:36-49`) calls `EC_KEY_print` (`ec_ameth.c:709-714`), which is the
+//! `EC_KEY_PRINT_PRIVATE`/`EC_KEY_PRINT_PUBLIC` arm of `do_EC_KEY_print` chosen by whether the key
+//! holds a private scalar. D347 withheld the wrapper because its callee was part of `ec_ameth.c`'s
+//! `EVP_PKEY_ASN1_METHOD` surface, which D341's cycle held open. D362 landed the object and its
+//! callbacks, so the wrapper's callee exists and the wrapper is written here rather than withheld.
 //!
 //! ## `ECParameters_print` is `ec_ameth.c`'s, and it is transcribed where it can be reached
 //!
@@ -29,7 +30,7 @@
 //! reads are guarded by `ktype != EC_KEY_PRINT_PARAM` and `ktype == EC_KEY_PRINT_PRIVATE`
 //! (`ec_ameth.c:296`, `:302`), so the arm this export selects is the print of the group's
 //! parameters and nothing else. It is written out as that arm rather than as a three-way
-//! `do_EC_KEY_print`, because the other two arms belong to `EC_KEY_print` above.
+//! `do_EC_KEY_print`, because the other two arms belong to `EC_KEY_print` in `src/ec/ameth.rs`.
 //!
 //! ## The raise coordinates are generated, not reconstructed
 //!
@@ -383,6 +384,34 @@ pub unsafe extern "C" fn ECPKParameters_print_fp(
         // `BIO_set_fp(b, fp, BIO_NOCLOSE)`, line 30.
         BIO_ctrl(b, BIO_C_SET_FILE_PTR, BIO_NOCLOSE as c_long, fp);
         let ret = ECPKParameters_print(b, x, off);
+        BIO_free(b);
+        ret
+    }
+}
+
+/// `int EC_KEY_print_fp(FILE *fp, const EC_KEY *x, int off)` — `crypto/ec/eck_prn.c:36-49`.
+///
+/// The `FILE *` wrapper around [`crate::ec::ameth::EC_KEY_print`]. Its refusal is
+/// `ERR_R_BIO_LIB`, not the `ERR_R_BUF_LIB` its two `ECPKParameters` siblings raise — the
+/// authority's own asymmetry, transcribed.
+///
+/// # Safety
+///
+/// `fp` is a live `FILE *`; `x` is a live key.
+#[no_mangle]
+pub unsafe extern "C" fn EC_KEY_print_fp(fp: *mut c_void, x: *const EcKey, off: c_int) -> c_int {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used here.
+    unsafe {
+        // `b = BIO_new(BIO_s_file())`, line 41.
+        let b = BIO_new(BIO_s_file());
+        if b.is_null() {
+            // SAFETY: `ECK_PRN_42` is the generated site at `eck_prn.c:42`.
+            raise_site(&err_sites::ECK_PRN_42);
+            return 0;
+        }
+        // `BIO_set_fp(b, fp, BIO_NOCLOSE)`, line 45.
+        BIO_ctrl(b, BIO_C_SET_FILE_PTR, BIO_NOCLOSE as c_long, fp);
+        let ret = crate::ec::ameth::EC_KEY_print(b, x, off);
         BIO_free(b);
         ret
     }

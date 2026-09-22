@@ -204,7 +204,6 @@
       "src/dsa/ameth.rs",
       "src/dsa/backend.rs",
       "src/dsa/pmeth.rs",
-      "src/ec/ameth.rs",
       "src/ec/backend.rs",
       "src/ec/curve_data.rs",
       "src/ec/ecdh_ossl.rs",

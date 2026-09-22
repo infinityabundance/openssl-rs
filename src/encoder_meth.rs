@@ -22,27 +22,20 @@
 //! in the fields their names say -- so a future sequential renumbering fails a test rather than a
 //! provider.
 //!
-//! ## What is withheld, and it is one named block rather than a scattered list
+//! ## The unit is whole
 //!
-//! Every function that is *not* here is named, with its authority coordinate: **the fetch and
-//! construct-method block** -- `encoder_data_st` (`:78-87`), `get_tmp_encoder_store` (`:95`),
-//! `dealloc_tmp_encoder_store` (`:104`), `get_encoder_store` (`:111`), `reserve_encoder_store`
-//! (`:116`), `unreserve_encoder_store` (`:127`), `get_encoder_from_store` (`:139`),
-//! `put_encoder_in_store` (`:174`), `construct_encoder` (`:304`), `destruct_encoder` (`:335`),
-//! `up_ref_encoder` (`:340`), `free_encoder` (`:345`), `inner_ossl_encoder_fetch` (`:351`),
-//! `OSSL_ENCODER_fetch` (`:429`), `do_one` (`:532`) and `OSSL_ENCODER_do_all_provided` (`:539`).
-//! These are one block because `do_all_provided` calls `inner_ossl_encoder_fetch` **first** (`:549`)
-//! and the fetch is the only caller of the seven `ossl_method_construct` callbacks, so none of the
-//! seventeen can link without the rest. Sixteen of the seventeen are `static` or non-exported and
-//! the seventeenth is an export, so the prerequisite gate does not see them as a transcribed unit's
-//! unwired internals -- but the omission is a *narrowing* and is recorded here rather than left
-//! implicit. They land with `src/encoder_pkey.rs`, whose `OSSL_ENCODER_CTX_new_for_pkey` is the
-//! first caller of `do_all_provided`.
+//! Every function of `encoder_meth.c` is here: the object, the dispatch scan, the fetch and
+//! construct-method block (`inner_ossl_encoder_fetch`, `OSSL_ENCODER_fetch`, `do_one`,
+//! `OSSL_ENCODER_do_all_provided` and the seven `ossl_method_construct` callbacks),
+//! `encoder_from_algorithm`, the accessors, the by-name pass-throughs and the context trio. The
+//! fetch block waited for this commit because `do_all_provided` calls `inner_ossl_encoder_fetch`
+//! first (`:549`) and that fetch is the seven callbacks' only caller, and because its first real
+//! caller is `src/encoder_pkey.rs`'s `ossl_encoder_ctx_setup_for_pkey`, which lands beside it.
 //!
-//! The **context trio** (`OSSL_ENCODER_CTX_new` `:608`, `_set_params` `:616`, `_free` `:645`) is
-//! here, even though it needs `src/encoder_lib.rs`'s `ossl_encoder_instance_free` and its two
-//! `OSSL_ENCODER_INSTANCE_get_*` -- the two units landed together in D361 for exactly that reason,
-//! which is the measurement D360 recorded.
+//! The unit's two **store bridges** (`:442-459`) are the exception, and they are not a gap:
+//! `ossl_encoder_store_cache_flush` and `ossl_encoder_store_remove_all_provided` are transcribed in
+//! `src/provider/stores.rs` with the seven sibling provider-activation bridges (D357), and this
+//! module calls them by name in a test rather than defining them twice.
 //!
 //! The two store bridges `ossl_encoder_store_cache_flush` and
 //! `ossl_encoder_store_remove_all_provided` are this unit's (`:442-459`) but are **already
@@ -57,18 +50,28 @@ use core::ptr;
 use core::sync::atomic::{AtomicI32, Ordering};
 
 use crate::context::dispatch::{entry_function, OsslDispatch, OSSL_DISPATCH_END};
-use crate::context::namemap::{ossl_namemap_doall_names, ossl_namemap_stored};
+use crate::context::namemap::{
+    ossl_namemap_add_names, ossl_namemap_doall_names, ossl_namemap_name2num_n,
+    ossl_namemap_num2name, ossl_namemap_stored,
+};
+use crate::context::{lib_ctx_get_data, lib_ctx_get_descriptor, OSSL_LIB_CTX_ENCODER_STORE_INDEX};
 use crate::encoder_lib::{
     ossl_encoder_instance_free, OSSL_ENCODER_CTX_get_num_encoders,
     OSSL_ENCODER_INSTANCE_get_encoder, OSSL_ENCODER_INSTANCE_get_encoder_ctx,
 };
 use crate::evp::algorithm::ossl_algorithm_get1_first_name;
+use crate::evp::method_store::{ossl_method_construct, OsslMethodConstructMethod};
 use crate::params::OsslParam;
 use crate::passphrase::{
     ossl_pw_clear_passphrase_data, OsslPassphraseCallback, OsslPassphraseData,
 };
 use crate::property::list::OsslPropertyList;
 use crate::property::parse::ossl_parse_property;
+use crate::property::store::{
+    ossl_method_lock_store, ossl_method_store_add, ossl_method_store_cache_get,
+    ossl_method_store_cache_set, ossl_method_store_do_all, ossl_method_store_fetch,
+    ossl_method_store_free, ossl_method_store_new, ossl_method_unlock_store, OsslMethodStore,
+};
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::{ossl_provider_libctx, ossl_provider_up_ref, OsslProvider};
 use crate::runtime::err::{err_sites, raise_site};
@@ -77,10 +80,17 @@ use crate::runtime::stack::{OPENSSL_sk_pop_free, OPENSSL_sk_value, OpenSslStack}
 
 /// `#define NAME_SEPARATOR ':'` — `crypto/encode_decode/encoder_meth.c:25`.
 ///
-/// An encoder can carry several names in one colon-separated string; the fetch block (withheld)
-/// is what splits it, so this constant is unused until that lands.
-#[allow(dead_code)] // read by the withheld fetch block, which splits the name list
+/// An encoder can carry several names in one colon-separated string, and the fetch block splits it
+/// with `strchr`: only the *first* name is used for the name-map id.
 const NAME_SEPARATOR: c_char = b':' as c_char;
+
+/// `#define OSSL_OP_ENCODER 20` — `include/openssl/core_dispatch.h:295`.
+///
+/// **Twenty, not ten**: the `OSSL_OP_*` ids skip 6-9, the same trap as the
+/// `OSSL_FUNC_ENCODER_*` identities one layer up. The crate already carries the two ids its other
+/// fetches need (`OSSL_OP_CIPHER` 2 in `src/evp/cipher.rs`, `OSSL_OP_SIGNATURE` 12 in
+/// `src/evp/signature.rs`), and this is the third.
+const OSSL_OP_ENCODER: c_int = 20;
 
 // ---------------------------------------------------------------------------
 // The `OSSL_FUNC_ENCODER_*` identities — `include/openssl/core_dispatch.h:952-961`
@@ -430,6 +440,553 @@ pub(crate) unsafe fn encoder_from_algorithm(
         (*encoder).base.prov = prov;
     }
     encoder
+}
+
+/// `ERR_RFLAG_COMMON` — `include/openssl/err.h`, the bit every `ERR_R_*` common reason carries.
+/// `0x2 << ERR_RFLAGS_OFFSET` with the offset 18, as `src/evp/fetch.rs:437` records it.
+const ERR_RFLAG_COMMON: c_int = 0x2 << 18;
+
+/// `ERR_R_FETCH_FAILED`, taken from the generated site `EVP_FETCH_352` rather than typed: the
+/// value is the authority's own, resolved through its headers by `gen_err_raise_sites.py`.
+const ERR_R_FETCH_FAILED: c_int = err_sites::EVP_FETCH_352.reason;
+
+/// `ERR_R_UNSUPPORTED` (`err.h`): `(268 | ERR_RFLAG_COMMON)`.
+///
+/// The other arm of the authority's `int code = unsupported ? ERR_R_UNSUPPORTED :
+/// ERR_R_FETCH_FAILED;` at `encoder_meth.c:415`, whose raise site `ENCODER_METH_419` is recorded
+/// with `dynamic_reason` precisely because the generator refuses to guess which arm a site takes.
+/// The same pair `src/evp/fetch.rs:461` spells for `evp_fetch.c`.
+const ERR_R_UNSUPPORTED: c_int = 268 | ERR_RFLAG_COMMON;
+
+/// `struct encoder_data_st` — `encoder_meth.c:78-87`.
+///
+/// The walk's state. `id`, `names` and `propquery` are filled by `inner_ossl_encoder_fetch` for the
+/// **get** callback's benefit; `tmp_store` is the temporary store the walk may create and
+/// `dealloc_tmp_encoder_store` releases; `flag_construct_error_occurred` is the one-bit flag that
+/// lets the fetch tell an unsupported algorithm from a failed constructor, and is projected as its
+/// four-byte storage for the reason `EvpPkey`'s `foreign` is.
+struct EncoderDataSt {
+    /// `OSSL_LIB_CTX *libctx`.
+    libctx: *mut c_void,
+    /// `int id` — the name-map number the fetch is looking for, or 0 to resolve from `names`.
+    id: c_int,
+    /// `const char *names` — the requested name list, or NULL.
+    names: *const c_char,
+    /// `const char *propquery` — the property query, never NULL once the fetch has started.
+    propquery: *const c_char,
+    /// `OSSL_METHOD_STORE *tmp_store` — the walk's temporary store, or NULL.
+    tmp_store: *mut OsslMethodStore,
+    /// `unsigned int flag_construct_error_occurred : 1` — projected as its four-byte storage.
+    flag_construct_error_occurred: c_int,
+}
+
+/// The length of the first `':'`-separated name in `names` — the authority's
+/// `q = strchr(names, NAME_SEPARATOR); l = q == NULL ? strlen(names) : q - names`.
+///
+/// # Safety
+/// `names` must be NUL-terminated.
+unsafe fn first_name_len(names: *const c_char) -> usize {
+    let mut l = 0usize;
+    // SAFETY: `names` is NUL-terminated per the contract, so the scan stays inside it.
+    unsafe {
+        while *names.add(l) != 0 && *names.add(l) != NAME_SEPARATOR {
+            l += 1;
+        }
+    }
+    l
+}
+
+/// `static void *get_tmp_encoder_store(void *data)` — `encoder_meth.c:95-102`.
+///
+/// # Safety
+/// `data` must be a live `EncoderDataSt`.
+unsafe extern "C" fn get_tmp_encoder_store(data: *mut c_void) -> *mut c_void {
+    let methdata = data.cast::<EncoderDataSt>();
+    // SAFETY: `methdata` is live per the contract.
+    unsafe {
+        if (*methdata).tmp_store.is_null() {
+            (*methdata).tmp_store = ossl_method_store_new((*methdata).libctx);
+        }
+        (*methdata).tmp_store.cast::<c_void>()
+    }
+}
+
+/// `static void dealloc_tmp_encoder_store(void *store)` — `encoder_meth.c:104-108`.
+///
+/// # Safety
+/// `store` must be NULL or a store this file created.
+unsafe extern "C" fn dealloc_tmp_encoder_store(store: *mut c_void) {
+    if !store.is_null() {
+        // SAFETY: `store` is a store `get_tmp_encoder_store` created and nobody else released.
+        unsafe { ossl_method_store_free(store.cast::<OsslMethodStore>()) };
+    }
+}
+
+/// `static OSSL_METHOD_STORE *get_encoder_store(OSSL_LIB_CTX *libctx)` — `encoder_meth.c:111-114`.
+fn get_encoder_store(libctx: *mut c_void) -> *mut OsslMethodStore {
+    // `lib_ctx_get_data` is a SAFE function in this crate (D113), so the read is not guarded.
+    lib_ctx_get_data(libctx, OSSL_LIB_CTX_ENCODER_STORE_INDEX).cast::<OsslMethodStore>()
+}
+
+/// `static int reserve_encoder_store(void *store, void *data)` — `encoder_meth.c:116-125`.
+///
+/// The `&&` is the authority's and matters: a caller-supplied store is used as-is, and only a NULL
+/// one is resolved through the context.
+///
+/// # Safety
+/// `store` NULL or a live store; `data` a live `EncoderDataSt`.
+unsafe extern "C" fn reserve_encoder_store(store: *mut c_void, data: *mut c_void) -> c_int {
+    let methdata = data.cast::<EncoderDataSt>();
+    let mut store = store.cast::<OsslMethodStore>();
+    if store.is_null() {
+        // SAFETY: `methdata` is live per the contract.
+        store = get_encoder_store(unsafe { (*methdata).libctx });
+        if store.is_null() {
+            return 0;
+        }
+    }
+    // SAFETY: `store` is live here.
+    unsafe { ossl_method_lock_store(store) }
+}
+
+/// `static int unreserve_encoder_store(void *store, void *data)` — `encoder_meth.c:127-136`.
+///
+/// # Safety
+/// As [`reserve_encoder_store`].
+unsafe extern "C" fn unreserve_encoder_store(store: *mut c_void, data: *mut c_void) -> c_int {
+    let methdata = data.cast::<EncoderDataSt>();
+    let mut store = store.cast::<OsslMethodStore>();
+    if store.is_null() {
+        // SAFETY: `methdata` is live per the contract.
+        store = get_encoder_store(unsafe { (*methdata).libctx });
+        if store.is_null() {
+            return 0;
+        }
+    }
+    // SAFETY: `store` is live here.
+    unsafe { ossl_method_unlock_store(store) }
+}
+
+/// `static void *get_encoder_from_store(void *store, const OSSL_PROVIDER **prov, void *data)` —
+/// `encoder_meth.c:139-172`.
+///
+/// The id is resolved from `names` **only when `id` is still 0**, and only the first name is used;
+/// the name map must exist or the lookup answers NULL. A store is resolved from the context when the
+/// caller passed none.
+///
+/// # Safety
+/// `store` NULL or live; `prov` NULL or writable; `data` a live `EncoderDataSt`.
+unsafe extern "C" fn get_encoder_from_store(
+    store: *mut c_void,
+    prov: *mut *const OsslProvider,
+    data: *mut c_void,
+) -> *mut c_void {
+    let methdata = data.cast::<EncoderDataSt>();
+    let mut store = store.cast::<OsslMethodStore>();
+    let mut method: *mut c_void = ptr::null_mut();
+
+    // SAFETY: `methdata` is live per the contract.
+    unsafe {
+        let mut id = (*methdata).id;
+        if id == 0 && !(*methdata).names.is_null() {
+            let namemap = ossl_namemap_stored((*methdata).libctx);
+            if namemap.is_null() {
+                return ptr::null_mut();
+            }
+            let l = first_name_len((*methdata).names);
+            id = ossl_namemap_name2num_n(namemap, (*methdata).names, l);
+        }
+
+        if id == 0 {
+            return ptr::null_mut();
+        }
+
+        if store.is_null() {
+            store = get_encoder_store((*methdata).libctx);
+            if store.is_null() {
+                return ptr::null_mut();
+            }
+        }
+
+        if ossl_method_store_fetch(store, id, (*methdata).propquery, prov, &mut method) == 0 {
+            return ptr::null_mut();
+        }
+    }
+    method
+}
+
+/// `static int put_encoder_in_store(void *store, void *method, const OSSL_PROVIDER *prov,
+/// const char *names, const char *propdef, void *data)` — `encoder_meth.c:174-206`.
+///
+/// Called only with a method `construct_encoder` just built, so all the names are already in the name
+/// map under one identity and the **first** is enough to recover it. The two callbacks handed to the
+/// store are this file's own wrappers, which is what makes the store's reference an
+/// `OSSL_ENCODER`'s.
+///
+/// # Safety
+/// `store` NULL or live; `method` live; `prov` live; `names` NULL or NUL-terminated; `propdef` NULL
+/// or NUL-terminated; `data` a live `EncoderDataSt`.
+unsafe extern "C" fn put_encoder_in_store(
+    store: *mut c_void,
+    method: *mut c_void,
+    prov: *const OsslProvider,
+    names: *const c_char,
+    propdef: *const c_char,
+    data: *mut c_void,
+) -> c_int {
+    let methdata = data.cast::<EncoderDataSt>();
+    let mut store = store.cast::<OsslMethodStore>();
+
+    // SAFETY: `names` is NULL or NUL-terminated per the contract.
+    let l = if !names.is_null() {
+        // SAFETY: `names` is non-NULL and NUL-terminated here.
+        unsafe { first_name_len(names) }
+    } else {
+        0
+    };
+
+    // SAFETY: `methdata` is live per the contract.
+    unsafe {
+        let namemap = ossl_namemap_stored((*methdata).libctx);
+        if namemap.is_null() {
+            return 0;
+        }
+        let id = ossl_namemap_name2num_n(namemap, names, l);
+        if id == 0 {
+            return 0;
+        }
+
+        if store.is_null() {
+            store = get_encoder_store((*methdata).libctx);
+            if store.is_null() {
+                return 0;
+            }
+        }
+
+        ossl_method_store_add(
+            store,
+            prov,
+            id,
+            propdef,
+            method,
+            ossl_encoder_up_ref,
+            ossl_encoder_free,
+        )
+    }
+}
+
+/// `static void ossl_encoder_free(void *data)` — `encoder_meth.c:27-30`.
+///
+/// # Safety
+/// `data` must be a live `OsslEncoder`.
+unsafe extern "C" fn ossl_encoder_free(data: *mut c_void) {
+    // SAFETY: `data` is live per the contract.
+    unsafe { OSSL_ENCODER_free(data.cast::<OsslEncoder>()) };
+}
+
+/// `static int ossl_encoder_up_ref(void *data)` — `encoder_meth.c:32-35`.
+///
+/// # Safety
+/// `data` must be a live `OsslEncoder`.
+unsafe extern "C" fn ossl_encoder_up_ref(data: *mut c_void) -> c_int {
+    // SAFETY: `data` is live per the contract.
+    unsafe { OSSL_ENCODER_up_ref(data.cast::<OsslEncoder>()) }
+}
+
+/// `static void *construct_encoder(const OSSL_ALGORITHM *algodef, OSSL_PROVIDER *prov,
+/// void *data)` — `encoder_meth.c:304-332`.
+///
+/// Reached only when `get_encoder_from_store` answered NULL, which is why the name-map entry is
+/// created here: `ossl_namemap_add_names` answers the existing number if the names are already
+/// known. The flag is set on **any** NULL method, which is how the fetch separates "unsupported
+/// algorithm" from "the constructor failed".
+///
+/// # Safety
+/// `algodef` and `prov` must be live; `data` a live `EncoderDataSt`.
+unsafe extern "C" fn construct_encoder(
+    algodef: *const OsslAlgorithm,
+    prov: *mut OsslProvider,
+    data: *mut c_void,
+) -> *mut c_void {
+    let methdata = data.cast::<EncoderDataSt>();
+    // SAFETY: `prov` is live per the contract.
+    let libctx = unsafe { ossl_provider_libctx(prov) };
+    let namemap = ossl_namemap_stored(libctx);
+    // SAFETY: `algodef` is live per the contract.
+    let names = unsafe { (*algodef).algorithm_names };
+    // SAFETY: `namemap` is live or NULL, which `ossl_namemap_add_names` refuses.
+    let id = unsafe { ossl_namemap_add_names(namemap, 0, names, NAME_SEPARATOR) };
+    let method = if id != 0 {
+        // SAFETY: `algodef` and `prov` are live, and `id` is the number the name map just gave.
+        unsafe { encoder_from_algorithm(id, algodef, prov) }
+    } else {
+        ptr::null_mut()
+    };
+
+    if method.is_null() {
+        // SAFETY: `methdata` is live per the contract.
+        unsafe { (*methdata).flag_construct_error_occurred = 1 };
+    }
+    method.cast::<c_void>()
+}
+
+/// `static void destruct_encoder(void *method, void *data)` — `encoder_meth.c:335-338`.
+///
+/// # Safety
+/// `method` must be a live `OsslEncoder`; `data` is unused.
+unsafe extern "C" fn destruct_encoder(method: *mut c_void, _data: *mut c_void) {
+    // SAFETY: `method` is live per the contract.
+    unsafe { OSSL_ENCODER_free(method.cast::<OsslEncoder>()) };
+}
+
+/// `static int up_ref_encoder(void *method)` — `encoder_meth.c:340-343`.
+///
+/// # Safety
+/// `method` must be a live `OsslEncoder`.
+unsafe extern "C" fn up_ref_encoder(method: *mut c_void) -> c_int {
+    // SAFETY: `method` is live per the contract.
+    unsafe { OSSL_ENCODER_up_ref(method.cast::<OsslEncoder>()) }
+}
+
+/// `static void free_encoder(void *method)` — `encoder_meth.c:345-348`.
+///
+/// # Safety
+/// `method` must be a live `OsslEncoder`.
+unsafe extern "C" fn free_encoder(method: *mut c_void) {
+    // SAFETY: `method` is live per the contract.
+    unsafe { OSSL_ENCODER_free(method.cast::<OsslEncoder>()) };
+}
+
+/// `static OSSL_ENCODER *inner_ossl_encoder_fetch(struct encoder_data_st *methdata,
+/// const char *name, const char *properties)` — `encoder_meth.c:351-427`.
+///
+/// The **cache is consulted first** (`ossl_method_store_cache_get`), and only a miss runs the walk.
+/// Two flags are easy to transpose: `unsupported` starts as "no name resolved" and is *replaced* by
+/// `!flag_construct_error_occurred` after a miss, so a walk that never entered the constructor means
+/// "unsupported" and one that failed inside it means `ERR_R_FETCH_FAILED`. The provider the walk
+/// settled on is written back through `prov` into the cache set, which is how a later cache hit
+/// still names a provider.
+///
+/// # Safety
+/// `methdata` must point at a live, initialised `EncoderDataSt`; `name` and `properties` NULL or
+/// NUL-terminated.
+unsafe fn inner_ossl_encoder_fetch(
+    methdata: *mut EncoderDataSt,
+    name: *const c_char,
+    properties: *const c_char,
+) -> *mut OsslEncoder {
+    // SAFETY: `methdata` is live per the contract.
+    let libctx = unsafe { (*methdata).libctx };
+    let store = get_encoder_store(libctx);
+    let namemap = ossl_namemap_stored(libctx);
+    let propq: *const c_char = if !properties.is_null() {
+        properties
+    } else {
+        c"".as_ptr()
+    };
+    let mut method: *mut c_void = ptr::null_mut();
+
+    if store.is_null() || namemap.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::ENCODER_METH_362) };
+        return ptr::null_mut();
+    }
+
+    // SAFETY: `namemap` is live and `name` is NULL or NUL-terminated.
+    let mut id = if !name.is_null() {
+        // SAFETY: `namemap` is live and `name` is non-NULL and NUL-terminated here.
+        unsafe { crate::context::namemap::ossl_namemap_name2num(namemap, name) }
+    } else {
+        0
+    };
+
+    /* If we haven't found the name yet, chances are that the algorithm to be fetched is unsupported. */
+    let mut unsupported = id == 0;
+
+    // SAFETY: `store` and `namemap` are live; `methdata` is live.
+    unsafe {
+        if id == 0
+            || ossl_method_store_cache_get(store, ptr::null_mut(), id, propq, &mut method) == 0
+        {
+            let mcm = OsslMethodConstructMethod {
+                get_tmp_store: get_tmp_encoder_store,
+                lock_store: reserve_encoder_store,
+                unlock_store: unreserve_encoder_store,
+                get: get_encoder_from_store,
+                put: put_encoder_in_store,
+                construct: construct_encoder,
+                destruct: destruct_encoder,
+            };
+            let mut prov: *mut OsslProvider = ptr::null_mut();
+
+            (*methdata).id = id;
+            (*methdata).names = name;
+            (*methdata).propquery = propq;
+            (*methdata).flag_construct_error_occurred = 0;
+            method = ossl_method_construct(
+                (*methdata).libctx,
+                OSSL_OP_ENCODER,
+                &mut prov,
+                0, /* !force_cache */
+                &mcm,
+                methdata.cast::<c_void>(),
+            );
+            if !method.is_null() {
+                /*
+                 * If construction did create a method for us, we know that there is a correct
+                 * name_id and meth_id, since those have already been calculated in
+                 * get_encoder_from_store() and put_encoder_in_store() above.
+                 */
+                if id == 0 {
+                    id = crate::context::namemap::ossl_namemap_name2num(namemap, name);
+                }
+                ossl_method_store_cache_set(
+                    store,
+                    prov,
+                    id,
+                    propq,
+                    method,
+                    up_ref_encoder,
+                    free_encoder,
+                );
+            }
+
+            /*
+             * If we never were in the constructor, the algorithm to be fetched is unsupported.
+             */
+            unsupported = (*methdata).flag_construct_error_occurred == 0;
+        }
+
+        if (id != 0 || !name.is_null()) && method.is_null() {
+            let code = if unsupported {
+                ERR_R_UNSUPPORTED
+            } else {
+                ERR_R_FETCH_FAILED
+            };
+            let reported = if name.is_null() {
+                ossl_namemap_num2name(namemap, id, 0)
+            } else {
+                name
+            };
+            let mut msg = [0 as c_char; 1024];
+            crate::runtime::bio::print::BIO_snprintf(
+                msg.as_mut_ptr(),
+                msg.len(),
+                c"%s, Name (%s : %d), Properties (%s)".as_ptr(),
+                lib_ctx_get_descriptor((*methdata).libctx),
+                if reported.is_null() {
+                    c"<null>".as_ptr()
+                } else {
+                    reported
+                },
+                id,
+                if properties.is_null() {
+                    c"<null>".as_ptr()
+                } else {
+                    properties
+                },
+            );
+            crate::runtime::err::raise_site_dynamic_data(
+                &err_sites::ENCODER_METH_419,
+                code,
+                msg.as_ptr(),
+            );
+        }
+    }
+
+    method.cast::<OsslEncoder>()
+}
+
+/// `OSSL_ENCODER *OSSL_ENCODER_fetch(OSSL_LIB_CTX *libctx, const char *name,
+/// const char *properties)` — `encoder_meth.c:429-440`.
+///
+/// # Safety
+/// `libctx` NULL or live; `name` and `properties` NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_ENCODER_fetch(
+    libctx: *mut c_void,
+    name: *const c_char,
+    properties: *const c_char,
+) -> *mut OsslEncoder {
+    let mut methdata = EncoderDataSt {
+        libctx,
+        id: 0,
+        names: ptr::null(),
+        propquery: ptr::null(),
+        tmp_store: ptr::null_mut(),
+        flag_construct_error_occurred: 0,
+    };
+    // SAFETY: `methdata` is live and initialised per the contract.
+    let method = unsafe { inner_ossl_encoder_fetch(&mut methdata, name, properties) };
+    // SAFETY: `methdata.tmp_store` is NULL or a store this call created.
+    unsafe { dealloc_tmp_encoder_store(methdata.tmp_store.cast::<c_void>()) };
+    method
+}
+
+/// `struct do_one_data_st` — `encoder_meth.c:527-530`.
+struct DoOneData {
+    /// `void (*user_fn)(OSSL_ENCODER *encoder, void *arg)`.
+    user_fn: unsafe extern "C" fn(*mut OsslEncoder, *mut c_void),
+    /// `void *user_arg`.
+    user_arg: *mut c_void,
+}
+
+/// `static void do_one(int id, void *method, void *arg)` — `encoder_meth.c:532-537`.
+///
+/// # Safety
+/// `method` must be a live `OsslEncoder` and `arg` a live `DoOneData`.
+unsafe extern "C" fn do_one(_id: c_int, method: *mut c_void, arg: *mut c_void) {
+    // SAFETY: `arg` is a live `DoOneData` per the contract.
+    let data = arg.cast::<DoOneData>();
+    // SAFETY: `data` is live; `user_fn` is the caller's own callback.
+    unsafe { ((*data).user_fn)(method.cast::<OsslEncoder>(), (*data).user_arg) };
+}
+
+/// `void OSSL_ENCODER_do_all_provided(OSSL_LIB_CTX *libctx,
+/// void (*user_fn)(OSSL_ENCODER *encoder, void *arg), void *user_arg)` — `encoder_meth.c:539-557`.
+///
+/// The **fetch runs first** (`:549`), which is what fills the temporary store, and only then are
+/// both the temporary store's methods and the permanent store's walked. The temporary store is
+/// released last. In this crate the walk finds nothing -- all 482 `OSSL_OP_ENCODER` rows are
+/// `unimplemented` -- so no callback is invoked, but the code path is the authority's.
+///
+/// # Safety
+/// `libctx` NULL or live; `user_fn` a valid callback; `user_arg` opaque to this file.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_ENCODER_do_all_provided(
+    libctx: *mut c_void,
+    user_fn: unsafe extern "C" fn(*mut OsslEncoder, *mut c_void),
+    user_arg: *mut c_void,
+) {
+    let mut methdata = EncoderDataSt {
+        libctx,
+        id: 0,
+        names: ptr::null(),
+        propquery: ptr::null(),
+        tmp_store: ptr::null_mut(),
+        flag_construct_error_occurred: 0,
+    };
+    // SAFETY: `methdata` is live; `inner_ossl_encoder_fetch`'s contract is met with NULLs.
+    unsafe { inner_ossl_encoder_fetch(&mut methdata, ptr::null(), ptr::null()) };
+
+    let mut data = DoOneData { user_fn, user_arg };
+    // SAFETY: each store is NULL or live and `data` is this frame's own.
+    unsafe {
+        if !methdata.tmp_store.is_null() {
+            ossl_method_store_do_all(
+                methdata.tmp_store,
+                Some(do_one),
+                ptr::addr_of_mut!(data).cast::<c_void>(),
+            );
+        }
+        ossl_method_store_do_all(
+            get_encoder_store(libctx),
+            Some(do_one),
+            ptr::addr_of_mut!(data).cast::<c_void>(),
+        );
+    }
+    // SAFETY: `methdata.tmp_store` is NULL or a store this call created.
+    unsafe { dealloc_tmp_encoder_store(methdata.tmp_store.cast::<c_void>()) };
 }
 
 /// `const OSSL_PROVIDER *OSSL_ENCODER_get0_provider(const OSSL_ENCODER *encoder)` —

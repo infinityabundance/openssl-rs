@@ -588,6 +588,9 @@ COVERED_FILES = [
     ("crypto/rsa/rsa_asn1.c", "RSA_ASN1"),
     ("crypto/rsa/rsa_mp.c", "RSA_MP"),
     ("crypto/rsa/rsa_prn.c", "RSA_PRN"),
+    # Phase 8.6's `crypto/dsa/dsa_prn.c` (D362) raises twice, both
+    # `ERR_LIB_DSA`/`ERR_R_BUF_LIB` at `:28` and `:43`.
+    ("crypto/dsa/dsa_prn.c", "DSA_PRN"),
     ("crypto/rsa/rsa_sp800_56b_check.c", "RSA_SP800_56B_CHECK"),
     ("crypto/rsa/rsa_sp800_56b_gen.c", "RSA_SP800_56B_GEN"),
     ("crypto/rsa/rsa_x931g.c", "RSA_X931G"),
@@ -786,6 +789,7 @@ COVERED_FILES = [
     # 6 (`encoder_meth.c`), 14 (`encoder_lib.c`) and 2 (`encoder_pkey.c`).
     ("crypto/encode_decode/encoder_meth.c", "ENCODER_METH"),
     ("crypto/encode_decode/encoder_lib.c", "ENCODER_LIB"),
+    ("crypto/encode_decode/encoder_pkey.c", "ENCODER_PKEY"),
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`

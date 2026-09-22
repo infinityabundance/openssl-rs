@@ -13,11 +13,11 @@ Read from the ledger's `body.counts`.
 | quantity | count |
 |---|---|
 | owned | 786 |
-| implemented | 772 |
+| implemented | 780 |
 | deferred to a later phase | 0 |
-| open in this stratum | 14 |
+| open in this stratum | 6 |
 
-The identity `owned = implemented + deferred + open` is `786 = 772 + 0 + 14`, which holds.
+The identity `owned = implemented + deferred + open` is `786 = 780 + 0 + 6`, which holds.
 
 ## The merge gate — what Phase 8 owes to Phase 9
 
@@ -42,25 +42,10 @@ table, verbatim.
 
 | subphase | owns | open | courts | depends on |
 |---|---|---|---|---|
-| 8.4 RSA | `src/rsa/asn1.rs`, `src/asn1/x_algor.rs`, `src/rsa/asn1.rs`, `src/rsa/mod.rs` | 2 | `RT-RSA`, `CT-RSA` | 8.1 (the RSA provider's `SHA`-named digests), 8.3 (its OAEP/PSS modes) |
-| 8.6 DSA | `src/dsa/mod.rs`, `src/dsa/mod.rs`, `src/dsa/object.rs`, `src/dsa/ossl.rs`, `src/dsa/key.rs`, `src/dsa/gen.rs`, `src/dsa/sign.rs`, `src/dsa/vrf.rs`, `src/dsa/depr.rs`, `src/asn1_dsa.rs`, `src/packet.rs`, `src/quic_vlint.rs`, `src/dsa/asn1.rs`, `src/dsa/ctrl.rs` | 4 | `RT-DSA`, `CT-DSA` | 8.5 |
-| 8.7 EC | `src/ec/mod.rs`, `src/ec/curve.rs`, `src/ec/curve_data.rs`, `src/ec/support.rs`, `src/ec/mod.rs`, `src/bn/intern.rs`, `src/bn/bignum.rs`, `src/bn/exp.rs`, `src/ec/key.rs`, `src/ec/lib.rs`, `src/ec/smpl.rs`, `src/ec/mult.rs`, `src/ec/oct.rs`, `src/ec/cvt.rs`, `src/ec/key.rs`, `src/ec/ecdsa.rs`, `src/param_build_set.rs`, `src/ec/print.rs`, `src/ec/depr.rs`, `src/ec/ecdsa.rs`, `src/ec/ctrl.rs`, `src/ec/kdf.rs`, `src/ec/asn1.rs`, `src/ec/prn.rs`, `src/ec/asn1.rs` | 2 | `RT-EC`, `CT-EC` | 8.6 |
 | 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals | `src/pem/key_legacy.rs`, `src/pem/key_legacy.rs` | 6 | `RT-PEM-KEY` | 8.8 |
 
-Total open symbols listed below: **14**; the ledger's
-`open_in_this_stratum` is 14.
-
-### 8.4 RSA — 2 open
-
-`RSA_print`, `RSA_print_fp`
-
-### 8.6 DSA — 4 open
-
-`DSA_print`, `DSA_print_fp`, `DSAparams_print`, `DSAparams_print_fp`
-
-### 8.7 EC — 2 open
-
-`EC_KEY_print`, `EC_KEY_print_fp`
+Total open symbols listed below: **6**; the ledger's
+`open_in_this_stratum` is 6.
 
 ### 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals — 6 open
 
@@ -71,7 +56,7 @@ Total open symbols listed below: **14**; the ledger's
 
 The plan records the subphases that still hold open work in this order:
 
-8.4 RSA -> 8.6 DSA -> 8.7 EC -> 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals
+8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals
 
 `docs/PHASE-8-SUBPHASES.md` §2 records this order, and states that each
 row's dependency column was read from the authority's calls rather than
@@ -83,7 +68,7 @@ from the export list — the method D114, D118 and D122 established. The
 This document projects `forensics/phase8-obligations.json`, and every row
 of that ledger is an **export**. Cross-stratum *internal* names — a helper
 a module references that is not an export — are recorded in a different
-place: `forensics/prerequisites.json`'s `deferrals` (10 rows, 2 of which name Phase 8 as
+place: `forensics/prerequisites.json`'s `deferrals` (9 rows, 2 of which name Phase 8 as
 owner), and
 `forensics/atlas/prerequisite-gate.json` is the generated view of them.
 A reader who only checks the export ledger has not seen that half of the

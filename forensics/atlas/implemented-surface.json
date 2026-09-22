@@ -349,7 +349,7 @@
         "truncf128",
         "truncf16"
       ],
-      "compiler_emitted_count": 10145,
+      "compiler_emitted_count": 9920,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -357,7 +357,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 2813,
+        "implemented": 2835,
         "implemented_symbols": [
           "AES_bi_ige_encrypt",
           "AES_cbc_encrypt",
@@ -1339,6 +1339,8 @@
           "DSA_meth_set_verify",
           "DSA_new",
           "DSA_new_method",
+          "DSA_print",
+          "DSA_print_fp",
           "DSA_security_bits",
           "DSA_set0_key",
           "DSA_set0_pqg",
@@ -1353,6 +1355,8 @@
           "DSA_up_ref",
           "DSA_verify",
           "DSAparams_dup",
+          "DSAparams_print",
+          "DSAparams_print_fp",
           "DSO_METHOD_openssl",
           "DSO_bind_func",
           "DSO_convert_filename",
@@ -1489,6 +1493,8 @@
           "EC_KEY_oct2key",
           "EC_KEY_oct2priv",
           "EC_KEY_precompute_mult",
+          "EC_KEY_print",
+          "EC_KEY_print_fp",
           "EC_KEY_priv2buf",
           "EC_KEY_priv2oct",
           "EC_KEY_set_asn1_flag",
@@ -2221,6 +2227,12 @@
           "EVP_PKEY_parameters_eq",
           "EVP_PKEY_paramgen",
           "EVP_PKEY_paramgen_init",
+          "EVP_PKEY_print_params",
+          "EVP_PKEY_print_params_fp",
+          "EVP_PKEY_print_private",
+          "EVP_PKEY_print_private_fp",
+          "EVP_PKEY_print_public",
+          "EVP_PKEY_print_public_fp",
           "EVP_PKEY_private_check",
           "EVP_PKEY_public_check",
           "EVP_PKEY_public_check_quick",
@@ -2547,17 +2559,25 @@
           "OSSL_ENCODER_CTX_free",
           "OSSL_ENCODER_CTX_get_num_encoders",
           "OSSL_ENCODER_CTX_new",
+          "OSSL_ENCODER_CTX_new_for_pkey",
+          "OSSL_ENCODER_CTX_set_cipher",
           "OSSL_ENCODER_CTX_set_cleanup",
           "OSSL_ENCODER_CTX_set_construct",
           "OSSL_ENCODER_CTX_set_construct_data",
           "OSSL_ENCODER_CTX_set_output_structure",
           "OSSL_ENCODER_CTX_set_output_type",
           "OSSL_ENCODER_CTX_set_params",
+          "OSSL_ENCODER_CTX_set_passphrase",
+          "OSSL_ENCODER_CTX_set_passphrase_cb",
+          "OSSL_ENCODER_CTX_set_passphrase_ui",
+          "OSSL_ENCODER_CTX_set_pem_password_cb",
           "OSSL_ENCODER_CTX_set_selection",
           "OSSL_ENCODER_INSTANCE_get_encoder",
           "OSSL_ENCODER_INSTANCE_get_encoder_ctx",
           "OSSL_ENCODER_INSTANCE_get_output_structure",
           "OSSL_ENCODER_INSTANCE_get_output_type",
+          "OSSL_ENCODER_do_all_provided",
+          "OSSL_ENCODER_fetch",
           "OSSL_ENCODER_free",
           "OSSL_ENCODER_get0_description",
           "OSSL_ENCODER_get0_name",
@@ -2928,6 +2948,8 @@
           "RSA_padding_check_X931",
           "RSA_padding_check_none",
           "RSA_pkey_ctx_ctrl",
+          "RSA_print",
+          "RSA_print_fp",
           "RSA_private_decrypt",
           "RSA_private_encrypt",
           "RSA_public_decrypt",
@@ -3173,7 +3195,7 @@
           "i2t_ASN1_OBJECT",
           "o2i_ECPublicKey"
         ],
-        "scaffolded": 3083
+        "scaffolded": 3061
       },
       "libssl": {
         "authority_exports": 603,
@@ -3184,18 +3206,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 2813,
-      "scaffolded": 3686
+      "implemented": 2835,
+      "scaffolded": 3664
     }
   },
-  "body_hash": "f6a6924cab270cf5319648443f50141a3de0202f630f891c96bbc2bc7f720803",
+  "body_hash": "3a9833e6c51e6e5e945f26b63431ef4922d650e5e32fdb87b840f7ad7b55ce0a",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "69d19d032a4012a109ab1eb15cf633439332d891f6bfaa79bc0b43d2ebf68491"
+      "sha256": "3ddaa3fef0aeef96ac1ff9b09feddd2598e953a027c044551d8d108f02eb3bf9"
     },
     {
       "name": "authority-exports",

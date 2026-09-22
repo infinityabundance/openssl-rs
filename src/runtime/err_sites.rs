@@ -23052,6 +23052,26 @@ pub(crate) const RSA_PRN_28: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `DSA_print_fp` at `crypto/dsa/dsa_prn.c:28` (ERR_R_BUF_LIB).
+pub(crate) const DSA_PRN_28: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_prn.c",
+    line: 28,
+    func: c"DSA_print_fp",
+    lib: 10,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `DSAparams_print_fp` at `crypto/dsa/dsa_prn.c:43` (ERR_R_BUF_LIB).
+pub(crate) const DSA_PRN_43: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_prn.c",
+    line: 43,
+    func: c"DSAparams_print_fp",
+    lib: 10,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
 /// `ossl_rsa_sp800_56b_check_public` at `crypto/rsa/rsa_sp800_56b_check.c:294` (RSA_R_MODULUS_TOO_LARGE).
 pub(crate) const RSA_SP800_56B_CHECK_294: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
@@ -31092,6 +31112,66 @@ pub(crate) const ENCODER_LIB_614: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ossl_encoder_ctx_setup_for_pkey` at `crypto/encode_decode/encoder_pkey.c:239` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_PKEY_239: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_pkey.c",
+    line: 239,
+    func: c"ossl_encoder_ctx_setup_for_pkey",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_encoder_ctx_setup_for_pkey` at `crypto/encode_decode/encoder_pkey.c:261` (ERR_R_CRYPTO_LIB).
+pub(crate) const ENCODER_PKEY_261: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_pkey.c",
+    line: 261,
+    func: c"ossl_encoder_ctx_setup_for_pkey",
+    lib: 59,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ossl_encoder_ctx_setup_for_pkey` at `crypto/encode_decode/encoder_pkey.c:316` (ERR_R_CRYPTO_LIB).
+pub(crate) const ENCODER_PKEY_316: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_pkey.c",
+    line: 316,
+    func: c"ossl_encoder_ctx_setup_for_pkey",
+    lib: 59,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_CTX_new_for_pkey` at `crypto/encode_decode/encoder_pkey.c:352` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_PKEY_352: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_pkey.c",
+    line: 352,
+    func: c"OSSL_ENCODER_CTX_new_for_pkey",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_CTX_new_for_pkey` at `crypto/encode_decode/encoder_pkey.c:357` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const ENCODER_PKEY_357: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_pkey.c",
+    line: 357,
+    func: c"OSSL_ENCODER_CTX_new_for_pkey",
+    lib: 59,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_CTX_new_for_pkey` at `crypto/encode_decode/encoder_pkey.c:363` (ERR_R_OSSL_ENCODER_LIB).
+pub(crate) const ENCODER_PKEY_363: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_pkey.c",
+    line: 363,
+    func: c"OSSL_ENCODER_CTX_new_for_pkey",
+    lib: 59,
+    reason: 524347,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -33405,6 +33485,8 @@ pub(crate) static ALL: &[ErrSite] = &[
     RSA_BACKEND_665,
     RSA_BACKEND_690,
     RSA_PRN_28,
+    DSA_PRN_28,
+    DSA_PRN_43,
     RSA_SP800_56B_CHECK_294,
     RSA_SP800_56B_CHECK_304,
     RSA_SP800_56B_CHECK_309,
@@ -34209,4 +34291,10 @@ pub(crate) static ALL: &[ErrSite] = &[
     ENCODER_LIB_367,
     ENCODER_LIB_378,
     ENCODER_LIB_614,
+    ENCODER_PKEY_239,
+    ENCODER_PKEY_261,
+    ENCODER_PKEY_316,
+    ENCODER_PKEY_352,
+    ENCODER_PKEY_357,
+    ENCODER_PKEY_363,
 ];

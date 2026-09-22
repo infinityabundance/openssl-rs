@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 0,
-      "implemented": 772,
-      "open_in_this_stratum": 14,
+      "implemented": 780,
+      "open_in_this_stratum": 6,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -511,6 +511,8 @@
       "DSA_meth_set_verify",
       "DSA_new",
       "DSA_new_method",
+      "DSA_print",
+      "DSA_print_fp",
       "DSA_security_bits",
       "DSA_set0_key",
       "DSA_set0_pqg",
@@ -525,6 +527,8 @@
       "DSA_up_ref",
       "DSA_verify",
       "DSAparams_dup",
+      "DSAparams_print",
+      "DSAparams_print_fp",
       "ECDH_KDF_X9_62",
       "ECDH_compute_key",
       "ECDSA_SIG_free",
@@ -646,6 +650,8 @@
       "EC_KEY_oct2key",
       "EC_KEY_oct2priv",
       "EC_KEY_precompute_mult",
+      "EC_KEY_print",
+      "EC_KEY_print_fp",
       "EC_KEY_priv2buf",
       "EC_KEY_priv2oct",
       "EC_KEY_set_asn1_flag",
@@ -945,6 +951,8 @@
       "RSA_padding_check_X931",
       "RSA_padding_check_none",
       "RSA_pkey_ctx_ctrl",
+      "RSA_print",
+      "RSA_print_fp",
       "RSA_private_decrypt",
       "RSA_private_encrypt",
       "RSA_public_decrypt",
@@ -1254,42 +1262,6 @@
     "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum, and it starts at the whole working set, which is the honest starting state. Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-8-SUBPHASES.md §4 decides when the stratum may be called complete.",
     "open": [
       {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_print"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSA_print_fp"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSAparams_print"
-      },
-      {
-        "declaring_header": "dsa.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DSAparams_print_fp"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_print"
-      },
-      {
-        "declaring_header": "ec.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": null,
-        "symbol": "EC_KEY_print_fp"
-      },
-      {
         "declaring_header": "pem.h",
         "module": "src/pem/key_legacy.rs",
         "received_from_phase": null,
@@ -1324,18 +1296,6 @@
         "module": "src/pem/key_legacy.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_bio_RSAPrivateKey"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_print"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
-        "symbol": "RSA_print_fp"
       }
     ],
     "owned_by_header": {
@@ -1409,12 +1369,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "f6a6924cab270cf5319648443f50141a3de0202f630f891c96bbc2bc7f720803"
+      "sha256": "3a9833e6c51e6e5e945f26b63431ef4922d650e5e32fdb87b840f7ad7b55ce0a"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "bbc87a21c96edf23b2b817492416ffed7ccacac33c4b779d817597ea8024d9ea"
+      "sha256": "6268e2c909e33f71efd788c8f046e2f563fa2ca1471c7987bc21157c6fcc58ec"
     }
   ],
   "kind": "phase8-obligations",

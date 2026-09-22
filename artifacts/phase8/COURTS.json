@@ -126,9 +126,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 420,
+        "authority_observations": 471,
         "candidate_exit_code": 0,
-        "candidate_observations": 420,
+        "candidate_observations": 471,
         "candidate_stderr_tail": [],
         "court": "RT-AMETH",
         "crashed": false,
@@ -37872,7 +37872,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_ameth_probe.c",
-      "sha256": "15349a3cb838ec9b1ca40dd4c4022f11a3df8695363b614c45f8668b9c714d0a"
+      "sha256": "1169ba8d31b2a9540f5093b49645a2abe86324b2ef57972e453711403d3715bc"
     },
     {
       "name": "probe",

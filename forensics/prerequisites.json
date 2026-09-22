@@ -58,12 +58,6 @@
         "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4l; docs/DECISIONS.md D165 and D355; src/evp/pkey_ctx.rs's `APP_PKEY_METHODS`"
       },
       {
-        "symbol": "OSSL_ENCODER_CTX_new_for_pkey",
-        "owner_phase": 10,
-        "reason": "`crypto/asn1/i2d_evp.c`'s `i2d_provided` builds an `OSSL_ENCODER_CTX` for a **provider** key, which is the branch every one of `i2d_KeyParams`, `i2d_KeyParams_bio`, `i2d_PrivateKey`, `i2d_PKCS8PrivateKey` and `i2d_PublicKey` takes first. The names are declared in `encoder.h`, Phase 10's, so no provider key can be encoded and the five exports are withheld with the boundary named in `RT-EVP-PKEY`.",
-        "evidence": "docs/DECISIONS.md D193; docs/PHASE-7-SUBPHASES.md row 7.4l"
-      },
-      {
         "symbol": "OSSL_DECODER_CTX_new_for_pkey",
         "owner_phase": 10,
         "reason": "`crypto/asn1/d2i_pr.c`'s `d2i_PrivateKey_decoder` builds an `OSSL_DECODER_CTX` and is the first thing `d2i_PrivateKey_ex` and `d2i_AutoPrivateKey_ex` try, with the legacy ameth path only as a fallback. The names are declared in `decoder.h`, Phase 10's, so the four `d2i_PrivateKey*`/`d2i_AutoPrivateKey*` exports are withheld.",

@@ -38,6 +38,14 @@
       },
       {
         "owner_phase": 10,
+        "symbol": "OSSL_ENCODER_CTX_new_for_pkey"
+      },
+      {
+        "owner_phase": 10,
+        "symbol": "OSSL_ENCODER_CTX_set_cipher"
+      },
+      {
+        "owner_phase": 10,
         "symbol": "OSSL_ENCODER_CTX_set_cleanup"
       },
       {
@@ -62,6 +70,22 @@
       },
       {
         "owner_phase": 10,
+        "symbol": "OSSL_ENCODER_CTX_set_passphrase"
+      },
+      {
+        "owner_phase": 10,
+        "symbol": "OSSL_ENCODER_CTX_set_passphrase_cb"
+      },
+      {
+        "owner_phase": 10,
+        "symbol": "OSSL_ENCODER_CTX_set_passphrase_ui"
+      },
+      {
+        "owner_phase": 10,
+        "symbol": "OSSL_ENCODER_CTX_set_pem_password_cb"
+      },
+      {
+        "owner_phase": 10,
         "symbol": "OSSL_ENCODER_CTX_set_selection"
       },
       {
@@ -79,6 +103,14 @@
       {
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_INSTANCE_get_output_type"
+      },
+      {
+        "owner_phase": 10,
+        "symbol": "OSSL_ENCODER_do_all_provided"
+      },
+      {
+        "owner_phase": 10,
+        "symbol": "OSSL_ENCODER_fetch"
       },
       {
         "owner_phase": 10,
@@ -3432,6 +3464,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-ASN1",
               "RT-ASN1-MIME",
               "RT-ASN1-PRINT",
@@ -3653,6 +3686,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-ASN1",
               "RT-ASN1-MIME",
               "RT-ASN1-PRINT",
@@ -3758,6 +3792,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-ASN1",
               "RT-ASN1-MIME",
               "RT-ASN1-PRINT",
@@ -6604,6 +6639,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-ASN1-STR",
               "RT-ASN1-TEMPLATE",
               "RT-BN"
@@ -6765,6 +6801,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-ASN1",
               "RT-ASN1-STR",
               "RT-ASN1-TEMPLATE",
@@ -9505,10 +9542,10 @@
       {
         "completed": true,
         "counts": {
-          "directly_courted": 727,
-          "directly_courted_called": 673,
+          "directly_courted": 733,
+          "directly_courted_called": 679,
           "directly_courted_referenced": 54,
-          "implemented": 727,
+          "implemented": 733,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -13649,6 +13686,48 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_print_params"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_print_params_fp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_print_private"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_print_private_fp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_print_public"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_print_public_fp"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-EVP-PKEY-OPS",
               "RT-EVP-REF"
             ],
@@ -15050,10 +15129,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 764,
-          "directly_courted_called": 764,
+          "directly_courted": 772,
+          "directly_courted_called": 772,
           "directly_courted_referenced": 0,
-          "implemented": 772,
+          "implemented": 780,
           "indirectly_courted": 8,
           "non_observable": 0,
           "unmatched": 0
@@ -16776,6 +16855,20 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "DSA_print"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "DSA_print_fp"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-DSA"
             ],
             "symbol": "DSA_security_bits"
@@ -16783,6 +16876,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-DSA"
             ],
             "symbol": "DSA_set0_key"
@@ -16790,6 +16884,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-DSA",
               "RT-PEM-KEY"
             ],
@@ -16871,6 +16966,20 @@
               "RT-DSA"
             ],
             "symbol": "DSAparams_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "DSAparams_print"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "DSAparams_print_fp"
           },
           {
             "basis": "called",
@@ -17725,6 +17834,20 @@
               "RT-EC"
             ],
             "symbol": "EC_KEY_precompute_mult"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EC_KEY_print"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EC_KEY_print_fp"
           },
           {
             "basis": "called",
@@ -19820,6 +19943,20 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "RSA_print"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "RSA_print_fp"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-RSA"
             ],
             "symbol": "RSA_private_decrypt"
@@ -19869,6 +20006,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-RSA"
             ],
             "symbol": "RSA_set0_key"
@@ -20978,10 +21116,10 @@
       }
     ],
     "totals": {
-      "directly_courted": 2692,
-      "directly_courted_called": 2417,
+      "directly_courted": 2706,
+      "directly_courted_called": 2431,
       "directly_courted_referenced": 275,
-      "implemented": 2700,
+      "implemented": 2714,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -20992,7 +21130,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "e811c21e531f9cddd46306c3921e32afd26f0be033b791bca24a260f45f72e3e"
+      "sha256": "4844649def495af0b72a920c429dd7a006a7ddd76301d4f9ce3a9fc84f39a3da"
     },
     {
       "name": "symbol-ownership",
@@ -21007,7 +21145,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "abbb4002f165d4acbd02de0a30ddcbb8e62faf4e1e051dc737afa127d2243634"
+      "sha256": "1482384ccab3c85572966acdd4868e79a08a1c90ad571a479cfd51ae4fe95bec"
     },
     {
       "name": "phase3-courts",
@@ -21017,7 +21155,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "41098167efcd03501cb66a4b6630b54498d9a05ed1bcffd09e96f0242df5f663"
+      "sha256": "dfe1c4abfe982ab962fb5d1e9745f2944582706ed1f37215bfc417e62a884a1a"
     },
     {
       "name": "phase4-courts",
@@ -21027,7 +21165,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "76c762be80d5bf3312ee597fa43152c1f011272a1c266974b6ff8f41c9d2442a"
+      "sha256": "b2c025dba936299d12435536b4bfc83ad47a0ae9f4a64e3ad250329323ca3dfd"
     },
     {
       "name": "phase5-courts",
@@ -21037,7 +21175,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "cb2e82aaf430e9c3d0b969924be937ab5ca0518ae2773089120cf843f30aa938"
+      "sha256": "b64c4124642a05a6ea7f405d6e0120187a22d72c644bf120c9aa73c1abe60c75"
     },
     {
       "name": "phase6-courts",
@@ -21047,7 +21185,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "bbc87a21c96edf23b2b817492416ffed7ccacac33c4b779d817597ea8024d9ea"
+      "sha256": "6268e2c909e33f71efd788c8f046e2f563fa2ca1471c7987bc21157c6fcc58ec"
     },
     {
       "name": "phase7-courts",
@@ -21057,17 +21195,17 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "e9ebeb1e94e76c8cb6aa5bf8ed9775bebe6aa5914d26f7aa970f2e1d3a17257a"
+      "sha256": "2b5cf1e5f49b376ab99a65b8c67d0815f8de6089a3ca0ce24b490b6d160f1a29"
     },
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "1cf59299be094e5dfa2d6c86f167ec19d8efdd490e9e4d1d00e5bc3f613c75e3"
+      "sha256": "6247f60993208a086f40764352d6ef84f59217811f419cdf5037ae40af501968"
     },
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "2861b65f28d800c70c8c7d0c8dbee815f2961a4d07c28a98e8491f833e57df5f"
+      "sha256": "4487d99e27743be8644154c69c5c4500bffd0b22b9781fba47fab9fa723cef69"
     },
     {
       "name": "phase9-courts",
