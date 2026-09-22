@@ -25473,3 +25473,122 @@ phase 7's counts do **not** move -- implemented **727**, deferred **223**, recei
 -- and `forensics/phase8-obligations.py`'s `BLOCKED_HANDOFFS` was already empty and stays empty. The
 open fourteen are the eight printers and the six `crypto/pem/` private-key readers. It is not Phase 8
 and not nearly Phase 8; the count this entry reaches is implemented **772** of **786** owned.
+
+## D357 — the encoder store slot is filled and its two delegations written; the encoder units and
+the printers are withheld on a blocker the brief did not name, and **no count moves**
+
+**Decision.** Take the encoder side in the order the brief gave and stop at its first step, green:
+fill `OSSL_LIB_CTX_ENCODER_STORE_INDEX` (slot 10) in `context_init`, release it in
+`context_deinit_objs` at the authority's `P2` position, and write the two delegations
+`src/provider/stores.rs` was asserting against (`ossl_encoder_store_cache_flush`,
+`ossl_encoder_store_remove_all_provided`). **Steps 2-4 are not landed** -- the three encoder units,
+`print_pkey`, `EVP_PKEY_print_public`/`_private`/`_params`, the three `_fp` twins and the eight
+Phase-8 printers are all withheld, and the reason is measured below and is **not** the store slot.
+**No ledger count moves** in either direction: Phase 8 stays at implemented **772** / open **14**,
+Phase 7 at 727/223/26, `implemented-surface.json`'s `libcrypto` at **2780**, `transcription-edges`
+at 309 modules / 278 units, and the courts at 94 / 37170. A green partial beats a red whole; this is
+the green partial, and it is the first step of four.
+
+**What landed, and why filling one slot is not a one-line change.** In the authority the encoder
+store is `ossl_method_store_new(ctx)` at `crypto/context.c:134`, marked `P2. We want encoder_store to
+be cleaned up before the provider store`, and it is released at `:263-266` in that position relative
+to the provider store. The crate already had the `get_data` arm (`src/context/mod.rs`, index 10) and
+the field, so what was missing was the construction, the release, and the two bridges.
+`src/provider/stores.rs`'s `ossl_encoder_store_cache_flush` and `ossl_encoder_store_remove_all_provided`
+carried an `assert_slot_unfilled` -- D142's deliberate invariant, which fails loudly when a slot is
+filled without its delegation, and which fired exactly as designed the moment `context_init` started
+building the store. The two bodies are now the authority's own
+(`crypto/encode_decode/encoder_meth.c:442-449` and `:451-459`): look the store up through
+`lib_ctx_get_data`, delegate to `ossl_method_store_cache_flush_all` /
+`ossl_method_store_remove_all_provided` if it is there, answer 1 if it is not. The absent arm still
+answers 1, which is what `provider_flush_store_cache`'s `== 4` sum depends on. The
+`stores.rs` unit test that asserted slots 10, 11, 15 and 20 were all unfilled is replaced by one
+that asserts slots 0 **and 10** are filled and 11, 15 and 20 are not, and
+`docs/PHASE-6-SUBPHASES.md`'s slot table records slot 10 as **filled by D357** rather than
+"Phase 7".
+
+**The decoder slot is not entangled, and that is measured rather than assumed.** Slot 11
+(`decoder_store`) and slot 20 (`decoder_cache`) are separate fields and separate bridges
+(`ossl_decoder_store_cache_flush` reads slot 11; `ossl_decoder_cache_flush` reads slot 20), and the
+one bridge that reads the decoder *cache* already answers 0 for an absent cache, which both of its
+callers discard. Filling slot 10 leaves both decoder bridges asserting, which is the correct state
+for a pass that lands no decoder unit, and `provider_flush_store_cache`'s sum still reaches 4
+because an asserting bridge answers 1. So **only slot 10 is filled**, and the decoder units stay
+next pass's.
+
+**The blocker that makes step 2 larger than the brief assumed, and it is measured at the call.**
+The brief's order implies the encoder units link against the passphrase setters D356 landed. They do
+not, and the gap is at `crypto/encode_decode/encoder_lib.c:665`: inside `encoder_process` -- the
+engine of `OSSL_ENCODER_to_bio`, which `print_pkey` (`crypto/evp/p_lib.c:1214`) calls -- the
+provider's `encode` function is handed **`ossl_pw_passphrase_callback_enc`** and `&ctx->pwdata`.
+That name is one of the six D356 **withheld**, because it is one call into `ossl_pw_get_passphrase`,
+whose `is_pem_password` arm calls `UI_UTIL_wrap_read_pem_callback` (`crypto/ui/ui_util.c:144`,
+declared `ui.h`), which is **Phase 13's and unlanded**. So the encoder side is not reachable by
+writing the encoder units: it needs D356's withheld six (the dispatcher and its five one-call
+callers) **and** `UI_UTIL_wrap_read_pem_callback` with its four static `UI_METHOD` callbacks
+(`ui_open`/`ui_read`/`ui_write`/`ui_close`) and its ex_data index -- a Phase-13 export, 164 authority
+lines in `ui_util.c` of which the wrapper and its callbacks are roughly 110. Nothing else on that
+path is missing: every other name the three encoder units call is landed, verified by name at the
+call -- `evp_pkey_is_provided`, `EVP_PKEY_get0_type_name`, `evp_keymgmt_export`,
+`EVP_KEYMGMT_names_do_all`, `ossl_namemap_stored`/`ossl_namemap_name2num`,
+`ossl_property_find_property`/`ossl_property_get_string_value`, `OSSL_PROVIDER_get0_provider_ctx`,
+`evp_generic_do_all`, `ossl_core_bio_new_from_bio`, `BIO_new`/`BIO_s_mem`/`BIO_f_buffer`,
+`PEM_def_callback`. So the encoder landing is **not** blocked on anything unknown; it is blocked on
+two known pieces D356 and Phase 13 own, and it is simply large: **1,926 authority lines** across
+`encoder_meth.c` (654), `encoder_lib.c` (864) and `encoder_pkey.c` (408), which the lexical census
+measures as **23 / 28 / 24** absent authority names against this crate -- names the landing itself
+supplies, except the passphrase and `UI_UTIL` ones above. `print_pkey` adds four more p_lib.c
+internals it needs and nothing else -- `print_set_indent` (`:1162`), `print_reset_indent` (`:1150`),
+`unsup_alg` (`:1187`) and the three `EVP_PKEY_print_*` plus their three `_fp` twins (`:1231-1293`)
+-- and the eight printers are 300-odd authority lines over four files.
+
+**What the last group will need, measured, as the brief asked.** The decoder units are
+`decoder_pkey.c` (969), `decoder_lib.c` (1165) and `decoder_meth.c` (675) -- **2,809 authority
+lines**, with **35 / 39 / 26** absent names respectively. Unlike the encoder side they need the
+**decoder cache**, not just a store: `ossl_decoder_cache_new`/`_free` build an `LHASH` of
+`DECODER_CACHE_ENTRY` keyed by `ossl_lh_strcasehash` and locked with a `CRYPTO_RWLOCK`, and
+`src/context/mod.rs`'s slot 20 is unfilled and `src/provider/stores.rs`'s `ossl_decoder_cache_flush`
+asserts it. The `LHASH` itself is landed (`src/runtime/lhash.rs`, `OPENSSL_LH_new`/`_insert`/
+`_doall`), so the cache is landable; `ossl_lh_strcasehash` is the one small absent name on it. The
+six `crypto/pem/` private-key readers are `crypto/pem/pem_pkey.c` (452 lines, Phase 7's
+`PEM_read[_bio]_PrivateKey` handed forward) plus the three `pkey_get_*` helpers in
+`src/pem/key_legacy.rs`, and their first leg is `OSSL_DECODER_CTX_new_for_pkey`
+(`crypto/encode_decode/decoder_pkey.c`) -- so they wait on the decoder units and on the same
+passphrase dispatcher. `crypto/asn1/d2i_pr.c` (258) and `crypto/asn1/i2d_evp.c` (169) are the
+`d2i_PrivateKey*`/`i2d_*` halves that call those contexts and are the other side of the same
+hand-off.
+
+**What the authority corrected in the brief.** Two things. The brief said "Fill
+`OSSL_LIB_CTX_ENCODER_STORE_INDEX` and what that forces (`src/provider/stores.rs:110-114`'s
+assertion, the encoder-store initialiser, its two asserting delegations)" -- and the correction is
+that the crate **already had** the `get_data` arm and the field, so the store initialiser is not a
+new `ossl_encoder_store_new` but the same `ossl_method_store_new` the EVP store uses, and the
+"what it forces" is exactly the two delegations and the release at the `P2` position; no new
+constructor exists in the authority either. And the brief's step 2 did not name the
+`ossl_pw_passphrase_callback_enc` -> `ossl_pw_get_passphrase` -> `UI_UTIL_wrap_read_pem_callback`
+chain, which is the real reason the encoder units cannot link on the strength of D356 alone: the
+passphrase floor D356 landed is the *setters*, and `encoder_process` needs the *dispatcher*.
+
+**What is deliberately not here.** The three encoder units, `encoder_local.h`'s shapes,
+`print_pkey`, the six `EVP_PKEY_print_*` names, the eight printers, D356's withheld six, and
+`UI_UTIL_wrap_read_pem_callback` are all withheld, each named rather than approximated. No
+`divergences` row is added for any of them, because none of them is a name the crate now
+*transcribes* and answers for differently: the encoder units are simply not transcribed, which is
+the state the gate already records (their Phase-10 deferrals `OSSL_ENCODER_CTX_new_for_pkey` and
+`OSSL_DECODER_CTX_new_for_pkey` remain in `forensics/prerequisites.json`, unchanged). D356's row
+for `crypto/passphrase.c`'s five is unchanged and still exact. `docs/PHASE-8-SUBPHASES.md` is
+untouched: no Phase 8 row's evidence moved, and §4's two anchored clauses stay consistent with the
+ledger in both directions because the ledger did not move.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete:
+false` with **14** names open, **unmoved**: implemented **772**, deferred **0**, owned **786**. The
+regenerated counts are all unmoved too: `implemented-surface.json`'s `libcrypto` implemented
+**2780** and its `internal_symbols.c_style` **335**; `transcription-edges.json` **309** modules over
+**278** units; `internal-symbols.json`'s `modules_without_a_stratum` **38**; `court_coverage.py`
+phase 8 at **772** (**764** directly courted, all *called*, **8** indirectly, **0** unmatched) and
+`not_yet_begun` at **80**; the prerequisite gate at **zero findings** over **10** deferrals, **12**
+divergence rows / **60** names, `blocking_dependencies` **10** and `sealed_stratum_census` **56**;
+phase 7 at implemented **727**, deferred **223**, received_by_handoff **26**. The open fourteen are
+still the eight printers and the six `crypto/pem/` private-key readers. It is not Phase 8 and not
+nearly Phase 8; the count this entry reaches is implemented **772** of **786** owned, and the
+ledger this entry moved is **none**.

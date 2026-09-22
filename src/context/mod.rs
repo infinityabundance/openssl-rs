@@ -177,7 +177,7 @@ pub(crate) const OSSL_LIB_CTX_THREAD_INDEX: c_int = 19;
 /// `OSSL_LIB_CTX_EVP_METHOD_STORE_INDEX`. Slot 0, filled by Phase 7.
 pub(crate) const OSSL_LIB_CTX_EVP_METHOD_STORE_INDEX: c_int = 0;
 
-/// `OSSL_LIB_CTX_ENCODER_STORE_INDEX`. Slot 10, filled by Phase 7.
+/// `OSSL_LIB_CTX_ENCODER_STORE_INDEX`. Slot 10, filled by D357 with the encoder landing.
 pub(crate) const OSSL_LIB_CTX_ENCODER_STORE_INDEX: c_int = 10;
 
 /// `OSSL_LIB_CTX_DECODER_STORE_INDEX`. Slot 11, filled by Phase 7.
@@ -235,7 +235,7 @@ struct OsslLibCtx {
     drbg: *mut c_void,
     /// `OSSL_LIB_CTX_DRBG_NONCE_INDEX` (6) — Phase 9.
     drbg_nonce: *mut c_void,
-    /// `OSSL_LIB_CTX_ENCODER_STORE_INDEX` (10) — Phase 7.
+    /// `OSSL_LIB_CTX_ENCODER_STORE_INDEX` (10) — built by `context_init`, D357.
     encoder_store: *mut c_void,
     /// `OSSL_LIB_CTX_DECODER_STORE_INDEX` (11) — Phase 7.
     decoder_store: *mut c_void,
@@ -384,9 +384,11 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
     // position here is therefore the authority's: `context_init` builds it immediately after the
     // context's lock and `ossl_do_ex_data_init`, ahead of the provider-config object, because
     // `P2` means "released before the provider store" and the seven objects that follow it before
-    // `provider_store` are all in that class. Slots 10, 11 and 15 are the *same* constructor and
-    // are not built here: their readers are `decoder_meth.c`, `encoder_meth.c` and
-    // `store_meth.c`, which are Phase 10's, so they land with the strata that read them.
+    // `provider_store` are all in that class. Slots 11 and 15 are the *same* constructor and are
+    // handled elsewhere: slot 10 (the encoder store) is built below with the encoder landing
+    // (D357), and slots 11 and 15 are not built at all, because their readers are
+    // `decoder_meth.c` and `store_meth.c`, which are Phase 10's, so they land with the strata that
+    // read them.
     //
     // SAFETY: `ctx` is the live context being initialised, and the store constructor only stores
     // the pointer it is given.
@@ -431,6 +433,27 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
     }
     // SAFETY: as above; the slot is published once, here.
     unsafe { (*ctx).drbg = drbg };
+
+    // The encoder method store, slot 10. The authority builds it *after* `drbg` and after the
+    // decoder store/cache it also builds there, and releases it before the provider store -- the
+    // two `P2` comments on those lines (`crypto/context.c:133-136`) say so, and P2 is the relation
+    // that matters: a method store holds references to provider-owned methods, so it must be
+    // released before the store that owns the providers. The decoder store and cache (slots 11 and
+    // 20) are *not* built here: their reader is `crypto/encode_decode/decoder_*`, which this
+    // stratum has not landed, so this crate's `ossl_decoder_store_cache_flush` still asserts its
+    // slot unfilled -- the two stores are independent, and filling only the encoder one leaves that
+    // assertion true (D357).
+    //
+    // SAFETY: `ctx` is the live context being initialised, and the store constructor only stores
+    // the pointer it is given.
+    let encoder_store =
+        unsafe { crate::property::store::ossl_method_store_new(ctx.cast::<c_void>()) };
+    if encoder_store.is_null() {
+        context_deinit(ctx);
+        return false;
+    }
+    // SAFETY: as above; the slot is published once, here.
+    unsafe { (*ctx).encoder_store = encoder_store.cast::<c_void>() };
 
     // The child-provider globals, slot 18. Built here and **filled later**:
     // `ossl_provider_init_as_child` is what creates the lock and stores the upcalls, so a
@@ -643,6 +666,24 @@ fn context_deinit_objs(ctx: *mut OsslLibCtx) {
         if !(*ctx).provider_conf.is_null() {
             crate::provider::conf::ossl_prov_conf_ctx_free((*ctx).provider_conf);
             (*ctx).provider_conf = ptr::null_mut();
+        }
+    }
+
+    // The encoder method store, slot 10 -- released in the authority's `P2` position, after the
+    // provider-config object and before the provider store. The order is load-bearing for the same
+    // reason it is at construction: the store's implementations point at providers, so the store
+    // must go first.
+    // SAFETY: `ctx` is a live context being torn down by `context_deinit`, and no other thread
+    // holds a reference to it -- `OSSL_LIB_CTX_free` is the only caller and the caller contract is
+    // that the object is no longer in use. The slot is released exactly once and re-NULLed.
+    unsafe {
+        if !(*ctx).encoder_store.is_null() {
+            crate::property::store::ossl_method_store_free(
+                (*ctx)
+                    .encoder_store
+                    .cast::<crate::property::store::OsslMethodStore>(),
+            );
+            (*ctx).encoder_store = ptr::null_mut();
         }
     }
 
