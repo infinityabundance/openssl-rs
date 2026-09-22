@@ -1,0 +1,51 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "checks": {
+      "every_entry_equals_independent_python_scalarmult": true,
+      "every_entry_on_the_curve": true,
+      "every_entry_xy2d_is_2dxy": true,
+      "parsed_by_brace_matching": true,
+      "token_counts_asserted": true
+    },
+    "counts": {
+      "entries": 264,
+      "limbs": 7920
+    },
+    "tables": [
+      {
+        "definition": "(j+1)*256^i*B, three fe per entry",
+        "entries": 256,
+        "limbs": 7680,
+        "rust": "K25519_PRECOMP",
+        "sha256": "0486838126996f37072893641dfaacb6ebd0f97e4f874166de6589472d83b7a3",
+        "shape": [
+          32,
+          8
+        ],
+        "symbol": "k25519Precomp"
+      },
+      {
+        "definition": "(2j+1)*B, three fe per entry",
+        "entries": 8,
+        "limbs": 240,
+        "rust": "BI",
+        "sha256": "eb622cf46aa4ec7d188ed06b8a79270158876afac9e5bbe382a1ef536734bdbf",
+        "shape": [
+          8
+        ],
+        "symbol": "Bi"
+      }
+    ]
+  },
+  "generator": "forensics/tools/gen_curve25519_tables.py",
+  "inputs": [
+    {
+      "name": "authority-source-curve25519",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/ec/curve25519.c",
+      "sha256": "d2ce29fa7764c6eaf083169339245643d8e10b5d4268b8e4c3cc15372c23aeda"
+    }
+  ],
+  "kind": "curve25519-tables",
+  "schema": "openssl-rs/atlas/curve25519-tables/v1"
+}
