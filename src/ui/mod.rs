@@ -9,16 +9,19 @@
 //! src/ui/ui_lib.rs      <-  crypto/ui/ui_lib.c       (whole: 57 exports)
 //! src/ui/ui_openssl.rs  <-  crypto/ui/ui_openssl.c   (the platform's console method)
 //! src/ui/ui_null.rs     <-  crypto/ui/ui_null.c      (the do-nothing method)
+//! src/ui/ui_util.rs     <-  crypto/ui/ui_util.c      (the three `UI_UTIL_*` exports, D358)
 //! ```
 //!
-//! `crypto/ui/ui_util.c` and `crypto/ui/ui_err.c` are **not** here. `ui_util.c`'s three exports
-//! (`UI_UTIL_read_pw`, `UI_UTIL_read_pw_string`, `UI_UTIL_wrap_read_pem_callback`) are not on the
-//! `EVP_read_pw_string_min -> PEM_def_callback -> PEM_do_header` chain: `EVP_read_pw_string_min`
-//! is `UI_new`/`UI_add_*`/`UI_process`/`UI_free` and nothing else, and `ui_util.c`'s
-//! `UI_UTIL_wrap_read_pem_callback` reaches `PEM_def_callback`, which is the *caller* on this
-//! path rather than a callee. `ui_err.c` defines no exports at all — it is the reason-string
+//! `crypto/ui/ui_err.c` is **not** here. It defines no exports at all -- it is the reason-string
 //! table, and this crate's `src/runtime/err_reasons.rs` already carries every `UI_R_*` code from
 //! the installed `uierr.h`, read by `gen_err_reasons.py` rather than by hand.
+//!
+//! `crypto/ui/ui_util.c` was deliberately absent until D358: its three exports are not on the
+//! `EVP_read_pw_string_min -> PEM_def_callback -> PEM_do_header` chain this directory first landed
+//! for, because `EVP_read_pw_string_min` is `UI_new`/`UI_add_*`/`UI_process`/`UI_free` and nothing
+//! else. It is here now for a different caller: `crypto/passphrase.c`'s `ossl_pw_get_passphrase`
+//! calls `UI_UTIL_wrap_read_pem_callback` to bridge a `pem_password_cb` to a `UI_METHOD`, and the
+//! encoder's `encoder_process` needs that dispatcher. See `src/ui/ui_util.rs`'s module doc.
 //!
 //! ## What this directory is for, one stratum early
 //!
@@ -37,3 +40,4 @@
 pub mod ui_lib;
 pub mod ui_null;
 pub mod ui_openssl;
+pub mod ui_util;

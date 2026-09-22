@@ -25592,3 +25592,116 @@ phase 7 at implemented **727**, deferred **223**, received_by_handoff **26**. Th
 still the eight printers and the six `crypto/pem/` private-key readers. It is not Phase 8 and not
 nearly Phase 8; the count this entry reaches is implemented **772** of **786** owned, and the
 ledger this entry moved is **none**.
+
+## D358 — the passphrase dispatcher closes: Phase 13's `UI_UTIL_*` and D356's withheld six land, and
+the divergence row retires; **no Phase 8 count moves** and the encoder units are still next
+
+**Decision.** Take step 1 of the order D357 proposed and stop at its green point: land Phase 13's
+`crypto/ui/ui_util.c` whole as `src/ui/ui_util.rs` (the three `UI_UTIL_*` exports and their four
+static `UI_METHOD` callbacks), then land the six `crypto/passphrase.c` functions D356 withheld --
+`ossl_pw_get_passphrase` (`:204-305`), `ossl_pw_get_password` (`:307-321`),
+`ossl_pw_pem_password` (`:323-326`), `ossl_pw_pvk_password` (`:328-331`) and the two
+`ossl_pw_passphrase_callback_{enc,dec}` (`:333-345`) -- in `src/passphrase.rs`. The `divergences`
+row D356 recorded for the five symbol-bearing ones **retires**, because the crate now builds them.
+**The encoder units, `print_pkey`, the six `EVP_PKEY_print_*` names and the eight printers are not
+landed**: steps 2 and 3 are 1,926 authority lines of encoder plus ~400 of printers, and this pass
+reaches only the chain that had to exist before any of them can link. **No Phase 8 or Phase 7 count
+moves**: Phase 8 stays at implemented **772** / open **14**, Phase 7 at 727 / 223 / 26.
+
+**What landed, and the two pieces of machinery the wrapper needed.** `UI_UTIL_wrap_read_pem_callback`
+(`crypto/ui/ui_util.c:143-164`) is a `UI_METHOD` built around a legacy `pem_password_cb`, and it is
+the callee the D357 measurement stopped at. Three things in it are not obvious and each is
+reproduced rather than approximated. First, the ex-data index must be reserved **once per process**
+-- `RUN_ONCE(&get_index_once, ui_method_data_index_init)` -- and since the crate has no `RUN_ONCE`
+macro, `src/ui/ui_util.rs` writes the expansion `src/runtime/init.rs` already uses for
+`ossl_init_base`: an `AtomicI32` for the once, a second for `the_ossl_ret_`, and a body that stores
+the answer so later callers read it. The index is `-1` until then, which is why the authority's
+ex-data attach is *inside* the short-circuit and so is this one. Second, `ui_read`
+(`:95-133`) carries a local `char result[PEM_BUFSIZE + 1]` and clamps `maxsize` to `PEM_BUFSIZE`
+**before** calling the callback, so the callback cannot overrun the buffer; the clamp is the whole
+reason the buffer can be a fixed size. Third -- and this is the one a transcription could silently
+"fix" -- `ui_read` casts the method's ex-data and calls `data->cb` with **no NULL test**, because
+the only method that installs `ui_read` is the one this file builds and it always attaches the data.
+A NULL test here would be a divergence that hides a real mis-wiring, so the untested dereference is
+reproduced and the module doc says so. `BUFSIZ` in `UI_UTIL_read_pw_string` is `#ifndef`-guarded in
+the authority, so its value is the platform's `<stdio.h>` `8192` and not the file's `256` fallback;
+that is the same measurement `src/evp/p_legacy.rs` records for `EVP_read_pw_string_min`, and the
+constant is repeated here with the same citation rather than shared, because the two units name it
+separately. `crypto/ui/ui_err.c` needed **nothing**: it defines no exports and the crate's
+`src/runtime/err_reasons.rs` already carries every `UI_R_*` code from the installed `uierr.h`.
+
+**What the dispatcher's landing changes, and the one new guard.** `ossl_pw_get_passphrase` is now
+the authority's body: an explicit phrase, then a cached one, then the callback form -- and only the
+third reaches the UI, which is why nothing below is observable without one.
+`src/passphrase.rs`'s `do_ui_passphrase` loses its `#[allow(dead_code)]`, its stated reader having
+arrived. The caching tail is the authority's `do_cache:` label, reached from two places (the
+`is_ossl_passphrase` arm's `goto` and the fall-through) and therefore written once as
+`cache_passphrase`. One deliberate guard: the authority calls
+`data->_.ossl_passphrase.passphrase_cb` unconditionally, and
+`ossl_pw_set_ossl_passphrase_cb` refuses a NULL callback, so the `Option::None` arm is unreachable
+-- it answers 0 the way `CRYPTO_THREAD_run_once` answers 0 for a NULL initialiser, a
+caller-contract violation answered rather than crashed. The two error texts
+("Prompt info data type incorrect", "No password method specified") are the authority's own bytes
+at `:251` and `:275`, raised through `raise_site_data`.
+
+**The gate record, retired in the other direction.** D356 recorded one `divergences` row
+(`owner_module` `src/passphrase.rs`, class `owned_by_a_later_stratum`, `covers` the five names) so
+the gate would not read a transcribed unit's withheld internals as an oversight. The crate now
+defines all five, so the row is **removed**, not retargeted: a record covering a name the gate no
+longer observes is a `divergence_record_does_not_match` finding, which is the fail-closed direction
+D356 predicted. `divergence_names_covered` moves **60 -> 55** -- still well above D356's 60 only
+because the row is gone, and the class's names reappear in `internal_symbols.c_style` instead. No
+deferral was added or removed; `planned_prerequisites` stays **8** and `deferrals` stays **10**.
+
+**Raise sites, and the unit that needs none.** `crypto/ui/ui_util.c` raises nothing -- neither
+`UI_UTIL_read_pw`, `UI_UTIL_read_pw_string` nor the wrapper has an `ERR_raise` -- so it joins no
+`COVERED_FILES` entry and there is nothing to add. `crypto/passphrase.c` was already covered as
+`PASSPHRASE` from D356, and the fifteen sites it generates now all belong to a landed body: the
+three that D356's note called "generated for the unit and unused" (`:251`, `:266`, `:275`) are the
+dispatcher's, and it references them.
+
+**Courts, and why the three new exports need none.** `court_coverage.py` checks the exports of every
+stratum that **has a ledger**, and `UI_UTIL_*` are `ui.h`'s, Phase 13's, which has none: the three
+are recorded under `not_yet_begun`, which grows **80 -> 83**, exactly as D350's `UI_*` exports were.
+No court moved: **94** courts and **37170** observations, unmoved, and `RT-AMETH` stays at 420. The
+new unit is covered by three `src/ui/ui_util.rs` unit tests -- the wrapper building a method with
+its data attached at the reserved index, a NULL callback becoming `PEM_def_callback`, and
+`UI_UTIL_read_pw`'s size-below-one refusal -- plus five new `src/passphrase.rs` tests (the explicit
+phrase answered with no UI, the `is_ossl_passphrase` arm reading and caching, the UI-method refusal,
+and `ossl_pw_pem_password` reading the explicit phrase first). Every value they print is a length, a
+return code or a pointer *identity*, never key material.
+
+**What the authority corrected in the brief.** Two things, and both are about the withheld-half
+mechanism rather than the code. The brief said the withheld remainder of a partially transcribed
+unit may be "covered by a `divergences` row, exactly as `src/passphrase.rs` does"; the correction is
+that this is a **two-way** mechanism and the retirement is part of it -- landing the names
+*requires* deleting the row, and the gate's direction D is what makes leaving it impossible. And
+the brief named `ui_err.c` as possibly needing landable work "if the crate's machinery wants it":
+it does not. `ui_err.c` defines no exports and its reason strings are already in the crate's
+generated reason table, so the whole file is the one `crypto/ui/` unit this project never needs.
+
+**What is deliberately not here, and the measurement that says it is one more pass.** The three
+encoder units (`encoder_meth.c` 654, `encoder_lib.c` 864, `encoder_pkey.c` 408), `encoder_local.h`'s
+shapes, `print_pkey` and its three internals, the six `EVP_PKEY_print_*` names, the eight printers,
+and -- behind them -- the decoder units and the six `crypto/pem/` readers are all withheld. What
+moved is the *precondition*: `encoder_process`'s passphrase argument
+(`crypto/encode_decode/encoder_lib.c:665`) now resolves, so the encoder units are no longer blocked
+on anything outside their own 1,926 lines -- the closure D357 measured as "two known pieces" has one
+piece left, and it is the units themselves. The eight printers still sit at the end of
+`print_pkey`'s fall-through, and phase 8's open fourteen are unchanged.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete:
+false` with **14** names open, **unmoved**: implemented **772**, deferred **0**, owned **786**. The
+regenerated counts: `implemented-surface.json`'s `libcrypto` implemented moves **2780 -> 2783** (the
+three Phase-13 exports, which no ledger accounts for) and its `internal_symbols.c_style` **335 ->
+340** (the five `ossl_pw_*` the crate now defines); `transcription-edges.json` **309 -> 310**
+modules over **278 -> 279** units, the new edge `src/ui/ui_util.rs -> crypto/ui/ui_util.c` at share
+3/3; `internal-symbols.json`'s `modules_without_a_stratum` stays **38**; `court_coverage.py` reports
+phase 8 at **772** (**764** directly courted, every one *called*, **8** indirectly, **0** unmatched)
+and phase 7 at **727** (**673** called, **54** referenced, **0** unmatched), with `not_yet_begun`
+**80 -> 83**; the prerequisite gate stays at **zero findings** over **10** deferrals, **11**
+divergence rows / **55** names, `blocking_dependencies` **10** and `sealed_stratum_census` **56**;
+phase 7's ledger does **not** move -- implemented **727**, deferred **223**, received_by_handoff
+**26**. The open fourteen are still the eight printers and the six `crypto/pem/` private-key
+readers. It is not Phase 8 and not nearly Phase 8; the count this entry reaches is implemented
+**772** of **786** owned, and the ledger this entry moved is **none**.

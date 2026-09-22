@@ -48,15 +48,21 @@ use core::ffi::{c_char, c_int, c_uint, c_void};
 use core::ptr;
 
 use crate::evp::pem_bridge::PemPasswordCb;
-use crate::params::OsslParam;
-use crate::runtime::err::{err_sites, raise_site};
+use crate::params::{
+    OSSL_PARAM_construct_end, OSSL_PARAM_construct_utf8_string, OSSL_PARAM_locate_const, OsslParam,
+    OSSL_PARAM_UTF8_STRING,
+};
+use crate::runtime::err::{err_sites, raise_site, raise_site_data};
 use crate::runtime::mem::{
-    CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_zalloc,
+    CRYPTO_clear_free, CRYPTO_clear_realloc, CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup,
+    CRYPTO_zalloc, OPENSSL_cleanse,
 };
 use crate::ui::ui_lib::{
-    UI_add_input_string, UI_add_user_data, UI_add_verify_string, UI_construct_prompt, UI_free,
-    UI_get_result_length, UI_new, UI_process, UI_set_method, Ui, UiMethod,
+    UI_add_input_string, UI_add_user_data, UI_add_verify_string, UI_construct_prompt,
+    UI_destroy_method, UI_free, UI_get_result_length, UI_new, UI_process, UI_set_method, Ui,
+    UiMethod,
 };
+use crate::ui::ui_util::UI_UTIL_wrap_read_pem_callback;
 
 /// `int(OSSL_PASSPHRASE_CALLBACK)(char *pass, size_t pass_size, size_t *pass_len,
 /// const OSSL_PARAM params[], void *arg)` — `include/openssl/core.h:227`.
@@ -429,7 +435,6 @@ pub unsafe extern "C" fn ossl_pw_disable_passphrase_caching(
 /// The `end:` label frees in the authority's order (verify buffer, then input buffer, then the
 /// prompt, then the `UI`) and neither buffer is NULL-tested for the reasons
 /// `CRYPTO_clear_free`'s contract gives.
-#[allow(dead_code)] // read by `ossl_pw_get_passphrase`, withheld on `UI_UTIL_wrap_read_pem_callback`
 unsafe fn do_ui_passphrase(
     pass: *mut c_char,
     pass_size: usize,
@@ -594,9 +599,487 @@ unsafe fn end(
     ret
 }
 
+/// `OSSL_PASSPHRASE_PARAM_INFO` -- `include/openssl/core_names.h:363`, the string `"info"`.
+///
+/// The one parameter `ossl_pw_get_passphrase` reads: a prompt to show the user.
+pub(crate) const OSSL_PASSPHRASE_PARAM_INFO: *const c_char = c"info".as_ptr();
+
+/// The authority's `do_cache:` label of [`ossl_pw_get_passphrase`] --
+/// `crypto/passphrase.c:285-304`.
+///
+/// Split out because the label is reached from two places (the `is_ossl_passphrase` arm's `goto`
+/// and the fall-through), and the caching it does is the same both times: when the flag is set and
+/// the read succeeded, grow the cache if needed and copy the passphrase into it, NUL-terminated,
+/// remembering the length. The failure path cleanses the caller's buffer before answering 0, which
+/// is why it is a cleanse of `pass` and not of the cache -- the cache was never written.
+///
+/// # Safety
+/// `data` must be live; `pass_len` must point at the length a successful read stored in it.
+unsafe fn cache_passphrase(
+    data: *mut OsslPassphraseData,
+    pass: *const c_char,
+    pass_len: *const usize,
+    ret: c_int,
+) -> c_int {
+    // SAFETY: `data` is live per the contract; `ret` and the flag are plain values.
+    if ret == 0 || unsafe { (*data).flag_cache_passphrase } == 0 {
+        return ret;
+    }
+    // SAFETY: `pass_len` is the length the read above stored.
+    let len = unsafe { *pass_len };
+    // SAFETY: `data` is live; the read is of a plain field.
+    let cached = unsafe { (*data).cached_passphrase };
+    // SAFETY: as above.
+    let cached_len = unsafe { (*data).cached_passphrase_len };
+    if cached.is_null() || len > cached_len {
+        // SAFETY: `cached` is NULL or the live cache; the clear-realloc contract is satisfied.
+        let new_cache = unsafe {
+            CRYPTO_clear_realloc(cached.cast::<c_void>(), cached_len, len + 1, ptr::null(), 0)
+        };
+        if new_cache.is_null() {
+            // SAFETY: `pass` is the caller's buffer, writable for `len` bytes.
+            unsafe { OPENSSL_cleanse(pass.cast_mut().cast::<c_void>(), len) };
+            return 0;
+        }
+        // SAFETY: `data` is live and the realloc succeeded.
+        unsafe { (*data).cached_passphrase = new_cache.cast::<c_char>() };
+    }
+    // SAFETY: the cache is now at least `len + 1` bytes, and `pass` is readable for `len`.
+    unsafe {
+        ptr::copy_nonoverlapping(pass, (*data).cached_passphrase, len);
+        *(*data).cached_passphrase.add(len) = 0;
+        (*data).cached_passphrase_len = len;
+    }
+    ret
+}
+
+/// `int ossl_pw_get_passphrase(char *pass, size_t pass_size, size_t *pass_len,
+/// const OSSL_PARAM params[], int verify, struct ossl_passphrase_data_st *data)` --
+/// `crypto/passphrase.c:204-305`.
+///
+/// The central dispatcher, and the reason D356 could only land the floor: its `is_pem_password`
+/// arm calls `UI_UTIL_wrap_read_pem_callback`, which `src/ui/ui_util.rs` now provides. The three
+/// sources are tried **in the authority's order** -- an explicit phrase, then a cached one, then
+/// the configured callback form -- and only the third reaches the UI. A NULL `ui_method` after
+/// both arms is the "no password method specified" refusal, which is a refusal and not a prompt.
+///
+/// The `is_ossl_passphrase` arm returns through [`cache_passphrase`], which is the authority's
+/// `goto do_cache`; the two earlier refusals (a bad prompt-info type, and a failed wrapper) return
+/// without caching, also as the authority does.
+///
+/// # Safety
+/// `pass` must be writable for `pass_size` bytes, `pass_len` writable, `params` NULL or a
+/// terminated `OSSL_PARAM` array, and `data` live.
+#[no_mangle]
+pub unsafe extern "C" fn ossl_pw_get_passphrase(
+    pass: *mut c_char,
+    pass_size: usize,
+    pass_len: *mut usize,
+    params: *const OsslParam,
+    verify: c_int,
+    data: *mut OsslPassphraseData,
+) -> c_int {
+    let mut source: *const c_char = ptr::null();
+    let mut source_len: usize = 0;
+    let mut prompt_info: *const c_char = ptr::null();
+    let mut ui_method: *const UiMethod = ptr::null();
+    let mut allocated_ui_method: *mut UiMethod = ptr::null_mut();
+    let mut ui_data: *mut c_void = ptr::null_mut();
+    let ret: c_int;
+
+    // The three plain reads below are each taken once, before the selector is used: the authority
+    // re-reads `data->type`, the flag and the cache pointer at each test, and none can change
+    // during this call.
+    // SAFETY: `data` is live per the contract.
+    let pw_type = unsafe { (*data).type_ };
+    // SAFETY: as above; both are plain fields.
+    let cache_flag = unsafe { (*data).flag_cache_passphrase };
+    // SAFETY: as above.
+    let cached = unsafe { (*data).cached_passphrase };
+    // SAFETY: as above; the length is meaningful exactly when `cached` is non-NULL.
+    let cached_len = unsafe { (*data).cached_passphrase_len };
+
+    // Explicit and cached passphrases.
+    if pw_type == IS_EXPL_PASSPHRASE {
+        // SAFETY: `type_` selects the `expl_passphrase` member.
+        unsafe {
+            source = (*data).payload.expl_passphrase.passphrase_copy;
+            source_len = (*data).payload.expl_passphrase.passphrase_len;
+        }
+    } else if cache_flag != 0 && !cached.is_null() {
+        source = cached;
+        source_len = cached_len;
+    }
+
+    if !source.is_null() {
+        if source_len > pass_size {
+            source_len = pass_size;
+        }
+        // SAFETY: `pass` is writable for `pass_size >= source_len` bytes and `source` is readable
+        // for `source_len`.
+        unsafe {
+            ptr::copy_nonoverlapping(source, pass, source_len);
+            *pass_len = source_len;
+        }
+        return 1;
+    }
+
+    // The `is_ossl_passphrase` case, which is direct and skips the UI entirely.
+    if pw_type == IS_OSSL_PASSPHRASE {
+        // SAFETY: `type_` selects the `ossl_passphrase` member, and the setter refused a NULL
+        // callback, so the callback below is live.
+        let (cb, cbarg) = unsafe {
+            (
+                (*data).payload.ossl_passphrase.passphrase_cb,
+                (*data).payload.ossl_passphrase.passphrase_cbarg,
+            )
+        };
+        // The `None` arm is unreachable -- `ossl_pw_set_ossl_passphrase_cb` refuses a NULL
+        // callback -- and answering 0 there is the same guard `CRYPTO_THREAD_run_once` uses for a
+        // NULL initialiser: a caller-contract violation answered rather than crashed.
+        ret = cb.map_or(0, |cb| {
+            // SAFETY: the callback is live and its arguments are the caller's own.
+            unsafe { cb(pass, pass_size, pass_len, params, cbarg) }
+        });
+        // SAFETY: `pass_len` was set by the callback above when it succeeded.
+        return unsafe { cache_passphrase(data, pass, pass_len, ret) };
+    }
+
+    // The is_pem_password and is_ui_method cases.
+    // SAFETY: `params` is NULL or a terminated array, which `OSSL_PARAM_locate_const` accepts.
+    let p = unsafe { OSSL_PARAM_locate_const(params, OSSL_PASSPHRASE_PARAM_INFO) };
+    if !p.is_null() {
+        // SAFETY: `p` points at an element of the caller's array.
+        if unsafe { (*p).data_type } != OSSL_PARAM_UTF8_STRING {
+            // SAFETY: a compile-time-constant site, with the authority's own message text.
+            unsafe {
+                raise_site_data(
+                    &err_sites::PASSPHRASE_251,
+                    c"Prompt info data type incorrect".as_ptr(),
+                )
+            };
+            return 0;
+        }
+        // SAFETY: `p` is live and its `data` is the UTF8 string the type said it was.
+        prompt_info = unsafe { (*p).data }.cast::<c_char>();
+    }
+
+    if pw_type == IS_PEM_PASSWORD {
+        // We use a UI wrapper for PEM.
+        // SAFETY: `type_` selects the `pem_password` member.
+        let cb = unsafe { (*data).payload.pem_password.password_cb };
+        // SAFETY: `cb` is NULL or live, which the wrapper's contract allows.
+        let wrapped = unsafe { UI_UTIL_wrap_read_pem_callback(cb, verify) };
+        ui_method = wrapped;
+        allocated_ui_method = wrapped;
+        // SAFETY: `data` is live.
+        ui_data = unsafe { (*data).payload.pem_password.password_cbarg };
+        if ui_method.is_null() {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::PASSPHRASE_266) };
+            return 0;
+        }
+    } else if pw_type == IS_UI_METHOD {
+        // SAFETY: `type_` selects the `ui_method` member.
+        unsafe {
+            ui_method = (*data).payload.ui_method.ui_method;
+            ui_data = (*data).payload.ui_method.ui_method_data;
+        }
+    }
+
+    if ui_method.is_null() {
+        // SAFETY: a compile-time-constant site, with the authority's own message text.
+        unsafe {
+            raise_site_data(
+                &err_sites::PASSPHRASE_275,
+                c"No password method specified".as_ptr(),
+            )
+        };
+        return 0;
+    }
+
+    // SAFETY: every pointer is live and `prompt_info` is NULL or the caller's string.
+    ret = unsafe {
+        do_ui_passphrase(
+            pass,
+            pass_size,
+            pass_len,
+            prompt_info,
+            verify,
+            ui_method,
+            ui_data,
+        )
+    };
+
+    // SAFETY: `allocated_ui_method` is NULL or the method the wrapper built for this call.
+    unsafe { UI_destroy_method(allocated_ui_method) };
+
+    // SAFETY: `pass_len` was set by `do_ui_passphrase` when it succeeded.
+    unsafe { cache_passphrase(data, pass, pass_len, ret) }
+}
+
+/// `static int ossl_pw_get_password(char *buf, int size, int rwflag, void *userdata,
+/// const char *info)` -- `crypto/passphrase.c:307-321`.
+///
+/// The `pem_password_cb` adapter: one `"info"` parameter carrying the prompt, and the answer
+/// reported as the callback's own length convention -- the read's length, or `-1`. The `params`
+/// array is built with `data` NULL and then assigned, which is the authority's own two steps.
+///
+/// # Safety
+/// `buf` must be writable for `size` bytes and `userdata` must be a live
+/// `OsslPassphraseData`; `info` NULL or NUL-terminated.
+unsafe fn ossl_pw_get_password(
+    buf: *mut c_char,
+    size: c_int,
+    rwflag: c_int,
+    userdata: *mut c_void,
+    info: *const c_char,
+) -> c_int {
+    let mut password_len: usize = 0;
+    // SAFETY: the constructor only fills a descriptor; the terminator is the authority's own.
+    let mut params = unsafe {
+        [
+            OSSL_PARAM_construct_utf8_string(OSSL_PASSPHRASE_PARAM_INFO, ptr::null_mut(), 0),
+            OSSL_PARAM_construct_end(),
+        ]
+    };
+    params[0].data = info.cast_mut().cast::<c_void>();
+
+    // SAFETY: `buf` is writable for `size` bytes; `params` is terminated; `userdata` is the
+    // caller's `OsslPassphraseData` per this function's contract.
+    if unsafe {
+        ossl_pw_get_passphrase(
+            buf,
+            size as usize,
+            &mut password_len,
+            params.as_ptr(),
+            rwflag,
+            userdata.cast::<OsslPassphraseData>(),
+        )
+    } != 0
+    {
+        return password_len as c_int;
+    }
+    -1
+}
+
+/// `int ossl_pw_pem_password(char *buf, int size, int rwflag, void *userdata)` --
+/// `crypto/passphrase.c:323-326`.
+///
+/// # Safety
+/// As [`ossl_pw_get_password`], with `userdata` the data struct.
+#[no_mangle]
+pub unsafe extern "C" fn ossl_pw_pem_password(
+    buf: *mut c_char,
+    size: c_int,
+    rwflag: c_int,
+    userdata: *mut c_void,
+) -> c_int {
+    // SAFETY: the contract is `ossl_pw_get_password`'s, with the literal prompt the authority uses.
+    unsafe { ossl_pw_get_password(buf, size, rwflag, userdata, c"PEM".as_ptr()) }
+}
+
+/// `int ossl_pw_pvk_password(char *buf, int size, int rwflag, void *userdata)` --
+/// `crypto/passphrase.c:328-331`.
+///
+/// # Safety
+/// As [`ossl_pw_get_password`].
+#[no_mangle]
+pub unsafe extern "C" fn ossl_pw_pvk_password(
+    buf: *mut c_char,
+    size: c_int,
+    rwflag: c_int,
+    userdata: *mut c_void,
+) -> c_int {
+    // SAFETY: as `ossl_pw_pem_password`; `PVK` is the authority's own prompt.
+    unsafe { ossl_pw_get_password(buf, size, rwflag, userdata, c"PVK".as_ptr()) }
+}
+
+/// `int ossl_pw_passphrase_callback_enc(char *pass, size_t pass_size, size_t *pass_len,
+/// const OSSL_PARAM params[], void *arg)` -- `crypto/passphrase.c:333-338`.
+///
+/// The provider-facing callback with `verify` set, which is what makes a re-type prompt appear
+/// when the passphrase is being *set* rather than read. `arg` is the `ossl_passphrase_data_st`
+/// the provider was handed, so it is cast rather than dereferenced here.
+///
+/// # Safety
+/// `arg` must be a live `OsslPassphraseData`; the rest is `ossl_pw_get_passphrase`'s contract.
+#[no_mangle]
+pub unsafe extern "C" fn ossl_pw_passphrase_callback_enc(
+    pass: *mut c_char,
+    pass_size: usize,
+    pass_len: *mut usize,
+    params: *const OsslParam,
+    arg: *mut c_void,
+) -> c_int {
+    // SAFETY: `arg` is the caller's data struct per the callback's contract.
+    unsafe {
+        ossl_pw_get_passphrase(
+            pass,
+            pass_size,
+            pass_len,
+            params,
+            1,
+            arg.cast::<OsslPassphraseData>(),
+        )
+    }
+}
+
+/// `int ossl_pw_passphrase_callback_dec(char *pass, size_t pass_size, size_t *pass_len,
+/// const OSSL_PARAM params[], void *arg)` -- `crypto/passphrase.c:340-345`.
+///
+/// The decoding twin of [`ossl_pw_passphrase_callback_enc`], with `verify` clear: a passphrase
+/// being read back is not re-typed.
+///
+/// # Safety
+/// As [`ossl_pw_passphrase_callback_enc`].
+#[no_mangle]
+pub unsafe extern "C" fn ossl_pw_passphrase_callback_dec(
+    pass: *mut c_char,
+    pass_size: usize,
+    pass_len: *mut usize,
+    params: *const OsslParam,
+    arg: *mut c_void,
+) -> c_int {
+    // SAFETY: as the `_enc` twin.
+    unsafe {
+        ossl_pw_get_passphrase(
+            pass,
+            pass_size,
+            pass_len,
+            params,
+            0,
+            arg.cast::<OsslPassphraseData>(),
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// An `OSSL_PASSPHRASE_CALLBACK` that writes a fixed phrase, so a read through the dispatcher
+    /// is observable without any UI.
+    unsafe extern "C" fn fixed_phrase(
+        pass: *mut c_char,
+        pass_size: usize,
+        pass_len: *mut usize,
+        _params: *const OsslParam,
+        _arg: *mut c_void,
+    ) -> c_int {
+        let phrase = b"opensesame";
+        if pass_size < phrase.len() {
+            return 0;
+        }
+        // SAFETY: `pass` is writable for `pass_size >= phrase.len()` bytes.
+        unsafe {
+            ptr::copy_nonoverlapping(phrase.as_ptr().cast::<c_char>(), pass, phrase.len());
+            *pass_len = phrase.len();
+        }
+        1
+    }
+
+    /// The explicit-phrase arm answers **before** any UI is consulted, which is what lets
+    /// `ossl_pw_pem_password` be observed with no terminal at all.
+    #[test]
+    fn an_explicit_passphrase_is_returned_without_a_ui() {
+        let mut d = blank();
+        let mut buf = [0 as c_char; 32];
+        let mut len: usize = 0;
+        // SAFETY: `d` and `buf` are live and correctly sized.
+        unsafe {
+            assert_eq!(ossl_pw_set_passphrase(&mut d, b"hunter2".as_ptr(), 7), 1);
+            assert_eq!(
+                ossl_pw_get_passphrase(buf.as_mut_ptr(), 32, &mut len, ptr::null(), 0, &mut d),
+                1
+            );
+            assert_eq!(len, 7);
+            assert_eq!(
+                core::slice::from_raw_parts(buf.as_ptr().cast::<u8>(), 7),
+                b"hunter2"
+            );
+            ossl_pw_clear_passphrase_data(&mut d);
+        }
+    }
+
+    /// The `is_ossl_passphrase` arm reaches the callback and, with caching on, fills the cache;
+    /// the callback pair is the one `encoder_process` hands a provider.
+    #[test]
+    fn the_ossl_callback_form_reads_and_caches() {
+        let mut d = blank();
+        let mut buf = [0 as c_char; 32];
+        let mut len: usize = 0;
+        // SAFETY: `d` and `buf` are live; the callback is the one defined above.
+        unsafe {
+            assert_eq!(
+                ossl_pw_set_ossl_passphrase_cb(&mut d, Some(fixed_phrase), ptr::null_mut()),
+                1
+            );
+            assert_eq!(ossl_pw_enable_passphrase_caching(&mut d), 1);
+            assert_eq!(
+                ossl_pw_passphrase_callback_dec(
+                    buf.as_mut_ptr(),
+                    32,
+                    &mut len,
+                    ptr::null(),
+                    (&mut d as *mut OsslPassphraseData).cast(),
+                ),
+                1
+            );
+            assert_eq!(len, 10);
+            assert_eq!(
+                core::slice::from_raw_parts(buf.as_ptr().cast::<u8>(), 10),
+                b"opensesame"
+            );
+            // The cache holds the answer, NUL-terminated, for the next read.
+            assert!(!d.cached_passphrase.is_null());
+            assert_eq!(d.cached_passphrase_len, 10);
+            assert_eq!(
+                core::slice::from_raw_parts(d.cached_passphrase.cast::<u8>(), 11),
+                b"opensesame\0"
+            );
+            ossl_pw_clear_passphrase_data(&mut d);
+        }
+    }
+
+    /// The `is_ui_method` arm with a NULL method is the "no password method specified" refusal,
+    /// and it answers 0 **before** any UI is built.
+    #[test]
+    fn no_method_is_a_refusal() {
+        let mut d = blank();
+        let mut buf = [0 as c_char; 32];
+        let mut len: usize = 0;
+        // SAFETY: `d` and `buf` are live; a NULL method is the case under test.
+        unsafe {
+            assert_eq!(
+                ossl_pw_get_passphrase(buf.as_mut_ptr(), 32, &mut len, ptr::null(), 0, &mut d),
+                0
+            );
+            ossl_pw_clear_passphrase_data(&mut d);
+        }
+    }
+
+    /// `ossl_pw_pem_password` is the dispatcher through the `"info"` parameter, and the explicit
+    /// phrase still wins.
+    #[test]
+    fn pem_password_reads_the_explicit_phrase_first() {
+        let mut d = blank();
+        let mut buf = [0 as c_char; 32];
+        // SAFETY: `d` and `buf` are live.
+        unsafe {
+            assert_eq!(ossl_pw_set_passphrase(&mut d, b"abc".as_ptr(), 3), 1);
+            assert_eq!(
+                ossl_pw_pem_password(
+                    buf.as_mut_ptr(),
+                    32,
+                    0,
+                    (&mut d as *mut OsslPassphraseData).cast(),
+                ),
+                3
+            );
+            ossl_pw_clear_passphrase_data(&mut d);
+        }
+    }
 
     /// A zeroed struct, as `ossl_pw_clear_passphrase_data` leaves one: `type_` is 0, which is no
     /// member of the authority's enum, so a stray read is a test failure rather than a branch.
