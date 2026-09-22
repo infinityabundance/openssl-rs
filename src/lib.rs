@@ -123,6 +123,7 @@ pub(crate) mod param_build_set;
 // arrived with the DSA landing, because `dsa_sign.c`'s `i2d_DSA_SIG` is a `WPACKET` program. It is
 // transcribed whole, QUIC half and all (D342).
 pub(crate) mod packet;
+pub mod passphrase;
 pub mod pem;
 pub mod property;
 pub mod provider;

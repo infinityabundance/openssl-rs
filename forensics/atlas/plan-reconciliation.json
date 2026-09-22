@@ -3628,10 +3628,10 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 277
+      "transcribed_units": 278
     }
   },
-  "body_hash": "9d991725253950842107462af6cec7a6d2281acf95392fe4792db8f53c9e95de",
+  "body_hash": "6b145aca91cfea3c3352a6de2f0c91e51c408f13f9306e1d2b769d3a6f944684",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -3642,12 +3642,12 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "cd7d271749a292176fbe57a650707d72d1c98ce33d582a33c0a1bb4c7acb6100"
+      "sha256": "3350847ccc16147c41a356c2841c26e7906e93625f408407e1419d2387a7fdf2"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "f40f243ffd64524329978bf547a98f1377623be1a0d75099ac5947eb7f86538f"
+      "sha256": "55aaf0512ac2987c1f654edc5b74347cfe4704ad86eaefa29bc716998c152c3e"
     },
     {
       "name": "phase-state",
@@ -3657,7 +3657,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "affdf002f48c4cf879ddb8070f226daaf74b0464776328ea267782b8e2614420"
+      "sha256": "110c6e712a10d9a05c191c3101c99f361a11f09e1f0d1f9a25f1365d3ef6f43a"
     },
     {
       "name": "source-manifest",

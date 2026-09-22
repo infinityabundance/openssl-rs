@@ -25311,3 +25311,165 @@ at **66** and `not_yet_begun` at **80**; the prerequisite gate stays at **zero f
 and `sealed_stratum_census` **56**. The open fourteen are the eight printers and the six
 `crypto/pem/` private-key readers. It is not Phase 8 and not nearly Phase 8; the count this entry
 reaches is implemented **772** of **786** owned.
+
+## D356 — the encoder/decoder framework's floor lands: `crypto/passphrase.c` as `src/passphrase.rs`,
+and the encoder path is measured end to end for the eight printers; **no Phase 8 count moves**
+
+**Decision.** Land the first step of the encoder/decoder slice the brief ordered, and stop there
+with a green tree rather than start step 4: `crypto/passphrase.c` becomes `src/passphrase.rs`
+(Phase 10's passphrase bridge, the floor every `OSSL_ENCODER_CTX`/`OSSL_DECODER_CTX` setter stands
+on), with the reachable subset transcribed whole and the rest withheld with coordinates. The eight
+Phase-8 printers, the six `crypto/pem/` private-key readers, the `crypto/encode_decode/` framework
+and the `EVP_PKEY_print_*` family are **not** landed, and the reason is measured rather than
+asserted (below). **No export moves**, `forensics/phase8-obligations.json` does not change, and the
+open fourteen stay exactly the eight printers and the six readers. A green partial is worth more
+than a red whole, which is the brief's own instruction; this is the green partial.
+
+**Why the floor is the thing that landed, and why it is partial.** `crypto/passphrase.c` is 345
+lines and fifteen functions. Nine are transcribed: `ossl_pw_clear_passphrase_data` (`:16-25`),
+`ossl_pw_clear_passphrase_cache` (`:27-31`), the four `ossl_pw_set_*` setters (`:33`, `:51`, `:65`,
+`:79`), the two caching toggles (`:93`, `:99`) and the `static do_ui_passphrase` processor
+(`:114-201`). Six are withheld, and they are one block: `ossl_pw_get_passphrase` (`:204-305`) is the
+central dispatcher and its `is_pem_password` arm calls `UI_UTIL_wrap_read_pem_callback`
+(`crypto/ui/ui_util.c`, declared `ui.h`), which is **Phase 13's and unlanded** -- `src/ui/mod.rs`
+records that the three `UI_UTIL_*` names are not on its working set; the other five
+(`ossl_pw_get_password` `:307`, `ossl_pw_pem_password` `:323`, `ossl_pw_pvk_password` `:328` and the
+two `ossl_pw_passphrase_callback_{enc,dec}` `:333`/`:340`) are each one call into it. A body whose
+own text calls a name no module defines cannot be written, and returning early would be a fabricated
+answer, so the six wait. `do_ui_passphrase` is **not** withheld even though its only caller is: its
+own body reaches only landed `UI_*` functions, so it is transcribed with an item-level
+`#[allow(dead_code)]` naming the caller that is waiting -- the project's convention, and the reason
+the withheld six are a block rather than a scattered list. The four setters are the part the
+encoder's own `OSSL_ENCODER_CTX_set_passphrase`, `_set_pem_password_cb`, `_set_passphrase_cb` and
+`_set_passphrase_ui` (`crypto/encode_decode/encoder_pkey.c:40-65`) call, which is why this is the
+floor.
+
+**The struct's layout is measured, not read, and it matters.** `OSSL_ENCODER_CTX` and
+`OSSL_DECODER_CTX` each embed one `struct ossl_passphrase_data_st` (`encoder_local.h:103`, `:161`),
+so the bridge's size and offsets become part of the contexts' layout.
+`courts/layout/measure-ossl-passphrase-data.c` compiles the authority's own struct against the
+admitted build's headers and prints them: **size 48**, align 8, `type` 0, the unnamed union member
+`_` 8 (sixteen bytes), the `unsigned int flag_cache_passphrase : 1` storage 24, `cached_passphrase`
+32, `cached_passphrase_len` 40. The two facts a reading gets wrong are the four-byte `int` enum at
+0 followed by four bytes of padding, and the one-bit flag's four-byte storage at 24 followed by four
+more before the pointer at 32; the `const _` block under `OsslPassphraseData` pins all seven
+numbers. The union member is unnamed in the authority and Rust reserves `_`, so the field is named
+`payload` with the authority's spelling recorded in the doc comment rather than in the code.
+
+**The gate record, and the one mechanism that fits it.** Transcribing the unit makes
+`crypto/passphrase.c`'s unwired internals countable (D327's rule), and the crate answers for eight
+of the unit's thirteen symbol-bearing functions, so the gate's
+`unwired_function_in_the_current_stratum` fired on the **five** that are symbols (the two statics are
+not in the symbol universe: `ossl_pw_get_passphrase`, `ossl_pw_pem_password`, `ossl_pw_pvk_password`,
+`ossl_pw_passphrase_callback_enc`, `ossl_pw_passphrase_callback_dec`). The fix is **not** a deferral:
+the gate treats a deferral as planned work and adds it to the `planned_prerequisites` census, which is
+directional, whereas a `divergences` row is what the gate documents for "a name an authority unit
+calls that the crate deliberately does not". The five are therefore covered by **one new
+`divergences` row** (`owner_module` `src/passphrase.rs`, class `owned_by_a_later_stratum`, the only
+class in the fixed vocabulary that fits a name the crate does not answer for and will not at this
+stratum), and the census the row feeds -- `covered_by_a_divergence` **83 -> 88** -- is the one the
+regression guard reads as **non-directional** (a difference understood or fixed, both work). The row
+is exact in both directions: the gate matched all five against names it observed, and it would
+report the row `stale` the moment any of the five is built. `planned_prerequisites` stays **8** and
+the deferral count stays **10** -- no deferral was added, which is the point.
+
+**Raise sites.** `crypto/passphrase.c` joins `gen_err_raise_sites.py`'s `COVERED_FILES` as
+`PASSPHRASE`; the file raises at fifteen lines (four in the setters, eight in `do_ui_passphrase`,
+three in the withheld dispatcher), and the site count moves **3065 -> 3080**. The four sites the
+landed setters reach (`:38`, `:55`, `:69`, `:83`) and the eight `do_ui_passphrase` reaches are each
+referenced by the body that raises them; the three in the withheld dispatcher are generated for the
+unit and unused, which is why the file's entry records that a raise site is a property of the
+translation unit rather than of the subset a stratum has reached.
+
+**Courts.** **No export was landed, so no court moved and none was needed.** `RT-AMETH` stays at
+**420** observations; the crate still has no `OSSL_ENCODER_*`/`OSSL_DECODER_*` name on its compiled
+surface, so nothing an ameth arm could call has changed. The landing is covered by four unit tests
+in `src/passphrase.rs` instead -- a round trip that asserts the copy is the crate's and not the
+caller's, the empty-phrase one-byte allocation, a second setter replacing the first, and the two
+toggles -- and every value they print is a length, a return code or a pointer *identity*, never key
+material. `regression_guard.py` reports no regression over **94** courts and **37170**
+observations, unmoved.
+
+**The encoder path, measured for the eight printers and the six readers, and where it stops.** The
+brief asked for `crypto/encode_decode/`'s framework to be **written** rather than reduced, on the
+argument that `print_pkey` (`crypto/evp/p_lib.c:1196-1229`) falls through to
+`pkey->ameth->priv_print` (`:1222`) through the authority's own code when
+`OSSL_ENCODER_CTX_get_num_encoders(ctx) == 0`. That argument is right and the path is real; the
+measurement is what says it is **not one pass**, and it is three separate costs:
+
+* **The units are mutually recursive and their closure is the whole `OSSL_ENCODER_*` family.** Against
+  this crate, the authority names each of the three encoder units still absent are, by the same
+  lexical rule the gate uses (identifiers in the unit that the crate defines nowhere under `src/`):
+  **`encoder_pkey.c` 23, `encoder_lib.c` 28, `encoder_meth.c` 24**, and for the reader leg
+  **`decoder_pkey.c` 35, `decoder_lib.c` 39, `decoder_meth.c` 26** -- 175 absent names over six
+  units, from `OSSL_ENCODER_CTX_new`/`_free`/`_set_params` through `OSSL_ENCODER_fetch`/`_up_ref`/
+  `_is_a`/`_do_all_provided` to `crypto/passphrase.c`'s own withheld `ossl_pw_passphrase_callback_dec`.
+  The counts include the crate's renamed internals (`ossl_lib_ctx_get_data` is `lib_ctx_get_data`), so
+  they over-count by a handful, and every one of them is a name that must exist before the unit links.
+* **The four names `print_pkey` needs sit on a store the crate has deliberately left unfilled.** A
+  *legacy* key (`pkey->keymgmt == NULL`, which is what `EVP_PKEY_set1_RSA` builds for every printer)
+  takes `ossl_encoder_ctx_setup_for_pkey`'s short arm and never reaches `OSSL_ENCODER_do_all_provided`
+  (`encoder_pkey.c:319`), so the printers' own path needs only a real `OSSL_ENCODER_CTX` plus
+  `OSSL_ENCODER_CTX_get_num_encoders` (`encoder_lib.c:345-348`, `ctx == NULL || ctx->encoder_insts ==
+  NULL ? 0`) and `OSSL_ENCODER_to_bio` (`encoder_lib.c:68-91`, which raises
+  `OSSL_ENCODER_R_ENCODER_NOT_FOUND` and answers 0 when the count is 0) -- but the *units* do not stay
+  on that path: `OSSL_ENCODER_fetch` reads `OSSL_LIB_CTX_ENCODER_STORE_INDEX`, and this crate's
+  `src/provider/stores.rs` **asserts that slot is unfilled** (`ossl_encoder_store_cache_flush`,
+  `:110-114`, and its `_remove_all_provided` sibling), a deliberate invariant D142 checked rather than
+  assumed. Filling slot 10 means the encoder store initialiser, the two delegations that assert
+  against it, and the same three names on the decoder side -- a Phase-10 landing the size of this
+  stratum's whole remaining surface, exactly as the brief anticipated by saying the count moves only
+  at step 4.
+* **All 38 `OSSL_ENCODER*` exports plus their decoder twins are the ownership atlas's Phase 10, and
+  `court_coverage.py` requires every export landed to be *directly called* by a staged probe.** The
+  three units carry roughly eighty exports between the two families, so landing them is not only
+  writing them but staging a court that calls each one -- the reason D355 confined `RT-AMETH`'s
+  pmeth arm to the six shared rows.
+
+None of that is a reason the path cannot be taken; it is a reason it is more than one pass. The
+withheld eight printers and six readers are therefore exactly where D355 left them, and this entry
+adds no P10-AMETH sibling record: the `divergences` row above is about `crypto/passphrase.c`'s own
+internals and nothing else. What this slice **does** change for the printers is one small thing and
+it is worth stating precisely: the floor they stand on now exists, so the count of absent names on
+`encoder_pkey.c`'s path is four smaller than it was -- `ossl_pw_set_passphrase`,
+`ossl_pw_set_pem_password_cb`, `ossl_pw_set_ossl_passphrase_cb` and `ossl_pw_set_ui_method` resolve
+here -- and nothing else on that path moved.
+
+**What the authority corrected in the brief.** Two things. The brief called `crypto/passphrase.c`
+"the four `ossl_pw_set_*` helpers and their neighbours"; the correction is that the file's fifteen
+functions divide at a **block boundary** and not at a helper list -- the four setters cannot be
+separated from the two clearers that head them and the two toggles that sit beside them, because a
+transcription that landed only the setters would leave the struct's cache fields writable-but-unread
+and the `is_expl_passphrase` member leaking on every set, and the four setters plus the two clearers
+plus the two toggles plus `do_ui_passphrase` is the whole of the closure whose own text compiles
+here. And the brief named `src/passphrase.rs` as a possible home "or `src/evp/passphrase.rs`": the
+authority defines the file at `crypto/passphrase.c`, neither under `crypto/evp/` nor under any
+subsystem directory, so the module sits at the crate root beside `src/packet.rs` and
+`src/quic_vlint.c`'s module, and `transcription-edges.json` maps it to its unit as it does for any
+other root module.
+
+**What is deliberately not here.** The eight printers, the six readers, `EVP_PKEY_print_public`/
+`_private`/`_params` with their three `_fp` twins, `print_pkey` itself, `crypto/encode_decode/`'s
+encoder and decoder units, and the `crypto/pem/pem_pkey.c` reader leg are all **not** here, and each
+is named rather than approximated. `docs/PHASE-8-SUBPHASES.md` is unchanged by this entry because no
+Phase 8 row's evidence moved: rows 8.4-8.9 already record the printers and readers as the open
+surface, and §4's two anchored clauses stay consistent with the ledger because the ledger did not
+move -- which `docs_consistency.py` confirms by passing. `docs/CI.md`'s hand-written "327 plain C
+identifiers" claim is corrected to **335**, because the eight `#[no_mangle] pub unsafe extern "C"`
+setters are new C-spelled identifiers in the archive and the gate's direction-D discipline is the
+same one that fails a document contradicting its evidence.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete:
+false` with **14** names open, **unmoved** by this entry: implemented **772**, deferred **0**, owned
+**786**. The regenerated counts: `implemented-surface.json`'s `libcrypto` implemented stays **2780**
+(this is an internal landing, so no export moves) while its `internal_symbols.c_style` subset moves
+**327 -> 335**; `transcription-edges.json` grows **308 -> 309** modules over **277 -> 278** units;
+`internal-symbols.json`'s `modules_without_a_stratum` stays **38** (the new module declares its
+stratum); `court_coverage.py` reports phase 8 at **772** implemented (**764** directly courted, every
+one *called*, **8** indirectly, **0** unmatched), phase 9 at **66** and `not_yet_begun` at **80**,
+all unmoved; the prerequisite gate stays at **zero findings** over **10** deferrals, **12**
+divergence rows / **60** names, `blocking_dependencies` **10** and `sealed_stratum_census` **56**;
+phase 7's counts do **not** move -- implemented **727**, deferred **223**, received_by_handoff **26**
+-- and `forensics/phase8-obligations.py`'s `BLOCKED_HANDOFFS` was already empty and stays empty. The
+open fourteen are the eight printers and the six `crypto/pem/` private-key readers. It is not Phase 8
+and not nearly Phase 8; the count this entry reaches is implemented **772** of **786** owned.
