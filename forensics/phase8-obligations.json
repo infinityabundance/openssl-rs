@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 0,
-      "implemented": 769,
-      "open_in_this_stratum": 17,
+      "implemented": 772,
+      "open_in_this_stratum": 14,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -175,53 +175,26 @@
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "crypto/rsa/rsa_pmeth.c",
-              "kind": "internal",
-              "line": 851,
-              "name": "ossl_rsa_pkey_method",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
-          "note": "the same shape as row 6: `ossl_rsa_pkey_method` is the first of the ten `standard_methods[]` `EVP_PKEY_METHOD` objects the prerequisite row names.",
           "owning_phase": 8,
-          "reason": "`EVP_PKEY_meth_find` (`crypto/evp/pmeth_lib.c:106`) searches `standard_methods[]` (`:54`) with `OBJ_bsearch_pmeth_func` (`:114`); `EVP_PKEY_meth_get_count` (`:646`) answers `OSSL_NELEM(standard_methods)` plus the application stack; `EVP_PKEY_meth_get0` (`:655`) indexes the table outright before it touches that stack. The ten `ossl_<alg>_pkey_method` objects the table holds are Phase 8's contents (D163, D165, D184), and the application half of the registry is already landed and courted -- so Phase 8 is the only phase that retires these three, and a stub would answer the application count where the authority answers twelve more.",
+          "reason": "`EVP_PKEY_meth_find` (`crypto/evp/pmeth_lib.c:106`) searches the **second** `standard_methods[]` (`:54`) with `OBJ_bsearch_pmeth_func` (`:114`); `EVP_PKEY_meth_get_count` (`:646`) answers `OSSL_NELEM(standard_methods)` plus the application stack; `EVP_PKEY_meth_get0` (`:655`) indexes the table outright before it touches that stack. The row's single `blocked_by` name was `ossl_rsa_pkey_method` (`crypto/rsa/rsa_pmeth.c:851`), **and D355 landed it** together with the other five in-reach `ossl_<alg>_pkey_method` objects and the table they populate -- so the row moves here from `BLOCKED_HANDOFFS` rather than retiring, and for the reason the `EVP_PKEY_assign` row gives: the three exports are still this stratum's to write in the ledger's arithmetic, and retiring the row would move three built exports into phase 7's `implemented` on the strength of a phase-8 landing. The application half of the registry was already landed and courted here (D193).",
           "symbol": "EVP_PKEY_meth_find"
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "crypto/rsa/rsa_pmeth.c",
-              "kind": "internal",
-              "line": 851,
-              "name": "ossl_rsa_pkey_method",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
-          "note": "the same shape as row 6: `ossl_rsa_pkey_method` is the first of the ten `standard_methods[]` `EVP_PKEY_METHOD` objects the prerequisite row names.",
           "owning_phase": 8,
-          "reason": "`EVP_PKEY_meth_find` (`crypto/evp/pmeth_lib.c:106`) searches `standard_methods[]` (`:54`) with `OBJ_bsearch_pmeth_func` (`:114`); `EVP_PKEY_meth_get_count` (`:646`) answers `OSSL_NELEM(standard_methods)` plus the application stack; `EVP_PKEY_meth_get0` (`:655`) indexes the table outright before it touches that stack. The ten `ossl_<alg>_pkey_method` objects the table holds are Phase 8's contents (D163, D165, D184), and the application half of the registry is already landed and courted -- so Phase 8 is the only phase that retires these three, and a stub would answer the application count where the authority answers twelve more.",
+          "reason": "`EVP_PKEY_meth_find` (`crypto/evp/pmeth_lib.c:106`) searches the **second** `standard_methods[]` (`:54`) with `OBJ_bsearch_pmeth_func` (`:114`); `EVP_PKEY_meth_get_count` (`:646`) answers `OSSL_NELEM(standard_methods)` plus the application stack; `EVP_PKEY_meth_get0` (`:655`) indexes the table outright before it touches that stack. The row's single `blocked_by` name was `ossl_rsa_pkey_method` (`crypto/rsa/rsa_pmeth.c:851`), **and D355 landed it** together with the other five in-reach `ossl_<alg>_pkey_method` objects and the table they populate -- so the row moves here from `BLOCKED_HANDOFFS` rather than retiring, and for the reason the `EVP_PKEY_assign` row gives: the three exports are still this stratum's to write in the ledger's arithmetic, and retiring the row would move three built exports into phase 7's `implemented` on the strength of a phase-8 landing. The application half of the registry was already landed and courted here (D193).",
           "symbol": "EVP_PKEY_meth_get0"
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "crypto/rsa/rsa_pmeth.c",
-              "kind": "internal",
-              "line": 851,
-              "name": "ossl_rsa_pkey_method",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
-          "note": "the same shape as row 6: `ossl_rsa_pkey_method` is the first of the ten `standard_methods[]` `EVP_PKEY_METHOD` objects the prerequisite row names.",
           "owning_phase": 8,
-          "reason": "`EVP_PKEY_meth_find` (`crypto/evp/pmeth_lib.c:106`) searches `standard_methods[]` (`:54`) with `OBJ_bsearch_pmeth_func` (`:114`); `EVP_PKEY_meth_get_count` (`:646`) answers `OSSL_NELEM(standard_methods)` plus the application stack; `EVP_PKEY_meth_get0` (`:655`) indexes the table outright before it touches that stack. The ten `ossl_<alg>_pkey_method` objects the table holds are Phase 8's contents (D163, D165, D184), and the application half of the registry is already landed and courted -- so Phase 8 is the only phase that retires these three, and a stub would answer the application count where the authority answers twelve more.",
+          "reason": "`EVP_PKEY_meth_find` (`crypto/evp/pmeth_lib.c:106`) searches the **second** `standard_methods[]` (`:54`) with `OBJ_bsearch_pmeth_func` (`:114`); `EVP_PKEY_meth_get_count` (`:646`) answers `OSSL_NELEM(standard_methods)` plus the application stack; `EVP_PKEY_meth_get0` (`:655`) indexes the table outright before it touches that stack. The row's single `blocked_by` name was `ossl_rsa_pkey_method` (`crypto/rsa/rsa_pmeth.c:851`), **and D355 landed it** together with the other five in-reach `ossl_<alg>_pkey_method` objects and the table they populate -- so the row moves here from `BLOCKED_HANDOFFS` rather than retiring, and for the reason the `EVP_PKEY_assign` row gives: the three exports are still this stratum's to write in the ledger's arithmetic, and retiring the row would move three built exports into phase 7's `implemented` on the strength of a phase-8 landing. The application half of the registry was already landed and courted here (D193).",
           "symbol": "EVP_PKEY_meth_get_count"
         },
         {
@@ -804,6 +777,9 @@
       "EVP_PKEY_get1_RSA",
       "EVP_PKEY_get_ec_point_conv_form",
       "EVP_PKEY_get_field_type",
+      "EVP_PKEY_meth_find",
+      "EVP_PKEY_meth_get0",
+      "EVP_PKEY_meth_get_count",
       "EVP_PKEY_set1_DH",
       "EVP_PKEY_set1_DSA",
       "EVP_PKEY_set1_EC_KEY",
@@ -1314,24 +1290,6 @@
         "symbol": "EC_KEY_print_fp"
       },
       {
-        "declaring_header": "evp.h",
-        "module": "src/asn1/ameth.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_meth_find"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/asn1/ameth.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_meth_get0"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/asn1/ameth.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_meth_get_count"
-      },
-      {
         "declaring_header": "pem.h",
         "module": "src/pem/key_legacy.rs",
         "received_from_phase": null,
@@ -1451,12 +1409,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "62a9cb8087b0ee5ffca66465036c0257a7c608ce6aa91acb0163d0ace4457f1b"
+      "sha256": "9d6093ef037f0c925c12762417e7fdab93ad6ed6fc3dbb695ce7992c24b0bcf0"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "1eb405d1bdfc1c9b1137e45c26f18729d27e2b3c471f0398beadced574ec6248"
+      "sha256": "06f8a684bf03619e0c57c626388e042412e6953533cde331f5748b9a632116ac"
     }
   ],
   "kind": "phase8-obligations",

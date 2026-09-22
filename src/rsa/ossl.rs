@@ -195,7 +195,7 @@ const OPENSSL_RSA_MAX_PUBEXP_BITS: c_int = 64;
 ///
 /// It is declared here rather than beside the other seven in `src/evp/pkey_ctx.rs` because this
 /// file is its only reader in the crate: the ctrl-string map and the providers never name it.
-const RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING: c_int = 8;
+pub(crate) const RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING: c_int = 8;
 
 /// `BN_FLG_CONSTTIME` — `include/openssl/bn.h`, `0x04`. Re-stated here as `src/bn/mont.rs:44`,
 /// `src/bn/recp.rs:37`, `src/asn1/x_bignum.rs:43` and `src/rsa/object.rs:277` each re-state it: the

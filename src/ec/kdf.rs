@@ -48,9 +48,12 @@ const OSSL_KDF_PARAM_INFO: *const c_char = c"info".as_ptr();
 ///
 /// # Safety
 /// `out` writable for `outlen` bytes; `Z`/`sinfo` readable for their lengths; `md` live.
+///
+/// `pub(crate)` since 8.8's `EVP_PKEY_METHOD` slice (D355): `crypto/ec/ec_pmeth.c`'s
+/// `pkey_ec_kdf_derive` is the authority's second caller, and `src/ec/pmeth.rs` is where it lands.
 #[allow(clippy::too_many_arguments)] // the authority's own signature has nine parameters.
 #[allow(non_snake_case)] // the authority's own symbol name
-unsafe fn ossl_ecdh_kdf_X9_63(
+pub(crate) unsafe fn ossl_ecdh_kdf_X9_63(
     out: *mut u8,
     outlen: usize,
     z: *const u8,

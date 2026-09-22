@@ -1145,6 +1145,21 @@ between the authority and the candidate at this site.**
   name -- at which point the four rows are appended to `STANDARD_METHODS` in `pkey_id` order (1034,
   1035, 1087, 1088, between `ossl_dhx_asn1_meth` at 920 and `ossl_sm2_asn1_meth` at 1172),
   `EVP_PKEY_asn1_get_count()` moves to 15, and this entry is removed with the table it describes.
+- **The same four units are the `EVP_PKEY_METHOD` table's rows too (D355).** `crypto/evp/pmeth_lib.c`'s
+  second `standard_methods[]` is an array of `pmeth_fn` **accessors** rather than of objects, and four
+  of its ten rows are `ossl_ecx25519_pkey_method` (1034), `ossl_ecx448_pkey_method` (1035),
+  `ossl_ed25519_pkey_method` (1087) and `ossl_ed448_pkey_method` (1088) -- all four defined in the
+  same withheld `crypto/ec/ecx_meth.c`. The crate's `src/evp/pkey_ctx.rs`'s `PMETH_STANDARD_METHODS`
+  therefore carries **six** rows where the authority carries ten, and the observable is
+  `EVP_PKEY_meth_find(EVP_PKEY_X25519)` -- and its X448, Ed25519 and Ed448 siblings -- answering
+  **NULL**, `EVP_PKEY_meth_get0(6..10)` answering NULL where the authority answers those four
+  methods, and `EVP_PKEY_meth_get_count()` answering **6** where the authority answers 10. The
+  callers that see it are `EVP_PKEY_CTX_new_id`'s legacy-method lookup and any enumeration by index,
+  both of which fall through to the provider `EVP_KEYMGMT_fetch` the authority would have preferred
+  the legacy method over. The six shared rows, `EVP_PKEY_meth_get0_info`'s two fields and
+  `EVP_PKEY_meth_find`'s application-table-first rule are claimed and courted (`RT-AMETH`'s arm 8),
+  and the trigger is the one above, one table over: the four accessors are appended to
+  `PMETH_STANDARD_METHODS` in `pkey_id` order after `ossl_dhx_pkey_method` at 920.
 
 ### D-PBE-PKCS12-KEYGEN-1 — the six `PKCS12_PBE_keyivgen` rows of `builtin_pbe[]` carry no keygen
 

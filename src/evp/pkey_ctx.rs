@@ -6,13 +6,14 @@
 //! registry (`_new`, `_free`, `_copy`, `_get0_info`, `_add0`, `_remove`) and the forty
 //! `EVP_PKEY_meth_get_*`/`set_*` accessors.
 //!
-//! **What is not here is the three exports that read `standard_methods[]`** —
-//! `EVP_PKEY_meth_find`, `_get0` and `_get_count` — which are 7.4l's, because that table's
-//! contents are Phase 8's `ossl_<alg>_pkey_method` objects (`docs/DECISIONS.md` D163, D165). The
-//! *application* half of the registry landed here: `evp_pkey_meth_find_added_by_application` is
-//! written and has no caller until `EVP_PKEY_meth_find` and `int_ctx_new`'s `app_pmeth` arm land,
-//! so a caller that installs its own method with `EVP_PKEY_meth_add0` is reachable today while the
-//! twelve built-in types are not.
+//! **The three exports that read `standard_methods[]` are here as of 8.8's `EVP_PKEY_METHOD`
+//! slice** (`docs/DECISIONS.md` D355): `EVP_PKEY_meth_find`, `_get0` and `_get_count`, over
+//! [`PMETH_STANDARD_METHODS`], whose contents are the four `*_pmeth.c` units' `ossl_<alg>_pkey_method`
+//! objects. The *application* half of the registry landed here earlier:
+//! `evp_pkey_meth_find_added_by_application` is now `EVP_PKEY_meth_find`'s first question, so a
+//! caller that installs its own method with `EVP_PKEY_meth_add0` is found before the table is
+//! searched. What is **not** yet here is `int_ctx_new`'s `pmeth` arm, so no context is built from
+//! either half: the exports answer the registry, and the contexts still come from `EVP_KEYMGMT`.
 //!
 //! ## A context is one object with two halves, and `evp_pkey_ctx_state` is the switch
 //!
@@ -113,8 +114,8 @@ use crate::runtime::obj::{
 use crate::runtime::obj::{OBJ_nid2sn, OBJ_sn2nid};
 use crate::runtime::obj::{OBJ_obj2txt, OBJ_txt2obj};
 use crate::runtime::stack::{
-    OPENSSL_sk_delete_ptr, OPENSSL_sk_find, OPENSSL_sk_new, OPENSSL_sk_push, OPENSSL_sk_sort,
-    OPENSSL_sk_value, OpenSslStack,
+    OPENSSL_sk_delete_ptr, OPENSSL_sk_find, OPENSSL_sk_new, OPENSSL_sk_num, OPENSSL_sk_push,
+    OPENSSL_sk_sort, OPENSSL_sk_value, OpenSslStack,
 };
 use crate::runtime::str::{OPENSSL_hexstr2buf, OPENSSL_strcasecmp, OPENSSL_strlcat};
 use core::ffi::c_long;
@@ -247,11 +248,20 @@ pub(crate) type EvpPkeyGenCb = unsafe extern "C" fn(*mut EvpPkeyCtx) -> c_int;
 /// reader dispatches on `operation` before touching a family's members, so the overlap is
 /// unobservable, and the field names are what a reader needs.
 ///
-/// The legacy half is here as far as it can be — `legacy_keytype`, `data`, `app_data`,
-/// `keygen_info`, `keygen_info_count`, `peerkey` — and `pmeth` and `engine` are absent because
-/// `EVP_PKEY_METHOD` is 7.4l's and `ENGINE` is Phase 13's. Both are only ever read behind a
-/// `pmeth != NULL` or `engine != NULL` test, so their absence makes those arms unreachable rather
-/// than wrong, and each site says so.
+/// The legacy half is the authority's: `legacy_keytype`, `pmeth`, `engine`, `pkey`, `peerkey`,
+/// `data`, the `flag_call_digest_custom` bit and `rsa_pubexp`. `pmeth` and `engine` were **absent**
+/// until 8.8's `EVP_PKEY_METHOD` slice landed (`docs/DECISIONS.md` D355), because `EVP_PKEY_METHOD`
+/// is 7.4l's and `ENGINE` is Phase 13's; a reader that needs them — `pkey_ctx_is_pss(ctx)`, which is
+/// `ctx->pmeth->pkey_id == EVP_PKEY_RSA_PSS`, and `pkey_dh_keygen`'s assignment type — is what the
+/// field is for. Nothing in this crate writes `engine` yet, and the field is present for the block's
+/// layout rather than for a state the crate enters.
+///
+/// **The absolute offsets are not the authority's and are not asserted to be.** The `op` union is
+/// flattened above (see this module's documentation), so this structure is *wider* than
+/// `struct evp_pkey_ctx_st`; what the `const _` block under the struct pins is the **legacy block's
+/// internal layout** — the deltas between `legacy_keytype`, `pmeth`, `engine`, `pkey`, `peerkey`,
+/// `data` and `rsa_pubexp` — which is what the callbacks read and what the measurement in
+/// `courts/layout/measure-evp-pkey-ctx.c` records from the authority.
 #[repr(C)]
 pub struct EvpPkeyCtx {
     /// `int operation` — the bit set `EVP_PKEY_OP_*` names.
@@ -296,12 +306,32 @@ pub struct EvpPkeyCtx {
     pub(crate) keygen_info_count: c_int,
     /// `int legacy_keytype`.
     pub(crate) legacy_keytype: c_int,
+    /// `const EVP_PKEY_METHOD *pmeth` — the legacy method this context was built from, or NULL.
+    ///
+    /// **8.8's writer is its enabler.** `int_ctx_new` and the `app_pmeth` arm are the authority's
+    /// writers; neither is landed here, so the field is written by nothing yet and read by the
+    /// `ossl_<alg>_pkey_method` callbacks this stratum publishes — `pkey_ctx_is_pss`
+    /// (`crypto/rsa/rsa_local.h:151`) and `pkey_dh_keygen`'s assignment type
+    /// (`crypto/dh/dh_pmeth.c:387`) are the two.
+    pub(crate) pmeth: *const EvpPkeyMethod,
+    /// `ENGINE *engine` — "Engine that implements this method or NULL if builtin". Phase 13's
+    /// object; present so the legacy block's internal layout is the authority's, and written by
+    /// nothing in this crate.
+    #[allow(dead_code)]
+    // present for the measured layout; Phase 13's `int_ctx_new` arm is its writer
+    pub(crate) engine: *mut Engine,
     /// `EVP_PKEY *pkey` — holding a reference, or NULL.
     pub(crate) pkey: *mut EvpPkey,
     /// `EVP_PKEY *peerkey` — holding a reference, or NULL.
     pub(crate) peerkey: *mut EvpPkey,
     /// `void *data` — algorithm-specific, owned by whoever set it.
     pub(crate) data: *mut c_void,
+    /// `unsigned int flag_call_digest_custom : 1` — "Indicator if `digest_custom` needs to be
+    /// called". Projected as its four-byte storage, as `EvpPkey`'s `foreign` is, and present so
+    /// `rsa_pubexp`'s offset follows `data`'s by the authority's own sixteen bytes.
+    #[allow(dead_code)]
+    // present for the measured layout; `do_sigver_init`'s `pmeth` arm is its writer
+    pub(crate) flag_call_digest_custom: c_int,
     /// `BIGNUM *rsa_pubexp` — the authority's own comment: *"Used to support taking custody of
     /// memory in the case of a provider being used with the deprecated
     /// `EVP_PKEY_CTX_set_rsa_keygen_pubexp()` API. This member should NOT be used for any other
@@ -313,6 +343,33 @@ pub struct EvpPkeyCtx {
     /// which is its only setter and `EVP_PKEY_CTX_free`'s only reader.
     pub(crate) rsa_pubexp: *mut BigNum,
 }
+
+/// The measured legacy block, pinned member by member.
+///
+/// `courts/layout/measure-evp-pkey-ctx.c` compiles the authority's own `struct evp_pkey_ctx_st`
+/// against the admitted build's headers and prints its size and every member's offset. These are
+/// those numbers: `legacy_keytype` 116, `pmeth` 120, `engine` 128, `pkey` 136, `peerkey` 144,
+/// `data` 152, and `rsa_pubexp` 168 with the `flag_call_digest_custom` bit's four-byte storage in
+/// between. **The crate's absolute offsets are not these** — the flattened `op` union makes this
+/// structure wider — so what is asserted is each field's distance from the one before it, which is
+/// what a reader of the callbacks depends on and what the flattening cannot move.
+const _: () = {
+    use core::mem::{align_of, offset_of};
+    assert!(align_of::<EvpPkeyCtx>() == 8);
+    /* Two four-byte ints are adjacent in the authority: `keygen_info_count` 112, `legacy_keytype`
+     * 116. The pointer after them is eight-aligned. */
+    assert!(
+        offset_of!(EvpPkeyCtx, legacy_keytype) - offset_of!(EvpPkeyCtx, keygen_info_count) == 4
+    );
+    assert!(offset_of!(EvpPkeyCtx, pmeth) - offset_of!(EvpPkeyCtx, legacy_keytype) == 4);
+    assert!(offset_of!(EvpPkeyCtx, engine) - offset_of!(EvpPkeyCtx, pmeth) == 8);
+    assert!(offset_of!(EvpPkeyCtx, pkey) - offset_of!(EvpPkeyCtx, engine) == 8);
+    assert!(offset_of!(EvpPkeyCtx, peerkey) - offset_of!(EvpPkeyCtx, pkey) == 8);
+    assert!(offset_of!(EvpPkeyCtx, data) - offset_of!(EvpPkeyCtx, peerkey) == 8);
+    /* `data` 152 -> the bitfield's storage at 160 -> `rsa_pubexp` 168. */
+    assert!(offset_of!(EvpPkeyCtx, rsa_pubexp) - offset_of!(EvpPkeyCtx, data) == 16);
+    assert!(offset_of!(EvpPkeyCtx, flag_call_digest_custom) - offset_of!(EvpPkeyCtx, data) == 8);
+};
 
 impl EvpPkeyCtx {
     /// `EVP_PKEY_CTX_IS_SIGNATURE_OP(ctx)`.
@@ -1725,6 +1782,14 @@ pub struct EvpPkeyMethod {
 /// `static const` object.
 const EVP_PKEY_FLAG_DYNAMIC: c_int = 1;
 
+/// `EVP_PKEY_FLAG_AUTOARGLEN` — `include/openssl/evp.h:1830`.
+///
+/// The flag every one of Phase 8's `ossl_<alg>_pkey_method` objects sets (`rsa_pmeth.c:818`,
+/// `dh_pmeth.c:461`, `dsa_pmeth.c:260`, `ec_pmeth.c:464`), and the crate's own name for it did not
+/// exist until the four units landed. `EVP_PKEY_meth_get0_info` publishes it as the method's flags
+/// word, which is what `RT-AMETH`'s pmeth arms observe.
+pub(crate) const EVP_PKEY_FLAG_AUTOARGLEN: c_int = 2;
+
 /// `app_pkey_methods` — the application-registered methods, sorted by `pmeth_cmp`.
 static mut APP_PKEY_METHODS: *mut OpenSslStack = ptr::null_mut();
 
@@ -1775,7 +1840,7 @@ unsafe extern "C" fn pmeth_cmp(a: *const c_void, b: *const c_void) -> c_int {
 ///
 /// # Safety
 /// `type_` is a legacy NID.
-#[allow(dead_code)] // first live callers are `EVP_PKEY_meth_find` (7.4l) and `int_ctx_new` (7.4c)
+#[allow(dead_code)] // `EVP_PKEY_meth_find` is its live caller; `int_ctx_new`'s arm is still absent
 pub(crate) unsafe fn evp_pkey_meth_find_added_by_application(type_: c_int) -> *const EvpPkeyMethod {
     // SAFETY: `APP_PKEY_METHODS` is NULL or a stack this module owns.
     if unsafe { APP_PKEY_METHODS }.is_null() {
@@ -1795,6 +1860,153 @@ pub(crate) unsafe fn evp_pkey_meth_find_added_by_application(type_: c_int) -> *c
     }
     // SAFETY: `idx` is a valid index into `APP_PKEY_METHODS`.
     unsafe { OPENSSL_sk_value(APP_PKEY_METHODS, idx) }.cast::<EvpPkeyMethod>()
+}
+
+/// `typedef const EVP_PKEY_METHOD *(*pmeth_fn)(void)` — `crypto/evp/pmeth_lib.c:48`.
+///
+/// The `EVP_PKEY_METHOD` table stores **functions**, not objects, which is the one structural
+/// difference from `crypto/asn1/standard_methods.h`: an ASN.1 method is a `static const` object
+/// named by address, and a `pmeth_fn` is an accessor that returns one. That is why
+/// [`pmeth_func_cmp`] calls its `b` argument before it can read a `pkey_id`, and why
+/// `EVP_PKEY_meth_get0`'s answer for a row inside the table is `(standard_methods[idx])()` rather
+/// than `standard_methods[idx]`.
+pub(crate) type PmethFn = unsafe extern "C" fn() -> *const EvpPkeyMethod;
+
+/// `static pmeth_fn standard_methods[]` — `crypto/evp/pmeth_lib.c:53-75`, the **six in-reach rows**
+/// of the authority's ten.
+///
+/// "This array needs to be in order of NIDs" is the authority's own comment, and the order below is
+/// that one: `EVP_PKEY_RSA` 6, `EVP_PKEY_DH` 28, `EVP_PKEY_DSA` 116, `EVP_PKEY_EC` 408,
+/// `EVP_PKEY_RSA_PSS` 912, `EVP_PKEY_DHX` 920.
+///
+/// **The four `crypto/ec/ecx_meth.c` rows are withheld**, and this is the second table to carry that
+/// narrowing: `ossl_ecx25519_pkey_method` (1034), `ossl_ecx448_pkey_method` (1035),
+/// `ossl_ed25519_pkey_method` (1087) and `ossl_ed448_pkey_method` (1088) need `ecx_key.c`,
+/// `ecx_backend.c`, `curve25519.c` and `crypto/ec/curve448/`, about 9,000 authority lines with no
+/// crate module and no stratum's plan row. The observable is named rather than implied:
+/// `EVP_PKEY_meth_find(EVP_PKEY_X25519)` and its three siblings answer **NULL**, and
+/// `EVP_PKEY_meth_get_count` answers **6** where the authority answers 10, so an
+/// `EVP_PKEY_CTX_new_id(EVP_PKEY_X25519)` that the authority would route through
+/// `ossl_ecx25519_pkey_method` gets a `keymgmt` fetch on this side. The record is
+/// `docs/SECURITY_DIVERGENCE_POLICY.md`'s `D-PKEY-AMETH-3`, which the ameth half cites for the same
+/// four units.
+pub(crate) static PMETH_STANDARD_METHODS: [PmethFn; 6] = [
+    crate::rsa::pmeth::ossl_rsa_pkey_method,
+    crate::dh::pmeth::ossl_dh_pkey_method,
+    crate::dsa::pmeth::ossl_dsa_pkey_method,
+    crate::ec::pmeth::ossl_ec_pkey_method,
+    crate::rsa::pmeth::ossl_rsa_pss_pkey_method,
+    crate::dh::pmeth::ossl_dhx_pkey_method,
+];
+
+/// `static int pmeth_func_cmp(const EVP_PKEY_METHOD *const *a, pmeth_fn const *b)` —
+/// `crypto/evp/pmeth_lib.c:79`.
+///
+/// The asymmetry is the whole of it: `a` is a pointer to the **search key** slot (a
+/// `const EVP_PKEY_METHOD *`), read directly, while `b` is a pointer to a **table slot** holding a
+/// `pmeth_fn`, which has to be called before its `pkey_id` exists.
+///
+/// # Safety
+/// `a` must point at a live `*const EvpPkeyMethod` slot and `b` at a live `PmethFn` slot.
+unsafe extern "C" fn pmeth_func_cmp(a: *const c_void, b: *const c_void) -> c_int {
+    let a = a.cast::<*const EvpPkeyMethod>();
+    let b = b.cast::<PmethFn>();
+    // SAFETY: both arguments are the slots the contract describes.
+    let (x, y) = unsafe { ((**a).pkey_id, (*(*b)()).pkey_id) };
+    x - y
+}
+
+/// `const EVP_PKEY_METHOD *EVP_PKEY_meth_find(int type)` — `crypto/evp/pmeth_lib.c:106`.
+///
+/// The application table first, then `standard_methods[]`, which the authority asks with
+/// `OBJ_bsearch_pmeth_func` — `OBJ_bsearch_(key, base, num, sizeof(key), pmeth_func_cmp)` — and
+/// whose element size is `sizeof(pmeth_fn)`, the size of one function pointer. A miss is NULL, and
+/// so is a hit on a NULL slot (`ret == NULL || *ret == NULL`), which is why the slot is read and
+/// checked before it is called.
+///
+/// # Safety
+/// Nothing: both tables are this module's own.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_find(type_: c_int) -> *const EvpPkeyMethod {
+    // SAFETY: the table is this module's own.
+    let added = unsafe { evp_pkey_meth_find_added_by_application(type_) };
+    if !added.is_null() {
+        return added;
+    }
+
+    /* The comparator reads `pkey_id` alone, so a zeroed probe of the right shape is a legal
+     * argument; see `EVP_PKEY_meth_add0`'s duplicate test for the same construction. */
+    // SAFETY: every field is a scalar or an `Option` of a function pointer, so the all-zero bit
+    // pattern is valid, and `pkey_id` is assigned on the next line.
+    let mut probe: EvpPkeyMethod = unsafe { core::mem::zeroed() };
+    probe.pkey_id = type_;
+    let key: *const EvpPkeyMethod = ptr::addr_of!(probe);
+
+    // SAFETY: `key` points at the live local `probe`, `PMETH_STANDARD_METHODS` is a sorted array of
+    // `num` elements of `size` bytes, and `pmeth_func_cmp` is the comparator its order is defined
+    // by.
+    let slot = unsafe {
+        crate::runtime::obj::OBJ_bsearch_(
+            ptr::addr_of!(key).cast::<c_void>(),
+            PMETH_STANDARD_METHODS.as_ptr().cast::<c_void>(),
+            PMETH_STANDARD_METHODS.len() as c_int,
+            core::mem::size_of::<PmethFn>() as c_int,
+            Some(pmeth_func_cmp),
+        )
+    };
+    if slot.is_null() {
+        return ptr::null();
+    }
+    // SAFETY: `slot` is an element of `PMETH_STANDARD_METHODS`, a live `PmethFn`.
+    let accessor = unsafe { *slot.cast::<PmethFn>() };
+    // SAFETY: `accessor` is the table's own entry point.
+    unsafe { accessor() }
+}
+
+/// `size_t EVP_PKEY_meth_get_count(void)` — `crypto/evp/pmeth_lib.c:646`.
+///
+/// `OSSL_NELEM(standard_methods)` plus the application stack. The answer is **6** here and **10** on
+/// the authority, which is the withheld-rows narrowing [`PMETH_STANDARD_METHODS`] records; a caller
+/// that enumerates by index sees a shorter table rather than a wrong one.
+///
+/// # Safety
+/// Nothing: both tables are this module's own.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get_count() -> usize {
+    let mut rv = PMETH_STANDARD_METHODS.len();
+    // SAFETY: `APP_PKEY_METHODS` is NULL or a stack this module owns.
+    if !unsafe { APP_PKEY_METHODS }.is_null() {
+        // SAFETY: `APP_PKEY_METHODS` is live.
+        rv += unsafe { OPENSSL_sk_num(APP_PKEY_METHODS) } as usize;
+    }
+    rv
+}
+
+/// `const EVP_PKEY_METHOD *EVP_PKEY_meth_get0(size_t idx)` — `crypto/evp/pmeth_lib.c:655`.
+///
+/// The table is indexed **outright** before the application stack is touched, so an index inside
+/// `OSSL_NELEM(standard_methods)` never consults it — which is what makes the withheld rows
+/// observable here as a shorter table rather than as a miss.
+///
+/// # Safety
+/// Nothing: both tables are this module's own.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get0(idx: usize) -> *const EvpPkeyMethod {
+    if idx < PMETH_STANDARD_METHODS.len() {
+        // SAFETY: `idx` is in range and the table is this module's own.
+        return unsafe { PMETH_STANDARD_METHODS[idx]() };
+    }
+    // SAFETY: `APP_PKEY_METHODS` is NULL or a stack this module owns.
+    if unsafe { APP_PKEY_METHODS }.is_null() {
+        return ptr::null();
+    }
+    let idx = idx - PMETH_STANDARD_METHODS.len();
+    // SAFETY: `APP_PKEY_METHODS` is live.
+    if idx >= unsafe { OPENSSL_sk_num(APP_PKEY_METHODS) } as usize {
+        return ptr::null();
+    }
+    // SAFETY: `idx` is a valid index into the live stack.
+    unsafe { OPENSSL_sk_value(APP_PKEY_METHODS, idx as c_int) }.cast::<EvpPkeyMethod>()
 }
 
 /// `EVP_PKEY_METHOD *EVP_PKEY_meth_new(int id, int flags)` — `crypto/evp/pmeth_lib.c:124`.
@@ -3263,13 +3475,13 @@ pub(crate) struct KdfTypeMap {
 }
 
 /// `EVP_PKEY_DH_KDF_NONE` — `include/openssl/dh.h:83`.
-const EVP_PKEY_DH_KDF_NONE: c_int = 1;
+pub(crate) const EVP_PKEY_DH_KDF_NONE: c_int = 1;
 /// `EVP_PKEY_DH_KDF_X9_42` — `include/openssl/dh.h:84`.
-const EVP_PKEY_DH_KDF_X9_42: c_int = 2;
+pub(crate) const EVP_PKEY_DH_KDF_X9_42: c_int = 2;
 /// `EVP_PKEY_ECDH_KDF_NONE` — `include/openssl/ec.h:66`.
-const EVP_PKEY_ECDH_KDF_NONE: c_int = 1;
+pub(crate) const EVP_PKEY_ECDH_KDF_NONE: c_int = 1;
 /// `EVP_PKEY_ECDH_KDF_X9_63` — `include/openssl/ec.h:67`.
-const EVP_PKEY_ECDH_KDF_X9_63: c_int = 2;
+pub(crate) const EVP_PKEY_ECDH_KDF_X9_63: c_int = 2;
 
 /// `fix_dh_kdf_type`'s table — `crypto/evp/ctrl_params_translate.c:927`.
 static KDF_TYPE_MAP_DH: [KdfTypeMap; 3] = [
@@ -4213,10 +4425,26 @@ pub(crate) const EVP_PKEY_X448: c_int = NID_X448;
 
 /// `EVP_PKEY_CTRL_MD` — `include/openssl/evp.h:1807`.
 pub(crate) const EVP_PKEY_CTRL_MD: c_int = 1;
+/// `EVP_PKEY_CTRL_PEER_KEY` — `include/openssl/evp.h:1808`.
+pub(crate) const EVP_PKEY_CTRL_PEER_KEY: c_int = 2;
+/// `EVP_PKEY_CTRL_PKCS7_ENCRYPT` — `include/openssl/evp.h:1814`.
+pub(crate) const EVP_PKEY_CTRL_PKCS7_ENCRYPT: c_int = 3;
+/// `EVP_PKEY_CTRL_PKCS7_DECRYPT` — `include/openssl/evp.h:1815`.
+pub(crate) const EVP_PKEY_CTRL_PKCS7_DECRYPT: c_int = 4;
+/// `EVP_PKEY_CTRL_PKCS7_SIGN` — `include/openssl/evp.h:1816`.
+pub(crate) const EVP_PKEY_CTRL_PKCS7_SIGN: c_int = 5;
+/// `EVP_PKEY_CTRL_DIGESTINIT` — `include/openssl/evp.h:1810`.
+pub(crate) const EVP_PKEY_CTRL_DIGESTINIT: c_int = 7;
 /// `EVP_PKEY_CTRL_SET_MAC_KEY` — `include/openssl/evp.h:1809`.
 pub(crate) const EVP_PKEY_CTRL_SET_MAC_KEY: c_int = 6;
 /// `EVP_PKEY_CTRL_CIPHER` — `include/openssl/evp.h:1821`.
 pub(crate) const EVP_PKEY_CTRL_CIPHER: c_int = 12;
+/// `EVP_PKEY_CTRL_CMS_ENCRYPT` — `include/openssl/evp.h:1817`.
+pub(crate) const EVP_PKEY_CTRL_CMS_ENCRYPT: c_int = 9;
+/// `EVP_PKEY_CTRL_CMS_DECRYPT` — `include/openssl/evp.h:1818`.
+pub(crate) const EVP_PKEY_CTRL_CMS_DECRYPT: c_int = 10;
+/// `EVP_PKEY_CTRL_CMS_SIGN` — `include/openssl/evp.h:1819`.
+pub(crate) const EVP_PKEY_CTRL_CMS_SIGN: c_int = 11;
 /// `EVP_PKEY_CTRL_GET_MD` — `include/openssl/evp.h:1822`.
 pub(crate) const EVP_PKEY_CTRL_GET_MD: c_int = 13;
 /// `EVP_PKEY_CTRL_SET_DIGEST_SIZE` — `include/openssl/evp.h:1823`.
@@ -10855,9 +11083,12 @@ mod tests {
             keygen_info: ptr::null_mut(),
             keygen_info_count: 0,
             legacy_keytype: 0,
+            pmeth: ptr::null(),
+            engine: ptr::null_mut(),
             pkey: ptr::null_mut(),
             peerkey: ptr::null_mut(),
             data: ptr::null_mut(),
+            flag_call_digest_custom: 0,
             rsa_pubexp: ptr::null_mut(),
         }
     }

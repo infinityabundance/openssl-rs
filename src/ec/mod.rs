@@ -87,11 +87,14 @@ pub mod ecdsa_ossl;
 pub mod kdf;
 pub mod key;
 pub mod kmeth;
+// Phase 8.8's `crypto/ec/ec_pmeth.c` (D355): the `EC` `EVP_PKEY_METHOD` object and its callbacks,
+// published as `PMETH_STANDARD_METHODS`' row for `EVP_PKEY_EC`.
 pub mod lib;
 pub mod mont;
 pub mod mult;
 pub mod nist;
 pub mod oct;
+pub mod pmeth;
 pub mod print;
 pub mod prn;
 pub mod smpl;

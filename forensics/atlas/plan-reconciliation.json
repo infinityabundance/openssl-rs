@@ -5,12 +5,12 @@
       "in-progress"
     ],
     "census": {
-      "names_a_file_the_authority_does_not_have": 21,
+      "names_a_file_the_authority_does_not_have": 22,
       "symbols_not_reached": 6,
       "units_not_reached": 28
     },
     "census_by_stratum": {
-      "8": 41,
+      "8": 42,
       "9": 14
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
@@ -30,6 +30,7 @@
         "docs/PHASE-8-SUBPHASES.md:8.6:crypto/dsa/dsa_ctrl.c",
         "docs/PHASE-8-SUBPHASES.md:8.7:courts/layout/measure-ec.c",
         "docs/PHASE-8-SUBPHASES.md:8.8:_ameth.c",
+        "docs/PHASE-8-SUBPHASES.md:8.8:_pmeth.c",
         "docs/PHASE-8-SUBPHASES.md:8.8:courts/layout/measure-evp-pkey.c",
         "docs/PHASE-9-SUBPHASES.md:9.4:drbg_ctr.c",
         "docs/PHASE-9-SUBPHASES.md:9.4:drbg_hash.c",
@@ -86,12 +87,12 @@
         "docs/PHASE-9-SUBPHASES.md"
       ],
       "rows_judged": 82,
-      "symbols_named_by_a_row": 101,
-      "symbols_reached": 95,
+      "symbols_named_by_a_row": 107,
+      "symbols_reached": 101,
       "unit_records": 61,
       "units_named_by_a_record": 63,
-      "units_named_by_a_row": 241,
-      "units_reached": 213
+      "units_named_by_a_row": 245,
+      "units_reached": 217
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -631,6 +632,19 @@
           "src/dh/mod.rs"
         ]
       },
+      "crypto/dh/dh_pmeth.c": {
+        "defines": [
+          "ossl_dh_pkey_method",
+          "ossl_dhx_pkey_method"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/dh/pmeth.rs"
+        ]
+      },
       "crypto/dh/dh_prn.c": {
         "defines": [],
         "recorded_by": null,
@@ -781,6 +795,18 @@
         ],
         "transcribed_by": [
           "src/dsa/ossl.rs"
+        ]
+      },
+      "crypto/dsa/dsa_pmeth.c": {
+        "defines": [
+          "ossl_dsa_pkey_method"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/dsa/pmeth.rs"
         ]
       },
       "crypto/dsa/dsa_prn.c": {
@@ -1093,6 +1119,18 @@
         ],
         "transcribed_by": [
           "src/ec/oct.rs"
+        ]
+      },
+      "crypto/ec/ec_pmeth.c": {
+        "defines": [
+          "ossl_ec_pkey_method"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/ec/pmeth.rs"
         ]
       },
       "crypto/ec/ec_print.c": {
@@ -2263,7 +2301,8 @@
         "subphases": [
           "7.4",
           "7.4c",
-          "7.4l"
+          "7.4l",
+          "8.8"
         ],
         "transcribed_by": [
           "src/evp/pkey_ctx.rs"
@@ -2949,6 +2988,19 @@
           "src/rsa/ossl.rs"
         ]
       },
+      "crypto/rsa/rsa_pmeth.c": {
+        "defines": [
+          "ossl_rsa_pkey_method",
+          "ossl_rsa_pss_pkey_method"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.4"
+        ],
+        "transcribed_by": [
+          "src/rsa/pmeth.rs"
+        ]
+      },
       "crypto/self_test_core.c": {
         "defines": [
           "ossl_self_test_set_callback_free",
@@ -3576,36 +3628,36 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 273
+      "transcribed_units": 277
     }
   },
-  "body_hash": "8bb3df69d39a222dcd8169017520c731161bbf42545fb6ff2b766a0b6665d678",
+  "body_hash": "9d991725253950842107462af6cec7a6d2281acf95392fe4792db8f53c9e95de",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "d20795e2a048802c08c613756519e607e8245f2c2c74ca9691713a15998b2067"
+      "sha256": "2554500d4cf89b76bc42eb61e91561e457e0cff0607cdf83aa3907d917500d77"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "5d168c71026987aa95cfe3572dbcbfdb0d41e8fde18a73161b7e0224d2bee807"
+      "sha256": "cd7d271749a292176fbe57a650707d72d1c98ce33d582a33c0a1bb4c7acb6100"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "961e31c41ea334a18190fff9ae682942f330b8e2e308e4036c226a6e0323275e"
+      "sha256": "f40f243ffd64524329978bf547a98f1377623be1a0d75099ac5947eb7f86538f"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "f02f1fb1be2f67afb39942d49e8758926565d1ce9b8a0be08d78afd518e77ff7"
+      "sha256": "09717edb63758357bd92e78ce20bf13d384fecc82e24a7b6d3791505f037b3ce"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "9fbb510c76e233242203a44f67276ca9b0dc7d53d79e86776a073c3413a7aac2"
+      "sha256": "affdf002f48c4cf879ddb8070f226daaf74b0464776328ea267782b8e2614420"
     },
     {
       "name": "source-manifest",
@@ -3630,7 +3682,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "08c8f0207ed407a0b791150ae064ba9e9f68afe084d83eaf15116f9e4dfcb741"
+      "sha256": "86c8272a499036da474087e52240cabec3c45ba17c25ad243d303a31f3a8ceb3"
     },
     {
       "name": "plan-PHASE-9-SUBPHASES",

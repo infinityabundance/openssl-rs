@@ -33,9 +33,14 @@
  * a ledger. A probe cannot link, let alone call, a symbol that is not there, so the print arms the
  * integration plan's section 7 lists are withheld with the eight printers themselves.
  *
- * **`EVP_PKEY_meth_find`/`_get0`/`_get_count`.** The `EVP_PKEY_METHOD` table of `crypto/evp/
- * pmeth_lib.c` is untouched (`ossl_rsa_pkey_method` stays a recorded deferral), so those three names
- * are withheld and cannot be named here.
+ * **`EVP_PKEY_meth_find`/`_get0`/`_get_count` are observed, not withheld.** The second
+ * `standard_methods[]` — `crypto/evp/pmeth_lib.c`'s array of `pmeth_fn` accessors — landed with
+ * `docs/DECISIONS.md` D355, and arm 8 exercises the three over the **six in-reach rows**
+ * (`EVP_PKEY_RSA` 6, `_DH` 28, `_DSA` 116, `_EC` 408, `_RSA_PSS` 912, `_DHX` 920). The four
+ * `crypto/ec/ecx_meth.c` rows are withheld under the same record as arm 7's,
+ * `D-PKEY-AMETH-3`, so the arm observes no index and no count the two sides would answer
+ * differently: `EVP_PKEY_meth_get0(6)` is never queried and `EVP_PKEY_meth_get_count()` is only
+ * ever reduced to a boolean.
  *
  * **The `crypto/asn1/d2i_param.c`/`d2i_pu.c` readers are observed, not withheld.**
  * `d2i_KeyParams`/`d2i_KeyParams_bio`/`d2i_PublicKey` landed together (`docs/DECISIONS.md` D354),
@@ -504,6 +509,63 @@ static void d2i_arms(void)
     }
 }
 
+/* ---------------------------------------------------- arm 8: the EVP_PKEY_METHOD table */
+
+/* `crypto/evp/pmeth_lib.c`'s **second** `standard_methods[]` — not the `EVP_PKEY_ASN1_METHOD`
+ * table arm 1 walks, but the array of `pmeth_fn` accessors `EVP_PKEY_meth_find` binary-searches.
+ * Six of its ten rows are in reach (`EVP_PKEY_RSA` 6, `_DH` 28, `_DSA` 116, `_EC` 408, `_RSA_PSS`
+ * 912, `_DHX` 920) and the four `crypto/ec/ecx_meth.c` rows are withheld with `D-PKEY-AMETH-3`'s
+ * observable, so the arms below observe the six shared rows and **never** an index or a count the
+ * two sides would answer differently: no `EVP_PKEY_meth_get0(6)` (the authority answers the X25519
+ * method there and the crate NULL) and no `EVP_PKEY_meth_get_count()` *value* (10 against 6), only
+ * a boolean. */
+static void pmeth_arms(void)
+{
+    static const int MIDS[] = {
+        NID_rsaEncryption,           /* EVP_PKEY_RSA            6 */
+        NID_dhKeyAgreement,          /* EVP_PKEY_DH            28 */
+        NID_dsa,                     /* EVP_PKEY_DSA          116 */
+        NID_X9_62_id_ecPublicKey,    /* EVP_PKEY_EC           408 */
+        NID_rsassaPss,               /* EVP_PKEY_RSA_PSS      912 */
+        NID_dhpublicnumber           /* EVP_PKEY_DHX          920 */
+    };
+    int i, j;
+
+    printf("ameth.pmeth.count_at_least_six=%d\n", EVP_PKEY_meth_get_count() >= 6);
+    printf("ameth.pmeth.find.none_is_null=%d\n", EVP_PKEY_meth_find(999999) == NULL);
+
+    for (i = 0; i < (int)(sizeof(MIDS) / sizeof(MIDS[0])); i++) {
+        const EVP_PKEY_METHOD *m = EVP_PKEY_meth_find(MIDS[i]);
+        int pid = -100000, flags = -100000;
+
+        printf("ameth.pmeth.find.%d.notnull=%d\n", MIDS[i], m != NULL);
+        if (m == NULL)
+            continue;
+        EVP_PKEY_meth_get0_info(&pid, &flags, m);
+        printf("ameth.pmeth.find.%d.pkey_id=%d\n", MIDS[i], pid);
+        printf("ameth.pmeth.find.%d.flags=%d\n", MIDS[i], flags);
+
+        /* The row is the same object `get0` answers at its index, and the six shared rows are in
+         * the same ascending `pkey_id` order on both sides, so `same` is a boolean they agree on. */
+        for (j = 0; j < 6; j++) {
+            const EVP_PKEY_METHOD *g = EVP_PKEY_meth_get0((size_t)j);
+
+            printf("ameth.pmeth.get0.%d.%d.notnull=%d\n", i, j, g != NULL);
+            if (g == NULL)
+                continue;
+            pid = -100000;
+            EVP_PKEY_meth_get0_info(&pid, NULL, g);
+            printf("ameth.pmeth.get0.%d.%d.pkey_id=%d\n", i, j, pid);
+            printf("ameth.pmeth.get0.%d.%d.same=%d\n", i, j, g == m);
+        }
+    }
+
+    /* Out-of-range indices. Only one beyond **both** index spaces is observed, because the
+     * authority's is ten long and the crate's six. */
+    printf("ameth.pmeth.get0.far_is_null=%d\n",
+        EVP_PKEY_meth_get0((size_t)-1) == NULL && EVP_PKEY_meth_get0(1000) == NULL);
+}
+
 /* ------------------------------------------------------------------ the accessor family */
 
 /* `court_coverage.py` requires every implemented export of a begun stratum to be **called** by
@@ -646,6 +708,7 @@ int main(void)
     params_arms();
     refusal_arms();
     d2i_arms();
+    pmeth_arms();
     coverage_arms();
     return 0;
 }
