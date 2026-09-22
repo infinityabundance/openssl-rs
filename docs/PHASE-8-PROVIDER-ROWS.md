@@ -22,10 +22,10 @@ Read from the census's own `implementation_state` for the rows this stratum owns
 | quantity | count |
 |---|---|
 | provider rows this stratum owns | 306 |
-| of those, implemented | 170 |
-| of those, unlanded | 136 |
+| of those, implemented | 179 |
+| of those, unlanded | 127 |
 
-The document below names all **136** unlanded rows this stratum owns across **44** translation units, and — so the first group can be read whole — the **4** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (119). The identity `306 = 170 + 136` holds.
+The document below names all **127** unlanded rows this stratum owns across **44** translation units, and — so the first group can be read whole — the **13** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (119). The identity `306 = 179 + 127` holds.
 
 ## The first group: the `OSSL_OP_KDF` rows and the `OSSL_OP_SKEYMGMT` pair
 
@@ -46,11 +46,11 @@ rather than stubbed.
 
 | table | dispatch table symbol | operation | algorithm name(s) | state | crate file |
 |---|---|---|---|---|---|
-| `deflt_kdfs` | `ossl_kdf_hkdf_functions` | `OSSL_OP_KDF` | `HKDF` | unimplemented | `src/provider/kdf.rs` |
-| `deflt_kdfs` | `ossl_kdf_hkdf_sha256_functions` | `OSSL_OP_KDF` | `HKDF-SHA256:id-alg-hkdf-with-sha256:1.2.840.113549.1.9.16.3.28` | unimplemented | `src/provider/kdf.rs` |
-| `deflt_kdfs` | `ossl_kdf_hkdf_sha384_functions` | `OSSL_OP_KDF` | `HKDF-SHA384:id-alg-hkdf-with-sha384:1.2.840.113549.1.9.16.3.29` | unimplemented | `src/provider/kdf.rs` |
-| `deflt_kdfs` | `ossl_kdf_hkdf_sha512_functions` | `OSSL_OP_KDF` | `HKDF-SHA512:id-alg-hkdf-with-sha512:1.2.840.113549.1.9.16.3.30` | unimplemented | `src/provider/kdf.rs` |
-| `deflt_kdfs` | `ossl_kdf_tls1_3_kdf_functions` | `OSSL_OP_KDF` | `TLS13-KDF` | unimplemented | `src/provider/kdf.rs` |
+| `deflt_kdfs` | `ossl_kdf_hkdf_functions` | `OSSL_OP_KDF` | `HKDF` | implemented | `src/provider/kdf.rs` |
+| `deflt_kdfs` | `ossl_kdf_hkdf_sha256_functions` | `OSSL_OP_KDF` | `HKDF-SHA256:id-alg-hkdf-with-sha256:1.2.840.113549.1.9.16.3.28` | implemented | `src/provider/kdf.rs` |
+| `deflt_kdfs` | `ossl_kdf_hkdf_sha384_functions` | `OSSL_OP_KDF` | `HKDF-SHA384:id-alg-hkdf-with-sha384:1.2.840.113549.1.9.16.3.29` | implemented | `src/provider/kdf.rs` |
+| `deflt_kdfs` | `ossl_kdf_hkdf_sha512_functions` | `OSSL_OP_KDF` | `HKDF-SHA512:id-alg-hkdf-with-sha512:1.2.840.113549.1.9.16.3.30` | implemented | `src/provider/kdf.rs` |
+| `deflt_kdfs` | `ossl_kdf_tls1_3_kdf_functions` | `OSSL_OP_KDF` | `TLS13-KDF` | implemented | `src/provider/kdf.rs` |
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/kdfs/hmacdrbg_kdf.c.in`
 
@@ -62,7 +62,7 @@ rather than stubbed.
 
 | table | dispatch table symbol | operation | algorithm name(s) | state | crate file |
 |---|---|---|---|---|---|
-| `deflt_kdfs` | `ossl_kdf_kbkdf_functions` | `OSSL_OP_KDF` | `KBKDF` | unimplemented | `src/provider/kdf.rs` |
+| `deflt_kdfs` | `ossl_kdf_kbkdf_functions` | `OSSL_OP_KDF` | `KBKDF` | implemented | `src/provider/kdf.rs` |
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/kdfs/krb5kdf.c.in`
 
@@ -74,7 +74,7 @@ rather than stubbed.
 
 | table | dispatch table symbol | operation | algorithm name(s) | state | crate file |
 |---|---|---|---|---|---|
-| `deflt_kdfs` | `ossl_kdf_pbkdf2_functions` | `OSSL_OP_KDF` | `PBKDF2:1.2.840.113549.1.5.12` | unimplemented | `src/provider/kdf.rs` |
+| `deflt_kdfs` | `ossl_kdf_pbkdf2_functions` | `OSSL_OP_KDF` | `PBKDF2:1.2.840.113549.1.5.12` | implemented | `src/provider/kdf.rs` |
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/kdfs/pkcs12kdf.c.in`
 
@@ -92,7 +92,7 @@ rather than stubbed.
 
 | table | dispatch table symbol | operation | algorithm name(s) | state | crate file |
 |---|---|---|---|---|---|
-| `deflt_kdfs` | `ossl_kdf_sshkdf_functions` | `OSSL_OP_KDF` | `SSHKDF` | unimplemented | `src/provider/kdf.rs` |
+| `deflt_kdfs` | `ossl_kdf_sshkdf_functions` | `OSSL_OP_KDF` | `SSHKDF` | implemented | `src/provider/kdf.rs` |
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/kdfs/sskdf.c.in`
 
@@ -105,7 +105,7 @@ rather than stubbed.
 
 | table | dispatch table symbol | operation | algorithm name(s) | state | crate file |
 |---|---|---|---|---|---|
-| `deflt_kdfs` | `ossl_kdf_tls1_prf_functions` | `OSSL_OP_KDF` | `TLS1-PRF` | unimplemented | `src/provider/kdf.rs` |
+| `deflt_kdfs` | `ossl_kdf_tls1_prf_functions` | `OSSL_OP_KDF` | `TLS1-PRF` | implemented | `src/provider/kdf.rs` |
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/kdfs/x942kdf.c.in`
 
@@ -405,7 +405,7 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 |---|---|
 | generator | `forensics/tools/phase8_provider_rows.py` |
 | census | `forensics/atlas/provider-algorithms.json` |
-| census content hash | `679c5da01493ceb81303ba5e0028936d67643f1db0c116dd709771ccfe919fdf` |
+| census content hash | `6e1013abd9b694603319e9c84735b487d95c0cb2b020f9fc3d26b501bb203e02` |
 | authority tree | `forensics/authorities/src/openssl-3.6.4` |
 | crate query read | `src/provider/digest.rs` |
 

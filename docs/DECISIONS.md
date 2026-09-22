@@ -27208,3 +27208,236 @@ still unlanded, and each remains a whole unit to transcribe (D327) — `hkdf.c.i
 `skeymgmt/`'s `aes_skmgmt.c`/`generic.c.in` pair — with every one of their rows, tables and crate
 homes named in `docs/PHASE-8-PROVIDER-ROWS.md`. No claim is made that the stratum is close to
 sealing: it is 136 provider rows away, and that is the number.
+
+---
+
+## D374 — 8.10's second provider-KDF row lands: `SSHKDF`, and the module header is corrected to name its five rows
+
+**Decision.** `providers/implementations/kdfs/sshkdf.c` is transcribed **whole** (D327) as a new
+section of `src/provider/kdf.rs`: the `KDF_SSHKDF` context, its reset/dup/free, the two generated
+decoders as the field-keyed repeat check (D305), its three parameter lists, and RFC 4253 §7.2's
+`SSHKDF` construction with the authority's `goto out` as a single-exit labelled block. Its
+registration row is published in `DEFLT_KDFS` as the authority's row 8 — between `PKCS12KDF` and
+`X963KDF` — so the crate's table stays a subsequence of `deflt_kdfs[]` (D244). This closes the
+smallest-closure unit the plan document named first (D373).
+
+**Movement, read off the regenerated files.** `provider_rows` moves implemented 170 -> **171**,
+unimplemented 136 -> **135** over **306** owned; `projection.open[8]` 136 -> **135**. The **export**
+ledgers do not move: `forensics/phase8-obligations.json` still reads `complete: true` with
+implemented **786**, deferred **0**, open **0**. `forensics/phase-state.json` still reads phase 8
+`in-progress`, `seal_sha256: null`, and its `blocking` line now names **135** rows.
+
+**The court, and why it is three lengths and two refusals.** `RT-DIGEST` grows 487 -> **496**
+observations: the row is fetched by its literal name and driven deterministically, and every input
+is a constant in `courts/phase8/rt_digest_probe.c`, so the printed bytes are the authority's own
+vector and not a secret. Three output lengths are observed because the construction has three arms
+— **16** bytes (shorter than the digest: the first-block truncation), **32** (one block), and **80**
+(2.5 blocks: the `K || H || <key so far>` re-hash loop and its own truncation) — and two refusals
+because the row's body raises for each: a type outside `'A'`..`'F'` (`PROV_R_VALUE_ERROR`) and a
+missing type (`PROV_R_MISSING_TYPE`). `provider_court_coverage.py` reports **176** implemented rows,
+**176** directly courted, **0** unmatched, and `gen_err_raise_sites.py` covers the unit, which is
+what gives the transcription its fifteen exact coordinates.
+
+**One correction, and it is a source doc rather than a count.** `src/provider/kdf.rs`'s module
+header still said "three registration rows" and named `SSKDF`/`X963KDF`/`X942KDF-ASN1`; D373 did not
+update it and this entry does, to the five rows now published (`SSKDF`, `PKCS12KDF`, `SSHKDF`,
+`X963KDF`, `X942KDF-ASN1`) in the authority's row numbers. The header is a claim about the module's
+own contents, so leaving it stale would have been the D208 class.
+
+**What is deliberately not here, with the coordinate.** Sixteen of the first group's eighteen rows
+remain, and the next units in the plan document's order are `pbkdf2.c.in` (row 6, between `SSKDF`
+and `PKCS12KDF`) and `hkdf.c.in` (rows 0-4, five of them, and the unit `TLS13-KDF` shares). The plan
+document `docs/PHASE-8-PROVIDER-ROWS.md` names every remaining unit, row, table and crate home. No
+claim is made that the stratum is close to sealing: it is **135** provider rows away, and that is
+the number.
+
+---
+
+## D375 — 8.10's third provider-KDF row lands: `PBKDF2`, with the one raise the crate had not yet had to model — a *variable* reason
+
+**Decision.** `providers/implementations/kdfs/pbkdf2.c` is transcribed **whole** (D327) as a new
+section of `src/provider/kdf.rs`: the `KDF_PBKDF2` context and its uninitialised-construct `dup`, the
+two generated decoders as the field-keyed repeat check (D305), the three parameter lists, the
+`PBKDF2` construction over the low-level `HMAC_CTX` pair, and the SHA-1/2048 defaults its `init`
+loads. Its registration row is published in `DEFLT_KDFS` as the authority's row 6 — between `SSKDF`
+and `PKCS12KDF` — so the crate's table stays a subsequence of `deflt_kdfs[]` (D244).
+
+**Movement, read off the regenerated files.** `provider_rows` moves implemented 171 -> **172**,
+unimplemented 135 -> **134** over **306** owned; `projection.open[8]` 135 -> **134**. The export
+ledgers do not move: `forensics/phase8-obligations.json` still reads `complete: true` with
+implemented **786**, deferred **0**, open **0**; `forensics/phase-state.json` still reads phase 8
+`in-progress`, `seal_sha256: null`, and its `blocking` line now names **134** rows.
+
+**The one new mechanism, and why it is not a workaround.** `lower_bound_check_passed`'s non-FIPS arm
+is the first raise in this module whose reason is not a constant: the authority writes
+`ERR_raise(ERR_LIB_PROV, error)`, and `error` is whichever of `PROV_R_KEY_SIZE_TOO_SMALL`,
+`PROV_R_INVALID_SALT_LENGTH` or `PROV_R_INVALID_ITERATION_COUNT` `pbkdf2_lower_bound_check_passed`
+selected. The error-coordinate plane already models this class — the generated site carries
+`dynamic_reason: true` — so the transcription calls `raise_site_dynamic` with the selected reason
+rather than three hand-written sites that would each pin a branch the authority does not. The
+`desc` out-parameter is FIPS-only and absent, and `keylen * 8` is `wrapping_mul` because two of the
+authority's three call sites pass `SIZE_MAX` and rely on the wrap.
+
+**The court, and the branches it reaches.** `RT-DIGEST` grows 496 -> **507** observations: the row
+is fetched by its literal name and driven deterministically, and every input is a constant in
+`courts/phase8/rt_digest_probe.c`, so the printed bytes are the authority's own vector and not a
+secret. The arms are 32 and 64 bytes (so the block counter `i` advances past one block); the row's
+own defaults with neither `digest` nor `iter` set (SHA-1 and 2048); `pkcs5=0`, which turns on
+SP800-132's bounds, at 100 iterations (refused through the variable reason) and at 1000 (accepted);
+and the two missing-input refusals. `provider_court_coverage.py` reports **177** implemented rows,
+**177** directly courted, **0** unmatched; `gen_err_raise_sites.py` covers the unit, which is what
+gives the transcription its sixteen exact coordinates.
+
+**What is deliberately not here, with the coordinate.** Fifteen of the first group's eighteen rows
+remain. The next unit in the plan document's order is `hkdf.c.in`, whose five rows (`HKDF`,
+`HKDF-SHA256`, `HKDF-SHA384`, `HKDF-SHA512`, `TLS13-KDF`) are the largest remaining piece and the
+one `TLS13-KDF` shares. `docs/PHASE-8-PROVIDER-ROWS.md` names every remaining unit, row, table and
+crate home. No claim is made that the stratum is close to sealing: it is **134** provider rows away,
+and that is the number.
+
+---
+
+## D376 — 8.10's fourth provider-KDF unit lands whole: `hkdf.c`'s five rows — `HKDF`, `HKDF-SHA256/384/512` and `TLS13-KDF`
+
+**Decision.** `providers/implementations/kdfs/hkdf.c` is transcribed **whole** (D327) as a new
+section of `src/provider/kdf.rs`: the `KDF_HKDF` context and its fixed-digest-aware reset, the four
+generated decoders as the field-keyed repeat check plus the one list rule (D305), the four parameter
+lists, RFC 5869's `HKDF`/`HKDF_Extract`/`HKDF_Expand`, RFC 8446's `HkdfLabel` packer over `WPACKET`,
+the pre-extract generate-secret step, and the five dispatch tables. All five rows are published in
+`DEFLT_KDFS` as the authority's rows 0-4, before `SSKDF`, so the crate's table stays a subsequence of
+`deflt_kdfs[]` (D244). This is the unit the brief called "`hkdf.c.in` (5 rows, which is also what
+`TLS13-KDF` needs)", and it is one unit, not two: `TLS13-KDF` is `hkdf.c`'s.
+
+**Movement, read off the regenerated files.** `provider_rows` moves implemented 172 -> **177**,
+unimplemented 134 -> **129** over **306** owned; `projection.open[8]` 134 -> **129**. The export
+ledgers do not move: `forensics/phase8-obligations.json` still reads `complete: true` with
+implemented **786**, deferred **0**, open **0**; `forensics/phase-state.json` still reads phase 8
+`in-progress`, `seal_sha256: null`, and its `blocking` line now names **129** rows.
+
+**The court, and the whole shape of the unit.** `RT-DIGEST` grows 507 -> **530** observations.
+HKDF is driven in all three of its modes — the RFC 5869 extract-and-expand, `EXTRACT_ONLY` (whose
+output length must equal the digest size, which is the row's own `size` answer), and `EXPAND_ONLY`
+— and at a length that spans more than one block, so the counter loop is exercised; `HKDF-SHA256`,
+`HKDF-SHA384` and `HKDF-SHA512` are each fetched by their own literal and derived at their own
+digest size, and `HKDF-SHA256`'s refusal to have its digest set (`PROV_R_DIGEST_NOT_ALLOWED`) is
+observed. `TLS13-KDF` is driven through `HkdfLabel` with RFC 8446's `"tls13 "` prefix in both of the
+modes it has, and its **default** mode (`EXTRACT_AND_EXPAND`) is observed as a refusal
+(`PROV_R_INVALID_MODE`) — the one behaviour that distinguishes it from `HKDF`. Every input is a
+constant in `courts/phase8/rt_digest_probe.c`, so the printed bytes are a vector and not a secret.
+`provider_court_coverage.py` reports **182** implemented rows, **182** directly courted, **0**
+unmatched; `gen_err_raise_sites.py` covers the unit, which is what gives the transcription its
+thirty-eight exact coordinates.
+
+**One defect was found and fixed before the court could see it.** The first coverage run after the
+census regeneration reported **2 unmatched** rows: `HKDF-SHA384` and `HKDF-SHA512` were implemented
+but named by no probe, so `provider_court_coverage.py` failed closed rather than reporting a
+smaller satisfied set. The arm now fetches each by name; the finding is what kept "the census moved"
+from being read as "the rows are observed".
+
+**What is deliberately not here, with the coordinate.** Twelve of the first group's eighteen rows
+remain. The next unit in the plan document's order is `tls1_prf.c.in` (row 10), then `kbkdf.c.in`
+(row 11), `scrypt.c.in` (row 13), `krb5kdf.c.in` (row 14), `hmacdrbg_kdf.c.in` (row 15),
+`argon2.c.in`'s three (rows 16-18) and `skeymgmt/`'s `aes_skmgmt.c`/`generic.c.in` pair.
+`docs/PHASE-8-PROVIDER-ROWS.md` names every remaining unit, row, table and crate home. No claim is
+made that the stratum is close to sealing: it is **129** provider rows away, and that is the number.
+
+---
+
+## D377 — 8.10's fifth provider-KDF row lands: `TLS1-PRF`, the unit with two MAC contexts and a seed that is a list
+
+**Decision.** `providers/implementations/kdfs/tls1_prf.c` is transcribed **whole** (D327) as a new
+section of `src/provider/kdf.rs`: the `TLS1_PRF` context and its two `EVP_MAC_CTX` fields, the
+generated set decoder as the field-keyed repeat check plus the one **list** rule (`seed` repeats up
+to `TLSPRF_MAX_SEEDS` and a seventh raises `PROV_R_TOO_MANY_RECORDS`, the same rule D376 gave
+`info`), the two parameter lists, RFC 2246 §5 / RFC 5246 §5's `P_hash` expansion and the two arms
+of `tls1_prf_alg`, and the dispatch table. Its registration row is published in `DEFLT_KDFS` as the
+authority's row 10 — between `X963KDF` and `X942KDF-ASN1` — so the crate's table stays a subsequence
+of `deflt_kdfs[]` (D244).
+
+**Movement, read off the regenerated files.** `provider_rows` moves implemented 177 -> **178**,
+unimplemented 129 -> **128** over **306** owned; `projection.open[8]` 129 -> **128**. The export
+ledgers do not move: `forensics/phase8-obligations.json` still reads `complete: true` with
+implemented **786**, deferred **0**, open **0**; `forensics/phase-state.json` still reads phase 8
+`in-progress`, `seal_sha256: null`, and its `blocking` line now names **128** rows.
+`docs/PHASE-8-PROVIDER-ROWS.md` is regenerated: 128 unlanded rows across 44 units, 12 landed.
+
+**The one mechanism new to this unit, and why it is not a workaround.** `seed` is the first
+*parameter-list* decrypt in this module that is **not** the fixed-digest `info` shape: the generated
+decoder counts the records and raises at the seventh (`tls1_prf.c:470`), and the *set body* then
+concatenates them across calls with `safe_add_size_t` and a single `OPENSSL_clear_realloc`. The
+transcription keeps both halves — the counter in [`tls1_prf_collect_seed`] and the concatenation in
+`tls1_prf_set_ctx_params` over a local `safe_add_size_t` that wraps `checked_add` and reports
+overflow the way the header's macro does — because the authority's `seedlen != ctx->seedlen` guard
+is what makes the second and later `set` calls append rather than replace.
+
+**The court, and both arms of the unit.** `RT-DIGEST` grows 530 -> **544** observations. `TLS1-PRF`
+is fetched by its literal name and driven deterministically, and every input is a constant in
+`courts/phase8/rt_digest_probe.c`, so the printed bytes are the authority's own vector and not a
+secret. Both arms are observed: the TLS v1.2 single-hash arm (`SHA256`) at **42** bytes — more than
+one SHA-256 block, so the `HMAC(secret, A(i) || seed)` loop runs more than once — and at **16** bytes,
+the first-block truncation; and the TLS v1.0/v1.1 two-MAC arm, `MD5-SHA1`, which loads HMAC-MD5 and
+HMAC-SHA1, splits the secret in halves and XORs the two expansions. The gettable `size` is driven
+(`SIZE_MAX`, the row's unbounded answer), and every guard in the derive body is crossed: no digest
+(`PROV_R_MISSING_MESSAGE_DIGEST`), no secret (`PROV_R_MISSING_SECRET`), no seed
+(`PROV_R_MISSING_SEED`), a zero-length key (`PROV_R_INVALID_KEY_LENGTH`), and the XOF digest refusal
+(`PROV_R_XOF_DIGESTS_NOT_ALLOWED`) that the throwaway `PROV_DIGEST` load exists to detect.
+`provider_court_coverage.py` reports **183** implemented rows, **183** directly courted, **0**
+unmatched (phase 8: 178 implemented, 0 unmatched); `gen_err_raise_sites.py` covers the unit with
+**18** coordinates, which is what pins the transcription's raise sites.
+
+**What is deliberately not here, with the coordinate.** Eleven of the first group's eighteen rows
+remain. The next unit in the plan document's order is `kbkdf.c.in` (row 11), then `scrypt.c.in`
+(row 13), `krb5kdf.c.in` (row 14), `hmacdrbg_kdf.c.in` (row 15), `argon2.c.in`'s three (rows 16-18)
+and `skeymgmt/`'s `aes_skmgmt.c`/`generic.c.in` pair. `docs/PHASE-8-PROVIDER-ROWS.md` names every
+remaining unit, row, table and crate home. No claim is made that the stratum is close to sealing: it
+is **128** provider rows away, and that is the number.
+
+---
+
+## D378 — 8.10's sixth provider-KDF row lands: `KBKDF`, SP800-108's two modes over one MAC context
+
+**Decision.** `providers/implementations/kdfs/kbkdf.c` is transcribed **whole** (D327) as a new
+section of `src/provider/kdf.rs`: the `KBKDF` context, the generated set decoder as the field-keyed
+repeat check plus the `info` list rule, the two parameter lists, SP800-108 section 5.1's counter mode
+and section 5.2's feedback mode, the `be32` counter packer, the KMAC arm's `custom`/`size`
+parameterisation, and the dispatch table. Its registration row is published in `DEFLT_KDFS` as the
+authority's row 11 — between `TLS1-PRF` and `X942KDF-ASN1` — so the crate's table stays a subsequence
+of `deflt_kdfs[]` (D244).
+
+**Movement, read off the regenerated files.** `provider_rows` moves implemented 178 -> **179**,
+unimplemented 128 -> **127** over **306** owned; `projection.open[8]` 128 -> **127**. The export
+ledgers do not move: `forensics/phase8-obligations.json` still reads `complete: true` with
+implemented **786**, deferred **0**, open **0**; `forensics/phase-state.json` still reads phase 8
+`in-progress`, `seal_sha256: null`, and its `blocking` line now names **127** rows.
+`docs/PHASE-8-PROVIDER-ROWS.md` is regenerated: 127 unlanded rows across 44 units, 13 landed.
+
+**The one mechanism new to this unit.** `derive` is the first body here that feeds **byte
+addresses** of stack integers into a MAC: the counter is big-endian packed by `be32` and the low
+`r / 8` bytes of it are handed to `EVP_MAC_update`, and `L` is likewise the four bytes of a `u32`.
+The transcription keeps both as `ptr::addr_of!(x).cast::<u8>().add(off)` over a `u32` whose
+in-memory bytes are big-endian on any host (`to_be`), because that is what the byte-addressed update
+reads; and it keeps the authority's `has_l`/`has_separator` omissions rather than defaulting either
+field back on.
+
+**The court, and both SP800-108 modes.** `RT-DIGEST` grows 544 -> **566** observations. `KBKDF` is
+fetched by its literal name and driven deterministically, and every input is a constant in
+`courts/phase8/rt_digest_probe.c`, so the printed bytes are the authority's own vector and not a
+secret. Counter mode is observed at **42** bytes — more than one HMAC-SHA256 block, so the counter
+loop runs more than once — and at **32**; the two fixed-input-data switches are each turned **off**
+(`use-l`, `use-separator`), and the counter width is driven at **16** bits, where the packed counter
+bytes differ from the default; feedback mode (section 5.2) is driven with a 32-byte `K(0)`. The
+gettable `size` is driven (`SIZE_MAX`, the row's unbounded answer), and every raise is crossed: no
+key at all (`PROV_R_NO_KEY_SET`), a key with no MAC (`PROV_R_MISSING_MAC`), a zero-length output
+(`PROV_R_INVALID_KEY_LENGTH`), a `seed` that is neither empty nor the MAC size
+(`PROV_R_INVALID_SEED_LENGTH`), an unknown `mode` string (`PROV_R_INVALID_MODE`), a MAC that is
+neither HMAC, CMAC nor KMAC (`PROV_R_INVALID_MAC`), and an `r` outside 8/16/24/32 (the set body's own
+bare refusal). `provider_court_coverage.py` reports **184** implemented rows, **184** directly
+courted, **0** unmatched (phase 8: 179 implemented, 0 unmatched); `gen_err_raise_sites.py` covers
+the unit with **24** coordinates.
+
+**What is deliberately not here, with the coordinate.** Ten of the first group's eighteen rows
+remain. The next unit in the plan document's order is `scrypt.c.in` (row 13), then `krb5kdf.c.in`
+(row 14), `hmacdrbg_kdf.c.in` (row 15), `argon2.c.in`'s three (rows 16-18) and `skeymgmt/`'s
+`aes_skmgmt.c`/`generic.c.in` pair. `docs/PHASE-8-PROVIDER-ROWS.md` names every remaining unit, row,
+table and crate home. No claim is made that the stratum is close to sealing: it is **127** provider
+rows away, and that is the number.
