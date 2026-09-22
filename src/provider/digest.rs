@@ -2086,10 +2086,11 @@ static DEFLT_DIGESTS: [OsslAlgorithm; 28] = [
 
 /// `static const OSSL_ALGORITHM *deflt_query(void *provctx, int operation_id, int *no_cache)` —
 /// `providers/defltprov.c`, with the `OSSL_OP_DIGEST`, `OSSL_OP_CIPHER`, `OSSL_OP_MAC`,
-/// `OSSL_OP_KDF` and `OSSL_OP_RAND` arms.
+/// `OSSL_OP_KDF`, `OSSL_OP_RAND` and `OSSL_OP_SKEYMGMT` arms.
 ///
 /// The other operations the authority answers are other subphases' and are absent, not stubbed.
-/// The arms are in the authority's own `switch` order (`defltprov.c:706-734`).
+/// The arms are in the authority's own `switch` order (`defltprov.c:706-734`), where `SKEYMGMT` is
+/// the last arm before the fall-through.
 /// **The `OSSL_OP_CIPHER` arm answers `exported_ciphers`, not `deflt_ciphers`** — the
 /// capability-filtered copy `ossl_prov_cache_exported_algorithms` fills at provider init, reached
 /// through `crate::provider::cipher::exported_ciphers`. The two tables are equal while every landed
@@ -2097,7 +2098,7 @@ static DEFLT_DIGESTS: [OsslAlgorithm; 28] = [
 /// row (D275).
 ///
 /// # Safety
-/// `no_cache` must be writable; `provctx` is ignored by all five arms.
+/// `no_cache` must be writable; `provctx` is ignored by all six arms.
 unsafe extern "C" fn deflt_query(
     _provctx: *mut c_void,
     operation_id: c_int,
@@ -2119,6 +2120,9 @@ unsafe extern "C" fn deflt_query(
     }
     if operation_id == crate::evp::rand::OSSL_OP_RAND {
         return crate::provider::rand::DEFLT_RANDS.as_ptr();
+    }
+    if operation_id == crate::evp::skeymgmt::OSSL_OP_SKEYMGMT {
+        return crate::provider::skeymgmt::DEFLT_SKEYMGMT.as_ptr();
     }
     ptr::null()
 }
@@ -2292,8 +2296,8 @@ mod tests {
         let none = unsafe { deflt_query(ptr::null_mut(), 14, &mut no_cache) };
         assert!(
             none.is_null(),
-            "only OSSL_OP_DIGEST, OSSL_OP_CIPHER, OSSL_OP_MAC, OSSL_OP_KDF and OSSL_OP_RAND \
-             are answered"
+            "only OSSL_OP_DIGEST, OSSL_OP_CIPHER, OSSL_OP_MAC, OSSL_OP_KDF, OSSL_OP_RAND and \
+             OSSL_OP_SKEYMGMT are answered"
         );
 
         // The cipher half answers too, and its table starts at `deflt_ciphers[]`'s first row.
@@ -2323,6 +2327,20 @@ mod tests {
         // SAFETY: the returned table's first row is initialised.
         let first = unsafe { core::ffi::CStr::from_ptr((*rands).algorithm_names) };
         assert_eq!(first.to_bytes(), b"CTR-DRBG");
+
+        // The SKEYMGMT arm answers `deflt_skeymgmt[]`, whose first row is the AES key type.
+        // SAFETY: the query's contract; `provctx` is NULL and this arm ignores it.
+        let skeymgmts = unsafe {
+            deflt_query(
+                ptr::null_mut(),
+                crate::evp::skeymgmt::OSSL_OP_SKEYMGMT,
+                &mut no_cache,
+            )
+        };
+        assert!(!skeymgmts.is_null());
+        // SAFETY: the returned table's first row is initialised.
+        let first = unsafe { core::ffi::CStr::from_ptr((*skeymgmts).algorithm_names) };
+        assert_eq!(first.to_bytes(), b"AES:2.16.840.1.101.3.4.1");
     }
 
     #[test]

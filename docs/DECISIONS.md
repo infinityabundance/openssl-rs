@@ -27631,3 +27631,60 @@ this entry's three argon2 rows (withheld above) and, not attempted this pass, th
 `src/provider/digest.rs` before a `DEFLT_SKEYMGMT` table can be published at all. The `OSSL_OP_KEYEXCH`
 rows were not reached. No claim is made that the stratum is close to sealing: it is **124** provider
 rows away, and that is the number.
+
+---
+
+## D383 — the `OSSL_OP_SKEYMGMT` pair lands, and `deflt_query` gains its sixth arm: `AES` and `GENERIC-SECRET`
+
+**Decision.** The two rows of `deflt_skeymgmt[]` are published, in the authority's order:
+`AES` (aliases `AES:2.16.840.1.101.3.4.1`) from `providers/implementations/skeymgmt/aes_skmgmt.c`,
+and `GENERIC-SECRET` from `providers/implementations/skeymgmt/generic.c`. Both units are
+transcribed **whole** (D327) into a new module, `src/provider/skeymgmt.rs` — the crate's first
+provider module for this operation, and the crate file `docs/PHASE-8-PROVIDER-ROWS.md` named as
+`_no arm yet_` before this entry.
+
+**The prerequisite, and how it was paid.** The previous entry measured that nothing could be
+published until `deflt_query` had an arm for the operation, because the census reads a landed row
+**only** through `deflt_query`'s own arms (`gen_provider_algorithms.py`'s
+`crate_query_tables`, D246). `src/provider/digest.rs`'s `deflt_query` gains its sixth arm,
+`crate::evp::skeymgmt::OSSL_OP_SKEYMGMT` -> `crate::provider::skeymgmt::DEFLT_SKEYMGMT`, in the
+authority's own `switch` order (`defltprov.c:706-734`, where SKEYMGMT is the last arm); its unit
+test gains the matching assertion and its "an operation no arm answers" message now names all six.
+
+**Movement, read off the regenerated files.** `provider_rows` moves implemented 182 -> **184**,
+unimplemented 124 -> **122** over **306** owned; `projection.open[8]` 124 -> **122**. The export
+ledgers do not move: `forensics/phase8-obligations.json` still reads `complete: true` with
+implemented **786**, deferred **0**, open **0**; `forensics/phase-state.json` still reads phase 8
+`in-progress`, `seal_sha256: null`, and its `blocking` line now names **122** rows.
+`docs/PHASE-8-PROVIDER-ROWS.md` is regenerated: 122 unlanded rows across 44 units, 17 landed.
+
+**What the two units are, and the one asymmetry that had to be preserved.** `generic.c` is the
+base: `generic_import` decodes a single `raw-bytes` record into a fresh `PROV_SKEY`,
+`generic_free` releases it, `generic_export` hands the bytes back through the caller's
+`OSSL_CALLBACK`, and `generic_imp_settable_params` publishes the one-key import list. `aes_skmgmt.c`
+is a **subclass**: `aes_import` calls `generic_import`, refuses any length that is not 16, 24 or 32,
+and stamps `SKEY_TYPE_AES`; `aes_export` refuses a keydata not already stamped `SKEY_TYPE_AES` and
+otherwise defers to `generic_export`. The transcription keeps that asymmetry exactly — the two
+dispatch tables share the free and settable **function pointers** and differ only in the import and
+export slots — because it is what makes the AES row stricter than the base rather than a copy of it.
+
+**The one raise, and the unit that has none.** `generic.c` raises exactly once, in its generated
+import decoder, on a second `raw-bytes` (`PROV_R_REPEATED_PARAMETER` at `generic.c:63`), which is
+the single coordinate `gen_err_raise_sites.py` gains. `aes_skmgmt.c` raises nothing at all — every
+refusal in it is a bare `return NULL`/`return 0` — so it is **deliberately absent** from that
+file's `COVERED_FILES`, the same reasoning that keeps `mdc2_prov.c` and `rsa_meth.c` out.
+
+**The court.** `RT-DIGEST` grows 602 -> **615** observations. `AES` is fetched by its primary name
+and by its OID alias (the same row's second spelling), the 16/24/32 rule is driven from both sides
+(a 16-byte key is imported and read back, a 20-byte key is refused), `GENERIC-SECRET` accepts the
+same 20 bytes, and the wrong selection (`OSSL_SKEYMGMT_SELECT_PARAMETERS`) is refused by the import.
+The bytes are read back through `EVP_SKEY_get0_raw_key` — the export path, which is the only way a
+key leaves a `PROV_SKEY` — and every input is a constant in `courts/phase8/rt_digest_probe.c`, so
+the printed bytes are a vector and not a secret. `provider_court_coverage.py` reports **189**
+implemented rows, **189** directly courted, **0** unmatched (phase 8: 184 implemented, 0 unmatched).
+
+**What is deliberately not here, with the coordinate.** Two of the first group's eighteen rows
+remain, and they are D382's withheld argon2 rows (`ARGON2D`, `ARGON2I`, `ARGON2ID`), whose reason
+is recorded under the unit's own heading in `docs/PHASE-8-PROVIDER-ROWS.md`. The `OSSL_OP_KEYEXCH`
+rows were not reached this pass. No claim is made that the stratum is close to sealing: it is
+**122** provider rows away, and that is the number.

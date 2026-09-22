@@ -604,6 +604,12 @@ COVERED_FILES = [
     # `hmac_drbg_kdf_new` (`:53`), `hmac_drbg_kdf_set_ctx_params` (`:386`) and its two generated
     # decoders (`:177`-`:188`, `:273`-`:327`).
     ("providers/implementations/kdfs/hmacdrbg_kdf.c", "PROV_HMACDRBG_KDF"),
+    # The generic SKEYMGMT row (8.10's `OSSL_OP_SKEYMGMT` pair, one of the two units).
+    # `skeymgmt/generic.c` is `.c.in`-generated, so its `__FILE__` is bare and its line number is
+    # the generated text's. It raises only from its generated import decoder (`:63`), on a repeated
+    # `raw-bytes`. `skeymgmt/aes_skmgmt.c` raises nothing at all and so is deliberately absent, the
+    # same reasoning `mdc2_prov.c` and `rsa_meth.c` are named under above.
+    ("providers/implementations/skeymgmt/generic.c", "PROV_GENERIC_SKEYMGMT"),
     # Phase 8.4: the `crypto/rsa` subsystem. The same rule as `crypto/bn` above -- this is
     # the *subsystem* set, not a selection of convenient files, because every one of them
     # raises from a surface Phase 8 owns and a coordinate's `file` string is part of the

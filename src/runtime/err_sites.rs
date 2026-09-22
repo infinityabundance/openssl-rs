@@ -22572,6 +22572,16 @@ pub(crate) const PROV_HMACDRBG_KDF_386: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `generic_skey_import_decoder` at `providers/implementations/skeymgmt/generic.c:63` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_GENERIC_SKEYMGMT_63: ErrSite = ErrSite {
+    file: c"providers/implementations/skeymgmt/generic.c",
+    line: 63,
+    func: c"generic_skey_import_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
 /// `rsa_new_intern` at `crypto/rsa/rsa_lib.c:85` (ERR_R_CRYPTO_LIB).
 pub(crate) const RSA_LIB_85: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
@@ -36837,6 +36847,7 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_HMACDRBG_KDF_316,
     PROV_HMACDRBG_KDF_327,
     PROV_HMACDRBG_KDF_386,
+    PROV_GENERIC_SKEYMGMT_63,
     RSA_LIB_85,
     RSA_LIB_106,
     RSA_LIB_116,

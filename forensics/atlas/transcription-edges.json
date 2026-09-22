@@ -1636,6 +1636,13 @@
         "translation_unit": "providers/common/libdefault-lib-provider_seeding.c"
       },
       {
+        "module": "src/provider/skeymgmt.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "4/4",
+        "translation_unit": "providers/implementations/skeymgmt/libdefault-lib-generic.c"
+      },
+      {
         "module": "src/provider/stores.rs",
         "phase": 6,
         "phase_source": "module-declaration",

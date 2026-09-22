@@ -191,7 +191,7 @@
       "verdict": "pass"
     },
     "RT-DIGEST": {
-      "observations": 602,
+      "observations": 615,
       "verdict": "pass"
     },
     "RT-DRBG": {
@@ -644,7 +644,9 @@
     "default/OSSL_OP_RAND/HASH-DRBG",
     "default/OSSL_OP_RAND/HMAC-DRBG",
     "default/OSSL_OP_RAND/SEED-SRC",
-    "default/OSSL_OP_RAND/TEST-RAND"
+    "default/OSSL_OP_RAND/TEST-RAND",
+    "default/OSSL_OP_SKEYMGMT/AES",
+    "default/OSSL_OP_SKEYMGMT/GENERIC-SECRET"
   ],
   "provider_rows": {
     "handed_on_by_phase": {
@@ -653,14 +655,14 @@
       "8": 685,
       "9": 675
     },
-    "implemented": 187,
+    "implemented": 189,
     "open_by_phase": {
       "10": 636,
       "13": 39,
-      "8": 124,
+      "8": 122,
       "9": 10
     },
     "total": 996,
-    "unimplemented": 809
+    "unimplemented": 807
   }
 }

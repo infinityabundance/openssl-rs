@@ -34282,6 +34282,7 @@
       "src/provider/mac.rs: crypto/poly1305/poly1305-x86_64.c",
       "src/provider/rand.rs: providers/implementations/rands/libdefault-lib-drbg.c",
       "src/provider/seeding.rs: providers/common/libdefault-lib-provider_seeding.c",
+      "src/provider/skeymgmt.rs: providers/implementations/skeymgmt/libdefault-lib-generic.c",
       "src/provider/util.rs: providers/common/libdefault-lib-provider_util.c",
       "src/rand/unix.rs: providers/implementations/rands/seeding/libdefault-lib-rand_unix.c",
       "src/rc4.rs: crypto/rc4/rc4-x86_64.c",
