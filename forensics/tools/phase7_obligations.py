@@ -375,29 +375,6 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
     ),
     BlockedHandoff(
         symbols=(
-            "EVP_PKEY_meth_find", "EVP_PKEY_meth_get0", "EVP_PKEY_meth_get_count",
-        ),
-        binding_phase=8,
-        blocked_by=(
-            Blocker("ossl_rsa_pkey_method", "crypto/rsa/rsa_pmeth.c", 851, "internal", 8),
-        ),
-        reason=(
-            "`EVP_PKEY_meth_find` (`crypto/evp/pmeth_lib.c:106`) searches `standard_methods[]` (`:54`) "
-            "with `OBJ_bsearch_pmeth_func` (`:114`); `EVP_PKEY_meth_get_count` (`:646`) answers "
-            "`OSSL_NELEM(standard_methods)` plus the application stack; `EVP_PKEY_meth_get0` (`:655`) "
-            "indexes the table outright before it touches that stack. The ten `ossl_<alg>_pkey_method` "
-            "objects the table holds are Phase 8's contents (D163, D165, D184), and the application half "
-            "of the registry is already landed and courted -- so Phase 8 is the only phase that retires "
-            "these three, and a stub would answer the application count where the authority answers "
-            "twelve more."
-        ),
-        note=(
-            "the same shape as row 6: `ossl_rsa_pkey_method` is the first of the ten "
-            "`standard_methods[]` `EVP_PKEY_METHOD` objects the prerequisite row names."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
             "EVP_add_alg_module",
         ),
         binding_phase=11,
@@ -649,6 +626,21 @@ UNBLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
         "`d2i_RSAPublicKey`/`d2i_DSAPublicKey`/`o2i_ECPublicKey` with the key-codec landings and "
         "`evp_pkey_copy_downgraded` with D353 -- so the row becomes an unconditional hand-off to "
         "Phase 8 rather than retiring: the three exports are still Phase 8's to write.",
+    ),
+    (
+        ("EVP_PKEY_meth_find", "EVP_PKEY_meth_get0", "EVP_PKEY_meth_get_count"),
+        8,
+        "`EVP_PKEY_meth_find` (`crypto/evp/pmeth_lib.c:106`) searches the **second** `standard_methods[]` "
+        "(`:54`) with `OBJ_bsearch_pmeth_func` (`:114`); `EVP_PKEY_meth_get_count` (`:646`) answers "
+        "`OSSL_NELEM(standard_methods)` plus the application stack; `EVP_PKEY_meth_get0` (`:655`) "
+        "indexes the table outright before it touches that stack. The row's single `blocked_by` name "
+        "was `ossl_rsa_pkey_method` (`crypto/rsa/rsa_pmeth.c:851`), **and D355 landed it** together "
+        "with the other five in-reach `ossl_<alg>_pkey_method` objects and the table they populate -- "
+        "so the row moves here from `BLOCKED_HANDOFFS` rather than retiring, and for the reason the "
+        "`EVP_PKEY_assign` row gives: the three exports are still this stratum's to write in the "
+        "ledger's arithmetic, and retiring the row would move three built exports into phase 7's "
+        "`implemented` on the strength of a phase-8 landing. The application half of the registry "
+        "was already landed and courted here (D193).",
     ),
 ]
 

@@ -563,6 +563,12 @@ NOT_A_DISPATCH: dict[str, str] = {
     "PkeyMethDigestverifyFn": PKEY_METHOD,
     "PkeyMethCheckFn": PKEY_METHOD,
     "PkeyMethDigestCustomFn": PKEY_METHOD,
+    # --- `pmeth_fn` (`crypto/evp/pmeth_lib.c:48`) --------------------------------------------
+    "PmethFn": ("not a provider dispatch: `typedef const EVP_PKEY_METHOD *(*pmeth_fn)(void)` -- "
+                 "the accessor a row of `crypto/evp/pmeth_lib.c`'s second `standard_methods[]` is. "
+                 "It takes no arguments and *returns* the method object, so it is not a callback "
+                 "signature the dispatch plane compares; D355 landed it with the table it "
+                 "populates."),
     "FixupArgsFn": XLAT,
     "CleanupArgsFn": XLAT,
     "XlatGetNameFn": XLAT_GET,

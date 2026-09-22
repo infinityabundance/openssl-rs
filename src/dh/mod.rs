@@ -152,6 +152,9 @@ pub mod group_params;
 pub mod kdf;
 pub mod key;
 pub mod object;
+// Phase 8.8's `crypto/dh/dh_pmeth.c` (D355): the two `DH`/`DHX` `EVP_PKEY_METHOD` objects and
+// their callbacks, published as `PMETH_STANDARD_METHODS`' rows 28 and 920.
+pub mod pmeth;
 pub mod prn;
 pub mod rfc5114;
 

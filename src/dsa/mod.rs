@@ -101,6 +101,9 @@ pub mod gen;
 pub mod key;
 pub mod object;
 pub mod ossl;
+// Phase 8.8's `crypto/dsa/dsa_pmeth.c` (D355): the `DSA` `EVP_PKEY_METHOD` object and its
+// nine callbacks, published as `PMETH_STANDARD_METHODS`' row for `EVP_PKEY_DSA`.
+pub mod pmeth;
 pub mod sign;
 pub mod vrf;
 

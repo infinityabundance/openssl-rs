@@ -25183,3 +25183,131 @@ and `not_yet_begun` at **80**; the prerequisite gate stays at **zero findings** 
 and **37025 -> 37041** observations. The open seventeen are exactly the eight printers, the three
 `EVP_PKEY_meth_*` names and the six PEM private-key readers. It is not Phase 8 and not nearly
 Phase 8; the count this entry reaches is implemented **769** of **786** owned.
+
+## D355 — 8.8's second `standard_methods[]` lands: the four `*_pmeth.c` units, the `EVP_PKEY_CTX`
+legacy block, and `EVP_PKEY_meth_find`/`_get0`/`_get_count`
+
+**Decision.** Land the four `crypto/{rsa,dh,dsa,ec}/*_pmeth.c` units whole as `src/rsa/pmeth.rs`,
+`src/dh/pmeth.rs`, `src/dsa/pmeth.rs` and `src/ec/pmeth.rs` (**2,268** authority lines: 935 + 535 +
+294 + 504); model `EvpPkeyCtx`'s remaining legacy members (`pmeth`, `engine`,
+`flag_call_digest_custom`); publish `crypto/evp/pmeth_lib.c`'s second `standard_methods[]` as
+`PMETH_STANDARD_METHODS`; and land `EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0` and
+`EVP_PKEY_meth_get_count` over it. **Three exports move**; nothing else in Phase 8's seventeen does.
+
+**What the authority corrected in the brief, and it is the table's shape.** The brief called this
+"the **second** `standard_methods` table"; the correction is that it is an array of **function
+pointers**, not of objects. `typedef const EVP_PKEY_METHOD *(*pmeth_fn)(void)`
+(`crypto/evp/pmeth_lib.c:48`), so a row is an accessor named `ossl_<alg>_pkey_method` that *returns*
+the method, where an `EVP_PKEY_ASN1_METHOD` row is a `static const` object named by address. Three
+consequences follow, and each is a place a transcription can be wrong: `EVP_PKEY_meth_get0(idx)`
+for an in-table index answers `(standard_methods[idx])()` and not `standard_methods[idx]`;
+`OBJ_bsearch_pmeth_func`'s element size is `sizeof(pmeth_fn)`; and `pmeth_func_cmp` is **asymmetric**
+-- `a` is a pointer to the search-key slot and is read directly, `b` is a pointer to a table slot and
+must be **called** before a `pkey_id` exists. A second correction of the same kind: the two KDF
+type constants are `EVP_PKEY_DH_KDF_NONE` **1** / `_X9_42` **2** and `EVP_PKEY_ECDH_KDF_NONE` **1** /
+`_X9_63` **2** (`dh.h:83-84`, `ec.h:66-67`), not 0 and 1, so a context that defaulted its `kdf_type`
+to zero would answer the wrong read at `EVP_PKEY_CTRL_DH_KDF_TYPE`'s `p1 == -2` arm.
+
+**The `EVP_PKEY_CTX` legacy block, and why its absolute offsets are not asserted.** `pkey_ctx_is_pss`
+is `(ctx->pmeth->pkey_id == EVP_PKEY_RSA_PSS)` (`crypto/rsa/rsa_local.h:151`) and is read by six
+algorithm callbacks; `pkey_dh_keygen` and `pkey_rsa_keygen` assign with `ctx->pmeth->pkey_id` rather
+than a constant, which is what makes one DH body answer DH or DHX. So `pmeth` had to exist. The
+crate's `EvpPkeyCtx` **flattens** the authority's `union op` (its module doc says so), which makes
+its absolute offsets unlike `struct evp_pkey_ctx_st`'s, so `courts/layout/measure-evp-pkey-ctx.c`
+measures the authority's numbers -- `legacy_keytype` 116, `pmeth` 120, `engine` 128, `pkey` 136,
+`peerkey` 144, `data` 152, `rsa_pubexp` 168, size 176 -- and the `const _` block under the struct
+pins every **delta** between them (4, 8, 8, 8, 8, 16), which is the part the flattening cannot move
+and the part a reader of the callbacks depends on.
+
+**The four `crypto/ec/ecx_meth.c` rows are withheld from this table too, and the record is extended
+rather than duplicated.** `ossl_ecx25519_pkey_method` (1034), `ossl_ecx448_pkey_method` (1035),
+`ossl_ed25519_pkey_method` (1087) and `ossl_ed448_pkey_method` (1088) are the same withheld units
+`D-PKEY-AMETH-3` already covers, so that entry gains a paragraph for the second table instead of a
+sibling record being invented: `EVP_PKEY_meth_find(EVP_PKEY_X25519)` and its three siblings answer
+**NULL**, `EVP_PKEY_meth_get0(6..10)` answers NULL where the authority answers those methods, and
+`EVP_PKEY_meth_get_count()` answers **6** where the authority answers 10 -- so
+`EVP_PKEY_CTX_new_id`'s legacy-method lookup falls through to the provider `EVP_KEYMGMT_fetch` the
+authority would have preferred the legacy method over. `RT-AMETH`'s arm 8 confines itself to the six
+shared rows, the two `EVP_PKEY_meth_get0_info` fields and a boolean form of the count for exactly
+that reason.
+
+**The debt this landing discharged, and the one thing it had to give back.**
+`forensics/prerequisites.json`'s `ossl_rsa_pkey_method` deferral (owner 8) **retires**: the crate now
+defines the name, so `stale_deferral` would have fired. Its neighbour `evp_app_cleanup_int`, whose
+only blocker *was* `ossl_rsa_pkey_method`, is **retargeted rather than retired** -- the gate reads an
+internal's owner phase out of that file's `deferrals`, so deleting the row would have left
+`evp_cleanup_int`'s `blocked_by` naming a name with no phase (`direction E`, which is exactly the
+finding the first attempt produced); the row now carries no `blocked_by`, which is the shape the
+plain deferrals (`OSSL_provider_init`, `ossl_get_openssldir`) already use.
+`forensics/tools/phase7_obligations.py`'s `BLOCKED_HANDOFFS` row for the three `EVP_PKEY_meth_*`
+exports moves to its `UNBLOCKED_HANDOFFS` for the reason D353 recorded for the d2i row: its single
+blocker landed, an `UNBLOCKED_HANDOFFS` row is the hand-off **edge** and is not falsified by the
+owner building the symbol, and retiring it would have moved three built exports into phase 7's
+`implemented` list on the strength of a phase-8 landing -- which the first attempt did, and which
+the tool caught (`implemented=730 deferred=220` for one run). Phase 7's counts do **not** move:
+implemented **727**, deferred **223**, received_by_handoff **26**.
+
+**Raise sites.** `crypto/dsa/dsa_pmeth.c` (5 sites), `crypto/dh/dh_pmeth.c` (4) and
+`crypto/ec/ec_pmeth.c` (11) join `gen_err_raise_sites.py`'s `COVERED_FILES` as `DSA_PMETH`,
+`DH_PMETH` and `EC_PMETH`; `crypto/rsa/rsa_pmeth.c` was already covered from 8.4, so its 31 sites
+already existed. The site count moves **3045 -> 3065**, and every one the four units raise is
+referenced by its callback. Five visibility widenings were needed and are each recorded at the item:
+`ossl_ecdh_kdf_X9_63` (`src/ec/kdf.rs`) gains `pub(crate)` for its second authority caller,
+`EVP_PKEY_DH_KDF_{NONE,X9_42}` and `EVP_PKEY_ECDH_KDF_{NONE,X9_63}` (`src/evp/pkey_ctx.rs`),
+`RSA_DEFAULT_PRIME_NUM`/`RSA_MIN_MODULUS_BITS` (`src/rsa/gen.rs`) and
+`RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING` (`src/rsa/ossl.rs`). Seven control numbers the four units
+switch on did not exist and are added at their header coordinates: `EVP_PKEY_CTRL_DIGESTINIT` (7),
+`EVP_PKEY_CTRL_PEER_KEY` (2), `EVP_PKEY_CTRL_PKCS7_{ENCRYPT,DECRYPT,SIGN}` (3, 4, 5),
+`EVP_PKEY_CTRL_CMS_{ENCRYPT,DECRYPT,SIGN}` (9, 10, 11) and `EVP_PKEY_FLAG_AUTOARGLEN` (2).
+
+**The court.** `RT-AMETH` grows **291 -> 420 observations** with zero residuals, and no new export is
+uncourted: arm 8 walks the six `pkey_id`s through `EVP_PKEY_meth_find` and `EVP_PKEY_meth_get0_info`,
+checks each is the object `EVP_PKEY_meth_get0` answers at its index by a boolean, and reduces
+`EVP_PKEY_meth_get_count()` to `>= 6` so the withheld rows cannot make the two sides differ.
+Everything printed is a return code, a `pkey_id`, a flag word or a NULL test; **no address, key byte
+or random-derived value appears**. `courts/layout/measure-evp-pkey-ctx.c` is committed beside the
+program it replaces as the block's measurement, and `regression_guard.py` reports no regression over
+**94** courts and **37041 -> 37170** observations.
+
+**What is deliberately not here, and the encoder measurement the brief asked for.** The eight
+printers stay withheld, and the reason is now **measured** rather than asserted.
+`EVP_PKEY_print_private` (and `_params`, `_public`) is `print_pkey`
+(`crypto/evp/p_lib.c:1196-1229`), which calls `OSSL_ENCODER_CTX_new_for_pkey` (`:1211`), tests
+`OSSL_ENCODER_CTX_get_num_encoders(ctx) != 0` (`:1213`), calls `OSSL_ENCODER_to_bio` (`:1214`) and
+`OSSL_ENCODER_CTX_free` (`:1215`), and falls through to `pkey->ameth->priv_print` (`:1222`) only
+when no encoder answered. **The encoder-less framework is not landable at this stratum, and the
+measurement is the closure**: the three units that provide those four names --
+`crypto/encode_decode/encoder_pkey.c`, `encoder_lib.c` and `encoder_meth.c` -- are mutually
+recursive over the whole `OSSL_ENCODER_*` family, and against this crate they reference **27, 23 and
+22** absent names respectively, from `OSSL_ENCODER_CTX_new`/`_free`/`_set_params` through
+`OSSL_ENCODER_fetch`/`_up_ref`/`_is_a`/`_do_all_provided` to `crypto/passphrase.c`'s
+`ossl_pw_set_passphrase`/`_pem_password_cb`/`_ossl_passphrase_cb`/`_ui_method`, none of which exists
+here. All **38** `OSSL_ENCODER*` exports are the ownership atlas's **Phase 10**, so an
+`OSSL_ENCODER_CTX` object -- even one that can never hold an encoder -- is a Phase-10 landing and not
+a reduction this stratum may take. The reduction D313 recorded for the `ENGINE_*` names is **not
+available here**, and the difference is measurable rather than stylistic: `ENGINE_*` was omitted
+because no engine can be registered on this profile, which the crate's `engine` fields record;
+`OSSL_ENCODER_CTX_*` would have to be *written* to answer `get_num_encoders == 0`, because that
+answer is `ctx == NULL || ctx->encoder_insts == NULL ? 0 : ...` (`encoder_lib.c:345-348`) over a real
+context object. And the gate could not cover the four names with a `divergences` row even if the
+reduction were taken, because the crate references none of them -- `D-PKEY-AMETH-3`'s direction-D
+argument, one family over. **What the printers would observe if the framework did land** is
+`print_pkey`'s fallback arm, which this slice does make reachable in principle: the four
+`*_ameth.c` objects now exist and carry `priv_print`/`params_print`/`pub_print`, so the eight become
+landable the day an `OSSL_ENCODER_CTX` with zero encoders exists, and not before. `int_ctx_new`'s
+`pmeth` arm is still absent, so the four objects and the table are reachable through the registry and
+not yet through a context; that is what the `pmeth` field's doc comment says. The six PEM
+private-key readers are unchanged.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads
+`complete: false` with **14** names open, moved **17 -> 14** by this entry. The regenerated counts:
+implemented **769 -> 772**, deferred **0**, owned **786**; `implemented-surface.json`'s `libcrypto`
+implemented **2777 -> 2780** with `c_style` staying **327**; `transcription-edges.json`
+**304 -> 308** modules over **273 -> 277** units; `internal-symbols.json`'s
+`modules_without_a_stratum` grows **34 -> 38**; `court_coverage.py` reports phase 8 at **772**
+implemented (**764** directly courted, every one *called*, **8** indirectly, **0** unmatched), phase 9
+at **66** and `not_yet_begun` at **80**; the prerequisite gate stays at **zero findings** over
+**11 -> 10** deferrals, **11** divergence rows / **55** names, `blocking_dependencies` **11 -> 10**
+and `sealed_stratum_census` **56**. The open fourteen are the eight printers and the six
+`crypto/pem/` private-key readers. It is not Phase 8 and not nearly Phase 8; the count this entry
+reaches is implemented **772** of **786** owned.

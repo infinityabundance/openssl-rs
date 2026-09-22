@@ -54,23 +54,8 @@
       {
         "symbol": "evp_app_cleanup_int",
         "owner_phase": 8,
-        "blocked_by": [
-          {
-            "name": "ossl_rsa_pkey_method",
-            "authority_unit": "crypto/rsa/rsa_pmeth.c",
-            "line": 851,
-            "kind": "internal",
-            "owning_phase": 8
-          }
-        ],
-        "reason": "Defined in `crypto/evp/pmeth_lib.c` and called from `crypto/evp/names.c`'s `EVP_cleanup_int`, so two transcribed units now owe it. Its whole body is `sk_EVP_PKEY_METHOD_pop_free(app_pkey_methods, EVP_PKEY_meth_free)`: both the stack and the destructor belong to the **application-supplied `EVP_PKEY_METHOD` registry**, which is 7.4l's because `EVP_PKEY_meth_find`'s lookup searches `standard_methods[]` -- the table whose contents are Phase 8's objects under D163 and D165. So this is Phase 8's with its sibling rows rather than a same-subphase deferral: there is no 7.4c-ii or 7.4d that could land it, because the two symbols it needs do not exist until Phase 8 does.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4l; docs/DECISIONS.md D165; src/evp/pkey_ctx.rs module doc, section on the absent registry"
-      },
-      {
-        "symbol": "ossl_rsa_pkey_method",
-        "owner_phase": 8,
-        "reason": "The `EVP_PKEY_METHOD` half of the same boundary: `crypto/evp/pmeth_lib.c`'s `standard_methods[]` holds the ten `ossl_<alg>_pkey_method` objects of the algorithm strata. `EVP_PKEY_meth_find`'s application half (`evp_pkey_meth_find_added_by_application`) is landed and courted; its `OBJ_bsearch_pmeth_func` half is not, and `EVP_PKEY_meth_get0` and `_get_count` index the table outright, so all three exports are withheld rather than stubbed with an application-count answer.",
-        "evidence": "docs/DECISIONS.md D193; docs/DECISIONS.md D163, D165 and D184; docs/PHASE-7-SUBPHASES.md row 7.4l"
+        "reason": "Defined in `crypto/evp/pmeth_lib.c`, called from `crypto/evp/names.c`'s `EVP_cleanup_int`, and its body is `sk_EVP_PKEY_METHOD_pop_free(app_pkey_methods, EVP_PKEY_meth_free)` -- the application-supplied `EVP_PKEY_METHOD` registry. **Its only blocker has landed**: `ossl_rsa_pkey_method` (`crypto/rsa/rsa_pmeth.c:851`) and the five sibling `ossl_<alg>_pkey_method` objects of the same unit arrived with the 8.8 `EVP_PKEY_METHOD` slice (D355), and both names the body needs -- the registry stack and `EVP_PKEY_meth_free` -- are built, so this row carries **no `blocked_by`** rather than a dependency that is gone: it records the stratum that still owes the name, not a file:line that would now be stale. `forensics/tools/phase7_obligations.py` moved the three `EVP_PKEY_meth_*` exports of the same slice to its `UNBLOCKED_HANDOFFS` for the same reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4l; docs/DECISIONS.md D165 and D355; src/evp/pkey_ctx.rs's `APP_PKEY_METHODS`"
       },
       {
         "symbol": "OSSL_ENCODER_CTX_new_for_pkey",

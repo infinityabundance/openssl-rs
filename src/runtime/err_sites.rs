@@ -22602,6 +22602,206 @@ pub(crate) const RSA_PMETH_890: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `pkey_dsa_ctrl` at `crypto/dsa/dsa_pmeth.c:152` (DSA_R_INVALID_DIGEST_TYPE).
+pub(crate) const DSA_PMETH_152: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_pmeth.c",
+    line: 152,
+    func: c"pkey_dsa_ctrl",
+    lib: 10,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `pkey_dsa_ctrl` at `crypto/dsa/dsa_pmeth.c:160` (DSA_R_INVALID_DIGEST_TYPE).
+pub(crate) const DSA_PMETH_160: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_pmeth.c",
+    line: 160,
+    func: c"pkey_dsa_ctrl",
+    lib: 10,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `pkey_dsa_ctrl` at `crypto/dsa/dsa_pmeth.c:176` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const DSA_PMETH_176: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_pmeth.c",
+    line: 176,
+    func: c"pkey_dsa_ctrl",
+    lib: 10,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `pkey_dsa_ctrl_str` at `crypto/dsa/dsa_pmeth.c:199` (DSA_R_INVALID_DIGEST_TYPE).
+pub(crate) const DSA_PMETH_199: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_pmeth.c",
+    line: 199,
+    func: c"pkey_dsa_ctrl_str",
+    lib: 10,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `pkey_dsa_keygen` at `crypto/dsa/dsa_pmeth.c:245` (DSA_R_NO_PARAMETERS_SET).
+pub(crate) const DSA_PMETH_245: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_pmeth.c",
+    line: 245,
+    func: c"pkey_dsa_keygen",
+    lib: 10,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `pkey_dh_ctrl_str` at `crypto/dh/dh_pmeth.c:243` (DH_R_INVALID_PARAMETER_NAME).
+pub(crate) const DH_PMETH_243: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_pmeth.c",
+    line: 243,
+    func: c"pkey_dh_ctrl_str",
+    lib: 5,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `pkey_dh_keygen` at `crypto/dh/dh_pmeth.c:378` (DH_R_NO_PARAMETERS_SET).
+pub(crate) const DH_PMETH_378: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_pmeth.c",
+    line: 378,
+    func: c"pkey_dh_keygen",
+    lib: 5,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `pkey_dh_derive` at `crypto/dh/dh_pmeth.c:404` (DH_R_KEYS_NOT_SET).
+pub(crate) const DH_PMETH_404: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_pmeth.c",
+    line: 404,
+    func: c"pkey_dh_derive",
+    lib: 5,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `pkey_dh_derive` at `crypto/dh/dh_pmeth.c:410` (DH_R_KEYS_NOT_SET).
+pub(crate) const DH_PMETH_410: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_pmeth.c",
+    line: 410,
+    func: c"pkey_dh_derive",
+    lib: 5,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `pkey_ec_sign` at `crypto/ec/ec_pmeth.c:128` (EC_R_BUFFER_TOO_SMALL).
+pub(crate) const EC_PMETH_128: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c",
+    line: 128,
+    func: c"pkey_ec_sign",
+    lib: 16,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `pkey_ec_derive` at `crypto/ec/ec_pmeth.c:176` (EC_R_KEYS_NOT_SET).
+pub(crate) const EC_PMETH_176: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c",
+    line: 176,
+    func: c"pkey_ec_derive",
+    lib: 16,
+    reason: 140,
+    dynamic_reason: false,
+};
+
+/// `pkey_ec_derive` at `crypto/ec/ec_pmeth.c:181` (EC_R_KEYS_NOT_SET).
+pub(crate) const EC_PMETH_181: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c",
+    line: 181,
+    func: c"pkey_ec_derive",
+    lib: 16,
+    reason: 140,
+    dynamic_reason: false,
+};
+
+/// `pkey_ec_ctrl` at `crypto/ec/ec_pmeth.c:255` (EC_R_INVALID_CURVE).
+pub(crate) const EC_PMETH_255: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c",
+    line: 255,
+    func: c"pkey_ec_ctrl",
+    lib: 16,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `pkey_ec_ctrl` at `crypto/ec/ec_pmeth.c:264` (EC_R_NO_PARAMETERS_SET).
+pub(crate) const EC_PMETH_264: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c",
+    line: 264,
+    func: c"pkey_ec_ctrl",
+    lib: 16,
+    reason: 139,
+    dynamic_reason: false,
+};
+
+/// `pkey_ec_ctrl` at `crypto/ec/ec_pmeth.c:290` (ERR_R_UNSUPPORTED).
+pub(crate) const EC_PMETH_290: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c",
+    line: 290,
+    func: c"pkey_ec_ctrl",
+    lib: 16,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `pkey_ec_ctrl` at `crypto/ec/ec_pmeth.c:355` (EC_R_INVALID_DIGEST_TYPE).
+pub(crate) const EC_PMETH_355: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c",
+    line: 355,
+    func: c"pkey_ec_ctrl",
+    lib: 16,
+    reason: 138,
+    dynamic_reason: false,
+};
+
+/// `pkey_ec_ctrl_str` at `crypto/ec/ec_pmeth.c:388` (EC_R_INVALID_CURVE).
+pub(crate) const EC_PMETH_388: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c",
+    line: 388,
+    func: c"pkey_ec_ctrl_str",
+    lib: 16,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `pkey_ec_ctrl_str` at `crypto/ec/ec_pmeth.c:404` (EC_R_INVALID_DIGEST).
+pub(crate) const EC_PMETH_404: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c",
+    line: 404,
+    func: c"pkey_ec_ctrl_str",
+    lib: 16,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `pkey_ec_paramgen` at `crypto/ec/ec_pmeth.c:424` (EC_R_NO_PARAMETERS_SET).
+pub(crate) const EC_PMETH_424: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c",
+    line: 424,
+    func: c"pkey_ec_paramgen",
+    lib: 16,
+    reason: 139,
+    dynamic_reason: false,
+};
+
+/// `pkey_ec_keygen` at `crypto/ec/ec_pmeth.c:443` (EC_R_NO_PARAMETERS_SET).
+pub(crate) const EC_PMETH_443: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c",
+    line: 443,
+    func: c"pkey_ec_keygen",
+    lib: 16,
+    reason: 139,
+    dynamic_reason: false,
+};
+
 /// `rsa_priv_encode` at `crypto/rsa/rsa_ameth.c:157` (ERR_R_ASN1_LIB).
 pub(crate) const RSA_AMETH_157: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ameth.c",
@@ -32750,6 +32950,26 @@ pub(crate) static ALL: &[ErrSite] = &[
     RSA_PMETH_672,
     RSA_PMETH_883,
     RSA_PMETH_890,
+    DSA_PMETH_152,
+    DSA_PMETH_160,
+    DSA_PMETH_176,
+    DSA_PMETH_199,
+    DSA_PMETH_245,
+    DH_PMETH_243,
+    DH_PMETH_378,
+    DH_PMETH_404,
+    DH_PMETH_410,
+    EC_PMETH_128,
+    EC_PMETH_176,
+    EC_PMETH_181,
+    EC_PMETH_255,
+    EC_PMETH_264,
+    EC_PMETH_290,
+    EC_PMETH_355,
+    EC_PMETH_388,
+    EC_PMETH_404,
+    EC_PMETH_424,
+    EC_PMETH_443,
     RSA_AMETH_157,
     RSA_AMETH_164,
     RSA_AMETH_431,

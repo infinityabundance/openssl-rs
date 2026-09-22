@@ -572,6 +572,17 @@ COVERED_FILES = [
     ("crypto/rsa/rsa_sign.c", "RSA_SIGN"),
     ("crypto/rsa/rsa_saos.c", "RSA_SAOS"),
     ("crypto/rsa/rsa_pmeth.c", "RSA_PMETH"),
+    # Phase 8.8's three remaining `EVP_PKEY_METHOD` units (D355). `rsa_pmeth.c` above was
+    # already a coordinate from 8.4; these three join it because the crate transcribes their
+    # raising bodies whole. Their site counts in this profile are DSA 5, DH 4 and EC 11, and
+    # each is named by the callback that raises rather than by a table listing: the digest and
+    # curve refusals of `pkey_dsa_ctrl`/`pkey_dsa_ctrl_str`, the parameter-name and
+    # keys-not-set refusals of `pkey_dh_ctrl_str`/`pkey_dh_keygen`/`pkey_dh_derive`, and the
+    # eleven EC refusals of `pkey_ec_sign`, `pkey_ec_derive`, `pkey_ec_ctrl`,
+    # `pkey_ec_ctrl_str`, `pkey_ec_paramgen` and `pkey_ec_keygen`.
+    ("crypto/dsa/dsa_pmeth.c", "DSA_PMETH"),
+    ("crypto/dh/dh_pmeth.c", "DH_PMETH"),
+    ("crypto/ec/ec_pmeth.c", "EC_PMETH"),
     ("crypto/rsa/rsa_ameth.c", "RSA_AMETH"),
     ("crypto/rsa/rsa_backend.c", "RSA_BACKEND"),
     ("crypto/rsa/rsa_asn1.c", "RSA_ASN1"),

@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 352,
+      "crate_files_read": 356,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -19,7 +19,7 @@
       "signatures_authority_only": 396,
       "signatures_checked": 238,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 190,
+      "signatures_not_a_dispatch": 191,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -4234,6 +4234,11 @@
           "alias": "PkeyMethDigestCustomFn",
           "at": "src/evp/pkey_ctx.rs",
           "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`. The atlas records no typedef for them because its universe is the installed public surface and that header is internal: 307 of the 465 struct records have no body at all and only 8 of the 158 complete ones have a function-pointer field, none of them this one. So the check these need is a second Clang pass over the internal headers or a generated C assertion, not a consumer of `structs.json` -- see docs/DECISIONS.md D185"
+        },
+        {
+          "alias": "PmethFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: `typedef const EVP_PKEY_METHOD *(*pmeth_fn)(void)` -- the accessor a row of `crypto/evp/pmeth_lib.c`'s second `standard_methods[]` is. It takes no arguments and *returns* the method object, so it is not a callback signature the dispatch plane compares; D355 landed it with the table it populates."
         },
         {
           "alias": "FixupArgsFn",

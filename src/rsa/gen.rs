@@ -67,11 +67,11 @@ use crate::selftest::{
 
 /// `RSA_DEFAULT_PRIME_NUM` — `include/openssl/rsa.h:62`. The two-prime default
 /// [`RSA_generate_key_ex`] forwards.
-const RSA_DEFAULT_PRIME_NUM: c_int = 2;
+pub(crate) const RSA_DEFAULT_PRIME_NUM: c_int = 2;
 
 /// `RSA_MIN_MODULUS_BITS` — `include/crypto/rsa.h:18`. The floor
 /// [`rsa_multiprime_keygen`] refuses below.
-const RSA_MIN_MODULUS_BITS: c_int = 512;
+pub(crate) const RSA_MIN_MODULUS_BITS: c_int = 512;
 
 /// `BN_FLG_CONSTTIME` — `include/openssl/bn.h:67`.
 const BN_FLG_CONSTTIME: c_int = 0x04;
