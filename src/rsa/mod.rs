@@ -94,6 +94,7 @@ use crate::runtime::obj::{NID_sha1, NID_sha256, NID_sha384, NID_sha512};
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack};
 use crate::runtime::thread::CryptoRwlock;
 
+pub mod ameth;
 pub mod asn1;
 pub(crate) mod backend;
 pub mod ctrl;

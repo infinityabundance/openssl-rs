@@ -41,15 +41,16 @@
 //! else from `src`. A transcription that copied the whole struct would alias `src`'s strings into
 //! `dst` and then free them twice.
 //!
-//! ## The two `find` functions: the empty table, and the engine arm that cannot fire
+//! ## The two `find` functions: the eleven rows, and the engine arm that cannot fire
 //!
-//! `pkey_asn1_find` asks `app_methods` first and then `standard_methods[]`, which is Phase 8's twelve
-//! objects and empty here. So `EVP_PKEY_asn1_find` answers a method for an **application-registered**
-//! type and NULL for every one of the twelve legacy types, where the authority answers the twelve —
-//! the `D-PKEY-AMETH-1` divergence reached through the public door, and the register carries it as
-//! `D-PKEY-AMETH-2`. Both functions are still defined rather than withheld, for the reason the whole
-//! project defines rather than withholds: a consumer that calls them must link, and the answer is
-//! right in every state this crate can reach.
+//! `pkey_asn1_find` asks `app_methods` first and then `standard_methods[]`, which D353 populated
+//! with **eleven of the authority's fifteen rows** -- the four `crypto/ec/ecx_meth.c` rows are
+//! withheld. So `EVP_PKEY_asn1_find`/`_find_str` answer the authority's own method for every legacy
+//! type except `EVP_PKEY_X25519`, `_X448`, `_ED25519` and `_ED448`, where they answer NULL: the
+//! narrowing recorded in `docs/DECISIONS.md` D353 and stated at [`STANDARD_METHODS`]. Both
+//! functions are defined rather than withheld, for the reason the whole project defines rather than
+//! withholds: a consumer that calls them must link, and the answer is right in every state this
+//! crate can reach.
 //!
 //! The engine arm is **absent and cannot fire**. `OPENSSL_NO_ENGINE` is undefined in this profile, so
 //! the authority's `ENGINE_get_pkey_asn1_meth_engine` / `ENGINE_pkey_asn1_find_str` /
@@ -59,10 +60,10 @@
 //! arm answers NULL too — which is why the crate's transcription writes the `*pe = NULL` that
 //! follows it and nothing else, and why the answer is identical rather than approximate.
 //!
-//! `EVP_PKEY_get0_asn1` is `return pkey->ameth;` with no NULL test, and `EvpPkey` now carries the
-//! field. Nothing in this crate sets it — that is `pkey_set_type`'s, and `D-PKEY-AMETH-1` records why
-//! it cannot yet — so it answers NULL for every state reachable here, which is what the authority
-//! answers for every key this crate can build (a provider key, or a blank one).
+//! `EVP_PKEY_get0_asn1` is `return pkey->ameth;` with no NULL test. `pkey_set_type` now sets the
+//! field from this table for every type the crate carries, so it answers the authority's own method
+//! for the eleven rows and NULL for a provider key or a blank one -- the states the authority also
+//! answers NULL for.
 //!
 //! ## The fifteen mutators, and why their signatures are the whole of their contract
 //!
@@ -100,10 +101,11 @@ use crate::runtime::stack::{
 use crate::runtime::str::OPENSSL_strncasecmp;
 use crate::selftest::OsslCallback;
 
-/// `ASN1_PKEY_ALIAS` — `include/openssl/evp.h:1603`.
-const ASN1_PKEY_ALIAS: c_long = 0x1;
+/// `ASN1_PKEY_ALIAS` — `include/openssl/evp.h:1603`. `pub(crate)` because the `rsa_ameth.c`,
+/// `dsa_ameth.c`, `ec_ameth.c` and `ecx_meth.c` method objects set it.
+pub(crate) const ASN1_PKEY_ALIAS: c_long = 0x1;
 /// `ASN1_PKEY_DYNAMIC` — `include/openssl/evp.h:1604`.
-const ASN1_PKEY_DYNAMIC: c_long = 0x2;
+pub(crate) const ASN1_PKEY_DYNAMIC: c_long = 0x2;
 
 // ---------------------------------------------------------------------------------------------
 // The four types this module names that the crate had left as placeholders, plus one
@@ -309,15 +311,41 @@ pub struct Engine {
     _private: [u8; 0],
 }
 
-/// `standard_methods[]` — `crypto/asn1/ameth_lib.c`, twelve objects in the authority.
+// SAFETY: every `EVP_PKEY_ASN1_METHOD` the `standard_methods[]` table names is an immutable
+// compile-time object whose pointer members are function addresses or string literals and whose
+// scalar members are the authority's own values; nothing in the crate writes one after
+// initialisation, so sharing a reference across threads is sound. 8.8 needs this to declare the
+// eleven `ossl_<alg>_asn1_meth` objects as `static`s, which is what gives each a single address
+// the table rows and the `d2i_dhp`-style identity comparisons can agree on.
+unsafe impl Sync for EvpPkeyAsn1Method {}
+
+/// `standard_methods[]` — `crypto/asn1/ameth_lib.c`'s table, from `crypto/asn1/standard_methods.h`.
 ///
-/// **Empty here, and that is the whole of this file's Phase-8 dependency.** The twelve
-/// `ossl_<alg>_asn1_meth` objects are what `standard_methods[]` holds, they are Phase 8's contents
-/// (D163, D165), and the count the authority reports is `OSSL_NELEM(standard_methods)` *plus* the
-/// application methods. So `get_count` answers the application count here and the authority's
-/// answer plus twelve there — the `D-PKEY-AMETH-1` divergence, reached through a different door, and
-/// the reason the two `find` functions are held rather than landed with an empty table today.
-const STANDARD_METHODS: [*const EvpPkeyAsn1Method; 0] = [];
+/// **Eleven of the authority's fifteen rows, over seven of its eleven named objects**, in ascending
+/// `pkey_id` order, which `OBJ_bsearch_ameth` requires. The four withheld rows are
+/// `crypto/ec/ecx_meth.c`'s `ossl_ecx{25519,448}_asn1_meth` and `ossl_ed{25519,448}_asn1_meth`
+/// (`EVP_PKEY_X25519` 1034, `_X448` 1035, `_ED25519` 1087, `_ED448` 1088): that unit and the
+/// ~9,000 lines it needs (`ecx_key.c`, `ecx_backend.c`, `curve25519.c`, `crypto/ec/curve448/`) are
+/// a separate landing, and the narrowing is recorded in `docs/DECISIONS.md` D353. Their absence is
+/// the one observable this table has that the authority's does not: `EVP_PKEY_asn1_find`/`_find_str`
+/// answer NULL and `EVP_PKEY_type` `NID_undef` for those four types. Every other row is the
+/// authority's object by address.
+///
+/// The count `EVP_PKEY_asn1_get_count` reports is this table's length plus the application count,
+/// which is the authority's own arithmetic.
+pub const STANDARD_METHODS: [*const EvpPkeyAsn1Method; 11] = [
+    &raw const crate::rsa::ameth::ossl_rsa_asn1_meths[0],
+    &raw const crate::rsa::ameth::ossl_rsa_asn1_meths[1],
+    &raw const crate::dh::ameth::ossl_dh_asn1_meth,
+    &raw const crate::dsa::ameth::ossl_dsa_asn1_meths[0],
+    &raw const crate::dsa::ameth::ossl_dsa_asn1_meths[1],
+    &raw const crate::dsa::ameth::ossl_dsa_asn1_meths[2],
+    &raw const crate::dsa::ameth::ossl_dsa_asn1_meths[3],
+    &raw const crate::ec::ameth::ossl_eckey_asn1_meth,
+    &raw const crate::rsa::ameth::ossl_rsa_pss_asn1_meth,
+    &raw const crate::dh::ameth::ossl_dhx_asn1_meth,
+    &raw const crate::ec::ameth::ossl_sm2_asn1_meth,
+];
 
 /// `app_methods` — the application-registered methods, sorted by `ameth_cmp`.
 static mut APP_METHODS: *mut OpenSslStack = ptr::null_mut();
@@ -349,10 +377,9 @@ unsafe extern "C" fn ameth_cmp(a: *const c_void, b: *const c_void) -> c_int {
 
 /// `int EVP_PKEY_asn1_get_count(void)` — `crypto/asn1/ameth_lib.c:40`.
 ///
-/// `OSSL_NELEM(standard_methods)` plus the application count — and the first term is **zero here**,
-/// because `standard_methods[]` is Phase 8's twelve objects. So this answers the application count
-/// where the authority answers that plus twelve; the divergence is recorded at [`STANDARD_METHODS`]
-/// and is the same one `D-PKEY-AMETH-1` records from the key-type side.
+/// `OSSL_NELEM(standard_methods)` plus the application count -- the first term is **eleven here**
+/// where the authority's is fifteen, because the four `crypto/ec/ecx_meth.c` rows are withheld. The
+/// narrowing is recorded at [`STANDARD_METHODS`] and in `docs/DECISIONS.md` D353.
 ///
 /// # Safety
 /// Nothing: it touches no pointer argument.
@@ -370,9 +397,9 @@ pub unsafe extern "C" fn EVP_PKEY_asn1_get_count() -> c_int {
 /// `const EVP_PKEY_ASN1_METHOD *EVP_PKEY_asn1_get0(int idx)` — `crypto/asn1/ameth_lib.c:48`.
 ///
 /// `idx < 0` answers NULL and the standard methods come first, so the two halves of the count are
-/// two halves of the index space. With the standard half empty here every index lands in
-/// `app_methods` — which is the same divergence as the count, and it is why this and `get_count`
-/// are the only two of the family that need no struct body.
+/// two halves of the index space: indices `0..11` land in [`STANDARD_METHODS`] and the rest in
+/// `app_methods`. (The authority's standard half is fifteen wide; the four withheld rows move the
+/// boundary, which is the count's narrowing and not a second divergence.)
 ///
 /// # Safety
 /// Nothing: it touches no pointer argument. It is an `unsafe fn` because every export in this crate
@@ -934,12 +961,10 @@ pub unsafe extern "C" fn EVP_PKEY_asn1_set_get_pub_key(
 /// `static const EVP_PKEY_ASN1_METHOD *pkey_asn1_find(int type)` — `crypto/asn1/ameth_lib.c:52`.
 ///
 /// The application table first, then `standard_methods[]`. The authority asks the second with
-/// `OBJ_bsearch_ameth`, a macro over a binary search; the table is Phase 8's and empty here, so the
-/// search is written as the linear form a binary search is equivalent to for a table whose
-/// `pkey_id`s are **unique** — which `add0`'s duplicate check enforces for `app_methods`, and which
-/// the twelve `ossl_<alg>_asn1_meth` objects also satisfy. A binary search over a table that is
-/// empty now and sorted later would have been a transcription of the mechanism rather than of the
-/// answer, and the answer is the whole contract.
+/// `OBJ_bsearch_ameth` — `OBJ_bsearch_(key, base, num, sizeof(key), ameth_cmp)` — and with the
+/// table now populated and sorted by `pkey_id` the crate asks it the same way rather than with the
+/// linear stand-in an empty table needed. `add0`'s duplicate check keeps `app_methods`'s keys
+/// unique and the authority's table's are; a miss is NULL.
 ///
 /// # Safety
 /// Nothing: both tables are this module's own.
@@ -961,13 +986,30 @@ unsafe fn pkey_asn1_find(type_: c_int) -> *const EvpPkeyAsn1Method {
             return unsafe { OPENSSL_sk_value(APP_METHODS, idx) }.cast::<EvpPkeyAsn1Method>();
         }
     }
-    for m in STANDARD_METHODS.iter() {
-        // SAFETY: every entry of the table is a live method or NULL.
-        if !m.is_null() && unsafe { (**m).pkey_id } == type_ {
-            return *m;
-        }
+
+    /* `OBJ_bsearch_ameth(type, standard_methods, OSSL_NELEM(standard_methods))`, whose element size
+     * is `sizeof(const EVP_PKEY_ASN1_METHOD *)` and whose comparator is `ameth_cmp`. The key is a
+     * pointer to the *element* the table stores -- a `const EVP_PKEY_ASN1_METHOD *` -- which the
+     * authority spells `&t` with `t = &tmp`; `ameth_cmp` dereferences it twice, so `&tmp` would be
+     * read as the first field of the probe rather than as the search key. The answer is a pointer to
+     * the matching slot, which holds the method pointer. */
+    let key: *const EvpPkeyAsn1Method = ptr::addr_of!(probe);
+    // SAFETY: `key` points at the live local `probe`, `STANDARD_METHODS` is a sorted array of `num`
+    // elements of `size` bytes, and `ameth_cmp` is the comparator the table's order is defined by.
+    let slot = unsafe {
+        crate::runtime::obj::OBJ_bsearch_(
+            ptr::addr_of!(key).cast::<c_void>(),
+            STANDARD_METHODS.as_ptr().cast::<c_void>(),
+            STANDARD_METHODS.len() as c_int,
+            core::mem::size_of::<*const EvpPkeyAsn1Method>() as c_int,
+            Some(ameth_cmp),
+        )
+    };
+    if slot.is_null() {
+        return ptr::null();
     }
-    ptr::null()
+    // SAFETY: `slot` is an element of `STANDARD_METHODS`, a live `*const EvpPkeyAsn1Method`.
+    unsafe { *slot.cast::<*const EvpPkeyAsn1Method>() }
 }
 
 /// `const EVP_PKEY_ASN1_METHOD *EVP_PKEY_asn1_find(ENGINE **pe, int type)` —
@@ -1053,9 +1095,9 @@ pub unsafe extern "C" fn EVP_PKEY_asn1_find_str(
         if (flags & ASN1_PKEY_ALIAS) != 0 {
             continue;
         }
-        /* A non-alias method has a `pem_str`: `add0` refuses one that does not, and
-         * `STANDARD_METHODS` is empty here, so the dereference the authority performs is guarded by
-         * the same check on both sides. */
+        /* A non-alias method has a `pem_str`: `add0` refuses one that does not, and every
+         * non-alias row of [`STANDARD_METHODS`] is the authority's own object, whose `pem_str` is
+         * set, so the dereference the authority performs is guarded by the same check on both sides. */
         // SAFETY: `pem_str` is non-NULL for a registered non-alias method.
         if unsafe { strlen(pem_str) as c_int } == len
             // SAFETY: both strings are readable for `len` bytes per the contract.
@@ -1070,10 +1112,10 @@ pub unsafe extern "C" fn EVP_PKEY_asn1_find_str(
 /// `const EVP_PKEY_ASN1_METHOD *EVP_PKEY_get0_asn1(const EVP_PKEY *pkey)` —
 /// `crypto/asn1/ameth_lib.c:480`.
 ///
-/// `return pkey->ameth;`, with **no** NULL test on `pkey` — the authority dereferences
-/// unconditionally, so a null `pkey` faults there and here rather than being refused. Nothing in
-/// this crate sets `ameth`; `D-PKEY-AMETH-1` records why `pkey_set_type` cannot yet, and this
-/// answers NULL for exactly the states the authority answers NULL for on a key this crate can build.
+/// `return pkey->ameth;`, with **no** NULL test on `pkey` -- the authority dereferences
+/// unconditionally, so a null `pkey` faults there and here rather than being refused.
+/// `pkey_set_type` sets the field from [`STANDARD_METHODS`] for every type the crate carries, so
+/// this answers the authority's own method for the eleven rows and NULL for a provider or blank key.
 ///
 /// # Safety
 /// `pkey` must be live.
@@ -1083,22 +1125,28 @@ pub unsafe extern "C" fn EVP_PKEY_get0_asn1(pkey: *const EvpPkey) -> *const EvpP
     unsafe { (*pkey).ameth }
 }
 
-/// The body of `EVP_PKEY_type` — `crypto/evp/evp_pkey_type.c:73`.
+/// `int EVP_PKEY_type(int type)` — `crypto/evp/evp_pkey_type.c:63`.
 ///
-/// **The export is 7.4l's and is deliberately withheld; this is its body**, because
-/// `EVP_PKEY_get_base_id` is `EVP_PKEY_type(pkey->type)` and `p_lib.c` lands here while
-/// `evp_pkey_type.c` waits for the twelve `ossl_<alg>_asn1_meth` objects (D163, D165). Splitting it
-/// this way keeps one copy of the resolution: the day 7.4l lands, `EVP_PKEY_type` is a
-/// `#[no_mangle]` wrapper over this function and nothing else moves.
+/// The active arm of the unit's two: `#ifndef OPENSSL_NO_DEPRECATED_3_6`, which resolves `type`
+/// through `EVP_PKEY_asn1_find` and answers the found method's own `pkey_id`, or `NID_undef` when no
+/// method is found. The `#else` arm — the hard-coded `base_id_conversion[]` table at `:34-60` — is
+/// compiled out on this profile (`OPENSSL_NO_DEPRECATED_3_6` is undefined) and is named rather than
+/// built.
 ///
-/// The alias walk is `EVP_PKEY_asn1_find`'s, and the fallback is `NID_undef` — which is what makes
-/// the withheld export *not* correct yet for the twelve legacy types, and what makes it correct for
-/// every value `pkey->type` can take here (`EVP_PKEY_KEYMGMT` and `EVP_PKEY_NONE`).
+/// It lives in this module rather than one of its own because `EVP_PKEY_asn1_find`'s table search is
+/// here and one copy of the resolution is the whole point: the crate carried this body as the
+/// internal `evp_pkey_type` until D353, which landed it as the authority's own `#[no_mangle]` name.
+///
+/// The alias walk is `EVP_PKEY_asn1_find`'s, so an alias's `pkey_id` is never returned: `type` is
+/// followed through `pkey_base_id` until a non-alias row answers. The engine arm is absent for the
+/// reason this module's doc gives — no engine can be registered — and the authority's own arm then
+/// answers `*pe = NULL` and falls through.
 ///
 /// # Safety
 /// Nothing: the lookup is over this module's own tables and touches no pointer argument.
-pub(crate) unsafe fn evp_pkey_type(type_: c_int) -> c_int {
-    // SAFETY: no preconditions.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_type(type_: c_int) -> c_int {
+    // SAFETY: the out-parameter is a live local and the search is over this module's own tables.
     let ameth = unsafe { EVP_PKEY_asn1_find(ptr::null_mut(), type_) };
     if ameth.is_null() {
         return crate::runtime::obj::NID_undef;

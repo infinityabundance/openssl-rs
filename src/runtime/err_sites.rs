@@ -23562,6 +23562,146 @@ pub(crate) const DH_BACKEND_235: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `dh_pub_decode` at `crypto/dh/dh_ameth.c:77` (DH_R_PARAMETER_ENCODING_ERROR).
+pub(crate) const DH_AMETH_77: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 77,
+    func: c"dh_pub_decode",
+    lib: 5,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `dh_pub_decode` at `crypto/dh/dh_ameth.c:86` (DH_R_DECODE_ERROR).
+pub(crate) const DH_AMETH_86: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 86,
+    func: c"dh_pub_decode",
+    lib: 5,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `dh_pub_decode` at `crypto/dh/dh_ameth.c:91` (DH_R_DECODE_ERROR).
+pub(crate) const DH_AMETH_91: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 91,
+    func: c"dh_pub_decode",
+    lib: 5,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `dh_pub_decode` at `crypto/dh/dh_ameth.c:97` (DH_R_BN_DECODE_ERROR).
+pub(crate) const DH_AMETH_97: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 97,
+    func: c"dh_pub_decode",
+    lib: 5,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `dh_pub_encode` at `crypto/dh/dh_ameth.c:124` (ERR_R_ASN1_LIB).
+pub(crate) const DH_AMETH_124: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 124,
+    func: c"dh_pub_encode",
+    lib: 5,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `dh_pub_encode` at `crypto/dh/dh_ameth.c:129` (ERR_R_ASN1_LIB).
+pub(crate) const DH_AMETH_129: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 129,
+    func: c"dh_pub_encode",
+    lib: 5,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `dh_pub_encode` at `crypto/dh/dh_ameth.c:143` (ERR_R_ASN1_LIB).
+pub(crate) const DH_AMETH_143: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 143,
+    func: c"dh_pub_encode",
+    lib: 5,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `dh_priv_encode` at `crypto/dh/dh_ameth.c:187` (ERR_R_ASN1_LIB).
+pub(crate) const DH_AMETH_187: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 187,
+    func: c"dh_priv_encode",
+    lib: 5,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `dh_priv_encode` at `crypto/dh/dh_ameth.c:193` (ERR_R_ASN1_LIB).
+pub(crate) const DH_AMETH_193: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 193,
+    func: c"dh_priv_encode",
+    lib: 5,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `dh_priv_encode` at `crypto/dh/dh_ameth.c:202` (DH_R_BN_ERROR).
+pub(crate) const DH_AMETH_202: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 202,
+    func: c"dh_priv_encode",
+    lib: 5,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `dh_priv_encode` at `crypto/dh/dh_ameth.c:211` (DH_R_BN_ERROR).
+pub(crate) const DH_AMETH_211: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 211,
+    func: c"dh_priv_encode",
+    lib: 5,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `do_dh_print` at `crypto/dh/dh_ameth.c:297` (ERR_raise dynamic reason).
+pub(crate) const DH_AMETH_297: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 297,
+    func: c"do_dh_print",
+    lib: 5,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `dh_pkey_public_check` at `crypto/dh/dh_ameth.c:433` (DH_R_MISSING_PUBKEY).
+pub(crate) const DH_AMETH_433: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 433,
+    func: c"dh_pkey_public_check",
+    lib: 5,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `dh_pkey_import_from_type` at `crypto/dh/dh_ameth.c:517` (ERR_R_DH_LIB).
+pub(crate) const DH_AMETH_517: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 517,
+    func: c"dh_pkey_import_from_type",
+    lib: 5,
+    reason: 524293,
+    dynamic_reason: false,
+};
+
 /// `dsa_new_intern` at `crypto/dsa/dsa_lib.c:141` (ERR_R_CRYPTO_LIB).
 pub(crate) const DSA_LIB_141: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_lib.c",
@@ -23749,6 +23889,166 @@ pub(crate) const DSA_BACKEND_182: ErrSite = ErrSite {
     func: c"ossl_dsa_key_from_pkcs8",
     lib: 10,
     reason: 104,
+    dynamic_reason: false,
+};
+
+/// `dsa_pub_decode` at `crypto/dsa/dsa_ameth.c:51` (DSA_R_DECODE_ERROR).
+pub(crate) const DSA_AMETH_51: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 51,
+    func: c"dsa_pub_decode",
+    lib: 10,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `dsa_pub_decode` at `crypto/dsa/dsa_ameth.c:57` (ERR_R_DSA_LIB).
+pub(crate) const DSA_AMETH_57: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 57,
+    func: c"dsa_pub_decode",
+    lib: 10,
+    reason: 524298,
+    dynamic_reason: false,
+};
+
+/// `dsa_pub_decode` at `crypto/dsa/dsa_ameth.c:61` (DSA_R_PARAMETER_ENCODING_ERROR).
+pub(crate) const DSA_AMETH_61: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 61,
+    func: c"dsa_pub_decode",
+    lib: 10,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `dsa_pub_decode` at `crypto/dsa/dsa_ameth.c:66` (DSA_R_DECODE_ERROR).
+pub(crate) const DSA_AMETH_66: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 66,
+    func: c"dsa_pub_decode",
+    lib: 10,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `dsa_pub_decode` at `crypto/dsa/dsa_ameth.c:71` (DSA_R_BN_DECODE_ERROR).
+pub(crate) const DSA_AMETH_71: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 71,
+    func: c"dsa_pub_decode",
+    lib: 10,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `dsa_pub_encode` at `crypto/dsa/dsa_ameth.c:103` (ERR_R_ASN1_LIB).
+pub(crate) const DSA_AMETH_103: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 103,
+    func: c"dsa_pub_encode",
+    lib: 10,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `dsa_pub_encode` at `crypto/dsa/dsa_ameth.c:108` (ERR_R_ASN1_LIB).
+pub(crate) const DSA_AMETH_108: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 108,
+    func: c"dsa_pub_encode",
+    lib: 10,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `dsa_pub_encode` at `crypto/dsa/dsa_ameth.c:118` (ERR_R_ASN1_LIB).
+pub(crate) const DSA_AMETH_118: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 118,
+    func: c"dsa_pub_encode",
+    lib: 10,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `dsa_pub_encode` at `crypto/dsa/dsa_ameth.c:126` (ERR_R_ASN1_LIB).
+pub(crate) const DSA_AMETH_126: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 126,
+    func: c"dsa_pub_encode",
+    lib: 10,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `dsa_priv_encode` at `crypto/dsa/dsa_ameth.c:170` (DSA_R_MISSING_PARAMETERS).
+pub(crate) const DSA_AMETH_170: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 170,
+    func: c"dsa_priv_encode",
+    lib: 10,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `dsa_priv_encode` at `crypto/dsa/dsa_ameth.c:177` (ERR_R_ASN1_LIB).
+pub(crate) const DSA_AMETH_177: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 177,
+    func: c"dsa_priv_encode",
+    lib: 10,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `dsa_priv_encode` at `crypto/dsa/dsa_ameth.c:183` (ERR_R_ASN1_LIB).
+pub(crate) const DSA_AMETH_183: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 183,
+    func: c"dsa_priv_encode",
+    lib: 10,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `dsa_priv_encode` at `crypto/dsa/dsa_ameth.c:192` (DSA_R_BN_ERROR).
+pub(crate) const DSA_AMETH_192: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 192,
+    func: c"dsa_priv_encode",
+    lib: 10,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `dsa_priv_encode` at `crypto/dsa/dsa_ameth.c:201` (DSA_R_BN_ERROR).
+pub(crate) const DSA_AMETH_201: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 201,
+    func: c"dsa_priv_encode",
+    lib: 10,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `old_dsa_priv_decode` at `crypto/dsa/dsa_ameth.c:361` (ERR_R_DSA_LIB).
+pub(crate) const DSA_AMETH_361: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 361,
+    func: c"old_dsa_priv_decode",
+    lib: 10,
+    reason: 524298,
+    dynamic_reason: false,
+};
+
+/// `dsa_pkey_import_from` at `crypto/dsa/dsa_ameth.c:485` (ERR_R_DSA_LIB).
+pub(crate) const DSA_AMETH_485: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 485,
+    func: c"dsa_pkey_import_from",
+    lib: 10,
+    reason: 524298,
     dynamic_reason: false,
 };
 
@@ -32546,6 +32846,20 @@ pub(crate) static ALL: &[ErrSite] = &[
     DH_GROUP_PARAMS_47,
     DH_BACKEND_222,
     DH_BACKEND_235,
+    DH_AMETH_77,
+    DH_AMETH_86,
+    DH_AMETH_91,
+    DH_AMETH_97,
+    DH_AMETH_124,
+    DH_AMETH_129,
+    DH_AMETH_143,
+    DH_AMETH_187,
+    DH_AMETH_193,
+    DH_AMETH_202,
+    DH_AMETH_211,
+    DH_AMETH_297,
+    DH_AMETH_433,
+    DH_AMETH_517,
     DSA_LIB_141,
     DSA_LIB_158,
     DSA_LIB_167,
@@ -32565,6 +32879,22 @@ pub(crate) static ALL: &[ErrSite] = &[
     DSA_BACKEND_171,
     DSA_BACKEND_175,
     DSA_BACKEND_182,
+    DSA_AMETH_51,
+    DSA_AMETH_57,
+    DSA_AMETH_61,
+    DSA_AMETH_66,
+    DSA_AMETH_71,
+    DSA_AMETH_103,
+    DSA_AMETH_108,
+    DSA_AMETH_118,
+    DSA_AMETH_126,
+    DSA_AMETH_170,
+    DSA_AMETH_177,
+    DSA_AMETH_183,
+    DSA_AMETH_192,
+    DSA_AMETH_201,
+    DSA_AMETH_361,
+    DSA_AMETH_485,
     EC_CURVE_2876,
     EC_CURVE_2888,
     EC_CURVE_2893,

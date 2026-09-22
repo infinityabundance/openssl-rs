@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 0,
-      "implemented": 745,
-      "open_in_this_stratum": 41,
+      "implemented": 766,
+      "open_in_this_stratum": 20,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -50,600 +50,127 @@
           "blocked_by": [],
           "declaring_header": "evp.h",
           "owning_phase": 8,
-          "reason": "`crypto/evp/p_lib.c:791`'s body is `EVP_PKEY_type` (`:797`), the two `EC_KEY_get0_group`/`EC_GROUP_get_curve_name` calls (`:801`, `:803`), `EVP_PKEY_set_type` (`:816`) and `detect_foreign_key` (`:819`), whose four `is_foreign` calls are `ossl_ec_key_is_foreign`, `ossl_dsa_is_foreign`, `ossl_rsa_is_foreign` and `ossl_dh_is_foreign` (`crypto/evp/p_lib.c:760-787`). **Every one of the four landed with D340 or D351** (`src/ec/backend.rs`, `src/dsa/backend.rs` and `src/rsa/backend.rs` in D351, `src/dh/backend.rs` with the same), and the two `EC_KEY_get0_group`/`EC_GROUP_get_curve_name` calls landed with D340, so the only name this export still waits on is Phase 8's own `EVP_PKEY_type` -- which is not another stratum's blocker but the `standard_methods[]` cycle D341 measured, and the same cycle that keeps the fifteen in `src/asn1/ameth.rs`. So the row moves here from `BLOCKED_HANDOFFS` rather than being retired: the export is still Phase 8's to write, and only the authority *blockers* have landed. `EVP_PKEY_assign_RSA`/`_DSA`/`_DH`/`_EC_KEY` are `#define`s over it (`include/openssl/evp.h`), so the four `set1_*` names in the first row wait on it too.",
+          "reason": "`crypto/evp/p_lib.c:791`'s body is `EVP_PKEY_type` (`:797`), the two `EC_KEY_get0_group`/`EC_GROUP_get_curve_name` calls (`:801`, `:803`), `EVP_PKEY_set_type` (`:816`) and `detect_foreign_key` (`:819`), whose four `is_foreign` calls are `ossl_ec_key_is_foreign`, `ossl_dsa_is_foreign`, `ossl_rsa_is_foreign` and `ossl_dh_is_foreign` (`crypto/evp/p_lib.c:760-787`). **Every one of the four landed with D340 or D351** (`src/ec/backend.rs`, `src/dsa/backend.rs` and `src/rsa/backend.rs` in D351, `src/dh/backend.rs` with the same), and the two `EC_KEY_get0_group`/`EC_GROUP_get_curve_name` calls landed with D340, so the only name this export still waited on was Phase 8's own `EVP_PKEY_type` -- which was not another stratum's blocker but the `standard_methods[]` cycle D341 measured, and the same cycle that kept the fifteen in `src/asn1/ameth.rs`. **D353 landed that name and the eleven rows beside it**, so this export is built too and the row stays as the hand-off edge rather than retiring: the export was and is Phase 8's to write, and retiring the row would move it into this sealed stratum's `implemented` list. `EVP_PKEY_assign_RSA`/`_DSA`/`_DH`/`_EC_KEY` are `#define`s over it (`include/openssl/evp.h`), so the four `set1_*` names in the first row wait on it too.",
           "symbol": "EVP_PKEY_assign"
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "crypto/rsa/rsa_crpt.c",
-              "kind": "exported",
-              "line": 33,
-              "name": "RSA_public_encrypt",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/rsa/rsa_crpt.c",
-              "kind": "exported",
-              "line": 45,
-              "name": "RSA_private_decrypt",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2154,
-              "name": "evp_pkey_get_legacy",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
-          "note": "`evp_pkey_get0_RSA_int` has no recorded owner phase, so its own dependency `evp_pkey_get_legacy` is named in its place; the two primitives are the direct calls.",
           "owning_phase": 8,
-          "reason": "`crypto/evp/p_enc.c:32` and `crypto/evp/p_dec.c:32` both take the low-level key with `evp_pkey_get0_RSA_int` (`crypto/evp/p_legacy.c:40`, which is `evp_pkey_get_legacy` behind a type test) and then call the primitive -- `RSA_public_encrypt` (`p_enc.c:36`) and `RSA_private_decrypt` (`p_dec.c:36`). Both the accessor and the two primitives are Phase 8's.",
+          "reason": "`crypto/evp/p_enc.c:32` and `crypto/evp/p_dec.c:32` both take the low-level key with `evp_pkey_get0_RSA_int` (`crypto/evp/p_legacy.c:40`, which is `evp_pkey_get_legacy` behind a type test) and then call the primitive -- `RSA_public_encrypt` (`p_enc.c:36`) and `RSA_private_decrypt` (`p_dec.c:36`). All three blockers landed (D340, D351, D353) and the two are built in `src/evp/p_enc.rs` and `src/evp/p_dec.rs`, so the row moves here rather than retiring.",
           "symbol": "EVP_PKEY_decrypt_old"
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "crypto/rsa/rsa_crpt.c",
-              "kind": "exported",
-              "line": 33,
-              "name": "RSA_public_encrypt",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/rsa/rsa_crpt.c",
-              "kind": "exported",
-              "line": 45,
-              "name": "RSA_private_decrypt",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2154,
-              "name": "evp_pkey_get_legacy",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
-          "note": "`evp_pkey_get0_RSA_int` has no recorded owner phase, so its own dependency `evp_pkey_get_legacy` is named in its place; the two primitives are the direct calls.",
           "owning_phase": 8,
-          "reason": "`crypto/evp/p_enc.c:32` and `crypto/evp/p_dec.c:32` both take the low-level key with `evp_pkey_get0_RSA_int` (`crypto/evp/p_legacy.c:40`, which is `evp_pkey_get_legacy` behind a type test) and then call the primitive -- `RSA_public_encrypt` (`p_enc.c:36`) and `RSA_private_decrypt` (`p_dec.c:36`). Both the accessor and the two primitives are Phase 8's.",
+          "reason": "`crypto/evp/p_enc.c:32` and `crypto/evp/p_dec.c:32` both take the low-level key with `evp_pkey_get0_RSA_int` (`crypto/evp/p_legacy.c:40`, which is `evp_pkey_get_legacy` behind a type test) and then call the primitive -- `RSA_public_encrypt` (`p_enc.c:36`) and `RSA_private_decrypt` (`p_dec.c:36`). All three blockers landed (D340, D351, D353) and the two are built in `src/evp/p_enc.rs` and `src/evp/p_dec.rs`, so the row moves here rather than retiring.",
           "symbol": "EVP_PKEY_encrypt_old"
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 155,
-              "name": "RSA",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 150,
-              "name": "DSA",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 146,
-              "name": "DH",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 163,
-              "name": "EC_KEY",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2154,
-              "name": "evp_pkey_get_legacy",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2066,
-              "name": "evp_pkey_copy_downgraded",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
-          "note": "the four low-level key types are declared only in the weak `types.h`, so they carry no authority phase of their own; `evp_pkey_get_legacy`, whose phase 8 the atlas and the prerequisites row agree on, corroborates them. The set is the type family plus the one function whose body needs it.",
           "owning_phase": 8,
-          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is `evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and `ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, D193); this row is the twelve exports that sit behind it.",
+          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int`, and D353 landed it together with `evp_pkey_copy_downgraded` (`:2066`) and the four low-level key types, so every blocker this row's `blocked_by` named has landed and the twelve are now built: six `p_lib.c` spellings in `src/evp/pkey.rs` (`get0`/`get1`/`set1` for DSA and DH) and six `p_legacy.c` ones in `src/evp/p_legacy_assign.rs` (`get0`/`get1`/`set1` for RSA and EC_KEY). **The brief's 9/3 split is a miscount and is corrected here**: the authority's `p_legacy.c` defines the RSA *and* the EC_KEY triplets (`:25`, `:49`, `:54`, `:65`, `:85`, `:90`), and `p_lib.c` the DSA and DH ones (`:896`, `:901`, `:915`, `:959`, `:1007`, `:1012`), so the split is six and six. The row moves here rather than retiring for the reason the `EVP_PKEY_assign` row below gives: retiring it would move twelve built exports into this sealed stratum's `implemented` list on the strength of Phase 8's work.",
           "symbol": "EVP_PKEY_get0_DH"
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 155,
-              "name": "RSA",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 150,
-              "name": "DSA",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 146,
-              "name": "DH",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 163,
-              "name": "EC_KEY",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2154,
-              "name": "evp_pkey_get_legacy",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2066,
-              "name": "evp_pkey_copy_downgraded",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
-          "note": "the four low-level key types are declared only in the weak `types.h`, so they carry no authority phase of their own; `evp_pkey_get_legacy`, whose phase 8 the atlas and the prerequisites row agree on, corroborates them. The set is the type family plus the one function whose body needs it.",
           "owning_phase": 8,
-          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is `evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and `ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, D193); this row is the twelve exports that sit behind it.",
+          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int`, and D353 landed it together with `evp_pkey_copy_downgraded` (`:2066`) and the four low-level key types, so every blocker this row's `blocked_by` named has landed and the twelve are now built: six `p_lib.c` spellings in `src/evp/pkey.rs` (`get0`/`get1`/`set1` for DSA and DH) and six `p_legacy.c` ones in `src/evp/p_legacy_assign.rs` (`get0`/`get1`/`set1` for RSA and EC_KEY). **The brief's 9/3 split is a miscount and is corrected here**: the authority's `p_legacy.c` defines the RSA *and* the EC_KEY triplets (`:25`, `:49`, `:54`, `:65`, `:85`, `:90`), and `p_lib.c` the DSA and DH ones (`:896`, `:901`, `:915`, `:959`, `:1007`, `:1012`), so the split is six and six. The row moves here rather than retiring for the reason the `EVP_PKEY_assign` row below gives: retiring it would move twelve built exports into this sealed stratum's `implemented` list on the strength of Phase 8's work.",
           "symbol": "EVP_PKEY_get0_DSA"
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 155,
-              "name": "RSA",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 150,
-              "name": "DSA",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 146,
-              "name": "DH",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 163,
-              "name": "EC_KEY",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2154,
-              "name": "evp_pkey_get_legacy",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2066,
-              "name": "evp_pkey_copy_downgraded",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
-          "note": "the four low-level key types are declared only in the weak `types.h`, so they carry no authority phase of their own; `evp_pkey_get_legacy`, whose phase 8 the atlas and the prerequisites row agree on, corroborates them. The set is the type family plus the one function whose body needs it.",
           "owning_phase": 8,
-          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is `evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and `ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, D193); this row is the twelve exports that sit behind it.",
+          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int`, and D353 landed it together with `evp_pkey_copy_downgraded` (`:2066`) and the four low-level key types, so every blocker this row's `blocked_by` named has landed and the twelve are now built: six `p_lib.c` spellings in `src/evp/pkey.rs` (`get0`/`get1`/`set1` for DSA and DH) and six `p_legacy.c` ones in `src/evp/p_legacy_assign.rs` (`get0`/`get1`/`set1` for RSA and EC_KEY). **The brief's 9/3 split is a miscount and is corrected here**: the authority's `p_legacy.c` defines the RSA *and* the EC_KEY triplets (`:25`, `:49`, `:54`, `:65`, `:85`, `:90`), and `p_lib.c` the DSA and DH ones (`:896`, `:901`, `:915`, `:959`, `:1007`, `:1012`), so the split is six and six. The row moves here rather than retiring for the reason the `EVP_PKEY_assign` row below gives: retiring it would move twelve built exports into this sealed stratum's `implemented` list on the strength of Phase 8's work.",
           "symbol": "EVP_PKEY_get0_EC_KEY"
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 155,
-              "name": "RSA",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 150,
-              "name": "DSA",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 146,
-              "name": "DH",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 163,
-              "name": "EC_KEY",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2154,
-              "name": "evp_pkey_get_legacy",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2066,
-              "name": "evp_pkey_copy_downgraded",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
-          "note": "the four low-level key types are declared only in the weak `types.h`, so they carry no authority phase of their own; `evp_pkey_get_legacy`, whose phase 8 the atlas and the prerequisites row agree on, corroborates them. The set is the type family plus the one function whose body needs it.",
           "owning_phase": 8,
-          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is `evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and `ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, D193); this row is the twelve exports that sit behind it.",
+          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int`, and D353 landed it together with `evp_pkey_copy_downgraded` (`:2066`) and the four low-level key types, so every blocker this row's `blocked_by` named has landed and the twelve are now built: six `p_lib.c` spellings in `src/evp/pkey.rs` (`get0`/`get1`/`set1` for DSA and DH) and six `p_legacy.c` ones in `src/evp/p_legacy_assign.rs` (`get0`/`get1`/`set1` for RSA and EC_KEY). **The brief's 9/3 split is a miscount and is corrected here**: the authority's `p_legacy.c` defines the RSA *and* the EC_KEY triplets (`:25`, `:49`, `:54`, `:65`, `:85`, `:90`), and `p_lib.c` the DSA and DH ones (`:896`, `:901`, `:915`, `:959`, `:1007`, `:1012`), so the split is six and six. The row moves here rather than retiring for the reason the `EVP_PKEY_assign` row below gives: retiring it would move twelve built exports into this sealed stratum's `implemented` list on the strength of Phase 8's work.",
           "symbol": "EVP_PKEY_get0_RSA"
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2154,
-              "name": "evp_pkey_get_legacy",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2066,
-              "name": "evp_pkey_copy_downgraded",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
           "owning_phase": 8,
-          "reason": "each is `pkey->type == <type> ? evp_pkey_get_legacy(pkey) : NULL` and then reads `os->length`/`os->data` off the answer (`crypto/evp/p_lib.c:843`, `:859`, `:877`). `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) is the whole dependency and it is Phase 8's: it constructs a legacy key with `evp_pkey_copy_downgraded` (`:2066`) and caches it against an `ameth` the crate cannot find. Same row in `forensics/prerequisites.json`, same stratum.",
+          "reason": "each is `pkey->type == <type> ? evp_pkey_get_legacy(pkey) : NULL` and then reads `os->length`/`os->data` off the answer (`crypto/evp/p_lib.c:843`, `:859`, `:877`). `evp_pkey_get_legacy` was the whole blocker and D353 landed it, so the three are built in `src/evp/pkey.rs` and the row moves here rather than retiring, for the `EVP_PKEY_assign` row's reason.",
           "symbol": "EVP_PKEY_get0_hmac"
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2154,
-              "name": "evp_pkey_get_legacy",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2066,
-              "name": "evp_pkey_copy_downgraded",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
           "owning_phase": 8,
-          "reason": "each is `pkey->type == <type> ? evp_pkey_get_legacy(pkey) : NULL` and then reads `os->length`/`os->data` off the answer (`crypto/evp/p_lib.c:843`, `:859`, `:877`). `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) is the whole dependency and it is Phase 8's: it constructs a legacy key with `evp_pkey_copy_downgraded` (`:2066`) and caches it against an `ameth` the crate cannot find. Same row in `forensics/prerequisites.json`, same stratum.",
+          "reason": "each is `pkey->type == <type> ? evp_pkey_get_legacy(pkey) : NULL` and then reads `os->length`/`os->data` off the answer (`crypto/evp/p_lib.c:843`, `:859`, `:877`). `evp_pkey_get_legacy` was the whole blocker and D353 landed it, so the three are built in `src/evp/pkey.rs` and the row moves here rather than retiring, for the `EVP_PKEY_assign` row's reason.",
           "symbol": "EVP_PKEY_get0_poly1305"
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2154,
-              "name": "evp_pkey_get_legacy",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2066,
-              "name": "evp_pkey_copy_downgraded",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
           "owning_phase": 8,
-          "reason": "each is `pkey->type == <type> ? evp_pkey_get_legacy(pkey) : NULL` and then reads `os->length`/`os->data` off the answer (`crypto/evp/p_lib.c:843`, `:859`, `:877`). `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) is the whole dependency and it is Phase 8's: it constructs a legacy key with `evp_pkey_copy_downgraded` (`:2066`) and caches it against an `ameth` the crate cannot find. Same row in `forensics/prerequisites.json`, same stratum.",
+          "reason": "each is `pkey->type == <type> ? evp_pkey_get_legacy(pkey) : NULL` and then reads `os->length`/`os->data` off the answer (`crypto/evp/p_lib.c:843`, `:859`, `:877`). `evp_pkey_get_legacy` was the whole blocker and D353 landed it, so the three are built in `src/evp/pkey.rs` and the row moves here rather than retiring, for the `EVP_PKEY_assign` row's reason.",
           "symbol": "EVP_PKEY_get0_siphash"
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 155,
-              "name": "RSA",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 150,
-              "name": "DSA",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 146,
-              "name": "DH",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 163,
-              "name": "EC_KEY",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2154,
-              "name": "evp_pkey_get_legacy",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2066,
-              "name": "evp_pkey_copy_downgraded",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
-          "note": "the four low-level key types are declared only in the weak `types.h`, so they carry no authority phase of their own; `evp_pkey_get_legacy`, whose phase 8 the atlas and the prerequisites row agree on, corroborates them. The set is the type family plus the one function whose body needs it.",
           "owning_phase": 8,
-          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is `evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and `ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, D193); this row is the twelve exports that sit behind it.",
+          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int`, and D353 landed it together with `evp_pkey_copy_downgraded` (`:2066`) and the four low-level key types, so every blocker this row's `blocked_by` named has landed and the twelve are now built: six `p_lib.c` spellings in `src/evp/pkey.rs` (`get0`/`get1`/`set1` for DSA and DH) and six `p_legacy.c` ones in `src/evp/p_legacy_assign.rs` (`get0`/`get1`/`set1` for RSA and EC_KEY). **The brief's 9/3 split is a miscount and is corrected here**: the authority's `p_legacy.c` defines the RSA *and* the EC_KEY triplets (`:25`, `:49`, `:54`, `:65`, `:85`, `:90`), and `p_lib.c` the DSA and DH ones (`:896`, `:901`, `:915`, `:959`, `:1007`, `:1012`), so the split is six and six. The row moves here rather than retiring for the reason the `EVP_PKEY_assign` row below gives: retiring it would move twelve built exports into this sealed stratum's `implemented` list on the strength of Phase 8's work.",
           "symbol": "EVP_PKEY_get1_DH"
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 155,
-              "name": "RSA",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 150,
-              "name": "DSA",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 146,
-              "name": "DH",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 163,
-              "name": "EC_KEY",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2154,
-              "name": "evp_pkey_get_legacy",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2066,
-              "name": "evp_pkey_copy_downgraded",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
-          "note": "the four low-level key types are declared only in the weak `types.h`, so they carry no authority phase of their own; `evp_pkey_get_legacy`, whose phase 8 the atlas and the prerequisites row agree on, corroborates them. The set is the type family plus the one function whose body needs it.",
           "owning_phase": 8,
-          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is `evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and `ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, D193); this row is the twelve exports that sit behind it.",
+          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int`, and D353 landed it together with `evp_pkey_copy_downgraded` (`:2066`) and the four low-level key types, so every blocker this row's `blocked_by` named has landed and the twelve are now built: six `p_lib.c` spellings in `src/evp/pkey.rs` (`get0`/`get1`/`set1` for DSA and DH) and six `p_legacy.c` ones in `src/evp/p_legacy_assign.rs` (`get0`/`get1`/`set1` for RSA and EC_KEY). **The brief's 9/3 split is a miscount and is corrected here**: the authority's `p_legacy.c` defines the RSA *and* the EC_KEY triplets (`:25`, `:49`, `:54`, `:65`, `:85`, `:90`), and `p_lib.c` the DSA and DH ones (`:896`, `:901`, `:915`, `:959`, `:1007`, `:1012`), so the split is six and six. The row moves here rather than retiring for the reason the `EVP_PKEY_assign` row below gives: retiring it would move twelve built exports into this sealed stratum's `implemented` list on the strength of Phase 8's work.",
           "symbol": "EVP_PKEY_get1_DSA"
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 155,
-              "name": "RSA",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 150,
-              "name": "DSA",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 146,
-              "name": "DH",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 163,
-              "name": "EC_KEY",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2154,
-              "name": "evp_pkey_get_legacy",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2066,
-              "name": "evp_pkey_copy_downgraded",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
-          "note": "the four low-level key types are declared only in the weak `types.h`, so they carry no authority phase of their own; `evp_pkey_get_legacy`, whose phase 8 the atlas and the prerequisites row agree on, corroborates them. The set is the type family plus the one function whose body needs it.",
           "owning_phase": 8,
-          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is `evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and `ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, D193); this row is the twelve exports that sit behind it.",
+          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int`, and D353 landed it together with `evp_pkey_copy_downgraded` (`:2066`) and the four low-level key types, so every blocker this row's `blocked_by` named has landed and the twelve are now built: six `p_lib.c` spellings in `src/evp/pkey.rs` (`get0`/`get1`/`set1` for DSA and DH) and six `p_legacy.c` ones in `src/evp/p_legacy_assign.rs` (`get0`/`get1`/`set1` for RSA and EC_KEY). **The brief's 9/3 split is a miscount and is corrected here**: the authority's `p_legacy.c` defines the RSA *and* the EC_KEY triplets (`:25`, `:49`, `:54`, `:65`, `:85`, `:90`), and `p_lib.c` the DSA and DH ones (`:896`, `:901`, `:915`, `:959`, `:1007`, `:1012`), so the split is six and six. The row moves here rather than retiring for the reason the `EVP_PKEY_assign` row below gives: retiring it would move twelve built exports into this sealed stratum's `implemented` list on the strength of Phase 8's work.",
           "symbol": "EVP_PKEY_get1_EC_KEY"
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 155,
-              "name": "RSA",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 150,
-              "name": "DSA",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 146,
-              "name": "DH",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 163,
-              "name": "EC_KEY",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2154,
-              "name": "evp_pkey_get_legacy",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2066,
-              "name": "evp_pkey_copy_downgraded",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
-          "note": "the four low-level key types are declared only in the weak `types.h`, so they carry no authority phase of their own; `evp_pkey_get_legacy`, whose phase 8 the atlas and the prerequisites row agree on, corroborates them. The set is the type family plus the one function whose body needs it.",
           "owning_phase": 8,
-          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is `evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and `ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, D193); this row is the twelve exports that sit behind it.",
+          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int`, and D353 landed it together with `evp_pkey_copy_downgraded` (`:2066`) and the four low-level key types, so every blocker this row's `blocked_by` named has landed and the twelve are now built: six `p_lib.c` spellings in `src/evp/pkey.rs` (`get0`/`get1`/`set1` for DSA and DH) and six `p_legacy.c` ones in `src/evp/p_legacy_assign.rs` (`get0`/`get1`/`set1` for RSA and EC_KEY). **The brief's 9/3 split is a miscount and is corrected here**: the authority's `p_legacy.c` defines the RSA *and* the EC_KEY triplets (`:25`, `:49`, `:54`, `:65`, `:85`, `:90`), and `p_lib.c` the DSA and DH ones (`:896`, `:901`, `:915`, `:959`, `:1007`, `:1012`), so the split is six and six. The row moves here rather than retiring for the reason the `EVP_PKEY_assign` row below gives: retiring it would move twelve built exports into this sealed stratum's `implemented` list on the strength of Phase 8's work.",
           "symbol": "EVP_PKEY_get1_RSA"
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "crypto/evp/p_legacy.c",
-              "kind": "exported",
-              "line": 45,
-              "name": "EVP_PKEY_get0_EC_KEY",
-              "owning_phase": 7
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2154,
-              "name": "evp_pkey_get_legacy",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
           "owning_phase": 8,
-          "reason": "each opens with `pkey->keymgmt == NULL || pkey->keydata == NULL` and answers its legacy arm -- `EVP_PKEY_get0_EC_KEY` then `EC_KEY_get_conv_form` (`crypto/evp/p_lib.c:2472`, `:2477`) or `EC_KEY_get0_group` then `EC_GROUP_get_field_type` (`:2512`, `:2517`, `:2521`). The three EC accessors landed with D340; what is still absent is `EVP_PKEY_get0_EC_KEY` itself, this stratum's own withheld export, whose whole body is `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) -- so the row names the accessor and its one dependency, which is what it actually waits on.",
+          "reason": "each opens with `pkey->keymgmt == NULL || pkey->keydata == NULL` and answers its legacy arm -- `EVP_PKEY_get0_EC_KEY` then `EC_KEY_get_conv_form` (`crypto/evp/p_lib.c:2472`, `:2477`) or `EC_KEY_get0_group` then `EC_GROUP_get_field_type` (`:2512`, `:2517`, `:2521`). D353 landed `EVP_PKEY_get0_EC_KEY` with the rest of `p_legacy.c`, so both are built in `src/evp/pkey.rs` and the row moves here rather than retiring.",
           "symbol": "EVP_PKEY_get_ec_point_conv_form"
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "crypto/evp/p_legacy.c",
-              "kind": "exported",
-              "line": 45,
-              "name": "EVP_PKEY_get0_EC_KEY",
-              "owning_phase": 7
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2154,
-              "name": "evp_pkey_get_legacy",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
           "owning_phase": 8,
-          "reason": "each opens with `pkey->keymgmt == NULL || pkey->keydata == NULL` and answers its legacy arm -- `EVP_PKEY_get0_EC_KEY` then `EC_KEY_get_conv_form` (`crypto/evp/p_lib.c:2472`, `:2477`) or `EC_KEY_get0_group` then `EC_GROUP_get_field_type` (`:2512`, `:2517`, `:2521`). The three EC accessors landed with D340; what is still absent is `EVP_PKEY_get0_EC_KEY` itself, this stratum's own withheld export, whose whole body is `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) -- so the row names the accessor and its one dependency, which is what it actually waits on.",
+          "reason": "each opens with `pkey->keymgmt == NULL || pkey->keydata == NULL` and answers its legacy arm -- `EVP_PKEY_get0_EC_KEY` then `EC_KEY_get_conv_form` (`crypto/evp/p_lib.c:2472`, `:2477`) or `EC_KEY_get0_group` then `EC_GROUP_get_field_type` (`:2512`, `:2517`, `:2521`). D353 landed `EVP_PKEY_get0_EC_KEY` with the rest of `p_legacy.c`, so both are built in `src/evp/pkey.rs` and the row moves here rather than retiring.",
           "symbol": "EVP_PKEY_get_field_type"
         },
         {
@@ -699,338 +226,66 @@
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 155,
-              "name": "RSA",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 150,
-              "name": "DSA",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 146,
-              "name": "DH",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 163,
-              "name": "EC_KEY",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2154,
-              "name": "evp_pkey_get_legacy",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2066,
-              "name": "evp_pkey_copy_downgraded",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
-          "note": "the four low-level key types are declared only in the weak `types.h`, so they carry no authority phase of their own; `evp_pkey_get_legacy`, whose phase 8 the atlas and the prerequisites row agree on, corroborates them. The set is the type family plus the one function whose body needs it.",
           "owning_phase": 8,
-          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is `evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and `ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, D193); this row is the twelve exports that sit behind it.",
+          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int`, and D353 landed it together with `evp_pkey_copy_downgraded` (`:2066`) and the four low-level key types, so every blocker this row's `blocked_by` named has landed and the twelve are now built: six `p_lib.c` spellings in `src/evp/pkey.rs` (`get0`/`get1`/`set1` for DSA and DH) and six `p_legacy.c` ones in `src/evp/p_legacy_assign.rs` (`get0`/`get1`/`set1` for RSA and EC_KEY). **The brief's 9/3 split is a miscount and is corrected here**: the authority's `p_legacy.c` defines the RSA *and* the EC_KEY triplets (`:25`, `:49`, `:54`, `:65`, `:85`, `:90`), and `p_lib.c` the DSA and DH ones (`:896`, `:901`, `:915`, `:959`, `:1007`, `:1012`), so the split is six and six. The row moves here rather than retiring for the reason the `EVP_PKEY_assign` row below gives: retiring it would move twelve built exports into this sealed stratum's `implemented` list on the strength of Phase 8's work.",
           "symbol": "EVP_PKEY_set1_DH"
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 155,
-              "name": "RSA",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 150,
-              "name": "DSA",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 146,
-              "name": "DH",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 163,
-              "name": "EC_KEY",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2154,
-              "name": "evp_pkey_get_legacy",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2066,
-              "name": "evp_pkey_copy_downgraded",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
-          "note": "the four low-level key types are declared only in the weak `types.h`, so they carry no authority phase of their own; `evp_pkey_get_legacy`, whose phase 8 the atlas and the prerequisites row agree on, corroborates them. The set is the type family plus the one function whose body needs it.",
           "owning_phase": 8,
-          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is `evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and `ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, D193); this row is the twelve exports that sit behind it.",
+          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int`, and D353 landed it together with `evp_pkey_copy_downgraded` (`:2066`) and the four low-level key types, so every blocker this row's `blocked_by` named has landed and the twelve are now built: six `p_lib.c` spellings in `src/evp/pkey.rs` (`get0`/`get1`/`set1` for DSA and DH) and six `p_legacy.c` ones in `src/evp/p_legacy_assign.rs` (`get0`/`get1`/`set1` for RSA and EC_KEY). **The brief's 9/3 split is a miscount and is corrected here**: the authority's `p_legacy.c` defines the RSA *and* the EC_KEY triplets (`:25`, `:49`, `:54`, `:65`, `:85`, `:90`), and `p_lib.c` the DSA and DH ones (`:896`, `:901`, `:915`, `:959`, `:1007`, `:1012`), so the split is six and six. The row moves here rather than retiring for the reason the `EVP_PKEY_assign` row below gives: retiring it would move twelve built exports into this sealed stratum's `implemented` list on the strength of Phase 8's work.",
           "symbol": "EVP_PKEY_set1_DSA"
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 155,
-              "name": "RSA",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 150,
-              "name": "DSA",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 146,
-              "name": "DH",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 163,
-              "name": "EC_KEY",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2154,
-              "name": "evp_pkey_get_legacy",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2066,
-              "name": "evp_pkey_copy_downgraded",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
-          "note": "the four low-level key types are declared only in the weak `types.h`, so they carry no authority phase of their own; `evp_pkey_get_legacy`, whose phase 8 the atlas and the prerequisites row agree on, corroborates them. The set is the type family plus the one function whose body needs it.",
           "owning_phase": 8,
-          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is `evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and `ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, D193); this row is the twelve exports that sit behind it.",
+          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int`, and D353 landed it together with `evp_pkey_copy_downgraded` (`:2066`) and the four low-level key types, so every blocker this row's `blocked_by` named has landed and the twelve are now built: six `p_lib.c` spellings in `src/evp/pkey.rs` (`get0`/`get1`/`set1` for DSA and DH) and six `p_legacy.c` ones in `src/evp/p_legacy_assign.rs` (`get0`/`get1`/`set1` for RSA and EC_KEY). **The brief's 9/3 split is a miscount and is corrected here**: the authority's `p_legacy.c` defines the RSA *and* the EC_KEY triplets (`:25`, `:49`, `:54`, `:65`, `:85`, `:90`), and `p_lib.c` the DSA and DH ones (`:896`, `:901`, `:915`, `:959`, `:1007`, `:1012`), so the split is six and six. The row moves here rather than retiring for the reason the `EVP_PKEY_assign` row below gives: retiring it would move twelve built exports into this sealed stratum's `implemented` list on the strength of Phase 8's work.",
           "symbol": "EVP_PKEY_set1_EC_KEY"
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 155,
-              "name": "RSA",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 150,
-              "name": "DSA",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 146,
-              "name": "DH",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "types.h",
-              "kind": "type",
-              "line": 163,
-              "name": "EC_KEY",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2154,
-              "name": "evp_pkey_get_legacy",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2066,
-              "name": "evp_pkey_copy_downgraded",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
-          "note": "the four low-level key types are declared only in the weak `types.h`, so they carry no authority phase of their own; `evp_pkey_get_legacy`, whose phase 8 the atlas and the prerequisites row agree on, corroborates them. The set is the type family plus the one function whose body needs it.",
           "owning_phase": 8,
-          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is `evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and `ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, D193); this row is the twelve exports that sit behind it.",
+          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int`, and D353 landed it together with `evp_pkey_copy_downgraded` (`:2066`) and the four low-level key types, so every blocker this row's `blocked_by` named has landed and the twelve are now built: six `p_lib.c` spellings in `src/evp/pkey.rs` (`get0`/`get1`/`set1` for DSA and DH) and six `p_legacy.c` ones in `src/evp/p_legacy_assign.rs` (`get0`/`get1`/`set1` for RSA and EC_KEY). **The brief's 9/3 split is a miscount and is corrected here**: the authority's `p_legacy.c` defines the RSA *and* the EC_KEY triplets (`:25`, `:49`, `:54`, `:65`, `:85`, `:90`), and `p_lib.c` the DSA and DH ones (`:896`, `:901`, `:915`, `:959`, `:1007`, `:1012`), so the split is six and six. The row moves here rather than retiring for the reason the `EVP_PKEY_assign` row below gives: retiring it would move twelve built exports into this sealed stratum's `implemented` list on the strength of Phase 8's work.",
           "symbol": "EVP_PKEY_set1_RSA"
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "crypto/rsa/rsa_ameth.c",
-              "kind": "internal",
-              "line": 968,
-              "name": "ossl_rsa_asn1_meths",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
-          "note": "`ossl_rsa_asn1_meths` is the object the prerequisite row names as the first of the twelve `standard_methods[]` entries; the other eleven are the same stratum, same table, same answer, and no record gives any of them a phase of its own.",
           "owning_phase": 8,
-          "reason": "`crypto/evp/evp_pkey_type.c:63` is `EVP_PKEY_asn1_find(&e, type)` and then `ameth->pkey_id`. The function is landed -- `src/evp/pkey_asn1.rs` holds it as the `pub(crate) evp_pkey_type` helper `EVP_PKEY_get_base_id` calls (D193) -- and the export is withheld because its whole answer is the `standard_methods[]` table `crypto/asn1/ameth_lib.c:54` fills from `crypto/asn1/standard_methods.h`, whose twelve `ossl_<alg>_asn1_meth` objects are Phase 8's. The `ENGINE_finish(e)` at `:75` is the `*pe = NULL` mechanism D181 records, not a second blocker.",
+          "reason": "`crypto/evp/evp_pkey_type.c:63` is `EVP_PKEY_asn1_find(&e, type)` and then `ameth->pkey_id`. The blockers this row named -- `ossl_rsa_asn1_meths` and the other ten `standard_methods[]` objects -- landed with D353, so the export is now the authority's own `#[no_mangle]` name in `src/evp/pkey_asn1.rs` beside the table it searches, over the body the crate had carried as the internal `evp_pkey_type` since D193. The `ENGINE_finish(e)` at `:75` remains the `*pe = NULL` mechanism D181 records, not a second blocker. The row moves here rather than retiring for the `EVP_PKEY_assign` row's reason.",
           "symbol": "EVP_PKEY_type"
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "crypto/rsa/rsa_asn1.c",
-              "kind": "exported",
-              "line": 117,
-              "name": "d2i_RSAPublicKey",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/dsa/dsa_asn1.c",
-              "kind": "exported",
-              "line": 67,
-              "name": "d2i_DSAPublicKey",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/ec/ec_asn1.c",
-              "kind": "exported",
-              "line": 1121,
-              "name": "o2i_ECPublicKey",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2066,
-              "name": "evp_pkey_copy_downgraded",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
           "owning_phase": 8,
-          "reason": "`d2i_PublicKey` (`crypto/asn1/d2i_pu.c:28`) is a `switch` on `EVP_PKEY_get_base_id(ret)` whose three arms call `d2i_RSAPublicKey` (`:52`), `d2i_DSAPublicKey` (`:59`) and `o2i_ECPublicKey` (`:71`), plus `evp_pkey_copy_downgraded` (`:42`) for the provided-EC input. `d2i_KeyParams` (`crypto/asn1/d2i_param.c:18`) refuses unless `ret->ameth != NULL && ret->ameth->param_decode != NULL` (`:31`) and then calls it, and `d2i_KeyParams_bio` (`:49`) is a `BUF_MEM` read around it. Every one of those names is Phase 8's; the `asn1_d2i_read_bio`/`EVP_PKEY_set_type` calls are landed.",
+          "reason": "`d2i_PublicKey` (`crypto/asn1/d2i_pu.c:28`) is a `switch` on `EVP_PKEY_get_base_id(ret)` whose three arms call `d2i_RSAPublicKey` (`:52`), `d2i_DSAPublicKey` (`:59`) and `o2i_ECPublicKey` (`:71`), plus `evp_pkey_copy_downgraded` (`:42`) for the provided-EC input. `d2i_KeyParams` (`crypto/asn1/d2i_param.c:18`) refuses unless `ret->ameth != NULL && ret->ameth->param_decode != NULL` (`:31`) and then calls it, and `d2i_KeyParams_bio` `:49` is a `BUF_MEM` read around it. **Every blocker this row named has landed** -- `d2i_RSAPublicKey`/`d2i_DSAPublicKey`/`o2i_ECPublicKey` with the key-codec landings and `evp_pkey_copy_downgraded` with D353 -- so the row becomes an unconditional hand-off to Phase 8 rather than retiring: the three exports are still Phase 8's to write.",
           "symbol": "d2i_KeyParams"
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "crypto/rsa/rsa_asn1.c",
-              "kind": "exported",
-              "line": 117,
-              "name": "d2i_RSAPublicKey",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/dsa/dsa_asn1.c",
-              "kind": "exported",
-              "line": 67,
-              "name": "d2i_DSAPublicKey",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/ec/ec_asn1.c",
-              "kind": "exported",
-              "line": 1121,
-              "name": "o2i_ECPublicKey",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2066,
-              "name": "evp_pkey_copy_downgraded",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
           "owning_phase": 8,
-          "reason": "`d2i_PublicKey` (`crypto/asn1/d2i_pu.c:28`) is a `switch` on `EVP_PKEY_get_base_id(ret)` whose three arms call `d2i_RSAPublicKey` (`:52`), `d2i_DSAPublicKey` (`:59`) and `o2i_ECPublicKey` (`:71`), plus `evp_pkey_copy_downgraded` (`:42`) for the provided-EC input. `d2i_KeyParams` (`crypto/asn1/d2i_param.c:18`) refuses unless `ret->ameth != NULL && ret->ameth->param_decode != NULL` (`:31`) and then calls it, and `d2i_KeyParams_bio` (`:49`) is a `BUF_MEM` read around it. Every one of those names is Phase 8's; the `asn1_d2i_read_bio`/`EVP_PKEY_set_type` calls are landed.",
+          "reason": "`d2i_PublicKey` (`crypto/asn1/d2i_pu.c:28`) is a `switch` on `EVP_PKEY_get_base_id(ret)` whose three arms call `d2i_RSAPublicKey` (`:52`), `d2i_DSAPublicKey` (`:59`) and `o2i_ECPublicKey` (`:71`), plus `evp_pkey_copy_downgraded` (`:42`) for the provided-EC input. `d2i_KeyParams` (`crypto/asn1/d2i_param.c:18`) refuses unless `ret->ameth != NULL && ret->ameth->param_decode != NULL` (`:31`) and then calls it, and `d2i_KeyParams_bio` `:49` is a `BUF_MEM` read around it. **Every blocker this row named has landed** -- `d2i_RSAPublicKey`/`d2i_DSAPublicKey`/`o2i_ECPublicKey` with the key-codec landings and `evp_pkey_copy_downgraded` with D353 -- so the row becomes an unconditional hand-off to Phase 8 rather than retiring: the three exports are still Phase 8's to write.",
           "symbol": "d2i_KeyParams_bio"
         },
         {
           "binding_phase": 8,
-          "blocked_by": [
-            {
-              "authority_unit": "crypto/rsa/rsa_asn1.c",
-              "kind": "exported",
-              "line": 117,
-              "name": "d2i_RSAPublicKey",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/dsa/dsa_asn1.c",
-              "kind": "exported",
-              "line": 67,
-              "name": "d2i_DSAPublicKey",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/ec/ec_asn1.c",
-              "kind": "exported",
-              "line": 1121,
-              "name": "o2i_ECPublicKey",
-              "owning_phase": 8
-            },
-            {
-              "authority_unit": "crypto/evp/p_lib.c",
-              "kind": "internal",
-              "line": 2066,
-              "name": "evp_pkey_copy_downgraded",
-              "owning_phase": 8
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
           "owning_phase": 8,
-          "reason": "`d2i_PublicKey` (`crypto/asn1/d2i_pu.c:28`) is a `switch` on `EVP_PKEY_get_base_id(ret)` whose three arms call `d2i_RSAPublicKey` (`:52`), `d2i_DSAPublicKey` (`:59`) and `o2i_ECPublicKey` (`:71`), plus `evp_pkey_copy_downgraded` (`:42`) for the provided-EC input. `d2i_KeyParams` (`crypto/asn1/d2i_param.c:18`) refuses unless `ret->ameth != NULL && ret->ameth->param_decode != NULL` (`:31`) and then calls it, and `d2i_KeyParams_bio` (`:49`) is a `BUF_MEM` read around it. Every one of those names is Phase 8's; the `asn1_d2i_read_bio`/`EVP_PKEY_set_type` calls are landed.",
+          "reason": "`d2i_PublicKey` (`crypto/asn1/d2i_pu.c:28`) is a `switch` on `EVP_PKEY_get_base_id(ret)` whose three arms call `d2i_RSAPublicKey` (`:52`), `d2i_DSAPublicKey` (`:59`) and `o2i_ECPublicKey` (`:71`), plus `evp_pkey_copy_downgraded` (`:42`) for the provided-EC input. `d2i_KeyParams` (`crypto/asn1/d2i_param.c:18`) refuses unless `ret->ameth != NULL && ret->ameth->param_decode != NULL` (`:31`) and then calls it, and `d2i_KeyParams_bio` `:49` is a `BUF_MEM` read around it. **Every blocker this row named has landed** -- `d2i_RSAPublicKey`/`d2i_DSAPublicKey`/`o2i_ECPublicKey` with the key-codec landings and `evp_pkey_copy_downgraded` with D353 -- so the row becomes an unconditional hand-off to Phase 8 rather than retiring: the three exports are still Phase 8's to write.",
           "symbol": "d2i_PublicKey"
         }
       ]
@@ -1533,6 +788,27 @@
       "EVP_PKEY_CTX_set_rsa_pss_keygen_mgf1_md_name",
       "EVP_PKEY_CTX_set_rsa_pss_keygen_saltlen",
       "EVP_PKEY_CTX_set_rsa_pss_saltlen",
+      "EVP_PKEY_assign",
+      "EVP_PKEY_decrypt_old",
+      "EVP_PKEY_encrypt_old",
+      "EVP_PKEY_get0_DH",
+      "EVP_PKEY_get0_DSA",
+      "EVP_PKEY_get0_EC_KEY",
+      "EVP_PKEY_get0_RSA",
+      "EVP_PKEY_get0_hmac",
+      "EVP_PKEY_get0_poly1305",
+      "EVP_PKEY_get0_siphash",
+      "EVP_PKEY_get1_DH",
+      "EVP_PKEY_get1_DSA",
+      "EVP_PKEY_get1_EC_KEY",
+      "EVP_PKEY_get1_RSA",
+      "EVP_PKEY_get_ec_point_conv_form",
+      "EVP_PKEY_get_field_type",
+      "EVP_PKEY_set1_DH",
+      "EVP_PKEY_set1_DSA",
+      "EVP_PKEY_set1_EC_KEY",
+      "EVP_PKEY_set1_RSA",
+      "EVP_PKEY_type",
       "IDEA_cbc_encrypt",
       "IDEA_cfb64_encrypt",
       "IDEA_ecb_encrypt",
@@ -2038,102 +1314,6 @@
         "declaring_header": "evp.h",
         "module": "src/asn1/ameth.rs",
         "received_from_phase": 7,
-        "symbol": "EVP_PKEY_assign"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/asn1/ameth.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_decrypt_old"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/asn1/ameth.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_encrypt_old"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_get0_DH"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_get0_DSA"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_get0_EC_KEY"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_get0_RSA"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/asn1/ameth.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_get0_hmac"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/asn1/ameth.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_get0_poly1305"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/asn1/ameth.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_get0_siphash"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_get1_DH"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_get1_DSA"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_get1_EC_KEY"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_get1_RSA"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/asn1/ameth.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_get_ec_point_conv_form"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/asn1/ameth.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_get_field_type"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/asn1/ameth.rs",
-        "received_from_phase": 7,
         "symbol": "EVP_PKEY_meth_find"
       },
       {
@@ -2147,36 +1327,6 @@
         "module": "src/asn1/ameth.rs",
         "received_from_phase": 7,
         "symbol": "EVP_PKEY_meth_get_count"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/dh/mod.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_set1_DH"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/dsa/mod.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_set1_DSA"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/ec/mod.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_set1_EC_KEY"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_set1_RSA"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/asn1/ameth.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_type"
       },
       {
         "declaring_header": "pem.h",
@@ -2316,12 +1466,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "ffa53cbac2981cdac433e8162b052340c2ffa0bfbfe6acc6adb74d01f6a1e0e7"
+      "sha256": "9f64a418b75378749d51342d4c7f52567fdcae1c821a04fb1f42c02dbef172ce"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "baf105431aec69779616c300b0c619f104d7785c126e94775b3645f4758019f2"
+      "sha256": "aa19ec5138d2d06019db26c7b7c9c9e6dc710b3502b6fd18618671b1abdff918"
     }
   ],
   "kind": "phase8-obligations",

@@ -5,12 +5,12 @@
       "in-progress"
     ],
     "census": {
-      "names_a_file_the_authority_does_not_have": 20,
+      "names_a_file_the_authority_does_not_have": 21,
       "symbols_not_reached": 6,
-      "units_not_reached": 30
+      "units_not_reached": 28
     },
     "census_by_stratum": {
-      "8": 42,
+      "8": 41,
       "9": 14
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
@@ -30,6 +30,7 @@
         "docs/PHASE-8-SUBPHASES.md:8.6:crypto/dsa/dsa_ctrl.c",
         "docs/PHASE-8-SUBPHASES.md:8.7:courts/layout/measure-ec.c",
         "docs/PHASE-8-SUBPHASES.md:8.8:_ameth.c",
+        "docs/PHASE-8-SUBPHASES.md:8.8:courts/layout/measure-evp-pkey.c",
         "docs/PHASE-9-SUBPHASES.md:9.4:drbg_ctr.c",
         "docs/PHASE-9-SUBPHASES.md:9.4:drbg_hash.c",
         "docs/PHASE-9-SUBPHASES.md:9.4:drbg_hmac.c",
@@ -47,12 +48,10 @@
       ],
       "units_not_reached": [
         "crypto/chacha/chacha_enc.c",
-        "crypto/dsa/dsa_ameth.c",
         "crypto/dsa/dsa_check.c",
         "crypto/dsa/dsa_err.c",
         "crypto/dsa/dsa_prn.c",
         "crypto/ec/curve25519.c",
-        "crypto/ec/ec_ameth.c",
         "crypto/ec/ecdsa_sign.c",
         "crypto/ec/ecdsa_vrf.c",
         "crypto/ec/ecp_nistz256.c",
@@ -87,12 +86,12 @@
         "docs/PHASE-9-SUBPHASES.md"
       ],
       "rows_judged": 82,
-      "symbols_named_by_a_row": 98,
-      "symbols_reached": 92,
+      "symbols_named_by_a_row": 101,
+      "symbols_reached": 95,
       "unit_records": 61,
       "units_named_by_a_record": 63,
-      "units_named_by_a_row": 240,
-      "units_reached": 210
+      "units_named_by_a_row": 241,
+      "units_reached": 213
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -484,7 +483,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.5"
+          "8.5",
+          "8.8"
         ],
         "transcribed_by": [
           "src/dh/ameth.rs"
@@ -651,7 +651,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.6"
+          "8.6",
+          "8.8"
         ],
         "transcribed_by": []
       },
@@ -2123,7 +2124,9 @@
         "subphases": [
           "7.4"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/p_dec.rs"
+        ]
       },
       "crypto/evp/p_enc.c": {
         "defines": [],
@@ -2131,7 +2134,9 @@
         "subphases": [
           "7.4"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/p_enc.rs"
+        ]
       },
       "crypto/evp/p_legacy.c": {
         "defines": [
@@ -2141,9 +2146,12 @@
         "recorded_by": "units:crypto/evp/p_legacy.c",
         "subphases": [
           "7.4",
-          "7.4l"
+          "7.4l",
+          "8.4"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/p_legacy_assign.rs"
+        ]
       },
       "crypto/evp/p_lib.c": {
         "defines": [
@@ -2892,6 +2900,24 @@
         ],
         "transcribed_by": []
       },
+      "crypto/rsa/rsa_ameth.c": {
+        "defines": [
+          "ossl_rsa_asn1_meths",
+          "ossl_rsa_ctx_to_pss_string",
+          "ossl_rsa_pss_asn1_meth",
+          "ossl_rsa_pss_get_param",
+          "ossl_rsa_pss_params_create",
+          "ossl_rsa_pss_to_ctx"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.4",
+          "8.8"
+        ],
+        "transcribed_by": [
+          "src/rsa/ameth.rs"
+        ]
+      },
       "crypto/rsa/rsa_asn1.c": {
         "defines": [
           "RSA_PRIME_INFO_it"
@@ -3544,36 +3570,36 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 267
+      "transcribed_units": 271
     }
   },
-  "body_hash": "a7e97040fac02c4610ce80042e5d75d95380d62a9da6f404a8f542c52e384ea8",
+  "body_hash": "d7a7d52dceca4dd43f634f5587a7af9c95e9d5553000071f4b331c519dd77773",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "0e0043a1a8123079e6c43a45b8045172dd77a1be342b7a29e67103f5009e9b7d"
+      "sha256": "d20795e2a048802c08c613756519e607e8245f2c2c74ca9691713a15998b2067"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "94f3da9b0bdf3c21a1d6187d4d7985c4494ad4c7960bfebd26eb3494742b399e"
+      "sha256": "5688cde6e4e880b2ff62ed36f942a93e163603b803c1881954c80cd5f20c288c"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "35a20de55f2c45ad196b47b3abee677efcaaff8115c04bbf14da59cb9250bc4b"
+      "sha256": "b90f837cb41e7f7fee0785300cf3369904908aca54e2a551919501def5f0b4da"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "e2b439a87a172810d605c2f44884124d0b7d6de0c391e4289a92e44a28d89c74"
+      "sha256": "d2f43f2b81a3d5df56aaea81a954f586426d3ed73b0aa97cd269c6a23ceb7dc4"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "a60254c0b54cab1d36caf79a85eb8e022dff8d167fe915370da21496ebb4ac62"
+      "sha256": "9fbb510c76e233242203a44f67276ca9b0dc7d53d79e86776a073c3413a7aac2"
     },
     {
       "name": "source-manifest",
@@ -3598,7 +3624,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "934feec2bdd3dc96e1bb40669aae4397b5385f17506521a5acbba4f3c76b9091"
+      "sha256": "1605b62981dcdbe5050afe849bc252e092a70ededf95e53b04c26b21cec614c1"
     },
     {
       "name": "plan-PHASE-9-SUBPHASES",

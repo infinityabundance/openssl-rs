@@ -72,6 +72,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+pub mod ameth;
 pub mod asn1;
 pub mod backend;
 pub mod check;

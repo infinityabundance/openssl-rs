@@ -24890,3 +24890,222 @@ them. What this slice is, is the subphase's boundary measured a second time and 
 cross-stratum closure D341 named is closed, the blocker is the crate's own `EVP_PKEY` legacy block and
 the four `crypto/ec/ecx_meth.c` rows' nine thousand lines, and the coordinates are named rather than
 stubbed. It is not 8.8, not a Phase-8 count, and not a claim about the stratum's work being nearly done.
+
+---
+
+## D353 — 8.8 lands: the four non-ECX `EVP_PKEY_ASN1_METHOD` units, the eleven in-reach `standard_methods[]` rows, the `EvpPkey` legacy block and the `crypto/evp` layer it closes over; `D-PKEY-AMETH-1`/`-2` retire behind `D-PKEY-AMETH-3`, the eight printers are withheld, and twenty-one exports move
+
+**Decision.** The slice D341 measured as unreachable and D352 re-measured as blocked only by the
+crate's own object model lands **whole**. Four authority units are transcribed complete -- 
+`crypto/rsa/rsa_ameth.c` as `src/rsa/ameth.rs`, `crypto/dh/dh_ameth.c` as `src/dh/ameth.rs`,
+`crypto/dsa/dsa_ameth.c` as `src/dsa/ameth.rs` and `crypto/ec/ec_ameth.c` as `src/ec/ameth.rs`, each
+with every callback its `EVP_PKEY_ASN1_METHOD` object names -- and
+`src/evp/pkey_asn1.rs`'s `STANDARD_METHODS` becomes the authority's table's **eleven in-reach rows**
+in ascending `pkey_id` order behind a faithful `OBJ_bsearch_ameth` walk. The `crypto/evp` layer the
+objects close over lands in the same commit, because Rust resolves the mutual recursion the
+authority keeps in three files and does not permit half of it: `EvpPkey`'s legacy block with
+measured offsets, `crypto/evp/p_lib.c`'s bridge, `crypto/evp/evp_pkey_type.c`'s one export,
+`crypto/evp/p_legacy.c` as a module of its own, `crypto/evp/p_dec.c`/`p_enc.c`'s two, and the twelve
+legacy accessors. **Twenty-one exports move.** `D-PKEY-AMETH-1` and `D-PKEY-AMETH-2` retire, and the four
+`crypto/ec/ecx_meth.c` rows are withheld as an explicit narrowing recorded by **`D-PKEY-AMETH-3`**. The
+eight `RSA_print`/`DSA_print`/`EC_KEY_print` family printers are withheld, all eight.
+
+**The eleven rows, and the table's order is the contract.** `crypto/asn1/standard_methods.h` compiles
+fifteen rows under this profile's guards (D340 read `configuration.h` for that fact two entries ago):
+`ossl_rsa_asn1_meths[0]` (6), `[1]` (19, `ASN1_PKEY_ALIAS`), `ossl_dh_asn1_meth` (28),
+`ossl_dsa_asn1_meths[0..3]` (67, 70, 113, 116; three of them aliases), `ossl_eckey_asn1_meth` (408),
+`ossl_rsa_pss_asn1_meth` (912), `ossl_dhx_asn1_meth` (920), the four `crypto/ec/ecx_meth.c` rows
+(1034, 1035, 1087, 1088) and `ossl_sm2_asn1_meth` (1172). `OBJ_bsearch_ameth` requires the array
+ascending by `pkey_id` and **complete**, so `EVP_PKEY_asn1_find` cannot answer for a type above any
+row the array omits -- which is why the four withheld rows are a narrowing and not a smaller table
+that happens to be sorted. The crate's array carries the eleven rows the four landed units define,
+and the SM2 row is among them: `ossl_sm2_asn1_meth` is `ec_ameth.c:702-707`'s three-line alias
+(`{ EVP_PKEY_SM2, EVP_PKEY_EC, ASN1_PKEY_ALIAS }`) with no callback field at all, so D352 measured it
+in reach and it lands with its unit.
+
+**A real defect in `pkey_asn1_find`, found by the court and not by the compiler.** The crate's
+`pkey_asn1_find` built a zeroed `EVP_PKEY_ASN1_METHOD` probe and handed `&probe` to `OBJ_bsearch_`.
+The authority's key is a pointer to the **element** `standard_methods[]` stores -- `&t`, where
+`t = &tmp` -- and `ameth_cmp` dereferences it twice, so `&probe` is read as the probe's first field
+and then dereferenced as a method pointer. The defect was **latent for the whole of Phase 7 and every
+phase since**, because `STANDARD_METHODS` was zero-length and `OBJ_bsearch_ex_` returns early on
+`num <= 0`: no comparator ever ran. `RT-AMETH`'s first arm (an `EVP_PKEY_asn1_find` on a type the
+table carries) took the candidate's process down with SIGSEGV where the authority answered a method,
+which is the shape a differential court exists to produce. The fix is one binding -- `let key: *const
+EvpPkeyAsn1Method = ptr::addr_of!(probe);` and `ptr::addr_of!(key)` as the key -- and the arm passes
+with 275 observations and zero residuals.
+
+**Three stale reductions in the `EVP_PKEY` parameter layer, and the court is what found them.** D353
+makes a legacy key buildable, and three `crypto/evp/p_lib.c` exports had been written as Phase-7
+reductions on the premise that one cannot be:
+
+* `EVP_PKEY_copy_parameters` tested `(*to).keydata == NULL` as `evp_pkey_is_blank(to)`. The
+  authority's macro (`include/crypto/evp.h:638`) is `type == EVP_PKEY_NONE && keymgmt == NULL`, and
+  a **legacy** key has `keytype == NULL` and `keydata == NULL` while its type is real -- so the
+  crate took the `EVP_PKEY_set_type_by_keymgmt(to, (*from).keymgmt)` arm with a NULL method and
+  faulted. The function is now transcribed whole, legacy arms included, plus the two inline helpers
+  `evp_pkey_is_blank`/`evp_pkey_is_provided` that were missing from `src/evp/pkey.rs`.
+* `EVP_PKEY_parameters_eq` stopped at `-2` where the authority calls `a->ameth->param_cmp` for two
+  legacy keys, and `EVP_PKEY_missing_parameters` skipped the legacy `param_missing` arm. Both now
+  dispatch to the landed ameth callbacks.
+
+The court's `params_arms` arm is the observation: two FFDHE-2048 keys, a `set1`/`get0` round trip, the
+missing/cmp/copy trio, and an empty RSA answering `missing == 1`. **One reduction survives and is
+named rather than hidden**: `EVP_PKEY_copy_parameters`'s provider-`to`/legacy-`from` arm reaches
+`evp_pkey_export_to_provider`, whose legacy-origin arm is absent -- that helper's own doc records it,
+and the court does not exercise it.
+
+**The four `crypto/ec/ecx_meth.c` rows are withheld, and the narrowing is recorded in prose because
+the gate's direction D refuses it as a record.** `ecx_meth.c` is 1,468 lines and fifty-five
+functions, and its callbacks reach `ecx_key.c`, `ecx_backend.c`, `curve25519.c` (about 5,900 lines)
+and all of `crypto/ec/curve448/` (about 3,400) -- roughly **9,000 authority lines** with no crate
+module and no stratum's obligation row. The exact observable of leaving them out, now that the
+eleven rows answer, is that `EVP_PKEY_asn1_find`/`_find_str` answer NULL, `EVP_PKEY_type` answers
+`NID_undef`, `EVP_PKEY_asn1_get_count()` answers 11 plus the application count where the authority
+answers 15 plus it, `EVP_PKEY_asn1_get0(10)` answers `ossl_sm2_asn1_meth` where the authority answers
+`ossl_ecx25519_asn1_meth`, and a provider keymgmt named `"X25519"`/`"X448"`/`"ED25519"`/`"ED448"`
+takes `EVP_PKEY_KEYMGMT` into `pkey->type` where the authority takes the legacy NID. **No
+`forensics/prerequisites.json` row carries this**, and the reason is the gate's own rule rather than
+an omission: the names a record would have to cover are the four `ossl_*_asn1_meth` **objects**, which
+are `const` data and not in the internal-symbol universe the gate observes, so a record naming them
+would fail direction D ("a divergence record may not cover a name the gate did not observe").
+`D-PKEY-AMETH-3` states the consequence instead, and `RT-AMETH` confines its arms to the eleven ids
+both sides carry for exactly that reason: an arm over the withheld four would **have to** differ, and
+a differential court's residual set must be empty (D-EC-2's rule).
+
+**The eight printers are withheld, all eight, and the measurement is why.** `RSA_print` calls
+`EVP_PKEY_print_private` (`crypto/rsa/rsa_prn.c:36`), and `print_pkey` (`crypto/evp/p_lib.c:1196`)
+calls `OSSL_ENCODER_CTX_new_for_pkey` first and falls through to `pkey->ameth->priv_print` only when
+`OSSL_ENCODER_CTX_get_num_encoders(ctx) == 0`. The ameth fallback *is* now reachable, so the question
+the brief poses -- whether a reduction at `:1211` is defensible the way D313 recorded the `ENGINE_*`
+reduction -- has a defensible answer: the crate references no encoder name, so
+`OSSL_ENCODER_CTX_new_for_pkey` would answer a context with zero encoders and the fallback would be
+the only live path. **The reduction is nevertheless not taken, and a measurement rather than a
+preference decides it**: `EVP_PKEY_print_private`, `_print_public` and `_print_params` are **absent
+from the crate's compiled surface** -- `nm --defined-only target/release/libopenssl_rs.a` lists none
+of them, and `implemented-surface.json` agrees, so they are neither implemented nor scaffolded. The
+eight printers therefore have no callee to link, let alone call, and landing them would mean landing
+three `p_lib.c` exports and `print_pkey` in the same commit. That is a further slice, so all eight are
+withheld with this coordinate rather than stubbed. (A `divergences` row cannot cover the four
+`OSSL_ENCODER_CTX_*` names either: the crate references none of them, so direction D refuses a record
+for a name it did not observe.)
+
+**What the authority corrected in the brief.**
+
+* The brief says "the twelve `EVP_PKEY_{get0,get1,set1}_{RSA,DH,DSA,EC_KEY}`", then "three are in
+  `p_legacy.c`, nine in `p_lib.c`". The split is **six and six**: `crypto/evp/p_legacy.c` defines
+  the RSA triplet (`:25`, `:49`, `:54`) *and* the EC_KEY triplet (`:65`, `:85`, `:90`), while
+  `crypto/evp/p_lib.c` defines the DSA triplet (`:896`, `:901`, `:915`) and the DH triplet (`:959`,
+  `:1007`, `:1012`). The brief's own later sentence that `EVP_PKEY_set1_DH`/`set1_DSA`/`get0_DH`/
+  `get1_DH`/`get0_DSA`/`get1_DSA` are `p_lib.c`'s is right; only the count is not, and phase 7's
+  hand-off tables now say six and six.
+* The brief says "publish the ten table rows". Withholding the four ECX rows from the authority's
+  fifteen leaves **eleven**, not ten: the SM2 row is in reach as `ec_ameth.c`'s three-line alias
+  (D352 measured this), and withholding it beside the ECX four would be a second narrowing the brief
+  did not ask for.
+* `EVP_PKEY_decrypt_old`/`EVP_PKEY_encrypt_old`, which the brief places in `crypto/evp/p_lib.c`, are
+  `crypto/evp/p_dec.c:21` and `p_enc.c:21`; they land as `src/evp/p_dec.rs` and `src/evp/p_enc.rs`,
+  one unit each, as D352 recorded.
+* The integration plan's section 7 arms could not be written literally, and the deviations are the
+  crate's state rather than a preference: arm 5's `EVP_PKEY_size`/`_bits`/`_security_bits` are
+  **absent** from the compiled surface like the three print entry points, so the arm observes the
+  `param_missing`/`param_cmp`/`param_copy` columns through a built FFDHE-2048 key instead; arm 6's
+  `d2i_KeyParams` `ASN1_R_UNSUPPORTED_TYPE` path is not landed, so the refusals the court drains are
+  the four accessors' `EVP_R_EXPECTING_AN_*_KEY`, the three raw-key readers'
+  `EVP_R_EXPECTING_AN_{HMAC,POLY1305,SIPHASH}_KEY`, and the two `_old` encryptors'
+  `EVP_R_PUBLIC_KEY_NOT_RSA`; and arm 1's "over the whole table" cannot be an index walk, because
+  the count differs (see above), so the eleven `pkey_id`s are resolved with `EVP_PKEY_asn1_find` and
+  `EVP_PKEY_asn1_get0` is exercised by scanning the index space for each of them and printing a
+  boolean.
+* `docs/PHASE-8-SUBPHASES.md`'s section 4 carries the two anchored clauses, and the open one is the
+  paragraph that runs from its heading to the next blank line -- which is several paragraphs of
+  per-subphase prose. Every whole-backticked simple identifier in that region must be an *open*
+  symbol, so the three sentences that called the EC and DSA legacy accessors open are corrected in
+  place rather than left as prose the gate would have to be taught to ignore.
+
+**Raise sites.** `forensics/tools/gen_err_raise_sites.py`'s `COVERED_FILES` gains
+`crypto/dh/dh_ameth.c` and `crypto/dsa/dsa_ameth.c` (14 and 16 sites), so
+`forensics/atlas/err-raise-sites.json` and `src/runtime/err_sites.rs` move **3015 -> 3045** sites
+with **0** unattributed, and thirty constants are new: `DH_AMETH_*` (14) and `DSA_AMETH_*` (16).
+`crypto/rsa/rsa_ameth.c` and `crypto/ec/ec_ameth.c` were already covered, as were
+`crypto/evp/p_lib.c`, `crypto/evp/p_legacy.c` and `crypto/evp/p_enc.c`/`p_dec.c`, so their sites add
+nothing new -- including `P_LIB_223`, the `EVP_PKEY_copy_parameters` export arm's
+`EVP_R_DIFFERENT_KEY_TYPES`, which the atlas already carried. **The `__FILE__` the crate records is
+the authority's build-relative path** -- `../../src/openssl-3.6.4/crypto/evp/p_legacy.c` for
+`P_LEGACY_43` -- and that is what `RT-AMETH` drains and compares, so a divergence in the recorded
+path is a residual rather than a cosmetic difference.
+
+**Prerequisite gate: four deferrals retire, one divergence row retires, and four rows shrink their
+blocker sets.** `forensics/prerequisites.json`'s deferrals fall **15 -> 11**: the
+`evp_pkey_get_legacy`, `evp_pkey_get0_DH_int`, `evp_pkey_copy_downgraded` and `ossl_rsa_asn1_meths`
+rows retire because every one of those names is now built. The divergence block loses the
+`src/dh/ameth.rs` row (`ossl_dh_asn1_meth`/`ossl_dhx_asn1_meth`, both built), so rows fall **12 -> 11**
+and covered names **57 -> 55**; `ossl_x509_algor_is_sm2` stays for D351's reason. Rule E then fires on
+the *other* rows whose blockers this landing consumed, and each is repaired by the mechanism that fits
+it: `EVP_PKEY_print_params`-family and the `d2i_PrivateKey`/`i2d_*` rows drop the now-landed
+`ossl_rsa_asn1_meths` from `blocked_by` and say so in their reasons, the
+`PEM_write_bio_PrivateKey_traditional` row drops `evp_pkey_copy_downgraded`, and the
+`d2i_KeyParams`/`d2i_KeyParams_bio`/`d2i_PublicKey` row -- whose blockers **all** landed -- moves to
+`UNBLOCKED_HANDOFFS`. `blocking_dependencies` falls **15 -> 11**, `sealed_stratum_census` stays **56**,
+and the gate ends at **zero findings** over 11 rows / 55 names.
+
+**The hand-off tables move for the same reason, and phase 7's ledger is where it shows.**
+`forensics/tools/phase7_obligations.py`'s `BLOCKED_HANDOFFS` loses five rows to
+`UNBLOCKED_HANDOFFS` -- the twelve accessors, the three raw-key readers, the two `_old` encryptors,
+`EVP_PKEY_get_ec_point_conv_form`/`get_field_type`, and `EVP_PKEY_type` -- plus the `d2i_KeyParams`
+row, for six moves: a `BLOCKED_HANDOFFS` row is falsified by its blocker landing, and an
+`UNBLOCKED_HANDOFFS` row is not falsified by the owner building the symbol, which is exactly the
+distinction D351 drew for `EVP_PKEY_assign`. `structured_rows` falls **15 -> 9**, `unblocked_rows`
+rises **7 -> 13** and `unblocked_symbols` **15 -> 38**, while phase 7's own counts do **not** move:
+implemented **727**, deferred **223**, received_by_handoff **26**. Phase 8's
+`forensics/tools/phase8_obligations.py` `BLOCKED_HANDOFFS` is empty and stays empty; its
+`received_by_handoff` rises **26 -> 27** on the one new phase-7 hand-off.
+
+**The court: `RT-AMETH` is registered, and this time it can be.** `courts/phase8/rt_ameth_probe.c` is
+new and `forensics/tools/phase8_courts.py`'s `COURTS` carries it, so phase 8's court count moves
+**10 -> 11**, all passing. Its 275 observations are six arms: the eleven `pkey_id`s through
+`EVP_PKEY_asn1_find` with `EVP_PKEY_asn1_get0_info`'s five fields and its `pem_str`, each checked
+reachable through `EVP_PKEY_asn1_get0` by a boolean scan; the `find_str` PEM-name walk and its three
+refusals; `EVP_PKEY_type` over the eleven ids and the two synthetic values, which is where the alias
+chain shows (`EVP_PKEY_type(EVP_PKEY_RSA2) == EVP_PKEY_RSA`); `EVP_PKEY_assign` read back through
+`EVP_PKEY_get0_asn1`, including the SM2 rewrite of an `EVP_PKEY_EC` assignment on the SM2 curve;
+the parameter trio through two FFDHE-2048 keys; and every refusal with its drained `ERR` coordinate.
+The twelve exports `court_coverage.py` demanded be *called* are called in a seventh arm -- the
+`set1`/`get0`/`get1` round trips for RSA, DSA and EC_KEY, the two EC readers on an EC key and on a
+DH key, the three raw-key readers' refusals, and the two `_old` encryptors' refusals -- each
+observation a return code, an id, a pointer equality reduced to a boolean, an untouched length, or a
+drained coordinate. **No address, key byte or random-derived value is printed anywhere**, and the
+court's header states the two omissions (the count, and the print arms) rather than leaving them to
+be inferred. `regression_guard.py --baseline-ref origin/main` reports no regression over **94**
+courts and **37025** observations.
+
+**Bookkeeping, read off the regenerated files.** `forensics/phase8-obligations.json` reads implemented
+**745 -> 766**, deferred **0**, open **41 -> 20**, owned **786**, `complete: false`;
+`implemented-surface.json`'s `libcrypto` implemented moves **2753 -> 2774** and
+`internal_symbols.c_style` stays **327**; `transcription-edges.json` moves **298 -> 302** modules over
+**267 -> 271** units; `internal-symbols.json`'s `modules_without_a_stratum` census grows **31 -> 34**;
+`court_coverage.py` reports phase 8 at **766** implemented (**758** directly courted, every one of them
+*called* by an arm, **8** indirect, **0** unmatched), phase 9 at **66** and `not_yet_begun` at **80**;
+and `docs/PHASE-8-REMAINING.md` is the regenerated projection (open **20**, deferred **0**, over five
+subphases). The open twenty are exactly the eight printers, the three `EVP_PKEY_meth_*` names, the six
+PEM private-key readers and the three `d2i_` names, and `docs/PHASE-8-SUBPHASES.md` rows 8.4 through
+8.8 record what moved with the two anchored clauses left consistent in both directions.
+
+**What is deliberately *not* here, named rather than implied.** The four `crypto/ec/ecx_meth.c` rows
+(`D-PKEY-AMETH-3`) and the ~9,000 lines they need. The eight printers, `p_lib.c`'s `print_pkey` and
+the three `EVP_PKEY_print_*` exports, withheld on the measurement above. The three `EVP_PKEY_meth_*`
+names and `crypto/evp/pmeth_lib.c`'s `EVP_PKEY_METHOD` table, untouched (`ossl_rsa_pkey_method`
+stays a recorded deferral to Phase 8). `crypto/asn1/d2i_pu.c`'s `d2i_PublicKey` and
+`crypto/asn1/d2i_param.c`'s `d2i_KeyParams`/`_bio`, whose closures include names this landing does not
+reach. The six `crypto/pem/` private-key readers, which the brief's first message asked about and the
+refined slice does not name. `EVP_PKEY_copy_parameters`' provider-`to`/legacy-`from` arm, whose
+`evp_pkey_export_to_provider` legacy half is still absent.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete: false`
+with **20** names open -- the eight printers, the three `EVP_PKEY_meth_*` names, the six PEM readers
+and the three `d2i_` names -- and the count this entry reaches is implemented **766** of **786**
+owned, which is eight more than D352's frontier moved by nothing at all. What this slice is, is the
+four non-ECX method units and the table they populate, transcribed whole, with the `crypto/evp` layer
+they close over landed beneath them and one differential court that now has 275 observations where it
+had none. It is not Phase 8, not nearly Phase 8, and not a claim about the stratum beyond the twenty
+names that moved.

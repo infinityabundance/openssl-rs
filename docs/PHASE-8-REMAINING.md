@@ -13,11 +13,11 @@ Read from the ledger's `body.counts`.
 | quantity | count |
 |---|---|
 | owned | 786 |
-| implemented | 745 |
+| implemented | 766 |
 | deferred to a later phase | 0 |
-| open in this stratum | 41 |
+| open in this stratum | 20 |
 
-The identity `owned = implemented + deferred + open` is `786 = 745 + 0 + 41`, which holds.
+The identity `owned = implemented + deferred + open` is `786 = 766 + 0 + 20`, which holds.
 
 ## The merge gate — what Phase 8 owes to Phase 9
 
@@ -42,42 +42,31 @@ table, verbatim.
 
 | subphase | owns | open | courts | depends on |
 |---|---|---|---|---|
-| 8.4 RSA | `src/rsa/asn1.rs`, `src/asn1/x_algor.rs`, `src/rsa/asn1.rs`, `src/rsa/mod.rs` | 5 | `RT-RSA`, `CT-RSA` | 8.1 (the RSA provider's `SHA`-named digests), 8.3 (its OAEP/PSS modes) |
-| 8.5 DH and DHX | `src/dh/mod.rs`, `src/dh/mod.rs`, `src/ffc/`, `src/dh/object.rs`, `src/dh/group_params.rs`, `src/dh/rfc5114.rs`, `src/ffc/dh.rs`, `src/bn/dh.rs`, `src/bn/dh_data.rs`, `src/ffc/backend.rs`, `src/dh/ctrl.rs`, `src/ffc/dh.rs`, `src/dh/asn1.rs`, `src/dh/kdf.rs`, `src/dh/backend.rs` | 3 | `RT-DH`, `CT-DH` | 8.4 (the shared BN/param idiom) |
-| 8.6 DSA | `src/dsa/mod.rs`, `src/dsa/mod.rs`, `src/dsa/object.rs`, `src/dsa/ossl.rs`, `src/dsa/key.rs`, `src/dsa/gen.rs`, `src/dsa/sign.rs`, `src/dsa/vrf.rs`, `src/dsa/depr.rs`, `src/asn1_dsa.rs`, `src/packet.rs`, `src/quic_vlint.rs`, `src/dsa/asn1.rs`, `src/dsa/ctrl.rs` | 7 | `RT-DSA`, `CT-DSA` | 8.5 |
-| 8.7 EC | `src/ec/mod.rs`, `src/ec/curve.rs`, `src/ec/curve_data.rs`, `src/ec/support.rs`, `src/ec/mod.rs`, `src/bn/intern.rs`, `src/bn/bignum.rs`, `src/bn/exp.rs`, `src/ec/key.rs`, `src/ec/lib.rs`, `src/ec/smpl.rs`, `src/ec/mult.rs`, `src/ec/oct.rs`, `src/ec/cvt.rs`, `src/ec/key.rs`, `src/ec/ecdsa.rs`, `src/param_build_set.rs`, `src/ec/print.rs`, `src/ec/depr.rs`, `src/ec/ecdsa.rs`, `src/ec/ctrl.rs`, `src/ec/kdf.rs`, `src/ec/asn1.rs`, `src/ec/prn.rs`, `src/ec/asn1.rs` | 5 | `RT-EC`, `CT-EC` | 8.6 |
-| 8.8 The ASN.1 method objects and `standard_methods[]` | `src/asn1/ameth.rs` | 15 | `RT-AMETH` | 8.4, 8.5, 8.6, 8.7 |
+| 8.4 RSA | `src/rsa/asn1.rs`, `src/asn1/x_algor.rs`, `src/rsa/asn1.rs`, `src/rsa/mod.rs` | 2 | `RT-RSA`, `CT-RSA` | 8.1 (the RSA provider's `SHA`-named digests), 8.3 (its OAEP/PSS modes) |
+| 8.6 DSA | `src/dsa/mod.rs`, `src/dsa/mod.rs`, `src/dsa/object.rs`, `src/dsa/ossl.rs`, `src/dsa/key.rs`, `src/dsa/gen.rs`, `src/dsa/sign.rs`, `src/dsa/vrf.rs`, `src/dsa/depr.rs`, `src/asn1_dsa.rs`, `src/packet.rs`, `src/quic_vlint.rs`, `src/dsa/asn1.rs`, `src/dsa/ctrl.rs` | 4 | `RT-DSA`, `CT-DSA` | 8.5 |
+| 8.7 EC | `src/ec/mod.rs`, `src/ec/curve.rs`, `src/ec/curve_data.rs`, `src/ec/support.rs`, `src/ec/mod.rs`, `src/bn/intern.rs`, `src/bn/bignum.rs`, `src/bn/exp.rs`, `src/ec/key.rs`, `src/ec/lib.rs`, `src/ec/smpl.rs`, `src/ec/mult.rs`, `src/ec/oct.rs`, `src/ec/cvt.rs`, `src/ec/key.rs`, `src/ec/ecdsa.rs`, `src/param_build_set.rs`, `src/ec/print.rs`, `src/ec/depr.rs`, `src/ec/ecdsa.rs`, `src/ec/ctrl.rs`, `src/ec/kdf.rs`, `src/ec/asn1.rs`, `src/ec/prn.rs`, `src/ec/asn1.rs` | 2 | `RT-EC`, `CT-EC` | 8.6 |
+| 8.8 The ASN.1 method objects and `standard_methods[]` | `src/asn1/ameth.rs`, `src/rsa/ameth.rs`, `src/dh/ameth.rs`, `src/dsa/ameth.rs`, `src/ec/ameth.rs`, `src/evp/pkey_asn1.rs` | 6 | `RT-AMETH` | 8.4, 8.5, 8.6, 8.7 |
 | 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals | `src/pem/key_legacy.rs`, `src/pem/key_legacy.rs` | 6 | `RT-PEM-KEY` | 8.8 |
 
-Total open symbols listed below: **41**; the ledger's
-`open_in_this_stratum` is 41.
+Total open symbols listed below: **20**; the ledger's
+`open_in_this_stratum` is 20.
 
-### 8.4 RSA — 5 open
+### 8.4 RSA — 2 open
 
-`EVP_PKEY_get0_RSA`, `EVP_PKEY_get1_RSA`, `EVP_PKEY_set1_RSA`, `RSA_print`,
-`RSA_print_fp`
+`RSA_print`, `RSA_print_fp`
 
-### 8.5 DH and DHX — 3 open
+### 8.6 DSA — 4 open
 
-`EVP_PKEY_get0_DH`, `EVP_PKEY_get1_DH`, `EVP_PKEY_set1_DH`
+`DSA_print`, `DSA_print_fp`, `DSAparams_print`, `DSAparams_print_fp`
 
-### 8.6 DSA — 7 open
+### 8.7 EC — 2 open
 
-`DSA_print`, `DSA_print_fp`, `DSAparams_print`, `DSAparams_print_fp`,
-`EVP_PKEY_get0_DSA`, `EVP_PKEY_get1_DSA`, `EVP_PKEY_set1_DSA`
+`EC_KEY_print`, `EC_KEY_print_fp`
 
-### 8.7 EC — 5 open
+### 8.8 The ASN.1 method objects and `standard_methods[]` — 6 open
 
-`EC_KEY_print`, `EC_KEY_print_fp`, `EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get1_EC_KEY`,
-`EVP_PKEY_set1_EC_KEY`
-
-### 8.8 The ASN.1 method objects and `standard_methods[]` — 15 open
-
-`EVP_PKEY_assign`, `EVP_PKEY_decrypt_old`, `EVP_PKEY_encrypt_old`, `EVP_PKEY_get0_hmac`,
-`EVP_PKEY_get0_poly1305`, `EVP_PKEY_get0_siphash`, `EVP_PKEY_get_ec_point_conv_form`,
-`EVP_PKEY_get_field_type`, `EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0`,
-`EVP_PKEY_meth_get_count`, `EVP_PKEY_type`, `d2i_KeyParams`, `d2i_KeyParams_bio`,
-`d2i_PublicKey`
+`EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0`, `EVP_PKEY_meth_get_count`, `d2i_KeyParams`,
+`d2i_KeyParams_bio`, `d2i_PublicKey`
 
 ### 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals — 6 open
 
@@ -88,7 +77,7 @@ Total open symbols listed below: **41**; the ledger's
 
 The plan records the subphases that still hold open work in this order:
 
-8.4 RSA -> 8.5 DH and DHX -> 8.6 DSA -> 8.7 EC -> 8.8 The ASN.1 method objects and `standard_methods[]` -> 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals
+8.4 RSA -> 8.6 DSA -> 8.7 EC -> 8.8 The ASN.1 method objects and `standard_methods[]` -> 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals
 
 `docs/PHASE-8-SUBPHASES.md` §2 records this order, and states that each
 row's dependency column was read from the authority's calls rather than
@@ -100,7 +89,7 @@ from the export list — the method D114, D118 and D122 established. The
 This document projects `forensics/phase8-obligations.json`, and every row
 of that ledger is an **export**. Cross-stratum *internal* names — a helper
 a module references that is not an export — are recorded in a different
-place: `forensics/prerequisites.json`'s `deferrals` (15 rows, 7 of which name Phase 8 as
+place: `forensics/prerequisites.json`'s `deferrals` (11 rows, 3 of which name Phase 8 as
 owner), and
 `forensics/atlas/prerequisite-gate.json` is the generated view of them.
 A reader who only checks the export ledger has not seen that half of the
