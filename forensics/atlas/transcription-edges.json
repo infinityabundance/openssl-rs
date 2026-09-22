@@ -435,7 +435,7 @@
         "module": "src/decoder_meth.rs",
         "phase": 10,
         "phase_source": "module-declaration",
-        "share": "18/18",
+        "share": "20/20",
         "translation_unit": "crypto/encode_decode/decoder_meth.c"
       },
       {
