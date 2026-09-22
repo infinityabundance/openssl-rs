@@ -25837,3 +25837,123 @@ courted, all *called*, **8** indirectly, **0** unmatched), phase 7 at **727** an
 **223** / **26**. The open fourteen are still the eight printers and the six `crypto/pem/`
 private-key readers. It is not Phase 8 and not nearly Phase 8; the count this entry reaches is
 implemented **772** of **786** owned, and the work this entry did is a measurement, not a landing.
+
+## D360 — the first encoder unit lands: `src/encoder_meth.rs`, with the ten `OSSL_FUNC_ENCODER_*`
+identities written at their authority values and the dispatch trap pinned by a test
+
+**Decision.** Land `crypto/encode_decode/encoder_meth.c` as `src/encoder_meth.rs` -- **11 exports
+and the unit's two internal accessors**, with two named remainder blocks withheld (below). This is
+the first of the three encoder units, taken alone because the encoder context the printers need is
+three units and a court, and this pass reaches one of them. **No Phase 8 or Phase 7 count moves**:
+Phase 8 stays implemented **772** / open **14**, Phase 7 at **727 / 223 / 26**.
+
+**The ten identities are not sequential, and the transcription writes them out.**
+`encoder_from_algorithm` (`:231-274`) walks a provider's `OSSL_DISPATCH` and switches on
+`function_id`, whose values come from the `OSSL_CORE_MAKE_FUNC` invocations at
+`include/openssl/core_dispatch.h:962-983`. They are **1, 2, 3, 4, 5, 6, 10, 11, 20 and 21**: the four
+at 10, 11, 20 and 21 are not where a sequential numbering would put them, so a transcription that
+numbered them `1..10` would store the encoder's `encode` in `does_selection`'s slot and
+`import_object`'s in `encode`'s, and nothing would fail until a provider encoder ran. Each constant
+is written against its own `OSSL_FUNC_ENCODER_*` name, and two tests pin the consequence rather than
+the declaration: `the_identities_are_the_authoritys_values` asserts all ten values by name, and
+`the_scan_lands_each_callback_in_the_field_its_id_names` builds a dispatch table that lists `ENCODE`
+(11) **before** `DOES_SELECTION` (10) and asserts each lands in the field its id names and that the
+two are not swapped. `dispatch_court.py` also reads the ten and reports `identities: checked=213
+mismatches=0`, so the values are independently checked against the authority's macro table. The two
+new function-pointer aliases for the chain callbacks needed `LINKS` entries --
+`EncoderConstructFn -> OSSL_ENCODER_CONSTRUCT` and `EncoderCleanupFn -> OSSL_ENCODER_CLEANUP`, whose
+authority names do not end `_fn` and so cannot be reached by the convention rule; without them
+`dispatch_court.py` reported `unlinked=2` and exited 1, which is the same shape D355 recorded for
+`PmethFn`.
+
+**What landed, and the two remainder blocks.** Landed, each with its authority coordinate:
+`ossl_encoder_new` (`:38`), `OSSL_ENCODER_up_ref` (`:52`), `OSSL_ENCODER_free` (`:60`),
+`encoder_from_algorithm` (`:209`), the accessors `OSSL_ENCODER_get0_provider` (`:465`),
+`_get0_properties` (`:475`), `ossl_encoder_parsed_properties` (`:485`), `ossl_encoder_get_number`
+(`:496`), `_get0_name` (`:506`), `_get0_description` (`:511`), `_is_a` (`:516`), and the by-name
+pass-throughs `OSSL_ENCODER_names_do_all` (`:559`), `_gettable_params` (`:576`), `_get_params`
+(`:587`), `_settable_ctx_params` (`:594`). Also here: `encoder_local.h`'s four shapes
+(`ossl_endecode_base_st`, `ossl_encoder_st`, `ossl_encoder_instance_st`, `ossl_encoder_ctx_st`),
+typed at the crate's visibility so the `pub` exports can name them, and the reference count as an
+`AtomicI32` with the `fetch_sub`-returns-the-previous-count discipline `EvpPkey` uses (free when
+`last <= 1`, not `last == 0`).
+
+Two blocks are withheld, and both are *named* rather than left as gaps:
+
+* **the fetch and construct-method block** -- `encoder_data_st`, the seven `ossl_method_construct`
+  callbacks (`get_tmp_encoder_store` `:95` through `put_encoder_in_store` `:174`),
+  `construct_encoder`/`destruct_encoder`/`up_ref_encoder`/`free_encoder` (`:304`-`:348`),
+  `inner_ossl_encoder_fetch` (`:351`), `OSSL_ENCODER_fetch` (`:429`), `do_one` (`:532`) and
+  `OSSL_ENCODER_do_all_provided` (`:539`). They are one block because `do_all_provided` calls
+  `inner_ossl_encoder_fetch` **first** (`:549`) and the fetch is the seven callbacks' only caller.
+  Sixteen are `static` and the seventeenth is an export, so the gate cannot read them as a
+  transcribed unit's unwired internals -- but the omission is recorded here rather than left
+  implicit, and they land with `src/encoder_lib.rs`'s `encoder_process`, the only thing that
+  fetches an encoder.
+* **the context trio** -- `OSSL_ENCODER_CTX_new` (`:608`), `_set_params` (`:616`), `_free` (`:645`).
+  They are excluded from *this* unit for a reason that is a measurement: `_set_params` calls
+  `OSSL_ENCODER_INSTANCE_get_encoder`/`_get_encoder_ctx` and `_free` calls
+  `ossl_encoder_instance_free`, all three of which `encoder_lib.c` defines. They land in
+  `src/encoder_lib.rs`'s commit.
+
+**This unit's two store bridges are not re-defined here.** `ossl_encoder_store_cache_flush` and
+`ossl_encoder_store_remove_all_provided` (`:442-459`) are this unit's, but D357 transcribed them in
+`src/provider/stores.rs` with the seven sibling provider-activation bridges; a second definition
+would be a duplicate symbol, and moving them would rewrite D357's record. The unit test
+`the_units_store_bridges_are_the_provider_modules` *calls* both names -- the flush against a live
+context, the sibling by its typed address -- so the module's reference set names them and the
+prerequisite gate's direction C does not read them as unwired internals. That is a real requirement
+and not a formality: the gate's `refs` are identifiers in blanked code, so a doc-comment mention
+would not have done.
+
+**Raise sites.** `crypto/encode_decode/encoder_meth.c` joins `gen_err_raise_sites.py`'s
+`COVERED_FILES` as `ENCODER_METH`; the file raises at eight lines, and the site count moves
+**3080 -> 3088**. Five are referenced by this pass's bodies (`:286` in `encoder_from_algorithm`'s
+sanity check, `:468`, `:478`, `:489`, `:499` in the accessors); the other three (`:362`, `:419`,
+`:624`) belong to the withheld blocks and are generated for the unit and unused, which is why the
+entry records that a raise site is a property of the translation unit rather than of the subset a
+stratum has reached.
+
+**Courts.** **No probe was needed, and that is measured rather than asserted.** All eleven exports
+are `encoder.h`'s and Phase 10's, which has no ledger, so `court_coverage.py` records them under
+`not_yet_begun` -- **83 -> 94** -- exactly as D350's `UI_*` exports and D358's `UI_UTIL_*` were
+treated. Nothing else moved: **94** courts and **37170** observations, unmoved,
+`RT-AMETH` stays at 420. The unit is covered by the three unit tests above plus the scan test;
+every value they print is a return code, a `function_id` or a pointer *identity*, never key
+material.
+
+**What the authority corrected in the brief.** One thing, and it is about the *unit* boundary
+rather than the code. The brief said the store callbacks, `ossl_encoder_new`/`_free`,
+`encoder_from_algorithm`'s dispatch scan and `OSSL_ENCODER_CTX_new`/`_set_params`/`_free` "do not
+need it [the fetch machinery]" and could therefore be the landed subset. The first three parts are
+right -- this module lands them -- but the last is not: `OSSL_ENCODER_CTX_set_params` and `_free`
+need `encoder_lib.c`'s `OSSL_ENCODER_INSTANCE_get_encoder`/`_get_encoder_ctx` and
+`ossl_encoder_instance_free`, so the trio cannot land in `encoder_meth.c`'s commit at all. The
+correction is not cosmetic: it is why the withholdable remainder is *two* blocks rather than one,
+and it is why the second block's coordinate is a name in the *next* unit rather than a line in this
+one.
+
+**What is deliberately not here.** `src/encoder_lib.rs` and `src/encoder_pkey.rs`, `print_pkey`,
+the six `EVP_PKEY_print_*`, the eight printers, and the two remainder blocks above. No `divergences`
+row is added and none is removed: the withheld names are `static`s (invisible to the gate) or
+exports (not internals), so there is nothing for a row to match, and the row count stands at
+D358's **11** rows / **55** names. `docs/PHASE-8-SUBPHASES.md` is untouched: no Phase 8 row's
+evidence moved, and §4's two anchored clauses stay consistent with the ledger in both directions
+because the ledger did not move.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete:
+false` with **14** names open: implemented **772**, deferred **0**, owned **786**. The regenerated
+counts: `implemented-surface.json`'s `libcrypto` implemented moves **2783 -> 2794** (the eleven
+Phase-10 exports) and its `internal_symbols.c_style` stays **340** (the unit's two internals are
+`pub(crate)` with no C symbol, so nothing new is collidable); `transcription-edges.json` **310 ->
+311** modules over **279 -> 280** units, the new edge `src/encoder_meth.rs ->
+crypto/encode_decode/encoder_meth.c` at share 13/13; `internal-symbols.json`'s
+`modules_without_a_stratum` stays **38**; `court_coverage.py` reports phase 8 at **772** (**764**
+directly courted, all *called*, **8** indirectly, **0** unmatched), phase 7 at **727**, and
+`not_yet_begun` **83 -> 94**; the prerequisite gate stays at **zero findings** over **10**
+deferrals, **11** divergence rows / **55** names, `blocking_dependencies` **10** and
+`sealed_stratum_census` **56**; phase 7's ledger does **not** move -- implemented **727**, deferred
+**223**, received_by_handoff **26**. The open fourteen are still the eight printers and the six
+`crypto/pem/` private-key readers. It is not Phase 8 and not nearly Phase 8; the count this entry
+reaches is implemented **772** of **786** owned, and the unit it moved into the crate is one of the
+three the printers need.

@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 2783 | 3113 |
+| libcrypto | 5896 | 2794 | 3102 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **2783** | **3716** |
+| **total** | **6499** | **2794** | **3705** |
 
 ## Ownership atlas, by stratum
 

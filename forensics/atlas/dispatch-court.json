@@ -2,22 +2,22 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 358,
+      "crate_files_read": 359,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
     },
     "canonical_form": "the authority's typedef body and the crate's alias are both read by `ABI-PROTOTYPE`'s canonicaliser, so pointer depth, pointee constness, integer width and signedness and function-pointer shape are compared while a struct pointee's name is discarded; a C function *type* and a Rust `extern \"C\" fn` item type differ only in the canonical head tag and are compared after normalising it",
     "counts": {
-      "identities_authority_only": 74,
-      "identities_checked": 203,
+      "identities_authority_only": 64,
+      "identities_checked": 213,
       "identities_mismatches": 0,
-      "links_convention": 205,
+      "links_convention": 215,
       "links_documented": 12,
-      "links_explicit": 15,
+      "links_explicit": 17,
       "problems": 0,
-      "signatures_authority_only": 395,
-      "signatures_checked": 239,
+      "signatures_authority_only": 383,
+      "signatures_checked": 251,
       "signatures_mismatches": 0,
       "signatures_not_a_dispatch": 191,
       "signatures_unlinked": 0,
@@ -61,16 +61,6 @@
         "OSSL_FUNC_DECODER_NEWCTX",
         "OSSL_FUNC_DECODER_SETTABLE_CTX_PARAMS",
         "OSSL_FUNC_DECODER_SET_CTX_PARAMS",
-        "OSSL_FUNC_ENCODER_DOES_SELECTION",
-        "OSSL_FUNC_ENCODER_ENCODE",
-        "OSSL_FUNC_ENCODER_FREECTX",
-        "OSSL_FUNC_ENCODER_FREE_OBJECT",
-        "OSSL_FUNC_ENCODER_GETTABLE_PARAMS",
-        "OSSL_FUNC_ENCODER_GET_PARAMS",
-        "OSSL_FUNC_ENCODER_IMPORT_OBJECT",
-        "OSSL_FUNC_ENCODER_NEWCTX",
-        "OSSL_FUNC_ENCODER_SETTABLE_CTX_PARAMS",
-        "OSSL_FUNC_ENCODER_SET_CTX_PARAMS",
         "OSSL_FUNC_INDICATOR_CB",
         "OSSL_FUNC_OPENSSL_CLEANSE",
         "OSSL_FUNC_PROVIDER_GETTABLE_PARAMS",
@@ -448,6 +438,66 @@
           "crate": 3,
           "crate_at": "src/evp/digest.rs",
           "symbol": "OSSL_FUNC_DIGEST_UPDATE"
+        },
+        {
+          "authority": 10,
+          "crate": 10,
+          "crate_at": "src/encoder_meth.rs",
+          "symbol": "OSSL_FUNC_ENCODER_DOES_SELECTION"
+        },
+        {
+          "authority": 11,
+          "crate": 11,
+          "crate_at": "src/encoder_meth.rs",
+          "symbol": "OSSL_FUNC_ENCODER_ENCODE"
+        },
+        {
+          "authority": 2,
+          "crate": 2,
+          "crate_at": "src/encoder_meth.rs",
+          "symbol": "OSSL_FUNC_ENCODER_FREECTX"
+        },
+        {
+          "authority": 21,
+          "crate": 21,
+          "crate_at": "src/encoder_meth.rs",
+          "symbol": "OSSL_FUNC_ENCODER_FREE_OBJECT"
+        },
+        {
+          "authority": 4,
+          "crate": 4,
+          "crate_at": "src/encoder_meth.rs",
+          "symbol": "OSSL_FUNC_ENCODER_GETTABLE_PARAMS"
+        },
+        {
+          "authority": 3,
+          "crate": 3,
+          "crate_at": "src/encoder_meth.rs",
+          "symbol": "OSSL_FUNC_ENCODER_GET_PARAMS"
+        },
+        {
+          "authority": 20,
+          "crate": 20,
+          "crate_at": "src/encoder_meth.rs",
+          "symbol": "OSSL_FUNC_ENCODER_IMPORT_OBJECT"
+        },
+        {
+          "authority": 1,
+          "crate": 1,
+          "crate_at": "src/encoder_meth.rs",
+          "symbol": "OSSL_FUNC_ENCODER_NEWCTX"
+        },
+        {
+          "authority": 6,
+          "crate": 6,
+          "crate_at": "src/encoder_meth.rs",
+          "symbol": "OSSL_FUNC_ENCODER_SETTABLE_CTX_PARAMS"
+        },
+        {
+          "authority": 5,
+          "crate": 5,
+          "crate_at": "src/encoder_meth.rs",
+          "symbol": "OSSL_FUNC_ENCODER_SET_CTX_PARAMS"
         },
         {
           "authority": 101,
@@ -1422,8 +1472,6 @@
         "OSSL_CMP_transfer_cb_t",
         "OSSL_DECODER_CLEANUP",
         "OSSL_DECODER_CONSTRUCT",
-        "OSSL_ENCODER_CLEANUP",
-        "OSSL_ENCODER_CONSTRUCT",
         "OSSL_FUNC",
         "OSSL_FUNC_BIO_new_file_fn",
         "OSSL_FUNC_BIO_new_membuf_fn",
@@ -1467,16 +1515,6 @@
         "OSSL_FUNC_decoder_newctx_fn",
         "OSSL_FUNC_decoder_set_ctx_params_fn",
         "OSSL_FUNC_decoder_settable_ctx_params_fn",
-        "OSSL_FUNC_encoder_does_selection_fn",
-        "OSSL_FUNC_encoder_encode_fn",
-        "OSSL_FUNC_encoder_free_object_fn",
-        "OSSL_FUNC_encoder_freectx_fn",
-        "OSSL_FUNC_encoder_get_params_fn",
-        "OSSL_FUNC_encoder_gettable_params_fn",
-        "OSSL_FUNC_encoder_import_object_fn",
-        "OSSL_FUNC_encoder_newctx_fn",
-        "OSSL_FUNC_encoder_set_ctx_params_fn",
-        "OSSL_FUNC_encoder_settable_ctx_params_fn",
         "OSSL_FUNC_indicator_cb_fn",
         "OSSL_FUNC_provider_get_capabilities_fn",
         "OSSL_FUNC_provider_get_params_fn",
@@ -1862,6 +1900,102 @@
           "authority_signature": "fptr(int:4:s; ptr(opaque))",
           "crate_signature": "fptr(int:4:s; ptr(opaque))",
           "how": "convention"
+        },
+        {
+          "alias": "EncoderNewCtxFn",
+          "at": "src/encoder_meth.rs",
+          "authority": "OSSL_FUNC_encoder_newctx_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "EncoderFreeCtxFn",
+          "at": "src/encoder_meth.rs",
+          "authority": "OSSL_FUNC_encoder_freectx_fn",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "EncoderGetParamsFn",
+          "at": "src/encoder_meth.rs",
+          "authority": "OSSL_FUNC_encoder_get_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "EncoderGettableParamsFn",
+          "at": "src/encoder_meth.rs",
+          "authority": "OSSL_FUNC_encoder_gettable_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "EncoderSetCtxParamsFn",
+          "at": "src/encoder_meth.rs",
+          "authority": "OSSL_FUNC_encoder_set_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "EncoderSettableCtxParamsFn",
+          "at": "src/encoder_meth.rs",
+          "authority": "OSSL_FUNC_encoder_settable_ctx_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "EncoderDoesSelectionFn",
+          "at": "src/encoder_meth.rs",
+          "authority": "OSSL_FUNC_encoder_does_selection_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), int:4:s)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "EncoderEncodeFn",
+          "at": "src/encoder_meth.rs",
+          "authority": "OSSL_FUNC_encoder_encode_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)), ptr(const(opaque)), int:4:s, fptr(int:4:s; ptr(int:1:s), int:8:u, ptr(int:8:u), ptr(const(opaque)), ptr(opaque)), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)), ptr(const(opaque)), int:4:s, fptr(int:4:s; ptr(int:1:s), int:8:u, ptr(int:8:u), ptr(const(opaque)), ptr(opaque)), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "EncoderImportObjectFn",
+          "at": "src/encoder_meth.rs",
+          "authority": "OSSL_FUNC_encoder_import_object_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque), int:4:s, ptr(const(opaque)))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque), int:4:s, ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "EncoderFreeObjectFn",
+          "at": "src/encoder_meth.rs",
+          "authority": "OSSL_FUNC_encoder_free_object_fn",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "EncoderConstructFn",
+          "at": "src/encoder_meth.rs",
+          "authority": "OSSL_ENCODER_CONSTRUCT",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "how": "explicit"
+        },
+        {
+          "alias": "EncoderCleanupFn",
+          "at": "src/encoder_meth.rs",
+          "authority": "OSSL_ENCODER_CLEANUP",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "explicit"
         },
         {
           "alias": "AsymCipherNewctxFn",

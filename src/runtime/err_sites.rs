@@ -30832,6 +30832,86 @@ pub(crate) const PASSPHRASE_275: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `encoder_from_algorithm` at `crypto/encode_decode/encoder_meth.c:286` (ERR_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const ENCODER_METH_286: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_meth.c",
+    line: 286,
+    func: c"encoder_from_algorithm",
+    lib: 59,
+    reason: 786696,
+    dynamic_reason: false,
+};
+
+/// `inner_ossl_encoder_fetch` at `crypto/encode_decode/encoder_meth.c:362` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const ENCODER_METH_362: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_meth.c",
+    line: 362,
+    func: c"inner_ossl_encoder_fetch",
+    lib: 59,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `inner_ossl_encoder_fetch` at `crypto/encode_decode/encoder_meth.c:419` (ERR_raise_data dynamic reason).
+pub(crate) const ENCODER_METH_419: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_meth.c",
+    line: 419,
+    func: c"inner_ossl_encoder_fetch",
+    lib: 59,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `OSSL_ENCODER_get0_provider` at `crypto/encode_decode/encoder_meth.c:468` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_METH_468: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_meth.c",
+    line: 468,
+    func: c"OSSL_ENCODER_get0_provider",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_get0_properties` at `crypto/encode_decode/encoder_meth.c:478` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_METH_478: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_meth.c",
+    line: 478,
+    func: c"OSSL_ENCODER_get0_properties",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_encoder_parsed_properties` at `crypto/encode_decode/encoder_meth.c:489` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_METH_489: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_meth.c",
+    line: 489,
+    func: c"ossl_encoder_parsed_properties",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_encoder_get_number` at `crypto/encode_decode/encoder_meth.c:499` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_METH_499: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_meth.c",
+    line: 499,
+    func: c"ossl_encoder_get_number",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_CTX_set_params` at `crypto/encode_decode/encoder_meth.c:624` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_METH_624: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_meth.c",
+    line: 624,
+    func: c"OSSL_ENCODER_CTX_set_params",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -33923,4 +34003,12 @@ pub(crate) static ALL: &[ErrSite] = &[
     PASSPHRASE_251,
     PASSPHRASE_266,
     PASSPHRASE_275,
+    ENCODER_METH_286,
+    ENCODER_METH_362,
+    ENCODER_METH_419,
+    ENCODER_METH_468,
+    ENCODER_METH_478,
+    ENCODER_METH_489,
+    ENCODER_METH_499,
+    ENCODER_METH_624,
 ];

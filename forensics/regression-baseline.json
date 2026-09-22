@@ -397,7 +397,7 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 2783,
+    "libcrypto": 2794,
     "libssl": 0
   },
   "open_obligations": {
@@ -446,7 +446,7 @@
     "blocking_dependencies": 10,
     "divergence_names_covered": 55,
     "findings": 0,
-    "language_census": 4422,
+    "language_census": 4453,
     "sealed_census": 56
   },
   "provider_implemented": [
