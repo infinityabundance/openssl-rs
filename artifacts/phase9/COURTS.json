@@ -1,26 +1,1075 @@
 {
   "authority": "openssl-3.6.4-production",
   "body": {
-    "all_pass": true,
+    "all_pass": false,
     "authority": "openssl-3.6.4-production",
     "claim": "A passing RT-* court means the candidate produced the same observable transcript as the authority for the behaviours that probe exercises -- differential compatibility, NOT that its output is unpredictable (docs/PARITY_MODEL.md, docs/PHASE-9-SUBPHASES.md section 3.3). `pending_courts` names the courts the plan gives this stratum that have not landed; each is printed on every run so that 'not run yet' cannot be read as 'passed'.",
     "courts": [
       {
         "authority_exit_code": 0,
         "authority_observations": 361,
-        "candidate_exit_code": 0,
-        "candidate_observations": 361,
-        "candidate_stderr_tail": [],
+        "candidate_exit_code": -6,
+        "candidate_observations": 187,
+        "candidate_stderr_tail": [
+          "  28:                0x0 - <unknown>",
+          "thread caused non-unwinding panic. aborting.",
+          "timeout: the monitored command dumped core"
+        ],
         "court": "RT-DRBG",
-        "crashed": false,
+        "crashed": true,
         "probe": "courts/phase9/rt_drbg_probe.c",
-        "residual_count": 0,
-        "residuals": [],
+        "residual_count": 174,
+        "residuals": [
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "generate.post.HASH-DRBG"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.post.HASH-DRBG.count"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "set.too_strong.HASH-DRBG"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "instantiate.too_strong.HASH-DRBG"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "state.too_strong.HASH-DRBG"
+          },
+          {
+            "authority": "lib=57,reason=181",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.too_strong.HASH-DRBG.0"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.too_strong.HASH-DRBG.count"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "set.bad.HASH-DRBG"
+          },
+          {
+            "authority": "lib=6,reason=524556",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.set.bad.HASH-DRBG.0"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.set.bad.HASH-DRBG.count"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "fetch.HMAC-DRBG"
+          },
+          {
+            "authority": "HMAC-DRBG",
+            "candidate": null,
+            "class": "missing",
+            "observation": "name.HMAC-DRBG"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "is_a.HMAC-DRBG.self"
+          },
+          {
+            "authority": "null",
+            "candidate": null,
+            "class": "missing",
+            "observation": "gettable.HMAC-DRBG"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctx.HMAC-DRBG"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "state.new.HMAC-DRBG"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "strength.new.HMAC-DRBG"
+          },
+          {
+            "authority": "mac:4",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.HMAC-DRBG.0"
+          },
+          {
+            "authority": "digest:4",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.HMAC-DRBG.1"
+          },
+          {
+            "authority": "state:1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.HMAC-DRBG.2"
+          },
+          {
+            "authority": "strength:2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.HMAC-DRBG.3"
+          },
+          {
+            "authority": "max_request:2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.HMAC-DRBG.4"
+          },
+          {
+            "authority": "min_entropylen:2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.HMAC-DRBG.5"
+          },
+          {
+            "authority": "max_entropylen:2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.HMAC-DRBG.6"
+          },
+          {
+            "authority": "min_noncelen:2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.HMAC-DRBG.7"
+          },
+          {
+            "authority": "max_noncelen:2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.HMAC-DRBG.8"
+          },
+          {
+            "authority": "max_perslen:2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.HMAC-DRBG.9"
+          },
+          {
+            "authority": "max_adinlen:2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.HMAC-DRBG.10"
+          },
+          {
+            "authority": "reseed_counter:2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.HMAC-DRBG.11"
+          },
+          {
+            "authority": "reseed_time:1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.HMAC-DRBG.12"
+          },
+          {
+            "authority": "reseed_requests:2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.HMAC-DRBG.13"
+          },
+          {
+            "authority": "reseed_time_interval:2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.HMAC-DRBG.14"
+          },
+          {
+            "authority": "15",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.HMAC-DRBG.count"
+          },
+          {
+            "authority": "properties:4",
+            "candidate": null,
+            "class": "missing",
+            "observation": "settable.HMAC-DRBG.0"
+          },
+          {
+            "authority": "digest:4",
+            "candidate": null,
+            "class": "missing",
+            "observation": "settable.HMAC-DRBG.1"
+          },
+          {
+            "authority": "mac:4",
+            "candidate": null,
+            "class": "missing",
+            "observation": "settable.HMAC-DRBG.2"
+          },
+          {
+            "authority": "provider-name:4",
+            "candidate": null,
+            "class": "missing",
+            "observation": "settable.HMAC-DRBG.3"
+          },
+          {
+            "authority": "reseed_requests:2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "settable.HMAC-DRBG.4"
+          },
+          {
+            "authority": "reseed_time_interval:2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "settable.HMAC-DRBG.5"
+          },
+          {
+            "authority": "6",
+            "candidate": null,
+            "class": "missing",
+            "observation": "settable.HMAC-DRBG.count"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "generate.uninit.HMAC-DRBG"
+          },
+          {
+            "authority": "2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "state.after.uninit.HMAC-DRBG"
+          },
+          {
+            "authority": "lib=57,reason=150",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.uninit.HMAC-DRBG.0"
+          },
+          {
+            "authority": "lib=57,reason=188",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.uninit.HMAC-DRBG.1"
+          },
+          {
+            "authority": "lib=57,reason=192",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.uninit.HMAC-DRBG.2"
+          },
+          {
+            "authority": "lib=6,reason=214",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.uninit.HMAC-DRBG.3"
+          },
+          {
+            "authority": "4",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.uninit.HMAC-DRBG.count"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "instantiate.in_error.HMAC-DRBG"
+          },
+          {
+            "authority": "2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "state.in_error.HMAC-DRBG"
+          },
+          {
+            "authority": "lib=57,reason=192",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.in_error.HMAC-DRBG.0"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.in_error.HMAC-DRBG.count"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "set.HMAC-DRBG"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.set.HMAC-DRBG.count"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "state.after_set.HMAC-DRBG"
+          },
+          {
+            "authority": "256",
+            "candidate": null,
+            "class": "missing",
+            "observation": "strength.after_set.HMAC-DRBG"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "instantiate.HMAC-DRBG"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "state.ready.HMAC-DRBG"
+          },
+          {
+            "authority": "256",
+            "candidate": null,
+            "class": "missing",
+            "observation": "strength.ready.HMAC-DRBG"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.instantiate.HMAC-DRBG.count"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.HMAC-DRBG.rc"
+          },
+          {
+            "authority": "256",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.HMAC-DRBG.v.strength"
+          },
+          {
+            "authority": "65536",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.HMAC-DRBG.v.max_request"
+          },
+          {
+            "authority": "32",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.HMAC-DRBG.v.min_entropylen"
+          },
+          {
+            "authority": "2147483647",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.HMAC-DRBG.v.max_entropylen"
+          },
+          {
+            "authority": "16",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.HMAC-DRBG.v.min_noncelen"
+          },
+          {
+            "authority": "2147483647",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.HMAC-DRBG.v.max_noncelen"
+          },
+          {
+            "authority": "2147483647",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.HMAC-DRBG.v.max_perslen"
+          },
+          {
+            "authority": "2147483647",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.HMAC-DRBG.v.max_adinlen"
+          },
+          {
+            "authority": "2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.HMAC-DRBG.v.reseed_counter"
+          },
+          {
+            "authority": "256",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.HMAC-DRBG.v.reseed_requests"
+          },
+          {
+            "authority": "3600",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.HMAC-DRBG.v.reseed_time_interval"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "digest.HMAC-DRBG.rc"
+          },
+          {
+            "authority": "SHA2-256",
+            "candidate": null,
+            "class": "missing",
+            "observation": "digest.HMAC-DRBG.v"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "mac.HMAC-DRBG.rc"
+          },
+          {
+            "authority": "HMAC",
+            "candidate": null,
+            "class": "missing",
+            "observation": "mac.HMAC-DRBG.v"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "generate.HMAC-DRBG"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "state.after.generate.HMAC-DRBG"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.generate.HMAC-DRBG.count"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "generate.short.HMAC-DRBG"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "state.after.short.HMAC-DRBG"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.short.HMAC-DRBG.count"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.after.HMAC-DRBG.rc"
+          },
+          {
+            "authority": "256",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.after.HMAC-DRBG.v.strength"
+          },
+          {
+            "authority": "65536",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.after.HMAC-DRBG.v.max_request"
+          },
+          {
+            "authority": "32",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.after.HMAC-DRBG.v.min_entropylen"
+          },
+          {
+            "authority": "2147483647",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.after.HMAC-DRBG.v.max_entropylen"
+          },
+          {
+            "authority": "16",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.after.HMAC-DRBG.v.min_noncelen"
+          },
+          {
+            "authority": "2147483647",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.after.HMAC-DRBG.v.max_noncelen"
+          },
+          {
+            "authority": "2147483647",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.after.HMAC-DRBG.v.max_perslen"
+          },
+          {
+            "authority": "2147483647",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.after.HMAC-DRBG.v.max_adinlen"
+          },
+          {
+            "authority": "2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.after.HMAC-DRBG.v.reseed_counter"
+          },
+          {
+            "authority": "256",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.after.HMAC-DRBG.v.reseed_requests"
+          },
+          {
+            "authority": "3600",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.after.HMAC-DRBG.v.reseed_time_interval"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "reinstantiate.HMAC-DRBG"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "state.after.reinstantiate.HMAC-DRBG"
+          },
+          {
+            "authority": "lib=57,reason=185",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.reinstantiate.HMAC-DRBG.0"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.reinstantiate.HMAC-DRBG.count"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "verify_zeroization.HMAC-DRBG"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.verify_zeroization.HMAC-DRBG.count"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uninstantiate.HMAC-DRBG"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "state.uninstantiated.HMAC-DRBG"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.uninstantiate.HMAC-DRBG.count"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "generate.post.HMAC-DRBG"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.post.HMAC-DRBG.count"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "set.too_strong.HMAC-DRBG"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "instantiate.too_strong.HMAC-DRBG"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "state.too_strong.HMAC-DRBG"
+          },
+          {
+            "authority": "lib=57,reason=181",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.too_strong.HMAC-DRBG.0"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.too_strong.HMAC-DRBG.count"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "set.bad.HMAC-DRBG"
+          },
+          {
+            "authority": "lib=6,reason=524556",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.set.bad.HMAC-DRBG.0"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.set.bad.HMAC-DRBG.count"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "fetch.SEED-SRC"
+          },
+          {
+            "authority": "SEED-SRC",
+            "candidate": null,
+            "class": "missing",
+            "observation": "name.SEED-SRC"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "is_a.SEED-SRC.self"
+          },
+          {
+            "authority": "null",
+            "candidate": null,
+            "class": "missing",
+            "observation": "gettable.SEED-SRC"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctx.SEED-SRC"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "state.new.SEED-SRC"
+          },
+          {
+            "authority": "state:1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.SEED-SRC.0"
+          },
+          {
+            "authority": "strength:2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.SEED-SRC.1"
+          },
+          {
+            "authority": "max_request:2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.SEED-SRC.2"
+          },
+          {
+            "authority": "3",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.SEED-SRC.count"
+          },
+          {
+            "authority": "null",
+            "candidate": null,
+            "class": "missing",
+            "observation": "settable.SEED-SRC"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "instantiate.SEED-SRC"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "state.ready.SEED-SRC"
+          },
+          {
+            "authority": "1024",
+            "candidate": null,
+            "class": "missing",
+            "observation": "strength.ready.SEED-SRC"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.instantiate.SEED-SRC.count"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.SEED-SRC.rc"
+          },
+          {
+            "authority": "1024",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.SEED-SRC.v.strength"
+          },
+          {
+            "authority": "128",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.SEED-SRC.v.max_request"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "generate.SEED-SRC"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "state.after.generate.SEED-SRC"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.generate.SEED-SRC.count"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uninstantiate.SEED-SRC"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "state.uninstantiated.SEED-SRC"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.uninstantiate.SEED-SRC.count"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "fetch.TEST-RAND"
+          },
+          {
+            "authority": "TEST-RAND",
+            "candidate": null,
+            "class": "missing",
+            "observation": "name.TEST-RAND"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "is_a.TEST-RAND.self"
+          },
+          {
+            "authority": "null",
+            "candidate": null,
+            "class": "missing",
+            "observation": "gettable.TEST-RAND"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctx.TEST-RAND"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "state.new.TEST-RAND"
+          },
+          {
+            "authority": "state:1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.TEST-RAND.0"
+          },
+          {
+            "authority": "strength:2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.TEST-RAND.1"
+          },
+          {
+            "authority": "max_request:2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.TEST-RAND.2"
+          },
+          {
+            "authority": "generate:2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.TEST-RAND.3"
+          },
+          {
+            "authority": "4",
+            "candidate": null,
+            "class": "missing",
+            "observation": "ctxtable.TEST-RAND.count"
+          },
+          {
+            "authority": "test_entropy:5",
+            "candidate": null,
+            "class": "missing",
+            "observation": "settable.TEST-RAND.0"
+          },
+          {
+            "authority": "test_nonce:5",
+            "candidate": null,
+            "class": "missing",
+            "observation": "settable.TEST-RAND.1"
+          },
+          {
+            "authority": "strength:2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "settable.TEST-RAND.2"
+          },
+          {
+            "authority": "max_request:2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "settable.TEST-RAND.3"
+          },
+          {
+            "authority": "generate:2",
+            "candidate": null,
+            "class": "missing",
+            "observation": "settable.TEST-RAND.4"
+          },
+          {
+            "authority": "5",
+            "candidate": null,
+            "class": "missing",
+            "observation": "settable.TEST-RAND.count"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "set.TEST-RAND"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.set.TEST-RAND.count"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "instantiate.TEST-RAND"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "state.ready.TEST-RAND"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "strength.ready.TEST-RAND"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.instantiate.TEST-RAND.count"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.TEST-RAND.rc"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.TEST-RAND.v.strength"
+          },
+          {
+            "authority": "2147483647",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.TEST-RAND.v.max_request"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uints.TEST-RAND.v.generate"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "generate.TEST-RAND"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "state.after.generate.TEST-RAND"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.generate.TEST-RAND.count"
+          },
+          {
+            "authority": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+            "candidate": null,
+            "class": "missing",
+            "observation": "bytes.TEST-RAND"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "uninstantiate.TEST-RAND"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "state.uninstantiated.TEST-RAND"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "err.uninstantiate.TEST-RAND.count"
+          },
+          {
+            "authority": "0",
+            "candidate": null,
+            "class": "missing",
+            "observation": "fetch.RSA"
+          },
+          {
+            "authority": "lib=6,reason=524556",
+            "candidate": null,
+            "class": "missing",
+            "observation": "fetch.RSA.err.0"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "fetch.RSA.err.count"
+          },
+          {
+            "authority": "1",
+            "candidate": null,
+            "class": "missing",
+            "observation": "provider.available"
+          }
+        ],
         "staged_binaries": {
           "authority": "artifacts/phase9/probes/rt_drbg_probe.authority",
           "candidate": "artifacts/phase9/probes/rt_drbg_probe.candidate"
         },
-        "verdict": "pass"
+        "verdict": "fail"
       },
       {
         "authority_exit_code": 0,
@@ -78,8 +1127,8 @@
       "CT-DRBG": "9.4 -- the DRBGs' construction vectors, which the pinned tree already carries: `test/recipes/30-test_evp_data/evprand.txt` mirror the NIST CAVP `drbgtestvectors.zip` sets, with the URL written in the file, and `evpkdf_hmac_drbg.txt` carries the HMAC-DRBG KDF cases. No network fetch is needed and none is permitted (docs/AUTHORITY_POLICY.md)."
     },
     "summary": {
-      "fail": 0,
-      "pass": 4,
+      "fail": 1,
+      "pass": 3,
       "total": 4
     }
   },

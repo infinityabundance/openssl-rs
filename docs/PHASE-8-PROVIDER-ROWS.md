@@ -22,10 +22,10 @@ Read from the census's own `implementation_state` for the rows this stratum owns
 | quantity | count |
 |---|---|
 | provider rows this stratum owns | 306 |
-| of those, implemented | 182 |
-| of those, unlanded | 124 |
+| of those, implemented | 184 |
+| of those, unlanded | 122 |
 
-The document below names all **124** unlanded rows this stratum owns across **44** translation units, and — so the first group can be read whole — the **16** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (119). The identity `306 = 182 + 124` holds.
+The document below names all **122** unlanded rows this stratum owns across **44** translation units, and — so the first group can be read whole — the **18** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (119). The identity `306 = 184 + 122` holds.
 
 ## The first group: the `OSSL_OP_KDF` rows and the `OSSL_OP_SKEYMGMT` pair
 
@@ -119,13 +119,13 @@ rather than stubbed.
 
 | table | dispatch table symbol | operation | algorithm name(s) | state | crate file |
 |---|---|---|---|---|---|
-| `deflt_skeymgmt` | `ossl_aes_skeymgmt_functions` | `OSSL_OP_SKEYMGMT` | `AES:2.16.840.1.101.3.4.1` | unimplemented | `_no arm yet_` |
+| `deflt_skeymgmt` | `ossl_aes_skeymgmt_functions` | `OSSL_OP_SKEYMGMT` | `AES:2.16.840.1.101.3.4.1` | implemented | `src/provider/skeymgmt.rs` |
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/skeymgmt/generic.c.in`
 
 | table | dispatch table symbol | operation | algorithm name(s) | state | crate file |
 |---|---|---|---|---|---|
-| `deflt_skeymgmt` | `ossl_generic_skeymgmt_functions` | `OSSL_OP_SKEYMGMT` | `GENERIC-SECRET` | unimplemented | `_no arm yet_` |
+| `deflt_skeymgmt` | `ossl_generic_skeymgmt_functions` | `OSSL_OP_SKEYMGMT` | `GENERIC-SECRET` | implemented | `src/provider/skeymgmt.rs` |
 
 ## The remaining rows, grouped by translation unit
 
@@ -407,7 +407,7 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 |---|---|
 | generator | `forensics/tools/phase8_provider_rows.py` |
 | census | `forensics/atlas/provider-algorithms.json` |
-| census content hash | `9a676e730ba32f87dcc61d73fc1ce1c7e8daa6b9a896300178d81ce6ab4cfc6c` |
+| census content hash | `9da5bb84029e748be4d14d118c76ee1b639bdf9b87c34895cbbcca88b1b501a0` |
 | authority tree | `forensics/authorities/src/openssl-3.6.4` |
 | crate query read | `src/provider/digest.rs` |
 

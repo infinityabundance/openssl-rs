@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 3454,
+      "sites": 3455,
       "unattributed": 0
     },
     "covered_files": [
@@ -211,6 +211,7 @@
       "providers/implementations/kdfs/scrypt.c",
       "providers/implementations/kdfs/krb5kdf.c",
       "providers/implementations/kdfs/hmacdrbg_kdf.c",
+      "providers/implementations/skeymgmt/generic.c",
       "crypto/rsa/rsa_lib.c",
       "crypto/rsa/rsa_crpt.c",
       "crypto/rsa/rsa_pk1.c",
@@ -34219,6 +34220,21 @@
         "rel_source": "providers/implementations/kdfs/hmacdrbg_kdf.c"
       },
       {
+        "const_name": "PROV_GENERIC_SKEYMGMT_63",
+        "data_format": "\"param %s is repeated\"",
+        "dynamic_reason": false,
+        "file": "providers/implementations/skeymgmt/generic.c",
+        "function": "generic_skey_import_decoder",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 63,
+        "macro": "ERR_raise_data",
+        "reason": 252,
+        "reason_symbol": "PROV_R_REPEATED_PARAMETER",
+        "rel_source": "providers/implementations/skeymgmt/generic.c"
+      },
+      {
         "const_name": "RSA_LIB_85",
         "data_format": null,
         "dynamic_reason": false,
@@ -53248,6 +53264,11 @@
       "name": "authority:providers/implementations/kdfs/hmacdrbg_kdf.c",
       "path": "forensics/authorities/build/openssl-3.6.4-production/providers/implementations/kdfs/hmacdrbg_kdf.c",
       "sha256": "ea5ad2134f5f4b6993f8f2a2fa1cb1e8429d66266ad361c9c6eaa6cb0d1b57db"
+    },
+    {
+      "name": "authority:providers/implementations/skeymgmt/generic.c",
+      "path": "forensics/authorities/build/openssl-3.6.4-production/providers/implementations/skeymgmt/generic.c",
+      "sha256": "498fc84a35347a4807b598ac8c26c8d333ca25f499859e629ca3169e6c532711"
     },
     {
       "name": "authority:crypto/rsa/rsa_lib.c",

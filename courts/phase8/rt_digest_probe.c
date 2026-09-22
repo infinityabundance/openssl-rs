@@ -1761,6 +1761,71 @@ static void rt_kdf_rows(void)
     }
     EVP_KDF_free(kdf);
 
+    /* The `OSSL_OP_SKEYMGMT` pair, the rows 8.10 lands
+     * (`providers/implementations/skeymgmt/{aes_skmgmt.c,generic.c}`). Every input is a constant
+     * in this file, so the key bytes printed back are a vector and not a secret. `AES` is fetched
+     * by its primary name and by its OID alias; both the AES 16/24/32 length rule (a 20-byte key is
+     * refused) and the `GENERIC-SECRET` base (which accepts the same 20 bytes) are driven, and the
+     * wrong selection is refused. `EVP_SKEY_get0_raw_key` is the export path read back as bytes. */
+    {
+        unsigned char key16[16], key20[20];
+        const unsigned char *raw;
+        size_t rawlen;
+        EVP_SKEY *skey;
+        OSSL_PARAM sp[2];
+
+        for (i = 0; i < sizeof(key16); i++)
+            key16[i] = (unsigned char)(3 * i + 1);
+        for (i = 0; i < sizeof(key20); i++)
+            key20[i] = (unsigned char)(29 * i + 7);
+
+        sp[0] = OSSL_PARAM_construct_octet_string(OSSL_SKEY_PARAM_RAW_BYTES, key16,
+                                                  sizeof(key16));
+        sp[1] = OSSL_PARAM_construct_end();
+        skey = EVP_SKEY_import(NULL, "AES", NULL, OSSL_SKEYMGMT_SELECT_SECRET_KEY, sp);
+        printf("skey.aes.import=%d\n", skey != NULL);
+        printf("skey.aes.is_a=%d\n", EVP_SKEY_is_a(skey, "AES"));
+        raw = NULL;
+        rawlen = 0;
+        printf("skey.aes.raw.ret=%d\n", EVP_SKEY_get0_raw_key(skey, &raw, &rawlen));
+        printf("skey.aes.rawlen=%zu\n", rawlen);
+        printf("skey.aes.raw=");
+        rt_print_hex(raw, rawlen);
+        printf("\n");
+        printf("skey.aes.matches=%d\n",
+               rawlen == sizeof(key16) && memcmp(raw, key16, sizeof(key16)) == 0);
+        EVP_SKEY_free(skey);
+
+        /* The OID alias is the same row's second spelling. */
+        skey = EVP_SKEY_import(NULL, "2.16.840.1.101.3.4.1", NULL,
+                               OSSL_SKEYMGMT_SELECT_SECRET_KEY, sp);
+        printf("skey.aes.alias.import=%d\n", skey != NULL);
+        EVP_SKEY_free(skey);
+
+        /* The AES row refuses a length that is not 16, 24 or 32. */
+        sp[0] = OSSL_PARAM_construct_octet_string(OSSL_SKEY_PARAM_RAW_BYTES, key20,
+                                                  sizeof(key20));
+        skey = EVP_SKEY_import(NULL, "AES", NULL, OSSL_SKEYMGMT_SELECT_SECRET_KEY, sp);
+        printf("skey.aes.badlen.import=%d\n", skey != NULL);
+        EVP_SKEY_free(skey);
+
+        /* `GENERIC-SECRET` is the base and accepts the same 20 bytes. */
+        skey = EVP_SKEY_import(NULL, "GENERIC-SECRET", NULL, OSSL_SKEYMGMT_SELECT_SECRET_KEY, sp);
+        printf("skey.generic.import=%d\n", skey != NULL);
+        raw = NULL;
+        rawlen = 0;
+        printf("skey.generic.raw.ret=%d\n", EVP_SKEY_get0_raw_key(skey, &raw, &rawlen));
+        printf("skey.generic.rawlen=%zu\n", rawlen);
+        printf("skey.generic.matches=%d\n",
+               rawlen == sizeof(key20) && memcmp(raw, key20, sizeof(key20)) == 0);
+        EVP_SKEY_free(skey);
+
+        /* The wrong selection is refused by the import. */
+        skey = EVP_SKEY_import(NULL, "GENERIC-SECRET", NULL, OSSL_SKEYMGMT_SELECT_PARAMETERS, sp);
+        printf("skey.generic.noselect.import=%d\n", skey != NULL);
+        EVP_SKEY_free(skey);
+    }
+
     /* A property query that no KDF row carries is a refusal, so the fetch path's negative
      * selection is crossed on the same name. */
     kdf = EVP_KDF_fetch(NULL, "X963KDF", "provider=nonexistent");
