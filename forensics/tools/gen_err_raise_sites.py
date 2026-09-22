@@ -794,6 +794,12 @@ COVERED_FILES = [
     # `ERR_R_INVALID_PROVIDER_FUNCTIONS` at `:280` and `ERR_R_PASSED_NULL_PARAMETER` at its four
     # accessor sites.
     ("crypto/encode_decode/decoder_meth.c", "DECODER_METH"),
+    # Phase 10's `crypto/encode_decode/decoder_lib.c` -- the `OSSL_DECODER_INSTANCE` and
+    # `OSSL_DECODER_CTX` object layer.
+    ("crypto/encode_decode/decoder_lib.c", "DECODER_LIB"),
+    # Phase 10's `crypto/encode_decode/decoder_pkey.c` -- the decoder cache and the four
+    # passphrase setters, with the pkey half withheld.
+    ("crypto/encode_decode/decoder_pkey.c", "DECODER_PKEY"),
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`
@@ -1334,6 +1340,10 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
     # "no encoders were found" refusal is the message D361 transcribes. `encodererr.h` is an
     # installed header, so this is `ecerr.h`'s case again.
     "#include <openssl/encodererr.h>",
+    # Phase 10 staging: `OSSL_DECODER_R_*` for `crypto/encode_decode/decoder_lib.c`,
+    # whose "no decoders were found" refusal is the message D364 transcribes.
+    # `decodererr.h` is an installed header, so this is `ecerr.h`'s case again.
+    "#include <openssl/decodererr.h>",
         # `PROP_R_*` is the first reason family this table needs that lives in an
         # *internal* header rather than an installed one: `internal/propertyerr.h`,
         # which the property grammar raises from. It is resolveable because the

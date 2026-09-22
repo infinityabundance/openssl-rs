@@ -47,19 +47,20 @@
 //!   `crypto/encode_decode/decoder_lib.c` (`OSSL_DECODER_do_all_provided` and
 //!   `OSSL_DECODER_fetch` from `OSSL_DECODER_CTX_add_extra`) or
 //!   `crypto/encode_decode/decoder_pkey.c`, which are items 3 and 4 of this chain.
-//! * **The context trio** -- `OSSL_DECODER_CTX_new` (`:628`), `OSSL_DECODER_CTX_set_params`
-//!   (`:637`), `OSSL_DECODER_CTX_free` (`:665`). `_free` calls `ossl_decoder_instance_free`
-//!   (`decoder_lib.c`) and `_set_params` calls `OSSL_DECODER_CTX_get_num_decoders` and
-//!   `OSSL_DECODER_INSTANCE_get_decoder`/`_get_decoder_ctx` (`decoder_lib.c`), so the trio
-//!   belongs to the commit that lands that unit -- the same split `encoder_meth.c`'s trio took
-//!   between D360 and D361.
+//! * **The context trio and the two context shapes landed in D364**, with `src/decoder_lib.rs`:
+//!   `OSSL_DECODER_CTX_new` (`:628`), `OSSL_DECODER_CTX_set_params` (`:637`) and
+//!   `OSSL_DECODER_CTX_free` (`:665`) are below, together with `OsslDecoderInstance` and
+//!   `OsslDecoderCtx`. Their unit is still this one -- they are `decoder_meth.c`'s -- but their
+//!   commit moves: `_free` calls `ossl_decoder_instance_free` and `_set_params` calls
+//!   `OSSL_DECODER_CTX_get_num_decoders`/`OSSL_DECODER_INSTANCE_get_decoder`/
+//!   `_get_decoder_ctx`, all `decoder_lib.c`'s, so they land with that unit. That is the split
+//!   `encoder_meth.c`'s trio took between D360 and D361.
 //!
 //! The unit's two **store bridges** (`:453-469`) are the exception, and they are not a gap:
 //! `ossl_decoder_store_cache_flush` and `ossl_decoder_store_remove_all_provided` are transcribed
-//! in `src/provider/stores.rs` alongside the sibling provider-activation bridges (D357), and they
-//! still assert their store slot unfilled because slot 11 is filled by the commit that lands this
-//! unit's fetch block. The test at the bottom of this file calls both by name so the two units'
-//! answers stay joined.
+//! in `src/provider/stores.rs` alongside the sibling provider-activation bridges (D357), and both
+//! delegate for real since D365 filled slot 11. The test at the bottom of this file calls them by
+//! name so the two units' answers stay joined.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -74,11 +75,13 @@ use crate::context::namemap::{
 use crate::encoder_meth::OsslEndecodeBase;
 use crate::evp::algorithm::ossl_algorithm_get1_first_name;
 use crate::params::OsslParam;
+use crate::passphrase::OsslPassphraseData;
 use crate::property::list::OsslPropertyList;
 use crate::property::parse::ossl_parse_property;
 use crate::provider::{ossl_provider_libctx, ossl_provider_up_ref, OsslProvider};
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::stack::OpenSslStack;
 use crate::selftest::OsslCallback;
 
 /// `#define NAME_SEPARATOR ':'` — `crypto/encode_decode/decoder_meth.c:27`.
@@ -636,6 +639,181 @@ pub unsafe extern "C" fn OSSL_DECODER_settable_ctx_params(
     ptr::null()
 }
 
+// ---------------------------------------------------------------------------
+// The context shapes — `crypto/encode_decode/encoder_local.h:106-169`
+// ---------------------------------------------------------------------------
+
+/// `typedef int OSSL_DECODER_CONSTRUCT(OSSL_DECODER_INSTANCE *, const OSSL_PARAM *, void *)` —
+/// `include/openssl/decoder.h:93-95`.
+///
+/// Answers an `int`, unlike the encoder's construct callback which answers the constructed
+/// `void *`: a decoder constructor's answer is a status, and the object it produced reaches the
+/// caller through `OSSL_DECODER_CTX_get_construct_data`'s convention instead.
+pub(crate) type DecoderConstructFn =
+    unsafe extern "C" fn(*mut OsslDecoderInstance, *const OsslParam, *mut c_void) -> c_int;
+/// `typedef void OSSL_DECODER_CLEANUP(void *construct_data)` — `include/openssl/decoder.h:96`.
+pub(crate) type DecoderCleanupFn = unsafe extern "C" fn(*mut c_void);
+
+/// `struct ossl_decoder_instance_st` — `encoder_local.h:106-115`.
+///
+/// One instantiated decoder in a context's chain. `decoderctx` is the provider's own context and
+/// is released through the decoder's `freectx`; `input_type` comes from the implementation's
+/// mandatory `input` property and is never NULL on a constructed instance.
+#[repr(C)]
+pub struct OsslDecoderInstance {
+    /// `OSSL_DECODER *decoder` — never NULL.
+    pub(crate) decoder: *mut OsslDecoder,
+    /// `void *decoderctx` — never NULL.
+    pub(crate) decoderctx: *mut c_void,
+    /// `const char *input_type` — never NULL.
+    pub(crate) input_type: *const c_char,
+    /// `const char *input_structure` — may be NULL.
+    pub(crate) input_structure: *const c_char,
+    /// `int input_type_id`.
+    pub(crate) input_type_id: c_int,
+    /// `int order` — for stable ordering of decoders wrt proqs.
+    pub(crate) order: c_int,
+    /// `int score` — for ordering decoders wrt proqs.
+    pub(crate) score: c_int,
+    /// `unsigned int flag_input_structure_was_set : 1` — projected as its four-byte storage, the
+    /// projection `EvpPkey`'s `foreign` and `EvpPkeyCache`'s bitfields use.
+    pub(crate) flag_input_structure_was_set: c_int,
+}
+
+/// `struct ossl_decoder_ctx_st` — `encoder_local.h:120-169`.
+///
+/// The context `OSSL_DECODER_CTX_new` allocates and `OSSL_DECODER_CTX_free` releases. `pwdata` is
+/// the passphrase bridge D356/D358 landed, embedded by value exactly as the authority embeds it,
+/// and `harderr` is the flag `ossl_decoder_ctx_set_harderr` raises so further processing stops.
+#[repr(C)]
+pub struct OsslDecoderCtx {
+    /// `const char *start_input_type` — the caller's starting type, or NULL.
+    pub(crate) start_input_type: *const c_char,
+    /// `const char *input_structure` — the desired input structure, or NULL.
+    pub(crate) input_structure: *const c_char,
+    /// `int selection` — the `OSSL_KEYMGMT_SELECT_*` bits expected.
+    pub(crate) selection: c_int,
+    /// `STACK_OF(OSSL_DECODER_INSTANCE) *decoder_insts` — the chain, built lazily.
+    pub(crate) decoder_insts: *mut OpenSslStack,
+    /// `OSSL_DECODER_CONSTRUCT *construct` — the object constructor for the chain's head.
+    pub(crate) construct: Option<DecoderConstructFn>,
+    /// `OSSL_DECODER_CLEANUP *cleanup` — its destructor.
+    pub(crate) cleanup: Option<DecoderCleanupFn>,
+    /// `void *construct_data` — passed to both.
+    pub(crate) construct_data: *mut c_void,
+    /// `struct ossl_passphrase_data_st pwdata` — by value, as the authority embeds it.
+    pub(crate) pwdata: OsslPassphraseData,
+    /// `int harderr` — set by `ossl_decoder_ctx_set_harderr`.
+    pub(crate) harderr: c_int,
+}
+
+// ---------------------------------------------------------------------------
+// The context trio — `decoder_meth.c:628-675`
+// ---------------------------------------------------------------------------
+
+/// `sk_OSSL_DECODER_INSTANCE_pop_free`'s destructor: the crate's stack frees elements through a
+/// `void *`-shaped callback, so `ossl_decoder_instance_free` is reached through this thunk.
+unsafe extern "C" fn decoder_instance_free_thunk(p: *mut c_void) {
+    // SAFETY: the stack's element is an `OsslDecoderInstance` this crate allocated and owns.
+    unsafe { crate::decoder_lib::ossl_decoder_instance_free(p.cast()) };
+}
+
+/// `OSSL_DECODER_CTX *OSSL_DECODER_CTX_new(void)` — `decoder_meth.c:628-635`.
+///
+/// A zeroed context and nothing else. `pwdata`'s zeroed state is the authority's own initial
+/// state, and `harderr` is 0.
+///
+/// # Safety
+/// No preconditions; the answer is NULL or a uniquely-owned context.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_DECODER_CTX_new() -> *mut OsslDecoderCtx {
+    // The constructor only asks for a zeroed block of the context's size.
+    CRYPTO_zalloc(core::mem::size_of::<OsslDecoderCtx>(), ptr::null(), 0).cast::<OsslDecoderCtx>()
+}
+
+/// `int OSSL_DECODER_CTX_set_params(OSSL_DECODER_CTX *ctx, const OSSL_PARAM params[])` —
+/// `decoder_meth.c:637-663`.
+///
+/// The authority's **and** of every instance's answer, with an **empty chain a success**: a
+/// context with no instances answers 1 without asking anything, which is why a caller can set
+/// parameters before the chain exists.
+///
+/// # Safety
+/// `ctx` must be live; `params` NULL or a terminated array.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_DECODER_CTX_set_params(
+    ctx: *mut OsslDecoderCtx,
+    params: *const OsslParam,
+) -> c_int {
+    let mut ok = 1;
+
+    if ctx.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::DECODER_METH_644) };
+        return 0;
+    }
+
+    // SAFETY: `ctx` is live.
+    if unsafe { (*ctx).decoder_insts }.is_null() {
+        return 1;
+    }
+
+    // SAFETY: `ctx` is live and its stack is non-NULL.
+    let l = unsafe { crate::decoder_lib::OSSL_DECODER_CTX_get_num_decoders(ctx) };
+    for i in 0..l {
+        // SAFETY: `ctx` is live; the index is inside the stack.
+        let decoder_inst =
+            unsafe { crate::runtime::stack::OPENSSL_sk_value((*ctx).decoder_insts, i) }
+                .cast::<OsslDecoderInstance>();
+        // SAFETY: `decoder_inst` is a live instance from the context's own stack.
+        let (decoder, decoderctx) = unsafe {
+            (
+                crate::decoder_lib::OSSL_DECODER_INSTANCE_get_decoder(decoder_inst),
+                crate::decoder_lib::OSSL_DECODER_INSTANCE_get_decoder_ctx(decoder_inst),
+            )
+        };
+        if decoderctx.is_null() {
+            continue;
+        }
+        // SAFETY: `decoder` is the instance's live method object.
+        let Some(set_ctx_params) = (unsafe { (*decoder).set_ctx_params }) else {
+            continue;
+        };
+        // SAFETY: `set_ctx_params` is a live provider callback and `params` is the caller's.
+        if unsafe { set_ctx_params(decoderctx, params) } == 0 {
+            ok = 0;
+        }
+    }
+    ok
+}
+
+/// `void OSSL_DECODER_CTX_free(OSSL_DECODER_CTX *ctx)` — `decoder_meth.c:665-675`.
+///
+/// Four releases in the authority's order: the cleanup callback with the construct data, the
+/// instance chain (each released through its own `freectx`), the passphrase bridge's data, then
+/// the context itself. The NULL test is the whole body's, so a NULL context is silent.
+///
+/// # Safety
+/// `ctx` must be NULL or a live context this crate allocated.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_DECODER_CTX_free(ctx: *mut OsslDecoderCtx) {
+    if ctx.is_null() {
+        return;
+    }
+    // SAFETY: `ctx` is live per the contract.
+    unsafe {
+        if let Some(cleanup) = (*ctx).cleanup {
+            cleanup((*ctx).construct_data);
+        }
+        crate::runtime::stack::OPENSSL_sk_pop_free(
+            (*ctx).decoder_insts,
+            Some(decoder_instance_free_thunk),
+        );
+        crate::passphrase::ossl_pw_clear_passphrase_data(ptr::addr_of_mut!((*ctx).pwdata));
+        CRYPTO_free(ctx.cast(), ptr::null(), 0);
+    }
+}
+
 // SPDX-License-Identifier: Apache-2.0
 
 #[cfg(test)]
@@ -723,16 +901,17 @@ mod tests {
         }
     }
 
-    /// This unit's two store bridges are transcribed in `src/provider/stores.rs` (D357), and the
-    /// provider machinery calls them there. Naming them here is what keeps the unit's own
-    /// translation-unit record complete. The decoder store slot is **unfilled** this pass, so both
-    /// answer their absent-store value: the flush **1**, and the cache flush the authority's
-    /// cache-specific **0**.
+    /// This unit's two store bridges and the third decoder bridge are transcribed in
+    /// `src/provider/stores.rs`, and the provider machinery calls them there. Naming them here is
+    /// what keeps the unit's own translation-unit record complete. All three slots are now filled
+    /// -- D365 filled the decoder store and cache -- so each answers the authority's value for a
+    /// store that exists: the four method-store flushes **1**, and the decoder cache's flush **1**
+    /// as well, because it is not absent any more.
     #[test]
     fn the_units_store_bridges_are_the_provider_modules() {
         let ctx = crate::context::OSSL_LIB_CTX_new();
         assert!(!ctx.is_null());
-        // SAFETY: `ctx` is live and non-NULL, which is both bridges' contract.
+        // SAFETY: `ctx` is live and non-NULL, which is all three bridges' contract.
         unsafe {
             assert_eq!(
                 crate::provider::stores::ossl_decoder_store_cache_flush(ctx),
@@ -740,8 +919,8 @@ mod tests {
             );
             assert_eq!(
                 crate::provider::stores::ossl_decoder_cache_flush(ctx),
-                0,
-                "the decoder cache slot is unfilled, and the authority answers 0 for that"
+                1,
+                "the decoder cache slot is filled, and an empty table flushes to 1"
             );
         }
         // The sibling needs a live provider, which this unit has none of; the name is referenced

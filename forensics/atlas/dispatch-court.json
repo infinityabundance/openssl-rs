@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 364,
+      "crate_files_read": 366,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -14,10 +14,10 @@
       "identities_mismatches": 0,
       "links_convention": 224,
       "links_documented": 12,
-      "links_explicit": 17,
+      "links_explicit": 19,
       "problems": 0,
-      "signatures_authority_only": 374,
-      "signatures_checked": 260,
+      "signatures_authority_only": 372,
+      "signatures_checked": 262,
       "signatures_mismatches": 0,
       "signatures_not_a_dispatch": 191,
       "signatures_unlinked": 0,
@@ -1515,8 +1515,6 @@
         "OSSL_CMP_certConf_cb_t",
         "OSSL_CMP_log_cb_t",
         "OSSL_CMP_transfer_cb_t",
-        "OSSL_DECODER_CLEANUP",
-        "OSSL_DECODER_CONSTRUCT",
         "OSSL_FUNC",
         "OSSL_FUNC_BIO_new_file_fn",
         "OSSL_FUNC_BIO_new_membuf_fn",
@@ -2008,6 +2006,22 @@
           "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), int:8:u, fptr(int:4:s; ptr(const(opaque)), ptr(opaque)), ptr(opaque))",
           "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), int:8:u, fptr(int:4:s; ptr(const(opaque)), ptr(opaque)), ptr(opaque))",
           "how": "convention"
+        },
+        {
+          "alias": "DecoderConstructFn",
+          "at": "src/decoder_meth.rs",
+          "authority": "OSSL_DECODER_CONSTRUCT",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), ptr(opaque))",
+          "how": "explicit"
+        },
+        {
+          "alias": "DecoderCleanupFn",
+          "at": "src/decoder_meth.rs",
+          "authority": "OSSL_DECODER_CLEANUP",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "explicit"
         },
         {
           "alias": "EncoderNewCtxFn",

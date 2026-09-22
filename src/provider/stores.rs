@@ -23,11 +23,11 @@
 //! from each subsystem's own initialiser (`evp_method_store_init`, the encoder and
 //! decoder initialisers, the store-loader initialiser), which are Phase 7 and
 //! Phase 10 work; the decoder cache is created by `ossl_decoder_cache_new`, also
-//! Phase 7. **Slot 10 is no longer unfilled**: D357's encoder landing builds the
-//! encoder store in `context_init` and implements its two delegations below, exactly
-//! as D142 did for slot 0. Slots 11, 15 and 20 cannot be non-NULL in this build, and
-//! `docs/PHASE-6-SUBPHASES.md`'s index table records each one as unfilled with its
-//! owner.
+//! Phase 10. **Slot 10 left the set in D357 and slots 11 and 20 left it in D365**: the encoder
+//! landing built the encoder store and implemented its two delegations, and the decoder landing
+//! built the decoder store and cache in `context_init` and implemented the three delegations
+//! below, exactly as D142 did for slot 0. Slot 15 alone remains unfilled, and
+//! `docs/PHASE-6-SUBPHASES.md`'s index table records it as unfilled with its owner.
 //!
 //! The delegation body -- `ossl_method_store_cache_flush_all` and
 //! `ossl_method_store_remove_all_provided`, both in `crypto/property/property.c` --
@@ -127,11 +127,20 @@ pub(crate) unsafe fn ossl_encoder_store_cache_flush(libctx: *mut c_void) -> c_in
 /// `int ossl_decoder_store_cache_flush(OSSL_LIB_CTX *libctx)` —
 /// `crypto/encode_decode/decoder_meth.c`.
 ///
+/// **Implemented in D365**, when slot 11 stopped being unfilled: `context_init` builds the decoder
+/// store in the authority's own position, so the branch can be taken and there is no longer
+/// anything to assert rather than call.
+///
 /// # Safety
 /// `libctx` must be NULL or live.
 pub(crate) unsafe fn ossl_decoder_store_cache_flush(libctx: *mut c_void) -> c_int {
-    let store = lib_ctx_get_data(libctx, OSSL_LIB_CTX_DECODER_STORE_INDEX);
-    assert_slot_unfilled(store, "ossl_decoder_store_cache_flush", "Phase 7");
+    let store = lib_ctx_get_data(libctx, OSSL_LIB_CTX_DECODER_STORE_INDEX)
+        .cast::<crate::property::store::OsslMethodStore>();
+    if !store.is_null() {
+        // SAFETY: the slot holds a store `context_init` built and released once, so it is live
+        // here; a store nobody has added to has an empty cache, which the flush handles.
+        return unsafe { crate::property::store::ossl_method_store_cache_flush_all(store) };
+    }
     1
 }
 
@@ -196,13 +205,23 @@ pub(crate) unsafe fn ossl_encoder_store_remove_all_provided(prov: *const OsslPro
 /// `int ossl_decoder_store_remove_all_provided(const OSSL_PROVIDER *prov)` —
 /// `crypto/encode_decode/decoder_meth.c`.
 ///
+/// **Implemented in D365**, its sibling's reason one level down: the store the delegation needs
+/// exists now, and the authority's own body reads it through the provider's context.
+///
 /// # Safety
 /// `prov` must be live.
 pub(crate) unsafe fn ossl_decoder_store_remove_all_provided(prov: *const OsslProvider) -> c_int {
     // SAFETY: `prov` is live.
     let libctx = unsafe { ossl_provider_libctx(prov) };
-    let store = lib_ctx_get_data(libctx, OSSL_LIB_CTX_DECODER_STORE_INDEX);
-    assert_slot_unfilled(store, "ossl_decoder_store_remove_all_provided", "Phase 7");
+    let store = lib_ctx_get_data(libctx, OSSL_LIB_CTX_DECODER_STORE_INDEX)
+        .cast::<crate::property::store::OsslMethodStore>();
+    if !store.is_null() {
+        // SAFETY: the slot holds a store `context_init` built; `prov` is live, and the store
+        // compares it by identity against the implementations it holds.
+        return unsafe {
+            crate::property::store::ossl_method_store_remove_all_provided(store, prov)
+        };
+    }
     1
 }
 
@@ -227,22 +246,17 @@ pub(crate) unsafe fn ossl_store_loader_store_remove_all_provided(
 
 /// `int ossl_decoder_cache_flush(OSSL_LIB_CTX *libctx)` — `crypto/encode_decode/decoder_pkey.c`.
 ///
-/// The one bridge whose absent case answers **0**, and the one whose body the
-/// authority writes with a lock: `CRYPTO_THREAD_write_lock(cache->lock)`, then
-/// `lh_DECODER_CACHE_ENTRY_doall(hashtable, decoder_cache_entry_free)`, then
-/// `lh_DECODER_CACHE_ENTRY_flush`. Both of those are the decoder cache's own, which
-/// `ossl_decoder_cache_new` creates in Phase 7.
+/// The one bridge whose absent case answers **0**, and the one whose body the authority writes with
+/// a lock. **Implemented in D365**, with the cache the same commit fills slot 20 with: this is a
+/// delegation to `src/decoder_pkey.rs`'s own `ossl_decoder_cache_flush`, which is where the lock,
+/// the doall and the flush live.
 ///
 /// # Safety
 /// `libctx` must be NULL or live.
 pub(crate) unsafe fn ossl_decoder_cache_flush(libctx: *mut c_void) -> c_int {
-    let cache = lib_ctx_get_data(libctx, OSSL_LIB_CTX_DECODER_CACHE_INDEX);
-    if cache.is_null() {
-        // The authority's `if (cache == NULL) return 0;`.
-        return 0;
-    }
-    assert_slot_unfilled(cache, "ossl_decoder_cache_flush", "Phase 7");
-    1
+    // SAFETY: `libctx` is NULL or live per the contract; the module it delegates to is this
+    // crate's transcription of the same authority function.
+    unsafe { crate::decoder_pkey::ossl_decoder_cache_flush(libctx) }
 }
 
 #[cfg(test)]
@@ -250,50 +264,43 @@ mod tests {
     use super::*;
     use crate::context::OSSL_LIB_CTX_new;
 
-    /// The invariant the remaining bridges rest on, checked rather than assumed.
+    /// The invariant the remaining bridge rests on, checked rather than assumed.
     ///
-    /// **Slot 10 left the set in D357, the way slot 0 left it in D142.** The encoder landing built
-    /// the encoder store -- its reader is `encoder_meth.c`, which the printers' path now reaches --
-    /// and implemented the two bridges that delegate to it, so the assertion this test used to
-    /// make about slot 10 fired exactly as designed and the answer is the one it pointed at: write
-    /// the delegation. What remains unfilled is slots 11, 15 and 20, whose readers are Phase 10's
-    /// `decoder_meth.c` and `store_meth.c` and Phase 7's decoder cache.
+    /// **Slots 11 and 20 left the set in D365, the way slot 10 left it in D357 and slot 0 in
+    /// D142.** The decoder landing fills both in `context_init`'s authority position -- the
+    /// decoder store then the cache, before the encoder store -- and implements the three bridges
+    /// that delegate to them, so the assertions this test used to make about those two fired
+    /// exactly as designed. What remains unfilled is slot 15 alone, whose reader is Phase 10's
+    /// `store_meth.c`.
     #[test]
-    fn the_evp_and_encoder_store_slots_are_filled_and_the_other_three_are_not() {
+    fn the_four_method_stores_and_the_cache_are_filled_and_slot_fifteen_is_not() {
         let ctx = OSSL_LIB_CTX_new();
         assert!(!ctx.is_null());
         // `lib_ctx_get_data` is a SAFE function in this crate (D113), so this is not
         // guarded: a NULL context is the default one and the read is total.
-        assert!(
-            !lib_ctx_get_data(ctx, OSSL_LIB_CTX_EVP_METHOD_STORE_INDEX).is_null(),
-            "context_init builds the EVP method store"
-        );
-        assert!(
-            !lib_ctx_get_data(ctx, OSSL_LIB_CTX_ENCODER_STORE_INDEX).is_null(),
-            "context_init builds the encoder method store"
-        );
-        let mut filled = 0;
-        for index in [
-            OSSL_LIB_CTX_DECODER_STORE_INDEX,
-            OSSL_LIB_CTX_STORE_LOADER_STORE_INDEX,
-            OSSL_LIB_CTX_DECODER_CACHE_INDEX,
+        for (index, what) in [
+            (OSSL_LIB_CTX_EVP_METHOD_STORE_INDEX, "the EVP method store"),
+            (OSSL_LIB_CTX_DECODER_STORE_INDEX, "the decoder method store"),
+            (OSSL_LIB_CTX_DECODER_CACHE_INDEX, "the decoder cache"),
+            (OSSL_LIB_CTX_ENCODER_STORE_INDEX, "the encoder method store"),
         ] {
-            if !lib_ctx_get_data(ctx, index).is_null() {
-                filled += 1;
-            }
+            assert!(
+                !lib_ctx_get_data(ctx, index).is_null(),
+                "context_init builds {what}"
+            );
         }
-        assert_eq!(
-            filled, 0,
-            "a Phase 10 slot has been filled without the delegation it needs"
+        assert!(
+            lib_ctx_get_data(ctx, OSSL_LIB_CTX_STORE_LOADER_STORE_INDEX).is_null(),
+            "slot 15 is still filled by a stratum that has not landed"
         );
     }
 
-    /// Each bridge answers the authority's *absent-store* value, which is what the
-    /// two sums in `provider_flush_store_cache` and `provider_store_methods` compare
-    /// against 4. Getting any of them wrong turns a successful activation into a
-    /// reported failure, so the values are asserted rather than assumed.
+    /// Each bridge answers the authority's value for the store its context now holds: the four
+    /// method stores have empty caches, so the flush is the authority's own `!= 0` sum's **1**, and
+    /// the decoder cache's flush is **1** too -- it is not absent any more, and its body takes the
+    /// lock and empties an already-empty table.
     #[test]
-    fn every_absent_store_answers_the_authoritys_value() {
+    fn every_bridge_answers_the_authoritys_value() {
         let ctx = OSSL_LIB_CTX_new();
         assert!(!ctx.is_null());
         // SAFETY: `ctx` is live and NULL-or-live is every one of these contracts.
@@ -302,8 +309,7 @@ mod tests {
             assert_eq!(ossl_encoder_store_cache_flush(ctx), 1);
             assert_eq!(ossl_decoder_store_cache_flush(ctx), 1);
             assert_eq!(ossl_store_loader_store_cache_flush(ctx), 1);
-            // The exception: an absent decoder *cache* answers 0, not 1.
-            assert_eq!(ossl_decoder_cache_flush(ctx), 0);
+            assert_eq!(ossl_decoder_cache_flush(ctx), 1);
         }
     }
 }

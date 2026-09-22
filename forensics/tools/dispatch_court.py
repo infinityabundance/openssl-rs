@@ -311,6 +311,8 @@ LINKS: dict[str, tuple[str, ...]] = {
     # convention rule cannot reach them. Landed with the encoder method object (D360).
     "EncoderConstructFn": ("OSSL_ENCODER_CONSTRUCT",),
     "EncoderCleanupFn": ("OSSL_ENCODER_CLEANUP",),
+    "DecoderConstructFn": ("OSSL_DECODER_CONSTRUCT",),
+    "DecoderCleanupFn": ("OSSL_DECODER_CLEANUP",),
 }
 
 # ---------------------------------------------------------------------------------------------
