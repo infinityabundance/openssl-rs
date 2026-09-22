@@ -1456,6 +1456,22 @@ pub(crate) const fn param_uint64(key: *const c_char) -> OsslParam {
     }
 }
 
+/// `OSSL_PARAM_uint32(key, addr)` — `params.h:45-47`, in the same key-only list form.
+///
+/// `UNSIGNED_INTEGER` with `sizeof(uint32_t)`. `scrypt.c`'s settable list publishes its `r` and
+/// `p` with this one rather than with `param_uint64`, and the size is part of the parameter's
+/// identity for the same reason [`param_uint64`]'s is.
+#[allow(dead_code)] // the landing caller is `src/provider/kdf.rs`'s SCRYPT settable list
+pub(crate) const fn param_uint32(key: *const c_char) -> OsslParam {
+    OsslParam {
+        key: key.cast(),
+        data_type: OSSL_PARAM_UNSIGNED_INTEGER,
+        data: ptr::null_mut(),
+        data_size: core::mem::size_of::<u32>(),
+        return_size: OSSL_PARAM_UNMODIFIED,
+    }
+}
+
 /// `OSSL_PARAM_time_t(key, addr)` — `params.h:53-54`, in the same key-only list form.
 ///
 /// **`INTEGER`, not `UNSIGNED_INTEGER`, and that is the authority's choice rather than a slip.**
