@@ -14,7 +14,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 84,
-      "language_surface_not_modelled_by_name": 4709,
+      "language_surface_not_modelled_by_name": 4731,
       "planned_prerequisites": 8
     },
     "census_by_unit": {
@@ -198,6 +198,7 @@
         "crypto/dsa/dsa_vrf.c": 2,
         "crypto/dso/dso_dlfcn.c": 16,
         "crypto/dso/dso_lib.c": 15,
+        "crypto/ec/curve448/curve448.c": 22,
         "crypto/ec/ec2_smpl.c": 13,
         "crypto/ec/ec_ameth.c": 28,
         "crypto/ec/ec_asn1.c": 45,
@@ -474,8 +475,8 @@
       ]
     },
     "checked": {
-      "authority_units": 296,
-      "crate_modules": 377,
+      "authority_units": 297,
+      "crate_modules": 379,
       "deferral_blocker_rows": 1,
       "deferrals_recorded": 9,
       "divergence_names_covered": 51,
@@ -590,13 +591,13 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "56769b4cae0a22eb9f09d5da3bc97ffb93f5f3a196d3e918d4b5a195b33d9924",
+  "body_hash": "2dcc442ff2d61cce0f5038be298523422a6c8ae01320986c4383202ace272ba0",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "004fabed99512775190f65e49dd48a3a8e9fde8a4e528ac61be5a6bcaf8f576d"
+      "sha256": "18bbb625aa7671bf23fc2522632df35b42a876297de6760db77deb482fc9e9d3"
     },
     {
       "name": "macro-owners",
@@ -611,7 +612,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "4e8db126b62a469a3a15da75831a868e53c8b300be4710ea15bb00a3d8e1002d"
+      "sha256": "4504b24a597f7a107fe41fab08b5eeded0dee5abbcc69e91b729e0f0396eac96"
     },
     {
       "name": "symbol-ownership",
@@ -626,7 +627,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "4d827f269b73e914120ba360e45ff40bc496ec3869268103731638b52c9b7b4e"
+      "sha256": "c7839f8ec8530824da7fab941842ab033c454203f2088d98a77ee1252d810e97"
     },
     {
       "name": "phase-state",

@@ -54,6 +54,14 @@ python3 forensics/tools/gen_ec_curves.py
 # a constant another party defines is generated, not transcribed (D33).
 python3 forensics/tools/gen_curve25519_tables.py
 
+# Phase 8.7's `crypto/ec/curve448/curve448_tables.c` (D371): the fixed-comb base table and
+# the wnaf base table, 2,688 limbs the X448 ladder and the Ed448 verifier read. It reads the
+# authority's own source, checks every entry against the curve law, re-derives the wnaf table
+# as `(2k+1)*B`, and writes `src/ec/curve448_tables.rs` with `#[rustfmt::skip]` so the
+# formatter pass below cannot move a byte. Runs **before** `cargo fmt`, like the three table
+# generators above.
+python3 forensics/tools/gen_curve448_tables.py
+
 echo "== fmt =="
 cargo fmt --all
 
