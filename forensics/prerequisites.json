@@ -225,19 +225,6 @@
         ],
         "note": "**Withheld rather than stubbed.** `src/x509/t_x509.rs` lands the one `t_x509.c` export the `rsa_ameth.c` and `dsa_ameth.c` method objects call -- `X509_signature_dump` (`:269-290`) -- and is therefore a module for `crypto/x509/t_x509.c`, which makes the unit's unwired internals countable (D327's rule). These two are the ones the lexical scan sees. `ossl_serial_number_print` (`:519-559`) prints an `ASN1_INTEGER` serial as decimal plus hex, falling back to colon-separated hex when it does not fit an `int64`; it is called from `crypto/x509/t_x509.c:96` (inside `X509_print_ex`'s `do_print_ex`) and `crypto/x509/v3_rolespec.c:49`. `ossl_x509_print_ex_brief` (`:383-411`) is the brief-print tail, called from `crypto/x509/t_x509.c:424`/`:493` and `crypto/cmp/cmp_vfy.c:57`. Nine of the unit's ten exports are the printers, whose `do_print_ex` reads nearly every field of an `X509` and which are withheld with the object layer (Phase 11's). Neither internal has a caller in this crate, so a transcription would be a printer no landed path reaches; the row records the omission rather than leaving it as a finding, and fail-closes both ways the same as its siblings.",
         "evidence": "docs/DECISIONS.md D349; crypto/x509/t_x509.c:519-559 and :383-411 (the two internals) against :269-290 (the slice); crypto/x509/v3_rolespec.c:49 and crypto/cmp/cmp_vfy.c:57 (the internals' other callers); src/x509/t_x509.rs's module documentation; forensics/atlas/transcription-edges.json's `crypto/x509/t_x509.c` edge"
-      },
-      {
-        "owner_module": "src/passphrase.rs",
-        "class": "owned_by_a_later_stratum",
-        "covers": [
-          "ossl_pw_get_passphrase",
-          "ossl_pw_passphrase_callback_dec",
-          "ossl_pw_passphrase_callback_enc",
-          "ossl_pw_pem_password",
-          "ossl_pw_pvk_password"
-        ],
-        "note": "**Withheld rather than stubbed.** `src/passphrase.rs` transcribes `crypto/passphrase.c`'s passphrase bridge, the floor of the encoder/decoder framework (D356): the two clearers, the four `ossl_pw_set_*` setters, the two caching toggles and the `static do_ui_passphrase` processor. That makes it a module for the unit, which makes the unit's unwired internals countable (D327's rule), and these five are the ones the lexical scan sees. They are one block: `ossl_pw_get_passphrase` (`:204-305`) is the central dispatcher and its `is_pem_password` arm calls `UI_UTIL_wrap_read_pem_callback` (`crypto/ui/ui_util.c`, declared `ui.h`), which is **Phase 13's and unlanded** -- `src/ui/mod.rs` records that the three `UI_UTIL_*` names are not on its working set -- and the other four (`ossl_pw_pem_password` `:323`, `ossl_pw_pvk_password` `:328`, `ossl_pw_passphrase_callback_enc` `:333`, `ossl_pw_passphrase_callback_dec` `:340`) are each one call into it. A body whose own text calls a name no module defines cannot be written, and returning early would be a fabricated answer, so the five are withheld with the boundary named. The class is `owned_by_a_later_stratum` because the unit is Phase 10's and the blocker is Phase 13's: the crate's module is the one that will reference them, and it will do so when those strata land. Nothing the eight Phase-8 printers wait on is in this block -- `print_pkey` falls through to `ameth->priv_print` without reading a passphrase -- so it blocks no Phase-8 work. The row fail-closes in both directions: if any of the five is ever built the gate reports it `stale` until the row is removed, and if `src/passphrase.rs` stopped owning the unit the record would stop matching.",
-        "evidence": "docs/DECISIONS.md D356; crypto/passphrase.c:204-305 (the dispatcher) against :61-63 of include/internal/passphrase.h (the header); src/ui/mod.rs's \"What is not here\" section; src/passphrase.rs's module documentation; forensics/atlas/transcription-edges.json's `crypto/passphrase.c` edge"
       }
     ],
     "units": [

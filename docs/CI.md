@@ -105,7 +105,7 @@ record the **build product** rather than a committed input:
 Those two are normalised, and the tool **prints exactly which of them it
 normalised** so the exception is visible rather than silent. Everything else —
 every count, every symbol name, every phase state, every obligation — is compared
-exactly. The `internal_symbols.c_style` subset (the 335 plain C identifiers a
+exactly. The `internal_symbols.c_style` subset (the 340 plain C identifiers a
 consumer's own symbols could collide with) *is* compared exactly; only the
 compiler-emitted population is not, which is why it is recorded as a count and not
 as names.
