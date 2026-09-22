@@ -13,8 +13,8 @@
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)"
     ],
     "census": {
-      "covered_by_a_divergence": 88,
-      "language_surface_not_modelled_by_name": 4524,
+      "covered_by_a_divergence": 90,
+      "language_surface_not_modelled_by_name": 4554,
       "planned_prerequisites": 8
     },
     "census_by_unit": {
@@ -50,8 +50,8 @@
         "ossl_i2d_X448_PUBKEY": 1,
         "ossl_lib_ctx_default_deinit": 1,
         "ossl_lib_ctx_get_concrete": 6,
-        "ossl_lib_ctx_get_data": 15,
-        "ossl_lib_ctx_get_descriptor": 3,
+        "ossl_lib_ctx_get_data": 16,
+        "ossl_lib_ctx_get_descriptor": 4,
         "ossl_lib_ctx_get_ex_data_global": 2,
         "ossl_lib_ctx_is_child": 1,
         "ossl_lib_ctx_is_default": 3,
@@ -225,6 +225,7 @@
         "crypto/ec/ecp_mont.c": 8,
         "crypto/ec/ecp_nist.c": 7,
         "crypto/ec/ecp_smpl.c": 13,
+        "crypto/encode_decode/decoder_meth.c": 30,
         "crypto/encode_decode/encoder_lib.c": 32,
         "crypto/encode_decode/encoder_meth.c": 21,
         "crypto/encode_decode/encoder_pkey.c": 31,
@@ -470,8 +471,8 @@
       ]
     },
     "checked": {
-      "authority_units": 285,
-      "crate_modules": 363,
+      "authority_units": 286,
+      "crate_modules": 364,
       "deferral_blocker_rows": 1,
       "deferrals_recorded": 9,
       "divergence_names_covered": 58,
@@ -592,7 +593,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "76e5583fac64d9c8163480bc789f8a0c20c1e21cbd20d578db23c8777870eb2c",
+  "body_hash": "d504f8a022429c3712b271ff83f6de1c5b9a9528de7b1c4b3a118337cae0d1ee",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -613,7 +614,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "d43742721366f912887c454694a1f966290a22d22ce9561f286f85ecea0fcf6f"
+      "sha256": "d7df03d3c556d872f3e0d72cb00ac1d61aa8c98c331955def09b4bee9afc87a5"
     },
     {
       "name": "symbol-ownership",
@@ -628,7 +629,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "4844649def495af0b72a920c429dd7a006a7ddd76301d4f9ce3a9fc84f39a3da"
+      "sha256": "d71b3aa550a0dd6542e8b53ea9a32762c85537bbba1360ce4bbe1ff0c5dbc32e"
     },
     {
       "name": "phase-state",

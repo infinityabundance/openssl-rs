@@ -126,6 +126,7 @@ pub(crate) mod packet;
 // Phase 10's `crypto/encode_decode/encoder_meth.c`: the `OSSL_ENCODER` method object and the
 // `OSSL_FUNC_ENCODER_*` dispatch scan (D360). It lands ahead of its stratum, as `src/ui/` and
 // `src/passphrase.rs` did, because the eight Phase-8 printers reach it through `print_pkey`.
+pub mod decoder_meth;
 pub mod encoder_lib;
 pub mod encoder_meth;
 pub mod encoder_pkey;

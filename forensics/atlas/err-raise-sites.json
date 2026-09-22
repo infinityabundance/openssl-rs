@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 3114,
+      "sites": 3122,
       "unattributed": 0
     },
     "covered_files": [
@@ -286,7 +286,8 @@
       "crypto/passphrase.c",
       "crypto/encode_decode/encoder_meth.c",
       "crypto/encode_decode/encoder_lib.c",
-      "crypto/encode_decode/encoder_pkey.c"
+      "crypto/encode_decode/encoder_pkey.c",
+      "crypto/encode_decode/decoder_meth.c"
     ],
     "note": "`file` is the authority's `__FILE__` string, derived from relpath(source_tree, build_dir) of the admitted build record. It is a build artifact of the forensic build, reproduced exactly rather than normalized away, so the candidate's ERR records compare byte-for-byte with the authority's.",
     "prefix": "../../src/openssl-3.6.4/",
@@ -47099,6 +47100,126 @@
         "reason": 524347,
         "reason_symbol": "ERR_R_OSSL_ENCODER_LIB",
         "rel_source": "crypto/encode_decode/encoder_pkey.c"
+      },
+      {
+        "const_name": "DECODER_METH_280",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+        "function": "ossl_decoder_from_algorithm",
+        "generated": false,
+        "lib": 60,
+        "lib_symbol": "ERR_LIB_OSSL_DECODER",
+        "line": 280,
+        "macro": "ERR_raise",
+        "reason": 786696,
+        "reason_symbol": "ERR_R_INVALID_PROVIDER_FUNCTIONS",
+        "rel_source": "crypto/encode_decode/decoder_meth.c"
+      },
+      {
+        "const_name": "DECODER_METH_356",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+        "function": "inner_ossl_decoder_fetch",
+        "generated": false,
+        "lib": 60,
+        "lib_symbol": "ERR_LIB_OSSL_DECODER",
+        "line": 356,
+        "macro": "ERR_raise",
+        "reason": 524550,
+        "reason_symbol": "ERR_R_PASSED_INVALID_ARGUMENT",
+        "rel_source": "crypto/encode_decode/decoder_meth.c"
+      },
+      {
+        "const_name": "DECODER_METH_414",
+        "data_format": "\"%s, Name (%s : %d), Properties (%s)\"",
+        "dynamic_reason": true,
+        "file": "../../src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+        "function": "inner_ossl_decoder_fetch",
+        "generated": false,
+        "lib": 60,
+        "lib_symbol": "ERR_LIB_OSSL_DECODER",
+        "line": 414,
+        "macro": "ERR_raise_data",
+        "reason": 0,
+        "reason_symbol": null,
+        "rel_source": "crypto/encode_decode/decoder_meth.c"
+      },
+      {
+        "const_name": "DECODER_METH_463",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+        "function": "OSSL_DECODER_get0_provider",
+        "generated": false,
+        "lib": 60,
+        "lib_symbol": "ERR_LIB_OSSL_DECODER",
+        "line": 463,
+        "macro": "ERR_raise",
+        "reason": 786690,
+        "reason_symbol": "ERR_R_PASSED_NULL_PARAMETER",
+        "rel_source": "crypto/encode_decode/decoder_meth.c"
+      },
+      {
+        "const_name": "DECODER_METH_473",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+        "function": "OSSL_DECODER_get0_properties",
+        "generated": false,
+        "lib": 60,
+        "lib_symbol": "ERR_LIB_OSSL_DECODER",
+        "line": 473,
+        "macro": "ERR_raise",
+        "reason": 786690,
+        "reason_symbol": "ERR_R_PASSED_NULL_PARAMETER",
+        "rel_source": "crypto/encode_decode/decoder_meth.c"
+      },
+      {
+        "const_name": "DECODER_METH_484",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+        "function": "ossl_decoder_parsed_properties",
+        "generated": false,
+        "lib": 60,
+        "lib_symbol": "ERR_LIB_OSSL_DECODER",
+        "line": 484,
+        "macro": "ERR_raise",
+        "reason": 786690,
+        "reason_symbol": "ERR_R_PASSED_NULL_PARAMETER",
+        "rel_source": "crypto/encode_decode/decoder_meth.c"
+      },
+      {
+        "const_name": "DECODER_METH_494",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+        "function": "ossl_decoder_get_number",
+        "generated": false,
+        "lib": 60,
+        "lib_symbol": "ERR_LIB_OSSL_DECODER",
+        "line": 494,
+        "macro": "ERR_raise",
+        "reason": 786690,
+        "reason_symbol": "ERR_R_PASSED_NULL_PARAMETER",
+        "rel_source": "crypto/encode_decode/decoder_meth.c"
+      },
+      {
+        "const_name": "DECODER_METH_644",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+        "function": "OSSL_DECODER_CTX_set_params",
+        "generated": false,
+        "lib": 60,
+        "lib_symbol": "ERR_LIB_OSSL_DECODER",
+        "line": 644,
+        "macro": "ERR_raise",
+        "reason": 786690,
+        "reason_symbol": "ERR_R_PASSED_NULL_PARAMETER",
+        "rel_source": "crypto/encode_decode/decoder_meth.c"
       }
     ],
     "unattributed": [],
@@ -48510,6 +48631,11 @@
       "name": "authority:crypto/encode_decode/encoder_pkey.c",
       "path": "forensics/authorities/src/openssl-3.6.4/crypto/encode_decode/encoder_pkey.c",
       "sha256": "7c1c70b1a9b1a649cb9ad0096f4ddfc675187e3598acd82e2387fc699fca769f"
+    },
+    {
+      "name": "authority:crypto/encode_decode/decoder_meth.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+      "sha256": "4e30c72a0bf6d75ab1074d46438d032b77212a5ee457cd4e4d47d8adeb94b2af"
     }
   ],
   "kind": "err-raise-sites",
