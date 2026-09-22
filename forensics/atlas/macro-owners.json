@@ -4,9 +4,9 @@
     "counts": {
       "installed_headers": 139,
       "internal_only": 2993,
-      "owned": 9599,
+      "owned": 9604,
       "records": 19839,
-      "unowned": 10240
+      "unowned": 10235
     },
     "definition": "every macro and enum member the authority's installed and internal headers define, with the header that defines it and that header's owning stratum",
     "installed_headers": [
@@ -73517,7 +73517,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_INTERNAL_PASSPHRASE_H",
-        "owner_phase": null
+        "owner_phase": 10
       },
       {
         "defined_in": [
@@ -139729,7 +139729,7 @@
         ],
         "kind": "enumerator",
         "name": "is_expl_passphrase",
-        "owner_phase": null
+        "owner_phase": 10
       },
       {
         "defined_in": [
@@ -139737,7 +139737,7 @@
         ],
         "kind": "enumerator",
         "name": "is_ossl_passphrase",
-        "owner_phase": null
+        "owner_phase": 10
       },
       {
         "defined_in": [
@@ -139745,7 +139745,7 @@
         ],
         "kind": "enumerator",
         "name": "is_pem_password",
-        "owner_phase": null
+        "owner_phase": 10
       },
       {
         "defined_in": [
@@ -139753,7 +139753,7 @@
         ],
         "kind": "enumerator",
         "name": "is_ui_method",
-        "owner_phase": null
+        "owner_phase": 10
       },
       {
         "defined_in": [

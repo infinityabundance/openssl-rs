@@ -30682,6 +30682,156 @@ pub(crate) const PEM_ALL_214: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ossl_pw_set_passphrase` at `crypto/passphrase.c:38` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PASSPHRASE_38: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 38,
+    func: c"ossl_pw_set_passphrase",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_pw_set_pem_password_cb` at `crypto/passphrase.c:55` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PASSPHRASE_55: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 55,
+    func: c"ossl_pw_set_pem_password_cb",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_pw_set_ossl_passphrase_cb` at `crypto/passphrase.c:69` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PASSPHRASE_69: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 69,
+    func: c"ossl_pw_set_ossl_passphrase_cb",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_pw_set_ui_method` at `crypto/passphrase.c:83` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PASSPHRASE_83: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 83,
+    func: c"ossl_pw_set_ui_method",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `do_ui_passphrase` at `crypto/passphrase.c:124` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PASSPHRASE_124: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 124,
+    func: c"do_ui_passphrase",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `do_ui_passphrase` at `crypto/passphrase.c:129` (ERR_R_UI_LIB).
+pub(crate) const PASSPHRASE_129: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 129,
+    func: c"do_ui_passphrase",
+    lib: 15,
+    reason: 524328,
+    dynamic_reason: false,
+};
+
+/// `do_ui_passphrase` at `crypto/passphrase.c:142` (ERR_R_UI_LIB).
+pub(crate) const PASSPHRASE_142: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 142,
+    func: c"do_ui_passphrase",
+    lib: 15,
+    reason: 524328,
+    dynamic_reason: false,
+};
+
+/// `do_ui_passphrase` at `crypto/passphrase.c:156` (ERR_R_UI_LIB).
+pub(crate) const PASSPHRASE_156: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 156,
+    func: c"do_ui_passphrase",
+    lib: 15,
+    reason: 524328,
+    dynamic_reason: false,
+};
+
+/// `do_ui_passphrase` at `crypto/passphrase.c:171` (ERR_R_UI_LIB).
+pub(crate) const PASSPHRASE_171: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 171,
+    func: c"do_ui_passphrase",
+    lib: 15,
+    reason: 524328,
+    dynamic_reason: false,
+};
+
+/// `do_ui_passphrase` at `crypto/passphrase.c:178` (ERR_R_INTERRUPTED_OR_CANCELLED).
+pub(crate) const PASSPHRASE_178: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 178,
+    func: c"do_ui_passphrase",
+    lib: 15,
+    reason: 524553,
+    dynamic_reason: false,
+};
+
+/// `do_ui_passphrase` at `crypto/passphrase.c:181` (ERR_R_UI_LIB).
+pub(crate) const PASSPHRASE_181: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 181,
+    func: c"do_ui_passphrase",
+    lib: 15,
+    reason: 524328,
+    dynamic_reason: false,
+};
+
+/// `do_ui_passphrase` at `crypto/passphrase.c:186` (ERR_R_UI_LIB).
+pub(crate) const PASSPHRASE_186: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 186,
+    func: c"do_ui_passphrase",
+    lib: 15,
+    reason: 524328,
+    dynamic_reason: false,
+};
+
+/// `ossl_pw_get_passphrase` at `crypto/passphrase.c:251` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PASSPHRASE_251: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 251,
+    func: c"ossl_pw_get_passphrase",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `ossl_pw_get_passphrase` at `crypto/passphrase.c:266` (ERR_R_UI_LIB).
+pub(crate) const PASSPHRASE_266: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 266,
+    func: c"ossl_pw_get_passphrase",
+    lib: 15,
+    reason: 524328,
+    dynamic_reason: false,
+};
+
+/// `ossl_pw_get_passphrase` at `crypto/passphrase.c:275` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PASSPHRASE_275: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 275,
+    func: c"ossl_pw_get_passphrase",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -33758,4 +33908,19 @@ pub(crate) static ALL: &[ErrSite] = &[
     UI_OPENSSL_561,
     PEM_ALL_201,
     PEM_ALL_214,
+    PASSPHRASE_38,
+    PASSPHRASE_55,
+    PASSPHRASE_69,
+    PASSPHRASE_83,
+    PASSPHRASE_124,
+    PASSPHRASE_129,
+    PASSPHRASE_142,
+    PASSPHRASE_156,
+    PASSPHRASE_171,
+    PASSPHRASE_178,
+    PASSPHRASE_181,
+    PASSPHRASE_186,
+    PASSPHRASE_251,
+    PASSPHRASE_266,
+    PASSPHRASE_275,
 ];

@@ -773,6 +773,14 @@ COVERED_FILES = [
     # they are one call to a `PEM_ASN1_*` -- so the two sites are the two hand-written readers'
     # (`PEM_read_bio_DHparams` at `:201`, `PEM_read_DHparams` at `:214`).
     ("crypto/pem/pem_all.c", "PEM_ALL"),
+    # Phase 10 staging: `crypto/passphrase.c`, the passphrase bridge the encode/decode
+    # framework stands on (D356). Its four `ossl_pw_set_*` setters and the `static
+    # do_ui_passphrase` processor raise `ERR_LIB_CRYPTO` with `ERR_R_PASSED_NULL_PARAMETER`,
+    # `ERR_R_UI_LIB` and `ERR_R_INTERRUPTED_OR_CANCELLED`; the eleven sites in
+    # `ossl_pw_get_passphrase` and its five one-call callers are covered by this file's entry
+    # even though those six functions are withheld, because a raise site is a property of the
+    # translation unit rather than of the subset a stratum has reached.
+    ("crypto/passphrase.c", "PASSPHRASE"),
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`
