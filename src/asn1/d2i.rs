@@ -1193,6 +1193,43 @@ pub unsafe extern "C" fn ASN1_item_d2i_ex(
     })
 }
 
+/// `int asn1_item_embed_d2i(ASN1_VALUE **pval, const unsigned char **in, long len,
+/// const ASN1_ITEM *it, int tag, int aclass, char opt, ASN1_TLC *ctx, int depth,
+/// OSSL_LIB_CTX *libctx, const char *propq)` — the dispatch's own entry point.
+///
+/// [`embed_d2i`] is that function, and this is the form another translation unit calls it
+/// by: `crypto/x509/x_pubkey.c`'s `x509_pubkey_ex_d2i_ex` reaches the `X509_PUBKEY_INTERNAL`
+/// decoder through it with `depth` 0 and no library context, exactly as the authority's
+/// `x509_pubkey_ex_d2i_ex` does (`crypto/x509/x_pubkey.c:149`). It is deliberately **not**
+/// `ASN1_item_ex_d2i`: that wrapper decodes a **null** `pval` through a local and frees the
+/// caller's value on every failure (see [`item_ex_d2i_intern`]), while the authority's
+/// `x509_pubkey_ex_d2i_ex` calls the dispatch directly and does its own free.
+///
+/// # Safety
+///
+/// As [`item_ex_d2i_intern`]. `depth` is the nesting depth to enter at.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+pub(crate) unsafe fn asn1_item_embed_d2i(
+    pval: *mut *mut c_void,
+    in_: *mut *const c_uchar,
+    len: c_long,
+    it: *const Asn1Item,
+    tag: c_int,
+    aclass: c_int,
+    opt: bool,
+    ctx: *mut Asn1Tlc,
+    depth: c_int,
+    libctx: *mut c_void,
+    propq: *const c_char,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        embed_d2i(
+            pval, in_, len, it, tag, aclass, opt, ctx, depth, libctx, propq,
+        )
+    }
+}
+
 /// `asn1_item_embed_d2i` — the dispatch, in full.
 ///
 /// Six arms and a depth guard. Two properties of the whole function are only visible

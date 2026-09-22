@@ -399,7 +399,7 @@
         "stratum": "EVP framework"
       },
       {
-        "blocking": "6 open obligation(s) of this stratum recorded in forensics/phase8-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase",
+        "blocking": "137 provider registration row(s) of this stratum are neither implemented nor handed to a later phase (forensics/atlas/provider-algorithms.json): AES, ARGON2D, ARGON2I, ARGON2ID, CMAC, DH...",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -618,7 +618,7 @@
       "not_started": 12
     }
   },
-  "body_hash": "73e9a3c1176598a8f62af5d06f91f93af924396c7154840ab93b1daae063cf04",
+  "body_hash": "f023f806f984e598007c93974ee68635b9583d84be1cebc2e7e66a21efa04737",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

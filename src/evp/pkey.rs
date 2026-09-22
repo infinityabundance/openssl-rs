@@ -909,6 +909,18 @@ pub unsafe extern "C" fn EVP_PKEY_get_size(pkey: *const EvpPkey) -> c_int {
     if !pkey.is_null() {
         // SAFETY: `pkey` is live per the contract.
         size = unsafe { (*pkey).cache.size };
+        /* D369: the `ameth` override below `FIPS_MODULE`. `pkey_set_type`'s lookup now finds
+         * every `standard_methods[]` row (D353), so a legacy key's method answers where the cache
+         * is empty -- the arm D163/D165's comment recorded as unreachable. */
+        // SAFETY: `pkey` is live.
+        let ameth = unsafe { (*pkey).ameth };
+        if !ameth.is_null() {
+            // SAFETY: `ameth` is the key's own method table.
+            if let Some(f) = unsafe { (*ameth).pkey_size } {
+                // SAFETY: the callback is the key's own, with the authority's signature.
+                size = unsafe { f(pkey) };
+            }
+        }
     }
     if size <= 0 {
         // SAFETY: a compile-time-constant site.
@@ -2387,9 +2399,16 @@ pub unsafe extern "C" fn EVP_PKEY_get_bits(pkey: *const EvpPkey) -> c_int {
     if !pkey.is_null() {
         // SAFETY: `pkey` is live per the contract.
         size = unsafe { (*pkey).cache.bits };
-        /* Phase 8: `if (pkey->ameth != NULL && pkey->ameth->pkey_bits != NULL) size =
-         * pkey->ameth->pkey_bits(pkey);` -- the lookup that would set `ameth` is `pkey_set_type`'s
-         * and searches `standard_methods[]`, which is empty here (D163, D165). */
+        /* D369: the `ameth` override, as in `EVP_PKEY_get_size`. */
+        // SAFETY: `pkey` is live.
+        let ameth = unsafe { (*pkey).ameth };
+        if !ameth.is_null() {
+            // SAFETY: `ameth` is the key's own method table.
+            if let Some(f) = unsafe { (*ameth).pkey_bits } {
+                // SAFETY: the callback is the key's own, with the authority's signature.
+                size = unsafe { f(pkey) };
+            }
+        }
     }
     if size <= 0 {
         // SAFETY: a compile-time-constant site.
@@ -2413,7 +2432,16 @@ pub unsafe extern "C" fn EVP_PKEY_get_security_bits(pkey: *const EvpPkey) -> c_i
     if !pkey.is_null() {
         // SAFETY: `pkey` is live per the contract.
         size = unsafe { (*pkey).cache.security_bits };
-        /* Phase 8: the `ameth->pkey_security_bits` override, as above. */
+        /* D369: the `ameth->pkey_security_bits` override, as above. */
+        // SAFETY: `pkey` is live.
+        let ameth = unsafe { (*pkey).ameth };
+        if !ameth.is_null() {
+            // SAFETY: `ameth` is the key's own method table.
+            if let Some(f) = unsafe { (*ameth).pkey_security_bits } {
+                // SAFETY: the callback is the key's own, with the authority's signature.
+                size = unsafe { f(pkey) };
+            }
+        }
     }
     if size <= 0 {
         // SAFETY: a compile-time-constant site.

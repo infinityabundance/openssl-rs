@@ -14,38 +14,32 @@
 //! IMPLEMENT_PEM_write_cb(name, TYPE, str, ASN1) both writers, the pass-phrase callback form
 //! ```
 //!
-//! ## Two do not land: the six private-key readers, and why
+//! ## The six private-key readers, and what they waited on
 //!
 //! `pem_all.c` defines six readers by hand rather than through the macros —
 //! `PEM_read_RSAPrivateKey`, `PEM_read_bio_RSAPrivateKey`, `PEM_read_DSAPrivateKey`,
 //! `PEM_read_bio_DSAPrivateKey`, `PEM_read_ECPrivateKey` and `PEM_read_bio_ECPrivateKey` — and
 //! each is `PEM_read[_bio]_PrivateKey` followed by one of the file's three `pkey_get_*`
-//! helpers (`:53`, `:93`, `:134`). The helpers call `EVP_PKEY_get1_RSA` / `_get1_DSA` /
-//! `_get1_EC_KEY`, which are **Phase 8's own open rows** and wait on the `standard_methods[]`
-//! table (`EVP_PKEY_get1_RSA` -> `evp_pkey_get_legacy` -> the ameth registry, D341's cycle), and
-//! the `PEM_read_*PrivateKey` pair they wrap is Phase 7's and equally unlanded
-//! (`crypto/pem/pem_pkey.c`, handed to Phase 10/13). Two independent absences, the later of them
-//! Phase 11's: a reader cannot be written that calls a function no module defines.
-//!
-//! Those six are therefore **withheld**, not stubbed, and named here with their coordinates:
-//! `pkey_get_rsa` (`pem_all.c:53-67`) over `PEM_read_bio_RSAPrivateKey` (`:69-75`) and
-//! `PEM_read_RSAPrivateKey` (`:79-84`); `pkey_get_dsa` (`:93-107`) over
-//! `PEM_read_bio_DSAPrivateKey` (`:109-115`) and `PEM_read_DSAPrivateKey` (`:120-125`); and
-//! `pkey_get_eckey` (`:134-148`) over `PEM_read_bio_ECPrivateKey` (`:150-156`) and
-//! `PEM_read_ECPrivateKey` (`:165-171`). The twenty-four that remain need only landed
-//! `d2i_*`/`i2d_*` pairs, and they are all here.
+//! helpers (`:53`, `:93`, `:134`). **D369 lands all six**: the helpers call
+//! `EVP_PKEY_get1_RSA`/`_get1_DSA`/`_get1_EC_KEY`, which landed with the 8.8 ameth slice
+//! (D353), and the `PEM_read_*PrivateKey` pair they wrap is now in `src/pem/pem_pkey.rs`,
+//! whose last missing callee was `ossl_d2i_PUBKEY_legacy` (D369, item 1). The three
+//! `pkey_get_*` helpers are transcribed here beside them, each taking ownership of the key it
+//! is handed.
 //!
 //! ## The one `EC_PUBKEY` and `DSA_PUBKEY` asymmetry
 //!
 //! `crypto/pem/pem_all.c` also expands `IMPLEMENT_PEM_rw(DSA_PUBKEY, ...)`,
 //! `IMPLEMENT_PEM_rw(EC_PUBKEY, ...)`, `IMPLEMENT_PEM_rw(RSA_PUBKEY, ...)` and the four
 //! `IMPLEMENT_PEM_rw(X509_*)`, and those ten readers/writers are **not here** because they are
-//! not Phase 8's: `symbol-ownership.json` assigns their `pem.h` declarations to Phase 11. What
-//! separates them is their `d2i_`: this module's twenty-four reach a landed `d2i_`/`i2d_` pair,
-//! and the four `*_PUBKEY` ones reach `d2i_DSA_PUBKEY`/`i2d_DSA_PUBKEY`,
-//! `d2i_EC_PUBKEY`/`i2d_EC_PUBKEY` and `d2i_RSA_PUBKEY`/`i2d_RSA_PUBKEY`, which are Phase 11's
-//! and unlanded. So the module is a partial one in the shape of `src/rsa/asn1.rs`': it lands
-//! every row whose closure is complete and names the rest.
+//! not Phase 8's: `symbol-ownership.json` assigns their `pem.h` declarations to Phase 11. Their
+//! `d2i_`/`i2d_` pairs — `d2i_DSA_PUBKEY`/`i2d_DSA_PUBKEY`, `d2i_EC_PUBKEY`/`i2d_EC_PUBKEY` and
+//! `d2i_RSA_PUBKEY`/`i2d_RSA_PUBKEY` — **landed with D369's completion of
+//! `crypto/x509/x_pubkey.c`**, so the ten are transcribable now and remain Phase 11's to write;
+//! the sentence D349 wrote here ("they reach ... which are Phase 11's and unlanded") is
+//! corrected rather than kept, because the second half is no longer true. This module is a
+//! partial one in the shape of `src/rsa/asn1.rs`: it lands every row Phase 8 owns and names the
+//! rest.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -56,18 +50,24 @@ use crate::asn1::layout::I2dOfVoid;
 use crate::dh::asn1::{d2i_DHparams, d2i_DHxparams, i2d_DHparams, i2d_DHxparams};
 use crate::dh::Dh;
 use crate::dsa::asn1::{d2i_DSAparams, i2d_DSAPrivateKey, i2d_DSAparams};
+use crate::dsa::object::DSA_free;
 use crate::dsa::Dsa;
 use crate::ec::asn1::{d2i_ECPKParameters, i2d_ECPKParameters, i2d_ECPrivateKey};
+use crate::ec::key::EC_KEY_free;
 use crate::ec::{EcGroup, EcKey};
 use crate::evp::cipher::EvpCipher;
+use crate::evp::p_legacy_assign::EVP_PKEY_get1_EC_KEY;
 use crate::evp::pem_bridge::PemPasswordCb;
+use crate::evp::pkey::{EVP_PKEY_free, EVP_PKEY_get1_DSA, EvpPkey};
 use crate::pem::pem_lib::{
     PEM_ASN1_read, PEM_ASN1_write, PEM_ASN1_write_bio, PEM_STRING_DHPARAMS, PEM_STRING_DHXPARAMS,
     PEM_STRING_DSA, PEM_STRING_DSAPARAMS, PEM_STRING_ECPARAMETERS, PEM_STRING_ECPRIVATEKEY,
     PEM_STRING_RSA, PEM_STRING_RSA_PUBLIC,
 };
 use crate::pem::pem_oth::PEM_ASN1_read_bio;
+use crate::pem::pem_pkey::{PEM_read_PrivateKey, PEM_read_bio_PrivateKey};
 use crate::rsa::asn1::{d2i_RSAPublicKey, i2d_RSAPrivateKey, i2d_RSAPublicKey};
+use crate::rsa::object::RSA_free;
 use crate::rsa::Rsa;
 use crate::runtime::bio::bss_file::BIO_s_file;
 use crate::runtime::bio::{BIO_ctrl, BIO_free, BIO_new, Bio, BIO_C_SET_FILE_PTR};
@@ -894,3 +894,198 @@ const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/pem/pem_all.c".as_p
 const LINE_ALL_202: c_int = 202;
 /// `PEM_read_bio_DHparams`'s `OPENSSL_free(data)` (`pem_all.c:203`).
 const LINE_ALL_203: c_int = 203;
+
+// ---------------------------------------------------------------------------------------------
+// The six private-key readers and the three `pkey_get_*` helpers — `pem_all.c:46-171`
+// ---------------------------------------------------------------------------------------------
+//
+// The three `pkey_get_*` helpers read an `EVP_PKEY` with `PEM_read[_bio]_PrivateKey` and hand back
+// the low-level key it holds, so "traditional" and PKCS#8 blocks are both readable through them.
+// D369 lands them: the only two names they waited on were `PEM_read[_bio]_PrivateKey`, which
+// `src/pem/pem_pkey.rs` now carries, and `EVP_PKEY_get1_*`, which landed with the 8.8 ameth slice
+// (D353). Each helper takes ownership of the key it is given and frees it on every path, which is
+// why the `_PrivateKey` call passes a NULL out-slot rather than the caller's address.
+
+/// `static RSA *pkey_get_rsa(EVP_PKEY *key, RSA **rsa)` — `crypto/pem/pem_all.c:53-67`.
+///
+/// # Safety
+/// `key` is NULL or a live key this call takes ownership of; `rsa` is NULL or a writable slot.
+unsafe fn pkey_get_rsa(key: *mut EvpPkey, rsa: *mut *mut Rsa) -> *mut Rsa {
+    if key.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `key` is live per the contract.
+    let rtmp = unsafe { crate::evp::p_legacy_assign::EVP_PKEY_get1_RSA(key) };
+    // SAFETY: `key` is this call's own and is always released here.
+    unsafe { EVP_PKEY_free(key) };
+    if rtmp.is_null() {
+        return ptr::null_mut();
+    }
+    if !rsa.is_null() {
+        // SAFETY: `rsa` is a live slot.
+        unsafe {
+            RSA_free(*rsa);
+            *rsa = rtmp;
+        }
+    }
+    rtmp
+}
+
+/// `static DSA *pkey_get_dsa(EVP_PKEY *key, DSA **dsa)` — `crypto/pem/pem_all.c:93-107`.
+///
+/// # Safety
+/// `key` is NULL or a live key this call takes ownership of; `dsa` is NULL or a writable slot.
+unsafe fn pkey_get_dsa(key: *mut EvpPkey, dsa: *mut *mut Dsa) -> *mut Dsa {
+    if key.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `key` is live per the contract.
+    let dtmp = unsafe { EVP_PKEY_get1_DSA(key) };
+    // SAFETY: `key` is this call's own and is always released here.
+    unsafe { EVP_PKEY_free(key) };
+    if dtmp.is_null() {
+        return ptr::null_mut();
+    }
+    if !dsa.is_null() {
+        // SAFETY: `dsa` is a live slot.
+        unsafe {
+            DSA_free(*dsa);
+            *dsa = dtmp;
+        }
+    }
+    dtmp
+}
+
+/// `static EC_KEY *pkey_get_eckey(EVP_PKEY *key, EC_KEY **eckey)` —
+/// `crypto/pem/pem_all.c:134-148`.
+///
+/// # Safety
+/// `key` is NULL or a live key this call takes ownership of; `eckey` is NULL or a writable slot.
+unsafe fn pkey_get_eckey(key: *mut EvpPkey, eckey: *mut *mut EcKey) -> *mut EcKey {
+    if key.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `key` is live per the contract.
+    let dtmp = unsafe { EVP_PKEY_get1_EC_KEY(key) };
+    // SAFETY: `key` is this call's own and is always released here.
+    unsafe { EVP_PKEY_free(key) };
+    if dtmp.is_null() {
+        return ptr::null_mut();
+    }
+    if !eckey.is_null() {
+        // SAFETY: `eckey` is a live slot.
+        unsafe {
+            EC_KEY_free(*eckey);
+            *eckey = dtmp;
+        }
+    }
+    dtmp
+}
+
+/// `RSA *PEM_read_bio_RSAPrivateKey(BIO *bp, RSA **rsa, pem_password_cb *cb, void *u)` —
+/// `crypto/pem/pem_all.c:69-75`.
+///
+/// # Safety
+/// `bp` a live readable BIO; `rsa` NULL or a writable slot; `cb`/`u` the pass-phrase pair.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_read_bio_RSAPrivateKey(
+    bp: *mut Bio,
+    rsa: *mut *mut Rsa,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> *mut Rsa {
+    // SAFETY: `bp` is live and the rest is the caller's.
+    let pktmp = unsafe { PEM_read_bio_PrivateKey(bp, ptr::null_mut(), cb, u) };
+    // SAFETY: `pktmp` is NULL or a key this call now owns; `rsa` is the caller's slot.
+    unsafe { pkey_get_rsa(pktmp, rsa) }
+}
+
+/// `RSA *PEM_read_RSAPrivateKey(FILE *fp, RSA **rsa, pem_password_cb *cb, void *u)` —
+/// `crypto/pem/pem_all.c:79-84`.
+///
+/// # Safety
+/// `fp` an open readable stream; `rsa` NULL or a writable slot; `cb`/`u` the pass-phrase pair.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_read_RSAPrivateKey(
+    fp: *mut c_void,
+    rsa: *mut *mut Rsa,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> *mut Rsa {
+    // SAFETY: `fp` is the caller's stream and the rest is the caller's.
+    let pktmp = unsafe { PEM_read_PrivateKey(fp, ptr::null_mut(), cb, u) };
+    // SAFETY: `pktmp` is NULL or a key this call now owns; `rsa` is the caller's slot.
+    unsafe { pkey_get_rsa(pktmp, rsa) }
+}
+
+/// `DSA *PEM_read_bio_DSAPrivateKey(BIO *bp, DSA **dsa, pem_password_cb *cb, void *u)` —
+/// `crypto/pem/pem_all.c:109-115`.
+///
+/// # Safety
+/// `bp` a live readable BIO; `dsa` NULL or a writable slot; `cb`/`u` the pass-phrase pair.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_read_bio_DSAPrivateKey(
+    bp: *mut Bio,
+    dsa: *mut *mut Dsa,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> *mut Dsa {
+    // SAFETY: `bp` is live and the rest is the caller's.
+    let pktmp = unsafe { PEM_read_bio_PrivateKey(bp, ptr::null_mut(), cb, u) };
+    // SAFETY: `pktmp` is NULL or a key this call now owns; `dsa` is the caller's slot.
+    unsafe { pkey_get_dsa(pktmp, dsa) }
+}
+
+/// `DSA *PEM_read_DSAPrivateKey(FILE *fp, DSA **dsa, pem_password_cb *cb, void *u)` —
+/// `crypto/pem/pem_all.c:120-125`.
+///
+/// # Safety
+/// `fp` an open readable stream; `dsa` NULL or a writable slot; `cb`/`u` the pass-phrase pair.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_read_DSAPrivateKey(
+    fp: *mut c_void,
+    dsa: *mut *mut Dsa,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> *mut Dsa {
+    // SAFETY: `fp` is the caller's stream and the rest is the caller's.
+    let pktmp = unsafe { PEM_read_PrivateKey(fp, ptr::null_mut(), cb, u) };
+    // SAFETY: `pktmp` is NULL or a key this call now owns; `dsa` is the caller's slot.
+    unsafe { pkey_get_dsa(pktmp, dsa) }
+}
+
+/// `EC_KEY *PEM_read_bio_ECPrivateKey(BIO *bp, EC_KEY **key, pem_password_cb *cb, void *u)` —
+/// `crypto/pem/pem_all.c:150-156`.
+///
+/// # Safety
+/// `bp` a live readable BIO; `key` NULL or a writable slot; `cb`/`u` the pass-phrase pair.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_read_bio_ECPrivateKey(
+    bp: *mut Bio,
+    key: *mut *mut EcKey,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> *mut EcKey {
+    // SAFETY: `bp` is live and the rest is the caller's.
+    let pktmp = unsafe { PEM_read_bio_PrivateKey(bp, ptr::null_mut(), cb, u) };
+    // SAFETY: `pktmp` is NULL or a key this call now owns; `key` is the caller's slot.
+    unsafe { pkey_get_eckey(pktmp, key) }
+}
+
+/// `EC_KEY *PEM_read_ECPrivateKey(FILE *fp, EC_KEY **eckey, pem_password_cb *cb, void *u)` —
+/// `crypto/pem/pem_all.c:165-171`.
+///
+/// # Safety
+/// `fp` an open readable stream; `eckey` NULL or a writable slot; `cb`/`u` the pass-phrase pair.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_read_ECPrivateKey(
+    fp: *mut c_void,
+    eckey: *mut *mut EcKey,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> *mut EcKey {
+    // SAFETY: `fp` is the caller's stream and the rest is the caller's.
+    let pktmp = unsafe { PEM_read_PrivateKey(fp, ptr::null_mut(), cb, u) };
+    // SAFETY: `pktmp` is NULL or a key this call now owns; `eckey` is the caller's slot.
+    unsafe { pkey_get_eckey(pktmp, eckey) }
+}

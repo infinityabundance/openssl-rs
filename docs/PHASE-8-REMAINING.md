@@ -13,11 +13,11 @@ Read from the ledger's `body.counts`.
 | quantity | count |
 |---|---|
 | owned | 786 |
-| implemented | 780 |
+| implemented | 786 |
 | deferred to a later phase | 0 |
-| open in this stratum | 6 |
+| open in this stratum | 0 |
 
-The identity `owned = implemented + deferred + open` is `786 = 780 + 0 + 6`, which holds.
+The identity `owned = implemented + deferred + open` is `786 = 786 + 0 + 0`, which holds.
 
 ## The merge gate — what Phase 8 owes to Phase 9
 
@@ -42,21 +42,15 @@ table, verbatim.
 
 | subphase | owns | open | courts | depends on |
 |---|---|---|---|---|
-| 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals | `src/pem/key_legacy.rs`, `src/pem/key_legacy.rs` | 6 | `RT-PEM-KEY` | 8.8 |
 
-Total open symbols listed below: **6**; the ledger's
-`open_in_this_stratum` is 6.
-
-### 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals — 6 open
-
-`PEM_read_DSAPrivateKey`, `PEM_read_ECPrivateKey`, `PEM_read_RSAPrivateKey`,
-`PEM_read_bio_DSAPrivateKey`, `PEM_read_bio_ECPrivateKey`, `PEM_read_bio_RSAPrivateKey`
+Total open symbols listed below: **0**; the ledger's
+`open_in_this_stratum` is 0.
 
 ## The subphase order
 
 The plan records the subphases that still hold open work in this order:
 
-8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals
+
 
 `docs/PHASE-8-SUBPHASES.md` §2 records this order, and states that each
 row's dependency column was read from the authority's calls rather than

@@ -217,10 +217,36 @@ def main() -> int:
     # A stratum is "begun" iff it has a ledger on disk; the phases that have one are
     # derived below and used here for the scope, so the two readings cannot drift.
     begun = set(ledgers)
+
+    # **The stratum that ultimately owes a symbol, which is not always its atlas owner.**
+    # A ledger's `deferred` rows are hand-offs: the atlas owner may have passed the symbol
+    # onward, and the receiving stratum's ledger carries it. A symbol the crate implements while
+    # it sits in a *transit* ledger's `deferred` list is claimed by no `implemented` list at all,
+    # and the ledger that will claim it is the receiving stratum's -- so the scope test is
+    # against the **last** recorded target, not the atlas owner. D369 measures the class: the
+    # four `PEM_read[_bio]_PrivateKey` and their `_ex` twins are Phase 7's by `pem.h`, Phase 7
+    # handed them to Phase 13, and Phase 13 has no ledger, so Phase 8 landing them left them
+    # claimable by nobody. This is the same scope question D348 settled for a symbol whose
+    # *owner* has no ledger, one hop further along; the invariant it protects -- everything a
+    # begun stratum's ledger claims is exactly the ledger union -- is untouched, because a
+    # symbol in a transit ledger's `deferred` list is in no `implemented` list either way.
+    onward: dict[str, int] = {}
+    for phase, (_path, doc) in sorted(ledgers.items()):
+        for row in doc["body"].get("deferred") or []:
+            if isinstance(row, dict) and "symbol" in row and "owning_phase" in row:
+                sym = row["symbol"]
+                onward[sym] = max(onward.get(sym, 0), int(row["owning_phase"]))
+
+    def owing(s: str) -> int | None:
+        """The stratum the last recorded hand-off names, or the atlas owner if none does."""
+        if s in onward:
+            return onward[s]
+        return owner_by_symbol.get(s)
+
     out_of_scope = {
         s: owner_by_symbol[s]
         for s in implemented_manifest - union
-        if s in owner_by_symbol and owner_by_symbol[s] not in begun
+        if s in owner_by_symbol and owing(s) not in begun
     }
     missing = sorted(
         s for s in implemented_manifest - union
@@ -441,9 +467,14 @@ def main() -> int:
         # Implemented exports whose atlas-owning stratum has no ledger yet. They are
         # outside this tool's "begun stratum" universe by definition, are recorded here
         # so the exclusion is visible rather than silent, and leave this list when their
-        # stratum's ledger lands. D348's `X509_ALGOR_*` are the first.
+        # stratum's ledger lands. D348's `X509_ALGOR_*` are the first. **D369 widened the
+        # scope's reading of "owing stratum" to follow the recorded hand-offs**, so a symbol
+        # the atlas owner passed to a stratum with no ledger (the four
+        # `PEM_read[_bio]_PrivateKey` spellings and their `_ex` twins, Phase 7 -> 13) is
+        # recorded here too rather than reported as "in the manifest but in no ledger".
         "not_yet_begun": [
-            {"symbol": s, "owner_phase": p} for s, p in sorted(out_of_scope.items())
+            {"symbol": s, "owner_phase": p, "owing_phase": owing(s)}
+            for s, p in sorted(out_of_scope.items())
         ],
     }
     doc = envelope(kind="court-coverage", generator="forensics/tools/court_coverage.py",

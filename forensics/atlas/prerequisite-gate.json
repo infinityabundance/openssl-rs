@@ -13,8 +13,8 @@
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)"
     ],
     "census": {
-      "covered_by_a_divergence": 92,
-      "language_surface_not_modelled_by_name": 4707,
+      "covered_by_a_divergence": 84,
+      "language_surface_not_modelled_by_name": 4709,
       "planned_prerequisites": 8
     },
     "census_by_unit": {
@@ -28,22 +28,14 @@
         "inlen": 1,
         "libctx": 1,
         "openssl_init_fork_handlers": 1,
-        "ossl_X509_PUBKEY_INTERNAL_free": 1,
         "ossl_bio_print_ffc_params": 1,
         "ossl_bio_print_labeled_bignum": 1,
         "ossl_bio_print_labeled_buf": 1,
-        "ossl_d2i_DH_PUBKEY": 1,
-        "ossl_d2i_DHx_PUBKEY": 1,
-        "ossl_d2i_DSA_PUBKEY": 1,
         "ossl_d2i_ED25519_PUBKEY": 1,
         "ossl_d2i_ED448_PUBKEY": 1,
-        "ossl_d2i_PUBKEY_legacy": 1,
         "ossl_d2i_X25519_PUBKEY": 1,
         "ossl_d2i_X448_PUBKEY": 1,
-        "ossl_d2i_X509_PUBKEY_INTERNAL": 1,
         "ossl_ec_generate_key_dhkem": 1,
-        "ossl_i2d_DH_PUBKEY": 1,
-        "ossl_i2d_DHx_PUBKEY": 1,
         "ossl_i2d_ED25519_PUBKEY": 1,
         "ossl_i2d_ED448_PUBKEY": 1,
         "ossl_i2d_X25519_PUBKEY": 1,
@@ -315,9 +307,10 @@
         "crypto/params_dup.c": 12,
         "crypto/params_from_text.c": 10,
         "crypto/passphrase.c": 23,
-        "crypto/pem/pem_all.c": 37,
+        "crypto/pem/pem_all.c": 28,
         "crypto/pem/pem_lib.c": 38,
         "crypto/pem/pem_oth.c": 8,
+        "crypto/pem/pem_pkey.c": 33,
         "crypto/pkcs12/p12_decr.c": 14,
         "crypto/pkcs12/p12_p8d.c": 5,
         "crypto/poly1305/poly1305.c": 5,
@@ -371,9 +364,9 @@
         "crypto/whrlpool/wp_dgst.c": 3,
         "crypto/x509/t_x509.c": 108,
         "crypto/x509/x509_att.c": 22,
-        "crypto/x509/x509_set.c": 47,
+        "crypto/x509/x509_set.c": 45,
         "crypto/x509/x_attrib.c": 19,
-        "crypto/x509/x_pubkey.c": 70
+        "crypto/x509/x_pubkey.c": 50
       },
       "planned_prerequisites": {
         "evp_app_cleanup_int": 2,
@@ -396,22 +389,14 @@
         "inlen",
         "libctx",
         "openssl_init_fork_handlers",
-        "ossl_X509_PUBKEY_INTERNAL_free",
         "ossl_bio_print_ffc_params",
         "ossl_bio_print_labeled_bignum",
         "ossl_bio_print_labeled_buf",
-        "ossl_d2i_DH_PUBKEY",
-        "ossl_d2i_DHx_PUBKEY",
-        "ossl_d2i_DSA_PUBKEY",
         "ossl_d2i_ED25519_PUBKEY",
         "ossl_d2i_ED448_PUBKEY",
-        "ossl_d2i_PUBKEY_legacy",
         "ossl_d2i_X25519_PUBKEY",
         "ossl_d2i_X448_PUBKEY",
-        "ossl_d2i_X509_PUBKEY_INTERNAL",
         "ossl_ec_generate_key_dhkem",
-        "ossl_i2d_DH_PUBKEY",
-        "ossl_i2d_DHx_PUBKEY",
         "ossl_i2d_ED25519_PUBKEY",
         "ossl_i2d_ED448_PUBKEY",
         "ossl_i2d_X25519_PUBKEY",
@@ -423,6 +408,14 @@
         "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_concrete",
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data"
@@ -481,11 +474,11 @@
       ]
     },
     "checked": {
-      "authority_units": 295,
-      "crate_modules": 374,
+      "authority_units": 296,
+      "crate_modules": 375,
       "deferral_blocker_rows": 1,
       "deferrals_recorded": 9,
-      "divergence_names_covered": 59,
+      "divergence_names_covered": 51,
       "divergence_rows": 13,
       "names_referenced_and_not_built": 19
     },
@@ -499,9 +492,6 @@
           "ossl_asn1_string_embed_free",
           "ossl_asn1_string_set_bits_left",
           "ossl_sk_ASN1_UTF8STRING2text"
-        ],
-        "crypto/asn1/tasn_dec.c": [
-          "asn1_item_embed_d2i"
         ],
         "crypto/asn1/tasn_fre.c": [
           "ossl_asn1_item_embed_free",
@@ -590,7 +580,7 @@
         ]
       },
       "definition": "authority internal functions a transcribed unit calls, whose own translation unit's stratum has already sealed. Not a failure: each is either modelled differently by the crate or is work carried across the boundary by a later stratum. The count is held to non-increase by the regression guard.",
-      "names": 55
+      "names": 54
     },
     "universes": {
       "crate_references_checked": 32438,
@@ -600,13 +590,13 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "243e9f3ab6a48fb9ce3244bb2516bb24c8a1c15ec48a752eef994118caf1327b",
+  "body_hash": "cc5f90f2cb6271c5d47bda0afc6387a1dedb8a726866086447e57a182905167c",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "b99fd0633a33f40ab12a84fb7c1c9ef74083845ee2ae6c1ee76f41825d0a3280"
+      "sha256": "e6dd393c91b1f8e25cdfcda48ef02d2a2e737238ae0091d3a4d16836e99c6ebb"
     },
     {
       "name": "macro-owners",
@@ -621,7 +611,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "8aac1e6197b9220bfdab3e17f9ad76cfac4d96edde1fea527defc62000e1f81a"
+      "sha256": "e8eff1049feb70a127aa91fc0257d23c06032eb7d93ce749a9498a631e62d799"
     },
     {
       "name": "symbol-ownership",
@@ -636,17 +626,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "d972c6aee0fda10b608f649be30f0226757c81d070993abafdf0b275ab902439"
+      "sha256": "29a867eeaf485bcac325d88ee9db0587ee613d12a44e95ca13fe341c744fc731"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "32148e7ef0798cc07e8a9140a9c5ade123abc2f442eb61cdefc04cdc2c96a756"
+      "sha256": "57aa6bd1b5891cea2d033c1b3bb63cbe81d968fc2925509bfd0e3976c1f37964"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "a9e59b7359361065bda5ea88002009764a6f4575733d23927c7ce6b842cc29f8"
+      "sha256": "e7b5e2f0cb26f0268cc592341980ce559791871d93b8e8495636dcf32128678c"
     },
     {
       "name": "crate-source-tree",
