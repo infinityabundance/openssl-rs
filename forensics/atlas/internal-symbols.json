@@ -209,6 +209,8 @@
       "src/ec/backend.rs",
       "src/ec/curve25519.rs",
       "src/ec/curve25519_data.rs",
+      "src/ec/curve448.rs",
+      "src/ec/curve448_tables.rs",
       "src/ec/curve_data.rs",
       "src/ec/ecdh_ossl.rs",
       "src/ec/ecdsa_ossl.rs",

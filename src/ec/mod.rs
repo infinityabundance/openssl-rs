@@ -80,6 +80,8 @@ pub mod ctrl;
 pub mod curve;
 pub mod curve25519;
 pub(crate) mod curve25519_data;
+pub mod curve448;
+pub(crate) mod curve448_tables;
 pub(crate) mod curve_data;
 pub mod cvt;
 pub mod depr;
