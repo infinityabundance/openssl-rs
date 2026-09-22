@@ -22,10 +22,10 @@ Read from the census's own `implementation_state` for the rows this stratum owns
 | quantity | count |
 |---|---|
 | provider rows this stratum owns | 306 |
-| of those, implemented | 179 |
-| of those, unlanded | 127 |
+| of those, implemented | 182 |
+| of those, unlanded | 124 |
 
-The document below names all **127** unlanded rows this stratum owns across **44** translation units, and — so the first group can be read whole — the **13** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (119). The identity `306 = 179 + 127` holds.
+The document below names all **124** unlanded rows this stratum owns across **44** translation units, and — so the first group can be read whole — the **16** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (119). The identity `306 = 182 + 124` holds.
 
 ## The first group: the `OSSL_OP_KDF` rows and the `OSSL_OP_SKEYMGMT` pair
 
@@ -42,6 +42,8 @@ rather than stubbed.
 | `deflt_kdfs` | `ossl_kdf_argon2d_functions` | `OSSL_OP_KDF` | `ARGON2D` | unimplemented | `src/provider/kdf.rs` |
 | `deflt_kdfs` | `ossl_kdf_argon2id_functions` | `OSSL_OP_KDF` | `ARGON2ID` | unimplemented | `src/provider/kdf.rs` |
 
+**Withheld: not reachable on this profile, and recorded rather than stubbed.** The arm this profile compiles is *threaded*: `configuration.h:36` defines `OPENSSL_THREADS` and neither `OPENSSL_NO_DEFAULT_THREAD_POOL` nor `OPENSSL_NO_THREAD_POOL` is set, so `argon2.c.in:41-47` does **not** define `ARGON2_NO_THREADS` and `fill_mem_blocks_mt` (`:561-626`) is compiled alongside `fill_mem_blocks_st`. It calls `ossl_crypto_thread_start`, `ossl_crypto_thread_join` and `ossl_crypto_thread_clean`, three **internal** functions of `crypto/threads_pthread.c` (declared in `include/internal/thread.h:19`, not installed, so they are not in the export atlas and have no owning phase). The crate implements none of them, so D327's whole transcription cannot close: the three rows `ARGON2D`, `ARGON2I` and `ARGON2ID` become reachable once `crypto/threads_pthread.c`'s thread-start/join/clean trio lands, and only then.
+
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/kdfs/hkdf.c.in`
 
 | table | dispatch table symbol | operation | algorithm name(s) | state | crate file |
@@ -56,7 +58,7 @@ rather than stubbed.
 
 | table | dispatch table symbol | operation | algorithm name(s) | state | crate file |
 |---|---|---|---|---|---|
-| `deflt_kdfs` | `ossl_kdf_hmac_drbg_functions` | `OSSL_OP_KDF` | `HMAC-DRBG-KDF` | unimplemented | `src/provider/kdf.rs` |
+| `deflt_kdfs` | `ossl_kdf_hmac_drbg_functions` | `OSSL_OP_KDF` | `HMAC-DRBG-KDF` | implemented | `src/provider/kdf.rs` |
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/kdfs/kbkdf.c.in`
 
@@ -68,7 +70,7 @@ rather than stubbed.
 
 | table | dispatch table symbol | operation | algorithm name(s) | state | crate file |
 |---|---|---|---|---|---|
-| `deflt_kdfs` | `ossl_kdf_krb5kdf_functions` | `OSSL_OP_KDF` | `KRB5KDF` | unimplemented | `src/provider/kdf.rs` |
+| `deflt_kdfs` | `ossl_kdf_krb5kdf_functions` | `OSSL_OP_KDF` | `KRB5KDF` | implemented | `src/provider/kdf.rs` |
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/kdfs/pbkdf2.c.in`
 
@@ -86,7 +88,7 @@ rather than stubbed.
 
 | table | dispatch table symbol | operation | algorithm name(s) | state | crate file |
 |---|---|---|---|---|---|
-| `deflt_kdfs` | `ossl_kdf_scrypt_functions` | `OSSL_OP_KDF` | `SCRYPT:id-scrypt:1.3.6.1.4.1.11591.4.11` | unimplemented | `src/provider/kdf.rs` |
+| `deflt_kdfs` | `ossl_kdf_scrypt_functions` | `OSSL_OP_KDF` | `SCRYPT:id-scrypt:1.3.6.1.4.1.11591.4.11` | implemented | `src/provider/kdf.rs` |
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/kdfs/sshkdf.c.in`
 
@@ -405,7 +407,7 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 |---|---|
 | generator | `forensics/tools/phase8_provider_rows.py` |
 | census | `forensics/atlas/provider-algorithms.json` |
-| census content hash | `6e1013abd9b694603319e9c84735b487d95c0cb2b020f9fc3d26b501bb203e02` |
+| census content hash | `9a676e730ba32f87dcc61d73fc1ce1c7e8daa6b9a896300178d81ce6ab4cfc6c` |
 | authority tree | `forensics/authorities/src/openssl-3.6.4` |
 | crate query read | `src/provider/digest.rs` |
 

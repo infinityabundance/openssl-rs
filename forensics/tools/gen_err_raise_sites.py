@@ -587,6 +587,23 @@ COVERED_FILES = [
     # `:349`), `kbkdf_set_ctx_params` (`:667`, `:680`) and its two generated decoders
     # (`:432`-`:619` and the info counter at `:465`; `:778`-`:790`).
     ("providers/implementations/kdfs/kbkdf.c", "PROV_KBKDF"),
+    # SCRYPT (8.10's seventh provider-KDF row). `scrypt.c` is `.c.in`-generated and its whole body
+    # is behind `#ifndef OPENSSL_NO_SCRYPT`, which this profile does not define, so its `__FILE__`
+    # is bare and its line numbers are the generated text's. It raises from `set_digest` (`:171`),
+    # `kdf_scrypt_derive` (`:198`, `:203`), its two generated decoders (`:264`-`:336`, `:432`) and
+    # `scrypt_alg` (`:615`, `:626`, `:644`, `:654`, `:661`, `:670`, `:699` -- the last six
+    # `ERR_LIB_EVP`, unlike every other unit in this table).
+    ("providers/implementations/kdfs/scrypt.c", "PROV_SCRYPT"),
+    # KRB5KDF (8.10's eighth provider-KDF row). `krb5kdf.c` is `.c.in`-generated, so its `__FILE__`
+    # is bare and its line numbers are the generated text's. It raises from `krb5kdf_derive`
+    # (`:140`, `:144`, `:148`), `KRB5KDF` (`:538`, `:557`, `:563`, `:584`, `:618`) and its two
+    # generated decoders (`:199`-`:244`, `:314`).
+    ("providers/implementations/kdfs/krb5kdf.c", "PROV_KRB5KDF"),
+    # HMAC-DRBG-KDF (8.10's ninth provider-KDF row). `hmacdrbg_kdf.c` is `.c.in`-generated, so its
+    # `__FILE__` is bare and its line numbers are the generated text's. It raises from
+    # `hmac_drbg_kdf_new` (`:53`), `hmac_drbg_kdf_set_ctx_params` (`:386`) and its two generated
+    # decoders (`:177`-`:188`, `:273`-`:327`).
+    ("providers/implementations/kdfs/hmacdrbg_kdf.c", "PROV_HMACDRBG_KDF"),
     # Phase 8.4: the `crypto/rsa` subsystem. The same rule as `crypto/bn` above -- this is
     # the *subsystem* set, not a selection of convenient files, because every one of them
     # raises from a surface Phase 8 owns and a coordinate's `file` string is part of the

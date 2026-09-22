@@ -27441,3 +27441,193 @@ remain. The next unit in the plan document's order is `scrypt.c.in` (row 13), th
 `aes_skmgmt.c`/`generic.c.in` pair. `docs/PHASE-8-PROVIDER-ROWS.md` names every remaining unit, row,
 table and crate home. No claim is made that the stratum is close to sealing: it is **127** provider
 rows away, and that is the number.
+
+---
+
+## D379 — 8.10's seventh provider-KDF row lands: `SCRYPT`, the unit that is behind `#ifndef OPENSSL_NO_SCRYPT` and raises under `ERR_LIB_EVP`
+
+**Decision.** `providers/implementations/kdfs/scrypt.c` is transcribed **whole** (D327) as a new
+section of `src/provider/kdf.rs`: the `KDF_SCRYPT` context and its three-part reset, the generated
+set decoder as the field-keyed repeat check with the `n`/`r`/`p`/`maxmem_bytes` bounds, the two
+parameter lists, RFC 7914's `scryptBlockMix`/`scryptROMix` over its own `salsa208_word_specification`,
+the whole `scrypt_alg` memory-check ladder, and the dispatch table. Its registration row is
+published in `DEFLT_KDFS` as the authority's row 13 — after `X942KDF-ASN1` — so the crate's table
+stays a subsequence of `deflt_kdfs[]` (D244). The unit's body is entirely inside `#ifndef
+OPENSSL_NO_SCRYPT`, which this profile does not define, so the transcription is the compiled arm.
+
+**Movement, read off the regenerated files.** `provider_rows` moves implemented 179 -> **180**,
+unimplemented 127 -> **126** over **306** owned; `projection.open[8]` 127 -> **126**. The export
+ledgers do not move: `forensics/phase8-obligations.json` still reads `complete: true` with
+implemented **786**, deferred **0**, open **0**; `forensics/phase-state.json` still reads phase 8
+`in-progress`, `seal_sha256: null`, and its `blocking` line now names **126** rows.
+`docs/PHASE-8-PROVIDER-ROWS.md` is regenerated: 126 unlanded rows across 44 units, 14 landed.
+
+**Two mechanisms new to this unit.** First, its raises are **not** all `ERR_LIB_PROV`: `scrypt_alg`'s
+seven memory and PBKDF2 raises are `ERR_LIB_EVP` (`EVP_R_MEMORY_LIMIT_EXCEEDED`,
+`EVP_R_PBKDF2_ERROR`), the first unit in this table whose `lib` is not the provider's — the
+transcription uses the generated sites' own `lib`/`reason` rather than assuming the module's.
+Second, the settable list publishes `SCRYPT_R`/`SCRYPT_P` as `OSSL_PARAM_uint32` while the decoder
+reads them with `OSSL_PARAM_get_uint64`; the crate had no `param_uint32` and gained one
+(`src/provider/cipher.rs`), because the data size is part of the parameter's identity exactly as
+`param_uint64`'s doc says. `scrypt_alg` itself is transcribed check for check — including the six
+distinct `EVP_R_MEMORY_LIMIT_EXCEEDED` branches and the `size_t` clamp — because a transcription
+that folded them would answer at the wrong branch.
+
+**The court, and why both parameter sets are driven.** `RT-DIGEST` grows 566 -> **582**
+observations. `SCRYPT` is fetched by all three of its spellings (`SCRYPT`, `id-scrypt`, and the
+dotted `1.3.6.1.4.1.11591.4.11`), and two parameter sets are derived: a tiny `N=16, r=1` and the
+RFC 7914-style `N=1024, r=8`, the latter so the ROMix loop and the block-mix index arithmetic run
+over more than one block. Every input is a constant in `courts/phase8/rt_digest_probe.c`, so the
+printed bytes are the authority's own vector and not a secret. The gettable `size` is driven
+(`SIZE_MAX`), and the refusals are crossed: no pass (`PROV_R_MISSING_PASS`), no salt
+(`PROV_R_MISSING_SALT`), `N` not a power of two, `N` not greater than one, `r` zero, `p` zero —
+each the set body's own bare refusal — and a `maxmem_bytes` too small for `Blen + Vlen`
+(`EVP_R_MEMORY_LIMIT_EXCEEDED`). `provider_court_coverage.py` reports **185** implemented rows,
+**185** directly courted, **0** unmatched (phase 8: 180 implemented, 0 unmatched);
+`gen_err_raise_sites.py` covers the unit with **18** coordinates.
+
+**What is deliberately not here, with the coordinate.** Nine of the first group's eighteen rows
+remain. The next unit in the plan document's order is `krb5kdf.c.in` (row 14), then
+`hmacdrbg_kdf.c.in` (row 15), `argon2.c.in`'s three (rows 16-18) and `skeymgmt/`'s
+`aes_skmgmt.c`/`generic.c.in` pair. `docs/PHASE-8-PROVIDER-ROWS.md` names every remaining unit, row,
+table and crate home. No claim is made that the stratum is close to sealing: it is **126** provider
+rows away, and that is the number.
+
+---
+
+## D380 — 8.10's eighth provider-KDF row lands: `KRB5KDF`, RFC 3961's n-fold over a fetched cipher
+
+**Decision.** `providers/implementations/kdfs/krb5kdf.c` is transcribed **whole** (D327) as a new
+section of `src/provider/kdf.rs`: the `KRB5KDF_CTX` and its `PROV_CIPHER`, the generated set decoder
+as the field-keyed repeat check, the two parameter lists, RFC 3961 §5.1's `n_fold`, the DES3 key
+fixup, the one-cipher-block-per-output-block encrypt loop with its context re-initialisation and
+block swap, and the dispatch table. Its registration row is published in `DEFLT_KDFS` as the
+authority's row 14 — after `SCRYPT` — so the crate's table stays a subsequence of `deflt_kdfs[]`
+(D244).
+
+**Movement, read off the regenerated files.** `provider_rows` moves implemented 180 -> **181**,
+unimplemented 126 -> **125** over **306** owned; `projection.open[8]` 126 -> **125**. The export
+ledgers do not move: `forensics/phase8-obligations.json` still reads `complete: true` with
+implemented **786**, deferred **0**, open **0**; `forensics/phase-state.json` still reads phase 8
+`in-progress`, `seal_sha256: null`, and its `blocking` line now names **125** rows.
+`docs/PHASE-8-PROVIDER-ROWS.md` is regenerated: 125 unlanded rows across 44 units, 15 landed.
+
+**The mechanisms new to this unit.** It is the first of the group whose context is a **`PROV_CIPHER`**
+rather than a `PROV_DIGEST`, so it is the first to reach `ossl_prov_cipher_load`/`_copy`/`_reset`/
+`_cipher`/`_engine` and the `EVP_CIPHER_CTX` encrypt path; and its `n_fold` is the first body here
+whose arithmetic is **carried** — each rotated constant byte is added into `block[l % blocksize]`
+and the carry is propagated **backwards** through the accumulator, so every subtraction and
+multiplication in it is `wrapping_*` exactly as the authority's `unsigned int` wraps (`lcm` itself
+can exceed 32 bits before the `% blocksize`). `fixup_des3_key` is inside `#ifndef OPENSSL_NO_DES`,
+which this profile does not define, so it is transcribed, `DES_set_odd_parity` included.
+
+**The court, and why one block then two.** `RT-DIGEST` grows 582 -> **594** observations. `KRB5KDF`
+is fetched by its literal name and driven with `AES-128-CBC`: first **16** bytes (exactly one cipher
+block), then **32**, so the plaintext/ciphertext block swap and the context re-initialisation run.
+Every input is a constant in `courts/phase8/rt_digest_probe.c`, so the printed bytes are the
+authority's own vector and not a secret. The gettable `size` is driven (the cipher's key length,
+`EVP_CIPHER_get_key_length`, rather than the unbounded `SIZE_MAX` of the previous three), and the
+refusals are crossed: no cipher (`PROV_R_MISSING_CIPHER`), no key (`PROV_R_MISSING_KEY`), no
+constant (`PROV_R_MISSING_CONSTANT`), a 17-byte constant against AES's 16-byte block
+(`PROV_R_INVALID_CONSTANT_LENGTH`), and a 24-byte output with a 16-byte key
+(`PROV_R_WRONG_OUTPUT_BUFFER_SIZE`). `provider_court_coverage.py` reports **186** implemented rows,
+**186** directly courted, **0** unmatched (phase 8: 181 implemented, 0 unmatched);
+`gen_err_raise_sites.py` covers the unit with **14** coordinates.
+
+**What is deliberately not here, with the coordinate.** Eight of the first group's eighteen rows
+remain. The next unit in the plan document's order is `hmacdrbg_kdf.c.in` (row 15), then
+`argon2.c.in`'s three (rows 16-18) and `skeymgmt/`'s `aes_skmgmt.c`/`generic.c.in` pair.
+`docs/PHASE-8-PROVIDER-ROWS.md` names every remaining unit, row, table and crate home. No claim is
+made that the stratum is close to sealing: it is **125** provider rows away, and that is the number.
+
+---
+
+## D381 — 8.10's ninth provider-KDF row lands: `HMAC-DRBG-KDF`, the KDF whose core is Phase 9's
+
+**Decision.** `providers/implementations/kdfs/hmacdrbg_kdf.c` is transcribed **whole** (D327) as a
+new section of `src/provider/kdf.rs`: the `KDF_HMAC_DRBG` context (a `PROV_DRBG_HMAC base` plus its
+entropy/nonce and its one-shot `init` latch), the two generated decoders as the field-keyed repeat
+check, the two parameter lists, the local `ossl_drbg_hmac_dup`, and the dispatch table. Its
+registration row is published in `DEFLT_KDFS` as the authority's row 15 — after `KRB5KDF` — so the
+crate's table stays a subsequence of `deflt_kdfs[]` (D244).
+
+**Movement, read off the regenerated files.** `provider_rows` moves implemented 181 -> **182**,
+unimplemented 125 -> **124** over **306** owned; `projection.open[8]` 125 -> **124**. The export
+ledgers do not move: `forensics/phase8-obligations.json` still reads `complete: true` with
+implemented **786**, deferred **0**, open **0**; `forensics/phase-state.json` still reads phase 8
+`in-progress`, `seal_sha256: null`, and its `blocking` line now names **124** rows.
+`docs/PHASE-8-PROVIDER-ROWS.md` is regenerated: 124 unlanded rows across 44 units, 16 landed.
+
+**The dependency, and why it is not a hand-off.** This row's engine is `ossl_drbg_hmac_init` /
+`ossl_drbg_hmac_generate`, which are `providers/implementations/rands/drbg_hmac.c`'s — Phase 9's
+unit — and they are **already landed** in `src/provider/rand.rs` (`ProvDrbgHmac` and its two
+functions). So the row is reachable without any new work outside this module: the transcription
+imports Phase 9's core and drives it, exactly as `TLS13-KDF` imports `hkdf.c`'s or `KBKDF` imports
+the MAC layer's. No stub and no deferral.
+
+**Two details the transcription had to preserve.** The FREECTX slot **precedes** DUPCTX in this
+unit's dispatch table — the authority's own order, unlike every other table in this module — and the
+`init` latch means a second `derive` after a `set` that changed neither entropy nor nonce reuses the
+DRBG state rather than re-seeding. The allocation failure in `new` is also this module's only
+`ERR_R_MALLOC_FAILURE`, raised as its own record rather than returned silently.
+
+**The court.** `RT-DIGEST` grows 594 -> **602** observations. `HMAC-DRBG-KDF` is fetched by its
+literal name and driven deterministically from constant `entropy` and `nonce` records; every input
+is a constant in `courts/phase8/rt_digest_probe.c`, so the printed bytes are the authority's own
+vector and not a secret. The two gettable answers — the loaded MAC's name and the loaded digest's
+name — are read back, the missing-entropy arm is the derive's bare refusal, and `SHAKE128` is the
+XOF digest the `EVP_MD_xof` check refuses (`PROV_R_XOF_DIGESTS_NOT_ALLOWED`).
+`provider_court_coverage.py` reports **187** implemented rows, **187** directly courted, **0**
+unmatched (phase 8: 182 implemented, 0 unmatched); `gen_err_raise_sites.py` covers the unit with
+**9** coordinates.
+
+**What is deliberately not here, with the coordinate.** Seven of the first group's eighteen rows
+remain: `argon2.c.in`'s three (rows 16-18) and `skeymgmt/`'s `aes_skmgmt.c`/`generic.c.in` pair, then
+the `OSSL_OP_KEYEXCH` rows if the pass allows. `docs/PHASE-8-PROVIDER-ROWS.md` names every remaining
+unit, row, table and crate home. No claim is made that the stratum is close to sealing: it is
+**124** provider rows away, and that is the number.
+
+---
+
+## D382 — `argon2.c` is withheld with its coordinate: the profile's arm is threaded and the crate has no `ossl_crypto_thread_*`
+
+**Decision.** The three rows of `providers/implementations/kdfs/argon2.c` — `ARGON2D`, `ARGON2I` and
+`ARGON2ID` — are **withheld**, not stubbed, and the reason is recorded in the generated plan
+document under the unit's own heading. `forensics/tools/phase8_provider_rows.py` gains a
+`WITHHELD` map, keyed by translation unit, that its renderer prints beneath the unit's table, so
+the withholding is a function of a tool rather than a hand-typed aside; the census is unchanged and
+the three rows still count as unlanded.
+
+**Why it is not reachable, measured.** This profile compiles argon2's **threaded** arm:
+`configuration.h:36` defines `OPENSSL_THREADS`, and neither `OPENSSL_NO_DEFAULT_THREAD_POOL` nor
+`OPENSSL_NO_THREAD_POOL` is set, so `argon2.c.in:41-47` does **not** define `ARGON2_NO_THREADS` and
+`fill_mem_blocks_mt` (`:561-626`) is part of the compiled text alongside `fill_mem_blocks_st`.
+That function calls `ossl_crypto_thread_start`, `ossl_crypto_thread_join` and
+`ossl_crypto_thread_clean` — three **internal** declarations of `crypto/threads_pthread.c`
+(`include/internal/thread.h:19`), which are not installed and so are not in the export atlas and
+have no owning phase. The crate implements none of the three (the thread plane it does carry is
+`CRYPTO_THREAD_lock_*`, `CRYPTO_THREAD_run_once` and the thread-local pair, none of which spawn,
+join or clean a thread). D327's whole transcription therefore cannot close, and a transcription
+that replaced `fill_mem_blocks_mt` with the single-threaded body would be an approximation the
+brief forbids. No other part of the unit is a blocker: BLAKE2B and BLAKE2BMAC are both landed, and
+`EVP_DigestInit_ex2` and the `EVP_MAC_*` path the unit runs on are all present.
+
+**Movement.** None, and that is the point: `provider_rows` stays implemented **182** / unimplemented
+**124** over **306** owned, and `projection.open[8]` stays **124**. The export ledger is untouched
+(`forensics/phase8-obligations.json` still `complete: true`, implemented **786**, deferred **0**,
+open **0**), and `forensics/phase-state.json` is unchanged.
+
+**What this pass landed, in full.** The three reachable units of the brief's KDF remainder:
+`SCRYPT` (D379, row 13), `KRB5KDF` (D380, row 14) and `HMAC-DRBG-KDF` (D381, row 15), taking
+`provider_rows` from implemented **180** / unimplemented **126** at the pass's start to **182** /
+**124**. `RT-DIGEST` grew 566 -> 594 -> 602 over those three units. `docs/PHASE-8-PROVIDER-ROWS.md`
+is regenerated and names every remaining unit, row, table and crate home.
+
+**What remains, with the coordinates.** Four of the first group's eighteen rows are still unlanded:
+this entry's three argon2 rows (withheld above) and, not attempted this pass, the
+`skeymgmt/` pair — `providers/implementations/skeymgmt/aes_skmgmt.c` (`AES:2.16.840.1.101.3.4.1`,
+`deflt_skeymgmt`) and `providers/implementations/skeymgmt/generic.c.in` (`GENERIC-SECRET`,
+`deflt_skeymgmt`), which need a **sixth `deflt_query` arm** for `OSSL_OP_SKEYMGMT` in
+`src/provider/digest.rs` before a `DEFLT_SKEYMGMT` table can be published at all. The `OSSL_OP_KEYEXCH`
+rows were not reached. No claim is made that the stratum is close to sealing: it is **124** provider
+rows away, and that is the number.

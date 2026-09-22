@@ -22162,6 +22162,416 @@ pub(crate) const PROV_KBKDF_790: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `set_digest` at `providers/implementations/kdfs/scrypt.c:171` (PROV_R_UNABLE_TO_LOAD_SHA256).
+pub(crate) const PROV_SCRYPT_171: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 171,
+    func: c"set_digest",
+    lib: 57,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `kdf_scrypt_derive` at `providers/implementations/kdfs/scrypt.c:198` (PROV_R_MISSING_PASS).
+pub(crate) const PROV_SCRYPT_198: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 198,
+    func: c"kdf_scrypt_derive",
+    lib: 57,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `kdf_scrypt_derive` at `providers/implementations/kdfs/scrypt.c:203` (PROV_R_MISSING_SALT).
+pub(crate) const PROV_SCRYPT_203: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 203,
+    func: c"kdf_scrypt_derive",
+    lib: 57,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `scrypt_set_ctx_params_decoder` at `providers/implementations/kdfs/scrypt.c:264` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SCRYPT_264: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 264,
+    func: c"scrypt_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `scrypt_set_ctx_params_decoder` at `providers/implementations/kdfs/scrypt.c:277` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SCRYPT_277: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 277,
+    func: c"scrypt_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `scrypt_set_ctx_params_decoder` at `providers/implementations/kdfs/scrypt.c:292` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SCRYPT_292: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 292,
+    func: c"scrypt_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `scrypt_set_ctx_params_decoder` at `providers/implementations/kdfs/scrypt.c:303` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SCRYPT_303: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 303,
+    func: c"scrypt_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `scrypt_set_ctx_params_decoder` at `providers/implementations/kdfs/scrypt.c:312` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SCRYPT_312: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 312,
+    func: c"scrypt_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `scrypt_set_ctx_params_decoder` at `providers/implementations/kdfs/scrypt.c:325` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SCRYPT_325: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 325,
+    func: c"scrypt_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `scrypt_set_ctx_params_decoder` at `providers/implementations/kdfs/scrypt.c:336` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SCRYPT_336: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 336,
+    func: c"scrypt_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `scrypt_get_ctx_params_decoder` at `providers/implementations/kdfs/scrypt.c:432` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SCRYPT_432: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 432,
+    func: c"scrypt_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `scrypt_alg` at `providers/implementations/kdfs/scrypt.c:615` (EVP_R_MEMORY_LIMIT_EXCEEDED).
+pub(crate) const PROV_SCRYPT_615: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 615,
+    func: c"scrypt_alg",
+    lib: 6,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `scrypt_alg` at `providers/implementations/kdfs/scrypt.c:626` (EVP_R_MEMORY_LIMIT_EXCEEDED).
+pub(crate) const PROV_SCRYPT_626: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 626,
+    func: c"scrypt_alg",
+    lib: 6,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `scrypt_alg` at `providers/implementations/kdfs/scrypt.c:644` (EVP_R_MEMORY_LIMIT_EXCEEDED).
+pub(crate) const PROV_SCRYPT_644: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 644,
+    func: c"scrypt_alg",
+    lib: 6,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `scrypt_alg` at `providers/implementations/kdfs/scrypt.c:654` (EVP_R_MEMORY_LIMIT_EXCEEDED).
+pub(crate) const PROV_SCRYPT_654: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 654,
+    func: c"scrypt_alg",
+    lib: 6,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `scrypt_alg` at `providers/implementations/kdfs/scrypt.c:661` (EVP_R_MEMORY_LIMIT_EXCEEDED).
+pub(crate) const PROV_SCRYPT_661: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 661,
+    func: c"scrypt_alg",
+    lib: 6,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `scrypt_alg` at `providers/implementations/kdfs/scrypt.c:670` (EVP_R_MEMORY_LIMIT_EXCEEDED).
+pub(crate) const PROV_SCRYPT_670: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 670,
+    func: c"scrypt_alg",
+    lib: 6,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `scrypt_alg` at `providers/implementations/kdfs/scrypt.c:699` (EVP_R_PBKDF2_ERROR).
+pub(crate) const PROV_SCRYPT_699: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 699,
+    func: c"scrypt_alg",
+    lib: 6,
+    reason: 181,
+    dynamic_reason: false,
+};
+
+/// `krb5kdf_derive` at `providers/implementations/kdfs/krb5kdf.c:140` (PROV_R_MISSING_CIPHER).
+pub(crate) const PROV_KRB5KDF_140: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 140,
+    func: c"krb5kdf_derive",
+    lib: 57,
+    reason: 155,
+    dynamic_reason: false,
+};
+
+/// `krb5kdf_derive` at `providers/implementations/kdfs/krb5kdf.c:144` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_KRB5KDF_144: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 144,
+    func: c"krb5kdf_derive",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `krb5kdf_derive` at `providers/implementations/kdfs/krb5kdf.c:148` (PROV_R_MISSING_CONSTANT).
+pub(crate) const PROV_KRB5KDF_148: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 148,
+    func: c"krb5kdf_derive",
+    lib: 57,
+    reason: 156,
+    dynamic_reason: false,
+};
+
+/// `krb5kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/krb5kdf.c:199` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KRB5KDF_199: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 199,
+    func: c"krb5kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `krb5kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/krb5kdf.c:210` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KRB5KDF_210: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 210,
+    func: c"krb5kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `krb5kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/krb5kdf.c:222` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KRB5KDF_222: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 222,
+    func: c"krb5kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `krb5kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/krb5kdf.c:233` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KRB5KDF_233: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 233,
+    func: c"krb5kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `krb5kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/krb5kdf.c:244` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KRB5KDF_244: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 244,
+    func: c"krb5kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `krb5kdf_get_ctx_params_decoder` at `providers/implementations/kdfs/krb5kdf.c:314` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KRB5KDF_314: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 314,
+    func: c"krb5kdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `KRB5KDF` at `providers/implementations/kdfs/krb5kdf.c:538` (PROV_R_WRONG_OUTPUT_BUFFER_SIZE).
+pub(crate) const PROV_KRB5KDF_538: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 538,
+    func: c"KRB5KDF",
+    lib: 57,
+    reason: 139,
+    dynamic_reason: false,
+};
+
+/// `KRB5KDF` at `providers/implementations/kdfs/krb5kdf.c:557` (PROV_R_MISSING_CIPHER).
+pub(crate) const PROV_KRB5KDF_557: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 557,
+    func: c"KRB5KDF",
+    lib: 57,
+    reason: 155,
+    dynamic_reason: false,
+};
+
+/// `KRB5KDF` at `providers/implementations/kdfs/krb5kdf.c:563` (PROV_R_INVALID_CONSTANT_LENGTH).
+pub(crate) const PROV_KRB5KDF_563: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 563,
+    func: c"KRB5KDF",
+    lib: 57,
+    reason: 157,
+    dynamic_reason: false,
+};
+
+/// `KRB5KDF` at `providers/implementations/kdfs/krb5kdf.c:584` (PROV_R_WRONG_FINAL_BLOCK_LENGTH).
+pub(crate) const PROV_KRB5KDF_584: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 584,
+    func: c"KRB5KDF",
+    lib: 57,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `KRB5KDF` at `providers/implementations/kdfs/krb5kdf.c:618` (PROV_R_FAILED_TO_GENERATE_KEY).
+pub(crate) const PROV_KRB5KDF_618: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 618,
+    func: c"KRB5KDF",
+    lib: 57,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `hmac_drbg_kdf_new` at `providers/implementations/kdfs/hmacdrbg_kdf.c:53` (ERR_R_MALLOC_FAILURE).
+pub(crate) const PROV_HMACDRBG_KDF_53: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hmacdrbg_kdf.c",
+    line: 53,
+    func: c"hmac_drbg_kdf_new",
+    lib: 57,
+    reason: 786688,
+    dynamic_reason: false,
+};
+
+/// `hmac_drbg_kdf_get_ctx_params_decoder` at `providers/implementations/kdfs/hmacdrbg_kdf.c:177` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMACDRBG_KDF_177: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hmacdrbg_kdf.c",
+    line: 177,
+    func: c"hmac_drbg_kdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_drbg_kdf_get_ctx_params_decoder` at `providers/implementations/kdfs/hmacdrbg_kdf.c:188` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMACDRBG_KDF_188: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hmacdrbg_kdf.c",
+    line: 188,
+    func: c"hmac_drbg_kdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_drbg_kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hmacdrbg_kdf.c:273` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMACDRBG_KDF_273: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hmacdrbg_kdf.c",
+    line: 273,
+    func: c"hmac_drbg_kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_drbg_kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hmacdrbg_kdf.c:292` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMACDRBG_KDF_292: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hmacdrbg_kdf.c",
+    line: 292,
+    func: c"hmac_drbg_kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_drbg_kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hmacdrbg_kdf.c:303` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMACDRBG_KDF_303: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hmacdrbg_kdf.c",
+    line: 303,
+    func: c"hmac_drbg_kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_drbg_kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hmacdrbg_kdf.c:316` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMACDRBG_KDF_316: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hmacdrbg_kdf.c",
+    line: 316,
+    func: c"hmac_drbg_kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_drbg_kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hmacdrbg_kdf.c:327` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMACDRBG_KDF_327: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hmacdrbg_kdf.c",
+    line: 327,
+    func: c"hmac_drbg_kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_drbg_kdf_set_ctx_params` at `providers/implementations/kdfs/hmacdrbg_kdf.c:386` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_HMACDRBG_KDF_386: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hmacdrbg_kdf.c",
+    line: 386,
+    func: c"hmac_drbg_kdf_set_ctx_params",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
 /// `rsa_new_intern` at `crypto/rsa/rsa_lib.c:85` (ERR_R_CRYPTO_LIB).
 pub(crate) const RSA_LIB_85: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
@@ -36386,6 +36796,47 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_KBKDF_680,
     PROV_KBKDF_778,
     PROV_KBKDF_790,
+    PROV_SCRYPT_171,
+    PROV_SCRYPT_198,
+    PROV_SCRYPT_203,
+    PROV_SCRYPT_264,
+    PROV_SCRYPT_277,
+    PROV_SCRYPT_292,
+    PROV_SCRYPT_303,
+    PROV_SCRYPT_312,
+    PROV_SCRYPT_325,
+    PROV_SCRYPT_336,
+    PROV_SCRYPT_432,
+    PROV_SCRYPT_615,
+    PROV_SCRYPT_626,
+    PROV_SCRYPT_644,
+    PROV_SCRYPT_654,
+    PROV_SCRYPT_661,
+    PROV_SCRYPT_670,
+    PROV_SCRYPT_699,
+    PROV_KRB5KDF_140,
+    PROV_KRB5KDF_144,
+    PROV_KRB5KDF_148,
+    PROV_KRB5KDF_199,
+    PROV_KRB5KDF_210,
+    PROV_KRB5KDF_222,
+    PROV_KRB5KDF_233,
+    PROV_KRB5KDF_244,
+    PROV_KRB5KDF_314,
+    PROV_KRB5KDF_538,
+    PROV_KRB5KDF_557,
+    PROV_KRB5KDF_563,
+    PROV_KRB5KDF_584,
+    PROV_KRB5KDF_618,
+    PROV_HMACDRBG_KDF_53,
+    PROV_HMACDRBG_KDF_177,
+    PROV_HMACDRBG_KDF_188,
+    PROV_HMACDRBG_KDF_273,
+    PROV_HMACDRBG_KDF_292,
+    PROV_HMACDRBG_KDF_303,
+    PROV_HMACDRBG_KDF_316,
+    PROV_HMACDRBG_KDF_327,
+    PROV_HMACDRBG_KDF_386,
     RSA_LIB_85,
     RSA_LIB_106,
     RSA_LIB_116,

@@ -67,6 +67,27 @@ PROVIDER_ROOT = AUTHORITY / "providers"
 CRATE_QUERY = REPO_ROOT / "src" / "provider" / "digest.rs"
 OUT = REPO_ROOT / "docs" / "PHASE-8-PROVIDER-ROWS.md"
 
+# A unit whose closure is **not reachable** on this profile, keyed by the translation unit's
+# repo-relative path, with the measured reason. It is a *claim about the authority and the crate*,
+# so it is reviewed when the unit moves, and the document renders it under the unit's own heading
+# (D382's `argon2.c.in`) rather than leaving an unexplained remainder. Being here does **not** change
+# the census: the rows stay `unimplemented` and the totals count them as unlanded.
+WITHHELD: dict[str, str] = {
+    "forensics/authorities/src/openssl-3.6.4/providers/implementations/kdfs/argon2.c.in": (
+        "**Withheld: not reachable on this profile, and recorded rather than stubbed.** The arm "
+        "this profile compiles is *threaded*: `configuration.h:36` defines `OPENSSL_THREADS` and "
+        "neither `OPENSSL_NO_DEFAULT_THREAD_POOL` nor `OPENSSL_NO_THREAD_POOL` is set, so "
+        "`argon2.c.in:41-47` does **not** define `ARGON2_NO_THREADS` and `fill_mem_blocks_mt` "
+        "(`:561-626`) is compiled alongside `fill_mem_blocks_st`. It calls "
+        "`ossl_crypto_thread_start`, `ossl_crypto_thread_join` and `ossl_crypto_thread_clean`, "
+        "three **internal** functions of `crypto/threads_pthread.c` (declared in "
+        "`include/internal/thread.h:19`, not installed, so they are not in the export atlas and "
+        "have no owning phase). The crate implements none of them, so D327's whole transcription "
+        "cannot close: the three rows `ARGON2D`, `ARGON2I` and `ARGON2ID` become reachable once "
+        "`crypto/threads_pthread.c`'s thread-start/join/clean trio lands, and only then."
+    ),
+}
+
 # The operations this document's first section executes. The task that commissioned this
 # document names them: the `OSSL_OP_KDF` rows and the `OSSL_OP_SKEYMGMT` pair. They are listed
 # rather than derived because they are *this session's* choice of where to start, and a plan
@@ -282,6 +303,9 @@ def main() -> int:
                 f"`{':'.join(r['aliases'])}` | {r['implementation_state']} | `{crate_file_for(r)}` |"
             )
         w("")
+        if unit in WITHHELD:
+            w(WITHHELD[unit])
+            w("")
     w("## The remaining rows, grouped by translation unit")
     w("")
     w("Every other unlanded row this stratum owns, grouped by the unit that defines its")

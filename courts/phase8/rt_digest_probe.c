@@ -1493,6 +1493,274 @@ static void rt_kdf_rows(void)
     }
     EVP_KDF_free(kdf);
 
+    /* SCRYPT, the row 8.10 lands (`providers/implementations/kdfs/scrypt.c`). Every input is a
+     * constant in this file, so the derived bytes are a vector and not a secret. Two parameter
+     * sets are driven (a tiny `N=16` and the RFC 7914-style `N=1024, r=8`), the gettable `size`
+     * answers `SIZE_MAX`, and the set/d'erive refusals are crossed: no pass, no salt, `N` not a
+     * power of two, `N` not greater than one, `r` zero, `p` zero, and a `maxmem_bytes` too small
+     * for the buffers (`EVP_R_MEMORY_LIMIT_EXCEEDED`). */
+    kdf = EVP_KDF_fetch(NULL, "SCRYPT", NULL);
+    printf("kdf.scrypt.fetch=%d\n", kdf != NULL);
+    {
+        uint64_t n16 = 16, n1024 = 1024, r1 = 1, r8 = 8, p1 = 1, mm1 = 1;
+        uint64_t n3 = 3, n1 = 1, r0 = 0, p0 = 0;
+        size_t sz = 0;
+        OSSL_PARAM gp[2];
+
+        kctx = EVP_KDF_CTX_new(kdf);
+        params[0] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_PASSWORD,
+                                                      (void *)"password", 8);
+        params[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_SALT, sinfo, sizeof(sinfo));
+        params[2] = OSSL_PARAM_construct_uint64(OSSL_KDF_PARAM_SCRYPT_N, &n16);
+        params[3] = OSSL_PARAM_construct_uint64(OSSL_KDF_PARAM_SCRYPT_R, &r1);
+        params[4] = OSSL_PARAM_construct_uint64(OSSL_KDF_PARAM_SCRYPT_P, &p1);
+        params[5] = OSSL_PARAM_construct_end();
+        memset(out, 0, sizeof(out));
+        printf("kdf.scrypt.derive=%d\n", EVP_KDF_derive(kctx, out, sizeof(out), params));
+        printf("kdf.scrypt.key=");
+        rt_print_hex(out, sizeof(out));
+        printf("\n");
+
+        gp[0] = OSSL_PARAM_construct_size_t(OSSL_KDF_PARAM_SIZE, &sz);
+        gp[1] = OSSL_PARAM_construct_end();
+        printf("kdf.scrypt.size.ret=%d\n", EVP_KDF_CTX_get_params(kctx, gp));
+        printf("kdf.scrypt.size=%zu\n", sz);
+        EVP_KDF_CTX_free(kctx);
+
+        /* `id-scrypt` and the dotted OID are the row's other two spellings. */
+        kdf = EVP_KDF_fetch(NULL, "id-scrypt", NULL);
+        printf("kdf.scrypt.alias1.fetch=%d\n", kdf != NULL);
+        EVP_KDF_free(kdf);
+        kdf = EVP_KDF_fetch(NULL, "1.3.6.1.4.1.11591.4.11", NULL);
+        printf("kdf.scrypt.alias2.fetch=%d\n", kdf != NULL);
+        EVP_KDF_free(kdf);
+        kdf = EVP_KDF_fetch(NULL, "SCRYPT", NULL);
+
+        /* The RFC 7914-style parameter set: a larger `N` and `r`, so the ROMix loop and the
+         * block-mix index arithmetic are exercised. */
+        kctx = EVP_KDF_CTX_new(kdf);
+        params[0] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_PASSWORD,
+                                                      (void *)"password", 8);
+        params[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_SALT, sinfo, sizeof(sinfo));
+        params[2] = OSSL_PARAM_construct_uint64(OSSL_KDF_PARAM_SCRYPT_N, &n1024);
+        params[3] = OSSL_PARAM_construct_uint64(OSSL_KDF_PARAM_SCRYPT_R, &r8);
+        params[4] = OSSL_PARAM_construct_uint64(OSSL_KDF_PARAM_SCRYPT_P, &p1);
+        params[5] = OSSL_PARAM_construct_end();
+        memset(out, 0, sizeof(out));
+        printf("kdf.scrypt.bigN.derive=%d\n", EVP_KDF_derive(kctx, out, sizeof(out), params));
+        printf("kdf.scrypt.bigN.key=");
+        rt_print_hex(out, sizeof(out));
+        printf("\n");
+
+        /* A `maxmem_bytes` too small for `Blen + Vlen`: `EVP_R_MEMORY_LIMIT_EXCEEDED`. */
+        params[5] = OSSL_PARAM_construct_uint64(OSSL_KDF_PARAM_SCRYPT_MAXMEM, &mm1);
+        params[6] = OSSL_PARAM_construct_end();
+        printf("kdf.scrypt.smallmax.derive=%d\n", EVP_KDF_derive(kctx, out, sizeof(out), params));
+        EVP_KDF_CTX_free(kctx);
+
+        /* No pass: `PROV_R_MISSING_PASS`. */
+        kctx = EVP_KDF_CTX_new(kdf);
+        params[0] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_SALT, sinfo, sizeof(sinfo));
+        params[1] = OSSL_PARAM_construct_end();
+        printf("kdf.scrypt.nopass.derive=%d\n", EVP_KDF_derive(kctx, out, sizeof(out), params));
+        EVP_KDF_CTX_free(kctx);
+
+        /* No salt: `PROV_R_MISSING_SALT`. */
+        kctx = EVP_KDF_CTX_new(kdf);
+        params[0] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_PASSWORD,
+                                                      (void *)"password", 8);
+        params[1] = OSSL_PARAM_construct_end();
+        printf("kdf.scrypt.nosalt.derive=%d\n", EVP_KDF_derive(kctx, out, sizeof(out), params));
+        EVP_KDF_CTX_free(kctx);
+
+        /* `N` not a power of two: the set body returns 0. */
+        kctx = EVP_KDF_CTX_new(kdf);
+        params[0] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_PASSWORD,
+                                                      (void *)"password", 8);
+        params[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_SALT, sinfo, sizeof(sinfo));
+        params[2] = OSSL_PARAM_construct_uint64(OSSL_KDF_PARAM_SCRYPT_N, &n3);
+        params[3] = OSSL_PARAM_construct_end();
+        printf("kdf.scrypt.badn.derive=%d\n", EVP_KDF_derive(kctx, out, sizeof(out), params));
+        EVP_KDF_CTX_free(kctx);
+
+        /* `N` not greater than one: the set body returns 0. */
+        kctx = EVP_KDF_CTX_new(kdf);
+        params[0] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_PASSWORD,
+                                                      (void *)"password", 8);
+        params[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_SALT, sinfo, sizeof(sinfo));
+        params[2] = OSSL_PARAM_construct_uint64(OSSL_KDF_PARAM_SCRYPT_N, &n1);
+        params[3] = OSSL_PARAM_construct_end();
+        printf("kdf.scrypt.n1.derive=%d\n", EVP_KDF_derive(kctx, out, sizeof(out), params));
+        EVP_KDF_CTX_free(kctx);
+
+        /* `r` zero, then `p` zero: the set body refuses each (`u64_value < 1`). */
+        kctx = EVP_KDF_CTX_new(kdf);
+        params[0] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_PASSWORD,
+                                                      (void *)"password", 8);
+        params[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_SALT, sinfo, sizeof(sinfo));
+        params[2] = OSSL_PARAM_construct_uint64(OSSL_KDF_PARAM_SCRYPT_R, &r0);
+        params[3] = OSSL_PARAM_construct_end();
+        printf("kdf.scrypt.r0.derive=%d\n", EVP_KDF_derive(kctx, out, sizeof(out), params));
+        EVP_KDF_CTX_free(kctx);
+
+        kctx = EVP_KDF_CTX_new(kdf);
+        params[0] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_PASSWORD,
+                                                      (void *)"password", 8);
+        params[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_SALT, sinfo, sizeof(sinfo));
+        params[2] = OSSL_PARAM_construct_uint64(OSSL_KDF_PARAM_SCRYPT_P, &p0);
+        params[3] = OSSL_PARAM_construct_end();
+        printf("kdf.scrypt.p0.derive=%d\n", EVP_KDF_derive(kctx, out, sizeof(out), params));
+        EVP_KDF_CTX_free(kctx);
+    }
+    EVP_KDF_free(kdf);
+
+    /* KRB5KDF, the row 8.10 lands (`providers/implementations/kdfs/krb5kdf.c`). Every input is a
+     * constant in this file, so the derived bytes are a vector and not a secret. RFC 3961's
+     * `n_fold` plus one AES-128-CBC encryption per block is driven at 16 bytes (one block) and 32
+     * (two, so the plaintext/ciphertext block swap runs), the gettable `size` answers the
+     * cipher's key length, and the refusals are crossed: no cipher, no key, no constant, a
+     * constant longer than the cipher block (`PROV_R_INVALID_CONSTANT_LENGTH`), and an output
+     * length that differs from the key's (`PROV_R_WRONG_OUTPUT_BUFFER_SIZE`). */
+    kdf = EVP_KDF_fetch(NULL, "KRB5KDF", NULL);
+    printf("kdf.krb5.fetch=%d\n", kdf != NULL);
+    {
+        unsigned char cnst17[17];
+        size_t sz = 0;
+        OSSL_PARAM gp[2];
+
+        for (i = 0; i < sizeof(cnst17); i++)
+            cnst17[i] = (unsigned char)(13 * i + 5);
+
+        kctx = EVP_KDF_CTX_new(kdf);
+        params[0] = OSSL_PARAM_construct_utf8_string(OSSL_KDF_PARAM_CIPHER,
+                                                     (char *)"AES-128-CBC", 0);
+        params[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_KEY, z, 16);
+        params[2] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_CONSTANT, ukm, sizeof(ukm));
+        params[3] = OSSL_PARAM_construct_end();
+        memset(out, 0, sizeof(out));
+        printf("kdf.krb5.derive=%d\n", EVP_KDF_derive(kctx, out, 16, params));
+        printf("kdf.krb5.key=");
+        rt_print_hex(out, 16);
+        printf("\n");
+
+        memset(big, 0, sizeof(big));
+        printf("kdf.krb5.derive32=%d\n", EVP_KDF_derive(kctx, big, 32, params));
+        printf("kdf.krb5.key32=");
+        rt_print_hex(big, 32);
+        printf("\n");
+
+        gp[0] = OSSL_PARAM_construct_size_t(OSSL_KDF_PARAM_SIZE, &sz);
+        gp[1] = OSSL_PARAM_construct_end();
+        printf("kdf.krb5.size.ret=%d\n", EVP_KDF_CTX_get_params(kctx, gp));
+        printf("kdf.krb5.size=%zu\n", sz);
+        EVP_KDF_CTX_free(kctx);
+
+        /* A constant longer than AES-128's 16-byte block: `PROV_R_INVALID_CONSTANT_LENGTH`. */
+        kctx = EVP_KDF_CTX_new(kdf);
+        params[0] = OSSL_PARAM_construct_utf8_string(OSSL_KDF_PARAM_CIPHER,
+                                                     (char *)"AES-128-CBC", 0);
+        params[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_KEY, z, 16);
+        params[2] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_CONSTANT, cnst17,
+                                                      sizeof(cnst17));
+        params[3] = OSSL_PARAM_construct_end();
+        printf("kdf.krb5.bigconst.derive=%d\n", EVP_KDF_derive(kctx, out, 16, params));
+        EVP_KDF_CTX_free(kctx);
+
+        /* A 24-byte output with a 16-byte key: `PROV_R_WRONG_OUTPUT_BUFFER_SIZE`. */
+        kctx = EVP_KDF_CTX_new(kdf);
+        params[0] = OSSL_PARAM_construct_utf8_string(OSSL_KDF_PARAM_CIPHER,
+                                                     (char *)"AES-128-CBC", 0);
+        params[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_KEY, z, 16);
+        params[2] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_CONSTANT, ukm, sizeof(ukm));
+        params[3] = OSSL_PARAM_construct_end();
+        printf("kdf.krb5.badoutlen.derive=%d\n", EVP_KDF_derive(kctx, out, 24, params));
+        EVP_KDF_CTX_free(kctx);
+
+        /* No cipher: `PROV_R_MISSING_CIPHER`. */
+        kctx = EVP_KDF_CTX_new(kdf);
+        params[0] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_KEY, z, 16);
+        params[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_CONSTANT, ukm, sizeof(ukm));
+        params[2] = OSSL_PARAM_construct_end();
+        printf("kdf.krb5.nocipher.derive=%d\n", EVP_KDF_derive(kctx, out, 16, params));
+        EVP_KDF_CTX_free(kctx);
+
+        /* A cipher but no key: `PROV_R_MISSING_KEY`. */
+        kctx = EVP_KDF_CTX_new(kdf);
+        params[0] = OSSL_PARAM_construct_utf8_string(OSSL_KDF_PARAM_CIPHER,
+                                                     (char *)"AES-128-CBC", 0);
+        params[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_CONSTANT, ukm, sizeof(ukm));
+        params[2] = OSSL_PARAM_construct_end();
+        printf("kdf.krb5.nokey.derive=%d\n", EVP_KDF_derive(kctx, out, 16, params));
+        EVP_KDF_CTX_free(kctx);
+
+        /* A key but no constant: `PROV_R_MISSING_CONSTANT`. */
+        kctx = EVP_KDF_CTX_new(kdf);
+        params[0] = OSSL_PARAM_construct_utf8_string(OSSL_KDF_PARAM_CIPHER,
+                                                     (char *)"AES-128-CBC", 0);
+        params[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_KEY, z, 16);
+        params[2] = OSSL_PARAM_construct_end();
+        printf("kdf.krb5.noconst.derive=%d\n", EVP_KDF_derive(kctx, out, 16, params));
+        EVP_KDF_CTX_free(kctx);
+    }
+    EVP_KDF_free(kdf);
+
+    /* HMAC-DRBG-KDF, the row 8.10 lands (`providers/implementations/kdfs/hmacdrbg_kdf.c`). Every
+     * input is a constant in this file, so the derived bytes are a vector and not a secret. The
+     * row is an HMAC-DRBG wrapped as a KDF: `entropy` and `nonce` seed it once, then `derive`
+     * generates. The two gettable answers are the loaded MAC's and digest's own names, the
+     * missing-entropy arm is the derive's bare refusal, and `SHAKE128` is the XOF digest the
+     * `EVP_MD_xof` check refuses. */
+    kdf = EVP_KDF_fetch(NULL, "HMAC-DRBG-KDF", NULL);
+    printf("kdf.hmacdrbg.fetch=%d\n", kdf != NULL);
+    {
+        char macname[64], dgstname[64];
+        OSSL_PARAM gp[3];
+
+        memset(macname, 0, sizeof(macname));
+        memset(dgstname, 0, sizeof(dgstname));
+
+        kctx = EVP_KDF_CTX_new(kdf);
+        params[0] = OSSL_PARAM_construct_utf8_string(OSSL_KDF_PARAM_DIGEST, (char *)mdname, 0);
+        params[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_HMACDRBG_ENTROPY, z, sizeof(z));
+        params[2] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_HMACDRBG_NONCE, ukm,
+                                                      sizeof(ukm));
+        params[3] = OSSL_PARAM_construct_end();
+        memset(big, 0, sizeof(big));
+        printf("kdf.hmacdrbg.derive=%d\n", EVP_KDF_derive(kctx, big, 32, params));
+        printf("kdf.hmacdrbg.key=");
+        rt_print_hex(big, 32);
+        printf("\n");
+
+        gp[0] = OSSL_PARAM_construct_utf8_string(OSSL_KDF_PARAM_MAC, macname, sizeof(macname));
+        gp[1] = OSSL_PARAM_construct_utf8_string(OSSL_KDF_PARAM_DIGEST, dgstname,
+                                                 sizeof(dgstname));
+        gp[2] = OSSL_PARAM_construct_end();
+        printf("kdf.hmacdrbg.get.ret=%d\n", EVP_KDF_CTX_get_params(kctx, gp));
+        printf("kdf.hmacdrbg.get.mac=%s\n", macname);
+        printf("kdf.hmacdrbg.get.digest=%s\n", dgstname);
+        EVP_KDF_CTX_free(kctx);
+
+        /* No entropy: the derive refuses before initialising the DRBG. */
+        kctx = EVP_KDF_CTX_new(kdf);
+        params[0] = OSSL_PARAM_construct_utf8_string(OSSL_KDF_PARAM_DIGEST, (char *)mdname, 0);
+        params[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_HMACDRBG_NONCE, ukm,
+                                                      sizeof(ukm));
+        params[2] = OSSL_PARAM_construct_end();
+        printf("kdf.hmacdrbg.noentropy.derive=%d\n", EVP_KDF_derive(kctx, big, 32, params));
+        EVP_KDF_CTX_free(kctx);
+
+        /* An XOF digest: `PROV_R_XOF_DIGESTS_NOT_ALLOWED`. */
+        kctx = EVP_KDF_CTX_new(kdf);
+        params[0] = OSSL_PARAM_construct_utf8_string(OSSL_KDF_PARAM_DIGEST, (char *)"SHAKE128", 0);
+        params[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_HMACDRBG_ENTROPY, z, sizeof(z));
+        params[2] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_HMACDRBG_NONCE, ukm,
+                                                      sizeof(ukm));
+        params[3] = OSSL_PARAM_construct_end();
+        printf("kdf.hmacdrbg.xof.derive=%d\n", EVP_KDF_derive(kctx, big, 32, params));
+        EVP_KDF_CTX_free(kctx);
+    }
+    EVP_KDF_free(kdf);
+
     /* A property query that no KDF row carries is a refusal, so the fetch path's negative
      * selection is crossed on the same name. */
     kdf = EVP_KDF_fetch(NULL, "X963KDF", "provider=nonexistent");

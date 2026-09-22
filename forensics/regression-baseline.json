@@ -191,7 +191,7 @@
       "verdict": "pass"
     },
     "RT-DIGEST": {
-      "observations": 566,
+      "observations": 602,
       "verdict": "pass"
     },
     "RT-DRBG": {
@@ -620,9 +620,12 @@
     "default/OSSL_OP_KDF/HKDF-SHA256",
     "default/OSSL_OP_KDF/HKDF-SHA384",
     "default/OSSL_OP_KDF/HKDF-SHA512",
+    "default/OSSL_OP_KDF/HMAC-DRBG-KDF",
     "default/OSSL_OP_KDF/KBKDF",
+    "default/OSSL_OP_KDF/KRB5KDF",
     "default/OSSL_OP_KDF/PBKDF2",
     "default/OSSL_OP_KDF/PKCS12KDF",
+    "default/OSSL_OP_KDF/SCRYPT",
     "default/OSSL_OP_KDF/SSHKDF",
     "default/OSSL_OP_KDF/SSKDF",
     "default/OSSL_OP_KDF/TLS1-PRF",
@@ -650,14 +653,14 @@
       "8": 685,
       "9": 675
     },
-    "implemented": 184,
+    "implemented": 187,
     "open_by_phase": {
       "10": 636,
       "13": 39,
-      "8": 127,
+      "8": 124,
       "9": 10
     },
     "total": 996,
-    "unimplemented": 812
+    "unimplemented": 809
   }
 }
