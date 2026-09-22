@@ -306,6 +306,7 @@
         "ossl_ecdsa_simple_verify_sig",
         "ossl_ecdsa_verify",
         "ossl_ecdsa_verify_sig",
+        "ossl_encoder_instance_free",
         "ossl_param_build_set_bn",
         "ossl_param_build_set_bn_pad",
         "ossl_param_build_set_int",
@@ -348,7 +349,7 @@
         "truncf128",
         "truncf16"
       ],
-      "compiler_emitted_count": 10034,
+      "compiler_emitted_count": 10145,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -356,7 +357,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 2794,
+        "implemented": 2813,
         "implemented_symbols": [
           "AES_bi_ige_encrypt",
           "AES_cbc_encrypt",
@@ -2541,6 +2542,22 @@
           "OPENSSL_version_patch",
           "OPENSSL_version_pre_release",
           "OSSL_EC_curve_nid2name",
+          "OSSL_ENCODER_CTX_add_encoder",
+          "OSSL_ENCODER_CTX_add_extra",
+          "OSSL_ENCODER_CTX_free",
+          "OSSL_ENCODER_CTX_get_num_encoders",
+          "OSSL_ENCODER_CTX_new",
+          "OSSL_ENCODER_CTX_set_cleanup",
+          "OSSL_ENCODER_CTX_set_construct",
+          "OSSL_ENCODER_CTX_set_construct_data",
+          "OSSL_ENCODER_CTX_set_output_structure",
+          "OSSL_ENCODER_CTX_set_output_type",
+          "OSSL_ENCODER_CTX_set_params",
+          "OSSL_ENCODER_CTX_set_selection",
+          "OSSL_ENCODER_INSTANCE_get_encoder",
+          "OSSL_ENCODER_INSTANCE_get_encoder_ctx",
+          "OSSL_ENCODER_INSTANCE_get_output_structure",
+          "OSSL_ENCODER_INSTANCE_get_output_type",
           "OSSL_ENCODER_free",
           "OSSL_ENCODER_get0_description",
           "OSSL_ENCODER_get0_name",
@@ -2551,6 +2568,9 @@
           "OSSL_ENCODER_is_a",
           "OSSL_ENCODER_names_do_all",
           "OSSL_ENCODER_settable_ctx_params",
+          "OSSL_ENCODER_to_bio",
+          "OSSL_ENCODER_to_data",
+          "OSSL_ENCODER_to_fp",
           "OSSL_ENCODER_up_ref",
           "OSSL_ERR_STATE_free",
           "OSSL_ERR_STATE_new",
@@ -3153,7 +3173,7 @@
           "i2t_ASN1_OBJECT",
           "o2i_ECPublicKey"
         ],
-        "scaffolded": 3102
+        "scaffolded": 3083
       },
       "libssl": {
         "authority_exports": 603,
@@ -3164,18 +3184,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 2794,
-      "scaffolded": 3705
+      "implemented": 2813,
+      "scaffolded": 3686
     }
   },
-  "body_hash": "c824f22c9ed4d47334193dbd6a9d7f73c5d312617ca527bb56041d132fd08c77",
+  "body_hash": "f6a6924cab270cf5319648443f50141a3de0202f630f891c96bbc2bc7f720803",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "3a08642245f78b7464847707e38b9021fe42fa884bfda1f16d00c1b562898979"
+      "sha256": "69d19d032a4012a109ab1eb15cf633439332d891f6bfaa79bc0b43d2ebf68491"
     },
     {
       "name": "authority-exports",

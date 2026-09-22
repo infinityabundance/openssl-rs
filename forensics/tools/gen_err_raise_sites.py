@@ -785,6 +785,7 @@ COVERED_FILES = [
     # bodies the encoder landing writes, so the three entries land with the code. Their counts are
     # 6 (`encoder_meth.c`), 14 (`encoder_lib.c`) and 2 (`encoder_pkey.c`).
     ("crypto/encode_decode/encoder_meth.c", "ENCODER_METH"),
+    ("crypto/encode_decode/encoder_lib.c", "ENCODER_LIB"),
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`
@@ -1321,6 +1322,10 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
     # Phase 13 staging: `UI_R_*` for `crypto/ui/ui_lib.c` and `ui_openssl.c`, which D350
     # transcribes. `uierr.h` is an installed header, so this is `ecerr.h`'s case again.
     "#include <openssl/uierr.h>",
+    # Phase 10 staging: `OSSL_ENCODER_R_*` for `crypto/encode_decode/encoder_lib.c`, whose
+    # "no encoders were found" refusal is the message D361 transcribes. `encodererr.h` is an
+    # installed header, so this is `ecerr.h`'s case again.
+    "#include <openssl/encodererr.h>",
         # `PROP_R_*` is the first reason family this table needs that lives in an
         # *internal* header rather than an installed one: `internal/propertyerr.h`,
         # which the property grammar raises from. It is resolveable because the

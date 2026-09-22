@@ -22,31 +22,27 @@
 //! in the fields their names say -- so a future sequential renumbering fails a test rather than a
 //! provider.
 //!
-//! ## What is withheld, and it is two named blocks rather than a scattered list
+//! ## What is withheld, and it is one named block rather than a scattered list
 //!
-//! Every function that is *not* here is named, with its authority coordinate:
+//! Every function that is *not* here is named, with its authority coordinate: **the fetch and
+//! construct-method block** -- `encoder_data_st` (`:78-87`), `get_tmp_encoder_store` (`:95`),
+//! `dealloc_tmp_encoder_store` (`:104`), `get_encoder_store` (`:111`), `reserve_encoder_store`
+//! (`:116`), `unreserve_encoder_store` (`:127`), `get_encoder_from_store` (`:139`),
+//! `put_encoder_in_store` (`:174`), `construct_encoder` (`:304`), `destruct_encoder` (`:335`),
+//! `up_ref_encoder` (`:340`), `free_encoder` (`:345`), `inner_ossl_encoder_fetch` (`:351`),
+//! `OSSL_ENCODER_fetch` (`:429`), `do_one` (`:532`) and `OSSL_ENCODER_do_all_provided` (`:539`).
+//! These are one block because `do_all_provided` calls `inner_ossl_encoder_fetch` **first** (`:549`)
+//! and the fetch is the only caller of the seven `ossl_method_construct` callbacks, so none of the
+//! seventeen can link without the rest. Sixteen of the seventeen are `static` or non-exported and
+//! the seventeenth is an export, so the prerequisite gate does not see them as a transcribed unit's
+//! unwired internals -- but the omission is a *narrowing* and is recorded here rather than left
+//! implicit. They land with `src/encoder_pkey.rs`, whose `OSSL_ENCODER_CTX_new_for_pkey` is the
+//! first caller of `do_all_provided`.
 //!
-//! * **The fetch and construct-method block** -- `encoder_data_st` (`:78-87`),
-//!   `get_tmp_encoder_store` (`:95`), `dealloc_tmp_encoder_store` (`:104`), `get_encoder_store`
-//!   (`:111`), `reserve_encoder_store` (`:116`), `unreserve_encoder_store` (`:127`),
-//!   `get_encoder_from_store` (`:139`), `put_encoder_in_store` (`:174`), `construct_encoder`
-//!   (`:304`), `destruct_encoder` (`:335`), `up_ref_encoder` (`:340`), `free_encoder` (`:345`),
-//!   `inner_ossl_encoder_fetch` (`:351`), `OSSL_ENCODER_fetch` (`:429`), `do_one` (`:532`) and
-//!   `OSSL_ENCODER_do_all_provided` (`:539`). These are one block because
-//!   `do_all_provided` calls `inner_ossl_encoder_fetch` **first** (`:549`) and the fetch is the only
-//!   caller of the seven `ossl_method_construct` callbacks, so none of the seventeen can link
-//!   without the rest. Sixteen of the seventeen are `static` or non-exported and the seventeenth is
-//!   an export, so the prerequisite gate does not see them as a transcribed unit's unwired
-//!   internals -- but the omission is a *narrowing* and is recorded here rather than left implicit.
-//!   They land with `src/encoder_lib.rs`'s `encoder_process`, because the only thing that fetches
-//!   an encoder is the encoder path itself.
-//! * **The context trio** -- `OSSL_ENCODER_CTX_new` (`:608`), `OSSL_ENCODER_CTX_set_params`
-//!   (`:616`) and `OSSL_ENCODER_CTX_free` (`:645`). They are excluded from *this* unit's landing
-//!   for a reason that is a measurement and not a choice: `_set_params` calls
-//!   `OSSL_ENCODER_INSTANCE_get_encoder` and `_get_encoder_ctx`, and `_free` calls
-//!   `ossl_encoder_instance_free` -- all three of which `crypto/encode_decode/encoder_lib.c`
-//!   defines. The trio therefore lands in `src/encoder_lib.rs`'s commit, where those three exist,
-//!   and not here.
+//! The **context trio** (`OSSL_ENCODER_CTX_new` `:608`, `_set_params` `:616`, `_free` `:645`) is
+//! here, even though it needs `src/encoder_lib.rs`'s `ossl_encoder_instance_free` and its two
+//! `OSSL_ENCODER_INSTANCE_get_*` -- the two units landed together in D361 for exactly that reason,
+//! which is the measurement D360 recorded.
 //!
 //! The two store bridges `ossl_encoder_store_cache_flush` and
 //! `ossl_encoder_store_remove_all_provided` are this unit's (`:442-459`) but are **already
@@ -62,16 +58,22 @@ use core::sync::atomic::{AtomicI32, Ordering};
 
 use crate::context::dispatch::{entry_function, OsslDispatch, OSSL_DISPATCH_END};
 use crate::context::namemap::{ossl_namemap_doall_names, ossl_namemap_stored};
+use crate::encoder_lib::{
+    ossl_encoder_instance_free, OSSL_ENCODER_CTX_get_num_encoders,
+    OSSL_ENCODER_INSTANCE_get_encoder, OSSL_ENCODER_INSTANCE_get_encoder_ctx,
+};
 use crate::evp::algorithm::ossl_algorithm_get1_first_name;
 use crate::params::OsslParam;
-use crate::passphrase::{OsslPassphraseCallback, OsslPassphraseData};
+use crate::passphrase::{
+    ossl_pw_clear_passphrase_data, OsslPassphraseCallback, OsslPassphraseData,
+};
 use crate::property::list::OsslPropertyList;
 use crate::property::parse::ossl_parse_property;
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::{ossl_provider_libctx, ossl_provider_up_ref, OsslProvider};
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
-use crate::runtime::stack::OpenSslStack;
+use crate::runtime::stack::{OPENSSL_sk_pop_free, OPENSSL_sk_value, OpenSslStack};
 
 /// `#define NAME_SEPARATOR ':'` — `crypto/encode_decode/encoder_meth.c:25`.
 ///
@@ -640,6 +642,105 @@ pub unsafe extern "C" fn OSSL_ENCODER_settable_ctx_params(
         }
     }
     ptr::null()
+}
+
+/// `sk_OSSL_ENCODER_INSTANCE_pop_free`'s destructor: the crate's stack frees elements through a
+/// `void *`-shaped callback, so `ossl_encoder_instance_free` is reached through this thunk.
+unsafe extern "C" fn encoder_instance_free_thunk(p: *mut c_void) {
+    // SAFETY: the stack's element is an `OsslEncoderInstance` this crate allocated and owns.
+    unsafe { ossl_encoder_instance_free(p.cast()) };
+}
+
+/// `OSSL_ENCODER_CTX *OSSL_ENCODER_CTX_new(void)` -- `encoder_meth.c:608-614`.
+///
+/// One zeroed allocation and nothing else: no lock, no reference count, no failure diagnosis. The
+/// embedded `pwdata` is therefore `type_ == 0`, which is no member of the passphrase enum -- the
+/// state `ossl_pw_get_passphrase` would refuse if it were ever called, and which the passphrase
+/// setters overwrite.
+///
+/// # Safety
+/// No preconditions.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_ENCODER_CTX_new() -> *mut OsslEncoderCtx {
+    // SAFETY: the constructor only asks for a zeroed block of the object's size.
+    CRYPTO_zalloc(core::mem::size_of::<OsslEncoderCtx>(), ptr::null(), 0).cast::<OsslEncoderCtx>()
+}
+
+/// `int OSSL_ENCODER_CTX_set_params(OSSL_ENCODER_CTX *ctx, const OSSL_PARAM params[])` --
+/// `encoder_meth.c:616-643`.
+///
+/// An **empty chain is a success**: `ctx->encoder_insts == NULL` answers 1 without touching
+/// `params`, which is the arm `OSSL_ENCODER_CTX_new_for_pkey` reaches for a legacy key. With a
+/// chain, every instance that has a context *and* a `set_ctx_params` is asked, and the answer is
+/// the **and** of their answers rather than the first refusal -- a later instance still gets the
+/// call after an earlier one fails.
+///
+/// # Safety
+/// `ctx` must be live; `params` must be NULL or a terminated array.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_ENCODER_CTX_set_params(
+    ctx: *mut OsslEncoderCtx,
+    params: *const OsslParam,
+) -> c_int {
+    let mut ok = 1;
+
+    if ctx.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::ENCODER_METH_624) };
+        return 0;
+    }
+
+    // SAFETY: `ctx` is live.
+    let insts = unsafe { (*ctx).encoder_insts };
+    if insts.is_null() {
+        return 1;
+    }
+
+    // SAFETY: `ctx` is live, so the count and the stack agree.
+    let l = unsafe { OSSL_ENCODER_CTX_get_num_encoders(ctx) };
+    for i in 0..l {
+        // SAFETY: `insts` is a live stack and `i` is within its count.
+        unsafe {
+            let encoder_inst = OPENSSL_sk_value(insts, i).cast::<OsslEncoderInstance>();
+            let encoder = OSSL_ENCODER_INSTANCE_get_encoder(encoder_inst);
+            let encoderctx = OSSL_ENCODER_INSTANCE_get_encoder_ctx(encoder_inst);
+
+            if encoderctx.is_null() {
+                continue;
+            }
+            if let Some(set_ctx_params) = (*encoder).set_ctx_params {
+                if set_ctx_params(encoderctx, params) == 0 {
+                    ok = 0;
+                }
+            }
+        }
+    }
+    ok
+}
+
+/// `void OSSL_ENCODER_CTX_free(OSSL_ENCODER_CTX *ctx)` -- `encoder_meth.c:645-654`.
+///
+/// Four releases in the authority's order: the instance chain through
+/// `ossl_encoder_instance_free` (which is what releases each instance's encoder reference and its
+/// provider context), the constructor data, the **passphrase bridge** -- D356/D358's
+/// `ossl_pw_clear_passphrase_data`, which frees an explicit phrase and the cache -- and the context
+/// itself. A NULL context is a no-op.
+///
+/// # Safety
+/// `ctx` must be NULL or a live `OsslEncoderCtx` this crate allocated.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_ENCODER_CTX_free(ctx: *mut OsslEncoderCtx) {
+    if ctx.is_null() {
+        return;
+    }
+    // SAFETY: `ctx` is live; the stack is NULL or a live stack of instances this crate made, and
+    // the thunk frees each one.
+    unsafe {
+        OPENSSL_sk_pop_free((*ctx).encoder_insts, Some(encoder_instance_free_thunk));
+        CRYPTO_free((*ctx).construct_data, ptr::null(), 0);
+        ossl_pw_clear_passphrase_data(ptr::addr_of_mut!((*ctx).pwdata));
+        CRYPTO_free(ctx.cast(), ptr::null(), 0);
+    }
 }
 
 #[cfg(test)]
