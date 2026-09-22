@@ -13,11 +13,11 @@ Read from the ledger's `body.counts`.
 | quantity | count |
 |---|---|
 | owned | 786 |
-| implemented | 766 |
+| implemented | 769 |
 | deferred to a later phase | 0 |
-| open in this stratum | 20 |
+| open in this stratum | 17 |
 
-The identity `owned = implemented + deferred + open` is `786 = 766 + 0 + 20`, which holds.
+The identity `owned = implemented + deferred + open` is `786 = 769 + 0 + 17`, which holds.
 
 ## The merge gate — what Phase 8 owes to Phase 9
 
@@ -45,11 +45,11 @@ table, verbatim.
 | 8.4 RSA | `src/rsa/asn1.rs`, `src/asn1/x_algor.rs`, `src/rsa/asn1.rs`, `src/rsa/mod.rs` | 2 | `RT-RSA`, `CT-RSA` | 8.1 (the RSA provider's `SHA`-named digests), 8.3 (its OAEP/PSS modes) |
 | 8.6 DSA | `src/dsa/mod.rs`, `src/dsa/mod.rs`, `src/dsa/object.rs`, `src/dsa/ossl.rs`, `src/dsa/key.rs`, `src/dsa/gen.rs`, `src/dsa/sign.rs`, `src/dsa/vrf.rs`, `src/dsa/depr.rs`, `src/asn1_dsa.rs`, `src/packet.rs`, `src/quic_vlint.rs`, `src/dsa/asn1.rs`, `src/dsa/ctrl.rs` | 4 | `RT-DSA`, `CT-DSA` | 8.5 |
 | 8.7 EC | `src/ec/mod.rs`, `src/ec/curve.rs`, `src/ec/curve_data.rs`, `src/ec/support.rs`, `src/ec/mod.rs`, `src/bn/intern.rs`, `src/bn/bignum.rs`, `src/bn/exp.rs`, `src/ec/key.rs`, `src/ec/lib.rs`, `src/ec/smpl.rs`, `src/ec/mult.rs`, `src/ec/oct.rs`, `src/ec/cvt.rs`, `src/ec/key.rs`, `src/ec/ecdsa.rs`, `src/param_build_set.rs`, `src/ec/print.rs`, `src/ec/depr.rs`, `src/ec/ecdsa.rs`, `src/ec/ctrl.rs`, `src/ec/kdf.rs`, `src/ec/asn1.rs`, `src/ec/prn.rs`, `src/ec/asn1.rs` | 2 | `RT-EC`, `CT-EC` | 8.6 |
-| 8.8 The ASN.1 method objects and `standard_methods[]` | `src/asn1/ameth.rs`, `src/rsa/ameth.rs`, `src/dh/ameth.rs`, `src/dsa/ameth.rs`, `src/ec/ameth.rs`, `src/evp/pkey_asn1.rs` | 6 | `RT-AMETH` | 8.4, 8.5, 8.6, 8.7 |
+| 8.8 The ASN.1 method objects and `standard_methods[]` | `src/asn1/ameth.rs`, `src/rsa/ameth.rs`, `src/dh/ameth.rs`, `src/dsa/ameth.rs`, `src/ec/ameth.rs`, `src/evp/pkey_asn1.rs`, `src/asn1/d2i_param.rs`, `src/asn1/d2i_pu.rs` | 3 | `RT-AMETH` | 8.4, 8.5, 8.6, 8.7 |
 | 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals | `src/pem/key_legacy.rs`, `src/pem/key_legacy.rs` | 6 | `RT-PEM-KEY` | 8.8 |
 
-Total open symbols listed below: **20**; the ledger's
-`open_in_this_stratum` is 20.
+Total open symbols listed below: **17**; the ledger's
+`open_in_this_stratum` is 17.
 
 ### 8.4 RSA — 2 open
 
@@ -63,10 +63,9 @@ Total open symbols listed below: **20**; the ledger's
 
 `EC_KEY_print`, `EC_KEY_print_fp`
 
-### 8.8 The ASN.1 method objects and `standard_methods[]` — 6 open
+### 8.8 The ASN.1 method objects and `standard_methods[]` — 3 open
 
-`EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0`, `EVP_PKEY_meth_get_count`, `d2i_KeyParams`,
-`d2i_KeyParams_bio`, `d2i_PublicKey`
+`EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0`, `EVP_PKEY_meth_get_count`
 
 ### 8.9 The `pem.h` helpers Phase 8 owns and the `_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals — 6 open
 

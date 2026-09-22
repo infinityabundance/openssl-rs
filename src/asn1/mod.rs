@@ -53,6 +53,10 @@ pub mod asn_pack;
 pub mod bio_asn1;
 pub mod bitstr;
 pub mod d2i;
+// Phase 8.8's `d2i_KeyParams`/`d2i_KeyParams_bio` (`crypto/asn1/d2i_param.c`) and `d2i_PublicKey`
+// (`crypto/asn1/d2i_pu.c`). Each is its own authority unit and therefore its own module.
+pub mod d2i_param;
+pub mod d2i_pu;
 pub mod der;
 pub mod evp_asn1;
 pub mod fre;

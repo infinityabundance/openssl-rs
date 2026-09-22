@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 0,
-      "implemented": 766,
-      "open_in_this_stratum": 20,
+      "implemented": 769,
+      "open_in_this_stratum": 17,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1037,6 +1037,9 @@
       "d2i_ECPKParameters",
       "d2i_ECParameters",
       "d2i_ECPrivateKey",
+      "d2i_KeyParams",
+      "d2i_KeyParams_bio",
+      "d2i_PublicKey",
       "d2i_RSAPrivateKey",
       "d2i_RSAPublicKey",
       "d2i_RSA_OAEP_PARAMS",
@@ -1375,24 +1378,6 @@
         "module": "src/rsa/mod.rs",
         "received_from_phase": null,
         "symbol": "RSA_print_fp"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/asn1/ameth.rs",
-        "received_from_phase": 7,
-        "symbol": "d2i_KeyParams"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/asn1/ameth.rs",
-        "received_from_phase": 7,
-        "symbol": "d2i_KeyParams_bio"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/asn1/ameth.rs",
-        "received_from_phase": 7,
-        "symbol": "d2i_PublicKey"
       }
     ],
     "owned_by_header": {
@@ -1466,12 +1451,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "9f64a418b75378749d51342d4c7f52567fdcae1c821a04fb1f42c02dbef172ce"
+      "sha256": "62a9cb8087b0ee5ffca66465036c0257a7c608ce6aa91acb0163d0ace4457f1b"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "aa19ec5138d2d06019db26c7b7c9c9e6dc710b3502b6fd18618671b1abdff918"
+      "sha256": "1eb405d1bdfc1c9b1137e45c26f18729d27e2b3c471f0398beadced574ec6248"
     }
   ],
   "kind": "phase8-obligations",
