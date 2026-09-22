@@ -620,6 +620,11 @@ COVERED_FILES = [
     # the PKCS#8 decode path -- `DH_R_BN_ERROR` at `:222` and `DH_R_DECODE_ERROR` at `:235` --
     # and like every other unit the file string is part of the observable error record.
     ("crypto/dh/dh_backend.c", "DH_BACKEND"),
+    # 8.8's `crypto/dh/dh_ameth.c` -- the `EVP_PKEY_ASN1_METHOD` objects. Its decode/encode
+    # callbacks, its `do_dh_print` err label and its two key checks all raise, so the unit joins
+    # the covered set with the objects that make its coordinates observable. `:297` is
+    # `dynamic_reason`: the authority raises a computed `reason`.
+    ("crypto/dh/dh_ameth.c", "DH_AMETH"),
     # Phase 8.6's `crypto/dsa` object layer and its `dsa_ossl.c`. The subsystem set again, minus
     # the five units that raise nothing: `dsa_meth.c` (D333 measured its whole body as allocations
     # and stored pointers), `dsa_gen.c` (every failure is a `return 0` and the reason a caller sees
@@ -635,6 +640,10 @@ COVERED_FILES = [
     # `DSA_R_BN_ERROR` (`:154`, `:171`), `ERR_R_BN_LIB` (`:159`, `:163`), `DSA_R_DECODE_ERROR`
     # (`:182`) and `ERR_R_INTERNAL_ERROR` (`:175`), all on the PKCS#8 decode path.
     ("crypto/dsa/dsa_backend.c", "DSA_BACKEND"),
+    # 8.8's `crypto/dsa/dsa_ameth.c` -- the same shape as `dh_ameth.c` above: the decode/encode
+    # callbacks, the private-key readers and the key checks raise, and the objects that reach them
+    # land here.
+    ("crypto/dsa/dsa_ameth.c", "DSA_AMETH"),
     # Phase 8.7's `crypto/ec` curve tables and `crypto/evp/ec_support.c`. The subsystem set again,
     # restricted to the two units D334 gives a crate module: `ec_curve.c` raises from the group
     # constructors (four `ERR_R_EC_LIB`/`ERR_R_BN_LIB`/`ERR_R_OBJ_LIB` sites in

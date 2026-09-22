@@ -833,6 +833,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-ASN1",
               "RT-ASN1-MIME",
               "RT-ASN1-PRINT",
@@ -956,6 +957,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-ASN1-MIME",
               "RT-ASN1-PRINT",
               "RT-ASN1-STR",
@@ -9370,8 +9372,8 @@
         "completed": true,
         "counts": {
           "directly_courted": 727,
-          "directly_courted_called": 668,
-          "directly_courted_referenced": 59,
+          "directly_courted_called": 673,
+          "directly_courted_referenced": 54,
           "implemented": 727,
           "indirectly_courted": 0,
           "non_observable": 0,
@@ -12407,15 +12409,17 @@
             "symbol": "EVP_PKEY_asn1_copy"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-EVP-REF"
             ],
             "symbol": "EVP_PKEY_asn1_find"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-EVP-REF"
             ],
             "symbol": "EVP_PKEY_asn1_find_str"
@@ -12429,8 +12433,9 @@
             "symbol": "EVP_PKEY_asn1_free"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-EVP-REF"
             ],
             "symbol": "EVP_PKEY_asn1_get0"
@@ -12438,14 +12443,16 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-EVP-INTROSPECT",
               "RT-EVP-REF"
             ],
             "symbol": "EVP_PKEY_asn1_get0_info"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-EVP-REF"
             ],
             "symbol": "EVP_PKEY_asn1_get_count"
@@ -12616,8 +12623,9 @@
             "symbol": "EVP_PKEY_cmp"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-EVP-REF"
             ],
             "symbol": "EVP_PKEY_cmp_parameters"
@@ -12625,6 +12633,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-EVP-PKEY"
             ],
             "symbol": "EVP_PKEY_copy_parameters"
@@ -12777,6 +12786,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-EVP-PKEY-OPS",
@@ -12824,6 +12834,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-EVP-PKEY-OPS",
               "RT-EVP-REF"
             ],
@@ -12863,6 +12874,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-EVP-PKEY"
             ],
             "symbol": "EVP_PKEY_get_base_id"
@@ -12914,6 +12926,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-EVP-PKEY"
             ],
             "symbol": "EVP_PKEY_get_id"
@@ -13391,6 +13404,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-EVP-PKEY"
             ],
             "symbol": "EVP_PKEY_missing_parameters"
@@ -13398,6 +13412,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-EVP-PEM",
               "RT-EVP-PKEY"
             ],
@@ -14900,10 +14915,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 737,
-          "directly_courted_called": 737,
+          "directly_courted": 758,
+          "directly_courted_called": 758,
           "directly_courted_referenced": 0,
-          "implemented": 745,
+          "implemented": 766,
           "indirectly_courted": 8,
           "non_observable": 0,
           "unmatched": 0
@@ -15829,6 +15844,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-DH",
               "RT-DSA",
               "RT-PEM-KEY"
@@ -16122,6 +16138,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-DH"
             ],
             "symbol": "DH_new_by_nid"
@@ -16311,6 +16328,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-DSA",
               "RT-PEM-KEY"
             ],
@@ -16607,6 +16625,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-DSA",
               "RT-PEM-KEY"
             ],
@@ -17423,6 +17442,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-EC",
               "RT-PEM-KEY"
             ],
@@ -17523,6 +17543,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-EC",
               "RT-PEM-KEY"
             ],
@@ -18378,6 +18399,153 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_assign"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_decrypt_old"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_encrypt_old"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_get0_DH"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_get0_DSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_get0_EC_KEY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_get0_RSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_get0_hmac"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_get0_poly1305"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_get0_siphash"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_get1_DH"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_get1_DSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_get1_EC_KEY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_get1_RSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_get_ec_point_conv_form"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_get_field_type"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_set1_DH"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_set1_DSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_set1_EC_KEY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_set1_RSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-AMETH"
+            ],
+            "symbol": "EVP_PKEY_type"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-CIPHER"
             ],
             "symbol": "IDEA_cbc_encrypt"
@@ -18966,6 +19134,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-PEM-KEY",
               "RT-RSA"
             ],
@@ -19367,6 +19536,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-AMETH",
               "RT-PEM-KEY",
               "RT-RSA"
             ],
@@ -20144,7 +20314,7 @@
         ],
         "non_observable": [],
         "phase": 8,
-        "staged_candidate_probes": 8
+        "staged_candidate_probes": 9
       },
       {
         "completed": false,
@@ -20631,10 +20801,10 @@
       }
     ],
     "totals": {
-      "directly_courted": 2665,
-      "directly_courted_called": 2385,
-      "directly_courted_referenced": 280,
-      "implemented": 2673,
+      "directly_courted": 2686,
+      "directly_courted_called": 2411,
+      "directly_courted_referenced": 275,
+      "implemented": 2694,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -20645,7 +20815,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "35a20de55f2c45ad196b47b3abee677efcaaff8115c04bbf14da59cb9250bc4b"
+      "sha256": "b90f837cb41e7f7fee0785300cf3369904908aca54e2a551919501def5f0b4da"
     },
     {
       "name": "symbol-ownership",
@@ -20660,7 +20830,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "8bb8caa3ad72740ea7e7501f8a87c7d8d4654f3ca9a29f4a0a1401af63a2858a"
+      "sha256": "929037b7cb6f3c5049b1ee6714d482157511be495dc7ea84818c88559c03f2ba"
     },
     {
       "name": "phase3-courts",
@@ -20670,7 +20840,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "98669533ba7bb7b8b3d951656dde7c872c0f7519ee30915236555a5648f38c13"
+      "sha256": "5839fb54911458565ac8d6f97c74887029af0f1665d06233475dbdd3958babcb"
     },
     {
       "name": "phase4-courts",
@@ -20680,7 +20850,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "270b92a8b54cb15ddcb485a31b4bdf65ca14c4b9d504d3eef613e1108b85790d"
+      "sha256": "c704b6e9f02bf7074b799856321a2c0fa587dd2585ffd81746806c05eecbf91b"
     },
     {
       "name": "phase5-courts",
@@ -20690,7 +20860,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "ed3a6b20413c42e409849caf3818a71a62bca14c3b806535749c33b53d102d99"
+      "sha256": "fcf9020b50e42bd11e7c23f00932ca30504046c7c814952cc5d7f814e9d13421"
     },
     {
       "name": "phase6-courts",
@@ -20700,7 +20870,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "baf105431aec69779616c300b0c619f104d7785c126e94775b3645f4758019f2"
+      "sha256": "aa19ec5138d2d06019db26c7b7c9c9e6dc710b3502b6fd18618671b1abdff918"
     },
     {
       "name": "phase7-courts",
@@ -20710,17 +20880,17 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "0c15a55a0c9ec2c6147b4a040168490b47ad6b0570e91d4f671626aa30356138"
+      "sha256": "a051e15eabc380b5d8359b2fd90028900ba13547f568ed948bdb5d9f659edfc1"
     },
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "8cc3299e8141b6edade8fadeebac371aaae74563ccffa751b511ade8f524fbcd"
+      "sha256": "eef0475b19019e26627d6eb2f92c448a5cd78709115825c1204483ca5dbf34e5"
     },
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "ff671c10bd4d7c5f7574f601e940a21c0083b8d8920ec9198cd84da22e9ab4fc"
+      "sha256": "cc8abf66d81661673a8956c3bfd7c77767a42774f6e48358cd49daa90fdbcc70"
     },
     {
       "name": "phase9-courts",

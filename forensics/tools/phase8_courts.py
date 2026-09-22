@@ -145,6 +145,18 @@ COURTS: list[tuple[str, str]] = [
     # tests in `src/ec/curve.rs`. The probe says so in its own header, because a probe that
     # called a symbol the candidate has not implemented would abort the candidate's side.
     ("RT-EC", "rt_ec_probe.c"),
+    # 8.8's registry court. Its subject is `crypto/asn1/standard_methods[]` -- the eleven
+    # `EVP_PKEY_ASN1_METHOD` rows the crate carries -- and the `crypto/evp` layer they close over:
+    # the five `EVP_PKEY_asn1_*` accessors, `EVP_PKEY_type`, `EVP_PKEY_assign` with
+    # `EVP_PKEY_get0_asn1`, the twelve legacy accessors' four refusals, and the
+    # `param_missing`/`param_cmp`/`param_copy` columns through a built FFDHE-2048 key. **The count
+    # and the four withheld `crypto/ec/ecx_meth.c` rows are not carried as arms**: they must differ
+    # between the two sides (D353's narrowing), and a differential court's residual set must be
+    # empty, so the table is observed through the eleven `pkey_id`s both sides share. The eight
+    # `RSA_print`/`DSA_print`/`EC_KEY_print` printers are withheld -- `EVP_PKEY_print_private` is
+    # absent from the crate's compiled surface -- and so are the three `EVP_PKEY_meth_*` names. The
+    # probe's own header states both omissions.
+    ("RT-AMETH", "rt_ameth_probe.c"),
     # 8.9's `pem.h` helper court. Its subject is the thirty `crypto/pem/pem_all.c` rows -- the
     # `IMPLEMENT_PEM_*` expansions for the DH, DSA, EC and RSA key families -- together with the
     # PEM plumbing they call (`PEM_bytes_read_bio`, `PEM_do_header`, `PEM_def_callback`,

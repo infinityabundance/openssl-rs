@@ -92,6 +92,7 @@
 //! constant so that a transcription which *did* call one would be visible in the transcript rather
 //! than merely wrong.
 
+pub mod ameth;
 pub mod asn1;
 pub mod backend;
 pub mod ctrl;

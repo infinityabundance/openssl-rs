@@ -52,51 +52,6 @@
         "evidence": "docs/DECISIONS.md D196; docs/DECISIONS.md D165 and D193; src/evp/legacy_evp.rs module doc, section \"What is not here\""
       },
       {
-        "symbol": "evp_pkey_get_legacy",
-        "owner_phase": 8,
-        "blocked_by": [
-          {
-            "name": "evp_pkey_copy_downgraded",
-            "authority_unit": "crypto/evp/p_lib.c",
-            "line": 2066,
-            "kind": "internal",
-            "owning_phase": 8
-          }
-        ],
-        "reason": "The second of the seven. It downgrades a provider key to a legacy one, so its whole body past the fast paths is `evp_pkey_copy_downgraded`, and the cache it then holds is keyed on `ameth` being non-NULL (`EVP_PKEY_asn1_find` for the type). Both halves are Phase 8's, which is why this name waits on the same registry as its sibling rather than on anything in this stratum.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4a (the dependency column names `_get_legacy`); row 7.4l; src/evp/pkey.rs module doc, section \"What is not here\""
-      },
-      {
-        "symbol": "evp_pkey_get0_DH_int",
-        "owner_phase": 8,
-        "blocked_by": [
-          {
-            "name": "evp_pkey_get_legacy",
-            "authority_unit": "crypto/evp/p_lib.c",
-            "line": 2154,
-            "kind": "internal",
-            "owning_phase": 8
-          }
-        ],
-        "reason": "The third of the seven, and the shortest: it is `pkey->type == EVP_PKEY_DH ? evp_pkey_get_legacy(pkey) : NULL`. It is therefore blocked by nothing of its own and inherited entirely from its sibling above -- the DH *type* it compares against is real now, the downgrade it calls is not. Recorded separately rather than folded into `evp_pkey_get_legacy` because the gate owes names, not call graphs, and a reader of the blocking census should see all four rather than three and an implication.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4a (the dependency column names `get0_DH_int`); row 7.4l; src/evp/pkey.rs module doc, section \"What is not here\""
-      },
-      {
-        "symbol": "evp_pkey_copy_downgraded",
-        "owner_phase": 8,
-        "blocked_by": [
-          {
-            "name": "ossl_rsa_asn1_meths",
-            "authority_unit": "crypto/rsa/rsa_ameth.c",
-            "line": 968,
-            "kind": "internal",
-            "owning_phase": 8
-          }
-        ],
-        "reason": "The fourth of the seven and the one that makes the other three wait. Its body exports the provider keydata through `evp_keymgmt_export` -- this stratum's -- and then imports it with `(*dest)->ameth->import_from`, synchronising `(*dest)->ameth->dirty_cnt`. Two fields of an `EVP_PKEY_ASN1_METHOD` and one of that struct's function pointers are read directly, so the function cannot be written before an ameth object exists, and the ameth objects are the twelve `crypto/asn1/ameth_lib.c` builds from Phase 8's `standard_methods[]`. It also needs `EVP_PKEY_CTX_new_from_pkey`, which is `pmeth_lib.c`'s and lands in 7.4c *inside* this stratum -- so the order is 7.4c, then Phase 8, then this row.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.4a, 7.4c and 7.4l; docs/DECISIONS.md D163; src/evp/pkey.rs module doc, section \"What is not here\""
-      },
-      {
         "symbol": "evp_app_cleanup_int",
         "owner_phase": 8,
         "blocked_by": [
@@ -110,12 +65,6 @@
         ],
         "reason": "Defined in `crypto/evp/pmeth_lib.c` and called from `crypto/evp/names.c`'s `EVP_cleanup_int`, so two transcribed units now owe it. Its whole body is `sk_EVP_PKEY_METHOD_pop_free(app_pkey_methods, EVP_PKEY_meth_free)`: both the stack and the destructor belong to the **application-supplied `EVP_PKEY_METHOD` registry**, which is 7.4l's because `EVP_PKEY_meth_find`'s lookup searches `standard_methods[]` -- the table whose contents are Phase 8's objects under D163 and D165. So this is Phase 8's with its sibling rows rather than a same-subphase deferral: there is no 7.4c-ii or 7.4d that could land it, because the two symbols it needs do not exist until Phase 8 does.",
         "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4l; docs/DECISIONS.md D165; src/evp/pkey_ctx.rs module doc, section on the absent registry"
-      },
-      {
-        "symbol": "ossl_rsa_asn1_meths",
-        "owner_phase": 8,
-        "reason": "The `EVP_PKEY_ASN1_METHOD` half of the `standard_methods[]` contents that `crypto/asn1/ameth_lib.c` searches -- the twelve `ossl_<alg>_asn1_meth` objects. `EVP_PKEY_asn1_find`/`_find_str` are landed and do search it, so their answer is NULL for every standard type until Phase 8 publishes the objects. That is why 7.4l withholds `EVP_PKEY_type`, `d2i_PrivateKey`/`_ex`, `d2i_AutoPrivateKey`/`_ex`, `d2i_PublicKey`, `d2i_KeyParams`/`_bio` and the legacy paths of the five `i2d_*` names rather than stubbing a divergent answer into them. `ossl_rsa_asn1_meths` is named as the first object of the table; the other eleven are the same stratum, same table, same answer.",
-        "evidence": "docs/DECISIONS.md D193; docs/DECISIONS.md D163 and D165; docs/PHASE-7-SUBPHASES.md row 7.4l"
       },
       {
         "symbol": "ossl_rsa_pkey_method",
@@ -247,16 +196,6 @@
         ],
         "note": "The one internal of `crypto/bn/bn_intern.c` this crate gives no function, and it is a storage-model divergence rather than a withheld one. The authority's body (`crypto/bn/bn_intern.c:171-182`) is five assignments -- `a->d = (BN_ULONG *)words; a->dmax = a->top = size; a->neg = 0; a->flags |= BN_FLG_STATIC_DATA;` -- and the first of them **aliases the caller's storage into the object**, which is the whole point of the name and which `BN_FLG_STATIC_DATA` then tells `BN_free` not to release. This crate's `BIGNUM` owns its magnitude (`d: Vec<Limb>`, `src/bn/bignum.rs:83`) and `src/bn/bignum.rs:67` already records that the representation the flag describes is not modelled, so the reachable half of the contract is an *owned copy* and not an alias: a later write through the caller's array would not be seen, and the object would carry `BN_FLG_STATIC_DATA` over storage it does own. The other half of the authority's body has no counterpart either -- `bn_correct_top` after a top that is deliberately set wide is the normalisation this representation performs on every store. Both readings are wrong in a direction a reader could not detect, so the name is recorded rather than approximated. **It is unreachable on every path either side has**: `bn_set_static_words` has no caller anywhere in the authority outside its own definition (`grep -rn bn_set_static_words crypto/ include/ providers/` answers the definition and nothing else), and the crate's own callers are the EC layer's, which lands against `src/bn/intern.rs`'s other seven. If a caller ever arrives, the row is what makes the decision visible instead of a `Vec` that quietly copied.",
         "evidence": "crypto/bn/bn_intern.c:171-182; src/bn/bignum.rs:67 and :83 (the representation, and the flag it declines to model); src/bn/intern.rs's module documentation (the three representational gaps); docs/DECISIONS.md D338"
-      },
-      {
-        "owner_module": "src/dh/ameth.rs",
-        "class": "owned_by_a_later_stratum",
-        "covers": [
-          "ossl_dh_asn1_meth",
-          "ossl_dhx_asn1_meth"
-        ],
-        "note": "**Withheld rather than stubbed.** `src/dh/ameth.rs` lands the two `dh_ameth.c` exports that reach no Phase 11 name -- `DHparams_dup` and `DHparams_print` -- and is therefore a module for `crypto/dh/dh_ameth.c`, which makes the unit's unwired internals countable (D327's rule). These two are the ones the lexical scan sees: the `EVP_PKEY_ASN1_METHOD` objects `ossl_dh_asn1_meth` and `ossl_dhx_asn1_meth` (`dh_ameth.c:426-585`), whose `pub_decode`/`pub_encode`/`priv_encode`/`import_from` columns read `X509_PUBKEY`/`X509_ALGOR`/`PKCS8_PRIV_KEY_INFO` fields -- the three bodies D341 measured as Phase 11's. A `const EVP_PKEY_ASN1_METHOD` names its callbacks by address, so neither object can exist until Phase 11's `X509_PUBKEY_get0_param`/`X509_ALGOR_get0`/`X509_PUBKEY_set0_param`/`PKCS8_pkey_set0` do; the eight `X509_*`/`PKCS8_*` coordinates are D341's table and the plan's \u00a75. The rest of the unit -- the decode/encode callbacks, `dh_cmp_parameters`, `dh_pub_cmp` and the three prints -- is unlanded and named here rather than approximated, and the two objects are absent rather than returned as NULLs. **The class is the closest of the five and the tension is recorded rather than smoothed over**: the work these two wait on is the ASN.1 method objects of the *same* stratum, exactly as `src/ec/asn1.rs`'s row records for the EC half.",
-        "evidence": "docs/DECISIONS.md D341 and D345; crypto/dh/dh_ameth.c:426-585; docs/PHASE-8-AMETH-INTEGRATION-PLAN.md \u00a75; forensics/atlas/transcription-edges.json's `crypto/dh/dh_ameth.c` edge"
       },
       {
         "owner_module": "src/x509/x_pubkey.rs",

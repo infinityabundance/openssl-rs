@@ -985,6 +985,13 @@ authority and the candidate for this function, and there was never supposed to b
 
 ### D-PKEY-AMETH-1 — `pkey_set_type`'s legacy-method lookup is Phase 8's, so a provider key's `type` stays `EVP_PKEY_KEYMGMT`
 
+> **Superseded by D-PKEY-AMETH-3** for the eleven `standard_methods[]` rows the 8.8 landing
+> (D353) now carries: `pkey_set_type` finds them, so a provider method named `"RSA"`, `"EC"`,
+> `"DSA"`, `"DH"`, `"RSA-PSS"`, `"DHX"` or `"SM2"` takes the legacy NID into `pkey->type` exactly
+> as the authority does. It is kept rather than deleted because the four `crypto/ec/ecx_meth.c`
+> names it still describes are the whole of D-PKEY-AMETH-3's subject. The paragraphs below are the
+> state before the 8.8 landing.
+
 - **Obligation:** `EVP_PKEY_set_type_by_keymgmt` on a provider method whose **name is a legacy key
   type** -- `"RSA"`, `"EC"`, `"DSA"`, and the rest of the twelve -- and, through it,
   `EVP_PKEY_get_id`, `EVP_PKEY_get_base_id` and every accessor that branches on the resulting type.
@@ -1049,6 +1056,12 @@ between the authority and the candidate at this site.**
 
 ### D-PKEY-AMETH-2 — the two `find` functions answer NULL for the twelve legacy types, because `standard_methods[]` is Phase 8's
 
+> **Superseded by D-PKEY-AMETH-3** for the eleven rows D353 published: `EVP_PKEY_asn1_find` and
+> `EVP_PKEY_asn1_find_str` now answer the authority's own objects for those. It is kept rather than
+> deleted because the four `crypto/ec/ecx_meth.c` types remain NULL, and because the engine-arm
+> paragraph below is still the reason that arm is absent. The paragraphs below are the state before
+> the 8.8 landing.
+
 - **Obligation:** `EVP_PKEY_asn1_find` and `EVP_PKEY_asn1_find_str` on any of the twelve legacy key types
   (`EVP_PKEY_RSA`, `EVP_PKEY_EC`, `EVP_PKEY_DSA`, and the rest), and therefore every caller that
   resolves a type to its `EVP_PKEY_ASN1_METHOD` through them.
@@ -1080,6 +1093,58 @@ between the authority and the candidate at this site.**
   project's rule is the opposite — define the symbol, answer correctly for every reachable state, and
   record the divergence — and that is what `EVP_PKEY_asn1_get_count` and `_get0` already did for the
   same table.
+
+### D-PKEY-AMETH-3 — the four `crypto/ec/ecx_meth.c` rows are withheld, so the two `find` functions answer NULL and `EVP_PKEY_type` answers `NID_undef` for X25519, X448, Ed25519 and Ed448
+
+- **Obligation:** `EVP_PKEY_asn1_find(NULL, type)`, `EVP_PKEY_asn1_find_str(NULL, name, len)`,
+  `EVP_PKEY_type(type)`, `EVP_PKEY_asn1_get0(idx)` and `EVP_PKEY_asn1_get_count()` for the four
+  `crypto/ec/ecx_meth.c` key types -- `EVP_PKEY_X25519` (1034), `EVP_PKEY_X448` (1035),
+  `EVP_PKEY_ED25519` (1087) and `EVP_PKEY_ED448` (1088) -- and, through `pkey_set_type`,
+  `EVP_PKEY_set_type_by_keymgmt` on a provider method named `"X25519"`, `"X448"`, `"ED25519"` or
+  `"ED448"`.
+- **Authority:** `crypto/asn1/standard_methods.h` carries **fifteen** rows under the admitted
+  `configuration.h` (D340 read the file for that fact; `OPENSSL_NO_ECX` is **absent**, so the four
+  `#ifndef OPENSSL_NO_ECX` rows compile in). So `EVP_PKEY_asn1_find(NULL, NID_X25519)` answers
+  `&ossl_ecx25519_asn1_meth`, `EVP_PKEY_asn1_find_str(NULL, "X25519", -1)` answers the same object
+  (`ecx_meth.c:552-553` gives it that `pem_str`), `EVP_PKEY_type(NID_X25519)` answers `NID_X25519`,
+  `EVP_PKEY_asn1_get_count()` answers **15** plus the application count, and `EVP_PKEY_asn1_get0(10)`
+  answers `&ossl_ecx25519_asn1_meth` where the crate's index 10 is `ossl_sm2_asn1_meth`.
+- **Crate:** `src/evp/pkey_asn1.rs`'s `STANDARD_METHODS` carries **eleven** rows -- the authority's
+  fifteen minus the four above -- and every one of the eleven is the authority's object by address.
+  The four absences are the table's only observable: the two `find` functions answer NULL for them,
+  `EVP_PKEY_type` answers `NID_undef`, `EVP_PKEY_asn1_get_count()` answers 11 plus the application
+  count, and a provider keymgmt named one of the four takes `EVP_PKEY_KEYMGMT` (`-1`) into
+  `pkey->type` where the authority takes the legacy NID. The callers that see it are
+  `EVP_PKEY_type`, `EVP_PKEY_assign`/`_set_type`/`_set_type_str`, `EVP_PKEY_get_id` and every
+  `EVP_PKEY_is_a` comparison against an ECX spelling, plus the with provider `X25519`/`ED25519`
+  method fetches that reach `EVP_PKEY_set_type_by_keymgmt`.
+- **Reason:** `crypto/ec/ecx_meth.c` is 1,468 lines and fifty-five functions, and its callbacks
+  reach `crypto/ec/ecx_key.c`, `crypto/ec/ecx_backend.c`, `crypto/ec/curve25519.c` (about 5,900
+  lines) and all of `crypto/ec/curve448/` (about 3,400) -- roughly **9,000 authority lines** with no
+  crate module and no stratum's obligation row (D316 names only the provider half of `ecx_key.c`).
+  A `const EVP_PKEY_ASN1_METHOD` names its callbacks **by address**, so a row cannot exist until
+  every callback it names does, and writing a row whose callback field is not the authority's would
+  be a fabricated method rather than a smaller landing -- D341's rule, which this entry applies
+  instead of violating. Landing the four rows is therefore a second unit of work the size of the one
+  D353 records, not a step inside it.
+- **Claim removed:** `EVP_PKEY_asn1_find`/`_find_str`/`EVP_PKEY_type`/`EVP_PKEY_asn1_get0`/
+  `EVP_PKEY_asn1_get_count` parity for the four ECX types, and `pkey_set_type`'s legacy-NID answer
+  for a provider method named one of their four PEM names. **Nothing else**: the other eleven rows,
+  both `find` functions' alias walk and length rules, the engine-arm absence and every
+  `EVP_PKEY_asn1_get0_info` field of the eleven are claimed and courted (`RT-AMETH`, 232
+  observations, zero residuals).
+- **This is not a `forensics/prerequisites.json` divergence record, and the gate is why.** The
+  names a record would have to cover -- `ossl_ecx25519_asn1_meth` and its three siblings -- are
+  `const` objects, not functions, so they are not in the internal-symbol universe the gate
+  observes; a record naming them would fail the gate's direction D ("a divergence record may not
+  cover a name the gate did not observe"). The four types are observed instead through the
+  **`EVP_PKEY_asn1_find`/`_find_str`/`EVP_PKEY_type` answers**, which is where the consequence is
+  visible to a caller, and `RT-AMETH` confines its arms to the eleven ids both sides carry for
+  exactly that reason.
+- **Trigger:** the slice that lands `crypto/ec/ecx_meth.c` and the ~9,000 lines its callbacks
+  name -- at which point the four rows are appended to `STANDARD_METHODS` in `pkey_id` order (1034,
+  1035, 1087, 1088, between `ossl_dhx_asn1_meth` at 920 and `ossl_sm2_asn1_meth` at 1172),
+  `EVP_PKEY_asn1_get_count()` moves to 15, and this entry is removed with the table it describes.
 
 ### D-PBE-PKCS12-KEYGEN-1 — the six `PKCS12_PBE_keyivgen` rows of `builtin_pbe[]` carry no keygen
 
