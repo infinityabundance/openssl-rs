@@ -26910,3 +26910,114 @@ decoder: `D-DECODER-ABSENT-1` is a register entry with a measurement, not a cour
 stratum's `complete: true` is the export working set's, not the stratum's — the 137 provider
 registration rows and the seven subphases `docs/PHASE-8-SUBPHASES.md` still lists are what stands
 between it and §4's seal.
+
+## D370 — the ECX chain's first unit lands: `crypto/ec/curve25519.c` and the ten `x25519-x86_64.pl` primitives are transcribed as `src/ec/curve25519.rs`, with the two precomputed tables generated; the four `crypto/ec/ecx_meth.c` rows stay withheld and **no ledger moves**
+
+**Decision.** Take `D-PKEY-AMETH-3`'s ~9,000 authority lines in dependency order rather than in
+the order the brief lists them, and land the first unit whole. The brief's step 1
+(`ecx_key.c` + `ecx_backend.c`) **cannot compile alone**: `ecx_backend.c`'s
+`ossl_ecx_public_from_private` is a four-arm switch over
+`ossl_x25519_public_from_private`/`ossl_ed25519_public_from_private`/
+`ossl_x448_public_from_private`/`ossl_ed448_public_from_private`, and `ecx_key.c`'s
+`ossl_ecx_compute_key` calls `ossl_x25519`/`ossl_x448`. Those six names are `curve25519.c` and
+`crypto/ec/curve448/`'s, so unit 2 and unit 3 are unit 1's prerequisites and not its
+successors. This entry is unit 2, the foundational one, and it is the largest self-contained
+piece: X25519 and Ed25519 need no other ECX unit.
+
+**What landed.** `src/ec/curve25519.rs`, transcribing every non-static function the admitted
+profile compiles — `ossl_x25519`, `ossl_x25519_public_from_private`, `ossl_ed25519_sign`,
+`ossl_ed25519_pubkey_verify`, `ossl_ed25519_verify`, `ossl_ed25519_public_from_private` — the
+whole base-2^25.5 field and Edwards group (`fe_*`, `ge_*`, `slide`,
+`ge_double_scalarmult_vartime`), the base-2^51 X25519 ladder, and the **ten** field primitives
+the authority's build takes from `crypto/ec/asm/x25519-x86_64.pl` rather than from the C file's
+reference arms: `x25519_fe64_eligible`, `_mul`, `_sqr`, `_mul121666`, `_add`, `_sub`,
+`_tobytes`, `x25519_fe51_mul`, `_sqr` and `_mul121666`. `x25519_scalar_mult_generic`'s 32-bit
+`fe` body is **not** here and is not withheld: it is under `#if !defined(BASE_2_51_IMPLEMENTED)`
+and the admitted profile has `X25519_ASM`, so the authority does not compile it either.
+
+**The shape a transcription gets wrong here, and this one keeps.** `fe_mul`'s ten `h_k` are
+*not* a schoolbook convolution folded by 19. The limbs carry weight `2^ceil(25.5*i)`, so a term
+contributes `2^{e_i+e_j-e_k}`, and that gap is one exactly when `i` and `j` are both odd — which
+is why the authority's `h0` is `f1g9_38 + f2g8_19 + f3g7_38 + …` and its `h2` carries
+`f1g1_2`. `fe_conv` derives the coefficient from the exponents instead of recalling it, and
+`fe_reduce` is the authority's carry chain verbatim; `fe_sq` is `fe_mul(f, f)` (the same integer
+sum) and `fe_sq2` doubles the convolution before its carry, which is the authority's own shape.
+
+**Where the Rust deliberately differs from the asm, and why it is not a divergence.** The asm
+reduces *lazily*: `x25519_fe64_mul`/`_sqr`/`_mul121666`/`_add`/`_sub` leave a representative in
+`[0, 2^256)` congruent mod `2^256-38` and `x25519_fe64_tobytes` canonicalises mod `2^255-19`.
+The Rust reduces fully at each step. The two are ring-congruent, every later operation is
+mod `2^256-38`, and `tobytes` is the only place the representative becomes observable, so the
+function is the same; `x25519_fe64_eligible` reads the same two `CPUID.(EAX=7,ECX=0).EBX` bits
+(`BMI2` | `ADX`) the asm's `OPENSSL_ia32cap_P[2] & 0x80100 == 0x80100` test reads, so the arm the
+ladder selects is the same decision. The scalar reduction (`x25519_sc_reduce`, `sc_muladd`) is a
+fixed-iteration masked long division rather than the authority's unrolled Barrett-like form —
+the same congruence, with a fixed loop count and a masked conditional subtract, so the
+constant-time property the unrolled form has is kept.
+
+**The tables are generated, not transcribed.** `k25519Precomp[32][8]` and `Bi[8]` are 7,920
+`fe` limbs — 2,364 lines of the unit. `forensics/tools/gen_curve25519_tables.py` reads them out
+of `crypto/ec/curve25519.c`, asserts `32*8*30` and `8*30` tokens, checks **every** entry against
+the curve equation (`-x² + y² = 1 + d x²y²`) and its `xy2d = 2dxy` relation, and then checks it
+against an **independent Python scalar multiplication**: `k25519Precomp[i][j] = (j+1)*256^i*B`
+and `Bi[j] = (2j+1)*B`, with `B` the `y = 4/5` base point and the affine law of a twisted
+Edwards curve written from the textbook rather than from the authority's formulas. A wrong digit
+breaks that equation almost surely, so the parse is what is trusted rather than the literal. The
+output is `src/ec/curve25519_data.rs`, and it carries `#[rustfmt::skip]` so `cargo fmt` cannot
+move it — which is why it may be committed as generated text. The generator is invoked by
+`forensics/tools/pipeline.sh` **before** `cargo fmt`, beside the two Phase 8 table generators,
+and for the same reason D215 gives; like them it is deliberately **not** an entry in
+`evidence_determinism.py`'s `GENERATORS`/`COMPARED`, so it needs no authority-absent tier.
+
+**Why no court, and this is the same boundary D369 drew.** Every name this unit defines is an
+internal symbol; none is an export, so `court_coverage.py` requires no arm and
+`forensics/phase8-obligations.json` does not move. The six `ossl_*` functions are reachable by a
+caller only through `crypto/ec/ecx_meth.c`'s `EVP_PKEY_ASN1_METHOD`/`EVP_PKEY_METHOD` rows,
+which are still withheld under `D-PKEY-AMETH-3`, and the ten perlasm primitives only through
+them. So `RT-ECX`'s differential arms — the ones `docs/PHASE-8-SUBPHASES.md` §3.1 says are the
+only evidence that a portable arm is the same observable function as the perlasm — arrive with
+unit 4, and this unit's committed evidence is its **correctness** half: `src/ec/curve25519.rs`'s
+unit tests run RFC 7748 §6.1's two X25519 vectors (both the `fe64` ladder and the `fe51`
+ladder, called directly so the arm the host does not select is still checked), the X25519
+public-from-private vectors, and RFC 8032 §7.1's TEST 1/2/3 sign-and-verify triples. That split
+is stated rather than implied: a passing unit test is not OpenSSL parity, and this entry does
+not claim parity for any of the six names.
+
+**`COVERED_FILES` and the gate.** `crypto/ec/curve25519.c` raises nothing (`ERR_raise` count
+zero), so it is deliberately absent from `gen_err_raise_sites.py`'s `COVERED_FILES`, the
+reasoning `mdc2_prov.c` and `crypto/pkcs12/p12_p8d.c` are named under; `err-raise-sites.json` is
+unchanged. The prerequisite gate is at **zero findings** and every count it publishes for this
+stratum is unchanged: **13** divergence rows / **51** names, **9** deferrals,
+`blocking_dependencies` **9**, `sealed_stratum_census` **54** names over **18** units. The four
+`crypto/ec/ecx_meth.c` rows remain withheld from both `standard_methods[]` tables and
+`D-PKEY-AMETH-3` is **not** retired by this entry; what retires it is unit 4, and this entry is
+the prerequisite that D-PKEY-AMETH-3's own `Trigger` line names.
+
+**The regenerated counts, and the one that moves.** `implemented-surface.json`'s `libcrypto`
+implemented is **2960**, unchanged — no export landed — and its
+`internal_symbols.c_style` moves **359 -> 375**: the six `ossl_*` functions and the ten perlasm
+symbols. `transcription-edges.json` moves **327 -> 328** modules over **296** units, the unit
+count unchanged because `src/ec/curve25519.rs`'s dominant unit is the perlasm translation unit
+`crypto/ec/x25519-x86_64.c`, which has no source file — so the module joins `src/aes.rs`,
+`src/chacha.rs`, `src/rc4.rs` and the rest of the “units with no source file” list rather than
+adding a unit. `docs/CI.md`'s “the 359 plain C identifiers” becomes 375, which is the only
+hand-written figure this entry moves. `forensics/phase8-obligations.json` reads implemented
+**786**, deferred **0**, open **0** over **786** owned, `complete: true`, **unchanged from D369
+through this entry** — the ECX names are not Phase-8 ledger rows — and
+`forensics/phase7-obligations.json` reads **733**/**217**/**0** of **950**, unchanged. Courts
+**95**, observations **37358**, `PIPELINE OK` run twice.
+
+**The plan's two anchored status clauses are untouched, and that is the ledger's answer rather
+than a preference.** `docs/PHASE-8-SUBPHASES.md`'s landed and open clauses are read by
+`docs_consistency.py`'s `phase8_active_status` claim in both directions against
+`forensics/phase8-obligations.json`, and that ledger did not move, so no symbol enters or leaves
+either clause. Saying so is the point: a landing that added an *export* would have to move them,
+and this one adds none.
+
+**What this entry does not claim.** No ECX key is verified by any differential court, and
+`D-PKEY-AMETH-3` stands. Three units of the brief remain: `crypto/ec/curve448/` (`curve448.c`,
+`eddsa.c`, `scalar.c`, `f_generic.c`, `curve448_tables.c`, `arch_64/f_impl64.c`), then
+`ecx_key.c`/`ecx_backend.c` with the four `ossl_evp_pkey_get1_*` internals, then
+`crypto/ec/ecx_meth.c` with both `standard_methods[]` halves — at which point the four ameth rows
+and the four pmeth rows open, `D-PKEY-AMETH-3` retires, and the eight ECX internals
+`src/x509/x_pubkey.rs` withholds get their write side.

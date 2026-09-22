@@ -796,6 +796,13 @@
         "translation_unit": "crypto/ec/ec_curve.c"
       },
       {
+        "module": "src/ec/curve25519.rs",
+        "phase": null,
+        "phase_source": null,
+        "share": "10/16",
+        "translation_unit": "crypto/ec/x25519-x86_64.c"
+      },
+      {
         "module": "src/ec/cvt.rs",
         "phase": 8,
         "phase_source": "export-ownership",

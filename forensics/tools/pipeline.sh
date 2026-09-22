@@ -45,6 +45,15 @@ python3 forensics/tools/gen_bn_dh.py
 # `evidence_determinism.py` re-runs it later and compares.
 python3 forensics/tools/gen_ec_curves.py
 
+# Phase 8.7's `crypto/ec/curve25519.c` precomputed tables (D370): `k25519Precomp[32][8]` and
+# `Bi[8]`, 7,920 limbs the Ed25519 base-point scalar multiplication reads. It reads the
+# authority's own source and re-derives every entry independently in Python (the curve
+# equation and a scalar multiplication) before writing `src/ec/curve25519_data.rs`, and its
+# renderer carries `#[rustfmt::skip]` so the formatter pass below cannot move a byte. Like the
+# two Phase 8 table generators above it runs **before** `cargo fmt`, and for the same reason:
+# a constant another party defines is generated, not transcribed (D33).
+python3 forensics/tools/gen_curve25519_tables.py
+
 echo "== fmt =="
 cargo fmt --all
 

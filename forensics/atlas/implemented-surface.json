@@ -317,6 +317,10 @@
         "ossl_ecdsa_simple_verify_sig",
         "ossl_ecdsa_verify",
         "ossl_ecdsa_verify_sig",
+        "ossl_ed25519_pubkey_verify",
+        "ossl_ed25519_public_from_private",
+        "ossl_ed25519_sign",
+        "ossl_ed25519_verify",
         "ossl_encoder_instance_free",
         "ossl_i2d_DH_PUBKEY",
         "ossl_i2d_DHx_PUBKEY",
@@ -340,6 +344,8 @@
         "ossl_pw_set_passphrase",
         "ossl_pw_set_pem_password_cb",
         "ossl_pw_set_ui_method",
+        "ossl_x25519",
+        "ossl_x25519_public_from_private",
         "ossl_x509at_add1_attr",
         "ossl_x509at_add1_attr_by_NID",
         "ossl_x509at_add1_attr_by_OBJ",
@@ -365,9 +371,19 @@
         "trunc",
         "truncf",
         "truncf128",
-        "truncf16"
+        "truncf16",
+        "x25519_fe51_mul",
+        "x25519_fe51_mul121666",
+        "x25519_fe51_sqr",
+        "x25519_fe64_add",
+        "x25519_fe64_eligible",
+        "x25519_fe64_mul",
+        "x25519_fe64_mul121666",
+        "x25519_fe64_sqr",
+        "x25519_fe64_sub",
+        "x25519_fe64_tobytes"
       ],
-      "compiler_emitted_count": 10302,
+      "compiler_emitted_count": 10342,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -3360,7 +3376,7 @@
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "3decfefa052335a4bba26c47407b050a09d847d124963fc9bf5c5fbbf93bcb5e"
+      "sha256": "be7cea159dbaabe2002c3bd53029c12eb20a64a719d0a4790946266c32dc3f96"
     },
     {
       "name": "authority-exports",
