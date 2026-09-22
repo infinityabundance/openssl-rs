@@ -1,72 +1,62 @@
-//! `crypto/asn1/p8_pkey.c`'s setter/getter pair — `PKCS8_pkey_set0` and
-//! `PKCS8_pkey_get0` — and the `PKCS8_PRIV_KEY_INFO` layout they read. Phase 8.8 (D349).
+//! `crypto/asn1/p8_pkey.c`'s setter/getter pair and item — `PKCS8_pkey_set0`, `PKCS8_pkey_get0`,
+//! the `PKCS8_PRIV_KEY_INFO` item group and `PKCS8_pkey_get0_attrs`. Phase 8.8 (D349), completed
+//! by D368.
 //!
-//! ## A partial unit, and what it withholds
+//! ## The item half, and the cycle D349 measured (landed here)
 //!
-//! `crypto/asn1/p8_pkey.c` is 109 lines and **11 exports**. This module lands **two**
-//! (`:53`, `:71`) — the pair every one of the five ASN.1 method objects reaches from its
-//! `priv_encode` and `priv_decode` columns (D341's table). The other nine are withheld, and
-//! the brief's own account of them is corrected by the measurement:
+//! `ASN1_SEQUENCE_cb(PKCS8_PRIV_KEY_INFO, pkey_cb)` (`:43-49`) names `X509_ATTRIBUTE_it` for its
+//! `attributes` column, and D349 withheld the whole item group because `crypto/x509/x_attrib.c`
+//! had no crate module. D368 lands `src/x509/x_attrib.rs`, so the template, its `pkey_cb`
+//! (`ASN1_OP_FREE_PRE`'s cleanse and `ASN1_OP_D2I_POST`'s version check) and the five
+//! `IMPLEMENT_ASN1_FUNCTIONS` names are here: [`PKCS8_PRIV_KEY_INFO_it`], `_new`, `_free`,
+//! `d2i_PKCS8_PRIV_KEY_INFO` and `i2d_PKCS8_PRIV_KEY_INFO`.
 //!
-//! * **Five are `IMPLEMENT_ASN1_FUNCTIONS(PKCS8_PRIV_KEY_INFO)`'s** (`PKCS8_PRIV_KEY_INFO_new`,
-//!   `_free`, `_it`, `d2i_PKCS8_PRIV_KEY_INFO`, `i2d_PKCS8_PRIV_KEY_INFO`). They are
-//!   macro-generated, so an identifier scan of the file cannot see them, and they are
-//!   **blocked rather than withheld by preference**: the template they come from,
-//!   `ASN1_SEQUENCE_cb(PKCS8_PRIV_KEY_INFO, pkey_cb)` (`:43-49`), names
-//!   `X509_ATTRIBUTE_it` for its `attributes` field, and `crypto/x509/x_attrib.c` is
-//!   Phase 11's and has no crate module. A `static` naming an item function the crate does
-//!   not define does not compile, so the template cannot be transcribed on this stratum.
-//!   The `pkey_cb` `ASN1_OP_FREE_PRE` cleanse and the `ASN1_OP_D2I_POST` version check go
-//!   with it.
-//! * **`PKCS8_pkey_get0_attrs`** (`:86-90`) is the `attributes` reader; it belongs with the
-//!   `add1_attr` family below and no crate caller reaches it, so it is withheld with them.
-//! * **Three are the `PKCS8_pkey_add1_attr*` family** (`:92-109`, the brief's "other
-//!   three"). Each is one call to `X509at_add1_attr_by_NID`, `X509at_add1_attr_by_OBJ` or
-//!   `X509at_add1_attr` — all three are `crypto/x509/x509_att.c`'s (`:118`, `:151`, `:187`)
-//!   and Phase 11's with no crate module, so transcribing them would name three unwired
-//!   functions, and the measurement says there is no partial form: each body is exactly
-//!   that one call. The brief also names `crypto/x509/x_attrib.c` as reached by these three,
-//!   and the measurement corrects that: `x_attrib.c`'s `X509_ATTRIBUTE_it` is reached by the
-//!   *template* above, not by the `add1_attr` trio. They are withheld, and the decision is
-//!   recorded here rather than left as an omission.
+//! ## What is withheld, with its coordinate
 //!
-//! The unit defines no internal symbol at all — its only file-local function is the
-//! `static pkey_cb`, which is not in the internal-symbol universe — so this module needs
-//! **no** divergence row, and `crypto/asn1/p8_pkey.c`'s direction-B set is empty. That is
-//! the one place this slice differs from its three siblings, and it is measured rather
-//! than assumed: the prerequisite gate reports nothing for this unit (D349).
+//! Nothing. The three `PKCS8_pkey_add1_attr` spellings (`:92-109`) were withheld by D349 as
+//! one call each to `X509at_add1_attr_by_NID`/`_by_OBJ`/`X509at_add1_attr`
+//! (`crypto/x509/x509_att.c:118`, `:151`, `:187`); D368 lands `crypto/x509/x509_att.c` as
+//! [`crate::x509::x509_att`], so they land here and the unit is whole (11 of 11 exports).
+//! `PKCS8_pkey_get0_attrs` (`:86-90`) is the `attributes` reader and needs nothing but the
+//! struct.
+//!
+//! The unit defines no internal symbol at all — its only file-local function is the `static
+//! pkey_cb` — so this module needs **no** divergence row. That is measured rather than assumed:
+//! the prerequisite gate reports nothing for this unit (D349, D368).
 //!
 //! ## The `Pkcs8PrivKeyInfo` layout
 //!
-//! `struct pkcs8_priv_key_info_st` is declared in `include/crypto/x509.h:291-297`, an
-//! internal header. This module is its canonical definition because
-//! `crypto/asn1/p8_pkey.c` is its authority unit — the file that defines the item over it
-//! and both hand-written accessors. `src/evp/pkey_asn1.rs` re-exports the name for the
-//! `priv_decode`/`priv_encode` callback signatures rather than declaring a placeholder
-//! (D348's rule). The `attributes` member is `STACK_OF(X509_ATTRIBUTE) *`, which the crate
-//! projects as `*mut OpenSslStack`, the same spelling `EvpPkey`'s own stack fields use.
+//! `struct pkcs8_priv_key_info_st` is declared in `include/crypto/x509.h:291-297`, an internal
+//! header. This module is its canonical definition because `crypto/asn1/p8_pkey.c` is its
+//! authority unit. `src/evp/pkey_asn1.rs` re-exports the name for the `priv_decode`/`priv_encode`
+//! callback signatures rather than declaring a placeholder (D348's rule). The `attributes` member
+//! is `STACK_OF(X509_ATTRIBUTE) *`, projected as `*mut OpenSslStack`.
 //!
-//! ## No raise, and the court
+//! ## The court
 //!
-//! Neither function raises: `PKCS8_pkey_set0` answers `0` on its three failure arms and
-//! `PKCS8_pkey_get0` always answers `1`. So `crypto/asn1/p8_pkey.c` is deliberately **not**
-//! added to `gen_err_raise_sites.py`'s `COVERED_FILES`. The arms live in
-//! `RT-ASN1-TEMPLATE`: a `PKCS8_PRIV_KEY_INFO` cannot be built through a landed entry point
-//! (its constructors are among the five withheld above), so the probe declares the
-//! authority's own `struct pkcs8_priv_key_info_st` locally and drives both accessors over
-//! live `ASN1_INTEGER`/`X509_ALGOR`/`ASN1_OCTET_STRING` members, printing return codes, the
-//! OID the probe compares itself, and the bytes of a public constant it chose.
+//! `crypto/asn1/p8_pkey.c` raises nothing, so it is deliberately **not** in `gen_err_raise_sites.py`'s
+//! `COVERED_FILES`. The evidence is the round trip below over a real `PKCS8_PRIV_KEY_INFO` built
+//! through its own item, which the five landed constructors now make possible.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_int, c_long, c_void};
+use core::ffi::{c_int, c_long, c_uchar, c_void};
+use core::ptr;
 
-use crate::asn1::layout::Asn1String;
-use crate::asn1::prim::ASN1_INTEGER_set;
+use crate::asn1::d2i::ASN1_item_d2i;
+use crate::asn1::fre::ASN1_item_free;
+use crate::asn1::i2d::ASN1_item_i2d;
+use crate::asn1::items::{ASN1_BIT_STRING_it, ASN1_INTEGER_it, ASN1_OCTET_STRING_it};
+use crate::asn1::layout::*;
+use crate::asn1::new::ASN1_item_new;
+use crate::asn1::prim::{ASN1_INTEGER_get, ASN1_INTEGER_set};
 use crate::asn1::string::{ASN1_STRING_get0_data, ASN1_STRING_length, ASN1_STRING_set0};
-use crate::asn1::x_algor::{X509Algor, X509_ALGOR_set0};
+use crate::asn1::x_algor::{X509Algor, X509_ALGOR_it, X509_ALGOR_set0};
+use crate::runtime::mem::OPENSSL_cleanse;
 use crate::runtime::obj::Asn1Object;
 use crate::runtime::stack::OpenSslStack;
+use crate::x509::x509_att::{X509at_add1_attr, X509at_add1_attr_by_NID, X509at_add1_attr_by_OBJ};
+use crate::x509::x_attrib::{X509Attribute, X509_ATTRIBUTE_it};
 
 /// `struct pkcs8_priv_key_info_st` — `PKCS8_PRIV_KEY_INFO`, from
 /// `include/crypto/x509.h:291-297`.
@@ -182,6 +172,264 @@ pub unsafe extern "C" fn PKCS8_pkey_get0(
         }
     }
     1
+}
+
+/// `static int pkey_cb(int operation, ASN1_VALUE **pval, const ASN1_ITEM *it, void *exarg)` —
+/// `crypto/asn1/p8_pkey.c:17-41`.
+///
+/// Two operations. `ASN1_OP_FREE_PRE` **cleanses the private-key octets** while the structure is
+/// still valid — this is a `PKCS#8` private key, so the bytes are secret and are zeroed before the
+/// allocator sees them again. `ASN1_OP_D2I_POST` insists on a valid version *after* the structure
+/// is decoded: only v1 (0) and v2 (1) exist, and a v1 structure must not carry the v2 `kpub`.
+///
+/// # Safety
+/// The item layer's own callback contract: `pval` points at a live value for the item this
+/// callback belongs to, and `it` is that item.
+unsafe extern "C" fn pkey_cb(
+    operation: c_int,
+    pval: *mut *mut c_void,
+    it: *const Asn1Item,
+    exarg: *mut c_void,
+) -> c_int {
+    let _ = (it, exarg);
+    match operation {
+        ASN1_OP_FREE_PRE => {
+            // SAFETY: `pval` points at a live `Pkcs8PrivKeyInfo` for this operation.
+            let key = unsafe { (*pval).cast::<Pkcs8PrivKeyInfo>() };
+            // SAFETY: `key` is live and its `pkey` is its own octet string.
+            unsafe {
+                if !(*key).pkey.is_null() {
+                    OPENSSL_cleanse(
+                        (*key).pkey.cast::<c_void>(),
+                        core::mem::size_of::<Asn1String>(),
+                    );
+                    OPENSSL_cleanse(
+                        (*(*key).pkey).data.cast::<c_void>(),
+                        (*(*key).pkey).length as usize,
+                    );
+                }
+            }
+        }
+        ASN1_OP_D2I_POST => {
+            // SAFETY: `pval` points at a live `Pkcs8PrivKeyInfo` for this operation.
+            let key = unsafe { (*pval).cast::<Pkcs8PrivKeyInfo>() };
+            // SAFETY: `key` is live and its `version` and `kpub` are its own.
+            let (version, kpub) = unsafe { (ASN1_INTEGER_get((*key).version), (*key).kpub) };
+            if !(0..=1).contains(&version) {
+                return 0;
+            }
+            if version == 0 && !kpub.is_null() {
+                return 0;
+            }
+        }
+        _ => {}
+    }
+    1
+}
+
+/// The `PKCS8_PRIV_KEY_INFO` item's `ASN1_AUX`. Wrapped for the same reason
+/// [`crate::dsa::asn1`] wraps its own: [`Asn1Aux`] holds raw pointers and so is not `Sync` by
+/// itself.
+#[repr(transparent)]
+struct SyncAux(Asn1Aux);
+
+// SAFETY: built from constants (a null `app_data`, integer offsets, a `None` const-callback and
+// one function pointer), written once by the loader, and with no interior mutability reachable
+// through a shared reference. The machinery reads only `asn1_cb` out of it.
+unsafe impl Sync for SyncAux {}
+
+/// `static const ASN1_AUX PKCS8_PRIV_KEY_INFO_aux = { NULL, 0, 0, 0, pkey_cb, 0, NULL }` —
+/// `ASN1_SEQUENCE_cb(PKCS8_PRIV_KEY_INFO, pkey_cb)`.
+static P8_AUX: SyncAux = SyncAux(Asn1Aux {
+    app_data: ptr::null_mut(),
+    flags: 0,
+    ref_offset: 0,
+    ref_lock: 0,
+    asn1_cb: Some(pkey_cb),
+    enc_offset: 0,
+    asn1_const_cb: None,
+});
+
+/// `PKCS8_PRIV_KEY_INFO_seq_tt` — `ASN1_SEQUENCE_cb(PKCS8_PRIV_KEY_INFO, pkey_cb)`
+/// (`crypto/asn1/p8_pkey.c:43-49`): `ASN1_SIMPLE(version, ASN1_INTEGER)`,
+/// `ASN1_SIMPLE(pkeyalg, X509_ALGOR)`, `ASN1_SIMPLE(pkey, ASN1_OCTET_STRING)`,
+/// `ASN1_IMP_SET_OF_OPT(attributes, X509_ATTRIBUTE, 0)` and `ASN1_IMP_OPT(kpub, ASN1_BIT_STRING,
+/// 1)`.
+static P8_SEQ_TT: [Asn1Template; 5] = [
+    Asn1Template {
+        flags: 0,
+        tag: 0,
+        offset: 0,
+        field_name: c"version".as_ptr(),
+        item: ASN1_INTEGER_it as *mut c_void,
+    },
+    Asn1Template {
+        flags: 0,
+        tag: 0,
+        offset: 8,
+        field_name: c"pkeyalg".as_ptr(),
+        item: X509_ALGOR_it as *mut c_void,
+    },
+    Asn1Template {
+        flags: 0,
+        tag: 0,
+        offset: 16,
+        field_name: c"pkey".as_ptr(),
+        item: ASN1_OCTET_STRING_it as *mut c_void,
+    },
+    Asn1Template {
+        flags: ASN1_TFLG_IMPLICIT | ASN1_TFLG_SET_OF | ASN1_TFLG_OPTIONAL,
+        tag: 0,
+        offset: 24,
+        field_name: c"attributes".as_ptr(),
+        item: X509_ATTRIBUTE_it as *mut c_void,
+    },
+    Asn1Template {
+        flags: ASN1_TFLG_IMPLICIT | ASN1_TFLG_OPTIONAL,
+        tag: 1,
+        offset: 32,
+        field_name: c"kpub".as_ptr(),
+        item: ASN1_BIT_STRING_it as *mut c_void,
+    },
+];
+
+/// `PKCS8_PRIV_KEY_INFO_it`'s descriptor — `ASN1_SEQUENCE_END_cb(PKCS8_PRIV_KEY_INFO,
+/// PKCS8_PRIV_KEY_INFO)` at `crypto/asn1/p8_pkey.c:49`.
+static P8_ITEM: Asn1Item = Asn1Item {
+    itype: ASN1_ITYPE_SEQUENCE,
+    utype: V_ASN1_SEQUENCE as c_long,
+    templates: P8_SEQ_TT.as_ptr(),
+    tcount: 5,
+    funcs: (&P8_AUX.0) as *const Asn1Aux as *const c_void,
+    size: core::mem::size_of::<Pkcs8PrivKeyInfo>() as c_long,
+    sname: c"PKCS8_PRIV_KEY_INFO".as_ptr(),
+};
+
+/// `const ASN1_ITEM *PKCS8_PRIV_KEY_INFO_it(void)` — `include/openssl/x509.h`, from
+/// `ASN1_SEQUENCE_END_cb(PKCS8_PRIV_KEY_INFO, PKCS8_PRIV_KEY_INFO)`.
+#[no_mangle]
+pub extern "C" fn PKCS8_PRIV_KEY_INFO_it() -> *const Asn1Item {
+    &P8_ITEM
+}
+
+/// `PKCS8_PRIV_KEY_INFO *PKCS8_PRIV_KEY_INFO_new(void)` — `crypto/asn1/p8_pkey.c:51`, from
+/// `IMPLEMENT_ASN1_FUNCTIONS(PKCS8_PRIV_KEY_INFO)`.
+#[no_mangle]
+pub extern "C" fn PKCS8_PRIV_KEY_INFO_new() -> *mut Pkcs8PrivKeyInfo {
+    // SAFETY: `PKCS8_PRIV_KEY_INFO_it()` answers a static item the crate owns.
+    unsafe { ASN1_item_new(PKCS8_PRIV_KEY_INFO_it()).cast::<Pkcs8PrivKeyInfo>() }
+}
+
+/// `void PKCS8_PRIV_KEY_INFO_free(PKCS8_PRIV_KEY_INFO *a)` — the same macro's free half. The
+/// `pkey_cb` `ASN1_OP_FREE_PRE` arm cleanses the octets as part of this release.
+///
+/// # Safety
+/// `a` is NULL or a value this item layer built.
+#[no_mangle]
+pub unsafe extern "C" fn PKCS8_PRIV_KEY_INFO_free(a: *mut Pkcs8PrivKeyInfo) {
+    // SAFETY: `a` is NULL or a live item value per the contract.
+    unsafe { ASN1_item_free(a.cast(), PKCS8_PRIV_KEY_INFO_it()) }
+}
+
+/// `PKCS8_PRIV_KEY_INFO *d2i_PKCS8_PRIV_KEY_INFO(PKCS8_PRIV_KEY_INFO **a,
+/// const unsigned char **in, long len)` — `crypto/asn1/p8_pkey.c:51`'s generated decoder.
+///
+/// The `pkey_cb` `ASN1_OP_D2I_POST` arm refuses a version outside 0..=1 or a v1 structure with a
+/// `kpub`, so that refusal is this function's answer too.
+///
+/// # Safety
+/// `a` is NULL or a writable slot; `in_` points at a readable cursor; `len` describes the input.
+#[no_mangle]
+pub unsafe extern "C" fn d2i_PKCS8_PRIV_KEY_INFO(
+    a: *mut *mut Pkcs8PrivKeyInfo,
+    in_: *mut *const c_uchar,
+    len: c_long,
+) -> *mut Pkcs8PrivKeyInfo {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe {
+        ASN1_item_d2i(a.cast(), in_, len, PKCS8_PRIV_KEY_INFO_it()).cast::<Pkcs8PrivKeyInfo>()
+    }
+}
+
+/// `int i2d_PKCS8_PRIV_KEY_INFO(const PKCS8_PRIV_KEY_INFO *a, unsigned char **out)` — the same
+/// macro's encoder.
+///
+/// # Safety
+/// `a` is NULL or a live value; `out` is NULL or a writable cursor.
+#[no_mangle]
+pub unsafe extern "C" fn i2d_PKCS8_PRIV_KEY_INFO(
+    a: *const Pkcs8PrivKeyInfo,
+    out: *mut *mut c_uchar,
+) -> c_int {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe { ASN1_item_i2d(a.cast(), out, PKCS8_PRIV_KEY_INFO_it()) }
+}
+
+/// `const STACK_OF(X509_ATTRIBUTE) *PKCS8_pkey_get0_attrs(const PKCS8_PRIV_KEY_INFO *p8)` —
+/// `crypto/asn1/p8_pkey.c:86-90`.
+///
+/// The `attributes` reader, borrowed rather than copied.
+///
+/// # Safety
+/// `p8` is a live `PKCS8_PRIV_KEY_INFO`; the answer is borrowed from it.
+#[no_mangle]
+pub unsafe extern "C" fn PKCS8_pkey_get0_attrs(p8: *const Pkcs8PrivKeyInfo) -> *const OpenSslStack {
+    // SAFETY: `p8` is live per the contract.
+    unsafe { (*p8).attributes }
+}
+
+/// `int PKCS8_pkey_add1_attr_by_NID(PKCS8_PRIV_KEY_INFO *p8, int nid, int type,
+/// const unsigned char *bytes, int len)` — `crypto/asn1/p8_pkey.c:92-98`.
+///
+/// One call to [`X509at_add1_attr_by_NID`], whose answer is the stack rather than a status;
+/// the export is the status, so a NULL stack becomes 0.
+///
+/// # Safety
+/// `p8` is a live `PKCS8_PRIV_KEY_INFO`; `bytes` is readable for `len` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn PKCS8_pkey_add1_attr_by_NID(
+    p8: *mut Pkcs8PrivKeyInfo,
+    nid: c_int,
+    type_: c_int,
+    bytes: *const c_uchar,
+    len: c_int,
+) -> c_int {
+    // SAFETY: `p8` is live, so its `attributes` slot is writable; `bytes`/`len` are the caller's.
+    let ret = unsafe { X509at_add1_attr_by_NID(&raw mut (*p8).attributes, nid, type_, bytes, len) };
+    c_int::from(!ret.is_null())
+}
+
+/// `int PKCS8_pkey_add1_attr_by_OBJ(PKCS8_PRIV_KEY_INFO *p8, const ASN1_OBJECT *obj, int type,
+/// const unsigned char *bytes, int len)` — `crypto/asn1/p8_pkey.c:100-104`.
+///
+/// # Safety
+/// `p8` is a live `PKCS8_PRIV_KEY_INFO`; `obj` is live; `bytes` is readable for `len` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn PKCS8_pkey_add1_attr_by_OBJ(
+    p8: *mut Pkcs8PrivKeyInfo,
+    obj: *const Asn1Object,
+    type_: c_int,
+    bytes: *const c_uchar,
+    len: c_int,
+) -> c_int {
+    // SAFETY: `p8` is live; `obj` is live; `bytes`/`len` are the caller's.
+    let ret = unsafe { X509at_add1_attr_by_OBJ(&raw mut (*p8).attributes, obj, type_, bytes, len) };
+    c_int::from(!ret.is_null())
+}
+
+/// `int PKCS8_pkey_add1_attr(PKCS8_PRIV_KEY_INFO *p8, X509_ATTRIBUTE *attr)` —
+/// `crypto/asn1/p8_pkey.c:106-109`.
+///
+/// # Safety
+/// `p8` is a live `PKCS8_PRIV_KEY_INFO`; `attr` is live and is duplicated before it is stored.
+#[no_mangle]
+pub unsafe extern "C" fn PKCS8_pkey_add1_attr(
+    p8: *mut Pkcs8PrivKeyInfo,
+    attr: *mut X509Attribute,
+) -> c_int {
+    // SAFETY: `p8` is live, so its `attributes` slot is writable; `attr` is live.
+    let ret = unsafe { X509at_add1_attr(&raw mut (*p8).attributes, attr) };
+    c_int::from(!ret.is_null())
 }
 
 #[cfg(test)]

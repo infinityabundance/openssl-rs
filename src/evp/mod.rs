@@ -51,6 +51,10 @@ pub mod cipher_ctx;
 pub mod digest;
 pub mod encode;
 pub mod evp_pbe;
+// Phase 7's `crypto/evp/evp_pkey.c` (D368): the legacy `PKCS8_PRIV_KEY_INFO` -> `EVP_PKEY`
+// step `pem_read_bio_key_legacy` reaches. A partial module -- the unit's encoder half and the
+// `EVP_PKCS82PKEY*` exports are Phase 10's and are withheld with their coordinates.
+pub mod evp_pkey;
 pub mod exchange;
 pub mod fetch;
 pub mod kdf;

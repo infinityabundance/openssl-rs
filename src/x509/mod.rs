@@ -32,5 +32,9 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 pub mod t_x509;
+// Phase 10's `crypto/x509/x_attrib.c` -- the `X509_ATTRIBUTE` family, landed early because
+// `crypto/asn1/p8_pkey.c`'s template names `X509_ATTRIBUTE_it` (D368).
+pub mod x509_att;
 pub mod x509_set;
+pub mod x_attrib;
 pub mod x_pubkey;

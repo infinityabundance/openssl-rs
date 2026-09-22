@@ -958,6 +958,122 @@ static void part_x509_accessors(void)
     }
 }
 
+/*
+ * The `X509_ATTRIBUTE` collection and constructor layer (`crypto/x509/x509_att.c`) and the
+ * PKCS#8 attribute path over it (`crypto/asn1/p8_pkey.c`'s three `PKCS8_pkey_add1_attr*`).
+ *
+ * The subject is an object graph rather than an encoding: an attribute is built, pushed onto an
+ * initially-NULL stack, refused when its OID repeats, read back through the type-checked
+ * accessors, and deleted. Every observation is a return code, a count, a NID, a selector, an
+ * integer or a length -- never an address -- and each refusal's error queue is drained because
+ * the reason is the contract that distinguishes a duplicate from an unknown name.
+ */
+static void part_x509_att(void)
+{
+    static const unsigned char oct2[2] = { 0xaa, 0xbb };
+    static const unsigned char one[1] = { 0x07 };
+    STACK_OF(X509_ATTRIBUTE) *sk = NULL;
+    X509_ATTRIBUTE *a, *dup;
+
+    clear_queue();
+
+    /* --- X509_ATTRIBUTE_create_by_NID and its accessors --- */
+    a = X509_ATTRIBUTE_create_by_NID(NULL, NID_commonName, V_ASN1_INTEGER, one, 1);
+    printf("i.attr.created=%d\n", a != NULL);
+    printf("i.attr.count=%d\n", X509_ATTRIBUTE_count(a));
+    printf("i.attr.object_nid=%d\n", OBJ_obj2nid(X509_ATTRIBUTE_get0_object(a)));
+    printf("i.attr.type0=%d\n", ASN1_TYPE_get(X509_ATTRIBUTE_get0_type(a, 0)));
+    printf("i.attr.int=%ld\n",
+        ASN1_INTEGER_get((ASN1_INTEGER *)X509_ATTRIBUTE_get0_data(a, 0, V_ASN1_INTEGER, NULL)));
+    printf("i.attr.wrong_type_null=%d\n",
+        X509_ATTRIBUTE_get0_data(a, 0, V_ASN1_OCTET_STRING, NULL) == NULL);
+    drain("i.attr.wrong_type_err");
+    printf("i.attr.oob_null=%d\n", X509_ATTRIBUTE_get0_type(a, 5) == NULL);
+
+    /* --- X509at_add1_attr onto an initially-NULL stack --- */
+    printf("i.sk.add1_nonnull=%d\n", X509at_add1_attr(&sk, a) != NULL);
+    printf("i.sk.count=%d\n", X509at_get_attr_count(sk));
+    printf("i.sk.by_nid=%d\n", X509at_get_attr_by_NID(sk, NID_commonName, -1));
+    printf("i.sk.by_unknown_nid=%d\n", X509at_get_attr_by_NID(sk, NID_undef, -1));
+    printf("i.sk.get0_ok=%d\n", X509at_get_attr(sk, 0) != NULL);
+    printf("i.sk.get0_oob_null=%d\n", X509at_get_attr(sk, 3) == NULL);
+    drain("i.sk.get0_oob_err");
+
+    /* A second attribute with the same OID is refused. */
+    dup = X509_ATTRIBUTE_create_by_NID(NULL, NID_commonName, V_ASN1_INTEGER, one, 1);
+    printf("i.sk.dup_null=%d\n", X509at_add1_attr(&sk, dup) == NULL);
+    printf("i.sk.count_after_dup=%d\n", X509at_get_attr_count(sk));
+    drain("i.sk.dup_err");
+
+    /* The `-1` lastpos means "unique occurrence"; the value comes back borrowed. */
+    printf("i.sk.data_by_obj=%ld\n",
+        ASN1_INTEGER_get((ASN1_INTEGER *)X509at_get0_data_by_OBJ(
+            sk, OBJ_nid2obj(NID_commonName), -1, V_ASN1_INTEGER)));
+
+    /* --- X509at_add1_attr_by_NID, read back, then delete --- */
+    {
+        STACK_OF(X509_ATTRIBUTE) *sk2 = NULL;
+        X509_ATTRIBUTE *first;
+
+        printf("i.sk2.add_by_nid=%d\n",
+            X509at_add1_attr_by_NID(&sk2, NID_commonName, V_ASN1_OCTET_STRING, oct2, 2)
+                != NULL);
+        printf("i.sk2.count=%d\n", X509at_get_attr_count(sk2));
+        first = X509at_get_attr(sk2, 0);
+        printf("i.sk2.oct_len=%d\n",
+            ASN1_STRING_length((ASN1_STRING *)X509_ATTRIBUTE_get0_data(
+                first, 0, V_ASN1_OCTET_STRING, NULL)));
+        printf("i.sk2.delete_ok=%d\n", X509at_delete_attr(sk2, 0) != NULL);
+        printf("i.sk2.count_after_delete=%d\n", X509at_get_attr_count(sk2));
+        printf("i.sk2.delete_oob_null=%d\n", X509at_delete_attr(sk2, 0) == NULL);
+        drain("i.sk2.delete_err");
+        sk_X509_ATTRIBUTE_pop_free(sk2, X509_ATTRIBUTE_free);
+    }
+
+    printf("i.sk.delete_ok=%d\n", X509at_delete_attr(sk, 0) != NULL);
+    sk_X509_ATTRIBUTE_pop_free(sk, X509_ATTRIBUTE_free);
+    X509_ATTRIBUTE_free(a);
+    X509_ATTRIBUTE_free(dup);
+    drain("i.final_err");
+
+    /* --- PKCS8_pkey_add1_attr* over a built PKCS8_PRIV_KEY_INFO --- */
+    {
+        struct pkcs8_priv_key_info_st *p8 = OPENSSL_zalloc(sizeof(*p8));
+        X509_ATTRIBUTE *attr;
+
+        p8->version = ASN1_INTEGER_new();
+        p8->pkeyalg = X509_ALGOR_new();
+        p8->pkey = ASN1_OCTET_STRING_new();
+
+        printf("i.p8.attrs_initial_null=%d\n", PKCS8_pkey_get0_attrs(p8) == NULL);
+        printf("i.p8.add_by_nid=%d\n",
+            PKCS8_pkey_add1_attr_by_NID(p8, NID_commonName, V_ASN1_OCTET_STRING, oct2, 2)
+                == 1);
+        printf("i.p8.attrs_count=%d\n",
+            X509at_get_attr_count(PKCS8_pkey_get0_attrs(p8)));
+        printf("i.p8.add_by_nid_dup=%d\n",
+            PKCS8_pkey_add1_attr_by_NID(p8, NID_commonName, V_ASN1_OCTET_STRING, oct2, 2)
+                == 0);
+        drain("i.p8.dup_err");
+
+        attr = X509_ATTRIBUTE_create_by_OBJ(NULL, OBJ_nid2obj(NID_commonName),
+            V_ASN1_OCTET_STRING, oct2, 2);
+        printf("i.p8.add_attr_create=%d\n", attr != NULL);
+        printf("i.p8.add_attr_dup=%d\n", PKCS8_pkey_add1_attr(p8, attr) == 0);
+        X509_ATTRIBUTE_free(attr);
+
+        attr = X509_ATTRIBUTE_create_by_txt(NULL, "commonName", V_ASN1_OCTET_STRING, oct2, 2);
+        printf("i.p8.create_by_txt=%d\n", attr != NULL);
+        X509_ATTRIBUTE_free(attr);
+        drain("i.p8.final_err");
+
+        ASN1_INTEGER_free(p8->version);
+        X509_ALGOR_free(p8->pkeyalg);
+        ASN1_OCTET_STRING_free(p8->pkey);
+        OPENSSL_free(p8);
+    }
+}
+
 int main(void)
 {
     part_sequence();
@@ -968,6 +1084,7 @@ int main(void)
     part_type_pairs();
     part_x509_algor();
     part_x509_accessors();
+    part_x509_att();
     printf("done=1\n");
     return 0;
 }

@@ -13,8 +13,8 @@
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)"
     ],
     "census": {
-      "covered_by_a_divergence": 91,
-      "language_surface_not_modelled_by_name": 4601,
+      "covered_by_a_divergence": 92,
+      "language_surface_not_modelled_by_name": 4707,
       "planned_prerequisites": 8
     },
     "census_by_unit": {
@@ -59,6 +59,7 @@
         "ossl_lib_ctx_read_lock": 2,
         "ossl_lib_ctx_unlock": 2,
         "ossl_lib_ctx_write_lock": 2,
+        "ossl_print_attribute_value": 1,
         "ossl_release_default_drbg_ctx": 2,
         "ossl_serial_number_print": 1,
         "ossl_x509_algor_is_sm2": 1,
@@ -99,11 +100,12 @@
         "crypto/asn1/asn_pack.c": 7,
         "crypto/asn1/bio_asn1.c": 13,
         "crypto/asn1/d2i_param.c": 8,
+        "crypto/asn1/d2i_pr.c": 19,
         "crypto/asn1/d2i_pu.c": 5,
         "crypto/asn1/evp_asn1.c": 13,
         "crypto/asn1/f_int.c": 8,
         "crypto/asn1/p5_scrypt.c": 23,
-        "crypto/asn1/p8_pkey.c": 24,
+        "crypto/asn1/p8_pkey.c": 17,
         "crypto/asn1/t_pkey.c": 5,
         "crypto/asn1/tasn_dec.c": 30,
         "crypto/asn1/tasn_enc.c": 23,
@@ -112,6 +114,7 @@
         "crypto/asn1/tasn_prn.c": 22,
         "crypto/asn1/tasn_typ.c": 29,
         "crypto/asn1/x_algor.c": 20,
+        "crypto/asn1/x_sig.c": 6,
         "crypto/asn1_dsa.c": 3,
         "crypto/bf/bf_enc.c": 4,
         "crypto/bio/bf_buff.c": 11,
@@ -248,6 +251,7 @@
         "crypto/evp/evp_key.c": 7,
         "crypto/evp/evp_lib.c": 24,
         "crypto/evp/evp_pbe.c": 23,
+        "crypto/evp/evp_pkey.c": 29,
         "crypto/evp/evp_rand.c": 33,
         "crypto/evp/exchange.c": 20,
         "crypto/evp/kdf_lib.c": 14,
@@ -265,7 +269,7 @@
         "crypto/evp/p_dec.c": 5,
         "crypto/evp/p_enc.c": 5,
         "crypto/evp/p_legacy.c": 8,
-        "crypto/evp/p_lib.c": 54,
+        "crypto/evp/p_lib.c": 53,
         "crypto/evp/pbe_scrypt.c": 7,
         "crypto/evp/pmeth_check.c": 7,
         "crypto/evp/pmeth_gn.c": 13,
@@ -314,6 +318,8 @@
         "crypto/pem/pem_all.c": 37,
         "crypto/pem/pem_lib.c": 38,
         "crypto/pem/pem_oth.c": 8,
+        "crypto/pkcs12/p12_decr.c": 14,
+        "crypto/pkcs12/p12_p8d.c": 5,
         "crypto/poly1305/poly1305.c": 5,
         "crypto/property/defn_cache.c": 7,
         "crypto/property/property.c": 25,
@@ -364,7 +370,9 @@
         "crypto/ui/ui_util.c": 13,
         "crypto/whrlpool/wp_dgst.c": 3,
         "crypto/x509/t_x509.c": 108,
+        "crypto/x509/x509_att.c": 22,
         "crypto/x509/x509_set.c": 47,
+        "crypto/x509/x_attrib.c": 19,
         "crypto/x509/x_pubkey.c": 70
       },
       "planned_prerequisites": {
@@ -473,12 +481,12 @@
       ]
     },
     "checked": {
-      "authority_units": 288,
-      "crate_modules": 366,
+      "authority_units": 295,
+      "crate_modules": 374,
       "deferral_blocker_rows": 1,
       "deferrals_recorded": 9,
-      "divergence_names_covered": 58,
-      "divergence_rows": 12,
+      "divergence_names_covered": 59,
+      "divergence_rows": 13,
       "names_referenced_and_not_built": 19
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
@@ -592,13 +600,13 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "344a0ab283a0252376fe98aac6d6c5febb09a3d87530099b3fc728984978b135",
+  "body_hash": "243e9f3ab6a48fb9ce3244bb2516bb24c8a1c15ec48a752eef994118caf1327b",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "478b36dbf4fc965d707d74de7730f369e97b5348351f805d374a42a7bc3d13c2"
+      "sha256": "b99fd0633a33f40ab12a84fb7c1c9ef74083845ee2ae6c1ee76f41825d0a3280"
     },
     {
       "name": "macro-owners",
@@ -613,7 +621,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "26d4267953a74d99c6ec0f0fca888d4cf2a092013a5c6b1e2a624728d25ee5c6"
+      "sha256": "8aac1e6197b9220bfdab3e17f9ad76cfac4d96edde1fea527defc62000e1f81a"
     },
     {
       "name": "symbol-ownership",
@@ -628,7 +636,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "b3487fd798a6c68b5b4c74220cedf8dcfee8207713f38978e43a59f8acfe8f41"
+      "sha256": "d972c6aee0fda10b608f649be30f0226757c81d070993abafdf0b275ab902439"
     },
     {
       "name": "phase-state",
@@ -638,7 +646,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "84d3c5d2eeeda9640c674dc1bfcfe186552e8e5443ff9e14213ed247a7caa250"
+      "sha256": "a9e59b7359361065bda5ea88002009764a6f4575733d23927c7ce6b842cc29f8"
     },
     {
       "name": "crate-source-tree",
