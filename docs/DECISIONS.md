@@ -26301,3 +26301,188 @@ at **zero findings** over **9** deferrals, **12** divergence rows / **58** names
 `blocking_dependencies` **9** and `sealed_stratum_census` **56**. It is not Phase 8 and not nearly
 Phase 8; the count this entry reaches is implemented **780** of **786** owned, and what it moved
 into the crate is the first of the four units the last six wait on.
+
+## D364 — the second decoder unit lands: `crypto/encode_decode/decoder_lib.c` as `src/decoder_lib.rs`,
+with `decoder_meth.c`'s context trio; nineteen exports, and the chain's remaining two units named
+
+**Decision.** Land `crypto/encode_decode/decoder_lib.c`'s **instance and context object layer** as
+`src/decoder_lib.rs`, together with the context trio `decoder_meth.c`'s unit owns and this unit's
+bodies make landable (`OSSL_DECODER_CTX_new` `:628`, `_set_params` `:637`, `_free` `:665`, in
+`src/decoder_meth.rs` beside the shapes they allocate). Nineteen exports land:
+`OSSL_DECODER_CTX_set_selection`, `_set_input_type`, `_set_input_structure`,
+`OSSL_DECODER_CTX_add_decoder`, `_get_num_decoders`, `_set_construct`, `_set_construct_data`,
+`_set_cleanup`, `_get_construct`, `_get_construct_data`, `_get_cleanup`, `OSSL_DECODER_export`,
+`OSSL_DECODER_INSTANCE_get_decoder`, `_get_decoder_ctx`, `_get_input_type`, `_get_input_structure`,
+`ossl_decoder_instance_new`, `ossl_decoder_instance_free`, and the trio.
+
+**What is withheld, as one named block, and why it is *one* block.** `OSSL_DECODER_CTX_add_extra`
+(`:556-679`) with `collect_all_decoders` (`:430-437`), `collect_extra_decoder` (`:439-546`),
+`decoder_sk_cmp` (`:548-554`) and `collect_extra_decoder_data_st` (`:411-425`); `decoder_process`
+(`:798-1165`) with `decoder_process_data_st` (`:27-46`); and `OSSL_DECODER_from_bio` (`:47-118`),
+`bio_from_file` (`:122-133`), `OSSL_DECODER_from_fp` (`:134-145`), `OSSL_DECODER_from_data`
+(`:147-167`). Every one reaches `OSSL_DECODER_do_all_provided` or `OSSL_DECODER_fetch` -- the
+`decoder_meth.c` fetch block, withheld because its first caller is `decoder_pkey.c` -- and the
+chain among them is what makes them one block rather than four: `add_extra` calls
+`do_all_provided` directly, `decoder_process` calls `add_extra` (`:1103`), and `from_bio` calls
+`decoder_process` (`:88`). They land together with `decoder_pkey.c`.
+
+**Two fault boundaries are answered 0 rather than reproduced, and the module doc names both.**
+`decoder->newctx` and `decoder->export_object` are optional in the dispatch scan -- the sanity
+check requires only that `newctx`/`freectx` be both-or-neither -- yet
+`ossl_decoder_instance_new_forprov` (`:227`), `OSSL_DECODER_CTX_add_decoder` (`:395`) and
+`OSSL_DECODER_export` (`:757`) call them through the bare pointer, so a provider that supplied
+neither would fault there. No provider decoder is registered in this crate, so neither site is
+reachable; the module takes the shape `src/runtime/lhash.rs` records for `OPENSSL_LH_doall` -- the
+failure the caller's contract implies rather than the fault -- and a unit test observes the
+`OSSL_DECODER_CTX_add_decoder` arm by building a decoder with **no** dispatch slots at all.
+
+**One bitfield is projected, and the projection is observable.** `input_structure`'s companion
+`flag_input_structure_was_set` is a one-bit field in `encoder_local.h:114`;
+`OSSL_DECODER_INSTANCE_get_input_structure` writes the caller's out-parameter from it **before**
+reading the string, so it is 0 for a NULL instance too. The crate projects it as its four-byte
+storage, the `EvpPkey` `foreign` projection's shape, and the accessor's order is the authority's.
+
+**Raise sites.** `crypto/encode_decode/decoder_lib.c` joins `gen_err_raise_sites.py`'s
+`COVERED_FILES` as `DECODER_LIB`, and the symbol resolver needed a second include:
+`OSSL_DECODER_R_DECODER_NOT_FOUND` (raised by the withheld `OSSL_DECODER_from_bio` at `:60`) is in
+`decodererr.h`, so that header joins the resolver's include list beside `encodererr.h` -- the same
+first-use correction D361 made. The site count moves **3122 -> 3147**; seventeen of the
+twenty-five are referenced by this pass's landed bodies and the rest belong to the withheld block,
+enumerated by the `ALL` table.
+
+**Courts.** **No probe was needed, and that is measured:** the nineteen exports are `decoder.h`'s and
+Phase 10's, which has no ledger, so `court_coverage.py` records them under `not_yet_begun` --
+**132 -> 151**. Totals do not move: **94** courts and **37221** observations. The unit's evidence is
+its two `src/decoder_lib.rs` unit tests (a fresh context's empty chain and the three setters'
+round trip including the 0-selection and NULL-input-type arms, and the absent-constructor refusal
+above) plus the four `src/decoder_meth.rs` tests, one of which now builds and frees a real
+`OSSL_DECODER_CTX`.
+
+**One tool needed a link, and that is a finding about the tool rather than the code.**
+`dispatch_court.py` exits 1 for an alias no authority typedef is linked to, and this unit's two new
+callback aliases (`DecoderConstructFn`, `DecoderCleanupFn`) had none: their authority typedefs are
+`OSSL_DECODER_CONSTRUCT`/`OSSL_DECODER_CLEANUP`, which do not squash to the crate's names. Both join
+`LINKS`, exactly as D362's `EncoderConstructFn`/`EncoderCleanupFn` did.
+
+**What the authority corrected in the brief.** Nothing about the order this time -- the corrected
+order this pass follows is the one D363 measured -- but one phrase: the brief's item 1 says
+"`decoder_lib.c` -> `src/decoder_lib.rs`, plus `decoder_meth.c`'s withheld context trio", and the
+trio's *unit* is still `decoder_meth.c`'s even though its commit moves, so the two shapes it
+allocates (`OsslDecoderInstance`, `OsslDecoderCtx`) live in `src/decoder_meth.rs` with it rather
+than in `src/decoder_lib.rs`, which is the split D361 made for the encoder's trio. The
+`not_yet_begun` count is likewise *not* reduced by the trio's landing, because an export's phase is
+its header's and `OSSL_DECODER_CTX_new` is `decoder.h`'s either way.
+
+**What is deliberately not here.** `crypto/encode_decode/decoder_pkey.c` -- and with it the decoder
+cache, slots 11 and 20, the four `OSSL_DECODER_CTX_set_passphrase*` setters and
+`OSSL_DECODER_CTX_new_for_pkey` -- and `crypto/pem/pem_pkey.c` with the six
+`PEM_read[_bio]_{RSA,DSA,EC}PrivateKey` readers. `docs/PHASE-8-SUBPHASES.md` §4's two anchored
+clauses are untouched because the Phase 8 ledger did not move.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete: false`
+with **6** names open: implemented **780**, deferred **0**, owned **786** -- unchanged from D362 and
+D363, because this landing is Phase 10's work. The regenerated counts: `implemented-surface.json`'s
+`libcrypto` implemented moves **2846 -> 2865** and its `internal_symbols.c_style` **341 -> 344**
+(the unit's three new internal C symbols: `ossl_decoder_instance_new_forprov`,
+`ossl_decoder_instance_dup` and the `ossl_decoder_ctx_{set,get}_harderr` pair's reachable names);
+`transcription-edges.json` **317 -> 318** modules over **286 -> 287** units, the new edge
+`src/decoder_lib.rs -> crypto/encode_decode/decoder_lib.c` at share 23/23; `court_coverage.py`'s
+`not_yet_begun` **132 -> 151**; the prerequisite gate stays at **zero findings** over **9**
+deferrals, **12** divergence rows / **58** names, `blocking_dependencies` **9** and
+`sealed_stratum_census` **56**. It is not Phase 8 and not nearly Phase 8; the count this entry
+reaches is implemented **780** of **786** owned, and two of the four units the last six wait on are
+now in the crate.
+
+## D365 — the decoder cache lands and slots 11 and 20 are filled: `crypto/encode_decode/decoder_pkey.c`'s
+cache half as `src/decoder_pkey.rs`, `ossl_lh_strcasehash`, and the three decoder store bridges
+become real delegations
+
+**Decision.** Land `crypto/encode_decode/decoder_pkey.c`'s **cache half** as `src/decoder_pkey.rs`:
+`DECODER_CACHE_ENTRY`/`DECODER_CACHE`, `decoder_cache_entry_free`, `decoder_cache_entry_hash`,
+`nullstrcmp`, `decoder_cache_entry_cmp`, `ossl_decoder_cache_new`, `ossl_decoder_cache_free`,
+`ossl_decoder_cache_flush`, and the four `OSSL_DECODER_CTX_set_passphrase*` setters. Fill **slot 11**
+and **slot 20** in `context_init` -- the decoder store then the cache, in the authority's own
+position before the encoder store -- and release both in `context_deinit_objs` in the same order.
+Implement the three decoder bridges in `src/provider/stores.rs` as real delegations, and add
+`ossl_lh_strcasehash` to `src/runtime/lhash.rs`, which the entry hash is built from. Four exports
+land; **no Phase 8 or Phase 7 count moves**.
+
+**This is the previous brief's item 1, and D363's measurement is what made it land here.** The cache
+could not go first because `decoder_cache_entry_free` (`decoder_pkey.c:681-691`) calls
+`OSSL_DECODER_CTX_free` on the entry's owned `template`. That export is `decoder_meth.c`'s and its
+body calls `ossl_decoder_instance_free`, `decoder_lib.c`'s -- so the cache is the first thing the
+two units D363 and D364 landed make possible, and it lands third, which is the order D363 corrected
+the brief to.
+
+**The cache is an `LHASH` keyed by a struct, and three details decide its behaviour.**
+
+* **The hash's NULL arms are 0, not the empty string's hash.** `decoder_cache_entry_hash`
+  (`:693-717`) folds four `hash * 23 +` terms, each conditional on its field being non-NULL, then
+  `hash ^= selection`. `ossl_lh_strcasehash` answers **0** for the empty string by its own early
+  return, so a NULL field and an empty one hash identically -- the arm is written as the authority
+  wrote it and the equivalence holds on both sides rather than being papered over.
+* **`nullstrcmp`'s NULL ordering is not `strcmp`'s.** `a` NULL against a value answers **1**, not
+  -1 (`:719-736`), and `decoder_cache_entry_cmp` uses the *case-insensitive* comparison for
+  `keytype`, `input_type` and `input_structure` and the **case-sensitive** one for `propquery` --
+  which is why the helper takes the flag rather than reading a global.
+* **The flush's absent case answers 0, and its lock failure raises.** `ossl_decoder_cache_flush`
+  returns 0 for an absent cache where its three sibling store bridges return 1, and takes a
+  `CRYPTO_THREAD_write_lock` whose failure raises `ERR_R_OSSL_DECODER_LIB` and answers 0. Both are
+  the authority's (`:800-816`) and both are now reachable, because slot 20 is filled.
+
+**`ossl_lh_strcasehash` is measured rather than typed, and its properties are pinned.** It is
+`crypto/lhash/lhash.c:397-425`, an internal of a Phase-3 unit (`src/runtime/lhash.rs`), so it adds
+no export; its body differs from `OPENSSL_LH_strhash` in exactly two ways -- `case_adjust` is
+`~0x20` and the empty string returns 0 by an early return -- and its test asserts the three
+properties those two facts imply (NULL and empty both 0, two ASCII spellings differing only in case
+hashing the same, a non-empty name hashing non-zero) rather than inventing a value.
+
+**The two slots' filling is observable, and it is observed.** `src/context/mod.rs` builds
+`decoder_store` then `decoder_cache` then `encoder_store`, which is `crypto/context.c:123-137`'s
+order and its `P2` release relation; `assert_slot_unfilled` now covers **slot 15 alone**, and the
+stores test asserts that. The bridge test's answer for the cache moves **0 -> 1**: the slot is no
+longer absent, so the flush takes the lock and empties an already-empty table. `sealed_stratum_census`
+falls **56 -> 55** because the decoder store's initialiser is no longer an unreached internal.
+
+**Raise sites.** `crypto/encode_decode/decoder_pkey.c` joins `gen_err_raise_sites.py`'s
+`COVERED_FILES` as `DECODER_PKEY`; the file raises at seventeen lines and the site count moves
+**3147 -> 3164**. Two are referenced by this pass's landed bodies (`:809`, the flush's lock failure,
+is the one a caller can reach); the rest belong to the withheld pkey half and are enumerated by the
+`ALL` table.
+
+**Courts.** No probe was needed and that is measured: the four setters are `decoder.h`'s and Phase
+10's, so `court_coverage.py` records them under `not_yet_begun` **151 -> 155**. Totals do not move:
+**94** courts and **37221** observations. The unit's evidence is its two `src/decoder_pkey.rs` tests
+(the three `ossl_lh_strcasehash` properties, and the cache's lifetime round trip with its live lock
+and empty table) plus the updated `src/provider/stores.rs` pair and the `src/decoder_meth.rs` bridge
+test.
+
+**What the authority corrected in the brief.** One thing, and it is the brief's phrase "the decoder
+cache at slot 20": the cache is not alone at that position. `crypto/context.c` builds the decoder
+**store** (slot 11) immediately before it, and the two are one initialiser's work, so filling slot 20
+without slot 11 would leave `context_init` in an order the authority does not have. Both are filled
+here, and the brief's "slot 20" is read as its two-line position.
+
+**What is deliberately not here: the pkey half, as one named block.** `decoder_construct_pkey`
+(`:71-202`), `decoder_clean_pkey_construct_arg` (`:204-233`), `collect_decoder_keymgmt` (`:235-311`),
+`collect_decoder` (`:313-362`), `check_keymgmt` (`:364-401`), `collect_keymgmt` (`:403-429`),
+`ossl_decoder_ctx_setup_for_pkey` (`:431-558`), `keymgmt_dup` (`:560-573`),
+`ossl_decoder_ctx_for_pkey_dup` (`:575-660`), the cache's lookup (`:825-960`) and
+`OSSL_DECODER_CTX_new_for_pkey` (`:820-969`) -- one block because they are one path, and one block
+because every one of them reaches `EVP_KEYMGMT_*`. With them go `crypto/encode_decode/decoder_lib.c`'s
+`OSSL_DECODER_CTX_add_extra`/`decoder_process`/`from_bio`/`from_fp`/`from_data` block D364 named, and
+then `crypto/pem/pem_pkey.c` with the six `PEM_read[_bio]_{RSA,DSA,EC}PrivateKey` readers.
+`docs/PHASE-8-SUBPHASES.md` §4's two anchored clauses are untouched because the Phase 8 ledger did
+not move.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete: false`
+with **6** names open: implemented **780**, deferred **0**, owned **786** -- unchanged from D362,
+D363 and D364. The regenerated counts: `implemented-surface.json`'s `libcrypto` implemented moves
+**2865 -> 2869** and its `internal_symbols.c_style` stays **344**; `transcription-edges.json`
+**318 -> 319** modules over **287 -> 288** units, the new edge
+`src/decoder_pkey.rs -> crypto/encode_decode/decoder_pkey.c` at share 7/7; `court_coverage.py`'s
+`not_yet_begun` **151 -> 155**; the prerequisite gate stays at **zero findings** over **9**
+deferrals, **12** divergence rows / **58** names and `blocking_dependencies` **9**, with
+`sealed_stratum_census` **56 -> 55**. It is not Phase 8 and not nearly Phase 8; the count this entry
+reaches is implemented **780** of **786** owned, and three of the four units the last six wait on are
+now in the crate.

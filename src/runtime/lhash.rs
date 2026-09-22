@@ -43,7 +43,7 @@
 //! are not the same number, so the linear-hashing layout had to be reproduced
 //! rather than approximated.
 
-use core::ffi::{c_char, c_int, c_uint, c_ulong, c_void};
+use core::ffi::{c_char, c_int, c_long, c_uint, c_ulong, c_void};
 
 use crate::ffi::guard_ffi;
 use crate::runtime::bio::print::BIO_printf;
@@ -376,6 +376,49 @@ pub unsafe extern "C" fn OPENSSL_LH_strhash(c: *const c_char) -> c_ulong {
             ((ret >> 16) ^ ret) as c_ulong
         }
     })
+}
+
+/// `unsigned long ossl_lh_strcasehash(const char *c)` — `crypto/lhash/lhash.c:397-425`.
+///
+/// The case-insensitive twin of [`OPENSSL_LH_strhash`], and the one the decoder cache's entry hash
+/// is built from (`decoder_pkey.c`'s `decoder_cache_entry_hash`). Two differences from
+/// `OPENSSL_LH_strhash`, both the authority's: `case_adjust` is `~0x20` rather than `0`, and the
+/// empty string answers **0** by an early return rather than by the loop. Like its sibling, each
+/// character is sign-extended before the OR, so a byte at or above `0x80` produces the same large
+/// value on both sides rather than being read as an unsigned byte.
+///
+/// # Safety
+/// `c` must be NULL or a NUL-terminated C string.
+pub(crate) unsafe fn ossl_lh_strcasehash(c: *const c_char) -> c_ulong {
+    if c.is_null() {
+        return 0;
+    }
+    // SAFETY: `c` is NUL-terminated per the caller's contract, so the first byte is readable.
+    if unsafe { *c } == 0 {
+        return 0;
+    }
+
+    // `~0x20` in the authority's `long`, which is 64-bit in this profile.
+    let case_adjust: i64 = !0x20i64;
+    let mut ret: u64 = 0;
+    let mut n: i64 = 0x100;
+    let mut p = c;
+    // SAFETY: `c` is NUL-terminated per the contract, and the loop stops at the terminator.
+    unsafe {
+        while *p != 0 {
+            // The authority ORs the counter into `case_adjust & *c`, and `*c` is a signed `char`, so
+            // the mask is applied to the sign-extended byte and the result is widened.
+            let v: u64 = (n as u64) | ((case_adjust & (*p as c_long)) as u64);
+            n += 0x100;
+            // `r` is 0..15, so both shifts stay inside 64 bits.
+            let r = (((v >> 2) ^ v) & 0x0f) as u32;
+            ret = (ret << r) | (ret >> (32 - r));
+            ret &= 0xFFFF_FFFF;
+            ret ^= v.wrapping_mul(v);
+            p = p.add(1);
+        }
+    }
+    ((ret >> 16) ^ ret) as c_ulong
 }
 
 /// `OPENSSL_LHASH *OPENSSL_LH_new(OPENSSL_LH_HASHFUNC h, OPENSSL_LH_COMPFUNC c)`

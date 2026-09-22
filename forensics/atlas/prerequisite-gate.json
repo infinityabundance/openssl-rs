@@ -13,8 +13,8 @@
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)"
     ],
     "census": {
-      "covered_by_a_divergence": 90,
-      "language_surface_not_modelled_by_name": 4554,
+      "covered_by_a_divergence": 91,
+      "language_surface_not_modelled_by_name": 4621,
       "planned_prerequisites": 8
     },
     "census_by_unit": {
@@ -50,7 +50,7 @@
         "ossl_i2d_X448_PUBKEY": 1,
         "ossl_lib_ctx_default_deinit": 1,
         "ossl_lib_ctx_get_concrete": 6,
-        "ossl_lib_ctx_get_data": 16,
+        "ossl_lib_ctx_get_data": 17,
         "ossl_lib_ctx_get_descriptor": 4,
         "ossl_lib_ctx_get_ex_data_global": 2,
         "ossl_lib_ctx_is_child": 1,
@@ -225,7 +225,9 @@
         "crypto/ec/ecp_mont.c": 8,
         "crypto/ec/ecp_nist.c": 7,
         "crypto/ec/ecp_smpl.c": 13,
-        "crypto/encode_decode/decoder_meth.c": 30,
+        "crypto/encode_decode/decoder_lib.c": 37,
+        "crypto/encode_decode/decoder_meth.c": 24,
+        "crypto/encode_decode/decoder_pkey.c": 37,
         "crypto/encode_decode/encoder_lib.c": 32,
         "crypto/encode_decode/encoder_meth.c": 21,
         "crypto/encode_decode/encoder_pkey.c": 31,
@@ -363,7 +365,7 @@
         "crypto/whrlpool/wp_dgst.c": 3,
         "crypto/x509/t_x509.c": 108,
         "crypto/x509/x509_set.c": 47,
-        "crypto/x509/x_pubkey.c": 73
+        "crypto/x509/x_pubkey.c": 72
       },
       "planned_prerequisites": {
         "evp_app_cleanup_int": 2,
@@ -471,8 +473,8 @@
       ]
     },
     "checked": {
-      "authority_units": 286,
-      "crate_modules": 364,
+      "authority_units": 288,
+      "crate_modules": 366,
       "deferral_blocker_rows": 1,
       "deferrals_recorded": 9,
       "divergence_names_covered": 58,
@@ -568,9 +570,6 @@
           "ossl_crypto_new_ex_data_ex",
           "ossl_do_ex_data_init"
         ],
-        "crypto/lhash/lhash.c": [
-          "ossl_lh_strcasehash"
-        ],
         "crypto/o_str.c": [
           "openssl_strerror_r",
           "ossl_to_hex"
@@ -583,7 +582,7 @@
         ]
       },
       "definition": "authority internal functions a transcribed unit calls, whose own translation unit's stratum has already sealed. Not a failure: each is either modelled differently by the crate or is work carried across the boundary by a later stratum. The count is held to non-increase by the regression guard.",
-      "names": 56
+      "names": 55
     },
     "universes": {
       "crate_references_checked": 32438,
@@ -593,7 +592,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "d504f8a022429c3712b271ff83f6de1c5b9a9528de7b1c4b3a118337cae0d1ee",
+  "body_hash": "9ec5ac6a5f35b5ccbba509aec28c9bbcf42943a5c96442da157098da28539f44",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -614,7 +613,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "d7df03d3c556d872f3e0d72cb00ac1d61aa8c98c331955def09b4bee9afc87a5"
+      "sha256": "3a9e7794441dc5136a8980973a5476e365b8ef39a2f76ccb2097fd2fce89a282"
     },
     {
       "name": "symbol-ownership",
@@ -629,7 +628,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "d71b3aa550a0dd6542e8b53ea9a32762c85537bbba1360ce4bbe1ff0c5dbc32e"
+      "sha256": "8e4e89098a127cd39ecd7401b2fc3c31c27938caccd47e46f805ec957eb8c64a"
     },
     {
       "name": "phase-state",

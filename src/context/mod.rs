@@ -434,15 +434,37 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
     // SAFETY: as above; the slot is published once, here.
     unsafe { (*ctx).drbg = drbg };
 
-    // The encoder method store, slot 10. The authority builds it *after* `drbg` and after the
-    // decoder store/cache it also builds there, and releases it before the provider store -- the
-    // two `P2` comments on those lines (`crypto/context.c:133-136`) say so, and P2 is the relation
-    // that matters: a method store holds references to provider-owned methods, so it must be
-    // released before the store that owns the providers. The decoder store and cache (slots 11 and
-    // 20) are *not* built here: their reader is `crypto/encode_decode/decoder_*`, which this
-    // stratum has not landed, so this crate's `ossl_decoder_store_cache_flush` still asserts its
-    // slot unfilled -- the two stores are independent, and filling only the encoder one leaves that
-    // assertion true (D357).
+    // The decoder method store, slot 11, and the decoder cache, slot 20. The authority builds the
+    // two together here, *after* `drbg` and *before* `encoder_store` (`crypto/context.c:123-137`),
+    // with the same `P2` comment on both lines; D365 fills them. Neither is entangled with the
+    // encoder store: they are independent objects the same initialiser builds in order.
+    //
+    // SAFETY: `ctx` is the live context being initialised, and each constructor only stores the
+    // pointer it is given.
+    let decoder_store =
+        unsafe { crate::property::store::ossl_method_store_new(ctx.cast::<c_void>()) };
+    if decoder_store.is_null() {
+        context_deinit(ctx);
+        return false;
+    }
+    // SAFETY: as above; the slot is published once, here.
+    unsafe { (*ctx).decoder_store = decoder_store.cast::<c_void>() };
+
+    // SAFETY: as above. The cache constructor reads no field of the context.
+    let decoder_cache =
+        unsafe { crate::decoder_pkey::ossl_decoder_cache_new(ctx.cast::<c_void>()) };
+    if decoder_cache.is_null() {
+        context_deinit(ctx);
+        return false;
+    }
+    // SAFETY: as above; the slot is published once, here.
+    unsafe { (*ctx).decoder_cache = decoder_cache };
+
+    // The encoder method store, slot 10. The authority builds it *after* the decoder store and
+    // cache and releases it before the provider store -- the `P2` comment on its line
+    // (`crypto/context.c:133-136`) says so, and P2 is the relation that matters: a method store
+    // holds references to provider-owned methods, so it must be released before the store that owns
+    // the providers.
     //
     // SAFETY: `ctx` is the live context being initialised, and the store constructor only stores
     // the pointer it is given.
@@ -666,6 +688,28 @@ fn context_deinit_objs(ctx: *mut OsslLibCtx) {
         if !(*ctx).provider_conf.is_null() {
             crate::provider::conf::ossl_prov_conf_ctx_free((*ctx).provider_conf);
             (*ctx).provider_conf = ptr::null_mut();
+        }
+    }
+
+    // The decoder cache, slot 20, and the decoder method store, slot 11 -- released in the
+    // authority's `P2` position, immediately before the encoder store, for the same reason: the
+    // cache's entries own decoder contexts whose decoders point at providers, and the store's
+    // implementations do too.
+    // SAFETY: `ctx` is a live context being torn down by `context_deinit`, and no other thread
+    // holds a reference to it -- `OSSL_LIB_CTX_free` is the only caller and the caller contract is
+    // that the object is no longer in use. Each slot is released exactly once and re-NULLed.
+    unsafe {
+        if !(*ctx).decoder_cache.is_null() {
+            crate::decoder_pkey::ossl_decoder_cache_free((*ctx).decoder_cache);
+            (*ctx).decoder_cache = ptr::null_mut();
+        }
+        if !(*ctx).decoder_store.is_null() {
+            crate::property::store::ossl_method_store_free(
+                (*ctx)
+                    .decoder_store
+                    .cast::<crate::property::store::OsslMethodStore>(),
+            );
+            (*ctx).decoder_store = ptr::null_mut();
         }
     }
 

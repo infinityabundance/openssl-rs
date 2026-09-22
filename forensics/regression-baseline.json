@@ -397,7 +397,7 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 2846,
+    "libcrypto": 2869,
     "libssl": 0
   },
   "open_obligations": {
@@ -446,8 +446,8 @@
     "blocking_dependencies": 9,
     "divergence_names_covered": 58,
     "findings": 0,
-    "language_census": 4554,
-    "sealed_census": 56
+    "language_census": 4621,
+    "sealed_census": 55
   },
   "provider_implemented": [
     "default/OSSL_OP_CIPHER/AES-128-CBC",

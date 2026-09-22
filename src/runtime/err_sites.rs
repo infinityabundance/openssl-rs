@@ -31252,6 +31252,426 @@ pub(crate) const DECODER_METH_644: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `OSSL_DECODER_from_bio` at `crypto/encode_decode/decoder_lib.c:55` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_55: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 55,
+    func: c"OSSL_DECODER_from_bio",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_from_bio` at `crypto/encode_decode/decoder_lib.c:60` (OSSL_DECODER_R_DECODER_NOT_FOUND).
+pub(crate) const DECODER_LIB_60: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 60,
+    func: c"OSSL_DECODER_from_bio",
+    lib: 60,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_from_bio` at `crypto/encode_decode/decoder_lib.c:104` (ERR_R_UNSUPPORTED).
+pub(crate) const DECODER_LIB_104: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 104,
+    func: c"OSSL_DECODER_from_bio",
+    lib: 60,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `bio_from_file` at `crypto/encode_decode/decoder_lib.c:127` (ERR_R_BIO_LIB).
+pub(crate) const DECODER_LIB_127: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 127,
+    func: c"bio_from_file",
+    lib: 60,
+    reason: 524320,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_from_data` at `crypto/encode_decode/decoder_lib.c:154` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_154: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 154,
+    func: c"OSSL_DECODER_from_data",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_set_selection` at `crypto/encode_decode/decoder_lib.c:171` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_171: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 171,
+    func: c"OSSL_DECODER_CTX_set_selection",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_set_input_type` at `crypto/encode_decode/decoder_lib.c:187` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_187: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 187,
+    func: c"OSSL_DECODER_CTX_set_input_type",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_set_input_structure` at `crypto/encode_decode/decoder_lib.c:203` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_203: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 203,
+    func: c"OSSL_DECODER_CTX_set_input_structure",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_instance_new_forprov` at `crypto/encode_decode/decoder_lib.c:222` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_222: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 222,
+    func: c"ossl_decoder_instance_new_forprov",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_instance_new` at `crypto/encode_decode/decoder_lib.c:252` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_252: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 252,
+    func: c"ossl_decoder_instance_new",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_instance_new` at `crypto/encode_decode/decoder_lib.c:263` (ERR_R_INVALID_PROPERTY_DEFINITION).
+pub(crate) const DECODER_LIB_263: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 263,
+    func: c"ossl_decoder_instance_new",
+    lib: 60,
+    reason: 524558,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_instance_new` at `crypto/encode_decode/decoder_lib.c:274` (ERR_R_INVALID_PROPERTY_DEFINITION).
+pub(crate) const DECODER_LIB_274: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 274,
+    func: c"ossl_decoder_instance_new",
+    lib: 60,
+    reason: 524558,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_instance_new` at `crypto/encode_decode/decoder_lib.c:290` (ERR_R_INTERNAL_ERROR).
+pub(crate) const DECODER_LIB_290: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 290,
+    func: c"ossl_decoder_instance_new",
+    lib: 60,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_instance_dup` at `crypto/encode_decode/decoder_lib.c:324` (ERR_R_INTERNAL_ERROR).
+pub(crate) const DECODER_LIB_324: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 324,
+    func: c"ossl_decoder_instance_dup",
+    lib: 60,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_instance_dup` at `crypto/encode_decode/decoder_lib.c:332` (ERR_R_INTERNAL_ERROR).
+pub(crate) const DECODER_LIB_332: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 332,
+    func: c"ossl_decoder_instance_dup",
+    lib: 60,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_ctx_add_decoder_inst` at `crypto/encode_decode/decoder_lib.c:361` (ERR_R_CRYPTO_LIB).
+pub(crate) const DECODER_LIB_361: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 361,
+    func: c"ossl_decoder_ctx_add_decoder_inst",
+    lib: 60,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_add_decoder` at `crypto/encode_decode/decoder_lib.c:389` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_389: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 389,
+    func: c"OSSL_DECODER_CTX_add_decoder",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_add_extra` at `crypto/encode_decode/decoder_lib.c:589` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_589: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 589,
+    func: c"OSSL_DECODER_CTX_add_extra",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_add_extra` at `crypto/encode_decode/decoder_lib.c:609` (ERR_R_CRYPTO_LIB).
+pub(crate) const DECODER_LIB_609: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 609,
+    func: c"OSSL_DECODER_CTX_add_extra",
+    lib: 60,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_set_construct` at `crypto/encode_decode/decoder_lib.c:691` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_691: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 691,
+    func: c"OSSL_DECODER_CTX_set_construct",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_set_construct_data` at `crypto/encode_decode/decoder_lib.c:702` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_702: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 702,
+    func: c"OSSL_DECODER_CTX_set_construct_data",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_set_cleanup` at `crypto/encode_decode/decoder_lib.c:713` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_713: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 713,
+    func: c"OSSL_DECODER_CTX_set_cleanup",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_export` at `crypto/encode_decode/decoder_lib.c:754` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_754: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 754,
+    func: c"OSSL_DECODER_export",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `decoder_process` at `crypto/encode_decode/decoder_lib.c:965` (ERR_R_BIO_LIB).
+pub(crate) const DECODER_LIB_965: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 965,
+    func: c"decoder_process",
+    lib: 60,
+    reason: 524320,
+    dynamic_reason: false,
+};
+
+/// `decoder_process` at `crypto/encode_decode/decoder_lib.c:970` (ERR_R_BIO_LIB).
+pub(crate) const DECODER_LIB_970: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 970,
+    func: c"decoder_process",
+    lib: 60,
+    reason: 524320,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_ctx_setup_for_pkey` at `crypto/encode_decode/decoder_pkey.c:470` (ERR_R_CRYPTO_LIB).
+pub(crate) const DECODER_PKEY_470: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 470,
+    func: c"ossl_decoder_ctx_setup_for_pkey",
+    lib: 60,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_ctx_for_pkey_dup` at `crypto/encode_decode/decoder_pkey.c:587` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const DECODER_PKEY_587: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 587,
+    func: c"ossl_decoder_ctx_for_pkey_dup",
+    lib: 60,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_ctx_for_pkey_dup` at `crypto/encode_decode/decoder_pkey.c:593` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const DECODER_PKEY_593: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 593,
+    func: c"ossl_decoder_ctx_for_pkey_dup",
+    lib: 60,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_ctx_for_pkey_dup` at `crypto/encode_decode/decoder_pkey.c:604` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const DECODER_PKEY_604: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 604,
+    func: c"ossl_decoder_ctx_for_pkey_dup",
+    lib: 60,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_ctx_for_pkey_dup` at `crypto/encode_decode/decoder_pkey.c:611` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const DECODER_PKEY_611: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 611,
+    func: c"ossl_decoder_ctx_for_pkey_dup",
+    lib: 60,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_ctx_for_pkey_dup` at `crypto/encode_decode/decoder_pkey.c:619` (ERR_R_CRYPTO_LIB).
+pub(crate) const DECODER_PKEY_619: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 619,
+    func: c"ossl_decoder_ctx_for_pkey_dup",
+    lib: 60,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_ctx_for_pkey_dup` at `crypto/encode_decode/decoder_pkey.c:625` (ERR_R_CRYPTO_LIB).
+pub(crate) const DECODER_PKEY_625: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 625,
+    func: c"ossl_decoder_ctx_for_pkey_dup",
+    lib: 60,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_ctx_for_pkey_dup` at `crypto/encode_decode/decoder_pkey.c:636` (ERR_R_EVP_LIB).
+pub(crate) const DECODER_PKEY_636: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 636,
+    func: c"ossl_decoder_ctx_for_pkey_dup",
+    lib: 60,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_ctx_for_pkey_dup` at `crypto/encode_decode/decoder_pkey.c:646` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const DECODER_PKEY_646: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 646,
+    func: c"ossl_decoder_ctx_for_pkey_dup",
+    lib: 60,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_ctx_for_pkey_dup` at `crypto/encode_decode/decoder_pkey.c:654` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const DECODER_PKEY_654: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 654,
+    func: c"ossl_decoder_ctx_for_pkey_dup",
+    lib: 60,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_cache_flush` at `crypto/encode_decode/decoder_pkey.c:809` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const DECODER_PKEY_809: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 809,
+    func: c"ossl_decoder_cache_flush",
+    lib: 60,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_new_for_pkey` at `crypto/encode_decode/decoder_pkey.c:839` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const DECODER_PKEY_839: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 839,
+    func: c"OSSL_DECODER_CTX_new_for_pkey",
+    lib: 60,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_new_for_pkey` at `crypto/encode_decode/decoder_pkey.c:857` (ERR_R_CRYPTO_LIB).
+pub(crate) const DECODER_PKEY_857: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 857,
+    func: c"OSSL_DECODER_CTX_new_for_pkey",
+    lib: 60,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_new_for_pkey` at `crypto/encode_decode/decoder_pkey.c:873` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const DECODER_PKEY_873: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 873,
+    func: c"OSSL_DECODER_CTX_new_for_pkey",
+    lib: 60,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_new_for_pkey` at `crypto/encode_decode/decoder_pkey.c:901` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const DECODER_PKEY_901: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 901,
+    func: c"OSSL_DECODER_CTX_new_for_pkey",
+    lib: 60,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_new_for_pkey` at `crypto/encode_decode/decoder_pkey.c:937` (ERR_R_CRYPTO_LIB).
+pub(crate) const DECODER_PKEY_937: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 937,
+    func: c"OSSL_DECODER_CTX_new_for_pkey",
+    lib: 60,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_new_for_pkey` at `crypto/encode_decode/decoder_pkey.c:946` (ERR_R_CRYPTO_LIB).
+pub(crate) const DECODER_PKEY_946: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 946,
+    func: c"OSSL_DECODER_CTX_new_for_pkey",
+    lib: 60,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -34385,4 +34805,46 @@ pub(crate) static ALL: &[ErrSite] = &[
     DECODER_METH_484,
     DECODER_METH_494,
     DECODER_METH_644,
+    DECODER_LIB_55,
+    DECODER_LIB_60,
+    DECODER_LIB_104,
+    DECODER_LIB_127,
+    DECODER_LIB_154,
+    DECODER_LIB_171,
+    DECODER_LIB_187,
+    DECODER_LIB_203,
+    DECODER_LIB_222,
+    DECODER_LIB_252,
+    DECODER_LIB_263,
+    DECODER_LIB_274,
+    DECODER_LIB_290,
+    DECODER_LIB_324,
+    DECODER_LIB_332,
+    DECODER_LIB_361,
+    DECODER_LIB_389,
+    DECODER_LIB_589,
+    DECODER_LIB_609,
+    DECODER_LIB_691,
+    DECODER_LIB_702,
+    DECODER_LIB_713,
+    DECODER_LIB_754,
+    DECODER_LIB_965,
+    DECODER_LIB_970,
+    DECODER_PKEY_470,
+    DECODER_PKEY_587,
+    DECODER_PKEY_593,
+    DECODER_PKEY_604,
+    DECODER_PKEY_611,
+    DECODER_PKEY_619,
+    DECODER_PKEY_625,
+    DECODER_PKEY_636,
+    DECODER_PKEY_646,
+    DECODER_PKEY_654,
+    DECODER_PKEY_809,
+    DECODER_PKEY_839,
+    DECODER_PKEY_857,
+    DECODER_PKEY_873,
+    DECODER_PKEY_901,
+    DECODER_PKEY_937,
+    DECODER_PKEY_946,
 ];
