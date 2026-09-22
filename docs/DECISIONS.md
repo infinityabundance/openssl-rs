@@ -25705,3 +25705,135 @@ phase 7's ledger does **not** move -- implemented **727**, deferred **223**, rec
 **26**. The open fourteen are still the eight printers and the six `crypto/pem/` private-key
 readers. It is not Phase 8 and not nearly Phase 8; the count this entry reaches is implemented
 **772** of **786** owned, and the ledger this entry moved is **none**.
+
+## D359 — the encoder units are re-measured function by function and are **one whole pass on their
+own**; no code lands, and the one prerequisite the briefs never named is the dispatch scan
+
+**Decision.** Re-measure the three encoder units ahead of writing them, and **land nothing this
+pass** rather than start ~1,800 lines and stop red. The brief's `14 -> 6` needs the encoder context
+*and* `print_pkey` *and* the six `EVP_PKEY_print_*` *and* the eight printers in one commit's worth
+of work; the encoder context alone is ~60 functions over three units plus the `encoder_local.h`
+shapes plus a court for roughly twenty-eight exports, and the printers are another ten functions
+over four files on top. That is more than one pass, so the tree stays green at D358 and the count
+this entry reaches is **772 / 14**, unchanged.
+
+**The per-unit function inventory, which the briefs have not had.** The three units are **1,926
+authority lines** (`encoder_meth.c` 654, `encoder_lib.c` 864, `encoder_pkey.c` 408) and almost
+every function of all three is on `print_pkey`'s reachability closure -- the exceptions are
+`encoder_lib.c`'s three `ossl_bio_print_*` helpers (`:706`, `:785`, `:813`), which provider encoder
+implementations call and the crate has none of, and which a transcription can therefore withhold
+with a divergence row rather than land dead:
+
+* `encoder_meth.c` — `ossl_encoder_new`/`OSSL_ENCODER_up_ref`/`_free` (`:38`, `:52`, `:60`); the
+  store and construct-method callbacks `get_tmp_encoder_store` (`:95`), `dealloc_tmp_encoder_store`
+  (`:104`), `get_encoder_store` (`:111`), `reserve_encoder_store` (`:116`),
+  `unreserve_encoder_store` (`:127`), `get_encoder_from_store` (`:139`), `put_encoder_in_store`
+  (`:174`); `encoder_from_algorithm` (`:209`), `construct_encoder` (`:304`), `destruct_encoder`
+  (`:335`), `up_ref_encoder` (`:340`), `free_encoder` (`:345`); `inner_ossl_encoder_fetch` (`:351`)
+  and `OSSL_ENCODER_fetch` (`:429`); the accessors `OSSL_ENCODER_get0_provider` (`:465`),
+  `_get0_properties` (`:475`), `ossl_encoder_parsed_properties` (`:485`), `ossl_encoder_get_number`
+  (`:496`), `_get0_name` (`:506`), `_get0_description` (`:511`), `_is_a` (`:516`); `do_one`
+  (`:532`) and `OSSL_ENCODER_do_all_provided` (`:539`); `OSSL_ENCODER_names_do_all` (`:559`),
+  `_gettable_params` (`:576`), `_get_params` (`:587`), `_settable_ctx_params` (`:594`); and
+  `OSSL_ENCODER_CTX_new` (`:608`), `_set_params` (`:616`), `_free` (`:645`).
+* `encoder_lib.c` — `OSSL_ENCODER_to_bio` (`:68`), `bio_from_file` (`:94`), `_to_fp` (`:106`),
+  `_to_data` (`:119`); the three context setters (`:170`, `:186`, `:198`);
+  `ossl_encoder_instance_new` (`:210`), `ossl_encoder_instance_free` (`:268`),
+  `ossl_encoder_ctx_add_encoder_inst` (`:280`), `OSSL_ENCODER_CTX_add_encoder` (`:307`),
+  `_add_extra` (`:339`), `_get_num_encoders` (`:345`), `_set_construct` (`:352`),
+  `_set_construct_data` (`:363`), `_set_cleanup` (`:374`), the four `OSSL_ENCODER_INSTANCE_get_*`
+  (`:385`, `:393`, `:401`, `:409`); `encoder_process` (`:417`); and the three printing helpers
+  `ossl_bio_print_labeled_bignum` (`:706`), `ossl_bio_print_labeled_buf` (`:785`) and
+  `ossl_bio_print_ffc_params` (`:813`), which are the only functions in the three units that no
+  landed caller reaches in this crate.
+* `encoder_pkey.c` — `OSSL_ENCODER_CTX_set_cipher` (`:26`) and the four passphrase setters (`:40`,
+  `:47`, `:54`, `:60`); `collect_encoder` (`:85`), `collect_name` (`:134`), `encoder_import_cb`
+  (`:164`), `encoder_construct_pkey` (`:177`), `encoder_destruct_pkey` (`:206`),
+  `ossl_encoder_ctx_setup_for_pkey` (`:227`) and `OSSL_ENCODER_CTX_new_for_pkey` (`:342`).
+
+**The one prerequisite no earlier brief named, and it is the reason this is not mechanical.** The
+crate does **not** transcribe the `OSSL_FUNC_*` accessors as functions: each `*_meth` module scans a
+provider's `OSSL_DISPATCH` itself with `function_id` constants and fills its own struct
+(`src/evp/cipher.rs:706`, `signature.rs`, `digest.rs`, `kdf.rs` all do this). `encoder_from_algorithm`
+(`encoder_meth.c:231-274`) is exactly that scan, so the crate must hand-write **ten
+`OSSL_FUNC_ENCODER_*` identities** — and their values are **not sequential**, which is the trap:
+`NEWCTX` 1, `FREECTX` 2, `GET_PARAMS` 3, `GETTABLE_PARAMS` 4, `SET_CTX_PARAMS` 5,
+`SETTABLE_CTX_PARAMS` 6, **`DOES_SELECTION` 10**, **`ENCODE` 11**, **`IMPORT_OBJECT` 20`,
+**`FREE_OBJECT` 21** (`include/openssl/core_dispatch.h:952-961`). A transcription that numbered
+them 1..10 would put the encoder's `encode` pointer in `does_selection`'s slot and be silently
+wrong everywhere; that is the same class `dispatch_court.py` exists to catch, and it is the single
+new name-layer the briefs left out. The other mechanical piece is the reference count:
+`ossl_encoder_new` uses `CRYPTO_NEW_REF`/`CRYPTO_UP_REF`/`CRYPTO_DOWN_REF`/`CRYPTO_FREE_REF` over
+`CRYPTO_REF_COUNT`, which the crate models as an `AtomicI32` field with `fetch_add`/`fetch_sub` and
+a `None`-shaped constructor — no new unit, but a convention to follow (`EvpPkey`'s `references`).
+
+**Everything else the three units call is landed**, verified by name at the call, which is what
+makes the closure *complete*: `ossl_method_construct` (`src/evp/method_store.rs`),
+`ossl_method_store_new`/`_free`/`_fetch`/`_add`/`_lock_store`/`_unlock_store`/`_cache_get`/
+`_cache_set`/`_do_all`/`_cache_flush_all`/`_remove_all_provided` (`src/property/store.rs`),
+`ossl_algorithm_get1_first_name` (`src/evp/algorithm.rs`), `ossl_parse_property`/`ossl_property_free`
+(`src/property/parse.rs`), `ossl_provider_up_ref`/`_free`/`_libctx`/`ossl_provider_ctx`
+(`src/provider/mod.rs`), the five `ossl_namemap_*` (`src/context/namemap.rs`),
+`ossl_lib_ctx_get_data`/`_get_descriptor` (`src/context/mod.rs`), `ossl_property_find_property`/
+`_get_string_value` (`src/property/query.rs`), `evp_keymgmt_export`/`EVP_KEYMGMT_names_do_all`/
+`EVP_KEYMGMT_get0_provider` (`src/evp/keymgmt.rs`), `evp_generic_do_all` (`src/evp/fetch.rs`),
+`ossl_core_bio_new_from_bio`/`_free` (`src/runtime/bio/core_bio.rs`), `BIO_new`/`BIO_s_mem`/
+`BIO_f_buffer`/`BIO_push`/`BIO_pop`/`BIO_get_mem_ptr` (`src/runtime/bio/`), and D358's
+`ossl_pw_passphrase_callback_enc` — the name `encoder_process:665` hands a provider. The encoder
+store itself landed as D357's slot 10 and its two delegations, so `OSSL_ENCODER_fetch`'s store
+exists.
+
+**Why the printers are unreachable without all of it, measured rather than argued.**
+`OSSL_ENCODER_CTX_new_for_pkey` builds its context and calls `ossl_encoder_ctx_setup_for_pkey`,
+which for a *provider* key calls `OSSL_ENCODER_do_all_provided`; and `do_all_provided` itself
+(`encoder_meth.c:549`) calls `inner_ossl_encoder_fetch(&methdata, NULL, NULL)` **first**, so
+`do_all_provided` cannot link without the whole fetch and construct-method machinery. There is no
+smaller closed subset, which is why D355's and D357's "the reduction is not available" stands. The
+honest route through it is the one the framework makes available: the authority registers **482**
+encoder implementations and the crate's `provider-algorithms.json` records **all 482 as
+`unimplemented`**, so `OSSL_ENCODER_CTX_get_num_encoders` answers 0 on every reachable path and
+`print_pkey`'s `ameth->priv_print` fallback (`p_lib.c:1222`) is taken through the authority's own
+code. That is the whole reason the eight printers are landable at all once this slice exists.
+
+**The court surface, so the next pass can size it.** Of the atlas's **38** `OSSL_ENCODER*` exports,
+the reachable subset is roughly **28** (`CTX_new`/`_free`/`_set_params`/`_add_encoder`/`_add_extra`/
+`_get_num_encoders`/`_set_selection`/`_set_output_type`/`_set_output_structure`/`_set_construct`/
+`_set_construct_data`/`_set_cleanup`/`_set_cipher`/the four passphrase setters/`_new_for_pkey`,
+`to_bio`/`to_fp`/`to_data`, the four `INSTANCE_get_*`, `up_ref`/`free`/`is_a`/`get0_name`/
+`get0_provider`/`get0_properties`/`get0_description`/`names_do_all`/`gettable_params`/`get_params`/
+`settable_ctx_params`/`do_all_provided`/`fetch`). All are Phase 10's, which has no ledger, so
+`court_coverage.py` records them under `not_yet_begun` and **does not require a probe** — but
+`docs/RELEASE_GATES.md` and the project's own standard do, and a probe calling an
+`OSSL_ENCODER_CTX_get_num_encoders(ctx) == 0` on a context built from a legacy key is the arm that
+pins the framework's whole observable behaviour in this crate. No raising unit joins
+`COVERED_FILES`: `encoder_meth.c` raises five times, `encoder_lib.c` fourteen and `encoder_pkey.c`
+two, and all twenty-one are in bodies the landing must write, so the three entries are
+`ENCODER_METH`, `ENCODER_LIB` and `ENCODER_PKEY` and belong in the same commit as the code.
+
+**What the authority corrected in the briefs.** Two things. The briefs call this "the encoder
+units"; the correction is that the units are not separable from `encoder_local.h`'s four struct
+shapes (`ossl_endecode_base_st`, `ossl_encoder_st`, `ossl_encoder_instance_st`,
+`ossl_encoder_ctx_st`) or from the ten `OSSL_FUNC_ENCODER_*` identities above, and neither of those
+is a translation unit — a plan that counts three files undercounts the work. And the brief suggests
+`encoder_pkey.c`'s four passphrase setters might be the withheld remainder; they cannot be a
+*useful* remainder, because `OSSL_ENCODER_CTX_free` already reaches `ossl_pw_clear_passphrase_data`
+(`encoder_meth.c:651`), so the passphrase data is in the struct the framework must model whether or
+not the setters are written.
+
+**What is deliberately not here.** No encoder module, no `encoder_local.h` shapes, no
+`OSSL_FUNC_ENCODER_*` identities, no `print_pkey`, no `EVP_PKEY_print_*`, no printers, and no new
+`divergences` row: nothing was transcribed this pass, so there is nothing for the gate to match
+against, and the row count stands at D358's **11** rows / **55** names. `docs/PHASE-8-SUBPHASES.md`
+is untouched, and §4's two anchored clauses stay consistent with the (unmoved) ledger.
+
+**Claim nothing about completion.** `forensics/phase8-obligations.json` still reads `complete:
+false` with **14** names open: implemented **772**, deferred **0**, owned **786**. Every count is
+exactly D358's — `implemented-surface.json`'s `libcrypto` **2783** and `internal_symbols.c_style`
+**340**; `transcription-edges.json` **310** modules over **279** units; `internal-symbols.json`'s
+`modules_without_a_stratum` **38**; `court_coverage.py` phase 8 at **772** (**764** directly
+courted, all *called*, **8** indirectly, **0** unmatched), phase 7 at **727** and `not_yet_begun` at
+**83**; the prerequisite gate at **zero findings** over **10** deferrals, **11** divergence rows /
+**55** names, `blocking_dependencies` **10** and `sealed_stratum_census` **56**; phase 7 at **727** /
+**223** / **26**. The open fourteen are still the eight printers and the six `crypto/pem/`
+private-key readers. It is not Phase 8 and not nearly Phase 8; the count this entry reaches is
+implemented **772** of **786** owned, and the work this entry did is a measurement, not a landing.
