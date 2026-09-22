@@ -8,859 +8,1211 @@
       4,
       5,
       6,
-      7
+      7,
+      8
     ],
     "definition": "a stratum that has begun is one with an obligation ledger on disk; `complete` records whether it has sealed. Every export a begun stratum implements is partitioned below, whether the stratum is in-progress or complete",
     "in_progress": [
-      8,
       9
     ],
     "not_yet_begun": [
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_CTX_add_decoder"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_CTX_add_extra"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_CTX_free"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_CTX_get_cleanup"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_CTX_get_construct"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_CTX_get_construct_data"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_CTX_get_num_decoders"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_CTX_new"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_CTX_new_for_pkey"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_CTX_set_cleanup"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_CTX_set_construct"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_CTX_set_construct_data"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_CTX_set_input_structure"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_CTX_set_input_type"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_CTX_set_params"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_CTX_set_passphrase"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_CTX_set_passphrase_cb"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_CTX_set_passphrase_ui"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_CTX_set_pem_password_cb"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_CTX_set_selection"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_INSTANCE_get_decoder"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_INSTANCE_get_decoder_ctx"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_INSTANCE_get_input_structure"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_INSTANCE_get_input_type"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_do_all_provided"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_export"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_fetch"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_free"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_from_bio"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_from_data"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_from_fp"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_get0_description"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_get0_name"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_get0_properties"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_get0_provider"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_get_params"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_gettable_params"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_is_a"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_names_do_all"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_settable_ctx_params"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_DECODER_up_ref"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_CTX_add_encoder"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_CTX_add_extra"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_CTX_free"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_CTX_get_num_encoders"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_CTX_new"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_CTX_new_for_pkey"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_CTX_set_cipher"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_CTX_set_cleanup"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_CTX_set_construct"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_CTX_set_construct_data"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_CTX_set_output_structure"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_CTX_set_output_type"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_CTX_set_params"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_CTX_set_passphrase"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_CTX_set_passphrase_cb"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_CTX_set_passphrase_ui"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_CTX_set_pem_password_cb"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_CTX_set_selection"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_INSTANCE_get_encoder"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_INSTANCE_get_encoder_ctx"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_INSTANCE_get_output_structure"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_INSTANCE_get_output_type"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_do_all_provided"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_fetch"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_free"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_get0_description"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_get0_name"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_get0_properties"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_get0_provider"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_get_params"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_gettable_params"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_is_a"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_names_do_all"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_settable_ctx_params"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_to_bio"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_to_data"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_to_fp"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "OSSL_ENCODER_up_ref"
       },
       {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "PEM_read_PUBKEY"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "PEM_read_PUBKEY_ex"
+      },
+      {
+        "owing_phase": 13,
+        "owner_phase": 7,
+        "symbol": "PEM_read_PrivateKey"
+      },
+      {
+        "owing_phase": 13,
+        "owner_phase": 7,
+        "symbol": "PEM_read_PrivateKey_ex"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "PEM_read_bio_PUBKEY"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "PEM_read_bio_PUBKEY_ex"
+      },
+      {
+        "owing_phase": 13,
+        "owner_phase": 7,
+        "symbol": "PEM_read_bio_PrivateKey"
+      },
+      {
+        "owing_phase": 13,
+        "owner_phase": 7,
+        "symbol": "PEM_read_bio_PrivateKey_ex"
+      },
+      {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "PKCS12_item_decrypt_d2i"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "PKCS12_item_decrypt_d2i_ex"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "PKCS12_item_i2d_encrypt"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "PKCS12_item_i2d_encrypt_ex"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "PKCS12_pbe_crypt"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "PKCS12_pbe_crypt_ex"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "PKCS8_PRIV_KEY_INFO_free"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "PKCS8_PRIV_KEY_INFO_it"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "PKCS8_PRIV_KEY_INFO_new"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "PKCS8_decrypt"
       },
       {
+        "owing_phase": 10,
         "owner_phase": 10,
         "symbol": "PKCS8_decrypt_ex"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "PKCS8_pkey_add1_attr"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "PKCS8_pkey_add1_attr_by_NID"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "PKCS8_pkey_add1_attr_by_OBJ"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "PKCS8_pkey_get0"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "PKCS8_pkey_get0_attrs"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "PKCS8_pkey_set0"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_OpenSSL"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_UTIL_read_pw"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_UTIL_read_pw_string"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_UTIL_wrap_read_pem_callback"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_add_error_string"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_add_info_string"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_add_input_boolean"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_add_input_string"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_add_user_data"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_add_verify_string"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_construct_prompt"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_create_method"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_ctrl"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_destroy_method"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_dup_error_string"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_dup_info_string"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_dup_input_boolean"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_dup_input_string"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_dup_user_data"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_dup_verify_string"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_free"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_get0_action_string"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_get0_output_string"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_get0_result"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_get0_result_string"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_get0_test_string"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_get0_user_data"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_get_default_method"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_get_ex_data"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_get_input_flags"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_get_method"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_get_result_length"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_get_result_maxsize"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_get_result_minsize"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_get_result_string_length"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_get_string_type"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_method_get_closer"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_method_get_data_destructor"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_method_get_data_duplicator"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_method_get_ex_data"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_method_get_flusher"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_method_get_opener"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_method_get_prompt_constructor"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_method_get_reader"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_method_get_writer"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_method_set_closer"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_method_set_data_duplicator"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_method_set_ex_data"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_method_set_flusher"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_method_set_opener"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_method_set_prompt_constructor"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_method_set_reader"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_method_set_writer"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_new"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_new_method"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_null"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_process"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_set_default_method"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_set_ex_data"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_set_method"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_set_result"
       },
       {
+        "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_set_result_ex"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_ALGORS_it"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_ALGOR_cmp"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_ALGOR_copy"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_ALGOR_dup"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_ALGOR_free"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_ALGOR_get0"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_ALGOR_it"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_ALGOR_new"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_ALGOR_set0"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_ALGOR_set_md"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_ATTRIBUTE_count"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_ATTRIBUTE_create"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_ATTRIBUTE_create_by_NID"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_ATTRIBUTE_create_by_OBJ"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_ATTRIBUTE_create_by_txt"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_ATTRIBUTE_dup"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_ATTRIBUTE_free"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_ATTRIBUTE_get0_data"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_ATTRIBUTE_get0_object"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_ATTRIBUTE_get0_type"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_ATTRIBUTE_it"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_ATTRIBUTE_new"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_ATTRIBUTE_set1_data"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_ATTRIBUTE_set1_object"
       },
       {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_PUBKEY_dup"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_PUBKEY_eq"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_PUBKEY_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_PUBKEY_get"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_PUBKEY_get0"
+      },
+      {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_PUBKEY_get0_param"
       },
       {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_PUBKEY_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_PUBKEY_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_PUBKEY_new_ex"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_PUBKEY_set"
+      },
+      {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_PUBKEY_set0_param"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_PUBKEY_set0_public_key"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_SIG_INFO_set"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_SIG_free"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_SIG_get0"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_SIG_getm"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_SIG_it"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_SIG_new"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_signature_dump"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509at_add1_attr"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509at_add1_attr_by_NID"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509at_add1_attr_by_OBJ"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509at_add1_attr_by_txt"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509at_delete_attr"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509at_get0_data_by_OBJ"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509at_get_attr"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509at_get_attr_by_NID"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509at_get_attr_by_OBJ"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509at_get_attr_count"
       },
       {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_DSA_PUBKEY"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_EC_PUBKEY"
+      },
+      {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "d2i_PKCS8_PRIV_KEY_INFO"
       },
       {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_PUBKEY"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_PUBKEY_ex"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_RSA_PUBKEY"
+      },
+      {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "d2i_X509_ALGOR"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "d2i_X509_ALGORS"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "d2i_X509_ATTRIBUTE"
       },
       {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_X509_PUBKEY"
+      },
+      {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "d2i_X509_SIG"
       },
       {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_DSA_PUBKEY"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_EC_PUBKEY"
+      },
+      {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "i2d_PKCS8_PRIV_KEY_INFO"
       },
       {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_PUBKEY"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_RSA_PUBKEY"
+      },
+      {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "i2d_X509_ALGOR"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "i2d_X509_ALGORS"
       },
       {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "i2d_X509_ATTRIBUTE"
       },
       {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_X509_PUBKEY"
+      },
+      {
+        "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "i2d_X509_SIG"
       }
@@ -1099,6 +1451,7 @@
               "RT-MEM-INSTALL",
               "RT-PARAM",
               "RT-PEM-KEY",
+              "RT-PUBKEY",
               "RT-RSA"
             ],
             "symbol": "CRYPTO_free"
@@ -1151,6 +1504,7 @@
               "RT-MEM-DEFAULT",
               "RT-MEM-INSTALL",
               "RT-PARAM",
+              "RT-PUBKEY",
               "RT-SECURE"
             ],
             "symbol": "CRYPTO_malloc"
@@ -1423,6 +1777,7 @@
               "RT-PARAM",
               "RT-PROVIDER",
               "RT-PROVIDER-3P",
+              "RT-PUBKEY",
               "RT-RAND-USERS",
               "RT-RSA",
               "RT-RUNTIME-EXT",
@@ -1476,6 +1831,7 @@
               "RT-DRBG",
               "RT-EC",
               "RT-ERR",
+              "RT-PUBKEY",
               "RT-RAND",
               "RT-RAND-USERS",
               "RT-RUNTIME-EXT"
@@ -1506,6 +1862,7 @@
               "RT-EVP-PKEY",
               "RT-HMAC",
               "RT-HPKE",
+              "RT-PUBKEY",
               "RT-RSA"
             ],
             "symbol": "ERR_get_error_all"
@@ -2182,6 +2539,7 @@
               "RT-ASN1",
               "RT-ASN1-TEMPLATE",
               "RT-EVP-PBE",
+              "RT-PUBKEY",
               "RT-RSA"
             ],
             "symbol": "OBJ_nid2obj"
@@ -2199,6 +2557,7 @@
             "courts": [
               "RT-ASN1",
               "RT-ASN1-TEMPLATE",
+              "RT-PUBKEY",
               "RT-RSA"
             ],
             "symbol": "OBJ_obj2nid"
@@ -3168,6 +3527,7 @@
               "RT-EVP-PEM",
               "RT-PARAM",
               "RT-PEM-KEY",
+              "RT-PUBKEY",
               "RT-RAND-USERS"
             ],
             "symbol": "BIO_ctrl"
@@ -3404,6 +3764,7 @@
               "RT-OBJ-STREAM",
               "RT-PARAM",
               "RT-PEM-KEY",
+              "RT-PUBKEY",
               "RT-RAND-USERS",
               "RT-RUNTIME-EXT"
             ],
@@ -3855,6 +4216,7 @@
               "RT-LHASH",
               "RT-PARAM",
               "RT-PEM-KEY",
+              "RT-PUBKEY",
               "RT-RAND-USERS",
               "RT-RUNTIME-EXT"
             ],
@@ -3931,7 +4293,8 @@
               "RT-BIO",
               "RT-CONF",
               "RT-OBJ-STREAM",
-              "RT-PEM-KEY"
+              "RT-PEM-KEY",
+              "RT-PUBKEY"
             ],
             "symbol": "BIO_new_mem_buf"
           },
@@ -4177,6 +4540,7 @@
               "RT-LHASH",
               "RT-PARAM",
               "RT-PEM-KEY",
+              "RT-PUBKEY",
               "RT-RUNTIME-EXT"
             ],
             "symbol": "BIO_s_mem"
@@ -7176,6 +7540,7 @@
               "RT-EC",
               "RT-PARAM",
               "RT-PEM-KEY",
+              "RT-PUBKEY",
               "RT-RSA"
             ],
             "symbol": "BN_free"
@@ -7620,6 +7985,7 @@
               "RT-DSA",
               "RT-EC",
               "RT-PEM-KEY",
+              "RT-PUBKEY",
               "RT-RSA"
             ],
             "symbol": "BN_new"
@@ -7791,6 +8157,7 @@
               "RT-DSA",
               "RT-EC",
               "RT-PEM-KEY",
+              "RT-PUBKEY",
               "RT-RSA"
             ],
             "symbol": "BN_set_word"
@@ -13325,7 +13692,8 @@
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-EVP-PKEY-OPS",
-              "RT-HPKE"
+              "RT-HPKE",
+              "RT-PUBKEY"
             ],
             "symbol": "EVP_PKEY_free"
           },
@@ -13462,7 +13830,8 @@
             "basis": "called",
             "courts": [
               "RT-AMETH",
-              "RT-EVP-PKEY"
+              "RT-EVP-PKEY",
+              "RT-PUBKEY"
             ],
             "symbol": "EVP_PKEY_get_id"
           },
@@ -13950,7 +14319,8 @@
             "courts": [
               "RT-AMETH",
               "RT-EVP-PEM",
-              "RT-EVP-PKEY"
+              "RT-EVP-PKEY",
+              "RT-PUBKEY"
             ],
             "symbol": "EVP_PKEY_new"
           },
@@ -15491,12 +15861,12 @@
         "staged_candidate_probes": 19
       },
       {
-        "completed": false,
+        "completed": true,
         "counts": {
-          "directly_courted": 772,
-          "directly_courted_called": 772,
+          "directly_courted": 778,
+          "directly_courted_called": 778,
           "directly_courted_referenced": 0,
-          "implemented": 780,
+          "implemented": 786,
           "indirectly_courted": 8,
           "non_observable": 0,
           "unmatched": 0
@@ -16908,7 +17278,8 @@
             "courts": [
               "RT-AMETH",
               "RT-DSA",
-              "RT-PEM-KEY"
+              "RT-PEM-KEY",
+              "RT-PUBKEY"
             ],
             "symbol": "DSA_free"
           },
@@ -17205,7 +17576,8 @@
             "courts": [
               "RT-AMETH",
               "RT-DSA",
-              "RT-PEM-KEY"
+              "RT-PEM-KEY",
+              "RT-PUBKEY"
             ],
             "symbol": "DSA_new"
           },
@@ -17241,7 +17613,8 @@
             "basis": "called",
             "courts": [
               "RT-AMETH",
-              "RT-DSA"
+              "RT-DSA",
+              "RT-PUBKEY"
             ],
             "symbol": "DSA_set0_key"
           },
@@ -17250,7 +17623,8 @@
             "courts": [
               "RT-AMETH",
               "RT-DSA",
-              "RT-PEM-KEY"
+              "RT-PEM-KEY",
+              "RT-PUBKEY"
             ],
             "symbol": "DSA_set0_pqg"
           },
@@ -18052,7 +18426,8 @@
             "courts": [
               "RT-AMETH",
               "RT-EC",
-              "RT-PEM-KEY"
+              "RT-PEM-KEY",
+              "RT-PUBKEY"
             ],
             "symbol": "EC_KEY_free"
           },
@@ -18060,7 +18435,8 @@
             "basis": "called",
             "courts": [
               "RT-EC",
-              "RT-PEM-KEY"
+              "RT-PEM-KEY",
+              "RT-PUBKEY"
             ],
             "symbol": "EC_KEY_generate_key"
           },
@@ -18153,7 +18529,8 @@
             "courts": [
               "RT-AMETH",
               "RT-EC",
-              "RT-PEM-KEY"
+              "RT-PEM-KEY",
+              "RT-PUBKEY"
             ],
             "symbol": "EC_KEY_new_by_curve_name"
           },
@@ -19021,7 +19398,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-AMETH"
+              "RT-AMETH",
+              "RT-PUBKEY"
             ],
             "symbol": "EVP_PKEY_assign"
           },
@@ -19063,7 +19441,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-AMETH"
+              "RT-AMETH",
+              "RT-PUBKEY"
             ],
             "symbol": "EVP_PKEY_get0_RSA"
           },
@@ -19350,6 +19729,13 @@
           {
             "basis": "called",
             "courts": [
+              "RT-PUBKEY"
+            ],
+            "symbol": "PEM_read_DSAPrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-PEM-KEY"
             ],
             "symbol": "PEM_read_DSAparams"
@@ -19360,6 +19746,20 @@
               "RT-PEM-KEY"
             ],
             "symbol": "PEM_read_ECPKParameters"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PUBKEY"
+            ],
+            "symbol": "PEM_read_ECPrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PUBKEY"
+            ],
+            "symbol": "PEM_read_RSAPrivateKey"
           },
           {
             "basis": "called",
@@ -19378,6 +19778,13 @@
           {
             "basis": "called",
             "courts": [
+              "RT-PUBKEY"
+            ],
+            "symbol": "PEM_read_bio_DSAPrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-PEM-KEY"
             ],
             "symbol": "PEM_read_bio_DSAparams"
@@ -19388,6 +19795,20 @@
               "RT-PEM-KEY"
             ],
             "symbol": "PEM_read_bio_ECPKParameters"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PUBKEY"
+            ],
+            "symbol": "PEM_read_bio_ECPrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PUBKEY"
+            ],
+            "symbol": "PEM_read_bio_RSAPrivateKey"
           },
           {
             "basis": "called",
@@ -19413,7 +19834,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-PEM-KEY"
+              "RT-PEM-KEY",
+              "RT-PUBKEY"
             ],
             "symbol": "PEM_write_DSAPrivateKey"
           },
@@ -19434,14 +19856,16 @@
           {
             "basis": "called",
             "courts": [
-              "RT-PEM-KEY"
+              "RT-PEM-KEY",
+              "RT-PUBKEY"
             ],
             "symbol": "PEM_write_ECPrivateKey"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-PEM-KEY"
+              "RT-PEM-KEY",
+              "RT-PUBKEY"
             ],
             "symbol": "PEM_write_RSAPrivateKey"
           },
@@ -19469,7 +19893,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-PEM-KEY"
+              "RT-PEM-KEY",
+              "RT-PUBKEY"
             ],
             "symbol": "PEM_write_bio_DSAPrivateKey"
           },
@@ -19490,14 +19915,16 @@
           {
             "basis": "called",
             "courts": [
-              "RT-PEM-KEY"
+              "RT-PEM-KEY",
+              "RT-PUBKEY"
             ],
             "symbol": "PEM_write_bio_ECPrivateKey"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-PEM-KEY"
+              "RT-PEM-KEY",
+              "RT-PUBKEY"
             ],
             "symbol": "PEM_write_bio_RSAPrivateKey"
           },
@@ -19728,6 +20155,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-PUBKEY",
               "RT-RSA"
             ],
             "symbol": "RSA_bits"
@@ -19779,6 +20207,7 @@
             "courts": [
               "RT-AMETH",
               "RT-PEM-KEY",
+              "RT-PUBKEY",
               "RT-RSA"
             ],
             "symbol": "RSA_free"
@@ -19794,6 +20223,7 @@
             "basis": "called",
             "courts": [
               "RT-PEM-KEY",
+              "RT-PUBKEY",
               "RT-RSA"
             ],
             "symbol": "RSA_generate_key_ex"
@@ -20181,6 +20611,7 @@
             "courts": [
               "RT-AMETH",
               "RT-PEM-KEY",
+              "RT-PUBKEY",
               "RT-RSA"
             ],
             "symbol": "RSA_new"
@@ -20993,7 +21424,7 @@
         ],
         "non_observable": [],
         "phase": 8,
-        "staged_candidate_probes": 9
+        "staged_candidate_probes": 10
       },
       {
         "completed": false,
@@ -21265,7 +21696,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-PEM-KEY"
+              "RT-PEM-KEY",
+              "RT-PUBKEY"
             ],
             "symbol": "PEM_ASN1_write_bio"
           },
@@ -21480,10 +21912,10 @@
       }
     ],
     "totals": {
-      "directly_courted": 2706,
-      "directly_courted_called": 2431,
+      "directly_courted": 2712,
+      "directly_courted_called": 2437,
       "directly_courted_referenced": 275,
-      "implemented": 2714,
+      "implemented": 2720,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -21494,7 +21926,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "d972c6aee0fda10b608f649be30f0226757c81d070993abafdf0b275ab902439"
+      "sha256": "29a867eeaf485bcac325d88ee9db0587ee613d12a44e95ca13fe341c744fc731"
     },
     {
       "name": "symbol-ownership",
@@ -21509,7 +21941,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "cc2de54afc56ae4f0a7a66b077e65560d150af2be5814df88dcb4842e552901a"
+      "sha256": "27f15e72821862d5a1b4d88856ac1c7ec38180ede579296dda76d3dec00cc7e4"
     },
     {
       "name": "phase3-courts",
@@ -21519,7 +21951,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "f565d26ab7a9f40e40d90c80474815879bace5124b597d3d76e2f7c7062de5d5"
+      "sha256": "3fdef722750cf6b92694531f317a56313206c855276f786b3bafca76bda968ec"
     },
     {
       "name": "phase4-courts",
@@ -21529,7 +21961,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "11ea19b2002612a57d24749e47fe60bf07a7178cd68763d69bcb3b1449716352"
+      "sha256": "e5fba1a288288c00f4200a53812a478e0c1d6dd2cd345ad7a763587064f13971"
     },
     {
       "name": "phase5-courts",
@@ -21539,7 +21971,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "bfec6488361cb8c98cbec32528344c67b4e81cd1422ea2bd24672d1528a4602e"
+      "sha256": "5ee0f4824ca4b3b2fac74ae3614382d61cbef7df75fe9e5a625443b1b3ea8146"
     },
     {
       "name": "phase6-courts",
@@ -21549,7 +21981,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "62d6fffdea9337e515d67bd7db63e05a15d5d9af493e8ae81fbdd062617ee23a"
+      "sha256": "3cc5eb3483f36c5a48b2032d84546727b335e2d59567c675d232f2e74d1c8aca"
     },
     {
       "name": "phase7-courts",
@@ -21559,17 +21991,17 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "5ae783a96530f8c9123d80408141f7dc5aabf763df702a6234103e507075c3c3"
+      "sha256": "9c9dd62db9bffd942f891eb221e5d145c70bc9ee5020ecb03f0bc28ab50183ef"
     },
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "6247f60993208a086f40764352d6ef84f59217811f419cdf5037ae40af501968"
+      "sha256": "c2d2a166f01e7dcb4d1c920782c29463d50df52d4646adc26acc4accb5ec9178"
     },
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "7f5d840e7083e5ebede6c821e9bc2eb3304f9c80047e92b44ca9f3581a5de5c0"
+      "sha256": "a09e8402678efe7a563fd6ec5af3d7e3b00382e42ad0fa1e1cd1e7c38bdd6b9b"
     },
     {
       "name": "phase9-courts",

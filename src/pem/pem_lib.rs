@@ -206,13 +206,13 @@ const EVP_MAX_BLOCK_LENGTH: usize = 32;
 const INT_MAX: c_long = 2147483647;
 
 /// `PEM_STRING_EVP_PKEY` — `include/openssl/pem.h:35`.
-const PEM_STRING_EVP_PKEY: *const c_char = c"ANY PRIVATE KEY".as_ptr();
+pub(crate) const PEM_STRING_EVP_PKEY: *const c_char = c"ANY PRIVATE KEY".as_ptr();
 /// `PEM_STRING_PKCS8` — `include/openssl/pem.h:44`.
-const PEM_STRING_PKCS8: *const c_char = c"ENCRYPTED PRIVATE KEY".as_ptr();
+pub(crate) const PEM_STRING_PKCS8: *const c_char = c"ENCRYPTED PRIVATE KEY".as_ptr();
 /// `PEM_STRING_PKCS8INF` — `include/openssl/pem.h:45`.
-const PEM_STRING_PKCS8INF: *const c_char = c"PRIVATE KEY".as_ptr();
+pub(crate) const PEM_STRING_PKCS8INF: *const c_char = c"PRIVATE KEY".as_ptr();
 /// `PEM_STRING_PARAMETERS` — `include/openssl/pem.h:52`.
-const PEM_STRING_PARAMETERS: *const c_char = c"PARAMETERS".as_ptr();
+pub(crate) const PEM_STRING_PARAMETERS: *const c_char = c"PARAMETERS".as_ptr();
 /// `PEM_STRING_DHPARAMS` — `include/openssl/pem.h:46`.
 pub(crate) const PEM_STRING_DHPARAMS: *const c_char = c"DH PARAMETERS".as_ptr();
 /// `PEM_STRING_DHXPARAMS` — `include/openssl/pem.h:47`.
@@ -227,8 +227,11 @@ pub(crate) const PEM_STRING_DSA: *const c_char = c"DSA PRIVATE KEY".as_ptr();
 pub(crate) const PEM_STRING_DSAPARAMS: *const c_char = c"DSA PARAMETERS".as_ptr();
 /// `PEM_STRING_ECPARAMETERS` — `include/openssl/pem.h:51`.
 pub(crate) const PEM_STRING_ECPARAMETERS: *const c_char = c"EC PARAMETERS".as_ptr();
-/// `PEM_STRING_PUBLIC` — `include/openssl/pem.h:36`. The name the four `*_PUBKEY` expansions use;
-/// those are Phase 11's, so no row here reaches it, and the constant is not defined until one does.
+/// `PEM_STRING_PUBLIC` — `include/openssl/pem.h:36`. The name the four `*_PUBKEY` expansions use.
+/// D369 defines it here because `crypto/pem/pem_pkey.c`'s read half is the first landed row that
+/// reaches it: `pem_read_bio_key_legacy`'s public-key-only arm passes it to
+/// `PEM_bytes_read_bio`.
+pub(crate) const PEM_STRING_PUBLIC: *const c_char = c"PUBLIC KEY".as_ptr();
 /// `PEM_STRING_ECPRIVATEKEY` — `include/openssl/pem.h:53`.
 pub(crate) const PEM_STRING_ECPRIVATEKEY: *const c_char = c"EC PRIVATE KEY".as_ptr();
 

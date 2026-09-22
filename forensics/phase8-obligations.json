@@ -1,12 +1,12 @@
 {
   "authority": "openssl-3.6.4-production",
   "body": {
-    "complete": false,
+    "complete": true,
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 0,
-      "implemented": 780,
-      "open_in_this_stratum": 6,
+      "implemented": 786,
+      "open_in_this_stratum": 0,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -815,12 +815,18 @@
       "MDC2_Update",
       "OSSL_EC_curve_nid2name",
       "PEM_read_DHparams",
+      "PEM_read_DSAPrivateKey",
       "PEM_read_DSAparams",
       "PEM_read_ECPKParameters",
+      "PEM_read_ECPrivateKey",
+      "PEM_read_RSAPrivateKey",
       "PEM_read_RSAPublicKey",
       "PEM_read_bio_DHparams",
+      "PEM_read_bio_DSAPrivateKey",
       "PEM_read_bio_DSAparams",
       "PEM_read_bio_ECPKParameters",
+      "PEM_read_bio_ECPrivateKey",
+      "PEM_read_bio_RSAPrivateKey",
       "PEM_read_bio_RSAPublicKey",
       "PEM_write_DHparams",
       "PEM_write_DHxparams",
@@ -1260,44 +1266,7 @@
       }
     ],
     "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum, and it starts at the whole working set, which is the honest starting state. Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-8-SUBPHASES.md §4 decides when the stratum may be called complete.",
-    "open": [
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_DSAPrivateKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_ECPrivateKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_RSAPrivateKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_bio_DSAPrivateKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_bio_ECPrivateKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/key_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_bio_RSAPrivateKey"
-      }
-    ],
+    "open": [],
     "owned_by_header": {
       "aes.h": 15,
       "blowfish.h": 8,
@@ -1369,12 +1338,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "b681ccffa5b4ca7044200ec846baa0f0f36c6320bfcac651dee0e0bdfc01fdd6"
+      "sha256": "92ee13e7deb57de7c790ee9a88776a3405b400e841b586421dbfed27c108b8b5"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "62d6fffdea9337e515d67bd7db63e05a15d5d9af493e8ae81fbdd062617ee23a"
+      "sha256": "3cc5eb3483f36c5a48b2032d84546727b335e2d59567c675d232f2e74d1c8aca"
     }
   ],
   "kind": "phase8-obligations",

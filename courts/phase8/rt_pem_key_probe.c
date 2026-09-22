@@ -14,8 +14,9 @@
  *   * The **twenty-four `pem_all.c` rows** Phase 8.9 lands: the `IMPLEMENT_PEM_*` expansions for
  *     `DHparams`, `DHxparams`, `DSAparams`, `DSAPrivateKey`, `ECPKParameters`, `ECPrivateKey`,
  *     `RSAPublicKey` and `RSAPrivateKey`, in both the `BIO *` and the `FILE *` spellings. The six
- *     private-key *readers* are deliberately not here and are named in `src/pem/key_legacy.rs`:
- *     they need `EVP_PKEY_get1_{RSA,DSA,EC_KEY}` and `PEM_read[_bio]_PrivateKey`, neither landed.
+ *     private-key *readers* are covered by **`RT-PUBKEY`**, not here (D369): they call
+ *     `PEM_read[_bio]_PrivateKey`, which `src/pem/pem_pkey.rs` now carries, and that probe is the
+ *     one whose arms drive them side by side with the `X509_PUBKEY` family.
  *   * The **PEM plumbing** `pem_lib.c` contributes: `PEM_def_callback`, `PEM_bytes_read_bio`, its
  *     `_secmem` spelling, `PEM_do_header`, `PEM_ASN1_read`/`_read_bio`/`_write`/`_write_bio`/
  *     `_write_bio_ctx`, and `EVP_read_pw_string`/`_min` through the `UI` program.

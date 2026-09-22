@@ -342,6 +342,10 @@
       "observations": 5,
       "verdict": "pass"
     },
+    "RT-PUBKEY": {
+      "observations": 100,
+      "verdict": "pass"
+    },
     "RT-RAND": {
       "observations": 129,
       "verdict": "pass"
@@ -397,7 +401,7 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 2926,
+    "libcrypto": 2960,
     "libssl": 0
   },
   "open_obligations": {
@@ -406,7 +410,7 @@
     "phase5": 0,
     "phase6": 0,
     "phase7": 0,
-    "phase8": 6,
+    "phase8": 0,
     "phase9": 3
   },
   "owned_obligations": {
@@ -444,10 +448,10 @@
   },
   "prerequisites": {
     "blocking_dependencies": 9,
-    "divergence_names_covered": 59,
+    "divergence_names_covered": 51,
     "findings": 0,
-    "language_census": 4707,
-    "sealed_census": 55
+    "language_census": 4709,
+    "sealed_census": 54
   },
   "provider_implemented": [
     "default/OSSL_OP_CIPHER/AES-128-CBC",

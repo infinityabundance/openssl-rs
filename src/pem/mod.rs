@@ -16,6 +16,7 @@
 //!                                                      then Phase 9's plumbing, D350)
 //! src/pem/pem_oth.rs      <-  crypto/pem/pem_oth.c    (the "other PEM" reader, D350)
 //! src/pem/key_legacy.rs   <-  crypto/pem/pem_all.c    (Phase 8.9's thirty `pem.h` names)
+//! src/pem/pem_pkey.rs     <-  crypto/pem/pem_pkey.c   (the read half, D369)
 //! ```
 //!
 //! `crypto/pem/pem_lib.c`'s reader and writer are split between two modules for a
@@ -33,3 +34,4 @@
 pub mod key_legacy;
 pub mod pem_lib;
 pub mod pem_oth;
+pub mod pem_pkey;

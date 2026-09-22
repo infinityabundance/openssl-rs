@@ -1392,3 +1392,48 @@ D334's state, when the column was recorded as a NULL rather than resolved.
 - **Supersedes D-EC-1**, whose subject was the same column recorded as "not transcribed": D-EC-2 is
   the same refusal with the answer the landing actually gives, which is stronger than a NULL because
   it is a stated behaviour with a measurement behind it rather than a field left empty.
+
+### D-DECODER-ABSENT-1 — the crate publishes no provider decoder, so every `OSSL_DECODER`-dependent reader answers the legacy leg's answer or fails
+
+- **Obligation:** the readers whose authority body tries `OSSL_DECODER` first: `d2i_PUBKEY` and
+  `d2i_PUBKEY_ex` (`crypto/x509/x_pubkey.c:541`, `:547`) through `x509_pubkey_ex_d2i_ex`'s
+  opportunistic arm (`:210`), and `pem_read_bio_key_decoder` (`crypto/pem/pem_pkey.c:35`), which
+  `PEM_read[_bio]_PrivateKey[_ex]` and `PEM_read[_bio]_PUBKEY[_ex]` all reach through
+  `pem_read_bio_key` (`:216`).
+- **Authority:** the default provider supplies the DER and PEM decoders, so each of these arms
+  decodes. Measured for `d2i_PUBKEY` on a 1024-bit RSA `SubjectPublicKeyInfo`: the authority answers
+  a key (`EVP_PKEY_get_id` 6, `EVP_PKEY_get_bits` 1024). Measured for `PEM_read_bio_Parameters` on a
+  written `-----BEGIN DH PARAMETERS-----` block: the authority answers a key (`EVP_PKEY_get_id` 28,
+  `EVP_PKEY_get0_DH` non-NULL), and the legacy parameters arm is **unreachable on this revision**
+  because its guard is `(selection & EVP_PKEY_KEYPAIR) == 0` while `EVP_PKEY_KEYPAIR` contains every
+  parameter bit.
+- **Candidate:** the decoder context is built and carries **no instances**
+  (`src/decoder_meth.rs`: every `OSSL_OP_DECODER` provider row is unimplemented here), so
+  `OSSL_DECODER_from_data`/`_from_bio` take their zero-decoder arm, `d2i_PUBKEY` answers NULL for a
+  decodable input, and `pem_read_bio_key_decoder` returns NULL after its first failed walk. The
+  legacy fallback that follows is the authority's own code path, so
+  `PEM_read[_bio]_PrivateKey[_ex]` and `PEM_read[_bio]_PUBKEY[_ex]` are **unaffected** on every input
+  the legacy methods can read — a traditional `RSA PRIVATE KEY` block is decoded by the ameth leg on
+  both sides, measured.
+- **The one observable inside the shared path.** The decoder leg's failure leaves a different record
+  on the queue: the authority raises `ERR_R_UNSUPPORTED` at `crypto/encode_decode/decoder_lib.c:104`
+  ("No supported data to decode"), the candidate `OSSL_DECODER_R_DECODER_NOT_FOUND` at `:60`. Both
+  answer NULL, so the *result* agrees and the loop's retry count is the only other difference.
+  `courts/phase8/rt_pubkey_probe.c` therefore observes the queue's **count** for those arms and
+  names this entry as the reason the record is not carried as a residual; every arm whose whole path
+  is shared carries the full coordinate (`drain`). `d2i_PUBKEY`'s refusal is observed through a
+  zero-length input, which fails in the ASN.1 layer at `crypto/asn1/tasn_dec.c:212` on both sides.
+- **Reason:** the missing piece is the provider layer, not the readers. Transcribing a reader whose
+  answer would differ is the class D349 refused; withholding the two `PEM_read_bio_Parameters*`
+  spellings, whose only successful arm is the decoder, is the same refusal applied where no legacy
+  fallback exists (`src/pem/pem_pkey.rs`).
+- **Claim removed:** that `d2i_PUBKEY`/`d2i_PUBKEY_ex` decode a `SubjectPublicKeyInfo` the default
+  provider's DER decoder reads, that `pem_read_bio_key_decoder` can succeed, and that
+  `PEM_read_bio_Parameters`/`_ex` answer a key. **Nothing else**: the `X509_PUBKEY` object layer,
+  `ossl_d2i_PUBKEY_legacy` and the type-specific `d2i`/`i2d` pairs for RSA, DSA and EC are the
+  authority's own code on both sides and are courted in full (`RT-PUBKEY`, 100 observations, zero
+  residuals).
+- **Trigger:** the slice that supplies a provider decoder — the DER/PEM decoder rows and the
+  keymgmt rows they construct into. At that point each of the three arms decodes, the queue record
+  becomes the authority's, and this entry is removed with the boundary it records. **Recorded by
+  D369.**

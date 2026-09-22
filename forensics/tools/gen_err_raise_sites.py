@@ -814,6 +814,14 @@ COVERED_FILES = [
     # `ERR_R_ASN1_LIB` with the four `X509_R_*` reasons the duplicate/unknown-name/wrong-type
     # refusals carry.
     ("crypto/x509/x509_att.c", "X509_ATT"),
+    # Phase 11 staging: `crypto/x509/x_pubkey.c`, the `X509_PUBKEY` object layer the `d2i`/
+    # `i2d` public-key family and `ossl_d2i_PUBKEY_legacy` are written in (D369). Its
+    # twenty-four sites are `ERR_LIB_X509`, `ERR_LIB_ASN1` and `ERR_LIB_EVP` with the generic
+    # `ERR_R_*` codes, `ASN1_R_DECODE_ERROR`, `EVP_R_DECODE_ERROR` and the three `X509_R_*`
+    # refusals (`PUBLIC_KEY_ENCODE_ERROR`, `METHOD_NOT_SUPPORTED`, `UNSUPPORTED_ALGORITHM`).
+    # D349 had the unit deliberately absent because the four functions then landed raised
+    # nothing; the completion is what changes that.
+    ("crypto/x509/x_pubkey.c", "X509_PUBKEY"),
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`

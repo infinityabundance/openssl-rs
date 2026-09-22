@@ -160,12 +160,21 @@ COURTS: list[tuple[str, str]] = [
     # 8.9's `pem.h` helper court. Its subject is the thirty `crypto/pem/pem_all.c` rows -- the
     # `IMPLEMENT_PEM_*` expansions for the DH, DSA, EC and RSA key families -- together with the
     # PEM plumbing they call (`PEM_bytes_read_bio`, `PEM_do_header`, `PEM_def_callback`,
-    # `PEM_ASN1_*`) and `pem_oth.c`'s `PEM_ASN1_read_bio`. Six of the thirty are
-    # **withheld** and named in `src/pem/key_legacy.rs`: the private-key readers need
-    # `EVP_PKEY_get1_{RSA,DSA,EC_KEY}` and `PEM_read[_bio]_PrivateKey`, neither landed, so the
-    # probe drives the twenty-four that are and says which are absent. Every writer arm prints a
-    # public parameter set's block or, for a private key, only its header lines and round trip.
+    # `PEM_ASN1_*`) and `pem_oth.c`'s `PEM_ASN1_read_bio`. The six private-key readers are now
+    # **covered**, by `RT-PUBKEY` rather than here (D369): they need `PEM_read[_bio]_PrivateKey`,
+    # which `src/pem/pem_pkey.rs` carries, and that probe is the one that drives them. Every writer
+    # arm prints a public parameter set's block or, for a private key, only its header lines and
+    # round trip.
     ("RT-PEM-KEY", "rt_pem_key_probe.c"),
+    # D369's court. Its subject is `crypto/x509/x_pubkey.c`'s object layer and `i2d`/`d2i`
+    # public-key family, together with `crypto/pem/pem_pkey.c`'s read half -- the four
+    # `PEM_read[_bio]_PrivateKey[_ex]` spellings, the four `PUBKEY` ones and the six `pem_all.c`
+    # private-key readers. **Two arms are deliberately absent and the probe's header names them**:
+    # the `OSSL_DECODER` leg, whose answer must differ because this crate publishes no provider
+    # decoder (`D-DECODER-ABSENT-1`), and a PKCS#8 `PRIVATE KEY` block, for the same reason. The
+    # two `PEM_read_bio_Parameters*` spellings are withheld rather than courted, because their only
+    # successful arm on this revision is that same decoder.
+    ("RT-PUBKEY", "rt_pubkey_probe.c"),
 ]
 
 # The correctness courts, and the committed vector sets each checks. `CT-DIGEST` is the

@@ -26772,3 +26772,141 @@ observation total moves **37221 -> 37258** -- the **37** observations `RT-ASN1-T
 are untouched because the Phase 8 ledger did not move, so the 8.9 row's note is extended rather
 than rewritten: the readers' last two prerequisites are `ossl_d2i_PUBKEY_legacy` and
 `pem_pkey.c`'s read half, and the row says so.
+
+## D369 — the last six land: `crypto/x509/x_pubkey.c` is completed, `crypto/pem/pem_pkey.c`'s read half becomes its own module, the six `pem_all.c` readers follow, and Phase 8's working set closes at **786 of 786**, `complete: true`
+
+**Decision.** Execute the three items D367 and D368 measured and could not take, in their order.
+The re-measurement D349 asked for is the first item, and the answer is that the whole unit except
+one block is in reach.
+
+**Item 1: `crypto/x509/x_pubkey.c`, 23 of 24 exports and 9 of 17 internals.** D349 landed three
+accessors and withheld the rest for the `EVP_PKEY_assign` cycle; D353 published the eleven
+`standard_methods[]` rows, D362 the encoder chain, D367 the pkey half of the decoder cache, so that
+cycle is gone and the unit is transcribed: the `X509_PUBKEY` object layer (`X509_PUBKEY_new`,
+`_new_ex`, `_free`, `_dup`, `_set`, `_get0`, `_get`, `_it`, `_eq`, `d2i_X509_PUBKEY`,
+`i2d_X509_PUBKEY`), the `ASN1_PUTY_ITEM** ...**` — the `ASN1_ITYPE_EXTERN` item group
+(`x509_pubkey_ff`'s five hooks, `ASN1_SEQUENCE(X509_PUBKEY_INTERNAL)` and
+`ossl_d2i_X509_PUBKEY_INTERNAL`/`ossl_X509_PUBKEY_INTERNAL_free`), `x509_pubkey_decode`,
+`d2i_PUBKEY_int`/`ossl_d2i_PUBKEY_legacy`/`d2i_PUBKEY_ex`/`d2i_PUBKEY`, `i2d_PUBKEY` and the
+type-specific `d2i`/`i2d` pairs for RSA, DH, DHx, DSA and EC. The `ASN1_ITYPE_EXTERN` item group is
+the part that had no precedent in the crate: `x509_pubkey_ff`'s five hooks
+(`x509_pubkey_ex_new_ex`, `_free`, `_d2i_ex`, `_i2d`, `_print`), the
+`ASN1_SEQUENCE(X509_PUBKEY_INTERNAL)` template and the decoder/free pair
+`ossl_d2i_X509_PUBKEY_INTERNAL`/`ossl_X509_PUBKEY_INTERNAL_free` — reached through a new
+`pub(crate) asn1_item_embed_d2i` in `src/asn1/d2i.rs`, because the authority's
+`x509_pubkey_ex_d2i_ex` calls the dispatch **directly** rather than through `ASN1_item_ex_d2i`, and
+does its own free. `src/x509/x_pubkey.rs` grows from 378 to **2,164** lines and transcribes
+**32 of 32** of the unit's symbols the atlas maps to it; `src/pem/pem_pkey.rs` is **923** lines.
+
+**Two blocks are withheld, and both are measured.** The eight `crypto/ec/ecx_meth.c`-dependent
+internals — the `ossl_d2i_*`/`ossl_i2d_*` pairs for `ED25519`, `ED448`, `X25519` and `X448` — need
+`ossl_evp_pkey_get1_ED25519`/`_ED448`/`_X25519`/`_X448` (`crypto/ec/ecx_backend.c`, no crate module)
+on the read side and the four withheld `standard_methods[]` rows on the write side, where
+`i2d_PUBKEY` answers `-1` instead of the encoded length (`D-PKEY-AMETH-3`). `X509_get0_pubkey_bitstr`
+reads `x->cert_info.key->public_key` off a `struct x509_st` the crate does not have. The
+`src/x509/x_pubkey.rs` divergence row is therefore **resized, not retired**: its `covers` goes from
+sixteen names to the eight ECX ones, exact in both directions as the gate requires.
+
+**The completion exposed three stale ameth arms and they are fixed, not dodged.**
+`EVP_PKEY_get_bits`, `EVP_PKEY_get_security_bits` and `EVP_PKEY_get_size` (`crypto/evp/p_lib.c:60`,
+`:77`, `:1854`) each carried a comment saying their `ameth->pkey_bits`/`_pkey_security_bits`/
+`_pkey_size` override was unreachable because `pkey_set_type`'s lookup searched an empty table —
+which was true when written and false since D353. A probe measuring a legacy key's
+`EVP_PKEY_get_bits` found the divergence: the authority answers 1024, the crate answered 0 **and
+raised `EVP_R_UNKNOWN_BITS`**. All three overrides are transcribed now, and
+`RT-PUBKEY`'s `pub.privkey.bio` arm is what found it.
+
+**Item 2: `crypto/pem/pem_pkey.c`'s read half, as `src/pem/pem_pkey.rs`.** `pem_read_bio_key`,
+`pem_read_bio_key_decoder`, `pem_read_bio_key_legacy` and the ten `PEM_read_*` spellings, whole. The
+last missing callee was exactly `ossl_d2i_PUBKEY_legacy` (item 1), and the write half is withheld as
+one block with its coordinate: the six writers expand `crypto/pem/pem_local.h`'s
+`IMPLEMENT_PEM_provided_write_body_*`, whose `legacy:` fall-through is `PEM_write_bio_PKCS8PrivateKey`
+(`crypto/pem/pem_pk8.c`, Phase 13's and unlanded) and whose `pass` body reaches
+`OSSL_ENCODER_CTX_set_cipher`/`_set_passphrase`/`_set_pem_password_cb`. A writer that omitted the
+fall-through would answer 0 where the authority encodes.
+
+**A third, smaller block is withheld, and it is the measurement rather than the preference.**
+`PEM_read_bio_Parameters` and `_ex` are transcribable, and transcribing them would put two names in
+the crate that answer **NULL** where the authority answers a key: their selection is
+`EVP_PKEY_KEY_PARAMETERS`, and on this revision the legacy parameters arm is unreachable because its
+guard is `(selection & EVP_PKEY_KEYPAIR) == 0` while `EVP_PKEY_KEYPAIR` contains every parameter
+bit — so the only arm that can answer is the decoder, which this crate has none of. Measured on a
+written `-----BEGIN DH PARAMETERS-----` block: authority `notnull=1`, `EVP_PKEY_get_id` 28,
+`EVP_PKEY_get0_DH` non-NULL; candidate `notnull=0`. They are the two read-half names that do not
+land. `D-DECODER-ABSENT-1` records the class.
+
+**Item 3: the six `crypto/pem/pem_all.c` readers, and 6 -> 0.** `pkey_get_rsa`/`pkey_get_dsa`/
+`pkey_get_eckey` (`pem_all.c:53`, `:93`, `:134`) and the six exports over them land in
+`src/pem/key_legacy.rs`, which goes from the twenty-four D349 landed to all thirty of its owned
+symbols (**30/30**).
+`forensics/phase8-obligations.json` reads implemented **786**, deferred **0**, open **0** over
+**786** owned, and **`complete: true`** — the first time this stratum's working set is whole.
+
+**What `complete: true` does not claim, and this is the half the number cannot say.** It is not a
+parity claim: every name in `implemented` is at most `IMPLEMENTED` in `docs/PARITY_MODEL.md` terms.
+Three things sit outside it and are unchanged or newly visible:
+* the four `crypto/ec/ecx_meth.c` rows are withheld from **both** `standard_methods[]` tables under
+  `D-PKEY-AMETH-3`, so `EVP_PKEY_type` answers `NID_undef` and the two `find` functions NULL for
+  X25519, X448, Ed25519 and Ed448 — which is why the eight ECX internals of item 1 are withheld with
+  them;
+* `court_coverage.py`'s `not_yet_begun` list holds **240** implemented exports no ledger can claim,
+  and all 28 item 1 and item 2 land are among them: twenty `x509.h` exports and eight `pem.h` ones.
+  The list's owing strata are **10**, **11** and **13** (atlas owners 7, 10, 11 and 13);
+* phase 8 is still `in-progress` in `forensics/phase-state.json`, and why is measured rather than
+  stated: **137** provider registration rows of this stratum are neither implemented nor handed to a
+  later phase (`forensics/atlas/provider-algorithms.json`), which is the provider half of 8.1b and
+  the remaining subphases. `complete: true` is about the export working set, and
+  `docs/PHASE-8-SUBPHASES.md` §4 decides when the stratum may be called complete.
+
+**Item 4: the evidence.** `courts/phase8/rt_pubkey_probe.c` is registered as **`RT-PUBKEY`** and
+passes at **100 observations** with zero residuals; it drives the `X509_PUBKEY` object layer and its
+item as a round trip, `X509_PUBKEY_set`/`_get0`/`_get` over a legacy `EVP_PKEY`, `i2d_PUBKEY`, the
+three type-specific codec pairs, the six readers and the eight `PrivateKey`/`PUBKEY` spellings of
+`pem_pkey.c`'s read half. **Two arms are deliberately not carried and the probe's header says so**:
+the `OSSL_DECODER` leg, whose answer must differ, and a PKCS#8 `PRIVATE KEY` block, for the same
+reason — both are `D-DECODER-ABSENT-1`, whose observable is the queue record
+(`ERR_R_UNSUPPORTED` at `decoder_lib.c:104` against `OSSL_DECODER_R_DECODER_NOT_FOUND` at `:60`),
+which the probe observes as a **count** on the arms that reach it and as the full coordinate
+everywhere the path is shared. `crypto/x509/x_pubkey.c` joins `gen_err_raise_sites.py`'s
+`COVERED_FILES` (stem `X509_PUBKEY`, **27** sites), because D349's reason for leaving it out — "none
+of the four functions raises" — stopped being true; `err-raise-sites.json` reads **3203 -> 3230**
+sites over **286 -> 287** covered files, zero unattributed. `docs/PHASE-8-SUBPHASES.md` §4's two
+anchored clauses are **both moved**: the six readers leave the open clause (nothing is open) and
+join the landed one.
+
+**`court_coverage.py`'s scope is widened by one hop, and the reason is why nothing else could be
+done.** The tool's universe is "every implemented export of a stratum that has begun", and its
+`not_yet_begun` bucket held symbols whose **atlas owner** has no ledger (D348's fourteen
+`X509_ALGOR_*`). The four `PEM_read[_bio]_PrivateKey` spellings are Phase 7's by `pem.h`, Phase 7
+handed them to Phase 13, and Phase 13 has no ledger — so with them implemented and Phase 7's ledger
+carrying them as handed on, they were in **no** ledger's `implemented` list and the assertion failed
+with "in the manifest but in no ledger". The scope test now follows the recorded hand-offs: a symbol
+is out of scope when the stratum the **last** hand-off names has no ledger. The invariant D348 set
+is untouched — everything a begun stratum's ledger claims is still exactly the ledger union — and
+the alternative, retiring Phase 7's hand-off rows so its `implemented` list could claim work it did
+not do, is the thing D353/D362/D367 each refused. The `not_yet_begun` entries now carry both
+`owner_phase` and `owing_phase`.
+
+**The regenerated counts.** `implemented-surface.json`: `libcrypto` implemented **2926 -> 2960**,
+`internal_symbols.c_style` **351 -> 359** — the eight new C-identifier internals,
+`ossl_d2i_X509_PUBKEY_INTERNAL`, `ossl_X509_PUBKEY_INTERNAL_free`, `ossl_d2i_PUBKEY_legacy`,
+`ossl_d2i_DH_PUBKEY`, `ossl_i2d_DH_PUBKEY`, `ossl_d2i_DHx_PUBKEY`, `ossl_i2d_DHx_PUBKEY` and
+`ossl_d2i_DSA_PUBKEY`.
+`transcription-edges.json`: **326 -> 327** modules over **295 -> 296** units, with
+`src/x509/x_pubkey.rs` at **32/32**, `src/pem/key_legacy.rs` at **30/30** and `src/pem/pem_pkey.rs`
+at **8/8**. `err-raise-sites.json` **3203 -> 3230** sites, **286 -> 287** files.
+`court_coverage.py`: `not_yet_begun` **212 -> 240**, phase 8 at **786** implemented (**778** direct,
+**8** indirect, **0** unmatched), the totals at **2720** implemented / **2712** direct / **8**
+indirect. The prerequisite gate stays at **zero findings**: **13** divergence rows / **51** names,
+**9** deferrals, `blocking_dependencies` **9**, `sealed_stratum_census` **54** names over **18**
+units. `forensics/phase7-obligations.json` reads **733** implemented / **217** deferred / **0** open
+of **950** owned, `complete: true`, unchanged. Courts **94 -> 95**, observations
+**37258 -> 37358**. Phase state: **8** complete, **2** in-progress, **12** not-started.
+`PIPELINE OK`, run twice.
+
+**What this entry does not claim.** No ECX key of any kind is verified: the four rows above are
+withheld, and `RT-PUBKEY` carries no arm that would have to differ. Nothing about the provider
+decoder: `D-DECODER-ABSENT-1` is a register entry with a measurement, not a court. And the
+stratum's `complete: true` is the export working set's, not the stratum's — the 137 provider
+registration rows and the seven subphases `docs/PHASE-8-SUBPHASES.md` still lists are what stands
+between it and §4's seal.

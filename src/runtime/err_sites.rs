@@ -32062,6 +32062,276 @@ pub(crate) const X509_ATT_442: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `x509_pubkey_ex_new_ex` at `crypto/x509/x_pubkey.c:120` (ERR_R_X509_LIB).
+pub(crate) const X509_PUBKEY_120: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 120,
+    func: c"x509_pubkey_ex_new_ex",
+    lib: 13,
+    reason: 524299,
+    dynamic_reason: false,
+};
+
+/// `x509_pubkey_ex_d2i_ex` at `crypto/x509/x_pubkey.c:144` (ERR_R_X509_LIB).
+pub(crate) const X509_PUBKEY_144: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 144,
+    func: c"x509_pubkey_ex_d2i_ex",
+    lib: 13,
+    reason: 524299,
+    dynamic_reason: false,
+};
+
+/// `x509_pubkey_ex_d2i_ex` at `crypto/x509/x_pubkey.c:160` (ERR_R_INTERNAL_ERROR).
+pub(crate) const X509_PUBKEY_160: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 160,
+    func: c"x509_pubkey_ex_d2i_ex",
+    lib: 13,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `x509_pubkey_ex_d2i_ex` at `crypto/x509/x_pubkey.c:227` (ASN1_R_DECODE_ERROR).
+pub(crate) const X509_PUBKEY_227: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 227,
+    func: c"x509_pubkey_ex_d2i_ex",
+    lib: 13,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `X509_PUBKEY_dup` at `crypto/x509/x_pubkey.c:293` (ERR_R_X509_LIB).
+pub(crate) const X509_PUBKEY_293: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 293,
+    func: c"X509_PUBKEY_dup",
+    lib: 11,
+    reason: 524299,
+    dynamic_reason: false,
+};
+
+/// `X509_PUBKEY_dup` at `crypto/x509/x_pubkey.c:305` (ERR_R_ASN1_LIB).
+pub(crate) const X509_PUBKEY_305: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 305,
+    func: c"X509_PUBKEY_dup",
+    lib: 11,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `X509_PUBKEY_set` at `crypto/x509/x_pubkey.c:331` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_PUBKEY_331: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 331,
+    func: c"X509_PUBKEY_set",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509_PUBKEY_set` at `crypto/x509/x_pubkey.c:337` (ERR_R_ASN1_LIB).
+pub(crate) const X509_PUBKEY_337: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 337,
+    func: c"X509_PUBKEY_set",
+    lib: 11,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `X509_PUBKEY_set` at `crypto/x509/x_pubkey.c:342` (X509_R_PUBLIC_KEY_ENCODE_ERROR).
+pub(crate) const X509_PUBKEY_342: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 342,
+    func: c"X509_PUBKEY_set",
+    lib: 11,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `X509_PUBKEY_set` at `crypto/x509/x_pubkey.c:346` (X509_R_METHOD_NOT_SUPPORTED).
+pub(crate) const X509_PUBKEY_346: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 346,
+    func: c"X509_PUBKEY_set",
+    lib: 11,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `X509_PUBKEY_set` at `crypto/x509/x_pubkey.c:367` (X509_R_UNSUPPORTED_ALGORITHM).
+pub(crate) const X509_PUBKEY_367: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 367,
+    func: c"X509_PUBKEY_set",
+    lib: 11,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `X509_PUBKEY_set` at `crypto/x509/x_pubkey.c:373` (ERR_R_INTERNAL_ERROR).
+pub(crate) const X509_PUBKEY_373: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 373,
+    func: c"X509_PUBKEY_set",
+    lib: 11,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `x509_pubkey_decode` at `crypto/x509/x_pubkey.c:427` (ERR_R_EVP_LIB).
+pub(crate) const X509_PUBKEY_427: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 427,
+    func: c"x509_pubkey_decode",
+    lib: 11,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `x509_pubkey_decode` at `crypto/x509/x_pubkey.c:432` (X509_R_UNSUPPORTED_ALGORITHM).
+pub(crate) const X509_PUBKEY_432: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 432,
+    func: c"x509_pubkey_decode",
+    lib: 11,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `x509_pubkey_decode` at `crypto/x509/x_pubkey.c:445` (X509_R_METHOD_NOT_SUPPORTED).
+pub(crate) const X509_PUBKEY_445: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 445,
+    func: c"x509_pubkey_decode",
+    lib: 11,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `X509_PUBKEY_get0` at `crypto/x509/x_pubkey.c:460` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_PUBKEY_460: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 460,
+    func: c"X509_PUBKEY_get0",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509_PUBKEY_get0` at `crypto/x509/x_pubkey.c:466` (EVP_R_DECODE_ERROR).
+pub(crate) const X509_PUBKEY_466: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 466,
+    func: c"X509_PUBKEY_get0",
+    lib: 6,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `X509_PUBKEY_get` at `crypto/x509/x_pubkey.c:478` (ERR_R_INTERNAL_ERROR).
+pub(crate) const X509_PUBKEY_478: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 478,
+    func: c"X509_PUBKEY_get",
+    lib: 11,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `i2d_RSA_PUBKEY` at `crypto/x509/x_pubkey.c:635` (ERR_R_EVP_LIB).
+pub(crate) const X509_PUBKEY_635: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 635,
+    func: c"i2d_RSA_PUBKEY",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_i2d_DH_PUBKEY` at `crypto/x509/x_pubkey.c:677` (ERR_R_EVP_LIB).
+pub(crate) const X509_PUBKEY_677: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 677,
+    func: c"ossl_i2d_DH_PUBKEY",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_i2d_DHx_PUBKEY` at `crypto/x509/x_pubkey.c:718` (ERR_R_EVP_LIB).
+pub(crate) const X509_PUBKEY_718: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 718,
+    func: c"ossl_i2d_DHx_PUBKEY",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `i2d_DSA_PUBKEY` at `crypto/x509/x_pubkey.c:784` (ERR_R_EVP_LIB).
+pub(crate) const X509_PUBKEY_784: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 784,
+    func: c"i2d_DSA_PUBKEY",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `i2d_EC_PUBKEY` at `crypto/x509/x_pubkey.c:829` (ERR_R_EVP_LIB).
+pub(crate) const X509_PUBKEY_829: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 829,
+    func: c"i2d_EC_PUBKEY",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_i2d_ED25519_PUBKEY` at `crypto/x509/x_pubkey.c:871` (ERR_R_EVP_LIB).
+pub(crate) const X509_PUBKEY_871: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 871,
+    func: c"ossl_i2d_ED25519_PUBKEY",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_i2d_ED448_PUBKEY` at `crypto/x509/x_pubkey.c:913` (ERR_R_EVP_LIB).
+pub(crate) const X509_PUBKEY_913: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 913,
+    func: c"ossl_i2d_ED448_PUBKEY",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_i2d_X25519_PUBKEY` at `crypto/x509/x_pubkey.c:955` (ERR_R_EVP_LIB).
+pub(crate) const X509_PUBKEY_955: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 955,
+    func: c"ossl_i2d_X25519_PUBKEY",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_i2d_X448_PUBKEY` at `crypto/x509/x_pubkey.c:997` (ERR_R_EVP_LIB).
+pub(crate) const X509_PUBKEY_997: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 997,
+    func: c"ossl_i2d_X448_PUBKEY",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -35276,4 +35546,31 @@ pub(crate) static ALL: &[ErrSite] = &[
     X509_ATT_417,
     X509_ATT_433,
     X509_ATT_442,
+    X509_PUBKEY_120,
+    X509_PUBKEY_144,
+    X509_PUBKEY_160,
+    X509_PUBKEY_227,
+    X509_PUBKEY_293,
+    X509_PUBKEY_305,
+    X509_PUBKEY_331,
+    X509_PUBKEY_337,
+    X509_PUBKEY_342,
+    X509_PUBKEY_346,
+    X509_PUBKEY_367,
+    X509_PUBKEY_373,
+    X509_PUBKEY_427,
+    X509_PUBKEY_432,
+    X509_PUBKEY_445,
+    X509_PUBKEY_460,
+    X509_PUBKEY_466,
+    X509_PUBKEY_478,
+    X509_PUBKEY_635,
+    X509_PUBKEY_677,
+    X509_PUBKEY_718,
+    X509_PUBKEY_784,
+    X509_PUBKEY_829,
+    X509_PUBKEY_871,
+    X509_PUBKEY_913,
+    X509_PUBKEY_955,
+    X509_PUBKEY_997,
 ];
