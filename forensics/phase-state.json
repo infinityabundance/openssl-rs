@@ -399,7 +399,7 @@
         "stratum": "EVP framework"
       },
       {
-        "blocking": "137 provider registration row(s) of this stratum are neither implemented nor handed to a later phase (forensics/atlas/provider-algorithms.json): AES, ARGON2D, ARGON2I, ARGON2ID, CMAC, DH...",
+        "blocking": "136 provider registration row(s) of this stratum are neither implemented nor handed to a later phase (forensics/atlas/provider-algorithms.json): AES, ARGON2D, ARGON2I, ARGON2ID, CMAC, DH...",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -418,9 +418,9 @@
         "phase": 8,
         "provider_rows": {
           "handed_on": 685,
-          "implemented": 169,
+          "implemented": 170,
           "owned": 306,
-          "unimplemented": 137
+          "unimplemented": 136
         },
         "seal_sha256": null,
         "state": "in-progress",
@@ -618,7 +618,7 @@
       "not_started": 12
     }
   },
-  "body_hash": "f023f806f984e598007c93974ee68635b9583d84be1cebc2e7e66a21efa04737",
+  "body_hash": "4ade8583c8e23e892ff41b845496f30a19de8a6f98a871ee000e3d65e578b872",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

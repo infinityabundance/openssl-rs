@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 169,
+        "implemented": 170,
         "unmatched": 0
       },
       "9": {
@@ -29,8 +29,8 @@
         "probe": "courts/phase9/rt_drbg_probe.c"
       }
     ],
-    "directly_courted": 174,
-    "implemented_rows": 174,
+    "directly_courted": 175,
+    "implemented_rows": 175,
     "rows": [
       {
         "algorithm_names": "AES-128-CBC",
@@ -2241,6 +2241,19 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "PKCS12KDF",
+        "aliases": [
+          "PKCS12KDF"
+        ],
+        "courts": [
+          "RT-DIGEST"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KDF",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "SSKDF",
         "aliases": [
           "SSKDF"
@@ -2465,12 +2478,12 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "517e00849f32e84aed13cb6a4839c01082ee703ae73f8a02af57fbc47d127c28"
+      "sha256": "5d35ca87b313f16c8f9352a2a90dc0ea05d1fd7e487badb4beb5f80e0967e046"
     },
     {
       "name": "court:RT-DIGEST",
       "path": "courts/phase8/rt_digest_probe.c",
-      "sha256": "15d0e30f6afc946c3ddca672b3e53bdac0a0a38bbf17b82285ef8a8b053f2d2d"
+      "sha256": "bf7bdeb565e185f7c77fdec3bb10814cd811f5d038288c29f4d99d0811a3b241"
     },
     {
       "name": "court:RT-CIPHER",

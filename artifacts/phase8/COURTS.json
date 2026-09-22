@@ -7,9 +7,9 @@
     "courts": [
       {
         "authority_exit_code": 0,
-        "authority_observations": 480,
+        "authority_observations": 487,
         "candidate_exit_code": 0,
-        "candidate_observations": 480,
+        "candidate_observations": 487,
         "candidate_stderr_tail": [],
         "court": "RT-DIGEST",
         "crashed": false,
@@ -37871,7 +37871,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_digest_probe.c",
-      "sha256": "15d0e30f6afc946c3ddca672b3e53bdac0a0a38bbf17b82285ef8a8b053f2d2d"
+      "sha256": "bf7bdeb565e185f7c77fdec3bb10814cd811f5d038288c29f4d99d0811a3b241"
     },
     {
       "name": "probe",
