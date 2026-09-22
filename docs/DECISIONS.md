@@ -26655,3 +26655,120 @@ Phase 8 and not nearly Phase 8; the count this entry reaches is implemented **78
 owned, and the decoder framework the last six wait on now has **all four units whole** -- what is
 left is `pem_pkey.c`, which needs a Phase-7 export and three unlanded units, and the six readers
 that sit on top of it.
+
+## D368 — the PKCS#8 legacy half lands: `crypto/x509/x509_att.c`, the `crypto/pkcs12/` decrypt pair and the two `d2i`/`pkey` downgrade internals, and the recovered `x_sig`/`x_attrib`/`p8_pkey` slice is completed; the six `PEM_read[_bio]_*PrivateKey` readers are re-measured **still not** reachable
+
+**Decision.** Land the prerequisites the six `PEM_read[_bio]_{RSA,DSA,EC}PrivateKey` readers
+wait on that are phase-8-owned or phase-8-blocking, and withhold the two that are not. `D367`
+measured the chain; this entry executes the part of it whose units exist and records the part
+whose units do not. Six units move, five as new modules and one completed:
+
+* **`crypto/x509/x509_att.c` -> `src/x509/x509_att.rs`, whole.** Nineteen exports and five
+  internals, 446 lines. The `STACK_OF(X509_ATTRIBUTE)` collection (`X509at_get_*`,
+  `X509at_delete_attr`, the four `add1_attr` spellings and their `ossl_` twins, `ossl_x509at_dup`)
+  and the `X509_ATTRIBUTE` constructors (`X509_ATTRIBUTE_create_by_{NID,OBJ,txt}`,
+  `set1_object`/`set1_data`, `count`, `get0_object`/`get0_data`/`get0_type`). This is the
+  `add1_attr` family D349 withheld `crypto/asn1/p8_pkey.c`'s three `PKCS8_pkey_add1_attr*` for.
+* **`crypto/pkcs12/p12_decr.c` -> `src/pkcs12/p12_decr.rs`, whole.** Six exports:
+  `PKCS12_pbe_crypt_ex`/`PKCS12_pbe_crypt` and the `PKCS12_item_{decrypt_d2i,i2d_encrypt}_ex`
+  pair. The `EVP_CIPH_FLAG_CIPHER_WITH_MAC` GOST arm is kept verbatim -- tag length through
+  `EVP_CTRL_AEAD_TLS1_AAD`, the tag read from the input's tail on decrypt and appended on encrypt,
+  and the `mac_len` added to the maximum output length -- because that is what makes a
+  MAC-carrying PBE cipher's buffer the authority's length.
+* **`crypto/pkcs12/p12_p8d.c` -> `src/pkcs12/p12_p8d.rs`, whole.** `PKCS8_decrypt_ex` and
+  `PKCS8_decrypt`: `X509_SIG_get0` borrows the `X509_SIG`'s algorithm and octets and
+  `PKCS12_item_decrypt_d2i_ex` decodes the `PKCS8_PRIV_KEY_INFO` with `zbuf` set.
+* **`crypto/asn1/p8_pkey.c` completed.** The three `PKCS8_pkey_add1_attr` spellings are now one
+  call each to the landed `x509_att` family, so the unit is **11 of 11** exports. This is the
+  item D349 measured and D367 confirms, and the recovered partial's item half
+  (`PKCS8_PRIV_KEY_INFO_it`/`_new`/`_free`/`d2i_`/`i2d_`/`PKCS8_pkey_get0_attrs`) is the other
+  half of the same completion.
+* **`crypto/evp/evp_pkey.c` -> `src/evp/evp_pkey.rs`, one internal.** `evp_pkcs82pkey_legacy`
+  (`:30-70`): decode the algorithm OID with `PKCS8_pkey_get0`, resolve it through
+  `EVP_PKEY_set_type` -> `standard_methods[]`, and run `priv_decode_ex` or `priv_decode`. The
+  unit's `EVP_PKCS82PKEY*`/`EVP_PKEY2PKCS8` exports are Phase 10's and are **not** landed.
+* **`crypto/asn1/d2i_pr.c` -> `src/asn1/d2i_pr.rs`, one internal.**
+  `ossl_d2i_PrivateKey_legacy` (`:101-164`): the type-specific `old_priv_decode` first, the
+  `private_keyinfo` fallback through `evp_pkcs82pkey_legacy` second, with the
+  `ERR_set_mark`/`_pop_to_mark`/`_clear_last_mark` discipline the three exits carry. The six
+  `d2i_PrivateKey*`/`d2i_AutoPrivateKey*` exports are Phase 7's and are **not** landed.
+  `ENGINE_finish(ret->engine)` is omitted with its coordinate: ENGINE is Phase 13's and the
+  crate's keys never hold one, the same collapse `src/evp/pkey.rs` records for `EVP_PKEY_free`.
+
+**What is withheld, with its coordinate, and why the six rows do not close.** Two of D367's
+three named legacy-downgrade units and one whole Phase-7 unit remain, and each is a whole layer
+rather than a function:
+
+* `ossl_d2i_PUBKEY_legacy` (`crypto/x509/x_pubkey.c:535`) is `d2i_PUBKEY_int(..., 1,
+  d2i_X509_PUBKEY)`, whose closure is the `X509_PUBKEY` **object layer** (`X509_PUBKEY_new`/
+  `_free`/`_get`), the `X509_PUBKEY_INTERNAL` item's decoder and `x509_pubkey_decode`, which
+  reads `pkey->ameth->pub_decode` on the legacy half and `OSSL_DECODER` on the provider half.
+  D349 withheld that layer as `owned_by_a_later_stratum` and **this entry does not narrow it**:
+  the sixteen names in `forensics/prerequisites.json`'s `src/x509/x_pubkey.rs` row are unchanged,
+  and the row's direction-B set stays exact.
+* `crypto/pem/pem_pkey.c`'s write half reaches `PEM_write_bio_PKCS8PrivateKey`
+  (`crypto/pem/pem_pk8.c`) and the `OSSL_ENCODER_CTX_*` write path, neither landed. The read half
+  (`pem_read_bio_key`, `pem_read_bio_key_decoder`, `pem_read_bio_key_legacy`, the ten
+  `PEM_read_*` exports) is transcribable but is **not** landed here, because its last missing
+  callee is exactly `ossl_d2i_PUBKEY_legacy` above -- `pem_read_bio_key_legacy` calls it on the
+  public-key-only arm (`crypto/pem/pem_pkey.c:186`), and the unit cannot be split along a
+  different line: `pem_read_bio_key`'s body calls `pem_read_bio_key_legacy`.
+
+So the six `PEM_read[_bio]_{RSA,DSA,EC}PrivateKey` rows are **still open**. Landing them needs
+`ossl_d2i_PUBKEY_legacy` and `pem_pkey.c`'s read half, in that order; neither is in this entry.
+
+**The two raising units join `COVERED_FILES` and the divergence gate gains one row.**
+`crypto/pkcs12/p12_decr.c` (stem `PKCS12`, thirteen sites) and `crypto/x509/x509_att.c` (stem
+`X509_ATT`, twenty-six sites) are raising units the crate now transcribes whole, so
+`gen_err_raise_sites.py` scans them and `src/runtime/err_sites.rs` carries their coordinates;
+`crypto/pkcs12/p12_p8d.c` raises nothing and is deliberately absent, the reasoning `mdc2_prov.c`
+is named under. The resolver's include set gains `<openssl/pkcs12err.h>` for the four
+`PKCS12_R_*` reasons. `err-raise-sites.json` reads **3203** sites over **286** covered files,
+**zero unattributed**. `src/x509/x_attrib.rs`'s one withheld internal,
+`ossl_print_attribute_value` (`crypto/x509/x_attrib.c:76-249`), is now a `divergence` row: its
+body reaches `d2i_X509_NAME`/`X509_NAME_print_ex`/`X509_NAME_free`, the X.509 name layer's and
+unlanded, and no landed caller reaches it -- so the gate reports it as a decision rather than as
+`unwired_function_in_the_current_stratum`. The gate is back to **zero findings**: **13**
+divergence rows / **59** names, **9** deferrals, `blocking_dependencies` **9**,
+`sealed_stratum_census` **55**.
+
+**The court: `RT-ASN1-TEMPLATE` grows 153 -> 190 observations, zero residual.** A
+`part_x509_att()` arm drives the landed exports in `courts/phase5/rt_asn1_template_probe.c` --
+the D349/D348 house for these types: an attribute built by `X509_ATTRIBUTE_create_by_NID` is
+pushed onto an initially-NULL stack, a repeated OID is refused and its queue drained
+(`X509_R_DUPLICATE_ATTRIBUTE`), the type-checked `get0_data`/`get0_type` answer and their wrong-
+type and out-of-range refusals are read, `X509at_delete_attr` removes and then refuses an empty
+stack, and the three `PKCS8_pkey_add1_attr*` spellings fill a built `PKCS8_PRIV_KEY_INFO`'s
+`attributes` column and refuse the duplicate. No address is printed; every line is a return code,
+a count, a NID, a selector, an integer, a length, or a drained reason. **The `crypto/pkcs12/`
+exports are landed but not differentially courted**, and the debt is named rather than hidden:
+the PBE rows a PKCS#8 secret-key spelling uses are the six `PKCS12_PBE_keyivgen` rows, which are
+`None` in the crate's `builtin_pbe[]` table (`docs/SECURITY_DIVERGENCE_POLICY.md`
+`D-PBE-PKCS12-KEYGEN-1`), and the non-PKCS12 rows a hand-built `X509_ALGOR` could select depend
+on the legacy cipher method NIDs `RT-EVP-PBE` already registers as a divergence
+with `D-EVP_CIPHER_LEGACY_NID-1`); a differential arm here would therefore record a registered
+divergence rather than agreement, so it waits on `crypto/pkcs12/p12_crpt.c`.
+
+**What this does not claim.** `forensics/phase8-obligations.json` still reads
+`complete: false` with **6** names open: implemented **780**, deferred **0**, owned **786** --
+unchanged from D362 through D367. `forensics/phase7-obligations.json` still reads **733**
+implemented / **217** deferred / **0** open of **950** owned, `complete: true`. The regenerated
+counts: `implemented-surface.json`'s `libcrypto` implemented moves **2896 -> 2926** (the thirty
+exports landed here) and its `internal_symbols.c_style` **344 -> 351** (the seven C-identifier
+internals the new units define: the five `ossl_x509at_*`, `evp_pkcs82pkey_legacy` and
+`ossl_d2i_PrivateKey_legacy`); `transcription-edges.json` moves to **326** modules over **295**
+units, with `src/x509/x509_att.rs` at **24/24**, `src/pkcs12/p12_decr.rs` at **6/6**,
+`src/pkcs12/p12_p8d.rs` at **2/2** and `src/asn1/p8_pkey.rs` at **11/11**;
+`court_coverage.py`'s `not_yet_begun` grows **162 -> 212** -- the twenty exports the recovered
+`x_sig`/`x_attrib`/`p8_pkey` slice added and the thirty this entry adds, every one of them a
+Phase 10 or Phase 11 export whose stratum has no ledger. The court total stays **94**, and the
+observation total moves **37221 -> 37258** -- the **37** observations `RT-ASN1-TEMPLATE` grew.
+
+**Two limits this entry does not close, and both are the same class.** The four
+`crypto/ec/ecx_meth.c` rows remain withheld from both `standard_methods[]` tables under
+`D-PKEY-AMETH-3`, unchanged; and the Phase 9/10/11/13 exports the crate has moved into
+`not_yet_begun` -- including every export this entry lands -- are `IMPLEMENTED` in
+`docs/PARITY_MODEL.md` terms and no more. `docs/PHASE-8-SUBPHASES.md` §4's two anchored clauses
+are untouched because the Phase 8 ledger did not move, so the 8.9 row's note is extended rather
+than rewritten: the readers' last two prerequisites are `ossl_d2i_PUBKEY_legacy` and
+`pem_pkey.c`'s read half, and the row says so.

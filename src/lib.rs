@@ -134,6 +134,10 @@ pub mod encoder_meth;
 pub mod encoder_pkey;
 pub mod passphrase;
 pub mod pem;
+// Phase 10's `crypto/pkcs12/` substream (D368): `p12_decr.c`'s PBE buffer crypt and the
+// ASN.1 decrypt/encrypt pair over it, and `p12_p8d.c`'s two `PKCS8_decrypt` spellings. It
+// lands early because `PKCS8_decrypt` is the PKCS#8 reader `pem_read_bio_key_legacy` reaches.
+pub mod pkcs12;
 pub mod property;
 pub mod provider;
 // Phase 8's `crypto/quic_vlint.c`: the QUIC variable-length integer codec, transcribed whole

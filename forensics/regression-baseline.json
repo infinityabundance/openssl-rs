@@ -79,7 +79,7 @@
       "verdict": "pass"
     },
     "RT-ASN1-TEMPLATE": {
-      "observations": 153,
+      "observations": 190,
       "verdict": "pass"
     },
     "RT-ASN1-TIME": {
@@ -397,7 +397,7 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 2876,
+    "libcrypto": 2926,
     "libssl": 0
   },
   "open_obligations": {
@@ -444,9 +444,9 @@
   },
   "prerequisites": {
     "blocking_dependencies": 9,
-    "divergence_names_covered": 58,
+    "divergence_names_covered": 59,
     "findings": 0,
-    "language_census": 4601,
+    "language_census": 4707,
     "sealed_census": 55
   },
   "provider_implemented": [

@@ -800,6 +800,20 @@ COVERED_FILES = [
     # Phase 10's `crypto/encode_decode/decoder_pkey.c` -- the decoder cache, the pkey half that
     # `OSSL_DECODER_CTX_new_for_pkey` builds, and the four passphrase setters.
     ("crypto/encode_decode/decoder_pkey.c", "DECODER_PKEY"),
+    # Phase 10 staging: `crypto/pkcs12/p12_decr.c`, the PBE buffer crypt and the ASN.1 decrypt/
+    # encrypt pair `PKCS8_decrypt` reads an `EncryptedPrivateKeyInfo` through (D368). Its
+    # thirteen sites are `ERR_LIB_PKCS12` with `ERR_R_EVP_LIB`, `ERR_R_PASSED_NULL_PARAMETER`,
+    # `ERR_R_INTERNAL_ERROR` and the four `PKCS12_R_*` reasons, so covering the unit gives the
+    # decrypt path its coordinates rather than a hand-written reconstruction. `p12_p8d.c` is
+    # **not** covered: `PKCS8_decrypt`/`PKCS8_decrypt_ex` raise nothing, so an entry for it would
+    # read as coverage that does not exist -- the reasoning `mdc2_prov.c` is named under above.
+    ("crypto/pkcs12/p12_decr.c", "PKCS12"),
+    # Phase 11 staging: `crypto/x509/x509_att.c`, the `X509at_add1_attr*` family
+    # `PKCS8_pkey_add1_attr*` is one call each to (D368). Its twenty-six sites are
+    # `ERR_LIB_X509`, mostly `ERR_R_PASSED_NULL_PARAMETER`, `ERR_R_CRYPTO_LIB` and
+    # `ERR_R_ASN1_LIB` with the four `X509_R_*` reasons the duplicate/unknown-name/wrong-type
+    # refusals carry.
+    ("crypto/x509/x509_att.c", "X509_ATT"),
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`
@@ -1344,6 +1358,10 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
     # whose "no decoders were found" refusal is the message D364 transcribes.
     # `decodererr.h` is an installed header, so this is `ecerr.h`'s case again.
     "#include <openssl/decodererr.h>",
+    # Phase 10 staging: `PKCS12_R_*` for `crypto/pkcs12/p12_decr.c`, whose decrypt/encrypt
+    # refusals D368 transcribes. `pkcs12err.h` is an installed header, so this is `ecerr.h`'s
+    # case again.
+    "#include <openssl/pkcs12err.h>",
         # `PROP_R_*` is the first reason family this table needs that lives in an
         # *internal* header rather than an installed one: `internal/propertyerr.h`,
         # which the property grammar raises from. It is resolveable because the

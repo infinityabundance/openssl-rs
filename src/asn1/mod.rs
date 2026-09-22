@@ -56,6 +56,7 @@ pub mod d2i;
 // Phase 8.8's `d2i_KeyParams`/`d2i_KeyParams_bio` (`crypto/asn1/d2i_param.c`) and `d2i_PublicKey`
 // (`crypto/asn1/d2i_pu.c`). Each is its own authority unit and therefore its own module.
 pub mod d2i_param;
+pub mod d2i_pr;
 pub mod d2i_pu;
 pub mod der;
 pub mod evp_asn1;
@@ -65,8 +66,8 @@ pub mod items;
 pub mod layout;
 pub mod new;
 // Phase 8.8's `crypto/asn1/p8_pkey.c` pair, `PKCS8_pkey_set0`/`PKCS8_pkey_get0`, and the
-// `PKCS8_PRIV_KEY_INFO` layout (D349). Partial: the item template waits on Phase 11's
-// `X509_ATTRIBUTE_it`, and the `add1_attr` family on `crypto/x509/x509_att.c`.
+// `PKCS8_PRIV_KEY_INFO` layout (D349). D368 completes the unit's item half; the `add1_attr`
+// family lands with `crypto/x509/x509_att.c`.
 pub mod p8_pkey;
 pub mod prim;
 pub mod string;
@@ -80,3 +81,6 @@ pub mod x_algor;
 pub mod x_bignum;
 pub mod x_int64;
 pub mod x_long;
+// Phase 10's `crypto/asn1/x_sig.c` -- the `X509_SIG` (EncryptedPrivateKeyInfo) family, landed
+// early because `PKCS8_decrypt` reads it through `X509_SIG_get0` (D368).
+pub mod x_sig;

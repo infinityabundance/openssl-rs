@@ -31672,6 +31672,396 @@ pub(crate) const DECODER_PKEY_946: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `PKCS12_pbe_crypt_ex` at `crypto/pkcs12/p12_decr.c:32` (ERR_R_EVP_LIB).
+pub(crate) const PKCS12_32: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 32,
+    func: c"PKCS12_pbe_crypt_ex",
+    lib: 35,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_pbe_crypt_ex` at `crypto/pkcs12/p12_decr.c:50` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PKCS12_50: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 50,
+    func: c"PKCS12_pbe_crypt_ex",
+    lib: 35,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_pbe_crypt_ex` at `crypto/pkcs12/p12_decr.c:60` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PKCS12_60: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 60,
+    func: c"PKCS12_pbe_crypt_ex",
+    lib: 35,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_pbe_crypt_ex` at `crypto/pkcs12/p12_decr.c:68` (PKCS12_R_UNSUPPORTED_PKCS12_MODE).
+pub(crate) const PKCS12_68: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 68,
+    func: c"PKCS12_pbe_crypt_ex",
+    lib: 35,
+    reason: 119,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_pbe_crypt_ex` at `crypto/pkcs12/p12_decr.c:75` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PKCS12_75: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 75,
+    func: c"PKCS12_pbe_crypt_ex",
+    lib: 35,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_pbe_crypt_ex` at `crypto/pkcs12/p12_decr.c:87` (ERR_R_EVP_LIB).
+pub(crate) const PKCS12_87: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 87,
+    func: c"PKCS12_pbe_crypt_ex",
+    lib: 35,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_pbe_crypt_ex` at `crypto/pkcs12/p12_decr.c:95` (PKCS12_R_PKCS12_CIPHERFINAL_ERROR).
+pub(crate) const PKCS12_95: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 95,
+    func: c"PKCS12_pbe_crypt_ex",
+    lib: 35,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_pbe_crypt_ex` at `crypto/pkcs12/p12_decr.c:110` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PKCS12_110: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 110,
+    func: c"PKCS12_pbe_crypt_ex",
+    lib: 35,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_item_decrypt_d2i_ex` at `crypto/pkcs12/p12_decr.c:151` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PKCS12_151: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 151,
+    func: c"PKCS12_item_decrypt_d2i_ex",
+    lib: 35,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_item_decrypt_d2i_ex` at `crypto/pkcs12/p12_decr.c:170` (PKCS12_R_DECODE_ERROR).
+pub(crate) const PKCS12_170: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 170,
+    func: c"PKCS12_item_decrypt_d2i_ex",
+    lib: 35,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_item_i2d_encrypt_ex` at `crypto/pkcs12/p12_decr.c:200` (ERR_R_ASN1_LIB).
+pub(crate) const PKCS12_200: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 200,
+    func: c"PKCS12_item_i2d_encrypt_ex",
+    lib: 35,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_item_i2d_encrypt_ex` at `crypto/pkcs12/p12_decr.c:205` (PKCS12_R_ENCODE_ERROR).
+pub(crate) const PKCS12_205: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 205,
+    func: c"PKCS12_item_i2d_encrypt_ex",
+    lib: 35,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_item_i2d_encrypt_ex` at `crypto/pkcs12/p12_decr.c:210` (PKCS12_R_ENCRYPT_ERROR).
+pub(crate) const PKCS12_210: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 210,
+    func: c"PKCS12_item_i2d_encrypt_ex",
+    lib: 35,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `X509at_get_attr` at `crypto/x509/x509_att.c:59` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ATT_59: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 59,
+    func: c"X509at_get_attr",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509at_get_attr` at `crypto/x509/x509_att.c:63` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const X509_ATT_63: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 63,
+    func: c"X509at_get_attr",
+    lib: 11,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `X509at_delete_attr` at `crypto/x509/x509_att.c:72` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ATT_72: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 72,
+    func: c"X509at_delete_attr",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509at_delete_attr` at `crypto/x509/x509_att.c:76` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const X509_ATT_76: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 76,
+    func: c"X509at_delete_attr",
+    lib: 11,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `ossl_x509at_add1_attr` at `crypto/x509/x509_att.c:89` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ATT_89: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 89,
+    func: c"ossl_x509at_add1_attr",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_x509at_add1_attr` at `crypto/x509/x509_att.c:95` (ERR_R_CRYPTO_LIB).
+pub(crate) const X509_ATT_95: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 95,
+    func: c"ossl_x509at_add1_attr",
+    lib: 11,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ossl_x509at_add1_attr` at `crypto/x509/x509_att.c:105` (ERR_R_CRYPTO_LIB).
+pub(crate) const X509_ATT_105: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 105,
+    func: c"ossl_x509at_add1_attr",
+    lib: 11,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `X509at_add1_attr` at `crypto/x509/x509_att.c:122` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ATT_122: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 122,
+    func: c"X509at_add1_attr",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509at_add1_attr` at `crypto/x509/x509_att.c:126` (X509_R_DUPLICATE_ATTRIBUTE).
+pub(crate) const X509_ATT_126: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 126,
+    func: c"X509at_add1_attr",
+    lib: 11,
+    reason: 140,
+    dynamic_reason: false,
+};
+
+/// `X509at_add1_attr_by_OBJ` at `crypto/x509/x509_att.c:159` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ATT_159: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 159,
+    func: c"X509at_add1_attr_by_OBJ",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509at_add1_attr_by_OBJ` at `crypto/x509/x509_att.c:163` (X509_R_DUPLICATE_ATTRIBUTE).
+pub(crate) const X509_ATT_163: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 163,
+    func: c"X509at_add1_attr_by_OBJ",
+    lib: 11,
+    reason: 140,
+    dynamic_reason: false,
+};
+
+/// `X509at_add1_attr_by_NID` at `crypto/x509/x509_att.c:194` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ATT_194: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 194,
+    func: c"X509at_add1_attr_by_NID",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509at_add1_attr_by_NID` at `crypto/x509/x509_att.c:198` (X509_R_DUPLICATE_ATTRIBUTE).
+pub(crate) const X509_ATT_198: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 198,
+    func: c"X509at_add1_attr_by_NID",
+    lib: 11,
+    reason: 140,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_create_by_NID` at `crypto/x509/x509_att.c:279` (X509_R_UNKNOWN_NID).
+pub(crate) const X509_ATT_279: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 279,
+    func: c"X509_ATTRIBUTE_create_by_NID",
+    lib: 11,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_create_by_OBJ` at `crypto/x509/x509_att.c:297` (ERR_R_ASN1_LIB).
+pub(crate) const X509_ATT_297: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 297,
+    func: c"X509_ATTRIBUTE_create_by_OBJ",
+    lib: 11,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_create_by_txt` at `crypto/x509/x509_att.c:327` (X509_R_INVALID_FIELD_NAME).
+pub(crate) const X509_ATT_327: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 327,
+    func: c"X509_ATTRIBUTE_create_by_txt",
+    lib: 11,
+    reason: 119,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_set1_object` at `crypto/x509/x509_att.c:339` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ATT_339: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 339,
+    func: c"X509_ATTRIBUTE_set1_object",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_set1_data` at `crypto/x509/x509_att.c:355` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ATT_355: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 355,
+    func: c"X509_ATTRIBUTE_set1_data",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_set1_data` at `crypto/x509/x509_att.c:362` (ERR_R_ASN1_LIB).
+pub(crate) const X509_ATT_362: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 362,
+    func: c"X509_ATTRIBUTE_set1_data",
+    lib: 11,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_set1_data` at `crypto/x509/x509_att.c:369` (ERR_R_ASN1_LIB).
+pub(crate) const X509_ATT_369: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 369,
+    func: c"X509_ATTRIBUTE_set1_data",
+    lib: 11,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_set1_data` at `crypto/x509/x509_att.c:384` (ERR_R_ASN1_LIB).
+pub(crate) const X509_ATT_384: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 384,
+    func: c"X509_ATTRIBUTE_set1_data",
+    lib: 11,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_set1_data` at `crypto/x509/x509_att.c:389` (ERR_R_ASN1_LIB).
+pub(crate) const X509_ATT_389: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 389,
+    func: c"X509_ATTRIBUTE_set1_data",
+    lib: 11,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_set1_data` at `crypto/x509/x509_att.c:397` (ERR_R_CRYPTO_LIB).
+pub(crate) const X509_ATT_397: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 397,
+    func: c"X509_ATTRIBUTE_set1_data",
+    lib: 11,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_get0_object` at `crypto/x509/x509_att.c:417` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ATT_417: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 417,
+    func: c"X509_ATTRIBUTE_get0_object",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_get0_data` at `crypto/x509/x509_att.c:433` (X509_R_WRONG_TYPE).
+pub(crate) const X509_ATT_433: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 433,
+    func: c"X509_ATTRIBUTE_get0_data",
+    lib: 11,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_get0_type` at `crypto/x509/x509_att.c:442` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ATT_442: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 442,
+    func: c"X509_ATTRIBUTE_get0_type",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -34847,4 +35237,43 @@ pub(crate) static ALL: &[ErrSite] = &[
     DECODER_PKEY_901,
     DECODER_PKEY_937,
     DECODER_PKEY_946,
+    PKCS12_32,
+    PKCS12_50,
+    PKCS12_60,
+    PKCS12_68,
+    PKCS12_75,
+    PKCS12_87,
+    PKCS12_95,
+    PKCS12_110,
+    PKCS12_151,
+    PKCS12_170,
+    PKCS12_200,
+    PKCS12_205,
+    PKCS12_210,
+    X509_ATT_59,
+    X509_ATT_63,
+    X509_ATT_72,
+    X509_ATT_76,
+    X509_ATT_89,
+    X509_ATT_95,
+    X509_ATT_105,
+    X509_ATT_122,
+    X509_ATT_126,
+    X509_ATT_159,
+    X509_ATT_163,
+    X509_ATT_194,
+    X509_ATT_198,
+    X509_ATT_279,
+    X509_ATT_297,
+    X509_ATT_327,
+    X509_ATT_339,
+    X509_ATT_355,
+    X509_ATT_362,
+    X509_ATT_369,
+    X509_ATT_384,
+    X509_ATT_389,
+    X509_ATT_397,
+    X509_ATT_417,
+    X509_ATT_433,
+    X509_ATT_442,
 ];

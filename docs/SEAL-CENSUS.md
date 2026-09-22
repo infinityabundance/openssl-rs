@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 2876 | 3020 |
+| libcrypto | 5896 | 2926 | 2970 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **2876** | **3623** |
+| **total** | **6499** | **2926** | **3573** |
 
 ## Ownership atlas, by stratum
 
@@ -161,13 +161,13 @@ Hand-offs received and discharged:
 
 * from phase 4: 4 symbol(s) — `BIO_asn1_get_prefix`, `BIO_asn1_get_suffix`, `BIO_asn1_set_prefix`, `BIO_asn1_set_suffix`
 
-Courts: `all pass`, 10 court(s), **10676** authority observation(s) over 10 transcript court(s).
+Courts: `all pass`, 10 court(s), **10713** authority observation(s) over 10 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
 | RT-BN | `pass` | 1510 |
 | RT-ASN1 | `pass` | 1403 |
-| RT-ASN1-TEMPLATE | `pass` | 153 |
+| RT-ASN1-TEMPLATE | `pass` | 190 |
 | RT-ASN1-TIME | `pass` | 1071 |
 | RT-ASN1-STR | `pass` | 5831 |
 | RT-BIO-ASN1 | `pass` | 114 |
