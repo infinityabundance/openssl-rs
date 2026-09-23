@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 283,
+        "implemented": 286,
         "unmatched": 0
       },
       "9": {
@@ -58,8 +58,8 @@
         ]
       }
     ],
-    "directly_courted": 288,
-    "implemented_rows": 288,
+    "directly_courted": 291,
+    "implemented_rows": 291,
     "rows": [
       {
         "algorithm_names": "RSA",
@@ -2554,6 +2554,54 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "ML-KEM-1024",
+        "aliases": [
+          "ML-KEM-1024",
+          "MLKEM1024",
+          "id-alg-ml-kem-1024",
+          "2.16.840.1.101.3.4.4.3"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEM",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ML-KEM-512",
+        "aliases": [
+          "ML-KEM-512",
+          "MLKEM512",
+          "id-alg-ml-kem-512",
+          "2.16.840.1.101.3.4.4.1"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEM",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ML-KEM-768",
+        "aliases": [
+          "ML-KEM-768",
+          "MLKEM768",
+          "id-alg-ml-kem-768",
+          "2.16.840.1.101.3.4.4.2"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEM",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "RSA",
         "aliases": [
           "RSA",
@@ -4251,7 +4299,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "d9c3ac7063eef116f313fe31ae243c578e284b650662b45f2a01bb60a8995c26"
+      "sha256": "4e87feb617f284ee3f183433c044971a6fc88e17a9a4f77d715040eff85a742b"
     },
     {
       "name": "court:RT-DIGEST:rt_digest_probe.c",
@@ -4271,7 +4319,7 @@
     {
       "name": "court:RT-KEYMGMT:rt_keymgmt_probe.c",
       "path": "courts/phase8/rt_keymgmt_probe.c",
-      "sha256": "1d53ac62bcc0069f7ae0a97c07632bec5cfe6c8ee6ba1f412d26193631760a11"
+      "sha256": "48b2a110beeb00ce4dda6d9a32c16a1beead03cf7d376902ac637bb8b456f6c7"
     },
     {
       "name": "court:RT-KEYMGMT:slh_dsa_probe.h",

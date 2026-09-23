@@ -303,7 +303,7 @@
       "verdict": "pass"
     },
     "RT-KEYMGMT": {
-      "observations": 280,
+      "observations": 299,
       "verdict": "pass"
     },
     "RT-LHASH": {
@@ -466,7 +466,7 @@
     "blocking_dependencies": 9,
     "divergence_names_covered": 43,
     "findings": 0,
-    "language_census": 4911,
+    "language_census": 4929,
     "sealed_census": 50
   },
   "provider_implemented": [
@@ -648,6 +648,9 @@
     "default/OSSL_OP_KDF/TLS13-KDF",
     "default/OSSL_OP_KDF/X942KDF-ASN1",
     "default/OSSL_OP_KDF/X963KDF",
+    "default/OSSL_OP_KEM/ML-KEM-1024",
+    "default/OSSL_OP_KEM/ML-KEM-512",
+    "default/OSSL_OP_KEM/ML-KEM-768",
     "default/OSSL_OP_KEM/RSA",
     "default/OSSL_OP_KEM/X25519",
     "default/OSSL_OP_KEM/X448",
@@ -766,14 +769,14 @@
       "8": 685,
       "9": 675
     },
-    "implemented": 288,
+    "implemented": 291,
     "open_by_phase": {
       "10": 636,
       "13": 39,
-      "8": 23,
+      "8": 20,
       "9": 10
     },
     "total": 996,
-    "unimplemented": 708
+    "unimplemented": 705
   }
 }

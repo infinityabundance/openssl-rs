@@ -1,0 +1,53 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "arrays": [
+      {
+        "definition": "[pow(17, bitreverse(i), p) for i in range(128)]",
+        "entries": 128,
+        "first_line": 261,
+        "matches_authority": true,
+        "name": "kNTTRoots",
+        "ordering": "natural",
+        "rust_name": "KNTT_ROOTS"
+      },
+      {
+        "definition": "[pow(17, -bitreverse(i), p) for i in range(128)]",
+        "entries": 128,
+        "first_line": 398,
+        "matches_authority": true,
+        "name": "kInverseNTTRoots",
+        "ordering": "use-order",
+        "rust_name": "KINVERSE_NTT_ROOTS"
+      },
+      {
+        "definition": "[pow(17, 2*bitreverse(i) + 1, p) for i in range(128)]",
+        "entries": 128,
+        "first_line": 534,
+        "matches_authority": true,
+        "name": "kModRoots",
+        "ordering": "natural",
+        "rust_name": "KMOD_ROOTS"
+      }
+    ],
+    "claim": "Every entry of `ml_kem.c`'s three 128-entry NTT root tables is re-derived from the definition the file's own comments state and agrees with the literal the authority emits; nothing is transcribed.",
+    "degree": 256,
+    "out": "src/ml_kem/tables.rs",
+    "prime": 3329
+  },
+  "generator": "forensics/tools/gen_ml_kem_tables.py",
+  "inputs": [
+    {
+      "name": "source",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/ml_kem/ml_kem.c",
+      "sha256": "cbf1a13f41a89ad6fdeaf23afdbe9dbb8ba510af0fca55d14b57836199879228"
+    },
+    {
+      "name": "header",
+      "path": "forensics/authorities/src/openssl-3.6.4/include/crypto/ml_kem.h",
+      "sha256": "1211a6fcb2b75a5787b6501a353a86cd0e033541937c9b2e0891fae65c9771e0"
+    }
+  ],
+  "kind": "ml-kem-tables",
+  "schema": "openssl-rs/atlas/ml-kem-tables/v1"
+}

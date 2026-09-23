@@ -62,6 +62,14 @@ python3 forensics/tools/gen_curve25519_tables.py
 # generators above.
 python3 forensics/tools/gen_curve448_tables.py
 
+# Phase 8's `crypto/ml_kem/ml_kem.c` NTT tables (D401): `kNTTRoots`, `kInverseNTTRoots` and
+# `kModRoots`, 384 entries the NTT and its inverse read. It re-derives every entry in Python from
+# the definition comments the authority's own source carries (`pow(17, bitreverse(i), p)` and its
+# two variants) and checks each against the authority's literal before writing
+# `src/ml_kem/tables.rs`, whose renderer carries `#[rustfmt::skip]` so the formatter pass below
+# cannot move a byte. Runs **before** `cargo fmt`, like the five table generators above.
+python3 forensics/tools/gen_ml_kem_tables.py
+
 echo "== fmt =="
 cargo fmt --all
 

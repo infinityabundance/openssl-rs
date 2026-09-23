@@ -112,6 +112,10 @@ pub mod ffi;
 pub mod hpke;
 pub mod idea;
 pub mod mac;
+// Phase 8's `crypto/ml_kem/` (FIPS 203): the single translation unit the six keymgmt and KEM rows
+// are built on. The module is new here; no provider row is published by it yet, so it is
+// `pub(crate)` like `crypto/slh_dsa/` was, and reached only by its own tests.
+pub(crate) mod ml_kem;
 pub mod modes;
 pub mod params;
 // Phase 8.7's `crypto/param_build_set.c`: the two-way key-management writers a provider's

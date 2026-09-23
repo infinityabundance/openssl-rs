@@ -16,19 +16,21 @@ use core::ptr;
 
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::ecx_kem::ECX_ASYM_KEM_FUNCTIONS;
+use crate::provider::ml_kem_kem::ML_KEM_ASYM_KEM_FUNCTIONS;
 use crate::provider::rsa_kem::RSA_ASYM_KEM_FUNCTIONS;
 
 /// `static const OSSL_ALGORITHM deflt_asym_kem[]` — `providers/defltprov.c:526-549`, **the rows
 /// this module has landed**, in the authority's order. The `RSA` row is the authority's first; the
-/// `EC` row and the four `ML-KEM`/`mlx` groups that follow are its later ones and are unlanded. The
-/// two ECX rows are the authority's second group.
+/// `EC` row sits between the two ECX rows and the three ML-KEM rows and is unlanded; the two
+/// `mlx` hybrid rows that follow the ML-KEM ones are unlanded too. The two ECX rows are the
+/// authority's second group and the three ML-KEM rows its fourth.
 ///
 /// **`#[rustfmt::skip]` is load-bearing, not cosmetic** (D392): `gen_provider_algorithms.py`'s row
 /// reader anchors a row on `algorithm_names: c"…"` and `implementation: …as_ptr()` in one another's
 /// neighbourhood, and the `RSA` alias sequence is long enough that a rustfmt pass could move the
 /// `c"…"` onto its own line.
 #[rustfmt::skip]
-pub(crate) static DEFLT_ASYM_KEM: [OsslAlgorithm; 4] = [
+pub(crate) static DEFLT_ASYM_KEM: [OsslAlgorithm; 7] = [
     OsslAlgorithm {
         // `PROV_NAMES_RSA` (`defltprov.c:527`).
         algorithm_names: c"RSA:rsaEncryption:1.2.840.113549.1.1.1".as_ptr(),
@@ -48,6 +50,27 @@ pub(crate) static DEFLT_ASYM_KEM: [OsslAlgorithm; 4] = [
         algorithm_names: c"X448:1.3.101.111".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
         implementation: ECX_ASYM_KEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ML_KEM_512` (`names.h:415`).
+        algorithm_names: c"ML-KEM-512:MLKEM512:id-alg-ml-kem-512:2.16.840.1.101.3.4.4.1".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ML_KEM_ASYM_KEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ML_KEM_768` (`names.h:417`).
+        algorithm_names: c"ML-KEM-768:MLKEM768:id-alg-ml-kem-768:2.16.840.1.101.3.4.4.2".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ML_KEM_ASYM_KEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ML_KEM_1024` (`names.h:419`).
+        algorithm_names: c"ML-KEM-1024:MLKEM1024:id-alg-ml-kem-1024:2.16.840.1.101.3.4.4.3".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ML_KEM_ASYM_KEM_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {

@@ -47,6 +47,12 @@
  *      parsed key, then `EVP_PKEY_encapsulate_init` and `EVP_PKEY_decapsulate_init`. The first
  *      succeeds on a public-only key and the second *refuses* it (`ecx_key_check` wants a private
  *      key), which is the row's own answer rather than a missing arm.
+ *   6b. **The three ML-KEM `OSSL_OP_KEM`-only rows (D401).** `EVP_KEM_fetch` over `ML-KEM-512`,
+ *      `ML-KEM-768` and `ML-KEM-1024` and their `MLKEM###` aliases, `EVP_KEM_is_a` over each
+ *      row's full, short and `id-alg-ml-kem-###` aliases plus one other row's name, and the
+ *      absent-name refusal. `EVP_KEM_fetch` reaches the KEM row through `deflt_query` rather
+ *      than through a keymgmt row, which is what makes the row observable while the ML-KEM key
+ *      type's own keymgmt unit is still unlanded; the alias set is the authority's own four.
  *   7. **The four legacy-MAC imports.** `HMAC`, `SIPHASH`, `POLY1305` and `CMAC` each import a
  *      fixed 16-byte private key through their own keymgmt row, and the no-key refusal is the
  *      fifth observation per type. `CMAC`'s import is the one that resolves a cipher through
@@ -337,6 +343,54 @@ static void arm_kem_fetch(void)
 
         kv_int("kem.absent.ctx", ctx != NULL);
         EVP_PKEY_CTX_free(ctx);
+    }
+}
+
+/* The three landed OSSL_OP_KEM-only ML-KEM rows (D401). `EVP_KEM_fetch` reaches the KEM row
+ * itself -- the `deflt_query` arm D401 added -- rather than through a keymgmt row, which is what
+ * makes the fetch observable while the ML-KEM key type's own keymgmt unit is still unlanded. The
+ * authority registers the same four aliases per row (`providers/implementations/include/prov/names.h`),
+ * so every observation here is the same on both sides. */
+static const char *ml_kem_rows[] = { "ML-KEM-512", "ML-KEM-768", "ML-KEM-1024" };
+static const char *ml_kem_short[] = { "MLKEM512", "MLKEM768", "MLKEM1024" };
+static const char *ml_kem_oid[] = { "id-alg-ml-kem-512", "id-alg-ml-kem-768", "id-alg-ml-kem-1024" };
+
+static void arm_ml_kem_kem_fetch(void)
+{
+    size_t i;
+
+    for (i = 0; i < sizeof(ml_kem_rows) / sizeof(ml_kem_rows[0]); i++) {
+        char key[64];
+        EVP_KEM *kem = EVP_KEM_fetch(NULL, ml_kem_rows[i], NULL);
+
+        snprintf(key, sizeof(key), "mlkem.%s.fetch", ml_kem_rows[i]);
+        kv_int(key, kem != NULL);
+        if (kem != NULL) {
+            snprintf(key, sizeof(key), "mlkem.%s.is_a_full", ml_kem_rows[i]);
+            kv_int(key, EVP_KEM_is_a(kem, ml_kem_rows[i]));
+            snprintf(key, sizeof(key), "mlkem.%s.is_a_short", ml_kem_rows[i]);
+            kv_int(key, EVP_KEM_is_a(kem, ml_kem_short[i]));
+            snprintf(key, sizeof(key), "mlkem.%s.is_a_oid_name", ml_kem_rows[i]);
+            kv_int(key, EVP_KEM_is_a(kem, ml_kem_oid[i]));
+            /* A *different* row's name is not this row's alias. */
+            snprintf(key, sizeof(key), "mlkem.%s.is_a_other", ml_kem_rows[i]);
+            kv_int(key, EVP_KEM_is_a(kem, ml_kem_rows[(i + 1) % 3]));
+        }
+        EVP_KEM_free(kem);
+
+        /* The second alias reaches the same row. */
+        kem = EVP_KEM_fetch(NULL, ml_kem_short[i], NULL);
+        snprintf(key, sizeof(key), "mlkem.%s.alias_fetch", ml_kem_short[i]);
+        kv_int(key, kem != NULL);
+        EVP_KEM_free(kem);
+    }
+
+    /* And an absent name is refused, which is the row set's own boundary. */
+    {
+        EVP_KEM *kem = EVP_KEM_fetch(NULL, "NO-SUCH-KEM", NULL);
+
+        kv_int("mlkem.absent.fetch", kem != NULL);
+        EVP_KEM_free(kem);
     }
 }
 
@@ -636,6 +690,7 @@ int main(void)
     arm_rsa_dsa_import();
     arm_mac_import();
     arm_kem_fetch();
+    arm_ml_kem_kem_fetch();
     arm_slh_dsa_keymgmt();
     ERR_clear_error();
     return 0;
