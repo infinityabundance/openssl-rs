@@ -83,8 +83,8 @@
       "rows_judged": 82,
       "symbols_named_by_a_row": 110,
       "symbols_reached": 104,
-      "unit_records": 61,
-      "units_named_by_a_record": 63,
+      "unit_records": 62,
+      "units_named_by_a_record": 64,
       "units_named_by_a_row": 252,
       "units_reached": 230
     },
@@ -3128,13 +3128,11 @@
       },
       "crypto/thread/api.c": {
         "defines": [],
-        "recorded_by": null,
+        "recorded_by": "units:crypto/thread/api.c",
         "subphases": [
           "6.6e"
         ],
-        "transcribed_by": [
-          "src/context/thread_data.rs"
-        ]
+        "transcribed_by": []
       },
       "crypto/thread/internal.c": {
         "defines": [
@@ -3149,7 +3147,9 @@
         "subphases": [
           "6.6e"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/context/thread_data.rs"
+        ]
       },
       "crypto/threads_common.c": {
         "defines": [
@@ -3724,6 +3724,11 @@
         "crate_module": null,
         "owner_phase": null
       },
+      "crypto/thread/api.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/context/thread_data.rs",
+        "owner_phase": null
+      },
       "pkey_derive.c": {
         "class": "does_not_exist_in_this_authority",
         "crate_module": null,
@@ -3738,10 +3743,10 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 303
+      "transcribed_units": 304
     }
   },
-  "body_hash": "bafcf7a18e258befaf2bfd66b052b33c9bb3dd661d605fe1d9d6dba22d8246c3",
+  "body_hash": "0fb09fe879d82a829e37ea987c1be299105dac62fd2aacfa408d3553b8fcaa35",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -3752,12 +3757,12 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "ed05eeb34a0d39311fda51aff69d41ed4c83e5becce7ca74ab334cf4f6edda89"
+      "sha256": "176c9691ba202a986310656583481af4ffaeed77bff9184f5e90e2d48a161327"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "b61f5acd5998f629703682174a8f810d3e47bb9aee775f94cda7fce5e26179a0"
+      "sha256": "97e61efb45b0e1dff2f9955225bf15729b5f9e1509b05ede80820bb897787449"
     },
     {
       "name": "phase-state",
@@ -3767,7 +3772,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "3af46021add39c2ae4ffdb2524af3410d66ef4112fa3f36ed0cfde42a748472d"
+      "sha256": "e79ed3f40b7cbb93ab9970dfdd382b9b129eb83277feef305db32c1ab188a39c"
     },
     {
       "name": "source-manifest",

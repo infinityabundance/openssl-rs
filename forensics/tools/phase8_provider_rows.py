@@ -99,9 +99,14 @@ WITHHELD: dict[str, str] = {
         "`ossl_crypto_mutex_lock`/`_unlock`, `ossl_crypto_condvar_wait`/`_signal` "
         "(`src/runtime/thread.rs`), `OSSL_LIB_CTX_GET_THREADS` (`src/context/thread_data.rs:133`) "
         "and `OSSL_get_max_threads`. So this is **not** a thin adapter over an existing thread "
-        "layer, but it is the smallest remaining unit in the stratum by a wide margin -- roughly "
-        "425 lines across `arch.c`, `thread_posix.c` and the three wrappers -- and it unblocks "
-        "these three rows at once."
+        "layer. **D397 landed it** -- `src/runtime/thread_arch.rs` is `arch.c` and "
+        "`arch/thread_posix.c`, the pool is `src/context/thread_data.rs`, and D397 also closed a "
+        "lost-wakeup window in `ossl_crypto_condvar_wait` that nothing had ever exercised. **What "
+        "remains for these three rows is therefore this unit's own transcription**: 1,574 lines of "
+        "provider C plus the BLAKE2 plumbing it drives. D396's estimate of \"roughly 425 lines for "
+        "six rows\" counted the thread trio and attributed argon2's rows to it, which was wrong by "
+        "about four times; the trio is landed and driven by unit tests, and argon2 is a pass of "
+        "its own."
     ),
     # The `OSSL_OP_KEYEXCH` group. D386 landed the crate's `OSSL_OP_KEYMGMT` arm -- the gate this
     # comment used to describe as absent -- and, on it, the `kdf_exch.c` unit. D387 landed
@@ -131,25 +136,39 @@ WITHHELD: dict[str, str] = {
         "are built on `ossl_ml_dsa_*` (`crypto/ml_dsa/`), which the crate does not have -- its "
         "function list (`ossl_ml_dsa_key_new`/`_free`/`_dup`/`_equal`, "
         "`ossl_ml_dsa_generate_key`, the encode/decode pair and the `_sig_*` family) matches no "
-        "symbol in this tree."
+        "symbol in this tree. **Measured (D397): 3,772 lines in `crypto/ml_dsa/`** "
+        "(`ml_dsa_encoders.c` 1,025, `ml_dsa_key.c` 571, `ml_dsa_sign.c` 500, `ml_dsa_sample.c` 381, "
+        "`ml_dsa_ntt.c` 193, `ml_dsa_key_compress.c` 175, `ml_dsa_params.c` 105 and the headers), "
+        "plus **1,153** lines in the unit pair (`ml_dsa_kmgmt.c.in` 616, `ml_dsa_sig.c.in` 537) -- "
+        "so about 4,900 lines for the six rows of this group."
     ),
     "forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/ml_kem_kmgmt.c.in": (
         "**Withheld: not reachable.** The unit's three rows (`ML-KEM-512`, `ML-KEM-768`, "
         "`ML-KEM-1024`) are built on `ossl_ml_kem_*` (`crypto/ml_kem/`), which the crate does not "
         "have -- `ossl_ml_kem_encap_rand`/`_encap_seed`, `ossl_ml_kem_decap`, the key "
-        "encode/decode pair and `ossl_ml_kem_get_vinfo` are none of them in this tree."
+        "encode/decode pair and `ossl_ml_kem_get_vinfo` are none of them in this tree. "
+        "**Measured (D397): 2,452 lines, one file (`crypto/ml_kem/ml_kem.c`)**, plus **1,174** in "
+        "the ML-KEM unit pair (`ml_kem_kmgmt.c.in` 902, `ml_kem_kem.c.in` 272)."
     ),
     "forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/mlx_kmgmt.c.in": (
         "**Withheld: not reachable.** The unit's four hybrid rows (`X25519MLKEM768`, "
         "`X448MLKEM1024`, `SecP256r1MLKEM768`, `SecP384r1MLKEM1024`) are built on **both** an ECX "
         "or EC half and the ML-KEM half: they call `ossl_ml_kem_get_vinfo` and `ossl_mlx_*`, and "
-        "depend on `crypto/ml_kem/` and `crypto/mlx/`, neither of which is in this tree."
+        "depend on `crypto/ml_kem/`. **Measured (D397), and one earlier revision of this note was "
+        "wrong about it: there is no `crypto/mlx/`.** The hybrid logic *is* the two provider units "
+        "(`mlx_kem.c` 350, `mlx_kmgmt.c.in` 844, 1,194 lines for the four rows), which sit on "
+        "`crypto/ml_kem/`'s 2,452 and the already-landed EC/ECX halves -- so these four rows cost "
+        "nothing beyond `crypto/ml_kem/` and their own 1,194 lines."
     ),
     "forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/slh_dsa_kmgmt.c.in": (
         "**Withheld: not reachable.** The unit's twelve rows (`SLH-DSA-SHA2-*`, `SLH-DSA-SHAKE-*`) "
         "are built on `ossl_slh_dsa_*` (`crypto/slh_dsa/`), which the crate does not have -- "
         "`ossl_slh_dsa_generate_key`, `ossl_slh_dsa_key_dup`/`_equal`/`_free`/`_get`, and the "
-        "`ossl_slh_dsa_hash_ctx_new`/`_free` pair are none of them in this tree."
+        "`ossl_slh_dsa_hash_ctx_new`/`_free` pair are none of them in this tree. **Measured "
+        "(D397): 2,952 lines in `crypto/slh_dsa/`** across ten `.c` files (`slh_dsa_key.c` 527, "
+        "`slh_dsa.c` 393, `slh_fors.c` 328, `slh_wots.c` 319, `slh_hash.c` 300 and five more), "
+        "plus **894** in the unit pair (`slh_dsa_kmgmt.c.in` 501, `slh_dsa_sig.c.in` 393) -- about "
+        "3,850 lines for this group's twenty-four rows, the largest block left."
     ),
     "forensics/authorities/src/openssl-3.6.4/providers/implementations/kem/ec_kem.c.in": (
         "**Withheld: the unit's `EC` KEM row, on a partial transcription that is named rather "

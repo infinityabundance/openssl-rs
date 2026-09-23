@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 416,
+      "crate_files_read": 417,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -19,7 +19,7 @@
       "signatures_authority_only": 372,
       "signatures_checked": 265,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 191,
+      "signatures_not_a_dispatch": 192,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -4891,6 +4891,11 @@
           "alias": "FreeThunk",
           "at": "src/runtime/stack.rs",
           "why": "not a provider dispatch: `safestack.h.in`'s `sk_*_compfunc` / `freefunc` / `copyfunc` macros generate it per type, so there is no single typedef"
+        },
+        {
+          "alias": "CryptoThreadRoutine",
+          "at": "src/runtime/thread_arch.rs",
+          "why": "not a provider dispatch: declared in `include/internal/thread_arch.h:57`, which is not installed, so the atlas has no record of it"
         },
         {
           "alias": "UiOpenSessionFn",

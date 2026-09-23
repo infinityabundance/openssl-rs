@@ -742,6 +742,18 @@
         "class": "does_not_exist_in_this_authority",
         "reason": "D287's Phase-9 scope names this file as 9.5's unit and it does not exist in the admitted tree. The continuous random number generator test is `providers/implementations/rands/fips_crng_test.c` (`RCT_test`/`APT_test`, dispatch symbol `ossl_crng_test_functions`), and `implementations.h` keeps only a dead `extern` for the old name. The correction is the reason this row exists rather than the row being avoided: a reader who follows D287 to that path must find the measurement that says it is not there, and the record fails if the file ever appears. `docs/PHASE-9-SUBPHASES.md` section 4.1 is where the plan states it and `docs/DECISIONS.md` D294 is where the measurement is recorded.",
         "evidence": "forensics/authorities/src/openssl-3.6.4/providers/implementations/rands/fips_crng_test.c; docs/PHASE-9-SUBPHASES.md section 4.1; docs/DECISIONS.md D287, D294"
+      },
+      {
+        "unit": "crypto/thread/api.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/context/thread_data.rs",
+        "names": [
+          "OSSL_get_max_threads",
+          "OSSL_set_max_threads",
+          "OSSL_get_thread_support_flags"
+        ],
+        "reason": "The file's whole content is three exports -- the two per-context thread-count accessors and the compile-time support-flags constant -- and all three are built: the first two in `src/context/thread_data.rs` (6.6e) and the third in `src/runtime/thread.rs` (Phase 3). `internal-symbols.json` records no internal function for the file, so no `crate_module` is credited with it in `transcription-edges.json`; that map credits each module with its **dominant** unit, and D397 moved `src/runtime/thread.rs`'s dominant unit from this file to `crypto/threads_pthread.c` when the thread object's arch layer landed there, which is what made the unit read as unreached. The unit was reached before D397 and is reached after it; what changed is which mechanical signal saw it, and this record is the one that can say so.",
+        "evidence": "docs/PHASE-6-SUBPHASES.md row 6.6e; forensics/phase6-obligations.json (the three exports); forensics/atlas/transcription-edges.json; src/context/thread_data.rs; src/runtime/thread.rs"
       }
     ]
   }
