@@ -313,3 +313,166 @@ fn a_one_byte_signature_destination_is_refused() {
         OSSL_LIB_CTX_free(libctx);
     }
 }
+
+/// D402 — the three `OSSL_KEYMGMT_SELECT_*` bits, and the selections `has`, `equal` and `dup`
+/// actually read.
+///
+/// `src/slh_dsa/key.rs` and `src/provider/slh_dsa_kmgmt.rs` each carried their own copy of the
+/// pair, at `0x02` and `0x04` -- one bit left of `core_dispatch.h:640-641` -- so every selection
+/// `EVP_PKEY` handed the provider was read as a different bit set than the header's. The public
+/// routes cannot see it: `EVP_PKEY_eq` passes `PUBLIC_KEY` (where both spellings agree) and falls
+/// back to `KEYPAIR`, and `EVP_PKEY_missing_parameters` passes `DOMAIN_PARAMETERS`, which is
+/// disjoint from both. So this test drives `ossl_slh_dsa_key_has`, `ossl_slh_dsa_key_equal` and
+/// `ossl_slh_dsa_key_dup` **directly**, over every bit, for a keypair key and a public-only one --
+/// and every one of the six assertions below moves when the pair is wrong.
+#[test]
+fn the_keymgmt_selection_bits_are_the_headers_and_select_as_the_header_says() {
+    use core::ffi::c_int;
+
+    use crate::evp::pkey::{OSSL_KEYMGMT_SELECT_PRIVATE_KEY, OSSL_KEYMGMT_SELECT_PUBLIC_KEY};
+
+    use super::key::{
+        ossl_slh_dsa_key_dup, ossl_slh_dsa_key_equal, ossl_slh_dsa_key_has, ossl_slh_dsa_set_pub,
+        OSSL_KEYMGMT_SELECT_KEYPAIR,
+    };
+
+    /// `OSSL_KEYMGMT_SELECT_DOMAIN_PARAMETERS` — `core_dispatch.h:642`, disjoint from the pair.
+    const DOMAIN_PARAMETERS: c_int = 0x04;
+    /// `DOMAIN_PARAMETERS | PUBLIC_KEY` — the value the old pair mistook for `KEYPAIR`.
+    const DOMAIN_AND_PUBLIC: c_int = DOMAIN_PARAMETERS | OSSL_KEYMGMT_SELECT_PUBLIC_KEY;
+    /// No selection at all.
+    const NONE: c_int = 0;
+
+    assert_eq!(OSSL_KEYMGMT_SELECT_PRIVATE_KEY, 0x01, "core_dispatch.h:640");
+    assert_eq!(OSSL_KEYMGMT_SELECT_PUBLIC_KEY, 0x02, "core_dispatch.h:641");
+    assert_eq!(OSSL_KEYMGMT_SELECT_KEYPAIR, 0x03, "core_dispatch.h:649-650");
+
+    let by_name = parse_arrays(SLH_DSA_INC);
+    let Some(priv_bytes) = by_name.get("slh_dsa_sha2_128s_0_keygen_priv") else {
+        assert!(false, "the keygen vector is in the file");
+        return;
+    };
+    let n = priv_bytes.len() / 4;
+    let pub_bytes = &priv_bytes[2 * n..4 * n];
+    let alg = cstr_bytes("SLH-DSA-SHA2-128s");
+
+    let libctx = fresh_libctx();
+    // SAFETY: every pointer is this test's own and every key is freed before the context is.
+    unsafe {
+        let kp = ossl_slh_dsa_key_new(libctx, ptr::null(), alg.as_ptr().cast());
+        let kp2 = ossl_slh_dsa_key_new(libctx, ptr::null(), alg.as_ptr().cast());
+        let po = ossl_slh_dsa_key_new(libctx, ptr::null(), alg.as_ptr().cast());
+        let po2 = ossl_slh_dsa_key_new(libctx, ptr::null(), alg.as_ptr().cast());
+        for k in [kp, kp2, po, po2] {
+            assert!(!k.is_null(), "key creation");
+        }
+        assert_eq!(
+            ossl_slh_dsa_set_priv(kp, priv_bytes.as_ptr(), priv_bytes.len()),
+            1
+        );
+        assert_eq!(
+            ossl_slh_dsa_set_priv(kp2, priv_bytes.as_ptr(), priv_bytes.len()),
+            1
+        );
+        assert_eq!(
+            ossl_slh_dsa_set_pub(po, pub_bytes.as_ptr(), pub_bytes.len()),
+            1
+        );
+        assert_eq!(
+            ossl_slh_dsa_set_pub(po2, pub_bytes.as_ptr(), pub_bytes.len()),
+            1
+        );
+
+        // `has`: (selection, keypair answer, public-only answer). The public-only column is where
+        // the wrong pair showed itself -- `0x01` was read as "the selection is not missing" and
+        // answered 1, and `0x02` was read as the *private* bit and answered 0.
+        for (selection, want_kp, want_po) in [
+            (NONE, 0, 0),
+            (OSSL_KEYMGMT_SELECT_PRIVATE_KEY, 1, 0),
+            (OSSL_KEYMGMT_SELECT_PUBLIC_KEY, 1, 1),
+            (OSSL_KEYMGMT_SELECT_KEYPAIR, 1, 0),
+            (DOMAIN_PARAMETERS, 0, 0),
+            (DOMAIN_AND_PUBLIC, 1, 1),
+        ] {
+            assert_eq!(
+                ossl_slh_dsa_key_has(kp, selection),
+                want_kp,
+                "has(keypair, {selection:#x})"
+            );
+            assert_eq!(
+                ossl_slh_dsa_key_has(po, selection),
+                want_po,
+                "has(public-only, {selection:#x})"
+            );
+        }
+
+        // `equal`: the two public-only keys agree on the public half; under the wrong pair the
+        // `0x02` selection was read as the private bit and two public-only keys answered "not
+        // equal" because neither holds a private half.
+        assert_eq!(
+            ossl_slh_dsa_key_equal(kp, kp2, OSSL_KEYMGMT_SELECT_PUBLIC_KEY),
+            1
+        );
+        assert_eq!(
+            ossl_slh_dsa_key_equal(po, po2, OSSL_KEYMGMT_SELECT_PUBLIC_KEY),
+            1
+        );
+        assert_eq!(
+            ossl_slh_dsa_key_equal(kp, po, OSSL_KEYMGMT_SELECT_PUBLIC_KEY),
+            1
+        );
+        assert_eq!(
+            ossl_slh_dsa_key_equal(kp, po, OSSL_KEYMGMT_SELECT_KEYPAIR),
+            1
+        );
+        assert_eq!(
+            ossl_slh_dsa_key_equal(kp, po, OSSL_KEYMGMT_SELECT_PRIVATE_KEY),
+            0
+        );
+
+        // `dup`: the private half is carried only when the selection names it. Under the wrong
+        // pair `0x02` *was* the private bit, so duplicating a public-only key for `PUBLIC_KEY`
+        // produced an object that claimed to hold a private key.
+        let dup_priv = ossl_slh_dsa_key_dup(kp, OSSL_KEYMGMT_SELECT_PRIVATE_KEY);
+        assert!(!dup_priv.is_null(), "dup(keypair, PRIVATE_KEY)");
+        assert_eq!(
+            ossl_slh_dsa_key_has(dup_priv, OSSL_KEYMGMT_SELECT_KEYPAIR),
+            1,
+            "the duplicate holds the pair"
+        );
+
+        let dup_pub = ossl_slh_dsa_key_dup(kp, OSSL_KEYMGMT_SELECT_PUBLIC_KEY);
+        assert!(!dup_pub.is_null(), "dup(keypair, PUBLIC_KEY)");
+        assert_eq!(
+            ossl_slh_dsa_key_has(dup_pub, OSSL_KEYMGMT_SELECT_PUBLIC_KEY),
+            1,
+            "the duplicate holds the public half"
+        );
+        assert_eq!(
+            ossl_slh_dsa_key_has(dup_pub, OSSL_KEYMGMT_SELECT_PRIVATE_KEY),
+            0,
+            "and not the private one"
+        );
+        assert_eq!(
+            std::slice::from_raw_parts(ossl_slh_dsa_key_get_pub(dup_pub), 2 * n),
+            pub_bytes,
+            "the duplicate's public half is the original's"
+        );
+
+        let dup_none = ossl_slh_dsa_key_dup(kp, NONE);
+        assert!(!dup_none.is_null(), "dup(keypair, 0)");
+        assert_eq!(
+            ossl_slh_dsa_key_has(dup_none, OSSL_KEYMGMT_SELECT_KEYPAIR),
+            0,
+            "a no-selection duplicate holds nothing"
+        );
+
+        for k in [dup_priv, dup_pub, dup_none] {
+            ossl_slh_dsa_key_free(k);
+        }
+        for k in [kp, kp2, po, po2] {
+            ossl_slh_dsa_key_free(k);
+        }
+        OSSL_LIB_CTX_free(libctx);
+    }
+}

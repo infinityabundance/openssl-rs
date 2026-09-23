@@ -45,7 +45,10 @@ use crate::evp::keymgmt::{
     OSSL_FUNC_KEYMGMT_IMPORT_TYPES, OSSL_FUNC_KEYMGMT_LOAD, OSSL_FUNC_KEYMGMT_MATCH,
     OSSL_FUNC_KEYMGMT_NEW, OSSL_FUNC_KEYMGMT_VALIDATE,
 };
-use crate::evp::pkey::{OSSL_PKEY_PARAM_PRIV_KEY, OSSL_PKEY_PARAM_PUB_KEY};
+use crate::evp::pkey::{
+    OSSL_KEYMGMT_SELECT_PRIVATE_KEY, OSSL_KEYMGMT_SELECT_PUBLIC_KEY, OSSL_PKEY_PARAM_PRIV_KEY,
+    OSSL_PKEY_PARAM_PUB_KEY,
+};
 use crate::param_build_set::ossl_param_build_set_octet_string;
 use crate::params::build::{
     OSSL_PARAM_BLD_free, OSSL_PARAM_BLD_new, OSSL_PARAM_BLD_to_param, OSSL_PARAM_BLD,
@@ -86,11 +89,11 @@ const OSSL_PKEY_PARAM_PROPERTIES: *const c_char = c"properties".as_ptr();
 /// `OSSL_PKEY_PARAM_SLH_DSA_SEED` — `core_names.h:497`.
 const OSSL_PKEY_PARAM_SLH_DSA_SEED: *const c_char = c"seed".as_ptr();
 
-/// `OSSL_KEYMGMT_SELECT_PRIVATE_KEY` — `include/openssl/core_dispatch.h`.
-const OSSL_KEYMGMT_SELECT_PRIVATE_KEY: c_int = 0x02;
-/// `OSSL_KEYMGMT_SELECT_PUBLIC_KEY` — `include/openssl/core_dispatch.h`.
-const OSSL_KEYMGMT_SELECT_PUBLIC_KEY: c_int = 0x04;
-/// `OSSL_KEYMGMT_SELECT_KEYPAIR` — `include/openssl/core_dispatch.h`.
+/// `OSSL_KEYMGMT_SELECT_KEYPAIR` — `core_dispatch.h:649`, `PRIVATE_KEY | PUBLIC_KEY`.
+///
+/// The pair is **imported** from `src/evp/pkey.rs` rather than re-spelled. This unit used to
+/// carry its own copies at `0x02`/`0x04`, one bit left of `core_dispatch.h:640-641`, so its
+/// `has`/`export`/`dup` columns were called with the wrong selection bits (D402).
 const OSSL_KEYMGMT_SELECT_KEYPAIR: c_int =
     OSSL_KEYMGMT_SELECT_PRIVATE_KEY | OSSL_KEYMGMT_SELECT_PUBLIC_KEY;
 /// `SLH_DSA_POSSIBLE_SELECTIONS` — `slh_dsa_kmgmt.c:50`.

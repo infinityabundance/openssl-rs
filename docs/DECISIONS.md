@@ -28941,3 +28941,89 @@ No claim is made that the stratum is closer to sealing than `provider_rows` says
 **286/20** after this pass, and the three rows that moved are exactly the three the unit publishes.
 `cargo test --lib` is **1024 passed, 0 failed**, `cargo clippy --all-targets -- -D warnings` is clean,
 and the pipeline is `PIPELINE OK` with **exit 0** and **99 courts / 38,546 observations**.
+
+## D402 -- the SLH-DSA keymgmt selection bits are corrected to the header's values, on the
+public-only column that could see it; and the provider-context parameter layer the three
+remaining keymgmt units need is landed
+
+`provider_rows` is unchanged at **286/20**: this pass moves no row. It fixes a wrong constant in
+D399's landed code, re-derives that unit's evidence, and lands the prerequisite
+`keymgmt/ml_kem_kmgmt.c.in` was waiting on.
+
+### The defect, and where it was visible
+
+`src/slh_dsa/key.rs:65-71` and `src/provider/slh_dsa_kmgmt.rs:89-97` each carried their own copy
+of the pair, at `0x02` and `0x04` with a `core_dispatch.h` citation. The header says `0x01` and
+`0x02` (`core_dispatch.h:640-641`), and every other module in the crate already spells them that
+way (`src/evp/pkey.rs:1711-1713`, `src/dsa/backend.rs:58-59`, `src/rsa/backend.rs:132-133`,
+`src/ec/backend.rs:152-153`, `src/dh/backend.rs:70-71`, `src/provider/keymgmt.rs:322-324`,
+`src/provider/ec_kmgmt.rs:133-135`, `src/provider/rsa_kmgmt.rs:120-122`). Each `SLH-DSA-*` row's
+`has`, `export`, `import` and `dup` columns were therefore reading a bit set one position left of
+the one `EVP_PKEY` handed them.
+
+**The public routes could not see it, and that is why the arm has to be written directly.**
+`EVP_PKEY_missing_parameters` passes `OSSL_KEYMGMT_SELECT_DOMAIN_PARAMETERS` (`0x04`), which is
+disjoint from both spellings *and* from the pair under either, so both answered the same;
+`EVP_PKEY_eq` passes `OSSL_KEYMGMT_SELECT_PUBLIC_KEY` and then falls back to `KEYPAIR`
+(`src/evp/pkey.rs:1834-1841`), and the mask's disagreement changes only which of two branches
+compares equal public halves. The column that moves is the **public-only** one: with the wrong
+pair, `has(public-only, 0x02)` was read as the *private* bit and answered `0`, and
+`has(public-only, 0x01)` was read as a selection outside the pair and answered `1` without
+consulting the key at all. `dup` moves with it: duplicating a private key for `PUBLIC_KEY` set
+`has_priv` on the copy, so a public-only duplicate claimed to hold a private key.
+
+### The correction, and the two arms that pin it
+
+The pair is now the **imported** one, from `src/evp/pkey.rs`, in both modules; only
+`OSSL_KEYMGMT_SELECT_KEYPAIR` is still spelled locally (`PRIVATE_KEY | PUBLIC_KEY`), because
+`pkey.rs` keeps its copy private. A second copy is what let the two drift, so there is no second
+copy to drift again.
+
+`src/slh_dsa/tests.rs` gains
+`the_keymgmt_selection_bits_are_the_headers_and_select_as_the_header_says`, which asserts the three
+values against `core_dispatch.h` and then drives `ossl_slh_dsa_key_has`, `ossl_slh_dsa_key_equal`
+and `ossl_slh_dsa_key_dup` **directly**, over `0x00`, `0x01`, `0x02`, `0x03`, `0x04` and `0x06`,
+for a keypair key and a public-only one -- a table of twelve `has` answers, five `equal` answers
+and three `dup` answers, every one of which is derived from the mask. **The correction changes
+observations, and this was measured, not argued**: with the pair temporarily restored to
+`0x02`/`0x04` and the three value assertions commented out, the test fails at the `has` table's
+public-only row (`left: 1, right: 0`); with them in place it fails at the first value assertion.
+That is the finding this pass was sent for.
+
+`courts/phase8/rt_keymgmt_probe.c`'s `arm_slh_dsa_keymgmt` gains a third arm over the two public
+routes and the `dup` column -- `EVP_PKEY_missing_parameters` (the `0x04` bit), `EVP_PKEY_dup`
+(the `KEYPAIR` bit through `OSSL_KEYMGMT_SELECT_ALL`), `EVP_PKEY_eq` between the key and its
+duplicate, and the duplicate's own public half compared against the original's. Those five
+observations per row are **equal on both sides**, exactly as the analysis above predicts, and they
+are there so the two routes are observed rather than assumed. `RT-KEYMGMT` is 359 observations,
+up from 299; `RT-SIGNATURE` is unchanged at 429. Both D399 units' courts were re-run and
+`artifacts/phase8/COURTS.json` re-derived, because the evidence was built on the wrong bits.
+
+### The prerequisite the remaining keymgmt units were waiting on
+
+`ml_kem_kmgmt.c.in:175-193`, `mlx_kmgmt.c.in` and the four `mlx` rows' key types all reach
+`ossl_prov_ctx_get_param`/`ossl_prov_ctx_get_bool_param` (`providers/common/provider_ctx.c:79-120`)
+for their `retain-seed`, `prefer-seed` and import-PCT settings. Neither function was in the crate.
+Both are now transcribed into `src/provider/ctx.rs`, over the `ProvCtx` the crate already carries
+(the core's `OSSL_FUNC_core_get_params` callback, which `OSSL_PARAM_UTF8_PTR` reaches through a
+`void *`). The four true and four false spellings are the authority's; a NULL context, handle or
+callback answers the default. `provider_ctx.c` is now transcribed complete bar `set0_core_bio_method`
+and `get0_core_bio_method`, whose `BIO_METHOD` field is the D117 residual that module's own note
+names.
+
+### What remains, and why `ml_kem_kmgmt.c.in` is now unblocked
+
+* **`keymgmt/ml_kem_kmgmt.c.in` (902 lines, 3 rows).** Its prerequisites are landed: the ML-KEM
+  core (D401), the provider-context parameter layer above, and the four `OSSL_PKEY_PARAM_ML_KEM_*`
+  spellings. It is the next pass's first item and its only remaining obstacle is its own size --
+  902 template lines, but the generated unit is ~1,100, with four `produce_param_decoder` blocks
+  (3 + 10 + 1 + 2 repeated-key sites) and an `export` over `OSSL_PARAM_BLD` plus `secure_zalloc`.
+* **`keymgmt/mlx_kmgmt.c.in` (844) and `kem/mlx_kem.c` (350), 8 rows.** Their key types are built
+  on the ML-KEM keymgmt rows, so they follow it.
+* **SM2 -- 2 rows, 1,940 lines**; **`kem/ec_kem.c.in` -- 1 row, 822**; **`crypto/ml_dsa/` --
+  6 rows, 4,925.** Unchanged from D401's order.
+
+No claim is made that the stratum is closer to sealing than `provider_rows` says. `provider_rows` is
+**286/20** after this pass. `cargo test --lib` is **1025 passed, 0 failed**, `cargo clippy
+--all-targets -- -D warnings` is clean, and the pipeline is `PIPELINE OK` with **exit 0** and
+**99 courts / 38,606 observations**.

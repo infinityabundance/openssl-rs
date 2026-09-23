@@ -27,7 +27,15 @@
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 
+use crate::params::{OsslParam, OSSL_PARAM_UNMODIFIED, OSSL_PARAM_UTF8_PTR};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::str::OPENSSL_strcasecmp;
+
+extern "C" {
+    /// `int strcmp(const char *, const char *)` — the C library's, as `provider_ctx.c` calls it.
+    #[allow(dead_code)] // reached through `ossl_prov_ctx_get_bool_param`, which is above
+    fn strcmp(a: *const c_char, b: *const c_char) -> c_int;
+}
 
 /// The allocation-tracking `file` argument for this unit's allocations:
 /// `providers/common/provider_ctx.c`.
@@ -173,6 +181,96 @@ pub(crate) unsafe fn ossl_prov_ctx_get0_core_get_params(ctx: *mut ProvCtx) -> *m
 pub(crate) unsafe fn prov_libctx_of(provctx: *mut c_void) -> *mut c_void {
     // SAFETY: the caller's contract; the cast is the macro's own.
     unsafe { ossl_prov_ctx_get0_libctx(provctx.cast::<ProvCtx>()) }
+}
+
+/// `const char *ossl_prov_ctx_get_param(PROV_CTX *ctx, const char *name,`
+/// `const char *defval)` — `provider_ctx.c:79-99`.
+///
+/// The context asks the **core** for the parameter through the `OSSL_FUNC_core_get_params`
+/// callback it was handed at provider init, which is how a non-default provider sees the
+/// application's `OPENSSL_CONF`-supplied settings. A NULL context, a NULL handle or a NULL
+/// callback answers `defval`; errors are ignored the same way, which is the authority's own
+/// "Errors are ignored, returning the default value".
+///
+/// # Safety
+/// `ctx` is NULL or live; `name` and `defval` are NULL or NUL-terminated.
+#[allow(dead_code)] // the ML-KEM and mlx keymgmt units are the callers that will land (D402)
+pub(crate) unsafe fn ossl_prov_ctx_get_param(
+    ctx: *mut ProvCtx,
+    name: *const c_char,
+    defval: *const c_char,
+) -> *const c_char {
+    let mut val: *const c_char = ptr::null();
+
+    // SAFETY: `ctx` is NULL or live per the contract.
+    unsafe {
+        if ctx.is_null() || (*ctx).handle.is_null() || (*ctx).core_get_params.is_null() {
+            return defval;
+        }
+
+        let mut param = [
+            OsslParam {
+                key: name,
+                data_type: OSSL_PARAM_UTF8_PTR,
+                data: ptr::addr_of_mut!(val).cast(),
+                data_size: core::mem::size_of::<*const c_char>(),
+                return_size: OSSL_PARAM_UNMODIFIED,
+            },
+            OsslParam {
+                key: ptr::null(),
+                data_type: 0,
+                data: ptr::null_mut(),
+                data_size: 0,
+                return_size: 0,
+            },
+        ];
+
+        let get_params: crate::provider::ctx::CoreGetParamsFn =
+            core::mem::transmute((*ctx).core_get_params);
+        if get_params((*ctx).handle, param.as_mut_ptr()) != 0
+            && param[0].return_size != OSSL_PARAM_UNMODIFIED
+            && !val.is_null()
+        {
+            return val;
+        }
+    }
+    defval
+}
+
+/// `int ossl_prov_ctx_get_bool_param(PROV_CTX *ctx, const char *name, int defval)` —
+/// `provider_ctx.c:101-120`. The four true spellings and the four false ones are the
+/// authority's; anything else, including a NULL value, answers `defval`.
+///
+/// # Safety
+/// `ctx` is NULL or live; `name` is NULL or NUL-terminated.
+#[allow(dead_code)] // the same callers as `ossl_prov_ctx_get_param` above
+pub(crate) unsafe fn ossl_prov_ctx_get_bool_param(
+    ctx: *mut ProvCtx,
+    name: *const c_char,
+    defval: c_int,
+) -> c_int {
+    // SAFETY: forwarded under this function's contract.
+    let val = unsafe { ossl_prov_ctx_get_param(ctx, name, ptr::null()) };
+
+    if !val.is_null() {
+        // SAFETY: `val` is a NUL-terminated string the core owns.
+        unsafe {
+            if strcmp(val, c"1".as_ptr()) == 0
+                || OPENSSL_strcasecmp(val, c"yes".as_ptr()) == 0
+                || OPENSSL_strcasecmp(val, c"true".as_ptr()) == 0
+                || OPENSSL_strcasecmp(val, c"on".as_ptr()) == 0
+            {
+                return 1;
+            } else if strcmp(val, c"0".as_ptr()) == 0
+                || OPENSSL_strcasecmp(val, c"no".as_ptr()) == 0
+                || OPENSSL_strcasecmp(val, c"false".as_ptr()) == 0
+                || OPENSSL_strcasecmp(val, c"off".as_ptr()) == 0
+            {
+                return 0;
+            }
+        }
+    }
+    defval
 }
 
 #[cfg(test)]

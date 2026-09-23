@@ -48,6 +48,7 @@ use core::ptr;
 
 use crate::evp::digest::{EVP_MD_free, EVP_MD_up_ref};
 use crate::evp::mac::{EVP_MAC_free, EVP_MAC_up_ref};
+use crate::evp::pkey::{OSSL_KEYMGMT_SELECT_PRIVATE_KEY, OSSL_KEYMGMT_SELECT_PUBLIC_KEY};
 use crate::params::OSSL_PARAM_get_octet_string;
 use crate::rand::rand_lib::{RAND_bytes_ex, RAND_priv_bytes_ex};
 use crate::runtime::mem::{
@@ -62,11 +63,12 @@ use super::params::ossl_slh_dsa_params_get;
 use super::xmss::ossl_slh_xmss_node;
 use super::{SlhDsaHashCtx, SlhDsaKey, SLH_DSA_MAX_N};
 
-/// `OSSL_KEYMGMT_SELECT_PRIVATE_KEY` — `include/openssl/core_dispatch.h`.
-pub(crate) const OSSL_KEYMGMT_SELECT_PRIVATE_KEY: c_int = 0x02;
-/// `OSSL_KEYMGMT_SELECT_PUBLIC_KEY` — `include/openssl/core_dispatch.h`.
-pub(crate) const OSSL_KEYMGMT_SELECT_PUBLIC_KEY: c_int = 0x04;
-/// `OSSL_KEYMGMT_SELECT_KEYPAIR` — `include/openssl/core_dispatch.h`.
+/// `OSSL_KEYMGMT_SELECT_KEYPAIR` — `core_dispatch.h:649`, `PRIVATE_KEY | PUBLIC_KEY`.
+///
+/// `OSSL_KEYMGMT_SELECT_PRIVATE_KEY` and `..._PUBLIC_KEY` are **imported** from
+/// `src/evp/pkey.rs`, which spells them at the header's values. This module used to carry its own
+/// copies at `0x02` and `0x04` — each one bit left of `core_dispatch.h:640-641` — and the two
+/// provider units that call these functions were built on the wrong pair (D402).
 pub(crate) const OSSL_KEYMGMT_SELECT_KEYPAIR: c_int =
     OSSL_KEYMGMT_SELECT_PRIVATE_KEY | OSSL_KEYMGMT_SELECT_PUBLIC_KEY;
 
