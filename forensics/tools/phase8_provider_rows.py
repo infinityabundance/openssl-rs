@@ -67,11 +67,17 @@ PROVIDER_ROOT = AUTHORITY / "providers"
 CRATE_QUERY = REPO_ROOT / "src" / "provider" / "digest.rs"
 OUT = REPO_ROOT / "docs" / "PHASE-8-PROVIDER-ROWS.md"
 
-# A unit whose closure is **not reachable** on this profile, keyed by the translation unit's
-# repo-relative path, with the measured reason. It is a *claim about the authority and the crate*,
-# so it is reviewed when the unit moves, and the document renders it under the unit's own heading
-# (D382's `argon2.c.in`) rather than leaving an unexplained remainder. Being here does **not** change
-# the census: the rows stay `unimplemented` and the totals count them as unlanded.
+# A unit **withheld** on this pass, keyed by the translation unit's repo-relative path, with the
+# measured reason. It is a *claim about the authority and the crate*, so it is reviewed when the
+# unit moves, and the document renders it under the unit's own heading rather than leaving an
+# unexplained remainder. Two kinds are recorded here: a unit whose closure is not *reachable*
+# (D382's `argon2.c.in`, D384's exchange units) and a unit that is reachable only behind a
+# prerequisite or that the census tool itself refuses (D385's keymgmt units). Being here does
+# **not** change the census: the rows stay `unimplemented` and the totals count them as unlanded.
+# D386 discharged the one tool refusal this map recorded -- the authority's many-to-one dispatch
+# symbols (`kdf_legacy_kmgmt.c`, `mac_legacy_kmgmt.c`) are now described by a partition-equality
+# check in `gen_provider_algorithms.py` rather than refused -- so the legacy-KDF unit is landed and
+# the remaining entries are reachability or prerequisite holds only.
 WITHHELD: dict[str, str] = {
     "forensics/authorities/src/openssl-3.6.4/providers/implementations/kdfs/argon2.c.in": (
         "**Withheld: not reachable on this profile, and recorded rather than stubbed.** The arm "
@@ -86,39 +92,85 @@ WITHHELD: dict[str, str] = {
         "cannot close: the three rows `ARGON2D`, `ARGON2I` and `ARGON2ID` become reachable once "
         "`crypto/threads_pthread.c`'s thread-start/join/clean trio lands, and only then."
     ),
-    # The whole `OSSL_OP_KEYEXCH` group. Every row of `deflt_keyexch[]` is reached through
-    # `EVP_PKEY_CTX_new_from_name(NULL, <name>, NULL)`, which fetches a **KEYMGMT** for that name,
-    # and the crate publishes no `OSSL_OP_KEYMGMT` row at all -- `deflt_query` has no keymgmt arm.
-    # Measured, not reasoned: a two-line probe against both sides answers `ctx=1` /
-    # `derive_init=1` on the authority and `ctx=0` on the candidate.
+    # The `OSSL_OP_KEYEXCH` group. D386 landed the crate's `OSSL_OP_KEYMGMT` arm -- the gate this
+    # comment used to describe as absent -- and, on it, the `kdf_exch.c` unit. So the gate is no
+    # longer why any of these is withheld: each remaining one is withheld on the **keymgmt row** it
+    # needs, measured against the landed table.
     "forensics/authorities/src/openssl-3.6.4/providers/implementations/exchange/dh_exch.c.in": (
-        "**Withheld: not reachable, and it is the whole group rather than this unit.** `DH` is "
-        "reached through `EVP_PKEY_CTX_new_from_name(NULL, \"DH\", NULL)`, which fetches the `DH` "
-        "**KEYMGMT** row; the crate publishes no `OSSL_OP_KEYMGMT` row (`deflt_query` has no "
-        "keymgmt arm), and this crate's DH key layer is the legacy `EVP_PKEY_AMETH` one, which does "
-        "**not** route through a provider keyexch. Measured against both sides: the authority "
-        "answers `ctx=1` and `EVP_PKEY_derive_init` `=1`, the candidate `ctx=0`. The row becomes "
-        "drivable when the `DH` keymgmt row lands. Its one apparent missing external, "
-        "`ossl_dh_check_key`, is **not** a blocker: it is called only inside `#ifdef FIPS_MODULE` "
-        "(`dh_exch.c.in:104-113`)."
+        "**Withheld: behind the `dh_kmgmt.c` unit.** D386 landed the `OSSL_OP_KEYMGMT` arm, so `DH` "
+        "is reached through a keymgmt row now -- but the `DH`/`DHX` rows themselves are not "
+        "transcribed. `dh_kmgmt.c` is the keymgmt group's next unit, and its closure is fully "
+        "present: of everything it calls, the only missing callee is the fifteen-line "
+        "`ossl_dh_gen_type_name2id` (`crypto/evp/dh_support.c:50`, a linear search over the "
+        "`dhtype2id[]` table the crate already carries in `src/evp/pkey_ctx.rs`). This exchange "
+        "unit's own layer is present; its one apparent missing external, `ossl_dh_check_key`, is "
+        "called only inside `#ifdef FIPS_MODULE` (`dh_exch.c.in:104-113`)."
     ),
     "forensics/authorities/src/openssl-3.6.4/providers/implementations/exchange/ecdh_exch.c.in": (
-        "**Withheld: not reachable.** Same KEYMGMT gate as `dh_exch.c.in`, on the `ECDH` row, and "
-        "additionally on the EC objects it computes with: the unit calls `EC_GROUP`/`EC_POINT` and "
-        "`ossl_ecdh_kdf_*`, and D334 records `EC_GROUP`/`EC_POINT` as one indivisible landing that "
-        "has not happened (`CT-EC` is `PENDING` for exactly that)."
+        "**Withheld: not reachable.** The keymgmt gate is open (D386), but the `ECDH` row needs the "
+        "`EC` keymgmt row, and this unit additionally calls `EC_GROUP`/`EC_POINT` and "
+        "`ossl_ecdh_kdf_*`. D334 records `EC_GROUP`/`EC_POINT` as one indivisible landing that has "
+        "not happened (`CT-EC` is `PENDING` for exactly that)."
     ),
     "forensics/authorities/src/openssl-3.6.4/providers/implementations/exchange/ecx_exch.c.in": (
-        "**Withheld: not reachable.** Same KEYMGMT gate as `dh_exch.c.in`, on the `X25519` and "
-        "`X448` rows. Its own layer is present (`ossl_ecx_key_up_ref`, `ossl_ecx_key_free` and "
+        "**Withheld: behind the `ecx_kmgmt.c.in` unit.** The keymgmt gate is open (D386); this unit "
+        "needs the four `X25519`/`X448`/`ED25519`/`ED448` keymgmt rows, which are not transcribed. "
+        "Its own layer is present (`ossl_ecx_key_up_ref`, `ossl_ecx_key_free` and "
         "`ossl_ecx_compute_key` are landed in `src/ec/ecx_key.rs`), so nothing in this unit blocks "
-        "it: the two keymgmt rows do."
+        "it: the four keymgmt rows do."
     ),
-    "forensics/authorities/src/openssl-3.6.4/providers/implementations/exchange/kdf_exch.c": (
-        "**Withheld: not reachable.** Same KEYMGMT gate as `dh_exch.c.in`, on the `TLS1-PRF`, "
-        "`HKDF` and `SCRYPT` rows. The KDFs themselves are landed (D377, D379), and this unit is a "
-        "thin wrapper over `EVP_KDF_fetch`/`EVP_KDF_derive`, so nothing in it blocks it: the three "
-        "keymgmt rows (`kdf_legacy_kmgmt.c`) do."
+    # The keymgmt group's **unreachable** units (D386). `kdf_legacy_kmgmt.c` is landed (D386), and
+    # `dh_kmgmt.c`, `ecx_kmgmt.c.in` and `mac_legacy_kmgmt.c` are reachable-but-untranscribed -- their
+    # closures were not shown unreachable, so they are not here, exactly as D385 kept `dh_kmgmt.c`
+    # out. The four PQC units below are each built on an implementation the crate does not have.
+    "forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/rsa_kmgmt.c": (
+        "**Withheld: reachable only behind a prerequisite that D327 deliberately left out.** The "
+        "unit's `rsa_validate` (`:390-410`) calls `ossl_rsa_validate_pairwise`, "
+        "`ossl_rsa_validate_private` and `ossl_rsa_validate_public` **outside any `#ifdef "
+        "FIPS_MODULE`** guard, and those three live in `crypto/rsa/rsa_chk.c` as one-line calls to "
+        "`ossl_rsa_sp800_56b_check_public`/`_private` (`crypto/rsa/rsa_sp800_56b_check.c`). D327 "
+        "did not transcribe `rsa_sp800_56b_check.c` because nothing on the generate path reached "
+        "it; `rsa_kmgmt.c` does, so the two rows `RSA` and `RSA-PSS` need that unit landed first. "
+        "Everything else it calls is present (`ossl_rsa_new_with_ctx`, `ossl_rsa_todata`, "
+        "`ossl_rsa_fromdata`, `ossl_rsa_dup`, the whole `ossl_rsa_pss_params_30_*` family)."
+    ),
+    "forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/dsa_kmgmt.c": (
+        "**Withheld: same class as `rsa_kmgmt.c`.** It calls `ossl_dsa_check_pairwise`, "
+        "`ossl_dsa_check_params`, `ossl_dsa_check_priv_key` and `ossl_dsa_check_pub_key` -- "
+        "`crypto/dsa/dsa_check.c`'s validators, none of which the crate has -- so the `DSA` row "
+        "needs that unit first. Everything else it calls is present (`ossl_dsa_new`, "
+        "`ossl_dsa_dup`, `ossl_dsa_key_fromdata`, `ossl_dsa_ffc_params_fromdata`, "
+        "`ossl_dsa_generate_ffc_parameters` and the `ossl_ffc_params_*` family)."
+    ),
+    "forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/ec_kmgmt.c": (
+        "**Withheld: not reachable.** The unit's two rows (`EC`, `SM2`) are built on "
+        "`EC_GROUP`/`EC_POINT` and their arithmetic, which D334 records as one indivisible landing "
+        "that has not happened (`CT-EC` is `PENDING` for exactly that)."
+    ),
+    "forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/ml_dsa_kmgmt.c.in": (
+        "**Withheld: not reachable.** The unit's three rows (`ML-DSA-44`, `ML-DSA-65`, `ML-DSA-87`) "
+        "are built on `ossl_ml_dsa_*` (`crypto/ml_dsa/`), which the crate does not have -- its "
+        "function list (`ossl_ml_dsa_key_new`/`_free`/`_dup`/`_equal`, "
+        "`ossl_ml_dsa_generate_key`, the encode/decode pair and the `_sig_*` family) matches no "
+        "symbol in this tree."
+    ),
+    "forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/ml_kem_kmgmt.c.in": (
+        "**Withheld: not reachable.** The unit's three rows (`ML-KEM-512`, `ML-KEM-768`, "
+        "`ML-KEM-1024`) are built on `ossl_ml_kem_*` (`crypto/ml_kem/`), which the crate does not "
+        "have -- `ossl_ml_kem_encap_rand`/`_encap_seed`, `ossl_ml_kem_decap`, the key "
+        "encode/decode pair and `ossl_ml_kem_get_vinfo` are none of them in this tree."
+    ),
+    "forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/mlx_kmgmt.c.in": (
+        "**Withheld: not reachable.** The unit's four hybrid rows (`X25519MLKEM768`, "
+        "`X448MLKEM1024`, `SecP256r1MLKEM768`, `SecP384r1MLKEM1024`) are built on **both** an ECX "
+        "or EC half and the ML-KEM half: they call `ossl_ml_kem_get_vinfo` and `ossl_mlx_*`, and "
+        "depend on `crypto/ml_kem/` and `crypto/mlx/`, neither of which is in this tree."
+    ),
+    "forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/slh_dsa_kmgmt.c.in": (
+        "**Withheld: not reachable.** The unit's twelve rows (`SLH-DSA-SHA2-*`, `SLH-DSA-SHAKE-*`) "
+        "are built on `ossl_slh_dsa_*` (`crypto/slh_dsa/`), which the crate does not have -- "
+        "`ossl_slh_dsa_generate_key`, `ossl_slh_dsa_key_dup`/`_equal`/`_free`/`_get`, and the "
+        "`ossl_slh_dsa_hash_ctx_new`/`_free` pair are none of them in this tree."
     ),
 }
 

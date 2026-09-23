@@ -1538,30 +1538,40 @@ def main(argv: list[str]) -> int:
             row["plan_match"] = matched_by
 
     for (provider, operation), pairs in sorted(matched.items()):
-        # The dispatch association, as a partition equality rather than a name comparison.
-        crate_dispatch: dict[str, str] = {}
-        authority_dispatch: dict[str, str] = {}
+        # The dispatch association, as a **partition equality** rather than a name comparison, and
+        # in both directions (D386).
+        #
+        # The authority's own tables are many-to-one in places, and the census must describe them
+        # rather than reject them: `deflt_keymgmt[]` publishes `HMAC`, `SIPHASH` and `POLY1305`
+        # under the one `ossl_mac_legacy_keymgmt_functions`, and its three legacy-KDF rows
+        # (`TLS1-PRF`, `HKDF`, `SCRYPT`) under the one `ossl_kdf_keymgmt_functions`. An earlier form
+        # of this check required each authority dispatch symbol to name exactly one row, which is a
+        # claim about this tool rather than about the authority it describes, and it refused those
+        # two units outright. What is actually required is that the crate's dispatch symbols and
+        # the authority's induce the **same partition** of the landed rows: rows the authority
+        # dispatches together must be dispatched together by the crate, and rows the crate
+        # dispatches together must be dispatched together by the authority. Either direction
+        # failing is still fatal, so a miscarved transcription cannot pass.
+        by_crate: dict[str, set[str]] = {}
+        by_authority: dict[str, set[str]] = {}
         for row, dispatch in pairs:
-            label = f"{provider}/{operation}/{row['algorithm_names']}"
-            crate_dispatch.setdefault(dispatch, label)
-            authority_dispatch.setdefault(row["dispatch_table_symbol"], label)
-            if authority_dispatch[row["dispatch_table_symbol"]] != label:
-                raise CensusError(
-                    f"[provider-algorithms] fatal: {label} and "
-                    f"{authority_dispatch[row['dispatch_table_symbol']]} share the authority "
-                    f"dispatch symbol {row['dispatch_table_symbol']!r} but are different rows"
-                )
-        for dispatch, label in sorted(crate_dispatch.items()):
-            same = [
-                r["dispatch_table_symbol"]
-                for r, d in pairs
-                if d == dispatch
-            ]
-            if len(set(same)) > 1:
+            by_crate.setdefault(dispatch, set()).add(row["dispatch_table_symbol"])
+            by_authority.setdefault(row["dispatch_table_symbol"], set()).add(dispatch)
+        for dispatch, symbols in sorted(by_crate.items()):
+            if len(symbols) > 1:
                 raise CensusError(
                     f"[provider-algorithms] fatal: the crate implementation {dispatch} answers "
-                    f"for {sorted(set(same))}, which the authority dispatches separately; the "
-                    f"dispatch association is not one-to-one ({label})"
+                    f"for {sorted(symbols)}, which the authority dispatches separately; the "
+                    f"dispatch association is not one-to-one "
+                    f"({provider}/{operation})"
+                )
+        for symbol, dispatches in sorted(by_authority.items()):
+            if len(dispatches) > 1:
+                raise CensusError(
+                    f"[provider-algorithms] fatal: the authority dispatch symbol {symbol!r} "
+                    f"reaches the crate's {sorted(dispatches)}, which dispatch it separately; the "
+                    f"dispatch association is not one-to-one "
+                    f"({provider}/{operation})"
                 )
 
         # Subsequence order. The authority's rows for one operation are the concatenation of its

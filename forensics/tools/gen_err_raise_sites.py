@@ -610,6 +610,12 @@ COVERED_FILES = [
     # `raw-bytes`. `skeymgmt/aes_skmgmt.c` raises nothing at all and so is deliberately absent, the
     # same reasoning `mdc2_prov.c` and `rsa_meth.c` are named under above.
     ("providers/implementations/skeymgmt/generic.c", "PROV_GENERIC_SKEYMGMT"),
+    # The KEYEXCH unit the `OSSL_OP_KEYMGMT` gate unlocks (8.5's first exchange unit).
+    # `exchange/kdf_exch.c` is a plain `.c` (not generated), so its `__FILE__` carries the
+    # source-tree prefix. It raises once, from `kdf_derive` (`:117`), when the caller's buffer is
+    # smaller than the KDF's fixed output size. `kdf_legacy_kmgmt.c` itself raises nothing and so is
+    # deliberately absent, on the same reasoning as `skeymgmt/aes_skmgmt.c` above.
+    ("providers/implementations/exchange/kdf_exch.c", "PROV_KDF_EXCH"),
     # Phase 8.4: the `crypto/rsa` subsystem. The same rule as `crypto/bn` above -- this is
     # the *subsystem* set, not a selection of convenient files, because every one of them
     # raises from a surface Phase 8 owns and a coordinate's `file` string is part of the

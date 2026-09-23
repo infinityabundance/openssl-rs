@@ -22582,6 +22582,16 @@ pub(crate) const PROV_GENERIC_SKEYMGMT_63: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `kdf_derive` at `providers/implementations/exchange/kdf_exch.c:117` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_KDF_EXCH_117: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/exchange/kdf_exch.c",
+    line: 117,
+    func: c"kdf_derive",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
 /// `rsa_new_intern` at `crypto/rsa/rsa_lib.c:85` (ERR_R_CRYPTO_LIB).
 pub(crate) const RSA_LIB_85: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
@@ -36848,6 +36858,7 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_HMACDRBG_KDF_327,
     PROV_HMACDRBG_KDF_386,
     PROV_GENERIC_SKEYMGMT_63,
+    PROV_KDF_EXCH_117,
     RSA_LIB_85,
     RSA_LIB_106,
     RSA_LIB_116,
