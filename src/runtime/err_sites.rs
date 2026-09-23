@@ -26142,6 +26142,186 @@ pub(crate) const SLH_DSA_177: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `slh_dsa_import_decoder` at `providers/implementations/keymgmt/slh_dsa_kmgmt.c:151` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_KMGMT_151: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/slh_dsa_kmgmt.c",
+    line: 151,
+    func: c"slh_dsa_import_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_import_decoder` at `providers/implementations/keymgmt/slh_dsa_kmgmt.c:162` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_KMGMT_162: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/slh_dsa_kmgmt.c",
+    line: 162,
+    func: c"slh_dsa_import_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_get_params_decoder` at `providers/implementations/keymgmt/slh_dsa_kmgmt.c:244` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_KMGMT_244: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/slh_dsa_kmgmt.c",
+    line: 244,
+    func: c"slh_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_get_params_decoder` at `providers/implementations/keymgmt/slh_dsa_kmgmt.c:263` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_KMGMT_263: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/slh_dsa_kmgmt.c",
+    line: 263,
+    func: c"slh_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_get_params_decoder` at `providers/implementations/keymgmt/slh_dsa_kmgmt.c:274` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_KMGMT_274: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/slh_dsa_kmgmt.c",
+    line: 274,
+    func: c"slh_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_get_params_decoder` at `providers/implementations/keymgmt/slh_dsa_kmgmt.c:291` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_KMGMT_291: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/slh_dsa_kmgmt.c",
+    line: 291,
+    func: c"slh_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_get_params_decoder` at `providers/implementations/keymgmt/slh_dsa_kmgmt.c:302` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_KMGMT_302: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/slh_dsa_kmgmt.c",
+    line: 302,
+    func: c"slh_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_get_params_decoder` at `providers/implementations/keymgmt/slh_dsa_kmgmt.c:350` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_KMGMT_350: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/slh_dsa_kmgmt.c",
+    line: 350,
+    func: c"slh_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_get_params_decoder` at `providers/implementations/keymgmt/slh_dsa_kmgmt.c:361` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_KMGMT_361: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/slh_dsa_kmgmt.c",
+    line: 361,
+    func: c"slh_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_gen_set_params_decoder` at `providers/implementations/keymgmt/slh_dsa_kmgmt.c:657` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_KMGMT_657: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/slh_dsa_kmgmt.c",
+    line: 657,
+    func: c"slh_dsa_gen_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_gen_set_params_decoder` at `providers/implementations/keymgmt/slh_dsa_kmgmt.c:668` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_KMGMT_668: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/slh_dsa_kmgmt.c",
+    line: 668,
+    func: c"slh_dsa_gen_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_signverify_msg_init` at `providers/implementations/signature/slh_dsa_sig.c:161` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_SLH_DSA_SIG_161: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/slh_dsa_sig.c",
+    line: 161,
+    func: c"slh_dsa_signverify_msg_init",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_digest_signverify_init` at `providers/implementations/signature/slh_dsa_sig.c:192` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_SLH_DSA_SIG_192: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/slh_dsa_sig.c",
+    line: 192,
+    func: c"slh_dsa_digest_signverify_init",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_set_ctx_params_decoder` at `providers/implementations/signature/slh_dsa_sig.c:301` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_SIG_301: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/slh_dsa_sig.c",
+    line: 301,
+    func: c"slh_dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_set_ctx_params_decoder` at `providers/implementations/signature/slh_dsa_sig.c:312` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_SIG_312: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/slh_dsa_sig.c",
+    line: 312,
+    func: c"slh_dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_set_ctx_params_decoder` at `providers/implementations/signature/slh_dsa_sig.c:323` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_SIG_323: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/slh_dsa_sig.c",
+    line: 323,
+    func: c"slh_dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_set_ctx_params_decoder` at `providers/implementations/signature/slh_dsa_sig.c:334` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_SIG_334: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/slh_dsa_sig.c",
+    line: 334,
+    func: c"slh_dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_get_ctx_params_decoder` at `providers/implementations/signature/slh_dsa_sig.c:418` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_SIG_418: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/slh_dsa_sig.c",
+    line: 418,
+    func: c"slh_dsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
 /// `mac_digest_sign_init` at `providers/implementations/signature/mac_legacy_sig.c:107` (PROV_R_NO_KEY_SET).
 pub(crate) const PROV_MAC_LEGACY_SIG_107: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/providers/implementations/signature/mac_legacy_sig.c",
@@ -40804,6 +40984,24 @@ pub(crate) static ALL: &[ErrSite] = &[
     SLH_DSA_74,
     SLH_DSA_80,
     SLH_DSA_177,
+    PROV_SLH_DSA_KMGMT_151,
+    PROV_SLH_DSA_KMGMT_162,
+    PROV_SLH_DSA_KMGMT_244,
+    PROV_SLH_DSA_KMGMT_263,
+    PROV_SLH_DSA_KMGMT_274,
+    PROV_SLH_DSA_KMGMT_291,
+    PROV_SLH_DSA_KMGMT_302,
+    PROV_SLH_DSA_KMGMT_350,
+    PROV_SLH_DSA_KMGMT_361,
+    PROV_SLH_DSA_KMGMT_657,
+    PROV_SLH_DSA_KMGMT_668,
+    PROV_SLH_DSA_SIG_161,
+    PROV_SLH_DSA_SIG_192,
+    PROV_SLH_DSA_SIG_301,
+    PROV_SLH_DSA_SIG_312,
+    PROV_SLH_DSA_SIG_323,
+    PROV_SLH_DSA_SIG_334,
+    PROV_SLH_DSA_SIG_418,
     PROV_MAC_LEGACY_SIG_107,
     RSA_LIB_85,
     RSA_LIB_106,

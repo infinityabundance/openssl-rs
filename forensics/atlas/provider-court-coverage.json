@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 256,
+        "implemented": 280,
         "unmatched": 0
       },
       "9": {
@@ -16,36 +16,50 @@
       {
         "court": "RT-DIGEST",
         "phase": 8,
-        "probe": "courts/phase8/rt_digest_probe.c"
+        "probes": [
+          "courts/phase8/rt_digest_probe.c"
+        ]
       },
       {
         "court": "RT-CIPHER",
         "phase": 8,
-        "probe": "courts/phase8/rt_cipher_probe.c"
+        "probes": [
+          "courts/phase8/rt_cipher_probe.c"
+        ]
       },
       {
         "court": "RT-DRBG",
         "phase": 9,
-        "probe": "courts/phase9/rt_drbg_probe.c"
+        "probes": [
+          "courts/phase9/rt_drbg_probe.c"
+        ]
       },
       {
         "court": "RT-KEYMGMT",
         "phase": 8,
-        "probe": "courts/phase8/rt_keymgmt_probe.c"
+        "probes": [
+          "courts/phase8/rt_keymgmt_probe.c",
+          "courts/phase8/slh_dsa_probe.h"
+        ]
       },
       {
         "court": "RT-SIGNATURE",
         "phase": 8,
-        "probe": "courts/phase8/rt_signature_probe.c"
+        "probes": [
+          "courts/phase8/rt_signature_probe.c",
+          "courts/phase8/slh_dsa_probe.h"
+        ]
       },
       {
         "court": "RT-ASYM-CIPHER",
         "phase": 8,
-        "probe": "courts/phase8/rt_asymcipher_probe.c"
+        "probes": [
+          "courts/phase8/rt_asymcipher_probe.c"
+        ]
       }
     ],
-    "directly_courted": 261,
-    "implemented_rows": 261,
+    "directly_courted": 285,
+    "implemented_rows": 285,
     "rows": [
       {
         "algorithm_names": "RSA",
@@ -2867,6 +2881,198 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "SLH-DSA-SHA2-128f",
+        "aliases": [
+          "SLH-DSA-SHA2-128f",
+          "id-slh-dsa-sha2-128f",
+          "2.16.840.1.101.3.4.3.21"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHA2-128s",
+        "aliases": [
+          "SLH-DSA-SHA2-128s",
+          "id-slh-dsa-sha2-128s",
+          "2.16.840.1.101.3.4.3.20"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHA2-192f",
+        "aliases": [
+          "SLH-DSA-SHA2-192f",
+          "id-slh-dsa-sha2-192f",
+          "2.16.840.1.101.3.4.3.23"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHA2-192s",
+        "aliases": [
+          "SLH-DSA-SHA2-192s",
+          "id-slh-dsa-sha2-192s",
+          "2.16.840.1.101.3.4.3.22"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHA2-256f",
+        "aliases": [
+          "SLH-DSA-SHA2-256f",
+          "id-slh-dsa-sha2-256f",
+          "2.16.840.1.101.3.4.3.25"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHA2-256s",
+        "aliases": [
+          "SLH-DSA-SHA2-256s",
+          "id-slh-dsa-sha2-256s",
+          "2.16.840.1.101.3.4.3.24"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHAKE-128f",
+        "aliases": [
+          "SLH-DSA-SHAKE-128f",
+          "id-slh-dsa-shake-128f",
+          "2.16.840.1.101.3.4.3.27"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHAKE-128s",
+        "aliases": [
+          "SLH-DSA-SHAKE-128s",
+          "id-slh-dsa-shake-128s",
+          "2.16.840.1.101.3.4.3.26"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHAKE-192f",
+        "aliases": [
+          "SLH-DSA-SHAKE-192f",
+          "id-slh-dsa-shake-192f",
+          "2.16.840.1.101.3.4.3.29"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHAKE-192s",
+        "aliases": [
+          "SLH-DSA-SHAKE-192s",
+          "id-slh-dsa-shake-192s",
+          "2.16.840.1.101.3.4.3.28"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHAKE-256f",
+        "aliases": [
+          "SLH-DSA-SHAKE-256f",
+          "id-slh-dsa-shake-256f",
+          "2.16.840.1.101.3.4.3.31"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHAKE-256s",
+        "aliases": [
+          "SLH-DSA-SHAKE-256s",
+          "id-slh-dsa-shake-256s",
+          "2.16.840.1.101.3.4.3.30"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "SM2",
         "aliases": [
           "SM2",
@@ -3780,6 +3986,198 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "SLH-DSA-SHA2-128f",
+        "aliases": [
+          "SLH-DSA-SHA2-128f",
+          "id-slh-dsa-sha2-128f",
+          "2.16.840.1.101.3.4.3.21"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHA2-128s",
+        "aliases": [
+          "SLH-DSA-SHA2-128s",
+          "id-slh-dsa-sha2-128s",
+          "2.16.840.1.101.3.4.3.20"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHA2-192f",
+        "aliases": [
+          "SLH-DSA-SHA2-192f",
+          "id-slh-dsa-sha2-192f",
+          "2.16.840.1.101.3.4.3.23"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHA2-192s",
+        "aliases": [
+          "SLH-DSA-SHA2-192s",
+          "id-slh-dsa-sha2-192s",
+          "2.16.840.1.101.3.4.3.22"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHA2-256f",
+        "aliases": [
+          "SLH-DSA-SHA2-256f",
+          "id-slh-dsa-sha2-256f",
+          "2.16.840.1.101.3.4.3.25"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHA2-256s",
+        "aliases": [
+          "SLH-DSA-SHA2-256s",
+          "id-slh-dsa-sha2-256s",
+          "2.16.840.1.101.3.4.3.24"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHAKE-128f",
+        "aliases": [
+          "SLH-DSA-SHAKE-128f",
+          "id-slh-dsa-shake-128f",
+          "2.16.840.1.101.3.4.3.27"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHAKE-128s",
+        "aliases": [
+          "SLH-DSA-SHAKE-128s",
+          "id-slh-dsa-shake-128s",
+          "2.16.840.1.101.3.4.3.26"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHAKE-192f",
+        "aliases": [
+          "SLH-DSA-SHAKE-192f",
+          "id-slh-dsa-shake-192f",
+          "2.16.840.1.101.3.4.3.29"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHAKE-192s",
+        "aliases": [
+          "SLH-DSA-SHAKE-192s",
+          "id-slh-dsa-shake-192s",
+          "2.16.840.1.101.3.4.3.28"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHAKE-256f",
+        "aliases": [
+          "SLH-DSA-SHAKE-256f",
+          "id-slh-dsa-shake-256f",
+          "2.16.840.1.101.3.4.3.31"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHAKE-256s",
+        "aliases": [
+          "SLH-DSA-SHAKE-256s",
+          "id-slh-dsa-shake-256s",
+          "2.16.840.1.101.3.4.3.30"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "AES",
         "aliases": [
           "AES",
@@ -3814,35 +4212,45 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "38125e4b8e8bc1b05e944b650986e154086b472e06934420396efdef3670a1bd"
+      "sha256": "76ce5b640ceda1a8786bb2e554fa1649a5f053f27a4404a5adce636ba687cb5e"
     },
     {
-      "name": "court:RT-DIGEST",
+      "name": "court:RT-DIGEST:rt_digest_probe.c",
       "path": "courts/phase8/rt_digest_probe.c",
       "sha256": "aaa2152f0fd85773eef87ce64dbc7203ba20f3a27ae0e5db2b76e1ee9a4753ee"
     },
     {
-      "name": "court:RT-CIPHER",
+      "name": "court:RT-CIPHER:rt_cipher_probe.c",
       "path": "courts/phase8/rt_cipher_probe.c",
       "sha256": "17b30e936dbcf463c5cc73f77d4189e59bd4a22e74a39cdfb87f9a894ff80fac"
     },
     {
-      "name": "court:RT-DRBG",
+      "name": "court:RT-DRBG:rt_drbg_probe.c",
       "path": "courts/phase9/rt_drbg_probe.c",
       "sha256": "ff28186b339c5d666151332184383080981405286fcac3d38518b3d54e1d5b63"
     },
     {
-      "name": "court:RT-KEYMGMT",
+      "name": "court:RT-KEYMGMT:rt_keymgmt_probe.c",
       "path": "courts/phase8/rt_keymgmt_probe.c",
-      "sha256": "c93c9eec13fba588660beda23c7970ddbcd9fd08acbf35ea5470e21fc94dc184"
+      "sha256": "1d53ac62bcc0069f7ae0a97c07632bec5cfe6c8ee6ba1f412d26193631760a11"
     },
     {
-      "name": "court:RT-SIGNATURE",
+      "name": "court:RT-KEYMGMT:slh_dsa_probe.h",
+      "path": "courts/phase8/slh_dsa_probe.h",
+      "sha256": "f33d29e403c29a242f3afd25689bc3c927f209d21f7568bcfb833a4f401465da"
+    },
+    {
+      "name": "court:RT-SIGNATURE:rt_signature_probe.c",
       "path": "courts/phase8/rt_signature_probe.c",
-      "sha256": "550463ffecb0d75603d01b4ee73aabe697a0aaa5a4ca120197c278831b6f8543"
+      "sha256": "e51a25cc5392bdd7d26af2d03c1a1704a24d69adf892dd6352c7ab2054cd4658"
     },
     {
-      "name": "court:RT-ASYM-CIPHER",
+      "name": "court:RT-SIGNATURE:slh_dsa_probe.h",
+      "path": "courts/phase8/slh_dsa_probe.h",
+      "sha256": "f33d29e403c29a242f3afd25689bc3c927f209d21f7568bcfb833a4f401465da"
+    },
+    {
+      "name": "court:RT-ASYM-CIPHER:rt_asymcipher_probe.c",
       "path": "courts/phase8/rt_asymcipher_probe.c",
       "sha256": "706658dd0d827b42bd4b99422b2c340a6ef9c0eef817c07ba3426e0f86004271"
     }

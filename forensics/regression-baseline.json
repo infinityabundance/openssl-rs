@@ -303,7 +303,7 @@
       "verdict": "pass"
     },
     "RT-KEYMGMT": {
-      "observations": 124,
+      "observations": 280,
       "verdict": "pass"
     },
     "RT-LHASH": {
@@ -387,7 +387,7 @@
       "verdict": "pass"
     },
     "RT-SIGNATURE": {
-      "observations": 297,
+      "observations": 429,
       "verdict": "pass"
     },
     "RT-STACK": {
@@ -669,6 +669,18 @@
     "default/OSSL_OP_KEYMGMT/RSA-PSS",
     "default/OSSL_OP_KEYMGMT/SCRYPT",
     "default/OSSL_OP_KEYMGMT/SIPHASH",
+    "default/OSSL_OP_KEYMGMT/SLH-DSA-SHA2-128f",
+    "default/OSSL_OP_KEYMGMT/SLH-DSA-SHA2-128s",
+    "default/OSSL_OP_KEYMGMT/SLH-DSA-SHA2-192f",
+    "default/OSSL_OP_KEYMGMT/SLH-DSA-SHA2-192s",
+    "default/OSSL_OP_KEYMGMT/SLH-DSA-SHA2-256f",
+    "default/OSSL_OP_KEYMGMT/SLH-DSA-SHA2-256s",
+    "default/OSSL_OP_KEYMGMT/SLH-DSA-SHAKE-128f",
+    "default/OSSL_OP_KEYMGMT/SLH-DSA-SHAKE-128s",
+    "default/OSSL_OP_KEYMGMT/SLH-DSA-SHAKE-192f",
+    "default/OSSL_OP_KEYMGMT/SLH-DSA-SHAKE-192s",
+    "default/OSSL_OP_KEYMGMT/SLH-DSA-SHAKE-256f",
+    "default/OSSL_OP_KEYMGMT/SLH-DSA-SHAKE-256s",
     "default/OSSL_OP_KEYMGMT/SM2",
     "default/OSSL_OP_KEYMGMT/TLS1-PRF",
     "default/OSSL_OP_KEYMGMT/X25519",
@@ -729,6 +741,18 @@
     "default/OSSL_OP_SIGNATURE/RSA-SHA3-512",
     "default/OSSL_OP_SIGNATURE/RSA-SM3",
     "default/OSSL_OP_SIGNATURE/SIPHASH",
+    "default/OSSL_OP_SIGNATURE/SLH-DSA-SHA2-128f",
+    "default/OSSL_OP_SIGNATURE/SLH-DSA-SHA2-128s",
+    "default/OSSL_OP_SIGNATURE/SLH-DSA-SHA2-192f",
+    "default/OSSL_OP_SIGNATURE/SLH-DSA-SHA2-192s",
+    "default/OSSL_OP_SIGNATURE/SLH-DSA-SHA2-256f",
+    "default/OSSL_OP_SIGNATURE/SLH-DSA-SHA2-256s",
+    "default/OSSL_OP_SIGNATURE/SLH-DSA-SHAKE-128f",
+    "default/OSSL_OP_SIGNATURE/SLH-DSA-SHAKE-128s",
+    "default/OSSL_OP_SIGNATURE/SLH-DSA-SHAKE-192f",
+    "default/OSSL_OP_SIGNATURE/SLH-DSA-SHAKE-192s",
+    "default/OSSL_OP_SIGNATURE/SLH-DSA-SHAKE-256f",
+    "default/OSSL_OP_SIGNATURE/SLH-DSA-SHAKE-256s",
     "default/OSSL_OP_SKEYMGMT/AES",
     "default/OSSL_OP_SKEYMGMT/GENERIC-SECRET"
   ],
@@ -739,14 +763,14 @@
       "8": 685,
       "9": 675
     },
-    "implemented": 261,
+    "implemented": 285,
     "open_by_phase": {
       "10": 636,
       "13": 39,
-      "8": 50,
+      "8": 26,
       "9": 10
     },
     "total": 996,
-    "unimplemented": 735
+    "unimplemented": 711
   }
 }

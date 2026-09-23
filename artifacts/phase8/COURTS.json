@@ -194,9 +194,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 124,
+        "authority_observations": 280,
         "candidate_exit_code": 0,
-        "candidate_observations": 124,
+        "candidate_observations": 280,
         "candidate_stderr_tail": [],
         "court": "RT-KEYMGMT",
         "crashed": false,
@@ -211,9 +211,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 297,
+        "authority_observations": 429,
         "candidate_exit_code": 0,
-        "candidate_observations": 297,
+        "candidate_observations": 429,
         "candidate_stderr_tail": [],
         "court": "RT-SIGNATURE",
         "crashed": false,
@@ -37977,12 +37977,12 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_keymgmt_probe.c",
-      "sha256": "c93c9eec13fba588660beda23c7970ddbcd9fd08acbf35ea5470e21fc94dc184"
+      "sha256": "1d53ac62bcc0069f7ae0a97c07632bec5cfe6c8ee6ba1f412d26193631760a11"
     },
     {
       "name": "probe",
       "path": "courts/phase8/rt_signature_probe.c",
-      "sha256": "550463ffecb0d75603d01b4ee73aabe697a0aaa5a4ca120197c278831b6f8543"
+      "sha256": "e51a25cc5392bdd7d26af2d03c1a1704a24d69adf892dd6352c7ab2054cd4658"
     },
     {
       "name": "probe",

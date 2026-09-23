@@ -95,6 +95,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "slh_dsa_probe.h"
+
 static void kv_int(const char *key, int value)
 {
     printf("%s=%d\n", key, value);
@@ -533,6 +535,97 @@ static void arm_mac_import(void)
     }
 }
 
+/* The sha256 of a buffer, as hex: the one observation this arm makes about a generated key that
+ * is not a size or a return code. A generated SLH-DSA keypair is a function of its seed alone, so
+ * the digest is identical on both sides; a plain key would not be. */
+static void kv_sha256(const char *key, const unsigned char *buf, size_t len)
+{
+    unsigned char digest[32];
+    unsigned int dlen = 0;
+
+    printf("%s=", key);
+    if (EVP_Digest(buf, len, digest, &dlen, EVP_sha256(), NULL) == 1) {
+        size_t i;
+
+        for (i = 0; i < dlen; i++)
+            printf("%02x", digest[i]);
+    } else {
+        printf("<failed>");
+    }
+    printf("\n");
+}
+
+/* The twelve `OSSL_OP_KEYMGMT` `SLH-DSA-*` rows. Each is fetched by its own name, a keypair is
+ * generated from the authority's own ACVP keygen seed, and the recovered `bits`/`security-bits`/
+ * `max-size` and public key are observed. The last 2n bytes of the vector are `PK_SEED || PK_ROOT`,
+ * so the generated public key is compared against the vector's rather than against a second
+ * transcription, and its sha256 is printed. A wrong-length generation or a dropped `seed`
+ * parameter is a residual rather than a plausible-looking log line. */
+static void arm_slh_dsa_keymgmt(void)
+{
+    size_t i;
+
+    for (i = 0; i < sizeof(slh_dsa_rows) / sizeof(slh_dsa_rows[0]); i++) {
+        const char *name = slh_dsa_rows[i].name;
+        size_t key_len = slh_dsa_rows[i].len;
+        size_t n = key_len / 4;
+        char key[96];
+        EVP_PKEY_CTX *ctx;
+        EVP_PKEY *pkey = NULL;
+        OSSL_PARAM params[2];
+        unsigned char priv[128], pub[64];
+        size_t priv_len = 0, pub_len = 0;
+        int bits = 0, sec_bits = 0, max_size = 0;
+
+        ctx = EVP_PKEY_CTX_new_from_name(NULL, name, NULL);
+        snprintf(key, sizeof(key), "slh.%s.fetch", name);
+        kv_int(key, ctx != NULL);
+        if (ctx == NULL)
+            continue;
+
+        /* Arm 1: the row's own generation path, driven with the vector's 3n-byte seed. */
+        params[0] = OSSL_PARAM_construct_octet_string(OSSL_PKEY_PARAM_SLH_DSA_SEED,
+                                                      (void *)slh_dsa_rows[i].key,
+                                                      key_len - n);
+        params[1] = OSSL_PARAM_construct_end();
+        snprintf(key, sizeof(key), "slh.%s.keygen_init", name);
+        kv_int(key, EVP_PKEY_keygen_init(ctx));
+        snprintf(key, sizeof(key), "slh.%s.set_seed", name);
+        kv_int(key, EVP_PKEY_CTX_set_params(ctx, params));
+        snprintf(key, sizeof(key), "slh.%s.generate", name);
+        kv_int(key, EVP_PKEY_generate(ctx, &pkey));
+
+        /* Arm 2: the recovered private and public key, and the three get_params sizes. */
+        snprintf(key, sizeof(key), "slh.%s.get_priv", name);
+        kv_int(key, EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_PRIV_KEY, priv,
+                                                    sizeof(priv), &priv_len));
+        snprintf(key, sizeof(key), "slh.%s.priv_len", name);
+        kv_int(key, (int)priv_len);
+        snprintf(key, sizeof(key), "slh.%s.get_pub", name);
+        kv_int(key, EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_PUB_KEY, pub,
+                                                    sizeof(pub), &pub_len));
+        snprintf(key, sizeof(key), "slh.%s.pub_len", name);
+        kv_int(key, (int)pub_len);
+        snprintf(key, sizeof(key), "slh.%s.pub_matches_vector", name);
+        kv_int(key, pub_len == 2 * n && memcmp(pub, slh_dsa_rows[i].key + 2 * n, 2 * n) == 0);
+        snprintf(key, sizeof(key), "slh.%s.pub_sha256", name);
+        kv_sha256(key, pub, pub_len);
+        snprintf(key, sizeof(key), "slh.%s.bits", name);
+        kv_int(key, EVP_PKEY_get_int_param(pkey, OSSL_PKEY_PARAM_BITS, &bits) == 1 ? bits : -1);
+        snprintf(key, sizeof(key), "slh.%s.security_bits", name);
+        kv_int(key, EVP_PKEY_get_int_param(pkey, OSSL_PKEY_PARAM_SECURITY_BITS, &sec_bits) == 1
+                       ? sec_bits
+                       : -1);
+        snprintf(key, sizeof(key), "slh.%s.max_size", name);
+        kv_int(key, EVP_PKEY_get_int_param(pkey, OSSL_PKEY_PARAM_MAX_SIZE, &max_size) == 1
+                       ? max_size
+                       : -1);
+
+        EVP_PKEY_free(pkey);
+        EVP_PKEY_CTX_free(ctx);
+    }
+}
+
 int main(void)
 {
     arm_keymgmt_fetch();
@@ -543,6 +636,7 @@ int main(void)
     arm_rsa_dsa_import();
     arm_mac_import();
     arm_kem_fetch();
+    arm_slh_dsa_keymgmt();
     ERR_clear_error();
     return 0;
 }

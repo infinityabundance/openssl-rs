@@ -75,6 +75,14 @@ use crate::provider::rsa_sig::{
     RSA_SHA512_224_SIGNATURE_FUNCTIONS, RSA_SHA512_256_SIGNATURE_FUNCTIONS,
     RSA_SHA512_SIGNATURE_FUNCTIONS, RSA_SIGNATURE_FUNCTIONS, RSA_SM3_SIGNATURE_FUNCTIONS,
 };
+use crate::provider::slh_dsa_sig::{
+    SLH_DSA_SHA2_128F_SIGNATURE_FUNCTIONS, SLH_DSA_SHA2_128S_SIGNATURE_FUNCTIONS,
+    SLH_DSA_SHA2_192F_SIGNATURE_FUNCTIONS, SLH_DSA_SHA2_192S_SIGNATURE_FUNCTIONS,
+    SLH_DSA_SHA2_256F_SIGNATURE_FUNCTIONS, SLH_DSA_SHA2_256S_SIGNATURE_FUNCTIONS,
+    SLH_DSA_SHAKE_128F_SIGNATURE_FUNCTIONS, SLH_DSA_SHAKE_128S_SIGNATURE_FUNCTIONS,
+    SLH_DSA_SHAKE_192F_SIGNATURE_FUNCTIONS, SLH_DSA_SHAKE_192S_SIGNATURE_FUNCTIONS,
+    SLH_DSA_SHAKE_256F_SIGNATURE_FUNCTIONS, SLH_DSA_SHAKE_256S_SIGNATURE_FUNCTIONS,
+};
 
 /// `static const OSSL_ALGORITHM deflt_signature[]` — `providers/defltprov.c:415-521`, **the rows
 /// this module has landed**, in the authority's order.
@@ -99,7 +107,7 @@ use crate::provider::rsa_sig::{
 /// rustfmt pass that moved the `c"…"` onto its own line would make the census read a table with
 /// fewer rows than it has.
 #[rustfmt::skip]
-pub(crate) static DEFLT_SIGNATURES: [OsslAlgorithm; 44] = [
+pub(crate) static DEFLT_SIGNATURES: [OsslAlgorithm; 56] = [
     OsslAlgorithm {
         // `PROV_NAMES_DSA` — the OID alias is part of the row.
         algorithm_names: c"DSA:dsaEncryption:1.2.840.10040.4.1".as_ptr(),
@@ -402,6 +410,90 @@ pub(crate) static DEFLT_SIGNATURES: [OsslAlgorithm; 44] = [
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
+        // `PROV_NAMES_SLH_DSA_SHA2_128S` — all three aliases are part of the row.
+        algorithm_names: c"SLH-DSA-SHA2-128s:id-slh-dsa-sha2-128s:2.16.840.1.101.3.4.3.20".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SLH_DSA_SHA2_128S_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SLH_DSA_SHA2_128F`.
+        algorithm_names: c"SLH-DSA-SHA2-128f:id-slh-dsa-sha2-128f:2.16.840.1.101.3.4.3.21".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SLH_DSA_SHA2_128F_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SLH_DSA_SHA2_192S`.
+        algorithm_names: c"SLH-DSA-SHA2-192s:id-slh-dsa-sha2-192s:2.16.840.1.101.3.4.3.22".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SLH_DSA_SHA2_192S_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SLH_DSA_SHA2_192F`.
+        algorithm_names: c"SLH-DSA-SHA2-192f:id-slh-dsa-sha2-192f:2.16.840.1.101.3.4.3.23".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SLH_DSA_SHA2_192F_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SLH_DSA_SHA2_256S`.
+        algorithm_names: c"SLH-DSA-SHA2-256s:id-slh-dsa-sha2-256s:2.16.840.1.101.3.4.3.24".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SLH_DSA_SHA2_256S_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SLH_DSA_SHA2_256F`.
+        algorithm_names: c"SLH-DSA-SHA2-256f:id-slh-dsa-sha2-256f:2.16.840.1.101.3.4.3.25".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SLH_DSA_SHA2_256F_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SLH_DSA_SHAKE_128S`.
+        algorithm_names: c"SLH-DSA-SHAKE-128s:id-slh-dsa-shake-128s:2.16.840.1.101.3.4.3.26".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SLH_DSA_SHAKE_128S_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SLH_DSA_SHAKE_128F`.
+        algorithm_names: c"SLH-DSA-SHAKE-128f:id-slh-dsa-shake-128f:2.16.840.1.101.3.4.3.27".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SLH_DSA_SHAKE_128F_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SLH_DSA_SHAKE_192S`.
+        algorithm_names: c"SLH-DSA-SHAKE-192s:id-slh-dsa-shake-192s:2.16.840.1.101.3.4.3.28".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SLH_DSA_SHAKE_192S_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SLH_DSA_SHAKE_192F`.
+        algorithm_names: c"SLH-DSA-SHAKE-192f:id-slh-dsa-shake-192f:2.16.840.1.101.3.4.3.29".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SLH_DSA_SHAKE_192F_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SLH_DSA_SHAKE_256S`.
+        algorithm_names: c"SLH-DSA-SHAKE-256s:id-slh-dsa-shake-256s:2.16.840.1.101.3.4.3.30".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SLH_DSA_SHAKE_256S_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SLH_DSA_SHAKE_256F`.
+        algorithm_names: c"SLH-DSA-SHAKE-256f:id-slh-dsa-shake-256f:2.16.840.1.101.3.4.3.31".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SLH_DSA_SHAKE_256F_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
         algorithm_names: ptr::null(),
         property_definition: ptr::null(),
         implementation: ptr::null(),
@@ -413,12 +505,13 @@ pub(crate) static DEFLT_SIGNATURES: [OsslAlgorithm; 44] = [
 mod tests {
     use super::*;
 
-    /// The table's shape: forty-four entries, the last the NULL terminator, and the five landed
-    /// runs in the authority's order -- `DSA` first (`defltprov.c:417`), then the fourteen `RSA`
-    /// rows (`:428-441`, D395), `EdDSA` (`:444`), `ECDSA` (`:455`) and `CMAC` last (`:484`).
+    /// The table's shape: fifty-six entries, the last the NULL terminator, and the six landed runs
+    /// in the authority's order -- `DSA` first (`defltprov.c:417`), then the fourteen `RSA` rows
+    /// (`:428-441`, D395), `EdDSA` (`:444`), `ECDSA` (`:455`), the legacy-MAC four (`:476-484`, D389)
+    /// and the twelve `SLH-DSA` rows last (`:497-521`, D399).
     #[test]
     fn the_signature_table_is_the_authoritys_landed_runs_in_order() {
-        assert_eq!(DEFLT_SIGNATURES.len(), 44);
+        assert_eq!(DEFLT_SIGNATURES.len(), 56);
         // SAFETY: the first row is initialised.
         let first = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[0].algorithm_names) };
         assert_eq!(first.to_bytes(), b"DSA:dsaEncryption:1.2.840.10040.4.1");
@@ -465,8 +558,20 @@ mod tests {
         // SAFETY: the forty-third row is initialised.
         let last = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[42].algorithm_names) };
         assert_eq!(last.to_bytes(), b"CMAC");
-        assert!(DEFLT_SIGNATURES[43].algorithm_names.is_null());
-        assert!(DEFLT_SIGNATURES[43].property_definition.is_null());
-        assert!(DEFLT_SIGNATURES[43].implementation.is_null());
+        // SAFETY: the forty-fourth row is initialised -- the `SLH-DSA` run's first.
+        let slh_first = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[43].algorithm_names) };
+        assert_eq!(
+            slh_first.to_bytes(),
+            b"SLH-DSA-SHA2-128s:id-slh-dsa-sha2-128s:2.16.840.1.101.3.4.3.20"
+        );
+        // SAFETY: the fifty-fifth row is initialised -- the `SLH-DSA` run's last.
+        let slh_last = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[54].algorithm_names) };
+        assert_eq!(
+            slh_last.to_bytes(),
+            b"SLH-DSA-SHAKE-256f:id-slh-dsa-shake-256f:2.16.840.1.101.3.4.3.31"
+        );
+        assert!(DEFLT_SIGNATURES[55].algorithm_names.is_null());
+        assert!(DEFLT_SIGNATURES[55].property_definition.is_null());
+        assert!(DEFLT_SIGNATURES[55].implementation.is_null());
     }
 }

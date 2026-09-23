@@ -137,6 +137,14 @@ use crate::provider::mac_legacy_kmgmt::{
     CMAC_LEGACY_KEYMGMT_FUNCTIONS, MAC_LEGACY_KEYMGMT_FUNCTIONS,
 };
 use crate::provider::rsa_kmgmt::{RSA_KEYMGMT_FUNCTIONS, RSA_PSS_KEYMGMT_FUNCTIONS};
+use crate::provider::slh_dsa_kmgmt::{
+    SLH_DSA_SHA2_128F_KEYMGMT_FUNCTIONS, SLH_DSA_SHA2_128S_KEYMGMT_FUNCTIONS,
+    SLH_DSA_SHA2_192F_KEYMGMT_FUNCTIONS, SLH_DSA_SHA2_192S_KEYMGMT_FUNCTIONS,
+    SLH_DSA_SHA2_256F_KEYMGMT_FUNCTIONS, SLH_DSA_SHA2_256S_KEYMGMT_FUNCTIONS,
+    SLH_DSA_SHAKE_128F_KEYMGMT_FUNCTIONS, SLH_DSA_SHAKE_128S_KEYMGMT_FUNCTIONS,
+    SLH_DSA_SHAKE_192F_KEYMGMT_FUNCTIONS, SLH_DSA_SHAKE_192S_KEYMGMT_FUNCTIONS,
+    SLH_DSA_SHAKE_256F_KEYMGMT_FUNCTIONS, SLH_DSA_SHAKE_256S_KEYMGMT_FUNCTIONS,
+};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
 use crate::runtime::mem::{
@@ -1753,7 +1761,15 @@ fn ossl_assert(expr: bool) -> c_int {
 /// **The property definition is `"provider=default"` on every row** (`defltprov.c`'s `ALG` macro,
 /// D247), and the description is left NULL on every row, which is this crate's convention for the
 /// fourth `OSSL_ALGORITHM` field (no landed table sets it, and nothing reads it).
-pub(crate) static DEFLT_KEYMGMT: [OsslAlgorithm; 19] = [
+/// The `SM2` row closes the landed set before D399; the twelve `SLH-DSA` rows are appended after it
+/// (`defltprov.c:659-700`, which sits after `SM2` at `:611-614`, the unlanded `LMS` row and the
+/// four unlanded ML-KEM/`mlx` rows). D399 lands them: the crate has no `LMS` or ML-KEM row, so
+/// appending the twelve after `SM2` keeps the crate's rows a **subsequence** of the authority's.
+///
+/// The authority's order within the twelve is the `PROV_NAMES_SLH_DSA_*` order — SHA2 128s/128f/
+/// 192s/192f/256s/256f, then SHAKE in the same shape (`defltprov.c:659-700`) — and each row's
+/// description is left NULL for the crate's usual reason.
+pub(crate) static DEFLT_KEYMGMT: [OsslAlgorithm; 31] = [
     OsslAlgorithm {
         // `PROV_NAMES_DH`.
         algorithm_names: c"DH:dhKeyAgreement:1.2.840.113549.1.3.1".as_ptr(),
@@ -1878,6 +1894,96 @@ pub(crate) static DEFLT_KEYMGMT: [OsslAlgorithm; 19] = [
         algorithm_names: c"SM2:1.2.156.10197.1.301".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
         implementation: SM2_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SLH_DSA_SHA2_128S` — all three aliases are part of the row.
+        algorithm_names: c"SLH-DSA-SHA2-128s:id-slh-dsa-sha2-128s:2.16.840.1.101.3.4.3.20".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SLH_DSA_SHA2_128S_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SLH_DSA_SHA2_128F`.
+        algorithm_names: c"SLH-DSA-SHA2-128f:id-slh-dsa-sha2-128f:2.16.840.1.101.3.4.3.21".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SLH_DSA_SHA2_128F_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SLH_DSA_SHA2_192S`.
+        algorithm_names: c"SLH-DSA-SHA2-192s:id-slh-dsa-sha2-192s:2.16.840.1.101.3.4.3.22".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SLH_DSA_SHA2_192S_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SLH_DSA_SHA2_192F`.
+        algorithm_names: c"SLH-DSA-SHA2-192f:id-slh-dsa-sha2-192f:2.16.840.1.101.3.4.3.23".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SLH_DSA_SHA2_192F_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SLH_DSA_SHA2_256S`.
+        algorithm_names: c"SLH-DSA-SHA2-256s:id-slh-dsa-sha2-256s:2.16.840.1.101.3.4.3.24".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SLH_DSA_SHA2_256S_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SLH_DSA_SHA2_256F`.
+        algorithm_names: c"SLH-DSA-SHA2-256f:id-slh-dsa-sha2-256f:2.16.840.1.101.3.4.3.25".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SLH_DSA_SHA2_256F_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SLH_DSA_SHAKE_128S`.
+        algorithm_names: c"SLH-DSA-SHAKE-128s:id-slh-dsa-shake-128s:2.16.840.1.101.3.4.3.26"
+            .as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SLH_DSA_SHAKE_128S_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SLH_DSA_SHAKE_128F`.
+        algorithm_names: c"SLH-DSA-SHAKE-128f:id-slh-dsa-shake-128f:2.16.840.1.101.3.4.3.27"
+            .as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SLH_DSA_SHAKE_128F_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SLH_DSA_SHAKE_192S`.
+        algorithm_names: c"SLH-DSA-SHAKE-192s:id-slh-dsa-shake-192s:2.16.840.1.101.3.4.3.28"
+            .as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SLH_DSA_SHAKE_192S_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SLH_DSA_SHAKE_192F`.
+        algorithm_names: c"SLH-DSA-SHAKE-192f:id-slh-dsa-shake-192f:2.16.840.1.101.3.4.3.29"
+            .as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SLH_DSA_SHAKE_192F_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SLH_DSA_SHAKE_256S`.
+        algorithm_names: c"SLH-DSA-SHAKE-256s:id-slh-dsa-shake-256s:2.16.840.1.101.3.4.3.30"
+            .as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SLH_DSA_SHAKE_256S_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SLH_DSA_SHAKE_256F`.
+        algorithm_names: c"SLH-DSA-SHAKE-256f:id-slh-dsa-shake-256f:2.16.840.1.101.3.4.3.31"
+            .as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SLH_DSA_SHAKE_256F_KEYMGMT_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {

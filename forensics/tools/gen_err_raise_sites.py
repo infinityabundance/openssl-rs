@@ -751,6 +751,16 @@ COVERED_FILES = [
     # destination-size guard, the `PROV_R_MISSING_KEY` "no private key" and "no public key"
     # guards, and the named field of the oversize-message refusal.
     ("crypto/slh_dsa/slh_dsa.c", "SLH_DSA"),
+    # The SLH-DSA keymgmt unit. `.c.in`-generated, so the bare build-relative path. Every raise is
+    # a generated decoder's `PROV_R_REPEATED_PARAMETER` site: the import decoder's two keys
+    # (priv, pub), the get-params decoder's seven, and the gen-set-params decoder's two. The
+    # `FIPS_MODULE` pairwise-test raises are recorded but not compiled on this profile.
+    ("providers/implementations/keymgmt/slh_dsa_kmgmt.c", "PROV_SLH_DSA_KMGMT"),
+    # The SLH-DSA signature unit. `.c.in`-generated too. Its raises are the generated
+    # set-ctx-params decoder's four `PROV_R_REPEATED_PARAMETER` sites, the get-ctx-params
+    # decoder's one, the `PROV_R_NO_KEY_SET` refusal of `slh_dsa_signverify_msg_init`, and the
+    # `PROV_R_INVALID_DIGEST` refusal of `slh_dsa_digest_signverify_init`.
+    ("providers/implementations/signature/slh_dsa_sig.c", "PROV_SLH_DSA_SIG"),
     # 8.10's `HMAC`/`SIPHASH`/`POLY1305`/`CMAC` signature rows. `signature/mac_legacy_sig.c` is a
     # plain `.c`, so its `__FILE__` carries the source-tree prefix. It raises once, the
     # `PROV_R_NO_KEY_SET` refusal of `mac_digest_sign_init` (`:107`).
