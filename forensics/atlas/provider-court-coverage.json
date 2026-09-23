@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 240,
+        "implemented": 254,
         "unmatched": 0
       },
       "9": {
@@ -39,8 +39,8 @@
         "probe": "courts/phase8/rt_signature_probe.c"
       }
     ],
-    "directly_courted": 245,
-    "implemented_rows": 245,
+    "directly_courted": 259,
+    "implemented_rows": 259,
     "rows": [
       {
         "algorithm_names": "AES-128-CBC",
@@ -2768,7 +2768,8 @@
         ],
         "courts": [
           "RT-DRBG",
-          "RT-KEYMGMT"
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -3501,6 +3502,225 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "RSA",
+        "aliases": [
+          "RSA",
+          "rsaEncryption",
+          "1.2.840.113549.1.1.1"
+        ],
+        "courts": [
+          "RT-DRBG",
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "RSA-RIPEMD160",
+        "aliases": [
+          "RSA-RIPEMD160",
+          "ripemd160WithRSA",
+          "1.3.36.3.3.1.2"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "RSA-SHA1",
+        "aliases": [
+          "RSA-SHA1",
+          "RSA-SHA-1",
+          "sha1WithRSAEncryption",
+          "1.2.840.113549.1.1.5"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "RSA-SHA2-224",
+        "aliases": [
+          "RSA-SHA2-224",
+          "RSA-SHA224",
+          "sha224WithRSAEncryption",
+          "1.2.840.113549.1.1.14"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "RSA-SHA2-256",
+        "aliases": [
+          "RSA-SHA2-256",
+          "RSA-SHA256",
+          "sha256WithRSAEncryption",
+          "1.2.840.113549.1.1.11"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "RSA-SHA2-384",
+        "aliases": [
+          "RSA-SHA2-384",
+          "RSA-SHA384",
+          "sha384WithRSAEncryption",
+          "1.2.840.113549.1.1.12"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "RSA-SHA2-512",
+        "aliases": [
+          "RSA-SHA2-512",
+          "RSA-SHA512",
+          "sha512WithRSAEncryption",
+          "1.2.840.113549.1.1.13"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "RSA-SHA2-512/224",
+        "aliases": [
+          "RSA-SHA2-512/224",
+          "RSA-SHA512-224",
+          "sha512-224WithRSAEncryption",
+          "1.2.840.113549.1.1.15"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "RSA-SHA2-512/256",
+        "aliases": [
+          "RSA-SHA2-512/256",
+          "RSA-SHA512-256",
+          "sha512-256WithRSAEncryption",
+          "1.2.840.113549.1.1.16"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "RSA-SHA3-224",
+        "aliases": [
+          "RSA-SHA3-224",
+          "id-rsassa-pkcs1-v1_5-with-sha3-224",
+          "2.16.840.1.101.3.4.3.13"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "RSA-SHA3-256",
+        "aliases": [
+          "RSA-SHA3-256",
+          "id-rsassa-pkcs1-v1_5-with-sha3-256",
+          "2.16.840.1.101.3.4.3.14"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "RSA-SHA3-384",
+        "aliases": [
+          "RSA-SHA3-384",
+          "id-rsassa-pkcs1-v1_5-with-sha3-384",
+          "2.16.840.1.101.3.4.3.15"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "RSA-SHA3-512",
+        "aliases": [
+          "RSA-SHA3-512",
+          "id-rsassa-pkcs1-v1_5-with-sha3-512",
+          "2.16.840.1.101.3.4.3.16"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "RSA-SM3",
+        "aliases": [
+          "RSA-SM3",
+          "sm3WithRSAEncryption",
+          "1.2.156.10197.1.504"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "SIPHASH",
         "aliases": [
           "SIPHASH"
@@ -3550,7 +3770,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "ebdc275b4bc54e5d24a5be68c55d729adcb100142ed62ab012b448bc95f0ed0d"
+      "sha256": "eae9b3f46b654ee63d248341cb24907761d165eb8beac75d1fbadc2becb1ce4d"
     },
     {
       "name": "court:RT-DIGEST",
@@ -3575,7 +3795,7 @@
     {
       "name": "court:RT-SIGNATURE",
       "path": "courts/phase8/rt_signature_probe.c",
-      "sha256": "38004bb270a183413418a8ff0dbc8071956bb417061fc4b90b67f93715193134"
+      "sha256": "550463ffecb0d75603d01b4ee73aabe697a0aaa5a4ca120197c278831b6f8543"
     }
   ],
   "kind": "provider-court-coverage",

@@ -3747,22 +3747,22 @@
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "bda9058b60151229789353a66a012f5f9120c9b0189a23e2fe3583a02a588c3d"
+      "sha256": "99c31cb4e679b9b5115ab46f54e21cf3ae185617a136beaab427be5c340f7db0"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "9238aa1a7fe8f99bbec965b7361e63f86ea9ddf895031d0c76bffeaa85305524"
+      "sha256": "cbadb01727bcec8134cffa5877808f14bab2efd77b0519e5a58792eda78ee471"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "63f15ad092a9ce41167a23515272824190f075325c06f72ad48e1f254e84add3"
+      "sha256": "578732f3b0018a7180de2a009d64fc5daaa654244da424f10cf82b07207573bd"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "92261be6af3014ba4604431d037e22dff738dfa033b92c68925049a32464ccaf"
+      "sha256": "946583f82bb1297722e0f82fa709d9b22c2c26dc043ce51b6787f64e81aa9280"
     },
     {
       "name": "prerequisites",

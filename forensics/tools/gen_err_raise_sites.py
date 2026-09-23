@@ -707,6 +707,29 @@ COVERED_FILES = [
     # `PROV_R_REPEATED_PARAMETER` sites. The two `PROV_R_FAILED_TO_SIGN` raises inside the
     # `S390X_EC_ASM` arms are recorded but not compiled on this profile.
     ("providers/implementations/signature/eddsa_sig.c", "PROV_EDDSA_SIG"),
+    # Phase 8's `rsa_sig.c.in` (D395), the largest signature unit. `.c.in`-generated, so the bare
+    # build-relative path. Its raises are the generated decoders' `PROV_R_REPEATED_PARAMETER`
+    # sites (four decoders over the compiled names), the `rsa_setup_md`/`rsa_setup_mgf1_md`
+    # digest refusals, the `rsa_check_padding`/`rsa_check_parameters`/`rsa_pss_compute_saltlen`
+    # PSS refusals, the `PROV_R_INVALID_SIGNATURE_SIZE`/`PROV_R_INVALID_DIGEST_LENGTH`/
+    # `PROV_R_KEY_SIZE_TOO_SMALL` of `rsa_sign_directly`, the `PROV_R_OUTPUT_BUFFER_TOO_SMALL`
+    # and `PROV_R_ALGORITHM_MISMATCH` of `rsa_verify_recover`, the `PROV_R_NO_KEY_SET` and
+    # `PROV_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE` of `rsa_signverify_init`, the
+    # `PROV_R_ILLEGAL_OR_UNSUPPORTED_PADDING_MODE`/`PROV_R_NOT_SUPPORTED`/
+    # `PROV_R_INVALID_MGF1_MD` refusals of `rsa_set_ctx_params`, and the
+    # `PROV_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE` of both `rsa_dupctx`'s method and
+    # `rsa_sigalg_signverify_init`. The `FIPS_MODULE` raises of `rsa_x931_padding_allowed` and
+    # `rsa_pss_saltlen_check_passed` are recorded but not compiled on this profile.
+    ("providers/implementations/signature/rsa_sig.c", "PROV_RSA_SIG"),
+    # `providers/common/der/der_rsa_key.c` (D395): two `ERR_LIB_RSA` refusals in
+    # `ossl_DER_w_RSASSA_PSS_params`, a negative salt length (`:308`) and a trailer field other
+    # than 1 (`:312`). It is a plain `.c`, so its `__FILE__` carries the source-tree prefix.
+    ("providers/common/der/der_rsa_key.c", "DER_RSA_KEY"),
+    # `providers/common/securitycheck.c` (D395): the two `ERR_LIB_PROV` refusals of
+    # `ossl_rsa_key_op_get_protect` -- the `PROV_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE`
+    # PSS refusal (`:47`) and the `ERR_R_INTERNAL_ERROR` unknown-operation arm (`:54`). The
+    # other eight functions raise nothing on this profile.
+    ("providers/common/securitycheck.c", "SECURITYCHECK"),
     # 8.10's `HMAC`/`SIPHASH`/`POLY1305`/`CMAC` signature rows. `signature/mac_legacy_sig.c` is a
     # plain `.c`, so its `__FILE__` carries the source-tree prefix. It raises once, the
     # `PROV_R_NO_KEY_SET` refusal of `mac_digest_sign_init` (`:107`).

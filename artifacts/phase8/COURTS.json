@@ -211,9 +211,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 170,
+        "authority_observations": 297,
         "candidate_exit_code": 0,
-        "candidate_observations": 170,
+        "candidate_observations": 297,
         "candidate_stderr_tail": [],
         "court": "RT-SIGNATURE",
         "crashed": false,
@@ -37965,7 +37965,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_signature_probe.c",
-      "sha256": "38004bb270a183413418a8ff0dbc8071956bb417061fc4b90b67f93715193134"
+      "sha256": "550463ffecb0d75603d01b4ee73aabe697a0aaa5a4ca120197c278831b6f8543"
     },
     {
       "name": "correctness-probe",

@@ -1629,6 +1629,20 @@
         "translation_unit": "providers/common/der/libcommon-lib-der_ecx_key.c"
       },
       {
+        "module": "src/provider/der_rsa_key.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "3/3",
+        "translation_unit": "providers/common/der/libcommon-lib-der_rsa_key.c"
+      },
+      {
+        "module": "src/provider/der_rsa_sig.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "1/1",
+        "translation_unit": "providers/common/der/libdefault-lib-der_rsa_sig.c"
+      },
+      {
         "module": "src/provider/digest.rs",
         "phase": 8,
         "phase_source": "module-declaration",
@@ -1704,6 +1718,20 @@
         "phase_source": null,
         "share": "17/19",
         "translation_unit": "providers/implementations/rands/libdefault-lib-drbg.c"
+      },
+      {
+        "module": "src/provider/securitycheck.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "8/8",
+        "translation_unit": "providers/common/libdefault-lib-securitycheck.c"
+      },
+      {
+        "module": "src/provider/securitycheck_default.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "2/2",
+        "translation_unit": "providers/common/libdefault-lib-securitycheck_default.c"
       },
       {
         "module": "src/provider/seeding.rs",

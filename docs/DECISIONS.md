@@ -28188,3 +28188,110 @@ No claim is made that the stratum is closer to sealing than `provider_rows` says
 * **`OSSL_OP_KEYMGMT`, twenty-two rows; `OSSL_OP_KEM`, eight; `OSSL_OP_ASYM_CIPHER`, two; `OSSL_OP_KDF`, three** -- the remaining blocks, unlanded and named.
 
 No claim is made that the stratum is closer to sealing than `provider_rows` says.
+
+## D395 — the `RSA` signature unit lands: `der_rsa_sig.c`, `der_rsa_key.c`'s PSS writer, the two `securitycheck*.c` functions, the fourteen rows, and `RT-SIGNATURE` drives each through its own dispatch
+
+**Decision.** The largest reachable mover is taken. `providers/common/der/der_rsa_sig.c` lands whole
+as `src/provider/der_rsa_sig.rs`, `providers/common/der/der_rsa_key.c` lands whole as
+`src/provider/der_rsa_key.rs`, and `providers/common/securitycheck.c` and
+`providers/common/securitycheck_default.c` land whole as `src/provider/securitycheck.rs` and
+`src/provider/securitycheck_default.rs`; on them `providers/implementations/signature/rsa_sig.c.in`
+lands whole as `src/provider/rsa_sig.rs`. `DEFLT_SIGNATURES` grows from **twenty-nine** to
+**forty-three** rows, the fourteen `RSA` ones (`defltprov.c:428-441`) inserted between the `DSA` run
+and the `EdDSA` one, which is the authority's order. Every one of the fourteen is **driven**, by the
+same court extended in the same pass.
+
+1. **The prerequisite the plan named is one unit, and it is not `der_rsa_sig.c`'s.** The pass before
+   this one recorded `rsa_sig.c.in` as waiting on "`der_rsa_sig.c`'s two
+   `ossl_DER_w_algorithmIdentifier_*` writers". Measured, it waits on `der_rsa_sig.c`'s **one**
+   (the `WITH MD` writer) plus `providers/common/der/der_rsa_key.c`'s
+   `ossl_DER_w_algorithmIdentifier_RSA_PSS` -- the PSS writer lives in the *key* unit, together with
+   `ossl_DER_w_RSASSA_PSS_params` and `DER_w_MaskGenAlgorithm` it is built on. That whole file is
+   transcribed rather than one function pulled out of it (D327), so the correction lands as code
+   rather than as a hold.
+2. **`der_rsa_sig.c` is one function and sixteen OIDs.** `ossl_DER_w_algorithmIdentifier_MDWithRSAEncryption`
+   is the `MD_with_RSA_CASE` expansion over the `*WithRSAEncryption` OIDs, and it differs from the
+   DSA/ECDSA/EdDSA writers in two observable ways: it writes an explicit `NULL` PARAMETERS field, and
+   an unlisted `mdnid` answers **-1** rather than 0. The sixteen DER literals are transcribed with a
+   unit test that checks each against the authority's own `der_rsa.h`/`der_digests.h` `DER_OID_V_*`
+   bytes. `SM3` is deliberately **not** among them -- `rsa_generate_signature_aid`'s PKCS#1 arm
+   therefore answers -1 for it, which is the authority's behaviour and is why the `RSA-SM3` row
+   publishes no `algorithm-id` in the court.
+3. **`der_rsa_key.c` is four functions and thirteen precompiled arrays.** `DER_w_MaskGenAlgorithm`'s
+   `break` sits physically before its five `MGF1_SHA_CASE` labels, which in C only stops case
+   `NID_sha1` falling through; the five labels stay reachable and each is selected for its own hash,
+   so the transcription is the natural `match` and the module says so.
+   `ossl_DER_w_algorithmIdentifier_RSA` (the *key* AlgorithmIdentifier) has no reader in this crate
+   yet and carries a stated `#[allow(dead_code)]` rather than being dropped, so the unit closes whole.
+4. **`securitycheck.c` lands whole, and only one of its nine functions is on this profile's path.**
+   `ossl_rsa_key_op_get_protect` is called unconditionally by `rsa_signverify_init` (`:530`); the
+   other eight are reached only from FIPS key-check arms, which is D391's `ossl_dsa_check_key`
+   measurement repeated, and each carries the stated `#[allow(dead_code)]`.
+   `securitycheck_default.c`'s `ossl_digest_rsa_sign_get_md_nid` is the superset of
+   `ossl_digest_get_approved_nid` that also accepts the five legacy digests an RSA signature may be
+   made over, and its seven-row map is why `RSA-MD5`/`RSA-RIPEMD160` fetch a digest at all.
+5. **`rsa_sig.c.in` lands whole (D327's rule), as `src/provider/rsa_sig.rs`.** One thousand five
+   hundred and thirty-one lines, thirty dispatch slots and fourteen dispatch tables. The plain `RSA`
+   row and the thirteen `RSA-<MD>` sigalgs are one implementation with the digest name, the operation
+   and the pad mode fixed at each call site; the five init wrappers and the table tail of
+   `IMPL_RSA_SIGALG` are transcribed as two Rust macros so the thirteen tables cannot drift.
+6. **Two arms are absent for measured reasons, not simplification.** The four `OSSL_FIPS_IND_SETTABLE*`
+   indicators, the `verify_message` lane and the `rsa_x931_padding_allowed` refusal are all inside
+   `#ifdef FIPS_MODULE`, which is not this profile's arm (D235); the `fips`-typed keys the generated
+   decoders carry are therefore absent from the crate's four decoder tables, and the six
+   `unsigned int : 1` flags are one storage lane with six bits, packed as the authority packs them.
+7. **`gen_err_raise_sites.py` gains three coordinates.** `providers/implementations/signature/rsa_sig.c`
+   is `.c.in`-generated, so its `__FILE__` is the bare build-relative path (D235's finding), and
+   `src/runtime/err_sites.rs` grows the **101** `PROV_RSA_SIG_*` sites it carries (the two
+   `FIPS_MODULE` raises are recorded but not compiled). Two plain-`.c` units join it:
+   `providers/common/der/der_rsa_key.c` (the two `ERR_LIB_RSA` refusals of
+   `ossl_DER_w_RSASSA_PSS_params`) and `providers/common/securitycheck.c` (the two `ERR_LIB_PROV`
+   refusals of `ossl_rsa_key_op_get_protect`).
+
+**Driven, not merely named.** `courts/phase8/rt_signature_probe.c` grows an `arm_rsa_rows` in the
+same pass as the rows it covers.
+
+* **The plain `RSA` row** is driven through `EVP_DigestSignInit`, the path the key's own
+  `query_operation_name` selects: a fixed 2048-bit key built through the `RSA` keymgmt row, a fixed
+  message, a sign and a verify of the signature just produced. The one-byte destination is
+  `rsa_sign_directly`'s `PROV_R_INVALID_SIGNATURE_SIZE`, and `SHAKE-128` is `rsa_setup_md`'s
+  `EVP_MD_xof` refusal, observed as `0`.
+* **The thirteen `RSA-<MD>` sigalgs** publish `SIGN_MESSAGE_INIT`/`VERIFY_MESSAGE_INIT`, so each is
+  fetched by name and driven end to end through its own `EVP_SIGNATURE`: `EVP_PKEY_sign_message_init`,
+  `EVP_PKEY_sign_message_final` for the size then the signature, and
+  `EVP_PKEY_verify_message_init`/`_final` with the signature set by `EVP_PKEY_CTX_set_signature`.
+* **Each row's AlgorithmIdentifier is observed as hex.** `rsa_get_ctx_params`'s `algorithm-id` arm is
+  `rsa_generate_signature_aid`, so the observation drives both DER writers rather than merely
+  reaching them: the thirteen sigalgs print thirteen different DER sequences, and the `RSA-SM3` row
+  prints none, which is the `-1` case item 2 records. A row wired to the wrong digest OID would be a
+  residual rather than a pass.
+
+**The fixed key is read back from the authority (D392's lesson).** All eight private-key components
+were produced by a one-off program linked against the admitted authority, through
+`EVP_PKEY_get_bn_param` in `OSSL_PARAM_construct_BN`'s native byte order -- not typed -- because two
+sides agreeing on a wrong constant is invisible to a differential court.
+
+**Movement.** `provider_rows` moves implemented **240 -> 254** (+14) and unlanded **66 -> 52**, over
+the same **306** owned; the census's whole-provider `implementation_state` moves `implemented`
+**245 -> 259** and `projection.open[8]` moves **66 -> 52**. `RT-SIGNATURE` runs **297 observations
+on both sides, identical and with zero residuals** (170 before), and `provider_court_coverage.py`
+reports **259 implemented rows, 259 directly courted, 0 unmatched**. **The export ledger is
+untouched** (`forensics/phase8-obligations.json` `complete: true`, implemented **786**, deferred
+**0**, open **0**) -- these are registration rows, not symbols. No new identifier moves `docs/CI.md`'s
+typed `c_style` count, which holds at **456**.
+
+**What remains, measured rather than reasoned.** The six units D394 named, one fewer:
+
+* **`sm2_sig.c.in`, one row** -- `der_sm2_sig.c` plus `crypto/sm2/sm2_sign.c`'s three functions; two
+  whole transcriptions for one row. **Now the smallest remaining signature prerequisite.**
+* **`ml_dsa_sig.c.in`, three rows, and `slh_dsa_sig.c.in`, twelve** -- `crypto/ml_dsa/` and
+  `crypto/slh_dsa/` do not exist in this crate, so their transcription cannot close.
+* **`asymciphers/rsa_enc.c.in`, one row, and `kem/rsa_kem.c.in`, one row** -- both reach
+  `ossl_rsa_key_op_get_protect` and `ossl_DER_w_algorithmIdentifier_RSA_PSS`, so this landing is
+  their gate and they are the smallest remaining `OSSL_OP_ASYM_CIPHER`/`OSSL_OP_KEM` prerequisites.
+* **`kem/ec_kem.c.in`, one row** -- unchanged from D390: the partial transcription is named rather
+  than claimed.
+* **`OSSL_OP_KEYMGMT`, twenty-two rows; `OSSL_OP_KEM`, eight; `OSSL_OP_ASYM_CIPHER`, two;
+  `OSSL_OP_KDF`, three** -- the remaining blocks, unlanded and named.
+
+No claim is made that the stratum is closer to sealing than `provider_rows` says.

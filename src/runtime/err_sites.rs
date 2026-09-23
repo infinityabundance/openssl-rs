@@ -24652,6 +24652,1056 @@ pub(crate) const PROV_EDDSA_SIG_1027: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `rsa_check_padding` at `providers/implementations/signature/rsa_sig.c:186` (PROV_R_INVALID_PADDING_MODE).
+pub(crate) const PROV_RSA_SIG_186: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 186,
+    func: c"rsa_check_padding",
+    lib: 57,
+    reason: 168,
+    dynamic_reason: false,
+};
+
+/// `rsa_check_padding` at `providers/implementations/signature/rsa_sig.c:192` (PROV_R_INVALID_X931_DIGEST).
+pub(crate) const PROV_RSA_SIG_192: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 192,
+    func: c"rsa_check_padding",
+    lib: 57,
+    reason: 170,
+    dynamic_reason: false,
+};
+
+/// `rsa_check_padding` at `providers/implementations/signature/rsa_sig.c:201` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_RSA_SIG_201: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 201,
+    func: c"rsa_check_padding",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `rsa_check_parameters` at `providers/implementations/signature/rsa_sig.c:222` (PROV_R_INVALID_SALT_LENGTH).
+pub(crate) const PROV_RSA_SIG_222: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 222,
+    func: c"rsa_check_parameters",
+    lib: 57,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `rsa_pss_compute_saltlen` at `providers/implementations/signature/rsa_sig.c:272` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_RSA_SIG_272: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 272,
+    func: c"rsa_pss_compute_saltlen",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `rsa_pss_compute_saltlen` at `providers/implementations/signature/rsa_sig.c:278` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_RSA_SIG_278: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 278,
+    func: c"rsa_pss_compute_saltlen",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `rsa_pss_compute_saltlen` at `providers/implementations/signature/rsa_sig.c:286` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_RSA_SIG_286: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 286,
+    func: c"rsa_pss_compute_saltlen",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `rsa_pss_compute_saltlen` at `providers/implementations/signature/rsa_sig.c:290` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_RSA_SIG_290: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 290,
+    func: c"rsa_pss_compute_saltlen",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `rsa_pss_compute_saltlen` at `providers/implementations/signature/rsa_sig.c:300` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_RSA_SIG_300: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 300,
+    func: c"rsa_pss_compute_saltlen",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_pss_compute_saltlen` at `providers/implementations/signature/rsa_sig.c:303` (PROV_R_PSS_SALTLEN_TOO_SMALL).
+pub(crate) const PROV_RSA_SIG_303: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 303,
+    func: c"rsa_pss_compute_saltlen",
+    lib: 57,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `rsa_generate_signature_aid` at `providers/implementations/signature/rsa_sig.c:323` (ERR_R_CRYPTO_LIB).
+pub(crate) const PROV_RSA_SIG_323: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 323,
+    func: c"rsa_generate_signature_aid",
+    lib: 57,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `rsa_generate_signature_aid` at `providers/implementations/signature/rsa_sig.c:335` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_RSA_SIG_335: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 335,
+    func: c"rsa_generate_signature_aid",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_generate_signature_aid` at `providers/implementations/signature/rsa_sig.c:338` (ERR_R_UNSUPPORTED).
+pub(crate) const PROV_RSA_SIG_338: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 338,
+    func: c"rsa_generate_signature_aid",
+    lib: 57,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `rsa_generate_signature_aid` at `providers/implementations/signature/rsa_sig.c:354` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_RSA_SIG_354: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 354,
+    func: c"rsa_generate_signature_aid",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_generate_signature_aid` at `providers/implementations/signature/rsa_sig.c:359` (ERR_R_UNSUPPORTED).
+pub(crate) const PROV_RSA_SIG_359: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 359,
+    func: c"rsa_generate_signature_aid",
+    lib: 57,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `rsa_setup_md` at `providers/implementations/signature/rsa_sig.c:388` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_RSA_SIG_388: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 388,
+    func: c"rsa_setup_md",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `rsa_setup_md` at `providers/implementations/signature/rsa_sig.c:394` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_RSA_SIG_394: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 394,
+    func: c"rsa_setup_md",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `rsa_setup_md` at `providers/implementations/signature/rsa_sig.c:405` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_RSA_SIG_405: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 405,
+    func: c"rsa_setup_md",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `rsa_setup_md` at `providers/implementations/signature/rsa_sig.c:427` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_RSA_SIG_427: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 427,
+    func: c"rsa_setup_md",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `rsa_setup_md` at `providers/implementations/signature/rsa_sig.c:434` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_RSA_SIG_434: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 434,
+    func: c"rsa_setup_md",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `rsa_setup_mgf1_md` at `providers/implementations/signature/rsa_sig.c:478` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_RSA_SIG_478: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 478,
+    func: c"rsa_setup_mgf1_md",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `rsa_setup_mgf1_md` at `providers/implementations/signature/rsa_sig.c:486` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_RSA_SIG_486: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 486,
+    func: c"rsa_setup_mgf1_md",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `rsa_setup_mgf1_md` at `providers/implementations/signature/rsa_sig.c:493` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_RSA_SIG_493: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 493,
+    func: c"rsa_setup_mgf1_md",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `rsa_signverify_init` at `providers/implementations/signature/rsa_sig.c:518` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_RSA_SIG_518: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 518,
+    func: c"rsa_signverify_init",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `rsa_signverify_init` at `providers/implementations/signature/rsa_sig.c:561` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_RSA_SIG_561: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 561,
+    func: c"rsa_signverify_init",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `rsa_signverify_init` at `providers/implementations/signature/rsa_sig.c:566` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_RSA_SIG_566: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 566,
+    func: c"rsa_signverify_init",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `rsa_signverify_init` at `providers/implementations/signature/rsa_sig.c:574` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_RSA_SIG_574: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 574,
+    func: c"rsa_signverify_init",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `rsa_signverify_init` at `providers/implementations/signature/rsa_sig.c:581` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_RSA_SIG_581: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 581,
+    func: c"rsa_signverify_init",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `rsa_signverify_init` at `providers/implementations/signature/rsa_sig.c:597` (PROV_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const PROV_RSA_SIG_597: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 597,
+    func: c"rsa_signverify_init",
+    lib: 57,
+    reason: 178,
+    dynamic_reason: false,
+};
+
+/// `rsa_pss_saltlen_check_passed` at `providers/implementations/signature/rsa_sig.c:652` (PROV_R_INVALID_SALT_LENGTH).
+pub(crate) const PROV_RSA_SIG_652: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 652,
+    func: c"rsa_pss_saltlen_check_passed",
+    lib: 57,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_directly` at `providers/implementations/signature/rsa_sig.c:696` (PROV_R_INVALID_SIGNATURE_SIZE).
+pub(crate) const PROV_RSA_SIG_696: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 696,
+    func: c"rsa_sign_directly",
+    lib: 57,
+    reason: 179,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_directly` at `providers/implementations/signature/rsa_sig.c:703` (PROV_R_INVALID_DIGEST_LENGTH).
+pub(crate) const PROV_RSA_SIG_703: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 703,
+    func: c"rsa_sign_directly",
+    lib: 57,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_directly` at `providers/implementations/signature/rsa_sig.c:712` (PROV_R_INVALID_PADDING_MODE).
+pub(crate) const PROV_RSA_SIG_712: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 712,
+    func: c"rsa_sign_directly",
+    lib: 57,
+    reason: 168,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_directly` at `providers/implementations/signature/rsa_sig.c:720` (ERR_R_RSA_LIB).
+pub(crate) const PROV_RSA_SIG_720: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 720,
+    func: c"rsa_sign_directly",
+    lib: 57,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_directly` at `providers/implementations/signature/rsa_sig.c:730` (PROV_R_KEY_SIZE_TOO_SMALL).
+pub(crate) const PROV_RSA_SIG_730: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 730,
+    func: c"rsa_sign_directly",
+    lib: 57,
+    reason: 171,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_directly` at `providers/implementations/signature/rsa_sig.c:736` (ERR_R_PROV_LIB).
+pub(crate) const PROV_RSA_SIG_736: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 736,
+    func: c"rsa_sign_directly",
+    lib: 57,
+    reason: 524345,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_directly` at `providers/implementations/signature/rsa_sig.c:751` (ERR_R_RSA_LIB).
+pub(crate) const PROV_RSA_SIG_751: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 751,
+    func: c"rsa_sign_directly",
+    lib: 57,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_directly` at `providers/implementations/signature/rsa_sig.c:765` (PROV_R_PSS_SALTLEN_TOO_SMALL).
+pub(crate) const PROV_RSA_SIG_765: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 765,
+    func: c"rsa_sign_directly",
+    lib: 57,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_directly` at `providers/implementations/signature/rsa_sig.c:777` (PROV_R_PSS_SALTLEN_TOO_SMALL).
+pub(crate) const PROV_RSA_SIG_777: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 777,
+    func: c"rsa_sign_directly",
+    lib: 57,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_directly` at `providers/implementations/signature/rsa_sig.c:795` (ERR_R_RSA_LIB).
+pub(crate) const PROV_RSA_SIG_795: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 795,
+    func: c"rsa_sign_directly",
+    lib: 57,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_directly` at `providers/implementations/signature/rsa_sig.c:808` (PROV_R_INVALID_PADDING_MODE).
+pub(crate) const PROV_RSA_SIG_808: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 808,
+    func: c"rsa_sign_directly",
+    lib: 57,
+    reason: 168,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_directly` at `providers/implementations/signature/rsa_sig.c:821` (ERR_R_RSA_LIB).
+pub(crate) const PROV_RSA_SIG_821: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 821,
+    func: c"rsa_sign_directly",
+    lib: 57,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `rsa_signverify_message_update` at `providers/implementations/signature/rsa_sig.c:839` (PROV_R_UPDATE_CALL_OUT_OF_ORDER).
+pub(crate) const PROV_RSA_SIG_839: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 839,
+    func: c"rsa_signverify_message_update",
+    lib: 57,
+    reason: 240,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_message_final` at `providers/implementations/signature/rsa_sig.c:859` (PROV_R_FINAL_CALL_OUT_OF_ORDER).
+pub(crate) const PROV_RSA_SIG_859: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 859,
+    func: c"rsa_sign_message_final",
+    lib: 57,
+    reason: 237,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign` at `providers/implementations/signature/rsa_sig.c:895` (PROV_R_ONESHOT_CALL_OUT_OF_ORDER).
+pub(crate) const PROV_RSA_SIG_895: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 895,
+    func: c"rsa_sign",
+    lib: 57,
+    reason: 239,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_recover` at `providers/implementations/signature/rsa_sig.c:955` (ERR_R_RSA_LIB).
+pub(crate) const PROV_RSA_SIG_955: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 955,
+    func: c"rsa_verify_recover",
+    lib: 57,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_recover` at `providers/implementations/signature/rsa_sig.c:960` (PROV_R_ALGORITHM_MISMATCH).
+pub(crate) const PROV_RSA_SIG_960: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 960,
+    func: c"rsa_verify_recover",
+    lib: 57,
+    reason: 173,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_recover` at `providers/implementations/signature/rsa_sig.c:964` (PROV_R_INVALID_DIGEST_LENGTH).
+pub(crate) const PROV_RSA_SIG_964: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 964,
+    func: c"rsa_verify_recover",
+    lib: 57,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_recover` at `providers/implementations/signature/rsa_sig.c:973` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_RSA_SIG_973: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 973,
+    func: c"rsa_verify_recover",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_recover` at `providers/implementations/signature/rsa_sig.c:987` (PROV_R_INVALID_DIGEST_LENGTH).
+pub(crate) const PROV_RSA_SIG_987: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 987,
+    func: c"rsa_verify_recover",
+    lib: 57,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_recover` at `providers/implementations/signature/rsa_sig.c:991` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_RSA_SIG_991: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 991,
+    func: c"rsa_verify_recover",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_recover` at `providers/implementations/signature/rsa_sig.c:999` (ERR_R_RSA_LIB).
+pub(crate) const PROV_RSA_SIG_999: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 999,
+    func: c"rsa_verify_recover",
+    lib: 57,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_recover` at `providers/implementations/signature/rsa_sig.c:1006` (PROV_R_INVALID_PADDING_MODE).
+pub(crate) const PROV_RSA_SIG_1006: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1006,
+    func: c"rsa_verify_recover",
+    lib: 57,
+    reason: 168,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_recover` at `providers/implementations/signature/rsa_sig.c:1014` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_RSA_SIG_1014: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1014,
+    func: c"rsa_verify_recover",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_recover` at `providers/implementations/signature/rsa_sig.c:1028` (ERR_R_RSA_LIB).
+pub(crate) const PROV_RSA_SIG_1028: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1028,
+    func: c"rsa_verify_recover",
+    lib: 57,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_directly` at `providers/implementations/signature/rsa_sig.c:1063` (ERR_R_RSA_LIB).
+pub(crate) const PROV_RSA_SIG_1063: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1063,
+    func: c"rsa_verify_directly",
+    lib: 57,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_directly` at `providers/implementations/signature/rsa_sig.c:1086` (PROV_R_INVALID_DIGEST_LENGTH).
+pub(crate) const PROV_RSA_SIG_1086: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1086,
+    func: c"rsa_verify_directly",
+    lib: 57,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_directly` at `providers/implementations/signature/rsa_sig.c:1097` (ERR_R_RSA_LIB).
+pub(crate) const PROV_RSA_SIG_1097: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1097,
+    func: c"rsa_verify_directly",
+    lib: 57,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_directly` at `providers/implementations/signature/rsa_sig.c:1106` (ERR_R_RSA_LIB).
+pub(crate) const PROV_RSA_SIG_1106: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1106,
+    func: c"rsa_verify_directly",
+    lib: 57,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_directly` at `providers/implementations/signature/rsa_sig.c:1116` (PROV_R_INVALID_PADDING_MODE).
+pub(crate) const PROV_RSA_SIG_1116: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1116,
+    func: c"rsa_verify_directly",
+    lib: 57,
+    reason: 168,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_directly` at `providers/implementations/signature/rsa_sig.c:1128` (ERR_R_RSA_LIB).
+pub(crate) const PROV_RSA_SIG_1128: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1128,
+    func: c"rsa_verify_directly",
+    lib: 57,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_message_final` at `providers/implementations/signature/rsa_sig.c:1163` (PROV_R_FINAL_CALL_OUT_OF_ORDER).
+pub(crate) const PROV_RSA_SIG_1163: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1163,
+    func: c"rsa_verify_message_final",
+    lib: 57,
+    reason: 237,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify` at `providers/implementations/signature/rsa_sig.c:1195` (PROV_R_ONESHOT_CALL_OUT_OF_ORDER).
+pub(crate) const PROV_RSA_SIG_1195: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1195,
+    func: c"rsa_verify",
+    lib: 57,
+    reason: 239,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1466` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1466: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1466,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1477` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1477: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1477,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1489` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1489: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1489,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1501` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1501: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1501,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1512` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1512: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1512,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1523` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1523: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1523,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1535` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1535: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1535,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params` at `providers/implementations/signature/rsa_sig.c:1589` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_RSA_SIG_1589: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1589,
+    func: c"rsa_get_ctx_params",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_x931_padding_allowed` at `providers/implementations/signature/rsa_sig.c:1662` (PROV_R_ILLEGAL_OR_UNSUPPORTED_PADDING_MODE).
+pub(crate) const PROV_RSA_SIG_1662: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1662,
+    func: c"rsa_x931_padding_allowed",
+    lib: 57,
+    reason: 165,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1763` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1763: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1763,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1773` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1773: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1773,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1790` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1790: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1790,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1822` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1822: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1822,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1833` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1833: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1833,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1853` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1853: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1853,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1864` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1864: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1864,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1877` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1877: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1877,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1893` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1893: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1893,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1905` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1905: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1905,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_no_digest_decoder` at `providers/implementations/signature/rsa_sig.c:1988` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1988: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1988,
+    func: c"rsa_set_ctx_params_no_digest_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_no_digest_decoder` at `providers/implementations/signature/rsa_sig.c:2001` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_2001: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2001,
+    func: c"rsa_set_ctx_params_no_digest_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_no_digest_decoder` at `providers/implementations/signature/rsa_sig.c:2033` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_2033: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2033,
+    func: c"rsa_set_ctx_params_no_digest_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_no_digest_decoder` at `providers/implementations/signature/rsa_sig.c:2044` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_2044: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2044,
+    func: c"rsa_set_ctx_params_no_digest_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_no_digest_decoder` at `providers/implementations/signature/rsa_sig.c:2060` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_2060: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2060,
+    func: c"rsa_set_ctx_params_no_digest_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_no_digest_decoder` at `providers/implementations/signature/rsa_sig.c:2072` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_2072: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2072,
+    func: c"rsa_set_ctx_params_no_digest_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_no_digest_decoder` at `providers/implementations/signature/rsa_sig.c:2088` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_2088: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2088,
+    func: c"rsa_set_ctx_params_no_digest_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_no_digest_decoder` at `providers/implementations/signature/rsa_sig.c:2100` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_2100: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2100,
+    func: c"rsa_set_ctx_params_no_digest_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params` at `providers/implementations/signature/rsa_sig.c:2222` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_RSA_SIG_2222: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2222,
+    func: c"rsa_set_ctx_params",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params` at `providers/implementations/signature/rsa_sig.c:2239` (PROV_R_ILLEGAL_OR_UNSUPPORTED_PADDING_MODE).
+pub(crate) const PROV_RSA_SIG_2239: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2239,
+    func: c"rsa_set_ctx_params",
+    lib: 57,
+    reason: 165,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params` at `providers/implementations/signature/rsa_sig.c:2242` (PROV_R_ILLEGAL_OR_UNSUPPORTED_PADDING_MODE).
+pub(crate) const PROV_RSA_SIG_2242: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2242,
+    func: c"rsa_set_ctx_params",
+    lib: 57,
+    reason: 165,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params` at `providers/implementations/signature/rsa_sig.c:2251` (PROV_R_NOT_SUPPORTED).
+pub(crate) const PROV_RSA_SIG_2251: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2251,
+    func: c"rsa_set_ctx_params",
+    lib: 57,
+    reason: 136,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params` at `providers/implementations/signature/rsa_sig.c:2280` (PROV_R_INVALID_SALT_LENGTH).
+pub(crate) const PROV_RSA_SIG_2280: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2280,
+    func: c"rsa_set_ctx_params",
+    lib: 57,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params` at `providers/implementations/signature/rsa_sig.c:2291` (PROV_R_INVALID_SALT_LENGTH).
+pub(crate) const PROV_RSA_SIG_2291: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2291,
+    func: c"rsa_set_ctx_params",
+    lib: 57,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params` at `providers/implementations/signature/rsa_sig.c:2298` (PROV_R_PSS_SALTLEN_TOO_SMALL).
+pub(crate) const PROV_RSA_SIG_2298: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2298,
+    func: c"rsa_set_ctx_params",
+    lib: 57,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params` at `providers/implementations/signature/rsa_sig.c:2309` (PROV_R_PSS_SALTLEN_TOO_SMALL).
+pub(crate) const PROV_RSA_SIG_2309: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2309,
+    func: c"rsa_set_ctx_params",
+    lib: 57,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params` at `providers/implementations/signature/rsa_sig.c:2333` (PROV_R_INVALID_MGF1_MD).
+pub(crate) const PROV_RSA_SIG_2333: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2333,
+    func: c"rsa_set_ctx_params",
+    lib: 57,
+    reason: 167,
+    dynamic_reason: false,
+};
+
+/// `rsa_sigalg_signverify_init` at `providers/implementations/signature/rsa_sig.c:2484` (PROV_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const PROV_RSA_SIG_2484: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2484,
+    func: c"rsa_sigalg_signverify_init",
+    lib: 57,
+    reason: 178,
+    dynamic_reason: false,
+};
+
+/// `rsa_sigalg_set_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:2546` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_2546: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2546,
+    func: c"rsa_sigalg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_DER_w_RSASSA_PSS_params` at `providers/common/der/der_rsa_key.c:308` (RSA_R_INVALID_SALT_LENGTH).
+pub(crate) const DER_RSA_KEY_308: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/common/der/der_rsa_key.c",
+    line: 308,
+    func: c"ossl_DER_w_RSASSA_PSS_params",
+    lib: 4,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `ossl_DER_w_RSASSA_PSS_params` at `providers/common/der/der_rsa_key.c:312` (RSA_R_INVALID_TRAILER).
+pub(crate) const DER_RSA_KEY_312: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/common/der/der_rsa_key.c",
+    line: 312,
+    func: c"ossl_DER_w_RSASSA_PSS_params",
+    lib: 4,
+    reason: 139,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_key_op_get_protect` at `providers/common/securitycheck.c:47` (PROV_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const SECURITYCHECK_47: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/common/securitycheck.c",
+    line: 47,
+    func: c"ossl_rsa_key_op_get_protect",
+    lib: 57,
+    reason: 178,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_key_op_get_protect` at `providers/common/securitycheck.c:54` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SECURITYCHECK_54: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/common/securitycheck.c",
+    line: 54,
+    func: c"ossl_rsa_key_op_get_protect",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
 /// `mac_digest_sign_init` at `providers/implementations/signature/mac_legacy_sig.c:107` (PROV_R_NO_KEY_SET).
 pub(crate) const PROV_MAC_LEGACY_SIG_107: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/providers/implementations/signature/mac_legacy_sig.c",
@@ -39165,6 +40215,111 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_EDDSA_SIG_926,
     PROV_EDDSA_SIG_961,
     PROV_EDDSA_SIG_1027,
+    PROV_RSA_SIG_186,
+    PROV_RSA_SIG_192,
+    PROV_RSA_SIG_201,
+    PROV_RSA_SIG_222,
+    PROV_RSA_SIG_272,
+    PROV_RSA_SIG_278,
+    PROV_RSA_SIG_286,
+    PROV_RSA_SIG_290,
+    PROV_RSA_SIG_300,
+    PROV_RSA_SIG_303,
+    PROV_RSA_SIG_323,
+    PROV_RSA_SIG_335,
+    PROV_RSA_SIG_338,
+    PROV_RSA_SIG_354,
+    PROV_RSA_SIG_359,
+    PROV_RSA_SIG_388,
+    PROV_RSA_SIG_394,
+    PROV_RSA_SIG_405,
+    PROV_RSA_SIG_427,
+    PROV_RSA_SIG_434,
+    PROV_RSA_SIG_478,
+    PROV_RSA_SIG_486,
+    PROV_RSA_SIG_493,
+    PROV_RSA_SIG_518,
+    PROV_RSA_SIG_561,
+    PROV_RSA_SIG_566,
+    PROV_RSA_SIG_574,
+    PROV_RSA_SIG_581,
+    PROV_RSA_SIG_597,
+    PROV_RSA_SIG_652,
+    PROV_RSA_SIG_696,
+    PROV_RSA_SIG_703,
+    PROV_RSA_SIG_712,
+    PROV_RSA_SIG_720,
+    PROV_RSA_SIG_730,
+    PROV_RSA_SIG_736,
+    PROV_RSA_SIG_751,
+    PROV_RSA_SIG_765,
+    PROV_RSA_SIG_777,
+    PROV_RSA_SIG_795,
+    PROV_RSA_SIG_808,
+    PROV_RSA_SIG_821,
+    PROV_RSA_SIG_839,
+    PROV_RSA_SIG_859,
+    PROV_RSA_SIG_895,
+    PROV_RSA_SIG_955,
+    PROV_RSA_SIG_960,
+    PROV_RSA_SIG_964,
+    PROV_RSA_SIG_973,
+    PROV_RSA_SIG_987,
+    PROV_RSA_SIG_991,
+    PROV_RSA_SIG_999,
+    PROV_RSA_SIG_1006,
+    PROV_RSA_SIG_1014,
+    PROV_RSA_SIG_1028,
+    PROV_RSA_SIG_1063,
+    PROV_RSA_SIG_1086,
+    PROV_RSA_SIG_1097,
+    PROV_RSA_SIG_1106,
+    PROV_RSA_SIG_1116,
+    PROV_RSA_SIG_1128,
+    PROV_RSA_SIG_1163,
+    PROV_RSA_SIG_1195,
+    PROV_RSA_SIG_1466,
+    PROV_RSA_SIG_1477,
+    PROV_RSA_SIG_1489,
+    PROV_RSA_SIG_1501,
+    PROV_RSA_SIG_1512,
+    PROV_RSA_SIG_1523,
+    PROV_RSA_SIG_1535,
+    PROV_RSA_SIG_1589,
+    PROV_RSA_SIG_1662,
+    PROV_RSA_SIG_1763,
+    PROV_RSA_SIG_1773,
+    PROV_RSA_SIG_1790,
+    PROV_RSA_SIG_1822,
+    PROV_RSA_SIG_1833,
+    PROV_RSA_SIG_1853,
+    PROV_RSA_SIG_1864,
+    PROV_RSA_SIG_1877,
+    PROV_RSA_SIG_1893,
+    PROV_RSA_SIG_1905,
+    PROV_RSA_SIG_1988,
+    PROV_RSA_SIG_2001,
+    PROV_RSA_SIG_2033,
+    PROV_RSA_SIG_2044,
+    PROV_RSA_SIG_2060,
+    PROV_RSA_SIG_2072,
+    PROV_RSA_SIG_2088,
+    PROV_RSA_SIG_2100,
+    PROV_RSA_SIG_2222,
+    PROV_RSA_SIG_2239,
+    PROV_RSA_SIG_2242,
+    PROV_RSA_SIG_2251,
+    PROV_RSA_SIG_2280,
+    PROV_RSA_SIG_2291,
+    PROV_RSA_SIG_2298,
+    PROV_RSA_SIG_2309,
+    PROV_RSA_SIG_2333,
+    PROV_RSA_SIG_2484,
+    PROV_RSA_SIG_2546,
+    DER_RSA_KEY_308,
+    DER_RSA_KEY_312,
+    SECURITYCHECK_47,
+    SECURITYCHECK_54,
     PROV_MAC_LEGACY_SIG_107,
     RSA_LIB_85,
     RSA_LIB_106,

@@ -28,18 +28,18 @@
 //! ## What is not here
 //!
 //! The `SLH-DSA` and `ML-DSA` rows are not stubbed: their units are built on `crypto/slh_dsa/` and
-//! `crypto/ml_dsa/`, which this crate does not have, so their transcription cannot close. The
-//! `RSA` and `SM2` units are absent for a reason that is a *measured* prerequisite rather than a
-//! size judgement, and each is named with its remaining callee:
+//! `crypto/ml_dsa/`, which this crate does not have, so their transcription cannot close. The `SM2`
+//! unit is absent for a reason that is a *measured* prerequisite rather than a size judgement, and
+//! is named with its remaining callees:
 //!
-//!   * `rsa_sig.c.in` waits on `providers/common/der/der_rsa_sig.c`'s two
-//!     `ossl_DER_w_algorithmIdentifier_*` writers and `providers/common/securitycheck.c`'s
-//!     `ossl_rsa_key_op_get_protect`;
-//!   * `sm2_sig.c.in` waits on `der_sm2_sig.c`'s writer and `crypto/sm2/sm2_sign.c`.
+//!   * `sm2_sig.c.in` waits on `providers/common/der/der_sm2_sig.c`'s writer and
+//!     `crypto/sm2/sm2_sign.c`'s three functions.
 //!
-//! The `DSA` unit opened the table (its two callees landed with it); the `EdDSA` unit is the
-//! second landing (whose one callee is `der_ecx_key.c`'s pair); the `ECDSA` unit is the third
-//! (whose one callee is `der_ec_sig.c`'s writer); the legacy-MAC unit waits on none of them.
+//! The `DSA` unit opened the table (its two callees landed with it); the `RSA` unit is the second
+//! (whose three callees — `der_rsa_sig.c`, `der_rsa_key.c`'s PSS writer and `securitycheck*.c` —
+//! landed with it, D395); the `EdDSA` unit is the third (whose one callee is `der_ecx_key.c`'s
+//! pair); the `ECDSA` unit is the fourth (whose one callee is `der_ec_sig.c`'s writer); the
+//! legacy-MAC unit waits on none of them.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -67,6 +67,14 @@ use crate::provider::mac_legacy_sig::{
     MAC_LEGACY_CMAC_SIGNATURE_FUNCTIONS, MAC_LEGACY_HMAC_SIGNATURE_FUNCTIONS,
     MAC_LEGACY_POLY1305_SIGNATURE_FUNCTIONS, MAC_LEGACY_SIPHASH_SIGNATURE_FUNCTIONS,
 };
+use crate::provider::rsa_sig::{
+    RSA_RIPEMD160_SIGNATURE_FUNCTIONS, RSA_SHA1_SIGNATURE_FUNCTIONS,
+    RSA_SHA224_SIGNATURE_FUNCTIONS, RSA_SHA256_SIGNATURE_FUNCTIONS, RSA_SHA384_SIGNATURE_FUNCTIONS,
+    RSA_SHA3_224_SIGNATURE_FUNCTIONS, RSA_SHA3_256_SIGNATURE_FUNCTIONS,
+    RSA_SHA3_384_SIGNATURE_FUNCTIONS, RSA_SHA3_512_SIGNATURE_FUNCTIONS,
+    RSA_SHA512_224_SIGNATURE_FUNCTIONS, RSA_SHA512_256_SIGNATURE_FUNCTIONS,
+    RSA_SHA512_SIGNATURE_FUNCTIONS, RSA_SIGNATURE_FUNCTIONS, RSA_SM3_SIGNATURE_FUNCTIONS,
+};
 
 /// `static const OSSL_ALGORITHM deflt_signature[]` — `providers/defltprov.c:415-521`, **the rows
 /// this module has landed**, in the authority's order.
@@ -91,7 +99,7 @@ use crate::provider::mac_legacy_sig::{
 /// rustfmt pass that moved the `c"…"` onto its own line would make the census read a table with
 /// fewer rows than it has.
 #[rustfmt::skip]
-pub(crate) static DEFLT_SIGNATURES: [OsslAlgorithm; 30] = [
+pub(crate) static DEFLT_SIGNATURES: [OsslAlgorithm; 44] = [
     OsslAlgorithm {
         // `PROV_NAMES_DSA` — the OID alias is part of the row.
         algorithm_names: c"DSA:dsaEncryption:1.2.840.10040.4.1".as_ptr(),
@@ -160,6 +168,104 @@ pub(crate) static DEFLT_SIGNATURES: [OsslAlgorithm; 30] = [
         algorithm_names: c"DSA-SHA3-512:dsa_with_SHA3-512:id-dsa-with-sha3-512:2.16.840.1.101.3.4.3.8".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
         implementation: DSA_SHA3_512_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_RSA` (`defltprov.c:428`).
+        algorithm_names: c"RSA:rsaEncryption:1.2.840.113549.1.1.1".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: RSA_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_RSA_RIPEMD160` (`defltprov.c:429`).
+        algorithm_names: c"RSA-RIPEMD160:ripemd160WithRSA:1.3.36.3.3.1.2".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: RSA_RIPEMD160_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_RSA_SHA1` (`defltprov.c:430`).
+        algorithm_names: c"RSA-SHA1:RSA-SHA-1:sha1WithRSAEncryption:1.2.840.113549.1.1.5".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: RSA_SHA1_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_RSA_SHA224` (`defltprov.c:431`).
+        algorithm_names: c"RSA-SHA2-224:RSA-SHA224:sha224WithRSAEncryption:1.2.840.113549.1.1.14".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: RSA_SHA224_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_RSA_SHA256` (`defltprov.c:432`).
+        algorithm_names: c"RSA-SHA2-256:RSA-SHA256:sha256WithRSAEncryption:1.2.840.113549.1.1.11".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: RSA_SHA256_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_RSA_SHA384` (`defltprov.c:433`).
+        algorithm_names: c"RSA-SHA2-384:RSA-SHA384:sha384WithRSAEncryption:1.2.840.113549.1.1.12".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: RSA_SHA384_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_RSA_SHA512` (`defltprov.c:434`).
+        algorithm_names: c"RSA-SHA2-512:RSA-SHA512:sha512WithRSAEncryption:1.2.840.113549.1.1.13".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: RSA_SHA512_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_RSA_SHA512_224` (`defltprov.c:435`).
+        algorithm_names: c"RSA-SHA2-512/224:RSA-SHA512-224:sha512-224WithRSAEncryption:1.2.840.113549.1.1.15".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: RSA_SHA512_224_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_RSA_SHA512_256` (`defltprov.c:436`).
+        algorithm_names: c"RSA-SHA2-512/256:RSA-SHA512-256:sha512-256WithRSAEncryption:1.2.840.113549.1.1.16".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: RSA_SHA512_256_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_RSA_SHA3_224` (`defltprov.c:437`).
+        algorithm_names: c"RSA-SHA3-224:id-rsassa-pkcs1-v1_5-with-sha3-224:2.16.840.1.101.3.4.3.13".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: RSA_SHA3_224_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_RSA_SHA3_256` (`defltprov.c:438`).
+        algorithm_names: c"RSA-SHA3-256:id-rsassa-pkcs1-v1_5-with-sha3-256:2.16.840.1.101.3.4.3.14".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: RSA_SHA3_256_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_RSA_SHA3_384` (`defltprov.c:439`).
+        algorithm_names: c"RSA-SHA3-384:id-rsassa-pkcs1-v1_5-with-sha3-384:2.16.840.1.101.3.4.3.15".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: RSA_SHA3_384_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_RSA_SHA3_512` (`defltprov.c:440`).
+        algorithm_names: c"RSA-SHA3-512:id-rsassa-pkcs1-v1_5-with-sha3-512:2.16.840.1.101.3.4.3.16".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: RSA_SHA3_512_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_RSA_SM3` (`defltprov.c:441`).
+        algorithm_names: c"RSA-SM3:sm3WithRSAEncryption:1.2.156.10197.1.504".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: RSA_SM3_SIGNATURE_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
@@ -307,46 +413,60 @@ pub(crate) static DEFLT_SIGNATURES: [OsslAlgorithm; 30] = [
 mod tests {
     use super::*;
 
-    /// The table's shape: thirty entries, the last the NULL terminator, and the four landed runs in
-    /// the authority's order -- `DSA` first (`defltprov.c:417`), `EdDSA` (`:444`), `ECDSA` (`:455`)
-    /// and `CMAC` last (`:484`).
+    /// The table's shape: forty-four entries, the last the NULL terminator, and the five landed
+    /// runs in the authority's order -- `DSA` first (`defltprov.c:417`), then the fourteen `RSA`
+    /// rows (`:428-441`, D395), `EdDSA` (`:444`), `ECDSA` (`:455`) and `CMAC` last (`:484`).
     #[test]
-    fn the_signature_table_is_the_authoritys_four_landed_runs_in_order() {
-        assert_eq!(DEFLT_SIGNATURES.len(), 30);
+    fn the_signature_table_is_the_authoritys_landed_runs_in_order() {
+        assert_eq!(DEFLT_SIGNATURES.len(), 44);
         // SAFETY: the first row is initialised.
         let first = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[0].algorithm_names) };
         assert_eq!(first.to_bytes(), b"DSA:dsaEncryption:1.2.840.10040.4.1");
-        // SAFETY: the tenth row is initialised.
+        // SAFETY: the tenth row is initialised -- the `DSA` run's last.
         let tenth = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[9].algorithm_names) };
         assert_eq!(
             tenth.to_bytes(),
             b"DSA-SHA3-512:dsa_with_SHA3-512:id-dsa-with-sha3-512:2.16.840.1.101.3.4.3.8"
         );
-        // SAFETY: the eleventh row is initialised -- the `EdDSA` run's first.
+        // SAFETY: the eleventh row is initialised -- the `RSA` run's first.
         let eleventh = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[10].algorithm_names) };
-        assert_eq!(eleventh.to_bytes(), b"ED25519:1.3.101.112");
-        // SAFETY: the fifteenth row is initialised -- the `EdDSA` run's last.
-        let fifteenth = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[14].algorithm_names) };
-        assert_eq!(fifteenth.to_bytes(), b"ED448ph");
-        // SAFETY: the sixteenth row is initialised -- the `ECDSA` run's first.
-        let sixteenth = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[15].algorithm_names) };
-        assert_eq!(sixteenth.to_bytes(), b"ECDSA");
-        // SAFETY: the twenty-fifth row is initialised -- the `ECDSA` run's last.
+        assert_eq!(
+            eleventh.to_bytes(),
+            b"RSA:rsaEncryption:1.2.840.113549.1.1.1"
+        );
+        // SAFETY: the twenty-fourth row is initialised -- the `RSA` run's last.
+        let twenty_fourth =
+            unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[23].algorithm_names) };
+        assert_eq!(
+            twenty_fourth.to_bytes(),
+            b"RSA-SM3:sm3WithRSAEncryption:1.2.156.10197.1.504"
+        );
+        // SAFETY: the twenty-fifth row is initialised -- the `EdDSA` run's first.
         let twenty_fifth =
             unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[24].algorithm_names) };
+        assert_eq!(twenty_fifth.to_bytes(), b"ED25519:1.3.101.112");
+        // SAFETY: the twenty-ninth row is initialised -- the `EdDSA` run's last.
+        let twenty_ninth =
+            unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[28].algorithm_names) };
+        assert_eq!(twenty_ninth.to_bytes(), b"ED448ph");
+        // SAFETY: the thirtieth row is initialised -- the `ECDSA` run's first.
+        let thirtieth = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[29].algorithm_names) };
+        assert_eq!(thirtieth.to_bytes(), b"ECDSA");
+        // SAFETY: the thirty-ninth row is initialised -- the `ECDSA` run's last.
+        let thirty_ninth =
+            unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[38].algorithm_names) };
         assert_eq!(
-            twenty_fifth.to_bytes(),
+            thirty_ninth.to_bytes(),
             b"ECDSA-SHA3-512:ecdsa_with_SHA3-512:id-ecdsa-with-sha3-512:2.16.840.1.101.3.4.3.12"
         );
-        // SAFETY: the twenty-sixth row is initialised -- the legacy-MAC run's first.
-        let twenty_sixth =
-            unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[25].algorithm_names) };
-        assert_eq!(twenty_sixth.to_bytes(), b"HMAC");
-        // SAFETY: the twenty-ninth row is initialised.
-        let last = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[28].algorithm_names) };
+        // SAFETY: the fortieth row is initialised -- the legacy-MAC run's first.
+        let fortieth = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[39].algorithm_names) };
+        assert_eq!(fortieth.to_bytes(), b"HMAC");
+        // SAFETY: the forty-third row is initialised.
+        let last = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[42].algorithm_names) };
         assert_eq!(last.to_bytes(), b"CMAC");
-        assert!(DEFLT_SIGNATURES[29].algorithm_names.is_null());
-        assert!(DEFLT_SIGNATURES[29].property_definition.is_null());
-        assert!(DEFLT_SIGNATURES[29].implementation.is_null());
+        assert!(DEFLT_SIGNATURES[43].algorithm_names.is_null());
+        assert!(DEFLT_SIGNATURES[43].property_definition.is_null());
+        assert!(DEFLT_SIGNATURES[43].implementation.is_null());
     }
 }
