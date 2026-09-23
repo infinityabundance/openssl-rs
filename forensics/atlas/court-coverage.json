@@ -1784,6 +1784,7 @@
               "RT-RSA",
               "RT-RUNTIME-EXT",
               "RT-SELFTEST",
+              "RT-SIGNATURE",
               "RT-THREADDATA"
             ],
             "symbol": "ERR_clear_error"
@@ -9437,7 +9438,8 @@
             "basis": "called",
             "courts": [
               "RT-KEYMGMT",
-              "RT-PARAM"
+              "RT-PARAM",
+              "RT-SIGNATURE"
             ],
             "symbol": "OSSL_PARAM_construct_BN"
           },
@@ -9461,7 +9463,8 @@
               "RT-KEYMGMT",
               "RT-PARAM",
               "RT-PROVIDER",
-              "RT-PROVIDER-3P"
+              "RT-PROVIDER-3P",
+              "RT-SIGNATURE"
             ],
             "symbol": "OSSL_PARAM_construct_end"
           },
@@ -9514,7 +9517,8 @@
               "RT-EVP-SKEY",
               "RT-HPKE",
               "RT-KEYMGMT",
-              "RT-PARAM"
+              "RT-PARAM",
+              "RT-SIGNATURE"
             ],
             "symbol": "OSSL_PARAM_construct_octet_string"
           },
@@ -9589,7 +9593,8 @@
               "RT-EVP-PKEY-OPS",
               "RT-KEYMGMT",
               "RT-PARAM",
-              "RT-PROVIDER-3P"
+              "RT-PROVIDER-3P",
+              "RT-SIGNATURE"
             ],
             "symbol": "OSSL_PARAM_construct_utf8_string"
           },
@@ -10283,8 +10288,8 @@
         "completed": true,
         "counts": {
           "directly_courted": 733,
-          "directly_courted_called": 681,
-          "directly_courted_referenced": 52,
+          "directly_courted_called": 682,
+          "directly_courted_referenced": 51,
           "implemented": 733,
           "indirectly_courted": 0,
           "non_observable": 0,
@@ -11359,14 +11364,16 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EVP-PKEY"
+              "RT-EVP-PKEY",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_DigestSignFinal"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-EVP-PKEY"
+              "RT-EVP-PKEY",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_DigestSignInit"
           },
@@ -11380,7 +11387,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EVP-PKEY"
+              "RT-EVP-PKEY",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_DigestSignUpdate"
           },
@@ -11414,14 +11422,16 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EVP-PKEY"
+              "RT-EVP-PKEY",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_DigestVerifyFinal"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-EVP-REF"
+              "RT-EVP-REF",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_DigestVerifyInit"
           },
@@ -11435,7 +11445,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EVP-PKEY"
+              "RT-EVP-PKEY",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_DigestVerifyUpdate"
           },
@@ -12259,7 +12270,8 @@
               "RT-EVP-INTROSPECT",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
-              "RT-FETCH"
+              "RT-FETCH",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_MD_CTX_free"
           },
@@ -12331,7 +12343,8 @@
               "RT-EVP-INTROSPECT",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
-              "RT-FETCH"
+              "RT-FETCH",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_MD_CTX_new"
           },
@@ -12886,7 +12899,8 @@
               "RT-EVP-PKEY",
               "RT-EVP-PKEY-OPS",
               "RT-KEYMGMT",
-              "RT-RSA"
+              "RT-RSA",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_PKEY_CTX_free"
           },
@@ -13071,7 +13085,8 @@
               "RT-EVP-PKEY",
               "RT-EVP-PKEY-OPS",
               "RT-KEYMGMT",
-              "RT-RSA"
+              "RT-RSA",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_PKEY_CTX_new_from_name"
           },
@@ -13716,7 +13731,8 @@
               "RT-EVP-PKEY-OPS",
               "RT-HPKE",
               "RT-KEYMGMT",
-              "RT-PUBKEY"
+              "RT-PUBKEY",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_PKEY_free"
           },
@@ -13724,7 +13740,8 @@
             "basis": "called",
             "courts": [
               "RT-EVP-PKEY",
-              "RT-KEYMGMT"
+              "RT-KEYMGMT",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_PKEY_fromdata"
           },
@@ -13732,7 +13749,8 @@
             "basis": "called",
             "courts": [
               "RT-EVP-PKEY",
-              "RT-KEYMGMT"
+              "RT-KEYMGMT",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_PKEY_fromdata_init"
           },
@@ -15021,7 +15039,8 @@
             "basis": "called",
             "courts": [
               "RT-EVP-CLASS",
-              "RT-EVP-PKEY"
+              "RT-EVP-PKEY",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_SIGNATURE_fetch"
           },
@@ -15029,7 +15048,8 @@
             "basis": "called",
             "courts": [
               "RT-EVP-CLASS",
-              "RT-EVP-PKEY"
+              "RT-EVP-PKEY",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_SIGNATURE_free"
           },
@@ -15389,7 +15409,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EVP-INTROSPECT"
+              "RT-EVP-INTROSPECT",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_md5"
           },
@@ -15462,7 +15483,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EVP-INTROSPECT"
+              "RT-EVP-INTROSPECT",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_sha256"
           },
@@ -21467,7 +21489,7 @@
         ],
         "non_observable": [],
         "phase": 8,
-        "staged_candidate_probes": 12
+        "staged_candidate_probes": 13
       },
       {
         "completed": false,
@@ -21789,7 +21811,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-RAND"
+              "RT-RAND",
+              "RT-SIGNATURE"
             ],
             "symbol": "RAND_bytes"
           },
@@ -21956,8 +21979,8 @@
     ],
     "totals": {
       "directly_courted": 2712,
-      "directly_courted_called": 2439,
-      "directly_courted_referenced": 273,
+      "directly_courted_called": 2440,
+      "directly_courted_referenced": 272,
       "implemented": 2720,
       "indirectly_courted": 8,
       "non_observable": 0
@@ -21969,7 +21992,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "84d28c2d960557466117fd7b70e5928228689a13320680b6b28cbf9cacf0c3f2"
+      "sha256": "c91e9dc1205722e84b9213eabedee1d6bf37c0afb9be3f29f4bb361dd902a481"
     },
     {
       "name": "symbol-ownership",
@@ -22024,7 +22047,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "fdd0251be659fbd1a26ae1a0450adf306dfb9a5d0d4a8f43581b53dce40d248f"
+      "sha256": "02db6371cea4a9b0fa681aa66bd806d9c31ea79acd37b729c91f8c7c5efa9e95"
     },
     {
       "name": "phase7-courts",
@@ -22034,17 +22057,17 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "d04940ff3825d6746071e4ac256e68509782ab0209f695296cb5962fc2579d89"
+      "sha256": "61f5385dbd6d6bb94c0c429632003a02abc9376d84151069795cfa1019b35c64"
     },
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "f0b96861f0cc3d3c3b9474b3b21559b2396127b56f3c9ee4a2051204240fba86"
+      "sha256": "cfaa4c69d3fbbeedb609b1c8c43ce91b8b1866aa001706b48d2c1f3663cfccf9"
     },
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "84d71d86a98e46000020dc15a3fbfb4cd7df1f660d034e5d8b72e63b7a250df0"
+      "sha256": "36430871c2d7cb02f34d365fdf254eaa82a80ec98b3368964fca05e411968c24"
     },
     {
       "name": "phase9-courts",

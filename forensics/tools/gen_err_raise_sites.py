@@ -681,6 +681,18 @@ COVERED_FILES = [
     # `crypto/sm2/sm2_key.c`: SM2's private-key range check, whose two raises are the
     # `ERR_LIB_SM2` null-parameter and invalid-private-key reasons.
     ("crypto/sm2/sm2_key.c", "SM2_KEY"),
+    # This pass's `DSA` signature unit. `signature/dsa_sig.c` is `.c.in`-generated, so its
+    # `__FILE__` is the bare build-relative path (D235's finding, the same one `dh_exch.c`
+    # carries). Its raises are its own: the four generated decoder refusals
+    # (`PROV_R_REPEATED_PARAMETER`, one per named parameter in each of the three decoders), the
+    # digest refusals of `dsa_setup_md` (`PROV_R_INVALID_DIGEST`/`PROV_R_DIGEST_NOT_ALLOWED`),
+    # the `PROV_R_XOF_DIGESTS_NOT_ALLOWED` arm, the `PROV_R_NO_KEY_SET` of
+    # `dsa_signverify_init`, and the `dsa_sigalg_set_ctx_params` refusals.
+    ("providers/implementations/signature/dsa_sig.c", "PROV_DSA_SIG"),
+    # 8.10's `HMAC`/`SIPHASH`/`POLY1305`/`CMAC` signature rows. `signature/mac_legacy_sig.c` is a
+    # plain `.c`, so its `__FILE__` carries the source-tree prefix. It raises once, the
+    # `PROV_R_NO_KEY_SET` refusal of `mac_digest_sign_init` (`:107`).
+    ("providers/implementations/signature/mac_legacy_sig.c", "PROV_MAC_LEGACY_SIG"),
     # Phase 8.4: the `crypto/rsa` subsystem. The same rule as `crypto/bn` above -- this is
     # the *subsystem* set, not a selection of convenient files, because every one of them
     # raises from a surface Phase 8 owns and a coordinate's `file` string is part of the

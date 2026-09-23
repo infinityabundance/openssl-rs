@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 399,
+      "crate_files_read": 404,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -13,11 +13,11 @@
       "identities_checked": 222,
       "identities_mismatches": 0,
       "links_convention": 224,
-      "links_documented": 12,
+      "links_documented": 13,
       "links_explicit": 19,
       "problems": 0,
       "signatures_authority_only": 372,
-      "signatures_checked": 262,
+      "signatures_checked": 263,
       "signatures_mismatches": 0,
       "signatures_not_a_dispatch": 191,
       "signatures_unlinked": 0,
@@ -3734,6 +3734,14 @@
           "authority_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(opaque))",
           "crate_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(opaque))",
           "how": "convention"
+        },
+        {
+          "alias": "SetCtxParamsFn",
+          "at": "src/provider/dsa_sig.rs",
+          "authority": "OSSL_FUNC_signature_set_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "how": "documented"
         },
         {
           "alias": "GetReasonStringsFn",
