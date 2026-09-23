@@ -28546,3 +28546,88 @@ the line counts D397 measured (authority source, `.c`/`.h`/`.c.in`):
   six).
 
 No claim is made that the stratum is closer to sealing than `provider_rows` says.
+
+## D398 -- `crypto/slh_dsa/` lands as code: the ten-unit FIPS 205 core, with its parameters, addresses, hashes, WOTS+, XMSS, FORS and hypertree, driven from the authority's own ACVP vectors
+
+**Decision.** D397 named SLH-DSA as the next pass and measured it at 3,846 authority lines for 24
+rows -- the best rows-per-line left. This pass lands the **core** of that block as code: the ten
+`crypto/slh_dsa/*.c` units, transcribed whole, with the two provider units as the next pass. The
+24 rows do **not** move, because a row moves only when its provider unit publishes it; the crate now
+has the mathematics those units are shells over, and `provider_rows` stays **256 implemented / 50
+unlanded**.
+
+1. **What landed, and where.** `crypto/slh_dsa/` is `src/slh_dsa/`, one module per authority unit:
+   `params.rs` (`slh_params.c`), `adrs.rs` (`slh_adrs.c`), `hash.rs` (`slh_hash.c`), `hash_ctx.rs`
+   (`slh_dsa_hash_ctx.c`), `wots.rs` (`slh_wots.c`), `xmss.rs` (`slh_xmss.c`), `fors.rs`
+   (`slh_fors.c`), `hypertree.rs` (`slh_hypertree.c`), `dsa.rs` (`slh_dsa.c`) and `key.rs`
+   (`slh_dsa_key.c`). The four headers are modelled field for field: `SlhDsaParams`
+   (`slh_params.h:22-37`), `SlhAdrsFunc` (`slh_adrs.h:57-69`), `SlhHashFunc` (`slh_hash.h:55-62`),
+   `SlhDsaKey` (`slh_dsa_key.h:23-50`) and `SlhDsaHashCtx` (`slh_dsa_local.h:51-66`), every one
+   `#[repr(C)]`. The module is `pub(crate)`: no provider row publishes it yet, so nothing about it
+   is externally observable and no export changes.
+2. **The header shapes are pinned by the constructors, not by a layout probe.** Every `struct` that
+   a caller reaches has a constructor in this module and the field order is the authority's, so a
+   misplaced member is a compile error at the constructor rather than a silent offset. The one
+   place identity is observable -- `md_big_ctx` may *be* `md_ctx` (`slh_dsa_hash_ctx.c:41-43`) -- is
+   reproduced as a pointer comparison in `..._free` and `..._dup`, which is what makes the category
+   1 SHA-2 and every SHAKE key free once.
+3. **The read side of `packet.h` lands with it.** The tree units read the signature back through
+   `PACKET_buf_init`/`PACKET_get_bytes`/`PACKET_remaining`, which are `static ossl_inline` functions
+   of `include/internal/packet.h` rather than symbols of any unit. `src/packet.rs` carried the write
+   half and `src/asn1_dsa.rs` a private read model; this pass adds the read half to `src/packet.rs`,
+   beside the header it belongs to, with the duplication of the two-field cursor named in the file.
+4. **The error coordinates are derived, not typed.** `crypto/slh_dsa/slh_dsa.c` joins
+   `gen_err_raise_sites.py`'s `COVERED_FILES`, so the generator resolves the three `ERR_LIB_PROV`
+   sites from the authority's own headers and the pinned source: `SLH_DSA_74`
+   (`PROV_R_INVALID_SIGNATURE_SIZE`, the destination-size guard), `SLH_DSA_80` and `SLH_DSA_177`
+   (`PROV_R_MISSING_KEY`, the private and public key guards). `err-raise-sites.json` and
+   `src/runtime/err_sites.rs` are regenerated.
+5. **One function is withheld, with its coordinate rather than a stub.** `ossl_slh_dsa_key_to_text`
+   (`slh_dsa_key.c:488-526`, the `#ifndef FIPS_MODULE` tail) is not transcribed: its only helpers
+   are `BIO_printf` and `ossl_bio_print_labeled_buf`, and the latter is the function
+   `src/encoder_lib.rs` withholds for the same reason (`encoder_lib.c:785`, no landed caller). Its
+   own only caller is `encode_key2text.c:454`, the text-encoder unit, likewise unlanded. It lands
+   with the text encoder. Every other definition in the ten units is present.
+
+**Driven from the authority's own vectors, because no row moves.** The evidence is
+`src/slh_dsa/tests.rs`, which embeds the authority's `test/slh_dsa.inc` with `include_str!` -- the
+ACVP `SLH-DSA-sigGen-FIPS205` `internalProjection` set the authority's own `slh_dsa_test.c` reads --
+and parses it rather than typing a constant:
+
+| test | what it observes |
+|---|---|
+| `the_root_recomputation_agrees_with_every_vector` | for the 12 keygen private keys and the 6 sigGen ones, `ossl_slh_dsa_key_pairwise_check` recomputes `PK_ROOT` from `SK_SEED \|\| PK_SEED` and agrees with the stored root |
+| `the_signature_digest_agrees_with_every_vector` | for the 6 sigGen items (SHA2-128s/192f/256f, SHAKE-128s/128f/256f), a deterministic signature's sha256 equals the vector's `sig_digest` |
+| `a_one_byte_signature_destination_is_refused` | the destination-size refusal, `SLH_DSA_74` |
+
+The vectors span both hash families, both `s` and `f` tree shapes, and security categories 1, 3 and
+5, and the two items the file marks with `add_random` (SHA2-192f and SHAKE-128f) drive the
+`test-entropy` path while the other four drive the `opt_rand = PK_SEED` substitution
+(`slh_dsa.c:92-93`). `cargo test --lib` is **1017 passed, 0 failed**; `cargo clippy --all-targets --
+-D warnings` is clean.
+
+**What remains for the 24 rows, and the order for the rest.** The keymgmt unit
+(`providers/implementations/keymgmt/slh_dsa_kmgmt.c.in`, 501 lines, 12 rows) and the signature unit
+(`.../signature/slh_dsa_sig.c.in`, 393 lines, 12 rows) are the next pass; the signature unit also
+needs `providers/common/der/der_slh_dsa_key.c` and its `id-slh-dsa-*` OID table
+(`der_slh_dsa_gen.c.in`), which are small and were not in D397's 894-line count. After SLH-DSA the
+order, best rows-per-line first, with the reasons D396 and D397 measured:
+
+* **`kdfs/argon2.c.in` -- 3 rows, 1,574 lines.** The best rows-per-line left in absolute terms, and
+  its prerequisite (the thread layer, D397) is landed, so nothing but the unit blocks it. It is the
+  next pass after SLH-DSA's provider units.
+* **`crypto/ml_kem/` + the `mlx` pair -- 14 rows, 4,820 lines.** The largest row count left, and its
+  four hybrid `mlx` rows cost only their own 1,194 unit lines once `ml_kem.c` is in (there is no
+  `crypto/mlx/`). Second because 14 rows for a fixed cost is the best remaining bulk.
+* **SM2 -- 2 rows, 1,940 lines** (`crypto/sm2/` 1,076 + `der_sm2_sig.c` 39 + `sm2_sig.c.in` 585 +
+  `sm2_enc.c.in` 240). It lands last of the algorithm blocks because it is two rows for two large
+  units, and because its two faces (signature and cipher) share the one crypt unit.
+* **`kem/ec_kem.c.in` -- 1 row, 822 lines.** One row, and one of its functions
+  (`ossl_ec_dhkem_derive_private`) is already landed, but its encapsulation path is the HPKE-derived
+  one the crate models only partly; it is the last of the fifty.
+* **`crypto/ml_dsa/` -- 6 rows, 4,925 lines.** Last overall: the worst rows-per-line in the set
+  (4,925 lines for six rows), and nothing else waits on it.
+
+No claim is made that the stratum is closer to sealing than `provider_rows` says. `provider_rows` is
+**256/50** after this pass, exactly as before it; what changed is that the largest block of the
+remaining fifty now has its mathematics in the crate instead of in a withheld note.

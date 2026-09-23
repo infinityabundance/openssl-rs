@@ -3099,12 +3099,12 @@
     {
       "name": "typedef-owners",
       "path": "forensics/atlas/typedef-owners.json",
-      "sha256": "0c8a471f98e5e7b612e27a0ec3387fd43b0a69e9515e6a764859015d0cafb93a"
+      "sha256": "7d08aeb2d40f9d94b547fddf6920218b7fa1d17669313fa490d26c6c3ca9d06a"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "e79ed3f40b7cbb93ab9970dfdd382b9b129eb83277feef305db32c1ab188a39c"
+      "sha256": "377034b1085c79c0b508f75c6cf586be256b5683e19eedf44d6f85b2341f027f"
     },
     {
       "name": "phase-state",

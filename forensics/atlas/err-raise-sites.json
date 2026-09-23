@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 3812,
+      "sites": 3815,
       "unattributed": 0
     },
     "covered_files": [
@@ -233,6 +233,7 @@
       "providers/common/securitycheck.c",
       "providers/implementations/asymciphers/rsa_enc.c",
       "providers/implementations/kem/rsa_kem.c",
+      "crypto/slh_dsa/slh_dsa.c",
       "providers/implementations/signature/mac_legacy_sig.c",
       "crypto/rsa/rsa_lib.c",
       "crypto/rsa/rsa_crpt.c",
@@ -39553,6 +39554,51 @@
         "rel_source": "providers/implementations/kem/rsa_kem.c"
       },
       {
+        "const_name": "SLH_DSA_74",
+        "data_format": "\"is %zu, should be at least %zu\"",
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/slh_dsa/slh_dsa.c",
+        "function": "slh_sign_internal",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 74,
+        "macro": "ERR_raise_data",
+        "reason": 179,
+        "reason_symbol": "PROV_R_INVALID_SIGNATURE_SIZE",
+        "rel_source": "crypto/slh_dsa/slh_dsa.c"
+      },
+      {
+        "const_name": "SLH_DSA_80",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/slh_dsa/slh_dsa.c",
+        "function": "slh_sign_internal",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 80,
+        "macro": "ERR_raise",
+        "reason": 128,
+        "reason_symbol": "PROV_R_MISSING_KEY",
+        "rel_source": "crypto/slh_dsa/slh_dsa.c"
+      },
+      {
+        "const_name": "SLH_DSA_177",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/slh_dsa/slh_dsa.c",
+        "function": "slh_verify_internal",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 177,
+        "macro": "ERR_raise",
+        "reason": 128,
+        "reason_symbol": "PROV_R_MISSING_KEY",
+        "rel_source": "crypto/slh_dsa/slh_dsa.c"
+      },
+      {
         "const_name": "PROV_MAC_LEGACY_SIG_107",
         "data_format": null,
         "dynamic_reason": false,
@@ -58752,6 +58798,11 @@
       "name": "authority:providers/implementations/kem/rsa_kem.c",
       "path": "forensics/authorities/build/openssl-3.6.4-production/providers/implementations/kem/rsa_kem.c",
       "sha256": "ae7a86255a7376fb99b0627779e431e45e366d23e02b0366ff736b7bd5d69ae0"
+    },
+    {
+      "name": "authority:crypto/slh_dsa/slh_dsa.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/slh_dsa/slh_dsa.c",
+      "sha256": "c6fcad81012cff565db57065820c9b6307a33a88cfabf0ec8421dcaac13ea588"
     },
     {
       "name": "authority:providers/implementations/signature/mac_legacy_sig.c",

@@ -745,6 +745,12 @@ COVERED_FILES = [
     # guard (`ERR_LIB_RSA` with `RSA_R_DATA_TOO_SMALL` or `RSA_R_DATA_TOO_LARGE_FOR_MODULUS` chosen
     # at run time).
     ("providers/implementations/kem/rsa_kem.c", "PROV_RSA_KEM"),
+    # The SLH-DSA core's signature unit. `crypto/slh_dsa/slh_dsa.c` is a plain `.c`, so its
+    # `__FILE__` carries the source-tree prefix. It raises the four `ERR_LIB_PROV` refusals of
+    # `slh_sign_internal`/`slh_verify_internal`: the `PROV_R_INVALID_SIGNATURE_SIZE`
+    # destination-size guard, the `PROV_R_MISSING_KEY` "no private key" and "no public key"
+    # guards, and the named field of the oversize-message refusal.
+    ("crypto/slh_dsa/slh_dsa.c", "SLH_DSA"),
     # 8.10's `HMAC`/`SIPHASH`/`POLY1305`/`CMAC` signature rows. `signature/mac_legacy_sig.c` is a
     # plain `.c`, so its `__FILE__` carries the source-tree prefix. It raises once, the
     # `PROV_R_NO_KEY_SET` refusal of `mac_digest_sign_init` (`:107`).
