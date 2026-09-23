@@ -22,10 +22,10 @@ Read from the census's own `implementation_state` for the rows this stratum owns
 | quantity | count |
 |---|---|
 | provider rows this stratum owns | 306 |
-| of those, implemented | 211 |
-| of those, unlanded | 95 |
+| of those, implemented | 225 |
+| of those, unlanded | 81 |
 
-The document below names all **95** unlanded rows this stratum owns across **32** translation units, and — so the first group can be read whole — the **18** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (92). The identity `306 = 211 + 95` holds.
+The document below names all **81** unlanded rows this stratum owns across **30** translation units, and — so the first group can be read whole — the **18** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (78). The identity `306 = 225 + 81` holds.
 
 ## The first group: the `OSSL_OP_KDF` rows and the `OSSL_OP_SKEYMGMT` pair
 
@@ -225,104 +225,92 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 
 **Withheld: not reachable.** The unit's twelve rows (`SLH-DSA-SHA2-*`, `SLH-DSA-SHAKE-*`) are built on `ossl_slh_dsa_*` (`crypto/slh_dsa/`), which the crate does not have -- `ossl_slh_dsa_generate_key`, `ossl_slh_dsa_key_dup`/`_equal`/`_free`/`_get`, and the `ossl_slh_dsa_hash_ctx_new`/`_free` pair are none of them in this tree.
 
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/dsa_sig.c.in` — 10 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_signature` | `ossl_dsa_signature_functions` | `OSSL_OP_SIGNATURE` | `DSA:dsaEncryption:1.2.840.10040.4.1` | `_no arm yet_` |
-| `deflt_signature` | `ossl_dsa_sha1_signature_functions` | `OSSL_OP_SIGNATURE` | `DSA-SHA1:DSA-SHA-1:dsaWithSHA1:1.2.840.10040.4.3` | `_no arm yet_` |
-| `deflt_signature` | `ossl_dsa_sha224_signature_functions` | `OSSL_OP_SIGNATURE` | `DSA-SHA2-224:DSA-SHA224:dsa_with_SHA224:2.16.840.1.101.3.4.3.1` | `_no arm yet_` |
-| `deflt_signature` | `ossl_dsa_sha256_signature_functions` | `OSSL_OP_SIGNATURE` | `DSA-SHA2-256:DSA-SHA256:dsa_with_SHA256:2.16.840.1.101.3.4.3.2` | `_no arm yet_` |
-| `deflt_signature` | `ossl_dsa_sha384_signature_functions` | `OSSL_OP_SIGNATURE` | `DSA-SHA2-384:DSA-SHA384:dsa_with_SHA384:id-dsa-with-sha384:1.2.840.1.101.3.4.3.3` | `_no arm yet_` |
-| `deflt_signature` | `ossl_dsa_sha512_signature_functions` | `OSSL_OP_SIGNATURE` | `DSA-SHA2-512:DSA-SHA512:dsa_with_SHA512:id-dsa-with-sha512:1.2.840.1.101.3.4.3.4` | `_no arm yet_` |
-| `deflt_signature` | `ossl_dsa_sha3_224_signature_functions` | `OSSL_OP_SIGNATURE` | `DSA-SHA3-224:dsa_with_SHA3-224:id-dsa-with-sha3-224:2.16.840.1.101.3.4.3.5` | `_no arm yet_` |
-| `deflt_signature` | `ossl_dsa_sha3_256_signature_functions` | `OSSL_OP_SIGNATURE` | `DSA-SHA3-256:dsa_with_SHA3-256:id-dsa-with-sha3-256:2.16.840.1.101.3.4.3.6` | `_no arm yet_` |
-| `deflt_signature` | `ossl_dsa_sha3_384_signature_functions` | `OSSL_OP_SIGNATURE` | `DSA-SHA3-384:dsa_with_SHA3-384:id-dsa-with-sha3-384:2.16.840.1.101.3.4.3.7` | `_no arm yet_` |
-| `deflt_signature` | `ossl_dsa_sha3_512_signature_functions` | `OSSL_OP_SIGNATURE` | `DSA-SHA3-512:dsa_with_SHA3-512:id-dsa-with-sha3-512:2.16.840.1.101.3.4.3.8` | `_no arm yet_` |
-
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/ecdsa_sig.c.in` — 10 row(s)
 
 | table | dispatch table symbol | operation | algorithm name(s) | crate file |
 |---|---|---|---|---|
-| `deflt_signature` | `ossl_ecdsa_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA` | `_no arm yet_` |
-| `deflt_signature` | `ossl_ecdsa_sha1_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA1:ECDSA-SHA-1:ecdsa-with-SHA1:1.2.840.10045.4.1` | `_no arm yet_` |
-| `deflt_signature` | `ossl_ecdsa_sha224_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA2-224:ECDSA-SHA224:ecdsa-with-SHA224:1.2.840.10045.4.3.1` | `_no arm yet_` |
-| `deflt_signature` | `ossl_ecdsa_sha256_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA2-256:ECDSA-SHA256:ecdsa-with-SHA256:1.2.840.10045.4.3.2` | `_no arm yet_` |
-| `deflt_signature` | `ossl_ecdsa_sha384_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA2-384:ECDSA-SHA384:ecdsa-with-SHA384:1.2.840.10045.4.3.3` | `_no arm yet_` |
-| `deflt_signature` | `ossl_ecdsa_sha512_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA2-512:ECDSA-SHA512:ecdsa-with-SHA512:1.2.840.10045.4.3.4` | `_no arm yet_` |
-| `deflt_signature` | `ossl_ecdsa_sha3_224_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA3-224:ecdsa_with_SHA3-224:id-ecdsa-with-sha3-224:2.16.840.1.101.3.4.3.9` | `_no arm yet_` |
-| `deflt_signature` | `ossl_ecdsa_sha3_256_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA3-256:ecdsa_with_SHA3-256:id-ecdsa-with-sha3-256:2.16.840.1.101.3.4.3.10` | `_no arm yet_` |
-| `deflt_signature` | `ossl_ecdsa_sha3_384_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA3-384:ecdsa_with_SHA3-384:id-ecdsa-with-sha3-384:2.16.840.1.101.3.4.3.11` | `_no arm yet_` |
-| `deflt_signature` | `ossl_ecdsa_sha3_512_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA3-512:ecdsa_with_SHA3-512:id-ecdsa-with-sha3-512:2.16.840.1.101.3.4.3.12` | `_no arm yet_` |
+| `deflt_signature` | `ossl_ecdsa_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_ecdsa_sha1_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA1:ECDSA-SHA-1:ecdsa-with-SHA1:1.2.840.10045.4.1` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_ecdsa_sha224_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA2-224:ECDSA-SHA224:ecdsa-with-SHA224:1.2.840.10045.4.3.1` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_ecdsa_sha256_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA2-256:ECDSA-SHA256:ecdsa-with-SHA256:1.2.840.10045.4.3.2` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_ecdsa_sha384_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA2-384:ECDSA-SHA384:ecdsa-with-SHA384:1.2.840.10045.4.3.3` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_ecdsa_sha512_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA2-512:ECDSA-SHA512:ecdsa-with-SHA512:1.2.840.10045.4.3.4` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_ecdsa_sha3_224_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA3-224:ecdsa_with_SHA3-224:id-ecdsa-with-sha3-224:2.16.840.1.101.3.4.3.9` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_ecdsa_sha3_256_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA3-256:ecdsa_with_SHA3-256:id-ecdsa-with-sha3-256:2.16.840.1.101.3.4.3.10` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_ecdsa_sha3_384_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA3-384:ecdsa_with_SHA3-384:id-ecdsa-with-sha3-384:2.16.840.1.101.3.4.3.11` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_ecdsa_sha3_512_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA3-512:ecdsa_with_SHA3-512:id-ecdsa-with-sha3-512:2.16.840.1.101.3.4.3.12` | `src/provider/signature.rs` |
+
+**Withheld: the unit's ten rows, on one unlanded callee.** `ossl_digest_get_approved_nid` is already landed (`src/provider/digest_to_nid.rs`), so what remains is `providers/common/der/der_ec_sig.c`'s `ossl_DER_w_algorithmIdentifier_ECDSA_with_MD` (`ecdsa_sig.c.in:234`), which is not in this tree. Everything else the unit reaches is either landed (`ossl_ecdsa_deterministic_sign` is `src/ec/ecdsa_ossl.rs`'s) or inside a `#ifdef FIPS_MODULE` arm, so it is the smallest remaining signature prerequisite.
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/eddsa_sig.c.in` — 5 row(s)
 
 | table | dispatch table symbol | operation | algorithm name(s) | crate file |
 |---|---|---|---|---|
-| `deflt_signature` | `ossl_ed25519_signature_functions` | `OSSL_OP_SIGNATURE` | `ED25519:1.3.101.112` | `_no arm yet_` |
-| `deflt_signature` | `ossl_ed25519ph_signature_functions` | `OSSL_OP_SIGNATURE` | `ED25519ph` | `_no arm yet_` |
-| `deflt_signature` | `ossl_ed25519ctx_signature_functions` | `OSSL_OP_SIGNATURE` | `ED25519ctx` | `_no arm yet_` |
-| `deflt_signature` | `ossl_ed448_signature_functions` | `OSSL_OP_SIGNATURE` | `ED448:1.3.101.113` | `_no arm yet_` |
-| `deflt_signature` | `ossl_ed448ph_signature_functions` | `OSSL_OP_SIGNATURE` | `ED448ph` | `_no arm yet_` |
+| `deflt_signature` | `ossl_ed25519_signature_functions` | `OSSL_OP_SIGNATURE` | `ED25519:1.3.101.112` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_ed25519ph_signature_functions` | `OSSL_OP_SIGNATURE` | `ED25519ph` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_ed25519ctx_signature_functions` | `OSSL_OP_SIGNATURE` | `ED25519ctx` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_ed448_signature_functions` | `OSSL_OP_SIGNATURE` | `ED448:1.3.101.113` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_ed448ph_signature_functions` | `OSSL_OP_SIGNATURE` | `ED448ph` | `src/provider/signature.rs` |
 
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/mac_legacy_sig.c` — 4 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_signature` | `ossl_mac_legacy_hmac_signature_functions` | `OSSL_OP_SIGNATURE` | `HMAC` | `_no arm yet_` |
-| `deflt_signature` | `ossl_mac_legacy_siphash_signature_functions` | `OSSL_OP_SIGNATURE` | `SIPHASH` | `_no arm yet_` |
-| `deflt_signature` | `ossl_mac_legacy_poly1305_signature_functions` | `OSSL_OP_SIGNATURE` | `POLY1305` | `_no arm yet_` |
-| `deflt_signature` | `ossl_mac_legacy_cmac_signature_functions` | `OSSL_OP_SIGNATURE` | `CMAC` | `_no arm yet_` |
+**Withheld: the unit's five rows, on one unlanded callee.** `eddsa_signverify_init` builds the AlgorithmIdentifier through `providers/common/der/der_ecx_key.c`'s `ossl_DER_w_algorithmIdentifier_ED25519` and `_ED448` (`eddsa_sig.c.in:279-282`), which is not in this tree. The four OIDs and the two writers are the whole prerequisite: every other callee (`ossl_ed25519_sign`/`_verify`, `ossl_ed448_sign`/`_verify`, `ossl_ecx_key_up_ref`/`_free`) is landed, so `EdDSA` is one small unit behind `DSA`'s landing.
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/ml_dsa_sig.c.in` — 3 row(s)
 
 | table | dispatch table symbol | operation | algorithm name(s) | crate file |
 |---|---|---|---|---|
-| `deflt_signature` | `ossl_ml_dsa_44_signature_functions` | `OSSL_OP_SIGNATURE` | `ML-DSA-44:MLDSA44:2.16.840.1.101.3.4.3.17:id-ml-dsa-44` | `_no arm yet_` |
-| `deflt_signature` | `ossl_ml_dsa_65_signature_functions` | `OSSL_OP_SIGNATURE` | `ML-DSA-65:MLDSA65:2.16.840.1.101.3.4.3.18:id-ml-dsa-65` | `_no arm yet_` |
-| `deflt_signature` | `ossl_ml_dsa_87_signature_functions` | `OSSL_OP_SIGNATURE` | `ML-DSA-87:MLDSA87:2.16.840.1.101.3.4.3.19:id-ml-dsa-87` | `_no arm yet_` |
+| `deflt_signature` | `ossl_ml_dsa_44_signature_functions` | `OSSL_OP_SIGNATURE` | `ML-DSA-44:MLDSA44:2.16.840.1.101.3.4.3.17:id-ml-dsa-44` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_ml_dsa_65_signature_functions` | `OSSL_OP_SIGNATURE` | `ML-DSA-65:MLDSA65:2.16.840.1.101.3.4.3.18:id-ml-dsa-65` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_ml_dsa_87_signature_functions` | `OSSL_OP_SIGNATURE` | `ML-DSA-87:MLDSA87:2.16.840.1.101.3.4.3.19:id-ml-dsa-87` | `src/provider/signature.rs` |
+
+**Withheld: not reachable.** The unit's three rows (`ML-DSA-44`, `ML-DSA-65`, `ML-DSA-87`) dispatch to `ossl_ml_dsa_*` (`crypto/ml_dsa/`), which the crate does not have.
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/rsa_sig.c.in` — 14 row(s)
 
 | table | dispatch table symbol | operation | algorithm name(s) | crate file |
 |---|---|---|---|---|
-| `deflt_signature` | `ossl_rsa_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA:rsaEncryption:1.2.840.113549.1.1.1` | `_no arm yet_` |
-| `deflt_signature` | `ossl_rsa_ripemd160_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-RIPEMD160:ripemd160WithRSA:1.3.36.3.3.1.2` | `_no arm yet_` |
-| `deflt_signature` | `ossl_rsa_sha1_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA1:RSA-SHA-1:sha1WithRSAEncryption:1.2.840.113549.1.1.5` | `_no arm yet_` |
-| `deflt_signature` | `ossl_rsa_sha224_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA2-224:RSA-SHA224:sha224WithRSAEncryption:1.2.840.113549.1.1.14` | `_no arm yet_` |
-| `deflt_signature` | `ossl_rsa_sha256_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA2-256:RSA-SHA256:sha256WithRSAEncryption:1.2.840.113549.1.1.11` | `_no arm yet_` |
-| `deflt_signature` | `ossl_rsa_sha384_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA2-384:RSA-SHA384:sha384WithRSAEncryption:1.2.840.113549.1.1.12` | `_no arm yet_` |
-| `deflt_signature` | `ossl_rsa_sha512_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA2-512:RSA-SHA512:sha512WithRSAEncryption:1.2.840.113549.1.1.13` | `_no arm yet_` |
-| `deflt_signature` | `ossl_rsa_sha512_224_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA2-512/224:RSA-SHA512-224:sha512-224WithRSAEncryption:1.2.840.113549.1.1.15` | `_no arm yet_` |
-| `deflt_signature` | `ossl_rsa_sha512_256_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA2-512/256:RSA-SHA512-256:sha512-256WithRSAEncryption:1.2.840.113549.1.1.16` | `_no arm yet_` |
-| `deflt_signature` | `ossl_rsa_sha3_224_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA3-224:id-rsassa-pkcs1-v1_5-with-sha3-224:2.16.840.1.101.3.4.3.13` | `_no arm yet_` |
-| `deflt_signature` | `ossl_rsa_sha3_256_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA3-256:id-rsassa-pkcs1-v1_5-with-sha3-256:2.16.840.1.101.3.4.3.14` | `_no arm yet_` |
-| `deflt_signature` | `ossl_rsa_sha3_384_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA3-384:id-rsassa-pkcs1-v1_5-with-sha3-384:2.16.840.1.101.3.4.3.15` | `_no arm yet_` |
-| `deflt_signature` | `ossl_rsa_sha3_512_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA3-512:id-rsassa-pkcs1-v1_5-with-sha3-512:2.16.840.1.101.3.4.3.16` | `_no arm yet_` |
-| `deflt_signature` | `ossl_rsa_sm3_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SM3:sm3WithRSAEncryption:1.2.156.10197.1.504` | `_no arm yet_` |
+| `deflt_signature` | `ossl_rsa_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA:rsaEncryption:1.2.840.113549.1.1.1` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_rsa_ripemd160_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-RIPEMD160:ripemd160WithRSA:1.3.36.3.3.1.2` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_rsa_sha1_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA1:RSA-SHA-1:sha1WithRSAEncryption:1.2.840.113549.1.1.5` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_rsa_sha224_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA2-224:RSA-SHA224:sha224WithRSAEncryption:1.2.840.113549.1.1.14` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_rsa_sha256_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA2-256:RSA-SHA256:sha256WithRSAEncryption:1.2.840.113549.1.1.11` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_rsa_sha384_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA2-384:RSA-SHA384:sha384WithRSAEncryption:1.2.840.113549.1.1.12` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_rsa_sha512_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA2-512:RSA-SHA512:sha512WithRSAEncryption:1.2.840.113549.1.1.13` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_rsa_sha512_224_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA2-512/224:RSA-SHA512-224:sha512-224WithRSAEncryption:1.2.840.113549.1.1.15` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_rsa_sha512_256_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA2-512/256:RSA-SHA512-256:sha512-256WithRSAEncryption:1.2.840.113549.1.1.16` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_rsa_sha3_224_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA3-224:id-rsassa-pkcs1-v1_5-with-sha3-224:2.16.840.1.101.3.4.3.13` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_rsa_sha3_256_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA3-256:id-rsassa-pkcs1-v1_5-with-sha3-256:2.16.840.1.101.3.4.3.14` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_rsa_sha3_384_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA3-384:id-rsassa-pkcs1-v1_5-with-sha3-384:2.16.840.1.101.3.4.3.15` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_rsa_sha3_512_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA3-512:id-rsassa-pkcs1-v1_5-with-sha3-512:2.16.840.1.101.3.4.3.16` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_rsa_sm3_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SM3:sm3WithRSAEncryption:1.2.156.10197.1.504` | `src/provider/signature.rs` |
+
+**Withheld: the unit's fourteen rows, on three unlanded callees.** `rsa_setup_md` calls `ossl_digest_rsa_sign_get_md_nid` (`:394`, `:485`) and `rsa_check_padding`/`rsa_signverify_init` call `ossl_rsa_key_op_get_protect` (`:530`), both of which are `providers/common/securitycheck*.c`'s; the signature's AlgorithmIdentifier comes from `providers/common/der/der_rsa_sig.c`'s `ossl_DER_w_algorithmIdentifier_MDWithRSAEncryption` and `_RSA_PSS`. None of the three is in this tree, so `rsa_sig.c.in` is the signature unit with the largest prerequisite and lands last.
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/slh_dsa_sig.c.in` — 12 row(s)
 
 | table | dispatch table symbol | operation | algorithm name(s) | crate file |
 |---|---|---|---|---|
-| `deflt_signature` | `ossl_slh_dsa_sha2_128s_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHA2-128s:id-slh-dsa-sha2-128s:2.16.840.1.101.3.4.3.20` | `_no arm yet_` |
-| `deflt_signature` | `ossl_slh_dsa_sha2_128f_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHA2-128f:id-slh-dsa-sha2-128f:2.16.840.1.101.3.4.3.21` | `_no arm yet_` |
-| `deflt_signature` | `ossl_slh_dsa_sha2_192s_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHA2-192s:id-slh-dsa-sha2-192s:2.16.840.1.101.3.4.3.22` | `_no arm yet_` |
-| `deflt_signature` | `ossl_slh_dsa_sha2_192f_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHA2-192f:id-slh-dsa-sha2-192f:2.16.840.1.101.3.4.3.23` | `_no arm yet_` |
-| `deflt_signature` | `ossl_slh_dsa_sha2_256s_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHA2-256s:id-slh-dsa-sha2-256s:2.16.840.1.101.3.4.3.24` | `_no arm yet_` |
-| `deflt_signature` | `ossl_slh_dsa_sha2_256f_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHA2-256f:id-slh-dsa-sha2-256f:2.16.840.1.101.3.4.3.25` | `_no arm yet_` |
-| `deflt_signature` | `ossl_slh_dsa_shake_128s_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHAKE-128s:id-slh-dsa-shake-128s:2.16.840.1.101.3.4.3.26` | `_no arm yet_` |
-| `deflt_signature` | `ossl_slh_dsa_shake_128f_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHAKE-128f:id-slh-dsa-shake-128f:2.16.840.1.101.3.4.3.27` | `_no arm yet_` |
-| `deflt_signature` | `ossl_slh_dsa_shake_192s_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHAKE-192s:id-slh-dsa-shake-192s:2.16.840.1.101.3.4.3.28` | `_no arm yet_` |
-| `deflt_signature` | `ossl_slh_dsa_shake_192f_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHAKE-192f:id-slh-dsa-shake-192f:2.16.840.1.101.3.4.3.29` | `_no arm yet_` |
-| `deflt_signature` | `ossl_slh_dsa_shake_256s_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHAKE-256s:id-slh-dsa-shake-256s:2.16.840.1.101.3.4.3.30` | `_no arm yet_` |
-| `deflt_signature` | `ossl_slh_dsa_shake_256f_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHAKE-256f:id-slh-dsa-shake-256f:2.16.840.1.101.3.4.3.31` | `_no arm yet_` |
+| `deflt_signature` | `ossl_slh_dsa_sha2_128s_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHA2-128s:id-slh-dsa-sha2-128s:2.16.840.1.101.3.4.3.20` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_slh_dsa_sha2_128f_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHA2-128f:id-slh-dsa-sha2-128f:2.16.840.1.101.3.4.3.21` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_slh_dsa_sha2_192s_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHA2-192s:id-slh-dsa-sha2-192s:2.16.840.1.101.3.4.3.22` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_slh_dsa_sha2_192f_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHA2-192f:id-slh-dsa-sha2-192f:2.16.840.1.101.3.4.3.23` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_slh_dsa_sha2_256s_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHA2-256s:id-slh-dsa-sha2-256s:2.16.840.1.101.3.4.3.24` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_slh_dsa_sha2_256f_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHA2-256f:id-slh-dsa-sha2-256f:2.16.840.1.101.3.4.3.25` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_slh_dsa_shake_128s_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHAKE-128s:id-slh-dsa-shake-128s:2.16.840.1.101.3.4.3.26` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_slh_dsa_shake_128f_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHAKE-128f:id-slh-dsa-shake-128f:2.16.840.1.101.3.4.3.27` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_slh_dsa_shake_192s_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHAKE-192s:id-slh-dsa-shake-192s:2.16.840.1.101.3.4.3.28` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_slh_dsa_shake_192f_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHAKE-192f:id-slh-dsa-shake-192f:2.16.840.1.101.3.4.3.29` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_slh_dsa_shake_256s_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHAKE-256s:id-slh-dsa-shake-256s:2.16.840.1.101.3.4.3.30` | `src/provider/signature.rs` |
+| `deflt_signature` | `ossl_slh_dsa_shake_256f_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHAKE-256f:id-slh-dsa-shake-256f:2.16.840.1.101.3.4.3.31` | `src/provider/signature.rs` |
+
+**Withheld: not reachable.** The unit's twelve rows (`SLH-DSA-SHA2-*`, `SLH-DSA-SHAKE-*`) dispatch to `ossl_slh_dsa_*` (`crypto/slh_dsa/`), which the crate does not have.
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/sm2_sig.c.in` — 1 row(s)
 
 | table | dispatch table symbol | operation | algorithm name(s) | crate file |
 |---|---|---|---|---|
-| `deflt_signature` | `ossl_sm2_signature_functions` | `OSSL_OP_SIGNATURE` | `SM2:1.2.156.10197.1.301` | `_no arm yet_` |
+| `deflt_signature` | `ossl_sm2_signature_functions` | `OSSL_OP_SIGNATURE` | `SM2:1.2.156.10197.1.301` | `src/provider/signature.rs` |
+
+**Withheld: the unit's one row, on two unlanded units.** `sm2_sig.c.in`'s sign path is `ossl_sm2_internal_sign`/`ossl_sm2_internal_verify` and `ossl_sm2_compute_z_digest` (`crypto/sm2/sm2_sign.c`), and its AlgorithmIdentifier comes from `providers/common/der/der_sm2_sig.c`. Neither unit is in this tree, so the single `SM2` row costs two whole transcriptions and lands with them.
 
 ## Provenance
 
@@ -330,7 +318,7 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 |---|---|
 | generator | `forensics/tools/phase8_provider_rows.py` |
 | census | `forensics/atlas/provider-algorithms.json` |
-| census content hash | `978972e7784bebda29b97a77e43bdd3880af79189136c724aac897fa86f32ea2` |
+| census content hash | `dfb6119c8fce144a58030fbdae22368dce074f27224dd56264de875ef4c31902` |
 | authority tree | `forensics/authorities/src/openssl-3.6.4` |
 | crate query read | `src/provider/digest.rs` |
 

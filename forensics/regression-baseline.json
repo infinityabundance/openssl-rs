@@ -382,6 +382,10 @@
       "observations": 71,
       "verdict": "pass"
     },
+    "RT-SIGNATURE": {
+      "observations": 63,
+      "verdict": "pass"
+    },
     "RT-STACK": {
       "observations": 159,
       "verdict": "pass"
@@ -676,6 +680,20 @@
     "default/OSSL_OP_RAND/HMAC-DRBG",
     "default/OSSL_OP_RAND/SEED-SRC",
     "default/OSSL_OP_RAND/TEST-RAND",
+    "default/OSSL_OP_SIGNATURE/CMAC",
+    "default/OSSL_OP_SIGNATURE/DSA",
+    "default/OSSL_OP_SIGNATURE/DSA-SHA1",
+    "default/OSSL_OP_SIGNATURE/DSA-SHA2-224",
+    "default/OSSL_OP_SIGNATURE/DSA-SHA2-256",
+    "default/OSSL_OP_SIGNATURE/DSA-SHA2-384",
+    "default/OSSL_OP_SIGNATURE/DSA-SHA2-512",
+    "default/OSSL_OP_SIGNATURE/DSA-SHA3-224",
+    "default/OSSL_OP_SIGNATURE/DSA-SHA3-256",
+    "default/OSSL_OP_SIGNATURE/DSA-SHA3-384",
+    "default/OSSL_OP_SIGNATURE/DSA-SHA3-512",
+    "default/OSSL_OP_SIGNATURE/HMAC",
+    "default/OSSL_OP_SIGNATURE/POLY1305",
+    "default/OSSL_OP_SIGNATURE/SIPHASH",
     "default/OSSL_OP_SKEYMGMT/AES",
     "default/OSSL_OP_SKEYMGMT/GENERIC-SECRET"
   ],
@@ -686,14 +704,14 @@
       "8": 685,
       "9": 675
     },
-    "implemented": 216,
+    "implemented": 230,
     "open_by_phase": {
       "10": 636,
       "13": 39,
-      "8": 95,
+      "8": 81,
       "9": 10
     },
     "total": 996,
-    "unimplemented": 780
+    "unimplemented": 766
   }
 }

@@ -2086,11 +2086,13 @@ static DEFLT_DIGESTS: [OsslAlgorithm; 28] = [
 
 /// `static const OSSL_ALGORITHM *deflt_query(void *provctx, int operation_id, int *no_cache)` —
 /// `providers/defltprov.c`, with the `OSSL_OP_DIGEST`, `OSSL_OP_CIPHER`, `OSSL_OP_MAC`,
-/// `OSSL_OP_KDF`, `OSSL_OP_RAND`, `OSSL_OP_KEYMGMT`, `OSSL_OP_KEYEXCH` and `OSSL_OP_SKEYMGMT` arms.
+/// `OSSL_OP_KDF`, `OSSL_OP_RAND`, `OSSL_OP_KEYMGMT`, `OSSL_OP_KEYEXCH`, `OSSL_OP_SIGNATURE`,
+/// `OSSL_OP_KEM` and `OSSL_OP_SKEYMGMT` arms.
 ///
 /// The other operations the authority answers are other subphases' and are absent, not stubbed.
-/// The arms are in the authority's own `switch` order (`defltprov.c:702-731`), where `SKEYMGMT` is
-/// the last arm before the fall-through.
+/// The arms are in the authority's own `switch` order (`defltprov.c:702-731`), where `SIGNATURE`
+/// answers `deflt_signature[]` (`src/provider/signature.rs`) right after `KEYEXCH`, and `SKEYMGMT`
+/// is the last arm before the fall-through.
 /// **The `OSSL_OP_KEYMGMT` arm is the gate D385 measured**: with no arm here the `DH`/`ECX`/KDF
 /// key types cannot be fetched, so no `OSSL_OP_KEYEXCH`, `OSSL_OP_SIGNATURE`, `OSSL_OP_KEM` or
 /// `OSSL_OP_ASYM_CIPHER` row is reachable — `EVP_PKEY_CTX_new_from_name(NULL, "DH", NULL)`
@@ -2130,6 +2132,9 @@ unsafe extern "C" fn deflt_query(
     }
     if operation_id == crate::evp::exchange::OSSL_OP_KEYEXCH {
         return crate::provider::exchange::DEFLT_KEYEXCH.as_ptr();
+    }
+    if operation_id == crate::evp::signature::OSSL_OP_SIGNATURE {
+        return crate::provider::signature::DEFLT_SIGNATURES.as_ptr();
     }
     if operation_id == crate::evp::skeymgmt::OSSL_OP_SKEYMGMT {
         return crate::provider::skeymgmt::DEFLT_SKEYMGMT.as_ptr();
@@ -2316,7 +2321,8 @@ mod tests {
         assert!(
             none.is_null(),
             "only OSSL_OP_DIGEST, OSSL_OP_CIPHER, OSSL_OP_MAC, OSSL_OP_KDF, OSSL_OP_RAND, \
-             OSSL_OP_KEYMGMT, OSSL_OP_KEYEXCH, OSSL_OP_KEM and OSSL_OP_SKEYMGMT are answered"
+             OSSL_OP_KEYMGMT, OSSL_OP_KEYEXCH, OSSL_OP_SIGNATURE, OSSL_OP_KEM and \
+             OSSL_OP_SKEYMGMT are answered"
         );
 
         // The cipher half answers too, and its table starts at `deflt_ciphers[]`'s first row.
@@ -2386,6 +2392,22 @@ mod tests {
         // SAFETY: the returned table's first row is initialised.
         let first = unsafe { core::ffi::CStr::from_ptr((*kems).algorithm_names) };
         assert_eq!(first.to_bytes(), b"X25519:1.3.101.110");
+
+        // The SIGNATURE arm answers `deflt_signatures[]`, whose first landed row is the `DSA`
+        // signature (D392; the authority's `deflt_signature[]` puts the ten `DSA` rows first at
+        // `:417-426` and the four legacy-MAC rows at `:476-484`).
+        // SAFETY: the query's contract; `provctx` is NULL and this arm ignores it.
+        let signatures = unsafe {
+            deflt_query(
+                ptr::null_mut(),
+                crate::evp::signature::OSSL_OP_SIGNATURE,
+                &mut no_cache,
+            )
+        };
+        assert!(!signatures.is_null());
+        // SAFETY: the returned table's first row is initialised.
+        let first = unsafe { core::ffi::CStr::from_ptr((*signatures).algorithm_names) };
+        assert_eq!(first.to_bytes(), b"DSA:dsaEncryption:1.2.840.10040.4.1");
 
         // The SKEYMGMT arm answers `deflt_skeymgmt[]`, whose first row is the AES key type.
         // SAFETY: the query's contract; `provctx` is NULL and this arm ignores it.

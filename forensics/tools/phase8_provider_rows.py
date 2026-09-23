@@ -146,6 +146,63 @@ WITHHELD: dict[str, str] = {
         "reached on. The entry stays until the row's own dispatch lands, so the census and this "
         "document agree that the row is open."
     ),
+    # The `OSSL_OP_SIGNATURE` group. D392 opened the operation: the `deflt_query` arm and
+    # `DEFLT_SIGNATURES` land with `mac_legacy_sig.c`'s four rows and `dsa_sig.c.in`'s ten, so
+    # fourteen of the fifty-nine rows are implemented. The entries below are the units that remain,
+    # each held on a **named callee** rather than a size judgement -- and the measurement is what
+    # makes the order: `ecdsa_sig.c.in` and `eddsa_sig.c.in` wait on one `providers/common/der/`
+    # writer each, `rsa_sig.c.in` on two writers plus `securitycheck_default.c`'s RSA digest map,
+    # and `sm2_sig.c.in` on a writer plus `crypto/sm2/sm2_sign.c`.
+    #
+    # `dsa_sig.c.in` is **not** here: its only non-FIPS prerequisites are
+    # `providers/common/digest_to_nid.c` and `der_dsa_sig.c`, both landed as
+    # `src/provider/digest_to_nid.rs` and `src/provider/der_dsa_sig.rs`. That is the measurement
+    # that let DSA land before RSA and ECDSA: `ossl_dsa_check_key`, the callee this comment would
+    # otherwise have named, is reached only from `dsa_sig.c.in`'s `#ifdef FIPS_MODULE` block at
+    # `:266`, so `providers/common/securitycheck.c` is not on the DSA path at all.
+    "forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/rsa_sig.c.in": (
+        "**Withheld: the unit's fourteen rows, on three unlanded callees.** `rsa_setup_md` calls "
+        "`ossl_digest_rsa_sign_get_md_nid` (`:394`, `:485`) and `rsa_check_padding`/"
+        "`rsa_signverify_init` call `ossl_rsa_key_op_get_protect` (`:530`), both of which are "
+        "`providers/common/securitycheck*.c`'s; the signature's AlgorithmIdentifier comes from "
+        "`providers/common/der/der_rsa_sig.c`'s `ossl_DER_w_algorithmIdentifier_"
+        "MDWithRSAEncryption` and `_RSA_PSS`. None of the three is in this tree, so `rsa_sig.c.in` "
+        "is the signature unit with the largest prerequisite and lands last."
+    ),
+    "forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/ecdsa_sig.c.in": (
+        "**Withheld: the unit's ten rows, on one unlanded callee.** `ossl_digest_get_approved_nid` "
+        "is already landed (`src/provider/digest_to_nid.rs`), so what remains is "
+        "`providers/common/der/der_ec_sig.c`'s `ossl_DER_w_algorithmIdentifier_ECDSA_with_MD` "
+        "(`ecdsa_sig.c.in:234`), which is not in this tree. Everything else the unit reaches is "
+        "either landed (`ossl_ecdsa_deterministic_sign` is `src/ec/ecdsa_ossl.rs`'s) or inside a "
+        "`#ifdef FIPS_MODULE` arm, so it is the smallest remaining signature prerequisite."
+    ),
+    "forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/eddsa_sig.c.in": (
+        "**Withheld: the unit's five rows, on one unlanded callee.** `eddsa_signverify_init` builds "
+        "the AlgorithmIdentifier through "
+        "`providers/common/der/der_ecx_key.c`'s `ossl_DER_w_algorithmIdentifier_ED25519` and "
+        "`_ED448` (`eddsa_sig.c.in:279-282`), which is not in this tree. The four OIDs and the two "
+        "writers are the whole prerequisite: every other callee "
+        "(`ossl_ed25519_sign`/`_verify`, `ossl_ed448_sign`/`_verify`, `ossl_ecx_key_up_ref`/"
+        "`_free`) is landed, so `EdDSA` is one small unit behind `DSA`'s landing."
+    ),
+    "forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/sm2_sig.c.in": (
+        "**Withheld: the unit's one row, on two unlanded units.** `sm2_sig.c.in`'s sign path is "
+        "`ossl_sm2_internal_sign`/`ossl_sm2_internal_verify` and `ossl_sm2_compute_z_digest` "
+        "(`crypto/sm2/sm2_sign.c`), and its AlgorithmIdentifier comes from "
+        "`providers/common/der/der_sm2_sig.c`. Neither unit is in this tree, so the single `SM2` "
+        "row costs two whole transcriptions and lands with them."
+    ),
+    "forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/ml_dsa_sig.c.in": (
+        "**Withheld: not reachable.** The unit's three rows (`ML-DSA-44`, `ML-DSA-65`, "
+        "`ML-DSA-87`) dispatch to `ossl_ml_dsa_*` (`crypto/ml_dsa/`), which the crate does not "
+        "have."
+    ),
+    "forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/slh_dsa_sig.c.in": (
+        "**Withheld: not reachable.** The unit's twelve rows (`SLH-DSA-SHA2-*`, "
+        "`SLH-DSA-SHAKE-*`) dispatch to `ossl_slh_dsa_*` (`crypto/slh_dsa/`), which the crate does "
+        "not have."
+    ),
 }
 
 # The operations this document's first section executes. The task that commissioned this

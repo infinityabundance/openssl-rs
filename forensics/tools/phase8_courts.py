@@ -206,6 +206,16 @@ COURTS: list[tuple[str, str]] = [
     # while no arm drove the keymgmt, keyexch or KEM rows at all. This is that arm. The probe's own
     # header names what it does not observe and why.
     ("RT-KEYMGMT", "rt_keymgmt_probe.c"),
+    # This pass's registration-row court, one operation over: its subject is the four landed
+    # `OSSL_OP_SIGNATURE` rows (`HMAC`, `SIPHASH`, `POLY1305`, `CMAC`), which are the legacy-MAC
+    # *signature* face of the four key objects `RT-KEYMGMT` drives. `EVP_SIGNATURE_fetch` names no
+    # row of any other operation, so without this entry the four would be an unmatched finding the
+    # moment they landed. **The court drives the sign path and observes the verify path's refusal**
+    # -- the rows publish no `VERIFY` slot, which is the one-directional shape of a MAC rather than
+    # a missing arm. `RSA`, `DSA`, `ECDSA`, `EdDSA` and `SM2` rows are not here: their units wait
+    # on `providers/common/der/` and `providers/common/securitycheck.c`, and the probe's header
+    # names each row's remaining callee.
+    ("RT-SIGNATURE", "rt_signature_probe.c"),
 ]
 
 # The correctness courts, and the committed vector sets each checks. `CT-DIGEST` is the

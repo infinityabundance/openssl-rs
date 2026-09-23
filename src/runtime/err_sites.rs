@@ -23882,6 +23882,236 @@ pub(crate) const SM2_KEY_43: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `dsa_setup_md` at `providers/implementations/signature/dsa_sig.c:171` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_DSA_SIG_171: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 171,
+    func: c"dsa_setup_md",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `dsa_setup_md` at `providers/implementations/signature/dsa_sig.c:176` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_DSA_SIG_176: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 176,
+    func: c"dsa_setup_md",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `dsa_setup_md` at `providers/implementations/signature/dsa_sig.c:181` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_DSA_SIG_181: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 181,
+    func: c"dsa_setup_md",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `dsa_setup_md` at `providers/implementations/signature/dsa_sig.c:187` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_DSA_SIG_187: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 187,
+    func: c"dsa_setup_md",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `dsa_setup_md` at `providers/implementations/signature/dsa_sig.c:209` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_DSA_SIG_209: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 209,
+    func: c"dsa_setup_md",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `dsa_check_key` at `providers/implementations/signature/dsa_sig.c:272` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_DSA_SIG_272: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 272,
+    func: c"dsa_check_key",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `dsa_signverify_init` at `providers/implementations/signature/dsa_sig.c:293` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_DSA_SIG_293: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 293,
+    func: c"dsa_signverify_init",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `dsa_get_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:714` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_714: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 714,
+    func: c"dsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_get_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:725` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_725: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 725,
+    func: c"dsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_get_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:737` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_737: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 737,
+    func: c"dsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_get_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:749` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_749: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 749,
+    func: c"dsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_set_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:910` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_910: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 910,
+    func: c"dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_set_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:920` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_920: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 920,
+    func: c"dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_set_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:937` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_937: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 937,
+    func: c"dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_set_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:949` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_949: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 949,
+    func: c"dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_set_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:960` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_960: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 960,
+    func: c"dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_set_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:972` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_972: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 972,
+    func: c"dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_sigalg_set_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:1219` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_1219: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 1219,
+    func: c"dsa_sigalg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_sigalg_set_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:1232` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_1232: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 1232,
+    func: c"dsa_sigalg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_sigalg_set_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:1244` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_1244: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 1244,
+    func: c"dsa_sigalg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_sigalg_set_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:1272` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_1272: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 1272,
+    func: c"dsa_sigalg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_sigalg_set_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:1284` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_1284: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 1284,
+    func: c"dsa_sigalg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `mac_digest_sign_init` at `providers/implementations/signature/mac_legacy_sig.c:107` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_MAC_LEGACY_SIG_107: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/signature/mac_legacy_sig.c",
+    line: 107,
+    func: c"mac_digest_sign_init",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
 /// `rsa_new_intern` at `crypto/rsa/rsa_lib.c:85` (ERR_R_CRYPTO_LIB).
 pub(crate) const RSA_LIB_85: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
@@ -38308,6 +38538,29 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_EC_KEM_847,
     SM2_KEY_33,
     SM2_KEY_43,
+    PROV_DSA_SIG_171,
+    PROV_DSA_SIG_176,
+    PROV_DSA_SIG_181,
+    PROV_DSA_SIG_187,
+    PROV_DSA_SIG_209,
+    PROV_DSA_SIG_272,
+    PROV_DSA_SIG_293,
+    PROV_DSA_SIG_714,
+    PROV_DSA_SIG_725,
+    PROV_DSA_SIG_737,
+    PROV_DSA_SIG_749,
+    PROV_DSA_SIG_910,
+    PROV_DSA_SIG_920,
+    PROV_DSA_SIG_937,
+    PROV_DSA_SIG_949,
+    PROV_DSA_SIG_960,
+    PROV_DSA_SIG_972,
+    PROV_DSA_SIG_1219,
+    PROV_DSA_SIG_1232,
+    PROV_DSA_SIG_1244,
+    PROV_DSA_SIG_1272,
+    PROV_DSA_SIG_1284,
+    PROV_MAC_LEGACY_SIG_107,
     RSA_LIB_85,
     RSA_LIB_106,
     RSA_LIB_116,

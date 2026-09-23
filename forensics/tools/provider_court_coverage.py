@@ -71,6 +71,11 @@ COURT_PROBES: list[tuple[str, str, int]] = [
     # `TLS1-PRF`/`HKDF`/`SCRYPT` only as **KDF** rows -- so without this entry every landed keymgmt,
     # keyexch and KEM row would be an unmatched finding the moment it landed.
     ("RT-KEYMGMT", "courts/phase8/rt_keymgmt_probe.c", 8),
+    # This pass's registration-row court, one operation over: the four `OSSL_OP_SIGNATURE` rows
+    # (`HMAC`, `SIPHASH`, `POLY1305`, `CMAC`). It is registered in the same commit as the rows
+    # whose observations it carries -- an `OSSL_OP_SIGNATURE` row is a different row of a different
+    # operation from the `OSSL_OP_KEYMGMT` and `OSSL_OP_MAC` rows `RT-KEYMGMT` and `RT-CIPHER` name.
+    ("RT-SIGNATURE", "courts/phase8/rt_signature_probe.c", 8),
 ]
 
 # The arm whose name list must equal the census's implemented cipher rows. A static list in a probe

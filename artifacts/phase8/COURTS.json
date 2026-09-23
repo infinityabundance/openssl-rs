@@ -210,6 +210,23 @@
         "verdict": "pass"
       },
       {
+        "authority_exit_code": 0,
+        "authority_observations": 63,
+        "candidate_exit_code": 0,
+        "candidate_observations": 63,
+        "candidate_stderr_tail": [],
+        "court": "RT-SIGNATURE",
+        "crashed": false,
+        "probe": "courts/phase8/rt_signature_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase8/probes/rt_signature_probe.authority",
+          "candidate": "artifacts/phase8/probes/rt_signature_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
         "algorithms": {
           "blake2b512": {
             "digest_bytes": 64,
@@ -37874,8 +37891,8 @@
     ],
     "summary": {
       "fail": 0,
-      "pass": 14,
-      "total": 14
+      "pass": 15,
+      "total": 15
     }
   },
   "generator": "forensics/tools/phase8_courts.py",
@@ -37944,6 +37961,11 @@
       "name": "probe",
       "path": "courts/phase8/rt_keymgmt_probe.c",
       "sha256": "c93c9eec13fba588660beda23c7970ddbcd9fd08acbf35ea5470e21fc94dc184"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase8/rt_signature_probe.c",
+      "sha256": "b31db4ebcd5623c4deec6b60a2e124346f34b6dbdb07db8878406cb44c67a6f8"
     },
     {
       "name": "correctness-probe",

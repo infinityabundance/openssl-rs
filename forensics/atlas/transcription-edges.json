@@ -1608,11 +1608,25 @@
         "translation_unit": "providers/common/libcommon-lib-provider_ctx.c"
       },
       {
+        "module": "src/provider/der_dsa_sig.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "1/1",
+        "translation_unit": "providers/common/der/libcommon-lib-der_dsa_sig.c"
+      },
+      {
         "module": "src/provider/digest.rs",
         "phase": 8,
         "phase_source": "module-declaration",
         "share": "2/4",
         "translation_unit": "providers/implementations/digests/libcommon-lib-digestcommon.c"
+      },
+      {
+        "module": "src/provider/digest_to_nid.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "2/2",
+        "translation_unit": "providers/common/libdefault-lib-digest_to_nid.c"
       },
       {
         "module": "src/provider/ec_kem.rs",
