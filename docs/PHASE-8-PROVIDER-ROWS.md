@@ -22,10 +22,10 @@ Read from the census's own `implementation_state` for the rows this stratum owns
 | quantity | count |
 |---|---|
 | provider rows this stratum owns | 306 |
-| of those, implemented | 256 |
-| of those, unlanded | 50 |
+| of those, implemented | 280 |
+| of those, unlanded | 26 |
 
-The document below names all **50** unlanded rows this stratum owns across **25** translation units, and — so the first group can be read whole — the **18** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (47). The identity `306 = 256 + 50` holds.
+The document below names all **26** unlanded rows this stratum owns across **23** translation units, and — so the first group can be read whole — the **18** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (23). The identity `306 = 280 + 26` holds.
 
 ## The first group: the `OSSL_OP_KDF` rows and the `OSSL_OP_SKEYMGMT` pair
 
@@ -196,25 +196,6 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 
 **Withheld: not reachable.** The unit's four hybrid rows (`X25519MLKEM768`, `X448MLKEM1024`, `SecP256r1MLKEM768`, `SecP384r1MLKEM1024`) are built on **both** an ECX or EC half and the ML-KEM half: they call `ossl_ml_kem_get_vinfo` and `ossl_mlx_*`, and depend on `crypto/ml_kem/`. **Measured (D397), and one earlier revision of this note was wrong about it: there is no `crypto/mlx/`.** The hybrid logic *is* the two provider units (`mlx_kem.c` 350, `mlx_kmgmt.c.in` 844, 1,194 lines for the four rows), which sit on `crypto/ml_kem/`'s 2,452 and the already-landed EC/ECX halves -- so these four rows cost nothing beyond `crypto/ml_kem/` and their own 1,194 lines.
 
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/slh_dsa_kmgmt.c.in` — 12 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_keymgmt` | `ossl_slh_dsa_sha2_128s_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `SLH-DSA-SHA2-128s:id-slh-dsa-sha2-128s:2.16.840.1.101.3.4.3.20` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_slh_dsa_sha2_128f_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `SLH-DSA-SHA2-128f:id-slh-dsa-sha2-128f:2.16.840.1.101.3.4.3.21` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_slh_dsa_sha2_192s_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `SLH-DSA-SHA2-192s:id-slh-dsa-sha2-192s:2.16.840.1.101.3.4.3.22` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_slh_dsa_sha2_192f_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `SLH-DSA-SHA2-192f:id-slh-dsa-sha2-192f:2.16.840.1.101.3.4.3.23` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_slh_dsa_sha2_256s_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `SLH-DSA-SHA2-256s:id-slh-dsa-sha2-256s:2.16.840.1.101.3.4.3.24` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_slh_dsa_sha2_256f_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `SLH-DSA-SHA2-256f:id-slh-dsa-sha2-256f:2.16.840.1.101.3.4.3.25` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_slh_dsa_shake_128s_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `SLH-DSA-SHAKE-128s:id-slh-dsa-shake-128s:2.16.840.1.101.3.4.3.26` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_slh_dsa_shake_128f_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `SLH-DSA-SHAKE-128f:id-slh-dsa-shake-128f:2.16.840.1.101.3.4.3.27` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_slh_dsa_shake_192s_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `SLH-DSA-SHAKE-192s:id-slh-dsa-shake-192s:2.16.840.1.101.3.4.3.28` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_slh_dsa_shake_192f_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `SLH-DSA-SHAKE-192f:id-slh-dsa-shake-192f:2.16.840.1.101.3.4.3.29` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_slh_dsa_shake_256s_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `SLH-DSA-SHAKE-256s:id-slh-dsa-shake-256s:2.16.840.1.101.3.4.3.30` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_slh_dsa_shake_256f_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `SLH-DSA-SHAKE-256f:id-slh-dsa-shake-256f:2.16.840.1.101.3.4.3.31` | `src/provider/keymgmt.rs` |
-
-**Withheld: not reachable.** The unit's twelve rows (`SLH-DSA-SHA2-*`, `SLH-DSA-SHAKE-*`) are built on `ossl_slh_dsa_*` (`crypto/slh_dsa/`), which the crate does not have -- `ossl_slh_dsa_generate_key`, `ossl_slh_dsa_key_dup`/`_equal`/`_free`/`_get`, and the `ossl_slh_dsa_hash_ctx_new`/`_free` pair are none of them in this tree. **Measured (D397): 2,952 lines in `crypto/slh_dsa/`** across ten `.c` files (`slh_dsa_key.c` 527, `slh_dsa.c` 393, `slh_fors.c` 328, `slh_wots.c` 319, `slh_hash.c` 300 and five more), plus **894** in the unit pair (`slh_dsa_kmgmt.c.in` 501, `slh_dsa_sig.c.in` 393) -- about 3,850 lines for this group's twenty-four rows, the largest block left.
-
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/ml_dsa_sig.c.in` — 3 row(s)
 
 | table | dispatch table symbol | operation | algorithm name(s) | crate file |
@@ -224,25 +205,6 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 | `deflt_signature` | `ossl_ml_dsa_87_signature_functions` | `OSSL_OP_SIGNATURE` | `ML-DSA-87:MLDSA87:2.16.840.1.101.3.4.3.19:id-ml-dsa-87` | `src/provider/signature.rs` |
 
 **Withheld: not reachable.** The unit's three rows (`ML-DSA-44`, `ML-DSA-65`, `ML-DSA-87`) dispatch to `ossl_ml_dsa_*` (`crypto/ml_dsa/`), which the crate does not have.
-
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/slh_dsa_sig.c.in` — 12 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_signature` | `ossl_slh_dsa_sha2_128s_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHA2-128s:id-slh-dsa-sha2-128s:2.16.840.1.101.3.4.3.20` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_slh_dsa_sha2_128f_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHA2-128f:id-slh-dsa-sha2-128f:2.16.840.1.101.3.4.3.21` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_slh_dsa_sha2_192s_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHA2-192s:id-slh-dsa-sha2-192s:2.16.840.1.101.3.4.3.22` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_slh_dsa_sha2_192f_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHA2-192f:id-slh-dsa-sha2-192f:2.16.840.1.101.3.4.3.23` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_slh_dsa_sha2_256s_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHA2-256s:id-slh-dsa-sha2-256s:2.16.840.1.101.3.4.3.24` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_slh_dsa_sha2_256f_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHA2-256f:id-slh-dsa-sha2-256f:2.16.840.1.101.3.4.3.25` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_slh_dsa_shake_128s_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHAKE-128s:id-slh-dsa-shake-128s:2.16.840.1.101.3.4.3.26` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_slh_dsa_shake_128f_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHAKE-128f:id-slh-dsa-shake-128f:2.16.840.1.101.3.4.3.27` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_slh_dsa_shake_192s_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHAKE-192s:id-slh-dsa-shake-192s:2.16.840.1.101.3.4.3.28` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_slh_dsa_shake_192f_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHAKE-192f:id-slh-dsa-shake-192f:2.16.840.1.101.3.4.3.29` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_slh_dsa_shake_256s_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHAKE-256s:id-slh-dsa-shake-256s:2.16.840.1.101.3.4.3.30` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_slh_dsa_shake_256f_signature_functions` | `OSSL_OP_SIGNATURE` | `SLH-DSA-SHAKE-256f:id-slh-dsa-shake-256f:2.16.840.1.101.3.4.3.31` | `src/provider/signature.rs` |
-
-**Withheld: not reachable.** The unit's twelve rows (`SLH-DSA-SHA2-*`, `SLH-DSA-SHAKE-*`) dispatch to `ossl_slh_dsa_*` (`crypto/slh_dsa/`), which the crate does not have.
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/sm2_sig.c.in` — 1 row(s)
 
@@ -256,7 +218,7 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 |---|---|
 | generator | `forensics/tools/phase8_provider_rows.py` |
 | census | `forensics/atlas/provider-algorithms.json` |
-| census content hash | `48b2885f414433c5f22463f7574487e8b3e3bd2e7b5bd00b1433c5c8a9b53ef1` |
+| census content hash | `7a7217f82a7c785cdfa2ee83a4566304ecb4408991c33964fddc603c9cb0a324` |
 | authority tree | `forensics/authorities/src/openssl-3.6.4` |
 | crate query read | `src/provider/digest.rs` |
 

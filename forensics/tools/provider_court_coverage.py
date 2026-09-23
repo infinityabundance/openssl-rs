@@ -56,32 +56,50 @@ OUT = ATLAS / "provider-court-coverage.json"
 # The differential courts whose probes can name a provider row, and the file each is written in.
 # A row is `direct` when one of its aliases appears as a C string literal in one of these; the
 # mapping from probe file to court name mirrors `phase8_courts.py`'s `COURTS`.
-COURT_PROBES: list[tuple[str, str, int]] = [
-    ("RT-DIGEST", "courts/phase8/rt_digest_probe.c", 8),
-    ("RT-CIPHER", "courts/phase8/rt_cipher_probe.c", 8),
+#
+# **A court has a list of sources, not one file.** `RT-KEYMGMT` and `RT-SIGNATURE` each compile a
+# single `.c` that `#include`s `courts/phase8/slh_dsa_probe.h`, and the twelve SLH-DSA rows are
+# named in that header -- so the header is a source of *both* courts. The model was one file per
+# court until the SLH-DSA rows landed; keeping it would have forced the twelve names to be
+# duplicated into both `.c`s, or the rows to be reported unmatched while two probes drove every
+# one of them.
+COURT_PROBES: list[tuple[str, list[str], int]] = [
+    ("RT-DIGEST", ["courts/phase8/rt_digest_probe.c"], 8),
+    ("RT-CIPHER", ["courts/phase8/rt_cipher_probe.c"], 8),
     # Phase 9's first court, landed in D309 with the three default-provider DRBG rows it names.
     # It is registered here in the same commit as the rows it covers, which is what keeps this
     # join preventive: a Phase-9 row that becomes `implemented` without an observation is a
     # failure on that commit rather than at the stratum's seal.
-    ("RT-DRBG", "courts/phase9/rt_drbg_probe.c", 9),
+    ("RT-DRBG", ["courts/phase9/rt_drbg_probe.c"], 9),
     # Phase 8.10's registration-row court (D387, extended with every chain since: ECX, MAC, EC/SM2
     # and RSA/DSA). It is registered here in the same commit as the rows whose observations it
     # carries: the `OSSL_OP_KEYMGMT`, `OSSL_OP_KEYEXCH` and `OSSL_OP_KEM` rows are not named by any
     # `OSSL_OP_*` row the other three probes fetch -- `rt_digest_probe.c` names
     # `TLS1-PRF`/`HKDF`/`SCRYPT` only as **KDF** rows -- so without this entry every landed keymgmt,
-    # keyexch and KEM row would be an unmatched finding the moment it landed.
-    ("RT-KEYMGMT", "courts/phase8/rt_keymgmt_probe.c", 8),
+    # keyexch and KEM row would be an unmatched finding the moment it landed. The twelve SLH-DSA
+    # keymgmt rows are named in `slh_dsa_probe.h`, the header both this probe and `RT-SIGNATURE`'s
+    # include, which is why this entry has two sources.
+    (
+        "RT-KEYMGMT",
+        ["courts/phase8/rt_keymgmt_probe.c", "courts/phase8/slh_dsa_probe.h"],
+        8,
+    ),
     # This pass's registration-row court, one operation over: the four `OSSL_OP_SIGNATURE` rows
-    # (`HMAC`, `SIPHASH`, `POLY1305`, `CMAC`). It is registered in the same commit as the rows
-    # whose observations it carries -- an `OSSL_OP_SIGNATURE` row is a different row of a different
-    # operation from the `OSSL_OP_KEYMGMT` and `OSSL_OP_MAC` rows `RT-KEYMGMT` and `RT-CIPHER` name.
-    ("RT-SIGNATURE", "courts/phase8/rt_signature_probe.c", 8),
+    # (`HMAC`, `SIPHASH`, `POLY1305`, `CMAC`), and the twelve SLH-DSA signature rows whose names
+    # are the same header's. It is registered in the same commit as the rows whose observations it
+    # carries -- an `OSSL_OP_SIGNATURE` row is a different row of a different operation from the
+    # `OSSL_OP_KEYMGMT` and `OSSL_OP_MAC` rows `RT-KEYMGMT` and `RT-CIPHER` name.
+    (
+        "RT-SIGNATURE",
+        ["courts/phase8/rt_signature_probe.c", "courts/phase8/slh_dsa_probe.h"],
+        8,
+    ),
     # This pass's court, and the first whose subject is an **encryption** face rather than a signing
     # or key-management one: the `OSSL_OP_ASYM_CIPHER` `RSA` row and the `OSSL_OP_KEM` `RSA` row.
     # `RT-KEYMGMT` and `RT-SIGNATURE` between them drive the `RSA` keymgmt and signature rows, so
     # before this entry the two encryption rows were `implemented` with no observation of their own
     # operation. It is registered here in the same commit as those rows.
-    ("RT-ASYM-CIPHER", "courts/phase8/rt_asymcipher_probe.c", 8),
+    ("RT-ASYM-CIPHER", ["courts/phase8/rt_asymcipher_probe.c"], 8),
 ]
 
 # The arm whose name list must equal the census's implemented cipher rows. A static list in a probe
@@ -129,12 +147,17 @@ def main(argv: list[str]) -> int:
     implemented = [r for r in rows if r["implementation_state"] == "implemented"]
 
     probes: list[tuple[str, int, str]] = []
-    for court, relpath, phase in COURT_PROBES:
-        path = REPO_ROOT / relpath
-        if not path.is_file():
-            print(f"[provider-court-coverage] fatal: {relpath} is absent", file=sys.stderr)
-            return 1
-        probes.append((court, phase, read(path)))
+    for court, relpaths, phase in COURT_PROBES:
+        texts: list[str] = []
+        for relpath in relpaths:
+            path = REPO_ROOT / relpath
+            if not path.is_file():
+                print(f"[provider-court-coverage] fatal: {relpath} is absent", file=sys.stderr)
+                return 1
+            texts.append(read(path))
+        # One textual source per court, so the alias test below is "this court's translation units
+        # and their includes", and a court with one file reads exactly as it did before.
+        probes.append((court, phase, "\n".join(texts)))
 
     covered: list[dict] = []
     unmatched: list[dict] = []
@@ -195,8 +218,8 @@ def main(argv: list[str]) -> int:
     body = {
         "claim": CLAIM,
         "courts": [
-            {"court": court, "phase": phase, "probe": probe_rel}
-            for court, probe_rel, phase in COURT_PROBES
+            {"court": court, "phase": phase, "probes": list(relpaths)}
+            for court, relpaths, phase in COURT_PROBES
         ],
         "implemented_rows": len(implemented),
         "directly_courted": len(covered),
@@ -211,8 +234,9 @@ def main(argv: list[str]) -> int:
     inputs = [
         InputRef(name="census", path=PROVIDERS),
         *[
-            InputRef(name=f"court:{court}", path=REPO_ROOT / probe_rel)
-            for court, probe_rel, _phase in COURT_PROBES
+            InputRef(name=f"court:{court}:{Path(relpath).name}", path=REPO_ROOT / relpath)
+            for court, relpaths, _phase in COURT_PROBES
+            for relpath in relpaths
         ],
     ]
     doc = envelope(

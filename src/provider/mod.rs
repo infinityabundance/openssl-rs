@@ -90,6 +90,7 @@ pub(crate) mod der_ec_sig;
 pub(crate) mod der_ecx_key;
 pub(crate) mod der_rsa_key;
 pub(crate) mod der_rsa_sig;
+pub(crate) mod der_slh_dsa_key;
 pub(crate) mod digest_to_nid;
 // 6.8e: `crypto/provider_child.c`, the child provider and its parent callbacks.
 pub(crate) mod child;
@@ -125,6 +126,8 @@ pub(crate) mod seed_src;
 pub(crate) mod seeding;
 pub(crate) mod signature;
 pub(crate) mod skeymgmt;
+pub(crate) mod slh_dsa_kmgmt;
+pub(crate) mod slh_dsa_sig;
 pub(crate) mod stores;
 pub(crate) mod util;
 

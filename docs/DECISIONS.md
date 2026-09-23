@@ -28631,3 +28631,114 @@ order, best rows-per-line first, with the reasons D396 and D397 measured:
 No claim is made that the stratum is closer to sealing than `provider_rows` says. `provider_rows` is
 **256/50** after this pass, exactly as before it; what changed is that the largest block of the
 remaining fifty now has its mathematics in the crate instead of in a withheld note.
+
+## D399 -- the SLH-DSA provider units land, and the 24 rows they publish move: `der_slh_dsa_key.c` +
+`der_slh_dsa_gen.c.in`'s OID table, `slh_dsa_kmgmt.c.in` and `slh_dsa_sig.c.in`, driven row by row by
+`RT-KEYMGMT` and `RT-SIGNATURE`
+
+**Decision.** D398 landed the ten-unit FIPS 205 core and named the two provider units plus the DER
+OID table as the next pass, and named the pass after that as `kdfs/argon2.c.in`. This pass lands the
+three units, and the 24 rows they publish move: `provider_rows` is **280 implemented / 26 unlanded**
+(306 owned, D237's census), from **256/50**. The movement is the rows' only: no row moved because a
+claim was relaxed, but because `DEFLT_KEYMGMT` and `DEFLT_SIGNATURES` now carry it.
+
+1. **`providers/common/der/der_slh_dsa_key.c` (47 lines) and `der_slh_dsa_gen.c.in` (21) --
+   `src/provider/der_slh_dsa_key.rs`.** The DER writer is one function,
+   `ossl_der_oid_id_slh_dsa_*`, and the generator file is the twelve `id-slh-dsa-*` OIDs and the
+double-quoted `OBJ_*` macros that expand them. **Every OID is read back from the authority's
+generated header rather than typed**: the twelve rows are `06 09 60 86 48 01 65 03 04 03 14`
+through `..1F` (2.16.840.1.101.3.4.3.20 .. 2.16.840.1.101.3.4.3.31), which is what
+`der_slh_dsa_gen.c.in`'s `DEFINE_OID` list expands to and what the unit test pins. D398's count of
+the block was 894 lines for the two provider units; these 68 lines are the piece D398 recorded as
+measured but not counted.
+2. **`providers/implementations/keymgmt/slh_dsa_kmgmt.c.in` (501 lines, 12 rows) --
+   `src/provider/slh_dsa_kmgmt.rs`.** One `make_keymgmt_functions!` expansion per parameter set, each
+publishing the same nineteen-slot `OSSL_DISPATCH` table; only `NEW` and `GEN` differ, because each
+carries its own algorithm name into `ossl_slh_dsa_key_new`/`ossl_slh_dsa_generate_key`. The two
+generated decoders are written the crate's way -- the repeated-key scan plus
+`OSSL_PARAM_locate_const` per key, the shape `src/provider/ecx_kmgmt.rs` already uses -- and the
+`FIPS_MODULE` pairwise test is recorded with its coordinate rather than written, because this
+profile's default provider is not a FIPS module.
+3. **`providers/implementations/signature/slh_dsa_sig.c.in` (393 lines, 12 rows) --
+   `src/provider/slh_dsa_sig.rs`.** The same shape over sixteen slots, with `sign_message_init`,
+`sign`, `verify_message_init` and `verify` sharing one body and each row's `newctx` the only
+per-algorithm entry.
+4. **The rows are published in the authority's order.** `DEFLT_KEYMGMT` grows to `[OsslAlgorithm;
+   31]` and `DEFLT_SIGNATURES` to `[OsslAlgorithm; 56]`, the twelve `SLH-DSA` rows appended after
+`SM2` and after `CMAC` respectively -- the authority puts them after `SM2` (`defltprov.c:659-700`,
+and after the unlanded `LMS` and `mlx` rows this crate has none of), so appending keeps the crate's
+rows a **subsequence** of the authority's, which `gen_provider_algorithms.py` enforces. The order
+within the twelve is the `PROV_NAMES_SLH_DSA_*` order, SHA2 128s/128f/192s/192f/256s/256f then SHAKE
+in the same shape, and each row carries all three aliases -- the type name, `id-slh-dsa-*` and the
+OID.
+
+**Driven row by row, and the two things the drive found.** `courts/phase8/slh_dsa_probe.h` carries
+the twelve ACVP keygen private keys **parsed from the authority's own
+`test/slh_dsa.inc`** -- each `<set>_0_keygen_priv`, whose first `3n` bytes are the generation seed and
+whose last `2n` are the expected `PK_SEED || PK_ROOT` -- so `RT-KEYMGMT`'s new arm generates from the
+vector and compares the recovered public key against the vector's own bytes rather than against a
+second transcription. `RT-SIGNATURE`'s arm then signs a fixed probe message at every registered set
+and observes the size query, the buffer sizes, the refusals and the verification verdict. Both courts
+are green: `RT-KEYMGMT` **280 observations**, `RT-SIGNATURE` **429**, and the whole Phase 8 court set
+is `all_pass=True`.
+
+* **A stale distribution shell read as a code defect for one round.** The first run of the new arms
+  answered `0` for all 24 rows' fetch while `DH` and `SM2` fetched, on a tree whose tables already
+  published them. The rows *were* reachable through `deflt_query` and the census matched them by
+  alias; what was stale was `artifacts/phase2/libcrypto.so.3`, built **before** the edits that added
+  them. The lesson is the one this project keeps relearning about evidence ordering: a court compares
+  two *executions*, and an execution of an old binary is not an observation of the tree. Nothing in
+  the tree was wrong.
+* **A real defect the probe caught: a `&str` where a NUL-terminated C string is required.** With the
+  shell rebuilt, `EVP_PKEY_generate` still answered `0` -- and `EVP_R_PROVIDER_KEYMGMT_FAILURE` means
+  the provider's `gen` returned NULL *without raising anything*, which narrowed it to `slh_dsa_gen`.
+  The cause is in the macro both units use:
+  `MAKE_KEYMGMT_FUNCTIONS("SLH-DSA-SHA2-128s", fn)` passes a **Rust `str` literal**, whose
+  `.as_ptr()` has **no terminator**, into `ossl_slh_dsa_params_get`, which compares with a
+  `strcmp`-style loop -- so the pointer read past the literal, never matched, `ossl_slh_dsa_key_new`
+  refused, and every key generation failed. It is now `concat!($alg, "\0")` in both units, and both
+  macros carry the note. **No unit test could have found this**: D398's tests call
+  `ossl_slh_dsa_key_new` with a Rust `CStr` they build themselves, and the only caller that passes a
+  bare `str` pointer is the provider dispatch the probe reaches. This is the class the differential
+  court exists for.
+
+**`provider_court_coverage.py` modelled a court as one file, and two courts now share a header.**
+The twelve row names are C string literals in `courts/phase8/slh_dsa_probe.h`, which `RT-KEYMGMT`'s and
+`RT-SIGNATURE`'s probes both `#include` -- so the join that requires every `implemented` row to be
+named by a probe reported all 24 as unmatched while two probes drove every one of them. The tool's
+`COURT_PROBES` now maps a court to a **list** of sources and its artifact records `probes` rather than
+`probe`, which is the truthful shape: a court is its translation units and their includes. The
+alternative -- a comment in each probe quoting the row names -- is exactly what the tool's own claim
+forbids, so it was not taken. `provider_court_coverage.py` is **285 implemented, 285 directly courted,
+0 unmatched** (280 Phase 8 + 5 Phase 9), and the census's own row-list join against
+`rt_deflt_row_census` still holds in both directions.
+
+**Evidence.** `cargo test --lib` is **1018 passed, 0 failed**; `cargo clippy --all-targets --
+-D warnings` is clean; `pipeline.sh` is `PIPELINE OK` with **exit 0** and **99 courts / 38,488
+observations**; the prerequisite gate is **0 findings** -- `ok: every dependency has an owner, every
+owner arrives in time, and every recorded divergence covers exactly what it claims`.
+`docs/PHASE-8-PROVIDER-ROWS.md` is regenerated: **306 owned, 280 implemented, 26 unlanded**. Three
+scratch diagnostics written into `court/` while the `&str` defect was being isolated are deleted.
+
+**What remains, and the order for the rest.** The 26 unlanded rows are the five units D398's order
+named, unchanged in size. The order, best rows-per-line first, with the reasons D396-D398 measured:
+
+* **`kdfs/argon2.c.in` -- 3 rows, 1,574 lines.** First, and this pass reached it next; its only
+  prerequisite, the thread layer, landed at D397, so nothing but the unit blocks it. The measured
+  trap D396 fell into is recorded above: the thread trio is *not* the work, and an estimate that
+  counted it as the work was wrong by about four times.
+* **`crypto/ml_kem/` + the `mlx` pair -- 14 rows, 4,820 lines.** The largest row count left, and its
+  four hybrid `mlx` rows cost only their own 1,194 unit lines once `ml_kem.c` is in.
+* **SM2 -- 2 rows, 1,940 lines** (`crypto/sm2/` 1,076 + `der_sm2_sig.c` 39 + `sm2_sig.c.in` 585 +
+  `sm2_enc.c.in` 240). Third because it is two rows for two large units whose two faces share the one
+  crypt unit, and because its `der_sm2_sig.c`/`sm2_sig.c.in` pair sits on the DER-OID pattern this
+  pass just landed for SLH-DSA, so the marginal cost is lower than the line count suggests.
+* **`kem/ec_kem.c.in` -- 1 row, 822 lines.** One row, and one of its functions
+  (`ossl_ec_dhkem_derive_private`) is already landed, but its encapsulation path is the HPKE-derived
+  one the crate models only partly.
+* **`crypto/ml_dsa/` -- 6 rows, 4,925 lines.** Last: the worst rows-per-line in the set (4,925 lines
+  for six rows), and nothing else waits on it.
+
+No claim is made that the stratum is closer to sealing than `provider_rows` says. `provider_rows` is
+**280/26** after this pass, and the 24 rows that moved are exactly the 24 the two units publish; the
+remaining 26 are the five units above, each named with its measured size.

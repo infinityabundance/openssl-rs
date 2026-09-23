@@ -109,6 +109,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "slh_dsa_probe.h"
+
 static void kv_int(const char *key, int value)
 {
     printf("%s=%d\n", key, value);
@@ -1108,6 +1110,140 @@ static void arm_rsa_rows(void)
     EVP_PKEY_free(pkey);
 }
 
+/* The twelve `OSSL_OP_SIGNATURE` `SLH-DSA-*` rows, in the authority's `deflt_signature[]` order.
+ * Each is reached twice: the key is built through the **keymgmt** row of the same name (so the
+ * signature arm is independent of the keymgmt court), and the signature row is then fetched by
+ * name and driven end to end through its own `SIGN`/`VERIFY` slots.
+ *
+ * The signature is deterministic: `deterministic=1` with no `test-entropy` makes the core use
+ * `PK_SEED` for `opt_rand` (`slh_dsa.c:92-93`), and the key is generated from the authority's own
+ * ACVP keygen seed, so both sides sign the same message with the same key and produce the *same*
+ * signature. It is still not printed: its sha256 is, for the same reason the authority's own
+ * `slh_dsa.inc` stores `sig_digest` rather than the up-to-49,856-byte signature. */
+static EVP_PKEY *slh_dsa_build_key(const struct { const char *name; const unsigned char *key;
+                                                size_t len; } *row)
+{
+    size_t key_len = row->len;
+    size_t n = key_len / 4;
+    EVP_PKEY_CTX *ctx;
+    EVP_PKEY *pkey = NULL;
+    OSSL_PARAM params[2];
+
+    ctx = EVP_PKEY_CTX_new_from_name(NULL, row->name, NULL);
+    if (ctx == NULL)
+        return NULL;
+    params[0] = OSSL_PARAM_construct_octet_string(OSSL_PKEY_PARAM_SLH_DSA_SEED,
+                                                  (void *)row->key, key_len - n);
+    params[1] = OSSL_PARAM_construct_end();
+    if (EVP_PKEY_keygen_init(ctx) <= 0
+        || EVP_PKEY_CTX_set_params(ctx, params) <= 0
+        || EVP_PKEY_generate(ctx, &pkey) <= 0) {
+        EVP_PKEY_free(pkey);
+        pkey = NULL;
+    }
+    EVP_PKEY_CTX_free(ctx);
+    return pkey;
+}
+
+static void kv_sha256(const char *key, const unsigned char *buf, size_t len)
+{
+    unsigned char digest[32];
+    unsigned int dlen = 0;
+
+    printf("%s=", key);
+    if (EVP_Digest(buf, len, digest, &dlen, EVP_sha256(), NULL) == 1) {
+        size_t i;
+
+        for (i = 0; i < dlen; i++)
+            printf("%02x", digest[i]);
+    } else {
+        printf("<failed>");
+    }
+    printf("\n");
+}
+
+static void arm_slh_dsa_rows(void)
+{
+    static const unsigned char slh_message[32] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
+        0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d,
+        0x1e, 0x1f
+    };
+    size_t i;
+
+    for (i = 0; i < sizeof(slh_dsa_rows) / sizeof(slh_dsa_rows[0]); i++) {
+        const char *name = slh_dsa_rows[i].name;
+        char key[96];
+        EVP_PKEY *pkey = slh_dsa_build_key(&slh_dsa_rows[i]);
+        EVP_SIGNATURE *algo = EVP_SIGNATURE_fetch(NULL, name, NULL);
+        EVP_PKEY_CTX *ctx;
+        EVP_PKEY_CTX *vctx;
+        static unsigned char sig[50000];
+        static unsigned char tampered[50000];
+        size_t siglen;
+        OSSL_PARAM params[3];
+        int msg_encode = 0;
+        int deterministic = 1;
+        int signed_ok = 0;
+
+        snprintf(key, sizeof(key), "slh.%s.key", name);
+        kv_int(key, pkey != NULL);
+        snprintf(key, sizeof(key), "slh.%s.sig_fetch", name);
+        kv_int(key, algo != NULL);
+        if (pkey == NULL || algo == NULL)
+            continue;
+
+        params[0] = OSSL_PARAM_construct_int(OSSL_SIGNATURE_PARAM_MESSAGE_ENCODING, &msg_encode);
+        params[1] = OSSL_PARAM_construct_int(OSSL_SIGNATURE_PARAM_DETERMINISTIC, &deterministic);
+        params[2] = OSSL_PARAM_construct_end();
+
+        /* Arm 1: the signature, through the row's own `SIGN_MESSAGE_INIT` + `SIGN`. */
+        ctx = EVP_PKEY_CTX_new_from_pkey(NULL, pkey, NULL);
+        snprintf(key, sizeof(key), "slh.%s.sign_message_init", name);
+        kv_int(key, EVP_PKEY_sign_message_init(ctx, algo, params));
+        siglen = sizeof(sig);
+        snprintf(key, sizeof(key), "slh.%s.sign_size_query", name);
+        kv_int(key, EVP_PKEY_sign(ctx, NULL, &siglen, slh_message, sizeof(slh_message)));
+        snprintf(key, sizeof(key), "slh.%s.sign_size", name);
+        kv_int(key, (int)siglen);
+        siglen = sizeof(sig);
+        snprintf(key, sizeof(key), "slh.%s.sign", name);
+        signed_ok = EVP_PKEY_sign(ctx, sig, &siglen, slh_message, sizeof(slh_message));
+        kv_int(key, signed_ok);
+        snprintf(key, sizeof(key), "slh.%s.sig_len", name);
+        kv_int(key, (int)siglen);
+        snprintf(key, sizeof(key), "slh.%s.sig_sha256", name);
+        kv_sha256(key, sig, siglen);
+        EVP_PKEY_CTX_free(ctx);
+
+        /* Arm 2: the buffer refusal -- a one-byte destination for a fixed-size signature. */
+        ctx = EVP_PKEY_CTX_new_from_pkey(NULL, pkey, NULL);
+        if (EVP_PKEY_sign_message_init(ctx, algo, params) > 0) {
+            unsigned char one[1];
+            size_t one_len = sizeof(one);
+
+            snprintf(key, sizeof(key), "slh.%s.small_buffer", name);
+            kv_int(key, EVP_PKEY_sign(ctx, one, &one_len, slh_message, sizeof(slh_message)));
+        }
+        EVP_PKEY_CTX_free(ctx);
+
+        /* Arm 3: the verify of the signature just produced, then of a corrupted copy. */
+        memcpy(tampered, sig, siglen);
+        tampered[siglen / 2] ^= 0x01;
+        vctx = EVP_PKEY_CTX_new_from_pkey(NULL, pkey, NULL);
+        if (EVP_PKEY_verify_message_init(vctx, algo, params) > 0) {
+            snprintf(key, sizeof(key), "slh.%s.verify", name);
+            kv_int(key, EVP_PKEY_verify(vctx, sig, siglen, slh_message, sizeof(slh_message)));
+            snprintf(key, sizeof(key), "slh.%s.verify_corrupted", name);
+            kv_int(key, EVP_PKEY_verify(vctx, tampered, siglen, slh_message, sizeof(slh_message)));
+        }
+        EVP_PKEY_CTX_free(vctx);
+
+        EVP_SIGNATURE_free(algo);
+        EVP_PKEY_free(pkey);
+    }
+}
+
 int main(void)
 {
     /* The warm-up: the `DSA` sign path reaches `ossl_bn_gen_dsa_nonce_fixed_top`, whose first act
@@ -1127,6 +1263,7 @@ int main(void)
     arm_ecdsa_rows();
     arm_eddsa_rows();
     arm_rsa_rows();
+    arm_slh_dsa_rows();
     ERR_clear_error();
     return 0;
 }

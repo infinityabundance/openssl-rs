@@ -1643,6 +1643,13 @@
         "translation_unit": "providers/common/der/libdefault-lib-der_rsa_sig.c"
       },
       {
+        "module": "src/provider/der_slh_dsa_key.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "1/1",
+        "translation_unit": "providers/common/der/libcommon-lib-der_slh_dsa_key.c"
+      },
+      {
         "module": "src/provider/digest.rs",
         "phase": 8,
         "phase_source": "module-declaration",

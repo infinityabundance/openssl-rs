@@ -9479,7 +9479,8 @@
               "RT-CIPHER",
               "RT-DIGEST",
               "RT-EVP-MAC",
-              "RT-PARAM"
+              "RT-PARAM",
+              "RT-SIGNATURE"
             ],
             "symbol": "OSSL_PARAM_construct_int"
           },
@@ -11310,7 +11311,9 @@
             "basis": "called",
             "courts": [
               "RT-FETCH",
-              "RT-RSA"
+              "RT-KEYMGMT",
+              "RT-RSA",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_Digest"
           },
@@ -13255,7 +13258,9 @@
             "courts": [
               "RT-ASYM-CIPHER",
               "RT-EVP-PKEY-OPS",
-              "RT-EVP-REF"
+              "RT-EVP-REF",
+              "RT-KEYMGMT",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_PKEY_CTX_set_params"
           },
@@ -13798,7 +13803,9 @@
             "basis": "called",
             "courts": [
               "RT-EVP-PKEY-OPS",
-              "RT-EVP-REF"
+              "RT-EVP-REF",
+              "RT-KEYMGMT",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_PKEY_generate"
           },
@@ -13919,14 +13926,16 @@
             "basis": "called",
             "courts": [
               "RT-EVP-PKEY-OPS",
-              "RT-EVP-REF"
+              "RT-EVP-REF",
+              "RT-KEYMGMT"
             ],
             "symbol": "EVP_PKEY_get_int_param"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-HPKE"
+              "RT-HPKE",
+              "RT-KEYMGMT"
             ],
             "symbol": "EVP_PKEY_get_octet_string_param"
           },
@@ -14021,7 +14030,9 @@
             "basis": "called",
             "courts": [
               "RT-EVP-PKEY",
-              "RT-EVP-PKEY-OPS"
+              "RT-EVP-PKEY-OPS",
+              "RT-KEYMGMT",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_PKEY_keygen_init"
           },
@@ -15524,6 +15535,7 @@
             "basis": "called",
             "courts": [
               "RT-EVP-INTROSPECT",
+              "RT-KEYMGMT",
               "RT-SIGNATURE"
             ],
             "symbol": "EVP_sha256"
@@ -22034,7 +22046,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "3494d29eb9269f80034ef76064ff87ff901ef2e4f8b3a4a048cf3d27f217185e"
+      "sha256": "3f283f09465c85d67b61ac337501474b7183eebe749bd695b9db4c5f8ac87468"
     },
     {
       "name": "symbol-ownership",
@@ -22089,7 +22101,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "c6cbd2172c1661e62194ec15ad80181b3e3e465575549a5d66af50c63c367cfb"
+      "sha256": "5568cdd6e1a3685fc12098fd2b32b2174aa1b77573e5712822730f0871d4a379"
     },
     {
       "name": "phase7-courts",
@@ -22099,17 +22111,17 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "8f85f387dd7142d38277f8b53744a072248cff5d2855e184df9ac144436d8955"
+      "sha256": "7b01ef5439eaef38e8a59e6922705a4d519cdee0f300fa63a44d05c3de5d7d43"
     },
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "30012e8c08788c8d7b162205bb60ea453360f9385e31b08ab84042d491c4a9bb"
+      "sha256": "d507019c38514d9f5b972c319d1f17ead932daac56df31bd538bb28a75b52e09"
     },
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "569172ee4b910a238432626bfc4b03344850c9bbea6aca9308e0ebeb5265f973"
+      "sha256": "a26b3691e4c826f724bab129f09acfec58c0493ec43c51946673d2202c04120c"
     },
     {
       "name": "phase9-courts",
