@@ -1118,6 +1118,65 @@ pub(crate) unsafe extern "C" fn WPACKET_quic_write_vlint(pkt: *mut Wpacket, v: u
     1
 }
 
+// ---------------------------------------------------------------------------------------------
+// The read side — `include/internal/packet.h`'s `PACKET_*` family
+// ---------------------------------------------------------------------------------------------
+//
+// `packet.h`'s read half is a set of `static ossl_inline` functions rather than symbols of any
+// translation unit. `src/asn1_dsa.rs` models the subset a DER decoder calls; the four SLH-DSA
+// readers (`slh_wots.c`, `slh_xmss.c`, `slh_fors.c`, `slh_hypertree.c`, `slh_dsa.c`) call a
+// second subset — `PACKET_buf_init`, `PACKET_get_bytes` and `PACKET_remaining` — which is
+// modelled here because `packet.h` is this module's header. The two models are the same two
+// fields and the same `PACKET_get_bytes` transition; the duplication is a later unification.
+
+/// `PACKET` — `include/internal/packet.h:22-27`, a borrowed read cursor.
+#[derive(Clone, Copy)]
+pub(crate) struct Packet {
+    /// `const unsigned char *curr`.
+    curr: *const c_uchar,
+    /// `size_t remaining`.
+    remaining: usize,
+}
+
+impl Packet {
+    /// `PACKET_buf_init`: a view of `len` bytes at `buf`, refusing a length above `SIZE_MAX / 2`.
+    ///
+    /// # Safety
+    /// `buf` is readable for `len` bytes.
+    #[allow(dead_code)] // the read half of the header; used by the SLH-DSA readers
+    pub(crate) unsafe fn buf_init(buf: *const c_uchar, len: usize) -> Option<Packet> {
+        if len > usize::MAX / 2 {
+            return None;
+        }
+        Some(Packet {
+            curr: buf,
+            remaining: len,
+        })
+    }
+
+    /// `PACKET_peek_bytes` + `PACKET_get_bytes`: a borrowed span, advancing.
+    ///
+    /// # Safety
+    /// `self.curr` is readable for `self.remaining` bytes.
+    #[allow(dead_code)] // the read half of the header; used by the SLH-DSA readers
+    pub(crate) unsafe fn get_bytes(&mut self, len: usize) -> Option<*const c_uchar> {
+        if self.remaining < len {
+            return None;
+        }
+        let data = self.curr;
+        // SAFETY: `len <= remaining`, so the advance stays inside the buffer.
+        self.curr = unsafe { self.curr.add(len) };
+        self.remaining -= len;
+        Some(data)
+    }
+
+    /// `PACKET_remaining`: the bytes left after the cursor.
+    #[allow(dead_code)] // the read half of the header; used by the SLH-DSA readers
+    pub(crate) fn remaining(&self) -> usize {
+        self.remaining
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

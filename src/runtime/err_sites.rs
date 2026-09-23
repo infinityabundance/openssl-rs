@@ -26112,6 +26112,36 @@ pub(crate) const PROV_RSA_KEM_541: ErrSite = ErrSite {
     dynamic_reason: true,
 };
 
+/// `slh_sign_internal` at `crypto/slh_dsa/slh_dsa.c:74` (PROV_R_INVALID_SIGNATURE_SIZE).
+pub(crate) const SLH_DSA_74: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/slh_dsa/slh_dsa.c",
+    line: 74,
+    func: c"slh_sign_internal",
+    lib: 57,
+    reason: 179,
+    dynamic_reason: false,
+};
+
+/// `slh_sign_internal` at `crypto/slh_dsa/slh_dsa.c:80` (PROV_R_MISSING_KEY).
+pub(crate) const SLH_DSA_80: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/slh_dsa/slh_dsa.c",
+    line: 80,
+    func: c"slh_sign_internal",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `slh_verify_internal` at `crypto/slh_dsa/slh_dsa.c:177` (PROV_R_MISSING_KEY).
+pub(crate) const SLH_DSA_177: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/slh_dsa/slh_dsa.c",
+    line: 177,
+    func: c"slh_verify_internal",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
 /// `mac_digest_sign_init` at `providers/implementations/signature/mac_legacy_sig.c:107` (PROV_R_NO_KEY_SET).
 pub(crate) const PROV_MAC_LEGACY_SIG_107: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/providers/implementations/signature/mac_legacy_sig.c",
@@ -40771,6 +40801,9 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_RSA_KEM_495,
     PROV_RSA_KEM_505,
     PROV_RSA_KEM_541,
+    SLH_DSA_74,
+    SLH_DSA_80,
+    SLH_DSA_177,
     PROV_MAC_LEGACY_SIG_107,
     RSA_LIB_85,
     RSA_LIB_106,

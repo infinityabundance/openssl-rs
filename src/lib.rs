@@ -151,6 +151,10 @@ pub mod rsa;
 pub mod runtime;
 pub mod seed;
 pub mod selftest;
+// Phase 8's `crypto/slh_dsa/` (FIPS 205): the ten-unit SLH-DSA core the twelve keymgmt and twelve
+// signature rows are built on. The directory is new here; no provider row is published by this
+// module yet, so it is `pub(crate)` and reached only by its own tests.
+pub(crate) mod slh_dsa;
 pub mod sm4;
 pub mod status;
 // Phase 8.8's `crypto/x509/` substream (D349): the accessor slices of `x_pubkey.c`,

@@ -4,9 +4,9 @@
     "counts": {
       "installed_headers": 139,
       "internal_only": 2993,
-      "owned": 9604,
+      "owned": 9628,
       "records": 19839,
-      "unowned": 10235
+      "unowned": 10211
     },
     "definition": "every macro and enum member the authority's installed and internal headers define, with the header that defines it and that header's owning stratum",
     "installed_headers": [
@@ -69405,7 +69405,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_CRYPTO_SLH_HASH_H",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -79765,7 +79765,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_SLH_DSA_SHA2_NUM_ZEROS_H_AND_T_BOUND1",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94298,7 +94298,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRSC_SIZE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94306,7 +94306,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRS_DECLARE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94314,7 +94314,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRS_FN_DECLARE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94322,7 +94322,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRS_FUNC_DECLARE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94330,7 +94330,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRS_SIZE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94338,7 +94338,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRS_SIZE_MAX",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94346,7 +94346,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRS_TYPE_FORS_PRF",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94354,7 +94354,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRS_TYPE_FORS_ROOTS",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94362,7 +94362,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRS_TYPE_FORS_TREE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94370,7 +94370,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRS_TYPE_TREE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94378,7 +94378,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRS_TYPE_WOTS_HASH",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94386,7 +94386,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRS_TYPE_WOTS_PK",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94394,7 +94394,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRS_TYPE_WOTS_PRF",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94410,7 +94410,7 @@
         ],
         "kind": "macro",
         "name": "SLH_DSA_MAX_N",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94418,7 +94418,7 @@
         ],
         "kind": "macro",
         "name": "SLH_DSA_PK_ROOT",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94426,7 +94426,7 @@
         ],
         "kind": "macro",
         "name": "SLH_DSA_PK_SEED",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94434,7 +94434,7 @@
         ],
         "kind": "macro",
         "name": "SLH_DSA_PRIV",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94442,7 +94442,7 @@
         ],
         "kind": "macro",
         "name": "SLH_DSA_PUB",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94450,7 +94450,7 @@
         ],
         "kind": "macro",
         "name": "SLH_DSA_SK_PRF",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94458,7 +94458,7 @@
         ],
         "kind": "macro",
         "name": "SLH_DSA_SK_SEED",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94466,7 +94466,7 @@
         ],
         "kind": "macro",
         "name": "SLH_HASH_FN_DECLARE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94474,7 +94474,7 @@
         ],
         "kind": "macro",
         "name": "SLH_HASH_FUNC_DECLARE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [

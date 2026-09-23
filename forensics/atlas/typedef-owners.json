@@ -4,9 +4,9 @@
     "counts": {
       "installed_headers": 139,
       "internal_only": 407,
-      "owned": 758,
+      "owned": 768,
       "records": 1573,
-      "unowned": 815
+      "unowned": 805
     },
     "definition": "every typedef name the authority's installed and internal headers introduce, with the header that introduces it and that header's owning stratum",
     "installed_headers": [
@@ -8391,7 +8391,7 @@
         ],
         "kind": "typedef",
         "name": "SLH_ADRS_FUNC",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -8399,7 +8399,7 @@
         ],
         "kind": "typedef",
         "name": "SLH_DSA_PARAMS",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -8407,7 +8407,7 @@
         ],
         "kind": "typedef",
         "name": "SLH_HASH_FUNC",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -9703,7 +9703,7 @@
         ],
         "kind": "typedef",
         "name": "adrs",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -10124,7 +10124,7 @@
         ],
         "kind": "typedef",
         "name": "in",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -10156,7 +10156,7 @@
         ],
         "kind": "typedef",
         "name": "layer",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -10380,7 +10380,7 @@
         ],
         "kind": "typedef",
         "name": "out_len",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -10420,7 +10420,7 @@
         ],
         "kind": "typedef",
         "name": "pkt",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -12645,7 +12645,7 @@
         ],
         "kind": "typedef",
         "name": "src",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -12693,7 +12693,7 @@
         ],
         "kind": "typedef",
         "name": "type",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
