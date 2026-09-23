@@ -50,10 +50,14 @@ const OSSL_DIGEST_NAME_SHA3_384: *const c_char = c"SHA3-384".as_ptr();
 const OSSL_DIGEST_NAME_SHA3_512: *const c_char = c"SHA3-512".as_ptr();
 
 /// `OSSL_ITEM` — `include/openssl/core.h`'s `struct ossl_item_st { int id; const char *ptr; }`.
+///
+/// The fields are `pub(crate)` because a second unit (`securitycheck_default.c`, transcribed as
+/// `src/provider/securitycheck_default.rs`) declares its own seven-row map of the same type and
+/// hands it to [`ossl_digest_md_to_nid`].
 #[repr(C)]
 pub(crate) struct OsslItem {
-    id: c_int,
-    ptr: *const c_char,
+    pub(crate) id: c_int,
+    pub(crate) ptr: *const c_char,
 }
 
 // SAFETY: every instance points at `'static` literals; nothing mutates a map.

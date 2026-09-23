@@ -147,12 +147,12 @@ WITHHELD: dict[str, str] = {
         "document agree that the row is open."
     ),
     # The `OSSL_OP_SIGNATURE` group. D392 opened the operation: the `deflt_query` arm and
-    # `DEFLT_SIGNATURES` land with `mac_legacy_sig.c`'s four rows and `dsa_sig.c.in`'s ten, so
-    # fourteen of the fifty-nine rows are implemented. The entries below are the units that remain,
-    # each held on a **named callee** rather than a size judgement -- and the measurement is what
-    # makes the order: `ecdsa_sig.c.in` and `eddsa_sig.c.in` wait on one `providers/common/der/`
-    # writer each, `rsa_sig.c.in` on two writers plus `securitycheck_default.c`'s RSA digest map,
-    # and `sm2_sig.c.in` on a writer plus `crypto/sm2/sm2_sign.c`.
+    # `DEFLT_SIGNATURES` land with `mac_legacy_sig.c`'s four rows and `dsa_sig.c.in`'s ten. D393
+    # landed `ecdsa_sig.c.in`'s ten on `der_ec_sig.c`, D394 `eddsa_sig.c.in`'s five on
+    # `der_ecx_key.c`, and D395 `rsa_sig.c.in`'s fourteen on `der_rsa_sig.c`, `der_rsa_key.c`'s PSS
+    # params writer and `securitycheck*.c` -- so **every reachable `OSSL_OP_SIGNATURE` row is now
+    # landed** and the entries below are the units that remain, each held on a named callee or on a
+    # `crypto/` implementation the crate does not have.
     #
     # `dsa_sig.c.in` is **not** here: its only non-FIPS prerequisites are
     # `providers/common/digest_to_nid.c` and `der_dsa_sig.c`, both landed as
@@ -160,15 +160,6 @@ WITHHELD: dict[str, str] = {
     # that let DSA land before RSA and ECDSA: `ossl_dsa_check_key`, the callee this comment would
     # otherwise have named, is reached only from `dsa_sig.c.in`'s `#ifdef FIPS_MODULE` block at
     # `:266`, so `providers/common/securitycheck.c` is not on the DSA path at all.
-    "forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/rsa_sig.c.in": (
-        "**Withheld: the unit's fourteen rows, on three unlanded callees.** `rsa_setup_md` calls "
-        "`ossl_digest_rsa_sign_get_md_nid` (`:394`, `:485`) and `rsa_check_padding`/"
-        "`rsa_signverify_init` call `ossl_rsa_key_op_get_protect` (`:530`), both of which are "
-        "`providers/common/securitycheck*.c`'s; the signature's AlgorithmIdentifier comes from "
-        "`providers/common/der/der_rsa_sig.c`'s `ossl_DER_w_algorithmIdentifier_"
-        "MDWithRSAEncryption` and `_RSA_PSS`. None of the three is in this tree, so `rsa_sig.c.in` "
-        "is the signature unit with the largest prerequisite and lands last."
-    ),
     "forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/ecdsa_sig.c.in": (
         "**Withheld: the unit's ten rows, on one unlanded callee.** `ossl_digest_get_approved_nid` "
         "is already landed (`src/provider/digest_to_nid.rs`), so what remains is "

@@ -383,7 +383,7 @@
       "verdict": "pass"
     },
     "RT-SIGNATURE": {
-      "observations": 170,
+      "observations": 297,
       "verdict": "pass"
     },
     "RT-STACK": {
@@ -708,6 +708,20 @@
     "default/OSSL_OP_SIGNATURE/ED448ph",
     "default/OSSL_OP_SIGNATURE/HMAC",
     "default/OSSL_OP_SIGNATURE/POLY1305",
+    "default/OSSL_OP_SIGNATURE/RSA",
+    "default/OSSL_OP_SIGNATURE/RSA-RIPEMD160",
+    "default/OSSL_OP_SIGNATURE/RSA-SHA1",
+    "default/OSSL_OP_SIGNATURE/RSA-SHA2-224",
+    "default/OSSL_OP_SIGNATURE/RSA-SHA2-256",
+    "default/OSSL_OP_SIGNATURE/RSA-SHA2-384",
+    "default/OSSL_OP_SIGNATURE/RSA-SHA2-512",
+    "default/OSSL_OP_SIGNATURE/RSA-SHA2-512/224",
+    "default/OSSL_OP_SIGNATURE/RSA-SHA2-512/256",
+    "default/OSSL_OP_SIGNATURE/RSA-SHA3-224",
+    "default/OSSL_OP_SIGNATURE/RSA-SHA3-256",
+    "default/OSSL_OP_SIGNATURE/RSA-SHA3-384",
+    "default/OSSL_OP_SIGNATURE/RSA-SHA3-512",
+    "default/OSSL_OP_SIGNATURE/RSA-SM3",
     "default/OSSL_OP_SIGNATURE/SIPHASH",
     "default/OSSL_OP_SKEYMGMT/AES",
     "default/OSSL_OP_SKEYMGMT/GENERIC-SECRET"
@@ -719,14 +733,14 @@
       "8": 685,
       "9": 675
     },
-    "implemented": 245,
+    "implemented": 259,
     "open_by_phase": {
       "10": 636,
       "13": 39,
-      "8": 66,
+      "8": 52,
       "9": 10
     },
     "total": 996,
-    "unimplemented": 751
+    "unimplemented": 737
   }
 }

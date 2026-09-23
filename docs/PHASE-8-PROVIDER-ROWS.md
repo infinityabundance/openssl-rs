@@ -22,10 +22,10 @@ Read from the census's own `implementation_state` for the rows this stratum owns
 | quantity | count |
 |---|---|
 | provider rows this stratum owns | 306 |
-| of those, implemented | 240 |
-| of those, unlanded | 66 |
+| of those, implemented | 254 |
+| of those, unlanded | 52 |
 
-The document below names all **66** unlanded rows this stratum owns across **28** translation units, and — so the first group can be read whole — the **18** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (63). The identity `306 = 240 + 66` holds.
+The document below names all **52** unlanded rows this stratum owns across **27** translation units, and — so the first group can be read whole — the **18** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (49). The identity `306 = 254 + 52` holds.
 
 ## The first group: the `OSSL_OP_KDF` rows and the `OSSL_OP_SKEYMGMT` pair
 
@@ -235,27 +235,6 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 
 **Withheld: not reachable.** The unit's three rows (`ML-DSA-44`, `ML-DSA-65`, `ML-DSA-87`) dispatch to `ossl_ml_dsa_*` (`crypto/ml_dsa/`), which the crate does not have.
 
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/rsa_sig.c.in` — 14 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_signature` | `ossl_rsa_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA:rsaEncryption:1.2.840.113549.1.1.1` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_rsa_ripemd160_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-RIPEMD160:ripemd160WithRSA:1.3.36.3.3.1.2` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_rsa_sha1_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA1:RSA-SHA-1:sha1WithRSAEncryption:1.2.840.113549.1.1.5` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_rsa_sha224_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA2-224:RSA-SHA224:sha224WithRSAEncryption:1.2.840.113549.1.1.14` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_rsa_sha256_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA2-256:RSA-SHA256:sha256WithRSAEncryption:1.2.840.113549.1.1.11` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_rsa_sha384_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA2-384:RSA-SHA384:sha384WithRSAEncryption:1.2.840.113549.1.1.12` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_rsa_sha512_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA2-512:RSA-SHA512:sha512WithRSAEncryption:1.2.840.113549.1.1.13` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_rsa_sha512_224_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA2-512/224:RSA-SHA512-224:sha512-224WithRSAEncryption:1.2.840.113549.1.1.15` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_rsa_sha512_256_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA2-512/256:RSA-SHA512-256:sha512-256WithRSAEncryption:1.2.840.113549.1.1.16` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_rsa_sha3_224_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA3-224:id-rsassa-pkcs1-v1_5-with-sha3-224:2.16.840.1.101.3.4.3.13` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_rsa_sha3_256_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA3-256:id-rsassa-pkcs1-v1_5-with-sha3-256:2.16.840.1.101.3.4.3.14` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_rsa_sha3_384_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA3-384:id-rsassa-pkcs1-v1_5-with-sha3-384:2.16.840.1.101.3.4.3.15` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_rsa_sha3_512_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SHA3-512:id-rsassa-pkcs1-v1_5-with-sha3-512:2.16.840.1.101.3.4.3.16` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_rsa_sm3_signature_functions` | `OSSL_OP_SIGNATURE` | `RSA-SM3:sm3WithRSAEncryption:1.2.156.10197.1.504` | `src/provider/signature.rs` |
-
-**Withheld: the unit's fourteen rows, on three unlanded callees.** `rsa_setup_md` calls `ossl_digest_rsa_sign_get_md_nid` (`:394`, `:485`) and `rsa_check_padding`/`rsa_signverify_init` call `ossl_rsa_key_op_get_protect` (`:530`), both of which are `providers/common/securitycheck*.c`'s; the signature's AlgorithmIdentifier comes from `providers/common/der/der_rsa_sig.c`'s `ossl_DER_w_algorithmIdentifier_MDWithRSAEncryption` and `_RSA_PSS`. None of the three is in this tree, so `rsa_sig.c.in` is the signature unit with the largest prerequisite and lands last.
-
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/slh_dsa_sig.c.in` — 12 row(s)
 
 | table | dispatch table symbol | operation | algorithm name(s) | crate file |
@@ -289,7 +268,7 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 |---|---|
 | generator | `forensics/tools/phase8_provider_rows.py` |
 | census | `forensics/atlas/provider-algorithms.json` |
-| census content hash | `2ab4825b8bb8ff9994217e7b74ef98e7dde0372c858b8d0b61e6ad4f956d1280` |
+| census content hash | `26589256aef4d7e9d9a877a879aa3c5bc4fe84e24cc2fe900c2a03ea0edff32d` |
 | authority tree | `forensics/authorities/src/openssl-3.6.4` |
 | crate query read | `src/provider/digest.rs` |
 
