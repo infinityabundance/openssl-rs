@@ -26512,6 +26512,506 @@ pub(crate) const SLH_DSA_177: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `parse_pubkey` at `crypto/ml_kem/ml_kem.c:1642` (PROV_R_INVALID_KEY).
+pub(crate) const ML_KEM_1642: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_kem/ml_kem.c",
+    line: 1642,
+    func: c"parse_pubkey",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `parse_pubkey` at `crypto/ml_kem/ml_kem.c:1655` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ML_KEM_1655: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_kem/ml_kem.c",
+    line: 1655,
+    func: c"parse_pubkey",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `parse_prvkey` at `crypto/ml_kem/ml_kem.c:1675` (PROV_R_INVALID_KEY).
+pub(crate) const ML_KEM_1675: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_kem/ml_kem.c",
+    line: 1675,
+    func: c"parse_prvkey",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `parse_prvkey` at `crypto/ml_kem/ml_kem.c:1688` (PROV_R_INVALID_KEY).
+pub(crate) const ML_KEM_1688: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_kem/ml_kem.c",
+    line: 1688,
+    func: c"parse_prvkey",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `genkey` at `crypto/ml_kem/ml_kem.c:1786` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ML_KEM_1786: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_kem/ml_kem.c",
+    line: 1786,
+    func: c"genkey",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `encap` at `crypto/ml_kem/ml_kem.c:1819` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ML_KEM_1819: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_kem/ml_kem.c",
+    line: 1819,
+    func: c"encap",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `decap` at `crypto/ml_kem/ml_kem.c:1866` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ML_KEM_1866: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_kem/ml_kem.c",
+    line: 1866,
+    func: c"decap",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_kem_key_new` at `crypto/ml_kem/ml_kem.c:1997` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const ML_KEM_1997: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_kem/ml_kem.c",
+    line: 1997,
+    func: c"ossl_ml_kem_key_new",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_kem_key_new` at `crypto/ml_kem/ml_kem.c:2022` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ML_KEM_2022: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_kem/ml_kem.c",
+    line: 2022,
+    func: c"ossl_ml_kem_key_new",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_encapsulate_init` at `providers/implementations/kem/ml_kem_kem.c:84` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_ML_KEM_KEM_84: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ml_kem_kem.c",
+    line: 84,
+    func: c"ml_kem_encapsulate_init",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_decapsulate_init` at `providers/implementations/kem/ml_kem_kem.c:96` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_ML_KEM_KEM_96: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ml_kem_kem.c",
+    line: 96,
+    func: c"ml_kem_decapsulate_init",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_set_ctx_params_decoder` at `providers/implementations/kem/ml_kem_kem.c:129` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KEM_129: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ml_kem_kem.c",
+    line: 129,
+    func: c"ml_kem_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_set_ctx_params` at `providers/implementations/kem/ml_kem_kem.c:166` (PROV_R_INVALID_SEED_LENGTH).
+pub(crate) const PROV_ML_KEM_KEM_166: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ml_kem_kem.c",
+    line: 166,
+    func: c"ml_kem_set_ctx_params",
+    lib: 57,
+    reason: 154,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_encapsulate` at `providers/implementations/kem/ml_kem_kem.c:192` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_ML_KEM_KEM_192: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ml_kem_kem.c",
+    line: 192,
+    func: c"ml_kem_encapsulate",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_encapsulate` at `providers/implementations/kem/ml_kem_kem.c:209` (PROV_R_NULL_OUTPUT_BUFFER).
+pub(crate) const PROV_ML_KEM_KEM_209: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ml_kem_kem.c",
+    line: 209,
+    func: c"ml_kem_encapsulate",
+    lib: 57,
+    reason: 248,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_encapsulate` at `providers/implementations/kem/ml_kem_kem.c:215` (PROV_R_NULL_LENGTH_POINTER).
+pub(crate) const PROV_ML_KEM_KEM_215: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ml_kem_kem.c",
+    line: 215,
+    func: c"ml_kem_encapsulate",
+    lib: 57,
+    reason: 247,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_encapsulate` at `providers/implementations/kem/ml_kem_kem.c:219` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_ML_KEM_KEM_219: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ml_kem_kem.c",
+    line: 219,
+    func: c"ml_kem_encapsulate",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_encapsulate` at `providers/implementations/kem/ml_kem_kem.c:227` (PROV_R_NULL_LENGTH_POINTER).
+pub(crate) const PROV_ML_KEM_KEM_227: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ml_kem_kem.c",
+    line: 227,
+    func: c"ml_kem_encapsulate",
+    lib: 57,
+    reason: 247,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_encapsulate` at `providers/implementations/kem/ml_kem_kem.c:231` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_ML_KEM_KEM_231: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ml_kem_kem.c",
+    line: 231,
+    func: c"ml_kem_encapsulate",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_decapsulate` at `providers/implementations/kem/ml_kem_kem.c:267` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_ML_KEM_KEM_267: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ml_kem_kem.c",
+    line: 267,
+    func: c"ml_kem_decapsulate",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_decapsulate` at `providers/implementations/kem/ml_kem_kem.c:282` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_ML_KEM_KEM_282: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ml_kem_kem.c",
+    line: 282,
+    func: c"ml_kem_decapsulate",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_pairwise_test` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:148` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_ML_KEM_KMGMT_148: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 148,
+    func: c"ml_kem_pairwise_test",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_export` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:263` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_ML_KEM_KMGMT_263: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 263,
+    func: c"ml_kem_export",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_key_type_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:380` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_380: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 380,
+    func: c"ml_kem_key_type_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_key_type_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:391` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_391: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 391,
+    func: c"ml_kem_key_type_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_key_type_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:403` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_403: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 403,
+    func: c"ml_kem_key_type_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `check_seed` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:432` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_ML_KEM_KMGMT_432: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 432,
+    func: c"check_seed",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `check_prvenc` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:453` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_ML_KEM_KMGMT_453: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 453,
+    func: c"check_prvenc",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_key_fromdata` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:489` (PROV_R_INVALID_SEED_LENGTH).
+pub(crate) const PROV_ML_KEM_KMGMT_489: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 489,
+    func: c"ml_kem_key_fromdata",
+    lib: 57,
+    reason: 154,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_key_fromdata` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:498` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_ML_KEM_KMGMT_498: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 498,
+    func: c"ml_kem_key_fromdata",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_key_fromdata` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:508` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_ML_KEM_KMGMT_508: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 508,
+    func: c"ml_kem_key_fromdata",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_key_fromdata` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:515` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_ML_KEM_KMGMT_515: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 515,
+    func: c"ml_kem_key_fromdata",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_key_fromdata` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:524` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_ML_KEM_KMGMT_524: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 524,
+    func: c"ml_kem_key_fromdata",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_get_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:616` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_616: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 616,
+    func: c"ml_kem_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_get_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:627` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_627: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 627,
+    func: c"ml_kem_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_get_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:638` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_638: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 638,
+    func: c"ml_kem_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_get_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:649` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_649: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 649,
+    func: c"ml_kem_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_get_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:664` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_664: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 664,
+    func: c"ml_kem_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_get_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:675` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_675: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 675,
+    func: c"ml_kem_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_get_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:687` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_687: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 687,
+    func: c"ml_kem_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_get_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:734` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_734: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 734,
+    func: c"ml_kem_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_get_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:745` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_745: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 745,
+    func: c"ml_kem_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_get_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:763` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_763: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 763,
+    func: c"ml_kem_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_load` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:811` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_ML_KEM_KMGMT_811: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 811,
+    func: c"ml_kem_load",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_set_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:960` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_960: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 960,
+    func: c"ml_kem_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_set_params` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:991` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_ML_KEM_KMGMT_991: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 991,
+    func: c"ml_kem_set_params",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_set_params` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:1000` (PROV_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const PROV_ML_KEM_KMGMT_1000: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 1000,
+    func: c"ml_kem_set_params",
+    lib: 57,
+    reason: 178,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_gen_set_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:1042` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_1042: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 1042,
+    func: c"ml_kem_gen_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_gen_set_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:1053` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_1053: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 1053,
+    func: c"ml_kem_gen_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_gen_set_params` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:1091` (PROV_R_INVALID_SEED_LENGTH).
+pub(crate) const PROV_ML_KEM_KMGMT_1091: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 1091,
+    func: c"ml_kem_gen_set_params",
+    lib: 57,
+    reason: 154,
+    dynamic_reason: false,
+};
+
 /// `slh_dsa_import_decoder` at `providers/implementations/keymgmt/slh_dsa_kmgmt.c:151` (PROV_R_REPEATED_PARAMETER).
 pub(crate) const PROV_SLH_DSA_KMGMT_151: ErrSite = ErrSite {
     file: c"providers/implementations/keymgmt/slh_dsa_kmgmt.c",
@@ -41391,6 +41891,56 @@ pub(crate) static ALL: &[ErrSite] = &[
     SLH_DSA_74,
     SLH_DSA_80,
     SLH_DSA_177,
+    ML_KEM_1642,
+    ML_KEM_1655,
+    ML_KEM_1675,
+    ML_KEM_1688,
+    ML_KEM_1786,
+    ML_KEM_1819,
+    ML_KEM_1866,
+    ML_KEM_1997,
+    ML_KEM_2022,
+    PROV_ML_KEM_KEM_84,
+    PROV_ML_KEM_KEM_96,
+    PROV_ML_KEM_KEM_129,
+    PROV_ML_KEM_KEM_166,
+    PROV_ML_KEM_KEM_192,
+    PROV_ML_KEM_KEM_209,
+    PROV_ML_KEM_KEM_215,
+    PROV_ML_KEM_KEM_219,
+    PROV_ML_KEM_KEM_227,
+    PROV_ML_KEM_KEM_231,
+    PROV_ML_KEM_KEM_267,
+    PROV_ML_KEM_KEM_282,
+    PROV_ML_KEM_KMGMT_148,
+    PROV_ML_KEM_KMGMT_263,
+    PROV_ML_KEM_KMGMT_380,
+    PROV_ML_KEM_KMGMT_391,
+    PROV_ML_KEM_KMGMT_403,
+    PROV_ML_KEM_KMGMT_432,
+    PROV_ML_KEM_KMGMT_453,
+    PROV_ML_KEM_KMGMT_489,
+    PROV_ML_KEM_KMGMT_498,
+    PROV_ML_KEM_KMGMT_508,
+    PROV_ML_KEM_KMGMT_515,
+    PROV_ML_KEM_KMGMT_524,
+    PROV_ML_KEM_KMGMT_616,
+    PROV_ML_KEM_KMGMT_627,
+    PROV_ML_KEM_KMGMT_638,
+    PROV_ML_KEM_KMGMT_649,
+    PROV_ML_KEM_KMGMT_664,
+    PROV_ML_KEM_KMGMT_675,
+    PROV_ML_KEM_KMGMT_687,
+    PROV_ML_KEM_KMGMT_734,
+    PROV_ML_KEM_KMGMT_745,
+    PROV_ML_KEM_KMGMT_763,
+    PROV_ML_KEM_KMGMT_811,
+    PROV_ML_KEM_KMGMT_960,
+    PROV_ML_KEM_KMGMT_991,
+    PROV_ML_KEM_KMGMT_1000,
+    PROV_ML_KEM_KMGMT_1042,
+    PROV_ML_KEM_KMGMT_1053,
+    PROV_ML_KEM_KMGMT_1091,
     PROV_SLH_DSA_KMGMT_151,
     PROV_SLH_DSA_KMGMT_162,
     PROV_SLH_DSA_KMGMT_244,

@@ -187,6 +187,16 @@ pub(crate) fn constant_time_eq_int(a: i32, b: i32) -> u32 {
     constant_time_eq_u32(a as u32, b as u32)
 }
 
+/// `constant_time_eq_int_8(int a, int b)` — `constant_time.h:264-267`.
+///
+/// `ml_kem.c:1882`'s FO verdict: `constant_time_eq_int_8(0, CRYPTO_memcmp(...))` is a byte mask
+/// that is `0xFF` when the ciphers match and `0x00` when they do not, which is what
+/// `constant_time_select_8` then chooses the shared secret with. The narrowing is the header's.
+#[inline(always)]
+pub(crate) fn constant_time_eq_int_8(a: i32, b: i32) -> u8 {
+    constant_time_eq_int(a, b) as u8
+}
+
 /// `constant_time_select(unsigned int mask, unsigned int a, unsigned int b)` —
 /// `constant_time.h:348-353`. `mask` must be all-ones or all-zeros.
 #[inline(always)]

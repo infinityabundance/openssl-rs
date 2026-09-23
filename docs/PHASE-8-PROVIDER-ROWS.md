@@ -22,10 +22,10 @@ Read from the census's own `implementation_state` for the rows this stratum owns
 | quantity | count |
 |---|---|
 | provider rows this stratum owns | 306 |
-| of those, implemented | 283 |
-| of those, unlanded | 23 |
+| of those, implemented | 286 |
+| of those, unlanded | 20 |
 
-The document below names all **23** unlanded rows this stratum owns across **23** translation units, and — so the first group can be read whole — the **21** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (23). The identity `306 = 283 + 23` holds.
+The document below names all **20** unlanded rows this stratum owns across **22** translation units, and — so the first group can be read whole — the **21** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (20). The identity `306 = 286 + 20` holds.
 
 ## The first group: the `OSSL_OP_KDF` rows and the `OSSL_OP_SKEYMGMT` pair
 
@@ -148,14 +148,6 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 
 **Withheld: the unit's `EC` KEM row, on a partial transcription that is named rather than claimed.** `src/provider/ec_kem.rs` carries **one** of the unit's functions, `ossl_ec_dhkem_derive_private` (`ec_kem.c.in:387-461`), `#[no_mangle]` because the authority defines it non-`static` and `crypto/ec/ec_key.c`'s `ossl_ec_generate_key_dhkem` calls it across translation units -- which is exactly what D390's `ec_kmgmt.c` landing needs. The rest of the unit is the `EC` KEM row's own dispatch (`ossl_ec_asym_kem_functions`, `:805-822`) and the twelve `eckem_*` functions plus the `dhkem_encap`/`dhkem_decap` pair it dispatches to, and it is **not** transcribed: the row's public-key decode path and its `OSSL_PKEY_PARAM_DHKEM_IKM` generate path reach `eckey_frompub`/`eckey_check` and the HPKE-derived encapsulation the crate models only partly, so the one row that would land (`OSSL_OP_KEM` `EC`, `defltprov.c:533`) is left `unimplemented` rather than half-driven. The function that *is* landed is drivable and driven: `RT-KEYMGMT`'s `EC` arm builds the key `ossl_ec_generate_key_dhkem` would be reached on. The entry stays until the row's own dispatch lands, so the census and this document agree that the row is open.
 
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/kem/ml_kem_kem.c.in` — 3 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_asym_kem` | `ossl_ml_kem_asym_kem_functions` | `OSSL_OP_KEM` | `ML-KEM-512:MLKEM512:id-alg-ml-kem-512:2.16.840.1.101.3.4.4.1` | `src/provider/kem.rs` |
-| `deflt_asym_kem` | `ossl_ml_kem_asym_kem_functions` | `OSSL_OP_KEM` | `ML-KEM-768:MLKEM768:id-alg-ml-kem-768:2.16.840.1.101.3.4.4.2` | `src/provider/kem.rs` |
-| `deflt_asym_kem` | `ossl_ml_kem_asym_kem_functions` | `OSSL_OP_KEM` | `ML-KEM-1024:MLKEM1024:id-alg-ml-kem-1024:2.16.840.1.101.3.4.4.3` | `src/provider/kem.rs` |
-
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c` — 4 row(s)
 
 | table | dispatch table symbol | operation | algorithm name(s) | crate file |
@@ -218,7 +210,7 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 |---|---|
 | generator | `forensics/tools/phase8_provider_rows.py` |
 | census | `forensics/atlas/provider-algorithms.json` |
-| census content hash | `b29fe1935d4669ea23dda3e12cdec101f23e7968c5523de5b837b13f49026b7b` |
+| census content hash | `ae15cb990242510e0108e7d5de6d3158cbc4920a64d99e2d5a7302e03f823c58` |
 | authority tree | `forensics/authorities/src/openssl-3.6.4` |
 | crate query read | `src/provider/digest.rs` |
 

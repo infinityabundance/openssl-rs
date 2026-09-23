@@ -115,6 +115,10 @@ pub(crate) mod keymgmt;
 pub(crate) mod mac;
 pub(crate) mod mac_legacy_kmgmt;
 pub(crate) mod mac_legacy_sig;
+// Phase 8's `providers/implementations/kem/ml_kem_kem.c.in` (D401): the three ML-KEM `OSSL_OP_KEM`
+// rows, one dispatch table shared by all three, exactly as the authority's `deflt_asym_kem[]`
+// publishes them.
+pub(crate) mod ml_kem_kem;
 pub(crate) mod rand;
 pub(crate) mod rsa_enc;
 pub(crate) mod rsa_kem;

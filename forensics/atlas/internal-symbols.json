@@ -225,6 +225,8 @@
       "src/ffc/backend.rs",
       "src/ffi/mod.rs",
       "src/lib.rs",
+      "src/ml_kem/arith.rs",
+      "src/ml_kem/key.rs",
       "src/param_build_set.rs",
       "src/provider/rand.rs",
       "src/provider/seeding.rs",

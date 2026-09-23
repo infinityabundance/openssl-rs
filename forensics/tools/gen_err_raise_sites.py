@@ -760,6 +760,25 @@ COVERED_FILES = [
     # destination-size guard, the `PROV_R_MISSING_KEY` "no private key" and "no public key"
     # guards, and the named field of the oversize-message refusal.
     ("crypto/slh_dsa/slh_dsa.c", "SLH_DSA"),
+    # This pass's ML-KEM core. `crypto/ml_kem/ml_kem.c` is a plain `.c`, so its `__FILE__` carries
+    # the source-tree prefix. It raises nine times, each with the algorithm name interpolated: the
+    # three `PROV_R_INVALID_KEY` refusals of `parse_pubkey`/`parse_prvkey` (the `t` vector, the `s`
+    # vector and the public-key-hash mismatch), the five `ERR_LIB_CRYPTO` `ERR_R_INTERNAL_ERROR`
+    # paths (`parse_pubkey`'s, `genkey`'s, `encap`'s, `decap`'s and `ossl_ml_kem_key_new`'s
+    # missing-SHA3 one) and `ossl_ml_kem_key_new`'s `ERR_R_PASSED_INVALID_ARGUMENT` for an unknown
+    # variant.
+    ("crypto/ml_kem/ml_kem.c", "ML_KEM"),
+    # This pass's ML-KEM KEM unit. `.c.in`-generated, so the bare build-relative path. Its raises
+    # are the two `PROV_R_MISSING_KEY` refusals of the encapsulate/decapsulate inits, the
+    # `PROV_R_MISSING_KEY` refusal inside `ml_kem_encapsulate`, the five `PROV_R_NULL_*`/
+    # `PROV_R_OUTPUT_BUFFER_TOO_SMALL` output guards of `ml_kem_encapsulate`, the
+    # `PROV_R_OUTPUT_BUFFER_TOO_SMALL` guard of `ml_kem_decapsulate`, and the generated
+    # set-ctx-params decoder's `PROV_R_INVALID_SEED_LENGTH` and `PROV_R_REPEATED_PARAMETER` sites.
+    ("providers/implementations/kem/ml_kem_kem.c", "PROV_ML_KEM_KEM"),
+    # This pass's ML-KEM keymgmt unit. `.c.in`-generated too. Every raise is a generated decoder's
+    # `PROV_R_REPEATED_PARAMETER` site: the import decoder's four keys (priv, pub, priv_len,
+    # pub_len), the get-params decoder's five, and the gen-set-params decoder's one (`seed`).
+    ("providers/implementations/keymgmt/ml_kem_kmgmt.c", "PROV_ML_KEM_KMGMT"),
     # The SLH-DSA keymgmt unit. `.c.in`-generated, so the bare build-relative path. Every raise is
     # a generated decoder's `PROV_R_REPEATED_PARAMETER` site: the import decoder's two keys
     # (priv, pub), the get-params decoder's seven, and the gen-set-params decoder's two. The

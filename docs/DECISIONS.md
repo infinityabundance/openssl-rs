@@ -28824,3 +28824,120 @@ No claim is made that the stratum is closer to sealing than `provider_rows` says
 **283/23** after this pass, and the three rows that moved are exactly the three the unit publishes.
 `cargo test --lib` is **1019 passed, 0 failed**, `cargo clippy --all-targets -- -D warnings` is clean,
 and the pipeline is `PIPELINE OK` with **exit 0** and **99 courts / 38,527 observations**.
+
+## D401 -- `crypto/ml_kem/` lands whole and its KEM unit publishes three rows: `ML-KEM-512`,
+`ML-KEM-768` and `ML-KEM-1024`, for `ml_kem_kem.c.in` (272 lines) over `ml_kem.c` (2,452)
+
+`provider_rows` moves **283/23 -> 286/20**. The three rows are exactly the three
+`deflt_asym_kem[]` rows `providers/implementations/kem/ml_kem_kem.c.in` publishes; they share one
+dispatch table, `ossl_ml_kem_asym_kem_functions`, as the authority's `defltprov.c:529-531`
+publishes them, and the crate's `DEFLT_ASYM_KEM` now carries them after the two ECX rows, in the
+authority's order (the `EC` row between them is still unlanded, so the table remains a
+**subsequence** of the authority's).
+
+### The core is transcribed whole, and it publishes no row
+
+`crypto/ml_kem/ml_kem.c` is one translation unit, 2,452 lines, and it is the whole of
+`src/ml_kem/`: `mod.rs` (the constants, `Scalar`, the six `#[repr(C)]` allocation structs with
+their `offset_of!` assertions, `MlKemVinfo`, `vinfo_map` and `MlKemKey`), `arith.rs` (`ml_kem.c`
+:33-1590 -- the four SHA3/SHAKE entry points, `sample_scalar`, the Barrett pair, the NTT and its
+inverse, the byte encode/decode family, `compress`/`decompress`, the vector and matrix products,
+`matrix_expand`, the two CBD samplers and `encrypt_cpa`/`decrypt_cpa`) and `key.rs` (:1592-2452 --
+the wire-format codecs and their parsers, `genkey`/`encap`/`decap`, `add_storage` and the fifteen
+`ossl_ml_kem_*` functions the provider units call). Like `crypto/slh_dsa/` at D398, the core
+publishes **no** row: the six live in the two provider units, and this pass lands one of them.
+
+**The 410 table lines are generated, not transcribed** (D33's rule). `forensics/tools/
+gen_ml_kem_tables.py` re-derives `kNTTRoots` (natural order, `pow(17, bitreverse(i), p)`),
+`kInverseNTTRoots` (the inverse NTT's **consumption** order -- `0`, then `[64,128)`, `[32,64)`,
+... ) and `kModRoots` (`pow(17, 2*bitreverse(i) + 1, p)`) from the definition comments the file
+itself carries, checks all 384 entries against the authority's literals and writes
+`src/ml_kem/tables.rs`. It joins `pipeline.sh` before `cargo fmt`, its renderer being
+`#[rustfmt::skip]`-stable.
+
+**`CONSTTIME_SECRET`/`CONSTTIME_DECLASSIFY` are the empty macros on this profile** (`ml_kem.c:150`
+selects the valgrind arm only under `OPENSSL_CONSTANT_TIME_VALIDATION`). The thirteen call sites
+are recorded in `arith::CONSTTIME_SITES` with their coordinates rather than written as no-ops.
+
+### The evidence is the authority's own published vectors, and one transcription bug fell out
+
+`src/ml_kem/tests.rs` drives five arms over `include_str!`-embedded copies of the authority's
+`test/recipes/30-test_evp_data/evppkey_ml_kem_*.txt` files. Nothing is typed: every seed, key,
+entropy, ciphertext and expected output is parsed at test time.
+
+* **The keygen KATs** (`evppkey_ml_kem_{512,768,1024}_keygen.txt`) -- a 64-byte `(d, z)` seed
+  through `ossl_ml_kem_set_seed`/`ossl_ml_kem_genkey` must produce the record's `hexpub` **and**
+  `hexpriv` byte for byte. That single comparison closes matrix expansion, both CBD samplers, the
+  NTT and its inverse, the two matrix products and both encoders.
+* **The encap KATs** and **the decap KATs**, which also carry the **negative** records the 768 and
+  1024 files hold: 120 `Result = TEST_PARSE_PUBLIC_KEY_ERROR` records in each encap file, and 120
+  `TEST_PARSE_PRIVATE_KEY_ERROR` plus 20 `TEST_DECAPSULATE_ERROR` records in each decap file. Those
+  are checked as **refusals**, not skipped -- a refusal is the whole of what such a record asserts.
+* **The ACVP `encapDecap` set** (`evppkey_ml_kem_encap_decap.txt`, generated from NIST's
+  ACVP-Server `ML-KEM-encapDecap-FIPS203/internalProjection.json`), 108 records, read the way the
+  authority's `evp_test` KEM section reads it (`test/evp_test.c:2390-2401`).
+
+A differential court proves two implementations agree; these published vectors are what says the
+bytes are ML-KEM's (D400's rule).
+
+**One transcription bug, and what found it.** The first three arms failed on the last 128 bytes of
+the ciphertext -- the `v` scalar -- while the 640-byte `u` half matched exactly. `scalar_ntt`'s
+`*++roots`, the inverse NTT, `compress`/`decompress` and both CBD samplers were all cleared by the
+`u` half and by the keygen KAT, which left `scalar_decode_decompress_add` (`ml_kem.c:1095-1128`) as
+the one primitive no other arm reached. The cause was a loop-shape error in the transcription: the
+authority's `do { ... } while (curr < end)` advances `curr` **eight times per input byte**, so it
+runs `DEGREE / 8 = 32` times, and the crate's version advanced one coefficient per byte -- 256
+times, reading past the 32-byte input. The repaired function is now pinned by a **self-check test**
+that compares it against the two-step `decompress(bit, 1)`-and-add form written independently in
+the test, which is what localises the next such error to one function instead of one ciphertext.
+
+### The KEM unit, and the probe arm that courts the three rows
+
+`src/provider/ml_kem_kem.rs` is `ml_kem_kem.c.in` whole: the eight-slot
+`ML_KEM_ASYM_KEM_FUNCTIONS` table, the generated `ikmE` decoder (the repeated-key scan plus
+`OSSL_PARAM_locate_const`, the shape `src/provider/ecx_kem.rs` uses), and the nine `err_sites::
+PROV_ML_KEM_KEM_*` coordinates. **`ml_kem_encapsulate`'s `ctext == NULL` size-query arm is a plain
+`return 1`**, so the `end:` block's one-shot-entropy cleanse is *skipped* on that path -- written
+as the authority writes it, because the difference is observable the next time a caller
+encapsulates without re-initialising.
+
+`courts/phase8/rt_keymgmt_probe.c` gains `arm_ml_kem_kem_fetch`: `EVP_KEM_fetch` over the three
+rows and their `MLKEM###` aliases, `EVP_KEM_is_a` over each row's full, short and
+`id-alg-ml-kem-###` aliases plus one other row's name, and the absent-name refusal. **`EVP_KEM_fetch`
+is what makes the row observable while the ML-KEM key type's own keymgmt unit is still unlanded**:
+`EVP_PKEY_CTX_new_from_name` would go through `OSSL_OP_KEYMGMT` and answer NULL on the candidate,
+which would be a new divergence rather than an observation. All 19 new observations are equal on
+both sides; `RT-KEYMGMT` is 299 observations, up from 280.
+
+### What remains, in this pass's measured order
+
+* **`crypto/ml_kem/ml_kem.c`'s keymgmt unit -- `keymgmt/ml_kem_kmgmt.c.in`, 902 lines, 3 rows.**
+  First: the three rows are the type face of the core this pass landed, and the probe above is
+  already written to grow into them (`EVP_PKEY_CTX_new_from_name` becomes reachable the moment the
+  keymgmt rows publish).
+* **The four hybrid `mlx` rows -- `keymgmt/mlx_kmgmt.c.in` (844) + `kem/mlx_kem.c` (350), 8 rows.**
+  Second: there is no `crypto/mlx/`, the hybrid logic **is** those two provider units over the
+  ML-KEM and EC/ECX halves, and both halves are now in the crate.
+* **SM2 -- 2 rows, 1,940 lines** (`crypto/sm2/` 1,076 + `der_sm2_sig.c` 39 + `sm2_sig.c.in` 585 +
+  `sm2_enc.c.in` 240). Third: two large units whose two faces share the one crypt unit, and its
+  DER-OID pair sits on the pattern D399 landed for SLH-DSA.
+* **`kem/ec_kem.c.in` -- 1 row, 822 lines.** Fourth: one row, one of whose functions
+  (`ossl_ec_dhkem_derive_private`) is already landed, but whose encapsulation path is the
+  HPKE-derived one this crate models only partly.
+* **`crypto/ml_dsa/` -- 6 rows, 4,925 lines.** Last: the worst rows-per-line left, and nothing else
+  waits on it.
+
+### A defect observed in a landed sibling, recorded rather than touched
+
+`src/provider/slh_dsa_kmgmt.rs:90-95` defines `OSSL_KEYMGMT_SELECT_PRIVATE_KEY` as `0x02` and
+`OSSL_KEYMGMT_SELECT_PUBLIC_KEY` as `0x04`, citing `include/openssl/core_dispatch.h`; the header
+says `0x01` and `0x02` (`core_dispatch.h:640-641`), and `src/evp/pkey.rs:1711-1721` already spells
+them that way. D399's rows call `slh_dsa_has`/`slh_dsa_key_dup` with the header's values, so the
+two constants are wrong by one bit each. It is named here because this pass read the neighbouring
+unit, and it is **not** changed here: it belongs to D399's unit and to a pass that can re-run that
+unit's courts. `src/ml_kem/key.rs` carries its own pair at the header's values.
+
+No claim is made that the stratum is closer to sealing than `provider_rows` says. `provider_rows` is
+**286/20** after this pass, and the three rows that moved are exactly the three the unit publishes.
+`cargo test --lib` is **1024 passed, 0 failed**, `cargo clippy --all-targets -- -D warnings` is clean,
+and the pipeline is `PIPELINE OK` with **exit 0** and **99 courts / 38,546 observations**.
