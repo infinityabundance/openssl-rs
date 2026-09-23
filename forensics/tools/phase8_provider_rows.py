@@ -86,6 +86,40 @@ WITHHELD: dict[str, str] = {
         "cannot close: the three rows `ARGON2D`, `ARGON2I` and `ARGON2ID` become reachable once "
         "`crypto/threads_pthread.c`'s thread-start/join/clean trio lands, and only then."
     ),
+    # The whole `OSSL_OP_KEYEXCH` group. Every row of `deflt_keyexch[]` is reached through
+    # `EVP_PKEY_CTX_new_from_name(NULL, <name>, NULL)`, which fetches a **KEYMGMT** for that name,
+    # and the crate publishes no `OSSL_OP_KEYMGMT` row at all -- `deflt_query` has no keymgmt arm.
+    # Measured, not reasoned: a two-line probe against both sides answers `ctx=1` /
+    # `derive_init=1` on the authority and `ctx=0` on the candidate.
+    "forensics/authorities/src/openssl-3.6.4/providers/implementations/exchange/dh_exch.c.in": (
+        "**Withheld: not reachable, and it is the whole group rather than this unit.** `DH` is "
+        "reached through `EVP_PKEY_CTX_new_from_name(NULL, \"DH\", NULL)`, which fetches the `DH` "
+        "**KEYMGMT** row; the crate publishes no `OSSL_OP_KEYMGMT` row (`deflt_query` has no "
+        "keymgmt arm), and this crate's DH key layer is the legacy `EVP_PKEY_AMETH` one, which does "
+        "**not** route through a provider keyexch. Measured against both sides: the authority "
+        "answers `ctx=1` and `EVP_PKEY_derive_init` `=1`, the candidate `ctx=0`. The row becomes "
+        "drivable when the `DH` keymgmt row lands. Its one apparent missing external, "
+        "`ossl_dh_check_key`, is **not** a blocker: it is called only inside `#ifdef FIPS_MODULE` "
+        "(`dh_exch.c.in:104-113`)."
+    ),
+    "forensics/authorities/src/openssl-3.6.4/providers/implementations/exchange/ecdh_exch.c.in": (
+        "**Withheld: not reachable.** Same KEYMGMT gate as `dh_exch.c.in`, on the `ECDH` row, and "
+        "additionally on the EC objects it computes with: the unit calls `EC_GROUP`/`EC_POINT` and "
+        "`ossl_ecdh_kdf_*`, and D334 records `EC_GROUP`/`EC_POINT` as one indivisible landing that "
+        "has not happened (`CT-EC` is `PENDING` for exactly that)."
+    ),
+    "forensics/authorities/src/openssl-3.6.4/providers/implementations/exchange/ecx_exch.c.in": (
+        "**Withheld: not reachable.** Same KEYMGMT gate as `dh_exch.c.in`, on the `X25519` and "
+        "`X448` rows. Its own layer is present (`ossl_ecx_key_up_ref`, `ossl_ecx_key_free` and "
+        "`ossl_ecx_compute_key` are landed in `src/ec/ecx_key.rs`), so nothing in this unit blocks "
+        "it: the two keymgmt rows do."
+    ),
+    "forensics/authorities/src/openssl-3.6.4/providers/implementations/exchange/kdf_exch.c": (
+        "**Withheld: not reachable.** Same KEYMGMT gate as `dh_exch.c.in`, on the `TLS1-PRF`, "
+        "`HKDF` and `SCRYPT` rows. The KDFs themselves are landed (D377, D379), and this unit is a "
+        "thin wrapper over `EVP_KDF_fetch`/`EVP_KDF_derive`, so nothing in it blocks it: the three "
+        "keymgmt rows (`kdf_legacy_kmgmt.c`) do."
+    ),
 }
 
 # The operations this document's first section executes. The task that commissioned this
@@ -327,6 +361,9 @@ def main() -> int:
                 f"`{':'.join(r['aliases'])}` | `{crate_file_for(r)}` |"
             )
         w("")
+        if unit in WITHHELD:
+            w(WITHHELD[unit])
+            w("")
     w("## Provenance")
     w("")
     w("| field | value |")

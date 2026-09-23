@@ -27688,3 +27688,59 @@ remain, and they are D382's withheld argon2 rows (`ARGON2D`, `ARGON2I`, `ARGON2I
 is recorded under the unit's own heading in `docs/PHASE-8-PROVIDER-ROWS.md`. The `OSSL_OP_KEYEXCH`
 rows were not reached this pass. No claim is made that the stratum is close to sealing: it is
 **122** provider rows away, and that is the number.
+
+---
+
+## D384 — the whole `OSSL_OP_KEYEXCH` group is withheld: every row of `deflt_keyexch[]` is gated by a KEYMGMT row, and the crate publishes none
+
+**Decision.** The seven `OSSL_OP_KEYEXCH` rows — `DH`, `ECDH`, `X25519`, `X448`, `TLS1-PRF`, `HKDF`
+and `SCRYPT` — are **withheld**, not stubbed, and the reason is recorded under each of their four
+units' own headings in `docs/PHASE-8-PROVIDER-ROWS.md` by the `WITHHELD` map D382 introduced. No
+`OSSL_OP_KEYEXCH` arm is added to `deflt_query` and no exchange module is landed: a published row
+that cannot be courted fails `provider_court_coverage.py` closed, so publishing and withholding are
+not compatible here. `provider_rows` does not move.
+
+**Why, measured rather than reasoned.** Every row of `deflt_keyexch[]` is reached one way only:
+`EVP_PKEY_CTX_new_from_name(NULL, <name>, NULL)`, which fetches a **`OSSL_OP_KEYMGMT`** row for that
+name; the crate publishes none (`deflt_query`'s six arms do not include keymgmt). A two-line probe
+compiled against both sides settles it and was run before this entry:
+`EVP_PKEY_CTX_new_from_name(NULL, "DH", NULL)` answers `ctx=1` and `EVP_PKEY_derive_init` `=1` on the
+authority and `ctx=0` on the candidate, so no arm naming the row can be written without a residual.
+This crate's DH key layer cannot substitute: it is the **legacy `EVP_PKEY_AMETH`** path, which does
+not route through a provider keyexch at all. `dh_exch.c.in`'s one apparent missing external,
+`ossl_dh_check_key`, is **not** a blocker — it is called only inside `#ifdef FIPS_MODULE`
+(`dh_exch.c.in:104-113`).
+
+**What each unit would have needed, so the next pass does not have to re-measure.** `dh_exch.c.in`
+needs the `DH` keymgmt row; `ecdh_exch.c.in` needs the `ECDH` keymgmt row **and** the
+`EC_GROUP`/`EC_POINT` layer D334 records as one indivisible landing not yet made (`CT-EC` is
+`PENDING` for it); `ecx_exch.c.in` needs the `X25519`/`X448` keymgmt rows and nothing else — its own
+layer (`ossl_ecx_key_up_ref`/`_free`/`ossl_ecx_compute_key`) is landed; and `kdf_exch.c` needs the
+`TLS1-PRF`/`HKDF`/`SCRYPT` keymgmt rows of `kdf_legacy_kmgmt.c` and nothing else — it is a thin
+wrapper over `EVP_KDF_fetch`/`EVP_KDF_derive`, both of which this stratum already owns (D377, D379).
+The full transcription of `dh_exch.c` was written and removed rather than left half-claimed; the
+`OSSL_OP_KEYEXCH` arm and the `OSSL_OP_KEYEXCH`/`ossl_dh_check_key` visibility changes were reverted
+with it, and `gen_err_raise_sites.py`'s `exchange/dh_exch.c` entry removed.
+
+**The biggest single block, measured for the commissioning question.** By row count the largest
+operation is **`OSSL_OP_SIGNATURE`, 59 rows across 8 units** — `rsa_sig.c.in` (14), `slh_dsa_sig.c.in`
+(12), `dsa_sig.c.in` (10), `ecdsa_sig.c.in` (10), `eddsa_sig.c.in` (5), `mac_legacy_sig.c` (4),
+`ml_dsa_sig.c.in` (3), `sm2_sig.c.in` (1). But the largest *effective* block is
+**`OSSL_OP_KEYMGMT`, 40 rows across 11 units** — `slh_dsa_kmgmt.c.in` (12), `ecx_kmgmt.c.in` (4),
+`mac_legacy_kmgmt.c` (4), `mlx_kmgmt.c.in` (4), `kdf_legacy_kmgmt.c` (3), `ml_dsa_kmgmt.c.in` (3),
+`ml_kem_kmgmt.c.in` (3), `dh_kmgmt.c` (2), `ec_kmgmt.c` (2), `rsa_kmgmt.c` (2), `dsa_kmgmt.c` (1) —
+because it is the **gate** for four whole operations, not merely a block beside them. The same probe
+above, run over twelve keytypes, answers `ctx=1` for every one on the authority (`RSA`, `RSA-PSS`,
+`DSA`, `EC`, `ED25519`, `ED448`, `X25519`, `X448`, `ML-DSA-44`, `ML-KEM-512`, `SLH-DSA-SHA2-128s`,
+`SM2`) and `ctx=0` for every one on the candidate. So the keymgmt group's 40 rows unblock **119 of
+the 122** unlanded rows — its own 40, plus `OSSL_OP_SIGNATURE`'s 59, `OSSL_OP_KEM`'s 11,
+`OSSL_OP_KEYEXCH`'s 7 and `OSSL_OP_ASYM_CIPHER`'s 2 — and the other three are D382's withheld argon2
+rows. **D384 recommends scoping the next pass to the keymgmt group**, and within it the units that
+carry the keytypes the signature group needs most (`rsa_kmgmt.c`, `dsa_kmgmt.c`, `ec_kmgmt.c`,
+`dh_kmgmt.c`, then the ECX/PQC units).
+
+**Movement.** None, and that is the point: `provider_rows` stays implemented **184** / unimplemented
+**122** over **306** owned, and `projection.open[8]` stays **122**. The export ledger is untouched
+(`forensics/phase8-obligations.json` still `complete: true`, implemented **786**, deferred **0**,
+open **0**), and `forensics/phase-state.json` is unchanged. No claim is made that the stratum is
+closer to sealing than that.
