@@ -627,8 +627,8 @@ static void arm_slh_dsa_keymgmt(void)
         EVP_PKEY_CTX *ctx;
         EVP_PKEY *pkey = NULL;
         OSSL_PARAM params[2];
-        unsigned char priv[128], pub[64];
-        size_t priv_len = 0, pub_len = 0;
+        unsigned char priv[128], pub[64], dup_pub[64];
+        size_t priv_len = 0, pub_len = 0, dup_pub_len = 0;
         int bits = 0, sec_bits = 0, max_size = 0;
 
         ctx = EVP_PKEY_CTX_new_from_name(NULL, name, NULL);
@@ -674,6 +674,36 @@ static void arm_slh_dsa_keymgmt(void)
         kv_int(key, EVP_PKEY_get_int_param(pkey, OSSL_PKEY_PARAM_MAX_SIZE, &max_size) == 1
                        ? max_size
                        : -1);
+
+        /* Arm 3 (D402): the `has` and `dup` columns, through the two public routes that pass a
+         * selection. `EVP_PKEY_missing_parameters` is `evp_keymgmt_util_has(pkey,
+         * OSSL_KEYMGMT_SELECT_DOMAIN_PARAMETERS)`, a bit disjoint from the key pair, so
+         * `slh_dsa_has` answers "the selection is not missing" without consulting the key;
+         * `EVP_PKEY_eq`'s first act is `evp_keymgmt_util_has(k,
+         * OSSL_KEYMGMT_SELECT_PUBLIC_KEY)` on each side; `EVP_PKEY_dup` reaches the keymgmt's
+         * `dup` with `OSSL_KEYMGMT_SELECT_ALL`. Before D402 the two provider units read a pair
+         * one bit left of the header's, and the public-only column of the `has` table is where
+         * that showed. */
+        snprintf(key, sizeof(key), "slh.%s.missing_parameters", name);
+        kv_int(key, EVP_PKEY_missing_parameters(pkey));
+        {
+            EVP_PKEY *dup = EVP_PKEY_dup(pkey);
+
+            snprintf(key, sizeof(key), "slh.%s.dup", name);
+            kv_int(key, dup != NULL);
+            if (dup != NULL) {
+                snprintf(key, sizeof(key), "slh.%s.dup_eq", name);
+                kv_int(key, EVP_PKEY_eq(pkey, dup));
+                dup_pub_len = 0;
+                snprintf(key, sizeof(key), "slh.%s.dup_get_pub", name);
+                kv_int(key, EVP_PKEY_get_octet_string_param(dup, OSSL_PKEY_PARAM_PUB_KEY,
+                                                            dup_pub, sizeof(dup_pub),
+                                                            &dup_pub_len));
+                snprintf(key, sizeof(key), "slh.%s.dup_pub_matches", name);
+                kv_int(key, dup_pub_len == pub_len && memcmp(dup_pub, pub, pub_len) == 0);
+                EVP_PKEY_free(dup);
+            }
+        }
 
         EVP_PKEY_free(pkey);
         EVP_PKEY_CTX_free(ctx);

@@ -13701,7 +13701,8 @@
             "basis": "called",
             "courts": [
               "RT-EVP-PKEY-OPS",
-              "RT-EVP-REF"
+              "RT-EVP-REF",
+              "RT-KEYMGMT"
             ],
             "symbol": "EVP_PKEY_dup"
           },
@@ -13749,7 +13750,8 @@
             "basis": "called",
             "courts": [
               "RT-EVP-PKEY-OPS",
-              "RT-EVP-REF"
+              "RT-EVP-REF",
+              "RT-KEYMGMT"
             ],
             "symbol": "EVP_PKEY_eq"
           },
@@ -14412,7 +14414,8 @@
             "basis": "called",
             "courts": [
               "RT-AMETH",
-              "RT-EVP-PKEY"
+              "RT-EVP-PKEY",
+              "RT-KEYMGMT"
             ],
             "symbol": "EVP_PKEY_missing_parameters"
           },
@@ -22052,7 +22055,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "d3cf5885f367176a5cc5322d061c4df5c8db13d689e4d71fb1327a82d7ee81c1"
+      "sha256": "0f09a4562139bec4e13395c68cd76b3e403b00577b4c9992e6eed52800542a17"
     },
     {
       "name": "symbol-ownership",
@@ -22122,7 +22125,7 @@
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "ab024ff6c18c794704b5455257009ffd395e2920bdd3cb46aca27327b030478c"
+      "sha256": "54c152b868d6a8825b075de6778e0c420aa5eefb07becfa15364ede35e73c9fd"
     },
     {
       "name": "phase9-obligations",

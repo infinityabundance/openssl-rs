@@ -303,7 +303,7 @@
       "verdict": "pass"
     },
     "RT-KEYMGMT": {
-      "observations": 299,
+      "observations": 359,
       "verdict": "pass"
     },
     "RT-LHASH": {
