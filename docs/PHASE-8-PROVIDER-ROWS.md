@@ -150,11 +150,15 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 |---|---|---|---|---|
 | `deflt_keyexch` | `ossl_dh_keyexch_functions` | `OSSL_OP_KEYEXCH` | `DH:dhKeyAgreement:1.2.840.113549.1.3.1` | `_no arm yet_` |
 
+**Withheld: not reachable, and it is the whole group rather than this unit.** `DH` is reached through `EVP_PKEY_CTX_new_from_name(NULL, "DH", NULL)`, which fetches the `DH` **KEYMGMT** row; the crate publishes no `OSSL_OP_KEYMGMT` row (`deflt_query` has no keymgmt arm), and this crate's DH key layer is the legacy `EVP_PKEY_AMETH` one, which does **not** route through a provider keyexch. Measured against both sides: the authority answers `ctx=1` and `EVP_PKEY_derive_init` `=1`, the candidate `ctx=0`. The row becomes drivable when the `DH` keymgmt row lands. Its one apparent missing external, `ossl_dh_check_key`, is **not** a blocker: it is called only inside `#ifdef FIPS_MODULE` (`dh_exch.c.in:104-113`).
+
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/exchange/ecdh_exch.c.in` — 1 row(s)
 
 | table | dispatch table symbol | operation | algorithm name(s) | crate file |
 |---|---|---|---|---|
 | `deflt_keyexch` | `ossl_ecdh_keyexch_functions` | `OSSL_OP_KEYEXCH` | `ECDH` | `_no arm yet_` |
+
+**Withheld: not reachable.** Same KEYMGMT gate as `dh_exch.c.in`, on the `ECDH` row, and additionally on the EC objects it computes with: the unit calls `EC_GROUP`/`EC_POINT` and `ossl_ecdh_kdf_*`, and D334 records `EC_GROUP`/`EC_POINT` as one indivisible landing that has not happened (`CT-EC` is `PENDING` for exactly that).
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/exchange/ecx_exch.c.in` — 2 row(s)
 
@@ -163,6 +167,8 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 | `deflt_keyexch` | `ossl_x25519_keyexch_functions` | `OSSL_OP_KEYEXCH` | `X25519:1.3.101.110` | `_no arm yet_` |
 | `deflt_keyexch` | `ossl_x448_keyexch_functions` | `OSSL_OP_KEYEXCH` | `X448:1.3.101.111` | `_no arm yet_` |
 
+**Withheld: not reachable.** Same KEYMGMT gate as `dh_exch.c.in`, on the `X25519` and `X448` rows. Its own layer is present (`ossl_ecx_key_up_ref`, `ossl_ecx_key_free` and `ossl_ecx_compute_key` are landed in `src/ec/ecx_key.rs`), so nothing in this unit blocks it: the two keymgmt rows do.
+
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/exchange/kdf_exch.c` — 3 row(s)
 
 | table | dispatch table symbol | operation | algorithm name(s) | crate file |
@@ -170,6 +176,8 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 | `deflt_keyexch` | `ossl_kdf_tls1_prf_keyexch_functions` | `OSSL_OP_KEYEXCH` | `TLS1-PRF` | `_no arm yet_` |
 | `deflt_keyexch` | `ossl_kdf_hkdf_keyexch_functions` | `OSSL_OP_KEYEXCH` | `HKDF` | `_no arm yet_` |
 | `deflt_keyexch` | `ossl_kdf_scrypt_keyexch_functions` | `OSSL_OP_KEYEXCH` | `SCRYPT:id-scrypt:1.3.6.1.4.1.11591.4.11` | `_no arm yet_` |
+
+**Withheld: not reachable.** Same KEYMGMT gate as `dh_exch.c.in`, on the `TLS1-PRF`, `HKDF` and `SCRYPT` rows. The KDFs themselves are landed (D377, D379), and this unit is a thin wrapper over `EVP_KDF_fetch`/`EVP_KDF_derive`, so nothing in it blocks it: the three keymgmt rows (`kdf_legacy_kmgmt.c`) do.
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/kem/ec_kem.c.in` — 1 row(s)
 
