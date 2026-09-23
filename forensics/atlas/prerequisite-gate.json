@@ -14,7 +14,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 75,
-      "language_surface_not_modelled_by_name": 4811,
+      "language_surface_not_modelled_by_name": 4830,
       "planned_prerequisites": 8
     },
     "census_by_unit": {
@@ -351,7 +351,8 @@
         "crypto/sm4/sm4.c": 4,
         "crypto/sparse_array.c": 6,
         "crypto/stack/stack.c": 17,
-        "crypto/thread/api.c": 4,
+        "crypto/thread/arch/thread_posix.c": 13,
+        "crypto/thread/internal.c": 10,
         "crypto/threads_common.c": 8,
         "crypto/threads_pthread.c": 24,
         "crypto/trace.c": 24,
@@ -472,8 +473,8 @@
       ]
     },
     "checked": {
-      "authority_units": 303,
-      "crate_modules": 416,
+      "authority_units": 304,
+      "crate_modules": 417,
       "deferral_blocker_rows": 1,
       "deferrals_recorded": 9,
       "divergence_names_covered": 42,
@@ -582,7 +583,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "f7dbe56d013f04e0d7152c9b13eacb04c25c52e7c8cd7d8cad5468fa6eff6eb1",
+  "body_hash": "e4de3d0050691bd86c562137b85501523fdb1188bcdd26518d9a76f6172b3694",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -603,7 +604,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "ed05eeb34a0d39311fda51aff69d41ed4c83e5becce7ca74ab334cf4f6edda89"
+      "sha256": "176c9691ba202a986310656583481af4ffaeed77bff9184f5e90e2d48a161327"
     },
     {
       "name": "symbol-ownership",
@@ -618,7 +619,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "b61f5acd5998f629703682174a8f810d3e47bb9aee775f94cda7fce5e26179a0"
+      "sha256": "97e61efb45b0e1dff2f9955225bf15729b5f9e1509b05ede80820bb897787449"
     },
     {
       "name": "phase-state",
@@ -628,7 +629,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "3af46021add39c2ae4ffdb2524af3410d66ef4112fa3f36ed0cfde42a748472d"
+      "sha256": "e79ed3f40b7cbb93ab9970dfdd382b9b129eb83277feef305db32c1ab188a39c"
     },
     {
       "name": "crate-source-tree",

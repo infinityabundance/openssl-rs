@@ -48,6 +48,7 @@ pub mod sparse_array;
 pub mod stack;
 pub mod str;
 pub mod thread;
+pub mod thread_arch;
 pub mod thread_events;
 pub mod threads_common;
 pub mod time;

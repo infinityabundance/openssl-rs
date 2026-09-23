@@ -264,6 +264,15 @@ UI_METHOD_VTABLE = ("not a provider dispatch: a member of `UI_METHOD`'s vtable, 
                     "in `crypto/ui/ui_local.h:20-59` as a plain function pointer rather than "
                     "through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records "
                     "no typedef for it")
+# `include/internal/thread_arch.h:57` -- `CRYPTO_THREAD_ROUTINE`, the thread routine the pool and
+# the native layer both take. A **function-pointer typedef** rather than a struct member, but the
+# atlas records no typedef for it for the same reason as the vtable families above: its universe is
+# the installed public surface and `internal/thread_arch.h` is not installed. The crate's alias
+# squashes to exactly this name, so without an entry the convention rule leaves it unlinked -- which
+# is what D397's first run of this court reported. `CRYPTO_THREAD_RETVAL` needs no entry: it is a
+# scalar typedef with no declarator for the signature reader to see.
+THREAD_ARCH_INT = ("not a provider dispatch: declared in `include/internal/thread_arch.h:57`, "
+                   "which is not installed, so the atlas has no record of it")
 
 
 def _inline(fn: str, spelling: str) -> str:
@@ -532,6 +541,8 @@ NOT_A_DISPATCH: dict[str, str] = {
     "ConfDumpFn": CONF_INT,
     "ConfLoadFn": CONF_INT,
     "ConfLoadBioFn": CONF_INT,
+    # --- the thread layer's one alias (`include/internal/thread_arch.h`, D397) ----------------
+    "CryptoThreadRoutine": THREAD_ARCH_INT,
     "ConfIsNumberFn": CONF_INT,
     "ConfToIntFn": CONF_INT,
     "DsoMergerFunc": DSO_INT,

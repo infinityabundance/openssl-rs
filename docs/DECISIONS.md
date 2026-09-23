@@ -28440,3 +28440,109 @@ next session does not read a green `--test-threads=1` run as proof that the test
   own dispatch and the twelve `eckem_*` functions are not.
 
 No claim is made that the stratum is closer to sealing than `provider_rows` says.
+
+## D397 -- `crypto/thread/` lands as code: the `CRYPTO_THREAD` object, its native layer and `internal.c`'s pool, with a latent lost-wakeup window in `ossl_crypto_condvar_wait` closed
+
+**Decision.** D396 named `crypto/thread/` as the next target on the strength of a measurement that
+turned out to be two-thirds of the story: the thread trio is ~425 lines, but the unit it unblocks,
+`kdfs/argon2.c.in`, is **1,574** lines of provider C that has never been started. The standing rule is
+to land a prerequisite as code rather than hold it, so the thread layer is landed here, whole, and
+argon2 is measured for a pass of its own rather than half-written.
+
+1. **What landed, and where.** `crypto/thread/arch.c` and `crypto/thread/arch/thread_posix.c` land as
+   `src/runtime/thread_arch.rs` -- the `CRYPTO_THREAD` object member for member (including the `ctx`
+   member D396 measured as missing), the four state flags with their two `<< 16` error copies, the
+   `thread_start_thunk`, `native_start`/`_spawn`/`_perform_join`/`_join`/`/clean`/`_exit`/`_is_self`
+   and the two `pthread_attr_*` bindings -- and `crypto/thread/internal.c`'s four remaining functions
+   (`_ossl_get_avail_threads`, `ossl_get_avail_threads`, `ossl_crypto_thread_start`/`_join`/`_clean`)
+   land in `src/context/thread_data.rs`, beside the `ossl_threads_ctx_new`/`_free` that file already
+   carried. The mutex, condition variable and `pthread_create` are the same primitives the profile
+   uses; `std::thread` is deliberately **not** used, because the routine is a C function pointer over
+   a caller-owned `void *`, neither of which is `Send`.
+2. **A latent defect in `ossl_crypto_condvar_wait` is fixed, and it is the first real prerequisite of
+   this pass.** The Phase 3 implementation released the caller's mutex, then re-acquired its parking
+   mutex, then waited -- three statements, with a window in the middle. A signaller that arrived in
+   that window had its signal consumed by nobody, and the waiter then blocked for ever: a classic lost
+   wakeup, reachable the first time anything waited. Nothing did, which is why it survived: all four
+   `ossl_crypto_condvar_*` carried `#[allow(dead_code)] // unreachable until the thread pool ...`.
+   POSIX does not have the window because `pthread_cond_wait` releases-and-waits as one operation with
+   respect to the signaller; a `std::sync::Condvar` waits on a guard it is *given*, so the crate's
+   condition variable now carries **its own gate mutex**, held across the release of the caller's
+   mutex and the wait, and `signal`/`broadcast` take it before notifying. The predicate is still
+   re-checked under the caller's mutex, which is what makes an early signal harmless. The three
+   `allow(dead_code)`s are gone.
+3. **`FINISHED` before `retval` before the broadcast, and `JOINED` in the error half on failure.**
+   Both orderings are the authority's and both are transcribed rather than tidied: the first is why
+   `native_join`'s first loop always finds a retval, and the second is what makes a concurrent joiner
+   retry instead of blocking. The three-way state -- already `FINISHED`, already `JOINED`, or another
+   caller's `JOIN_AWAIT` -- is exactly the authority's, because `pthread_join` may be called once.
+4. **Allocation records carry the authority's coordinates.** The object is
+   `CRYPTO_zalloc(..., "../../src/openssl-3.6.4/crypto/thread/arch.c", 21)` and freed at `:43`; the
+   `pthread_t` block is allocated and freed at `thread_posix.c:41`/`:59`. `pthread_attr_t` is an
+   opaque 56-byte, 8-aligned local -- the size and alignment glibc gives it -- because only
+   `setdetachstate` is ever touched; a wrong size would corrupt the stack and the ABI court is what
+   would catch a port.
+5. **The dead-code discipline, stated once rather than twenty-nine times.** Every item in the new
+   module is unreachable from the *library* build until argon2 lands, so `thread_arch.rs` carries one
+   module-level `#![allow(dead_code)]` naming that caller, and the five pool items carry the same
+   reason individually (the rest of `thread_data.rs` is live). This is the `cipher.rs` convention --
+   "the landing caller is ..." -- rather than the twenty-nine scattered attributes a per-item reading
+   of the rule would have produced.
+6. **The unit's timed wait lands too, with its timed arm a documented substitution.**
+   `ossl_crypto_condvar_wait_timeout` (`thread_posix.c:178-201`) is the one function of the file that
+   would otherwise have been left out: nothing in the authority calls it -- the pool's
+   `ossl_crypto_thread_join` waits without a deadline -- so a record would have been defensible. It
+   is written instead, because the unit is transcribed whole and because the prerequisite gate
+   requires every name of a landed unit to be present or recorded. Its infinite arm is the untimed
+   wait verbatim; its timed arm converts the `OSSL_TIME` deadline to a remaining duration against
+   `CLOCK_MONOTONIC` (the clock `OSSL_TIME` deadlines are built from) and calls
+   `Condvar::wait_timeout` under the same gate, where the authority converts to a `timespec` and
+   calls `pthread_cond_timedwait` on a condition variable whose default clock is `CLOCK_REALTIME`.
+   The substitution is more coherent than the line it replaces, and a deterministic unit test pins
+   the timeout path.
+7. **One prerequisite record, and it is what keeps a latent brittleness honest.** Landing the arch
+   layer moved `src/runtime/thread.rs`'s **dominant** authority unit from `crypto/thread/api.c` to
+   `crypto/threads_pthread.c` in `transcription-edges.json` -- the map credits a module with its
+   dominant unit, and the module now holds `thread_posix.c`'s timed wait as well as its
+   `CRYPTO_THREAD_*` family. That made `crypto/thread/api.c`, named by Phase 6's row 6.6e, read as
+   unreached for the first time, and `plan_reconciliation.py` failed the pipeline with
+   `plan_named_unit_not_reached`. The unit **is** reached -- its three exports are all built, two in
+   `src/context/thread_data.rs` and one in `src/runtime/thread.rs` -- so the fix is the record the
+   mechanism has for exactly this shape: a `units` row of class `reached_by_a_named_construct`
+   naming the module and the three constructs. Nothing about the attribution map was overridden.
+
+**Driven by unit tests, because there is no row to drive.** No provider row moves with this unit, so
+`court/phase8` gains nothing and `provider_rows` is **unchanged at 256 implemented / 50 unlanded**.
+The evidence is `src/context/thread_data.rs`'s four tests and
+`src/runtime/thread.rs`'s `condvar_tests`: `the_pool_starts_joins_and_cleans_workers`
+starts four workers on a context with `max_threads = 8`, checks `ossl_get_avail_threads` reads 8 then 4
+then 8, checks `ossl_crypto_thread_clean` refuses each handle before its join and accepts it after,
+joins each and checks the routine's returned ordinal reached the caller, and checks the workers'
+shared counter. `a_zero_max_threads_refuses_a_start` observes the refusal.
+`a_past_deadline_times_out_and_reacquires_the_mutex` drives item 6's timed path, and
+`the_clock_never_reports_the_infinity_sentinel` pins the sentinel the infinite arm compares against.
+**The pool test is also the first exercise of the condition variable in the crate's history, and it
+is what would have hung had item 2's window not been closed** -- a lost wakeup is a hang, not a
+failing assertion.
+
+**What remains, measured.** `provider_rows` is 256/50 and this pass does not move it. The units, with
+the line counts D397 measured (authority source, `.c`/`.h`/`.c.in`):
+
+| block | rows | authority lines |
+|---|---|---|
+| `crypto/slh_dsa/` + `slh_dsa_kmgmt.c.in` + `slh_dsa_sig.c.in` | 24 | 2,952 + 894 = 3,846 |
+| `crypto/ml_kem/ml_kem.c` + four ML-KEM/`mlx` provider units | 14 | 2,452 + 2,368 = 4,820 |
+| `crypto/ml_dsa/` + `ml_dsa_kmgmt.c.in` + `ml_dsa_sig.c.in` | 6 | 3,772 + 1,153 = 4,925 |
+| `kdfs/argon2.c.in` (its thread prerequisite now landed) | 3 | 1,574 |
+| `crypto/sm2/` + `der_sm2_sig.c` + `sm2_sig.c.in` + `sm2_enc.c.in` | 2 | 1,076 + 864 = 1,940 |
+| `kem/ec_kem.c.in` (one function already landed) | 1 | 822 |
+
+* **There is no `crypto/mlx/`.** D396's withheld note for the four hybrid rows said they depend on it;
+  they do not. The hybrid logic *is* the two provider units (`mlx_kem.c` 350, `mlx_kmgmt.c.in` 844),
+  so those four rows cost nothing beyond `crypto/ml_kem/` and their own 1,194 lines. The note is
+  corrected.
+* **Argon2 is now the best rows-per-line left in absolute terms** (1,574 lines for three rows) and the
+  thread prerequisite is landed, so it is the next target; `crypto/ml_dsa/` is the worst (4,925 for
+  six).
+
+No claim is made that the stratum is closer to sealing than `provider_rows` says.
