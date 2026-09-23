@@ -69,6 +69,7 @@
 #include <openssl/whrlpool.h>
 #include <openssl/evp.h>
 #include <openssl/kdf.h>
+#include <openssl/thread.h>
 #include <openssl/provider.h>
 #include <openssl/params.h>
 #include <openssl/core_names.h>
@@ -1824,6 +1825,238 @@ static void rt_kdf_rows(void)
         skey = EVP_SKEY_import(NULL, "GENERIC-SECRET", NULL, OSSL_SKEYMGMT_SELECT_PARAMETERS, sp);
         printf("skey.generic.noselect.import=%d\n", skey != NULL);
         EVP_SKEY_free(skey);
+    }
+
+    /* The three ARGON2 rows, the unit `providers/implementations/kdfs/argon2.c` and the last group
+     * of `deflt_kdfs[]`. Every input is a constant in this file, so the derived bytes are a vector,
+     * and all three variants are driven with the same four inputs -- RFC 9106's own primary vector,
+     * which is also the first case in the authority's `test/recipes/30-test_evp_data/
+     * evpkdf_argon2.txt`: a 32-byte password of `01`, a 16-byte salt of `02`, an 8-byte secret of
+     * `03` and 12 bytes of associated data of `04` -- so the three rows differ only in their
+     * addressing. `memcost` is deliberately small: what this arm observes is the addressing, the
+     * parameter bounds and the two fill paths, not a parameter space. */
+    {
+        unsigned char apw[32], asalt[16], asecret[8], aad[12];
+        unsigned char aout[64], aout1[64], aout2[64];
+        uint32_t lanes4 = 4, iter3 = 3, mem32 = 32;
+        uint32_t lanes2 = 2, thrds2 = 2, mem64 = 64;
+        uint32_t one = 1, eclean1 = 1, ver10 = 0x10;
+        OSSL_PARAM ap[9];
+
+        for (i = 0; i < sizeof(apw); i++)
+            apw[i] = 0x01;
+        for (i = 0; i < sizeof(asalt); i++)
+            asalt[i] = 0x02;
+        for (i = 0; i < sizeof(asecret); i++)
+            asecret[i] = 0x03;
+        for (i = 0; i < sizeof(aad); i++)
+            aad[i] = 0x04;
+
+        /* The three rows, each fetched by its own name and derived with the same inputs. */
+        for (i = 0; i < 3; i++) {
+            const char *aname = i == 0 ? "ARGON2D" : (i == 1 ? "ARGON2I" : "ARGON2ID");
+            char key[64];
+
+            kdf = EVP_KDF_fetch(NULL, aname, NULL);
+            snprintf(key, sizeof(key), "kdf.%s.fetch", aname);
+            printf("%s=%d\n", key, kdf != NULL);
+            kctx = EVP_KDF_CTX_new(kdf);
+
+            ap[0] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_PASSWORD, apw, sizeof(apw));
+            ap[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_SALT, asalt, sizeof(asalt));
+            ap[2] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_SECRET, asecret,
+                                                      sizeof(asecret));
+            ap[3] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_ARGON2_AD, aad, sizeof(aad));
+            ap[4] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_ARGON2_LANES, &lanes4);
+            ap[5] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_ITER, &iter3);
+            ap[6] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_ARGON2_MEMCOST, &mem32);
+            ap[7] = OSSL_PARAM_construct_end();
+
+            snprintf(key, sizeof(key), "kdf.%s.set", aname);
+            printf("%s=%d\n", key, EVP_KDF_CTX_set_params(kctx, ap));
+
+            memset(aout, 0, sizeof(aout));
+            snprintf(key, sizeof(key), "kdf.%s.derive", aname);
+            printf("%s=%d\n", key, EVP_KDF_derive(kctx, aout, sizeof(aout), ap));
+            snprintf(key, sizeof(key), "kdf.%s.key", aname);
+            printf("%s=", key);
+            rt_print_hex(aout, sizeof(aout));
+            printf("\n");
+
+            /* `size` is what the row reports it can produce: `SIZE_MAX`, and the row's own `-2`.
+             */
+            {
+                size_t sz = 0;
+                OSSL_PARAM gp[2];
+
+                gp[0] = OSSL_PARAM_construct_size_t(OSSL_KDF_PARAM_SIZE, &sz);
+                gp[1] = OSSL_PARAM_construct_end();
+                snprintf(key, sizeof(key), "kdf.%s.size.ret", aname);
+                printf("%s=%d\n", key, EVP_KDF_CTX_get_params(kctx, gp));
+                snprintf(key, sizeof(key), "kdf.%s.size", aname);
+                printf("%s=%zu\n", key, sz);
+            }
+            EVP_KDF_CTX_free(kctx);
+            EVP_KDF_free(kdf);
+        }
+
+        /* `early_clean` cleanses the stored password and secret once they have been hashed, so it
+         * must not move the derived bytes: the same vector with the flag set is compared against
+         * the one above. A fresh context is used because the flag's whole effect is on the *gctx's*
+         * stored copies. */
+        kdf = EVP_KDF_fetch(NULL, "ARGON2D", NULL);
+        kctx = EVP_KDF_CTX_new(kdf);
+        ap[0] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_PASSWORD, apw, sizeof(apw));
+        ap[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_SALT, asalt, sizeof(asalt));
+        ap[2] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_SECRET, asecret, sizeof(asecret));
+        ap[3] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_ARGON2_AD, aad, sizeof(aad));
+        ap[4] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_ARGON2_LANES, &lanes4);
+        ap[5] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_ITER, &iter3);
+        ap[6] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_ARGON2_MEMCOST, &mem32);
+        ap[7] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_EARLY_CLEAN, &eclean1);
+        ap[8] = OSSL_PARAM_construct_end();
+        memset(aout1, 0, sizeof(aout1));
+        printf("kdf.argon2.earlyclean.derive=%d\n", EVP_KDF_derive(kctx, aout1, sizeof(aout1), ap));
+        printf("kdf.argon2.earlyclean.key=");
+        rt_print_hex(aout1, sizeof(aout1));
+        printf("\n");
+        EVP_KDF_CTX_free(kctx);
+        EVP_KDF_free(kdf);
+
+        /* Version 1.0 (`0x10`) takes `fill_segment`'s *overwrite* arm rather than the XOR one, so
+         * it is a different derivation and not an alias of the default. */
+        kdf = EVP_KDF_fetch(NULL, "ARGON2ID", NULL);
+        kctx = EVP_KDF_CTX_new(kdf);
+        ap[4] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_ARGON2_LANES, &lanes4);
+        ap[7] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_ARGON2_VERSION, &ver10);
+        ap[8] = OSSL_PARAM_construct_end();
+        memset(aout, 0, sizeof(aout));
+        printf("kdf.argon2.v10.derive=%d\n", EVP_KDF_derive(kctx, aout, sizeof(aout), ap));
+        printf("kdf.argon2.v10.key=");
+        rt_print_hex(aout, sizeof(aout));
+        printf("\n");
+        EVP_KDF_CTX_free(kctx);
+        EVP_KDF_free(kdf);
+
+        /* The parameter bounds, each observed where the row checks it: the two a `set_params`
+         * refuses (`memcost`'s floor and each of the four range checks), the two `derive` refuses
+         * (`m_cost < 8 * lanes`, a missing salt), the output-length floor, and the `size` refusal
+         * that only fires when the caller set `size` shorter than the buffer it hands in. */
+        {
+            uint32_t mem7 = 7, lanes0 = 0, lanesBig = 0x1000000u, lanes100 = 100, mem799 = 799;
+            uint32_t iter0 = 0, thrds0 = 0, size32 = 32, size3 = 3;
+            unsigned char saltShort[2] = { 0x02, 0x02 };
+
+            kdf = EVP_KDF_fetch(NULL, "ARGON2D", NULL);
+
+            kctx = EVP_KDF_CTX_new(kdf);
+            ap[0] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_ARGON2_MEMCOST, &mem7);
+            ap[1] = OSSL_PARAM_construct_end();
+            printf("kdf.argon2.mem7.set=%d\n", EVP_KDF_CTX_set_params(kctx, ap));
+            EVP_KDF_CTX_free(kctx);
+
+            kctx = EVP_KDF_CTX_new(kdf);
+            ap[0] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_SALT, saltShort,
+                                                      sizeof(saltShort));
+            ap[1] = OSSL_PARAM_construct_end();
+            printf("kdf.argon2.saltshort.set=%d\n", EVP_KDF_CTX_set_params(kctx, ap));
+            EVP_KDF_CTX_free(kctx);
+
+            kctx = EVP_KDF_CTX_new(kdf);
+            ap[0] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_ARGON2_LANES, &lanes0);
+            ap[1] = OSSL_PARAM_construct_end();
+            printf("kdf.argon2.lanes0.set=%d\n", EVP_KDF_CTX_set_params(kctx, ap));
+            ap[0] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_ARGON2_LANES, &lanesBig);
+            printf("kdf.argon2.lanesbig.set=%d\n", EVP_KDF_CTX_set_params(kctx, ap));
+            ap[0] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_THREADS, &thrds0);
+            printf("kdf.argon2.thrds0.set=%d\n", EVP_KDF_CTX_set_params(kctx, ap));
+            ap[0] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_ITER, &iter0);
+            printf("kdf.argon2.iter0.set=%d\n", EVP_KDF_CTX_set_params(kctx, ap));
+            ap[0] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_SIZE, &size3);
+            printf("kdf.argon2.size3.set=%d\n", EVP_KDF_CTX_set_params(kctx, ap));
+            EVP_KDF_CTX_free(kctx);
+
+            /* `m_cost` below eight times the lanes is refused at derive time.
+             * `threads > 1` on a context whose pool is zero threads wide is refused there too,
+             * which is the row's only reader of `ossl_get_avail_threads`. */
+            kctx = EVP_KDF_CTX_new(kdf);
+            ap[0] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_PASSWORD, apw, sizeof(apw));
+            ap[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_SALT, asalt, sizeof(asalt));
+            ap[2] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_ARGON2_LANES, &lanes100);
+            ap[3] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_ARGON2_MEMCOST, &mem799);
+            ap[4] = OSSL_PARAM_construct_end();
+            printf("kdf.argon2.memlow.derive=%d\n", EVP_KDF_derive(kctx, aout, sizeof(aout), ap));
+            EVP_KDF_CTX_free(kctx);
+
+            kctx = EVP_KDF_CTX_new(kdf);
+            ap[0] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_PASSWORD, apw, sizeof(apw));
+            ap[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_SALT, asalt, sizeof(asalt));
+            ap[2] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_ARGON2_LANES, &lanes2);
+            ap[3] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_THREADS, &thrds2);
+            ap[4] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_ARGON2_MEMCOST, &mem64);
+            ap[5] = OSSL_PARAM_construct_end();
+            printf("kdf.argon2.thrdsavail.derive=%d\n",
+                   EVP_KDF_derive(kctx, aout, sizeof(aout), ap));
+            EVP_KDF_CTX_free(kctx);
+
+            kctx = EVP_KDF_CTX_new(kdf);
+            ap[0] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_PASSWORD, apw, sizeof(apw));
+            ap[1] = OSSL_PARAM_construct_end();
+            printf("kdf.argon2.nosalt.derive=%d\n", EVP_KDF_derive(kctx, aout, sizeof(aout), ap));
+            EVP_KDF_CTX_free(kctx);
+
+            /* The `size` refusal: `size` is 32 but 64 bytes are asked for, and the two disagree
+             * only because the caller set one. */
+            kctx = EVP_KDF_CTX_new(kdf);
+            ap[0] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_PASSWORD, apw, sizeof(apw));
+            ap[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_SALT, asalt, sizeof(asalt));
+            ap[2] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_SIZE, &size32);
+            ap[3] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_ARGON2_LANES, &lanes4);
+            ap[4] = OSSL_PARAM_construct_end();
+            printf("kdf.argon2.size.derive=%d\n", EVP_KDF_derive(kctx, aout, sizeof(aout), ap));
+            EVP_KDF_CTX_free(kctx);
+
+            /* A property query no KDF row carries is a refusal, so the fetch path's negative
+             * selection is crossed on this unit's own name. */
+            kdf = EVP_KDF_fetch(NULL, "ARGON2D", "provider=nonexistent");
+            printf("kdf.argon2.badprop.fetch=%d\n", kdf != NULL);
+            EVP_KDF_free(kdf);
+        }
+
+        /* The threaded fill, and the pool D397 landed. A fresh context's pool is **zero** threads
+         * wide, which is why the refusal above fires; `OSSL_set_max_threads` is what makes
+         * `threads > 1` reachable at all. Once it is, the threaded derivation must agree byte for
+         * byte with the single-threaded one on the same parameters, because the two fill paths
+         * differ only in which thread fills which (pass, lane, slice). Two lanes and two threads
+         * put both workers to work on the same sync point, which is the case a sequential
+         * transcription would get wrong. */
+        if (OSSL_set_max_threads(NULL, 4) == 1) {
+            kdf = EVP_KDF_fetch(NULL, "ARGON2D", NULL);
+
+            kctx = EVP_KDF_CTX_new(kdf);
+            ap[0] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_PASSWORD, apw, sizeof(apw));
+            ap[1] = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_SALT, asalt, sizeof(asalt));
+            ap[2] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_ARGON2_LANES, &lanes2);
+            ap[3] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_THREADS, &thrds2);
+            ap[4] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_ARGON2_MEMCOST, &mem64);
+            ap[5] = OSSL_PARAM_construct_end();
+            memset(aout, 0, sizeof(aout));
+            printf("kdf.argon2.mt.derive=%d\n", EVP_KDF_derive(kctx, aout, sizeof(aout), ap));
+            printf("kdf.argon2.mt.key=");
+            rt_print_hex(aout, sizeof(aout));
+            printf("\n");
+            EVP_KDF_CTX_free(kctx);
+
+            kctx = EVP_KDF_CTX_new(kdf);
+            ap[3] = OSSL_PARAM_construct_uint32(OSSL_KDF_PARAM_THREADS, &one);
+            printf("kdf.argon2.st.derive=%d\n", EVP_KDF_derive(kctx, aout2, sizeof(aout2), ap));
+            printf("kdf.argon2.st.key=");
+            rt_print_hex(aout2, sizeof(aout2));
+            printf("\n");
+            printf("kdf.argon2.mt.matches=%d\n", memcmp(aout, aout2, sizeof(aout)) == 0);
+            EVP_KDF_CTX_free(kctx);
+            EVP_KDF_free(kdf);
+        }
     }
 
     /* A property query that no KDF row carries is a refusal, so the fetch path's negative

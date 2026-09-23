@@ -604,6 +604,15 @@ COVERED_FILES = [
     # `hmac_drbg_kdf_new` (`:53`), `hmac_drbg_kdf_set_ctx_params` (`:386`) and its two generated
     # decoders (`:177`-`:188`, `:273`-`:327`).
     ("providers/implementations/kdfs/hmacdrbg_kdf.c", "PROV_HMACDRBG_KDF"),
+    # This pass's Argon2 unit (RFC 9106), the last three `OSSL_OP_KDF` rows. `argon2.c` is
+    # `.c.in`-generated, so its `__FILE__` is bare and its line numbers are the generated text's:
+    # the `.in` template expands two `produce_param_decoder` calls into ~370 generated lines ahead
+    # of `initialize`, so reading the template would attribute every site to a line the compiler
+    # never saw. It raises from `initialize` (`:741`), the three `new` constructors (`:938`, `:957`,
+    # `:976`), `kdf_argon2_derive` (`:1031`, `:1039`, `:1045`, `:1052`, `:1065`, `:1071`, `:1077`,
+    # `:1084`, `:1092`), the nine ctx setters (`:1157`-`:1373`) and its two generated decoders
+    # (`:1448`-`:1579`, `:1711`).
+    ("providers/implementations/kdfs/argon2.c", "PROV_ARGON2"),
     # The generic SKEYMGMT row (8.10's `OSSL_OP_SKEYMGMT` pair, one of the two units).
     # `skeymgmt/generic.c` is `.c.in`-generated, so its `__FILE__` is bare and its line number is
     # the generated text's. It raises only from its generated import decoder (`:63`), on a repeated

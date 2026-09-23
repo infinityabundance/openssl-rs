@@ -22,10 +22,10 @@ Read from the census's own `implementation_state` for the rows this stratum owns
 | quantity | count |
 |---|---|
 | provider rows this stratum owns | 306 |
-| of those, implemented | 280 |
-| of those, unlanded | 26 |
+| of those, implemented | 283 |
+| of those, unlanded | 23 |
 
-The document below names all **26** unlanded rows this stratum owns across **23** translation units, and — so the first group can be read whole — the **18** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (23). The identity `306 = 280 + 26` holds.
+The document below names all **23** unlanded rows this stratum owns across **23** translation units, and — so the first group can be read whole — the **21** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (23). The identity `306 = 283 + 23` holds.
 
 ## The first group: the `OSSL_OP_KDF` rows and the `OSSL_OP_SKEYMGMT` pair
 
@@ -38,9 +38,9 @@ rather than stubbed.
 
 | table | dispatch table symbol | operation | algorithm name(s) | state | crate file |
 |---|---|---|---|---|---|
-| `deflt_kdfs` | `ossl_kdf_argon2i_functions` | `OSSL_OP_KDF` | `ARGON2I` | unimplemented | `src/provider/kdf.rs` |
-| `deflt_kdfs` | `ossl_kdf_argon2d_functions` | `OSSL_OP_KDF` | `ARGON2D` | unimplemented | `src/provider/kdf.rs` |
-| `deflt_kdfs` | `ossl_kdf_argon2id_functions` | `OSSL_OP_KDF` | `ARGON2ID` | unimplemented | `src/provider/kdf.rs` |
+| `deflt_kdfs` | `ossl_kdf_argon2i_functions` | `OSSL_OP_KDF` | `ARGON2I` | implemented | `src/provider/kdf.rs` |
+| `deflt_kdfs` | `ossl_kdf_argon2d_functions` | `OSSL_OP_KDF` | `ARGON2D` | implemented | `src/provider/kdf.rs` |
+| `deflt_kdfs` | `ossl_kdf_argon2id_functions` | `OSSL_OP_KDF` | `ARGON2ID` | implemented | `src/provider/kdf.rs` |
 
 **Withheld: not reachable on this profile, and recorded rather than stubbed.** The arm this profile compiles is *threaded*: `configuration.h:36` defines `OPENSSL_THREADS` and neither `OPENSSL_NO_DEFAULT_THREAD_POOL` nor `OPENSSL_NO_THREAD_POOL` is set, so `argon2.c.in:41-47` does **not** define `ARGON2_NO_THREADS` and `fill_mem_blocks_mt` (`:561-626`) is compiled alongside `fill_mem_blocks_st`. It calls `ossl_crypto_thread_start`, `ossl_crypto_thread_join` and `ossl_crypto_thread_clean` (declared in `include/internal/thread.h:19`, not installed, so they are not in the export atlas and have no owning phase). **Their coordinate was measured at D396 and is not `crypto/threads_pthread.c`**, which is what an earlier revision of this note said: that file holds the `CRYPTO_THREAD_*` lock/local/once layer and the RCU layer, and the crate already carries both in `src/runtime/thread.rs`. The three functions are `crypto/thread/internal.c:40/73/95` (the `#else` no-threads arm at `:109/115/120` is not this profile's), and what they need that the crate lacks is the native layer they call -- `ossl_crypto_thread_native_start`/`_join`/`_clean` in `crypto/thread/arch.c` (132 lines) over `crypto/thread/arch/thread_posix.c` (233, the POSIX arm this profile compiles) -- plus a `ctx` member on the thread object. Their other prerequisites are **landed**: `ossl_crypto_mutex_lock`/`_unlock`, `ossl_crypto_condvar_wait`/`_signal` (`src/runtime/thread.rs`), `OSSL_LIB_CTX_GET_THREADS` (`src/context/thread_data.rs:133`) and `OSSL_get_max_threads`. So this is **not** a thin adapter over an existing thread layer. **D397 landed it** -- `src/runtime/thread_arch.rs` is `arch.c` and `arch/thread_posix.c`, the pool is `src/context/thread_data.rs`, and D397 also closed a lost-wakeup window in `ossl_crypto_condvar_wait` that nothing had ever exercised. **What remains for these three rows is therefore this unit's own transcription**: 1,574 lines of provider C plus the BLAKE2 plumbing it drives. D396's estimate of "roughly 425 lines for six rows" counted the thread trio and attributed argon2's rows to it, which was wrong by about four times; the trio is landed and driven by unit tests, and argon2 is a pass of its own.
 
@@ -218,7 +218,7 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 |---|---|
 | generator | `forensics/tools/phase8_provider_rows.py` |
 | census | `forensics/atlas/provider-algorithms.json` |
-| census content hash | `7a7217f82a7c785cdfa2ee83a4566304ecb4408991c33964fddc603c9cb0a324` |
+| census content hash | `b29fe1935d4669ea23dda3e12cdec101f23e7968c5523de5b837b13f49026b7b` |
 | authority tree | `forensics/authorities/src/openssl-3.6.4` |
 | crate query read | `src/provider/digest.rs` |
 
