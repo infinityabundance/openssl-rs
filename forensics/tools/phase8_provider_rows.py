@@ -85,12 +85,23 @@ WITHHELD: dict[str, str] = {
         "neither `OPENSSL_NO_DEFAULT_THREAD_POOL` nor `OPENSSL_NO_THREAD_POOL` is set, so "
         "`argon2.c.in:41-47` does **not** define `ARGON2_NO_THREADS` and `fill_mem_blocks_mt` "
         "(`:561-626`) is compiled alongside `fill_mem_blocks_st`. It calls "
-        "`ossl_crypto_thread_start`, `ossl_crypto_thread_join` and `ossl_crypto_thread_clean`, "
-        "three **internal** functions of `crypto/threads_pthread.c` (declared in "
-        "`include/internal/thread.h:19`, not installed, so they are not in the export atlas and "
-        "have no owning phase). The crate implements none of them, so D327's whole transcription "
-        "cannot close: the three rows `ARGON2D`, `ARGON2I` and `ARGON2ID` become reachable once "
-        "`crypto/threads_pthread.c`'s thread-start/join/clean trio lands, and only then."
+        "`ossl_crypto_thread_start`, `ossl_crypto_thread_join` and `ossl_crypto_thread_clean` "
+        "(declared in `include/internal/thread.h:19`, not installed, so they are not in the export "
+        "atlas and have no owning phase). **Their coordinate was measured at D396 and is not "
+        "`crypto/threads_pthread.c`**, which is what an earlier revision of this note said: that "
+        "file holds the `CRYPTO_THREAD_*` lock/local/once layer and the RCU layer, and the crate "
+        "already carries both in `src/runtime/thread.rs`. The three functions are "
+        "`crypto/thread/internal.c:40/73/95` (the `#else` no-threads arm at `:109/115/120` is not "
+        "this profile's), and what they need that the crate lacks is the native layer they call -- "
+        "`ossl_crypto_thread_native_start`/`_join`/`_clean` in `crypto/thread/arch.c` (132 lines) "
+        "over `crypto/thread/arch/thread_posix.c` (233, the POSIX arm this profile compiles) -- "
+        "plus a `ctx` member on the thread object. Their other prerequisites are **landed**: "
+        "`ossl_crypto_mutex_lock`/`_unlock`, `ossl_crypto_condvar_wait`/`_signal` "
+        "(`src/runtime/thread.rs`), `OSSL_LIB_CTX_GET_THREADS` (`src/context/thread_data.rs:133`) "
+        "and `OSSL_get_max_threads`. So this is **not** a thin adapter over an existing thread "
+        "layer, but it is the smallest remaining unit in the stratum by a wide margin -- roughly "
+        "425 lines across `arch.c`, `thread_posix.c` and the three wrappers -- and it unblocks "
+        "these three rows at once."
     ),
     # The `OSSL_OP_KEYEXCH` group. D386 landed the crate's `OSSL_OP_KEYMGMT` arm -- the gate this
     # comment used to describe as absent -- and, on it, the `kdf_exch.c` unit. D387 landed
@@ -98,6 +109,17 @@ WITHHELD: dict[str, str] = {
     # `ec_kmgmt.c` and `ecdh_exch.c.in`, so **every `OSSL_OP_KEYEXCH` row the authority's
     # `deflt_keyexch[]` holds is landed and this group has no entry here.** The KEM group's one
     # entry is below, beside the keymgmt units.
+    #
+    # D396 landed the **encryption** faces of the `RSA` key object on D395's `ossl_rsa_key_op_get_protect`
+    # gate: the `OSSL_OP_ASYM_CIPHER` row (`asymciphers/rsa_enc.c.in`) and the `OSSL_OP_KEM` row
+    # (`kem/rsa_kem.c.in`, the authority's first `deflt_asym_kem[]` entry, which shifts the two ECX
+    # rows down one). The `OSSL_OP_ASYM_CIPHER` group's remaining row is therefore `sm2_enc.c.in`
+    # alone and the KEM group's is `ec_kem.c.in` alone, both below.
+    #
+    # D396 also removed the two entries that had gone stale: `ecdsa_sig.c.in` and `eddsa_sig.c.in`
+    # landed at D393 and D394, their `Withheld` notes were correct when written and contradicted the
+    # group preamble this file now carries, and a note for a landed unit can never be printed by the
+    # generator -- so leaving them was an unreadable claim rather than a harmless one.
     # The keymgmt group's **prerequisite-held and unreachable** units. `kdf_legacy_kmgmt.c` is
     # landed (D386), `dh_kmgmt.c` is landed (D387), `ecx_kmgmt.c.in`, `mac_legacy_kmgmt.c` and
     # `ec_kmgmt.c` are landed (D388-D390), and `rsa_kmgmt.c` and `dsa_kmgmt.c` land at D391 with the
@@ -160,29 +182,25 @@ WITHHELD: dict[str, str] = {
     # that let DSA land before RSA and ECDSA: `ossl_dsa_check_key`, the callee this comment would
     # otherwise have named, is reached only from `dsa_sig.c.in`'s `#ifdef FIPS_MODULE` block at
     # `:266`, so `providers/common/securitycheck.c` is not on the DSA path at all.
-    "forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/ecdsa_sig.c.in": (
-        "**Withheld: the unit's ten rows, on one unlanded callee.** `ossl_digest_get_approved_nid` "
-        "is already landed (`src/provider/digest_to_nid.rs`), so what remains is "
-        "`providers/common/der/der_ec_sig.c`'s `ossl_DER_w_algorithmIdentifier_ECDSA_with_MD` "
-        "(`ecdsa_sig.c.in:234`), which is not in this tree. Everything else the unit reaches is "
-        "either landed (`ossl_ecdsa_deterministic_sign` is `src/ec/ecdsa_ossl.rs`'s) or inside a "
-        "`#ifdef FIPS_MODULE` arm, so it is the smallest remaining signature prerequisite."
-    ),
-    "forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/eddsa_sig.c.in": (
-        "**Withheld: the unit's five rows, on one unlanded callee.** `eddsa_signverify_init` builds "
-        "the AlgorithmIdentifier through "
-        "`providers/common/der/der_ecx_key.c`'s `ossl_DER_w_algorithmIdentifier_ED25519` and "
-        "`_ED448` (`eddsa_sig.c.in:279-282`), which is not in this tree. The four OIDs and the two "
-        "writers are the whole prerequisite: every other callee "
-        "(`ossl_ed25519_sign`/`_verify`, `ossl_ed448_sign`/`_verify`, `ossl_ecx_key_up_ref`/"
-        "`_free`) is landed, so `EdDSA` is one small unit behind `DSA`'s landing."
-    ),
-    "forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/sm2_sig.c.in": (
+    "forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/ml_dsa_sig.c.in": (
         "**Withheld: the unit's one row, on two unlanded units.** `sm2_sig.c.in`'s sign path is "
         "`ossl_sm2_internal_sign`/`ossl_sm2_internal_verify` and `ossl_sm2_compute_z_digest` "
-        "(`crypto/sm2/sm2_sign.c`), and its AlgorithmIdentifier comes from "
-        "`providers/common/der/der_sm2_sig.c`. Neither unit is in this tree, so the single `SM2` "
-        "row costs two whole transcriptions and lands with them."
+        "(`crypto/sm2/sm2_sign.c`, 543 lines), and its AlgorithmIdentifier comes from "
+        "`providers/common/der/der_sm2_sig.c` (39 lines). Neither unit is in this tree, so the "
+        "single `SM2` row costs two whole transcriptions and lands with them. **D396 measured "
+        "their closure and found only one prerequisite the crate lacks**: the EC half is landed "
+        "(`ossl_ec_group_do_inverse_ord` is `src/ec/lib.rs:2236`'s, `ossl_ec_key_get_libctx`/"
+        "`ossl_ec_key_get0_propq` and the `EC_GROUP`/`EC_POINT`/`ECDSA_SIG` accessors are all in "
+        "`src/ec/`), and `SM2_R_*` is already in `src/runtime/err_reasons.rs`, so what remains is "
+        "these two units plus the row's own dispatch."
+    ),
+    "forensics/authorities/src/openssl-3.6.4/providers/implementations/asymciphers/sm2_enc.c.in": (
+        "**Withheld: the unit's one row, on three unlanded units.** `sm2_enc.c.in`'s encrypt and "
+        "decrypt arms call `ossl_sm2_encrypt`/`ossl_sm2_decrypt` (`crypto/sm2/sm2_crypt.c`), which "
+        "is not in this tree, and its AlgorithmIdentifier comes from the same "
+        "`providers/common/der/der_sm2_sig.c` that `sm2_sig.c.in` waits on. It is therefore the "
+        "**last** of the `OSSL_OP_ASYM_CIPHER` group's two rows to land: the `RSA` row landed at "
+        "D396, and this one lands with the `SM2` crypt unit D396 measured."
     ),
     "forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/ml_dsa_sig.c.in": (
         "**Withheld: not reachable.** The unit's three rows (`ML-DSA-44`, `ML-DSA-65`, "

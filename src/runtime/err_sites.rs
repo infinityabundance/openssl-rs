@@ -25702,6 +25702,416 @@ pub(crate) const SECURITYCHECK_54: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `rsa_init` at `providers/implementations/asymciphers/rsa_enc.c:124` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_RSA_ENC_124: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 124,
+    func: c"rsa_init",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_encrypt` at `providers/implementations/asymciphers/rsa_enc.c:171` (PROV_R_INVALID_PADDING_MODE).
+pub(crate) const PROV_RSA_ENC_171: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 171,
+    func: c"rsa_encrypt",
+    lib: 57,
+    reason: 168,
+    dynamic_reason: false,
+};
+
+/// `rsa_encrypt` at `providers/implementations/asymciphers/rsa_enc.c:177` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_RSA_ENC_177: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 177,
+    func: c"rsa_encrypt",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `rsa_encrypt` at `providers/implementations/asymciphers/rsa_enc.c:187` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_RSA_ENC_187: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 187,
+    func: c"rsa_encrypt",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `rsa_encrypt` at `providers/implementations/asymciphers/rsa_enc.c:201` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_RSA_ENC_201: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 201,
+    func: c"rsa_encrypt",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_decrypt` at `providers/implementations/asymciphers/rsa_enc.c:247` (PROV_R_BAD_LENGTH).
+pub(crate) const PROV_RSA_ENC_247: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 247,
+    func: c"rsa_decrypt",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `rsa_decrypt` at `providers/implementations/asymciphers/rsa_enc.c:253` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_RSA_ENC_253: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 253,
+    func: c"rsa_decrypt",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `rsa_decrypt` at `providers/implementations/asymciphers/rsa_enc.c:261` (PROV_R_BAD_LENGTH).
+pub(crate) const PROV_RSA_ENC_261: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 261,
+    func: c"rsa_decrypt",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `rsa_decrypt` at `providers/implementations/asymciphers/rsa_enc.c:280` (PROV_R_FAILED_TO_DECRYPT).
+pub(crate) const PROV_RSA_ENC_280: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 280,
+    func: c"rsa_decrypt",
+    lib: 57,
+    reason: 162,
+    dynamic_reason: false,
+};
+
+/// `rsa_decrypt` at `providers/implementations/asymciphers/rsa_enc.c:288` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_RSA_ENC_288: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 288,
+    func: c"rsa_decrypt",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_decrypt` at `providers/implementations/asymciphers/rsa_enc.c:301` (PROV_R_BAD_TLS_CLIENT_VERSION).
+pub(crate) const PROV_RSA_ENC_301: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 301,
+    func: c"rsa_decrypt",
+    lib: 57,
+    reason: 161,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:425` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_425: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 425,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:437` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_437: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 437,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:449` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_449: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 449,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:460` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_460: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 460,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:471` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_471: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 471,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:482` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_482: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 482,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:509` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_509: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 509,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:520` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_520: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 520,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params` at `providers/implementations/asymciphers/rsa_enc.c:565` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_RSA_ENC_565: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 565,
+    func: c"rsa_get_ctx_params",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:694` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_694: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 694,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:703` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_703: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 703,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:719` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_719: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 719,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:731` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_731: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 731,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:763` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_763: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 763,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:774` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_774: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 774,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:790` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_790: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 790,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:801` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_801: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 801,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:813` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_813: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 813,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:841` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_841: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 841,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:852` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_852: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 852,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsakem_init` at `providers/implementations/kem/rsa_kem.c:162` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_RSA_KEM_162: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/rsa_kem.c",
+    line: 162,
+    func: c"rsakem_init",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `rsakem_get_ctx_params_decoder` at `providers/implementations/kem/rsa_kem.c:226` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_KEM_226: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/rsa_kem.c",
+    line: 226,
+    func: c"rsakem_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsakem_set_ctx_params_decoder` at `providers/implementations/kem/rsa_kem.c:298` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_KEM_298: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/rsa_kem.c",
+    line: 298,
+    func: c"rsakem_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsakem_set_ctx_params_decoder` at `providers/implementations/kem/rsa_kem.c:310` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_KEM_310: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/rsa_kem.c",
+    line: 310,
+    func: c"rsakem_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsasve_generate` at `providers/implementations/kem/rsa_kem.c:406` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_RSA_KEM_406: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/rsa_kem.c",
+    line: 406,
+    func: c"rsasve_generate",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `rsasve_generate` at `providers/implementations/kem/rsa_kem.c:424` (PROV_R_INVALID_OUTPUT_LENGTH).
+pub(crate) const PROV_RSA_KEM_424: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/rsa_kem.c",
+    line: 424,
+    func: c"rsasve_generate",
+    lib: 57,
+    reason: 217,
+    dynamic_reason: false,
+};
+
+/// `rsasve_recover` at `providers/implementations/kem/rsa_kem.c:483` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_RSA_KEM_483: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/rsa_kem.c",
+    line: 483,
+    func: c"rsasve_recover",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `rsasve_recover` at `providers/implementations/kem/rsa_kem.c:495` (PROV_R_BAD_LENGTH).
+pub(crate) const PROV_RSA_KEM_495: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/rsa_kem.c",
+    line: 495,
+    func: c"rsasve_recover",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `rsasve_recover` at `providers/implementations/kem/rsa_kem.c:505` (PROV_R_INVALID_OUTPUT_LENGTH).
+pub(crate) const PROV_RSA_KEM_505: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/rsa_kem.c",
+    line: 505,
+    func: c"rsasve_recover",
+    lib: 57,
+    reason: 217,
+    dynamic_reason: false,
+};
+
+/// `rsasve_recover` at `providers/implementations/kem/rsa_kem.c:541` (ERR_raise dynamic reason).
+pub(crate) const PROV_RSA_KEM_541: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/rsa_kem.c",
+    line: 541,
+    func: c"rsasve_recover",
+    lib: 4,
+    reason: 0,
+    dynamic_reason: true,
+};
+
 /// `mac_digest_sign_init` at `providers/implementations/signature/mac_legacy_sig.c:107` (PROV_R_NO_KEY_SET).
 pub(crate) const PROV_MAC_LEGACY_SIG_107: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/providers/implementations/signature/mac_legacy_sig.c",
@@ -40320,6 +40730,47 @@ pub(crate) static ALL: &[ErrSite] = &[
     DER_RSA_KEY_312,
     SECURITYCHECK_47,
     SECURITYCHECK_54,
+    PROV_RSA_ENC_124,
+    PROV_RSA_ENC_171,
+    PROV_RSA_ENC_177,
+    PROV_RSA_ENC_187,
+    PROV_RSA_ENC_201,
+    PROV_RSA_ENC_247,
+    PROV_RSA_ENC_253,
+    PROV_RSA_ENC_261,
+    PROV_RSA_ENC_280,
+    PROV_RSA_ENC_288,
+    PROV_RSA_ENC_301,
+    PROV_RSA_ENC_425,
+    PROV_RSA_ENC_437,
+    PROV_RSA_ENC_449,
+    PROV_RSA_ENC_460,
+    PROV_RSA_ENC_471,
+    PROV_RSA_ENC_482,
+    PROV_RSA_ENC_509,
+    PROV_RSA_ENC_520,
+    PROV_RSA_ENC_565,
+    PROV_RSA_ENC_694,
+    PROV_RSA_ENC_703,
+    PROV_RSA_ENC_719,
+    PROV_RSA_ENC_731,
+    PROV_RSA_ENC_763,
+    PROV_RSA_ENC_774,
+    PROV_RSA_ENC_790,
+    PROV_RSA_ENC_801,
+    PROV_RSA_ENC_813,
+    PROV_RSA_ENC_841,
+    PROV_RSA_ENC_852,
+    PROV_RSA_KEM_162,
+    PROV_RSA_KEM_226,
+    PROV_RSA_KEM_298,
+    PROV_RSA_KEM_310,
+    PROV_RSA_KEM_406,
+    PROV_RSA_KEM_424,
+    PROV_RSA_KEM_483,
+    PROV_RSA_KEM_495,
+    PROV_RSA_KEM_505,
+    PROV_RSA_KEM_541,
     PROV_MAC_LEGACY_SIG_107,
     RSA_LIB_85,
     RSA_LIB_106,

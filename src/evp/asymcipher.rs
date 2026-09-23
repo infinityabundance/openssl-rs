@@ -96,27 +96,27 @@ const LINE_CLEAR_FREE_DECRYPT_ALLOC: c_int = 343;
 // ---------------------------------------------------------------------------------------------
 
 /// `OSSL_FUNC_ASYM_CIPHER_NEWCTX`.
-const OSSL_FUNC_ASYM_CIPHER_NEWCTX: c_int = 1;
+pub(crate) const OSSL_FUNC_ASYM_CIPHER_NEWCTX: c_int = 1;
 /// `OSSL_FUNC_ASYM_CIPHER_ENCRYPT_INIT`.
-const OSSL_FUNC_ASYM_CIPHER_ENCRYPT_INIT: c_int = 2;
+pub(crate) const OSSL_FUNC_ASYM_CIPHER_ENCRYPT_INIT: c_int = 2;
 /// `OSSL_FUNC_ASYM_CIPHER_ENCRYPT`.
-const OSSL_FUNC_ASYM_CIPHER_ENCRYPT: c_int = 3;
+pub(crate) const OSSL_FUNC_ASYM_CIPHER_ENCRYPT: c_int = 3;
 /// `OSSL_FUNC_ASYM_CIPHER_DECRYPT_INIT`.
-const OSSL_FUNC_ASYM_CIPHER_DECRYPT_INIT: c_int = 4;
+pub(crate) const OSSL_FUNC_ASYM_CIPHER_DECRYPT_INIT: c_int = 4;
 /// `OSSL_FUNC_ASYM_CIPHER_DECRYPT`.
-const OSSL_FUNC_ASYM_CIPHER_DECRYPT: c_int = 5;
+pub(crate) const OSSL_FUNC_ASYM_CIPHER_DECRYPT: c_int = 5;
 /// `OSSL_FUNC_ASYM_CIPHER_FREECTX`.
-const OSSL_FUNC_ASYM_CIPHER_FREECTX: c_int = 6;
+pub(crate) const OSSL_FUNC_ASYM_CIPHER_FREECTX: c_int = 6;
 /// `OSSL_FUNC_ASYM_CIPHER_DUPCTX`.
-const OSSL_FUNC_ASYM_CIPHER_DUPCTX: c_int = 7;
+pub(crate) const OSSL_FUNC_ASYM_CIPHER_DUPCTX: c_int = 7;
 /// `OSSL_FUNC_ASYM_CIPHER_GET_CTX_PARAMS`.
-const OSSL_FUNC_ASYM_CIPHER_GET_CTX_PARAMS: c_int = 8;
+pub(crate) const OSSL_FUNC_ASYM_CIPHER_GET_CTX_PARAMS: c_int = 8;
 /// `OSSL_FUNC_ASYM_CIPHER_GETTABLE_CTX_PARAMS`.
-const OSSL_FUNC_ASYM_CIPHER_GETTABLE_CTX_PARAMS: c_int = 9;
+pub(crate) const OSSL_FUNC_ASYM_CIPHER_GETTABLE_CTX_PARAMS: c_int = 9;
 /// `OSSL_FUNC_ASYM_CIPHER_SET_CTX_PARAMS`.
-const OSSL_FUNC_ASYM_CIPHER_SET_CTX_PARAMS: c_int = 10;
+pub(crate) const OSSL_FUNC_ASYM_CIPHER_SET_CTX_PARAMS: c_int = 10;
 /// `OSSL_FUNC_ASYM_CIPHER_SETTABLE_CTX_PARAMS`.
-const OSSL_FUNC_ASYM_CIPHER_SETTABLE_CTX_PARAMS: c_int = 11;
+pub(crate) const OSSL_FUNC_ASYM_CIPHER_SETTABLE_CTX_PARAMS: c_int = 11;
 
 /// `OSSL_FUNC_asym_cipher_newctx_fn`.
 pub(crate) type AsymCipherNewctxFn = unsafe extern "C" fn(*mut c_void) -> *mut c_void;

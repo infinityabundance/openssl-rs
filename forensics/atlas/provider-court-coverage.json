@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 254,
+        "implemented": 256,
         "unmatched": 0
       },
       "9": {
@@ -37,11 +37,34 @@
         "court": "RT-SIGNATURE",
         "phase": 8,
         "probe": "courts/phase8/rt_signature_probe.c"
+      },
+      {
+        "court": "RT-ASYM-CIPHER",
+        "phase": 8,
+        "probe": "courts/phase8/rt_asymcipher_probe.c"
       }
     ],
-    "directly_courted": 259,
-    "implemented_rows": 259,
+    "directly_courted": 261,
+    "implemented_rows": 261,
     "rows": [
+      {
+        "algorithm_names": "RSA",
+        "aliases": [
+          "RSA",
+          "rsaEncryption",
+          "1.2.840.113549.1.1.1"
+        ],
+        "courts": [
+          "RT-DRBG",
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-ASYM-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ASYM_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
       {
         "algorithm_names": "AES-128-CBC",
         "aliases": [
@@ -2066,7 +2089,8 @@
         "courts": [
           "RT-DIGEST",
           "RT-CIPHER",
-          "RT-DRBG"
+          "RT-DRBG",
+          "RT-ASYM-CIPHER"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_DIGEST",
@@ -2477,6 +2501,24 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "RSA",
+        "aliases": [
+          "RSA",
+          "rsaEncryption",
+          "1.2.840.113549.1.1.1"
+        ],
+        "courts": [
+          "RT-DRBG",
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-ASYM-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEM",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "X25519",
         "aliases": [
           "X25519",
@@ -2769,7 +2811,8 @@
         "courts": [
           "RT-DRBG",
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-ASYM-CIPHER"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -3511,7 +3554,8 @@
         "courts": [
           "RT-DRBG",
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-ASYM-CIPHER"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_SIGNATURE",
@@ -3770,7 +3814,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "eae9b3f46b654ee63d248341cb24907761d165eb8beac75d1fbadc2becb1ce4d"
+      "sha256": "38125e4b8e8bc1b05e944b650986e154086b472e06934420396efdef3670a1bd"
     },
     {
       "name": "court:RT-DIGEST",
@@ -3796,6 +3840,11 @@
       "name": "court:RT-SIGNATURE",
       "path": "courts/phase8/rt_signature_probe.c",
       "sha256": "550463ffecb0d75603d01b4ee73aabe697a0aaa5a4ca120197c278831b6f8543"
+    },
+    {
+      "name": "court:RT-ASYM-CIPHER",
+      "path": "courts/phase8/rt_asymcipher_probe.c",
+      "sha256": "706658dd0d827b42bd4b99422b2c340a6ef9c0eef817c07ba3426e0f86004271"
     }
   ],
   "kind": "provider-court-coverage",
