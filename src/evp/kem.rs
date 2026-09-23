@@ -98,11 +98,11 @@ pub(crate) const OSSL_FUNC_KEM_DECAPSULATE: c_int = 5;
 /// `OSSL_FUNC_KEM_FREECTX`.
 pub(crate) const OSSL_FUNC_KEM_FREECTX: c_int = 6;
 /// `OSSL_FUNC_KEM_DUPCTX`.
-const OSSL_FUNC_KEM_DUPCTX: c_int = 7;
+pub(crate) const OSSL_FUNC_KEM_DUPCTX: c_int = 7;
 /// `OSSL_FUNC_KEM_GET_CTX_PARAMS`.
-const OSSL_FUNC_KEM_GET_CTX_PARAMS: c_int = 8;
+pub(crate) const OSSL_FUNC_KEM_GET_CTX_PARAMS: c_int = 8;
 /// `OSSL_FUNC_KEM_GETTABLE_CTX_PARAMS`.
-const OSSL_FUNC_KEM_GETTABLE_CTX_PARAMS: c_int = 9;
+pub(crate) const OSSL_FUNC_KEM_GETTABLE_CTX_PARAMS: c_int = 9;
 /// `OSSL_FUNC_KEM_SET_CTX_PARAMS`.
 pub(crate) const OSSL_FUNC_KEM_SET_CTX_PARAMS: c_int = 10;
 /// `OSSL_FUNC_KEM_SETTABLE_CTX_PARAMS`.

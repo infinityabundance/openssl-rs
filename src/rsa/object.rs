@@ -703,13 +703,12 @@ pub unsafe extern "C" fn RSA_up_ref(r: *mut Rsa) -> c_int {
 /// way rather than tidied, because the symbol is called from other translation units through this
 /// prototype.
 ///
-/// `#[allow(dead_code)]`'s reason: **the first readers are the provider stratum's.** The authority
-/// calls it from `providers/implementations/keymgmt/rsa_kmgmt.c:189` (and the KEM's
-/// `rsa_kem.c`), which is beyond this phase; no crate code calls it yet.
+/// The first reader is the provider stratum's: `providers/implementations/kem/rsa_kem.c:269`
+/// (`src/provider/rsa_kem.rs`'s `rsasve_gen_rand_bytes`), which landed with that row. The
+/// `rsa_kmgmt.c:189` caller is still beyond this phase.
 ///
 /// # Safety
 /// `r` is a live object.
-#[allow(dead_code)] // read by the provider keymgmt/KEM, which are a later stratum
 pub(crate) unsafe fn ossl_rsa_get0_libctx(r: *mut Rsa) -> *mut c_void {
     // SAFETY: `r` is live per the contract.
     unsafe { (*r).libctx }

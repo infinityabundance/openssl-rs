@@ -28295,3 +28295,148 @@ typed `c_style` count, which holds at **456**.
   `OSSL_OP_KDF`, three** -- the remaining blocks, unlanded and named.
 
 No claim is made that the stratum is closer to sealing than `provider_rows` says.
+
+## D396 — the `RSA` encryption faces land: `asymciphers/rsa_enc.c.in` and `kem/rsa_kem.c.in` on D395's gate, `crypto/rsa/rsa_pk1.c`'s fourth padding function, and `RT-ASYM-CIPHER` drives both rows
+
+**Decision.** The two rows D395 left as the smallest reachable movers are taken, on the gate D395
+landed. `providers/implementations/asymciphers/rsa_enc.c.in` lands whole as `src/provider/rsa_enc.rs`
+(eleven dispatch slots) and `providers/implementations/kem/rsa_kem.c.in` lands whole as
+`src/provider/rsa_kem.rs` (the RSASVE KEM, eleven slots); on them the `OSSL_OP_ASYM_CIPHER` `RSA` row
+and the `OSSL_OP_KEM` `RSA` row land, and one new court drives both rather than naming them.
+
+1. **The prerequisite is one function of `crypto/rsa/rsa_pk1.c`, and it is the unit's fourth.**
+   `rsa_decrypt`'s `RSA_PKCS1_WITH_TLS_PADDING` arm calls
+   `ossl_rsa_padding_check_PKCS1_type_2_TLS` (`rsa_pk1.c:546-639`), which D285 recorded as a Phase 9
+   hand-off on `RAND_priv_bytes_ex` and D323 corrected the coordinate for. It is **not** one of the
+   fifteen padding functions the RSA stratum transcribed, and it lands here as `src/rsa/mod.rs`'s
+   `ossl_rsa_padding_check_PKCS1_type_2_TLS` with `SSL_MAX_MASTER_KEY_LENGTH` (48,
+   `include/openssl/prov_ssl.h:20`) beside it, because the provider row is its only caller. Everything
+   else `rsa_enc.c.in` reaches is landed: `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex`,
+   `RSA_padding_check_PKCS1_OAEP_mgf1`, `RSA_public_encrypt`/`RSA_private_decrypt`,
+   `ossl_rsa_key_op_get_protect` (D395) and the constant-time selectors. `rsa_kem.c.in`'s whole
+   closure is landed too, and `ossl_rsa_get0_libctx` loses the `#[allow(dead_code)]` D325 gave it
+   because this row is the caller that comment named.
+2. **The padding-mode numbers are read from the authority's header, not typed.**
+   `RSA_PKCS1_WITH_TLS_PADDING` is **7** and `RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING` is **8**
+   (`include/openssl/rsa.h:201`, `:204`). A reconstruction written earlier in this pass had the TLS
+   gate as `client_version == 0 || client_version > 0x7fffffff` where the authority's is
+   `client_version <= 0` (`rsa_enc.c.in:302`, the same predicate for the `unsigned int`), and it was
+   discarded for the authority's form. The probe takes the mode numbers from that header on both
+   sides rather than from a literal, so the two sides cannot agree on a wrong `7`.
+3. **`rsa_kem.c.in` lands whole, and its `#ifndef FIPS_MODULE` arm is this profile's.** The RSASVE
+   encapsulation draws `1 < z < n-1` with `BN_priv_rand_range_ex`, returns `RSAEP((n,e), z)` as the
+   ciphertext and `z` as the secret; decapsulation is `RSADP((n,d), c)`. `rsasve_recover`'s
+   degenerate-ciphertext guard (`rsa_kem.c.in:412-448`) is the **non-FIPS** arm -- `RSADP`'s own
+   `1 < c < n-1` bound is applied by the primitive only under `FIPS_MODULE` -- so it is transcribed,
+   raising the primitive's own reasons (`RSA_R_DATA_TOO_SMALL` for `c in {0,1}`,
+   `RSA_R_DATA_TOO_LARGE_FOR_MODULUS` for `c in {n-1,n}`) through the unit's one run-time-chosen site.
+   `rsakem_init`'s `e <= 1` refusal (`:162-166`) is transcribed with its own site's reason.
+4. **Two new tables and the `OSSL_OP_ASYM_CIPHER` arm.** `src/provider/asymcipher.rs` declares
+   `DEFLT_ASYM_CIPHER`, the authority's two rows at `defltprov.c:518-524`; the `RSA` row lands and the
+   `SM2` row is absent rather than reordered, because the census requires the crate's rows to be a
+   **subsequence** (D386). `DEFLT_ASYM_KEM` grows from three entries to **four**, the `RSA` row
+   inserted at index 0 because it is the authority's first (`defltprov.c:527`). Both tables and
+   `rsa_kem.rs`'s dispatch carry `#[rustfmt::skip]`, which is load-bearing for the census row reader
+   rather than cosmetic (D392).
+5. **`gen_err_raise_sites.py` gains two coordinates.** `providers/implementations/asymciphers/rsa_enc.c`
+   and `providers/implementations/kem/rsa_kem.c` are both `.c.in`-generated, so their `__FILE__` is
+   the bare build-relative path (D235's finding); `src/runtime/err_sites.rs` grows the **31**
+   `PROV_RSA_ENC_*` and the **10** `PROV_RSA_KEM_*` sites they carry, for **3812** total. Six of the
+   41 (`ENC_171`, `ENC_437`, `ENC_731`, `ENC_813`, `KEM_226`, `KEM_298`) are inside `FIPS_MODULE` and
+   are recorded but not compiled, exactly as D395's two `FIPS_MODULE` raises are.
+6. **The two dispatch-constant sets move from private to `pub(crate)`.** `src/evp/asymcipher.rs`'s
+   eleven `OSSL_FUNC_ASYM_CIPHER_*` ids and `src/evp/kem.rs`'s `DUPCTX`/`GET_CTX_PARAMS`/
+   `GETTABLE_CTX_PARAMS` had no reader outside their own modules until these two rows; no value
+   changes.
+
+**Driven, not merely named.** `courts/phase8/rt_asymcipher_probe.c` is a new court,
+`RT-ASYM-CIPHER`, registered in `phase8_courts.py` and `provider_court_coverage.py` in the same pass as
+the rows it covers. It fetches both rows by name, imports the fixed 2048-bit key through the `RSA`
+keymgmt row, and drives:
+
+* **The PKCS#1 v1.5, OAEP and `none` round trips**, each with its size query, its "how big is this?"
+  answer, its encryption, its parameter read-back (`pad-mode` as the *name* the row selects a method
+  member with, `oaep-digest`, `mgf1-digest`, `oaep-label`, `implicit-rejection`) and its decryption.
+  The `none` arm's ciphertext is printed in full: `RSAEP` with no padding is deterministic, so that
+  line is what notices a wrong `n`, `e` or native byte order, which is the one class of error the
+  randomised arms cannot see.
+* **The two `pss` paths, which pin the name table's contents rather than the setter's intent.** The
+  table has no `pss` entry, so the *name* is accepted and the mode silently becomes 0 (and the
+  encryption then refuses); the *number* 6 is refused. Both are observed.
+* **`RSA_PKCS1_WITH_TLS_PADDING`**: the mode is accepted, the size query answers 48, the
+  `client_version == 0` gate refuses, and the constant-time check then runs.
+* **The buffer and key refusals**: a one-byte destination, a `none`-mode input of the wrong length,
+  and an undermeasured `none`-mode encryption.
+* **The RSASVE round trip**: the size query (256/256), the encapsulation, the decapsulation and the
+  verdict that the recovered secret is the one published.
+* **The `operation` parameter** (`RSASVE` accepted, an unknown name refused) and the four degenerate
+  ciphertexts `{0, 1, n-1, n}`, whose `n` and `n-1` are **derived from the authority-read modulus**
+  rather than typed.
+* **Every refusal arm drains the error queue**, printing each record's packed code *and its
+  `file:line:func` coordinate*. That is what makes `rsa_kem.c:541`'s run-time-chosen reason
+  observable at all: the transcript reads `33554543` (`ERR_LIB_RSA` + `RSA_R_DATA_TOO_SMALL`) for
+  `c = 0` and `c = 1`, and `33554564` (`RSA_R_DATA_TOO_LARGE_FOR_MODULUS`) for `c = n-1` and `c = n`.
+  The `client_version == 0` refusal is likewise observed with its coordinate
+  (`rsa_enc.c:301:rsa_decrypt`), which is the observation that would have caught the discarded gate.
+
+**Movement.** `provider_rows` moves implemented **254 -> 256** (+2) and unlanded **52 -> 50**, over the
+same **306** owned; the census's whole-provider `implementation_state` moves `implemented`
+**259 -> 261** (`unimplemented` **737 -> 735**) and `projection.open[8]` moves **52 -> 50**.
+`RT-ASYM-CIPHER` runs **103 observations on both sides, identical and with zero residuals**, and
+`provider_court_coverage.py` reports **261 implemented rows, 261 directly courted, 0 unmatched**.
+**The export ledger is untouched** (`forensics/phase8-obligations.json` `complete: true`, implemented
+**786**, deferred **0**, open **0**) -- these are registration rows, not symbols. No new identifier
+moves `docs/CI.md`'s typed `c_style` count.
+
+**A pre-existing unit-test isolation defect, recorded rather than fixed.**
+`provider::digest::tests::the_digest_query_answers_only_for_digest_and_terminates` reads
+`exported_ciphers()`'s table, which is filled at provider init: run **alone** in a fresh process the
+test segfaults before its first assertion, and it passes when any sibling test initialises the default
+provider first. It is not this pass's defect and this pass did not change it; it is recorded so the
+next session does not read a green `--test-threads=1` run as proof that the test is isolated.
+
+**What remains, measured rather than reasoned.** The fifty unlanded rows, by unit:
+
+| unit | rows |
+|---|---|
+| `keymgmt/slh_dsa_kmgmt.c.in` | 12 |
+| `signature/slh_dsa_sig.c.in` | 12 |
+| `kem/mlx_kem.c` | 4 |
+| `keymgmt/mlx_kmgmt.c.in` | 4 |
+| `kem/ml_kem_kem.c.in` | 3 |
+| `keymgmt/ml_kem_kmgmt.c.in` | 3 |
+| `keymgmt/ml_dsa_kmgmt.c.in` | 3 |
+| `signature/ml_dsa_sig.c.in` | 3 |
+| `kdfs/argon2.c.in` | 3 |
+| `asymciphers/sm2_enc.c.in` | 1 |
+| `kem/ec_kem.c.in` | 1 |
+| `signature/sm2_sig.c.in` | 1 |
+
+* **The biggest block is `crypto/slh_dsa/`, twenty-four rows** (twelve keymgmt, twelve signature),
+  followed by `crypto/ml_kem/` + `crypto/mlx/` at **fourteen** and `crypto/ml_dsa/` at **six**. None of
+  the three is a transcription behind a callee: the crate has no ML-KEM, ML-DSA or SLH-DSA
+  implementation at all, so each is a whole new subsystem.
+* **The smallest remaining unit is `crypto/thread/`, and it is not a thin adapter -- measured, not
+  guessed.** The three argon2-blocking functions are **not** in `crypto/threads_pthread.c`, which is
+  what an earlier revision of the withheld note said: that file holds the `CRYPTO_THREAD_*`
+  lock/local/once layer and the RCU layer, and the crate already carries both
+  (`src/runtime/thread.rs`). `ossl_crypto_thread_start`/`_join`/`_clean` are
+  `crypto/thread/internal.c:40/73/95`, and what the crate lacks is the native layer they call --
+  `ossl_crypto_thread_native_start`/`_join`/`_clean` in `crypto/thread/arch.c` (132 lines) over
+  `crypto/thread/arch/thread_posix.c` (233, the POSIX arm this profile compiles) -- plus a `ctx`
+  member on the thread object. Their other prerequisites **are** landed:
+  `ossl_crypto_mutex_lock`/`_unlock` and `ossl_crypto_condvar_wait`/`_signal`
+  (`src/runtime/thread.rs`), `OSSL_LIB_CTX_GET_THREADS` (`src/context/thread_data.rs:133`) and
+  `OSSL_get_max_threads`. So it is roughly **425 lines for six rows** (the trio plus the three
+  `argon2` rows it unblocks at once) with every dependency already present -- the best rows-per-line
+  in the stratum, and the right next target ahead of the larger but untooled PQC subsystems.
+* **The two `SM2` rows are two units behind a landed one.** D396 measured their closure: the EC half
+  is landed (`ossl_ec_group_do_inverse_ord` is `src/ec/lib.rs:2236`'s, `ossl_ec_key_get_libctx` and
+  the `EC_GROUP`/`EC_POINT`/`ECDSA_SIG` accessors are all in `src/ec/`), and `SM2_R_*` is already in
+  `src/runtime/err_reasons.rs`. What remains is `providers/common/der/der_sm2_sig.c` (39 lines, two
+  writers over `id-sm2-with-SM3`) with `crypto/sm2/sm2_sign.c` (543), then `sm2_sig.c.in` (585);
+  `sm2_enc.c.in` (240) additionally waits on `crypto/sm2/sm2_crypt.c`.
+* **`kem/ec_kem.c.in` is unchanged from D390**: one of its functions is landed and driven, the row's
+  own dispatch and the twelve `eckem_*` functions are not.
+
+No claim is made that the stratum is closer to sealing than `provider_rows` says.

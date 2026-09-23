@@ -730,6 +730,21 @@ COVERED_FILES = [
     # PSS refusal (`:47`) and the `ERR_R_INTERNAL_ERROR` unknown-operation arm (`:54`). The
     # other eight functions raise nothing on this profile.
     ("providers/common/securitycheck.c", "SECURITYCHECK"),
+    # Phase 8's `rsa_enc.c.in` (D396), the `RSA` `OSSL_OP_ASYM_CIPHER` row. `.c.in`-generated, so
+    # the bare build-relative path. Its raises are the generated decoder refusals, the
+    # `PROV_R_INVALID_PADDING_MODE`/`PROV_R_INVALID_KEY`/`PROV_R_OUTPUT_BUFFER_TOO_SMALL`/
+    # `PROV_R_FAILED_TO_DECRYPT`/`PROV_R_BAD_TLS_CLIENT_VERSION`/
+    # `PROV_R_BAD_LENGTH`/`ERR_R_INTERNAL_ERROR` refusals of its four bodies, and the
+    # `rsa_init` `ERR_R_INTERNAL_ERROR` arm. The `FIPS_MODULE` X9.31/key-check raises are recorded
+    # but not compiled on this profile.
+    ("providers/implementations/asymciphers/rsa_enc.c", "PROV_RSA_ENC"),
+    # Phase 8's `rsa_kem.c.in` (D396), the `RSA` `OSSL_OP_KEM` row. `.c.in`-generated, so the bare
+    # build-relative path. Its raises are the generated decoder refusals, the
+    # `PROV_R_INVALID_KEY`/`PROV_R_INVALID_OUTPUT_LENGTH`/`PROV_R_BAD_LENGTH` refusals of the two
+    # RSASVE bodies, and the one **dynamic** reason at `rsasve_recover`'s degenerate-ciphertext
+    # guard (`ERR_LIB_RSA` with `RSA_R_DATA_TOO_SMALL` or `RSA_R_DATA_TOO_LARGE_FOR_MODULUS` chosen
+    # at run time).
+    ("providers/implementations/kem/rsa_kem.c", "PROV_RSA_KEM"),
     # 8.10's `HMAC`/`SIPHASH`/`POLY1305`/`CMAC` signature rows. `signature/mac_legacy_sig.c` is a
     # plain `.c`, so its `__FILE__` carries the source-tree prefix. It raises once, the
     # `PROV_R_NO_KEY_SET` refusal of `mac_digest_sign_init` (`:107`).

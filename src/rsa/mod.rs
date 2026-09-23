@@ -85,7 +85,10 @@ use crate::evp::pkey_asn1::Engine;
 use crate::mac::hmac::{
     HMAC_CTX_free, HMAC_CTX_new, HMAC_Final, HMAC_Init_ex, HMAC_Update, HmacCtx,
 };
-use crate::rand::rand_lib::RAND_bytes_ex;
+use crate::rand::rand_lib::{RAND_bytes_ex, RAND_priv_bytes_ex};
+use crate::runtime::constant_time::{
+    constant_time_eq_u32, constant_time_is_zero_u32, constant_time_select_8,
+};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::ex_data::CryptoExData;
@@ -2257,6 +2260,128 @@ pub(crate) unsafe fn ossl_rsa_padding_check_PKCS1_type_2(
         }
         crate::runtime::mem::CRYPTO_free(synthetic.cast::<c_void>(), FILE_RSA_PK1, LINE);
         ret
+    }
+}
+
+/// `SSL_MAX_MASTER_KEY_LENGTH` — `include/openssl/prov_ssl.h:20`. Forty-eight, the size of a TLS
+/// 1.0–1.2 pre-master secret, and the fixed length the type-2 TLS check always answers.
+const SSL_MAX_MASTER_KEY_LENGTH: usize = 48;
+
+/// `int ossl_rsa_padding_check_PKCS1_type_2_TLS(OSSL_LIB_CTX *libctx, unsigned char *to, size_t tlen,
+/// const unsigned char *from, size_t flen, int client_version, int alt_version)` —
+/// `crypto/rsa/rsa_pk1.c:546-639`.
+///
+/// The fourth `rsa_pk1.c` function this stratum's padding block reached only through the provider
+/// `asymcipher/rsa_enc.c.in`, and D285's coordinate correction names it: **this** is the function
+/// whose refusal is randomised (`RAND_priv_bytes_ex` at `:569`), not `RSA_padding_check_PKCS1_type_2`.
+/// It is what makes a PKCS#1 v1.5 RSA decryption's failure indistinguishable from its success
+/// (Bleichenbacher), so the whole body is constant-time and the answer is always
+/// `SSL_MAX_MASTER_KEY_LENGTH` — the caller cannot tell a real pre-master secret from the random
+/// one the mask selects under `good`.
+///
+/// Two things are **not** new here: the constant-time primitives are the crate's existing
+/// `constant_time_*` functions (`constant_time_is_zero_u32`/`constant_time_eq_u32` are the
+/// header's `unsigned int` variants, and `constant_time_is_zero_8` is its `(unsigned char)` cast),
+/// and the randomness is Phase 9's `RAND_priv_bytes_ex`. The two refusals are the file's own
+/// recorded coordinates.
+///
+/// # Safety
+/// `libctx` is NULL or a live library context; `to` is writable for `tlen` bytes; `from` is
+/// readable for `flen` bytes.
+#[allow(non_snake_case)] // the authority's name, kept verbatim like every other one
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+pub(crate) unsafe fn ossl_rsa_padding_check_PKCS1_type_2_TLS(
+    libctx: *mut c_void,
+    to: *mut c_uchar,
+    tlen: usize,
+    from: *const c_uchar,
+    flen: usize,
+    client_version: c_int,
+    alt_version: c_int,
+) -> c_int {
+    let mut rand_premaster_secret = [0u8; SSL_MAX_MASTER_KEY_LENGTH];
+
+    // SAFETY: the caller's contract.
+    unsafe {
+        /*
+         * If these checks fail then either the message in publicly invalid, or
+         * we've been called incorrectly. We can fail immediately.
+         */
+        if flen < RSA_PKCS1_PADDING_SIZE as usize + SSL_MAX_MASTER_KEY_LENGTH
+            || tlen < SSL_MAX_MASTER_KEY_LENGTH
+        {
+            raise_site(&err_sites::RSA_PK1_561);
+            return -1;
+        }
+
+        /*
+         * Generate a random premaster secret to use in the event that we fail
+         * to decrypt.
+         */
+        if RAND_priv_bytes_ex(
+            libctx,
+            rand_premaster_secret.as_mut_ptr(),
+            SSL_MAX_MASTER_KEY_LENGTH,
+            0,
+        ) <= 0
+        {
+            raise_site(&err_sites::RSA_PK1_572);
+            return -1;
+        }
+
+        let mut good = constant_time_is_zero_u32(*from as u32);
+        good &= constant_time_eq_u32(*from.add(1) as u32, 2);
+
+        /* Check we have the expected padding data */
+        let mut i: usize = 2;
+        while i < flen - SSL_MAX_MASTER_KEY_LENGTH - 1 {
+            // `constant_time_is_zero_8(x)` is `(unsigned char)constant_time_is_zero(x)`, and the
+            // header's `~` is on the promoted `unsigned int`.
+            good &= !constant_time_is_zero_u32(*from.add(i) as u32);
+            i += 1;
+        }
+        good &= constant_time_is_zero_u32(*from.add(flen - SSL_MAX_MASTER_KEY_LENGTH - 1) as u32);
+
+        let mut version_good = constant_time_eq_u32(
+            *from.add(flen - SSL_MAX_MASTER_KEY_LENGTH) as u32,
+            ((client_version >> 8) & 0xff) as u32,
+        );
+        version_good &= constant_time_eq_u32(
+            *from.add(flen - SSL_MAX_MASTER_KEY_LENGTH + 1) as u32,
+            (client_version & 0xff) as u32,
+        );
+
+        if alt_version > 0 {
+            let mut workaround_good = constant_time_eq_u32(
+                *from.add(flen - SSL_MAX_MASTER_KEY_LENGTH) as u32,
+                ((alt_version >> 8) & 0xff) as u32,
+            );
+            workaround_good &= constant_time_eq_u32(
+                *from.add(flen - SSL_MAX_MASTER_KEY_LENGTH + 1) as u32,
+                (alt_version & 0xff) as u32,
+            );
+            version_good |= workaround_good;
+        }
+
+        good &= version_good;
+
+        /*
+         * Now copy the result over to the to buffer if good, or random data if
+         * not good.
+         */
+        for (i, r) in rand_premaster_secret
+            .iter()
+            .enumerate()
+            .take(SSL_MAX_MASTER_KEY_LENGTH)
+        {
+            *to.add(i) = constant_time_select_8(
+                good as u8,
+                *from.add(flen - SSL_MAX_MASTER_KEY_LENGTH + i),
+                *r,
+            );
+        }
+
+        SSL_MAX_MASTER_KEY_LENGTH as c_int
     }
 }
 

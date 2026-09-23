@@ -22,10 +22,10 @@ Read from the census's own `implementation_state` for the rows this stratum owns
 | quantity | count |
 |---|---|
 | provider rows this stratum owns | 306 |
-| of those, implemented | 254 |
-| of those, unlanded | 52 |
+| of those, implemented | 256 |
+| of those, unlanded | 50 |
 
-The document below names all **52** unlanded rows this stratum owns across **27** translation units, and — so the first group can be read whole — the **18** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (49). The identity `306 = 254 + 52` holds.
+The document below names all **50** unlanded rows this stratum owns across **25** translation units, and — so the first group can be read whole — the **18** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (47). The identity `306 = 256 + 50` holds.
 
 ## The first group: the `OSSL_OP_KDF` rows and the `OSSL_OP_SKEYMGMT` pair
 
@@ -42,7 +42,7 @@ rather than stubbed.
 | `deflt_kdfs` | `ossl_kdf_argon2d_functions` | `OSSL_OP_KDF` | `ARGON2D` | unimplemented | `src/provider/kdf.rs` |
 | `deflt_kdfs` | `ossl_kdf_argon2id_functions` | `OSSL_OP_KDF` | `ARGON2ID` | unimplemented | `src/provider/kdf.rs` |
 
-**Withheld: not reachable on this profile, and recorded rather than stubbed.** The arm this profile compiles is *threaded*: `configuration.h:36` defines `OPENSSL_THREADS` and neither `OPENSSL_NO_DEFAULT_THREAD_POOL` nor `OPENSSL_NO_THREAD_POOL` is set, so `argon2.c.in:41-47` does **not** define `ARGON2_NO_THREADS` and `fill_mem_blocks_mt` (`:561-626`) is compiled alongside `fill_mem_blocks_st`. It calls `ossl_crypto_thread_start`, `ossl_crypto_thread_join` and `ossl_crypto_thread_clean`, three **internal** functions of `crypto/threads_pthread.c` (declared in `include/internal/thread.h:19`, not installed, so they are not in the export atlas and have no owning phase). The crate implements none of them, so D327's whole transcription cannot close: the three rows `ARGON2D`, `ARGON2I` and `ARGON2ID` become reachable once `crypto/threads_pthread.c`'s thread-start/join/clean trio lands, and only then.
+**Withheld: not reachable on this profile, and recorded rather than stubbed.** The arm this profile compiles is *threaded*: `configuration.h:36` defines `OPENSSL_THREADS` and neither `OPENSSL_NO_DEFAULT_THREAD_POOL` nor `OPENSSL_NO_THREAD_POOL` is set, so `argon2.c.in:41-47` does **not** define `ARGON2_NO_THREADS` and `fill_mem_blocks_mt` (`:561-626`) is compiled alongside `fill_mem_blocks_st`. It calls `ossl_crypto_thread_start`, `ossl_crypto_thread_join` and `ossl_crypto_thread_clean` (declared in `include/internal/thread.h:19`, not installed, so they are not in the export atlas and have no owning phase). **Their coordinate was measured at D396 and is not `crypto/threads_pthread.c`**, which is what an earlier revision of this note said: that file holds the `CRYPTO_THREAD_*` lock/local/once layer and the RCU layer, and the crate already carries both in `src/runtime/thread.rs`. The three functions are `crypto/thread/internal.c:40/73/95` (the `#else` no-threads arm at `:109/115/120` is not this profile's), and what they need that the crate lacks is the native layer they call -- `ossl_crypto_thread_native_start`/`_join`/`_clean` in `crypto/thread/arch.c` (132 lines) over `crypto/thread/arch/thread_posix.c` (233, the POSIX arm this profile compiles) -- plus a `ctx` member on the thread object. Their other prerequisites are **landed**: `ossl_crypto_mutex_lock`/`_unlock`, `ossl_crypto_condvar_wait`/`_signal` (`src/runtime/thread.rs`), `OSSL_LIB_CTX_GET_THREADS` (`src/context/thread_data.rs:133`) and `OSSL_get_max_threads`. So this is **not** a thin adapter over an existing thread layer, but it is the smallest remaining unit in the stratum by a wide margin -- roughly 425 lines across `arch.c`, `thread_posix.c` and the three wrappers -- and it unblocks these three rows at once.
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/kdfs/hkdf.c.in`
 
@@ -132,17 +132,13 @@ rather than stubbed.
 Every other unlanded row this stratum owns, grouped by the unit that defines its
 `dispatch_table_symbol`, then listed by its `deflt_*` table in the authority's order.
 
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/asymciphers/rsa_enc.c.in` — 1 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_asym_cipher` | `ossl_rsa_asym_cipher_functions` | `OSSL_OP_ASYM_CIPHER` | `RSA:rsaEncryption:1.2.840.113549.1.1.1` | `_no arm yet_` |
-
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/asymciphers/sm2_enc.c.in` — 1 row(s)
 
 | table | dispatch table symbol | operation | algorithm name(s) | crate file |
 |---|---|---|---|---|
-| `deflt_asym_cipher` | `ossl_sm2_asym_cipher_functions` | `OSSL_OP_ASYM_CIPHER` | `SM2:1.2.156.10197.1.301` | `_no arm yet_` |
+| `deflt_asym_cipher` | `ossl_sm2_asym_cipher_functions` | `OSSL_OP_ASYM_CIPHER` | `SM2:1.2.156.10197.1.301` | `src/provider/asymcipher.rs` |
+
+**Withheld: the unit's one row, on three unlanded units.** `sm2_enc.c.in`'s encrypt and decrypt arms call `ossl_sm2_encrypt`/`ossl_sm2_decrypt` (`crypto/sm2/sm2_crypt.c`), which is not in this tree, and its AlgorithmIdentifier comes from the same `providers/common/der/der_sm2_sig.c` that `sm2_sig.c.in` waits on. It is therefore the **last** of the `OSSL_OP_ASYM_CIPHER` group's two rows to land: the `RSA` row landed at D396, and this one lands with the `SM2` crypt unit D396 measured.
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/kem/ec_kem.c.in` — 1 row(s)
 
@@ -168,12 +164,6 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 | `deflt_asym_kem` | `ossl_mlx_kem_asym_kem_functions` | `OSSL_OP_KEM` | `X448MLKEM1024` | `src/provider/kem.rs` |
 | `deflt_asym_kem` | `ossl_mlx_kem_asym_kem_functions` | `OSSL_OP_KEM` | `SecP256r1MLKEM768` | `src/provider/kem.rs` |
 | `deflt_asym_kem` | `ossl_mlx_kem_asym_kem_functions` | `OSSL_OP_KEM` | `SecP384r1MLKEM1024` | `src/provider/kem.rs` |
-
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/kem/rsa_kem.c.in` — 1 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_asym_kem` | `ossl_rsa_asym_kem_functions` | `OSSL_OP_KEM` | `RSA:rsaEncryption:1.2.840.113549.1.1.1` | `src/provider/kem.rs` |
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/ml_dsa_kmgmt.c.in` — 3 row(s)
 
@@ -260,15 +250,13 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 |---|---|---|---|---|
 | `deflt_signature` | `ossl_sm2_signature_functions` | `OSSL_OP_SIGNATURE` | `SM2:1.2.156.10197.1.301` | `src/provider/signature.rs` |
 
-**Withheld: the unit's one row, on two unlanded units.** `sm2_sig.c.in`'s sign path is `ossl_sm2_internal_sign`/`ossl_sm2_internal_verify` and `ossl_sm2_compute_z_digest` (`crypto/sm2/sm2_sign.c`), and its AlgorithmIdentifier comes from `providers/common/der/der_sm2_sig.c`. Neither unit is in this tree, so the single `SM2` row costs two whole transcriptions and lands with them.
-
 ## Provenance
 
 | field | value |
 |---|---|
 | generator | `forensics/tools/phase8_provider_rows.py` |
 | census | `forensics/atlas/provider-algorithms.json` |
-| census content hash | `26589256aef4d7e9d9a877a879aa3c5bc4fe84e24cc2fe900c2a03ea0edff32d` |
+| census content hash | `48b2885f414433c5f22463f7574487e8b3e3bd2e7b5bd00b1433c5c8a9b53ef1` |
 | authority tree | `forensics/authorities/src/openssl-3.6.4` |
 | crate query read | `src/provider/digest.rs` |
 

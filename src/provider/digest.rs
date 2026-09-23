@@ -2087,7 +2087,7 @@ static DEFLT_DIGESTS: [OsslAlgorithm; 28] = [
 /// `static const OSSL_ALGORITHM *deflt_query(void *provctx, int operation_id, int *no_cache)` —
 /// `providers/defltprov.c`, with the `OSSL_OP_DIGEST`, `OSSL_OP_CIPHER`, `OSSL_OP_MAC`,
 /// `OSSL_OP_KDF`, `OSSL_OP_RAND`, `OSSL_OP_KEYMGMT`, `OSSL_OP_KEYEXCH`, `OSSL_OP_SIGNATURE`,
-/// `OSSL_OP_KEM` and `OSSL_OP_SKEYMGMT` arms.
+/// `OSSL_OP_ASYM_CIPHER`, `OSSL_OP_KEM` and `OSSL_OP_SKEYMGMT` arms.
 ///
 /// The other operations the authority answers are other subphases' and are absent, not stubbed.
 /// The arms are in the authority's own `switch` order (`defltprov.c:702-731`), where `SIGNATURE`
@@ -2138,6 +2138,9 @@ unsafe extern "C" fn deflt_query(
     }
     if operation_id == crate::evp::skeymgmt::OSSL_OP_SKEYMGMT {
         return crate::provider::skeymgmt::DEFLT_SKEYMGMT.as_ptr();
+    }
+    if operation_id == crate::evp::asymcipher::OSSL_OP_ASYM_CIPHER {
+        return crate::provider::asymcipher::DEFLT_ASYM_CIPHER.as_ptr();
     }
     if operation_id == crate::evp::kem::OSSL_OP_KEM {
         return crate::provider::kem::DEFLT_ASYM_KEM.as_ptr();
@@ -2321,8 +2324,8 @@ mod tests {
         assert!(
             none.is_null(),
             "only OSSL_OP_DIGEST, OSSL_OP_CIPHER, OSSL_OP_MAC, OSSL_OP_KDF, OSSL_OP_RAND, \
-             OSSL_OP_KEYMGMT, OSSL_OP_KEYEXCH, OSSL_OP_SIGNATURE, OSSL_OP_KEM and \
-             OSSL_OP_SKEYMGMT are answered"
+             OSSL_OP_KEYMGMT, OSSL_OP_KEYEXCH, OSSL_OP_SIGNATURE, OSSL_OP_ASYM_CIPHER, \
+             OSSL_OP_KEM and OSSL_OP_SKEYMGMT are answered"
         );
 
         // The cipher half answers too, and its table starts at `deflt_ciphers[]`'s first row.
@@ -2383,15 +2386,32 @@ mod tests {
         let first = unsafe { core::ffi::CStr::from_ptr((*keyexchs).algorithm_names) };
         assert_eq!(first.to_bytes(), b"DH:dhKeyAgreement:1.2.840.113549.1.3.1");
 
-        // The KEM arm answers `deflt_asym_kem[]`, whose first landed row is the `X25519` DHKEM
-        // (this pass; the authority's `deflt_asym_kem[]` puts `RSA` first and `X25519` next).
+        // The ASYM_CIPHER arm answers `deflt_asym_cipher[]`, whose first (and, on this profile,
+        // only landed) row is the `RSA` one -- the authority's first at `defltprov.c:519`, with the
+        // `SM2` row after it unlanded.
+        // SAFETY: the query's contract; `provctx` is NULL and this arm ignores it.
+        let asymciphers = unsafe {
+            deflt_query(
+                ptr::null_mut(),
+                crate::evp::asymcipher::OSSL_OP_ASYM_CIPHER,
+                &mut no_cache,
+            )
+        };
+        assert!(!asymciphers.is_null());
+        // SAFETY: the returned table's first row is initialised.
+        let first = unsafe { core::ffi::CStr::from_ptr((*asymciphers).algorithm_names) };
+        assert_eq!(first.to_bytes(), b"RSA:rsaEncryption:1.2.840.113549.1.1.1");
+
+        // The KEM arm answers `deflt_asym_kem[]`, whose first landed row is now the `RSA` RSASVE
+        // KEM (this pass; the authority's `deflt_asym_kem[]` puts `RSA` first at `:527` and the two
+        // ECX rows at `:530-531`).
         // SAFETY: the query's contract; `provctx` is NULL and this arm ignores it.
         let kems =
             unsafe { deflt_query(ptr::null_mut(), crate::evp::kem::OSSL_OP_KEM, &mut no_cache) };
         assert!(!kems.is_null());
         // SAFETY: the returned table's first row is initialised.
         let first = unsafe { core::ffi::CStr::from_ptr((*kems).algorithm_names) };
-        assert_eq!(first.to_bytes(), b"X25519:1.3.101.110");
+        assert_eq!(first.to_bytes(), b"RSA:rsaEncryption:1.2.840.113549.1.1.1");
 
         // The SIGNATURE arm answers `deflt_signatures[]`, whose first landed row is the `DSA`
         // signature (D392; the authority's `deflt_signature[]` puts the ten `DSA` rows first at

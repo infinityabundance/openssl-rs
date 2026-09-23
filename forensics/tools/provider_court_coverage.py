@@ -76,6 +76,12 @@ COURT_PROBES: list[tuple[str, str, int]] = [
     # whose observations it carries -- an `OSSL_OP_SIGNATURE` row is a different row of a different
     # operation from the `OSSL_OP_KEYMGMT` and `OSSL_OP_MAC` rows `RT-KEYMGMT` and `RT-CIPHER` name.
     ("RT-SIGNATURE", "courts/phase8/rt_signature_probe.c", 8),
+    # This pass's court, and the first whose subject is an **encryption** face rather than a signing
+    # or key-management one: the `OSSL_OP_ASYM_CIPHER` `RSA` row and the `OSSL_OP_KEM` `RSA` row.
+    # `RT-KEYMGMT` and `RT-SIGNATURE` between them drive the `RSA` keymgmt and signature rows, so
+    # before this entry the two encryption rows were `implemented` with no observation of their own
+    # operation. It is registered here in the same commit as those rows.
+    ("RT-ASYM-CIPHER", "courts/phase8/rt_asymcipher_probe.c", 8),
 ]
 
 # The arm whose name list must equal the census's implemented cipher rows. A static list in a probe

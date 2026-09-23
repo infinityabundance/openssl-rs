@@ -16,12 +16,26 @@ use core::ptr;
 
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::ecx_kem::ECX_ASYM_KEM_FUNCTIONS;
+use crate::provider::rsa_kem::RSA_ASYM_KEM_FUNCTIONS;
 
-/// `static const OSSL_ALGORITHM deflt_asym_kem[]` — `providers/defltprov.c:526-547`, **the rows
-/// this module has landed**, in the authority's order. The `RSA` row is the authority's first, the
-/// four `ML-KEM`/`mlx` groups are its last, and `EC` sits between — all unlanded. The two ECX rows
-/// are the authority's second group.
-pub(crate) static DEFLT_ASYM_KEM: [OsslAlgorithm; 3] = [
+/// `static const OSSL_ALGORITHM deflt_asym_kem[]` — `providers/defltprov.c:526-549`, **the rows
+/// this module has landed**, in the authority's order. The `RSA` row is the authority's first; the
+/// `EC` row and the four `ML-KEM`/`mlx` groups that follow are its later ones and are unlanded. The
+/// two ECX rows are the authority's second group.
+///
+/// **`#[rustfmt::skip]` is load-bearing, not cosmetic** (D392): `gen_provider_algorithms.py`'s row
+/// reader anchors a row on `algorithm_names: c"…"` and `implementation: …as_ptr()` in one another's
+/// neighbourhood, and the `RSA` alias sequence is long enough that a rustfmt pass could move the
+/// `c"…"` onto its own line.
+#[rustfmt::skip]
+pub(crate) static DEFLT_ASYM_KEM: [OsslAlgorithm; 4] = [
+    OsslAlgorithm {
+        // `PROV_NAMES_RSA` (`defltprov.c:527`).
+        algorithm_names: c"RSA:rsaEncryption:1.2.840.113549.1.1.1".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: RSA_ASYM_KEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
     OsslAlgorithm {
         // `PROV_NAMES_X25519`.
         algorithm_names: c"X25519:1.3.101.110".as_ptr(),

@@ -86,6 +86,10 @@
       "observations": 1071,
       "verdict": "pass"
     },
+    "RT-ASYM-CIPHER": {
+      "observations": 103,
+      "verdict": "pass"
+    },
     "RT-BIO": {
       "observations": 212,
       "verdict": "pass"
@@ -466,6 +470,7 @@
     "sealed_census": 50
   },
   "provider_implemented": [
+    "default/OSSL_OP_ASYM_CIPHER/RSA",
     "default/OSSL_OP_CIPHER/AES-128-CBC",
     "default/OSSL_OP_CIPHER/AES-128-CBC-CTS",
     "default/OSSL_OP_CIPHER/AES-128-CBC-HMAC-SHA1",
@@ -640,6 +645,7 @@
     "default/OSSL_OP_KDF/TLS13-KDF",
     "default/OSSL_OP_KDF/X942KDF-ASN1",
     "default/OSSL_OP_KDF/X963KDF",
+    "default/OSSL_OP_KEM/RSA",
     "default/OSSL_OP_KEM/X25519",
     "default/OSSL_OP_KEM/X448",
     "default/OSSL_OP_KEYEXCH/DH",
@@ -733,14 +739,14 @@
       "8": 685,
       "9": 675
     },
-    "implemented": 259,
+    "implemented": 261,
     "open_by_phase": {
       "10": 636,
       "13": 39,
-      "8": 52,
+      "8": 50,
       "9": 10
     },
     "total": 996,
-    "unimplemented": 737
+    "unimplemented": 735
   }
 }

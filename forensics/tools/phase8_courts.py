@@ -216,6 +216,14 @@ COURTS: list[tuple[str, str]] = [
     # on `providers/common/der/` and `providers/common/securitycheck.c`, and the probe's header
     # names each row's remaining callee.
     ("RT-SIGNATURE", "rt_signature_probe.c"),
+    #
+    # This pass's court, and the first whose subject is an **encryption** face rather than a
+    # signing or key-management one: the `OSSL_OP_ASYM_CIPHER` `RSA` row and the `OSSL_OP_KEM`
+    # `RSA` row. `RT-KEYMGMT` drives the `RSA` keymgmt row both key through and `RT-SIGNATURE`
+    # the `RSA` signature rows; neither touches the encryption faces, so without this entry the
+    # two rows would be `implemented` and named by no observation of their own operation. The
+    # probe's header names what it does not observe and why.
+    ("RT-ASYM-CIPHER", "rt_asymcipher_probe.c"),
 ]
 
 # The correctness courts, and the committed vector sets each checks. `CT-DIGEST` is the

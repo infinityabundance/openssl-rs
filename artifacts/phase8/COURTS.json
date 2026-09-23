@@ -227,6 +227,23 @@
         "verdict": "pass"
       },
       {
+        "authority_exit_code": 0,
+        "authority_observations": 103,
+        "candidate_exit_code": 0,
+        "candidate_observations": 103,
+        "candidate_stderr_tail": [],
+        "court": "RT-ASYM-CIPHER",
+        "crashed": false,
+        "probe": "courts/phase8/rt_asymcipher_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase8/probes/rt_asymcipher_probe.authority",
+          "candidate": "artifacts/phase8/probes/rt_asymcipher_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
         "algorithms": {
           "blake2b512": {
             "digest_bytes": 64,
@@ -37891,8 +37908,8 @@
     ],
     "summary": {
       "fail": 0,
-      "pass": 15,
-      "total": 15
+      "pass": 16,
+      "total": 16
     }
   },
   "generator": "forensics/tools/phase8_courts.py",
@@ -37966,6 +37983,11 @@
       "name": "probe",
       "path": "courts/phase8/rt_signature_probe.c",
       "sha256": "550463ffecb0d75603d01b4ee73aabe697a0aaa5a4ca120197c278831b6f8543"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase8/rt_asymcipher_probe.c",
+      "sha256": "706658dd0d827b42bd4b99422b2c340a6ef9c0eef817c07ba3426e0f86004271"
     },
     {
       "name": "correctness-probe",
