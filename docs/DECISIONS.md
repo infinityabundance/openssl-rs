@@ -27744,3 +27744,128 @@ carry the keytypes the signature group needs most (`rsa_kmgmt.c`, `dsa_kmgmt.c`,
 (`forensics/phase8-obligations.json` still `complete: true`, implemented **786**, deferred **0**,
 open **0**), and `forensics/phase-state.json` is unchanged. No claim is made that the stratum is
 closer to sealing than that.
+
+---
+
+## D385 — the keymgmt group's first units are gated three different ways, and the census refuses two of them outright
+
+**Decision.** No `OSSL_OP_KEYMGMT` row is landed this pass, and the `OSSL_OP_KEYMGMT` arm written
+and tested for it is **removed again** rather than committed empty. The reason is structural and
+measured: `gen_provider_algorithms.py` cannot accept a crate table with no rows (its reader needs at
+least one `algorithm_names:` field or `row(…)`, `:554-590`), so an arm with an empty `DEFLT_KEYMGTS`
+fails the census; and the first units that could fill it are each gated. The work is recorded in the
+plan document's `WITHHELD` map, whose meaning D385 widens from "not reachable" to "withheld, with the
+measured reason" — it now covers prerequisites and tool refusals as well as unreachability. The
+fully-written `DEFLT_KEYMGTS`, the `kdf_legacy_kmgmt.c` transcription (`src/provider/keymgmt.rs`,
+`KDF_DATA`, its three `ossl_kdf_data_*` functions and the three-row table), the arm, the
+`OSSL_FUNC_KEYMGMT_*` and `CRYPTO_*_REF` visibility widenings and the unit-test assertion were all
+reverted, so the tree claims nothing it cannot court.
+
+**The three gates, each measured against the tree rather than reasoned.**
+
+1. **`kdf_legacy_kmgmt.c` (3 rows) and `mac_legacy_kmgmt.c` (4, of which 3 are gated) are refused by
+   the census's own invariant.** Its three rows all dispatch to the authority's one
+   `ossl_kdf_keymgmt_functions`, and `gen_provider_algorithms.py:1540-1553` requires one authority
+   dispatch symbol per row. Landing two of them raises the fatal
+   `default/OSSL_OP_KEYMGMT/HKDF and default/OSSL_OP_KEYMGMT/TLS1-PRF share the authority dispatch
+   symbol 'ossl_kdf_keymgmt_functions' but are different rows` — observed by running the generator
+   with the transposed table in place. **The authority's own `deflt_keymgmt[]` is many-to-one here**
+   (`HMAC`/`SIPHASH`/`POLY1305` share `ossl_mac_legacy_keymgmt_functions` the same way), so this
+   invariant is stricter than the table it describes. Two of the forty keymgmt rows therefore need a
+   census carve-out for the authority's declared shared symbols before the group can be closed —
+   and that is the next pass's first piece of work, not a transcription.
+2. **`rsa_kmgmt.c` (2 rows) and `dsa_kmgmt.c` (1 row) need prerequisite units.** `rsa_kmgmt.c`'s
+   `rsa_validate` (`:390-410`) calls all three `ossl_rsa_validate_*` **outside** any FIPS guard, and
+   those are `crypto/rsa/rsa_chk.c`'s one-line calls to `ossl_rsa_sp800_56b_check_public`/`_private`
+   in `crypto/rsa/rsa_sp800_56b_check.c` — the unit D327 deliberately did **not** transcribe because
+   nothing on the generate path reached it. `dsa_kmgmt.c` is the same shape: it calls
+   `ossl_dsa_check_pairwise`, `ossl_dsa_check_params`, `ossl_dsa_check_priv_key` and
+   `ossl_dsa_check_pub_key` from `crypto/dsa/dsa_check.c`, none of which the crate has. Their other
+   externals are all present, so both are reachable as soon as the prerequisites land.
+3. **`ec_kmgmt.c` (2 rows) is not reachable.** Its rows are built on `EC_GROUP`/`EC_POINT`, which
+   D334 records as one indivisible landing not yet made (`CT-EC` is `PENDING` for it).
+
+**What is *not* gated, and is therefore next.** `dh_kmgmt.c` (2 rows, `DH` and `DHX`) is **fully
+reachable**: of everything it calls, only `ossl_dh_gen_type_name2id`
+(`crypto/evp/dh_support.c:50`, a linear search over the `dhtype2id[]` table the crate already
+carries in `src/evp/pkey_ctx.rs:4886-4905`) is missing, and it is a fifteen-line function. It is
+deliberately **not** in the `WITHHELD` map, because nothing about its closure is unreachable — it is
+simply the largest single piece of work left in the group's front half (910 lines), and this pass
+ran out of room after paying for the measurement above. It is also the highest-leverage single unit
+remaining anywhere in the stratum: with the two `dh_kmgmt` rows published, D384's withheld
+`exchange/dh_exch.c.in` becomes drivable and its `DH` keyexch row can land.
+
+**Movement.** None, and that is the point: `provider_rows` stays implemented **184** / unimplemented
+**122** over **306** owned, and `projection.open[8]` stays **122**. The export ledger is untouched
+(`forensics/phase8-obligations.json` still `complete: true`, implemented **786**, deferred **0**,
+open **0**), and `forensics/phase-state.json` is unchanged. No claim is made that the stratum is
+closer to sealing than that.
+
+---
+
+## D386 — the keymgmt gate opens: the census carve-out, the sixth and seventh `deflt_query` arms, and six rows
+
+**Decision.** Three things D385 named as the next pieces of work are done, in the order that makes
+them possible rather than useful.
+
+1. **The census carve-out D385 measured is a partition equality, not a relaxation.**
+   `gen_provider_algorithms.py`'s dispatch-association check required each *authority* dispatch
+   symbol to name exactly one row, which the authority's own `deflt_keymgmt[]` violates:
+   `HMAC`/`SIPHASH`/`POLY1305` share `ossl_mac_legacy_keymgmt_functions` and the three legacy-KDF
+   rows share `ossl_kdf_keymgmt_functions`. The check now requires the two symbols to induce the
+   **same partition** of the landed rows — rows the authority dispatches together must be dispatched
+   together by the crate, and vice versa — which is what its own comment always said it was. Both
+   directions stay fatal, so a miscarved transcription is still refused; only the false "one symbol
+   per row" claim is gone. Measured against the landed rows: 0 rows changed state for the carve-out
+   itself.
+2. **The `OSSL_OP_KEYMGMT` arm is landed (`src/provider/keymgmt.rs`, `DEFLT_KEYMGMT`).** It is the
+   gate: with no arm, `EVP_PKEY_CTX_new_from_name(NULL, "DH", NULL)` cannot fetch a key type, so no
+   `OSSL_OP_KEYEXCH`, `OSSL_OP_SIGNATURE`, `OSSL_OP_KEM` or `OSSL_OP_ASYM_CIPHER` row is reachable.
+   On it lands **`kdf_legacy_kmgmt.c` (3 rows: `TLS1-PRF`, `HKDF`, `SCRYPT`)** — the `KDF_DATA`
+   handle and its three dispatch slots, transcribed whole. It is the smallest of the four reachable
+   keymgmt units and the one the exchange gate needs first. The three rows share the one crate
+   `KDF_KEYMGMT_FUNCTIONS`, which is now accepted because the census describes rather than rejects
+   the authority's many-to-one association.
+3. **The `OSSL_OP_KEYEXCH` arm is landed (`src/provider/exchange.rs`, `DEFLT_KEYEXCH`) — the
+   seventh arm — and on it `kdf_exch.c` (3 rows: `TLS1-PRF`, `HKDF`, `SCRYPT`).** This is the first
+   exchange unit the gate makes drivable, and it is the demonstration that the gate is real rather
+   than structural: the three rows are fetched through the `TLS1-PRF`/`HKDF`/`SCRYPT` **keymgmt**
+   rows landed in step 2. `kdf_exch.c` raises once (`PROV_R_OUTPUT_BUFFER_TOO_SMALL`, `:117`), so it
+   joins `gen_err_raise_sites.py`'s covered units as `PROV_KDF_EXCH` and its coordinate is
+   `err_sites::PROV_KDF_EXCH_117`.
+
+**The `WITHHELD` map is corrected, because two of its reasons were made false by this pass.** The
+`kdf_legacy_kmgmt.c` entry (census refusal) and the `kdf_exch.c` entry (keymgmt gate absent) are
+removed — both units are landed. The `dh_exch.c.in`, `ecdh_exch.c.in` and `ecx_exch.c.in` entries no
+longer say the gate is absent; each now names the **keymgmt row** it waits on (`dh_kmgmt.c`,
+`ec_kmgmt.c`, `ecx_kmgmt.c.in`). The `mac_legacy_kmgmt.c` entry is removed: the census no longer
+refuses it, and its closure was not shown unreachable (`PROV_CIPHER`, `ossl_prov_cipher_load`,
+`ossl_prov_cipher_load_from_params` and the `ossl_param_build_set_*` pair are all present), so it is
+reachable-but-untranscribed rather than withheld — the same status D385 gave `dh_kmgmt.c`. The four
+PQC keymgmt units are **added** as unreachable, with the measured reason: their units call
+`ossl_ml_dsa_*`, `ossl_ml_kem_*`, `ossl_mlx_*` and `ossl_slh_dsa_*`, and this tree matches none of
+those symbols.
+
+**What is left, and what it needs — measured, not reasoned.**
+
+* **`dh_kmgmt.c` (2 rows, `DH`/`DHX`)** — unchanged from D385's measurement and still the highest
+  leverage: its only missing callee is `ossl_dh_gen_type_name2id` (fifteen lines). Landing it makes
+  `dh_exch.c.in` (1 row) drivable.
+* **`ecx_kmgmt.c.in` (4 rows)** — its own layer is present (`src/ec/ecx_key.rs`), so it is reachable;
+  landing it makes `ecx_exch.c.in` (2 rows) drivable.
+* **`mac_legacy_kmgmt.c` (4 rows)** — reachable (carve-out landed, `PROV_CIPHER` helpers present);
+  the one arm to check after transcribing is `key_to_params`'s `#if !defined(OPENSSL_NO_ENGINE)`
+  block, which reads `ENGINE_get_id`.
+* **`rsa_kmgmt.c` (2) and `dsa_kmgmt.c` (1)** — still behind `crypto/rsa/rsa_sp800_56b_check.c` and
+  `crypto/dsa/dsa_check.c` respectively.
+* **`ec_kmgmt.c` (2), `ecdh_exch.c.in` (1), and the twelve PQC keymgmt rows** — not reachable
+  (`EC_GROUP`/`EC_POINT`; the PQC implementations).
+
+**Movement.** `provider_rows` moves implemented **184 → 190** (+6) and unimplemented **122 → 116**
+over **306** owned, and `projection.open[8]` moves **122 → 116**. The six are: `kdf_legacy_kmgmt.c`'s
+three (`OSSL_OP_KEYMGMT`) and `kdf_exch.c`'s three (`OSSL_OP_KEYEXCH`). The export ledger is
+untouched (`forensics/phase8-obligations.json` `complete: true`, implemented **786**, deferred **0**,
+open **0**) — these are registration rows, not symbols — and the new `#[no_mangle]` handles
+(`ossl_kdf_data_new`/`_free`/`_up_ref`) are authority *internal* symbols already listed in
+`forensics/atlas/internal-symbols.json`. No claim is made that the stratum is closer to sealing than
+`provider_rows` says.

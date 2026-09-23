@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 184,
+        "implemented": 190,
         "unmatched": 0
       },
       "9": {
@@ -29,8 +29,8 @@
         "probe": "courts/phase9/rt_drbg_probe.c"
       }
     ],
-    "directly_courted": 189,
-    "implemented_rows": 189,
+    "directly_courted": 195,
+    "implemented_rows": 195,
     "rows": [
       {
         "algorithm_names": "AES-128-CBC",
@@ -2461,6 +2461,88 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "HKDF",
+        "aliases": [
+          "HKDF"
+        ],
+        "courts": [
+          "RT-DIGEST"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYEXCH",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SCRYPT",
+        "aliases": [
+          "SCRYPT",
+          "id-scrypt",
+          "1.3.6.1.4.1.11591.4.11"
+        ],
+        "courts": [
+          "RT-DIGEST"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYEXCH",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "TLS1-PRF",
+        "aliases": [
+          "TLS1-PRF"
+        ],
+        "courts": [
+          "RT-DIGEST"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYEXCH",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "HKDF",
+        "aliases": [
+          "HKDF"
+        ],
+        "courts": [
+          "RT-DIGEST"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SCRYPT",
+        "aliases": [
+          "SCRYPT",
+          "id-scrypt",
+          "1.3.6.1.4.1.11591.4.11"
+        ],
+        "courts": [
+          "RT-DIGEST"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "TLS1-PRF",
+        "aliases": [
+          "TLS1-PRF"
+        ],
+        "courts": [
+          "RT-DIGEST"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "BLAKE2BMAC",
         "aliases": [
           "BLAKE2BMAC",
@@ -2673,7 +2755,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "43e6e0fad06335d95019f9bf164b552de7eda4f14f6ab64c6681cb3202f2613f"
+      "sha256": "b7772e186461c34bbe5ae773cd4a2a09ed2ca27cb5109531dfd204efe0d22ecc"
     },
     {
       "name": "court:RT-DIGEST",

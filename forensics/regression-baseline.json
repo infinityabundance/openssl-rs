@@ -632,6 +632,12 @@
     "default/OSSL_OP_KDF/TLS13-KDF",
     "default/OSSL_OP_KDF/X942KDF-ASN1",
     "default/OSSL_OP_KDF/X963KDF",
+    "default/OSSL_OP_KEYEXCH/HKDF",
+    "default/OSSL_OP_KEYEXCH/SCRYPT",
+    "default/OSSL_OP_KEYEXCH/TLS1-PRF",
+    "default/OSSL_OP_KEYMGMT/HKDF",
+    "default/OSSL_OP_KEYMGMT/SCRYPT",
+    "default/OSSL_OP_KEYMGMT/TLS1-PRF",
     "default/OSSL_OP_MAC/BLAKE2BMAC",
     "default/OSSL_OP_MAC/BLAKE2SMAC",
     "default/OSSL_OP_MAC/CMAC",
@@ -655,14 +661,14 @@
       "8": 685,
       "9": 675
     },
-    "implemented": 189,
+    "implemented": 195,
     "open_by_phase": {
       "10": 636,
       "13": 39,
-      "8": 122,
+      "8": 116,
       "9": 10
     },
     "total": 996,
-    "unimplemented": 807
+    "unimplemented": 801
   }
 }

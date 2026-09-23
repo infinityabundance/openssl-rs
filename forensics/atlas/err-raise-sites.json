@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 3455,
+      "sites": 3456,
       "unattributed": 0
     },
     "covered_files": [
@@ -212,6 +212,7 @@
       "providers/implementations/kdfs/krb5kdf.c",
       "providers/implementations/kdfs/hmacdrbg_kdf.c",
       "providers/implementations/skeymgmt/generic.c",
+      "providers/implementations/exchange/kdf_exch.c",
       "crypto/rsa/rsa_lib.c",
       "crypto/rsa/rsa_crpt.c",
       "crypto/rsa/rsa_pk1.c",
@@ -34235,6 +34236,21 @@
         "rel_source": "providers/implementations/skeymgmt/generic.c"
       },
       {
+        "const_name": "PROV_KDF_EXCH_117",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/providers/implementations/exchange/kdf_exch.c",
+        "function": "kdf_derive",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 117,
+        "macro": "ERR_raise",
+        "reason": 106,
+        "reason_symbol": "PROV_R_OUTPUT_BUFFER_TOO_SMALL",
+        "rel_source": "providers/implementations/exchange/kdf_exch.c"
+      },
+      {
         "const_name": "RSA_LIB_85",
         "data_format": null,
         "dynamic_reason": false,
@@ -53269,6 +53285,11 @@
       "name": "authority:providers/implementations/skeymgmt/generic.c",
       "path": "forensics/authorities/build/openssl-3.6.4-production/providers/implementations/skeymgmt/generic.c",
       "sha256": "498fc84a35347a4807b598ac8c26c8d333ca25f499859e629ca3169e6c532711"
+    },
+    {
+      "name": "authority:providers/implementations/exchange/kdf_exch.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/providers/implementations/exchange/kdf_exch.c",
+      "sha256": "91e40f6c836a6e69bcbc210a2f5a45e326a20fc29f20f3584f56ef2e2af82bae"
     },
     {
       "name": "authority:crypto/rsa/rsa_lib.c",

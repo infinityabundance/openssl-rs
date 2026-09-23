@@ -1608,6 +1608,13 @@
         "translation_unit": "crypto/provider_core.c"
       },
       {
+        "module": "src/provider/keymgmt.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "3/3",
+        "translation_unit": "providers/implementations/keymgmt/libdefault-lib-kdf_legacy_kmgmt.c"
+      },
+      {
         "module": "src/provider/mac.rs",
         "phase": 8,
         "phase_source": "module-declaration",
