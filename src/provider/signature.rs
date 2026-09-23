@@ -29,19 +29,17 @@
 //!
 //! The `SLH-DSA` and `ML-DSA` rows are not stubbed: their units are built on `crypto/slh_dsa/` and
 //! `crypto/ml_dsa/`, which this crate does not have, so their transcription cannot close. The
-//! `RSA`, `DSA`, `ECDSA`, `EdDSA` and `SM2` units are absent for a reason that is a *measured*
-//! prerequisite rather than a size judgement, and each is named with its remaining callee:
+//! `RSA` and `SM2` units are absent for a reason that is a *measured* prerequisite rather than a
+//! size judgement, and each is named with its remaining callee:
 //!
 //!   * `rsa_sig.c.in` waits on `providers/common/der/der_rsa_sig.c`'s two
 //!     `ossl_DER_w_algorithmIdentifier_*` writers and `providers/common/securitycheck.c`'s
 //!     `ossl_rsa_key_op_get_protect`;
-//!   * `dsa_sig.c.in` waits on `der_dsa_sig.c`'s writer and `securitycheck.c`'s `ossl_dsa_check_key`;
-//!   * `ecdsa_sig.c.in` waits on `der_ec_sig.c`'s writer and `securitycheck.c`'s
-//!     `ossl_digest_get_approved_nid`;
-//!   * `eddsa_sig.c.in` waits only on `der_ecx_key.c`'s two writers;
 //!   * `sm2_sig.c.in` waits on `der_sm2_sig.c`'s writer and `crypto/sm2/sm2_sign.c`.
 //!
-//! The legacy-MAC unit waits on none of them, which is why it is the one the table opens with.
+//! The `DSA` unit opened the table (its two callees landed with it); the `EdDSA` unit is the
+//! second landing (whose one callee is `der_ecx_key.c`'s pair); the `ECDSA` unit is the third
+//! (whose one callee is `der_ec_sig.c`'s writer); the legacy-MAC unit waits on none of them.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -54,6 +52,17 @@ use crate::provider::dsa_sig::{
     DSA_SHA3_256_SIGNATURE_FUNCTIONS, DSA_SHA3_384_SIGNATURE_FUNCTIONS,
     DSA_SHA3_512_SIGNATURE_FUNCTIONS, DSA_SHA512_SIGNATURE_FUNCTIONS, DSA_SIGNATURE_FUNCTIONS,
 };
+use crate::provider::ecdsa_sig::{
+    ECDSA_SHA1_SIGNATURE_FUNCTIONS, ECDSA_SHA224_SIGNATURE_FUNCTIONS,
+    ECDSA_SHA256_SIGNATURE_FUNCTIONS, ECDSA_SHA384_SIGNATURE_FUNCTIONS,
+    ECDSA_SHA3_224_SIGNATURE_FUNCTIONS, ECDSA_SHA3_256_SIGNATURE_FUNCTIONS,
+    ECDSA_SHA3_384_SIGNATURE_FUNCTIONS, ECDSA_SHA3_512_SIGNATURE_FUNCTIONS,
+    ECDSA_SHA512_SIGNATURE_FUNCTIONS, ECDSA_SIGNATURE_FUNCTIONS,
+};
+use crate::provider::eddsa_sig::{
+    ED25519CTX_SIGNATURE_FUNCTIONS, ED25519PH_SIGNATURE_FUNCTIONS, ED25519_SIGNATURE_FUNCTIONS,
+    ED448PH_SIGNATURE_FUNCTIONS, ED448_SIGNATURE_FUNCTIONS,
+};
 use crate::provider::mac_legacy_sig::{
     MAC_LEGACY_CMAC_SIGNATURE_FUNCTIONS, MAC_LEGACY_HMAC_SIGNATURE_FUNCTIONS,
     MAC_LEGACY_POLY1305_SIGNATURE_FUNCTIONS, MAC_LEGACY_SIPHASH_SIGNATURE_FUNCTIONS,
@@ -62,17 +71,19 @@ use crate::provider::mac_legacy_sig::{
 /// `static const OSSL_ALGORITHM deflt_signature[]` — `providers/defltprov.c:415-521`, **the rows
 /// this module has landed**, in the authority's order.
 ///
-/// Two units have landed. `dsa_sig.c.in` is the authority's first ten rows (`:417-426`), the
+/// Three units have landed. `dsa_sig.c.in` is the authority's first ten rows (`:417-426`), the
 /// `DSA` row first and its nine `DSA-<MD>` sigalgs after it; the ten dispatch tables are
-/// `src/provider/dsa_sig.rs`'s. The four legacy-MAC rows are the second landing: `HMAC` (`:476`),
-/// `SIPHASH` (`:478-479`), `POLY1305` (`:481-482`) and `CMAC` (`:484`), whose tables are
+/// `src/provider/dsa_sig.rs`'s. The five `EdDSA` rows are the second landing (`:444-448`), whose
+/// tables are `src/provider/eddsa_sig.rs`'s. The ten `ECDSA` rows are the third (`:455-464`), whose
+/// tables are `src/provider/ecdsa_sig.rs`'s. The four legacy-MAC rows are the fourth: `HMAC`
+/// (`:476`), `SIPHASH` (`:478-479`), `POLY1305` (`:481-482`) and `CMAC` (`:484`), whose tables are
 /// `src/provider/mac_legacy_sig.rs`'s.
 ///
 /// **The property definition is `"provider=default"` on every row** (`defltprov.c`'s three-field
-/// initializer, D247). The rows between the two runs — the fourteen `RSA` ones, the five `EdDSA`
-/// ones, the ten `ECDSA` ones, `SM2`, the three `ML-DSA` ones — are absent rather than reordered
-/// until their units land: the census requires this table's rows to be a **subsequence** of
-/// `deflt_signature[]` in the authority's order (D386).
+/// initializer, D247). The rows between the runs — the fourteen `RSA` ones, `SM2` and the three
+/// `ML-DSA` ones — are absent rather than reordered until their units land: the census requires
+/// this table's rows to be a **subsequence** of `deflt_signature[]` in the authority's order
+/// (D386).
 ///
 /// **`#[rustfmt::skip]` is load-bearing, not cosmetic.** `gen_provider_algorithms.py`'s row
 /// reader anchors a row on `algorithm_names: c"…"` and `implementation: …as_ptr()` in one another's
@@ -80,7 +91,7 @@ use crate::provider::mac_legacy_sig::{
 /// rustfmt pass that moved the `c"…"` onto its own line would make the census read a table with
 /// fewer rows than it has.
 #[rustfmt::skip]
-pub(crate) static DEFLT_SIGNATURES: [OsslAlgorithm; 15] = [
+pub(crate) static DEFLT_SIGNATURES: [OsslAlgorithm; 30] = [
     OsslAlgorithm {
         // `PROV_NAMES_DSA` — the OID alias is part of the row.
         algorithm_names: c"DSA:dsaEncryption:1.2.840.10040.4.1".as_ptr(),
@@ -152,6 +163,111 @@ pub(crate) static DEFLT_SIGNATURES: [OsslAlgorithm; 15] = [
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
+        // `PROV_NAMES_ED25519`.
+        algorithm_names: c"ED25519:1.3.101.112".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ED25519_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ED25519ph`.
+        algorithm_names: c"ED25519ph".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ED25519PH_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ED25519ctx`.
+        algorithm_names: c"ED25519ctx".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ED25519CTX_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ED448`.
+        algorithm_names: c"ED448:1.3.101.113".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ED448_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ED448ph`.
+        algorithm_names: c"ED448ph".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ED448PH_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ECDSA`.
+        algorithm_names: c"ECDSA".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ECDSA_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ECDSA_SHA1`.
+        algorithm_names: c"ECDSA-SHA1:ECDSA-SHA-1:ecdsa-with-SHA1:1.2.840.10045.4.1".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ECDSA_SHA1_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ECDSA_SHA224`.
+        algorithm_names: c"ECDSA-SHA2-224:ECDSA-SHA224:ecdsa-with-SHA224:1.2.840.10045.4.3.1".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ECDSA_SHA224_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ECDSA_SHA256`.
+        algorithm_names: c"ECDSA-SHA2-256:ECDSA-SHA256:ecdsa-with-SHA256:1.2.840.10045.4.3.2".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ECDSA_SHA256_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ECDSA_SHA384`.
+        algorithm_names: c"ECDSA-SHA2-384:ECDSA-SHA384:ecdsa-with-SHA384:1.2.840.10045.4.3.3".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ECDSA_SHA384_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ECDSA_SHA512`.
+        algorithm_names: c"ECDSA-SHA2-512:ECDSA-SHA512:ecdsa-with-SHA512:1.2.840.10045.4.3.4".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ECDSA_SHA512_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ECDSA_SHA3_224`.
+        algorithm_names: c"ECDSA-SHA3-224:ecdsa_with_SHA3-224:id-ecdsa-with-sha3-224:2.16.840.1.101.3.4.3.9".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ECDSA_SHA3_224_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ECDSA_SHA3_256`.
+        algorithm_names: c"ECDSA-SHA3-256:ecdsa_with_SHA3-256:id-ecdsa-with-sha3-256:2.16.840.1.101.3.4.3.10".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ECDSA_SHA3_256_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ECDSA_SHA3_384`.
+        algorithm_names: c"ECDSA-SHA3-384:ecdsa_with_SHA3-384:id-ecdsa-with-sha3-384:2.16.840.1.101.3.4.3.11".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ECDSA_SHA3_384_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ECDSA_SHA3_512`.
+        algorithm_names: c"ECDSA-SHA3-512:ecdsa_with_SHA3-512:id-ecdsa-with-sha3-512:2.16.840.1.101.3.4.3.12".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ECDSA_SHA3_512_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
         // `PROV_NAMES_HMAC`.
         algorithm_names: c"HMAC".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
@@ -191,11 +307,12 @@ pub(crate) static DEFLT_SIGNATURES: [OsslAlgorithm; 15] = [
 mod tests {
     use super::*;
 
-    /// The table's shape: fifteen entries, the last the NULL terminator, and the two landed runs
-    /// in the authority's order -- `DSA` first (`defltprov.c:417`) and `CMAC` last (`:484`).
+    /// The table's shape: thirty entries, the last the NULL terminator, and the four landed runs in
+    /// the authority's order -- `DSA` first (`defltprov.c:417`), `EdDSA` (`:444`), `ECDSA` (`:455`)
+    /// and `CMAC` last (`:484`).
     #[test]
-    fn the_signature_table_is_the_authoritys_two_landed_runs_in_order() {
-        assert_eq!(DEFLT_SIGNATURES.len(), 15);
+    fn the_signature_table_is_the_authoritys_four_landed_runs_in_order() {
+        assert_eq!(DEFLT_SIGNATURES.len(), 30);
         // SAFETY: the first row is initialised.
         let first = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[0].algorithm_names) };
         assert_eq!(first.to_bytes(), b"DSA:dsaEncryption:1.2.840.10040.4.1");
@@ -205,14 +322,31 @@ mod tests {
             tenth.to_bytes(),
             b"DSA-SHA3-512:dsa_with_SHA3-512:id-dsa-with-sha3-512:2.16.840.1.101.3.4.3.8"
         );
-        // SAFETY: the eleventh row is initialised.
+        // SAFETY: the eleventh row is initialised -- the `EdDSA` run's first.
         let eleventh = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[10].algorithm_names) };
-        assert_eq!(eleventh.to_bytes(), b"HMAC");
-        // SAFETY: the fourteenth row is initialised.
-        let last = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[13].algorithm_names) };
+        assert_eq!(eleventh.to_bytes(), b"ED25519:1.3.101.112");
+        // SAFETY: the fifteenth row is initialised -- the `EdDSA` run's last.
+        let fifteenth = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[14].algorithm_names) };
+        assert_eq!(fifteenth.to_bytes(), b"ED448ph");
+        // SAFETY: the sixteenth row is initialised -- the `ECDSA` run's first.
+        let sixteenth = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[15].algorithm_names) };
+        assert_eq!(sixteenth.to_bytes(), b"ECDSA");
+        // SAFETY: the twenty-fifth row is initialised -- the `ECDSA` run's last.
+        let twenty_fifth =
+            unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[24].algorithm_names) };
+        assert_eq!(
+            twenty_fifth.to_bytes(),
+            b"ECDSA-SHA3-512:ecdsa_with_SHA3-512:id-ecdsa-with-sha3-512:2.16.840.1.101.3.4.3.12"
+        );
+        // SAFETY: the twenty-sixth row is initialised -- the legacy-MAC run's first.
+        let twenty_sixth =
+            unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[25].algorithm_names) };
+        assert_eq!(twenty_sixth.to_bytes(), b"HMAC");
+        // SAFETY: the twenty-ninth row is initialised.
+        let last = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[28].algorithm_names) };
         assert_eq!(last.to_bytes(), b"CMAC");
-        assert!(DEFLT_SIGNATURES[14].algorithm_names.is_null());
-        assert!(DEFLT_SIGNATURES[14].property_definition.is_null());
-        assert!(DEFLT_SIGNATURES[14].implementation.is_null());
+        assert!(DEFLT_SIGNATURES[29].algorithm_names.is_null());
+        assert!(DEFLT_SIGNATURES[29].property_definition.is_null());
+        assert!(DEFLT_SIGNATURES[29].implementation.is_null());
     }
 }

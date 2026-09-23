@@ -13094,7 +13094,8 @@
             "basis": "called",
             "courts": [
               "RT-EVP-PKEY",
-              "RT-KEYMGMT"
+              "RT-KEYMGMT",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_PKEY_CTX_new_from_pkey"
           },
@@ -13274,7 +13275,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EVP-PKEY"
+              "RT-EVP-PKEY",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_PKEY_CTX_set_signature"
           },
@@ -14639,7 +14641,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EVP-PKEY"
+              "RT-EVP-PKEY",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_PKEY_sign"
           },
@@ -14667,21 +14670,24 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EVP-PKEY"
+              "RT-EVP-PKEY",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_PKEY_sign_message_final"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-EVP-PKEY"
+              "RT-EVP-PKEY",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_PKEY_sign_message_init"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-EVP-PKEY"
+              "RT-EVP-PKEY",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_PKEY_sign_message_update"
           },
@@ -14712,7 +14718,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EVP-PKEY"
+              "RT-EVP-PKEY",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_PKEY_verify"
           },
@@ -14740,21 +14747,24 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EVP-PKEY"
+              "RT-EVP-PKEY",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_PKEY_verify_message_final"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-EVP-PKEY"
+              "RT-EVP-PKEY",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_PKEY_verify_message_init"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-EVP-PKEY"
+              "RT-EVP-PKEY",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_PKEY_verify_message_update"
           },
@@ -15547,7 +15557,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EVP-INTROSPECT"
+              "RT-EVP-INTROSPECT",
+              "RT-SIGNATURE"
             ],
             "symbol": "EVP_shake128"
           },
@@ -21992,7 +22003,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "c91e9dc1205722e84b9213eabedee1d6bf37c0afb9be3f29f4bb361dd902a481"
+      "sha256": "63f15ad092a9ce41167a23515272824190f075325c06f72ad48e1f254e84add3"
     },
     {
       "name": "symbol-ownership",
@@ -22047,7 +22058,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "02db6371cea4a9b0fa681aa66bd806d9c31ea79acd37b729c91f8c7c5efa9e95"
+      "sha256": "169e4a7000ac7bfedfcfd5492a2cd843a46933d43fa62710dbb408578ab06821"
     },
     {
       "name": "phase7-courts",
@@ -22057,17 +22068,17 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "61f5385dbd6d6bb94c0c429632003a02abc9376d84151069795cfa1019b35c64"
+      "sha256": "e86a7451bff143f3ab0cf7edec56eef1dcaaad828ba9d612332a253d9079aca5"
     },
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "cfaa4c69d3fbbeedb609b1c8c43ce91b8b1866aa001706b48d2c1f3663cfccf9"
+      "sha256": "f2b4a34651901db3e7f5a4a38130ecf076f33d116d1e8889bf588c19e45ece58"
     },
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "36430871c2d7cb02f34d365fdf254eaa82a80ec98b3368964fca05e411968c24"
+      "sha256": "7e5417a5df0c0b354799015fea6ae9aebcf4fe78f92ea93f55bdfd35f3ee16ec"
     },
     {
       "name": "phase9-courts",

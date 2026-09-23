@@ -24102,6 +24102,556 @@ pub(crate) const PROV_DSA_SIG_1284: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ecdsa_setup_md` at `providers/implementations/signature/ecdsa_sig.c:184` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_ECDSA_SIG_184: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 184,
+    func: c"ecdsa_setup_md",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_setup_md` at `providers/implementations/signature/ecdsa_sig.c:192` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_ECDSA_SIG_192: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 192,
+    func: c"ecdsa_setup_md",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_setup_md` at `providers/implementations/signature/ecdsa_sig.c:198` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_ECDSA_SIG_198: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 198,
+    func: c"ecdsa_setup_md",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_setup_md` at `providers/implementations/signature/ecdsa_sig.c:205` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_ECDSA_SIG_205: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 205,
+    func: c"ecdsa_setup_md",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_setup_md` at `providers/implementations/signature/ecdsa_sig.c:212` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_ECDSA_SIG_212: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 212,
+    func: c"ecdsa_setup_md",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_setup_md` at `providers/implementations/signature/ecdsa_sig.c:234` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_ECDSA_SIG_234: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 234,
+    func: c"ecdsa_setup_md",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_signverify_init` at `providers/implementations/signature/ecdsa_sig.c:285` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_ECDSA_SIG_285: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 285,
+    func: c"ecdsa_signverify_init",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_get_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:723` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_723: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 723,
+    func: c"ecdsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_get_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:758` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_758: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 758,
+    func: c"ecdsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_get_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:767` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_767: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 767,
+    func: c"ecdsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_get_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:784` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_784: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 784,
+    func: c"ecdsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_get_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:796` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_796: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 796,
+    func: c"ecdsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_get_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:808` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_808: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 808,
+    func: c"ecdsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_set_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:989` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_989: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 989,
+    func: c"ecdsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_set_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:1001` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_1001: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 1001,
+    func: c"ecdsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_set_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:1011` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_1011: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 1011,
+    func: c"ecdsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_set_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:1032` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_1032: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 1032,
+    func: c"ecdsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_set_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:1045` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_1045: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 1045,
+    func: c"ecdsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_set_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:1059` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_1059: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 1059,
+    func: c"ecdsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_set_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:1070` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_1070: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 1070,
+    func: c"ecdsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sigalg_set_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:1315` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_1315: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 1315,
+    func: c"ecdsa_sigalg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sigalg_set_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:1332` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_1332: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 1332,
+    func: c"ecdsa_sigalg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sigalg_set_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:1345` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_1345: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 1345,
+    func: c"ecdsa_sigalg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sigalg_set_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:1359` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_1359: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 1359,
+    func: c"ecdsa_sigalg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sigalg_set_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:1370` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_1370: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 1370,
+    func: c"ecdsa_sigalg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `eddsa_signverify_init` at `providers/implementations/signature/eddsa_sig.c:249` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_EDDSA_SIG_249: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 249,
+    func: c"eddsa_signverify_init",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `eddsa_signverify_init` at `providers/implementations/signature/eddsa_sig.c:254` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_EDDSA_SIG_254: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 254,
+    func: c"eddsa_signverify_init",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `eddsa_signverify_init` at `providers/implementations/signature/eddsa_sig.c:284` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_EDDSA_SIG_284: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 284,
+    func: c"eddsa_signverify_init",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ed25519_sign` at `providers/implementations/signature/eddsa_sig.c:406` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_EDDSA_SIG_406: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 406,
+    func: c"ed25519_sign",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ed25519_sign` at `providers/implementations/signature/eddsa_sig.c:410` (PROV_R_NOT_A_PRIVATE_KEY).
+pub(crate) const PROV_EDDSA_SIG_410: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 410,
+    func: c"ed25519_sign",
+    lib: 57,
+    reason: 221,
+    dynamic_reason: false,
+};
+
+/// `ed25519_sign` at `providers/implementations/signature/eddsa_sig.c:426` (PROV_R_FAILED_TO_SIGN).
+pub(crate) const PROV_EDDSA_SIG_426: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 426,
+    func: c"ed25519_sign",
+    lib: 57,
+    reason: 175,
+    dynamic_reason: false,
+};
+
+/// `ed25519_sign` at `providers/implementations/signature/eddsa_sig.c:439` (PROV_R_INVALID_PREHASHED_DIGEST_LENGTH).
+pub(crate) const PROV_EDDSA_SIG_439: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 439,
+    func: c"ed25519_sign",
+    lib: 57,
+    reason: 241,
+    dynamic_reason: false,
+};
+
+/// `ed25519_sign` at `providers/implementations/signature/eddsa_sig.c:445` (PROV_R_INVALID_DIGEST_LENGTH).
+pub(crate) const PROV_EDDSA_SIG_445: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 445,
+    func: c"ed25519_sign",
+    lib: 57,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `ed25519_sign` at `providers/implementations/signature/eddsa_sig.c:450` (PROV_R_INVALID_EDDSA_INSTANCE_FOR_ATTEMPTED_OPERATION).
+pub(crate) const PROV_EDDSA_SIG_450: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 450,
+    func: c"ed25519_sign",
+    lib: 57,
+    reason: 243,
+    dynamic_reason: false,
+};
+
+/// `ed25519_sign` at `providers/implementations/signature/eddsa_sig.c:460` (PROV_R_FAILED_TO_SIGN).
+pub(crate) const PROV_EDDSA_SIG_460: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 460,
+    func: c"ed25519_sign",
+    lib: 57,
+    reason: 175,
+    dynamic_reason: false,
+};
+
+/// `ed448_sign` at `providers/implementations/signature/eddsa_sig.c:515` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_EDDSA_SIG_515: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 515,
+    func: c"ed448_sign",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ed448_sign` at `providers/implementations/signature/eddsa_sig.c:519` (PROV_R_NOT_A_PRIVATE_KEY).
+pub(crate) const PROV_EDDSA_SIG_519: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 519,
+    func: c"ed448_sign",
+    lib: 57,
+    reason: 221,
+    dynamic_reason: false,
+};
+
+/// `ed448_sign` at `providers/implementations/signature/eddsa_sig.c:533` (PROV_R_FAILED_TO_SIGN).
+pub(crate) const PROV_EDDSA_SIG_533: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 533,
+    func: c"ed448_sign",
+    lib: 57,
+    reason: 175,
+    dynamic_reason: false,
+};
+
+/// `ed448_sign` at `providers/implementations/signature/eddsa_sig.c:548` (PROV_R_INVALID_DIGEST_LENGTH).
+pub(crate) const PROV_EDDSA_SIG_548: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 548,
+    func: c"ed448_sign",
+    lib: 57,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `ed448_sign` at `providers/implementations/signature/eddsa_sig.c:553` (PROV_R_INVALID_EDDSA_INSTANCE_FOR_ATTEMPTED_OPERATION).
+pub(crate) const PROV_EDDSA_SIG_553: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 553,
+    func: c"ed448_sign",
+    lib: 57,
+    reason: 243,
+    dynamic_reason: false,
+};
+
+/// `ed448_sign` at `providers/implementations/signature/eddsa_sig.c:563` (PROV_R_FAILED_TO_SIGN).
+pub(crate) const PROV_EDDSA_SIG_563: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 563,
+    func: c"ed448_sign",
+    lib: 57,
+    reason: 175,
+    dynamic_reason: false,
+};
+
+/// `ed25519_verify` at `providers/implementations/signature/eddsa_sig.c:606` (PROV_R_INVALID_PREHASHED_DIGEST_LENGTH).
+pub(crate) const PROV_EDDSA_SIG_606: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 606,
+    func: c"ed25519_verify",
+    lib: 57,
+    reason: 241,
+    dynamic_reason: false,
+};
+
+/// `ed25519_verify` at `providers/implementations/signature/eddsa_sig.c:612` (PROV_R_INVALID_DIGEST_LENGTH).
+pub(crate) const PROV_EDDSA_SIG_612: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 612,
+    func: c"ed25519_verify",
+    lib: 57,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `ed25519_verify` at `providers/implementations/signature/eddsa_sig.c:617` (PROV_R_INVALID_EDDSA_INSTANCE_FOR_ATTEMPTED_OPERATION).
+pub(crate) const PROV_EDDSA_SIG_617: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 617,
+    func: c"ed25519_verify",
+    lib: 57,
+    reason: 243,
+    dynamic_reason: false,
+};
+
+/// `ed448_verify` at `providers/implementations/signature/eddsa_sig.c:664` (PROV_R_INVALID_DIGEST_LENGTH).
+pub(crate) const PROV_EDDSA_SIG_664: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 664,
+    func: c"ed448_verify",
+    lib: 57,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `ed448_verify` at `providers/implementations/signature/eddsa_sig.c:669` (PROV_R_INVALID_EDDSA_INSTANCE_FOR_ATTEMPTED_OPERATION).
+pub(crate) const PROV_EDDSA_SIG_669: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 669,
+    func: c"ed448_verify",
+    lib: 57,
+    reason: 243,
+    dynamic_reason: false,
+};
+
+/// `ed25519_digest_signverify_init` at `providers/implementations/signature/eddsa_sig.c:688` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_EDDSA_SIG_688: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 688,
+    func: c"ed25519_digest_signverify_init",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `ed448_digest_signverify_init` at `providers/implementations/signature/eddsa_sig.c:722` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_EDDSA_SIG_722: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 722,
+    func: c"ed448_digest_signverify_init",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `eddsa_dupctx` at `providers/implementations/signature/eddsa_sig.c:774` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_EDDSA_SIG_774: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 774,
+    func: c"eddsa_dupctx",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `eddsa_get_ctx_params_decoder` at `providers/implementations/signature/eddsa_sig.c:826` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_EDDSA_SIG_826: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 826,
+    func: c"eddsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `eddsa_set_ctx_params_decoder` at `providers/implementations/signature/eddsa_sig.c:894` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_EDDSA_SIG_894: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 894,
+    func: c"eddsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `eddsa_set_ctx_params_decoder` at `providers/implementations/signature/eddsa_sig.c:905` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_EDDSA_SIG_905: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 905,
+    func: c"eddsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `eddsa_set_ctx_params_internal` at `providers/implementations/signature/eddsa_sig.c:926` (PROV_R_NO_INSTANCE_ALLOWED).
+pub(crate) const PROV_EDDSA_SIG_926: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 926,
+    func: c"eddsa_set_ctx_params_internal",
+    lib: 57,
+    reason: 242,
+    dynamic_reason: false,
+};
+
+/// `eddsa_set_ctx_params_internal` at `providers/implementations/signature/eddsa_sig.c:961` (PROV_R_INVALID_EDDSA_INSTANCE_FOR_ATTEMPTED_OPERATION).
+pub(crate) const PROV_EDDSA_SIG_961: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 961,
+    func: c"eddsa_set_ctx_params_internal",
+    lib: 57,
+    reason: 243,
+    dynamic_reason: false,
+};
+
+/// `eddsa_set_variant_ctx_params_decoder` at `providers/implementations/signature/eddsa_sig.c:1027` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_EDDSA_SIG_1027: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 1027,
+    func: c"eddsa_set_variant_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
 /// `mac_digest_sign_init` at `providers/implementations/signature/mac_legacy_sig.c:107` (PROV_R_NO_KEY_SET).
 pub(crate) const PROV_MAC_LEGACY_SIG_107: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/providers/implementations/signature/mac_legacy_sig.c",
@@ -38560,6 +39110,61 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_DSA_SIG_1244,
     PROV_DSA_SIG_1272,
     PROV_DSA_SIG_1284,
+    PROV_ECDSA_SIG_184,
+    PROV_ECDSA_SIG_192,
+    PROV_ECDSA_SIG_198,
+    PROV_ECDSA_SIG_205,
+    PROV_ECDSA_SIG_212,
+    PROV_ECDSA_SIG_234,
+    PROV_ECDSA_SIG_285,
+    PROV_ECDSA_SIG_723,
+    PROV_ECDSA_SIG_758,
+    PROV_ECDSA_SIG_767,
+    PROV_ECDSA_SIG_784,
+    PROV_ECDSA_SIG_796,
+    PROV_ECDSA_SIG_808,
+    PROV_ECDSA_SIG_989,
+    PROV_ECDSA_SIG_1001,
+    PROV_ECDSA_SIG_1011,
+    PROV_ECDSA_SIG_1032,
+    PROV_ECDSA_SIG_1045,
+    PROV_ECDSA_SIG_1059,
+    PROV_ECDSA_SIG_1070,
+    PROV_ECDSA_SIG_1315,
+    PROV_ECDSA_SIG_1332,
+    PROV_ECDSA_SIG_1345,
+    PROV_ECDSA_SIG_1359,
+    PROV_ECDSA_SIG_1370,
+    PROV_EDDSA_SIG_249,
+    PROV_EDDSA_SIG_254,
+    PROV_EDDSA_SIG_284,
+    PROV_EDDSA_SIG_406,
+    PROV_EDDSA_SIG_410,
+    PROV_EDDSA_SIG_426,
+    PROV_EDDSA_SIG_439,
+    PROV_EDDSA_SIG_445,
+    PROV_EDDSA_SIG_450,
+    PROV_EDDSA_SIG_460,
+    PROV_EDDSA_SIG_515,
+    PROV_EDDSA_SIG_519,
+    PROV_EDDSA_SIG_533,
+    PROV_EDDSA_SIG_548,
+    PROV_EDDSA_SIG_553,
+    PROV_EDDSA_SIG_563,
+    PROV_EDDSA_SIG_606,
+    PROV_EDDSA_SIG_612,
+    PROV_EDDSA_SIG_617,
+    PROV_EDDSA_SIG_664,
+    PROV_EDDSA_SIG_669,
+    PROV_EDDSA_SIG_688,
+    PROV_EDDSA_SIG_722,
+    PROV_EDDSA_SIG_774,
+    PROV_EDDSA_SIG_826,
+    PROV_EDDSA_SIG_894,
+    PROV_EDDSA_SIG_905,
+    PROV_EDDSA_SIG_926,
+    PROV_EDDSA_SIG_961,
+    PROV_EDDSA_SIG_1027,
     PROV_MAC_LEGACY_SIG_107,
     RSA_LIB_85,
     RSA_LIB_106,

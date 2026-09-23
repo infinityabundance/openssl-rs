@@ -34280,6 +34280,8 @@
       "src/provider/cipher.rs: providers/implementations/ciphers/libcommon-lib-ciphercommon.c",
       "src/provider/ctx.rs: providers/common/libcommon-lib-provider_ctx.c",
       "src/provider/der_dsa_sig.rs: providers/common/der/libcommon-lib-der_dsa_sig.c",
+      "src/provider/der_ec_sig.rs: providers/common/der/libcommon-lib-der_ec_sig.c",
+      "src/provider/der_ecx_key.rs: providers/common/der/libcommon-lib-der_ecx_key.c",
       "src/provider/digest.rs: providers/implementations/digests/libcommon-lib-digestcommon.c",
       "src/provider/digest_to_nid.rs: providers/common/libdefault-lib-digest_to_nid.c",
       "src/provider/ec_kem.rs: providers/implementations/kem/libdefault-lib-ec_kem.c",
