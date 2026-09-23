@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 225,
+        "implemented": 240,
         "unmatched": 0
       },
       "9": {
@@ -39,8 +39,8 @@
         "probe": "courts/phase8/rt_signature_probe.c"
       }
     ],
-    "directly_courted": 230,
-    "implemented_rows": 230,
+    "directly_courted": 245,
+    "implemented_rows": 245,
     "rows": [
       {
         "algorithm_names": "AES-128-CBC",
@@ -2674,7 +2674,8 @@
           "1.2.840.10045.2.1"
         ],
         "courts": [
-          "RT-KEYMGMT"
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -2688,7 +2689,8 @@
           "1.3.101.112"
         ],
         "courts": [
-          "RT-KEYMGMT"
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -2702,7 +2704,8 @@
           "1.3.101.113"
         ],
         "courts": [
-          "RT-KEYMGMT"
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -3239,6 +3242,232 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "ECDSA",
+        "aliases": [
+          "ECDSA"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ECDSA-SHA1",
+        "aliases": [
+          "ECDSA-SHA1",
+          "ECDSA-SHA-1",
+          "ecdsa-with-SHA1",
+          "1.2.840.10045.4.1"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ECDSA-SHA2-224",
+        "aliases": [
+          "ECDSA-SHA2-224",
+          "ECDSA-SHA224",
+          "ecdsa-with-SHA224",
+          "1.2.840.10045.4.3.1"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ECDSA-SHA2-256",
+        "aliases": [
+          "ECDSA-SHA2-256",
+          "ECDSA-SHA256",
+          "ecdsa-with-SHA256",
+          "1.2.840.10045.4.3.2"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ECDSA-SHA2-384",
+        "aliases": [
+          "ECDSA-SHA2-384",
+          "ECDSA-SHA384",
+          "ecdsa-with-SHA384",
+          "1.2.840.10045.4.3.3"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ECDSA-SHA2-512",
+        "aliases": [
+          "ECDSA-SHA2-512",
+          "ECDSA-SHA512",
+          "ecdsa-with-SHA512",
+          "1.2.840.10045.4.3.4"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ECDSA-SHA3-224",
+        "aliases": [
+          "ECDSA-SHA3-224",
+          "ecdsa_with_SHA3-224",
+          "id-ecdsa-with-sha3-224",
+          "2.16.840.1.101.3.4.3.9"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ECDSA-SHA3-256",
+        "aliases": [
+          "ECDSA-SHA3-256",
+          "ecdsa_with_SHA3-256",
+          "id-ecdsa-with-sha3-256",
+          "2.16.840.1.101.3.4.3.10"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ECDSA-SHA3-384",
+        "aliases": [
+          "ECDSA-SHA3-384",
+          "ecdsa_with_SHA3-384",
+          "id-ecdsa-with-sha3-384",
+          "2.16.840.1.101.3.4.3.11"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ECDSA-SHA3-512",
+        "aliases": [
+          "ECDSA-SHA3-512",
+          "ecdsa_with_SHA3-512",
+          "id-ecdsa-with-sha3-512",
+          "2.16.840.1.101.3.4.3.12"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ED25519",
+        "aliases": [
+          "ED25519",
+          "1.3.101.112"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ED25519ctx",
+        "aliases": [
+          "ED25519ctx"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ED25519ph",
+        "aliases": [
+          "ED25519ph"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ED448",
+        "aliases": [
+          "ED448",
+          "1.3.101.113"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ED448ph",
+        "aliases": [
+          "ED448ph"
+        ],
+        "courts": [
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "HMAC",
         "aliases": [
           "HMAC"
@@ -3321,7 +3550,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "2f0b45a9f9fe41e612c5f3939587140628b958c6f72a238186376a9e582d7c0f"
+      "sha256": "ebdc275b4bc54e5d24a5be68c55d729adcb100142ed62ab012b448bc95f0ed0d"
     },
     {
       "name": "court:RT-DIGEST",
@@ -3346,7 +3575,7 @@
     {
       "name": "court:RT-SIGNATURE",
       "path": "courts/phase8/rt_signature_probe.c",
-      "sha256": "b31db4ebcd5623c4deec6b60a2e124346f34b6dbdb07db8878406cb44c67a6f8"
+      "sha256": "38004bb270a183413418a8ff0dbc8071956bb417061fc4b90b67f93715193134"
     }
   ],
   "kind": "provider-court-coverage",

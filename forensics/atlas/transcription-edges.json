@@ -1615,6 +1615,20 @@
         "translation_unit": "providers/common/der/libcommon-lib-der_dsa_sig.c"
       },
       {
+        "module": "src/provider/der_ec_sig.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "1/1",
+        "translation_unit": "providers/common/der/libcommon-lib-der_ec_sig.c"
+      },
+      {
+        "module": "src/provider/der_ecx_key.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "4/4",
+        "translation_unit": "providers/common/der/libcommon-lib-der_ecx_key.c"
+      },
+      {
         "module": "src/provider/digest.rs",
         "phase": 8,
         "phase_source": "module-declaration",

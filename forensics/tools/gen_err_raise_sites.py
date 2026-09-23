@@ -689,6 +689,24 @@ COVERED_FILES = [
     # the `PROV_R_XOF_DIGESTS_NOT_ALLOWED` arm, the `PROV_R_NO_KEY_SET` of
     # `dsa_signverify_init`, and the `dsa_sigalg_set_ctx_params` refusals.
     ("providers/implementations/signature/dsa_sig.c", "PROV_DSA_SIG"),
+    # This pass's `ECDSA` signature unit. `signature/ecdsa_sig.c` is `.c.in`-generated, so its
+    # `__FILE__` is the bare build-relative path, like `dsa_sig.c`'s. Its raises are the same
+    # shape: the generated decoder refusals (`PROV_R_REPEATED_PARAMETER`, one per named parameter
+    # in each of the four decoders), the three `PROV_R_INVALID_DIGEST` refusals and the
+    # `PROV_R_DIGEST_NOT_ALLOWED` pair of `ecdsa_setup_md`, its `PROV_R_XOF_DIGESTS_NOT_ALLOWED`
+    # arm, and the `PROV_R_NO_KEY_SET` of `ecdsa_signverify_init`.
+    ("providers/implementations/signature/ecdsa_sig.c", "PROV_ECDSA_SIG"),
+    # This pass's `EdDSA` signature unit. `signature/eddsa_sig.c` is `.c.in`-generated, so its
+    # `__FILE__` is the bare build-relative path too. Its raises are the `PROV_R_NO_KEY_SET` and
+    # two `ERR_R_INTERNAL_ERROR` sites of `eddsa_signverify_init` and `eddsa_dupctx`, the
+    # `PROV_R_OUTPUT_BUFFER_TOO_SMALL`/`PROV_R_NOT_A_PRIVATE_KEY`/`PROV_R_FAILED_TO_SIGN` trio of
+    # each sign path, the `ph`-instance refusals (`PROV_R_INVALID_PREHASHED_DIGEST_LENGTH`,
+    # `PROV_R_INVALID_DIGEST_LENGTH`, `PROV_R_INVALID_EDDSA_INSTANCE_FOR_ATTEMPTED_OPERATION`), the
+    # two `PROV_R_INVALID_DIGEST` refusals of the digest inits, the `PROV_R_NO_INSTANCE_ALLOWED`
+    # and unknown-instance refusals of `eddsa_set_ctx_params_internal`, and the three decoders'
+    # `PROV_R_REPEATED_PARAMETER` sites. The two `PROV_R_FAILED_TO_SIGN` raises inside the
+    # `S390X_EC_ASM` arms are recorded but not compiled on this profile.
+    ("providers/implementations/signature/eddsa_sig.c", "PROV_EDDSA_SIG"),
     # 8.10's `HMAC`/`SIPHASH`/`POLY1305`/`CMAC` signature rows. `signature/mac_legacy_sig.c` is a
     # plain `.c`, so its `__FILE__` carries the source-tree prefix. It raises once, the
     # `PROV_R_NO_KEY_SET` refusal of `mac_digest_sign_init` (`:107`).

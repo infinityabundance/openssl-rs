@@ -22,10 +22,10 @@ Read from the census's own `implementation_state` for the rows this stratum owns
 | quantity | count |
 |---|---|
 | provider rows this stratum owns | 306 |
-| of those, implemented | 225 |
-| of those, unlanded | 81 |
+| of those, implemented | 240 |
+| of those, unlanded | 66 |
 
-The document below names all **81** unlanded rows this stratum owns across **30** translation units, and — so the first group can be read whole — the **18** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (78). The identity `306 = 225 + 81` holds.
+The document below names all **66** unlanded rows this stratum owns across **28** translation units, and — so the first group can be read whole — the **18** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (63). The identity `306 = 240 + 66` holds.
 
 ## The first group: the `OSSL_OP_KDF` rows and the `OSSL_OP_SKEYMGMT` pair
 
@@ -225,35 +225,6 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 
 **Withheld: not reachable.** The unit's twelve rows (`SLH-DSA-SHA2-*`, `SLH-DSA-SHAKE-*`) are built on `ossl_slh_dsa_*` (`crypto/slh_dsa/`), which the crate does not have -- `ossl_slh_dsa_generate_key`, `ossl_slh_dsa_key_dup`/`_equal`/`_free`/`_get`, and the `ossl_slh_dsa_hash_ctx_new`/`_free` pair are none of them in this tree.
 
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/ecdsa_sig.c.in` — 10 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_signature` | `ossl_ecdsa_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_ecdsa_sha1_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA1:ECDSA-SHA-1:ecdsa-with-SHA1:1.2.840.10045.4.1` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_ecdsa_sha224_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA2-224:ECDSA-SHA224:ecdsa-with-SHA224:1.2.840.10045.4.3.1` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_ecdsa_sha256_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA2-256:ECDSA-SHA256:ecdsa-with-SHA256:1.2.840.10045.4.3.2` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_ecdsa_sha384_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA2-384:ECDSA-SHA384:ecdsa-with-SHA384:1.2.840.10045.4.3.3` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_ecdsa_sha512_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA2-512:ECDSA-SHA512:ecdsa-with-SHA512:1.2.840.10045.4.3.4` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_ecdsa_sha3_224_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA3-224:ecdsa_with_SHA3-224:id-ecdsa-with-sha3-224:2.16.840.1.101.3.4.3.9` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_ecdsa_sha3_256_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA3-256:ecdsa_with_SHA3-256:id-ecdsa-with-sha3-256:2.16.840.1.101.3.4.3.10` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_ecdsa_sha3_384_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA3-384:ecdsa_with_SHA3-384:id-ecdsa-with-sha3-384:2.16.840.1.101.3.4.3.11` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_ecdsa_sha3_512_signature_functions` | `OSSL_OP_SIGNATURE` | `ECDSA-SHA3-512:ecdsa_with_SHA3-512:id-ecdsa-with-sha3-512:2.16.840.1.101.3.4.3.12` | `src/provider/signature.rs` |
-
-**Withheld: the unit's ten rows, on one unlanded callee.** `ossl_digest_get_approved_nid` is already landed (`src/provider/digest_to_nid.rs`), so what remains is `providers/common/der/der_ec_sig.c`'s `ossl_DER_w_algorithmIdentifier_ECDSA_with_MD` (`ecdsa_sig.c.in:234`), which is not in this tree. Everything else the unit reaches is either landed (`ossl_ecdsa_deterministic_sign` is `src/ec/ecdsa_ossl.rs`'s) or inside a `#ifdef FIPS_MODULE` arm, so it is the smallest remaining signature prerequisite.
-
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/eddsa_sig.c.in` — 5 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_signature` | `ossl_ed25519_signature_functions` | `OSSL_OP_SIGNATURE` | `ED25519:1.3.101.112` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_ed25519ph_signature_functions` | `OSSL_OP_SIGNATURE` | `ED25519ph` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_ed25519ctx_signature_functions` | `OSSL_OP_SIGNATURE` | `ED25519ctx` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_ed448_signature_functions` | `OSSL_OP_SIGNATURE` | `ED448:1.3.101.113` | `src/provider/signature.rs` |
-| `deflt_signature` | `ossl_ed448ph_signature_functions` | `OSSL_OP_SIGNATURE` | `ED448ph` | `src/provider/signature.rs` |
-
-**Withheld: the unit's five rows, on one unlanded callee.** `eddsa_signverify_init` builds the AlgorithmIdentifier through `providers/common/der/der_ecx_key.c`'s `ossl_DER_w_algorithmIdentifier_ED25519` and `_ED448` (`eddsa_sig.c.in:279-282`), which is not in this tree. The four OIDs and the two writers are the whole prerequisite: every other callee (`ossl_ed25519_sign`/`_verify`, `ossl_ed448_sign`/`_verify`, `ossl_ecx_key_up_ref`/`_free`) is landed, so `EdDSA` is one small unit behind `DSA`'s landing.
-
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/ml_dsa_sig.c.in` — 3 row(s)
 
 | table | dispatch table symbol | operation | algorithm name(s) | crate file |
@@ -318,7 +289,7 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 |---|---|
 | generator | `forensics/tools/phase8_provider_rows.py` |
 | census | `forensics/atlas/provider-algorithms.json` |
-| census content hash | `dfb6119c8fce144a58030fbdae22368dce074f27224dd56264de875ef4c31902` |
+| census content hash | `2ab4825b8bb8ff9994217e7b74ef98e7dde0372c858b8d0b61e6ad4f956d1280` |
 | authority tree | `forensics/authorities/src/openssl-3.6.4` |
 | crate query read | `src/provider/digest.rs` |
 
