@@ -22,10 +22,10 @@ Read from the census's own `implementation_state` for the rows this stratum owns
 | quantity | count |
 |---|---|
 | provider rows this stratum owns | 306 |
-| of those, implemented | 190 |
-| of those, unlanded | 116 |
+| of those, implemented | 193 |
+| of those, unlanded | 113 |
 
-The document below names all **116** unlanded rows this stratum owns across **42** translation units, and — so the first group can be read whole — the **18** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (113). The identity `306 = 190 + 116` holds.
+The document below names all **113** unlanded rows this stratum owns across **40** translation units, and — so the first group can be read whole — the **18** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (110). The identity `306 = 193 + 113` holds.
 
 ## The first group: the `OSSL_OP_KDF` rows and the `OSSL_OP_SKEYMGMT` pair
 
@@ -144,21 +144,13 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 |---|---|---|---|---|
 | `deflt_asym_cipher` | `ossl_sm2_asym_cipher_functions` | `OSSL_OP_ASYM_CIPHER` | `SM2:1.2.156.10197.1.301` | `_no arm yet_` |
 
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/exchange/dh_exch.c.in` — 1 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_keyexch` | `ossl_dh_keyexch_functions` | `OSSL_OP_KEYEXCH` | `DH:dhKeyAgreement:1.2.840.113549.1.3.1` | `src/provider/exchange.rs` |
-
-**Withheld: behind the `dh_kmgmt.c` unit.** D386 landed the `OSSL_OP_KEYMGMT` arm, so `DH` is reached through a keymgmt row now -- but the `DH`/`DHX` rows themselves are not transcribed. `dh_kmgmt.c` is the keymgmt group's next unit, and its closure is fully present: of everything it calls, the only missing callee is the fifteen-line `ossl_dh_gen_type_name2id` (`crypto/evp/dh_support.c:50`, a linear search over the `dhtype2id[]` table the crate already carries in `src/evp/pkey_ctx.rs`). This exchange unit's own layer is present; its one apparent missing external, `ossl_dh_check_key`, is called only inside `#ifdef FIPS_MODULE` (`dh_exch.c.in:104-113`).
-
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/exchange/ecdh_exch.c.in` — 1 row(s)
 
 | table | dispatch table symbol | operation | algorithm name(s) | crate file |
 |---|---|---|---|---|
 | `deflt_keyexch` | `ossl_ecdh_keyexch_functions` | `OSSL_OP_KEYEXCH` | `ECDH` | `src/provider/exchange.rs` |
 
-**Withheld: not reachable.** The keymgmt gate is open (D386), but the `ECDH` row needs the `EC` keymgmt row, and this unit additionally calls `EC_GROUP`/`EC_POINT` and `ossl_ecdh_kdf_*`. D334 records `EC_GROUP`/`EC_POINT` as one indivisible landing that has not happened (`CT-EC` is `PENDING` for exactly that).
+**Withheld: behind the `EC` keymgmt row, and the old reason was stale.** The keymgmt gate is open (D386) and the `ECDH` row needs the `EC` keymgmt row. D334 recorded `EC_GROUP`/`EC_POINT` as one indivisible landing not made and this entry named it as a second hold; **D387 re-measured and it is no longer true**: `EC_GROUP_new_by_curve_name` (`src/ec/curve.rs`) builds a real group from the generated curve tables and `EC_POINT_new`/`EC_POINT_mul` (`src/ec/lib.rs`) with the wNAF and ladder (`src/ec/mult.rs`) are landed. Of the 47 `EC*`/`EVP*`/`OSSL*`/`BN*`/`ossl_*` names this unit calls, the only ones the crate does not carry are the `OSSL_FIPS_IND_*` macros, all of which are inside `#ifdef FIPS_MODULE` and not this profile's. Nothing in the unit blocks it: the `EC` keymgmt row does.
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/exchange/ecx_exch.c.in` — 2 row(s)
 
@@ -205,13 +197,6 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 |---|---|---|---|---|
 | `deflt_asym_kem` | `ossl_rsa_asym_kem_functions` | `OSSL_OP_KEM` | `RSA:rsaEncryption:1.2.840.113549.1.1.1` | `_no arm yet_` |
 
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/dh_kmgmt.c` — 2 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_keymgmt` | `ossl_dh_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `DH:dhKeyAgreement:1.2.840.113549.1.3.1` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_dhx_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `DHX:X9.42 DH:dhpublicnumber:1.2.840.10046.2.1` | `src/provider/keymgmt.rs` |
-
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/dsa_kmgmt.c` — 1 row(s)
 
 | table | dispatch table symbol | operation | algorithm name(s) | crate file |
@@ -227,7 +212,7 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 | `deflt_keymgmt` | `ossl_ec_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `EC:id-ecPublicKey:1.2.840.10045.2.1` | `src/provider/keymgmt.rs` |
 | `deflt_keymgmt` | `ossl_sm2_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `SM2:1.2.156.10197.1.301` | `src/provider/keymgmt.rs` |
 
-**Withheld: not reachable.** The unit's two rows (`EC`, `SM2`) are built on `EC_GROUP`/`EC_POINT` and their arithmetic, which D334 records as one indivisible landing that has not happened (`CT-EC` is `PENDING` for exactly that).
+**Withheld: behind two small functions, and the old reason was stale.** D334 recorded `EC_GROUP`/`EC_POINT` and their arithmetic as one indivisible landing not made, and this entry named it as the hold (`CT-EC` is `PENDING` for it). **D387 re-measured and it is no longer the crate's state**: `EC_GROUP_new_by_curve_name` (`src/ec/curve.rs`) builds a real group from the generated curve tables, `EC_POINT_new`/`EC_POINT_mul` (`src/ec/lib.rs`) and the wNAF/ladder (`src/ec/mult.rs`) are landed, and `EC_POINT_point2oct` (`src/ec/oct.rs`) serializes. Of the 97 `EC*`/`EVP*`/`OSSL*`/`BN*`/`ossl_*` names the unit calls, the only genuine missing ones are `ossl_ec_generate_key_dhkem` (`:1294`, reached only when the caller sets `OSSL_PKEY_PARAM_DHKEM_IKM`) and `ossl_sm2_key_private_check` (`:902`, the SM2 row's private-key validate); `ossl_fips_ind_ec_key_check` (`:1281`) is inside `#ifdef FIPS_MODULE` and is not this profile's. So the two rows `EC` and `SM2` wait on those two functions and the unit's own size (1,492 lines), not on the object layer -- and with them `ecdh_exch.c.in` and `ec_kem.c.in` become drivable.
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/ecx_kmgmt.c.in` — 4 row(s)
 
@@ -411,7 +396,7 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 |---|---|
 | generator | `forensics/tools/phase8_provider_rows.py` |
 | census | `forensics/atlas/provider-algorithms.json` |
-| census content hash | `be51ef5a3c2cc71f41549608b213369e5d5e8403b6eaadad052cca2627638c10` |
+| census content hash | `e75cb88929a45c96fc656ab925abbf9c31cd1d12e35317d64526bf72738866ad` |
 | authority tree | `forensics/authorities/src/openssl-3.6.4` |
 | crate query read | `src/provider/digest.rs` |
 

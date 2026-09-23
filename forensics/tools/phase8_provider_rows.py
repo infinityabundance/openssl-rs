@@ -93,24 +93,21 @@ WITHHELD: dict[str, str] = {
         "`crypto/threads_pthread.c`'s thread-start/join/clean trio lands, and only then."
     ),
     # The `OSSL_OP_KEYEXCH` group. D386 landed the crate's `OSSL_OP_KEYMGMT` arm -- the gate this
-    # comment used to describe as absent -- and, on it, the `kdf_exch.c` unit. So the gate is no
-    # longer why any of these is withheld: each remaining one is withheld on the **keymgmt row** it
-    # needs, measured against the landed table.
-    "forensics/authorities/src/openssl-3.6.4/providers/implementations/exchange/dh_exch.c.in": (
-        "**Withheld: behind the `dh_kmgmt.c` unit.** D386 landed the `OSSL_OP_KEYMGMT` arm, so `DH` "
-        "is reached through a keymgmt row now -- but the `DH`/`DHX` rows themselves are not "
-        "transcribed. `dh_kmgmt.c` is the keymgmt group's next unit, and its closure is fully "
-        "present: of everything it calls, the only missing callee is the fifteen-line "
-        "`ossl_dh_gen_type_name2id` (`crypto/evp/dh_support.c:50`, a linear search over the "
-        "`dhtype2id[]` table the crate already carries in `src/evp/pkey_ctx.rs`). This exchange "
-        "unit's own layer is present; its one apparent missing external, `ossl_dh_check_key`, is "
-        "called only inside `#ifdef FIPS_MODULE` (`dh_exch.c.in:104-113`)."
-    ),
+    # comment used to describe as absent -- and, on it, the `kdf_exch.c` unit. D387 landed
+    # `dh_kmgmt.c` and `dh_exch.c.in`, so neither of those is here any more. `ecdh_exch.c.in` is
+    # withheld on the `EC` keymgmt row and the `EC_GROUP`/`EC_POINT` layer; `ecx_exch.c.in` on the
+    # four ECX keymgmt rows of `ecx_kmgmt.c.in`.
     "forensics/authorities/src/openssl-3.6.4/providers/implementations/exchange/ecdh_exch.c.in": (
-        "**Withheld: not reachable.** The keymgmt gate is open (D386), but the `ECDH` row needs the "
-        "`EC` keymgmt row, and this unit additionally calls `EC_GROUP`/`EC_POINT` and "
-        "`ossl_ecdh_kdf_*`. D334 records `EC_GROUP`/`EC_POINT` as one indivisible landing that has "
-        "not happened (`CT-EC` is `PENDING` for exactly that)."
+        "**Withheld: behind the `EC` keymgmt row, and the old reason was stale.** The keymgmt gate "
+        "is open (D386) and the `ECDH` row needs the `EC` keymgmt row. D334 recorded "
+        "`EC_GROUP`/`EC_POINT` as one indivisible landing not made and this entry named it as a "
+        "second hold; **D387 re-measured and it is no longer true**: `EC_GROUP_new_by_curve_name` "
+        "(`src/ec/curve.rs`) builds a real group from the generated curve tables and "
+        "`EC_POINT_new`/`EC_POINT_mul` (`src/ec/lib.rs`) with the wNAF and ladder "
+        "(`src/ec/mult.rs`) are landed. Of the 47 `EC*`/`EVP*`/`OSSL*`/`BN*`/`ossl_*` names this "
+        "unit calls, the only ones the crate does not carry are the `OSSL_FIPS_IND_*` macros, "
+        "all of which are inside `#ifdef FIPS_MODULE` and not this profile's. Nothing in the unit "
+        "blocks it: the `EC` keymgmt row does."
     ),
     "forensics/authorities/src/openssl-3.6.4/providers/implementations/exchange/ecx_exch.c.in": (
         "**Withheld: behind the `ecx_kmgmt.c.in` unit.** The keymgmt gate is open (D386); this unit "
@@ -119,10 +116,11 @@ WITHHELD: dict[str, str] = {
         "`ossl_ecx_compute_key` are landed in `src/ec/ecx_key.rs`), so nothing in this unit blocks "
         "it: the four keymgmt rows do."
     ),
-    # The keymgmt group's **unreachable** units (D386). `kdf_legacy_kmgmt.c` is landed (D386), and
-    # `dh_kmgmt.c`, `ecx_kmgmt.c.in` and `mac_legacy_kmgmt.c` are reachable-but-untranscribed -- their
-    # closures were not shown unreachable, so they are not here, exactly as D385 kept `dh_kmgmt.c`
-    # out. The four PQC units below are each built on an implementation the crate does not have.
+    # The keymgmt group's **prerequisite-held and unreachable** units. `kdf_legacy_kmgmt.c` is
+    # landed (D386) and `dh_kmgmt.c` is landed (D387), so neither is here. `ecx_kmgmt.c.in` and
+    # `mac_legacy_kmgmt.c` are reachable-but-untranscribed -- their closures were not shown
+    # unreachable, so they are not here, exactly as D385 kept `dh_kmgmt.c` out. The four PQC units
+    # below are each built on an implementation the crate does not have.
     "forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/rsa_kmgmt.c": (
         "**Withheld: reachable only behind a prerequisite that D327 deliberately left out.** The "
         "unit's `rsa_validate` (`:390-410`) calls `ossl_rsa_validate_pairwise`, "
@@ -143,9 +141,19 @@ WITHHELD: dict[str, str] = {
         "`ossl_dsa_generate_ffc_parameters` and the `ossl_ffc_params_*` family)."
     ),
     "forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/ec_kmgmt.c": (
-        "**Withheld: not reachable.** The unit's two rows (`EC`, `SM2`) are built on "
-        "`EC_GROUP`/`EC_POINT` and their arithmetic, which D334 records as one indivisible landing "
-        "that has not happened (`CT-EC` is `PENDING` for exactly that)."
+        "**Withheld: behind two small functions, and the old reason was stale.** D334 recorded "
+        "`EC_GROUP`/`EC_POINT` and their arithmetic as one indivisible landing not made, and this "
+        "entry named it as the hold (`CT-EC` is `PENDING` for it). **D387 re-measured and it is no "
+        "longer the crate's state**: `EC_GROUP_new_by_curve_name` (`src/ec/curve.rs`) builds a real "
+        "group from the generated curve tables, `EC_POINT_new`/`EC_POINT_mul` (`src/ec/lib.rs`) "
+        "and the wNAF/ladder (`src/ec/mult.rs`) are landed, and `EC_POINT_point2oct` "
+        "(`src/ec/oct.rs`) serializes. Of the 97 `EC*`/`EVP*`/`OSSL*`/`BN*`/`ossl_*` names the unit "
+        "calls, the only genuine missing ones are `ossl_ec_generate_key_dhkem` (`:1294`, reached "
+        "only when the caller sets `OSSL_PKEY_PARAM_DHKEM_IKM`) and `ossl_sm2_key_private_check` "
+        "(`:902`, the SM2 row's private-key validate); `ossl_fips_ind_ec_key_check` (`:1281`) is "
+        "inside `#ifdef FIPS_MODULE` and is not this profile's. So the two rows `EC` and `SM2` "
+        "wait on those two functions and the unit's own size (1,492 lines), not on the object "
+        "layer -- and with them `ecdh_exch.c.in` and `ec_kem.c.in` become drivable."
     ),
     "forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/ml_dsa_kmgmt.c.in": (
         "**Withheld: not reachable.** The unit's three rows (`ML-DSA-44`, `ML-DSA-65`, `ML-DSA-87`) "

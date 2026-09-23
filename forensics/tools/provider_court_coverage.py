@@ -64,6 +64,12 @@ COURT_PROBES: list[tuple[str, str, int]] = [
     # join preventive: a Phase-9 row that becomes `implemented` without an observation is a
     # failure on that commit rather than at the stratum's seal.
     ("RT-DRBG", "courts/phase9/rt_drbg_probe.c", 9),
+    # Phase 8.10's registration-row court (D387). It is registered here in the same commit as the
+    # rows whose observations it carries: the `OSSL_OP_KEYMGMT` and `OSSL_OP_KEYEXCH` rows are not
+    # named by any `OSSL_OP_*` row the other three probes fetch -- `rt_digest_probe.c` names
+    # `TLS1-PRF`/`HKDF`/`SCRYPT` only as **KDF** rows -- so without this entry every landed keymgmt
+    # and keyexch row would be an unmatched finding the moment it landed.
+    ("RT-KEYMGMT", "courts/phase8/rt_keymgmt_probe.c", 8),
 ]
 
 # The arm whose name list must equal the census's implemented cipher rows. A static list in a probe

@@ -4883,18 +4883,32 @@ unsafe fn atoi(s: *const c_char) -> c_int {
     unsafe { strtol(s, ptr::null_mut(), 10) as c_int }
 }
 
+/// `TYPE_ANY` — `crypto/evp/dh_support.c:22`.  Matches either key type, `DH` or `DHX`.
+const DH_TYPE_ANY: c_int = -1;
+/// `TYPE_DH` — `crypto/evp/dh_support.c:24`, `DH_FLAG_TYPE_DH` (`include/openssl/dh.h:111`).
+const DH_TYPE_DH: c_int = 0x0000;
+/// `TYPE_DHX` — `crypto/evp/dh_support.c:25`, `DH_FLAG_TYPE_DHX` (`include/openssl/dh.h:112`).
+const DH_TYPE_DHX: c_int = 0x1000;
+
 /// `struct dh_name2id_st` — `crypto/evp/dh_support.c:18`.
 ///
-/// The authority's `type` member is **not** reproduced: it is read only by
-/// `ossl_dh_gen_type_name2id`, which the ctrl plane never calls — `fix_dh_paramgen_type` translates
-/// ids to names and nothing here translates back — and a member no reader reads is weight this
-/// project drops rather than carries. The `TYPE_ANY`/`TYPE_DH`/`TYPE_DHX` values it would hold are
-/// consequently absent too.
+/// Three members, as the authority has: `name`, `id` and `type`.
+///
+/// **The `type` member was absent until D387, and its return is a correction rather than an
+/// addition.** The ctrl plane reaches only the id-to-name direction (`fix_dh_paramgen_type`
+/// translates ids to names and nothing here translated back), so with no reader the member was
+/// dropped. The `providers/implementations/keymgmt/dh_kmgmt.c` unit D387 lands reads the *other*
+/// direction — `dh_gen_type_name2id_w_default` (`dh_kmgmt.c:82`) calls `ossl_dh_gen_type_name2id`
+/// with `gctx->dh_type` — and a `name2id` over a table with no `type` column could not tell a
+/// `DH` name from a `DHX` one: `"fips186_2"` would then answer for a `DH` key, which the authority
+/// refuses. The member is restored with the reader, not before it.
 struct DhGenTypeName2Id {
     /// `const char *name`.
     name: &'static CStr,
     /// `int id` — one of the four `DH_PARAMGEN_TYPE_*`.
     id: c_int,
+    /// `int type` — one of `TYPE_ANY`, `TYPE_DH`, `TYPE_DHX`.
+    type_: c_int,
 }
 
 /// `static const DH_GENTYPE_NAME2ID dhtype2id[]` — `crypto/evp/dh_support.c:31`.
@@ -4906,18 +4920,22 @@ static DHTYPE2ID: [DhGenTypeName2Id; 4] = [
     DhGenTypeName2Id {
         name: c"group",
         id: DH_PARAMGEN_TYPE_GROUP,
+        type_: DH_TYPE_ANY,
     },
     DhGenTypeName2Id {
         name: c"generator",
         id: DH_PARAMGEN_TYPE_GENERATOR,
+        type_: DH_TYPE_DH,
     },
     DhGenTypeName2Id {
         name: c"fips186_4",
         id: DH_PARAMGEN_TYPE_FIPS_186_4,
+        type_: DH_TYPE_DHX,
     },
     DhGenTypeName2Id {
         name: c"fips186_2",
         id: DH_PARAMGEN_TYPE_FIPS_186_2,
+        type_: DH_TYPE_DHX,
     },
 ];
 
@@ -4932,6 +4950,28 @@ fn ossl_dh_gen_type_id2name(id: c_int) -> *const c_char {
         }
     }
     ptr::null()
+}
+
+/// `int ossl_dh_gen_type_name2id(const char *name, int type)` — `crypto/evp/dh_support.c:50`.
+///
+/// The `type` test is an `||` inside the `&&`, so a `TYPE_ANY` row matches either key type and a
+/// typed row matches only its own; `-1` for a name the table does not carry for `type`, which
+/// `dh_gen_type_name2id_w_default` (`dh_kmgmt.c:98`) hands straight back and its caller turns into
+/// `ERR_R_PASSED_INVALID_ARGUMENT`. The comparison is `strcmp`, not a prefix or a length test.
+///
+/// # Safety
+/// `name` must be NUL-terminated (the authority dereferences it in `strcmp` without a NULL test).
+pub(crate) unsafe fn ossl_dh_gen_type_name2id(name: *const c_char, type_: c_int) -> c_int {
+    for e in &DHTYPE2ID {
+        if e.type_ == DH_TYPE_ANY || type_ == e.type_ {
+            // SAFETY: `name` is NUL-terminated per the contract and `e.name` is a `'static`
+            // literal, so both arguments are NUL-terminated strings.
+            if unsafe { crate::runtime::bio::sys::strcmp(e.name.as_ptr(), name) } == 0 {
+                return e.id;
+            }
+        }
+    }
+    -1
 }
 
 /// `static int fix_dh_nid(...)` — `crypto/evp/ctrl_params_translate.c:998`.

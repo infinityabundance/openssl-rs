@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 190,
+        "implemented": 193,
         "unmatched": 0
       },
       "9": {
@@ -27,10 +27,15 @@
         "court": "RT-DRBG",
         "phase": 9,
         "probe": "courts/phase9/rt_drbg_probe.c"
+      },
+      {
+        "court": "RT-KEYMGMT",
+        "phase": 8,
+        "probe": "courts/phase8/rt_keymgmt_probe.c"
       }
     ],
-    "directly_courted": 195,
-    "implemented_rows": 195,
+    "directly_courted": 198,
+    "implemented_rows": 198,
     "rows": [
       {
         "algorithm_names": "AES-128-CBC",
@@ -2247,7 +2252,8 @@
           "HKDF"
         ],
         "courts": [
-          "RT-DIGEST"
+          "RT-DIGEST",
+          "RT-KEYMGMT"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KDF",
@@ -2373,7 +2379,8 @@
           "1.3.6.1.4.1.11591.4.11"
         ],
         "courts": [
-          "RT-DIGEST"
+          "RT-DIGEST",
+          "RT-KEYMGMT"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KDF",
@@ -2412,7 +2419,8 @@
           "TLS1-PRF"
         ],
         "courts": [
-          "RT-DIGEST"
+          "RT-DIGEST",
+          "RT-KEYMGMT"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KDF",
@@ -2461,12 +2469,28 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "DH",
+        "aliases": [
+          "DH",
+          "dhKeyAgreement",
+          "1.2.840.113549.1.3.1"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYEXCH",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "HKDF",
         "aliases": [
           "HKDF"
         ],
         "courts": [
-          "RT-DIGEST"
+          "RT-DIGEST",
+          "RT-KEYMGMT"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYEXCH",
@@ -2481,7 +2505,8 @@
           "1.3.6.1.4.1.11591.4.11"
         ],
         "courts": [
-          "RT-DIGEST"
+          "RT-DIGEST",
+          "RT-KEYMGMT"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYEXCH",
@@ -2494,10 +2519,42 @@
           "TLS1-PRF"
         ],
         "courts": [
-          "RT-DIGEST"
+          "RT-DIGEST",
+          "RT-KEYMGMT"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYEXCH",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "DH",
+        "aliases": [
+          "DH",
+          "dhKeyAgreement",
+          "1.2.840.113549.1.3.1"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "DHX",
+        "aliases": [
+          "DHX",
+          "X9.42 DH",
+          "dhpublicnumber",
+          "1.2.840.10046.2.1"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
         "owning_phase": 8,
         "provider": "default"
       },
@@ -2507,7 +2564,8 @@
           "HKDF"
         ],
         "courts": [
-          "RT-DIGEST"
+          "RT-DIGEST",
+          "RT-KEYMGMT"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -2522,7 +2580,8 @@
           "1.3.6.1.4.1.11591.4.11"
         ],
         "courts": [
-          "RT-DIGEST"
+          "RT-DIGEST",
+          "RT-KEYMGMT"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -2535,7 +2594,8 @@
           "TLS1-PRF"
         ],
         "courts": [
-          "RT-DIGEST"
+          "RT-DIGEST",
+          "RT-KEYMGMT"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -2755,7 +2815,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "b7772e186461c34bbe5ae773cd4a2a09ed2ca27cb5109531dfd204efe0d22ecc"
+      "sha256": "7cd990a96fc54ae6cbe094a16c5bc09d104f0f58a5b08bd65f235ce0781a83a7"
     },
     {
       "name": "court:RT-DIGEST",
@@ -2771,6 +2831,11 @@
       "name": "court:RT-DRBG",
       "path": "courts/phase9/rt_drbg_probe.c",
       "sha256": "ff28186b339c5d666151332184383080981405286fcac3d38518b3d54e1d5b63"
+    },
+    {
+      "name": "court:RT-KEYMGMT",
+      "path": "courts/phase8/rt_keymgmt_probe.c",
+      "sha256": "28f361fef0cf33ac51a638474137fa459c3f8390478f45cc273ee37764b9324d"
     }
   ],
   "kind": "provider-court-coverage",
