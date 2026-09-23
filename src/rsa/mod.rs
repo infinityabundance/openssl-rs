@@ -97,6 +97,8 @@ use crate::runtime::thread::CryptoRwlock;
 pub mod ameth;
 pub mod asn1;
 pub(crate) mod backend;
+// Phase 8's `crypto/rsa/rsa_sp800_56b_check.c` (D391): the SP800-56B key validators, ten functions.
+pub(crate) mod check;
 pub mod ctrl;
 pub mod gen;
 mod mp;
@@ -3120,6 +3122,45 @@ unsafe fn rsa_validate_keypair_multiprime(key: *const Rsa, cb: *mut BnGencb) -> 
         BN_CTX_free(ctx);
         ret
     }
+}
+
+/// `int ossl_rsa_validate_public(const RSA *key)` -- `rsa_chk.c:238-241`.
+///
+/// The public half of the `#ifdef FIPS_MODULE` three-call chain `RSA_check_key_ex` takes there,
+/// and the name `rsa_kmgmt.c`'s `rsa_validate` calls on this profile: `providers/implementations/keymgmt/rsa_kmgmt.c:394`
+/// reaches all three outside any module guard, which is why D391 landed `crypto/rsa/rsa_sp800_56b_check.c`
+/// whole rather than three tenths of it.
+///
+/// # Safety
+/// `key` is a live object.
+pub(crate) unsafe fn ossl_rsa_validate_public(key: *const Rsa) -> c_int {
+    // SAFETY: the caller's contract, forwarded unchanged.
+    unsafe { crate::rsa::check::ossl_rsa_sp800_56b_check_public(key) }
+}
+
+/// `int ossl_rsa_validate_private(const RSA *key)` -- `rsa_chk.c:243-246`.
+///
+/// # Safety
+/// `key` is a live object.
+pub(crate) unsafe fn ossl_rsa_validate_private(key: *const Rsa) -> c_int {
+    // SAFETY: the caller's contract, forwarded unchanged.
+    unsafe { crate::rsa::check::ossl_rsa_sp800_56b_check_private(key) }
+}
+
+/// `int ossl_rsa_validate_pairwise(const RSA *key)` -- `rsa_chk.c:248-254`.
+///
+/// `#ifdef FIPS_MODULE` sends this to `ossl_rsa_sp800_56b_check_keypair(key, NULL, -1,
+/// RSA_bits(key))`; this build, which has no module branch, is the `#else` arm -- the same
+/// `rsa_validate_keypair_multiprime` above with a NULL callback, **collapsed to a boolean**: the
+/// authority's `> 0` is what turns the three-answer function's `-1` into a failure rather than a
+/// distinguishable one. That collapse is this function's contract and is not applied anywhere
+/// else.
+///
+/// # Safety
+/// `key` is a live object.
+pub(crate) unsafe fn ossl_rsa_validate_pairwise(key: *const Rsa) -> c_int {
+    // SAFETY: the caller's contract; a NULL callback is the no-callback form.
+    unsafe { c_int::from(rsa_validate_keypair_multiprime(key, core::ptr::null_mut()) > 0) }
 }
 
 /// `int RSA_check_key_ex(const RSA *key, BN_GENCB *cb)` -- `rsa_chk.c:261-269`.

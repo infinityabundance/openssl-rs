@@ -105,6 +105,7 @@ pub mod oct;
 pub mod pmeth;
 pub mod print;
 pub mod prn;
+pub(crate) mod sm2_key;
 pub mod smpl;
 pub mod smpl2;
 pub mod support;

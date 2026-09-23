@@ -40,13 +40,14 @@ use crate::bn::ctx::{
     BN_GENCB_new, BN_GENCB_set_old, BnCtx, BnGencb,
 };
 use crate::bn::primes::BN_generate_prime_ex2;
+use crate::rsa::check::ossl_rsa_check_public_exponent;
 use crate::rsa::mp::{
     multip_info_free_thunk, ossl_rsa_multip_cap, ossl_rsa_multip_info_new, RSA_MAX_PRIME_NUM,
 };
 use crate::rsa::object::{
     RSA_private_decrypt, RSA_public_encrypt, RSA_size, RSA_ASN1_VERSION_MULTI,
 };
-use crate::rsa::sp800::{ossl_rsa_check_public_exponent, ossl_rsa_sp800_56b_generate_key};
+use crate::rsa::sp800::ossl_rsa_sp800_56b_generate_key;
 use crate::rsa::{Rsa, RsaPrimeInfo};
 use crate::runtime::err::err_sites::{
     RSA_GEN_282, RSA_GEN_286, RSA_GEN_291, RSA_GEN_296, RSA_GEN_602,

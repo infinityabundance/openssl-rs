@@ -150,15 +150,6 @@
         "evidence": "forensics/atlas/macro-owners.json (defined_in for each name); the gate's first-run report, recorded in docs/DECISIONS.md D123; docs/DECISIONS.md D275 (the `scan_typedefs` grammar fix and the four retirements)"
       },
       {
-        "owner_module": "src/ec/key.rs",
-        "class": "owned_by_a_later_stratum",
-        "covers": [
-          "ossl_ec_generate_key_dhkem"
-        ],
-        "note": "**Withheld rather than stubbed, and this row is what the prerequisite gate's `unwired_function_in_the_current_stratum` finding becomes once the omission is a decision rather than an oversight.** `ossl_ec_generate_key_dhkem` (`crypto/ec/ec_key.c:357-386`) is the one of `crypto/ec/ec_key.c`'s fourteen internals `src/ec/key.rs` does not carry: its body derives a private scalar by calling `ossl_ec_dhkem_derive_private` (`providers/implementations/kem/libdefault-lib-ec_kem.c:181`), which is the **provider KEM DSO's** and is not a `libcrypto` export at all. No crate module can name it, the distribution shell does not scaffold it (it scaffolds only `libcrypto`'s unimplemented exports), and a call to it leaves the candidate DSO with an undefined reference -- which is the link failure this row was written after observing. Its only two callers in the whole authority are the provider key management and KEM rows (`providers/implementations/keymgmt/ec_kmgmt.c:1294` and `providers/implementations/kem/ec_kem.c.in:486`), neither of which is in this crate, so the name is unreachable from every landed path. A transcription that invented a derivation would be a fabricated answer for a function the provider half owns. **The class is the closest of the five and the tension is recorded rather than smoothed over**: the work this name waits on is the provider KEM's rather than a later stratum's, exactly as `ossl_ffc_params_todata`'s row records for D330 and `ossl_ec_curve_nid_from_params`'s row did for D334. The row fail-closes in both directions: if the name is ever built the gate reports it as `stale` until the row is removed, and if `src/ec/key.rs` stopped owning the unit the record would stop matching.",
-        "evidence": "docs/DECISIONS.md D340; crypto/ec/ec_key.c:357-386; providers/implementations/kem/libdefault-lib-ec_kem.c:181; providers/implementations/keymgmt/ec_kmgmt.c:1294; forensics/atlas/transcription-edges.json's `crypto/ec/ec_key.c` edge"
-      },
-      {
         "owner_module": "src/ec/backend.rs",
         "class": "owned_by_a_later_stratum",
         "covers": [

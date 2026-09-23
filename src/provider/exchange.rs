@@ -61,6 +61,8 @@ use crate::provider::cipher::{
     param_int, param_octet_ptr, param_octet_string, param_size_t, param_utf8_string,
 };
 use crate::provider::ctx::prov_libctx_of;
+use crate::provider::ecdh_exch::ECDH_KEYEXCH_FUNCTIONS;
+use crate::provider::ecx_exch::{X25519_KEYEXCH_FUNCTIONS, X448_KEYEXCH_FUNCTIONS};
 use crate::provider::keymgmt::{ossl_kdf_data_free, ossl_kdf_data_up_ref, KdfData};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
@@ -1395,15 +1397,38 @@ pub(crate) static DH_KEYEXCH_FUNCTIONS: [OsslDispatch; 11] = [
 
 /// `static const OSSL_ALGORITHM deflt_keyexch[]` — `providers/defltprov.c:384-402`, **the rows
 /// this module has landed**, in the authority's order. The `DH` row is the authority's first
-/// (`:386`); the KDF rows are its last three (`:395-400`); the `ECDH`/`X25519`/`X448` rows are
-/// theirs and are not landed. The order matters beyond fidelity: the census requires the crate's
-/// rows to be a **subsequence** of the authority's, so `DH` must precede the KDF trio.
-pub(crate) static DEFLT_KEYEXCH: [OsslAlgorithm; 5] = [
+/// (`:386`); the `ECDH` row is its next (`:389`); the two ECX rows (`X25519`, `X448`) follow
+/// inside the same `#ifndef OPENSSL_NO_EC`/`NO_ECX` block (`:390-393`); the KDF rows are its last
+/// three (`:395-400`). The order matters beyond fidelity: the census requires the crate's rows to
+/// be a **subsequence** of the authority's, so `DH`, `ECDH`, `X25519` and `X448` must precede the
+/// KDF trio.
+pub(crate) static DEFLT_KEYEXCH: [OsslAlgorithm; 8] = [
     OsslAlgorithm {
         // `PROV_NAMES_DH`.
         algorithm_names: c"DH:dhKeyAgreement:1.2.840.113549.1.3.1".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
         implementation: DH_KEYEXCH_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ECDH` — the primary name alone.
+        algorithm_names: c"ECDH".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ECDH_KEYEXCH_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_X25519`.
+        algorithm_names: c"X25519:1.3.101.110".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: X25519_KEYEXCH_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_X448`.
+        algorithm_names: c"X448:1.3.101.111".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: X448_KEYEXCH_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {

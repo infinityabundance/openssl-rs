@@ -27957,3 +27957,145 @@ deferred **0**, open **0**) -- these are registration rows, not symbols -- and
 `forensics/atlas/internal-symbols.json`. **The coverage join is `198` implemented rows and `0`
 unmatched**, which is what `RT-KEYMGMT` exists to keep true. No claim is made that the stratum is
 closer to sealing than `provider_rows` says.
+
+---
+
+## D388 — the ECX chain closes: `ecx_kmgmt.c.in` and the two units it gates land, `RT-KEYMGMT` is extended to drive them, and the `OSSL_OP_KEM` arm is written
+
+**Decision.** D387's first two measured lines are discharged in the order that makes each possible:
+the largest reachable keymgmt unit lands, and the four rows it carries make the two units behind it
+drivable, so all three land in one pass.
+
+1. **The prerequisite first: `ossl_HPKE_KEM_INFO_find_curve` lands.** `crypto/hpke/hpke_util.c:156`
+   is sixteen lines, and the Phase 7.6 pass omitted it with the recorded reason that
+   `crypto/hpke/hpke.c` never calls it -- true, and still true. The **keys'** KEM unit is its first
+   caller: `kem/ecx_kem.c`'s `get_kem_info` (`:80`) resolves `SN_X25519`/`SN_X448` through it. It
+   lands beside its `find_id` sibling in `src/hpke/mod.rs` with the omission corrected in the module
+   doc, and the three `hpke_util.c` helpers it sits beside (`hpke_labeled_extract`,
+   `hpke_labeled_expand`, `kdf_ctx_create`) are widened to `pub(crate)` for the same caller rather
+   than duplicated.
+2. **`providers/implementations/keymgmt/kem_util.c` lands as `src/provider/kem_util.rs`.** One
+   table and `ossl_eckem_modename2id`; the ECX KEM unit's `set_ctx_params` is its caller, and the
+   withheld `ec_kem.c.in` is the second. It is an authority *internal* (`prov/eckem.h`, uninstalled),
+   so it is a `pub(crate)` Rust function.
+3. **`providers/implementations/keymgmt/ecx_kmgmt.c.in` lands whole (D327's rule), as
+   `src/provider/ecx_kmgmt.rs`.** One thousand three hundred and thirty-eight source lines, four
+   dispatch tables (`X25519`, `X448`, `ED25519`, `ED448`) and the twenty-slot
+   `MAKE_KEYMGMT_FUNCTIONS` expansion behind each. The S390X arms and the `FIPS_MODULE` arms are not
+   this profile's and are named at each site rather than stubbed. The unit's five generated
+   `paramnames.pm` decoders are written the crate's way -- one repeated-key scan plus one
+   `OSSL_PARAM_locate_const` per field, the idiom `src/provider/mac.rs` and `src/provider/exchange.rs`
+   already use -- and its generated raise coordinates are the eleven
+   `PROV_ECX_KMGMT_*` `PROV_R_REPEATED_PARAMETER` sites plus the five hand-written ones. `ecx_load`
+   is `#[no_mangle]` because the authority's definition is not `static`.
+4. **`providers/implementations/exchange/ecx_exch.c.in` lands whole, as `src/provider/ecx_exch.rs`**,
+   and the two `X25519`/`X448` keyexch rows with it. Two hundred and forty-four lines of context
+   plumbing over `ossl_ecx_compute_key`, which D372 landed; its own generated `FIPS_MODULE` decoder
+   is not compiled, so its `gettable`/`get` arms are the authority's empty array and literal 1.
+5. **`providers/implementations/kem/ecx_kem.c.in` lands whole, as `src/provider/ecx_kem.rs`**, and
+   the two `OSSL_OP_KEM` rows with it. RFC 9180 section 4.1's `DHKEM` over the two ECX keys, plus
+   `ossl_ecx_dhkem_derive_private` -- which the authority **defines here** (`ecx_kem.c.in:342`) and
+   the *keymgmt* unit calls, which is the measurable reason the three units cannot land separately.
+   The two rows share one dispatch table, and the `OSSL_OP_KEM` arm is added to `deflt_query` as
+   `src/provider/kem.rs`'s `DEFLT_ASYM_KEM` -- without it the census has no arm to read the rows
+   from, and with it the KEM operation joins the eight the query answers.
+
+**The eight rows are driven, not merely named.** D387 wrote `courts/phase8/rt_keymgmt_probe.c` and
+registered `RT-KEYMGMT`; this pass **extends that arm in the same commit as the rows it now covers**,
+which is the pattern D387 set. The probe fetches nine keymgmt rows by type name, imports a fixed
+public key through each of the four ECX rows (RFC 7748's base points and RFC 8032's first test
+vectors -- public constants, never a generated key), reads `bits`/`size`/`security-bits` and the
+wrong-length refusal from each, and reaches the keyexch and KEM rows through a context built from
+*that* key: `derive_init` for `X25519`/`X448`, and `encapsulate_init`/`decapsulate_init` for the two
+KEM rows, where the first succeeds on a public-only key and the second refuses it -- the row's own
+answer, not a missing arm. **Twenty-two observations before this pass, sixty-five after, both sides
+identical, zero residuals.**
+
+**Movement.** `provider_rows` (the phase-8-owned rows) moves implemented **193 -> 201** (+8) and
+unlanded **113 -> 105**, over the same **306** owned; the census's whole-provider `implemented`
+moves **198 -> 206** and `projection.open[8]` moves **113 -> 105**. The eight are `ecx_kmgmt.c.in`'s
+four (`X25519`, `X448`, `ED25519`, `ED448` under `OSSL_OP_KEYMGMT`), `ecx_exch.c.in`'s two
+(`OSSL_OP_KEYEXCH`) and `ecx_kem.c.in`'s two (`OSSL_OP_KEM`). **The coverage join is `206`
+implemented rows and `0` unmatched**, which is what `RT-KEYMGMT` exists to keep true. The export
+ledger is untouched (`forensics/phase8-obligations.json` `complete: true`, implemented **786**,
+deferred **0**, open **0**) -- these are registration rows, not symbols -- and the two new
+`#[no_mangle]` names (`ossl_ecx_dhkem_derive_private`, `ecx_load`) are authority *internals*. Three
+units join `gen_err_raise_sites.py`'s covered set (`PROV_ECX_KMGMT`, `PROV_ECX_EXCH`, `PROV_ECX_KEM`,
+49 new sites), which is why `docs/CI.md`'s typed `c_style` identifier count moves 449 -> 451 in the
+same commit.
+
+**What remains, measured rather than reasoned.**
+
+* **`mac_legacy_kmgmt.c` (4 rows, 569 lines)** -- reachable (the census carve-out landed, `PROV_CIPHER`
+  helpers present); the one arm to resolve after transcribing is `key_to_params`'s
+  `#if !defined(OPENSSL_NO_ENGINE)` block that reads `ENGINE_get_id`, which is D181's reduction
+  written at the site with its reason. **Not reached this pass.**
+* **`ec_kmgmt.c` (2 rows) and `ecdh_exch.c.in` (1)** -- reachable per D387's re-measurement; their
+  only holds are `ossl_ec_generate_key_dhkem` (`:1294`, DHKEM-IKM-gated) and
+  `ossl_sm2_key_private_check` (`:902`). **Not reached this pass.**
+* **`rsa_kmgmt.c` (2) and `dsa_kmgmt.c` (1)** -- still behind `crypto/rsa/rsa_chk.c` +
+  `rsa_sp800_56b_check.c` and `crypto/dsa/dsa_check.c`. **Not reached this pass.**
+* **The twelve PQC keymgmt rows** -- each built on `crypto/ml_dsa/`, `crypto/ml_kem/` or
+  `crypto/slh_dsa/`, none of which the crate has.
+
+No claim is made that the stratum is closer to sealing than `provider_rows` says.
+
+## D389 — the four legacy-MAC keymgmt rows land, and `key_to_params`'s engine arm is reduced the way D181 reduces that family
+
+**Decision.** D388's first measured line is discharged whole: `providers/implementations/keymgmt/mac_legacy_kmgmt.c`, five hundred and sixty-nine source lines, thirty functions and two dispatch tables, lands as `src/provider/mac_legacy_kmgmt.rs`, and the four rows it publishes are appended to `DEFLT_KEYMGMT` in the authority's order -- **placed first in the crate's array**, because `deflt_keymgmt[]` puts them after the KDF trio, and the census requires the crate's rows to be a subsequence of the authority's.
+
+**The one `#if !defined(OPENSSL_NO_ENGINE)` arm.** `key_to_params`'s engine block (`:253-259`) is *compiled in* on this profile -- D181 measured `OPENSSL_NO_ENGINE` as undefined -- and it reads `ENGINE_get_id(key->cipher.engine)`, stamps the result into `OSSL_PKEY_PARAM_CMAC_ENGINE`, and unrefs the engine. `ENGINE` is Phase 13's and this crate has no engine type or registry, so `PROV_CIPHER.engine` (`src/provider/util.rs`) can **only** ever be NULL in every state the crate can reach and the block's guard is unreachable. It is therefore **not emitted**, with D181's reason written at the site: the call is absent because its guard is false in every reachable state, not because the unit was dropped. That is the same shape `ossl_prov_cipher_reset`'s `ENGINE_finish` note takes, and it is the reduction the standing rules ask for rather than a reason to withhold the unit. Nothing else in the unit is engine-shaped: the remaining twenty-nine functions are the `MAC_KEY` object (`prov/macsignature.h:19`) with its `PROV_CIPHER`, its reference count and the secure private key.
+
+**The four rows.** `HMAC`, `SIPHASH` and `POLY1305` share `ossl_mac_legacy_keymgmt_functions` and `CMAC` has `ossl_cmac_legacy_keymgmt_functions` -- the many-to-one association the census's partition-equality check describes rather than refuses (D386). `ossl_mac_key_new`/`_free`/`_up_ref` are `#[no_mangle]` because the authority defines them non-`static` and `crypto/evp/p_lib.c`'s `EVP_PKEY_new_mac_key` reaches them across translation units. Landing the unit also gives `ossl_prov_cipher_load_from_params` (`src/provider/util.rs`) its first live caller -- it had shipped behind `#![allow(dead_code)]` with a note naming this unit -- so the allow is removed with it.
+
+**Driven, not merely named.** `courts/phase8/rt_keymgmt_probe.c` gains `arm_mac_import()` in the same pass as the rows: each of the four names imports a fixed 16-byte **public** constant through its own keymgmt row, the no-key refusal is the row's own answer, and `CMAC`'s import is observed twice more because `mac_key_fromdata` resolves a cipher through `ossl_prov_cipher_load_from_params` -- once with a cipher the provider holds and once with a name it does not, which is the row's `PROV_R_PASSED_INVALID_ARGUMENT` site (`mac_legacy_kmgmt.c:212`). **Sixty-five observations before this pass, eighty-three after, both sides identical, zero residuals.**
+
+**Movement.** `provider_rows` moves implemented **201 -> 205** (+4) and unlanded **105 -> 101**, over the same **306** owned; the census's whole-provider `implemented` moves **206 -> 210** and `projection.open[8]` moves **105 -> 101**. The coverage join is **210 implemented rows and 0 unmatched**. The export ledger is untouched (these are registration rows, not symbols); the three new `#[no_mangle]` names are authority internals, which is why `docs/CI.md`'s typed `c_style` count moves 451 -> 454 in the same pass. `gen_err_raise_sites.py` gains `PROV_MAC_LEGACY_KMGMT` (8 sites).
+
+No claim is made that the stratum is closer to sealing than `provider_rows` says.
+
+## D390 — the `EC` chain closes: `ec_kmgmt.c` and `ecdh_exch.c.in` land, and the keyexch group is emptied
+
+**Decision.** D388's second measured line is discharged: the two functions the EC rows were held on land first, the unit that needs them lands whole, and the exchange unit behind it lands with it. **All three rows are driven by the `RT-KEYMGMT` arm D387 wrote.**
+
+1. **`ossl_ec_generate_key_dhkem` lands (`src/ec/key.rs`).** `crypto/ec/ec_key.c:357-386`, the one of that file's internals D340 withheld because its body calls `ossl_ec_dhkem_derive_private` -- which D388 landed as `src/provider/ec_kem.rs`'s `#[no_mangle]` function. The prerequisite is what changed, not the measurement, so **the `forensics/prerequisites.json` divergence row that covered the name is removed in the same pass** (12 rows -> 11): the gate fail-closes on a record that keeps covering a name the crate has since built, and this is that moment. The DHKEM-IKM arm it serves (`:1294`) is reached only when the caller sets `OSSL_PKEY_PARAM_DHKEM_IKM`.
+2. **`ossl_sm2_key_private_check` lands (`src/ec/sm2_key.rs`).** `crypto/sm2/sm2_key.c:22-52`, the SM2 row's private-key validate, with the two `SM2_KEY_*` raise coordinates its own translation unit raises.
+3. **`providers/implementations/keymgmt/ec_kmgmt.c` lands whole (D327's rule), as `src/provider/ec_kmgmt.rs`.** One thousand four hundred and ninety-two source lines, the `EC` dispatch table (twenty-five slots) and the `SM2` one (twenty-three), and all fifteen `ec_kmgmt_imexport.inc` parameter tables plus the sixteen-entry `EC_TYPES` index. The `EC2M` arms are compiled in (`OPENSSL_NO_EC2M` undefined) and answer 1 for every curve this crate holds; the `FIPS_MODULE` arms are not this profile's and are named at each site. The four generated `paramnames.pm` decoders are written the crate's way. **The fifteen tables cannot be spliced from a `macro_rules!`** -- a fragment expanding to a comma-separated list is not a single expression -- so the shared twelve-entry domain-parameter block expands the *whole* table through `ec_types_with_dom!`, which is what `dh_kmgmt.rs`'s precedent does by hand.
+4. **`providers/implementations/exchange/ecdh_exch.c.in` lands whole, as `src/provider/ecdh_exch.rs`**, and the `ECDH` keyexch row with it. Six hundred and sixty source lines and twelve dispatch slots; `ecdh_plain_derive`'s cofactor rule -- the context's mode overrides the key's `EC_FLAG_COFACTOR_ECDH` bit only when the two disagree **and** the group's cofactor is not 1, and the override is a *duplicate* of the key rather than a mutation of the caller's -- is the unit's real content. Its two generated decoders are written the crate's way. **With this row the `OSSL_OP_KEYEXCH` group is emptied**: every row of the authority's `deflt_keyexch[]` is now landed, and `WITHHELD` in `phase8_provider_rows.py` has no exchange entry.
+
+**What is deliberately *not* transcribed, and it is named rather than claimed.** `providers/implementations/kem/ec_kem.c.in` is a **partial** transcription: only `ossl_ec_dhkem_derive_private` (`:387-461`) lands, as `src/provider/ec_kem.rs`, because it is the prerequisite step 1 needs. The unit's own `OSSL_OP_KEM` `EC` row (`defltprov.c:533`, `ossl_ec_asym_kem_functions`) and the twelve `eckem_*` functions plus `dhkem_encap`/`dhkem_decap` are **not** transcribed, so **the `EC` KEM row stays `unimplemented`** and `kem/ec_kem.c.in` joins `WITHHELD` with that reason. The landed function is drivable and driven: `RT-KEYMGMT`'s `EC` arm builds the key `ossl_ec_generate_key_dhkem` would be reached on. A transcription that existed is not deleted -- the one function that had to exist for `ec_kmgmt.c` to be drivable is what was written.
+
+**The three rows are driven, not merely named.** `rt_keymgmt_probe.c` gains `arm_ec_import()` in the same pass as the rows. `EC` imports the published NIST P-256 group by name and reads `bits`/`size`/`security-bits` (`256`/`72`/`128`); `SM2` imports its own group the same way (`256`/`72`/`128`). What the two rows *refuse* is the probe's sharpest evidence and it is `common_check_sm2`'s own answer rather than a missing arm: **`EC` refuses the `SM2` curve and `SM2` refuses P-256**, because each wants the `sm2_wanted` flag to agree with the curve's `NID_sm2`; `EC`'s unknown group is a third refusal. The `ECDH` keyexch row is driven through the `EC` key's own operation name -- `EVP_PKEY_CTX_new_from_pkey` over the imported key and `EVP_PKEY_derive_init`, which is `ec_query_operation_name`'s `ECDH` answer for `OSSL_OP_KEYEXCH`; the bare-name fetch is also observed and answers NULL, which is the authority's own answer for a keyexch-only name and is kept as the differential observation it is. **Eighty-three observations before this pass, one hundred after, both sides identical, zero residuals.**
+
+**Movement.** `provider_rows` moves implemented **205 -> 208** (+3) and unlanded **101 -> 98**, over the same **306** owned; the census's whole-provider `implemented` moves **210 -> 213** and `projection.open[8]` moves **101 -> 98**. The three are `EC` and `SM2` under `OSSL_OP_KEYMGMT` and `ECDH` under `OSSL_OP_KEYEXCH`. **The coverage join is `213` implemented rows and `0` unmatched.** The export ledger is untouched; the two new `#[no_mangle]` names (`ossl_ec_generate_key_dhkem`, `ossl_ec_dhkem_derive_private`) are authority internals, which is why `docs/CI.md`'s typed `c_style` count moves 454 -> 456 in the same pass. `gen_err_raise_sites.py` gains `PROV_EC_KMGMT`, `PROV_ECDH_EXCH`, `PROV_EC_KEM` and `SM2_KEY` (43 new sites).
+
+**What remains, measured rather than reasoned.**
+
+* **`crypto/rsa/rsa_chk.c` + `rsa_sp800_56b_check.c` and `crypto/dsa/dsa_check.c`** -- prerequisites, not reasons to withhold: `rsa_kmgmt.c` (2 rows) and `dsa_kmgmt.c` (1 row) call their validators outside any `FIPS_MODULE` guard. **Not reached this pass.**
+* **`kem/ec_kem.c.in`'s `EC` row** -- the partial transcription above; the row's own dispatch is what is missing, not a symbol behind it. **Named, not landed.**
+* **The twelve PQC keymgmt rows** -- each built on `crypto/ml_dsa/`, `crypto/ml_kem/` or `crypto/slh_dsa/`, none of which the crate has.
+
+No claim is made that the stratum is closer to sealing than `provider_rows` says.
+
+## D391 — the keymgmt group closes: `crypto/rsa/rsa_chk.c` + `rsa_sp800_56b_check.c` and `crypto/dsa/dsa_check.c` land, and on them `rsa_kmgmt.c` and `dsa_kmgmt.c` land whole
+
+**Decision.** D390's third measured line is discharged, and the keymgmt group closes with it: the validators the last three reachable rows were held on land first, in the same pass as the two units that call them, and the `RSA`, `RSA-PSS` and `DSA` rows with them. **All three rows are driven by the `RT-KEYMGMT` arm D387 wrote**, extended in the same commit as the rows it now covers.
+
+1. **`crypto/rsa/rsa_chk.c` (270 lines) and `crypto/rsa/rsa_sp800_56b_check.c` (447 lines) land as `src/rsa/check.rs`**, with the three delegating validators `ossl_rsa_validate_public`/`_private`/`_pairwise` beside `rsa_validate_keypair_multiprime` in `src/rsa/mod.rs`. D326 had left three of `rsa_sp800_56b_check.c`'s helpers in `src/rsa/sp800.rs` for want of a caller; they move into the unit that is their home. D327 withheld the unit because nothing on the *generate* path reached it -- and `rsa_validate` (`rsa_kmgmt.c:390-410`) calls all three **outside any `#ifdef FIPS_MODULE` guard**, so the *withholding*, not the unit, was the whole hold on the two RSA rows.
+2. **`crypto/dsa/dsa_check.c` (133 lines) lands as `src/dsa/check.rs`** -- the four `ossl_dsa_check_*` validators (`_params`, `_pub_key`, `_priv_key`, `_pairwise`). `dsa_validate` (`dsa_kmgmt.c:373-408`) calls all four outside any `#ifdef FIPS_MODULE` guard, so the unit is the one hold on the `DSA` row.
+3. **`providers/implementations/keymgmt/rsa_kmgmt.c` lands whole (D327's rule), as `src/provider/rsa_kmgmt.rs`.** Seven hundred and forty-two source lines, twenty-four statics and two dispatch tables, publishing two rows -- `RSA` (`PROV_NAMES_RSA`) and `RSA-PSS` (`PROV_NAMES_RSA_PSS`). The two differ only in where `RSA_FLAG_TYPE_RSA` and `RSA_FLAG_TYPE_RSASSAPSS` are stamped: the object path's `rsa_newdata`/`rsapss_newdata`, `gen_init`'s `rsa_type` argument and `rsa_gen`'s re-stamp, and `common_load`'s `expected_rsa_type`. Everything else is shared. The `FIPS_MODULE && !OPENSSL_NO_ACVP_TESTS` arms and the module's five-entry `RSA_KEY_MP_TYPES` are not this profile's and are named at each site.
+4. **`providers/implementations/keymgmt/dsa_kmgmt.c` lands whole, as `src/provider/dsa_kmgmt.rs`.** Seven hundred and fifty source lines, twenty-one statics and one dispatch table, publishing the one row `DSA` (`PROV_NAMES_DSA`). The `OSSL_FIPS_IND_*` family is a no-op on this profile, so each site names the macro it is the empty expansion of rather than stubbing it, and `dsa_imexport_types` indexes its four-entry type table by the sum of two selection weights, the way `ec_kmgmt.rs`'s is.
+
+**The three rows and what the group now holds.** They append to `DEFLT_KEYMGMT` in the authority's order -- `DSA` at `defltprov.c:561-562`, then `RSA` and `RSA-PSS` at `:563-566` -- which takes the null-terminated array from sixteen entries to nineteen (fifteen rows to eighteen). The order is the authority's and the census requires it: the crate's rows are a **subsequence** of `deflt_keymgmt[]`. **The group holds no reachable row that is not landed**: every one of the eighteen rows this profile's crate can build is here, and what remains under `OSSL_OP_KEYMGMT` is the twenty-two post-quantum rows -- each built on a `crypto/ml_dsa/`, `crypto/ml_kem/`, `crypto/mlx/` or `crypto/slh_dsa/` the crate does not have.
+
+**Driven, not merely named.** `rt_keymgmt_probe.c` gains `arm_rsa_dsa_import()` in the same pass as the rows. `RSA`, `RSA-PSS` and `DSA` each import a **fixed public** parameter set through their own keymgmt row -- a small public modulus and the F4 exponent (`n = 3233`, `e = 65537`, the shape `rt_rsa_probe.c` already uses) for the two RSA rows, and a small public `p`/`q`/`g` triple for `DSA` -- then read `bits`/`size`/`security-bits` and rebuild a context from the imported key with `EVP_PKEY_CTX_new_from_pkey`. The empty `fromdata` is the row's own refusal, and nothing here is a generated key. The fetch arm now observes all eighteen landed rows answering by name. **One hundred observations before this pass, one hundred and twenty-four after, both sides identical, zero residuals.**
+
+**Movement.** `provider_rows` moves implemented **208 -> 211** (+3) and unlanded **98 -> 95**, over the same **306** owned; the census's whole-provider `implemented` moves **213 -> 216** and `projection.open[8]` moves **98 -> 95**. The three are `DSA`, `RSA` and `RSA-PSS`, all under `OSSL_OP_KEYMGMT`. **The coverage join is `216` implemented rows and `0` unmatched**, which is what `RT-KEYMGMT` exists to keep true. The export ledger is untouched (`forensics/phase8-obligations.json` `complete: true`, implemented **786**, deferred **0**, open **0**) -- these are registration rows, not symbols -- and no new identifier moves `docs/CI.md`'s typed `c_style` count (it holds at **456**). `gen_err_raise_sites.py` gains `PROV_RSA_KMGMT`, `PROV_DSA_KMGMT`, `RSA_CHK`, `RSA_SP800_56B_CHECK` and `DSA_CHECK`.
+
+**What remains, measured rather than reasoned.**
+
+* **`OSSL_OP_SIGNATURE`, fifty-nine rows** -- the next and by far the largest block: the DSA, RSA, ECDSA, EdDSA, SM2 and PQC signature units, each of which needs a signature object the crate does not yet have. **Named, not landed.**
+* **`OSSL_OP_KEM`, nine rows** -- the `RSA` and `EC` KEM rows plus the three ML-KEM and four MLX rows; `kem/ec_kem.c.in`'s `EC` row is the partial transcription D390 named.
+* **`OSSL_OP_KEYMGMT`, twenty-two rows; `OSSL_OP_ASYM_CIPHER`, two; `OSSL_OP_KDF`, three** -- the post-quantum key types, the `RSA`/`SM2` asymmetric ciphers, and `argon2.c.in`'s three threaded rows.
+
+No claim is made that the stratum is closer to sealing than `provider_rows` says.

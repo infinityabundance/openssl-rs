@@ -191,14 +191,20 @@ COURTS: list[tuple[str, str]] = [
     # subject (D355).
     ("RT-ECX", "rt_ecx_probe.c"),
     # 8.10's registration-row court, and the arm D386's six landed rows were missing. Its subject
-    # is the `OSSL_OP_KEYMGMT` rows (`DH`, `DHX`, `TLS1-PRF`, `HKDF`, `SCRYPT`) and the
-    # `OSSL_OP_KEYEXCH` rows they gate (`DH`, `TLS1-PRF`, `HKDF`, `SCRYPT`): it fetches each by
-    # type name, builds a `DH` key through its own row with `EVP_PKEY_fromdata`, and reaches the
-    # exchange row's `derive_init` through that key. **`rt_digest_probe.c` already names
-    # `TLS1-PRF`/`HKDF`/`SCRYPT`**, but under `OSSL_OP_KDF` -- different rows of a different
-    # operation -- so the provider-row coverage join was satisfied while no arm drove the keymgmt
-    # or keyexch rows at all. This is that arm. The probe's own header names what it does not
-    # observe and why.
+    # is the `OSSL_OP_KEYMGMT` rows (`DH`, `DHX`, `DSA`, `RSA`, `RSA-PSS`, `EC`, the four ECX types,
+    # the KDF trio, the four legacy MAC types and `SM2`), the `OSSL_OP_KEYEXCH` rows they gate
+    # (`DH`, `ECDH`, `X25519`, `X448`, and the KDF trio) and the `OSSL_OP_KEM` rows (`X25519`,
+    # `X448`): it fetches each by type name, builds a `DH` key, the four ECX keys, the `EC`/`SM2`
+    # keys and the `RSA`/`RSA-PSS`/`DSA` keys and imports each legacy-MAC key through their own rows
+    # with `EVP_PKEY_fromdata`, reads the object accessors, and reaches each exchange and KEM row
+    # through the key it built. **D387 landed it with the `DH`/`DHX` rows and named the caveat that
+    # it drove only those and the KDF trio**; D388 extended it with the eight ECX rows, D389 with
+    # the four MAC rows, D390 with `EC`, `SM2` and `ECDH` and D391 with `RSA`, `RSA-PSS` and `DSA`,
+    # each in the same commit as the rows it now drives, so no landed row is named-but-not-driven.
+    # **`rt_digest_probe.c` already names `TLS1-PRF`/`HKDF`/`SCRYPT`**, but under `OSSL_OP_KDF` --
+    # different rows of a different operation -- so the provider-row coverage join was satisfied
+    # while no arm drove the keymgmt, keyexch or KEM rows at all. This is that arm. The probe's own
+    # header names what it does not observe and why.
     ("RT-KEYMGMT", "rt_keymgmt_probe.c"),
 ]
 

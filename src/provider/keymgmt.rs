@@ -31,6 +31,19 @@
 //! and `crypto/slh_dsa/`, none of which the crate has. They are recorded rather than stubbed, the
 //! the way D382/D384/D385 record their own unreachable units.
 //!
+//! **`ecx_kmgmt.c.in` is the third unit, landed in this pass**, and it is the largest reachable
+//! keymgmt unit: four rows (`X25519`, `X448`, `ED25519`, `ED448`) over the ECX object layer D372
+//! landed. Its own four dispatch tables live in [`crate::provider::ecx_kmgmt`] because the unit is
+//! 1,338 lines and shares nothing with the two above but the dispatch-slot names; the four rows are
+//! appended to [`DEFLT_KEYMGMT`] in the authority's order. Landing it is what makes the two
+//! `exchange/ecx_exch.c.in` and two `kem/ecx_kem.c.in` rows drivable, which is why all three units
+//! land in one pass.
+//!
+//! **`mac_legacy_kmgmt.c` is the fourth unit**, the four legacy MAC key types (`HMAC`, `SIPHASH`,
+//! `POLY1305`, `CMAC`), transcribed whole in [`crate::provider::mac_legacy_kmgmt`]. Its one
+//! `#if !defined(OPENSSL_NO_ENGINE)` arm is reduced the way D181 reduces that family, with its
+//! reason at the site.
+//!
 //! ## The DH unit's one raise is a `_data` site, and it is the authority's `__func__`
 //!
 //! `dh_gen` raises `ERR_LIB_PROV`/`ERR_R_INTERNAL_ERROR` at `dh_kmgmt.c:725` through
@@ -114,6 +127,16 @@ use crate::params::{
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::cipher::{param_int, param_octet_string, param_size_t, param_utf8_string};
 use crate::provider::ctx::prov_libctx_of;
+use crate::provider::dsa_kmgmt::DSA_KEYMGMT_FUNCTIONS;
+use crate::provider::ec_kmgmt::{EC_KEYMGMT_FUNCTIONS, SM2_KEYMGMT_FUNCTIONS};
+use crate::provider::ecx_kmgmt::{
+    ED25519_KEYMGMT_FUNCTIONS, ED448_KEYMGMT_FUNCTIONS, X25519_KEYMGMT_FUNCTIONS,
+    X448_KEYMGMT_FUNCTIONS,
+};
+use crate::provider::mac_legacy_kmgmt::{
+    CMAC_LEGACY_KEYMGMT_FUNCTIONS, MAC_LEGACY_KEYMGMT_FUNCTIONS,
+};
+use crate::provider::rsa_kmgmt::{RSA_KEYMGMT_FUNCTIONS, RSA_PSS_KEYMGMT_FUNCTIONS};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
 use crate::runtime::mem::{
@@ -1716,17 +1739,21 @@ fn ossl_assert(expr: bool) -> c_int {
 /// `static const OSSL_ALGORITHM deflt_keymgmt[]` — `providers/defltprov.c:551-666`, **the rows this
 /// module has landed**, in the authority's order.
 ///
-/// The `DH` and `DHX` rows are the authority's first two (`defltprov.c:553-558`); the KDF rows
-/// share `ossl_kdf_keymgmt_functions` exactly as the authority's three do (`:588-595`) — that
-/// many-to-one association is a fact about the authority, and the census's dispatch association
-/// is a partition equality (D386) so it is described rather than rejected. The order is the
-/// authority's and the census requires it: the crate's rows must be a **subsequence** of
-/// `deflt_keymgmt[]`, so `DH`/`DHX` precede the KDF trio exactly as they do there.
+/// The `DH` and `DHX` rows are the authority's first two (`defltprov.c:553-558`); the `DSA` row is
+/// next (`:561-562`); the `RSA` and `RSA-PSS` rows follow it (`:563-566`); the `EC` row is next
+/// (`:568-569`); the four ECX rows (`X25519`, `X448`, `ED25519`, `ED448`) follow (`:571-578`); the
+/// KDF rows share `ossl_kdf_keymgmt_functions` exactly as the authority's three do (`:588-595`);
+/// the four legacy-MAC rows (`HMAC`, `SIPHASH`, `POLY1305`, `CMAC`, `:596-609`) come next, three
+/// sharing `ossl_mac_legacy_keymgmt_functions` and `CMAC` its own; and the `SM2` row closes the
+/// landed set (`:611-614`). The many-to-one associations are facts about the authority, and the
+/// census's dispatch association is a partition equality (D386) so they are described rather than
+/// rejected. The order is the authority's and the census requires it: the crate's rows must be a
+/// **subsequence** of `deflt_keymgmt[]`.
 ///
 /// **The property definition is `"provider=default"` on every row** (`defltprov.c`'s `ALG` macro,
 /// D247), and the description is left NULL on every row, which is this crate's convention for the
 /// fourth `OSSL_ALGORITHM` field (no landed table sets it, and nothing reads it).
-pub(crate) static DEFLT_KEYMGMT: [OsslAlgorithm; 6] = [
+pub(crate) static DEFLT_KEYMGMT: [OsslAlgorithm; 19] = [
     OsslAlgorithm {
         // `PROV_NAMES_DH`.
         algorithm_names: c"DH:dhKeyAgreement:1.2.840.113549.1.3.1".as_ptr(),
@@ -1739,6 +1766,62 @@ pub(crate) static DEFLT_KEYMGMT: [OsslAlgorithm; 6] = [
         algorithm_names: c"DHX:X9.42 DH:dhpublicnumber:1.2.840.10046.2.1".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
         implementation: DHX_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_DSA` — the OID alias is part of the row.
+        algorithm_names: c"DSA:dsaEncryption:1.2.840.10040.4.1".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: DSA_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_RSA` — the OID alias is part of the row.
+        algorithm_names: c"RSA:rsaEncryption:1.2.840.113549.1.1.1".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: RSA_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_RSA_PSS` — all three aliases are part of the row.
+        algorithm_names: c"RSA-PSS:RSASSA-PSS:rsassaPss:1.2.840.113549.1.1.10".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: RSA_PSS_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_EC` — the OID alias is part of the row.
+        algorithm_names: c"EC:id-ecPublicKey:1.2.840.10045.2.1".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: EC_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_X25519`.
+        algorithm_names: c"X25519:1.3.101.110".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: X25519_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_X448`.
+        algorithm_names: c"X448:1.3.101.111".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: X448_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ED25519`.
+        algorithm_names: c"ED25519:1.3.101.112".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ED25519_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ED448`.
+        algorithm_names: c"ED448:1.3.101.113".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ED448_KEYMGMT_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
@@ -1760,6 +1843,41 @@ pub(crate) static DEFLT_KEYMGMT: [OsslAlgorithm; 6] = [
         algorithm_names: c"SCRYPT:id-scrypt:1.3.6.1.4.1.11591.4.11".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
         implementation: KDF_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_HMAC`.
+        algorithm_names: c"HMAC".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: MAC_LEGACY_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SIPHASH`.
+        algorithm_names: c"SIPHASH".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: MAC_LEGACY_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_POLY1305`.
+        algorithm_names: c"POLY1305".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: MAC_LEGACY_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_CMAC`.
+        algorithm_names: c"CMAC".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: CMAC_LEGACY_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SM2` — the OID alias is part of the row.
+        algorithm_names: c"SM2:1.2.156.10197.1.301".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: SM2_KEYMGMT_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {

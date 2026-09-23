@@ -22,10 +22,10 @@ Read from the census's own `implementation_state` for the rows this stratum owns
 | quantity | count |
 |---|---|
 | provider rows this stratum owns | 306 |
-| of those, implemented | 193 |
-| of those, unlanded | 113 |
+| of those, implemented | 211 |
+| of those, unlanded | 95 |
 
-The document below names all **113** unlanded rows this stratum owns across **40** translation units, and — so the first group can be read whole — the **18** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (110). The identity `306 = 193 + 113` holds.
+The document below names all **95** unlanded rows this stratum owns across **32** translation units, and — so the first group can be read whole — the **18** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (92). The identity `306 = 211 + 95` holds.
 
 ## The first group: the `OSSL_OP_KDF` rows and the `OSSL_OP_SKEYMGMT` pair
 
@@ -144,93 +144,36 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 |---|---|---|---|---|
 | `deflt_asym_cipher` | `ossl_sm2_asym_cipher_functions` | `OSSL_OP_ASYM_CIPHER` | `SM2:1.2.156.10197.1.301` | `_no arm yet_` |
 
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/exchange/ecdh_exch.c.in` — 1 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_keyexch` | `ossl_ecdh_keyexch_functions` | `OSSL_OP_KEYEXCH` | `ECDH` | `src/provider/exchange.rs` |
-
-**Withheld: behind the `EC` keymgmt row, and the old reason was stale.** The keymgmt gate is open (D386) and the `ECDH` row needs the `EC` keymgmt row. D334 recorded `EC_GROUP`/`EC_POINT` as one indivisible landing not made and this entry named it as a second hold; **D387 re-measured and it is no longer true**: `EC_GROUP_new_by_curve_name` (`src/ec/curve.rs`) builds a real group from the generated curve tables and `EC_POINT_new`/`EC_POINT_mul` (`src/ec/lib.rs`) with the wNAF and ladder (`src/ec/mult.rs`) are landed. Of the 47 `EC*`/`EVP*`/`OSSL*`/`BN*`/`ossl_*` names this unit calls, the only ones the crate does not carry are the `OSSL_FIPS_IND_*` macros, all of which are inside `#ifdef FIPS_MODULE` and not this profile's. Nothing in the unit blocks it: the `EC` keymgmt row does.
-
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/exchange/ecx_exch.c.in` — 2 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_keyexch` | `ossl_x25519_keyexch_functions` | `OSSL_OP_KEYEXCH` | `X25519:1.3.101.110` | `src/provider/exchange.rs` |
-| `deflt_keyexch` | `ossl_x448_keyexch_functions` | `OSSL_OP_KEYEXCH` | `X448:1.3.101.111` | `src/provider/exchange.rs` |
-
-**Withheld: behind the `ecx_kmgmt.c.in` unit.** The keymgmt gate is open (D386); this unit needs the four `X25519`/`X448`/`ED25519`/`ED448` keymgmt rows, which are not transcribed. Its own layer is present (`ossl_ecx_key_up_ref`, `ossl_ecx_key_free` and `ossl_ecx_compute_key` are landed in `src/ec/ecx_key.rs`), so nothing in this unit blocks it: the four keymgmt rows do.
-
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/kem/ec_kem.c.in` — 1 row(s)
 
 | table | dispatch table symbol | operation | algorithm name(s) | crate file |
 |---|---|---|---|---|
-| `deflt_asym_kem` | `ossl_ec_asym_kem_functions` | `OSSL_OP_KEM` | `EC:id-ecPublicKey:1.2.840.10045.2.1` | `_no arm yet_` |
+| `deflt_asym_kem` | `ossl_ec_asym_kem_functions` | `OSSL_OP_KEM` | `EC:id-ecPublicKey:1.2.840.10045.2.1` | `src/provider/kem.rs` |
 
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/kem/ecx_kem.c.in` — 2 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_asym_kem` | `ossl_ecx_asym_kem_functions` | `OSSL_OP_KEM` | `X25519:1.3.101.110` | `_no arm yet_` |
-| `deflt_asym_kem` | `ossl_ecx_asym_kem_functions` | `OSSL_OP_KEM` | `X448:1.3.101.111` | `_no arm yet_` |
+**Withheld: the unit's `EC` KEM row, on a partial transcription that is named rather than claimed.** `src/provider/ec_kem.rs` carries **one** of the unit's functions, `ossl_ec_dhkem_derive_private` (`ec_kem.c.in:387-461`), `#[no_mangle]` because the authority defines it non-`static` and `crypto/ec/ec_key.c`'s `ossl_ec_generate_key_dhkem` calls it across translation units -- which is exactly what D390's `ec_kmgmt.c` landing needs. The rest of the unit is the `EC` KEM row's own dispatch (`ossl_ec_asym_kem_functions`, `:805-822`) and the twelve `eckem_*` functions plus the `dhkem_encap`/`dhkem_decap` pair it dispatches to, and it is **not** transcribed: the row's public-key decode path and its `OSSL_PKEY_PARAM_DHKEM_IKM` generate path reach `eckey_frompub`/`eckey_check` and the HPKE-derived encapsulation the crate models only partly, so the one row that would land (`OSSL_OP_KEM` `EC`, `defltprov.c:533`) is left `unimplemented` rather than half-driven. The function that *is* landed is drivable and driven: `RT-KEYMGMT`'s `EC` arm builds the key `ossl_ec_generate_key_dhkem` would be reached on. The entry stays until the row's own dispatch lands, so the census and this document agree that the row is open.
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/kem/ml_kem_kem.c.in` — 3 row(s)
 
 | table | dispatch table symbol | operation | algorithm name(s) | crate file |
 |---|---|---|---|---|
-| `deflt_asym_kem` | `ossl_ml_kem_asym_kem_functions` | `OSSL_OP_KEM` | `ML-KEM-512:MLKEM512:id-alg-ml-kem-512:2.16.840.1.101.3.4.4.1` | `_no arm yet_` |
-| `deflt_asym_kem` | `ossl_ml_kem_asym_kem_functions` | `OSSL_OP_KEM` | `ML-KEM-768:MLKEM768:id-alg-ml-kem-768:2.16.840.1.101.3.4.4.2` | `_no arm yet_` |
-| `deflt_asym_kem` | `ossl_ml_kem_asym_kem_functions` | `OSSL_OP_KEM` | `ML-KEM-1024:MLKEM1024:id-alg-ml-kem-1024:2.16.840.1.101.3.4.4.3` | `_no arm yet_` |
+| `deflt_asym_kem` | `ossl_ml_kem_asym_kem_functions` | `OSSL_OP_KEM` | `ML-KEM-512:MLKEM512:id-alg-ml-kem-512:2.16.840.1.101.3.4.4.1` | `src/provider/kem.rs` |
+| `deflt_asym_kem` | `ossl_ml_kem_asym_kem_functions` | `OSSL_OP_KEM` | `ML-KEM-768:MLKEM768:id-alg-ml-kem-768:2.16.840.1.101.3.4.4.2` | `src/provider/kem.rs` |
+| `deflt_asym_kem` | `ossl_ml_kem_asym_kem_functions` | `OSSL_OP_KEM` | `ML-KEM-1024:MLKEM1024:id-alg-ml-kem-1024:2.16.840.1.101.3.4.4.3` | `src/provider/kem.rs` |
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c` — 4 row(s)
 
 | table | dispatch table symbol | operation | algorithm name(s) | crate file |
 |---|---|---|---|---|
-| `deflt_asym_kem` | `ossl_mlx_kem_asym_kem_functions` | `OSSL_OP_KEM` | `X25519MLKEM768` | `_no arm yet_` |
-| `deflt_asym_kem` | `ossl_mlx_kem_asym_kem_functions` | `OSSL_OP_KEM` | `X448MLKEM1024` | `_no arm yet_` |
-| `deflt_asym_kem` | `ossl_mlx_kem_asym_kem_functions` | `OSSL_OP_KEM` | `SecP256r1MLKEM768` | `_no arm yet_` |
-| `deflt_asym_kem` | `ossl_mlx_kem_asym_kem_functions` | `OSSL_OP_KEM` | `SecP384r1MLKEM1024` | `_no arm yet_` |
+| `deflt_asym_kem` | `ossl_mlx_kem_asym_kem_functions` | `OSSL_OP_KEM` | `X25519MLKEM768` | `src/provider/kem.rs` |
+| `deflt_asym_kem` | `ossl_mlx_kem_asym_kem_functions` | `OSSL_OP_KEM` | `X448MLKEM1024` | `src/provider/kem.rs` |
+| `deflt_asym_kem` | `ossl_mlx_kem_asym_kem_functions` | `OSSL_OP_KEM` | `SecP256r1MLKEM768` | `src/provider/kem.rs` |
+| `deflt_asym_kem` | `ossl_mlx_kem_asym_kem_functions` | `OSSL_OP_KEM` | `SecP384r1MLKEM1024` | `src/provider/kem.rs` |
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/kem/rsa_kem.c.in` — 1 row(s)
 
 | table | dispatch table symbol | operation | algorithm name(s) | crate file |
 |---|---|---|---|---|
-| `deflt_asym_kem` | `ossl_rsa_asym_kem_functions` | `OSSL_OP_KEM` | `RSA:rsaEncryption:1.2.840.113549.1.1.1` | `_no arm yet_` |
-
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/dsa_kmgmt.c` — 1 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_keymgmt` | `ossl_dsa_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `DSA:dsaEncryption:1.2.840.10040.4.1` | `src/provider/keymgmt.rs` |
-
-**Withheld: same class as `rsa_kmgmt.c`.** It calls `ossl_dsa_check_pairwise`, `ossl_dsa_check_params`, `ossl_dsa_check_priv_key` and `ossl_dsa_check_pub_key` -- `crypto/dsa/dsa_check.c`'s validators, none of which the crate has -- so the `DSA` row needs that unit first. Everything else it calls is present (`ossl_dsa_new`, `ossl_dsa_dup`, `ossl_dsa_key_fromdata`, `ossl_dsa_ffc_params_fromdata`, `ossl_dsa_generate_ffc_parameters` and the `ossl_ffc_params_*` family).
-
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/ec_kmgmt.c` — 2 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_keymgmt` | `ossl_ec_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `EC:id-ecPublicKey:1.2.840.10045.2.1` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_sm2_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `SM2:1.2.156.10197.1.301` | `src/provider/keymgmt.rs` |
-
-**Withheld: behind two small functions, and the old reason was stale.** D334 recorded `EC_GROUP`/`EC_POINT` and their arithmetic as one indivisible landing not made, and this entry named it as the hold (`CT-EC` is `PENDING` for it). **D387 re-measured and it is no longer the crate's state**: `EC_GROUP_new_by_curve_name` (`src/ec/curve.rs`) builds a real group from the generated curve tables, `EC_POINT_new`/`EC_POINT_mul` (`src/ec/lib.rs`) and the wNAF/ladder (`src/ec/mult.rs`) are landed, and `EC_POINT_point2oct` (`src/ec/oct.rs`) serializes. Of the 97 `EC*`/`EVP*`/`OSSL*`/`BN*`/`ossl_*` names the unit calls, the only genuine missing ones are `ossl_ec_generate_key_dhkem` (`:1294`, reached only when the caller sets `OSSL_PKEY_PARAM_DHKEM_IKM`) and `ossl_sm2_key_private_check` (`:902`, the SM2 row's private-key validate); `ossl_fips_ind_ec_key_check` (`:1281`) is inside `#ifdef FIPS_MODULE` and is not this profile's. So the two rows `EC` and `SM2` wait on those two functions and the unit's own size (1,492 lines), not on the object layer -- and with them `ecdh_exch.c.in` and `ec_kem.c.in` become drivable.
-
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/ecx_kmgmt.c.in` — 4 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_keymgmt` | `ossl_x25519_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `X25519:1.3.101.110` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_x448_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `X448:1.3.101.111` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_ed25519_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `ED25519:1.3.101.112` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_ed448_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `ED448:1.3.101.113` | `src/provider/keymgmt.rs` |
-
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/mac_legacy_kmgmt.c` — 4 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_keymgmt` | `ossl_mac_legacy_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `HMAC` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_mac_legacy_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `SIPHASH` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_mac_legacy_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `POLY1305` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_cmac_legacy_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `CMAC` | `src/provider/keymgmt.rs` |
+| `deflt_asym_kem` | `ossl_rsa_asym_kem_functions` | `OSSL_OP_KEM` | `RSA:rsaEncryption:1.2.840.113549.1.1.1` | `src/provider/kem.rs` |
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/ml_dsa_kmgmt.c.in` — 3 row(s)
 
@@ -262,15 +205,6 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 | `deflt_keymgmt` | `ossl_mlx_p384_kem_kmgmt_functions` | `OSSL_OP_KEYMGMT` | `SecP384r1MLKEM1024` | `src/provider/keymgmt.rs` |
 
 **Withheld: not reachable.** The unit's four hybrid rows (`X25519MLKEM768`, `X448MLKEM1024`, `SecP256r1MLKEM768`, `SecP384r1MLKEM1024`) are built on **both** an ECX or EC half and the ML-KEM half: they call `ossl_ml_kem_get_vinfo` and `ossl_mlx_*`, and depend on `crypto/ml_kem/` and `crypto/mlx/`, neither of which is in this tree.
-
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/rsa_kmgmt.c` — 2 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_keymgmt` | `ossl_rsa_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `RSA:rsaEncryption:1.2.840.113549.1.1.1` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_rsapss_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `RSA-PSS:RSASSA-PSS:rsassaPss:1.2.840.113549.1.1.10` | `src/provider/keymgmt.rs` |
-
-**Withheld: reachable only behind a prerequisite that D327 deliberately left out.** The unit's `rsa_validate` (`:390-410`) calls `ossl_rsa_validate_pairwise`, `ossl_rsa_validate_private` and `ossl_rsa_validate_public` **outside any `#ifdef FIPS_MODULE`** guard, and those three live in `crypto/rsa/rsa_chk.c` as one-line calls to `ossl_rsa_sp800_56b_check_public`/`_private` (`crypto/rsa/rsa_sp800_56b_check.c`). D327 did not transcribe `rsa_sp800_56b_check.c` because nothing on the generate path reached it; `rsa_kmgmt.c` does, so the two rows `RSA` and `RSA-PSS` need that unit landed first. Everything else it calls is present (`ossl_rsa_new_with_ctx`, `ossl_rsa_todata`, `ossl_rsa_fromdata`, `ossl_rsa_dup`, the whole `ossl_rsa_pss_params_30_*` family).
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/slh_dsa_kmgmt.c.in` — 12 row(s)
 
@@ -396,7 +330,7 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 |---|---|
 | generator | `forensics/tools/phase8_provider_rows.py` |
 | census | `forensics/atlas/provider-algorithms.json` |
-| census content hash | `e75cb88929a45c96fc656ab925abbf9c31cd1d12e35317d64526bf72738866ad` |
+| census content hash | `978972e7784bebda29b97a77e43bdd3880af79189136c724aac897fa86f32ea2` |
 | authority tree | `forensics/authorities/src/openssl-3.6.4` |
 | crate query read | `src/provider/digest.rs` |
 

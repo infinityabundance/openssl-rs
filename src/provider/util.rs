@@ -213,9 +213,11 @@ pub(crate) unsafe fn ossl_prov_cipher_load(
 /// `int ossl_prov_cipher_load_from_params(PROV_CIPHER *pc, const OSSL_PARAM params[],
 /// OSSL_LIB_CTX *ctx)` — `provider_util.c:125-134`: the three-key form of the above.
 ///
+/// **`mac_legacy_kmgmt.c` is its first caller** (D389), which is why the `dead_code` allowance it
+/// carried while only `hmac_prov.c`'s digest half and the encoder rows were anticipated is gone.
+///
 /// # Safety
 /// `pc` is writable; `params` is a terminated array; `ctx` is NULL or live.
-#[allow(dead_code)] // the digest and encoder provider rows are the callers that will land
 pub(crate) unsafe fn ossl_prov_cipher_load_from_params(
     pc: *mut ProvCipher,
     params: *const OsslParam,

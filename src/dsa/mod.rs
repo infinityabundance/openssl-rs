@@ -95,6 +95,7 @@
 pub mod ameth;
 pub mod asn1;
 pub mod backend;
+pub mod check;
 pub mod ctrl;
 pub mod depr;
 pub mod gen;

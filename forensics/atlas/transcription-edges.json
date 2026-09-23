@@ -663,6 +663,13 @@
         "translation_unit": "crypto/dsa/dsa_backend.c"
       },
       {
+        "module": "src/dsa/check.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "5/5",
+        "translation_unit": "crypto/dsa/dsa_check.c"
+      },
+      {
         "module": "src/dsa/ctrl.rs",
         "phase": 8,
         "phase_source": "export-ownership",
@@ -876,7 +883,7 @@
         "module": "src/ec/key.rs",
         "phase": 8,
         "phase_source": "export-ownership",
-        "share": "47/47",
+        "share": "48/48",
         "translation_unit": "crypto/ec/ec_key.c"
       },
       {
@@ -941,6 +948,13 @@
         "phase_source": "export-ownership",
         "share": "4/5",
         "translation_unit": "crypto/ec/eck_prn.c"
+      },
+      {
+        "module": "src/ec/sm2_key.rs",
+        "phase": null,
+        "phase_source": null,
+        "share": "1/1",
+        "translation_unit": "crypto/sm2/sm2_key.c"
       },
       {
         "module": "src/ec/smpl.rs",
@@ -1324,7 +1338,7 @@
         "module": "src/hpke/mod.rs",
         "phase": 7,
         "phase_source": "module-declaration",
-        "share": "19/19",
+        "share": "19/20",
         "translation_unit": "crypto/hpke/hpke.c"
       },
       {
@@ -1601,11 +1615,32 @@
         "translation_unit": "providers/implementations/digests/libcommon-lib-digestcommon.c"
       },
       {
+        "module": "src/provider/ec_kem.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "1/1",
+        "translation_unit": "providers/implementations/kem/libdefault-lib-ec_kem.c"
+      },
+      {
+        "module": "src/provider/ecx_kem.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "1/1",
+        "translation_unit": "providers/implementations/kem/libdefault-lib-ecx_kem.c"
+      },
+      {
         "module": "src/provider/init.rs",
         "phase": 6,
         "phase_source": "module-declaration",
         "share": "1/1",
         "translation_unit": "crypto/provider_core.c"
+      },
+      {
+        "module": "src/provider/kem_util.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "1/1",
+        "translation_unit": "providers/implementations/kem/libdefault-lib-kem_util.c"
       },
       {
         "module": "src/provider/keymgmt.rs",
@@ -1620,6 +1655,13 @@
         "phase_source": "module-declaration",
         "share": "1/1",
         "translation_unit": "crypto/poly1305/poly1305-x86_64.c"
+      },
+      {
+        "module": "src/provider/mac_legacy_kmgmt.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "3/3",
+        "translation_unit": "providers/implementations/keymgmt/libdefault-lib-mac_legacy_kmgmt.c"
       },
       {
         "module": "src/provider/mod.rs",
@@ -1741,6 +1783,13 @@
         "translation_unit": "crypto/rsa/rsa_backend.c"
       },
       {
+        "module": "src/rsa/check.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "10/10",
+        "translation_unit": "crypto/rsa/rsa_sp800_56b_check.c"
+      },
+      {
         "module": "src/rsa/ctrl.rs",
         "phase": 8,
         "phase_source": "export-ownership",
@@ -1758,7 +1807,7 @@
         "module": "src/rsa/mod.rs",
         "phase": 8,
         "phase_source": "export-ownership",
-        "share": "33/55",
+        "share": "33/58",
         "translation_unit": "crypto/rsa/rsa_meth.c"
       },
       {
@@ -1821,7 +1870,7 @@
         "module": "src/rsa/sp800.rs",
         "phase": 8,
         "phase_source": "module-declaration",
-        "share": "5/8",
+        "share": "5/5",
         "translation_unit": "crypto/rsa/rsa_sp800_56b_gen.c"
       },
       {
@@ -20123,6 +20172,69 @@
           "src/dsa/backend.rs"
         ],
         "tu": "crypto/dsa/dsa_backend.c"
+      },
+      {
+        "identifiers": [
+          "BIGNUM",
+          "BN_CTX",
+          "BN_CTX_free",
+          "BN_CTX_new_ex",
+          "BN_cmp",
+          "BN_free",
+          "BN_new",
+          "BN_num_bits",
+          "DSA",
+          "DSA_R_BAD_FFC_PARAMETERS",
+          "DSA_R_BAD_Q_VALUE",
+          "DSA_R_MODULUS_TOO_LARGE",
+          "ERR_LIB_DSA",
+          "ERR_raise",
+          "FFC_CHECK_INVALID_PQ",
+          "FFC_PARAM_TYPE_DSA",
+          "NULL",
+          "OPENSSL_DSA_MAX_MODULUS_BITS",
+          "OSSL_KEYMGMT_VALIDATE_QUICK_CHECK",
+          "bn",
+          "checktype",
+          "const",
+          "ctx",
+          "dsa",
+          "dsa_precheck_params",
+          "else",
+          "err",
+          "g",
+          "goto",
+          "h",
+          "if",
+          "include",
+          "int",
+          "libctx",
+          "openssl",
+          "ossl_dsa_check_pairwise",
+          "ossl_dsa_check_params",
+          "ossl_dsa_check_priv_key",
+          "ossl_dsa_check_pub_key",
+          "ossl_dsa_check_pub_key_partial",
+          "ossl_dsa_generate_public_key",
+          "ossl_ffc_params_full_validate",
+          "ossl_ffc_params_simple_validate",
+          "ossl_ffc_validate_private_key",
+          "ossl_ffc_validate_public_key",
+          "ossl_ffc_validate_public_key_partial",
+          "p",
+          "params",
+          "priv_key",
+          "pub_key",
+          "q",
+          "ret",
+          "return",
+          "static",
+          "stdio"
+        ],
+        "modules": [
+          "src/dsa/check.rs"
+        ],
+        "tu": "crypto/dsa/dsa_check.c"
       },
       {
         "identifiers": [
@@ -45268,6 +45380,112 @@
           "BN_CTX_new_ex",
           "BN_CTX_start",
           "BN_FLG_CONSTTIME",
+          "BN_PRIMETEST_COMPOSITE_NOT_POWER_OF_PRIME",
+          "BN_PRIMETEST_COMPOSITE_WITH_FACTOR",
+          "BN_check_prime",
+          "BN_clear",
+          "BN_cmp",
+          "BN_copy",
+          "BN_div",
+          "BN_free",
+          "BN_gcd",
+          "BN_is_odd",
+          "BN_is_one",
+          "BN_is_zero",
+          "BN_lshift",
+          "BN_mod_mul",
+          "BN_mul",
+          "BN_new",
+          "BN_num_bits",
+          "BN_rshift",
+          "BN_set_flags",
+          "BN_set_negative",
+          "BN_sub",
+          "BN_sub_word",
+          "BN_value_one",
+          "ERR_LIB_RSA",
+          "ERR_raise",
+          "FIPS_MODULE",
+          "NULL",
+          "OPENSSL_RSA_MAX_MODULUS_BITS",
+          "RSA",
+          "RSA_MIN_MODULUS_BITS",
+          "RSA_R_INVALID_KEYPAIR",
+          "RSA_R_INVALID_KEY_LENGTH",
+          "RSA_R_INVALID_MODULUS",
+          "RSA_R_INVALID_REQUEST",
+          "RSA_R_MODULUS_TOO_LARGE",
+          "RSA_R_PUB_EXPONENT_OUT_OF_RANGE",
+          "bitlen",
+          "bn",
+          "const",
+          "ctx",
+          "d",
+          "diff",
+          "dmp1",
+          "dmq1",
+          "e",
+          "efixed",
+          "else",
+          "endif",
+          "err",
+          "gcd",
+          "goto",
+          "h",
+          "if",
+          "ifdef",
+          "include",
+          "int",
+          "iqmp",
+          "lcm",
+          "libctx",
+          "low",
+          "n",
+          "nbits",
+          "openssl",
+          "ossl_bn_get0_small_factors",
+          "ossl_bn_inv_sqrt_2",
+          "ossl_bn_miller_rabin_is_prime",
+          "ossl_rsa_check_crt_components",
+          "ossl_rsa_check_pminusq_diff",
+          "ossl_rsa_check_prime_factor",
+          "ossl_rsa_check_prime_factor_range",
+          "ossl_rsa_check_private_exponent",
+          "ossl_rsa_check_public_exponent",
+          "ossl_rsa_get_lcm",
+          "ossl_rsa_sp800_56b_check_keypair",
+          "ossl_rsa_sp800_56b_check_private",
+          "ossl_rsa_sp800_56b_check_public",
+          "ossl_rsa_sp800_56b_validate_strength",
+          "p",
+          "p1",
+          "p1q1",
+          "q",
+          "q1",
+          "r",
+          "ret",
+          "return",
+          "rsa",
+          "shift",
+          "status",
+          "strength",
+          "x1"
+        ],
+        "modules": [
+          "src/rsa/check.rs"
+        ],
+        "tu": "crypto/rsa/rsa_sp800_56b_check.c"
+      },
+      {
+        "identifiers": [
+          "BIGNUM",
+          "BN_CTX",
+          "BN_CTX_end",
+          "BN_CTX_free",
+          "BN_CTX_get",
+          "BN_CTX_new_ex",
+          "BN_CTX_start",
+          "BN_FLG_CONSTTIME",
           "BN_GENCB",
           "BN_clear",
           "BN_clear_free",
@@ -47327,6 +47545,48 @@
           "src/mac/siphash.rs"
         ],
         "tu": "crypto/siphash/siphash.c"
+      },
+      {
+        "identifiers": [
+          "BIGNUM",
+          "BN_cmp",
+          "BN_dup",
+          "BN_free",
+          "BN_sub_word",
+          "BN_value_one",
+          "EC_GROUP",
+          "EC_GROUP_get0_order",
+          "EC_KEY",
+          "EC_KEY_get0_group",
+          "EC_KEY_get0_private_key",
+          "ERR_LIB_SM2",
+          "ERR_R_PASSED_NULL_PARAMETER",
+          "ERR_raise",
+          "NULL",
+          "SM2_R_INVALID_PRIVATE_KEY",
+          "const",
+          "ec",
+          "eckey",
+          "end",
+          "err",
+          "goto",
+          "group",
+          "h",
+          "if",
+          "include",
+          "int",
+          "max",
+          "openssl",
+          "order",
+          "ossl_sm2_key_private_check",
+          "priv_key",
+          "ret",
+          "return"
+        ],
+        "modules": [
+          "src/ec/sm2_key.rs"
+        ],
+        "tu": "crypto/sm2/sm2_key.c"
       },
       {
         "identifiers": [

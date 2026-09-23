@@ -94,67 +94,16 @@ WITHHELD: dict[str, str] = {
     ),
     # The `OSSL_OP_KEYEXCH` group. D386 landed the crate's `OSSL_OP_KEYMGMT` arm -- the gate this
     # comment used to describe as absent -- and, on it, the `kdf_exch.c` unit. D387 landed
-    # `dh_kmgmt.c` and `dh_exch.c.in`, so neither of those is here any more. `ecdh_exch.c.in` is
-    # withheld on the `EC` keymgmt row and the `EC_GROUP`/`EC_POINT` layer; `ecx_exch.c.in` on the
-    # four ECX keymgmt rows of `ecx_kmgmt.c.in`.
-    "forensics/authorities/src/openssl-3.6.4/providers/implementations/exchange/ecdh_exch.c.in": (
-        "**Withheld: behind the `EC` keymgmt row, and the old reason was stale.** The keymgmt gate "
-        "is open (D386) and the `ECDH` row needs the `EC` keymgmt row. D334 recorded "
-        "`EC_GROUP`/`EC_POINT` as one indivisible landing not made and this entry named it as a "
-        "second hold; **D387 re-measured and it is no longer true**: `EC_GROUP_new_by_curve_name` "
-        "(`src/ec/curve.rs`) builds a real group from the generated curve tables and "
-        "`EC_POINT_new`/`EC_POINT_mul` (`src/ec/lib.rs`) with the wNAF and ladder "
-        "(`src/ec/mult.rs`) are landed. Of the 47 `EC*`/`EVP*`/`OSSL*`/`BN*`/`ossl_*` names this "
-        "unit calls, the only ones the crate does not carry are the `OSSL_FIPS_IND_*` macros, "
-        "all of which are inside `#ifdef FIPS_MODULE` and not this profile's. Nothing in the unit "
-        "blocks it: the `EC` keymgmt row does."
-    ),
-    "forensics/authorities/src/openssl-3.6.4/providers/implementations/exchange/ecx_exch.c.in": (
-        "**Withheld: behind the `ecx_kmgmt.c.in` unit.** The keymgmt gate is open (D386); this unit "
-        "needs the four `X25519`/`X448`/`ED25519`/`ED448` keymgmt rows, which are not transcribed. "
-        "Its own layer is present (`ossl_ecx_key_up_ref`, `ossl_ecx_key_free` and "
-        "`ossl_ecx_compute_key` are landed in `src/ec/ecx_key.rs`), so nothing in this unit blocks "
-        "it: the four keymgmt rows do."
-    ),
+    # `dh_kmgmt.c` and `dh_exch.c.in`; D388 landed `ecx_kmgmt.c.in` and `ecx_exch.c.in`; D390 landed
+    # `ec_kmgmt.c` and `ecdh_exch.c.in`, so **every `OSSL_OP_KEYEXCH` row the authority's
+    # `deflt_keyexch[]` holds is landed and this group has no entry here.** The KEM group's one
+    # entry is below, beside the keymgmt units.
     # The keymgmt group's **prerequisite-held and unreachable** units. `kdf_legacy_kmgmt.c` is
-    # landed (D386) and `dh_kmgmt.c` is landed (D387), so neither is here. `ecx_kmgmt.c.in` and
-    # `mac_legacy_kmgmt.c` are reachable-but-untranscribed -- their closures were not shown
-    # unreachable, so they are not here, exactly as D385 kept `dh_kmgmt.c` out. The four PQC units
-    # below are each built on an implementation the crate does not have.
-    "forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/rsa_kmgmt.c": (
-        "**Withheld: reachable only behind a prerequisite that D327 deliberately left out.** The "
-        "unit's `rsa_validate` (`:390-410`) calls `ossl_rsa_validate_pairwise`, "
-        "`ossl_rsa_validate_private` and `ossl_rsa_validate_public` **outside any `#ifdef "
-        "FIPS_MODULE`** guard, and those three live in `crypto/rsa/rsa_chk.c` as one-line calls to "
-        "`ossl_rsa_sp800_56b_check_public`/`_private` (`crypto/rsa/rsa_sp800_56b_check.c`). D327 "
-        "did not transcribe `rsa_sp800_56b_check.c` because nothing on the generate path reached "
-        "it; `rsa_kmgmt.c` does, so the two rows `RSA` and `RSA-PSS` need that unit landed first. "
-        "Everything else it calls is present (`ossl_rsa_new_with_ctx`, `ossl_rsa_todata`, "
-        "`ossl_rsa_fromdata`, `ossl_rsa_dup`, the whole `ossl_rsa_pss_params_30_*` family)."
-    ),
-    "forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/dsa_kmgmt.c": (
-        "**Withheld: same class as `rsa_kmgmt.c`.** It calls `ossl_dsa_check_pairwise`, "
-        "`ossl_dsa_check_params`, `ossl_dsa_check_priv_key` and `ossl_dsa_check_pub_key` -- "
-        "`crypto/dsa/dsa_check.c`'s validators, none of which the crate has -- so the `DSA` row "
-        "needs that unit first. Everything else it calls is present (`ossl_dsa_new`, "
-        "`ossl_dsa_dup`, `ossl_dsa_key_fromdata`, `ossl_dsa_ffc_params_fromdata`, "
-        "`ossl_dsa_generate_ffc_parameters` and the `ossl_ffc_params_*` family)."
-    ),
-    "forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/ec_kmgmt.c": (
-        "**Withheld: behind two small functions, and the old reason was stale.** D334 recorded "
-        "`EC_GROUP`/`EC_POINT` and their arithmetic as one indivisible landing not made, and this "
-        "entry named it as the hold (`CT-EC` is `PENDING` for it). **D387 re-measured and it is no "
-        "longer the crate's state**: `EC_GROUP_new_by_curve_name` (`src/ec/curve.rs`) builds a real "
-        "group from the generated curve tables, `EC_POINT_new`/`EC_POINT_mul` (`src/ec/lib.rs`) "
-        "and the wNAF/ladder (`src/ec/mult.rs`) are landed, and `EC_POINT_point2oct` "
-        "(`src/ec/oct.rs`) serializes. Of the 97 `EC*`/`EVP*`/`OSSL*`/`BN*`/`ossl_*` names the unit "
-        "calls, the only genuine missing ones are `ossl_ec_generate_key_dhkem` (`:1294`, reached "
-        "only when the caller sets `OSSL_PKEY_PARAM_DHKEM_IKM`) and `ossl_sm2_key_private_check` "
-        "(`:902`, the SM2 row's private-key validate); `ossl_fips_ind_ec_key_check` (`:1281`) is "
-        "inside `#ifdef FIPS_MODULE` and is not this profile's. So the two rows `EC` and `SM2` "
-        "wait on those two functions and the unit's own size (1,492 lines), not on the object "
-        "layer -- and with them `ecdh_exch.c.in` and `ec_kem.c.in` become drivable."
-    ),
+    # landed (D386), `dh_kmgmt.c` is landed (D387), `ecx_kmgmt.c.in`, `mac_legacy_kmgmt.c` and
+    # `ec_kmgmt.c` are landed (D388-D390), and `rsa_kmgmt.c` and `dsa_kmgmt.c` land at D391 with the
+    # two crypto validators they were held on -- so **every row of the authority's
+    # `deflt_keymgmt[]` that this profile's crate can build is now landed**, and the entries below
+    # are the four PQC units, each built on an implementation the crate does not have.
     "forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/ml_dsa_kmgmt.c.in": (
         "**Withheld: not reachable.** The unit's three rows (`ML-DSA-44`, `ML-DSA-65`, `ML-DSA-87`) "
         "are built on `ossl_ml_dsa_*` (`crypto/ml_dsa/`), which the crate does not have -- its "
@@ -179,6 +128,23 @@ WITHHELD: dict[str, str] = {
         "are built on `ossl_slh_dsa_*` (`crypto/slh_dsa/`), which the crate does not have -- "
         "`ossl_slh_dsa_generate_key`, `ossl_slh_dsa_key_dup`/`_equal`/`_free`/`_get`, and the "
         "`ossl_slh_dsa_hash_ctx_new`/`_free` pair are none of them in this tree."
+    ),
+    "forensics/authorities/src/openssl-3.6.4/providers/implementations/kem/ec_kem.c.in": (
+        "**Withheld: the unit's `EC` KEM row, on a partial transcription that is named rather "
+        "than claimed.** `src/provider/ec_kem.rs` carries **one** of the unit's functions, "
+        "`ossl_ec_dhkem_derive_private` (`ec_kem.c.in:387-461`), `#[no_mangle]` because the "
+        "authority defines it non-`static` and `crypto/ec/ec_key.c`'s `ossl_ec_generate_key_dhkem` "
+        "calls it across translation units -- which is exactly what D390's `ec_kmgmt.c` landing "
+        "needs. The rest of the unit is the `EC` KEM row's own dispatch "
+        "(`ossl_ec_asym_kem_functions`, `:805-822`) and the twelve `eckem_*` functions plus the "
+        "`dhkem_encap`/`dhkem_decap` pair it dispatches to, and it is **not** transcribed: "
+        "the row's public-key decode path and its `OSSL_PKEY_PARAM_DHKEM_IKM` generate path reach "
+        "`eckey_frompub`/`eckey_check` and the HPKE-derived encapsulation the crate models only "
+        "partly, so the one row that would land (`OSSL_OP_KEM` `EC`, `defltprov.c:533`) is left "
+        "`unimplemented` rather than half-driven. The function that *is* landed is drivable and "
+        "driven: `RT-KEYMGMT`'s `EC` arm builds the key `ossl_ec_generate_key_dhkem` would be "
+        "reached on. The entry stays until the row's own dispatch lands, so the census and this "
+        "document agree that the row is open."
     ),
 }
 
