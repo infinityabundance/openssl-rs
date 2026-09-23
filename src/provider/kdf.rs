@@ -45,10 +45,17 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_uint, c_ulong, c_void, CStr};
+use core::ffi::{c_char, c_int, c_uchar, c_uint, c_ulong, c_void, CStr};
 use core::ptr;
 
 use crate::context::dispatch::{OsslDispatch, OSSL_DISPATCH_END};
+// The per-context thread pool D397 landed (`crypto/thread/internal.c` + `crypto/thread/arch.c`).
+// Argon2's threaded fill is their first caller: `ossl_get_avail_threads` is what
+// `kdf_argon2_derive`'s thread-pool bound reads, and the trio drive `fill_segment_thr`.
+use crate::context::thread_data::{
+    ossl_crypto_thread_clean, ossl_crypto_thread_join, ossl_crypto_thread_start,
+    ossl_get_avail_threads,
+};
 use crate::der_writer::{
     ossl_DER_w_begin_sequence, ossl_DER_w_end_sequence, ossl_DER_w_octet_string,
     ossl_DER_w_octet_string_uint32, ossl_DER_w_precompiled,
@@ -65,9 +72,9 @@ use crate::evp::cipher_ctx::{
     EvpCipherCtx,
 };
 use crate::evp::digest::{
-    EVP_DigestFinal_ex, EVP_DigestInit, EVP_DigestInit_ex, EVP_DigestUpdate, EVP_MD_CTX_copy_ex,
-    EVP_MD_CTX_free, EVP_MD_CTX_new, EVP_MD_fetch, EVP_MD_free, EVP_MD_get0_name,
-    EVP_MD_get_block_size, EVP_MD_get_size, EVP_MD_up_ref, EVP_MD_xof,
+    EVP_DigestFinal_ex, EVP_DigestInit, EVP_DigestInit_ex, EVP_DigestInit_ex2, EVP_DigestUpdate,
+    EVP_MD_CTX_copy_ex, EVP_MD_CTX_free, EVP_MD_CTX_new, EVP_MD_fetch, EVP_MD_free,
+    EVP_MD_get0_name, EVP_MD_get_block_size, EVP_MD_get_size, EVP_MD_up_ref, EVP_MD_xof,
 };
 use crate::evp::kdf::{
     OSSL_FUNC_KDF_DERIVE, OSSL_FUNC_KDF_DUPCTX, OSSL_FUNC_KDF_FREECTX,
@@ -76,8 +83,8 @@ use crate::evp::kdf::{
 };
 use crate::evp::mac::{
     EVP_MAC_CTX_dup, EVP_MAC_CTX_free, EVP_MAC_CTX_get0_mac, EVP_MAC_CTX_get_mac_size,
-    EVP_MAC_CTX_set_params, EVP_MAC_final, EVP_MAC_get0_name, EVP_MAC_init, EVP_MAC_is_a,
-    EVP_MAC_update, EVP_Q_mac, EvpMacCtx,
+    EVP_MAC_CTX_new, EVP_MAC_CTX_set_params, EVP_MAC_fetch, EVP_MAC_final, EVP_MAC_free,
+    EVP_MAC_get0_name, EVP_MAC_init, EVP_MAC_is_a, EVP_MAC_update, EVP_Q_mac, EvpMacCtx,
 };
 use crate::evp::p5_crpt2::ossl_pkcs5_pbkdf2_hmac_ex;
 use crate::evp::pbe::{
@@ -100,9 +107,10 @@ use crate::params::{
     ossl_param_get1_concat_octet_string, ossl_param_get1_octet_string_from_param,
     OSSL_PARAM_construct_end, OSSL_PARAM_construct_octet_string, OSSL_PARAM_construct_size_t,
     OSSL_PARAM_construct_utf8_string, OSSL_PARAM_get_int, OSSL_PARAM_get_octet_string,
-    OSSL_PARAM_get_octet_string_ptr, OSSL_PARAM_get_size_t, OSSL_PARAM_get_uint64,
-    OSSL_PARAM_get_utf8_string_ptr, OSSL_PARAM_set_int, OSSL_PARAM_set_octet_string,
-    OSSL_PARAM_set_size_t, OSSL_PARAM_set_utf8_string, OsslParam, END, OSSL_PARAM_UTF8_STRING,
+    OSSL_PARAM_get_octet_string_ptr, OSSL_PARAM_get_size_t, OSSL_PARAM_get_uint32,
+    OSSL_PARAM_get_uint64, OSSL_PARAM_get_utf8_string_ptr, OSSL_PARAM_set_int,
+    OSSL_PARAM_set_octet_string, OSSL_PARAM_set_size_t, OSSL_PARAM_set_utf8_string, OsslParam, END,
+    OSSL_PARAM_UTF8_STRING,
 };
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::cipher::{
@@ -118,14 +126,17 @@ use crate::provider::util::{
     ossl_prov_cipher_cipher, ossl_prov_cipher_copy, ossl_prov_cipher_engine, ossl_prov_cipher_load,
     ossl_prov_cipher_reset, ossl_prov_macctx_load, ossl_prov_memdup, ProvCipher,
 };
+use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::err_reasons;
-use crate::runtime::err::{err_sites, raise_site, raise_site_dynamic};
+use crate::runtime::err::{err_sites, raise_site, raise_site_data, raise_site_dynamic};
 use crate::runtime::mem::{
-    cleanse, CRYPTO_clear_free, CRYPTO_clear_realloc, CRYPTO_free, CRYPTO_malloc, CRYPTO_memcmp,
-    CRYPTO_strdup, CRYPTO_zalloc,
+    cleanse, CRYPTO_calloc, CRYPTO_clear_free, CRYPTO_clear_realloc, CRYPTO_free, CRYPTO_malloc,
+    CRYPTO_memcmp, CRYPTO_strdup, CRYPTO_zalloc,
 };
 use crate::runtime::obj::NID_des_ede3_cbc;
+use crate::runtime::secure::{CRYPTO_secure_calloc, CRYPTO_secure_clear_free};
 use crate::runtime::str::{OPENSSL_strcasecmp, OPENSSL_strncasecmp};
+use crate::runtime::thread_arch::{CryptoThreadRetval, CryptoThreadRoutine};
 
 /// `OSSL_OP_KDF` — `include/openssl/core_dispatch.h`.
 pub(crate) const OSSL_OP_KDF: c_int = 4;
@@ -192,6 +203,20 @@ const OSSL_KDF_PARAM_X942_USE_KEYBITS: *const c_char = c"use-keybits".as_ptr();
 const OSSL_KDF_PARAM_PASSWORD: *const c_char = c"pass".as_ptr();
 /// `OSSL_KDF_PARAM_ITER` — `core_names.h:290` (`"iter"`).
 const OSSL_KDF_PARAM_ITER: *const c_char = c"iter".as_ptr();
+/// `OSSL_KDF_PARAM_THREADS` — `core_names.h:315` (`"threads"`), one of Argon2's six keys.
+const OSSL_KDF_PARAM_THREADS: *const c_char = c"threads".as_ptr();
+/// `OSSL_KDF_PARAM_EARLY_CLEAN` — `core_names.h:282` (`"early_clean"`).
+const OSSL_KDF_PARAM_EARLY_CLEAN: *const c_char = c"early_clean".as_ptr();
+/// `OSSL_KDF_PARAM_ARGON2_AD` — `core_names.h:273` (`"ad"`).
+const OSSL_KDF_PARAM_ARGON2_AD: *const c_char = c"ad".as_ptr();
+/// `OSSL_KDF_PARAM_ARGON2_LANES` — `core_names.h:274` (`"lanes"`).
+const OSSL_KDF_PARAM_ARGON2_LANES: *const c_char = c"lanes".as_ptr();
+/// `OSSL_KDF_PARAM_ARGON2_MEMCOST` — `core_names.h:275` (`"memcost"`).
+const OSSL_KDF_PARAM_ARGON2_MEMCOST: *const c_char = c"memcost".as_ptr();
+/// `OSSL_KDF_PARAM_ARGON2_VERSION` — `core_names.h:276` (`"version"`).
+const OSSL_KDF_PARAM_ARGON2_VERSION: *const c_char = c"version".as_ptr();
+/// `OSSL_MAC_PARAM_KEY` — `core_names.h:350` (`"key"`), the key `blake2b_mac` sets.
+const OSSL_MAC_PARAM_KEY: *const c_char = c"key".as_ptr();
 /// `OSSL_KDF_PARAM_PKCS12_ID` — `core_names.h:300` (`"id"`).
 const OSSL_KDF_PARAM_PKCS12_ID: *const c_char = c"id".as_ptr();
 /// `OSSL_KDF_PARAM_SSHKDF_XCGHASH` — `core_names.h:314`.
@@ -247,6 +272,9 @@ const FILE_SSHKDF: *const c_char = c"providers/implementations/kdfs/sshkdf.c".as
 const FILE_PBKDF2: *const c_char = c"providers/implementations/kdfs/pbkdf2.c".as_ptr();
 /// `__FILE__` for `hkdf.c`, measured the same way.
 const FILE_HKDF: *const c_char = c"providers/implementations/kdfs/hkdf.c".as_ptr();
+/// `__FILE__` for `argon2.c`. `.c.in`-generated, so the spelling is the bare build-relative path
+/// (D235's finding for every generated unit in this module).
+const FILE_ARGON2: *const c_char = c"providers/implementations/kdfs/argon2.c".as_ptr();
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
 
@@ -8969,15 +8997,2534 @@ pub(crate) static HMACDRBG_KDF_FUNCTIONS: [OsslDispatch; 10] = [
     },
 ];
 
+// =============================================================================================
+// `providers/implementations/kdfs/argon2.c` — ARGON2D, ARGON2I and ARGON2ID (RFC 9106)
+// =============================================================================================
+//
+// The unit's third and last `OSSL_OP_KDF` group, and the only one in this module whose derivation
+// is **memory-hard**: `fill_memory_blocks` builds a `m_cost`-block matrix with the BlaMka
+// permutation and folds it into one `blake2b_long` output. It is also the only unit here whose
+// threaded path is compiled on this profile: `configuration.h` defines `OPENSSL_THREADS` and
+// neither `OPENSSL_NO_DEFAULT_THREAD_POOL` nor `OPENSSL_NO_THREAD_POOL`, so `ARGON2_NO_THREADS` is
+// **not** defined and `fill_mem_blocks_mt` is live beside `fill_mem_blocks_st`.
+//
+// ## The two things a transcription can lose here
+//
+// **The arithmetic wraps.** `a + b + 2 * mul_lower(a, b)` overflows `uint64_t` constantly, and this
+// crate builds with `overflow-checks = true` even in release, so every one of those additions is a
+// `wrapping_add` -- a panic here would be a divergence from an answer the authority does give, not
+// a defect report. `index_alpha` is the same story in `u32`: `index - 1` at `index == 0` is the
+// authority's own `(uint32_t)-1` and is written as `wrapping_sub(1)`.
+//
+// **`kdf_argon2_get_ctx_params` answers `-2`.** Not 1: the unit's last statement is `return -2;`
+// (`argon2.c:1734`), which is neither the dispatch interface's success value nor a documented
+// refusal. It is reproduced as written, and the probe observes whatever `EVP_KDF_CTX_get_params`
+// makes of it on both sides rather than this file asserting what that is.
+//
+// ## What is deliberately not carried
+//
+// Five of the unit's bound macros have **no reference in its code**: `ARGON2_MAX_OUT_LENGTH`,
+// `ARGON2_MAX_MEMORY`, `ARGON2_MAX_TIME`, `ARGON2_MIN_PWD_LENGTH` and `ARGON2_MIN_AD_LENGTH` are
+// named in the authority's comments as checks it skips ("`ARGON2_MAX_MEMORY == max m_cost value, so
+// skip check`"), and a Rust `const` with no reader is a `dead_code` finding rather than a
+// transcription. The bounds that *are* referenced are below with their coordinates. The three
+// values that read as unused but are not are the ones a setter compares against: a bound whose
+// comparison can never fire is still a comparison the authority makes.
+
+/// `BLAKE2B_OUTBYTES` — `prov/blake2.h:26`, the width `blake2b_long`'s two buffers take.
+const BLAKE2B_OUTBYTES: usize = 64;
+
+/// `ARGON2_MIN_LANES` — `argon2.c:51`.
+const ARGON2_MIN_LANES: u32 = 1;
+/// `ARGON2_MAX_LANES` — `argon2.c:52`.
+const ARGON2_MAX_LANES: u32 = 0xFF_FFFF;
+/// `ARGON2_MIN_THREADS` — `argon2.c:53`.
+const ARGON2_MIN_THREADS: u32 = 1;
+/// `ARGON2_MAX_THREADS` — `argon2.c:54`.
+const ARGON2_MAX_THREADS: u32 = 0xFF_FFFF;
+/// `ARGON2_SYNC_POINTS` — `argon2.c:55`.
+const ARGON2_SYNC_POINTS: u32 = 4;
+/// `ARGON2_MIN_OUT_LENGTH` — `argon2.c:56`.
+const ARGON2_MIN_OUT_LENGTH: u32 = 4;
+/// `ARGON2_MIN_MEMORY` — `argon2.c:58`, `(2 * ARGON2_SYNC_POINTS)`.
+const ARGON2_MIN_MEMORY: u32 = 2 * ARGON2_SYNC_POINTS;
+/// `ARGON2_MIN_TIME` — `argon2.c:61`.
+const ARGON2_MIN_TIME: u32 = 1;
+/// `ARGON2_MAX_PWD_LENGTH` — `argon2.c:64`. The bound `set_pwd` checks.
+const ARGON2_MAX_PWD_LENGTH: u32 = 0xFFFF_FFFF;
+/// `ARGON2_MAX_SALT_LENGTH` — `argon2.c:68`.
+const ARGON2_MAX_SALT_LENGTH: u32 = 0xFFFF_FFFF;
+/// `ARGON2_MIN_SALT_LENGTH` — `argon2.c:67`.
+const ARGON2_MIN_SALT_LENGTH: u32 = 8;
+/// `ARGON2_MAX_SECRET` — `argon2.c:70`.
+const ARGON2_MAX_SECRET: u32 = 0xFFFF_FFFF;
+/// `ARGON2_MAX_AD_LENGTH` — `argon2.c:66`.
+const ARGON2_MAX_AD_LENGTH: u32 = 0xFFFF_FFFF;
+/// `ARGON2_BLOCK_SIZE` — `argon2.c:71`.
+const ARGON2_BLOCK_SIZE: usize = 1024;
+/// `ARGON2_QWORDS_IN_BLOCK` — `argon2.c:72`, `(ARGON2_BLOCK_SIZE / 8)`.
+const ARGON2_QWORDS_IN_BLOCK: usize = ARGON2_BLOCK_SIZE / 8;
+/// `ARGON2_ADDRESSES_IN_BLOCK` — `argon2.c:76`.
+const ARGON2_ADDRESSES_IN_BLOCK: u32 = 128;
+/// `ARGON2_PREHASH_DIGEST_LENGTH` — `argon2.c:77`.
+const ARGON2_PREHASH_DIGEST_LENGTH: usize = 64;
+/// `ARGON2_PREHASH_SEED_LENGTH` — `argon2.c:78-79`, `DIGEST_LENGTH + 2 * sizeof(uint32_t)`.
+const ARGON2_PREHASH_SEED_LENGTH: usize = ARGON2_PREHASH_DIGEST_LENGTH + 2 * 4;
+/// `ARGON2_DEFAULT_OUTLEN` — `argon2.c:81`.
+const ARGON2_DEFAULT_OUTLEN: u32 = 64;
+/// `ARGON2_DEFAULT_T_COST` — `argon2.c:82`.
+const ARGON2_DEFAULT_T_COST: u32 = 3;
+/// `ARGON2_DEFAULT_M_COST` — `argon2.c:83`, which is `ARGON2_MIN_MEMORY`.
+const ARGON2_DEFAULT_M_COST: u32 = ARGON2_MIN_MEMORY;
+/// `ARGON2_DEFAULT_LANES` — `argon2.c:84`.
+const ARGON2_DEFAULT_LANES: u32 = 1;
+/// `ARGON2_DEFAULT_THREADS` — `argon2.c:85`.
+const ARGON2_DEFAULT_THREADS: u32 = 1;
+/// `ARGON2_VERSION_10` — `argon2.c:142`.
+const ARGON2_VERSION_10: u32 = 0x10;
+/// `ARGON2_VERSION_13` — `argon2.c:143`.
+const ARGON2_VERSION_13: u32 = 0x13;
+/// `ARGON2_VERSION_NUMBER` — `argon2.c:144`, which is `ARGON2_VERSION_13`.
+const ARGON2_VERSION_NUMBER: u32 = ARGON2_VERSION_13;
+/// `ARGON2_D` — `argon2.c:148`.
+const ARGON2_D: u32 = 0;
+/// `ARGON2_I` — `argon2.c:149`. The data-independent variant.
+const ARGON2_I: u32 = 1;
+/// `ARGON2_ID` — `argon2.c:150`. Data-independent for the first half of pass 0 only.
+const ARGON2_ID: u32 = 2;
+/// `OSSL_MAC_NAME_BLAKE2BMAC` — `core_names.h`, the MAC `kdf_argon2_derive` fetches.
+const OSSL_MAC_NAME_BLAKE2BMAC: *const c_char = c"blake2bmac".as_ptr();
+/// `OSSL_MD_NAME_BLAKE2B512` — `core_names.h`, the digest it fetches.
+const OSSL_MD_NAME_BLAKE2B512: *const c_char = c"blake2b512".as_ptr();
+/// `OSSL_DIGEST_PARAM_SIZE` — `core_names.h:229` (`"size"`). `blake2b_md` and `blake2b_long` set
+/// it on the fetched digest to choose the output width; it is `src/evp/digest.rs`'s own private
+/// constant too, and the two are the same byte string.
+const OSSL_DIGEST_PARAM_SIZE: *const c_char = c"size".as_ptr();
+
+/// `typedef struct { uint64_t v[ARGON2_QWORDS_IN_BLOCK]; } BLOCK` — `argon2.c:137-139`.
+#[repr(C)]
+pub(crate) struct Block {
+    /// `uint64_t v[ARGON2_QWORDS_IN_BLOCK]`.
+    pub v: [u64; ARGON2_QWORDS_IN_BLOCK],
+}
+
+/// An all-zero `Block`, which is what every stack-local one starts as in the authority (either by
+/// `memset` or because the authority zeroes it before use).
+impl Block {
+    /// A zeroed block.
+    fn zero() -> Block {
+        Block {
+            v: [0u64; ARGON2_QWORDS_IN_BLOCK],
+        }
+    }
+}
+
+/// `typedef struct { uint32_t pass; uint32_t lane; uint8_t slice; uint32_t index; } ARGON2_POS` —
+/// `argon2.c:153-158`.
+#[repr(C)]
+struct Argon2Pos {
+    /// `uint32_t pass`.
+    pass: u32,
+    /// `uint32_t lane`.
+    lane: u32,
+    /// `uint8_t slice`.
+    slice: u8,
+    /// `uint32_t index` — written by `fill_mem_blocks_mt` and never read.
+    index: u32,
+}
+
+/// `typedef struct { ARGON2_POS pos; KDF_ARGON2 *ctx; } ARGON2_THREAD_DATA` — `argon2.c:189-192`.
+#[repr(C)]
+struct Argon2ThreadData {
+    /// `ARGON2_POS pos`.
+    pos: Argon2Pos,
+    /// `KDF_ARGON2 *ctx`.
+    ctx: *mut KdfArgon2,
+}
+
+/// `struct KDF_ARGON2` — `argon2.c:160-187`. Every field is the authority's; the FIPS indicator of
+/// the other units in this module does not appear here because this unit has no FIPS arm.
+#[repr(C)]
+pub(crate) struct KdfArgon2 {
+    /// `void *provctx`.
+    pub provctx: *mut c_void,
+    /// `uint32_t outlen`.
+    pub outlen: u32,
+    /// `uint8_t *pwd` / `uint32_t pwdlen`.
+    pub pwd: *mut u8,
+    pub pwdlen: u32,
+    /// `uint8_t *salt` / `uint32_t saltlen`.
+    pub salt: *mut u8,
+    pub saltlen: u32,
+    /// `uint8_t *secret` / `uint32_t secretlen`.
+    pub secret: *mut u8,
+    pub secretlen: u32,
+    /// `uint8_t *ad` / `uint32_t adlen`.
+    pub ad: *mut u8,
+    pub adlen: u32,
+    /// `uint32_t t_cost`.
+    pub t_cost: u32,
+    /// `uint32_t m_cost`.
+    pub m_cost: u32,
+    /// `uint32_t lanes`.
+    pub lanes: u32,
+    /// `uint32_t threads`.
+    pub threads: u32,
+    /// `uint32_t version`.
+    pub version: u32,
+    /// `uint32_t early_clean`.
+    pub early_clean: u32,
+    /// `ARGON2_TYPE type`.
+    pub type_: u32,
+    /// `BLOCK *memory`.
+    pub memory: *mut Block,
+    /// `uint32_t passes`.
+    pub passes: u32,
+    /// `uint32_t memory_blocks`.
+    pub memory_blocks: u32,
+    /// `uint32_t segment_length`.
+    pub segment_length: u32,
+    /// `uint32_t lane_length`.
+    pub lane_length: u32,
+    /// `OSSL_LIB_CTX *libctx`.
+    pub libctx: *mut c_void,
+    /// `EVP_MD *md` — the fetched `blake2b512`.
+    pub md: *mut crate::evp::digest::EvpMd,
+    /// `EVP_MAC *mac` — the fetched `blake2bmac`.
+    pub mac: *mut crate::evp::mac::EvpMac,
+    /// `char *propq`.
+    pub propq: *mut c_char,
+}
+
+/// `struct argon2_set_ctx_params_st` — generated `argon2.c:1415-1430`. The fields are the
+/// generated struct's, in its order; the decoder's key-and-site list below uses each field's index
+/// here as its id, which is the reading `scrypt.c`'s decoder already uses.
+#[derive(Default)]
+struct Argon2SetCtxParams {
+    ad: *const OsslParam,
+    eclean: *const OsslParam,
+    iter: *const OsslParam,
+    lanes: *const OsslParam,
+    mem: *const OsslParam,
+    propq: *const OsslParam,
+    pw: *const OsslParam,
+    salt: *const OsslParam,
+    secret: *const OsslParam,
+    size: *const OsslParam,
+    thrds: *const OsslParam,
+    vers: *const OsslParam,
+}
+
+/// The `argon2_set_ctx_params_decoder` keys, each with its (field id, raise site). The generated
+/// `strcmp`-trie at `argon2.c:1441-1585` gives every key its own field and none is a list, so the
+/// second occurrence of any one raises `PROV_R_REPEATED_PARAMETER` at its own coordinate. The
+/// field ids are `Argon2SetCtxParams`'s declaration order, which is the generated struct's.
+const ARGON2_SET_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char, u32); 12] = [
+    (&err_sites::PROV_ARGON2_1448, OSSL_KDF_PARAM_ARGON2_AD, 0),
+    (&err_sites::PROV_ARGON2_1459, OSSL_KDF_PARAM_EARLY_CLEAN, 1),
+    (&err_sites::PROV_ARGON2_1470, OSSL_KDF_PARAM_ITER, 2),
+    (&err_sites::PROV_ARGON2_1481, OSSL_KDF_PARAM_ARGON2_LANES, 3),
+    (
+        &err_sites::PROV_ARGON2_1492,
+        OSSL_KDF_PARAM_ARGON2_MEMCOST,
+        4,
+    ),
+    (&err_sites::PROV_ARGON2_1518, OSSL_KDF_PARAM_PROPERTIES, 5),
+    (&err_sites::PROV_ARGON2_1507, OSSL_KDF_PARAM_PASSWORD, 6),
+    (&err_sites::PROV_ARGON2_1534, OSSL_KDF_PARAM_SALT, 7),
+    (&err_sites::PROV_ARGON2_1545, OSSL_KDF_PARAM_SECRET, 8),
+    (&err_sites::PROV_ARGON2_1556, OSSL_KDF_PARAM_SIZE, 9),
+    (&err_sites::PROV_ARGON2_1568, OSSL_KDF_PARAM_THREADS, 10),
+    (
+        &err_sites::PROV_ARGON2_1579,
+        OSSL_KDF_PARAM_ARGON2_VERSION,
+        11,
+    ),
+];
+
+/// The `argon2_get_ctx_params_decoder` key, `argon2.c:1700-1718`.
+const ARGON2_GET_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char, u32); 1] =
+    [(&err_sites::PROV_ARGON2_1711, OSSL_KDF_PARAM_SIZE, 0)];
+
+/// `static const OSSL_PARAM argon2_set_ctx_params_list[]` — generated `argon2.c:1398-1412`.
+#[rustfmt::skip]
+static ARGON2_SETTABLE_CTX_PARAMS: [OsslParam; 13] = [
+    param_octet_string(OSSL_KDF_PARAM_PASSWORD),
+    param_octet_string(OSSL_KDF_PARAM_SALT),
+    param_octet_string(OSSL_KDF_PARAM_SECRET),
+    param_octet_string(OSSL_KDF_PARAM_ARGON2_AD),
+    param_uint32(OSSL_KDF_PARAM_SIZE),
+    param_uint32(OSSL_KDF_PARAM_ITER),
+    param_uint32(OSSL_KDF_PARAM_THREADS),
+    param_uint32(OSSL_KDF_PARAM_ARGON2_LANES),
+    param_uint32(OSSL_KDF_PARAM_ARGON2_MEMCOST),
+    param_uint32(OSSL_KDF_PARAM_EARLY_CLEAN),
+    param_uint32(OSSL_KDF_PARAM_ARGON2_VERSION),
+    param_utf8_string(OSSL_KDF_PARAM_PROPERTIES),
+    END,
+];
+
+/// `static const OSSL_PARAM argon2_get_ctx_params_list[]` — generated `argon2.c:1687-1690`.
+static ARGON2_GETTABLE_CTX_PARAMS: [OsslParam; 2] = [param_size_t(OSSL_KDF_PARAM_SIZE), END];
+
+/// `G(a, b, c, d)` — `argon2.c:89-101`, the BlaMka quarter-round over four elements of a block.
+///
+/// `a = a + b + 2 * mul_lower(a, b)` appears three times and each addition can overflow `u64`, so
+/// every one of them wraps. The four rotations land in `{16, 24, 32, 63}`, which is where
+/// [`argon2_rotr64`] is exact.
+#[inline]
+fn argon2_g(v: &mut [u64; ARGON2_QWORDS_IN_BLOCK], a: usize, b: usize, c: usize, d: usize) {
+    let mut va = v[a];
+    let mut vb = v[b];
+    let mut vc = v[c];
+    let mut vd = v[d];
+
+    va = va
+        .wrapping_add(vb)
+        .wrapping_add(argon2_mul_lower(va, vb).wrapping_mul(2));
+    vd = argon2_rotr64(vd ^ va, 32);
+    vc = vc
+        .wrapping_add(vd)
+        .wrapping_add(argon2_mul_lower(vc, vd).wrapping_mul(2));
+    vb = argon2_rotr64(vb ^ vc, 24);
+    va = va
+        .wrapping_add(vb)
+        .wrapping_add(argon2_mul_lower(va, vb).wrapping_mul(2));
+    vd = argon2_rotr64(vd ^ va, 16);
+    vc = vc
+        .wrapping_add(vd)
+        .wrapping_add(argon2_mul_lower(vc, vd).wrapping_mul(2));
+    vb = argon2_rotr64(vb ^ vc, 63);
+
+    v[a] = va;
+    v[b] = vb;
+    v[c] = vc;
+    v[d] = vd;
+}
+
+/// `PERMUTATION_P(v0, ..., v15)` — `argon2.c:102-114`, the eight `G` calls over sixteen indexed
+/// elements. The two macros below are the two addressing orders that feed it.
+#[inline]
+fn argon2_p(v: &mut [u64; ARGON2_QWORDS_IN_BLOCK], i: [usize; 16]) {
+    argon2_g(v, i[0], i[4], i[8], i[12]);
+    argon2_g(v, i[1], i[5], i[9], i[13]);
+    argon2_g(v, i[2], i[6], i[10], i[14]);
+    argon2_g(v, i[3], i[7], i[11], i[15]);
+    argon2_g(v, i[0], i[5], i[10], i[15]);
+    argon2_g(v, i[1], i[6], i[11], i[12]);
+    argon2_g(v, i[2], i[7], i[8], i[13]);
+    argon2_g(v, i[3], i[4], i[9], i[14]);
+}
+
+/// `PERMUTATION_P_COLUMN(x, i)` — `argon2.c:116-124`: sixteen **consecutive** words from `16 * i`.
+#[inline]
+fn argon2_p_column(v: &mut [u64; ARGON2_QWORDS_IN_BLOCK], i: usize) {
+    let base = 16 * i;
+    argon2_p(
+        v,
+        [
+            base,
+            base + 1,
+            base + 2,
+            base + 3,
+            base + 4,
+            base + 5,
+            base + 6,
+            base + 7,
+            base + 8,
+            base + 9,
+            base + 10,
+            base + 11,
+            base + 12,
+            base + 13,
+            base + 14,
+            base + 15,
+        ],
+    );
+}
+
+/// `PERMUTATION_P_ROW(x, i)` — `argon2.c:126-135`: the strided sixteen from `2 * i`, the transpose
+/// of the column order.
+#[inline]
+fn argon2_p_row(v: &mut [u64; ARGON2_QWORDS_IN_BLOCK], i: usize) {
+    let base = 2 * i;
+    argon2_p(
+        v,
+        [
+            base,
+            base + 1,
+            base + 16,
+            base + 17,
+            base + 32,
+            base + 33,
+            base + 48,
+            base + 49,
+            base + 64,
+            base + 65,
+            base + 80,
+            base + 81,
+            base + 96,
+            base + 97,
+            base + 112,
+            base + 113,
+        ],
+    );
+}
+
+/// `static ossl_inline uint64_t load64(const uint8_t *src)` — `argon2.c:274-284`, little-endian by
+/// construction.
+///
+/// # Safety
+/// `src` is readable for eight bytes.
+unsafe fn argon2_load64(src: *const u8) -> u64 {
+    let mut w: u64 = 0;
+    // SAFETY: `src` is readable for eight bytes per the contract, so `i` is in bounds.
+    unsafe {
+        for i in 0..8usize {
+            w |= (*src.add(i) as u64) << (8 * i);
+        }
+    }
+    w
+}
+
+/// `static ossl_inline void store32(uint8_t *dst, uint32_t w)` — `argon2.c:286-292`.
+///
+/// # Safety
+/// `dst` is writable for four bytes.
+unsafe fn argon2_store32(dst: *mut u8, w: u32) {
+    // SAFETY: `dst` is writable for four bytes per the contract.
+    unsafe {
+        for i in 0..4usize {
+            *dst.add(i) = (w >> (8 * i)) as u8;
+        }
+    }
+}
+
+/// `static ossl_inline void store64(uint8_t *dst, uint64_t w)` — `argon2.c:294-304`.
+///
+/// # Safety
+/// `dst` is writable for eight bytes.
+unsafe fn argon2_store64(dst: *mut u8, w: u64) {
+    // SAFETY: `dst` is writable for eight bytes per the contract.
+    unsafe {
+        for i in 0..8usize {
+            *dst.add(i) = (w >> (8 * i)) as u8;
+        }
+    }
+}
+
+/// `static ossl_inline uint64_t rotr64(const uint64_t w, const unsigned int c)` —
+/// `argon2.c:306-309`.
+///
+/// The authority's `(w >> c) | (w << (64 - c))` for `0 < c < 64`, which is [`u64::rotate_right`];
+/// `c == 0` is undefined in the authority's spelling and `rotate_right` is defined there, and no
+/// caller in the unit passes it.
+#[inline]
+fn argon2_rotr64(w: u64, c: u32) -> u64 {
+    w.rotate_right(c)
+}
+
+/// `static ossl_inline uint64_t mul_lower(uint64_t x, uint64_t y)` — `argon2.c:311-315`, the low
+/// halves multiplied. `m = 0xFFFFFFFF` and the product of two masked `u64`s cannot overflow.
+#[inline]
+fn argon2_mul_lower(x: u64, y: u64) -> u64 {
+    const M: u64 = 0xFFFF_FFFF;
+    (x & M) * (y & M)
+}
+
+/// `static void init_block_value(BLOCK *b, uint8_t in)` — `argon2.c:317-320`.
+///
+/// # Safety
+/// `b` is writable for a whole block.
+unsafe fn init_block_value(b: *mut Block, in_: u8) {
+    // SAFETY: `b` is writable for `ARGON2_BLOCK_SIZE` bytes per the contract.
+    unsafe { ptr::write_bytes((*b).v.as_mut_ptr().cast::<u8>(), in_, ARGON2_BLOCK_SIZE) };
+}
+
+/// `static void copy_block(BLOCK *dst, const BLOCK *src)` — `argon2.c:322-325`.
+///
+/// # Safety
+/// `dst` is writable and `src` readable, each for one block, and they do not overlap.
+unsafe fn copy_block(dst: *mut Block, src: *const Block) {
+    // SAFETY: both are one block per the contract, and the authority's `memcpy` states the
+    // non-overlap.
+    unsafe {
+        ptr::copy_nonoverlapping(
+            (*src).v.as_ptr(),
+            (*dst).v.as_mut_ptr(),
+            ARGON2_QWORDS_IN_BLOCK,
+        )
+    };
+}
+
+/// `static void xor_block(BLOCK *dst, const BLOCK *src)` — `argon2.c:327-333`.
+///
+/// # Safety
+/// `dst` and `src` are live blocks; `dst` is writable.
+unsafe fn xor_block(dst: *mut Block, src: *const Block) {
+    // SAFETY: both are live blocks per the contract, and `zip` stops at `v`'s length in both.
+    unsafe {
+        for (d, s) in (*dst).v.iter_mut().zip((*src).v.iter()) {
+            *d ^= *s;
+        }
+    }
+}
+
+/// `static void load_block(BLOCK *dst, const void *input)` — `argon2.c:335-341`.
+///
+/// # Safety
+/// `dst` is writable for a block and `input` is readable for `ARGON2_BLOCK_SIZE` bytes.
+unsafe fn load_block(dst: *mut Block, input: *const c_void) {
+    // SAFETY: `input` is readable for a block per the contract, so `i * 8` stays inside it.
+    unsafe {
+        for (i, slot) in (*dst).v.iter_mut().enumerate() {
+            *slot = argon2_load64(input.cast::<u8>().add(i * 8));
+        }
+    }
+}
+
+/// `static void store_block(void *output, const BLOCK *src)` — `argon2.c:343-349`.
+///
+/// # Safety
+/// `output` is writable for a block; `src` is a live block.
+unsafe fn store_block(output: *mut c_void, src: *const Block) {
+    // SAFETY: `output` is writable for a block per the contract.
+    unsafe {
+        for (i, w) in (*src).v.iter().enumerate() {
+            argon2_store64(output.cast::<u8>().add(i * 8), *w);
+        }
+    }
+}
+
+/// `static void fill_first_blocks(uint8_t *blockhash, const KDF_ARGON2 *ctx)` — `argon2.c:351-374`.
+///
+/// # Safety
+/// `blockhash` is writable for `ARGON2_PREHASH_SEED_LENGTH` bytes; `ctx` is live with `memory`
+/// allocated for `memory_blocks` blocks and `md`/`mac` fetched.
+unsafe fn fill_first_blocks(blockhash: *mut u8, ctx: *const KdfArgon2) {
+    let mut blockhash_bytes = [0u8; ARGON2_BLOCK_SIZE];
+
+    // SAFETY: every pointer below is the caller's, per the contract.
+    unsafe {
+        for l in 0..(*ctx).lanes {
+            argon2_store32(blockhash.add(ARGON2_PREHASH_DIGEST_LENGTH), 0);
+            argon2_store32(blockhash.add(ARGON2_PREHASH_DIGEST_LENGTH + 4), l);
+            blake2b_long(
+                (*ctx).md,
+                (*ctx).mac,
+                blockhash_bytes.as_mut_ptr(),
+                ARGON2_BLOCK_SIZE,
+                blockhash.cast(),
+                ARGON2_PREHASH_SEED_LENGTH,
+            );
+            load_block(
+                (*ctx).memory.add((l * (*ctx).lane_length) as usize),
+                blockhash_bytes.as_ptr().cast(),
+            );
+            argon2_store32(blockhash.add(ARGON2_PREHASH_DIGEST_LENGTH), 1);
+            blake2b_long(
+                (*ctx).md,
+                (*ctx).mac,
+                blockhash_bytes.as_mut_ptr(),
+                ARGON2_BLOCK_SIZE,
+                blockhash.cast(),
+                ARGON2_PREHASH_SEED_LENGTH,
+            );
+            load_block(
+                (*ctx).memory.add((l * (*ctx).lane_length + 1) as usize),
+                blockhash_bytes.as_ptr().cast(),
+            );
+        }
+        cleanse(blockhash_bytes.as_mut_ptr(), ARGON2_BLOCK_SIZE);
+    }
+}
+
+/// `static void fill_block(const BLOCK *prev, const BLOCK *ref, BLOCK *next, int with_xor)` —
+/// `argon2.c:376-397`.
+///
+/// # Safety
+/// The three pointers are live blocks, with `next` writable.
+unsafe fn fill_block(prev: *const Block, ref_: *const Block, next: *mut Block, with_xor: c_int) {
+    let mut block_r = Block::zero();
+    let mut tmp = Block::zero();
+
+    // SAFETY: the three pointers are live blocks per the contract; the two locals are this
+    // frame's.
+    unsafe {
+        copy_block(&mut block_r, ref_);
+        xor_block(&mut block_r, prev);
+        copy_block(&mut tmp, &block_r);
+
+        if with_xor != 0 {
+            xor_block(&mut tmp, next.cast_const());
+        }
+
+        for i in 0..8usize {
+            argon2_p_column(&mut block_r.v, i);
+        }
+        for i in 0..8usize {
+            argon2_p_row(&mut block_r.v, i);
+        }
+
+        copy_block(next, &tmp);
+        xor_block(next, &block_r);
+    }
+}
+
+/// `static void next_addresses(BLOCK *address_block, BLOCK *input_block, const BLOCK *zero_block)` —
+/// `argon2.c:399-405`.
+///
+/// # Safety
+/// The three pointers are live blocks, with `address_block` and `input_block` writable.
+unsafe fn next_addresses(
+    address_block: *mut Block,
+    input_block: *mut Block,
+    zero_block: *const Block,
+) {
+    // SAFETY: the three pointers are live blocks per the contract.
+    unsafe {
+        (*input_block).v[6] = (*input_block).v[6].wrapping_add(1);
+        fill_block(zero_block, input_block, address_block, 0);
+        fill_block(zero_block, address_block, address_block, 0);
+    }
+}
+
+/// `static int data_indep_addressing(const KDF_ARGON2 *ctx, uint32_t pass, uint8_t slice)` —
+/// `argon2.c:407-419`. `ARGON2_I` is always data-independent; `ARGON2_ID` is for the first half of
+/// pass 0's slices only; `ARGON2_D` never is.
+///
+/// # Safety
+/// `ctx` is a live context.
+unsafe fn data_indep_addressing(ctx: *const KdfArgon2, pass: u32, slice: u8) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    match unsafe { (*ctx).type_ } {
+        ARGON2_I => 1,
+        ARGON2_ID => c_int::from(pass == 0 && u32::from(slice) < ARGON2_SYNC_POINTS / 2),
+        _ => 0,
+    }
+}
+
+/// `static uint32_t index_alpha(const KDF_ARGON2 *ctx, uint32_t pass, uint8_t slice, uint32_t
+/// index, uint32_t pseudo_rand, int same_lane)` — `argon2.c:432-466`.
+///
+/// The reference-area computation, and the one place where the index arithmetic is deliberately
+/// modular: `(index == 0) ? (-1) : 0` is `0xFFFFFFFF` for a `uint32_t`, and `ref_area_sz - 1 - ...`
+/// at `argon2.c:462` can borrow below zero. Both wrap.
+///
+/// # Safety
+/// `ctx` is a live context with `segment_length` and `lane_length` set.
+unsafe fn index_alpha(
+    ctx: *const KdfArgon2,
+    pass: u32,
+    slice: u8,
+    index: u32,
+    pseudo_rand: u32,
+    same_lane: c_int,
+) -> u32 {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe {
+        let (ref_area_sz, start_pos): (u32, u32) = if pass == 0 {
+            let sz = if slice == 0 {
+                index.wrapping_sub(1)
+            } else if same_lane != 0 {
+                u32::from(slice)
+                    .wrapping_mul((*ctx).segment_length)
+                    .wrapping_add(index)
+                    .wrapping_sub(1)
+            } else {
+                u32::from(slice)
+                    .wrapping_mul((*ctx).segment_length)
+                    .wrapping_add(if index == 0 { u32::MAX } else { 0 })
+            };
+            (sz, 0)
+        } else {
+            let sz = if same_lane != 0 {
+                (*ctx)
+                    .lane_length
+                    .wrapping_sub((*ctx).segment_length)
+                    .wrapping_add(index)
+                    .wrapping_sub(1)
+            } else {
+                (*ctx)
+                    .lane_length
+                    .wrapping_sub((*ctx).segment_length)
+                    .wrapping_add(if index == 0 { u32::MAX } else { 0 })
+            };
+            let start = if slice != (ARGON2_SYNC_POINTS - 1) as u8 {
+                (u32::from(slice) + 1).wrapping_mul((*ctx).segment_length)
+            } else {
+                0
+            };
+            (sz, start)
+        };
+
+        let mut rel_pos: u64 = u64::from(pseudo_rand);
+        rel_pos = rel_pos.wrapping_mul(rel_pos) >> 32;
+        rel_pos = u64::from(ref_area_sz)
+            .wrapping_sub(1)
+            .wrapping_sub((u64::from(ref_area_sz).wrapping_mul(rel_pos)) >> 32);
+        let abs_pos = (u64::from(start_pos).wrapping_add(rel_pos)) % u64::from((*ctx).lane_length);
+
+        abs_pos as u32
+    }
+}
+
+/// `static void fill_segment(const KDF_ARGON2 *ctx, uint32_t pass, uint32_t lane, uint8_t slice)`
+/// — `argon2.c:468-548`.
+///
+/// The block-at-a-time walk over one (pass, lane, slice). The two cursors `curr_offset` and
+/// `prev_offset` are advanced by the loop's own `++curr_offset, ++prev_offset` and reset once per
+/// lane boundary, so they are a `while` loop's manual step rather than a range's.
+///
+/// # Safety
+/// `ctx` is live with `memory` allocated for `memory_blocks` blocks, `lane_length`,
+/// `segment_length` and `passes` set, and for the data-independent variants `md`/`mac` fetched.
+unsafe fn fill_segment(ctx: *const KdfArgon2, pass: u32, lane: u32, slice: u8) {
+    let mut address_block = Block::zero();
+    let mut input_block = Block::zero();
+    let mut zero_block = Block::zero();
+
+    // `memset(&input_block, 0, sizeof(BLOCK))` — `argon2.c:479`, before the NULL test.
+    // SAFETY: `input_block` is this frame's own live block.
+    unsafe {
+        ptr::write_bytes(
+            input_block.v.as_mut_ptr().cast::<u8>(),
+            0,
+            ARGON2_BLOCK_SIZE,
+        )
+    };
+
+    if ctx.is_null() {
+        return;
+    }
+
+    // SAFETY: `ctx` is non-NULL and live per the contract.
+    unsafe {
+        if data_indep_addressing(ctx, pass, slice) != 0 {
+            init_block_value(&mut zero_block, 0);
+            init_block_value(&mut input_block, 0);
+
+            input_block.v[0] = u64::from(pass);
+            input_block.v[1] = u64::from(lane);
+            input_block.v[2] = u64::from(slice);
+            input_block.v[3] = u64::from((*ctx).memory_blocks);
+            input_block.v[4] = u64::from((*ctx).passes);
+            input_block.v[5] = u64::from((*ctx).type_);
+        }
+
+        let mut start_idx: u32 = 0;
+
+        /* We've generated the first two blocks. Generate the 1st block of addrs. */
+        if pass == 0 && slice == 0 {
+            start_idx = 2;
+            if data_indep_addressing(ctx, pass, slice) != 0 {
+                next_addresses(&mut address_block, &mut input_block, &zero_block);
+            }
+        }
+
+        let mut curr_offset: u32 = lane
+            .wrapping_mul((*ctx).lane_length)
+            .wrapping_add(u32::from(slice).wrapping_mul((*ctx).segment_length))
+            .wrapping_add(start_idx);
+
+        let mut prev_offset: u32 = if curr_offset.is_multiple_of((*ctx).lane_length) {
+            curr_offset.wrapping_add((*ctx).lane_length).wrapping_sub(1)
+        } else {
+            curr_offset.wrapping_sub(1)
+        };
+
+        let mut j = start_idx;
+        while j < (*ctx).segment_length {
+            if curr_offset % (*ctx).lane_length == 1 {
+                prev_offset = curr_offset.wrapping_sub(1);
+            }
+
+            /* Taking pseudo-random value from the previous block. */
+            let rnd: u64 = if data_indep_addressing(ctx, pass, slice) != 0 {
+                if j.is_multiple_of(ARGON2_ADDRESSES_IN_BLOCK) {
+                    next_addresses(&mut address_block, &mut input_block, &zero_block);
+                }
+                address_block.v[(j % ARGON2_ADDRESSES_IN_BLOCK) as usize]
+            } else {
+                (*(*ctx).memory.add(prev_offset as usize)).v[0]
+            };
+
+            /* Computing the lane of the reference block */
+            let mut ref_lane = (rnd >> 32) % u64::from((*ctx).lanes);
+            /* Can not reference other lanes yet */
+            if pass == 0 && slice == 0 {
+                ref_lane = u64::from(lane);
+            }
+
+            /* Computing the number of possible reference block within the lane. */
+            let ref_index = index_alpha(
+                ctx,
+                pass,
+                slice,
+                j,
+                (rnd & 0xFFFF_FFFF) as u32,
+                c_int::from(ref_lane == u64::from(lane)),
+            );
+
+            /* Creating a new block */
+            let ref_block = (*ctx).memory.add(
+                (u64::from((*ctx).lane_length).wrapping_mul(ref_lane) + u64::from(ref_index))
+                    as usize,
+            );
+            let curr_block = (*ctx).memory.add(curr_offset as usize);
+
+            if ARGON2_VERSION_10 == (*ctx).version {
+                /* Version 1.2.1 and earlier: overwrite, not XOR */
+                fill_block(
+                    (*ctx).memory.add(prev_offset as usize),
+                    ref_block,
+                    curr_block,
+                    0,
+                );
+                j = j.wrapping_add(1);
+                curr_offset = curr_offset.wrapping_add(1);
+                prev_offset = prev_offset.wrapping_add(1);
+                continue;
+            }
+
+            fill_block(
+                (*ctx).memory.add(prev_offset as usize),
+                ref_block,
+                curr_block,
+                if pass == 0 { 0 } else { 1 },
+            );
+
+            j = j.wrapping_add(1);
+            curr_offset = curr_offset.wrapping_add(1);
+            prev_offset = prev_offset.wrapping_add(1);
+        }
+    }
+}
+
+/// `static uint32_t fill_segment_thr(void *thread_data)` — `argon2.c:552-561`. The worker the pool
+/// runs; the return value is unused by the joiner, as in the authority.
+///
+/// # Safety
+/// `thread_data` is a live `Argon2ThreadData` whose `ctx` outlives the thread.
+unsafe extern "C" fn fill_segment_thr(thread_data: *mut c_void) -> CryptoThreadRetval {
+    let my_data = thread_data.cast::<Argon2ThreadData>();
+
+    // SAFETY: `my_data` is live per the contract.
+    unsafe {
+        fill_segment(
+            (*my_data).ctx,
+            (*my_data).pos.pass,
+            (*my_data).pos.lane,
+            (*my_data).pos.slice,
+        );
+    }
+    0
+}
+
+/// `static int fill_mem_blocks_mt(KDF_ARGON2 *ctx)` — `argon2.c:563-628`.
+///
+/// The threaded fill, and the reason this unit needed D397's pool. `threads` workers are kept in
+/// flight and the handles are joined in the authority's order: **the slot that is about to be
+/// reused is joined first** (`l >= ctx->threads`), and the tail is drained at the end of every sync
+/// point (`l = lanes - threads .. lanes`). A spawn that fails joins whatever is still live before
+/// answering 0 -- and it joins from index 0, including handles the recycle step has already joined,
+/// which is why the authority's own `goto fail` is reachable from that loop and why this
+/// transcription's `break` lands on the same answer.
+///
+/// # Safety
+/// `ctx` is live with `libctx` set, `fill_segment`'s preconditions met, and `lanes`/`threads`
+/// such that `threads <= lanes`.
+unsafe fn fill_mem_blocks_mt(ctx: *mut KdfArgon2) -> c_int {
+    // SAFETY: `ctx` is live per the contract; both allocations are this call's own.
+    unsafe {
+        let lanes = (*ctx).lanes;
+        let threads = (*ctx).threads;
+
+        let t = CRYPTO_calloc(
+            lanes as usize,
+            core::mem::size_of::<*mut c_void>(),
+            FILE_ARGON2,
+            LINE,
+        )
+        .cast::<*mut c_void>();
+        let t_data = CRYPTO_calloc(
+            lanes as usize,
+            core::mem::size_of::<Argon2ThreadData>(),
+            FILE_ARGON2,
+            LINE,
+        )
+        .cast::<Argon2ThreadData>();
+
+        if t.is_null() || t_data.is_null() {
+            if !t_data.is_null() {
+                CRYPTO_free(t_data.cast(), FILE_ARGON2, LINE);
+            }
+            if !t.is_null() {
+                CRYPTO_free(t.cast(), FILE_ARGON2, LINE);
+            }
+            return 0;
+        }
+
+        let mut ok = true;
+        'fill: for r in 0..(*ctx).passes {
+            for s in 0..ARGON2_SYNC_POINTS {
+                let mut l: u32 = 0;
+                while l < lanes {
+                    if l >= threads {
+                        if ossl_crypto_thread_join(*t.add((l - threads) as usize), ptr::null_mut())
+                            == 0
+                        {
+                            ok = false;
+                            break 'fill;
+                        }
+                        if ossl_crypto_thread_clean(*t.add((l - threads) as usize)) == 0 {
+                            ok = false;
+                            break 'fill;
+                        }
+                        *t.add((l - threads) as usize) = ptr::null_mut();
+                    }
+
+                    let p = Argon2Pos {
+                        pass: r,
+                        lane: l,
+                        slice: s as u8,
+                        index: 0,
+                    };
+
+                    (*t_data.add(l as usize)).ctx = ctx;
+                    // `memcpy(&(t_data[l].pos), &p, sizeof(ARGON2_POS))`.
+                    ptr::copy_nonoverlapping(
+                        ptr::addr_of!(p),
+                        ptr::addr_of_mut!((*t_data.add(l as usize)).pos),
+                        1,
+                    );
+                    *t.add(l as usize) = ossl_crypto_thread_start(
+                        (*ctx).libctx,
+                        Some(fill_segment_thr as CryptoThreadRoutine),
+                        t_data.add(l as usize).cast::<c_void>(),
+                    );
+                    if (*t.add(l as usize)).is_null() {
+                        for ll in 0..l {
+                            if ossl_crypto_thread_join(*t.add(ll as usize), ptr::null_mut()) == 0 {
+                                ok = false;
+                                break 'fill;
+                            }
+                            if ossl_crypto_thread_clean(*t.add(ll as usize)) == 0 {
+                                ok = false;
+                                break 'fill;
+                            }
+                            *t.add(ll as usize) = ptr::null_mut();
+                        }
+                        ok = false;
+                        break 'fill;
+                    }
+                    l += 1;
+                }
+                let mut l = lanes - threads;
+                while l < lanes {
+                    if ossl_crypto_thread_join(*t.add(l as usize), ptr::null_mut()) == 0 {
+                        ok = false;
+                        break 'fill;
+                    }
+                    if ossl_crypto_thread_clean(*t.add(l as usize)) == 0 {
+                        ok = false;
+                        break 'fill;
+                    }
+                    *t.add(l as usize) = ptr::null_mut();
+                    l += 1;
+                }
+            }
+        }
+
+        CRYPTO_free(t_data.cast(), FILE_ARGON2, LINE);
+        CRYPTO_free(t.cast(), FILE_ARGON2, LINE);
+
+        c_int::from(ok)
+    }
+}
+
+/// `static int fill_mem_blocks_st(KDF_ARGON2 *ctx)` — `argon2.c:632-641`.
+///
+/// # Safety
+/// `ctx` is live with `fill_segment`'s preconditions met.
+unsafe fn fill_mem_blocks_st(ctx: *mut KdfArgon2) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe {
+        for r in 0..(*ctx).passes {
+            for s in 0..ARGON2_SYNC_POINTS {
+                for l in 0..(*ctx).lanes {
+                    fill_segment(ctx, r, l, s as u8);
+                }
+            }
+        }
+    }
+    1
+}
+
+/// `static ossl_inline int fill_memory_blocks(KDF_ARGON2 *ctx)` — `argon2.c:643-650`.
+///
+/// # Safety
+/// `ctx` is live with `fill_segment`'s preconditions met.
+unsafe fn fill_memory_blocks(ctx: *mut KdfArgon2) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe {
+        if (*ctx).threads == 1 {
+            fill_mem_blocks_st(ctx)
+        } else {
+            fill_mem_blocks_mt(ctx)
+        }
+    }
+}
+
+/// `static void initial_hash(uint8_t *blockhash, KDF_ARGON2 *ctx)` — `argon2.c:652-725`.
+///
+/// `H0`: the seven `uint32_t` arguments, then the password, salt, secret and associated data, each
+/// preceded by its little-endian length. The password and secret are cleansed **in place** when
+/// `early_clean` is set, which is why the authority's `ctx` is not `const` here.
+///
+/// # Safety
+/// `ctx` is live with `md` fetched; `blockhash` is NULL or writable for
+/// `ARGON2_PREHASH_DIGEST_LENGTH` bytes.
+unsafe fn initial_hash(blockhash: *mut u8, ctx: *mut KdfArgon2) {
+    let mut value = [0u8; 4];
+    let mut args = [0u32; 7];
+
+    // SAFETY: `ctx` is live per the contract, so its members are readable and the two cleanse
+    // sites write only through its own pointers.
+    unsafe {
+        if ctx.is_null() || blockhash.is_null() {
+            return;
+        }
+
+        args[0] = (*ctx).lanes;
+        args[1] = (*ctx).outlen;
+        args[2] = (*ctx).m_cost;
+        args[3] = (*ctx).t_cost;
+        args[4] = (*ctx).version;
+        args[5] = (*ctx).type_;
+        args[6] = (*ctx).pwdlen;
+
+        let mdctx = EVP_MD_CTX_new();
+        if mdctx.is_null() || EVP_DigestInit_ex(mdctx, (*ctx).md, ptr::null_mut()) != 1 {
+            EVP_MD_CTX_free(mdctx);
+            return;
+        }
+
+        'body: {
+            for arg in args {
+                argon2_store32(value.as_mut_ptr(), arg);
+                if EVP_DigestUpdate(mdctx, value.as_ptr().cast(), value.len()) != 1 {
+                    break 'body;
+                }
+            }
+
+            if !(*ctx).pwd.is_null() {
+                if EVP_DigestUpdate(mdctx, (*ctx).pwd.cast(), (*ctx).pwdlen as usize) != 1 {
+                    break 'body;
+                }
+                if (*ctx).early_clean != 0 {
+                    cleanse((*ctx).pwd, (*ctx).pwdlen as usize);
+                    (*ctx).pwdlen = 0;
+                }
+            }
+
+            argon2_store32(value.as_mut_ptr(), (*ctx).saltlen);
+
+            if EVP_DigestUpdate(mdctx, value.as_ptr().cast(), value.len()) != 1 {
+                break 'body;
+            }
+
+            if !(*ctx).salt.is_null()
+                && EVP_DigestUpdate(mdctx, (*ctx).salt.cast(), (*ctx).saltlen as usize) != 1
+            {
+                break 'body;
+            }
+
+            argon2_store32(value.as_mut_ptr(), (*ctx).secretlen);
+            if EVP_DigestUpdate(mdctx, value.as_ptr().cast(), value.len()) != 1 {
+                break 'body;
+            }
+
+            if !(*ctx).secret.is_null() {
+                if EVP_DigestUpdate(mdctx, (*ctx).secret.cast(), (*ctx).secretlen as usize) != 1 {
+                    break 'body;
+                }
+                if (*ctx).early_clean != 0 {
+                    cleanse((*ctx).secret, (*ctx).secretlen as usize);
+                    (*ctx).secretlen = 0;
+                }
+            }
+
+            argon2_store32(value.as_mut_ptr(), (*ctx).adlen);
+            if EVP_DigestUpdate(mdctx, value.as_ptr().cast(), value.len()) != 1 {
+                break 'body;
+            }
+
+            if !(*ctx).ad.is_null()
+                && EVP_DigestUpdate(mdctx, (*ctx).ad.cast(), (*ctx).adlen as usize) != 1
+            {
+                break 'body;
+            }
+
+            let mut tmp: c_uint = ARGON2_PREHASH_DIGEST_LENGTH as c_uint;
+            EVP_DigestFinal_ex(mdctx, blockhash, &mut tmp);
+        }
+
+        EVP_MD_CTX_free(mdctx);
+    }
+}
+
+/// `static int initialize(KDF_ARGON2 *ctx)` — `argon2.c:727-755`.
+///
+/// The matrix allocation, and the only place the two variants differ in *security*: `ARGON2_D`
+/// allocates with the plain allocator and the other two with the secure one, which is what
+/// `finalize`'s two clears mirror.
+///
+/// # Safety
+/// `ctx` is live with `memory_blocks`, `lanes`, `t_cost` and `type` set and `md`/`mac` fetched.
+unsafe fn argon2_initialize(ctx: *mut KdfArgon2) -> c_int {
+    let mut blockhash = [0u8; ARGON2_PREHASH_SEED_LENGTH];
+
+    // SAFETY: `ctx` is live per the contract; `blockhash` is this frame's own.
+    unsafe {
+        if ctx.is_null() {
+            return 0;
+        }
+
+        let memory_blocks = (*ctx).memory_blocks as usize;
+        if memory_blocks.wrapping_mul(ARGON2_BLOCK_SIZE) / ARGON2_BLOCK_SIZE != memory_blocks {
+            return 0;
+        }
+
+        if (*ctx).type_ != ARGON2_D {
+            (*ctx).memory =
+                CRYPTO_secure_calloc(memory_blocks, ARGON2_BLOCK_SIZE, FILE_ARGON2, LINE)
+                    .cast::<Block>();
+        } else {
+            (*ctx).memory =
+                CRYPTO_calloc(memory_blocks, ARGON2_BLOCK_SIZE, FILE_ARGON2, LINE).cast::<Block>();
+        }
+
+        if (*ctx).memory.is_null() {
+            raise_site_data(
+                &err_sites::PROV_ARGON2_741,
+                c"cannot allocate required memory".as_ptr(),
+            );
+            return 0;
+        }
+
+        initial_hash(blockhash.as_mut_ptr(), ctx);
+        cleanse(
+            blockhash.as_mut_ptr().add(ARGON2_PREHASH_DIGEST_LENGTH),
+            ARGON2_PREHASH_SEED_LENGTH - ARGON2_PREHASH_DIGEST_LENGTH,
+        );
+        fill_first_blocks(blockhash.as_mut_ptr(), ctx);
+        cleanse(blockhash.as_mut_ptr(), ARGON2_PREHASH_SEED_LENGTH);
+
+        1
+    }
+}
+
+/// `static void finalize(const KDF_ARGON2 *ctx, void *out)` — `argon2.c:757-788`.
+///
+/// XORs the last block of every lane, then folds the result through `blake2b_long` into the
+/// caller's output -- and **releases the matrix**, which is why it is the last thing that touches
+/// `ctx->memory`.
+///
+/// # Safety
+/// `ctx` is live with `memory` allocated; `out` is writable for `ctx->outlen` bytes.
+unsafe fn argon2_finalize(ctx: *const KdfArgon2, out: *mut c_void) {
+    let mut blockhash = Block::zero();
+    let mut blockhash_bytes = [0u8; ARGON2_BLOCK_SIZE];
+
+    // SAFETY: `ctx` is live per the contract and every pointer below is derived from it or is
+    // this frame's own.
+    unsafe {
+        if ctx.is_null() {
+            return;
+        }
+
+        copy_block(
+            &mut blockhash,
+            (*ctx).memory.add(((*ctx).lane_length - 1) as usize),
+        );
+
+        /* XOR the last blocks */
+        for l in 1..(*ctx).lanes {
+            let last_block_in_lane = l
+                .wrapping_mul((*ctx).lane_length)
+                .wrapping_add((*ctx).lane_length - 1);
+            xor_block(
+                &mut blockhash,
+                (*ctx).memory.add(last_block_in_lane as usize),
+            );
+        }
+
+        /* Hash the result */
+        store_block(blockhash_bytes.as_mut_ptr().cast(), &blockhash);
+        blake2b_long(
+            (*ctx).md,
+            (*ctx).mac,
+            out.cast::<u8>(),
+            (*ctx).outlen as usize,
+            blockhash_bytes.as_ptr().cast(),
+            ARGON2_BLOCK_SIZE,
+        );
+        cleanse(blockhash.v.as_mut_ptr().cast::<u8>(), ARGON2_BLOCK_SIZE);
+        cleanse(blockhash_bytes.as_mut_ptr(), ARGON2_BLOCK_SIZE);
+
+        if (*ctx).type_ != ARGON2_D {
+            CRYPTO_secure_clear_free(
+                (*ctx).memory.cast(),
+                (*ctx).memory_blocks as usize * ARGON2_BLOCK_SIZE,
+                FILE_ARGON2,
+                LINE,
+            );
+        } else {
+            CRYPTO_clear_free(
+                (*ctx).memory.cast(),
+                (*ctx).memory_blocks as usize * ARGON2_BLOCK_SIZE,
+                FILE_ARGON2,
+                LINE,
+            );
+        }
+    }
+}
+
+/// `static int blake2b_mac(EVP_MAC *mac, void *out, size_t outlen, const void *in, size_t inlen,
+/// const void *key, size_t keylen)` — `argon2.c:790-814`.
+///
+/// The keyed arm of [`blake2b`], and the reason `EVP_MAC` is fetched at all: the key is set as an
+/// `OSSL_MAC_PARAM_KEY` and the width as an `OSSL_MAC_PARAM_SIZE`.
+///
+/// # Safety
+/// `mac` is a live fetched MAC; `out` is writable for `outlen` bytes and `in`/`key` readable for
+/// their lengths.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+unsafe fn blake2b_mac(
+    mac: *mut crate::evp::mac::EvpMac,
+    out: *mut c_void,
+    mut outlen: usize,
+    in_: *const c_void,
+    inlen: usize,
+    key: *const c_void,
+    keylen: usize,
+) -> c_int {
+    let mut ret: c_int = 0;
+    let mut out_written: usize = 0;
+
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe {
+        let ctx = EVP_MAC_CTX_new(mac);
+        if ctx.is_null() {
+            return ret;
+        }
+
+        let par = [
+            OSSL_PARAM_construct_octet_string(OSSL_MAC_PARAM_KEY, key.cast_mut(), keylen),
+            OSSL_PARAM_construct_size_t(OSSL_MAC_PARAM_SIZE, &mut outlen),
+            OSSL_PARAM_construct_end(),
+        ];
+
+        if EVP_MAC_CTX_set_params(ctx, par.as_ptr()) == 1
+            && EVP_MAC_init(ctx, ptr::null(), 0, ptr::null()) == 1
+            && EVP_MAC_update(ctx, in_.cast::<c_uchar>(), inlen) == 1
+            && EVP_MAC_final(ctx, out.cast::<c_uchar>(), &mut out_written, outlen) == 1
+        {
+            ret = 1;
+        }
+
+        EVP_MAC_CTX_free(ctx);
+        ret
+    }
+}
+
+/// `static int blake2b_md(EVP_MD *md, void *out, size_t outlen, const void *in, size_t inlen)` —
+/// `argon2.c:816-835`.
+///
+/// The unkeyed arm: `EVP_DigestInit_ex2` with the width as a parameter, and a **NULL** final length
+/// because the caller already named the width.
+///
+/// # Safety
+/// `md` is a live fetched digest; `out` is writable for `outlen` bytes and `in` readable for
+/// `inlen`.
+unsafe fn blake2b_md(
+    md: *mut crate::evp::digest::EvpMd,
+    out: *mut c_void,
+    mut outlen: usize,
+    in_: *const c_void,
+    inlen: usize,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe {
+        let ctx = EVP_MD_CTX_new();
+        if ctx.is_null() {
+            return 0;
+        }
+
+        let par = [
+            OSSL_PARAM_construct_size_t(OSSL_DIGEST_PARAM_SIZE, &mut outlen),
+            OSSL_PARAM_construct_end(),
+        ];
+
+        let ret = EVP_DigestInit_ex2(ctx, md, par.as_ptr()) == 1
+            && EVP_DigestUpdate(ctx, in_, inlen) == 1
+            && EVP_DigestFinal_ex(ctx, out.cast::<c_uchar>(), ptr::null_mut()) == 1;
+
+        EVP_MD_CTX_free(ctx);
+        c_int::from(ret)
+    }
+}
+
+/// `static int blake2b(EVP_MD *md, EVP_MAC *mac, void *out, size_t outlen, const void *in, size_t
+/// inlen, const void *key, size_t keylen)` — `argon2.c:837-847`.
+///
+/// The key selects the arm: no key (or a zero-length one) is the digest, anything else the keyed
+/// MAC.
+///
+/// # Safety
+/// `md` and `mac` are live; `out` is writable for `outlen` bytes and `in`/`key` readable for their
+/// lengths.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+unsafe fn blake2b(
+    md: *mut crate::evp::digest::EvpMd,
+    mac: *mut crate::evp::mac::EvpMac,
+    out: *mut c_void,
+    outlen: usize,
+    in_: *const c_void,
+    inlen: usize,
+    key: *const c_void,
+    keylen: usize,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under the callees' contracts.
+    unsafe {
+        if out.is_null() || outlen == 0 {
+            return 0;
+        }
+
+        if key.is_null() || keylen == 0 {
+            return blake2b_md(md, out, outlen, in_, inlen);
+        }
+
+        blake2b_mac(mac, out, outlen, in_, inlen, key, keylen)
+    }
+}
+
+/// `static int blake2b_long(EVP_MD *md, EVP_MAC *mac, unsigned char *out, size_t outlen, const void
+/// *in, size_t inlen)` — `argon2.c:849-912`.
+///
+/// `H'`: the variable-length hash. The width is *prepended* to the input, the first block is taken
+/// at `min(outlen, 64)`, and every further 32-byte half is chained through the 64-byte unfinalised
+/// buffer -- which is why the two local buffers are exactly `BLAKE2B_OUTBYTES` and why the last
+/// `blake2b` call asks for the remaining, possibly shorter, width.
+///
+/// # Safety
+/// `md` and `mac` are live; `out` is NULL or writable for `outlen` bytes; `in` is readable for
+/// `inlen`.
+unsafe fn blake2b_long(
+    md: *mut crate::evp::digest::EvpMd,
+    mac: *mut crate::evp::mac::EvpMac,
+    out: *mut u8,
+    outlen: usize,
+    in_: *const c_void,
+    inlen: usize,
+) -> c_int {
+    let mut ret: c_int;
+    let mut outlen_curr: u32;
+    let mut outbuf = [0u8; BLAKE2B_OUTBYTES];
+    let mut inbuf = [0u8; BLAKE2B_OUTBYTES];
+    let mut outlen_bytes = [0u8; 4];
+    let mut outlen_md: usize;
+
+    // SAFETY: the arguments are forwarded under the callees' contracts, and the four buffers are
+    // this frame's own.
+    unsafe {
+        if out.is_null() || outlen == 0 {
+            return 0;
+        }
+
+        /* Ensure little-endian byte order */
+        argon2_store32(outlen_bytes.as_mut_ptr(), outlen as u32);
+
+        let ctx = EVP_MD_CTX_new();
+        if ctx.is_null() {
+            return 0;
+        }
+
+        outlen_md = if outlen <= BLAKE2B_OUTBYTES {
+            outlen
+        } else {
+            BLAKE2B_OUTBYTES
+        };
+        let par = [
+            OSSL_PARAM_construct_size_t(OSSL_DIGEST_PARAM_SIZE, &mut outlen_md),
+            OSSL_PARAM_construct_end(),
+        ];
+
+        ret = c_int::from(
+            EVP_DigestInit_ex2(ctx, md, par.as_ptr()) == 1
+                && EVP_DigestUpdate(ctx, outlen_bytes.as_ptr().cast(), outlen_bytes.len()) == 1
+                && EVP_DigestUpdate(ctx, in_, inlen) == 1
+                && EVP_DigestFinal_ex(
+                    ctx,
+                    if outlen > BLAKE2B_OUTBYTES {
+                        outbuf.as_mut_ptr()
+                    } else {
+                        out
+                    },
+                    ptr::null_mut(),
+                ) == 1,
+        );
+
+        'body: {
+            if ret == 0 {
+                break 'body;
+            }
+
+            if outlen > BLAKE2B_OUTBYTES {
+                ptr::copy_nonoverlapping(outbuf.as_ptr(), out, BLAKE2B_OUTBYTES / 2);
+                let mut outp = out.add(BLAKE2B_OUTBYTES / 2);
+                outlen_curr = outlen as u32 - (BLAKE2B_OUTBYTES / 2) as u32;
+
+                while outlen_curr > BLAKE2B_OUTBYTES as u32 {
+                    ptr::copy_nonoverlapping(outbuf.as_ptr(), inbuf.as_mut_ptr(), BLAKE2B_OUTBYTES);
+                    if blake2b(
+                        md,
+                        mac,
+                        outbuf.as_mut_ptr().cast(),
+                        BLAKE2B_OUTBYTES,
+                        inbuf.as_ptr().cast(),
+                        BLAKE2B_OUTBYTES,
+                        ptr::null(),
+                        0,
+                    ) != 1
+                    {
+                        ret = 0;
+                        break 'body;
+                    }
+                    ptr::copy_nonoverlapping(outbuf.as_ptr(), outp, BLAKE2B_OUTBYTES / 2);
+                    outp = outp.add(BLAKE2B_OUTBYTES / 2);
+                    outlen_curr -= (BLAKE2B_OUTBYTES / 2) as u32;
+                }
+
+                ptr::copy_nonoverlapping(outbuf.as_ptr(), inbuf.as_mut_ptr(), BLAKE2B_OUTBYTES);
+                if blake2b(
+                    md,
+                    mac,
+                    outbuf.as_mut_ptr().cast(),
+                    outlen_curr as usize,
+                    inbuf.as_ptr().cast(),
+                    BLAKE2B_OUTBYTES,
+                    ptr::null(),
+                    0,
+                ) != 1
+                {
+                    ret = 0;
+                    break 'body;
+                }
+                ptr::copy_nonoverlapping(outbuf.as_ptr(), outp, outlen_curr as usize);
+            }
+            ret = 1;
+        }
+
+        EVP_MD_CTX_free(ctx);
+        ret
+    }
+}
+
+/// `static void kdf_argon2_init(KDF_ARGON2 *c, ARGON2_TYPE type)` — `argon2.c:914-929`. The
+/// `libctx` is saved across the wipe, which is what makes `OPENSSL_zalloc`'s work survivable when
+/// the initialiser is called on an already-constructed context by `reset`.
+///
+/// # Safety
+/// `c` is a live context.
+unsafe fn kdf_argon2_init(c: *mut KdfArgon2, type_: u32) {
+    // SAFETY: `c` is live per the contract.
+    unsafe {
+        let libctx = (*c).libctx;
+        ptr::write_bytes(c.cast::<u8>(), 0, core::mem::size_of::<KdfArgon2>());
+
+        (*c).libctx = libctx;
+        (*c).outlen = ARGON2_DEFAULT_OUTLEN;
+        (*c).t_cost = ARGON2_DEFAULT_T_COST;
+        (*c).m_cost = ARGON2_DEFAULT_M_COST;
+        (*c).lanes = ARGON2_DEFAULT_LANES;
+        (*c).threads = ARGON2_DEFAULT_THREADS;
+        (*c).version = ARGON2_VERSION_NUMBER;
+        (*c).type_ = type_;
+    }
+}
+
+/// `static void *kdf_argon2d_new(void *provctx)` — `argon2.c:931-948`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn kdf_argon2d_new(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+
+        let ctx =
+            CRYPTO_zalloc(core::mem::size_of::<KdfArgon2>(), FILE_ARGON2, LINE).cast::<KdfArgon2>();
+        if ctx.is_null() {
+            raise_site(&err_sites::PROV_ARGON2_938);
+            return ptr::null_mut();
+        }
+
+        (*ctx).libctx = prov_libctx_of(provctx);
+        kdf_argon2_init(ctx, ARGON2_D);
+        ctx.cast()
+    }
+}
+
+/// `static void *kdf_argon2i_new(void *provctx)` — `argon2.c:950-967`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn kdf_argon2i_new(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+
+        let ctx =
+            CRYPTO_zalloc(core::mem::size_of::<KdfArgon2>(), FILE_ARGON2, LINE).cast::<KdfArgon2>();
+        if ctx.is_null() {
+            raise_site(&err_sites::PROV_ARGON2_957);
+            return ptr::null_mut();
+        }
+
+        (*ctx).libctx = prov_libctx_of(provctx);
+        kdf_argon2_init(ctx, ARGON2_I);
+        ctx.cast()
+    }
+}
+
+/// `static void *kdf_argon2id_new(void *provctx)` — `argon2.c:969-986`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn kdf_argon2id_new(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+
+        let ctx =
+            CRYPTO_zalloc(core::mem::size_of::<KdfArgon2>(), FILE_ARGON2, LINE).cast::<KdfArgon2>();
+        if ctx.is_null() {
+            raise_site(&err_sites::PROV_ARGON2_976);
+            return ptr::null_mut();
+        }
+
+        (*ctx).libctx = prov_libctx_of(provctx);
+        kdf_argon2_init(ctx, ARGON2_ID);
+        ctx.cast()
+    }
+}
+
+/// `static void kdf_argon2_free(void *vctx)` — `argon2.c:988-1015`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn kdf_argon2_free(vctx: *mut c_void) {
+    let ctx = vctx.cast::<KdfArgon2>();
+
+    // SAFETY: `ctx` is NULL or live per the contract.
+    unsafe {
+        if ctx.is_null() {
+            return;
+        }
+
+        if !(*ctx).pwd.is_null() {
+            CRYPTO_clear_free((*ctx).pwd.cast(), (*ctx).pwdlen as usize, FILE_ARGON2, LINE);
+        }
+        if !(*ctx).salt.is_null() {
+            CRYPTO_clear_free(
+                (*ctx).salt.cast(),
+                (*ctx).saltlen as usize,
+                FILE_ARGON2,
+                LINE,
+            );
+        }
+        if !(*ctx).secret.is_null() {
+            CRYPTO_clear_free(
+                (*ctx).secret.cast(),
+                (*ctx).secretlen as usize,
+                FILE_ARGON2,
+                LINE,
+            );
+        }
+        if !(*ctx).ad.is_null() {
+            CRYPTO_clear_free((*ctx).ad.cast(), (*ctx).adlen as usize, FILE_ARGON2, LINE);
+        }
+
+        EVP_MD_free((*ctx).md);
+        EVP_MAC_free((*ctx).mac);
+        CRYPTO_free((*ctx).propq.cast(), FILE_ARGON2, LINE);
+
+        ptr::write_bytes(vctx.cast::<u8>(), 0, core::mem::size_of::<KdfArgon2>());
+        CRYPTO_free(vctx, FILE_ARGON2, LINE);
+    }
+}
+
+/// `static int kdf_argon2_derive(void *vctx, unsigned char *out, size_t outlen, const OSSL_PARAM
+/// params[])` — `argon2.c:1017-1122`.
+///
+/// The unit's whole public contract in one function: set the parameters, fetch the two BLAKE2
+/// methods, then bound-check, size the matrix and run it. Three details are the authority's rather
+/// than the RFC's: the **`size_param` refusal** (a caller who set `size` shorter than the buffer it
+/// now hands in is refused, where a caller who set nothing is re-sized silently), the threads bound
+/// against `ossl_get_avail_threads` of the *provider's* context, and the `m_cost >= 8 * lanes`
+/// floor above the RFC's own minimum.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn kdf_argon2_derive(
+    vctx: *mut c_void,
+    out: *mut u8,
+    outlen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    let ctx = vctx.cast::<KdfArgon2>();
+    let mut size_param: *const OsslParam = ptr::null();
+
+    // SAFETY: the caller's contract, and `size_param` is this frame's own slot.
+    unsafe {
+        if is_running() == 0 || argon2_set_ctx_params(ctx, params, &mut size_param) == 0 {
+            return 0;
+        }
+
+        if (*ctx).mac.is_null() {
+            (*ctx).mac = EVP_MAC_fetch((*ctx).libctx, OSSL_MAC_NAME_BLAKE2BMAC, (*ctx).propq);
+        }
+        if (*ctx).mac.is_null() {
+            raise_site_data(
+                &err_sites::PROV_ARGON2_1031,
+                c"cannot fetch blake2bmac".as_ptr(),
+            );
+            return 0;
+        }
+
+        if (*ctx).md.is_null() {
+            (*ctx).md = EVP_MD_fetch((*ctx).libctx, OSSL_MD_NAME_BLAKE2B512, (*ctx).propq);
+        }
+        if (*ctx).md.is_null() {
+            raise_site_data(
+                &err_sites::PROV_ARGON2_1039,
+                c"cannot fetch blake2b512".as_ptr(),
+            );
+            return 0;
+        }
+
+        if (*ctx).salt.is_null() || (*ctx).saltlen == 0 {
+            return fail_at(&err_sites::PROV_ARGON2_1045);
+        }
+
+        if outlen != (*ctx).outlen as usize {
+            /* User set a size that was too short so raise an error */
+            if !size_param.is_null() {
+                return fail_at(&err_sites::PROV_ARGON2_1052);
+            }
+            if kdf_argon2_ctx_set_out_length(ctx, outlen as u32) == 0 {
+                return 0;
+            }
+        }
+
+        match (*ctx).type_ {
+            ARGON2_D | ARGON2_I | ARGON2_ID => {}
+            _ => {
+                raise_site_data(
+                    &err_sites::PROV_ARGON2_1065,
+                    c"invalid Argon2 type".as_ptr(),
+                );
+                return 0;
+            }
+        }
+
+        if (*ctx).threads > 1 {
+            let avail = ossl_get_avail_threads((*ctx).libctx);
+            if (*ctx).threads as u64 > avail {
+                let mut msg = [0 as c_char; 64];
+                // SAFETY: `msg` is a 64-byte buffer and the format is the authority's. The two
+                // `%u` conversions are `unsigned int`: the authority passes the `uint64_t` return
+                // of `ossl_get_avail_threads` to one, so the low 32 bits are what reaches the
+                // buffer on this ABI and that is what is passed here.
+                BIO_snprintf(
+                    msg.as_mut_ptr(),
+                    msg.len(),
+                    c"requested %u threads, available: %u".as_ptr(),
+                    (*ctx).threads,
+                    ossl_get_avail_threads((*ctx).libctx) as c_uint,
+                );
+                raise_site_data(&err_sites::PROV_ARGON2_1077, msg.as_ptr());
+                return 0;
+            }
+            if (*ctx).threads > (*ctx).lanes {
+                let mut msg = [0 as c_char; 64];
+                // SAFETY: `msg` is a 64-byte buffer and the format is the authority's.
+                BIO_snprintf(
+                    msg.as_mut_ptr(),
+                    msg.len(),
+                    c"requested more threads (%u) than lanes (%u)".as_ptr(),
+                    (*ctx).threads,
+                    (*ctx).lanes,
+                );
+                raise_site_data(&err_sites::PROV_ARGON2_1084, msg.as_ptr());
+                return 0;
+            }
+        }
+
+        if (*ctx).m_cost < 8 * (*ctx).lanes {
+            raise_site_data(
+                &err_sites::PROV_ARGON2_1092,
+                c"m_cost must be greater or equal than 8 times the number of lanes".as_ptr(),
+            );
+            return 0;
+        }
+
+        let mut memory_blocks = (*ctx).m_cost;
+        if memory_blocks < 2 * ARGON2_SYNC_POINTS * (*ctx).lanes {
+            memory_blocks = 2 * ARGON2_SYNC_POINTS * (*ctx).lanes;
+        }
+
+        /* Ensure that all segments have equal length */
+        let segment_length = memory_blocks / ((*ctx).lanes * ARGON2_SYNC_POINTS);
+        memory_blocks = segment_length * ((*ctx).lanes * ARGON2_SYNC_POINTS);
+
+        (*ctx).memory = ptr::null_mut();
+        (*ctx).memory_blocks = memory_blocks;
+        (*ctx).segment_length = segment_length;
+        (*ctx).passes = (*ctx).t_cost;
+        (*ctx).lane_length = segment_length * ARGON2_SYNC_POINTS;
+
+        if argon2_initialize(ctx) != 1 {
+            return 0;
+        }
+
+        if fill_memory_blocks(ctx) != 1 {
+            return 0;
+        }
+
+        argon2_finalize(ctx, out.cast::<c_void>());
+
+        1
+    }
+}
+
+/// `static void kdf_argon2_reset(void *vctx)` — `argon2.c:1124-1154`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn kdf_argon2_reset(vctx: *mut c_void) {
+    let ctx = vctx.cast::<KdfArgon2>();
+
+    // SAFETY: `ctx` is live per the contract.
+    unsafe {
+        let type_ = (*ctx).type_;
+        let libctx = (*ctx).libctx;
+
+        EVP_MD_free((*ctx).md);
+        EVP_MAC_free((*ctx).mac);
+        CRYPTO_free((*ctx).propq.cast(), FILE_ARGON2, LINE);
+
+        if !(*ctx).pwd.is_null() {
+            CRYPTO_clear_free((*ctx).pwd.cast(), (*ctx).pwdlen as usize, FILE_ARGON2, LINE);
+        }
+        if !(*ctx).salt.is_null() {
+            CRYPTO_clear_free(
+                (*ctx).salt.cast(),
+                (*ctx).saltlen as usize,
+                FILE_ARGON2,
+                LINE,
+            );
+        }
+        if !(*ctx).secret.is_null() {
+            CRYPTO_clear_free(
+                (*ctx).secret.cast(),
+                (*ctx).secretlen as usize,
+                FILE_ARGON2,
+                LINE,
+            );
+        }
+        if !(*ctx).ad.is_null() {
+            CRYPTO_clear_free((*ctx).ad.cast(), (*ctx).adlen as usize, FILE_ARGON2, LINE);
+        }
+
+        ptr::write_bytes(vctx.cast::<u8>(), 0, core::mem::size_of::<KdfArgon2>());
+        (*ctx).libctx = libctx;
+        kdf_argon2_init(ctx, type_);
+    }
+}
+
+/// `static int kdf_argon2_ctx_set_threads(KDF_ARGON2 *ctx, uint32_t threads)` —
+/// `argon2.c:1156-1172`.
+///
+/// # Safety
+/// `ctx` is live.
+unsafe fn kdf_argon2_ctx_set_threads(ctx: *mut KdfArgon2, threads: u32) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe {
+        if threads < ARGON2_MIN_THREADS {
+            let mut msg = [0 as c_char; 32];
+            // SAFETY: `msg` is a 32-byte buffer and the format is the authority's.
+            BIO_snprintf(
+                msg.as_mut_ptr(),
+                msg.len(),
+                c"min threads: %u".as_ptr(),
+                ARGON2_MIN_THREADS,
+            );
+            raise_site_data(&err_sites::PROV_ARGON2_1157, msg.as_ptr());
+            return 0;
+        }
+
+        if threads > ARGON2_MAX_THREADS {
+            let mut msg = [0 as c_char; 32];
+            // SAFETY: `msg` is a 32-byte buffer and the format is the authority's.
+            BIO_snprintf(
+                msg.as_mut_ptr(),
+                msg.len(),
+                c"max threads: %u".as_ptr(),
+                ARGON2_MAX_THREADS,
+            );
+            raise_site_data(&err_sites::PROV_ARGON2_1163, msg.as_ptr());
+            return 0;
+        }
+
+        (*ctx).threads = threads;
+        1
+    }
+}
+
+/// `static int kdf_argon2_ctx_set_lanes(KDF_ARGON2 *ctx, uint32_t lanes)` — `argon2.c:1174-1190`.
+///
+/// # Safety
+/// `ctx` is live.
+unsafe fn kdf_argon2_ctx_set_lanes(ctx: *mut KdfArgon2, lanes: u32) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe {
+        if lanes > ARGON2_MAX_LANES {
+            let mut msg = [0 as c_char; 32];
+            // SAFETY: `msg` is a 32-byte buffer and the format is the authority's.
+            BIO_snprintf(
+                msg.as_mut_ptr(),
+                msg.len(),
+                c"max lanes: %u".as_ptr(),
+                ARGON2_MAX_LANES,
+            );
+            raise_site_data(&err_sites::PROV_ARGON2_1175, msg.as_ptr());
+            return 0;
+        }
+
+        if lanes < ARGON2_MIN_LANES {
+            let mut msg = [0 as c_char; 32];
+            // SAFETY: `msg` is a 32-byte buffer and the format is the authority's.
+            BIO_snprintf(
+                msg.as_mut_ptr(),
+                msg.len(),
+                c"min lanes: %u".as_ptr(),
+                ARGON2_MIN_LANES,
+            );
+            raise_site_data(&err_sites::PROV_ARGON2_1181, msg.as_ptr());
+            return 0;
+        }
+
+        (*ctx).lanes = lanes;
+        1
+    }
+}
+
+/// `static int kdf_argon2_ctx_set_t_cost(KDF_ARGON2 *ctx, uint32_t t_cost)` — `argon2.c:1192-1204`.
+/// No upper bound is checked; the authority's comment names the reason.
+///
+/// # Safety
+/// `ctx` is live.
+unsafe fn kdf_argon2_ctx_set_t_cost(ctx: *mut KdfArgon2, t_cost: u32) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe {
+        if t_cost < ARGON2_MIN_TIME {
+            let mut msg = [0 as c_char; 32];
+            // SAFETY: `msg` is a 32-byte buffer and the format is the authority's.
+            BIO_snprintf(
+                msg.as_mut_ptr(),
+                msg.len(),
+                c"min: %u".as_ptr(),
+                ARGON2_MIN_TIME,
+            );
+            raise_site_data(&err_sites::PROV_ARGON2_1195, msg.as_ptr());
+            return 0;
+        }
+
+        (*ctx).t_cost = t_cost;
+        1
+    }
+}
+
+/// `static int kdf_argon2_ctx_set_m_cost(KDF_ARGON2 *ctx, uint32_t m_cost)` — `argon2.c:1206-1218`.
+///
+/// # Safety
+/// `ctx` is live.
+unsafe fn kdf_argon2_ctx_set_m_cost(ctx: *mut KdfArgon2, m_cost: u32) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe {
+        if m_cost < ARGON2_MIN_MEMORY {
+            let mut msg = [0 as c_char; 32];
+            // SAFETY: `msg` is a 32-byte buffer and the format is the authority's.
+            BIO_snprintf(
+                msg.as_mut_ptr(),
+                msg.len(),
+                c"min: %u".as_ptr(),
+                ARGON2_MIN_MEMORY,
+            );
+            raise_site_data(&err_sites::PROV_ARGON2_1209, msg.as_ptr());
+            return 0;
+        }
+
+        (*ctx).m_cost = m_cost;
+        1
+    }
+}
+
+/// `static int kdf_argon2_ctx_set_out_length(KDF_ARGON2 *ctx, uint32_t outlen)` —
+/// `argon2.c:1220-1236`. Only the floor is checked; the authority's comment names the reason the
+/// ceiling is not.
+///
+/// # Safety
+/// `ctx` is live.
+unsafe fn kdf_argon2_ctx_set_out_length(ctx: *mut KdfArgon2, outlen: u32) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe {
+        if outlen < ARGON2_MIN_OUT_LENGTH {
+            let mut msg = [0 as c_char; 32];
+            // SAFETY: `msg` is a 32-byte buffer and the format is the authority's.
+            BIO_snprintf(
+                msg.as_mut_ptr(),
+                msg.len(),
+                c"min: %u".as_ptr(),
+                ARGON2_MIN_OUT_LENGTH,
+            );
+            raise_site_data(&err_sites::PROV_ARGON2_1227, msg.as_ptr());
+            return 0;
+        }
+
+        (*ctx).outlen = outlen;
+        1
+    }
+}
+
+/// `static int kdf_argon2_ctx_set_secret(KDF_ARGON2 *ctx, const OSSL_PARAM *p)` —
+/// `argon2.c:1238-1263`. The over-length refusal answers 0 **without** raising, which is the
+/// authority's shape and not an omission.
+///
+/// # Safety
+/// `ctx` is live; `p` is a live parameter with a non-NULL `data`.
+unsafe fn kdf_argon2_ctx_set_secret(ctx: *mut KdfArgon2, p: *const OsslParam) -> c_int {
+    let mut buflen: usize = 0;
+
+    // SAFETY: `ctx` and `p` are per the contract.
+    unsafe {
+        if (*p).data.is_null() {
+            return 0;
+        }
+
+        if !(*ctx).secret.is_null() {
+            CRYPTO_clear_free(
+                (*ctx).secret.cast(),
+                (*ctx).secretlen as usize,
+                FILE_ARGON2,
+                LINE,
+            );
+            (*ctx).secret = ptr::null_mut();
+            (*ctx).secretlen = 0;
+        }
+
+        if OSSL_PARAM_get_octet_string(
+            p,
+            ptr::addr_of_mut!((*ctx).secret).cast::<*mut c_void>(),
+            0,
+            &mut buflen,
+        ) == 0
+        {
+            return 0;
+        }
+
+        if buflen > ARGON2_MAX_SECRET as usize {
+            CRYPTO_free((*ctx).secret.cast(), FILE_ARGON2, LINE);
+            (*ctx).secret = ptr::null_mut();
+            (*ctx).secretlen = 0;
+            return 0;
+        }
+
+        (*ctx).secretlen = buflen as u32;
+        1
+    }
+}
+
+/// `static int kdf_argon2_ctx_set_pwd(KDF_ARGON2 *ctx, const OSSL_PARAM *p)` — `argon2.c:1265-1295`.
+///
+/// # Safety
+/// `ctx` is live; `p` is a live parameter with a non-NULL `data`.
+unsafe fn kdf_argon2_ctx_set_pwd(ctx: *mut KdfArgon2, p: *const OsslParam) -> c_int {
+    let mut buflen: usize = 0;
+
+    // SAFETY: `ctx` and `p` are per the contract.
+    unsafe {
+        if (*p).data.is_null() {
+            return 0;
+        }
+
+        if !(*ctx).pwd.is_null() {
+            CRYPTO_clear_free((*ctx).pwd.cast(), (*ctx).pwdlen as usize, FILE_ARGON2, LINE);
+            (*ctx).pwd = ptr::null_mut();
+            (*ctx).pwdlen = 0;
+        }
+
+        if OSSL_PARAM_get_octet_string(
+            p,
+            ptr::addr_of_mut!((*ctx).pwd).cast::<*mut c_void>(),
+            0,
+            &mut buflen,
+        ) == 0
+        {
+            return 0;
+        }
+
+        if buflen > ARGON2_MAX_PWD_LENGTH as usize {
+            let mut msg = [0 as c_char; 32];
+            // SAFETY: `msg` is a 32-byte buffer and the format is the authority's.
+            BIO_snprintf(
+                msg.as_mut_ptr(),
+                msg.len(),
+                c"max: %u".as_ptr(),
+                ARGON2_MAX_PWD_LENGTH,
+            );
+            raise_site_data(&err_sites::PROV_ARGON2_1280, msg.as_ptr());
+            CRYPTO_free((*ctx).pwd.cast(), FILE_ARGON2, LINE);
+            (*ctx).pwd = ptr::null_mut();
+            (*ctx).pwdlen = 0;
+            return 0;
+        }
+
+        (*ctx).pwdlen = buflen as u32;
+        1
+    }
+}
+
+/// `static int kdf_argon2_ctx_set_salt(KDF_ARGON2 *ctx, const OSSL_PARAM *p)` —
+/// `argon2.c:1297-1333`.
+///
+/// The one input with a **floor**: a salt shorter than `ARGON2_MIN_SALT_LENGTH` is refused, and a
+/// missing salt is refused later by `kdf_argon2_derive` rather than here.
+///
+/// # Safety
+/// `ctx` is live; `p` is a live parameter with a non-NULL `data`.
+unsafe fn kdf_argon2_ctx_set_salt(ctx: *mut KdfArgon2, p: *const OsslParam) -> c_int {
+    let mut buflen: usize = 0;
+
+    // SAFETY: `ctx` and `p` are per the contract.
+    unsafe {
+        if (*p).data.is_null() {
+            return 0;
+        }
+
+        if !(*ctx).salt.is_null() {
+            CRYPTO_clear_free(
+                (*ctx).salt.cast(),
+                (*ctx).saltlen as usize,
+                FILE_ARGON2,
+                LINE,
+            );
+            (*ctx).salt = ptr::null_mut();
+            (*ctx).saltlen = 0;
+        }
+
+        if OSSL_PARAM_get_octet_string(
+            p,
+            ptr::addr_of_mut!((*ctx).salt).cast::<*mut c_void>(),
+            0,
+            &mut buflen,
+        ) == 0
+        {
+            return 0;
+        }
+
+        if buflen < ARGON2_MIN_SALT_LENGTH as usize {
+            let mut msg = [0 as c_char; 32];
+            // SAFETY: `msg` is a 32-byte buffer and the format is the authority's.
+            BIO_snprintf(
+                msg.as_mut_ptr(),
+                msg.len(),
+                c"min: %u".as_ptr(),
+                ARGON2_MIN_SALT_LENGTH,
+            );
+            raise_site_data(&err_sites::PROV_ARGON2_1312, msg.as_ptr());
+            CRYPTO_free((*ctx).salt.cast(), FILE_ARGON2, LINE);
+            (*ctx).salt = ptr::null_mut();
+            (*ctx).saltlen = 0;
+            return 0;
+        }
+
+        if buflen > ARGON2_MAX_SALT_LENGTH as usize {
+            let mut msg = [0 as c_char; 32];
+            // SAFETY: `msg` is a 32-byte buffer and the format is the authority's.
+            BIO_snprintf(
+                msg.as_mut_ptr(),
+                msg.len(),
+                c"max: %u".as_ptr(),
+                ARGON2_MAX_SALT_LENGTH,
+            );
+            raise_site_data(&err_sites::PROV_ARGON2_1318, msg.as_ptr());
+            CRYPTO_free((*ctx).salt.cast(), FILE_ARGON2, LINE);
+            (*ctx).salt = ptr::null_mut();
+            (*ctx).saltlen = 0;
+            return 0;
+        }
+
+        (*ctx).saltlen = buflen as u32;
+        1
+    }
+}
+
+/// `static int kdf_argon2_ctx_set_ad(KDF_ARGON2 *ctx, const OSSL_PARAM *p)` — `argon2.c:1335-1360`.
+/// Like `set_secret`, the over-length refusal is silent.
+///
+/// # Safety
+/// `ctx` is live; `p` is a live parameter with a non-NULL `data`.
+unsafe fn kdf_argon2_ctx_set_ad(ctx: *mut KdfArgon2, p: *const OsslParam) -> c_int {
+    let mut buflen: usize = 0;
+
+    // SAFETY: `ctx` and `p` are per the contract.
+    unsafe {
+        if (*p).data.is_null() {
+            return 0;
+        }
+
+        if !(*ctx).ad.is_null() {
+            CRYPTO_clear_free((*ctx).ad.cast(), (*ctx).adlen as usize, FILE_ARGON2, LINE);
+            (*ctx).ad = ptr::null_mut();
+            (*ctx).adlen = 0;
+        }
+
+        if OSSL_PARAM_get_octet_string(
+            p,
+            ptr::addr_of_mut!((*ctx).ad).cast::<*mut c_void>(),
+            0,
+            &mut buflen,
+        ) == 0
+        {
+            return 0;
+        }
+
+        if buflen > ARGON2_MAX_AD_LENGTH as usize {
+            CRYPTO_free((*ctx).ad.cast(), FILE_ARGON2, LINE);
+            (*ctx).ad = ptr::null_mut();
+            (*ctx).adlen = 0;
+            return 0;
+        }
+
+        (*ctx).adlen = buflen as u32;
+        1
+    }
+}
+
+/// `static void kdf_argon2_ctx_set_flag_early_clean(KDF_ARGON2 *ctx, uint32_t f)` —
+/// `argon2.c:1362-1365`. The value is normalised to 0 or 1.
+///
+/// # Safety
+/// `ctx` is live.
+unsafe fn kdf_argon2_ctx_set_flag_early_clean(ctx: *mut KdfArgon2, f: u32) {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe { (*ctx).early_clean = u32::from(f != 0) };
+}
+
+/// `static int kdf_argon2_ctx_set_version(KDF_ARGON2 *ctx, uint32_t version)` —
+/// `argon2.c:1367-1379`. Only `0x10` and `0x13` are accepted, which is why a probe can drive the
+/// version-1.0 overwrite arm of `fill_segment`.
+///
+/// # Safety
+/// `ctx` is live.
+unsafe fn kdf_argon2_ctx_set_version(ctx: *mut KdfArgon2, version: u32) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe {
+        match version {
+            ARGON2_VERSION_10 | ARGON2_VERSION_13 => {
+                (*ctx).version = version;
+                1
+            }
+            _ => {
+                raise_site_data(
+                    &err_sites::PROV_ARGON2_1373,
+                    c"invalid Argon2 version".as_ptr(),
+                );
+                0
+            }
+        }
+    }
+}
+
+/// `static int set_property_query(KDF_ARGON2 *ctx, const char *propq)` — `argon2.c:1381-1395`.
+/// The two fetched methods are dropped with the old query, so the next derive re-fetches them.
+///
+/// # Safety
+/// `ctx` is live; `propq` is NULL or NUL-terminated.
+unsafe fn set_property_query(ctx: *mut KdfArgon2, propq: *const c_char) -> c_int {
+    // SAFETY: `ctx` is live and `propq` is per the contract.
+    unsafe {
+        CRYPTO_free((*ctx).propq.cast(), FILE_ARGON2, LINE);
+        (*ctx).propq = ptr::null_mut();
+        if !propq.is_null() {
+            (*ctx).propq = CRYPTO_strdup(propq, FILE_ARGON2, LINE);
+            if (*ctx).propq.is_null() {
+                return 0;
+            }
+        }
+        EVP_MD_free((*ctx).md);
+        (*ctx).md = ptr::null_mut();
+        EVP_MAC_free((*ctx).mac);
+        (*ctx).mac = ptr::null_mut();
+        1
+    }
+}
+
+/// `static int argon2_set_ctx_params(KDF_ARGON2 *ctx, const OSSL_PARAM params[], OSSL_PARAM
+/// **size_param_ptr)` — generated `argon2.c:1592-1668`.
+///
+/// The generated switch is the field-keyed repeat check plus one `OSSL_PARAM_locate_const` per key,
+/// which is this module's established reading of a decoder (D305). `size_param_ptr` is an
+/// **out**-parameter because `kdf_argon2_derive` needs to know whether the caller set `size`; it is
+/// written unconditionally on the path that reaches it, and the derive's own guard is what makes a
+/// write-through-on-failure impossible.
+///
+/// # Safety
+/// `ctx` is NULL or live; `params` is NULL or key-terminated; `size_param_ptr` is writable.
+unsafe fn argon2_set_ctx_params(
+    ctx: *mut KdfArgon2,
+    params: *const OsslParam,
+    size_param_ptr: *mut *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if ctx.is_null() {
+            return 0;
+        }
+        if let Some(site) = repeated_param_site_by_field(params, &ARGON2_SET_DECODER_KEYS) {
+            return fail_at(site);
+        }
+
+        let p = Argon2SetCtxParams {
+            ad: locate_const(params, OSSL_KDF_PARAM_ARGON2_AD),
+            eclean: locate_const(params, OSSL_KDF_PARAM_EARLY_CLEAN),
+            iter: locate_const(params, OSSL_KDF_PARAM_ITER),
+            lanes: locate_const(params, OSSL_KDF_PARAM_ARGON2_LANES),
+            mem: locate_const(params, OSSL_KDF_PARAM_ARGON2_MEMCOST),
+            propq: locate_const(params, OSSL_KDF_PARAM_PROPERTIES),
+            pw: locate_const(params, OSSL_KDF_PARAM_PASSWORD),
+            salt: locate_const(params, OSSL_KDF_PARAM_SALT),
+            secret: locate_const(params, OSSL_KDF_PARAM_SECRET),
+            size: locate_const(params, OSSL_KDF_PARAM_SIZE),
+            thrds: locate_const(params, OSSL_KDF_PARAM_THREADS),
+            vers: locate_const(params, OSSL_KDF_PARAM_ARGON2_VERSION),
+        };
+        let mut u32_value: u32 = 0;
+
+        if !p.pw.is_null() && kdf_argon2_ctx_set_pwd(ctx, p.pw) == 0 {
+            return 0;
+        }
+
+        if !p.salt.is_null() && kdf_argon2_ctx_set_salt(ctx, p.salt) == 0 {
+            return 0;
+        }
+
+        if !p.secret.is_null() && kdf_argon2_ctx_set_secret(ctx, p.secret) == 0 {
+            return 0;
+        }
+
+        if !p.ad.is_null() && kdf_argon2_ctx_set_ad(ctx, p.ad) == 0 {
+            return 0;
+        }
+
+        *size_param_ptr = p.size;
+        if !p.size.is_null() {
+            if OSSL_PARAM_get_uint32(p.size, &mut u32_value) == 0 {
+                return 0;
+            }
+            if kdf_argon2_ctx_set_out_length(ctx, u32_value) == 0 {
+                return 0;
+            }
+        }
+
+        if !p.iter.is_null() {
+            if OSSL_PARAM_get_uint32(p.iter, &mut u32_value) == 0 {
+                return 0;
+            }
+            if kdf_argon2_ctx_set_t_cost(ctx, u32_value) == 0 {
+                return 0;
+            }
+        }
+
+        if !p.thrds.is_null() {
+            if OSSL_PARAM_get_uint32(p.thrds, &mut u32_value) == 0 {
+                return 0;
+            }
+            if kdf_argon2_ctx_set_threads(ctx, u32_value) == 0 {
+                return 0;
+            }
+        }
+
+        if !p.lanes.is_null() {
+            if OSSL_PARAM_get_uint32(p.lanes, &mut u32_value) == 0 {
+                return 0;
+            }
+            if kdf_argon2_ctx_set_lanes(ctx, u32_value) == 0 {
+                return 0;
+            }
+        }
+
+        if !p.mem.is_null() {
+            if OSSL_PARAM_get_uint32(p.mem, &mut u32_value) == 0 {
+                return 0;
+            }
+            if kdf_argon2_ctx_set_m_cost(ctx, u32_value) == 0 {
+                return 0;
+            }
+        }
+
+        if !p.eclean.is_null() {
+            if OSSL_PARAM_get_uint32(p.eclean, &mut u32_value) == 0 {
+                return 0;
+            }
+            kdf_argon2_ctx_set_flag_early_clean(ctx, u32_value);
+        }
+
+        if !p.vers.is_null() {
+            if OSSL_PARAM_get_uint32(p.vers, &mut u32_value) == 0 {
+                return 0;
+            }
+            if kdf_argon2_ctx_set_version(ctx, u32_value) == 0 {
+                return 0;
+            }
+        }
+
+        if !p.propq.is_null()
+            && ((*p.propq).data_type != OSSL_PARAM_UTF8_STRING
+                || set_property_query(ctx, (*p.propq).data.cast()) == 0)
+        {
+            return 0;
+        }
+
+        1
+    }
+}
+
+/// `static int kdf_argon2_set_ctx_params(void *vctx, const OSSL_PARAM params[])` —
+/// `argon2.c:1670-1676`. The `size_param` it builds is discarded; only `derive` reads it.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn kdf_argon2_set_ctx_params(
+    vctx: *mut c_void,
+    params: *const OsslParam,
+) -> c_int {
+    let ctx = vctx.cast::<KdfArgon2>();
+    let mut size_param: *const OsslParam = ptr::null();
+
+    // SAFETY: the caller's contract, and `size_param` is this frame's own slot.
+    unsafe { argon2_set_ctx_params(ctx, params, &mut size_param) }
+}
+
+/// `static const OSSL_PARAM *kdf_argon2_settable_ctx_params(void *ctx, void *p_ctx)` —
+/// generated `argon2.c:1678-1682`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn kdf_argon2_settable_ctx_params(
+    _ctx: *mut c_void,
+    _p_ctx: *mut c_void,
+) -> *const OsslParam {
+    ARGON2_SETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `static int kdf_argon2_get_ctx_params(void *vctx, OSSL_PARAM params[])` — generated
+/// `argon2.c:1723-1735`.
+///
+/// Answers `SIZE_MAX` for `size` and then **`-2`** -- the authority's own return value, which is
+/// neither this interface's success value nor a documented refusal. It is reproduced as written;
+/// what a caller makes of it is the probe's observation to make on both sides.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn kdf_argon2_get_ctx_params(vctx: *mut c_void, params: *mut OsslParam) -> c_int {
+    let ctx = vctx.cast::<KdfArgon2>();
+
+    // SAFETY: the caller's contract.
+    unsafe {
+        if ctx.is_null() {
+            return 0;
+        }
+        if let Some(site) =
+            repeated_param_site_by_field(params.cast_const(), &ARGON2_GET_DECODER_KEYS)
+        {
+            return fail_at(site);
+        }
+        let p = locate_const(params, OSSL_KDF_PARAM_SIZE);
+        if !p.is_null() && OSSL_PARAM_set_size_t(p.cast_mut(), usize::MAX) == 0 {
+            return 0;
+        }
+        -2
+    }
+}
+
+/// `static const OSSL_PARAM *kdf_argon2_gettable_ctx_params(void *ctx, void *p_ctx)` —
+/// generated `argon2.c:1737-1741`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn kdf_argon2_gettable_ctx_params(
+    _ctx: *mut c_void,
+    _p_ctx: *mut c_void,
+) -> *const OsslParam {
+    ARGON2_GETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `const OSSL_DISPATCH ossl_kdf_argon2i_functions[]` — `argon2.c:1743-1755`. Eight callbacks and
+/// the terminator: there is no `DUPCTX` slot, because the unit does not implement one.
+pub(crate) static ARGON2I_FUNCTIONS: [OsslDispatch; 9] = [
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_NEWCTX,
+        function: kdf_argon2i_new as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_FREECTX,
+        function: kdf_argon2_free as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_RESET,
+        function: kdf_argon2_reset as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DERIVE,
+        function: kdf_argon2_derive as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS,
+        function: kdf_argon2_settable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SET_CTX_PARAMS,
+        function: kdf_argon2_set_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS,
+        function: kdf_argon2_gettable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GET_CTX_PARAMS,
+        function: kdf_argon2_get_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_DISPATCH_END,
+        function: ptr::null_mut(),
+    },
+];
+
+/// `const OSSL_DISPATCH ossl_kdf_argon2d_functions[]` — `argon2.c:1757-1769`.
+pub(crate) static ARGON2D_FUNCTIONS: [OsslDispatch; 9] = [
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_NEWCTX,
+        function: kdf_argon2d_new as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_FREECTX,
+        function: kdf_argon2_free as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_RESET,
+        function: kdf_argon2_reset as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DERIVE,
+        function: kdf_argon2_derive as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS,
+        function: kdf_argon2_settable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SET_CTX_PARAMS,
+        function: kdf_argon2_set_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS,
+        function: kdf_argon2_gettable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GET_CTX_PARAMS,
+        function: kdf_argon2_get_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_DISPATCH_END,
+        function: ptr::null_mut(),
+    },
+];
+
+/// `const OSSL_DISPATCH ossl_kdf_argon2id_functions[]` — `argon2.c:1771-1783`.
+pub(crate) static ARGON2ID_FUNCTIONS: [OsslDispatch; 9] = [
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_NEWCTX,
+        function: kdf_argon2id_new as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_FREECTX,
+        function: kdf_argon2_free as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_RESET,
+        function: kdf_argon2_reset as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DERIVE,
+        function: kdf_argon2_derive as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS,
+        function: kdf_argon2_settable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SET_CTX_PARAMS,
+        function: kdf_argon2_set_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS,
+        function: kdf_argon2_gettable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GET_CTX_PARAMS,
+        function: kdf_argon2_get_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_DISPATCH_END,
+        function: ptr::null_mut(),
+    },
+];
+
 /// `static const OSSL_ALGORITHM deflt_kdfs[]` — `providers/defltprov.c:355-375`, restricted to
 /// the rows this module implements, **in the authority's order**: `HKDF` rows 0-4, `SSKDF` row 5,
 /// `PBKDF2` row 6, `PKCS12KDF` row 7, `SSHKDF` row 8, `X963KDF` row 9, `TLS1-PRF` row 10,
-/// `KBKDF` row 11, `X942KDF-ASN1` row 12, `SCRYPT` row 13, `KRB5KDF` row 14 and `HMAC-DRBG-KDF`
-/// row 15, so the table is a subsequence (D244).
+/// `KBKDF` row 11, `X942KDF-ASN1` row 12, `SCRYPT` row 13, `KRB5KDF` row 14, `HMAC-DRBG-KDF`
+/// row 15, `ARGON2I` row 16, `ARGON2D` row 17 and `ARGON2ID` row 18, so the table is a
+/// **subsequence** of all nineteen and every row of the authority's is now published (D244, D400).
 ///
 /// **The property definition is `"provider=default"` on every row**, which is `defltprov.c`'s
 /// `ALG` macro (D247).
-pub(crate) static DEFLT_KDFS: [OsslAlgorithm; 17] = [
+///
+/// The three `ARGON2` rows carry **no alias**: `PROV_NAMES_ARGON2I`/`_D`/`_ID` are the primary
+/// names alone, unlike `SCRYPT`'s `id-scrypt` pair or `PBKDF2`'s OID. Their `#ifndef
+/// OPENSSL_NO_ARGON2` guard is satisfied on this profile, so all three are live.
+pub(crate) static DEFLT_KDFS: [OsslAlgorithm; 20] = [
     OsslAlgorithm {
         // `PROV_NAMES_HKDF` — the primary name alone.
         algorithm_names: c"HKDF".as_ptr(),
@@ -9091,6 +11638,27 @@ pub(crate) static DEFLT_KDFS: [OsslAlgorithm; 17] = [
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
+        // `PROV_NAMES_ARGON2I` — the primary name alone.
+        algorithm_names: c"ARGON2I".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ARGON2I_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ARGON2D` — the primary name alone.
+        algorithm_names: c"ARGON2D".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ARGON2D_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ARGON2ID` — the primary name alone.
+        algorithm_names: c"ARGON2ID".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ARGON2ID_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
         algorithm_names: ptr::null(),
         property_definition: ptr::null(),
         implementation: ptr::null(),
@@ -9108,11 +11676,11 @@ mod tests {
     /// are `prov/names.h`'s expansions, checked against the census rather than this file.
     #[test]
     fn the_kdf_table_names_its_rows_in_the_authoritys_order() {
-        assert_eq!(DEFLT_KDFS.len(), 17);
+        assert_eq!(DEFLT_KDFS.len(), 20);
         // SAFETY: the terminator's fields are NULL by construction and each landed row's name is a
         // `'static` C string.
         unsafe {
-            assert!(DEFLT_KDFS[16].algorithm_names.is_null());
+            assert!(DEFLT_KDFS[19].algorithm_names.is_null());
             for (row, want) in [
                 (&DEFLT_KDFS[0], b"HKDF".as_slice()),
                 (
@@ -9139,6 +11707,9 @@ mod tests {
                 (&DEFLT_KDFS[13], b"SCRYPT:id-scrypt:1.3.6.1.4.1.11591.4.11"),
                 (&DEFLT_KDFS[14], b"KRB5KDF"),
                 (&DEFLT_KDFS[15], b"HMAC-DRBG-KDF"),
+                (&DEFLT_KDFS[16], b"ARGON2I"),
+                (&DEFLT_KDFS[17], b"ARGON2D"),
+                (&DEFLT_KDFS[18], b"ARGON2ID"),
             ] {
                 assert_eq!(
                     core::ffi::CStr::from_ptr(row.algorithm_names).to_bytes(),
@@ -9186,6 +11757,22 @@ mod tests {
                 assert!(!entry.function.is_null());
             }
         }
+
+        // The three Argon2 tables are the one shape in this module that is **eight** callbacks and
+        // a terminator: the unit implements no `DUPCTX`, so the terminator is at index 8 rather
+        // than 9 (`argon2.c:1743-1783`).
+        for table in [&ARGON2I_FUNCTIONS, &ARGON2D_FUNCTIONS, &ARGON2ID_FUNCTIONS] {
+            assert_eq!(table.len(), 9);
+            assert_eq!(
+                table[8].function_id,
+                crate::context::dispatch::OSSL_DISPATCH_END
+            );
+            assert!(table[8].function.is_null());
+            for entry in &table[..8] {
+                assert!(!entry.function.is_null());
+            }
+        }
+        assert_eq!(ARGON2I_FUNCTIONS[3].function_id, OSSL_FUNC_KDF_DERIVE);
         assert_eq!(SSKDF_FUNCTIONS[4].function_id, OSSL_FUNC_KDF_DERIVE);
         assert_eq!(X963KDF_FUNCTIONS[4].function_id, OSSL_FUNC_KDF_DERIVE);
         // The two tables share all but the derive and settable/gettable callbacks, so the derive
@@ -9309,5 +11896,209 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// The authority's own Argon2 corpus, embedded rather than retyped.
+    ///
+    /// `test/recipes/30-test_evp_data/evpkdf_argon2.txt` is the file the authority's own
+    /// `test/evp_test.c` drives the three rows with -- RFC 9106's published vectors plus the
+    /// unit's bound cases -- and it is parsed here at test time so that neither an input nor an
+    /// expected output is a second transcription (D392's rule). The file's two directives are
+    /// reproduced as the harness reads them: `Threads = N` is `OSSL_set_max_threads(libctx, N)`
+    /// (`evp_test.c:5458-5464`), which is what makes the two threaded cases derivable at all, and
+    /// `Ctrl.<anything> = <key>:<value>` is one parameter whose **key is the value's** -- so the
+    /// file's own `Ctrl.lanes = threads:0` really does set `threads`, as it does in the harness.
+    /// A `hex` prefix means the octets the hex spells; anything else is the value's own ASCII.
+    const ARGON2_VECTORS: &str = include_str!(
+        "../../forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpkdf_argon2.txt"
+    );
+
+    /// A NUL-terminated copy of an ASCII token, for the C-ABI key arguments.
+    fn argon2_cstr(s: &str) -> Vec<u8> {
+        let mut v = s.as_bytes().to_vec();
+        v.push(0);
+        v
+    }
+
+    /// The bytes a hex spelling names, as the file's `hexsalt:` and friends use it.
+    fn argon2_hex(s: &str) -> Vec<u8> {
+        let b = s.as_bytes();
+        let mut out = Vec::with_capacity(b.len() / 2);
+        let mut i = 0;
+        while i + 1 < b.len() {
+            let hi = (b[i] as char).to_digit(16);
+            let lo = (b[i + 1] as char).to_digit(16);
+            let (Some(hi), Some(lo)) = (hi, lo) else {
+                break;
+            };
+            out.push((hi * 16 + lo) as u8);
+            i += 2;
+        }
+        out
+    }
+
+    /// A `uint32_t` parameter value, decimal or `0x`-prefixed as the file spells it.
+    fn argon2_u32(s: &str) -> Option<u32> {
+        match s.strip_prefix("0x") {
+            Some(hex) => u32::from_str_radix(hex, 16).ok(),
+            None => s.parse::<u32>().ok(),
+        }
+    }
+
+    /// One case, as the file writes it.
+    struct Argon2Case {
+        alg: Vec<u8>,
+        threads: Option<u64>,
+        /// `(key, octets)` for the four byte-string parameters.
+        octets: Vec<(Vec<u8>, Vec<u8>)>,
+        /// `(key, value)` for the seven `uint32_t` ones.
+        u32s: Vec<(Vec<u8>, u32)>,
+        /// The expected output, empty when the case is a bound case.
+        output: Vec<u8>,
+        /// `Result = ...` was present, so the derive must be refused.
+        refused: bool,
+    }
+
+    /// The file's cases. A case begins at `KDF =` and every later line of its block belongs to it;
+    /// `Title`, comments and blank lines outside a block are skipped.
+    fn parse_argon2_vectors(text: &str) -> Vec<Argon2Case> {
+        let mut cases: Vec<Argon2Case> = Vec::new();
+
+        for line in text.lines() {
+            let line = line.trim();
+            if line.is_empty() || line.starts_with('#') {
+                continue;
+            }
+            let Some((key, value)) = line.split_once('=') else {
+                continue;
+            };
+            let (key, value) = (key.trim(), value.trim());
+
+            if key == "KDF" {
+                cases.push(Argon2Case {
+                    alg: argon2_cstr(value),
+                    threads: None,
+                    octets: Vec::new(),
+                    u32s: Vec::new(),
+                    output: Vec::new(),
+                    refused: false,
+                });
+                continue;
+            }
+
+            let Some(case) = cases.last_mut() else {
+                continue;
+            };
+
+            if key == "Threads" {
+                case.threads = value.parse::<u64>().ok();
+            } else if key == "Output" {
+                case.output = argon2_hex(value);
+            } else if key == "Result" {
+                case.refused = true;
+            } else if key.starts_with("Ctrl.") {
+                let Some((pkey, pvalue)) = value.split_once(':') else {
+                    continue;
+                };
+                let (pkey, pvalue) = (pkey.trim(), pvalue.trim());
+                match pkey {
+                    "hexpass" | "hexsalt" | "hexsecret" | "hexad" => {
+                        case.octets
+                            .push((argon2_cstr(&pkey[3..]), argon2_hex(pvalue)));
+                    }
+                    "pass" | "salt" | "secret" | "ad" => {
+                        case.octets
+                            .push((argon2_cstr(pkey), pvalue.as_bytes().to_vec()));
+                    }
+                    _ => {
+                        if let Some(v) = argon2_u32(pvalue) {
+                            case.u32s.push((argon2_cstr(pkey), v));
+                        }
+                    }
+                }
+            }
+        }
+        cases
+    }
+
+    /// Every case in the authority's file, through the three published rows.
+    ///
+    /// The court `RT-DIGEST` is what observes *where* a refusal happens and what the threaded fill
+    /// lands on; this test is what pins the **derived bytes** to values the author did not choose,
+    /// which a differential court cannot do on its own: two implementations that agree on the same
+    /// bytes have agreed, but only a published vector says the bytes are Argon2's. The counts at
+    /// the end are the file's, so a case that stops being parsed is a failure rather than a
+    /// quietly smaller corpus.
+    #[test]
+    fn the_argon2_rows_agree_with_the_authoritys_own_vectors() {
+        use crate::context::thread_data::OSSL_set_max_threads;
+        use crate::context::{OSSL_LIB_CTX_free, OSSL_LIB_CTX_new};
+        use crate::evp::kdf::{
+            EVP_KDF_CTX_free, EVP_KDF_CTX_new, EVP_KDF_derive, EVP_KDF_fetch, EVP_KDF_free,
+        };
+        use crate::params::OSSL_PARAM_construct_uint32;
+
+        let mut cases = parse_argon2_vectors(ARGON2_VECTORS);
+        assert_eq!(cases.len(), 23, "the file's `KDF =` cases");
+
+        let mut derived = 0;
+        let mut refused = 0;
+
+        for case in &mut cases {
+            let libctx = OSSL_LIB_CTX_new();
+            assert!(!libctx.is_null(), "a fresh library context");
+
+            let mut params: Vec<OsslParam> =
+                Vec::with_capacity(case.octets.len() + case.u32s.len() + 1);
+
+            // SAFETY: every key is a NUL-terminated copy the case owns and every value buffer
+            // outlives `params`, which is built once and read once below; nothing mutates either
+            // after a pointer to it is taken.
+            unsafe {
+                for (key, value) in case.octets.iter() {
+                    params.push(OSSL_PARAM_construct_octet_string(
+                        key.as_ptr().cast(),
+                        value.as_ptr().cast_mut().cast(),
+                        value.len(),
+                    ));
+                }
+                for (key, value) in case.u32s.iter_mut() {
+                    params.push(OSSL_PARAM_construct_uint32(key.as_ptr().cast(), value));
+                }
+                params.push(OSSL_PARAM_construct_end());
+
+                if let Some(n) = case.threads {
+                    assert_eq!(OSSL_set_max_threads(libctx, n), 1, "Threads = {n}");
+                }
+
+                let kdf = EVP_KDF_fetch(libctx, case.alg.as_ptr().cast(), core::ptr::null());
+                assert!(!kdf.is_null(), "the row fetches from a fresh context");
+                let kctx = EVP_KDF_CTX_new(kdf);
+                assert!(!kctx.is_null(), "a derivation context");
+
+                let len = if case.refused { 32 } else { case.output.len() };
+                let mut out = vec![0u8; len];
+                let ret = EVP_KDF_derive(kctx, out.as_mut_ptr(), len, params.as_ptr());
+
+                if case.refused {
+                    assert_eq!(ret, 0, "a bound case is refused");
+                    refused += 1;
+                } else {
+                    assert_eq!(ret, 1, "a vector derives");
+                    assert_eq!(out, case.output, "the derived bytes");
+                    derived += 1;
+                }
+
+                EVP_KDF_CTX_free(kctx);
+                EVP_KDF_free(kdf);
+            }
+
+            // SAFETY: `libctx` is this iteration's own fresh context and nothing below it is
+            // live once the block above has released the KDF and its context.
+            unsafe { OSSL_LIB_CTX_free(libctx) };
+        }
+
+        assert_eq!(derived, 12, "the file's derivable cases");
+        assert_eq!(refused, 11, "the file's bound cases");
     }
 }

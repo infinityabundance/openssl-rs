@@ -28742,3 +28742,85 @@ named, unchanged in size. The order, best rows-per-line first, with the reasons 
 No claim is made that the stratum is closer to sealing than `provider_rows` says. `provider_rows` is
 **280/26** after this pass, and the 24 rows that moved are exactly the 24 the two units publish; the
 remaining 26 are the five units above, each named with its measured size.
+
+## D400 -- `kdfs/argon2.c.in` lands whole: ARGON2I, ARGON2D and ARGON2ID, three rows for 1,574 live
+lines, driven by `RT-DIGEST` and by the authority's own `evpkdf_argon2.txt` corpus
+
+**Decision.** D399 named Argon2 as the next pass -- 3 rows, 1,574 lines, all live, its thread
+prerequisite landed at D397 -- and made a partial landing a stub rather than an option. The unit is
+transcribed whole into `src/provider/kdf.rs`, and the three rows are published in `DEFLT_KDFS` in the
+authority's order. `provider_rows` is **283 implemented / 23 unlanded** (306 owned), from **280/26**.
+
+1. **What landed, and where.** `providers/implementations/kdfs/argon2.c.in` is 1,574 lines and
+   **none** of them is behind `FIPS_MODULE`, so the whole unit is live on this profile -- the
+   property D397 measured and this pass relied on. It is transcribed as one section of
+   `src/provider/kdf.rs`: `Block` (128 `u64`), `Argon2Pos`, `Argon2ThreadData` and `KdfArgon2` as
+   `#[repr(C)]` structs; the BlaMka `G`/`PERMUTATION_P` pair as `argon2_g`/`argon2_p` over the two
+   addressing orders; the six block operations; `index_alpha`; `fill_segment`; the two fill paths;
+   `initial_hash`/`initialize`/`finalize`; the four BLAKE2 helpers; the three constructors, the free
+   and the reset; the nine setters; the two generated decoders this module's established reading
+   turns into a field-keyed repeat check plus one `OSSL_PARAM_locate_const` per key; and three
+   `OSSL_DISPATCH` tables.
+2. **The unit needed a prerequisite's notes discharged, and they are.** `crypto/thread/internal.c`'s
+   pool landed at D397 behind five `#[allow(dead_code)]` attributes and a module-level `allow` in
+   `src/runtime/thread_arch.rs`, each with the reason that the landing caller
+   (`argon2.c.in`'s `fill_mem_blocks_mt`) was not yet transcribed. It is now, so those six allowances
+   are gone, `avail_threads_locked`/`ossl_get_avail_threads`/`ossl_crypto_thread_start`/`_join`/`_clean`
+   are reachable from `src/provider/kdf.rs`, and both notes say so. `thread_arch.rs` keeps one module
+   `allow` for what argon2 does **not** reach -- the state word's error-half arms and the
+   `pthread_attr_*` shims -- with that reason written down instead of the stale one.
+3. **Three behaviours are reproduced rather than tidied.**
+   * `kdf_argon2_get_ctx_params` answers **`-2`** (`argon2.c:1734`), which is neither the interface's
+     success value nor a documented refusal. The probe observes what `EVP_KDF_CTX_get_params` makes
+     of it on both sides (it is `-2` there too) rather than this crate asserting a meaning.
+   * `kdf_argon2_derive`'s thread-pool message passes the **`uint64_t`** return of
+     `ossl_get_avail_threads` to a **`%u`**, so the low 32 bits are what reaches the buffer on this
+     ABI. The transcription truncates explicitly and says why, because a message is readable through
+     the error queue and is therefore contract.
+   * Five of the unit's bound macros have **no reference in its code** -- `ARGON2_MAX_OUT_LENGTH`,
+     `ARGON2_MAX_MEMORY`, `ARGON2_MAX_TIME`, `ARGON2_MIN_PWD_LENGTH`, `ARGON2_MIN_AD_LENGTH` are
+     named in the authority's comments as checks it skips -- and a Rust `const` with no reader is a
+     `dead_code` finding, so they are recorded in the section's header rather than carried. The
+     bounds that *are* compared against are all present, including the ones whose comparison cannot
+     fire on this build.
+4. **The error coordinates are derived, not typed.** `providers/implementations/kdfs/argon2.c` joins
+   `gen_err_raise_sites.py`'s `COVERED_FILES`, so the **38** sites resolve from the pinned
+   *generated* text: the `.in` template expands two `produce_param_decoder` calls into ~370 lines
+   ahead of `initialize`, so reading the template would attribute every site to a line the compiler
+   never saw. `err-raise-sites.json` and `src/runtime/err_sites.rs` are regenerated.
+
+**Evidence, and it is of two kinds because one kind cannot carry it.** `RT-DIGEST`'s Argon2 arm
+drives all three rows and the whole bound set -- fetch, apply, derive, the `-2`, the two
+`set_params` bound groups, the four `derive`-time refusals, the `size` refusal, the property-query
+refusal -- and then the **threaded path**, which is the arm this unit needed D397 for: a fresh
+context's pool is zero threads wide, so `OSSL_set_max_threads(NULL, 4)` is what makes `threads > 1`
+reachable at all, and with two lanes and two threads the threaded derivation is compared **byte for
+byte** against the single-threaded one on the same parameters. `RT-DIGEST` is **654 observations**
+(from 615) and the Phase 8 court set is `all_pass=True`. A differential court cannot say the bytes
+are Argon2's, though, only that two implementations agree, so the same unit is also driven by the
+authority's own corpus: `the_argon2_rows_agree_with_the_authoritys_own_vectors` parses
+`test/recipes/30-test_evp_data/evpkdf_argon2.txt` -- RFC 9106's published vectors plus the unit's own
+bound cases -- with `include_str!` and drives **all 23 cases** through the published rows, deriving
+the 12 with an `Output` byte-exactly and requiring the 11 with a `Result` to be refused. The file's
+`Threads = N` directive is reproduced as the harness reads it (`OSSL_set_max_threads(libctx, N)`),
+which is what makes its two threaded cases derivable rather than refused.
+
+**What remains, in the order D398 measured.** The 23 unlanded rows are the four units left, unchanged
+in size, and this pass's order is the one D399 recorded:
+
+* **`crypto/ml_kem/` (2,452) + `ml_kem_kem.c.in` (272) + `ml_kem_kmgmt.c.in` (902) + `mlx_kem.c`
+  (350) + `mlx_kmgmt.c.in` (844) -- 14 rows, 4,820 lines.** First: the largest row count left, and the
+  four hybrid `mlx` rows cost only their own 1,194 provider lines once `ml_kem.c` is in.
+* **SM2 -- 2 rows, 1,940 lines** (`crypto/sm2/` 1,076 + `der_sm2_sig.c` 39 + `sm2_sig.c.in` 585 +
+  `sm2_enc.c.in` 240). Second: two rows for two large units whose two faces share the one crypt
+  unit, and its DER-OID pair sits on the pattern D399 landed for SLH-DSA.
+* **`kem/ec_kem.c.in` -- 1 row, 822 lines.** Third: one row, one of whose functions
+  (`ossl_ec_dhkem_derive_private`) is already landed, but whose encapsulation path is the
+  HPKE-derived one this crate models only partly.
+* **`crypto/ml_dsa/` -- 6 rows, 4,925 lines.** Last: the worst rows-per-line in the set, and nothing
+  else waits on it.
+
+No claim is made that the stratum is closer to sealing than `provider_rows` says. `provider_rows` is
+**283/23** after this pass, and the three rows that moved are exactly the three the unit publishes.
+`cargo test --lib` is **1019 passed, 0 failed**, `cargo clippy --all-targets -- -D warnings` is clean,
+and the pipeline is `PIPELINE OK` with **exit 0** and **99 courts / 38,527 observations**.

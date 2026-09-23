@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 280,
+        "implemented": 283,
         "unmatched": 0
       },
       "9": {
@@ -58,8 +58,8 @@
         ]
       }
     ],
-    "directly_courted": 285,
-    "implemented_rows": 285,
+    "directly_courted": 288,
+    "implemented_rows": 288,
     "rows": [
       {
         "algorithm_names": "RSA",
@@ -2293,6 +2293,45 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "ARGON2D",
+        "aliases": [
+          "ARGON2D"
+        ],
+        "courts": [
+          "RT-DIGEST"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KDF",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARGON2I",
+        "aliases": [
+          "ARGON2I"
+        ],
+        "courts": [
+          "RT-DIGEST"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KDF",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARGON2ID",
+        "aliases": [
+          "ARGON2ID"
+        ],
+        "courts": [
+          "RT-DIGEST"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KDF",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "HKDF",
         "aliases": [
           "HKDF"
@@ -4212,12 +4251,12 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "76ce5b640ceda1a8786bb2e554fa1649a5f053f27a4404a5adce636ba687cb5e"
+      "sha256": "d9c3ac7063eef116f313fe31ae243c578e284b650662b45f2a01bb60a8995c26"
     },
     {
       "name": "court:RT-DIGEST:rt_digest_probe.c",
       "path": "courts/phase8/rt_digest_probe.c",
-      "sha256": "aaa2152f0fd85773eef87ce64dbc7203ba20f3a27ae0e5db2b76e1ee9a4753ee"
+      "sha256": "efef1b982a99da1ea74f367d8f563f3c061bedc878996017039fe8d7bf9bfb3e"
     },
     {
       "name": "court:RT-CIPHER:rt_cipher_probe.c",

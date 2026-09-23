@@ -263,7 +263,7 @@ Courts: `all pass`, 19 court(s), **2954** authority observation(s) over 19 trans
 ## Phase 8 — Native cryptographic primitives
 
 * state: `in-progress`
-* blocking: 26 provider registration row(s) of this stratum are neither implemented nor handed to a later phase (forensics/atlas/provider-algorithms.json): ARGON2D, ARGON2I, ARGON2ID, EC, ML-DSA-44, ML-DSA-65...
+* blocking: 23 provider registration row(s) of this stratum are neither implemented nor handed to a later phase (forensics/atlas/provider-algorithms.json): EC, ML-DSA-44, ML-DSA-65, ML-DSA-87, ML-KEM-1024, ML-KEM-512...
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase8-obligations.json`
 * atlas-owned: 759
@@ -276,13 +276,13 @@ Hand-offs received and discharged:
 
 * from phase 7: 27 symbol(s) — `EVP_PKEY_assign`, `EVP_PKEY_decrypt_old`, `EVP_PKEY_encrypt_old`, `EVP_PKEY_get0_DH`, `EVP_PKEY_get0_DSA`, `EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get0_RSA`, `EVP_PKEY_get0_hmac`, `EVP_PKEY_get0_poly1305`, `EVP_PKEY_get0_siphash`, `EVP_PKEY_get1_DH`, `EVP_PKEY_get1_DSA`, `EVP_PKEY_get1_EC_KEY`, `EVP_PKEY_get1_RSA`, `EVP_PKEY_get_ec_point_conv_form`, `EVP_PKEY_get_field_type`, `EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0`, `EVP_PKEY_meth_get_count`, `EVP_PKEY_set1_DH`, `EVP_PKEY_set1_DSA`, `EVP_PKEY_set1_EC_KEY`, `EVP_PKEY_set1_RSA`, `EVP_PKEY_type`, `d2i_KeyParams`, `d2i_KeyParams_bio`, `d2i_PublicKey`
 
-Courts: `all pass`, 16 court(s), **13982** authority observation(s) over 14 transcript court(s).
+Courts: `all pass`, 16 court(s), **14021** authority observation(s) over 14 transcript court(s).
 
 The other 2 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
 
 | court | verdict | observations |
 |---|---|---|
-| RT-DIGEST | `pass` | 615 |
+| RT-DIGEST | `pass` | 654 |
 | RT-CIPHER | `pass` | 6946 |
 | RT-CIPHER-MEM | `pass` | 382 |
 | RT-RSA | `pass` | 1021 |

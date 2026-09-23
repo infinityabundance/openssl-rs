@@ -22572,6 +22572,376 @@ pub(crate) const PROV_HMACDRBG_KDF_386: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `initialize` at `providers/implementations/kdfs/argon2.c:741` (PROV_R_INVALID_MEMORY_SIZE).
+pub(crate) const PROV_ARGON2_741: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 741,
+    func: c"initialize",
+    lib: 57,
+    reason: 235,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2d_new` at `providers/implementations/kdfs/argon2.c:938` (ERR_R_MALLOC_FAILURE).
+pub(crate) const PROV_ARGON2_938: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 938,
+    func: c"kdf_argon2d_new",
+    lib: 57,
+    reason: 786688,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2i_new` at `providers/implementations/kdfs/argon2.c:957` (ERR_R_MALLOC_FAILURE).
+pub(crate) const PROV_ARGON2_957: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 957,
+    func: c"kdf_argon2i_new",
+    lib: 57,
+    reason: 786688,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2id_new` at `providers/implementations/kdfs/argon2.c:976` (ERR_R_MALLOC_FAILURE).
+pub(crate) const PROV_ARGON2_976: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 976,
+    func: c"kdf_argon2id_new",
+    lib: 57,
+    reason: 786688,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_derive` at `providers/implementations/kdfs/argon2.c:1031` (PROV_R_MISSING_MAC).
+pub(crate) const PROV_ARGON2_1031: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1031,
+    func: c"kdf_argon2_derive",
+    lib: 57,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_derive` at `providers/implementations/kdfs/argon2.c:1039` (PROV_R_MISSING_MESSAGE_DIGEST).
+pub(crate) const PROV_ARGON2_1039: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1039,
+    func: c"kdf_argon2_derive",
+    lib: 57,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_derive` at `providers/implementations/kdfs/argon2.c:1045` (PROV_R_MISSING_SALT).
+pub(crate) const PROV_ARGON2_1045: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1045,
+    func: c"kdf_argon2_derive",
+    lib: 57,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_derive` at `providers/implementations/kdfs/argon2.c:1052` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_ARGON2_1052: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1052,
+    func: c"kdf_argon2_derive",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_derive` at `providers/implementations/kdfs/argon2.c:1065` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_ARGON2_1065: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1065,
+    func: c"kdf_argon2_derive",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_derive` at `providers/implementations/kdfs/argon2.c:1071` (PROV_R_INVALID_THREAD_POOL_SIZE).
+pub(crate) const PROV_ARGON2_1071: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1071,
+    func: c"kdf_argon2_derive",
+    lib: 57,
+    reason: 234,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_derive` at `providers/implementations/kdfs/argon2.c:1077` (PROV_R_INVALID_THREAD_POOL_SIZE).
+pub(crate) const PROV_ARGON2_1077: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1077,
+    func: c"kdf_argon2_derive",
+    lib: 57,
+    reason: 234,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_derive` at `providers/implementations/kdfs/argon2.c:1084` (PROV_R_INVALID_THREAD_POOL_SIZE).
+pub(crate) const PROV_ARGON2_1084: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1084,
+    func: c"kdf_argon2_derive",
+    lib: 57,
+    reason: 234,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_derive` at `providers/implementations/kdfs/argon2.c:1092` (PROV_R_INVALID_MEMORY_SIZE).
+pub(crate) const PROV_ARGON2_1092: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1092,
+    func: c"kdf_argon2_derive",
+    lib: 57,
+    reason: 235,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_ctx_set_threads` at `providers/implementations/kdfs/argon2.c:1157` (PROV_R_INVALID_THREAD_POOL_SIZE).
+pub(crate) const PROV_ARGON2_1157: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1157,
+    func: c"kdf_argon2_ctx_set_threads",
+    lib: 57,
+    reason: 234,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_ctx_set_threads` at `providers/implementations/kdfs/argon2.c:1163` (PROV_R_INVALID_THREAD_POOL_SIZE).
+pub(crate) const PROV_ARGON2_1163: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1163,
+    func: c"kdf_argon2_ctx_set_threads",
+    lib: 57,
+    reason: 234,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_ctx_set_lanes` at `providers/implementations/kdfs/argon2.c:1175` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_ARGON2_1175: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1175,
+    func: c"kdf_argon2_ctx_set_lanes",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_ctx_set_lanes` at `providers/implementations/kdfs/argon2.c:1181` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_ARGON2_1181: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1181,
+    func: c"kdf_argon2_ctx_set_lanes",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_ctx_set_t_cost` at `providers/implementations/kdfs/argon2.c:1195` (PROV_R_INVALID_ITERATION_COUNT).
+pub(crate) const PROV_ARGON2_1195: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1195,
+    func: c"kdf_argon2_ctx_set_t_cost",
+    lib: 57,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_ctx_set_m_cost` at `providers/implementations/kdfs/argon2.c:1209` (PROV_R_INVALID_MEMORY_SIZE).
+pub(crate) const PROV_ARGON2_1209: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1209,
+    func: c"kdf_argon2_ctx_set_m_cost",
+    lib: 57,
+    reason: 235,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_ctx_set_out_length` at `providers/implementations/kdfs/argon2.c:1227` (PROV_R_INVALID_OUTPUT_LENGTH).
+pub(crate) const PROV_ARGON2_1227: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1227,
+    func: c"kdf_argon2_ctx_set_out_length",
+    lib: 57,
+    reason: 217,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_ctx_set_pwd` at `providers/implementations/kdfs/argon2.c:1280` (PROV_R_INVALID_SALT_LENGTH).
+pub(crate) const PROV_ARGON2_1280: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1280,
+    func: c"kdf_argon2_ctx_set_pwd",
+    lib: 57,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_ctx_set_salt` at `providers/implementations/kdfs/argon2.c:1312` (PROV_R_INVALID_SALT_LENGTH).
+pub(crate) const PROV_ARGON2_1312: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1312,
+    func: c"kdf_argon2_ctx_set_salt",
+    lib: 57,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_ctx_set_salt` at `providers/implementations/kdfs/argon2.c:1318` (PROV_R_INVALID_SALT_LENGTH).
+pub(crate) const PROV_ARGON2_1318: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1318,
+    func: c"kdf_argon2_ctx_set_salt",
+    lib: 57,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_ctx_set_version` at `providers/implementations/kdfs/argon2.c:1373` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_ARGON2_1373: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1373,
+    func: c"kdf_argon2_ctx_set_version",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `argon2_set_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1448` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1448: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1448,
+    func: c"argon2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `argon2_set_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1459` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1459: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1459,
+    func: c"argon2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `argon2_set_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1470` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1470: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1470,
+    func: c"argon2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `argon2_set_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1481` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1481: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1481,
+    func: c"argon2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `argon2_set_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1492` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1492: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1492,
+    func: c"argon2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `argon2_set_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1507` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1507: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1507,
+    func: c"argon2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `argon2_set_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1518` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1518: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1518,
+    func: c"argon2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `argon2_set_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1534` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1534: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1534,
+    func: c"argon2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `argon2_set_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1545` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1545: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1545,
+    func: c"argon2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `argon2_set_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1556` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1556: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1556,
+    func: c"argon2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `argon2_set_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1568` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1568: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1568,
+    func: c"argon2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `argon2_set_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1579` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1579: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1579,
+    func: c"argon2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `argon2_get_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1711` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1711: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1711,
+    func: c"argon2_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
 /// `generic_skey_import_decoder` at `providers/implementations/skeymgmt/generic.c:63` (PROV_R_REPEATED_PARAMETER).
 pub(crate) const PROV_GENERIC_SKEYMGMT_63: ErrSite = ErrSite {
     file: c"providers/implementations/skeymgmt/generic.c",
@@ -40627,6 +40997,43 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_HMACDRBG_KDF_316,
     PROV_HMACDRBG_KDF_327,
     PROV_HMACDRBG_KDF_386,
+    PROV_ARGON2_741,
+    PROV_ARGON2_938,
+    PROV_ARGON2_957,
+    PROV_ARGON2_976,
+    PROV_ARGON2_1031,
+    PROV_ARGON2_1039,
+    PROV_ARGON2_1045,
+    PROV_ARGON2_1052,
+    PROV_ARGON2_1065,
+    PROV_ARGON2_1071,
+    PROV_ARGON2_1077,
+    PROV_ARGON2_1084,
+    PROV_ARGON2_1092,
+    PROV_ARGON2_1157,
+    PROV_ARGON2_1163,
+    PROV_ARGON2_1175,
+    PROV_ARGON2_1181,
+    PROV_ARGON2_1195,
+    PROV_ARGON2_1209,
+    PROV_ARGON2_1227,
+    PROV_ARGON2_1280,
+    PROV_ARGON2_1312,
+    PROV_ARGON2_1318,
+    PROV_ARGON2_1373,
+    PROV_ARGON2_1448,
+    PROV_ARGON2_1459,
+    PROV_ARGON2_1470,
+    PROV_ARGON2_1481,
+    PROV_ARGON2_1492,
+    PROV_ARGON2_1507,
+    PROV_ARGON2_1518,
+    PROV_ARGON2_1534,
+    PROV_ARGON2_1545,
+    PROV_ARGON2_1556,
+    PROV_ARGON2_1568,
+    PROV_ARGON2_1579,
+    PROV_ARGON2_1711,
     PROV_GENERIC_SKEYMGMT_63,
     PROV_KDF_EXCH_117,
     PROV_DH_KMGMT_544,

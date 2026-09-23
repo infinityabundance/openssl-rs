@@ -6,22 +6,21 @@
 //! the thread and the object's state machine is what `..._join` and `..._clean`
 //! implement; `crate::context::thread_data`'s pool is the caller.
 //!
-//! ## Why this is its own module, and why the module carries `allow(dead_code)`
+//! ## Why this is its own module
 //!
 //! `crypto/thread/` is a directory in the authority: the primitives this crate had
 //! already landed live in `arch/thread_posix.c` (and are `src/runtime/thread.rs`'s),
 //! and the object plus its life-cycle is `arch.c`. Keeping the second beside the first
-//! made every item here read as dead to the *library* build, because the only caller of
-//! the pool is `kdfs/argon2.c.in`'s `fill_mem_blocks_mt` and that unit is not yet
-//! transcribed. The standing rule is to land a prerequisite as code rather than hold
-//! it, so the code is here and the reason is written down once, at the module, instead
-//! of on each of the twenty-nine items a per-item `allow` would need.
+//! made every item here read as dead to the *library* build while the only caller of
+//! the pool -- `kdfs/argon2.c.in`'s `fill_mem_blocks_mt` -- was untranscribed, so the
+//! module carried one `allow(dead_code)` with that reason instead of twenty-nine
+//! per-item ones.
 //!
-//! **The landing caller is `crypto/thread/internal.c`'s pool, and behind it
-//! `kdfs/argon2.c.in`'s `fill_mem_blocks_mt`.** Until argon2 lands, the only in-tree
-//! exercise of everything below is the test module: it spawns four workers, joins them,
-//! reads their return values and cleans them, which is also what makes the condition
-//! variable reachable for the first time.
+//! **That reason is discharged.** `src/provider/kdf.rs`'s `fill_mem_blocks_mt` landed
+//! as `crypto/thread/internal.c`'s first in-crate caller of the pool, so the module
+//! `allow` is gone and every item below is reachable from `argon2` through
+//! `crate::context::thread_data` -- with the test module still the thing that spawns
+//! four workers, joins them, reads their return values and cleans them.
 //!
 //! ## The three things this layer has to get right
 //!
@@ -40,7 +39,13 @@
 //! (`union { char __size[56]; long __align; }`), because only one of its members is ever
 //! touched and that is reached through this module's own `pthread_attr_*` bindings. A
 //! wrong size would corrupt the stack, and the ABI court is what would catch a port.
-#![allow(dead_code)] // the landing caller is argon2.c.in's fill_mem_blocks_mt; see the module note
+//!
+//! **What the module-level `allow` still covers.** `argon2` reaches
+//! `ossl_crypto_thread_native_start`/`_join`/`_clean` and their `pthread_*` bindings, but
+//! not every arm of the state word: `JOINED` set in the *error* half, the `JOIN_AWAIT`
+//! retry and the `pthread_attr_*` shims are unreachable from any in-crate caller by
+//! construction, and they are transcribed because the authority's own code is.
+#![allow(dead_code)] // not every state-word arm and portability shim has a caller; see the note below
 
 use core::ffi::{c_char, c_int, c_ulong, c_void};
 use core::ptr;

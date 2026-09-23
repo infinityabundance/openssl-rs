@@ -195,7 +195,7 @@
       "verdict": "pass"
     },
     "RT-DIGEST": {
-      "observations": 615,
+      "observations": 654,
       "verdict": "pass"
     },
     "RT-DRBG": {
@@ -629,6 +629,9 @@
     "default/OSSL_OP_DIGEST/SHAKE-128",
     "default/OSSL_OP_DIGEST/SHAKE-256",
     "default/OSSL_OP_DIGEST/SM3",
+    "default/OSSL_OP_KDF/ARGON2D",
+    "default/OSSL_OP_KDF/ARGON2I",
+    "default/OSSL_OP_KDF/ARGON2ID",
     "default/OSSL_OP_KDF/HKDF",
     "default/OSSL_OP_KDF/HKDF-SHA256",
     "default/OSSL_OP_KDF/HKDF-SHA384",
@@ -763,14 +766,14 @@
       "8": 685,
       "9": 675
     },
-    "implemented": 285,
+    "implemented": 288,
     "open_by_phase": {
       "10": 636,
       "13": 39,
-      "8": 26,
+      "8": 23,
       "9": 10
     },
     "total": 996,
-    "unimplemented": 711
+    "unimplemented": 708
   }
 }

@@ -211,13 +211,13 @@ pub unsafe extern "C" fn OSSL_set_max_threads(ctx: *mut c_void, max_threads: u64
 // ---------------------------------------------------------------------------
 // The pool: `crypto/thread/internal.c`'s remaining four functions
 //
-// **These five items are dead to the library build today, and that is why each
-// carries an `allow` with this one reason.** Their only caller in the authority is
-// `kdfs/argon2.c.in`'s `fill_mem_blocks_mt` (`argon2.c.in:594`), whose unit is not yet
-// transcribed; `src/runtime/thread_arch.rs` carries the same reason at module level.
-// The standing rule is to land a prerequisite as code rather than hold it, so they are
-// here and driven by this module's tests, which spawn, join and clean real workers --
-// the first exercise of the condition variable in the crate.
+// Their only caller in the authority is `kdfs/argon2.c.in`'s `fill_mem_blocks_mt`
+// (`argon2.c.in:594`), and **that caller is now landed**: `src/provider/kdf.rs`'s
+// `fill_mem_blocks_mt` is the first thing in the crate to reach this pool, so the
+// `allow` each of these five used to carry is gone and the module note in
+// `src/runtime/thread_arch.rs` no longer applies. `src/context/thread_data.rs`'s own
+// tests still spawn, join and clean real workers, which is what first exercised the
+// condition variable.
 // ---------------------------------------------------------------------------
 
 /// `static ossl_inline uint64_t _ossl_get_avail_threads(OSSL_LIB_CTX_THREADS *tdata)` —
@@ -227,7 +227,6 @@ pub unsafe extern "C" fn OSSL_set_max_threads(ctx: *mut c_void, max_threads: u64
 /// caller-settable, so a value below `active_threads` is reachable rather than
 /// theoretical, and a debug-build panic would be a divergence from an answer the
 /// authority does give.
-#[allow(dead_code)] // the landing caller is argon2.c.in's fill_mem_blocks_mt; see the group note
 fn avail_threads_locked(tdata: *mut OsslLibCtxThreads) -> u64 {
     // SAFETY: the caller holds `tdata->lock`, which is what makes the two reads
     // one consistent pair.
@@ -237,9 +236,10 @@ fn avail_threads_locked(tdata: *mut OsslLibCtxThreads) -> u64 {
 /// `uint64_t ossl_get_avail_threads(OSSL_LIB_CTX *ctx)` —
 /// `crypto/thread/internal.c:25-38`. Answers `0` when the slot is missing.
 ///
+/// `kdf_argon2_derive` is the reader: it refuses `threads > ossl_get_avail_threads(ctx)`.
+///
 /// # Safety
 /// `ctx` must be NULL or a live library context.
-#[allow(dead_code)] // the landing caller is argon2.c.in's fill_mem_blocks_mt; see the group note
 pub(crate) unsafe fn ossl_get_avail_threads(ctx: *mut c_void) -> u64 {
     let tdata = threads_of(ctx);
     if tdata.is_null() {
@@ -266,7 +266,6 @@ pub(crate) unsafe fn ossl_get_avail_threads(ctx: *mut c_void) -> u64 {
 /// # Safety
 /// `ctx` must be NULL or a live library context; `start` must be safe to run on
 /// another thread with `data`, and `data` must outlive that thread.
-#[allow(dead_code)] // the landing caller is argon2.c.in's fill_mem_blocks_mt; see the group note
 pub(crate) unsafe fn ossl_crypto_thread_start(
     ctx: *mut c_void,
     start: Option<CryptoThreadRoutine>,
@@ -313,7 +312,6 @@ pub(crate) unsafe fn ossl_crypto_thread_start(
 /// # Safety
 /// `vhandle` must be NULL or a live value returned by [`ossl_crypto_thread_start`];
 /// `retval` must be NULL or writable.
-#[allow(dead_code)] // the landing caller is argon2.c.in's fill_mem_blocks_mt; see the group note
 pub(crate) unsafe fn ossl_crypto_thread_join(
     vhandle: *mut c_void,
     retval: *mut CryptoThreadRetval,
@@ -348,7 +346,6 @@ pub(crate) unsafe fn ossl_crypto_thread_join(
 ///
 /// # Safety
 /// `vhandle` must be NULL or a live thread that has been joined.
-#[allow(dead_code)] // the landing caller is argon2.c.in's fill_mem_blocks_mt; see the group note
 pub(crate) unsafe fn ossl_crypto_thread_clean(vhandle: *mut c_void) -> c_int {
     // SAFETY: `vhandle` is NULL or a live thread per the contract, and the callee
     // accepts NULL.
