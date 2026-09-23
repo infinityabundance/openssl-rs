@@ -190,6 +190,16 @@ COURTS: list[tuple[str, str]] = [
     # context-building arm, because `int_ctx_new`'s legacy `pmeth` arm is not this landing's
     # subject (D355).
     ("RT-ECX", "rt_ecx_probe.c"),
+    # 8.10's registration-row court, and the arm D386's six landed rows were missing. Its subject
+    # is the `OSSL_OP_KEYMGMT` rows (`DH`, `DHX`, `TLS1-PRF`, `HKDF`, `SCRYPT`) and the
+    # `OSSL_OP_KEYEXCH` rows they gate (`DH`, `TLS1-PRF`, `HKDF`, `SCRYPT`): it fetches each by
+    # type name, builds a `DH` key through its own row with `EVP_PKEY_fromdata`, and reaches the
+    # exchange row's `derive_init` through that key. **`rt_digest_probe.c` already names
+    # `TLS1-PRF`/`HKDF`/`SCRYPT`**, but under `OSSL_OP_KDF` -- different rows of a different
+    # operation -- so the provider-row coverage join was satisfied while no arm drove the keymgmt
+    # or keyexch rows at all. This is that arm. The probe's own header names what it does not
+    # observe and why.
+    ("RT-KEYMGMT", "rt_keymgmt_probe.c"),
 ]
 
 # The correctness courts, and the committed vector sets each checks. `CT-DIGEST` is the

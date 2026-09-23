@@ -22592,6 +22592,266 @@ pub(crate) const PROV_KDF_EXCH_117: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `dh_gen_common_set_params` at `providers/implementations/keymgmt/dh_kmgmt.c:544` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PROV_DH_KMGMT_544: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/dh_kmgmt.c",
+    line: 544,
+    func: c"dh_gen_common_set_params",
+    lib: 57,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `dh_gen_common_set_params` at `providers/implementations/keymgmt/dh_kmgmt.c:558` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PROV_DH_KMGMT_558: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/dh_kmgmt.c",
+    line: 558,
+    func: c"dh_gen_common_set_params",
+    lib: 57,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `dhx_gen_set_params` at `providers/implementations/keymgmt/dh_kmgmt.c:653` (ERR_R_UNSUPPORTED).
+pub(crate) const PROV_DH_KMGMT_653: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/dh_kmgmt.c",
+    line: 653,
+    func: c"dhx_gen_set_params",
+    lib: 57,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `dh_gen_set_params` at `providers/implementations/keymgmt/dh_kmgmt.c:681` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PROV_DH_KMGMT_681: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/dh_kmgmt.c",
+    line: 681,
+    func: c"dh_gen_set_params",
+    lib: 57,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `dh_gen` at `providers/implementations/keymgmt/dh_kmgmt.c:725` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_DH_KMGMT_725: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/dh_kmgmt.c",
+    line: 725,
+    func: c"dh_gen",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `dh_check_key` at `providers/implementations/exchange/dh_exch.c:111` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_DH_EXCH_111: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 111,
+    func: c"dh_check_key",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `dh_match_params` at `providers/implementations/exchange/dh_exch.c:163` (PROV_R_MISMATCHING_DOMAIN_PARAMETERS).
+pub(crate) const PROV_DH_EXCH_163: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 163,
+    func: c"dh_match_params",
+    lib: 57,
+    reason: 203,
+    dynamic_reason: false,
+};
+
+/// `dh_plain_derive` at `providers/implementations/exchange/dh_exch.c:192` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_DH_EXCH_192: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 192,
+    func: c"dh_plain_derive",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `dh_plain_derive` at `providers/implementations/exchange/dh_exch.c:202` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_DH_EXCH_202: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 202,
+    func: c"dh_plain_derive",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `dh_X9_42_kdf_derive` at `providers/implementations/exchange/dh_exch.c:232` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_DH_EXCH_232: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 232,
+    func: c"dh_X9_42_kdf_derive",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `dh_set_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:402` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_402: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 402,
+    func: c"dh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_set_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:414` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_414: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 414,
+    func: c"dh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_set_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:466` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_466: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 466,
+    func: c"dh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_set_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:475` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_475: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 475,
+    func: c"dh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_set_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:491` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_491: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 491,
+    func: c"dh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_set_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:502` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_502: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 502,
+    func: c"dh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_set_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:513` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_513: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 513,
+    func: c"dh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_set_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:528` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_528: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 528,
+    func: c"dh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_set_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:542` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_542: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 542,
+    func: c"dh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_set_ctx_params` at `providers/implementations/exchange/dh_exch.c:603` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_DH_EXCH_603: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 603,
+    func: c"dh_set_ctx_params",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `dh_get_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:712` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_712: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 712,
+    func: c"dh_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_get_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:724` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_724: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 724,
+    func: c"dh_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_get_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:752` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_752: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 752,
+    func: c"dh_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_get_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:763` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_763: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 763,
+    func: c"dh_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_get_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:774` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_774: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 774,
+    func: c"dh_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_get_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:785` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_785: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 785,
+    func: c"dh_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
 /// `rsa_new_intern` at `crypto/rsa/rsa_lib.c:85` (ERR_R_CRYPTO_LIB).
 pub(crate) const RSA_LIB_85: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
@@ -36859,6 +37119,32 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_HMACDRBG_KDF_386,
     PROV_GENERIC_SKEYMGMT_63,
     PROV_KDF_EXCH_117,
+    PROV_DH_KMGMT_544,
+    PROV_DH_KMGMT_558,
+    PROV_DH_KMGMT_653,
+    PROV_DH_KMGMT_681,
+    PROV_DH_KMGMT_725,
+    PROV_DH_EXCH_111,
+    PROV_DH_EXCH_163,
+    PROV_DH_EXCH_192,
+    PROV_DH_EXCH_202,
+    PROV_DH_EXCH_232,
+    PROV_DH_EXCH_402,
+    PROV_DH_EXCH_414,
+    PROV_DH_EXCH_466,
+    PROV_DH_EXCH_475,
+    PROV_DH_EXCH_491,
+    PROV_DH_EXCH_502,
+    PROV_DH_EXCH_513,
+    PROV_DH_EXCH_528,
+    PROV_DH_EXCH_542,
+    PROV_DH_EXCH_603,
+    PROV_DH_EXCH_712,
+    PROV_DH_EXCH_724,
+    PROV_DH_EXCH_752,
+    PROV_DH_EXCH_763,
+    PROV_DH_EXCH_774,
+    PROV_DH_EXCH_785,
     RSA_LIB_85,
     RSA_LIB_106,
     RSA_LIB_116,

@@ -2338,8 +2338,8 @@ mod tests {
         let first = unsafe { core::ffi::CStr::from_ptr((*rands).algorithm_names) };
         assert_eq!(first.to_bytes(), b"CTR-DRBG");
 
-        // The KEYMGMT arm answers `deflt_keymgmt[]`, whose first landed row is the legacy KDF
-        // `TLS1-PRF` key type (the authority's `DH` rows are not landed yet).
+        // The KEYMGMT arm answers `deflt_keymgmt[]`, whose first landed row is the `DH` key type
+        // (D387; the authority's `deflt_keymgmt[]` puts `DH` and `DHX` first).
         // SAFETY: the query's contract; `provctx` is NULL and this arm ignores it.
         let keymgmts = unsafe {
             deflt_query(
@@ -2351,10 +2351,10 @@ mod tests {
         assert!(!keymgmts.is_null());
         // SAFETY: the returned table's first row is initialised.
         let first = unsafe { core::ffi::CStr::from_ptr((*keymgmts).algorithm_names) };
-        assert_eq!(first.to_bytes(), b"TLS1-PRF");
+        assert_eq!(first.to_bytes(), b"DH:dhKeyAgreement:1.2.840.113549.1.3.1");
 
-        // The KEYEXCH arm answers `deflt_keyexch[]`, whose first landed row is the KDF `TLS1-PRF`
-        // exchange (the authority's `DH` row is not landed yet).
+        // The KEYEXCH arm answers `deflt_keyexch[]`, whose first landed row is the `DH` exchange
+        // (D387).
         // SAFETY: the query's contract; `provctx` is NULL and this arm ignores it.
         let keyexchs = unsafe {
             deflt_query(
@@ -2366,7 +2366,7 @@ mod tests {
         assert!(!keyexchs.is_null());
         // SAFETY: the returned table's first row is initialised.
         let first = unsafe { core::ffi::CStr::from_ptr((*keyexchs).algorithm_names) };
-        assert_eq!(first.to_bytes(), b"TLS1-PRF");
+        assert_eq!(first.to_bytes(), b"DH:dhKeyAgreement:1.2.840.113549.1.3.1");
 
         // The SKEYMGMT arm answers `deflt_skeymgmt[]`, whose first row is the AES key type.
         // SAFETY: the query's contract; `provctx` is NULL and this arm ignores it.

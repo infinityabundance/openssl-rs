@@ -56,7 +56,7 @@ const OSSL_KDF_PARAM_CEK_ALG: *const c_char = c"cekalg".as_ptr();
 /// NUL-terminated C string; `md` live.
 #[allow(clippy::too_many_arguments)] // the authority's own signature has ten parameters.
 #[allow(non_snake_case)] // the authority's own symbol name
-unsafe fn ossl_dh_kdf_X9_42_asn1(
+pub(crate) unsafe fn ossl_dh_kdf_X9_42_asn1(
     out: *mut u8,
     outlen: usize,
     z: *const u8,

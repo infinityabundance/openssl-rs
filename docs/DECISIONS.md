@@ -27869,3 +27869,91 @@ open **0**) — these are registration rows, not symbols — and the new `#[no_m
 (`ossl_kdf_data_new`/`_free`/`_up_ref`) are authority *internal* symbols already listed in
 `forensics/atlas/internal-symbols.json`. No claim is made that the stratum is closer to sealing than
 `provider_rows` says.
+
+---
+
+## D387 — `dh_kmgmt.c` and `dh_exch.c.in` land, the keymgmt/keyexch arm is written, and the `DH` chain closes
+
+**Decision.** D385/D386's highest-leverage measurement is discharged: the `DH` and `DHX` keymgmt
+rows and the `DH` keyexch row land, and the court that *drives* the registration rows -- the arm
+D386 left as a to-do -- is written and registered. Three things are done, in the order that makes
+each possible.
+
+1. **The keystone prerequisite first: `ossl_dh_gen_type_name2id` lands, and the `type` column it
+   reads comes back with it.** `crypto/evp/dh_support.c:50` is fifteen lines, and `src/evp/pkey_ctx.rs`
+   carried `dhtype2id[]` and the id-to-name direction already but had **dropped the `type` member**
+   on the argument that no reader read it -- which was true while the ctrl plane, whose only caller
+   of the table is `fix_dh_paramgen_type`, never translated a name back to an id. `dh_kmgmt.c`'s
+   `dh_gen_type_name2id_w_default` (`:82`) does. The member is restored with its reader rather than
+   the function being written against a table that has lost it: a `name2id` with no `type` column
+   could not tell `DH`'s names from `DHX`'s, so `"fips186_2"` would answer for a `DH` key the
+   authority refuses. The three `TYPE_*` values are restated beside it as `DH_TYPE_ANY`/`_DH`/`_DHX`.
+2. **`providers/implementations/keymgmt/dh_kmgmt.c` lands whole (D327's rule), as
+   `src/provider/keymgmt.rs`'s second unit.** Nine hundred and ten lines, twenty-eight functions and
+   two dispatch tables whose two rows share nineteen of their twenty slots; `DHX` replaces
+   `newdata`, `gen_init`, `gen_set_params`, `gen_settable_params` and adds
+   `QUERY_OPERATION_NAME` before `DUP`. The two rows are appended to `DEFLT_KEYMGMT` **ahead of the
+   KDF trio**, because the census requires the crate's rows to be a subsequence of the authority's
+   `deflt_keymgmt[]` and the authority puts `DH`/`DHX` first. The unit raises five times
+   (`ERR_R_PASSED_INVALID_ARGUMENT` twice in `dh_gen_common_set_params` and once in
+   `dh_gen_set_params`, `ERR_R_UNSUPPORTED` in `dhx_gen_set_params`, and `ERR_R_INTERNAL_ERROR`
+   *with a message* in `dh_gen`), so `providers/implementations/keymgmt/dh_kmgmt.c` joins
+   `gen_err_raise_sites.py`'s covered set as `PROV_DH_KMGMT`; the `_data` site's text is built with
+   `BIO_snprintf` as `src/asn1/a_mbstr.rs` builds its own.
+3. **`providers/implementations/exchange/dh_exch.c.in` lands whole, and the `DH` row with it.** The
+   unit's two generated `ds_set_ctx_params`/`dh_get_ctx_params` blocks are transcribed as
+   `src/provider/mac.rs` and `src/provider/rand.rs` transcribe the same `produce_param_decoder`
+   machinery -- one repeated-key scan plus one `OSSL_PARAM_locate_const` per field -- and the
+   generated raise sites are read from the **generated** `dh_exch.c` in the authority's build tree,
+   because that is the text the compiler saw and the text `__FILE__`/`__LINE__` name. The
+   `#ifdef FIPS_MODULE` `dh_check_key`/`digest_check` pair and the two `ind_k`/`ind_d` decoder
+   fields are not this profile's; six `OSSL_FIPS_IND_*` uses reduce to no-ops and the literal 1.
+   `DH` is prepended to `DEFLT_KEYEXCH`, again because the census's subsequence rule and the
+   authority's `deflt_keyexch[]` both put it first.
+
+**The arm D386 left, and why it was not optional.** D386's six landed rows were *named* by
+`rt_digest_probe.c` -- `TLS1-PRF`, `HKDF` and `SCRYPT` are also `OSSL_OP_KDF` rows that probe
+fetches -- so `provider_court_coverage.py` was satisfied while **no arm drove the
+`OSSL_OP_KEYMGMT` or `OSSL_OP_KEYEXCH` rows at all**: they are different rows of different
+operations, and a literal in a probe for a KDF row is not an observation of a key type. So
+`courts/phase8/rt_keymgmt_probe.c` is written and `RT-KEYMGMT` registered in `phase8_courts.py` and
+in `provider_court_coverage.py`'s `COURT_PROBES` in the same commit as the rows it covers. It
+fetches each keymgmt row by type name, builds a `DH` key through its own row with
+`EVP_PKEY_fromdata` over the published FFDHE-2048 group (bits, size, security-bits, and the empty
+and unknown-group refusals), and reaches each keyexch row's `derive_init` through the key it built.
+Every observation is a return code or a size; no generated key, no derived secret and no address is
+printed. **One arm is deliberately absent and the probe's header names it**: `EVP_PKEY_get_id`,
+which is the `EVP_PKEY` object's legacy-type assignment rather than the keymgmt row's, and where
+this crate answers `-1` for a provider-built key where the authority answers `EVP_PKEY_DH` (28).
+
+**What remains, measured rather than reasoned.**
+
+* **`ecx_kmgmt.c.in` (4 rows)** and, behind it, `ecx_exch.c.in` (2) -- unchanged from D386: the
+  ECX layer is present (`src/ec/ecx_key.rs`), so the four rows are reachable-but-untranscribed.
+  `ecx_kmgmt.c.in` is the largest remaining reachable keymgmt unit (1,338 lines).
+* **`mac_legacy_kmgmt.c` (4 rows)** -- reachable (the census carve-out landed, `PROV_CIPHER` present);
+  the one arm to resolve after transcribing is `key_to_params`'s `#if !defined(OPENSSL_NO_ENGINE)`
+  block that reads `ENGINE_get_id`, which is D181's reduction written at the site with its reason.
+* **`rsa_kmgmt.c` (2) and `dsa_kmgmt.c` (1)** -- still behind `crypto/rsa/rsa_sp800_56b_check.c`
+  (via `rsa_chk.c`) and `crypto/dsa/dsa_check.c` respectively, exactly as D386 measured.
+* **`ec_kmgmt.c` (2) and `ecdh_exch.c.in` (1)** -- **the recorded reason was stale, and the
+  measurement corrects it.** D334's `EC_GROUP`/`EC_POINT` "indivisible landing not made" is no
+  longer the crate's state: `EC_GROUP_new_by_curve_name` (`src/ec/curve.rs`), `EC_POINT_new`/
+  `EC_POINT_mul` (`src/ec/lib.rs`) and the wNAF/ladder (`src/ec/mult.rs`) are landed. Of
+  `ec_kmgmt.c`'s 97 `EC*`/`EVP*`/`OSSL*`/`BN*`/`ossl_*` callee names the only genuine missing ones
+  are `ossl_ec_generate_key_dhkem` (`:1294`, reached only with `OSSL_PKEY_PARAM_DHKEM_IKM`) and
+  `ossl_sm2_key_private_check` (`:902`); `ecdh_exch.c.in` has **no** missing non-FIPS callee at
+  all, so it waits only on the `EC` keymgmt row. The withholding records for both units are
+  corrected in `phase8_provider_rows.py` rather than left stale.
+* **`ec_kem.c.in` (1) and the twelve PQC keymgmt rows** -- the PQC rows are each built on
+  `crypto/ml_dsa/`, `crypto/ml_kem/` or `crypto/slh_dsa/`, none of which the crate has.
+
+**Movement.** `provider_rows` moves implemented **190 → 193** (+3) and unimplemented **116 → 113**
+over **306** owned, and `projection.open[8]` moves **116 → 113**. The three are `dh_kmgmt.c`'s two
+(`DH`, `DHX`, `OSSL_OP_KEYMGMT`) and `dh_exch.c.in`'s one (`DH`, `OSSL_OP_KEYEXCH`). The export
+ledger is untouched (`forensics/phase8-obligations.json` `complete: true`, implemented **786**,
+deferred **0**, open **0**) -- these are registration rows, not symbols -- and
+`ossl_dh_gen_type_name2id` is an authority *internal* symbol already listed in
+`forensics/atlas/internal-symbols.json`. **The coverage join is `198` implemented rows and `0`
+unmatched**, which is what `RT-KEYMGMT` exists to keep true. No claim is made that the stratum is
+closer to sealing than `provider_rows` says.

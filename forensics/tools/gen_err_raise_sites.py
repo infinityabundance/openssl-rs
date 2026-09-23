@@ -616,6 +616,18 @@ COVERED_FILES = [
     # smaller than the KDF's fixed output size. `kdf_legacy_kmgmt.c` itself raises nothing and so is
     # deliberately absent, on the same reasoning as `skeymgmt/aes_skmgmt.c` above.
     ("providers/implementations/exchange/kdf_exch.c", "PROV_KDF_EXCH"),
+    # The `DH`/`DHX` key types (D387). `keymgmt/dh_kmgmt.c` is a plain `.c`, so its `__FILE__`
+    # carries the source-tree prefix. It raises five times: `dh_gen_common_set_params`
+    # (`:544`, `:558`) and `dh_gen_set_params` (`:681`) with `ERR_R_PASSED_INVALID_ARGUMENT`,
+    # `dhx_gen_set_params` (`:653`) with `ERR_R_UNSUPPORTED`, and `dh_gen` (`:725`) through
+    # `ERR_raise_data` with a formatted `gen_type` message.
+    ("providers/implementations/keymgmt/dh_kmgmt.c", "PROV_DH_KMGMT"),
+    # The `DH` key exchange row (D387). `exchange/dh_exch.c.in` is `.c.in`-generated, so its
+    # `__FILE__` is the bare build-relative path and its line numbers are the generated text's:
+    # `dh_match_params` (`:165`), `dh_plain_derive` (`:194`, `:204`) and `dh_X9_42_kdf_derive`
+    # (`:234`) in the hand-written body, and the two generated decoders'
+    # `PROV_R_REPEATED_PARAMETER` sites (`:402`-`:542` set, `:712`-`:785` get).
+    ("providers/implementations/exchange/dh_exch.c", "PROV_DH_EXCH"),
     # Phase 8.4: the `crypto/rsa` subsystem. The same rule as `crypto/bn` above -- this is
     # the *subsystem* set, not a selection of convenient files, because every one of them
     # raises from a surface Phase 8 owns and a coordinate's `file` string is part of the

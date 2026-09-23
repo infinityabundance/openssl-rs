@@ -298,6 +298,10 @@
       "observations": 65,
       "verdict": "pass"
     },
+    "RT-KEYMGMT": {
+      "observations": 22,
+      "verdict": "pass"
+    },
     "RT-LHASH": {
       "observations": 56,
       "verdict": "pass"
@@ -632,9 +636,12 @@
     "default/OSSL_OP_KDF/TLS13-KDF",
     "default/OSSL_OP_KDF/X942KDF-ASN1",
     "default/OSSL_OP_KDF/X963KDF",
+    "default/OSSL_OP_KEYEXCH/DH",
     "default/OSSL_OP_KEYEXCH/HKDF",
     "default/OSSL_OP_KEYEXCH/SCRYPT",
     "default/OSSL_OP_KEYEXCH/TLS1-PRF",
+    "default/OSSL_OP_KEYMGMT/DH",
+    "default/OSSL_OP_KEYMGMT/DHX",
     "default/OSSL_OP_KEYMGMT/HKDF",
     "default/OSSL_OP_KEYMGMT/SCRYPT",
     "default/OSSL_OP_KEYMGMT/TLS1-PRF",
@@ -661,14 +668,14 @@
       "8": 685,
       "9": 675
     },
-    "implemented": 195,
+    "implemented": 198,
     "open_by_phase": {
       "10": 636,
       "13": 39,
-      "8": 116,
+      "8": 113,
       "9": 10
     },
     "total": 996,
-    "unimplemented": 801
+    "unimplemented": 798
   }
 }
