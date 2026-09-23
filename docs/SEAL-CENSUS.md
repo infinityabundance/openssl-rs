@@ -263,7 +263,7 @@ Courts: `all pass`, 19 court(s), **2954** authority observation(s) over 19 trans
 ## Phase 8 — Native cryptographic primitives
 
 * state: `in-progress`
-* blocking: 113 provider registration row(s) of this stratum are neither implemented nor handed to a later phase (forensics/atlas/provider-algorithms.json): ARGON2D, ARGON2I, ARGON2ID, CMAC, DSA, DSA-SHA1...
+* blocking: 95 provider registration row(s) of this stratum are neither implemented nor handed to a later phase (forensics/atlas/provider-algorithms.json): ARGON2D, ARGON2I, ARGON2ID, CMAC, DSA, DSA-SHA1...
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase8-obligations.json`
 * atlas-owned: 759
@@ -276,7 +276,7 @@ Hand-offs received and discharged:
 
 * from phase 7: 27 symbol(s) — `EVP_PKEY_assign`, `EVP_PKEY_decrypt_old`, `EVP_PKEY_encrypt_old`, `EVP_PKEY_get0_DH`, `EVP_PKEY_get0_DSA`, `EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get0_RSA`, `EVP_PKEY_get0_hmac`, `EVP_PKEY_get0_poly1305`, `EVP_PKEY_get0_siphash`, `EVP_PKEY_get1_DH`, `EVP_PKEY_get1_DSA`, `EVP_PKEY_get1_EC_KEY`, `EVP_PKEY_get1_RSA`, `EVP_PKEY_get_ec_point_conv_form`, `EVP_PKEY_get_field_type`, `EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0`, `EVP_PKEY_meth_get_count`, `EVP_PKEY_set1_DH`, `EVP_PKEY_set1_DSA`, `EVP_PKEY_set1_EC_KEY`, `EVP_PKEY_set1_RSA`, `EVP_PKEY_type`, `d2i_KeyParams`, `d2i_KeyParams_bio`, `d2i_PublicKey`
 
-Courts: `all pass`, 14 court(s), **13192** authority observation(s) over 12 transcript court(s).
+Courts: `all pass`, 14 court(s), **13294** authority observation(s) over 12 transcript court(s).
 
 The other 2 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
 
@@ -293,7 +293,7 @@ The other 2 compare ELF structure rather than a transcript and observe nothing l
 | RT-PEM-KEY | `pass` | 102 |
 | RT-PUBKEY | `pass` | 100 |
 | RT-ECX | `pass` | 183 |
-| RT-KEYMGMT | `pass` | 22 |
+| RT-KEYMGMT | `pass` | 124 |
 | CT-DIGEST | `pass` | — (structural) |
 | CT-CIPHER | `pass` | — (structural) |
 
@@ -341,10 +341,10 @@ are proofs of reference only. See `docs/DECISIONS.md` D199 and D236.
 | 4 | 249 | 249 | 213 | 36 | 0 | 0 | 0 |
 | 5 | 474 | 474 | 383 | 91 | 0 | 0 | 0 |
 | 6 | 161 | 161 | 156 | 5 | 0 | 0 | 0 |
-| 7 | 733 | 733 | 679 | 54 | 0 | 0 | 0 |
+| 7 | 733 | 733 | 681 | 52 | 0 | 0 | 0 |
 | 8 | 786 | 778 | 778 | 0 | 8 | 0 | 0 |
 | 9 | 66 | 66 | 66 | 0 | 0 | 0 | 0 |
-| **total** | **2720** | **2712** | **2437** | **275** | **8** | **0** | **0** |
+| **total** | **2720** | **2712** | **2439** | **273** | **8** | **0** | **0** |
 
 ## Atlas/ledger reconciliation
 

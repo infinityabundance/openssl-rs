@@ -203,6 +203,7 @@
         "copysignf",
         "copysignf128",
         "copysignf16",
+        "ecx_load",
         "evp_pkcs82pkey_legacy",
         "fabs",
         "fabsf",
@@ -315,8 +316,10 @@
         "ossl_decoder_instance_new",
         "ossl_ec_check_group_type_id2name",
         "ossl_ec_curve_nid_from_params",
+        "ossl_ec_dhkem_derive_private",
         "ossl_ec_encoding_name2id",
         "ossl_ec_encoding_param2id",
+        "ossl_ec_generate_key_dhkem",
         "ossl_ec_group_do_inverse_ord",
         "ossl_ec_group_fromdata",
         "ossl_ec_group_new_ex",
@@ -359,6 +362,7 @@
         "ossl_ecdsa_verify",
         "ossl_ecdsa_verify_sig",
         "ossl_ecx_compute_key",
+        "ossl_ecx_dhkem_derive_private",
         "ossl_ecx_key_allocate_privkey",
         "ossl_ecx_key_dup",
         "ossl_ecx_key_free",
@@ -394,6 +398,9 @@
         "ossl_kdf_data_free",
         "ossl_kdf_data_new",
         "ossl_kdf_data_up_ref",
+        "ossl_mac_key_free",
+        "ossl_mac_key_new",
+        "ossl_mac_key_up_ref",
         "ossl_param_build_set_bn",
         "ossl_param_build_set_bn_pad",
         "ossl_param_build_set_int",
@@ -457,7 +464,7 @@
         "x25519_fe64_sub",
         "x25519_fe64_tobytes"
       ],
-      "compiler_emitted_count": 10578,
+      "compiler_emitted_count": 10963,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -3450,7 +3457,7 @@
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "ae8bde23fbf89684b7d9686722a5b1ba027f0e112c45ad1a3f223c0cbc1cd86f"
+      "sha256": "6fb8541bf831ddcc1cbe3622c1f7df069d31c1dad786a213db576283c84be480"
     },
     {
       "name": "authority-exports",

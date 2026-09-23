@@ -7,21 +7,21 @@
 //! `rsa_multiprime_keygen`, so this file is on the path of every 2048-bit
 //! `RSA_generate_key_ex(rsa, 2048, e = 65537, cb)`.
 //!
-//! **The three `rsa_sp800_56b_check.c` helpers the generator reaches live here too,
-//! and the reason is the prerequisite gate rather than convenience.** The generate
-//! path reaches exactly three of that unit's ten functions —
-//! [`ossl_rsa_check_public_exponent`], [`ossl_rsa_check_pminusq_diff`] and
-//! [`ossl_rsa_get_lcm`] — and the other seven are reachable only from
-//! `ossl_rsa_sp800_56b_check_keypair` and the provider's public-key validation, which
-//! no 8.4 body calls. Giving `rsa_sp800_56b_check.c` its own module would make those
-//! seven names *countable* to the gate, which would then report them as unbuilt
-//! internals of an in-progress stratum's unit; D326's own rule is that an unreachable
-//! transcription is dead code rather than a landing. So the file's dominant unit here
-//! is `rsa_sp800_56b_gen.c` (five symbols against three), and the three helpers are
-//! written beside the generator that calls them. `src/rsa/mod.rs` and
-//! `src/rsa/object.rs` are the same pattern from the other side: a module's
-//! definitions are allowed to be spread across units, and what the map records is the
-//! dominant one.
+//! **The three `rsa_sp800_56b_check.c` helpers the generator reaches used to live here, and in
+//! D391 they moved to [`crate::rsa::check`].** D326 wrote them beside the generator for a reason
+//! that has since inverted: the generate path reaches exactly three of that unit's ten functions —
+//! [`ossl_rsa_check_public_exponent`], [`ossl_rsa_check_pminusq_diff`] and [`ossl_rsa_get_lcm`] —
+//! and the other seven are reached only from `ossl_rsa_sp800_56b_check_keypair` and the provider's
+//! public-key validation, which no 8.4 body called. Giving `rsa_sp800_56b_check.c` its own module
+//! would have made those seven *countable* to the gate as unbuilt internals of an in-progress
+//! stratum's unit, and D326's own rule is that an unreachable transcription is dead code rather
+//! than a landing. **`rsa_kmgmt.c` reaches all seven** (D391), so the unit is transcribed whole in
+//! `src/rsa/check.rs` and the three helpers moved with it: the unit↔module map is measured from
+//! the code, so ten check-unit functions beside five gen-unit ones would have handed this module to
+//! the check unit and left `rsa_sp800_56b_gen.c` with no module at all. `src/rsa/mod.rs` and
+//! `src/rsa/object.rs` remain the pattern D326 described: a module's definitions are allowed to be
+//! spread across units, and what the map records is the dominant one — which here is the generator,
+//! as it was.
 //!
 //! **The `RSA_ACVP_TEST` machinery is `void` on this profile.** `include/crypto/rsa.h`
 //! defines the type only under `FIPS_MODULE && !OPENSSL_NO_ACVP_TESTS` and spells it
@@ -32,15 +32,16 @@
 
 use core::ffi::{c_int, c_void};
 
-use crate::bn::arith::{
-    BN_cmp, BN_div, BN_gcd, BN_mod_exp, BN_mod_inverse, BN_mul, BN_sub, BN_sub_word,
-};
+use crate::bn::arith::{BN_cmp, BN_div, BN_mod_exp, BN_mod_inverse, BN_mul};
 use crate::bn::bignum::{
-    BN_clear, BN_clear_free, BN_dup, BN_free, BN_is_odd, BN_is_zero, BN_new, BN_num_bits,
-    BN_secure_new, BN_set_flags, BN_set_negative, BN_set_word, BN_value_one, BigNum,
+    BN_clear, BN_clear_free, BN_dup, BN_free, BN_new, BN_num_bits, BN_secure_new, BN_set_flags,
+    BN_set_word, BigNum,
 };
 use crate::bn::ctx::{
     BN_CTX_end, BN_CTX_free, BN_CTX_get, BN_CTX_new_ex, BN_CTX_start, BnCtx, BnGencb,
+};
+use crate::rsa::check::{
+    ossl_rsa_check_pminusq_diff, ossl_rsa_check_public_exponent, ossl_rsa_get_lcm,
 };
 use crate::rsa::object::ossl_ifc_ffc_compute_security_bits;
 use crate::rsa::Rsa;
@@ -54,91 +55,6 @@ const RSA_FIPS1864_MIN_KEYGEN_KEYSIZE: c_int = 2048;
 
 /// `BN_FLG_CONSTTIME` — `include/openssl/bn.h:67`.
 const BN_FLG_CONSTTIME: c_int = 0x04;
-
-/// `int ossl_rsa_check_public_exponent(const BIGNUM *e)` —
-/// `crypto/rsa/rsa_sp800_56b_check.c:226-237`.
-///
-/// The profile's `#else` arm: "Allow small exponents larger than 1 for legacy
-/// purposes". The FIPS arm's `[17..256]` bit-length window is not this build's, and
-/// neither is the bound it would place on `rsa_multiprime_keygen`'s `e`.
-///
-/// # Safety
-///
-/// `e` must be NULL or a live `BIGNUM`.
-pub(crate) unsafe fn ossl_rsa_check_public_exponent(e: *const BigNum) -> c_int {
-    // SAFETY: `e` is NULL or live per this function's `# Safety` section, and
-    // `BN_is_odd`/`BN_cmp`/`BN_value_one` accept those.
-    unsafe { c_int::from(BN_is_odd(e) != 0 && BN_cmp(e, BN_value_one()) > 0) }
-}
-
-/// `int ossl_rsa_check_pminusq_diff(BIGNUM *diff, const BIGNUM *p, const BIGNUM *q,`
-/// `int nbits)` — `crypto/rsa/rsa_sp800_56b_check.c:243-258`.
-///
-/// `|p - q| > 2^(nbits/2 - 100)`, with `-1` for "the subtraction failed" and `0` for
-/// "not far enough apart". The `BN_set_negative(diff, 0)` is the absolute value, and
-/// the `BN_sub_word(diff, 1)` before the width test makes the comparison strict:
-/// `num_bits(p - q - 1) > bitlen` is the authority's spelling of
-/// `p - q > 2^bitlen`.
-///
-/// # Safety
-///
-/// `diff` must be live and writable; `p` and `q` must be live.
-pub(crate) unsafe fn ossl_rsa_check_pminusq_diff(
-    diff: *mut BigNum,
-    p: *const BigNum,
-    q: *const BigNum,
-    nbits: c_int,
-) -> c_int {
-    let bitlen = (nbits >> 1) - 100;
-
-    // SAFETY: `diff`, `p` and `q` are live per this function's `# Safety` section.
-    unsafe {
-        if BN_sub(diff, p, q) == 0 {
-            return -1;
-        }
-        BN_set_negative(diff, 0);
-        if BN_is_zero(diff) != 0 {
-            return 0;
-        }
-        if BN_sub_word(diff, 1) == 0 {
-            return -1;
-        }
-        c_int::from(BN_num_bits(diff) > bitlen)
-    }
-}
-
-/// `int ossl_rsa_get_lcm(BN_CTX *ctx, const BIGNUM *p, const BIGNUM *q, BIGNUM *lcm,`
-/// `BIGNUM *gcd, BIGNUM *p1, BIGNUM *q1, BIGNUM *p1q1)` —
-/// `crypto/rsa/rsa_sp800_56b_check.c:266-275`.
-///
-/// `LCM(p-1, q-1)` as `(p-1)(q-1) / gcd(p-1, q-1)`. The caller owns every temporary
-/// and must have marked them `BN_FLG_CONSTTIME`; this function only consumes them.
-///
-/// # Safety
-///
-/// Every pointer is live; `ctx` is a live `BN_CTX`.
-#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
-pub(crate) unsafe fn ossl_rsa_get_lcm(
-    ctx: *mut BnCtx,
-    p: *const BigNum,
-    q: *const BigNum,
-    lcm: *mut BigNum,
-    gcd: *mut BigNum,
-    p1: *mut BigNum,
-    q1: *mut BigNum,
-    p1q1: *mut BigNum,
-) -> c_int {
-    // SAFETY: every pointer is live per this function's `# Safety` section.
-    unsafe {
-        c_int::from(
-            BN_sub(p1, p, BN_value_one()) != 0 /* p-1 */
-                && BN_sub(q1, q, BN_value_one()) != 0 /* q-1 */
-                && BN_mul(p1q1, p1, q1, ctx) != 0 /* (p-1)(q-1) */
-                && BN_gcd(gcd, p1, q1, ctx) != 0
-                && BN_div(lcm, core::ptr::null_mut(), p1q1, gcd, ctx) != 0,
-        )
-    }
-}
 
 /// `int ossl_rsa_fips186_4_gen_prob_primes(RSA *rsa, RSA_ACVP_TEST *test, int nbits,`
 /// `const BIGNUM *e, BN_CTX *ctx, BN_GENCB *cb)` — `rsa_sp800_56b_gen.c:55-162`.
@@ -656,123 +572,6 @@ pub(crate) unsafe fn ossl_rsa_sp800_56b_pairwise_test(rsa: *mut Rsa, ctx: *mut B
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bn::bignum::{BN_is_one, BN_set_word};
-
-    /// **The profile's public-exponent rule is the legacy arm**: an odd exponent
-    /// greater than 1 is accepted, and everything else — even values, 1, 0 — is not.
-    /// The FIPS arm's bit-length window is a different function, and a test that
-    /// asserted it here would be asserting a branch this build does not compile.
-    #[test]
-    fn the_public_exponent_check_is_the_legacy_arm() {
-        // SAFETY: each `e` is a fresh object this test owns and `BN_set_word` writes a
-        // live one.
-        unsafe {
-            for (word, want) in [
-                (65537u64, 1),
-                (3, 1),
-                (17, 1),
-                (1, 0),
-                (0, 0),
-                (2, 0),
-                (4, 0),
-            ] {
-                let e = BN_new();
-                assert!(!e.is_null());
-                assert_eq!(BN_set_word(e, word), 1);
-                assert_eq!(
-                    ossl_rsa_check_public_exponent(e),
-                    want,
-                    "ossl_rsa_check_public_exponent({word})"
-                );
-                BN_free(e);
-            }
-        }
-    }
-
-    /// **`|p - q| > 2^(nbits/2 - 100)` and its three answers.** A 1023-bit `p` against
-    /// `q = 3` is far enough apart at 2048 bits; equal factors answer `0`, and a pair
-    /// one apart also answers `0` because the `BN_sub_word(diff, 1)` makes the test
-    /// strict.
-    #[test]
-    fn the_pminusq_check_measures_the_gap() {
-        // SAFETY: every pointer is a fresh object this test owns.
-        unsafe {
-            let p = BN_new();
-            let q = BN_new();
-            let diff = BN_new();
-            assert!(!p.is_null() && !q.is_null() && !diff.is_null());
-
-            assert_eq!(crate::bn::bignum::BN_set_bit(p, 1023), 1);
-            assert_eq!(BN_set_word(q, 3), 1);
-            assert_eq!(ossl_rsa_check_pminusq_diff(diff, p, q, 2048), 1);
-
-            /* `p == q`: zero difference. */
-            assert_eq!(ossl_rsa_check_pminusq_diff(diff, p, p, 2048), 0);
-
-            /* One apart: `diff - 1 == 0`, so the width test is not satisfied. */
-            let q2 = BN_new();
-            assert!(!q2.is_null());
-            assert_eq!(BN_set_word(q2, 4), 1);
-            let p2 = BN_new();
-            assert!(!p2.is_null());
-            assert_eq!(BN_set_word(p2, 5), 1);
-            assert_eq!(ossl_rsa_check_pminusq_diff(diff, p2, q2, 2048), 0);
-
-            BN_free(p);
-            BN_free(q);
-            BN_free(q2);
-            BN_free(p2);
-            BN_free(diff);
-        }
-    }
-
-    /// **The lcm helper is `LCM(p-1, q-1)`, not `(p-1)(q-1)`.** With `p = 61` and
-    /// `q = 53` the factors are 60 and 52, whose gcd is 4, so the lcm is 780 — and the
-    /// product identity `(p-1)(q-1) = gcd * lcm` is the independent statement that does
-    /// not restate the two `BN_div` arguments.
-    #[test]
-    fn the_lcm_helper_is_the_least_common_multiple() {
-        // SAFETY: every pointer is a fresh object this test owns or a live pool slot.
-        unsafe {
-            let ctx = BN_CTX_new_ex(core::ptr::null_mut());
-            assert!(!ctx.is_null());
-            BN_CTX_start(ctx);
-            let p = BN_new();
-            let q = BN_new();
-            assert!(!p.is_null() && !q.is_null());
-            assert_eq!(BN_set_word(p, 61), 1);
-            assert_eq!(BN_set_word(q, 53), 1);
-
-            let (p1, q1, lcm, p1q1, gcd) = (
-                BN_CTX_get(ctx),
-                BN_CTX_get(ctx),
-                BN_CTX_get(ctx),
-                BN_CTX_get(ctx),
-                BN_CTX_get(ctx),
-            );
-            assert!(!gcd.is_null());
-            assert_eq!(ossl_rsa_get_lcm(ctx, p, q, lcm, gcd, p1, q1, p1q1), 1);
-
-            let want = BN_new();
-            assert!(!want.is_null());
-            assert_eq!(BN_set_word(want, 780), 1);
-            assert_eq!(BN_cmp(lcm, want), 0);
-
-            /* `(p-1)(q-1) == gcd * lcm`. */
-            let prod = BN_new();
-            assert!(!prod.is_null());
-            assert_eq!(BN_mul(prod, gcd, lcm, ctx), 1);
-            assert_eq!(BN_cmp(prod, p1q1), 0);
-            assert_eq!(BN_is_one(gcd), 0);
-
-            BN_free(want);
-            BN_free(prod);
-            BN_free(p);
-            BN_free(q);
-            BN_CTX_end(ctx);
-            BN_CTX_free(ctx);
-        }
-    }
 
     /// **The strength check is the equality test with `-1` meaning "unknown".** The
     /// generator always passes `-1`; a caller that states a strength gets `1` for the

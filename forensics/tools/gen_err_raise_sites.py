@@ -628,6 +628,59 @@ COVERED_FILES = [
     # (`:234`) in the hand-written body, and the two generated decoders'
     # `PROV_R_REPEATED_PARAMETER` sites (`:402`-`:542` set, `:712`-`:785` get).
     ("providers/implementations/exchange/dh_exch.c", "PROV_DH_EXCH"),
+    # Phase 8.10's ECX chain (this pass): the four `X25519`/`X448`/`ED25519`/`ED448` key types, the
+    # two key-exchange rows they gate and the two DHKEM rows. All three are `.c.in`-generated, so
+    # each `__FILE__` is the bare build-relative path and each line number is the generated text's.
+    # `keymgmt/ecx_kmgmt.c` raises five times -- `ecx_gen_set_params`'s group-name mismatch
+    # (`:1144`, `ERR_R_PASSED_INVALID_ARGUMENT`), two `ERR_R_EC_LIB` sites in `ecx_gen` (`:1255`,
+    # `:1264`) and `ecx_validate`'s `PROV_R_ALGORITHM_MISMATCH` (`:1514`) -- plus the eleven
+    # generated `PROV_R_REPEATED_PARAMETER` sites its four decoders carry.
+    ("providers/implementations/keymgmt/ecx_kmgmt.c", "PROV_ECX_KMGMT"),
+    # `exchange/ecx_exch.c` raises three times, all `ERR_LIB_PROV`/`ERR_R_INTERNAL_ERROR`: `ecx_init`
+    # (`:86`), `ecx_set_peer` (`:124`) and the two reference failures in `ecx_dupctx` (`:168`,
+    # `:174`). It has no generated decoders (its only `FIPS_MODULE`-guarded one is not compiled).
+    ("providers/implementations/exchange/ecx_exch.c", "PROV_ECX_EXCH"),
+    # `kem/ecx_kem.c` raises from `ecx_pubkey` (`:155`, `PROV_R_NOT_A_PUBLIC_KEY`),
+    # `ossl_ecx_dhkem_derive_private` (`:401`, `PROV_R_INVALID_INPUT_LENGTH` with an
+    # `ikmlen`/`Nsk` message), `dhkem_encap` (`:618`, `:622`, `PROV_R_BAD_LENGTH`),
+    # `dhkem_decap` (`:681`, `PROV_R_BAD_LENGTH`; `:685`, `PROV_R_INVALID_KEY`) and the two
+    # `ecxkem_{encapsulate,decapsulate}` default arms (`:720`, `:734`, `PROV_R_INVALID_MODE`), plus
+    # its one generated `PROV_R_REPEATED_PARAMETER` decoder.
+    ("providers/implementations/kem/ecx_kem.c", "PROV_ECX_KEM"),
+    # 8.10's `HMAC`/`SIPHASH`/`POLY1305`/`CMAC` key types. `keymgmt/mac_legacy_kmgmt.c` is a plain
+    # `.c`, so its `__FILE__` carries the source-tree prefix. It raises eight times: three
+    # `ERR_R_PASSED_INVALID_ARGUMENT` sites in `mac_key_fromdata` (`:187` private-key type, `:202`
+    # property type, `:212` the CMAC cipher load), one each in `mac_gen_set_params` (`:422`) and
+    # `cmac_gen_set_params` (`:444`), and three in `mac_gen` (`:481` `ERR_R_PROV_LIB`, `:490`
+    # `PROV_R_INVALID_KEY`, `:503` `ERR_R_INTERNAL_ERROR`).
+    ("providers/implementations/keymgmt/mac_legacy_kmgmt.c", "PROV_MAC_LEGACY_KMGMT"),
+    # Phase 8's `rsa_kmgmt.c` and `dsa_kmgmt.c` (D391). Both are plain `.c` files, so their
+    # `__FILE__` carries the source-tree prefix. `rsa_kmgmt.c` raises once, the
+    # `PROV_R_KEY_SIZE_TOO_SMALL` refusal of `rsa_gen_set_params` at `:513`; `dsa_kmgmt.c`
+    # raises twice, `ERR_R_PASSED_INVALID_ARGUMENT` from `dsa_gen_set_params` at `:486` and
+    # `ERR_R_INTERNAL_ERROR` from `dsa_load` at `:633`.
+    ("providers/implementations/keymgmt/rsa_kmgmt.c", "PROV_RSA_KMGMT"),
+    ("providers/implementations/keymgmt/dsa_kmgmt.c", "PROV_DSA_KMGMT"),
+    # 8.10's `EC`/`SM2` key types and the `ECDH` exchange row. `keymgmt/ec_kmgmt.c` is a plain
+    # `.c`, so its `__FILE__` carries the source-tree prefix. It raises four times, all with
+    # `PROV_R_*` reasons: `common_get_params` (`:632` `PROV_R_NO_PARAMETERS_SET`, `:729`
+    # `PROV_R_NOT_A_PUBLIC_KEY`), `ec_gen_set_group` (`:1021` `PROV_R_INVALID_CURVE`) and
+    # `ec_gen_assign_group` (`:1241` `PROV_R_NO_PARAMETERS_SET`).
+    ("providers/implementations/keymgmt/ec_kmgmt.c", "PROV_EC_KMGMT"),
+    # `exchange/ecdh_exch.c.in` is `.c.in`-generated, so its `__FILE__` is the bare
+    # build-relative path. It raises from `ecdh_init` (`:65`), `ecdh_match_params` (`:114`),
+    # `ecdh_plain_derive` (`:172`, `:176`), `ecdh_X9_62_kdf_derive` (`:208`) and its two generated
+    # decoders' `PROV_R_REPEATED_PARAMETER` sites.
+    ("providers/implementations/exchange/ecdh_exch.c", "PROV_ECDH_EXCH"),
+    # The two EC KEM functions the EC keymgmt/gen path needs, and the unit's own rows.
+    # `kem/ec_kem.c.in` is `.c.in`-generated. It raises from `eckey_check` (`:82`),
+    # `ossl_ec_match_params` (`:236`), `ossl_ec_dhkem_derive_private` (`:415`, `:441`),
+    # `generate_ecdhkm` (`:534`), `derive_secret` (`:598`), `dhkem_encap` (`:672`, `:676`, `:692`),
+    # `dhkem_decap` and its one generated decoder.
+    ("providers/implementations/kem/ec_kem.c", "PROV_EC_KEM"),
+    # `crypto/sm2/sm2_key.c`: SM2's private-key range check, whose two raises are the
+    # `ERR_LIB_SM2` null-parameter and invalid-private-key reasons.
+    ("crypto/sm2/sm2_key.c", "SM2_KEY"),
     # Phase 8.4: the `crypto/rsa` subsystem. The same rule as `crypto/bn` above -- this is
     # the *subsystem* set, not a selection of convenient files, because every one of them
     # raises from a surface Phase 8 owns and a coordinate's `file` string is part of the
@@ -671,6 +724,12 @@ COVERED_FILES = [
     # `ERR_LIB_DSA`/`ERR_R_BUF_LIB` at `:28` and `:43`.
     ("crypto/dsa/dsa_prn.c", "DSA_PRN"),
     ("crypto/rsa/rsa_sp800_56b_check.c", "RSA_SP800_56B_CHECK"),
+    # Phase 8's `crypto/dsa/dsa_check.c` (D391). The unit is transcribed whole as
+    # `src/dsa/check.rs` and raises three times, all `ERR_LIB_DSA`: the two
+    # `DSA_R_BAD_FFC_PARAMETERS`/`DSA_R_MODULUS_TOO_LARGE` refusals of `dsa_precheck_params`
+    # at `:25` and `:31`, and its `DSA_R_BAD_Q_VALUE` at `:37`. Its third neighbour
+    # `DSA_R_BAD_FFC_PARAMETERS` is the same reason as the first.
+    ("crypto/dsa/dsa_check.c", "DSA_CHECK"),
     ("crypto/rsa/rsa_sp800_56b_gen.c", "RSA_SP800_56B_GEN"),
     ("crypto/rsa/rsa_x931g.c", "RSA_X931G"),
     ("crypto/rsa/rsa_depr.c", "RSA_DEPR"),
@@ -1471,6 +1530,10 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
         "#include <internal/propertyerr.h>",
         # `DSO_R_*` likewise, from `internal/dsoerr.h`.
         "#include <internal/dsoerr.h>",
+        # `SM2_R_*` for `crypto/sm2/sm2_key.c`, the SM2 private-key range check D389 transcribes.
+        # `crypto/sm2err.h` is not installed either, so it is the same fallthrough case as
+        # `internal/propertyerr.h`; it carries the `crypto/` prefix rather than `internal/`.
+        "#include <crypto/sm2err.h>",
         "#include <stdio.h>",
         "",
     ]

@@ -1,9 +1,10 @@
 //! `crypto/ec/ec_key.c` — the `EC_KEY` object and its key-derivation and key-check surface,
 //! Phase 8.7.
 //!
-//! One thousand and seventy-eight lines: fourteen internals — `ossl_ec_key_gen`,
+//! One thousand and seventy-eight lines: fifteen internals — `ossl_ec_key_gen`,
 //! `ossl_ec_key_simple_generate_key`, `ossl_ec_key_simple_generate_public_key`,
-//! `ossl_ec_key_simple_check_key`, the three `ossl_ec_key_public_check*`, the private and pairwise
+//! `ossl_ec_generate_key_dhkem`, `ossl_ec_key_simple_check_key`, the three
+//! `ossl_ec_key_public_check*`, the private and pairwise
 //! checks, the two `ossl_ec_key_simple_{priv2oct,oct2priv}` and the four libctx/propq
 //! readers/writers — and thirty-three exports, `EC_KEY_generate_key` among them. The plan's §1
 //! step 7 is this unit together with [`crate::ec::kmeth`], and D339 is why: `EC_KEY_free` frees its
@@ -23,19 +24,19 @@
 //! [`crate::ec::kmeth`]'s module documentation records for the constructor. Every engine call is
 //! named rather than silently dropped.
 //!
-//! ## The one internal this unit withholds, and its coordinate
+//! ## The one internal that was withheld, and the prerequisite D389 landed for it
 //!
-//! `ossl_ec_generate_key_dhkem` (`ec_key.c:357-386`) is **not** transcribed. Its body derives a
-//! private scalar through `ossl_ec_dhkem_derive_private`
-//! (`providers/implementations/kem/libdefault-lib-ec_kem.c:181`), which is the provider KEM DSO's
-//! and is not a `libcrypto` export: no crate module can name it, the distribution shell does not
-//! scaffold it, and calling it would leave the candidate DSO with an undefined reference. Its only
-//! two callers in the whole authority are the provider key management and KEM rows
-//! (`providers/implementations/keymgmt/ec_kmgmt.c:1294` and
-//! `providers/implementations/kem/ec_kem.c.in:486`), neither of which is in this crate. The name is
-//! recorded in `forensics/prerequisites.json`'s divergence list with this module, which is what
-//! turns the prerequisite gate's `unwired_function_in_the_current_stratum` finding into a decision:
-//! the alternative is a fabricated derivation for a function the provider half owns.
+//! `ossl_ec_generate_key_dhkem` (`ec_key.c:357-386`) derives a private scalar through
+//! `ossl_ec_dhkem_derive_private` (`providers/implementations/kem/ec_kem.c.in:387`). An earlier
+//! pass recorded it as unreachable on the reasoning that the callee is the **provider KEM DSO's**
+//! and not a `libcrypto` export, so a call would leave the candidate DSO undefined. **That
+//! reasoning is a fact about the authority's DSO split and not about this crate**: the crate
+//! compiles the provider units into the same archive, as `src/provider/ecx_kem.rs` already does for
+//! `ossl_ecx_dhkem_derive_private`. D389 landed the callee
+//! ([`crate::provider::ec_kem::ossl_ec_dhkem_derive_private`]) and this function with it, and the
+//! `forensics/prerequisites.json` divergence row that recorded the withholding is removed rather
+//! than left to fail-close as `stale`. The provider key management row (`ec_kmgmt.c:1294`) is its
+//! caller here; the KEM unit's own `derivekey` remains the other, in the authority.
 //!
 //! ## The `EC_FLAG_*` key-level bits, which are not the `EC_FLAGS_*` method-level ones
 //!
@@ -717,6 +718,75 @@ unsafe fn err_ec_generate_key(
         BN_clear_free(*priv_key);
         BN_CTX_free(ctx);
         BN_free(*order);
+        ok
+    }
+}
+
+/// `int ossl_ec_generate_key_dhkem(EC_KEY *eckey, const unsigned char *ikm, size_t ikmlen)` —
+/// `crypto/ec/ec_key.c:357-386`, inside the profile's `#ifndef FIPS_MODULE`. Internal.
+///
+/// The `ec_generate_key` twin that takes its private scalar from a seed instead of the RNG: the
+/// scalar is derived by [`crate::provider::ec_kem::ossl_ec_dhkem_derive_private`], which D389
+/// landed as this function's prerequisite. The `err:` path clears the private key and sets the
+/// public point to infinity rather than freeing the key — the caller owns the object.
+///
+/// # Safety
+///
+/// `eckey` is a live key with a group; `ikm` is NULL or readable for `ikmlen` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn ossl_ec_generate_key_dhkem(
+    eckey: *mut EcKey,
+    ikm: *const c_uchar,
+    ikmlen: usize,
+) -> c_int {
+    let mut ok: c_int = 0;
+
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer used here.
+    unsafe {
+        if (*eckey).priv_key.is_null() {
+            (*eckey).priv_key = BN_secure_new();
+            if (*eckey).priv_key.is_null() {
+                return ec_generate_key_dhkem_end(eckey, ok);
+            }
+        }
+        if crate::provider::ec_kem::ossl_ec_dhkem_derive_private(
+            eckey,
+            (*eckey).priv_key,
+            ikm,
+            ikmlen,
+        ) <= 0
+        {
+            return ec_generate_key_dhkem_end(eckey, ok);
+        }
+        if (*eckey).pub_key.is_null() {
+            (*eckey).pub_key = EC_POINT_new((*eckey).group);
+            if (*eckey).pub_key.is_null() {
+                return ec_generate_key_dhkem_end(eckey, ok);
+            }
+        }
+        if ossl_ec_key_simple_generate_public_key(eckey) == 0 {
+            return ec_generate_key_dhkem_end(eckey, ok);
+        }
+
+        ok = 1;
+        ec_generate_key_dhkem_end(eckey, ok)
+    }
+}
+
+/// The `err:` label of [`ossl_ec_generate_key_dhkem`] — `ec_key.c:378-385`.
+///
+/// # Safety
+/// `eckey` is a live key, as in the caller's contract.
+unsafe fn ec_generate_key_dhkem_end(eckey: *mut EcKey, ok: c_int) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if ok == 0 {
+            BN_clear_free((*eckey).priv_key);
+            (*eckey).priv_key = ptr::null_mut();
+            if !(*eckey).pub_key.is_null() {
+                EC_POINT_set_to_infinity((*eckey).group, (*eckey).pub_key);
+            }
+        }
         ok
     }
 }

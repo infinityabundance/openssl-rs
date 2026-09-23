@@ -2134,6 +2134,9 @@ unsafe extern "C" fn deflt_query(
     if operation_id == crate::evp::skeymgmt::OSSL_OP_SKEYMGMT {
         return crate::provider::skeymgmt::DEFLT_SKEYMGMT.as_ptr();
     }
+    if operation_id == crate::evp::kem::OSSL_OP_KEM {
+        return crate::provider::kem::DEFLT_ASYM_KEM.as_ptr();
+    }
     ptr::null()
 }
 
@@ -2301,13 +2304,19 @@ mod tests {
             "the twenty-seven default-provider digest rows 8.1 has landed"
         );
 
-        // SAFETY: the query's contract; an operation no arm answers. There are fifteen
-        // `OSSL_OP_*` values (1..=13 plus the two max sentinels); 14 is the max sentinel.
-        let none = unsafe { deflt_query(ptr::null_mut(), 14, &mut no_cache) };
+        // SAFETY: the query's contract; an operation no arm answers. `OSSL_OP_HIGHEST` (22) is the
+        // authority's own max sentinel and is not an operation any provider publishes.
+        let none = unsafe {
+            deflt_query(
+                ptr::null_mut(),
+                crate::evp::algorithm::OSSL_OP_HIGHEST,
+                &mut no_cache,
+            )
+        };
         assert!(
             none.is_null(),
-            "only OSSL_OP_DIGEST, OSSL_OP_CIPHER, OSSL_OP_MAC, OSSL_OP_KDF, OSSL_OP_RAND and \
-             OSSL_OP_SKEYMGMT are answered"
+            "only OSSL_OP_DIGEST, OSSL_OP_CIPHER, OSSL_OP_MAC, OSSL_OP_KDF, OSSL_OP_RAND, \
+             OSSL_OP_KEYMGMT, OSSL_OP_KEYEXCH, OSSL_OP_KEM and OSSL_OP_SKEYMGMT are answered"
         );
 
         // The cipher half answers too, and its table starts at `deflt_ciphers[]`'s first row.
@@ -2367,6 +2376,16 @@ mod tests {
         // SAFETY: the returned table's first row is initialised.
         let first = unsafe { core::ffi::CStr::from_ptr((*keyexchs).algorithm_names) };
         assert_eq!(first.to_bytes(), b"DH:dhKeyAgreement:1.2.840.113549.1.3.1");
+
+        // The KEM arm answers `deflt_asym_kem[]`, whose first landed row is the `X25519` DHKEM
+        // (this pass; the authority's `deflt_asym_kem[]` puts `RSA` first and `X25519` next).
+        // SAFETY: the query's contract; `provctx` is NULL and this arm ignores it.
+        let kems =
+            unsafe { deflt_query(ptr::null_mut(), crate::evp::kem::OSSL_OP_KEM, &mut no_cache) };
+        assert!(!kems.is_null());
+        // SAFETY: the returned table's first row is initialised.
+        let first = unsafe { core::ffi::CStr::from_ptr((*kems).algorithm_names) };
+        assert_eq!(first.to_bytes(), b"X25519:1.3.101.110");
 
         // The SKEYMGMT arm answers `deflt_skeymgmt[]`, whose first row is the AES key type.
         // SAFETY: the query's contract; `provctx` is NULL and this arm ignores it.

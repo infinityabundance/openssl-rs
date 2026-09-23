@@ -22852,6 +22852,1036 @@ pub(crate) const PROV_DH_EXCH_785: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ecx_imexport_types_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:247` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_247: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 247,
+    func: c"ecx_imexport_types_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_imexport_types_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:258` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_258: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 258,
+    func: c"ecx_imexport_types_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:420` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_420: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 420,
+    func: c"ecx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:431` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_431: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 431,
+    func: c"ecx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:443` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_443: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 443,
+    func: c"ecx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:455` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_455: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 455,
+    func: c"ecx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:470` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_470: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 470,
+    func: c"ecx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:481` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_481: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 481,
+    func: c"ecx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:529` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_529: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 529,
+    func: c"ecx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:540` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_540: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 540,
+    func: c"ecx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ed_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:607` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_607: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 607,
+    func: c"ed_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ed_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:626` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_626: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 626,
+    func: c"ed_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ed_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:637` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_637: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 637,
+    func: c"ed_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ed_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:654` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_654: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 654,
+    func: c"ed_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ed_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:665` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_665: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 665,
+    func: c"ed_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ed_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:713` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_713: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 713,
+    func: c"ed_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ed_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:724` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_724: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 724,
+    func: c"ed_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_set_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:891` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_891: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 891,
+    func: c"ecx_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_set_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:902` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_902: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 902,
+    func: c"ecx_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_gen_set_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:1079` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_1079: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1079,
+    func: c"ecx_gen_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_gen_set_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:1090` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_1090: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1090,
+    func: c"ecx_gen_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_gen_set_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:1101` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_1101: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1101,
+    func: c"ecx_gen_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_gen_set_params` at `providers/implementations/keymgmt/ecx_kmgmt.c:1144` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PROV_ECX_KMGMT_1144: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1144,
+    func: c"ecx_gen_set_params",
+    lib: 57,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `ecx_gen` at `providers/implementations/keymgmt/ecx_kmgmt.c:1255` (ERR_R_EC_LIB).
+pub(crate) const PROV_ECX_KMGMT_1255: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1255,
+    func: c"ecx_gen",
+    lib: 57,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ecx_gen` at `providers/implementations/keymgmt/ecx_kmgmt.c:1264` (ERR_R_EC_LIB).
+pub(crate) const PROV_ECX_KMGMT_1264: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1264,
+    func: c"ecx_gen",
+    lib: 57,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ecx_validate` at `providers/implementations/keymgmt/ecx_kmgmt.c:1514` (PROV_R_ALGORITHM_MISMATCH).
+pub(crate) const PROV_ECX_KMGMT_1514: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1514,
+    func: c"ecx_validate",
+    lib: 57,
+    reason: 173,
+    dynamic_reason: false,
+};
+
+/// `s390x_ecx_keygen25519` at `providers/implementations/keymgmt/ecx_kmgmt.c:1610` (ERR_R_EC_LIB).
+pub(crate) const PROV_ECX_KMGMT_1610: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1610,
+    func: c"s390x_ecx_keygen25519",
+    lib: 57,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_ecx_keygen25519` at `providers/implementations/keymgmt/ecx_kmgmt.c:1622` (ERR_R_EC_LIB).
+pub(crate) const PROV_ECX_KMGMT_1622: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1622,
+    func: c"s390x_ecx_keygen25519",
+    lib: 57,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_ecx_keygen448` at `providers/implementations/keymgmt/ecx_kmgmt.c:1667` (ERR_R_EC_LIB).
+pub(crate) const PROV_ECX_KMGMT_1667: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1667,
+    func: c"s390x_ecx_keygen448",
+    lib: 57,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_ecx_keygen448` at `providers/implementations/keymgmt/ecx_kmgmt.c:1679` (ERR_R_EC_LIB).
+pub(crate) const PROV_ECX_KMGMT_1679: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1679,
+    func: c"s390x_ecx_keygen448",
+    lib: 57,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_ecd_keygen25519` at `providers/implementations/keymgmt/ecx_kmgmt.c:1731` (ERR_R_EC_LIB).
+pub(crate) const PROV_ECX_KMGMT_1731: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1731,
+    func: c"s390x_ecd_keygen25519",
+    lib: 57,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_ecd_keygen25519` at `providers/implementations/keymgmt/ecx_kmgmt.c:1743` (ERR_R_EC_LIB).
+pub(crate) const PROV_ECX_KMGMT_1743: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1743,
+    func: c"s390x_ecd_keygen25519",
+    lib: 57,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_ecd_keygen448` at `providers/implementations/keymgmt/ecx_kmgmt.c:1799` (ERR_R_EC_LIB).
+pub(crate) const PROV_ECX_KMGMT_1799: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1799,
+    func: c"s390x_ecd_keygen448",
+    lib: 57,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_ecd_keygen448` at `providers/implementations/keymgmt/ecx_kmgmt.c:1811` (ERR_R_EC_LIB).
+pub(crate) const PROV_ECX_KMGMT_1811: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1811,
+    func: c"s390x_ecd_keygen448",
+    lib: 57,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ecx_init` at `providers/implementations/exchange/ecx_exch.c:86` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_ECX_EXCH_86: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecx_exch.c",
+    line: 86,
+    func: c"ecx_init",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ecx_set_peer` at `providers/implementations/exchange/ecx_exch.c:124` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_ECX_EXCH_124: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecx_exch.c",
+    line: 124,
+    func: c"ecx_set_peer",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ecx_dupctx` at `providers/implementations/exchange/ecx_exch.c:168` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_ECX_EXCH_168: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecx_exch.c",
+    line: 168,
+    func: c"ecx_dupctx",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ecx_dupctx` at `providers/implementations/exchange/ecx_exch.c:174` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_ECX_EXCH_174: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecx_exch.c",
+    line: 174,
+    func: c"ecx_dupctx",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ecx_get_ctx_params_decoder` at `providers/implementations/exchange/ecx_exch.c:218` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_EXCH_218: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecx_exch.c",
+    line: 218,
+    func: c"ecx_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_pubkey` at `providers/implementations/kem/ecx_kem.c:155` (PROV_R_NOT_A_PUBLIC_KEY).
+pub(crate) const PROV_ECX_KEM_155: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ecx_kem.c",
+    line: 155,
+    func: c"ecx_pubkey",
+    lib: 57,
+    reason: 220,
+    dynamic_reason: false,
+};
+
+/// `ecxkem_set_ctx_params_decoder` at `providers/implementations/kem/ecx_kem.c:280` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KEM_280: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ecx_kem.c",
+    line: 280,
+    func: c"ecxkem_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecxkem_set_ctx_params_decoder` at `providers/implementations/kem/ecx_kem.c:291` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KEM_291: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ecx_kem.c",
+    line: 291,
+    func: c"ecxkem_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_dhkem_derive_private` at `providers/implementations/kem/ecx_kem.c:401` (PROV_R_INVALID_INPUT_LENGTH).
+pub(crate) const PROV_ECX_KEM_401: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ecx_kem.c",
+    line: 401,
+    func: c"ossl_ecx_dhkem_derive_private",
+    lib: 57,
+    reason: 230,
+    dynamic_reason: false,
+};
+
+/// `dhkem_encap` at `providers/implementations/kem/ecx_kem.c:618` (PROV_R_BAD_LENGTH).
+pub(crate) const PROV_ECX_KEM_618: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ecx_kem.c",
+    line: 618,
+    func: c"dhkem_encap",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `dhkem_encap` at `providers/implementations/kem/ecx_kem.c:622` (PROV_R_BAD_LENGTH).
+pub(crate) const PROV_ECX_KEM_622: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ecx_kem.c",
+    line: 622,
+    func: c"dhkem_encap",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `dhkem_decap` at `providers/implementations/kem/ecx_kem.c:681` (PROV_R_BAD_LENGTH).
+pub(crate) const PROV_ECX_KEM_681: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ecx_kem.c",
+    line: 681,
+    func: c"dhkem_decap",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `dhkem_decap` at `providers/implementations/kem/ecx_kem.c:685` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_ECX_KEM_685: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ecx_kem.c",
+    line: 685,
+    func: c"dhkem_decap",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ecxkem_encapsulate` at `providers/implementations/kem/ecx_kem.c:720` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_ECX_KEM_720: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ecx_kem.c",
+    line: 720,
+    func: c"ecxkem_encapsulate",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `ecxkem_decapsulate` at `providers/implementations/kem/ecx_kem.c:734` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_ECX_KEM_734: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ecx_kem.c",
+    line: 734,
+    func: c"ecxkem_decapsulate",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `mac_key_fromdata` at `providers/implementations/keymgmt/mac_legacy_kmgmt.c:187` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PROV_MAC_LEGACY_KMGMT_187: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/mac_legacy_kmgmt.c",
+    line: 187,
+    func: c"mac_key_fromdata",
+    lib: 57,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `mac_key_fromdata` at `providers/implementations/keymgmt/mac_legacy_kmgmt.c:202` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PROV_MAC_LEGACY_KMGMT_202: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/mac_legacy_kmgmt.c",
+    line: 202,
+    func: c"mac_key_fromdata",
+    lib: 57,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `mac_key_fromdata` at `providers/implementations/keymgmt/mac_legacy_kmgmt.c:212` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PROV_MAC_LEGACY_KMGMT_212: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/mac_legacy_kmgmt.c",
+    line: 212,
+    func: c"mac_key_fromdata",
+    lib: 57,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `mac_gen_set_params` at `providers/implementations/keymgmt/mac_legacy_kmgmt.c:422` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PROV_MAC_LEGACY_KMGMT_422: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/mac_legacy_kmgmt.c",
+    line: 422,
+    func: c"mac_gen_set_params",
+    lib: 57,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `cmac_gen_set_params` at `providers/implementations/keymgmt/mac_legacy_kmgmt.c:444` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PROV_MAC_LEGACY_KMGMT_444: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/mac_legacy_kmgmt.c",
+    line: 444,
+    func: c"cmac_gen_set_params",
+    lib: 57,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `mac_gen` at `providers/implementations/keymgmt/mac_legacy_kmgmt.c:481` (ERR_R_PROV_LIB).
+pub(crate) const PROV_MAC_LEGACY_KMGMT_481: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/mac_legacy_kmgmt.c",
+    line: 481,
+    func: c"mac_gen",
+    lib: 57,
+    reason: 524345,
+    dynamic_reason: false,
+};
+
+/// `mac_gen` at `providers/implementations/keymgmt/mac_legacy_kmgmt.c:490` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_MAC_LEGACY_KMGMT_490: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/mac_legacy_kmgmt.c",
+    line: 490,
+    func: c"mac_gen",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `mac_gen` at `providers/implementations/keymgmt/mac_legacy_kmgmt.c:503` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_MAC_LEGACY_KMGMT_503: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/mac_legacy_kmgmt.c",
+    line: 503,
+    func: c"mac_gen",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_gen_set_params` at `providers/implementations/keymgmt/rsa_kmgmt.c:513` (PROV_R_KEY_SIZE_TOO_SMALL).
+pub(crate) const PROV_RSA_KMGMT_513: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/rsa_kmgmt.c",
+    line: 513,
+    func: c"rsa_gen_set_params",
+    lib: 57,
+    reason: 171,
+    dynamic_reason: false,
+};
+
+/// `dsa_gen_set_params` at `providers/implementations/keymgmt/dsa_kmgmt.c:486` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PROV_DSA_KMGMT_486: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/dsa_kmgmt.c",
+    line: 486,
+    func: c"dsa_gen_set_params",
+    lib: 57,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `dsa_gen` at `providers/implementations/keymgmt/dsa_kmgmt.c:633` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_DSA_KMGMT_633: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/dsa_kmgmt.c",
+    line: 633,
+    func: c"dsa_gen",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `common_get_params` at `providers/implementations/keymgmt/ec_kmgmt.c:632` (PROV_R_NO_PARAMETERS_SET).
+pub(crate) const PROV_EC_KMGMT_632: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/ec_kmgmt.c",
+    line: 632,
+    func: c"common_get_params",
+    lib: 57,
+    reason: 177,
+    dynamic_reason: false,
+};
+
+/// `common_get_params` at `providers/implementations/keymgmt/ec_kmgmt.c:729` (PROV_R_NOT_A_PUBLIC_KEY).
+pub(crate) const PROV_EC_KMGMT_729: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/ec_kmgmt.c",
+    line: 729,
+    func: c"common_get_params",
+    lib: 57,
+    reason: 220,
+    dynamic_reason: false,
+};
+
+/// `ec_gen_set_group` at `providers/implementations/keymgmt/ec_kmgmt.c:1021` (PROV_R_INVALID_CURVE).
+pub(crate) const PROV_EC_KMGMT_1021: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/ec_kmgmt.c",
+    line: 1021,
+    func: c"ec_gen_set_group",
+    lib: 57,
+    reason: 176,
+    dynamic_reason: false,
+};
+
+/// `ec_gen_assign_group` at `providers/implementations/keymgmt/ec_kmgmt.c:1241` (PROV_R_NO_PARAMETERS_SET).
+pub(crate) const PROV_EC_KMGMT_1241: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/ec_kmgmt.c",
+    line: 1241,
+    func: c"ec_gen_assign_group",
+    lib: 57,
+    reason: 177,
+    dynamic_reason: false,
+};
+
+/// `ecdh_match_params` at `providers/implementations/exchange/ecdh_exch.c:143` (ERR_R_BN_LIB).
+pub(crate) const PROV_ECDH_EXCH_143: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 143,
+    func: c"ecdh_match_params",
+    lib: 57,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ecdh_match_params` at `providers/implementations/exchange/ecdh_exch.c:150` (PROV_R_MISMATCHING_DOMAIN_PARAMETERS).
+pub(crate) const PROV_ECDH_EXCH_150: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 150,
+    func: c"ecdh_match_params",
+    lib: 57,
+    reason: 203,
+    dynamic_reason: false,
+};
+
+/// `ecdh_set_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:305` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_305: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 305,
+    func: c"ecdh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_set_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:374` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_374: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 374,
+    func: c"ecdh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_set_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:386` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_386: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 386,
+    func: c"ecdh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_set_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:451` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_451: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 451,
+    func: c"ecdh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_set_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:460` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_460: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 460,
+    func: c"ecdh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_set_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:476` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_476: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 476,
+    func: c"ecdh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_set_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:487` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_487: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 487,
+    func: c"ecdh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_set_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:498` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_498: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 498,
+    func: c"ecdh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_set_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:513` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_513: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 513,
+    func: c"ecdh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_set_ctx_params` at `providers/implementations/exchange/ecdh_exch.c:591` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_ECDH_EXCH_591: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 591,
+    func: c"ecdh_set_ctx_params",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `ecdh_get_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:678` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_678: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 678,
+    func: c"ecdh_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_get_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:690` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_690: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 690,
+    func: c"ecdh_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_get_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:718` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_718: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 718,
+    func: c"ecdh_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_get_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:729` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_729: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 729,
+    func: c"ecdh_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_get_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:740` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_740: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 740,
+    func: c"ecdh_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_get_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:751` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_751: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 751,
+    func: c"ecdh_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_plain_derive` at `providers/implementations/exchange/ecdh_exch.c:861` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_ECDH_EXCH_861: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 861,
+    func: c"ecdh_plain_derive",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `ecdh_plain_derive` at `providers/implementations/exchange/ecdh_exch.c:926` (PROV_R_COFACTOR_REQUIRED).
+pub(crate) const PROV_ECDH_EXCH_926: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 926,
+    func: c"ecdh_plain_derive",
+    lib: 57,
+    reason: 236,
+    dynamic_reason: false,
+};
+
+/// `ecdh_X9_63_kdf_derive` at `providers/implementations/exchange/ecdh_exch.c:962` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_ECDH_EXCH_962: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 962,
+    func: c"ecdh_X9_63_kdf_derive",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `eckey_check` at `providers/implementations/kem/ec_kem.c:80` (PROV_R_NOT_A_PUBLIC_KEY).
+pub(crate) const PROV_EC_KEM_80: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 80,
+    func: c"eckey_check",
+    lib: 57,
+    reason: 220,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_match_params` at `providers/implementations/kem/ec_kem.c:234` (PROV_R_MISMATCHING_DOMAIN_PARAMETERS).
+pub(crate) const PROV_EC_KEM_234: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 234,
+    func: c"ossl_ec_match_params",
+    lib: 57,
+    reason: 203,
+    dynamic_reason: false,
+};
+
+/// `eckem_set_ctx_params_decoder` at `providers/implementations/kem/ec_kem.c:324` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_EC_KEM_324: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 324,
+    func: c"eckem_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `eckem_set_ctx_params_decoder` at `providers/implementations/kem/ec_kem.c:335` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_EC_KEM_335: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 335,
+    func: c"eckem_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_dhkem_derive_private` at `providers/implementations/kem/ec_kem.c:463` (PROV_R_INVALID_INPUT_LENGTH).
+pub(crate) const PROV_EC_KEM_463: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 463,
+    func: c"ossl_ec_dhkem_derive_private",
+    lib: 57,
+    reason: 230,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_dhkem_derive_private` at `providers/implementations/kem/ec_kem.c:489` (PROV_R_FAILED_TO_GENERATE_KEY).
+pub(crate) const PROV_EC_KEM_489: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 489,
+    func: c"ossl_ec_dhkem_derive_private",
+    lib: 57,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `generate_ecdhkm` at `providers/implementations/kem/ec_kem.c:582` (PROV_R_BAD_LENGTH).
+pub(crate) const PROV_EC_KEM_582: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 582,
+    func: c"generate_ecdhkm",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `derive_secret` at `providers/implementations/kem/ec_kem.c:646` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_EC_KEM_646: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 646,
+    func: c"derive_secret",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `dhkem_encap` at `providers/implementations/kem/ec_kem.c:720` (PROV_R_BAD_LENGTH).
+pub(crate) const PROV_EC_KEM_720: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 720,
+    func: c"dhkem_encap",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `dhkem_encap` at `providers/implementations/kem/ec_kem.c:724` (PROV_R_BAD_LENGTH).
+pub(crate) const PROV_EC_KEM_724: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 724,
+    func: c"dhkem_encap",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `dhkem_encap` at `providers/implementations/kem/ec_kem.c:740` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_EC_KEM_740: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 740,
+    func: c"dhkem_encap",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `dhkem_decap` at `providers/implementations/kem/ec_kem.c:793` (PROV_R_BAD_LENGTH).
+pub(crate) const PROV_EC_KEM_793: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 793,
+    func: c"dhkem_decap",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `dhkem_decap` at `providers/implementations/kem/ec_kem.c:797` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_EC_KEM_797: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 797,
+    func: c"dhkem_decap",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `dhkem_decap` at `providers/implementations/kem/ec_kem.c:808` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_EC_KEM_808: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 808,
+    func: c"dhkem_decap",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `eckem_encapsulate` at `providers/implementations/kem/ec_kem.c:833` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_EC_KEM_833: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 833,
+    func: c"eckem_encapsulate",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `eckem_decapsulate` at `providers/implementations/kem/ec_kem.c:847` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_EC_KEM_847: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 847,
+    func: c"eckem_decapsulate",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_key_private_check` at `crypto/sm2/sm2_key.c:33` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const SM2_KEY_33: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_key.c",
+    line: 33,
+    func: c"ossl_sm2_key_private_check",
+    lib: 53,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_key_private_check` at `crypto/sm2/sm2_key.c:43` (SM2_R_INVALID_PRIVATE_KEY).
+pub(crate) const SM2_KEY_43: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_key.c",
+    line: 43,
+    func: c"ossl_sm2_key_private_check",
+    lib: 53,
+    reason: 113,
+    dynamic_reason: false,
+};
+
 /// `rsa_new_intern` at `crypto/rsa/rsa_lib.c:85` (ERR_R_CRYPTO_LIB).
 pub(crate) const RSA_LIB_85: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
@@ -25249,6 +26279,36 @@ pub(crate) const RSA_SP800_56B_CHECK_440: ErrSite = ErrSite {
     func: c"ossl_rsa_sp800_56b_check_keypair",
     lib: 4,
     reason: 171,
+    dynamic_reason: false,
+};
+
+/// `dsa_precheck_params` at `crypto/dsa/dsa_check.c:25` (DSA_R_BAD_FFC_PARAMETERS).
+pub(crate) const DSA_CHECK_25: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_check.c",
+    line: 25,
+    func: c"dsa_precheck_params",
+    lib: 10,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `dsa_precheck_params` at `crypto/dsa/dsa_check.c:31` (DSA_R_MODULUS_TOO_LARGE).
+pub(crate) const DSA_CHECK_31: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_check.c",
+    line: 31,
+    func: c"dsa_precheck_params",
+    lib: 10,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `dsa_precheck_params` at `crypto/dsa/dsa_check.c:37` (DSA_R_BAD_Q_VALUE).
+pub(crate) const DSA_CHECK_37: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_check.c",
+    line: 37,
+    func: c"dsa_precheck_params",
+    lib: 10,
+    reason: 102,
     dynamic_reason: false,
 };
 
@@ -37145,6 +38205,109 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_DH_EXCH_763,
     PROV_DH_EXCH_774,
     PROV_DH_EXCH_785,
+    PROV_ECX_KMGMT_247,
+    PROV_ECX_KMGMT_258,
+    PROV_ECX_KMGMT_420,
+    PROV_ECX_KMGMT_431,
+    PROV_ECX_KMGMT_443,
+    PROV_ECX_KMGMT_455,
+    PROV_ECX_KMGMT_470,
+    PROV_ECX_KMGMT_481,
+    PROV_ECX_KMGMT_529,
+    PROV_ECX_KMGMT_540,
+    PROV_ECX_KMGMT_607,
+    PROV_ECX_KMGMT_626,
+    PROV_ECX_KMGMT_637,
+    PROV_ECX_KMGMT_654,
+    PROV_ECX_KMGMT_665,
+    PROV_ECX_KMGMT_713,
+    PROV_ECX_KMGMT_724,
+    PROV_ECX_KMGMT_891,
+    PROV_ECX_KMGMT_902,
+    PROV_ECX_KMGMT_1079,
+    PROV_ECX_KMGMT_1090,
+    PROV_ECX_KMGMT_1101,
+    PROV_ECX_KMGMT_1144,
+    PROV_ECX_KMGMT_1255,
+    PROV_ECX_KMGMT_1264,
+    PROV_ECX_KMGMT_1514,
+    PROV_ECX_KMGMT_1610,
+    PROV_ECX_KMGMT_1622,
+    PROV_ECX_KMGMT_1667,
+    PROV_ECX_KMGMT_1679,
+    PROV_ECX_KMGMT_1731,
+    PROV_ECX_KMGMT_1743,
+    PROV_ECX_KMGMT_1799,
+    PROV_ECX_KMGMT_1811,
+    PROV_ECX_EXCH_86,
+    PROV_ECX_EXCH_124,
+    PROV_ECX_EXCH_168,
+    PROV_ECX_EXCH_174,
+    PROV_ECX_EXCH_218,
+    PROV_ECX_KEM_155,
+    PROV_ECX_KEM_280,
+    PROV_ECX_KEM_291,
+    PROV_ECX_KEM_401,
+    PROV_ECX_KEM_618,
+    PROV_ECX_KEM_622,
+    PROV_ECX_KEM_681,
+    PROV_ECX_KEM_685,
+    PROV_ECX_KEM_720,
+    PROV_ECX_KEM_734,
+    PROV_MAC_LEGACY_KMGMT_187,
+    PROV_MAC_LEGACY_KMGMT_202,
+    PROV_MAC_LEGACY_KMGMT_212,
+    PROV_MAC_LEGACY_KMGMT_422,
+    PROV_MAC_LEGACY_KMGMT_444,
+    PROV_MAC_LEGACY_KMGMT_481,
+    PROV_MAC_LEGACY_KMGMT_490,
+    PROV_MAC_LEGACY_KMGMT_503,
+    PROV_RSA_KMGMT_513,
+    PROV_DSA_KMGMT_486,
+    PROV_DSA_KMGMT_633,
+    PROV_EC_KMGMT_632,
+    PROV_EC_KMGMT_729,
+    PROV_EC_KMGMT_1021,
+    PROV_EC_KMGMT_1241,
+    PROV_ECDH_EXCH_143,
+    PROV_ECDH_EXCH_150,
+    PROV_ECDH_EXCH_305,
+    PROV_ECDH_EXCH_374,
+    PROV_ECDH_EXCH_386,
+    PROV_ECDH_EXCH_451,
+    PROV_ECDH_EXCH_460,
+    PROV_ECDH_EXCH_476,
+    PROV_ECDH_EXCH_487,
+    PROV_ECDH_EXCH_498,
+    PROV_ECDH_EXCH_513,
+    PROV_ECDH_EXCH_591,
+    PROV_ECDH_EXCH_678,
+    PROV_ECDH_EXCH_690,
+    PROV_ECDH_EXCH_718,
+    PROV_ECDH_EXCH_729,
+    PROV_ECDH_EXCH_740,
+    PROV_ECDH_EXCH_751,
+    PROV_ECDH_EXCH_861,
+    PROV_ECDH_EXCH_926,
+    PROV_ECDH_EXCH_962,
+    PROV_EC_KEM_80,
+    PROV_EC_KEM_234,
+    PROV_EC_KEM_324,
+    PROV_EC_KEM_335,
+    PROV_EC_KEM_463,
+    PROV_EC_KEM_489,
+    PROV_EC_KEM_582,
+    PROV_EC_KEM_646,
+    PROV_EC_KEM_720,
+    PROV_EC_KEM_724,
+    PROV_EC_KEM_740,
+    PROV_EC_KEM_793,
+    PROV_EC_KEM_797,
+    PROV_EC_KEM_808,
+    PROV_EC_KEM_833,
+    PROV_EC_KEM_847,
+    SM2_KEY_33,
+    SM2_KEY_43,
     RSA_LIB_85,
     RSA_LIB_106,
     RSA_LIB_116,
@@ -37385,6 +38548,9 @@ pub(crate) static ALL: &[ErrSite] = &[
     RSA_SP800_56B_CHECK_413,
     RSA_SP800_56B_CHECK_427,
     RSA_SP800_56B_CHECK_440,
+    DSA_CHECK_25,
+    DSA_CHECK_31,
+    DSA_CHECK_37,
     RSA_SP800_56B_GEN_89,
     RSA_SP800_56B_GEN_94,
     RSA_SP800_56B_GEN_180,

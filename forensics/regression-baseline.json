@@ -299,7 +299,7 @@
       "verdict": "pass"
     },
     "RT-KEYMGMT": {
-      "observations": 22,
+      "observations": 124,
       "verdict": "pass"
     },
     "RT-LHASH": {
@@ -456,9 +456,9 @@
   },
   "prerequisites": {
     "blocking_dependencies": 9,
-    "divergence_names_covered": 43,
+    "divergence_names_covered": 42,
     "findings": 0,
-    "language_census": 4797,
+    "language_census": 4811,
     "sealed_census": 50
   },
   "provider_implemented": [
@@ -636,15 +636,33 @@
     "default/OSSL_OP_KDF/TLS13-KDF",
     "default/OSSL_OP_KDF/X942KDF-ASN1",
     "default/OSSL_OP_KDF/X963KDF",
+    "default/OSSL_OP_KEM/X25519",
+    "default/OSSL_OP_KEM/X448",
     "default/OSSL_OP_KEYEXCH/DH",
+    "default/OSSL_OP_KEYEXCH/ECDH",
     "default/OSSL_OP_KEYEXCH/HKDF",
     "default/OSSL_OP_KEYEXCH/SCRYPT",
     "default/OSSL_OP_KEYEXCH/TLS1-PRF",
+    "default/OSSL_OP_KEYEXCH/X25519",
+    "default/OSSL_OP_KEYEXCH/X448",
+    "default/OSSL_OP_KEYMGMT/CMAC",
     "default/OSSL_OP_KEYMGMT/DH",
     "default/OSSL_OP_KEYMGMT/DHX",
+    "default/OSSL_OP_KEYMGMT/DSA",
+    "default/OSSL_OP_KEYMGMT/EC",
+    "default/OSSL_OP_KEYMGMT/ED25519",
+    "default/OSSL_OP_KEYMGMT/ED448",
     "default/OSSL_OP_KEYMGMT/HKDF",
+    "default/OSSL_OP_KEYMGMT/HMAC",
+    "default/OSSL_OP_KEYMGMT/POLY1305",
+    "default/OSSL_OP_KEYMGMT/RSA",
+    "default/OSSL_OP_KEYMGMT/RSA-PSS",
     "default/OSSL_OP_KEYMGMT/SCRYPT",
+    "default/OSSL_OP_KEYMGMT/SIPHASH",
+    "default/OSSL_OP_KEYMGMT/SM2",
     "default/OSSL_OP_KEYMGMT/TLS1-PRF",
+    "default/OSSL_OP_KEYMGMT/X25519",
+    "default/OSSL_OP_KEYMGMT/X448",
     "default/OSSL_OP_MAC/BLAKE2BMAC",
     "default/OSSL_OP_MAC/BLAKE2SMAC",
     "default/OSSL_OP_MAC/CMAC",
@@ -668,14 +686,14 @@
       "8": 685,
       "9": 675
     },
-    "implemented": 198,
+    "implemented": 216,
     "open_by_phase": {
       "10": 636,
       "13": 39,
-      "8": 113,
+      "8": 95,
       "9": 10
     },
     "total": 996,
-    "unimplemented": 798
+    "unimplemented": 780
   }
 }

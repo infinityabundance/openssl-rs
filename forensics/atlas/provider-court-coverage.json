@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 193,
+        "implemented": 211,
         "unmatched": 0
       },
       "9": {
@@ -34,8 +34,8 @@
         "probe": "courts/phase8/rt_keymgmt_probe.c"
       }
     ],
-    "directly_courted": 198,
-    "implemented_rows": 198,
+    "directly_courted": 216,
+    "implemented_rows": 216,
     "rows": [
       {
         "algorithm_names": "AES-128-CBC",
@@ -46,7 +46,8 @@
         ],
         "courts": [
           "RT-DIGEST",
-          "RT-CIPHER"
+          "RT-CIPHER",
+          "RT-KEYMGMT"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_CIPHER",
@@ -2469,11 +2470,52 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "X25519",
+        "aliases": [
+          "X25519",
+          "1.3.101.110"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEM",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "X448",
+        "aliases": [
+          "X448",
+          "1.3.101.111"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEM",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "DH",
         "aliases": [
           "DH",
           "dhKeyAgreement",
           "1.2.840.113549.1.3.1"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYEXCH",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ECDH",
+        "aliases": [
+          "ECDH"
         ],
         "courts": [
           "RT-KEYMGMT"
@@ -2524,6 +2566,48 @@
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYEXCH",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "X25519",
+        "aliases": [
+          "X25519",
+          "1.3.101.110"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYEXCH",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "X448",
+        "aliases": [
+          "X448",
+          "1.3.101.111"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYEXCH",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "CMAC",
+        "aliases": [
+          "CMAC"
+        ],
+        "courts": [
+          "RT-CIPHER",
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
         "owning_phase": 8,
         "provider": "default"
       },
@@ -2559,12 +2643,133 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "DSA",
+        "aliases": [
+          "DSA",
+          "dsaEncryption",
+          "1.2.840.10040.4.1"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "EC",
+        "aliases": [
+          "EC",
+          "id-ecPublicKey",
+          "1.2.840.10045.2.1"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ED25519",
+        "aliases": [
+          "ED25519",
+          "1.3.101.112"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ED448",
+        "aliases": [
+          "ED448",
+          "1.3.101.113"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "HKDF",
         "aliases": [
           "HKDF"
         ],
         "courts": [
           "RT-DIGEST",
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "HMAC",
+        "aliases": [
+          "HMAC"
+        ],
+        "courts": [
+          "RT-DIGEST",
+          "RT-CIPHER",
+          "RT-DRBG",
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "POLY1305",
+        "aliases": [
+          "POLY1305"
+        ],
+        "courts": [
+          "RT-DIGEST",
+          "RT-CIPHER",
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "RSA",
+        "aliases": [
+          "RSA",
+          "rsaEncryption",
+          "1.2.840.113549.1.1.1"
+        ],
+        "courts": [
+          "RT-DRBG",
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "RSA-PSS",
+        "aliases": [
+          "RSA-PSS",
+          "RSASSA-PSS",
+          "rsassaPss",
+          "1.2.840.113549.1.1.10"
+        ],
+        "courts": [
           "RT-KEYMGMT"
         ],
         "coverage": "direct",
@@ -2589,12 +2794,68 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "SIPHASH",
+        "aliases": [
+          "SIPHASH"
+        ],
+        "courts": [
+          "RT-CIPHER",
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SM2",
+        "aliases": [
+          "SM2",
+          "1.2.156.10197.1.301"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "TLS1-PRF",
         "aliases": [
           "TLS1-PRF"
         ],
         "courts": [
           "RT-DIGEST",
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "X25519",
+        "aliases": [
+          "X25519",
+          "1.3.101.110"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "X448",
+        "aliases": [
+          "X448",
+          "1.3.101.111"
+        ],
+        "courts": [
           "RT-KEYMGMT"
         ],
         "coverage": "direct",
@@ -2636,7 +2897,8 @@
           "CMAC"
         ],
         "courts": [
-          "RT-CIPHER"
+          "RT-CIPHER",
+          "RT-KEYMGMT"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_MAC",
@@ -2651,7 +2913,8 @@
         "courts": [
           "RT-DIGEST",
           "RT-CIPHER",
-          "RT-DRBG"
+          "RT-DRBG",
+          "RT-KEYMGMT"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_MAC",
@@ -2695,7 +2958,8 @@
         ],
         "courts": [
           "RT-DIGEST",
-          "RT-CIPHER"
+          "RT-CIPHER",
+          "RT-KEYMGMT"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_MAC",
@@ -2708,7 +2972,8 @@
           "SIPHASH"
         ],
         "courts": [
-          "RT-CIPHER"
+          "RT-CIPHER",
+          "RT-KEYMGMT"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_MAC",
@@ -2815,7 +3080,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "7cd990a96fc54ae6cbe094a16c5bc09d104f0f58a5b08bd65f235ce0781a83a7"
+      "sha256": "e6cac17689f4a0bae0ab494eb5a29af6a9b51a722444bf7a6ba1cb0767eadcff"
     },
     {
       "name": "court:RT-DIGEST",
@@ -2835,7 +3100,7 @@
     {
       "name": "court:RT-KEYMGMT",
       "path": "courts/phase8/rt_keymgmt_probe.c",
-      "sha256": "28f361fef0cf33ac51a638474137fa459c3f8390478f45cc273ee37764b9324d"
+      "sha256": "c93c9eec13fba588660beda23c7970ddbcd9fd08acbf35ea5470e21fc94dc184"
     }
   ],
   "kind": "provider-court-coverage",
