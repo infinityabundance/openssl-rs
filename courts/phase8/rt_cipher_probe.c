@@ -4653,6 +4653,7 @@ static void rt_deflt_properties(void)
         { "cipher", "AES-128-CBC" },
         { "digest", "SHA256" },
         { "mac",    "CMAC" },
+        { "mac",    "GMAC" },
         { "mac",    "HMAC" },
         { "mac",    "BLAKE2BMAC" },
         { "mac",    "BLAKE2SMAC" },
@@ -7969,6 +7970,125 @@ static void rt_deflt_hmac(void)
     EVP_MAC_free(mac);
 }
 
+/*
+ * The `GMAC` row -- the last `OSSL_OP_MAC` row the census called open. It was withheld while this
+ * profile's only GCM ciphers were Phase 9's, and for a reason that is worth restating because it is
+ * the `DES3-WRAP` class one operation over: `gmac_set_ctx_params` resolves a `cipher` name and then
+ * refuses every mode but `EVP_CIPH_GCM_MODE` (`gmac_prov.c.in:236-239`), so a registered GMAC would
+ * have answered `EVP_MAC_fetch` 1 on **both** sides and then failed every init where the authority
+ * succeeded (D243). The `AES-{128,192,256}-GCM` rows landed, so the row is publishable and this arm
+ * drives it.
+ *
+ * The tag is deterministic -- GMAC is GHASH under a fixed key and IV with no nonce reuse -- so the
+ * successful arm prints it and the two sides must agree byte for byte. That is stronger than the
+ * naming the provider census asks for, and it is what a row that resolves a *cipher by name* needs:
+ * the failure this arm would have found, had the row been published early, is an init that answers
+ * 1 and a tag that differs.
+ *
+ * The refusals are the three a caller can reach: a cipher whose mode is not GCM
+ * (`PROV_R_INVALID_MODE`), a cipher name that resolves to nothing, and no cipher at all, which
+ * makes `gmac_setkey`'s `EVP_EncryptInit_ex(ctx, NULL, NULL, key, NULL)` fail on an unset cipher.
+ */
+static void rt_deflt_gmac(void)
+{
+    /*
+     * The GCM-128 case's own key, IV and plaintext, reused as GMAC's inputs. The tag is **not**
+     * the published vector's: GMAC feeds `update`'s bytes in as *AAD* with an empty ciphertext
+     * (`gmac_update` calls `EVP_EncryptUpdate(ctx, NULL, &outlen, data, datalen)`), where the
+     * published case authenticates a non-empty ciphertext too. The two sides must still agree on
+     * it exactly, which is what this arm compares -- the constant is here so the value is
+     * reproducible rather than incidental, not because it is a known answer.
+     */
+    static const unsigned char key[16] = {
+        0xfe, 0xff, 0xe9, 0x92, 0x86, 0x65, 0x73, 0x1c,
+        0x6d, 0x6a, 0x8f, 0x94, 0x67, 0x30, 0x83, 0x08
+    };
+    static const unsigned char iv[12] = {
+        0xca, 0xfe, 0xba, 0xbe, 0xfa, 0xce, 0xdb, 0xad,
+        0xde, 0xca, 0xf8, 0x88
+    };
+    static const unsigned char msg[60] = {
+        0xd9, 0x31, 0x32, 0x25, 0xf8, 0x84, 0x06, 0xe5,
+        0xa5, 0x59, 0x09, 0xc5, 0xaf, 0xf5, 0x26, 0x9a,
+        0x86, 0xa7, 0xa9, 0x53, 0x15, 0x34, 0xf7, 0xda,
+        0x2e, 0x4c, 0x30, 0x3d, 0x8a, 0x31, 0x8a, 0x72,
+        0x1c, 0x3c, 0x0c, 0x95, 0x95, 0x68, 0x09, 0x53,
+        0x2f, 0xcf, 0x0e, 0x24, 0x49, 0xa6, 0xb5, 0x25,
+        0xb1, 0x6a, 0xed, 0xf5, 0xaa, 0x0d, 0xe6, 0x57,
+        0xba, 0x63, 0x7b, 0x39
+    };
+    unsigned char tag[32];
+    size_t taglen = 0;
+    EVP_MAC *mac = EVP_MAC_fetch(NULL, "GMAC", NULL);
+    EVP_MAC_CTX *ctx = NULL;
+
+    printf("defltgmac.fetched=%d\n", mac != NULL);
+    if (mac == NULL)
+        return;
+    printf("defltgmac.name=%s\n", EVP_MAC_get0_name(mac));
+    ctx = EVP_MAC_CTX_new(mac);
+    printf("defltgmac.ctx=%d\n", ctx != NULL);
+    if (ctx == NULL) {
+        EVP_MAC_free(mac);
+        return;
+    }
+    printf("defltgmac.size=%zu\n", EVP_MAC_CTX_get_mac_size(ctx));
+
+    {
+        OSSL_PARAM params[3];
+
+        params[0] = OSSL_PARAM_construct_utf8_string("cipher", (char *)"AES-128-GCM", 0);
+        params[1] = OSSL_PARAM_construct_octet_string("iv", (void *)iv, sizeof(iv));
+        params[2] = OSSL_PARAM_construct_end();
+
+        ERR_clear_error();
+        printf("defltgmac.init=%d\n", EVP_MAC_init(ctx, key, sizeof(key), params));
+        rt_errq("gmac_init");
+        printf("defltgmac.update=%d\n", EVP_MAC_update(ctx, msg, sizeof(msg)));
+        ERR_clear_error();
+        printf("defltgmac.final=%d\n", EVP_MAC_final(ctx, tag, &taglen, sizeof(tag)));
+        rt_errq("gmac_final");
+        printf("defltgmac.taglen=%zu\n", taglen);
+        rt_hex("defltgmac.tag", tag, taglen);
+    }
+    EVP_MAC_CTX_free(ctx);
+
+    /* A cipher whose mode is not GCM: `gmac_set_ctx_params` names the mode it refused. */
+    ctx = EVP_MAC_CTX_new(mac);
+    {
+        OSSL_PARAM params[2];
+
+        params[0] = OSSL_PARAM_construct_utf8_string("cipher", (char *)"AES-128-CBC", 0);
+        params[1] = OSSL_PARAM_construct_end();
+        ERR_clear_error();
+        printf("defltgmac.badmode.init=%d\n", EVP_MAC_init(ctx, key, sizeof(key), params));
+        rt_errq("gmac_badmode");
+    }
+    EVP_MAC_CTX_free(ctx);
+
+    /* A cipher name that resolves to nothing. */
+    ctx = EVP_MAC_CTX_new(mac);
+    {
+        OSSL_PARAM params[2];
+
+        params[0] = OSSL_PARAM_construct_utf8_string("cipher", (char *)"NO-SUCH-GCM-CIPHER", 0);
+        params[1] = OSSL_PARAM_construct_end();
+        ERR_clear_error();
+        printf("defltgmac.nocipher.init=%d\n", EVP_MAC_init(ctx, key, sizeof(key), params));
+        rt_errq("gmac_nocipher");
+    }
+    EVP_MAC_CTX_free(ctx);
+
+    /* No cipher at all: the key's `EVP_EncryptInit_ex` has nothing to initialise. */
+    ctx = EVP_MAC_CTX_new(mac);
+    ERR_clear_error();
+    printf("defltgmac.unset.init=%d\n", EVP_MAC_init(ctx, key, sizeof(key), NULL));
+    rt_errq("gmac_unset");
+    EVP_MAC_CTX_free(ctx);
+
+    EVP_MAC_free(mac);
+}
+
 /* The same refusals reached the way an application reaches them, through `EVP_*`. Four of the
  * six named paths are reachable here (the invalid key length and the too-small output buffer are
  * not, because EVP chooses those arguments), and what this arm adds is the EVP layer's own
@@ -8522,6 +8642,7 @@ int main(void)
     rt_deflt_properties();
     rt_deflt_siphash();
     rt_deflt_hmac();
+    rt_deflt_gmac();
     rt_deflt_blake2_mac();
     rt_deflt_poly1305();
     rt_deflt_kmac();

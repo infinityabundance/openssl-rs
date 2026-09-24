@@ -7,7 +7,7 @@
         "unmatched": 0
       },
       "9": {
-        "implemented": 13,
+        "implemented": 14,
         "unmatched": 0
       }
     },
@@ -58,8 +58,8 @@
         ]
       }
     ],
-    "directly_courted": 319,
-    "implemented_rows": 319,
+    "directly_courted": 320,
+    "implemented_rows": 320,
     "rows": [
       {
         "algorithm_names": "RSA",
@@ -3613,6 +3613,20 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "GMAC",
+        "aliases": [
+          "GMAC",
+          "1.0.9797.3.4"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_MAC",
+        "owning_phase": 9,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "HMAC",
         "aliases": [
           "HMAC"
@@ -4720,7 +4734,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "a54a586ca3fb4230a0fd213b5c4f49d40a976ab78ddb20c65546ddb46c8d8159"
+      "sha256": "45e51d42aefa698d9cc2026aaf19a75346ac1eba7e0912f7179c5ea3ffa261b6"
     },
     {
       "name": "court:RT-DIGEST:rt_digest_probe.c",
@@ -4730,7 +4744,7 @@
     {
       "name": "court:RT-CIPHER:rt_cipher_probe.c",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "4fe4eff1e3f592b8246086a52b10939b1e877c961c3e083a7b68639ef33c75c3"
+      "sha256": "2618b7634207721af898298c8b42d4b85fd9cdc1803bb8ce06e2495c2472a99d"
     },
     {
       "name": "court:RT-DRBG:rt_drbg_probe.c",

@@ -275,14 +275,14 @@ Hand-offs received and discharged:
 
 * from phase 7: 27 symbol(s) — `EVP_PKEY_assign`, `EVP_PKEY_decrypt_old`, `EVP_PKEY_encrypt_old`, `EVP_PKEY_get0_DH`, `EVP_PKEY_get0_DSA`, `EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get0_RSA`, `EVP_PKEY_get0_hmac`, `EVP_PKEY_get0_poly1305`, `EVP_PKEY_get0_siphash`, `EVP_PKEY_get1_DH`, `EVP_PKEY_get1_DSA`, `EVP_PKEY_get1_EC_KEY`, `EVP_PKEY_get1_RSA`, `EVP_PKEY_get_ec_point_conv_form`, `EVP_PKEY_get_field_type`, `EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0`, `EVP_PKEY_meth_get_count`, `EVP_PKEY_set1_DH`, `EVP_PKEY_set1_DSA`, `EVP_PKEY_set1_EC_KEY`, `EVP_PKEY_set1_RSA`, `EVP_PKEY_type`, `d2i_KeyParams`, `d2i_KeyParams_bio`, `d2i_PublicKey`
 
-Courts: `all pass`, 18 court(s), **15415** authority observation(s) over 15 transcript court(s).
+Courts: `all pass`, 18 court(s), **15438** authority observation(s) over 15 transcript court(s).
 
 The other 3 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
 
 | court | verdict | observations |
 |---|---|---|
 | RT-DIGEST | `pass` | 654 |
-| RT-CIPHER | `pass` | 7232 |
+| RT-CIPHER | `pass` | 7255 |
 | RT-CIPHER-MEM | `pass` | 382 |
 | RT-RSA | `pass` | 1021 |
 | RT-DH | `pass` | 589 |
@@ -303,7 +303,7 @@ The other 3 compare ELF structure rather than a transcript and observe nothing l
 ## Phase 9 — RAND / DRBG + entropy
 
 * state: `in-progress`
-* blocking: 2 provider registration row(s) of this stratum are neither implemented nor handed to a later phase (forensics/atlas/provider-algorithms.json): GMAC, SEED-SRC
+* blocking: 1 provider registration row(s) of this stratum are neither implemented nor handed to a later phase (forensics/atlas/provider-algorithms.json): SEED-SRC
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase9-obligations.json`
 * atlas-owned: 25
