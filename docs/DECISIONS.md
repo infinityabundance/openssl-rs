@@ -29608,3 +29608,94 @@ at **0 findings**, `evidence_determinism.py` and `docs_consistency.py` are `ok`,
 `PIPELINE OK` with **exit 0** over **100 courts / 38,913 observations**. `phase-state.json` derives
 phase 8 `complete`; the seal document (`docs/PHASE-8-CRYPTO-SEAL.md`, the plan's 8.10) is still to be
 written, and this entry does not claim it exists.
+
+## D411 -- the default provider's capability surface lands, and `D117`'s provider-params half closes
+
+The three dispatch arms row 8.2 has recorded as absent since the bootstrap, the transcription behind
+them, and the court that drives them.
+
+### `providers/common/capabilities.c` (344 lines) is transcribed whole
+
+`src/provider/capabilities.rs` carries the unit's one external name, `ossl_prov_get_capabilities`, plus
+its two static walkers and four static tables, in the authority's order. Every `#if` in the authority
+guards on a macro the admitted profile leaves undefined -- `forensics/authorities/build/openssl-3.6.4-production/include/openssl/configuration.h`
+defines none of `OPENSSL_NO_EC`, `OPENSSL_NO_DH`, `OPENSSL_NO_ML_KEM`, `OPENSSL_NO_ML_DSA`,
+`OPENSSL_NO_ECX`, `OPENSSL_NO_EC2M`, `OPENSSL_NO_TLS_DEPRECATED_EC`, and `FIPS_MODULE` is not defined
+for the default provider -- so the tables are at their full sizes. The entry counts are read by the
+court rather than asserted here.
+
+The one non-mechanical problem in the transcription is that C's `TLS_GROUP_ENTRY` binds each value
+parameter's `data` to **the address of a static struct member** (`(unsigned int *)&group_list[idx].group_id`)
+and each string parameter's `data` to the literal's address with `data_size == sizeof(literal)`, the
+NUL included. `core::ptr::addr_of!` of a field of a `static`, inside a `const fn` called from another
+`static`'s initializer, is the construct that reproduces it without interior mutability; the two
+value-carrying constructors it needed (`param_uint_with`, `param_int_with`) are local to the module
+because the crate's existing `param_uint`/`param_int` are the zero-`data` forms.
+
+### `deflt_get_params`, `deflt_gettable_params`, and three entries in `DEFLT_DISPATCH`
+
+`src/provider/digest.rs` gains `DEFLT_PARAM_TYPES` (four `OSSL_PARAM_DEFN` descriptors plus the
+terminator -- **every one a definition, so `data == NULL` and `data_size == 0`, including the three
+`UTF8_PTR` ones and the one `INTEGER`**), the two functions, and three dispatch entries, taking
+`DEFLT_DISPATCH` to five plus the terminator. The two new constructors `param_utf8_ptr` and
+`param_integer_defn` exist precisely because the definition form is distinguishable from the value
+form only by `data_type` (`UTF8_PTR`/6 against `UTF8_STRING`/4) and by `data_size` (0 against 4), and
+the court prints both fields for every descriptor so that a table which confused them would fail.
+
+`deflt_get_params`' arm shape is the part worth naming: the authority's `p != NULL && !set(...)` guard
+means a key the caller did not ask for is **skipped, not refused**, and the call still answers 1. A
+transcription that treated an absent key as an error would answer 0, and the court observes both halves
+of that (`cap.gp.4.filled=0` beside `cap.gp.ret=1`).
+
+### The court was measured against the authority before the arms landed
+
+`courts/phase8/rt_provider_cap_probe.c` registers `RT-PROVIDER-CAP`, and it observed **722 lines on the
+authority** before any of this landed. Its header records the three pre-landing answers it would have
+found on the candidate (`gettable_params` NULL, `get_params` 0, `get_capabilities` **1** without
+inviting the callback -- the last of which is wrong on its face rather than merely empty), so the
+pass is not a court tuned to the implementation it judges.
+
+### Movement
+
+`provider_rows` is **unchanged at 306/306 over 306 owned**, and the export ledger is untouched at
+`complete: true`, implemented **786**, deferred **0**, open **0**. That is the point and it is
+uncomfortable: the capability surface is **in neither ledger** -- not an export, and not a row of
+`defltprov.c` -- so nothing objected to its absence for the stratum's whole life, exactly as D410 said.
+The surface now has a crate module, three published dispatch arms, two unit tests and a differential
+court; `docs/PHASE-8-SUBPHASES.md` row 8.2, `src/provider/cipher.rs`'s and `src/provider/digest.rs`'s
+headers no longer say it is absent, and `courts/phase8/rt_provider_cap_probe.c`'s own "a sibling
+landing adds those three arms" is now past tense. The `base`/`null` *providers* remain absent **by
+design**, and the coordinate that says so is the census rather than prose:
+`forensics/atlas/provider-algorithms.json`'s `projection` block reads `open["8"] == 0`, and the 319
+rows those two files define carry `owning_phase` 10 (318) and 9 (1). `RT-PROVIDER-CAP`'s 722
+observations take the pipeline to **101 courts / 39,635 observations**, `PIPELINE OK` exit 0.
+
+## D412 -- the seal map had two copies, and `seal_sha256` silently disagreed with the seal census
+
+### The divergence, measured
+
+`forensics/tools/render_seal_census.py` carried a `SEALS` dict that knew phases 3-7.
+`forensics/tools/phase_state.py` carried a different local `seals` dict that knew only phases 1-2. Both
+were introduced by the Phase 2.1 structural closure that created `docs/SEAL-CENSUS.md` (D97), and
+neither was updated as the later strata sealed. The consequence is a measurement, not an inference:
+`docs/PHASE-3-CORE-RUNTIME-SEAL.md` through `docs/PHASE-7-EVP-SEAL.md` were all on disk, the census
+named every one of them, and `forensics/phase-state.json` recorded `seal_sha256: null` for phases 3
+through 7 because `phase_state.py` never learned they existed.
+
+A derived record silently contradicting a generated census is the class of gap where nothing objects
+because nothing looks. D320 measured the same shape in `blocker_liveness`: a piece of evidence
+machinery that is never run over a class of rows is indistinguishable from one that agrees with them.
+It was found here only because 8.10's seal needed `seal_sha256` to be derived rather than typed.
+
+### The fix
+
+`SEAL_DOCS: dict[int, str]` moves to `forensics/tools/atlas_common.py`, covers phases 1 through 8, and
+both tools read it, so a seal's identity is decided in one place. A stratum with no entry, or whose
+document has not landed, still answers `null` in `phase-state.json` and `none written yet` in the
+census: a missing seal is a fact about the tree rather than a failure to read it, and phase 9 and later
+are unchanged.
+
+### Movement
+
+Phases 3-7 gain a `seal_sha256`; phase 8 stays `null` until its own document lands. No court moves, no
+ledger moves, and `docs/SEAL-CENSUS.md`'s per-stratum `seal:` lines keep their existing meaning.

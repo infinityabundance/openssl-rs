@@ -354,6 +354,10 @@
       "observations": 40,
       "verdict": "pass"
     },
+    "RT-PROVIDER-CAP": {
+      "observations": 722,
+      "verdict": "pass"
+    },
     "RT-PROVIDER-REF": {
       "observations": 5,
       "verdict": "pass"

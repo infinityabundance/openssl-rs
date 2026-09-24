@@ -31,6 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from atlas_common import (  # noqa: E402
     ATLAS,
+    SEAL_DOCS,
     content_hash,
     envelope,
     rel,
@@ -851,14 +852,12 @@ def main() -> int:
         elif state != "complete" and earlier_incomplete is None:
             earlier_incomplete = phase
 
-        seals = {
-            "phase1": seal_identity("docs/PHASE-1-ARCHAEOLOGY-SEAL.md"),
-            "phase2": seal_identity("docs/PHASE-2-DISTRIBUTION-SEAL.md"),
-        }
+        seal_doc = SEAL_DOCS.get(phase)
         rows.append({
             "phase": phase, "name": name, "stratum": stratum, "state": state,
             "evidence_present": present, "evidence_absent": absent,
-            "blocking": blocking, "seal_sha256": seals.get(f"phase{phase}"),
+            "blocking": blocking,
+            "seal_sha256": seal_identity(seal_doc) if seal_doc else None,
             "deferred": deferred_rows(phase),
             "provider_rows": provider_rows_for(phase),
         })

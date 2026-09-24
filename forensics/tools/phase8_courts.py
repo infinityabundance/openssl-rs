@@ -224,6 +224,21 @@ COURTS: list[tuple[str, str]] = [
     # two rows would be `implemented` and named by no observation of their own operation. The
     # probe's header names what it does not observe and why.
     ("RT-ASYM-CIPHER", "rt_asymcipher_probe.c"),
+    # This pass's court, and the first whose subject is the **provider dispatch table's parameter
+    # and capability face** rather than an algorithm row: the three `OSSL_FUNC_PROVIDER_*` arms
+    # the authority's default dispatch publishes and the candidate's does not --
+    # `GETTABLE_PARAMS`, `GET_PARAMS` and `GET_CAPABILITIES`
+    # (`forensics/authorities/src/openssl-3.6.4/providers/defltprov.c:742-750`). The three public
+    # entry points (`src/provider/mod.rs:2386/2400/2498`) already exist and are wired to the
+    # provider vtable, so before the sibling landing each answers the core's "no such function"
+    # path (`crypto/provider_core.c:1767/1810/1903`): `gettable_params` NULL, `get_params` 0, and
+    # `get_capabilities` **1 with the callback never invited** -- the last of which makes the
+    # authority's `0` for an unclaimed capability name (and for a callback that refuses an entry)
+    # unreachable. The probe drives all three: the `TLS-GROUP`/`TLS-SIGALG` walks through a
+    # recording callback plus the walk's own refusal contract, one capability name no arm claims,
+    # and the provider's four `gettable_params` definitions and four answered (plus one
+    # unanswered) `get_params` keys.
+    ("RT-PROVIDER-CAP", "rt_provider_cap_probe.c"),
 ]
 
 # The correctness courts, and the committed vector sets each checks. `CT-DIGEST` is the

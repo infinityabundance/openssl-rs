@@ -487,7 +487,7 @@
     },
     "checked": {
       "authority_units": 324,
-      "crate_modules": 461,
+      "crate_modules": 462,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 7,
       "divergence_names_covered": 43,
@@ -596,13 +596,13 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "fd795b4e30420e7c7f60a8484b17945f9cf09803ea13ff86c0eeef6128a82784",
+  "body_hash": "7b648d1eb297e543fc8ea29c36205bcf6ad33a6504288ddcd6630425541330a6",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "20bf9f448d481dbdf0490d3146c2138197a9215830f56cb92badf0f288da5629"
+      "sha256": "9e95be44e345c893b26ca4d83eb64aa4f9a605ba36d1a5d913da05809b29cd0e"
     },
     {
       "name": "macro-owners",
@@ -617,7 +617,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "fc28652c92d554e815c2152a5a5c61a809a3dec18b67c9a68386c34447b12dc6"
+      "sha256": "c965aa475ee4a202c2ceae8664adc901f152f74d84a4f1b1f568faf17b6bc034"
     },
     {
       "name": "symbol-ownership",
@@ -632,17 +632,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "6c794259ab58365db6ccb464a89f46f1eaf41eded64ae4c7ce62be0f9b2b0182"
+      "sha256": "0373bf17a288fdef9d2f2e6eb516800db9107c08e9fec661dfe48706cf1ba8d9"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "2a76c67bc0c328ee6792c169e706cb84d98cc0720ea2c3e6b5264618962f4f06"
+      "sha256": "bce5dd834ab8a9ece72c273fe30db981547f5e2465a7a03b958ef54a548f0432"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "61e69cf25d7b9e215a798cf5a344baa0482df7ea9cac71da9312a6b839270dcc"
+      "sha256": "79615740d2f897692441e2391456f7d64ec7f2cb90309bf15380c7c877dfd8f6"
     },
     {
       "name": "crate-source-tree",

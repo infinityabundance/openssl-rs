@@ -41,6 +41,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from atlas_common import (  # noqa: E402
     REPO_ROOT,
+    SEAL_DOCS,
     court_observations,
     has_transcript,
     rel,
@@ -48,17 +49,6 @@ from atlas_common import (  # noqa: E402
 
 OUT = REPO_ROOT / "docs" / "SEAL-CENSUS.md"
 GENERATOR = "forensics/tools/render_seal_census.py"
-
-# Which seal document belongs to which stratum, where one exists. A stratum with no
-# seal yet is rendered from its ledger and says so, rather than being omitted: an
-# omitted stratum reads as a stratum with nothing to say.
-SEALS = {
-    3: "docs/PHASE-3-CORE-RUNTIME-SEAL.md",
-    4: "docs/PHASE-4-BIO-CONF-SEAL.md",
-    5: "docs/PHASE-5-BN-ASN1-PEM-SEAL.md",
-    6: "docs/PHASE-6-PROVIDER-SEAL.md",
-    7: "docs/PHASE-7-EVP-SEAL.md",
-}
 
 
 def load(relpath: str):
@@ -161,7 +151,9 @@ def main(argv: list[str]) -> int:
         L.append(f"* state: `{row.get('state', 'unknown')}`")
         if row.get("blocking"):
             L.append(f"* blocking: {row['blocking']}")
-        seal = SEALS.get(phase)
+        # A stratum with no seal yet is rendered from its ledger and says so, rather than
+        # being omitted: an omitted stratum reads as a stratum with nothing to say.
+        seal = SEAL_DOCS.get(phase)
         if seal and (REPO_ROOT / seal).is_file():
             L.append(f"* seal: `{seal}`")
         else:

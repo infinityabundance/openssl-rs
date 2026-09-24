@@ -28,8 +28,9 @@
 //!   `cipher_aes_ccm.c` + `ciphercommon_ccm.c`, `cipher_aes_wrp.c` and `cipher_cts.c`;
 //! * the `OSSL_OP_CIPHER` arm of `deflt_query`.
 //!
-//! What is **absent by design**: `deflt_get_params`/`deflt_gettable_params`/
-//! `ossl_prov_get_capabilities`/`provctx` and the `base`/`null` *providers*; the `AES-*-GCM` three
+//! What is **absent by design**: the `base`/`null` *providers* -- `forensics/atlas/provider-algorithms.json`'s
+//! `projection` block gives their 319 rows `owning_phase` 10 (318) and 9 (1), so no Phase 8 ledger
+//! claims them; the `AES-*-GCM` three
 //! (`defltprov.c:202-204`), deferred to Phase 9 on `RAND_bytes_ex` (D234, D237); and the multiblock
 //! *encrypt* parameter of the four published `AES-*-CBC-HMAC-*` rows, which is this module's one
 //! recorded narrowing (`docs/SECURITY_DIVERGENCE_POLICY.md` D-CBCHMAC-MULTIBLOCK-ENC-1). Everything
@@ -106,7 +107,8 @@ use crate::modes::{
 };
 use crate::params::{
     OsslParam, END, OSSL_PARAM_INTEGER, OSSL_PARAM_OCTET_PTR, OSSL_PARAM_OCTET_STRING,
-    OSSL_PARAM_UNMODIFIED, OSSL_PARAM_UNSIGNED_INTEGER, OSSL_PARAM_UTF8_STRING,
+    OSSL_PARAM_UNMODIFIED, OSSL_PARAM_UNSIGNED_INTEGER, OSSL_PARAM_UTF8_PTR,
+    OSSL_PARAM_UTF8_STRING,
 };
 use crate::provider::activate::{
     ossl_prov_cache_exported_algorithms, AlgorithmCapability, OsslAlgorithm, OsslAlgorithmCapable,
@@ -1365,6 +1367,41 @@ pub(crate) const fn param_utf8_string(key: *const c_char) -> OsslParam {
     OsslParam {
         key: key.cast(),
         data_type: OSSL_PARAM_UTF8_STRING,
+        data: ptr::null_mut(),
+        data_size: 0,
+        return_size: OSSL_PARAM_UNMODIFIED,
+    }
+}
+
+/// `OSSL_PARAM_DEFN(key, OSSL_PARAM_UTF8_PTR, NULL, 0)` — `params.h:27-28`.
+///
+/// Every other constructor here carries a length; this one does not, because the definition form
+/// is what a **descriptor list** uses: a table that names the parameters a caller may ask for,
+/// rather than one that hands a value back. The authority's `deflt_param_types`
+/// (`providers/defltprov.c:38-45`) is built from four of these, and its three string entries are
+/// separated from `param_utf8_string` by `data_type` (`UTF8_PTR`, 6, not `UTF8_STRING`, 4) and
+/// from `param_uint`/`param_int` by `data_size` (0, not 4). The provider-capability court prints
+/// the size as well as the type for exactly that reason: a court that printed only the type could
+/// not tell a descriptor list from a value list.
+pub(crate) const fn param_utf8_ptr(key: *const c_char) -> OsslParam {
+    OsslParam {
+        key: key.cast(),
+        data_type: OSSL_PARAM_UTF8_PTR,
+        data: ptr::null_mut(),
+        data_size: 0,
+        return_size: OSSL_PARAM_UNMODIFIED,
+    }
+}
+
+/// `OSSL_PARAM_DEFN(key, OSSL_PARAM_INTEGER, NULL, 0)` — `params.h:27-28`.
+///
+/// The `INTEGER` sibling of `param_utf8_ptr` above, and distinct from `param_int` for the same
+/// reason: `data_size` is 0 rather than `sizeof(int)`. `deflt_param_types`'s fourth entry is the
+/// one that uses it, and it is the only one whose type is not `UTF8_PTR`.
+pub(crate) const fn param_integer_defn(key: *const c_char) -> OsslParam {
+    OsslParam {
+        key: key.cast(),
+        data_type: OSSL_PARAM_INTEGER,
         data: ptr::null_mut(),
         data_size: 0,
         return_size: OSSL_PARAM_UNMODIFIED,

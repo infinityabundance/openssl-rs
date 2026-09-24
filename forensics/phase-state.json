@@ -153,7 +153,7 @@
         "name": "core-runtime",
         "phase": 3,
         "provider_rows": null,
-        "seal_sha256": null,
+        "seal_sha256": "67b6e7eea69046b9ce2223dedc4ab0728f6c8147678c6c20b29dafd012559b70",
         "state": "complete",
         "stratum": "Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects"
       },
@@ -241,7 +241,7 @@
         "name": "bio-conf-objects",
         "phase": 4,
         "provider_rows": null,
-        "seal_sha256": null,
+        "seal_sha256": "69bd62cf735d8f915003818a7e29bade4f2f2d469312877b70f0266d65fa5494",
         "state": "complete",
         "stratum": "BIO + CONF + object database"
       },
@@ -269,7 +269,7 @@
         "name": "bn-asn1-der-pem",
         "phase": 5,
         "provider_rows": null,
-        "seal_sha256": null,
+        "seal_sha256": "d8d3eaebe58b853cafed71119c37a88fdde07c686c896c46b5aff4f47ff93104",
         "state": "complete",
         "stratum": "BN + ASN.1 + DER/PEM"
       },
@@ -337,7 +337,7 @@
         "name": "libctx-provider",
         "phase": 6,
         "provider_rows": null,
-        "seal_sha256": null,
+        "seal_sha256": "090e0695899a5a7f4e901923e0b1f8fe6b2029953b8f862dd1c7de20f7d9aaf5",
         "state": "complete",
         "stratum": "OSSL_LIB_CTX + provider core"
       },
@@ -394,7 +394,7 @@
         "name": "evp",
         "phase": 7,
         "provider_rows": null,
-        "seal_sha256": null,
+        "seal_sha256": "0ca018d9a4e53a9b29d4044bf884138489fcb8389858d07052d335e2aa51e060",
         "state": "complete",
         "stratum": "EVP framework"
       },
@@ -617,7 +617,7 @@
       "not_started": 12
     }
   },
-  "body_hash": "b7ceede0c7c7d83d9b0dabea37c0f90e3f23956586cc6eb4c98370c0940a07c1",
+  "body_hash": "121aacecf161c4458ef72aab1eb69c6325342f4609ae8ce87b9c9c3e6c501125",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

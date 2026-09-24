@@ -1011,6 +1011,16 @@
         ],
         "reason": "`providers/implementations/ciphers/cipher_chacha20_poly1305_hw.c` defines no authority-internal function of the internal-symbols universe and no export; its content is the `chacha20_poly1305_*` hw vtable and its two cipher arms (the generic one and the TLS the crate's `tlsaad` path selects), which `src/provider/cipher.rs` transcribes. Those names are all built there -- the record names them because the three mechanical signals cannot see a provider unit.",
         "evidence": "src/provider/cipher.rs; docs/DECISIONS.md D279; docs/PHASE-8-SUBPHASES.md row 8.3"
+      },
+      {
+        "unit": "providers/common/capabilities.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/capabilities.rs",
+        "names": [
+          "ossl_prov_get_capabilities"
+        ],
+        "reason": "Its one external name is `ossl_prov_get_capabilities`, defined non-`static` in the authority (`providers/common/capabilities.c:334`) and declared in `providers/common/include/prov/providercommon.h:21`, because `defltprov.c`'s dispatch table binds it across translation units. It is transcribed whole in `src/provider/capabilities.rs` (D411) -- the function, its two static walkers and its four static tables, in the authority's order -- but none of the three mechanical signals reaches the unit. It compiles into the default provider as `providers/common/libdefault-lib-capabilities.c` rather than into `crypto/`, so it is not one of the units `internal-symbols.json` and `transcription-edges.json` are built over, and the crate module that transcribes it is dominated by no other unit because it transcribes exactly one. It is also deliberately not a provider *algorithm* row: it appears in no `provider-algorithms.json` row and in neither the Phase 8 export ledger nor the Phase 9 one, which is why nothing objected while it was absent for the stratum's whole life (D411). `docs/PHASE-8-SUBPHASES.md` row 8.2 named it absent from the bootstrap until D411 landed it.",
+        "evidence": "docs/PHASE-8-SUBPHASES.md row 8.2; src/provider/capabilities.rs; src/provider/digest.rs (the three DEFLT_DISPATCH arms); courts/phase8/rt_provider_cap_probe.c (RT-PROVIDER-CAP, 722 observations); forensics/authorities/src/openssl-3.6.4/providers/common/capabilities.c:334"
       }
     ]
   }
