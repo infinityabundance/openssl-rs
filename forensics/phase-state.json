@@ -399,7 +399,7 @@
         "stratum": "EVP framework"
       },
       {
-        "blocking": "7 provider registration row(s) of this stratum are neither implemented nor handed to a later phase (forensics/atlas/provider-algorithms.json): EC, ML-DSA-44, ML-DSA-65, ML-DSA-87",
+        "blocking": "1 provider registration row(s) of this stratum are neither implemented nor handed to a later phase (forensics/atlas/provider-algorithms.json): EC",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -418,9 +418,9 @@
         "phase": 8,
         "provider_rows": {
           "handed_on": 685,
-          "implemented": 299,
+          "implemented": 305,
           "owned": 306,
-          "unimplemented": 7
+          "unimplemented": 1
         },
         "seal_sha256": null,
         "state": "in-progress",
@@ -618,7 +618,7 @@
       "not_started": 12
     }
   },
-  "body_hash": "c949161a15c2ac57d6896bad171c8427f31b0b661f34113c5829efc259909a9a",
+  "body_hash": "16dd5d9de5b924420e24eab25b434f241a7fe0bf1c5cb8c9c1a6af76f4294801",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

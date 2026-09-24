@@ -136,6 +136,9 @@ use crate::provider::ecx_kmgmt::{
 use crate::provider::mac_legacy_kmgmt::{
     CMAC_LEGACY_KEYMGMT_FUNCTIONS, MAC_LEGACY_KEYMGMT_FUNCTIONS,
 };
+use crate::provider::ml_dsa_kmgmt::{
+    ML_DSA_44_KEYMGMT_FUNCTIONS, ML_DSA_65_KEYMGMT_FUNCTIONS, ML_DSA_87_KEYMGMT_FUNCTIONS,
+};
 use crate::provider::ml_kem_kmgmt::{
     ML_KEM_1024_KEYMGMT_FUNCTIONS, ML_KEM_512_KEYMGMT_FUNCTIONS, ML_KEM_768_KEYMGMT_FUNCTIONS,
 };
@@ -1756,7 +1759,8 @@ fn ossl_assert(expr: bool) -> c_int {
 ///
 /// The `DH` and `DHX` rows are the authority's first two (`defltprov.c:553-558`); the `DSA` row is
 /// next (`:561-562`); the `RSA` and `RSA-PSS` rows follow it (`:563-566`); the `EC` row is next
-/// (`:568-569`); the four ECX rows (`X25519`, `X448`, `ED25519`, `ED448`) follow (`:571-578`); the
+/// the four ECX rows (`X25519`, `X448`, `ED25519`, `ED448`) follow (`:571-578`); the three
+/// `ML-DSA` rows follow them (`:580-587`, D409); the
 /// KDF rows share `ossl_kdf_keymgmt_functions` exactly as the authority's three do (`:588-595`);
 /// the four legacy-MAC rows (`HMAC`, `SIPHASH`, `POLY1305`, `CMAC`, `:596-609`) come next, three
 /// sharing `ossl_mac_legacy_keymgmt_functions` and `CMAC` its own; and the `SM2` row closes the
@@ -1776,7 +1780,7 @@ fn ossl_assert(expr: bool) -> c_int {
 /// The authority's order within the twelve is the `PROV_NAMES_SLH_DSA_*` order — SHA2 128s/128f/
 /// 192s/192f/256s/256f, then SHAKE in the same shape (`defltprov.c:659-700`) — and each row's
 /// description is left NULL for the crate's usual reason.
-pub(crate) static DEFLT_KEYMGMT: [OsslAlgorithm; 38] = [
+pub(crate) static DEFLT_KEYMGMT: [OsslAlgorithm; 41] = [
     OsslAlgorithm {
         // `PROV_NAMES_DH`.
         algorithm_names: c"DH:dhKeyAgreement:1.2.840.113549.1.3.1".as_ptr(),
@@ -1845,6 +1849,28 @@ pub(crate) static DEFLT_KEYMGMT: [OsslAlgorithm; 38] = [
         algorithm_names: c"ED448:1.3.101.113".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
         implementation: ED448_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ML_DSA_44` (`defltprov.c:581`, `names.h:409`), the authority's row after the
+        // ECX group and before the KDF rows.
+        algorithm_names: c"ML-DSA-44:MLDSA44:2.16.840.1.101.3.4.3.17:id-ml-dsa-44".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ML_DSA_44_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ML_DSA_65` (`defltprov.c:583`, `names.h:411`).
+        algorithm_names: c"ML-DSA-65:MLDSA65:2.16.840.1.101.3.4.3.18:id-ml-dsa-65".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ML_DSA_65_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ML_DSA_87` (`defltprov.c:585`, `names.h:413`).
+        algorithm_names: c"ML-DSA-87:MLDSA87:2.16.840.1.101.3.4.3.19:id-ml-dsa-87".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ML_DSA_87_KEYMGMT_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {

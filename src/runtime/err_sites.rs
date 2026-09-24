@@ -28492,6 +28492,366 @@ pub(crate) const ML_DSA_SIGN_344: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ml_dsa_key_type_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:227` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_227: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 227,
+    func: c"ml_dsa_key_type_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_key_type_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:238` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_238: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 238,
+    func: c"ml_dsa_key_type_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_key_type_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:250` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_250: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 250,
+    func: c"ml_dsa_key_type_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_key_fromdata` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:287` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_ML_DSA_KMGMT_287: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 287,
+    func: c"ml_dsa_key_fromdata",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_key_fromdata` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:299` (PROV_R_INVALID_SEED_LENGTH).
+pub(crate) const PROV_ML_DSA_KMGMT_299: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 299,
+    func: c"ml_dsa_key_fromdata",
+    lib: 57,
+    reason: 154,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_key_fromdata` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:310` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_ML_DSA_KMGMT_310: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 310,
+    func: c"ml_dsa_key_fromdata",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_key_fromdata` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:319` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_ML_DSA_KMGMT_319: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 319,
+    func: c"ml_dsa_key_fromdata",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_key_fromdata` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:329` (PROV_R_FAILED_TO_GENERATE_KEY).
+pub(crate) const PROV_ML_DSA_KMGMT_329: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 329,
+    func: c"ml_dsa_key_fromdata",
+    lib: 57,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_key_fromdata` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:345` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_ML_DSA_KMGMT_345: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 345,
+    func: c"ml_dsa_key_fromdata",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_get_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:428` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_428: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 428,
+    func: c"ml_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_get_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:447` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_447: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 447,
+    func: c"ml_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_get_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:458` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_458: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 458,
+    func: c"ml_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_get_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:475` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_475: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 475,
+    func: c"ml_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_get_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:486` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_486: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 486,
+    func: c"ml_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_get_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:534` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_534: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 534,
+    func: c"ml_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_get_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:545` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_545: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 545,
+    func: c"ml_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_get_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:563` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_563: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 563,
+    func: c"ml_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_load` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:709` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_ML_DSA_KMGMT_709: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 709,
+    func: c"ml_dsa_load",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_gen` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:755` (PROV_R_FAILED_TO_GENERATE_KEY).
+pub(crate) const PROV_ML_DSA_KMGMT_755: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 755,
+    func: c"ml_dsa_gen",
+    lib: 57,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_gen_set_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:801` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_801: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 801,
+    func: c"ml_dsa_gen_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_gen_set_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:812` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_812: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 812,
+    func: c"ml_dsa_gen_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_signverify_msg_init` at `providers/implementations/signature/ml_dsa_sig.c:177` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_ML_DSA_SIG_177: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 177,
+    func: c"ml_dsa_signverify_msg_init",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_digest_signverify_init` at `providers/implementations/signature/ml_dsa_sig.c:205` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_ML_DSA_SIG_205: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 205,
+    func: c"ml_dsa_digest_signverify_init",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_set_ctx_params_decoder` at `providers/implementations/signature/ml_dsa_sig.c:415` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_SIG_415: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 415,
+    func: c"ml_dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_set_ctx_params_decoder` at `providers/implementations/signature/ml_dsa_sig.c:426` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_SIG_426: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 426,
+    func: c"ml_dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_set_ctx_params_decoder` at `providers/implementations/signature/ml_dsa_sig.c:441` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_SIG_441: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 441,
+    func: c"ml_dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_set_ctx_params_decoder` at `providers/implementations/signature/ml_dsa_sig.c:454` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_SIG_454: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 454,
+    func: c"ml_dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_set_ctx_params_decoder` at `providers/implementations/signature/ml_dsa_sig.c:466` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_SIG_466: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 466,
+    func: c"ml_dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_verifymsg_set_ctx_params_decoder` at `providers/implementations/signature/ml_dsa_sig.c:520` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_SIG_520: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 520,
+    func: c"ml_dsa_verifymsg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_verifymsg_set_ctx_params_decoder` at `providers/implementations/signature/ml_dsa_sig.c:531` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_SIG_531: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 531,
+    func: c"ml_dsa_verifymsg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_verifymsg_set_ctx_params_decoder` at `providers/implementations/signature/ml_dsa_sig.c:546` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_SIG_546: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 546,
+    func: c"ml_dsa_verifymsg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_verifymsg_set_ctx_params_decoder` at `providers/implementations/signature/ml_dsa_sig.c:559` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_SIG_559: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 559,
+    func: c"ml_dsa_verifymsg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_verifymsg_set_ctx_params_decoder` at `providers/implementations/signature/ml_dsa_sig.c:571` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_SIG_571: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 571,
+    func: c"ml_dsa_verifymsg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_verifymsg_set_ctx_params_decoder` at `providers/implementations/signature/ml_dsa_sig.c:582` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_SIG_582: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 582,
+    func: c"ml_dsa_verifymsg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_set_ctx_params` at `providers/implementations/signature/ml_dsa_sig.c:622` (PROV_R_INVALID_SEED_LENGTH).
+pub(crate) const PROV_ML_DSA_SIG_622: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 622,
+    func: c"ml_dsa_set_ctx_params",
+    lib: 57,
+    reason: 154,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_get_ctx_params_decoder` at `providers/implementations/signature/ml_dsa_sig.c:686` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_SIG_686: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 686,
+    func: c"ml_dsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
 /// `mac_digest_sign_init` at `providers/implementations/signature/mac_legacy_sig.c:107` (PROV_R_NO_KEY_SET).
 pub(crate) const PROV_MAC_LEGACY_SIG_107: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/providers/implementations/signature/mac_legacy_sig.c",
@@ -43389,6 +43749,42 @@ pub(crate) static ALL: &[ErrSite] = &[
     ML_DSA_SIGN_135,
     ML_DSA_SIGN_181,
     ML_DSA_SIGN_344,
+    PROV_ML_DSA_KMGMT_227,
+    PROV_ML_DSA_KMGMT_238,
+    PROV_ML_DSA_KMGMT_250,
+    PROV_ML_DSA_KMGMT_287,
+    PROV_ML_DSA_KMGMT_299,
+    PROV_ML_DSA_KMGMT_310,
+    PROV_ML_DSA_KMGMT_319,
+    PROV_ML_DSA_KMGMT_329,
+    PROV_ML_DSA_KMGMT_345,
+    PROV_ML_DSA_KMGMT_428,
+    PROV_ML_DSA_KMGMT_447,
+    PROV_ML_DSA_KMGMT_458,
+    PROV_ML_DSA_KMGMT_475,
+    PROV_ML_DSA_KMGMT_486,
+    PROV_ML_DSA_KMGMT_534,
+    PROV_ML_DSA_KMGMT_545,
+    PROV_ML_DSA_KMGMT_563,
+    PROV_ML_DSA_KMGMT_709,
+    PROV_ML_DSA_KMGMT_755,
+    PROV_ML_DSA_KMGMT_801,
+    PROV_ML_DSA_KMGMT_812,
+    PROV_ML_DSA_SIG_177,
+    PROV_ML_DSA_SIG_205,
+    PROV_ML_DSA_SIG_415,
+    PROV_ML_DSA_SIG_426,
+    PROV_ML_DSA_SIG_441,
+    PROV_ML_DSA_SIG_454,
+    PROV_ML_DSA_SIG_466,
+    PROV_ML_DSA_SIG_520,
+    PROV_ML_DSA_SIG_531,
+    PROV_ML_DSA_SIG_546,
+    PROV_ML_DSA_SIG_559,
+    PROV_ML_DSA_SIG_571,
+    PROV_ML_DSA_SIG_582,
+    PROV_ML_DSA_SIG_622,
+    PROV_ML_DSA_SIG_686,
     PROV_MAC_LEGACY_SIG_107,
     RSA_LIB_85,
     RSA_LIB_106,

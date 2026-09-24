@@ -131,6 +131,17 @@ pub(crate) mod ml_kem_kem;
 // rows, one body with three macro expansions, exactly as the authority's `deflt_keymgmt[]`
 // publishes them.
 pub(crate) mod ml_kem_kmgmt;
+// Phase 8's `providers/common/der/der_ml_dsa_key.c` (D409): the ML-DSA `AlgorithmIdentifier` for
+// the three keymgmt and signature rows, and the three `id-ml-dsa-*` OIDs it writes.
+pub(crate) mod der_ml_dsa_key;
+// Phase 8's `providers/implementations/keymgmt/ml_dsa_kmgmt.c.in` (D409): the three ML-DSA keymgmt
+// rows, one body with three macro expansions, exactly as the authority's `deflt_keymgmt[]`
+// publishes them.
+pub(crate) mod ml_dsa_kmgmt;
+// Phase 8's `providers/implementations/signature/ml_dsa_sig.c.in` (D409): the three ML-DSA signature
+// rows, one body with three macro expansions, exactly as the authority's `deflt_signature[]`
+// publishes them.
+pub(crate) mod ml_dsa_sig;
 // Phase 8's `providers/implementations/keymgmt/mlx_kmgmt.c.in` (D404): the four ML-KEM/EC-ECX hybrid
 // keymgmt rows, one body with four macro expansions, exactly as the authority's `deflt_keymgmt[]`
 // publishes them. There is no `crypto/mlx/`: the hybrid logic *is* this unit.
