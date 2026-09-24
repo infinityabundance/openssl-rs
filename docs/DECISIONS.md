@@ -30146,3 +30146,77 @@ establishes is agreement, and the row it closes is a registration row, which is 
 
 `provider_rows[implemented]` 319 to 320, `[open_by_phase][9]` 2 to 1 (the `base` provider's
 `SEED-SRC` is the last), `RT-CIPHER` 7232 to **7255** observations, `PIPELINE OK` exit 0.
+
+## D420 -- phase 9's plan turns out to claim four units and three symbols nothing could see, and the reader is what was wrong
+
+Making phase 9 `complete`-eligible turned on `plan_reconciliation.py`'s checks for a complete stratum
+-- which phase 8 had passed and phase 9 had never been asked. It reported **16 findings**. Three were
+real and thirteen were the machinery's.
+
+### What the sixteen were
+
+* **three symbols** -- `ossl_drbg_ctr_functions`, `ossl_drbg_hash_functions`,
+  `ossl_drbg_ossl_hmac_functions` (`docs/PHASE-9-SUBPHASES.md` row 9.4). Real: the crate built the
+  three tables as `DRBG_CTR_FUNCTIONS`/`DRBG_HASH_FUNCTIONS`/`DRBG_HMAC_FUNCTIONS`, and the
+  authority's names are non-`static` and declared in the uninstalled `prov/implementations.h`, so the
+  plan can promise them and nothing could join the promise to a definition. Renamed, with the
+  authority's spellings kept and `non_upper_case_globals` allowed, which is the same treatment
+  `ec_kem`'s and `ecx_kmem`'s non-`static` definitions already get.
+* **one stale deferral** -- `crypto/evp/bio_ok.c` carried
+  `deferred_to_later_stratum: owner_phase 9`, and `BIO_f_reliable` landed in D317. With phase 9 no
+  longer `in-progress` the row became a stale deferral whose owner had sealed. Retired; the unit is
+  reached through its own transcription edge.
+* **five units** -- `providers/common/provider_seeding.c`, `providers/common/provider_util.c`,
+  `providers/implementations/rands/drbg.c`, `providers/implementations/rands/seeding/rand_unix.c` and
+  `providers/fips/fipsprov.c`. The first four are **the machinery's**: see below.
+* **seven file names** -- `drbg_ctr.c`, `drbg_hash.c`, `drbg_hmac.c`, `seed_src.c`, `test_rng.c` and
+  `fips_crng_test.c` (twice). The authority has all six as `.c.in`, so a plan row naming the bare
+  `.c` names a file the manifest does not have -- and the row was invisible anyway, because `_UNIT`'s
+  trailing boundary rejects a dot in order to keep `openssl.cnf` from matching as `openssl.c`.
+
+### The machinery defect, which is the one worth recording
+
+**`internal-symbols.json` keys a translation unit by the object name the authority's build gives it,
+and a plan names the source path.** `providers/implementations/rands/drbg.c` compiles to
+`providers/implementations/rands/libdefault-lib-drbg.c`, and a `.c.in` compiles to
+`.../libdefault-lib-drbg_ctr.c`; that is the `__FILE__` the raises in those units carry, which is why
+the atlas files them there. `plan_reconciliation.py` looked a plan-named path up in that map and found
+nothing, so a unit the crate demonstrably reaches was reported unreached -- and **only for the units
+a named build goal compiles**, which is a subset no other tool could see either. The reader was
+answering a smaller question than it was asked, which is D396's and D417's class for the third time
+this stratum.
+
+Two changes fix it at the root rather than unit by unit:
+
+1. `source_of_build()` derives a build object's manifest source path (`lib<goal>-lib-<stem>` to
+   `.../<stem>` or `.../<stem>.in`, checked against the committed manifest, and left alone when it
+   does not resolve), and `unit_symbols` is indexed under both keys.
+2. `_UNIT_IN` names a `.c.in` as its own pattern, so a plan row can promise one without weakening
+   `_UNIT`'s `openssl.cnf` guard.
+
+With those, the four units are reached mechanically and need no record. The remaining two --
+`fipsprov.c` and `fips_crng_test.c.in` -- get `not_in_this_profile` records, because both live in
+`libfips.a` alone (`providers/fips/build.info:3`, `providers/implementations/rands/build.info:7`) and
+this profile builds no FIPS module: the plan names them in order to say so, the same shape
+`crypto/rcu.c` has, and the guard is the configure line rather than a prose claim.
+
+**The widening found two more, in phase 8.** `cipher_chacha20_poly1305.c.in` and `cmac_prov.c.in`
+were promised by `docs/PHASE-8-SUBPHASES.md` row 8.3 and invisible to the old regex; both are reached
+now, by the same rename treatment (`ossl_chacha20_ossl_poly1305_functions`, `ossl_cmac_functions`).
+That is a check that had never fired being turned on, which is what the widening was for.
+
+### The one row that stays open, and why it is recorded rather than moved
+
+`base`'s `SEED-SRC` row is the last unlanded row phase 9 owns. Its *implementation* landed in D311;
+what it lacks is a provider to publish it in, because `baseprov.c`'s `base_query` answers one table
+per operation and this crate has no base provider module at all. Moving the row to phase 10 would
+clear phase 9 and is forbidden by `regression_guard.py`'s `PROVIDER_UP_IS_BAD` rule -- an
+`open_by_phase` increase is refused because pushing an obligation forward is how a stratum would
+complete by moving its work. So the row keeps phase 9, its `blocked_by` names the real prerequisite
+(the base provider module, whose other three operation ids are 318 Phase-10 rows), and D287's
+misreading of it -- "the base provider's single RAND row is the test RNG" -- is corrected in the plan
+row itself, where a reader following D287 arrives. `docs/PHASE-9-SUBPHASES.md` §4.2 already carried
+the correction as prose; it is now in the machine-readable plan as well.
+
+`PIPELINE OK` exit 0, `plan_reconciliation.py` clean over 266 named units and 107 named symbols,
+phase 9 still `in-progress` with exactly one named blocker.

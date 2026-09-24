@@ -14230,7 +14230,7 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 140] = [
     row(N_CHACHA20, CHACHA20_FUNCTIONS.as_ptr().cast()),
     row(
         N_CHACHA20_POLY1305,
-        CHACHA20_POLY1305_FUNCTIONS.as_ptr().cast(),
+        ossl_chacha20_ossl_poly1305_functions.as_ptr().cast(),
     ),
     OsslAlgorithmCapable {
         alg: OsslAlgorithm {
@@ -16436,7 +16436,13 @@ unsafe extern "C" fn chacha20_poly1305_final(
 /// **`update` and `cipher` are different functions here**, where every block-mode row shares one
 /// generic pair. The order is the authority's, and `GETTABLE_PARAMS` is
 /// `ossl_cipher_generic_gettable_params` directly because the row does not override it.
-pub(crate) static CHACHA20_POLY1305_FUNCTIONS: [OsslDispatch; 15] = [
+///
+/// The table keeps the authority's own name because the authority defines it non-`static` and
+/// declares it in the uninstalled `prov/implementations.h:250`, so the plan can promise it and
+/// `plan_reconciliation.py` has to be able to see it built (D420). The doubled `ossl` is the
+/// authority's, not a transcription slip.
+#[allow(non_upper_case_globals)]
+pub(crate) static ossl_chacha20_ossl_poly1305_functions: [OsslDispatch; 15] = [
     OsslDispatch {
         function_id: OSSL_FUNC_CIPHER_NEWCTX,
         function: chacha20_poly1305_newctx as *mut c_void,

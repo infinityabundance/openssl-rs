@@ -4,37 +4,10 @@
     "censed_states": [
       "in-progress"
     ],
-    "census": {
-      "names_a_file_the_authority_does_not_have": 6,
-      "symbols_not_reached": 3,
-      "units_not_reached": 5
-    },
-    "census_by_stratum": {
-      "9": 14
-    },
+    "census": {},
+    "census_by_stratum": {},
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
-    "census_samples": {
-      "names_a_file_the_authority_does_not_have": [
-        "docs/PHASE-9-SUBPHASES.md:9.4:drbg_ctr.c",
-        "docs/PHASE-9-SUBPHASES.md:9.4:drbg_hash.c",
-        "docs/PHASE-9-SUBPHASES.md:9.4:drbg_hmac.c",
-        "docs/PHASE-9-SUBPHASES.md:9.5:fips_crng_test.c",
-        "docs/PHASE-9-SUBPHASES.md:9.5:seed_src.c",
-        "docs/PHASE-9-SUBPHASES.md:9.5:test_rng.c"
-      ],
-      "symbols_not_reached": [
-        "ossl_drbg_ctr_functions",
-        "ossl_drbg_hash_functions",
-        "ossl_drbg_ossl_hmac_functions"
-      ],
-      "units_not_reached": [
-        "providers/common/provider_seeding.c",
-        "providers/common/provider_util.c",
-        "providers/fips/fipsprov.c",
-        "providers/implementations/rands/drbg.c",
-        "providers/implementations/rands/seeding/rand_unix.c"
-      ]
-    },
+    "census_samples": {},
     "checked": {
       "plans_read": [
         "docs/PHASE-5-SUBPHASES.md",
@@ -45,11 +18,11 @@
       ],
       "rows_judged": 82,
       "symbols_named_by_a_row": 107,
-      "symbols_reached": 104,
-      "unit_records": 80,
-      "units_named_by_a_record": 82,
-      "units_named_by_a_row": 254,
-      "units_reached": 249
+      "symbols_reached": 107,
+      "unit_records": 81,
+      "units_named_by_a_record": 83,
+      "units_named_by_a_row": 266,
+      "units_reached": 266
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -1443,7 +1416,7 @@
       },
       "crypto/evp/bio_ok.c": {
         "defines": [],
-        "recorded_by": "units:crypto/evp/bio_ok.c",
+        "recorded_by": null,
         "subphases": [
           "7.5"
         ],
@@ -3243,7 +3216,9 @@
         "transcribed_by": []
       },
       "providers/common/capabilities.c": {
-        "defines": [],
+        "defines": [
+          "ossl_prov_get_capabilities"
+        ],
         "recorded_by": "units:providers/common/capabilities.c",
         "subphases": [
           "8.2"
@@ -3251,7 +3226,13 @@
         "transcribed_by": []
       },
       "providers/common/provider_seeding.c": {
-        "defines": [],
+        "defines": [
+          "ossl_prov_cleanup_entropy",
+          "ossl_prov_cleanup_nonce",
+          "ossl_prov_get_entropy",
+          "ossl_prov_get_nonce",
+          "ossl_prov_seeding_from_dispatch"
+        ],
         "recorded_by": null,
         "subphases": [
           "9.3"
@@ -3259,7 +3240,27 @@
         "transcribed_by": []
       },
       "providers/common/provider_util.c": {
-        "defines": [],
+        "defines": [
+          "ossl_prov_cache_exported_algorithms",
+          "ossl_prov_cipher_cipher",
+          "ossl_prov_cipher_copy",
+          "ossl_prov_cipher_engine",
+          "ossl_prov_cipher_load",
+          "ossl_prov_cipher_load_from_params",
+          "ossl_prov_cipher_reset",
+          "ossl_prov_digest_copy",
+          "ossl_prov_digest_engine",
+          "ossl_prov_digest_fetch",
+          "ossl_prov_digest_load",
+          "ossl_prov_digest_load_from_params",
+          "ossl_prov_digest_md",
+          "ossl_prov_digest_reset",
+          "ossl_prov_digest_set_md",
+          "ossl_prov_macctx_load",
+          "ossl_prov_macctx_load_from_params",
+          "ossl_prov_memdup",
+          "ossl_prov_set_macctx"
+        ],
         "recorded_by": null,
         "subphases": [
           "9.3"
@@ -3279,14 +3280,35 @@
       },
       "providers/fips/fipsprov.c": {
         "defines": [],
-        "recorded_by": null,
+        "recorded_by": "units:providers/fips/fipsprov.c",
         "subphases": [
           "9.5"
         ],
         "transcribed_by": []
       },
       "providers/implementations/ciphers/cipher_aes.c": {
-        "defines": [],
+        "defines": [
+          "ossl_aes128cbc_cts_functions",
+          "ossl_aes128cbc_functions",
+          "ossl_aes128cfb1_functions",
+          "ossl_aes128cfb8_functions",
+          "ossl_aes128cfb_functions",
+          "ossl_aes128ctr_functions",
+          "ossl_aes128ecb_functions",
+          "ossl_aes128ofb_functions",
+          "ossl_aes192cbc_cts_functions",
+          "ossl_aes192cbc_functions",
+          "ossl_aes192cfb1_functions",
+          "ossl_aes192cfb8_functions",
+          "ossl_aes192cfb_functions",
+          "ossl_aes192ctr_functions",
+          "ossl_aes192ecb_functions",
+          "ossl_aes192ofb_functions",
+          "ossl_aes256cbc_cts_functions",
+          "ossl_aes256cbc_functions",
+          "ossl_aes256cfb1_functions",
+          "ossl_aes256cfb8_functions"
+        ],
         "recorded_by": "units:providers/implementations/ciphers/cipher_aes.c",
         "subphases": [
           "8.3"
@@ -3294,7 +3316,11 @@
         "transcribed_by": []
       },
       "providers/implementations/ciphers/cipher_aes_siv.c": {
-        "defines": [],
+        "defines": [
+          "ossl_aes128siv_functions",
+          "ossl_aes192siv_functions",
+          "ossl_aes256siv_functions"
+        ],
         "recorded_by": "units:providers/implementations/ciphers/cipher_aes_siv.c",
         "subphases": [
           "8.3"
@@ -3302,7 +3328,28 @@
         "transcribed_by": []
       },
       "providers/implementations/ciphers/cipher_aria.c": {
-        "defines": [],
+        "defines": [
+          "ossl_aria128cbc_functions",
+          "ossl_aria128cfb1_functions",
+          "ossl_aria128cfb8_functions",
+          "ossl_aria128cfb_functions",
+          "ossl_aria128ctr_functions",
+          "ossl_aria128ecb_functions",
+          "ossl_aria128ofb_functions",
+          "ossl_aria192cbc_functions",
+          "ossl_aria192cfb1_functions",
+          "ossl_aria192cfb8_functions",
+          "ossl_aria192cfb_functions",
+          "ossl_aria192ctr_functions",
+          "ossl_aria192ecb_functions",
+          "ossl_aria192ofb_functions",
+          "ossl_aria256cbc_functions",
+          "ossl_aria256cfb1_functions",
+          "ossl_aria256cfb8_functions",
+          "ossl_aria256cfb_functions",
+          "ossl_aria256ctr_functions",
+          "ossl_aria256ecb_functions"
+        ],
         "recorded_by": "units:providers/implementations/ciphers/cipher_aria.c",
         "subphases": [
           "8.3"
@@ -3310,7 +3357,28 @@
         "transcribed_by": []
       },
       "providers/implementations/ciphers/cipher_camellia.c": {
-        "defines": [],
+        "defines": [
+          "ossl_camellia128cbc_cts_functions",
+          "ossl_camellia128cbc_functions",
+          "ossl_camellia128cfb1_functions",
+          "ossl_camellia128cfb8_functions",
+          "ossl_camellia128cfb_functions",
+          "ossl_camellia128ctr_functions",
+          "ossl_camellia128ecb_functions",
+          "ossl_camellia128ofb_functions",
+          "ossl_camellia192cbc_cts_functions",
+          "ossl_camellia192cbc_functions",
+          "ossl_camellia192cfb1_functions",
+          "ossl_camellia192cfb8_functions",
+          "ossl_camellia192cfb_functions",
+          "ossl_camellia192ctr_functions",
+          "ossl_camellia192ecb_functions",
+          "ossl_camellia192ofb_functions",
+          "ossl_camellia256cbc_cts_functions",
+          "ossl_camellia256cbc_functions",
+          "ossl_camellia256cfb1_functions",
+          "ossl_camellia256cfb8_functions"
+        ],
         "recorded_by": "units:providers/implementations/ciphers/cipher_camellia.c",
         "subphases": [
           "8.3"
@@ -3318,7 +3386,12 @@
         "transcribed_by": []
       },
       "providers/implementations/ciphers/cipher_chacha20.c": {
-        "defines": [],
+        "defines": [
+          "ossl_chacha20_dinit",
+          "ossl_chacha20_einit",
+          "ossl_chacha20_functions",
+          "ossl_chacha20_initctx"
+        ],
         "recorded_by": "units:providers/implementations/ciphers/cipher_chacha20.c",
         "subphases": [
           "8.3"
@@ -3326,15 +3399,29 @@
         "transcribed_by": []
       },
       "providers/implementations/ciphers/cipher_chacha20_hw.c": {
-        "defines": [],
+        "defines": [
+          "ossl_prov_cipher_hw_chacha20"
+        ],
         "recorded_by": "units:providers/implementations/ciphers/cipher_chacha20_hw.c",
         "subphases": [
           "8.3"
         ],
         "transcribed_by": []
       },
+      "providers/implementations/ciphers/cipher_chacha20_poly1305.c.in": {
+        "defines": [
+          "ossl_chacha20_ossl_poly1305_functions"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
+      },
       "providers/implementations/ciphers/cipher_chacha20_poly1305_hw.c": {
-        "defines": [],
+        "defines": [
+          "ossl_prov_cipher_hw_chacha20_poly1305"
+        ],
         "recorded_by": "units:providers/implementations/ciphers/cipher_chacha20_poly1305_hw.c",
         "subphases": [
           "8.3"
@@ -3342,7 +3429,12 @@
         "transcribed_by": []
       },
       "providers/implementations/ciphers/cipher_cts.c": {
-        "defines": [],
+        "defines": [
+          "ossl_cipher_cbc_cts_block_final",
+          "ossl_cipher_cbc_cts_block_update",
+          "ossl_cipher_cbc_cts_mode_id2name",
+          "ossl_cipher_cbc_cts_mode_name2id"
+        ],
         "recorded_by": "units:providers/implementations/ciphers/cipher_cts.c",
         "subphases": [
           "8.3"
@@ -3350,7 +3442,13 @@
         "transcribed_by": []
       },
       "providers/implementations/ciphers/cipher_sm4.c": {
-        "defines": [],
+        "defines": [
+          "ossl_sm4128cbc_functions",
+          "ossl_sm4128cfb128_functions",
+          "ossl_sm4128ctr_functions",
+          "ossl_sm4128ecb_functions",
+          "ossl_sm4128ofb128_functions"
+        ],
         "recorded_by": "units:providers/implementations/ciphers/cipher_sm4.c",
         "subphases": [
           "8.3"
@@ -3358,26 +3456,144 @@
         "transcribed_by": []
       },
       "providers/implementations/ciphers/cipher_tdes_common.c": {
-        "defines": [],
+        "defines": [
+          "ossl_tdes_dinit",
+          "ossl_tdes_dupctx",
+          "ossl_tdes_einit",
+          "ossl_tdes_freectx",
+          "ossl_tdes_get_ctx_params",
+          "ossl_tdes_get_params",
+          "ossl_tdes_gettable_ctx_params",
+          "ossl_tdes_newctx",
+          "ossl_tdes_set_ctx_params",
+          "ossl_tdes_settable_ctx_params"
+        ],
         "recorded_by": "units:providers/implementations/ciphers/cipher_tdes_common.c",
         "subphases": [
           "8.3"
         ],
         "transcribed_by": []
       },
+      "providers/implementations/ciphers/ciphercommon.c.in": {
+        "defines": [
+          "ossl_cipher_common_get_ctx_params",
+          "ossl_cipher_common_set_ctx_params",
+          "ossl_cipher_generic_block_final",
+          "ossl_cipher_generic_block_update",
+          "ossl_cipher_generic_cipher",
+          "ossl_cipher_generic_dinit",
+          "ossl_cipher_generic_einit",
+          "ossl_cipher_generic_get_ctx_params",
+          "ossl_cipher_generic_get_params",
+          "ossl_cipher_generic_gettable_ctx_params",
+          "ossl_cipher_generic_gettable_params",
+          "ossl_cipher_generic_initiv",
+          "ossl_cipher_generic_initkey",
+          "ossl_cipher_generic_reset_ctx",
+          "ossl_cipher_generic_set_ctx_params",
+          "ossl_cipher_generic_settable_ctx_params",
+          "ossl_cipher_generic_skey_dinit",
+          "ossl_cipher_generic_skey_einit",
+          "ossl_cipher_generic_stream_final",
+          "ossl_cipher_generic_stream_update"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.2",
+          "8.3"
+        ],
+        "transcribed_by": []
+      },
       "providers/implementations/ciphers/ciphercommon_block.c": {
-        "defines": [],
+        "defines": [
+          "ossl_cipher_fillblock",
+          "ossl_cipher_padblock",
+          "ossl_cipher_tlsunpadblock",
+          "ossl_cipher_trailingdata",
+          "ossl_cipher_unpadblock"
+        ],
         "recorded_by": "units:providers/implementations/ciphers/ciphercommon_block.c",
         "subphases": [
           "8.2"
         ],
         "transcribed_by": []
       },
+      "providers/implementations/ciphers/ciphercommon_ccm.c.in": {
+        "defines": [
+          "ossl_ccm_cipher",
+          "ossl_ccm_dinit",
+          "ossl_ccm_einit",
+          "ossl_ccm_get_ctx_params",
+          "ossl_ccm_gettable_ctx_params",
+          "ossl_ccm_initctx",
+          "ossl_ccm_set_ctx_params",
+          "ossl_ccm_settable_ctx_params",
+          "ossl_ccm_stream_final",
+          "ossl_ccm_stream_update"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/ciphers/ciphercommon_gcm.c.in": {
+        "defines": [
+          "ossl_gcm_cipher",
+          "ossl_gcm_dinit",
+          "ossl_gcm_einit",
+          "ossl_gcm_get_ctx_params",
+          "ossl_gcm_gettable_ctx_params",
+          "ossl_gcm_initctx",
+          "ossl_gcm_set_ctx_params",
+          "ossl_gcm_settable_ctx_params",
+          "ossl_gcm_stream_final",
+          "ossl_gcm_stream_update"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
+      },
       "providers/implementations/ciphers/ciphercommon_hw.c": {
-        "defines": [],
+        "defines": [
+          "ossl_cipher_hw_chunked_cbc",
+          "ossl_cipher_hw_chunked_cfb128",
+          "ossl_cipher_hw_chunked_cfb8",
+          "ossl_cipher_hw_chunked_ofb128",
+          "ossl_cipher_hw_generic_cbc",
+          "ossl_cipher_hw_generic_cfb1",
+          "ossl_cipher_hw_generic_cfb128",
+          "ossl_cipher_hw_generic_cfb8",
+          "ossl_cipher_hw_generic_ctr",
+          "ossl_cipher_hw_generic_ecb",
+          "ossl_cipher_hw_generic_ofb128"
+        ],
         "recorded_by": "units:providers/implementations/ciphers/ciphercommon_hw.c",
         "subphases": [
           "8.2"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/digests/digestcommon.c.in": {
+        "defines": [
+          "ossl_digest_default_get_params",
+          "ossl_digest_default_gettable_params"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.1b"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/macs/cmac_prov.c.in": {
+        "defines": [
+          "ossl_cmac_functions"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.3"
         ],
         "transcribed_by": []
       },
@@ -3390,15 +3606,99 @@
         "transcribed_by": []
       },
       "providers/implementations/rands/drbg.c": {
-        "defines": [],
+        "defines": [
+          "ossl_drbg_clear_seed",
+          "ossl_drbg_enable_locking",
+          "ossl_drbg_get_ctx_params",
+          "ossl_drbg_get_ctx_params_no_lock",
+          "ossl_drbg_get_seed",
+          "ossl_drbg_lock",
+          "ossl_drbg_set_ctx_params",
+          "ossl_drbg_unlock",
+          "ossl_drbg_verify_digest",
+          "ossl_prov_drbg_generate",
+          "ossl_prov_drbg_instantiate",
+          "ossl_prov_drbg_nonce_ctx_free",
+          "ossl_prov_drbg_nonce_ctx_new",
+          "ossl_prov_drbg_reseed",
+          "ossl_prov_drbg_uninstantiate",
+          "ossl_rand_drbg_free",
+          "ossl_rand_drbg_new"
+        ],
         "recorded_by": null,
         "subphases": [
           "9.3"
         ],
         "transcribed_by": []
       },
-      "providers/implementations/rands/seeding/rand_unix.c": {
+      "providers/implementations/rands/drbg_ctr.c.in": {
+        "defines": [
+          "ossl_drbg_ctr_functions"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "9.4"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/rands/drbg_hash.c.in": {
+        "defines": [
+          "ossl_drbg_hash_functions"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "9.4"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/rands/drbg_hmac.c.in": {
+        "defines": [
+          "ossl_drbg_hmac_generate",
+          "ossl_drbg_hmac_init",
+          "ossl_drbg_ossl_hmac_functions"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "9.4"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/rands/fips_crng_test.c.in": {
         "defines": [],
+        "recorded_by": "units:providers/implementations/rands/fips_crng_test.c.in",
+        "subphases": [
+          "9.5"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/rands/seed_src.c.in": {
+        "defines": [
+          "ossl_seed_src_functions"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "9.5"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/rands/seeding/rand_unix.c": {
+        "defines": [
+          "ossl_pool_acquire_entropy",
+          "ossl_pool_add_nonce_data",
+          "ossl_rand_pool_cleanup",
+          "ossl_rand_pool_init",
+          "ossl_rand_pool_keep_random_devices_open"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "9.5"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/rands/test_rng.c.in": {
+        "defines": [
+          "ossl_test_rng_functions"
+        ],
         "recorded_by": null,
         "subphases": [
           "9.5"
@@ -3482,11 +3782,6 @@
         "class": "reached_by_a_named_construct",
         "crate_module": "src/evp/bio_enc.rs",
         "owner_phase": null
-      },
-      "crypto/evp/bio_ok.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 9
       },
       "crypto/evp/c_allc.c": {
         "class": "deferred_to_later_stratum",
@@ -3743,6 +4038,11 @@
         "crate_module": "src/provider/capabilities.rs",
         "owner_phase": null
       },
+      "providers/fips/fipsprov.c": {
+        "class": "not_in_this_profile",
+        "crate_module": null,
+        "owner_phase": null
+      },
       "providers/implementations/ciphers/cipher_aes.c": {
         "class": "reached_by_a_named_construct",
         "crate_module": "src/provider/cipher.rs",
@@ -3807,6 +4107,11 @@
         "class": "does_not_exist_in_this_authority",
         "crate_module": null,
         "owner_phase": null
+      },
+      "providers/implementations/rands/fips_crng_test.c.in": {
+        "class": "not_in_this_profile",
+        "crate_module": null,
+        "owner_phase": null
       }
     },
     "universes": {
@@ -3815,7 +4120,7 @@
       "transcribed_units": 325
     }
   },
-  "body_hash": "e79068b26f8d4145bf32067222ff5848e65d0c2bd57b3153bbb7e3ca7c2041d5",
+  "body_hash": "4db761c3cf4a0b96c758df1ce38f21f2168b8a86ee3210bdda2c1ad40e4d5953",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -3831,7 +4136,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "3469b9413978bea55ad69244b8d07018d76867c0be50411440b47eaae5f8d576"
+      "sha256": "2bfd86b6e0dbe4f1e5f5ce63aa7dc7e7c133bf52059baf5a43894611ca38c667"
     },
     {
       "name": "phase-state",
@@ -3841,7 +4146,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "79615740d2f897692441e2391456f7d64ec7f2cb90309bf15380c7c877dfd8f6"
+      "sha256": "dc20cc52dab0e2aa85cb19c56fbeac02edd99028a16de3e5197ddb798b857a58"
     },
     {
       "name": "source-manifest",
@@ -3871,7 +4176,7 @@
     {
       "name": "plan-PHASE-9-SUBPHASES",
       "path": "docs/PHASE-9-SUBPHASES.md",
-      "sha256": "987078f2a8925e5f90f0e773d5f35705863c7d8eb7de1259f674d1b486fc53df"
+      "sha256": "0a7c0ecc95c1aeab5ba4dfe0fa6a6d81137ceda5c1e01368b5e2e6f0be86f01e"
     }
   ],
   "kind": "plan-reconciliation",

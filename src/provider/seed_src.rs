@@ -52,6 +52,11 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 #![allow(non_snake_case)]
+// The authority's own names again, for the same reason: `ossl_seed_src_functions` and
+// `ossl_test_rng_functions` are non-`static` in the authority and declared in the uninstalled
+// `prov/implementations.h`, so the plan can promise them and `plan_reconciliation.py` has to be
+// able to see them built (D420).
+#![allow(non_upper_case_globals)]
 // The authority's spellings survive transcription for the same reason `src/provider/rand.rs`'s
 // do: an identifier the tooling cannot join to a C name is indistinguishable from an absent one.
 // `type` aliases here are the authority's own (`RAND_POOL`) or its public types modelled as
@@ -569,7 +574,7 @@ pub(crate) unsafe extern "C" fn seed_src_unlock(_vctx: *mut c_void) {}
 /// Note the two **`GET_SEED`/`CLEAR_SEED`** entries: these are what the DRBG frame uses to pull
 /// entropy from a seed source, and they are the reason this row is meaningful to the RAND layer
 /// even though `generate` exists for callers that treat it as an ordinary RAND.
-pub(crate) static SEED_SRC_FUNCTIONS: [OsslDispatch; 15] = [
+pub(crate) static ossl_seed_src_functions: [OsslDispatch; 15] = [
     OsslDispatch {
         function_id: OSSL_FUNC_RAND_NEWCTX,
         function: seed_src_new as *mut c_void,
@@ -1207,7 +1212,7 @@ unsafe extern "C" fn test_rng_unlock(vtest: *mut c_void) {
 ///
 /// This is the one RAND row that publishes `NONCE`, `SETTABLE_CTX_PARAMS` **and**
 /// `SET_CTX_PARAMS`, and it publishes no `CLEAR_SEED` to pair with its `GET_SEED`.
-pub(crate) static TEST_RNG_FUNCTIONS: [OsslDispatch; 17] = [
+pub(crate) static ossl_test_rng_functions: [OsslDispatch; 17] = [
     OsslDispatch {
         function_id: OSSL_FUNC_RAND_NEWCTX,
         function: test_rng_new as *mut c_void,
@@ -1323,7 +1328,7 @@ pub(crate) static TEST_RNG_FUNCTIONS: [OsslDispatch; 17] = [
 //
 // The default provider's own module is not represented in this crate yet, so the row below is
 // a description to be placed by the integration that lands `baseprov.c` and `defltprov.c`; it
-// references `SEED_SRC_FUNCTIONS` above directly.
+// references `ossl_seed_src_functions` above directly.
 // =============================================================================================
 
 /// `static const OSSL_ALGORITHM base_rands[]` — `providers/baseprov.c:90-96`, after the
@@ -1335,12 +1340,12 @@ pub(crate) static TEST_RNG_FUNCTIONS: [OsslDispatch; 17] = [
 /// the first field to stop).
 ///
 /// `algorithm_names` is `PROV_NAMES_SEED_SRC`, byte-for-byte `"SEED-SRC"`. The dispatch symbol
-/// is `ossl_seed_src_functions[]` = [`SEED_SRC_FUNCTIONS`].
+/// is `ossl_seed_src_functions[]` = [`ossl_seed_src_functions`].
 pub(crate) static BASE_RANDS: [OsslAlgorithm; 2] = [
     OsslAlgorithm {
         algorithm_names: PROV_NAMES_SEED_SRC,
         property_definition: c"provider=base".as_ptr(),
-        implementation: SEED_SRC_FUNCTIONS.as_ptr().cast(),
+        implementation: ossl_seed_src_functions.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     // #ifndef OPENSSL_NO_JITTER

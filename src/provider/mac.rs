@@ -76,6 +76,11 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+// `ossl_cmac_functions` is the authority's own name for the `CMAC` row's dispatch table --
+// non-`static` in `cmac_prov.c.in` and declared in the uninstalled `prov/implementations.h`, so
+// the plan can promise it and `plan_reconciliation.py` has to be able to see it built (D420).
+#![allow(non_upper_case_globals)]
+
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void};
 use core::ptr;
 
@@ -527,7 +532,7 @@ unsafe extern "C" fn cmac_final(
 }
 
 /// `const OSSL_DISPATCH ossl_cmac_functions[]` — `cmac_prov.c:308-322`, ten entries.
-pub(crate) static CMAC_FUNCTIONS: [OsslDispatch; 11] = [
+pub(crate) static ossl_cmac_functions: [OsslDispatch; 11] = [
     OsslDispatch {
         function_id: OSSL_FUNC_MAC_NEWCTX,
         function: cmac_new as *mut c_void,
@@ -606,7 +611,7 @@ pub(crate) static DEFLT_MACS: [OsslAlgorithm; 10] = [
     OsslAlgorithm {
         algorithm_names: c"CMAC".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
-        implementation: CMAC_FUNCTIONS.as_ptr().cast(),
+        implementation: ossl_cmac_functions.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
@@ -1078,7 +1083,7 @@ unsafe extern "C" fn gmac_set_ctx_params(vmacctx: *mut c_void, params: *const Os
 
 /// `const OSSL_DISPATCH ossl_gmac_functions[]` — `gmac_prov.c:265-278`, ten entries and the
 /// terminator. Two of them are the *provider-level* pair, `GETTABLE_PARAMS` and `GET_PARAMS`,
-/// which is the shape difference from `CMAC_FUNCTIONS`.
+/// which is the shape difference from `ossl_cmac_functions`.
 ///
 /// **Transcribed and held until D419, then registered.** The table was deliberately absent from
 /// [`DEFLT_MACS`] while GMAC's `cipher` resolution had nothing to resolve: GMAC refuses every mode
@@ -1509,7 +1514,7 @@ unsafe extern "C" fn siphash_set_params(vmacctx: *mut c_void, params: *const Oss
 }
 
 /// `const OSSL_DISPATCH ossl_siphash_functions[]` — `siphash_prov.c:229-243`, ten entries and the
-/// terminator. The same shape as `CMAC_FUNCTIONS`: the ctx-params pair, not the provider-level one.
+/// terminator. The same shape as `ossl_cmac_functions`: the ctx-params pair, not the provider-level one.
 pub(crate) static SIPHASH_FUNCTIONS: [OsslDispatch; 11] = [
     OsslDispatch {
         function_id: OSSL_FUNC_MAC_NEWCTX,
@@ -4170,7 +4175,7 @@ mod tests {
         let ids: Vec<c_int> = SIPHASH_FUNCTIONS.iter().map(|d| d.function_id).collect();
         assert_eq!(ids.len(), 11);
         assert_eq!(ids[10], END_ID);
-        // The same shape as `CMAC_FUNCTIONS`: the ctx-params pair, not the provider-level one that
+        // The same shape as `ossl_cmac_functions`: the ctx-params pair, not the provider-level one that
         // `GMAC_FUNCTIONS` uses.
         assert_eq!(
             ids[..10],
@@ -4340,7 +4345,7 @@ mod tests {
 
     #[test]
     fn the_dispatch_table_carries_ten_entries_and_terminates() {
-        let ids: Vec<c_int> = CMAC_FUNCTIONS.iter().map(|d| d.function_id).collect();
+        let ids: Vec<c_int> = ossl_cmac_functions.iter().map(|d| d.function_id).collect();
         assert_eq!(ids.len(), 11);
         assert_eq!(ids[10], END_ID);
         // The ten the authority's table lists, in its order.
@@ -4360,7 +4365,9 @@ mod tests {
             ]
         );
         // Every entry before the terminator has a callable.
-        assert!(CMAC_FUNCTIONS[..10].iter().all(|d| !d.function.is_null()));
+        assert!(ossl_cmac_functions[..10]
+            .iter()
+            .all(|d| !d.function.is_null()));
     }
 
     #[test]
@@ -4381,7 +4388,7 @@ mod tests {
         let ids: Vec<c_int> = GMAC_FUNCTIONS.iter().map(|d| d.function_id).collect();
         assert_eq!(ids.len(), 11);
         assert_eq!(ids[10], END_ID);
-        // The one shape difference from `CMAC_FUNCTIONS`: GMAC's two getters are the
+        // The one shape difference from `ossl_cmac_functions`: GMAC's two getters are the
         // **provider-level** `GETTABLE_PARAMS`/`GET_PARAMS`, so `gmac_prov.c`'s table is not the
         // same ten ids in the same order.
         assert_eq!(
