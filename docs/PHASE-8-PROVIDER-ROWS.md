@@ -22,10 +22,10 @@ Read from the census's own `implementation_state` for the rows this stratum owns
 | quantity | count |
 |---|---|
 | provider rows this stratum owns | 306 |
-| of those, implemented | 286 |
-| of those, unlanded | 20 |
+| of those, implemented | 297 |
+| of those, unlanded | 9 |
 
-The document below names all **20** unlanded rows this stratum owns across **22** translation units, and — so the first group can be read whole — the **21** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (20). The identity `306 = 286 + 20` holds.
+The document below names all **9** unlanded rows this stratum owns across **19** translation units, and — so the first group can be read whole — the **21** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (9). The identity `306 = 297 + 9` holds.
 
 ## The first group: the `OSSL_OP_KDF` rows and the `OSSL_OP_SKEYMGMT` pair
 
@@ -41,8 +41,6 @@ rather than stubbed.
 | `deflt_kdfs` | `ossl_kdf_argon2i_functions` | `OSSL_OP_KDF` | `ARGON2I` | implemented | `src/provider/kdf.rs` |
 | `deflt_kdfs` | `ossl_kdf_argon2d_functions` | `OSSL_OP_KDF` | `ARGON2D` | implemented | `src/provider/kdf.rs` |
 | `deflt_kdfs` | `ossl_kdf_argon2id_functions` | `OSSL_OP_KDF` | `ARGON2ID` | implemented | `src/provider/kdf.rs` |
-
-**Withheld: not reachable on this profile, and recorded rather than stubbed.** The arm this profile compiles is *threaded*: `configuration.h:36` defines `OPENSSL_THREADS` and neither `OPENSSL_NO_DEFAULT_THREAD_POOL` nor `OPENSSL_NO_THREAD_POOL` is set, so `argon2.c.in:41-47` does **not** define `ARGON2_NO_THREADS` and `fill_mem_blocks_mt` (`:561-626`) is compiled alongside `fill_mem_blocks_st`. It calls `ossl_crypto_thread_start`, `ossl_crypto_thread_join` and `ossl_crypto_thread_clean` (declared in `include/internal/thread.h:19`, not installed, so they are not in the export atlas and have no owning phase). **Their coordinate was measured at D396 and is not `crypto/threads_pthread.c`**, which is what an earlier revision of this note said: that file holds the `CRYPTO_THREAD_*` lock/local/once layer and the RCU layer, and the crate already carries both in `src/runtime/thread.rs`. The three functions are `crypto/thread/internal.c:40/73/95` (the `#else` no-threads arm at `:109/115/120` is not this profile's), and what they need that the crate lacks is the native layer they call -- `ossl_crypto_thread_native_start`/`_join`/`_clean` in `crypto/thread/arch.c` (132 lines) over `crypto/thread/arch/thread_posix.c` (233, the POSIX arm this profile compiles) -- plus a `ctx` member on the thread object. Their other prerequisites are **landed**: `ossl_crypto_mutex_lock`/`_unlock`, `ossl_crypto_condvar_wait`/`_signal` (`src/runtime/thread.rs`), `OSSL_LIB_CTX_GET_THREADS` (`src/context/thread_data.rs:133`) and `OSSL_get_max_threads`. So this is **not** a thin adapter over an existing thread layer. **D397 landed it** -- `src/runtime/thread_arch.rs` is `arch.c` and `arch/thread_posix.c`, the pool is `src/context/thread_data.rs`, and D397 also closed a lost-wakeup window in `ossl_crypto_condvar_wait` that nothing had ever exercised. **What remains for these three rows is therefore this unit's own transcription**: 1,574 lines of provider C plus the BLAKE2 plumbing it drives. D396's estimate of "roughly 425 lines for six rows" counted the thread trio and attributed argon2's rows to it, which was wrong by about four times; the trio is landed and driven by unit tests, and argon2 is a pass of its own.
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/kdfs/hkdf.c.in`
 
@@ -148,15 +146,6 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 
 **Withheld: the unit's `EC` KEM row, on a partial transcription that is named rather than claimed.** `src/provider/ec_kem.rs` carries **one** of the unit's functions, `ossl_ec_dhkem_derive_private` (`ec_kem.c.in:387-461`), `#[no_mangle]` because the authority defines it non-`static` and `crypto/ec/ec_key.c`'s `ossl_ec_generate_key_dhkem` calls it across translation units -- which is exactly what D390's `ec_kmgmt.c` landing needs. The rest of the unit is the `EC` KEM row's own dispatch (`ossl_ec_asym_kem_functions`, `:805-822`) and the twelve `eckem_*` functions plus the `dhkem_encap`/`dhkem_decap` pair it dispatches to, and it is **not** transcribed: the row's public-key decode path and its `OSSL_PKEY_PARAM_DHKEM_IKM` generate path reach `eckey_frompub`/`eckey_check` and the HPKE-derived encapsulation the crate models only partly, so the one row that would land (`OSSL_OP_KEM` `EC`, `defltprov.c:533`) is left `unimplemented` rather than half-driven. The function that *is* landed is drivable and driven: `RT-KEYMGMT`'s `EC` arm builds the key `ossl_ec_generate_key_dhkem` would be reached on. The entry stays until the row's own dispatch lands, so the census and this document agree that the row is open.
 
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c` — 4 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_asym_kem` | `ossl_mlx_kem_asym_kem_functions` | `OSSL_OP_KEM` | `X25519MLKEM768` | `src/provider/kem.rs` |
-| `deflt_asym_kem` | `ossl_mlx_kem_asym_kem_functions` | `OSSL_OP_KEM` | `X448MLKEM1024` | `src/provider/kem.rs` |
-| `deflt_asym_kem` | `ossl_mlx_kem_asym_kem_functions` | `OSSL_OP_KEM` | `SecP256r1MLKEM768` | `src/provider/kem.rs` |
-| `deflt_asym_kem` | `ossl_mlx_kem_asym_kem_functions` | `OSSL_OP_KEM` | `SecP384r1MLKEM1024` | `src/provider/kem.rs` |
-
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/ml_dsa_kmgmt.c.in` — 3 row(s)
 
 | table | dispatch table symbol | operation | algorithm name(s) | crate file |
@@ -166,27 +155,6 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 | `deflt_keymgmt` | `ossl_ml_dsa_87_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `ML-DSA-87:MLDSA87:2.16.840.1.101.3.4.3.19:id-ml-dsa-87` | `src/provider/keymgmt.rs` |
 
 **Withheld: not reachable.** The unit's three rows (`ML-DSA-44`, `ML-DSA-65`, `ML-DSA-87`) are built on `ossl_ml_dsa_*` (`crypto/ml_dsa/`), which the crate does not have -- its function list (`ossl_ml_dsa_key_new`/`_free`/`_dup`/`_equal`, `ossl_ml_dsa_generate_key`, the encode/decode pair and the `_sig_*` family) matches no symbol in this tree. **Measured (D397): 3,772 lines in `crypto/ml_dsa/`** (`ml_dsa_encoders.c` 1,025, `ml_dsa_key.c` 571, `ml_dsa_sign.c` 500, `ml_dsa_sample.c` 381, `ml_dsa_ntt.c` 193, `ml_dsa_key_compress.c` 175, `ml_dsa_params.c` 105 and the headers), plus **1,153** lines in the unit pair (`ml_dsa_kmgmt.c.in` 616, `ml_dsa_sig.c.in` 537) -- so about 4,900 lines for the six rows of this group.
-
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/ml_kem_kmgmt.c.in` — 3 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_keymgmt` | `ossl_ml_kem_512_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `ML-KEM-512:MLKEM512:id-alg-ml-kem-512:2.16.840.1.101.3.4.4.1` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_ml_kem_768_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `ML-KEM-768:MLKEM768:id-alg-ml-kem-768:2.16.840.1.101.3.4.4.2` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_ml_kem_1024_keymgmt_functions` | `OSSL_OP_KEYMGMT` | `ML-KEM-1024:MLKEM1024:id-alg-ml-kem-1024:2.16.840.1.101.3.4.4.3` | `src/provider/keymgmt.rs` |
-
-**Withheld: not reachable.** The unit's three rows (`ML-KEM-512`, `ML-KEM-768`, `ML-KEM-1024`) are built on `ossl_ml_kem_*` (`crypto/ml_kem/`), which the crate does not have -- `ossl_ml_kem_encap_rand`/`_encap_seed`, `ossl_ml_kem_decap`, the key encode/decode pair and `ossl_ml_kem_get_vinfo` are none of them in this tree. **Measured (D397): 2,452 lines, one file (`crypto/ml_kem/ml_kem.c`)**, plus **1,174** in the ML-KEM unit pair (`ml_kem_kmgmt.c.in` 902, `ml_kem_kem.c.in` 272).
-
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/mlx_kmgmt.c.in` — 4 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_keymgmt` | `ossl_mlx_x25519_kem_kmgmt_functions` | `OSSL_OP_KEYMGMT` | `X25519MLKEM768` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_mlx_x448_kem_kmgmt_functions` | `OSSL_OP_KEYMGMT` | `X448MLKEM1024` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_mlx_p256_kem_kmgmt_functions` | `OSSL_OP_KEYMGMT` | `SecP256r1MLKEM768` | `src/provider/keymgmt.rs` |
-| `deflt_keymgmt` | `ossl_mlx_p384_kem_kmgmt_functions` | `OSSL_OP_KEYMGMT` | `SecP384r1MLKEM1024` | `src/provider/keymgmt.rs` |
-
-**Withheld: not reachable.** The unit's four hybrid rows (`X25519MLKEM768`, `X448MLKEM1024`, `SecP256r1MLKEM768`, `SecP384r1MLKEM1024`) are built on **both** an ECX or EC half and the ML-KEM half: they call `ossl_ml_kem_get_vinfo` and `ossl_mlx_*`, and depend on `crypto/ml_kem/`. **Measured (D397), and one earlier revision of this note was wrong about it: there is no `crypto/mlx/`.** The hybrid logic *is* the two provider units (`mlx_kem.c` 350, `mlx_kmgmt.c.in` 844, 1,194 lines for the four rows), which sit on `crypto/ml_kem/`'s 2,452 and the already-landed EC/ECX halves -- so these four rows cost nothing beyond `crypto/ml_kem/` and their own 1,194 lines.
 
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/ml_dsa_sig.c.in` — 3 row(s)
 
@@ -204,13 +172,15 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 |---|---|---|---|---|
 | `deflt_signature` | `ossl_sm2_signature_functions` | `OSSL_OP_SIGNATURE` | `SM2:1.2.156.10197.1.301` | `src/provider/signature.rs` |
 
+**Withheld: the unit's one row, on two unlanded units.** `sm2_sig.c.in`'s sign path is `ossl_sm2_internal_sign`/`ossl_sm2_internal_verify` and `ossl_sm2_compute_z_digest` (`crypto/sm2/sm2_sign.c`, 543 lines), and its AlgorithmIdentifier comes from `providers/common/der/der_sm2_sig.c` (39 lines). Neither unit is in this tree, so the single `SM2` row costs two whole transcriptions and lands with them. **D396 measured their closure and found only one prerequisite the crate lacks**: the EC half is landed (`ossl_ec_group_do_inverse_ord` is `src/ec/lib.rs:2236`'s, `ossl_ec_key_get_libctx`/`ossl_ec_key_get0_propq` and the `EC_GROUP`/`EC_POINT`/`ECDSA_SIG` accessors are all in `src/ec/`), and `SM2_R_*` is already in `src/runtime/err_reasons.rs`, so what remains is these two units plus the row's own dispatch.
+
 ## Provenance
 
 | field | value |
 |---|---|
 | generator | `forensics/tools/phase8_provider_rows.py` |
 | census | `forensics/atlas/provider-algorithms.json` |
-| census content hash | `ae15cb990242510e0108e7d5de6d3158cbc4920a64d99e2d5a7302e03f823c58` |
+| census content hash | `f452581aecafd379df4b80e268033d72e74e3e28a1c03231e703d072ca92c345` |
 | authority tree | `forensics/authorities/src/openssl-3.6.4` |
 | crate query read | `src/provider/digest.rs` |
 

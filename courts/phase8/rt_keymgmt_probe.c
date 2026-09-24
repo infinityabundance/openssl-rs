@@ -102,17 +102,26 @@
 #include <string.h>
 
 #include "slh_dsa_probe.h"
+#include "ml_kem_probe.h"
 
 static void kv_int(const char *key, int value)
 {
     printf("%s=%d\n", key, value);
 }
 
-/* The eight landed OSSL_OP_KEYMGMT rows this probe fetches, plus the eight it does not: the list is
- * the authority's deflt_keymgmt[] order, restricted to the rows the crate publishes. */
+/* Forward declarations: two arms below are defined after the arms that call them. */
+static void kv_sha256(const char *key, const unsigned char *buf, size_t len);
+
+/* The twenty-five landed OSSL_OP_KEYMGMT rows this probe fetches, in the authority's
+ * deflt_keymgmt[] order: the eighteen D391's pass published, the three ML-KEM rows D403 added, and
+ * the four `mlx` hybrid rows D404 added. The rows the authority publishes and the crate does not
+ * (`LMS`, `ML-DSA-44/65/87` and the SLH-DSA twelve, which `slh_dsa_probe.h` carries under their own
+ * arm) are named in the arms that reach them. */
 static const char *kmgmt_rows[] = { "DH", "DHX", "DSA", "RSA", "RSA-PSS", "EC", "X25519", "X448",
                                     "ED25519", "ED448", "TLS1-PRF", "HKDF", "SCRYPT", "HMAC",
-                                    "SIPHASH", "POLY1305", "CMAC", "SM2" };
+                                    "SIPHASH", "POLY1305", "CMAC", "SM2", "ML-KEM-512",
+                                    "ML-KEM-768", "ML-KEM-1024", "X25519MLKEM768", "X448MLKEM1024",
+                                    "SecP256r1MLKEM768", "SecP384r1MLKEM1024" };
 
 /* The landed OSSL_OP_KEYEXCH rows. The KDF trio is fetched by the same names the keymgmt rows
  * answer; `DH` and the two ECX rows are their own keymgmt names, so a context with no key still
@@ -394,9 +403,271 @@ static void arm_ml_kem_kem_fetch(void)
     }
 }
 
-/* The two landed EC keymgmt rows. `EC`'s curve is the published NIST P-256 group; `SM2`'s is the
- * SM2 group its own `gen_init` defaults to. Both are named groups the provider holds, not
- * generated keys. */
+/* The three landed ML-KEM keymgmt rows (D403), driven the way the authority's own keygen KATs
+ * drive them: a **published** 64-byte `(d, z)` seed out of `ml_kem_probe.h` (generated from the
+ * authority's `evppkey_ml_kem_*_keygen.txt`), so `EVP_PKEY_generate` is deterministic and the
+ * resulting object can be compared against the vector's own encapsulation key. Nothing derived
+ * from a random value is printed: the only key bytes in the transcript are the public half's
+ * sha256, and the public half of a public vector is not a secret. */
+static void arm_ml_kem_keymgmt(void)
+{
+    size_t i;
+
+    for (i = 0; i < sizeof(ml_kem_kat_rows) / sizeof(ml_kem_kat_rows[0]); i++) {
+        const struct ml_kem_probe_row *r = &ml_kem_kat_rows[i];
+        char key[96];
+        EVP_PKEY_CTX *ctx, *ictx;
+        EVP_PKEY *pkey = NULL, *ipkey = NULL, *dup = NULL;
+        OSSL_PARAM params[2];
+        unsigned char pub[1600], ipub[1600];
+        size_t pub_len = 0, ipub_len = 0, priv_len = 0;
+        int bits = 0, sec_bits = 0, max_size = 0, seccat = 0;
+
+        ctx = EVP_PKEY_CTX_new_from_name(NULL, r->name, NULL);
+        snprintf(key, sizeof(key), "mlkem.%s.ctx", r->name);
+        kv_int(key, ctx != NULL);
+        if (ctx == NULL)
+            continue;
+
+        /* Arm 1: generation from the vector's published seed, through the public path --
+         * `EVP_PKEY_CTX_new_from_name` resolves the `OSSL_OP_KEYMGMT` row, which is what D401's
+         * `EVP_KEM_fetch` arm could not reach. */
+        snprintf(key, sizeof(key), "mlkem.%s.keygen_init", r->name);
+        kv_int(key, EVP_PKEY_keygen_init(ctx));
+        params[0] = OSSL_PARAM_construct_octet_string(OSSL_PKEY_PARAM_ML_KEM_SEED,
+                                                      (void *)r->seed, r->seedlen);
+        params[1] = OSSL_PARAM_construct_end();
+        snprintf(key, sizeof(key), "mlkem.%s.set_seed", r->name);
+        kv_int(key, EVP_PKEY_CTX_set_params(ctx, params));
+        snprintf(key, sizeof(key), "mlkem.%s.generate", r->name);
+        kv_int(key, EVP_PKEY_generate(ctx, &pkey));
+
+        if (pkey != NULL) {
+            snprintf(key, sizeof(key), "mlkem.%s.bits", r->name);
+            kv_int(key, EVP_PKEY_get_int_param(pkey, OSSL_PKEY_PARAM_BITS, &bits) == 1
+                           ? bits : -1);
+            snprintf(key, sizeof(key), "mlkem.%s.security_bits", r->name);
+            kv_int(key, EVP_PKEY_get_int_param(pkey, OSSL_PKEY_PARAM_SECURITY_BITS, &sec_bits)
+                           == 1 ? sec_bits : -1);
+            /* `max-size` is the ciphertext length of the variant. */
+            snprintf(key, sizeof(key), "mlkem.%s.max_size", r->name);
+            kv_int(key, EVP_PKEY_get_int_param(pkey, OSSL_PKEY_PARAM_MAX_SIZE, &max_size) == 1
+                           ? max_size : -1);
+            snprintf(key, sizeof(key), "mlkem.%s.security_category", r->name);
+            kv_int(key, EVP_PKEY_get_int_param(pkey, OSSL_PKEY_PARAM_SECURITY_CATEGORY, &seccat)
+                           == 1 ? seccat : -1);
+
+            pub_len = 0;
+            snprintf(key, sizeof(key), "mlkem.%s.get_pub", r->name);
+            kv_int(key, EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_PUB_KEY, pub,
+                                                        sizeof(pub), &pub_len));
+            snprintf(key, sizeof(key), "mlkem.%s.pub_len", r->name);
+            kv_int(key, (int)pub_len);
+            snprintf(key, sizeof(key), "mlkem.%s.pub_matches_vector", r->name);
+            kv_int(key, pub_len == r->publen && memcmp(pub, r->pub, pub_len) == 0);
+            snprintf(key, sizeof(key), "mlkem.%s.pub_sha256", r->name);
+            kv_sha256(key, pub, pub_len);
+
+            /* The private half's *length* only -- its bytes are never printed. */
+            priv_len = 0;
+            snprintf(key, sizeof(key), "mlkem.%s.get_priv", r->name);
+            kv_int(key, EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_PRIV_KEY, NULL, 0,
+                                                        &priv_len));
+            snprintf(key, sizeof(key), "mlkem.%s.priv_len", r->name);
+            kv_int(key, (int)priv_len);
+
+            /* The `dup` and `match` columns. */
+            dup = EVP_PKEY_dup(pkey);
+            snprintf(key, sizeof(key), "mlkem.%s.dup", r->name);
+            kv_int(key, dup != NULL);
+            if (dup != NULL) {
+                snprintf(key, sizeof(key), "mlkem.%s.dup_eq", r->name);
+                kv_int(key, EVP_PKEY_eq(pkey, dup));
+                EVP_PKEY_free(dup);
+            }
+
+            /* `set1_encoded_public_key` on a key that already holds one is the mutation refusal.
+             * `EVP_PKEY_set1_encoded_public_key` needs an `EVP_PKEY` context, so take one. */
+            {
+                EVP_PKEY_CTX *sctx = EVP_PKEY_CTX_new_from_pkey(NULL, pkey, NULL);
+
+                snprintf(key, sizeof(key), "mlkem.%s.set_encoded_pub", r->name);
+                kv_int(key, EVP_PKEY_set1_encoded_public_key(pkey, r->pub, r->publen));
+                EVP_PKEY_CTX_free(sctx);
+                ERR_clear_error();
+            }
+        }
+        EVP_PKEY_free(pkey);
+        EVP_PKEY_CTX_free(ctx);
+
+        /* Arm 3: the import path, over the vector's own encapsulation key. */
+        ictx = EVP_PKEY_CTX_new_from_name(NULL, r->name, NULL);
+        snprintf(key, sizeof(key), "mlkem.%s.import_ctx", r->name);
+        kv_int(key, ictx != NULL);
+        if (ictx != NULL) {
+            params[0] = OSSL_PARAM_construct_octet_string(OSSL_PKEY_PARAM_PUB_KEY,
+                                                          (void *)r->pub, r->publen);
+            params[1] = OSSL_PARAM_construct_end();
+            snprintf(key, sizeof(key), "mlkem.%s.fromdata_init", r->name);
+            kv_int(key, EVP_PKEY_fromdata_init(ictx));
+            snprintf(key, sizeof(key), "mlkem.%s.fromdata_pub", r->name);
+            kv_int(key, EVP_PKEY_fromdata(ictx, &ipkey, EVP_PKEY_PUBLIC_KEY, params));
+            if (ipkey != NULL) {
+                ipub_len = 0;
+                snprintf(key, sizeof(key), "mlkem.%s.import_roundtrip", r->name);
+                kv_int(key, EVP_PKEY_get_octet_string_param(ipkey, OSSL_PKEY_PARAM_PUB_KEY, ipub,
+                                                            sizeof(ipub), &ipub_len)
+                               && ipub_len == r->publen
+                               && memcmp(ipub, r->pub, r->publen) == 0);
+                snprintf(key, sizeof(key), "mlkem.%s.import_matches", r->name);
+                kv_int(key, EVP_PKEY_eq(ipkey, ipkey));
+            }
+            EVP_PKEY_free(ipkey);
+
+            /* A public key one byte short is the keymgmt's own length refusal. */
+            params[0] = OSSL_PARAM_construct_octet_string(OSSL_PKEY_PARAM_PUB_KEY,
+                                                          (void *)r->pub, r->publen - 1);
+            ipkey = NULL;
+            snprintf(key, sizeof(key), "mlkem.%s.fromdata_short", r->name);
+            kv_int(key, EVP_PKEY_fromdata(ictx, &ipkey, EVP_PKEY_PUBLIC_KEY, params));
+            EVP_PKEY_free(ipkey);
+            ERR_clear_error();
+
+            EVP_PKEY_CTX_free(ictx);
+        }
+    }
+}
+
+/* The four landed `mlx` hybrid keymgmt rows (D404). Each is driven three ways: through its own
+ * keymgmt row (a keypair generated), through the shared KEM row (a fetch, whose one alias is its
+ * own name), and through an encapsulate/decapsulate round trip over the generated key. Every
+ * observation is a return code, a **length** or a boolean the probe computed -- never a generated
+ * key byte, because both halves of a hybrid keypair are random and a transcript that printed one
+ * would differ between two runs of the same side. The secret the decapsulation reproduces is
+ * compared against the one the encapsulation produced and only the **result** of that comparison is
+ * printed. */
+static const char *mlx_rows[] = { "X25519MLKEM768", "X448MLKEM1024", "SecP256r1MLKEM768",
+                                  "SecP384r1MLKEM1024" };
+
+static void arm_mlx_hybrid(void)
+{
+    size_t i;
+
+    for (i = 0; i < sizeof(mlx_rows) / sizeof(mlx_rows[0]); i++) {
+        char key[96];
+        EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_from_name(NULL, mlx_rows[i], NULL);
+        EVP_PKEY *pkey = NULL;
+        int bits = 0, sec_bits = 0, max_size = 0, seccat = 0;
+        unsigned char pub[2048];
+        size_t pub_len = 0, priv_len = 0;
+
+        snprintf(key, sizeof(key), "mlx.%s.ctx", mlx_rows[i]);
+        kv_int(key, ctx != NULL);
+        if (ctx == NULL)
+            continue;
+
+        snprintf(key, sizeof(key), "mlx.%s.keygen_init", mlx_rows[i]);
+        kv_int(key, EVP_PKEY_keygen_init(ctx));
+        snprintf(key, sizeof(key), "mlx.%s.generate", mlx_rows[i]);
+        kv_int(key, EVP_PKEY_generate(ctx, &pkey));
+
+        if (pkey != NULL) {
+            EVP_PKEY *dup;
+
+            /* The reported bit counts, security bits, category and max-size are those of the
+             * ML-KEM half; `max-size` is that half's ciphertext plus the x half's public key. */
+            snprintf(key, sizeof(key), "mlx.%s.bits", mlx_rows[i]);
+            kv_int(key, EVP_PKEY_get_int_param(pkey, OSSL_PKEY_PARAM_BITS, &bits) == 1 ? bits : -1);
+            snprintf(key, sizeof(key), "mlx.%s.security_bits", mlx_rows[i]);
+            kv_int(key, EVP_PKEY_get_int_param(pkey, OSSL_PKEY_PARAM_SECURITY_BITS, &sec_bits) == 1
+                           ? sec_bits : -1);
+            snprintf(key, sizeof(key), "mlx.%s.max_size", mlx_rows[i]);
+            kv_int(key, EVP_PKEY_get_int_param(pkey, OSSL_PKEY_PARAM_MAX_SIZE, &max_size) == 1
+                           ? max_size : -1);
+            snprintf(key, sizeof(key), "mlx.%s.security_category", mlx_rows[i]);
+            kv_int(key, EVP_PKEY_get_int_param(pkey, OSSL_PKEY_PARAM_SECURITY_CATEGORY, &seccat)
+                           == 1 ? seccat : -1);
+
+            /* The public block is the two halves' concatenation, in the slot order; only its
+             * length is deterministic, so only its length is printed. */
+            pub_len = 0;
+            snprintf(key, sizeof(key), "mlx.%s.get_pub", mlx_rows[i]);
+            kv_int(key, EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_PUB_KEY, pub,
+                                                        sizeof(pub), &pub_len));
+            snprintf(key, sizeof(key), "mlx.%s.pub_len", mlx_rows[i]);
+            kv_int(key, (int)pub_len);
+
+            /* The private half's length only -- its bytes are never printed. */
+            priv_len = 0;
+            snprintf(key, sizeof(key), "mlx.%s.get_priv", mlx_rows[i]);
+            kv_int(key, EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_PRIV_KEY, NULL, 0,
+                                                        &priv_len));
+            snprintf(key, sizeof(key), "mlx.%s.priv_len", mlx_rows[i]);
+            kv_int(key, (int)priv_len);
+
+            /* The `dup` column. */
+            dup = EVP_PKEY_dup(pkey);
+            snprintf(key, sizeof(key), "mlx.%s.dup", mlx_rows[i]);
+            kv_int(key, dup != NULL);
+            if (dup != NULL) {
+                snprintf(key, sizeof(key), "mlx.%s.dup_eq", mlx_rows[i]);
+                kv_int(key, EVP_PKEY_eq(pkey, dup));
+                EVP_PKEY_free(dup);
+            }
+
+            /* The encapsulate/decapsulate round trip through the shared KEM row: an ML-KEM
+             * encapsulation plus an ephemeral ECDHE exchange, then the reverse. */
+            {
+                unsigned char ctext[2048], secret[128], secret2[128];
+                size_t clen = sizeof(ctext), slen = sizeof(secret), slen2 = sizeof(secret2);
+                EVP_PKEY_CTX *kctx = EVP_PKEY_CTX_new_from_pkey(NULL, pkey, NULL);
+                EVP_PKEY_CTX *dctx = EVP_PKEY_CTX_new_from_pkey(NULL, pkey, NULL);
+
+                snprintf(key, sizeof(key), "mlx.%s.encap_init", mlx_rows[i]);
+                kv_int(key, EVP_PKEY_encapsulate_init(kctx, NULL));
+                snprintf(key, sizeof(key), "mlx.%s.encap", mlx_rows[i]);
+                kv_int(key, EVP_PKEY_encapsulate(kctx, ctext, &clen, secret, &slen));
+                snprintf(key, sizeof(key), "mlx.%s.ctext_len", mlx_rows[i]);
+                kv_int(key, (int)clen);
+                snprintf(key, sizeof(key), "mlx.%s.secret_len", mlx_rows[i]);
+                kv_int(key, (int)slen);
+                snprintf(key, sizeof(key), "mlx.%s.decap_init", mlx_rows[i]);
+                kv_int(key, EVP_PKEY_decapsulate_init(dctx, NULL));
+                snprintf(key, sizeof(key), "mlx.%s.decap", mlx_rows[i]);
+                kv_int(key, EVP_PKEY_decapsulate(dctx, secret2, &slen2, ctext, clen));
+                snprintf(key, sizeof(key), "mlx.%s.secret_match", mlx_rows[i]);
+                kv_int(key, slen == slen2 && memcmp(secret, secret2, slen) == 0);
+
+                /* An undersized ciphertext buffer is the KEM unit's own refusal. */
+                clen = 1;
+                snprintf(key, sizeof(key), "mlx.%s.encap_small", mlx_rows[i]);
+                kv_int(key, EVP_PKEY_encapsulate(kctx, ctext, &clen, secret, &slen));
+                ERR_clear_error();
+
+                EVP_PKEY_CTX_free(dctx);
+                EVP_PKEY_CTX_free(kctx);
+            }
+        }
+        EVP_PKEY_free(pkey);
+        EVP_PKEY_CTX_free(ctx);
+
+        /* The KEM row itself, by name and against one other row's name. */
+        {
+            EVP_KEM *kem = EVP_KEM_fetch(NULL, mlx_rows[i], NULL);
+
+            snprintf(key, sizeof(key), "mlx.%s.kem_fetch", mlx_rows[i]);
+            kv_int(key, kem != NULL);
+            if (kem != NULL) {
+                snprintf(key, sizeof(key), "mlx.%s.kem_is_a", mlx_rows[i]);
+                kv_int(key, EVP_KEM_is_a(kem, mlx_rows[i]));
+                snprintf(key, sizeof(key), "mlx.%s.kem_is_a_other", mlx_rows[i]);
+                kv_int(key, EVP_KEM_is_a(kem, mlx_rows[(i + 1) % 4]));
+            }
+            EVP_KEM_free(kem);
+        }
+    }
+}
+
 /* The two landed EC keymgmt rows. `EC`'s curve is the published NIST P-256 group; `SM2`'s is the
  * SM2 group its own `gen_init` defaults to. Both are named groups the provider holds, not
  * generated keys. */
@@ -721,6 +992,8 @@ int main(void)
     arm_mac_import();
     arm_kem_fetch();
     arm_ml_kem_kem_fetch();
+    arm_ml_kem_keymgmt();
+    arm_mlx_hybrid();
     arm_slh_dsa_keymgmt();
     ERR_clear_error();
     return 0;

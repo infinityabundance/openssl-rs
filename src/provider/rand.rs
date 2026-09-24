@@ -3188,7 +3188,12 @@ unsafe fn add_bytes(
             // Add the carry to the top of dst if inlen is not the same size.
             let mut i = (*drbg).seedlen - inlen;
             while i > 0 {
-                *d += 1; // Carry can only be 1.
+                // The authority writes `*d += 1;` on an `unsigned char`
+                // (drbg_hash.c.in:181), which wraps silently on 0xff. The
+                // crate is built with `overflow-checks = true`, so the `+=`
+                // would panic on the wrap; use `wrapping_add` to preserve the
+                // C semantics. Carry can only be 1.
+                *d = (*d).wrapping_add(1);
                 if *d != 0 {
                     break;
                 }

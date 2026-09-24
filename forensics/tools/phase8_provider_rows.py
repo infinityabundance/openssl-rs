@@ -68,46 +68,24 @@ CRATE_QUERY = REPO_ROOT / "src" / "provider" / "digest.rs"
 OUT = REPO_ROOT / "docs" / "PHASE-8-PROVIDER-ROWS.md"
 
 # A unit **withheld** on this pass, keyed by the translation unit's repo-relative path, with the
-# measured reason. It is a *claim about the authority and the crate*, so it is reviewed when the
-# unit moves, and the document renders it under the unit's own heading rather than leaving an
-# unexplained remainder. Two kinds are recorded here: a unit whose closure is not *reachable*
-# (D382's `argon2.c.in`, D384's exchange units) and a unit that is reachable only behind a
-# prerequisite or that the census tool itself refuses (D385's keymgmt units). Being here does
-# **not** change the census: the rows stay `unimplemented` and the totals count them as unlanded.
-# D386 discharged the one tool refusal this map recorded -- the authority's many-to-one dispatch
-# symbols (`kdf_legacy_kmgmt.c`, `mac_legacy_kmgmt.c`) are now described by a partition-equality
-# check in `gen_provider_algorithms.py` rather than refused -- so the legacy-KDF unit is landed and
-# the remaining entries are reachability or prerequisite holds only.
+# measured reason. It is a *claim about the authority and the crate*, so it is reviewed whenever a
+# unit lands, and the document renders it under the unit's own heading rather than leaving an
+# unexplained remainder. Being here does **not** change the census: the rows stay `unimplemented`
+# and the totals count them as unlanded. D382 introduced the map for argon2's unreachable threaded
+# arm, D384/D385 widened it to prerequisite holds and the census refusals, and D386 discharged the
+# one tool refusal.
+#
+# **An entry may exist only for a unit that is genuinely not transcribed, and it must name the
+# missing implementation rather than a landed one.** A note the generator still prints for a landed
+# unit is a false claim in `docs/PHASE-8-PROVIDER-ROWS.md`; a note for a unit that can no longer
+# appear at all is an unreadable one (D396 removed the two stale signature notes for exactly these
+# reasons). D404 audited this map against the crate and the census and found six discrepancies: the
+# `argon2.c.in`, `ml_kem_kmgmt.c.in`, `mlx_kmgmt.c.in`, `slh_dsa_kmgmt.c.in` and `slh_dsa_sig.c.in`
+# entries were deleted (all five units landed at D397-D404, and each note named a thread or `crypto/`
+# implementation the crate now has), and the SM2 signature note -- shadowed by a duplicate
+# `ml_dsa_sig.c.in` key, so it never printed at all -- was re-keyed to its own unit. The five entries
+# below are the whole of what the census leaves unlanded.
 WITHHELD: dict[str, str] = {
-    "forensics/authorities/src/openssl-3.6.4/providers/implementations/kdfs/argon2.c.in": (
-        "**Withheld: not reachable on this profile, and recorded rather than stubbed.** The arm "
-        "this profile compiles is *threaded*: `configuration.h:36` defines `OPENSSL_THREADS` and "
-        "neither `OPENSSL_NO_DEFAULT_THREAD_POOL` nor `OPENSSL_NO_THREAD_POOL` is set, so "
-        "`argon2.c.in:41-47` does **not** define `ARGON2_NO_THREADS` and `fill_mem_blocks_mt` "
-        "(`:561-626`) is compiled alongside `fill_mem_blocks_st`. It calls "
-        "`ossl_crypto_thread_start`, `ossl_crypto_thread_join` and `ossl_crypto_thread_clean` "
-        "(declared in `include/internal/thread.h:19`, not installed, so they are not in the export "
-        "atlas and have no owning phase). **Their coordinate was measured at D396 and is not "
-        "`crypto/threads_pthread.c`**, which is what an earlier revision of this note said: that "
-        "file holds the `CRYPTO_THREAD_*` lock/local/once layer and the RCU layer, and the crate "
-        "already carries both in `src/runtime/thread.rs`. The three functions are "
-        "`crypto/thread/internal.c:40/73/95` (the `#else` no-threads arm at `:109/115/120` is not "
-        "this profile's), and what they need that the crate lacks is the native layer they call -- "
-        "`ossl_crypto_thread_native_start`/`_join`/`_clean` in `crypto/thread/arch.c` (132 lines) "
-        "over `crypto/thread/arch/thread_posix.c` (233, the POSIX arm this profile compiles) -- "
-        "plus a `ctx` member on the thread object. Their other prerequisites are **landed**: "
-        "`ossl_crypto_mutex_lock`/`_unlock`, `ossl_crypto_condvar_wait`/`_signal` "
-        "(`src/runtime/thread.rs`), `OSSL_LIB_CTX_GET_THREADS` (`src/context/thread_data.rs:133`) "
-        "and `OSSL_get_max_threads`. So this is **not** a thin adapter over an existing thread "
-        "layer. **D397 landed it** -- `src/runtime/thread_arch.rs` is `arch.c` and "
-        "`arch/thread_posix.c`, the pool is `src/context/thread_data.rs`, and D397 also closed a "
-        "lost-wakeup window in `ossl_crypto_condvar_wait` that nothing had ever exercised. **What "
-        "remains for these three rows is therefore this unit's own transcription**: 1,574 lines of "
-        "provider C plus the BLAKE2 plumbing it drives. D396's estimate of \"roughly 425 lines for "
-        "six rows\" counted the thread trio and attributed argon2's rows to it, which was wrong by "
-        "about four times; the trio is landed and driven by unit tests, and argon2 is a pass of "
-        "its own."
-    ),
     # The `OSSL_OP_KEYEXCH` group. D386 landed the crate's `OSSL_OP_KEYMGMT` arm -- the gate this
     # comment used to describe as absent -- and, on it, the `kdf_exch.c` unit. D387 landed
     # `dh_kmgmt.c` and `dh_exch.c.in`; D388 landed `ecx_kmgmt.c.in` and `ecx_exch.c.in`; D390 landed
@@ -121,16 +99,12 @@ WITHHELD: dict[str, str] = {
     # rows down one). The `OSSL_OP_ASYM_CIPHER` group's remaining row is therefore `sm2_enc.c.in`
     # alone and the KEM group's is `ec_kem.c.in` alone, both below.
     #
-    # D396 also removed the two entries that had gone stale: `ecdsa_sig.c.in` and `eddsa_sig.c.in`
-    # landed at D393 and D394, their `Withheld` notes were correct when written and contradicted the
-    # group preamble this file now carries, and a note for a landed unit can never be printed by the
-    # generator -- so leaving them was an unreadable claim rather than a harmless one.
-    # The keymgmt group's **prerequisite-held and unreachable** units. `kdf_legacy_kmgmt.c` is
-    # landed (D386), `dh_kmgmt.c` is landed (D387), `ecx_kmgmt.c.in`, `mac_legacy_kmgmt.c` and
-    # `ec_kmgmt.c` are landed (D388-D390), and `rsa_kmgmt.c` and `dsa_kmgmt.c` land at D391 with the
-    # two crypto validators they were held on -- so **every row of the authority's
-    # `deflt_keymgmt[]` that this profile's crate can build is now landed**, and the entries below
-    # are the four PQC units, each built on an implementation the crate does not have.
+    # The keymgmt group. `kdf_legacy_kmgmt.c`, `dh_kmgmt.c`, `ecx_kmgmt.c.in`, `mac_legacy_kmgmt.c`,
+    # `ec_kmgmt.c`, `rsa_kmgmt.c` and `dsa_kmgmt.c` are landed (D386-D391), and so are the three PQC
+    # keymgmt units that followed: `slh_dsa_kmgmt.c.in` (D398/D399), `ml_kem_kmgmt.c.in` (D403, over
+    # D401's `crypto/ml_kem/`) and `mlx_kmgmt.c.in` (D404, over the ML-KEM and EC/ECX halves). **The
+    # only keymgmt unit left is `ml_dsa_kmgmt.c.in`**, built on a `crypto/ml_dsa/` the crate does not
+    # have, and it is the sole entry here.
     "forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/ml_dsa_kmgmt.c.in": (
         "**Withheld: not reachable.** The unit's three rows (`ML-DSA-44`, `ML-DSA-65`, `ML-DSA-87`) "
         "are built on `ossl_ml_dsa_*` (`crypto/ml_dsa/`), which the crate does not have -- its "
@@ -141,34 +115,6 @@ WITHHELD: dict[str, str] = {
         "`ml_dsa_ntt.c` 193, `ml_dsa_key_compress.c` 175, `ml_dsa_params.c` 105 and the headers), "
         "plus **1,153** lines in the unit pair (`ml_dsa_kmgmt.c.in` 616, `ml_dsa_sig.c.in` 537) -- "
         "so about 4,900 lines for the six rows of this group."
-    ),
-    "forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/ml_kem_kmgmt.c.in": (
-        "**Withheld: not reachable.** The unit's three rows (`ML-KEM-512`, `ML-KEM-768`, "
-        "`ML-KEM-1024`) are built on `ossl_ml_kem_*` (`crypto/ml_kem/`), which the crate does not "
-        "have -- `ossl_ml_kem_encap_rand`/`_encap_seed`, `ossl_ml_kem_decap`, the key "
-        "encode/decode pair and `ossl_ml_kem_get_vinfo` are none of them in this tree. "
-        "**Measured (D397): 2,452 lines, one file (`crypto/ml_kem/ml_kem.c`)**, plus **1,174** in "
-        "the ML-KEM unit pair (`ml_kem_kmgmt.c.in` 902, `ml_kem_kem.c.in` 272)."
-    ),
-    "forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/mlx_kmgmt.c.in": (
-        "**Withheld: not reachable.** The unit's four hybrid rows (`X25519MLKEM768`, "
-        "`X448MLKEM1024`, `SecP256r1MLKEM768`, `SecP384r1MLKEM1024`) are built on **both** an ECX "
-        "or EC half and the ML-KEM half: they call `ossl_ml_kem_get_vinfo` and `ossl_mlx_*`, and "
-        "depend on `crypto/ml_kem/`. **Measured (D397), and one earlier revision of this note was "
-        "wrong about it: there is no `crypto/mlx/`.** The hybrid logic *is* the two provider units "
-        "(`mlx_kem.c` 350, `mlx_kmgmt.c.in` 844, 1,194 lines for the four rows), which sit on "
-        "`crypto/ml_kem/`'s 2,452 and the already-landed EC/ECX halves -- so these four rows cost "
-        "nothing beyond `crypto/ml_kem/` and their own 1,194 lines."
-    ),
-    "forensics/authorities/src/openssl-3.6.4/providers/implementations/keymgmt/slh_dsa_kmgmt.c.in": (
-        "**Withheld: not reachable.** The unit's twelve rows (`SLH-DSA-SHA2-*`, `SLH-DSA-SHAKE-*`) "
-        "are built on `ossl_slh_dsa_*` (`crypto/slh_dsa/`), which the crate does not have -- "
-        "`ossl_slh_dsa_generate_key`, `ossl_slh_dsa_key_dup`/`_equal`/`_free`/`_get`, and the "
-        "`ossl_slh_dsa_hash_ctx_new`/`_free` pair are none of them in this tree. **Measured "
-        "(D397): 2,952 lines in `crypto/slh_dsa/`** across ten `.c` files (`slh_dsa_key.c` 527, "
-        "`slh_dsa.c` 393, `slh_fors.c` 328, `slh_wots.c` 319, `slh_hash.c` 300 and five more), "
-        "plus **894** in the unit pair (`slh_dsa_kmgmt.c.in` 501, `slh_dsa_sig.c.in` 393) -- about "
-        "3,850 lines for this group's twenty-four rows, the largest block left."
     ),
     "forensics/authorities/src/openssl-3.6.4/providers/implementations/kem/ec_kem.c.in": (
         "**Withheld: the unit's `EC` KEM row, on a partial transcription that is named rather "
@@ -190,10 +136,10 @@ WITHHELD: dict[str, str] = {
     # The `OSSL_OP_SIGNATURE` group. D392 opened the operation: the `deflt_query` arm and
     # `DEFLT_SIGNATURES` land with `mac_legacy_sig.c`'s four rows and `dsa_sig.c.in`'s ten. D393
     # landed `ecdsa_sig.c.in`'s ten on `der_ec_sig.c`, D394 `eddsa_sig.c.in`'s five on
-    # `der_ecx_key.c`, and D395 `rsa_sig.c.in`'s fourteen on `der_rsa_sig.c`, `der_rsa_key.c`'s PSS
-    # params writer and `securitycheck*.c` -- so **every reachable `OSSL_OP_SIGNATURE` row is now
-    # landed** and the entries below are the units that remain, each held on a named callee or on a
-    # `crypto/` implementation the crate does not have.
+    # `der_ecx_key.c`, D395 `rsa_sig.c.in`'s fourteen on `der_rsa_sig.c`, `der_rsa_key.c`'s PSS
+    # params writer and `securitycheck*.c`, and D399 `slh_dsa_sig.c.in`'s twelve on `crypto/slh_dsa/`
+    # -- so the two entries below are the whole of what remains: `sm2_sig.c.in`, held on
+    # `crypto/sm2/` and `der_sm2_sig.c`, and `ml_dsa_sig.c.in`, held on `crypto/ml_dsa/`.
     #
     # `dsa_sig.c.in` is **not** here: its only non-FIPS prerequisites are
     # `providers/common/digest_to_nid.c` and `der_dsa_sig.c`, both landed as
@@ -201,7 +147,7 @@ WITHHELD: dict[str, str] = {
     # that let DSA land before RSA and ECDSA: `ossl_dsa_check_key`, the callee this comment would
     # otherwise have named, is reached only from `dsa_sig.c.in`'s `#ifdef FIPS_MODULE` block at
     # `:266`, so `providers/common/securitycheck.c` is not on the DSA path at all.
-    "forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/ml_dsa_sig.c.in": (
+    "forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/sm2_sig.c.in": (
         "**Withheld: the unit's one row, on two unlanded units.** `sm2_sig.c.in`'s sign path is "
         "`ossl_sm2_internal_sign`/`ossl_sm2_internal_verify` and `ossl_sm2_compute_z_digest` "
         "(`crypto/sm2/sm2_sign.c`, 543 lines), and its AlgorithmIdentifier comes from "
@@ -225,11 +171,6 @@ WITHHELD: dict[str, str] = {
         "**Withheld: not reachable.** The unit's three rows (`ML-DSA-44`, `ML-DSA-65`, "
         "`ML-DSA-87`) dispatch to `ossl_ml_dsa_*` (`crypto/ml_dsa/`), which the crate does not "
         "have."
-    ),
-    "forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/slh_dsa_sig.c.in": (
-        "**Withheld: not reachable.** The unit's twelve rows (`SLH-DSA-SHA2-*`, "
-        "`SLH-DSA-SHAKE-*`) dispatch to `ossl_slh_dsa_*` (`crypto/slh_dsa/`), which the crate does "
-        "not have."
     ),
 }
 

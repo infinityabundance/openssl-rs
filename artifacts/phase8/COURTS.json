@@ -194,9 +194,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 359,
+        "authority_observations": 531,
         "candidate_exit_code": 0,
-        "candidate_observations": 359,
+        "candidate_observations": 531,
         "candidate_stderr_tail": [],
         "court": "RT-KEYMGMT",
         "crashed": false,
@@ -37977,7 +37977,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_keymgmt_probe.c",
-      "sha256": "0d3099c12ba28fc860f7bf34fa589224e0a29545e963b95d77c753f401e12020"
+      "sha256": "1806c4e298edcb58a69a3c5942f13d05bc074fb7e633f99dca2346f555ef1276"
     },
     {
       "name": "probe",
