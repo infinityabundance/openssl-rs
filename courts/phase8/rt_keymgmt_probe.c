@@ -73,6 +73,15 @@
  *      rebuilds a context from the imported key with `EVP_PKEY_CTX_new_from_pkey`. The empty
  *      `fromdata` is the row's own refusal. The small values are the shape `rt_rsa_probe.c`
  *      already uses (`n = 3233`, `e = 65537`); nothing here is generated.
+ *  10. **The three `ML-DSA-44/65/87` keymgmt rows (D409).** Each is fetched by its own name and by
+ *      its `MLDSA##` short alias, its four aliases are each probed through `EVP_KEYMGMT_is_a` (plus
+ *      one other row's name, which is not one), and a keypair is generated from the fixed seed
+ *      `ml_dsa_probe.h` carries -- a **differential** input, not a published vector. The observed
+ *      values are the recovered `bits`/`security-bits`/`security-category`/`max-size`, the encoded
+ *      public key's length and its sha256. `security-bits` is the row's *collision strength*
+ *      (`ossl_ml_dsa_key_get_collision_strength_bits`, FIPS 204's lambda) and `security-category`
+ *      its NIST category; the public half of a seed-derived keypair is not a secret, which is what
+ *      lets this arm print a key-derived digest where the rest of the file prints only sizes.
  *
  * ## What this court deliberately does not observe
  *
@@ -103,6 +112,7 @@
 
 #include "slh_dsa_probe.h"
 #include "ml_kem_probe.h"
+#include "ml_dsa_probe.h"
 
 static void kv_int(const char *key, int value)
 {
@@ -112,11 +122,12 @@ static void kv_int(const char *key, int value)
 /* Forward declarations: two arms below are defined after the arms that call them. */
 static void kv_sha256(const char *key, const unsigned char *buf, size_t len);
 
-/* The twenty-five landed OSSL_OP_KEYMGMT rows this probe fetches, in the authority's
- * deflt_keymgmt[] order: the eighteen D391's pass published, the three ML-KEM rows D403 added, and
- * the four `mlx` hybrid rows D404 added. The rows the authority publishes and the crate does not
- * (`LMS`, `ML-DSA-44/65/87` and the SLH-DSA twelve, which `slh_dsa_probe.h` carries under their own
- * arm) are named in the arms that reach them. */
+/* The twenty-five landed OSSL_OP_KEYMGMT rows this probe fetches by name through a key context, in
+ * the authority's deflt_keymgmt[] order: the eighteen D391's pass published, the three ML-KEM rows
+ * D403 added, and the four `mlx` hybrid rows D404 added. The rows whose own arm reaches them
+ * instead -- the three ML-DSA keymgmt rows below and the twelve SLH-DSA keymgmt rows
+ * `slh_dsa_probe.h` carries -- are named there and not here; `LMS`, which the authority publishes
+ * and the crate does not, has no arm. */
 static const char *kmgmt_rows[] = { "DH", "DHX", "DSA", "RSA", "RSA-PSS", "EC", "X25519", "X448",
                                     "ED25519", "ED448", "TLS1-PRF", "HKDF", "SCRYPT", "HMAC",
                                     "SIPHASH", "POLY1305", "CMAC", "SM2", "ML-KEM-512",
@@ -981,6 +992,122 @@ static void arm_slh_dsa_keymgmt(void)
     }
 }
 
+/* The three landed `OSSL_OP_KEYMGMT` `ML-DSA-*` rows (D409), one macro-expanded body publishing
+ * `ML-DSA-44`/`-65`/`-87` exactly as the authority's `deflt_keymgmt[]` does. Each row carries four
+ * aliases -- the full name, the `MLDSA##` short name, the dotted OID and the `id-ml-dsa-##` name --
+ * and all four are probed through `EVP_KEYMGMT_is_a` after the row is fetched. The keypair is then
+ * generated from the fixed seed `ml_dsa_probe.h` carries, so the observables (`bits`,
+ * `security-bits`, `security-category`, `max-size`, the public key's length and its sha256) are the
+ * same bytes on both sides. A generated ML-DSA keypair is a function of its seed alone; the public
+ * half is not a secret, so its digest is the one key-derived byte string this arm prints. */
+struct ml_dsa_kmgmt_row {
+    const char *name;
+    const char *short_name;
+    const char *oid;
+    const char *oid_name;
+};
+
+static const struct ml_dsa_kmgmt_row ml_dsa_kmgmt_rows[] = {
+    { "ML-DSA-44", "MLDSA44", "2.16.840.1.101.3.4.3.17", "id-ml-dsa-44" },
+    { "ML-DSA-65", "MLDSA65", "2.16.840.1.101.3.4.3.18", "id-ml-dsa-65" },
+    { "ML-DSA-87", "MLDSA87", "2.16.840.1.101.3.4.3.19", "id-ml-dsa-87" },
+};
+
+static void arm_ml_dsa_keymgmt(void)
+{
+    size_t i;
+
+    /* Three rows, so the "another row's name" probe below indexes one ahead and wraps. */
+    for (i = 0; i < sizeof(ml_dsa_kmgmt_rows) / sizeof(ml_dsa_kmgmt_rows[0]); i++) {
+        const struct ml_dsa_kmgmt_row *r = &ml_dsa_kmgmt_rows[i];
+        EVP_KEYMGMT *km;
+        EVP_PKEY_CTX *ctx;
+        EVP_PKEY *pkey = NULL;
+        OSSL_PARAM params[2];
+        unsigned char pub[2592];
+        size_t pub_len = 0;
+        char key[96];
+        int bits = 0, sec_bits = 0, max_size = 0, seccat = 0;
+
+        /* Arm 1: the row's own fetch, and its four aliases through `EVP_KEYMGMT_is_a`. */
+        km = EVP_KEYMGMT_fetch(NULL, r->name, NULL);
+        snprintf(key, sizeof(key), "mldsa.%s.fetch", r->name);
+        kv_int(key, km != NULL);
+        if (km != NULL) {
+            snprintf(key, sizeof(key), "mldsa.%s.is_a_full", r->name);
+            kv_int(key, EVP_KEYMGMT_is_a(km, r->name));
+            snprintf(key, sizeof(key), "mldsa.%s.is_a_short", r->name);
+            kv_int(key, EVP_KEYMGMT_is_a(km, r->short_name));
+            snprintf(key, sizeof(key), "mldsa.%s.is_a_oid", r->name);
+            kv_int(key, EVP_KEYMGMT_is_a(km, r->oid));
+            snprintf(key, sizeof(key), "mldsa.%s.is_a_oid_name", r->name);
+            kv_int(key, EVP_KEYMGMT_is_a(km, r->oid_name));
+            /* A *different* row's name is not this row's alias. */
+            snprintf(key, sizeof(key), "mldsa.%s.is_a_other", r->name);
+            kv_int(key, EVP_KEYMGMT_is_a(km, ml_dsa_kmgmt_rows[(i + 1) % 3].name));
+            EVP_KEYMGMT_free(km);
+        }
+
+        /* The short alias reaches the same row. */
+        km = EVP_KEYMGMT_fetch(NULL, r->short_name, NULL);
+        snprintf(key, sizeof(key), "mldsa.%s.alias_fetch", r->short_name);
+        kv_int(key, km != NULL);
+        EVP_KEYMGMT_free(km);
+
+        /* Arm 2: generation from the fixed `seed` gen parameter, through the public keygen path. */
+        ctx = EVP_PKEY_CTX_new_from_name(NULL, r->name, NULL);
+        snprintf(key, sizeof(key), "mldsa.%s.ctx", r->name);
+        kv_int(key, ctx != NULL);
+        if (ctx == NULL)
+            continue;
+
+        snprintf(key, sizeof(key), "mldsa.%s.keygen_init", r->name);
+        kv_int(key, EVP_PKEY_keygen_init(ctx));
+        params[0] = OSSL_PARAM_construct_octet_string(OSSL_PKEY_PARAM_ML_DSA_SEED,
+                                                      (void *)ml_dsa_seed, sizeof(ml_dsa_seed));
+        params[1] = OSSL_PARAM_construct_end();
+        snprintf(key, sizeof(key), "mldsa.%s.set_seed", r->name);
+        kv_int(key, EVP_PKEY_CTX_set_params(ctx, params));
+        snprintf(key, sizeof(key), "mldsa.%s.generate", r->name);
+        kv_int(key, EVP_PKEY_generate(ctx, &pkey));
+
+        if (pkey != NULL) {
+            snprintf(key, sizeof(key), "mldsa.%s.bits", r->name);
+            kv_int(key, EVP_PKEY_get_int_param(pkey, OSSL_PKEY_PARAM_BITS, &bits) == 1 ? bits : -1);
+            /* `security-bits` is the row's collision strength: FIPS 204's lambda, 128/192/256. */
+            snprintf(key, sizeof(key), "mldsa.%s.security_bits", r->name);
+            kv_int(key, EVP_PKEY_get_int_param(pkey, OSSL_PKEY_PARAM_SECURITY_BITS, &sec_bits)
+                           == 1 ? sec_bits : -1);
+            /* `max-size` is the signature length of the parameter set. */
+            snprintf(key, sizeof(key), "mldsa.%s.max_size", r->name);
+            kv_int(key, EVP_PKEY_get_int_param(pkey, OSSL_PKEY_PARAM_MAX_SIZE, &max_size) == 1
+                           ? max_size : -1);
+            snprintf(key, sizeof(key), "mldsa.%s.security_category", r->name);
+            kv_int(key, EVP_PKEY_get_int_param(pkey, OSSL_PKEY_PARAM_SECURITY_CATEGORY, &seccat)
+                           == 1 ? seccat : -1);
+
+            pub_len = 0;
+            snprintf(key, sizeof(key), "mldsa.%s.get_pub", r->name);
+            kv_int(key, EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_PUB_KEY, pub,
+                                                        sizeof(pub), &pub_len));
+            snprintf(key, sizeof(key), "mldsa.%s.pub_len", r->name);
+            kv_int(key, (int)pub_len);
+            snprintf(key, sizeof(key), "mldsa.%s.pub_sha256", r->name);
+            kv_sha256(key, pub, pub_len);
+        }
+        EVP_PKEY_free(pkey);
+        EVP_PKEY_CTX_free(ctx);
+    }
+
+    /* An absent name is refused, which is the row set's own boundary. */
+    {
+        EVP_KEYMGMT *km = EVP_KEYMGMT_fetch(NULL, "NO-SUCH-KEYMGMT", NULL);
+
+        kv_int("mldsa.absent.fetch", km != NULL);
+        EVP_KEYMGMT_free(km);
+    }
+}
+
 int main(void)
 {
     arm_keymgmt_fetch();
@@ -995,6 +1122,7 @@ int main(void)
     arm_ml_kem_keymgmt();
     arm_mlx_hybrid();
     arm_slh_dsa_keymgmt();
+    arm_ml_dsa_keymgmt();
     ERR_clear_error();
     return 0;
 }

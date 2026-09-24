@@ -1685,6 +1685,13 @@
         "translation_unit": "providers/common/der/libcommon-lib-der_ecx_key.c"
       },
       {
+        "module": "src/provider/der_ml_dsa_key.rs",
+        "phase": 9,
+        "phase_source": "module-declaration",
+        "share": "1/1",
+        "translation_unit": "providers/common/der/libcommon-lib-der_ml_dsa_key.c"
+      },
+      {
         "module": "src/provider/der_rsa_key.rs",
         "phase": 8,
         "phase_source": "module-declaration",
@@ -1774,6 +1781,13 @@
         "phase_source": "module-declaration",
         "share": "3/3",
         "translation_unit": "providers/implementations/keymgmt/libdefault-lib-mac_legacy_kmgmt.c"
+      },
+      {
+        "module": "src/provider/ml_dsa_kmgmt.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "1/1",
+        "translation_unit": "providers/implementations/keymgmt/libdefault-lib-ml_dsa_kmgmt.c"
       },
       {
         "module": "src/provider/ml_kem_kmgmt.rs",

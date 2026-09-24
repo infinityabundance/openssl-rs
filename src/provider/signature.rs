@@ -67,6 +67,9 @@ use crate::provider::mac_legacy_sig::{
     MAC_LEGACY_CMAC_SIGNATURE_FUNCTIONS, MAC_LEGACY_HMAC_SIGNATURE_FUNCTIONS,
     MAC_LEGACY_POLY1305_SIGNATURE_FUNCTIONS, MAC_LEGACY_SIPHASH_SIGNATURE_FUNCTIONS,
 };
+use crate::provider::ml_dsa_sig::{
+    ML_DSA_44_SIGNATURE_FUNCTIONS, ML_DSA_65_SIGNATURE_FUNCTIONS, ML_DSA_87_SIGNATURE_FUNCTIONS,
+};
 use crate::provider::rsa_sig::{
     RSA_RIPEMD160_SIGNATURE_FUNCTIONS, RSA_SHA1_SIGNATURE_FUNCTIONS,
     RSA_SHA224_SIGNATURE_FUNCTIONS, RSA_SHA256_SIGNATURE_FUNCTIONS, RSA_SHA384_SIGNATURE_FUNCTIONS,
@@ -97,10 +100,10 @@ use crate::provider::sm2_sig::SM2_SIGNATURE_FUNCTIONS;
 /// `src/provider/mac_legacy_sig.rs`'s.
 ///
 /// **The property definition is `"provider=default"` on every row** (`defltprov.c`'s three-field
-/// initializer, D247). The rows between the runs — the fourteen `RSA` ones, `SM2` and the three
-/// `ML-DSA` ones — are absent rather than reordered until their units land: the census requires
-/// this table's rows to be a **subsequence** of `deflt_signature[]` in the authority's order
-/// (D386).
+/// initializer, D247). The rows between the runs — the fourteen `RSA` ones — are absent rather than
+/// reordered until their unit lands: the census requires this table's rows to be a **subsequence**
+/// of `deflt_signature[]` in the authority's order (D386). The three `ML-DSA` rows are the fifth
+/// landing (D409), between `SM2` and the legacy MACs, which is `defltprov.c:469-472`'s position.
 ///
 /// **`#[rustfmt::skip]` is load-bearing, not cosmetic.** `gen_provider_algorithms.py`'s row
 /// reader anchors a row on `algorithm_names: c"…"` and `implementation: …as_ptr()` in one another's
@@ -108,7 +111,7 @@ use crate::provider::sm2_sig::SM2_SIGNATURE_FUNCTIONS;
 /// rustfmt pass that moved the `c"…"` onto its own line would make the census read a table with
 /// fewer rows than it has.
 #[rustfmt::skip]
-pub(crate) static DEFLT_SIGNATURES: [OsslAlgorithm; 57] = [
+pub(crate) static DEFLT_SIGNATURES: [OsslAlgorithm; 60] = [
     OsslAlgorithm {
         // `PROV_NAMES_DSA` — the OID alias is part of the row.
         algorithm_names: c"DSA:dsaEncryption:1.2.840.10040.4.1".as_ptr(),
@@ -390,6 +393,28 @@ pub(crate) static DEFLT_SIGNATURES: [OsslAlgorithm; 57] = [
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
+        // `PROV_NAMES_ML_DSA_44` (`defltprov.c:470`, `names.h:409`), the authority's row after
+        // `SM2` and before the legacy MACs.
+        algorithm_names: c"ML-DSA-44:MLDSA44:2.16.840.1.101.3.4.3.17:id-ml-dsa-44".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ML_DSA_44_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ML_DSA_65` (`defltprov.c:471`, `names.h:411`).
+        algorithm_names: c"ML-DSA-65:MLDSA65:2.16.840.1.101.3.4.3.18:id-ml-dsa-65".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ML_DSA_65_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ML_DSA_87` (`defltprov.c:472`, `names.h:413`).
+        algorithm_names: c"ML-DSA-87:MLDSA87:2.16.840.1.101.3.4.3.19:id-ml-dsa-87".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ML_DSA_87_SIGNATURE_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
         // `PROV_NAMES_HMAC`.
         algorithm_names: c"HMAC".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
@@ -513,13 +538,14 @@ pub(crate) static DEFLT_SIGNATURES: [OsslAlgorithm; 57] = [
 mod tests {
     use super::*;
 
-    /// The table's shape: fifty-seven entries, the last the NULL terminator, and the seven landed
-    /// runs in the authority's order -- `DSA` first (`defltprov.c:417`), then the fourteen `RSA` rows
+    /// The table's shape: sixty entries, the last the NULL terminator, and the eight landed runs in
+    /// the authority's order -- `DSA` first (`defltprov.c:417`), then the fourteen `RSA` rows
     /// (`:428-441`, D395), `EdDSA` (`:444`), `ECDSA` (`:455`), the one `SM2` row (`:460`, D406), the
-    /// legacy-MAC four (`:476-484`, D389) and the twelve `SLH-DSA` rows last (`:497-521`, D399).
+    /// three `ML-DSA` rows (`:470-472`, D409), the legacy-MAC four (`:476-484`, D389) and the twelve
+    /// `SLH-DSA` rows last (`:497-521`, D399).
     #[test]
     fn the_signature_table_is_the_authoritys_landed_runs_in_order() {
-        assert_eq!(DEFLT_SIGNATURES.len(), 57);
+        assert_eq!(DEFLT_SIGNATURES.len(), 60);
         // SAFETY: the first row is initialised.
         let first = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[0].algorithm_names) };
         assert_eq!(first.to_bytes(), b"DSA:dsaEncryption:1.2.840.10040.4.1");
@@ -563,26 +589,46 @@ mod tests {
         // SAFETY: the fortieth row is initialised -- the `SM2` row (`defltprov.c:460`, D406).
         let sm2_row = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[39].algorithm_names) };
         assert_eq!(sm2_row.to_bytes(), b"SM2:1.2.156.10197.1.301");
-        // SAFETY: the forty-first row is initialised -- the legacy-MAC run's first.
-        let fortieth = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[40].algorithm_names) };
-        assert_eq!(fortieth.to_bytes(), b"HMAC");
-        // SAFETY: the forty-fourth row is initialised.
-        let last = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[43].algorithm_names) };
-        assert_eq!(last.to_bytes(), b"CMAC");
-        // SAFETY: the forty-fifth row is initialised -- the `SLH-DSA` run's first.
-        let slh_first = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[44].algorithm_names) };
+        // SAFETY: the forty-first row is initialised -- the `ML-DSA` run's first (`:470`, D409).
+        let mldsa_first =
+            unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[40].algorithm_names) };
+        assert_eq!(
+            mldsa_first.to_bytes(),
+            b"ML-DSA-44:MLDSA44:2.16.840.1.101.3.4.3.17:id-ml-dsa-44"
+        );
+        // SAFETY: the forty-second row is initialised -- the `ML-DSA` run's second.
+        let mldsa_second =
+            unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[41].algorithm_names) };
+        assert_eq!(
+            mldsa_second.to_bytes(),
+            b"ML-DSA-65:MLDSA65:2.16.840.1.101.3.4.3.18:id-ml-dsa-65"
+        );
+        // SAFETY: the forty-third row is initialised -- the `ML-DSA` run's last.
+        let mldsa_last = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[42].algorithm_names) };
+        assert_eq!(
+            mldsa_last.to_bytes(),
+            b"ML-DSA-87:MLDSA87:2.16.840.1.101.3.4.3.19:id-ml-dsa-87"
+        );
+        // SAFETY: the forty-fourth row is initialised -- the legacy-MAC run's first.
+        let hmac = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[43].algorithm_names) };
+        assert_eq!(hmac.to_bytes(), b"HMAC");
+        // SAFETY: the forty-seventh row is initialised -- the legacy-MAC run's last.
+        let cmac = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[46].algorithm_names) };
+        assert_eq!(cmac.to_bytes(), b"CMAC");
+        // SAFETY: the forty-eighth row is initialised -- the `SLH-DSA` run's first.
+        let slh_first = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[47].algorithm_names) };
         assert_eq!(
             slh_first.to_bytes(),
             b"SLH-DSA-SHA2-128s:id-slh-dsa-sha2-128s:2.16.840.1.101.3.4.3.20"
         );
-        // SAFETY: the fifty-sixth row is initialised -- the `SLH-DSA` run's last.
-        let slh_last = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[55].algorithm_names) };
+        // SAFETY: the fifty-ninth row is initialised -- the `SLH-DSA` run's last.
+        let slh_last = unsafe { core::ffi::CStr::from_ptr(DEFLT_SIGNATURES[58].algorithm_names) };
         assert_eq!(
             slh_last.to_bytes(),
             b"SLH-DSA-SHAKE-256f:id-slh-dsa-shake-256f:2.16.840.1.101.3.4.3.31"
         );
-        assert!(DEFLT_SIGNATURES[56].algorithm_names.is_null());
-        assert!(DEFLT_SIGNATURES[56].property_definition.is_null());
-        assert!(DEFLT_SIGNATURES[56].implementation.is_null());
+        assert!(DEFLT_SIGNATURES[59].algorithm_names.is_null());
+        assert!(DEFLT_SIGNATURES[59].property_definition.is_null());
+        assert!(DEFLT_SIGNATURES[59].implementation.is_null());
     }
 }

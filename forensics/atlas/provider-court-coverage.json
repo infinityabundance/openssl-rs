@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 299,
+        "implemented": 305,
         "unmatched": 0
       },
       "9": {
@@ -58,8 +58,8 @@
         ]
       }
     ],
-    "directly_courted": 304,
-    "implemented_rows": 304,
+    "directly_courted": 310,
+    "implemented_rows": 310,
     "rows": [
       {
         "algorithm_names": "RSA",
@@ -2956,6 +2956,57 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "ML-DSA-44",
+        "aliases": [
+          "ML-DSA-44",
+          "MLDSA44",
+          "2.16.840.1.101.3.4.3.17",
+          "id-ml-dsa-44"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ML-DSA-65",
+        "aliases": [
+          "ML-DSA-65",
+          "MLDSA65",
+          "2.16.840.1.101.3.4.3.18",
+          "id-ml-dsa-65"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ML-DSA-87",
+        "aliases": [
+          "ML-DSA-87",
+          "MLDSA87",
+          "2.16.840.1.101.3.4.3.19",
+          "id-ml-dsa-87"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "ML-KEM-1024",
         "aliases": [
           "ML-KEM-1024",
@@ -3993,6 +4044,57 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "ML-DSA-44",
+        "aliases": [
+          "ML-DSA-44",
+          "MLDSA44",
+          "2.16.840.1.101.3.4.3.17",
+          "id-ml-dsa-44"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ML-DSA-65",
+        "aliases": [
+          "ML-DSA-65",
+          "MLDSA65",
+          "2.16.840.1.101.3.4.3.18",
+          "id-ml-dsa-65"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ML-DSA-87",
+        "aliases": [
+          "ML-DSA-87",
+          "MLDSA87",
+          "2.16.840.1.101.3.4.3.19",
+          "id-ml-dsa-87"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "POLY1305",
         "aliases": [
           "POLY1305"
@@ -4486,7 +4588,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "8abf06cb73f30a33dcc7bef4125428a36c068e90dd607a96a3bf65286094b59e"
+      "sha256": "c9d53073508eab8beb8b7458b00ae855666170722f5eef06b5dc2bf278c320bc"
     },
     {
       "name": "court:RT-DIGEST:rt_digest_probe.c",
@@ -4506,7 +4608,7 @@
     {
       "name": "court:RT-KEYMGMT:rt_keymgmt_probe.c",
       "path": "courts/phase8/rt_keymgmt_probe.c",
-      "sha256": "1806c4e298edcb58a69a3c5942f13d05bc074fb7e633f99dca2346f555ef1276"
+      "sha256": "afad9204c9cfd430ac4b12aefe05ccbd9829a0fd68e5390c2514d38b103c6007"
     },
     {
       "name": "court:RT-KEYMGMT:slh_dsa_probe.h",
@@ -4516,7 +4618,7 @@
     {
       "name": "court:RT-SIGNATURE:rt_signature_probe.c",
       "path": "courts/phase8/rt_signature_probe.c",
-      "sha256": "288c72b8f69ffc696e16c87748b27d2879161499e94959cc6991adc9f0159a2b"
+      "sha256": "48038558ca32602263e8f01dfba8ae725aa1e0d7fd7f51d6e00ca43a458d48a9"
     },
     {
       "name": "court:RT-SIGNATURE:slh_dsa_probe.h",

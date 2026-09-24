@@ -11952,7 +11952,8 @@
             "basis": "called",
             "courts": [
               "RT-EVP-KEYMGMT",
-              "RT-EVP-PKEY"
+              "RT-EVP-PKEY",
+              "RT-KEYMGMT"
             ],
             "symbol": "EVP_KEYMGMT_fetch"
           },
@@ -11960,7 +11961,8 @@
             "basis": "called",
             "courts": [
               "RT-EVP-KEYMGMT",
-              "RT-EVP-PKEY"
+              "RT-EVP-PKEY",
+              "RT-KEYMGMT"
             ],
             "symbol": "EVP_KEYMGMT_free"
           },
@@ -12009,7 +12011,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EVP-KEYMGMT"
+              "RT-EVP-KEYMGMT",
+              "RT-KEYMGMT"
             ],
             "symbol": "EVP_KEYMGMT_is_a"
           },
@@ -22063,7 +22066,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "0f8d9a83ca4d45660454291a14f52ade9e42b6926585827704cd98a83f185046"
+      "sha256": "abe501dab350b1f84d9cbed56f99f47654cb3b777b8572829a257da9a7611d71"
     },
     {
       "name": "symbol-ownership",
@@ -22118,7 +22121,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "aaa7d6cde69040adc8e6ab036c3409ecd7894319d3041ed8225fd43fb4771a3f"
+      "sha256": "10e6005595fc130f9853623a2c6597eff354a5eb861efbef48bd1d6073823e07"
     },
     {
       "name": "phase7-courts",
@@ -22128,17 +22131,17 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "7e830651a6d853965996c8178c29c3a00b435d82a4e7dca2f302a6029eba58ba"
+      "sha256": "1c919a8d51b86cab672c4ecd278eba1381c2096f89583ab2bb1af73b1f3a8119"
     },
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "9a763e56fc14decc4aa83e7b03dbe2f5610b71ef7eaad414777832ddf8251a5f"
+      "sha256": "0aa62590f9a4e9b8c5ad8249750e14260a20b722f755a75a9bfb829f1bd31e53"
     },
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "f3562d3e64a6191a03a2d18f052603fb5f8fcf7bcc21fd2e20a531f3fa3ae2e5"
+      "sha256": "547c46eea64469cd5a01be52c654b7567617feb47ef56790269ca1203ac4bc9b"
     },
     {
       "name": "phase9-courts",

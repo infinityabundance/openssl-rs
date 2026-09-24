@@ -830,16 +830,28 @@ COVERED_FILES = [
     # The ML-DSA core's three raising units. `crypto/ml_dsa/ml_dsa_encoders.c` is a plain `.c`, so
     # its `__FILE__` carries the source-tree prefix; it raises once, the `PROV_R_INVALID_KEY`
     # refusal of `ossl_ml_dsa_sk_decode`'s public-key-hash check (`:820`). `ml_dsa_key.c` raises
-    # once (`:501`); see below.
+    # once, the `PROV_R_INVALID_KEY` refusal of `ossl_ml_dsa_generate_key`'s "explicit private key
+    # does not match seed" check (`:501`), which `ossl_ml_dsa_key_reset`s the key first.
     # `ml_dsa_sign.c` raises the three `PROV_R_BAD_LENGTH` guards of `ossl_ml_dsa_mu_init` (`:135`),
-    # `ossl_ml_dsa_sign` (`:181`) and `ossl_ml_dsa_verify` (`:344`). `ml_dsa_key.c` raises once, the
-    # `PROV_R_INVALID_KEY` refusal of `ossl_ml_dsa_generate_key`'s "explicit private key does not
-    # match seed" check (`:501`), which `ossl_ml_dsa_key_reset`s the key first. The other five
-    # `crypto/ml_dsa/` units -- `params`, `ntt`, `key_compress`, `sample` and `matrix` -- raise
-    # nothing.
+    # `ossl_ml_dsa_sign` (`:181`) and `ossl_ml_dsa_verify` (`:344`). The other five `crypto/ml_dsa/`
+    # units -- `params`, `ntt`, `key_compress`, `sample` and `matrix` -- raise nothing.
     ("crypto/ml_dsa/ml_dsa_encoders.c", "ML_DSA_ENCODERS"),
     ("crypto/ml_dsa/ml_dsa_key.c", "ML_DSA_KEY"),
     ("crypto/ml_dsa/ml_dsa_sign.c", "ML_DSA_SIGN"),
+    # The ML-DSA keymgmt unit. `.c.in`-generated, so the bare build-relative path and the
+    # post-expansion coordinates. Its raises are the two `PROV_R_INVALID_KEY_LENGTH` refusals of
+    # `ml_dsa_import`'s seed check and `ml_dsa_export`, the `PROV_R_INVALID_SEED_LENGTH` refusal
+    # beside them, the `PROV_R_MISSING_KEY` refusal of `ml_dsa_export`, the two
+    # `PROV_R_FAILED_TO_GENERATE_KEY` refusals of `ml_dsa_gen` and `ml_dsa_load`'s no-seed arm, the
+    # two `PROV_R_INVALID_KEY` refusals of `ml_dsa_import`'s key check and `ml_dsa_validate`, and
+    # the generated decoders' `PROV_R_REPEATED_PARAMETER` sites.
+    ("providers/implementations/keymgmt/ml_dsa_kmgmt.c", "PROV_ML_DSA_KMGMT"),
+    # The ML-DSA signature unit. `.c.in`-generated too. Its raises are the `PROV_R_NO_KEY_SET`
+    # refusals of the sign and verify message inits, the `PROV_R_INVALID_DIGEST` refusal of
+    # `ml_dsa_digest_signverify_init`, the `PROV_R_INVALID_SEED_LENGTH` refusal of
+    # `ml_dsa_set_ctx_params`'s `test-entropy` decoder, and the generated set-ctx-params decoder's
+    # `PROV_R_REPEATED_PARAMETER` sites.
+    ("providers/implementations/signature/ml_dsa_sig.c", "PROV_ML_DSA_SIG"),
     # 8.10's `HMAC`/`SIPHASH`/`POLY1305`/`CMAC` signature rows. `signature/mac_legacy_sig.c` is a
     # plain `.c`, so its `__FILE__` carries the source-tree prefix. It raises once, the
     # `PROV_R_NO_KEY_SET` refusal of `mac_digest_sign_init` (`:107`).

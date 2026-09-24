@@ -29453,3 +29453,72 @@ is recorded here as `crypto/ml_dsa/`'s landing rather than as a numbered export 
 `language_census` moves **4967 -> 5014** for the new crate modules and nothing else moves. `cargo test
 --lib` is **1040 passed** (the eight ml_dsa tests among them), `cargo clippy --all-targets -- -D
 warnings` is clean, and the pipeline is `PIPELINE OK` with **exit 0**.
+
+## D409 -- the two ML-DSA provider units land, both courted, and `provider_rows` moves to 305/1
+
+The six ML-DSA rows publish here, on D407/D408's core:
+
+| authority unit | lines | crate module |
+|---|---|---|
+| `providers/implementations/keymgmt/ml_dsa_kmgmt.c.in` | 616 | `src/provider/ml_dsa_kmgmt.rs` |
+| `providers/implementations/signature/ml_dsa_sig.c.in` | 537 | `src/provider/ml_dsa_sig.rs` |
+| `providers/common/der/der_ml_dsa_key.c` | 41 | `src/provider/der_ml_dsa_key.rs` |
+
+`DEFLT_SIGNATURES` grows **57 -> 60** with the three signature rows between `SM2` and the legacy MACs
+(`defltprov.c:470-472`), and `DEFLT_KEYMGMT` **38 -> 41** with the three keymgmt rows between the ECX
+group and the KDF rows (`defltprov.c:580-587`) -- both the authority's own positions, so each table
+stays a subsequence. `der_ml_dsa_key.c` is the small unit the signature row's AlgorithmIdentifier
+comes from; its three `ossl_der_oid_id_ml_dsa_*` arrays were read from the authority's **generated**
+`der_ml_dsa_gen.c`/`der_ml_dsa.h` (11 bytes each, `06 09 60 86 48 01 65 03 04 03 1X`), cross-checked
+against `ML_DSA.asn1`, not typed from memory. Two new `gen_err_raise_sites.py` entries register the
+two units' raises (the `PROV_ML_DSA_KMGMT_*` decoder and length/seed/validate sites, and the
+`PROV_ML_DSA_SIG_*` init/digest/`test-entropy` sites).
+
+### Both courts, and how each row is driven
+
+`RT-KEYMGMT` gains `arm_ml_dsa_keymgmt` and `RT-SIGNATURE` gains `arm_ml_dsa_rows`
+(`courts/phase8/ml_dsa_probe.h` carries the one fixed 32-byte keygen seed). The keymgmt arm fetches
+each row and its `MLDSA##`/OID aliases, checks `EVP_KEYMGMT_is_a` over each, generates a keypair from
+the fixed seed and prints the four get-params integers (`bits`, `security-bits` = FIPS 204's lambda,
+`security-category`, `max-size`), the encoded public key's length and its SHA-256. The signature arm
+builds each key from the same seed **through the keymgmt row**, so the court is independent of
+`RT-KEYMGMT`'s, signs a fixed message, prints the signature length and its SHA-256, verifies, and
+flips one byte and requires the verify to fail. `RT-KEYMGMT` grows **531 -> 586 observations** and
+`RT-SIGNATURE` **439 -> 472**, both with zero residual, so the candidate answers every one of them the
+same way the authority does.
+
+**Determinism is the `deterministic` ctx parameter**, `OSSL_SIGNATURE_PARAM_DETERMINISTIC`
+(`core_names.h:549`), which `ml_dsa_sign` turns into a zeroed `rnd`; `test-entropy` is deliberately
+*not* set, so the provider's own zero-`rnd` path is the one driven. The seed in `ml_dsa_probe.h` is a
+**differential** input, not a published vector: both sides receive it, so the court tests behaviour on
+it, and a shared misreading would be invisible to it. That is why the independent correctness plane
+is still **owed** -- see "What remains".
+
+### The prototype court found a real coupling defect this pass introduced
+
+`prototype_court.py` reads a `macro_rules!` invocation by looking up its definition **by name**. This
+pass's two provider modules initially reused `make_keymgmt_functions!` and `make_signature_functions!`,
+the names `slh_dsa_kmgmt.rs` and `slh_dsa_sig.rs` already define, and with two definitions of each name
+the reader resolved the SLH-DSA invocations against the *wrong* body: twelve `UNREADABLE ... does not
+begin with an identifier` lines and a **nonzero exit** that `pipeline.sh`'s `set -e` turned into a
+failed run. Renaming them to `make_ml_dsa_keymgmt_functions!`/`make_ml_dsa_signature_functions!` -- the
+convention `ml_kem_kmgmt.rs`'s `declare_variant!` already follows -- makes `unreadable=0`. The finding
+is recorded because the failure mode is the tool's: a name collision between two crate modules is
+invisible to `cargo` and to every gate except this one, and the fix is a rename no reviewer would think
+to ask for.
+
+### What remains
+
+`provider_rows` moves **299/7 -> 305/1 over 306 owned**: the constraint is now exactly one row,
+`OSSL_OP_KEM` `EC` on `kem/ec_kem.c.in`. Two things are still owed before Phase 8's seal, and neither
+is optional:
+
+* **`kem/ec_kem.c.in`** (1 row, 822 lines) -- the last registration row.
+* **The ML-DSA independent correctness plane.** The six rows carry the differential court above and
+  not yet a known-answer court of FIPS 204 / ACVP vectors, which the two-plane doctrine
+  (`docs/PHASE-8-SUBPHASES.md` §3) requires of a primitive-bearing row: the differential plane cannot
+  see a shared misreading, and the published vectors are what closes a derived value (D400, D406).
+
+The export ledger is untouched at `complete: true`, implemented **786**, deferred **0**, open **0**.
+`cargo test --lib` is **1041 passed**, `cargo clippy --all-targets -- -D warnings` is clean, and the
+pipeline is `PIPELINE OK` with **exit 0** over **99 courts / 38,891 observations**.
