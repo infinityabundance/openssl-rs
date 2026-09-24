@@ -76,14 +76,14 @@
       "handed_on": {
         "10": 39,
         "13": 0,
-        "8": 677,
+        "8": 676,
         "9": 675
       },
       "open": {
         "10": 636,
         "13": 39,
         "8": 0,
-        "9": 2
+        "9": 1
       },
       "what": "`open[N]` are the rows the plan gives stratum N that the crate does not publish, and `handed_on[N]` are the unlanded rows the plan gives a later stratum. Both are derived from each row's `owning_phase` and `implementation_state` and are not stored on the row, because a stored `open`/`deferred` is a statement about which stratum was active on the day the census ran (docs/DECISIONS.md D295)."
     },
@@ -4195,15 +4195,16 @@
           "GMAC",
           "1.0.9797.3.4"
         ],
-        "blocked_by": "the AES-GCM cipher rows: gmac_set_ctx_params resolves a `cipher` name and then refuses every mode but EVP_CIPH_GCM_MODE, and this profile's only GCM ciphers are AES-{128,192,256}-GCM, which are themselves Phase 9's on RAND_bytes_ex (docs/DECISIONS.md D234). GMAC's whole engine is transcribed (src/provider/mac.rs, GMAC_FUNCTIONS); the registration row is withheld because a registered GMAC would answer EVP_MAC_fetch 1 on both sides and then fail every init where the authority succeeds -- the `DES3-WRAP` class one operation over. D243.",
+        "blocked_by": null,
         "capability_filtered": false,
         "capability_predicate": null,
+        "crate_dispatch": "GMAC_FUNCTIONS",
         "dispatch_table_symbol": "ossl_gmac_functions",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_MAC",
         "operation_id": 3,
         "owning_phase": 9,
-        "plan_match": "override:GMAC",
+        "plan_match": "crate-table",
         "property_definition": "provider=default",
         "provider": "default",
         "row_order": 3,

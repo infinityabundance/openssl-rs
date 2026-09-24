@@ -417,7 +417,7 @@
         "name": "algorithms",
         "phase": 8,
         "provider_rows": {
-          "handed_on": 677,
+          "handed_on": 676,
           "implemented": 306,
           "owned": 306
         },
@@ -426,7 +426,7 @@
         "stratum": "Native cryptographic primitives"
       },
       {
-        "blocking": "2 provider registration row(s) of this stratum are neither implemented nor handed to a later phase (forensics/atlas/provider-algorithms.json): GMAC, SEED-SRC",
+        "blocking": "1 provider registration row(s) of this stratum are neither implemented nor handed to a later phase (forensics/atlas/provider-algorithms.json): SEED-SRC",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -449,9 +449,9 @@
         "phase": 9,
         "provider_rows": {
           "handed_on": 675,
-          "implemented": 13,
+          "implemented": 14,
           "owned": 15,
-          "unimplemented": 2
+          "unimplemented": 1
         },
         "seal_sha256": null,
         "state": "in-progress",
@@ -617,7 +617,7 @@
       "not_started": 12
     }
   },
-  "body_hash": "44e7e1f39afac86ed5960e111ea64b636779ea734311ce2abc10f7197f26f818",
+  "body_hash": "28572cc5c1a19f06357c8b4de4786c5a78b1efaec7bbe2b5a7dfcd6d2b7b537a",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

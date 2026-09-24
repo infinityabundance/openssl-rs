@@ -30113,3 +30113,36 @@ Against the merge base: `RT-CIPHER` 6946 to **7232** observations, `RT-BN-RAND` 
 `src/runtime/bio/` and `src/evp/bio_ok.rs` ahead of its `BIO_` catch-all, because the two `BIO_`
 hand-offs' crate homes are already filed under those modules and the label should say where the code
 is rather than where the header's stratum is.
+
+## D419 -- the `GMAC` row is registered, and its court arm drives the tag rather than only the fetch
+
+D243 held GMAC's registration while its blocker was real: `gmac_set_ctx_params` resolves a `cipher`
+name and then refuses every mode but `EVP_CIPH_GCM_MODE` (`gmac_prov.c.in:236-239`), and this
+profile's only GCM ciphers were `AES-{128,192,256}-GCM`, themselves Phase 9's on `RAND_bytes_ex`.
+Registering it then would have made `EVP_MAC_fetch(NULL, "GMAC", NULL)` answer 1 on **both** sides and
+then made every `EVP_MAC_init` fail where the authority succeeds -- the `DES3-WRAP` class of invisible
+incompleteness one operation over, and worse than not publishing the row, because a fetch-only
+observation cannot see it. D417 landed the GCM ciphers, so the blocker is gone and the row enters
+`DEFLT_MACS` at `defltprov.c:342`'s position, between `CMAC` and `HMAC`; the array moves 9 to 10. The
+row's alias sequence is `GMAC:1.0.9797.3.4` (`prov/names.h:319`).
+
+**The arm drives the tag, not only the name.** The provider census asks that a published row be
+*named* by a probe of a court that covers it, and `rt_deflt_properties` already names every MAC row
+through three property queries. That is not enough for this row, because the failure the withheld
+registration would have produced is an init that answers 1 and a tag that differs. `RT-CIPHER`'s new
+`rt_deflt_gmac` arm therefore fetches, reads the name and the 16-byte tag size, initialises with a
+committed key and IV over `AES-128-GCM`, updates, finalises, and prints the tag -- which the two sides
+must agree on byte for byte (`ffb400e7fd5ad8583f1e10c809074607`). It also drives the three refusals a
+caller can reach: a cipher whose mode is not GCM (`PROV_R_INVALID_MODE`), a cipher name that resolves
+to nothing, and no cipher at all.
+
+**What the tag is, stated rather than implied.** GMAC feeds `update`'s bytes in as **AAD** with an
+empty ciphertext (`gmac_update` calls `EVP_EncryptUpdate(ctx, NULL, &outlen, data, datalen)`), so the
+key, IV and message are the GCM-128 test case's but the tag is not the published vector's. The
+constant is there so the value is reproducible, not because it is a known answer; what this arm
+establishes is agreement, and the row it closes is a registration row, which is what agreement is for.
+
+### Movement
+
+`provider_rows[implemented]` 319 to 320, `[open_by_phase][9]` 2 to 1 (the `base` provider's
+`SEED-SRC` is the last), `RT-CIPHER` 7232 to **7255** observations, `PIPELINE OK` exit 0.
