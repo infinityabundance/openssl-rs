@@ -99,6 +99,12 @@ MODULE_PREFIXES: list[tuple[str, tuple[str, ...]]] = [
     ("src/ec/mod.rs", ("EC",)),
     ("src/pem/pem_lib.rs", ("PEM_",)),
     ("src/hpke/mod.rs", ("OSSL_HPKE_",)),
+    # The two `BIO_` hand-offs whose crate home is already filed under another module, named
+    # before the catch-all below so the label is where the code actually is: `BIO_f_nbio_test` is
+    # `crypto/bio/bf_nbio.c` and lands in `src/runtime/bio/`, and `BIO_f_reliable` is
+    # `crypto/evp/bio_ok.c` and landed in `src/evp/bio_ok.rs`.
+    ("src/runtime/bio/", ("BIO_f_nbio_test",)),
+    ("src/evp/bio_ok.rs", ("BIO_f_reliable",)),
     ("src/evp/bio_enc.rs", ("BIO_",)),
     ("src/evp/", ("EVP_",)),
 ]

@@ -114,6 +114,7 @@ use crate::provider::activate::{
     ossl_prov_cache_exported_algorithms, AlgorithmCapability, OsslAlgorithm, OsslAlgorithmCapable,
 };
 use crate::provider::cipher_gcm;
+use crate::provider::cipher_tdes_wrap;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{
     CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_memcmp, CRYPTO_memdup, CRYPTO_zalloc,
@@ -154,7 +155,7 @@ const FILE_AES: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes.c".as_ptr();
 const FILE_CAMELLIA: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_camellia.c".as_ptr();
-const FILE_TDES: *const c_char =
+pub(crate) const FILE_TDES: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_tdes_common.c".as_ptr();
 const FILE_AES_WRAP: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_wrp.c".as_ptr();
@@ -165,7 +166,7 @@ const FILE_AES_OCB: *const c_char =
 const FILE_NULL: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_null.c".as_ptr();
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
-const LINE: c_int = 0;
+pub(crate) const LINE: c_int = 0;
 
 /// `OSSL_OP_CIPHER` — `include/openssl/core_dispatch.h`.
 pub(crate) const OSSL_OP_CIPHER: c_int = 2;
@@ -178,13 +179,13 @@ type Ecb128F = unsafe extern "C" fn(*const u8, *mut u8, usize, *const c_void, c_
 // ---------------------------------------------------------------------------------------------
 
 /// `PROV_CIPHER_FLAG_CUSTOM_IV`.
-const PROV_CIPHER_FLAG_CUSTOM_IV: u64 = 0x0002;
+pub(crate) const PROV_CIPHER_FLAG_CUSTOM_IV: u64 = 0x0002;
 /// `PROV_CIPHER_FLAG_CTS`.
 const PROV_CIPHER_FLAG_CTS: u64 = 0x0004;
 /// `PROV_CIPHER_FLAG_TLS1_MULTIBLOCK`.
 const PROV_CIPHER_FLAG_TLS1_MULTIBLOCK: u64 = 0x0008;
 /// `PROV_CIPHER_FLAG_RAND_KEY`.
-const PROV_CIPHER_FLAG_RAND_KEY: u64 = 0x0010;
+pub(crate) const PROV_CIPHER_FLAG_RAND_KEY: u64 = 0x0010;
 /// `PROV_CIPHER_FLAG_VARIABLE_LENGTH`.
 const PROV_CIPHER_FLAG_VARIABLE_LENGTH: u64 = 0x0100;
 /// `PROV_CIPHER_FLAG_INVERSE_CIPHER`.
@@ -201,7 +202,7 @@ const EVP_CIPH_ECB_MODE: c_uint = 0x1;
 /// `EVP_CIPH_CBC_MODE` — `include/openssl/evp.h:312`.
 const EVP_CIPH_CBC_MODE: c_uint = 0x2;
 /// `EVP_CIPH_WRAP_MODE` — `include/openssl/evp.h:319`.
-const EVP_CIPH_WRAP_MODE: c_uint = 0x10002;
+pub(crate) const EVP_CIPH_WRAP_MODE: c_uint = 0x10002;
 /// `EVP_CIPH_CFB_MODE` — `include/openssl/evp.h:313`.
 const EVP_CIPH_CFB_MODE: c_uint = 0x3;
 /// `EVP_CIPH_OFB_MODE` — `include/openssl/evp.h:314`.
@@ -258,8 +259,8 @@ const OSSL_CIPHER_PARAM_RANDOM_KEY: *const c_char = c"randkey".as_ptr();
 const OSSL_CIPHER_PARAM_DECRYPT_ONLY: *const c_char = c"decrypt-only".as_ptr();
 
 // The `PROV_CIPHER_CTX` bitfield order, `prov/ciphercommon.h:69-76`.
-const CTX_PAD: c_uint = 1 << 0;
-const CTX_ENC: c_uint = 1 << 1;
+pub(crate) const CTX_PAD: c_uint = 1 << 0;
+pub(crate) const CTX_ENC: c_uint = 1 << 1;
 const CTX_IV_SET: c_uint = 1 << 2;
 const CTX_KEY_SET: c_uint = 1 << 3;
 const CTX_UPDATED: c_uint = 1 << 4;
@@ -1280,7 +1281,7 @@ unsafe fn ossl_cipher_generic_initiv(
 /// other readers are the provider rows that sub-fetch (`cmac_prov.c`'s `ossl_prov_cipher_load`,
 /// `cipher_aes_siv_hw.c`'s two fetches) through their own `PROV_LIBCTX_OF`.
 #[allow(clippy::too_many_arguments)]
-unsafe fn ossl_cipher_generic_initkey(
+pub(crate) unsafe fn ossl_cipher_generic_initkey(
     vctx: *mut c_void,
     kbits: usize,
     blkbits: usize,
@@ -2375,7 +2376,7 @@ unsafe extern "C" fn cipher_hw_camellia_copyctx(
 ///
 /// # Safety
 /// The `PROV_CIPHER_HW::init` contract; an EDE3 row's key is twenty-four bytes.
-unsafe extern "C" fn cipher_hw_tdes_ede3_initkey(
+pub(crate) unsafe extern "C" fn cipher_hw_tdes_ede3_initkey(
     ctx: *mut ProvCipherCtx,
     key: *const c_uchar,
     _keylen: usize,
@@ -2417,7 +2418,10 @@ unsafe extern "C" fn cipher_hw_tdes_ede2_initkey(
 ///
 /// # Safety
 /// The `PROV_CIPHER_HW::copyctx` contract.
-unsafe extern "C" fn cipher_hw_tdes_copyctx(dst: *mut ProvCipherCtx, src: *const ProvCipherCtx) {
+pub(crate) unsafe extern "C" fn cipher_hw_tdes_copyctx(
+    dst: *mut ProvCipherCtx,
+    src: *const ProvCipherCtx,
+) {
     // SAFETY: the caller's contract; both are `PROV_TDES_CTX`.
     unsafe {
         ptr::copy_nonoverlapping(src.cast::<ProvTdesCtx>(), dst.cast::<ProvTdesCtx>(), 1);
@@ -2464,7 +2468,7 @@ unsafe extern "C" fn ossl_cipher_hw_tdes_ecb(
 ///
 /// # Safety
 /// The `PROV_CIPHER_HW_FN` contract.
-unsafe extern "C" fn ossl_cipher_hw_tdes_cbc(
+pub(crate) unsafe extern "C" fn ossl_cipher_hw_tdes_cbc(
     ctx: *mut ProvCipherCtx,
     out: *mut c_uchar,
     in_: *const c_uchar,
@@ -2801,7 +2805,7 @@ unsafe extern "C" fn camellia_dupctx(ctx: *mut c_void) -> *mut c_void {
 ///
 /// # Safety
 /// The dispatch contract.
-unsafe extern "C" fn tdes_freectx(vctx: *mut c_void) {
+pub(crate) unsafe extern "C" fn tdes_freectx(vctx: *mut c_void) {
     // SAFETY: the caller's contract.
     unsafe {
         ossl_cipher_generic_reset_ctx(vctx.cast());
@@ -2882,7 +2886,7 @@ static TDES_GETTABLE_CTX_PARAMS: [OsslParam; 8] = [
 ///
 /// # Safety
 /// The dispatch contract.
-unsafe extern "C" fn ossl_tdes_gettable_ctx_params(
+pub(crate) unsafe extern "C" fn ossl_tdes_gettable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -2912,7 +2916,10 @@ unsafe extern "C" fn ossl_tdes_settable_ctx_params(
 ///
 /// # Safety
 /// The dispatch contract.
-unsafe extern "C" fn ossl_tdes_get_ctx_params(vctx: *mut c_void, params: *mut OsslParam) -> c_int {
+pub(crate) unsafe extern "C" fn ossl_tdes_get_ctx_params(
+    vctx: *mut c_void,
+    params: *mut OsslParam,
+) -> c_int {
     // SAFETY: the caller's contract.
     unsafe { ossl_cipher_generic_get_ctx_params(vctx, params) }
 }
@@ -13806,6 +13813,13 @@ alias!(N_DES_EDE3_OFB, "DES-EDE3-OFB");
 alias!(N_DES_EDE3_CFB, "DES-EDE3-CFB");
 alias!(N_DES_EDE3_CFB8, "DES-EDE3-CFB8");
 alias!(N_DES_EDE3_CFB1, "DES-EDE3-CFB1");
+// `PROV_NAMES_DES3_WRAP` — `prov/names.h:163`. It carries the S/MIME CMS 3DES wrap OID and no
+// short `id-` spelling, and it sits between `DES-EDE3-CFB1` and `DES-EDE-ECB` in both `names.h`
+// and `defltprov.c:308`.
+alias!(
+    N_DES3_WRAP,
+    "DES3-WRAP:id-smime-alg-CMS3DESwrap:1.2.840.113549.1.9.16.3.6"
+);
 alias!(N_DES_EDE_ECB, "DES-EDE-ECB:DES-EDE:1.3.14.3.2.17");
 alias!(N_DES_EDE_CBC, "DES-EDE-CBC");
 alias!(N_DES_EDE_OFB, "DES-EDE-OFB");
@@ -13947,7 +13961,7 @@ const fn capable_row(
 
 /// `static const OSSL_ALGORITHM_CAPABLE deflt_ciphers[]` — `providers/defltprov.c:161-330`,
 /// restricted to the rows this half implements, in the authority's order.
-pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 139] = [
+pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 140] = [
     row(N_NULL, NULL_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_ECB, AES256ECB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_ECB, AES192ECB_FUNCTIONS.as_ptr().cast()),
@@ -14197,6 +14211,10 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 139] = [
     row(N_DES_EDE3_CFB, TDES_EDE3_CFB_FUNCTIONS.as_ptr().cast()),
     row(N_DES_EDE3_CFB8, TDES_EDE3_CFB8_FUNCTIONS.as_ptr().cast()),
     row(N_DES_EDE3_CFB1, TDES_EDE3_CFB1_FUNCTIONS.as_ptr().cast()),
+    row(
+        N_DES3_WRAP,
+        cipher_tdes_wrap::TDES_WRAP_CBC_FUNCTIONS.as_ptr().cast(),
+    ),
     row(N_DES_EDE_ECB, TDES_EDE2_ECB_FUNCTIONS.as_ptr().cast()),
     row(N_DES_EDE_CBC, TDES_EDE2_CBC_FUNCTIONS.as_ptr().cast()),
     row(N_DES_EDE_OFB, TDES_EDE2_OFB_FUNCTIONS.as_ptr().cast()),
@@ -14234,13 +14252,13 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 139] = [
 /// against the write. This crate keeps the same discipline: the only writer is
 /// `crate::provider::cipher::cache_exported_ciphers`, called from provider init, and every reader
 /// goes through [`exported_ciphers`].
-static EXPORTED_CIPHERS: SyncCell<[OsslAlgorithm; 139]> = SyncCell(UnsafeCell::new(
+static EXPORTED_CIPHERS: SyncCell<[OsslAlgorithm; 140]> = SyncCell(UnsafeCell::new(
     [OsslAlgorithm {
         algorithm_names: ptr::null(),
         property_definition: ptr::null(),
         implementation: ptr::null(),
         algorithm_description: ptr::null(),
-    }; 139],
+    }; 140],
 ));
 
 /// A `static` the crate mutates once at provider init and shares afterwards, exactly as the
@@ -17584,9 +17602,9 @@ mod tests {
 
     #[test]
     fn the_cipher_table_terminates_and_names_the_rows() {
-        assert_eq!(DEFLT_CIPHERS.len(), 139);
+        assert_eq!(DEFLT_CIPHERS.len(), 140);
         // SAFETY: every entry up to the terminator is initialised.
-        let last = DEFLT_CIPHERS[138].alg.algorithm_names;
+        let last = DEFLT_CIPHERS[139].alg.algorithm_names;
         assert!(last.is_null(), "the table is NULL-name terminated");
         // SAFETY: the first row's name is a `'static` C string.
         let first = unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[0].alg.algorithm_names) };
@@ -17594,13 +17612,13 @@ mod tests {
         // SAFETY: the last *named* row's name is a `'static` C string, and it is the authority's
         // last cipher row (`defltprov.c:327`).
         let penultimate =
-            unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[137].alg.algorithm_names) };
+            unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[138].alg.algorithm_names) };
         assert_eq!(penultimate.to_bytes(), b"ChaCha20-Poly1305");
         // The filtered copy the `OSSL_OP_CIPHER` arm answers is the same length, so the two
         // cannot drift apart silently.
         // SAFETY: the cell is a `'static` array of `OsslAlgorithm`; only its length is read.
         let filtered = unsafe { &*EXPORTED_CIPHERS.0.get() };
-        assert_eq!(filtered.len(), 139);
+        assert_eq!(filtered.len(), 140);
     }
 
     #[test]

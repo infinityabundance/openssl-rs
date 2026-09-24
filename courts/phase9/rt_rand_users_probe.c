@@ -51,13 +51,17 @@
  *     `EVP_MD` (`EVP_sha256()` and friends), which is Phase 13's, and until that lands the round
  *     trip is owed rather than measurable. A probe that drove it would abort the authority side and
  *     compare only the prefix it managed to print.
- *   - **`OSSL_HPKE_get_grease_value`** is absent from this probe altogether, and the line below
- *     says so in the transcript. It was transcribed and measured in D316 and could not land: its
- *     success path calls `OSSL_HPKE_keygen`, which fetches a **keymgmt by name from the library
- *     context**, and the default provider's `OSSL_OP_KEYMGMT X25519` row is unimplemented and
- *     Phase 8's. `RT-HPKE` never sees this because it deliberately runs in a private
- *     `OSSL_LIB_CTX` carrying its own test provider, so the framework is what that court measures
- *     and the default provider's algorithm universe is what this one does.
+ *   - **`OSSL_HPKE_get_grease_value`** was absent from this probe in D316 and D317 because its
+ *     success path calls `OSSL_HPKE_keygen`, which fetches a keymgmt **by name from the library
+ *     context**, and the default provider's `OSSL_OP_KEYMGMT X25519` row was unimplemented and
+ *     Phase 8's. That row has landed, so the export landed with it and its arm is section 4 below.
+ *     `RT-HPKE` still never sees this: it deliberately runs in a private `OSSL_LIB_CTX` carrying
+ *     its own test provider, so the framework is what that court measures and the default
+ *     provider's algorithm universe is what this one does. The GREASE `ct` is a `RAND_bytes_ex`
+ *     draw and the `enc` is a real public key from a throwaway private one, so neither is
+ *     compared byte for byte -- what is compared is the return codes, the refusal shapes, the
+ *     `enclen` the keygen sets, and, for the NIST curve, that `enc[0]` is `0x04`, which is the
+ *     whole point of the authority's "generate and then delete a real key" step.
  *
  * What a difference here means
  * ----------------------------
@@ -75,6 +79,7 @@
 #include <openssl/crypto.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
+#include <openssl/hpke.h>
 #include <openssl/provider.h>
 #include <openssl/rand.h>
 
@@ -118,6 +123,49 @@ static void seal(const char *label, EVP_CIPHER_CTX *ctx, const EVP_CIPHER *type,
         printf("%s=%d\n", k, EVP_CIPHER_CTX_get_key_length(ctx));
         snprintf(k, sizeof(k), "seal.%s.iv_length", label);
         printf("%s=%d\n", k, EVP_CIPHER_CTX_get_iv_length(ctx));
+    }
+}
+
+/*
+ * One `OSSL_HPKE_get_grease_value` call under a committed suite, observed as the contract: the
+ * return code, the error queue, whether the chosen suite came back equal to the one asked for,
+ * the `enclen` the key generation set, and -- for a NIST curve, whose encoding is fixed -- the
+ * first octet of `enc`. The `enc`/`ct` bytes themselves are a public key from a throwaway private
+ * key and a `RAND_bytes_ex` draw, so they are never printed.
+ */
+static void grease(const char *label, const OSSL_HPKE_SUITE *suite_in,
+                   size_t enclen_in, size_t ctlen)
+{
+    unsigned char enc[256];
+    unsigned char ct[64];
+    OSSL_HPKE_SUITE chosen;
+    size_t enclen = enclen_in;
+    char k[128];
+    int ret;
+
+    memset(enc, 0, sizeof(enc));
+    memset(ct, 0, sizeof(ct));
+    memset(&chosen, 0, sizeof(chosen));
+
+    ERR_clear_error();
+    ret = OSSL_HPKE_get_grease_value(suite_in, &chosen, enc, &enclen, ct, ctlen, NULL, NULL);
+    snprintf(k, sizeof(k), "grease.%s.ret", label);
+    printf("%s=%d\n", k, ret);
+    snprintf(k, sizeof(k), "grease.%s.err", label);
+    errs(k);
+    snprintf(k, sizeof(k), "grease.%s.suite_returned", label);
+    printf("%s=%d\n", k, ret == 1);
+    if (ret == 1 && suite_in != NULL) {
+        snprintf(k, sizeof(k), "grease.%s.suite_same", label);
+        printf("%s=%d\n", k, chosen.kem_id == suite_in->kem_id
+            && chosen.kdf_id == suite_in->kdf_id
+            && chosen.aead_id == suite_in->aead_id);
+        snprintf(k, sizeof(k), "grease.%s.enclen", label);
+        printf("%s=%zu\n", k, enclen);
+        if (suite_in->kem_id == OSSL_HPKE_KEM_ID_P256) {
+            snprintf(k, sizeof(k), "grease.%s.enc_first_octet", label);
+            printf("%s=%u\n", k, (unsigned int)enc[0]);
+        }
     }
 }
 
@@ -275,10 +323,107 @@ int main(void)
         EVP_MD_free(md);
     }
 
+    /* ---- 4. `OSSL_HPKE_get_grease_value` ------------------------------------------ */
+
+    /*
+     * The five argument refusals first: each answers 0 with `ERR_R_PASSED_INVALID_ARGUMENT` and
+     * none of them needs a key generation or a draw, so none can make the authority diverge.
+     */
+    {
+        OSSL_HPKE_SUITE s;
+        unsigned char enc[256];
+        unsigned char ct[64];
+        size_t enclen = sizeof(enc);
+
+        s.kem_id = OSSL_HPKE_KEM_ID_X25519;
+        s.kdf_id = OSSL_HPKE_KDF_ID_HKDF_SHA256;
+        s.aead_id = OSSL_HPKE_AEAD_ID_AES_GCM_128;
+
+        ERR_clear_error();
+        printf("grease.refuse.null_enc.ret=%d\n",
+            OSSL_HPKE_get_grease_value(&s, &s, NULL, &enclen, ct, sizeof(ct), NULL, NULL));
+        errs("grease.refuse.null_enc.err");
+        ERR_clear_error();
+        printf("grease.refuse.null_enclen.ret=%d\n",
+            OSSL_HPKE_get_grease_value(&s, &s, enc, NULL, ct, sizeof(ct), NULL, NULL));
+        errs("grease.refuse.null_enclen.err");
+        ERR_clear_error();
+        printf("grease.refuse.null_ct.ret=%d\n",
+            OSSL_HPKE_get_grease_value(&s, &s, enc, &enclen, NULL, sizeof(ct), NULL, NULL));
+        errs("grease.refuse.null_ct.err");
+        ERR_clear_error();
+        printf("grease.refuse.zero_ctlen.ret=%d\n",
+            OSSL_HPKE_get_grease_value(&s, &s, enc, &enclen, ct, 0, NULL, NULL));
+        errs("grease.refuse.zero_ctlen.err");
+        ERR_clear_error();
+        printf("grease.refuse.null_suite.ret=%d\n",
+            OSSL_HPKE_get_grease_value(&s, NULL, enc, &enclen, ct, sizeof(ct), NULL, NULL));
+        errs("grease.refuse.null_suite.err");
+    }
+
+    /*
+     * The two suites whose encodings the key generation fixes. X25519's `enc` is a 32-byte
+     * u-coordinate and P-256's is the uncompressed point, so `enclen` and `enc[0]` are the
+     * deterministic part of a successful call.
+     */
+    {
+        OSSL_HPKE_SUITE x25519;
+        OSSL_HPKE_SUITE p256;
+
+        x25519.kem_id = OSSL_HPKE_KEM_ID_X25519;
+        x25519.kdf_id = OSSL_HPKE_KDF_ID_HKDF_SHA256;
+        x25519.aead_id = OSSL_HPKE_AEAD_ID_AES_GCM_128;
+        p256.kem_id = OSSL_HPKE_KEM_ID_P256;
+        p256.kdf_id = OSSL_HPKE_KDF_ID_HKDF_SHA256;
+        p256.aead_id = OSSL_HPKE_AEAD_ID_AES_GCM_128;
+
+        grease("x25519", &x25519, 32, 64);
+        grease("p256", &p256, 65, 64);
+
+        /* `*enclen` smaller than the KEM's `Npk` (32 for X25519, 65 for P-256). */
+        grease("x25519_enclen_too_small", &x25519, 1, 64);
+        grease("p256_enclen_too_small", &p256, 64, 64);
+
+        /* `ctlen <= aead_info->taglen` (16 for AES-GCM-128). */
+        grease("x25519_ctlen_le_tag", &x25519, 32, 16);
+        grease("x25519_ctlen_zero", &x25519, 32, 0);
+
+        /* An unenumerated KEM id: `hpke_suite_check` refuses before anything else runs. */
+        {
+            OSSL_HPKE_SUITE bad = x25519;
+
+            bad.kem_id = 0x0001;
+            grease("unenumerated_kem", &bad, 32, 64);
+        }
+    }
+
+    /*
+     * `suite_in == NULL` picks a random suite. Which one is a draw, so only the return code, the
+     * emptiness of the error queue and the check's own acceptance of the returned suite are
+     * printed -- and that the returned suite passes `OSSL_HPKE_suite_check`, which is a property
+     * of the sweep rather than of the draw.
+     */
+    {
+        unsigned char enc[256];
+        unsigned char ct[64];
+        OSSL_HPKE_SUITE chosen;
+        size_t enclen = sizeof(enc);
+        int ret;
+
+        memset(&chosen, 0, sizeof(chosen));
+        ERR_clear_error();
+        ret = OSSL_HPKE_get_grease_value(NULL, &chosen, enc, &enclen, ct, sizeof(ct),
+            NULL, NULL);
+        printf("grease.random.ret=%d\n", ret);
+        errs("grease.random.err");
+        printf("grease.random.suite_valid=%d\n",
+            ret == 1 && OSSL_HPKE_suite_check(chosen) == 1);
+        printf("grease.random.enclen_positive=%d\n", ret == 1 && enclen > 0);
+    }
+
     /* Exports this stratum owes that are not courted here, named so that "not run" cannot be read
-     * as "passed": see the header's last two bullets and docs/DECISIONS.md D316/D317. */
+     * as "passed": see the header's third bullet and docs/DECISIONS.md D317. */
     printf("BIO_f_reliable.write_path=NOT_MEASURED_LEGACY_EVP_MD_IS_PHASE_13\n");
-    printf("OSSL_HPKE_get_grease_value=NOT_MEASURED_DEFAULT_PROVIDER_KEYMGMT_X25519_IS_PHASE_8\n");
 
     printf("done=1\n");
     return 0;

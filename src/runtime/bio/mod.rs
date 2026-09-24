@@ -58,6 +58,7 @@ pub mod addr;
 pub mod addr_info;
 pub mod bf_buff;
 pub mod bf_lbuf;
+pub mod bf_nbio;
 pub mod bf_null;
 pub mod bf_prefix;
 pub mod bf_readbuff;
@@ -1879,6 +1880,7 @@ pub use addr_info::{
 };
 pub use bf_buff::BIO_f_buffer;
 pub use bf_lbuf::BIO_f_linebuffer;
+pub use bf_nbio::BIO_f_nbio_test;
 pub use bf_prefix::BIO_f_prefix;
 pub use bf_readbuff::BIO_f_readbuffer;
 pub use bio_cb::{BIO_debug_callback, BIO_debug_callback_ex};

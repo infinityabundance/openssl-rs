@@ -1151,9 +1151,9 @@
               "-O2"
             ],
             "observations": {
-              "-O0": 114,
-              "-O1": 114,
-              "-O2": 114
+              "-O0": 140,
+              "-O1": 140,
+              "-O2": 140
             },
             "side": "authority",
             "verdict": "clean"
@@ -1179,9 +1179,9 @@
               "-O2"
             ],
             "observations": {
-              "-O0": 114,
-              "-O1": 114,
-              "-O2": 114
+              "-O0": 140,
+              "-O1": 140,
+              "-O2": 140
             },
             "side": "candidate",
             "verdict": "clean"
@@ -4437,9 +4437,9 @@
               "-O2"
             ],
             "observations": {
-              "-O0": 7030,
-              "-O1": 7030,
-              "-O2": 7030
+              "-O0": 7064,
+              "-O1": 7064,
+              "-O2": 7064
             },
             "side": "authority",
             "verdict": "clean"
@@ -4465,9 +4465,9 @@
               "-O2"
             ],
             "observations": {
-              "-O0": 7030,
-              "-O1": 7030,
-              "-O2": 7030
+              "-O0": 7064,
+              "-O1": 7064,
+              "-O2": 7064
             },
             "side": "candidate",
             "verdict": "clean"
@@ -5181,9 +5181,9 @@
               "-O2"
             ],
             "observations": {
-              "-O0": 462,
-              "-O1": 462,
-              "-O2": 462
+              "-O0": 482,
+              "-O1": 482,
+              "-O2": 482
             },
             "side": "authority",
             "verdict": "clean"
@@ -5209,9 +5209,9 @@
               "-O2"
             ],
             "observations": {
-              "-O0": 462,
-              "-O1": 462,
-              "-O2": 462
+              "-O0": 482,
+              "-O1": 482,
+              "-O2": 482
             },
             "side": "candidate",
             "verdict": "clean"
@@ -5367,9 +5367,9 @@
               "-O2"
             ],
             "observations": {
-              "-O0": 61,
-              "-O1": 61,
-              "-O2": 61
+              "-O0": 111,
+              "-O1": 111,
+              "-O2": 111
             },
             "side": "authority",
             "verdict": "clean"
@@ -5395,9 +5395,9 @@
               "-O2"
             ],
             "observations": {
-              "-O0": 61,
-              "-O1": 61,
-              "-O2": 61
+              "-O0": 111,
+              "-O1": 111,
+              "-O2": 111
             },
             "side": "candidate",
             "verdict": "clean"
@@ -5508,7 +5508,7 @@
     {
       "name": "probe",
       "path": "courts/phase4/rt_bio_filter_probe.c",
-      "sha256": "d69ac895cc412baf8925f570415c5130b068976c2805ca7637b7281213f01011"
+      "sha256": "8873d75e586f921babf4a602d798d79f8e24495cc5c48bf0c529c8383e9c19f3"
     },
     {
       "name": "probe",
@@ -5773,7 +5773,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "6d5ee995be69a38171bf8bb230aab8605437fab4e434b49f8bfc730914b5d7af"
+      "sha256": "4fe4eff1e3f592b8246086a52b10939b1e877c961c3e083a7b68639ef33c75c3"
     },
     {
       "name": "probe",
@@ -5833,7 +5833,7 @@
     {
       "name": "probe",
       "path": "courts/phase9/rt_bn_rand_probe.c",
-      "sha256": "afb7b833fd1cd012cd92fdbfb8cbffc439d28fff96286a38ac46a4738b897dbe"
+      "sha256": "1cbf32f8c4d8ced86b679ad1bc9d1c0f8924e81859d001d5d1e01556bf1f3579"
     },
     {
       "name": "probe",
@@ -5848,7 +5848,7 @@
     {
       "name": "probe",
       "path": "courts/phase9/rt_rand_users_probe.c",
-      "sha256": "870654569b9f99a2c271fe15a148a7eb14ecac1d640ed26003ee659f991713cb"
+      "sha256": "18d6eb6100f540dcf7d99a939126cc3fcbf3813455dcf45abe6891865a855c28"
     }
   ],
   "kind": "probe-hygiene",

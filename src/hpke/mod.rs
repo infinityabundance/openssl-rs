@@ -22,7 +22,7 @@
 //! `crypto/hpke/hpke.c`'s helpers are `crypto/hpke/hpke_util.c`'s, declared in the **uninstalled**
 //! `include/internal/hpke_util.h`, so the atlas does not census them as obligations and the
 //! ledger has no module for them. They are transcribed as `pub(crate)` internals beside the
-//! exports they serve, with one deliberate substitution and one omission:
+//! exports they serve, with one deliberate substitution and no omissions left:
 //!
 //!   * `ossl_hpke_labeled_extract`/`_expand` build a labelled byte string through `WPACKET`
 //!     (`include/internal/packet.h`), which this crate does not have. The `WPACKET_*` calls there
@@ -31,20 +31,24 @@
 //!     `PROV_R_OUTPUT_BUFFER_TOO_SMALL` arm at `hpke_util.c:329`/`:380` is **unreachable**. The
 //!     concatenation is written directly, and the unreachable arm is named rather than stubbed.
 //!   * `ossl_HPKE_KEM_INFO_find_random`, `ossl_HPKE_KDF_INFO_find_random` and
-//!     `ossl_HPKE_AEAD_INFO_find_random` are omitted, together with `hpke_random_suite`, because
-//!     their only caller is `OSSL_HPKE_get_grease_value`, which is itself withheld on
-//!     `RAND_bytes_ex` (Phase 9, `hpke.c:1433`). They call `ossl_rand_uniform_uint32`
-//!     (`crypto/rand/rand_lib.c`, Phase 9). `ossl_HPKE_KEM_INFO_find_curve` is omitted for the
-//!     same reason in the other direction: nothing in `hpke.c` calls it.
+//!     `ossl_HPKE_AEAD_INFO_find_random` (`hpke_util.c:192`, `:214`, `:236`) **landed**, together
+//!     with `hpke_random_suite` (`hpke.c:351`), once Phase 9's `ossl_rand_uniform_uint32` arrived
+//!     to draw their index; their only caller, `OSSL_HPKE_get_grease_value`, is no longer
+//!     withheld. `ossl_HPKE_KEM_INFO_find_curve` (`hpke_util.c:156`), once omitted here, has
+//!     **landed** as well, for the other direction: nothing in `hpke.c` calls it, but the keys'
+//!     KEM units do, and `src/provider/ec_kem.rs`/`ecx_kem.rs` are those calls in this crate.
 //!
-//! ## What is withheld, and why
+//! ## `OSSL_HPKE_get_grease_value` lands on Phase 9's random layer
 //!
-//! **`OSSL_HPKE_get_grease_value`** (`crypto/hpke/hpke.c:1377`) is the one export that does not
-//! land. It calls `RAND_bytes_ex` (`hpke.c:1433`) to fill the GREASE ciphertext, and
-//! `ossl_rand_uniform_uint32` (`hpke_util.c:198`, `:220`, `:243`) to pick a random suite. Both are
-//! `crypto/rand/`'s and Phase 9's. There is no partial answer: the whole observable is whether
-//! that random fill succeeds. It has a `forensics/prerequisites.json` row and a
-//! `NOT_MEASURED_…` line in `RT-HPKE`.
+//! **`OSSL_HPKE_get_grease_value`** (`crypto/hpke/hpke.c:1377`) is transcribed, with the three
+//! `find_random` helpers and `hpke_random_suite` beside it. The two callees that blocked it have
+//! both landed in Phase 9: `ossl_rand_uniform_uint32` (`src/rand/rand_uniform.rs`, cited here at
+//! `hpke_util.c:198`, `:220`, `:243`) draws each random suite field, and `RAND_bytes_ex`
+//! (`src/rand/rand_lib.rs:926`) fills the GREASE ciphertext (`hpke.c:1433`). The GREASE
+//! key-generation path is this module's own `OSSL_HPKE_keygen` (`hpke.c:1304`), which fetches the
+//! KEM keymgmt by name from the library context; the default provider's `X25519` and `EC` keymgmt
+//! rows are Phase 8's and are `implemented`, so that fetch resolves. Nothing in this module is
+//! now withheld; the one remaining substitution is the `WPACKET` concatenation recorded above.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -80,6 +84,8 @@ use crate::params::{
     OSSL_PARAM_construct_end, OSSL_PARAM_construct_int, OSSL_PARAM_construct_octet_string,
     OSSL_PARAM_construct_utf8_string, OsslParam,
 };
+use crate::rand::rand_lib::RAND_bytes_ex;
+use crate::rand::rand_uniform::ossl_rand_uniform_uint32;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
@@ -482,6 +488,69 @@ fn aead_info_find_id(aeadid: u16) -> Option<&'static HpkeAeadInfo> {
     // SAFETY: a compile-time-constant site.
     unsafe { raise_site(&err_sites::HPKE_UTIL_232) };
     None
+}
+
+/// `const OSSL_HPKE_KEM_INFO *ossl_HPKE_KEM_INFO_find_random(OSSL_LIB_CTX *ctx)` —
+/// `hpke_util.c:192`.
+///
+/// A uniformly-random row of `KEM_TAB`, the index drawn by
+/// `ossl_rand_uniform_uint32(ctx, OSSL_NELEM(hpke_kem_tab), &err)`. The authority answers NULL
+/// only when that draw sets `err`, so a miss is an entropy failure and not a bad id -- this
+/// helper raises nothing of its own, and its one caller turns the miss into an
+/// `ERR_R_INTERNAL_ERROR` of its own.
+///
+/// # Safety
+/// `ctx` NULL or a live library context for `ossl_rand_uniform_uint32`.
+fn kem_info_find_random(ctx: *mut c_void) -> Option<&'static HpkeKemInfo> {
+    let sz = KEM_TAB.len() as u32;
+    let mut err: c_int = 0;
+    // SAFETY: `ctx` is NULL or live per the contract; `err` is a live local and is only written.
+    let rval = unsafe { ossl_rand_uniform_uint32(ctx, sz, &mut err) };
+    if err == 1 {
+        None
+    } else {
+        Some(&KEM_TAB[rval as usize])
+    }
+}
+
+/// `const OSSL_HPKE_KDF_INFO *ossl_HPKE_KDF_INFO_find_random(OSSL_LIB_CTX *ctx)` —
+/// `hpke_util.c:214`.
+///
+/// As `kem_info_find_random`, over `KDF_TAB`.
+///
+/// # Safety
+/// `ctx` NULL or a live library context for `ossl_rand_uniform_uint32`.
+fn kdf_info_find_random(ctx: *mut c_void) -> Option<&'static HpkeKdfInfo> {
+    let sz = KDF_TAB.len() as u32;
+    let mut err: c_int = 0;
+    // SAFETY: `ctx` is NULL or live per the contract; `err` is a live local and is only written.
+    let rval = unsafe { ossl_rand_uniform_uint32(ctx, sz, &mut err) };
+    if err == 1 {
+        None
+    } else {
+        Some(&KDF_TAB[rval as usize])
+    }
+}
+
+/// `const OSSL_HPKE_AEAD_INFO *ossl_HPKE_AEAD_INFO_find_random(OSSL_LIB_CTX *ctx)` —
+/// `hpke_util.c:236`.
+///
+/// As the KEM/KDF finders, over `AEAD_TAB`, with the one difference the authority comments on:
+/// the bound is `OSSL_NELEM(hpke_aead_tab) - 1`, so the trailing `OSSL_HPKE_AEAD_ID_EXPORTONLY`
+/// row can never be drawn.
+///
+/// # Safety
+/// `ctx` NULL or a live library context for `ossl_rand_uniform_uint32`.
+fn aead_info_find_random(ctx: *mut c_void) -> Option<&'static HpkeAeadInfo> {
+    let sz = (AEAD_TAB.len() - 1) as u32;
+    let mut err: c_int = 0;
+    // SAFETY: `ctx` is NULL or live per the contract; `err` is a live local and is only written.
+    let rval = unsafe { ossl_rand_uniform_uint32(ctx, sz, &mut err) };
+    if err == 1 {
+        None
+    } else {
+        Some(&AEAD_TAB[rval as usize])
+    }
 }
 
 /// `static int kdf_derive(EVP_KDF_CTX *kctx, unsigned char *out, size_t outlen, int mode,
@@ -1398,6 +1467,39 @@ fn hpke_suite_check(
     let kdf_info = kdf_info_find_id(suite.kdf_id)?;
     let aead_info = aead_info_find_id(suite.aead_id)?;
     Some((kem_info, kdf_info, aead_info))
+}
+
+/// `static int hpke_random_suite(OSSL_LIB_CTX *libctx, const char *propq, OSSL_HPKE_SUITE *suite)`
+/// — `hpke.c:351`.
+///
+/// One uniformly-random row from each of the three tables, written into `suite` in the authority's
+/// order -- KEM, then KDF, then AEAD. `propq` is in the authority's signature but is never read
+/// there: the three draws go through `libctx` alone, so it is carried as `_propq`. A failed draw is
+/// a silent 0, and the one caller raises `ERR_R_INTERNAL_ERROR` for it.
+///
+/// # Safety
+/// `libctx` NULL or a live library context; `suite` writable for one suite.
+unsafe fn hpke_random_suite(
+    libctx: *mut c_void,
+    _propq: *const c_char,
+    suite: *mut OsslHpkeSuite,
+) -> c_int {
+    let Some(kem_info) = kem_info_find_random(libctx) else {
+        return 0;
+    };
+    // SAFETY: `suite` is writable per the contract.
+    unsafe { (*suite).kem_id = kem_info.kem_id };
+    let Some(kdf_info) = kdf_info_find_random(libctx) else {
+        return 0;
+    };
+    // SAFETY: `suite` is writable per the contract.
+    unsafe { (*suite).kdf_id = kdf_info.kdf_id };
+    let Some(aead_info) = aead_info_find_random(libctx) else {
+        return 0;
+    };
+    // SAFETY: `suite` is writable per the contract.
+    unsafe { (*suite).aead_id = aead_info.aead_id };
+    1
 }
 
 /// `static int hpke_expansion(OSSL_HPKE_SUITE suite, size_t *enclen, size_t clearlen,
@@ -2969,6 +3071,122 @@ pub unsafe extern "C" fn OSSL_HPKE_keygen(
 #[no_mangle]
 pub extern "C" fn OSSL_HPKE_suite_check(suite: OsslHpkeSuite) -> c_int {
     c_int::from(hpke_suite_check(suite).is_some())
+}
+
+/// `int OSSL_HPKE_get_grease_value(const OSSL_HPKE_SUITE *suite_in, OSSL_HPKE_SUITE *suite,
+///     unsigned char *enc, size_t *enclen, unsigned char *ct, size_t ctlen, OSSL_LIB_CTX *libctx,
+///     const char *propq)` — `hpke.c:1377`.
+///
+/// The RFC 9180 GREASE helper: fill `enc` with a real, well-formed encapsulation for the chosen
+/// suite -- a genuine key is generated and immediately deleted, so the encoding is right rather
+/// than guessed -- and `ct` with `ctlen` random octets. With `suite_in == NULL` the suite itself is
+/// drawn at random by `hpke_random_suite`.
+///
+/// Seven refusals, all `ERR_LIB_CRYPTO` and all a bare 0: `hpke.c:1391`
+/// `ERR_R_PASSED_INVALID_ARGUMENT` for a null in-parameter, and `ERR_R_INTERNAL_ERROR` at `:1397`
+/// (random-suite draw failed), `:1404` (the drawn or given suite is not one of the tables),
+/// `:1410` (no room past the AEAD tag), `:1416` (`enc` is smaller than `Npk`) and `:1429` (key
+/// generation) / `:1434` (the GREASE fill). The generated key is freed before the fill, so no
+/// refusal arm leaves one live.
+///
+/// # Safety
+/// `enc` writable for `*enclen`; `enclen` writable; `ct` writable for `ctlen`; `suite` writable;
+/// `suite_in` NULL or readable; `libctx` NULL or live; `propq` NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_HPKE_get_grease_value(
+    suite_in: *const OsslHpkeSuite,
+    suite: *mut OsslHpkeSuite,
+    enc: *mut c_uchar,
+    enclen: *mut usize,
+    ct: *mut c_uchar,
+    ctlen: usize,
+    libctx: *mut c_void,
+    propq: *const c_char,
+) -> c_int {
+    let mut fakepriv: *mut EvpPkey = ptr::null_mut();
+
+    // `enclen == 0` in the authority is a test of the pointer, not of what it points at, so this
+    // is `enclen.is_null()` and not `*enclen == 0`.
+    if enc.is_null() || enclen.is_null() || ct.is_null() || ctlen == 0 || suite.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::HPKE_1391) };
+        return 0;
+    }
+    let chosen: OsslHpkeSuite = if suite_in.is_null() {
+        /* choose a random suite */
+        let mut picked = OsslHpkeSuite {
+            kem_id: 0,
+            kdf_id: 0,
+            aead_id: 0,
+        };
+        // SAFETY: `picked` is a live local and `libctx`/`propq` are the caller's.
+        if unsafe { hpke_random_suite(libctx, propq, &mut picked) } != 1 {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::HPKE_1397) };
+            return 0;
+        }
+        picked
+    } else {
+        // SAFETY: `suite_in` is non-NULL on this arm.
+        unsafe { *suite_in }
+    };
+    let Some((kem_info, _kdf_info, aead_info)) = hpke_suite_check(chosen) else {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::HPKE_1404) };
+        return 0;
+    };
+    // SAFETY: `suite` is non-NULL per the guard above.
+    unsafe { *suite = chosen };
+    /* make sure room for tag and one plaintext octet */
+    if aead_info.taglen >= ctlen {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::HPKE_1410) };
+        return 0;
+    }
+    /* publen */
+    let plen = kem_info.npk;
+    // SAFETY: `enclen` is non-NULL per the guard above.
+    if plen > unsafe { *enclen } {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::HPKE_1416) };
+        return 0;
+    }
+    /*
+     * In order for our enc to look good for sure, we generate and then
+     * delete a real key for that curve - bit OTT but it ensures we do
+     * get the encoding right (e.g. 0x04 as 1st octet for NIST curves in
+     * uncompressed form) and that the value really does map to a point on
+     * the relevant curve.
+     */
+    // SAFETY: `enc`/`enclen` are the caller's and checked above, `fakepriv` is a live local, and
+    // `libctx`/`propq` are forwarded to `OSSL_HPKE_keygen` under its own contract.
+    if unsafe {
+        OSSL_HPKE_keygen(
+            chosen,
+            enc,
+            enclen,
+            &mut fakepriv,
+            ptr::null(),
+            0,
+            libctx,
+            propq,
+        )
+    } != 1
+    {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::HPKE_1429) };
+        return 0;
+    }
+    // SAFETY: `fakepriv` is this call's own key on the success arm; `OSSL_HPKE_keygen` frees its
+    // own key on every failure arm, so it is never double-freed.
+    unsafe { EVP_PKEY_free(fakepriv) };
+    // SAFETY: `ct` is writable for `ctlen` and `libctx` is the caller's.
+    if unsafe { RAND_bytes_ex(libctx, ct, ctlen, 0) } <= 0 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::HPKE_1434) };
+        return 0;
+    }
+    1
 }
 
 /// `int OSSL_HPKE_str2suite(const char *str, OSSL_HPKE_SUITE *suite)` — `hpke.c:1442`.

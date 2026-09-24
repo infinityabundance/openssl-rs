@@ -30030,3 +30030,86 @@ Phase 9's `provider_rows` is now **12 implemented of 15 owned, 3 unimplemented**
 `courts/phase8/rt_cipher_probe.c`, `forensics/tools/gen_provider_algorithms.py` (the reader guard),
 the regenerated atlases and the two probe transcripts. `PIPELINE OK` exit 0 after the two-step fixed
 point, `RT-CIPHER pass (7,198 observations)`, `provider-court-coverage` 0 findings.
+
+## D418 -- Phase 9's three open exports and eight provider rows land in one pass, and the TDES init pair turns out to be substituted crate-wide
+
+The stratum's ledger had three open exports and the provider census two open rows. All five close here,
+together with the seven GCM rows D417 published, and the one court defect the new arms found.
+
+### The three exports
+
+* **`BIO_f_nbio_test`** (`crypto/bio/bf_nbio.c`, 189 lines) lands in `src/runtime/bio/bf_nbio.rs`,
+  beside `bf_lbuf`/`bf_null`/`bf_readbuff`. It is the one `crypto/bio/` filter whose body draws from
+  the random layer: `nbiof_read` and `nbiof_write` each call `RAND_priv_bytes` and pass through only
+  the low three bits of the one byte they get, and a zero draw answers `-1` with the retry flag for
+  the direction it was called in. That draw is exactly why the row is Phase 9's and not Phase 4's,
+  which landed every other filter beside it.
+* **`BN_generate_dsa_nonce`** (`crypto/bn/bn_rand.c:397-412`) lands in `src/bn/rand.rs`. Its whole
+  body was already present as D333's `ossl_bn_gen_dsa_nonce_fixed_top`; the export is that function
+  plus `bn_correct_top`, which the crate documents as a no-op in its always-normalised
+  representation (the same reduction `bn_mod_exp_mont_fixed_top` already makes). The three error
+  sites D314 had generated and left unused (`BN_RAND_332`/`_338`/`_385`) become reachable through it.
+* **`OSSL_HPKE_get_grease_value`** (`crypto/hpke/hpke.c:1377`) lands in `src/hpke/mod.rs` with the
+  three `ossl_HPKE_*_INFO_find_random` helpers (`hpke_util.c:192`/`:214`/`:236`) and
+  `hpke_random_suite` (`hpke.c:351`). D316 transcribed and withheld all of it because its success
+  path calls `OSSL_HPKE_keygen`, which fetches a keymgmt **by name from the library context**, and
+  the default provider's `OSSL_OP_KEYMGMT X25519` row was Phase 8's. Phase 8 landed that row, so the
+  blocker is gone; the `RAND_bytes_ex` and `ossl_rand_uniform_uint32` dependencies the header named
+  are Phase 9's own and landed in D311. The module's header, which said these helpers were "omitted"
+  and this export "withheld", is corrected rather than left stale.
+
+### The `DES3-WRAP` row
+
+`src/provider/cipher_tdes_wrap.rs` (547 lines) is `cipher_tdes_wrap.c` (209 lines) whole and
+`cipher_tdes_wrap_hw.c`'s one hardware table: `PROV_CIPHER_HW_tdes_mode(wrap, cbc)` with the file's
+`#define` applied is `{ ossl_cipher_hw_tdes_ede3_initkey, ossl_cipher_hw_tdes_cbc,
+ossl_cipher_hw_tdes_copyctx }`, which is **exactly** the crate's `TDES_EDE3_CBC_HW`, so the wrap row's
+hardware table is that measurement and not a new one. The row enters `DEFLT_CIPHERS`/`EXPORTED_CIPHERS`
+at its authority position (`defltprov.c:308`, between `DES-EDE3-CFB1` and `DES-EDE-ECB`); the arrays
+move 139 to 140. Its blocker was the wrap IV: `des_ede3_wrap` generates it with
+`RAND_bytes_ex(ctx->libctx, ctx->iv, ivlen, 0)` (`:101`), the only draw in the unit.
+
+### The two defects the new court arms found
+
+**Both are `RT-BIO-FILTER`'s, and both are the same class: an observation that is a function of a
+draw.** The `nbio` arm first printed `BIO_ctrl(BIO_CTRL_INFO)` on the downstream memory BIO, which is
+`written - read` where **both** are draws -- the authority answered 7 and the candidate 8. That was a
+differential-court residual. The second was worse, because the differential court could not see it:
+`BIO_should_read`/`_write` on their own are the draw's outcome, so the transcript varied between
+`-O0` and `-O1` of the *same* source. `probe_hygiene` caught it (`candidate: -O0 differs from -O1`,
+`nbio.read.should_read: -O1='0' -O0='1'`). Both are now printed as *relations* to whether the call
+answered `-1`, which is what the filter's contract actually is. D320 named this shape for
+`blocker_liveness`; this is the same failure mode one layer down, in a probe rather than a checker,
+and it is the first time `probe_hygiene` has caught a defect the differential court passed clean.
+
+### A finding, recorded rather than described as equivalent: the TDES init pair
+
+Landing the wrap row surfaced that the crate has **no** `ossl_tdes_newctx`, `ossl_tdes_dupctx`,
+`tdes_init`, `ossl_tdes_einit` or `ossl_tdes_dinit`. `cipher_tdes_common.c`'s five functions are
+declared in the uninstalled `providers/implementations/include/prov/implementations.h`, so they are
+in no ledger and no atlas -- the same class D396 measured for `ossl_crypto_thread_*`. All eleven TDES
+rows (the six EDE3, four EDE2 and this wrap row) publish `ossl_cipher_generic_einit`/
+`ossl_cipher_generic_dinit` in their place, and the two init bodies are **not** equivalent. The
+measured deltas are three, and the third is not observable:
+
+1. `tdes_init` has no `EVP_CIPH_ECB_MODE` guard on its `iv != NULL` branch
+   (`cipher_tdes_common.c:83-88`); `cipher_generic_init_internal` has one (`ciphercommon.c.in:214`).
+2. `tdes_init` does not reset `ctx->updated`; `cipher_generic_init_internal` does
+   (`ciphercommon.c.in:208`).
+3. The wrong-key-length raise is at a different coordinate only; both raise
+   `PROV_R_INVALID_KEY_LENGTH`, and coordinates are not part of the parity model.
+
+Deltas 1 and 2 sit behind arms no court drives, which is why eleven rows have carried them in
+silence. The new module's header names all three; the fix is a separate pass and is not claimed here.
+
+### Movement
+
+`open_obligations[phase9]` **3 to 0**; `implemented[libcrypto]` 2960 to 2963;
+`provider_rows[implemented]` 311 to 319 and `[unimplemented]` 685 to 677, with
+`open_by_phase[9]` 10 to 2 (leaving `GMAC` and the `base` provider's `SEED-SRC`).
+Against the merge base: `RT-CIPHER` 6946 to **7232** observations, `RT-BN-RAND` 467 to **487**,
+`RT-RAND-USERS` 61 to **111**, `RT-BIO-FILTER` 114 to **140**, and `probe_hygiene` `all_clean` true.
+`PIPELINE OK` exit 0. `forensics/tools/phase9_obligations.py`'s label table names
+`src/runtime/bio/` and `src/evp/bio_ok.rs` ahead of its `BIO_` catch-all, because the two `BIO_`
+hand-offs' crate homes are already filed under those modules and the label should say where the code
+is rather than where the header's stratum is.

@@ -41,9 +41,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 467,
+        "authority_observations": 487,
         "candidate_exit_code": 0,
-        "candidate_observations": 467,
+        "candidate_observations": 487,
         "candidate_stderr_tail": [],
         "court": "RT-BN-RAND",
         "crashed": false,
@@ -58,9 +58,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 61,
+        "authority_observations": 111,
         "candidate_exit_code": 0,
-        "candidate_observations": 61,
+        "candidate_observations": 111,
         "candidate_stderr_tail": [],
         "court": "RT-RAND-USERS",
         "crashed": false,
@@ -103,12 +103,12 @@
     {
       "name": "probe",
       "path": "courts/phase9/rt_bn_rand_probe.c",
-      "sha256": "afb7b833fd1cd012cd92fdbfb8cbffc439d28fff96286a38ac46a4738b897dbe"
+      "sha256": "1cbf32f8c4d8ced86b679ad1bc9d1c0f8924e81859d001d5d1e01556bf1f3579"
     },
     {
       "name": "probe",
       "path": "courts/phase9/rt_rand_users_probe.c",
-      "sha256": "870654569b9f99a2c271fe15a148a7eb14ecac1d640ed26003ee659f991713cb"
+      "sha256": "18d6eb6100f540dcf7d99a939126cc3fcbf3813455dcf45abe6891865a855c28"
     }
   ],
   "kind": "phase9-courts",

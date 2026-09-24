@@ -177,6 +177,7 @@
       "src/evp/pem_bridge.rs: declared Phase 7, defines exports owned by phase 5",
       "src/pem/pem_oth.rs: declared Phase 9, defines exports owned by phase 5",
       "src/provider/core_dispatch.rs: declared Phase 6, defines exports owned by phase 4",
+      "src/runtime/bio/bf_nbio.rs: declared Phase 9, defines exports owned by phase 4",
       "src/runtime/bio/core_bio.rs: declared Phase 6, defines exports owned by phase 4",
       "src/runtime/conf/init_settings.rs: declared Phase 4, defines exports owned by phase 3",
       "src/runtime/confmod/asn1.rs: declared Phase 6, defines exports owned by phase 5",

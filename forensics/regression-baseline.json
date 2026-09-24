@@ -139,7 +139,7 @@
       "verdict": "pass"
     },
     "RT-BIO-FILTER": {
-      "observations": 114,
+      "observations": 140,
       "verdict": "pass"
     },
     "RT-BIO-PAIR": {
@@ -167,11 +167,11 @@
       "verdict": "pass"
     },
     "RT-BN-RAND": {
-      "observations": 467,
+      "observations": 487,
       "verdict": "pass"
     },
     "RT-CIPHER": {
-      "observations": 7198,
+      "observations": 7232,
       "verdict": "pass"
     },
     "RT-CIPHER-MEM": {
@@ -371,7 +371,7 @@
       "verdict": "pass"
     },
     "RT-RAND-USERS": {
-      "observations": 61,
+      "observations": 111,
       "verdict": "pass"
     },
     "RT-RSA": {
@@ -425,7 +425,7 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 2960,
+    "libcrypto": 2963,
     "libssl": 0
   },
   "open_obligations": {
@@ -435,7 +435,7 @@
     "phase6": 0,
     "phase7": 0,
     "phase8": 0,
-    "phase9": 3
+    "phase9": 0
   },
   "owned_obligations": {
     "phase3": 294,
@@ -474,7 +474,7 @@
     "blocking_dependencies": 7,
     "divergence_names_covered": 43,
     "findings": 0,
-    "language_census": 5003,
+    "language_census": 5011,
     "sealed_census": 50
   },
   "provider_implemented": [
@@ -609,6 +609,7 @@
     "default/OSSL_OP_CIPHER/DES-EDE3-CFB8",
     "default/OSSL_OP_CIPHER/DES-EDE3-ECB",
     "default/OSSL_OP_CIPHER/DES-EDE3-OFB",
+    "default/OSSL_OP_CIPHER/DES3-WRAP",
     "default/OSSL_OP_CIPHER/NULL",
     "default/OSSL_OP_CIPHER/SM4-CBC",
     "default/OSSL_OP_CIPHER/SM4-CCM",
@@ -801,17 +802,17 @@
     "handed_on_by_phase": {
       "10": 39,
       "13": 0,
-      "8": 678,
+      "8": 677,
       "9": 675
     },
-    "implemented": 318,
+    "implemented": 319,
     "open_by_phase": {
       "10": 636,
       "13": 39,
       "8": 0,
-      "9": 3
+      "9": 2
     },
     "total": 996,
-    "unimplemented": 678
+    "unimplemented": 677
   }
 }

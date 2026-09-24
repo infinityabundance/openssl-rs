@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 2960 | 2936 |
+| libcrypto | 5896 | 2963 | 2933 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **2960** | **3539** |
+| **total** | **6499** | **2963** | **3536** |
 
 ## Ownership atlas, by stratum
 
@@ -34,7 +34,7 @@ declared owner; this is that assignment.
 | 6 | OSSL_LIB_CTX + provider core | `complete` | 137 | 161 | 161 | 0 | 0 |
 | 7 | EVP framework | `complete` | 924 | 950 | 733 | 217 | 0 |
 | 8 | Native cryptographic primitives | `complete` | 759 | 786 | 786 | 0 | 0 |
-| 9 | RAND / DRBG + entropy | `in-progress` | 25 | 69 | 66 | 0 | 3 |
+| 9 | RAND / DRBG + entropy | `in-progress` | 25 | 69 | 69 | 0 | 0 |
 | 10 | Key formats + PKCS + STORE | `not-started` | 272 | — | — | — | — |
 | 11 | X.509 + verification | `not-started` | 1455 | — | — | — | — |
 | 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `not-started` | 1024 | — | — | — | — |
@@ -101,14 +101,14 @@ Deferred out, by receiving stratum:
   `BIO_asn1_get_prefix`, `BIO_asn1_get_suffix`, `BIO_asn1_set_prefix`, `BIO_asn1_set_suffix`
 * to phase 6: 18 symbol(s), 18 already discharged by that stratum
   `BIO_new_from_core_bio`, `BIO_s_core`, `CONF_imodule_get_flags`, `CONF_imodule_get_module`, `CONF_imodule_get_name`, `CONF_imodule_get_usr_data`, `CONF_imodule_get_value`, `CONF_imodule_set_flags`, `CONF_imodule_set_usr_data`, `CONF_module_add`, `CONF_module_get_usr_data`, `CONF_module_set_usr_data`, `CONF_modules_finish`, `CONF_modules_load`, `CONF_modules_load_file`, `CONF_modules_load_file_ex`, `CONF_modules_unload`, `OPENSSL_load_builtin_modules`
-* to phase 9: 1 symbol(s)
+* to phase 9: 1 symbol(s), 1 already discharged by that stratum
   `BIO_f_nbio_test`
 
 Hand-offs received and discharged:
 
 * from phase 3: 16 symbol(s) — `ERR_add_error_mem_bio`, `ERR_print_errors`, `ERR_print_errors_cb`, `ERR_print_errors_fp`, `OBJ_create_objects`, `OPENSSL_INIT_free`, `OPENSSL_INIT_new`, `OPENSSL_INIT_set_config_appname`, `OPENSSL_INIT_set_config_file_flags`, `OPENSSL_INIT_set_config_filename`, `OPENSSL_LH_node_stats`, `OPENSSL_LH_node_stats_bio`, `OPENSSL_LH_node_usage_stats`, `OPENSSL_LH_node_usage_stats_bio`, `OPENSSL_LH_stats`, `OPENSSL_LH_stats_bio`
 
-Courts: `all pass`, 18 court(s), **3280** authority observation(s) over 18 transcript court(s).
+Courts: `all pass`, 18 court(s), **3306** authority observation(s) over 18 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
@@ -121,7 +121,7 @@ Courts: `all pass`, 18 court(s), **3280** authority observation(s) over 18 trans
 | RT-BIO-DEBUG | `pass` | 57 |
 | RT-BIO-PRINT | `pass` | 213 |
 | RT-BIO-FILE | `pass` | 134 |
-| RT-BIO-FILTER | `pass` | 114 |
+| RT-BIO-FILTER | `pass` | 140 |
 | RT-BIO-PAIR | `pass` | 111 |
 | RT-BIO-DGRAM-PAIR | `pass` | 141 |
 | RT-BIO-DGRAM | `pass` | 294 |
@@ -275,14 +275,14 @@ Hand-offs received and discharged:
 
 * from phase 7: 27 symbol(s) — `EVP_PKEY_assign`, `EVP_PKEY_decrypt_old`, `EVP_PKEY_encrypt_old`, `EVP_PKEY_get0_DH`, `EVP_PKEY_get0_DSA`, `EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get0_RSA`, `EVP_PKEY_get0_hmac`, `EVP_PKEY_get0_poly1305`, `EVP_PKEY_get0_siphash`, `EVP_PKEY_get1_DH`, `EVP_PKEY_get1_DSA`, `EVP_PKEY_get1_EC_KEY`, `EVP_PKEY_get1_RSA`, `EVP_PKEY_get_ec_point_conv_form`, `EVP_PKEY_get_field_type`, `EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0`, `EVP_PKEY_meth_get_count`, `EVP_PKEY_set1_DH`, `EVP_PKEY_set1_DSA`, `EVP_PKEY_set1_EC_KEY`, `EVP_PKEY_set1_RSA`, `EVP_PKEY_type`, `d2i_KeyParams`, `d2i_KeyParams_bio`, `d2i_PublicKey`
 
-Courts: `all pass`, 18 court(s), **15381** authority observation(s) over 15 transcript court(s).
+Courts: `all pass`, 18 court(s), **15415** authority observation(s) over 15 transcript court(s).
 
 The other 3 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
 
 | court | verdict | observations |
 |---|---|---|
 | RT-DIGEST | `pass` | 654 |
-| RT-CIPHER | `pass` | 7198 |
+| RT-CIPHER | `pass` | 7232 |
 | RT-CIPHER-MEM | `pass` | 382 |
 | RT-RSA | `pass` | 1021 |
 | RT-DH | `pass` | 589 |
@@ -303,14 +303,14 @@ The other 3 compare ELF structure rather than a transcript and observe nothing l
 ## Phase 9 — RAND / DRBG + entropy
 
 * state: `in-progress`
-* blocking: 3 open obligation(s) of this stratum recorded in forensics/phase9-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Twenty-five of the exports it owns are its own header's and the remainder arrive as recorded hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives in earlier strata's modules (docs/DECISIONS.md D294). Courts have landed since this note was first written; the registered set and its observation counts are `artifacts/phase9/COURTS.json` and the ledger's own `courts` block, and this note defers to them rather than restating counts that move.
+* blocking: 2 provider registration row(s) of this stratum are neither implemented nor handed to a later phase (forensics/atlas/provider-algorithms.json): GMAC, SEED-SRC
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase9-obligations.json`
 * atlas-owned: 25
 * owned working set: 69
-* implemented: 66
+* implemented: 69
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 3**
+* **open in this stratum: 0**
 
 Hand-offs received and discharged:
 
@@ -318,14 +318,14 @@ Hand-offs received and discharged:
 * from phase 5: 31 symbol(s) — `BN_BLINDING_convert`, `BN_BLINDING_convert_ex`, `BN_BLINDING_create_param`, `BN_BLINDING_update`, `BN_GF2m_mod_solve_quad`, `BN_GF2m_mod_solve_quad_arr`, `BN_GF2m_mod_sqrt`, `BN_GF2m_mod_sqrt_arr`, `BN_X931_derive_prime_ex`, `BN_X931_generate_Xpq`, `BN_X931_generate_prime_ex`, `BN_bntest_rand`, `BN_check_prime`, `BN_generate_dsa_nonce`, `BN_generate_prime`, `BN_generate_prime_ex`, `BN_generate_prime_ex2`, `BN_is_prime`, `BN_is_prime_ex`, `BN_is_prime_fasttest`, `BN_is_prime_fasttest_ex`, `BN_priv_rand`, `BN_priv_rand_ex`, `BN_priv_rand_range`, `BN_priv_rand_range_ex`, `BN_pseudo_rand`, `BN_pseudo_rand_range`, `BN_rand`, `BN_rand_ex`, `BN_rand_range`, `BN_rand_range_ex`
 * from phase 7: 12 symbol(s) — `BIO_f_reliable`, `EVP_CIPHER_CTX_rand_key`, `EVP_SealInit`, `OSSL_HPKE_get_grease_value`, `PEM_ASN1_read`, `PEM_ASN1_read_bio`, `PEM_ASN1_write`, `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx`, `PEM_bytes_read_bio`, `PEM_bytes_read_bio_secmem`, `PEM_do_header`
 
-Courts: `all pass`, 4 court(s), **1018** authority observation(s) over 4 transcript court(s).
+Courts: `all pass`, 4 court(s), **1088** authority observation(s) over 4 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
 | RT-DRBG | `pass` | 361 |
 | RT-RAND | `pass` | 129 |
-| RT-BN-RAND | `pass` | 467 |
-| RT-RAND-USERS | `pass` | 61 |
+| RT-BN-RAND | `pass` | 487 |
+| RT-RAND-USERS | `pass` | 111 |
 
 ## Court coverage
 
@@ -346,8 +346,8 @@ are proofs of reference only. See `docs/DECISIONS.md` D199 and D236.
 | 6 | 161 | 161 | 156 | 5 | 0 | 0 | 0 |
 | 7 | 733 | 733 | 688 | 45 | 0 | 0 | 0 |
 | 8 | 786 | 778 | 778 | 0 | 8 | 0 | 0 |
-| 9 | 66 | 66 | 66 | 0 | 0 | 0 | 0 |
-| **total** | **2720** | **2712** | **2446** | **266** | **8** | **0** | **0** |
+| 9 | 69 | 69 | 69 | 0 | 0 | 0 | 0 |
+| **total** | **2723** | **2715** | **2449** | **266** | **8** | **0** | **0** |
 
 ## Atlas/ledger reconciliation
 
