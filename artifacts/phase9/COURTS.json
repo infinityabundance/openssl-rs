@@ -24,9 +24,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 129,
+        "authority_observations": 145,
         "candidate_exit_code": 0,
-        "candidate_observations": 129,
+        "candidate_observations": 145,
         "candidate_stderr_tail": [],
         "court": "RT-RAND",
         "crashed": false,
@@ -98,7 +98,7 @@
     {
       "name": "probe",
       "path": "courts/phase9/rt_rand_probe.c",
-      "sha256": "446ce654ced9048505cd809d4b71458e3ad91f21d82074c53f197398fb0f75be"
+      "sha256": "ffc672e5abc61caa7868cf89d57f73c047c5081432e7d7d793338f33739ff805"
     },
     {
       "name": "probe",

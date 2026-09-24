@@ -17,7 +17,7 @@ enforced here:
 | 6 | OSSL_LIB_CTX + provider core | `complete` |  |
 | 7 | EVP framework | `complete` |  |
 | 8 | Native cryptographic primitives | `complete` |  |
-| 9 | RAND / DRBG + entropy | `in-progress` | 1 provider registration row(s) of this stratum are neither implemented nor handed to a later phase (forensics/atlas/provider-algorithms.json): SEED-SRC |
+| 9 | RAND / DRBG + entropy | `complete` |  |
 | 10 | Key formats + PKCS + STORE | `not-started` | not started |
 | 11 | X.509 + verification | `not-started` | not started |
 | 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `not-started` | not started |

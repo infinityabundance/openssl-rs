@@ -30220,3 +30220,68 @@ the correction as prose; it is now in the machine-readable plan as well.
 
 `PIPELINE OK` exit 0, `plan_reconciliation.py` clean over 266 named units and 107 named symbols,
 phase 9 still `in-progress` with exactly one named blocker.
+
+## D421 -- the base provider lands, phase 9's last row publishes, and the census turns out to have been reading one provider
+
+D420 left `base`'s `SEED-SRC` row open with a named prerequisite: `baseprov.c`'s `base_query`
+answers one table per operation and this crate had no base provider module at all. The row's
+implementation had landed in D311 and the plan's 9.5 row owns "the two `SEED-SRC` rows", so the
+module is phase 9's to land -- and it is the *smaller* side of the dependency, which is what makes
+landing it the way to break the ordering rather than moving the row forward.
+
+### The module
+
+`src/provider/base.rs` (342 lines) is `providers/baseprov.c` (183 lines): `base_param_types[]`,
+`base_gettable_params`, `base_get_params`, `base_query`, `base_teardown`, `base_dispatch_table[]` and
+`ossl_base_provider_init`. `PREDEFINED_PROVIDERS`'s base row gains its `init`, so
+`OSSL_PROVIDER_load(NULL, "base")` now activates the compiled-in provider instead of falling to the
+`DSO` branch -- part of the residual D117 recorded.
+
+`base_encoder[]`, `base_decoder[]` and `base_store[]` are **deliberately not transcribed**. They come
+from `#include "encoders.inc"`/`"decoders.inc"`/`"stores.inc"` and reference dispatch tables this
+crate does not carry: 318 rows that are `owning_phase: 10` and `unimplemented` in
+`forensics/atlas/provider-algorithms.json`. `base_query` therefore answers `NULL` for
+`OSSL_OP_ENCODER`, `OSSL_OP_DECODER` and `OSSL_OP_STORE` -- which is the authority's own answer for an
+operation a provider does not handle, so the crate's provider answers *today's* census exactly. The
+module's header says all of that rather than leaving a reader to infer it.
+
+**The arms are `if operation_id == …` rather than a `match`**, and the header says why: the census
+reads a crate query function's arms, which is why `deflt_query` is written the same way. The
+semantics are identical; the shape is the reader's contract.
+
+### The census defect this exposed, which is the important part
+
+`gen_provider_algorithms.py` carried a **single** `CRATE_QUERY_UNIT`/`CRATE_QUERY_PROVIDER` pair --
+`deflt_query` in `src/provider/digest.rs`, provider `default`. So a row the *base* provider publishes
+could never be read as `implemented` **however the crate was shaped**: `base/OSSL_OP_RAND/SEED-SRC`
+was `unimplemented` by construction. The same reader that D417 caught dropping rows silently was, here,
+reading the wrong provider silently.
+
+`CRATE_QUERY_READERS` is now a list of `(provider, module, query function)` and each is walked. Two
+more defects surfaced while wiring it, both of the same class:
+
+1. **`CRATE_QUERY_ARM` could not see past a `//` comment** between the brace and the `return`, and
+   `src/provider/base.rs` documents every arm that way. Base's four arms went unread and the reader
+   returned an empty result for it without complaint. The pattern now allows a comment, and a reader
+   that recognises **no** arm is a fatal error rather than an empty table -- which is the guard that
+   should have existed from the start.
+2. **`read_crate_table` could not read a row that spells `algorithm_names` through a module const.**
+   `DEFLT_RANDS` writes `c"SEED-SRC".as_ptr()`; `BASE_RANDS` writes `PROV_NAMES_SEED_SRC`, which is the
+   same contract in a better spelling because the literal then appears once. The reader resolves a
+   same-module `const … : *const c_char = c"…"` and fails loudly on a name it cannot resolve. Its
+   field-count guard counts rows that *spell a name*, so a terminator's
+   `algorithm_names: ptr::null()` is not counted as one.
+
+### Movement
+
+`provider_rows[implemented]` 320 to 321, `[open_by_phase][9]` 1 to 0, phase 9 to **`complete`** with
+15/15 owned rows and 69/69 ledger exports; `RT-RAND` 129 to **145** observations, with the new arm
+answering identically on both sides first time. `ossl_base_provider_init` is a `#[no_mangle]`
+definition, so `implemented-surface.json`'s `internal_symbols.c_style` moves 456 to 457 and
+`docs/CI.md`'s assertion moves with it. `PIPELINE OK` exit 0.
+
+**What is still owed, named rather than implied.** Phase 9's `complete` carries
+`seal_sha256: null`: the stratum has reached the state a seal *records*, and the seal document itself
+is the plan's own last artifact and has not been written. `CT-DRBG` is still a pending court, and
+`CT-BN-RAND` -- named by `docs/PHASE-9-SUBPHASES.md` row 9.1 -- is in neither `phase9_courts.py`'s
+registered set nor its pending set, which is a gap in the runner rather than a court nobody ran.

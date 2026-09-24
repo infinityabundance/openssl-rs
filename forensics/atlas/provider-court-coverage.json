@@ -7,7 +7,7 @@
         "unmatched": 0
       },
       "9": {
-        "implemented": 14,
+        "implemented": 15,
         "unmatched": 0
       }
     },
@@ -58,9 +58,22 @@
         ]
       }
     ],
-    "directly_courted": 320,
-    "implemented_rows": 320,
+    "directly_courted": 321,
+    "implemented_rows": 321,
     "rows": [
+      {
+        "algorithm_names": "SEED-SRC",
+        "aliases": [
+          "SEED-SRC"
+        ],
+        "courts": [
+          "RT-DRBG"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_RAND",
+        "owning_phase": 9,
+        "provider": "base"
+      },
       {
         "algorithm_names": "RSA",
         "aliases": [
@@ -4734,7 +4747,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "8aeb7ccf467a866b6e5a89018caf60d54d60160f738eb0d0c0d4fb5a9565909d"
+      "sha256": "b85252dd46305833ba142fa22f33f51f29f4aeee34f062bb36d0b0c14e8821be"
     },
     {
       "name": "court:RT-DIGEST:rt_digest_probe.c",
