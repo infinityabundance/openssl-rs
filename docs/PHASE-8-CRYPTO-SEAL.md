@@ -329,9 +329,23 @@ beside them because they are the project's own rule for every stratum, not this 
 | the earlier strata are complete, which the rule requires | `forensics/phase-state.json` |
 | the courts are re-derived on every push, not trusted from a committed file | the `courts` job in `.github/workflows/ci.yml` runs `court/pipeline.sh` |
 | a commit may not undo an earlier commit's evidence | `forensics/tools/regression_guard.py` against the branch's previous head and against `origin/main` |
-| **`RELEASE_GATES` §2 item 3, court manifests** | `artifacts/phase8/COURTS.json` |
-| **item 8, FRF receipts** | `.frf/` — fifteen receipts and a compiled `sensitivity-backed` claim; §8 |
-| **item 10, Gemel checkpoint** | `forensics/GEMEL_TRAJECTORY.md` — `K45`, `K46` and `K47`; §8 |
+
+**`docs/RELEASE_GATES.md` §2's ten items, each checked rather than assumed.** The first three columns
+are the authority's own list; the last says what this stratum's evidence for it is. They are listed in
+full because a gate whose unmet items are not read is a gate nobody is keeping.
+
+| # | item | this stratum's evidence |
+|---|---|---|
+| 1 | authority identity | `forensics/authorities/AUTHORITIES.json` pins `openssl-3.6.4-production`; the compiled claim records the reference as `openssl-rt-3.6.4-r2` |
+| 2 | obligation inventory | `forensics/phase8-obligations.json` — and, for the provider rows, `forensics/atlas/provider-algorithms.json` |
+| 3 | court manifests | `artifacts/phase8/COURTS.json` |
+| 4 | raw captures | `.frf/captures/` for the fifteen FRF courts, and the staged `artifacts/phase8/probes/<probe>.{authority,candidate}` pairs for the court venue |
+| 5 | residual set | `.frf/residuals/` — one record per observed divergence, with the head disposition carried on each. The stratum's one library-adjacent residual is dispositioned `environmental` with a reason; §8 records it and the pre-fix record it came from |
+| 6 | mutation / sensitivity evidence | the thirty challenge records of §8, each `saw_defect: true` and `specificity_clean: true` |
+| 7 | resolution runs | **stated precisely, because this is the item that reads as unmet.** No `fixed` disposition applies to this stratum: `--resolution-run` is required only for `fixed`, and `fixed` requires a *changed* candidate artifact, which would be a false statement here (D413). What resolves the one recorded divergence is the corrected instrument and a fresh clean run under the unchanged candidate, recorded in `C75`/`K46` and `C76`/`K47` |
+| 8 | FRF receipts | `.frf/receipts/` — fifteen, plus the two compiled `sensitivity-backed` claims of §8 |
+| 9 | generated parity projection | `forensics/STATUS.md`, rendered by `forensics/tools/render_status.py` from the atlas and the receipts; the seal-facing arithmetic is `docs/SEAL-CENSUS.md` |
+| 10 | Gemel checkpoint | `K45`, `K46` and `K47` in `forensics/GEMEL_TRAJECTORY.md` |
 
 ## 8. FRF and Gemel
 

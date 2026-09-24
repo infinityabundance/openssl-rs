@@ -421,7 +421,7 @@
           "implemented": 306,
           "owned": 306
         },
-        "seal_sha256": "554cb1b5f9482bad8be386d2d58faf1f55355e2aeb27c714f6a43bb3d7d52607",
+        "seal_sha256": "f74d262edfb4e2e8be37ae06b6e1f6f81e33c584979a24e114b95bd818345cfb",
         "state": "complete",
         "stratum": "Native cryptographic primitives"
       },
@@ -617,7 +617,7 @@
       "not_started": 12
     }
   },
-  "body_hash": "92113b36911b95aef3269f044b16e7b35608d54e78ee98f212302acc23273cb9",
+  "body_hash": "59bcb22c5f03e4c194d31bd56a284629522ebcd3e17985153b773a889946132d",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",
