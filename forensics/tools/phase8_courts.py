@@ -246,6 +246,18 @@ CIPHER_CORRECTNESS_COURTS: list[tuple[str, tuple[str, ...]]] = [
                    "chacha20_poly1305", "cbchmac", "ccm", "xts", "ocb", "cts")),
 ]
 
+# The ML-DSA correctness court, and the second plane D409's three ML-DSA rows were missing. Its
+# vector schema is neither digest-shaped nor cipher-shaped — a keygen `(seed, public key)`,
+# a siggen `(private key, message, context, signature)` and a sigver `(public key, message,
+# signature, verdict)` — so it is driven by `correctness_vectors.run_ml_dsa_court` against the
+# generator's own record, `forensics/atlas/ct-ml-dsa-vectors.json`, and its inputs are the
+# generated header `courts/phase8/ct_ml_dsa_vectors.h`. A signature is up to 4627 bytes, so a
+# digest-shaped `forensics/vectors/` file would have to carry it at full width; the record is the
+# generator's instead, added the way `CT-CIPHER`'s `cipher-vectors-*` schema was. It is a plain
+# list rather than `(name, algorithms)` because there is no per-algorithm `forensics/vectors/`
+# file to name.
+ML_DSA_CORRECTNESS_COURTS: list[str] = ["CT-ML-DSA"]
+
 # A `CT-*` court the plan names but whose primitive is not implemented yet. It is not a
 # registered court: nothing here can pass, and the runner prints each one as PENDING with what
 # it needs so that "not run yet" cannot be read as "passed". Each entry names the subphase and
@@ -437,6 +449,10 @@ def main(argv: list[str]) -> int:
         records.append(cv.run_cipher_court(name, algorithms, work_dir=work,
                                            authority_id=auth.id))
 
+    for name in ML_DSA_CORRECTNESS_COURTS:
+        work.mkdir(parents=True, exist_ok=True)
+        records.append(cv.run_ml_dsa_court(name, work_dir=work, authority_id=auth.id))
+
     passed = sum(1 for r in records if r["verdict"] == "pass")
     body = {
         "all_pass": passed == len(records),
@@ -471,6 +487,11 @@ def main(argv: list[str]) -> int:
         for algorithm in algorithms:
             inputs.append(InputRef(name=f"cipher-correctness-vectors:{algorithm}",
                                    path=cv.VECTOR_DIR / f"{algorithm}.json"))
+    for _name in ML_DSA_CORRECTNESS_COURTS:
+        inputs.append(InputRef(name="ml-dsa-correctness-probe", path=cv.ML_DSA_PROBE))
+        inputs.append(InputRef(name="ml-dsa-correctness-vectors", path=cv.ML_DSA_VECTORS))
+        inputs.append(InputRef(name="ml-dsa-vector-inputs",
+                               path=PROBE_DIR / "ct_ml_dsa_vectors.h"))
     doc = envelope(kind="phase8-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)

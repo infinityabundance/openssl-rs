@@ -695,6 +695,14 @@ pub(crate) unsafe fn hpke_labeled_extract(
 /// info)`, exactly sized; the `WPACKET` failure arm (`hpke_util.c:380`) is unreachable for the
 /// same reason as the extract's.
 ///
+/// The authority's `labeled_infolen` serves **two** roles and the crate must keep them apart: it is
+/// first the allocation bound `maxoutlen` (`2 + okmlen + prklen + ...`, deliberately larger than the
+/// string), and then `WPACKET_get_total_written` overwrites it with the bytes actually written
+/// (`2 + HPKE-v1 + protocol_label + suiteid + label + info`) before `ossl_hpke_kdf_expand` is
+/// handed that *written* length. Passing the allocation bound to the KDF instead would append
+/// `okmlen + prklen` bytes of unwritten (uninitialised) buffer to the HKDF `info`, which is what
+/// the `written` variable below prevents.
+///
 /// # Safety
 /// `kctx` live; `okm` writable for `okmlen`; `prk`/`info` readable for their lengths.
 #[allow(clippy::too_many_arguments)]
@@ -711,6 +719,7 @@ pub(crate) unsafe fn hpke_labeled_expand(
     info: *const c_uchar,
     infolen: usize,
 ) -> c_int {
+    // `maxoutlen` — the allocation bound, larger than the label string by `okmlen + prklen`.
     let labeled_infolen = 2
         + okmlen
         + prklen
@@ -724,6 +733,9 @@ pub(crate) unsafe fn hpke_labeled_expand(
         return 0;
     }
 
+    // `WPACKET_get_total_written`'s result: the bytes actually written, which is what the KDF's
+    // `info` argument must be sized to.
+    let written;
     // SAFETY: the destination was sized as the exact sum below and each copy is of its own length.
     unsafe {
         let mut off = 0usize;
@@ -752,20 +764,12 @@ pub(crate) unsafe fn hpke_labeled_expand(
         if infolen > 0 {
             ptr::copy_nonoverlapping(info, labeled_info.add(off), infolen);
         }
+        off += infolen;
+        written = off;
     }
 
-    // SAFETY: `kctx` is live and `labeled_info` holds `labeled_infolen` bytes.
-    let ret = unsafe {
-        hpke_kdf_expand(
-            kctx,
-            okm,
-            okmlen,
-            prk,
-            prklen,
-            labeled_info,
-            labeled_infolen,
-        )
-    };
+    // SAFETY: `kctx` is live and `labeled_info` holds `written` written bytes.
+    let ret = unsafe { hpke_kdf_expand(kctx, okm, okmlen, prk, prklen, labeled_info, written) };
     // SAFETY: the buffer is this call's own and just used.
     unsafe { CRYPTO_free(labeled_info.cast::<c_void>(), FILE_HPKE_UTIL, 388) };
     ret

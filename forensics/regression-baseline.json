@@ -58,6 +58,10 @@
       "observations": 0,
       "verdict": "pass"
     },
+    "CT-ML-DSA": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-AMETH": {
       "observations": 471,
       "verdict": "pass"
@@ -303,7 +307,7 @@
       "verdict": "pass"
     },
     "RT-KEYMGMT": {
-      "observations": 586,
+      "observations": 608,
       "verdict": "pass"
     },
     "RT-LHASH": {
@@ -459,14 +463,14 @@
     "5": "complete",
     "6": "complete",
     "7": "complete",
-    "8": "in-progress",
+    "8": "complete",
     "9": "in-progress"
   },
   "prerequisites": {
-    "blocking_dependencies": 9,
+    "blocking_dependencies": 7,
     "divergence_names_covered": 43,
     "findings": 0,
-    "language_census": 5014,
+    "language_census": 5013,
     "sealed_census": 50
   },
   "provider_implemented": [
@@ -649,6 +653,7 @@
     "default/OSSL_OP_KDF/TLS13-KDF",
     "default/OSSL_OP_KDF/X942KDF-ASN1",
     "default/OSSL_OP_KDF/X963KDF",
+    "default/OSSL_OP_KEM/EC",
     "default/OSSL_OP_KEM/ML-KEM-1024",
     "default/OSSL_OP_KEM/ML-KEM-512",
     "default/OSSL_OP_KEM/ML-KEM-768",
@@ -788,14 +793,14 @@
       "8": 685,
       "9": 675
     },
-    "implemented": 310,
+    "implemented": 311,
     "open_by_phase": {
       "10": 636,
       "13": 39,
-      "8": 1,
+      "8": 0,
       "9": 10
     },
     "total": 996,
-    "unimplemented": 686
+    "unimplemented": 685
   }
 }

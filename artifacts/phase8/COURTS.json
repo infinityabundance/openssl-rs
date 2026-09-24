@@ -194,9 +194,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 586,
+        "authority_observations": 608,
         "candidate_exit_code": 0,
-        "candidate_observations": 586,
+        "candidate_observations": 608,
         "candidate_stderr_tail": [],
         "court": "RT-KEYMGMT",
         "crashed": false,
@@ -37904,12 +37904,665 @@
         "vectors_failed": 0,
         "vectors_passed": 3190,
         "verdict": "pass"
+      },
+      {
+        "arms": {
+          "keygen": 75,
+          "siggen": 6,
+          "sigver": 9
+        },
+        "authority": "openssl-3.6.4-production",
+        "calls_checked": 90,
+        "candidate_shared_object": "artifacts/phase2/libcrypto.so.3",
+        "claim": "A correctness-vector PASS means candidate-only construction verification: the candidate's ML-DSA keymgmt and signature rows produced the committed expected bytes for the 75 keygen; 6 siggen; 9 sigver vectors (90 total), which are the pinned authority's checked-in FIPS 204 / ACVP values mirrored in forensics/atlas/ct-ml-dsa-vectors.json by gen_ct_ml_dsa_vectors.py. It is NOT OpenSSL parity: the corpus does not contain the authority's observable behaviour, and that is RT-KEYMGMT's and RT-SIGNATURE's question. It is NOT independent cryptographic validation and NOT formal validation; published test vectors are informal verification, not a certificate. See docs/DECISIONS.md D201/D208 and docs/PHASE-8-SUBPHASES.md.",
+        "court": "CT-ML-DSA",
+        "failures": [],
+        "kind": "ml-dsa-vectors",
+        "plane": "correctness",
+        "probe": "courts/phase8/ct_ml_dsa.c",
+        "results": [
+          {
+            "actual": "a140495fe1cbeb25d30ecf194ee2823dde1b76bbcbdea8cac50c6365f6803060",
+            "arm": "keygen",
+            "expected": "a140495fe1cbeb25d30ecf194ee2823dde1b76bbcbdea8cac50c6365f6803060",
+            "id": "keygen-ML-DSA-44-tcId1",
+            "passed": true
+          },
+          {
+            "actual": "6b91de274283f8ffec6b38db13920c951ad8c00e307f7c60a6dab9138254e921",
+            "arm": "keygen",
+            "expected": "6b91de274283f8ffec6b38db13920c951ad8c00e307f7c60a6dab9138254e921",
+            "id": "keygen-ML-DSA-44-tcId2",
+            "passed": true
+          },
+          {
+            "actual": "5e4e3e78a1a00cf302b544a1a043d6c203fb63184e0510a96ee2b81de258cd09",
+            "arm": "keygen",
+            "expected": "5e4e3e78a1a00cf302b544a1a043d6c203fb63184e0510a96ee2b81de258cd09",
+            "id": "keygen-ML-DSA-44-tcId3",
+            "passed": true
+          },
+          {
+            "actual": "b5ea4bd71199cfb719d0c3a2be10e5dc4a0e04ddaad3234ca87f79e313e7f7da",
+            "arm": "keygen",
+            "expected": "b5ea4bd71199cfb719d0c3a2be10e5dc4a0e04ddaad3234ca87f79e313e7f7da",
+            "id": "keygen-ML-DSA-44-tcId4",
+            "passed": true
+          },
+          {
+            "actual": "bf0c58e5785116dabd6e370eb098ae790af9c0e6f17dfff91bde8c5cbb71e57b",
+            "arm": "keygen",
+            "expected": "bf0c58e5785116dabd6e370eb098ae790af9c0e6f17dfff91bde8c5cbb71e57b",
+            "id": "keygen-ML-DSA-44-tcId5",
+            "passed": true
+          },
+          {
+            "actual": "a35b1282808fc712ef86c1a2112250105cf4ab2ce3a4f8cf96db688837f9d1fd",
+            "arm": "keygen",
+            "expected": "a35b1282808fc712ef86c1a2112250105cf4ab2ce3a4f8cf96db688837f9d1fd",
+            "id": "keygen-ML-DSA-44-tcId6",
+            "passed": true
+          },
+          {
+            "actual": "01775e977a43220aeb7dc18a2ba809e91e02a8d6630e49a8abdf36c9a4d23c6f",
+            "arm": "keygen",
+            "expected": "01775e977a43220aeb7dc18a2ba809e91e02a8d6630e49a8abdf36c9a4d23c6f",
+            "id": "keygen-ML-DSA-44-tcId7",
+            "passed": true
+          },
+          {
+            "actual": "3847403c9e81f33b6ffa7412fdeef506b90aefe3528d81958332add0c0a8c7a6",
+            "arm": "keygen",
+            "expected": "3847403c9e81f33b6ffa7412fdeef506b90aefe3528d81958332add0c0a8c7a6",
+            "id": "keygen-ML-DSA-44-tcId8",
+            "passed": true
+          },
+          {
+            "actual": "e18f7195a1b4b8c6b5f0a52414cdf18dc89c3364793bdb551f6530fec67a291a",
+            "arm": "keygen",
+            "expected": "e18f7195a1b4b8c6b5f0a52414cdf18dc89c3364793bdb551f6530fec67a291a",
+            "id": "keygen-ML-DSA-44-tcId9",
+            "passed": true
+          },
+          {
+            "actual": "abb1bdcf2dd717cfd1a15e3f8168fd0fb19993f920437db46d818b727cfd06f3",
+            "arm": "keygen",
+            "expected": "abb1bdcf2dd717cfd1a15e3f8168fd0fb19993f920437db46d818b727cfd06f3",
+            "id": "keygen-ML-DSA-44-tcId10",
+            "passed": true
+          },
+          {
+            "actual": "80dc31fb3fc9cfce8c6b6a6007543c579cdb17352f9e6b4ba9639bebe1ab68fa",
+            "arm": "keygen",
+            "expected": "80dc31fb3fc9cfce8c6b6a6007543c579cdb17352f9e6b4ba9639bebe1ab68fa",
+            "id": "keygen-ML-DSA-44-tcId11",
+            "passed": true
+          },
+          {
+            "actual": "aea21f2bc02f3550acdc1f8598ffcdf00df01e566891225ada5c561b57858760",
+            "arm": "keygen",
+            "expected": "aea21f2bc02f3550acdc1f8598ffcdf00df01e566891225ada5c561b57858760",
+            "id": "keygen-ML-DSA-44-tcId12",
+            "passed": true
+          },
+          {
+            "actual": "58a91476e65a86673e205c9bed7e07066d71ea82707a052f01dca0545e52e045",
+            "arm": "keygen",
+            "expected": "58a91476e65a86673e205c9bed7e07066d71ea82707a052f01dca0545e52e045",
+            "id": "keygen-ML-DSA-44-tcId13",
+            "passed": true
+          },
+          {
+            "actual": "b69e5e9f6d7d26db770219817fa993cd07e31861f191b59a6e5247ed8db0087d",
+            "arm": "keygen",
+            "expected": "b69e5e9f6d7d26db770219817fa993cd07e31861f191b59a6e5247ed8db0087d",
+            "id": "keygen-ML-DSA-44-tcId14",
+            "passed": true
+          },
+          {
+            "actual": "88e2830fea652aa691b21e909b894b9e15d01dc2f033905633ec386db6d36c25",
+            "arm": "keygen",
+            "expected": "88e2830fea652aa691b21e909b894b9e15d01dc2f033905633ec386db6d36c25",
+            "id": "keygen-ML-DSA-44-tcId15",
+            "passed": true
+          },
+          {
+            "actual": "0ec72b877a9da4334d9f359595a41c4aaa26ad14928c29708f87b0633b2705ff",
+            "arm": "keygen",
+            "expected": "0ec72b877a9da4334d9f359595a41c4aaa26ad14928c29708f87b0633b2705ff",
+            "id": "keygen-ML-DSA-44-tcId16",
+            "passed": true
+          },
+          {
+            "actual": "f50d9837704b663ec7bee4908e2d0e828bdd297afb846588791884ebcf1453a5",
+            "arm": "keygen",
+            "expected": "f50d9837704b663ec7bee4908e2d0e828bdd297afb846588791884ebcf1453a5",
+            "id": "keygen-ML-DSA-44-tcId17",
+            "passed": true
+          },
+          {
+            "actual": "3aff43a8d660d486e84a608c45f54d35d02cb16510e1622897b1a796a7e6f1df",
+            "arm": "keygen",
+            "expected": "3aff43a8d660d486e84a608c45f54d35d02cb16510e1622897b1a796a7e6f1df",
+            "id": "keygen-ML-DSA-44-tcId18",
+            "passed": true
+          },
+          {
+            "actual": "a099a219ac916f178c1d99bea604b40761cd5c352234765897d6e61b0f14c800",
+            "arm": "keygen",
+            "expected": "a099a219ac916f178c1d99bea604b40761cd5c352234765897d6e61b0f14c800",
+            "id": "keygen-ML-DSA-44-tcId19",
+            "passed": true
+          },
+          {
+            "actual": "613917ea24b16795e0408449bfbe89b24047d99625b363327c066b6d9f5a0f7e",
+            "arm": "keygen",
+            "expected": "613917ea24b16795e0408449bfbe89b24047d99625b363327c066b6d9f5a0f7e",
+            "id": "keygen-ML-DSA-44-tcId20",
+            "passed": true
+          },
+          {
+            "actual": "b636c835fb15b0fed2eae1a3544bc73e5c43ab826ba5cc069f08cc3ef97ec609",
+            "arm": "keygen",
+            "expected": "b636c835fb15b0fed2eae1a3544bc73e5c43ab826ba5cc069f08cc3ef97ec609",
+            "id": "keygen-ML-DSA-44-tcId21",
+            "passed": true
+          },
+          {
+            "actual": "58140fb60ab5967ddb8b3e50d3325b0c2f4cbe2a5ae93cadb61436dca9f83fd8",
+            "arm": "keygen",
+            "expected": "58140fb60ab5967ddb8b3e50d3325b0c2f4cbe2a5ae93cadb61436dca9f83fd8",
+            "id": "keygen-ML-DSA-44-tcId22",
+            "passed": true
+          },
+          {
+            "actual": "a74da96daa75d8ce4f90bb77450e08ce17fcc86ce381c04938229bb46f9606a4",
+            "arm": "keygen",
+            "expected": "a74da96daa75d8ce4f90bb77450e08ce17fcc86ce381c04938229bb46f9606a4",
+            "id": "keygen-ML-DSA-44-tcId23",
+            "passed": true
+          },
+          {
+            "actual": "2992c404416d19fba35a57caeaf101eaed3ac51afece76a8b5540365af480b55",
+            "arm": "keygen",
+            "expected": "2992c404416d19fba35a57caeaf101eaed3ac51afece76a8b5540365af480b55",
+            "id": "keygen-ML-DSA-44-tcId24",
+            "passed": true
+          },
+          {
+            "actual": "9f1a4ee94ad1227b86635b6036948617092dbcaea7a59b78668c1e7232bf3c23",
+            "arm": "keygen",
+            "expected": "9f1a4ee94ad1227b86635b6036948617092dbcaea7a59b78668c1e7232bf3c23",
+            "id": "keygen-ML-DSA-44-tcId25",
+            "passed": true
+          },
+          {
+            "actual": "b0cc1d6464e1528a478108d4be94be4aca4c7ae69d9595b1e6b752713442022a",
+            "arm": "keygen",
+            "expected": "b0cc1d6464e1528a478108d4be94be4aca4c7ae69d9595b1e6b752713442022a",
+            "id": "keygen-ML-DSA-65-tcId26",
+            "passed": true
+          },
+          {
+            "actual": "244e54052b0472b7dee049d0987f7578e409cc6962a0af8abe595bd9d256fe75",
+            "arm": "keygen",
+            "expected": "244e54052b0472b7dee049d0987f7578e409cc6962a0af8abe595bd9d256fe75",
+            "id": "keygen-ML-DSA-65-tcId27",
+            "passed": true
+          },
+          {
+            "actual": "59bb58034161ce551811966835fe95b7929c798ae4ea48b6d439f61e357775a9",
+            "arm": "keygen",
+            "expected": "59bb58034161ce551811966835fe95b7929c798ae4ea48b6d439f61e357775a9",
+            "id": "keygen-ML-DSA-65-tcId28",
+            "passed": true
+          },
+          {
+            "actual": "fbc22d7e50669a198be2550036af03ca1dc054792f8cb6e8df05e9d43335e1e5",
+            "arm": "keygen",
+            "expected": "fbc22d7e50669a198be2550036af03ca1dc054792f8cb6e8df05e9d43335e1e5",
+            "id": "keygen-ML-DSA-65-tcId29",
+            "passed": true
+          },
+          {
+            "actual": "c92ccff4da9eeaf4e66c550b9a560abd7d4992d2e96d04877ec5d3f04bef38dd",
+            "arm": "keygen",
+            "expected": "c92ccff4da9eeaf4e66c550b9a560abd7d4992d2e96d04877ec5d3f04bef38dd",
+            "id": "keygen-ML-DSA-65-tcId30",
+            "passed": true
+          },
+          {
+            "actual": "99135a7cb877609d357fd80e632bfdfa6bf95d82ae9b26e71095686502922298",
+            "arm": "keygen",
+            "expected": "99135a7cb877609d357fd80e632bfdfa6bf95d82ae9b26e71095686502922298",
+            "id": "keygen-ML-DSA-65-tcId31",
+            "passed": true
+          },
+          {
+            "actual": "d5c9339a16aa8cdf9e5317f993ede828d5cc45449914c3506ee790e7eca75ec0",
+            "arm": "keygen",
+            "expected": "d5c9339a16aa8cdf9e5317f993ede828d5cc45449914c3506ee790e7eca75ec0",
+            "id": "keygen-ML-DSA-65-tcId32",
+            "passed": true
+          },
+          {
+            "actual": "69355d4ded5061daac1a9883157ec731e613c47d7fb5c58c493af1cbe7d5ed03",
+            "arm": "keygen",
+            "expected": "69355d4ded5061daac1a9883157ec731e613c47d7fb5c58c493af1cbe7d5ed03",
+            "id": "keygen-ML-DSA-65-tcId33",
+            "passed": true
+          },
+          {
+            "actual": "faa3a4d4d0e0ac8d8c3e057069bbb4a6f5c508745b3b7454e1e6c54ef50716ff",
+            "arm": "keygen",
+            "expected": "faa3a4d4d0e0ac8d8c3e057069bbb4a6f5c508745b3b7454e1e6c54ef50716ff",
+            "id": "keygen-ML-DSA-65-tcId34",
+            "passed": true
+          },
+          {
+            "actual": "08ce87c56448a12c43428bd142b3c59a8600c5de01e64b5a71da54cbe8389f48",
+            "arm": "keygen",
+            "expected": "08ce87c56448a12c43428bd142b3c59a8600c5de01e64b5a71da54cbe8389f48",
+            "id": "keygen-ML-DSA-65-tcId35",
+            "passed": true
+          },
+          {
+            "actual": "bc2d9fa598dc13c38164db0cee392c57f251269cf68d13807528a822f899384f",
+            "arm": "keygen",
+            "expected": "bc2d9fa598dc13c38164db0cee392c57f251269cf68d13807528a822f899384f",
+            "id": "keygen-ML-DSA-65-tcId36",
+            "passed": true
+          },
+          {
+            "actual": "ba79167cff785bd4275c625deb214ec43f7c83f8273fcc462f9981d5c93cdf8d",
+            "arm": "keygen",
+            "expected": "ba79167cff785bd4275c625deb214ec43f7c83f8273fcc462f9981d5c93cdf8d",
+            "id": "keygen-ML-DSA-65-tcId37",
+            "passed": true
+          },
+          {
+            "actual": "907de8490a6452e003682b4a3340b280c7a7feaf44ebb10019a360ea4ead40b2",
+            "arm": "keygen",
+            "expected": "907de8490a6452e003682b4a3340b280c7a7feaf44ebb10019a360ea4ead40b2",
+            "id": "keygen-ML-DSA-65-tcId38",
+            "passed": true
+          },
+          {
+            "actual": "73158c2309dd9bc6da7cfb07f66211a1bbd646970d7e2230d4acbb7ddbc53ccc",
+            "arm": "keygen",
+            "expected": "73158c2309dd9bc6da7cfb07f66211a1bbd646970d7e2230d4acbb7ddbc53ccc",
+            "id": "keygen-ML-DSA-65-tcId39",
+            "passed": true
+          },
+          {
+            "actual": "c1a758922cba837056e6c4fd79d787cf6a5b95a7fc4492daf3ec7acaebe53f53",
+            "arm": "keygen",
+            "expected": "c1a758922cba837056e6c4fd79d787cf6a5b95a7fc4492daf3ec7acaebe53f53",
+            "id": "keygen-ML-DSA-65-tcId40",
+            "passed": true
+          },
+          {
+            "actual": "8dafd0fdda50071ad359f87711f23028d50a2a833f9994ec8f29758e599dad96",
+            "arm": "keygen",
+            "expected": "8dafd0fdda50071ad359f87711f23028d50a2a833f9994ec8f29758e599dad96",
+            "id": "keygen-ML-DSA-65-tcId41",
+            "passed": true
+          },
+          {
+            "actual": "357e2bbc5f66f1fae987b42c06e8da6dd286bf2d6e24368865012976867e3cb3",
+            "arm": "keygen",
+            "expected": "357e2bbc5f66f1fae987b42c06e8da6dd286bf2d6e24368865012976867e3cb3",
+            "id": "keygen-ML-DSA-65-tcId42",
+            "passed": true
+          },
+          {
+            "actual": "0a91d0d876ce27e467ffe0897d771c4be01858320b4ea4f5d6a27679dcbb1dd0",
+            "arm": "keygen",
+            "expected": "0a91d0d876ce27e467ffe0897d771c4be01858320b4ea4f5d6a27679dcbb1dd0",
+            "id": "keygen-ML-DSA-65-tcId43",
+            "passed": true
+          },
+          {
+            "actual": "c5f37ca723f95de20db767db4afa777b8b857cd7973c2ea9e8101deae89673a6",
+            "arm": "keygen",
+            "expected": "c5f37ca723f95de20db767db4afa777b8b857cd7973c2ea9e8101deae89673a6",
+            "id": "keygen-ML-DSA-65-tcId44",
+            "passed": true
+          },
+          {
+            "actual": "79a38c15a550c3879840a129ee83d4145765c817df52b08d2d52fe264a1eac62",
+            "arm": "keygen",
+            "expected": "79a38c15a550c3879840a129ee83d4145765c817df52b08d2d52fe264a1eac62",
+            "id": "keygen-ML-DSA-65-tcId45",
+            "passed": true
+          },
+          {
+            "actual": "4083e1ef275f3c4a1b77c6ff4cef3e9603e9f0a27092a58d64cc0149e7d92c4f",
+            "arm": "keygen",
+            "expected": "4083e1ef275f3c4a1b77c6ff4cef3e9603e9f0a27092a58d64cc0149e7d92c4f",
+            "id": "keygen-ML-DSA-65-tcId46",
+            "passed": true
+          },
+          {
+            "actual": "618d3a914dcc4d56de27b306418532a013dbbdac0766a448322d0e98dd7ddee0",
+            "arm": "keygen",
+            "expected": "618d3a914dcc4d56de27b306418532a013dbbdac0766a448322d0e98dd7ddee0",
+            "id": "keygen-ML-DSA-65-tcId47",
+            "passed": true
+          },
+          {
+            "actual": "81aff29e0e02ae7e0ba6ac585561a388041943362cae1fc569ddab5488db740b",
+            "arm": "keygen",
+            "expected": "81aff29e0e02ae7e0ba6ac585561a388041943362cae1fc569ddab5488db740b",
+            "id": "keygen-ML-DSA-65-tcId48",
+            "passed": true
+          },
+          {
+            "actual": "5602f70557c1df2bbdf790ae68f86e8ce5ccb6b94b3a84e4d0d13426039dd7ec",
+            "arm": "keygen",
+            "expected": "5602f70557c1df2bbdf790ae68f86e8ce5ccb6b94b3a84e4d0d13426039dd7ec",
+            "id": "keygen-ML-DSA-65-tcId49",
+            "passed": true
+          },
+          {
+            "actual": "5ac553bece45ad883ecb665ff08e3faefe5b1a1b81bd64eba99058b322ff50ba",
+            "arm": "keygen",
+            "expected": "5ac553bece45ad883ecb665ff08e3faefe5b1a1b81bd64eba99058b322ff50ba",
+            "id": "keygen-ML-DSA-65-tcId50",
+            "passed": true
+          },
+          {
+            "actual": "f3181985231f1541993e4a5e676636e76ca97a2d551bff73d832e9ed80217b31",
+            "arm": "keygen",
+            "expected": "f3181985231f1541993e4a5e676636e76ca97a2d551bff73d832e9ed80217b31",
+            "id": "keygen-ML-DSA-87-tcId51",
+            "passed": true
+          },
+          {
+            "actual": "e8f2c2caa1fa2fbf29ccfecf2ca983cad86b41b9114459eb8ec3367968d28f04",
+            "arm": "keygen",
+            "expected": "e8f2c2caa1fa2fbf29ccfecf2ca983cad86b41b9114459eb8ec3367968d28f04",
+            "id": "keygen-ML-DSA-87-tcId52",
+            "passed": true
+          },
+          {
+            "actual": "d858c177d8144dc0dc4a56c9a7d89477f6bd9d93338591b22bcd092f22d81bde",
+            "arm": "keygen",
+            "expected": "d858c177d8144dc0dc4a56c9a7d89477f6bd9d93338591b22bcd092f22d81bde",
+            "id": "keygen-ML-DSA-87-tcId53",
+            "passed": true
+          },
+          {
+            "actual": "155703b544836eeb3b61d214147a2f8fcd13fa99a2af8fac284e516c5be57529",
+            "arm": "keygen",
+            "expected": "155703b544836eeb3b61d214147a2f8fcd13fa99a2af8fac284e516c5be57529",
+            "id": "keygen-ML-DSA-87-tcId54",
+            "passed": true
+          },
+          {
+            "actual": "86d45d22b5c316a4e8bc2a804115a87fab9e23d48442b5a933afacf1423aeed7",
+            "arm": "keygen",
+            "expected": "86d45d22b5c316a4e8bc2a804115a87fab9e23d48442b5a933afacf1423aeed7",
+            "id": "keygen-ML-DSA-87-tcId55",
+            "passed": true
+          },
+          {
+            "actual": "c1423b9aaa5277501b7e32491094b5dd9409344dc8e9d754e15fc2a93d94e676",
+            "arm": "keygen",
+            "expected": "c1423b9aaa5277501b7e32491094b5dd9409344dc8e9d754e15fc2a93d94e676",
+            "id": "keygen-ML-DSA-87-tcId56",
+            "passed": true
+          },
+          {
+            "actual": "1e2f4b12fea1757a20e2023ee9bf524f470808521d222d798670f24c8c75bacd",
+            "arm": "keygen",
+            "expected": "1e2f4b12fea1757a20e2023ee9bf524f470808521d222d798670f24c8c75bacd",
+            "id": "keygen-ML-DSA-87-tcId57",
+            "passed": true
+          },
+          {
+            "actual": "1eb8cd997ddfdc3c9e70566686010c4391959db6c5884f30333bb010804a4037",
+            "arm": "keygen",
+            "expected": "1eb8cd997ddfdc3c9e70566686010c4391959db6c5884f30333bb010804a4037",
+            "id": "keygen-ML-DSA-87-tcId58",
+            "passed": true
+          },
+          {
+            "actual": "a19449b6790964ebf7095fd99ec5d4b65f8be67cc67a6153379b7fe5118d248f",
+            "arm": "keygen",
+            "expected": "a19449b6790964ebf7095fd99ec5d4b65f8be67cc67a6153379b7fe5118d248f",
+            "id": "keygen-ML-DSA-87-tcId59",
+            "passed": true
+          },
+          {
+            "actual": "b5d1161bda3073baec79a40d5cb219b58850c82aa74e73387c36d997cf9a5f08",
+            "arm": "keygen",
+            "expected": "b5d1161bda3073baec79a40d5cb219b58850c82aa74e73387c36d997cf9a5f08",
+            "id": "keygen-ML-DSA-87-tcId60",
+            "passed": true
+          },
+          {
+            "actual": "13918a8ae05873d3a120cdd239f21a6a96d74ba3076b3c036b017c85177a46c0",
+            "arm": "keygen",
+            "expected": "13918a8ae05873d3a120cdd239f21a6a96d74ba3076b3c036b017c85177a46c0",
+            "id": "keygen-ML-DSA-87-tcId61",
+            "passed": true
+          },
+          {
+            "actual": "7cf769fef69060821f11992c6dc7e586c1ceef3823a6ee9fd8945b84ed0dc5c4",
+            "arm": "keygen",
+            "expected": "7cf769fef69060821f11992c6dc7e586c1ceef3823a6ee9fd8945b84ed0dc5c4",
+            "id": "keygen-ML-DSA-87-tcId62",
+            "passed": true
+          },
+          {
+            "actual": "b69341a5b1cf2325146bb5cd1426c74142cf446e96fb2c486375f29e679161c9",
+            "arm": "keygen",
+            "expected": "b69341a5b1cf2325146bb5cd1426c74142cf446e96fb2c486375f29e679161c9",
+            "id": "keygen-ML-DSA-87-tcId63",
+            "passed": true
+          },
+          {
+            "actual": "8565e6c68fcb384fd7e125d3657f405d8e896c0e0d207a73d019f02ab3fcc557",
+            "arm": "keygen",
+            "expected": "8565e6c68fcb384fd7e125d3657f405d8e896c0e0d207a73d019f02ab3fcc557",
+            "id": "keygen-ML-DSA-87-tcId64",
+            "passed": true
+          },
+          {
+            "actual": "15dcc3d5d0191ed9d1cf038fbaae6fb63ff03bba18bc364e95fc59072b249586",
+            "arm": "keygen",
+            "expected": "15dcc3d5d0191ed9d1cf038fbaae6fb63ff03bba18bc364e95fc59072b249586",
+            "id": "keygen-ML-DSA-87-tcId65",
+            "passed": true
+          },
+          {
+            "actual": "982c562edd5d62f994d3b7e918a7a06b10d8338c4881fbe7b487932f008db378",
+            "arm": "keygen",
+            "expected": "982c562edd5d62f994d3b7e918a7a06b10d8338c4881fbe7b487932f008db378",
+            "id": "keygen-ML-DSA-87-tcId66",
+            "passed": true
+          },
+          {
+            "actual": "25d948c4530da86372a7991e5d82f2ec3e1bd8df86268c358bb6db580d918e80",
+            "arm": "keygen",
+            "expected": "25d948c4530da86372a7991e5d82f2ec3e1bd8df86268c358bb6db580d918e80",
+            "id": "keygen-ML-DSA-87-tcId67",
+            "passed": true
+          },
+          {
+            "actual": "af4e28c12d44456bdcde999340fb0c8fd64ce75daf439bfd088f33584bbc5fd0",
+            "arm": "keygen",
+            "expected": "af4e28c12d44456bdcde999340fb0c8fd64ce75daf439bfd088f33584bbc5fd0",
+            "id": "keygen-ML-DSA-87-tcId68",
+            "passed": true
+          },
+          {
+            "actual": "5ac777d9d41eb8c80ff95aa4b6c419615b2ae8a17de9f70a74744dfd35210bfb",
+            "arm": "keygen",
+            "expected": "5ac777d9d41eb8c80ff95aa4b6c419615b2ae8a17de9f70a74744dfd35210bfb",
+            "id": "keygen-ML-DSA-87-tcId69",
+            "passed": true
+          },
+          {
+            "actual": "56cf60b5d20125a785a2343ac77d6348ad073065122bf6efd6ea4898e4125487",
+            "arm": "keygen",
+            "expected": "56cf60b5d20125a785a2343ac77d6348ad073065122bf6efd6ea4898e4125487",
+            "id": "keygen-ML-DSA-87-tcId70",
+            "passed": true
+          },
+          {
+            "actual": "7672b8ed7ac8db8802508274bd4d49fccf6ba310df3f330dbc14cff91e6918a1",
+            "arm": "keygen",
+            "expected": "7672b8ed7ac8db8802508274bd4d49fccf6ba310df3f330dbc14cff91e6918a1",
+            "id": "keygen-ML-DSA-87-tcId71",
+            "passed": true
+          },
+          {
+            "actual": "76b642c9281f4e7c40f8b8d5747d3597f5988ac0316b5236bfe1231cdc3a2368",
+            "arm": "keygen",
+            "expected": "76b642c9281f4e7c40f8b8d5747d3597f5988ac0316b5236bfe1231cdc3a2368",
+            "id": "keygen-ML-DSA-87-tcId72",
+            "passed": true
+          },
+          {
+            "actual": "b1ab4dfe917ba0f90780c9882c0b8ea477212fc9712765ddc8528f1f8a3ad0ca",
+            "arm": "keygen",
+            "expected": "b1ab4dfe917ba0f90780c9882c0b8ea477212fc9712765ddc8528f1f8a3ad0ca",
+            "id": "keygen-ML-DSA-87-tcId73",
+            "passed": true
+          },
+          {
+            "actual": "65ddeed06be0358f5dfc1fb3512b644dd0b9b767618bea38bf75a63d88fa7aeb",
+            "arm": "keygen",
+            "expected": "65ddeed06be0358f5dfc1fb3512b644dd0b9b767618bea38bf75a63d88fa7aeb",
+            "id": "keygen-ML-DSA-87-tcId74",
+            "passed": true
+          },
+          {
+            "actual": "73d0f798e9a121ea9bef1b30aaaa67a09bfa48a44dc98bc06b5fea4acc97d53f",
+            "arm": "keygen",
+            "expected": "73d0f798e9a121ea9bef1b30aaaa67a09bfa48a44dc98bc06b5fea4acc97d53f",
+            "id": "keygen-ML-DSA-87-tcId75",
+            "passed": true
+          },
+          {
+            "actual": "e21dd16910c77e1ae818555b58bc27c95d3f0cc9f391035c5361e4175e67d854",
+            "arm": "siggen",
+            "expected": "e21dd16910c77e1ae818555b58bc27c95d3f0cc9f391035c5361e4175e67d854",
+            "id": "siggen-ML-DSA-44-ML_DSA_44_1@15",
+            "passed": true
+          },
+          {
+            "actual": "bb5f1bc67ead28e65eaf4a3a3c93577248d862606a049a42b437da55268f9e45",
+            "arm": "siggen",
+            "expected": "bb5f1bc67ead28e65eaf4a3a3c93577248d862606a049a42b437da55268f9e45",
+            "id": "siggen-ML-DSA-44-ML_DSA_44_2@34",
+            "passed": true
+          },
+          {
+            "actual": "683bc5c514686e8137932eb8a7860ab2ed153244d97aad0162a82e30852c68ea",
+            "arm": "siggen",
+            "expected": "683bc5c514686e8137932eb8a7860ab2ed153244d97aad0162a82e30852c68ea",
+            "id": "siggen-ML-DSA-65-ML_DSA_65_31@181",
+            "passed": true
+          },
+          {
+            "actual": "96a26ae307e86786e99d7f0e7e5a8c9542277016db87e34cd71388dfcf7ac05f",
+            "arm": "siggen",
+            "expected": "96a26ae307e86786e99d7f0e7e5a8c9542277016db87e34cd71388dfcf7ac05f",
+            "id": "siggen-ML-DSA-65-ML_DSA_65_32@200",
+            "passed": true
+          },
+          {
+            "actual": "acb334f91a44aab9653392f4ddfc723502c6a1ba87c5555024c31c791b9756f9",
+            "arm": "siggen",
+            "expected": "acb334f91a44aab9653392f4ddfc723502c6a1ba87c5555024c31c791b9756f9",
+            "id": "siggen-ML-DSA-87-ML_DSA_87_61@347",
+            "passed": true
+          },
+          {
+            "actual": "01e9f40d378dcf27d89fbf4cd364de2ef52ff20c497bd25f6e1bade00424ceea",
+            "arm": "siggen",
+            "expected": "01e9f40d378dcf27d89fbf4cd364de2ef52ff20c497bd25f6e1bade00424ceea",
+            "id": "siggen-ML-DSA-87-ML_DSA_87_62@366",
+            "passed": true
+          },
+          {
+            "actual": "0",
+            "arm": "sigver",
+            "expected": "0",
+            "id": "sigver-ML-DSA-44-ML_DSA_44_1@16",
+            "passed": true
+          },
+          {
+            "actual": "0",
+            "arm": "sigver",
+            "expected": "0",
+            "id": "sigver-ML-DSA-44-ML_DSA_44_2@27",
+            "passed": true
+          },
+          {
+            "actual": "1",
+            "arm": "sigver",
+            "expected": "1",
+            "id": "sigver-ML-DSA-44-ML_DSA_44_7@85",
+            "passed": true
+          },
+          {
+            "actual": "0",
+            "arm": "sigver",
+            "expected": "0",
+            "id": "sigver-ML-DSA-65-ML_DSA_65_31@185",
+            "passed": true
+          },
+          {
+            "actual": "0",
+            "arm": "sigver",
+            "expected": "0",
+            "id": "sigver-ML-DSA-65-ML_DSA_65_32@196",
+            "passed": true
+          },
+          {
+            "actual": "1",
+            "arm": "sigver",
+            "expected": "1",
+            "id": "sigver-ML-DSA-65-ML_DSA_65_33@208",
+            "passed": true
+          },
+          {
+            "actual": "0",
+            "arm": "sigver",
+            "expected": "0",
+            "id": "sigver-ML-DSA-87-ML_DSA_87_61@354",
+            "passed": true
+          },
+          {
+            "actual": "0",
+            "arm": "sigver",
+            "expected": "0",
+            "id": "sigver-ML-DSA-87-ML_DSA_87_62@365",
+            "passed": true
+          },
+          {
+            "actual": "1",
+            "arm": "sigver",
+            "expected": "1",
+            "id": "sigver-ML-DSA-87-ML_DSA_87_65@400",
+            "passed": true
+          }
+        ],
+        "stage": "compare",
+        "vectors_checked": 90,
+        "vectors_failed": 0,
+        "vectors_passed": 90,
+        "verdict": "pass"
       }
     ],
     "summary": {
       "fail": 0,
-      "pass": 16,
-      "total": 16
+      "pass": 17,
+      "total": 17
     }
   },
   "generator": "forensics/tools/phase8_courts.py",
@@ -37977,7 +38630,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_keymgmt_probe.c",
-      "sha256": "afad9204c9cfd430ac4b12aefe05ccbd9829a0fd68e5390c2514d38b103c6007"
+      "sha256": "fbb564ff10233c0bd3230dfc2641b0ca73338060008e7d7a4df9fd4df88a6d4d"
     },
     {
       "name": "probe",
@@ -38218,6 +38871,21 @@
       "name": "cipher-correctness-vectors:cts",
       "path": "forensics/vectors/cts.json",
       "sha256": "4213379ea7b57c79670006474435fb04c6817950c178c17737efdceede6ff181"
+    },
+    {
+      "name": "ml-dsa-correctness-probe",
+      "path": "courts/phase8/ct_ml_dsa.c",
+      "sha256": "e07c14ee879bcde173b1e8c4445842b659edf2165308b2f00756bddb9cbcc751"
+    },
+    {
+      "name": "ml-dsa-correctness-vectors",
+      "path": "forensics/atlas/ct-ml-dsa-vectors.json",
+      "sha256": "284f580c7a5d3f2c7ff2532cc9f282b685ce592b9fe88ca401261b83602e558c"
+    },
+    {
+      "name": "ml-dsa-vector-inputs",
+      "path": "courts/phase8/ct_ml_dsa_vectors.h",
+      "sha256": "fb63978acd09ba04e93713470693f565995112802cdedc4b8043f59112643bdb"
     }
   ],
   "kind": "phase8-courts",

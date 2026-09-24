@@ -29522,3 +29522,89 @@ is optional:
 The export ledger is untouched at `complete: true`, implemented **786**, deferred **0**, open **0**.
 `cargo test --lib` is **1041 passed**, `cargo clippy --all-targets -- -D warnings` is clean, and the
 pipeline is `PIPELINE OK` with **exit 0** over **99 courts / 38,891 observations**.
+
+## D410 -- the `EC` KEM row lands, its court finds an uninitialised read in `hpke_labeled_expand`,
+and the two Phase-8 cleanup names close the stratum's deferrals
+
+The last Phase 8 provider row and the two names Phase 8 still owed.
+
+### `kem/ec_kem.c.in` (1 row) publishes, and `provider_rows` reaches 306/306
+
+`src/provider/ec_kem.rs` is completed from one function to the whole unit (`PROV_EC_CTX`, the six
+init slots, `dhkem_encap`/`dhkem_decap`, `derivekey`, `generate_ecdhkm`, `derive_secret`,
+`dhkem_extract_and_expand`, `eckey_frompub`/`ecpubkey_todata`, `ossl_ec_match_params`, the generated
+decoder and `EC_ASYM_KEM_FUNCTIONS`), and the `EC` row joins `DEFLT_ASYM_KEM` between `X448` and
+`ML-KEM-512` (`defltprov.c:533`) -- **11 -> 12 rows**. `provider_rows` moves **305/1 -> 306/0 over 306
+owned**, and `docs/PHASE-8-SUBPHASES.md`'s blocking sentence -- "1 provider registration row(s) ...
+neither implemented nor handed to a later phase: EC" -- is gone because its subject is.
+
+### The EC KEM court is what found the defect, and the defect was memory-unsafe
+
+`RT-KEYMGMT` gains `arm_ec_kem`: a P-256 key generated from a fixed `dhkem-ikm`, a fixed ephemeral
+seed (`ikme`) so the whole encap is deterministic, and an encapsulate/decapsulate round trip. It
+first failed -- and the arm was then **strengthened** rather than loosened, to print the digest of the
+derived public key and of both secrets, which localised the fault to a degree the equality boolean
+alone could not:
+
+```
+eckem.pub_sha256: authority 2a54d2a0... candidate 4c546680...
+eckem.secret_match: authority 1 candidate 0
+```
+
+**`hpke_labeled_expand` (`crypto/hpke/hpke_util.c:345`, RFC 9180 §4 `LabelExpand`)** computed its
+`info` buffer length **once as the over-large allocation bound** (`2 + okmlen + prklen + "HPKE-v1" +
+protocol_label + suiteid + label + infolen`) and the authority then **corrects it to the bytes
+actually written** through `WPACKET_get_total_written`. The crate kept the bound and **dropped the
+correction**, so it handed `hpke_kdf_expand` `okmlen + prklen` extra bytes -- **uninitialised
+`malloc` memory** -- appended to every `LabelExpand`'s `info`. Every HPKE and DHKEM consumer was
+affected; the observable damage here was that both derived scalars and the shared secret depended on
+heap contents. A direct `dhkem_encap`/`dhkem_decap` round trip in a unit test had *passed*, because
+both halves read the same allocation in one process; the court's two-process diff is what made it
+visible. The fix tracks the written length; the law is now pinned by
+`the_dhkem_derive_private_matches_rfc9180_p256`, a **value** test asserting the seed `00..1f` derives
+scalar `c4a9b2ed…` and point `04cfb264…` (the values behind the authority's digest), which fails on
+the pre-fix code. `RT-KEYMGMT` is **608 observations**, zero residual, both sides agreeing.
+
+### The two names Phase 8 still owed, and the deferrals that recorded them
+
+`evp_app_cleanup_int` (`crypto/evp/pmeth_lib.c:631-635`) lands in `src/evp/pkey_ctx.rs` beside the
+`APP_PKEY_METHODS` registry it pops, and `evp_cleanup_int` (`crypto/evp/names.c:179-195`) lands in
+`src/evp/legacy_evp.rs` with its seven calls in the authority's order. The authority's `OPENSSL_cleanup`
+calls the second (`crypto/init.c:468-469`), so the crate's does too, at the position its modelled
+subset allows -- between `ossl_cleanup_thread` and `unload_strings`, which is the authority's slot
+with the two units the crate does not model removed; `RT-ERR` and `RT-THREADDATA` are unchanged.
+`evp_app_cleanup_int` **clears** the registry pointer where the authority leaves it dangling, so a
+second call is a no-op rather than a double free -- the treatment `EVP_PBE_cleanup` already gets for
+the same class of static registry, recorded at the function. Both deferral rows are removed from
+`forensics/prerequisites.json`, which is the whole point: a deferral for a name that has landed is the
+staleness `prerequisite_gate.py` exists to catch.
+
+### Bringing the plan into agreement with the crate
+
+With the stratum now deriving `complete`, `plan_reconciliation.py` judges Phase 8's unreached plan
+names instead of censusing them, and found 43. They are reconciled honestly -- the seven
+`unit_record_defers_to_a_stratum_that_has_sealed` records are replaced by the truthful
+unit-to-module mappings, the sixteen file findings were short forms of real authority paths (`*.c.in`
+templates named without `.in`), bare fragments (`_hw.c`, `_ameth.c`) or **crate** court programs read
+as authority files, and the seventeen unreached units get `reached_by_a_named_construct` records where
+the crate does transcribe them. Two items are named **as narrowings rather than closed**, and neither
+is a silent absence:
+
+* **`crypto/ec/ecp_nistz256.c`** is genuinely not reached -- no `EC_GFp_nistz256_method` -- and it is
+  the already-recorded, trigger-bearing divergence **`D-EC-2`**, now registered machine-readably.
+* **The default provider's `ossl_prov_get_capabilities`/`get_params`/`provctx` and the `base`/`null`
+  providers** remain absent, which `docs/PHASE-8-SUBPHASES.md` row 8.2 has said since the bootstrap.
+  They are in neither ledger -- not exports, and not rows of `defltprov.c` -- so **no ledger owns
+  them**; row 8.2's "still absent" is the record, and this entry says so rather than letting a
+  derived `complete` be read as their having landed.
+
+### Movement
+
+`provider_rows` **305/1 -> 306/0**. The export ledger is untouched at `complete: true`, implemented
+**786**, deferred **0**, open **0**. `cargo test --lib` is **1044 passed** (four new tests: the
+round-trip, the keygen consistency check, the RFC 9180 KAT, and the ML-DSA probe generator's), `cargo
+clippy --all-targets -- -D warnings` is clean, `prerequisite_gate.py` and `plan_reconciliation.py` are
+at **0 findings**, `evidence_determinism.py` and `docs_consistency.py` are `ok`, and the pipeline is
+`PIPELINE OK` with **exit 0** over **100 courts / 38,913 observations**. `phase-state.json` derives
+phase 8 `complete`; the seal document (`docs/PHASE-8-CRYPTO-SEAL.md`, the plan's 8.10) is still to be
+written, and this entry does not claim it exists.

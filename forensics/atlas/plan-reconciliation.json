@@ -5,33 +5,16 @@
       "in-progress"
     ],
     "census": {
-      "names_a_file_the_authority_does_not_have": 22,
-      "symbols_not_reached": 6,
-      "units_not_reached": 22
+      "names_a_file_the_authority_does_not_have": 6,
+      "symbols_not_reached": 3,
+      "units_not_reached": 5
     },
     "census_by_stratum": {
-      "8": 36,
       "9": 14
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
       "names_a_file_the_authority_does_not_have": [
-        "docs/PHASE-8-SUBPHASES.md:8.1b:_prov.c",
-        "docs/PHASE-8-SUBPHASES.md:8.1b:digestcommon.c",
-        "docs/PHASE-8-SUBPHASES.md:8.3:_hw.c",
-        "docs/PHASE-8-SUBPHASES.md:8.3:cipher_chacha20_poly1305.c",
-        "docs/PHASE-8-SUBPHASES.md:8.3:ciphercommon.c",
-        "docs/PHASE-8-SUBPHASES.md:8.3:ciphercommon_ccm.c",
-        "docs/PHASE-8-SUBPHASES.md:8.3:courts/layout/oracle-chacha20-poly1305-hw.c",
-        "docs/PHASE-8-SUBPHASES.md:8.3:courts/layout/oracle-polyval.c",
-        "docs/PHASE-8-SUBPHASES.md:8.3:oracle-mem-file.c",
-        "docs/PHASE-8-SUBPHASES.md:8.3:providers/implementations/macs/cmac_prov.c",
-        "docs/PHASE-8-SUBPHASES.md:8.5:courts/layout/measure-ffc-params.c",
-        "docs/PHASE-8-SUBPHASES.md:8.6:crypto/dsa/dsa_ctrl.c",
-        "docs/PHASE-8-SUBPHASES.md:8.7:courts/layout/measure-ec.c",
-        "docs/PHASE-8-SUBPHASES.md:8.8:_ameth.c",
-        "docs/PHASE-8-SUBPHASES.md:8.8:_pmeth.c",
-        "docs/PHASE-8-SUBPHASES.md:8.8:courts/layout/measure-evp-pkey.c",
         "docs/PHASE-9-SUBPHASES.md:9.4:drbg_ctr.c",
         "docs/PHASE-9-SUBPHASES.md:9.4:drbg_hash.c",
         "docs/PHASE-9-SUBPHASES.md:9.4:drbg_hmac.c",
@@ -42,34 +25,14 @@
       "symbols_not_reached": [
         "ossl_drbg_ctr_functions",
         "ossl_drbg_hash_functions",
-        "ossl_drbg_ossl_hmac_functions",
-        "ossl_polyval_ghash_init",
-        "ossl_prov_get_capabilities",
-        "xor128_encrypt_n_pad"
+        "ossl_drbg_ossl_hmac_functions"
       ],
       "units_not_reached": [
-        "crypto/chacha/chacha_enc.c",
-        "crypto/dsa/dsa_err.c",
-        "crypto/ec/ecdsa_sign.c",
-        "crypto/ec/ecdsa_vrf.c",
-        "crypto/ec/ecp_nistz256.c",
         "providers/common/provider_seeding.c",
         "providers/common/provider_util.c",
         "providers/fips/fipsprov.c",
-        "providers/implementations/ciphers/cipher_aes.c",
-        "providers/implementations/ciphers/cipher_aes_siv.c",
-        "providers/implementations/ciphers/cipher_aria.c",
-        "providers/implementations/ciphers/cipher_camellia.c",
-        "providers/implementations/ciphers/cipher_chacha20.c",
-        "providers/implementations/ciphers/cipher_chacha20_hw.c",
-        "providers/implementations/ciphers/cipher_cts.c",
-        "providers/implementations/ciphers/cipher_sm4.c",
-        "providers/implementations/ciphers/cipher_tdes_common.c",
-        "providers/implementations/ciphers/ciphercommon_block.c",
-        "providers/implementations/ciphers/ciphercommon_hw.c",
         "providers/implementations/rands/drbg.c",
-        "providers/implementations/rands/seeding/rand_unix.c",
-        "test/evp_test.c"
+        "providers/implementations/rands/seeding/rand_unix.c"
       ]
     },
     "checked": {
@@ -81,12 +44,12 @@
         "docs/PHASE-9-SUBPHASES.md"
       ],
       "rows_judged": 82,
-      "symbols_named_by_a_row": 110,
+      "symbols_named_by_a_row": 107,
       "symbols_reached": 104,
-      "unit_records": 62,
-      "units_named_by_a_record": 64,
-      "units_named_by_a_row": 252,
-      "units_reached": 230
+      "unit_records": 79,
+      "units_named_by_a_record": 81,
+      "units_named_by_a_row": 253,
+      "units_reached": 248
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -321,7 +284,7 @@
       },
       "crypto/chacha/chacha_enc.c": {
         "defines": [],
-        "recorded_by": null,
+        "recorded_by": "units:crypto/chacha/chacha_enc.c",
         "subphases": [
           "8.3"
         ],
@@ -714,6 +677,14 @@
           "src/dsa/check.rs"
         ]
       },
+      "crypto/dsa/dsa_ctrl.c": {
+        "defines": [],
+        "recorded_by": "units:crypto/dsa/dsa_ctrl.c",
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": []
+      },
       "crypto/dsa/dsa_depr.c": {
         "defines": [],
         "recorded_by": null,
@@ -728,7 +699,7 @@
         "defines": [
           "ossl_err_load_DSA_strings"
         ],
-        "recorded_by": null,
+        "recorded_by": "units:crypto/dsa/dsa_err.c",
         "subphases": [
           "8.6"
         ],
@@ -1193,7 +1164,7 @@
       },
       "crypto/ec/ecdsa_sign.c": {
         "defines": [],
-        "recorded_by": null,
+        "recorded_by": "units:crypto/ec/ecdsa_sign.c",
         "subphases": [
           "8.7"
         ],
@@ -1201,7 +1172,7 @@
       },
       "crypto/ec/ecdsa_vrf.c": {
         "defines": [],
-        "recorded_by": null,
+        "recorded_by": "units:crypto/ec/ecdsa_vrf.c",
         "subphases": [
           "8.7"
         ],
@@ -1260,7 +1231,7 @@
           "EC_nistz256_pre_comp_dup",
           "EC_nistz256_pre_comp_free"
         ],
-        "recorded_by": null,
+        "recorded_by": "divergence:src/ec/curve.rs",
         "subphases": [
           "8.7"
         ],
@@ -2189,7 +2160,7 @@
           "evp_get_cipherbyname_ex",
           "evp_get_digestbyname_ex"
         ],
-        "recorded_by": "deferral:evp_cleanup_int",
+        "recorded_by": null,
         "subphases": [
           "7.2",
           "7.3",
@@ -3308,7 +3279,7 @@
       },
       "providers/implementations/ciphers/cipher_aes.c": {
         "defines": [],
-        "recorded_by": null,
+        "recorded_by": "units:providers/implementations/ciphers/cipher_aes.c",
         "subphases": [
           "8.3"
         ],
@@ -3316,7 +3287,7 @@
       },
       "providers/implementations/ciphers/cipher_aes_siv.c": {
         "defines": [],
-        "recorded_by": null,
+        "recorded_by": "units:providers/implementations/ciphers/cipher_aes_siv.c",
         "subphases": [
           "8.3"
         ],
@@ -3324,7 +3295,7 @@
       },
       "providers/implementations/ciphers/cipher_aria.c": {
         "defines": [],
-        "recorded_by": null,
+        "recorded_by": "units:providers/implementations/ciphers/cipher_aria.c",
         "subphases": [
           "8.3"
         ],
@@ -3332,7 +3303,7 @@
       },
       "providers/implementations/ciphers/cipher_camellia.c": {
         "defines": [],
-        "recorded_by": null,
+        "recorded_by": "units:providers/implementations/ciphers/cipher_camellia.c",
         "subphases": [
           "8.3"
         ],
@@ -3340,7 +3311,7 @@
       },
       "providers/implementations/ciphers/cipher_chacha20.c": {
         "defines": [],
-        "recorded_by": null,
+        "recorded_by": "units:providers/implementations/ciphers/cipher_chacha20.c",
         "subphases": [
           "8.3"
         ],
@@ -3348,7 +3319,15 @@
       },
       "providers/implementations/ciphers/cipher_chacha20_hw.c": {
         "defines": [],
-        "recorded_by": null,
+        "recorded_by": "units:providers/implementations/ciphers/cipher_chacha20_hw.c",
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/ciphers/cipher_chacha20_poly1305_hw.c": {
+        "defines": [],
+        "recorded_by": "units:providers/implementations/ciphers/cipher_chacha20_poly1305_hw.c",
         "subphases": [
           "8.3"
         ],
@@ -3356,7 +3335,7 @@
       },
       "providers/implementations/ciphers/cipher_cts.c": {
         "defines": [],
-        "recorded_by": null,
+        "recorded_by": "units:providers/implementations/ciphers/cipher_cts.c",
         "subphases": [
           "8.3"
         ],
@@ -3364,7 +3343,7 @@
       },
       "providers/implementations/ciphers/cipher_sm4.c": {
         "defines": [],
-        "recorded_by": null,
+        "recorded_by": "units:providers/implementations/ciphers/cipher_sm4.c",
         "subphases": [
           "8.3"
         ],
@@ -3372,7 +3351,7 @@
       },
       "providers/implementations/ciphers/cipher_tdes_common.c": {
         "defines": [],
-        "recorded_by": null,
+        "recorded_by": "units:providers/implementations/ciphers/cipher_tdes_common.c",
         "subphases": [
           "8.3"
         ],
@@ -3380,7 +3359,7 @@
       },
       "providers/implementations/ciphers/ciphercommon_block.c": {
         "defines": [],
-        "recorded_by": null,
+        "recorded_by": "units:providers/implementations/ciphers/ciphercommon_block.c",
         "subphases": [
           "8.2"
         ],
@@ -3388,7 +3367,7 @@
       },
       "providers/implementations/ciphers/ciphercommon_hw.c": {
         "defines": [],
-        "recorded_by": null,
+        "recorded_by": "units:providers/implementations/ciphers/ciphercommon_hw.c",
         "subphases": [
           "8.2"
         ],
@@ -3417,22 +3396,14 @@
           "9.5"
         ],
         "transcribed_by": []
-      },
-      "test/evp_test.c": {
-        "defines": [],
-        "recorded_by": null,
-        "subphases": [
-          "8.3"
-        ],
-        "transcribed_by": []
       }
     },
     "rule": "every authority translation unit and every authority-internal function named by a subphase row of a **complete** stratum must be transcribed by a crate module or named by an explicit record field; and an explicit record field naming an authority unit must have a subphase row behind it. An `in-progress` stratum's unreached names are published as a census and are not a failure, because a plan names the work a stratum will do",
     "unit_records": {
       "crypto/asn1/d2i_param.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 8
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/asn1/d2i_param.rs",
+        "owner_phase": null
       },
       "crypto/asn1/d2i_pr.c": {
         "class": "deferred_to_later_stratum",
@@ -3440,9 +3411,9 @@
         "owner_phase": 10
       },
       "crypto/asn1/d2i_pu.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 8
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/asn1/d2i_pu.rs",
+        "owner_phase": null
       },
       "crypto/asn1/i2d_evp.c": {
         "class": "deferred_to_later_stratum",
@@ -3454,9 +3425,24 @@
         "crate_module": null,
         "owner_phase": 13
       },
+      "crypto/chacha/chacha_enc.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
       "crypto/conf/conf_mall.c": {
         "class": "reached_by_a_named_construct",
         "crate_module": "src/runtime/confmod/mod.rs",
+        "owner_phase": null
+      },
+      "crypto/dsa/dsa_ctrl.c": {
+        "class": "does_not_exist_in_this_authority",
+        "crate_module": null,
+        "owner_phase": null
+      },
+      "crypto/dsa/dsa_err.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
         "owner_phase": null
       },
       "crypto/dso/dso_err.c": {
@@ -3467,6 +3453,16 @@
       "crypto/dso/dso_openssl.c": {
         "class": "not_in_this_profile",
         "crate_module": null,
+        "owner_phase": null
+      },
+      "crypto/ec/ecdsa_sign.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "crypto/ec/ecdsa_vrf.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
         "owner_phase": null
       },
       "crypto/evp/bio_b64.c": {
@@ -3590,9 +3586,9 @@
         "owner_phase": 13
       },
       "crypto/evp/ec_support.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 8
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/ec/support.rs",
+        "owner_phase": null
       },
       "crypto/evp/evp_cnf.c": {
         "class": "deferred_to_later_stratum",
@@ -3610,9 +3606,9 @@
         "owner_phase": null
       },
       "crypto/evp/evp_pkey_type.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 8
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/pkey_asn1.rs",
+        "owner_phase": null
       },
       "crypto/evp/kdf_meth.c": {
         "class": "reached_by_a_named_construct",
@@ -3655,19 +3651,19 @@
         "owner_phase": null
       },
       "crypto/evp/p_dec.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 8
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/p_dec.rs",
+        "owner_phase": null
       },
       "crypto/evp/p_enc.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 8
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/p_enc.rs",
+        "owner_phase": null
       },
       "crypto/evp/p_legacy.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 8
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/p_legacy_assign.rs",
+        "owner_phase": null
       },
       "crypto/evp/p_open.c": {
         "class": "reached_by_a_named_construct",
@@ -3734,6 +3730,66 @@
         "crate_module": null,
         "owner_phase": null
       },
+      "providers/implementations/ciphers/cipher_aes.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/ciphers/cipher_aes_siv.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/ciphers/cipher_aria.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/ciphers/cipher_camellia.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/ciphers/cipher_chacha20.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/ciphers/cipher_chacha20_hw.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/ciphers/cipher_chacha20_poly1305_hw.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/ciphers/cipher_cts.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/ciphers/cipher_sm4.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/ciphers/cipher_tdes_common.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/ciphers/ciphercommon_block.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/ciphers/ciphercommon_hw.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
       "providers/implementations/rands/crngt.c": {
         "class": "does_not_exist_in_this_authority",
         "crate_module": null,
@@ -3746,7 +3802,7 @@
       "transcribed_units": 324
     }
   },
-  "body_hash": "6da4b81da766b8d4bdd71bb2efc54ff087888fbcfd7727bdf4148284ec3eefd4",
+  "body_hash": "25d08b3e343397a45ca4c0f0b77470ff085e33d669e9ffcf70b5cfc63fb451d3",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -3757,22 +3813,22 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "4fe3580bb67fff2e4b4afa7578a223699b95c4ea8e62ea1be8bd0b2262f3ec76"
+      "sha256": "fc28652c92d554e815c2152a5a5c61a809a3dec18b67c9a68386c34447b12dc6"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "abe501dab350b1f84d9cbed56f99f47654cb3b777b8572829a257da9a7611d71"
+      "sha256": "6c794259ab58365db6ccb464a89f46f1eaf41eded64ae4c7ce62be0f9b2b0182"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "fc51ae03f8773124204876441c80dba579b794b20a4f29bfd3fa617cfbbbc1f1"
+      "sha256": "2a76c67bc0c328ee6792c169e706cb84d98cc0720ea2c3e6b5264618962f4f06"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "377034b1085c79c0b508f75c6cf586be256b5683e19eedf44d6f85b2341f027f"
+      "sha256": "61e69cf25d7b9e215a798cf5a344baa0482df7ea9cac71da9312a6b839270dcc"
     },
     {
       "name": "source-manifest",
@@ -3797,7 +3853,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "05d82cf0b19441d23f4ef260d4608592103258cd2b0cf62dc0dc1e6f7ffdf8a4"
+      "sha256": "cf1a4a8288da93fe3f830a1b527db7139e4cd466ce7c30e7b98cb1553a91521b"
     },
     {
       "name": "plan-PHASE-9-SUBPHASES",

@@ -81,10 +81,12 @@
 //! `ERR_STATE` at all: every `ERR_*` call becomes a no-op and **no** error is
 //! recorded, including the one a refused `OPENSSL_init_crypto` would otherwise
 //! raise. That is measured by the RT-ERR probe's `stopped` section. The rest of
-//! the authority's teardown (compression, async, RAND, config modules, ENGINE,
-//! STORE, the default `OSSL_LIB_CTX`, BIO, EVP, OBJ, secure memory, CMP,
-//! tracing) is empty here; each entry is unlocked by the phase named in
-//! `docs/RELEASE_GATES.md` §1, and the Phase 3 ledger records what is deferred.
+//! the authority's teardown (compression, async, RAND, ENGINE, STORE, the default
+//! `OSSL_LIB_CTX`, BIO, OBJ, secure memory, CMP, tracing) is empty here; each
+//! entry is unlocked by the phase named in `docs/RELEASE_GATES.md` §1, and the
+//! Phase 3 ledger records what is deferred. `evp_cleanup_int()` is the one
+//! exception in that list: Phase 8 landed it, and this function now calls it at
+//! the authority's own coordinate (`crypto/init.c:468`).
 //!
 //! ## Runtime identity — captured from the authority, and where it would lie
 //!
@@ -893,11 +895,13 @@ fn run_atexit_handlers() {
 /// returns 0, and string lookups see an empty registry. Both are reproduced
 /// here, and the RT-ERR probe measures them.
 ///
-/// The rest of the authority's teardown (compression, async, RAND, config
-/// modules, ENGINE, STORE, the default `OSSL_LIB_CTX`, BIO, EVP, OBJ, secure
-/// memory, CMP, tracing) is empty here; each entry is unlocked by the phase named
-/// in `docs/RELEASE_GATES.md` §1. This is a recorded open obligation rather than
-/// a pretence.
+/// The rest of the authority's teardown (compression, async, RAND, ENGINE,
+/// STORE, the default `OSSL_LIB_CTX`, BIO, OBJ, secure memory, CMP, tracing) is
+/// empty here; each entry is unlocked by the phase named in
+/// `docs/RELEASE_GATES.md` §1. This is a recorded open obligation rather than a
+/// pretence. `evp_cleanup_int()` is the exception and is called at its authority
+/// position: the Phase 8 slice that landed its last call is what made the name
+/// reachable.
 #[no_mangle]
 pub extern "C" fn OPENSSL_cleanup() {
     guard_ffi((), || {
@@ -934,6 +938,17 @@ pub extern "C" fn OPENSSL_cleanup() {
         // unload after it returns early rather than walking a freed list.
         ossl_config_modules_free();
         crate::runtime::thread_events::ossl_cleanup_thread();
+        // `evp_cleanup_int()`. The authority calls it after `bio_cleanup()` and before
+        // `ossl_obj_cleanup_int()`, so its place in the modelled subset is here: the thread
+        // machinery has been torn down, and `err_cleanup()`'s `unload_strings()` is still ahead.
+        // It releases the four `OBJ_NAME` tables, the PBE application registry, the signature-id
+        // cache and the application `EVP_PKEY_METHOD` registry -- the EVP teardown whose callees
+        // Phase 8 landed, measured by RT-EVP-NAMES and RT-AMETH rather than assumed.
+        // SAFETY: every registry it touches is this crate's own, and nothing uses one afterwards:
+        // `STOPPED` refuses every later `OPENSSL_init_crypto`, and the two probes that call
+        // `OPENSSL_cleanup` (RT-ERR's `stopped` section and RT-THREADDATA's `atexit` section)
+        // observe only the terminal flag and the atexit count.
+        unsafe { crate::evp::legacy_evp::evp_cleanup_int() };
         // `err_cleanup()`: the string registry is released.
         crate::runtime::err::unload_strings();
     })

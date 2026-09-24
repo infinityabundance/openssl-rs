@@ -1,0 +1,1349 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "arms": {
+      "keygen": 75,
+      "siggen": 6,
+      "sigver": 9
+    },
+    "court": "CT-ML-DSA",
+    "inputs_header": "courts/phase8/ct_ml_dsa_vectors.h",
+    "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)",
+    "probe": "courts/phase8/ct_ml_dsa.c",
+    "provenance": {
+      "note": "Candidate-only construction verification: the expected bytes are the pinned authority's checked-in FIPS 204 / ACVP vectors, mirrored above with each source file's sha256 in `inputs[]` and each vector's line recorded. This does NOT establish that the mirror is faithful to a standard nobody here has read, and a CT pass is not formal validation (docs/DECISIONS.md D201/D208)."
+    },
+    "selection": {
+      "keygen": "all distinct (seed, public key) vectors",
+      "not_taken": [
+        "siggen blocks without `deterministic:1` (their signature depends on a test-entropy `rnd` and is not reproducible from the vector alone)",
+        "external-mu (`Ctrl = mu:1`) blocks: this probe drives the pure raw-message interface, and the `mu` representative interface is named as not observed",
+        "the `test/ml_dsa.inc` cut-down corpus: its siggen items carry only a signature digest, and it is driven with `message-encoding:0`"
+      ],
+      "siggen": "first 2 `deterministic:1`, non-external-mu per set",
+      "sigver": "first 1 accept and 2 reject, non-external-mu, per set"
+    },
+    "sizes": {
+      "max_context": 255,
+      "note": "read from the authority's own include/crypto/ml_dsa.h and required to equal FIPS 204 Table 1/2",
+      "per_alg": {
+        "ML-DSA-44": [
+          2560,
+          1312,
+          2420
+        ],
+        "ML-DSA-65": [
+          4032,
+          1952,
+          3309
+        ],
+        "ML-DSA-87": [
+          4896,
+          2592,
+          4627
+        ]
+      },
+      "seed_bytes": 32
+    },
+    "standard": "FIPS 204 (ML-DSA)",
+    "vectors": [
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "a140495fe1cbeb25d30ecf194ee2823dde1b76bbcbdea8cac50c6365f6803060",
+        "id": "keygen-ML-DSA-44-tcId1",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 13,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "6b91de274283f8ffec6b38db13920c951ad8c00e307f7c60a6dab9138254e921",
+        "id": "keygen-ML-DSA-44-tcId2",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 28,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "5e4e3e78a1a00cf302b544a1a043d6c203fb63184e0510a96ee2b81de258cd09",
+        "id": "keygen-ML-DSA-44-tcId3",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 35,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "b5ea4bd71199cfb719d0c3a2be10e5dc4a0e04ddaad3234ca87f79e313e7f7da",
+        "id": "keygen-ML-DSA-44-tcId4",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 42,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "bf0c58e5785116dabd6e370eb098ae790af9c0e6f17dfff91bde8c5cbb71e57b",
+        "id": "keygen-ML-DSA-44-tcId5",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 49,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "a35b1282808fc712ef86c1a2112250105cf4ab2ce3a4f8cf96db688837f9d1fd",
+        "id": "keygen-ML-DSA-44-tcId6",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 56,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "01775e977a43220aeb7dc18a2ba809e91e02a8d6630e49a8abdf36c9a4d23c6f",
+        "id": "keygen-ML-DSA-44-tcId7",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 63,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "3847403c9e81f33b6ffa7412fdeef506b90aefe3528d81958332add0c0a8c7a6",
+        "id": "keygen-ML-DSA-44-tcId8",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 70,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "e18f7195a1b4b8c6b5f0a52414cdf18dc89c3364793bdb551f6530fec67a291a",
+        "id": "keygen-ML-DSA-44-tcId9",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 77,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "abb1bdcf2dd717cfd1a15e3f8168fd0fb19993f920437db46d818b727cfd06f3",
+        "id": "keygen-ML-DSA-44-tcId10",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 84,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "80dc31fb3fc9cfce8c6b6a6007543c579cdb17352f9e6b4ba9639bebe1ab68fa",
+        "id": "keygen-ML-DSA-44-tcId11",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 91,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "aea21f2bc02f3550acdc1f8598ffcdf00df01e566891225ada5c561b57858760",
+        "id": "keygen-ML-DSA-44-tcId12",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 98,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "58a91476e65a86673e205c9bed7e07066d71ea82707a052f01dca0545e52e045",
+        "id": "keygen-ML-DSA-44-tcId13",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 105,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "b69e5e9f6d7d26db770219817fa993cd07e31861f191b59a6e5247ed8db0087d",
+        "id": "keygen-ML-DSA-44-tcId14",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 112,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "88e2830fea652aa691b21e909b894b9e15d01dc2f033905633ec386db6d36c25",
+        "id": "keygen-ML-DSA-44-tcId15",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 119,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "0ec72b877a9da4334d9f359595a41c4aaa26ad14928c29708f87b0633b2705ff",
+        "id": "keygen-ML-DSA-44-tcId16",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 126,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "f50d9837704b663ec7bee4908e2d0e828bdd297afb846588791884ebcf1453a5",
+        "id": "keygen-ML-DSA-44-tcId17",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 133,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "3aff43a8d660d486e84a608c45f54d35d02cb16510e1622897b1a796a7e6f1df",
+        "id": "keygen-ML-DSA-44-tcId18",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 140,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "a099a219ac916f178c1d99bea604b40761cd5c352234765897d6e61b0f14c800",
+        "id": "keygen-ML-DSA-44-tcId19",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 147,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "613917ea24b16795e0408449bfbe89b24047d99625b363327c066b6d9f5a0f7e",
+        "id": "keygen-ML-DSA-44-tcId20",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 154,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "b636c835fb15b0fed2eae1a3544bc73e5c43ab826ba5cc069f08cc3ef97ec609",
+        "id": "keygen-ML-DSA-44-tcId21",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 161,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "58140fb60ab5967ddb8b3e50d3325b0c2f4cbe2a5ae93cadb61436dca9f83fd8",
+        "id": "keygen-ML-DSA-44-tcId22",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 168,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "a74da96daa75d8ce4f90bb77450e08ce17fcc86ce381c04938229bb46f9606a4",
+        "id": "keygen-ML-DSA-44-tcId23",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 175,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "2992c404416d19fba35a57caeaf101eaed3ac51afece76a8b5540365af480b55",
+        "id": "keygen-ML-DSA-44-tcId24",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 182,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "keygen",
+        "expected_sha256": "9f1a4ee94ad1227b86635b6036948617092dbcaea7a59b78668c1e7232bf3c23",
+        "id": "keygen-ML-DSA-44-tcId25",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 189,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "b0cc1d6464e1528a478108d4be94be4aca4c7ae69d9595b1e6b752713442022a",
+        "id": "keygen-ML-DSA-65-tcId26",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 196,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "244e54052b0472b7dee049d0987f7578e409cc6962a0af8abe595bd9d256fe75",
+        "id": "keygen-ML-DSA-65-tcId27",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 211,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "59bb58034161ce551811966835fe95b7929c798ae4ea48b6d439f61e357775a9",
+        "id": "keygen-ML-DSA-65-tcId28",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 218,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "fbc22d7e50669a198be2550036af03ca1dc054792f8cb6e8df05e9d43335e1e5",
+        "id": "keygen-ML-DSA-65-tcId29",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 225,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "c92ccff4da9eeaf4e66c550b9a560abd7d4992d2e96d04877ec5d3f04bef38dd",
+        "id": "keygen-ML-DSA-65-tcId30",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 232,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "99135a7cb877609d357fd80e632bfdfa6bf95d82ae9b26e71095686502922298",
+        "id": "keygen-ML-DSA-65-tcId31",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 239,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "d5c9339a16aa8cdf9e5317f993ede828d5cc45449914c3506ee790e7eca75ec0",
+        "id": "keygen-ML-DSA-65-tcId32",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 246,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "69355d4ded5061daac1a9883157ec731e613c47d7fb5c58c493af1cbe7d5ed03",
+        "id": "keygen-ML-DSA-65-tcId33",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 253,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "faa3a4d4d0e0ac8d8c3e057069bbb4a6f5c508745b3b7454e1e6c54ef50716ff",
+        "id": "keygen-ML-DSA-65-tcId34",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 260,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "08ce87c56448a12c43428bd142b3c59a8600c5de01e64b5a71da54cbe8389f48",
+        "id": "keygen-ML-DSA-65-tcId35",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 267,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "bc2d9fa598dc13c38164db0cee392c57f251269cf68d13807528a822f899384f",
+        "id": "keygen-ML-DSA-65-tcId36",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 274,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "ba79167cff785bd4275c625deb214ec43f7c83f8273fcc462f9981d5c93cdf8d",
+        "id": "keygen-ML-DSA-65-tcId37",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 281,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "907de8490a6452e003682b4a3340b280c7a7feaf44ebb10019a360ea4ead40b2",
+        "id": "keygen-ML-DSA-65-tcId38",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 288,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "73158c2309dd9bc6da7cfb07f66211a1bbd646970d7e2230d4acbb7ddbc53ccc",
+        "id": "keygen-ML-DSA-65-tcId39",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 295,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "c1a758922cba837056e6c4fd79d787cf6a5b95a7fc4492daf3ec7acaebe53f53",
+        "id": "keygen-ML-DSA-65-tcId40",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 302,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "8dafd0fdda50071ad359f87711f23028d50a2a833f9994ec8f29758e599dad96",
+        "id": "keygen-ML-DSA-65-tcId41",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 309,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "357e2bbc5f66f1fae987b42c06e8da6dd286bf2d6e24368865012976867e3cb3",
+        "id": "keygen-ML-DSA-65-tcId42",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 316,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "0a91d0d876ce27e467ffe0897d771c4be01858320b4ea4f5d6a27679dcbb1dd0",
+        "id": "keygen-ML-DSA-65-tcId43",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 323,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "c5f37ca723f95de20db767db4afa777b8b857cd7973c2ea9e8101deae89673a6",
+        "id": "keygen-ML-DSA-65-tcId44",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 330,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "79a38c15a550c3879840a129ee83d4145765c817df52b08d2d52fe264a1eac62",
+        "id": "keygen-ML-DSA-65-tcId45",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 337,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "4083e1ef275f3c4a1b77c6ff4cef3e9603e9f0a27092a58d64cc0149e7d92c4f",
+        "id": "keygen-ML-DSA-65-tcId46",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 344,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "618d3a914dcc4d56de27b306418532a013dbbdac0766a448322d0e98dd7ddee0",
+        "id": "keygen-ML-DSA-65-tcId47",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 351,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "81aff29e0e02ae7e0ba6ac585561a388041943362cae1fc569ddab5488db740b",
+        "id": "keygen-ML-DSA-65-tcId48",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 358,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "5602f70557c1df2bbdf790ae68f86e8ce5ccb6b94b3a84e4d0d13426039dd7ec",
+        "id": "keygen-ML-DSA-65-tcId49",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 365,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "keygen",
+        "expected_sha256": "5ac553bece45ad883ecb665ff08e3faefe5b1a1b81bd64eba99058b322ff50ba",
+        "id": "keygen-ML-DSA-65-tcId50",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 372,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "f3181985231f1541993e4a5e676636e76ca97a2d551bff73d832e9ed80217b31",
+        "id": "keygen-ML-DSA-87-tcId51",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 379,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "e8f2c2caa1fa2fbf29ccfecf2ca983cad86b41b9114459eb8ec3367968d28f04",
+        "id": "keygen-ML-DSA-87-tcId52",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 394,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "d858c177d8144dc0dc4a56c9a7d89477f6bd9d93338591b22bcd092f22d81bde",
+        "id": "keygen-ML-DSA-87-tcId53",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 401,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "155703b544836eeb3b61d214147a2f8fcd13fa99a2af8fac284e516c5be57529",
+        "id": "keygen-ML-DSA-87-tcId54",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 408,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "86d45d22b5c316a4e8bc2a804115a87fab9e23d48442b5a933afacf1423aeed7",
+        "id": "keygen-ML-DSA-87-tcId55",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 415,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "c1423b9aaa5277501b7e32491094b5dd9409344dc8e9d754e15fc2a93d94e676",
+        "id": "keygen-ML-DSA-87-tcId56",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 422,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "1e2f4b12fea1757a20e2023ee9bf524f470808521d222d798670f24c8c75bacd",
+        "id": "keygen-ML-DSA-87-tcId57",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 429,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "1eb8cd997ddfdc3c9e70566686010c4391959db6c5884f30333bb010804a4037",
+        "id": "keygen-ML-DSA-87-tcId58",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 436,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "a19449b6790964ebf7095fd99ec5d4b65f8be67cc67a6153379b7fe5118d248f",
+        "id": "keygen-ML-DSA-87-tcId59",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 443,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "b5d1161bda3073baec79a40d5cb219b58850c82aa74e73387c36d997cf9a5f08",
+        "id": "keygen-ML-DSA-87-tcId60",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 450,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "13918a8ae05873d3a120cdd239f21a6a96d74ba3076b3c036b017c85177a46c0",
+        "id": "keygen-ML-DSA-87-tcId61",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 457,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "7cf769fef69060821f11992c6dc7e586c1ceef3823a6ee9fd8945b84ed0dc5c4",
+        "id": "keygen-ML-DSA-87-tcId62",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 464,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "b69341a5b1cf2325146bb5cd1426c74142cf446e96fb2c486375f29e679161c9",
+        "id": "keygen-ML-DSA-87-tcId63",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 471,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "8565e6c68fcb384fd7e125d3657f405d8e896c0e0d207a73d019f02ab3fcc557",
+        "id": "keygen-ML-DSA-87-tcId64",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 478,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "15dcc3d5d0191ed9d1cf038fbaae6fb63ff03bba18bc364e95fc59072b249586",
+        "id": "keygen-ML-DSA-87-tcId65",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 485,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "982c562edd5d62f994d3b7e918a7a06b10d8338c4881fbe7b487932f008db378",
+        "id": "keygen-ML-DSA-87-tcId66",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 492,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "25d948c4530da86372a7991e5d82f2ec3e1bd8df86268c358bb6db580d918e80",
+        "id": "keygen-ML-DSA-87-tcId67",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 499,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "af4e28c12d44456bdcde999340fb0c8fd64ce75daf439bfd088f33584bbc5fd0",
+        "id": "keygen-ML-DSA-87-tcId68",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 506,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "5ac777d9d41eb8c80ff95aa4b6c419615b2ae8a17de9f70a74744dfd35210bfb",
+        "id": "keygen-ML-DSA-87-tcId69",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 513,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "56cf60b5d20125a785a2343ac77d6348ad073065122bf6efd6ea4898e4125487",
+        "id": "keygen-ML-DSA-87-tcId70",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 520,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "7672b8ed7ac8db8802508274bd4d49fccf6ba310df3f330dbc14cff91e6918a1",
+        "id": "keygen-ML-DSA-87-tcId71",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 527,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "76b642c9281f4e7c40f8b8d5747d3597f5988ac0316b5236bfe1231cdc3a2368",
+        "id": "keygen-ML-DSA-87-tcId72",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 534,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "b1ab4dfe917ba0f90780c9882c0b8ea477212fc9712765ddc8528f1f8a3ad0ca",
+        "id": "keygen-ML-DSA-87-tcId73",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 541,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "65ddeed06be0358f5dfc1fb3512b644dd0b9b767618bea38bf75a63d88fa7aeb",
+        "id": "keygen-ML-DSA-87-tcId74",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 548,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "keygen",
+        "expected_sha256": "73d0f798e9a121ea9bef1b30aaaa67a09bfa48a44dc98bc06b5fea4acc97d53f",
+        "id": "keygen-ML-DSA-87-tcId75",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+          "line": 555,
+          "mirror_sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "siggen",
+        "expected_sha256": "e21dd16910c77e1ae818555b58bc27c95d3f0cc9f391035c5361e4175e67d854",
+        "id": "siggen-ML-DSA-44-ML_DSA_44_1@15",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_siggen.txt",
+          "line": 15,
+          "mirror_sha256": "3a94d47d903c22c09f1b1a1ebc62f27879fa73df44356a37113ec445320091d2",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "siggen",
+        "expected_sha256": "bb5f1bc67ead28e65eaf4a3a3c93577248d862606a049a42b437da55268f9e45",
+        "id": "siggen-ML-DSA-44-ML_DSA_44_2@34",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_siggen.txt",
+          "line": 34,
+          "mirror_sha256": "3a94d47d903c22c09f1b1a1ebc62f27879fa73df44356a37113ec445320091d2",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "siggen",
+        "expected_sha256": "683bc5c514686e8137932eb8a7860ab2ed153244d97aad0162a82e30852c68ea",
+        "id": "siggen-ML-DSA-65-ML_DSA_65_31@181",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_siggen.txt",
+          "line": 181,
+          "mirror_sha256": "3a94d47d903c22c09f1b1a1ebc62f27879fa73df44356a37113ec445320091d2",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "siggen",
+        "expected_sha256": "96a26ae307e86786e99d7f0e7e5a8c9542277016db87e34cd71388dfcf7ac05f",
+        "id": "siggen-ML-DSA-65-ML_DSA_65_32@200",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_siggen.txt",
+          "line": 200,
+          "mirror_sha256": "3a94d47d903c22c09f1b1a1ebc62f27879fa73df44356a37113ec445320091d2",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "siggen",
+        "expected_sha256": "acb334f91a44aab9653392f4ddfc723502c6a1ba87c5555024c31c791b9756f9",
+        "id": "siggen-ML-DSA-87-ML_DSA_87_61@347",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_siggen.txt",
+          "line": 347,
+          "mirror_sha256": "3a94d47d903c22c09f1b1a1ebc62f27879fa73df44356a37113ec445320091d2",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "siggen",
+        "expected_sha256": "01e9f40d378dcf27d89fbf4cd364de2ef52ff20c497bd25f6e1bade00424ceea",
+        "id": "siggen-ML-DSA-87-ML_DSA_87_62@366",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_siggen.txt",
+          "line": 366,
+          "mirror_sha256": "3a94d47d903c22c09f1b1a1ebc62f27879fa73df44356a37113ec445320091d2",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "sigver",
+        "expected": 0,
+        "id": "sigver-ML-DSA-44-ML_DSA_44_1@16",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_sigver.txt",
+          "line": 16,
+          "mirror_sha256": "2d0e1bfbb6f0308bd8d69ccbc3b80499b149640cb8459aa3d884b222eed4ad20",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "sigver",
+        "expected": 0,
+        "id": "sigver-ML-DSA-44-ML_DSA_44_2@27",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_sigver.txt",
+          "line": 27,
+          "mirror_sha256": "2d0e1bfbb6f0308bd8d69ccbc3b80499b149640cb8459aa3d884b222eed4ad20",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-44",
+        "arm": "sigver",
+        "expected": 1,
+        "id": "sigver-ML-DSA-44-ML_DSA_44_7@85",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_sigver.txt",
+          "line": 85,
+          "mirror_sha256": "2d0e1bfbb6f0308bd8d69ccbc3b80499b149640cb8459aa3d884b222eed4ad20",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "sigver",
+        "expected": 0,
+        "id": "sigver-ML-DSA-65-ML_DSA_65_31@185",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_sigver.txt",
+          "line": 185,
+          "mirror_sha256": "2d0e1bfbb6f0308bd8d69ccbc3b80499b149640cb8459aa3d884b222eed4ad20",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "sigver",
+        "expected": 0,
+        "id": "sigver-ML-DSA-65-ML_DSA_65_32@196",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_sigver.txt",
+          "line": 196,
+          "mirror_sha256": "2d0e1bfbb6f0308bd8d69ccbc3b80499b149640cb8459aa3d884b222eed4ad20",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-65",
+        "arm": "sigver",
+        "expected": 1,
+        "id": "sigver-ML-DSA-65-ML_DSA_65_33@208",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_sigver.txt",
+          "line": 208,
+          "mirror_sha256": "2d0e1bfbb6f0308bd8d69ccbc3b80499b149640cb8459aa3d884b222eed4ad20",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "sigver",
+        "expected": 0,
+        "id": "sigver-ML-DSA-87-ML_DSA_87_61@354",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_sigver.txt",
+          "line": 354,
+          "mirror_sha256": "2d0e1bfbb6f0308bd8d69ccbc3b80499b149640cb8459aa3d884b222eed4ad20",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "sigver",
+        "expected": 0,
+        "id": "sigver-ML-DSA-87-ML_DSA_87_62@365",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_sigver.txt",
+          "line": 365,
+          "mirror_sha256": "2d0e1bfbb6f0308bd8d69ccbc3b80499b149640cb8459aa3d884b222eed4ad20",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      },
+      {
+        "alg": "ML-DSA-87",
+        "arm": "sigver",
+        "expected": 1,
+        "id": "sigver-ML-DSA-87-ML_DSA_87_65@400",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_sigver.txt",
+          "line": 400,
+          "mirror_sha256": "2d0e1bfbb6f0308bd8d69ccbc3b80499b149640cb8459aa3d884b222eed4ad20",
+          "primary_source": "NIST ACVP-Server ML-DSA-{keyGen,sigGen,sigVer}-FIPS204/internalProjection.json, version 42 (mirrored by the authority in test/recipes/30-test_evp_data/evppkey_ml_dsa_*.txt)"
+        }
+      }
+    ]
+  },
+  "generator": "forensics/tools/gen_ct_ml_dsa_vectors.py",
+  "inputs": [
+    {
+      "name": "corpus-keygen",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_keygen.txt",
+      "sha256": "4ce166548af99bd678c26be58c65ed580b238aa35ba03f3913f743e331e943ce"
+    },
+    {
+      "name": "corpus-siggen",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_siggen.txt",
+      "sha256": "3a94d47d903c22c09f1b1a1ebc62f27879fa73df44356a37113ec445320091d2"
+    },
+    {
+      "name": "corpus-sigver",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_dsa_sigver.txt",
+      "sha256": "2d0e1bfbb6f0308bd8d69ccbc3b80499b149640cb8459aa3d884b222eed4ad20"
+    },
+    {
+      "name": "ml-dsa-sizes",
+      "path": "forensics/authorities/src/openssl-3.6.4/include/crypto/ml_dsa.h",
+      "sha256": "d4192cc16328e6fe8da8d21ddc1025d1339d037b38cf23ab5ac6ebe83cbd88de"
+    },
+    {
+      "name": "ml-dsa-cutdown-corpus",
+      "note": "the authority's cut-down C form of the same corpus; not read by this generator (see the selection.not_taken note) but named so the omission is auditable",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/ml_dsa.inc",
+      "sha256": "6f6f0cd66c0ae0aaa82d92e879c37e055d07db06abd288d93d4a720200886104"
+    },
+    {
+      "name": "ml-dsa-cutdown-driver",
+      "note": "how each `ml_dsa.inc` item is used",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/ml_dsa_test.c",
+      "sha256": "a67790797965b675aa1d0983fa58c479a95eb584b2fe2e5fbdae50dc485653f0"
+    }
+  ],
+  "kind": "ct-ml-dsa-vectors",
+  "schema": "openssl-rs/atlas/ct-ml-dsa-vectors/v1"
+}
