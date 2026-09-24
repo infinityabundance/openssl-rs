@@ -29925,3 +29925,39 @@ runner rather than by asserting it: with the authority tree moved aside -- `src`
 `captures`, which is exactly the state a clean checkout is in -- **every step of the `static` job now
 passes**, and the four gate atlases that simulation rewrote are byte-identical to the committed ones,
 which is also the strongest available evidence that the two tiers agree about those artefacts.
+
+## D416 -- 0.0.12: the version moves, 77 declarations move with it, and the receipts stay where they are
+
+Phase 8's release, cut by `docs/RELEASE_GATES.md` §8's sequence rather than by bumping a string.
+
+### What moved, and why each thing had to
+
+Step 1 landed the stratum on `main` with the pipeline green -- PR #7, merged with a merge commit as
+`docs/PHASE-8-SUBPHASES.md` §5 asks, with the staging branch deleted afterwards. Step 2's bump is two
+files, and the second is the one the first 0.0.10 attempt missed: `Cargo.toml`'s `version` **and**
+`Cargo.lock`, which records the crate's own version and which `cargo publish --dry-run` refuses to
+publish from a dirty tree over. Step 3 is `forensics/tools/gen_frf_courts.py`, and the count is larger
+than 0.0.11's because the registry grew: **77 declaration manifests** carry `version_or_commit`,
+against 62 then, fifteen of them Phase 8's. Step 4 is the two local gates -- `gen_frf_courts.py
+--check` and `cargo fmt --all -- --check` -- both green on the release commit's own account rather
+than on CI's.
+
+### What deliberately did not move
+
+**The receipts.** `.frf/captures/`, `.frf/receipts/`, `.frf/challenges/` and `.frf/claims/` record
+what was observed under the candidate identity that was observed, and D202's rule is that they stay
+where they are: a receipt is evidence about a past run, not a claim about the current version. The
+same reading keeps `docs/PHASE-8-CRYPTO-SEAL.md` §8 naming `openssl-rs 0.0.11 (e4f60d8b)` -- that is
+the *claim's* candidate identity, a fact about a stored object, and `docs_consistency.py`'s
+`phase7_claim_candidate_version` exemption records exactly that distinction for Phase 7's seal.
+`.gemel`'s exchange packs are immutable history; `docs/DECISIONS.md`'s older entries naming 0.0.11 are
+historical records and are not edited in place.
+
+### Movement
+
+`Cargo.toml`, `Cargo.lock`, the 77 declaration manifests, and the regenerated artefacts that carry the
+version (`forensics/atlas/implemented-surface.json`, `court-coverage.json`, `ownership-audit.json`,
+`plan-reconciliation.json`, `prerequisite-gate.json`, `prototype-court.json`, the Phase 2 shell, and
+the ledgers that hash them). No crate source moves and no court moves: `PIPELINE OK` is exit 0 over
+101 courts / 39,635 observations **with the version already moved**, and `cargo publish` follows once
+the release lands on `main` green.
