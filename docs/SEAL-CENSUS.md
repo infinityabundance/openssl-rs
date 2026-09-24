@@ -303,7 +303,7 @@ The other 3 compare ELF structure rather than a transcript and observe nothing l
 ## Phase 9 — RAND / DRBG + entropy
 
 * state: `complete`
-* seal: none written yet (`unnamed`)
+* seal: `docs/PHASE-9-RAND-DRBG-SEAL.md`
 * ledger: `forensics/phase9-obligations.json`
 * atlas-owned: 25
 * owned working set: 69
