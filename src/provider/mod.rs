@@ -84,6 +84,7 @@ pub(crate) mod activate;
 pub(crate) mod asymcipher;
 pub(crate) mod capabilities;
 pub(crate) mod cipher;
+pub(crate) mod cipher_gcm;
 pub(crate) mod conf;
 pub(crate) mod ctx;
 pub(crate) mod der_dsa_sig;

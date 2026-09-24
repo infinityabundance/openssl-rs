@@ -723,13 +723,13 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
     8: StratumEvidence(PHASE8_MODULES, PHASE8_OBLIGATIONS, PHASE8_COURTS),
     9: StratumEvidence(PHASE9_MODULES, PHASE9_OBLIGATIONS, PHASE9_COURTS,
                        ledger_note=(
-                           "Its working set is ninety-three exports, and only twenty-five "
-                           "are its own header's: the other sixty-eight arrive as recorded "
-                           "hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives "
-                           "in ten earlier strata's modules (docs/DECISIONS.md D294). The "
-                           "court file records `courts: []` and is not evidence that "
-                           "anything works: no Phase 9 court has landed yet "
-                           "(docs/PHASE-9-SUBPHASES.md section 1)"
+                           "Twenty-five of the exports it owns are its own header's and the "
+                           "remainder arrive as recorded hand-offs from phases 4, 5, 7 and 8, "
+                           "so the stratum's work lives in earlier strata's modules "
+                           "(docs/DECISIONS.md D294). Courts have landed since this note was "
+                           "first written; the registered set and its observation counts are "
+                           "`artifacts/phase9/COURTS.json` and the ledger's own `courts` block, "
+                           "and this note defers to them rather than restating counts that move."
                        )),
 }
 

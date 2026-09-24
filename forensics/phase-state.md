@@ -17,7 +17,7 @@ enforced here:
 | 6 | OSSL_LIB_CTX + provider core | `complete` |  |
 | 7 | EVP framework | `complete` |  |
 | 8 | Native cryptographic primitives | `complete` |  |
-| 9 | RAND / DRBG + entropy | `in-progress` | 3 open obligation(s) of this stratum recorded in forensics/phase9-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Its working set is ninety-three exports, and only twenty-five are its own header's: the other sixty-eight arrive as recorded hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives in ten earlier strata's modules (docs/DECISIONS.md D294). The court file records `courts: []` and is not evidence that anything works: no Phase 9 court has landed yet (docs/PHASE-9-SUBPHASES.md section 1) |
+| 9 | RAND / DRBG + entropy | `in-progress` | 3 open obligation(s) of this stratum recorded in forensics/phase9-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Twenty-five of the exports it owns are its own header's and the remainder arrive as recorded hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives in earlier strata's modules (docs/DECISIONS.md D294). Courts have landed since this note was first written; the registered set and its observation counts are `artifacts/phase9/COURTS.json` and the ledger's own `courts` block, and this note defers to them rather than restating counts that move. |
 | 10 | Key formats + PKCS + STORE | `not-started` | not started |
 | 11 | X.509 + verification | `not-started` | not started |
 | 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `not-started` | not started |

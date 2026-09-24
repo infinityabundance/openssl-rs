@@ -171,7 +171,7 @@
       "verdict": "pass"
     },
     "RT-CIPHER": {
-      "observations": 6946,
+      "observations": 7198,
       "verdict": "pass"
     },
     "RT-CIPHER-MEM": {
@@ -474,7 +474,7 @@
     "blocking_dependencies": 7,
     "divergence_names_covered": 43,
     "findings": 0,
-    "language_census": 5013,
+    "language_census": 5003,
     "sealed_census": 50
   },
   "provider_implemented": [
@@ -493,6 +493,7 @@
     "default/OSSL_OP_CIPHER/AES-128-CFB8",
     "default/OSSL_OP_CIPHER/AES-128-CTR",
     "default/OSSL_OP_CIPHER/AES-128-ECB",
+    "default/OSSL_OP_CIPHER/AES-128-GCM",
     "default/OSSL_OP_CIPHER/AES-128-GCM-SIV",
     "default/OSSL_OP_CIPHER/AES-128-OCB",
     "default/OSSL_OP_CIPHER/AES-128-OFB",
@@ -513,6 +514,7 @@
     "default/OSSL_OP_CIPHER/AES-192-CFB8",
     "default/OSSL_OP_CIPHER/AES-192-CTR",
     "default/OSSL_OP_CIPHER/AES-192-ECB",
+    "default/OSSL_OP_CIPHER/AES-192-GCM",
     "default/OSSL_OP_CIPHER/AES-192-GCM-SIV",
     "default/OSSL_OP_CIPHER/AES-192-OCB",
     "default/OSSL_OP_CIPHER/AES-192-OFB",
@@ -534,6 +536,7 @@
     "default/OSSL_OP_CIPHER/AES-256-CFB8",
     "default/OSSL_OP_CIPHER/AES-256-CTR",
     "default/OSSL_OP_CIPHER/AES-256-ECB",
+    "default/OSSL_OP_CIPHER/AES-256-GCM",
     "default/OSSL_OP_CIPHER/AES-256-GCM-SIV",
     "default/OSSL_OP_CIPHER/AES-256-OCB",
     "default/OSSL_OP_CIPHER/AES-256-OFB",
@@ -550,6 +553,7 @@
     "default/OSSL_OP_CIPHER/ARIA-128-CFB8",
     "default/OSSL_OP_CIPHER/ARIA-128-CTR",
     "default/OSSL_OP_CIPHER/ARIA-128-ECB",
+    "default/OSSL_OP_CIPHER/ARIA-128-GCM",
     "default/OSSL_OP_CIPHER/ARIA-128-OFB",
     "default/OSSL_OP_CIPHER/ARIA-192-CBC",
     "default/OSSL_OP_CIPHER/ARIA-192-CCM",
@@ -558,6 +562,7 @@
     "default/OSSL_OP_CIPHER/ARIA-192-CFB8",
     "default/OSSL_OP_CIPHER/ARIA-192-CTR",
     "default/OSSL_OP_CIPHER/ARIA-192-ECB",
+    "default/OSSL_OP_CIPHER/ARIA-192-GCM",
     "default/OSSL_OP_CIPHER/ARIA-192-OFB",
     "default/OSSL_OP_CIPHER/ARIA-256-CBC",
     "default/OSSL_OP_CIPHER/ARIA-256-CCM",
@@ -566,6 +571,7 @@
     "default/OSSL_OP_CIPHER/ARIA-256-CFB8",
     "default/OSSL_OP_CIPHER/ARIA-256-CTR",
     "default/OSSL_OP_CIPHER/ARIA-256-ECB",
+    "default/OSSL_OP_CIPHER/ARIA-256-GCM",
     "default/OSSL_OP_CIPHER/ARIA-256-OFB",
     "default/OSSL_OP_CIPHER/CAMELLIA-128-CBC",
     "default/OSSL_OP_CIPHER/CAMELLIA-128-CBC-CTS",
@@ -609,6 +615,7 @@
     "default/OSSL_OP_CIPHER/SM4-CFB",
     "default/OSSL_OP_CIPHER/SM4-CTR",
     "default/OSSL_OP_CIPHER/SM4-ECB",
+    "default/OSSL_OP_CIPHER/SM4-GCM",
     "default/OSSL_OP_CIPHER/SM4-OFB",
     "default/OSSL_OP_CIPHER/SM4-XTS",
     "default/OSSL_OP_DIGEST/BLAKE2B-512",
@@ -794,17 +801,17 @@
     "handed_on_by_phase": {
       "10": 39,
       "13": 0,
-      "8": 685,
+      "8": 678,
       "9": 675
     },
-    "implemented": 311,
+    "implemented": 318,
     "open_by_phase": {
       "10": 636,
       "13": 39,
       "8": 0,
-      "9": 10
+      "9": 3
     },
     "total": 996,
-    "unimplemented": 685
+    "unimplemented": 678
   }
 }

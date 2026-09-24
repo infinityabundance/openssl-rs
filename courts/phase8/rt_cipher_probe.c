@@ -4533,9 +4533,10 @@ static void rt_deflt_row_census(void)
         "AES-192-OCB", "AES-128-OCB", "AES-128-SIV", "AES-192-SIV",
         "AES-256-SIV",
         /* The `AES-*-GCM-SIV` trio, `defltprov.c:198-200`, between the `AES-*-SIV` three and the
-         * `AES-*-GCM` three -- which are Phase 9's on `RAND_bytes_ex` and are therefore absent from
-         * this list rather than listed-and-skipped (D278). */
+         * `AES-*-GCM` three. The three below it were Phase 9's on `RAND_bytes_ex` and listed-and-
+         * skipped until the GCM engine landed (D278); they are entries now that the rows are. */
         "AES-128-GCM-SIV", "AES-192-GCM-SIV", "AES-256-GCM-SIV",
+        "AES-256-GCM", "AES-192-GCM", "AES-128-GCM",
         "AES-256-CCM", "AES-192-CCM", "AES-128-CCM",
         "AES-256-WRAP", "AES-192-WRAP", "AES-128-WRAP", "AES-256-WRAP-PAD",
         "AES-192-WRAP-PAD", "AES-128-WRAP-PAD", "AES-256-WRAP-INV", "AES-192-WRAP-INV",
@@ -4552,8 +4553,10 @@ static void rt_deflt_row_census(void)
         "AES-128-CBC-HMAC-SHA512-ETM", "AES-192-CBC-HMAC-SHA512-ETM",
         "AES-256-CBC-HMAC-SHA512-ETM",
         /* The authority's `deflt_ciphers[]` order again: the `ARIA-*` rows land between the
-         * AES-CBC-HMAC `ALGC` rows and `CAMELLIA`. The three GCM rows precede the CCM
-         * three in `defltprov.c` and are Phase 9's on `RAND_bytes_ex` (D270). */
+         * AES-CBC-HMAC `ALGC` rows and `CAMELLIA`. The three GCM rows, `defltprov.c:247-249`,
+         * precede the CCM three; they were Phase 9's on `RAND_bytes_ex` and are listed here now
+         * that their engine has landed (D270). */
+        "ARIA-256-GCM", "ARIA-192-GCM", "ARIA-128-GCM",
         "ARIA-256-CCM", "ARIA-192-CCM", "ARIA-128-CCM",
         "ARIA-256-ECB", "ARIA-192-ECB", "ARIA-128-ECB",
         "ARIA-256-CBC", "ARIA-192-CBC", "ARIA-128-CBC",
@@ -4571,9 +4574,10 @@ static void rt_deflt_row_census(void)
         "DES-EDE3-ECB", "DES-EDE3-CBC", "DES-EDE3-OFB", "DES-EDE3-CFB",
         "DES-EDE3-CFB8", "DES-EDE3-CFB1", "DES-EDE-ECB", "DES-EDE-CBC",
         "DES-EDE-OFB", "DES-EDE-CFB",
-        /* `SM4-GCM` precedes `SM4-CCM` in `defltprov.c` and is Phase 9's on `RAND_bytes_ex`; the
-         * `SM4-XTS` row follows `SM4-CFB` and has not landed. */
-        "SM4-CCM",
+        /* `SM4-GCM` (`defltprov.c:315`) precedes `SM4-CCM`; it was Phase 9's on `RAND_bytes_ex`
+         * and is listed here now that its engine has landed. The `SM4-XTS` row follows
+         * `SM4-CFB` and has not landed. */
+        "SM4-GCM", "SM4-CCM",
         /* The authority's `deflt_ciphers[]` order, which is the order this list is compared in:
          * the `SM4-*` rows land between the ARIA family and `ChaCha20`. */
         "SM4-ECB", "SM4-CBC", "SM4-CTR", "SM4-OFB", "SM4-CFB", "SM4-XTS",

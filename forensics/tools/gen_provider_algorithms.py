@@ -576,7 +576,7 @@ def read_crate_table(path: Path, ident: str) -> list[tuple[str, str]]:
         for m in re.finditer(r'alias!\(\s*([A-Za-z0-9_]+)\s*,\s*"([^"]*)"\s*\)', text, re.S)
     }
     rows: list[tuple[str, str]] = []
-    for m in re.finditer(r"row\(\s*([A-Za-z0-9_]+)\s*,\s*([A-Za-z0-9_]+)\.as_ptr\(\)", body):
+    for m in re.finditer(r"row\(\s*([A-Za-z0-9_]+)\s*,\s*([A-Za-z0-9_:]+)\.as_ptr\(", body):
         name = aliases.get(m.group(1))
         if name is None:
             raise CensusError(
@@ -584,6 +584,19 @@ def read_crate_table(path: Path, ident: str) -> list[tuple[str, str]]:
                 f"{m.group(1)}, so its alias sequence cannot be read"
             )
         rows.append((name, m.group(2)))
+    # **The aliased form gets the same guard the inline form has above, and it did not have one.**
+    # Its absence is D417: seven `AES`/`ARIA`/`SM4` GCM rows whose dispatch expression is a
+    # *qualified path* (`cipher_gcm::AES128GCM_FUNCTIONS.as_ptr()`) were dropped in silence, because
+    # the row pattern accepted only a bare identifier, so the census went on reading those rows
+    # `unimplemented` while the crate had published them. A row this reader cannot read must be an
+    # error rather than a table with one fewer row, which is what the inline branch already says.
+    invocations = len(re.findall(r"(?m)^\s*(?:capable_)?row\(", body))
+    if len(rows) != invocations:
+        raise CensusError(
+            f"[provider-algorithms] fatal: {rel(path)}'s {ident} has {invocations} row "
+            f"invocation(s) and the reader found {len(rows)}; a row it cannot read is a row it "
+            "must not skip"
+        )
     if not rows:
         raise CensusError(
             f"[provider-algorithms] fatal: {rel(path)}'s {ident} yielded no rows in either form, "

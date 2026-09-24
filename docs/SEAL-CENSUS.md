@@ -275,14 +275,14 @@ Hand-offs received and discharged:
 
 * from phase 7: 27 symbol(s) — `EVP_PKEY_assign`, `EVP_PKEY_decrypt_old`, `EVP_PKEY_encrypt_old`, `EVP_PKEY_get0_DH`, `EVP_PKEY_get0_DSA`, `EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get0_RSA`, `EVP_PKEY_get0_hmac`, `EVP_PKEY_get0_poly1305`, `EVP_PKEY_get0_siphash`, `EVP_PKEY_get1_DH`, `EVP_PKEY_get1_DSA`, `EVP_PKEY_get1_EC_KEY`, `EVP_PKEY_get1_RSA`, `EVP_PKEY_get_ec_point_conv_form`, `EVP_PKEY_get_field_type`, `EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0`, `EVP_PKEY_meth_get_count`, `EVP_PKEY_set1_DH`, `EVP_PKEY_set1_DSA`, `EVP_PKEY_set1_EC_KEY`, `EVP_PKEY_set1_RSA`, `EVP_PKEY_type`, `d2i_KeyParams`, `d2i_KeyParams_bio`, `d2i_PublicKey`
 
-Courts: `all pass`, 18 court(s), **15129** authority observation(s) over 15 transcript court(s).
+Courts: `all pass`, 18 court(s), **15381** authority observation(s) over 15 transcript court(s).
 
 The other 3 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
 
 | court | verdict | observations |
 |---|---|---|
 | RT-DIGEST | `pass` | 654 |
-| RT-CIPHER | `pass` | 6946 |
+| RT-CIPHER | `pass` | 7198 |
 | RT-CIPHER-MEM | `pass` | 382 |
 | RT-RSA | `pass` | 1021 |
 | RT-DH | `pass` | 589 |
@@ -303,7 +303,7 @@ The other 3 compare ELF structure rather than a transcript and observe nothing l
 ## Phase 9 — RAND / DRBG + entropy
 
 * state: `in-progress`
-* blocking: 3 open obligation(s) of this stratum recorded in forensics/phase9-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Its working set is ninety-three exports, and only twenty-five are its own header's: the other sixty-eight arrive as recorded hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives in ten earlier strata's modules (docs/DECISIONS.md D294). The court file records `courts: []` and is not evidence that anything works: no Phase 9 court has landed yet (docs/PHASE-9-SUBPHASES.md section 1)
+* blocking: 3 open obligation(s) of this stratum recorded in forensics/phase9-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Twenty-five of the exports it owns are its own header's and the remainder arrive as recorded hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives in earlier strata's modules (docs/DECISIONS.md D294). Courts have landed since this note was first written; the registered set and its observation counts are `artifacts/phase9/COURTS.json` and the ledger's own `courts` block, and this note defers to them rather than restating counts that move.
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase9-obligations.json`
 * atlas-owned: 25

@@ -7,7 +7,7 @@
         "unmatched": 0
       },
       "9": {
-        "implemented": 5,
+        "implemented": 12,
         "unmatched": 0
       }
     },
@@ -58,8 +58,8 @@
         ]
       }
     ],
-    "directly_courted": 311,
-    "implemented_rows": 311,
+    "directly_courted": 318,
+    "implemented_rows": 318,
     "rows": [
       {
         "algorithm_names": "RSA",
@@ -271,6 +271,21 @@
         "coverage": "direct",
         "operation": "OSSL_OP_CIPHER",
         "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "AES-128-GCM",
+        "aliases": [
+          "AES-128-GCM",
+          "id-aes128-GCM",
+          "2.16.840.1.101.3.4.1.6"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 9,
         "provider": "default"
       },
       {
@@ -548,6 +563,21 @@
         "coverage": "direct",
         "operation": "OSSL_OP_CIPHER",
         "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "AES-192-GCM",
+        "aliases": [
+          "AES-192-GCM",
+          "id-aes192-GCM",
+          "2.16.840.1.101.3.4.1.26"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 9,
         "provider": "default"
       },
       {
@@ -840,6 +870,21 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "AES-256-GCM",
+        "aliases": [
+          "AES-256-GCM",
+          "id-aes256-GCM",
+          "2.16.840.1.101.3.4.1.46"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 9,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "AES-256-GCM-SIV",
         "aliases": [
           "AES-256-GCM-SIV"
@@ -1064,6 +1109,20 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "ARIA-128-GCM",
+        "aliases": [
+          "ARIA-128-GCM",
+          "1.2.410.200046.1.1.34"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 9,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "ARIA-128-OFB",
         "aliases": [
           "ARIA-128-OFB",
@@ -1175,6 +1234,20 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "ARIA-192-GCM",
+        "aliases": [
+          "ARIA-192-GCM",
+          "1.2.410.200046.1.1.35"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 9,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "ARIA-192-OFB",
         "aliases": [
           "ARIA-192-OFB",
@@ -1283,6 +1356,20 @@
         "coverage": "direct",
         "operation": "OSSL_OP_CIPHER",
         "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARIA-256-GCM",
+        "aliases": [
+          "ARIA-256-GCM",
+          "1.2.410.200046.1.1.36"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 9,
         "provider": "default"
       },
       {
@@ -1874,6 +1961,20 @@
         "coverage": "direct",
         "operation": "OSSL_OP_CIPHER",
         "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SM4-GCM",
+        "aliases": [
+          "SM4-GCM",
+          "1.2.156.10197.1.104.8"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 9,
         "provider": "default"
       },
       {
@@ -4604,7 +4705,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "610c71976607c20e1463c762ab2b07dda0b892a949566e4d0790f0454a5468f5"
+      "sha256": "f665b2ef7972a04c7b343e89a6ad35fbb46a7c1142e162d74cbdfe8a10f32afe"
     },
     {
       "name": "court:RT-DIGEST:rt_digest_probe.c",
@@ -4614,7 +4715,7 @@
     {
       "name": "court:RT-CIPHER:rt_cipher_probe.c",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "17b30e936dbcf463c5cc73f77d4189e59bd4a22e74a39cdfb87f9a894ff80fac"
+      "sha256": "6d5ee995be69a38171bf8bb230aab8605437fab4e434b49f8bfc730914b5d7af"
     },
     {
       "name": "court:RT-DRBG:rt_drbg_probe.c",

@@ -3094,7 +3094,7 @@
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "9e95be44e345c893b26ca4d83eb64aa4f9a605ba36d1a5d913da05809b29cd0e"
+      "sha256": "a7a8b7d1e31de017e457966a207e47a07117d839fa00518580face4ca420e70b"
     },
     {
       "name": "typedef-owners",
@@ -3109,7 +3109,7 @@
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "6795b56707180b2346eed4a7cdff22f40344a0dfbd81a38154d4343c5bc63154"
+      "sha256": "40426389158dc18117743ae424a5f7446daec8eb255522d9184b7d2a6799ce64"
     },
     {
       "name": "authority-source-tree-and-crate-source",
