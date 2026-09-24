@@ -814,7 +814,15 @@ def check_support_table(support: dict) -> None:
                 f"{count}]` array"
             )
         found += [(a, b) for a, b in _SUPPORT_ROW.findall(m.group(1))]
-    want = list(support["names"]) + list(support["nist"])
+    # **Both sides are normalised to tuples, and the weak tier is why.** The strong tier
+    # builds these rows by parsing the authority's C, so they are tuples; the weak tier
+    # reads the same rows out of `forensics/atlas/ec-curves.json`, where JSON arrays
+    # deserialise to lists. A comparison of the two would therefore be unequal on identical
+    # content, and it was: this check reported "the first difference is at row 0:
+    # ('secp112r1', 'NID_secp112r1') against ['secp112r1', 'NID_secp112r1']" -- the same
+    # row, twice, printed as different. The check is about the rows, not about the Python
+    # type they happen to arrive in.
+    want = [tuple(row) for row in list(support["names"]) + list(support["nist"])]
     if found != want:
         at = next((i for i, (a, b) in enumerate(zip(found, want)) if a != b),
                   min(len(found), len(want)))

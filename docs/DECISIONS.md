@@ -29889,3 +29889,39 @@ run has always been in -- `cargo clippy --all-targets -- -D warnings` is clean, 
 1045 passed, and `prerequisite_gate.py` and `plan_reconciliation.py` are at 0 findings; and with it
 absent, `evidence_determinism.py` is the weak-tier run `static` has always made, which is what
 `main`'s own green history records.
+
+## D415 -- `gen_ec_curves.py`'s weak tier compared a tuple against a list, so it failed on identical rows
+
+### The defect
+
+`forensics/tools/evidence_determinism.py` drives every generator two ways: re-derive it when the
+authority is present, and otherwise check the committed artefact against the crate. `gen_ec_curves.py`'s
+`check_support_table` compares `src/ec/support.rs`'s two name tables against `crypto/evp/ec_support.c`'s.
+The strong tier builds the authority side by parsing the C, so its rows are Python **tuples**;
+the weak tier reads the same rows out of `forensics/atlas/ec-curves.json`, where JSON arrays
+deserialise to **lists**. `found` was built from tuples either way, so `found != want` was true on
+identical content, and the tool said so with the two rows printed side by side:
+
+```
+the first difference is at row 0: ('secp112r1', 'NID_secp112r1') against ['secp112r1', 'NID_secp112r1']
+```
+
+-- the same row twice, reported as different. The check is about the rows rather than the Python type
+they arrive in, so both sides are now normalised to tuples.
+
+### Why it was invisible
+
+It fires only in the weak tier, and this job's weak tier had not been **reached** in some time:
+`static` failed earlier, at `cargo test --lib`, because three test modules `include_str!` the
+authority's own vector files and the job had no authority to give them. D414 fixed that, and this
+surfaced immediately behind it. Two latent failures in one job, the second hidden by the first, is the
+same shape D412 and D320 measured: nothing objects to a check that is never run, and the ordering of
+the failures is what decides which one is found first.
+
+### Movement
+
+`forensics/tools/gen_ec_curves.py` only, and no generated artefact changes. Verified by simulating the
+runner rather than by asserting it: with the authority tree moved aside -- `src`, `build`, `prefix` and
+`captures`, which is exactly the state a clean checkout is in -- **every step of the `static` job now
+passes**, and the four gate atlases that simulation rewrote are byte-identical to the committed ones,
+which is also the strongest available evidence that the two tiers agree about those artefacts.
