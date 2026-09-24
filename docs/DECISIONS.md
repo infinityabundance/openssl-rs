@@ -29835,3 +29835,48 @@ one line for the arm it fixed. `cargo test --lib` is **1045 passed**, `cargo cli
 the pipeline is `PIPELINE OK` with **exit 0**. **`docs/PHASE-8-CRYPTO-SEAL.md`, the plan's 8.10, lands
 with this entry**, and `forensics/phase-state.json` now derives phase 8 `complete` **with a
 `seal_sha256`** rather than merely `complete`.
+
+## D414 -- the two jobs that compile test targets acquire the authority, because three test modules need it
+
+### The failure, and it is the class this project keeps finding
+
+`lint` (`cargo clippy --all-targets`) and `static` (`cargo test --lib`) both failed on a clean
+checkout of this branch:
+
+```
+error: couldn't read `src/ml_kem/../../forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppkey_ml_kem_1024_encap.txt`: No such file or directory (os error 2)
+```
+
+`forensics/authorities/src/` is deliberately ignored by git -- `.gitignore` calls the extracted trees
+"reproducible-and-ignored" -- so `forensics/tools/authority_acquire.py` is what reproduces them, and
+only the `courts` job ran it. Three test modules embed the authority's own vector files with
+`include_str!` rather than retyping them: `src/ml_kem/tests.rs` (eleven files), `src/slh_dsa/tests.rs`
+(one) and `src/provider/kdf.rs` (the Argon2 corpus, eight kilobytes). Each says why in its own comment
+-- "the authority's own vector file, embedded at compile time", "embedded rather than retyped", "so
+that neither an input nor an expected output is a second transcription (D392's rule)". The tests'
+design is therefore deliberate and right; **what was missing was the provisioning step**, because the
+dependency appeared after those jobs were written and nothing reads the workflow for a job whose
+workload has grown a new input. It is the same class D412 and D320 measured, and it was invisible for
+the same reason: every local run passes, because the local tree has the authority.
+
+### The fix
+
+An `Acquire authority` step -- `python3 forensics/tools/authority_acquire.py --all`, the same
+invocation the `courts` job uses and hash-verified against `forensics/authorities/AUTHORITIES.json` --
+is added to both jobs ahead of the step that compiles test targets. In `static` it also puts the two
+gates that read the authority source tree (`prerequisite_gate.py`, `plan_reconciliation.py`) into the
+configuration they were developed in, rather than one where those checks are skipped.
+
+**Fixing the tests instead was considered and rejected.** Extracting the vectors into a committed
+artefact -- the pattern `forensics/tools/gen_ct_ml_dsa_vectors.py` used for `CT-ML-DSA`'s header --
+would remove a twelve-megabyte dependency, but it would also turn the authority's own file into a
+second transcription, which is the exact property the tests' own comments say they were written to
+avoid. The correct fix for "a test needs the authority" is to provide the authority, not to relocate
+it.
+
+### Movement
+
+`.github/workflows/ci.yml` only. No crate source, no ledger, no court and no count moves. Verified by
+locality rather than asserted: with the authority present -- which is the state every local pipeline
+run has always been in -- `cargo clippy --all-targets -- -D warnings` is clean, `cargo test --lib` is
+1045 passed, and `prerequisite_gate.py` and `plan_reconciliation.py` are at 0 findings.
