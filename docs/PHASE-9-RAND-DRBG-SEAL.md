@@ -100,9 +100,9 @@ open when the plan was written rather than retyped.
 **The two planes, and which one this stratum's evidence is.** D201's commitment — every
 primitive-bearing subphase carries a differential `RT-*` court *and* a correctness `CT-*` court — is
 inherited here, but Phase 9's correctness plane is **not populated**: `CT-DRBG` is a pending court and
-`CT-BN-RAND` is named by the plan's row 9.1 (`docs/PHASE-9-SUBPHASES.md:62`) yet exists in neither of
-`forensics/tools/phase9_courts.py`'s sets. §6 names both, and §8 explains why the differential four
-are the whole of this stratum's chain-relevant evidence.
+`CT-BN-RAND` was absent from both of `forensics/tools/phase9_courts.py`'s sets until **D423**
+registered it there as pending, which is the gap that registration closes. §6 names both, and §8
+explains why the differential four are the whole of this stratum's chain-relevant evidence.
 
 ## 2. What has been built
 
@@ -299,14 +299,19 @@ sentence, not a missing court. (`docs/DECISIONS.md:30110-30111` cites `RT-BN-RAN
    sets … and `evpkdf_hmac_drbg.txt` carries the HMAC-DRBG KDF cases"
    (`artifacts/phase9/COURTS.json:77-79`, `forensics/tools/phase9_courts.py:137-143`). It is printed on
    every run so that "not run yet" cannot be read as "passed".
-4. **`CT-BN-RAND` is named by the plan and exists in neither of the runner's sets — and that is a gap
-   in the runner, not a court nobody ran.** `docs/PHASE-9-SUBPHASES.md:62` lists `CT-BN-RAND` beside
-   `RT-BN-RAND` as row 9.1's courts; `forensics/tools/phase9_courts.py`'s registered `COURTS`
-   (`forensics/tools/phase9_courts.py:127-132`) and its `PENDING_COURTS`
-   (`forensics/tools/phase9_courts.py:137-143`) each omit it. D421 names it plainly: "`CT-BN-RAND` —
-   named by `docs/PHASE-9-SUBPHASES.md` row 9.1 — is in neither `phase9_courts.py`'s registered set nor
-   its pending set, which is a gap in the runner rather than a court nobody ran"
-   (`docs/DECISIONS.md:30285-30287`). This seal records it as an omission of the instrument.
+4. **`CT-BN-RAND` is a court the runner did not carry, and D423 registers it as pending.**
+   `docs/PHASE-9-SUBPHASES.md:62` lists `CT-BN-RAND` beside `RT-BN-RAND` as row 9.1's courts, and
+   `forensics/tools/phase9_courts.py`'s registered `COURTS`
+   (`forensics/tools/phase9_courts.py:127-132`) and its `PENDING_COURTS` (`:137-143`) each omitted it
+   — a gap in the instrument rather than a court nobody ran, which D421 named and D423 closes by
+   adding the name and its corpus to `PENDING_COURTS`, so it is now printed on every run and "not
+   run yet" cannot be read as "passed". **The corpus is identifiable and named there**:
+   `crypto/bn/bn_rand.c`'s exports are draws, so a construction court needs a *fixed* seed, and the
+   path is `test_rng.c.in`'s — `test_rng_set_ctx_params` accepts an `entropy` octet string and, with
+   `generate` unset, `test_rng_generate` returns exactly those bytes in order (`test_rng.c.in:88-105`)
+   — but driving it means `RAND_set_seed_source_type` and the seed-source context, and that driver is
+   owed rather than written. What the court would close is `BN_rand`'s exact output under a committed
+   seed; what it would not is anything `RT-BN-RAND`'s postconditions already cover.
 5. **`BIO_f_reliable`'s write path is owed to Phase 13.** `sig_out` fills the record's digest half with
    `RAND_bytes`, and with a provider digest the authority reaches `memcpy(buf, NULL, 32)` on the first
    `BIO_write` — its own live `FIXME` (`docs/DECISIONS.md:20609-20630`). The filter needs a **legacy**
@@ -414,8 +419,8 @@ found, because nothing here was looked for.** The evidence for each clause:
 the claim and the checkpoint are produced by running the chain in the FRF tooling container, never on
 the host, and none of them exists to cite. §6's items and §7's items 4, 6, 7, 8 and 10 are the
 coordinates of the gap, and the two "not met" readings that matter — `CT-DRBG` (a court the plan gives
-this stratum that has not landed) and `CT-BN-RAND` (a court the runner does not carry) — travel with
-them.
+this stratum that has not landed) and `CT-BN-RAND` (a court the runner did not carry, registered
+pending by D423) — travel with them.
 
 ## 9. What happens next
 
@@ -430,9 +435,9 @@ from `owning_phase` rather than storing it (D295).
 
 **The immediate next actions this seal's own findings point at**, recorded so they are not lost:
 
-- **`CT-DRBG` and `CT-BN-RAND`.** The first is a pending court whose corpus already ships in the
-  pinned tree (§6.3); the second is a runner gap (§6.4) that a later pass closes by adding the name to
-  the runner's sets — a court the plan gives this stratum that nothing currently carries.
+- **`CT-DRBG` and `CT-BN-RAND`.** Both are pending courts now: the first's corpus already ships in
+  the pinned tree (§6.3), and the second's is `test_rng.c.in`'s committed `entropy` path (§6.4), which
+  D423 registers and names. Each needs its driver written.
 - **`BIO_f_reliable`'s write path** retires when Phase 13 lands `EVP_sha256()`'s family (§6.5).
 - **The TDES init pair** needs the five `cipher_tdes_common.c` bodies, which are in no ledger and no
   atlas because they are declared in the uninstalled `prov/implementations.h` (§6.6).
@@ -492,9 +497,10 @@ replaced.
    other tool could see (`docs/DECISIONS.md:30177-30206`). The `.in` spelling is load-bearing here
    rather than cosmetic (`docs/PHASE-9-SUBPHASES.md:66`).
 
-6. **`CT-BN-RAND` is a gap in the runner.** Named by `docs/PHASE-9-SUBPHASES.md:62`, absent from both
-   `forensics/tools/phase9_courts.py:127-132` and `:137-143`; D421 is the decision that names it as a
-   runner gap rather than a court nobody ran (`docs/DECISIONS.md:30285-30287`). §6.4 and §9 record it.
+6. **`CT-BN-RAND` was absent from the runner's sets, and D423 registers it as pending.** Named by
+   `docs/PHASE-9-SUBPHASES.md:62`, omitted from both `forensics/tools/phase9_courts.py:127-132` and
+   `:137-143` until D423; D421 is the decision that named it as a runner gap rather than a court nobody
+   ran (`docs/DECISIONS.md:30285-30287`). §6.4 and §9 record it.
 
 7. **Observation counts inside older decision entries are historical.** §5's closing note. They are
    not restated, they are not corrected in place, and they are not this document's counts.

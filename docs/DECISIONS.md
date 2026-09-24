@@ -30318,3 +30318,29 @@ its own words where that is weaker than Phase 8's. The three remaining artifacts
 than implied: the FRF chain entry, `CT-DRBG`, and `CT-BN-RAND`.
 
 `PIPELINE OK` exit 0.
+
+## D423 -- `CT-BN-RAND` is registered pending, because a court the plan names and the runner omits is an omission of the instrument
+
+D421 and D422 both name the gap: `docs/PHASE-9-SUBPHASES.md` row 9.1 lists `CT-BN-RAND` beside
+`RT-BN-RAND` as that slice's courts, and `phase9_courts.py` carried the name in **neither** its
+registered `COURTS` nor its `PENDING_COURTS`. A court the plan promises and no instrument carries is
+invisible rather than owed, which is the same class as the plan-named units D420 found -- and the
+runner's own contract says the opposite: a court the plan names and this stratum cannot run yet is
+printed on every run, so "not run yet" cannot be read as "passed".
+
+The name and its corpus are now in `PENDING_COURTS`, and the corpus is measured rather than guessed.
+`crypto/bn/bn_rand.c`'s exports are draws, so a construction court needs a **fixed seed**, and the
+path exists: `test_rng.c.in`'s `test_rng_set_ctx_params` accepts an `entropy` octet string
+(`test_rng.c.in:88-94`) and, with `generate` unset, `test_rng_generate` copies exactly those bytes out
+in order (`:88-105`). What is owed is the driver -- `RAND_set_seed_source_type` and the seed-source
+context -- not the vector source, and the pending row says so instead of leaving a reader to work out
+whether the court is possible.
+
+`CT-DRBG` is unchanged and was already pending with its own corpus named.
+
+### Movement
+
+`artifacts/phase9/COURTS.json`'s `pending_courts` gains the row; `docs/PHASE-9-RAND-DRBG-SEAL.md`'s
+four mentions of the gap are corrected from "exists in neither of the runner's sets" to the
+registration and what it names, so the seal and the runner agree. Phase 9's `seal_sha256` moves with
+the document, to `a0ae7d96f12a013b…`. `PIPELINE OK` exit 0.

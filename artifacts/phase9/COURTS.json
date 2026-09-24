@@ -75,6 +75,7 @@
       }
     ],
     "pending_courts": {
+      "CT-BN-RAND": "9.1 -- the BN random family's construction court, named by `docs/PHASE-9-SUBPHASES.md` row 9.1 and absent from this runner until D423, which is the gap that registration closes. `crypto/bn/bn_rand.c`'s exports are draws, so a construction court needs a *fixed* seed: the path exists and is named -- `test_rng.c.in`'s `test_rng_set_ctx_params` takes an `entropy` octet string and, with `generate` unset, `test_rng_generate` returns exactly those bytes in order (`test_rng.c.in:88-105`) -- but the court has to drive it through `RAND_set_seed_source_type` and the seed-source context, and that driver is owed rather than written.",
       "CT-DRBG": "9.4 -- the DRBGs' construction vectors, which the pinned tree already carries: `test/recipes/30-test_evp_data/evprand.txt` mirror the NIST CAVP `drbgtestvectors.zip` sets, with the URL written in the file, and `evpkdf_hmac_drbg.txt` carries the HMAC-DRBG KDF cases. No network fetch is needed and none is permitted (docs/AUTHORITY_POLICY.md)."
     },
     "summary": {

@@ -22166,7 +22166,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "a7c8f8aa664f294e91d30020e5e25a4ae981f7650cddcb99fd22de32aa1becca"
+      "sha256": "25428614d108d45b9b59ef61b9e1269eeb30c20e7f28c2295e28883f6e597dd2"
     },
     {
       "name": "phase7-courts",
@@ -22176,7 +22176,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "628bbeea4995d78dd219215022d7ff930f58da76b8d4785de2d8fd0f5273cfc0"
+      "sha256": "7183be871c0a61a64fefecd31402b648ee3cc3297a31aa577f6e81d591e655f9"
     },
     {
       "name": "phase8-courts",
@@ -22186,12 +22186,12 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "e49061225096b5b8ada004a309e2fcec423445493b93a333da54e5e37ed05cd9"
+      "sha256": "c3a4504c4c12d88dd4a42a8bd8fa84dadabfac20411b44e8530bdf42ac756d66"
     },
     {
       "name": "phase9-courts",
       "path": "artifacts/phase9/COURTS.json",
-      "sha256": "faef5a2861f7b9a1ed1c06bd75e6b99f57703b952b0daf863c7264de26d77601"
+      "sha256": "ae50c432bff205a596552af01d13d358083973b79e4ea8cf36555cd429119647"
     }
   ],
   "kind": "court-coverage",
