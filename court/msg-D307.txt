@@ -1,0 +1,59 @@
+rand: the decoder tables are rewritten to real site coordinates, and the DRBG's error set is 39 (D307)
+
+The unit D306 scoped, done, plus the measured remainder.
+
+court/phase9/drbg_renamed.rs.txt's six decoder key tables now cite the real
+line-numbered sites instead of the staging file's invented _DECODER_<FIELD> names: 63
+entries rewritten, each by FIELD MACRO NAME rather than position. The mapping was
+extracted from the generated files, and it is exact for all six:
+
+  CTR  get  cipher 751, maxadlen 791, maxentlen 802, maxnonlen 813, maxperlen 824,
+            maxreq 835, minentlen 861, minnonlen 872, reseed_cnt 915, reseed_req 926,
+            reseed_int 953, reseed_time 962, state 991, str 1002, df 1015
+  CTR  set  cipher 1179, propq 1202, prov 1213, reseed_req 1255, reseed_time 1266, df 1284
+  HASH get  digest 540, maxadlen 580, ... state 780, str 791        (14 sites)
+  HASH set  digest 1021, engine 1037, propq 1060, prov 1071, reseed_req 1113,
+            reseed_time 1124                                        (6 sites)
+  HMAC get  digest 434, mac 468, ..., state 687, str 698             (15 sites)
+  HMAC set  digest 967, engine 983, mac 994, propq 1017, prov 1028, reseed_req 1070,
+            reseed_time 1081                                        (7 sites)
+
+The `ind`/`ind_d` sites are absent from every table for the reason D306 recorded: they
+are the FIPS_MODULE-guarded fips-indicator arms, which are not compiled on this profile.
+
+Two things the rewrite confirmed, and one it exposed.
+
+Confirmed: the staged field suffixes and the generated assignments agree one-for-one --
+`cipher`, `df`, `state`, `str`, `maxreq`, and the rest -- with no field left over and none
+the generated code has that the table lacks, apart from the guarded one. That is the check
+D306 said would confirm the reading.
+
+Exposed, and it is the next unit's first task: EIGHT more sites do not exist at the lines
+the staging file cites, and they are a different class from the decoder tables. They are
+`PROV_DRBG_CTR_579/588/596/627/633/786/805` and `PROV_DRBG_HMAC_131`, and the atlas's
+sites for those functions are the GENERATED line numbers -- `drbg_ctr_init` at 577, 586,
+594, 607, 625, 631 and `ossl_drbg_hmac_init` at 129. The staging file cited the `.c.in`
+line numbers, which are the author's rather than the build's. Re-mapping them is the same
+exercise as the decoder tables but against `drbg_ctr_init` and `ossl_drbg_hmac_init`, and
+the atlas already has both site lists.
+
+Three imports fixed in the same pass, which is what moved the count: `time` from the
+platform layer, and `ossl_prov_macctx_load` and `openssl_get_fork_id` from D304/D305.
+
+Measured remainder, 39 compile errors:
+
+  every error printed once, in the list above, plus
+  5 method-not-found on ProvDrbg -- instantiate, uninstantiate, reseed, generate, which
+    are the four cached virtual functions and need to be read as fields rather than
+    called as methods
+  7 mismatched types, 6 expected-function-found-i32, 3 argument errors -- unclassified
+    until the five above are fixed, because a wrong representation of the virtual
+    functions changes the types of their call sites
+
+The error set went 143 -> 108 (D304's rename) -> 46 (this commit's tables) -> 39 (the
+three imports). Each step is recorded with what produced it so the next unit does not
+re-measure any of them.
+
+Reverted from the tree: src/provider/rand.rs is not re-added to src/provider/mod.rs, so
+the tree is green and the module stays staged. No export is implemented and no Phase 9
+court has landed.

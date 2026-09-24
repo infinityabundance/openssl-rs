@@ -1,0 +1,307 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "algorithm": "sha512_256",
+    "court": "CT-DIGEST",
+    "digest_bytes": 32,
+    "openssl_digest": "SHA512-256",
+    "primary_source": "FIPS 180-4",
+    "provenance": {
+      "authority": "openssl-3.6.4-production",
+      "corpus": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
+      "corpus_sha256": "1cdaa355477300fd3c0ad453d2f6c13f528f3b127af83ff03dbfbf2bf33029c4",
+      "note": "Candidate-only construction verification: the primary source is named above, the bytes are mirrored through the pinned corpus (`corpus_sha256`), and the mirror's identity is fixed. This does NOT establish that the mirror is faithful to a primary source nobody in this repository has read. A CT pass is not formal validation. See D206.",
+      "primary_source": "FIPS 180-4"
+    },
+    "standard": "FIPS 180-4",
+    "vectors": [
+      {
+        "expected_hex": "c672b8d1ef56ed28ab87c3622c5114069bdd3ad7b8f9737498d0c01ecef0967a",
+        "id": "sha512_256-evpmd_sha-141",
+        "input_hex": "",
+        "modes": [
+          "one"
+        ],
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
+          "form": "empty",
+          "line": 141,
+          "mirror_sha256": "1cdaa355477300fd3c0ad453d2f6c13f528f3b127af83ff03dbfbf2bf33029c4",
+          "primary_source": "FIPS 180-4",
+          "title": "SHA tests from (RFC6234 section 8.5 and others)"
+        },
+        "standard": "FIPS 180-4"
+      },
+      {
+        "expected_hex": "c4ef36923c64e51e875720e550298a5ab8a3f2f875b1e1a4c9b95babf7344fef",
+        "id": "sha512_256-evpmd_sha-145",
+        "input_hex": "fa",
+        "modes": [
+          "one"
+        ],
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
+          "form": "hex",
+          "line": 145,
+          "mirror_sha256": "1cdaa355477300fd3c0ad453d2f6c13f528f3b127af83ff03dbfbf2bf33029c4",
+          "primary_source": "FIPS 180-4",
+          "title": "SHA tests from (RFC6234 section 8.5 and others)"
+        },
+        "standard": "FIPS 180-4"
+      },
+      {
+        "expected_hex": "0c994228b8d3bd5ea5b5259157a9bba7a193118ad22817e6fbed2df1a32a4148",
+        "id": "sha512_256-evpmd_sha-149",
+        "input_hex": "74e4",
+        "modes": [
+          "one"
+        ],
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
+          "form": "hex",
+          "line": 149,
+          "mirror_sha256": "1cdaa355477300fd3c0ad453d2f6c13f528f3b127af83ff03dbfbf2bf33029c4",
+          "primary_source": "FIPS 180-4",
+          "title": "SHA tests from (RFC6234 section 8.5 and others)"
+        },
+        "standard": "FIPS 180-4"
+      },
+      {
+        "expected_hex": "d25265bf9cbc0dd2f108a2f5e8f69db7d15e5b8fe9100fe887dae20b6e054fe8",
+        "id": "sha512_256-evpmd_sha-153",
+        "input_hex": "b4e2e8501f54be91",
+        "modes": [
+          "one"
+        ],
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
+          "form": "hex",
+          "line": 153,
+          "mirror_sha256": "1cdaa355477300fd3c0ad453d2f6c13f528f3b127af83ff03dbfbf2bf33029c4",
+          "primary_source": "FIPS 180-4",
+          "title": "SHA tests from (RFC6234 section 8.5 and others)"
+        },
+        "standard": "FIPS 180-4"
+      },
+      {
+        "expected_hex": "91a8e285029085e224987078066486b6c605cbac27e49e84f4639710ddd05d33",
+        "id": "sha512_256-evpmd_sha-157",
+        "input_hex": "63188781f4e9cbd1e89a54a65da053b93722e1106f00f024ad1582421ab919326f8a6e17536d6596e3cf413a9231141733e37aae540f8711cefafe489a87c4f2e6fd942f6809f3bef3076763487de48c2ee88733c5bc870617a668c6f01471ed",
+        "modes": [
+          "one"
+        ],
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
+          "form": "hex",
+          "line": 157,
+          "mirror_sha256": "1cdaa355477300fd3c0ad453d2f6c13f528f3b127af83ff03dbfbf2bf33029c4",
+          "primary_source": "FIPS 180-4",
+          "title": "SHA tests from (RFC6234 section 8.5 and others)"
+        },
+        "standard": "FIPS 180-4"
+      },
+      {
+        "expected_hex": "53048e2681941ef99b2e29b76b4c7dabe4c2d0c634fc6d46e0e2f13107e7af23",
+        "id": "sha512_256-evpmd_sha-162",
+        "input_hex": "616263",
+        "modes": [
+          "one"
+        ],
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
+          "form": "quoted-string",
+          "line": 162,
+          "mirror_sha256": "1cdaa355477300fd3c0ad453d2f6c13f528f3b127af83ff03dbfbf2bf33029c4",
+          "primary_source": "FIPS 180-4",
+          "title": "SHA tests from (RFC6234 section 8.5 and others)"
+        },
+        "standard": "FIPS 180-4"
+      },
+      {
+        "expected_hex": "3928e184fb8690f840da3988121d31be65cb9d3ef83ee6146feac861e19b563a",
+        "id": "sha512_256-evpmd_sha-166",
+        "input_hex": "61626364656667686263646566676869636465666768696a6465666768696a6b65666768696a6b6c666768696a6b6c6d6768696a6b6c6d6e68696a6b6c6d6e6f696a6b6c6d6e6f706a6b6c6d6e6f70716b6c6d6e6f7071726c6d6e6f707172736d6e6f70717273746e6f707172737475",
+        "modes": [
+          "one"
+        ],
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
+          "form": "quoted-string",
+          "line": 166,
+          "mirror_sha256": "1cdaa355477300fd3c0ad453d2f6c13f528f3b127af83ff03dbfbf2bf33029c4",
+          "primary_source": "FIPS 180-4",
+          "title": "SHA tests from (RFC6234 section 8.5 and others)"
+        },
+        "standard": "FIPS 180-4"
+      },
+      {
+        "expected_hex": "c672b8d1ef56ed28ab87c3622c5114069bdd3ad7b8f9737498d0c01ecef0967a",
+        "id": "sha512_256-boundary-empty",
+        "input_hex": "",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "empty",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "FIPS 180-4"
+        },
+        "standard": "FIPS 180-4"
+      },
+      {
+        "expected_hex": "455e518824bc0601f9fb858ff5c37d417d67c2f8e0df2babe4808858aea830f8",
+        "id": "sha512_256-boundary-one",
+        "input_hex": "61",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "one",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "FIPS 180-4"
+        },
+        "standard": "FIPS 180-4"
+      },
+      {
+        "expected_hex": "8c12c6a555202a2f24eae9d29d5901bf14d8355b08fdd880b962813c30e2e50e",
+        "id": "sha512_256-boundary-len55",
+        "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "len55",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "FIPS 180-4"
+        },
+        "standard": "FIPS 180-4"
+      },
+      {
+        "expected_hex": "d8d15e81e95d2c68bde6c76da58ff17930bcc53926ab3fae45d28c420e4f06cd",
+        "id": "sha512_256-boundary-len56",
+        "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d84",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "len56",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "FIPS 180-4"
+        },
+        "standard": "FIPS 180-4"
+      },
+      {
+        "expected_hex": "12bbbb739014d2158f881b0d98fe55399980e2f520dcd46fddbb934d6c4b134c",
+        "id": "sha512_256-boundary-len63",
+        "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "len63",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "FIPS 180-4"
+        },
+        "standard": "FIPS 180-4"
+      },
+      {
+        "expected_hex": "f6fd50d9eff545c7d1810c1a6d31428de85a3584d974a3830775fd65fe2cb929",
+        "id": "sha512_256-boundary-len64",
+        "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bc",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "len64",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "FIPS 180-4"
+        },
+        "standard": "FIPS 180-4"
+      },
+      {
+        "expected_hex": "c2e05c6b3e0958dae20472c75f51ee9a85db8cb6793e40446dcda28f27090252",
+        "id": "sha512_256-boundary-len65",
+        "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "len65",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "FIPS 180-4"
+        },
+        "standard": "FIPS 180-4"
+      },
+      {
+        "expected_hex": "14271b3d36ca983ae2da2693d995fe68412c0bd5394ec2f05b763586db6e24fd",
+        "id": "sha512_256-boundary-multi1000",
+        "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4ebf2f900070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4ebf2f900070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4ebf2f900070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4ebf2f900070e151c232a31383f464d54",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "multi1000",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "FIPS 180-4"
+        },
+        "standard": "FIPS 180-4"
+      }
+    ]
+  },
+  "generator": "forensics/tools/correctness_vectors.py",
+  "inputs": [
+    {
+      "name": "authority-evp-vector-file",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
+      "sha256": "1cdaa355477300fd3c0ad453d2f6c13f528f3b127af83ff03dbfbf2bf33029c4"
+    }
+  ],
+  "kind": "correctness-vectors-sha512_256",
+  "schema": "openssl-rs/atlas/correctness-vectors-sha512_256/v1"
+}

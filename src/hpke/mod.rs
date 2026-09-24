@@ -427,6 +427,37 @@ fn kem_info_find_id(kemid: u16) -> Option<&'static HpkeKemInfo> {
     None
 }
 
+/// `const OSSL_HPKE_KEM_INFO *ossl_HPKE_KEM_INFO_find_curve(const char *curve)` —
+/// `hpke_util.c:156`.
+///
+/// The authority's `OSSL_NELEM` walk over `hpke_kem_tab[]`, comparing the argument against each
+/// row's `groupname`, or against its `keytype` where `groupname` is `NULL`. Nothing in
+/// `crypto/hpke/hpke.c` calls it -- hence the omission the module documentation records -- and the
+/// **keys'** KEM units are its first callers: `providers/implementations/kem/ecx_kem.c`'s
+/// `get_kem_info` (`:80`) passes `SN_X25519`/`SN_X448` and needs the walk to resolve them to a
+/// suite. The miss raises, which is why the match is not a quiet `None`.
+///
+/// # Safety
+/// `curve` is NUL-terminated.
+#[allow(non_snake_case)] // the authority's own symbol name
+pub(crate) unsafe extern "C" fn ossl_HPKE_KEM_INFO_find_curve(
+    curve: *const c_char,
+) -> *const HpkeKemInfo {
+    for info in KEM_TAB.iter() {
+        let group = match info.groupname {
+            Some(g) => g.as_ptr(),
+            None => info.keytype.as_ptr(),
+        };
+        // SAFETY: `curve` is NUL-terminated per the contract and `group` is a `'static` literal.
+        if unsafe { crate::runtime::str::OPENSSL_strcasecmp(curve, group) } == 0 {
+            return info;
+        }
+    }
+    // SAFETY: a compile-time-constant site.
+    unsafe { raise_site(&err_sites::HPKE_UTIL_168) };
+    ptr::null()
+}
+
 /// `const OSSL_HPKE_KDF_INFO *ossl_HPKE_KDF_INFO_find_id(uint16_t kdfid)` —
 /// `hpke_util.c:202`.
 fn kdf_info_find_id(kdfid: u16) -> Option<&'static HpkeKdfInfo> {
@@ -592,7 +623,7 @@ unsafe fn hpke_kdf_expand(
 /// # Safety
 /// `kctx` live; `prk` writable for `prklen`; `suiteid`/`ikm` readable for their lengths.
 #[allow(clippy::too_many_arguments)]
-unsafe fn hpke_labeled_extract(
+pub(crate) unsafe fn hpke_labeled_extract(
     kctx: *mut EvpKdfCtx,
     prk: *mut c_uchar,
     prklen: usize,
@@ -664,10 +695,18 @@ unsafe fn hpke_labeled_extract(
 /// info)`, exactly sized; the `WPACKET` failure arm (`hpke_util.c:380`) is unreachable for the
 /// same reason as the extract's.
 ///
+/// The authority's `labeled_infolen` serves **two** roles and the crate must keep them apart: it is
+/// first the allocation bound `maxoutlen` (`2 + okmlen + prklen + ...`, deliberately larger than the
+/// string), and then `WPACKET_get_total_written` overwrites it with the bytes actually written
+/// (`2 + HPKE-v1 + protocol_label + suiteid + label + info`) before `ossl_hpke_kdf_expand` is
+/// handed that *written* length. Passing the allocation bound to the KDF instead would append
+/// `okmlen + prklen` bytes of unwritten (uninitialised) buffer to the HKDF `info`, which is what
+/// the `written` variable below prevents.
+///
 /// # Safety
 /// `kctx` live; `okm` writable for `okmlen`; `prk`/`info` readable for their lengths.
 #[allow(clippy::too_many_arguments)]
-unsafe fn hpke_labeled_expand(
+pub(crate) unsafe fn hpke_labeled_expand(
     kctx: *mut EvpKdfCtx,
     okm: *mut c_uchar,
     okmlen: usize,
@@ -680,6 +719,7 @@ unsafe fn hpke_labeled_expand(
     info: *const c_uchar,
     infolen: usize,
 ) -> c_int {
+    // `maxoutlen` — the allocation bound, larger than the label string by `okmlen + prklen`.
     let labeled_infolen = 2
         + okmlen
         + prklen
@@ -693,6 +733,9 @@ unsafe fn hpke_labeled_expand(
         return 0;
     }
 
+    // `WPACKET_get_total_written`'s result: the bytes actually written, which is what the KDF's
+    // `info` argument must be sized to.
+    let written;
     // SAFETY: the destination was sized as the exact sum below and each copy is of its own length.
     unsafe {
         let mut off = 0usize;
@@ -721,20 +764,12 @@ unsafe fn hpke_labeled_expand(
         if infolen > 0 {
             ptr::copy_nonoverlapping(info, labeled_info.add(off), infolen);
         }
+        off += infolen;
+        written = off;
     }
 
-    // SAFETY: `kctx` is live and `labeled_info` holds `labeled_infolen` bytes.
-    let ret = unsafe {
-        hpke_kdf_expand(
-            kctx,
-            okm,
-            okmlen,
-            prk,
-            prklen,
-            labeled_info,
-            labeled_infolen,
-        )
-    };
+    // SAFETY: `kctx` is live and `labeled_info` holds `written` written bytes.
+    let ret = unsafe { hpke_kdf_expand(kctx, okm, okmlen, prk, prklen, labeled_info, written) };
     // SAFETY: the buffer is this call's own and just used.
     unsafe { CRYPTO_free(labeled_info.cast::<c_void>(), FILE_HPKE_UTIL, 388) };
     ret
@@ -756,7 +791,7 @@ unsafe fn cleanse_ptr(p: *mut c_uchar, len: usize) {
 /// # Safety
 /// `kdfname`/`mdname` NULL or NUL-terminated; `libctx` NULL or live; `propq` NULL or
 /// NUL-terminated.
-unsafe fn kdf_ctx_create(
+pub(crate) unsafe fn kdf_ctx_create(
     kdfname: *const c_char,
     mdname: *const c_char,
     libctx: *mut c_void,

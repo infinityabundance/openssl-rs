@@ -43,6 +43,32 @@ BUILD_RECORDS = ATLAS / "BUILD_RECORDS.json"
 PRODUCTION_AUTHORITY = "openssl-3.6.4-production"
 HISTORICAL_AUTHORITY = "openssl-3.6.3-historical"
 
+# Which seal document belongs to which stratum, where one exists. **One table, because two tools
+# read it and had drifted apart.** `render_seal_census.py` carried a copy that knew phases 3-7 and
+# `phase_state.py` carried a copy that knew only phases 1-2, so the two tools -- which mean the
+# same thing by a seal's identity -- disagreed about which strata are sealed. The consequence was
+# measured: `docs/PHASE-3-CORE-RUNTIME-SEAL.md` through `docs/PHASE-7-EVP-SEAL.md` were all on
+# disk, the census named every one of them, and `forensics/phase-state.json` recorded
+# `seal_sha256: null` for phases 3 through 7 because `phase_state.py` never learned they existed.
+# A derived record silently contradicting a generated census is exactly the class of gap where
+# nothing objected because nothing looked, so the table lives here and both tools read it.
+#
+# A stratum with no entry -- or whose document has not landed yet -- is not an error: the census
+# prints `none written yet` and `phase_state.py` records `null`, because a missing seal is a fact
+# about the tree rather than a failure to read it. The table covers every stratum whose document
+# exists or is being written; later strata are deliberately absent until theirs land. See
+# docs/DECISIONS.md D97 for why the seal census is one generated document the seals cite.
+SEAL_DOCS: dict[int, str] = {
+    1: "docs/PHASE-1-ARCHAEOLOGY-SEAL.md",
+    2: "docs/PHASE-2-DISTRIBUTION-SEAL.md",
+    3: "docs/PHASE-3-CORE-RUNTIME-SEAL.md",
+    4: "docs/PHASE-4-BIO-CONF-SEAL.md",
+    5: "docs/PHASE-5-BN-ASN1-PEM-SEAL.md",
+    6: "docs/PHASE-6-PROVIDER-SEAL.md",
+    7: "docs/PHASE-7-EVP-SEAL.md",
+    8: "docs/PHASE-8-CRYPTO-SEAL.md",
+}
+
 
 class AtlasError(RuntimeError):
     """Fatal condition: the generator cannot produce trustworthy evidence."""

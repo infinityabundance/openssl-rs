@@ -57,13 +57,12 @@
 //!
 //! ## What is not here
 //!
-//! `evp_cleanup_int` is `names.c`'s too, and it is **owed to Phase 8**. Its body is four
-//! `OBJ_NAME_cleanup` calls, `EVP_PBE_cleanup`, `OBJ_sigid_free` and `evp_app_cleanup_int`; the
-//! first six are landed -- `EVP_PBE_cleanup` landed with 7.4c's PBE remainder (D192), which is the
-//! dependency this note was written against -- and the seventh is Phase 8's, because
-//! `evp_app_cleanup_int` pops the application-supplied `EVP_PKEY_METHOD` registry that
-//! `EVP_PKEY_meth_find` searches. It is recorded in `forensics/prerequisites.json` with that
-//! dependency named rather than stubbed, and D196 retargets the row from this stratum to Phase 8.
+//! `evp_cleanup_int` is `names.c`'s too, and it **landed with Phase 8's `EVP_PKEY_METHOD` slice**
+//! (D355), when `evp_app_cleanup_int` (`crypto/evp/pmeth_lib.c:631`) — the seventh of its seven
+//! calls — became buildable. D196 had retargeted the row from this stratum to Phase 8 for exactly
+//! that seventh call, which pops the application-supplied `EVP_PKEY_METHOD` registry that
+//! `EVP_PKEY_meth_find` searches; both `forensics/prerequisites.json` rows are now retired. It is
+//! defined below and called at its authority coordinate by `crate::runtime::init::OPENSSL_cleanup`.
 //!
 //! `EVP_add_alg_module` is `crypto/evp/evp_cnf.c`'s, a 7.4 unit: its body is two lines of
 //! `CONF_module_add`, but the module callback it registers reads the configuration through
@@ -82,11 +81,16 @@ use crate::context::namemap::{
 };
 use crate::evp::cipher::{EVP_CIPHER_fetch, EVP_CIPHER_free, EvpCipher, OBJ_NAME_TYPE_CIPHER_METH};
 use crate::evp::digest::{EVP_MD_fetch, EVP_MD_free, EvpMd, OBJ_NAME_TYPE_MD_METH};
+use crate::evp::evp_pbe::EVP_PBE_cleanup;
+use crate::evp::pkey_ctx::evp_app_cleanup_int;
 use crate::runtime::err::{ERR_pop_to_mark, ERR_set_mark};
 use crate::runtime::init::{
     OPENSSL_init_crypto, OPENSSL_INIT_ADD_ALL_CIPHERS, OPENSSL_INIT_ADD_ALL_DIGESTS,
 };
-use crate::runtime::obj::{OBJ_NAME_add, OBJ_NAME_get, OBJ_nid2ln, OBJ_nid2sn, OBJ_NAME_ALIAS};
+use crate::runtime::obj::{
+    OBJ_NAME_add, OBJ_NAME_cleanup, OBJ_NAME_get, OBJ_nid2ln, OBJ_nid2sn, OBJ_sigid_free,
+    OBJ_NAME_ALIAS,
+};
 
 /// `int EVP_add_cipher(const EVP_CIPHER *c)`.
 ///
@@ -374,6 +378,41 @@ pub unsafe extern "C" fn EVP_get_cipherbyname(name: *const c_char) -> *const Evp
 pub unsafe extern "C" fn EVP_get_digestbyname(name: *const c_char) -> *const EvpMd {
     // SAFETY: the arguments are forwarded under this function's contract.
     unsafe { evp_get_digestbyname_ex(ptr::null_mut(), name) }
+}
+
+/// `OBJ_NAME_TYPE_KDF_METH` — `include/openssl/objects.h:30`. **0x06**, and not one of the type
+/// indices `src/runtime/obj.rs` already names, so it is declared here where its one reader is.
+const OBJ_NAME_TYPE_KDF_METH: c_int = 0x06;
+
+/// `void evp_cleanup_int(void)` — `crypto/evp/names.c:179`.
+///
+/// The seven calls in the authority's order: the **KDF**, **cipher** and **digest** `OBJ_NAME`
+/// tables, then `OBJ_NAME_cleanup(-1)` for the hash table itself (the authority's comment notes that
+/// the three typed calls empty the table's contents and the fourth removes it), then the PBE
+/// application registry, the signature-id cache and the application `EVP_PKEY_METHOD` registry.
+///
+/// **The KDF table is the type the crate had never named.** `OBJ_NAME_TYPE_KDF_METH` is `0x06`
+/// (`include/openssl/objects.h:30`) and this is its only reader, so it is declared here rather than
+/// in `src/runtime/obj.rs` — the same choice `src/evp/digest.rs:180` and `src/evp/cipher.rs:96` made
+/// for `OBJ_NAME_TYPE_MD_METH` and `OBJ_NAME_TYPE_CIPHER_METH`.
+///
+/// The `-1` is **`type < 0`**, not "all types": `OBJ_NAME_cleanup` takes everything and drops the
+/// per-type callback vector with it, which is why the authority singles the line out in its comment.
+///
+/// # Safety
+/// Nothing: every registry it touches is the crate's own.
+pub(crate) unsafe fn evp_cleanup_int() {
+    /* SAFETY: `OBJ_NAME_cleanup` is this crate's own registry teardown, and the argument is the
+     * authority's own type code. */
+    unsafe {
+        OBJ_NAME_cleanup(OBJ_NAME_TYPE_KDF_METH);
+        OBJ_NAME_cleanup(OBJ_NAME_TYPE_CIPHER_METH);
+        OBJ_NAME_cleanup(OBJ_NAME_TYPE_MD_METH);
+        OBJ_NAME_cleanup(-1);
+        EVP_PBE_cleanup();
+        OBJ_sigid_free();
+        evp_app_cleanup_int();
+    }
 }
 
 // SPDX-License-Identifier: Apache-2.0

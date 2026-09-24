@@ -194,11 +194,57 @@ def main(argv: list[str]) -> int:
             + "\n  ".join(f"{r['lib']}:{r['symbol']}" for r in unowned_implemented)
         )
 
-    # ---- the ledgers, and their reconciliation against the atlas --------------
+    # ---- the hand-off graph, built **before** any phase is checked (D296) -------------
+    #
+    # It used to be filled in as the loop below walked the phases in order, which was invisible
+    # while every chain was one hop and wrong the moment one was not. `PEM_do_header` and its
+    # seven neighbours are the worked example: `pem.h` is phase 5's, phase 5 hands them to 7
+    # because the PEM layer is 7's work, and 7 hands them to 9 because the block key comes from
+    # `EVP_md5` and the DEK salt from `RAND_bytes`. Whether a phase's rule-2 answer was right
+    # therefore depended on its *number*, which is not a property evidence should have.
     paths = ledger_paths()
+    deferred_to: dict[tuple[int, str], int] = {}
+    for phase in sorted(paths):
+        path = REPO_ROOT / paths[phase]
+        if not path.is_file():
+            continue
+        rows = json.loads(path.read_text(encoding="utf-8"))["body"]
+        for row in rows.get("deferred") or []:
+            if isinstance(row, dict) and "owning_phase" in row:
+                deferred_to[(phase, row["symbol"])] = int(row["owning_phase"])
+        for source, syms in (rows.get("handoffs_discharged") or {}).items():
+            for sym in syms:
+                deferred_to.setdefault((int(source), sym), phase)
+
+    def reaches(owner_phase: int, sym: str, target: int) -> bool:
+        """Whether the recorded hand-offs carry `sym` from `owner_phase` to `target`.
+
+        **A chain, not a hop.** Rule 2 asks whether the stratum that owns a symbol's declaring
+        header ever hands it to the ledger that carries it, and a hand-off that goes through a
+        third stratum still answers yes: phase 5 hands the eight `pem.h` symbols to phase 7, phase
+        7 hands them to phase 9, and phase 9's ledger carrying them is agreed to by both. Without
+        this the audit could not express a two-hop hand-off at all, so the only way to satisfy it
+        would have been to delete the intermediate hop -- which is the record of phase 7 having
+        measured the blocker.
+
+        A cycle is a failure of the data rather than of this function, so it terminates and
+        answers `False` rather than looping; the recursion is over a `set` of visited strata.
+        """
+        seen: set[int] = set()
+        at = owner_phase
+        while at not in seen:
+            seen.add(at)
+            if at == target:
+                return True
+            following = deferred_to.get((at, sym))
+            if following is None:
+                return False
+            at = following
+        return False
+
+    # ---- the ledgers, and their reconciliation against the atlas --------------
     ledger_agreement: list[dict] = []
     ledger_bodies: dict[int, dict] = {}
-    deferred_to: dict[tuple[int, str], int] = {}
     implemented_by: dict[str, list[int]] = {}
 
     for phase in sorted(paths):
@@ -218,12 +264,6 @@ def main(argv: list[str]) -> int:
         deferred_rows = symbols_of(rows.get("deferred"))
         for sym in implemented_rows:
             implemented_by.setdefault(sym, []).append(phase)
-        for row in rows.get("deferred") or []:
-            if isinstance(row, dict) and "owning_phase" in row:
-                deferred_to[(phase, row["symbol"])] = int(row["owning_phase"])
-        for source, syms in (rows.get("handoffs_discharged") or {}).items():
-            for sym in syms:
-                deferred_to.setdefault((int(source), sym), phase)
 
         ledger_symbols = implemented_rows | open_rows | deferred_rows
 
@@ -277,7 +317,7 @@ def main(argv: list[str]) -> int:
                     "does not assign to any stratum"
                 )
                 continue
-            if deferred_to.get((owner_phase, sym)) != phase:
+            if not reaches(owner_phase, sym, phase):
                 unjustified.append(sym)
         if unjustified:
             problems.append(

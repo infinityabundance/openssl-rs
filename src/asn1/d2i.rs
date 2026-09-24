@@ -1193,6 +1193,43 @@ pub unsafe extern "C" fn ASN1_item_d2i_ex(
     })
 }
 
+/// `int asn1_item_embed_d2i(ASN1_VALUE **pval, const unsigned char **in, long len,
+/// const ASN1_ITEM *it, int tag, int aclass, char opt, ASN1_TLC *ctx, int depth,
+/// OSSL_LIB_CTX *libctx, const char *propq)` — the dispatch's own entry point.
+///
+/// [`embed_d2i`] is that function, and this is the form another translation unit calls it
+/// by: `crypto/x509/x_pubkey.c`'s `x509_pubkey_ex_d2i_ex` reaches the `X509_PUBKEY_INTERNAL`
+/// decoder through it with `depth` 0 and no library context, exactly as the authority's
+/// `x509_pubkey_ex_d2i_ex` does (`crypto/x509/x_pubkey.c:149`). It is deliberately **not**
+/// `ASN1_item_ex_d2i`: that wrapper decodes a **null** `pval` through a local and frees the
+/// caller's value on every failure (see [`item_ex_d2i_intern`]), while the authority's
+/// `x509_pubkey_ex_d2i_ex` calls the dispatch directly and does its own free.
+///
+/// # Safety
+///
+/// As [`item_ex_d2i_intern`]. `depth` is the nesting depth to enter at.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+pub(crate) unsafe fn asn1_item_embed_d2i(
+    pval: *mut *mut c_void,
+    in_: *mut *const c_uchar,
+    len: c_long,
+    it: *const Asn1Item,
+    tag: c_int,
+    aclass: c_int,
+    opt: bool,
+    ctx: *mut Asn1Tlc,
+    depth: c_int,
+    libctx: *mut c_void,
+    propq: *const c_char,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        embed_d2i(
+            pval, in_, len, it, tag, aclass, opt, ctx, depth, libctx, propq,
+        )
+    }
+}
+
 /// `asn1_item_embed_d2i` — the dispatch, in full.
 ///
 /// Six arms and a depth guard. Two properties of the whole function are only visible
@@ -2028,10 +2065,16 @@ unsafe fn template_noexp_d2i(
         return 1;
     }
 
+    // The authority raises a **different** `ERR_R_NESTED_ASN1_ERROR` site in each arm --
+    // `tasn_dec.c:703` for the implicit-tag arm and `:712` for the "nothing special" arm --
+    // and the two coordinates are distinguishable to any caller that drains the queue. D372
+    // found this while courting `d2i_PUBKEY`: the plain arm raised `TASN_DEC_703`, so the
+    // ECX public-key decode reported the implicit-tag arm's coordinate where the authority
+    // reports `TASN_DEC_712`. Each arm now raises its own site.
     let ret = if t.flags & ASN1_TFLG_IMPTAG != 0 {
         // An implicit tag replaces the field's own tag, so the tag is passed down.
         // SAFETY: the caller's contract.
-        unsafe {
+        let r = unsafe {
             embed_d2i(
                 val,
                 &mut p,
@@ -2045,17 +2088,24 @@ unsafe fn template_noexp_d2i(
                 libctx,
                 propq,
             )
+        };
+        if r == 0 {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::TASN_DEC_703) };
+            return 0;
         }
+        r
     } else {
         // The field's own tag is the underlying type's.
         // SAFETY: the caller's contract.
-        unsafe { embed_d2i(val, &mut p, len, sub, -1, 0, opt, ctx, depth, libctx, propq) }
+        let r = unsafe { embed_d2i(val, &mut p, len, sub, -1, 0, opt, ctx, depth, libctx, propq) };
+        if r == 0 {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::TASN_DEC_712) };
+            return 0;
+        }
+        r
     };
-    if ret == 0 {
-        // SAFETY: a compile-time-constant site.
-        unsafe { raise_site(&err_sites::TASN_DEC_703) };
-        return 0;
-    }
     if ret == -1 {
         return -1;
     }

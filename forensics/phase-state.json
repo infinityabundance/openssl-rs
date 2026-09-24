@@ -23,6 +23,7 @@
         ],
         "name": "constitution",
         "phase": 0,
+        "provider_rows": null,
         "seal_sha256": null,
         "state": "complete",
         "stratum": "Constitution, authorities, claim algebra"
@@ -37,6 +38,7 @@
         ],
         "name": "archaeology",
         "phase": 1,
+        "provider_rows": null,
         "seal_sha256": "ecd5c0e019d1c02959cce72ca014cb559b06c9cc947c90450b3f243296d35063",
         "state": "complete",
         "stratum": "Complete archaeology / API / ABI atlas"
@@ -52,6 +54,7 @@
         ],
         "name": "distribution-shell",
         "phase": 2,
+        "provider_rows": null,
         "seal_sha256": "c14af3ffaa2bb5b1cc0765efe5f2a06477732f11eb8344b07e10dc220f2db836",
         "state": "complete",
         "stratum": "Distribution / ABI shell"
@@ -143,11 +146,14 @@
           "courts/phase3/rt_coverage_ref_probe.c",
           "forensics/phase3-obligations.json",
           "artifacts/phase3/COURTS.json",
-          "forensics/atlas/court-coverage.json"
+          "forensics/atlas/court-coverage.json",
+          "forensics/atlas/provider-algorithms.json",
+          "forensics/atlas/provider-court-coverage.json"
         ],
         "name": "core-runtime",
         "phase": 3,
-        "seal_sha256": null,
+        "provider_rows": null,
+        "seal_sha256": "67b6e7eea69046b9ce2223dedc4ab0728f6c8147678c6c20b29dafd012559b70",
         "state": "complete",
         "stratum": "Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects"
       },
@@ -228,11 +234,14 @@
           "courts/phase4/rt_coverage_ref_probe.c",
           "forensics/phase4-obligations.json",
           "artifacts/phase4/COURTS.json",
-          "forensics/atlas/court-coverage.json"
+          "forensics/atlas/court-coverage.json",
+          "forensics/atlas/provider-algorithms.json",
+          "forensics/atlas/provider-court-coverage.json"
         ],
         "name": "bio-conf-objects",
         "phase": 4,
-        "seal_sha256": null,
+        "provider_rows": null,
+        "seal_sha256": "69bd62cf735d8f915003818a7e29bade4f2f2d469312877b70f0266d65fa5494",
         "state": "complete",
         "stratum": "BIO + CONF + object database"
       },
@@ -253,11 +262,14 @@
           "courts/phase5/rt_coverage_ref_probe.c",
           "forensics/phase5-obligations.json",
           "artifacts/phase5/COURTS.json",
-          "forensics/atlas/court-coverage.json"
+          "forensics/atlas/court-coverage.json",
+          "forensics/atlas/provider-algorithms.json",
+          "forensics/atlas/provider-court-coverage.json"
         ],
         "name": "bn-asn1-der-pem",
         "phase": 5,
-        "seal_sha256": null,
+        "provider_rows": null,
+        "seal_sha256": "d8d3eaebe58b853cafed71119c37a88fdde07c686c896c46b5aff4f47ff93104",
         "state": "complete",
         "stratum": "BN + ASN.1 + DER/PEM"
       },
@@ -318,11 +330,14 @@
           "courts/phase6/rt_coverage_ref_probe.c",
           "forensics/phase6-obligations.json",
           "artifacts/phase6/COURTS.json",
-          "forensics/atlas/court-coverage.json"
+          "forensics/atlas/court-coverage.json",
+          "forensics/atlas/provider-algorithms.json",
+          "forensics/atlas/provider-court-coverage.json"
         ],
         "name": "libctx-provider",
         "phase": 6,
-        "seal_sha256": null,
+        "provider_rows": null,
+        "seal_sha256": "090e0695899a5a7f4e901923e0b1f8fe6b2029953b8f862dd1c7de20f7d9aaf5",
         "state": "complete",
         "stratum": "OSSL_LIB_CTX + provider core"
       },
@@ -372,34 +387,74 @@
           "courts/phase7/rt_evp_pkey_ops_probe.c",
           "forensics/phase7-obligations.json",
           "artifacts/phase7/COURTS.json",
-          "forensics/atlas/court-coverage.json"
+          "forensics/atlas/court-coverage.json",
+          "forensics/atlas/provider-algorithms.json",
+          "forensics/atlas/provider-court-coverage.json"
         ],
         "name": "evp",
         "phase": 7,
-        "seal_sha256": null,
+        "provider_rows": null,
+        "seal_sha256": "0ca018d9a4e53a9b29d4044bf884138489fcb8389858d07052d335e2aa51e060",
         "state": "complete",
         "stratum": "EVP framework"
       },
       {
-        "blocking": "not started",
+        "blocking": "",
         "deferred": [],
         "evidence_absent": [],
-        "evidence_present": [],
+        "evidence_present": [
+          "docs/PHASE-8-SUBPHASES.md",
+          "forensics/tools/phase8_courts.py",
+          "forensics/tools/phase8_obligations.py",
+          "forensics/tools/correctness_vectors.py",
+          "courts/phase8/ct_digest.c",
+          "forensics/phase8-obligations.json",
+          "artifacts/phase8/COURTS.json",
+          "forensics/atlas/court-coverage.json",
+          "forensics/atlas/provider-algorithms.json",
+          "forensics/atlas/provider-court-coverage.json"
+        ],
         "name": "algorithms",
         "phase": 8,
-        "seal_sha256": null,
-        "state": "not-started",
+        "provider_rows": {
+          "handed_on": 685,
+          "implemented": 306,
+          "owned": 306
+        },
+        "seal_sha256": "f74d262edfb4e2e8be37ae06b6e1f6f81e33c584979a24e114b95bd818345cfb",
+        "state": "complete",
         "stratum": "Native cryptographic primitives"
       },
       {
-        "blocking": "not started",
+        "blocking": "3 open obligation(s) of this stratum recorded in forensics/phase9-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Its working set is ninety-three exports, and only twenty-five are its own header's: the other sixty-eight arrive as recorded hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives in ten earlier strata's modules (docs/DECISIONS.md D294). The court file records `courts: []` and is not evidence that anything works: no Phase 9 court has landed yet (docs/PHASE-9-SUBPHASES.md section 1)",
         "deferred": [],
         "evidence_absent": [],
-        "evidence_present": [],
+        "evidence_present": [
+          "docs/PHASE-9-SUBPHASES.md",
+          "forensics/tools/phase9_courts.py",
+          "forensics/tools/phase9_obligations.py",
+          "src/rand/mod.rs",
+          "src/rand/pool.rs",
+          "src/rand/sys.rs",
+          "src/rand/unix.rs",
+          "src/provider/seeding.rs",
+          "src/provider/util.rs",
+          "forensics/phase9-obligations.json",
+          "artifacts/phase9/COURTS.json",
+          "forensics/atlas/court-coverage.json",
+          "forensics/atlas/provider-algorithms.json",
+          "forensics/atlas/provider-court-coverage.json"
+        ],
         "name": "rand-drbg",
         "phase": 9,
+        "provider_rows": {
+          "handed_on": 675,
+          "implemented": 5,
+          "owned": 15,
+          "unimplemented": 10
+        },
         "seal_sha256": null,
-        "state": "not-started",
+        "state": "in-progress",
         "stratum": "RAND / DRBG + entropy"
       },
       {
@@ -409,6 +464,11 @@
         "evidence_present": [],
         "name": "key-formats",
         "phase": 10,
+        "provider_rows": {
+          "handed_on": 39,
+          "owned": 636,
+          "unimplemented": 636
+        },
         "seal_sha256": null,
         "state": "not-started",
         "stratum": "Key formats + PKCS + STORE"
@@ -420,6 +480,7 @@
         "evidence_present": [],
         "name": "x509",
         "phase": 11,
+        "provider_rows": null,
         "seal_sha256": null,
         "state": "not-started",
         "stratum": "X.509 + verification"
@@ -431,6 +492,7 @@
         "evidence_present": [],
         "name": "protocol-families",
         "phase": 12,
+        "provider_rows": null,
         "seal_sha256": null,
         "state": "not-started",
         "stratum": "CMS / OCSP / CMP / CT / TS and remaining libcrypto families"
@@ -442,6 +504,11 @@
         "evidence_present": [],
         "name": "legacy",
         "phase": 13,
+        "provider_rows": {
+          "handed_on": 0,
+          "owned": 39,
+          "unimplemented": 39
+        },
         "seal_sha256": null,
         "state": "not-started",
         "stratum": "Legacy / deprecated compatibility"
@@ -453,6 +520,7 @@
         "evidence_present": [],
         "name": "tls-dtls",
         "phase": 14,
+        "provider_rows": null,
         "seal_sha256": null,
         "state": "not-started",
         "stratum": "TLS / DTLS (libssl)"
@@ -464,6 +532,7 @@
         "evidence_present": [],
         "name": "quic-ech",
         "phase": 15,
+        "provider_rows": null,
         "seal_sha256": null,
         "state": "not-started",
         "stratum": "QUIC / ECH and modern SSL surface"
@@ -475,6 +544,7 @@
         "evidence_present": [],
         "name": "cli-config",
         "phase": 16,
+        "provider_rows": null,
         "seal_sha256": null,
         "state": "not-started",
         "stratum": "CLI / config / filesystem contract"
@@ -486,6 +556,7 @@
         "evidence_present": [],
         "name": "downstream",
         "phase": 17,
+        "provider_rows": null,
         "seal_sha256": null,
         "state": "not-started",
         "stratum": "Downstream replacement court"
@@ -497,6 +568,7 @@
         "evidence_present": [],
         "name": "hostile-hardening",
         "phase": 18,
+        "provider_rows": null,
         "seal_sha256": null,
         "state": "not-started",
         "stratum": "Hostile fuzz / security / side-channel hardening"
@@ -508,6 +580,7 @@
         "evidence_present": [],
         "name": "performance",
         "phase": 19,
+        "provider_rows": null,
         "seal_sha256": null,
         "state": "not-started",
         "stratum": "Performance / CPU dispatch"
@@ -519,6 +592,7 @@
         "evidence_present": [],
         "name": "custodian-seal",
         "phase": 20,
+        "provider_rows": null,
         "seal_sha256": null,
         "state": "not-started",
         "stratum": "3.6.4 custodian seal"
@@ -530,6 +604,7 @@
         "evidence_present": [],
         "name": "maintenance-delta",
         "phase": 21,
+        "provider_rows": null,
         "seal_sha256": null,
         "state": "not-started",
         "stratum": "Maintenance delta machinery"
@@ -537,12 +612,12 @@
     ],
     "rule": "a phase may be complete only if every earlier phase is complete",
     "summary": {
-      "complete": 8,
-      "in_progress": 0,
-      "not_started": 14
+      "complete": 9,
+      "in_progress": 1,
+      "not_started": 12
     }
   },
-  "body_hash": "a51f111243cd7396018cea08e111a46a7d45075c42a6ebb1ee842d1d18f30e16",
+  "body_hash": "59bcb22c5f03e4c194d31bd56a284629522ebcd3e17985153b773a889946132d",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

@@ -123,6 +123,42 @@ pub(crate) const ERR_TXT_MALLOCED_FLAG: c_int = ERR_TXT_MALLOCED;
 /// See [`ERR_TXT_MALLOCED_FLAG`].
 pub(crate) const ERR_FLAG_CLEAR_FLAG: c_int = ERR_FLAG_CLEAR;
 
+/// `void err_clear_last_constant_time(int clear)` — `crypto/err/err.c:875-891`.
+///
+/// **The flag is ORed in, and the operand is selected in constant time**, because the alternative —
+/// an `if (clear)` — is a branch that an attacker measuring the OAEP decrypt path could observe.
+/// The authority's own comment says why the record is *flagged* rather than removed here: removing
+/// it would let a later error occupy the same slot and reveal timing information. `clear` is an
+/// `int` that is `0` or `1`, and the authority reinterprets it through `constant_time_eq_int`, so
+/// the mask is all-ones exactly when `clear` is zero.
+///
+/// The bounds check is a **transcription addition**, recorded as one: the authority indexes
+/// `err_flags[top]` unguarded, and `top` is maintained in `0..ERR_NUM_ERRORS` by the state's own
+/// code. A Rust index would panic rather than read adjacent memory if that invariant were ever
+/// broken, and this crate forbids a panic on a published path, so an out-of-range `top` does
+/// nothing instead of doing something undefined.
+///
+/// The caller is `RSA_padding_check_PKCS1_OAEP_mgf1`, which calls it **unconditionally after
+/// raising** — a transcription that guarded it on `good` would get exactly the case the flag exists
+/// for wrong. The type-2 check and the OAEP check both call it, so the `#[allow(dead_code)]` this
+/// carried until D323's landing has been removed rather than left to outlive its reason.
+pub(crate) fn err_clear_last_constant_time(clear: c_int) {
+    use crate::runtime::constant_time::{constant_time_eq_int, constant_time_select_int};
+
+    // The closure's return value is discarded: this function reports nothing, and the state is
+    // absent only before the thread's first error, where the authority also returns early.
+    let _ = with_state(|es| {
+        let top = es.top;
+
+        if top < 0 || top as usize >= ERR_NUM_ERRORS {
+            return;
+        }
+        let mask = constant_time_select_int(constant_time_eq_int(clear, 0), 0, ERR_FLAG_CLEAR);
+
+        es.err_flags[top as usize] |= mask;
+    });
+}
+
 /// `ERR_LIB_SYS`, the one library whose errors are packed as system codes.
 const ERR_LIB_SYS: c_int = 2;
 
@@ -397,6 +433,27 @@ fn get_reason(e: c_ulong) -> c_ulong {
     }
 }
 
+/// `ERR_GET_REASON(ERR_peek_error())` — the reason code of the queue's **first** entry.
+///
+/// The first-entry twin of [`peek_last_reason`], and the one `crypto/pem/pem_lib.c`'s
+/// `pem_bytes_read_bio_flags` needs: it asks whether the reader's *oldest* queued error is
+/// `PEM_R_NO_START_LINE` — meaning it scanned to end-of-input without finding a BEGIN line —
+/// and, when it is, appends the name it was looking for. Reading the newest entry instead
+/// would answer a different question on a queue holding more than one record.
+///
+/// # Safety
+///
+/// There is no precondition: the function takes no arguments and touches only the
+/// calling thread's own queue.
+pub(crate) fn peek_first_reason() -> c_ulong {
+    let e = ERR_peek_error();
+    if e == 0 {
+        0
+    } else {
+        get_reason(e)
+    }
+}
+
 /// `ERR_GET_REASON(ERR_peek_last_error())` — the reason code of the queue's last entry.
 ///
 /// Exists because one caller has to *branch* on a reason rather than report it:
@@ -414,6 +471,26 @@ pub(crate) fn peek_last_reason() -> c_ulong {
         0
     } else {
         get_reason(e)
+    }
+}
+
+/// `ERR_GET_LIB(ERR_peek_last_error())` — the library code of the queue's last entry.
+///
+/// The companion of [`peek_last_reason`], for the same kind of caller: `crypto/rsa/
+/// rsa_gen.c`'s multi-prime generator has to distinguish "this prime has no inverse
+/// modulo `e`, so draw another" from any other failure, and the authority spells that
+/// test `ERR_GET_LIB(error) == ERR_LIB_BN && ERR_GET_REASON(error) == BN_R_NO_INVERSE`.
+///
+/// # Safety
+///
+/// There is no precondition: the function takes no arguments and touches only the
+/// calling thread's own queue.
+pub(crate) fn peek_last_lib() -> c_ulong {
+    let e = ERR_peek_last_error();
+    if e == 0 {
+        0
+    } else {
+        get_lib(e)
     }
 }
 

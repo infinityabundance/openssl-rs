@@ -29,12 +29,6 @@
         "evidence": "src/runtime/defaults.rs module doc"
       },
       {
-        "symbol": "ossl_random_add_conf_module",
-        "owner_phase": 9,
-        "reason": "One of the seven modules `OPENSSL_load_builtin_modules` registers. It is Phase 9's because it lives in crypto/rand/rand_lib.c, and the fan-out's residual -- six of the seven absent -- is already recorded in the Phase 6 subphase plan and the seal; this row is what makes the name visible to the gate rather than only to a reader.",
-        "evidence": "docs/PHASE-6-SUBPHASES.md row 6.10 (the fan-out residual)"
-      },
-      {
         "symbol": "OSSL_provider_init",
         "owner_phase": 13,
         "authority_unit": "providers/legacy-dso-legacyprov.c",
@@ -42,125 +36,10 @@
         "evidence": "docs/PHASE-6-SUBPHASES.md rows 6.8d and 6.12"
       },
       {
-        "symbol": "evp_rand_can_seed",
-        "owner_phase": 9,
-        "authority_unit": "crypto/evp/evp_rand.c",
-        "reason": "Internal: declared in `include/crypto/evp.h`, which is not installed, and its only caller in the whole authority is `crypto/rand/rand_lib.c`, already recorded in this file's `units` section as Phase 9's. 7.3f transcribes `evp_rand.c` and deliberately stops at the dispatch walk that fills the `get_seed` and `clear_seed` *fields*: the fields are this file's, the three callers are the stratum that needs the DRBG plumbing. Recording the name here is what makes that boundary visible to the gate rather than only to a reader.",
-        "evidence": "src/evp/rand.rs module doc, section \"What is not here\"; forensics/prerequisites.json units row crypto/rand/rand_lib.c"
-      },
-      {
-        "symbol": "evp_rand_get_seed",
-        "owner_phase": 9,
-        "authority_unit": "crypto/evp/evp_rand.c",
-        "reason": "The same boundary as its `can_seed` sibling: internal to `crypto/evp/evp_rand.c`, declared in the uninstalled `include/crypto/evp.h`, called only by `crypto/rand/rand_lib.c`. It answers entropy to the DRBG, so it cannot be written before the thing that asks for entropy exists.",
-        "evidence": "src/evp/rand.rs module doc, section \"What is not here\"; forensics/prerequisites.json units row crypto/rand/rand_lib.c"
-      },
-      {
-        "symbol": "evp_rand_clear_seed",
-        "owner_phase": 9,
-        "authority_unit": "crypto/evp/evp_rand.c",
-        "reason": "The third of the seed trio, and the same boundary again: internal, declared in the uninstalled `include/crypto/evp.h`, called only by `crypto/rand/rand_lib.c`, and the releasing half of the pair whose acquiring half is `evp_rand_get_seed`. Neither half has a caller before Phase 9.",
-        "evidence": "src/evp/rand.rs module doc, section \"What is not here\"; forensics/prerequisites.json units row crypto/rand/rand_lib.c"
-      },
-      {
-        "symbol": "evp_cleanup_int",
-        "owner_phase": 8,
-        "blocked_by": [
-          {
-            "name": "evp_app_cleanup_int",
-            "authority_unit": "crypto/evp/pmeth_lib.c",
-            "line": 631,
-            "kind": "internal",
-            "owning_phase": 8
-          }
-        ],
-        "authority_unit": "crypto/evp/names.c",
-        "reason": "Internal, called only by `OPENSSL_cleanup`, and **owed to Phase 8 through `evp_app_cleanup_int`**. Its body is seven calls -- four `OBJ_NAME_cleanup`, then `EVP_PBE_cleanup`, then `OBJ_sigid_free`, then `evp_app_cleanup_int` -- and the first six are landed: `EVP_PBE_cleanup` is `crypto/evp/evp_pbe.c`'s and landed with 7.4c's PBE remainder (D192), which is the dependency this row was written against. What is left is the seventh, and `evp_app_cleanup_int` (`crypto/evp/pmeth_lib.c`) is Phase 8's because its whole body pops the **application-supplied `EVP_PKEY_METHOD` registry** against `EVP_PKEY_meth_free`, and `EVP_PKEY_meth_find` searches `standard_methods[]` (D165, D193). So the row is retargeted rather than discharged: the name cannot be written before Phase 8, and leaving it pinned to this stratum would have made a Phase-7 gap out of a Phase-8 dependency on the day this stratum sealed.",
-        "evidence": "docs/DECISIONS.md D196; docs/DECISIONS.md D165 and D193; src/evp/legacy_evp.rs module doc, section \"What is not here\""
-      },
-      {
-        "symbol": "evp_pkey_get_legacy",
-        "owner_phase": 8,
-        "blocked_by": [
-          {
-            "name": "evp_pkey_copy_downgraded",
-            "authority_unit": "crypto/evp/p_lib.c",
-            "line": 2066,
-            "kind": "internal",
-            "owning_phase": 8
-          }
-        ],
-        "reason": "The second of the seven. It downgrades a provider key to a legacy one, so its whole body past the fast paths is `evp_pkey_copy_downgraded`, and the cache it then holds is keyed on `ameth` being non-NULL (`EVP_PKEY_asn1_find` for the type). Both halves are Phase 8's, which is why this name waits on the same registry as its sibling rather than on anything in this stratum.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4a (the dependency column names `_get_legacy`); row 7.4l; src/evp/pkey.rs module doc, section \"What is not here\""
-      },
-      {
-        "symbol": "evp_pkey_get0_DH_int",
-        "owner_phase": 8,
-        "blocked_by": [
-          {
-            "name": "evp_pkey_get_legacy",
-            "authority_unit": "crypto/evp/p_lib.c",
-            "line": 2154,
-            "kind": "internal",
-            "owning_phase": 8
-          }
-        ],
-        "reason": "The third of the seven, and the shortest: it is `pkey->type == EVP_PKEY_DH ? evp_pkey_get_legacy(pkey) : NULL`. It is therefore blocked by nothing of its own and inherited entirely from its sibling above -- the DH *type* it compares against is real now, the downgrade it calls is not. Recorded separately rather than folded into `evp_pkey_get_legacy` because the gate owes names, not call graphs, and a reader of the blocking census should see all four rather than three and an implication.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4a (the dependency column names `get0_DH_int`); row 7.4l; src/evp/pkey.rs module doc, section \"What is not here\""
-      },
-      {
-        "symbol": "evp_pkey_copy_downgraded",
-        "owner_phase": 8,
-        "blocked_by": [
-          {
-            "name": "ossl_rsa_asn1_meths",
-            "authority_unit": "crypto/rsa/rsa_ameth.c",
-            "line": 968,
-            "kind": "internal",
-            "owning_phase": 8
-          }
-        ],
-        "reason": "The fourth of the seven and the one that makes the other three wait. Its body exports the provider keydata through `evp_keymgmt_export` -- this stratum's -- and then imports it with `(*dest)->ameth->import_from`, synchronising `(*dest)->ameth->dirty_cnt`. Two fields of an `EVP_PKEY_ASN1_METHOD` and one of that struct's function pointers are read directly, so the function cannot be written before an ameth object exists, and the ameth objects are the twelve `crypto/asn1/ameth_lib.c` builds from Phase 8's `standard_methods[]`. It also needs `EVP_PKEY_CTX_new_from_pkey`, which is `pmeth_lib.c`'s and lands in 7.4c *inside* this stratum -- so the order is 7.4c, then Phase 8, then this row.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.4a, 7.4c and 7.4l; docs/DECISIONS.md D163; src/evp/pkey.rs module doc, section \"What is not here\""
-      },
-      {
-        "symbol": "evp_app_cleanup_int",
-        "owner_phase": 8,
-        "blocked_by": [
-          {
-            "name": "ossl_rsa_pkey_method",
-            "authority_unit": "crypto/rsa/rsa_pmeth.c",
-            "line": 851,
-            "kind": "internal",
-            "owning_phase": 8
-          }
-        ],
-        "reason": "Defined in `crypto/evp/pmeth_lib.c` and called from `crypto/evp/names.c`'s `EVP_cleanup_int`, so two transcribed units now owe it. Its whole body is `sk_EVP_PKEY_METHOD_pop_free(app_pkey_methods, EVP_PKEY_meth_free)`: both the stack and the destructor belong to the **application-supplied `EVP_PKEY_METHOD` registry**, which is 7.4l's because `EVP_PKEY_meth_find`'s lookup searches `standard_methods[]` -- the table whose contents are Phase 8's objects under D163 and D165. So this is Phase 8's with its sibling rows rather than a same-subphase deferral: there is no 7.4c-ii or 7.4d that could land it, because the two symbols it needs do not exist until Phase 8 does.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4l; docs/DECISIONS.md D165; src/evp/pkey_ctx.rs module doc, section on the absent registry"
-      },
-      {
-        "symbol": "ossl_rsa_asn1_meths",
-        "owner_phase": 8,
-        "reason": "The `EVP_PKEY_ASN1_METHOD` half of the `standard_methods[]` contents that `crypto/asn1/ameth_lib.c` searches -- the twelve `ossl_<alg>_asn1_meth` objects. `EVP_PKEY_asn1_find`/`_find_str` are landed and do search it, so their answer is NULL for every standard type until Phase 8 publishes the objects. That is why 7.4l withholds `EVP_PKEY_type`, `d2i_PrivateKey`/`_ex`, `d2i_AutoPrivateKey`/`_ex`, `d2i_PublicKey`, `d2i_KeyParams`/`_bio` and the legacy paths of the five `i2d_*` names rather than stubbing a divergent answer into them. `ossl_rsa_asn1_meths` is named as the first object of the table; the other eleven are the same stratum, same table, same answer.",
-        "evidence": "docs/DECISIONS.md D193; docs/DECISIONS.md D163 and D165; docs/PHASE-7-SUBPHASES.md row 7.4l"
-      },
-      {
-        "symbol": "ossl_rsa_pkey_method",
-        "owner_phase": 8,
-        "reason": "The `EVP_PKEY_METHOD` half of the same boundary: `crypto/evp/pmeth_lib.c`'s `standard_methods[]` holds the ten `ossl_<alg>_pkey_method` objects of the algorithm strata. `EVP_PKEY_meth_find`'s application half (`evp_pkey_meth_find_added_by_application`) is landed and courted; its `OBJ_bsearch_pmeth_func` half is not, and `EVP_PKEY_meth_get0` and `_get_count` index the table outright, so all three exports are withheld rather than stubbed with an application-count answer.",
-        "evidence": "docs/DECISIONS.md D193; docs/DECISIONS.md D163, D165 and D184; docs/PHASE-7-SUBPHASES.md row 7.4l"
-      },
-      {
-        "symbol": "OSSL_ENCODER_CTX_new_for_pkey",
+        "symbol": "d2i_PrivateKey",
         "owner_phase": 10,
-        "reason": "`crypto/asn1/i2d_evp.c`'s `i2d_provided` builds an `OSSL_ENCODER_CTX` for a **provider** key, which is the branch every one of `i2d_KeyParams`, `i2d_KeyParams_bio`, `i2d_PrivateKey`, `i2d_PKCS8PrivateKey` and `i2d_PublicKey` takes first. The names are declared in `encoder.h`, Phase 10's, so no provider key can be encoded and the five exports are withheld with the boundary named in `RT-EVP-PKEY`.",
-        "evidence": "docs/DECISIONS.md D193; docs/PHASE-7-SUBPHASES.md row 7.4l"
-      },
-      {
-        "symbol": "OSSL_DECODER_CTX_new_for_pkey",
-        "owner_phase": 10,
-        "reason": "`crypto/asn1/d2i_pr.c`'s `d2i_PrivateKey_decoder` builds an `OSSL_DECODER_CTX` and is the first thing `d2i_PrivateKey_ex` and `d2i_AutoPrivateKey_ex` try, with the legacy ameth path only as a fallback. The names are declared in `decoder.h`, Phase 10's, so the four `d2i_PrivateKey*`/`d2i_AutoPrivateKey*` exports are withheld.",
-        "evidence": "docs/DECISIONS.md D193; docs/PHASE-7-SUBPHASES.md row 7.4l"
+        "reason": "`d2i_PrivateKey_decoder` (`crypto/asn1/d2i_pr.c:61`) builds an `OSSL_DECODER_CTX` and is the first thing `d2i_PrivateKey_ex` and `d2i_AutoPrivateKey_ex` try, with the legacy ameth path only as a fallback. **The decoder prerequisite landed in D367** -- `OSSL_DECODER_CTX_new_for_pkey` and the four decoder units are transcribed in `src/decoder_meth.rs`, `src/decoder_lib.rs` and `src/decoder_pkey.rs` -- so this row carries **no `blocked_by`** rather than a dependency that is gone: it records the stratum that still owes the four `d2i_PrivateKey*`/`d2i_AutoPrivateKey*` exports, whose remaining leg is `ossl_d2i_PrivateKey_legacy` (`:102`) reading the ameth decode pointers Phase 8 owns. `forensics/tools/phase7_obligations.py` moved the four to its `UNBLOCKED_HANDOFFS` for the same reason.",
+        "evidence": "docs/DECISIONS.md D193 and D367; docs/PHASE-7-SUBPHASES.md row 7.4l"
       },
       {
         "symbol": "ASN1_item_sign_ctx",
@@ -173,42 +52,6 @@
         "owner_phase": 11,
         "reason": "The verification twin of `ASN1_item_sign_ctx`: `ASN1_item_verify_ex` (`crypto/asn1/a_verify.c:104`) delegates to it, and it is declared in `x509.h`, Phase 11's. The hand-off from Phase 5 to this stratum cannot be completed while the delegate is another stratum's export.",
         "evidence": "docs/DECISIONS.md D193; docs/PHASE-7-SUBPHASES.md row 7.4l"
-      },
-      {
-        "symbol": "d2i_X509_ALGOR",
-        "owner_phase": 11,
-        "reason": "`EVP_PKEY_CTX_get_algor` (`crypto/evp/evp_lib.c:1455`) decodes the provider's `OSSL_SIGNATURE_PARAM_ALGORITHM_ID` answer with `d2i_X509_ALGOR`, declared in `x509.h` and Phase 11's. **`EVP_CIPHER_CTX_get_algor` (`:1337`) is the same call in the same shape** and is withheld on it too, so this one row covers both accessors and the Phase-7 obligation ledger's two deferral rows name the same coordinate. The record is otherwise unchanged from 7.4e: the accessor is withheld, and its probe line names this coordinate.",
-        "evidence": "docs/DECISIONS.md D196; docs/DECISIONS.md D193 and D190; docs/PHASE-7-SUBPHASES.md rows 7.3c and 7.4e"
-      },
-      {
-        "symbol": "RAND_priv_bytes_ex",
-        "owner_phase": 9,
-        "reason": "`EVP_SealInit` (`crypto/evp/p_seal.c:42` and `:46`) needs the random layer twice: `EVP_CIPHER_CTX_rand_key` for the session key and `RAND_priv_bytes_ex` for the IV. Both land in Phase 9 and `crypto/evp/evp_enc.c`'s `EVP_CIPHER_CTX_rand_key` is itself still an open 7.3c row for the same reason, so `EVP_SealInit` is withheld while its `_Final` half -- which needs no random -- lands with the rest of 7.4l.",
-        "evidence": "docs/DECISIONS.md D193; docs/PHASE-7-SUBPHASES.md rows 7.3c and 7.4l"
-      },
-      {
-        "symbol": "UI_new",
-        "owner_phase": 13,
-        "reason": "`EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`) is a `UI` program -- `UI_new`, `UI_add_input_string`, `UI_add_verify_string`, `UI_process`, `UI_free` -- and `ui.h` is Phase 13's. `EVP_read_pw_string` goes with it because its whole body is a call to `_min`; `EVP_get_pw_prompt`/`EVP_set_pw_prompt` do **not**, because they touch the file's own eighty-byte static and nothing else, and they land.",
-        "evidence": "docs/DECISIONS.md D193; docs/PHASE-7-SUBPHASES.md row 7.4l"
-      },
-      {
-        "symbol": "EVP_md5",
-        "owner_phase": 13,
-        "reason": "`PEM_do_header` derives the block's key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`), and `PEM_ASN1_write_bio_internal` does the same on its encrypted arm (`:392`). `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s -- a legacy `EVP_MD` whose callbacks are `MD5_Init`/`MD5_Update`/`MD5_Final` -- and 7.3g handed every such static to Phase 13 with its primitive unit named, so `EVP_md5` is that stratum's and not this one's. Through `PEM_do_header` it withholds `PEM_bytes_read_bio`, its `_secmem` spelling, `PEM_ASN1_read_bio`/`PEM_ASN1_read`, and the `PEM_ASN1_write_bio`/`PEM_ASN1_write_bio_ctx`/`PEM_ASN1_write` trio; the withholding is per symbol and the blocker is the same one.",
-        "evidence": "docs/DECISIONS.md D194; docs/PHASE-7-SUBPHASES.md rows 7.3g and 7.5"
-      },
-      {
-        "symbol": "RAND_bytes",
-        "owner_phase": 9,
-        "reason": "`PEM_ASN1_write_bio_internal`'s encrypted arm generates the DEK-Info salt from `RAND_bytes(iv, EVP_CIPHER_get_iv_length(enc))` (`crypto/pem/pem_lib.c:386`), and `rand.h` is Phase 9's. The name blocks `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx` and `PEM_ASN1_write` alongside `EVP_md5`; all three are withheld, and this row records the second of their two blockers rather than a second withheld export. The same argument D165 makes applies in the other direction here: the `enc == NULL` arm of the function is transcribable against landed machinery alone, but an export cannot be half-written, and the encrypted arm is the one every `PEM_write_*PrivateKey*` caller reaches.",
-        "evidence": "docs/DECISIONS.md D194; docs/PHASE-7-SUBPHASES.md row 7.5"
-      },
-      {
-        "symbol": "RAND_bytes_ex",
-        "owner_phase": 9,
-        "reason": "`OSSL_HPKE_get_grease_value` fills the GREASE ciphertext with `RAND_bytes_ex(libctx, ct, ctlen, 0)` (`crypto/hpke/hpke.c:1433`), and its random-suite arm calls `ossl_rand_uniform_uint32` (`crypto/hpke/hpke_util.c:198`, `:220`, `:243`); both are `crypto/rand/`'s and Phase 9's. The whole observable of that export is whether the random fill succeeds, so there is no partial answer to write and it is withheld rather than stubbed. No other `OSSL_HPKE_*` name needs the random layer: the KEM, KDF and AEAD arms all build over landed 7.3 objects, which is what D195 records. This row names the direct callee; `ossl_rand_uniform_uint32` is the same stratum, reached only through `ossl_HPKE_*_INFO_find_random`, whose only caller is the same withheld function.",
-        "evidence": "docs/DECISIONS.md D195; docs/PHASE-7-SUBPHASES.md row 7.6"
       }
     ],
     "divergences": [
@@ -253,11 +96,10 @@
         "owner_module": "src/runtime/thread.rs",
         "class": "modelled_differently",
         "covers": [
-          "openssl_init_fork_handlers",
-          "openssl_get_fork_id"
+          "openssl_init_fork_handlers"
         ],
-        "note": "Neither needs a function in the crate. On this profile openssl_init_fork_handlers() is `return 1` -- a no-op, which src/runtime/init.rs already records for OPENSSL_INIT_ATFORK -- and openssl_get_fork_id() is `return getpid()`, so a caller that needs a fork id asks the C library for one.",
-        "evidence": "forensics/authorities/src/openssl-3.6.4/crypto/threads_pthread.c lines 1232 and 1238; src/runtime/init.rs's OPENSSL_INIT_ATFORK row"
+        "note": "The remaining name needs no function in the crate. On this profile `openssl_init_fork_handlers()` is `return 1` -- a no-op, which `src/runtime/init.rs` already records for `OPENSSL_INIT_ATFORK`. **`openssl_get_fork_id` was in this list until D304 landed it**: it is `return getpid()`, it is `drbg.c`'s fork check, and a `getpid`-shaped answer is one the crate can give rather than one it must delegate. The gate reported this row as `divergence_record_does_not_match` on the commit that defined the function, which is what makes the row fail-closed rather than a place to park a name the crate has since built.",
+        "evidence": "forensics/authorities/src/openssl-3.6.4/crypto/threads_pthread.c lines 1232 and 1238; src/runtime/init.rs's OPENSSL_INIT_ATFORK row; src/runtime/thread.rs's `openssl_get_fork_id` (docs/DECISIONS.md D304)"
       },
       {
         "owner_module": "several",
@@ -269,20 +111,98 @@
           "in",
           "inlen",
           "libctx",
-          "now",
           "out_len",
           "outlen",
+          "pkt",
           "sleep",
           "src",
           "stderr",
+          "stdin",
           "type",
           "u16",
           "u32",
           "u64",
           "u8"
         ],
-        "note": "Each of these is a name the authority's *non-installed* headers introduce -- `#define F(x)` in crypto/md4/md4_local.h and crypto/sha/sha_local.h, `u8`/`u16`/`u32`/`u64` in crypto/aes/aes_local.h, macro-body and parameter names in include/internal/list.h, quic_*.h and sha3.h, and `sleep` in include/internal/e_os.h, which is EINTR-retry shim over the C library's -- and each also appears in this crate as an ordinary Rust identifier: a generic parameter, a local binding, a width alias, or a word inside a doc comment. A lexical scan of either side cannot separate those two facts, which is why this is a recorded class rather than a narrower matcher: a matcher tuned to drop `u8` would also drop a real collision. The gate holds the list exact, so a new member has to be looked at.",
-        "evidence": "forensics/atlas/macro-owners.json (defined_in for each name); the gate's first-run report, recorded in docs/DECISIONS.md D123"
+        "note": "Each of these is a name the authority's *non-installed* headers introduce -- `#define F(x)` in crypto/md4/md4_local.h and crypto/sha/sha_local.h, `u8`/`u16`/`u32`/`u64` in crypto/aes/aes_local.h, macro-body and parameter names in include/internal/list.h, quic_*.h and sha3.h, and `sleep` in include/internal/e_os.h, which is EINTR-retry shim over the C library's -- and each also appears in this crate as an ordinary Rust identifier: a generic parameter, a local binding, a width alias, or a word inside a doc comment. A lexical scan of either side cannot separate those two facts, which is why this is a recorded class rather than a narrower matcher: a matcher tuned to drop `u8` would also drop a real collision. The gate holds the list exact, so a new member has to be looked at. **`stdin` joined at D350**, with `src/ui/ui_openssl.rs`: `include/internal/e_os.h` spells `stdin`/`stdout`/`stderr` as macros for the systems whose C library has no `FILE *` stream objects (VMS, MSDOS), and the console method compares its session's input stream against `stdin` and falls back to it, so the crate declares the libc `static mut stdin` exactly where it needs it -- the same shadowing `stderr` has had since Phase 4. Three earlier members -- `cbc` (D239), `initkey` (D242) and `now` -- and the one-member `not_in_this_profile` row that carried `initiv` (D265) were retired at D275: each was a *struct-member function-pointer field*, not a type, and `scan_typedefs` had taken the field's name out of the enclosing struct body. The grammar now reads a typedef's name from after the closing brace of a struct/union/enum body, so all four left the type universe and the records that existed only to cover them are gone. `initiv`'s own record had already said the honest disposition of that lexical false positive was to fix the atlas.",
+        "evidence": "forensics/atlas/macro-owners.json (defined_in for each name); the gate's first-run report, recorded in docs/DECISIONS.md D123; docs/DECISIONS.md D275 (the `scan_typedefs` grammar fix and the four retirements)"
+      },
+      {
+        "owner_module": "src/ec/backend.rs",
+        "class": "owned_by_a_later_stratum",
+        "covers": [
+          "ossl_x509_algor_is_sm2"
+        ],
+        "note": "**One name now, and the two that left are the ones D351 landed.** D340 wrote this row for the whole `#ifndef FIPS_MODULE` tail of `crypto/ec/ec_backend.c` -- `ossl_x509_algor_is_sm2`, `ossl_ec_key_param_from_x509_algor` and `ossl_ec_key_from_pkcs8` -- because all three reached the ASN.1/X.509 half, which was 8.8's and slice E's at the time. **The measurement changed in the crate rather than in the authority**: D345 landed `crypto/ec/ec_asn1.c`, D348 `crypto/asn1/x_algor.c` and D349 `crypto/x509/x_pubkey.c` plus `crypto/asn1/p8_pkey.c`, so `X509_ALGOR_get0`, `d2i_ECParameters`, `d2i_ECPrivateKey` and `PKCS8_pkey_get0` are all built, and D351 transcribes the two. What is left is `ossl_x509_algor_is_sm2` (`ec_backend.c:729-757`), withheld for the reason D340 gave: its body reaches `d2i_ECPKParameters` and its only caller in the whole authority is the provider half (`ec_kmgmt.c`), which this crate does not carry, so a transcription would be a function no landed path reaches. `covers` is exact in both directions, which is why the row shrank rather than standing: the gate would otherwise report the two landed names as a record that keeps covering what the crate has since fixed. `ossl_ec_key_from_pkcs8`'s absence of a unit-test arm is recorded in the module's own test module: its first act is `PKCS8_pkey_get0`, so an arm would need a hand-built container rather than a measurement.",
+        "evidence": "docs/DECISIONS.md D340 and D351; crypto/ec/ec_backend.c:729-757 (the one name left) against :759-833 (the two landed); providers/implementations/keymgmt/ec_kmgmt.c as `ossl_x509_algor_is_sm2`'s only caller; forensics/atlas/transcription-edges.json's `crypto/ec/ec_backend.c` edge"
+      },
+      {
+        "owner_module": "src/bn/intern.rs",
+        "class": "modelled_differently",
+        "covers": [
+          "bn_set_static_words"
+        ],
+        "note": "The one internal of `crypto/bn/bn_intern.c` this crate gives no function, and it is a storage-model divergence rather than a withheld one. The authority's body (`crypto/bn/bn_intern.c:171-182`) is five assignments -- `a->d = (BN_ULONG *)words; a->dmax = a->top = size; a->neg = 0; a->flags |= BN_FLG_STATIC_DATA;` -- and the first of them **aliases the caller's storage into the object**, which is the whole point of the name and which `BN_FLG_STATIC_DATA` then tells `BN_free` not to release. This crate's `BIGNUM` owns its magnitude (`d: Vec<Limb>`, `src/bn/bignum.rs:83`) and `src/bn/bignum.rs:67` already records that the representation the flag describes is not modelled, so the reachable half of the contract is an *owned copy* and not an alias: a later write through the caller's array would not be seen, and the object would carry `BN_FLG_STATIC_DATA` over storage it does own. The other half of the authority's body has no counterpart either -- `bn_correct_top` after a top that is deliberately set wide is the normalisation this representation performs on every store. Both readings are wrong in a direction a reader could not detect, so the name is recorded rather than approximated. **It is unreachable on every path either side has**: `bn_set_static_words` has no caller anywhere in the authority outside its own definition (`grep -rn bn_set_static_words crypto/ include/ providers/` answers the definition and nothing else), and the crate's own callers are the EC layer's, which lands against `src/bn/intern.rs`'s other seven. If a caller ever arrives, the row is what makes the decision visible instead of a `Vec` that quietly copied.",
+        "evidence": "crypto/bn/bn_intern.c:171-182; src/bn/bignum.rs:67 and :83 (the representation, and the flag it declines to model); src/bn/intern.rs's module documentation (the three representational gaps); docs/DECISIONS.md D338"
+      },
+      {
+        "owner_module": "src/x509/x509_set.rs",
+        "class": "owned_by_a_later_stratum",
+        "covers": [
+          "ossl_x509_init_sig_info",
+          "ossl_x509_set1_time"
+        ],
+        "note": "**Withheld rather than stubbed.** `src/x509/x509_set.rs` lands the one `x509_set.c` export the ASN.1 method objects call -- `X509_SIG_INFO_set` (`:200-207`), which `rsa_ameth.c:771` and `ecx_meth.c:586`/`:602` reach -- and is therefore a module for `crypto/x509/x509_set.c`, which makes the unit's unwired internals countable (D327's rule). These two are the ones the lexical scan sees. `ossl_x509_init_sig_info` (`:305-309`) is a one-line delegation to the file-local `static x509_sig_info_init` (`:217`); its only caller is `crypto/x509/v3_purp.c:659`, inside `X509_check_purpose`, and the `X509_SIG_INFO` it fills is read back by `X509_SIG_INFO_get` (`:186-198`). `ossl_x509_set1_time` (`:78-92`) duplicates one `ASN1_TIME` with `ASN1_STRING_dup`, frees the old one and sets a caller's `*modified` flag; the two `X509_set1_notBefore`/`_notAfter` exports (`:98`, `:106`) and three `crypto/x509/x509cset.c` setters call it. Neither has a caller in this crate, so a transcription would be a function no landed path reaches; the row records the omission rather than leaving it as a finding, and fail-closes both ways the same as its siblings.",
+        "evidence": "docs/DECISIONS.md D349; crypto/x509/x509_set.c:78-92 and :305-309 (the two internals) against :200-207 (the slice); crypto/x509/v3_purp.c:659 and crypto/x509/x509cset.c:47/54/156 (the internals' callers); src/x509/x509_set.rs's module documentation; forensics/atlas/transcription-edges.json's `crypto/x509/x509_set.c` edge"
+      },
+      {
+        "owner_module": "src/x509/t_x509.rs",
+        "class": "owned_by_a_later_stratum",
+        "covers": [
+          "ossl_serial_number_print",
+          "ossl_x509_print_ex_brief"
+        ],
+        "note": "**Withheld rather than stubbed.** `src/x509/t_x509.rs` lands the one `t_x509.c` export the `rsa_ameth.c` and `dsa_ameth.c` method objects call -- `X509_signature_dump` (`:269-290`) -- and is therefore a module for `crypto/x509/t_x509.c`, which makes the unit's unwired internals countable (D327's rule). These two are the ones the lexical scan sees. `ossl_serial_number_print` (`:519-559`) prints an `ASN1_INTEGER` serial as decimal plus hex, falling back to colon-separated hex when it does not fit an `int64`; it is called from `crypto/x509/t_x509.c:96` (inside `X509_print_ex`'s `do_print_ex`) and `crypto/x509/v3_rolespec.c:49`. `ossl_x509_print_ex_brief` (`:383-411`) is the brief-print tail, called from `crypto/x509/t_x509.c:424`/`:493` and `crypto/cmp/cmp_vfy.c:57`. Nine of the unit's ten exports are the printers, whose `do_print_ex` reads nearly every field of an `X509` and which are withheld with the object layer (Phase 11's). Neither internal has a caller in this crate, so a transcription would be a printer no landed path reaches; the row records the omission rather than leaving it as a finding, and fail-closes both ways the same as its siblings.",
+        "evidence": "docs/DECISIONS.md D349; crypto/x509/t_x509.c:519-559 and :383-411 (the two internals) against :269-290 (the slice); crypto/x509/v3_rolespec.c:49 and crypto/cmp/cmp_vfy.c:57 (the internals' other callers); src/x509/t_x509.rs's module documentation; forensics/atlas/transcription-edges.json's `crypto/x509/t_x509.c` edge"
+      },
+      {
+        "owner_module": "src/encoder_lib.rs",
+        "class": "owned_by_a_later_stratum",
+        "covers": [
+          "ossl_bio_print_ffc_params",
+          "ossl_bio_print_labeled_bignum",
+          "ossl_bio_print_labeled_buf"
+        ],
+        "note": "**Withheld rather than written dead.** `src/encoder_lib.rs` transcribes `crypto/encode_decode/encoder_lib.c`'s context chain and `encoder_process` (D361), which makes the unit's unwired internals countable (D327's rule); these three are its tail (`:706`, `:785`, `:813`) and the only functions in the unit no landed caller reaches. They print a labelled `BIGNUM` as decimal plus hex, a labelled byte buffer in `LABELED_BUF_PRINT_WIDTH`-octet lines, and an `FFC_PARAMS` in the `X9.42` layout, and their callers are **provider encoder implementations** -- the default provider's `encoder_text.c` and its siblings -- of which this crate publishes none: `forensics/atlas/provider-algorithms.json` records all **482** `OSSL_OP_ENCODER` rows as `unimplemented`, and `docs/DECISIONS.md` D355 measured the same fact from the other side. A transcription here would therefore be three functions no path can call, which the project records rather than writes; they join the landing that brings the first provider encoder. The class is `owned_by_a_later_stratum` because the unit is Phase 10's and the callers are provider-side. The row fail-closes in both directions: if any of the three is ever built the gate reports it `stale` until the row is removed, and if `src/encoder_lib.rs` stopped owning the unit the record would stop matching.",
+        "evidence": "docs/DECISIONS.md D361; crypto/encode_decode/encoder_lib.c:706-864 (the three helpers) against :417-704 (the walk that does not call them); forensics/atlas/provider-algorithms.json's 482 `unimplemented` `OSSL_OP_ENCODER` rows; src/encoder_lib.rs's module documentation; forensics/atlas/transcription-edges.json's `crypto/encode_decode/encoder_lib.c` edge"
+      },
+      {
+        "owner_module": "src/x509/x_attrib.rs",
+        "class": "owned_by_a_later_stratum",
+        "covers": [
+          "ossl_print_attribute_value"
+        ],
+        "note": "**Withheld rather than approximated, and this row is what the prerequisite gate's `unwired_function_in_the_current_stratum` finding becomes once the omission is a decision rather than an oversight.** `src/x509/x_attrib.rs` transcribes `crypto/x509/x_attrib.c`'s seven exports -- the `ASN1_SEQUENCE(X509_ATTRIBUTE)` template and its `IMPLEMENT_ASN1_FUNCTIONS`/`IMPLEMENT_ASN1_DUP_FUNCTION` group over it, plus `X509_ATTRIBUTE_create` (`:37-59`) -- which makes the unit's unwired internals countable (D327's rule). This is the one internal the unit defines, `ossl_print_attribute_value` (`:76-249`), a `switch` over every `V_ASN1_*` tag that reaches `ossl_bio_print_hex`, `ASN1_ENUMERATED_get_int64`, `d2i_X509_NAME`, `X509_NAME_print_ex`, `X509_NAME_free` and `ASN1_parse_dump`. The two `X509_NAME` names are the X.509 name layer's (`crypto/x509/x_name.c`, Phase 11's) and are unlanded, so a transcription would be a printer joined to six unwired calls; and no landed caller reaches it -- the ASN.1 v3 printer that calls it is itself withheld. The row fail-closes in both directions: if the name is ever built the gate reports it `stale` until the row is removed, and if `src/x509/x_attrib.rs` stopped owning the unit the record would stop matching.",
+        "evidence": "docs/DECISIONS.md D368; crypto/x509/x_attrib.c:76-249 (the printer) against :29-59 (the landed template and `X509_ATTRIBUTE_create`); crypto/x509/x_attrib.c:229 (`ossl_bio_print_hex`), :242 (`d2i_X509_NAME`) and :246 (`X509_NAME_print_ex`) as the unwired reaches; src/x509/x_attrib.rs's module documentation; forensics/atlas/transcription-edges.json's `crypto/x509/x_attrib.c` edge"
+      },
+      {
+        "owner_module": "src/slh_dsa/key.rs",
+        "class": "owned_by_a_later_stratum",
+        "covers": [
+          "ossl_slh_dsa_key_to_text"
+        ],
+        "note": "**Withheld rather than written, and this row is what the prerequisite gate's `unwired_function_in_the_current_stratum` finding becomes once the omission is a decision rather than an oversight.** `src/slh_dsa/key.rs` transcribes `crypto/slh_dsa/slh_dsa_key.c` whole (D398), which makes the unit's unwired internals countable (D327's rule). This is the one definition of the unit this pass does not carry: `ossl_slh_dsa_key_to_text` (`:488-526`, the `#ifndef FIPS_MODULE` tail). Its two helpers are `BIO_printf` and `ossl_bio_print_labeled_buf`, and the latter is `crypto/encode_decode/encoder_lib.c:785`'s, which `src/encoder_lib.rs` already withholds in the row above (`owned_by_a_later_stratum`, because the default provider publishes no encoder that reaches it). `ossl_slh_dsa_key_to_text`'s own only caller is `providers/implementations/encode_decode/encode_key2text.c:454`, the provider text-encoder unit, which is likewise unlanded and is Phase 8's. A transcription here would be a printer joined to a withheld helper and reached by nothing; it lands with the text encoder it serves. The row fail-closes in both directions: if the name is ever built the gate reports it `stale` until the row is removed, and if `src/slh_dsa/key.rs` stopped owning the unit the record would stop matching.",
+        "evidence": "docs/DECISIONS.md D398; crypto/slh_dsa/slh_dsa_key.c:488-526 (the printer) against :21-486 (the whole rest of the unit, all transcribed); crypto/slh_dsa/slh_dsa_key.c:511 (`BIO_printf`) and :513/:521 (`ossl_bio_print_labeled_buf`) as the unwired reaches; providers/implementations/encode_decode/encode_key2text.c:454 as the only caller; src/slh_dsa/key.rs's module documentation; this file's own `ossl_bio_print_labeled_buf` row"
+      },
+      {
+        "owner_module": "src/ec/curve.rs",
+        "class": "modelled_differently",
+        "covers": [],
+        "authority_units": [
+          "crypto/ec/ecp_nistz256.c"
+        ],
+        "note": "**The unit is not transcribed, and the crate answers a different `EC_METHOD` for its one row.** `crypto/ec/ecp_nistz256.c` defines `EC_GFp_nistz256_method` and the `EC_nistz256_pre_comp_dup`/`_free` pair; every field operation it names is `crypto/ec/ecp_nistz256-x86_64.s`, generated by perlasm from `asm/ecp_nistz256-x86_64.pl` with **no `#else` arm**, so the crate cannot supply a portable arm (D-EC-2's reason, which is why D274's rule does not reach it). `src/ec/curve.rs`'s `curve_list_method` resolves `NID_X9_62_prime256v1` to `EC_GFp_simple_method` where the authority answers `EC_GFp_nistz256_method`, and `EC_GROUP_copy`/`EC_pre_comp_free` do not transcribe the two `#ifdef ECP_NISTZ256_ASM` arms. **`covers` is empty on purpose**: the names this divergence concerns (`EC_GFp_nistz256_method`, `EC_nistz256_pre_comp_dup`/`_free`) are not in the crate's reference set, so the prerequisite gate never observed them and a `covers` entry would fail its direction D. This record names the unit so that the plan's row 8.7 sentence -- that `ec_lib.c` reaches `ecp_nistz256.c` -- is read as the authority call-graph measurement it is, and not as a crate-transcription promise. The divergence itself is recorded in full by D-EC-2.",
+        "evidence": "docs/SECURITY_DIVERGENCE_POLICY.md D-EC-2 (superseding D-EC-1); docs/PHASE-8-SUBPHASES.md row 8.7; forensics/atlas/ec-curves.json; src/ec/curve.rs"
       }
     ],
     "units": [
@@ -406,24 +326,10 @@
         "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
       },
       {
-        "unit": "crypto/evp/legacy_blake2.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 13,
-        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 2 export(s) are legacy method statics whose callbacks call `crypto/blake2/`'s own primitives (`ossl_blake2b_init`/`ossl_blake2s_init`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
-      },
-      {
         "unit": "crypto/evp/legacy_md4.c",
         "class": "deferred_to_later_stratum",
         "owner_phase": 13,
         "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 1 export(s) are legacy method statics whose callbacks call `crypto/md4/`'s own primitives (`MD4_Init`/`MD4_Update`/`MD4_Final`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
-      },
-      {
-        "unit": "crypto/evp/legacy_md5.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 13,
-        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 1 export(s) are legacy method statics whose callbacks call `crypto/md5/`'s own primitives (`MD5_Init`/`MD5_Update`/`MD5_Final`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
         "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
       },
       {
@@ -438,20 +344,6 @@
         "class": "deferred_to_later_stratum",
         "owner_phase": 13,
         "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 1 export(s) are legacy method statics whose callbacks call `crypto/mdc2/` over `crypto/des/`'s own primitives (`MDC2_Init`/`MDC2_Update` over the DES block), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
-      },
-      {
-        "unit": "crypto/evp/legacy_ripemd.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 13,
-        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 1 export(s) are legacy method statics whose callbacks call `crypto/ripemd/`'s own primitives (`RIPEMD160_Init`/`_Update`/`_Final`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
-      },
-      {
-        "unit": "crypto/evp/legacy_sha.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 13,
-        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 13 export(s) are legacy method statics whose callbacks call `crypto/sha/`'s own primitives (`SHA1_Init` through the SHA-3 and SHAKE one-shots, one table), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
         "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
       },
       {
@@ -656,31 +548,47 @@
       },
       {
         "unit": "crypto/evp/evp_pkey_type.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 8,
-        "reason": "Its single export is `EVP_PKEY_type`, and its body is `EVP_PKEY_asn1_find(&e, type)` followed by `ameth->pkey_id` (`crypto/evp/evp_pkey_type.c:63`). The alias-walking call and the `NID_undef` fallback are already written -- `src/evp/pkey_asn1.rs` holds them as the `pub(crate) evp_pkey_type` helper `EVP_PKEY_get_base_id` calls (D193) -- and the export is withheld because the answer is `standard_methods[]`, whose twelve `ossl_<alg>_asn1_meth` objects are Phase 8's.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/pkey_asn1.rs",
+        "names": [
+          "EVP_PKEY_type"
+        ],
+        "reason": "Its single export is `EVP_PKEY_type`, and it is **landed**: `src/evp/pkey_asn1.rs` carries the `#[no_mangle]` body over the eleven in-reach `standard_methods[]` rows D353 published (`EVP_PKEY_asn1_find(&e, type)` followed by `ameth->pkey_id`, exactly `crypto/evp/evp_pkey_type.c:63`). The unit is invisible to the three mechanical signals because its content is one export and it defines no authority-internal function of its own, so this record names the module and the construct instead.",
+        "evidence": "src/evp/pkey_asn1.rs (`EVP_PKEY_type`); docs/DECISIONS.md D353; docs/PHASE-8-SUBPHASES.md row 8.8"
       },
       {
         "unit": "crypto/evp/ec_support.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 8,
-        "reason": "Its single export is `OSSL_EC_curve_nid2name`, which the ownership atlas gives to Phase 8 (`ec.h`'s and the EC stratum's). Row 7.4 names the file only as one of the two the `ec_support.c`/`dh_support.c` pair stands for, and `src/evp/pkey.rs`'s module doc records that both halves wait on Phase 8's `EC_KEY`/`DH` types.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/ec/support.rs",
+        "names": [
+          "OSSL_EC_curve_nid2name",
+          "ossl_ec_curve_name2nid",
+          "ossl_ec_curve_nid2nist_int",
+          "ossl_ec_curve_nist2nid_int"
+        ],
+        "reason": "`crypto/evp/ec_support.c` is `src/ec/support.rs` whole: its one export `OSSL_EC_curve_nid2name` and its three internals `ossl_ec_curve_name2nid`, `ossl_ec_curve_nid2nist_int` and `ossl_ec_curve_nist2nid_int` are every one built. `forensics/tools/gen_ec_curves.py` checks the module's two name tables against this unit row for row and in order in both tiers, so a hand edit fails.",
+        "evidence": "src/ec/support.rs; docs/DECISIONS.md D334; docs/PHASE-8-SUBPHASES.md row 8.7"
       },
       {
         "unit": "crypto/asn1/d2i_param.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 8,
-        "reason": "Its two exports are `d2i_KeyParams` and `d2i_KeyParams_bio`, and the first refuses unless `ret->ameth->param_decode != NULL` (`crypto/asn1/d2i_param.c:31`) before it calls it. The ameth objects are the twelve `crypto/asn1/standard_methods.h` builds, which are Phase 8's, so both are reasoned deferrals in this stratum's ledger.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/asn1/d2i_param.rs",
+        "names": [
+          "d2i_KeyParams",
+          "d2i_KeyParams_bio"
+        ],
+        "reason": "`crypto/asn1/d2i_param.c` is `src/asn1/d2i_param.rs` whole -- both of its exports, `d2i_KeyParams` and `d2i_KeyParams_bio`, are built over the eleven-row `standard_methods[]` table D353 published, reading `ret->ameth->param_decode`.",
+        "evidence": "src/asn1/d2i_param.rs; docs/DECISIONS.md D354; docs/PHASE-8-SUBPHASES.md row 8.8"
       },
       {
         "unit": "crypto/asn1/d2i_pu.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 8,
-        "reason": "`d2i_PublicKey`'s three `switch` arms call `d2i_RSAPublicKey`, `d2i_DSAPublicKey` and `o2i_ECPublicKey` (`crypto/asn1/d2i_pu.c:52`, `:59`, `:71`) and its provided-EC arm calls `evp_pkey_copy_downgraded` (`:42`). All four are Phase 8's.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/asn1/d2i_pu.rs",
+        "names": [
+          "d2i_PublicKey"
+        ],
+        "reason": "`crypto/asn1/d2i_pu.c` is `src/asn1/d2i_pu.rs` whole -- its single export `d2i_PublicKey` is built, switching on `EVP_PKEY_get_base_id` into `d2i_RSAPublicKey`/`d2i_DSAPublicKey`/`o2i_ECPublicKey`.",
+        "evidence": "src/asn1/d2i_pu.rs; docs/DECISIONS.md D354; docs/PHASE-8-SUBPHASES.md row 8.8"
       },
       {
         "unit": "crypto/asn1/d2i_pr.c",
@@ -698,24 +606,40 @@
       },
       {
         "unit": "crypto/evp/p_dec.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 8,
-        "reason": "Its single export is `EVP_PKEY_decrypt_old`, which takes the low-level key with `evp_pkey_get0_RSA_int` (`crypto/evp/p_dec.c:32`) and then calls `RSA_private_decrypt` (`:36`). Both are Phase 8's.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/p_dec.rs",
+        "names": [
+          "EVP_PKEY_decrypt_old"
+        ],
+        "reason": "`crypto/evp/p_dec.c` is `src/evp/p_dec.rs` whole -- its single export `EVP_PKEY_decrypt_old` is built over `evp_pkey_get0_RSA_int` and `RSA_private_decrypt`, one unit as the authority has it.",
+        "evidence": "src/evp/p_dec.rs; docs/DECISIONS.md D353; docs/PHASE-8-SUBPHASES.md row 8.4"
       },
       {
         "unit": "crypto/evp/p_enc.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 8,
-        "reason": "The encryption twin of `p_dec.c`: `evp_pkey_get0_RSA_int` at `crypto/evp/p_enc.c:32` and `RSA_public_encrypt` at `:36`, both Phase 8's.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/p_enc.rs",
+        "names": [
+          "EVP_PKEY_encrypt_old"
+        ],
+        "reason": "`crypto/evp/p_enc.c` is `src/evp/p_enc.rs` whole -- its single export `EVP_PKEY_encrypt_old` is built over `evp_pkey_get0_RSA_int` and `RSA_public_encrypt`.",
+        "evidence": "src/evp/p_enc.rs; docs/DECISIONS.md D353; docs/PHASE-8-SUBPHASES.md row 8.4"
       },
       {
         "unit": "crypto/evp/p_legacy.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 8,
-        "reason": "Six of its exports are the `EVP_PKEY_get0_/get1_/set1_RSA` and `_EC_KEY` spellings, and each reaches `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through the file's own `evp_pkey_get0_RSA_int` (`:40`) and `evp_pkey_get0_EC_KEY_int` (`:76`). That function **constructs** the legacy `RSA`/`EC_KEY` with `evp_pkey_copy_downgraded` (`:2066`) and imports into its ameth, so the six are Phase 8's; the ledger carries the same twelve accessors as one group.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/p_legacy_assign.rs",
+        "names": [
+          "EVP_PKEY_set1_RSA",
+          "EVP_PKEY_get0_RSA",
+          "EVP_PKEY_get1_RSA",
+          "EVP_PKEY_set1_EC_KEY",
+          "EVP_PKEY_get0_EC_KEY",
+          "EVP_PKEY_get1_EC_KEY",
+          "evp_pkey_get0_RSA_int",
+          "evp_pkey_get0_EC_KEY_int"
+        ],
+        "reason": "`crypto/evp/p_legacy.c` is `src/evp/p_legacy_assign.rs`: its six legacy accessors -- the RSA triplet and the EC_KEY triplet -- and its two `crypto/evp.h`-declared internals `evp_pkey_get0_RSA_int` and `evp_pkey_get0_EC_KEY_int` are all built over the `EvpPkey` legacy block D353 landed with measured offsets. The DSA and DH triplets of the same family are `crypto/evp/p_lib.c`'s and live in `src/evp/pkey.rs`.",
+        "evidence": "src/evp/p_legacy_assign.rs; docs/DECISIONS.md D353; docs/PHASE-8-SUBPHASES.md rows 8.4-8.7"
       },
       {
         "unit": "crypto/evp/evp_cnf.c",
@@ -729,13 +653,6 @@
         "class": "deferred_to_later_stratum",
         "owner_phase": 9,
         "reason": "Its single export is `BIO_f_reliable` (`crypto/evp/bio_ok.c:127`), which answers `&methods_ok` (`:112`) -- a `BIO_METHOD` whose write path is `ok_write` (`:254`) and `sig_out`, and `sig_out` fills the record's digest half with `RAND_bytes(md_data, md_size)` (`:456`). `rand.h` is Phase 9's, and a method struct cannot be published with a callback that has no callee.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
-      },
-      {
-        "unit": "crypto/pem/pem_oth.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 13,
-        "reason": "Its single export is `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`), which is a call to `PEM_bytes_read_bio` (`:28`) and then an `i2d`/callback pair. `PEM_bytes_read_bio` is one of the eight names `EVP_md5` withholds (`crypto/pem/pem_lib.c:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s -- handed to Phase 13 by 7.3g with its primitive unit named.",
         "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
       },
       {
@@ -844,24 +761,266 @@
         "evidence": "docs/PHASE-6-SUBPHASES.md section 2 (\"Why ASYNC_* is deferred to Phase 13\"); forensics/phase3-obligations.json's ASYNC_* hand-off"
       },
       {
-        "unit": "crypto/rand/rand_lib.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 9,
-        "reason": "Also named by row 6.10 for the shared thread-local family. Its own content is the RAND state and the DRBG plumbing, which is Phase 9's; the one internal 6.10 cares about, `ossl_random_add_conf_module`, is one of the seven registrations `OPENSSL_load_builtin_modules` makes and is recorded separately as a symbol deferral.",
-        "evidence": "docs/PHASE-6-SUBPHASES.md row 6.10; forensics/phase-state.json phase 9"
-      },
-      {
-        "unit": "crypto/rsa/rsa_ossl.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 8,
-        "reason": "Named by row 6.10 only as another sharer of `CRYPTO_THREAD_get_local_ex`. The file is RSA's provider-side implementation and belongs to the algorithm stratum.",
-        "evidence": "docs/PHASE-6-SUBPHASES.md row 6.10; forensics/phase-state.json phase 8"
-      },
-      {
         "unit": "pkey_derive.c",
         "class": "does_not_exist_in_this_authority",
         "reason": "Row 7.3f names it in order to say it is **not** where `EVP_PKEY_derive_SKEY` lives: *\"`EVP_PKEY_derive_SKEY` is `pkey_derive.c`'s and is 7.4's, with its module named\"*, and the module it names is `crypto/evp/exchange.c`, which defines the function at `:554` and is a promised unit this stratum reached. The file is therefore a reconnaissance finding rather than a promise -- the same shape as `crypto/rcu.c`, which row 6.10 names in order to say RCU lives in `crypto/threads_pthread.c` -- so the tool's \"names a file the authority does not have\" check is right about the fact and wrong about the intent. The plan sentence is kept rather than reworded, because a guessed filename recorded beside its correction is what the next reader needs, and the record fails the moment the file appears.",
         "evidence": "docs/PHASE-7-SUBPHASES.md row 7.3f; forensics/atlas/export-defining-units.json (crypto/evp/exchange.c defines `EVP_PKEY_derive_SKEY`); docs/DECISIONS.md D196"
+      },
+      {
+        "unit": "providers/implementations/rands/crngt.c",
+        "class": "does_not_exist_in_this_authority",
+        "reason": "D287's Phase-9 scope names this file as 9.5's unit and it does not exist in the admitted tree. The continuous random number generator test is `providers/implementations/rands/fips_crng_test.c` (`RCT_test`/`APT_test`, dispatch symbol `ossl_crng_test_functions`), and `implementations.h` keeps only a dead `extern` for the old name. The correction is the reason this row exists rather than the row being avoided: a reader who follows D287 to that path must find the measurement that says it is not there, and the record fails if the file ever appears. `docs/PHASE-9-SUBPHASES.md` section 4.1 is where the plan states it and `docs/DECISIONS.md` D294 is where the measurement is recorded.",
+        "evidence": "forensics/authorities/src/openssl-3.6.4/providers/implementations/rands/fips_crng_test.c; docs/PHASE-9-SUBPHASES.md section 4.1; docs/DECISIONS.md D287, D294"
+      },
+      {
+        "unit": "crypto/thread/api.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/context/thread_data.rs",
+        "names": [
+          "OSSL_get_max_threads",
+          "OSSL_set_max_threads",
+          "OSSL_get_thread_support_flags"
+        ],
+        "reason": "The file's whole content is three exports -- the two per-context thread-count accessors and the compile-time support-flags constant -- and all three are built: the first two in `src/context/thread_data.rs` (6.6e) and the third in `src/runtime/thread.rs` (Phase 3). `internal-symbols.json` records no internal function for the file, so no `crate_module` is credited with it in `transcription-edges.json`; that map credits each module with its **dominant** unit, and D397 moved `src/runtime/thread.rs`'s dominant unit from this file to `crypto/threads_pthread.c` when the thread object's arch layer landed there, which is what made the unit read as unreached. The unit was reached before D397 and is reached after it; what changed is which mechanical signal saw it, and this record is the one that can say so.",
+        "evidence": "docs/PHASE-6-SUBPHASES.md row 6.6e; forensics/phase6-obligations.json (the three exports); forensics/atlas/transcription-edges.json; src/context/thread_data.rs; src/runtime/thread.rs"
+      },
+      {
+        "unit": "crypto/chacha/chacha_enc.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "names": [
+          "ChaCha20_ctr32",
+          "chacha20_core"
+        ],
+        "reason": "The unit is **not compiled in this profile** -- `crypto/chacha/build.info`'s `$CHACHAASM` selects `chacha-x86_64.s` alone on x86-64, so there is no `libcrypto-lib-chacha_enc.o` -- but the crate transcribes its portable shape as `src/chacha.rs`'s `ChaCha20_ctr32` and `chacha20_core`, which is what the plan's row 8.3 calls the specification of the perlasm-only function. No authority-internal name reaches it by the three mechanical signals (its own object does not exist here), so the record names the module and the constructs.",
+        "evidence": "src/chacha.rs (its module header records the build.info selection); docs/DECISIONS.md D263; docs/PHASE-8-SUBPHASES.md row 8.3"
+      },
+      {
+        "unit": "crypto/dsa/dsa_err.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "names": [
+          "ERR_load_DSA_strings"
+        ],
+        "reason": "The file is a generated error table (`util/mkerr.pl`): a `DSA_str_reasons[]` and a loader, which the crate models as one generated loader in `src/runtime/err_loaders.rs`. Its public `ERR_load_DSA_strings` is the built name above -- the same disposition `crypto/evp/evp_err.c` and `crypto/dso/dso_err.c` already have rows for. The provider-facing reason codes the plan's row 8.6 called out are carried by the same generated table.",
+        "evidence": "src/runtime/err_loaders.rs (`ERR_load_DSA_strings`); the sibling rows crypto/evp/evp_err.c and crypto/dso/dso_err.c; docs/DECISIONS.md D98"
+      },
+      {
+        "unit": "crypto/ec/ecdsa_sign.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "names": [
+          "ECDSA_do_sign",
+          "ECDSA_do_sign_ex",
+          "ECDSA_sign",
+          "ECDSA_sign_ex",
+          "ECDSA_sign_setup"
+        ],
+        "reason": "The signature pair `crypto/ec/ecdsa_sign.c`/`ecdsa_vrf.c` is `src/ec/ecdsa.rs` (D340), and this unit's five exports -- `ECDSA_do_sign`/`_do_sign_ex`, `ECDSA_sign`/`_sign_ex` and `ECDSA_sign_setup` -- are all built there as the two-branch dispatch over an `EC_KEY_METHOD` column. The unit defines no authority-internal function, which is why the three signals miss it.",
+        "evidence": "src/ec/ecdsa.rs; docs/DECISIONS.md D340; docs/PHASE-8-SUBPHASES.md row 8.7"
+      },
+      {
+        "unit": "crypto/ec/ecdsa_vrf.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "names": [
+          "ECDSA_do_verify",
+          "ECDSA_verify"
+        ],
+        "reason": "The verification half of the signature pair is `src/ec/ecdsa.rs` (D340): both of this unit's exports, `ECDSA_do_verify` and `ECDSA_verify`, are built there over the same `EC_KEY_METHOD` column.",
+        "evidence": "src/ec/ecdsa.rs; docs/DECISIONS.md D340; docs/PHASE-8-SUBPHASES.md row 8.7"
+      },
+      {
+        "unit": "providers/implementations/ciphers/cipher_aes.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "names": [
+          "aes_dupctx",
+          "aes_freectx"
+        ],
+        "reason": "`providers/implementations/ciphers/cipher_aes.c` defines no authority-internal function of the internal-symbols universe and no export -- its content is the provider dispatch table and the row's own constructors, which `src/provider/cipher.rs` transcribes. D280's allocator attribution names this file as the translation unit the authority's own compiler recorded for the row, and the names above are the crate's built functions for it.",
+        "evidence": "src/provider/cipher.rs; docs/DECISIONS.md D280; docs/PHASE-8-SUBPHASES.md row 8.3"
+      },
+      {
+        "unit": "providers/implementations/ciphers/cipher_aes_siv.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "names": [
+          "aes_siv_freectx",
+          "aes_siv_get_ctx_params",
+          "aes_siv_gettable_ctx_params",
+          "aes_siv_newctx",
+          "aes_siv_set_ctx_params",
+          "aes_siv_settable_ctx_params",
+          "siv_cipher",
+          "siv_dinit",
+          "siv_dupctx",
+          "siv_einit",
+          "siv_init",
+          "siv_stream_final"
+        ],
+        "reason": "`providers/implementations/ciphers/cipher_aes_siv.c` defines no authority-internal function of the internal-symbols universe and no export -- its content is the provider dispatch table and the row's own constructors, which `src/provider/cipher.rs` transcribes. D280's allocator attribution names this file as the translation unit the authority's own compiler recorded for the row, and the names above are the crate's built functions for it.",
+        "evidence": "src/provider/cipher.rs; docs/DECISIONS.md D280; docs/PHASE-8-SUBPHASES.md row 8.3"
+      },
+      {
+        "unit": "providers/implementations/ciphers/cipher_aria.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "names": [
+          "aria_dupctx",
+          "aria_freectx"
+        ],
+        "reason": "`providers/implementations/ciphers/cipher_aria.c` defines no authority-internal function of the internal-symbols universe and no export -- its content is the provider dispatch table and the row's own constructors, which `src/provider/cipher.rs` transcribes. D280's allocator attribution names this file as the translation unit the authority's own compiler recorded for the row, and the names above are the crate's built functions for it.",
+        "evidence": "src/provider/cipher.rs; docs/DECISIONS.md D280; docs/PHASE-8-SUBPHASES.md row 8.3"
+      },
+      {
+        "unit": "providers/implementations/ciphers/cipher_camellia.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "names": [
+          "camellia_dupctx",
+          "camellia_freectx"
+        ],
+        "reason": "`providers/implementations/ciphers/cipher_camellia.c` defines no authority-internal function of the internal-symbols universe and no export -- its content is the provider dispatch table and the row's own constructors, which `src/provider/cipher.rs` transcribes. D280's allocator attribution names this file as the translation unit the authority's own compiler recorded for the row, and the names above are the crate's built functions for it.",
+        "evidence": "src/provider/cipher.rs; docs/DECISIONS.md D280; docs/PHASE-8-SUBPHASES.md row 8.3"
+      },
+      {
+        "unit": "providers/implementations/ciphers/cipher_chacha20.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "names": [
+          "chacha20_dupctx",
+          "chacha20_freectx",
+          "chacha20_get_ctx_params",
+          "chacha20_get_params",
+          "chacha20_gettable_ctx_params",
+          "chacha20_newctx",
+          "chacha20_set_ctx_params",
+          "chacha20_settable_ctx_params",
+          "ossl_chacha20_dinit",
+          "ossl_chacha20_einit",
+          "ossl_chacha20_initctx"
+        ],
+        "reason": "`providers/implementations/ciphers/cipher_chacha20.c` defines no authority-internal function of the internal-symbols universe and no export -- its content is the provider dispatch table and the row's own constructors, which `src/provider/cipher.rs` transcribes. D280's allocator attribution names this file as the translation unit the authority's own compiler recorded for the row, and the names above are the crate's built functions for it.",
+        "evidence": "src/provider/cipher.rs; docs/DECISIONS.md D280; docs/PHASE-8-SUBPHASES.md row 8.3"
+      },
+      {
+        "unit": "providers/implementations/ciphers/cipher_chacha20_hw.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "names": [
+          "chacha20_cipher",
+          "chacha20_initiv",
+          "chacha20_initkey",
+          "ossl_prov_cipher_hw_chacha20"
+        ],
+        "reason": "`providers/implementations/ciphers/cipher_chacha20_hw.c` defines no authority-internal function of the internal-symbols universe and no export -- its content is the provider dispatch table and the row's own constructors, which `src/provider/cipher.rs` transcribes. D280's allocator attribution names this file as the translation unit the authority's own compiler recorded for the row, and the names above are the crate's built functions for it.",
+        "evidence": "src/provider/cipher.rs; docs/DECISIONS.md D280; docs/PHASE-8-SUBPHASES.md row 8.3"
+      },
+      {
+        "unit": "providers/implementations/ciphers/cipher_cts.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "names": [
+          "cts128_cs1_decrypt",
+          "cts128_cs1_encrypt",
+          "cts128_cs2_decrypt",
+          "cts128_cs2_encrypt",
+          "cts128_cs3_decrypt",
+          "cts128_cs3_encrypt",
+          "ossl_cipher_cbc_cts_block_final",
+          "ossl_cipher_cbc_cts_block_update"
+        ],
+        "reason": "`providers/implementations/ciphers/cipher_cts.c` defines no authority-internal function of the internal-symbols universe and no export -- its content is the provider dispatch table and the row's own constructors, which `src/provider/cipher.rs` transcribes. D280's allocator attribution names this file as the translation unit the authority's own compiler recorded for the row, and the names above are the crate's built functions for it.",
+        "evidence": "src/provider/cipher.rs; docs/DECISIONS.md D280; docs/PHASE-8-SUBPHASES.md row 8.3"
+      },
+      {
+        "unit": "providers/implementations/ciphers/cipher_sm4.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "names": [
+          "sm4_dupctx",
+          "sm4_freectx"
+        ],
+        "reason": "`providers/implementations/ciphers/cipher_sm4.c` defines no authority-internal function of the internal-symbols universe and no export -- its content is the provider dispatch table and the row's own constructors, which `src/provider/cipher.rs` transcribes. D280's allocator attribution names this file as the translation unit the authority's own compiler recorded for the row, and the names above are the crate's built functions for it.",
+        "evidence": "src/provider/cipher.rs; docs/DECISIONS.md D280; docs/PHASE-8-SUBPHASES.md row 8.3"
+      },
+      {
+        "unit": "providers/implementations/ciphers/cipher_tdes_common.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "names": [
+          "ossl_tdes_get_ctx_params",
+          "ossl_tdes_get_params",
+          "ossl_tdes_set_ctx_params"
+        ],
+        "reason": "`providers/implementations/ciphers/cipher_tdes_common.c` defines no authority-internal function of the internal-symbols universe and no export -- its content is the provider dispatch table and the row's own constructors, which `src/provider/cipher.rs` transcribes. D280's allocator attribution names this file as the translation unit the authority's own compiler recorded for the row, and the names above are the crate's built functions for it.",
+        "evidence": "src/provider/cipher.rs; docs/DECISIONS.md D280; docs/PHASE-8-SUBPHASES.md row 8.3"
+      },
+      {
+        "unit": "providers/implementations/ciphers/ciphercommon_block.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "names": [
+          "ossl_cipher_fillblock",
+          "ossl_cipher_padblock",
+          "ossl_cipher_trailingdata",
+          "ossl_cipher_unpadblock"
+        ],
+        "reason": "`providers/implementations/ciphers/ciphercommon_block.c` defines no authority-internal function of the internal-symbols universe and no export -- its content is the provider dispatch table and the row's own constructors, which `src/provider/cipher.rs` transcribes. D280's allocator attribution names this file as the translation unit the authority's own compiler recorded for the row, and the names above are the crate's built functions for it.",
+        "evidence": "src/provider/cipher.rs; docs/DECISIONS.md D280; docs/PHASE-8-SUBPHASES.md row 8.3"
+      },
+      {
+        "unit": "providers/implementations/ciphers/ciphercommon_hw.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "names": [
+          "ossl_cipher_hw_chunked_cbc",
+          "ossl_cipher_hw_chunked_cfb128",
+          "ossl_cipher_hw_chunked_cfb8",
+          "ossl_cipher_hw_chunked_ofb128",
+          "ossl_cipher_hw_generic_cbc",
+          "ossl_cipher_hw_generic_cfb1",
+          "ossl_cipher_hw_generic_cfb128",
+          "ossl_cipher_hw_generic_cfb8",
+          "ossl_cipher_hw_generic_ctr",
+          "ossl_cipher_hw_generic_ecb",
+          "ossl_cipher_hw_generic_ofb128"
+        ],
+        "reason": "`providers/implementations/ciphers/ciphercommon_hw.c` defines no authority-internal function of the internal-symbols universe and no export -- its content is the provider dispatch table and the row's own constructors, which `src/provider/cipher.rs` transcribes. D280's allocator attribution names this file as the translation unit the authority's own compiler recorded for the row, and the names above are the crate's built functions for it.",
+        "evidence": "src/provider/cipher.rs; docs/DECISIONS.md D280; docs/PHASE-8-SUBPHASES.md row 8.3"
+      },
+      {
+        "unit": "crypto/dsa/dsa_ctrl.c",
+        "class": "does_not_exist_in_this_authority",
+        "reason": "The plan's row 8.6 says it in order to say so -- *\"There is **no `crypto/dsa/dsa_ctrl.c`**\"* -- and the committed manifest agrees: the seven `EVP_PKEY_CTX_set_dsa_paramgen_*` controls are `crypto/evp/dsa_ctrl.c`'s, transcribed as `src/dsa/ctrl.rs` (D343). The sentence is kept rather than reworded, and the tool verifies the absence against the manifest itself, so this record fails the day such a file appears -- the same shape `crypto/rcu.c` has.",
+        "evidence": "docs/PHASE-8-SUBPHASES.md row 8.6; docs/DECISIONS.md D343; forensics/authorities/SOURCE_MANIFEST.3.6.4.json"
+      },
+      {
+        "unit": "providers/implementations/ciphers/cipher_chacha20_poly1305_hw.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "names": [
+          "chacha20_poly1305_aead_cipher",
+          "chacha20_poly1305_initiv",
+          "chacha20_poly1305_initkey",
+          "chacha20_poly1305_tls_cipher",
+          "chacha_poly1305_tls_init",
+          "chacha_poly1305_tls_iv_set_fixed",
+          "ossl_prov_cipher_hw_chacha20_poly1305"
+        ],
+        "reason": "`providers/implementations/ciphers/cipher_chacha20_poly1305_hw.c` defines no authority-internal function of the internal-symbols universe and no export; its content is the `chacha20_poly1305_*` hw vtable and its two cipher arms (the generic one and the TLS the crate's `tlsaad` path selects), which `src/provider/cipher.rs` transcribes. Those names are all built there -- the record names them because the three mechanical signals cannot see a provider unit.",
+        "evidence": "src/provider/cipher.rs; docs/DECISIONS.md D279; docs/PHASE-8-SUBPHASES.md row 8.3"
+      },
+      {
+        "unit": "providers/common/capabilities.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/capabilities.rs",
+        "names": [
+          "ossl_prov_get_capabilities"
+        ],
+        "reason": "Its one external name is `ossl_prov_get_capabilities`, defined non-`static` in the authority (`providers/common/capabilities.c:334`) and declared in `providers/common/include/prov/providercommon.h:21`, because `defltprov.c`'s dispatch table binds it across translation units. It is transcribed whole in `src/provider/capabilities.rs` (D411) -- the function, its two static walkers and its four static tables, in the authority's order -- but none of the three mechanical signals reaches the unit. It compiles into the default provider as `providers/common/libdefault-lib-capabilities.c` rather than into `crypto/`, so it is not one of the units `internal-symbols.json` and `transcription-edges.json` are built over, and the crate module that transcribes it is dominated by no other unit because it transcribes exactly one. It is also deliberately not a provider *algorithm* row: it appears in no `provider-algorithms.json` row and in neither the Phase 8 export ledger nor the Phase 9 one, which is why nothing objected while it was absent for the stratum's whole life (D411). `docs/PHASE-8-SUBPHASES.md` row 8.2 named it absent from the bootstrap until D411 landed it.",
+        "evidence": "docs/PHASE-8-SUBPHASES.md row 8.2; src/provider/capabilities.rs; src/provider/digest.rs (the three DEFLT_DISPATCH arms); courts/phase8/rt_provider_cap_probe.c (RT-PROVIDER-CAP, 722 observations); forensics/authorities/src/openssl-3.6.4/providers/common/capabilities.c:334"
       }
     ]
   }

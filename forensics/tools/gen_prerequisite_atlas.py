@@ -402,6 +402,15 @@ def scan_typedefs(text: str) -> set[str]:
         if end < 0:
             continue
         decl = guarded[m.end() : end]
+        # Only what follows a top-level struct/union/enum body is the typedef name. Its
+        # members, function-pointer fields included, are not types. `provider_util.h:140-143`'s
+        # `typedef struct ag_capable_st { ... int (*capable)(void); } OSSL_ALGORITHM_CAPABLE;`
+        # is the case that put the member `capable` into the type universe, from which the
+        # prerequisite gate then read it as a missing prerequisite for the crate's
+        # `AlgorithmCapability`.
+        body = decl.rfind("}")
+        if body >= 0:
+            decl = decl[body + 1 :]
         fp = re.search(r"\(\s*\*\s*([A-Za-z_][A-Za-z0-9_]*)", decl)
         if fp:
             out.add(fp.group(1))

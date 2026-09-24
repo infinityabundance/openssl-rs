@@ -1,0 +1,609 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "complete": false,
+    "counts": {
+      "atlas_owned": 25,
+      "deferred_to_later_phase": 0,
+      "implemented": 66,
+      "open_in_this_stratum": 3,
+      "owned": 69,
+      "received_by_handoff": 44
+    },
+    "deferred": [],
+    "deferred_by_phase": {},
+    "handoffs_discharged": {
+      "4": [
+        "BIO_f_nbio_test"
+      ],
+      "5": [
+        "BN_BLINDING_convert",
+        "BN_BLINDING_convert_ex",
+        "BN_BLINDING_create_param",
+        "BN_BLINDING_update",
+        "BN_GF2m_mod_solve_quad",
+        "BN_GF2m_mod_solve_quad_arr",
+        "BN_GF2m_mod_sqrt",
+        "BN_GF2m_mod_sqrt_arr",
+        "BN_X931_derive_prime_ex",
+        "BN_X931_generate_Xpq",
+        "BN_X931_generate_prime_ex",
+        "BN_bntest_rand",
+        "BN_check_prime",
+        "BN_generate_dsa_nonce",
+        "BN_generate_prime",
+        "BN_generate_prime_ex",
+        "BN_generate_prime_ex2",
+        "BN_is_prime",
+        "BN_is_prime_ex",
+        "BN_is_prime_fasttest",
+        "BN_is_prime_fasttest_ex",
+        "BN_priv_rand",
+        "BN_priv_rand_ex",
+        "BN_priv_rand_range",
+        "BN_priv_rand_range_ex",
+        "BN_pseudo_rand",
+        "BN_pseudo_rand_range",
+        "BN_rand",
+        "BN_rand_ex",
+        "BN_rand_range",
+        "BN_rand_range_ex"
+      ],
+      "7": [
+        "BIO_f_reliable",
+        "EVP_CIPHER_CTX_rand_key",
+        "EVP_SealInit",
+        "OSSL_HPKE_get_grease_value",
+        "PEM_ASN1_read",
+        "PEM_ASN1_read_bio",
+        "PEM_ASN1_write",
+        "PEM_ASN1_write_bio",
+        "PEM_ASN1_write_bio_ctx",
+        "PEM_bytes_read_bio",
+        "PEM_bytes_read_bio_secmem",
+        "PEM_do_header"
+      ]
+    },
+    "handoffs_discharged_with_reasons": {
+      "4": [
+        {
+          "declaring_header": "bio.h",
+          "implemented_by_owner": false,
+          "module": "src/runtime/bio/",
+          "owning_phase": 9,
+          "reason": "its read and write call RAND_priv_bytes; RAND is Phase 9",
+          "symbol": "BIO_f_nbio_test"
+        }
+      ],
+      "5": [
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "re-creates the blinding factor through BN_BLINDING_create_param, which draws it from RAND; RAND is Phase 9",
+          "symbol": "BN_BLINDING_convert"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "re-creates the blinding factor through BN_BLINDING_create_param, which draws it from RAND; RAND is Phase 9",
+          "symbol": "BN_BLINDING_convert_ex"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "re-creates the blinding factor through BN_BLINDING_create_param, which draws it from RAND; RAND is Phase 9",
+          "symbol": "BN_BLINDING_create_param"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "re-creates the blinding factor through BN_BLINDING_create_param, which draws it from RAND; RAND is Phase 9",
+          "symbol": "BN_BLINDING_update"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "searches with a random field element; RAND is Phase 9",
+          "symbol": "BN_GF2m_mod_solve_quad"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "searches with a random field element; RAND is Phase 9",
+          "symbol": "BN_GF2m_mod_solve_quad_arr"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "searches with a random field element; RAND is Phase 9",
+          "symbol": "BN_GF2m_mod_sqrt"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "searches with a random field element; RAND is Phase 9",
+          "symbol": "BN_GF2m_mod_sqrt_arr"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws candidates with BN_priv_rand; RAND is Phase 9",
+          "symbol": "BN_X931_derive_prime_ex"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws candidates with BN_priv_rand; RAND is Phase 9",
+          "symbol": "BN_X931_generate_Xpq"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws candidates with BN_priv_rand; RAND is Phase 9",
+          "symbol": "BN_X931_generate_prime_ex"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+          "symbol": "BN_bntest_rand"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "picks Miller-Rabin bases with BN_priv_rand_range; RAND is Phase 9",
+          "symbol": "BN_check_prime"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "derives a nonce from the digest and entropy; RAND is Phase 9",
+          "symbol": "BN_generate_dsa_nonce"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws prime candidates with BN_priv_rand; RAND is Phase 9",
+          "symbol": "BN_generate_prime"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws prime candidates with BN_priv_rand; RAND is Phase 9",
+          "symbol": "BN_generate_prime_ex"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws prime candidates with BN_priv_rand; RAND is Phase 9",
+          "symbol": "BN_generate_prime_ex2"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "picks Miller-Rabin bases with BN_priv_rand_range; RAND is Phase 9",
+          "symbol": "BN_is_prime"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "picks Miller-Rabin bases with BN_priv_rand_range; RAND is Phase 9",
+          "symbol": "BN_is_prime_ex"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "picks Miller-Rabin bases with BN_priv_rand_range; RAND is Phase 9",
+          "symbol": "BN_is_prime_fasttest"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "picks Miller-Rabin bases with BN_priv_rand_range; RAND is Phase 9",
+          "symbol": "BN_is_prime_fasttest_ex"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+          "symbol": "BN_priv_rand"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+          "symbol": "BN_priv_rand_ex"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+          "symbol": "BN_priv_rand_range"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+          "symbol": "BN_priv_rand_range_ex"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+          "symbol": "BN_pseudo_rand"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+          "symbol": "BN_pseudo_rand_range"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+          "symbol": "BN_rand"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+          "symbol": "BN_rand_ex"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+          "symbol": "BN_rand_range"
+        },
+        {
+          "declaring_header": "bn.h",
+          "owning_phase": 9,
+          "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+          "symbol": "BN_rand_range_ex"
+        }
+      ],
+      "7": [
+        {
+          "binding_phase": 9,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 9,
+          "reason": "`crypto/evp/bio_ok.c:456`'s `sig_out` fills the record's digest half with `RAND_bytes(md_data, md_size)`, which landed in D313. The whole `bio_ok.c` unit is this stratum's -- `forensics/prerequisites.json`'s `units` block records it as `deferred_to_a_later_stratum` to Phase 9 -- so the export is owed with the unit rather than by the stratum that declares `BIO_f_reliable` in `evp.h`.",
+          "symbol": "BIO_f_reliable"
+        },
+        {
+          "binding_phase": 9,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 9,
+          "reason": "`crypto/evp/evp_enc.c:1751`'s fall-through for every cipher without `EVP_CIPH_RAND_KEY` is `RAND_priv_bytes_ex(libctx, key, kl, 0)` (`:1764`), which landed in D313. What remains is this stratum's own transcription of the accessor.",
+          "symbol": "EVP_CIPHER_CTX_rand_key"
+        },
+        {
+          "binding_phase": 9,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 9,
+          "reason": "`crypto/evp/p_seal.c:42` takes the session key from `EVP_CIPHER_CTX_rand_key` and `:46` fills the IV with `RAND_priv_bytes_ex(libctx, iv, len, 0)`. The `RAND_*` front landed in D313, so the blocker this row named is now a landed callee; `EVP_CIPHER_CTX_rand_key` is the second name of this group and is owed with it.",
+          "symbol": "EVP_SealInit"
+        },
+        {
+          "binding_phase": 9,
+          "blocked_by": [],
+          "declaring_header": "hpke.h",
+          "owning_phase": 9,
+          "reason": "`crypto/hpke/hpke.c:1433` fills the GREASE ciphertext with `RAND_bytes_ex(libctx, ct, ctlen, 0)`, and its random-suite arm reaches `ossl_rand_uniform_uint32` (`crypto/hpke/hpke_util.c`); both are `crypto/rand/`'s and landed in D313. The remaining dependency is this stratum's own HPKE-utility transcription.",
+          "symbol": "OSSL_HPKE_get_grease_value"
+        },
+        {
+          "binding_phase": 9,
+          "blocked_by": [],
+          "declaring_header": "pem.h",
+          "owning_phase": 9,
+          "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer. **D350 corrects what this reason left out:** `PEM_do_header` (`crypto/pem/pem_lib.c:467`) and the write trio (`:372`) also call `PEM_def_callback` (`:36-69`), whose own chain is `EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`, Phase 7) -> the `UI_*` objects (`crypto/ui/ui_lib.c`, Phase 13), so the eight were blocked on Phase 13 and not on this stratum's transcription alone. D350 lands that closure (`src/ui/`, `src/evp/p_legacy.rs`, `src/pem/pem_lib.rs`), so all eight are in Phase 9's `implemented` list and the row stands as the hand-off **edge** rather than being retired: retiring it would move eight built exports into this sealed stratum's `implemented` list on the strength of work it did not do, and drop them from Phase 9's `received_by_handoff`.",
+          "symbol": "PEM_ASN1_read"
+        },
+        {
+          "binding_phase": 9,
+          "blocked_by": [],
+          "declaring_header": "pem.h",
+          "owning_phase": 9,
+          "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer. **D350 corrects what this reason left out:** `PEM_do_header` (`crypto/pem/pem_lib.c:467`) and the write trio (`:372`) also call `PEM_def_callback` (`:36-69`), whose own chain is `EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`, Phase 7) -> the `UI_*` objects (`crypto/ui/ui_lib.c`, Phase 13), so the eight were blocked on Phase 13 and not on this stratum's transcription alone. D350 lands that closure (`src/ui/`, `src/evp/p_legacy.rs`, `src/pem/pem_lib.rs`), so all eight are in Phase 9's `implemented` list and the row stands as the hand-off **edge** rather than being retired: retiring it would move eight built exports into this sealed stratum's `implemented` list on the strength of work it did not do, and drop them from Phase 9's `received_by_handoff`.",
+          "symbol": "PEM_ASN1_read_bio"
+        },
+        {
+          "binding_phase": 9,
+          "blocked_by": [],
+          "declaring_header": "pem.h",
+          "owning_phase": 9,
+          "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer. **D350 corrects what this reason left out:** `PEM_do_header` (`crypto/pem/pem_lib.c:467`) and the write trio (`:372`) also call `PEM_def_callback` (`:36-69`), whose own chain is `EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`, Phase 7) -> the `UI_*` objects (`crypto/ui/ui_lib.c`, Phase 13), so the eight were blocked on Phase 13 and not on this stratum's transcription alone. D350 lands that closure (`src/ui/`, `src/evp/p_legacy.rs`, `src/pem/pem_lib.rs`), so all eight are in Phase 9's `implemented` list and the row stands as the hand-off **edge** rather than being retired: retiring it would move eight built exports into this sealed stratum's `implemented` list on the strength of work it did not do, and drop them from Phase 9's `received_by_handoff`.",
+          "symbol": "PEM_ASN1_write"
+        },
+        {
+          "binding_phase": 9,
+          "blocked_by": [],
+          "declaring_header": "pem.h",
+          "owning_phase": 9,
+          "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer. **D350 corrects what this reason left out:** `PEM_do_header` (`crypto/pem/pem_lib.c:467`) and the write trio (`:372`) also call `PEM_def_callback` (`:36-69`), whose own chain is `EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`, Phase 7) -> the `UI_*` objects (`crypto/ui/ui_lib.c`, Phase 13), so the eight were blocked on Phase 13 and not on this stratum's transcription alone. D350 lands that closure (`src/ui/`, `src/evp/p_legacy.rs`, `src/pem/pem_lib.rs`), so all eight are in Phase 9's `implemented` list and the row stands as the hand-off **edge** rather than being retired: retiring it would move eight built exports into this sealed stratum's `implemented` list on the strength of work it did not do, and drop them from Phase 9's `received_by_handoff`.",
+          "symbol": "PEM_ASN1_write_bio"
+        },
+        {
+          "binding_phase": 9,
+          "blocked_by": [],
+          "declaring_header": "pem.h",
+          "owning_phase": 9,
+          "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer. **D350 corrects what this reason left out:** `PEM_do_header` (`crypto/pem/pem_lib.c:467`) and the write trio (`:372`) also call `PEM_def_callback` (`:36-69`), whose own chain is `EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`, Phase 7) -> the `UI_*` objects (`crypto/ui/ui_lib.c`, Phase 13), so the eight were blocked on Phase 13 and not on this stratum's transcription alone. D350 lands that closure (`src/ui/`, `src/evp/p_legacy.rs`, `src/pem/pem_lib.rs`), so all eight are in Phase 9's `implemented` list and the row stands as the hand-off **edge** rather than being retired: retiring it would move eight built exports into this sealed stratum's `implemented` list on the strength of work it did not do, and drop them from Phase 9's `received_by_handoff`.",
+          "symbol": "PEM_ASN1_write_bio_ctx"
+        },
+        {
+          "binding_phase": 9,
+          "blocked_by": [],
+          "declaring_header": "pem.h",
+          "owning_phase": 9,
+          "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer. **D350 corrects what this reason left out:** `PEM_do_header` (`crypto/pem/pem_lib.c:467`) and the write trio (`:372`) also call `PEM_def_callback` (`:36-69`), whose own chain is `EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`, Phase 7) -> the `UI_*` objects (`crypto/ui/ui_lib.c`, Phase 13), so the eight were blocked on Phase 13 and not on this stratum's transcription alone. D350 lands that closure (`src/ui/`, `src/evp/p_legacy.rs`, `src/pem/pem_lib.rs`), so all eight are in Phase 9's `implemented` list and the row stands as the hand-off **edge** rather than being retired: retiring it would move eight built exports into this sealed stratum's `implemented` list on the strength of work it did not do, and drop them from Phase 9's `received_by_handoff`.",
+          "symbol": "PEM_bytes_read_bio"
+        },
+        {
+          "binding_phase": 9,
+          "blocked_by": [],
+          "declaring_header": "pem.h",
+          "owning_phase": 9,
+          "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer. **D350 corrects what this reason left out:** `PEM_do_header` (`crypto/pem/pem_lib.c:467`) and the write trio (`:372`) also call `PEM_def_callback` (`:36-69`), whose own chain is `EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`, Phase 7) -> the `UI_*` objects (`crypto/ui/ui_lib.c`, Phase 13), so the eight were blocked on Phase 13 and not on this stratum's transcription alone. D350 lands that closure (`src/ui/`, `src/evp/p_legacy.rs`, `src/pem/pem_lib.rs`), so all eight are in Phase 9's `implemented` list and the row stands as the hand-off **edge** rather than being retired: retiring it would move eight built exports into this sealed stratum's `implemented` list on the strength of work it did not do, and drop them from Phase 9's `received_by_handoff`.",
+          "symbol": "PEM_bytes_read_bio_secmem"
+        },
+        {
+          "binding_phase": 9,
+          "blocked_by": [],
+          "declaring_header": "pem.h",
+          "owning_phase": 9,
+          "reason": "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer. **D350 corrects what this reason left out:** `PEM_do_header` (`crypto/pem/pem_lib.c:467`) and the write trio (`:372`) also call `PEM_def_callback` (`:36-69`), whose own chain is `EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`, Phase 7) -> the `UI_*` objects (`crypto/ui/ui_lib.c`, Phase 13), so the eight were blocked on Phase 13 and not on this stratum's transcription alone. D350 lands that closure (`src/ui/`, `src/evp/p_legacy.rs`, `src/pem/pem_lib.rs`), so all eight are in Phase 9's `implemented` list and the row stands as the hand-off **edge** rather than being retired: retiring it would move eight built exports into this sealed stratum's `implemented` list on the strength of work it did not do, and drop them from Phase 9's `received_by_handoff`.",
+          "symbol": "PEM_do_header"
+        }
+      ]
+    },
+    "implemented": [
+      "BIO_f_reliable",
+      "BN_BLINDING_convert",
+      "BN_BLINDING_convert_ex",
+      "BN_BLINDING_create_param",
+      "BN_BLINDING_update",
+      "BN_GF2m_mod_solve_quad",
+      "BN_GF2m_mod_solve_quad_arr",
+      "BN_GF2m_mod_sqrt",
+      "BN_GF2m_mod_sqrt_arr",
+      "BN_X931_derive_prime_ex",
+      "BN_X931_generate_Xpq",
+      "BN_X931_generate_prime_ex",
+      "BN_bntest_rand",
+      "BN_check_prime",
+      "BN_generate_prime",
+      "BN_generate_prime_ex",
+      "BN_generate_prime_ex2",
+      "BN_is_prime",
+      "BN_is_prime_ex",
+      "BN_is_prime_fasttest",
+      "BN_is_prime_fasttest_ex",
+      "BN_priv_rand",
+      "BN_priv_rand_ex",
+      "BN_priv_rand_range",
+      "BN_priv_rand_range_ex",
+      "BN_pseudo_rand",
+      "BN_pseudo_rand_range",
+      "BN_rand",
+      "BN_rand_ex",
+      "BN_rand_range",
+      "BN_rand_range_ex",
+      "EVP_CIPHER_CTX_rand_key",
+      "EVP_SealInit",
+      "PEM_ASN1_read",
+      "PEM_ASN1_read_bio",
+      "PEM_ASN1_write",
+      "PEM_ASN1_write_bio",
+      "PEM_ASN1_write_bio_ctx",
+      "PEM_bytes_read_bio",
+      "PEM_bytes_read_bio_secmem",
+      "PEM_do_header",
+      "RAND_OpenSSL",
+      "RAND_add",
+      "RAND_bytes",
+      "RAND_bytes_ex",
+      "RAND_file_name",
+      "RAND_get0_primary",
+      "RAND_get0_private",
+      "RAND_get0_public",
+      "RAND_get_rand_method",
+      "RAND_keep_random_devices_open",
+      "RAND_load_file",
+      "RAND_poll",
+      "RAND_priv_bytes",
+      "RAND_priv_bytes_ex",
+      "RAND_pseudo_bytes",
+      "RAND_seed",
+      "RAND_set0_private",
+      "RAND_set0_public",
+      "RAND_set1_random_provider",
+      "RAND_set_DRBG_type",
+      "RAND_set_rand_engine",
+      "RAND_set_rand_method",
+      "RAND_set_seed_source_type",
+      "RAND_status",
+      "RAND_write_file"
+    ],
+    "module_prefixes": [
+      {
+        "module": "src/bn/rand.rs",
+        "prefixes": [
+          "BN_bntest_rand",
+          "BN_generate_dsa_nonce",
+          "BN_priv_rand",
+          "BN_pseudo_rand",
+          "BN_rand"
+        ]
+      },
+      {
+        "module": "src/bn/blinding.rs",
+        "prefixes": [
+          "BN_BLINDING_"
+        ]
+      },
+      {
+        "module": "src/bn/primes.rs",
+        "prefixes": [
+          "BN_check_prime",
+          "BN_generate_prime",
+          "BN_is_prime",
+          "BN_X931_"
+        ]
+      },
+      {
+        "module": "src/bn/gf2m.rs",
+        "prefixes": [
+          "BN_GF2m_mod_solve_quad",
+          "BN_GF2m_mod_sqrt"
+        ]
+      },
+      {
+        "module": "src/rand/mod.rs",
+        "prefixes": [
+          "RAND_"
+        ]
+      },
+      {
+        "module": "src/des/mod.rs",
+        "prefixes": [
+          "DES_"
+        ]
+      },
+      {
+        "module": "src/rsa/mod.rs",
+        "prefixes": [
+          "RSA_"
+        ]
+      },
+      {
+        "module": "src/dh/mod.rs",
+        "prefixes": [
+          "DH_"
+        ]
+      },
+      {
+        "module": "src/dsa/mod.rs",
+        "prefixes": [
+          "DSA_"
+        ]
+      },
+      {
+        "module": "src/ec/mod.rs",
+        "prefixes": [
+          "EC"
+        ]
+      },
+      {
+        "module": "src/pem/pem_lib.rs",
+        "prefixes": [
+          "PEM_"
+        ]
+      },
+      {
+        "module": "src/hpke/mod.rs",
+        "prefixes": [
+          "OSSL_HPKE_"
+        ]
+      },
+      {
+        "module": "src/evp/bio_enc.rs",
+        "prefixes": [
+          "BIO_"
+        ]
+      },
+      {
+        "module": "src/evp/",
+        "prefixes": [
+          "EVP_"
+        ]
+      }
+    ],
+    "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum, and it starts at the whole working set, which is the honest starting state. Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-9-SUBPHASES.md section 4 decides when the stratum may be called complete.",
+    "open": [
+      {
+        "declaring_header": "bio.h",
+        "module": "src/evp/bio_enc.rs",
+        "received_from_phase": 4,
+        "symbol": "BIO_f_nbio_test"
+      },
+      {
+        "declaring_header": "bn.h",
+        "module": "src/bn/rand.rs",
+        "received_from_phase": 5,
+        "symbol": "BN_generate_dsa_nonce"
+      },
+      {
+        "declaring_header": "hpke.h",
+        "module": "src/hpke/mod.rs",
+        "received_from_phase": 7,
+        "symbol": "OSSL_HPKE_get_grease_value"
+      }
+    ],
+    "owned_by_header": {
+      "bio.h": 1,
+      "bn.h": 31,
+      "evp.h": 3,
+      "hpke.h": 1,
+      "pem.h": 8,
+      "rand.h": 25
+    },
+    "owned_by_module": {
+      "src/bn/blinding.rs": 4,
+      "src/bn/gf2m.rs": 4,
+      "src/bn/primes.rs": 11,
+      "src/bn/rand.rs": 12,
+      "src/evp/": 2,
+      "src/evp/bio_enc.rs": 2,
+      "src/hpke/mod.rs": 1,
+      "src/pem/pem_lib.rs": 8,
+      "src/rand/mod.rs": 25
+    },
+    "rule": "the stratum's working set is the projection of forensics/atlas/symbol-ownership.json for phase 9, plus every symbol an earlier stratum's ledger records as handed to it: a symbol belongs to the stratum that owns the header declaring it, and a discharged hand-off belongs to the stratum that built it"
+  },
+  "generator": "forensics/tools/phase9_obligations.py",
+  "inputs": [
+    {
+      "name": "authority-symbols",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+      "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+    },
+    {
+      "name": "authority-functions",
+      "path": "forensics/atlas/openssl-3.6.4-production/functions.json",
+      "sha256": "0add7610e574dc030773b0f76a6cc80215d73cfbca411392bd6b64f3f8de80d0"
+    },
+    {
+      "name": "symbol-ownership",
+      "path": "forensics/atlas/symbol-ownership.json",
+      "sha256": "d42d2ba4f459b729139149f7343cb36357959272a38fecce8f20e6e4aa29a137"
+    },
+    {
+      "name": "implemented-surface",
+      "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
+      "sha256": "92ee13e7deb57de7c790ee9a88776a3405b400e841b586421dbfed27c108b8b5"
+    },
+    {
+      "name": "phase4-obligations",
+      "path": "forensics/phase4-obligations.json",
+      "sha256": "3fdef722750cf6b92694531f317a56313206c855276f786b3bafca76bda968ec"
+    },
+    {
+      "name": "phase5-obligations",
+      "path": "forensics/phase5-obligations.json",
+      "sha256": "e5fba1a288288c00f4200a53812a478e0c1d6dd2cd345ad7a763587064f13971"
+    },
+    {
+      "name": "phase7-obligations",
+      "path": "forensics/phase7-obligations.json",
+      "sha256": "ad30393779ff9d4c69fd45f07c71d4e15de0cdb47d27e50fafd9af13da72e9a9"
+    }
+  ],
+  "kind": "phase9-obligations",
+  "schema": "openssl-rs/atlas/phase9-obligations/v1"
+}

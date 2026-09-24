@@ -199,35 +199,35 @@ const LINE_FREE_MD: c_int = 867;
 // ---------------------------------------------------------------------------------------------
 
 /// `OSSL_FUNC_DIGEST_NEWCTX`.
-const OSSL_FUNC_DIGEST_NEWCTX: c_int = 1;
+pub(crate) const OSSL_FUNC_DIGEST_NEWCTX: c_int = 1;
 /// `OSSL_FUNC_DIGEST_INIT`.
-const OSSL_FUNC_DIGEST_INIT: c_int = 2;
+pub(crate) const OSSL_FUNC_DIGEST_INIT: c_int = 2;
 /// `OSSL_FUNC_DIGEST_UPDATE`.
-const OSSL_FUNC_DIGEST_UPDATE: c_int = 3;
+pub(crate) const OSSL_FUNC_DIGEST_UPDATE: c_int = 3;
 /// `OSSL_FUNC_DIGEST_FINAL`.
-const OSSL_FUNC_DIGEST_FINAL: c_int = 4;
+pub(crate) const OSSL_FUNC_DIGEST_FINAL: c_int = 4;
 /// `OSSL_FUNC_DIGEST_DIGEST`.
-const OSSL_FUNC_DIGEST_DIGEST: c_int = 5;
+pub(crate) const OSSL_FUNC_DIGEST_DIGEST: c_int = 5;
 /// `OSSL_FUNC_DIGEST_FREECTX`.
-const OSSL_FUNC_DIGEST_FREECTX: c_int = 6;
+pub(crate) const OSSL_FUNC_DIGEST_FREECTX: c_int = 6;
 /// `OSSL_FUNC_DIGEST_DUPCTX`.
-const OSSL_FUNC_DIGEST_DUPCTX: c_int = 7;
+pub(crate) const OSSL_FUNC_DIGEST_DUPCTX: c_int = 7;
 /// `OSSL_FUNC_DIGEST_GET_PARAMS`.
-const OSSL_FUNC_DIGEST_GET_PARAMS: c_int = 8;
+pub(crate) const OSSL_FUNC_DIGEST_GET_PARAMS: c_int = 8;
 /// `OSSL_FUNC_DIGEST_SET_CTX_PARAMS`.
-const OSSL_FUNC_DIGEST_SET_CTX_PARAMS: c_int = 9;
+pub(crate) const OSSL_FUNC_DIGEST_SET_CTX_PARAMS: c_int = 9;
 /// `OSSL_FUNC_DIGEST_GET_CTX_PARAMS`.
-const OSSL_FUNC_DIGEST_GET_CTX_PARAMS: c_int = 10;
+pub(crate) const OSSL_FUNC_DIGEST_GET_CTX_PARAMS: c_int = 10;
 /// `OSSL_FUNC_DIGEST_GETTABLE_PARAMS`.
-const OSSL_FUNC_DIGEST_GETTABLE_PARAMS: c_int = 11;
+pub(crate) const OSSL_FUNC_DIGEST_GETTABLE_PARAMS: c_int = 11;
 /// `OSSL_FUNC_DIGEST_SETTABLE_CTX_PARAMS`.
-const OSSL_FUNC_DIGEST_SETTABLE_CTX_PARAMS: c_int = 12;
+pub(crate) const OSSL_FUNC_DIGEST_SETTABLE_CTX_PARAMS: c_int = 12;
 /// `OSSL_FUNC_DIGEST_GETTABLE_CTX_PARAMS`.
-const OSSL_FUNC_DIGEST_GETTABLE_CTX_PARAMS: c_int = 13;
+pub(crate) const OSSL_FUNC_DIGEST_GETTABLE_CTX_PARAMS: c_int = 13;
 /// `OSSL_FUNC_DIGEST_SQUEEZE`.
-const OSSL_FUNC_DIGEST_SQUEEZE: c_int = 14;
+pub(crate) const OSSL_FUNC_DIGEST_SQUEEZE: c_int = 14;
 /// `OSSL_FUNC_DIGEST_COPYCTX`.
-const OSSL_FUNC_DIGEST_COPYCTX: c_int = 15;
+pub(crate) const OSSL_FUNC_DIGEST_COPYCTX: c_int = 15;
 
 /// `OSSL_FUNC_digest_newctx_fn` — `void *(*)(void *provctx)`.
 pub(crate) type DigestNewCtxFn = unsafe extern "C" fn(*mut c_void) -> *mut c_void;

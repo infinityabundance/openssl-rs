@@ -1,0 +1,40 @@
+rand: openssl_get_fork_id lands, and the divergence row that covered it goes stale (D304)
+
+The DRBG's fork check, and the first of its prerequisites that is not itself the DRBG.
+
+crypto/threads_pthread.c:1238-1241 is `int openssl_get_fork_id(void) { return getpid(); }`,
+so this is one function in src/runtime/thread.rs plus a test that asserts it against the
+platform rather than against a recorded value: `drbg.c` records the value at every
+(re)seed and compares it before generating, so a transcription that returned a constant
+would satisfy every caller in a single process and defeat the check in exactly the case
+it exists for -- a fork(2) child that must reseed rather than repeat its parent's output.
+
+getpid moved to src/runtime/bio/sys.rs, where both callers can reach it: this file's
+openssl_get_fork_id and rand_unix.c's nonce. src/rand/sys.rs keeps the safe wrapper and
+imports the declaration, so there is one extern for the one <unistd.h> prototype. That is
+the second time this pattern has been needed (D302 did it for open) and the reason is the
+same: a platform declaration belongs to the layer that owns the platform, not to whichever
+caller arrived first.
+
+Suite 648 -> 649.
+
+The gate caught a record that had become false, which is what it is for.
+forensics/prerequisites.json's divergence row for src/runtime/thread.rs had class
+modelled_differently covering BOTH openssl_init_fork_handlers and openssl_get_fork_id, with
+the note "a caller that needs a fork id asks the C library for one". The moment this commit
+defined it, that covers list was wrong, and prerequisite_gate.py reported
+divergence_record_does_not_match rather than letting the row keep covering a name the crate
+now builds. openssl_init_fork_handlers stays -- it really is `return 1` on this profile and
+really does need no function -- and the note records that the other name left the list and
+why. This is the fail-closed shape D294's EVP_md5 retirement and D296's KDF correction each
+exercised from a different direction.
+
+Also staged, not integrated: court/phase9/drbg_renamed.rs.txt is the DRBG module with its
+162 error-site references renamed from the staging file's `PROV_DRBG_C_<line>` spelling to
+the generator's actual `PROV_DRBG_<line>`. It compiles no further than that today -- its
+generated-decoder key tables still need the sixteen per-unit line-numbered raise sites
+mapped against the generated drbg_*.c in the build tree, and its three remaining helpers
+(ossl_prov_get_entropy, ossl_prov_macctx_load, and the OSSL_LIB_CTX DRBG slots) are not
+landed. Parking it with the rename applied rather than re-deriving it later.
+
+PIPELINE OK, 85 courts, 31469 observations, 649 unit tests.

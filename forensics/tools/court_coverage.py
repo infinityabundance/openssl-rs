@@ -11,8 +11,9 @@ court that exists* passes; nothing joins the two. At seven hundred and six expor
 that is an unproven assertion in a project whose whole discipline is that a claim is
 a fact a reader can recompute.
 
-This tool performs the missing join. For every **completed** stratum it partitions
-every export that stratum owns into exactly three disjoint sets:
+This tool performs the missing join. For every stratum that has **begun** -- every ledger on
+disk, whether it is still `in-progress` or already `complete` -- it partitions every export
+that stratum owns into exactly three disjoint sets:
 
   1. **directly courted** -- the name is an undefined dynamic symbol of a staged
      candidate probe that ran and produced a transcript. The court names are the
@@ -24,8 +25,28 @@ every export that stratum owns into exactly three disjoint sets:
   3. **explicitly non-observable** -- a reason, and the court that observes the
      symbol's downstream effect. "No observable" is only admissible when it is true.
 
-and it **fails, naming them**, if any implemented export of a completed stratum is in
-none of the three.
+and it **fails, naming them**, if any implemented export of a begun stratum is in none of the
+three.
+
+Why the invariant covers the in-progress stratum too
+----------------------------------------------------
+It used to read "for every **completed** stratum", which meant an in-progress stratum's
+exports could be landed one commit at a time with no court edge at all, and became subject
+only on the day the stratum sealed. That is exactly backwards for the stratum being written:
+the moment to require evidence for an export is the commit that lands it, not the seal. It
+already bit once -- the five `sha.h` one-shot exports landed in 8.1 with no probe arm and no
+edge, and a hand audit found them rather than this generator. So the universe is now every
+ledger on disk, and the per-stratum record keeps `completed` so the difference between the
+two is still visible.
+
+An export whose *owning* stratum has not begun is outside that universe by its own wording, and
+the manifest-versus-ledger assertion has to say so rather than fail on it. That happens when a
+commit lands a later stratum's unit early: D348's `crypto/asn1/x_algor.c` is the first, its
+fourteen `X509_ALGOR_*` exports are Phase 11's by their `x509.h` declaration, and Phase 11 has no
+ledger. Such a symbol is claimed by no ledger yet and is recorded under `not_yet_begun` in the
+output -- visible rather than silently skipped -- and it leaves that list the day its stratum's
+ledger exists, because it will already be in the ledger's `implemented` list. Everything else, an
+implemented export whose owner *has* begun, is still held to exactly the ledger union.
 
 How set 1 is derived, and precisely what it claims
 --------------------------------------------------
@@ -97,7 +118,8 @@ CLAIM = (
     "an explicit, checked edge -- the named entry is itself directly courted by a probe "
     "of the named court. `non_observable` is a symbol whose effect no probe can isolate, "
     "with the reason and the court that observes its downstream effect. A symbol in none "
-    "of the three fails this generator by name."
+    "of the three fails this generator by name -- for every stratum that has begun, "
+    "in-progress or complete, so an export cannot be landed without an edge."
 )
 
 
@@ -150,10 +172,33 @@ def main() -> int:
     # exactly one ledger, and the ledgers together are exactly the manifest. If a
     # stratum lands implementations but no ledger, the manifest will carry a symbol the
     # union does not, and this fails rather than silently shrinking the atlas.
+    #
+    # **One class is out of scope by the tool's own definition, and it is named rather
+    # than silently skipped.** The doc's universe is "every implemented export of a
+    # stratum that has **begun**", and a symbol whose atlas `owner_phase` has no ledger
+    # belongs to a stratum that has not begun. That happens when a crate commit lands a
+    # later stratum's unit early: D348's `crypto/asn1/x_algor.c` is the first, its
+    # fourteen `X509_ALGOR_*` exports are Phase 11's by their `x509.h` declaration, and
+    # Phase 11 has no ledger. Such a symbol is claimed by no ledger yet and is recorded
+    # under `not_yet_begun` below; when its stratum's ledger lands it will already be in
+    # that ledger's `implemented` list, so the assertion covers it again and the list
+    # empties. Everything else -- an implemented export whose owner *has* begun -- is
+    # still held to exactly the union.
     surface = read_json(IMPL_SURFACE)
     implemented_manifest = set(
         surface["body"]["libraries"]["libcrypto"]["implemented_symbols"]
     )
+    # The ownership atlas is one half of the universe assertion. It assigns every
+    # *authority* export to exactly one owner phase; the ledgers' implemented sets are
+    # drawn from it, and a ledger symbol the atlas has never heard of would mean this
+    # tool is partitioning a name no authority defines. (A ledger may implement a symbol
+    # the atlas assigns another phase -- the crate places `BIO_asn1_*` in a Phase-5
+    # module though `bio.h` owns it, and `ownership_audit.py` is the arbiter of whether
+    # that placement is a problem, reporting `problems: 0` over the whole tree. It is
+    # not this tool's business to re-litigate that here.)
+    ownership = read_json(OWNERSHIP)
+    owner_by_symbol = {r["symbol"]: r["owner_phase"] for r in ownership["body"]["records"]}
+
     owner: dict[str, int] = {}
     impl: dict[int, set[str]] = {}
     for phase, (path, doc) in sorted(ledgers.items()):
@@ -168,7 +213,45 @@ def main() -> int:
                 )
             owner[sym] = phase
     union = set(owner)
-    missing = sorted(implemented_manifest - union)
+
+    # A stratum is "begun" iff it has a ledger on disk; the phases that have one are
+    # derived below and used here for the scope, so the two readings cannot drift.
+    begun = set(ledgers)
+
+    # **The stratum that ultimately owes a symbol, which is not always its atlas owner.**
+    # A ledger's `deferred` rows are hand-offs: the atlas owner may have passed the symbol
+    # onward, and the receiving stratum's ledger carries it. A symbol the crate implements while
+    # it sits in a *transit* ledger's `deferred` list is claimed by no `implemented` list at all,
+    # and the ledger that will claim it is the receiving stratum's -- so the scope test is
+    # against the **last** recorded target, not the atlas owner. D369 measures the class: the
+    # four `PEM_read[_bio]_PrivateKey` and their `_ex` twins are Phase 7's by `pem.h`, Phase 7
+    # handed them to Phase 13, and Phase 13 has no ledger, so Phase 8 landing them left them
+    # claimable by nobody. This is the same scope question D348 settled for a symbol whose
+    # *owner* has no ledger, one hop further along; the invariant it protects -- everything a
+    # begun stratum's ledger claims is exactly the ledger union -- is untouched, because a
+    # symbol in a transit ledger's `deferred` list is in no `implemented` list either way.
+    onward: dict[str, int] = {}
+    for phase, (_path, doc) in sorted(ledgers.items()):
+        for row in doc["body"].get("deferred") or []:
+            if isinstance(row, dict) and "symbol" in row and "owning_phase" in row:
+                sym = row["symbol"]
+                onward[sym] = max(onward.get(sym, 0), int(row["owning_phase"]))
+
+    def owing(s: str) -> int | None:
+        """The stratum the last recorded hand-off names, or the atlas owner if none does."""
+        if s in onward:
+            return onward[s]
+        return owner_by_symbol.get(s)
+
+    out_of_scope = {
+        s: owner_by_symbol[s]
+        for s in implemented_manifest - union
+        if s in owner_by_symbol and owing(s) not in begun
+    }
+    missing = sorted(
+        s for s in implemented_manifest - union
+        if s not in out_of_scope
+    )
     extra = sorted(union - implemented_manifest)
     if missing or extra:
         raise CoverageError(
@@ -178,16 +261,6 @@ def main() -> int:
             f"{extra[:20]}{' ...' if len(extra) > 20 else ''}"
         )
 
-    # The ownership atlas is the other half of the universe assertion. It assigns every
-    # *authority* export to exactly one owner phase; the ledgers' implemented sets are
-    # drawn from it, and a ledger symbol the atlas has never heard of would mean this
-    # tool is partitioning a name no authority defines. (A ledger may implement a symbol
-    # the atlas assigns another phase -- the crate places `BIO_asn1_*` in a Phase-5
-    # module though `bio.h` owns it, and `ownership_audit.py` is the arbiter of whether
-    # that placement is a problem, reporting `problems: 0` over the whole tree. It is
-    # not this tool's business to re-litigate that here.)
-    ownership = read_json(OWNERSHIP)
-    owner_by_symbol = {r["symbol"]: r["owner_phase"] for r in ownership["body"]["records"]}
     unknown = sorted(s for s in union if s not in owner_by_symbol)
     if unknown:
         raise CoverageError(
@@ -199,12 +272,18 @@ def main() -> int:
     completed = sorted(
         phase for phase, (_p, doc) in ledgers.items() if doc["body"].get("complete")
     )
+    # The atlas universe is every stratum that has begun, not every stratum that has
+    # sealed: a ledger's existence is the claim that its exports are being implemented,
+    # and `complete` is the separate claim that the stratum has closed. See the module
+    # doc; the SHA one-shots are the precedent this closes.
+    active = sorted(ledgers)
+    in_progress = sorted(set(active) - set(completed))
 
     # ---- set 1, from the staged candidate ELF dynamic tables ----
     courts_for: dict[str, set[str]] = {}
     court_index: dict[str, dict] = {}
     per_stratum_probe_count: dict[int, int] = {}
-    for phase in completed:
+    for phase in active:
         binaries, rows = court_binaries(phase)
         court_index.update(rows)
         n = 0
@@ -242,7 +321,7 @@ def main() -> int:
     if unknown_ref:
         raise CoverageError(
             f"[court-coverage] fatal: reference_probes names {unknown_ref}, which is not "
-            f"a court in any completed stratum's COURTS.json"
+            f"a court in any begun stratum's COURTS.json"
         )
 
     # ---- the partition, and the join that fails closed ----
@@ -257,10 +336,10 @@ def main() -> int:
         if sym not in owner:
             problems.append(f"indirect row names {sym}, which no stratum implements")
             continue
-        if owner[sym] not in completed:
+        if owner[sym] not in active:
             problems.append(
-                f"indirect row names {sym}, owned by phase {owner[sym]}, which is not "
-                f"complete"
+                f"indirect row names {sym}, owned by phase {owner[sym]}, which has not "
+                f"begun"
             )
             continue
         entry = r.get("entry")
@@ -285,10 +364,10 @@ def main() -> int:
         if sym not in owner:
             problems.append(f"non-observable row names {sym}, which no stratum implements")
             continue
-        if owner[sym] not in completed:
+        if owner[sym] not in active:
             problems.append(
-                f"non-observable row names {sym}, owned by phase {owner[sym]}, which is "
-                f"not complete"
+                f"non-observable row names {sym}, owned by phase {owner[sym]}, which has "
+                f"not begun"
             )
             continue
         if not r.get("reason") or not r.get("court") or not r.get("authority"):
@@ -301,7 +380,7 @@ def main() -> int:
                 f"court in this atlas"
             )
 
-    for phase in completed:
+    for phase in active:
         direct, ind, non = [], [], []
         for sym in sorted(impl[phase]):
             if sym in courts_for:
@@ -339,7 +418,7 @@ def main() -> int:
             totals[k] += counts[k]
         strata.append({
             "phase": phase,
-            "completed": True,
+            "completed": phase in completed,
             "staged_candidate_probes": per_stratum_probe_count.get(phase, 0),
             "counts": counts,
             "directly_courted": direct,
@@ -355,7 +434,7 @@ def main() -> int:
     if unmatched:
         raise CoverageError(
             f"[court-coverage] fatal: {len(unmatched)} implemented export(s) of a "
-            "completed stratum are in none of directly-courted, indirectly-courted or "
+            "stratum that has begun is in none of directly-courted, indirectly-courted or "
             "non-observable; add a probe arm that makes each observable, an explicit "
             "indirect edge, or a truthful non-observable row:\n  "
             + "\n  ".join(unmatched)
@@ -366,7 +445,7 @@ def main() -> int:
         InputRef(name="symbol-ownership", path=OWNERSHIP),
         InputRef(name="coverage-rows", path=ROWS),
     ]
-    for phase in completed:
+    for phase in active:
         inputs.append(InputRef(name=f"phase{phase}-obligations",
                                path=REPO_ROOT / f"forensics/phase{phase}-obligations.json"))
         inputs.append(InputRef(name=f"phase{phase}-courts",
@@ -376,12 +455,27 @@ def main() -> int:
         "authority": surface["authority"],
         "claim": CLAIM,
         "definition": (
-            "a completed stratum is one whose obligation ledger records `complete`; "
-            "every export that ledger implements is partitioned below"
+            "a stratum that has begun is one with an obligation ledger on disk; `complete` "
+            "records whether it has sealed. Every export a begun stratum implements is "
+            "partitioned below, whether the stratum is in-progress or complete"
         ),
+        "completed": completed,
+        "in_progress": in_progress,
         "strata": strata,
         "totals": totals,
         "unmatched": 0,
+        # Implemented exports whose atlas-owning stratum has no ledger yet. They are
+        # outside this tool's "begun stratum" universe by definition, are recorded here
+        # so the exclusion is visible rather than silent, and leave this list when their
+        # stratum's ledger lands. D348's `X509_ALGOR_*` are the first. **D369 widened the
+        # scope's reading of "owing stratum" to follow the recorded hand-offs**, so a symbol
+        # the atlas owner passed to a stratum with no ledger (the four
+        # `PEM_read[_bio]_PrivateKey` spellings and their `_ex` twins, Phase 7 -> 13) is
+        # recorded here too rather than reported as "in the manifest but in no ledger".
+        "not_yet_begun": [
+            {"symbol": s, "owner_phase": p, "owing_phase": owing(s)}
+            for s, p in sorted(out_of_scope.items())
+        ],
     }
     doc = envelope(kind="court-coverage", generator="forensics/tools/court_coverage.py",
                    inputs=inputs, body=body, authority=surface["authority"])

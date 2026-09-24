@@ -31,17 +31,32 @@
 
 use core::ffi::c_int;
 
-use crate::bn::bignum::{as_mut, as_ref, new_owned, parts, store, BN_free, BigNum};
-use crate::bn::ctx::BnCtx;
+use crate::bn::arith::BN_ucmp;
+use crate::bn::bignum::{
+    as_mut, as_ref, new_owned, parts, store, BN_copy, BN_free, BN_is_zero, BN_set_bit, BN_zero_ex,
+    BigNum,
+};
+use crate::bn::ctx::{BN_CTX_end, BN_CTX_get, BN_CTX_start, BnCtx};
 use crate::bn::limbs::{self, Limb};
+use crate::bn::rand::{BN_priv_rand_ex, BN_RAND_BOTTOM_ANY, BN_RAND_TOP_ONE};
 use crate::ffi::guard_ffi;
-use crate::runtime::err::err_sites::{BN_GF2M_389, BN_GF2M_472, BN_GF2M_532, BN_GF2M_915};
+use crate::runtime::err::err_sites::{
+    BN_GF2M_1065, BN_GF2M_1075, BN_GF2M_1111, BN_GF2M_389, BN_GF2M_472, BN_GF2M_532, BN_GF2M_915,
+    BN_GF2M_977,
+};
 use crate::runtime::err::raise_site;
 
 /// The authority's `OSSL_NELEM(arr)` bound for the fixed-size wrappers: `arr[6]` in
 /// `BN_GF2m_mod` is the smallest of them, and the others derive their bound from
 /// `BN_num_bits(p) + 1`.
 const FIXED_ARR: usize = 6;
+
+/// `MAX_ITERATIONS` — `crypto/bn/bn_gf2m.c:24`. The ceiling on the even-degree
+/// `BN_GF2m_mod_solve_quad_arr` retry loop before it raises `BN_R_TOO_MANY_ITERATIONS`.
+/// The loop redraws while the accumulated `w` is zero; for an irreducible modulus the
+/// trace functional is non-zero and a draw clears it about half the time, so the ceiling
+/// is reached only when the modulus is reducible enough that `w` vanishes identically.
+const MAX_ITERATIONS: c_int = 50;
 
 /// `OPENSSL_ECC_MAX_FIELD_BITS`, which `BN_GF2m_poly2arr` refuses to exceed.
 const MAX_FIELD_BITS: c_int = 661;
@@ -729,4 +744,559 @@ pub unsafe extern "C" fn BN_GF2m_mod_div_arr(
         unsafe { BN_free(field) };
         out
     })
+}
+
+/// `int BN_GF2m_mod_sqrt_arr(BIGNUM *r, const BIGNUM *a, const int p[], BN_CTX *ctx)`
+///
+/// The square root in `GF(2)[x]/(p)` is `a^(2^(m - 1))`, the exponentiation IEEE P1363's
+/// A.4.1 names. The Frobenius map `x |-> x^2` is an automorphism of degree `m`, so its
+/// inverse is the `m - 1`-fold iterate and every element has exactly one square root.
+/// A degree-zero modulus is the authority's `reduction mod 1` arm and answers zero
+/// without touching `ctx`.
+///
+/// # Safety
+///
+/// `r` must be null or a live, uniquely-owned `BIGNUM`; `a` must be null or live; `p`
+/// must be a `0`-terminated exponent array whose first entry is the degree; `ctx` must be
+/// null or a live, uniquely-owned `BN_CTX`.
+#[no_mangle]
+pub unsafe extern "C" fn BN_GF2m_mod_sqrt_arr(
+    r: *mut BigNum,
+    a: *const BigNum,
+    p: *const c_int,
+    ctx: *mut BnCtx,
+) -> c_int {
+    guard_ffi(0, || {
+        if p.is_null() {
+            return 0;
+        }
+        // SAFETY: the caller guarantees a `0`-terminated array, so this scan stops inside it.
+        let arr = unsafe { exponent_slice(p) };
+        let m = degree(&arr);
+        if m == 0 {
+            // Reduction mod 1 answers zero.
+            // SAFETY: `r` is null-or-live per this function's `# Safety` section.
+            return c_int::from(store_keeping_sign(unsafe { as_mut(r) }, Vec::new()));
+        }
+        // SAFETY: `ctx` is null-or-live per this function's `# Safety` section.
+        unsafe { BN_CTX_start(ctx) };
+        let mut ret = 0;
+        'body: {
+            // SAFETY: `ctx` is null-or-live per this function's `# Safety` section.
+            let u = unsafe { BN_CTX_get(ctx) };
+            if u.is_null() {
+                break 'body;
+            }
+            // `u = 2^(p[0] - 1)`, the exponent `2^(m - 1)`.
+            // SAFETY: `u` is live.
+            if unsafe { BN_set_bit(u, m - 1) } == 0 {
+                break 'body;
+            }
+            // SAFETY: every pointer is as this function's `# Safety` section says.
+            ret = unsafe { BN_GF2m_mod_exp_arr(r, a, u, p, ctx) };
+        }
+        // SAFETY: `ctx` is null-or-live.
+        unsafe { BN_CTX_end(ctx) };
+        ret
+    })
+}
+
+/// `int BN_GF2m_mod_sqrt(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx)`
+///
+/// The `BN_GF2m_poly2arr` conversion, with the authority's `max = BN_num_bits(p) + 1`
+/// bound, then `BN_GF2m_mod_sqrt_arr`. A modulus whose constant term is missing is not
+/// odd, so `poly2arr` answers `0` and this raises `BN_R_INVALID_LENGTH`.
+///
+/// # Safety
+///
+/// `r` must be null or a live, uniquely-owned `BIGNUM`; `a` and `p` must each be null or
+/// live; `ctx` must be null or a live, uniquely-owned `BN_CTX`.
+#[no_mangle]
+pub unsafe extern "C" fn BN_GF2m_mod_sqrt(
+    r: *mut BigNum,
+    a: *const BigNum,
+    p: *const BigNum,
+    ctx: *mut BnCtx,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `p` is null or live per this function's `# Safety` section.
+        let arr = match unsafe { to_array(p, 0) } {
+            Ok(arr) => arr,
+            Err(()) => {
+                // SAFETY: the site is a compile-time constant.
+                unsafe { raise_site(&BN_GF2M_977) };
+                return 0;
+            }
+        };
+        // SAFETY: every pointer is as this function's `# Safety` section says.
+        unsafe { BN_GF2m_mod_sqrt_arr(r, a, arr.as_ptr(), ctx) }
+    })
+}
+
+/// `int BN_GF2m_mod_solve_quad_arr(BIGNUM *r, const BIGNUM *a_, const int p[], BN_CTX *ctx)`
+///
+/// Answers `z` with `z^2 + z = a (mod p)`, or `0` when no root exists. For odd `m` the
+/// root is the half-trace `a + a^4 + ... + a^(2^(m - 1))`, computed directly; for even `m`
+/// the authority draws `rho` and accumulates until `w` is non-zero (IEEE P1363's A.4.6),
+/// retrying at most [`MAX_ITERATIONS`] times. In both arms the candidate is checked with
+/// `z^2 + z == a` and `BN_R_NO_SOLUTION` is raised when the check fails.
+///
+/// # Safety
+///
+/// `r` must be null or a live, uniquely-owned `BIGNUM`; `a_` must be null or live; `p`
+/// must be a `0`-terminated exponent array whose first entry is the degree; `ctx` must be
+/// null or a live, uniquely-owned `BN_CTX` (and live when `m` is even, which draws).
+#[no_mangle]
+pub unsafe extern "C" fn BN_GF2m_mod_solve_quad_arr(
+    r: *mut BigNum,
+    a_: *const BigNum,
+    p: *const c_int,
+    ctx: *mut BnCtx,
+) -> c_int {
+    guard_ffi(0, || {
+        if p.is_null() {
+            return 0;
+        }
+        // SAFETY: the caller guarantees a `0`-terminated array, so this scan stops inside it.
+        let arr = unsafe { exponent_slice(p) };
+        let m = degree(&arr);
+        if m == 0 {
+            // Reduction mod 1 answers zero.
+            // SAFETY: `r` is null-or-live per this function's `# Safety` section.
+            return c_int::from(store_keeping_sign(unsafe { as_mut(r) }, Vec::new()));
+        }
+        // SAFETY: `ctx` is null-or-live per this function's `# Safety` section.
+        unsafe { BN_CTX_start(ctx) };
+        let mut ret = 0;
+        'body: {
+            // SAFETY: `ctx` is null-or-live per this function's `# Safety` section.
+            let a = unsafe { BN_CTX_get(ctx) };
+            // SAFETY: `ctx` is null-or-live per this function's `# Safety` section.
+            let z = unsafe { BN_CTX_get(ctx) };
+            // SAFETY: `ctx` is null-or-live per this function's `# Safety` section.
+            let w = unsafe { BN_CTX_get(ctx) };
+            // The authority checks only `w`, because `BN_CTX_get` fails from the first
+            // request on: an exhausted context hands back NULL for all three.
+            if w.is_null() {
+                break 'body;
+            }
+            // SAFETY: every pointer is as this function's `# Safety` section says.
+            if unsafe { BN_GF2m_mod_arr(a, a_, p) } == 0 {
+                break 'body;
+            }
+            // SAFETY: `a` is live.
+            if unsafe { BN_is_zero(a) } != 0 {
+                // SAFETY: `r` is null-or-live.
+                unsafe { BN_zero_ex(r) };
+                ret = 1;
+                break 'body;
+            }
+            if m & 1 == 1 {
+                // `m` is odd: the half-trace of `a`.
+                // SAFETY: `z` and `a` are live.
+                if unsafe { BN_copy(z, a) }.is_null() {
+                    break 'body;
+                }
+                for _j in 1..=(m - 1) / 2 {
+                    // SAFETY: every pointer is as this function's `# Safety` section says.
+                    if unsafe { BN_GF2m_mod_sqr_arr(z, z, p, ctx) } == 0 {
+                        break 'body;
+                    }
+                    // SAFETY: every pointer is as this function's `# Safety` section says.
+                    if unsafe { BN_GF2m_mod_sqr_arr(z, z, p, ctx) } == 0 {
+                        break 'body;
+                    }
+                    // SAFETY: `z` and `a` are live.
+                    if unsafe { BN_GF2m_add(z, z, a) } == 0 {
+                        break 'body;
+                    }
+                }
+            } else {
+                // `m` is even: draw until `w` is non-zero, then `z` is the candidate.
+                // SAFETY: `ctx` is null-or-live per this function's `# Safety` section.
+                let rho = unsafe { BN_CTX_get(ctx) };
+                // SAFETY: `ctx` is null-or-live per this function's `# Safety` section.
+                let w2 = unsafe { BN_CTX_get(ctx) };
+                // SAFETY: `ctx` is null-or-live per this function's `# Safety` section.
+                let tmp = unsafe { BN_CTX_get(ctx) };
+                if tmp.is_null() {
+                    break 'body;
+                }
+                let mut count = 0;
+                loop {
+                    // SAFETY: every pointer is as this function's `# Safety` section says.
+                    if unsafe {
+                        BN_priv_rand_ex(rho, m, BN_RAND_TOP_ONE, BN_RAND_BOTTOM_ANY, 0, ctx)
+                    } == 0
+                    {
+                        break 'body;
+                    }
+                    // SAFETY: `rho` is live and `p` is a `0`-terminated array.
+                    if unsafe { BN_GF2m_mod_arr(rho, rho, p) } == 0 {
+                        break 'body;
+                    }
+                    // SAFETY: `z` is live.
+                    unsafe { BN_zero_ex(z) };
+                    // SAFETY: `w` and `rho` are live.
+                    if unsafe { BN_copy(w, rho) }.is_null() {
+                        break 'body;
+                    }
+                    for _j in 1..=m - 1 {
+                        // SAFETY: every pointer is as this function's `# Safety` section says.
+                        if unsafe { BN_GF2m_mod_sqr_arr(z, z, p, ctx) } == 0 {
+                            break 'body;
+                        }
+                        // SAFETY: every pointer is as this function's `# Safety` section says.
+                        if unsafe { BN_GF2m_mod_sqr_arr(w2, w, p, ctx) } == 0 {
+                            break 'body;
+                        }
+                        // SAFETY: every pointer is as this function's `# Safety` section says.
+                        if unsafe { BN_GF2m_mod_mul_arr(tmp, w2, a, p, ctx) } == 0 {
+                            break 'body;
+                        }
+                        // SAFETY: `z` and `tmp` are live.
+                        if unsafe { BN_GF2m_add(z, z, tmp) } == 0 {
+                            break 'body;
+                        }
+                        // SAFETY: `w`, `w2` and `rho` are live.
+                        if unsafe { BN_GF2m_add(w, w2, rho) } == 0 {
+                            break 'body;
+                        }
+                    }
+                    count += 1;
+                    // The authority's `while (BN_is_zero(w) && count < MAX_ITERATIONS)`.
+                    // SAFETY: `w` is live.
+                    if unsafe { BN_is_zero(w) } == 0 || count >= MAX_ITERATIONS {
+                        break;
+                    }
+                }
+                // SAFETY: `w` is live.
+                if unsafe { BN_is_zero(w) } != 0 {
+                    // SAFETY: the site is a compile-time constant.
+                    unsafe { raise_site(&BN_GF2M_1065) };
+                    break 'body;
+                }
+            }
+            // `w = z^2 + z`.
+            // SAFETY: every pointer is as this function's `# Safety` section says.
+            if unsafe { BN_GF2m_mod_sqr_arr(w, z, p, ctx) } == 0 {
+                break 'body;
+            }
+            // SAFETY: `w` and `z` are live.
+            if unsafe { BN_GF2m_add(w, z, w) } == 0 {
+                break 'body;
+            }
+            // `BN_GF2m_cmp(w, a)` is `BN_ucmp((w), (a))`; a non-zero answer is no root.
+            // SAFETY: `w` and `a` are live.
+            if unsafe { BN_ucmp(w, a) } != 0 {
+                // SAFETY: the site is a compile-time constant.
+                unsafe { raise_site(&BN_GF2M_1075) };
+                break 'body;
+            }
+            // SAFETY: `r` and `z` are live.
+            if unsafe { BN_copy(r, z) }.is_null() {
+                break 'body;
+            }
+            ret = 1;
+        }
+        // SAFETY: `ctx` is null-or-live.
+        unsafe { BN_CTX_end(ctx) };
+        ret
+    })
+}
+
+/// `int BN_GF2m_mod_solve_quad(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx)`
+///
+/// The `BN_GF2m_poly2arr` conversion, with the authority's `max = BN_num_bits(p) + 1`
+/// bound, then `BN_GF2m_mod_solve_quad_arr`. A modulus whose constant term is missing is
+/// not odd, so `poly2arr` answers `0` and this raises `BN_R_INVALID_LENGTH`.
+///
+/// # Safety
+///
+/// `r` must be null or a live, uniquely-owned `BIGNUM`; `a` and `p` must each be null or
+/// live; `ctx` must be null or a live, uniquely-owned `BN_CTX`.
+#[no_mangle]
+pub unsafe extern "C" fn BN_GF2m_mod_solve_quad(
+    r: *mut BigNum,
+    a: *const BigNum,
+    p: *const BigNum,
+    ctx: *mut BnCtx,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `p` is null or live per this function's `# Safety` section.
+        let arr = match unsafe { to_array(p, 0) } {
+            Ok(arr) => arr,
+            Err(()) => {
+                // SAFETY: the site is a compile-time constant.
+                unsafe { raise_site(&BN_GF2M_1111) };
+                return 0;
+            }
+        };
+        // SAFETY: every pointer is as this function's `# Safety` section says.
+        unsafe { BN_GF2m_mod_solve_quad_arr(r, a, arr.as_ptr(), ctx) }
+    })
+}
+
+// =============================================================================================
+// Tests — the defining relations and the refusals.
+//
+// A field element is never printed: the sqrt arm asserts `y^2 == a (mod f)` and the quadratic
+// arm asserts `z^2 + z == a (mod f)`, the relations IEEE P1363's A.4.1 and A.4.7 name, against
+// committed fields. The even-degree solve draws, so its *value* is not an assertion anywhere;
+// the odd-degree arm's root is the half-trace and therefore deterministic, but the same
+// relation is what is checked so the two arms are observed the same way.
+// =============================================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use core::ffi::c_ulong;
+
+    use crate::bn::bignum::{BN_hex2bn, BN_new, BN_set_word};
+    use crate::bn::ctx::BN_CTX_new;
+    use crate::runtime::err::{err_sites, ERR_clear_error, ERR_peek_error};
+
+    /// The packed code `ERR_peek_error` reports for a recorded site:
+    /// `(lib & 0xff) << 23 | (reason & 0x7fffff`, read from the generated table.
+    fn packed(site: &err_sites::ErrSite) -> c_ulong {
+        (((site.lib as c_ulong) & 0xff) << 23) | ((site.reason as c_ulong) & 0x7f_ffff)
+    }
+
+    /// A `BIGNUM` holding a machine word.
+    fn word(w: c_ulong) -> *mut BigNum {
+        // SAFETY: `BN_new` takes no pointers.
+        let b = unsafe { BN_new() };
+        // SAFETY: `b` is live.
+        unsafe { BN_set_word(b, w) };
+        b
+    }
+
+    /// A `BIGNUM` from a hex string.
+    fn hex(s: &str) -> *mut BigNum {
+        let c = crate::bn::bignum::dup_cstring(s);
+        let mut p: *mut BigNum = core::ptr::null_mut();
+        // SAFETY: `p` is this frame's slot and `c` is NUL-terminated and live.
+        unsafe {
+            assert!(BN_hex2bn(&mut p, c) > 0);
+            crate::runtime::mem::CRYPTO_free(c.cast(), core::ptr::null(), 0);
+        }
+        p
+    }
+
+    /// The polynomial an exponent array names, as a `BIGNUM` (every listed exponent set).
+    fn field(exps: &[c_int]) -> *mut BigNum {
+        // SAFETY: `BN_new` takes no pointers.
+        let b = unsafe { BN_new() };
+        for &e in exps {
+            // SAFETY: `b` is live and `e` is an exponent.
+            unsafe { BN_set_bit(b, e) };
+        }
+        b
+    }
+
+    /// `a mod p`, reduced.
+    fn reduce(a: *const BigNum, p: *const c_int) -> *mut BigNum {
+        // SAFETY: `BN_new` takes no pointers.
+        let out = unsafe { BN_new() };
+        // SAFETY: every pointer is live and `p` is a `0`-terminated array.
+        assert_eq!(unsafe { BN_GF2m_mod_arr(out, a, p) }, 1);
+        out
+    }
+
+    /// `(y^2 + y) mod p`, or `y^2 mod p` when `plus_y` is false — the left side of the
+    /// quadratic and square-root relations.
+    fn left(y: *const BigNum, p: *const c_int, ctx: *mut BnCtx, plus_y: bool) -> *mut BigNum {
+        // SAFETY: `BN_new` takes no pointers.
+        let s = unsafe { BN_new() };
+        // SAFETY: every pointer is live and `p` is a `0`-terminated array.
+        assert_eq!(unsafe { BN_GF2m_mod_sqr_arr(s, y, p, ctx) }, 1);
+        if plus_y {
+            // SAFETY: `s` and `y` are live.
+            assert_eq!(unsafe { BN_GF2m_add(s, s, y) }, 1);
+        }
+        s
+    }
+
+    /// `x^163 + x^7 + x^6 + x^3 + 1` — an irreducible odd-degree binary field.
+    const F163: [c_int; 5] = [163, 7, 6, 3, 0];
+    /// `x^8 + x^4 + x^3 + x + 1` — the AES field, even degree.
+    const F8: [c_int; 5] = [8, 4, 3, 1, 0];
+    /// `x^6 + x^5 + x^4 + x^3 + x^2 + x + 1 = (x^3 + x + 1)(x^3 + x^2 + 1)`: reducible, and
+    /// its absolute trace vanishes identically, so the even-degree retry loop never sees a
+    /// non-zero `w` and reaches its ceiling.
+    const F6_REDUCIBLE: [c_int; 7] = [6, 5, 4, 3, 2, 1, 0];
+
+    #[test]
+    fn the_square_root_satisfies_its_defining_relation() {
+        // SAFETY: `BN_CTX_new` takes no pointers.
+        let ctx = unsafe { BN_CTX_new() };
+        for a in [
+            hex("1ABCDEF0123456789ABCDEF0123456789ABCDEF"),
+            word(3),
+            word(1),
+            word(0),
+        ] {
+            // SAFETY: `BN_new` takes no pointers.
+            let y = unsafe { BN_new() };
+            ERR_clear_error();
+            // SAFETY: every argument is a live object and `F163` is a `0`-terminated array.
+            assert_eq!(unsafe { BN_GF2m_mod_sqrt_arr(y, a, F163.as_ptr(), ctx) }, 1);
+            assert_eq!(ERR_peek_error(), 0, "the square root raised nothing");
+            // SAFETY: every pointer is live.
+            let rel =
+                unsafe { BN_ucmp(left(y, F163.as_ptr(), ctx, false), reduce(a, F163.as_ptr())) };
+            assert_eq!(rel, 0, "y^2 == a mod f");
+        }
+
+        // The even-degree field, through the `BN_GF2m_poly2arr` wrapper.
+        let p8 = field(&F8);
+        let a = hex("57");
+        // SAFETY: `BN_new` takes no pointers.
+        let y = unsafe { BN_new() };
+        ERR_clear_error();
+        // SAFETY: every argument is live.
+        assert_eq!(unsafe { BN_GF2m_mod_sqrt(y, a, p8, ctx) }, 1);
+        assert_eq!(ERR_peek_error(), 0);
+        // SAFETY: every pointer is live.
+        let rel = unsafe { BN_ucmp(left(y, F8.as_ptr(), ctx, false), reduce(a, F8.as_ptr())) };
+        assert_eq!(rel, 0);
+    }
+
+    #[test]
+    fn the_quadratic_solve_finds_a_root_or_refuses() {
+        // SAFETY: `BN_CTX_new` takes no pointers.
+        let ctx = unsafe { BN_CTX_new() };
+        // SAFETY: `BN_new` takes no pointers.
+        let z = unsafe { BN_new() };
+        let one = word(1);
+
+        // Odd `m`: `a = x^2 + x` for `x = 2` has `6` as a root on both sides; the half-trace
+        // makes the value deterministic, and the relation is what is asserted.
+        let a = word(6);
+        ERR_clear_error();
+        // SAFETY: every argument is live and `F163` is a `0`-terminated array.
+        let ret = unsafe { BN_GF2m_mod_solve_quad_arr(z, a, F163.as_ptr(), ctx) };
+        assert_eq!(ret, 1);
+        assert_eq!(ERR_peek_error(), 0);
+        // SAFETY: every pointer is live.
+        let rel = unsafe { BN_ucmp(left(z, F163.as_ptr(), ctx, true), reduce(a, F163.as_ptr())) };
+        assert_eq!(rel, 0, "z^2 + z == a mod f");
+
+        // Odd `m` and `a = 1`: `trace(1) = m mod 2 = 1`, so no root exists and the half-trace
+        // check raises `BN_R_NO_SOLUTION`.
+        ERR_clear_error();
+        // SAFETY: every argument is live and `F163` is a `0`-terminated array.
+        let ret = unsafe { BN_GF2m_mod_solve_quad_arr(z, one, F163.as_ptr(), ctx) };
+        assert_eq!(ret, 0);
+        assert_eq!(ERR_peek_error(), packed(&err_sites::BN_GF2M_1075));
+
+        // Even `m`: the root is a draw, so the relation is the observation.
+        for a in [word(1), word(6)] {
+            ERR_clear_error();
+            // SAFETY: every argument is live and `F8` is a `0`-terminated array.
+            let ret = unsafe { BN_GF2m_mod_solve_quad_arr(z, a, F8.as_ptr(), ctx) };
+            assert_eq!(ret, 1);
+            assert_eq!(ERR_peek_error(), 0);
+            // SAFETY: every pointer is live.
+            let rel = unsafe { BN_ucmp(left(z, F8.as_ptr(), ctx, true), reduce(a, F8.as_ptr())) };
+            assert_eq!(rel, 0, "z^2 + z == a mod f");
+        }
+
+        // Even `m` on a reducible modulus whose trace vanishes: the retry ceiling is reached.
+        ERR_clear_error();
+        // SAFETY: every argument is live and `F6_REDUCIBLE` is a `0`-terminated array.
+        let ret = unsafe { BN_GF2m_mod_solve_quad_arr(z, one, F6_REDUCIBLE.as_ptr(), ctx) };
+        assert_eq!(ret, 0);
+        assert_eq!(ERR_peek_error(), packed(&err_sites::BN_GF2M_1065));
+
+        // `a == 0` answers zero without a draw.
+        let zero = word(0);
+        ERR_clear_error();
+        // SAFETY: every argument is live and `F163` is a `0`-terminated array.
+        let ret = unsafe { BN_GF2m_mod_solve_quad_arr(z, zero, F163.as_ptr(), ctx) };
+        assert_eq!(ret, 1);
+        // SAFETY: `z` is live.
+        assert_eq!(unsafe { BN_is_zero(z) }, 1);
+        assert_eq!(ERR_peek_error(), 0);
+    }
+
+    #[test]
+    fn the_wrappers_convert_the_modulus_and_refuse_a_non_odd_one() {
+        // SAFETY: `BN_CTX_new` takes no pointers.
+        let ctx = unsafe { BN_CTX_new() };
+        let p163 = field(&F163);
+        let a = word(3);
+        // SAFETY: `BN_new` takes no pointers.
+        let out = unsafe { BN_new() };
+        ERR_clear_error();
+        // SAFETY: every argument is live.
+        assert_eq!(unsafe { BN_GF2m_mod_sqrt(out, a, p163, ctx) }, 1);
+        assert_eq!(ERR_peek_error(), 0);
+        // SAFETY: every pointer is live.
+        let rel = unsafe {
+            BN_ucmp(
+                left(out, F163.as_ptr(), ctx, false),
+                reduce(a, F163.as_ptr()),
+            )
+        };
+        assert_eq!(rel, 0, "the wrapper's y^2 == a mod f");
+
+        let six = word(6);
+        ERR_clear_error();
+        // SAFETY: every argument is live.
+        assert_eq!(unsafe { BN_GF2m_mod_solve_quad(out, six, p163, ctx) }, 1);
+        assert_eq!(ERR_peek_error(), 0);
+        // SAFETY: every pointer is live.
+        let rel = unsafe {
+            BN_ucmp(
+                left(out, F163.as_ptr(), ctx, true),
+                reduce(six, F163.as_ptr()),
+            )
+        };
+        assert_eq!(rel, 0, "the wrapper's z^2 + z == a mod f");
+
+        // A modulus whose constant term is missing is not odd, so `BN_GF2m_poly2arr` answers
+        // `0` and the wrapper raises `BN_R_INVALID_LENGTH` at its own site.
+        // SAFETY: `BN_new` takes no pointers.
+        let peven = unsafe { BN_new() };
+        // SAFETY: `peven` is live.
+        unsafe { BN_set_bit(peven, 8) };
+        // SAFETY: `peven` is live.
+        unsafe { BN_set_bit(peven, 4) };
+        ERR_clear_error();
+        // SAFETY: every argument is live.
+        assert_eq!(unsafe { BN_GF2m_mod_sqrt(out, a, peven, ctx) }, 0);
+        assert_eq!(ERR_peek_error(), packed(&err_sites::BN_GF2M_977));
+        ERR_clear_error();
+        // SAFETY: every argument is live.
+        assert_eq!(unsafe { BN_GF2m_mod_solve_quad(out, a, peven, ctx) }, 0);
+        assert_eq!(ERR_peek_error(), packed(&err_sites::BN_GF2M_1111));
+    }
+
+    #[test]
+    fn a_degree_zero_modulus_answers_zero() {
+        // SAFETY: `BN_CTX_new` takes no pointers.
+        let ctx = unsafe { BN_CTX_new() };
+        let zero_arr: [c_int; 2] = [0, 0];
+        let a = word(7);
+        // SAFETY: `BN_new` takes no pointers.
+        let out = unsafe { BN_new() };
+        for solve_quad in [false, true] {
+            // SAFETY: `out` is live.
+            unsafe { BN_set_word(out, 0x77) };
+            ERR_clear_error();
+            // SAFETY: every argument is live and `zero_arr` is `0`-terminated.
+            let ret = unsafe {
+                if solve_quad {
+                    BN_GF2m_mod_solve_quad_arr(out, a, zero_arr.as_ptr(), ctx)
+                } else {
+                    BN_GF2m_mod_sqrt_arr(out, a, zero_arr.as_ptr(), ctx)
+                }
+            };
+            assert_eq!(ret, 1, "solve_quad={solve_quad}");
+            // SAFETY: `out` is live.
+            assert_eq!(unsafe { BN_is_zero(out) }, 1, "solve_quad={solve_quad}");
+            assert_eq!(ERR_peek_error(), 0);
+        }
+    }
 }

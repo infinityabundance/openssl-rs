@@ -79,6 +79,7 @@ use crate::params::{
     OSSL_PARAM_locate_const, OSSL_PARAM_modified, OSSL_PARAM_set_int, OsslParam,
 };
 use crate::provider::{ossl_provider_ctx, ossl_provider_libctx};
+use crate::rand::rand_lib::RAND_priv_bytes_ex;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 use crate::runtime::obj::NID_undef;
@@ -142,6 +143,8 @@ const EVP_CIPH_FLAG_CUSTOM_CIPHER: c_ulong = 0x10_0000;
 const EVP_CIPH_FLAG_CUSTOM_ASN1: c_ulong = 0x100_0000;
 /// `EVP_CIPH_CUSTOM_COPY`.
 const EVP_CIPH_CUSTOM_COPY: c_ulong = 0x400;
+/// `EVP_CIPH_RAND_KEY` — the flag `EVP_CIPHER_CTX_rand_key` tests.
+const EVP_CIPH_RAND_KEY: c_ulong = 0x200;
 
 // The `EVP_CTRL_*` commands `EVP_CIPHER_CTX_ctrl` switches on, from `include/openssl/evp.h`.
 /// `EVP_CTRL_INIT`.
@@ -222,19 +225,14 @@ const LINE_FREE_AID: c_int = 1517;
 
 /// `struct x509_algor_st` — `X509_ALGOR`, from `include/openssl/x509.h`.
 ///
-/// **Phase 11 owns this type** (`X509_ALGOR_it` and its two codecs are that stratum's), and two
-/// functions in this file need one thing from it: the layout. `EVP_CIPHER_CTX_get_algor_params`
-/// and `_set_algor_params` take a caller's `X509_ALGOR *`, read or write `parameter`, and pass it
-/// to `d2i_ASN1_TYPE`/`i2d_ASN1_TYPE` — Phase 5's, and present. So the struct is declared here
-/// with the authority's two fields and the reason it is declared rather than deferred, and the
-/// one function that would need Phase 11's *decoder* is deferred instead.
-#[repr(C)]
-pub struct X509Algor {
-    /// `const ASN1_OBJECT *algorithm` — the OID, which neither function here reads.
-    pub algorithm: *const crate::runtime::obj::Asn1Object,
-    /// `ASN1_TYPE *parameter` — the value, which both functions here do.
-    pub parameter: *mut Asn1Type,
-}
+/// **The definition is [`crate::asn1::x_algor::X509Algor`]'s and this is a re-export (D348).**
+/// Two functions in this file need the type: `EVP_CIPHER_CTX_get_algor_params` and
+/// `_set_algor_params` take a caller's `X509_ALGOR *`, read or write `parameter`, and pass it to
+/// `d2i_ASN1_TYPE`/`i2d_ASN1_TYPE` — Phase 5's, and present. It was declared here before
+/// `crypto/asn1/x_algor.c` had a module; now that it does, the authority's own translation unit
+/// owns the struct and both this site and `src/evp/pkey_asn1.rs` import it rather than declaring
+/// a second one.
+pub use crate::asn1::x_algor::X509Algor;
 
 /// `struct evp_cipher_ctx_st` — `EVP_CIPHER_CTX`, from `crypto/evp/evp_local.h`.
 ///
@@ -1253,8 +1251,7 @@ unsafe fn ossl_provider_ctx_for(cipher: *const EvpCipher) -> *mut c_void {
 ///
 /// # Safety
 /// `ctx` must be a live `EvpCipherCtx`.
-#[allow(dead_code)]
-// its only caller, `EVP_CIPHER_CTX_rand_key`, is deferred to Phase 9
+// its only caller, `EVP_CIPHER_CTX_rand_key`, has landed (D315), so no dead-code allow is needed
 // mirrors the authority's name exactly: this is a transcription, not a Rust function
 #[allow(non_snake_case)]
 unsafe fn EVP_CIPHER_CTX_get_libctx(ctx: *mut EvpCipherCtx) -> *mut c_void {
@@ -1267,6 +1264,52 @@ unsafe fn EVP_CIPHER_CTX_get_libctx(ctx: *mut EvpCipherCtx) -> *mut c_void {
     let prov = unsafe { EVP_CIPHER_get0_provider(cipher) };
     // SAFETY: `prov` is NULL or the live provider that published this method.
     unsafe { ossl_provider_libctx(prov) }
+}
+
+/// `int EVP_CIPHER_CTX_rand_key(EVP_CIPHER_CTX *ctx, unsigned char *key)` — `crypto/evp/evp_enc.c:1751`.
+///
+/// **The flag chooses, and the fallback draws from the private DRBG.** A cipher that advertises
+/// `EVP_CIPH_RAND_KEY` is asked through `EVP_CTRL_RAND_KEY` — the provider arm of
+/// `EVP_CIPHER_CTX_ctrl` turns that into the `"randkey"` octet-string parameter — and the control
+/// call's answer becomes this function's answer. Every other cipher takes the second arm:
+/// `RAND_priv_bytes_ex` fills `key` with `EVP_CIPHER_CTX_get_key_length` bytes, and a cipher that
+/// reports no usable key length refuses **before** any random is drawn, because the authority's
+/// `||` short-circuits.
+///
+/// The authority's `#ifdef FIPS_MODULE` arm answers 0 and is not built here: `FIPS_MODULE` is
+/// undefined on this profile, so the `#else` arm above is the one transcribed.
+///
+/// # Safety
+/// `ctx` must be a live `EvpCipherCtx` whose `cipher` is set — the authority reads
+/// `ctx->cipher->flags` before anything else, with no test — and `key` must be writable for that
+/// cipher's key length.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_CIPHER_CTX_rand_key(
+    ctx: *mut EvpCipherCtx,
+    key: *mut c_uchar,
+) -> c_int {
+    // SAFETY: `ctx` is live per the contract; this is the cipher `ctx->cipher` names.
+    let cipher = unsafe { EVP_CIPHER_CTX_get0_cipher(ctx) };
+    // SAFETY: `cipher` is the live method this context holds per the contract.
+    if (unsafe { (*cipher).flags } & EVP_CIPH_RAND_KEY) != 0 {
+        // SAFETY: `ctx` is live and `key` is writable per the contract; `EVP_CTRL_RAND_KEY`
+        // takes the key buffer as its pointer argument and ignores `arg`.
+        return unsafe { EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_RAND_KEY, 0, key.cast::<c_void>()) };
+    }
+
+    // SAFETY: `ctx` is live per the contract.
+    let libctx = unsafe { EVP_CIPHER_CTX_get_libctx(ctx) };
+    // SAFETY: `ctx` is live per the contract.
+    let kl = unsafe { EVP_CIPHER_CTX_get_key_length(ctx) };
+    if kl <= 0 {
+        return 0;
+    }
+    // SAFETY: `libctx` is NULL or a live library context, and `key` is writable for `kl` bytes
+    // per the contract; `kl` is positive, so the fill is in range.
+    if unsafe { RAND_priv_bytes_ex(libctx, key, kl as usize, 0) } <= 0 {
+        return 0;
+    }
+    1
 }
 
 /// `int EVP_CIPHER_CTX_set_key_length(EVP_CIPHER_CTX *c, int keylen)`.
@@ -2981,7 +3024,7 @@ unsafe fn evp_cipher_param_to_asn1_ex(
     // SAFETY: `cipher` is NULL or the live method this context holds.
     } else if !(unsafe { (*cipher).prov }).is_null() {
         let mut alg = X509Algor {
-            algorithm: ptr::null(),
+            algorithm: ptr::null_mut(),
             parameter: type_,
         };
         // SAFETY: `c` is live and `alg` is this frame's own.
@@ -3044,7 +3087,7 @@ unsafe fn evp_cipher_asn1_to_param_ex(
     // SAFETY: `cipher` is NULL or the live method this context holds.
     } else if !(unsafe { (*cipher).prov }).is_null() {
         let alg = X509Algor {
-            algorithm: ptr::null(),
+            algorithm: ptr::null_mut(),
             parameter: type_,
         };
         // SAFETY: `c` is live and `alg` is this frame's own.
@@ -4455,14 +4498,6 @@ pub unsafe extern "C" fn EVP_CipherPipelineFinal(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// `EVP_CIPH_RAND_KEY` — `include/openssl/evp.h`.
-    ///
-    /// Declared here rather than with the flags the module's own code tests, because the only
-    /// reader is the flag test below: `EVP_CIPHER_CTX_rand_key`, which is where the flag is used
-    /// in the authority, is this slice's hand-off to Phase 9. A header fact a test needs belongs
-    /// with the test.
-    const EVP_CIPH_RAND_KEY: c_ulong = 0x200;
 
     /// The context a test arms, released once. Nothing here sets global state: an
     /// `EVP_CIPHER_CTX` is this crate's own object and the two flags it carries are its own.

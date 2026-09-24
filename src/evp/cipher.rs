@@ -145,45 +145,45 @@ const LINE_FREE_CIPHER: c_int = 2118;
 // ---------------------------------------------------------------------------------------------
 
 /// `OSSL_FUNC_CIPHER_NEWCTX`.
-const OSSL_FUNC_CIPHER_NEWCTX: c_int = 1;
+pub(crate) const OSSL_FUNC_CIPHER_NEWCTX: c_int = 1;
 /// `OSSL_FUNC_CIPHER_ENCRYPT_INIT`.
-const OSSL_FUNC_CIPHER_ENCRYPT_INIT: c_int = 2;
+pub(crate) const OSSL_FUNC_CIPHER_ENCRYPT_INIT: c_int = 2;
 /// `OSSL_FUNC_CIPHER_DECRYPT_INIT`.
-const OSSL_FUNC_CIPHER_DECRYPT_INIT: c_int = 3;
+pub(crate) const OSSL_FUNC_CIPHER_DECRYPT_INIT: c_int = 3;
 /// `OSSL_FUNC_CIPHER_UPDATE`.
-const OSSL_FUNC_CIPHER_UPDATE: c_int = 4;
+pub(crate) const OSSL_FUNC_CIPHER_UPDATE: c_int = 4;
 /// `OSSL_FUNC_CIPHER_FINAL`.
-const OSSL_FUNC_CIPHER_FINAL: c_int = 5;
+pub(crate) const OSSL_FUNC_CIPHER_FINAL: c_int = 5;
 /// `OSSL_FUNC_CIPHER_CIPHER`.
-const OSSL_FUNC_CIPHER_CIPHER: c_int = 6;
+pub(crate) const OSSL_FUNC_CIPHER_CIPHER: c_int = 6;
 /// `OSSL_FUNC_CIPHER_FREECTX`.
-const OSSL_FUNC_CIPHER_FREECTX: c_int = 7;
+pub(crate) const OSSL_FUNC_CIPHER_FREECTX: c_int = 7;
 /// `OSSL_FUNC_CIPHER_DUPCTX`.
-const OSSL_FUNC_CIPHER_DUPCTX: c_int = 8;
+pub(crate) const OSSL_FUNC_CIPHER_DUPCTX: c_int = 8;
 /// `OSSL_FUNC_CIPHER_GET_PARAMS`.
-const OSSL_FUNC_CIPHER_GET_PARAMS: c_int = 9;
+pub(crate) const OSSL_FUNC_CIPHER_GET_PARAMS: c_int = 9;
 /// `OSSL_FUNC_CIPHER_GET_CTX_PARAMS`.
-const OSSL_FUNC_CIPHER_GET_CTX_PARAMS: c_int = 10;
+pub(crate) const OSSL_FUNC_CIPHER_GET_CTX_PARAMS: c_int = 10;
 /// `OSSL_FUNC_CIPHER_SET_CTX_PARAMS`.
-const OSSL_FUNC_CIPHER_SET_CTX_PARAMS: c_int = 11;
+pub(crate) const OSSL_FUNC_CIPHER_SET_CTX_PARAMS: c_int = 11;
 /// `OSSL_FUNC_CIPHER_GETTABLE_PARAMS`.
-const OSSL_FUNC_CIPHER_GETTABLE_PARAMS: c_int = 12;
+pub(crate) const OSSL_FUNC_CIPHER_GETTABLE_PARAMS: c_int = 12;
 /// `OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS`.
-const OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS: c_int = 13;
+pub(crate) const OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS: c_int = 13;
 /// `OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS`.
-const OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS: c_int = 14;
+pub(crate) const OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS: c_int = 14;
 /// `OSSL_FUNC_CIPHER_PIPELINE_ENCRYPT_INIT`.
-const OSSL_FUNC_CIPHER_PIPELINE_ENCRYPT_INIT: c_int = 15;
+pub(crate) const OSSL_FUNC_CIPHER_PIPELINE_ENCRYPT_INIT: c_int = 15;
 /// `OSSL_FUNC_CIPHER_PIPELINE_DECRYPT_INIT`.
-const OSSL_FUNC_CIPHER_PIPELINE_DECRYPT_INIT: c_int = 16;
+pub(crate) const OSSL_FUNC_CIPHER_PIPELINE_DECRYPT_INIT: c_int = 16;
 /// `OSSL_FUNC_CIPHER_PIPELINE_UPDATE`.
-const OSSL_FUNC_CIPHER_PIPELINE_UPDATE: c_int = 17;
+pub(crate) const OSSL_FUNC_CIPHER_PIPELINE_UPDATE: c_int = 17;
 /// `OSSL_FUNC_CIPHER_PIPELINE_FINAL`.
-const OSSL_FUNC_CIPHER_PIPELINE_FINAL: c_int = 18;
+pub(crate) const OSSL_FUNC_CIPHER_PIPELINE_FINAL: c_int = 18;
 /// `OSSL_FUNC_CIPHER_ENCRYPT_SKEY_INIT`.
-const OSSL_FUNC_CIPHER_ENCRYPT_SKEY_INIT: c_int = 19;
+pub(crate) const OSSL_FUNC_CIPHER_ENCRYPT_SKEY_INIT: c_int = 19;
 /// `OSSL_FUNC_CIPHER_DECRYPT_SKEY_INIT`.
-const OSSL_FUNC_CIPHER_DECRYPT_SKEY_INIT: c_int = 20;
+pub(crate) const OSSL_FUNC_CIPHER_DECRYPT_SKEY_INIT: c_int = 20;
 
 // ---------------------------------------------------------------------------------------------
 // The provider-side function types, from the headers' `OSSL_CORE_MAKE_FUNC` declarations

@@ -88,6 +88,7 @@
 use core::ffi::{c_int, c_long, c_uint, c_ulong, c_void};
 use core::sync::atomic::{AtomicI32, AtomicPtr, AtomicU64, Ordering};
 use std::sync::{Condvar, Mutex, MutexGuard};
+use std::time::Duration;
 
 use crate::ffi::guard_ffi;
 use crate::runtime::bio::sys::{self, Timespec, Timeval};
@@ -110,6 +111,7 @@ extern "C" {
     fn pthread_setspecific(key: c_uint, value: *const c_void) -> c_int;
     fn pthread_self() -> c_ulong;
     fn pthread_equal(a: c_ulong, b: c_ulong) -> c_int;
+    fn clock_gettime(clk: c_int, tp: *mut Timespec) -> c_int;
 }
 
 /// Opaque handle matching the C `CRYPTO_RWLOCK *` (`typedef void CRYPTO_RWLOCK`).
@@ -1075,6 +1077,19 @@ pub struct CryptoCondvar {
     /// then; one condvar is used with one mutex for its whole life.
     bound: AtomicPtr<CryptoMutex>,
     cond: Condvar,
+    /// The condition variable's **own** mutex, held across the release of the
+    /// caller's mutex and the wait. It is what makes those two one step here.
+    ///
+    /// POSIX gets that for free: `pthread_cond_wait` releases the caller's mutex
+    /// and waits in one operation with respect to the signaller. A
+    /// `std::sync::Condvar` instead waits on a guard it is *given*, so the
+    /// release of a different mutex and the wait are two statements — and a
+    /// signaller that arrives between them is lost, leaving the waiter blocked
+    /// for ever. Holding this gate across both closes the window: a signaller
+    /// blocks on the gate until the waiter is inside `wait`. The predicate is
+    /// still re-checked under the caller's mutex, as a condition variable
+    /// requires.
+    gate: Mutex<()>,
 }
 
 /// `CRYPTO_MUTEX *ossl_crypto_mutex_new(void)` — NULL when allocation fails.
@@ -1183,22 +1198,23 @@ pub(crate) fn ossl_crypto_condvar_new() -> *mut CryptoCondvar {
     let cv = CryptoCondvar {
         bound: AtomicPtr::new(core::ptr::null_mut()),
         cond: Condvar::new(),
+        gate: Mutex::new(()),
     };
     Box::into_raw(Box::new(cv))
 }
 
 /// `void ossl_crypto_condvar_wait(CRYPTO_CONDVAR *cv, CRYPTO_MUTEX *mutex)`
 ///
-/// Releases `mutex`, waits for a signal, and re-acquires it — the release and
-/// the wait are one step with respect to the flag, because both use the mutex's
-/// own parking mutex.
+/// Releases `mutex`, waits for a signal, and re-acquires it — the release and the
+/// wait are one step with respect to the signaller, because both happen under the
+/// condition variable's own gate. The caller re-checks its predicate after this
+/// returns, which is what makes a signal that arrives with no waiter harmless.
 ///
 /// # Safety
 /// `cv` and `mutex` must be live, and `mutex` must be held by this thread. A
 /// `cv` already bound to a different mutex is a caller error: the authority's
 /// `pthread_cond_wait` has no defined answer for it either, and this reports it
 /// by returning without waiting rather than by becoming a lost wakeup.
-#[allow(dead_code)] // unreachable until the thread pool waits on one
 pub(crate) unsafe fn ossl_crypto_condvar_wait(cv: *mut CryptoCondvar, m: *mut CryptoMutex) {
     if cv.is_null() || m.is_null() {
         return;
@@ -1217,12 +1233,23 @@ pub(crate) unsafe fn ossl_crypto_condvar_wait(cv: *mut CryptoCondvar, m: *mut Cr
     } else if existing != m {
         return;
     }
+
+    // The gate is taken **while the caller's mutex is still held** and released
+    // only by the `wait` below, so no signaller can slip between the release of
+    // `m` and the wait.
+    // SAFETY: `cv` is live per the caller's contract.
+    let gate = match unsafe { &(*cv).gate }.lock() {
+        Ok(g) => g,
+        Err(p) => p.into_inner(),
+    };
+
     // SAFETY: `m` is live and held by this thread per the caller's contract.
     let held = unsafe { mutex_held(m) };
     let mut flag = lock_state_poisoned(held);
     if !*flag {
         // The caller did not hold it. `pthread_cond_wait` is undefined there too,
         // so this returns rather than waiting on a mutex it does not own.
+        drop(gate);
         return;
     }
     *flag = false;
@@ -1230,46 +1257,168 @@ pub(crate) unsafe fn ossl_crypto_condvar_wait(cv: *mut CryptoCondvar, m: *mut Cr
     // Wake one `ossl_crypto_mutex_lock` waiter, now that the flag is clear.
     // SAFETY: `m` is live.
     unsafe { &(*m).released }.notify_one();
-    // Re-acquire before waiting, so that a signaller -- which every caller in
-    // the authority is, under this mutex -- cannot slip between the release
-    // above and the wait below. The wait then releases it atomically.
-    // SAFETY: `m` is live.
-    let g = lock_state_poisoned(unsafe { mutex_held(m) });
-    // SAFETY: `cv` is live; the guard belongs to this mutex, which is what makes
-    // release-and-wait one step.
-    let mut g = match unsafe { &(*cv).cond }.wait(g) {
+
+    // SAFETY: `cv` is live; the guard belongs to the gate, and `wait` releases it
+    // for the duration of the wait, which is what lets a signaller through.
+    let gate = match unsafe { &(*cv).cond }.wait(gate) {
         Ok(g) => g,
         Err(p) => p.into_inner(),
     };
-    // The wait returns with the mutex re-locked: restore the flag so the next
-    // `unlock` releases it rather than corrupting the state.
-    *g = true;
+    drop(gate);
+
+    // Re-acquire the caller's mutex, restoring the flag so the next `unlock`
+    // releases it rather than corrupting the state.
+    let mut flag = lock_state_poisoned(held);
+    *flag = true;
+}
+
+/// `OSSL_TIME_INFINITY` — `include/internal/time.h`, the sentinel `ossl_time_is_infinite` compares
+/// against. `OSSL_TIME` is a `uint64_t` tick count in nanoseconds.
+const OSSL_TIME_INFINITY: u64 = u64::MAX;
+
+/// `CLOCK_MONOTONIC` — `time.h` on the admitted glibc profile; the clock `ossl_time_now()`
+/// (`crypto/time.c:31-40`) reads, which is the clock an `OSSL_TIME` deadline is built from.
+const CLOCK_MONOTONIC: c_int = 1;
+
+/// Nanoseconds on `CLOCK_MONOTONIC`. Answers 0 if the clock cannot be read, as `ossl_time_now`
+/// answers `ossl_time_zero()` there. The authority's function is `crypto/time.c`'s; this is the
+/// piece of it the timed wait needs, kept private and named for the clock rather than for the
+/// authority's symbol so it does not read as a claim to have landed that unit.
+fn monotonic_now_nanos() -> u64 {
+    let mut ts = Timespec {
+        tv_sec: 0,
+        tv_nsec: 0,
+    };
+    // SAFETY: `ts` is a valid, aligned `Timespec` and a pointer to it is what `clock_gettime`
+    // writes through.
+    let r = unsafe { clock_gettime(CLOCK_MONOTONIC, &mut ts) };
+    if r != 0 {
+        return 0;
+    }
+    (ts.tv_sec as u64)
+        .wrapping_mul(1_000_000_000)
+        .wrapping_add(ts.tv_nsec as u64)
+}
+
+/// `void ossl_crypto_condvar_wait_timeout(CRYPTO_CONDVAR *cv, CRYPTO_MUTEX *mutex, OSSL_TIME
+/// deadline)` — `crypto/thread/arch/thread_posix.c:178-201`.
+///
+/// **The timed arm is a documented substitution; the infinite arm is not.** The authority converts
+/// its `OSSL_TIME` deadline to a `struct timespec` and calls `pthread_cond_timedwait` on the same
+/// `pthread_cond_t` its untimed sibling waits on. This crate's condition variable is built from
+/// `std::sync::Condvar` (the module note above says why), which takes a *duration* rather than an
+/// absolute deadline, so the remaining time is `deadline - now` and the wait is
+/// `Condvar::wait_timeout`. The clock is the one the deadline was built from — `ossl_time_now()`,
+/// `CLOCK_MONOTONIC`, nanoseconds — and the authority's own conversion hands that monotonic value
+/// to a condition variable whose default clock is `CLOCK_REALTIME`, so the substitution is more
+/// coherent than the line it replaces, not less.
+///
+/// **Nothing in the authority calls this function**, so there is no observation to lose: the pool's
+/// `ossl_crypto_thread_join` waits without a deadline. It is here because `thread_posix.c` is
+/// transcribed whole, and the prerequisite gate requires every name of a landed unit to be present
+/// or recorded; this is the present form of that choice.
+///
+/// # Safety
+/// As [`ossl_crypto_condvar_wait`].
+#[allow(dead_code)] // no caller anywhere in the authority: the pool's join has no deadline
+pub(crate) unsafe fn ossl_crypto_condvar_wait_timeout(
+    cv: *mut CryptoCondvar,
+    m: *mut CryptoMutex,
+    deadline: u64,
+) {
+    if cv.is_null() || m.is_null() {
+        return;
+    }
+    if deadline == OSSL_TIME_INFINITY {
+        // `ossl_time_is_infinite(deadline)`: the authority waits without a deadline, and so does
+        // this.
+        // SAFETY: the caller's contract is this function's.
+        unsafe { ossl_crypto_condvar_wait(cv, m) };
+        return;
+    }
+
+    // SAFETY: `cv` is live per the caller's contract.
+    let bound = unsafe { &(*cv).bound };
+    let existing = bound.load(Ordering::Acquire);
+    if existing.is_null() {
+        let _ = bound.compare_exchange(
+            core::ptr::null_mut(),
+            m,
+            Ordering::AcqRel,
+            Ordering::Acquire,
+        );
+    } else if existing != m {
+        return;
+    }
+
+    // SAFETY: `cv` is live per the caller's contract; the gate is taken while the caller's mutex is
+    // still held, exactly as the untimed wait takes it.
+    let gate = match unsafe { &(*cv).gate }.lock() {
+        Ok(g) => g,
+        Err(p) => p.into_inner(),
+    };
+
+    // SAFETY: `m` is live and held by this thread per the caller's contract.
+    let held = unsafe { mutex_held(m) };
+    let mut flag = lock_state_poisoned(held);
+    if !*flag {
+        drop(gate);
+        return;
+    }
+    *flag = false;
+    drop(flag);
+    // SAFETY: `m` is live.
+    unsafe { &(*m).released }.notify_one();
+
+    let now = monotonic_now_nanos();
+    let remaining = deadline.saturating_sub(now);
+    // SAFETY: `cv` is live; the guard belongs to the gate and `wait_timeout` releases it for the
+    // duration of the wait, which is what lets a signaller through.
+    let gate = match unsafe { &(*cv).cond }.wait_timeout(gate, Duration::from_nanos(remaining)) {
+        Ok(g) => g.0,
+        Err(p) => p.into_inner().0,
+    };
+    drop(gate);
+
+    let mut flag = lock_state_poisoned(held);
+    *flag = true;
 }
 
 /// `void ossl_crypto_condvar_signal(CRYPTO_CONDVAR *cv)` — wakes one waiter.
 ///
 /// # Safety
 /// `cv` must be NULL or live.
-#[allow(dead_code)] // unreachable until the thread pool signals one
 pub(crate) unsafe fn ossl_crypto_condvar_signal(cv: *mut CryptoCondvar) {
     if cv.is_null() {
         return;
     }
-    // SAFETY: `cv` is live per the caller's contract.
-    unsafe { &(*cv).cond }.notify_one();
+    // SAFETY: `cv` is live per the caller's contract. The gate is what makes this
+    // signal reach a waiter that has released its mutex but not yet waited.
+    unsafe {
+        let _gate = match (*cv).gate.lock() {
+            Ok(g) => g,
+            Err(p) => p.into_inner(),
+        };
+        (*cv).cond.notify_one();
+    }
 }
 
 /// `void ossl_crypto_condvar_broadcast(CRYPTO_CONDVAR *cv)` — wakes all waiters.
 ///
 /// # Safety
 /// `cv` must be NULL or live.
-#[allow(dead_code)] // unreachable until the thread pool broadcasts to them
 pub(crate) unsafe fn ossl_crypto_condvar_broadcast(cv: *mut CryptoCondvar) {
     if cv.is_null() {
         return;
     }
-    // SAFETY: `cv` is live per the caller's contract.
-    unsafe { &(*cv).cond }.notify_all();
+    // SAFETY: `cv` is live per the caller's contract; see `signal` for the gate.
+    unsafe {
+        let _gate = match (*cv).gate.lock() {
+            Ok(g) => g,
+            Err(p) => p.into_inner(),
+        };
+        (*cv).cond.notify_all();
+    }
 }
 
 /// `void ossl_crypto_condvar_free(CRYPTO_CONDVAR **cv)` — frees and NULLs.
@@ -1310,12 +1459,12 @@ const OSSL_THREAD_SUPPORT_FLAG_DEFAULT_SPAWN: u32 = 1 << 1;
 /// contains no `no-thread-pool` — so the answer is `3`.
 ///
 /// The two flags decide what `OSSL_get_max_threads`/`OSSL_set_max_threads` mean
-/// for their caller, and those two are **not** implemented here: they read and
-/// write the thread-tracking ex-data slot of an `OSSL_LIB_CTX`
-/// (`OSSL_LIB_CTX_GET_THREADS(ctx)` → `ossl_lib_ctx_get_data(ctx,
-/// OSSL_LIB_CTX_THREAD_INDEX)`), so they are Phase 6's obligation and are
-/// recorded as a hand-off in `forensics/phase3-obligations.json` with that
-/// dependency named.
+/// for their caller. Those two are **not** implemented here: they read and write
+/// the thread-tracking slot of an `OSSL_LIB_CTX` (`OSSL_LIB_CTX_GET_THREADS(ctx)`
+/// → `ossl_lib_ctx_get_data(ctx, OSSL_LIB_CTX_THREAD_INDEX)`, which is
+/// `src/context/thread_data.rs` alongside `crypto/thread/internal.c`'s pool).
+/// They were Phase 6's and landed there; the hand-off this comment used to name
+/// is discharged.
 #[no_mangle]
 pub extern "C" fn OSSL_get_thread_support_flags() -> u32 {
     OSSL_THREAD_SUPPORT_FLAG_THREAD_POOL | OSSL_THREAD_SUPPORT_FLAG_DEFAULT_SPAWN
@@ -1403,6 +1552,23 @@ unsafe extern "C" {
     fn nanosleep(req: *const Timespec, rem: *mut Timespec) -> c_int;
 }
 
+/// `int openssl_get_fork_id(void)` — `crypto/threads_pthread.c:1238-1241`.
+///
+/// The whole body is `return getpid();`; the `FIPS_MODULE` arm beside it is not built on this
+/// profile. It exists because a `fork(2)` hands the child a copy of its parent's DRBG state:
+/// `drbg.c` records this value at every (re)seed and compares it before generating, so a child
+/// that inherits a seeded DRBG reseeds rather than repeating its parent's output. A value that was
+/// not the process's would make that comparison answer "no fork" forever, which is a false
+/// negative in a security-relevant path rather than a cosmetic error.
+///
+/// Internal: `include/internal/cryptlib.h` declares it and `libcrypto.num` does not, so it carries
+/// no export.
+#[allow(dead_code)] // the landing caller is `src/provider/rand.rs`'s `ProvDrbg` reseed check
+pub(crate) fn openssl_get_fork_id() -> c_int {
+    // SAFETY: `getpid` takes no arguments, dereferences none, and cannot fail per POSIX.
+    unsafe { sys::getpid() }
+}
+
 #[cfg(test)]
 mod sleep_tests {
     use super::*;
@@ -1426,5 +1592,70 @@ mod sleep_tests {
         // magnitude on an unloaded machine. The units are nanoseconds.
         assert!(elapsed >= 20_000_000, "elapsed {elapsed}ns");
         assert!(elapsed < 2_000_000_000, "elapsed {elapsed}ns");
+    }
+}
+
+#[cfg(test)]
+mod fork_id_tests {
+    //! `openssl_get_fork_id` is one line, and this is the test that says which line.
+    //!
+    //! The function's whole contract is "the process's id", and `drbg.c`'s fork check is a
+    //! comparison of two of its answers. A transcription that returned a constant would satisfy
+    //! every caller in a single process and defeat the check in exactly the case it exists for, so
+    //! the assertion is against the platform rather than against a recorded value.
+
+    use super::*;
+
+    #[test]
+    fn the_fork_id_is_this_process_id() {
+        let id = openssl_get_fork_id();
+        assert!(id > 0, "a pid is positive, got {id}");
+        // SAFETY: `getpid` takes no arguments and cannot fail per POSIX.
+        let real = unsafe { sys::getpid() };
+        assert_eq!(
+            id, real,
+            "openssl_get_fork_id() is getpid(), not a copy of it"
+        );
+    }
+}
+
+#[cfg(test)]
+mod condvar_tests {
+    use super::*;
+
+    /// A deadline already in the past times out immediately, and the caller's mutex is held again
+    /// when it returns -- which is the whole observable contract of the timed wait that a single
+    /// thread can reach. The immediate timeout is deterministic rather than a race: `remaining` is
+    /// `deadline - now` at the moment of the wait, and a deadline read a moment earlier is already
+    /// behind it.
+    #[test]
+    fn a_past_deadline_times_out_and_reacquires_the_mutex() {
+        // SAFETY: the two objects are created here and released exactly once at the end; the mutex
+        // is locked before the wait and unlocked after it.
+        unsafe {
+            let mut m = ossl_crypto_mutex_new();
+            let mut cv = ossl_crypto_condvar_new();
+            assert!(!m.is_null() && !cv.is_null());
+
+            ossl_crypto_mutex_lock(m);
+            ossl_crypto_condvar_wait_timeout(cv, m, monotonic_now_nanos());
+            // The wait returned; the mutex is ours again, so this unlock is the assertion that the
+            // re-acquire happened. A wait that returned with the flag still clear would leave the
+            // second lock below impossible to take.
+            ossl_crypto_mutex_unlock(m);
+            ossl_crypto_mutex_lock(m);
+            ossl_crypto_mutex_unlock(m);
+
+            ossl_crypto_mutex_free(&raw mut m);
+            ossl_crypto_condvar_free(&raw mut cv);
+        }
+    }
+
+    /// `OSSL_TIME_INFINITY` is the sentinel the infinite arm compares against, and it is
+    /// unreachable from a clock reading -- which is what makes the arm a branch rather than an
+    /// accident. Pinned here because the branch is otherwise untestable without a signaller.
+    #[test]
+    fn the_clock_never_reports_the_infinity_sentinel() {
+        assert_ne!(monotonic_now_nanos(), OSSL_TIME_INFINITY);
     }
 }

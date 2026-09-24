@@ -49,7 +49,10 @@
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/objects.h>
+#include <openssl/md5.h>
 #include <openssl/params.h>
+#include <openssl/ripemd.h>
+#include <openssl/sha.h>
 
 static void sayn(const char *key, long long v)
 {
@@ -374,6 +377,70 @@ static int pbe_pw_arms(void)
     return 1;
 }
 
+static void legacy_md_arms(void)
+{
+    /* The seven `sha.h` accessors, which `crypto/evp/legacy_sha.c` answers with static `EVP_MD`
+     * objects. Their internal fields are the crate's business and its unit test compares them; what
+     * a court can see is the **public** accessors and -- the arm that matters -- that handing one to
+     * `EVP_DigestInit_ex` produces a correct digest. D290 measured why: `evp_md_init_internal` sees
+     * a method with no provider and fetches the provider implementation by NID, so the digest runs
+     * through the fetched method and not through the legacy object's own callbacks. A transcription
+     * that got the object right and the fetch-replacement wrong would pass every field check and
+     * fail here. */
+    static const struct {
+        const char *name;
+        const EVP_MD *(*fn)(void);
+    } rows[] = {
+        { "SHA1", EVP_sha1 },
+        { "SHA224", EVP_sha224 },
+        { "SHA256", EVP_sha256 },
+        { "SHA384", EVP_sha384 },
+        { "SHA512", EVP_sha512 },
+        { "SHA512-224", EVP_sha512_224 },
+        { "SHA512-256", EVP_sha512_256 },
+        { "MD5", EVP_md5 },
+        { "MD5-SHA1", EVP_md5_sha1 },
+        { "RIPEMD160", EVP_ripemd160 },
+        { "BLAKE2b512", EVP_blake2b512 },
+        { "BLAKE2s256", EVP_blake2s256 },
+        { "SHA3-224", EVP_sha3_224 },
+        { "SHA3-256", EVP_sha3_256 },
+        { "SHA3-384", EVP_sha3_384 },
+        { "SHA3-512", EVP_sha3_512 },
+        { "SHAKE128", EVP_shake128 },
+        { "SHAKE256", EVP_shake256 },
+    };
+    unsigned char md[EVP_MAX_MD_SIZE];
+    unsigned int n;
+    size_t i;
+    int k;
+
+    for (i = 0; i < sizeof(rows) / sizeof(rows[0]); i++) {
+        const EVP_MD *m = rows[i].fn();
+        EVP_MD_CTX *c;
+
+        printf("legacy.%s.is_null=%d\n", rows[i].name, m == NULL);
+        if (m == NULL)
+            continue;
+        printf("legacy.%s.type=%d\n", rows[i].name, EVP_MD_get_type(m));
+        printf("legacy.%s.size=%d\n", rows[i].name, EVP_MD_get_size(m));
+        printf("legacy.%s.block=%d\n", rows[i].name, EVP_MD_get_block_size(m));
+        printf("legacy.%s.flags=%lu\n", rows[i].name,
+            (unsigned long)EVP_MD_get_flags(m));
+
+        c = EVP_MD_CTX_new();
+        n = 0;
+        ERR_clear_error();
+        printf("legacy.%s.init=%d\n", rows[i].name, EVP_DigestInit_ex(c, m, NULL));
+        printf("legacy.%s.update=%d\n", rows[i].name, EVP_DigestUpdate(c, "abc", 3));
+        printf("legacy.%s.final=%d\n", rows[i].name, EVP_DigestFinal_ex(c, md, &n));
+        printf("legacy.%s.outlen=%u\n", rows[i].name, n);
+        for (k = 0; k < (int)n && k < 8; k++)
+            printf("legacy.%s.md.%02d=%02x\n", rows[i].name, k, md[k]);
+        EVP_MD_CTX_free(c);
+    }
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IOLBF, 0);
@@ -382,5 +449,6 @@ int main(void)
     asn1_meth_arms();
     md_cipher_meth_arms();
     pbe_pw_arms();
+    legacy_md_arms();
     return 0;
 }

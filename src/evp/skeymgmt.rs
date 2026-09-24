@@ -132,17 +132,17 @@ const OSSL_SKEY_TYPE_GENERIC: *const c_char = c"GENERIC-SECRET".as_ptr();
 // ---------------------------------------------------------------------------------------------
 
 /// `OSSL_FUNC_SKEYMGMT_FREE`. Mandatory, and one of the three the structural check tests.
-const OSSL_FUNC_SKEYMGMT_FREE: c_int = 1;
+pub(crate) const OSSL_FUNC_SKEYMGMT_FREE: c_int = 1;
 /// `OSSL_FUNC_SKEYMGMT_IMPORT`. Mandatory.
-const OSSL_FUNC_SKEYMGMT_IMPORT: c_int = 2;
+pub(crate) const OSSL_FUNC_SKEYMGMT_IMPORT: c_int = 2;
 /// `OSSL_FUNC_SKEYMGMT_EXPORT`. Mandatory, and the third of the three.
-const OSSL_FUNC_SKEYMGMT_EXPORT: c_int = 3;
+pub(crate) const OSSL_FUNC_SKEYMGMT_EXPORT: c_int = 3;
 /// `OSSL_FUNC_SKEYMGMT_GENERATE`. Optional: `EVP_SKEY_generate` answers the fetch's NULL if absent.
 const OSSL_FUNC_SKEYMGMT_GENERATE: c_int = 4;
 /// `OSSL_FUNC_SKEYMGMT_GET_KEY_ID`. Optional, and not counted.
 const OSSL_FUNC_SKEYMGMT_GET_KEY_ID: c_int = 5;
 /// `OSSL_FUNC_SKEYMGMT_IMP_SETTABLE_PARAMS`. Optional, and not counted.
-const OSSL_FUNC_SKEYMGMT_IMP_SETTABLE_PARAMS: c_int = 6;
+pub(crate) const OSSL_FUNC_SKEYMGMT_IMP_SETTABLE_PARAMS: c_int = 6;
 /// `OSSL_FUNC_SKEYMGMT_GEN_SETTABLE_PARAMS`. Optional, and not counted.
 const OSSL_FUNC_SKEYMGMT_GEN_SETTABLE_PARAMS: c_int = 7;
 

@@ -586,6 +586,7 @@ pub(crate) unsafe fn provider_free_intern(prov: *mut OsslProvider, deactivate: c
 /// `*const c_void` immediately, and typing it as the dispatch struct would invite a
 /// dereference the authority never performs here.
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct OsslAlgorithm {
     /// `const char *algorithm_names` — the `:`-separated alias list, and the array's key: a
     /// **NULL** here terminates the array, which is how every walk in this crate stops.
@@ -597,6 +598,95 @@ pub struct OsslAlgorithm {
     pub implementation: *const c_void,
     /// `const char *algorithm_description` — human-readable, and NULL for most providers.
     pub algorithm_description: *const c_char,
+}
+
+// SAFETY: a table row points at `'static` literals and `'static` dispatch tables; it has no
+// interior mutability, and the authority shares rows between the compiled-in table and every
+// query result. A `static` array of rows is therefore safe to share, which is what the default
+// provider's `deflt_digests[]` is.
+unsafe impl Sync for OsslAlgorithm {}
+
+/// The predicate an `ALGC` row carries instead of `NULL`: `int (*capable)(void)`, written inline as
+/// the second field of `struct ag_capable_st` (`providers/common/include/prov/provider_util.h:140-143`)
+/// rather than introduced as a typedef. The authority spells the field's type at its use site, so no
+/// authority header records a name for it and this crate's `AlgorithmCapability` is its own.
+///
+/// It takes no arguments and answers whether the row is to be published at all. In the authority
+/// every instance is a host-CPU test (`AESNI_CBC_HMAC_SHA_CAPABLE` is
+/// `OPENSSL_ia32cap_P[1] & (1 << 25)`), which is why a row's *presence* is not a compile-time fact
+/// and why the filtering below is real work rather than a formality.
+pub(crate) type AlgorithmCapability = unsafe extern "C" fn() -> c_int;
+
+/// `OSSL_ALGORITHM_CAPABLE` — `providers/common/include/prov/provider_util.h:140-143`:
+/// `struct ag_capable_st { OSSL_ALGORITHM alg; int (*capable)(void); }`.
+///
+/// **This is the type of a provider's *source* table, not of a query result.** The core walks a
+/// query result as a stride of the four-field [`OsslAlgorithm`], so a result element may not carry
+/// the fifth field; `ossl_prov_cache_exported_algorithms` exists precisely to copy the `alg` halves
+/// of a capable table into a plain one. `defltprov.c`'s two macros are
+/// `ALGC(NAMES, FUNC, CHECK) { { NAMES, "provider=default", FUNC }, CHECK }` and
+/// `ALG(NAMES, FUNC) ALGC(NAMES, FUNC, NULL)`, so every row of the source table is one of these and
+/// an unconditional row's `capable` is `None`.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub(crate) struct OsslAlgorithmCapable {
+    /// `OSSL_ALGORITHM alg`.
+    pub alg: OsslAlgorithm,
+    /// `int (*capable)(void)` — `None` is the authority's `NULL`.
+    pub capable: Option<AlgorithmCapability>,
+}
+
+// SAFETY: as [`OsslAlgorithm`]: the row points at `'static` literals, has no interior mutability,
+// and the authority shares it between the compiled-in table and the filtered copy.
+unsafe impl Sync for OsslAlgorithmCapable {}
+
+/// `void ossl_prov_cache_exported_algorithms(const OSSL_ALGORITHM_CAPABLE *in, OSSL_ALGORITHM *out)`
+/// — `providers/common/provider_util.c:338-350`.
+///
+/// One pass over `in`, copying each row's `alg` into `out` unless its `capable` answers 0, and
+/// terminating `out` with the `NULL`-named row that ended `in`.
+///
+/// **The authority's own guard is on `out`, not on a flag of its own**: the body is
+/// `if (out[0].algorithm_names == NULL) { ... }`, so the fill happens only when the destination is
+/// still untouched. That is what makes it idempotent when `ossl_default_provider_init` runs twice,
+/// and it is the reason this transcription keeps the same test rather than a `bool`.
+///
+/// # Safety
+/// `in` is a `NULL`-named terminated capable table and `out` is writable for at least as many rows
+/// as `in` has, including the terminator.
+pub(crate) unsafe fn ossl_prov_cache_exported_algorithms(
+    in_: *const OsslAlgorithmCapable,
+    out: *mut OsslAlgorithm,
+) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if (*out).algorithm_names.is_null() {
+            let mut i = 0usize;
+            let mut j = 0usize;
+            while !(*in_.add(i)).alg.algorithm_names.is_null() {
+                let keep = match (*in_.add(i)).capable {
+                    Some(capable) => capable() != 0,
+                    None => true,
+                };
+                if keep {
+                    *out.add(j) = OsslAlgorithm {
+                        algorithm_names: (*in_.add(i)).alg.algorithm_names,
+                        property_definition: (*in_.add(i)).alg.property_definition,
+                        implementation: (*in_.add(i)).alg.implementation,
+                        algorithm_description: (*in_.add(i)).alg.algorithm_description,
+                    };
+                    j += 1;
+                }
+                i += 1;
+            }
+            *out.add(j) = OsslAlgorithm {
+                algorithm_names: ptr::null(),
+                property_definition: ptr::null(),
+                implementation: ptr::null(),
+                algorithm_description: ptr::null(),
+            };
+        }
+    }
 }
 
 /// `typedef int (*OSSL_provider_random_bytes_fn)(void *provctx, int which, void *buf,
@@ -629,14 +719,13 @@ type ProviderRandomBytesFn =
 /// caller who registered `default` through `OSSL_PROVIDER_add_builtin` with parameters has
 /// those parameters applied to the instance the walk creates.
 ///
-/// **Registered residual.** The three `init` pointers in
-/// [`crate::provider::PREDEFINED_PROVIDERS`] are 7/8's, so `provider_new` here receives
-/// `None` for each of them and `provider_activate` therefore takes `provider_init` down the
-/// *module* branch, where `DSO_load` fails. The walk consequently answers 0 where the
-/// authority answers 1. That is a real divergence, observable through
-/// `OSSL_PROVIDER_available` and `OSSL_PROVIDER_do_all`, and it is recorded rather than
-/// smoothed over: it is D116's third residual and it is named in `docs/PHASE-6-SUBPHASES.md`'s
-/// 6.8c row.
+/// **Residual, and now partly retired.** `default`'s entry point
+/// ([`crate::provider::digest::ossl_default_provider_init`]) landed with 8.1b, so this walk
+/// activates `default` with its digest half and answers 1 as the authority does. `base` and
+/// `null` still name `None`, so had they been fallbacks they would take `provider_init` down
+/// the *module* branch and fail at `DSO_load`; they are not fallbacks in this profile, so the
+/// walk does not reach them. What remains open is `OSSL_PROVIDER_load(NULL, "base")` /
+/// `"null"`, and the default provider's non-digest halves. D206 records the measurement.
 ///
 /// # Safety
 /// `store` must be a live store.
@@ -680,8 +769,8 @@ unsafe fn provider_activate_fallbacks(store: *mut ProviderStore) -> c_int {
         let params = unsafe { find_registered_params(store, row.name.as_ptr()) };
         // SAFETY: `row.name` is a `'static` NUL-terminated literal; `params` is NULL or the
         // store's own list, which outlives the object this creates because `provider_new`
-        // deep-copies it.
-        let prov = unsafe { provider_new(row.name.as_ptr(), None, params) };
+        // deep-copies it. `row.init` is the authority's `p->init`.
+        let prov = unsafe { provider_new(row.name.as_ptr(), row.init, params) };
         if prov.is_null() {
             failed = true;
             break;
@@ -1580,11 +1669,27 @@ mod tests {
         (&PROVCTX as *const u8 as *mut u8).cast::<c_void>()
     }
 
-    /// The marker every pointer answer is compared against. A `static`'s address, never
-    /// dereferenced: `OsslParam` has no `Sync` impl because no authority-visible one is ever
-    /// shared, so a `static OsslParam` is not expressible and would not be a better marker.
+    /// The marker every pointer answer is compared against.
+    ///
+    /// **It is an aligned, terminated table rather than a `u8`'s address, and that is a repair.**
+    /// It used to be `(&PROVCTX as *const u8).cast::<OsslParam>()` — misaligned for both
+    /// `OsslParam` and `OsslAlgorithm`, and with no terminating row — on the argument that nothing
+    /// dereferenced it. That argument held only while no unit test performed a provider-backed
+    /// fetch after this fake provider was registered. `provider::util`'s digest tests were the
+    /// first, and `evp_generic_fetch` walked this address as an `OsslAlgorithm` table and aborted
+    /// on the misaligned dereference. A one-row table whose first pointer is NULL is still a
+    /// distinguishable address — the assertions compare it and never read it — and it terminates a
+    /// table walk and a params walk alike, because `OsslParam`'s first field is a `key` that is
+    /// NULL for a terminator and `OsslAlgorithm`'s is an `algorithm_names` that is NULL for one.
+    static TABLE_MARKER: [OsslAlgorithm; 1] = [OsslAlgorithm {
+        algorithm_names: ptr::null(),
+        property_definition: ptr::null(),
+        implementation: ptr::null(),
+        algorithm_description: ptr::null(),
+    }];
+
     fn table_marker() -> *const OsslParam {
-        (&PROVCTX as *const u8).cast::<OsslParam>()
+        TABLE_MARKER.as_ptr().cast::<OsslParam>()
     }
 
     /// The provider's own dispatch table, published through `out`.

@@ -109,27 +109,27 @@ const OSSL_KDF_PARAM_SIZE: *const c_char = c"size".as_ptr();
 // ---------------------------------------------------------------------------------------------
 
 /// `OSSL_FUNC_KDF_NEWCTX`.
-const OSSL_FUNC_KDF_NEWCTX: c_int = 1;
+pub(crate) const OSSL_FUNC_KDF_NEWCTX: c_int = 1;
 /// `OSSL_FUNC_KDF_DUPCTX`.
-const OSSL_FUNC_KDF_DUPCTX: c_int = 2;
+pub(crate) const OSSL_FUNC_KDF_DUPCTX: c_int = 2;
 /// `OSSL_FUNC_KDF_FREECTX`.
-const OSSL_FUNC_KDF_FREECTX: c_int = 3;
+pub(crate) const OSSL_FUNC_KDF_FREECTX: c_int = 3;
 /// `OSSL_FUNC_KDF_RESET`.
-const OSSL_FUNC_KDF_RESET: c_int = 4;
+pub(crate) const OSSL_FUNC_KDF_RESET: c_int = 4;
 /// `OSSL_FUNC_KDF_DERIVE`.
-const OSSL_FUNC_KDF_DERIVE: c_int = 5;
+pub(crate) const OSSL_FUNC_KDF_DERIVE: c_int = 5;
 /// `OSSL_FUNC_KDF_GETTABLE_PARAMS`.
 const OSSL_FUNC_KDF_GETTABLE_PARAMS: c_int = 6;
 /// `OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS`.
-const OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS: c_int = 7;
+pub(crate) const OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS: c_int = 7;
 /// `OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS`.
-const OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS: c_int = 8;
+pub(crate) const OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS: c_int = 8;
 /// `OSSL_FUNC_KDF_GET_PARAMS`.
 const OSSL_FUNC_KDF_GET_PARAMS: c_int = 9;
 /// `OSSL_FUNC_KDF_GET_CTX_PARAMS`.
-const OSSL_FUNC_KDF_GET_CTX_PARAMS: c_int = 10;
+pub(crate) const OSSL_FUNC_KDF_GET_CTX_PARAMS: c_int = 10;
 /// `OSSL_FUNC_KDF_SET_CTX_PARAMS`.
-const OSSL_FUNC_KDF_SET_CTX_PARAMS: c_int = 11;
+pub(crate) const OSSL_FUNC_KDF_SET_CTX_PARAMS: c_int = 11;
 /// `OSSL_FUNC_KDF_SET_SKEY`. Filled by the walk, called by 7.3f.
 const OSSL_FUNC_KDF_SET_SKEY: c_int = 12;
 /// `OSSL_FUNC_KDF_DERIVE_SKEY`. Filled by the walk, called by 7.3f.

@@ -1,0 +1,239 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "algorithm": "bf",
+    "court": "CT-CIPHER",
+    "openssl_cipher": "BF-{ECB,CBC,CFB,OFB}",
+    "primary_source": "Schneier's Blowfish (self-generated corpus)",
+    "provenance": {
+      "authority": "openssl-3.6.4-production",
+      "corpus": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_bf.txt",
+      "corpus_sha256": "40d648bc8d6a4b041f410097d385d3b7478052e961808113127a8fd7226b2d8e",
+      "note": "Candidate-only construction verification: the primary source is named, the bytes are mirrored through the pinned corpus (`corpus_sha256`), and the mirror's identity is fixed. This does NOT establish that the mirror is faithful to a primary source nobody here has read, and a CT pass is not formal validation. No independent implementation of this cipher is present in the pinned court image, so only the empty-input boundary carries an independent oracle, whose answer is the construction's own (D211/D215).",
+      "primary_source": "Schneier's Blowfish (self-generated corpus)"
+    },
+    "standard": "Schneier's Blowfish (self-generated corpus)",
+    "vectors": [
+      {
+        "aad_hex": "",
+        "cipher": "BF-ECB",
+        "expected_hex": "079590e0010626685653b9b6c2a406e0",
+        "id": "bf-1",
+        "input_hex": "0f0e0c0d0b0a09080706050403020100",
+        "iv_hex": "",
+        "key_hex": "000102030405060708090a0b0c0d0e0f",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_bf.txt",
+          "form": "keyed-block",
+          "line": 13,
+          "mirror_sha256": "40d648bc8d6a4b041f410097d385d3b7478052e961808113127a8fd7226b2d8e",
+          "primary_source": "Schneier's Blowfish (self-generated corpus)",
+          "title": "Self generated BF test vectors"
+        },
+        "standard": "Schneier's Blowfish (self-generated corpus)",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "BF-ECB",
+        "expected_hex": "7a0fe3734ad4785b49e59296b7861789",
+        "id": "bf-2",
+        "input_hex": "0f0e0c0d0b0a09080706050403020100",
+        "iv_hex": "",
+        "key_hex": "000102030405060708090a0b0c0d0e0f00000000",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_bf.txt",
+          "form": "keyed-block",
+          "line": 20,
+          "mirror_sha256": "40d648bc8d6a4b041f410097d385d3b7478052e961808113127a8fd7226b2d8e",
+          "primary_source": "Schneier's Blowfish (self-generated corpus)",
+          "title": "Self generated BF test vectors"
+        },
+        "standard": "Schneier's Blowfish (self-generated corpus)",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "BF-CBC",
+        "expected_hex": "39c65006742b62a49f7a40ff69749c0a",
+        "id": "bf-3",
+        "input_hex": "0f0e0c0d0b0a09080706050403020100",
+        "iv_hex": "0101010101010101",
+        "key_hex": "000102030405060708090a0b0c0d0e0f",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_bf.txt",
+          "form": "keyed-block",
+          "line": 26,
+          "mirror_sha256": "40d648bc8d6a4b041f410097d385d3b7478052e961808113127a8fd7226b2d8e",
+          "primary_source": "Schneier's Blowfish (self-generated corpus)",
+          "title": "Self generated BF test vectors"
+        },
+        "standard": "Schneier's Blowfish (self-generated corpus)",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "BF-CBC",
+        "expected_hex": "3a5cefdb91e56e7aab45e7ea562bd465",
+        "id": "bf-4",
+        "input_hex": "0f0e0c0d0b0a09080706050403020100",
+        "iv_hex": "0101010101010101",
+        "key_hex": "000102030405060708090a0b0c0d0e0f00000000",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_bf.txt",
+          "form": "keyed-block",
+          "line": 34,
+          "mirror_sha256": "40d648bc8d6a4b041f410097d385d3b7478052e961808113127a8fd7226b2d8e",
+          "primary_source": "Schneier's Blowfish (self-generated corpus)",
+          "title": "Self generated BF test vectors"
+        },
+        "standard": "Schneier's Blowfish (self-generated corpus)",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "BF-OFB",
+        "expected_hex": "27be8331cdc52dc61724029d302b9358",
+        "id": "bf-5",
+        "input_hex": "0f0e0c0d0b0a09080706050403020100",
+        "iv_hex": "0101010101010101",
+        "key_hex": "0001020304050607",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_bf.txt",
+          "form": "keyed-block",
+          "line": 41,
+          "mirror_sha256": "40d648bc8d6a4b041f410097d385d3b7478052e961808113127a8fd7226b2d8e",
+          "primary_source": "Schneier's Blowfish (self-generated corpus)",
+          "title": "Self generated BF test vectors"
+        },
+        "standard": "Schneier's Blowfish (self-generated corpus)",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "BF-OFB",
+        "expected_hex": "f108f229cc1cbe228aa3b2407979289a",
+        "id": "bf-6",
+        "input_hex": "0f0e0c0d0b0a09080706050403020100",
+        "iv_hex": "0101010101010101",
+        "key_hex": "000102030405060700000000",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_bf.txt",
+          "form": "keyed-block",
+          "line": 49,
+          "mirror_sha256": "40d648bc8d6a4b041f410097d385d3b7478052e961808113127a8fd7226b2d8e",
+          "primary_source": "Schneier's Blowfish (self-generated corpus)",
+          "title": "Self generated BF test vectors"
+        },
+        "standard": "Schneier's Blowfish (self-generated corpus)",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "BF-CFB",
+        "expected_hex": "27be8331cdc52dc675a93625f90f5db4",
+        "id": "bf-7",
+        "input_hex": "0f0e0c0d0b0a09080706050403020100",
+        "iv_hex": "0101010101010101",
+        "key_hex": "0001020304050607",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_bf.txt",
+          "form": "keyed-block",
+          "line": 56,
+          "mirror_sha256": "40d648bc8d6a4b041f410097d385d3b7478052e961808113127a8fd7226b2d8e",
+          "primary_source": "Schneier's Blowfish (self-generated corpus)",
+          "title": "Self generated BF test vectors"
+        },
+        "standard": "Schneier's Blowfish (self-generated corpus)",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "BF-CFB",
+        "expected_hex": "f108f229cc1cbe2214f00c3a8611cb46",
+        "id": "bf-8",
+        "input_hex": "0f0e0c0d0b0a09080706050403020100",
+        "iv_hex": "0101010101010101",
+        "key_hex": "000102030405060700000000",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_bf.txt",
+          "form": "keyed-block",
+          "line": 64,
+          "mirror_sha256": "40d648bc8d6a4b041f410097d385d3b7478052e961808113127a8fd7226b2d8e",
+          "primary_source": "Schneier's Blowfish (self-generated corpus)",
+          "title": "Self generated BF test vectors"
+        },
+        "standard": "Schneier's Blowfish (self-generated corpus)",
+        "tag_hex": ""
+      },
+      {
+        "cipher": "BF-ECB",
+        "expected_hex": "",
+        "id": "bf-bf-ecb-empty-9",
+        "input_hex": "",
+        "iv_hex": "",
+        "key_hex": "000102030405060708090a0b0c0d0e0f",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "derivation": "independent",
+          "label": "empty",
+          "note": "the expected bytes are the construction's own answer, not a published test value",
+          "oracle": "the construction's definition: a block or feedback mode over a zero-byte input emits no bytes",
+          "primary_source": "UNKNOWN"
+        },
+        "standard": "Schneier's Blowfish (self-generated corpus)"
+      },
+      {
+        "cipher": "BF-CBC",
+        "expected_hex": "",
+        "id": "bf-bf-cbc-empty-10",
+        "input_hex": "",
+        "iv_hex": "0000000000000000",
+        "key_hex": "000102030405060708090a0b0c0d0e0f",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "derivation": "independent",
+          "label": "empty",
+          "note": "the expected bytes are the construction's own answer, not a published test value",
+          "oracle": "the construction's definition: a block or feedback mode over a zero-byte input emits no bytes",
+          "primary_source": "UNKNOWN"
+        },
+        "standard": "Schneier's Blowfish (self-generated corpus)"
+      }
+    ]
+  },
+  "generator": "forensics/tools/correctness_vectors.py",
+  "inputs": [
+    {
+      "name": "authority-evp-vector-file",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_bf.txt",
+      "sha256": "40d648bc8d6a4b041f410097d385d3b7478052e961808113127a8fd7226b2d8e"
+    }
+  ],
+  "kind": "cipher-vectors-bf",
+  "schema": "openssl-rs/atlas/cipher-vectors-bf/v1"
+}

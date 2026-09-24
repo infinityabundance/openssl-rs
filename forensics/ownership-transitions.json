@@ -79,6 +79,14 @@
   ],
   "prerequisite_transitions": [
     {
+      "metric": "sealed_census",
+      "before": 57,
+      "after": 59,
+      "reason": "Landing the BN blinding and prime families (D324) gave `crypto/bn/bn_prime.c` a crate module for the first time, so the gate's sealed-stratum census now sees two of that unit's own internals that the crate does not build: `ossl_bn_get0_small_factors` (`bn_prime.c:65`) and `ossl_bn_check_generated_prime` (`:258`). Both are Phase 5's unit, which is complete, and neither is reached by any body this commit transcribes -- their only authority callers are in `crypto/bn/bn_rsa_fips186_4.c`, which is Phase 8's. So the census rose because two names became *countable* when the unit that owns them finally got a module beside them, not because an implementation was lost; a census entry is not a failure, and the gate prints the count rather than gating on it. The same class as D132's 11 -> 12, D134's 12 -> 15 and D130's language census: an invariant that cannot tell a legitimate change from a hidden omission.",
+      "authority_artifact": "forensics/atlas/prerequisite-gate.json",
+      "recorded_by": "docs/DECISIONS.md D324"
+    },
+    {
       "metric": "blocking_dependencies",
       "before": 11,
       "after": 12,
@@ -213,6 +221,30 @@
       "reason": "7.6 withholds `OSSL_HPKE_get_grease_value`, and `forensics/prerequisites.json` records the *dependency* that blocks it rather than a row for itself (D165 refused a deferral for a Phase-7-owned export). One dependency name is new: `RAND_bytes_ex` (`crypto/hpke/hpke.c:1433`, Phase 9's), which the random GREASE fill is the whole observable of; its random-suite helper `ossl_rand_uniform_uint32` (`hpke_util.c:198`, `:220`, `:243`) is the same stratum and is named in the same row's reason rather than as a second blocking entry. Phase 9 has not started, so the name is blocking by the gate's rule. This row is the same change measured against this branch's previous head (`34c68191`), whose committed baseline already counts 25. The count rises because a blocker became *recorded*, not because work appeared, and nothing was undone.",
       "authority_artifact": "forensics/prerequisites.json",
       "recorded_by": "docs/DECISIONS.md D195"
+    },
+    {
+      "metric": "sealed_census",
+      "before": 56,
+      "after": 57,
+      "reason": "D314 gives `crypto/bn/bn_rand.c` a transcription edge (`src/bn/rand.rs`). The gate's sealed census counts authority internals a transcribed unit calls whose own defining unit's stratum has sealed, so transcribing another authority file necessarily enters that file's not-yet-built tail: two names of it appeared -- `ossl_bn_priv_rand_range_fixed_top` (`crypto/bn/bn_rand.c:241-283`) and `ossl_bn_gen_dsa_nonce_fixed_top` (`:293-395`), neither of which the crate defines -- and one left because D314 built it (`ossl_bn_get_libctx`, `crypto/bn/bn_ctx.c:243`). The count rises because a whole authority unit that nothing referenced became visible, which is the cause D132 recorded for the blocking list from the same direction: landing work can move such a count up without any work being undone. Both names are the later slice `src/bn/rand.rs`'s module note already records as not transcribed, and both need `ossl_bn_mask_bits_fixed_top` and the fixed-top representation.",
+      "authority_artifact": "forensics/atlas/prerequisite-gate.json",
+      "recorded_by": "docs/DECISIONS.md D314"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 17,
+      "after": 19,
+      "reason": "The blocking-dependency census rises by **two**, from 17 to 19, and both names are 8.6's own rather than a later stratum's, which is why they are deferrals with `owner_phase` 8 and therefore countable. `ossl_dsa_sign_int` (`crypto/dsa/dsa_sign.c`) is the one definition of that unit D333 does not carry: its body past its four arguments is `i2d_DSA_SIG`, the DER `DSA-Sig-Value` encoder, and that is `crypto/asn1_dsa.c`'s `ossl_encode_der_dsa_sig` over `crypto/packet.c`'s thirty `WPACKET_*` symbols -- neither unit has a crate module and no stratum's plan row names one. `ossl_dsa_ffc_params_fromdata` (`crypto/dsa/dsa_lib.c:355-365`) is `ossl_ffc_params_fromdata` plus a `dirty_cnt` bump, and that function is `crypto/ffc/ffc_backend.c`'s, the unit D330 and D332 already record as having no module because it calls `crypto/param_build_set.c`'s four `ossl_param_build_set_*`. Both are visible for the first time because D333 gave `dsa_sign.c` and `dsa_lib.c` crate modules, and the gate's rule is about names a transcribed unit defines that no module mentions -- the same *visibility* class as D324's `sealed_census` rise and D132's 11 -> 12: an invariant that cannot tell a legitimate change from a hidden omission. The other two counters moved down with the same commit and need no row: `sealed_census` 57 -> 52, because D333 builds the five names D314 deferred (`ossl_bn_priv_rand_range_fixed_top`, `ossl_bn_gen_dsa_nonce_fixed_top`, `ossl_bn_mask_bits_fixed_top`, `ossl_bn_is_word_fixed_top` and `bn_wexpand`), and `open` in the Phase-8 ledger 390 -> 328.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D333"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 19,
+      "after": 20,
+      "reason": "The blocking-dependency census rises by **one**, from 19 to 20, and the name is a Phase-8 internal that becomes *visible* for the first time because D340 records it. `ossl_dh_is_foreign` (`crypto/dh/dh_backend.c:122`) is the DH provider backend's, and `crypto/evp/p_lib.c`'s static `detect_foreign_key` calls it whenever a legacy key is attached to an `EVP_PKEY`. D340 lands `crypto/ec/ec_key.c` and `crypto/ec/ec_lib.c` whole, which retires the two Phase-7 deferral rows that `EVP_PKEY_assign` and `EVP_PKEY_get_ec_point_conv_form`/`EVP_PKEY_get_field_type` were blocked on (`EC_KEY_get0_group`, `EC_GROUP_get_curve_name`, `EC_KEY_get_conv_form`, `EC_GROUP_get_field_type`) -- a row whose every blocker has landed is stale by definition, and `blocker_liveness.py` reported exactly that. `EVP_PKEY_assign` still needs `detect_foreign_key`'s three callees, and `ossl_dh_is_foreign` had no owner phase in any atlas, so D340 gives it a deferral row with `owner_phase` 8 rather than leaving the Phase-7 row name a call the atlas cannot resolve. Nothing about the candidate changed: the name was already absent and unlanded, and it is the *record* that is new. The other counters moved down with the same commit and need no row: `sealed_census` stays 52 and the Phase-8 ledger's `open` moved 324 -> 173 as 152 `ec.h` exports landed.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D340"
     }
   ]
 }

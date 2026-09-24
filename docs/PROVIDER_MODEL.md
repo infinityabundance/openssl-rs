@@ -62,6 +62,24 @@ more than "our `EVP_*` calls seem to work".
 - **Obligations**: every provider operation, algorithm and property is a
   generated obligation (`PROVIDER-LOAD`, `PROVIDER-DISPATCH`,
   `FETCH-PROPERTY` courts).
+- **Registration rows are a completion input, not a report.** A provider publishes
+  *algorithm registration rows* — `deflt_ciphers[]`, `deflt_digests[]`, `deflt_macs[]` and their
+  siblings — and no `libcrypto.num` entry names any of them, so no symbol atlas can see one. They
+  are enumerated by `forensics/atlas/provider-algorithms.json`, and since D244 a stratum cannot
+  reach `complete` while any row it owns is neither implemented nor handed to a later phase. The
+  row counts are carried on every phase's row in `forensics/phase-state.json` and in
+  `forensics/regression-baseline.json`, so a landed row cannot be un-registered in silence.
+  `deferred` is not `open`: a hand-off names the phase that will take it and a blocker.
+- **Registration rows are observed, not merely present.** `implemented` is a statement about a
+  candidate table; it is not a statement that any observation touches the row. Since D245 every
+  implemented row must be named by a probe belonging to a court that covers its stratum, and
+  `forensics/atlas/provider-court-coverage.json` is the join. This is D199's export invariant one
+  universe down, and it was written against a measured gap: **39 of 82** implemented cipher rows —
+  every AES and Camellia non-128 variant in ECB/OFB/CFB/CFB1/CFB8/CTR, and their 3DES EDE/EDE3
+  counterparts — were named nowhere in any probe while the census called them implemented. They are
+  now fetched *and measured* (`keylen`, `ivlen`, `blocksize`, `mode`) by `RT-CIPHER`'s
+  `rt_deflt_row_census` arm, and the generator compares that arm's name list against the census in
+  both directions so neither can go stale in silence.
 - **Duplicated names / property selection**: the *selected* algorithm is
   observable and may differ; selection is courted, not assumed.
 - **Configuration**: config-driven provider module activation and property

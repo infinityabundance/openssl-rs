@@ -1,0 +1,38 @@
+rand: the crate-side constants the DRBG rows need, and the eight entropy ids close eight census names (D299)
+
+Phase 9.1's crate-side prerequisites, all of them named by the staged transcriptions as
+missing and each verified against the authority before it was added.
+
+context/dispatch.rs gains the eight entropy and nonce up-call ids
+providers/common/provider_seeding.c publishes and drbg.c consumes through the provider
+context: CLEANUP_USER_ENTROPY 96, CLEANUP_USER_NONCE 97, GET_USER_ENTROPY 98,
+GET_USER_NONCE 99, GET_ENTROPY 101, CLEANUP_ENTROPY 102, GET_NONCE 103, CLEANUP_NONCE
+104 -- read from core_dispatch.h:177-191, where 100 is absent and the CLEANUP_ pair
+precedes the GET_ pair because it was added first. The register-guard census moves for
+this commit and is the evidence the addition was needed rather than decorative:
+language_surface_not_modelled_by_name goes 3139 -> 3131, exactly the eight names.
+
+evp/rand.rs widens OSSL_OP_RAND, EVP_RAND_STATE_ERROR and all nineteen OSSL_FUNC_RAND_*
+constants to pub(crate) -- the DRBG rows answer deflt_query(OSSL_OP_RAND) from
+src/provider/rand.rs now, so they are read across modules -- and names
+EVP_RAND_STATE_UNINITIALISED (0) and EVP_RAND_STATE_READY (1) beside the existing
+ERROR (2). The two non-error states are named rather than folded into a boolean because
+a DRBG row's gettable_ctx_params reports state as a number and the authority's drbg.c
+compares against READY by name.
+
+modes/mod.rs widens get_u32_be and put_u32_be to pub(crate): the CTR and HASH DRBGs
+assemble their counter blocks with them.
+
+provider/cipher.rs gains param_uint64 and param_time_t. The second is the one worth
+recording: OSSL_PARAM_time_t uses OSSL_PARAM_INTEGER, not UNSIGNED_INTEGER
+(params.h:53-54), so a transcription that reused the uint64 body because both are eight
+bytes would publish a parameter whose type differs from the authority's for the same
+key -- and params/mod.rs branches on the data type when it copies, so the difference is
+observable through OSSL_PARAM_get_int64. drbg.c publishes max_request and
+reseed_time_interval with it.
+
+Nothing here is a stub and nothing is wired: each new item carries an allow(dead_code)
+that names the landing caller, which is the crate's existing idiom for a mechanism
+landed ahead of the code that reads it.
+
+PIPELINE OK, 85 courts, 31469 observations.

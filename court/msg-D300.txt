@@ -1,0 +1,53 @@
+rand: the entropy pool lands as src/rand/, compiled and tested while nothing calls it yet (D300)
+
+9.2's first unit, and the one part of Phase 9 that can land honestly before the
+front it will be called from.
+
+src/rand/mod.rs and src/rand/pool.rs transcribe crypto/rand/rand_pool.c and
+include/crypto/rand_pool.h: the RAND_POOL layout with the authority's field order
+and widths, ossl_rand_pool_new/_attach/_free/_buffer/_entropy/_length/_detach/
+_reattach/_entropy_available/_entropy_needed/_bytes_needed/_bytes_remaining/_add/
+_add_begin/_add_end/_adin_mix_in, and the two private helpers rand_pool_grow and
+entropy_to_bytes. The module carries ten unit tests (634 total, up from 624) and
+compiles with no caller at all.
+
+Why this unit and not the front: the pool is the only piece of the random layer
+with no platform dependency and no caller, so it is the only piece that can be
+landed, compiled, clippy-clean and tested on the day it arrives. Everything else
+in 9.2-9.5 needs the DRBG it fetches or the sys bindings the seeding arm uses.
+The module-level allow(dead_code) says exactly that, and the precedent is
+src/runtime/rcu.rs and src/evp/fetch.rs.
+
+The seeding half is deliberately NOT here. ossl_pool_acquire_entropy,
+ossl_rand_pool_init/_cleanup and the /dev cache are in
+providers/implementations/rands/seeding/rand_unix.c, which is 9.5's, needs about
+a dozen sys bindings the crate does not declare, and is reached only through the
+provider's instantiate. D298 recorded the correction that put them there.
+
+Three defects the work found, all in the tests rather than the transcription, and
+recorded at the sites because the same wrong intuition would come back:
+
+1. ossl_rand_pool_bytes_needed CLIPS NOTHING. If the estimate does not fit in
+   max_len - len it raises RAND_R_REPEATED_PARAMETER's sibling reason and answers
+   0 (rand_pool.c:262-273). A test asserting it clipped to max_len failed against
+   the transcription, and the transcription was right.
+2. ossl_rand_pool_adin_mix_in's cyclic side is the POOL, not the adin:
+   pool->buffer[i % pool->len] ^= adin[i] with the loop running over adin_len. A
+   two-byte adin over a four-byte pool therefore touches only a prefix, and a
+   six-byte adin XORs bytes 0 and 1 twice. The test now drives both directions.
+3. EVP_RAND/OSSL_PARAM units: param_time_t is OSSL_PARAM_INTEGER while
+   param_uint64 is OSSL_PARAM_UNSIGNED_INTEGER, same eight bytes -- D299's
+   finding, which the DRBG rows depend on.
+
+Every arithmetic operation that can overflow is wrapping_*, for the reason
+docs/UNSAFE.md gives: the crate builds with overflow-checks = true, so the
+authority's undefined size_t arithmetic has to have a defined answer here rather
+than a panic.
+
+Evidence of the landing: the prerequisite gate's language census moves 3131 ->
+3140, which is the nine internal names the pool adds. The module carries no
+export, so the obligation ledger and the court-coverage atlas gain nothing from
+it -- naming src/rand/ in phase_state.py's PHASE9_MODULES is the only place the
+landing is visible to the evidence machinery at all, and it is named there.
+
+PIPELINE OK, 85 courts, 31469 observations, 634 unit tests.

@@ -1,0 +1,1056 @@
+//! Phase 5 — the PEM reader's middle: `crypto/pem/pem_lib.c:111-300` and `:445-504`, plus
+//! `crypto/pem/pem_oth.c:20-36`. Five exports, three statics and the constants they compare
+//! against.
+//!
+//! ## This file does not compile, on purpose
+//!
+//! This is a **staging** file: the crate's convention is that such a file is written first and
+//! integrated in a later commit, so it is deliberately not part of the build. Adding
+//! `mod pem_read;` to `src/pem/mod.rs` today would fail the crate's build at **name resolution**,
+//! on the four names the missing-callee list below names — not at the link, and not silently: the
+//! failure is the point, because it is how the gap is kept visible instead of stubbed. It is
+//! **not** watered down to compile: a version that stubbed those four would be a different
+//! observable contract, not a smaller one. Every name the crate *does* have is imported and
+//! called unchanged; every name it lacks is called exactly as the authority spells it and is
+//! listed in the section below.
+//!
+//! ## Missing callees, named
+//!
+//! * **`PEM_def_callback`** — declared `include/openssl/pem.h:440`, defined
+//!   `crypto/pem/pem_lib.c:36-69`; called by `PEM_do_header` at `:467` when the caller passes no
+//!   callback. Absent from the crate. Its home is this stratum's `src/pem/pem_lib.rs`, and its
+//!   own blocker is `EVP_read_pw_string_min` — the `UI`-backed pair `src/evp/p_legacy.rs`
+//!   withholds for the same reason, `docs/PHASE-7-SUBPHASES.md` handing it to **Phase 13**. The
+//!   call below is written with the path that stratum will give it; its raise site
+//!   (`err_sites::PEM_LIB_64`) is already generated.
+//! * **`ERR_add_error_data`** — `crypto/err/err.c`, a printf-style **C-variadic**; called by
+//!   `pem_bytes_read_bio_flags` at `:260` to append `Expecting: <name>` to the
+//!   `PEM_R_NO_START_LINE` the reader already raised. Rust cannot call a C-variadic, and no
+//!   `extern` in the crate declares the symbol (the `src/runtime/err_variadic.c` adapter defines
+//!   it, but only for the C side). The crate reaches the same effect through
+//!   `runtime::err::ERR_add_error_txt` — see `src/asn1/d2i.rs`'s `add_error_data` and
+//!   `src/runtime/bio/legacy_host.rs` — which is how it will be spelled when this lands.
+//!   **Phase 2**'s.
+//! * **`ERR_GET_REASON`** — `include/openssl/err.h`'s mask-and-cast macro
+//!   (`((int)(((unsigned long)(r)) & ERR_REASON_MASK))`), read at `:259` against the **oldest**
+//!   queued entry (`ERR_peek_error`, not `ERR_peek_last_error`). The crate's
+//!   `runtime::err::get_reason` is private to `err.rs` and `peek_last_reason` is the *last*-entry
+//!   spelling, which is a different read, so neither is substituted. **Phase 2**'s.
+//! * **`ENGINE_finish`** — `crypto/engine/eng_init.c`, one of the 115 `ENGINE_*` exports
+//!   `docs/DECISIONS.md` D181 assigns to **Phase 13**; called by `check_pem` at `:170` under
+//!   `#ifndef OPENSSL_NO_ENGINE`, which this profile leaves undefined. The `Engine` type itself
+//!   *is* in the crate (`src/evp/pkey_asn1.rs:295`).
+//!
+//! Nothing else is missing. `EVP_BytesToKey`, `EVP_md5`, the `EVP_CIPHER_CTX_new`/`_free` pair
+//! and the three `EVP_Decrypt*` calls, `PEM_read_bio_ex`, `PEM_get_EVP_CIPHER_INFO`,
+//! `ossl_pem_check_suffix`, `EVP_PKEY_asn1_find_str`, `BIO_new`/`BIO_s_file`/`BIO_ctrl`/
+//! `BIO_free`, `CRYPTO_free`/`CRYPTO_secure_clear_free`, `OPENSSL_cleanse` and `ERR_peek_error`
+//! all exist in the crate today with the authority's signature, and `strcmp` is the C library's.
+//!
+//! ## Macro spellings, checked rather than assumed
+//!
+//! * `PEM_FREE(p, flags, num)` (`:223`) is transcribed as the **function behind it**,
+//!   `pem_free` (`:225-232`), exactly as `court/bn-rand.rs` transcribes `BN_zero` as `BN_zero_ex`.
+//!   The macro passes `OPENSSL_FILE`/`OPENSSL_LINE`, so **each of the six call sites records its
+//!   own line** and each is written with its own `__LINE__`.
+//! * `BIO_set_fp(b, fp, c)` is `BIO_ctrl(b, BIO_C_SET_FILE_PTR, c, (char *)(fp))`
+//!   (`include/openssl/bio.h:568`), so `PEM_ASN1_read` calls `BIO_ctrl` — the same substitution
+//!   `src/evp/pem_bridge.rs:1166` makes.
+//! * `OPENSSL_free(data)` (`pem_oth.c:34`) is `CRYPTO_free(data, OPENSSL_FILE, OPENSSL_LINE)` in
+//!   this profile, so it is written with `pem_oth.c`'s own file and line.
+//! * `ERR_GET_REASON` and `ERR_add_error_data` are **left as the authority spells them** — see
+//!   the list above — rather than replaced by the crate's near-miss spellings.
+//! * `EVP_MAX_KEY_LENGTH` (`include/openssl/evp.h:35`) and `BIO_NOCLOSE`
+//!   (`include/openssl/bio.h:85`) are file-private to several crate modules and are re-stated
+//!   here, as `src/evp/p_legacy.rs:109` and `src/evp/pem_bridge.rs:135` re-state them.
+//! * `PEM_FLAG_SECURE` / `PEM_FLAG_EAY_COMPATIBLE` are **imported** from
+//!   `src/evp/pem_bridge.rs:129-131`, where Phase 7.5 landed them.
+//! * `PEM_STRING_*` (`include/openssl/pem.h:35-62`): the crate has no table of them and
+//!   `check_pem` compares fourteen. They are literals with no function behind them, so they are
+//!   transcribed as private `const`s, the way `BN_RAND_TOP_*` are. The `#ifndef OPENSSL_NO_CMS`
+//!   pair at `:210-218` **is compiled**: `no-cms` is not among this profile's Configure options.
+//!
+//! ## The `err:` label, and the one return that skips it
+//!
+//! `pem_bytes_read_bio_flags` has three exits. Two reach `err:` (`:277`) — the header parse and
+//! then the decryption — and free `nm` unless the caller asked for it (`:278-279`), `header`
+//! always (`:280`), and `data` only when `ret` is still `0` (`:281-282`). The third is a bare
+//! `return 0` inside the `do`/`while` when `PEM_read_bio_ex` fails (`:261`), which **never
+//! reaches `err:`**. That is not a leak: `PEM_read_bio_ex` writes `*name_out = *header = NULL`,
+//! `*data = NULL` and `*len_out = 0` before it has read a byte (`:954-956`), so all three are
+//! `NULL` on that path. Both shapes are transcribed as written: the early `return 0`, and
+//! [`pem_bytes_read_bio_err`] for the label.
+//!
+//! ## Scope: what is transcribed, and what is deliberately left
+//!
+//! Transcribed here, in authority order: `PEM_ASN1_read` (`pem_lib.c:111-125`), the static
+//! `check_pem` (`:128-221`), the static `pem_free` (`:225-232`), the static
+//! `pem_bytes_read_bio_flags` (`:243-284`) with its `err:` tail, `PEM_bytes_read_bio`
+//! (`:286-292`), `PEM_bytes_read_bio_secmem` (`:294-300`), `PEM_do_header` (`:445-504`) and
+//! `PEM_ASN1_read_bio` (`pem_oth.c:20-36`).
+//!
+//! Left out of this slice, each named rather than silently dropped:
+//!
+//! * `pem_malloc` (`:236-241`, the `PEM_MALLOC` body). **No name above allocates through it** —
+//!   every buffer these six touch is `PEM_read_bio_ex`'s — so it belongs with the writing half.
+//!   `PEM_FREE`'s twin *is* needed and is transcribed. Both already exist as **private** functions
+//!   in `src/evp/pem_bridge.rs:188` and `:201`; they are re-stated here only because a module
+//!   cannot reach another module's private items, and the integration should keep one copy, not
+//!   two.
+//! * Everything else in the two files, all of which is already landed or another slice's:
+//!   `PEM_def_callback` (`:36-69`, the missing callee above), `PEM_proc_type` / `PEM_dek_info`
+//!   (`:71-108`, in `src/pem/pem_lib.rs`), `PEM_ASN1_write*` (`:303-443`),
+//!   `PEM_get_EVP_CIPHER_INFO` (`:521-592`), `PEM_write*` / `PEM_read*` (`:618-718`, `:944-1039`),
+//!   `sanitize_line` / `get_name` / `get_header_and_data` (`:722-936`) and `ossl_pem_check_suffix`
+//!   (`:1047-1062`) — the last six of those in `src/evp/pem_bridge.rs`.
+//!
+//! `#ifndef OPENSSL_NO_STDIO`, which guards `PEM_ASN1_read` in the authority, is **undefined** on
+//! this profile (no `no-stdio` in the Configure options), so the export is compiled and is
+//! transcribed. `#if LONG_MAX > INT_MAX` holds for `c_long` on the target, so `PEM_do_header`'s
+//! truncation check is compiled and is transcribed; `#ifdef CHARSET_EBCDIC` does not hold, so its
+//! two `ebcdic2ascii` calls are absent, which is why no such name appears below.
+//!
+//! SPDX-License-Identifier: Apache-2.0
+
+#![deny(unsafe_op_in_unsafe_fn)]
+#![deny(missing_docs)]
+
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
+use core::ptr;
+
+use crate::asn1::layout::D2iOfVoid;
+use crate::evp::cipher_ctx::{
+    EVP_CIPHER_CTX_free, EVP_CIPHER_CTX_new, EVP_DecryptFinal_ex, EVP_DecryptInit_ex,
+    EVP_DecryptUpdate,
+};
+use crate::evp::legacy_md5::EVP_md5;
+use crate::evp::p_legacy::EVP_BytesToKey;
+use crate::evp::pem_bridge::{
+    ossl_pem_check_suffix, EvpCipherInfo, PemPasswordCb, PEM_FLAG_EAY_COMPATIBLE, PEM_FLAG_SECURE,
+    PEM_get_EVP_CIPHER_INFO, PEM_read_bio_ex,
+};
+use crate::evp::pkey_asn1::{Engine, EVP_PKEY_asn1_find_str};
+use crate::pem::pem_lib::PEM_BUFSIZE;
+use crate::runtime::bio::bss_file::BIO_s_file;
+use crate::runtime::bio::{BIO_ctrl, BIO_free, BIO_new, Bio, BIO_C_SET_FILE_PTR};
+use crate::runtime::err::err_reasons::PEM_R_NO_START_LINE;
+use crate::runtime::err::err_sites;
+use crate::runtime::err::{raise_site, ERR_peek_error};
+use crate::runtime::mem::{CRYPTO_free, OPENSSL_cleanse};
+use crate::runtime::secure::CRYPTO_secure_clear_free;
+
+/// `PEM_STRING_X509_OLD` — `include/openssl/pem.h:35`.
+const PEM_STRING_X509_OLD: *const c_char = c"X509 CERTIFICATE".as_ptr();
+/// `PEM_STRING_X509` — `include/openssl/pem.h:36`.
+const PEM_STRING_X509: *const c_char = c"CERTIFICATE".as_ptr();
+/// `PEM_STRING_X509_TRUSTED` — `include/openssl/pem.h:37`.
+const PEM_STRING_X509_TRUSTED: *const c_char = c"TRUSTED CERTIFICATE".as_ptr();
+/// `PEM_STRING_X509_REQ_OLD` — `include/openssl/pem.h:38`.
+const PEM_STRING_X509_REQ_OLD: *const c_char = c"NEW CERTIFICATE REQUEST".as_ptr();
+/// `PEM_STRING_X509_REQ` — `include/openssl/pem.h:39`.
+const PEM_STRING_X509_REQ: *const c_char = c"CERTIFICATE REQUEST".as_ptr();
+/// `PEM_STRING_EVP_PKEY` — `include/openssl/pem.h:41`.
+const PEM_STRING_EVP_PKEY: *const c_char = c"ANY PRIVATE KEY".as_ptr();
+/// `PEM_STRING_PKCS7` — `include/openssl/pem.h:47`.
+const PEM_STRING_PKCS7: *const c_char = c"PKCS7".as_ptr();
+/// `PEM_STRING_PKCS7_SIGNED` — `include/openssl/pem.h:48`.
+const PEM_STRING_PKCS7_SIGNED: *const c_char = c"PKCS #7 SIGNED DATA".as_ptr();
+/// `PEM_STRING_PKCS8` — `include/openssl/pem.h:49`.
+const PEM_STRING_PKCS8: *const c_char = c"ENCRYPTED PRIVATE KEY".as_ptr();
+/// `PEM_STRING_PKCS8INF` — `include/openssl/pem.h:50`.
+const PEM_STRING_PKCS8INF: *const c_char = c"PRIVATE KEY".as_ptr();
+/// `PEM_STRING_DHPARAMS` — `include/openssl/pem.h:51`.
+const PEM_STRING_DHPARAMS: *const c_char = c"DH PARAMETERS".as_ptr();
+/// `PEM_STRING_DHXPARAMS` — `include/openssl/pem.h:52`.
+const PEM_STRING_DHXPARAMS: *const c_char = c"X9.42 DH PARAMETERS".as_ptr();
+/// `PEM_STRING_PARAMETERS` — `include/openssl/pem.h:58`.
+const PEM_STRING_PARAMETERS: *const c_char = c"PARAMETERS".as_ptr();
+/// `PEM_STRING_CMS` — `include/openssl/pem.h:59`. Compiled: the profile leaves
+/// `OPENSSL_NO_CMS` undefined.
+const PEM_STRING_CMS: *const c_char = c"CMS".as_ptr();
+
+/// `EVP_MAX_KEY_LENGTH` — `include/openssl/evp.h:35`. The authority's `key[]` in
+/// `PEM_do_header` is this many bytes, and `sizeof(key)` is what the final `OPENSSL_cleanse`
+/// clears.
+const EVP_MAX_KEY_LENGTH: c_int = 64;
+
+/// `BIO_NOCLOSE` — `include/openssl/bio.h:85`, the `c` argument `PEM_ASN1_read` passes to
+/// `BIO_set_fp`.
+const BIO_NOCLOSE: c_long = 0x00;
+
+/// `OPENSSL_FILE` at the allocation and free sites in `crypto/pem/pem_lib.c`.
+const FILE_PEM_LIB: *const c_char = c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c".as_ptr();
+/// `OPENSSL_FILE` at the free site in `crypto/pem/pem_oth.c`.
+const FILE_PEM_OTH: *const c_char = c"../../src/openssl-3.6.4/crypto/pem/pem_oth.c".as_ptr();
+/// `PEM_ASN1_read_bio`'s `OPENSSL_free(data)` — `pem_oth.c:34`.
+const LINE_PEM_OTH_FREE: c_int = 34;
+
+extern "C" {
+    /// `int strcmp(const char *, const char *)` — the C library's. `check_pem` is a chain of
+    /// these; the crate declares libc's `strcmp` the same way in `src/asn1/a_strnid.rs:62`.
+    fn strcmp(a: *const c_char, b: *const c_char) -> c_int;
+}
+
+/// `static void pem_free(void *p, unsigned int flags, size_t num, const char *file, int line)`
+/// — `crypto/pem/pem_lib.c:225-232`, the body behind the `PEM_FREE(p, flags, num)` macro at
+/// `:223`.
+///
+/// The `flags` word picks the allocator *and* the free: `PEM_FLAG_SECURE` means the block came
+/// from `CRYPTO_secure_malloc` and must go back through `CRYPTO_secure_clear_free` **with its
+/// length**, and anything else means `CRYPTO_free`, which ignores `num`. A caller that passes
+/// `PEM_FLAG_SECURE` and then frees with a different `num` has changed what the allocator is told.
+///
+/// # Safety
+///
+/// `p` must be NULL or a block obtained from `CRYPTO_malloc`/`CRYPTO_secure_malloc` with the same
+/// `flags`, and `num` must be that block's length when the secure flavour is selected.
+unsafe fn pem_free(p: *mut c_void, flags: c_uint, num: usize, file: *const c_char, line: c_int) {
+    if flags & PEM_FLAG_SECURE != 0 {
+        // SAFETY: the caller's contract: the block came from the secure allocator with this
+        // length.
+        unsafe { CRYPTO_secure_clear_free(p, num, file, line) }
+    } else {
+        // SAFETY: the caller's contract, and `CRYPTO_free` reads only the pointer.
+        unsafe { CRYPTO_free(p, file, line) }
+    }
+}
+
+/// `static int check_pem(const char *nm, const char *name)` — `crypto/pem/pem_lib.c:128-221`.
+///
+/// `nm` is the name a PEM header actually carried and `name` is the one the caller asked for;
+/// this answers whether they are the same kind of block. It is an exact `strcmp` first, then a
+/// list of one-way aliases the authority has accumulated since 0.9.x, in a fixed order:
+///
+/// * `ANY PRIVATE KEY` matches `ENCRYPTED PRIVATE KEY`, `PRIVATE KEY`, and any name ending in
+///   `" PRIVATE KEY"` whose prefix names a method with an `old_priv_decode` — the legacy
+///   per-algorithm decoders, which the comment at `:145-148` says engines never provide;
+/// * `PARAMETERS` matches any name ending in `" PARAMETERS"` whose prefix names a method with a
+///   `param_decode`;
+/// * `X9.42 DH PARAMETERS` is accepted where `DH PARAMETERS` was asked for, and the reverse is
+///   **not** — the arm is one-way; the three older spellings (`X509 CERTIFICATE`,
+///   `NEW CERTIFICATE REQUEST`) are accepted where their modern names were asked for; a plain
+///   `CERTIFICATE` is accepted as a `TRUSTED CERTIFICATE`; `CERTIFICATE` and `PKCS #7 SIGNED
+///   DATA` are both accepted as `PKCS7`; and, with `OPENSSL_NO_CMS` undefined on this profile,
+///   `CERTIFICATE` and `PKCS7` are both accepted as `CMS`.
+///
+/// The two `EVP_PKEY_asn1_find_str` arms answer through the crate's own registry, so on a crate
+/// where no method is registered (`src/evp/pkey_asn1.rs`'s `STANDARD_METHODS` is empty) they
+/// fall through to `0` for every prefix.
+///
+/// # Safety
+///
+/// `nm` and `name` must each be NULL or NUL-terminated.
+unsafe fn check_pem(nm: *const c_char, name: *const c_char) -> c_int {
+    /* Normal matching nm and name */
+    // SAFETY: both strings are NUL-terminated per the contract.
+    if unsafe { strcmp(nm, name) } == 0 {
+        return 1;
+    }
+
+    /* Make PEM_STRING_EVP_PKEY match any private key */
+    // SAFETY: `name` is NUL-terminated per the contract.
+    if unsafe { strcmp(name, PEM_STRING_EVP_PKEY) } == 0 {
+        // SAFETY: `nm` is NUL-terminated per the contract.
+        if unsafe { strcmp(nm, PEM_STRING_PKCS8) } == 0 {
+            return 1;
+        }
+        // SAFETY: as above.
+        if unsafe { strcmp(nm, PEM_STRING_PKCS8INF) } == 0 {
+            return 1;
+        }
+        // SAFETY: `nm` and the static suffix are NUL-terminated.
+        let slen = unsafe { ossl_pem_check_suffix(nm, c"PRIVATE KEY".as_ptr()) };
+        if slen > 0 {
+            /*
+             * NB: ENGINE implementations won't contain a deprecated old
+             * private key decode function so don't look for them.
+             */
+            // SAFETY: `nm` is NUL-terminated and `slen` is the prefix length just measured.
+            let ameth = unsafe { EVP_PKEY_asn1_find_str(ptr::null_mut(), nm, slen) };
+            // SAFETY: `ameth` is NULL or the live method the lookup just answered.
+            if !ameth.is_null() && unsafe { (*ameth).old_priv_decode }.is_some() {
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    // SAFETY: `name` is NUL-terminated per the contract.
+    if unsafe { strcmp(name, PEM_STRING_PARAMETERS) } == 0 {
+        // SAFETY: `nm` and the static suffix are NUL-terminated.
+        let slen = unsafe { ossl_pem_check_suffix(nm, c"PARAMETERS".as_ptr()) };
+        if slen > 0 {
+            /*
+             * The authority writes `ENGINE *e;` uninitialised and reads it only on the arm
+             * where the lookup answered a method. `EVP_PKEY_asn1_find_str` writes through
+             * `*pe` before it can answer non-null (`src/evp/pkey_asn1.rs:1027`), so a null
+             * initialiser is the same value on every path that reads it. Recorded, not a
+             * divergence.
+             */
+            let mut e: *mut Engine = ptr::null_mut();
+            // SAFETY: `nm` is NUL-terminated and `e` is this frame's own slot.
+            let ameth = unsafe { EVP_PKEY_asn1_find_str(&mut e, nm, slen) };
+            if !ameth.is_null() {
+                // SAFETY: `ameth` is the live method the lookup just answered.
+                let r: c_int = if unsafe { (*ameth).param_decode }.is_some() {
+                    1
+                } else {
+                    0
+                };
+                /*
+                 * `#ifndef OPENSSL_NO_ENGINE` — undefined in this profile, so the authority
+                 * compiles the finish in. `ENGINE_finish` is Phase 13's and is absent; see
+                 * the module's missing-callee list.
+                 */
+                // SAFETY: `e` is NULL or the engine the lookup answered.
+                unsafe { ENGINE_finish(e) };
+                return r;
+            }
+        }
+        return 0;
+    }
+    /* If reading DH parameters handle X9.42 DH format too */
+    // SAFETY: both strings are NUL-terminated per the contract.
+    if unsafe { strcmp(nm, PEM_STRING_DHXPARAMS) } == 0
+        // SAFETY: as above.
+        && unsafe { strcmp(name, PEM_STRING_DHPARAMS) } == 0
+    {
+        return 1;
+    }
+
+    /* Permit older strings */
+    // SAFETY: both strings are NUL-terminated per the contract.
+    if unsafe { strcmp(nm, PEM_STRING_X509_OLD) } == 0
+        // SAFETY: as above.
+        && unsafe { strcmp(name, PEM_STRING_X509) } == 0
+    {
+        return 1;
+    }
+
+    // SAFETY: both strings are NUL-terminated per the contract.
+    if unsafe { strcmp(nm, PEM_STRING_X509_REQ_OLD) } == 0
+        // SAFETY: as above.
+        && unsafe { strcmp(name, PEM_STRING_X509_REQ) } == 0
+    {
+        return 1;
+    }
+
+    /* Allow normal certs to be read as trusted certs */
+    // SAFETY: both strings are NUL-terminated per the contract.
+    if unsafe { strcmp(nm, PEM_STRING_X509) } == 0
+        // SAFETY: as above.
+        && unsafe { strcmp(name, PEM_STRING_X509_TRUSTED) } == 0
+    {
+        return 1;
+    }
+
+    // SAFETY: both strings are NUL-terminated per the contract.
+    if unsafe { strcmp(nm, PEM_STRING_X509_OLD) } == 0
+        // SAFETY: as above.
+        && unsafe { strcmp(name, PEM_STRING_X509_TRUSTED) } == 0
+    {
+        return 1;
+    }
+
+    /* Some CAs use PKCS#7 with CERTIFICATE headers */
+    // SAFETY: both strings are NUL-terminated per the contract.
+    if unsafe { strcmp(nm, PEM_STRING_X509) } == 0
+        // SAFETY: as above.
+        && unsafe { strcmp(name, PEM_STRING_PKCS7) } == 0
+    {
+        return 1;
+    }
+
+    // SAFETY: both strings are NUL-terminated per the contract.
+    if unsafe { strcmp(nm, PEM_STRING_PKCS7_SIGNED) } == 0
+        // SAFETY: as above.
+        && unsafe { strcmp(name, PEM_STRING_PKCS7) } == 0
+    {
+        return 1;
+    }
+
+    // `#ifndef OPENSSL_NO_CMS` — undefined in this profile, so both arms are compiled.
+    // SAFETY: both strings are NUL-terminated per the contract.
+    if unsafe { strcmp(nm, PEM_STRING_X509) } == 0
+        // SAFETY: as above.
+        && unsafe { strcmp(name, PEM_STRING_CMS) } == 0
+    {
+        return 1;
+    }
+    /* Allow CMS to be read from PKCS#7 headers */
+    // SAFETY: both strings are NUL-terminated per the contract.
+    if unsafe { strcmp(nm, PEM_STRING_PKCS7) } == 0
+        // SAFETY: as above.
+        && unsafe { strcmp(name, PEM_STRING_CMS) } == 0
+    {
+        return 1;
+    }
+
+    return 0;
+}
+
+/// `static int pem_bytes_read_bio_flags(unsigned char **pdata, long *plen, char **pnm,
+/// const char *name, BIO *bp, pem_password_cb *cb, void *u, unsigned int flags)` —
+/// `crypto/pem/pem_lib.c:243-284`.
+///
+/// The reader's middle step, and the only place the two public spellings differ: it loops
+/// because a BIO may hold several PEM blocks in sequence, discarding each one whose name
+/// `check_pem` rejects, until it finds the block the caller asked for. Only then does it parse
+/// the `Proc-Type`/`DEK-Info` header into a local `EVP_CIPHER_INFO` — deliberately **after** the
+/// name match, so a block it is about to skip is never decrypted — and only then does it call
+/// [`PEM_do_header`].
+///
+/// Ownership on success: `*pdata` takes the body and `*plen` its length (both flags apart);
+/// `*pnm`, when non-NULL, takes the name, and the local `nm` is then *not* freed. `header` is
+/// always released, decrypted or not.
+///
+/// # Safety
+///
+/// `pdata`, `plen` and `pnm` must be NULL or writable for one pointer/`long` each; `name` must
+/// be NUL-terminated; `bp` must be a live BIO; `cb` is the caller's callback or `None`; `u` is
+/// passed to it untouched.
+unsafe fn pem_bytes_read_bio_flags(
+    pdata: *mut *mut c_uchar,
+    plen: *mut c_long,
+    pnm: *mut *mut c_char,
+    name: *const c_char,
+    bp: *mut Bio,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+    flags: c_uint,
+) -> c_int {
+    /* EVP_CIPHER_INFO cipher; */
+    let mut cipher = core::mem::MaybeUninit::<EvpCipherInfo>::uninit();
+    let mut nm: *mut c_char = ptr::null_mut();
+    let mut header: *mut c_char = ptr::null_mut();
+    let mut data: *mut c_uchar = ptr::null_mut();
+    let mut len: c_long = 0;
+    let mut ret: c_int = 0;
+
+    loop {
+        /* PEM_FREE(nm, flags, 0); */
+        // SAFETY: `nm` is NULL or the previous iteration's block.
+        unsafe { pem_free(nm.cast(), flags, 0, FILE_PEM_LIB, 255) };
+        /* PEM_FREE(header, flags, 0); */
+        // SAFETY: as above.
+        unsafe { pem_free(header.cast(), flags, 0, FILE_PEM_LIB, 256) };
+        /* PEM_FREE(data, flags, len); */
+        // SAFETY: `data` is NULL or the previous iteration's block, `len` bytes long.
+        unsafe { pem_free(data.cast(), flags, len as usize, FILE_PEM_LIB, 257) };
+
+        // SAFETY: the five out-parameters are this frame's own slots and `bp` is the caller's
+        // live BIO. `PEM_read_bio_ex` NULLs all four before it parses anything.
+        if unsafe { PEM_read_bio_ex(bp, &mut nm, &mut header, &mut data, &mut len, flags) } == 0 {
+            // `ERR_GET_REASON(ERR_peek_error())` — `ERR_peek_error` touches only this thread's
+            // queue and `ERR_GET_REASON` is the mask-and-cast macro; see the module's
+            // missing-callee list for why neither is spelled the crate's way.
+            if ERR_GET_REASON(ERR_peek_error()) == PEM_R_NO_START_LINE {
+                // SAFETY: both arguments are NUL-terminated (`name` per the contract).
+                unsafe { ERR_add_error_data(2, c"Expecting: ".as_ptr(), name) };
+            }
+            return 0;
+        }
+        // `} while (!check_pem(nm, name));` — the loop turns only when the name did **not**
+        // match, so a match breaks out with `nm` still owned by this frame.
+        // SAFETY: `nm` and `name` are NUL-terminated.
+        if unsafe { check_pem(nm, name) } != 0 {
+            break;
+        }
+    }
+    // `if (!PEM_get_EVP_CIPHER_INFO(header, &cipher)) goto err;`
+    // SAFETY: `header` is the header `PEM_read_bio_ex` just handed over and `cipher` is this
+    // frame's own slot.
+    if unsafe { PEM_get_EVP_CIPHER_INFO(header, cipher.as_mut_ptr()) } == 0 {
+        // SAFETY: the five arguments are this frame's own blocks and slots.
+        return unsafe { pem_bytes_read_bio_err(nm, header, data, len, flags, ret, pnm) };
+    }
+    // `if (!PEM_do_header(&cipher, data, &len, cb, u)) goto err;`
+    // SAFETY: `cipher` was filled by the call above, and `data`/`len` are the body it produced.
+    if unsafe { PEM_do_header(cipher.as_mut_ptr(), data, &mut len, cb, u) } == 0 {
+        // SAFETY: as above.
+        return unsafe { pem_bytes_read_bio_err(nm, header, data, len, flags, ret, pnm) };
+    }
+
+    // SAFETY: the two out-parameters are the caller's own slots.
+    unsafe {
+        *pdata = data;
+        *plen = len;
+    }
+
+    if !pnm.is_null() {
+        // SAFETY: `pnm` is non-NULL and so, per the contract, is the caller's writable slot.
+        unsafe { *pnm = nm };
+    }
+
+    ret = 1;
+
+    // `err:`
+    // SAFETY: as above.
+    unsafe { pem_bytes_read_bio_err(nm, header, data, len, flags, ret, pnm) }
+}
+
+/// `err:` in [`pem_bytes_read_bio_flags`] — `crypto/pem/pem_lib.c:277-283`.
+///
+/// One place for the label's three frees, because two `goto err`s and the fall-through all land
+/// here. Which of the three run depends on `ret` and on whether the caller wanted the name:
+///
+/// | free | condition |
+/// |---|---|
+/// | `nm` | `ret == 0` **or** `pnm == NULL` |
+/// | `header` | always |
+/// | `data` | `ret == 0` |
+///
+/// `PEM_FREE` carries `OPENSSL_LINE`, so each free records the line it is written on — the three
+/// here are 279, 280 and 282.
+///
+/// # Safety
+///
+/// `nm`, `header` and `data` must be NULL or blocks this frame owns (from
+/// `PEM_read_bio_ex`), `len` the length `data` was allocated with, and `pnm` the caller's slot.
+unsafe fn pem_bytes_read_bio_err(
+    nm: *mut c_char,
+    header: *mut c_char,
+    data: *mut c_uchar,
+    len: c_long,
+    flags: c_uint,
+    ret: c_int,
+    pnm: *mut *mut c_char,
+) -> c_int {
+    if ret == 0 || pnm.is_null() {
+        /* PEM_FREE(nm, flags, 0); */
+        // SAFETY: `nm` is this frame's block or NULL.
+        unsafe { pem_free(nm.cast(), flags, 0, FILE_PEM_LIB, 279) };
+    }
+    /* PEM_FREE(header, flags, 0); */
+    // SAFETY: `header` is this frame's block or NULL.
+    unsafe { pem_free(header.cast(), flags, 0, FILE_PEM_LIB, 280) };
+    if ret == 0 {
+        /* PEM_FREE(data, flags, len); */
+        // SAFETY: `data` is this frame's block, `len` bytes long, or NULL.
+        unsafe { pem_free(data.cast(), flags, len as usize, FILE_PEM_LIB, 282) };
+    }
+    ret
+}
+
+/// `int PEM_bytes_read_bio(unsigned char **pdata, long *plen, char **pnm, const char *name,
+/// BIO *bp, pem_password_cb *cb, void *u)` — `crypto/pem/pem_lib.c:286-292`.
+///
+/// [`pem_bytes_read_bio_flags`] with `PEM_FLAG_EAY_COMPATIBLE` alone, which is what makes the
+/// plain reader strip trailing whitespace from every line and *not* apply `PEM_FLAG_ONLY_B64`.
+///
+/// # Safety
+///
+/// As [`pem_bytes_read_bio_flags`] with this flag word.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_bytes_read_bio(
+    pdata: *mut *mut c_uchar,
+    plen: *mut c_long,
+    pnm: *mut *mut c_char,
+    name: *const c_char,
+    bp: *mut Bio,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> c_int {
+    // SAFETY: the caller's contract passes through unchanged.
+    unsafe {
+        pem_bytes_read_bio_flags(
+            pdata,
+            plen,
+            pnm,
+            name,
+            bp,
+            cb,
+            u,
+            PEM_FLAG_EAY_COMPATIBLE,
+        )
+    }
+}
+
+/// `int PEM_bytes_read_bio_secmem(unsigned char **pdata, long *plen, char **pnm,
+/// const char *name, BIO *bp, pem_password_cb *cb, void *u)` — `crypto/pem/pem_lib.c:294-300`.
+///
+/// The same call with `PEM_FLAG_SECURE | PEM_FLAG_EAY_COMPATIBLE`. The flag word does two
+/// things: `PEM_read_bio_ex` allocates its two memory BIOs through `BIO_s_secmem()`, and every
+/// `PEM_FREE` on the way out releases a `PEM_FLAG_SECURE`-flagged block with its length.
+///
+/// # Safety
+///
+/// As [`pem_bytes_read_bio_flags`] with this flag word.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_bytes_read_bio_secmem(
+    pdata: *mut *mut c_uchar,
+    plen: *mut c_long,
+    pnm: *mut *mut c_char,
+    name: *const c_char,
+    bp: *mut Bio,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> c_int {
+    // SAFETY: the caller's contract passes through unchanged.
+    unsafe {
+        pem_bytes_read_bio_flags(
+            pdata,
+            plen,
+            pnm,
+            name,
+            bp,
+            cb,
+            u,
+            PEM_FLAG_SECURE | PEM_FLAG_EAY_COMPATIBLE,
+        )
+    }
+}
+
+/// `int PEM_do_header(EVP_CIPHER_INFO *cipher, unsigned char *data, long *len,
+/// pem_password_cb *callback, void *u)` — `crypto/pem/pem_lib.c:445-504`.
+///
+/// Decrypts the body of an encrypted PEM block in place, and is the hinge every
+/// `PEM_read_bio_*` reaches: `PEM_bytes_read_bio`, `pem_bytes_read_bio_flags`,
+/// `PEM_ASN1_read_bio` — and through it `PEM_ASN1_read`.
+///
+/// The order of the guards is observable, and the three early returns are **not**
+/// interchangeable:
+///
+/// 1. a length above `INT_MAX` is refused (`PEM_R_HEADER_TOO_LONG`) **before** the cipher is
+///    looked at, so a null cipher cannot rescue it; `#if LONG_MAX > INT_MAX` holds for `c_long`
+///    on this target, so the arm is compiled;
+/// 2. a null `cipher->cipher` answers success immediately — the block was not encrypted — and
+///    **no password is read**, which is the arm a caller can drive with no callback at all;
+/// 3. a negative `keylen` is `PEM_R_BAD_PASSWORD_READ`.
+///
+/// On the three failure returns above, `buf` and `key` are **not** cleansed — the authority
+/// returns from inside the body. Only the path that reaches the end clears them, after
+/// `EVP_CIPHER_CTX_free`. `EVP_DecryptUpdate`/`_Final_ex` share one `int` length variable, and
+/// `*len` is updated after the update (so a final-block failure still reports the plaintext
+/// decrypted so far) and again after the final.
+///
+/// # Safety
+///
+/// `cipher` must be a live, initialised `EVP_CIPHER_INFO`; `data` must be writable for
+/// `*plen` bytes plus one cipher block; `plen` must be a writable `long`; `callback`, when
+/// `Some`, must be a live callback and `u` is passed to it untouched.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_do_header(
+    cipher: *mut EvpCipherInfo,
+    data: *mut c_uchar,
+    plen: *mut c_long,
+    callback: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> c_int {
+    let mut ok: c_int;
+    let mut keylen: c_int;
+    // `long len = *plen; int ilen = (int)len;` — the narrowing is the authority's and happens
+    // before the check below.
+    // SAFETY: `plen` is the caller's writable slot.
+    let len: c_long = unsafe { *plen };
+    let mut ilen: c_int = len as c_int;
+    // `EVP_CIPHER_CTX *ctx;` — created below, so it is not declared yet.
+    let mut key = [0u8; EVP_MAX_KEY_LENGTH as usize];
+    let mut buf = [0 as c_char; PEM_BUFSIZE as usize];
+
+    /* Check that we did not truncate the length */
+    if len > c_int::MAX as c_long {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::PEM_LIB_459) };
+        return 0;
+    }
+
+    // SAFETY: `cipher` is the caller's live structure.
+    if unsafe { (*cipher).cipher }.is_null() {
+        return 1;
+    }
+    keylen = match callback {
+        // The authority's `PEM_def_callback(buf, PEM_BUFSIZE, 0, u)`; see the module's
+        // missing-callee list.
+        None => unsafe {
+            crate::pem::pem_lib::PEM_def_callback(buf.as_mut_ptr(), PEM_BUFSIZE, 0, u)
+        },
+        // SAFETY: `buf` is `PEM_BUFSIZE` writable bytes and `u` is the caller's.
+        Some(cb) => unsafe { cb(buf.as_mut_ptr(), PEM_BUFSIZE, 0, u) },
+    };
+    if keylen < 0 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::PEM_LIB_471) };
+        return 0;
+    }
+    /* #ifdef CHARSET_EBCDIC is not defined on this profile, so the ebcdic2ascii call is not
+     * compiled. */
+
+    // SAFETY: `cipher->cipher` is live, `EVP_md5()` is the crate's static legacy object,
+    // `cipher->iv` is the salt the header carried, and `buf`/`key` are this frame's buffers.
+    if unsafe {
+        EVP_BytesToKey(
+            (*cipher).cipher,
+            EVP_md5(),
+            (*cipher).iv.as_ptr(),
+            buf.as_ptr().cast::<c_uchar>(),
+            keylen,
+            1,
+            key.as_mut_ptr(),
+            ptr::null_mut(),
+        )
+    } == 0
+    {
+        return 0;
+    }
+
+    // SAFETY: allocates a fresh context and answers NULL on failure, which is checked below.
+    let ctx = EVP_CIPHER_CTX_new();
+    if ctx.is_null() {
+        return 0;
+    }
+
+    // SAFETY: `ctx` is live, `cipher->cipher` is live, and `key`/`cipher->iv` are the frame's
+    // own buffers of the lengths the cipher was asked for.
+    ok = unsafe {
+        EVP_DecryptInit_ex(
+            ctx,
+            (*cipher).cipher,
+            ptr::null_mut(),
+            key.as_ptr(),
+            (*cipher).iv.as_ptr(),
+        )
+    };
+    if ok != 0 {
+        // SAFETY: `data` is the caller's `ilen` bytes with room for a final block, and `ilen`
+        // is this frame's own length.
+        ok = unsafe { EVP_DecryptUpdate(ctx, data, &mut ilen, data, ilen) };
+    }
+    if ok != 0 {
+        /* Squirrel away the length of data decrypted so far. */
+        // SAFETY: `plen` is the caller's writable slot.
+        unsafe { *plen = ilen as c_long };
+        // SAFETY: the caller's contract leaves room for one cipher block past `ilen` bytes.
+        ok = unsafe { EVP_DecryptFinal_ex(ctx, data.add(ilen as usize), &mut ilen) };
+    }
+    if ok != 0 {
+        // SAFETY: `plen` is the caller's writable slot.
+        unsafe { *plen += ilen as c_long };
+    } else {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::PEM_LIB_498) };
+    }
+
+    // SAFETY: `ctx` is this frame's own context, and `buf`/`key` are this frame's own buffers
+    // of exactly these lengths.
+    unsafe {
+        EVP_CIPHER_CTX_free(ctx);
+        OPENSSL_cleanse(buf.as_mut_ptr().cast(), PEM_BUFSIZE as usize);
+        OPENSSL_cleanse(key.as_mut_ptr().cast(), EVP_MAX_KEY_LENGTH as usize);
+    }
+    ok
+}
+
+/// `void *PEM_ASN1_read(d2i_of_void *d2i, const char *name, FILE *fp, void **x,
+/// pem_password_cb *cb, void *u)` — `crypto/pem/pem_lib.c:111-125`.
+///
+/// `PEM_ASN1_read_bio` with a `BIO_s_file()` pushed onto the caller's `FILE *` and
+/// `BIO_NOCLOSE` set, so the stream is not closed under the caller. Compiled because this
+/// profile leaves `OPENSSL_NO_STDIO` undefined. The BIO is released on **both** paths — a null
+/// `BIO_new` raises `ERR_R_BUF_LIB` at `:118` and answers `0`.
+///
+/// # Safety
+///
+/// As [`PEM_ASN1_read_bio`]; `fp` must be an open, readable `FILE *` that outlives the call.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_ASN1_read(
+    d2i: D2iOfVoid,
+    name: *const c_char,
+    fp: *mut c_void,
+    x: *mut *mut c_void,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> *mut c_void {
+    /* if ((b = BIO_new(BIO_s_file())) == NULL) { */
+    // SAFETY: `BIO_s_file()` is a static method table.
+    let b = unsafe { BIO_new(BIO_s_file()) };
+    if b.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::PEM_LIB_118) };
+        return ptr::null_mut();
+    }
+    /* BIO_set_fp(b, fp, BIO_NOCLOSE); */
+    // The macro at `include/openssl/bio.h:568` is
+    // `BIO_ctrl(b, BIO_C_SET_FILE_PTR, c, (char *)(fp))`.
+    // SAFETY: `b` is this frame's live file BIO and `fp` is the caller's stream.
+    unsafe { BIO_ctrl(b, BIO_C_SET_FILE_PTR, BIO_NOCLOSE, fp) };
+    /* ret = PEM_ASN1_read_bio(d2i, name, b, x, cb, u); */
+    // SAFETY: `b` is live and the remaining arguments are the caller's.
+    let ret = unsafe { PEM_ASN1_read_bio(d2i, name, b, x, cb, u) };
+    /* BIO_free(b); */
+    // SAFETY: `b` is this frame's own file BIO.
+    unsafe { BIO_free(b) };
+    ret
+}
+
+/// `void *PEM_ASN1_read_bio(d2i_of_void *d2i, const char *name, BIO *bp, void **x,
+/// pem_password_cb *cb, void *u)` — `crypto/pem/pem_oth.c:20-36`.
+///
+/// The generic `PEM_read_<type>_bio` body: read one `name`-typed block with
+/// [`PEM_bytes_read_bio`] (no name wanted, so the third argument is NULL), hand the decoded
+/// bytes to the caller's `d2i`, and release them.
+///
+/// Two details are observable and are kept: the decode's cursor is a **local** `const unsigned
+/// char *p` initialised from the buffer, so the caller's `x` is the only thing `d2i` writes
+/// through; and the buffer is released on **both** the successful and the failed decode — a
+/// caller cannot tell "bad DER" from "no block" apart, because both answer NULL.
+///
+/// # Safety
+///
+/// `d2i` must be a live decoder matching `x`'s type; `name` must be NUL-terminated; `bp` must be
+/// a live BIO; `x` must be a live slot for the decoded object.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_ASN1_read_bio(
+    d2i: D2iOfVoid,
+    name: *const c_char,
+    bp: *mut Bio,
+    x: *mut *mut c_void,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> *mut c_void {
+    // `const unsigned char *p = NULL;` — the cursor is set from `data` below.
+    let mut data: *mut c_uchar = ptr::null_mut();
+    let mut len: c_long = 0;
+
+    // SAFETY: `data` and `len` are this frame's own slots, `bp` is the caller's live BIO, the
+    // `pnm` argument is the authority's own NULL, and the rest are the caller's.
+    if unsafe {
+        PEM_bytes_read_bio(&mut data, &mut len, ptr::null_mut(), name, bp, cb, u)
+    } == 0
+    {
+        return ptr::null_mut();
+    }
+    /* p = data; */
+    let mut p: *const c_uchar = data;
+    /* ret = d2i(x, &p, len); */
+    // SAFETY: `data` holds `len` bytes — what `PEM_bytes_read_bio` just handed over — and `d2i`
+    // is the caller's decoder.
+    let ret = unsafe { d2i(x, &mut p, len) };
+    if ret.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::PEM_OTH_33) };
+    }
+    /* OPENSSL_free(data); */
+    // The macro over `CRYPTO_free(data, OPENSSL_FILE, OPENSSL_LINE)` at `pem_oth.c:34`.
+    // SAFETY: `data` is the block `PEM_bytes_read_bio` just handed over and is not owned
+    // elsewhere.
+    unsafe { CRYPTO_free(data.cast(), FILE_PEM_OTH, LINE_PEM_OTH_FREE) };
+    ret
+}
+
+// =============================================================================================
+// Tests. Every case below is one of the three kinds the brief admits: a refusal arm, an
+// argument-validation arm, or a path that needs neither randomness nor a provider fetch. The
+// arms that do decrypt are not tested here, because a cipher fetch is a provider round trip and
+// the court for that is `RT-EVP-PEM`'s, not this module's.
+// =============================================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::runtime::bio::bss_mem::BIO_s_mem;
+    use crate::runtime::err::{err_sites, ERR_clear_error, ERR_peek_error};
+    use core::ffi::c_ulong;
+    use core::sync::atomic::{AtomicUsize, Ordering};
+
+    /// The packed code `ERR_peek_error` reports for a recorded site:
+    /// `(lib & 0xff) << 23 | (reason & 0x7fffff)`, read from the generated table rather than
+    /// typed, so a wrong expectation here cannot disagree with the authority's coordinates.
+    fn packed(site: &err_sites::ErrSite) -> c_ulong {
+        (((site.lib as c_ulong) & 0xff) << 23) | ((site.reason as c_ulong) & 0x7f_ffff)
+    }
+
+    /// An `EVP_CIPHER_INFO` as `PEM_get_EVP_CIPHER_INFO` leaves one for a block with no header.
+    fn no_cipher() -> EvpCipherInfo {
+        EvpCipherInfo {
+            cipher: ptr::null(),
+            iv: [0; 16],
+        }
+    }
+
+    /// `check_pem` answers for each alias the authority's chain declares. These are pure
+    /// `strcmp` arms: no allocation, no registry read, no provider.
+    #[test]
+    fn check_pem_matches_the_authority_aliases() {
+        let names: [(&core::ffi::CStr, &core::ffi::CStr); 11] = [
+            (c"X509 CERTIFICATE", c"CERTIFICATE"),
+            (c"NEW CERTIFICATE REQUEST", c"CERTIFICATE REQUEST"),
+            (c"CERTIFICATE", c"TRUSTED CERTIFICATE"),
+            (c"X509 CERTIFICATE", c"TRUSTED CERTIFICATE"),
+            (c"CERTIFICATE", c"PKCS7"),
+            (c"PKCS #7 SIGNED DATA", c"PKCS7"),
+            (c"X9.42 DH PARAMETERS", c"DH PARAMETERS"),
+            (c"ENCRYPTED PRIVATE KEY", c"ANY PRIVATE KEY"),
+            (c"PRIVATE KEY", c"ANY PRIVATE KEY"),
+            // The `#ifndef OPENSSL_NO_CMS` pair, compiled because this profile configures CMS in.
+            (c"CERTIFICATE", c"CMS"),
+            (c"PKCS7", c"CMS"),
+        ];
+        for (nm, name) in names {
+            // SAFETY: both are NUL-terminated literals.
+            assert_eq!(
+                unsafe { check_pem(nm.as_ptr(), name.as_ptr()) },
+                1,
+                "nm={nm:?} name={name:?}"
+            );
+        }
+    }
+
+    /// The refusals, including the two the direction of an arm decides: the X9.42 spelling is
+    /// accepted where `DH PARAMETERS` was asked for and the reverse is not, and `ANY PRIVATE
+    /// KEY` is a header name, not a request.
+    #[test]
+    fn check_pem_refuses_what_no_alias_covers() {
+        let names: [(&core::ffi::CStr, &core::ffi::CStr); 4] = [
+            (c"CERTIFICATE", c"RSA PRIVATE KEY"),
+            (c"PUBLIC KEY", c"RSA PRIVATE KEY"),
+            (c"DH PARAMETERS", c"X9.42 DH PARAMETERS"),
+            (c"ANY PRIVATE KEY", c"CERTIFICATE"),
+        ];
+        for (nm, name) in names {
+            // SAFETY: both are NUL-terminated literals.
+            assert_eq!(
+                unsafe { check_pem(nm.as_ptr(), name.as_ptr()) },
+                0,
+                "nm={nm:?} name={name:?}"
+            );
+        }
+    }
+
+    /// A block with no `DEK-Info` has a null `cipher->cipher`, and the authority answers success
+    /// **before** it reads the callback — so a null callback is legal here and the body and
+    /// length come back untouched. No cipher is fetched, so no provider is reached.
+    #[test]
+    fn a_null_cipher_answers_success_without_reading_a_password() {
+        ERR_clear_error();
+        let mut cipher = no_cipher();
+        let mut body = [0u8; 4];
+        let mut len: c_long = 4;
+
+        // SAFETY: `cipher`, `body` and `len` are this test's own objects, and the callback is
+        // null on purpose: the arm returns before it could be called.
+        let r = unsafe {
+            PEM_do_header(
+                &mut cipher,
+                body.as_mut_ptr(),
+                &mut len,
+                None,
+                ptr::null_mut(),
+            )
+        };
+        assert_eq!(r, 1);
+        assert_eq!(len, 4, "the length is left alone");
+        assert_eq!(body, [0u8; 4], "and so is the body");
+        assert_eq!(ERR_peek_error(), 0, "and nothing is raised");
+    }
+
+    /// The length guard is **before** the null-cipher guard, so a length above `INT_MAX` is
+    /// refused even for a block that would otherwise answer success. The null cipher is what
+    /// makes the ordering visible.
+    #[test]
+    fn a_length_above_int_max_is_refused_before_the_cipher_is_read() {
+        ERR_clear_error();
+        let mut cipher = no_cipher();
+        let mut body = [0u8; 1];
+        let mut len: c_long = c_int::MAX as c_long + 1;
+
+        // SAFETY: this test's own objects.
+        let r = unsafe {
+            PEM_do_header(
+                &mut cipher,
+                body.as_mut_ptr(),
+                &mut len,
+                None,
+                ptr::null_mut(),
+            )
+        };
+        assert_eq!(r, 0);
+        assert_eq!(ERR_peek_error(), packed(&err_sites::PEM_LIB_459));
+    }
+
+    /// An empty BIO carries no `-----BEGIN `, so the reader refuses with `get_name`'s
+    /// `PEM_R_NO_START_LINE` and a caller's three out-parameters are left null/zero — the
+    /// authority's early `return 0`, not its `err:` tail.
+    #[test]
+    fn an_empty_bio_is_refused_with_the_no_start_line_reason() {
+        ERR_clear_error();
+        // SAFETY: `BIO_s_mem()` is a static method table.
+        let bp = unsafe { BIO_new(BIO_s_mem()) };
+        assert!(!bp.is_null(), "the memory BIO is allocated");
+        let mut data: *mut c_uchar = ptr::null_mut();
+        let mut len: c_long = 0;
+        let mut nm: *mut c_char = ptr::null_mut();
+
+        // SAFETY: `bp` is live and the three out-parameters are this test's own slots.
+        let r = unsafe {
+            PEM_bytes_read_bio(
+                &mut data,
+                &mut len,
+                &mut nm,
+                c"CERTIFICATE".as_ptr(),
+                bp,
+                None,
+                ptr::null_mut(),
+            )
+        };
+        assert_eq!(r, 0);
+        assert!(data.is_null(), "no body is published");
+        assert!(nm.is_null(), "and no name");
+        assert_eq!(len, 0);
+        assert_eq!(ERR_peek_error(), packed(&err_sites::PEM_LIB_794));
+
+        // SAFETY: `bp` is this test's BIO.
+        unsafe { BIO_free(bp) };
+    }
+
+    /// A decoder that must never be reached. `PEM_ASN1_read_bio` calls it only after
+    /// `PEM_bytes_read_bio` has answered success, so an empty BIO proves the order.
+    static DECODER_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    /// The counting decoder itself. Its return value is never used by the test.
+    ///
+    /// # Safety
+    /// The signature is `d2i_of_void`'s; the test never allows it to be called.
+    unsafe extern "C" fn counting_d2i(
+        _x: *mut *mut c_void,
+        _p: *mut *const c_uchar,
+        _len: c_long,
+    ) -> *mut c_void {
+        DECODER_CALLS.fetch_add(1, Ordering::SeqCst);
+        ptr::null_mut()
+    }
+
+    /// The refusal comes *before* the decode: no block, no `d2i` call.
+    #[test]
+    fn asn1_read_bio_returns_null_without_calling_the_decoder() {
+        ERR_clear_error();
+        DECODER_CALLS.store(0, Ordering::SeqCst);
+        // SAFETY: `BIO_s_mem()` is a static method table.
+        let bp = unsafe { BIO_new(BIO_s_mem()) };
+        assert!(!bp.is_null());
+        let mut x: *mut c_void = ptr::null_mut();
+
+        // SAFETY: `bp` is live, `x` is this test's own slot, and `counting_d2i` is a live
+        // `d2i_of_void` that the call must not reach.
+        let r = unsafe {
+            PEM_ASN1_read_bio(
+                counting_d2i,
+                c"CERTIFICATE".as_ptr(),
+                bp,
+                &mut x,
+                None,
+                ptr::null_mut(),
+            )
+        };
+        assert!(r.is_null());
+        assert!(x.is_null(), "the caller's slot is untouched");
+        assert_eq!(
+            DECODER_CALLS.load(Ordering::SeqCst),
+            0,
+            "the decoder is not reached"
+        );
+
+        // SAFETY: `bp` is this test's BIO.
+        unsafe { BIO_free(bp) };
+    }
+}

@@ -4,9 +4,9 @@
     "counts": {
       "installed_headers": 139,
       "internal_only": 2993,
-      "owned": 9545,
+      "owned": 9628,
       "records": 19839,
-      "unowned": 10294
+      "unowned": 10211
     },
     "definition": "every macro and enum member the authority's installed and internal headers define, with the header that defines it and that header's owning stratum",
     "installed_headers": [
@@ -31435,7 +31435,7 @@
         ],
         "kind": "macro",
         "name": "KECCAK1600_WIDTH",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -31571,7 +31571,7 @@
         ],
         "kind": "macro",
         "name": "KMAC_MDSIZE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -39220,7 +39220,7 @@
         ],
         "kind": "macro",
         "name": "MD5_SHA1_CBLOCK",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -39228,7 +39228,7 @@
         ],
         "kind": "macro",
         "name": "MD5_SHA1_DIGEST_LENGTH",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -51977,7 +51977,7 @@
         ],
         "kind": "macro",
         "name": "NUMPRIMES",
-        "owner_phase": null
+        "owner_phase": 5
       },
       {
         "defined_in": [
@@ -69405,7 +69405,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_CRYPTO_SLH_HASH_H",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -73493,7 +73493,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_INTERNAL_PACKET_H",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -73517,7 +73517,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_INTERNAL_PASSPHRASE_H",
-        "owner_phase": null
+        "owner_phase": 10
       },
       {
         "defined_in": [
@@ -73605,7 +73605,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_INTERNAL_QUIC_VLINT_H",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -73653,7 +73653,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_INTERNAL_SHA3_H",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -73669,7 +73669,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_INTERNAL_SM3_H",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -77301,7 +77301,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_PROV_MD5_SHA1_H",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -78485,7 +78485,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_QUIC_VLINT_1B_MAX",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -78493,7 +78493,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_QUIC_VLINT_1B_MIN",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -78501,7 +78501,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_QUIC_VLINT_2B_MAX",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -78509,7 +78509,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_QUIC_VLINT_2B_MIN",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -78517,7 +78517,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_QUIC_VLINT_4B_MAX",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -78525,7 +78525,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_QUIC_VLINT_4B_MIN",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -78533,7 +78533,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_QUIC_VLINT_8B_MAX",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -78541,7 +78541,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_QUIC_VLINT_8B_MIN",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -78549,7 +78549,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_QUIC_VLINT_MAX",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -79765,7 +79765,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_SLH_DSA_SHA2_NUM_ZEROS_H_AND_T_BOUND1",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -93498,7 +93498,7 @@
         ],
         "kind": "macro",
         "name": "SHA3_BLOCKSIZE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -93506,7 +93506,7 @@
         ],
         "kind": "macro",
         "name": "SHA3_MDSIZE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94298,7 +94298,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRSC_SIZE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94306,7 +94306,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRS_DECLARE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94314,7 +94314,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRS_FN_DECLARE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94322,7 +94322,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRS_FUNC_DECLARE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94330,7 +94330,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRS_SIZE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94338,7 +94338,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRS_SIZE_MAX",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94346,7 +94346,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRS_TYPE_FORS_PRF",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94354,7 +94354,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRS_TYPE_FORS_ROOTS",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94362,7 +94362,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRS_TYPE_FORS_TREE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94370,7 +94370,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRS_TYPE_TREE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94378,7 +94378,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRS_TYPE_WOTS_HASH",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94386,7 +94386,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRS_TYPE_WOTS_PK",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94394,7 +94394,7 @@
         ],
         "kind": "macro",
         "name": "SLH_ADRS_TYPE_WOTS_PRF",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94410,7 +94410,7 @@
         ],
         "kind": "macro",
         "name": "SLH_DSA_MAX_N",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94418,7 +94418,7 @@
         ],
         "kind": "macro",
         "name": "SLH_DSA_PK_ROOT",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94426,7 +94426,7 @@
         ],
         "kind": "macro",
         "name": "SLH_DSA_PK_SEED",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94434,7 +94434,7 @@
         ],
         "kind": "macro",
         "name": "SLH_DSA_PRIV",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94442,7 +94442,7 @@
         ],
         "kind": "macro",
         "name": "SLH_DSA_PUB",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94450,7 +94450,7 @@
         ],
         "kind": "macro",
         "name": "SLH_DSA_SK_PRF",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94458,7 +94458,7 @@
         ],
         "kind": "macro",
         "name": "SLH_DSA_SK_SEED",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94466,7 +94466,7 @@
         ],
         "kind": "macro",
         "name": "SLH_HASH_FN_DECLARE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94474,7 +94474,7 @@
         ],
         "kind": "macro",
         "name": "SLH_HASH_FUNC_DECLARE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94530,7 +94530,7 @@
         ],
         "kind": "macro",
         "name": "SM3_CBLOCK",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94546,7 +94546,7 @@
         ],
         "kind": "macro",
         "name": "SM3_DIGEST_LENGTH",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94586,7 +94586,7 @@
         ],
         "kind": "macro",
         "name": "SM3_LBLOCK",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94594,7 +94594,7 @@
         ],
         "kind": "macro",
         "name": "SM3_WORD",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133240,7 +133240,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_FLAGS_ABANDON_ON_ZERO_LENGTH",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133248,7 +133248,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_FLAGS_NONE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133256,7 +133256,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_FLAGS_NON_ZERO_LENGTH",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133264,7 +133264,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_FLAGS_QUIC_VLINT",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133272,7 +133272,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_put_bytes_u16",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133280,7 +133280,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_put_bytes_u24",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133288,7 +133288,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_put_bytes_u32",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133296,7 +133296,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_put_bytes_u64",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133304,7 +133304,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_put_bytes_u8",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133312,7 +133312,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_start_sub_packet_u16",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133320,7 +133320,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_start_sub_packet_u24",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133328,7 +133328,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_start_sub_packet_u32",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133336,7 +133336,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_start_sub_packet_u8",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133344,7 +133344,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_sub_allocate_bytes_u16",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133352,7 +133352,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_sub_allocate_bytes_u24",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133360,7 +133360,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_sub_allocate_bytes_u32",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133368,7 +133368,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_sub_allocate_bytes_u8",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133376,7 +133376,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_sub_memcpy_u16",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133384,7 +133384,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_sub_memcpy_u24",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133392,7 +133392,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_sub_memcpy_u32",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133400,7 +133400,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_sub_memcpy_u8",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133408,7 +133408,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_sub_reserve_bytes_u16",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133416,7 +133416,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_sub_reserve_bytes_u24",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133424,7 +133424,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_sub_reserve_bytes_u32",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -133432,7 +133432,7 @@
         ],
         "kind": "macro",
         "name": "WPACKET_sub_reserve_bytes_u8",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -138736,7 +138736,7 @@
         ],
         "kind": "macro",
         "name": "XOF_STATE_ABSORB",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -138744,7 +138744,7 @@
         ],
         "kind": "macro",
         "name": "XOF_STATE_FINAL",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -138752,7 +138752,7 @@
         ],
         "kind": "macro",
         "name": "XOF_STATE_INIT",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -138760,7 +138760,7 @@
         ],
         "kind": "macro",
         "name": "XOF_STATE_SQUEEZE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -139729,7 +139729,7 @@
         ],
         "kind": "enumerator",
         "name": "is_expl_passphrase",
-        "owner_phase": null
+        "owner_phase": 10
       },
       {
         "defined_in": [
@@ -139737,7 +139737,7 @@
         ],
         "kind": "enumerator",
         "name": "is_ossl_passphrase",
-        "owner_phase": null
+        "owner_phase": 10
       },
       {
         "defined_in": [
@@ -139745,7 +139745,7 @@
         ],
         "kind": "enumerator",
         "name": "is_pem_password",
-        "owner_phase": null
+        "owner_phase": 10
       },
       {
         "defined_in": [
@@ -139753,7 +139753,7 @@
         ],
         "kind": "enumerator",
         "name": "is_ui_method",
-        "owner_phase": null
+        "owner_phase": 10
       },
       {
         "defined_in": [

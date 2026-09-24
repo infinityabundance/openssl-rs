@@ -1,0 +1,231 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "algorithm": "md5_sha1",
+    "court": "CT-DIGEST",
+    "digest_bytes": 36,
+    "openssl_digest": "MD5-SHA1",
+    "primary_source": "UNKNOWN",
+    "provenance": {
+      "authority": "openssl-3.6.4-production",
+      "corpus": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_md.txt",
+      "corpus_sha256": "d803585d182f78d932d306ce21dad8754897d854a3346501605851a45c047148",
+      "note": "Candidate-only construction verification: the primary source is named above, the bytes are mirrored through the pinned corpus (`corpus_sha256`), and the mirror's identity is fixed. This does NOT establish that the mirror is faithful to a primary source nobody in this repository has read. A CT pass is not formal validation. See D206.",
+      "primary_source": "UNKNOWN"
+    },
+    "standard": "MD5||SHA-1 concatenation (no standard)",
+    "vectors": [
+      {
+        "expected_hex": "d41d8cd98f00b204e9800998ecf8427eda39a3ee5e6b4b0d3255bfef95601890afd80709",
+        "id": "md5_sha1-evpmd_md-115",
+        "input_hex": "",
+        "modes": [
+          "one"
+        ],
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_md.txt",
+          "form": "empty",
+          "line": 115,
+          "mirror_sha256": "d803585d182f78d932d306ce21dad8754897d854a3346501605851a45c047148",
+          "primary_source": "UNKNOWN",
+          "title": "MD5-SHA1"
+        },
+        "standard": "MD5||SHA-1 concatenation (no standard)"
+      },
+      {
+        "expected_hex": "900150983cd24fb0d6963f7d28e17f72a9993e364706816aba3e25717850c26c9cd0d89d",
+        "id": "md5_sha1-evpmd_md-119",
+        "input_hex": "616263",
+        "modes": [
+          "one"
+        ],
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_md.txt",
+          "form": "quoted-string",
+          "line": 119,
+          "mirror_sha256": "d803585d182f78d932d306ce21dad8754897d854a3346501605851a45c047148",
+          "primary_source": "UNKNOWN",
+          "title": "MD5-SHA1"
+        },
+        "standard": "MD5||SHA-1 concatenation (no standard)"
+      },
+      {
+        "expected_hex": "8215ef0796a20bcaaae116d3876c664a84983e441c3bd26ebaae4aa1f95129e5e54670f1",
+        "id": "md5_sha1-evpmd_md-123",
+        "input_hex": "6162636462636465636465666465666765666768666768696768696a68696a6b696a6b6c6a6b6c6d6b6c6d6e6c6d6e6f6d6e6f706e6f7071",
+        "modes": [
+          "one"
+        ],
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_md.txt",
+          "form": "quoted-string",
+          "line": 123,
+          "mirror_sha256": "d803585d182f78d932d306ce21dad8754897d854a3346501605851a45c047148",
+          "primary_source": "UNKNOWN",
+          "title": "MD5-SHA1"
+        },
+        "standard": "MD5||SHA-1 concatenation (no standard)"
+      },
+      {
+        "expected_hex": "d41d8cd98f00b204e9800998ecf8427eda39a3ee5e6b4b0d3255bfef95601890afd80709",
+        "id": "md5_sha1-boundary-empty",
+        "input_hex": "",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "empty",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "UNKNOWN"
+        },
+        "standard": "MD5||SHA-1 concatenation (no standard)"
+      },
+      {
+        "expected_hex": "0cc175b9c0f1b6a831c399e26977266186f7e437faa5a7fce15d1ddcb9eaeaea377667b8",
+        "id": "md5_sha1-boundary-one",
+        "input_hex": "61",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "one",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "UNKNOWN"
+        },
+        "standard": "MD5||SHA-1 concatenation (no standard)"
+      },
+      {
+        "expected_hex": "52c0e574e1198de5fe3f8f11440dcb1bddf57317ef34bfee3b6df83d359098930eb278bc",
+        "id": "md5_sha1-boundary-len55",
+        "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "len55",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "UNKNOWN"
+        },
+        "standard": "MD5||SHA-1 concatenation (no standard)"
+      },
+      {
+        "expected_hex": "46c9907fc908ee68b1e7b8e71286a518a0d492bb0fc889d0eca3bc137066ab6f4f74f369",
+        "id": "md5_sha1-boundary-len56",
+        "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d84",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "len56",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "UNKNOWN"
+        },
+        "standard": "MD5||SHA-1 concatenation (no standard)"
+      },
+      {
+        "expected_hex": "a62f6d59e837867693f042f5b8f5a236c55856749bef509bdfe6bfebfc7bf4e793e82132",
+        "id": "md5_sha1-boundary-len63",
+        "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "len63",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "UNKNOWN"
+        },
+        "standard": "MD5||SHA-1 concatenation (no standard)"
+      },
+      {
+        "expected_hex": "7160b8fb5e9e4023d549c3971fbaeeadbede92be29c3874e1b54ddc77988d606fc857a8e",
+        "id": "md5_sha1-boundary-len64",
+        "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bc",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "len64",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "UNKNOWN"
+        },
+        "standard": "MD5||SHA-1 concatenation (no standard)"
+      },
+      {
+        "expected_hex": "70bd662e7aefbda85a0f7244167b7897b05a80522b053d6dc7e0a517d0e70212c7dad11f",
+        "id": "md5_sha1-boundary-len65",
+        "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "len65",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "UNKNOWN"
+        },
+        "standard": "MD5||SHA-1 concatenation (no standard)"
+      },
+      {
+        "expected_hex": "10046f077f2082ac19676b8079f1cb1a4231a8a50a10fa9758db8ec71fdef855b751048a",
+        "id": "md5_sha1-boundary-multi1000",
+        "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4ebf2f900070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4ebf2f900070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4ebf2f900070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4ebf2f900070e151c232a31383f464d54",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "multi1000",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "UNKNOWN"
+        },
+        "standard": "MD5||SHA-1 concatenation (no standard)"
+      }
+    ]
+  },
+  "generator": "forensics/tools/correctness_vectors.py",
+  "inputs": [
+    {
+      "name": "authority-evp-vector-file",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_md.txt",
+      "sha256": "d803585d182f78d932d306ce21dad8754897d854a3346501605851a45c047148"
+    }
+  ],
+  "kind": "correctness-vectors-md5_sha1",
+  "schema": "openssl-rs/atlas/correctness-vectors-md5_sha1/v1"
+}

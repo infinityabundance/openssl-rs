@@ -1,0 +1,2319 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "checks": {
+      "comments_are_the_source_strings": true,
+      "declared_size_is_seed_plus_n_fields": true,
+      "ec_support_tables_match_the_crate": true,
+      "field_type_and_cofactor_are_the_headers": true,
+      "fips_curve_list_rows": 15,
+      "inventory_from": "crypto/ec/ec_curve.c's `EC_CURVE_DATA` initialisers and its compiled `curve_list[]`",
+      "method_column_has_one_non_null_row": true,
+      "method_column_resolved_for_this_profile": true,
+      "montgomery_fields_from_the_source": [
+        "_EC_X9_62_PRIME_256V1"
+      ],
+      "nid_set_matches_both_directions": true,
+      "readback_is_the_source_arrays": true,
+      "readback_width_is_the_declared_slice": true,
+      "table_order_is_the_probe_order": true,
+      "values_from": "a probe linked against the admitted prefix, walking `EC_get_builtin_curves` and reading each group back with `EC_GROUP_get_curve`, `EC_POINT_get_affine_coordinates`, `EC_GROUP_get_order`, `EC_GROUP_get0_cofactor`, `EC_GROUP_get0_seed` and `BN_bn2hex`"
+    },
+    "counts": {
+      "bytes": 14542,
+      "characteristic_two_field": 37,
+      "curves": 75,
+      "field_widths": 26,
+      "non_null_method_rows": 1,
+      "prime_field": 38,
+      "rows": 82,
+      "seed_lengths": [
+        0,
+        20
+      ]
+    },
+    "curve_list": [
+      {
+        "comment": "SECG/WTLS curve over a 112 bit prime field",
+        "curve": "_EC_SECG_PRIME_112R1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_secp112r1",
+        "source": "crypto/ec/ec_curve.c:2592"
+      },
+      {
+        "comment": "SECG curve over a 112 bit prime field",
+        "curve": "_EC_SECG_PRIME_112R2",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_secp112r2",
+        "source": "crypto/ec/ec_curve.c:2594"
+      },
+      {
+        "comment": "SECG curve over a 128 bit prime field",
+        "curve": "_EC_SECG_PRIME_128R1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_secp128r1",
+        "source": "crypto/ec/ec_curve.c:2596"
+      },
+      {
+        "comment": "SECG curve over a 128 bit prime field",
+        "curve": "_EC_SECG_PRIME_128R2",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_secp128r2",
+        "source": "crypto/ec/ec_curve.c:2598"
+      },
+      {
+        "comment": "SECG curve over a 160 bit prime field",
+        "curve": "_EC_SECG_PRIME_160K1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_secp160k1",
+        "source": "crypto/ec/ec_curve.c:2600"
+      },
+      {
+        "comment": "SECG curve over a 160 bit prime field",
+        "curve": "_EC_SECG_PRIME_160R1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_secp160r1",
+        "source": "crypto/ec/ec_curve.c:2602"
+      },
+      {
+        "comment": "SECG/WTLS curve over a 160 bit prime field",
+        "curve": "_EC_SECG_PRIME_160R2",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_secp160r2",
+        "source": "crypto/ec/ec_curve.c:2604"
+      },
+      {
+        "comment": "SECG curve over a 192 bit prime field",
+        "curve": "_EC_SECG_PRIME_192K1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_secp192k1",
+        "source": "crypto/ec/ec_curve.c:2607"
+      },
+      {
+        "comment": "SECG curve over a 224 bit prime field",
+        "curve": "_EC_SECG_PRIME_224K1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_secp224k1",
+        "source": "crypto/ec/ec_curve.c:2609"
+      },
+      {
+        "comment": "NIST/SECG curve over a 224 bit prime field",
+        "curve": "_EC_NIST_PRIME_224",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_secp224r1",
+        "source": "crypto/ec/ec_curve.c:2615"
+      },
+      {
+        "comment": "SECG curve over a 256 bit prime field",
+        "curve": "_EC_SECG_PRIME_256K1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_secp256k1",
+        "source": "crypto/ec/ec_curve.c:2618"
+      },
+      {
+        "comment": "NIST/SECG curve over a 384 bit prime field",
+        "curve": "_EC_NIST_PRIME_384",
+        "method": "0",
+        "method_source": "#if defined(S390X_EC_ASM)\n        EC_GFp_s390x_nistp384_method,\n#elif !defined(OPENSSL_NO_EC_NISTP_64_GCC_128)\n        ossl_ec_GFp_nistp384_method,\n#else\n        0,\n#endif",
+        "nid": "NID_secp384r1",
+        "source": "crypto/ec/ec_curve.c:2621"
+      },
+      {
+        "comment": "NIST/SECG curve over a 521 bit prime field",
+        "curve": "_EC_NIST_PRIME_521",
+        "method": "0",
+        "method_source": "#if defined(S390X_EC_ASM)\n        EC_GFp_s390x_nistp521_method,\n#elif !defined(OPENSSL_NO_EC_NISTP_64_GCC_128)\n        EC_GFp_nistp521_method,\n#else\n        0,\n#endif",
+        "nid": "NID_secp521r1",
+        "source": "crypto/ec/ec_curve.c:2630"
+      },
+      {
+        "comment": "NIST/X9.62/SECG curve over a 192 bit prime field",
+        "curve": "_EC_NIST_PRIME_192",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_X9_62_prime192v1",
+        "source": "crypto/ec/ec_curve.c:2640"
+      },
+      {
+        "comment": "X9.62 curve over a 192 bit prime field",
+        "curve": "_EC_X9_62_PRIME_192V2",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_X9_62_prime192v2",
+        "source": "crypto/ec/ec_curve.c:2642"
+      },
+      {
+        "comment": "X9.62 curve over a 192 bit prime field",
+        "curve": "_EC_X9_62_PRIME_192V3",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_X9_62_prime192v3",
+        "source": "crypto/ec/ec_curve.c:2644"
+      },
+      {
+        "comment": "X9.62 curve over a 239 bit prime field",
+        "curve": "_EC_X9_62_PRIME_239V1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_X9_62_prime239v1",
+        "source": "crypto/ec/ec_curve.c:2646"
+      },
+      {
+        "comment": "X9.62 curve over a 239 bit prime field",
+        "curve": "_EC_X9_62_PRIME_239V2",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_X9_62_prime239v2",
+        "source": "crypto/ec/ec_curve.c:2648"
+      },
+      {
+        "comment": "X9.62 curve over a 239 bit prime field",
+        "curve": "_EC_X9_62_PRIME_239V3",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_X9_62_prime239v3",
+        "source": "crypto/ec/ec_curve.c:2650"
+      },
+      {
+        "comment": "X9.62/SECG curve over a 256 bit prime field",
+        "curve": "_EC_X9_62_PRIME_256V1",
+        "method": "EC_GFp_nistz256_method",
+        "method_source": "#if defined(ECP_NISTZ256_ASM)\n        EC_GFp_nistz256_method,\n#elif defined(S390X_EC_ASM)\n        EC_GFp_s390x_nistp256_method,\n#elif !defined(OPENSSL_NO_EC_NISTP_64_GCC_128)\n        EC_GFp_nistp256_method,\n#else\n        0,\n#endif",
+        "nid": "NID_X9_62_prime256v1",
+        "source": "crypto/ec/ec_curve.c:2652"
+      },
+      {
+        "comment": "SECG curve over a 113 bit binary field",
+        "curve": "_EC_SECG_CHAR2_113R1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_sect113r1",
+        "source": "crypto/ec/ec_curve.c:2666"
+      },
+      {
+        "comment": "SECG curve over a 113 bit binary field",
+        "curve": "_EC_SECG_CHAR2_113R2",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_sect113r2",
+        "source": "crypto/ec/ec_curve.c:2668"
+      },
+      {
+        "comment": "SECG/WTLS curve over a 131 bit binary field",
+        "curve": "_EC_SECG_CHAR2_131R1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_sect131r1",
+        "source": "crypto/ec/ec_curve.c:2670"
+      },
+      {
+        "comment": "SECG curve over a 131 bit binary field",
+        "curve": "_EC_SECG_CHAR2_131R2",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_sect131r2",
+        "source": "crypto/ec/ec_curve.c:2672"
+      },
+      {
+        "comment": "NIST/SECG/WTLS curve over a 163 bit binary field",
+        "curve": "_EC_NIST_CHAR2_163K",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_sect163k1",
+        "source": "crypto/ec/ec_curve.c:2674"
+      },
+      {
+        "comment": "SECG curve over a 163 bit binary field",
+        "curve": "_EC_SECG_CHAR2_163R1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_sect163r1",
+        "source": "crypto/ec/ec_curve.c:2676"
+      },
+      {
+        "comment": "NIST/SECG curve over a 163 bit binary field",
+        "curve": "_EC_NIST_CHAR2_163B",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_sect163r2",
+        "source": "crypto/ec/ec_curve.c:2678"
+      },
+      {
+        "comment": "SECG curve over a 193 bit binary field",
+        "curve": "_EC_SECG_CHAR2_193R1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_sect193r1",
+        "source": "crypto/ec/ec_curve.c:2680"
+      },
+      {
+        "comment": "SECG curve over a 193 bit binary field",
+        "curve": "_EC_SECG_CHAR2_193R2",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_sect193r2",
+        "source": "crypto/ec/ec_curve.c:2682"
+      },
+      {
+        "comment": "NIST/SECG/WTLS curve over a 233 bit binary field",
+        "curve": "_EC_NIST_CHAR2_233K",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_sect233k1",
+        "source": "crypto/ec/ec_curve.c:2684"
+      },
+      {
+        "comment": "NIST/SECG/WTLS curve over a 233 bit binary field",
+        "curve": "_EC_NIST_CHAR2_233B",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_sect233r1",
+        "source": "crypto/ec/ec_curve.c:2686"
+      },
+      {
+        "comment": "SECG curve over a 239 bit binary field",
+        "curve": "_EC_SECG_CHAR2_239K1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_sect239k1",
+        "source": "crypto/ec/ec_curve.c:2688"
+      },
+      {
+        "comment": "NIST/SECG curve over a 283 bit binary field",
+        "curve": "_EC_NIST_CHAR2_283K",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_sect283k1",
+        "source": "crypto/ec/ec_curve.c:2690"
+      },
+      {
+        "comment": "NIST/SECG curve over a 283 bit binary field",
+        "curve": "_EC_NIST_CHAR2_283B",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_sect283r1",
+        "source": "crypto/ec/ec_curve.c:2692"
+      },
+      {
+        "comment": "NIST/SECG curve over a 409 bit binary field",
+        "curve": "_EC_NIST_CHAR2_409K",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_sect409k1",
+        "source": "crypto/ec/ec_curve.c:2694"
+      },
+      {
+        "comment": "NIST/SECG curve over a 409 bit binary field",
+        "curve": "_EC_NIST_CHAR2_409B",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_sect409r1",
+        "source": "crypto/ec/ec_curve.c:2696"
+      },
+      {
+        "comment": "NIST/SECG curve over a 571 bit binary field",
+        "curve": "_EC_NIST_CHAR2_571K",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_sect571k1",
+        "source": "crypto/ec/ec_curve.c:2698"
+      },
+      {
+        "comment": "NIST/SECG curve over a 571 bit binary field",
+        "curve": "_EC_NIST_CHAR2_571B",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_sect571r1",
+        "source": "crypto/ec/ec_curve.c:2700"
+      },
+      {
+        "comment": "X9.62 curve over a 163 bit binary field",
+        "curve": "_EC_X9_62_CHAR2_163V1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_X9_62_c2pnb163v1",
+        "source": "crypto/ec/ec_curve.c:2703"
+      },
+      {
+        "comment": "X9.62 curve over a 163 bit binary field",
+        "curve": "_EC_X9_62_CHAR2_163V2",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_X9_62_c2pnb163v2",
+        "source": "crypto/ec/ec_curve.c:2705"
+      },
+      {
+        "comment": "X9.62 curve over a 163 bit binary field",
+        "curve": "_EC_X9_62_CHAR2_163V3",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_X9_62_c2pnb163v3",
+        "source": "crypto/ec/ec_curve.c:2707"
+      },
+      {
+        "comment": "X9.62 curve over a 176 bit binary field",
+        "curve": "_EC_X9_62_CHAR2_176V1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_X9_62_c2pnb176v1",
+        "source": "crypto/ec/ec_curve.c:2709"
+      },
+      {
+        "comment": "X9.62 curve over a 191 bit binary field",
+        "curve": "_EC_X9_62_CHAR2_191V1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_X9_62_c2tnb191v1",
+        "source": "crypto/ec/ec_curve.c:2711"
+      },
+      {
+        "comment": "X9.62 curve over a 191 bit binary field",
+        "curve": "_EC_X9_62_CHAR2_191V2",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_X9_62_c2tnb191v2",
+        "source": "crypto/ec/ec_curve.c:2713"
+      },
+      {
+        "comment": "X9.62 curve over a 191 bit binary field",
+        "curve": "_EC_X9_62_CHAR2_191V3",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_X9_62_c2tnb191v3",
+        "source": "crypto/ec/ec_curve.c:2715"
+      },
+      {
+        "comment": "X9.62 curve over a 208 bit binary field",
+        "curve": "_EC_X9_62_CHAR2_208W1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_X9_62_c2pnb208w1",
+        "source": "crypto/ec/ec_curve.c:2717"
+      },
+      {
+        "comment": "X9.62 curve over a 239 bit binary field",
+        "curve": "_EC_X9_62_CHAR2_239V1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_X9_62_c2tnb239v1",
+        "source": "crypto/ec/ec_curve.c:2719"
+      },
+      {
+        "comment": "X9.62 curve over a 239 bit binary field",
+        "curve": "_EC_X9_62_CHAR2_239V2",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_X9_62_c2tnb239v2",
+        "source": "crypto/ec/ec_curve.c:2721"
+      },
+      {
+        "comment": "X9.62 curve over a 239 bit binary field",
+        "curve": "_EC_X9_62_CHAR2_239V3",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_X9_62_c2tnb239v3",
+        "source": "crypto/ec/ec_curve.c:2723"
+      },
+      {
+        "comment": "X9.62 curve over a 272 bit binary field",
+        "curve": "_EC_X9_62_CHAR2_272W1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_X9_62_c2pnb272w1",
+        "source": "crypto/ec/ec_curve.c:2725"
+      },
+      {
+        "comment": "X9.62 curve over a 304 bit binary field",
+        "curve": "_EC_X9_62_CHAR2_304W1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_X9_62_c2pnb304w1",
+        "source": "crypto/ec/ec_curve.c:2727"
+      },
+      {
+        "comment": "X9.62 curve over a 359 bit binary field",
+        "curve": "_EC_X9_62_CHAR2_359V1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_X9_62_c2tnb359v1",
+        "source": "crypto/ec/ec_curve.c:2729"
+      },
+      {
+        "comment": "X9.62 curve over a 368 bit binary field",
+        "curve": "_EC_X9_62_CHAR2_368W1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_X9_62_c2pnb368w1",
+        "source": "crypto/ec/ec_curve.c:2731"
+      },
+      {
+        "comment": "X9.62 curve over a 431 bit binary field",
+        "curve": "_EC_X9_62_CHAR2_431R1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_X9_62_c2tnb431r1",
+        "source": "crypto/ec/ec_curve.c:2733"
+      },
+      {
+        "comment": "WTLS curve over a 113 bit binary field",
+        "curve": "_EC_WTLS_1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_wap_wsg_idm_ecid_wtls1",
+        "source": "crypto/ec/ec_curve.c:2736"
+      },
+      {
+        "comment": "NIST/SECG/WTLS curve over a 163 bit binary field",
+        "curve": "_EC_NIST_CHAR2_163K",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_wap_wsg_idm_ecid_wtls3",
+        "source": "crypto/ec/ec_curve.c:2738"
+      },
+      {
+        "comment": "SECG curve over a 113 bit binary field",
+        "curve": "_EC_SECG_CHAR2_113R1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_wap_wsg_idm_ecid_wtls4",
+        "source": "crypto/ec/ec_curve.c:2740"
+      },
+      {
+        "comment": "X9.62 curve over a 163 bit binary field",
+        "curve": "_EC_X9_62_CHAR2_163V1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_wap_wsg_idm_ecid_wtls5",
+        "source": "crypto/ec/ec_curve.c:2742"
+      },
+      {
+        "comment": "SECG/WTLS curve over a 112 bit prime field",
+        "curve": "_EC_SECG_PRIME_112R1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_wap_wsg_idm_ecid_wtls6",
+        "source": "crypto/ec/ec_curve.c:2745"
+      },
+      {
+        "comment": "SECG/WTLS curve over a 160 bit prime field",
+        "curve": "_EC_SECG_PRIME_160R2",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_wap_wsg_idm_ecid_wtls7",
+        "source": "crypto/ec/ec_curve.c:2747"
+      },
+      {
+        "comment": "WTLS curve over a 112 bit prime field",
+        "curve": "_EC_WTLS_8",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_wap_wsg_idm_ecid_wtls8",
+        "source": "crypto/ec/ec_curve.c:2749"
+      },
+      {
+        "comment": "WTLS curve over a 160 bit prime field",
+        "curve": "_EC_WTLS_9",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_wap_wsg_idm_ecid_wtls9",
+        "source": "crypto/ec/ec_curve.c:2751"
+      },
+      {
+        "comment": "NIST/SECG/WTLS curve over a 233 bit binary field",
+        "curve": "_EC_NIST_CHAR2_233K",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_wap_wsg_idm_ecid_wtls10",
+        "source": "crypto/ec/ec_curve.c:2754"
+      },
+      {
+        "comment": "NIST/SECG/WTLS curve over a 233 bit binary field",
+        "curve": "_EC_NIST_CHAR2_233B",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_wap_wsg_idm_ecid_wtls11",
+        "source": "crypto/ec/ec_curve.c:2756"
+      },
+      {
+        "comment": "WTLS curve over a 224 bit prime field",
+        "curve": "_EC_WTLS_12",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_wap_wsg_idm_ecid_wtls12",
+        "source": "crypto/ec/ec_curve.c:2759"
+      },
+      {
+        "comment": "\n\tIPSec/IKE/Oakley curve #3 over a 155 bit binary field.\n\tNot suitable for ECDSA.\n\tQuestionable extension field!",
+        "curve": "_EC_IPSEC_155_ID3",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_ipsec3",
+        "source": "crypto/ec/ec_curve.c:2763"
+      },
+      {
+        "comment": "\n\tIPSec/IKE/Oakley curve #4 over a 185 bit binary field.\n\tNot suitable for ECDSA.\n\tQuestionable extension field!",
+        "curve": "_EC_IPSEC_185_ID4",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_ipsec4",
+        "source": "crypto/ec/ec_curve.c:2766"
+      },
+      {
+        "comment": "RFC 5639 curve over a 160 bit prime field",
+        "curve": "_EC_brainpoolP160r1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_brainpoolP160r1",
+        "source": "crypto/ec/ec_curve.c:2771"
+      },
+      {
+        "comment": "RFC 5639 curve over a 160 bit prime field",
+        "curve": "_EC_brainpoolP160t1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_brainpoolP160t1",
+        "source": "crypto/ec/ec_curve.c:2773"
+      },
+      {
+        "comment": "RFC 5639 curve over a 192 bit prime field",
+        "curve": "_EC_brainpoolP192r1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_brainpoolP192r1",
+        "source": "crypto/ec/ec_curve.c:2775"
+      },
+      {
+        "comment": "RFC 5639 curve over a 192 bit prime field",
+        "curve": "_EC_brainpoolP192t1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_brainpoolP192t1",
+        "source": "crypto/ec/ec_curve.c:2777"
+      },
+      {
+        "comment": "RFC 5639 curve over a 224 bit prime field",
+        "curve": "_EC_brainpoolP224r1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_brainpoolP224r1",
+        "source": "crypto/ec/ec_curve.c:2779"
+      },
+      {
+        "comment": "RFC 5639 curve over a 224 bit prime field",
+        "curve": "_EC_brainpoolP224t1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_brainpoolP224t1",
+        "source": "crypto/ec/ec_curve.c:2781"
+      },
+      {
+        "comment": "RFC 5639 curve over a 256 bit prime field",
+        "curve": "_EC_brainpoolP256r1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_brainpoolP256r1",
+        "source": "crypto/ec/ec_curve.c:2783"
+      },
+      {
+        "comment": "RFC 5639 curve over a 256 bit prime field",
+        "curve": "_EC_brainpoolP256t1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_brainpoolP256t1",
+        "source": "crypto/ec/ec_curve.c:2785"
+      },
+      {
+        "comment": "RFC 5639 curve over a 320 bit prime field",
+        "curve": "_EC_brainpoolP320r1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_brainpoolP320r1",
+        "source": "crypto/ec/ec_curve.c:2787"
+      },
+      {
+        "comment": "RFC 5639 curve over a 320 bit prime field",
+        "curve": "_EC_brainpoolP320t1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_brainpoolP320t1",
+        "source": "crypto/ec/ec_curve.c:2789"
+      },
+      {
+        "comment": "RFC 5639 curve over a 384 bit prime field",
+        "curve": "_EC_brainpoolP384r1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_brainpoolP384r1",
+        "source": "crypto/ec/ec_curve.c:2791"
+      },
+      {
+        "comment": "RFC 5639 curve over a 384 bit prime field",
+        "curve": "_EC_brainpoolP384t1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_brainpoolP384t1",
+        "source": "crypto/ec/ec_curve.c:2793"
+      },
+      {
+        "comment": "RFC 5639 curve over a 512 bit prime field",
+        "curve": "_EC_brainpoolP512r1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_brainpoolP512r1",
+        "source": "crypto/ec/ec_curve.c:2795"
+      },
+      {
+        "comment": "RFC 5639 curve over a 512 bit prime field",
+        "curve": "_EC_brainpoolP512t1",
+        "method": "0",
+        "method_source": "0,",
+        "nid": "NID_brainpoolP512t1",
+        "source": "crypto/ec/ec_curve.c:2797"
+      },
+      {
+        "comment": "SM2 curve over a 256 bit prime field",
+        "curve": "_EC_sm2p256v1",
+        "method": "0",
+        "method_source": "#ifdef ECP_SM2P256_ASM\n        EC_GFp_sm2p256_method,\n#else\n        0,\n#endif",
+        "nid": "NID_sm2",
+        "source": "crypto/ec/ec_curve.c:2800"
+      }
+    ],
+    "curves": [
+      {
+        "bytes": 164,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 164,
+        "emitted_sha256": "4b3406df03cf49f38f2dfbc396bf75489ee06688b13ff8789118a985a257560e",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_NIST_PRIME_192",
+        "param_len": 24,
+        "seed_len": 20,
+        "sha256": "4b3406df03cf49f38f2dfbc396bf75489ee06688b13ff8789118a985a257560e",
+        "source": "crypto/ec/ec_curve.c:21"
+      },
+      {
+        "bytes": 188,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 188,
+        "emitted_sha256": "75e4cdb21365c9a9848f1be2c149a903aad08461cd41f9d046d4b7a4dc5f9152",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_NIST_PRIME_224",
+        "param_len": 28,
+        "seed_len": 20,
+        "sha256": "75e4cdb21365c9a9848f1be2c149a903aad08461cd41f9d046d4b7a4dc5f9152",
+        "source": "crypto/ec/ec_curve.c:49"
+      },
+      {
+        "bytes": 308,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 308,
+        "emitted_sha256": "81757b8dbc9ea6284241b8596b1ffc657eda76198a3b70f44f17a8b67adc0825",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_NIST_PRIME_384",
+        "param_len": 48,
+        "seed_len": 20,
+        "sha256": "81757b8dbc9ea6284241b8596b1ffc657eda76198a3b70f44f17a8b67adc0825",
+        "source": "crypto/ec/ec_curve.c:83"
+      },
+      {
+        "bytes": 416,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 416,
+        "emitted_sha256": "271e592aeb351f7208dbd72f994901f96436aa991a3aca062c3fb00d8c7d1ff7",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_NIST_PRIME_521",
+        "param_len": 66,
+        "seed_len": 20,
+        "sha256": "271e592aeb351f7208dbd72f994901f96436aa991a3aca062c3fb00d8c7d1ff7",
+        "source": "crypto/ec/ec_curve.c:123"
+      },
+      {
+        "bytes": 164,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 164,
+        "emitted_sha256": "a56ba74675d040af9a74af73381426c7959d3775fa4ca4159cc87f6ffbe87436",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_X9_62_PRIME_192V2",
+        "param_len": 24,
+        "seed_len": 20,
+        "sha256": "a56ba74675d040af9a74af73381426c7959d3775fa4ca4159cc87f6ffbe87436",
+        "source": "crypto/ec/ec_curve.c:177"
+      },
+      {
+        "bytes": 164,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 164,
+        "emitted_sha256": "8fd487834d5ce4610e9aafaeea1450f6070c30e3df386f36871e54aea67641e6",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_X9_62_PRIME_192V3",
+        "param_len": 24,
+        "seed_len": 20,
+        "sha256": "8fd487834d5ce4610e9aafaeea1450f6070c30e3df386f36871e54aea67641e6",
+        "source": "crypto/ec/ec_curve.c:205"
+      },
+      {
+        "bytes": 200,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 200,
+        "emitted_sha256": "574fc0144dff23b996f093905a0f0e71164fabf4826a112050a9ea2240dda752",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_X9_62_PRIME_239V1",
+        "param_len": 30,
+        "seed_len": 20,
+        "sha256": "574fc0144dff23b996f093905a0f0e71164fabf4826a112050a9ea2240dda752",
+        "source": "crypto/ec/ec_curve.c:233"
+      },
+      {
+        "bytes": 200,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 200,
+        "emitted_sha256": "a2ea3d8f678aeef235d90ec8ad21c4b93a3917ebd2051e8813c4f210a2d746ec",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_X9_62_PRIME_239V2",
+        "param_len": 30,
+        "seed_len": 20,
+        "sha256": "a2ea3d8f678aeef235d90ec8ad21c4b93a3917ebd2051e8813c4f210a2d746ec",
+        "source": "crypto/ec/ec_curve.c:267"
+      },
+      {
+        "bytes": 200,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 200,
+        "emitted_sha256": "6ccbd379258469d97b3956dd9e65065d55d11e4b893da29b772c77cf4cce9780",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_X9_62_PRIME_239V3",
+        "param_len": 30,
+        "seed_len": 20,
+        "sha256": "6ccbd379258469d97b3956dd9e65065d55d11e4b893da29b772c77cf4cce9780",
+        "source": "crypto/ec/ec_curve.c:301"
+      },
+      {
+        "bytes": 276,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 276,
+        "emitted_sha256": "94954e4604e36e6b7ee8dc588fcb59c0d1f2c24f2899c45a78d088c1ceb731b6",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 8,
+        "montgomery_fields": [
+          "00000004FFFFFFFDFFFFFFFFFFFFFFFEFFFFFFFBFFFFFFFF0000000000000003",
+          "66E12D94F3D956202845B2392B6BEC594699799C49BD6FA683244C95BE79EEA2"
+        ],
+        "name": "_EC_X9_62_PRIME_256V1",
+        "param_len": 32,
+        "seed_len": 20,
+        "sha256": "94954e4604e36e6b7ee8dc588fcb59c0d1f2c24f2899c45a78d088c1ceb731b6",
+        "source": "crypto/ec/ec_curve.c:336"
+      },
+      {
+        "bytes": 104,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 104,
+        "emitted_sha256": "2a3c2f435d888a07d7b8f910aa0851c001fc6c4b99a71cb0ff7e0f3935220784",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_SECG_PRIME_112R1",
+        "param_len": 14,
+        "seed_len": 20,
+        "sha256": "2a3c2f435d888a07d7b8f910aa0851c001fc6c4b99a71cb0ff7e0f3935220784",
+        "source": "crypto/ec/ec_curve.c:380"
+      },
+      {
+        "bytes": 104,
+        "cofactor": 4,
+        "cofactor_source": "4",
+        "emitted_bytes": 104,
+        "emitted_sha256": "9dead1ee27463ab7b26ac3e6f51e137eef405704850bd6268db4db89c0691a47",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_SECG_PRIME_112R2",
+        "param_len": 14,
+        "seed_len": 20,
+        "sha256": "9dead1ee27463ab7b26ac3e6f51e137eef405704850bd6268db4db89c0691a47",
+        "source": "crypto/ec/ec_curve.c:408"
+      },
+      {
+        "bytes": 116,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 116,
+        "emitted_sha256": "3060143d68e7d79be01ce39881a7d493b8adb78af0f0be9dac355bed679755a0",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_SECG_PRIME_128R1",
+        "param_len": 16,
+        "seed_len": 20,
+        "sha256": "3060143d68e7d79be01ce39881a7d493b8adb78af0f0be9dac355bed679755a0",
+        "source": "crypto/ec/ec_curve.c:436"
+      },
+      {
+        "bytes": 116,
+        "cofactor": 4,
+        "cofactor_source": "4",
+        "emitted_bytes": 116,
+        "emitted_sha256": "89c7bbc90bf0b201ba380e8d8f550594845ea54b7cc0dc51db2623fd2f8f7e73",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_SECG_PRIME_128R2",
+        "param_len": 16,
+        "seed_len": 20,
+        "sha256": "89c7bbc90bf0b201ba380e8d8f550594845ea54b7cc0dc51db2623fd2f8f7e73",
+        "source": "crypto/ec/ec_curve.c:464"
+      },
+      {
+        "bytes": 126,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 126,
+        "emitted_sha256": "2763ffa6d21632582988aae72aa700f240befbf1284148179cf3ae803f1b7b9b",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_SECG_PRIME_160K1",
+        "param_len": 21,
+        "seed_len": 0,
+        "sha256": "2763ffa6d21632582988aae72aa700f240befbf1284148179cf3ae803f1b7b9b",
+        "source": "crypto/ec/ec_curve.c:492"
+      },
+      {
+        "bytes": 146,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 146,
+        "emitted_sha256": "e99e7c9a634e28f7c9bf0823f67bddc4f3cc3b951bf8d0e3dcbb87b37e3fb6b1",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_SECG_PRIME_160R1",
+        "param_len": 21,
+        "seed_len": 20,
+        "sha256": "e99e7c9a634e28f7c9bf0823f67bddc4f3cc3b951bf8d0e3dcbb87b37e3fb6b1",
+        "source": "crypto/ec/ec_curve.c:518"
+      },
+      {
+        "bytes": 146,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 146,
+        "emitted_sha256": "4c105dc935e048252efe470d97dc7d56b375df4426dd07bf2fc5ca69d92a3151",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_SECG_PRIME_160R2",
+        "param_len": 21,
+        "seed_len": 20,
+        "sha256": "4c105dc935e048252efe470d97dc7d56b375df4426dd07bf2fc5ca69d92a3151",
+        "source": "crypto/ec/ec_curve.c:546"
+      },
+      {
+        "bytes": 144,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 144,
+        "emitted_sha256": "82ad7af97df8da41fabb45c25d0e7254ddec6204e6261638a12870e21729d0ee",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_SECG_PRIME_192K1",
+        "param_len": 24,
+        "seed_len": 0,
+        "sha256": "82ad7af97df8da41fabb45c25d0e7254ddec6204e6261638a12870e21729d0ee",
+        "source": "crypto/ec/ec_curve.c:574"
+      },
+      {
+        "bytes": 174,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 174,
+        "emitted_sha256": "f1da45cb8f8b55691567f875139dea39026bd4ee9e5378f78e28e19e6e8063fa",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_SECG_PRIME_224K1",
+        "param_len": 29,
+        "seed_len": 0,
+        "sha256": "f1da45cb8f8b55691567f875139dea39026bd4ee9e5378f78e28e19e6e8063fa",
+        "source": "crypto/ec/ec_curve.c:600"
+      },
+      {
+        "bytes": 192,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 192,
+        "emitted_sha256": "872bb2a17e87e15f07d7df9e6471a8d33254f03493070353b35da91343a4e5d9",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_SECG_PRIME_256K1",
+        "param_len": 32,
+        "seed_len": 0,
+        "sha256": "872bb2a17e87e15f07d7df9e6471a8d33254f03493070353b35da91343a4e5d9",
+        "source": "crypto/ec/ec_curve.c:632"
+      },
+      {
+        "bytes": 90,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 90,
+        "emitted_sha256": "e4ae67ffcf065e964587cbd691ba6be060d8c0a417fd717b34b2bc44c84ef6d0",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_WTLS_8",
+        "param_len": 15,
+        "seed_len": 0,
+        "sha256": "e4ae67ffcf065e964587cbd691ba6be060d8c0a417fd717b34b2bc44c84ef6d0",
+        "source": "crypto/ec/ec_curve.c:665"
+      },
+      {
+        "bytes": 126,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 126,
+        "emitted_sha256": "aad75ad81be7c4dad0f095e7a1da3414fb5e6ff67cbed39c79ae2778aaaa2e5c",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_WTLS_9",
+        "param_len": 21,
+        "seed_len": 0,
+        "sha256": "aad75ad81be7c4dad0f095e7a1da3414fb5e6ff67cbed39c79ae2778aaaa2e5c",
+        "source": "crypto/ec/ec_curve.c:691"
+      },
+      {
+        "bytes": 168,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 168,
+        "emitted_sha256": "a71b13819483898ac90f3b09d502f3ea9639924d9e58900b9e1edd8bdb8b61cb",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_WTLS_12",
+        "param_len": 28,
+        "seed_len": 0,
+        "sha256": "a71b13819483898ac90f3b09d502f3ea9639924d9e58900b9e1edd8bdb8b61cb",
+        "source": "crypto/ec/ec_curve.c:717"
+      },
+      {
+        "bytes": 110,
+        "cofactor": 2,
+        "cofactor_source": "2",
+        "emitted_bytes": 110,
+        "emitted_sha256": "c1fba02caaaa6a910d5a6abda28925d495fdc8821a903dd008c6cc1d71dd891f",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_SECG_CHAR2_113R1",
+        "param_len": 15,
+        "seed_len": 20,
+        "sha256": "c1fba02caaaa6a910d5a6abda28925d495fdc8821a903dd008c6cc1d71dd891f",
+        "source": "crypto/ec/ec_curve.c:755"
+      },
+      {
+        "bytes": 110,
+        "cofactor": 2,
+        "cofactor_source": "2",
+        "emitted_bytes": 110,
+        "emitted_sha256": "12b5b46f7c8cc424b316b5f8cad54aee0b1cfe5f4ccca62316b30edf518a4d9e",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_SECG_CHAR2_113R2",
+        "param_len": 15,
+        "seed_len": 20,
+        "sha256": "12b5b46f7c8cc424b316b5f8cad54aee0b1cfe5f4ccca62316b30edf518a4d9e",
+        "source": "crypto/ec/ec_curve.c:783"
+      },
+      {
+        "bytes": 122,
+        "cofactor": 2,
+        "cofactor_source": "2",
+        "emitted_bytes": 122,
+        "emitted_sha256": "0dfe030b5d9b9e3d8ae224a6aa20acb3d6fde25d1558b92e61704b5ad2938c77",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_SECG_CHAR2_131R1",
+        "param_len": 17,
+        "seed_len": 20,
+        "sha256": "0dfe030b5d9b9e3d8ae224a6aa20acb3d6fde25d1558b92e61704b5ad2938c77",
+        "source": "crypto/ec/ec_curve.c:811"
+      },
+      {
+        "bytes": 122,
+        "cofactor": 2,
+        "cofactor_source": "2",
+        "emitted_bytes": 122,
+        "emitted_sha256": "fa0c05c492c880fbb3a46b8bd028d365d84d560155c9ac04a199a4d0afecd78e",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_SECG_CHAR2_131R2",
+        "param_len": 17,
+        "seed_len": 20,
+        "sha256": "fa0c05c492c880fbb3a46b8bd028d365d84d560155c9ac04a199a4d0afecd78e",
+        "source": "crypto/ec/ec_curve.c:839"
+      },
+      {
+        "bytes": 126,
+        "cofactor": 2,
+        "cofactor_source": "2",
+        "emitted_bytes": 126,
+        "emitted_sha256": "03a8a3475cf370ca4e939a69e6c4deb7723e6123579858da297fae8890349dbc",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_NIST_CHAR2_163K",
+        "param_len": 21,
+        "seed_len": 0,
+        "sha256": "03a8a3475cf370ca4e939a69e6c4deb7723e6123579858da297fae8890349dbc",
+        "source": "crypto/ec/ec_curve.c:868"
+      },
+      {
+        "bytes": 126,
+        "cofactor": 2,
+        "cofactor_source": "2",
+        "emitted_bytes": 126,
+        "emitted_sha256": "b9c3869f8f80abb160ea35ed50fbc9cdaf102ad36f27d6fe4766825d7ecc4be4",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_SECG_CHAR2_163R1",
+        "param_len": 21,
+        "seed_len": 0,
+        "sha256": "b9c3869f8f80abb160ea35ed50fbc9cdaf102ad36f27d6fe4766825d7ecc4be4",
+        "source": "crypto/ec/ec_curve.c:895"
+      },
+      {
+        "bytes": 126,
+        "cofactor": 2,
+        "cofactor_source": "2",
+        "emitted_bytes": 126,
+        "emitted_sha256": "ab4984a59925a04addfd727af1fcd01dbfbc6d008e1c6a92e89c18f44d82159c",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_NIST_CHAR2_163B",
+        "param_len": 21,
+        "seed_len": 0,
+        "sha256": "ab4984a59925a04addfd727af1fcd01dbfbc6d008e1c6a92e89c18f44d82159c",
+        "source": "crypto/ec/ec_curve.c:921"
+      },
+      {
+        "bytes": 170,
+        "cofactor": 2,
+        "cofactor_source": "2",
+        "emitted_bytes": 170,
+        "emitted_sha256": "49091f83e4243892e928b2d143f106d1dcdeda2c7d7b52b5017f0630fbcee650",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_SECG_CHAR2_193R1",
+        "param_len": 25,
+        "seed_len": 20,
+        "sha256": "49091f83e4243892e928b2d143f106d1dcdeda2c7d7b52b5017f0630fbcee650",
+        "source": "crypto/ec/ec_curve.c:947"
+      },
+      {
+        "bytes": 170,
+        "cofactor": 2,
+        "cofactor_source": "2",
+        "emitted_bytes": 170,
+        "emitted_sha256": "edd50697c4d6b33b5db7cbc798d5d3d7cc09edefcb805c4c5507f5a5f363ae0f",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_SECG_CHAR2_193R2",
+        "param_len": 25,
+        "seed_len": 20,
+        "sha256": "edd50697c4d6b33b5db7cbc798d5d3d7cc09edefcb805c4c5507f5a5f363ae0f",
+        "source": "crypto/ec/ec_curve.c:981"
+      },
+      {
+        "bytes": 180,
+        "cofactor": 4,
+        "cofactor_source": "4",
+        "emitted_bytes": 180,
+        "emitted_sha256": "10c861533f174fb06fe5eb3980ba5bff521a9949e731f2ddb93bb9295d3f0840",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_NIST_CHAR2_233K",
+        "param_len": 30,
+        "seed_len": 0,
+        "sha256": "10c861533f174fb06fe5eb3980ba5bff521a9949e731f2ddb93bb9295d3f0840",
+        "source": "crypto/ec/ec_curve.c:1016"
+      },
+      {
+        "bytes": 200,
+        "cofactor": 2,
+        "cofactor_source": "2",
+        "emitted_bytes": 200,
+        "emitted_sha256": "ae5922c2f2404b3aceeb5d463a544203ae88d58ad25ffd7fd662fd8b037e5d66",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_NIST_CHAR2_233B",
+        "param_len": 30,
+        "seed_len": 20,
+        "sha256": "ae5922c2f2404b3aceeb5d463a544203ae88d58ad25ffd7fd662fd8b037e5d66",
+        "source": "crypto/ec/ec_curve.c:1048"
+      },
+      {
+        "bytes": 180,
+        "cofactor": 4,
+        "cofactor_source": "4",
+        "emitted_bytes": 180,
+        "emitted_sha256": "420516279860ab5ecec7cfd5a6a24ef2cc37befa6d124f79760984ba00a9e954",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_SECG_CHAR2_239K1",
+        "param_len": 30,
+        "seed_len": 0,
+        "sha256": "420516279860ab5ecec7cfd5a6a24ef2cc37befa6d124f79760984ba00a9e954",
+        "source": "crypto/ec/ec_curve.c:1083"
+      },
+      {
+        "bytes": 216,
+        "cofactor": 4,
+        "cofactor_source": "4",
+        "emitted_bytes": 216,
+        "emitted_sha256": "92da06453fd6e83fb75703f4141cf66f260d5fa7c6caa618608406c7f68579d9",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_NIST_CHAR2_283K",
+        "param_len": 36,
+        "seed_len": 0,
+        "sha256": "92da06453fd6e83fb75703f4141cf66f260d5fa7c6caa618608406c7f68579d9",
+        "source": "crypto/ec/ec_curve.c:1116"
+      },
+      {
+        "bytes": 236,
+        "cofactor": 2,
+        "cofactor_source": "2",
+        "emitted_bytes": 236,
+        "emitted_sha256": "2fe70773e2bbeab5bfad3c0984829587d0f984065a9f3ffee014008257931c2f",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_NIST_CHAR2_283B",
+        "param_len": 36,
+        "seed_len": 20,
+        "sha256": "2fe70773e2bbeab5bfad3c0984829587d0f984065a9f3ffee014008257931c2f",
+        "source": "crypto/ec/ec_curve.c:1148"
+      },
+      {
+        "bytes": 312,
+        "cofactor": 4,
+        "cofactor_source": "4",
+        "emitted_bytes": 312,
+        "emitted_sha256": "0aeef8ebc86a721d3f33142aed44f5d1de40d3bd4c82ba7a42f73824d1a1f43b",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_NIST_CHAR2_409K",
+        "param_len": 52,
+        "seed_len": 0,
+        "sha256": "0aeef8ebc86a721d3f33142aed44f5d1de40d3bd4c82ba7a42f73824d1a1f43b",
+        "source": "crypto/ec/ec_curve.c:1182"
+      },
+      {
+        "bytes": 332,
+        "cofactor": 2,
+        "cofactor_source": "2",
+        "emitted_bytes": 332,
+        "emitted_sha256": "673cce64b8a87f4bc2722cc2984c8cfa9b8f07feb06e6974f9ab6e247b379035",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_NIST_CHAR2_409B",
+        "param_len": 52,
+        "seed_len": 20,
+        "sha256": "673cce64b8a87f4bc2722cc2984c8cfa9b8f07feb06e6974f9ab6e247b379035",
+        "source": "crypto/ec/ec_curve.c:1226"
+      },
+      {
+        "bytes": 432,
+        "cofactor": 4,
+        "cofactor_source": "4",
+        "emitted_bytes": 432,
+        "emitted_sha256": "64e87c58611c7e04cb3504c492fed18cb8b9fc5484f2c8dcdb4b1bf03cb37f90",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_NIST_CHAR2_571K",
+        "param_len": 72,
+        "seed_len": 0,
+        "sha256": "64e87c58611c7e04cb3504c492fed18cb8b9fc5484f2c8dcdb4b1bf03cb37f90",
+        "source": "crypto/ec/ec_curve.c:1272"
+      },
+      {
+        "bytes": 452,
+        "cofactor": 2,
+        "cofactor_source": "2",
+        "emitted_bytes": 452,
+        "emitted_sha256": "5e8eaacbfe46f2d74e003f0a8982c05e2755a6f00bbe8b1849518e07fd1b3d6c",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_NIST_CHAR2_571B",
+        "param_len": 72,
+        "seed_len": 20,
+        "sha256": "5e8eaacbfe46f2d74e003f0a8982c05e2755a6f00bbe8b1849518e07fd1b3d6c",
+        "source": "crypto/ec/ec_curve.c:1322"
+      },
+      {
+        "bytes": 146,
+        "cofactor": 2,
+        "cofactor_source": "2",
+        "emitted_bytes": 146,
+        "emitted_sha256": "db00888f4c788db73ac2d1ece85123163068b98035afaaef1a05fd22e2145f58",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_X9_62_CHAR2_163V1",
+        "param_len": 21,
+        "seed_len": 20,
+        "sha256": "db00888f4c788db73ac2d1ece85123163068b98035afaaef1a05fd22e2145f58",
+        "source": "crypto/ec/ec_curve.c:1375"
+      },
+      {
+        "bytes": 146,
+        "cofactor": 2,
+        "cofactor_source": "2",
+        "emitted_bytes": 146,
+        "emitted_sha256": "f364956480724d2e2fad0faeca48b732bbb24ac14d031c19f8445b42d6ed85df",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_X9_62_CHAR2_163V2",
+        "param_len": 21,
+        "seed_len": 20,
+        "sha256": "f364956480724d2e2fad0faeca48b732bbb24ac14d031c19f8445b42d6ed85df",
+        "source": "crypto/ec/ec_curve.c:1403"
+      },
+      {
+        "bytes": 146,
+        "cofactor": 2,
+        "cofactor_source": "2",
+        "emitted_bytes": 146,
+        "emitted_sha256": "e4357f4531e481beb60defbd47593d6ac3e508684df0c6095158468470859943",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_X9_62_CHAR2_163V3",
+        "param_len": 21,
+        "seed_len": 20,
+        "sha256": "e4357f4531e481beb60defbd47593d6ac3e508684df0c6095158468470859943",
+        "source": "crypto/ec/ec_curve.c:1431"
+      },
+      {
+        "bytes": 138,
+        "cofactor": 65390,
+        "cofactor_source": "0xFF6E",
+        "emitted_bytes": 138,
+        "emitted_sha256": "e2106de34e9d55e163d790d4ac3d84e4e5d143248e0ab86bac7ea9d079811bb2",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_X9_62_CHAR2_176V1",
+        "param_len": 23,
+        "seed_len": 0,
+        "sha256": "e2106de34e9d55e163d790d4ac3d84e4e5d143248e0ab86bac7ea9d079811bb2",
+        "source": "crypto/ec/ec_curve.c:1459"
+      },
+      {
+        "bytes": 164,
+        "cofactor": 2,
+        "cofactor_source": "2",
+        "emitted_bytes": 164,
+        "emitted_sha256": "66a0a0a1edb6e4b3a6503f89d013f9647ef611838fffb7f7af396162c4d24139",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_X9_62_CHAR2_191V1",
+        "param_len": 24,
+        "seed_len": 20,
+        "sha256": "66a0a0a1edb6e4b3a6503f89d013f9647ef611838fffb7f7af396162c4d24139",
+        "source": "crypto/ec/ec_curve.c:1485"
+      },
+      {
+        "bytes": 164,
+        "cofactor": 4,
+        "cofactor_source": "4",
+        "emitted_bytes": 164,
+        "emitted_sha256": "f9a3318fb50a67fc5e76175d26e6e12e987b5eee0db10c5896674f8ae310a97f",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_X9_62_CHAR2_191V2",
+        "param_len": 24,
+        "seed_len": 20,
+        "sha256": "f9a3318fb50a67fc5e76175d26e6e12e987b5eee0db10c5896674f8ae310a97f",
+        "source": "crypto/ec/ec_curve.c:1513"
+      },
+      {
+        "bytes": 164,
+        "cofactor": 6,
+        "cofactor_source": "6",
+        "emitted_bytes": 164,
+        "emitted_sha256": "59c6bb8b9ce767401ad4de5666b68e70e793cea6f03c79e8bc7c8bad0979c161",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_X9_62_CHAR2_191V3",
+        "param_len": 24,
+        "seed_len": 20,
+        "sha256": "59c6bb8b9ce767401ad4de5666b68e70e793cea6f03c79e8bc7c8bad0979c161",
+        "source": "crypto/ec/ec_curve.c:1541"
+      },
+      {
+        "bytes": 162,
+        "cofactor": 65096,
+        "cofactor_source": "0xFE48",
+        "emitted_bytes": 162,
+        "emitted_sha256": "bc2bd99fe0c0fcd36c61cff782072dc5aad264f29ef7b7113c08c433b2f78200",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_X9_62_CHAR2_208W1",
+        "param_len": 27,
+        "seed_len": 0,
+        "sha256": "bc2bd99fe0c0fcd36c61cff782072dc5aad264f29ef7b7113c08c433b2f78200",
+        "source": "crypto/ec/ec_curve.c:1569"
+      },
+      {
+        "bytes": 200,
+        "cofactor": 4,
+        "cofactor_source": "4",
+        "emitted_bytes": 200,
+        "emitted_sha256": "67faac01d79574cc3c32bf7c42a3cbc8f90be946a1c86afb8fc0b93a9169d2b1",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_X9_62_CHAR2_239V1",
+        "param_len": 30,
+        "seed_len": 20,
+        "sha256": "67faac01d79574cc3c32bf7c42a3cbc8f90be946a1c86afb8fc0b93a9169d2b1",
+        "source": "crypto/ec/ec_curve.c:1601"
+      },
+      {
+        "bytes": 200,
+        "cofactor": 6,
+        "cofactor_source": "6",
+        "emitted_bytes": 200,
+        "emitted_sha256": "2572821909cbcad4a93772b9af495d2e8847e3e6dfa6022f6a52e53edb82662c",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_X9_62_CHAR2_239V2",
+        "param_len": 30,
+        "seed_len": 20,
+        "sha256": "2572821909cbcad4a93772b9af495d2e8847e3e6dfa6022f6a52e53edb82662c",
+        "source": "crypto/ec/ec_curve.c:1635"
+      },
+      {
+        "bytes": 200,
+        "cofactor": 10,
+        "cofactor_source": "0xA",
+        "emitted_bytes": 200,
+        "emitted_sha256": "4cd9c1ae4a7b84f8eb4e71f5e785017df920c67d45921d2c3a455a47977717bd",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_X9_62_CHAR2_239V3",
+        "param_len": 30,
+        "seed_len": 20,
+        "sha256": "4cd9c1ae4a7b84f8eb4e71f5e785017df920c67d45921d2c3a455a47977717bd",
+        "source": "crypto/ec/ec_curve.c:1669"
+      },
+      {
+        "bytes": 210,
+        "cofactor": 65286,
+        "cofactor_source": "0xFF06",
+        "emitted_bytes": 210,
+        "emitted_sha256": "048874b7c5ef60713218ee76d394d2c2a2a3b7a57bbe4b9edfc5e15c59b94944",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_X9_62_CHAR2_272W1",
+        "param_len": 35,
+        "seed_len": 0,
+        "sha256": "048874b7c5ef60713218ee76d394d2c2a2a3b7a57bbe4b9edfc5e15c59b94944",
+        "source": "crypto/ec/ec_curve.c:1703"
+      },
+      {
+        "bytes": 234,
+        "cofactor": 65070,
+        "cofactor_source": "0xFE2E",
+        "emitted_bytes": 234,
+        "emitted_sha256": "c1b86e3d29bc63843cde28ccf053d1bdf3ae457ece5c8a345a3387b27a5fc172",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_X9_62_CHAR2_304W1",
+        "param_len": 39,
+        "seed_len": 0,
+        "sha256": "c1b86e3d29bc63843cde28ccf053d1bdf3ae457ece5c8a345a3387b27a5fc172",
+        "source": "crypto/ec/ec_curve.c:1735"
+      },
+      {
+        "bytes": 290,
+        "cofactor": 76,
+        "cofactor_source": "0x4C",
+        "emitted_bytes": 290,
+        "emitted_sha256": "46347d50d02d407e7911c4c4dea2211a3a0cf246d21f1dfd10766dfb2bb49a4f",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_X9_62_CHAR2_359V1",
+        "param_len": 45,
+        "seed_len": 20,
+        "sha256": "46347d50d02d407e7911c4c4dea2211a3a0cf246d21f1dfd10766dfb2bb49a4f",
+        "source": "crypto/ec/ec_curve.c:1773"
+      },
+      {
+        "bytes": 282,
+        "cofactor": 65392,
+        "cofactor_source": "0xFF70",
+        "emitted_bytes": 282,
+        "emitted_sha256": "f0311daa571d5c5f00059a08ca701626302f6fb5dbfa6167944e8d6335713a4b",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_X9_62_CHAR2_368W1",
+        "param_len": 47,
+        "seed_len": 0,
+        "sha256": "f0311daa571d5c5f00059a08ca701626302f6fb5dbfa6167944e8d6335713a4b",
+        "source": "crypto/ec/ec_curve.c:1813"
+      },
+      {
+        "bytes": 324,
+        "cofactor": 10080,
+        "cofactor_source": "0x2760",
+        "emitted_bytes": 324,
+        "emitted_sha256": "0ea3bc7e960cb4f345b0efa0b4629b7750c654a80bce2462786ba899364f57f6",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_X9_62_CHAR2_431R1",
+        "param_len": 54,
+        "seed_len": 0,
+        "sha256": "0ea3bc7e960cb4f345b0efa0b4629b7750c654a80bce2462786ba899364f57f6",
+        "source": "crypto/ec/ec_curve.c:1851"
+      },
+      {
+        "bytes": 90,
+        "cofactor": 2,
+        "cofactor_source": "2",
+        "emitted_bytes": 90,
+        "emitted_sha256": "87386def013888ec0b36e868515b363c6d36d0c0e183e786fac91315579900ab",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_WTLS_1",
+        "param_len": 15,
+        "seed_len": 0,
+        "sha256": "87386def013888ec0b36e868515b363c6d36d0c0e183e786fac91315579900ab",
+        "source": "crypto/ec/ec_curve.c:1895"
+      },
+      {
+        "bytes": 120,
+        "cofactor": 3,
+        "cofactor_source": "3",
+        "emitted_bytes": 120,
+        "emitted_sha256": "2ed72f7d10c50abe8634a0b498a311022f9984613b16e284f940325cf4dacf62",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_IPSEC_155_ID3",
+        "param_len": 20,
+        "seed_len": 0,
+        "sha256": "2ed72f7d10c50abe8634a0b498a311022f9984613b16e284f940325cf4dacf62",
+        "source": "crypto/ec/ec_curve.c:1923"
+      },
+      {
+        "bytes": 144,
+        "cofactor": 2,
+        "cofactor_source": "2",
+        "emitted_bytes": 144,
+        "emitted_sha256": "b96b710fda4f6c8883b75a7c3a497a1e41c4fba7290943414daac33a1794242b",
+        "field_type": "NID_X9_62_characteristic_two_field",
+        "field_type_number": 407,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_IPSEC_185_ID4",
+        "param_len": 24,
+        "seed_len": 0,
+        "sha256": "b96b710fda4f6c8883b75a7c3a497a1e41c4fba7290943414daac33a1794242b",
+        "source": "crypto/ec/ec_curve.c:1950"
+      },
+      {
+        "bytes": 120,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 120,
+        "emitted_sha256": "64cd87f6fbf7e83630d482b9c43f3855244891fb223215d4f3676adebea0e5b6",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_brainpoolP160r1",
+        "param_len": 20,
+        "seed_len": 0,
+        "sha256": "64cd87f6fbf7e83630d482b9c43f3855244891fb223215d4f3676adebea0e5b6",
+        "source": "crypto/ec/ec_curve.c:1981"
+      },
+      {
+        "bytes": 120,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 120,
+        "emitted_sha256": "603f0683e38f700203a8a20b13786eb4e9e0248b4bdd64eaf88eea8c8d727b69",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_brainpoolP160t1",
+        "param_len": 20,
+        "seed_len": 0,
+        "sha256": "603f0683e38f700203a8a20b13786eb4e9e0248b4bdd64eaf88eea8c8d727b69",
+        "source": "crypto/ec/ec_curve.c:2007"
+      },
+      {
+        "bytes": 144,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 144,
+        "emitted_sha256": "5320680bf1cefd6a37c5bde8fe9454d4fb97fd1ba55b667a0c5042e65ca6d9d7",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_brainpoolP192r1",
+        "param_len": 24,
+        "seed_len": 0,
+        "sha256": "5320680bf1cefd6a37c5bde8fe9454d4fb97fd1ba55b667a0c5042e65ca6d9d7",
+        "source": "crypto/ec/ec_curve.c:2033"
+      },
+      {
+        "bytes": 144,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 144,
+        "emitted_sha256": "e7ddbfab9bdbba5c39b1b9425650da7cd812e2469a1cfbbca6eb9632bfb25306",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_brainpoolP192t1",
+        "param_len": 24,
+        "seed_len": 0,
+        "sha256": "e7ddbfab9bdbba5c39b1b9425650da7cd812e2469a1cfbbca6eb9632bfb25306",
+        "source": "crypto/ec/ec_curve.c:2059"
+      },
+      {
+        "bytes": 168,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 168,
+        "emitted_sha256": "0a5ba0c1e28111d7dac27b5165664fa19066558064712c4631ba0dd9fbdb4ff1",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_brainpoolP224r1",
+        "param_len": 28,
+        "seed_len": 0,
+        "sha256": "0a5ba0c1e28111d7dac27b5165664fa19066558064712c4631ba0dd9fbdb4ff1",
+        "source": "crypto/ec/ec_curve.c:2085"
+      },
+      {
+        "bytes": 168,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 168,
+        "emitted_sha256": "2cecd2a861a3303002d7e9147349affcff95c9ac3e2b72a1372c9f8b2acbe99f",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_brainpoolP224t1",
+        "param_len": 28,
+        "seed_len": 0,
+        "sha256": "2cecd2a861a3303002d7e9147349affcff95c9ac3e2b72a1372c9f8b2acbe99f",
+        "source": "crypto/ec/ec_curve.c:2117"
+      },
+      {
+        "bytes": 192,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 192,
+        "emitted_sha256": "ccc4a2be4b2098b1708376343d5c13b9d1167fb2d391298026e091bb43f5059d",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_brainpoolP256r1",
+        "param_len": 32,
+        "seed_len": 0,
+        "sha256": "ccc4a2be4b2098b1708376343d5c13b9d1167fb2d391298026e091bb43f5059d",
+        "source": "crypto/ec/ec_curve.c:2149"
+      },
+      {
+        "bytes": 192,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 192,
+        "emitted_sha256": "9f358d0eaa7e96a0407f2e9d641c5efd1a3d73b5105f83055860942510817863",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_brainpoolP256t1",
+        "param_len": 32,
+        "seed_len": 0,
+        "sha256": "9f358d0eaa7e96a0407f2e9d641c5efd1a3d73b5105f83055860942510817863",
+        "source": "crypto/ec/ec_curve.c:2181"
+      },
+      {
+        "bytes": 240,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 240,
+        "emitted_sha256": "3995ea7ec42d544e2874ba829c120c8208995d705fc18cd123f39394716dfbe0",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_brainpoolP320r1",
+        "param_len": 40,
+        "seed_len": 0,
+        "sha256": "3995ea7ec42d544e2874ba829c120c8208995d705fc18cd123f39394716dfbe0",
+        "source": "crypto/ec/ec_curve.c:2213"
+      },
+      {
+        "bytes": 240,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 240,
+        "emitted_sha256": "7ca9a22cd8b03c3f863aa8e3b57526c08160494b649ec08ebbd95824435a4894",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_brainpoolP320t1",
+        "param_len": 40,
+        "seed_len": 0,
+        "sha256": "7ca9a22cd8b03c3f863aa8e3b57526c08160494b649ec08ebbd95824435a4894",
+        "source": "crypto/ec/ec_curve.c:2251"
+      },
+      {
+        "bytes": 288,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 288,
+        "emitted_sha256": "57f7bda8e9a2308a858fb4e4b8e0a25ec253a405274c0edaa0625e973a474e03",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_brainpoolP384r1",
+        "param_len": 48,
+        "seed_len": 0,
+        "sha256": "57f7bda8e9a2308a858fb4e4b8e0a25ec253a405274c0edaa0625e973a474e03",
+        "source": "crypto/ec/ec_curve.c:2289"
+      },
+      {
+        "bytes": 288,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 288,
+        "emitted_sha256": "f8f905ee60ef7816461e009dc2d751da1582db09a1af2c079e7351e117db02fe",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_brainpoolP384t1",
+        "param_len": 48,
+        "seed_len": 0,
+        "sha256": "f8f905ee60ef7816461e009dc2d751da1582db09a1af2c079e7351e117db02fe",
+        "source": "crypto/ec/ec_curve.c:2327"
+      },
+      {
+        "bytes": 384,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 384,
+        "emitted_sha256": "d77079b8cc1d0bfbc2a04cc85f9c906ca7aa84c3c289f2ca6c194aff5e2db062",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_brainpoolP512r1",
+        "param_len": 64,
+        "seed_len": 0,
+        "sha256": "d77079b8cc1d0bfbc2a04cc85f9c906ca7aa84c3c289f2ca6c194aff5e2db062",
+        "source": "crypto/ec/ec_curve.c:2365"
+      },
+      {
+        "bytes": 384,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 384,
+        "emitted_sha256": "3a46c69a48885901178eb92348893c9d578d94b1ed854432961ed74dea4a442c",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_brainpoolP512t1",
+        "param_len": 64,
+        "seed_len": 0,
+        "sha256": "3a46c69a48885901178eb92348893c9d578d94b1ed854432961ed74dea4a442c",
+        "source": "crypto/ec/ec_curve.c:2415"
+      },
+      {
+        "bytes": 192,
+        "cofactor": 1,
+        "cofactor_source": "1",
+        "emitted_bytes": 192,
+        "emitted_sha256": "0ae1c37d70f4458df6d27363f09f724f2cb0982311fc2f482dc6fb10181b1d16",
+        "field_type": "NID_X9_62_prime_field",
+        "field_type_number": 406,
+        "fields": 6,
+        "montgomery_fields": [],
+        "name": "_EC_sm2p256v1",
+        "param_len": 32,
+        "seed_len": 0,
+        "sha256": "0ae1c37d70f4458df6d27363f09f724f2cb0982311fc2f482dc6fb10181b1d16",
+        "source": "crypto/ec/ec_curve.c:2467"
+      }
+    ],
+    "ec_support": {
+      "names": [
+        [
+          "secp112r1",
+          "NID_secp112r1"
+        ],
+        [
+          "secp112r2",
+          "NID_secp112r2"
+        ],
+        [
+          "secp128r1",
+          "NID_secp128r1"
+        ],
+        [
+          "secp128r2",
+          "NID_secp128r2"
+        ],
+        [
+          "secp160k1",
+          "NID_secp160k1"
+        ],
+        [
+          "secp160r1",
+          "NID_secp160r1"
+        ],
+        [
+          "secp160r2",
+          "NID_secp160r2"
+        ],
+        [
+          "secp192k1",
+          "NID_secp192k1"
+        ],
+        [
+          "secp224k1",
+          "NID_secp224k1"
+        ],
+        [
+          "secp224r1",
+          "NID_secp224r1"
+        ],
+        [
+          "secp256k1",
+          "NID_secp256k1"
+        ],
+        [
+          "secp384r1",
+          "NID_secp384r1"
+        ],
+        [
+          "secp521r1",
+          "NID_secp521r1"
+        ],
+        [
+          "prime192v1",
+          "NID_X9_62_prime192v1"
+        ],
+        [
+          "prime192v2",
+          "NID_X9_62_prime192v2"
+        ],
+        [
+          "prime192v3",
+          "NID_X9_62_prime192v3"
+        ],
+        [
+          "prime239v1",
+          "NID_X9_62_prime239v1"
+        ],
+        [
+          "prime239v2",
+          "NID_X9_62_prime239v2"
+        ],
+        [
+          "prime239v3",
+          "NID_X9_62_prime239v3"
+        ],
+        [
+          "prime256v1",
+          "NID_X9_62_prime256v1"
+        ],
+        [
+          "sect113r1",
+          "NID_sect113r1"
+        ],
+        [
+          "sect113r2",
+          "NID_sect113r2"
+        ],
+        [
+          "sect131r1",
+          "NID_sect131r1"
+        ],
+        [
+          "sect131r2",
+          "NID_sect131r2"
+        ],
+        [
+          "sect163k1",
+          "NID_sect163k1"
+        ],
+        [
+          "sect163r1",
+          "NID_sect163r1"
+        ],
+        [
+          "sect163r2",
+          "NID_sect163r2"
+        ],
+        [
+          "sect193r1",
+          "NID_sect193r1"
+        ],
+        [
+          "sect193r2",
+          "NID_sect193r2"
+        ],
+        [
+          "sect233k1",
+          "NID_sect233k1"
+        ],
+        [
+          "sect233r1",
+          "NID_sect233r1"
+        ],
+        [
+          "sect239k1",
+          "NID_sect239k1"
+        ],
+        [
+          "sect283k1",
+          "NID_sect283k1"
+        ],
+        [
+          "sect283r1",
+          "NID_sect283r1"
+        ],
+        [
+          "sect409k1",
+          "NID_sect409k1"
+        ],
+        [
+          "sect409r1",
+          "NID_sect409r1"
+        ],
+        [
+          "sect571k1",
+          "NID_sect571k1"
+        ],
+        [
+          "sect571r1",
+          "NID_sect571r1"
+        ],
+        [
+          "c2pnb163v1",
+          "NID_X9_62_c2pnb163v1"
+        ],
+        [
+          "c2pnb163v2",
+          "NID_X9_62_c2pnb163v2"
+        ],
+        [
+          "c2pnb163v3",
+          "NID_X9_62_c2pnb163v3"
+        ],
+        [
+          "c2pnb176v1",
+          "NID_X9_62_c2pnb176v1"
+        ],
+        [
+          "c2tnb191v1",
+          "NID_X9_62_c2tnb191v1"
+        ],
+        [
+          "c2tnb191v2",
+          "NID_X9_62_c2tnb191v2"
+        ],
+        [
+          "c2tnb191v3",
+          "NID_X9_62_c2tnb191v3"
+        ],
+        [
+          "c2pnb208w1",
+          "NID_X9_62_c2pnb208w1"
+        ],
+        [
+          "c2tnb239v1",
+          "NID_X9_62_c2tnb239v1"
+        ],
+        [
+          "c2tnb239v2",
+          "NID_X9_62_c2tnb239v2"
+        ],
+        [
+          "c2tnb239v3",
+          "NID_X9_62_c2tnb239v3"
+        ],
+        [
+          "c2pnb272w1",
+          "NID_X9_62_c2pnb272w1"
+        ],
+        [
+          "c2pnb304w1",
+          "NID_X9_62_c2pnb304w1"
+        ],
+        [
+          "c2tnb359v1",
+          "NID_X9_62_c2tnb359v1"
+        ],
+        [
+          "c2pnb368w1",
+          "NID_X9_62_c2pnb368w1"
+        ],
+        [
+          "c2tnb431r1",
+          "NID_X9_62_c2tnb431r1"
+        ],
+        [
+          "wap-wsg-idm-ecid-wtls1",
+          "NID_wap_wsg_idm_ecid_wtls1"
+        ],
+        [
+          "wap-wsg-idm-ecid-wtls3",
+          "NID_wap_wsg_idm_ecid_wtls3"
+        ],
+        [
+          "wap-wsg-idm-ecid-wtls4",
+          "NID_wap_wsg_idm_ecid_wtls4"
+        ],
+        [
+          "wap-wsg-idm-ecid-wtls5",
+          "NID_wap_wsg_idm_ecid_wtls5"
+        ],
+        [
+          "wap-wsg-idm-ecid-wtls6",
+          "NID_wap_wsg_idm_ecid_wtls6"
+        ],
+        [
+          "wap-wsg-idm-ecid-wtls7",
+          "NID_wap_wsg_idm_ecid_wtls7"
+        ],
+        [
+          "wap-wsg-idm-ecid-wtls8",
+          "NID_wap_wsg_idm_ecid_wtls8"
+        ],
+        [
+          "wap-wsg-idm-ecid-wtls9",
+          "NID_wap_wsg_idm_ecid_wtls9"
+        ],
+        [
+          "wap-wsg-idm-ecid-wtls10",
+          "NID_wap_wsg_idm_ecid_wtls10"
+        ],
+        [
+          "wap-wsg-idm-ecid-wtls11",
+          "NID_wap_wsg_idm_ecid_wtls11"
+        ],
+        [
+          "wap-wsg-idm-ecid-wtls12",
+          "NID_wap_wsg_idm_ecid_wtls12"
+        ],
+        [
+          "Oakley-EC2N-3",
+          "NID_ipsec3"
+        ],
+        [
+          "Oakley-EC2N-4",
+          "NID_ipsec4"
+        ],
+        [
+          "brainpoolP160r1",
+          "NID_brainpoolP160r1"
+        ],
+        [
+          "brainpoolP160t1",
+          "NID_brainpoolP160t1"
+        ],
+        [
+          "brainpoolP192r1",
+          "NID_brainpoolP192r1"
+        ],
+        [
+          "brainpoolP192t1",
+          "NID_brainpoolP192t1"
+        ],
+        [
+          "brainpoolP224r1",
+          "NID_brainpoolP224r1"
+        ],
+        [
+          "brainpoolP224t1",
+          "NID_brainpoolP224t1"
+        ],
+        [
+          "brainpoolP256r1",
+          "NID_brainpoolP256r1"
+        ],
+        [
+          "brainpoolP256t1",
+          "NID_brainpoolP256t1"
+        ],
+        [
+          "brainpoolP320r1",
+          "NID_brainpoolP320r1"
+        ],
+        [
+          "brainpoolP320t1",
+          "NID_brainpoolP320t1"
+        ],
+        [
+          "brainpoolP384r1",
+          "NID_brainpoolP384r1"
+        ],
+        [
+          "brainpoolP384t1",
+          "NID_brainpoolP384t1"
+        ],
+        [
+          "brainpoolP512r1",
+          "NID_brainpoolP512r1"
+        ],
+        [
+          "brainpoolP512t1",
+          "NID_brainpoolP512t1"
+        ],
+        [
+          "SM2",
+          "NID_sm2"
+        ]
+      ],
+      "nist": [
+        [
+          "B-163",
+          "NID_sect163r2"
+        ],
+        [
+          "B-233",
+          "NID_sect233r1"
+        ],
+        [
+          "B-283",
+          "NID_sect283r1"
+        ],
+        [
+          "B-409",
+          "NID_sect409r1"
+        ],
+        [
+          "B-571",
+          "NID_sect571r1"
+        ],
+        [
+          "K-163",
+          "NID_sect163k1"
+        ],
+        [
+          "K-233",
+          "NID_sect233k1"
+        ],
+        [
+          "K-283",
+          "NID_sect283k1"
+        ],
+        [
+          "K-409",
+          "NID_sect409k1"
+        ],
+        [
+          "K-571",
+          "NID_sect571k1"
+        ],
+        [
+          "P-192",
+          "NID_X9_62_prime192v1"
+        ],
+        [
+          "P-224",
+          "NID_secp224r1"
+        ],
+        [
+          "P-256",
+          "NID_X9_62_prime256v1"
+        ],
+        [
+          "P-384",
+          "NID_secp384r1"
+        ],
+        [
+          "P-521",
+          "NID_secp521r1"
+        ]
+      ]
+    },
+    "profile_macros": {
+      "ECP_NISTZ256_ASM": true,
+      "ECP_SM2P256_ASM": false,
+      "OPENSSL_NO_EC_NISTP_64_GCC_128": true,
+      "S390X_EC_ASM": false
+    }
+  },
+  "generator": "forensics/tools/gen_ec_curves.py",
+  "inputs": [
+    {
+      "name": "authority-symbols",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+      "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+    },
+    {
+      "name": "authority-source-ec-curve",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/ec/ec_curve.c",
+      "sha256": "b5ed5738fe965af7893e3256718df28072329edd2432cef851d8bdec9ac72160"
+    },
+    {
+      "name": "authority-source-ec-support",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/evp/ec_support.c",
+      "sha256": "6c2ff05cdac01657055e3d1e1ce27ba44b8d856fbc49700821b36007ffe47312"
+    }
+  ],
+  "kind": "ec-curves",
+  "schema": "openssl-rs/atlas/ec-curves/v1"
+}

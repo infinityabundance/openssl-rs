@@ -77,6 +77,22 @@ each case the probe prints a `NOT_MEASURED_AUTHORITY_FAULTS` marker: the boundar
 is visible in the transcript rather than silently absent from it. The
 observations that *can* be made around each boundary are compared normally.
 
+### D-CIPHERCTX-NOALG-1 — `EVP_CIPHER_CTX_gettable_params` dereferences a NULL cipher
+
+- **Obligation:** `EVP_CIPHER_CTX_gettable_params` and its `_settable_` twin, on a context created by
+  `EVP_CIPHER_CTX_new()` and not yet initialised.
+- **Authority:** **faults.** The guard is
+  `if (cctx != NULL && cctx->cipher->gettable_ctx_params != NULL)` (`crypto/evp/evp_enc.c:1730`),
+  which dereferences `cctx->cipher` without checking it. Measured: a fresh context segfaults, so the
+  condition's own precondition is one the function does not establish.
+- **Candidate:** total and quiet. Both accessors test `(*cctx).cipher.is_null()` and answer NULL.
+- **Reason:** calling through a NULL pointer is not a contract to reproduce. It is the same class as
+  D-LHASH-1 and D-STACK-2, and reproducing it would violate §3's prohibition on copying a known
+  memory-safety defect.
+- **Claim removed:** none. The boundary cannot be compared — one side dies — so `RT-CIPHER`'s
+  `ChaCha20` arm prints `chacha.x.cgp.unset=NOT_MEASURED_AUTHORITY_FAULTS` on both sides and the
+  reachable observation, the two lists read *after* an init, is compared normally.
+
 ### D-MEM-ALIGNED-1 — the `CRYPTO_aligned_alloc` family writes through a NULL `freeptr`
 
 - **Obligation:** `CRYPTO_aligned_alloc(num, align, NULL, file, line)` and
@@ -969,6 +985,13 @@ authority and the candidate for this function, and there was never supposed to b
 
 ### D-PKEY-AMETH-1 — `pkey_set_type`'s legacy-method lookup is Phase 8's, so a provider key's `type` stays `EVP_PKEY_KEYMGMT`
 
+> **Superseded by D-PKEY-AMETH-3** for the eleven `standard_methods[]` rows the 8.8 landing
+> (D353) now carries: `pkey_set_type` finds them, so a provider method named `"RSA"`, `"EC"`,
+> `"DSA"`, `"DH"`, `"RSA-PSS"`, `"DHX"` or `"SM2"` takes the legacy NID into `pkey->type` exactly
+> as the authority does. It is kept rather than deleted because the four `crypto/ec/ecx_meth.c`
+> names it still describes are the whole of D-PKEY-AMETH-3's subject. The paragraphs below are the
+> state before the 8.8 landing.
+
 - **Obligation:** `EVP_PKEY_set_type_by_keymgmt` on a provider method whose **name is a legacy key
   type** -- `"RSA"`, `"EC"`, `"DSA"`, and the rest of the twelve -- and, through it,
   `EVP_PKEY_get_id`, `EVP_PKEY_get_base_id` and every accessor that branches on the resulting type.
@@ -1033,6 +1056,12 @@ between the authority and the candidate at this site.**
 
 ### D-PKEY-AMETH-2 — the two `find` functions answer NULL for the twelve legacy types, because `standard_methods[]` is Phase 8's
 
+> **Superseded by D-PKEY-AMETH-3** for the eleven rows D353 published: `EVP_PKEY_asn1_find` and
+> `EVP_PKEY_asn1_find_str` now answer the authority's own objects for those. It is kept rather than
+> deleted because the four `crypto/ec/ecx_meth.c` types remain NULL, and because the engine-arm
+> paragraph below is still the reason that arm is absent. The paragraphs below are the state before
+> the 8.8 landing.
+
 - **Obligation:** `EVP_PKEY_asn1_find` and `EVP_PKEY_asn1_find_str` on any of the twelve legacy key types
   (`EVP_PKEY_RSA`, `EVP_PKEY_EC`, `EVP_PKEY_DSA`, and the rest), and therefore every caller that
   resolves a type to its `EVP_PKEY_ASN1_METHOD` through them.
@@ -1064,6 +1093,87 @@ between the authority and the candidate at this site.**
   project's rule is the opposite — define the symbol, answer correctly for every reachable state, and
   record the divergence — and that is what `EVP_PKEY_asn1_get_count` and `_get0` already did for the
   same table.
+
+### D-PKEY-AMETH-3 — the four `crypto/ec/ecx_meth.c` rows are withheld, so the two `find` functions answer NULL and `EVP_PKEY_type` answers `NID_undef` for X25519, X448, Ed25519 and Ed448
+
+> **Superseded by D372** for the four rows this entry withholds. `crypto/ec/ecx_meth.c` and the
+> ~9,000 lines its callbacks name are transcribed (`src/ec/ecx_meth.rs`, `src/ec/ecx_key.rs`,
+> `src/ec/ecx_backend.rs`, `src/ec/curve25519.rs`, `src/ec/curve448.rs`, the four
+> `ossl_evp_pkey_get1_*` accessors of `crypto/evp/p_lib.c` in `src/evp/pkey.rs`, and the eight
+> `ossl_*_PUBKEY` internals in `src/x509/x_pubkey.rs`), its four `EVP_PKEY_ASN1_METHOD` objects are
+> in `src/evp/pkey_asn1.rs`'s `STANDARD_METHODS` and its four `EVP_PKEY_METHOD` accessors in
+> `src/evp/pkey_ctx.rs`'s `PMETH_STANDARD_METHODS`, so both tables carry the authority's own
+> **fifteen** and **ten** rows. The four observables below move to their authority answers:
+> `EVP_PKEY_asn1_find`/`_find_str` answer the four objects, `EVP_PKEY_type` answers their four
+> NIDs, `EVP_PKEY_asn1_get0(10)` answers `&ossl_ecx25519_asn1_meth` where it answered
+> `ossl_sm2_asn1_meth`, and the two `get_count`s answer **15** and **10** where they answered 11
+> and 6. The entry is kept rather than deleted, as its two siblings are, because the paragraphs
+> below are the state before that landing and are what **`RT-ECX`** now observes the absence of.
+
+- **Obligation:** `EVP_PKEY_asn1_find(NULL, type)`, `EVP_PKEY_asn1_find_str(NULL, name, len)`,
+  `EVP_PKEY_type(type)`, `EVP_PKEY_asn1_get0(idx)` and `EVP_PKEY_asn1_get_count()` for the four
+  `crypto/ec/ecx_meth.c` key types -- `EVP_PKEY_X25519` (1034), `EVP_PKEY_X448` (1035),
+  `EVP_PKEY_ED25519` (1087) and `EVP_PKEY_ED448` (1088) -- and, through `pkey_set_type`,
+  `EVP_PKEY_set_type_by_keymgmt` on a provider method named `"X25519"`, `"X448"`, `"ED25519"` or
+  `"ED448"`.
+- **Authority:** `crypto/asn1/standard_methods.h` carries **fifteen** rows under the admitted
+  `configuration.h` (D340 read the file for that fact; `OPENSSL_NO_ECX` is **absent**, so the four
+  `#ifndef OPENSSL_NO_ECX` rows compile in). So `EVP_PKEY_asn1_find(NULL, NID_X25519)` answers
+  `&ossl_ecx25519_asn1_meth`, `EVP_PKEY_asn1_find_str(NULL, "X25519", -1)` answers the same object
+  (`ecx_meth.c:552-553` gives it that `pem_str`), `EVP_PKEY_type(NID_X25519)` answers `NID_X25519`,
+  `EVP_PKEY_asn1_get_count()` answers **15** plus the application count, and `EVP_PKEY_asn1_get0(10)`
+  answers `&ossl_ecx25519_asn1_meth` where the crate's index 10 is `ossl_sm2_asn1_meth`.
+- **Crate:** `src/evp/pkey_asn1.rs`'s `STANDARD_METHODS` carries **eleven** rows -- the authority's
+  fifteen minus the four above -- and every one of the eleven is the authority's object by address.
+  The four absences are the table's only observable: the two `find` functions answer NULL for them,
+  `EVP_PKEY_type` answers `NID_undef`, `EVP_PKEY_asn1_get_count()` answers 11 plus the application
+  count, and a provider keymgmt named one of the four takes `EVP_PKEY_KEYMGMT` (`-1`) into
+  `pkey->type` where the authority takes the legacy NID. The callers that see it are
+  `EVP_PKEY_type`, `EVP_PKEY_assign`/`_set_type`/`_set_type_str`, `EVP_PKEY_get_id` and every
+  `EVP_PKEY_is_a` comparison against an ECX spelling, plus the with provider `X25519`/`ED25519`
+  method fetches that reach `EVP_PKEY_set_type_by_keymgmt`.
+- **Reason:** `crypto/ec/ecx_meth.c` is 1,468 lines and fifty-five functions, and its callbacks
+  reach `crypto/ec/ecx_key.c`, `crypto/ec/ecx_backend.c`, `crypto/ec/curve25519.c` (about 5,900
+  lines) and all of `crypto/ec/curve448/` (about 3,400) -- roughly **9,000 authority lines** with no
+  crate module and no stratum's obligation row (D316 names only the provider half of `ecx_key.c`).
+  A `const EVP_PKEY_ASN1_METHOD` names its callbacks **by address**, so a row cannot exist until
+  every callback it names does, and writing a row whose callback field is not the authority's would
+  be a fabricated method rather than a smaller landing -- D341's rule, which this entry applies
+  instead of violating. Landing the four rows is therefore a second unit of work the size of the one
+  D353 records, not a step inside it.
+- **Claim removed:** `EVP_PKEY_asn1_find`/`_find_str`/`EVP_PKEY_type`/`EVP_PKEY_asn1_get0`/
+  `EVP_PKEY_asn1_get_count` parity for the four ECX types, and `pkey_set_type`'s legacy-NID answer
+  for a provider method named one of their four PEM names. **Nothing else**: the other eleven rows,
+  both `find` functions' alias walk and length rules, the engine-arm absence and every
+  `EVP_PKEY_asn1_get0_info` field of the eleven are claimed and courted (`RT-AMETH`, 232
+  observations, zero residuals).
+- **This is not a `forensics/prerequisites.json` divergence record, and the gate is why.** The
+  names a record would have to cover -- `ossl_ecx25519_asn1_meth` and its three siblings -- are
+  `const` objects, not functions, so they are not in the internal-symbol universe the gate
+  observes; a record naming them would fail the gate's direction D ("a divergence record may not
+  cover a name the gate did not observe"). The four types are observed instead through the
+  **`EVP_PKEY_asn1_find`/`_find_str`/`EVP_PKEY_type` answers**, which is where the consequence is
+  visible to a caller, and `RT-AMETH` confines its arms to the eleven ids both sides carry for
+  exactly that reason.
+- **Trigger:** the slice that lands `crypto/ec/ecx_meth.c` and the ~9,000 lines its callbacks
+  name -- at which point the four rows are appended to `STANDARD_METHODS` in `pkey_id` order (1034,
+  1035, 1087, 1088, between `ossl_dhx_asn1_meth` at 920 and `ossl_sm2_asn1_meth` at 1172),
+  `EVP_PKEY_asn1_get_count()` moves to 15, and this entry is removed with the table it describes.
+- **The same four units are the `EVP_PKEY_METHOD` table's rows too (D355).** `crypto/evp/pmeth_lib.c`'s
+  second `standard_methods[]` is an array of `pmeth_fn` **accessors** rather than of objects, and four
+  of its ten rows are `ossl_ecx25519_pkey_method` (1034), `ossl_ecx448_pkey_method` (1035),
+  `ossl_ed25519_pkey_method` (1087) and `ossl_ed448_pkey_method` (1088) -- all four defined in the
+  same withheld `crypto/ec/ecx_meth.c`. The crate's `src/evp/pkey_ctx.rs`'s `PMETH_STANDARD_METHODS`
+  therefore carries **six** rows where the authority carries ten, and the observable is
+  `EVP_PKEY_meth_find(EVP_PKEY_X25519)` -- and its X448, Ed25519 and Ed448 siblings -- answering
+  **NULL**, `EVP_PKEY_meth_get0(6..10)` answering NULL where the authority answers those four
+  methods, and `EVP_PKEY_meth_get_count()` answering **6** where the authority answers 10. The
+  callers that see it are `EVP_PKEY_CTX_new_id`'s legacy-method lookup and any enumeration by index,
+  both of which fall through to the provider `EVP_KEYMGMT_fetch` the authority would have preferred
+  the legacy method over. The six shared rows, `EVP_PKEY_meth_get0_info`'s two fields and
+  `EVP_PKEY_meth_find`'s application-table-first rule are claimed and courted (`RT-AMETH`'s arm 8),
+  and the trigger is the one above, one table over: the four accessors are appended to
+  `PMETH_STANDARD_METHODS` in `pkey_id` order after `ossl_dhx_pkey_method` at 920.
 
 ### D-PBE-PKCS12-KEYGEN-1 — the six `PKCS12_PBE_keyivgen` rows of `builtin_pbe[]` carry no keygen
 
@@ -1131,3 +1241,213 @@ between the authority and the candidate at this site.**
 - **Trigger:** Phase 13's first legacy cipher wrapper. `RT-EVP-PBE`'s
   `pbe.cipher_nid.legacy` marker is where the difference would be measured, and
   `pbe.alg_add.methods_nids` is the arm it holds back.
+
+### D-CBCHMAC-MULTIBLOCK-ENC-1 — the multiblock *encrypt* parameter is refused, because its IVs come from the random layer
+
+- **Obligation:** `EVP_CIPHER_CTX_set_params` with `OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_ENC` (and its
+  `..._ENC_IN` companion) on a fetched `AES-{128,256}-CBC-HMAC-SHA{1,256}` context, and the bytes it
+  writes to the caller's `out` buffer.
+- **Authority:** `aes_set_ctx_params` (`cipher_aes_cbc_hmac_sha.c:150-170`) hands the parameter to
+  `tls1_multiblock_encrypt`, whose body is `tls1_multi_block_encrypt`
+  (`cipher_aes_cbc_hmac_sha1_hw.c:121`) and whose first act is
+  `RAND_bytes_ex(ctx->base.libctx, blocks[0].c, 16 * x4, 0)` (`:146`). Those `x4` sixteen-byte
+  values become each interleaved record's explicit IV, so the written ciphertext is a function of
+  them: with the call answered, the parameter returns 1 and `tls1multi_enclen` becomes the packed
+  length.
+- **Crate:** answers **0** with no error queued, which is the value the authority itself answers when
+  that `RAND_bytes_ex` call fails. `crypto/rand/` is Phase 9's; there is no DRBG, so there is no
+  value to substitute.
+- **Reason:** the dependency is a missing subsystem rather than a choice. `tls1_multiblock_aad` and
+  `tls1_multiblock_max_bufsize` — the other two thirds of the same contract — need no randomness and
+  **are** transcribed and courted by `RT-CIPHER`'s `cbchmac.*.mbaad*` and `cbchmac.*.g.maxbufsz`
+  arms, so the row's stitched surface is narrowed rather than absent. This is the same boundary
+  D234 records for the `AES-*-GCM` rows and D237 for `DES3-WRAP`.
+- **Claim removed:** the `tls1multi_enc` parameter and `tls1multi_enclen` after it are not claimed
+  compatible for these four rows. Every other observable of the rows is: the fetch, the flags, both
+  key/IV/block lengths, all eight settable keys, all nine gettable keys, the multiblock AAD
+  parameter, and the whole TLS 1.0 record including its refusal arm.
+- **Trigger:** Phase 9's first commit that lands `crypto/rand/`. At that point
+  `tls1_multiblock_encrypt` is written from `tls1_multi_block_encrypt` and
+  `RT-CIPHER` gains the `cbchmac.*.mbenc` arm; the entry is removed with the arm's green.
+
+### D-CBCHMAC-MAXBUFSZ-ASSERT-1 — `tls1multi_maxbufsz` before `maxsndfrag` aborts the authority and is answered here
+
+- **Obligation:** `EVP_CIPHER_CTX_get_params` for `OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_MAX_BUFSIZE`
+  on a context whose `multiblock_max_send_fragment` is still zero, which is every context that has
+  not set `OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_MAX_SEND_FRAGMENT`.
+- **Authority:** `aesni_cbc_hmac_sha1_tls1_multiblock_max_bufsize`
+  (`cipher_aes_cbc_hmac_sha1_hw.c:697-704`) begins with
+  `OPENSSL_assert(ctx->multiblock_max_send_fragment != 0)`. The assertion is **live in the pinned
+  build** — measured, not assumed: the arm that read the buffer size first aborted the authority with
+  `cipher_aes_cbc_hmac_sha1_hw.c:701: OpenSSL internal error: assertion failed:
+  ctx->multiblock_max_send_fragment != 0`, exit status 134, which is why `RT-CIPHER` sets the
+  fragment before it reads the size.
+- **Crate:** computes the arithmetic anyway and answers **53** — `5 + 16 + ((0 + 20 + 16) & -16)` —
+  where the authority terminates the process.
+- **Reason:** reproducing an abort is not a compatibility property a library can hold: the crate
+  forbids `panic` in production code for the same reason, and a deliberate `abort()` on a query
+  would turn a caller's diagnostic into a denial of service. The divergence is in the safe
+  direction, and it is recorded rather than left implicit because a *difference* on this path is
+  otherwise invisible: a caller who never sets the fragment sees a number here and a dead process
+  there.
+- **Claim removed:** the abort itself is not claimed compatible. The value the function computes for
+  a **non-zero** fragment is, and `RT-CIPHER`'s `cbchmac.*.g.maxbufsz` arm observes it with the
+  fragment set to 16384, where both sides answer 16437.
+- **Trigger:** none planned: this is a permanent, deliberate safety divergence. If a caller needs
+  parity with the abort, that is `docs/DECISIONS.md` D276's to revisit, not an arm's.
+
+### D-EC-1 — `curve_list[]`'s method column is not transcribed, because its one non-NULL value is a perlasm-only method whose table names units 8.7 does not own
+
+> **Superseded by D-EC-2**, which records the same column with the answer the 8.7 landing actually
+gives. It is kept rather than deleted because its *reason* -- the perlasm-only method -- is the
+reason D-EC-2 gives too, and because D336, D338 and D339 cite it by number. The paragraph below is
+D334's state, when the column was recorded as a NULL rather than resolved.
+
+- **Obligation:** `EC_GROUP_new_by_curve_name(nid)`'s answer for `NID_X9_62_prime256v1`, and the
+  method identity `EC_GROUP_method_of` reports for it.
+- **Authority:** `crypto/ec/ec_curve.c:2678-2688` gives that row `EC_GFp_nistz256_method`, because
+  `ECP_NISTZ256_ASM` is defined on this profile; the other eighty-one rows' fourth column resolves
+  to `0`. The one non-NULL symbol is `ec_local.h`'s internal and **not** a DSO export — measured,
+  not read: `nm -D` on the admitted prefix lists `EC_GF2m_simple_method`, `EC_GFp_mont_method`,
+  `EC_GFp_nist_method` and `EC_GFp_simple_method` and no `EC_GFp_nistz256_method`.
+- **Crate:** the built-in curve table, `curve_list[]`'s rows, `EC_get_builtin_curves`,
+  `EC_curve_nid2nist`, `EC_curve_nist2nid` and `OSSL_EC_curve_nid2name` are transcribed and courted
+  (`RT-EC`, 483 observations); the method column is recorded per row in
+  `forensics/atlas/ec-curves.json` with the profile's `#if` resolution and the probe's own method
+  observation beside it, and `src/ec/curve.rs`'s module documentation says why at the field it would
+  occupy.
+- **Reason:** a `None` in that column where the authority has a function would be a *fabricated
+  value*, which is a stronger prohibition than an omission. The column's only two readers are
+  `EC_GROUP_new_by_curve_name_ex` and its static `ec_group_new_from_data`, and
+  `ec_group_new_from_data` **branches on** `curve.meth` — so writing the branch over a NULL would
+  give `NID_X9_62_prime256v1` a different `EC_GROUP_method_of` than the authority the moment either
+  constructor exists. Building the column needs `EC_GFp_nistz256_method`, whose `EC_METHOD` table
+  (`ecp_nistz256.c:1569-1630`) names `ossl_ec_key_simple_*` (`ec_key.c`),
+  `ossl_ecdh_simple_compute_key` (`ecdh_ossl.c`) and `ossl_ecdsa_simple_*` (`ecdsa_ossl.c`) — the
+  key layer and the two units `docs/PHASE-8-SUBPHASES.md` puts after this block. Its field
+  arithmetic is itself perlasm-only, so D274's rule applies to it: the crate supplies the
+  construction and `RT-EC` becomes the court that proves it is *this* implementation's observable
+  behaviour.
+- **Claim removed:** the method column, and therefore `EC_GROUP_method_of` on a
+  `NID_X9_62_prime256v1` group. **Nothing else**: every other column of every row, the whole
+  eighty-two-row order, the two group constructors' *absence* (they are `open` in
+  `forensics/phase8-obligations.json`, not divergent) and all three name lookups are claimed and
+  courted.
+- **Trigger:** the slice that lands `ec_key.c`, `ecdh_ossl.c` and `ecdsa_ossl.c` — at which point
+  the column is written, the `EcListElement` field is added, and the divergence is removed with the
+  arm that observes `EC_GROUP_method_of(EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1))`. The
+  unit test `the_table_is_the_authoritys_eighty_two_rows_in_order` and the generator's
+  `method_column_has_one_non_null_row` check are the tripwires: both name this row, so the next
+  person cannot add the field without reading this entry.
+  That slice landed in D340 and **the trigger fired the other way**: the column is written, its one
+  non-NULL row is resolved to `EC_GFp_simple_method`, and the divergence is *recorded* rather than
+  removed, because the perlasm method still cannot be built. See **D-EC-2**.
+
+### D-EC-2 — the `NID_X9_62_prime256v1` row resolves to `EC_GFp_simple_method` where the authority answers `EC_GFp_nistz256_method`, and that one row is the whole of the divergence
+
+- **Obligation:** the method identity `EC_GROUP_method_of` reports for
+  `EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1)`, and therefore every point operation performed on
+  that group's `EC_METHOD`.
+- **Authority:** `EC_GFp_nistz256_method` — `crypto/ec/ec_curve.c:2678-2688` gives that row the
+  method because `ECP_NISTZ256_ASM` is defined on this profile and `ec_nistp_64_gcc_128` is not, and
+  the other eighty-one rows' fourth column resolves to `0`. Measured against the admitted prefix
+  rather than read: a probe compiled against
+  `forensics/authorities/prefix/openssl-3.6.4-production/` reports that group's
+  `EC_GROUP_method_of` matching **none** of the four DSO exports `EC_GFp_simple_method`,
+  `EC_GFp_mont_method`, `EC_GFp_nist_method` and `EC_GF2m_simple_method`, while the same `p`/`a`/`b`
+  through `EC_GROUP_new_curve_GFp` answers `EC_GFp_mont_method`. The one non-NULL symbol is
+  `ec_local.h`'s internal and is **not** a DSO export.
+- **Crate:** `src/ec/curve.rs`'s `curve_list_method` resolves that row to `EC_GFp_simple_method`, and
+  every other row to `None`, exactly as every NULL row resolves through `EC_GROUP_new_curve_GFp`
+  (`src/ec/cvt.rs`, which is `EC_GFp_mont_method()` unconditionally on this profile, matching the
+  authority). `ec_group_new_from_data` is transcribed whole and its `curve.meth` branch is real; the
+  field it reads is the divergence, and `forensics/atlas/ec-curves.json` records the resolution per
+  row — the generator's `method_column_resolves_for_every_row` check fails if a row's method is
+  absent from the commit's four tables.
+- **Reason:** `crypto/ec/ecp_nistz256.c`'s table (`:1569-1630`) is ordinary C, but every field
+  operation it names — `ecp_nistz256_mul_mont`, `_sqr_mont`, `_point_add`, `_point_double`,
+  `_gather_w5`/`_scatter_w5` and the rest — is `crypto/ec/ecp_nistz256-x86_64.s`, generated by
+  perlasm from `asm/ecp_nistz256-x86_64.pl`, with **no `#else` arm** (D334 measured this). Inventing
+  a construction would be the fabricated value D334 refused for the column itself, one level down;
+  and D274's rule, which lets the crate supply a construction for a perlasm-only function and make a
+  court prove it is *this* implementation's behaviour, does not reach this one either — a
+  Montgomery-domain representation is observable through every subsequent multiplication, so a
+  different construction is a different curve arithmetic rather than a different instruction
+  schedule.
+- **Observable consequences, which are what make this a divergence rather than an omission:**
+  (a) `EC_GROUP_method_of` answers `EC_GFp_simple_method` where the authority answers
+  `EC_GFp_nistz256_method`. That comparison is **not carried as an `RT-EC` arm**, and the integration
+  plan's §5 step-6 sentence that says it is cannot be: a differential court's verdict is `pass` only
+  when the residual set is empty (`forensics/tools/phase8_courts.py`), so an arm that *must* differ
+  between the two sides is a known failure rather than a court arm, and `run_courts.py` requires
+  `all_pass`. `RT-EC` observes the other eighty-one rows instead, comparing each group's identity
+  against the four tables it calls in the probe; this divergence is measured on the authority side by
+  the one-off probe above and on the crate side by the generator, which is the same shape every
+  crash-boundary entry in §6 uses (a boundary is measured once and printed, and the observations
+  around it are compared). (b) Every `NID_X9_62_prime256v1` operation runs the generic Weierstrass
+  code path rather than the 4-limb Montgomery arithmetic, so a `secp256r1` signature is the same
+  *value* on both sides — the group is the same — but not the same *code path*; `RT-EC`'s ECDSA
+  sign-then-verify and ECDH agreement arms observe the values and agree. (c) `EC_nistz256_pre_comp_dup`
+  and `_free` (`crypto/ec/ecp_nistz256.c`) are not given a module, so `EC_GROUP_copy` and
+  `EC_pre_comp_free` do not transcribe their two `#ifdef ECP_NISTZ256_ASM` arms — an omission that
+  is unreachable while no nistz256 group can be constructed, and is named at the arm rather than left
+  as an untaken branch (`src/ec/lib.rs:92-96`, `:201-216`). (d) `EC_GROUP_have_precompute_mult`
+  answers 0 for that group where the authority answers 1, which is why `RT-EC` skips the direct arm
+  for that one NID and courts the pre-computation path only through `EC_POINT_mul`'s ladder arm, as
+  the plan's §5 says.
+- **Claim removed:** the method identity of the one curve, that group's pre-computation path, and the
+  `have_precompute_mult` answer for it. **Nothing else**: all eighty-two rows in order, both group
+  constructors, every field operation of the four landed `EC_METHOD`s and all three name lookups are
+  claimed and courted (`RT-EC`, 2134 observations, zero residuals).
+- **Trigger:** the slice that supplies a construction for the perlasm unit — at which point
+  `curve_list_method` answers `EC_GFp_nistz256_method` for that NID, the `PCT_nistz256` arm of
+  `EC_pre_comp_free`/`EC_GROUP_copy` is transcribed, and this entry is removed with the boundary it
+  records.
+- **Supersedes D-EC-1**, whose subject was the same column recorded as "not transcribed": D-EC-2 is
+  the same refusal with the answer the landing actually gives, which is stronger than a NULL because
+  it is a stated behaviour with a measurement behind it rather than a field left empty.
+
+### D-DECODER-ABSENT-1 — the crate publishes no provider decoder, so every `OSSL_DECODER`-dependent reader answers the legacy leg's answer or fails
+
+- **Obligation:** the readers whose authority body tries `OSSL_DECODER` first: `d2i_PUBKEY` and
+  `d2i_PUBKEY_ex` (`crypto/x509/x_pubkey.c:541`, `:547`) through `x509_pubkey_ex_d2i_ex`'s
+  opportunistic arm (`:210`), and `pem_read_bio_key_decoder` (`crypto/pem/pem_pkey.c:35`), which
+  `PEM_read[_bio]_PrivateKey[_ex]` and `PEM_read[_bio]_PUBKEY[_ex]` all reach through
+  `pem_read_bio_key` (`:216`).
+- **Authority:** the default provider supplies the DER and PEM decoders, so each of these arms
+  decodes. Measured for `d2i_PUBKEY` on a 1024-bit RSA `SubjectPublicKeyInfo`: the authority answers
+  a key (`EVP_PKEY_get_id` 6, `EVP_PKEY_get_bits` 1024). Measured for `PEM_read_bio_Parameters` on a
+  written `-----BEGIN DH PARAMETERS-----` block: the authority answers a key (`EVP_PKEY_get_id` 28,
+  `EVP_PKEY_get0_DH` non-NULL), and the legacy parameters arm is **unreachable on this revision**
+  because its guard is `(selection & EVP_PKEY_KEYPAIR) == 0` while `EVP_PKEY_KEYPAIR` contains every
+  parameter bit.
+- **Candidate:** the decoder context is built and carries **no instances**
+  (`src/decoder_meth.rs`: every `OSSL_OP_DECODER` provider row is unimplemented here), so
+  `OSSL_DECODER_from_data`/`_from_bio` take their zero-decoder arm, `d2i_PUBKEY` answers NULL for a
+  decodable input, and `pem_read_bio_key_decoder` returns NULL after its first failed walk. The
+  legacy fallback that follows is the authority's own code path, so
+  `PEM_read[_bio]_PrivateKey[_ex]` and `PEM_read[_bio]_PUBKEY[_ex]` are **unaffected** on every input
+  the legacy methods can read — a traditional `RSA PRIVATE KEY` block is decoded by the ameth leg on
+  both sides, measured.
+- **The one observable inside the shared path.** The decoder leg's failure leaves a different record
+  on the queue: the authority raises `ERR_R_UNSUPPORTED` at `crypto/encode_decode/decoder_lib.c:104`
+  ("No supported data to decode"), the candidate `OSSL_DECODER_R_DECODER_NOT_FOUND` at `:60`. Both
+  answer NULL, so the *result* agrees and the loop's retry count is the only other difference.
+  `courts/phase8/rt_pubkey_probe.c` therefore observes the queue's **count** for those arms and
+  names this entry as the reason the record is not carried as a residual; every arm whose whole path
+  is shared carries the full coordinate (`drain`). `d2i_PUBKEY`'s refusal is observed through a
+  zero-length input, which fails in the ASN.1 layer at `crypto/asn1/tasn_dec.c:212` on both sides.
+- **Reason:** the missing piece is the provider layer, not the readers. Transcribing a reader whose
+  answer would differ is the class D349 refused; withholding the two `PEM_read_bio_Parameters*`
+  spellings, whose only successful arm is the decoder, is the same refusal applied where no legacy
+  fallback exists (`src/pem/pem_pkey.rs`).
+- **Claim removed:** that `d2i_PUBKEY`/`d2i_PUBKEY_ex` decode a `SubjectPublicKeyInfo` the default
+  provider's DER decoder reads, that `pem_read_bio_key_decoder` can succeed, and that
+  `PEM_read_bio_Parameters`/`_ex` answer a key. **Nothing else**: the `X509_PUBKEY` object layer,
+  `ossl_d2i_PUBKEY_legacy` and the type-specific `d2i`/`i2d` pairs for RSA, DSA and EC are the
+  authority's own code on both sides and are courted in full (`RT-PUBKEY`, 100 observations, zero
+  residuals).
+- **Trigger:** the slice that supplies a provider decoder — the DER/PEM decoder rows and the
+  keymgmt rows they construct into. At that point each of the three arms decodes, the queue record
+  becomes the authority's, and this entry is removed with the boundary it records. **Recorded by
+  D369.**

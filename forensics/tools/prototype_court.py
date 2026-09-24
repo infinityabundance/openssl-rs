@@ -153,7 +153,7 @@ DECL_RE = re.compile(
     r"([A-Za-z_][A-Za-z0-9_]*)\s*\("
 )
 RUST_ALIAS_RE = re.compile(
-    r"^(?:pub(?:\s*\([a-z]+\s*\))?\s+)?type\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([^;]+);",
+    r"^(?:pub(?:\s*\([a-z]+\s*\))?\s+)?type\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*",
     re.MULTILINE,
 )
 C_DEF_RE_TEMPLATE = r"(?m)^[A-Za-z_][A-Za-z0-9_ \t*]*\b{name}\s*\("
@@ -217,6 +217,18 @@ RUST_INT_WIDTH = {
     "bool": (1, False),
 }
 
+# The C floating widths, which `core::ffi` spells `c_float`/`c_double`. They are kept apart from
+# `RUST_INT_WIDTH` because the canonical form names the width and the class is `floating` rather
+# than `integer`: `RAND_add`'s third parameter is the first export to carry one (`double`), and a
+# court that could not read `c_double` would report an unreadable name against the authority's
+# `float:8` instead of comparing two types.
+RUST_FLOAT_WIDTH = {
+    "c_float": 4,
+    "f32": 4,
+    "c_double": 8,
+    "f64": 8,
+}
+
 
 def canon_c_type(
     text: str, typedefs: dict[str, str], depth: int = 0, pointee: bool = False
@@ -256,6 +268,34 @@ def canon_c_type(
         g0 = groups[0]
         inner = t[g0[0] + 1:g0[1]].strip()
         if inner.startswith("*"):
+            tail = t[g0[1] + 1:].lstrip()
+            if not tail.startswith("("):
+                # `T (*)[N]` is a *pointer to an array*, and it shares the `(*` spelling
+                # with a function pointer; what separates them is what follows the
+                # declarator. Reading it as a function pointer made the authority's own
+                # `ocb128_f` canonicalise `const unsigned char (*)[16]` to
+                # `fptr(int:1:u; )` -- the argument list it never had. The instrument was
+                # the suspect, not the declaration: see docs/DECISIONS.md D229.
+                stars = 0
+                for ch in inner:
+                    if ch != "*":
+                        break
+                    stars += 1
+                # `const` is read further down, after the group branches, so it is
+                # recomputed here rather than reordered: moving the strip above them
+                # would drop the pointee `const` of `const T *`.
+                cst = t.startswith("const ")
+                elem_src = t[:g0[0]].strip()
+                if cst:
+                    elem_src = elem_src[len("const "):].strip()
+                elem = canon_c_type(elem_src, typedefs, depth + 1)
+                if elem is None:
+                    return None
+                idx = t.rfind("[")
+                base = f"arr({elem};{t[idx + 1:-1].strip()})"
+                if cst:
+                    base = f"const({base})"
+                return "ptr(" * stars + base + ")" * stars
             return canon_c_fnptr(t, typedefs, depth)
         if "*" in t[:g0[0]] and not t[g0[1] + 1:].strip():
             # `RET *(...)`: a function type whose return is a pointer. The regex branch
@@ -316,6 +356,20 @@ def canon_c_type(
     if t.startswith("const "):
         const = True
         t = t[len("const "):].strip()
+    if t.endswith("]") and "[" in t:
+        # An *array* type, reached here almost always through a typedef -- `DES_cblock`
+        # is `unsigned char[8]`, so `DES_cblock *` resolves to a pointer to an array.
+        # Until this branch existed the type plane could not read it and reported a
+        # *correct* declaration as `type_unmapped`, which is a failure, not a gap: the
+        # first implementation whose prototype mentions `DES_cblock` was blocked by the
+        # instrument rather than by the authority. The element type and the length are
+        # both kept, so `DES_cblock *` and `unsigned char *` remain distinguishable.
+        idx = t.rfind("[")
+        elem = canon_c_type(t[:idx].strip(), typedefs, depth + 1, pointee)
+        if elem is None:
+            return None
+        base = f"arr({elem};{t[idx + 1:-1].strip()})"
+        return f"const({base})" if (const and pointee) else base
     if t.startswith("enum ") or t.startswith("struct ") or t.startswith("union "):
         base = "int:4:s" if t.startswith("enum ") else "opaque"
         return f"const({base})" if (const and pointee) else base
@@ -416,6 +470,15 @@ def canon_rust_type(text: str, aliases: dict[str, str], depth: int = 0) -> str |
     if t.startswith("Option<") and t.endswith(">"):
         # A nullable function pointer and a bare one are the same to the ABI.
         return canon_rust_type(t[len("Option<"):-1], aliases, depth + 1)
+    if t.startswith("[") and t.endswith("]") and ";" in t:
+        # An array type. This is the Rust side of the array branch in `canon_c_type`:
+        # `*mut [u8; 8]` and `DES_cblock *` must canonicalise alike, and the element
+        # type and length are both kept so the two do not become a wildcard.
+        elem_text, _, len_text = t[1:-1].rpartition(";")
+        elem = canon_rust_type(elem_text.strip(), aliases, depth + 1)
+        if elem is None:
+            return None
+        return f"arr({elem};{len_text.strip()})"
     if t.startswith("*mut "):
         inner = canon_rust_type(t[len("*mut "):], aliases, depth + 1)
         return None if inner is None else f"ptr({inner})"
@@ -424,8 +487,8 @@ def canon_rust_type(text: str, aliases: dict[str, str], depth: int = 0) -> str |
         return None if inner is None else f"ptr(const({inner}))"
     if t.startswith("unsafe extern \"C\" fn") or t.startswith("extern \"C\" fn"):
         return canon_rust_fnptr(t, aliases, depth)
-    if t in ("f32", "f64"):
-        return "float:4" if t == "f32" else "float:8"
+    if t in RUST_FLOAT_WIDTH:
+        return f"float:{RUST_FLOAT_WIDTH[t]}"
     if t in RUST_INT_WIDTH:
         b, s = RUST_INT_WIDTH[t]
         return f"int:{b}:{'s' if s else 'u'}"
@@ -435,6 +498,9 @@ def canon_rust_type(text: str, aliases: dict[str, str], depth: int = 0) -> str |
             # `core::ffi::c_uint` and `c_uint` are the same type.
             b, s = RUST_INT_WIDTH[leaf]
             return f"int:{b}:{'s' if s else 'u'}"
+        if leaf != t and leaf in RUST_FLOAT_WIDTH:
+            # `core::ffi::c_double` and `c_double` are the same type.
+            return f"float:{RUST_FLOAT_WIDTH[leaf]}"
         target = aliases.get(t) or aliases.get(leaf)
         if target is not None:
             return canon_rust_type(target, aliases, depth + 1)
@@ -555,7 +621,7 @@ def classify_rust(text: str, aliases: dict[str, str], depth: int = 0) -> str:
         # through the same resolver rather than being string-matched once.
         inner_class = classify_rust(inner, aliases, depth + 1)
         return inner_class if inner_class in ("function_pointer", "pointer") else "unclassified"
-    if t in ("f32", "f64"):
+    if t in RUST_FLOAT_WIDTH:
         return "floating"
     if R_INTEGER.match(t):
         return "integer"
@@ -566,6 +632,8 @@ def classify_rust(text: str, aliases: dict[str, str], depth: int = 0) -> str:
         # `ASN1_tag2bit` as unclassified for that reason alone.
         if leaf != t and R_INTEGER.match(leaf):
             return "integer"
+        if leaf != t and leaf in RUST_FLOAT_WIDTH:
+            return "floating"
         target = aliases.get(t) or aliases.get(leaf)
         if target is not None:
             return classify_rust(target, aliases, depth + 1)
@@ -628,6 +696,33 @@ def _scan_balanced(text: str, open_at: int) -> int:
                 return i
         i += 1
     return -1
+
+
+def alias_target(text: str, start: int) -> str:
+    """An alias body from `start` to the `;` that terminates it at bracket depth zero.
+
+    The regex that used to capture this body was `[^;]+`, which stops at the *first*
+    semicolon -- and an array type inside a function-pointer alias carries its own
+    (`l_: *const [u8; 16]`). The alias was therefore truncated to `*const [u8`, the
+    function-pointer canonicaliser answered None, and the two exports that take an
+    `ocb128_f` were reported `type_unmapped` while their declarations were correct.
+    The instrument dropped the detail, not the code: see docs/DECISIONS.md D229.
+    """
+    depth = 0
+    i = start
+    while i < len(text):
+        ch = text[i]
+        if ch == "-" and text[i + 1:i + 2] == ">":
+            i += 2
+            continue
+        if ch in "(<[":
+            depth += 1
+        elif ch in ")>]":
+            depth -= 1
+        elif ch == ";" and depth == 0:
+            return text[start:i]
+        i += 1
+    return text[start:]
 
 
 def top_level_groups(text: str) -> list[tuple[int, int]]:
@@ -1191,7 +1286,7 @@ aliases, all Rust text, all C text, and every macro the court could not read.
             rust_files.append((key, text))
             file_aliases: dict[str, str] = {}
             for m in RUST_ALIAS_RE.finditer(text):
-                file_aliases.setdefault(m.group(1), m.group(2).strip())
+                file_aliases.setdefault(m.group(1), alias_target(text, m.end()).strip())
             aliases_by_file[key] = file_aliases
         elif path.suffix == ".c":
             try:

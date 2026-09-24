@@ -81,12 +81,91 @@
 
 pub(crate) mod activate;
 // 6.8d: `crypto/provider_conf.c`, the `providers` configuration module.
+pub(crate) mod asymcipher;
+pub(crate) mod capabilities;
+pub(crate) mod cipher;
 pub(crate) mod conf;
+pub(crate) mod ctx;
+pub(crate) mod der_dsa_sig;
+pub(crate) mod der_ec_sig;
+pub(crate) mod der_ecx_key;
+pub(crate) mod der_rsa_key;
+pub(crate) mod der_rsa_sig;
+pub(crate) mod der_slh_dsa_key;
+// Phase 8's `providers/common/der/der_sm2_sig.c` (D406): the SM2 `WITH MD` AlgorithmIdentifier
+// writer the signature unit's setup builds.
+pub(crate) mod der_sm2_sig;
+// Phase 8's `providers/implementations/asymciphers/sm2_enc.c` (D406): the `SM2` asym-cipher row,
+// the encryption face of the `SM2` key object.
+pub(crate) mod digest_to_nid;
+pub(crate) mod sm2_enc;
+// Phase 8's `providers/implementations/signature/sm2_sig.c` (D406): the one `SM2` signature row.
+pub(crate) mod sm2_sig;
 // 6.8e: `crypto/provider_child.c`, the child provider and its parent callbacks.
 pub(crate) mod child;
 pub(crate) mod core_dispatch;
+pub(crate) mod digest;
+pub(crate) mod dsa_kmgmt;
+pub(crate) mod dsa_sig;
+pub(crate) mod ec_kem;
+pub(crate) mod ec_kmgmt;
+pub(crate) mod ecdh_exch;
+pub(crate) mod ecdsa_sig;
+pub(crate) mod ecx_exch;
+pub(crate) mod ecx_kem;
+pub(crate) mod ecx_kmgmt;
+pub(crate) mod eddsa_sig;
+pub(crate) mod exchange;
 pub(crate) mod init;
+pub(crate) mod kdf;
+pub(crate) mod kem;
+pub(crate) mod kem_util;
+pub(crate) mod keymgmt;
+pub(crate) mod mac;
+pub(crate) mod mac_legacy_kmgmt;
+pub(crate) mod mac_legacy_sig;
+// Phase 8's `providers/implementations/kem/ml_kem_kem.c.in` (D401): the three ML-KEM `OSSL_OP_KEM`
+// rows, one dispatch table shared by all three, exactly as the authority's `deflt_asym_kem[]`
+// publishes them.
+pub(crate) mod ml_kem_kem;
+// Phase 8's `providers/implementations/keymgmt/ml_kem_kmgmt.c.in` (D403): the three ML-KEM keymgmt
+// rows, one body with three macro expansions, exactly as the authority's `deflt_keymgmt[]`
+// publishes them.
+pub(crate) mod ml_kem_kmgmt;
+// Phase 8's `providers/common/der/der_ml_dsa_key.c` (D409): the ML-DSA `AlgorithmIdentifier` for
+// the three keymgmt and signature rows, and the three `id-ml-dsa-*` OIDs it writes.
+pub(crate) mod der_ml_dsa_key;
+// Phase 8's `providers/implementations/keymgmt/ml_dsa_kmgmt.c.in` (D409): the three ML-DSA keymgmt
+// rows, one body with three macro expansions, exactly as the authority's `deflt_keymgmt[]`
+// publishes them.
+pub(crate) mod ml_dsa_kmgmt;
+// Phase 8's `providers/implementations/signature/ml_dsa_sig.c.in` (D409): the three ML-DSA signature
+// rows, one body with three macro expansions, exactly as the authority's `deflt_signature[]`
+// publishes them.
+pub(crate) mod ml_dsa_sig;
+// Phase 8's `providers/implementations/keymgmt/mlx_kmgmt.c.in` (D404): the four ML-KEM/EC-ECX hybrid
+// keymgmt rows, one body with four macro expansions, exactly as the authority's `deflt_keymgmt[]`
+// publishes them. There is no `crypto/mlx/`: the hybrid logic *is* this unit.
+pub(crate) mod mlx_kmgmt;
+// Phase 8's `providers/implementations/kem/mlx_kem.c` (D404): the four hybrid `OSSL_OP_KEM` rows,
+// one dispatch table shared by all four, exactly as the authority's `deflt_asym_kem[]` publishes
+// them.
+pub(crate) mod mlx_kem;
+pub(crate) mod rand;
+pub(crate) mod rsa_enc;
+pub(crate) mod rsa_kem;
+pub(crate) mod rsa_kmgmt;
+pub(crate) mod rsa_sig;
+pub(crate) mod securitycheck;
+pub(crate) mod securitycheck_default;
+pub(crate) mod seed_src;
+pub(crate) mod seeding;
+pub(crate) mod signature;
+pub(crate) mod skeymgmt;
+pub(crate) mod slh_dsa_kmgmt;
+pub(crate) mod slh_dsa_sig;
 pub(crate) mod stores;
+pub(crate) mod util;
 
 use core::ffi::{c_char, c_int, c_uint, c_void};
 use core::ptr;
@@ -1137,6 +1216,14 @@ pub(crate) struct PredefinedProvider {
     pub(crate) name: &'static core::ffi::CStr,
     /// The authority's `is_fallback : 1`.
     pub(crate) is_fallback: c_uint,
+    /// The provider's compiled-in entry point, or `None` where it has not landed yet.
+    ///
+    /// `default` names [`crate::provider::digest::ossl_default_provider_init`], which 8.1b
+    /// landed. `base` and `null` name `ossl_base_provider_init` and
+    /// `ossl_null_provider_init`, which are other subphases' and are still `None`: a row
+    /// whose entry point does not exist cannot publish a table, and naming one here would
+    /// make the registry depend on every algorithm in the library.
+    pub(crate) init: Option<ProviderInitFn>,
 }
 
 /// `const OSSL_PROVIDER_INFO ossl_predefined_providers[]` — `crypto/provider_predefined.c`.
@@ -1152,32 +1239,39 @@ pub(crate) struct PredefinedProvider {
 /// (6.8c), so `default` is what an operation with no explicit `OSSL_PROVIDER_load` gets --
 /// and `base`, which declares no algorithms of its own, is not.
 ///
-/// **The three `init` pointers are NULL here and are 7/8's.** They name
-/// `ossl_default_provider_init` (807 lines), `ossl_base_provider_init` (183) and
-/// `ossl_null_provider_init` (80) in `providers/`, which are the provider-side entry points
-/// that publish the algorithm tables. Referencing them from here would make the registry
-/// depend on every algorithm in the library, in the wrong direction. The consequence is
-/// recorded rather than hidden: until they land, `ossl_provider_new` resolves these three
-/// names as *builtins with no init function*, which 6.8c's `provider_init` would take down
-/// the `DSO` branch. That is a real divergence, it becomes observable at 6.8c, and it is a
-/// `residual` on this subphase rather than a silent gap.
+/// **The `default` row carries its entry point; `base` and `null` are `None`.** The three
+/// authority rows name `ossl_default_provider_init`, `ossl_base_provider_init` and
+/// `ossl_null_provider_init` in `providers/`. `default`'s digest half landed with 8.1b, so it
+/// is named here and the fallback walk activates `default` instead of failing at `DSO_load`;
+/// `base` and `null` are still 7/8's and their absence is recorded rather than hidden -- a
+/// `provider_new` for either receives `None` and `provider_init` takes the `DSO` branch, which
+/// is the remaining part of D117's residual.
+///
+/// `is_fallback` is 1 for `default` and 0 for `base` and `null`. That one bit is what
+/// `provider_activate_fallbacks` uses to decide what to load when nothing has been asked for
+/// (6.8c), so `default` is what an operation with no explicit `OSSL_PROVIDER_load` gets --
+/// and `base`, which declares no algorithms of its own, is not.
 pub(crate) static PREDEFINED_PROVIDERS: [PredefinedProvider; 4] = [
     PredefinedProvider {
         name: c"default",
         is_fallback: 1,
+        init: Some(crate::provider::digest::ossl_default_provider_init),
     },
     PredefinedProvider {
         name: c"base",
         is_fallback: 0,
+        init: None,
     },
     PredefinedProvider {
         name: c"null",
         is_fallback: 0,
+        init: None,
     },
     // The authority's terminator: `{ NULL, NULL, NULL, NULL, 0 }`.
     PredefinedProvider {
         name: c"",
         is_fallback: 0,
+        init: None,
     },
 ];
 
@@ -1297,8 +1391,7 @@ pub(crate) unsafe fn ossl_provider_new(
             // program's life; the template does not own it, and `provider_new` dup's it.
             template.name = row.name.as_ptr().cast_mut();
             template.is_fallback = row.is_fallback;
-            // 7/8: `template.init = <the provider's init function>`. See
-            // `PREDEFINED_PROVIDERS`.
+            template.init = row.init;
             chosen = true;
         }
         // SAFETY: `store` is live.
