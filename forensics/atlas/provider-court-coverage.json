@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 305,
+        "implemented": 306,
         "unmatched": 0
       },
       "9": {
@@ -58,8 +58,8 @@
         ]
       }
     ],
-    "directly_courted": 310,
-    "implemented_rows": 310,
+    "directly_courted": 311,
+    "implemented_rows": 311,
     "rows": [
       {
         "algorithm_names": "RSA",
@@ -2571,6 +2571,22 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "EC",
+        "aliases": [
+          "EC",
+          "id-ecPublicKey",
+          "1.2.840.10045.2.1"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEM",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "ML-KEM-1024",
         "aliases": [
           "ML-KEM-1024",
@@ -4588,7 +4604,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "c9d53073508eab8beb8b7458b00ae855666170722f5eef06b5dc2bf278c320bc"
+      "sha256": "610c71976607c20e1463c762ab2b07dda0b892a949566e4d0790f0454a5468f5"
     },
     {
       "name": "court:RT-DIGEST:rt_digest_probe.c",
@@ -4608,7 +4624,7 @@
     {
       "name": "court:RT-KEYMGMT:rt_keymgmt_probe.c",
       "path": "courts/phase8/rt_keymgmt_probe.c",
-      "sha256": "afad9204c9cfd430ac4b12aefe05ccbd9829a0fd68e5390c2514d38b103c6007"
+      "sha256": "fbb564ff10233c0bd3230dfc2641b0ca73338060008e7d7a4df9fd4df88a6d4d"
     },
     {
       "name": "court:RT-KEYMGMT:slh_dsa_probe.h",

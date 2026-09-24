@@ -53,6 +53,18 @@
  *      absent-name refusal. `EVP_KEM_fetch` reaches the KEM row through `deflt_query` rather
  *      than through a keymgmt row, which is what makes the row observable while the ML-KEM key
  *      type's own keymgmt unit is still unlanded; the alias set is the authority's own four.
+ *  6c. **The `EC` `OSSL_OP_KEM` row.** `arm_kem_fetch` names it: `EVP_PKEY_CTX_new_from_name(NULL,
+ *      "EC", NULL)` resolves the `EC` keymgmt, whose `query_operation_name` answers NULL for
+ *      `OSSL_OP_KEM` and so falls back to the key type's own name -- the `EVP_KEM_fetch` arm that
+ *      would reach the row -- and the no-key `encapsulate_init` refuses it, exactly as the two
+ *      ECX rows' does (the refusal precedes the KEM fetch). The fetch alone does not reach
+ *      `eckem_encapsulate`/`dhkem_encap`, so a second arm drives the round trip: `arm_ec_kem`
+ *      generates a P-256 `EC` key from a **fixed** DHKEM IKM (`OSSL_PKEY_PARAM_DHKEM_IKM` through
+ *      the keygen `EVP_PKEY_CTX`, the one path that reaches `ossl_ec_generate_key_dhkem`), sets
+ *      `OSSL_KEM_PARAM_OPERATION` to `DHKEM`, and round-trips `EVP_PKEY_encapsulate`/
+ *      `EVP_PKEY_decapsulate` with the same key. `EVP_PKEY_encapsulate` draws a fresh ephemeral key
+ *      from the RNG, so only the two lengths, the return codes and the secret-equality boolean are
+ *      printed -- never a ciphertext or secret byte.
  *   7. **The four legacy-MAC imports.** `HMAC`, `SIPHASH`, `POLY1305` and `CMAC` each import a
  *      fixed 16-byte private key through their own keymgmt row, and the no-key refusal is the
  *      fifth observation per type. `CMAC`'s import is the one that resolves a cipher through
@@ -143,8 +155,11 @@ static const char *kmgmt_rows[] = { "DH", "DHX", "DSA", "RSA", "RSA-PSS", "EC", 
  * `EVP_PKEY_derive_init`, which is `ec_query_operation_name`'s `ECDH` answer for `OSSL_OP_KEYEXCH`. */
 static const char *keyexch_rows[] = { "DH", "ECDH", "X25519", "X448", "TLS1-PRF", "HKDF", "SCRYPT" };
 
-/* The two landed OSSL_OP_KEM rows, which are also keymgmt and keyexch names. */
-static const char *kem_rows[] = { "X25519", "X448" };
+/* The three landed OSSL_OP_KEM rows, all of which are also keymgmt names. `X25519`/`X448` are
+ * keyexch names too, so their rows resolve through a no-key context directly; `EC` is not, and its
+ * row is reached through the `EC` keymgmt's fallback to the key type's own name (`OSSL_OP_KEM` is
+ * not one of the two operations `ec_query_operation_name` answers). */
+static const char *kem_rows[] = { "X25519", "X448", "EC" };
 
 /* The four landed legacy-MAC keymgmt rows. The private key below is a fixed public constant, not
  * a secret: it is an input the two sides must agree on, not a generated key. */
@@ -743,6 +758,122 @@ static void arm_ec_import(void)
     EVP_PKEY_CTX_free(ctx);
 }
 
+/* The `EC` `OSSL_OP_KEM` row's round trip. The row's *fetch* is observed by `arm_kem_fetch`; this
+ * is the arm that reaches `eckem_encapsulate`/`dhkem_encap`, which a name-only context cannot. The
+ * key is the `EC` keygen path with `OSSL_PKEY_PARAM_DHKEM_IKM` set -- the one caller shape of
+ * `ossl_ec_generate_key_dhkem` -- over the published NIST P-256 group, and the operation is set to
+ * `DHKEM` through `OSSL_KEM_PARAM_OPERATION` on the KEM context. The IKM is a fixed probe-side
+ * constant, not a secret: it is an input the two sides must agree on, like every other constant in
+ * this file. `EVP_PKEY_encapsulate` draws a fresh ephemeral key from the RNG, so the ciphertext and
+ * the shared secret are random and **not one byte of either is printed** -- only the two lengths,
+ * the return codes and the boolean that the two secrets are equal. */
+static const unsigned char ec_dhkem_ikm[32] = {
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+    0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+    0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f
+};
+
+/* The ephemeral seed, `OSSL_KEM_PARAM_IKME` (`core_names.h:325`). Setting it makes the encap side
+ * deterministic -- the sender's ephemeral key is derived from it instead of the RNG
+ * (`eckem_set_ctx_params` stores it as `ctx->ikm`, and `derivekey` uses it rather than drawing a
+ * random one) -- so the ciphertext and both derived secrets are a function of fixed inputs and
+ * their digests are printed. Without it the arm could only print lengths and the equality boolean,
+ * which is not enough to tell *which* half of a mismatch is wrong. */
+static const unsigned char ec_dhkem_ikme[32] = {
+    0xff, 0xfe, 0xfd, 0xfc, 0xfb, 0xfa, 0xf9, 0xf8,
+    0xf7, 0xf6, 0xf5, 0xf4, 0xf3, 0xf2, 0xf1, 0xf0,
+    0xef, 0xee, 0xed, 0xec, 0xeb, 0xea, 0xe9, 0xe8,
+    0xe7, 0xe6, 0xe5, 0xe4, 0xe3, 0xe2, 0xe1, 0xe0
+};
+
+static void arm_ec_kem(void)
+{
+    EVP_PKEY_CTX *genctx = EVP_PKEY_CTX_new_from_name(NULL, "EC", NULL);
+    EVP_PKEY *pkey = NULL;
+    OSSL_PARAM gen_params[3];
+
+    kv_int("eckem.genctx", genctx != NULL);
+    if (genctx == NULL)
+        return;
+
+    /* The DHKEM keygen: the group names the curve, `dhkem-ikm` the seed. */
+    kv_int("eckem.keygen_init", EVP_PKEY_keygen_init(genctx));
+    gen_params[0] = OSSL_PARAM_construct_utf8_string(OSSL_PKEY_PARAM_GROUP_NAME,
+                                                     (char *)"prime256v1", 0);
+    gen_params[1] = OSSL_PARAM_construct_octet_string(OSSL_PKEY_PARAM_DHKEM_IKM,
+                                                      (void *)ec_dhkem_ikm,
+                                                      sizeof(ec_dhkem_ikm));
+    gen_params[2] = OSSL_PARAM_construct_end();
+    kv_int("eckem.set_params", EVP_PKEY_CTX_set_params(genctx, gen_params));
+    kv_int("eckem.generate", EVP_PKEY_generate(genctx, &pkey));
+    EVP_PKEY_CTX_free(genctx);
+
+    if (pkey != NULL) {
+        unsigned char ctext[128], secret[64], secret2[64];
+        unsigned char pub[128];
+        size_t publen = 0;
+        EVP_PKEY_CTX *kctx = EVP_PKEY_CTX_new_from_pkey(NULL, pkey, NULL);
+        EVP_PKEY_CTX *dctx = EVP_PKEY_CTX_new_from_pkey(NULL, pkey, NULL);
+        OSSL_PARAM op_params[3];
+        size_t clen, slen, slen2;
+        int encap_ok, decap_ok;
+
+        /* The recipient public key is a function of the fixed `dhkem-ikm`, so its digest is an
+         * observation of `ossl_ec_dhkem_derive_private` and the public-point computation. */
+        if (EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_ENCODED_PUBLIC_KEY,
+                                            pub, sizeof(pub), &publen) == 1) {
+            kv_int("eckem.pub_len", (int)publen);
+            kv_sha256("eckem.pub_sha256", pub, publen);
+        }
+
+        /* The KEM operation, `DHKEM`, and the fixed ephemeral seed. */
+        op_params[0] = OSSL_PARAM_construct_utf8_string(OSSL_KEM_PARAM_OPERATION,
+                                                        (char *)"DHKEM", 0);
+        op_params[1] = OSSL_PARAM_construct_octet_string(OSSL_KEM_PARAM_IKME,
+                                                         (void *)ec_dhkem_ikme,
+                                                         sizeof(ec_dhkem_ikme));
+        op_params[2] = OSSL_PARAM_construct_end();
+
+        kv_int("eckem.encap_init", EVP_PKEY_encapsulate_init(kctx, op_params));
+
+        /* The size query first: no output, no secret, both lengths asked for. */
+        clen = 0;
+        slen = 0;
+        kv_int("eckem.encap_size", EVP_PKEY_encapsulate(kctx, NULL, &clen, NULL, &slen));
+        kv_int("eckem.ctext_size", (int)clen);
+        kv_int("eckem.secret_size", (int)slen);
+
+        clen = sizeof(ctext);
+        slen = sizeof(secret);
+        encap_ok = EVP_PKEY_encapsulate(kctx, ctext, &clen, secret, &slen);
+        kv_int("eckem.encap", encap_ok);
+        kv_int("eckem.ctext_len", (int)clen);
+        kv_int("eckem.secret_len", (int)slen);
+        if (encap_ok == 1) {
+            kv_sha256("eckem.ctext_sha256", ctext, clen);
+            kv_sha256("eckem.secret_sha256", secret, slen);
+        }
+
+        kv_int("eckem.decap_init", EVP_PKEY_decapsulate_init(dctx, op_params));
+        slen2 = sizeof(secret2);
+        decap_ok = EVP_PKEY_decapsulate(dctx, secret2, &slen2, ctext, clen);
+        kv_int("eckem.decap", decap_ok);
+        kv_int("eckem.decap_secret_len", (int)slen2);
+        if (decap_ok == 1)
+            kv_sha256("eckem.decap_secret_sha256", secret2, slen2);
+        /* Guarded on both return codes so a failed path never reads an uninitialised secret: the
+         * comparison is only meaningful when there are two real secrets to compare. */
+        kv_int("eckem.secret_match",
+               encap_ok == 1 && decap_ok == 1 && slen == slen2
+                       && memcmp(secret, secret2, slen) == 0);
+
+        EVP_PKEY_CTX_free(dctx);
+        EVP_PKEY_CTX_free(kctx);
+    }
+    EVP_PKEY_free(pkey);
+}
+
 /* The three landed `RSA`, `RSA-PSS` and `DSA` keymgmt rows. The public parameters below are fixed
  * probe-side constants -- a public modulus and the F4 exponent, and a public DSA domain-parameter
  * triple -- never a generated key, so two runs of one side agree. */
@@ -1115,6 +1246,7 @@ int main(void)
     arm_dh_import();
     arm_ecx_import();
     arm_ec_import();
+    arm_ec_kem();
     arm_rsa_dsa_import();
     arm_mac_import();
     arm_kem_fetch();

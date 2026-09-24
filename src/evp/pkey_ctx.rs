@@ -114,8 +114,8 @@ use crate::runtime::obj::{
 use crate::runtime::obj::{OBJ_nid2sn, OBJ_sn2nid};
 use crate::runtime::obj::{OBJ_obj2txt, OBJ_txt2obj};
 use crate::runtime::stack::{
-    OPENSSL_sk_delete_ptr, OPENSSL_sk_find, OPENSSL_sk_new, OPENSSL_sk_num, OPENSSL_sk_push,
-    OPENSSL_sk_sort, OPENSSL_sk_value, OpenSslStack,
+    OPENSSL_sk_delete_ptr, OPENSSL_sk_find, OPENSSL_sk_new, OPENSSL_sk_num, OPENSSL_sk_pop_free,
+    OPENSSL_sk_push, OPENSSL_sk_sort, OPENSSL_sk_value, OpenSslStack,
 };
 use crate::runtime::str::{OPENSSL_hexstr2buf, OPENSSL_strcasecmp, OPENSSL_strlcat};
 use core::ffi::c_long;
@@ -2146,6 +2146,51 @@ pub unsafe extern "C" fn EVP_PKEY_meth_add0(pmeth: *const EvpPkeyMethod) -> c_in
     // SAFETY: `APP_PKEY_METHODS` is live.
     unsafe { OPENSSL_sk_sort(APP_PKEY_METHODS) };
     1
+}
+
+/// `evp_app_cleanup_int`'s destructor argument — the `OPENSSL_sk_pop_free` half of the authority's
+/// `sk_EVP_PKEY_METHOD_pop_free(app_pkey_methods, EVP_PKEY_meth_free)`.
+///
+/// The stack erases its element type, so the typed `EVP_PKEY_meth_free` cannot be handed to
+/// `OPENSSL_sk_pop_free` directly; this is the adapter that restores the call.
+///
+/// # Safety
+/// `pmeth` must be NULL or a live method.
+unsafe extern "C" fn free_evp_pkey_meth(pmeth: *mut c_void) {
+    // SAFETY: `pmeth` is NULL or live per the contract.
+    unsafe { EVP_PKEY_meth_free(pmeth.cast::<EvpPkeyMethod>()) };
+}
+
+/// `void evp_app_cleanup_int(void)` — `crypto/evp/pmeth_lib.c:631`.
+///
+/// Releases the application-supplied `EVP_PKEY_METHOD` registry, and **only** that one: a method in
+/// `standard_methods[]` is a `static` object and survives, which is exactly what
+/// [`EVP_PKEY_meth_free`]'s `DYNAMIC` test is for. The authority's body is
+/// `if (app_pkey_methods != NULL) sk_EVP_PKEY_METHOD_pop_free(app_pkey_methods, EVP_PKEY_meth_free);`,
+/// and the NULL guard is the authority's — it is kept rather than dropped, so a cleanup before any
+/// `EVP_PKEY_meth_add0` does nothing at all.
+///
+/// **The pointer is cleared here, where the authority leaves it dangling.** The authority assigns
+/// nothing back after the pop, so a second call there is a double free; this crate clears it, as its
+/// sibling [`crate::evp::evp_pbe::EVP_PBE_cleanup`] does for the PBE registry, so a second call is a
+/// no-op rather than a use-after-free. That property is relied on rather than cosmetic: this crate's
+/// `OPENSSL_cleanup` is atomic-guarded and re-callable within a process (`src/runtime/init.rs`), and
+/// a cleared pointer is what keeps the second pass from walking a freed stack. The difference is
+/// unobservable to a caller that follows the authority's one-shot contract — `OPENSSL_cleanup` is
+/// the only caller — and is recorded here because the two bodies differ.
+///
+/// # Safety
+/// Nothing: the stack is this module's own.
+pub(crate) unsafe fn evp_app_cleanup_int() {
+    // SAFETY: `APP_PKEY_METHODS` is NULL or a stack this module owns whose every element is a
+    // method the caller pushed with `EVP_PKEY_meth_add0`.
+    if !unsafe { APP_PKEY_METHODS }.is_null() {
+        // SAFETY: `APP_PKEY_METHODS` is live, and `free_evp_pkey_meth` accepts every element it
+        // holds.
+        unsafe { OPENSSL_sk_pop_free(APP_PKEY_METHODS, Some(free_evp_pkey_meth)) };
+        // SAFETY: this module owns the pointer; clearing it makes a second call a no-op.
+        unsafe { APP_PKEY_METHODS = ptr::null_mut() };
+    }
 }
 
 /// `int EVP_PKEY_meth_remove(const EVP_PKEY_METHOD *pmeth)` — `crypto/evp/pmeth_lib.c:637`.

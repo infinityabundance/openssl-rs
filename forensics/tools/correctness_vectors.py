@@ -174,6 +174,15 @@ PROBE = REPO_ROOT / "courts" / "phase8" / "ct_digest.c"
 CIPHER_PROBE = REPO_ROOT / "courts" / "phase8" / "ct_cipher.c"
 CIPHER_KIND_PREFIX = "cipher-vectors-"
 
+# The ML-DSA correctness court's two artefacts. Its vector schema — a keygen `(seed, public
+# key)`, a siggen `(private key, message, context, signature)`, a sigver `(public key, message,
+# signature, verdict)` — is neither digest-shaped nor cipher-shaped, so it does not fit the
+# `forensics/vectors/*.json` records above/`aes.json`; its inputs are a generated C header (a
+# signature is up to 4627 bytes) and its expected values are the generator's own atlas envelope,
+# written by `forensics/tools/gen_ct_ml_dsa_vectors.py`. See `run_ml_dsa_court`.
+ML_DSA_PROBE = REPO_ROOT / "courts" / "phase8" / "ct_ml_dsa.c"
+ML_DSA_VECTORS = REPO_ROOT / "forensics" / "atlas" / "ct-ml-dsa-vectors.json"
+
 # The committed vectors' schema/kind prefix. `envelope` writes
 # `openssl-rs/atlas/correctness-vectors-<algorithm>/v1`.
 KIND_PREFIX = "correctness-vectors-"
@@ -872,6 +881,172 @@ def run_cipher_court(
             "committed `forensics/vectors/*.json` cipher sets by `correctness_vectors.py`, "
             "not typed. It is NOT OpenSSL parity and NOT formal validation. See D201/D208 "
             "and docs/PHASE-8-SUBPHASES.md."
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
+# The ML-DSA correctness court: a keygen/siggen/sigver schema
+# ---------------------------------------------------------------------------
+#
+# `CT-ML-DSA` is the second evidence plane for the three landed ML-DSA provider rows. Its corpus
+# is the authority's own FIPS 204 / ACVP vectors, read by `gen_ct_ml_dsa_vectors.py`; the inputs
+# the candidate-only probe drives are a generated C header and the expected bytes this tool
+# compares with live in that generator's atlas envelope. Nothing here reads the authority at run
+# time — the bytes are committed, content-addressed, and re-derived only by the generator.
+
+def _parse_ml_dsa_probe(stdout: str) -> dict[tuple[str, str], tuple[str, str]]:
+    """The probe's `<arm>\t<id>\t<ok|err>\t<value>` lines, keyed by `(arm, id)`."""
+    results: dict[tuple[str, str], tuple[str, str]] = {}
+    for line in stdout.splitlines():
+        parts = line.split("\t")
+        if len(parts) != 4:
+            continue
+        results[(parts[0], parts[1])] = (parts[2], parts[3])
+    return results
+
+
+def run_ml_dsa_court(
+    name: str,
+    *,
+    vector_path: Path = ML_DSA_VECTORS,
+    candidate_dir: Path = CANDIDATE_DIR,
+    probe: Path = ML_DSA_PROBE,
+    work_dir: Path,
+    authority_id: str = PRODUCTION_AUTHORITY,
+) -> dict:
+    """Run the ML-DSA correctness court (`CT-ML-DSA`): candidate-only, per-vector and loud.
+
+    The probe computes and prints; this function owns the expected values (the generator's atlas
+    record) and the comparison. A `keygen`/`siggen` line is compared as the sha256 of the bytes
+    the probe produced; a `sigver` line is compared as the verdict. Every mismatch is recorded
+    with its expected and actual value, and one mismatch fails the court.
+    """
+    if not vector_path.is_file():
+        return {
+            "court": name, "plane": "correctness", "verdict": "fail",
+            "stage": "vectors-missing",
+            "detail": [f"no committed ml-dsa vectors at {rel(vector_path)}"],
+            "needs": ("forensics/atlas/ct-ml-dsa-vectors.json; run "
+                      "forensics/tools/gen_ct_ml_dsa_vectors.py"),
+        }
+    doc = json.loads(vector_path.read_text(encoding="utf-8"))
+    _require(str(doc.get("kind", "")) == "ct-ml-dsa-vectors",
+             f"{rel(vector_path)}: kind is not 'ct-ml-dsa-vectors'")
+    body = doc.get("body")
+    _require(isinstance(body, dict), f"{rel(vector_path)}: body is missing")
+    raw_vectors = body.get("vectors")
+    _require(isinstance(raw_vectors, list) and raw_vectors,
+             f"{rel(vector_path)}: body.vectors must be a non-empty list")
+
+    # `(arm, id) -> (kind, expected, algorithm)`, where kind is "sha256" (compare the digest of
+    # the probe's bytes) or "verdict" (compare the stringified verdict directly).
+    expected: dict[tuple[str, str], tuple[str, str, str]] = {}
+    per_arm: dict[str, int] = {}
+    for raw in raw_vectors:
+        arm = str(raw.get("arm", ""))
+        vid = str(raw.get("id", ""))
+        alg = str(raw.get("alg", ""))
+        _require(arm in ("keygen", "siggen", "sigver"),
+                 f"{rel(vector_path)}: arm {arm!r} is not keygen/siggen/sigver")
+        _require(vid != "", f"{rel(vector_path)}: a vector has no id")
+        _require(alg != "", f"{rel(vector_path)}: {vid} has no alg")
+        _require((arm, vid) not in expected,
+                 f"{rel(vector_path)}: duplicate vector {arm}/{vid}")
+        if arm == "sigver":
+            _require(raw.get("expected") in (0, 1),
+                     f"{rel(vector_path)}: sigver {vid} expected must be 0 or 1")
+            expected[(arm, vid)] = ("verdict", str(raw["expected"]), alg)
+        else:
+            digest = str(raw.get("expected_sha256", ""))
+            _require(len(digest) == 64, f"{rel(vector_path)}: {vid} expected_sha256 is malformed")
+            expected[(arm, vid)] = ("sha256", digest, alg)
+        per_arm[arm] = per_arm.get(arm, 0) + 1
+
+    work_dir.mkdir(parents=True, exist_ok=True)
+    binary = work_dir / f"{name.lower()}.candidate"
+    ok, err = compile_probe(probe, binary, candidate_dir / "include", candidate_dir)
+    if not ok:
+        return {
+            "court": name, "plane": "correctness", "verdict": "fail",
+            "stage": "compile-candidate", "probe": rel(probe),
+            "detail": err.splitlines()[:16],
+            "needs": ("the candidate distribution shell "
+                      f"({rel(candidate_dir / 'libcrypto.so.3')}) to export the ML-DSA keymgmt "
+                      "and signature rows and the `EVP_PKEY_sign_message_*` / "
+                      "`EVP_PKEY_verify_message_*` entry points. Run "
+                      "forensics/tools/build_phase2.sh first."),
+        }
+    res = run([str(binary)])
+    if res.returncode != 0:
+        return {
+            "court": name, "plane": "correctness", "verdict": "fail",
+            "stage": "candidate-run", "probe": rel(probe),
+            "detail": {"exit_code": res.returncode, "stderr": res.stderr.splitlines()[:16]},
+        }
+
+    produced = _parse_ml_dsa_probe(res.stdout)
+    failures: list[dict] = []
+    results: list[dict] = []
+    for (arm, vid), (kind, want, alg) in expected.items():
+        status, value = produced.get((arm, vid), ("missing", "no-result-line"))
+        actual: str | None = None
+        detail: str | None = None
+        if status == "ok":
+            if kind == "sha256":
+                try:
+                    actual = hashlib.sha256(bytes.fromhex(value)).hexdigest()
+                except ValueError:
+                    actual = None
+                    detail = "probe answered non-hex"
+                good = actual is not None and actual == want
+            else:
+                actual = value
+                good = value == want
+        else:
+            good = False
+            detail = value
+        shown = actual if actual is not None else detail
+        results.append({"arm": arm, "id": vid, "passed": good,
+                        "expected": want, "actual": shown})
+        if good:
+            continue
+        failures.append({
+            "algorithm": alg,
+            "id": vid,
+            "arm": arm,
+            "input_hex": "",
+            "expected_hex": want,
+            "actual_hex": actual,
+            "probe_status": status,
+            "probe_detail": detail,
+        })
+
+    total = len(expected)
+    passed = total - len(failures)
+    arm_parts = "; ".join(f"{n} {arm}" for arm, n in sorted(per_arm.items()))
+    return {
+        "court": name, "plane": "correctness", "kind": "ml-dsa-vectors",
+        "probe": rel(probe),
+        "candidate_shared_object": rel(candidate_dir / "libcrypto.so.3"),
+        "authority": authority_id,
+        "vectors_checked": total, "vectors_passed": passed,
+        "vectors_failed": len(failures), "calls_checked": total,
+        "arms": per_arm,
+        "results": results, "failures": failures,
+        "stage": "vector-mismatch" if failures else "compare",
+        "verdict": "pass" if not failures else "fail",
+        "claim": (
+            "A correctness-vector PASS means candidate-only construction verification: the "
+            "candidate's ML-DSA keymgmt and signature rows produced the committed expected "
+            f"bytes for the {arm_parts} vectors ({total} total), which are the pinned "
+            "authority's checked-in FIPS 204 / ACVP values mirrored in "
+            f"{rel(ML_DSA_VECTORS)} by gen_ct_ml_dsa_vectors.py. It is NOT OpenSSL parity: the "
+            "corpus does not contain the authority's observable behaviour, and that is "
+            "RT-KEYMGMT's and RT-SIGNATURE's question. It is NOT independent cryptographic "
+            "validation and NOT formal validation; published test vectors are informal "
+            "verification, not a certificate. See docs/DECISIONS.md D201/D208 and "
+            "docs/PHASE-8-SUBPHASES.md."
         ),
     }
 

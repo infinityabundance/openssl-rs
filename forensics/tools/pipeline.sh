@@ -85,6 +85,15 @@ python3 forensics/tools/gen_ml_kem_probe.py
 # pass below cannot move a byte. Runs **before** `cargo fmt`, like the six table generators above.
 python3 forensics/tools/gen_ml_dsa_tables.py
 
+# Phase 8's ML-DSA correctness vectors (D400/D406): `courts/phase8/ct_ml_dsa_vectors.h`, the
+# keygen seeds, signature private keys/messages/contexts and verify public keys/signatures/messages
+# `courts/phase8/ct_ml_dsa.c` drives, together with the expected values in
+# `forensics/atlas/ct-ml-dsa-vectors.json`. It reads them back out of the authority's own FIPS 204
+# / ACVP `evppkey_ml_dsa_*.txt` corpus rather than transcribing them, because an expected value
+# typed from memory is exactly what a correctness court exists to rule out. It runs before
+# `cargo fmt` with the other generators; the header is C, so the formatter cannot move it.
+python3 forensics/tools/gen_ct_ml_dsa_vectors.py
+
 echo "== fmt =="
 cargo fmt --all
 

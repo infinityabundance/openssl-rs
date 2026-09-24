@@ -15,6 +15,7 @@
 use core::ptr;
 
 use crate::provider::activate::OsslAlgorithm;
+use crate::provider::ec_kem::EC_ASYM_KEM_FUNCTIONS;
 use crate::provider::ecx_kem::ECX_ASYM_KEM_FUNCTIONS;
 use crate::provider::ml_kem_kem::ML_KEM_ASYM_KEM_FUNCTIONS;
 use crate::provider::mlx_kem::MLX_ASYM_KEM_FUNCTIONS;
@@ -22,7 +23,7 @@ use crate::provider::rsa_kem::RSA_ASYM_KEM_FUNCTIONS;
 
 /// `static const OSSL_ALGORITHM deflt_asym_kem[]` — `providers/defltprov.c:526-549`, **the rows
 /// this module has landed**, in the authority's order. The `RSA` row is the authority's first; the
-/// `EC` row sits between the two ECX rows and the three ML-KEM rows and is unlanded; the four
+/// `EC` row sits between the two ECX rows and the three ML-KEM rows (`defltprov.c:533`); the four
 /// `mlx` hybrid rows that follow the ML-KEM ones are the authority's last. The two ECX rows are
 /// the authority's second group, the three ML-KEM rows its fourth, and the four hybrids its fifth.
 ///
@@ -31,7 +32,7 @@ use crate::provider::rsa_kem::RSA_ASYM_KEM_FUNCTIONS;
 /// neighbourhood, and the `RSA` alias sequence is long enough that a rustfmt pass could move the
 /// `c"…"` onto its own line.
 #[rustfmt::skip]
-pub(crate) static DEFLT_ASYM_KEM: [OsslAlgorithm; 11] = [
+pub(crate) static DEFLT_ASYM_KEM: [OsslAlgorithm; 12] = [
     OsslAlgorithm {
         // `PROV_NAMES_RSA` (`defltprov.c:527`).
         algorithm_names: c"RSA:rsaEncryption:1.2.840.113549.1.1.1".as_ptr(),
@@ -51,6 +52,14 @@ pub(crate) static DEFLT_ASYM_KEM: [OsslAlgorithm; 11] = [
         algorithm_names: c"X448:1.3.101.111".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
         implementation: ECX_ASYM_KEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_EC` (`defltprov.c:533`, `names.h:341`) — the authority's row between X448
+        // and the ML-KEM group.
+        algorithm_names: c"EC:id-ecPublicKey:1.2.840.10045.2.1".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: EC_ASYM_KEM_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
