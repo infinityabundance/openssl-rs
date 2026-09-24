@@ -827,6 +827,19 @@ COVERED_FILES = [
     # decoder's one, the `PROV_R_NO_KEY_SET` refusal of `slh_dsa_signverify_msg_init`, and the
     # `PROV_R_INVALID_DIGEST` refusal of `slh_dsa_digest_signverify_init`.
     ("providers/implementations/signature/slh_dsa_sig.c", "PROV_SLH_DSA_SIG"),
+    # The ML-DSA core's three raising units. `crypto/ml_dsa/ml_dsa_encoders.c` is a plain `.c`, so
+    # its `__FILE__` carries the source-tree prefix; it raises once, the `PROV_R_INVALID_KEY`
+    # refusal of `ossl_ml_dsa_sk_decode`'s public-key-hash check (`:820`). `ml_dsa_key.c` raises
+    # once (`:501`); see below.
+    # `ml_dsa_sign.c` raises the three `PROV_R_BAD_LENGTH` guards of `ossl_ml_dsa_mu_init` (`:135`),
+    # `ossl_ml_dsa_sign` (`:181`) and `ossl_ml_dsa_verify` (`:344`). `ml_dsa_key.c` raises once, the
+    # `PROV_R_INVALID_KEY` refusal of `ossl_ml_dsa_generate_key`'s "explicit private key does not
+    # match seed" check (`:501`), which `ossl_ml_dsa_key_reset`s the key first. The other five
+    # `crypto/ml_dsa/` units -- `params`, `ntt`, `key_compress`, `sample` and `matrix` -- raise
+    # nothing.
+    ("crypto/ml_dsa/ml_dsa_encoders.c", "ML_DSA_ENCODERS"),
+    ("crypto/ml_dsa/ml_dsa_key.c", "ML_DSA_KEY"),
+    ("crypto/ml_dsa/ml_dsa_sign.c", "ML_DSA_SIGN"),
     # 8.10's `HMAC`/`SIPHASH`/`POLY1305`/`CMAC` signature rows. `signature/mac_legacy_sig.c` is a
     # plain `.c`, so its `__FILE__` carries the source-tree prefix. It raises once, the
     # `PROV_R_NO_KEY_SET` refusal of `mac_digest_sign_init` (`:107`).

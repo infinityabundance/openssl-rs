@@ -29367,3 +29367,89 @@ deferred **0**, open **0**): these units publish no row. `crypto/ml_dsa/sample.c
 export, no court arm, no ledger row, no provider row. `cargo test --lib` is **1037 passed** (the five
 new tests), `cargo clippy --all-targets -- -D warnings` is clean, and the pipeline is `PIPELINE OK`
 with **exit 0**.
+
+## D408 -- `crypto/ml_dsa/` lands whole: the samplers, the encoders, the key object, the signature
+unit and the shared hash header, on D407's arithmetic core
+
+The five remaining `crypto/ml_dsa/*.c` units land here, transcribed whole per D327's rule:
+
+| authority unit | lines | crate module |
+|---|---|---|
+| `crypto/ml_dsa/ml_dsa_sample.c` | 381 | `src/ml_dsa/sample.rs` |
+| `crypto/ml_dsa/ml_dsa_encoders.c` | 1025 | `src/ml_dsa/encoders.rs` |
+| `crypto/ml_dsa/ml_dsa_key.c` | 571 | `src/ml_dsa/key.rs` |
+| `crypto/ml_dsa/ml_dsa_sign.c` | 500 | `src/ml_dsa/sign.rs` |
+| `ml_dsa_hash.h` | 41 | `src/ml_dsa/hash.rs` |
+
+`ml_dsa_hash.h` is shared by four units, so like the three layout headers it belongs to none of
+them and is transcribed once in `hash.rs`. The four header inlines D407 deliberately left out
+(`poly_sample_in_ball_ntt`, `poly_expand_mask`, `vector_expand_mask`, `matrix_expand_A`) and the
+`vector_expand_S` forwarder now join `poly.rs`; every forwarder keeps the header's own arity
+including `vector_expand_mask`'s unused `rho_prime_len`, which the header takes and ignores.
+
+### The three error coordinates are registered, and one this pass first mis-named
+
+`gen_err_raise_sites.py` gains the three raising units: `ml_dsa_encoders.c`'s one
+`PROV_R_INVALID_KEY` (the public-key-hash check of `ossl_ml_dsa_sk_decode`, `:820`),
+`ml_dsa_key.c`'s one (`ossl_ml_dsa_generate_key`'s "explicit private key does not match seed",
+`:501`), and `ml_dsa_sign.c`'s three `PROV_R_BAD_LENGTH` guards (`:135`, `:181`, `:344`) -- five
+constants in all, `ML_DSA_ENCODERS_820`, `ML_DSA_KEY_501`, `ML_DSA_SIGN_135/181/344`. The other five
+`crypto/ml_dsa/` units raise nothing. The registry comment first placed `:501` in
+`ossl_ml_dsa_set_prekey`, which is **wrong** -- that function raises nothing -- and the entry is now
+the correct function. A constant's *name* is line-derived and did not move with the correction; its
+coordinate is what the atlas records.
+
+### The evidence is eight unit tests, and they drive the whole subsystem end to end
+
+The units define no export of their own, so before the two provider units land the evidence is
+`src/ml_dsa/tests.rs`. Five are D407's arithmetic checks; three are new and drive the layer that
+follows:
+
+* `a_generated_key_passes_its_pairwise_check` -- for **all three** parameter sets, `key_new` +
+  `generate_key` + `ossl_ml_dsa_key_pairwise_check`, which signs and verifies internally. One call
+  therefore drives `keygen_internal`, `ExpandA`, `ExpandS`, both NTTs, both encoders and the whole
+  signature path.
+* `a_signature_verifies_and_a_tampered_one_does_not` -- a fixed 32-byte `rnd` makes the randomised
+  signing path deterministic, and a single flipped signature bit must fail.
+* `the_public_key_encoding_round_trips` -- `pk_encode`, then `pk_decode` into a second key, byte for
+  byte, against `ML_DSA_44_PUB_LEN`.
+
+These are **self-consistency** checks, not independent cryptographic correctness: the independent
+plane is the FIPS 204 / ACVP known-answer court that lands with the provider units (D400's rule). What
+they do establish is that the whole transcription is *internally* coherent -- keygen produces a key
+its own verifier accepts, and a tampered signature is rejected -- which is a real class of defect (a
+round constant read from the wrong place would still round-trip, but a mis-ordered hint or a wrong
+encode/decode pair would not).
+
+### Two differences that are Rust requirements, not measured authority faults
+
+Neither is a divergence row in `docs/SECURITY_DIVERGENCE_POLICY.md`, and neither should be one: the
+first is *unreachable* in the authority and the second is observably identical.
+
+* **The `WPACKET` is zero-initialised.** `ossl_ml_dsa_pk_encode` (`:630-651`) declares `WPACKET pkt;`
+  and calls `WPACKET_finish(&pkt)` on its `err` label, which is reached from
+  `if (!WPACKET_init_static_len(...) || !WPACKET_memcpy(...)) goto err;`. If `init` were the arm that
+  failed, `pkt` would be read uninitialised. It cannot fail here -- `enc` is checked non-NULL and
+  `enc_len` is `params->pk_len`, so `init_static_len` always succeeds -- so the authority's read is
+  unreachable and there is nothing to compare. Rust additionally requires the binding to be
+  initialised, so the crate zeroes it, which makes `WPACKET_finish` take its own NULL-`subs` early
+  return on the unreachable arm. Recorded because a reader will see `core::mem::zeroed` and ask.
+* **`CRYPTO_memcmp` at `ossl_ml_dsa_sk_decode`'s hash check.** The authority calls libc `memcmp` at
+  `:819`; the crate calls `CRYPTO_memcmp`, which is the same `== 0` predicate computed in constant
+  time. The observable -- go to the error arm, or do not -- is identical, so this is stricter rather
+  than different. `value_barrier_32` is likewise the crate's `core::hint::black_box`, the spelling
+  D371 records for the sibling in `crypto/ec/curve448/`.
+
+### What remains, and what did not move
+
+`provider_rows` is **unchanged at 299 implemented / 7 unimplemented over 306 owned**, and the export
+ledger is untouched (`complete: true`, implemented **786**, deferred **0**, open **0**): these units
+publish no row either. What is left of Phase 8 is now exactly two units: the two ML-DSA provider
+units (`keymgmt/ml_dsa_kmgmt.c.in` and `signature/ml_dsa_sig.c.in`, **6 rows**) and
+`kem/ec_kem.c.in` (**1 row**). The plan's subphase table (`docs/PHASE-8-SUBPHASES.md` section 2) is the
+*export* plan and ends at 8.10's seal; the provider registration rows are tracked in
+`forensics/atlas/provider-algorithms.json` and `docs/PHASE-8-PROVIDER-ROWS.md`, which is why this pass
+is recorded here as `crypto/ml_dsa/`'s landing rather than as a numbered export subphase.
+`language_census` moves **4967 -> 5014** for the new crate modules and nothing else moves. `cargo test
+--lib` is **1040 passed** (the eight ml_dsa tests among them), `cargo clippy --all-targets -- -D
+warnings` is clean, and the pipeline is `PIPELINE OK` with **exit 0**.

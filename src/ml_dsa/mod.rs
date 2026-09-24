@@ -40,9 +40,14 @@
 
 #![allow(dead_code)]
 
+pub(crate) mod encoders;
+pub(crate) mod hash;
+pub(crate) mod key;
 pub(crate) mod key_compress;
 pub(crate) mod ntt;
 pub(crate) mod poly;
+pub(crate) mod sample;
+pub(crate) mod sign;
 pub(crate) mod tables;
 
 #[cfg(test)]

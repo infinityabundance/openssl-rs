@@ -26,6 +26,7 @@
 use core::ffi::{c_char, c_int};
 use core::ptr;
 
+use crate::evp::digest::{EvpMd, EvpMdCtx};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_memcmp};
 use crate::runtime::secure::{CRYPTO_secure_clear_free, CRYPTO_secure_malloc};
 
@@ -35,6 +36,10 @@ use super::key_compress::{
     ossl_ml_dsa_key_compress_use_hint,
 };
 use super::ntt::ossl_ml_dsa_poly_ntt;
+use super::sample::{
+    ossl_ml_dsa_matrix_expand_A, ossl_ml_dsa_poly_expand_mask, ossl_ml_dsa_poly_sample_in_ball,
+    ossl_ml_dsa_vector_expand_S,
+};
 use super::{
     abs_mod_prime, abs_signed, maximum, mod_sub, reduce_once, ML_DSA_D_BITS,
     ML_DSA_NUM_POLY_COEFFICIENTS, ML_DSA_Q, ML_DSA_RHO_PRIME_BYTES,
@@ -545,6 +550,135 @@ pub(crate) unsafe fn matrix_as_slice(m: &Matrix) -> &[Poly] {
 pub(crate) unsafe fn matrix_mult_vector(a: &Matrix, s: &Vector, t: &mut Vector) {
     // SAFETY: the contract is this function's own; it is forwarded unchanged.
     unsafe { super::ntt::ossl_ml_dsa_matrix_mult_vector(a, s, t) };
+}
+
+/// `matrix_expand_A(g_ctx, md, rho, out)` — `ml_dsa_matrix.h:39-44`, a forwarder to
+/// `ossl_ml_dsa_matrix_expand_A` (`ml_dsa_sample.c:209-239`).
+///
+/// # Safety
+/// `g_ctx` must be a live digest context, `md` a fetched SHAKE128, `rho` readable for
+/// `ML_DSA_RHO_BYTES` bytes, and `out` must name a `k` by `l` block of polynomials.
+#[allow(non_snake_case)] // the authority's own spelling (`matrix_expand_A`)
+pub(crate) unsafe fn matrix_expand_A(
+    g_ctx: *mut EvpMdCtx,
+    md: *const EvpMd,
+    rho: *const u8,
+    out: *mut Matrix,
+) -> c_int {
+    // SAFETY: forwarded under this function's contract.
+    unsafe { ossl_ml_dsa_matrix_expand_A(g_ctx, md, rho, &mut *out) }
+}
+
+/// `poly_sample_in_ball_ntt(out, seed, seed_len, h_ctx, md, tau)` — `ml_dsa_poly.h:73-81`, a
+/// sample-then-`poly_ntt` pair.
+///
+/// # Safety
+/// `out` must name one initialised polynomial, `seed` readable for `seed_len` bytes, and
+/// `h_ctx`/`md` live.
+pub(crate) unsafe fn poly_sample_in_ball_ntt(
+    out: *mut Poly,
+    seed: *const u8,
+    seed_len: c_int,
+    h_ctx: *mut EvpMdCtx,
+    md: *const EvpMd,
+    tau: u32,
+) -> c_int {
+    // SAFETY: forwarded under this function's contract.
+    if unsafe { ossl_ml_dsa_poly_sample_in_ball(&mut *out, seed, seed_len, h_ctx, md, tau) } == 0 {
+        return 0;
+    }
+    // SAFETY: `out` names one initialised polynomial per the contract.
+    poly_ntt(unsafe { &mut *out });
+    1
+}
+
+/// `poly_expand_mask(out, seed, seed_len, gamma1, h_ctx, md)` — `ml_dsa_poly.h:83-88`, a forwarder
+/// to `ossl_ml_dsa_poly_expand_mask` (`ml_dsa_sample.c:298-309`).
+///
+/// # Safety
+/// `out` must name one initialised polynomial, `seed` readable for `seed_len` bytes, and
+/// `h_ctx`/`md` live.
+pub(crate) unsafe fn poly_expand_mask(
+    out: *mut Poly,
+    seed: *const u8,
+    seed_len: usize,
+    gamma1: u32,
+    h_ctx: *mut EvpMdCtx,
+    md: *const EvpMd,
+) -> c_int {
+    // SAFETY: forwarded under this function's contract.
+    unsafe { ossl_ml_dsa_poly_expand_mask(&mut *out, seed, seed_len, gamma1, h_ctx, md) }
+}
+
+/// `vector_expand_S(h_ctx, md, eta, seed, s1, s2)` — `ml_dsa_vector.h:148-153`, a forwarder to
+/// `ossl_ml_dsa_vector_expand_S` (`ml_dsa_sample.c:259-295`).
+///
+/// # Safety
+/// `s1` must name `l` polynomials, `s2` must name `k` polynomials, `seed` must be readable for
+/// `ML_DSA_PRIV_SEED_BYTES` bytes, and `h_ctx`/`md` must be live.
+#[allow(non_snake_case)] // the authority's own spelling (`vector_expand_S`)
+pub(crate) unsafe fn vector_expand_S(
+    h_ctx: *mut EvpMdCtx,
+    md: *const EvpMd,
+    eta: c_int,
+    seed: *const u8,
+    s1: *mut Vector,
+    s2: *mut Vector,
+) -> c_int {
+    // SAFETY: forwarded under this function's contract.
+    unsafe { ossl_ml_dsa_vector_expand_S(h_ctx, md, eta, seed, &mut *s1, &mut *s2) }
+}
+
+/// `vector_expand_mask(out, rho_prime, rho_prime_len, kappa, gamma1, h_ctx, md)` —
+/// `ml_dsa_vector.h:155-174`.
+///
+/// The header copies its fixed `ML_DSA_RHO_PRIME_BYTES` bytes, not the `rho_prime_len` it is
+/// handed, and puts the two counter bytes after them; the length is kept as a parameter because the
+/// header takes it, and is unused exactly as it is there.
+///
+/// # Safety
+/// `rho_prime` must be readable for `ML_DSA_RHO_PRIME_BYTES` bytes, `out` must name `num_poly`
+/// initialised polynomials, and `h_ctx`/`md` must be live.
+pub(crate) unsafe fn vector_expand_mask(
+    out: *mut Vector,
+    rho_prime: *const u8,
+    _rho_prime_len: usize,
+    kappa: u32,
+    gamma1: u32,
+    h_ctx: *mut EvpMdCtx,
+    md: *const EvpMd,
+) {
+    let mut derived_seed = [0u8; VECTOR_EXPAND_MASK_SEED_LEN];
+    // SAFETY: `rho_prime` is readable for `ML_DSA_RHO_PRIME_BYTES` bytes per the contract.
+    unsafe {
+        ptr::copy_nonoverlapping(rho_prime, derived_seed.as_mut_ptr(), ML_DSA_RHO_PRIME_BYTES)
+    };
+
+    // SAFETY: `out` names `num_poly` polynomials per the contract.
+    let vector = unsafe { &mut *out };
+    let n = vector.num_poly;
+    for i in 0..n {
+        let index = kappa + i as u32;
+        derived_seed[ML_DSA_RHO_PRIME_BYTES] = (index & 0xFF) as u8;
+        derived_seed[ML_DSA_RHO_PRIME_BYTES + 1] = ((index >> 8) & 0xFF) as u8;
+        // SAFETY: `out.poly + i` names one initialised polynomial and `derived_seed` is a live
+        // `ML_DSA_RHO_PRIME_BYTES + 2`-byte buffer.
+        unsafe {
+            poly_expand_mask(
+                vector.poly.add(i),
+                derived_seed.as_ptr(),
+                derived_seed.len(),
+                gamma1,
+                h_ctx,
+                md,
+            );
+        }
+    }
+    // `OPENSSL_cleanse(derived_seed, sizeof(derived_seed))`.
+    // SAFETY: `derived_seed` is a live local of exactly that size.
+    unsafe {
+        crate::runtime::mem::OPENSSL_cleanse(derived_seed.as_mut_ptr().cast(), derived_seed.len())
+    };
 }
 
 /// The `ML_DSA_RHO_PRIME_BYTES + 2`-byte derivation buffer `vector_expand_mask` fills.

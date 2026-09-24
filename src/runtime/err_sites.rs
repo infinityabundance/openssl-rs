@@ -28442,6 +28442,56 @@ pub(crate) const PROV_SLH_DSA_SIG_418: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ossl_ml_dsa_sk_decode` at `crypto/ml_dsa/ml_dsa_encoders.c:820` (PROV_R_INVALID_KEY).
+pub(crate) const ML_DSA_ENCODERS_820: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_encoders.c",
+    line: 820,
+    func: c"ossl_ml_dsa_sk_decode",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_dsa_generate_key` at `crypto/ml_dsa/ml_dsa_key.c:501` (PROV_R_INVALID_KEY).
+pub(crate) const ML_DSA_KEY_501: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_key.c",
+    line: 501,
+    func: c"ossl_ml_dsa_generate_key",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_dsa_mu_finalize` at `crypto/ml_dsa/ml_dsa_sign.c:135` (PROV_R_BAD_LENGTH).
+pub(crate) const ML_DSA_SIGN_135: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_sign.c",
+    line: 135,
+    func: c"ossl_ml_dsa_mu_finalize",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_sign_internal` at `crypto/ml_dsa/ml_dsa_sign.c:181` (PROV_R_BAD_LENGTH).
+pub(crate) const ML_DSA_SIGN_181: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_sign.c",
+    line: 181,
+    func: c"ml_dsa_sign_internal",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_verify_internal` at `crypto/ml_dsa/ml_dsa_sign.c:344` (PROV_R_BAD_LENGTH).
+pub(crate) const ML_DSA_SIGN_344: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_sign.c",
+    line: 344,
+    func: c"ml_dsa_verify_internal",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
 /// `mac_digest_sign_init` at `providers/implementations/signature/mac_legacy_sig.c:107` (PROV_R_NO_KEY_SET).
 pub(crate) const PROV_MAC_LEGACY_SIG_107: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/providers/implementations/signature/mac_legacy_sig.c",
@@ -43334,6 +43384,11 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_SLH_DSA_SIG_323,
     PROV_SLH_DSA_SIG_334,
     PROV_SLH_DSA_SIG_418,
+    ML_DSA_ENCODERS_820,
+    ML_DSA_KEY_501,
+    ML_DSA_SIGN_135,
+    ML_DSA_SIGN_181,
+    ML_DSA_SIGN_344,
     PROV_MAC_LEGACY_SIG_107,
     RSA_LIB_85,
     RSA_LIB_106,

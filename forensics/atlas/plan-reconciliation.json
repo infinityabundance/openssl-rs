@@ -3743,26 +3743,26 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 320
+      "transcribed_units": 324
     }
   },
-  "body_hash": "03deb57d3276df220306fa7ba6eaf150b142e0f1e25b561723b7b934aa3db183",
+  "body_hash": "6da4b81da766b8d4bdd71bb2efc54ff087888fbcfd7727bdf4148284ec3eefd4",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "f4929c977f3851193cffab26ca3a1ffa725977bf3b83e9863df25348fe6351b2"
+      "sha256": "9f574a902c83f1e3a2e2850ae9a31ffdff6eb3158241371c15865e4759c42c31"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "4c924b95fc9f8e3d08224d89ef154a73617b04f9ecbb6dd8f5dfb351ab01227a"
+      "sha256": "65b048be83ee0eddd721e86b8b5f3f77ae4215e760e73d5fe357d5c3c366ef98"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "687050ee36227eece7d6eff956f35641329535517ae52179e60a67ee82bc6b5f"
+      "sha256": "0f8d9a83ca4d45660454291a14f52ade9e42b6926585827704cd98a83f185046"
     },
     {
       "name": "phase-state",
