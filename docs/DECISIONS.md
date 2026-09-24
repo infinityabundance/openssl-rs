@@ -29863,20 +29863,29 @@ the same reason: every local run passes, because the local tree has the authorit
 
 An `Acquire authority` step -- `python3 forensics/tools/authority_acquire.py --all`, the same
 invocation the `courts` job uses and hash-verified against `forensics/authorities/AUTHORITIES.json` --
-is added to both jobs ahead of the step that compiles test targets. In `static` it also puts the two
-gates that read the authority source tree (`prerequisite_gate.py`, `plan_reconciliation.py`) into the
-configuration they were developed in, rather than one where those checks are skipped.
+is added to both jobs ahead of the step that compiles test targets.
+
+**In `static` it is stood back down immediately after, and that is the fix rather than a formality.**
+Every later step in that job is designed to run *without* the authority: the generators have a
+documented two-tier check and print which tier ran ("ok (weak tier, authority source absent)"), and
+this job's committed-artefact comparisons are that weak tier by construction. Acquiring the authority
+job-wide was tried first and CI refused it, correctly: `gen_err_raise_sites.py` reads a file the
+authority's *build* tree generates, so a source tree without a build tree is a state **no tier
+covers** -- stronger than weak, so it must find every file, and unable to, because nothing built it.
+The narrow form keeps each step in the configuration it was written for.
 
 **Fixing the tests instead was considered and rejected.** Extracting the vectors into a committed
-artefact -- the pattern `forensics/tools/gen_ct_ml_dsa_vectors.py` used for `CT-ML-DSA`'s header --
-would remove a twelve-megabyte dependency, but it would also turn the authority's own file into a
-second transcription, which is the exact property the tests' own comments say they were written to
-avoid. The correct fix for "a test needs the authority" is to provide the authority, not to relocate
-it.
+artefact -- the pattern `forensics/tools/gen_ct_ml_dsa_vectors.py` used for `CT-ML-DSA`'s header, and
+`gen_ml_kem_probe.py` already uses for the ML-KEM keygen KATs -- would remove an eleven-megabyte
+dependency, but it would also turn the authority's own file into a second transcription, which is the
+exact property the tests' own comments say they were written to avoid. The correct fix for "a test
+needs the authority" is to provide the authority where the test runs, not to relocate it.
 
 ### Movement
 
 `.github/workflows/ci.yml` only. No crate source, no ledger, no court and no count moves. Verified by
 locality rather than asserted: with the authority present -- which is the state every local pipeline
 run has always been in -- `cargo clippy --all-targets -- -D warnings` is clean, `cargo test --lib` is
-1045 passed, and `prerequisite_gate.py` and `plan_reconciliation.py` are at 0 findings.
+1045 passed, and `prerequisite_gate.py` and `plan_reconciliation.py` are at 0 findings; and with it
+absent, `evidence_determinism.py` is the weak-tier run `static` has always made, which is what
+`main`'s own green history records.

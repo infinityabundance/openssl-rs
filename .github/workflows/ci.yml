@@ -99,17 +99,6 @@ jobs:
           rustc --version
           cargo --version
 
-      # The unit tests are not forensic evidence (docs/CUSTODIAN_CONTRACT.md §11), but
-      # three of them do embed the authority's own vector files with `include_str!`
-      # rather than retyping them, so `cargo test --lib` cannot compile a target in this
-      # job without the authority source tree -- which git ignores because it is
-      # reproducible. This job never needed the authority before those tests existed.
-      # Acquiring it here also makes the two gates below run in the configuration they
-      # were developed in, rather than in one where the authority-source checks they
-      # document are skipped. See D414.
-      - name: Acquire authority
-        run: python3 forensics/tools/authority_acquire.py --all
-
       - name: Formatting
         run: cargo fmt --all -- --check
 
@@ -118,8 +107,23 @@ jobs:
 
       # Pure Rust tests: no authority, and per docs/CUSTODIAN_CONTRACT.md §11 they
       # are not forensic evidence. Everything authority-bearing is in `courts`.
+      # The unit tests are not forensic evidence (docs/CUSTODIAN_CONTRACT.md §11), but three of
+      # them embed the authority's own vector files with `include_str!` rather than retyping them,
+      # so the test target cannot compile without the authority source tree -- which git ignores
+      # because it is reproducible. It is acquired for these two steps and then stood back down,
+      # because **every later step in this job is designed to run without it**: the generators have
+      # a documented two-tier check and print which tier ran, and this job's committed-artefact
+      # comparisons are the weak tier -- "authority source absent" -- by construction. Acquiring it
+      # job-wide was tried first and is wrong: a source tree without the build tree is a state no
+      # tier covers, and `gen_err_raise_sites.py` correctly refused it. See D414.
+      - name: Acquire authority, for the test targets
+        run: python3 forensics/tools/authority_acquire.py --all
+
       - name: Unit tests
         run: cargo test --lib -- --test-threads=1
+
+      - name: Stand the authority back down
+        run: rm -rf forensics/authorities/src forensics/authorities/downloads
 
       - name: Forbidden implementation backends
         run: python3 forensics/tools/check_forbidden_dependencies.py
