@@ -116,6 +116,10 @@ pub mod mac;
 // are built on. The module is new here; no provider row is published by it yet, so it is
 // `pub(crate)` like `crypto/slh_dsa/` was, and reached only by its own tests.
 pub(crate) mod ml_kem;
+// Phase 8's `crypto/ml_dsa/` (FIPS 204): the eight translation units the six keymgmt and signature
+// rows are built on. Like `crypto/ml_kem/` and `crypto/slh_dsa/`, it is `pub(crate)` and reaches no
+// provider row yet, so it is exercised by its own tests until its provider units land.
+pub(crate) mod ml_dsa;
 pub mod modes;
 pub mod params;
 // Phase 8.7's `crypto/param_build_set.c`: the two-way key-management writers a provider's
