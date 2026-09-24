@@ -439,6 +439,7 @@
           "src/rand/unix.rs",
           "src/provider/seeding.rs",
           "src/provider/util.rs",
+          "docs/PHASE-9-RAND-DRBG-SEAL.md",
           "forensics/phase9-obligations.json",
           "artifacts/phase9/COURTS.json",
           "forensics/atlas/court-coverage.json",
@@ -452,7 +453,7 @@
           "implemented": 15,
           "owned": 15
         },
-        "seal_sha256": null,
+        "seal_sha256": "a0a9c851f42b0fd7c27a5390da4656a9e41dcf5fbaaa9b5d2bc6ec80b908f9c0",
         "state": "complete",
         "stratum": "RAND / DRBG + entropy"
       },
@@ -616,7 +617,7 @@
       "not_started": 12
     }
   },
-  "body_hash": "f2e23d8a01331c06370646cc63e3aab6cedc96318ee651b7d71354fde9ca5d59",
+  "body_hash": "a01f7ee4d3b6dcbe2882fadd11b3d616614d002be31d0b74f9a6437066c4bc18",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

@@ -30285,3 +30285,36 @@ definition, so `implemented-surface.json`'s `internal_symbols.c_style` moves 456
 is the plan's own last artifact and has not been written. `CT-DRBG` is still a pending court, and
 `CT-BN-RAND` -- named by `docs/PHASE-9-SUBPHASES.md` row 9.1 -- is in neither `phase9_courts.py`'s
 registered set nor its pending set, which is a gap in the runner rather than a court nobody ran.
+
+## D422 -- Phase 9 seals, and the seal's own section 6 is where its two gaps live
+
+`docs/PHASE-9-RAND-DRBG-SEAL.md` (500 lines) exists, is registered in `atlas_common.SEAL_DOCS` and in
+`phase_state.PHASE9_MODULES`, and is the plan's own row 9.7 -- `docs/PHASE-9-SUBPHASES.md` §2 gains
+that row in this commit. `forensics/phase-state.json`'s phase 9 now carries
+`seal_sha256: a0a9c851f42b0fd7c27a5390da4656a9e41dcf5fbaaa9b5d2bc6ec80b908f9c0`.
+
+**Registering it is what makes the machinery's own rule true.** `phase_state.py`'s phase 6, 7 and 8
+entries each carry the comment *"a stratum may only report `complete` with its seal in place"*, and
+that rule is enforced by the seal doc being in the stratum's evidence list: an absent required
+evidence file makes the state `in-progress` with a blocking reason. Phase 9 had no such line, so it
+reached `complete` at D421 with `seal_sha256: null` -- the rule was false for exactly one stratum, and
+the stratum that had just landed. The line is added in the commit that writes the document, which is
+the order phases 6, 7 and 8 all used.
+
+### What the seal says, including what it does not
+
+Its §7 checks all ten of `docs/RELEASE_GATES.md` §2's items. Seven are met from the generated
+artifacts; three are the **FRF-chain** items (captures, residuals, challenges, receipts) and the Gemel
+checkpoint, which Phase 8 entered and Phase 9 has not. Its §6 names six things that are explicitly
+not claimed: the entropy pool's source is environmental and nothing here is a parity claim about
+entropy; `CT-DRBG` is a pending court; **`CT-BN-RAND` is named by the plan's row 9.1 and is in neither
+`forensics/tools/phase9_courts.py`'s registered set nor its pending set**, which is a gap in the
+runner rather than a court nobody ran; `BIO_f_reliable`'s write path is owed to Phase 13; the TDES
+init pair substitution D418 records, with its three measured deltas; and the base provider's three
+unlanded operation ids.
+
+So phase 9 is `complete` on its ledger, its provider rows and its four courts, and its seal says in
+its own words where that is weaker than Phase 8's. The three remaining artifacts are named rather
+than implied: the FRF chain entry, `CT-DRBG`, and `CT-BN-RAND`.
+
+`PIPELINE OK` exit 0.

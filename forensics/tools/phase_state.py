@@ -707,6 +707,12 @@ PHASE9_MODULES = [
     # named here -- nothing else in the evidence machinery sees them.
     "src/provider/seeding.rs",
     "src/provider/util.rs",
+    # 9.7 -- the seal. A stratum may only report `complete` with its seal in place, which is the
+    # rule phases 3 through 8 already follow and which is the reason this line is added in the
+    # commit that writes the document rather than after it. Without it phase 9 could reach
+    # `complete` with no seal at all, and `phase_state.py`'s own claim -- "a stratum may only
+    # report `complete` with its seal in place" -- would be false for exactly one stratum.
+    "docs/PHASE-9-RAND-DRBG-SEAL.md",
 ]
 
 STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
