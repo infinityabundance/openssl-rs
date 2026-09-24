@@ -154,7 +154,7 @@ FRF claims and Gemel memory:
 
 ```
 .frf/                     FRF store: authorities, captures, residuals, receipts, claims
-forensics/frf/courts/     the CLI trajectory courts and the 62 generated runtime courts (phases 3-7)
+forensics/frf/courts/     the CLI trajectory courts and the 77 generated runtime courts (phases 3-8)
 forensics/frf/refs/       authority/candidate reference wrappers
 ```
 

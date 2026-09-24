@@ -766,7 +766,16 @@ static void ec_kdf_arms(void)
 int main(void)
 {
     size_t n, i;
-    EC_builtin_curve one[2];
+    /* The sentinel the fourth call below observes: `EC_get_builtin_curves(one, 1)` writes exactly
+     * one row and must leave `one[1]` alone. **It has to be set, not merely described.** This
+     * probe's first version left `one` uninitialised and printed `one[1]`'s indeterminate contents
+     * as if they were that sentinel; the court venue happened to read 0 on both sides so the arm
+     * passed, while FRF's venue read 0 against the authority and 26 against the candidate -- a
+     * defect in this probe rather than a divergence in the library, and the class
+     * `forensics/tools/probe_hygiene.py` exists to catch. `-1` is a NID no builtin curve row can
+     * carry, so a row the function really had written there could not be mistaken for the sentinel.
+     * `D411`'s pass fixed it; the `one[0]` half is written by the call either way. */
+    EC_builtin_curve one[2] = { { 0, NULL }, { -1, NULL } };
 
     /* One line per observation, so a crash on either side is located by the last line rather
      * than by a block-sized guess. */
@@ -776,7 +785,8 @@ int main(void)
 
     /* The four call shapes, in the authority's own order of tests: the NULL table and the
      * zero-length one both answer the length without writing; the one-entry one answers the length
-     * having written exactly one row, and the second entry is still the sentinel it was. */
+     * having written exactly one row, and the second entry is still the `{-1, NULL}` sentinel it
+     * was set to above. */
     n = EC_get_builtin_curves(NULL, 0);
     printf("count=%zu\n", n);
     printf("count.nitems0=%zu\n", EC_get_builtin_curves(one, 0));

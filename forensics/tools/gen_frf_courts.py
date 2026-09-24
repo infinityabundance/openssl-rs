@@ -374,6 +374,58 @@ COURTS: list[tuple[str, int, str, str]] = [
     ("rt-evp-pkey-ops", 7, "rt_evp_pkey_ops_probe",
      "the `EVP_PKEY_CTX` accessor surface and the `EVP_PKEY` operation entry "
      "points, driven through a keymgmt this probe publishes"),
+    # Phase 8 — the native cryptographic primitives.
+    #
+    # Each description is the court's own one-line subject, the line its probe
+    # header opens with, carried here as the Phase 7 rows carry theirs (D200).
+    #
+    # The three `CT-*` correctness courts are deliberately absent. They are not
+    # differential: `forensics/tools/correctness_vectors.py` compiles each probe
+    # once against the candidate alone and compares its output with committed
+    # expected bytes, so a `CT-*` court has no authority transcript to diff, no
+    # `artifacts/phase8/probes/<probe>.{authority,candidate}` pair to stage and no
+    # `{fixture}` for a challenge to locate (D13, D201). They are declared by
+    # `phase8_courts.py`'s `CORRECTNESS_COURTS`, `CIPHER_CORRECTNESS_COURTS` and
+    # `ML_DSA_CORRECTNESS_COURTS`, and their evidence is the `CT-*` rows of
+    # `artifacts/phase8/COURTS.json`; a manifest generated from this table would
+    # name execution-context artifacts that do not exist.
+    ("rt-digest", 8, "rt_digest_probe",
+     "the differential digest probe (RT-DIGEST)"),
+    ("rt-cipher", 8, "rt_cipher_probe",
+     "the differential cipher-mode probe (RT-CIPHER), first arm: the non-AEAD "
+     "`modes.h` helpers"),
+    ("rt-cipher-mem", 8, "rt_cipher_mem_probe",
+     "which authority translation unit does each default-provider cipher row "
+     "pass as the `file` argument to a caller-installed allocator?"),
+    ("rt-rsa", 8, "rt_rsa_probe",
+     "the differential court for `crypto/rsa`'s method table and object layer "
+     "(Phase 8.4, slices A and B)"),
+    ("rt-dh", 8, "rt_dh_probe",
+     "the differential court for `crypto/dh/` (Phase 8.5)"),
+    ("rt-dsa", 8, "rt_dsa_probe",
+     "the differential court for `crypto/dsa/` (Phase 8.6)"),
+    ("rt-ec", 8, "rt_ec_probe",
+     "the differential court for `crypto/ec/` (Phase 8.7)"),
+    ("rt-ameth", 8, "rt_ameth_probe",
+     "Phase 8.8's `EVP_PKEY_ASN1_METHOD` registry court"),
+    ("rt-pem-key", 8, "rt_pem_key_probe",
+     "the differential court for `crypto/pem/pem_all.c`, `pem_lib.c`'s "
+     "plumbing and `pem_oth.c` (Phase 8.9 / Phase 9 staging, D350)"),
+    ("rt-pubkey", 8, "rt_pubkey_probe",
+     "the differential court for `crypto/x509/x_pubkey.c` and "
+     "`crypto/pem/pem_pkey.c`'s read half (D369)"),
+    ("rt-ecx", 8, "rt_ecx_probe",
+     "Phase 8.8's X25519/X448/Ed25519/Ed448 method court"),
+    ("rt-keymgmt", 8, "rt_keymgmt_probe",
+     "Phase 8's key-management, key-exchange and KEM registration court"),
+    ("rt-signature", 8, "rt_signature_probe",
+     "Phase 8's `OSSL_OP_SIGNATURE` registration-row court"),
+    ("rt-asym-cipher", 8, "rt_asymcipher_probe",
+     "Phase 8.4's `OSSL_OP_ASYM_CIPHER` and `OSSL_OP_KEM` registration-row "
+     "court"),
+    ("rt-provider-cap", 8, "rt_provider_cap_probe",
+     "the default provider's third dispatch-table face: `GETTABLE_PARAMS`, "
+     "`GET_PARAMS` and `GET_CAPABILITIES`"),
 ]
 
 

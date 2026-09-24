@@ -29699,3 +29699,139 @@ are unchanged.
 
 Phases 3-7 gain a `seal_sha256`; phase 8 stays `null` until its own document lands. No court moves, no
 ledger moves, and `docs/SEAL-CENSUS.md`'s per-stratum `seal:` lines keep their existing meaning.
+
+## D413 -- Phase 8 joins the FRF chain, and the chain's venue finds a defect in the stratum's own probe
+
+Fifteen declarations, fifteen receipts, thirty challenge records, a compiled claim, three Gemel
+checkpoints -- and an uninitialised read that the court venue could not see.
+
+### The gap was `RELEASE_GATES` section 2's, not the plan's
+
+`docs/RELEASE_GATES.md` section 2 is the phase-exit rule and it applies to every stratum: "A phase does
+**not** end on implementation presence. Each phase ends with:" a list whose item 3 is court
+manifests, item 8 FRF receipts and item 10 a Gemel checkpoint. Phase 8 had the third and neither of
+the last two. `docs/PHASE-8-SUBPHASES.md` section 4 requires courts rather than FRF declarations --
+the words FRF and Gemel do not occur in that document at all -- so the plan never named the gap, and
+`gen_frf_courts.py --check` verifies the declaration table against its own output rather than
+asserting that any stratum has declarations. This is the same gap D200 repaired for Phase 7, and it
+is repaired the same way. Phase 7 is also the precedent for the *shape* of the repair: D196 sealed
+the stratum with zero declarations and called it "the landed convention rather than a gap", and D200
+reversed that reading because it is "a *weaker evidence class* than the earlier strata's". The same
+reading applies here, which is why this entry does not seal first and declare later.
+
+### The declarations, and the three courts that cannot have them
+
+Fifteen `(id, phase, probe, description)` rows were added to `forensics/tools/gen_frf_courts.py`'s
+`COURTS` table, one per differential court, each naming the
+`artifacts/phase8/probes/<probe>.{authority,candidate}` pair the court stages and the
+`courts/phase8/<probe>.c` it was compiled from. The generator wrote **154 files for 77 courts** where
+the table previously read 62 courts and 124 files, and `--check` moved from
+`ok: 124 file(s) match the table (62 courts)` to `ok: 154 file(s) match the table (77 courts)`. The
+declarations are `forensics/frf/courts/openssl-rs-rt-{digest,cipher,cipher-mem,rsa,dh,dsa,ec,ameth,pem-key,pubkey,ecx,keymgmt,signature,asym-cipher,provider-cap}`.
+`forensics/frf/run_courts.sh` derives its court list by globbing that directory, so a court added here
+is run at the next store recreation by construction rather than by a list.
+
+**The three `CT-*` courts are not declarable, and the reason is the instrument rather than the
+courts.** `CT-DIGEST`, `CT-CIPHER` and `CT-ML-DSA` are vector-driven:
+`forensics/tools/correctness_vectors.py` compiles each probe once against the candidate alone and
+compares its output with committed expected bytes, so such a court has no authority transcript to
+diff, no staged `{authority,candidate}` pair and no fixture a challenge could locate (D13, D201). A
+manifest generated from the table would name execution-context artifacts that do not exist and would
+fail at admission. The table's Phase 8 block declares the fifteen and records the three-name omission
+with that reason rather than fabricating rows; the three still run in the pipeline, and
+`artifacts/phase8/COURTS.json` carries their counts.
+
+### The chain, and the store was added to rather than recreated
+
+The invocations are the ones `run_courts.sh` makes -- `court run`, `receipt emit`, `court challenge`,
+`claim compile --policy sensitivity-backed` -- run in the FRF tooling container
+(`bash docker/openssl-rs-frf-court.sh up`/`exec`), never on the host, and **without** the
+`rm -rf "$ROOT"` that `run_courts.sh` begins with, because `.frf/` is committed evidence and D200 set
+the precedent of adding to it. **Fifteen receipts** were emitted, one per declared court, and **thirty
+challenge records**, both declared axes on every court, every one adjudicated with `saw_defect: true`
+and `specificity_clean: true` and none refused -- which is what makes the claim `sensitivity-backed`
+rather than merely green (D13). The store moved captures 198 -> 246, challenges 132 -> 164, receipts
+66 -> 82, claims 6 -> 8 and residuals 135 -> 168, with `graph_verified: yes` and
+`object_closure: complete`.
+
+### The defect, and it is in this project's own probe
+
+`RT-EC`'s first real run diverged on exactly one observation of a 2,420-line transcript:
+`short.tail=0,1` against the authority and `short.tail=26,1` against the candidate.
+`courts/phase8/rt_ec_probe.c` declared `EC_builtin_curve one[2]` without an initialiser and then
+printed `one[1]` as "the sentinel it still is" -- a sentinel the comment described and the code never
+set -- while `EC_get_builtin_curves(one, 1)` writes `min(1, 82) = 1` row and leaves `one[1]`
+untouched. It is an **uninitialised stack read**: deterministic per binary (0 for the authority, 26 for
+the candidate) and **environment-dependent across venues**, which is why the court venue of
+`artifacts/phase8/COURTS.json` reads 0 on both sides and passes while FRF's venue reads 0 against 26
+and raises a residual. That places it in `forensics/tools/probe_hygiene.py`'s class -- the same class
+C61's RT-PARAM residual was in -- and **not** in the candidate. The probe was corrected to declare
+`EC_builtin_curve one[2] = { { 0, NULL }, { -1, NULL } }`, `-1` being a NID no builtin curve row can
+carry so a row the call really had written there could not be mistaken for the sentinel; the
+transcript now reads `short.tail=-1,1` on both sides, and the arm's "only `min` entries are written"
+observation is made by construction rather than by accident. `RT-EC` was re-observed clean under a
+**new** run identity (`6493159b`, because the probe binaries in the execution context changed) with
+**0 residuals**.
+
+### The disposition, and what the vocabulary actually says
+
+A clean receipt did **not** admit the claim, and the mechanism is counter-intuitive enough to record:
+FRF admits a claim over each premise's *clean* surface, the corrected `RT-EC` receipt's clean surface
+is the full `{stdout, exit}`, so the claim's `RT-EC` cell **widened** onto the surface the pre-fix
+residual occupies -- and the pre-fix residual still intersected it. The earlier claim was admissible
+only because its `RT-EC` premise was itself dirty and FRF had narrowed the cell to `[exit]` first. So
+a clean receipt made the claim harder to get, not easier.
+
+That forced a disposition, and the disposition is not a free choice. FRF's compiler names the blocking
+set in source rather than in prose: `is_scope_blocking` in `frf/src/commands/claim.rs` matches
+`open | unknown | nonreproduced | stabilized`, with the comment that `fixed` is the **only**
+remediation-evidence state and that `nonreproduced` and `stabilized` observe disappearance *without a
+candidate change*, which is "real evidence of nondeterminism, never a license to claim
+compatibility". `nonreproduced` was therefore applied first and **refused as a resolution** -- which is
+how that rule was measured rather than assumed. Of the eight settable dispositions, `fixed` requires a
+resolution run under a **changed candidate artifact** and the candidate never changed (it is the same
+`e4f60d8b`, which is the whole point of the finding); `intentional` and `oracle_version` would both be
+false statements about what happened; and **`environmental`** is the one that describes the mechanism,
+because the value came from the execution envelope and never from either library. The residual moved
+`open -> nonreproduced -> environmental`, each transition carrying a reason, and the `environmental`
+reason states the probe defect, the venue-dependence and the candidate's unchanged identity outright.
+**The pre-fix capture, receipt and residual remain in the store** with their original content
+addresses: nothing was removed and nothing was rewritten.
+
+### Two claims, and the second is the stronger one
+
+`642866a3...` was compiled in the first pass with zero blockers, and it binds `RT-EC` by its **exit
+class alone**; `40c229c5...` was compiled once the disposition landed, over the same fifteen receipts
+(the fourteen unchanged plus `RT-EC`'s fresh one, and deliberately not the pre-fix one), with zero
+blockers and **all fifteen premises asserting both stdout and exit** -- `rt-ec` among them. Its own
+non-claims are emitted beside it: it does not establish byte-identical stderr, full CLI
+compatibility, or drop-in replacement for all `rt-digest` behaviour.
+
+### The Gemel checkpoints
+
+Three additive changes, in `court/gemel-7.7.sh`'s manner: **`C74`/`K45`** the FRF closure and the
+defect the venue found, **`C75`/`K46`** the probe fix with the refusal recorded, and **`C76`/`K47`**
+the disposition and the corrected claim. `K47` is `forensics/GEMEL_TRAJECTORY.md`'s `current:`, and
+the projection is append-only, so a reader can follow the finding, the fix and the disposition --
+including the change in which the claim was refused. The store's `.gemel` is not Git-tracked (D17);
+the projection, rendered by `forensics/tools/render_gemel_trajectory.sh` inside the FRF
+container, is the travel-in-Git evidence.
+
+### Movement
+
+The FRF table moves **62 -> 77 courts** and **124 -> 154 files**, which made five hand-written counts
+stale: `README.md`'s "62 generated runtime courts", two counts in `forensics/frf/README.md` and
+`docs/RELEASE_GATES.md`'s "the alternative is 62 YAML", plus the FRF README's per-phase breakdown,
+which now carries the Phase 8 fifteen. `docs_consistency.py` caught all five and they were corrected
+rather than exempted -- which is the gate working, and the reason the FRF README already said of
+itself that "this line can [fall behind]: it is prose rather than a projection".
+
+No Rust source moves in this closure beyond the probe, no ledger moves -- `provider_rows` stays
+306/306 over 306 owned and the export ledger stays at `complete: true`, implemented **786**,
+deferred **0**, open **0** -- and `artifacts/phase8/COURTS.json` stays `all_pass` true over eighteen
+courts with `RT-EC`'s observation count unchanged at 2419, because the corrected probe still emits
+one line for the arm it fixed. `cargo test --lib` is **1045 passed**, `cargo clippy --all-targets --
+-D warnings` is clean, `prerequisite_gate.py` and `plan_reconciliation.py` are at **0 findings**, and
+the pipeline is `PIPELINE OK` with **exit 0**. **`docs/PHASE-8-CRYPTO-SEAL.md`, the plan's 8.10, lands
+with this entry**, and `forensics/phase-state.json` now derives phase 8 `complete` **with a
+`seal_sha256`** rather than merely `complete`.
