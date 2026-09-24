@@ -7,7 +7,7 @@
         "unmatched": 0
       },
       "9": {
-        "implemented": 12,
+        "implemented": 13,
         "unmatched": 0
       }
     },
@@ -58,8 +58,8 @@
         ]
       }
     ],
-    "directly_courted": 318,
-    "implemented_rows": 318,
+    "directly_courted": 319,
+    "implemented_rows": 319,
     "rows": [
       {
         "algorithm_names": "RSA",
@@ -1875,6 +1875,21 @@
         "coverage": "direct",
         "operation": "OSSL_OP_CIPHER",
         "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "DES3-WRAP",
+        "aliases": [
+          "DES3-WRAP",
+          "id-smime-alg-CMS3DESwrap",
+          "1.2.840.113549.1.9.16.3.6"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 9,
         "provider": "default"
       },
       {
@@ -4705,7 +4720,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "f665b2ef7972a04c7b343e89a6ad35fbb46a7c1142e162d74cbdfe8a10f32afe"
+      "sha256": "a54a586ca3fb4230a0fd213b5c4f49d40a976ab78ddb20c65546ddb46c8d8159"
     },
     {
       "name": "court:RT-DIGEST:rt_digest_probe.c",
@@ -4715,7 +4730,7 @@
     {
       "name": "court:RT-CIPHER:rt_cipher_probe.c",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "6d5ee995be69a38171bf8bb230aab8605437fab4e434b49f8bfc730914b5d7af"
+      "sha256": "4fe4eff1e3f592b8246086a52b10939b1e877c961c3e083a7b68639ef33c75c3"
     },
     {
       "name": "court:RT-DRBG:rt_drbg_probe.c",

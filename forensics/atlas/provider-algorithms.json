@@ -76,14 +76,14 @@
       "handed_on": {
         "10": 39,
         "13": 0,
-        "8": 678,
+        "8": 677,
         "9": 675
       },
       "open": {
         "10": 636,
         "13": 39,
         "8": 0,
-        "9": 3
+        "9": 2
       },
       "what": "`open[N]` are the rows the plan gives stratum N that the crate does not publish, and `handed_on[N]` are the unlanded rows the plan gives a later stratum. Both are derived from each row's `owning_phase` and `implementation_state` and are not stored on the row, because a stored `open`/`deferred` is a statement about which stratum was active on the day the census ran (docs/DECISIONS.md D295)."
     },
@@ -3801,15 +3801,16 @@
           "id-smime-alg-CMS3DESwrap",
           "1.2.840.113549.1.9.16.3.6"
         ],
-        "blocked_by": "RAND_bytes_ex: providers/implementations/ciphers/cipher_tdes_wrap.c's ossl_tdes_wrap_cbc_init generates the wrap IV with it, and rand.h is Phase 9's (docs/DECISIONS.md D234's class). The row is Phase 8's obligation, handed to Phase 9 with the blocker named rather than stubbed.",
+        "blocked_by": null,
         "capability_filtered": true,
         "capability_predicate": null,
+        "crate_dispatch": "cipher_tdes_wrap::TDES_WRAP_CBC_FUNCTIONS",
         "dispatch_table_symbol": "ossl_tdes_wrap_cbc_functions",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
         "operation_id": 2,
         "owning_phase": 9,
-        "plan_match": "override:DES3-WRAP",
+        "plan_match": "crate-table",
         "property_definition": "provider=default",
         "provider": "default",
         "row_order": 124,

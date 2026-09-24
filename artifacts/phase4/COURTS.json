@@ -160,9 +160,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 114,
+        "authority_observations": 140,
         "candidate_exit_code": 0,
-        "candidate_observations": 114,
+        "candidate_observations": 140,
         "candidate_stderr_tail": [],
         "court": "RT-BIO-FILTER",
         "crashed": false,
@@ -318,7 +318,7 @@
       "total": 18
     }
   },
-  "body_hash": "618d80a289c2309ae9de86d9d5d7d820d3e007f6e39d48eab15834822c47d2f3",
+  "body_hash": "9d2df68e16fe560f85116c210800778acc7c1981dd37978831b0ec439a17514d",
   "generator": "forensics/tools/phase4_courts.py",
   "inputs": [],
   "kind": "phase4-courts",

@@ -4572,7 +4572,12 @@ static void rt_deflt_row_census(void)
         "CAMELLIA-192-CFB1", "CAMELLIA-128-CFB1", "CAMELLIA-256-CFB8", "CAMELLIA-192-CFB8",
         "CAMELLIA-128-CFB8", "CAMELLIA-256-CTR", "CAMELLIA-192-CTR", "CAMELLIA-128-CTR",
         "DES-EDE3-ECB", "DES-EDE3-CBC", "DES-EDE3-OFB", "DES-EDE3-CFB",
-        "DES-EDE3-CFB8", "DES-EDE3-CFB1", "DES-EDE-ECB", "DES-EDE-CBC",
+        "DES-EDE3-CFB8", "DES-EDE3-CFB1",
+        /* `defltprov.c:308`: the `DES3-WRAP` row lands between the EDE3 six and the EDE four. It was
+         * Phase 8's obligation on `RAND_bytes_ex` (`cipher_tdes_wrap.c`'s `des_ede3_wrap` fills the
+         * wrap IV from it) and its engine is Phase 9's, `src/provider/cipher_tdes_wrap.rs`. */
+        "DES3-WRAP",
+        "DES-EDE-ECB", "DES-EDE-CBC",
         "DES-EDE-OFB", "DES-EDE-CFB",
         /* `SM4-GCM` (`defltprov.c:315`) precedes `SM4-CCM`; it was Phase 9's on `RAND_bytes_ex`
          * and is listed here now that its engine has landed. The `SM4-XTS` row follows

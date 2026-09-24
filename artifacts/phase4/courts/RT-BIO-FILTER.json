@@ -1,8 +1,8 @@
 {
   "authority_exit_code": 0,
-  "authority_observations": 114,
+  "authority_observations": 140,
   "candidate_exit_code": 0,
-  "candidate_observations": 114,
+  "candidate_observations": 140,
   "candidate_stderr_tail": [],
   "court": "RT-BIO-FILTER",
   "crashed": false,

@@ -44,6 +44,22 @@ static void show_mem(const char *key, BIO *mem)
     putchar('\n');
 }
 
+/**
+ * The error queue, normalised to the two fields `docs/PARITY_MODEL.md`'s `ERROR_PASS` names as
+ * portable: the library and the reason. The file/line/function coordinates are deliberately not
+ * printed -- they are transcription-unit properties the error-site courts cover, and printing
+ * them here would turn one behavioural residual into a coordinate diff.
+ */
+static void errs(const char *key)
+{
+    unsigned long e;
+    int i = 0;
+
+    while ((e = ERR_get_error()) != 0)
+        printf("%s.%d=lib=%d,reason=%d\n", key, i++, ERR_GET_LIB(e), ERR_GET_REASON(e));
+    printf("%s.count=%d\n", key, i);
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -273,6 +289,93 @@ int main(void)
         show_mem("pref.mem.write4", mem);
 
         printf("pref.free=%d\n", BIO_free(b));
+        BIO_free(mem);
+    }
+
+    /* --- BIO_f_nbio_test -------------------------------------------------- */
+    /*
+     * This filter is Phase 9's rather than Phase 4's: `nbiof_read` and `nbiof_write` each draw one
+     * byte with `RAND_priv_bytes` and pass through only its low three bits, so the *sizes* here
+     * are draws and are not compared. What is deterministic -- and is what this arm prints -- is
+     * the filter's shape and the contract around the draw: the method's type and name, that every
+     * entry point with no `next_bio` refuses rather than dereferencing, that `DUP` is refused
+     * without forwarding, that the bytes landing downstream are exactly the return code, and that
+     * the `-1` arm raises the retry flag for the direction it was called in. **The downstream
+     * pending count is deliberately not printed**: both caps are draws, so it is a function of two
+     * independent draws and differs between two honest builds -- the first version of this arm
+     * printed it and the authority answered 7 where the candidate answered 8. **The retry flags
+     * themselves are the same shape**: whether `BIO_should_read`/`_write` is set is a function of
+     * the draw, so each is printed only as a relation to whether the call answered `-1` -- the
+     * absolute values were the second defect this arm found, and `probe_hygiene` caught them as an
+     * `-O0`/`-O1` disagreement rather than the differential court catching them at all.
+     */
+    {
+        BIO *none = BIO_new(BIO_f_nbio_test());
+        char out[16];
+
+        printf("nbio.nonnull=%d\n", none != NULL);
+        printf("nbio.name=%s\n", none ? BIO_method_name(none) : "-");
+        printf("nbio.type=%d\n", none ? BIO_method_type(none) : -1);
+        printf("nbio.init=%d\n", none ? BIO_get_init(none) : -1);
+
+        memset(out, 0, sizeof(out));
+        ERR_clear_error();
+        printf("nbio.nonext.read=%d\n", BIO_read(none, out, 4));
+        printf("nbio.nonext.write=%d\n", BIO_write(none, "x", 1));
+        printf("nbio.nonext.gets=%d\n", BIO_gets(none, out, sizeof(out)));
+        printf("nbio.nonext.puts=%d\n", BIO_puts(none, "x"));
+        printf("nbio.nonext.ctrl=%ld\n", BIO_ctrl(none, BIO_CTRL_INFO, 0, NULL));
+        printf("nbio.nonext.flush=%d\n", BIO_flush(none));
+        errs("nbio.nonext.err");
+        printf("nbio.free=%d\n", BIO_free(none));
+    }
+
+    {
+        BIO *mem = BIO_new(BIO_s_mem());
+        BIO *b = BIO_new(BIO_f_nbio_test());
+        char out[16];
+        int rr;
+
+        BIO_push(b, mem);
+
+        /* `DUP` is refused without forwarding, as every filter in this file refuses it. */
+        printf("nbio.dup=%ld\n", BIO_ctrl(b, BIO_CTRL_DUP, 0, NULL));
+
+        /*
+         * The write path: at most the low three bits of one private draw are forwarded, so the
+         * return code is in `[-1, 7]`, `-1` iff the retry flag was raised for WRITE, and the
+         * bytes that landed downstream are exactly `max(ret, 0)`.
+         */
+        ERR_clear_error();
+        rr = BIO_write(b, "abcdefghij", 10);
+        printf("nbio.write.ret_le7=%d\n", rr <= 7);
+        printf("nbio.write.ret_ge_neg1=%d\n", rr >= -1);
+        printf("nbio.write.retry_iff_neg=%d\n", (rr < 0) == (BIO_should_retry(b) != 0));
+        printf("nbio.write.should_write_iff_neg=%d\n",
+            (rr < 0) == (BIO_should_write(b) != 0));
+        printf("nbio.write.mem_is_ret=%d\n",
+            (int)BIO_ctrl(mem, BIO_CTRL_INFO, 0, NULL) == (rr < 0 ? 0 : rr));
+        errs("nbio.write.err");
+
+        /*
+         * The read path. `mem` is given committed bytes first so that a non-zero draw has
+         * something to forward: then the `-1` arm is taken exactly when the retry flag is raised
+         * for READ, and a forwarded read is positive with the flags left clear.
+         */
+        BIO_write(mem, "12345678", 8);
+        memset(out, 0, sizeof(out));
+        ERR_clear_error();
+        rr = BIO_read(b, out, 4);
+        printf("nbio.read.ret_le7=%d\n", rr <= 7);
+        printf("nbio.read.ret_ge_neg1=%d\n", rr >= -1);
+        printf("nbio.read.retry_iff_neg=%d\n", (rr < 0) == (BIO_should_retry(b) != 0));
+        printf("nbio.read.should_read_iff_neg=%d\n",
+            (rr < 0) == (BIO_should_read(b) != 0));
+        printf("nbio.read.flags_clear_on_forward=%d\n",
+            rr > 0 ? (BIO_should_retry(b) == 0 && BIO_should_read(b) == 0) : 1);
+        errs("nbio.read.err");
+
+        printf("nbio.free2=%d\n", BIO_free(b));
         BIO_free(mem);
     }
 

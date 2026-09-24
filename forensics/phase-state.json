@@ -417,7 +417,7 @@
         "name": "algorithms",
         "phase": 8,
         "provider_rows": {
-          "handed_on": 678,
+          "handed_on": 677,
           "implemented": 306,
           "owned": 306
         },
@@ -426,7 +426,7 @@
         "stratum": "Native cryptographic primitives"
       },
       {
-        "blocking": "3 open obligation(s) of this stratum recorded in forensics/phase9-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Twenty-five of the exports it owns are its own header's and the remainder arrive as recorded hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives in earlier strata's modules (docs/DECISIONS.md D294). Courts have landed since this note was first written; the registered set and its observation counts are `artifacts/phase9/COURTS.json` and the ledger's own `courts` block, and this note defers to them rather than restating counts that move.",
+        "blocking": "2 provider registration row(s) of this stratum are neither implemented nor handed to a later phase (forensics/atlas/provider-algorithms.json): GMAC, SEED-SRC",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -449,9 +449,9 @@
         "phase": 9,
         "provider_rows": {
           "handed_on": 675,
-          "implemented": 12,
+          "implemented": 13,
           "owned": 15,
-          "unimplemented": 3
+          "unimplemented": 2
         },
         "seal_sha256": null,
         "state": "in-progress",
@@ -617,7 +617,7 @@
       "not_started": 12
     }
   },
-  "body_hash": "989061fdb2c9af0b8e9bd89af8e564d4fc7ad182ad29d82f1fcb579f6b0c57a4",
+  "body_hash": "44e7e1f39afac86ed5960e111ea64b636779ea734311ce2abc10f7197f26f818",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",
