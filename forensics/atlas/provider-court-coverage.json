@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 286,
+        "implemented": 297,
         "unmatched": 0
       },
       "9": {
@@ -58,8 +58,8 @@
         ]
       }
     ],
-    "directly_courted": 291,
-    "implemented_rows": 291,
+    "directly_courted": 302,
+    "implemented_rows": 302,
     "rows": [
       {
         "algorithm_names": "RSA",
@@ -2620,6 +2620,32 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "SecP256r1MLKEM768",
+        "aliases": [
+          "SecP256r1MLKEM768"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEM",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SecP384r1MLKEM1024",
+        "aliases": [
+          "SecP384r1MLKEM1024"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEM",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "X25519",
         "aliases": [
           "X25519",
@@ -2634,10 +2660,36 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "X25519MLKEM768",
+        "aliases": [
+          "X25519MLKEM768"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEM",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "X448",
         "aliases": [
           "X448",
           "1.3.101.111"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEM",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "X448MLKEM1024",
+        "aliases": [
+          "X448MLKEM1024"
         ],
         "courts": [
           "RT-KEYMGMT"
@@ -2880,6 +2932,54 @@
           "RT-DRBG",
           "RT-KEYMGMT",
           "RT-SIGNATURE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ML-KEM-1024",
+        "aliases": [
+          "ML-KEM-1024",
+          "MLKEM1024",
+          "id-alg-ml-kem-1024",
+          "2.16.840.1.101.3.4.4.3"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ML-KEM-512",
+        "aliases": [
+          "ML-KEM-512",
+          "MLKEM512",
+          "id-alg-ml-kem-512",
+          "2.16.840.1.101.3.4.4.1"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ML-KEM-768",
+        "aliases": [
+          "ML-KEM-768",
+          "MLKEM768",
+          "id-alg-ml-kem-768",
+          "2.16.840.1.101.3.4.4.2"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -3174,6 +3274,32 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "SecP256r1MLKEM768",
+        "aliases": [
+          "SecP256r1MLKEM768"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SecP384r1MLKEM1024",
+        "aliases": [
+          "SecP384r1MLKEM1024"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "TLS1-PRF",
         "aliases": [
           "TLS1-PRF"
@@ -3202,10 +3328,36 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "X25519MLKEM768",
+        "aliases": [
+          "X25519MLKEM768"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "X448",
         "aliases": [
           "X448",
           "1.3.101.111"
+        ],
+        "courts": [
+          "RT-KEYMGMT"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KEYMGMT",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "X448MLKEM1024",
+        "aliases": [
+          "X448MLKEM1024"
         ],
         "courts": [
           "RT-KEYMGMT"
@@ -4299,7 +4451,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "4e87feb617f284ee3f183433c044971a6fc88e17a9a4f77d715040eff85a742b"
+      "sha256": "1121ffd6793d902f37c9a82846cb5c4b262281ffebc9202d3f9906eb34daf711"
     },
     {
       "name": "court:RT-DIGEST:rt_digest_probe.c",
@@ -4319,7 +4471,7 @@
     {
       "name": "court:RT-KEYMGMT:rt_keymgmt_probe.c",
       "path": "courts/phase8/rt_keymgmt_probe.c",
-      "sha256": "0d3099c12ba28fc860f7bf34fa589224e0a29545e963b95d77c753f401e12020"
+      "sha256": "1806c4e298edcb58a69a3c5942f13d05bc074fb7e633f99dca2346f555ef1276"
     },
     {
       "name": "court:RT-KEYMGMT:slh_dsa_probe.h",

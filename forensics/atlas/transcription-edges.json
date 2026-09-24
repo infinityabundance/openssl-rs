@@ -1720,6 +1720,13 @@
         "translation_unit": "providers/implementations/keymgmt/libdefault-lib-mac_legacy_kmgmt.c"
       },
       {
+        "module": "src/provider/ml_kem_kmgmt.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "1/1",
+        "translation_unit": "providers/implementations/keymgmt/libdefault-lib-ml_kem_kmgmt.c"
+      },
+      {
         "module": "src/provider/mod.rs",
         "phase": 6,
         "phase_source": "module-declaration",

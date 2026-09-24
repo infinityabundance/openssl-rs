@@ -119,6 +119,18 @@ pub(crate) mod mac_legacy_sig;
 // rows, one dispatch table shared by all three, exactly as the authority's `deflt_asym_kem[]`
 // publishes them.
 pub(crate) mod ml_kem_kem;
+// Phase 8's `providers/implementations/keymgmt/ml_kem_kmgmt.c.in` (D403): the three ML-KEM keymgmt
+// rows, one body with three macro expansions, exactly as the authority's `deflt_keymgmt[]`
+// publishes them.
+pub(crate) mod ml_kem_kmgmt;
+// Phase 8's `providers/implementations/keymgmt/mlx_kmgmt.c.in` (D404): the four ML-KEM/EC-ECX hybrid
+// keymgmt rows, one body with four macro expansions, exactly as the authority's `deflt_keymgmt[]`
+// publishes them. There is no `crypto/mlx/`: the hybrid logic *is* this unit.
+pub(crate) mod mlx_kmgmt;
+// Phase 8's `providers/implementations/kem/mlx_kem.c` (D404): the four hybrid `OSSL_OP_KEM` rows,
+// one dispatch table shared by all four, exactly as the authority's `deflt_asym_kem[]` publishes
+// them.
+pub(crate) mod mlx_kem;
 pub(crate) mod rand;
 pub(crate) mod rsa_enc;
 pub(crate) mod rsa_kem;

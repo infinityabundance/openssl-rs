@@ -34295,6 +34295,7 @@
       "src/provider/keymgmt.rs: providers/implementations/keymgmt/libdefault-lib-kdf_legacy_kmgmt.c",
       "src/provider/mac.rs: crypto/poly1305/poly1305-x86_64.c",
       "src/provider/mac_legacy_kmgmt.rs: providers/implementations/keymgmt/libdefault-lib-mac_legacy_kmgmt.c",
+      "src/provider/ml_kem_kmgmt.rs: providers/implementations/keymgmt/libdefault-lib-ml_kem_kmgmt.c",
       "src/provider/rand.rs: providers/implementations/rands/libdefault-lib-drbg.c",
       "src/provider/securitycheck.rs: providers/common/libdefault-lib-securitycheck.c",
       "src/provider/securitycheck_default.rs: providers/common/libdefault-lib-securitycheck_default.c",

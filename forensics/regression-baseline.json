@@ -303,7 +303,7 @@
       "verdict": "pass"
     },
     "RT-KEYMGMT": {
-      "observations": 359,
+      "observations": 531,
       "verdict": "pass"
     },
     "RT-LHASH": {
@@ -652,8 +652,12 @@
     "default/OSSL_OP_KEM/ML-KEM-512",
     "default/OSSL_OP_KEM/ML-KEM-768",
     "default/OSSL_OP_KEM/RSA",
+    "default/OSSL_OP_KEM/SecP256r1MLKEM768",
+    "default/OSSL_OP_KEM/SecP384r1MLKEM1024",
     "default/OSSL_OP_KEM/X25519",
+    "default/OSSL_OP_KEM/X25519MLKEM768",
     "default/OSSL_OP_KEM/X448",
+    "default/OSSL_OP_KEM/X448MLKEM1024",
     "default/OSSL_OP_KEYEXCH/DH",
     "default/OSSL_OP_KEYEXCH/ECDH",
     "default/OSSL_OP_KEYEXCH/HKDF",
@@ -670,6 +674,9 @@
     "default/OSSL_OP_KEYMGMT/ED448",
     "default/OSSL_OP_KEYMGMT/HKDF",
     "default/OSSL_OP_KEYMGMT/HMAC",
+    "default/OSSL_OP_KEYMGMT/ML-KEM-1024",
+    "default/OSSL_OP_KEYMGMT/ML-KEM-512",
+    "default/OSSL_OP_KEYMGMT/ML-KEM-768",
     "default/OSSL_OP_KEYMGMT/POLY1305",
     "default/OSSL_OP_KEYMGMT/RSA",
     "default/OSSL_OP_KEYMGMT/RSA-PSS",
@@ -688,9 +695,13 @@
     "default/OSSL_OP_KEYMGMT/SLH-DSA-SHAKE-256f",
     "default/OSSL_OP_KEYMGMT/SLH-DSA-SHAKE-256s",
     "default/OSSL_OP_KEYMGMT/SM2",
+    "default/OSSL_OP_KEYMGMT/SecP256r1MLKEM768",
+    "default/OSSL_OP_KEYMGMT/SecP384r1MLKEM1024",
     "default/OSSL_OP_KEYMGMT/TLS1-PRF",
     "default/OSSL_OP_KEYMGMT/X25519",
+    "default/OSSL_OP_KEYMGMT/X25519MLKEM768",
     "default/OSSL_OP_KEYMGMT/X448",
+    "default/OSSL_OP_KEYMGMT/X448MLKEM1024",
     "default/OSSL_OP_MAC/BLAKE2BMAC",
     "default/OSSL_OP_MAC/BLAKE2SMAC",
     "default/OSSL_OP_MAC/CMAC",
@@ -769,14 +780,14 @@
       "8": 685,
       "9": 675
     },
-    "implemented": 291,
+    "implemented": 302,
     "open_by_phase": {
       "10": 636,
       "13": 39,
-      "8": 20,
+      "8": 9,
       "9": 10
     },
     "total": 996,
-    "unimplemented": 705
+    "unimplemented": 694
   }
 }

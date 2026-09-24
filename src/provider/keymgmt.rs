@@ -136,6 +136,13 @@ use crate::provider::ecx_kmgmt::{
 use crate::provider::mac_legacy_kmgmt::{
     CMAC_LEGACY_KEYMGMT_FUNCTIONS, MAC_LEGACY_KEYMGMT_FUNCTIONS,
 };
+use crate::provider::ml_kem_kmgmt::{
+    ML_KEM_1024_KEYMGMT_FUNCTIONS, ML_KEM_512_KEYMGMT_FUNCTIONS, ML_KEM_768_KEYMGMT_FUNCTIONS,
+};
+use crate::provider::mlx_kmgmt::{
+    MLX_P256_KEM_KMGMT_FUNCTIONS, MLX_P384_KEM_KMGMT_FUNCTIONS, MLX_X25519_KEM_KMGMT_FUNCTIONS,
+    MLX_X448_KEM_KMGMT_FUNCTIONS,
+};
 use crate::provider::rsa_kmgmt::{RSA_KEYMGMT_FUNCTIONS, RSA_PSS_KEYMGMT_FUNCTIONS};
 use crate::provider::slh_dsa_kmgmt::{
     SLH_DSA_SHA2_128F_KEYMGMT_FUNCTIONS, SLH_DSA_SHA2_128S_KEYMGMT_FUNCTIONS,
@@ -1769,7 +1776,7 @@ fn ossl_assert(expr: bool) -> c_int {
 /// The authority's order within the twelve is the `PROV_NAMES_SLH_DSA_*` order — SHA2 128s/128f/
 /// 192s/192f/256s/256f, then SHAKE in the same shape (`defltprov.c:659-700`) — and each row's
 /// description is left NULL for the crate's usual reason.
-pub(crate) static DEFLT_KEYMGMT: [OsslAlgorithm; 31] = [
+pub(crate) static DEFLT_KEYMGMT: [OsslAlgorithm; 38] = [
     OsslAlgorithm {
         // `PROV_NAMES_DH`.
         algorithm_names: c"DH:dhKeyAgreement:1.2.840.113549.1.3.1".as_ptr(),
@@ -1894,6 +1901,59 @@ pub(crate) static DEFLT_KEYMGMT: [OsslAlgorithm; 31] = [
         algorithm_names: c"SM2:1.2.156.10197.1.301".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
         implementation: SM2_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    // The three ML-KEM rows (`defltprov.c:619-624`) and the four `mlx` hybrid rows that follow
+    // them (`defltprov.c:625-636`). The `LMS` row between `SM2` and these is unlanded, so the table
+    // stays a **subsequence** of the authority's.
+    OsslAlgorithm {
+        // `PROV_NAMES_ML_KEM_512` (`names.h:415`).
+        algorithm_names: c"ML-KEM-512:MLKEM512:id-alg-ml-kem-512:2.16.840.1.101.3.4.4.1".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ML_KEM_512_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ML_KEM_768` (`names.h:417`).
+        algorithm_names: c"ML-KEM-768:MLKEM768:id-alg-ml-kem-768:2.16.840.1.101.3.4.4.2".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ML_KEM_768_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_ML_KEM_1024` (`names.h:419`).
+        algorithm_names: c"ML-KEM-1024:MLKEM1024:id-alg-ml-kem-1024:2.16.840.1.101.3.4.4.3"
+            .as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: ML_KEM_1024_KEYMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_X25519MLKEM768` (`names.h:421`); `defltprov.c:626`.
+        algorithm_names: c"X25519MLKEM768".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: MLX_X25519_KEM_KMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_X448MLKEM1024` (`names.h:423`); `defltprov.c:628`.
+        algorithm_names: c"X448MLKEM1024".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: MLX_X448_KEM_KMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SecP256r1MLKEM768` (`names.h:425`); `defltprov.c:632`.
+        algorithm_names: c"SecP256r1MLKEM768".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: MLX_P256_KEM_KMGMT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_SecP384r1MLKEM1024` (`names.h:427`); `defltprov.c:634`.
+        algorithm_names: c"SecP384r1MLKEM1024".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: MLX_P384_KEM_KMGMT_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {

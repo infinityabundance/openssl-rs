@@ -779,6 +779,22 @@ COVERED_FILES = [
     # `PROV_R_REPEATED_PARAMETER` site: the import decoder's four keys (priv, pub, priv_len,
     # pub_len), the get-params decoder's five, and the gen-set-params decoder's one (`seed`).
     ("providers/implementations/keymgmt/ml_kem_kmgmt.c", "PROV_ML_KEM_KMGMT"),
+    # This pass's `mlx_kmgmt.c.in`. `.c.in`-generated, so the bare build-relative path. Its raises
+    # are the generated decoders' `PROV_R_REPEATED_PARAMETER` sites -- the import decoder's two
+    # keys (priv, pub), the get-params decoder's six, the set-params decoder's two, and the
+    # gen-set-params decoder's one (`properties`) -- plus `export_sub_cb`'s two `ERR_R_INTERNAL_ERROR`
+    # length checks, the export/fromdata `PROV_R_MISSING_KEY` and `PROV_R_INVALID_KEY_LENGTH`
+    # refusals, the get-params two `PROV_R_OUTPUT_BUFFER_TOO_SMALL` guards, the set-params
+    # `PROV_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE` mutation refusal and its `PROV_R_INVALID_KEY`
+    # length guard, and `dup`'s `PROV_R_UNSUPPORTED_SELECTION`.
+    ("providers/implementations/keymgmt/mlx_kmgmt.c", "PROV_MLX_KMGMT"),
+    # This pass's `mlx_kem.c`. A plain `.c`, so its `__FILE__` carries the source-tree prefix. Its
+    # raises are the three `PROV_R_MISSING_KEY` refusals of the two inits and `mlx_kem_encapsulate`,
+    # the five `PROV_R_NULL_*`/`PROV_R_OUTPUT_BUFFER_TOO_SMALL` output guards of `mlx_kem_encapsulate`,
+    # the four `ERR_R_INTERNAL_ERROR` "unexpected size" checks (two per body), the
+    # `PROV_R_OUTPUT_BUFFER_TOO_SMALL` and `PROV_R_WRONG_CIPHERTEXT_SIZE` guards of
+    # `mlx_kem_decapsulate`, and the `PROV_R_MISSING_KEY` refusal inside it.
+    ("providers/implementations/kem/mlx_kem.c", "PROV_MLX_KEM"),
     # The SLH-DSA keymgmt unit. `.c.in`-generated, so the bare build-relative path. Every raise is
     # a generated decoder's `PROV_R_REPEATED_PARAMETER` site: the import decoder's two keys
     # (priv, pub), the get-params decoder's seven, and the gen-set-params decoder's two. The

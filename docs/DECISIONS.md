@@ -29027,3 +29027,211 @@ No claim is made that the stratum is closer to sealing than `provider_rows` says
 **286/20** after this pass. `cargo test --lib` is **1025 passed, 0 failed**, `cargo clippy
 --all-targets -- -D warnings` is clean, and the pipeline is `PIPELINE OK` with **exit 0** and
 **99 courts / 38,606 observations**.
+
+## D403 -- `keymgmt/ml_kem_kmgmt.c.in` lands whole and the ML-KEM set publishes three rows; and
+the HASH-DRBG `add_bytes` carry loop is corrected to wrap as the authority's `unsigned char` does
+
+`provider_rows` is **289/17**, up from **286/20**: this pass lands three rows, the three ML-KEM
+keymgmt rows, completing ML-KEM as a set. It also fixes a wrong-wrap in D399-era landed code, which
+is a correctness fix recorded as its own finding below.
+
+### The unit: `keymgmt/ml_kem_kmgmt.c.in` -- 902 template lines, three rows
+
+Transcribed whole into `src/provider/ml_kem_kmgmt.rs` (about 1,450 Rust lines). The shape follows
+the ML-KEM core unit of D401 and the SLH-DSA keymgmt of D399: a `ProvMlKemGenCtx` generation
+context, `ossl_prov_ml_kem_new`, `ml_kem_pairwise_test` (the non-`FIPS_MODULE` arms only -- the
+self-test bracket is absent by coordinate on this profile), and the `has`/`match`/`validate`/
+`export`/`import` column set. `export` is over `OSSL_PARAM_BLD` plus `CRYPTO_secure_zalloc`, and
+`import` carries the four generated `produce_param_decoder` blocks, each written as the
+**repeated-key scan plus `OSSL_PARAM_locate_const`** the generator emits.
+
+`ml_kem_get_params` carries the `#ifndef OPENSSL_NO_CMS` block: `ri-type` is
+`CMS_RECIPINFO_KEM` = `5` (`include/openssl/cms.h.in:77`, read back from the authority, not
+re-spelled), and `kemri-kdf-alg` is a DER `AlgorithmIdentifier` over `id-alg-hkdf-with-sha256`
+(`providers/implementations/keymgmt/ml_kem_kmgmt.c.in:645-664`, the OID bytes read back from the
+generated `prov/der_hkdf.h` as `ossl_der_oid_id_alg_hkdf_with_sha256`), built with `WPACKET_init_der`
+followed by `ossl_DER_w_begin_sequence` / `ossl_DER_w_precompiled` / `ossl_DER_w_end_sequence`.
+
+The four decoders' repeated-key raise sites were **read back from the generated build tree**
+(`providers/implementations/keymgmt/ml_kem_kmgmt.c` after generation), not inferred from the tuple
+order in the template: `ml_kem_key_type_params` 380/391/403; `ml_kem_get_params` in the trie's leaf
+order 616, 627, 638, 649, 664, 675, 687, 734, 745, 763; `ml_kem_set_params` 960;
+`ml_kem_gen_set_params` 1042/1053 -- the thirty `PROV_ML_KEM_KMGMT_*` constants in
+`src/runtime/err_sites.rs`. That is the same "read the generated tree, do not guess from the
+template" rule the SLH-DSA pass used.
+
+`src/provider/keymgmt.rs`'s `DEFLT_KEYMGMT` grows from 31 rows to 34, the three ML-KEM rows
+inserted after the `SM2` row in `defltprov.c:619-624` order with the `LMS` row still absent (the
+table remains a subsequence of the authority's). The three `ML_KEM_{512,768,1024}_KEYMGMT_FUNCTIONS`
+are emitted by a `declare_variant!` macro as 21-slot tables. Names handed to the crate's lookup
+carry `concat!(name, "\0")`, per the standing rule; the selection bits are imported from
+`src/evp/pkey.rs`, not re-spelled (D402's rule).
+
+### The evidence: a generated probe header, and the public path now reachable
+
+`forensics/tools/gen_ml_kem_probe.py` reads the authority's own
+`test/recipes/30-test_evp_data/evppkey_ml_kem_{512,768,1024}_keygen.txt` and emits
+`courts/phase8/ml_kem_probe.h`: for each of the three sets, the first record's 64-byte `hexseed`
+and its `hexpub`, as `struct ml_kem_probe_row { name, seed, seedlen, pub, publen }` plus the array
+`ml_kem_kat_rows[3]` (renamed from `ml_kem_rows` so it does not clash with the probe's own
+`static const char *ml_kem_rows[]`). **Probe constants are read back from the authority's own test
+data, per the standing rule.**
+
+`arm_ml_kem_keymgmt()` in `courts/phase8/rt_keymgmt_probe.c` drives each row through the public
+path -- `EVP_PKEY_CTX_new_from_name` + `OSSL_PKEY_PARAM_ML_KEM_SEED` + `EVP_PKEY_generate`, which
+was **unreachable for ML-KEM before this pass** -- then reads `bits`, `security-bits`, `max-size`
+and `security-category`, compares the exported public key against the vector's own `pub`
+(`pub_matches_vector`), takes the private **length only** (never its bytes), and exercises
+`EVP_PKEY_dup`/`EVP_PKEY_eq`, the `set1_encoded_public_key` mutation refusal, and the import path
+(`EVP_PKEY_fromdata` over the vector's `pub` plus a one-byte-short length refusal). `kmgmt_rows[]`
+grows 18 to 21. The `EVP_KEM_fetch` arm of D401 stays.
+
+Measured, both sides equal: `ML-KEM-512` bits 512 / security-bits 128 / max-size 768 /
+security-category 1 / pub 800 / priv 1632; `ML-KEM-768` 768 / 192 / 1088 / 3 / 1184 / 2400;
+`ML-KEM-1024` 1024 / 256 / 1568 / 5 / 1568 / 3168 -- every value against FIPS 203 Table 2, and
+`pub_matches_vector` is 1 on all three. The refusals (`set1_encoded_public_key` 0,
+`fromdata_short` 0) and the round-trips (`dup` 1, `dup_eq` 1, `import_roundtrip` 1,
+`is_a_full`/`is_a_short`/`is_a_oid_name` 1, `is_a_other` 0) hold. `RT-KEYMGMT` is **431
+observations**, up from 359.
+
+### A separate finding: the HASH-DRBG `add_bytes` carry loop did not wrap
+
+`src/provider/rand.rs:3187-3197` transcribed
+`providers/implementations/rands/drbg_hash.c.in:156-184`'s carry propagation. The authority writes
+`*d += 1;` on an `unsigned char` (`drbg_hash.c.in:181`), which wraps silently at `0xff`; the crate
+is built with `overflow-checks = true`, so on a carry that reached a `0xff` byte the Rust
+**panicked** (`attempt to add with overflow`, `rand.rs:3191`). It was **latent and flaky**, reached
+only when the carry propagated into a `0xff` byte: measured at about **1 run in 6**, surfacing as
+`courts/phase9/rt_drbg_probe.c` UNSTABLE with exit `-6` at `-O0` and the `bytes.TEST-RAND` /
+`ctx.*` observations going to `None` on the panic run. `probe_hygiene.py` runs each probe at three
+optimisation levels, so it saw it; the pipeline had earlier passed only by luck.
+
+The fix is `*d = (*d).wrapping_add(1);`, with the C site cited in place, preserving the C's
+`if (*d != 0) break;` test as written. It is the same class as D401's
+`scalar_decode_decompress_add` finding: a transcription must use the wrapping arithmetic wherever
+the C relies on `unsigned char`/`unsigned` wrap. Confirmed stable over five consecutive
+`probe_hygiene.py` runs (zero `UNSTABLE`); it is not a workaround -- the C wraps and the crate must.
+
+No claim is made that the stratum is closer to sealing than `provider_rows` says. `provider_rows` is
+**289/17** after this pass. `cargo test --lib` passes, `cargo clippy --all-targets -- -D warnings`
+is clean, and the pipeline is `PIPELINE OK` with **exit 0** and **99 courts / 38,678
+observations**.
+
+## D404 -- `keymgmt/mlx_kmgmt.c.in` and `kem/mlx_kem.c` land whole, and ML-KEM's four hybrid rows
+publish on both operations, for eight rows
+
+`provider_rows` moves **289/17 -> 297/9**. The eight rows are the four `OSSL_OP_KEYMGMT` hybrids --
+`X25519MLKEM768`, `X448MLKEM1024`, `SecP256r1MLKEM768`, `SecP384r1MLKEM1024` of
+`deflt_keymgmt[]` -- and the four `OSSL_OP_KEM` rows of the same names in `deflt_asym_kem[]`. Each
+operation's four share **one** dispatch table, exactly as the authority's `defltprov.c` publishes
+them.
+
+### There is no `crypto/mlx/`, and that is the measurement
+
+D396's withholding note for these rows named a `crypto/mlx/` the hybrid logic would sit on. The
+authority has none: the hybrid logic **is** these two provider units, over D401's `crypto/ml_kem/`
+and the EC/ECX halves D388-D390 landed. `mlx_kmgmt.c.in` (844 template lines) is transcribed whole
+into `src/provider/mlx_kmgmt.rs` (1,720 Rust lines) and `mlx_kem.c` (350) into
+`src/provider/mlx_kem.rs` (572), so the eight rows cost their own 1,194 authority lines and
+nothing more.
+
+### The two units
+
+`mlx_kmgmt.c.in` holds **two** `EVP_PKEY`s -- an ML-KEM half and an EC or ECX half -- and every
+column is a pass-through to the corresponding `EVP_PKEY_*` call on one or both. The key-material
+layout is the authority's offset arithmetic, not a struct: the exported public block is
+`ML-KEM-pub || x-pub` or `x-pub || ML-KEM-pub` according to `xinfo->ml_kem_slot`, and
+`export_sub`/`load_keys` place each half's bytes at `slot * pubkey_bytes` /
+`(1 - ml_kem_slot) * pubkey_bytes`. The four rows are one body with four macro expansions, and
+the four `OSSL_PKEY_PARAM_ML_KEM_*` names it hands the crate's lookup carry `concat!(name, "\0")`,
+per the standing rule.
+
+`mlx_kem.c` is the thin KEM face over that `MLX_KEY`: encapsulation runs an ML-KEM encapsulation and
+an ephemeral ECDHE and concatenates the halves in `ml_kem_slot` order. Its two size-query arms
+(`ctext == NULL`, `shsec == NULL`) `return` **inside** the function, so the `end:` block's
+partial-shared-secret cleanse is skipped on those paths -- written as the authority writes it,
+because the difference is observable the next time a caller encapsulates.
+
+### The evidence
+
+`DEFLT_KEYMGMT` grows 34 -> 38 and `DEFLT_ASYM_KEM` 7 -> 11, each still a **subsequence** of the
+authority's: the `EC` KEM row between the ECX and ML-KEM groups and the `LMS` keymgmt row between
+`SM2` and `ML-KEM-512` stay unlanded. `gen_err_raise_sites.py` gains the two units as
+`PROV_MLX_KMGMT` (the generated decoders' `PROV_R_REPEATED_PARAMETER` sites, `export_sub_cb`'s two
+length checks, the export/fromdata refusals, the get-params output guards, the set-params mutation
+refusal and `dup`'s `PROV_R_UNSUPPORTED_SELECTION`) and `PROV_MLX_KEM` (the `PROV_R_MISSING_KEY`
+inits, the output guards, the four "unexpected size" checks and the decapsulate refusals).
+
+`courts/phase8/rt_keymgmt_probe.c` gains `arm_mlx_hybrid`, which drives each of the four rows
+through `EVP_PKEY_CTX_new_from_name` -- the public path, reachable for a hybrid now that its
+keymgmt row publishes -- and reads `bits`/`security-bits`/`max-size`/`security-category`, the
+exported public and private **lengths** (never the private bytes), `EVP_PKEY_dup`/`EVP_PKEY_eq`,
+and a full encapsulate/decapsulate round trip. `RT-KEYMGMT` is **531 observations**, up from 431;
+`provider_court_coverage.py` reports phase 8 at **297 implemented, 0 unmatched**.
+
+### What remains
+
+SM2 (2 rows, 1,940 lines), `kem/ec_kem.c.in` (1, 822) and `crypto/ml_dsa/` (6, 4,925). Unchanged
+from D403's order, and none of the three is withheld as unreachable. No claim is made that the
+stratum is closer to sealing than `provider_rows` says: it is **297/9** after this pass, and the
+nine are exactly the three units above.
+
+## D405 -- the `WITHHELD` map's six false notes are removed or re-keyed: a note may name a missing
+implementation, never a landed one
+
+`provider_rows` is unchanged at **297/9**: this pass moves no row. It corrects the *documentation*,
+which had drifted from the crate and the census by six entries in
+`forensics/tools/phase8_provider_rows.py`'s `WITHHELD` map -- the map whose renderer is
+`docs/PHASE-8-PROVIDER-ROWS.md`.
+
+### The six discrepancies, with their before-text
+
+1. **`kdfs/argon2.c.in` -- deleted.** Its note said the three `ARGON2*` rows were withheld on the
+   thread trio (`ossl_crypto_thread_start`/`_join`/`_clean`, `crypto/thread/internal.c`); **D397
+   landed the trio** (`src/runtime/thread_arch.rs`, the pool in `src/context/thread_data.rs`) and
+   **D400 landed argon2 whole** (`src/provider/kdf.rs`). The unit sits in the document's first group,
+   so the generator **still printed** the note beneath three rows the census calls `implemented` -- a
+   live false claim in the plan document, not merely an unreadable one.
+2. **`keymgmt/ml_kem_kmgmt.c.in` -- deleted.** The note said the three ML-KEM rows were built on a
+   `crypto/ml_kem/` "which the crate does not have"; **D401 landed `crypto/ml_kem/`** and **D403
+   landed the keymgmt unit** (`src/provider/ml_kem_kmgmt.rs`).
+3. **`keymgmt/mlx_kmgmt.c.in` -- deleted.** Same class; landed at **D404** over the same ML-KEM
+   core.
+4. **`keymgmt/slh_dsa_kmgmt.c.in` -- deleted.** The note said the twelve `SLH-DSA-*` rows were
+   built on `ossl_slh_dsa_*` (`crypto/slh_dsa/`), "which the crate does not have"; **D398 landed
+   `crypto/slh_dsa/`** and **D399 landed the twenty-four rows**.
+5. **`signature/slh_dsa_sig.c.in` -- deleted.** Same class; landed at **D399**.
+6. **the SM2 signature note -- re-keyed, not deleted.** It was stored under
+   `signature/ml_dsa_sig.c.in`, whose key the real ML-DSA note then overwrote, so the SM2 note
+   **never printed at all** and `signature/sm2_sig.c.in` appeared with no withholding note beside a
+   row the census leaves open. It is now keyed to its own unit, and `docs/PHASE-8-PROVIDER-ROWS.md`
+   prints it.
+
+Every remaining entry was audited against the crate and the census and kept: the ML-DSA keymgmt and
+signature units, `kem/ec_kem.c.in`, `signature/sm2_sig.c.in` and `asymciphers/sm2_enc.c.in` each
+name a missing implementation this tree does not have. **The five notes the regenerated document
+prints are exactly those five units** -- no note for a landed unit remains, and no note is
+unreachable to the renderer.
+
+### The rule the audit enforces, now written where the map is
+
+The map's comment block is rewritten to state it: an entry may exist only for a unit that is
+genuinely not transcribed, and it must name the **missing implementation** rather than a landed
+one. A note the generator still prints for an implemented row is a false claim; a note it can no
+longer print is an unreadable one -- the reason D396 removed the two stale signature notes.
+
+### What this pass did not do, named rather than excused
+
+The three remaining work items are **not transcribed** this pass: **SM2 (2 rows)**, **`kem/ec_kem.c.in`
+(1)** and **`crypto/ml_dsa/` (6)**. No claim of "unreachable" is made for any of them -- each is
+reachable-but-untranscribed, and each lands whole or not at all (D327). They are about 7,700
+authority lines, of which `crypto/ml_dsa/` is a subsystem the size of D398's `crypto/slh_dsa/`; they
+are a pass of their own. Their coordinates stand in the corrected map, and `provider_rows` counts
+them as unlanded.
+
+### Movement
+
+`provider_rows` is **297/9** and the export ledger is untouched (`forensics/phase8-obligations.json`
+`complete: true`, implemented **786**, deferred **0**, open **0**). `cargo test --lib` is **1025
+passed, 0 failed**, `cargo clippy --all-targets -- -D warnings` is clean, and the pipeline is
+`PIPELINE OK` with **exit 0**.

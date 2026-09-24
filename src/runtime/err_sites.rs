@@ -27012,6 +27012,396 @@ pub(crate) const PROV_ML_KEM_KMGMT_1091: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ml_kem_import_export_decoder` at `providers/implementations/keymgmt/mlx_kmgmt.c:186` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_MLX_KMGMT_186: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 186,
+    func: c"ml_kem_import_export_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_import_export_decoder` at `providers/implementations/keymgmt/mlx_kmgmt.c:197` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_MLX_KMGMT_197: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 197,
+    func: c"ml_kem_import_export_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `export_sub_cb` at `providers/implementations/keymgmt/mlx_kmgmt.c:244` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_MLX_KMGMT_244: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 244,
+    func: c"export_sub_cb",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `export_sub_cb` at `providers/implementations/keymgmt/mlx_kmgmt.c:258` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_MLX_KMGMT_258: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 258,
+    func: c"export_sub_cb",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_export` at `providers/implementations/keymgmt/mlx_kmgmt.c:326` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_MLX_KMGMT_326: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 326,
+    func: c"mlx_kem_export",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_key_fromdata` at `providers/implementations/keymgmt/mlx_kmgmt.c:503` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_MLX_KMGMT_503: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 503,
+    func: c"mlx_kem_key_fromdata",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_key_fromdata` at `providers/implementations/keymgmt/mlx_kmgmt.c:513` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_MLX_KMGMT_513: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 513,
+    func: c"mlx_kem_key_fromdata",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_key_fromdata` at `providers/implementations/keymgmt/mlx_kmgmt.c:517` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_MLX_KMGMT_517: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 517,
+    func: c"mlx_kem_key_fromdata",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `mlx_get_params_decoder` at `providers/implementations/keymgmt/mlx_kmgmt.c:580` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_MLX_KMGMT_580: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 580,
+    func: c"mlx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `mlx_get_params_decoder` at `providers/implementations/keymgmt/mlx_kmgmt.c:591` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_MLX_KMGMT_591: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 591,
+    func: c"mlx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `mlx_get_params_decoder` at `providers/implementations/keymgmt/mlx_kmgmt.c:602` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_MLX_KMGMT_602: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 602,
+    func: c"mlx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `mlx_get_params_decoder` at `providers/implementations/keymgmt/mlx_kmgmt.c:613` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_MLX_KMGMT_613: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 613,
+    func: c"mlx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `mlx_get_params_decoder` at `providers/implementations/keymgmt/mlx_kmgmt.c:660` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_MLX_KMGMT_660: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 660,
+    func: c"mlx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `mlx_get_params_decoder` at `providers/implementations/keymgmt/mlx_kmgmt.c:671` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_MLX_KMGMT_671: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 671,
+    func: c"mlx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_get_params` at `providers/implementations/keymgmt/mlx_kmgmt.c:745` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_MLX_KMGMT_745: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 745,
+    func: c"mlx_kem_get_params",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_get_params` at `providers/implementations/keymgmt/mlx_kmgmt.c:764` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_MLX_KMGMT_764: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 764,
+    func: c"mlx_kem_get_params",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `mlx_set_params_decoder` at `providers/implementations/keymgmt/mlx_kmgmt.c:832` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_MLX_KMGMT_832: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 832,
+    func: c"mlx_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `mlx_set_params_decoder` at `providers/implementations/keymgmt/mlx_kmgmt.c:843` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_MLX_KMGMT_843: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 843,
+    func: c"mlx_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_set_params` at `providers/implementations/keymgmt/mlx_kmgmt.c:883` (PROV_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const PROV_MLX_KMGMT_883: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 883,
+    func: c"mlx_kem_set_params",
+    lib: 57,
+    reason: 178,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_set_params` at `providers/implementations/keymgmt/mlx_kmgmt.c:893` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_MLX_KMGMT_893: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 893,
+    func: c"mlx_kem_set_params",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `mlx_gen_set_params_decoder` at `providers/implementations/keymgmt/mlx_kmgmt.c:927` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_MLX_KMGMT_927: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 927,
+    func: c"mlx_gen_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_dup` at `providers/implementations/keymgmt/mlx_kmgmt.c:1069` (PROV_R_UNSUPPORTED_SELECTION).
+pub(crate) const PROV_MLX_KMGMT_1069: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 1069,
+    func: c"mlx_kem_dup",
+    lib: 57,
+    reason: 250,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_encapsulate_init` at `providers/implementations/kem/mlx_kem.c:74` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_MLX_KEM_74: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 74,
+    func: c"mlx_kem_encapsulate_init",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_decapsulate_init` at `providers/implementations/kem/mlx_kem.c:86` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_MLX_KEM_86: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 86,
+    func: c"mlx_kem_decapsulate_init",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_encapsulate` at `providers/implementations/kem/mlx_kem.c:120` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_MLX_KEM_120: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 120,
+    func: c"mlx_kem_encapsulate",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_encapsulate` at `providers/implementations/kem/mlx_kem.c:136` (PROV_R_NULL_OUTPUT_BUFFER).
+pub(crate) const PROV_MLX_KEM_136: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 136,
+    func: c"mlx_kem_encapsulate",
+    lib: 57,
+    reason: 248,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_encapsulate` at `providers/implementations/kem/mlx_kem.c:142` (PROV_R_NULL_LENGTH_POINTER).
+pub(crate) const PROV_MLX_KEM_142: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 142,
+    func: c"mlx_kem_encapsulate",
+    lib: 57,
+    reason: 247,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_encapsulate` at `providers/implementations/kem/mlx_kem.c:146` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_MLX_KEM_146: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 146,
+    func: c"mlx_kem_encapsulate",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_encapsulate` at `providers/implementations/kem/mlx_kem.c:154` (PROV_R_NULL_LENGTH_POINTER).
+pub(crate) const PROV_MLX_KEM_154: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 154,
+    func: c"mlx_kem_encapsulate",
+    lib: 57,
+    reason: 247,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_encapsulate` at `providers/implementations/kem/mlx_kem.c:158` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_MLX_KEM_158: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 158,
+    func: c"mlx_kem_encapsulate",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_encapsulate` at `providers/implementations/kem/mlx_kem.c:176` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_MLX_KEM_176: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 176,
+    func: c"mlx_kem_encapsulate",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_encapsulate` at `providers/implementations/kem/mlx_kem.c:182` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_MLX_KEM_182: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 182,
+    func: c"mlx_kem_encapsulate",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_encapsulate` at `providers/implementations/kem/mlx_kem.c:214` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_MLX_KEM_214: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 214,
+    func: c"mlx_kem_encapsulate",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_encapsulate` at `providers/implementations/kem/mlx_kem.c:231` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_MLX_KEM_231: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 231,
+    func: c"mlx_kem_encapsulate",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_decapsulate` at `providers/implementations/kem/mlx_kem.c:262` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_MLX_KEM_262: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 262,
+    func: c"mlx_kem_decapsulate",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_decapsulate` at `providers/implementations/kem/mlx_kem.c:277` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_MLX_KEM_277: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 277,
+    func: c"mlx_kem_decapsulate",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_decapsulate` at `providers/implementations/kem/mlx_kem.c:284` (PROV_R_WRONG_CIPHERTEXT_SIZE).
+pub(crate) const PROV_MLX_KEM_284: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 284,
+    func: c"mlx_kem_decapsulate",
+    lib: 57,
+    reason: 251,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_decapsulate` at `providers/implementations/kem/mlx_kem.c:301` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_MLX_KEM_301: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 301,
+    func: c"mlx_kem_decapsulate",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_decapsulate` at `providers/implementations/kem/mlx_kem.c:323` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_MLX_KEM_323: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 323,
+    func: c"mlx_kem_decapsulate",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
 /// `slh_dsa_import_decoder` at `providers/implementations/keymgmt/slh_dsa_kmgmt.c:151` (PROV_R_REPEATED_PARAMETER).
 pub(crate) const PROV_SLH_DSA_KMGMT_151: ErrSite = ErrSite {
     file: c"providers/implementations/keymgmt/slh_dsa_kmgmt.c",
@@ -41941,6 +42331,45 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_ML_KEM_KMGMT_1042,
     PROV_ML_KEM_KMGMT_1053,
     PROV_ML_KEM_KMGMT_1091,
+    PROV_MLX_KMGMT_186,
+    PROV_MLX_KMGMT_197,
+    PROV_MLX_KMGMT_244,
+    PROV_MLX_KMGMT_258,
+    PROV_MLX_KMGMT_326,
+    PROV_MLX_KMGMT_503,
+    PROV_MLX_KMGMT_513,
+    PROV_MLX_KMGMT_517,
+    PROV_MLX_KMGMT_580,
+    PROV_MLX_KMGMT_591,
+    PROV_MLX_KMGMT_602,
+    PROV_MLX_KMGMT_613,
+    PROV_MLX_KMGMT_660,
+    PROV_MLX_KMGMT_671,
+    PROV_MLX_KMGMT_745,
+    PROV_MLX_KMGMT_764,
+    PROV_MLX_KMGMT_832,
+    PROV_MLX_KMGMT_843,
+    PROV_MLX_KMGMT_883,
+    PROV_MLX_KMGMT_893,
+    PROV_MLX_KMGMT_927,
+    PROV_MLX_KMGMT_1069,
+    PROV_MLX_KEM_74,
+    PROV_MLX_KEM_86,
+    PROV_MLX_KEM_120,
+    PROV_MLX_KEM_136,
+    PROV_MLX_KEM_142,
+    PROV_MLX_KEM_146,
+    PROV_MLX_KEM_154,
+    PROV_MLX_KEM_158,
+    PROV_MLX_KEM_176,
+    PROV_MLX_KEM_182,
+    PROV_MLX_KEM_214,
+    PROV_MLX_KEM_231,
+    PROV_MLX_KEM_262,
+    PROV_MLX_KEM_277,
+    PROV_MLX_KEM_284,
+    PROV_MLX_KEM_301,
+    PROV_MLX_KEM_323,
     PROV_SLH_DSA_KMGMT_151,
     PROV_SLH_DSA_KMGMT_162,
     PROV_SLH_DSA_KMGMT_244,

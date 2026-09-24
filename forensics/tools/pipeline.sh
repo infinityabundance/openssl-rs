@@ -70,6 +70,13 @@ python3 forensics/tools/gen_curve448_tables.py
 # cannot move a byte. Runs **before** `cargo fmt`, like the five table generators above.
 python3 forensics/tools/gen_ml_kem_tables.py
 
+# Phase 8's ML-KEM probe vectors (D403): `courts/phase8/ml_kem_probe.h`, the three published
+# `(d, z)` seeds and encapsulation keys `rt_keymgmt_probe.c` drives the keymgmt rows with. It reads
+# them back out of the authority's own `evppkey_ml_kem_*_keygen.txt` rather than transcribing them,
+# because a constant both sides agree on is invisible to a differential court (D392, D402). It runs
+# before `cargo fmt` with the other generators; the header is C, so the formatter cannot move it.
+python3 forensics/tools/gen_ml_kem_probe.py
+
 echo "== fmt =="
 cargo fmt --all
 
