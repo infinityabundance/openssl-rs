@@ -91,7 +91,15 @@ pub(crate) mod der_ecx_key;
 pub(crate) mod der_rsa_key;
 pub(crate) mod der_rsa_sig;
 pub(crate) mod der_slh_dsa_key;
+// Phase 8's `providers/common/der/der_sm2_sig.c` (D406): the SM2 `WITH MD` AlgorithmIdentifier
+// writer the signature unit's setup builds.
+pub(crate) mod der_sm2_sig;
+// Phase 8's `providers/implementations/asymciphers/sm2_enc.c` (D406): the `SM2` asym-cipher row,
+// the encryption face of the `SM2` key object.
 pub(crate) mod digest_to_nid;
+pub(crate) mod sm2_enc;
+// Phase 8's `providers/implementations/signature/sm2_sig.c` (D406): the one `SM2` signature row.
+pub(crate) mod sm2_sig;
 // 6.8e: `crypto/provider_child.c`, the child provider and its parent callbacks.
 pub(crate) mod child;
 pub(crate) mod core_dispatch;

@@ -87,7 +87,7 @@
       "verdict": "pass"
     },
     "RT-ASYM-CIPHER": {
-      "observations": 103,
+      "observations": 118,
       "verdict": "pass"
     },
     "RT-BIO": {
@@ -387,7 +387,7 @@
       "verdict": "pass"
     },
     "RT-SIGNATURE": {
-      "observations": 429,
+      "observations": 439,
       "verdict": "pass"
     },
     "RT-STACK": {
@@ -466,11 +466,12 @@
     "blocking_dependencies": 9,
     "divergence_names_covered": 43,
     "findings": 0,
-    "language_census": 4929,
+    "language_census": 4964,
     "sealed_census": 50
   },
   "provider_implemented": [
     "default/OSSL_OP_ASYM_CIPHER/RSA",
+    "default/OSSL_OP_ASYM_CIPHER/SM2",
     "default/OSSL_OP_CIPHER/AES-128-CBC",
     "default/OSSL_OP_CIPHER/AES-128-CBC-CTS",
     "default/OSSL_OP_CIPHER/AES-128-CBC-HMAC-SHA1",
@@ -770,6 +771,7 @@
     "default/OSSL_OP_SIGNATURE/SLH-DSA-SHAKE-192s",
     "default/OSSL_OP_SIGNATURE/SLH-DSA-SHAKE-256f",
     "default/OSSL_OP_SIGNATURE/SLH-DSA-SHAKE-256s",
+    "default/OSSL_OP_SIGNATURE/SM2",
     "default/OSSL_OP_SKEYMGMT/AES",
     "default/OSSL_OP_SKEYMGMT/GENERIC-SECRET"
   ],
@@ -780,14 +782,14 @@
       "8": 685,
       "9": 675
     },
-    "implemented": 302,
+    "implemented": 304,
     "open_by_phase": {
       "10": 636,
       "13": 39,
-      "8": 9,
+      "8": 7,
       "9": 10
     },
     "total": 996,
-    "unimplemented": 694
+    "unimplemented": 692
   }
 }

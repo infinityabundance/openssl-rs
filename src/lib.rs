@@ -160,6 +160,9 @@ pub mod selftest;
 // module yet, so it is `pub(crate)` and reached only by its own tests.
 pub(crate) mod slh_dsa;
 pub mod sm4;
+// Phase 8's `crypto/sm2/` (D406): the SM2 Z-digest/sign pair and the `SM2_Ciphertext` codec, the
+// two crypt units the `SM2` signature and asym-cipher rows publish on.
+pub(crate) mod sm2;
 pub mod status;
 // Phase 8.8's `crypto/x509/` substream (D349): the accessor slices of `x_pubkey.c`,
 // `x509_set.c` and `t_x509.c` that the ASN.1 method objects call by name. The directory

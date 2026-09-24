@@ -690,6 +690,28 @@ COVERED_FILES = [
     # `crypto/sm2/sm2_key.c`: SM2's private-key range check, whose two raises are the
     # `ERR_LIB_SM2` null-parameter and invalid-private-key reasons.
     ("crypto/sm2/sm2_key.c", "SM2_KEY"),
+    # Phase 8's SM2 signature crypt unit. `crypto/sm2/sm2_sign.c` is a plain `.c`, so its `__FILE__`
+    # carries the source-tree prefix. Its raises are the `ERR_LIB_SM2` refusals of the three message
+    # helpers (`ossl_sm2_compute_z_digest`'s null-public-key, digest, BN and curve/point guards,
+    # `sm2_compute_msg_hash`'s invalid-digest and EVP refusals, `sm2_sig_gen`'s private-key, EC, BN
+    # and ECDSA refusals and `sm2_sig_verify`'s bad-signature, EC and BN ones) plus the two
+    # `ossl_sm2_internal_*` entry points' null-parameter, BN, ECDSA and invalid-encoding refusals.
+    ("crypto/sm2/sm2_sign.c", "SM2_SIGN"),
+    # Phase 8's SM2 encryption crypt unit. A plain `.c`, so its `__FILE__` carries the source-tree
+    # prefix. Its raises are the `ERR_LIB_SM2` refusals of `ossl_sm2_plaintext_size`,
+    # `ossl_sm2_encrypt` and `ossl_sm2_decrypt` -- the invalid-encoding, invalid-argument,
+    # internal-error, EC/BN/EVP/ASN1-lib and buffer-too-small reasons -- and the
+    # `SM2_R_INVALID_DIGEST` refusal of the decrypt path's C3 comparison.
+    ("crypto/sm2/sm2_crypt.c", "SM2_CRYPT"),
+    # Phase 8's SM2 signature unit. `.c.in`-generated, so the bare build-relative path. Its raises
+    # are the `PROV_R_XOF_DIGESTS_NOT_ALLOWED` and `PROV_R_INVALID_DIGEST` refusals of
+    # `sm2sig_set_mdname`, the `PROV_R_NO_KEY_SET` refusal of `sm2sig_signature_init`, and the two
+    # generated decoders' `PROV_R_REPEATED_PARAMETER` sites.
+    ("providers/implementations/signature/sm2_sig.c", "PROV_SM2_SIG"),
+    # Phase 8's SM2 asym-cipher unit. `.c.in`-generated too. Its raises are the
+    # `PROV_R_INVALID_KEY` refusal of `sm2_asym_encrypt`'s size-query arm and the two generated
+    # decoders' `PROV_R_REPEATED_PARAMETER` sites.
+    ("providers/implementations/asymciphers/sm2_enc.c", "PROV_SM2_ENC"),
     # This pass's `DSA` signature unit. `signature/dsa_sig.c` is `.c.in`-generated, so its
     # `__FILE__` is the bare build-relative path (D235's finding, the same one `dh_exch.c`
     # carries). Its raises are its own: the four generated decoder refusals

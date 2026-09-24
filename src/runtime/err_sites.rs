@@ -24252,6 +24252,866 @@ pub(crate) const SM2_KEY_43: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ossl_sm2_compute_z_digest` at `crypto/sm2/sm2_sign.c:48` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const SM2_SIGN_48: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 48,
+    func: c"ossl_sm2_compute_z_digest",
+    lib: 53,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_compute_z_digest` at `crypto/sm2/sm2_sign.c:54` (ERR_R_EVP_LIB).
+pub(crate) const SM2_SIGN_54: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 54,
+    func: c"ossl_sm2_compute_z_digest",
+    lib: 53,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_compute_z_digest` at `crypto/sm2/sm2_sign.c:59` (ERR_R_BN_LIB).
+pub(crate) const SM2_SIGN_59: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 59,
+    func: c"ossl_sm2_compute_z_digest",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_compute_z_digest` at `crypto/sm2/sm2_sign.c:73` (ERR_R_BN_LIB).
+pub(crate) const SM2_SIGN_73: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 73,
+    func: c"ossl_sm2_compute_z_digest",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_compute_z_digest` at `crypto/sm2/sm2_sign.c:78` (ERR_R_EVP_LIB).
+pub(crate) const SM2_SIGN_78: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 78,
+    func: c"ossl_sm2_compute_z_digest",
+    lib: 53,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_compute_z_digest` at `crypto/sm2/sm2_sign.c:86` (SM2_R_ID_TOO_LARGE).
+pub(crate) const SM2_SIGN_86: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 86,
+    func: c"ossl_sm2_compute_z_digest",
+    lib: 53,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_compute_z_digest` at `crypto/sm2/sm2_sign.c:94` (ERR_R_EVP_LIB).
+pub(crate) const SM2_SIGN_94: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 94,
+    func: c"ossl_sm2_compute_z_digest",
+    lib: 53,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_compute_z_digest` at `crypto/sm2/sm2_sign.c:99` (ERR_R_EVP_LIB).
+pub(crate) const SM2_SIGN_99: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 99,
+    func: c"ossl_sm2_compute_z_digest",
+    lib: 53,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_compute_z_digest` at `crypto/sm2/sm2_sign.c:104` (ERR_R_EVP_LIB).
+pub(crate) const SM2_SIGN_104: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 104,
+    func: c"ossl_sm2_compute_z_digest",
+    lib: 53,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_compute_z_digest` at `crypto/sm2/sm2_sign.c:109` (ERR_R_EC_LIB).
+pub(crate) const SM2_SIGN_109: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 109,
+    func: c"ossl_sm2_compute_z_digest",
+    lib: 53,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_compute_z_digest` at `crypto/sm2/sm2_sign.c:137` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_SIGN_137: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 137,
+    func: c"ossl_sm2_compute_z_digest",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `sm2_compute_msg_hash` at `crypto/sm2/sm2_sign.c:166` (SM2_R_INVALID_DIGEST).
+pub(crate) const SM2_SIGN_166: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 166,
+    func: c"sm2_compute_msg_hash",
+    lib: 53,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `sm2_compute_msg_hash` at `crypto/sm2/sm2_sign.c:170` (ERR_R_EVP_LIB).
+pub(crate) const SM2_SIGN_170: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 170,
+    func: c"sm2_compute_msg_hash",
+    lib: 53,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `sm2_compute_msg_hash` at `crypto/sm2/sm2_sign.c:180` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_SIGN_180: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 180,
+    func: c"sm2_compute_msg_hash",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `sm2_compute_msg_hash` at `crypto/sm2/sm2_sign.c:194` (ERR_R_EVP_LIB).
+pub(crate) const SM2_SIGN_194: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 194,
+    func: c"sm2_compute_msg_hash",
+    lib: 53,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `sm2_compute_msg_hash` at `crypto/sm2/sm2_sign.c:200` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_SIGN_200: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 200,
+    func: c"sm2_compute_msg_hash",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_gen` at `crypto/sm2/sm2_sign.c:226` (SM2_R_INVALID_PRIVATE_KEY).
+pub(crate) const SM2_SIGN_226: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 226,
+    func: c"sm2_sig_gen",
+    lib: 53,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_gen` at `crypto/sm2/sm2_sign.c:231` (ERR_R_EC_LIB).
+pub(crate) const SM2_SIGN_231: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 231,
+    func: c"sm2_sig_gen",
+    lib: 53,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_gen` at `crypto/sm2/sm2_sign.c:236` (ERR_R_BN_LIB).
+pub(crate) const SM2_SIGN_236: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 236,
+    func: c"sm2_sig_gen",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_gen` at `crypto/sm2/sm2_sign.c:246` (ERR_R_BN_LIB).
+pub(crate) const SM2_SIGN_246: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 246,
+    func: c"sm2_sig_gen",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_gen` at `crypto/sm2/sm2_sign.c:258` (ERR_R_BN_LIB).
+pub(crate) const SM2_SIGN_258: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 258,
+    func: c"sm2_sig_gen",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_gen` at `crypto/sm2/sm2_sign.c:273` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_SIGN_273: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 273,
+    func: c"sm2_sig_gen",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_gen` at `crypto/sm2/sm2_sign.c:281` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_SIGN_281: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 281,
+    func: c"sm2_sig_gen",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_gen` at `crypto/sm2/sm2_sign.c:290` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_SIGN_290: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 290,
+    func: c"sm2_sig_gen",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_gen` at `crypto/sm2/sm2_sign.c:302` (ERR_R_BN_LIB).
+pub(crate) const SM2_SIGN_302: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 302,
+    func: c"sm2_sig_gen",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_gen` at `crypto/sm2/sm2_sign.c:312` (ERR_R_ECDSA_LIB).
+pub(crate) const SM2_SIGN_312: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 312,
+    func: c"sm2_sig_gen",
+    lib: 53,
+    reason: 524330,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_verify` at `crypto/sm2/sm2_sign.c:349` (ERR_R_BN_LIB).
+pub(crate) const SM2_SIGN_349: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 349,
+    func: c"sm2_sig_verify",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_verify` at `crypto/sm2/sm2_sign.c:356` (ERR_R_BN_LIB).
+pub(crate) const SM2_SIGN_356: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 356,
+    func: c"sm2_sig_verify",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_verify` at `crypto/sm2/sm2_sign.c:362` (ERR_R_EC_LIB).
+pub(crate) const SM2_SIGN_362: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 362,
+    func: c"sm2_sig_verify",
+    lib: 53,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_verify` at `crypto/sm2/sm2_sign.c:382` (SM2_R_BAD_SIGNATURE).
+pub(crate) const SM2_SIGN_382: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 382,
+    func: c"sm2_sig_verify",
+    lib: 53,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_verify` at `crypto/sm2/sm2_sign.c:387` (ERR_R_BN_LIB).
+pub(crate) const SM2_SIGN_387: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 387,
+    func: c"sm2_sig_verify",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_verify` at `crypto/sm2/sm2_sign.c:392` (SM2_R_BAD_SIGNATURE).
+pub(crate) const SM2_SIGN_392: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 392,
+    func: c"sm2_sig_verify",
+    lib: 53,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_verify` at `crypto/sm2/sm2_sign.c:398` (ERR_R_EC_LIB).
+pub(crate) const SM2_SIGN_398: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 398,
+    func: c"sm2_sig_verify",
+    lib: 53,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_verify` at `crypto/sm2/sm2_sign.c:403` (ERR_R_BN_LIB).
+pub(crate) const SM2_SIGN_403: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 403,
+    func: c"sm2_sig_verify",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_internal_sign` at `crypto/sm2/sm2_sign.c:472` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const SM2_SIGN_472: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 472,
+    func: c"ossl_sm2_internal_sign",
+    lib: 53,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_internal_sign` at `crypto/sm2/sm2_sign.c:478` (ERR_R_BN_LIB).
+pub(crate) const SM2_SIGN_478: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 478,
+    func: c"ossl_sm2_internal_sign",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_internal_sign` at `crypto/sm2/sm2_sign.c:484` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_SIGN_484: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 484,
+    func: c"ossl_sm2_internal_sign",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_internal_sign` at `crypto/sm2/sm2_sign.c:490` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_SIGN_490: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 490,
+    func: c"ossl_sm2_internal_sign",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_internal_verify` at `crypto/sm2/sm2_sign.c:516` (ERR_R_ECDSA_LIB).
+pub(crate) const SM2_SIGN_516: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 516,
+    func: c"ossl_sm2_internal_verify",
+    lib: 53,
+    reason: 524330,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_internal_verify` at `crypto/sm2/sm2_sign.c:520` (SM2_R_INVALID_ENCODING).
+pub(crate) const SM2_SIGN_520: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 520,
+    func: c"ossl_sm2_internal_verify",
+    lib: 53,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_internal_verify` at `crypto/sm2/sm2_sign.c:526` (SM2_R_INVALID_ENCODING).
+pub(crate) const SM2_SIGN_526: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 526,
+    func: c"ossl_sm2_internal_verify",
+    lib: 53,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_internal_verify` at `crypto/sm2/sm2_sign.c:532` (ERR_R_BN_LIB).
+pub(crate) const SM2_SIGN_532: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 532,
+    func: c"ossl_sm2_internal_verify",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_plaintext_size` at `crypto/sm2/sm2_crypt.c:77` (SM2_R_INVALID_ENCODING).
+pub(crate) const SM2_CRYPT_77: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 77,
+    func: c"ossl_sm2_plaintext_size",
+    lib: 53,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:141` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const SM2_CRYPT_141: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 141,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:146` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_CRYPT_146: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 146,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:152` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_CRYPT_152: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 152,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:159` (ERR_R_EC_LIB).
+pub(crate) const SM2_CRYPT_159: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 159,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:164` (ERR_R_BN_LIB).
+pub(crate) const SM2_CRYPT_164: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 164,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:176` (ERR_R_BN_LIB).
+pub(crate) const SM2_CRYPT_176: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 176,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:194` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_CRYPT_194: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 194,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:202` (ERR_R_EC_LIB).
+pub(crate) const SM2_CRYPT_202: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 202,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:208` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_CRYPT_208: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 208,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:215` (ERR_R_EVP_LIB).
+pub(crate) const SM2_CRYPT_215: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 215,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:229` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_CRYPT_229: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 229,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:237` (ERR_R_EVP_LIB).
+pub(crate) const SM2_CRYPT_237: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 237,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:247` (ERR_R_ASN1_LIB).
+pub(crate) const SM2_CRYPT_247: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 247,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:252` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_CRYPT_252: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 252,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:259` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_CRYPT_259: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 259,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:264` (SM2_R_BUFFER_TOO_SMALL).
+pub(crate) const SM2_CRYPT_264: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 264,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:270` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_CRYPT_270: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 270,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_decrypt` at `crypto/sm2/sm2_crypt.c:325` (SM2_R_ASN1_ERROR).
+pub(crate) const SM2_CRYPT_325: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 325,
+    func: c"ossl_sm2_decrypt",
+    lib: 53,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_decrypt` at `crypto/sm2/sm2_crypt.c:330` (SM2_R_INVALID_ENCODING).
+pub(crate) const SM2_CRYPT_330: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 330,
+    func: c"ossl_sm2_decrypt",
+    lib: 53,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_decrypt` at `crypto/sm2/sm2_crypt.c:338` (SM2_R_BUFFER_TOO_SMALL).
+pub(crate) const SM2_CRYPT_338: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 338,
+    func: c"ossl_sm2_decrypt",
+    lib: 53,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_decrypt` at `crypto/sm2/sm2_crypt.c:344` (ERR_R_BN_LIB).
+pub(crate) const SM2_CRYPT_344: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 344,
+    func: c"ossl_sm2_decrypt",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_decrypt` at `crypto/sm2/sm2_crypt.c:353` (ERR_R_BN_LIB).
+pub(crate) const SM2_CRYPT_353: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 353,
+    func: c"ossl_sm2_decrypt",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_decrypt` at `crypto/sm2/sm2_crypt.c:366` (ERR_R_EC_LIB).
+pub(crate) const SM2_CRYPT_366: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 366,
+    func: c"ossl_sm2_decrypt",
+    lib: 53,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_decrypt` at `crypto/sm2/sm2_crypt.c:375` (ERR_R_EC_LIB).
+pub(crate) const SM2_CRYPT_375: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 375,
+    func: c"ossl_sm2_decrypt",
+    lib: 53,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_decrypt` at `crypto/sm2/sm2_crypt.c:383` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_CRYPT_383: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 383,
+    func: c"ossl_sm2_decrypt",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_decrypt` at `crypto/sm2/sm2_crypt.c:388` (SM2_R_INVALID_ENCODING).
+pub(crate) const SM2_CRYPT_388: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 388,
+    func: c"ossl_sm2_decrypt",
+    lib: 53,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_decrypt` at `crypto/sm2/sm2_crypt.c:397` (ERR_R_EVP_LIB).
+pub(crate) const SM2_CRYPT_397: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 397,
+    func: c"ossl_sm2_decrypt",
+    lib: 53,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_decrypt` at `crypto/sm2/sm2_crypt.c:406` (ERR_R_EVP_LIB).
+pub(crate) const SM2_CRYPT_406: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 406,
+    func: c"ossl_sm2_decrypt",
+    lib: 53,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_decrypt` at `crypto/sm2/sm2_crypt.c:411` (SM2_R_INVALID_DIGEST).
+pub(crate) const SM2_CRYPT_411: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 411,
+    func: c"ossl_sm2_decrypt",
+    lib: 53,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `sm2sig_set_mdname` at `providers/implementations/signature/sm2_sig.c:105` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_SM2_SIG_105: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/sm2_sig.c",
+    line: 105,
+    func: c"sm2sig_set_mdname",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `sm2sig_set_mdname` at `providers/implementations/signature/sm2_sig.c:114` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_SM2_SIG_114: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/sm2_sig.c",
+    line: 114,
+    func: c"sm2sig_set_mdname",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `sm2sig_signature_init` at `providers/implementations/signature/sm2_sig.c:150` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_SM2_SIG_150: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/sm2_sig.c",
+    line: 150,
+    func: c"sm2sig_signature_init",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `sm2sig_get_ctx_params_decoder` at `providers/implementations/signature/sm2_sig.c:440` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SM2_SIG_440: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/sm2_sig.c",
+    line: 440,
+    func: c"sm2sig_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sm2sig_get_ctx_params_decoder` at `providers/implementations/signature/sm2_sig.c:475` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SM2_SIG_475: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/sm2_sig.c",
+    line: 475,
+    func: c"sm2sig_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sm2sig_get_ctx_params_decoder` at `providers/implementations/signature/sm2_sig.c:484` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SM2_SIG_484: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/sm2_sig.c",
+    line: 484,
+    func: c"sm2sig_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sm2sig_set_ctx_params_decoder` at `providers/implementations/signature/sm2_sig.c:591` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SM2_SIG_591: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/sm2_sig.c",
+    line: 591,
+    func: c"sm2sig_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sm2sig_set_ctx_params_decoder` at `providers/implementations/signature/sm2_sig.c:600` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SM2_SIG_600: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/sm2_sig.c",
+    line: 600,
+    func: c"sm2sig_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sm2sig_set_ctx_params_decoder` at `providers/implementations/signature/sm2_sig.c:614` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SM2_SIG_614: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/sm2_sig.c",
+    line: 614,
+    func: c"sm2sig_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sm2_asym_encrypt` at `providers/implementations/asymciphers/sm2_enc.c:98` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_SM2_ENC_98: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/sm2_enc.c",
+    line: 98,
+    func: c"sm2_asym_encrypt",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `sm2_get_ctx_params_decoder` at `providers/implementations/asymciphers/sm2_enc.c:188` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SM2_ENC_188: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/sm2_enc.c",
+    line: 188,
+    func: c"sm2_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sm2_set_ctx_params_decoder` at `providers/implementations/asymciphers/sm2_enc.c:259` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SM2_ENC_259: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/sm2_enc.c",
+    line: 259,
+    func: c"sm2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sm2_set_ctx_params_decoder` at `providers/implementations/asymciphers/sm2_enc.c:270` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SM2_ENC_270: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/sm2_enc.c",
+    line: 270,
+    func: c"sm2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sm2_set_ctx_params_decoder` at `providers/implementations/asymciphers/sm2_enc.c:281` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SM2_ENC_281: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/sm2_enc.c",
+    line: 281,
+    func: c"sm2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
 /// `dsa_setup_md` at `providers/implementations/signature/dsa_sig.c:171` (PROV_R_INVALID_DIGEST).
 pub(crate) const PROV_DSA_SIG_171: ErrSite = ErrSite {
     file: c"providers/implementations/signature/dsa_sig.c",
@@ -42055,6 +42915,92 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_EC_KEM_847,
     SM2_KEY_33,
     SM2_KEY_43,
+    SM2_SIGN_48,
+    SM2_SIGN_54,
+    SM2_SIGN_59,
+    SM2_SIGN_73,
+    SM2_SIGN_78,
+    SM2_SIGN_86,
+    SM2_SIGN_94,
+    SM2_SIGN_99,
+    SM2_SIGN_104,
+    SM2_SIGN_109,
+    SM2_SIGN_137,
+    SM2_SIGN_166,
+    SM2_SIGN_170,
+    SM2_SIGN_180,
+    SM2_SIGN_194,
+    SM2_SIGN_200,
+    SM2_SIGN_226,
+    SM2_SIGN_231,
+    SM2_SIGN_236,
+    SM2_SIGN_246,
+    SM2_SIGN_258,
+    SM2_SIGN_273,
+    SM2_SIGN_281,
+    SM2_SIGN_290,
+    SM2_SIGN_302,
+    SM2_SIGN_312,
+    SM2_SIGN_349,
+    SM2_SIGN_356,
+    SM2_SIGN_362,
+    SM2_SIGN_382,
+    SM2_SIGN_387,
+    SM2_SIGN_392,
+    SM2_SIGN_398,
+    SM2_SIGN_403,
+    SM2_SIGN_472,
+    SM2_SIGN_478,
+    SM2_SIGN_484,
+    SM2_SIGN_490,
+    SM2_SIGN_516,
+    SM2_SIGN_520,
+    SM2_SIGN_526,
+    SM2_SIGN_532,
+    SM2_CRYPT_77,
+    SM2_CRYPT_141,
+    SM2_CRYPT_146,
+    SM2_CRYPT_152,
+    SM2_CRYPT_159,
+    SM2_CRYPT_164,
+    SM2_CRYPT_176,
+    SM2_CRYPT_194,
+    SM2_CRYPT_202,
+    SM2_CRYPT_208,
+    SM2_CRYPT_215,
+    SM2_CRYPT_229,
+    SM2_CRYPT_237,
+    SM2_CRYPT_247,
+    SM2_CRYPT_252,
+    SM2_CRYPT_259,
+    SM2_CRYPT_264,
+    SM2_CRYPT_270,
+    SM2_CRYPT_325,
+    SM2_CRYPT_330,
+    SM2_CRYPT_338,
+    SM2_CRYPT_344,
+    SM2_CRYPT_353,
+    SM2_CRYPT_366,
+    SM2_CRYPT_375,
+    SM2_CRYPT_383,
+    SM2_CRYPT_388,
+    SM2_CRYPT_397,
+    SM2_CRYPT_406,
+    SM2_CRYPT_411,
+    PROV_SM2_SIG_105,
+    PROV_SM2_SIG_114,
+    PROV_SM2_SIG_150,
+    PROV_SM2_SIG_440,
+    PROV_SM2_SIG_475,
+    PROV_SM2_SIG_484,
+    PROV_SM2_SIG_591,
+    PROV_SM2_SIG_600,
+    PROV_SM2_SIG_614,
+    PROV_SM2_ENC_98,
+    PROV_SM2_ENC_188,
+    PROV_SM2_ENC_259,
+    PROV_SM2_ENC_270,
+    PROV_SM2_ENC_281,
     PROV_DSA_SIG_171,
     PROV_DSA_SIG_176,
     PROV_DSA_SIG_181,

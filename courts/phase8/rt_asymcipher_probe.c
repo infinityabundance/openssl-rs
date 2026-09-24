@@ -794,6 +794,81 @@ int main(void)
     }
 
     EVP_PKEY_free(pkey);
+
+    /* ----------------------------------------------------------------------------------------- */
+    /* The `OSSL_OP_ASYM_CIPHER` SM2 row (D406).                                                  */
+    /* ----------------------------------------------------------------------------------------- */
+
+    /* The row by name, then a key generated through the `SM2` keymgmt row and an encrypt/decrypt
+     * round trip. The published GM/T 0003.5-2012 known answers are the crypt unit's own unit tests
+     * (`src/sm2/crypt.rs`); here the row is driven through its dispatch and the round trip observed,
+     * which is the registration-row court's subject. */
+    {
+        EVP_ASYM_CIPHER *sm2_row = EVP_ASYM_CIPHER_fetch(NULL, "SM2", NULL);
+        EVP_PKEY_CTX *kctx;
+        EVP_PKEY *skey = NULL;
+        OSSL_PARAM gparams[2];
+
+        kv_int("asym.SM2.fetch", sm2_row != NULL);
+        EVP_ASYM_CIPHER_free(sm2_row);
+
+        kctx = EVP_PKEY_CTX_new_from_name(NULL, "SM2", NULL);
+        gparams[0] = OSSL_PARAM_construct_utf8_string(OSSL_PKEY_PARAM_GROUP_NAME, (char *)"SM2", 0);
+        gparams[1] = OSSL_PARAM_construct_end();
+        kv_int("asym.SM2.keygen_init", kctx != NULL && EVP_PKEY_keygen_init(kctx) > 0);
+        kv_int("asym.SM2.set_group", kctx != NULL && EVP_PKEY_CTX_set_params(kctx, gparams) > 0);
+        kv_int("asym.SM2.keygen", kctx != NULL && EVP_PKEY_keygen(kctx, &skey) > 0);
+        EVP_PKEY_CTX_free(kctx);
+        drain("asym.SM2.keygen");
+
+        if (skey != NULL) {
+            unsigned char ct[512];
+            unsigned char pt[512];
+            size_t ctlen;
+            size_t ptlen;
+            int encrypt_ok;
+            EVP_PKEY_CTX *c = EVP_PKEY_CTX_new_from_pkey(NULL, skey, NULL);
+
+            /* SM2 encryption is randomised, and its DER ciphertext length varies with the two
+             * INTEGER components' leading zeroes, so neither the ciphertext nor its length is
+             * printed; the size query, the message length and the round trip are deterministic. */
+            kv_int("asym.SM2.encrypt_init", c != NULL && EVP_PKEY_encrypt_init_ex(c, NULL) > 0);
+            ctlen = sizeof(ct);
+            kv_int("asym.SM2.size", c != NULL && EVP_PKEY_encrypt(c, NULL, &ctlen, NULL, 0) > 0);
+            kv_int("asym.SM2.size_len", (int)ctlen);
+            ctlen = sizeof(ct);
+            encrypt_ok = c != NULL && EVP_PKEY_encrypt(c, ct, &ctlen,
+                                                       (const unsigned char *)asym_message,
+                                                       sizeof(asym_message) - 1) > 0;
+            kv_int("asym.SM2.encrypt", encrypt_ok);
+            if (c != NULL && EVP_PKEY_encrypt_init_ex(c, NULL) > 0) {
+                char digest[32] = { 0 };
+                OSSL_PARAM gp[2];
+
+                gp[0] = OSSL_PARAM_construct_utf8_string(OSSL_ASYM_CIPHER_PARAM_DIGEST, digest,
+                                                         sizeof(digest));
+                gp[1] = OSSL_PARAM_construct_end();
+                kv_int("asym.SM2.get", EVP_PKEY_CTX_get_params(c, gp) > 0);
+                kv_str("asym.SM2.digest", digest);
+            }
+            EVP_PKEY_CTX_free(c);
+
+            if (encrypt_ok) {
+                c = EVP_PKEY_CTX_new_from_pkey(NULL, skey, NULL);
+                kv_int("asym.SM2.decrypt_init", c != NULL && EVP_PKEY_decrypt_init_ex(c, NULL) > 0);
+                ptlen = sizeof(pt);
+                kv_int("asym.SM2.decrypt",
+                       c != NULL && EVP_PKEY_decrypt(c, pt, &ptlen, ct, ctlen) > 0);
+                kv_int("asym.SM2.pt_len", (int)ptlen);
+                kv_int("asym.SM2.roundtrip",
+                       ptlen == sizeof(asym_message) - 1
+                           && memcmp(pt, asym_message, sizeof(asym_message) - 1) == 0);
+                EVP_PKEY_CTX_free(c);
+            }
+            EVP_PKEY_free(skey);
+        }
+    }
+
     ERR_clear_error();
     return 0;
 }
