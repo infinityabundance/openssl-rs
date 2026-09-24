@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 4045,
+      "sites": 4050,
       "unattributed": 0
     },
     "covered_files": [
@@ -246,6 +246,9 @@
       "providers/implementations/kem/mlx_kem.c",
       "providers/implementations/keymgmt/slh_dsa_kmgmt.c",
       "providers/implementations/signature/slh_dsa_sig.c",
+      "crypto/ml_dsa/ml_dsa_encoders.c",
+      "crypto/ml_dsa/ml_dsa_key.c",
+      "crypto/ml_dsa/ml_dsa_sign.c",
       "providers/implementations/signature/mac_legacy_sig.c",
       "crypto/rsa/rsa_lib.c",
       "crypto/rsa/rsa_crpt.c",
@@ -43061,6 +43064,81 @@
         "rel_source": "providers/implementations/signature/slh_dsa_sig.c"
       },
       {
+        "const_name": "ML_DSA_ENCODERS_820",
+        "data_format": "\"%s private key does not match its pubkey part\"",
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_encoders.c",
+        "function": "ossl_ml_dsa_sk_decode",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 820,
+        "macro": "ERR_raise_data",
+        "reason": 158,
+        "reason_symbol": "PROV_R_INVALID_KEY",
+        "rel_source": "crypto/ml_dsa/ml_dsa_encoders.c"
+      },
+      {
+        "const_name": "ML_DSA_KEY_501",
+        "data_format": "\"explicit %s private key does not match seed\"",
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_key.c",
+        "function": "ossl_ml_dsa_generate_key",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 501,
+        "macro": "ERR_raise_data",
+        "reason": 158,
+        "reason_symbol": "PROV_R_INVALID_KEY",
+        "rel_source": "crypto/ml_dsa/ml_dsa_key.c"
+      },
+      {
+        "const_name": "ML_DSA_SIGN_135",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_sign.c",
+        "function": "ossl_ml_dsa_mu_finalize",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 135,
+        "macro": "ERR_raise",
+        "reason": 142,
+        "reason_symbol": "PROV_R_BAD_LENGTH",
+        "rel_source": "crypto/ml_dsa/ml_dsa_sign.c"
+      },
+      {
+        "const_name": "ML_DSA_SIGN_181",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_sign.c",
+        "function": "ml_dsa_sign_internal",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 181,
+        "macro": "ERR_raise",
+        "reason": 142,
+        "reason_symbol": "PROV_R_BAD_LENGTH",
+        "rel_source": "crypto/ml_dsa/ml_dsa_sign.c"
+      },
+      {
+        "const_name": "ML_DSA_SIGN_344",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_sign.c",
+        "function": "ml_dsa_verify_internal",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 344,
+        "macro": "ERR_raise",
+        "reason": 142,
+        "reason_symbol": "PROV_R_BAD_LENGTH",
+        "rel_source": "crypto/ml_dsa/ml_dsa_sign.c"
+      },
+      {
         "const_name": "PROV_MAC_LEGACY_SIG_107",
         "data_format": null,
         "dynamic_reason": false,
@@ -62325,6 +62403,21 @@
       "name": "authority:providers/implementations/signature/slh_dsa_sig.c",
       "path": "forensics/authorities/build/openssl-3.6.4-production/providers/implementations/signature/slh_dsa_sig.c",
       "sha256": "585ad912d9f8ce68fcd1ddf2bbac4201848e756820e4bec5c794231641279527"
+    },
+    {
+      "name": "authority:crypto/ml_dsa/ml_dsa_encoders.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_encoders.c",
+      "sha256": "dbd0487c809eca28ab52064078b9a325bbf16d27478801c22ece920cec9c8568"
+    },
+    {
+      "name": "authority:crypto/ml_dsa/ml_dsa_key.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_key.c",
+      "sha256": "3c44b06891986aa2779bd4b2d84eff950ba05da346c8f4bce4284175a72eb2d8"
+    },
+    {
+      "name": "authority:crypto/ml_dsa/ml_dsa_sign.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_sign.c",
+      "sha256": "b9863573867f8d0ca440e3a5c3852b209a8386e57511bb9868aa328cf0c813f9"
     },
     {
       "name": "authority:providers/implementations/signature/mac_legacy_sig.c",

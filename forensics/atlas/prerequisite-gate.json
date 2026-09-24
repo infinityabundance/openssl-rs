@@ -14,7 +14,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 77,
-      "language_surface_not_modelled_by_name": 4967,
+      "language_surface_not_modelled_by_name": 5014,
       "planned_prerequisites": 8
     },
     "census_by_unit": {
@@ -286,8 +286,12 @@
         "crypto/mdc2/mdc2dgst.c": 4,
         "crypto/mem.c": 12,
         "crypto/mem_sec.c": 10,
+        "crypto/ml_dsa/ml_dsa_encoders.c": 13,
+        "crypto/ml_dsa/ml_dsa_key.c": 16,
         "crypto/ml_dsa/ml_dsa_key_compress.c": 1,
         "crypto/ml_dsa/ml_dsa_ntt.c": 2,
+        "crypto/ml_dsa/ml_dsa_sample.c": 7,
+        "crypto/ml_dsa/ml_dsa_sign.c": 11,
         "crypto/ml_kem/ml_kem.c": 18,
         "crypto/modes/ccm128.c": 4,
         "crypto/modes/cts128.c": 3,
@@ -489,8 +493,8 @@
       ]
     },
     "checked": {
-      "authority_units": 320,
-      "crate_modules": 453,
+      "authority_units": 324,
+      "crate_modules": 458,
       "deferral_blocker_rows": 1,
       "deferrals_recorded": 9,
       "divergence_names_covered": 43,
@@ -599,13 +603,13 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "9c0aa09cdbc1032a0ea7629dfc14a74bec0e22cf55d1d79010433e913bbff2bc",
+  "body_hash": "8f1450e000af284427fce4b9ee34de587976c1cbc6efd98ae742cb01761e8833",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "f4929c977f3851193cffab26ca3a1ffa725977bf3b83e9863df25348fe6351b2"
+      "sha256": "9f574a902c83f1e3a2e2850ae9a31ffdff6eb3158241371c15865e4759c42c31"
     },
     {
       "name": "macro-owners",
@@ -620,7 +624,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "4c924b95fc9f8e3d08224d89ef154a73617b04f9ecbb6dd8f5dfb351ab01227a"
+      "sha256": "65b048be83ee0eddd721e86b8b5f3f77ae4215e760e73d5fe357d5c3c366ef98"
     },
     {
       "name": "symbol-ownership",
@@ -635,7 +639,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "687050ee36227eece7d6eff956f35641329535517ae52179e60a67ee82bc6b5f"
+      "sha256": "0f8d9a83ca4d45660454291a14f52ade9e42b6926585827704cd98a83f185046"
     },
     {
       "name": "phase-state",

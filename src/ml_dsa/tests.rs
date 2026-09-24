@@ -11,15 +11,23 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+use super::encoders::{ossl_ml_dsa_pk_decode, ossl_ml_dsa_pk_encode};
+use super::key::{
+    ossl_ml_dsa_generate_key, ossl_ml_dsa_key_free, ossl_ml_dsa_key_get_priv,
+    ossl_ml_dsa_key_get_pub, ossl_ml_dsa_key_get_pub_len, ossl_ml_dsa_key_get_sig_len,
+    ossl_ml_dsa_key_new, ossl_ml_dsa_key_pairwise_check,
+};
 use super::key_compress::{
     ossl_ml_dsa_key_compress_decompose, ossl_ml_dsa_key_compress_high_bits,
     ossl_ml_dsa_key_compress_low_bits, ossl_ml_dsa_key_compress_power2_round,
 };
 use super::ntt::{ossl_ml_dsa_poly_ntt, ossl_ml_dsa_poly_ntt_inverse};
 use super::poly::Poly;
+use super::sign::{ossl_ml_dsa_sign, ossl_ml_dsa_verify};
 use super::{
-    mod_sub, reduce_once, ML_DSA_D_BITS, ML_DSA_GAMMA2_Q_MINUS1_DIV32,
-    ML_DSA_GAMMA2_Q_MINUS1_DIV88, ML_DSA_NUM_POLY_COEFFICIENTS, ML_DSA_Q, ML_DSA_Q_MINUS1_DIV2,
+    mod_sub, reduce_once, EVP_PKEY_ML_DSA_44, EVP_PKEY_ML_DSA_65, EVP_PKEY_ML_DSA_87,
+    ML_DSA_44_PUB_LEN, ML_DSA_D_BITS, ML_DSA_GAMMA2_Q_MINUS1_DIV32, ML_DSA_GAMMA2_Q_MINUS1_DIV88,
+    ML_DSA_NUM_POLY_COEFFICIENTS, ML_DSA_Q, ML_DSA_Q_MINUS1_DIV2,
 };
 
 /// `2^32 mod q` — the Montgomery multiplier's image, `ml_dsa_local.h`'s `R` in `mod q`.
@@ -104,5 +112,127 @@ fn ntt_then_inverse_scales_by_the_montgomery_r() {
     for i in 0..ML_DSA_NUM_POLY_COEFFICIENTS {
         let want = ((orig.coeff[i] as u64 * MONTGOMERY_R) % ML_DSA_Q as u64) as u32;
         assert_eq!(x.coeff[i], want, "coeff {i}");
+    }
+}
+
+/// A freshly generated key of every parameter set satisfies its own pairwise consistency test.
+///
+/// `ossl_ml_dsa_key_pairwise_check` signs and verifies internally, so this one call drives
+/// `keygen_internal`, `ExpandA`, `ExpandS`, both NTTs, both encoders and the whole signature path.
+#[test]
+fn a_generated_key_passes_its_pairwise_check() {
+    for evp_type in [EVP_PKEY_ML_DSA_44, EVP_PKEY_ML_DSA_65, EVP_PKEY_ML_DSA_87] {
+        // SAFETY: the key is created by `ossl_ml_dsa_key_new` and freed below; every other call is
+        // under that function's own contract.
+        unsafe {
+            let key = ossl_ml_dsa_key_new(core::ptr::null_mut(), core::ptr::null(), evp_type);
+            assert!(!key.is_null(), "key_new({evp_type})");
+            assert_eq!(ossl_ml_dsa_generate_key(key), 1, "generate_key({evp_type})");
+            assert_eq!(
+                ossl_ml_dsa_key_pairwise_check(key),
+                1,
+                "pairwise_check({evp_type})"
+            );
+            assert!(!ossl_ml_dsa_key_get_pub(key).is_null());
+            assert!(!ossl_ml_dsa_key_get_priv(key).is_null());
+            assert_ne!(ossl_ml_dsa_key_get_sig_len(key), 0);
+            ossl_ml_dsa_key_free(key);
+        }
+    }
+}
+
+/// A signature over a message verifies, and a single flipped signature bit does not.
+#[test]
+fn a_signature_verifies_and_a_tampered_one_does_not() {
+    let msg = b"openssl-rs ML-DSA self-consistency";
+    // A fixed `rnd` makes the randomised signing path deterministic for the test.
+    let rnd = [0x5au8; 32];
+
+    // SAFETY: the key is created and freed here; the buffers are live for the lengths passed.
+    unsafe {
+        let key = ossl_ml_dsa_key_new(core::ptr::null_mut(), core::ptr::null(), EVP_PKEY_ML_DSA_44);
+        assert_eq!(ossl_ml_dsa_generate_key(key), 1);
+
+        let sig_len = ossl_ml_dsa_key_get_sig_len(key);
+        let mut sig = vec![0u8; sig_len];
+        let mut out_len = 0usize;
+
+        assert_eq!(
+            ossl_ml_dsa_sign(
+                key,
+                0,
+                msg.as_ptr(),
+                msg.len(),
+                core::ptr::null(),
+                0,
+                rnd.as_ptr(),
+                rnd.len(),
+                1,
+                sig.as_mut_ptr(),
+                &mut out_len,
+                sig_len,
+            ),
+            1
+        );
+        assert_eq!(out_len, sig_len);
+
+        assert_eq!(
+            ossl_ml_dsa_verify(
+                key,
+                0,
+                msg.as_ptr(),
+                msg.len(),
+                core::ptr::null(),
+                0,
+                1,
+                sig.as_ptr(),
+                out_len,
+            ),
+            1
+        );
+
+        sig[0] ^= 1;
+        assert_eq!(
+            ossl_ml_dsa_verify(
+                key,
+                0,
+                msg.as_ptr(),
+                msg.len(),
+                core::ptr::null(),
+                0,
+                1,
+                sig.as_ptr(),
+                out_len,
+            ),
+            0
+        );
+
+        ossl_ml_dsa_key_free(key);
+    }
+}
+
+/// `pk_encode` then `pk_decode` into a second key reproduces the encoded public key byte for byte.
+#[test]
+fn the_public_key_encoding_round_trips() {
+    // SAFETY: both keys are created and freed here, and the byte slice stays live across the call.
+    unsafe {
+        let key = ossl_ml_dsa_key_new(core::ptr::null_mut(), core::ptr::null(), EVP_PKEY_ML_DSA_44);
+        assert_eq!(ossl_ml_dsa_generate_key(key), 1);
+        assert_eq!(ossl_ml_dsa_pk_encode(key), 1);
+
+        let pk = ossl_ml_dsa_key_get_pub(key);
+        let pk_len = ossl_ml_dsa_key_get_pub_len(key);
+        assert_eq!(pk_len, ML_DSA_44_PUB_LEN);
+        let bytes = core::slice::from_raw_parts(pk, pk_len).to_vec();
+
+        let other =
+            ossl_ml_dsa_key_new(core::ptr::null_mut(), core::ptr::null(), EVP_PKEY_ML_DSA_44);
+        assert_eq!(ossl_ml_dsa_pk_decode(other, bytes.as_ptr(), bytes.len()), 1);
+        let pk2 = ossl_ml_dsa_key_get_pub(other);
+        let pk2_len = ossl_ml_dsa_key_get_pub_len(other);
+        assert_eq!(core::slice::from_raw_parts(pk2, pk2_len), &bytes[..]);
+
+        ossl_ml_dsa_key_free(key);
+        ossl_ml_dsa_key_free(other);
     }
 }
