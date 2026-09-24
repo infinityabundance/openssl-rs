@@ -129,10 +129,10 @@
    "blocked_by": "the OSSL_STORE loaders are Phase 10's."
   },
   {
-   "provider": "base",
-   "operation": "OSSL_OP_RAND",
-   "phase": 9,
-   "blocked_by": "RAND/DRBG is Phase 9's; the base provider's single RAND row is the test RNG."
+    "provider": "base",
+    "operation": "OSSL_OP_RAND",
+    "phase": 9,
+    "blocked_by": "the base provider module, which this stratum has to land to publish the row: `baseprov.c`'s `base_query` answers one table per operation and returns `base_encoder`/`base_decoder`/`base_store` as well as `base_rands`, so publishing `base_rands[]` alone would need `ossl_base_provider_init` to exist first. That module's other three operation ids are 318 encoder, decoder and store rows, all `owning_phase: 10`, which is why the module reads as Phase 10's and the prerequisite as later than the row -- but the row is Phase 9's and the module is its *smallest* prerequisite, so landing it here is what breaks the ordering rather than moving the row forward (which `regression_guard.py`'s `open_by_phase` rule forbids, and rightly). The row's *implementation* has landed (`ossl_seed_src_functions`, `src/provider/seed_src.rs`, D311). **D287's reading of this row is corrected here as well as in docs/PHASE-9-SUBPHASES.md section 4.2**: it is `SEED-SRC`, not the test RNG, and TEST-RAND is `defltprov.c`'s (`base_rands[]` has one row on this profile, because `OPENSSL_NO_JITTER` removes the second)."
   }
  ],
  "overrides": [

@@ -143,6 +143,13 @@ JUDGED_OR_CENSUSED = JUDGED + CENSUSED
 # character, which is what makes `openssl.cnf` and `libcrypto.so.3` non-matches.
 _UNIT = re.compile(r"(?<![\w./-])([A-Za-z0-9_][A-Za-z0-9_/.\-]*\.c)(?![\w.\-])")
 
+# A `.c.in` unit -- the authority's generated sources, which several provider goals build. The
+# pattern above deliberately excludes one, because its trailing boundary rejects a dot in order to
+# keep `openssl.cnf` from matching as `openssl.c`; a second, narrower pattern names a `.c.in`
+# without weakening that. Without it a plan row that names `drbg_ctr.c.in` matches nothing at all,
+# which is how phase 9's four DRBG rows came to claim units this tool could not see.
+_UNIT_IN = re.compile(r"(?<![\w./-])([A-Za-z0-9_][A-Za-z0-9_/.\-]*\.c\.in)(?![\w.\-])")
+
 # A backticked identifier: `` ossl_algorithm_do_all ``, `` provider_init ``, `` ASN1_STRING ``.
 _BACKTICKED = re.compile(r"`([A-Za-z_][A-Za-z0-9_]*)`")
 
@@ -255,6 +262,42 @@ def main(argv: list[str]) -> int:
     unit_symbols: dict[str, set[str]] = defaultdict(set)
     for name, tu in internal.items():
         unit_symbols[tu].add(name)
+
+    # **The atlas keys a translation unit by the object name the authority's build gives it, and
+    # a plan names the source path.** `providers/implementations/rands/drbg.c` compiles to
+    # `providers/implementations/rands/libdefault-lib-drbg.c`, and a `.c.in` compiles to
+    # `.../libdefault-lib-drbg_ctr.c` -- which is the `__FILE__` the raises in those units carry,
+    # and therefore the key `internal-symbols.json` files them under. The two vocabularies have to
+    # be joined here, because otherwise a unit the crate demonstrably reaches is reported
+    # unreached, and only for the units a named build goal compiles, which is a subset nothing
+    # else in this tool can see. D420 is what found it: phase 9's plan names `drbg.c`,
+    # `provider_seeding.c`, `provider_util.c` and `rand_unix.c`, and the crate builds internal
+    # functions of all four.
+    manifest_paths = {
+        (row["path"] if isinstance(row, dict) else row) for row in manifest["files"]
+    }
+
+    def source_of_build(tu: str) -> str | None:
+        """The manifest path a build-object translation unit came from, or None.
+
+        `lib<goal>-lib-<stem>` is the authority's per-object name; the source is the same
+        directory with `<stem>` restored, as a `.c` or -- for a `.c.in` -- as the `.c.in` the
+        manifest actually holds. A name that does not match, or whose source is not in the
+        manifest, is left alone rather than guessed.
+        """
+        directory, _, base = tu.rpartition("/")
+        m = re.match(r"lib[A-Za-z0-9_]+-lib-(.+)$", base)
+        if m is None:
+            return None
+        for cand in (f"{directory}/{m.group(1)}", f"{directory}/{m.group(1)}.in"):
+            if cand in manifest_paths:
+                return cand
+        return None
+
+    for tu in list(unit_symbols):
+        src = source_of_build(tu)
+        if src is not None:
+            unit_symbols[src] |= unit_symbols[tu]
     unit_identifiers: dict[str, set[str]] = {
         u["tu"]: set(u["identifiers"]) for u in edges_doc["body"]["units"]
     }
@@ -436,7 +479,7 @@ def main(argv: list[str]) -> int:
             row_state[head] = states.get(phase, "not-started")
             row_phase[head] = phase
             blob = " ".join(cs[1:])
-            for raw in _UNIT.findall(blob):
+            for raw in _UNIT.findall(blob) + _UNIT_IN.findall(blob):
                 if raw.startswith("./"):
                     raw = raw[2:]
                 # A row may name a file in order to say the authority does not have it, and

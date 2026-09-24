@@ -649,13 +649,6 @@
         "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
       },
       {
-        "unit": "crypto/evp/bio_ok.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 9,
-        "reason": "Its single export is `BIO_f_reliable` (`crypto/evp/bio_ok.c:127`), which answers `&methods_ok` (`:112`) -- a `BIO_METHOD` whose write path is `ok_write` (`:254`) and `sig_out`, and `sig_out` fills the record's digest half with `RAND_bytes(md_data, md_size)` (`:456`). `rand.h` is Phase 9's, and a method struct cannot be published with a callback that has no callee.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
-      },
-      {
         "unit": "crypto/pem/pem_pk8.c",
         "class": "deferred_to_later_stratum",
         "owner_phase": 13,
@@ -1021,6 +1014,20 @@
         ],
         "reason": "Its one external name is `ossl_prov_get_capabilities`, defined non-`static` in the authority (`providers/common/capabilities.c:334`) and declared in `providers/common/include/prov/providercommon.h:21`, because `defltprov.c`'s dispatch table binds it across translation units. It is transcribed whole in `src/provider/capabilities.rs` (D411) -- the function, its two static walkers and its four static tables, in the authority's order -- but none of the three mechanical signals reaches the unit. It compiles into the default provider as `providers/common/libdefault-lib-capabilities.c` rather than into `crypto/`, so it is not one of the units `internal-symbols.json` and `transcription-edges.json` are built over, and the crate module that transcribes it is dominated by no other unit because it transcribes exactly one. It is also deliberately not a provider *algorithm* row: it appears in no `provider-algorithms.json` row and in neither the Phase 8 export ledger nor the Phase 9 one, which is why nothing objected while it was absent for the stratum's whole life (D411). `docs/PHASE-8-SUBPHASES.md` row 8.2 named it absent from the bootstrap until D411 landed it.",
         "evidence": "docs/PHASE-8-SUBPHASES.md row 8.2; src/provider/capabilities.rs; src/provider/digest.rs (the three DEFLT_DISPATCH arms); courts/phase8/rt_provider_cap_probe.c (RT-PROVIDER-CAP, 722 observations); forensics/authorities/src/openssl-3.6.4/providers/common/capabilities.c:334"
+      },
+      {
+        "unit": "providers/fips/fipsprov.c",
+        "class": "not_in_this_profile",
+        "guard": "`providers/fips/build.info:3` puts the unit under `SOURCE[../libfips.a]` and nothing else, and this profile's configure line -- recorded in `forensics/atlas/internal-symbols.json`'s `authority_build` -- passes `shared enable-legacy no-tests` with no `enable-fips`, so `libfips.a` is never linked and the unit is never compiled.",
+        "reason": "docs/PHASE-9-SUBPHASES.md row 9.5 names it in order to say so: `fipsprov.c:445`'s `CRNG-TEST` row is that unit's only observable, `fipsprov.c` is not one of the four admitted providers, and this profile builds no FIPS module -- so there is nothing for a transcription to be measured against. The name is a reconnaissance finding rather than a promise, the same shape `crypto/rcu.c` and `pkey_derive.c` have; the difference is that those name a file the authority does not have and this one names a file it does not compile.",
+        "evidence": "docs/PHASE-9-SUBPHASES.md sections 2 and 4.1; docs/DECISIONS.md D310; forensics/authorities/src/openssl-3.6.4/providers/fips/build.info:3; forensics/atlas/internal-symbols.json (`authority_build.configure_argv`)"
+      },
+      {
+        "unit": "providers/implementations/rands/fips_crng_test.c.in",
+        "class": "not_in_this_profile",
+        "guard": "`providers/implementations/rands/build.info:7` puts the unit under `SOURCE[../../libfips.a]` alone -- `:6` sends `seed_src.c` and `seed_src_jitter.c` to `libdefault.a` and this one nowhere else -- and this profile builds no FIPS module.",
+        "reason": "docs/PHASE-9-SUBPHASES.md row 9.5 names it for the same reason as `fipsprov.c`: it is the continuous random number generator test (`RCT_test`/`APT_test`, dispatch symbol `ossl_crng_test_functions`), it is compiled into `libfips.a` alone, and its single authority row is `fipsprov.c:445`'s `CRNG-TEST`, which is not in an admitted provider -- so the provider census has no observable for it. D287 named the wrong file (`crngt.c`) and §4.1 is the correction; that correction is the `does_not_exist_in_this_authority` record above, and this is the record for the unit that really exists.",
+        "evidence": "docs/PHASE-9-SUBPHASES.md sections 2 and 4.1; docs/DECISIONS.md D287, D310; forensics/authorities/src/openssl-3.6.4/providers/implementations/rands/build.info:6-7"
       }
     ]
   }
