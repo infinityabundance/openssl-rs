@@ -29305,3 +29305,65 @@ Neither is withheld as unreachable, and the map now names exactly those three un
 `complete: true`, implemented **786**, deferred **0**, open **0**). `cargo test --lib` is **1032
 passed, 0 failed**, `cargo clippy --all-targets -- -D warnings` is clean, and the pipeline is
 `PIPELINE OK` with **exit 0**.
+
+## D407 -- `crypto/ml_dsa/`'s arithmetic core lands: the NTT, the key compression and the three
+inline headers, with the zeta table generated
+
+`src/ml_dsa/` is new. It carries `crypto/ml_dsa/ml_dsa_params.c` (the three FIPS 204 parameter
+sets), `crypto/ml_dsa/ml_dsa_ntt.c` (`reduce_montgomery`, the pointwise multiply, the forward and
+inverse transforms) and `crypto/ml_dsa/ml_dsa_key_compress.c` (`Power2Round`, `HighBits`,
+`Decompose`, `LowBits`, `MakeHint`, `UseHint`), together with `ml_dsa_matrix.c`'s one function and
+the three `static ossl_inline` headers every unit includes (`ml_dsa_poly.h`, `ml_dsa_vector.h`,
+`ml_dsa_matrix.h`), which are not translation units and have no owning phase of their own.
+
+### The 256 zeta entries are generated, not transcribed
+
+`ml_dsa_ntt.c:47-80` is 256 `uint32_t` literals: the Montgomery-form 256th roots of unity the
+forward and inverse NTT both read. `forensics/tools/gen_ml_dsa_tables.py` reads the file's own
+definition comment (`zeta[k] = 1753^bitrev(k) mod q`, then
+`zetasMontgomery[k] = reduce_montgomery(zeta[k] * (2^32 * 2^32 mod q))`), re-derives every entry in
+Python with the file's own eight-bit `bitrev` and its own `reduce_montgomery` over
+`ML_DSA_Q`/`ML_DSA_Q_NEG_INV` read from `ml_dsa_local.h`, and **fails unless all 256 agree with the
+authority's literal**. It writes `src/ml_dsa/tables.rs`, whose renderer carries `#[rustfmt::skip]`,
+and runs in `pipeline.sh` before `cargo fmt` like the six table generators above it. The reversal is
+*pinned by the literals*: an eight-bit `bitrev` reproduces the table and a seven-bit one does not, so
+the width is measured rather than assumed.
+
+### `s1`/`s2`/`t0` are one allocation, so the vectors carry raw pointers
+
+`ml_dsa_key.h:55` says `s1`'s block has space for `s2` and `t0` after it, and the key recovers the
+three by pointer arithmetic. `Vector` and `Matrix` are therefore `#[repr(C)]` with the C's own
+pointer-and-count shape rather than `Vec`s, and every header inline is transcribed over them. The
+allocation helpers take `file`/`line` parameters because the authority's
+`OPENSSL_malloc_array`/`OPENSSL_secure_malloc_array` macros report the *caller's* coordinates.
+
+### The evidence is five unit tests, and it is not independent correctness
+
+The eight units define no export -- the six rows live in the two provider units -- so before those
+land the evidence is `src/ml_dsa/tests.rs`, exactly as `crypto/slh_dsa/` and `crypto/ml_kem/` were
+before theirs. Each test re-derives a property in 64-bit arithmetic the transcription does not use:
+
+* `reduce_once` and `mod_sub` against their definitions;
+* `Power2Round` reconstructs `r = r1 * 2^13 + r0 (mod q)` with `r0` in `(0,4096] ∪ (q-4095,q)`;
+* `Decompose`/`HighBits`/`LowBits` reconstruct `r = r1 * (2 * gamma2) + r0 (mod q)` with
+  `|r0| <= gamma2`, for both `gamma2` values;
+* `intt(ntt(x)) = x * 2^32 mod q` -- the exact scale the Montgomery-form table and the inverse's
+  `inverse_degree_montgomery` multiply leave behind, which the NTT-domain product's `* R^-1`
+  cancels. That scale is a **measurement** of the composition, checked against the C body rather
+  than assumed to be the identity.
+
+That last test is a self-consistency check on both transforms and all 256 table entries at once; it
+is **not** independent cryptographic correctness. The independent plane is the FIPS 204 / ACVP
+known-answer court that lands with the provider units, on D400's rule.
+
+### What remains, and what did not move
+
+`provider_rows` is **unchanged at 299 implemented / 7 unimplemented over 306 owned**, and the export
+ledger is untouched (`forensics/phase8-obligations.json` `complete: true`, implemented **786**,
+deferred **0**, open **0**): these units publish no row. `crypto/ml_dsa/sample.c`, `ml_dsa_encoders.c`,
+`ml_dsa_key.c` and `ml_dsa_sign.c` are the next pass, and the six rows follow on them; then
+`kem/ec_kem.c.in`'s one row. Neither is withheld as unreachable. The prerequisite atlas's
+`language_census` moves **4964 -> 4967** for the three new crate modules and nothing else moves: no
+export, no court arm, no ledger row, no provider row. `cargo test --lib` is **1037 passed** (the five
+new tests), `cargo clippy --all-targets -- -D warnings` is clean, and the pipeline is `PIPELINE OK`
+with **exit 0**.

@@ -77,6 +77,14 @@ python3 forensics/tools/gen_ml_kem_tables.py
 # before `cargo fmt` with the other generators; the header is C, so the formatter cannot move it.
 python3 forensics/tools/gen_ml_kem_probe.py
 
+# Phase 8's `crypto/ml_dsa/ml_dsa_ntt.c` Montgomery zeta table: the 256 Montgomery-form 256th
+# roots of unity the forward and inverse NTT both read. It re-derives every entry in Python from
+# the definition the file's own comment carries (`1753^bitrev8(k) * (2^32 * 2^32 mod q)` reduced
+# through the file's own `reduce_montgomery`) and checks each against the authority's literal
+# before writing `src/ml_dsa/tables.rs`, whose renderer carries `#[rustfmt::skip]` so the formatter
+# pass below cannot move a byte. Runs **before** `cargo fmt`, like the six table generators above.
+python3 forensics/tools/gen_ml_dsa_tables.py
+
 echo "== fmt =="
 cargo fmt --all
 
