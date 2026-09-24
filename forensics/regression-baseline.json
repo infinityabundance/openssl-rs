@@ -367,7 +367,7 @@
       "verdict": "pass"
     },
     "RT-RAND": {
-      "observations": 129,
+      "observations": 145,
       "verdict": "pass"
     },
     "RT-RAND-USERS": {
@@ -468,16 +468,17 @@
     "6": "complete",
     "7": "complete",
     "8": "complete",
-    "9": "in-progress"
+    "9": "complete"
   },
   "prerequisites": {
     "blocking_dependencies": 7,
     "divergence_names_covered": 43,
     "findings": 0,
-    "language_census": 5011,
+    "language_census": 5036,
     "sealed_census": 50
   },
   "provider_implemented": [
+    "base/OSSL_OP_RAND/SEED-SRC",
     "default/OSSL_OP_ASYM_CIPHER/RSA",
     "default/OSSL_OP_ASYM_CIPHER/SM2",
     "default/OSSL_OP_CIPHER/AES-128-CBC",
@@ -803,17 +804,17 @@
     "handed_on_by_phase": {
       "10": 39,
       "13": 0,
-      "8": 676,
+      "8": 675,
       "9": 675
     },
-    "implemented": 320,
+    "implemented": 321,
     "open_by_phase": {
       "10": 636,
       "13": 39,
       "8": 0,
-      "9": 1
+      "9": 0
     },
     "total": 996,
-    "unimplemented": 676
+    "unimplemented": 675
   }
 }

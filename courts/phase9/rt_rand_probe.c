@@ -316,6 +316,49 @@ int main(void)
     printf("status.final=%d\n", RAND_status());
     errs("err.status.final");
 
+    /* ---- The base provider: its load, its params, and its one RAND row ------------ */
+
+    /*
+     * `OSSL_PROVIDER_load(NULL, "base")` is what the base provider module exists for. It answers
+     * the same four operation ids the authority's does and publishes exactly one algorithm row on
+     * this profile -- `SEED-SRC`, `base_rands[]`, because `OPENSSL_NO_JITTER` removes the second --
+     * and that row's *implementation* is the same `ossl_seed_src_functions` table the default
+     * provider publishes. So what this arm measures is the registration and the provider's own
+     * surface: the load, the name it reports, availability, its self-test, and that a SEED-SRC
+     * fetched under `provider=base` reaches a live context with its identity intact.
+     */
+    {
+        OSSL_PROVIDER *base = OSSL_PROVIDER_load(NULL, "base");
+
+        printf("base.load=%d\n", base != NULL);
+        errs("err.base.load");
+        printf("base.name=%s\n", base != NULL ? OSSL_PROVIDER_get0_name(base) : "-");
+        printf("base.available=%d\n", OSSL_PROVIDER_available(NULL, "base"));
+        printf("base.self_test=%d\n", OSSL_PROVIDER_self_test(base));
+        errs("err.base.self_test");
+        if (base != NULL) {
+            EVP_RAND *r = EVP_RAND_fetch(NULL, "SEED-SRC", "provider=base");
+
+            printf("base.rand_fetch=%d\n", r != NULL);
+            errs("err.base.rand_fetch");
+            if (r != NULL) {
+                EVP_RAND_CTX *rctx = EVP_RAND_CTX_new(r, NULL);
+
+                printf("base.rand_name=%s\n", EVP_RAND_get0_name(r));
+                printf("base.rand_ctx=%d\n", rctx != NULL);
+                errs("err.base.rand_ctx");
+                printf("base.rand_gettable=%d\n", EVP_RAND_gettable_ctx_params(r) != NULL);
+                printf("base.rand_ctx_get0_same=%d\n",
+                    rctx != NULL && EVP_RAND_CTX_get0_rand(rctx) == r);
+                EVP_RAND_CTX_free(rctx);
+                EVP_RAND_free(r);
+            }
+            printf("base.unload=%d\n", OSSL_PROVIDER_unload(base));
+            errs("err.base.unload");
+            printf("base.available_after=%d\n", OSSL_PROVIDER_available(NULL, "base"));
+        }
+    }
+
     printf("provider.unload.default=%d\n", OSSL_PROVIDER_unload(prov));
     printf("provider.available=%d\n", OSSL_PROVIDER_available(NULL, "default"));
     errs("err.provider.unload.default");

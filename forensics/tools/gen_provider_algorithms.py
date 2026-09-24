@@ -556,20 +556,58 @@ def read_crate_table(path: Path, ident: str) -> list[tuple[str, str]]:
     end = text.index("];", start)
     body = text[start:end]
 
-    inline = re.findall(
-        r'algorithm_names:\s*c"([^"]*)".*?implementation:\s*([A-Za-z0-9_:]+)\.as_ptr\(\)',
-        body,
-        re.S,
-    )
-    if inline:
-        aliased_fields = body.count('algorithm_names: c"')
-        if len(inline) != aliased_fields:
+    # **Three spellings of one row, and the third was missing.** A row may carry its alias sequence
+    # inline (`c"SEED-SRC".as_ptr()`, which is what `PROV_NAMES_*` expands to and what
+    # `DEFLT_RANDS` writes) or through the module's `alias!` map (`row(N_AES_128_CBC, ...)`, which is
+    # what `defltprov.c`'s `ALG(...)` expands to) -- and, as `src/provider/seed_src.rs`'s
+    # `BASE_RANDS` does, through a `const … : *const c_char = c"…".as_ptr()` the module already
+    # declares for that name. The third form is the *same* contract in a better spelling (the
+    # literal appears once), so the reader resolves it rather than requiring the caller to repeat
+    # the string; D420 is where the base provider's row needed it. Every form is checked against the
+    # number of `algorithm_names:` fields, so a row the reader misses is an error and not a table
+    # with fewer rows.
+    consts = {
+        m.group(1): m.group(2)
+        for m in re.finditer(
+            r'const\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*\*const c_char\s*=\s*c"([^"]*)"\s*\.as_ptr\(\)',
+            text,
+            re.S,
+        )
+    }
+    spellings = [
+        (m.start(), m.group(1) or consts.get(m.group(2)), m.group(3), m.group(2))
+        for m in re.finditer(
+            r'algorithm_names:\s*(?:c"([^"]*)"|([A-Za-z_][A-Za-z0-9_]*))\s*'
+            r'(?:\.as_ptr\(\))?\s*,'
+            r'.*?implementation:\s*([A-Za-z0-9_:]+)\.as_ptr\(\)',
+            body,
+            re.S,
+        )
+    ]
+    unresolved = sorted({ident for _p, name, _d, ident in spellings if name is None})
+    if unresolved:
+        raise CensusError(
+            f"[provider-algorithms] fatal: {rel(path)}'s {ident} names the algorithm_names "
+            f"constant(s) {unresolved}, which this reader cannot resolve to a literal in the same "
+            "module; a row it cannot read is a row it must not skip"
+        )
+    if spellings:
+        # The field count is the number of rows **that spell a name**, so a terminator row's
+        # `algorithm_names: ptr::null()` is not one of them -- counting every `algorithm_names:`
+        # would report a table of N rows as having N+1 and fail on a correct table.
+        aliased_fields = len(
+            re.findall(
+                r'algorithm_names:\s*(?:c"|[A-Za-z_][A-Za-z0-9_]*\s*(?:\.as_ptr\(\))?\s*,)',
+                body,
+            )
+        )
+        if len(spellings) != aliased_fields:
             raise CensusError(
                 f"[provider-algorithms] fatal: {rel(path)}'s {ident} has {aliased_fields} "
-                f"aliased row(s) and the reader found {len(inline)}; a row it cannot read is a "
+                f"aliased row(s) and the reader found {len(spellings)}; a row it cannot read is a "
                 f"row it must not skip"
             )
-        return inline
+        return [(name, dispatch) for _p, name, dispatch, _ident in sorted(spellings)]
 
     aliases = {
         m.group(1): m.group(2)
@@ -605,19 +643,37 @@ def read_crate_table(path: Path, ident: str) -> list[tuple[str, str]]:
     return rows
 
 
-# The crate's default provider publishes its algorithm tables through one query function. The
-# reader below is anchored on **that function's arms** rather than on a table of per-operation
+# The crate's providers publish their algorithm tables through one query function each. The
+# reader below is anchored on **those functions' arms** rather than on a table of per-operation
 # readers, because a per-operation list is the failure mode this census exists to remove: a row
 # landed under an operation nobody wrote a reader for would be invisible, which is `DES3-WRAP`'s
-# class (D237) reached from the candidate side. Adding an operation to `deflt_query` is now enough
-# for the census to see it (D246).
-CRATE_QUERY_UNIT = REPO_ROOT / "src" / "provider" / "digest.rs"
-CRATE_QUERY_FN = 'unsafe extern "C" fn deflt_query('
+# class (D237) reached from the candidate side. Adding an operation to a provider's query is now
+# enough for the census to see it (D246).
+#
+# **There is more than one provider, and D420 is what found that the reader knew only one.** It
+# carried a single `CRATE_QUERY_UNIT`/`CRATE_QUERY_PROVIDER` pair, so a row the *base* provider
+# publishes could never be read as `implemented` however the crate was shaped -- the base
+# provider's `SEED-SRC` row was `unimplemented` by construction, not by measurement. Each entry is
+# `(provider name, module, the query function's own definition line)`.
+CRATE_QUERY_READERS: list[tuple[str, Path, str]] = [
+    ("default", REPO_ROOT / "src" / "provider" / "digest.rs", 'unsafe extern "C" fn deflt_query('),
+    ("base", REPO_ROOT / "src" / "provider" / "base.rs", 'unsafe extern "C" fn base_query('),
+]
 # An arm may return a table's `.as_ptr()` or call a function that answers the address. The second
-# form exists because one arm answers a **filtered copy** rather than the source table.
+# form exists because one arm answers a **filtered copy** rather than the source table. A `//`
+# comment may sit between the brace and the `return`, which is how `src/provider/base.rs` documents
+# each of its arms -- and a reader that could not see past one would report the base provider's
+# whole table set as absent, silently. D420 found that the first time this reader met a commented
+# arm; the per-reader guard below is what makes the next one a failure instead.
 CRATE_QUERY_ARM = re.compile(
-    r"if\s+operation_id\s*==\s*([A-Za-z0-9_:]+)\s*\{\s*return\s+([A-Za-z0-9_:]+)\s*(\(\)|\.as_ptr\(\))\s*;"
+    r"if\s+operation_id\s*==\s*([A-Za-z0-9_:]+)\s*\{"
+    r"(?:\s*//[^\n]*)*\s*return\s+([A-Za-z0-9_:]+)\s*(\(\)|\.as_ptr\(\))\s*;"
 )
+# An arm that answers `NULL` publishes nothing, which is the base provider's three unlanded
+# operations (`src/provider/base.rs`'s `base_query`). It is not a table and must not be resolved as
+# one; the alternative -- shaping the provider's code so the reader cannot see it -- is what this
+# census is for. A *typo* in a table path is still an error, because it resolves to neither form.
+CRATE_QUERY_ARM_NULL = "ptr::null"
 # `OSSL_OP_CIPHER`'s arm answers `exported_ciphers`, which
 # `ossl_prov_cache_exported_algorithms` fills from `DEFLT_CIPHERS` at provider init (D275). The
 # census must read the **source** table: the filtered copy is a runtime projection of it, and a row
@@ -627,10 +683,6 @@ CRATE_QUERY_ARM = re.compile(
 CRATE_QUERY_ARM_SOURCE = {
     "crate::provider::cipher::exported_ciphers": "DEFLT_CIPHERS",
 }
-# The provider whose query function is walked. The authority has four admitted providers and only
-# the default publishes algorithm tables on this profile, so the second anchor is a second constant
-# rather than an assumption folded into this one.
-CRATE_QUERY_PROVIDER = "default"
 
 
 def crate_query_tables(ops: dict[str, int]) -> dict[tuple[str, str], list[tuple[str, str]]]:
@@ -641,61 +693,76 @@ def crate_query_tables(ops: dict[str, int]) -> dict[tuple[str, str], list[tuple[
     authority does not define is a failure rather than an unclassified row set; and the table's
     module is derived from the arm's own path, so where a table *lives* is read rather than typed.
     """
-    text = read(CRATE_QUERY_UNIT)
-    start = text.index(CRATE_QUERY_FN)
-    end = text.index("\n}", start)
-    body = text[start:end]
-
+    text = None
     tables: dict[tuple[str, str], list[tuple[str, str]]] = {}
-    for arm in CRATE_QUERY_ARM.finditer(body):
-        constant, table_path = arm.group(1), arm.group(2)
-        source = CRATE_QUERY_ARM_SOURCE.get(table_path)
-        if source is not None:
-            # The arm answers a derived table; the census reads the one it derives from.
-            table_path = f"crate::provider::cipher::{source}"
-        operation = constant.split("::")[-1]
-        if operation not in ops:
+    for provider, unit, fn_line in CRATE_QUERY_READERS:
+        text = read(unit)
+        start = text.index(fn_line)
+        end = text.index("\n}", start)
+        body = text[start:end]
+        arms_seen = 0
+        for arm in CRATE_QUERY_ARM.finditer(body):
+            constant, table_path = arm.group(1), arm.group(2)
+            arms_seen += 1
+            if table_path == CRATE_QUERY_ARM_NULL:
+                # This arm publishes nothing -- see `CRATE_QUERY_ARM_NULL`.
+                continue
+            source = CRATE_QUERY_ARM_SOURCE.get(table_path)
+            if source is not None:
+                # The arm answers a derived table; the census reads the one it derives from.
+                table_path = f"crate::provider::cipher::{source}"
+            operation = constant.split("::")[-1]
+            if operation not in ops:
+                raise CensusError(
+                    f"[provider-algorithms] fatal: {rel(unit)}'s `{provider}` query answers "
+                    f"{constant}, which the authority defines no operation id for"
+                )
+            segments = table_path.split("::")
+            if len(segments) == 1:
+                # A bare identifier is a table in the module the query itself lives in, which is
+                # how the authority's `defltprov.c` spells its own `deflt_digests[]`.
+                path = unit
+                ident = segments[-1]
+            else:
+                if segments[0] != "crate":
+                    raise CensusError(
+                        f"[provider-algorithms] fatal: {rel(unit)}'s `{provider}` query returns "
+                        f"{table_path}, which is not a path this reader can resolve to a module"
+                    )
+                module_segments = segments[1:-1]
+                if not module_segments or module_segments[0] != "provider":
+                    raise CensusError(
+                        f"[provider-algorithms] fatal: {table_path} is not a provider module table"
+                    )
+                module = REPO_ROOT / "src" / Path(*module_segments)
+                candidates = [module.with_suffix(".rs"), module / "mod.rs"]
+                path = next((c for c in candidates if c.is_file()), None)
+                if path is None:
+                    raise CensusError(
+                        f"[provider-algorithms] fatal: {table_path} names no module under src/ "
+                        f"(tried {[rel(c) for c in candidates]})"
+                    )
+                ident = segments[-1]
+            key = (provider, operation)
+            if key in tables:
+                raise CensusError(
+                    f"[provider-algorithms] fatal: `{provider}`'s query answers {operation} twice, "
+                    "so one arm's rows would be unreachable"
+                )
+            tables[key] = read_crate_table(path, ident)
+        # **A reader that recognises no arm is a failure, not an empty result.** Without this the
+        # base provider's four arms could go unread -- which is what happened the first time this
+        # reader met a commented arm -- and the census would report the provider's rows unlanded
+        # while the crate published them. That is D417's silent-drop class one level up.
+        if arms_seen == 0:
             raise CensusError(
-                f"[provider-algorithms] fatal: {rel(CRATE_QUERY_UNIT)}'s `deflt_query` answers "
-                f"{constant}, which the authority defines no operation id for"
+                f"[provider-algorithms] fatal: {rel(unit)}'s `{provider}` query has no arm this "
+                "reader recognises, so the provider's rows would be read as unlanded in silence"
             )
-        segments = table_path.split("::")
-        if len(segments) == 1:
-            # A bare identifier is a table in the module the query itself lives in, which is how the
-            # authority's `defltprov.c` spells its own `deflt_digests[]`.
-            path = CRATE_QUERY_UNIT
-            ident = segments[-1]
-        else:
-            if segments[0] != "crate":
-                raise CensusError(
-                    f"[provider-algorithms] fatal: {rel(CRATE_QUERY_UNIT)}'s `deflt_query` returns "
-                    f"{table_path}, which is not a path this reader can resolve to a module"
-                )
-            module_segments = segments[1:-1]
-            if not module_segments or module_segments[0] != "provider":
-                raise CensusError(
-                    f"[provider-algorithms] fatal: {table_path} is not a provider module table"
-                )
-            module = REPO_ROOT / "src" / Path(*module_segments)
-            candidates = [module.with_suffix(".rs"), module / "mod.rs"]
-            path = next((c for c in candidates if c.is_file()), None)
-            if path is None:
-                raise CensusError(
-                    f"[provider-algorithms] fatal: {table_path} names no module under src/ "
-                    f"(tried {[rel(c) for c in candidates]})"
-                )
-            ident = segments[-1]
-        key = (CRATE_QUERY_PROVIDER, operation)
-        if key in tables:
-            raise CensusError(
-                f"[provider-algorithms] fatal: `deflt_query` answers {operation} twice, so one "
-                "arm's rows would be unreachable"
-            )
-        tables[key] = read_crate_table(path, ident)
     if not tables:
         raise CensusError(
-            f"[provider-algorithms] fatal: `deflt_query` in {rel(CRATE_QUERY_UNIT)} has no arms "
-            "this reader recognises"
+            "[provider-algorithms] fatal: no crate query function in "
+            f"{[rel(u) for _p, u, _f in CRATE_QUERY_READERS]} has an arm this reader recognises"
         )
     return tables
 

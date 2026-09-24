@@ -34,7 +34,7 @@ declared owner; this is that assignment.
 | 6 | OSSL_LIB_CTX + provider core | `complete` | 137 | 161 | 161 | 0 | 0 |
 | 7 | EVP framework | `complete` | 924 | 950 | 733 | 217 | 0 |
 | 8 | Native cryptographic primitives | `complete` | 759 | 786 | 786 | 0 | 0 |
-| 9 | RAND / DRBG + entropy | `in-progress` | 25 | 69 | 69 | 0 | 0 |
+| 9 | RAND / DRBG + entropy | `complete` | 25 | 69 | 69 | 0 | 0 |
 | 10 | Key formats + PKCS + STORE | `not-started` | 272 | — | — | — | — |
 | 11 | X.509 + verification | `not-started` | 1455 | — | — | — | — |
 | 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `not-started` | 1024 | — | — | — | — |
@@ -302,8 +302,7 @@ The other 3 compare ELF structure rather than a transcript and observe nothing l
 
 ## Phase 9 — RAND / DRBG + entropy
 
-* state: `in-progress`
-* blocking: 1 provider registration row(s) of this stratum are neither implemented nor handed to a later phase (forensics/atlas/provider-algorithms.json): SEED-SRC
+* state: `complete`
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase9-obligations.json`
 * atlas-owned: 25
@@ -318,12 +317,12 @@ Hand-offs received and discharged:
 * from phase 5: 31 symbol(s) — `BN_BLINDING_convert`, `BN_BLINDING_convert_ex`, `BN_BLINDING_create_param`, `BN_BLINDING_update`, `BN_GF2m_mod_solve_quad`, `BN_GF2m_mod_solve_quad_arr`, `BN_GF2m_mod_sqrt`, `BN_GF2m_mod_sqrt_arr`, `BN_X931_derive_prime_ex`, `BN_X931_generate_Xpq`, `BN_X931_generate_prime_ex`, `BN_bntest_rand`, `BN_check_prime`, `BN_generate_dsa_nonce`, `BN_generate_prime`, `BN_generate_prime_ex`, `BN_generate_prime_ex2`, `BN_is_prime`, `BN_is_prime_ex`, `BN_is_prime_fasttest`, `BN_is_prime_fasttest_ex`, `BN_priv_rand`, `BN_priv_rand_ex`, `BN_priv_rand_range`, `BN_priv_rand_range_ex`, `BN_pseudo_rand`, `BN_pseudo_rand_range`, `BN_rand`, `BN_rand_ex`, `BN_rand_range`, `BN_rand_range_ex`
 * from phase 7: 12 symbol(s) — `BIO_f_reliable`, `EVP_CIPHER_CTX_rand_key`, `EVP_SealInit`, `OSSL_HPKE_get_grease_value`, `PEM_ASN1_read`, `PEM_ASN1_read_bio`, `PEM_ASN1_write`, `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx`, `PEM_bytes_read_bio`, `PEM_bytes_read_bio_secmem`, `PEM_do_header`
 
-Courts: `all pass`, 4 court(s), **1088** authority observation(s) over 4 transcript court(s).
+Courts: `all pass`, 4 court(s), **1104** authority observation(s) over 4 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
 | RT-DRBG | `pass` | 361 |
-| RT-RAND | `pass` | 129 |
+| RT-RAND | `pass` | 145 |
 | RT-BN-RAND | `pass` | 487 |
 | RT-RAND-USERS | `pass` | 111 |
 
