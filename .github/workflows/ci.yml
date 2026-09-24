@@ -68,6 +68,17 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+
+      # `--all-targets` compiles the crate's `#[cfg(test)]` code, and three test modules
+      # embed the authority's own vector files with `include_str!` rather than retyping
+      # them -- `src/ml_kem/tests.rs`, `src/slh_dsa/tests.rs` and `src/provider/kdf.rs`'s
+      # Argon2 corpus. The authority source tree is deliberately ignored by git (it is
+      # reproducible), so no clean checkout can compile those targets until it is
+      # acquired, and this job never needed it before those tests existed: the dependency
+      # appeared without its provisioning step. This is that step. See D414.
+      - name: Acquire authority
+        run: python3 forensics/tools/authority_acquire.py --all
+
       - name: Clippy
         run: cargo clippy --all-targets -- -D warnings
 
@@ -87,6 +98,17 @@ jobs:
           rustup show
           rustc --version
           cargo --version
+
+      # The unit tests are not forensic evidence (docs/CUSTODIAN_CONTRACT.md §11), but
+      # three of them do embed the authority's own vector files with `include_str!`
+      # rather than retyping them, so `cargo test --lib` cannot compile a target in this
+      # job without the authority source tree -- which git ignores because it is
+      # reproducible. This job never needed the authority before those tests existed.
+      # Acquiring it here also makes the two gates below run in the configuration they
+      # were developed in, rather than in one where the authority-source checks they
+      # document are skipped. See D414.
+      - name: Acquire authority
+        run: python3 forensics/tools/authority_acquire.py --all
 
       - name: Formatting
         run: cargo fmt --all -- --check
