@@ -113,6 +113,7 @@ use crate::params::{
 use crate::provider::activate::{
     ossl_prov_cache_exported_algorithms, AlgorithmCapability, OsslAlgorithm, OsslAlgorithmCapable,
 };
+use crate::provider::cipher_gcm;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{
     CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_memcmp, CRYPTO_memdup, CRYPTO_zalloc,
@@ -13722,6 +13723,14 @@ alias!(N_ARIA_128_CFB8, "ARIA-128-CFB8");
 alias!(N_ARIA_256_CTR, "ARIA-256-CTR:1.2.410.200046.1.1.15");
 alias!(N_ARIA_192_CTR, "ARIA-192-CTR:1.2.410.200046.1.1.10");
 alias!(N_ARIA_128_CTR, "ARIA-128-CTR:1.2.410.200046.1.1.5");
+// The ARIA and SM4 GCM rows' sequences -- `prov/names.h:108-110` and `:173`. All three carry an OID
+// and no short alias, unlike their CBC rows, and all four sit immediately before the CCM rows in
+// `names.h` exactly as they do in `defltprov.c`.
+alias!(N_ARIA_256_GCM, "ARIA-256-GCM:1.2.410.200046.1.1.36");
+alias!(N_ARIA_192_GCM, "ARIA-192-GCM:1.2.410.200046.1.1.35");
+alias!(N_ARIA_128_GCM, "ARIA-128-GCM:1.2.410.200046.1.1.34");
+alias!(N_SM4_GCM, "SM4-GCM:1.2.156.10197.1.104.8");
+
 // The ARIA and SM4 CCM rows' sequences -- `prov/names.h:111-113` and `:174`. Neither carries a
 // short alias, unlike their CBC rows.
 alias!(N_ARIA_256_CCM, "ARIA-256-CCM:1.2.410.200046.1.1.39");
@@ -13804,6 +13813,21 @@ alias!(N_DES_EDE_CFB, "DES-EDE-CFB");
 alias!(N_AES_128_SIV, "AES-128-SIV");
 alias!(N_AES_192_SIV, "AES-192-SIV");
 alias!(N_AES_256_SIV, "AES-256-SIV");
+// The AES GCM rows' sequences -- `prov/names.h:74-76`, which sit immediately before the CCM three
+// exactly as they do in `defltprov.c`. Each carries both a short OID alias and the long `id-`
+// spelling, unlike the CCM three below.
+alias!(
+    N_AES_256_GCM,
+    "AES-256-GCM:id-aes256-GCM:2.16.840.1.101.3.4.1.46"
+);
+alias!(
+    N_AES_192_GCM,
+    "AES-192-GCM:id-aes192-GCM:2.16.840.1.101.3.4.1.26"
+);
+alias!(
+    N_AES_128_GCM,
+    "AES-128-GCM:id-aes128-GCM:2.16.840.1.101.3.4.1.6"
+);
 alias!(
     N_AES_256_CCM,
     "AES-256-CCM:id-aes256-CCM:2.16.840.1.101.3.4.1.47"
@@ -13923,7 +13947,7 @@ const fn capable_row(
 
 /// `static const OSSL_ALGORITHM_CAPABLE deflt_ciphers[]` — `providers/defltprov.c:161-330`,
 /// restricted to the rows this half implements, in the authority's order.
-pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 132] = [
+pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 139] = [
     row(N_NULL, NULL_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_ECB, AES256ECB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_ECB, AES192ECB_FUNCTIONS.as_ptr().cast()),
@@ -13960,6 +13984,18 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 132] = [
     row(N_AES_128_GCM_SIV, AES128GCM_SIV_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_GCM_SIV, AES192GCM_SIV_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_GCM_SIV, AES256GCM_SIV_FUNCTIONS.as_ptr().cast()),
+    row(
+        N_AES_256_GCM,
+        cipher_gcm::AES256GCM_FUNCTIONS.as_ptr().cast(),
+    ),
+    row(
+        N_AES_192_GCM,
+        cipher_gcm::AES192GCM_FUNCTIONS.as_ptr().cast(),
+    ),
+    row(
+        N_AES_128_GCM,
+        cipher_gcm::AES128GCM_FUNCTIONS.as_ptr().cast(),
+    ),
     row(N_AES_256_CCM, AES256CCM_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_CCM, AES192CCM_FUNCTIONS.as_ptr().cast()),
     row(N_AES_128_CCM, AES128CCM_FUNCTIONS.as_ptr().cast()),
@@ -14068,6 +14104,18 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 132] = [
     // `CAMELLIA`. The six GCM and CCM rows precede these in the authority; the GCM three are
     // Phase 9's on `RAND_bytes_ex` and the CCM three are landed below, ahead of the mode rows
     // because that is where the authority puts them.
+    row(
+        N_ARIA_256_GCM,
+        cipher_gcm::ARIA256GCM_FUNCTIONS.as_ptr().cast(),
+    ),
+    row(
+        N_ARIA_192_GCM,
+        cipher_gcm::ARIA192GCM_FUNCTIONS.as_ptr().cast(),
+    ),
+    row(
+        N_ARIA_128_GCM,
+        cipher_gcm::ARIA128GCM_FUNCTIONS.as_ptr().cast(),
+    ),
     row(N_ARIA_256_CCM, ARIA256CCM_FUNCTIONS.as_ptr().cast()),
     row(N_ARIA_192_CCM, ARIA192CCM_FUNCTIONS.as_ptr().cast()),
     row(N_ARIA_128_CCM, ARIA128CCM_FUNCTIONS.as_ptr().cast()),
@@ -14153,6 +14201,7 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 132] = [
     row(N_DES_EDE_CBC, TDES_EDE2_CBC_FUNCTIONS.as_ptr().cast()),
     row(N_DES_EDE_OFB, TDES_EDE2_OFB_FUNCTIONS.as_ptr().cast()),
     row(N_DES_EDE_CFB, TDES_EDE2_CFB_FUNCTIONS.as_ptr().cast()),
+    row(N_SM4_GCM, cipher_gcm::SM4128GCM_FUNCTIONS.as_ptr().cast()),
     row(N_SM4_CCM, SM4128CCM_FUNCTIONS.as_ptr().cast()),
     row(N_SM4_ECB, SM4128ECB_FUNCTIONS.as_ptr().cast()),
     row(N_SM4_CBC, SM4128CBC_FUNCTIONS.as_ptr().cast()),
@@ -14185,13 +14234,13 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 132] = [
 /// against the write. This crate keeps the same discipline: the only writer is
 /// `crate::provider::cipher::cache_exported_ciphers`, called from provider init, and every reader
 /// goes through [`exported_ciphers`].
-static EXPORTED_CIPHERS: SyncCell<[OsslAlgorithm; 132]> = SyncCell(UnsafeCell::new(
+static EXPORTED_CIPHERS: SyncCell<[OsslAlgorithm; 139]> = SyncCell(UnsafeCell::new(
     [OsslAlgorithm {
         algorithm_names: ptr::null(),
         property_definition: ptr::null(),
         implementation: ptr::null(),
         algorithm_description: ptr::null(),
-    }; 132],
+    }; 139],
 ));
 
 /// A `static` the crate mutates once at provider init and shares afterwards, exactly as the
@@ -17535,9 +17584,9 @@ mod tests {
 
     #[test]
     fn the_cipher_table_terminates_and_names_the_rows() {
-        assert_eq!(DEFLT_CIPHERS.len(), 132);
+        assert_eq!(DEFLT_CIPHERS.len(), 139);
         // SAFETY: every entry up to the terminator is initialised.
-        let last = DEFLT_CIPHERS[131].alg.algorithm_names;
+        let last = DEFLT_CIPHERS[138].alg.algorithm_names;
         assert!(last.is_null(), "the table is NULL-name terminated");
         // SAFETY: the first row's name is a `'static` C string.
         let first = unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[0].alg.algorithm_names) };
@@ -17545,13 +17594,13 @@ mod tests {
         // SAFETY: the last *named* row's name is a `'static` C string, and it is the authority's
         // last cipher row (`defltprov.c:327`).
         let penultimate =
-            unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[130].alg.algorithm_names) };
+            unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[137].alg.algorithm_names) };
         assert_eq!(penultimate.to_bytes(), b"ChaCha20-Poly1305");
         // The filtered copy the `OSSL_OP_CIPHER` arm answers is the same length, so the two
         // cannot drift apart silently.
         // SAFETY: the cell is a `'static` array of `OsslAlgorithm`; only its length is read.
         let filtered = unsafe { &*EXPORTED_CIPHERS.0.get() };
-        assert_eq!(filtered.len(), 132);
+        assert_eq!(filtered.len(), 139);
     }
 
     #[test]

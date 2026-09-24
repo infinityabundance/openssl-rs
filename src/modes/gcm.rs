@@ -53,10 +53,12 @@ const R: u128 = 0xe100_0000_0000_0000_0000_0000_0000_0000;
 /// [`CRYPTO_gcm128_new`], and the only way it is released is [`CRYPTO_gcm128_release`].
 #[repr(C)]
 pub struct GcmCtx {
-    /// `H`, the GHASH key: `E(K, 0^128)` as a big-endian field element.
-    h: u128,
-    /// `Xi`, the GHASH accumulator, big-endian.
-    xi: u128,
+    /// `H`, the GHASH key: `E(K, 0^128)` as a big-endian field element. Carried as two
+    /// half-words (high half first); see [`GcmCtx::h_val`].
+    h: [u64; 2],
+    /// `Xi`, the GHASH accumulator, big-endian. Carried as two half-words (high half first);
+    /// see [`GcmCtx::xi_val`].
+    xi: [u64; 2],
     /// `EKi`, the current keystream block. It survives a call boundary, because a partial
     /// block that spans two calls resumes at the same position in the same keystream.
     eki: [u8; 16],
@@ -75,6 +77,45 @@ pub struct GcmCtx {
     /// `block128_f block`, `void *key`.
     block: Option<Block128F>,
     key: *mut c_void,
+}
+
+impl GcmCtx {
+    /// The GHASH key `H` as a `u128`: `((h[0] as u128) << 64) | h[1] as u128`.
+    ///
+    /// `h` and [`GcmCtx::xi`] are `[u64; 2]` rather than `u128` so that `GcmCtx` has alignment
+    /// **8**, matching the authority's `GCM128_CONTEXT` (`include/crypto/modes.h:110-131`) as
+    /// measured by compiling its internal headers. A `u128` field would force sixteen-byte
+    /// alignment: at alignment 8 `GcmCtx` is 152 bytes and sits at the authority's own
+    /// `PROV_GCM_CTX` offset 248, which restores `sizeof(PROV_GCM_CTX) = 704` and
+    /// `sizeof(PROV_ARIA_GCM_CTX) = 984`; the sixteen-byte alignment pushed `gcm` to 256 and
+    /// rounded the ARIA context up to 992. The two half-words carry the same 128 bits at the
+    /// same integer value, so this is a representation change and no value moves.
+    ///
+    /// A `[u64; 2]` (high half first) rather than a native-endian `u64` pair keeps the stored
+    /// value independent of host byte order; every read and write goes through this accessor
+    /// or [`GcmCtx::set_h`].
+    #[inline]
+    fn h_val(&self) -> u128 {
+        ((self.h[0] as u128) << 64) | self.h[1] as u128
+    }
+
+    /// Store `H`; the inverse of [`GcmCtx::h_val`].
+    #[inline]
+    fn set_h(&mut self, v: u128) {
+        self.h = [(v >> 64) as u64, v as u64];
+    }
+
+    /// The GHASH accumulator `Xi` as a `u128`; see [`GcmCtx::h_val`] for the alignment rationale.
+    #[inline]
+    fn xi_val(&self) -> u128 {
+        ((self.xi[0] as u128) << 64) | self.xi[1] as u128
+    }
+
+    /// Store `Xi`; the inverse of [`GcmCtx::xi_val`].
+    #[inline]
+    fn set_xi(&mut self, v: u128) {
+        self.xi = [(v >> 64) as u64, v as u64];
+    }
 }
 
 /// SP 800-38D Algorithm 1: multiply two field elements, both in the big-endian convention.
@@ -172,7 +213,7 @@ unsafe fn init(ctx: *mut GcmCtx, key: *mut c_void, block: Block128F) {
         (*ctx).key = key;
         let mut hb = [0u8; 16];
         block(hb.as_ptr(), hb.as_mut_ptr(), key);
-        (*ctx).h = ossl_gcm_init_4bit(&hb);
+        (*ctx).set_h(ossl_gcm_init_4bit(&hb));
     }
 }
 
@@ -251,24 +292,24 @@ pub unsafe extern "C" fn CRYPTO_gcm128_setiv(ctx: *mut GcmCtx, iv: *const u8, le
             while remaining >= 16 {
                 let mut block = [0u8; 16];
                 ptr::copy_nonoverlapping(p, block.as_mut_ptr(), 16);
-                ossl_gcm_gmult_4bit(&mut xi, (*ctx).h, &block);
+                ossl_gcm_gmult_4bit(&mut xi, (*ctx).h_val(), &block);
                 p = p.add(16);
                 remaining -= 16;
             }
             if remaining > 0 {
                 let mut block = [0u8; 16];
                 ptr::copy_nonoverlapping(p, block.as_mut_ptr(), remaining);
-                ossl_gcm_gmult_4bit(&mut xi, (*ctx).h, &block);
+                ossl_gcm_gmult_4bit(&mut xi, (*ctx).h_val(), &block);
             }
             let len_bits = (len as u64) << 3;
             xi ^= len_bits as u128;
-            xi = gf_mul(xi, (*ctx).h);
+            xi = gf_mul(xi, (*ctx).h_val());
 
             (*ctx).yi = xi.to_be_bytes();
             xi as u32
         };
 
-        (*ctx).xi = 0;
+        (*ctx).set_xi(0);
 
         let block = match (*ctx).block {
             Some(f) => f,
@@ -311,7 +352,9 @@ pub unsafe extern "C" fn CRYPTO_gcm128_aad(ctx: *mut GcmCtx, aad: *const u8, len
             remaining -= full;
             n += full;
             if n == 16 {
-                ossl_gcm_gmult_4bit(&mut (*ctx).xi, (*ctx).h, &(*ctx).aad_buf);
+                let mut xi = (*ctx).xi_val();
+                ossl_gcm_gmult_4bit(&mut xi, (*ctx).h_val(), &(*ctx).aad_buf);
+                (*ctx).set_xi(xi);
                 (*ctx).aad_buf = [0u8; 16];
                 n = 0;
             } else {
@@ -322,11 +365,13 @@ pub unsafe extern "C" fn CRYPTO_gcm128_aad(ctx: *mut GcmCtx, aad: *const u8, len
 
         let whole = remaining & !15usize;
         if whole != 0 {
+            let mut xi = (*ctx).xi_val();
             ossl_gcm_ghash_4bit(
-                &mut (*ctx).xi,
-                (*ctx).h,
+                &mut xi,
+                (*ctx).h_val(),
                 core::slice::from_raw_parts(p, whole),
             );
+            (*ctx).set_xi(xi);
             p = p.add(whole);
             remaining -= whole;
         }
@@ -356,7 +401,9 @@ unsafe fn crypt(ctx: *mut GcmCtx, input: *const u8, out: *mut u8, len: usize, de
         (*ctx).msg_len = mlen;
 
         if (*ctx).ares != 0 {
-            ossl_gcm_gmult_4bit(&mut (*ctx).xi, (*ctx).h, &(*ctx).aad_buf);
+            let mut xi = (*ctx).xi_val();
+            ossl_gcm_gmult_4bit(&mut xi, (*ctx).h_val(), &(*ctx).aad_buf);
+            (*ctx).set_xi(xi);
             (*ctx).aad_buf = [0u8; 16];
             (*ctx).ares = 0;
         }
@@ -390,7 +437,9 @@ unsafe fn crypt(ctx: *mut GcmCtx, input: *const u8, out: *mut u8, len: usize, de
             n += take;
             i += take;
             if n == 16 {
-                ossl_gcm_gmult_4bit(&mut (*ctx).xi, (*ctx).h, &(*ctx).buf);
+                let mut xi = (*ctx).xi_val();
+                ossl_gcm_gmult_4bit(&mut xi, (*ctx).h_val(), &(*ctx).buf);
+                (*ctx).set_xi(xi);
                 (*ctx).buf = [0u8; 16];
                 n = 0;
             }
@@ -484,10 +533,14 @@ pub unsafe extern "C" fn CRYPTO_gcm128_finish(
     // SAFETY: the caller's contract.
     unsafe {
         if (*ctx).mres != 0 {
-            ossl_gcm_gmult_4bit(&mut (*ctx).xi, (*ctx).h, &(*ctx).buf);
+            let mut xi = (*ctx).xi_val();
+            ossl_gcm_gmult_4bit(&mut xi, (*ctx).h_val(), &(*ctx).buf);
+            (*ctx).set_xi(xi);
             (*ctx).mres = 0;
         } else if (*ctx).ares != 0 {
-            ossl_gcm_gmult_4bit(&mut (*ctx).xi, (*ctx).h, &(*ctx).aad_buf);
+            let mut xi = (*ctx).xi_val();
+            ossl_gcm_gmult_4bit(&mut xi, (*ctx).h_val(), &(*ctx).aad_buf);
+            (*ctx).set_xi(xi);
             (*ctx).ares = 0;
         }
 
@@ -496,16 +549,21 @@ pub unsafe extern "C" fn CRYPTO_gcm128_finish(
         let mut lengths = [0u8; 16];
         lengths[..8].copy_from_slice(&alen.to_be_bytes());
         lengths[8..].copy_from_slice(&clen.to_be_bytes());
-        ossl_gcm_gmult_4bit(&mut (*ctx).xi, (*ctx).h, &lengths);
+        let mut xi = (*ctx).xi_val();
+        ossl_gcm_gmult_4bit(&mut xi, (*ctx).h_val(), &lengths);
 
-        let mut bytes = (*ctx).xi.to_be_bytes();
+        let mut bytes = xi.to_be_bytes();
         for (b, m) in bytes.iter_mut().zip((*ctx).ek0.iter()) {
             *b ^= *m;
         }
-        (*ctx).xi = u128::from_be_bytes(bytes);
+        (*ctx).set_xi(u128::from_be_bytes(bytes));
 
         if !tag.is_null() && len <= 16 {
-            CRYPTO_memcmp((*ctx).xi.to_be_bytes().as_ptr().cast(), tag.cast(), len)
+            CRYPTO_memcmp(
+                (*ctx).xi_val().to_be_bytes().as_ptr().cast(),
+                tag.cast(),
+                len,
+            )
         } else {
             -1
         }
@@ -523,7 +581,7 @@ pub unsafe extern "C" fn CRYPTO_gcm128_tag(ctx: *mut GcmCtx, tag: *mut u8, len: 
     unsafe {
         CRYPTO_gcm128_finish(ctx, ptr::null(), 0);
         let n = if len <= 16 { len } else { 16 };
-        ptr::copy_nonoverlapping((*ctx).xi.to_be_bytes().as_ptr(), tag, n);
+        ptr::copy_nonoverlapping((*ctx).xi_val().to_be_bytes().as_ptr(), tag, n);
     }
 }
 

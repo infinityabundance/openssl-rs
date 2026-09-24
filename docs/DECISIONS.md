@@ -29961,3 +29961,72 @@ version (`forensics/atlas/implemented-surface.json`, `court-coverage.json`, `own
 the ledgers that hash them). No crate source moves and no court moves: `PIPELINE OK` is exit 0 over
 101 courts / 39,635 observations **with the version already moved**, and `cargo publish` follows once
 the release lands on `main` green.
+
+## D417 -- the default provider's GCM engine lands seven rows, and the census reader is found to drop them in silence
+
+Phase 9's first discharge of a Phase 8 hand-off. The seven `AES`/`ARIA`/`SM4` GCM rows were withheld
+by D234's class -- their engine's three arms draw from the random layer -- and `RAND_bytes_ex` now
+exists, so the blocker is gone and the engine can be written.
+
+### The engine
+
+`src/provider/cipher_gcm.rs` (2,281 lines) is `ciphercommon_gcm.c.in`'s `ossl_gcm_*` engine and
+`ciphercommon_gcm_hw.c`'s five hardware methods, shared by all seven rows exactly as the CCM rows
+share D238's engine: one `gcm_row!` macro is the honest expansion of
+`prov/ciphercommon_aead.h:18-67`'s `IMPLEMENT_aead_cipher`, and the seven rows differ only in key
+size and their per-algorithm `hw` table. The two assembly `initkey`/`cipher_update` selections
+(`cipher_aes_gcm_hw.c:126-133`, `cipher_sm4_gcm_hw.c:277-284`) are declined as D266 and D269
+declined the other AES and SM4 assembly arms; ARIA has no assembly arm. The consequence for `ctr`
+is measured rather than assumed: `AES_CTR_ASM` is defined only for `s390x` and `c64xplus`
+(`crypto/aes/build.info:30,55`), so on this host the C `initkey` installs `ctx->ctr = NULL` and the
+`_ctr32` branch is never taken -- it is transcribed anyway, because it is part of the C body.
+
+The seven rows enter `DEFLT_CIPHERS`/`EXPORTED_CIPHERS` at their authority positions
+(`defltprov.c:202-204`, `:247-249`, `:315`): the arrays move 132 to 139 and the terminator with
+them.
+
+### The layout defect the landing exposed, and why it was invisible
+
+`GcmCtx` carried its `H` and `Xi` field elements as `u128`. A `u128` field forces **sixteen**-byte
+alignment where the authority's `GCM128_CONTEXT` has eight, which pushed the embedded `gcm` member
+from offset 248 to 256 and rounded `PROV_ARIA_GCM_CTX` up to 992. The allocation size a caller's
+`CRYPTO_set_mem_functions` receives is contract, so this was a real divergence, and nothing saw it
+before now because no test asserted the size and the GCM rows were not published. `H` and `Xi` are
+now carried as `[u64; 2]` (high half first) behind `h_val`/`set_h`/`xi_val`/`set_xi`; the same 128
+bits are stored at the same integer value, so no value moves. Every measured number now agrees:
+`PROV_GCM_CTX` 704, `PROV_AES_GCM_CTX` 960, `PROV_SM4_GCM_CTX` 832, `PROV_ARIA_GCM_CTX` 984, and
+`gcm` at 248 with a named 296-byte reserve to `ctr` at 696. The precedent is `PROV_AES_GCM_SIV_CTX`'s
+`[u64; 32]` htable, which models the same kind of C layout and chose the integer pair for the same
+reason.
+
+### The finding: the census reader dropped the rows in silence
+
+Landing the seven rows moved `provider-algorithms.json` by **zero** rows. `gen_provider_algorithms.py`
+reads a crate cipher table by matching `row(NAME, IMPL.as_ptr())`, and its pattern accepted only a
+**bare identifier** for `IMPL`. The GCM rows' dispatch expression is a qualified path
+(`cipher_gcm::AES128GCM_FUNCTIONS.as_ptr()`), so all seven failed to match and the reader went on
+reporting them `unimplemented` while the crate had published them. The inline `capable_row` branch
+had carried a count guard since it was written; the aliased branch had none, which is why a silent
+drop was possible there and not here. The pattern now accepts `[A-Za-z0-9_:]+` **and** the aliased
+branch gets the same guard: a row invocation the reader cannot parse is a `CensusError`, not a table
+with one fewer row. This is the same class D396 and D412 measured -- a check that is never run, or a
+reader that answers a smaller question than it was asked, and nothing objects.
+
+### The observation the rows gained, and the join that proves it
+
+`rt_cipher_probe.c`'s `rt_deflt_row_census` arm names the fetched rows and had listed the seven as
+"Phase 9's ... absent from this list rather than listed-and-skipped". They are entries now, and the
+arm's existing per-row work (fetch, keylen/ivlen/blocksize/mode, the `gp`/`cgp`/`csp` parameter
+lists, `ctxinit`) drives each of them: **RT-CIPHER moves 6,946 observations to 7,198**, +252, exactly
+36 per row. `provider_court_coverage.py` -- which fails closed on a published row with no probe
+naming it -- went from 2 findings to none: 318 implemented rows, 318 directly courted, 0 unmatched.
+Phase 9's `provider_rows` is now **12 implemented of 15 owned, 3 unimplemented** (`DES3-WRAP`,
+`GMAC`, the `base` provider's `SEED-SRC`).
+
+### Movement
+
+`src/provider/cipher_gcm.rs` (new), `src/provider/cipher.rs` (7 rows, 10 aliases, two arrays
+132 to 139), `src/provider/mod.rs`, `src/modes/gcm.rs` (the alignment repair),
+`courts/phase8/rt_cipher_probe.c`, `forensics/tools/gen_provider_algorithms.py` (the reader guard),
+the regenerated atlases and the two probe transcripts. `PIPELINE OK` exit 0 after the two-step fixed
+point, `RT-CIPHER pass (7,198 observations)`, `provider-court-coverage` 0 findings.

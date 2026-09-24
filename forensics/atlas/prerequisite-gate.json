@@ -12,7 +12,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 77,
-      "language_surface_not_modelled_by_name": 5013,
+      "language_surface_not_modelled_by_name": 5003,
       "planned_prerequisites": 5
     },
     "census_by_unit": {
@@ -213,7 +213,7 @@
         "crypto/ec/ecp_nist.c": 7,
         "crypto/ec/ecp_smpl.c": 13,
         "crypto/ec/ecx_backend.c": 13,
-        "crypto/ec/ecx_key.c": 15,
+        "crypto/ec/ecx_key.c": 14,
         "crypto/ec/ecx_meth.c": 42,
         "crypto/encode_decode/decoder_lib.c": 29,
         "crypto/encode_decode/decoder_meth.c": 21,
@@ -221,7 +221,7 @@
         "crypto/encode_decode/encoder_lib.c": 32,
         "crypto/encode_decode/encoder_meth.c": 21,
         "crypto/encode_decode/encoder_pkey.c": 31,
-        "crypto/err/err.c": 88,
+        "crypto/err/err.c": 87,
         "crypto/err/err_all_legacy.c": 11,
         "crypto/err/err_save.c": 2,
         "crypto/evp/asymcipher.c": 20,
@@ -233,7 +233,7 @@
         "crypto/evp/ec_ctrl.c": 8,
         "crypto/evp/ec_support.c": 1,
         "crypto/evp/encode.c": 6,
-        "crypto/evp/evp_enc.c": 34,
+        "crypto/evp/evp_enc.c": 32,
         "crypto/evp/evp_fetch.c": 19,
         "crypto/evp/evp_key.c": 7,
         "crypto/evp/evp_lib.c": 24,
@@ -284,13 +284,13 @@
         "crypto/mdc2/mdc2dgst.c": 4,
         "crypto/mem.c": 12,
         "crypto/mem_sec.c": 10,
-        "crypto/ml_dsa/ml_dsa_encoders.c": 13,
-        "crypto/ml_dsa/ml_dsa_key.c": 16,
+        "crypto/ml_dsa/ml_dsa_encoders.c": 12,
+        "crypto/ml_dsa/ml_dsa_key.c": 15,
         "crypto/ml_dsa/ml_dsa_key_compress.c": 1,
         "crypto/ml_dsa/ml_dsa_ntt.c": 2,
         "crypto/ml_dsa/ml_dsa_sample.c": 7,
-        "crypto/ml_dsa/ml_dsa_sign.c": 11,
-        "crypto/ml_kem/ml_kem.c": 18,
+        "crypto/ml_dsa/ml_dsa_sign.c": 10,
+        "crypto/ml_kem/ml_kem.c": 17,
         "crypto/modes/ccm128.c": 4,
         "crypto/modes/cts128.c": 3,
         "crypto/modes/gcm128.c": 14,
@@ -353,9 +353,9 @@
         "crypto/sha/sha512.c": 7,
         "crypto/siphash/siphash.c": 2,
         "crypto/slh_dsa/slh_adrs.c": 3,
-        "crypto/slh_dsa/slh_dsa.c": 15,
+        "crypto/slh_dsa/slh_dsa.c": 14,
         "crypto/slh_dsa/slh_dsa_hash_ctx.c": 3,
-        "crypto/slh_dsa/slh_dsa_key.c": 18,
+        "crypto/slh_dsa/slh_dsa_key.c": 17,
         "crypto/slh_dsa/slh_fors.c": 11,
         "crypto/slh_dsa/slh_hash.c": 6,
         "crypto/slh_dsa/slh_hypertree.c": 5,
@@ -487,7 +487,7 @@
     },
     "checked": {
       "authority_units": 324,
-      "crate_modules": 462,
+      "crate_modules": 463,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 7,
       "divergence_names_covered": 43,
@@ -596,13 +596,13 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "7b648d1eb297e543fc8ea29c36205bcf6ad33a6504288ddcd6630425541330a6",
+  "body_hash": "e5efd618c3f4af0d0403e4d92db64ec7c408f94d50670d8cfa7148f6cae64e02",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "9e95be44e345c893b26ca4d83eb64aa4f9a605ba36d1a5d913da05809b29cd0e"
+      "sha256": "a7a8b7d1e31de017e457966a207e47a07117d839fa00518580face4ca420e70b"
     },
     {
       "name": "macro-owners",
@@ -617,7 +617,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "c965aa475ee4a202c2ceae8664adc901f152f74d84a4f1b1f568faf17b6bc034"
+      "sha256": "e3dc3bfb8edd71af7980d1e419d02f8749322feb29bd064f0f8b71844643549f"
     },
     {
       "name": "symbol-ownership",
@@ -632,12 +632,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "52d6add52874fafa4406a0fec5c44a869e377e7c42e3451c7373e22b774262ea"
+      "sha256": "c2a7dcde22244316b1c43a2cdb44a0ac185d4907b2c2cf83d90964621bfcabaf"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "6795b56707180b2346eed4a7cdff22f40344a0dfbd81a38154d4343c5bc63154"
+      "sha256": "8a7932981293632d3f38485c65e382274cbdf6b8036a470d9e83ca00432705d7"
     },
     {
       "name": "prerequisites",

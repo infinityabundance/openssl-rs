@@ -34290,6 +34290,7 @@
       "src/mac/ssl3_cbc.rs: ssl/record/methods/libdefault-lib-ssl3_cbc.c",
       "src/provider/capabilities.rs: providers/common/libdefault-lib-capabilities.c",
       "src/provider/cipher.rs: providers/implementations/ciphers/libcommon-lib-ciphercommon.c",
+      "src/provider/cipher_gcm.rs: providers/implementations/ciphers/libcommon-lib-ciphercommon_gcm.c",
       "src/provider/ctx.rs: providers/common/libcommon-lib-provider_ctx.c",
       "src/provider/der_dsa_sig.rs: providers/common/der/libcommon-lib-der_dsa_sig.c",
       "src/provider/der_ec_sig.rs: providers/common/der/libcommon-lib-der_ec_sig.c",

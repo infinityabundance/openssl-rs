@@ -1650,6 +1650,13 @@
         "translation_unit": "providers/implementations/ciphers/libcommon-lib-ciphercommon.c"
       },
       {
+        "module": "src/provider/cipher_gcm.rs",
+        "phase": 9,
+        "phase_source": "module-declaration",
+        "share": "10/18",
+        "translation_unit": "providers/implementations/ciphers/libcommon-lib-ciphercommon_gcm.c"
+      },
+      {
         "module": "src/provider/conf.rs",
         "phase": 6,
         "phase_source": "module-declaration",
