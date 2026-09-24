@@ -1629,6 +1629,13 @@
         "translation_unit": "crypto/provider_core.c"
       },
       {
+        "module": "src/provider/capabilities.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "1/1",
+        "translation_unit": "providers/common/libdefault-lib-capabilities.c"
+      },
+      {
         "module": "src/provider/child.rs",
         "phase": 6,
         "phase_source": "module-declaration",

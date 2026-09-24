@@ -244,6 +244,23 @@
         "verdict": "pass"
       },
       {
+        "authority_exit_code": 0,
+        "authority_observations": 722,
+        "candidate_exit_code": 0,
+        "candidate_observations": 722,
+        "candidate_stderr_tail": [],
+        "court": "RT-PROVIDER-CAP",
+        "crashed": false,
+        "probe": "courts/phase8/rt_provider_cap_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase8/probes/rt_provider_cap_probe.authority",
+          "candidate": "artifacts/phase8/probes/rt_provider_cap_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
         "algorithms": {
           "blake2b512": {
             "digest_bytes": 64,
@@ -38561,8 +38578,8 @@
     ],
     "summary": {
       "fail": 0,
-      "pass": 17,
-      "total": 17
+      "pass": 18,
+      "total": 18
     }
   },
   "generator": "forensics/tools/phase8_courts.py",
@@ -38641,6 +38658,11 @@
       "name": "probe",
       "path": "courts/phase8/rt_asymcipher_probe.c",
       "sha256": "4420251dd24a38970f7b4cf8f05a9eb56a86765749f1574ec199df1279adf366"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase8/rt_provider_cap_probe.c",
+      "sha256": "b05e685e7850f2117d7d6c21f09c0a704b8ad7f4d49f1dbaa1aecb3f9c2e9d27"
     },
     {
       "name": "correctness-probe",

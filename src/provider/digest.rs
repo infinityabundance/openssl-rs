@@ -24,11 +24,15 @@
 //!
 //! Everything else the authority's default provider publishes is **other halves of other
 //! subphases** and is absent here rather than stubbed: the cipher, MAC, KDF, RAND, keymgmt,
-//! signature, asym-cipher, KEM, encoder, decoder, store and skeymgmt tables (8.2 and later),
-//! `deflt_get_params`/`deflt_gettable_params` and `ossl_prov_get_capabilities` (the provider
-//! params half), and the `provctx` that `ossl_prov_ctx_new`/`ossl_bio_prov_init_bio_method`
-//! build — the digest query needs none of them, so `provctx` is NULL and `deflt_query` ignores
-//! it exactly as the authority's answer for `OSSL_OP_DIGEST` does.
+//! signature, asym-cipher, KEM, encoder, decoder, store and skeymgmt tables (8.2 and later).
+//!
+//! **The provider-params half is no longer among those absences.** `deflt_gettable_params`,
+//! `deflt_get_params` and the `GET_CAPABILITIES` up-call -- `providers/common/capabilities.c`,
+//! transcribed in `src/provider/capabilities.rs` -- all land in this module's dispatch table
+//! below, and the `provctx` they are handed is **live**: `ossl_default_provider_init` builds it
+//! with `ossl_prov_ctx_new`, so the earlier claim in this header that `provctx` was NULL is
+//! retracted. The digest query itself still ignores `provctx`, exactly as the authority's
+//! `OSSL_OP_DIGEST` answer does.
 //!
 //! **The rows `deflt_digests[]` carries and this half does not, restated after 8.1c.** There are
 //! none left that this crate has a construction for. The eleven 8.1c landed — SHA-3/KECCAK/SHAKE
@@ -83,12 +87,22 @@ use crate::evp::digest::{
     OSSL_FUNC_DIGEST_INIT, OSSL_FUNC_DIGEST_NEWCTX, OSSL_FUNC_DIGEST_SETTABLE_CTX_PARAMS,
     OSSL_FUNC_DIGEST_SET_CTX_PARAMS, OSSL_FUNC_DIGEST_SQUEEZE, OSSL_FUNC_DIGEST_UPDATE,
 };
-use crate::params::{OsslParam, END, OSSL_PARAM_OCTET_STRING, OSSL_PARAM_UNMODIFIED};
+use crate::params::{
+    OSSL_PARAM_locate, OSSL_PARAM_set_int, OSSL_PARAM_set_utf8_ptr, OsslParam, END,
+    OSSL_PARAM_OCTET_STRING, OSSL_PARAM_UNMODIFIED,
+};
 
 use crate::provider::activate::OsslAlgorithm;
-use crate::provider::cipher::{param_int, param_size_t, param_uint};
-use crate::provider::init::FUNC_PROVIDER_QUERY_OPERATION;
+use crate::provider::capabilities::ossl_prov_get_capabilities;
+use crate::provider::cipher::{
+    param_int, param_integer_defn, param_size_t, param_uint, param_utf8_ptr,
+};
+use crate::provider::init::{
+    FUNC_PROVIDER_GETTABLE_PARAMS, FUNC_PROVIDER_GET_CAPABILITIES, FUNC_PROVIDER_GET_PARAMS,
+    FUNC_PROVIDER_QUERY_OPERATION,
+};
 use crate::runtime::err::{err_sites, raise_site};
+use crate::runtime::init::VERSION_STRING;
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc, CRYPTO_zalloc};
 
 /// The authority's translation unit, for the allocation-tracking `file` argument.
@@ -2160,6 +2174,98 @@ unsafe extern "C" fn deflt_teardown(provctx: *mut c_void) {
     unsafe { crate::provider::ctx::ossl_prov_ctx_free(provctx.cast()) };
 }
 
+/// `OSSL_PROV_PARAM_NAME` — `include/openssl/core_names.h:512`.
+const OSSL_PROV_PARAM_NAME: *const c_char = c"name".as_ptr();
+/// `OSSL_PROV_PARAM_VERSION` — `core_names.h:534`.
+const OSSL_PROV_PARAM_VERSION: *const c_char = c"version".as_ptr();
+/// `OSSL_PROV_PARAM_BUILDINFO` — `core_names.h:500`.
+const OSSL_PROV_PARAM_BUILDINFO: *const c_char = c"buildinfo".as_ptr();
+/// `OSSL_PROV_PARAM_STATUS` — `core_names.h:527`.
+const OSSL_PROV_PARAM_STATUS: *const c_char = c"status".as_ptr();
+
+/// `deflt_param_types` — `providers/defltprov.c:38-45`.
+///
+/// Four descriptors plus the terminator, and it is a **descriptor list** rather than a value
+/// list: every entry has a NULL `data` and a `data_size` of 0, because the authority builds it
+/// with `OSSL_PARAM_DEFN` (`params.h:27-28`) rather than a `set`-capable constructor. The three
+/// `UTF8_PTR` entries are therefore distinguishable from `param_utf8_string`'s `UTF8_STRING`
+/// entries only by their `data_type`, and the `INTEGER` one from `param_int` only by its
+/// `data_size` -- which is why `RT-PROVIDER-CAP` prints both fields for every descriptor.
+///
+/// The measured authority answers all four (`cap.gt.count=4`, `cap.gt.0..3` in the court), in
+/// this order: `name`, `version`, `buildinfo`, `status`.
+static DEFLT_PARAM_TYPES: [OsslParam; 5] = [
+    param_utf8_ptr(OSSL_PROV_PARAM_NAME),
+    param_utf8_ptr(OSSL_PROV_PARAM_VERSION),
+    param_utf8_ptr(OSSL_PROV_PARAM_BUILDINFO),
+    param_integer_defn(OSSL_PROV_PARAM_STATUS),
+    END,
+];
+
+/// `static const OSSL_PARAM *deflt_gettable_params(void *provctx)` — `defltprov.c:46-49`.
+///
+/// The authority's body returns the table and reads neither argument. `provctx` is a live
+/// context here rather than NULL (see `ossl_default_provider_init` below), so ignoring it is
+/// faithful and not a shortcut.
+unsafe extern "C" fn deflt_gettable_params(_provctx: *mut c_void) -> *const OsslParam {
+    DEFLT_PARAM_TYPES.as_ptr()
+}
+
+/// `static int deflt_get_params(void *provctx, OSSL_PARAM params[])` — `defltprov.c:51-68`.
+///
+/// Each arm locates its parameter in the caller's array and, **only if the caller asked for it**,
+/// fills it -- failing the whole call when the fill fails. A key the caller did not ask for is not
+/// an error: the authority's `p != NULL && !set(...)` guard skips it and the function still
+/// answers 1. That asymmetry, and the four values themselves, are what `RT-PROVIDER-CAP`'s
+/// `get_params` arm observes: `OpenSSL Default Provider`, `3.6.4`, `3.6.4`, `1`, then a requested
+/// key that no arm sets (`filled=0`) with the call still returning 1.
+///
+/// The last two values are the two version strings. `opensslv.h:90/93` define
+/// `OPENSSL_VERSION_STR` and `OPENSSL_FULL_VERSION_STR`, and **on a release build the two are
+/// equal** -- the measured authority answers `3.6.4` for both -- so both arms read the crate's
+/// single captured `VERSION_STRING` rather than carrying a second literal that could drift.
+///
+/// # Safety
+/// The dispatch contract: `params` is NULL or a `key`-terminated array of live, writable
+/// `OsslParam`, each with room for the type it names.
+unsafe extern "C" fn deflt_get_params(_provctx: *mut c_void, params: *mut OsslParam) -> c_int {
+    // SAFETY: `params` is the caller's array; `OSSL_PARAM_locate` walks it to its terminator and
+    // returns NULL when the key is absent.
+    let p = unsafe { OSSL_PARAM_locate(params, OSSL_PROV_PARAM_NAME) };
+    if !p.is_null() {
+        // SAFETY: `p` is a live entry of the caller's array, which the caller made writable for
+        // the type it named.
+        if unsafe { OSSL_PARAM_set_utf8_ptr(p, c"OpenSSL Default Provider".as_ptr()) } == 0 {
+            return 0;
+        }
+    }
+    // SAFETY: as above for each of the remaining three arms.
+    let p = unsafe { OSSL_PARAM_locate(params, OSSL_PROV_PARAM_VERSION) };
+    if !p.is_null() {
+        // SAFETY: `p` is a live, writable entry of the caller's array.
+        if unsafe { OSSL_PARAM_set_utf8_ptr(p, VERSION_STRING.as_ptr()) } == 0 {
+            return 0;
+        }
+    }
+    // SAFETY: as above.
+    let p = unsafe { OSSL_PARAM_locate(params, OSSL_PROV_PARAM_BUILDINFO) };
+    if !p.is_null() {
+        // SAFETY: `p` is a live, writable entry of the caller's array.
+        if unsafe { OSSL_PARAM_set_utf8_ptr(p, VERSION_STRING.as_ptr()) } == 0 {
+            return 0;
+        }
+    }
+    // SAFETY: as above.
+    let p = unsafe { OSSL_PARAM_locate(params, OSSL_PROV_PARAM_STATUS) };
+    if !p.is_null() {
+        // SAFETY: `p` is a live, writable entry of the caller's array, made for an `int`.
+        if unsafe { OSSL_PARAM_set_int(p, ossl_prov_is_running()) } == 0 {
+            return 0;
+        }
+    }
+    1
+}
+
 /// `int ossl_default_provider_init(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in,
 /// const OSSL_DISPATCH **out, void **provctx)` — `providers/defltprov.c:754-807`.
 ///
@@ -2172,19 +2278,26 @@ unsafe extern "C" fn deflt_teardown(provctx: *mut c_void) {
 /// application silently reach the global one. D240 recorded that as a measured obligation;
 /// `RT-CIPHER`'s private-libctx arm is what takes the observation where it discriminates.
 ///
-/// Four things the authority does are **absent, and named**:
+/// Three things the authority does are **absent, and named** -- the list is shorter than the
+/// four-item one this header used to carry, and the shortening is recorded rather than silent:
 ///
-/// * `ossl_prov_bio_from_dispatch(in)` / `ossl_prov_seeding_from_dispatch(in)` are the first two
-///   calls in the authority's body, and their units (`providers/common/bio_prov.c` and
-///   `providers/common/provider_seeding.c`) are not transcribed. What they install is the core
-///   `BIO_METHOD` and the seeding callbacks, which the BIO and RAND strata need; the
-///   `||`-short-circuit they form is the *only* thing skipped, and nothing in this crate's
-///   landed rows reaches either callback;
-/// * `ossl_bio_prov_init_bio_method()` and the `corebiometh` field it fills;
-/// * `deflt_get_params`/`deflt_gettable_params` and their `OSSL_PROV_PARAM_*` keys;
-/// * `ossl_prov_get_capabilities` and `ossl_prov_cache_exported_algorithms`.
+/// * `ossl_prov_bio_from_dispatch(in)` is the first half of the authority's `||`-short-circuit,
+///   and its unit (`providers/common/bio_prov.c`) is not transcribed. What it installs is the core
+///   `BIO_METHOD` a provider uses to hand the core a BIO, and nothing in this crate's landed rows
+///   asks for one. The **second** half of that same call, `ossl_prov_seeding_from_dispatch`
+///   (`providers/common/provider_seeding.c`), *is* transcribed and **is** invoked below, because a
+///   DRBG's instantiate cannot get a nonce or entropy without it;
+/// * `ossl_bio_prov_init_bio_method()` and the `corebiometh` field it returns, for the same
+///   reason: this crate builds no provider-side BIO method;
+/// * `ossl_prov_ctx_set0_core_bio_method`, the setter for that field.
 ///
-/// All four remain the D117 residual, and `(*prov).provctx` becoming non-NULL is the part that
+/// **The other two items the old list named have landed, in this stratum.**
+/// `deflt_get_params`/`deflt_gettable_params` and their `OSSL_PROV_PARAM_*` keys are above and are
+/// dispatched from `DEFLT_DISPATCH`; `ossl_prov_get_capabilities` is `src/provider/capabilities.rs`,
+/// also in `DEFLT_DISPATCH`; and `ossl_prov_cache_exported_algorithms` has been in
+/// `src/provider/activate.rs` since D275, which is what `cache_exported_ciphers()` below drives.
+///
+/// `(*prov).provctx` becoming non-NULL is the part that
 /// matters for correctness now: `OSSL_PROVIDER_get0_provider_ctx` on the default provider
 /// answers a real context, as the authority's does.
 ///
@@ -2265,11 +2378,16 @@ pub(crate) unsafe extern "C" fn ossl_default_provider_init(
     1
 }
 
-/// `deflt_dispatch_table` — `providers/defltprov.c`, restricted to the two entries reachable
-/// without the provider-params and cache halves. The authority also publishes
-/// `GETTABLE_PARAMS`, `GET_PARAMS` and `GET_CAPABILITIES`; those are the D117 residual named
-/// above, and they are absent rather than stubbed.
-static DEFLT_DISPATCH: [OsslDispatch; 3] = [
+/// `deflt_dispatch_table` — `providers/defltprov.c:742-750`.
+///
+/// Five entries plus the terminator. The authority lists them in ascending `function_id` order
+/// (`TEARDOWN` 1024, `GETTABLE_PARAMS` 1025, `GET_PARAMS` 1026, `QUERY_OPERATION` 1027,
+/// `GET_CAPABILITIES` 1030); the order in the table is not observable, since the walk in
+/// `provider_init` keys each entry by its id, so the two entries that predate this pass keep the
+/// positions the earlier passes measured and the three new ones are appended. **Every one of the
+/// five is now published**: the `D117` residual this table used to name is discharged here, and
+/// `GET_CAPABILITIES` is `providers/common/capabilities.c`'s `ossl_prov_get_capabilities`.
+static DEFLT_DISPATCH: [OsslDispatch; 6] = [
     OsslDispatch {
         function_id: FUNC_PROVIDER_QUERY_OPERATION,
         function: deflt_query as *mut c_void,
@@ -2277,6 +2395,18 @@ static DEFLT_DISPATCH: [OsslDispatch; 3] = [
     OsslDispatch {
         function_id: crate::provider::init::FUNC_PROVIDER_TEARDOWN,
         function: deflt_teardown as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: FUNC_PROVIDER_GETTABLE_PARAMS,
+        function: deflt_gettable_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: FUNC_PROVIDER_GET_PARAMS,
+        function: deflt_get_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: FUNC_PROVIDER_GET_CAPABILITIES,
+        function: ossl_prov_get_capabilities as *mut c_void,
     },
     OsslDispatch {
         function_id: OSSL_DISPATCH_END,
@@ -2533,15 +2663,109 @@ mod tests {
             // The published context is freed the way the teardown entry would.
             crate::provider::ctx::ossl_prov_ctx_free(provctx.cast());
         }
-        // SAFETY: `out` is the published `'static` table; query, then teardown, then the end.
+        // SAFETY: `out` is the published `'static` table; the five arms in the order
+        // `DEFLT_DISPATCH` declares them, then the terminator. `out.add(5)` is the last entry, so
+        // reading it is in bounds.
         unsafe {
             assert_eq!((*out).function_id, FUNC_PROVIDER_QUERY_OPERATION);
             assert_eq!(
                 (*out.add(1)).function_id,
                 crate::provider::init::FUNC_PROVIDER_TEARDOWN
             );
-            assert_eq!((*out.add(2)).function_id, OSSL_DISPATCH_END);
+            assert_eq!((*out.add(2)).function_id, FUNC_PROVIDER_GETTABLE_PARAMS);
+            assert_eq!((*out.add(3)).function_id, FUNC_PROVIDER_GET_PARAMS);
+            assert_eq!((*out.add(4)).function_id, FUNC_PROVIDER_GET_CAPABILITIES);
+            assert_eq!((*out.add(5)).function_id, OSSL_DISPATCH_END);
+            assert!(
+                (*out.add(5)).function.is_null(),
+                "the terminator carries a NULL function"
+            );
         }
+    }
+
+    /// The four provider parameters `deflt_get_params` fills, and the fifth key it **skips rather
+    /// than refusing**. This is the in-crate guard; `RT-PROVIDER-CAP` is the differential
+    /// measurement against the authority, and the two must agree on the same four values and the
+    /// same `1` return beside an unfilled slot.
+    #[test]
+    fn the_default_provider_answers_its_own_param_list() {
+        let mut name: *mut c_char = ptr::null_mut();
+        let mut version: *mut c_char = ptr::null_mut();
+        let mut buildinfo: *mut c_char = ptr::null_mut();
+        let mut status: c_int = -1;
+        let mut unclaimed: c_int = -1;
+        let mut params: [OsslParam; 6] = [END; 6];
+        // SAFETY: each slot is this frame's own, and each constructor only records its address.
+        unsafe {
+            params[0] =
+                crate::params::OSSL_PARAM_construct_utf8_ptr(OSSL_PROV_PARAM_NAME, &mut name, 0);
+            params[1] = crate::params::OSSL_PARAM_construct_utf8_ptr(
+                OSSL_PROV_PARAM_VERSION,
+                &mut version,
+                0,
+            );
+            params[2] = crate::params::OSSL_PARAM_construct_utf8_ptr(
+                OSSL_PROV_PARAM_BUILDINFO,
+                &mut buildinfo,
+                0,
+            );
+            params[3] =
+                crate::params::OSSL_PARAM_construct_int(OSSL_PROV_PARAM_STATUS, &mut status);
+            params[4] = crate::params::OSSL_PARAM_construct_int(
+                c"not-a-provider-param".as_ptr(),
+                &mut unclaimed,
+            );
+        }
+        // SAFETY: the array is terminated and every buffer it names is this frame's.
+        let ok = unsafe { deflt_get_params(ptr::null_mut(), params.as_mut_ptr()) };
+        assert_eq!(ok, 1, "an unclaimed key is skipped, not an error");
+        // SAFETY: the three pointers were filled by the call and point at `'static` strings.
+        unsafe {
+            assert_eq!(
+                core::ffi::CStr::from_ptr(name).to_bytes(),
+                b"OpenSSL Default Provider"
+            );
+            assert_eq!(core::ffi::CStr::from_ptr(version).to_bytes(), b"3.6.4");
+            assert_eq!(core::ffi::CStr::from_ptr(buildinfo).to_bytes(), b"3.6.4");
+        }
+        assert_eq!(status, 1, "`ossl_prov_is_running` answers 1 on this build");
+        assert_eq!(unclaimed, -1, "the unclaimed slot was not written");
+
+        // The descriptor list is the four the authority publishes, in the authority's order.
+        assert_eq!(
+            DEFLT_PARAM_TYPES.len(),
+            5,
+            "four descriptors and a terminator"
+        );
+        // SAFETY: every entry before the terminator carries a `'static` key.
+        unsafe {
+            assert_eq!(
+                core::ffi::CStr::from_ptr(DEFLT_PARAM_TYPES[0].key).to_bytes(),
+                b"name"
+            );
+            assert_eq!(
+                core::ffi::CStr::from_ptr(DEFLT_PARAM_TYPES[1].key).to_bytes(),
+                b"version"
+            );
+            assert_eq!(
+                core::ffi::CStr::from_ptr(DEFLT_PARAM_TYPES[2].key).to_bytes(),
+                b"buildinfo"
+            );
+            assert_eq!(
+                core::ffi::CStr::from_ptr(DEFLT_PARAM_TYPES[3].key).to_bytes(),
+                b"status"
+            );
+            assert_eq!(DEFLT_PARAM_TYPES[0].data_type, 6, "UTF8_PTR");
+            assert_eq!(DEFLT_PARAM_TYPES[3].data_type, 1, "INTEGER");
+            assert_eq!(
+                DEFLT_PARAM_TYPES[0].data_size, 0,
+                "the DEFN form carries no size"
+            );
+        }
+        assert!(
+            DEFLT_PARAM_TYPES[4].key.is_null(),
+            "the fifth entry is the terminator"
+        );
     }
 
     #[test]

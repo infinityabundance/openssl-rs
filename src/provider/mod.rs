@@ -82,6 +82,7 @@
 pub(crate) mod activate;
 // 6.8d: `crypto/provider_conf.c`, the `providers` configuration module.
 pub(crate) mod asymcipher;
+pub(crate) mod capabilities;
 pub(crate) mod cipher;
 pub(crate) mod conf;
 pub(crate) mod ctx;
