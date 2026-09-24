@@ -32,7 +32,7 @@ court:
   authority: openssl-rt-3.6.4-r2
   candidate:
     name: openssl-rs
-    version_or_commit: "0.0.11"
+    version_or_commit: "0.0.12"
     build_profile: linux-x86_64-default-shared-legacy-notests
     path: forensics/frf/refs/candidate-runtime-probe.sh
   fixture:
