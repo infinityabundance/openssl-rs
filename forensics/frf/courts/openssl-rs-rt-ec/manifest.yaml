@@ -1,0 +1,59 @@
+# openssl-rs court: the Phase 8 `rt-ec` runtime surface.
+#
+# The subject is the transcript of a differential probe: one C program that
+# prints one `key=value` line per observation while exercising
+#
+#     the differential court for `crypto/ec/` (Phase 8.7)
+#
+# The same source is compiled against the admitted authority and against the
+# candidate, each side executes its own binary, and FRF compares the
+# transcripts.
+#
+# Scope: the observations the probe makes. It is NOT a claim about surface the
+# probe does not touch, and not a cryptographic or security claim.
+
+court:
+  id: openssl-rs-rt-ec
+  question: >-
+    For the rt-ec runtime surface in fixture family rt-ec, does
+    the candidate produce the same observable transcript as the admitted
+    authority OpenSSL 3.6.4 when both run the same probe over the same
+    fixture?
+  falsifier: >-
+    Any observation line differs between the two transcripts, or either
+    side's exit class differs.
+  authority: openssl-rt-3.6.4-r2
+  candidate:
+    name: openssl-rs
+    version_or_commit: "0.0.11"
+    build_profile: linux-x86_64-default-shared-legacy-notests
+    path: forensics/frf/refs/candidate-runtime-probe.sh
+  fixture:
+    id: probe-list.txt
+    path: forensics/frf/courts/openssl-rs-rt-ec/fixtures/probe-list.txt
+    arguments: ["{fixture}", "phase8"]
+  admissibility_envelope:
+    fixture_family: rt-ec
+    platforms: ["x86_64-linux"]
+    observables: [stdout, exit]
+    normalizers: []
+    replay_scope: single-run
+  execution_context:
+    artifacts:
+      - path: forensics/frf/refs/authority-runtime-probe.sh
+        role: child-executable
+      - path: forensics/frf/refs/candidate-runtime-probe.sh
+        role: child-executable
+      - path: artifacts/phase8/probes/rt_ec_probe.authority
+        role: child-executable
+      - path: artifacts/phase8/probes/rt_ec_probe.candidate
+        role: child-executable
+      - path: courts/phase8/rt_ec_probe.c
+        role: data
+      - path: forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+        role: runtime-library
+      - path: artifacts/phase2/libcrypto.so.3
+        role: runtime-library
+  environment:
+    LC_ALL: C
+    TZ: UTC

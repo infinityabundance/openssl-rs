@@ -263,7 +263,7 @@ Courts: `all pass`, 19 court(s), **2954** authority observation(s) over 19 trans
 ## Phase 8 — Native cryptographic primitives
 
 * state: `complete`
-* seal: none written yet (`docs/PHASE-8-CRYPTO-SEAL.md`)
+* seal: `docs/PHASE-8-CRYPTO-SEAL.md`
 * ledger: `forensics/phase8-obligations.json`
 * atlas-owned: 759
 * owned working set: 786
