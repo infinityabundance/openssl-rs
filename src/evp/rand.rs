@@ -37,12 +37,15 @@
 //! the fetch-time check and the runtime requirement are the same requirement, and the class is
 //! honest about it up front.
 //!
-//! ## What is not here
+//! ## What landed late, and why
 //!
 //! `evp_rand_can_seed`, `evp_rand_get_seed` and `evp_rand_clear_seed` are internal, are declared in
-//! `include/crypto/evp.h`, and are called only by `crypto/rand/rand_lib.c` — which is Phase 9's. The
-//! `get_seed` and `clear_seed` *fields* are filled by this file's dispatch walk, because the walk is
-//! this file's; their three callers arrive with the stratum that needs them.
+//! `include/crypto/evp.h`, and are called only by `crypto/rand/rand_lib.c`. The `get_seed` and
+//! `clear_seed` *fields* were filled by this file's dispatch walk from the start, because the walk
+//! is this file's; the three callers arrived with the stratum that needs them. **D309 landed them**,
+//! together with the `rand_lib.c` half that calls them, because the default provider's DRBG rows
+//! cannot instantiate without entropy and a nonce — the prerequisite gate had them recorded as
+//! deferrals until then, and the records were retired on the same commit rather than left stale.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -66,7 +69,10 @@ use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 
 /// `OSSL_OP_RAND` — `include/openssl/core_dispatch.h`. The fifth operation the walk visits.
-const OSSL_OP_RAND: c_int = 5;
+///
+/// `pub(crate)` since D299: the Phase 9 provider rows answer `deflt_query(OSSL_OP_RAND)` from
+/// `src/provider/rand.rs`, so the constant is read across modules now rather than only here.
+pub(crate) const OSSL_OP_RAND: c_int = 5;
 
 /// The authority's translation unit, so a failing allocation records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/evp_rand.c".as_ptr();
@@ -86,7 +92,19 @@ const LINE_FREE_CTX: c_int = 399;
 
 /// `EVP_RAND_STATE_ERROR` — `include/openssl/evp.h`. The state `EVP_RAND_get_state` answers when it
 /// cannot ask.
-const EVP_RAND_STATE_ERROR: c_int = 2;
+pub(crate) const EVP_RAND_STATE_ERROR: c_int = 2;
+/// `EVP_RAND_STATE_UNINITIALISED` — `include/openssl/evp.h:1345`.
+#[allow(dead_code)] // the landing caller is `drbg.c`'s `prov_drbg_new`
+pub(crate) const EVP_RAND_STATE_UNINITIALISED: c_int = 0;
+/// `EVP_RAND_STATE_READY` — `include/openssl/evp.h:1346`.
+///
+/// The two non-error states are named rather than folded into a boolean because a DRBG row's
+/// `gettable_ctx_params` reports `state` as a **number** in its parameter array, and the
+/// authority's own `drbg.c` compares against `EVP_RAND_STATE_READY` by name. A transcription that
+/// wrote `1` at one site and the constant at another would agree with itself and disagree with the
+/// authority's spelling the first time either moved.
+#[allow(dead_code)] // the landing caller is `drbg.c`'s `ossl_prov_drbg_generate`
+pub(crate) const EVP_RAND_STATE_READY: c_int = 1;
 
 // ---------------------------------------------------------------------------------------------
 // The dispatch ids and the nineteen function-pointer types.
@@ -97,43 +115,43 @@ const EVP_RAND_STATE_ERROR: c_int = 2;
 // ---------------------------------------------------------------------------------------------
 
 /// `OSSL_FUNC_RAND_NEWCTX`.
-const OSSL_FUNC_RAND_NEWCTX: c_int = 1;
+pub(crate) const OSSL_FUNC_RAND_NEWCTX: c_int = 1;
 /// `OSSL_FUNC_RAND_FREECTX`.
-const OSSL_FUNC_RAND_FREECTX: c_int = 2;
+pub(crate) const OSSL_FUNC_RAND_FREECTX: c_int = 2;
 /// `OSSL_FUNC_RAND_INSTANTIATE`.
-const OSSL_FUNC_RAND_INSTANTIATE: c_int = 3;
+pub(crate) const OSSL_FUNC_RAND_INSTANTIATE: c_int = 3;
 /// `OSSL_FUNC_RAND_UNINSTANTIATE`.
-const OSSL_FUNC_RAND_UNINSTANTIATE: c_int = 4;
+pub(crate) const OSSL_FUNC_RAND_UNINSTANTIATE: c_int = 4;
 /// `OSSL_FUNC_RAND_GENERATE`.
-const OSSL_FUNC_RAND_GENERATE: c_int = 5;
+pub(crate) const OSSL_FUNC_RAND_GENERATE: c_int = 5;
 /// `OSSL_FUNC_RAND_RESEED`.
-const OSSL_FUNC_RAND_RESEED: c_int = 6;
+pub(crate) const OSSL_FUNC_RAND_RESEED: c_int = 6;
 /// `OSSL_FUNC_RAND_NONCE`.
-const OSSL_FUNC_RAND_NONCE: c_int = 7;
+pub(crate) const OSSL_FUNC_RAND_NONCE: c_int = 7;
 /// `OSSL_FUNC_RAND_ENABLE_LOCKING`.
-const OSSL_FUNC_RAND_ENABLE_LOCKING: c_int = 8;
+pub(crate) const OSSL_FUNC_RAND_ENABLE_LOCKING: c_int = 8;
 /// `OSSL_FUNC_RAND_LOCK`.
-const OSSL_FUNC_RAND_LOCK: c_int = 9;
+pub(crate) const OSSL_FUNC_RAND_LOCK: c_int = 9;
 /// `OSSL_FUNC_RAND_UNLOCK`.
-const OSSL_FUNC_RAND_UNLOCK: c_int = 10;
+pub(crate) const OSSL_FUNC_RAND_UNLOCK: c_int = 10;
 /// `OSSL_FUNC_RAND_GETTABLE_PARAMS`.
-const OSSL_FUNC_RAND_GETTABLE_PARAMS: c_int = 11;
+pub(crate) const OSSL_FUNC_RAND_GETTABLE_PARAMS: c_int = 11;
 /// `OSSL_FUNC_RAND_GETTABLE_CTX_PARAMS`.
-const OSSL_FUNC_RAND_GETTABLE_CTX_PARAMS: c_int = 12;
+pub(crate) const OSSL_FUNC_RAND_GETTABLE_CTX_PARAMS: c_int = 12;
 /// `OSSL_FUNC_RAND_SETTABLE_CTX_PARAMS`.
-const OSSL_FUNC_RAND_SETTABLE_CTX_PARAMS: c_int = 13;
+pub(crate) const OSSL_FUNC_RAND_SETTABLE_CTX_PARAMS: c_int = 13;
 /// `OSSL_FUNC_RAND_GET_PARAMS`.
-const OSSL_FUNC_RAND_GET_PARAMS: c_int = 14;
+pub(crate) const OSSL_FUNC_RAND_GET_PARAMS: c_int = 14;
 /// `OSSL_FUNC_RAND_GET_CTX_PARAMS`. One of the three counters — see the module documentation.
-const OSSL_FUNC_RAND_GET_CTX_PARAMS: c_int = 15;
+pub(crate) const OSSL_FUNC_RAND_GET_CTX_PARAMS: c_int = 15;
 /// `OSSL_FUNC_RAND_SET_CTX_PARAMS`.
-const OSSL_FUNC_RAND_SET_CTX_PARAMS: c_int = 16;
+pub(crate) const OSSL_FUNC_RAND_SET_CTX_PARAMS: c_int = 16;
 /// `OSSL_FUNC_RAND_VERIFY_ZEROIZATION`.
-const OSSL_FUNC_RAND_VERIFY_ZEROIZATION: c_int = 17;
+pub(crate) const OSSL_FUNC_RAND_VERIFY_ZEROIZATION: c_int = 17;
 /// `OSSL_FUNC_RAND_GET_SEED`. Filled here, called by Phase 9's `rand_lib.c`.
-const OSSL_FUNC_RAND_GET_SEED: c_int = 18;
+pub(crate) const OSSL_FUNC_RAND_GET_SEED: c_int = 18;
 /// `OSSL_FUNC_RAND_CLEAR_SEED`. Filled here, called by Phase 9's `rand_lib.c`.
-const OSSL_FUNC_RAND_CLEAR_SEED: c_int = 19;
+pub(crate) const OSSL_FUNC_RAND_CLEAR_SEED: c_int = 19;
 
 /// `OSSL_FUNC_rand_newctx_fn` — `void *(*)(void *provctx, void *parent,
 /// const OSSL_DISPATCH *parent_calls)`.
@@ -1012,6 +1030,135 @@ unsafe fn evp_rand_unlock(rand: *mut EvpRandCtx) {
         // SAFETY: `f` is the provider's own callback and `algctx` is its context.
         unsafe { f((*rand).algctx) };
     }
+}
+
+/// `int evp_rand_can_seed(EVP_RAND_CTX *ctx)` — `crypto/evp/evp_rand.c:696-699`.
+///
+/// **The question is about the method, not the context**: a row that publishes a `get_seed` can
+/// seed another RAND, which is what `rand_lib.c`'s `ossl_rand_get_user_entropy` asks before it
+/// either draws from the seed source or falls back to the platform pool. It is the only place
+/// `get_seed` is consulted without being called, which is why it is a function rather than a
+/// field test at the call site.
+///
+/// # Safety
+/// `ctx` must be a live context whose `meth` is live.
+pub(crate) unsafe fn evp_rand_can_seed(ctx: *mut EvpRandCtx) -> c_int {
+    // SAFETY: `ctx` is live per the contract and `meth` is live.
+    let meth = unsafe { (*ctx).meth };
+    // SAFETY: `meth` is live.
+    if unsafe { (*meth).get_seed }.is_some() {
+        1
+    } else {
+        0
+    }
+}
+
+/// `static size_t evp_rand_get_seed_locked(EVP_RAND_CTX *ctx, unsigned char **buffer, int entropy,
+/// size_t min_len, size_t max_len, int prediction_resistance, const unsigned char *adin, size_t
+/// adin_len)` — `crypto/evp/evp_rand.c:701-715`.
+///
+/// # Safety
+/// `ctx` must be locked and live; `buffer` writable and `adin` readable per the callback contract.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+unsafe fn evp_rand_get_seed_locked(
+    ctx: *mut EvpRandCtx,
+    buffer: *mut *mut c_uchar,
+    entropy: c_int,
+    min_len: usize,
+    max_len: usize,
+    prediction_resistance: c_int,
+    adin: *const c_uchar,
+    adin_len: usize,
+) -> usize {
+    // SAFETY: `ctx` is live per the contract.
+    let meth = unsafe { (*ctx).meth };
+    // SAFETY: `meth` is live.
+    let Some(f) = (unsafe { (*meth).get_seed }) else {
+        return 0;
+    };
+    // SAFETY: `f` is the provider's own callback and `algctx` is its context.
+    unsafe {
+        f(
+            (*ctx).algctx,
+            buffer,
+            entropy,
+            min_len,
+            max_len,
+            prediction_resistance,
+            adin,
+            adin_len,
+        )
+    }
+}
+
+/// `size_t evp_rand_get_seed(EVP_RAND_CTX *ctx, unsigned char **buffer, int entropy, size_t
+/// min_len, size_t max_len, int prediction_resistance, const unsigned char *adin, size_t
+/// adin_len)` — `crypto/evp/evp_rand.c:717-734`. Takes the context's lock around the callback.
+///
+/// # Safety
+/// `ctx` must be live; `buffer` writable and `adin` readable per the callback contract.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+pub(crate) unsafe fn evp_rand_get_seed(
+    ctx: *mut EvpRandCtx,
+    buffer: *mut *mut c_uchar,
+    entropy: c_int,
+    min_len: usize,
+    max_len: usize,
+    prediction_resistance: c_int,
+    adin: *const c_uchar,
+    adin_len: usize,
+) -> usize {
+    // SAFETY: `ctx` is live per the contract; the lock is the context's own.
+    if unsafe { evp_rand_lock(ctx) } == 0 {
+        return 0;
+    }
+    // SAFETY: the lock is held, and the callback's contract is the caller's.
+    let res = unsafe {
+        evp_rand_get_seed_locked(
+            ctx,
+            buffer,
+            entropy,
+            min_len,
+            max_len,
+            prediction_resistance,
+            adin,
+            adin_len,
+        )
+    };
+    // SAFETY: the lock is held by this call.
+    unsafe { evp_rand_unlock(ctx) };
+    res
+}
+
+/// `static void evp_rand_clear_seed_locked(EVP_RAND_CTX *ctx, unsigned char *buffer, size_t
+/// b_len)` — `crypto/evp/evp_rand.c:736-741`.
+///
+/// # Safety
+/// `ctx` must be locked and live; `buffer` is the caller's seed allocation.
+unsafe fn evp_rand_clear_seed_locked(ctx: *mut EvpRandCtx, buffer: *mut c_uchar, b_len: usize) {
+    // SAFETY: `ctx` is live per the contract.
+    let meth = unsafe { (*ctx).meth };
+    // SAFETY: `meth` is live.
+    if let Some(f) = unsafe { (*meth).clear_seed } {
+        // SAFETY: `f` is the provider's own callback and `algctx` is its context.
+        unsafe { f((*ctx).algctx, buffer, b_len) };
+    }
+}
+
+/// `void evp_rand_clear_seed(EVP_RAND_CTX *ctx, unsigned char *buffer, size_t b_len)` —
+/// `crypto/evp/evp_rand.c:743-750`. Takes the context's lock around the callback.
+///
+/// # Safety
+/// `ctx` must be live; `buffer` is the caller's seed allocation.
+pub(crate) unsafe fn evp_rand_clear_seed(ctx: *mut EvpRandCtx, buffer: *mut c_uchar, b_len: usize) {
+    // SAFETY: `ctx` is live per the contract; the lock is the context's own.
+    if unsafe { evp_rand_lock(ctx) } == 0 {
+        return;
+    }
+    // SAFETY: the lock is held, and `buffer` is the caller's per the contract.
+    unsafe { evp_rand_clear_seed_locked(ctx, buffer, b_len) };
+    // SAFETY: the lock is held by this call.
+    unsafe { evp_rand_unlock(ctx) };
 }
 
 /// `int EVP_RAND_enable_locking(EVP_RAND_CTX *rand)`.

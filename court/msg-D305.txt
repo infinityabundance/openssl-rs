@@ -1,0 +1,39 @@
+rand: the provider's seed up-calls and the two MAC-context helpers land (D305)
+
+The DRBG's provider-side prerequisites, and the unit D298's measurement named.
+
+src/provider/seeding.rs — providers/common/provider_seeding.c: the four up-calls
+(ossl_prov_get_entropy, ossl_prov_cleanup_entropy, ossl_prov_get_nonce,
+ossl_prov_cleanup_nonce) plus ossl_prov_seeding_from_dispatch, the walk that records the
+eight OSSL_FUNC_{GET,CLEANUP}_{USER_,}ENTROPY and _NONCE entries off a provider's own
+dispatch table into the statics the up-calls read. Those eight ids are the ones D299
+landed in src/context/dispatch.rs, and this is the function that consumes them.
+
+src/provider/util.rs gains ossl_prov_set_macctx and ossl_prov_macctx_load, the MAC half
+of provider_util.c that drbg_hmac.c reaches and that the module was missing. Three arms
+of it are contract rather than detail and the code says so at each: a NULL macname with a
+mac descriptor LOCATES AND REUSES the existing context, so the function can hand new
+digest and cipher parameters to a context that already exists; a new mac name releases
+the old context BEFORE building the new one and releases the fetched method immediately
+after EVP_MAC_CTX_new, because the context holds its own reference; and a
+set_ctx_params refusal releases the context and NULLs it rather than leaving the caller a
+half-parameterised one.
+
+Suite stays at 649: both units are internal, and their callers are the DRBG rows.
+
+Two measurement notes, both about the staging file rather than the authority:
+
+1. The staging file's Section 2 was appended after util.rs's #[cfg(test)] module, and the
+   crate's clippy configuration refuses "items after a test module". The 166 lines moved
+   above it. Worth recording because the file's own layout is what a reader uses to find
+   the test module, and appending is the obvious thing to do.
+2. ossl_prov_macctx_load has ten parameters, which trips too_many_arguments. The allow is
+   argued rather than reflexive: four descriptors, four out-parameters, the context and the
+   library context are the authority's own signature, and folding them into a struct would
+   be a representation the authority does not have while the call sites pass them
+   positionally out of a parameter list.
+
+Both modules carry an allow(dead_code) naming the landing caller, since neither is called
+until the DRBG rows are published.
+
+PIPELINE OK, 85 courts, 31469 observations, 649 unit tests.

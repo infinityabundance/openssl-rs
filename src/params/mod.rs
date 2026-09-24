@@ -122,6 +122,13 @@ pub struct OsslParam {
     pub return_size: usize,
 }
 
+// SAFETY: a descriptor is a C value with no interior mutability the type system needs to see;
+// the raw pointers either point at `'static` literals (the digest tables) or at a caller's
+// buffer the caller owns. A shared static of descriptors is read-only, and every entry point
+// that writes a descriptor's `data` does so through a pointer the caller supplied. The same
+// reasoning the crate already applies to `OsslDispatch` and `StaticMd`.
+unsafe impl Sync for OsslParam {}
+
 /// Read a `*const OsslParam` as a reference.
 ///
 /// # Safety
@@ -3103,7 +3110,10 @@ pub(crate) unsafe fn ossl_param_get1_concat_octet_string(
         return 0;
     }
     if sz == 0 {
-        // `OPENSSL_zalloc(1)` — one byte, so the caller has something to release.
+        // `OPENSSL_zalloc(1)` — one byte, so the caller has something to release. **`*out_len`
+        // stays `sz` (zero)**, because the authority's `fin:` label writes `sz` and the early arm
+        // jumps to it without changing it; a length of one here made `X963KDF` hash a stray zero
+        // byte (D346).
         let z = CRYPTO_zalloc(1, FILE.as_ptr(), LINE);
         if z.is_null() {
             return 0;
@@ -3119,7 +3129,7 @@ pub(crate) unsafe fn ossl_param_get1_concat_octet_string(
                 );
             }
             *out = z.cast();
-            *out_len = 1;
+            *out_len = sz;
         }
         return 1;
     }

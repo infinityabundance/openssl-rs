@@ -31,6 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from atlas_common import (  # noqa: E402
     ATLAS,
+    SEAL_DOCS,
     content_hash,
     envelope,
     rel,
@@ -48,6 +49,22 @@ OUT = REPO_ROOT / "forensics" / "phase-state.json"
 # generated before this tool in `court/pipeline.sh`, and it derives the completed strata
 # from the ledgers rather than from this file, so there is no cycle.
 COVERAGE = "forensics/atlas/court-coverage.json"
+
+# The provider-algorithm census (docs/DECISIONS.md D237). A stratum owns **two** universes: the
+# exports it must publish, and the provider *algorithm registration rows* it must publish. The
+# second is invisible to every ELF census -- `deflt_ciphers[]` and its siblings are arrays whose
+# members no `libcrypto.num` entry names -- so until this rule it participated in no completion
+# decision at all. That left the hole the structural review found: a stratum could reach
+# `open_in_this_stratum == 0`, every court passing, zero unmatched exports and a seal, while
+# publishing two hundred fewer provider rows than the authority, with only the atlas saying so.
+# The rule below is generic over `STRATUM_EVIDENCE` rather than special to the stratum that
+# happens to be in progress, and it reads the same atlas the census writes.
+PROVIDER_ALGORITHMS = "forensics/atlas/provider-algorithms.json"
+
+# The provider-row court-coverage atlas (docs/DECISIONS.md D245): the join that says a row the
+# census calls `implemented` is also *observed*. Generated before this tool, from the same census
+# and the court probes.
+PROVIDER_COVERAGE = "forensics/atlas/provider-court-coverage.json"
 
 # The conservation strata, in dependency order (docs/RELEASE_GATES.md §1).
 STRATA: list[tuple[int, str, str]] = [
@@ -184,8 +201,9 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
     # `open == 0` and `every court passes` do not imply that every implemented export has
     # a court. The atlas performs that join; a `complete` stratum must appear in it with no
     # unmatched export, or the state it would otherwise reach is not one the evidence
-    # supports. The atlas covers strata 3-7 (all currently complete export-bearing strata),
-    # so this rule holds for each of them rather than being scoped to Phase 7.
+    # supports. The atlas covers every stratum that has begun -- phases 3-8 -- so this rule
+    # holds for each of them rather than being scoped to Phase 7, and Phase 8 is subject to it
+    # while it is being written rather than only on the day it seals (docs/DECISIONS.md D236).
     coverage = read_json(COVERAGE)
     if coverage:
         present.append(COVERAGE)
@@ -200,6 +218,52 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
                 f"in no court coverage set ({COVERAGE})")
     else:
         absent.append(COVERAGE)
+
+    # Provider registration rows (D237). The census in `PROVIDER_ALGORITHMS` records every row of
+    # every admitted provider's tables with an `owning_phase` and an `implementation_state`
+    # (`implemented` / `unimplemented`), and a stratum may not be complete while any row it owns is
+    # unlanded. "Handed on" is not a state a row can carry: it is the census's `projection`, which
+    # counts the unlanded rows the plan gives a *later* stratum, and handing work to a later stratum
+    # is a decision this project allows -- silently *not* publishing a row is what it does not.
+    #
+    # **This rule reads no stratum-relative value** (D295). Until D295 the census stored
+    # `state = "open" if owning_phase == 8 else "deferred"`, which meant this rule's answer for
+    # phase 8 depended on phase 8 happening to be the stratum that was active; activating phase 9
+    # would have made eleven of phase 8's rows read as `deferred` and let the stratum complete with
+    # them unpublished. The projection cannot move under a different active stratum.
+    providers = read_json(PROVIDER_ALGORITHMS)
+    if providers:
+        present.append(PROVIDER_ALGORITHMS)
+        owned = [r for r in providers["body"]["rows"] if r["owning_phase"] == phase]
+        open_rows = [r for r in owned if r["implementation_state"] == "unimplemented"]
+        if open_rows:
+            names = sorted({r["algorithm_names"] for r in open_rows})
+            shown = ", ".join(names[:6]) + ("..." if len(names) > 6 else "")
+            blocking = blocking or (
+                f"{len(open_rows)} provider registration row(s) of this stratum are neither "
+                f"implemented nor handed to a later phase ({PROVIDER_ALGORITHMS}): {shown}")
+    else:
+        absent.append(PROVIDER_ALGORITHMS)
+
+    # Provider-row court coverage (D245). The same join D199 performs for exports, one universe
+    # down: `implemented` is a statement about a candidate table, and it is not a statement that
+    # any observation touches the row. A stratum may not be complete while any row it owns is
+    # implemented and named by no probe.
+    pcov = read_json(PROVIDER_COVERAGE)
+    if pcov:
+        present.append(PROVIDER_COVERAGE)
+        unmatched = pcov["body"]["unmatched"]
+        if unmatched:
+            names = sorted(
+                r["algorithm_names"] for r in pcov["body"]["rows"]
+                if r["coverage"] == "unmatched"
+            )
+            shown = ", ".join(names[:6]) + ("..." if len(names) > 6 else "")
+            blocking = blocking or (
+                f"{unmatched} implemented provider row(s) are named by no probe "
+                f"({PROVIDER_COVERAGE}): {shown}")
+    else:
+        absent.append(PROVIDER_COVERAGE)
     return present, absent, blocking
 
     return present, absent, "not started"
@@ -581,6 +645,70 @@ PHASE7_MODULES = [
     "courts/phase7/rt_evp_pkey_ops_probe.c",
 ]
 
+
+# Phase 8's evidence: the native cryptographic primitives -- the digests, the symmetric
+# ciphers and their modes, and the four asymmetric key types with the ASN.1 method objects
+# that name them. Its plan is `docs/PHASE-8-SUBPHASES.md`, and 8.0 landed the ledger while the
+# stratum itself is entirely open, which is the honest starting state and is what that plan's
+# §2 records. The modules are added by the subphase that lands them, in the same commit, so
+# that this list is a statement about the tree rather than about the plan.
+PHASE8_COURTS = "artifacts/phase8/COURTS.json"
+PHASE8_OBLIGATIONS = "forensics/phase8-obligations.json"
+PHASE8_MODULES = [
+    "docs/PHASE-8-SUBPHASES.md",
+    "forensics/tools/phase8_courts.py",
+    "forensics/tools/phase8_obligations.py",
+    # 8.1a adds the second evidence plane: the correctness courts' driver and the
+    # candidate-only probe. The committed vector sets under `forensics/vectors/` are that
+    # driver's data and are recorded per court by `phase8_courts.py`; naming the code here
+    # is what makes the plane's absence a blocking reason rather than a silent one.
+    "forensics/tools/correctness_vectors.py",
+    "courts/phase8/ct_digest.c",
+]
+
+
+# Phase 9's evidence: the random layer -- `rand.h`'s front, the BN random family behind it, the
+# providers' DRBG framework and its three instantiations, and the seed sources those draw on. Its
+# plan is `docs/PHASE-9-SUBPHASES.md`, which 9.0 lands with the ledger and the runner. The
+# modules are added by the subphase that lands them, in the same commit, so that this list is a
+# statement about the tree rather than about the plan -- which is why it does not yet name
+# `src/rand/` or any of the three DRBG modules: none of them exists.
+#
+# **The court file is present and empty, and its own claim says so** (docs/DECISIONS.md D294).
+# `run_courts.py` requires a stratum that has committed a courts file to have a runner that
+# reproduces it, so the runner lands with the file; `Phase 9`'s evidence until 9.1 is the ledger,
+# and `phase-state.json` reports the stratum `in-progress` rather than `complete` because the
+# ledger's `open_in_this_stratum` is ninety-three.
+PHASE9_COURTS = "artifacts/phase9/COURTS.json"
+PHASE9_OBLIGATIONS = "forensics/phase9-obligations.json"
+PHASE9_MODULES = [
+    "docs/PHASE-9-SUBPHASES.md",
+    "forensics/tools/phase9_courts.py",
+    "forensics/tools/phase9_obligations.py",
+    # 9.2's first unit, and the only part of this stratum that can land before the front it is
+    # called from: `crypto/rand/rand_pool.c` has no platform dependency, so it compiles and its
+    # ten unit tests run while nothing in the crate calls it. It carries no export, so it adds no
+    # row to the ledger and no edge to the court-coverage atlas -- which is why naming it here is
+    # the only place its landing is visible to the evidence machinery at all.
+    "src/rand/mod.rs",
+    "src/rand/pool.rs",
+    # 9.5's platform layer. It landed before the arm that calls it because it is the part with an
+    # ABI to get wrong and no dependency of its own: ten unit tests exercise each binding against
+    # the running kernel, including the `struct stat` offsets and the `__NR_getrandom` value, which
+    # are exactly the two a transcription can get wrong without any caller noticing.
+    "src/rand/sys.rs",
+    # 9.5's seeding arm itself: `rand_unix.c`, the unit D298 moved out of
+    # `crypto/rand/rand_pool.c`. It is the only part of this stratum that reaches the kernel for
+    # entropy, so its four tests are the only place `ossl_pool_acquire_entropy` is called at all.
+    "src/rand/unix.rs",
+    # 9.3's provider-side prerequisites: the four seed up-calls `drbg.c` reaches through the
+    # provider context, and `provider_util.c`'s two MAC-context functions `drbg_hmac.c` calls.
+    # Both are internal and neither has a caller until the DRBG rows land, which is why they are
+    # named here -- nothing else in the evidence machinery sees them.
+    "src/provider/seeding.rs",
+    "src/provider/util.rs",
+]
+
 STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
     3: StratumEvidence(PHASE3_MODULES, PHASE3_OBLIGATIONS, PHASE3_COURTS,
                        ledger_note=(
@@ -592,6 +720,17 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
     5: StratumEvidence(PHASE5_MODULES, PHASE5_OBLIGATIONS, PHASE5_COURTS),
     6: StratumEvidence(PHASE6_MODULES, PHASE6_OBLIGATIONS, PHASE6_COURTS),
     7: StratumEvidence(PHASE7_MODULES, PHASE7_OBLIGATIONS, PHASE7_COURTS),
+    8: StratumEvidence(PHASE8_MODULES, PHASE8_OBLIGATIONS, PHASE8_COURTS),
+    9: StratumEvidence(PHASE9_MODULES, PHASE9_OBLIGATIONS, PHASE9_COURTS,
+                       ledger_note=(
+                           "Its working set is ninety-three exports, and only twenty-five "
+                           "are its own header's: the other sixty-eight arrive as recorded "
+                           "hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives "
+                           "in ten earlier strata's modules (docs/DECISIONS.md D294). The "
+                           "court file records `courts: []` and is not evidence that "
+                           "anything works: no Phase 9 court has landed yet "
+                           "(docs/PHASE-9-SUBPHASES.md section 1)"
+                       )),
 }
 
 
@@ -617,6 +756,35 @@ def deferred_rows(phase: int) -> list[str]:
         f"{row['symbol']} -> phase {row['owning_phase']} ({row['reason']})"
         for row in doc["body"]["deferred"]
     ]
+
+
+def provider_rows_for(phase: int) -> dict | None:
+    """The stratum's provider registration rows, counted by the census's own `implementation_state`.
+
+    Machine-readable rather than prose, and on every stratum's row rather than only the one in
+    progress, because the *count* is what makes the obligation auditable a year from now: a
+    reader can see that phase 8 owns so many rows of which so many are implemented, and the
+    regression guard can watch those numbers instead of watching the state alone. `None` when the
+    atlas is absent, which `evidence_for` already reports as absent evidence rather than as a zero.
+
+    The `handed_on` count beside them is the census's projection for the same stratum: the unlanded
+    rows the plan gives a *later* phase (D295).
+    """
+    doc = read_json(PROVIDER_ALGORITHMS)
+    if not doc:
+        return None
+    owned = [r for r in doc["body"]["rows"] if r["owning_phase"] == phase]
+    if not owned:
+        return None
+    by_state: dict[str, int] = {}
+    for row in owned:
+        by_state[row["implementation_state"]] = by_state.get(row["implementation_state"], 0) + 1
+    handed_on = doc["body"].get("projection", {}).get("handed_on", {}).get(str(phase))
+    return {
+        "owned": len(owned),
+        **{k: by_state[k] for k in sorted(by_state)},
+        "handed_on": handed_on if handed_on is not None else 0,
+    }
 
 
 def main() -> int:
@@ -684,15 +852,14 @@ def main() -> int:
         elif state != "complete" and earlier_incomplete is None:
             earlier_incomplete = phase
 
-        seals = {
-            "phase1": seal_identity("docs/PHASE-1-ARCHAEOLOGY-SEAL.md"),
-            "phase2": seal_identity("docs/PHASE-2-DISTRIBUTION-SEAL.md"),
-        }
+        seal_doc = SEAL_DOCS.get(phase)
         rows.append({
             "phase": phase, "name": name, "stratum": stratum, "state": state,
             "evidence_present": present, "evidence_absent": absent,
-            "blocking": blocking, "seal_sha256": seals.get(f"phase{phase}"),
+            "blocking": blocking,
+            "seal_sha256": seal_identity(seal_doc) if seal_doc else None,
             "deferred": deferred_rows(phase),
+            "provider_rows": provider_rows_for(phase),
         })
 
     body = {

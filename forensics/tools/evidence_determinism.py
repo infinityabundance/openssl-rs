@@ -91,6 +91,30 @@ GENERATORS_BEFORE_LEDGERS = [
     # doing only one of the two would have replaced one silent gap with two.
     "forensics/tools/gen_err_raise_sites.py",
     "forensics/tools/gen_bn_primes.py",
+    # Phase 8.5's named-group constants (D332). It is listed here so a stale committed copy
+    # is a failure and not a silent divergence: the whole point of reading 13,536 bytes of
+    # limb data back from the authority instead of transcribing them is defeated by a
+    # generator nothing re-runs. It has two tiers like the two above -- re-derive with the
+    # authority present, rebuild-and-compare from the committed pair without it -- and it
+    # additionally checks `src/bn/dh.rs`'s accessor table against `bn_dh.c`'s own
+    # `make_dh_bn` inventory in **both** tiers, so a hand edit to that table fails on a
+    # runner with no authority too.
+    "forensics/tools/gen_bn_dh.py",
+    # Phase 8.7's built-in curve parameters (D334). Listed here so a stale committed copy is a
+    # failure and not a silent divergence: the whole point of reading 14,542 bytes of curve
+    # constants back from the authority instead of transcribing them is defeated by a generator
+    # nothing re-runs. It has the same two tiers as the three above -- re-derive with the
+    # authority present, rebuild-and-compare from the committed pair without it -- and it
+    # additionally checks `src/ec/support.rs`'s two name tables against `crypto/evp/ec_support.c`
+    # in **both** tiers, so a hand edit to that module fails on a runner with no authority too.
+    "forensics/tools/gen_ec_curves.py",
+    # The provider algorithm-row census (D237). It reads the authority's provider tables and
+    # the crate's two provider modules, and nothing else, so it has no position dependence
+    # beyond being after the crate's sources are final; it is listed here so a stale
+    # committed copy is a failure rather than a silent divergence. The whole point of the
+    # census is that `DES3-WRAP` was invisible, so a generator nothing re-runs would
+    # reintroduce exactly that.
+    "forensics/tools/gen_provider_algorithms.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
@@ -122,6 +146,13 @@ GENERATORS_AFTER_LEDGERS = [
     "forensics/tools/plan_reconciliation.py",
     "forensics/tools/render_seal_census.py",
     "forensics/tools/render_status.py",
+    # The Phase 8 remainder projection (docs/PHASE-8-REMAINING.md). It reads the Phase 8
+    # obligation ledger the block above just wrote, so it sits after the ledgers rather
+    # than before them, and it is listed here so a stale committed copy is a failure
+    # rather than a silent divergence -- the document exists to answer a planning
+    # question about what is left of the stratum, and a copy nothing re-runs would drift
+    # from the ledger it projects.
+    "forensics/tools/phase8_remaining.py",
 ]
 
 
@@ -180,6 +211,7 @@ COMPARED = [
     "forensics/phase-state.json",
     "forensics/phase-state.md",
     "docs/SEAL-CENSUS.md",
+    "docs/PHASE-8-REMAINING.md",
     "forensics/STATUS.md",
     # Not a JSON artefact and not written by a generator that reads the atlas: it is
     # emitted by `gen_ctype_table.py` above, so it is compared in the same pass. It
@@ -190,6 +222,17 @@ COMPARED = [
     # `cargo`-visible file generated from the authority was in neither this list nor the
     # generator list, so it could drift from the atlas without anything noticing.
     "src/runtime/err_sites.rs",
+    # Phase 8.5's named-group constants (D332), for the same reason as the two above and
+    # `src/bn/dh_data.rs`, for the same reason as the two above and
+    # with one extra property the other generated `.rs` files do not need: this file's
+    # renderer is **`rustfmt`-stable**, so `pipeline.sh` may run it before `cargo fmt`
+    # without the formatter moving a byte. That is what lets it be compared here at all,
+    # and why the two Phase 8 table generators below are deliberately not.
+    "src/bn/dh_data.rs",
+    # Phase 8.7's built-in curve parameters (D334), the same argument again: a `cargo`-visible
+    # file generated from the authority, whose renderer is `rustfmt`-stable, so a formatter pass
+    # cannot move it. It is 75 `EC_CURVE_DATA` structures and `curve_list[]`'s eighty-two rows.
+    "src/ec/curve_data.rs",
 ]
 
 # ---------------------------------------------------------------------------

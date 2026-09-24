@@ -99,6 +99,7 @@ from atlas_common import (  # noqa: E402
 )
 from prototype_court import (  # noqa: E402
     RUST_ALIAS_RE,
+    alias_target,
     blank_comments,
     canon_c_type,
     canon_rust_type,
@@ -139,6 +140,61 @@ CONF_INT = ("not a provider dispatch: a member of the `CONF_METHOD` vtable, whic
 EVP_LEGACY = ("not a provider dispatch: a member of `EVP_CIPHER`'s or `EVP_MD`'s legacy callback "
               "list in `evp.h`, declared as a plain function pointer rather than through "
               "`OSSL_CORE_MAKE_FUNC`")
+# `crypto/rsa/rsa_local.h:102-147` -- the `RSA_METHOD` members (Phase 8.4). Like `evp.h`'s legacy
+# list, the struct declares each callback inline as a plain function pointer; unlike it, the header
+# is *internal*, so the atlas -- whose universe is the installed public surface -- records no
+# `typedef` for any of the eight and there is no authority name for the crate's aliases to link to.
+RSA_METHOD_VTABLE = ("not a provider dispatch: a member of `RSA_METHOD`'s vtable, declared inline "
+                     "in `crypto/rsa/rsa_local.h:102-147` as a plain function pointer rather than "
+                     "through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records "
+                     "no typedef for it")
+# `crypto/dh/dh_local.h:47-64` -- the `DH_METHOD` members (Phase 8.5). The same shape as
+# `RSA_METHOD`'s vtable: each callback is declared inline as a plain function pointer, the header
+# is internal, and the atlas -- whose universe is the installed public surface -- records no
+# `typedef` for any of the six, so there is no authority name for the crate's aliases to link to.
+DH_METHOD_VTABLE = ("not a provider dispatch: a member of `DH_METHOD`'s vtable, declared inline "
+                    "in `crypto/dh/dh_local.h:47-64` as a plain function pointer rather than "
+                    "through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records "
+                    "no typedef for it")
+# `crypto/dsa/dsa_local.h:46-70` -- the `DSA_METHOD` members (Phase 8.6). The third of the same
+# shape: every callback is declared inline as a plain function pointer, the header is internal, and
+# the atlas -- whose universe is the installed public surface -- records no `typedef` for any of the
+# eight, so there is no authority name for the crate's aliases to link to.
+DSA_METHOD_VTABLE = ("not a provider dispatch: a member of `DSA_METHOD`'s vtable, declared inline "
+                     "in `crypto/dsa/dsa_local.h:46-70` as a plain function pointer rather than "
+                     "through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records "
+                     "no typedef for it")
+# `crypto/ec/ec_local.h:43-200` -- the `EC_METHOD` members (Phase 8.7). The fourth of the same
+# shape, and the largest: **fifty-five** callbacks declared inline as plain function pointers in an
+# internal header, so the atlas -- whose universe is the installed public surface -- records no
+# `typedef` for any of them. The crate's aliases fold the ones the authority spells identically
+# (`EcGroupFinishFn` is both `group_finish` and `group_clear_finish`, `EcFieldSqrFn` is six
+# members), which is why thirty aliases cover fifty-five members.
+EC_METHOD_VTABLE = ("not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline "
+                    "in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than "
+                    "through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records "
+                    "no typedef for it")
+# `crypto/ec/ec_local.h:664-688` -- the `EC_KEY_METHOD` members. The same shape again; the four
+# aliases below are the ones only this table declares (the other nine members reuse an `EC_METHOD`
+# alias, because the authority spells `set_private`, `keygen`, `compute_key`, `sign_setup`,
+# `sign_sig` and `verify_sig` identically in both).
+EC_KEY_METHOD_VTABLE = ("not a provider dispatch: a member of `EC_KEY_METHOD`'s table, declared "
+                        "inline in `crypto/ec/ec_local.h:664-688` as a plain function pointer "
+                        "rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the "
+                        "atlas records no typedef for it")
+# `crypto/ec/ec_local.h:257-258` -- `struct ec_group_st`'s `field_mod_func`. Not a method table at
+# all: it is a function pointer **member of the group object**, stored by
+# `ossl_ec_GFp_nist_group_set_curve` (one of `BN_nist_mod_192`..`_521`) and called through
+# `group` rather than through `group->meth`.
+EC_GROUP_FIELD_MOD = ("not a provider dispatch: `struct ec_group_st`'s `field_mod_func` member "
+                      "(`crypto/ec/ec_local.h:257-258`), a function pointer on the *group object* "
+                      "rather than in a method table, declared inline in an internal header")
+# `crypto/ec/ec_curve.c:2536` -- `curve_list[]`'s fourth column, `const EC_METHOD *(*meth)(void)`,
+# declared inline in the internal `_ec_list_element_st` rather than through `OSSL_CORE_MAKE_FUNC`.
+EC_CURVE_METHOD_COLUMN = ("not a provider dispatch: `curve_list[]`'s fourth column "
+                          "(`crypto/ec/ec_curve.c:2536`), a plain function pointer declared inline "
+                          "in the internal `_ec_list_element_st` rather than through "
+                          "`OSSL_CORE_MAKE_FUNC`")
 LHASH_MACRO = ("not a provider dispatch: `lhash.h.in`'s `LHASH_HASH_FN` / `LHASH_COMP_FN` / "
                "`LHASH_DOALL*` macros generate it per type, so there is no single typedef")
 SK_MACRO = ("not a provider dispatch: `safestack.h.in`'s `sk_*_compfunc` / `freefunc` / "
@@ -169,6 +225,54 @@ XLAT_GET = ("not a provider dispatch: the type of `fix_cipher_md`'s two function
             "its own signature rather than as typedefs; the crate names them to parameterise one "
             "function over `EVP_CIPHER` and `EVP_MD`")
 CRATE_LOCAL = "not an authority type: a crate-local callback shape with no header counterpart"
+# `providers/implementations/include/prov/drbg.h:59-165` -- `struct prov_drbg_st`'s cached virtual
+# functions (`instantiate`, `uninstantiate`, `reseed`, `generate`) and its two `dnew`/`dfree`
+# callbacks. They are declared **inline in the struct as plain function pointers**, exactly as
+# `RSA_METHOD`'s and `EVP_PKEY_METHOD`'s members are, and the header is internal (`prov/`), so the
+# atlas -- whose universe is the installed public surface -- records no typedef for any of them and
+# the convention rule has no name to join on (D309).
+DRBG_VTABLE = ("not a provider dispatch: a member of `struct prov_drbg_st`, declared inline in "
+               "`providers/implementations/include/prov/drbg.h:59-165` as a plain function pointer "
+               "rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas "
+               "records no typedef for it")
+# `cipher_aes_wrp.c:28-30` -- the wrap rows' `aeswrap_fn`, a typedef local to a provider
+# implementation file. The atlas's universe is the installed public surface, so it records no
+# typedef for it, and unlike `block128_f`/`cbc128_f` its name is not declared in a header the
+# convention rule can reach. `crypto/modes/wrap128.c`'s `CRYPTO_128_*` have the same shape.
+WRAP_FN = ("not a provider dispatch: `cipher_aes_wrp.c:28-30`'s `aeswrap_fn`, a typedef local to a "
+           "provider implementation file, which the atlas -- whose universe is the installed "
+           "public surface -- records no typedef for")
+# `prov/ciphercommon.h:30` -- `PROV_CIPHER_FUNC(type, name, args)` expands to
+# `typedef type(*OSSL_##name##_fn) args`, so the typedef is produced by the preprocessor and there
+# is no `typedef` declaration for a declaration reader to record. `OSSL_xts_stream_fn` is the one
+# instance the crate names.
+PROV_CIPHER_FUNC_TYPE = (
+    "not a provider dispatch: `prov/ciphercommon.h:30`'s `PROV_CIPHER_FUNC` macro generates it as "
+    "`typedef type(*OSSL_##name##_fn) args`, so the header carries no `typedef` declaration and "
+    "the atlas records none")
+# `cipher_tdes.h:26-29` -- the member type of `PROV_TDES_CTX`'s `tstream` union, written inline in
+# the struct rather than introduced with a `typedef`.
+TDES_TSTREAM_FN = (
+    "not a provider dispatch: the type of `PROV_TDES_CTX`'s `tstream` union member "
+    "(`cipher_tdes.h:26-29`), written inline in the struct rather than introduced with a "
+    "`typedef`, so the atlas records no name for it")
+# `crypto/ui/ui_local.h:20-59` -- the `UI_METHOD` members (Phase 13 staging, D350). The same shape
+# as `RSA_METHOD`'s vtable: each callback is declared inline as a plain function pointer in an
+# internal header, and the atlas -- whose universe is the installed public surface -- records no
+# `typedef` for any of them, so there is no authority name for the crate's aliases to link to.
+UI_METHOD_VTABLE = ("not a provider dispatch: a member of `UI_METHOD`'s vtable, declared inline "
+                    "in `crypto/ui/ui_local.h:20-59` as a plain function pointer rather than "
+                    "through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records "
+                    "no typedef for it")
+# `include/internal/thread_arch.h:57` -- `CRYPTO_THREAD_ROUTINE`, the thread routine the pool and
+# the native layer both take. A **function-pointer typedef** rather than a struct member, but the
+# atlas records no typedef for it for the same reason as the vtable families above: its universe is
+# the installed public surface and `internal/thread_arch.h` is not installed. The crate's alias
+# squashes to exactly this name, so without an entry the convention rule leaves it unlinked -- which
+# is what D397's first run of this court reported. `CRYPTO_THREAD_RETVAL` needs no entry: it is a
+# scalar typedef with no declarator for the signature reader to see.
+THREAD_ARCH_INT = ("not a provider dispatch: declared in `include/internal/thread_arch.h:57`, "
+                   "which is not installed, so the atlas has no record of it")
 
 
 def _inline(fn: str, spelling: str) -> str:
@@ -207,6 +311,17 @@ LINKS: dict[str, tuple[str, ...]] = {
     "BioCallbackFn": ("BIO_callback_fn",),
     "BioCallbackExFn": ("BIO_callback_fn_ex",),
     "BioInfoCb": ("BIO_info_cb",),
+    # `include/openssl/modes.h:40-44`'s `ccm128_f`. The authority's name ends `_f` rather than
+    # `_fn`, so the convention rule (which strips only `_fn`) cannot reach it.
+    "Ccm128Fn": ("ccm128_f",),
+    # `encoder.h`'s two libcrypto-side callbacks for an encoder chain. They are not `OSSL_FUNC_*`
+    # provider dispatch functions -- they are what a *caller* of `OSSL_ENCODER_CTX_set_construct`
+    # supplies -- and the authority's names end `_CONSTRUCT`/`_CLEANUP` rather than `_fn`, so the
+    # convention rule cannot reach them. Landed with the encoder method object (D360).
+    "EncoderConstructFn": ("OSSL_ENCODER_CONSTRUCT",),
+    "EncoderCleanupFn": ("OSSL_ENCODER_CLEANUP",),
+    "DecoderConstructFn": ("OSSL_DECODER_CONSTRUCT",),
+    "DecoderCleanupFn": ("OSSL_DECODER_CLEANUP",),
 }
 
 # ---------------------------------------------------------------------------------------------
@@ -242,6 +357,100 @@ NOT_A_DISPATCH: dict[str, str] = {
     "MdLegacyCopyFn": EVP_LEGACY,
     "MdLegacyCleanupFn": EVP_LEGACY,
     "MdLegacyCtrlFn": EVP_LEGACY,
+    # --- `RSA_METHOD`'s vtable (`crypto/rsa/rsa_local.h:102-147`, Phase 8.4) -----------------
+    "RsaCryptFn": RSA_METHOD_VTABLE,
+    "RsaModExpFn": RSA_METHOD_VTABLE,
+    "RsaBnModExpFn": RSA_METHOD_VTABLE,
+    "RsaLifecycleFn": RSA_METHOD_VTABLE,
+    "RsaSignFn": RSA_METHOD_VTABLE,
+    "RsaVerifyFn": RSA_METHOD_VTABLE,
+    "RsaKeygenFn": RSA_METHOD_VTABLE,
+    "RsaMultiPrimeKeygenFn": RSA_METHOD_VTABLE,
+    # --- `DH_METHOD`'s vtable (`crypto/dh/dh_local.h:47-64`, Phase 8.5) ---------------------
+    "DhGenerateKeyFn": DH_METHOD_VTABLE,
+    "DhComputeKeyFn": DH_METHOD_VTABLE,
+    "DhBnModExpFn": DH_METHOD_VTABLE,
+    "DhLifecycleFn": DH_METHOD_VTABLE,
+    "DhGenerateParamsFn": DH_METHOD_VTABLE,
+    # --- `DSA_METHOD`'s vtable (`crypto/dsa/dsa_local.h:46-70`, Phase 8.6) -------------------
+    "DsaDoSignFn": DSA_METHOD_VTABLE,
+    "DsaSignSetupFn": DSA_METHOD_VTABLE,
+    "DsaDoVerifyFn": DSA_METHOD_VTABLE,
+    "DsaModExpFn": DSA_METHOD_VTABLE,
+    "DsaBnModExpFn": DSA_METHOD_VTABLE,
+    "DsaLifecycleFn": DSA_METHOD_VTABLE,
+    "DsaParamgenFn": DSA_METHOD_VTABLE,
+    "DsaKeygenFn": DSA_METHOD_VTABLE,
+    # --- `EC_METHOD`'s vtable (`crypto/ec/ec_local.h:43-200`, Phase 8.7) ---------------------
+    "EcGroupInitFn": EC_METHOD_VTABLE,
+    "EcGroupFinishFn": EC_METHOD_VTABLE,
+    "EcGroupCopyFn": EC_METHOD_VTABLE,
+    "EcGroupSetCurveFn": EC_METHOD_VTABLE,
+    "EcGroupGetCurveFn": EC_METHOD_VTABLE,
+    "EcGroupQueryFn": EC_METHOD_VTABLE,
+    "EcGroupCheckDiscriminantFn": EC_METHOD_VTABLE,
+    "EcGroupFullInitFn": EC_METHOD_VTABLE,
+    "EcPointInitFn": EC_METHOD_VTABLE,
+    "EcPointFinishFn": EC_METHOD_VTABLE,
+    "EcPointCopyFn": EC_METHOD_VTABLE,
+    "EcPointSetToInfinityFn": EC_METHOD_VTABLE,
+    "EcPointSetAffineFn": EC_METHOD_VTABLE,
+    "EcPointGetAffineFn": EC_METHOD_VTABLE,
+    "EcPointSetCompressedFn": EC_METHOD_VTABLE,
+    "EcPoint2OctFn": EC_METHOD_VTABLE,
+    "EcOct2PointFn": EC_METHOD_VTABLE,
+    "EcPointAddFn": EC_METHOD_VTABLE,
+    "EcPointDblFn": EC_METHOD_VTABLE,
+    "EcPointUnaryFn": EC_METHOD_VTABLE,
+    "EcPointIsAtInfinityFn": EC_METHOD_VTABLE,
+    "EcPointIsOnCurveFn": EC_METHOD_VTABLE,
+    "EcPointCmpFn": EC_METHOD_VTABLE,
+    "EcPointsMakeAffineFn": EC_METHOD_VTABLE,
+    "EcPointMulFn": EC_METHOD_VTABLE,
+    "EcPrecomputeMultFn": EC_METHOD_VTABLE,
+    "EcFieldMulFn": EC_METHOD_VTABLE,
+    "EcFieldSqrFn": EC_METHOD_VTABLE,
+    # The one three-argument `EC_METHOD` column: `int (*field_set_to_one)(const EC_GROUP *,
+    # BIGNUM *, BN_CTX *)` (`ec_local.h:165`). It is a separate crate alias from `EcFieldSqrFn`
+    # because it takes no multiplicand, and the convention rule has no authority name to join on --
+    # the header is internal and the atlas records no typedef for it (D333's rule).
+    "EcFieldSetToOneFn": EC_METHOD_VTABLE,
+    "EcPriv2OctFn": EC_METHOD_VTABLE,
+    "EcOct2PrivFn": EC_METHOD_VTABLE,
+    "EcComputeKeyFn": EC_METHOD_VTABLE,
+    "EcKeyInitFn": EC_METHOD_VTABLE,
+    "EcKeyCheckFn": EC_METHOD_VTABLE,
+    "EcKeyCopyFn": EC_METHOD_VTABLE,
+    "EcKeyFinishFn": EC_METHOD_VTABLE,
+    "EcKeySignSetupFn": EC_METHOD_VTABLE,
+    "EcKeySignSigFn": EC_METHOD_VTABLE,
+    "EcKeyVerifySigFn": EC_METHOD_VTABLE,
+    "EcLadderFn": EC_METHOD_VTABLE,
+    # --- `EC_KEY_METHOD`'s table (`crypto/ec/ec_local.h:664-688`, Phase 8.7) ------------------
+    "EcKeySetGroupFn": EC_KEY_METHOD_VTABLE,
+    "EcKeySetPublicFn": EC_KEY_METHOD_VTABLE,
+    "EcKeySignFn": EC_KEY_METHOD_VTABLE,
+    "EcKeyVerifyFn": EC_KEY_METHOD_VTABLE,
+    # `set_private` is the one member both tables declare with the same signature.
+    "EcKeySetPrivateFn": EC_METHOD_VTABLE,
+    # --- `struct ec_group_st`'s `field_mod_func` (`crypto/ec/ec_local.h:257-258`, Phase 8.7) --
+    "EcFieldModFn": EC_GROUP_FIELD_MOD,
+    # `curve_list[]`'s fourth-column type (`crypto/ec/ec_curve.c:2536`), the one alias this tranche
+    # adds: a plain function pointer in the internal `_ec_list_element_st` rather than through
+    # `OSSL_CORE_MAKE_FUNC`, so the convention rule has no authority name to join on.
+    "EcMethodCtor": EC_CURVE_METHOD_COLUMN,
+    # `ECDH_compute_key`'s inline `KDF` parameter type (`crypto/ec/ec_kmeth.c:148-151`), a plain
+    # function pointer the authority spells in its own signature rather than through
+    # `OSSL_CORE_MAKE_FUNC`, so the convention rule has no name to join on.
+    "EcdhKdfFn": _inline("ECDH_compute_key",
+                         "void *(*KDF)(const void *in, size_t inlen, void *out, size_t *outlen)"),
+    # --- `struct prov_drbg_st`'s vtable (`prov/drbg.h:59-165`, Phase 9.4, D309) -------------
+    "ProvDrbgInstantiateFn": DRBG_VTABLE,
+    "ProvDrbgUninstantiateFn": DRBG_VTABLE,
+    "ProvDrbgReseedFn": DRBG_VTABLE,
+    "ProvDrbgGenerateFn": DRBG_VTABLE,
+    "ProvDrbgNewFn": DRBG_VTABLE,
+    "ProvDrbgFreeFn": DRBG_VTABLE,
     # --- `BIO_meth_set_*`'s inline parameter types (`bio.h`) ---------------------------------
     # The `_ex` two take `char *` where the *core dispatch* typedefs of the same shape take
     # `void *`, and `BIO_meth_set_ctrl` returns `long` where `OSSL_FUNC_BIO_ctrl_fn` returns
@@ -259,9 +468,24 @@ NOT_A_DISPATCH: dict[str, str] = {
                              "int (*f)(BIO *, BIO_MSG *, size_t, size_t, uint64_t, size_t *)"),
     "BioCallbackCtrlFn": _inline("BIO_meth_set_callback_ctrl",
                                  "long (*callback_ctrl)(BIO *, int, BIO_info_cb *)"),
+    # --- `UI_METHOD`'s vtable (`crypto/ui/ui_local.h:20-59`, Phase 13 staging, D350) ---------
+    "UiOpenSessionFn": UI_METHOD_VTABLE,
+    "UiWriteStringFn": UI_METHOD_VTABLE,
+    "UiDuplicateDataFn": UI_METHOD_VTABLE,
+    "UiDestroyDataFn": UI_METHOD_VTABLE,
+    "UiConstructPromptFn": UI_METHOD_VTABLE,
     # --- other inline parameter types in the public headers -----------------------------------
     "DumpCb": _inline("BIO_dump_cb", "int (*cb)(const void *, size_t, void *)"),
     "ErrPrintCb": _inline("ERR_print_errors_cb", "int (*cb)(const char *, size_t, void *)"),
+    # The callback parameter of `BN_BLINDING_create_param` (`include/openssl/bn.h:440-448`).
+    # Like the two above it is a *public header* function pointer with no typedef, so there is
+    # no authority name for the crate's `BnModExp` to link to -- and the convention rule cannot
+    # reach it either, because the parameter is named `bn_mod_exp` where the crate's alias is
+    # `BnModExp`. `BN_mod_exp_mont` has exactly this signature.
+    "BnModExp@src/bn/blinding.rs": _inline(
+        "BN_BLINDING_create_param",
+        "int (*bn_mod_exp)(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, const BIGNUM *m, "
+        "BN_CTX *ctx, BN_MONT_CTX *m_ctx)"),
     "ObjNameHashFn": OBJ_INT,
     "ObjNameCmpFn": OBJ_INT,
     "ObjNameFreeFn": OBJ_INT,
@@ -291,6 +515,22 @@ NOT_A_DISPATCH: dict[str, str] = {
     "SkCompFn": SK_MACRO,
     "SkCopyFn": SK_MACRO,
     "SkFreeFn": SK_MACRO,
+    "AesWrapFn@src/provider/cipher.rs": WRAP_FN,
+    "OsslXtsStreamFn": PROV_CIPHER_FUNC_TYPE,
+    # The same macro-generated typedef one header over. `cipher_sm4_xts.h:14-17` invokes
+    # `PROV_CIPHER_FUNC(void, xts_stream, ...)` with `SM4_KEY` parameters and a trailing `enc` where
+    # `cipher_aes_xts.h`'s invocation of the same macro uses `AES_KEY` and no `enc`, so the two
+    # produce one typedef *name* with two different types and cannot share a translation unit. The
+    # crate therefore declares two Rust aliases; both are generated, so neither has a `typedef` for
+    # the atlas to record.
+    "OsslSm4XtsStreamFn": PROV_CIPHER_FUNC_TYPE,
+    "TdesStreamFn": TDES_TSTREAM_FN,
+    # `provider_util.h:140-143`'s `struct ag_capable_st` writes its predicate inline, as
+    # `int (*capable)(void)`. The authority introduces no typedef for that type, so there is no
+    # authority name for the crate's `AlgorithmCapability` to link to.
+    "AlgorithmCapability": ("not a provider dispatch: the predicate field of "
+                           "`OSSL_ALGORITHM_CAPABLE` (`provider_util.h:140-143`), spelled inline "
+                           "as `int (*capable)(void)` rather than declared as a typedef"),
     "ConfInitFn@src/runtime/conf/types.rs": CONF_METHOD,
     "ConfFinishFn": ("not a provider dispatch: the crate's `conf_finish_func` equivalent for the "
                      "`CONF_METHOD` vtable; the authority declares the module finish callback "
@@ -301,6 +541,8 @@ NOT_A_DISPATCH: dict[str, str] = {
     "ConfDumpFn": CONF_INT,
     "ConfLoadFn": CONF_INT,
     "ConfLoadBioFn": CONF_INT,
+    # --- the thread layer's one alias (`include/internal/thread_arch.h`, D397) ----------------
+    "CryptoThreadRoutine": THREAD_ARCH_INT,
     "ConfIsNumberFn": CONF_INT,
     "ConfToIntFn": CONF_INT,
     "DsoMergerFunc": DSO_INT,
@@ -340,6 +582,12 @@ NOT_A_DISPATCH: dict[str, str] = {
     "PkeyMethDigestverifyFn": PKEY_METHOD,
     "PkeyMethCheckFn": PKEY_METHOD,
     "PkeyMethDigestCustomFn": PKEY_METHOD,
+    # --- `pmeth_fn` (`crypto/evp/pmeth_lib.c:48`) --------------------------------------------
+    "PmethFn": ("not a provider dispatch: `typedef const EVP_PKEY_METHOD *(*pmeth_fn)(void)` -- "
+                 "the accessor a row of `crypto/evp/pmeth_lib.c`'s second `standard_methods[]` is. "
+                 "It takes no arguments and *returns* the method object, so it is not a callback "
+                 "signature the dispatch plane compares; D355 landed it with the table it "
+                 "populates."),
     "FixupArgsFn": XLAT,
     "CleanupArgsFn": XLAT,
     "XlatGetNameFn": XLAT_GET,
@@ -431,7 +679,7 @@ def read_crate():
         files.append(file)
         per_file: dict[str, str] = {}
         for m in RUST_ALIAS_RE.finditer(text):
-            per_file.setdefault(m.group(1), m.group(2).strip())
+            per_file.setdefault(m.group(1), alias_target(text, m.end()).strip())
         scope_by_file[file] = per_file
         for m in IDENTITY_RE.finditer(text):
             identities.setdefault(m.group(1), (int(m.group(2)), file))

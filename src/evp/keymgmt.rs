@@ -104,57 +104,57 @@ const ERR_DATA_BUFFER: usize = 1024;
 // ---------------------------------------------------------------------------------------------
 
 /// `OSSL_FUNC_KEYMGMT_NEW`.
-const OSSL_FUNC_KEYMGMT_NEW: c_int = 1;
+pub(crate) const OSSL_FUNC_KEYMGMT_NEW: c_int = 1;
 /// `OSSL_FUNC_KEYMGMT_GEN_INIT`.
-const OSSL_FUNC_KEYMGMT_GEN_INIT: c_int = 2;
+pub(crate) const OSSL_FUNC_KEYMGMT_GEN_INIT: c_int = 2;
 /// `OSSL_FUNC_KEYMGMT_GEN_SET_TEMPLATE`.
-const OSSL_FUNC_KEYMGMT_GEN_SET_TEMPLATE: c_int = 3;
+pub(crate) const OSSL_FUNC_KEYMGMT_GEN_SET_TEMPLATE: c_int = 3;
 /// `OSSL_FUNC_KEYMGMT_GEN_SET_PARAMS`.
-const OSSL_FUNC_KEYMGMT_GEN_SET_PARAMS: c_int = 4;
+pub(crate) const OSSL_FUNC_KEYMGMT_GEN_SET_PARAMS: c_int = 4;
 /// `OSSL_FUNC_KEYMGMT_GEN_SETTABLE_PARAMS`.
-const OSSL_FUNC_KEYMGMT_GEN_SETTABLE_PARAMS: c_int = 5;
+pub(crate) const OSSL_FUNC_KEYMGMT_GEN_SETTABLE_PARAMS: c_int = 5;
 /// `OSSL_FUNC_KEYMGMT_GEN`.
-const OSSL_FUNC_KEYMGMT_GEN: c_int = 6;
+pub(crate) const OSSL_FUNC_KEYMGMT_GEN: c_int = 6;
 /// `OSSL_FUNC_KEYMGMT_GEN_CLEANUP`.
-const OSSL_FUNC_KEYMGMT_GEN_CLEANUP: c_int = 7;
+pub(crate) const OSSL_FUNC_KEYMGMT_GEN_CLEANUP: c_int = 7;
 /// `OSSL_FUNC_KEYMGMT_LOAD`. **8**, and the id `FREE` does *not* follow.
-const OSSL_FUNC_KEYMGMT_LOAD: c_int = 8;
+pub(crate) const OSSL_FUNC_KEYMGMT_LOAD: c_int = 8;
 /// `OSSL_FUNC_KEYMGMT_FREE`.
-const OSSL_FUNC_KEYMGMT_FREE: c_int = 10;
+pub(crate) const OSSL_FUNC_KEYMGMT_FREE: c_int = 10;
 /// `OSSL_FUNC_KEYMGMT_GET_PARAMS`.
-const OSSL_FUNC_KEYMGMT_GET_PARAMS: c_int = 11;
+pub(crate) const OSSL_FUNC_KEYMGMT_GET_PARAMS: c_int = 11;
 /// `OSSL_FUNC_KEYMGMT_GETTABLE_PARAMS`.
-const OSSL_FUNC_KEYMGMT_GETTABLE_PARAMS: c_int = 12;
+pub(crate) const OSSL_FUNC_KEYMGMT_GETTABLE_PARAMS: c_int = 12;
 /// `OSSL_FUNC_KEYMGMT_SET_PARAMS`.
-const OSSL_FUNC_KEYMGMT_SET_PARAMS: c_int = 13;
+pub(crate) const OSSL_FUNC_KEYMGMT_SET_PARAMS: c_int = 13;
 /// `OSSL_FUNC_KEYMGMT_SETTABLE_PARAMS`.
-const OSSL_FUNC_KEYMGMT_SETTABLE_PARAMS: c_int = 14;
+pub(crate) const OSSL_FUNC_KEYMGMT_SETTABLE_PARAMS: c_int = 14;
 /// `OSSL_FUNC_KEYMGMT_GEN_GET_PARAMS`.
-const OSSL_FUNC_KEYMGMT_GEN_GET_PARAMS: c_int = 15;
+pub(crate) const OSSL_FUNC_KEYMGMT_GEN_GET_PARAMS: c_int = 15;
 /// `OSSL_FUNC_KEYMGMT_GEN_GETTABLE_PARAMS`.
-const OSSL_FUNC_KEYMGMT_GEN_GETTABLE_PARAMS: c_int = 16;
+pub(crate) const OSSL_FUNC_KEYMGMT_GEN_GETTABLE_PARAMS: c_int = 16;
 /// `OSSL_FUNC_KEYMGMT_QUERY_OPERATION_NAME`.
-const OSSL_FUNC_KEYMGMT_QUERY_OPERATION_NAME: c_int = 20;
+pub(crate) const OSSL_FUNC_KEYMGMT_QUERY_OPERATION_NAME: c_int = 20;
 /// `OSSL_FUNC_KEYMGMT_HAS`.
-const OSSL_FUNC_KEYMGMT_HAS: c_int = 21;
+pub(crate) const OSSL_FUNC_KEYMGMT_HAS: c_int = 21;
 /// `OSSL_FUNC_KEYMGMT_VALIDATE`.
-const OSSL_FUNC_KEYMGMT_VALIDATE: c_int = 22;
+pub(crate) const OSSL_FUNC_KEYMGMT_VALIDATE: c_int = 22;
 /// `OSSL_FUNC_KEYMGMT_MATCH`.
-const OSSL_FUNC_KEYMGMT_MATCH: c_int = 23;
+pub(crate) const OSSL_FUNC_KEYMGMT_MATCH: c_int = 23;
 /// `OSSL_FUNC_KEYMGMT_IMPORT`.
-const OSSL_FUNC_KEYMGMT_IMPORT: c_int = 40;
+pub(crate) const OSSL_FUNC_KEYMGMT_IMPORT: c_int = 40;
 /// `OSSL_FUNC_KEYMGMT_IMPORT_TYPES`.
-const OSSL_FUNC_KEYMGMT_IMPORT_TYPES: c_int = 41;
+pub(crate) const OSSL_FUNC_KEYMGMT_IMPORT_TYPES: c_int = 41;
 /// `OSSL_FUNC_KEYMGMT_EXPORT`.
-const OSSL_FUNC_KEYMGMT_EXPORT: c_int = 42;
+pub(crate) const OSSL_FUNC_KEYMGMT_EXPORT: c_int = 42;
 /// `OSSL_FUNC_KEYMGMT_EXPORT_TYPES`.
-const OSSL_FUNC_KEYMGMT_EXPORT_TYPES: c_int = 43;
+pub(crate) const OSSL_FUNC_KEYMGMT_EXPORT_TYPES: c_int = 43;
 /// `OSSL_FUNC_KEYMGMT_DUP`.
-const OSSL_FUNC_KEYMGMT_DUP: c_int = 44;
+pub(crate) const OSSL_FUNC_KEYMGMT_DUP: c_int = 44;
 /// `OSSL_FUNC_KEYMGMT_IMPORT_TYPES_EX`.
-const OSSL_FUNC_KEYMGMT_IMPORT_TYPES_EX: c_int = 45;
+pub(crate) const OSSL_FUNC_KEYMGMT_IMPORT_TYPES_EX: c_int = 45;
 /// `OSSL_FUNC_KEYMGMT_EXPORT_TYPES_EX`.
-const OSSL_FUNC_KEYMGMT_EXPORT_TYPES_EX: c_int = 46;
+pub(crate) const OSSL_FUNC_KEYMGMT_EXPORT_TYPES_EX: c_int = 46;
 
 /// `OSSL_FUNC_keymgmt_new_fn` — `void *(*)(void *provctx)`.
 pub(crate) type KeymgmtNewFn = unsafe extern "C" fn(*mut c_void) -> *mut c_void;

@@ -86,31 +86,31 @@ const LINE_FREE_KEM: c_int = 446;
 // ---------------------------------------------------------------------------------------------
 
 /// `OSSL_FUNC_KEM_NEWCTX`.
-const OSSL_FUNC_KEM_NEWCTX: c_int = 1;
+pub(crate) const OSSL_FUNC_KEM_NEWCTX: c_int = 1;
 /// `OSSL_FUNC_KEM_ENCAPSULATE_INIT`.
-const OSSL_FUNC_KEM_ENCAPSULATE_INIT: c_int = 2;
+pub(crate) const OSSL_FUNC_KEM_ENCAPSULATE_INIT: c_int = 2;
 /// `OSSL_FUNC_KEM_ENCAPSULATE`.
-const OSSL_FUNC_KEM_ENCAPSULATE: c_int = 3;
+pub(crate) const OSSL_FUNC_KEM_ENCAPSULATE: c_int = 3;
 /// `OSSL_FUNC_KEM_DECAPSULATE_INIT`.
-const OSSL_FUNC_KEM_DECAPSULATE_INIT: c_int = 4;
+pub(crate) const OSSL_FUNC_KEM_DECAPSULATE_INIT: c_int = 4;
 /// `OSSL_FUNC_KEM_DECAPSULATE`.
-const OSSL_FUNC_KEM_DECAPSULATE: c_int = 5;
+pub(crate) const OSSL_FUNC_KEM_DECAPSULATE: c_int = 5;
 /// `OSSL_FUNC_KEM_FREECTX`.
-const OSSL_FUNC_KEM_FREECTX: c_int = 6;
+pub(crate) const OSSL_FUNC_KEM_FREECTX: c_int = 6;
 /// `OSSL_FUNC_KEM_DUPCTX`.
-const OSSL_FUNC_KEM_DUPCTX: c_int = 7;
+pub(crate) const OSSL_FUNC_KEM_DUPCTX: c_int = 7;
 /// `OSSL_FUNC_KEM_GET_CTX_PARAMS`.
-const OSSL_FUNC_KEM_GET_CTX_PARAMS: c_int = 8;
+pub(crate) const OSSL_FUNC_KEM_GET_CTX_PARAMS: c_int = 8;
 /// `OSSL_FUNC_KEM_GETTABLE_CTX_PARAMS`.
-const OSSL_FUNC_KEM_GETTABLE_CTX_PARAMS: c_int = 9;
+pub(crate) const OSSL_FUNC_KEM_GETTABLE_CTX_PARAMS: c_int = 9;
 /// `OSSL_FUNC_KEM_SET_CTX_PARAMS`.
-const OSSL_FUNC_KEM_SET_CTX_PARAMS: c_int = 10;
+pub(crate) const OSSL_FUNC_KEM_SET_CTX_PARAMS: c_int = 10;
 /// `OSSL_FUNC_KEM_SETTABLE_CTX_PARAMS`.
-const OSSL_FUNC_KEM_SETTABLE_CTX_PARAMS: c_int = 11;
+pub(crate) const OSSL_FUNC_KEM_SETTABLE_CTX_PARAMS: c_int = 11;
 /// `OSSL_FUNC_KEM_AUTH_ENCAPSULATE_INIT`.
-const OSSL_FUNC_KEM_AUTH_ENCAPSULATE_INIT: c_int = 12;
+pub(crate) const OSSL_FUNC_KEM_AUTH_ENCAPSULATE_INIT: c_int = 12;
 /// `OSSL_FUNC_KEM_AUTH_DECAPSULATE_INIT`.
-const OSSL_FUNC_KEM_AUTH_DECAPSULATE_INIT: c_int = 13;
+pub(crate) const OSSL_FUNC_KEM_AUTH_DECAPSULATE_INIT: c_int = 13;
 
 /// `OSSL_FUNC_kem_newctx_fn`.
 pub(crate) type KemNewctxFn = unsafe extern "C" fn(*mut c_void) -> *mut c_void;

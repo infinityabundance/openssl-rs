@@ -143,6 +143,21 @@ pub(crate) const OSSL_LIB_CTX_BIO_CORE_INDEX: c_int = 17;
 #[allow(dead_code)] // unreachable until the stratum that calls it lands
 pub(crate) const OSSL_LIB_CTX_NAMEMAP_INDEX: c_int = 4;
 
+/// `OSSL_LIB_CTX_DRBG_INDEX`, from `include/internal/cryptlib.h`. Slot 5: the RAND front's
+/// per-context DRBG holder. `context_init` fills it through
+/// `crate::rand::rand_lib::ossl_rand_ctx_new`, and `context_deinit` releases it through
+/// `ossl_rand_ctx_free` -- the order `context.c` uses (D309).
+pub(crate) const OSSL_LIB_CTX_DRBG_INDEX: c_int = 5;
+
+/// `OSSL_LIB_CTX_DRBG_NONCE_INDEX`, from `include/internal/cryptlib.h`. Slot 6: the DRBG
+/// nonce counter and its lock, built by `context_init` from `ossl_prov_drbg_nonce_ctx_new`.
+///
+/// It is **load-bearing for every DRBG instantiation with `min_noncelen > 0`** (all three
+/// default-provider rows): `prov_drbg_get_nonce` reads the slot and answers 0 when it is NULL,
+/// which the caller reports as `PROV_R_ERROR_RETRIEVING_NONCE`. RT-DRBG found the slot
+/// unfilled on the first run.
+pub(crate) const OSSL_LIB_CTX_DRBG_NONCE_INDEX: c_int = 6;
+
 /// `OSSL_LIB_CTX_SELF_TEST_CB_INDEX`, from `include/internal/cryptlib.h`. Slot 12,
 /// filled by 6.11.
 pub(crate) const OSSL_LIB_CTX_SELF_TEST_CB_INDEX: c_int = 12;
@@ -162,7 +177,7 @@ pub(crate) const OSSL_LIB_CTX_THREAD_INDEX: c_int = 19;
 /// `OSSL_LIB_CTX_EVP_METHOD_STORE_INDEX`. Slot 0, filled by Phase 7.
 pub(crate) const OSSL_LIB_CTX_EVP_METHOD_STORE_INDEX: c_int = 0;
 
-/// `OSSL_LIB_CTX_ENCODER_STORE_INDEX`. Slot 10, filled by Phase 7.
+/// `OSSL_LIB_CTX_ENCODER_STORE_INDEX`. Slot 10, filled by D357 with the encoder landing.
 pub(crate) const OSSL_LIB_CTX_ENCODER_STORE_INDEX: c_int = 10;
 
 /// `OSSL_LIB_CTX_DECODER_STORE_INDEX`. Slot 11, filled by Phase 7.
@@ -220,7 +235,7 @@ struct OsslLibCtx {
     drbg: *mut c_void,
     /// `OSSL_LIB_CTX_DRBG_NONCE_INDEX` (6) — Phase 9.
     drbg_nonce: *mut c_void,
-    /// `OSSL_LIB_CTX_ENCODER_STORE_INDEX` (10) — Phase 7.
+    /// `OSSL_LIB_CTX_ENCODER_STORE_INDEX` (10) — built by `context_init`, D357.
     encoder_store: *mut c_void,
     /// `OSSL_LIB_CTX_DECODER_STORE_INDEX` (11) — Phase 7.
     decoder_store: *mut c_void,
@@ -369,9 +384,11 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
     // position here is therefore the authority's: `context_init` builds it immediately after the
     // context's lock and `ossl_do_ex_data_init`, ahead of the provider-config object, because
     // `P2` means "released before the provider store" and the seven objects that follow it before
-    // `provider_store` are all in that class. Slots 10, 11 and 15 are the *same* constructor and
-    // are not built here: their readers are `decoder_meth.c`, `encoder_meth.c` and
-    // `store_meth.c`, which are Phase 10's, so they land with the strata that read them.
+    // `provider_store` are all in that class. Slots 11 and 15 are the *same* constructor and are
+    // handled elsewhere: slot 10 (the encoder store) is built below with the encoder landing
+    // (D357), and slots 11 and 15 are not built at all, because their readers are
+    // `decoder_meth.c` and `store_meth.c`, which are Phase 10's, so they land with the strata that
+    // read them.
     //
     // SAFETY: `ctx` is the live context being initialised, and the store constructor only stores
     // the pointer it is given.
@@ -401,6 +418,64 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
     }
     // SAFETY: as above; the slot is published once, here.
     unsafe { (*ctx).provider_conf = provider_conf.cast::<c_void>() };
+
+    // The per-context RAND state, slot 5. The authority builds it **third**, after
+    // `evp_method_store` and `provider_conf` and before the decoder stores; this is that
+    // position. It is what `ossl_rand_get0_seed_noncreating` and every DRBG's nonce read, and
+    // an unfilled slot is why `PROV_R_ERROR_RETRIEVING_NONCE` refused every instantiation
+    // before D309 -- measured by RT-DRBG, not inferred.
+    // SAFETY: `ctx` is the live context being initialised; the constructor allocates and
+    // releases the thread-handling base first, as `rand_lib.c` does.
+    let drbg = unsafe { crate::rand::rand_lib::ossl_rand_ctx_new(ctx.cast::<c_void>()) };
+    if drbg.is_null() {
+        context_deinit(ctx);
+        return false;
+    }
+    // SAFETY: as above; the slot is published once, here.
+    unsafe { (*ctx).drbg = drbg };
+
+    // The decoder method store, slot 11, and the decoder cache, slot 20. The authority builds the
+    // two together here, *after* `drbg` and *before* `encoder_store` (`crypto/context.c:123-137`),
+    // with the same `P2` comment on both lines; D365 fills them. Neither is entangled with the
+    // encoder store: they are independent objects the same initialiser builds in order.
+    //
+    // SAFETY: `ctx` is the live context being initialised, and each constructor only stores the
+    // pointer it is given.
+    let decoder_store =
+        unsafe { crate::property::store::ossl_method_store_new(ctx.cast::<c_void>()) };
+    if decoder_store.is_null() {
+        context_deinit(ctx);
+        return false;
+    }
+    // SAFETY: as above; the slot is published once, here.
+    unsafe { (*ctx).decoder_store = decoder_store.cast::<c_void>() };
+
+    // SAFETY: as above. The cache constructor reads no field of the context.
+    let decoder_cache =
+        unsafe { crate::decoder_pkey::ossl_decoder_cache_new(ctx.cast::<c_void>()) };
+    if decoder_cache.is_null() {
+        context_deinit(ctx);
+        return false;
+    }
+    // SAFETY: as above; the slot is published once, here.
+    unsafe { (*ctx).decoder_cache = decoder_cache };
+
+    // The encoder method store, slot 10. The authority builds it *after* the decoder store and
+    // cache and releases it before the provider store -- the `P2` comment on its line
+    // (`crypto/context.c:133-136`) says so, and P2 is the relation that matters: a method store
+    // holds references to provider-owned methods, so it must be released before the store that owns
+    // the providers.
+    //
+    // SAFETY: `ctx` is the live context being initialised, and the store constructor only stores
+    // the pointer it is given.
+    let encoder_store =
+        unsafe { crate::property::store::ossl_method_store_new(ctx.cast::<c_void>()) };
+    if encoder_store.is_null() {
+        context_deinit(ctx);
+        return false;
+    }
+    // SAFETY: as above; the slot is published once, here.
+    unsafe { (*ctx).encoder_store = encoder_store.cast::<c_void>() };
 
     // The child-provider globals, slot 18. Built here and **filled later**:
     // `ossl_provider_init_as_child` is what creates the lock and stores the upcalls, so a
@@ -499,6 +574,20 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
     // SAFETY: as above.
     unsafe { (*ctx).bio_core = bio_core.cast::<c_void>() };
 
+    // The DRBG nonce counter and its lock. The authority builds it after `bio_core` and before
+    // the two callback holders, and it is **the slot every DRBG instantiate with a nonce reads**:
+    // `prov_drbg_get_nonce` answers 0 for a NULL slot, which `ossl_prov_drbg_instantiate` reports
+    // as `PROV_R_ERROR_RETRIEVING_NONCE`. RT-DRBG measured that refusal on the first run.
+    let drbg_nonce =
+        // SAFETY: `ctx` is the live context being built; the constructor only allocates.
+        unsafe { crate::provider::rand::ossl_prov_drbg_nonce_ctx_new(ctx.cast::<c_void>()) };
+    if drbg_nonce.is_null() {
+        context_deinit(ctx);
+        return false;
+    }
+    // SAFETY: as above; the slot is published once, here.
+    unsafe { (*ctx).drbg_nonce = drbg_nonce };
+
     // The two callback holders. The authority builds them after `drbg_nonce` and
     // before the thread slot, and each is a plain `OPENSSL_zalloc`ed pair.
     let self_test_cb = crate::selftest::ossl_self_test_set_callback_new(ctx.cast::<c_void>());
@@ -575,6 +664,17 @@ fn context_deinit_objs(ctx: *mut OsslLibCtx) {
         }
     }
 
+    // The per-context RAND state, released **immediately after the EVP method store**, which is
+    // the authority's P2 order -- and it has to be, because the DRBG this slot holds is fetched
+    // *through* the method store.
+    // SAFETY: as above; the slot is released once and re-NULLed.
+    unsafe {
+        if !(*ctx).drbg.is_null() {
+            crate::rand::rand_lib::ossl_rand_ctx_free((*ctx).drbg);
+            (*ctx).drbg = ptr::null_mut();
+        }
+    }
+
     // The provider-config object, released next among the slot objects, which is the
     // authority's order: `context_deinit_objs` releases `evp_method_store` (Phase 7),
     // `drbg` (Phase 9) and then this one, all before the provider store's *P1* position.
@@ -588,6 +688,46 @@ fn context_deinit_objs(ctx: *mut OsslLibCtx) {
         if !(*ctx).provider_conf.is_null() {
             crate::provider::conf::ossl_prov_conf_ctx_free((*ctx).provider_conf);
             (*ctx).provider_conf = ptr::null_mut();
+        }
+    }
+
+    // The decoder cache, slot 20, and the decoder method store, slot 11 -- released in the
+    // authority's `P2` position, immediately before the encoder store, for the same reason: the
+    // cache's entries own decoder contexts whose decoders point at providers, and the store's
+    // implementations do too.
+    // SAFETY: `ctx` is a live context being torn down by `context_deinit`, and no other thread
+    // holds a reference to it -- `OSSL_LIB_CTX_free` is the only caller and the caller contract is
+    // that the object is no longer in use. Each slot is released exactly once and re-NULLed.
+    unsafe {
+        if !(*ctx).decoder_cache.is_null() {
+            crate::decoder_pkey::ossl_decoder_cache_free((*ctx).decoder_cache);
+            (*ctx).decoder_cache = ptr::null_mut();
+        }
+        if !(*ctx).decoder_store.is_null() {
+            crate::property::store::ossl_method_store_free(
+                (*ctx)
+                    .decoder_store
+                    .cast::<crate::property::store::OsslMethodStore>(),
+            );
+            (*ctx).decoder_store = ptr::null_mut();
+        }
+    }
+
+    // The encoder method store, slot 10 -- released in the authority's `P2` position, after the
+    // provider-config object and before the provider store. The order is load-bearing for the same
+    // reason it is at construction: the store's implementations point at providers, so the store
+    // must go first.
+    // SAFETY: `ctx` is a live context being torn down by `context_deinit`, and no other thread
+    // holds a reference to it -- `OSSL_LIB_CTX_free` is the only caller and the caller contract is
+    // that the object is no longer in use. The slot is released exactly once and re-NULLed.
+    unsafe {
+        if !(*ctx).encoder_store.is_null() {
+            crate::property::store::ossl_method_store_free(
+                (*ctx)
+                    .encoder_store
+                    .cast::<crate::property::store::OsslMethodStore>(),
+            );
+            (*ctx).encoder_store = ptr::null_mut();
         }
     }
 
@@ -673,6 +813,17 @@ fn context_deinit_objs(ctx: *mut OsslLibCtx) {
                     .cast::<crate::context::core_bio::BioCoreGlobals>(),
             );
             (*ctx).bio_core = ptr::null_mut();
+        }
+    }
+
+    // The DRBG nonce counter, released after the core BIO globals and before the two callback
+    // holders, which is the authority's own order.
+    // SAFETY: `ctx` is a live context being torn down by `context_deinit`, and no other thread
+    // holds a reference to it. The slot is released exactly once and re-NULLed.
+    unsafe {
+        if !(*ctx).drbg_nonce.is_null() {
+            crate::provider::rand::ossl_prov_drbg_nonce_ctx_free((*ctx).drbg_nonce);
+            (*ctx).drbg_nonce = ptr::null_mut();
         }
     }
 

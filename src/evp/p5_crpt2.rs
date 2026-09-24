@@ -71,13 +71,12 @@
 //!
 //! ## The three ASN.1 descriptors
 //!
-//! `PBE2PARAM` and `PBKDF2PARAM` are `crypto/asn1/p5_pbev2.c:20-37`'s; `X509_ALGOR` is
-//! `crypto/asn1/x_algor.c:18-21`'s, whose *struct* already lands in `src/evp/cipher_ctx.rs` for
-//! `EVP_CIPHER_CTX_get_algor_params`. Only the two field descriptors this file decodes through are
-//! added here, as file-local statics, for the reason `src/asn1/evp_asn1.rs` records: the item is
-//! `static const` inside the authority's own accessor (`X509_ALGOR_it`, `PBE2PARAM_it`,
-//! `PBKDF2PARAM_it`, all Phase 11's) and nothing outside the unit can name it. The accessors stay
-//! in the ledger as Phase 11's and no symbol is defined twice.
+//! `PBE2PARAM` and `PBKDF2PARAM` are `crypto/asn1/p5_pbev2.c:20-37`'s. `X509_ALGOR` is
+//! `crypto/asn1/x_algor.c:18-21`'s and is no longer duplicated here: D348 gave that unit its own
+//! module, `src/asn1/x_algor.rs`, whose `X509_ALGOR_it` is the accessor the two field descriptors
+//! below point at. Before that module existed this file carried a private copy of the two-entry
+//! template because the authority's accessor was Phase 11's and nothing outside the unit could
+//! name it; now the real one is named.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -86,13 +85,14 @@ use core::ptr;
 
 use crate::asn1::asn_pack::ASN1_item_unpack;
 use crate::asn1::fre::ASN1_item_free;
-use crate::asn1::items::{ASN1_ANY_it, ASN1_INTEGER_it, ASN1_OBJECT_it};
+use crate::asn1::items::{ASN1_ANY_it, ASN1_INTEGER_it};
 use crate::asn1::layout::*;
 use crate::asn1::prim::ASN1_INTEGER_get;
+use crate::asn1::x_algor::{X509Algor, X509_ALGOR_it};
 use crate::evp::cipher::{EVP_CIPHER_fetch, EVP_CIPHER_free, EvpCipher};
 use crate::evp::cipher_ctx::{
     EVP_CIPHER_CTX_get0_cipher, EVP_CIPHER_CTX_get_key_length, EVP_CIPHER_asn1_to_param,
-    EVP_CipherInit_ex, EvpCipherCtx, X509Algor,
+    EVP_CipherInit_ex, EvpCipherCtx,
 };
 use crate::evp::digest::{EVP_MD_fetch, EVP_MD_free, EVP_MD_get0_name, EvpMd};
 use crate::evp::evp_pbe::{EVP_PBE_find, EVP_PBE_find_ex, EVP_PBE_TYPE_KDF, EVP_PBE_TYPE_PRF};
@@ -133,28 +133,7 @@ const SN_SHA1: *const c_char = c"SHA1".as_ptr();
 // The three ASN.1 descriptors
 // ---------------------------------------------------------------------------------------------
 
-/// `x509_algor_seq_tt` — `crypto/asn1/x_algor.c:18-21`'s two fields, the second optional.
-///
-/// The *struct* is [`X509Algor`], declared in `src/evp/cipher_ctx.rs` for the two
-/// `EVP_CIPHER_CTX_*algor_params` functions; only the descriptor is this file's.
-static X509_ALGOR_TT: [Asn1Template; 2] = [
-    Asn1Template {
-        flags: 0,
-        tag: 0,
-        offset: 0,
-        field_name: c"algorithm".as_ptr(),
-        item: ASN1_OBJECT_it as *mut c_void,
-    },
-    Asn1Template {
-        flags: ASN1_TFLG_OPTIONAL,
-        tag: 0,
-        offset: 8,
-        field_name: c"parameter".as_ptr(),
-        item: ASN1_ANY_it as *mut c_void,
-    },
-];
-
-/// The offsets `X509_ALGOR_TT` names, asserted against the shared declaration.
+/// The offsets the two field descriptors below name, asserted against the shared declaration.
 const _: () = {
     assert!(core::mem::size_of::<X509Algor>() == 16);
     assert!(core::mem::offset_of!(X509Algor, algorithm) == 0);
@@ -207,14 +186,14 @@ static PBE2PARAM_TT: [Asn1Template; 2] = [
         tag: 0,
         offset: 0,
         field_name: c"keyfunc".as_ptr(),
-        item: x509_algor_it as *mut c_void,
+        item: X509_ALGOR_it as *mut c_void,
     },
     Asn1Template {
         flags: 0,
         tag: 0,
         offset: 8,
         field_name: c"encryption".as_ptr(),
-        item: x509_algor_it as *mut c_void,
+        item: X509_ALGOR_it as *mut c_void,
     },
 ];
 
@@ -246,20 +225,9 @@ static PBKDF2PARAM_TT: [Asn1Template; 4] = [
         tag: 0,
         offset: 24,
         field_name: c"prf".as_ptr(),
-        item: x509_algor_it as *mut c_void,
+        item: X509_ALGOR_it as *mut c_void,
     },
 ];
-
-/// `X509_ALGOR_it`'s descriptor, private here because the accessor is Phase 11's.
-static X509_ALGOR_ITEM: Asn1Item = Asn1Item {
-    itype: ASN1_ITYPE_SEQUENCE,
-    utype: V_ASN1_SEQUENCE as c_long,
-    templates: X509_ALGOR_TT.as_ptr(),
-    tcount: 2,
-    funcs: ptr::null(),
-    size: core::mem::size_of::<X509Algor>() as c_long,
-    sname: c"X509_ALGOR".as_ptr(),
-};
 
 /// `PBE2PARAM_it`'s descriptor, private here because the accessor is Phase 11's.
 static PBE2PARAM_ITEM: Asn1Item = Asn1Item {
@@ -282,13 +250,6 @@ static PBKDF2PARAM_ITEM: Asn1Item = Asn1Item {
     size: core::mem::size_of::<Pbkdf2Param>() as c_long,
     sname: c"PBKDF2PARAM".as_ptr(),
 };
-
-/// The `ASN1_ITEM_EXP` a nested template names: `X509_ALGOR_it`'s address as a *function*, which
-/// `ASN1_ITEM_ref(X509_ALGOR)` spells as `&X509_ALGOR_it`. The authority's accessor is Phase 11's,
-/// so the one the nested templates point at is this file's.
-extern "C" fn x509_algor_it() -> *const Asn1Item {
-    &X509_ALGOR_ITEM
-}
 
 // ---------------------------------------------------------------------------------------------
 // The PBKDF2 façade
@@ -934,22 +895,18 @@ const _: c_int = NID_undef;
 mod tests {
     use super::*;
 
-    /// The three private descriptors are the authority's: a SEQUENCE each, with the field counts
-    /// and the two OPTIONAL flags `ASN1_OPT` sets.
+    /// The private `PBE2PARAM`/`PBKDF2PARAM` descriptors are the authority's, and the nested
+    /// `X509_ALGOR` fields point at the real `X509_ALGOR_it` accessor rather than a local copy.
     #[test]
     fn the_private_items_have_the_authority_shape() {
-        assert_eq!(X509_ALGOR_ITEM.itype, ASN1_ITYPE_SEQUENCE);
-        assert_eq!(X509_ALGOR_ITEM.tcount, 2);
-        assert_eq!(X509_ALGOR_ITEM.size, 16);
-        assert_eq!(X509_ALGOR_TT[1].flags, ASN1_TFLG_OPTIONAL);
         assert_eq!(PBE2PARAM_ITEM.tcount, 2);
         assert_eq!(PBE2PARAM_ITEM.size, 16);
         assert_eq!(PBKDF2PARAM_ITEM.tcount, 4);
         assert_eq!(PBKDF2PARAM_ITEM.size, 32);
         assert_eq!(PBKDF2PARAM_TT[2].flags, ASN1_TFLG_OPTIONAL);
         assert_eq!(PBKDF2PARAM_TT[3].flags, ASN1_TFLG_OPTIONAL);
-        /* The nested items are the file's own getter, not a data pointer. */
-        assert_eq!(PBE2PARAM_TT[0].item, x509_algor_it as *mut c_void);
+        /* The nested items are the `x_algor` module's getter, not a data pointer. */
+        assert_eq!(PBE2PARAM_TT[0].item, X509_ALGOR_it as *mut c_void);
     }
 
     /// `PKCS5_PBKDF2_HMAC` refuses a NULL digest method rather than faulting: `EVP_MD_get0_name`

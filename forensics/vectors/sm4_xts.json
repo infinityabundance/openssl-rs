@@ -1,0 +1,119 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "algorithm": "sm4_xts",
+    "court": "CT-CIPHER",
+    "openssl_cipher": "SM4-XTS",
+    "primary_source": "GB/T 17964-2021; IEEE Std 1619-2007",
+    "provenance": {
+      "authority": "openssl-3.6.4-production",
+      "corpus": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_sm4.txt",
+      "corpus_sha256": "9e66667dd0634a59a5549340e14822591314c9b1ccebfcf5ae70ba6fe7472aba",
+      "note": "Candidate-only construction verification: the corpus's two `SM4 XTS` sections are GB/T 17964-2021's vectors and the IEEE Std 1619-2007 spelling of the same ones, and each block names its standard. Both are mirrored (`corpus_sha256`), and the `xtsstandard` column is what keeps them distinct -- the two sections publish different expected ciphertext for identical inputs, so a driver that ignored the field could not pass both. No independent SM4 implementation is present in the pinned court image, so no boundary vector carries an independent oracle.",
+      "primary_source": "GB/T 17964-2021; IEEE Std 1619-2007"
+    },
+    "standard": "GB/T 17964-2021; IEEE Std 1619-2007",
+    "vectors": [
+      {
+        "aad_hex": "",
+        "cipher": "SM4-XTS",
+        "expected_hex": "e9538251c71d7b80bbe4483fef497bd12c5c581bd6242fc51e08964fb4f60fdb0ba42f63499279213d318d2c11f6886e903be7f93a1b3479",
+        "id": "sm4_xts-1",
+        "input_hex": "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17",
+        "iv_hex": "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
+        "key_hex": "2b7e151628aed2a6abf7158809cf4f3c000102030405060708090a0b0c0d0e0f",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_sm4.txt",
+          "form": "keyed-block",
+          "line": 74,
+          "mirror_sha256": "9e66667dd0634a59a5549340e14822591314c9b1ccebfcf5ae70ba6fe7472aba",
+          "primary_source": "GB/T 17964-2021; IEEE Std 1619-2007",
+          "title": "SM4 XTS test vectors from GB/T 17964-2021"
+        },
+        "standard": "GB/T 17964-2021; IEEE Std 1619-2007",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "SM4-XTS",
+        "expected_hex": "e9538251c71d7b80bbe4483fef497bd12c5c581bd6242fc51e08964fb4f60fdb0ba42f63499279213d318d2c11f6886e903be7f93a1b3479",
+        "id": "sm4_xts-2",
+        "input_hex": "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17",
+        "iv_hex": "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
+        "key_hex": "2b7e151628aed2a6abf7158809cf4f3c000102030405060708090a0b0c0d0e0f",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_sm4.txt",
+          "form": "keyed-block",
+          "line": 80,
+          "mirror_sha256": "9e66667dd0634a59a5549340e14822591314c9b1ccebfcf5ae70ba6fe7472aba",
+          "primary_source": "GB/T 17964-2021; IEEE Std 1619-2007",
+          "title": "SM4 XTS test vectors from GB/T 17964-2021"
+        },
+        "standard": "GB/T 17964-2021; IEEE Std 1619-2007",
+        "tag_hex": "",
+        "xtsstandard": "GB"
+      },
+      {
+        "aad_hex": "",
+        "cipher": "SM4-XTS",
+        "expected_hex": "e9538251c71d7b80bbe4483fef497bd1b3db1a3e60408c575d63ff7db39f83260869f9e2585fec9f0b863bf8fd784b8627d16c0db6d2cfc7",
+        "id": "sm4_xts-3",
+        "input_hex": "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17",
+        "iv_hex": "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
+        "key_hex": "2b7e151628aed2a6abf7158809cf4f3c000102030405060708090a0b0c0d0e0f",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_sm4.txt",
+          "form": "keyed-block",
+          "line": 89,
+          "mirror_sha256": "9e66667dd0634a59a5549340e14822591314c9b1ccebfcf5ae70ba6fe7472aba",
+          "primary_source": "GB/T 17964-2021; IEEE Std 1619-2007",
+          "title": "SM4 XTS test vectors, while the XTS mode is standardized in IEEE Std 1619-2007"
+        },
+        "standard": "GB/T 17964-2021; IEEE Std 1619-2007",
+        "tag_hex": "",
+        "xtsstandard": "IEEE"
+      },
+      {
+        "aad_hex": "",
+        "cipher": "SM4-XTS",
+        "expected_hex": "9e52443a35410ca0ba5637b94c0766f469",
+        "id": "sm4_xts-4",
+        "input_hex": "000102030405060708090a0b0c0d0e0f10",
+        "iv_hex": "9a785634120000000000000000000000",
+        "key_hex": "fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0bfbebdbcbbbab9b8b7b6b5b4b3b2b1b0",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_sm4.txt",
+          "form": "keyed-block",
+          "line": 96,
+          "mirror_sha256": "9e66667dd0634a59a5549340e14822591314c9b1ccebfcf5ae70ba6fe7472aba",
+          "primary_source": "GB/T 17964-2021; IEEE Std 1619-2007",
+          "title": "SM4 XTS test vectors, while the XTS mode is standardized in IEEE Std 1619-2007"
+        },
+        "standard": "GB/T 17964-2021; IEEE Std 1619-2007",
+        "tag_hex": ""
+      }
+    ]
+  },
+  "generator": "forensics/tools/correctness_vectors.py",
+  "inputs": [
+    {
+      "name": "authority-evp-vector-file",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_sm4.txt",
+      "sha256": "9e66667dd0634a59a5549340e14822591314c9b1ccebfcf5ae70ba6fe7472aba"
+    }
+  ],
+  "kind": "cipher-vectors-sm4_xts",
+  "schema": "openssl-rs/atlas/cipher-vectors-sm4_xts/v1"
+}

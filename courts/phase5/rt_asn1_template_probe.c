@@ -41,7 +41,12 @@
 #include <openssl/asn1.h>
 #include <openssl/asn1t.h>
 #include <openssl/bn.h>
+#include <openssl/crypto.h>
 #include <openssl/err.h>
+#include <openssl/evp.h>
+#include <openssl/objects.h>
+#include <openssl/stack.h>
+#include <openssl/x509.h>
 
 #include <stdint.h>
 #include <stdio.h>
@@ -655,6 +660,420 @@ static void part_type_pairs(void)
     clear_queue();
 }
 
+/* ------------------------------- g. the installed `X509_ALGOR` family (D348)
+ *
+ * `crypto/asn1/x_algor.c`'s own item, and the first *installed* descriptor this
+ * probe drives: until D348 every template here was the probe's own declaration, which
+ * is deliberate -- "the shape of the item is the thing under test". `X509_ALGOR` is the
+ * shape an installed header publishes, so driving it checks that the crate's item, its
+ * two codecs, its dup and its four hand-written functions answer as the authority's do.
+ * `X509_ALGORS` is the `SEQUENCE OF` wrapper over it. Every observation is a return
+ * code, a decoded length, an OID comparison the probe computes itself, or the DER of a
+ * value the probe built from constants -- no address and no secret. */
+static void part_x509_algor(void)
+{
+    X509_ALGOR *alg = X509_ALGOR_new();
+    X509_ALGOR *dup, *dst, *back;
+    unsigned char *der = NULL;
+    const unsigned char *p;
+    int n, ptype;
+    const ASN1_OBJECT *o;
+    const void *pval;
+
+    printf("g.it.stable=%d\n",
+        X509_ALGOR_it() == X509_ALGOR_it()
+        && X509_ALGORS_it() == X509_ALGORS_it()
+        && X509_ALGOR_it() != X509_ALGORS_it());
+    printf("g.new_notnull=%d\n", alg != NULL);
+
+    printf("g.set0=%d\n",
+        X509_ALGOR_set0(alg, OBJ_nid2obj(NID_sha256), V_ASN1_NULL, NULL) == 1);
+
+    o = NULL;
+    ptype = -99;
+    pval = NULL;
+    X509_ALGOR_get0(&o, &ptype, &pval, alg);
+    printf("g.get0.oid=%d\n", o != NULL && OBJ_obj2nid(o) == NID_sha256);
+    printf("g.get0.ptype=%d\n", ptype);
+    printf("g.get0.pval=%d\n", pval == NULL);
+
+    n = i2d_X509_ALGOR(alg, NULL);
+    printf("g.measure=%d\n", n > 0);
+    n = i2d_X509_ALGOR(alg, &der);
+    hex("g.der", der, n);
+    p = der;
+    back = d2i_X509_ALGOR(NULL, &p, n);
+    printf("g.d2i=%d\n", back != NULL);
+    if (back != NULL) {
+        printf("g.cmp=%d\n", X509_ALGOR_cmp(alg, back) == 0);
+        printf("g.consumed_all=%d\n", (int)(p - der) == n);
+        X509_ALGOR_free(back);
+    }
+    OPENSSL_free(der);
+    der = NULL;
+
+    dst = X509_ALGOR_new();
+    printf("g.copy=%d\n",
+        X509_ALGOR_copy(dst, alg) == 1 && X509_ALGOR_cmp(dst, alg) == 0);
+    dup = X509_ALGOR_dup(alg);
+    printf("g.dup=%d\n", dup != NULL && X509_ALGOR_cmp(dup, alg) == 0);
+    X509_ALGOR_free(dup);
+    X509_ALGOR_free(dst);
+
+    /* An identifier with no parameter reports `V_ASN1_UNDEF`. */
+    {
+        X509_ALGOR *a2 = X509_ALGOR_new();
+
+        ptype = -99;
+        X509_ALGOR_set0(a2, OBJ_nid2obj(NID_sha1), V_ASN1_UNDEF, NULL);
+        X509_ALGOR_get0(NULL, &ptype, NULL, a2);
+        printf("g.absent_ptype=%d\n", ptype == V_ASN1_UNDEF);
+        X509_ALGOR_free(a2);
+    }
+    X509_ALGOR_free(alg);
+
+    /* `X509_ALGORS`: a `SEQUENCE OF` two identifiers. */
+    {
+        X509_ALGORS *sk = (X509_ALGORS *)OPENSSL_sk_new_null();
+        X509_ALGOR *a0 = X509_ALGOR_new();
+        X509_ALGOR *a1 = X509_ALGOR_new();
+
+        X509_ALGOR_set0(a0, OBJ_nid2obj(NID_sha256), V_ASN1_NULL, NULL);
+        X509_ALGOR_set0(a1, OBJ_nid2obj(NID_sha1), V_ASN1_UNDEF, NULL);
+        OPENSSL_sk_push(sk, a0);
+        OPENSSL_sk_push(sk, a1);
+
+        n = i2d_X509_ALGORS(sk, &der);
+        printf("g.algors.i2d=%d\n", n > 0 && der != NULL);
+        hex("g.algors.der", der, n);
+        p = der;
+        {
+            X509_ALGORS *bsk = d2i_X509_ALGORS(NULL, &p, n);
+
+            printf("g.algors.d2i_notnull=%d\n", bsk != NULL);
+            if (bsk != NULL) {
+                printf("g.algors.num=%d\n", OPENSSL_sk_num(bsk) == 2);
+                printf("g.algors.consumed_all=%d\n", (int)(p - der) == n);
+                printf("g.algors.cmp=%d\n",
+                    X509_ALGOR_cmp((X509_ALGOR *)OPENSSL_sk_value(bsk, 0), a0) == 0
+                    && X509_ALGOR_cmp((X509_ALGOR *)OPENSSL_sk_value(bsk, 1), a1) == 0);
+                OPENSSL_sk_pop_free(bsk, (OPENSSL_sk_freefunc)X509_ALGOR_free);
+            }
+        }
+        OPENSSL_free(der);
+        OPENSSL_sk_pop_free(sk, (OPENSSL_sk_freefunc)X509_ALGOR_free);
+    }
+}
+
+/* ------------ h. the X.509/PKCS#8 accessors Phase 8.8 lands (D349)
+ *
+ * `X509_PUBKEY_set0_param`/`X509_PUBKEY_get0_param` (`crypto/x509/x_pubkey.c`),
+ * `PKCS8_pkey_set0`/`PKCS8_pkey_get0` (`crypto/asn1/p8_pkey.c`), `X509_SIG_INFO_set`
+ * (`crypto/x509/x509_set.c`) and `X509_signature_dump` (`crypto/x509/t_x509.c`) are the six
+ * Phase-11 accessors the five `EVP_PKEY_ASN1_METHOD` objects call by name; the crate lands
+ * them in `src/x509/` and `src/asn1/p8_pkey.rs` (D349) and this is their differential court.
+ *
+ * No constructor for an `X509_PUBKEY` or a `PKCS8_PRIV_KEY_INFO` is landed -- both units'
+ * `_new` families are withheld with the object layers they belong to -- so the probe cannot
+ * obtain either object from the library. It declares the authority's own structures instead
+ * (`crypto/x509/x_pubkey.c:31-43`, `include/crypto/x509.h:291-297` for the PKCS#8 object and
+ * `:50-59` for the signature-info one), allocates one, fills its ASN.1 members with the
+ * library's own constructors, and drives the accessors. That is this probe's established
+ * method -- "the shape of the item **is** the thing under test" -- and here the declared
+ * shape also makes the arm a *layout* observation: the accessors read fields by offset, so a
+ * candidate that placed one differently would read the wrong address and the transcript would
+ * differ. The same source is compiled against the authority's headers and the candidate's, so
+ * the structure the probe declares is the one *both* libraries are held to.
+ *
+ * Nothing here prints a secret: every payload is a constant this file chooses, and the
+ * signature dump is hex-encoded so a multi-line dump stays one `key=value` observation.
+ */
+
+struct x509_pubkey_st {
+    X509_ALGOR *algor;
+    ASN1_BIT_STRING *public_key;
+    EVP_PKEY *pkey;
+    OSSL_LIB_CTX *libctx;
+    char *propq;
+    unsigned int flag_force_legacy : 1;
+};
+
+struct pkcs8_priv_key_info_st {
+    ASN1_INTEGER *version;
+    X509_ALGOR *pkeyalg;
+    ASN1_OCTET_STRING *pkey;
+    OPENSSL_STACK *attributes;
+    ASN1_OCTET_STRING *kpub;
+};
+
+struct x509_sig_info_st {
+    int mdnid;
+    int pknid;
+    int secbits;
+    uint32_t flags;
+};
+
+static void part_x509_accessors(void)
+{
+    static const unsigned char payload[4] = { 0x01, 0x02, 0x03, 0x04 };
+    static const unsigned char sig20[20] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
+        0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13
+    };
+
+    clear_queue();
+
+    /* --- X509_PUBKEY_set0_param / X509_PUBKEY_get0_param --- */
+    {
+        struct x509_pubkey_st *pub = OPENSSL_zalloc(sizeof(*pub));
+        unsigned char *penc = OPENSSL_malloc(sizeof(payload));
+        ASN1_OBJECT *o = NULL;
+        const unsigned char *pk = NULL;
+        X509_ALGOR *pa = NULL;
+        int pklen = -1;
+
+        memcpy(penc, payload, sizeof(payload));
+        pub->algor = X509_ALGOR_new();
+        pub->public_key = ASN1_BIT_STRING_new();
+
+        printf("h.pub.set0=%d\n",
+            X509_PUBKEY_set0_param(pub, OBJ_nid2obj(NID_X25519), V_ASN1_UNDEF, NULL,
+                penc, (int)sizeof(payload)) == 1);
+        printf("h.pub.get0=%d\n",
+            X509_PUBKEY_get0_param(&o, &pk, &pklen, &pa, pub) == 1);
+        printf("h.pub.nid_is_x25519=%d\n", o != NULL && OBJ_obj2nid(o) == NID_X25519);
+        printf("h.pub.pklen=%d\n", pklen);
+        hex("h.pub.pk", pk, pklen);
+        printf("h.pub.pa_is_algor=%d\n", pa == pub->algor);
+
+        /* A NULL `penc` keeps the existing bit string. */
+        printf("h.pub.set0_keep=%d\n",
+            X509_PUBKEY_set0_param(pub, OBJ_nid2obj(NID_sha256), V_ASN1_NULL, NULL,
+                NULL, 0) == 1);
+        pklen = -1;
+        X509_PUBKEY_get0_param(NULL, &pk, &pklen, NULL, pub);
+        hex("h.pub.pk_kept", pk, pklen);
+        drain("h.pub.err");
+
+        X509_ALGOR_free(pub->algor);
+        ASN1_BIT_STRING_free(pub->public_key);
+        OPENSSL_free(pub);
+    }
+
+    /* --- PKCS8_pkey_set0 / PKCS8_pkey_get0 --- */
+    {
+        struct pkcs8_priv_key_info_st *p8 = OPENSSL_zalloc(sizeof(*p8));
+        unsigned char *penc = OPENSSL_malloc(3);
+        const ASN1_OBJECT *o = NULL;
+        const unsigned char *pk = NULL;
+        const X509_ALGOR *pa = NULL;
+        int pklen = -1;
+
+        penc[0] = 0x30;
+        penc[1] = 0x01;
+        penc[2] = 0x00;
+        p8->version = ASN1_INTEGER_new();
+        p8->pkeyalg = X509_ALGOR_new();
+        p8->pkey = ASN1_OCTET_STRING_new();
+
+        printf("h.p8.set0_v1=%d\n",
+            PKCS8_pkey_set0(p8, OBJ_nid2obj(NID_rsaEncryption), 0, V_ASN1_UNDEF, NULL,
+                penc, 3) == 1);
+        printf("h.p8.version=%ld\n", ASN1_INTEGER_get(p8->version));
+        printf("h.p8.get0=%d\n", PKCS8_pkey_get0(&o, &pk, &pklen, &pa, p8) == 1);
+        printf("h.p8.nid_is_rsa=%d\n",
+            o != NULL && OBJ_obj2nid(o) == NID_rsaEncryption);
+        printf("h.p8.pklen=%d\n", pklen);
+        hex("h.p8.pk", pk, pklen);
+        printf("h.p8.pa_is_algor=%d\n", pa == p8->pkeyalg);
+
+        /* A version above 1 is refused before anything is written. */
+        printf("h.p8.v2_refused=%d\n",
+            PKCS8_pkey_set0(p8, OBJ_nid2obj(NID_rsaEncryption), 2, V_ASN1_UNDEF, NULL,
+                NULL, 0) == 0);
+        printf("h.p8.version_after_refusal=%ld\n", ASN1_INTEGER_get(p8->version));
+
+        /* A negative version leaves the version word alone and still sets the algorithm. */
+        printf("h.p8.neg_ok=%d\n",
+            PKCS8_pkey_set0(p8, OBJ_nid2obj(NID_sha256), -1, V_ASN1_UNDEF, NULL,
+                NULL, 0) == 1);
+        printf("h.p8.version_after_neg=%ld\n", ASN1_INTEGER_get(p8->version));
+        drain("h.p8.err");
+
+        ASN1_INTEGER_free(p8->version);
+        X509_ALGOR_free(p8->pkeyalg);
+        ASN1_OCTET_STRING_free(p8->pkey);
+        OPENSSL_free(p8);
+    }
+
+    /* --- X509_SIG_INFO_set --- */
+    {
+        struct x509_sig_info_st siginf;
+
+        memset(&siginf, 0, sizeof(siginf));
+        X509_SIG_INFO_set(&siginf, NID_sha256, NID_rsaEncryption, 128, 0x5u);
+        printf("h.siginf.mdnid=%d\n", siginf.mdnid);
+        printf("h.siginf.pknid=%d\n", siginf.pknid);
+        printf("h.siginf.secbits=%d\n", siginf.secbits);
+        printf("h.siginf.flags=%u\n", (unsigned)siginf.flags);
+    }
+
+    /* --- X509_signature_dump --- */
+    {
+        ASN1_OCTET_STRING *sig;
+        BIO *bio;
+        unsigned char buf[256];
+        int n;
+
+        /* Twenty octets: more than one eighteen-octet line, so the break is visible. */
+        sig = ASN1_OCTET_STRING_new();
+        printf("h.dump.set_20=%d\n", ASN1_STRING_set(sig, sig20, 20) == 1);
+        bio = BIO_new(BIO_s_mem());
+        printf("h.dump.rc_20=%d\n", X509_signature_dump(bio, (const ASN1_STRING *)sig, 4));
+        n = BIO_read(bio, buf, (int)sizeof(buf));
+        printf("h.dump.len_20=%d\n", n);
+        hex("h.dump.bytes_20", buf, n);
+        BIO_free(bio);
+        ASN1_OCTET_STRING_free(sig);
+
+        /* Nineteen octets: the break still falls after the eighteenth. */
+        sig = ASN1_OCTET_STRING_new();
+        ASN1_STRING_set(sig, sig20, 19);
+        bio = BIO_new(BIO_s_mem());
+        X509_signature_dump(bio, (const ASN1_STRING *)sig, 0);
+        n = BIO_read(bio, buf, (int)sizeof(buf));
+        hex("h.dump.bytes_19", buf, n);
+        BIO_free(bio);
+        ASN1_OCTET_STRING_free(sig);
+
+        /* Zero octets: the loop never runs, so the dump is the trailing newline alone. */
+        sig = ASN1_OCTET_STRING_new();
+        bio = BIO_new(BIO_s_mem());
+        printf("h.dump.rc_0=%d\n", X509_signature_dump(bio, (const ASN1_STRING *)sig, 2));
+        n = BIO_read(bio, buf, (int)sizeof(buf));
+        hex("h.dump.bytes_0", buf, n);
+        BIO_free(bio);
+        ASN1_OCTET_STRING_free(sig);
+        drain("h.dump.err");
+    }
+}
+
+/*
+ * The `X509_ATTRIBUTE` collection and constructor layer (`crypto/x509/x509_att.c`) and the
+ * PKCS#8 attribute path over it (`crypto/asn1/p8_pkey.c`'s three `PKCS8_pkey_add1_attr*`).
+ *
+ * The subject is an object graph rather than an encoding: an attribute is built, pushed onto an
+ * initially-NULL stack, refused when its OID repeats, read back through the type-checked
+ * accessors, and deleted. Every observation is a return code, a count, a NID, a selector, an
+ * integer or a length -- never an address -- and each refusal's error queue is drained because
+ * the reason is the contract that distinguishes a duplicate from an unknown name.
+ */
+static void part_x509_att(void)
+{
+    static const unsigned char oct2[2] = { 0xaa, 0xbb };
+    static const unsigned char one[1] = { 0x07 };
+    STACK_OF(X509_ATTRIBUTE) *sk = NULL;
+    X509_ATTRIBUTE *a, *dup;
+
+    clear_queue();
+
+    /* --- X509_ATTRIBUTE_create_by_NID and its accessors --- */
+    a = X509_ATTRIBUTE_create_by_NID(NULL, NID_commonName, V_ASN1_INTEGER, one, 1);
+    printf("i.attr.created=%d\n", a != NULL);
+    printf("i.attr.count=%d\n", X509_ATTRIBUTE_count(a));
+    printf("i.attr.object_nid=%d\n", OBJ_obj2nid(X509_ATTRIBUTE_get0_object(a)));
+    printf("i.attr.type0=%d\n", ASN1_TYPE_get(X509_ATTRIBUTE_get0_type(a, 0)));
+    printf("i.attr.int=%ld\n",
+        ASN1_INTEGER_get((ASN1_INTEGER *)X509_ATTRIBUTE_get0_data(a, 0, V_ASN1_INTEGER, NULL)));
+    printf("i.attr.wrong_type_null=%d\n",
+        X509_ATTRIBUTE_get0_data(a, 0, V_ASN1_OCTET_STRING, NULL) == NULL);
+    drain("i.attr.wrong_type_err");
+    printf("i.attr.oob_null=%d\n", X509_ATTRIBUTE_get0_type(a, 5) == NULL);
+
+    /* --- X509at_add1_attr onto an initially-NULL stack --- */
+    printf("i.sk.add1_nonnull=%d\n", X509at_add1_attr(&sk, a) != NULL);
+    printf("i.sk.count=%d\n", X509at_get_attr_count(sk));
+    printf("i.sk.by_nid=%d\n", X509at_get_attr_by_NID(sk, NID_commonName, -1));
+    printf("i.sk.by_unknown_nid=%d\n", X509at_get_attr_by_NID(sk, NID_undef, -1));
+    printf("i.sk.get0_ok=%d\n", X509at_get_attr(sk, 0) != NULL);
+    printf("i.sk.get0_oob_null=%d\n", X509at_get_attr(sk, 3) == NULL);
+    drain("i.sk.get0_oob_err");
+
+    /* A second attribute with the same OID is refused. */
+    dup = X509_ATTRIBUTE_create_by_NID(NULL, NID_commonName, V_ASN1_INTEGER, one, 1);
+    printf("i.sk.dup_null=%d\n", X509at_add1_attr(&sk, dup) == NULL);
+    printf("i.sk.count_after_dup=%d\n", X509at_get_attr_count(sk));
+    drain("i.sk.dup_err");
+
+    /* The `-1` lastpos means "unique occurrence"; the value comes back borrowed. */
+    printf("i.sk.data_by_obj=%ld\n",
+        ASN1_INTEGER_get((ASN1_INTEGER *)X509at_get0_data_by_OBJ(
+            sk, OBJ_nid2obj(NID_commonName), -1, V_ASN1_INTEGER)));
+
+    /* --- X509at_add1_attr_by_NID, read back, then delete --- */
+    {
+        STACK_OF(X509_ATTRIBUTE) *sk2 = NULL;
+        X509_ATTRIBUTE *first;
+
+        printf("i.sk2.add_by_nid=%d\n",
+            X509at_add1_attr_by_NID(&sk2, NID_commonName, V_ASN1_OCTET_STRING, oct2, 2)
+                != NULL);
+        printf("i.sk2.count=%d\n", X509at_get_attr_count(sk2));
+        first = X509at_get_attr(sk2, 0);
+        printf("i.sk2.oct_len=%d\n",
+            ASN1_STRING_length((ASN1_STRING *)X509_ATTRIBUTE_get0_data(
+                first, 0, V_ASN1_OCTET_STRING, NULL)));
+        printf("i.sk2.delete_ok=%d\n", X509at_delete_attr(sk2, 0) != NULL);
+        printf("i.sk2.count_after_delete=%d\n", X509at_get_attr_count(sk2));
+        printf("i.sk2.delete_oob_null=%d\n", X509at_delete_attr(sk2, 0) == NULL);
+        drain("i.sk2.delete_err");
+        sk_X509_ATTRIBUTE_pop_free(sk2, X509_ATTRIBUTE_free);
+    }
+
+    printf("i.sk.delete_ok=%d\n", X509at_delete_attr(sk, 0) != NULL);
+    sk_X509_ATTRIBUTE_pop_free(sk, X509_ATTRIBUTE_free);
+    X509_ATTRIBUTE_free(a);
+    X509_ATTRIBUTE_free(dup);
+    drain("i.final_err");
+
+    /* --- PKCS8_pkey_add1_attr* over a built PKCS8_PRIV_KEY_INFO --- */
+    {
+        struct pkcs8_priv_key_info_st *p8 = OPENSSL_zalloc(sizeof(*p8));
+        X509_ATTRIBUTE *attr;
+
+        p8->version = ASN1_INTEGER_new();
+        p8->pkeyalg = X509_ALGOR_new();
+        p8->pkey = ASN1_OCTET_STRING_new();
+
+        printf("i.p8.attrs_initial_null=%d\n", PKCS8_pkey_get0_attrs(p8) == NULL);
+        printf("i.p8.add_by_nid=%d\n",
+            PKCS8_pkey_add1_attr_by_NID(p8, NID_commonName, V_ASN1_OCTET_STRING, oct2, 2)
+                == 1);
+        printf("i.p8.attrs_count=%d\n",
+            X509at_get_attr_count(PKCS8_pkey_get0_attrs(p8)));
+        printf("i.p8.add_by_nid_dup=%d\n",
+            PKCS8_pkey_add1_attr_by_NID(p8, NID_commonName, V_ASN1_OCTET_STRING, oct2, 2)
+                == 0);
+        drain("i.p8.dup_err");
+
+        attr = X509_ATTRIBUTE_create_by_OBJ(NULL, OBJ_nid2obj(NID_commonName),
+            V_ASN1_OCTET_STRING, oct2, 2);
+        printf("i.p8.add_attr_create=%d\n", attr != NULL);
+        printf("i.p8.add_attr_dup=%d\n", PKCS8_pkey_add1_attr(p8, attr) == 0);
+        X509_ATTRIBUTE_free(attr);
+
+        attr = X509_ATTRIBUTE_create_by_txt(NULL, "commonName", V_ASN1_OCTET_STRING, oct2, 2);
+        printf("i.p8.create_by_txt=%d\n", attr != NULL);
+        X509_ATTRIBUTE_free(attr);
+        drain("i.p8.final_err");
+
+        ASN1_INTEGER_free(p8->version);
+        X509_ALGOR_free(p8->pkeyalg);
+        ASN1_OCTET_STRING_free(p8->pkey);
+        OPENSSL_free(p8);
+    }
+}
+
 int main(void)
 {
     part_sequence();
@@ -663,6 +1082,9 @@ int main(void)
     part_any();
     part_numbers();
     part_type_pairs();
+    part_x509_algor();
+    part_x509_accessors();
+    part_x509_att();
     printf("done=1\n");
     return 0;
 }

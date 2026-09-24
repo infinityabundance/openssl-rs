@@ -76,6 +76,37 @@ pub(crate) const OSSL_FUNC_BIO_GETS: c_int = 49;
 /// `OSSL_FUNC_BIO_CTRL`
 pub(crate) const OSSL_FUNC_BIO_CTRL: c_int = 50;
 
+// Phase 9 — the eight entropy and nonce up-calls `providers/common/provider_seeding.c` publishes
+// and `providers/implementations/rands/drbg.c` consumes through the provider context. They are the
+// only `core_dispatch.h` ids this crate takes from the `GET/CLEANUP_{USER_,}{ENTROPY,NONCE}` block,
+// and they are *not* the `os*` seeding functions: names and numbers are read from
+// `include/openssl/core_dispatch.h:177-191`, where the numbers are not contiguous with the block
+// above (`100` is absent, and 96/97 precede 98/99 because the `CLEANUP_` pair was added first).
+/// `OSSL_FUNC_CLEANUP_USER_ENTROPY` — `core_dispatch.h:177`.
+#[allow(dead_code)] // the landing caller is `provider_seeding.c`'s `ossl_prov_cleanup_entropy`
+pub(crate) const OSSL_FUNC_CLEANUP_USER_ENTROPY: c_int = 96;
+/// `OSSL_FUNC_CLEANUP_USER_NONCE` — `core_dispatch.h:178`.
+#[allow(dead_code)] // the landing caller is `provider_seeding.c`'s `ossl_prov_cleanup_nonce`
+pub(crate) const OSSL_FUNC_CLEANUP_USER_NONCE: c_int = 97;
+/// `OSSL_FUNC_GET_USER_ENTROPY` — `core_dispatch.h:179`.
+#[allow(dead_code)] // the landing caller is `provider_seeding.c`'s `ossl_prov_get_entropy`
+pub(crate) const OSSL_FUNC_GET_USER_ENTROPY: c_int = 98;
+/// `OSSL_FUNC_GET_USER_NONCE` — `core_dispatch.h:180`.
+#[allow(dead_code)] // the landing caller is `provider_seeding.c`'s `ossl_prov_get_nonce`
+pub(crate) const OSSL_FUNC_GET_USER_NONCE: c_int = 99;
+/// `OSSL_FUNC_GET_ENTROPY` — `core_dispatch.h:188`.
+#[allow(dead_code)] // the landing caller is `provider_seeding.c`'s `ossl_prov_get_entropy`
+pub(crate) const OSSL_FUNC_GET_ENTROPY: c_int = 101;
+/// `OSSL_FUNC_CLEANUP_ENTROPY` — `core_dispatch.h:189`.
+#[allow(dead_code)] // the landing caller is `provider_seeding.c`'s `ossl_prov_cleanup_entropy`
+pub(crate) const OSSL_FUNC_CLEANUP_ENTROPY: c_int = 102;
+/// `OSSL_FUNC_GET_NONCE` — `core_dispatch.h:190`.
+#[allow(dead_code)] // the landing caller is `provider_seeding.c`'s `ossl_prov_get_nonce`
+pub(crate) const OSSL_FUNC_GET_NONCE: c_int = 103;
+/// `OSSL_FUNC_CLEANUP_NONCE` — `core_dispatch.h:191`.
+#[allow(dead_code)] // the landing caller is `provider_seeding.c`'s `ossl_prov_cleanup_nonce`
+pub(crate) const OSSL_FUNC_CLEANUP_NONCE: c_int = 104;
+
 /// `int (*)(OSSL_CORE_BIO *bio, void *data, size_t data_len, size_t *bytes_read)`
 pub(crate) type OsslFuncBioReadEx =
     unsafe extern "C" fn(*mut c_void, *mut c_void, usize, *mut usize) -> c_int;

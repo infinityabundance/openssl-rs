@@ -109,9 +109,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 80,
+        "authority_observations": 83,
         "candidate_exit_code": 0,
-        "candidate_observations": 80,
+        "candidate_observations": 83,
         "candidate_stderr_tail": [],
         "court": "RT-PROVIDER",
         "crashed": false,
@@ -222,7 +222,7 @@
     {
       "name": "probe",
       "path": "courts/phase6/rt_provider_probe.c",
-      "sha256": "f9aa25cc12690565daccc316df88baa46ac5ff16936a5e2a92df31f416d34de1"
+      "sha256": "49347e07900c41c5dd6260dd383b7d8c37d5a777f65342b0bdc99aed1608c0fa"
     },
     {
       "name": "probe",

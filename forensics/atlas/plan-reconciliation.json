@@ -4,23 +4,52 @@
     "censed_states": [
       "in-progress"
     ],
-    "census": {},
-    "census_by_stratum": {},
+    "census": {
+      "names_a_file_the_authority_does_not_have": 6,
+      "symbols_not_reached": 3,
+      "units_not_reached": 5
+    },
+    "census_by_stratum": {
+      "9": 14
+    },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
-    "census_samples": {},
+    "census_samples": {
+      "names_a_file_the_authority_does_not_have": [
+        "docs/PHASE-9-SUBPHASES.md:9.4:drbg_ctr.c",
+        "docs/PHASE-9-SUBPHASES.md:9.4:drbg_hash.c",
+        "docs/PHASE-9-SUBPHASES.md:9.4:drbg_hmac.c",
+        "docs/PHASE-9-SUBPHASES.md:9.5:fips_crng_test.c",
+        "docs/PHASE-9-SUBPHASES.md:9.5:seed_src.c",
+        "docs/PHASE-9-SUBPHASES.md:9.5:test_rng.c"
+      ],
+      "symbols_not_reached": [
+        "ossl_drbg_ctr_functions",
+        "ossl_drbg_hash_functions",
+        "ossl_drbg_ossl_hmac_functions"
+      ],
+      "units_not_reached": [
+        "providers/common/provider_seeding.c",
+        "providers/common/provider_util.c",
+        "providers/fips/fipsprov.c",
+        "providers/implementations/rands/drbg.c",
+        "providers/implementations/rands/seeding/rand_unix.c"
+      ]
+    },
     "checked": {
       "plans_read": [
         "docs/PHASE-5-SUBPHASES.md",
         "docs/PHASE-6-SUBPHASES.md",
-        "docs/PHASE-7-SUBPHASES.md"
+        "docs/PHASE-7-SUBPHASES.md",
+        "docs/PHASE-8-SUBPHASES.md",
+        "docs/PHASE-9-SUBPHASES.md"
       ],
-      "rows_judged": 62,
-      "symbols_named_by_a_row": 71,
-      "symbols_reached": 71,
-      "unit_records": 67,
-      "units_named_by_a_record": 70,
-      "units_named_by_a_row": 135,
-      "units_reached": 135
+      "rows_judged": 82,
+      "symbols_named_by_a_row": 107,
+      "symbols_reached": 104,
+      "unit_records": 80,
+      "units_named_by_a_record": 82,
+      "units_named_by_a_row": 254,
+      "units_reached": 249
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -34,7 +63,8 @@
         "recorded_by": null,
         "subphases": [
           "7.4",
-          "7.4l"
+          "7.4l",
+          "8.8"
         ],
         "transcribed_by": [
           "src/evp/pkey_asn1.rs"
@@ -55,9 +85,12 @@
         "defines": [],
         "recorded_by": "units:crypto/asn1/d2i_param.c",
         "subphases": [
-          "7.4"
+          "7.4",
+          "8.8"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/asn1/d2i_param.rs"
+        ]
       },
       "crypto/asn1/d2i_pr.c": {
         "defines": [
@@ -65,25 +98,43 @@
         ],
         "recorded_by": "units:crypto/asn1/d2i_pr.c",
         "subphases": [
-          "7.4"
+          "7.4",
+          "8.8"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/asn1/d2i_pr.rs"
+        ]
       },
       "crypto/asn1/d2i_pu.c": {
         "defines": [],
         "recorded_by": "units:crypto/asn1/d2i_pu.c",
         "subphases": [
-          "7.4"
+          "7.4",
+          "8.8"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/asn1/d2i_pu.rs"
+        ]
       },
       "crypto/asn1/i2d_evp.c": {
         "defines": [],
         "recorded_by": "units:crypto/asn1/i2d_evp.c",
         "subphases": [
-          "7.4"
+          "7.4",
+          "8.8"
         ],
         "transcribed_by": []
+      },
+      "crypto/asn1/p8_pkey.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.8",
+          "8.9"
+        ],
+        "transcribed_by": [
+          "src/asn1/p8_pkey.rs"
+        ]
       },
       "crypto/asn1/tasn_typ.c": {
         "defines": [],
@@ -93,6 +144,40 @@
         ],
         "transcribed_by": [
           "src/asn1/typ.rs"
+        ]
+      },
+      "crypto/asn1/x_algor.c": {
+        "defines": [
+          "ossl_X509_ALGOR_from_nid",
+          "ossl_x509_algor_get_md",
+          "ossl_x509_algor_md_to_mgf1",
+          "ossl_x509_algor_mgf1_decode",
+          "ossl_x509_algor_new_from_md"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.4",
+          "8.8"
+        ],
+        "transcribed_by": [
+          "src/asn1/x_algor.rs"
+        ]
+      },
+      "crypto/asn1_dsa.c": {
+        "defines": [
+          "ossl_decode_der_dsa_sig",
+          "ossl_decode_der_integer",
+          "ossl_decode_der_length",
+          "ossl_encode_der_dsa_sig",
+          "ossl_encode_der_integer",
+          "ossl_encode_der_length"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/asn1_dsa.rs"
         ]
       },
       "crypto/async/async.c": {
@@ -121,6 +206,89 @@
         "transcribed_by": [
           "src/context/core_bio.rs"
         ]
+      },
+      "crypto/bn/bn_dh.c": {
+        "defines": [
+          "ossl_bignum_const_2",
+          "ossl_bignum_dh1024_160_g",
+          "ossl_bignum_dh1024_160_p",
+          "ossl_bignum_dh1024_160_q",
+          "ossl_bignum_dh2048_224_g",
+          "ossl_bignum_dh2048_224_p",
+          "ossl_bignum_dh2048_224_q",
+          "ossl_bignum_dh2048_256_g",
+          "ossl_bignum_dh2048_256_p",
+          "ossl_bignum_dh2048_256_q",
+          "ossl_bignum_ffdhe2048_p",
+          "ossl_bignum_ffdhe2048_q",
+          "ossl_bignum_ffdhe3072_p",
+          "ossl_bignum_ffdhe3072_q",
+          "ossl_bignum_ffdhe4096_p",
+          "ossl_bignum_ffdhe4096_q",
+          "ossl_bignum_ffdhe6144_p",
+          "ossl_bignum_ffdhe6144_q",
+          "ossl_bignum_ffdhe8192_p",
+          "ossl_bignum_ffdhe8192_q"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/bn/dh.rs"
+        ]
+      },
+      "crypto/bn/bn_exp.c": {
+        "defines": [
+          "bn_mod_exp_mont_fixed_top"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/bn/exp.rs"
+        ]
+      },
+      "crypto/bn/bn_intern.c": {
+        "defines": [
+          "bn_compute_wNAF",
+          "bn_copy_words",
+          "bn_get_dmax",
+          "bn_get_top",
+          "bn_get_words",
+          "bn_set_all_zero",
+          "bn_set_static_words",
+          "bn_set_words"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/bn/intern.rs"
+        ]
+      },
+      "crypto/bn/bn_rand.c": {
+        "defines": [
+          "ossl_bn_gen_dsa_nonce_fixed_top",
+          "ossl_bn_priv_rand_range_fixed_top"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "9.1"
+        ],
+        "transcribed_by": [
+          "src/bn/rand.rs"
+        ]
+      },
+      "crypto/chacha/chacha_enc.c": {
+        "defines": [],
+        "recorded_by": "units:crypto/chacha/chacha_enc.c",
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
       },
       "crypto/cmac/cmac.c": {
         "defines": [
@@ -275,6 +443,374 @@
           "src/context/namemap.rs"
         ]
       },
+      "crypto/dh/dh_ameth.c": {
+        "defines": [
+          "ossl_dh_asn1_meth",
+          "ossl_dhx_asn1_meth"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5",
+          "8.8"
+        ],
+        "transcribed_by": [
+          "src/dh/ameth.rs"
+        ]
+      },
+      "crypto/dh/dh_asn1.c": {
+        "defines": [
+          "d2i_int_dhx",
+          "i2d_int_dhx"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/dh/asn1.rs"
+        ]
+      },
+      "crypto/dh/dh_backend.c": {
+        "defines": [
+          "ossl_dh_dup",
+          "ossl_dh_is_foreign",
+          "ossl_dh_key_from_pkcs8",
+          "ossl_dh_key_fromdata",
+          "ossl_dh_key_todata",
+          "ossl_dh_params_fromdata",
+          "ossl_dh_params_todata"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/dh/backend.rs"
+        ]
+      },
+      "crypto/dh/dh_check.c": {
+        "defines": [
+          "ossl_dh_check_pairwise",
+          "ossl_dh_check_priv_key",
+          "ossl_dh_check_pub_key_partial"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/dh/check.rs"
+        ]
+      },
+      "crypto/dh/dh_depr.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/dh/depr.rs"
+        ]
+      },
+      "crypto/dh/dh_gen.c": {
+        "defines": [
+          "ossl_dh_generate_ffc_parameters",
+          "ossl_dh_get_named_group_uid_from_size"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/dh/gen.rs"
+        ]
+      },
+      "crypto/dh/dh_group_params.c": {
+        "defines": [
+          "ossl_dh_cache_named_group",
+          "ossl_dh_is_named_safe_prime_group",
+          "ossl_dh_new_by_nid_ex"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/dh/group_params.rs"
+        ]
+      },
+      "crypto/dh/dh_kdf.c": {
+        "defines": [
+          "ossl_dh_kdf_X9_42_asn1"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/dh/kdf.rs"
+        ]
+      },
+      "crypto/dh/dh_key.c": {
+        "defines": [
+          "ossl_dh_buf2key",
+          "ossl_dh_compute_key",
+          "ossl_dh_generate_public_key",
+          "ossl_dh_key2buf"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/dh/key.rs"
+        ]
+      },
+      "crypto/dh/dh_lib.c": {
+        "defines": [
+          "ossl_dh_get0_nid",
+          "ossl_dh_get0_params",
+          "ossl_dh_get_method",
+          "ossl_dh_new_ex",
+          "ossl_dh_set0_libctx"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/dh/object.rs"
+        ]
+      },
+      "crypto/dh/dh_meth.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/dh/mod.rs"
+        ]
+      },
+      "crypto/dh/dh_pmeth.c": {
+        "defines": [
+          "ossl_dh_pkey_method",
+          "ossl_dhx_pkey_method"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/dh/pmeth.rs"
+        ]
+      },
+      "crypto/dh/dh_prn.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/dh/prn.rs"
+        ]
+      },
+      "crypto/dh/dh_rfc5114.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/dh/rfc5114.rs"
+        ]
+      },
+      "crypto/dsa/dsa_ameth.c": {
+        "defines": [
+          "ossl_dsa_asn1_meths"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6",
+          "8.8"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/dsa/dsa_asn1.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/dsa/asn1.rs"
+        ]
+      },
+      "crypto/dsa/dsa_backend.c": {
+        "defines": [
+          "ossl_dsa_dup",
+          "ossl_dsa_is_foreign",
+          "ossl_dsa_key_from_pkcs8",
+          "ossl_dsa_key_fromdata"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/dsa/backend.rs"
+        ]
+      },
+      "crypto/dsa/dsa_check.c": {
+        "defines": [
+          "ossl_dsa_check_pairwise",
+          "ossl_dsa_check_params",
+          "ossl_dsa_check_priv_key",
+          "ossl_dsa_check_pub_key",
+          "ossl_dsa_check_pub_key_partial"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/dsa/check.rs"
+        ]
+      },
+      "crypto/dsa/dsa_ctrl.c": {
+        "defines": [],
+        "recorded_by": "units:crypto/dsa/dsa_ctrl.c",
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/dsa/dsa_depr.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/dsa/depr.rs"
+        ]
+      },
+      "crypto/dsa/dsa_err.c": {
+        "defines": [
+          "ossl_err_load_DSA_strings"
+        ],
+        "recorded_by": "units:crypto/dsa/dsa_err.c",
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/dsa/dsa_gen.c": {
+        "defines": [
+          "ossl_dsa_generate_ffc_parameters"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/dsa/gen.rs"
+        ]
+      },
+      "crypto/dsa/dsa_key.c": {
+        "defines": [
+          "ossl_dsa_generate_public_key"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/dsa/key.rs"
+        ]
+      },
+      "crypto/dsa/dsa_lib.c": {
+        "defines": [
+          "ossl_dsa_ffc_params_fromdata",
+          "ossl_dsa_get0_params",
+          "ossl_dsa_new",
+          "ossl_dsa_set0_libctx"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/dsa/object.rs"
+        ]
+      },
+      "crypto/dsa/dsa_meth.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/dsa/mod.rs"
+        ]
+      },
+      "crypto/dsa/dsa_ossl.c": {
+        "defines": [
+          "ossl_dsa_do_sign_int"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6",
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/dsa/ossl.rs"
+        ]
+      },
+      "crypto/dsa/dsa_pmeth.c": {
+        "defines": [
+          "ossl_dsa_pkey_method"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/dsa/pmeth.rs"
+        ]
+      },
+      "crypto/dsa/dsa_prn.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/dsa/prn.rs"
+        ]
+      },
+      "crypto/dsa/dsa_sign.c": {
+        "defines": [
+          "ossl_dsa_sign_int"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/dsa/sign.rs"
+        ]
+      },
+      "crypto/dsa/dsa_vrf.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/dsa/vrf.rs"
+        ]
+      },
       "crypto/dso/dso_dlfcn.c": {
         "defines": [],
         "recorded_by": null,
@@ -312,6 +848,539 @@
           "6.9"
         ],
         "transcribed_by": []
+      },
+      "crypto/ec/curve25519.c": {
+        "defines": [
+          "ossl_ed25519_pubkey_verify",
+          "ossl_ed25519_public_from_private",
+          "ossl_ed25519_sign",
+          "ossl_ed25519_verify",
+          "ossl_x25519",
+          "ossl_x25519_public_from_private"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.8"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/ec/ec2_oct.c": {
+        "defines": [
+          "ossl_ec_GF2m_simple_oct2point",
+          "ossl_ec_GF2m_simple_point2oct",
+          "ossl_ec_GF2m_simple_set_compressed_coordinates"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/ec/ec2_smpl.c": {
+        "defines": [
+          "ossl_ec_GF2m_simple_add",
+          "ossl_ec_GF2m_simple_cmp",
+          "ossl_ec_GF2m_simple_dbl",
+          "ossl_ec_GF2m_simple_field_div",
+          "ossl_ec_GF2m_simple_field_mul",
+          "ossl_ec_GF2m_simple_field_sqr",
+          "ossl_ec_GF2m_simple_group_check_discriminant",
+          "ossl_ec_GF2m_simple_group_clear_finish",
+          "ossl_ec_GF2m_simple_group_copy",
+          "ossl_ec_GF2m_simple_group_finish",
+          "ossl_ec_GF2m_simple_group_get_curve",
+          "ossl_ec_GF2m_simple_group_get_degree",
+          "ossl_ec_GF2m_simple_group_init",
+          "ossl_ec_GF2m_simple_group_set_curve",
+          "ossl_ec_GF2m_simple_invert",
+          "ossl_ec_GF2m_simple_is_at_infinity",
+          "ossl_ec_GF2m_simple_is_on_curve",
+          "ossl_ec_GF2m_simple_make_affine",
+          "ossl_ec_GF2m_simple_point_clear_finish",
+          "ossl_ec_GF2m_simple_point_copy"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/ec/smpl2.rs"
+        ]
+      },
+      "crypto/ec/ec_ameth.c": {
+        "defines": [
+          "ossl_eckey_asn1_meth",
+          "ossl_sm2_asn1_meth"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7",
+          "8.8"
+        ],
+        "transcribed_by": [
+          "src/ec/ameth.rs"
+        ]
+      },
+      "crypto/ec/ec_asn1.c": {
+        "defines": [
+          "EC_PRIVATEKEY_free",
+          "EC_PRIVATEKEY_new",
+          "X9_62_CHARACTERISTIC_TWO_free",
+          "X9_62_CHARACTERISTIC_TWO_new",
+          "X9_62_PENTANOMIAL_free",
+          "X9_62_PENTANOMIAL_new",
+          "d2i_ECPKPARAMETERS",
+          "d2i_EC_PRIVATEKEY",
+          "i2d_ECPKPARAMETERS",
+          "i2d_EC_PRIVATEKEY"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/ec/asn1.rs",
+          "src/ec/ecdsa.rs"
+        ]
+      },
+      "crypto/ec/ec_backend.c": {
+        "defines": [
+          "ossl_ec_check_group_type_id2name",
+          "ossl_ec_encoding_name2id",
+          "ossl_ec_encoding_param2id",
+          "ossl_ec_group_fromdata",
+          "ossl_ec_group_todata",
+          "ossl_ec_key_dup",
+          "ossl_ec_key_from_pkcs8",
+          "ossl_ec_key_fromdata",
+          "ossl_ec_key_is_foreign",
+          "ossl_ec_key_otherparams_fromdata",
+          "ossl_ec_key_param_from_x509_algor",
+          "ossl_ec_pt_format_id2name",
+          "ossl_ec_pt_format_name2id",
+          "ossl_ec_pt_format_param2id",
+          "ossl_ec_set_check_group_type_from_name",
+          "ossl_ec_set_ecdh_cofactor_mode",
+          "ossl_x509_algor_is_sm2"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5",
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/ec/backend.rs"
+        ]
+      },
+      "crypto/ec/ec_check.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/ec/check.rs"
+        ]
+      },
+      "crypto/ec/ec_curve.c": {
+        "defines": [
+          "ossl_ec_curve_nid_from_params"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/ec/curve.rs"
+        ]
+      },
+      "crypto/ec/ec_cvt.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/ec/cvt.rs"
+        ]
+      },
+      "crypto/ec/ec_deprecated.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/ec/depr.rs"
+        ]
+      },
+      "crypto/ec/ec_key.c": {
+        "defines": [
+          "ossl_ec_generate_key_dhkem",
+          "ossl_ec_key_gen",
+          "ossl_ec_key_get0_propq",
+          "ossl_ec_key_get_libctx",
+          "ossl_ec_key_pairwise_check",
+          "ossl_ec_key_private_check",
+          "ossl_ec_key_public_check",
+          "ossl_ec_key_public_check_quick",
+          "ossl_ec_key_set0_libctx",
+          "ossl_ec_key_simple_check_key",
+          "ossl_ec_key_simple_generate_key",
+          "ossl_ec_key_simple_generate_public_key",
+          "ossl_ec_key_simple_oct2priv",
+          "ossl_ec_key_simple_priv2oct"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/ec/key.rs"
+        ]
+      },
+      "crypto/ec/ec_kmeth.c": {
+        "defines": [
+          "ossl_ec_key_new_method_int"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/ec/kmeth.rs"
+        ]
+      },
+      "crypto/ec/ec_lib.c": {
+        "defines": [
+          "EC_pre_comp_free",
+          "ossl_ec_group_do_inverse_ord",
+          "ossl_ec_group_new_ex",
+          "ossl_ec_group_set_params",
+          "ossl_ec_group_simple_order_bits",
+          "ossl_ec_point_blind_coordinates"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/ec/lib.rs"
+        ]
+      },
+      "crypto/ec/ec_mult.c": {
+        "defines": [
+          "EC_ec_pre_comp_dup",
+          "EC_ec_pre_comp_free",
+          "ossl_ec_scalar_mul_ladder",
+          "ossl_ec_wNAF_have_precompute_mult",
+          "ossl_ec_wNAF_mul",
+          "ossl_ec_wNAF_precompute_mult"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/ec/mult.rs"
+        ]
+      },
+      "crypto/ec/ec_oct.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/ec/oct.rs"
+        ]
+      },
+      "crypto/ec/ec_pmeth.c": {
+        "defines": [
+          "ossl_ec_pkey_method"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/ec/pmeth.rs"
+        ]
+      },
+      "crypto/ec/ec_print.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/ec/print.rs"
+        ]
+      },
+      "crypto/ec/ecdh_kdf.c": {
+        "defines": [
+          "ossl_ecdh_kdf_X9_63"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/ec/kdf.rs"
+        ]
+      },
+      "crypto/ec/ecdh_ossl.c": {
+        "defines": [
+          "ossl_ecdh_compute_key",
+          "ossl_ecdh_simple_compute_key"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/ec/ecdh_ossl.rs"
+        ]
+      },
+      "crypto/ec/ecdsa_ossl.c": {
+        "defines": [
+          "ossl_ecdsa_deterministic_sign",
+          "ossl_ecdsa_sign",
+          "ossl_ecdsa_sign_setup",
+          "ossl_ecdsa_sign_sig",
+          "ossl_ecdsa_simple_sign_setup",
+          "ossl_ecdsa_simple_sign_sig",
+          "ossl_ecdsa_simple_verify_sig",
+          "ossl_ecdsa_verify",
+          "ossl_ecdsa_verify_sig"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/ec/ecdsa_ossl.rs"
+        ]
+      },
+      "crypto/ec/ecdsa_sign.c": {
+        "defines": [],
+        "recorded_by": "units:crypto/ec/ecdsa_sign.c",
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/ec/ecdsa_vrf.c": {
+        "defines": [],
+        "recorded_by": "units:crypto/ec/ecdsa_vrf.c",
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/ec/eck_prn.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/ec/prn.rs"
+        ]
+      },
+      "crypto/ec/ecp_mont.c": {
+        "defines": [
+          "ossl_ec_GFp_mont_field_decode",
+          "ossl_ec_GFp_mont_field_encode",
+          "ossl_ec_GFp_mont_field_inv",
+          "ossl_ec_GFp_mont_field_mul",
+          "ossl_ec_GFp_mont_field_set_to_one",
+          "ossl_ec_GFp_mont_field_sqr",
+          "ossl_ec_GFp_mont_group_clear_finish",
+          "ossl_ec_GFp_mont_group_copy",
+          "ossl_ec_GFp_mont_group_finish",
+          "ossl_ec_GFp_mont_group_init",
+          "ossl_ec_GFp_mont_group_set_curve"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/ec/mont.rs"
+        ]
+      },
+      "crypto/ec/ecp_nist.c": {
+        "defines": [
+          "ossl_ec_GFp_nist_field_mul",
+          "ossl_ec_GFp_nist_field_sqr",
+          "ossl_ec_GFp_nist_group_copy",
+          "ossl_ec_GFp_nist_group_set_curve"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/ec/nist.rs"
+        ]
+      },
+      "crypto/ec/ecp_nistz256.c": {
+        "defines": [
+          "EC_GFp_nistz256_method",
+          "EC_nistz256_pre_comp_dup",
+          "EC_nistz256_pre_comp_free"
+        ],
+        "recorded_by": "divergence:src/ec/curve.rs",
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/ec/ecp_oct.c": {
+        "defines": [
+          "ossl_ec_GFp_simple_oct2point",
+          "ossl_ec_GFp_simple_point2oct",
+          "ossl_ec_GFp_simple_set_compressed_coordinates"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/ec/ecp_smpl.c": {
+        "defines": [
+          "ossl_ec_GFp_simple_add",
+          "ossl_ec_GFp_simple_blind_coordinates",
+          "ossl_ec_GFp_simple_cmp",
+          "ossl_ec_GFp_simple_dbl",
+          "ossl_ec_GFp_simple_field_inv",
+          "ossl_ec_GFp_simple_field_mul",
+          "ossl_ec_GFp_simple_field_sqr",
+          "ossl_ec_GFp_simple_get_Jprojective_coordinates_GFp",
+          "ossl_ec_GFp_simple_group_check_discriminant",
+          "ossl_ec_GFp_simple_group_clear_finish",
+          "ossl_ec_GFp_simple_group_copy",
+          "ossl_ec_GFp_simple_group_finish",
+          "ossl_ec_GFp_simple_group_get_curve",
+          "ossl_ec_GFp_simple_group_get_degree",
+          "ossl_ec_GFp_simple_group_init",
+          "ossl_ec_GFp_simple_group_set_curve",
+          "ossl_ec_GFp_simple_invert",
+          "ossl_ec_GFp_simple_is_at_infinity",
+          "ossl_ec_GFp_simple_is_on_curve",
+          "ossl_ec_GFp_simple_ladder_post"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/ec/smpl.rs"
+        ]
+      },
+      "crypto/ec/ecx_backend.c": {
+        "defines": [
+          "ossl_ecx_key_dup",
+          "ossl_ecx_key_from_pkcs8",
+          "ossl_ecx_key_fromdata",
+          "ossl_ecx_key_op",
+          "ossl_ecx_public_from_private"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.8"
+        ],
+        "transcribed_by": [
+          "src/ec/ecx_backend.rs"
+        ]
+      },
+      "crypto/ec/ecx_key.c": {
+        "defines": [
+          "ossl_ecx_compute_key",
+          "ossl_ecx_key_allocate_privkey",
+          "ossl_ecx_key_free",
+          "ossl_ecx_key_new",
+          "ossl_ecx_key_set0_libctx",
+          "ossl_ecx_key_up_ref"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.8"
+        ],
+        "transcribed_by": [
+          "src/ec/ecx_key.rs"
+        ]
+      },
+      "crypto/ec/ecx_meth.c": {
+        "defines": [
+          "ossl_ecx25519_asn1_meth",
+          "ossl_ecx25519_pkey_method",
+          "ossl_ecx448_asn1_meth",
+          "ossl_ecx448_pkey_method",
+          "ossl_ed25519_asn1_meth",
+          "ossl_ed25519_pkey_method",
+          "ossl_ed448_asn1_meth",
+          "ossl_ed448_pkey_method"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.8",
+          "8.9"
+        ],
+        "transcribed_by": [
+          "src/ec/ecx_meth.rs"
+        ]
+      },
+      "crypto/encode_decode/decoder_lib.c": {
+        "defines": [
+          "ossl_decoder_ctx_add_decoder_inst",
+          "ossl_decoder_ctx_get_harderr",
+          "ossl_decoder_ctx_set_harderr",
+          "ossl_decoder_instance_dup",
+          "ossl_decoder_instance_free",
+          "ossl_decoder_instance_new",
+          "ossl_decoder_instance_new_forprov"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.9"
+        ],
+        "transcribed_by": [
+          "src/decoder_lib.rs"
+        ]
+      },
+      "crypto/encode_decode/decoder_meth.c": {
+        "defines": [
+          "ossl_decoder_fast_is_a",
+          "ossl_decoder_from_algorithm",
+          "ossl_decoder_get_number",
+          "ossl_decoder_parsed_properties",
+          "ossl_decoder_store_cache_flush",
+          "ossl_decoder_store_remove_all_provided"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.9"
+        ],
+        "transcribed_by": [
+          "src/decoder_meth.rs"
+        ]
+      },
+      "crypto/encode_decode/decoder_pkey.c": {
+        "defines": [
+          "ossl_decoder_cache_flush",
+          "ossl_decoder_cache_free",
+          "ossl_decoder_cache_new"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.9"
+        ],
+        "transcribed_by": [
+          "src/decoder_pkey.rs"
+        ]
       },
       "crypto/err/err.c": {
         "defines": [
@@ -378,7 +1447,9 @@
         "subphases": [
           "7.5"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/bio_ok.rs"
+        ]
       },
       "crypto/evp/c_allc.c": {
         "defines": [
@@ -427,6 +1498,16 @@
         ],
         "transcribed_by": []
       },
+      "crypto/evp/dh_ctrl.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/dh/ctrl.rs"
+        ]
+      },
       "crypto/evp/dh_support.c": {
         "defines": [
           "ossl_dh_gen_type_id2name",
@@ -455,6 +1536,16 @@
           "7.3d"
         ],
         "transcribed_by": []
+      },
+      "crypto/evp/dsa_ctrl.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/dsa/ctrl.rs"
+        ]
       },
       "crypto/evp/e_aes.c": {
         "defines": [],
@@ -638,6 +1729,16 @@
         ],
         "transcribed_by": []
       },
+      "crypto/evp/ec_ctrl.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/ec/ctrl.rs"
+        ]
+      },
       "crypto/evp/ec_support.c": {
         "defines": [
           "ossl_ec_curve_name2nid",
@@ -646,9 +1747,12 @@
         ],
         "recorded_by": "units:crypto/evp/ec_support.c",
         "subphases": [
-          "7.4"
+          "7.4",
+          "8.7"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ec/support.rs"
+        ]
       },
       "crypto/evp/encode.c": {
         "defines": [
@@ -774,7 +1878,9 @@
         "subphases": [
           "7.4"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/evp_pkey.rs"
+        ]
       },
       "crypto/evp/evp_pkey_type.c": {
         "defines": [],
@@ -791,7 +1897,7 @@
           "evp_rand_get_number",
           "evp_rand_get_seed"
         ],
-        "recorded_by": "deferral:evp_rand_can_seed",
+        "recorded_by": null,
         "subphases": [
           "7.3",
           "7.3f"
@@ -927,12 +2033,14 @@
       },
       "crypto/evp/legacy_blake2.c": {
         "defines": [],
-        "recorded_by": "units:crypto/evp/legacy_blake2.c",
+        "recorded_by": null,
         "subphases": [
           "7.3",
           "7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/legacy_blake2.rs"
+        ]
       },
       "crypto/evp/legacy_md4.c": {
         "defines": [],
@@ -945,12 +2053,14 @@
       },
       "crypto/evp/legacy_md5.c": {
         "defines": [],
-        "recorded_by": "units:crypto/evp/legacy_md5.c",
+        "recorded_by": null,
         "subphases": [
           "7.3",
           "7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/legacy_md5.rs"
+        ]
       },
       "crypto/evp/legacy_md5_sha1.c": {
         "defines": [],
@@ -971,21 +2081,26 @@
       },
       "crypto/evp/legacy_ripemd.c": {
         "defines": [],
-        "recorded_by": "units:crypto/evp/legacy_ripemd.c",
+        "recorded_by": null,
         "subphases": [
           "7.3",
           "7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/legacy_ripemd.rs"
+        ]
       },
       "crypto/evp/legacy_sha.c": {
         "defines": [],
-        "recorded_by": "units:crypto/evp/legacy_sha.c",
+        "recorded_by": null,
         "subphases": [
           "7.3",
           "7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/legacy_sha.rs",
+          "src/evp/legacy_sha3.rs"
+        ]
       },
       "crypto/evp/legacy_wp.c": {
         "defines": [],
@@ -1045,7 +2160,7 @@
           "evp_get_cipherbyname_ex",
           "evp_get_digestbyname_ex"
         ],
-        "recorded_by": "deferral:evp_cleanup_int",
+        "recorded_by": null,
         "subphases": [
           "7.2",
           "7.3",
@@ -1085,7 +2200,9 @@
         "subphases": [
           "7.4"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/p_dec.rs"
+        ]
       },
       "crypto/evp/p_enc.c": {
         "defines": [],
@@ -1093,7 +2210,9 @@
         "subphases": [
           "7.4"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/p_enc.rs"
+        ]
       },
       "crypto/evp/p_legacy.c": {
         "defines": [
@@ -1103,9 +2222,12 @@
         "recorded_by": "units:crypto/evp/p_legacy.c",
         "subphases": [
           "7.4",
-          "7.4l"
+          "7.4l",
+          "8.4"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/p_legacy_assign.rs"
+        ]
       },
       "crypto/evp/p_lib.c": {
         "defines": [
@@ -1125,7 +2247,8 @@
         "subphases": [
           "7.4",
           "7.4a",
-          "7.4e"
+          "7.4e",
+          "8.8"
         ],
         "transcribed_by": [
           "src/evp/pkey.rs"
@@ -1210,7 +2333,8 @@
         "subphases": [
           "7.4",
           "7.4c",
-          "7.4l"
+          "7.4l",
+          "8.8"
         ],
         "transcribed_by": [
           "src/evp/pkey_ctx.rs"
@@ -1259,6 +2383,123 @@
           "src/evp/skeymgmt.rs"
         ]
       },
+      "crypto/ffc/ffc_backend.c": {
+        "defines": [
+          "ossl_ffc_params_fromdata"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/ffc/backend.rs"
+        ]
+      },
+      "crypto/ffc/ffc_dh.c": {
+        "defines": [
+          "ossl_ffc_name_to_dh_named_group",
+          "ossl_ffc_named_group_get_keylength",
+          "ossl_ffc_named_group_get_name",
+          "ossl_ffc_named_group_get_q",
+          "ossl_ffc_named_group_get_uid",
+          "ossl_ffc_named_group_set",
+          "ossl_ffc_numbers_to_dh_named_group",
+          "ossl_ffc_uid_to_dh_named_group"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/ffc/dh.rs"
+        ]
+      },
+      "crypto/ffc/ffc_key_generate.c": {
+        "defines": [
+          "ossl_ffc_generate_private_key"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/ffc/key_generate.rs"
+        ]
+      },
+      "crypto/ffc/ffc_key_validate.c": {
+        "defines": [
+          "ossl_ffc_validate_private_key",
+          "ossl_ffc_validate_public_key",
+          "ossl_ffc_validate_public_key_partial"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/ffc/key_validate.rs"
+        ]
+      },
+      "crypto/ffc/ffc_params.c": {
+        "defines": [
+          "ossl_ffc_params_cleanup",
+          "ossl_ffc_params_cmp",
+          "ossl_ffc_params_copy",
+          "ossl_ffc_params_enable_flags",
+          "ossl_ffc_params_get0_pqg",
+          "ossl_ffc_params_get_validate_params",
+          "ossl_ffc_params_init",
+          "ossl_ffc_params_print",
+          "ossl_ffc_params_set0_j",
+          "ossl_ffc_params_set0_pqg",
+          "ossl_ffc_params_set_flags",
+          "ossl_ffc_params_set_gindex",
+          "ossl_ffc_params_set_h",
+          "ossl_ffc_params_set_pcounter",
+          "ossl_ffc_params_set_seed",
+          "ossl_ffc_params_set_validate_params",
+          "ossl_ffc_params_todata",
+          "ossl_ffc_set_digest"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/ffc/params.rs"
+        ]
+      },
+      "crypto/ffc/ffc_params_generate.c": {
+        "defines": [
+          "ossl_ffc_params_FIPS186_2_gen_verify",
+          "ossl_ffc_params_FIPS186_2_generate",
+          "ossl_ffc_params_FIPS186_4_gen_verify",
+          "ossl_ffc_params_FIPS186_4_generate"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/ffc/params_generate.rs"
+        ]
+      },
+      "crypto/ffc/ffc_params_validate.c": {
+        "defines": [
+          "ossl_ffc_params_FIPS186_2_validate",
+          "ossl_ffc_params_FIPS186_4_validate",
+          "ossl_ffc_params_full_validate",
+          "ossl_ffc_params_simple_validate",
+          "ossl_ffc_params_validate_unverifiable_g"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5"
+        ],
+        "transcribed_by": [
+          "src/ffc/params_validate.rs"
+        ]
+      },
       "crypto/hmac/hmac.c": {
         "defines": [],
         "recorded_by": null,
@@ -1302,6 +2543,37 @@
           "src/runtime/time.rs"
         ]
       },
+      "crypto/packet.c": {
+        "defines": [
+          "WPACKET_allocate_bytes",
+          "WPACKET_cleanup",
+          "WPACKET_close",
+          "WPACKET_fill_lengths",
+          "WPACKET_finish",
+          "WPACKET_get_curr",
+          "WPACKET_get_length",
+          "WPACKET_get_total_written",
+          "WPACKET_init",
+          "WPACKET_init_der",
+          "WPACKET_init_len",
+          "WPACKET_init_null",
+          "WPACKET_init_null_der",
+          "WPACKET_init_static_len",
+          "WPACKET_is_null_buf",
+          "WPACKET_memcpy",
+          "WPACKET_memset",
+          "WPACKET_put_bytes__",
+          "WPACKET_quic_sub_allocate_bytes",
+          "WPACKET_quic_write_vlint"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/packet.rs"
+        ]
+      },
       "crypto/param_build.c": {
         "defines": [],
         "recorded_by": null,
@@ -1310,6 +2582,25 @@
         ],
         "transcribed_by": [
           "src/params/build.rs"
+        ]
+      },
+      "crypto/param_build_set.c": {
+        "defines": [
+          "ossl_param_build_set_bn",
+          "ossl_param_build_set_bn_pad",
+          "ossl_param_build_set_int",
+          "ossl_param_build_set_long",
+          "ossl_param_build_set_multi_key_bn",
+          "ossl_param_build_set_octet_string",
+          "ossl_param_build_set_utf8_string"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.5",
+          "8.7"
+        ],
+        "transcribed_by": [
+          "src/param_build_set.rs"
         ]
       },
       "crypto/params.c": {
@@ -1324,6 +2615,16 @@
         ],
         "transcribed_by": [
           "src/params/mod.rs"
+        ]
+      },
+      "crypto/pem/pem_all.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.9"
+        ],
+        "transcribed_by": [
+          "src/pem/key_legacy.rs"
         ]
       },
       "crypto/pem/pem_lib.c": {
@@ -1341,11 +2642,13 @@
       },
       "crypto/pem/pem_oth.c": {
         "defines": [],
-        "recorded_by": "units:crypto/pem/pem_oth.c",
+        "recorded_by": null,
         "subphases": [
           "7.5"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/pem/pem_oth.rs"
+        ]
       },
       "crypto/pem/pem_pk8.c": {
         "defines": [],
@@ -1359,9 +2662,12 @@
         "defines": [],
         "recorded_by": "units:crypto/pem/pem_pkey.c",
         "subphases": [
-          "7.5"
+          "7.5",
+          "8.9"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/pem/pem_pkey.rs"
+        ]
       },
       "crypto/pem/pem_sign.c": {
         "defines": [],
@@ -1370,6 +2676,41 @@
           "7.5"
         ],
         "transcribed_by": []
+      },
+      "crypto/pkcs12/p12_decr.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.9"
+        ],
+        "transcribed_by": [
+          "src/pkcs12/p12_decr.rs"
+        ]
+      },
+      "crypto/pkcs12/p12_p8d.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.9"
+        ],
+        "transcribed_by": [
+          "src/pkcs12/p12_p8d.rs"
+        ]
+      },
+      "crypto/poly1305/poly1305.c": {
+        "defines": [
+          "Poly1305_Final",
+          "Poly1305_Init",
+          "Poly1305_Update",
+          "Poly1305_ctx_size"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": [
+          "src/mac/poly1305.rs"
+        ]
       },
       "crypto/property/defn_cache.c": {
         "defines": [
@@ -1575,6 +2916,21 @@
         ],
         "transcribed_by": []
       },
+      "crypto/quic_vlint.c": {
+        "defines": [
+          "ossl_quic_vlint_decode",
+          "ossl_quic_vlint_decode_unchecked",
+          "ossl_quic_vlint_encode",
+          "ossl_quic_vlint_encode_n"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.6"
+        ],
+        "transcribed_by": [
+          "src/quic_vlint.rs"
+        ]
+      },
       "crypto/rand/rand_lib.c": {
         "defines": [
           "ossl_rand_check_random_provider_on_load",
@@ -1585,11 +2941,55 @@
           "ossl_rand_get0_seed_noncreating",
           "ossl_random_add_conf_module"
         ],
-        "recorded_by": "units:crypto/rand/rand_lib.c",
+        "recorded_by": null,
         "subphases": [
-          "6.10"
+          "6.10",
+          "9.2"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/rand/rand_lib.rs"
+        ]
+      },
+      "crypto/rand/rand_pool.c": {
+        "defines": [
+          "ossl_rand_pool_add",
+          "ossl_rand_pool_add_begin",
+          "ossl_rand_pool_add_end",
+          "ossl_rand_pool_adin_mix_in",
+          "ossl_rand_pool_attach",
+          "ossl_rand_pool_buffer",
+          "ossl_rand_pool_bytes_needed",
+          "ossl_rand_pool_bytes_remaining",
+          "ossl_rand_pool_detach",
+          "ossl_rand_pool_entropy",
+          "ossl_rand_pool_entropy_available",
+          "ossl_rand_pool_entropy_needed",
+          "ossl_rand_pool_free",
+          "ossl_rand_pool_length",
+          "ossl_rand_pool_new",
+          "ossl_rand_pool_reattach"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "9.2",
+          "9.5"
+        ],
+        "transcribed_by": [
+          "src/rand/pool.rs"
+        ]
+      },
+      "crypto/rand/rand_uniform.c": {
+        "defines": [
+          "ossl_rand_range_uint32",
+          "ossl_rand_uniform_uint32"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "9.2"
+        ],
+        "transcribed_by": [
+          "src/rand/rand_uniform.rs"
+        ]
       },
       "crypto/rcu.c": {
         "defines": [],
@@ -1599,16 +2999,71 @@
         ],
         "transcribed_by": []
       },
+      "crypto/rsa/rsa_ameth.c": {
+        "defines": [
+          "ossl_rsa_asn1_meths",
+          "ossl_rsa_ctx_to_pss_string",
+          "ossl_rsa_pss_asn1_meth",
+          "ossl_rsa_pss_get_param",
+          "ossl_rsa_pss_params_create",
+          "ossl_rsa_pss_to_ctx"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.4",
+          "8.8"
+        ],
+        "transcribed_by": [
+          "src/rsa/ameth.rs"
+        ]
+      },
+      "crypto/rsa/rsa_asn1.c": {
+        "defines": [
+          "RSA_PRIME_INFO_it"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.4"
+        ],
+        "transcribed_by": [
+          "src/rsa/asn1.rs"
+        ]
+      },
       "crypto/rsa/rsa_ossl.c": {
         "defines": [
           "ossl_rsa_alloc_blinding",
           "ossl_rsa_free_blinding"
         ],
-        "recorded_by": "units:crypto/rsa/rsa_ossl.c",
+        "recorded_by": null,
         "subphases": [
           "6.10"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/rsa/ossl.rs"
+        ]
+      },
+      "crypto/rsa/rsa_pmeth.c": {
+        "defines": [
+          "ossl_rsa_pkey_method",
+          "ossl_rsa_pss_pkey_method"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.4"
+        ],
+        "transcribed_by": [
+          "src/rsa/pmeth.rs"
+        ]
+      },
+      "crypto/rsa/rsa_prn.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.4"
+        ],
+        "transcribed_by": [
+          "src/rsa/prn.rs"
+        ]
       },
       "crypto/self_test_core.c": {
         "defines": [
@@ -1644,13 +3099,11 @@
       },
       "crypto/thread/api.c": {
         "defines": [],
-        "recorded_by": null,
+        "recorded_by": "units:crypto/thread/api.c",
         "subphases": [
           "6.6e"
         ],
-        "transcribed_by": [
-          "src/context/thread_data.rs"
-        ]
+        "transcribed_by": []
       },
       "crypto/thread/internal.c": {
         "defines": [
@@ -1665,7 +3118,9 @@
         "subphases": [
           "6.6e"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/context/thread_data.rs"
+        ]
       },
       "crypto/threads_common.c": {
         "defines": [
@@ -1708,6 +3163,77 @@
           "src/runtime/thread.rs"
         ]
       },
+      "crypto/x509/t_x509.c": {
+        "defines": [
+          "ossl_serial_number_print",
+          "ossl_x509_print_ex_brief"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.8"
+        ],
+        "transcribed_by": [
+          "src/x509/t_x509.rs"
+        ]
+      },
+      "crypto/x509/x509_att.c": {
+        "defines": [
+          "ossl_x509at_add1_attr",
+          "ossl_x509at_add1_attr_by_NID",
+          "ossl_x509at_add1_attr_by_OBJ",
+          "ossl_x509at_add1_attr_by_txt",
+          "ossl_x509at_dup"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.9"
+        ],
+        "transcribed_by": [
+          "src/x509/x509_att.rs"
+        ]
+      },
+      "crypto/x509/x509_set.c": {
+        "defines": [
+          "ossl_x509_init_sig_info",
+          "ossl_x509_set1_time"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.8"
+        ],
+        "transcribed_by": [
+          "src/x509/x509_set.rs"
+        ]
+      },
+      "crypto/x509/x_pubkey.c": {
+        "defines": [
+          "ossl_X509_PUBKEY_INTERNAL_free",
+          "ossl_d2i_DH_PUBKEY",
+          "ossl_d2i_DHx_PUBKEY",
+          "ossl_d2i_DSA_PUBKEY",
+          "ossl_d2i_ED25519_PUBKEY",
+          "ossl_d2i_ED448_PUBKEY",
+          "ossl_d2i_PUBKEY_legacy",
+          "ossl_d2i_X25519_PUBKEY",
+          "ossl_d2i_X448_PUBKEY",
+          "ossl_d2i_X509_PUBKEY_INTERNAL",
+          "ossl_i2d_DH_PUBKEY",
+          "ossl_i2d_DHx_PUBKEY",
+          "ossl_i2d_ED25519_PUBKEY",
+          "ossl_i2d_ED448_PUBKEY",
+          "ossl_i2d_X25519_PUBKEY",
+          "ossl_i2d_X448_PUBKEY",
+          "ossl_x509_PUBKEY_get0_libctx"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.8",
+          "8.9"
+        ],
+        "transcribed_by": [
+          "src/x509/x_pubkey.rs"
+        ]
+      },
       "pkey_derive.c": {
         "defines": [],
         "recorded_by": "units:pkey_derive.c",
@@ -1715,14 +3241,177 @@
           "7.3f"
         ],
         "transcribed_by": []
+      },
+      "providers/common/capabilities.c": {
+        "defines": [],
+        "recorded_by": "units:providers/common/capabilities.c",
+        "subphases": [
+          "8.2"
+        ],
+        "transcribed_by": []
+      },
+      "providers/common/provider_seeding.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "9.3"
+        ],
+        "transcribed_by": []
+      },
+      "providers/common/provider_util.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "9.3"
+        ],
+        "transcribed_by": []
+      },
+      "providers/defltprov.c": {
+        "defines": [
+          "ossl_default_provider_init"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.1b",
+          "8.2"
+        ],
+        "transcribed_by": []
+      },
+      "providers/fips/fipsprov.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "9.5"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/ciphers/cipher_aes.c": {
+        "defines": [],
+        "recorded_by": "units:providers/implementations/ciphers/cipher_aes.c",
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/ciphers/cipher_aes_siv.c": {
+        "defines": [],
+        "recorded_by": "units:providers/implementations/ciphers/cipher_aes_siv.c",
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/ciphers/cipher_aria.c": {
+        "defines": [],
+        "recorded_by": "units:providers/implementations/ciphers/cipher_aria.c",
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/ciphers/cipher_camellia.c": {
+        "defines": [],
+        "recorded_by": "units:providers/implementations/ciphers/cipher_camellia.c",
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/ciphers/cipher_chacha20.c": {
+        "defines": [],
+        "recorded_by": "units:providers/implementations/ciphers/cipher_chacha20.c",
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/ciphers/cipher_chacha20_hw.c": {
+        "defines": [],
+        "recorded_by": "units:providers/implementations/ciphers/cipher_chacha20_hw.c",
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/ciphers/cipher_chacha20_poly1305_hw.c": {
+        "defines": [],
+        "recorded_by": "units:providers/implementations/ciphers/cipher_chacha20_poly1305_hw.c",
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/ciphers/cipher_cts.c": {
+        "defines": [],
+        "recorded_by": "units:providers/implementations/ciphers/cipher_cts.c",
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/ciphers/cipher_sm4.c": {
+        "defines": [],
+        "recorded_by": "units:providers/implementations/ciphers/cipher_sm4.c",
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/ciphers/cipher_tdes_common.c": {
+        "defines": [],
+        "recorded_by": "units:providers/implementations/ciphers/cipher_tdes_common.c",
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/ciphers/ciphercommon_block.c": {
+        "defines": [],
+        "recorded_by": "units:providers/implementations/ciphers/ciphercommon_block.c",
+        "subphases": [
+          "8.2"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/ciphers/ciphercommon_hw.c": {
+        "defines": [],
+        "recorded_by": "units:providers/implementations/ciphers/ciphercommon_hw.c",
+        "subphases": [
+          "8.2"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/rands/crngt.c": {
+        "defines": [],
+        "recorded_by": "units:providers/implementations/rands/crngt.c",
+        "subphases": [
+          "9.5"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/rands/drbg.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "9.3"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/rands/seeding/rand_unix.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "9.5"
+        ],
+        "transcribed_by": []
       }
     },
     "rule": "every authority translation unit and every authority-internal function named by a subphase row of a **complete** stratum must be transcribed by a crate module or named by an explicit record field; and an explicit record field naming an authority unit must have a subphase row behind it. An `in-progress` stratum's unreached names are published as a census and are not a failure, because a plan names the work a stratum will do",
     "unit_records": {
       "crypto/asn1/d2i_param.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 8
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/asn1/d2i_param.rs",
+        "owner_phase": null
       },
       "crypto/asn1/d2i_pr.c": {
         "class": "deferred_to_later_stratum",
@@ -1730,9 +3419,9 @@
         "owner_phase": 10
       },
       "crypto/asn1/d2i_pu.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 8
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/asn1/d2i_pu.rs",
+        "owner_phase": null
       },
       "crypto/asn1/i2d_evp.c": {
         "class": "deferred_to_later_stratum",
@@ -1744,9 +3433,24 @@
         "crate_module": null,
         "owner_phase": 13
       },
+      "crypto/chacha/chacha_enc.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
       "crypto/conf/conf_mall.c": {
         "class": "reached_by_a_named_construct",
         "crate_module": "src/runtime/confmod/mod.rs",
+        "owner_phase": null
+      },
+      "crypto/dsa/dsa_ctrl.c": {
+        "class": "does_not_exist_in_this_authority",
+        "crate_module": null,
+        "owner_phase": null
+      },
+      "crypto/dsa/dsa_err.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
         "owner_phase": null
       },
       "crypto/dso/dso_err.c": {
@@ -1757,6 +3461,16 @@
       "crypto/dso/dso_openssl.c": {
         "class": "not_in_this_profile",
         "crate_module": null,
+        "owner_phase": null
+      },
+      "crypto/ec/ecdsa_sign.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "crypto/ec/ecdsa_vrf.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
         "owner_phase": null
       },
       "crypto/evp/bio_b64.c": {
@@ -1880,9 +3594,9 @@
         "owner_phase": 13
       },
       "crypto/evp/ec_support.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 8
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/ec/support.rs",
+        "owner_phase": null
       },
       "crypto/evp/evp_cnf.c": {
         "class": "deferred_to_later_stratum",
@@ -1900,26 +3614,16 @@
         "owner_phase": null
       },
       "crypto/evp/evp_pkey_type.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 8
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/pkey_asn1.rs",
+        "owner_phase": null
       },
       "crypto/evp/kdf_meth.c": {
         "class": "reached_by_a_named_construct",
         "crate_module": "src/evp/kdf.rs",
         "owner_phase": null
       },
-      "crypto/evp/legacy_blake2.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
-      },
       "crypto/evp/legacy_md4.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
-      },
-      "crypto/evp/legacy_md5.c": {
         "class": "deferred_to_later_stratum",
         "crate_module": null,
         "owner_phase": 13
@@ -1930,16 +3634,6 @@
         "owner_phase": 13
       },
       "crypto/evp/legacy_mdc2.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
-      },
-      "crypto/evp/legacy_ripemd.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
-      },
-      "crypto/evp/legacy_sha.c": {
         "class": "deferred_to_later_stratum",
         "crate_module": null,
         "owner_phase": 13
@@ -1965,19 +3659,19 @@
         "owner_phase": null
       },
       "crypto/evp/p_dec.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 8
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/p_dec.rs",
+        "owner_phase": null
       },
       "crypto/evp/p_enc.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 8
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/p_enc.rs",
+        "owner_phase": null
       },
       "crypto/evp/p_legacy.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 8
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/p_legacy_assign.rs",
+        "owner_phase": null
       },
       "crypto/evp/p_open.c": {
         "class": "reached_by_a_named_construct",
@@ -1998,11 +3692,6 @@
         "class": "reached_by_a_named_construct",
         "crate_module": "src/evp/p_legacy.rs",
         "owner_phase": null
-      },
-      "crypto/pem/pem_oth.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
       },
       "crypto/pem/pem_pk8.c": {
         "class": "deferred_to_later_stratum",
@@ -2034,22 +3723,87 @@
         "crate_module": "src/provider/mod.rs",
         "owner_phase": null
       },
-      "crypto/rand/rand_lib.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 9
-      },
       "crypto/rcu.c": {
         "class": "does_not_exist_in_this_authority",
         "crate_module": null,
         "owner_phase": null
       },
-      "crypto/rsa/rsa_ossl.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 8
+      "crypto/thread/api.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/context/thread_data.rs",
+        "owner_phase": null
       },
       "pkey_derive.c": {
+        "class": "does_not_exist_in_this_authority",
+        "crate_module": null,
+        "owner_phase": null
+      },
+      "providers/common/capabilities.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/capabilities.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/ciphers/cipher_aes.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/ciphers/cipher_aes_siv.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/ciphers/cipher_aria.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/ciphers/cipher_camellia.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/ciphers/cipher_chacha20.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/ciphers/cipher_chacha20_hw.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/ciphers/cipher_chacha20_poly1305_hw.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/ciphers/cipher_cts.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/ciphers/cipher_sm4.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/ciphers/cipher_tdes_common.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/ciphers/ciphercommon_block.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/ciphers/ciphercommon_hw.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/cipher.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/rands/crngt.c": {
         "class": "does_not_exist_in_this_authority",
         "crate_module": null,
         "owner_phase": null
@@ -2058,36 +3812,36 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 144
+      "transcribed_units": 324
     }
   },
-  "body_hash": "39ec542a39b80912da70b7a8f2277b26e8e73a1cd20e039319378f6dd8757d33",
+  "body_hash": "3dbe8985bdda793c5542173cd4791e6ece81f9d4ac0f14023f892b2e922ed74e",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "c129e2181d6c1f696c8ddb6f0035a4d00adcf7e9d07a771a3b825163dc0fe7c6"
+      "sha256": "9e95be44e345c893b26ca4d83eb64aa4f9a605ba36d1a5d913da05809b29cd0e"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "8ddb00bcaf90ba6356356cdd70fb8cd5b2a86af0a665e2627cd8cf9e5ce5dcf4"
+      "sha256": "c965aa475ee4a202c2ceae8664adc901f152f74d84a4f1b1f568faf17b6bc034"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "e5406e2563746d31e6ffe97b24d2c6732f5a5800e32107abb4ae7d509ae8c9d9"
+      "sha256": "0373bf17a288fdef9d2f2e6eb516800db9107c08e9fec661dfe48706cf1ba8d9"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "ddd30bde27af7756e09f4c5ccddb7226657c5645194d877ade42ab95afb8436a"
+      "sha256": "6795b56707180b2346eed4a7cdff22f40344a0dfbd81a38154d4343c5bc63154"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "227ba400c6ec650caec475ac30e5ab020bda95d79d5d0402cc706b1ef85cc5ec"
+      "sha256": "79615740d2f897692441e2391456f7d64ec7f2cb90309bf15380c7c877dfd8f6"
     },
     {
       "name": "source-manifest",
@@ -2102,12 +3856,22 @@
     {
       "name": "plan-PHASE-6-SUBPHASES",
       "path": "docs/PHASE-6-SUBPHASES.md",
-      "sha256": "749a8cd25cc37d3d043023af94fcc04e5d9d625b90a3067b722211969884b9b3"
+      "sha256": "8af47de4e6da7c8e1d1ed32f922bca52eafecbb331e07ef47d1cda4d9f328863"
     },
     {
       "name": "plan-PHASE-7-SUBPHASES",
       "path": "docs/PHASE-7-SUBPHASES.md",
       "sha256": "d35a9ce9a483e60a24e8ac581687386e706699a995b8cccfeb35d42f7d28d061"
+    },
+    {
+      "name": "plan-PHASE-8-SUBPHASES",
+      "path": "docs/PHASE-8-SUBPHASES.md",
+      "sha256": "8cc4399120102633a15c4f0eca62984b50d19fed2127d1ce4ac50d986ba9a079"
+    },
+    {
+      "name": "plan-PHASE-9-SUBPHASES",
+      "path": "docs/PHASE-9-SUBPHASES.md",
+      "sha256": "987078f2a8925e5f90f0e773d5f35705863c7d8eb7de1259f674d1b486fc53df"
     }
   ],
   "kind": "plan-reconciliation",

@@ -1,0 +1,513 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "checks": {
+      "accessor_table_in_bn_dh_rs_matches": true,
+      "ffdhe_and_modp_g_is_const_2": true,
+      "inventory_from": "crypto/bn/bn_dh.c's `make_dh_bn` list plus `ossl_bignum_const_2`",
+      "inventory_matches_both_directions": true,
+      "nbits_is_the_readback_width": true,
+      "readback_fits_declared_limbs": true,
+      "table_from": "crypto/ffc/ffc_dh.c's `dh_named_groups[]`, macros expanded",
+      "table_names_only_these_constants": true,
+      "table_order_is_the_probe_order": true,
+      "values_from": "a probe linked against the admitted prefix, calling `DH_new_by_nid`/`DH_get_1024_160` and `BN_bn2hex`"
+    },
+    "constants": [
+      {
+        "bits": 2,
+        "bytes": 8,
+        "limbs": 1,
+        "sha256": "cd04a4754498e06db5a13c5f371f1f04ff6d2470f24aa9bd886540e5dce77f70",
+        "source": "crypto/bn/bn_dh.c:1385",
+        "symbol": "ossl_bignum_const_2"
+      },
+      {
+        "bits": 1024,
+        "bytes": 128,
+        "limbs": 16,
+        "sha256": "44c55cfee5c075927cf682da5b681bdecbd5c3eb0784c14f5dce7610f0ef133d",
+        "source": "crypto/bn/bn_dh.c:1389",
+        "symbol": "ossl_bignum_dh1024_160_p"
+      },
+      {
+        "bits": 160,
+        "bytes": 24,
+        "limbs": 3,
+        "sha256": "b5907845e0e599aac59ce0c493195e24547248dc583cf5dbca2338c0120ac7b5",
+        "source": "crypto/bn/bn_dh.c:1390",
+        "symbol": "ossl_bignum_dh1024_160_q"
+      },
+      {
+        "bits": 1024,
+        "bytes": 128,
+        "limbs": 16,
+        "sha256": "10733f8a181773b6d1cd579bf8a1a0220ce64366165e02e0555c918f5693cb36",
+        "source": "crypto/bn/bn_dh.c:1391",
+        "symbol": "ossl_bignum_dh1024_160_g"
+      },
+      {
+        "bits": 2048,
+        "bytes": 256,
+        "limbs": 32,
+        "sha256": "bfe545862ca102ad1eeddb5fbfa5bf855ac4995c56a8b408ce3fe099dce93a9d",
+        "source": "crypto/bn/bn_dh.c:1392",
+        "symbol": "ossl_bignum_dh2048_224_p"
+      },
+      {
+        "bits": 224,
+        "bytes": 32,
+        "limbs": 4,
+        "sha256": "cbd6fd7990558d5f8883bca3266b4a501d4c287035f6ea9a4e34b4e8e73a9d90",
+        "source": "crypto/bn/bn_dh.c:1393",
+        "symbol": "ossl_bignum_dh2048_224_q"
+      },
+      {
+        "bits": 2048,
+        "bytes": 256,
+        "limbs": 32,
+        "sha256": "304fa9e9307277fac76a886a98170924373a50a290d836f82b39e4949f70d6c2",
+        "source": "crypto/bn/bn_dh.c:1394",
+        "symbol": "ossl_bignum_dh2048_224_g"
+      },
+      {
+        "bits": 2048,
+        "bytes": 256,
+        "limbs": 32,
+        "sha256": "0b7835722cb619827610c2549fdda5587421686c4409a13865e76225522ddcc9",
+        "source": "crypto/bn/bn_dh.c:1395",
+        "symbol": "ossl_bignum_dh2048_256_p"
+      },
+      {
+        "bits": 256,
+        "bytes": 32,
+        "limbs": 4,
+        "sha256": "f0db115b384f879f40f2f4dbae5dbd1681afdabdcd1be002dca609e6869aae0f",
+        "source": "crypto/bn/bn_dh.c:1396",
+        "symbol": "ossl_bignum_dh2048_256_q"
+      },
+      {
+        "bits": 2046,
+        "bytes": 256,
+        "limbs": 32,
+        "sha256": "a16f15da21d7d610dad3af0f3ea9f80c7de830d97f8f8392cb29071128ac8a4b",
+        "source": "crypto/bn/bn_dh.c:1397",
+        "symbol": "ossl_bignum_dh2048_256_g"
+      },
+      {
+        "bits": 2048,
+        "bytes": 256,
+        "limbs": 32,
+        "sha256": "9cd3b7f336872f46c09428d1bbc19877a4d440512cda8d1c1cf0cd6e33698966",
+        "source": "crypto/bn/bn_dh.c:1399",
+        "symbol": "ossl_bignum_ffdhe2048_p"
+      },
+      {
+        "bits": 2047,
+        "bytes": 256,
+        "limbs": 32,
+        "sha256": "3072ed775345bbd8721aeb890833aa381bf5a19a889fb8c2b71ebd5cead60fe1",
+        "source": "crypto/bn/bn_dh.c:1400",
+        "symbol": "ossl_bignum_ffdhe2048_q"
+      },
+      {
+        "bits": 3072,
+        "bytes": 384,
+        "limbs": 48,
+        "sha256": "0eaf67db3a839156d5013494a5318a772b5697d270d721f37f092efc69ea5a17",
+        "source": "crypto/bn/bn_dh.c:1401",
+        "symbol": "ossl_bignum_ffdhe3072_p"
+      },
+      {
+        "bits": 3071,
+        "bytes": 384,
+        "limbs": 48,
+        "sha256": "181f68e06ad73585303cbcab43a6ac96ce2ce8e4927e8dbf2251a469108b72a3",
+        "source": "crypto/bn/bn_dh.c:1402",
+        "symbol": "ossl_bignum_ffdhe3072_q"
+      },
+      {
+        "bits": 4096,
+        "bytes": 512,
+        "limbs": 64,
+        "sha256": "4648414224ac881b3d0dc59b466f96d06a558278776807797ecf1f66ff397b3e",
+        "source": "crypto/bn/bn_dh.c:1403",
+        "symbol": "ossl_bignum_ffdhe4096_p"
+      },
+      {
+        "bits": 4095,
+        "bytes": 512,
+        "limbs": 64,
+        "sha256": "657f638a3039e247a4b0506feac04910ce72777b6ebbeccbc08d0db08e4c6302",
+        "source": "crypto/bn/bn_dh.c:1404",
+        "symbol": "ossl_bignum_ffdhe4096_q"
+      },
+      {
+        "bits": 6144,
+        "bytes": 768,
+        "limbs": 96,
+        "sha256": "227ac9066b3ddd9e193670cda2388fa884f65ba0cf98b742d1fe77a6687c79c7",
+        "source": "crypto/bn/bn_dh.c:1405",
+        "symbol": "ossl_bignum_ffdhe6144_p"
+      },
+      {
+        "bits": 6143,
+        "bytes": 768,
+        "limbs": 96,
+        "sha256": "941d2ad245277a59089d4ecd97468aefb32907a408ce0b4000aa5d92826b93f4",
+        "source": "crypto/bn/bn_dh.c:1406",
+        "symbol": "ossl_bignum_ffdhe6144_q"
+      },
+      {
+        "bits": 8192,
+        "bytes": 1024,
+        "limbs": 128,
+        "sha256": "770b14efaf6f049929c523113b3fa99a8d11dab1b18af3609590122075d19833",
+        "source": "crypto/bn/bn_dh.c:1407",
+        "symbol": "ossl_bignum_ffdhe8192_p"
+      },
+      {
+        "bits": 8191,
+        "bytes": 1024,
+        "limbs": 128,
+        "sha256": "1ae557d6e35b0cbae49aa5bf2032a02721cfa723b09eefcf652aee0f31845925",
+        "source": "crypto/bn/bn_dh.c:1408",
+        "symbol": "ossl_bignum_ffdhe8192_q"
+      },
+      {
+        "bits": 1536,
+        "bytes": 192,
+        "limbs": 24,
+        "sha256": "64fcc83ec403930bf18393dbc883ccaa1fbb08ac876f77f7aa99748ca945019b",
+        "source": "crypto/bn/bn_dh.c:1411",
+        "symbol": "ossl_bignum_modp_1536_p"
+      },
+      {
+        "bits": 1535,
+        "bytes": 192,
+        "limbs": 24,
+        "sha256": "758d9312f39b6715bdff07a577c265ec6d7dd7c30617fca06001d12437a86d96",
+        "source": "crypto/bn/bn_dh.c:1412",
+        "symbol": "ossl_bignum_modp_1536_q"
+      },
+      {
+        "bits": 2048,
+        "bytes": 256,
+        "limbs": 32,
+        "sha256": "d66436f79bbd6b2e38c0ffbd079be904d2641415e2e67140e09448be9a60890e",
+        "source": "crypto/bn/bn_dh.c:1414",
+        "symbol": "ossl_bignum_modp_2048_p"
+      },
+      {
+        "bits": 2047,
+        "bytes": 256,
+        "limbs": 32,
+        "sha256": "a638f55d63c78f6d9ca04f0de138b1699fd6ff9737d926f4c24f318fc1d0f572",
+        "source": "crypto/bn/bn_dh.c:1415",
+        "symbol": "ossl_bignum_modp_2048_q"
+      },
+      {
+        "bits": 3072,
+        "bytes": 384,
+        "limbs": 48,
+        "sha256": "48cf8b092fbce4359d9871abf74f98e25b6163379eaa15cd9087e800c6d1c55c",
+        "source": "crypto/bn/bn_dh.c:1416",
+        "symbol": "ossl_bignum_modp_3072_p"
+      },
+      {
+        "bits": 3071,
+        "bytes": 384,
+        "limbs": 48,
+        "sha256": "018089836b3704979e9c4ed47a717e61440ff98b4deba0e7e95e56514442e52c",
+        "source": "crypto/bn/bn_dh.c:1417",
+        "symbol": "ossl_bignum_modp_3072_q"
+      },
+      {
+        "bits": 4096,
+        "bytes": 512,
+        "limbs": 64,
+        "sha256": "4ee95187682bcb230ad26a95205f6920e84708f6251b3894329b09ec23919e33",
+        "source": "crypto/bn/bn_dh.c:1418",
+        "symbol": "ossl_bignum_modp_4096_p"
+      },
+      {
+        "bits": 4095,
+        "bytes": 512,
+        "limbs": 64,
+        "sha256": "e42aff7fcbae0ec2e7a3b98feba4047d64b39dc651a7863bddfae726ed9fb336",
+        "source": "crypto/bn/bn_dh.c:1419",
+        "symbol": "ossl_bignum_modp_4096_q"
+      },
+      {
+        "bits": 6144,
+        "bytes": 768,
+        "limbs": 96,
+        "sha256": "d1bfe6d0925ce7e4da262b62861514a7755e35831e429f343e7b864848657efd",
+        "source": "crypto/bn/bn_dh.c:1420",
+        "symbol": "ossl_bignum_modp_6144_p"
+      },
+      {
+        "bits": 6143,
+        "bytes": 768,
+        "limbs": 96,
+        "sha256": "9ef372ff1ed8e94504ef9907c5d36e3452762844ecd8b8480623d413151ecb1e",
+        "source": "crypto/bn/bn_dh.c:1421",
+        "symbol": "ossl_bignum_modp_6144_q"
+      },
+      {
+        "bits": 8192,
+        "bytes": 1024,
+        "limbs": 128,
+        "sha256": "39ab4feab950a3128fb71accb9fc3965d857012e081998a85996e3ea8b3c3bcf",
+        "source": "crypto/bn/bn_dh.c:1422",
+        "symbol": "ossl_bignum_modp_8192_p"
+      },
+      {
+        "bits": 8191,
+        "bytes": 1024,
+        "limbs": 128,
+        "sha256": "f057944ee2943fe085b350a3e9ea8e107076148c0862f99537f562af26adfc5f",
+        "source": "crypto/bn/bn_dh.c:1423",
+        "symbol": "ossl_bignum_modp_8192_q"
+      }
+    ],
+    "counts": {
+      "bytes": 13536,
+      "constants": 32,
+      "limbs": 1692,
+      "named_groups": 14
+    },
+    "named_groups": [
+      {
+        "acquired_by": "DH_new_by_nid(NID_ffdhe2048)",
+        "bits_g": 2,
+        "bits_p": 2048,
+        "bits_q": 2047,
+        "family": "ffdhe",
+        "g": "ossl_bignum_const_2",
+        "group": "ffdhe2048",
+        "keylength": 225,
+        "name": "SN_ffdhe2048",
+        "nbits": 2048,
+        "p": "ossl_bignum_ffdhe2048_p",
+        "q": "ossl_bignum_ffdhe2048_q",
+        "uid": "NID_ffdhe2048"
+      },
+      {
+        "acquired_by": "DH_new_by_nid(NID_ffdhe3072)",
+        "bits_g": 2,
+        "bits_p": 3072,
+        "bits_q": 3071,
+        "family": "ffdhe",
+        "g": "ossl_bignum_const_2",
+        "group": "ffdhe3072",
+        "keylength": 275,
+        "name": "SN_ffdhe3072",
+        "nbits": 3072,
+        "p": "ossl_bignum_ffdhe3072_p",
+        "q": "ossl_bignum_ffdhe3072_q",
+        "uid": "NID_ffdhe3072"
+      },
+      {
+        "acquired_by": "DH_new_by_nid(NID_ffdhe4096)",
+        "bits_g": 2,
+        "bits_p": 4096,
+        "bits_q": 4095,
+        "family": "ffdhe",
+        "g": "ossl_bignum_const_2",
+        "group": "ffdhe4096",
+        "keylength": 325,
+        "name": "SN_ffdhe4096",
+        "nbits": 4096,
+        "p": "ossl_bignum_ffdhe4096_p",
+        "q": "ossl_bignum_ffdhe4096_q",
+        "uid": "NID_ffdhe4096"
+      },
+      {
+        "acquired_by": "DH_new_by_nid(NID_ffdhe6144)",
+        "bits_g": 2,
+        "bits_p": 6144,
+        "bits_q": 6143,
+        "family": "ffdhe",
+        "g": "ossl_bignum_const_2",
+        "group": "ffdhe6144",
+        "keylength": 375,
+        "name": "SN_ffdhe6144",
+        "nbits": 6144,
+        "p": "ossl_bignum_ffdhe6144_p",
+        "q": "ossl_bignum_ffdhe6144_q",
+        "uid": "NID_ffdhe6144"
+      },
+      {
+        "acquired_by": "DH_new_by_nid(NID_ffdhe8192)",
+        "bits_g": 2,
+        "bits_p": 8192,
+        "bits_q": 8191,
+        "family": "ffdhe",
+        "g": "ossl_bignum_const_2",
+        "group": "ffdhe8192",
+        "keylength": 400,
+        "name": "SN_ffdhe8192",
+        "nbits": 8192,
+        "p": "ossl_bignum_ffdhe8192_p",
+        "q": "ossl_bignum_ffdhe8192_q",
+        "uid": "NID_ffdhe8192"
+      },
+      {
+        "acquired_by": "DH_new_by_nid(NID_modp_1536)",
+        "bits_g": 2,
+        "bits_p": 1536,
+        "bits_q": 1535,
+        "family": "modp",
+        "g": "ossl_bignum_const_2",
+        "group": "modp_1536",
+        "keylength": 200,
+        "name": "SN_modp_1536",
+        "nbits": 1536,
+        "p": "ossl_bignum_modp_1536_p",
+        "q": "ossl_bignum_modp_1536_q",
+        "uid": "NID_modp_1536"
+      },
+      {
+        "acquired_by": "DH_new_by_nid(NID_modp_2048)",
+        "bits_g": 2,
+        "bits_p": 2048,
+        "bits_q": 2047,
+        "family": "modp",
+        "g": "ossl_bignum_const_2",
+        "group": "modp_2048",
+        "keylength": 225,
+        "name": "SN_modp_2048",
+        "nbits": 2048,
+        "p": "ossl_bignum_modp_2048_p",
+        "q": "ossl_bignum_modp_2048_q",
+        "uid": "NID_modp_2048"
+      },
+      {
+        "acquired_by": "DH_new_by_nid(NID_modp_3072)",
+        "bits_g": 2,
+        "bits_p": 3072,
+        "bits_q": 3071,
+        "family": "modp",
+        "g": "ossl_bignum_const_2",
+        "group": "modp_3072",
+        "keylength": 275,
+        "name": "SN_modp_3072",
+        "nbits": 3072,
+        "p": "ossl_bignum_modp_3072_p",
+        "q": "ossl_bignum_modp_3072_q",
+        "uid": "NID_modp_3072"
+      },
+      {
+        "acquired_by": "DH_new_by_nid(NID_modp_4096)",
+        "bits_g": 2,
+        "bits_p": 4096,
+        "bits_q": 4095,
+        "family": "modp",
+        "g": "ossl_bignum_const_2",
+        "group": "modp_4096",
+        "keylength": 325,
+        "name": "SN_modp_4096",
+        "nbits": 4096,
+        "p": "ossl_bignum_modp_4096_p",
+        "q": "ossl_bignum_modp_4096_q",
+        "uid": "NID_modp_4096"
+      },
+      {
+        "acquired_by": "DH_new_by_nid(NID_modp_6144)",
+        "bits_g": 2,
+        "bits_p": 6144,
+        "bits_q": 6143,
+        "family": "modp",
+        "g": "ossl_bignum_const_2",
+        "group": "modp_6144",
+        "keylength": 375,
+        "name": "SN_modp_6144",
+        "nbits": 6144,
+        "p": "ossl_bignum_modp_6144_p",
+        "q": "ossl_bignum_modp_6144_q",
+        "uid": "NID_modp_6144"
+      },
+      {
+        "acquired_by": "DH_new_by_nid(NID_modp_8192)",
+        "bits_g": 2,
+        "bits_p": 8192,
+        "bits_q": 8191,
+        "family": "modp",
+        "g": "ossl_bignum_const_2",
+        "group": "modp_8192",
+        "keylength": 400,
+        "name": "SN_modp_8192",
+        "nbits": 8192,
+        "p": "ossl_bignum_modp_8192_p",
+        "q": "ossl_bignum_modp_8192_q",
+        "uid": "NID_modp_8192"
+      },
+      {
+        "acquired_by": "DH_get_1024_160()",
+        "bits_g": 1024,
+        "bits_p": 1024,
+        "bits_q": 160,
+        "family": "rfc5114",
+        "g": "ossl_bignum_dh1024_160_g",
+        "group": "dh1024_160",
+        "keylength": 0,
+        "name": "dh_1024_160",
+        "nbits": 1024,
+        "p": "ossl_bignum_dh1024_160_p",
+        "q": "ossl_bignum_dh1024_160_q",
+        "uid": "1"
+      },
+      {
+        "acquired_by": "DH_get_2048_224()",
+        "bits_g": 2048,
+        "bits_p": 2048,
+        "bits_q": 224,
+        "family": "rfc5114",
+        "g": "ossl_bignum_dh2048_224_g",
+        "group": "dh2048_224",
+        "keylength": 0,
+        "name": "dh_2048_224",
+        "nbits": 2048,
+        "p": "ossl_bignum_dh2048_224_p",
+        "q": "ossl_bignum_dh2048_224_q",
+        "uid": "2"
+      },
+      {
+        "acquired_by": "DH_get_2048_256()",
+        "bits_g": 2046,
+        "bits_p": 2048,
+        "bits_q": 256,
+        "family": "rfc5114",
+        "g": "ossl_bignum_dh2048_256_g",
+        "group": "dh2048_256",
+        "keylength": 0,
+        "name": "dh_2048_256",
+        "nbits": 2048,
+        "p": "ossl_bignum_dh2048_256_p",
+        "q": "ossl_bignum_dh2048_256_q",
+        "uid": "3"
+      }
+    ]
+  },
+  "generator": "forensics/tools/gen_bn_dh.py",
+  "inputs": [
+    {
+      "name": "authority-symbols",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+      "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+    },
+    {
+      "name": "authority-source-bn-dh",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/bn/bn_dh.c",
+      "sha256": "f9b34917f64a97c8df399fdaf56d3f41cdcb38ceeaa359e0db47ca53688f8e4b"
+    },
+    {
+      "name": "authority-source-ffc-dh",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/ffc/ffc_dh.c",
+      "sha256": "95ee6506923b0ff20cd340333a25e65ed4f0e629e59ab70a1d0f75e2f182157c"
+    }
+  ],
+  "kind": "bn-dh",
+  "schema": "openssl-rs/atlas/bn-dh/v1"
+}

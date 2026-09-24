@@ -199,8 +199,10 @@ LEGACY_HANDOFFS: list[tuple[tuple[str, ...], str, str]] = [
     (("EVP_xcbc",), "crypto/aes/",
      "`e_xcbc_d.c`, which is the XCBC-MAC construction over the AES-CBC primitive"),
     (("EVP_md4",), "crypto/md4/", "`legacy_md4.c`"),
-    (("EVP_md5",), "crypto/md5/",
-     "`legacy_md5.c` and `legacy_md5_sha1.c`, the second an MD5-then-SHA1 composition"),
+    # `EVP_md5` and `EVP_md5_sha1` were the tenth and eleventh rows here until D293 landed
+    # them: `legacy_md5.c` and `legacy_md5_sha1.c` are transcribed in `src/evp/legacy_md5.rs`,
+    # so the row is retired rather than left covering a symbol the crate now defines -- which
+    # `BLOCKED_HANDOFFS`' own fail-closed rule refuses. `EVP_md4` and `EVP_mdc2` stay.
     (("EVP_mdc2",), "crypto/mdc2/", "`legacy_mdc2.c`, itself over `crypto/des/`"),
     (("EVP_sha",), "crypto/sha/",
      "`legacy_sha.c`, which builds every SHA-1, SHA-2, SHA-3 and SHAKE static in one table"),
@@ -264,179 +266,7 @@ LEGACY_HANDOFFS: list[tuple[tuple[str, ...], str, str]] = [
 BLOCKED_HANDOFFS: list[BlockedHandoff] = [
     BlockedHandoff(
         symbols=(
-            "EVP_PKEY_get0_RSA", "EVP_PKEY_get1_RSA", "EVP_PKEY_set1_RSA", "EVP_PKEY_get0_DSA",
-            "EVP_PKEY_get1_DSA", "EVP_PKEY_set1_DSA", "EVP_PKEY_get0_DH", "EVP_PKEY_get1_DH",
-            "EVP_PKEY_set1_DH", "EVP_PKEY_get0_EC_KEY", "EVP_PKEY_get1_EC_KEY",
-            "EVP_PKEY_set1_EC_KEY"
-        ),
-        binding_phase=8,
-        blocked_by=(
-            Blocker("RSA", "types.h", 155, "type", 8),
-            Blocker("DSA", "types.h", 150, "type", 8),
-            Blocker("DH", "types.h", 146, "type", 8),
-            Blocker("EC_KEY", "types.h", 163, "type", 8),
-            Blocker("evp_pkey_get_legacy", "crypto/evp/p_lib.c", 2154, "internal", 8),
-            Blocker("evp_pkey_copy_downgraded", "crypto/evp/p_lib.c", 2066, "internal", 8),
-        ),
-        reason=(
-            "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their "
-                "file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; "
-                "`crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is "
-                "`evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an "
-                "`RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor "
-                "the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and "
-                "so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), "
-                "`EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` "
-                "(`p_lib.c:905`, `:911`) and "
-                "`ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` "
-                "(`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings "
-                "call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` "
-                "row (Phase 8, D193); this row is the twelve exports that sit behind it."
-        ),
-        note=(
-            "the four low-level key types are declared only in the weak `types.h`, so they carry "
-                "no authority phase of their own; `evp_pkey_get_legacy`, whose phase 8 the atlas and "
-                "the prerequisites row agree on, corroborates them. The set is the type family plus "
-                "the one function whose body needs it."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "EVP_PKEY_get0_hmac", "EVP_PKEY_get0_poly1305", "EVP_PKEY_get0_siphash"
-        ),
-        binding_phase=8,
-        blocked_by=(
-            Blocker("evp_pkey_get_legacy", "crypto/evp/p_lib.c", 2154, "internal", 8),
-            Blocker("evp_pkey_copy_downgraded", "crypto/evp/p_lib.c", 2066, "internal", 8),
-        ),
-        reason=(
-            "each is `pkey->type == <type> ? evp_pkey_get_legacy(pkey) : NULL` and then reads "
-                "`os->length`/`os->data` off the answer (`crypto/evp/p_lib.c:843`, `:859`, `:877`). "
-                "`evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) is the whole dependency and it is "
-                "Phase 8's: it constructs a legacy key with `evp_pkey_copy_downgraded` (`:2066`) and "
-                "caches it against an `ameth` the crate cannot find. Same row in "
-                "`forensics/prerequisites.json`, same stratum."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "EVP_PKEY_assign",
-        ),
-        binding_phase=8,
-        blocked_by=(
-            Blocker("EC_KEY_get0_group", "crypto/ec/ec_key.c", 711, "exported", 8),
-            Blocker("EC_GROUP_get_curve_name", "crypto/ec/ec_lib.c", 495, "exported", 8),
-        ),
-        reason=(
-            "`crypto/evp/p_lib.c:791` calls `EVP_PKEY_type` (`:797`, the `standard_methods[]` "
-                "walk `crypto/evp/evp_pkey_type.c:63` is the export for), `EC_KEY_get0_group` and "
-                "`EC_GROUP_get_curve_name` (`:801`, `:803`) on the incoming key, and then "
-                "`detect_foreign_key` -> `ossl_dh_is_foreign` (`:819`, `:782`). Every one is Phase "
-                "8's; the `EVP_PKEY_set_type` call between them is landed. "
-                "`EVP_PKEY_assign_RSA`/`_DSA`/`_DH`/`_EC_KEY` are `#define`s over this function "
-                "(`include/openssl/evp.h`), so the four `set1_*` names in the first row wait on it "
-                "too."
-        ),
-        note=(
-            "`EVP_PKEY_type` is this stratum's own withheld export and `ossl_dh_is_foreign` has "
-                "no recorded owner phase, so the two Phase-8 exports that can carry the claim are "
-                "named; `EVP_PKEY_set_type`, the call between them, is landed."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "EVP_PKEY_encrypt_old", "EVP_PKEY_decrypt_old"
-        ),
-        binding_phase=8,
-        blocked_by=(
-            Blocker("RSA_public_encrypt", "crypto/rsa/rsa_crpt.c", 33, "exported", 8),
-            Blocker("RSA_private_decrypt", "crypto/rsa/rsa_crpt.c", 45, "exported", 8),
-            Blocker("evp_pkey_get_legacy", "crypto/evp/p_lib.c", 2154, "internal", 8),
-        ),
-        reason=(
-            "`crypto/evp/p_enc.c:32` and `crypto/evp/p_dec.c:32` both take the low-level key with "
-                "`evp_pkey_get0_RSA_int` (`crypto/evp/p_legacy.c:40`, which is `evp_pkey_get_legacy` "
-                "behind a type test) and then call the primitive -- `RSA_public_encrypt` "
-                "(`p_enc.c:36`) and `RSA_private_decrypt` (`p_dec.c:36`). Both the accessor and the "
-                "two primitives are Phase 8's."
-        ),
-        note=(
-            "`evp_pkey_get0_RSA_int` has no recorded owner phase, so its own dependency "
-                "`evp_pkey_get_legacy` is named in its place; the two primitives are the direct "
-                "calls."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "EVP_PKEY_get_ec_point_conv_form", "EVP_PKEY_get_field_type"
-        ),
-        binding_phase=8,
-        blocked_by=(
-            Blocker("EC_KEY_get_conv_form", "crypto/ec/ec_key.c", 855, "exported", 8),
-            Blocker("EC_KEY_get0_group", "crypto/ec/ec_key.c", 711, "exported", 8),
-            Blocker("EC_GROUP_get_field_type", "crypto/ec/ec_lib.c", 505, "exported", 8),
-        ),
-        reason=(
-            "each opens with `pkey->keymgmt == NULL || pkey->keydata == NULL` and answers its "
-                "legacy arm -- `EVP_PKEY_get0_EC_KEY` then `EC_KEY_get_conv_form` "
-                "(`crypto/evp/p_lib.c:2472`, `:2477`) or `EC_KEY_get0_group` then "
-                "`EC_GROUP_get_field_type` (`:2512`, `:2517`, `:2521`). The provider arm above those "
-                "needs nothing foreign, but the legacy arm is compiled in and the crate's "
-                "`EVP_PKEY_get0_EC_KEY` is itself withheld in this stratum, so both are Phase 8's."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "EVP_PKEY_type",
-        ),
-        binding_phase=8,
-        blocked_by=(
-            Blocker("ossl_rsa_asn1_meths", "crypto/rsa/rsa_ameth.c", 968, "internal", 8),
-        ),
-        reason=(
-            "`crypto/evp/evp_pkey_type.c:63` is `EVP_PKEY_asn1_find(&e, type)` and then "
-                "`ameth->pkey_id`. The function is landed -- `src/evp/pkey_asn1.rs` holds it as the "
-                "`pub(crate) evp_pkey_type` helper `EVP_PKEY_get_base_id` calls (D193) -- and the "
-                "export is withheld because its whole answer is the `standard_methods[]` table "
-                "`crypto/asn1/ameth_lib.c:54` fills from `crypto/asn1/standard_methods.h`, whose "
-                "twelve `ossl_<alg>_asn1_meth` objects are Phase 8's. The `ENGINE_finish(e)` at `:75` "
-                "is the `*pe = NULL` mechanism D181 records, not a second blocker."
-        ),
-        note=(
-            "`ossl_rsa_asn1_meths` is the object the prerequisite row names as the first of the "
-                "twelve `standard_methods[]` entries; the other eleven are the same stratum, same "
-                "table, same answer, and no record gives any of them a phase of its own."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "EVP_PKEY_print_public", "EVP_PKEY_print_private", "EVP_PKEY_print_params",
-            "EVP_PKEY_print_public_fp", "EVP_PKEY_print_private_fp",
-            "EVP_PKEY_print_params_fp"
-        ),
-        binding_phase=10,
-        blocked_by=(
-            Blocker("OSSL_ENCODER_CTX_new_for_pkey", "crypto/encode_decode/encoder_pkey.c", 342, "exported", 10),
-            Blocker("OSSL_ENCODER_CTX_get_num_encoders", "crypto/encode_decode/encoder_lib.c", 345, "exported", 10),
-            Blocker("OSSL_ENCODER_to_bio", "crypto/encode_decode/encoder_lib.c", 68, "exported", 10),
-            Blocker("ossl_rsa_asn1_meths", "crypto/rsa/rsa_ameth.c", 968, "internal", 8),
-        ),
-        reason=(
-            "the three `_fp` twins are `BIO_new_fp` around the three others, and all six reach "
-                "`print_pkey` (`crypto/evp/p_lib.c:1196`), whose first statement is "
-                "`OSSL_ENCODER_CTX_new_for_pkey` (`:1211`) followed by "
-                "`OSSL_ENCODER_CTX_get_num_encoders` (`:1213`) and `OSSL_ENCODER_to_bio` (`:1214`). "
-                "Those three are `encoder.h`'s and Phase 10's, and the call is unconditional -- it is "
-                "not the legacy fallback that decides whether the export can be written. The fallback "
-                "arm below it (`pkey->ameth->pub_print`/`priv_print`/`param_print`, at `:1233`, "
-                "`:1241`, `:1249`) is Phase 8's ameth *contents*, so Phase 8 also feeds these six; "
-                "the struct and its three function-pointer fields are already declared, which is why "
-                "Phase 10 is the binding one."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "EVP_PKEY_set1_engine", "EVP_PKEY_get0_engine"
+            "EVP_PKEY_get0_engine", "EVP_PKEY_set1_engine",
         ),
         binding_phase=13,
         blocked_by=(
@@ -445,85 +275,16 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
             Blocker("ENGINE_finish", "crypto/engine/eng_init.c", 106, "exported", 13),
         ),
         reason=(
-            "`crypto/evp/p_lib.c:732` calls `ENGINE_init` (`:735`), `ENGINE_get_pkey_meth` "
-                "(`:739`) and `ENGINE_finish` (`:736`, `:745`) and writes `pkey->pmeth_engine`; "
-                "`:750` reads `pkey->engine`. `ENGINE` is `engine.h`'s and Phase 13's, and this "
-                "crate's `EvpPkey` has neither field -- they are absent with the rest of the legacy "
-                "attribute block (`src/evp/pkey.rs` module doc), so the pair is blocked on Phase 13 "
-                "and on nothing else."
+            "`crypto/evp/p_lib.c:732` calls `ENGINE_init` (`:735`), `ENGINE_get_pkey_meth` (`:739`) and "
+            "`ENGINE_finish` (`:736`, `:745`) and writes `pkey->pmeth_engine`; `:750` reads "
+            "`pkey->engine`. `ENGINE` is `engine.h`'s and Phase 13's, and this crate's `EvpPkey` has "
+            "neither field -- they are absent with the rest of the legacy attribute block "
+            "(`src/evp/pkey.rs` module doc), so the pair is blocked on Phase 13 and on nothing else."
         ),
     ),
     BlockedHandoff(
         symbols=(
-            "d2i_PublicKey", "d2i_KeyParams", "d2i_KeyParams_bio"
-        ),
-        binding_phase=8,
-        blocked_by=(
-            Blocker("d2i_RSAPublicKey", "crypto/rsa/rsa_asn1.c", 117, "exported", 8),
-            Blocker("d2i_DSAPublicKey", "crypto/dsa/dsa_asn1.c", 67, "exported", 8),
-            Blocker("o2i_ECPublicKey", "crypto/ec/ec_asn1.c", 1121, "exported", 8),
-            Blocker("evp_pkey_copy_downgraded", "crypto/evp/p_lib.c", 2066, "internal", 8),
-        ),
-        reason=(
-            "`d2i_PublicKey` (`crypto/asn1/d2i_pu.c:28`) is a `switch` on "
-                "`EVP_PKEY_get_base_id(ret)` whose three arms call `d2i_RSAPublicKey` (`:52`), "
-                "`d2i_DSAPublicKey` (`:59`) and `o2i_ECPublicKey` (`:71`), plus "
-                "`evp_pkey_copy_downgraded` (`:42`) for the provided-EC input. `d2i_KeyParams` "
-                "(`crypto/asn1/d2i_param.c:18`) refuses unless `ret->ameth != NULL && "
-                "ret->ameth->param_decode != NULL` (`:31`) and then calls it, and `d2i_KeyParams_bio` "
-                "(`:49`) is a `BUF_MEM` read around it. Every one of those names is Phase 8's; the "
-                "`asn1_d2i_read_bio`/`EVP_PKEY_set_type` calls are landed."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "d2i_PrivateKey", "d2i_PrivateKey_ex", "d2i_AutoPrivateKey",
-            "d2i_AutoPrivateKey_ex"
-        ),
-        binding_phase=10,
-        blocked_by=(
-            Blocker("OSSL_DECODER_CTX_new_for_pkey", "crypto/encode_decode/decoder_pkey.c", 821, "exported", 10),
-            Blocker("ossl_rsa_asn1_meths", "crypto/rsa/rsa_ameth.c", 968, "internal", 8),
-        ),
-        reason=(
-            "all four are `d2i_PrivateKey_decoder` then, if it answered NULL, "
-                "`ossl_d2i_PrivateKey_legacy` (`crypto/asn1/d2i_pr.c:172`-`:175`, `:247`-`:250`). The "
-                "decoder builds an `OSSL_DECODER_CTX` with `OSSL_DECODER_CTX_new_for_pkey` (`:78`), "
-                "which is `decoder.h`'s and Phase 10's and is called **first**; the fallback reads "
-                "`ret->ameth->old_priv_decode`/`priv_decode`/`priv_decode_ex` (`:130`, `:132`) and "
-                "calls `evp_pkcs82pkey_legacy` (`crypto/evp/evp_pkey.c:52`-`:59` is the same fields "
-                "again), which is Phase 8's. So both phases feed these four and Phase 10 is the "
-                "binding one: an export cannot be half-written, and the half that runs first is the "
-                "decoder."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "i2d_PrivateKey", "i2d_PKCS8PrivateKey", "i2d_PublicKey", "i2d_KeyParams",
-            "i2d_KeyParams_bio"
-        ),
-        binding_phase=10,
-        blocked_by=(
-            Blocker("OSSL_ENCODER_CTX_new_for_pkey", "crypto/encode_decode/encoder_pkey.c", 342, "exported", 10),
-            Blocker("OSSL_ENCODER_to_data", "crypto/encode_decode/encoder_lib.c", 119, "exported", 10),
-            Blocker("OSSL_ENCODER_CTX_free", "crypto/encode_decode/encoder_meth.c", 645, "exported", 10),
-            Blocker("ossl_rsa_asn1_meths", "crypto/rsa/rsa_ameth.c", 968, "internal", 8),
-        ),
-        reason=(
-            "all five reach `i2d_provided` (`crypto/asn1/i2d_evp.c:33`) whenever the key is "
-                "provided, and that function is `OSSL_ENCODER_CTX_new_for_pkey` (`:53`) + "
-                "`OSSL_ENCODER_to_data` (`:59`) + `OSSL_ENCODER_CTX_free` (`:64`), `encoder.h`'s and "
-                "Phase 10's. Their non-provided arms are Phase 8's as well -- `i2d_PublicKey`'s "
-                "`switch` calls `i2d_RSAPublicKey`/`i2d_DSAPublicKey`/`i2o_ECPublicKey` (`:159`, "
-                "`:162`, `:165`) through `EVP_PKEY_get0_RSA`/`_DSA`/`_EC_KEY`, and "
-                "`i2d_PrivateKey_impl`'s calls `a->ameth->old_priv_encode` (`:106`) and "
-                "`EVP_PKEY2PKCS8` (`crypto/evp/evp_pkey.c:129`, itself an encoder context) -- so "
-                "Phase 8 feeds these five too and Phase 10 is the binding one."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "ASN1_item_sign_ex", "ASN1_item_verify_ex"
+            "ASN1_item_sign_ex", "ASN1_item_verify_ex",
         ),
         binding_phase=11,
         blocked_by=(
@@ -531,138 +292,14 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
             Blocker("ASN1_item_verify_ctx", "crypto/asn1/a_verify.c", 111, "exported", 11),
         ),
         reason=(
-            "`ASN1_item_sign_ex` (`crypto/asn1/a_sign.c:121`) builds its digest context and then "
-                "hands it to `ASN1_item_sign_ctx` (`:138`); `ASN1_item_verify_ex` "
-                "(`crypto/asn1/a_verify.c:95`) is the same shape around `ASN1_item_verify_ctx` "
-                "(`:104`). Both delegates are declared in `x509.h`, are defined in those same two "
-                "files (`a_sign.c:146`, `a_verify.c:111`) and are Phase 11's exports, so the Phase 5 "
-                "-> 7 hand-off cannot be completed here; `forensics/prerequisites.json` carries the "
-                "pair with this reason and `RT-EVP-PKEY`'s `NOT_MEASURED` lines name them. "
-                "`evp_md_ctx_new_ex`, the other callee, is `crypto/evp/digest.c`'s own internal and "
-                "belongs with this stratum."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "EVP_PKEY_meth_find", "EVP_PKEY_meth_get_count", "EVP_PKEY_meth_get0"
-        ),
-        binding_phase=8,
-        blocked_by=(
-            Blocker("ossl_rsa_pkey_method", "crypto/rsa/rsa_pmeth.c", 851, "internal", 8),
-        ),
-        reason=(
-            "`EVP_PKEY_meth_find` (`crypto/evp/pmeth_lib.c:106`) searches `standard_methods[]` "
-                "(`:54`) with `OBJ_bsearch_pmeth_func` (`:114`); `EVP_PKEY_meth_get_count` (`:646`) "
-                "answers `OSSL_NELEM(standard_methods)` plus the application stack; "
-                "`EVP_PKEY_meth_get0` (`:655`) indexes the table outright before it touches that "
-                "stack. The ten `ossl_<alg>_pkey_method` objects the table holds are Phase 8's "
-                "contents (D163, D165, D184), and the application half of the registry is already "
-                "landed and courted -- so Phase 8 is the only phase that retires these three, and a "
-                "stub would answer the application count where the authority answers twelve more."
-        ),
-        note=(
-            "the same shape as row 6: `ossl_rsa_pkey_method` is the first of the ten "
-                "`standard_methods[]` `EVP_PKEY_METHOD` objects the prerequisite row names."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "EVP_PKEY_CTX_get_algor",
-        ),
-        binding_phase=11,
-        blocked_by=(
-            Blocker("d2i_X509_ALGOR", "crypto/asn1/x_algor.c", 26, "exported", 11),
-        ),
-        reason=(
-            "`crypto/evp/evp_lib.c:1455` decodes the provider's "
-                "`OSSL_SIGNATURE_PARAM_ALGORITHM_ID` answer with `d2i_X509_ALGOR` (`:1490`), which is "
-                "`crypto/asn1/x_algor.c:26`'s generated `IMPLEMENT_ASN1_FUNCTIONS` export and Phase "
-                "11's. `forensics/prerequisites.json` carries `d2i_X509_ALGOR` with this coordinate; "
-                "D190 recorded the withholding and D193 restated it."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "EVP_SealInit",
-        ),
-        binding_phase=9,
-        blocked_by=(
-            Blocker("RAND_priv_bytes_ex", "crypto/rand/rand_lib.c", 420, "exported", 9),
-        ),
-        reason=(
-            "`crypto/evp/p_seal.c:42` takes the session key from `EVP_CIPHER_CTX_rand_key` and "
-                "`:46` fills the IV with `RAND_priv_bytes_ex(libctx, iv, len, 0)`; `rand.h` is Phase "
-                "9's, and `EVP_CIPHER_CTX_rand_key` (`crypto/evp/evp_enc.c:1751`, `:1764`) is itself "
-                "withheld in this stratum on the same call -- which is why the deferral is Phase 9 "
-                "and not a same-stratum one. `forensics/prerequisites.json`'s `RAND_priv_bytes_ex` "
-                "row is this dependency."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "EVP_read_pw_string", "EVP_read_pw_string_min"
-        ),
-        binding_phase=13,
-        blocked_by=(
-            Blocker("UI_new", "crypto/ui/ui_lib.c", 18, "exported", 13),
-            Blocker("UI_add_input_string", "crypto/ui/ui_lib.c", 196, "exported", 13),
-            Blocker("UI_add_verify_string", "crypto/ui/ui_lib.c", 226, "exported", 13),
-            Blocker("UI_process", "crypto/ui/ui_lib.c", 476, "exported", 13),
-            Blocker("UI_free", "crypto/ui/ui_lib.c", 71, "exported", 13),
-        ),
-        reason=(
-            "`EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`) is `UI_new` (`:56`), "
-                "`UI_add_input_string` (`:62`), `UI_add_verify_string` (`:70`), `UI_process` (`:78`) "
-                "and `UI_free` (`:84`), and `ui.h` is Phase 13's. `EVP_read_pw_string` (`:47`) is its "
-                "one-line spelling. `EVP_get_pw_prompt`/`EVP_set_pw_prompt` are this file's too and "
-                "did land: they touch the file's own eighty-byte static and no `UI` at all."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "EVP_CIPHER_CTX_get_algor",
-        ),
-        binding_phase=11,
-        blocked_by=(
-            Blocker("d2i_X509_ALGOR", "crypto/asn1/x_algor.c", 26, "exported", 11),
-        ),
-        reason=(
-            "`crypto/evp/evp_lib.c:1337` is `EVP_PKEY_CTX_get_algor`'s cipher-side twin and "
-                "decodes the same `OSSL_SIGNATURE_PARAM_ALGORITHM_ID` octet string with the same "
-                "`d2i_X509_ALGOR` (`:1372`), `crypto/asn1/x_algor.c:26`'s and Phase 11's. One "
-                "`forensics/prerequisites.json` row covers both accessors."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "EVP_CIPHER_CTX_rand_key",
-        ),
-        binding_phase=9,
-        blocked_by=(
-            Blocker("RAND_priv_bytes_ex", "crypto/rand/rand_lib.c", 420, "exported", 9),
-        ),
-        reason=(
-            "`crypto/evp/evp_enc.c:1751` falls through to `RAND_priv_bytes_ex(libctx, key, kl, "
-                "0)` (`:1764`) for every cipher without `EVP_CIPH_RAND_KEY`, which is every provider "
-                "cipher; `rand.h` is Phase 9's. `EVP_SealInit` above is the caller that made this "
-                "visible, and the `RAND_priv_bytes_ex` row in `forensics/prerequisites.json` names "
-                "both."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "BIO_f_reliable",
-        ),
-        binding_phase=9,
-        blocked_by=(
-            Blocker("RAND_bytes", "crypto/rand/rand_lib.c", 500, "exported", 9),
-        ),
-        reason=(
-            "`crypto/evp/bio_ok.c:127` is `return &methods_ok`, and `methods_ok` (`:112`) is a "
-                "`BIO_METHOD` whose write path is `ok_write` (`:254`) -> `sig_out` -- and `sig_out` "
-                "fills the record's digest half with `RAND_bytes(md_data, md_size)` (`:456`). "
-                "`rand.h` is Phase 9's, and the method struct cannot be published with a callback "
-                "that has no callee, so the export is withheld rather than the table partial."
+            "`ASN1_item_sign_ex` (`crypto/asn1/a_sign.c:121`) builds its digest context and then hands "
+            "it to `ASN1_item_sign_ctx` (`:138`); `ASN1_item_verify_ex` (`crypto/asn1/a_verify.c:95`) is "
+            "the same shape around `ASN1_item_verify_ctx` (`:104`). Both delegates are declared in "
+            "`x509.h`, are defined in those same two files (`a_sign.c:146`, `a_verify.c:111`) and are "
+            "Phase 11's exports, so the Phase 5 -> 7 hand-off cannot be completed here; "
+            "`forensics/prerequisites.json` carries the pair with this reason and `RT-EVP-PKEY`'s "
+            "`NOT_MEASURED` lines name them. `evp_md_ctx_new_ex`, the other callee, is "
+            "`crypto/evp/digest.c`'s own internal and belongs with this stratum."
         ),
     ),
     BlockedHandoff(
@@ -674,140 +311,293 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
             Blocker("X509V3_get_value_bool", "crypto/x509/v3_utl.c", 266, "exported", 11),
         ),
         reason=(
-            "`crypto/evp/evp_cnf.c:69` registers `alg_module_init` (`:24`), whose `fips_mode` arm "
-                "reads the section value with `X509V3_get_value_bool` (`:46`, defined at "
-                "`crypto/x509/v3_utl.c:266` and declared in `x509v3.h`, Phase 11's). The other three "
-                "calls in the handler -- `CONF_imodule_get_value`, `NCONF_get_section`, "
-                "`evp_set_default_properties_int` -- are landed, so Phase 11 is the only blocker, and "
-                "it is the same one the subphase plan names for this name."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "OSSL_HPKE_get_grease_value",
-        ),
-        binding_phase=9,
-        blocked_by=(
-            Blocker("RAND_bytes_ex", "crypto/rand/rand_lib.c", 463, "exported", 9),
-        ),
-        reason=(
-            "`crypto/hpke/hpke.c:1377`'s only observable is whether the GREASE ciphertext gets "
-                "filled, and it is filled by `RAND_bytes_ex(libctx, ct, ctlen, 0)` (`:1433`) -- "
-                "`rand.h`, Phase 9. Its random-suite arm additionally reaches "
-                "`ossl_rand_uniform_uint32` (`crypto/hpke/hpke_util.c:198`, `:220`, `:243`), the same "
-                "stratum. D195 recorded the withholding and `forensics/prerequisites.json`'s "
-                "`RAND_bytes_ex` row names both coordinates."
-        ),
-        note=(
-            "`ossl_rand_uniform_uint32` is internal with no recorded owner phase; `RAND_bytes_ex` "
-                "is the binding call and is Phase 9's."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "PEM_do_header", "PEM_bytes_read_bio", "PEM_bytes_read_bio_secmem",
-            "PEM_ASN1_read", "PEM_ASN1_read_bio", "PEM_ASN1_write", "PEM_ASN1_write_bio",
-            "PEM_ASN1_write_bio_ctx"
-        ),
-        binding_phase=13,
-        blocked_by=(
-            Blocker("EVP_md5", "crypto/evp/legacy_md5.c", 31, "exported", 13),
-            Blocker("RAND_bytes", "crypto/rand/rand_lib.c", 500, "exported", 9),
-        ),
-        reason=(
-            "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with "
-                "`EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is "
-                "`crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- "
-                "which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and "
-                "not this stratum's even though `evp.h` declares it. The other seven reach it through "
-                "one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) "
-                "call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` "
-                "(`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` "
-                "(`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio (`:303`, "
-                "`:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm calls "
-                "`EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). So "
-                "Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "PEM_def_callback",
-        ),
-        binding_phase=13,
-        blocked_by=(
-            Blocker("UI_new", "crypto/ui/ui_lib.c", 18, "exported", 13),
-        ),
-        reason=(
-            "`crypto/pem/pem_lib.c:36`'s `userdata == NULL` arm is `EVP_read_pw_string_min(buf, "
-                "min_len, num, prompt, rwflag)` (`:62`), the `UI` program two rows above, and `ui.h` "
-                "is Phase 13's. The `userdata != NULL` arm is a `strlen`/`memcpy` with `num` as the "
-                "clamp and needs nothing foreign, but an export cannot be half-written and the arm "
-                "every `PEM_write_*PrivateKey*` caller reaches is the other one. D194 recorded this "
-                "and kept `forensics/prerequisites.json`'s `UI_new` row rather than adding one naming "
-                "`EVP_read_pw_string_min`, which is a Phase-7-owned export and may not appear there."
-        ),
-        note=(
-            "`PEM_def_callback`'s own call is `EVP_read_pw_string_min`, a Phase-7-owned export "
-                "withheld by row 16; the root blocker both share is the `UI` program, and `UI_new` is "
-                "its Phase-13 name."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "PEM_read_bio_PrivateKey", "PEM_read_bio_PrivateKey_ex", "PEM_read_PrivateKey",
-            "PEM_read_PrivateKey_ex", "PEM_read_bio_Parameters", "PEM_read_bio_Parameters_ex",
-            "PEM_write_bio_PrivateKey", "PEM_write_bio_PrivateKey_ex", "PEM_write_PrivateKey",
-            "PEM_write_PrivateKey_ex", "PEM_write_bio_Parameters",
-            "PEM_write_bio_PKCS8PrivateKey", "PEM_write_bio_PKCS8PrivateKey_nid",
-            "PEM_write_PKCS8PrivateKey", "PEM_write_PKCS8PrivateKey_nid"
-        ),
-        binding_phase=13,
-        blocked_by=(
-            Blocker("OSSL_DECODER_CTX_new_for_pkey", "crypto/encode_decode/decoder_pkey.c", 821, "exported", 10),
-            Blocker("OSSL_ENCODER_CTX_new_for_pkey", "crypto/encode_decode/encoder_pkey.c", 342, "exported", 10),
-            Blocker("EVP_md5", "crypto/evp/legacy_md5.c", 31, "exported", 13),
-            Blocker("UI_new", "crypto/ui/ui_lib.c", 18, "exported", 13),
-        ),
-        reason=(
-            "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first "
-                "attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` "
-                "(`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` "
-                "(`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- "
-                "which is the eighth name of the row above and therefore Phase 13. The six writers "
-                "expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose "
-                "encoder call is Phase 10 and whose `legacy:` label reaches "
-                "`PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and "
-                "10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose "
-                "`OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = "
-                "PEM_def_callback` (`:91`) is Phase 13. So Phase 10 is what these fifteen are reached "
-                "through **first** -- which is what 7.5's `NOT_MEASURED` lines say -- and Phase 13 is "
-                "the phase that retires them, because the fallback legs cannot be omitted."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
-            "PEM_write_bio_PrivateKey_traditional",
-        ),
-        binding_phase=13,
-        blocked_by=(
-            Blocker("evp_pkey_copy_downgraded", "crypto/evp/p_lib.c", 2066, "internal", 8),
-            Blocker("OSSL_ENCODER_CTX_new_for_pkey", "crypto/encode_decode/encoder_pkey.c", 342, "exported", 10),
-            Blocker("EVP_md5", "crypto/evp/legacy_md5.c", 31, "exported", 13),
-            Blocker("RAND_bytes", "crypto/rand/rand_lib.c", 500, "exported", 9),
-        ),
-        reason=(
-            "`crypto/pem/pem_pkey.c:342` needs `evp_pkey_copy_downgraded` (`:356`, Phase 8, for "
-                "the provided-key copy), `x->ameth->old_priv_encode`/`x->ameth->pem_str` (`:359`, "
-                "`:364`, Phase 8's ameth contents), the `i2d_PrivateKey` function pointer (`:365`, "
-                "Phase 10) and `PEM_ASN1_write_bio` (`:365`, Phase 13 behind `EVP_md5` and Phase 9 "
-                "behind `RAND_bytes`). Four strata feed it and Phase 13 is the latest, so Phase 13 "
-                "retires it. D194 named this as the one name of the private-key family that needs the "
-                "ameth *before* it needs the encoder, and this row is the four-dependency version of "
-                "that sentence."
+            "`crypto/evp/evp_cnf.c:69` registers `alg_module_init` (`:24`), whose `fips_mode` arm reads "
+            "the section value with `X509V3_get_value_bool` (`:46`, defined at "
+            "`crypto/x509/v3_utl.c:266` and declared in `x509v3.h`, Phase 11's). The other three calls "
+            "in the handler -- `CONF_imodule_get_value`, `NCONF_get_section`, "
+            "`evp_set_default_properties_int` -- are landed, so Phase 11 is the only blocker, and it is "
+            "the same one the subphase plan names for this name."
         ),
     ),
 ]
 
+# ---------------------------------------------------------------------------------------------
+# The third deferral mechanism: a hand-off whose blocker has since landed.
+#
+# `BLOCKED_HANDOFFS` above makes a *structured claim* -- "this export is withheld because file:line
+# calls `X`, and `X` is not in the crate" -- and `blocker_liveness.check_rows` fires the moment `X`
+# lands, because a table that can keep covering a landed blocker can hide the next real gap behind
+# it. The prescription is "retire the row".
+#
+# **Retiring these five rows would be a false statement about this stratum, not a correction of
+# one.** `owning_phase` is the stratum that committed to building the export, and for all twelve
+# names here that is Phase 9: `forensics/phase9-obligations.json` already lists them in its `open`
+# list as hand-offs received from this stratum, and `docs/PHASE-9-SUBPHASES.md` section 9.6 is the
+# row that owes them. Removing the row would move each name into *this* stratum's `open` list and
+# un-seal a stratum whose plan never claimed them; the honest difference is that the *blocker* is
+# gone, not that the hand-off is. So the row is **retargeted** from a blocked claim to an
+# unconditional one -- D173's precedent, "a deferral that had to move" -- and the reason records
+# what landed rather than repeating a claim that no longer holds.
+#
+# The rows are authored as `(symbols, owning_phase, reason)`. They carry no `blocked_by`, so
+# `check_rows` does not run on them and there is nothing left to go stale: an unconditional hand-off
+# is falsified by the owner's ledger, which already counts them, rather than by a file:line.
+# ---------------------------------------------------------------------------------------------
+
+UNBLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
+    (
+        ("EVP_SealInit",),
+        9,
+        "`crypto/evp/p_seal.c:42` takes the session key from `EVP_CIPHER_CTX_rand_key` and `:46` "
+        "fills the IV with `RAND_priv_bytes_ex(libctx, iv, len, 0)`. The `RAND_*` front landed in "
+        "D313, so the blocker this row named is now a landed callee; `EVP_CIPHER_CTX_rand_key` is "
+        "the second name of this group and is owed with it.",
+    ),
+    (
+        ("EVP_CIPHER_CTX_rand_key",),
+        9,
+        "`crypto/evp/evp_enc.c:1751`'s fall-through for every cipher without `EVP_CIPH_RAND_KEY` "
+        "is `RAND_priv_bytes_ex(libctx, key, kl, 0)` (`:1764`), which landed in D313. What remains "
+        "is this stratum's own transcription of the accessor.",
+    ),
+    (
+        ("BIO_f_reliable",),
+        9,
+        "`crypto/evp/bio_ok.c:456`'s `sig_out` fills the record's digest half with "
+        "`RAND_bytes(md_data, md_size)`, which landed in D313. The whole `bio_ok.c` unit is this "
+        "stratum's -- `forensics/prerequisites.json`'s `units` block records it as "
+        "`deferred_to_a_later_stratum` to Phase 9 -- so the export is owed with the unit rather "
+        "than by the stratum that declares `BIO_f_reliable` in `evp.h`.",
+    ),
+    (
+        ("OSSL_HPKE_get_grease_value",),
+        9,
+        "`crypto/hpke/hpke.c:1433` fills the GREASE ciphertext with `RAND_bytes_ex(libctx, ct, "
+        "ctlen, 0)`, and its random-suite arm reaches `ossl_rand_uniform_uint32` "
+        "(`crypto/hpke/hpke_util.c`); both are `crypto/rand/`'s and landed in D313. The remaining "
+        "dependency is this stratum's own HPKE-utility transcription.",
+    ),
+    (
+        (
+            "PEM_do_header", "PEM_bytes_read_bio", "PEM_bytes_read_bio_secmem",
+            "PEM_ASN1_read", "PEM_ASN1_read_bio", "PEM_ASN1_write", "PEM_ASN1_write_bio",
+            "PEM_ASN1_write_bio_ctx",
+        ),
+        9,
+        "`PEM_do_header` derives the block key with `EVP_BytesToKey(cipher->cipher, EVP_md5(), "
+        "...)` (`crypto/pem/pem_lib.c:479`) and the write trio shares `PEM_ASN1_write_bio_internal`'s "
+        "DEK salt `RAND_bytes` (`:386`). Both names this row's reason gave have landed -- `EVP_md5` "
+        "in D293 and the `RAND_*` front in D313 -- so neither is a blocker any longer. **D350 corrects "
+        "what this reason left out:** `PEM_do_header` (`crypto/pem/pem_lib.c:467`) and the write trio "
+        "(`:372`) also call `PEM_def_callback` (`:36-69`), whose own chain is `EVP_read_pw_string_min` "
+        "(`crypto/evp/evp_key.c:52`, Phase 7) -> the `UI_*` objects (`crypto/ui/ui_lib.c`, Phase 13), "
+        "so the eight were blocked on Phase 13 and not on this stratum's transcription alone. D350 "
+        "lands that closure (`src/ui/`, `src/evp/p_legacy.rs`, `src/pem/pem_lib.rs`), so all eight are "
+        "in Phase 9's `implemented` list and the row stands as the hand-off **edge** rather than being "
+        "retired: retiring it would move eight built exports into this sealed stratum's `implemented` "
+        "list on the strength of work it did not do, and drop them from Phase 9's "
+        "`received_by_handoff`.",
+    ),
+    (
+        ("EVP_PKEY_CTX_get_algor", "EVP_CIPHER_CTX_get_algor"),
+        11,
+        "Both accessors decode an `OSSL_SIGNATURE_PARAM_ALGORITHM_ID` octet string with "
+        "`d2i_X509_ALGOR` (`crypto/evp/evp_lib.c:1490`, `:1372`), the single blocker the old rows "
+        "named. D348 transcribed `crypto/asn1/x_algor.c` whole as `src/asn1/x_algor.rs`, so that "
+        "export is landed and the blocker is gone -- which is why the rows move here from "
+        "`BLOCKED_HANDOFFS` rather than being retired: the exports are still this stratum's to "
+        "write, and only the authority *blocker* has landed. The one remaining dependency is the "
+        "legacy `OBJ_NAME` digest lookup the decoded identifier is read through, which is Phase 13's "
+        "(D343, D344), not a file:line in `x_algor.c` -- so a `Blocker` row would be stale on the "
+        "day it was written.",
+    ),
+    (
+        ("EVP_PKEY_assign",),
+        8,
+        "`crypto/evp/p_lib.c:791`'s body is `EVP_PKEY_type` (`:797`), the two "
+        "`EC_KEY_get0_group`/`EC_GROUP_get_curve_name` calls (`:801`, `:803`), `EVP_PKEY_set_type` "
+        "(`:816`) and `detect_foreign_key` (`:819`), whose four `is_foreign` calls are "
+        "`ossl_ec_key_is_foreign`, `ossl_dsa_is_foreign`, `ossl_rsa_is_foreign` and "
+        "`ossl_dh_is_foreign` (`crypto/evp/p_lib.c:760-787`). **Every one of the four landed with "
+        "D340 or D351** (`src/ec/backend.rs`, `src/dsa/backend.rs` and `src/rsa/backend.rs` in "
+        "D351, `src/dh/backend.rs` with the same), and the two `EC_KEY_get0_group`/"
+        "`EC_GROUP_get_curve_name` calls landed with D340, so the only name this export still "
+        "waited on was Phase 8's own `EVP_PKEY_type` -- which was not another stratum's blocker "
+        "but the `standard_methods[]` cycle D341 measured, and the same cycle that kept the "
+        "fifteen in `src/asn1/ameth.rs`. **D353 landed that name and the eleven rows beside it**, "
+        "so this export is built too and the row stays as the hand-off edge rather than retiring: "
+        "the export was and is Phase 8's to write, and retiring the row would move it into this "
+        "sealed stratum's `implemented` list. `EVP_PKEY_assign_RSA`/`_DSA`/`_DH`/`_EC_KEY` are `#define`s over it "
+        "(`include/openssl/evp.h`), so the four `set1_*` names in the first row wait on it too.",
+    ),
+    (
+        (
+            "EVP_PKEY_get0_RSA", "EVP_PKEY_get1_RSA", "EVP_PKEY_set1_RSA", "EVP_PKEY_get0_DSA",
+            "EVP_PKEY_get1_DSA", "EVP_PKEY_set1_DSA", "EVP_PKEY_get0_DH", "EVP_PKEY_get1_DH",
+            "EVP_PKEY_set1_DH", "EVP_PKEY_get0_EC_KEY", "EVP_PKEY_get1_EC_KEY",
+            "EVP_PKEY_set1_EC_KEY",
+        ),
+        8,
+        "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's "
+        "own `evp_pkey_get0_<TYPE>_int`, and D353 landed it together with "
+        "`evp_pkey_copy_downgraded` (`:2066`) and the four low-level key types, so every blocker "
+        "this row's `blocked_by` named has landed and the twelve are now built: six `p_lib.c` "
+        "spellings in `src/evp/pkey.rs` (`get0`/`get1`/`set1` for DSA and DH) and six `p_legacy.c` "
+        "ones in `src/evp/p_legacy_assign.rs` (`get0`/`get1`/`set1` for RSA and EC_KEY). **The "
+        "brief's 9/3 split is a miscount and is corrected here**: the authority's `p_legacy.c` "
+        "defines the RSA *and* the EC_KEY triplets (`:25`, `:49`, `:54`, `:65`, `:85`, `:90`), and "
+        "`p_lib.c` the DSA and DH ones (`:896`, `:901`, `:915`, `:959`, `:1007`, `:1012`), so the "
+        "split is six and six. The row moves here rather than retiring for the reason the "
+        "`EVP_PKEY_assign` row below gives: retiring it would move twelve built exports into this "
+        "sealed stratum's `implemented` list on the strength of Phase 8's work.",
+    ),
+    (
+        ("EVP_PKEY_get0_hmac", "EVP_PKEY_get0_poly1305", "EVP_PKEY_get0_siphash"),
+        8,
+        "each is `pkey->type == <type> ? evp_pkey_get_legacy(pkey) : NULL` and then reads "
+        "`os->length`/`os->data` off the answer (`crypto/evp/p_lib.c:843`, `:859`, `:877`). "
+        "`evp_pkey_get_legacy` was the whole blocker and D353 landed it, so the three are built in "
+        "`src/evp/pkey.rs` and the row moves here rather than retiring, for the `EVP_PKEY_assign` "
+        "row's reason.",
+    ),
+    (
+        ("EVP_PKEY_encrypt_old", "EVP_PKEY_decrypt_old"),
+        8,
+        "`crypto/evp/p_enc.c:32` and `crypto/evp/p_dec.c:32` both take the low-level key with "
+        "`evp_pkey_get0_RSA_int` (`crypto/evp/p_legacy.c:40`, which is `evp_pkey_get_legacy` behind "
+        "a type test) and then call the primitive -- `RSA_public_encrypt` (`p_enc.c:36`) and "
+        "`RSA_private_decrypt` (`p_dec.c:36`). All three blockers landed (D340, D351, D353) and the "
+        "two are built in `src/evp/p_enc.rs` and `src/evp/p_dec.rs`, so the row moves here rather "
+        "than retiring.",
+    ),
+    (
+        ("EVP_PKEY_get_ec_point_conv_form", "EVP_PKEY_get_field_type"),
+        8,
+        "each opens with `pkey->keymgmt == NULL || pkey->keydata == NULL` and answers its legacy "
+        "arm -- `EVP_PKEY_get0_EC_KEY` then `EC_KEY_get_conv_form` (`crypto/evp/p_lib.c:2472`, "
+        "`:2477`) or `EC_KEY_get0_group` then `EC_GROUP_get_field_type` (`:2512`, `:2517`, `:2521`). "
+        "D353 landed `EVP_PKEY_get0_EC_KEY` with the rest of `p_legacy.c`, so both are built in "
+        "`src/evp/pkey.rs` and the row moves here rather than retiring.",
+    ),
+    (
+        ("EVP_PKEY_type",),
+        8,
+        "`crypto/evp/evp_pkey_type.c:63` is `EVP_PKEY_asn1_find(&e, type)` and then "
+        "`ameth->pkey_id`. The blockers this row named -- `ossl_rsa_asn1_meths` and the other ten "
+        "`standard_methods[]` objects -- landed with D353, so the export is now the authority's own "
+        "`#[no_mangle]` name in `src/evp/pkey_asn1.rs` beside the table it searches, over the body "
+        "the crate had carried as the internal `evp_pkey_type` since D193. The `ENGINE_finish(e)` "
+        "at `:75` remains the `*pe = NULL` mechanism D181 records, not a second blocker. The row "
+        "moves here rather than retiring for the `EVP_PKEY_assign` row's reason.",
+    ),
+    (
+        ("d2i_KeyParams", "d2i_KeyParams_bio", "d2i_PublicKey"),
+        8,
+        "`d2i_PublicKey` (`crypto/asn1/d2i_pu.c:28`) is a `switch` on `EVP_PKEY_get_base_id(ret)` "
+        "whose three arms call `d2i_RSAPublicKey` (`:52`), `d2i_DSAPublicKey` (`:59`) and "
+        "`o2i_ECPublicKey` (`:71`), plus `evp_pkey_copy_downgraded` (`:42`) for the provided-EC "
+        "input. `d2i_KeyParams` (`crypto/asn1/d2i_param.c:18`) refuses unless `ret->ameth != NULL && "
+        "ret->ameth->param_decode != NULL` (`:31`) and then calls it, and `d2i_KeyParams_bio` `:49` "
+        "is a `BUF_MEM` read around it. **Every blocker this row named has landed** -- "
+        "`d2i_RSAPublicKey`/`d2i_DSAPublicKey`/`o2i_ECPublicKey` with the key-codec landings and "
+        "`evp_pkey_copy_downgraded` with D353 -- so the row becomes an unconditional hand-off to "
+        "Phase 8 rather than retiring: the three exports are still Phase 8's to write.",
+    ),
+    (
+        ("EVP_PKEY_meth_find", "EVP_PKEY_meth_get0", "EVP_PKEY_meth_get_count"),
+        8,
+        "`EVP_PKEY_meth_find` (`crypto/evp/pmeth_lib.c:106`) searches the **second** `standard_methods[]` "
+        "(`:54`) with `OBJ_bsearch_pmeth_func` (`:114`); `EVP_PKEY_meth_get_count` (`:646`) answers "
+        "`OSSL_NELEM(standard_methods)` plus the application stack; `EVP_PKEY_meth_get0` (`:655`) "
+        "indexes the table outright before it touches that stack. The row's single `blocked_by` name "
+        "was `ossl_rsa_pkey_method` (`crypto/rsa/rsa_pmeth.c:851`), **and D355 landed it** together "
+        "with the other five in-reach `ossl_<alg>_pkey_method` objects and the table they populate -- "
+        "so the row moves here from `BLOCKED_HANDOFFS` rather than retiring, and for the reason the "
+        "`EVP_PKEY_assign` row gives: the three exports are still this stratum's to write in the "
+        "ledger's arithmetic, and retiring the row would move three built exports into phase 7's "
+        "`implemented` on the strength of a phase-8 landing. The application half of the registry "
+        "was already landed and courted here (D193).",
+    ),
+    (
+        (
+            "i2d_KeyParams", "i2d_KeyParams_bio", "i2d_PKCS8PrivateKey", "i2d_PrivateKey",
+            "i2d_PublicKey",
+        ),
+        10,
+        "all five reach `i2d_provided` (`crypto/asn1/i2d_evp.c:33`) whenever the key is provided, and "
+        "that function is `OSSL_ENCODER_CTX_new_for_pkey` (`:53`) + `OSSL_ENCODER_to_data` (`:59`) + "
+        "`OSSL_ENCODER_CTX_free` (`:64`). **D362 landed all three of those names** -- the encoder "
+        "framework's three units (`crypto/encode_decode/encoder_meth.c`, `encoder_lib.c`, "
+        "`encoder_pkey.c`) are now transcribed in `src/encoder_meth.rs`, `src/encoder_lib.rs` and "
+        "`src/encoder_pkey.rs` -- so every blocker this row named has landed and the row moves here "
+        "from `BLOCKED_HANDOFFS` rather than retiring: the five exports are still Phase 10's to write "
+        "in the ledger's arithmetic, and only the authority *blocker* has landed. The non-provided "
+        "arms remain Phase 8's (`i2d_PublicKey`'s `i2d_RSAPublicKey`/`i2d_DSAPublicKey`/"
+        "`i2o_ECPublicKey`, `i2d_PrivateKey_impl`'s `ameth->old_priv_encode`/`EVP_PKEY2PKCS8`), so a "
+        "`Blocker` row would be stale on the day it was written.",
+    ),
+    (
+        ("PEM_write_bio_PrivateKey_traditional",),
+        10,
+        "`crypto/pem/pem_pkey.c:342` needs `evp_pkey_copy_downgraded` (`:356`, Phase 8), "
+        "`x->ameth->old_priv_encode`/`x->ameth->pem_str` (`:359`, `:364`, Phase 8's ameth contents), "
+        "the `i2d_PrivateKey` function pointer (`:365`, Phase 10) and `PEM_ASN1_write_bio` (`:365`, "
+        "Phase 13 behind `EVP_md5` and Phase 9 behind `RAND_bytes`). **D362 landed the encoder blocker** "
+        "(`OSSL_ENCODER_CTX_new_for_pkey`) and D353 retired the `evp_pkey_copy_downgraded` one, so the "
+        "two names the old `blocked_by` carried are both built and the row moves here from "
+        "`BLOCKED_HANDOFFS` rather than retiring. The remaining dependency is `PEM_ASN1_write_bio`, "
+        "which is this stratum's to write behind the Phase 13 `UI` and the Phase 9 `RAND_*` front -- "
+        "neither a file:line in `pem_pkey.c`, so a `Blocker` row would be stale on the day it was "
+        "written.",
+    ),
+    (
+        (
+            "d2i_AutoPrivateKey", "d2i_AutoPrivateKey_ex", "d2i_PrivateKey",
+            "d2i_PrivateKey_ex",
+        ),
+        10,
+        "all four are `d2i_PrivateKey_decoder` then, if it answered NULL, "
+        "`ossl_d2i_PrivateKey_legacy` (`crypto/asn1/d2i_pr.c:172`-`:175`, `:247`-`:250`). The "
+        "decoder builds an `OSSL_DECODER_CTX` with `OSSL_DECODER_CTX_new_for_pkey` (`:78`), which is "
+        "`decoder.h`'s and Phase 10's and is called **first**; the fallback reads "
+        "`ret->ameth->old_priv_decode`/`priv_decode`/`priv_decode_ex` (`:130`, `:132`) and calls "
+        "`evp_pkcs82pkey_legacy` (`crypto/evp/evp_pkey.c:52`-`:59`), which is Phase 8's. **D367 landed "
+        "`OSSL_DECODER_CTX_new_for_pkey`** -- the decoder chain's four units are transcribed in "
+        "`src/decoder_meth.rs`, `src/decoder_lib.rs` and `src/decoder_pkey.rs` -- so the row's single "
+        "`blocked_by` name is now a landed callee and the row moves here from `BLOCKED_HANDOFFS` "
+        "rather than retiring: the four exports are still Phase 10's to write in the ledger's "
+        "arithmetic. The legacy leg is still Phase 8's, so a `Blocker` row would be stale on the day "
+        "it was written.",
+    ),
+    (
+        (
+            "PEM_read_PrivateKey", "PEM_read_PrivateKey_ex", "PEM_read_bio_Parameters",
+            "PEM_read_bio_Parameters_ex", "PEM_read_bio_PrivateKey",
+            "PEM_read_bio_PrivateKey_ex", "PEM_write_PKCS8PrivateKey",
+            "PEM_write_PKCS8PrivateKey_nid", "PEM_write_PrivateKey", "PEM_write_PrivateKey_ex",
+            "PEM_write_bio_PKCS8PrivateKey", "PEM_write_bio_PKCS8PrivateKey_nid",
+            "PEM_write_bio_Parameters", "PEM_write_bio_PrivateKey",
+            "PEM_write_bio_PrivateKey_ex",
+        ),
+        13,
+        "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt "
+        "is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, "
+        "`decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> "
+        "`PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six "
+        "writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose "
+        "encoder call is Phase 10 and whose `legacy:` label reaches "
+        "`PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); "
+        "the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose "
+        "`OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` "
+        "(`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- "
+        "`OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and "
+        "`UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than "
+        "retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and "
+        "retiring the row would move them into this sealed stratum's `implemented` list on the "
+        "strength of work it did not do. The fallback legs cannot be omitted, which is why the "
+        "receiving stratum is the latest of the three.",
+    ),
+]
 
 
 def load(path: Path) -> dict:
@@ -969,6 +759,48 @@ def main(argv: list[str]) -> int:
                 }
     handed_on_names = set(handed_on)
 
+    # The third mechanism (see `UNBLOCKED_HANDOFFS`): a hand-off whose blocker has landed. Same
+    # fail-closed rule as `BLOCKED_HANDOFFS` for a symbol outside the working set, and **not** the
+    # same rule for a symbol the crate now defines -- deliberately, and the asymmetry is the whole
+    # point of keeping the two tables apart:
+    #
+    #   * a `BLOCKED_HANDOFFS` row is falsified by its blocker landing, because its claim IS
+    #     "file:line calls X and X is absent";
+    #   * an `UNBLOCKED_HANDOFFS` row makes no such claim, so it is not falsified by *itself* being
+    #     built. The row is the hand-off **edge**: it is what puts the symbol in the receiving
+    #     stratum's working set, and it is what `phase9_obligations.py` reads to count the symbol
+    #     as that stratum's. Retiring it the moment the owner lands the symbol would move the
+    #     symbol into *this* stratum's `implemented` list on the strength of work this stratum did
+    #     not do, and take it off the owner's books at the same time. So the row stays, and where
+    #     the landing appears is the owner's ledger, which this tool cannot read: it is written
+    #     later in the pipeline, and reading a possibly-stale ledger would be worse than not
+    #     reading one.
+    #
+    # What still fails closed is a row that hands on a symbol this stratum may not name at all,
+    # and one that collides with either of the other two mechanisms.
+    unblocked_handed_on: dict[str, dict] = {}
+    for symbols, owning_phase, reason in UNBLOCKED_HANDOFFS:
+        for sym in symbols:
+            if sym not in owned:
+                raise SystemExit(
+                    f"phase7-obligations: UNBLOCKED_HANDOFFS names {sym}, which is not in this "
+                    f"stratum's working set (or is not an authority export at all)"
+                )
+            if sym in handed_on or any(sym in r.symbols for r in BLOCKED_HANDOFFS):
+                raise SystemExit(
+                    f"phase7-obligations: {sym} is handed on by two of the three mechanisms; "
+                    f"one cause per symbol, or the reasons will disagree"
+                )
+            unblocked_handed_on[sym] = {
+                "symbol": sym,
+                "owning_phase": owning_phase,
+                "binding_phase": owning_phase,
+                "declaring_header": owned[sym]["declaring_header"],
+                "blocked_by": [],
+                "reason": reason,
+            }
+    unblocked_handed_on_names = set(unblocked_handed_on)
+
     # The second deferral mechanism, and the fail-closed one: a symbol in `BLOCKED_HANDOFFS` that
     # the crate now defines is a stale row rather than a harmless one, because a table that can
     # keep covering a landed symbol can hide the next real gap behind it. Same rule
@@ -1014,8 +846,12 @@ def main(argv: list[str]) -> int:
         raise SystemExit(
             "phase7-obligations: blocker liveness failed:\n  " + "\n  ".join(liveness)
         )
-    deferred_names = handed_on_names | set(blocked)
-    deferred: list[dict] = list(handed_on.values()) + list(blocked.values())
+    deferred_names = handed_on_names | set(blocked) | unblocked_handed_on_names
+    deferred: list[dict] = (
+        list(handed_on.values())
+        + list(blocked.values())
+        + list(unblocked_handed_on.values())
+    )
 
     implemented_here = sorted(s for s in owned if s in done and s not in deferred_names)
     open_rows = [
@@ -1059,6 +895,10 @@ def main(argv: list[str]) -> int:
             "structured_blockers": sum(len(r.blocked_by) for r in BLOCKED_HANDOFFS),
             "legacy_rows": len(handed_on_names),
             "legacy_unit_claims": len(LEGACY_HANDOFFS),
+            # The third mechanism: a hand-off whose blocker has landed, retargeted from a blocked
+            # claim to an unconditional one rather than retired (see `UNBLOCKED_HANDOFFS`).
+            "unblocked_rows": len(UNBLOCKED_HANDOFFS),
+            "unblocked_symbols": len(unblocked_handed_on_names),
             "findings": len(liveness),
         },
         "implemented": implemented_here,

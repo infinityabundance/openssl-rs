@@ -231,11 +231,16 @@ COVERED_FILES = [
     # Deliberately *not* covered, with the stratum that owns each: `a_digest.c`,
     # `ameth_lib.c` (Phase 7); `d2i_param.c`, `d2i_pr.c`, `d2i_pu.c`, `i2d_evp.c`,
     # `n_pkey.c`, `p5_pbe.c`, `p5_pbev2.c` (Phase 10 or 11 as their exports say); `a_sign.c`,
-    # `a_verify.c`, `x_algor.c`, `x_pkey.c` (Phase 11); the rest of `asn_mime.c`
+    # `a_verify.c`, `x_pkey.c` (Phase 11); the rest of `asn_mime.c`
     # (Phase 12; the file is covered above for the two coordinates a Phase 5 export
     # raises);
     # `nsseq.c` (Phase 13). Their raises are visible as uncovered sites in
     # `forensics/atlas/err-raise-sites.json` until those phases land.
+    #
+    # `x_algor.c` was on this list ("Phase 11") and is not any more: D348 transcribes
+    # `crypto/asn1/x_algor.c` whole as `src/asn1/x_algor.rs`, so its one raise --
+    # `ossl_x509_algor_get_md`'s `ASN1_R_UNKNOWN_DIGEST` at `:165` -- is a coordinate a
+    # crate module can reach and is covered below.
     #
     # `p5_scrypt.c` was on this list and is not any more: 7.4c lands
     # `PKCS5_v2_scrypt_keyivgen`/`_ex`, which are that file's and Phase 7's by its
@@ -405,6 +410,743 @@ COVERED_FILES = [
     ("crypto/pem/pem_oth.c", "PEM_OTH"),
     ("crypto/pem/pem_pkey.c", "PEM_PKEY"),
     ("crypto/pem/pem_pk8.c", "PEM_PK8"),
+    # Phase 8: the providers' own translation units. Until this block existed the
+    # `PROV_R_*` family had exactly one covered file (`crypto/hpke/hpke_util.c`, added
+    # by 7.6 for the shared helpers), so the provider half of the cipher and digest
+    # surface had no coordinates at all -- while the authority raises from every
+    # failure arm the crate transcribes. `src/provider/cipher.rs` therefore returned 0
+    # where the authority *also* queued a specific error, which `RT-CIPHER` could not
+    # see because it did not drain the queue. The rule is Phase 4/5/6's: the list is
+    # the *subsystem* set of the stratum, not a selection of convenient files, and a
+    # site nobody calls yet is a coordinate rather than a claim.
+    #
+    # Two of the four files here are build-generated (`.c.in`) and are resolved from
+    # the build tree by `resolve_site_source`; the generated text is what the compiler
+    # saw, and its `__FILE__` carries no source-tree prefix. The other two spellings
+    # are the source tree's and its prefix is the usual `relpath` one. The difference
+    # is measured, not assumed: `ciphercommon.c`'s records read
+    # `providers/implementations/ciphers/ciphercommon.c` while
+    # `ciphercommon_block.c`'s read `../../src/openssl-3.6.4/.../ciphercommon_block.c`.
+    ("providers/implementations/ciphers/ciphercommon.c", "PROV_CIPHERCOMMON"),
+    ("providers/implementations/ciphers/ciphercommon_block.c", "PROV_CIPHERCOMMON_BLOCK"),
+    ("providers/implementations/ciphers/cipher_aes_hw.c", "PROV_CIPHER_AES_HW"),
+    ("providers/implementations/ciphers/cipher_camellia_hw.c", "PROV_CIPHER_CAMELLIA_HW"),
+    ("providers/implementations/ciphers/cipher_tdes_common.c", "PROV_CIPHER_TDES_COMMON"),
+    ("providers/implementations/ciphers/cipher_null.c", "PROV_CIPHER_NULL"),
+    ("providers/implementations/ciphers/cipher_aes_ocb.c", "PROV_CIPHER_AES_OCB"),
+    ("providers/implementations/ciphers/cipher_aes_wrp.c", "PROV_CIPHER_AES_WRP"),
+    ("providers/implementations/ciphers/cipher_aes_xts.c", "PROV_CIPHER_AES_XTS"),
+    ("providers/implementations/ciphers/ciphercommon_ccm.c", "PROV_CIPHERCOMMON_CCM"),
+    ("providers/implementations/ciphers/cipher_aes_siv.c", "PROV_CIPHER_AES_SIV"),
+    # `cipher_chacha20.c` is a **source-tree** file rather than a `.c.in` template, so its `__FILE__`
+    # carries the source-tree prefix and its seven raises are its own: three
+    # `PROV_R_FAILED_TO_SET_PARAMETER` in the getter (one per key it publishes) and four in the setter
+    # -- two `PROV_R_FAILED_TO_GET_PARAMETER` for the two length keys and one reason each for the
+    # length checks they guard. The row's sibling `cipher_chacha20_hw.c` raises nothing at all, so it
+    # is absent for the reason `cipher_cts.c` is: an entry that can never change would read as
+    # coverage that does not exist.
+    ("providers/implementations/ciphers/cipher_chacha20.c", "PROV_CIPHER_CHACHA20"),
+    # `cipher_chacha20_poly1305.c` is the *other* kind of generated unit: it is a `.c.in` template
+    # (`cipher_chacha20_poly1305.c.in`), so the build compiles it from the build tree and its
+    # `__FILE__` carries **no** source-tree prefix -- `providers/implementations/ciphers/
+    # cipher_chacha20_poly1305.c` where its source-tree sibling `cipher_chacha20.c` directly above
+    # carries `../../src/openssl-3.6.4/`. Both spellings are measured from the two objects and
+    # confirmed end to end by `courts/layout/oracle-mem-file.c`, which prints the `file` the
+    # authority hands a caller-installed allocator for each row.
+    #
+    # Its raises are its own, and there are **twenty-nine**: five `PROV_R_REPEATED_PARAMETER` in
+    # the getter's generated decoder (`:142`, `:153`, `:176`, `:185`, `:197` -- one per key it
+    # locates) and five in the setter's (`:305`, `:316`, `:331`, `:350`, `:361`); seven in
+    # `chacha20_poly1305_get_ctx_params`' body (`:221`, `:227`, `:233`, `:239` for the four
+    # `PROV_R_FAILED_TO_SET_PARAMETER` writes, then `:245` type, `:249` `PROV_R_TAG_NOT_SET` on a
+    # decrypting context and `:253` `PROV_R_INVALID_TAG_LENGTH`); eleven in
+    # `chacha20_poly1305_set_ctx_params`' body (`:396`, `:407`, `:418`, `:437`, `:450` for the five
+    # `PROV_R_FAILED_TO_GET_PARAMETER`s, `:400` and `:411` for the two length refusals, `:422`
+    # `PROV_R_INVALID_TAG_LENGTH`, `:427` `PROV_R_TAG_NOT_NEEDED`, `:442` `PROV_R_INVALID_DATA` and
+    # `:456` `PROV_R_INVALID_IV_LENGTH`); and the one `PROV_R_OUTPUT_BUFFER_TOO_SMALL` in
+    # `chacha20_poly1305_cipher` (`:512`). The sibling `cipher_chacha20_poly1305_hw.c` raises
+    # **nothing** -- it returns 0 -- so it is absent for the reason `cipher_chacha20_hw.c` is.
+    ("providers/implementations/ciphers/cipher_chacha20_poly1305.c", "PROV_CIPHER_CHACHA20_POLY1305"),
+    # `cipher_aria_hw.c` is a **source-tree** file, and unlike `cipher_sm4.c` and `cipher_sm4_hw.c`
+    # it *does* have a failure arm: `cipher_hw_aria_initkey` raises `PROV_R_KEY_SETUP_FAILED` at
+    # line 25 when the schedule function answers negative. The note this entry replaces said
+    # `cipher_aria*.c` raised nothing, which was true of the primitive and false of the row's hw --
+    # and it was the ARIA rows landing that made the difference visible (D270). `cipher_aria.c`
+    # itself still raises nothing and is absent for `cipher_chacha20_hw.c`'s reason.
+    ("providers/implementations/ciphers/cipher_aria_hw.c", "PROV_CIPHER_ARIA_HW"),
+    # `cipher_sm4_xts.c` is a source-tree file with six raises, one per failure arm the row has that
+    # the shared engine does not own: the key-length check in `sm4_xts_init` (`:54`), the 2^20-block
+    # data-unit limit (`:142`), the output-size check (`:171`) and the cipher failure (`:176`) in
+    # `sm4_xts_stream_update`, and the two `xts_standard` arms of `sm4_xts_set_ctx_params` (`:227`,
+    # `:235`). Its `cipher_sm4_xts_hw.c` raises nothing, like `cipher_sm4_hw.c`.
+    ("providers/implementations/ciphers/cipher_sm4_xts.c", "PROV_CIPHER_SM4_XTS"),
+    # The AES-CBC-HMAC-SHA row layer. It is a **source-tree** file, so its `__FILE__` carries the
+    # `../../src/openssl-3.6.4/` prefix, and its raises are its own: three
+    # `PROV_R_FAILED_TO_GET_PARAMETER` in the setter (the AEAD mac key, the multiblock AAD pair and
+    # the multiblock ENC trio, plus the two length keys), one `PROV_R_INVALID_KEY_LENGTH` for the
+    # `keylen` check, and one `ERR_R_INTERNAL_ERROR` for the TLS-version/`removetlsfixed` assertion.
+    # Its HW siblings (`cipher_aes_cbc_hmac_sha1_hw.c`, `cipher_aes_cbc_hmac_sha256_hw.c`) raise
+    # **nothing** in this profile -- they return 0 -- so they are absent for the reason
+    # `cipher_chacha20_hw.c` is. The nine `*_etm_*` units are absent for a stronger reason: on this
+    # profile `AES_CBC_HMAC_SHA_ETM_CAPABLE` is undefined (`aes_platform.h:114-121` is aarch64-only),
+    # so both their row layer and their hw files compile the stub branch and raise nothing.
+    ("providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c", "PROV_CIPHER_AES_CBC_HMAC_SHA"),
+    # The AES-GCM-SIV row layer. Also a **source-tree** file, and its raises are its own: one
+    # `PROV_R_INVALID_KEY_LENGTH` in `ossl_aes_gcm_siv_init` and one more in
+    # `ossl_aes_gcm_siv_set_ctx_params`, a `PROV_R_INVALID_IV_LENGTH`, a
+    # `PROV_R_OUTPUT_BUFFER_TOO_SMALL` in the cipher entry point, three
+    # `PROV_R_FAILED_TO_SET_PARAMETER` in the getter (one per key it publishes) and two
+    # `PROV_R_FAILED_TO_GET_PARAMETER` in the setter. Its `_hw.c` and `_polyval.c` siblings raise
+    # **nothing** -- they return 0 -- so they are absent for the reason `cipher_chacha20_hw.c` is.
+    ("providers/implementations/ciphers/cipher_aes_gcm_siv.c", "PROV_CIPHER_AES_GCM_SIV"),
+    # Deliberately *not* covered, with the reason: `cipher_sm4.c` and `cipher_sm4_hw.c` raise
+    # nothing at all in this profile -- there is no failure arm in either -- so an entry would read
+    # as coverage that does not exist. The SM4 *primitive* `crypto/sm4/sm4.c` has no failure path
+    # either, `ossl_sm4_set_key` always answering 1.
+    ("providers/implementations/macs/cmac_prov.c", "PROV_CMAC_PROV"),
+    ("providers/implementations/macs/gmac_prov.c", "PROV_GMAC_PROV"),
+    # The row lands with this stratum and its two generated decoders are the only
+    # sites it raises from in this profile: two in the get decoder (`block-size`,
+    # `size`) and five in the set decoder (`digest`, `engine`, `key`, `properties`,
+    # `tls-data-size`). The two `fips` keys the generator also emits are
+    # `# if defined(FIPS_MODULE)`-guarded in the generated text, so their
+    # coordinates exist and no reachable arm uses them -- the same shape as
+    # `cmac_prov.c`'s three and `gmac_prov.c`'s.
+    ("providers/implementations/macs/hmac_prov.c", "PROV_HMAC_PROV"),
+    ("providers/implementations/include/prov/blake2_params.inc", "PROV_BLAKE2_PARAMS"),
+    # The BLAKE2 MAC implementation, which `blake2b_mac.c` and `blake2s_mac.c` each `#include` as
+    # their whole body. It is a *source-tree* file, so unlike the `.c.in`-generated units its
+    # `__FILE__` carries the `../../src/openssl-3.6.4/` prefix -- the opposite of D235's finding,
+    # and measured from the two object files rather than assumed.
+    ("providers/implementations/macs/blake2_mac_impl.c", "PROV_BLAKE2_MAC_IMPL"),
+    ("providers/implementations/macs/poly1305_prov.c", "PROV_POLY1305_PROV"),
+    ("providers/implementations/macs/siphash_prov.c", "PROV_SIPHASH_PROV"),
+    # The largest MAC unit, and the only one that raises from helper functions rather than from
+    # the row's own bodies: `kmac_prov.c`'s generated text carries twenty-one sites, and five of
+    # them are the encoding helpers' (`right_encode`, `encode_string`) plus `bytepad`'s
+    # passed-NULL guard. Its two generated decoders raise for four keys in this profile --
+    # `block-size`/`size` in the get decoder and `custom`/`key`/`size`/`xof` in the set one -- and
+    # the two `fips` keys each generator also emits are `# if defined(FIPS_MODULE)`-guarded, so
+    # their coordinates exist and no reachable arm uses them, the same shape as `cmac_prov.c`'s.
+    ("providers/implementations/macs/kmac_prov.c", "PROV_KMAC_PROV"),
+    # Phase 8's digest half. `digestcommon.c` is generated and shared by every digest
+    # row the *default* provider publishes. The other `*_prov.c` units raise nothing in
+    # this profile and are deliberately absent (an entry that can never change would read
+    # as coverage that does not exist). `mdc2_prov.c` is one of the exceptions that proves
+    # D206's rule again at the provider-file level: it *does* raise
+    # (`mdc2_set_ctx_params` at `:51`), but MDC2 is a **legacy** provider row
+    # (`providers/legacyprov.c:95`, beside MD4 at `:92` and WHIRLPOOL at `:98`), so no
+    # translation unit this crate transcribes reaches it. It is named here rather than
+    # listed, and it joins the covered set in the legacy provider's stratum.
+    ("providers/implementations/digests/digestcommon.c", "PROV_DIGESTCOMMON"),
+    # Phase 8's KDF half (D346). The two rows `DH_KDF_X9_42` and `ECDH_KDF_X9_62` fetch are
+    # `X942KDF-ASN1` and `X963KDF`, and this stratum publishes both, so the two units'
+    # raises are coordinates this crate now has. Both are `.c.in`-generated, so (D235's
+    # finding, confirmed by `strings` on the two objects) their `__FILE__` is the bare
+    # build-relative path and their line numbers are the generated text's, not the
+    # template's. `sskdf.c` raises from `sskdf_size`/`sskdf_derive`/`x963kdf_derive` and from
+    # the two generated decoders; `x942kdf.c` raises from `find_alg_id`, `x942kdf_size`,
+    # `x942kdf_derive`, `x942kdf_hash_kdm` and its two decoders.
+    ("providers/implementations/kdfs/sskdf.c", "PROV_SSKDF"),
+    ("providers/implementations/kdfs/x942kdf.c", "PROV_X942KDF"),
+    # The PKCS12 KDF (8.10's first provider-KDF row). `pkcs12kdf.c` is `.c.in`-generated, so its
+    # `__FILE__` is the bare build-relative path and its line numbers are the generated text's.
+    # It raises from `pkcs12kdf_derive` (`:69`, `:75`), `kdf_pkcs12_derive` (`:234`, `:239`) and
+    # its two generated decoders (`:288`-`:366`, `:451`).
+    ("providers/implementations/kdfs/pkcs12kdf.c", "PROV_PKCS12KDF"),
+    # The SSH KDF (8.10's second provider-KDF row). `sshkdf.c` is `.c.in`-generated too, so its
+    # `__FILE__` is bare and its line numbers are the generated text's. It raises from
+    # `kdf_sshkdf_derive` (`:186`, `:190`, `:194`, `:198`, `:202`), `kdf_sshkdf_set_ctx_params`
+    # (`:435`, `:472`) and its two generated decoders (`:301`-`:397`, `:536`).
+    ("providers/implementations/kdfs/sshkdf.c", "PROV_SSHKDF"),
+    # PBKDF2 (8.10's third provider-KDF row). `pbkdf2.c` is `.c.in`-generated, so its `__FILE__` is
+    # bare and its line numbers are the generated text's. It raises from `lower_bound_check_passed`
+    # (`:248`, the *variable* reason the lower-bound function selected, and `:252`),
+    # `kdf_pbkdf2_derive` (`:270`, `:275`), `kdf_pbkdf2_set_ctx_params` (`:431`) and its two
+    # generated decoders (`:327`-`:398`, `:525`), plus `pbkdf2_derive`'s own overflow guard
+    # (`:606`).
+    ("providers/implementations/kdfs/pbkdf2.c", "PROV_PBKDF2"),
+    # HKDF and TLS13-KDF (8.10's fourth unit, five rows). `hkdf.c` is `.c.in`-generated, so its
+    # `__FILE__` is bare and its line numbers are the generated text's. It raises from
+    # `kdf_hkdf_size` (`:199`), `kdf_hkdf_derive` (`:239`, `:243`, `:247`),
+    # `hkdf_common_set_ctx_params` (`:299`, `:313`, `:320`, `:325`), `HKDF_Extract` (`:1055`),
+    # `kdf_tls1_3_derive` (`:1349`), `kdf_tls1_3_set_ctx_params` (`:1629`) and its four generated
+    # decoders (`:407`-`:498` and the info counter at `:429`; `:586`-`:647`; `:825`-`:894` and its
+    # counter at `:836`; `:1440`-`:1599`).
+    ("providers/implementations/kdfs/hkdf.c", "PROV_HKDF"),
+    # TLS1-PRF (8.10's fifth provider-KDF row). `tls1_prf.c` is `.c.in`-generated, so its
+    # `__FILE__` is bare and its line numbers are the generated text's. It raises from
+    # `fips_ems_check_passed` (`:205`), `fips_digest_check_passed` (`:230`),
+    # `fips_key_check_passed` (`:246`), `kdf_tls1_prf_derive` (`:263`, `:267`, `:271`, `:275`),
+    # `kdf_tls1_prf_set_ctx_params` (`:537`) and its two generated decoders
+    # (`:372`-`:470`, `:655`-`:667`).
+    ("providers/implementations/kdfs/tls1_prf.c", "PROV_TLS1_PRF"),
+    # KBKDF (8.10's sixth provider-KDF row). `kbkdf.c` is `.c.in`-generated, so its `__FILE__` is
+    # bare and its line numbers are the generated text's. It raises from
+    # `fips_kbkdf_key_check_passed` (`:203`), `kbkdf_derive` (`:315`, `:320`, `:326`, `:341`,
+    # `:349`), `kbkdf_set_ctx_params` (`:667`, `:680`) and its two generated decoders
+    # (`:432`-`:619` and the info counter at `:465`; `:778`-`:790`).
+    ("providers/implementations/kdfs/kbkdf.c", "PROV_KBKDF"),
+    # SCRYPT (8.10's seventh provider-KDF row). `scrypt.c` is `.c.in`-generated and its whole body
+    # is behind `#ifndef OPENSSL_NO_SCRYPT`, which this profile does not define, so its `__FILE__`
+    # is bare and its line numbers are the generated text's. It raises from `set_digest` (`:171`),
+    # `kdf_scrypt_derive` (`:198`, `:203`), its two generated decoders (`:264`-`:336`, `:432`) and
+    # `scrypt_alg` (`:615`, `:626`, `:644`, `:654`, `:661`, `:670`, `:699` -- the last six
+    # `ERR_LIB_EVP`, unlike every other unit in this table).
+    ("providers/implementations/kdfs/scrypt.c", "PROV_SCRYPT"),
+    # KRB5KDF (8.10's eighth provider-KDF row). `krb5kdf.c` is `.c.in`-generated, so its `__FILE__`
+    # is bare and its line numbers are the generated text's. It raises from `krb5kdf_derive`
+    # (`:140`, `:144`, `:148`), `KRB5KDF` (`:538`, `:557`, `:563`, `:584`, `:618`) and its two
+    # generated decoders (`:199`-`:244`, `:314`).
+    ("providers/implementations/kdfs/krb5kdf.c", "PROV_KRB5KDF"),
+    # HMAC-DRBG-KDF (8.10's ninth provider-KDF row). `hmacdrbg_kdf.c` is `.c.in`-generated, so its
+    # `__FILE__` is bare and its line numbers are the generated text's. It raises from
+    # `hmac_drbg_kdf_new` (`:53`), `hmac_drbg_kdf_set_ctx_params` (`:386`) and its two generated
+    # decoders (`:177`-`:188`, `:273`-`:327`).
+    ("providers/implementations/kdfs/hmacdrbg_kdf.c", "PROV_HMACDRBG_KDF"),
+    # This pass's Argon2 unit (RFC 9106), the last three `OSSL_OP_KDF` rows. `argon2.c` is
+    # `.c.in`-generated, so its `__FILE__` is bare and its line numbers are the generated text's:
+    # the `.in` template expands two `produce_param_decoder` calls into ~370 generated lines ahead
+    # of `initialize`, so reading the template would attribute every site to a line the compiler
+    # never saw. It raises from `initialize` (`:741`), the three `new` constructors (`:938`, `:957`,
+    # `:976`), `kdf_argon2_derive` (`:1031`, `:1039`, `:1045`, `:1052`, `:1065`, `:1071`, `:1077`,
+    # `:1084`, `:1092`), the nine ctx setters (`:1157`-`:1373`) and its two generated decoders
+    # (`:1448`-`:1579`, `:1711`).
+    ("providers/implementations/kdfs/argon2.c", "PROV_ARGON2"),
+    # The generic SKEYMGMT row (8.10's `OSSL_OP_SKEYMGMT` pair, one of the two units).
+    # `skeymgmt/generic.c` is `.c.in`-generated, so its `__FILE__` is bare and its line number is
+    # the generated text's. It raises only from its generated import decoder (`:63`), on a repeated
+    # `raw-bytes`. `skeymgmt/aes_skmgmt.c` raises nothing at all and so is deliberately absent, the
+    # same reasoning `mdc2_prov.c` and `rsa_meth.c` are named under above.
+    ("providers/implementations/skeymgmt/generic.c", "PROV_GENERIC_SKEYMGMT"),
+    # The KEYEXCH unit the `OSSL_OP_KEYMGMT` gate unlocks (8.5's first exchange unit).
+    # `exchange/kdf_exch.c` is a plain `.c` (not generated), so its `__FILE__` carries the
+    # source-tree prefix. It raises once, from `kdf_derive` (`:117`), when the caller's buffer is
+    # smaller than the KDF's fixed output size. `kdf_legacy_kmgmt.c` itself raises nothing and so is
+    # deliberately absent, on the same reasoning as `skeymgmt/aes_skmgmt.c` above.
+    ("providers/implementations/exchange/kdf_exch.c", "PROV_KDF_EXCH"),
+    # The `DH`/`DHX` key types (D387). `keymgmt/dh_kmgmt.c` is a plain `.c`, so its `__FILE__`
+    # carries the source-tree prefix. It raises five times: `dh_gen_common_set_params`
+    # (`:544`, `:558`) and `dh_gen_set_params` (`:681`) with `ERR_R_PASSED_INVALID_ARGUMENT`,
+    # `dhx_gen_set_params` (`:653`) with `ERR_R_UNSUPPORTED`, and `dh_gen` (`:725`) through
+    # `ERR_raise_data` with a formatted `gen_type` message.
+    ("providers/implementations/keymgmt/dh_kmgmt.c", "PROV_DH_KMGMT"),
+    # The `DH` key exchange row (D387). `exchange/dh_exch.c.in` is `.c.in`-generated, so its
+    # `__FILE__` is the bare build-relative path and its line numbers are the generated text's:
+    # `dh_match_params` (`:165`), `dh_plain_derive` (`:194`, `:204`) and `dh_X9_42_kdf_derive`
+    # (`:234`) in the hand-written body, and the two generated decoders'
+    # `PROV_R_REPEATED_PARAMETER` sites (`:402`-`:542` set, `:712`-`:785` get).
+    ("providers/implementations/exchange/dh_exch.c", "PROV_DH_EXCH"),
+    # Phase 8.10's ECX chain (this pass): the four `X25519`/`X448`/`ED25519`/`ED448` key types, the
+    # two key-exchange rows they gate and the two DHKEM rows. All three are `.c.in`-generated, so
+    # each `__FILE__` is the bare build-relative path and each line number is the generated text's.
+    # `keymgmt/ecx_kmgmt.c` raises five times -- `ecx_gen_set_params`'s group-name mismatch
+    # (`:1144`, `ERR_R_PASSED_INVALID_ARGUMENT`), two `ERR_R_EC_LIB` sites in `ecx_gen` (`:1255`,
+    # `:1264`) and `ecx_validate`'s `PROV_R_ALGORITHM_MISMATCH` (`:1514`) -- plus the eleven
+    # generated `PROV_R_REPEATED_PARAMETER` sites its four decoders carry.
+    ("providers/implementations/keymgmt/ecx_kmgmt.c", "PROV_ECX_KMGMT"),
+    # `exchange/ecx_exch.c` raises three times, all `ERR_LIB_PROV`/`ERR_R_INTERNAL_ERROR`: `ecx_init`
+    # (`:86`), `ecx_set_peer` (`:124`) and the two reference failures in `ecx_dupctx` (`:168`,
+    # `:174`). It has no generated decoders (its only `FIPS_MODULE`-guarded one is not compiled).
+    ("providers/implementations/exchange/ecx_exch.c", "PROV_ECX_EXCH"),
+    # `kem/ecx_kem.c` raises from `ecx_pubkey` (`:155`, `PROV_R_NOT_A_PUBLIC_KEY`),
+    # `ossl_ecx_dhkem_derive_private` (`:401`, `PROV_R_INVALID_INPUT_LENGTH` with an
+    # `ikmlen`/`Nsk` message), `dhkem_encap` (`:618`, `:622`, `PROV_R_BAD_LENGTH`),
+    # `dhkem_decap` (`:681`, `PROV_R_BAD_LENGTH`; `:685`, `PROV_R_INVALID_KEY`) and the two
+    # `ecxkem_{encapsulate,decapsulate}` default arms (`:720`, `:734`, `PROV_R_INVALID_MODE`), plus
+    # its one generated `PROV_R_REPEATED_PARAMETER` decoder.
+    ("providers/implementations/kem/ecx_kem.c", "PROV_ECX_KEM"),
+    # 8.10's `HMAC`/`SIPHASH`/`POLY1305`/`CMAC` key types. `keymgmt/mac_legacy_kmgmt.c` is a plain
+    # `.c`, so its `__FILE__` carries the source-tree prefix. It raises eight times: three
+    # `ERR_R_PASSED_INVALID_ARGUMENT` sites in `mac_key_fromdata` (`:187` private-key type, `:202`
+    # property type, `:212` the CMAC cipher load), one each in `mac_gen_set_params` (`:422`) and
+    # `cmac_gen_set_params` (`:444`), and three in `mac_gen` (`:481` `ERR_R_PROV_LIB`, `:490`
+    # `PROV_R_INVALID_KEY`, `:503` `ERR_R_INTERNAL_ERROR`).
+    ("providers/implementations/keymgmt/mac_legacy_kmgmt.c", "PROV_MAC_LEGACY_KMGMT"),
+    # Phase 8's `rsa_kmgmt.c` and `dsa_kmgmt.c` (D391). Both are plain `.c` files, so their
+    # `__FILE__` carries the source-tree prefix. `rsa_kmgmt.c` raises once, the
+    # `PROV_R_KEY_SIZE_TOO_SMALL` refusal of `rsa_gen_set_params` at `:513`; `dsa_kmgmt.c`
+    # raises twice, `ERR_R_PASSED_INVALID_ARGUMENT` from `dsa_gen_set_params` at `:486` and
+    # `ERR_R_INTERNAL_ERROR` from `dsa_load` at `:633`.
+    ("providers/implementations/keymgmt/rsa_kmgmt.c", "PROV_RSA_KMGMT"),
+    ("providers/implementations/keymgmt/dsa_kmgmt.c", "PROV_DSA_KMGMT"),
+    # 8.10's `EC`/`SM2` key types and the `ECDH` exchange row. `keymgmt/ec_kmgmt.c` is a plain
+    # `.c`, so its `__FILE__` carries the source-tree prefix. It raises four times, all with
+    # `PROV_R_*` reasons: `common_get_params` (`:632` `PROV_R_NO_PARAMETERS_SET`, `:729`
+    # `PROV_R_NOT_A_PUBLIC_KEY`), `ec_gen_set_group` (`:1021` `PROV_R_INVALID_CURVE`) and
+    # `ec_gen_assign_group` (`:1241` `PROV_R_NO_PARAMETERS_SET`).
+    ("providers/implementations/keymgmt/ec_kmgmt.c", "PROV_EC_KMGMT"),
+    # `exchange/ecdh_exch.c.in` is `.c.in`-generated, so its `__FILE__` is the bare
+    # build-relative path. It raises from `ecdh_init` (`:65`), `ecdh_match_params` (`:114`),
+    # `ecdh_plain_derive` (`:172`, `:176`), `ecdh_X9_62_kdf_derive` (`:208`) and its two generated
+    # decoders' `PROV_R_REPEATED_PARAMETER` sites.
+    ("providers/implementations/exchange/ecdh_exch.c", "PROV_ECDH_EXCH"),
+    # The two EC KEM functions the EC keymgmt/gen path needs, and the unit's own rows.
+    # `kem/ec_kem.c.in` is `.c.in`-generated. It raises from `eckey_check` (`:82`),
+    # `ossl_ec_match_params` (`:236`), `ossl_ec_dhkem_derive_private` (`:415`, `:441`),
+    # `generate_ecdhkm` (`:534`), `derive_secret` (`:598`), `dhkem_encap` (`:672`, `:676`, `:692`),
+    # `dhkem_decap` and its one generated decoder.
+    ("providers/implementations/kem/ec_kem.c", "PROV_EC_KEM"),
+    # `crypto/sm2/sm2_key.c`: SM2's private-key range check, whose two raises are the
+    # `ERR_LIB_SM2` null-parameter and invalid-private-key reasons.
+    ("crypto/sm2/sm2_key.c", "SM2_KEY"),
+    # Phase 8's SM2 signature crypt unit. `crypto/sm2/sm2_sign.c` is a plain `.c`, so its `__FILE__`
+    # carries the source-tree prefix. Its raises are the `ERR_LIB_SM2` refusals of the three message
+    # helpers (`ossl_sm2_compute_z_digest`'s null-public-key, digest, BN and curve/point guards,
+    # `sm2_compute_msg_hash`'s invalid-digest and EVP refusals, `sm2_sig_gen`'s private-key, EC, BN
+    # and ECDSA refusals and `sm2_sig_verify`'s bad-signature, EC and BN ones) plus the two
+    # `ossl_sm2_internal_*` entry points' null-parameter, BN, ECDSA and invalid-encoding refusals.
+    ("crypto/sm2/sm2_sign.c", "SM2_SIGN"),
+    # Phase 8's SM2 encryption crypt unit. A plain `.c`, so its `__FILE__` carries the source-tree
+    # prefix. Its raises are the `ERR_LIB_SM2` refusals of `ossl_sm2_plaintext_size`,
+    # `ossl_sm2_encrypt` and `ossl_sm2_decrypt` -- the invalid-encoding, invalid-argument,
+    # internal-error, EC/BN/EVP/ASN1-lib and buffer-too-small reasons -- and the
+    # `SM2_R_INVALID_DIGEST` refusal of the decrypt path's C3 comparison.
+    ("crypto/sm2/sm2_crypt.c", "SM2_CRYPT"),
+    # Phase 8's SM2 signature unit. `.c.in`-generated, so the bare build-relative path. Its raises
+    # are the `PROV_R_XOF_DIGESTS_NOT_ALLOWED` and `PROV_R_INVALID_DIGEST` refusals of
+    # `sm2sig_set_mdname`, the `PROV_R_NO_KEY_SET` refusal of `sm2sig_signature_init`, and the two
+    # generated decoders' `PROV_R_REPEATED_PARAMETER` sites.
+    ("providers/implementations/signature/sm2_sig.c", "PROV_SM2_SIG"),
+    # Phase 8's SM2 asym-cipher unit. `.c.in`-generated too. Its raises are the
+    # `PROV_R_INVALID_KEY` refusal of `sm2_asym_encrypt`'s size-query arm and the two generated
+    # decoders' `PROV_R_REPEATED_PARAMETER` sites.
+    ("providers/implementations/asymciphers/sm2_enc.c", "PROV_SM2_ENC"),
+    # This pass's `DSA` signature unit. `signature/dsa_sig.c` is `.c.in`-generated, so its
+    # `__FILE__` is the bare build-relative path (D235's finding, the same one `dh_exch.c`
+    # carries). Its raises are its own: the four generated decoder refusals
+    # (`PROV_R_REPEATED_PARAMETER`, one per named parameter in each of the three decoders), the
+    # digest refusals of `dsa_setup_md` (`PROV_R_INVALID_DIGEST`/`PROV_R_DIGEST_NOT_ALLOWED`),
+    # the `PROV_R_XOF_DIGESTS_NOT_ALLOWED` arm, the `PROV_R_NO_KEY_SET` of
+    # `dsa_signverify_init`, and the `dsa_sigalg_set_ctx_params` refusals.
+    ("providers/implementations/signature/dsa_sig.c", "PROV_DSA_SIG"),
+    # This pass's `ECDSA` signature unit. `signature/ecdsa_sig.c` is `.c.in`-generated, so its
+    # `__FILE__` is the bare build-relative path, like `dsa_sig.c`'s. Its raises are the same
+    # shape: the generated decoder refusals (`PROV_R_REPEATED_PARAMETER`, one per named parameter
+    # in each of the four decoders), the three `PROV_R_INVALID_DIGEST` refusals and the
+    # `PROV_R_DIGEST_NOT_ALLOWED` pair of `ecdsa_setup_md`, its `PROV_R_XOF_DIGESTS_NOT_ALLOWED`
+    # arm, and the `PROV_R_NO_KEY_SET` of `ecdsa_signverify_init`.
+    ("providers/implementations/signature/ecdsa_sig.c", "PROV_ECDSA_SIG"),
+    # This pass's `EdDSA` signature unit. `signature/eddsa_sig.c` is `.c.in`-generated, so its
+    # `__FILE__` is the bare build-relative path too. Its raises are the `PROV_R_NO_KEY_SET` and
+    # two `ERR_R_INTERNAL_ERROR` sites of `eddsa_signverify_init` and `eddsa_dupctx`, the
+    # `PROV_R_OUTPUT_BUFFER_TOO_SMALL`/`PROV_R_NOT_A_PRIVATE_KEY`/`PROV_R_FAILED_TO_SIGN` trio of
+    # each sign path, the `ph`-instance refusals (`PROV_R_INVALID_PREHASHED_DIGEST_LENGTH`,
+    # `PROV_R_INVALID_DIGEST_LENGTH`, `PROV_R_INVALID_EDDSA_INSTANCE_FOR_ATTEMPTED_OPERATION`), the
+    # two `PROV_R_INVALID_DIGEST` refusals of the digest inits, the `PROV_R_NO_INSTANCE_ALLOWED`
+    # and unknown-instance refusals of `eddsa_set_ctx_params_internal`, and the three decoders'
+    # `PROV_R_REPEATED_PARAMETER` sites. The two `PROV_R_FAILED_TO_SIGN` raises inside the
+    # `S390X_EC_ASM` arms are recorded but not compiled on this profile.
+    ("providers/implementations/signature/eddsa_sig.c", "PROV_EDDSA_SIG"),
+    # Phase 8's `rsa_sig.c.in` (D395), the largest signature unit. `.c.in`-generated, so the bare
+    # build-relative path. Its raises are the generated decoders' `PROV_R_REPEATED_PARAMETER`
+    # sites (four decoders over the compiled names), the `rsa_setup_md`/`rsa_setup_mgf1_md`
+    # digest refusals, the `rsa_check_padding`/`rsa_check_parameters`/`rsa_pss_compute_saltlen`
+    # PSS refusals, the `PROV_R_INVALID_SIGNATURE_SIZE`/`PROV_R_INVALID_DIGEST_LENGTH`/
+    # `PROV_R_KEY_SIZE_TOO_SMALL` of `rsa_sign_directly`, the `PROV_R_OUTPUT_BUFFER_TOO_SMALL`
+    # and `PROV_R_ALGORITHM_MISMATCH` of `rsa_verify_recover`, the `PROV_R_NO_KEY_SET` and
+    # `PROV_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE` of `rsa_signverify_init`, the
+    # `PROV_R_ILLEGAL_OR_UNSUPPORTED_PADDING_MODE`/`PROV_R_NOT_SUPPORTED`/
+    # `PROV_R_INVALID_MGF1_MD` refusals of `rsa_set_ctx_params`, and the
+    # `PROV_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE` of both `rsa_dupctx`'s method and
+    # `rsa_sigalg_signverify_init`. The `FIPS_MODULE` raises of `rsa_x931_padding_allowed` and
+    # `rsa_pss_saltlen_check_passed` are recorded but not compiled on this profile.
+    ("providers/implementations/signature/rsa_sig.c", "PROV_RSA_SIG"),
+    # `providers/common/der/der_rsa_key.c` (D395): two `ERR_LIB_RSA` refusals in
+    # `ossl_DER_w_RSASSA_PSS_params`, a negative salt length (`:308`) and a trailer field other
+    # than 1 (`:312`). It is a plain `.c`, so its `__FILE__` carries the source-tree prefix.
+    ("providers/common/der/der_rsa_key.c", "DER_RSA_KEY"),
+    # `providers/common/securitycheck.c` (D395): the two `ERR_LIB_PROV` refusals of
+    # `ossl_rsa_key_op_get_protect` -- the `PROV_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE`
+    # PSS refusal (`:47`) and the `ERR_R_INTERNAL_ERROR` unknown-operation arm (`:54`). The
+    # other eight functions raise nothing on this profile.
+    ("providers/common/securitycheck.c", "SECURITYCHECK"),
+    # Phase 8's `rsa_enc.c.in` (D396), the `RSA` `OSSL_OP_ASYM_CIPHER` row. `.c.in`-generated, so
+    # the bare build-relative path. Its raises are the generated decoder refusals, the
+    # `PROV_R_INVALID_PADDING_MODE`/`PROV_R_INVALID_KEY`/`PROV_R_OUTPUT_BUFFER_TOO_SMALL`/
+    # `PROV_R_FAILED_TO_DECRYPT`/`PROV_R_BAD_TLS_CLIENT_VERSION`/
+    # `PROV_R_BAD_LENGTH`/`ERR_R_INTERNAL_ERROR` refusals of its four bodies, and the
+    # `rsa_init` `ERR_R_INTERNAL_ERROR` arm. The `FIPS_MODULE` X9.31/key-check raises are recorded
+    # but not compiled on this profile.
+    ("providers/implementations/asymciphers/rsa_enc.c", "PROV_RSA_ENC"),
+    # Phase 8's `rsa_kem.c.in` (D396), the `RSA` `OSSL_OP_KEM` row. `.c.in`-generated, so the bare
+    # build-relative path. Its raises are the generated decoder refusals, the
+    # `PROV_R_INVALID_KEY`/`PROV_R_INVALID_OUTPUT_LENGTH`/`PROV_R_BAD_LENGTH` refusals of the two
+    # RSASVE bodies, and the one **dynamic** reason at `rsasve_recover`'s degenerate-ciphertext
+    # guard (`ERR_LIB_RSA` with `RSA_R_DATA_TOO_SMALL` or `RSA_R_DATA_TOO_LARGE_FOR_MODULUS` chosen
+    # at run time).
+    ("providers/implementations/kem/rsa_kem.c", "PROV_RSA_KEM"),
+    # The SLH-DSA core's signature unit. `crypto/slh_dsa/slh_dsa.c` is a plain `.c`, so its
+    # `__FILE__` carries the source-tree prefix. It raises the four `ERR_LIB_PROV` refusals of
+    # `slh_sign_internal`/`slh_verify_internal`: the `PROV_R_INVALID_SIGNATURE_SIZE`
+    # destination-size guard, the `PROV_R_MISSING_KEY` "no private key" and "no public key"
+    # guards, and the named field of the oversize-message refusal.
+    ("crypto/slh_dsa/slh_dsa.c", "SLH_DSA"),
+    # This pass's ML-KEM core. `crypto/ml_kem/ml_kem.c` is a plain `.c`, so its `__FILE__` carries
+    # the source-tree prefix. It raises nine times, each with the algorithm name interpolated: the
+    # three `PROV_R_INVALID_KEY` refusals of `parse_pubkey`/`parse_prvkey` (the `t` vector, the `s`
+    # vector and the public-key-hash mismatch), the five `ERR_LIB_CRYPTO` `ERR_R_INTERNAL_ERROR`
+    # paths (`parse_pubkey`'s, `genkey`'s, `encap`'s, `decap`'s and `ossl_ml_kem_key_new`'s
+    # missing-SHA3 one) and `ossl_ml_kem_key_new`'s `ERR_R_PASSED_INVALID_ARGUMENT` for an unknown
+    # variant.
+    ("crypto/ml_kem/ml_kem.c", "ML_KEM"),
+    # This pass's ML-KEM KEM unit. `.c.in`-generated, so the bare build-relative path. Its raises
+    # are the two `PROV_R_MISSING_KEY` refusals of the encapsulate/decapsulate inits, the
+    # `PROV_R_MISSING_KEY` refusal inside `ml_kem_encapsulate`, the five `PROV_R_NULL_*`/
+    # `PROV_R_OUTPUT_BUFFER_TOO_SMALL` output guards of `ml_kem_encapsulate`, the
+    # `PROV_R_OUTPUT_BUFFER_TOO_SMALL` guard of `ml_kem_decapsulate`, and the generated
+    # set-ctx-params decoder's `PROV_R_INVALID_SEED_LENGTH` and `PROV_R_REPEATED_PARAMETER` sites.
+    ("providers/implementations/kem/ml_kem_kem.c", "PROV_ML_KEM_KEM"),
+    # This pass's ML-KEM keymgmt unit. `.c.in`-generated too. Every raise is a generated decoder's
+    # `PROV_R_REPEATED_PARAMETER` site: the import decoder's four keys (priv, pub, priv_len,
+    # pub_len), the get-params decoder's five, and the gen-set-params decoder's one (`seed`).
+    ("providers/implementations/keymgmt/ml_kem_kmgmt.c", "PROV_ML_KEM_KMGMT"),
+    # This pass's `mlx_kmgmt.c.in`. `.c.in`-generated, so the bare build-relative path. Its raises
+    # are the generated decoders' `PROV_R_REPEATED_PARAMETER` sites -- the import decoder's two
+    # keys (priv, pub), the get-params decoder's six, the set-params decoder's two, and the
+    # gen-set-params decoder's one (`properties`) -- plus `export_sub_cb`'s two `ERR_R_INTERNAL_ERROR`
+    # length checks, the export/fromdata `PROV_R_MISSING_KEY` and `PROV_R_INVALID_KEY_LENGTH`
+    # refusals, the get-params two `PROV_R_OUTPUT_BUFFER_TOO_SMALL` guards, the set-params
+    # `PROV_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE` mutation refusal and its `PROV_R_INVALID_KEY`
+    # length guard, and `dup`'s `PROV_R_UNSUPPORTED_SELECTION`.
+    ("providers/implementations/keymgmt/mlx_kmgmt.c", "PROV_MLX_KMGMT"),
+    # This pass's `mlx_kem.c`. A plain `.c`, so its `__FILE__` carries the source-tree prefix. Its
+    # raises are the three `PROV_R_MISSING_KEY` refusals of the two inits and `mlx_kem_encapsulate`,
+    # the five `PROV_R_NULL_*`/`PROV_R_OUTPUT_BUFFER_TOO_SMALL` output guards of `mlx_kem_encapsulate`,
+    # the four `ERR_R_INTERNAL_ERROR` "unexpected size" checks (two per body), the
+    # `PROV_R_OUTPUT_BUFFER_TOO_SMALL` and `PROV_R_WRONG_CIPHERTEXT_SIZE` guards of
+    # `mlx_kem_decapsulate`, and the `PROV_R_MISSING_KEY` refusal inside it.
+    ("providers/implementations/kem/mlx_kem.c", "PROV_MLX_KEM"),
+    # The SLH-DSA keymgmt unit. `.c.in`-generated, so the bare build-relative path. Every raise is
+    # a generated decoder's `PROV_R_REPEATED_PARAMETER` site: the import decoder's two keys
+    # (priv, pub), the get-params decoder's seven, and the gen-set-params decoder's two. The
+    # `FIPS_MODULE` pairwise-test raises are recorded but not compiled on this profile.
+    ("providers/implementations/keymgmt/slh_dsa_kmgmt.c", "PROV_SLH_DSA_KMGMT"),
+    # The SLH-DSA signature unit. `.c.in`-generated too. Its raises are the generated
+    # set-ctx-params decoder's four `PROV_R_REPEATED_PARAMETER` sites, the get-ctx-params
+    # decoder's one, the `PROV_R_NO_KEY_SET` refusal of `slh_dsa_signverify_msg_init`, and the
+    # `PROV_R_INVALID_DIGEST` refusal of `slh_dsa_digest_signverify_init`.
+    ("providers/implementations/signature/slh_dsa_sig.c", "PROV_SLH_DSA_SIG"),
+    # The ML-DSA core's three raising units. `crypto/ml_dsa/ml_dsa_encoders.c` is a plain `.c`, so
+    # its `__FILE__` carries the source-tree prefix; it raises once, the `PROV_R_INVALID_KEY`
+    # refusal of `ossl_ml_dsa_sk_decode`'s public-key-hash check (`:820`). `ml_dsa_key.c` raises
+    # once, the `PROV_R_INVALID_KEY` refusal of `ossl_ml_dsa_generate_key`'s "explicit private key
+    # does not match seed" check (`:501`), which `ossl_ml_dsa_key_reset`s the key first.
+    # `ml_dsa_sign.c` raises the three `PROV_R_BAD_LENGTH` guards of `ossl_ml_dsa_mu_init` (`:135`),
+    # `ossl_ml_dsa_sign` (`:181`) and `ossl_ml_dsa_verify` (`:344`). The other five `crypto/ml_dsa/`
+    # units -- `params`, `ntt`, `key_compress`, `sample` and `matrix` -- raise nothing.
+    ("crypto/ml_dsa/ml_dsa_encoders.c", "ML_DSA_ENCODERS"),
+    ("crypto/ml_dsa/ml_dsa_key.c", "ML_DSA_KEY"),
+    ("crypto/ml_dsa/ml_dsa_sign.c", "ML_DSA_SIGN"),
+    # The ML-DSA keymgmt unit. `.c.in`-generated, so the bare build-relative path and the
+    # post-expansion coordinates. Its raises are the two `PROV_R_INVALID_KEY_LENGTH` refusals of
+    # `ml_dsa_import`'s seed check and `ml_dsa_export`, the `PROV_R_INVALID_SEED_LENGTH` refusal
+    # beside them, the `PROV_R_MISSING_KEY` refusal of `ml_dsa_export`, the two
+    # `PROV_R_FAILED_TO_GENERATE_KEY` refusals of `ml_dsa_gen` and `ml_dsa_load`'s no-seed arm, the
+    # two `PROV_R_INVALID_KEY` refusals of `ml_dsa_import`'s key check and `ml_dsa_validate`, and
+    # the generated decoders' `PROV_R_REPEATED_PARAMETER` sites.
+    ("providers/implementations/keymgmt/ml_dsa_kmgmt.c", "PROV_ML_DSA_KMGMT"),
+    # The ML-DSA signature unit. `.c.in`-generated too. Its raises are the `PROV_R_NO_KEY_SET`
+    # refusals of the sign and verify message inits, the `PROV_R_INVALID_DIGEST` refusal of
+    # `ml_dsa_digest_signverify_init`, the `PROV_R_INVALID_SEED_LENGTH` refusal of
+    # `ml_dsa_set_ctx_params`'s `test-entropy` decoder, and the generated set-ctx-params decoder's
+    # `PROV_R_REPEATED_PARAMETER` sites.
+    ("providers/implementations/signature/ml_dsa_sig.c", "PROV_ML_DSA_SIG"),
+    # 8.10's `HMAC`/`SIPHASH`/`POLY1305`/`CMAC` signature rows. `signature/mac_legacy_sig.c` is a
+    # plain `.c`, so its `__FILE__` carries the source-tree prefix. It raises once, the
+    # `PROV_R_NO_KEY_SET` refusal of `mac_digest_sign_init` (`:107`).
+    ("providers/implementations/signature/mac_legacy_sig.c", "PROV_MAC_LEGACY_SIG"),
+    # Phase 8.4: the `crypto/rsa` subsystem. The same rule as `crypto/bn` above -- this is
+    # the *subsystem* set, not a selection of convenient files, because every one of them
+    # raises from a surface Phase 8 owns and a coordinate's `file` string is part of the
+    # observable error record.
+    #
+    # `rsa_meth.c` is deliberately **absent**: D284 measured the whole file as allocations
+    # and stored pointers, so it raises nothing, and an entry that could never change would
+    # read as coverage that does not exist -- the reasoning `mdc2_prov.c` is named under
+    # above. `rsa_err.c` is absent for the generator's own reason: it is the generated
+    # reason-string table, not a raiser.
+    ("crypto/rsa/rsa_lib.c", "RSA_LIB"),
+    ("crypto/rsa/rsa_crpt.c", "RSA_CRPT"),
+    ("crypto/rsa/rsa_pk1.c", "RSA_PK1"),
+    ("crypto/rsa/rsa_none.c", "RSA_NONE"),
+    ("crypto/rsa/rsa_x931.c", "RSA_X931"),
+    ("crypto/rsa/rsa_oaep.c", "RSA_OAEP"),
+    ("crypto/rsa/rsa_pss.c", "RSA_PSS"),
+    ("crypto/rsa/rsa_ossl.c", "RSA_OSSL"),
+    ("crypto/rsa/rsa_gen.c", "RSA_GEN"),
+    ("crypto/rsa/rsa_chk.c", "RSA_CHK"),
+    ("crypto/rsa/rsa_sign.c", "RSA_SIGN"),
+    ("crypto/rsa/rsa_saos.c", "RSA_SAOS"),
+    ("crypto/rsa/rsa_pmeth.c", "RSA_PMETH"),
+    # Phase 8.8's three remaining `EVP_PKEY_METHOD` units (D355). `rsa_pmeth.c` above was
+    # already a coordinate from 8.4; these three join it because the crate transcribes their
+    # raising bodies whole. Their site counts in this profile are DSA 5, DH 4 and EC 11, and
+    # each is named by the callback that raises rather than by a table listing: the digest and
+    # curve refusals of `pkey_dsa_ctrl`/`pkey_dsa_ctrl_str`, the parameter-name and
+    # keys-not-set refusals of `pkey_dh_ctrl_str`/`pkey_dh_keygen`/`pkey_dh_derive`, and the
+    # eleven EC refusals of `pkey_ec_sign`, `pkey_ec_derive`, `pkey_ec_ctrl`,
+    # `pkey_ec_ctrl_str`, `pkey_ec_paramgen` and `pkey_ec_keygen`.
+    ("crypto/dsa/dsa_pmeth.c", "DSA_PMETH"),
+    ("crypto/dh/dh_pmeth.c", "DH_PMETH"),
+    ("crypto/ec/ec_pmeth.c", "EC_PMETH"),
+    ("crypto/rsa/rsa_ameth.c", "RSA_AMETH"),
+    ("crypto/rsa/rsa_backend.c", "RSA_BACKEND"),
+    ("crypto/rsa/rsa_asn1.c", "RSA_ASN1"),
+    ("crypto/rsa/rsa_mp.c", "RSA_MP"),
+    ("crypto/rsa/rsa_prn.c", "RSA_PRN"),
+    # Phase 8.6's `crypto/dsa/dsa_prn.c` (D362) raises twice, both
+    # `ERR_LIB_DSA`/`ERR_R_BUF_LIB` at `:28` and `:43`.
+    ("crypto/dsa/dsa_prn.c", "DSA_PRN"),
+    ("crypto/rsa/rsa_sp800_56b_check.c", "RSA_SP800_56B_CHECK"),
+    # Phase 8's `crypto/dsa/dsa_check.c` (D391). The unit is transcribed whole as
+    # `src/dsa/check.rs` and raises three times, all `ERR_LIB_DSA`: the two
+    # `DSA_R_BAD_FFC_PARAMETERS`/`DSA_R_MODULUS_TOO_LARGE` refusals of `dsa_precheck_params`
+    # at `:25` and `:31`, and its `DSA_R_BAD_Q_VALUE` at `:37`. Its third neighbour
+    # `DSA_R_BAD_FFC_PARAMETERS` is the same reason as the first.
+    ("crypto/dsa/dsa_check.c", "DSA_CHECK"),
+    ("crypto/rsa/rsa_sp800_56b_gen.c", "RSA_SP800_56B_GEN"),
+    ("crypto/rsa/rsa_x931g.c", "RSA_X931G"),
+    ("crypto/rsa/rsa_depr.c", "RSA_DEPR"),
+    ("crypto/rsa/rsa_schemes.c", "RSA_SCHEMES"),
+    ("crypto/rsa/rsa_mp_names.c", "RSA_MP_NAMES"),
+    ("crypto/rsa/rsa_acvp_test_params.c", "RSA_ACVP_TEST_PARAMS"),
+    # Phase 8.8's `crypto/asn1/x_algor.c` (D348). The unit is transcribed whole as
+    # `src/asn1/x_algor.rs`, and it raises once: `ossl_x509_algor_get_md`'s
+    # `ASN1_R_UNKNOWN_DIGEST` at `:165`, the coordinate a caller sees when an OID
+    # resolves to no digest method.
+    ("crypto/asn1/x_algor.c", "X_ALGOR"),
+    # Phase 8.5's `crypto/ffc` subsystem. The same rule as `crypto/rsa` above: these are the
+    # units of the stratum that **raise**, and a coordinate's `file` string is part of the
+    # observable error record. `ffc_params_validate.c` raises the DH
+    # `NOT_SUITABLE_GENERATOR` reason at `:125` and the two DSA prime reasons at `:172` and
+    # `:178`; `ffc_params_generate.c` raises the DH and DSA `BAD_FFC_PARAMETERS` reasons from
+    # its L/N pair test, all three of them on the `#else` arm this profile compiles.
+    #
+    # `ffc_params.c`, `ffc_key_generate.c`, `ffc_key_validate.c`, `ffc_dh.c` and
+    # `ffc_backend.c` are deliberately **absent**: none of them raises anything (they
+    # allocate, copy, compare, print and validate ranges), so an entry for them would read as
+    # coverage that does not exist -- the reasoning `rsa_meth.c` and `mdc2_prov.c` are named
+    # under above.
+    ("crypto/ffc/ffc_params_generate.c", "FFC_PARAMS_GENERATE"),
+    ("crypto/ffc/ffc_params_validate.c", "FFC_PARAMS_VALIDATE"),
+    # Phase 8.5's `crypto/dh` object layer, key layer, generator and validator. The subsystem
+    # set again, minus the two units that raise nothing: `dh_meth.c` (D329 measured its whole
+    # body as allocations and stored pointers) and `dh_depr.c` (its one function allocates a
+    # context and dispatches), so neither gets an entry that could never change. `dh_kdf.c`,
+    # `dh_asn1.c` and `dh_rfc5114.c` raise nothing either. `dh_group_params.c`'s one site is
+    # D332's: the named-group unit the four earlier slices recorded as a separable follow-up
+    # now has a crate module, so its single `DH_R_INVALID_PARAMETER_NID` at `:47` is covered
+    # like every other landed coordinate.
+    ("crypto/dh/dh_lib.c", "DH_LIB"),
+    ("crypto/dh/dh_key.c", "DH_KEY"),
+    ("crypto/dh/dh_gen.c", "DH_GEN"),
+    ("crypto/dh/dh_check.c", "DH_CHECK"),
+    ("crypto/dh/dh_group_params.c", "DH_GROUP_PARAMS"),
+    # D351's `crypto/dh/dh_backend.c`: the provider/legacy key bridge. It raises twice, both on
+    # the PKCS#8 decode path -- `DH_R_BN_ERROR` at `:222` and `DH_R_DECODE_ERROR` at `:235` --
+    # and like every other unit the file string is part of the observable error record.
+    ("crypto/dh/dh_backend.c", "DH_BACKEND"),
+    # 8.8's `crypto/dh/dh_ameth.c` -- the `EVP_PKEY_ASN1_METHOD` objects. Its decode/encode
+    # callbacks, its `do_dh_print` err label and its two key checks all raise, so the unit joins
+    # the covered set with the objects that make its coordinates observable. `:297` is
+    # `dynamic_reason`: the authority raises a computed `reason`.
+    ("crypto/dh/dh_ameth.c", "DH_AMETH"),
+    # Phase 8.6's `crypto/dsa` object layer and its `dsa_ossl.c`. The subsystem set again, minus
+    # the five units that raise nothing: `dsa_meth.c` (D333 measured its whole body as allocations
+    # and stored pointers), `dsa_gen.c` (every failure is a `return 0` and the reason a caller sees
+    # is the FFC generator's own site -- the reasoning `dh_kdf.c` and `dh_asn1.c` were named
+    # under), `dsa_key.c` (its only `ERR_raise`s are inside `#ifdef FIPS_MODULE`), `dsa_sign.c`
+    # and `dsa_vrf.c` (dispatch) and `dsa_depr.c` (allocation and dispatch). `dsa_ossl.c` is where
+    # the sign and verify reasons are raised -- nine sites, one of them the authority's only
+    # dynamic-reason site in this stratum -- and `dsa_lib.c` is where the constructor's two
+    # refusals are.
+    ("crypto/dsa/dsa_lib.c", "DSA_LIB"),
+    ("crypto/dsa/dsa_ossl.c", "DSA_OSS"),
+    # D351's `crypto/dsa/dsa_backend.c`: the DSA half of the same bridge. Its four raises are
+    # `DSA_R_BN_ERROR` (`:154`, `:171`), `ERR_R_BN_LIB` (`:159`, `:163`), `DSA_R_DECODE_ERROR`
+    # (`:182`) and `ERR_R_INTERNAL_ERROR` (`:175`), all on the PKCS#8 decode path.
+    ("crypto/dsa/dsa_backend.c", "DSA_BACKEND"),
+    # 8.8's `crypto/dsa/dsa_ameth.c` -- the same shape as `dh_ameth.c` above: the decode/encode
+    # callbacks, the private-key readers and the key checks raise, and the objects that reach them
+    # land here.
+    ("crypto/dsa/dsa_ameth.c", "DSA_AMETH"),
+    # Phase 8.7's `crypto/ec` curve tables and `crypto/evp/ec_support.c`. The subsystem set again,
+    # restricted to the two units D334 gives a crate module: `ec_curve.c` raises from the group
+    # constructors (four `ERR_R_EC_LIB`/`ERR_R_BN_LIB`/`ERR_R_OBJ_LIB` sites in
+    # `ec_group_new_from_data`'s `#ifndef FIPS_MODULE` tail and the `ERR_raise_data`/
+    # `EC_R_UNKNOWN_GROUP` pair in `EC_GROUP_new_by_curve_name_ex`), and `ec_support.c` raises
+    # nothing -- it is listed with an empty site set rather than omitted, so a later raise in it
+    # cannot be invisible. **The lexical scan emits every site whether or not a landed path reaches
+    # it**, which is the same treatment D330 records for the two FIPS-only FFC coordinates: the
+    # constructors themselves are `open` in this slice, so these coordinates are carried for the
+    # slice that lands them rather than reached by anything here.
+    ("crypto/ec/ec_curve.c", "EC_CURVE"),
+    ("crypto/evp/ec_support.c", "EC_SUPPORT"),
+    # Phase 8.7's remaining `crypto/ec` layer — the group and point objects, the field arithmetic
+    # they dispatch to, the multiplication ladder, the point-encoding units, the key layer, the
+    # two signature/shared-secret units, the provider backend and the `ec.h` DER entry points.
+    # D334 registered only the two units its first slice gave a crate module; D340 lands the rest
+    # of the block, so the subsystem set is now complete. The same rule as `crypto/rsa` and
+    # `crypto/dsa` above applies: a coordinate's `file` string is part of the observable error
+    # record, so every unit of the stratum that **raises** is listed. `ec_cvt.c` raises nothing
+    # and is listed with an empty site set rather than omitted, `ec_support.c`'s case above.
+    ("crypto/ec/ec_lib.c", "EC_LIB"),
+    ("crypto/ec/ecp_smpl.c", "ECP_SMPL"),
+    ("crypto/ec/ecp_mont.c", "ECP_MONT"),
+    ("crypto/ec/ecp_nist.c", "ECP_NIST"),
+    ("crypto/ec/ec_mult.c", "EC_MULT"),
+    ("crypto/ec/ecp_oct.c", "ECP_OCT"),
+    ("crypto/ec/ec_oct.c", "EC_OCT"),
+    ("crypto/ec/ec2_smpl.c", "EC2_SMPL"),
+    ("crypto/ec/ec2_oct.c", "EC2_OCT"),
+    ("crypto/ec/ec_key.c", "EC_KEY"),
+    ("crypto/ec/ec_kmeth.c", "EC_KMETH"),
+    ("crypto/ec/ecdsa_ossl.c", "ECDSA_OSSL"),
+    ("crypto/ec/ecdh_ossl.c", "ECDH_OSSL"),
+    ("crypto/ec/ecdsa_sign.c", "ECDSA_SIGN"),
+    ("crypto/ec/ecdsa_vrf.c", "ECDSA_VRF"),
+    ("crypto/ec/ec_check.c", "EC_CHECK"),
+    ("crypto/ec/ec_cvt.c", "EC_CVT"),
+    # `ec_backend.c` is the provider group/key backend the group object reaches through
+    # `EC_GROUP_to_params`/`EC_GROUP_new_from_params`, and `ec_asn1.c` supplies the three `ec.h`
+    # DER entry points `ecdsa_ossl.c` reaches (`ECDSA_size`, `i2d_ECDSA_SIG`, `d2i_ECDSA_SIG`).
+    ("crypto/ec/ec_backend.c", "EC_BACKEND"),
+    ("crypto/ec/ec_asn1.c", "EC_ASN1"),
+    # `ec_ameth.c` is the `EVP_PKEY_ASN1_METHOD` object unit; the one export of it this stratum
+    # lands, `ECParameters_print`, is the `EC_KEY_PRINT_PARAM` arm of its static
+    # `do_EC_KEY_print`, and it raises at `:292` and `:341`. Covering the unit gives those two
+    # coordinates their generated constants rather than a hand-written reconstruction.
+    ("crypto/ec/ec_ameth.c", "EC_AMETH"),
+    # `eck_prn.c` is the deprecated printer unit `ec_asn1.c`'s parameter family is printed
+    # through: `ECPKParameters_print`/`_print_fp` and `ECParameters_print_fp` raise their own
+    # records. Its four sites are the coordinates the printer transcription reproduces.
+    ("crypto/ec/eck_prn.c", "ECK_PRN"),
+    # `crypto/param_build_set.c` is the unit `ec_backend.c` reaches for its four
+    # `ossl_param_build_set_*` helpers. D330 and D331 both recorded it as having no crate
+    # module and no plan row; 8.7's backend is the first caller that needs it, so it joins the
+    # covered set here. Its one reason is `CRYPTO_R_TOO_SMALL_BUFFER` (`cryptoerr.h`, already in
+    # the resolver's include set).
+    ("crypto/param_build_set.c", "PARAM_BUILD_SET"),
+    # Phase 9's `crypto/rand` subsystem. **The subsystem set, not a selection of convenient
+    # files**, for `crypto/rsa`'s reason and one more of its own: this stratum's symbols are
+    # raised from inside bodies whose declaring header belongs to *earlier* strata (`BN_rand`,
+    # `RSA_generate_key_ex`, `EVP_SealInit`), so a coordinate's `file` string is what tells a
+    # caller which unit refused -- and the units are the ones the random layer owns.
+    #
+    # `rand_uniform.c` is deliberately **absent**: its two functions are arithmetic over a
+    # `RAND_POOL` and raise nothing, so an entry for it would read as coverage that does not
+    # exist -- the reasoning `mdc2_prov.c` is named under above. `rand_err.c` is absent for the
+    # generator's own reason: it is the generated reason-string table, not a raiser.
+    # `rand_engine.c` does not exist in 3.6.4; the ENGINE arms live in `rand_lib.c` and are
+    # Phase 13's, but the file is covered here because the sites it raises from are Phase 9's.
+    ("crypto/rand/rand_lib.c", "RAND_LIB"),
+    ("crypto/rand/randfile.c", "RANDFILE"),
+    ("crypto/rand/rand_pool.c", "RAND_POOL"),
+    # `prov_seed.c` **joins the covered set in D309, when its first caller lands**: it is the
+    # core-side half of the provider seeding up-call (`ossl_rand_get_entropy` and its seven
+    # siblings), and `$CRYPTO` in `crypto/rand/build.info:4` says it is built on this profile. Its
+    # two raises are `ERR_LIB_RAND`/`ERR_R_RAND_LIB` on the pool-allocation failure path, which is
+    # exactly the kind of coordinate a caller sees rather than a diagnostic.
+    ("crypto/rand/prov_seed.c", "PROV_SEED"),
+    # Phase 9's `providers/implementations/rands` subsystem -- the four `OSSL_OP_RAND` rows and
+    # the seed sources they draw on. `crngt.c` is **not** in this list because it is not in the
+    # authority: the continuous test is `fips_crng_test.c`, which is, and the correction is
+    # recorded in `forensics/prerequisites.json`'s `units` block (docs/DECISIONS.md D294).
+    ("providers/implementations/rands/drbg.c", "PROV_DRBG"),
+    ("providers/implementations/rands/drbg_ctr.c", "PROV_DRBG_CTR"),
+    ("providers/implementations/rands/drbg_hash.c", "PROV_DRBG_HASH"),
+    ("providers/implementations/rands/drbg_hmac.c", "PROV_DRBG_HMAC"),
+    ("providers/implementations/rands/seed_src.c", "PROV_SEED_SRC"),
+    ("providers/implementations/rands/test_rng.c", "PROV_TEST_RNG"),
+    ("providers/implementations/rands/fips_crng_test.c", "PROV_FIPS_CRNG_TEST"),
+    # Deliberately *not* covered yet, with the stratum that owns each: the AEAD
+    # template `ciphercommon_gcm.c.in` (9: no row reaches it, because
+    # `deflt_ciphers[]` carries no GCM row in this crate -- D234); the
+    # `cipher_chacha20*.c`, `cipher_aes_siv.c`, `cipher_aes_gcm_siv.c` (9, or
+    # 8.3's blocked rows: `cipher_aes_siv.c`'s three rows needed the `OSSL_OP_MAC`
+    # CMAC row, which landed with them (D241); `cipher_aes_gcm_siv.c` and
+    # `cipher_chacha20*.c` (9);
+    # whose `ciphercommon_ccm.c.in` sibling *is* covered above, because the three
+    # AES-CCM rows land in 8.3);
+    # `cipher_cts.c` and the `cipher_*_cts.inc` pair raise nothing and are absent for
+    # that reason; `cipher_aria_hw.c`, `cipher_sm4_xts.c`, `cipher_des.c`,
+    # `cipher_rc2.c`, `cipher_rc4_hmac_md5.c`, `cipher_rc5.c` and the
+    # `cipher_aes_cbc_hmac_*` family are not this profile's rows. Their raises stay
+    # visible as uncovered sites until those strata land.
+    #
+    # Phase 13 staging: `crypto/ui/ui_lib.c` and `crypto/ui/ui_openssl.c`. The `UI` program lands
+    # ahead of its stratum (D350) because `EVP_read_pw_string_min` is its only caller and the PEM
+    # hinge needs it. Both files raise from surfaces the crate now has: `ui_lib.c`'s twenty sites
+    # are `ERR_LIB_UI` with the generic `ERR_R_*` codes and the eleven `UI_R_*` ones, and
+    # `ui_openssl.c`'s single reachable site is the `tcgetattr` errno fallback
+    # (`UI_R_UNKNOWN_TTYGET_ERRNO_VALUE`). `ui_err.c` defines no site (it is the reason-string
+    # `ui_err.c` defines no site (it is the reason-string
+    # table) and `ui_null.c` raises nothing, so neither is covered.
+    ("crypto/ui/ui_lib.c", "UI_LIB"),
+    ("crypto/ui/ui_openssl.c", "UI_OPENSSL"),
+    # Phase 8.9's `crypto/pem/pem_all.c`. The `IMPLEMENT_PEM_*` expansions raise nothing --
+    # they are one call to a `PEM_ASN1_*` -- so the two sites are the two hand-written readers'
+    # (`PEM_read_bio_DHparams` at `:201`, `PEM_read_DHparams` at `:214`).
+    ("crypto/pem/pem_all.c", "PEM_ALL"),
+    # Phase 10 staging: `crypto/passphrase.c`, the passphrase bridge the encode/decode
+    # framework stands on (D356). Its four `ossl_pw_set_*` setters and the `static
+    # do_ui_passphrase` processor raise `ERR_LIB_CRYPTO` with `ERR_R_PASSED_NULL_PARAMETER`,
+    # `ERR_R_UI_LIB` and `ERR_R_INTERRUPTED_OR_CANCELLED`; the eleven sites in
+    # `ossl_pw_get_passphrase` and its five one-call callers are covered by this file's entry
+    # even though those six functions are withheld, because a raise site is a property of the
+    # translation unit rather than of the subset a stratum has reached.
+    ("crypto/passphrase.c", "PASSPHRASE"),
+    # Phase 10 staging: the three `crypto/encode_decode/encoder_*` units (D360). Each raises from
+    # bodies the encoder landing writes, so the three entries land with the code. Their counts are
+    # 6 (`encoder_meth.c`), 14 (`encoder_lib.c`) and 2 (`encoder_pkey.c`).
+    ("crypto/encode_decode/encoder_meth.c", "ENCODER_METH"),
+    ("crypto/encode_decode/encoder_lib.c", "ENCODER_LIB"),
+    ("crypto/encode_decode/encoder_pkey.c", "ENCODER_PKEY"),
+    # Phase 10's `crypto/encode_decode/decoder_meth.c` -- the `OSSL_DECODER` object. It raises
+    # `ERR_R_INVALID_PROVIDER_FUNCTIONS` at `:280` and `ERR_R_PASSED_NULL_PARAMETER` at its four
+    # accessor sites.
+    ("crypto/encode_decode/decoder_meth.c", "DECODER_METH"),
+    # Phase 10's `crypto/encode_decode/decoder_lib.c` -- the `OSSL_DECODER_INSTANCE` and
+    # `OSSL_DECODER_CTX` object layer.
+    ("crypto/encode_decode/decoder_lib.c", "DECODER_LIB"),
+    # Phase 10's `crypto/encode_decode/decoder_pkey.c` -- the decoder cache, the pkey half that
+    # `OSSL_DECODER_CTX_new_for_pkey` builds, and the four passphrase setters.
+    ("crypto/encode_decode/decoder_pkey.c", "DECODER_PKEY"),
+    # Phase 10 staging: `crypto/pkcs12/p12_decr.c`, the PBE buffer crypt and the ASN.1 decrypt/
+    # encrypt pair `PKCS8_decrypt` reads an `EncryptedPrivateKeyInfo` through (D368). Its
+    # thirteen sites are `ERR_LIB_PKCS12` with `ERR_R_EVP_LIB`, `ERR_R_PASSED_NULL_PARAMETER`,
+    # `ERR_R_INTERNAL_ERROR` and the four `PKCS12_R_*` reasons, so covering the unit gives the
+    # decrypt path its coordinates rather than a hand-written reconstruction. `p12_p8d.c` is
+    # **not** covered: `PKCS8_decrypt`/`PKCS8_decrypt_ex` raise nothing, so an entry for it would
+    # read as coverage that does not exist -- the reasoning `mdc2_prov.c` is named under above.
+    ("crypto/pkcs12/p12_decr.c", "PKCS12"),
+    # Phase 11 staging: `crypto/x509/x509_att.c`, the `X509at_add1_attr*` family
+    # `PKCS8_pkey_add1_attr*` is one call each to (D368). Its twenty-six sites are
+    # `ERR_LIB_X509`, mostly `ERR_R_PASSED_NULL_PARAMETER`, `ERR_R_CRYPTO_LIB` and
+    # `ERR_R_ASN1_LIB` with the four `X509_R_*` reasons the duplicate/unknown-name/wrong-type
+    # refusals carry.
+    ("crypto/x509/x509_att.c", "X509_ATT"),
+    # Phase 11 staging: `crypto/x509/x_pubkey.c`, the `X509_PUBKEY` object layer the `d2i`/
+    # `i2d` public-key family and `ossl_d2i_PUBKEY_legacy` are written in (D369). Its
+    # twenty-four sites are `ERR_LIB_X509`, `ERR_LIB_ASN1` and `ERR_LIB_EVP` with the generic
+    # `ERR_R_*` codes, `ASN1_R_DECODE_ERROR`, `EVP_R_DECODE_ERROR` and the three `X509_R_*`
+    # refusals (`PUBLIC_KEY_ENCODE_ERROR`, `METHOD_NOT_SUPPORTED`, `UNSUPPORTED_ALGORITHM`).
+    # D349 had the unit deliberately absent because the four functions then landed raised
+    # nothing; the completion is what changes that.
+    ("crypto/x509/x_pubkey.c", "X509_PUBKEY"),
+    # Phase 8.7's ECX key objects (D372): `crypto/ec/ecx_key.c` (the `ECX_KEY` object and
+    # `ossl_ecx_compute_key`) and `crypto/ec/ecx_backend.c` (the backend the legacy methods and
+    # the providers share). The first is `ERR_LIB_PROV` with the four `PROV_R_*` reasons on the
+    # X25519/X448 agreement path; the second is `ERR_LIB_EC` with `ERR_R_EC_LIB`,
+    # `EC_R_INVALID_ENCODING` and `EC_R_FAILED_MAKING_PUBLIC_KEY`.
+    ("crypto/ec/ecx_key.c", "ECX_KEY"),
+    ("crypto/ec/ecx_backend.c", "ECX_BACKEND"),
+    # `crypto/ec/ecx_meth.c` (D372), the two method tables' four rows: `EVP_PKEY_ASN1_METHOD`
+    # and `EVP_PKEY_METHOD` for X25519, X448, Ed25519 and Ed448. Its thirty-one sites are
+    # `ERR_LIB_EC`, `ERR_LIB_DH` and `ERR_LIB_ASN1` with the `EC_R_*`/`ERR_R_*` reasons the two
+    # tables' decode, sign and key-generation arms carry.
+    ("crypto/ec/ecx_meth.c", "ECX_METH"),
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`
@@ -501,15 +1243,71 @@ def definition_name(line: str) -> str | None:
 
 
 def relpath_prefix(source: Path, build_dir: Path) -> str:
-    """The `__FILE__` prefix the authority's compiler would have used."""
+    """The `__FILE__` prefix the authority's compiler would have used.
+
+    Files the build compiles from the *source tree* are passed to the compiler with a
+    path under that tree, so the compiler records `relpath(source_tree, build_dir)` in
+    front of the source-relative path. Files the build *generates* into the build tree
+    (the `.c.in` templates: `ciphercommon.c`, `ciphercommon_gcm.c`,
+    `ciphercommon_ccm.c`, `digestcommon.c`) are compiled from the build directory and
+    record only their build-relative path. Both are derived from the admitted build
+    record by `resolve_site_source`, never hand-typed: the spellings differ and the ERR
+    record carries the compiler's, so getting this wrong is a contract divergence.
+    """
     return os.path.relpath(str(source.resolve()), str(build_dir.resolve())) + "/"
+
+
+def resolve_site_source(auth, build_dir: Path, rel_source: str) -> tuple[Path, bool]:
+    """Where a covered translation unit's text actually lives, and whether it is generated.
+
+    Returns `(path, generated)`. A unit present in the admitted source tree is read from
+    there and its `__FILE__` carries the source-tree prefix. A unit the build generates
+    into the build tree (the `.c.in` templates) is read from the build tree and its
+    `__FILE__` is the bare build-relative path -- `ciphercommon.c` is the first of these,
+    and the authority's own ERR records show the two spellings differ. Reading the `.in`
+    instead would attribute every site to a line number the compiler never saw, because
+    the template expands `produce_param_decoder` into ~130 generated lines before the
+    first real function.
+    """
+    path = auth.source / rel_source
+    if path.is_file():
+        return path, False
+    generated = build_dir / rel_source
+    if generated.is_file():
+        return generated, True
+    raise SystemExit(f"authority file missing: {path} (and not generated at {generated})")
+
+
+def definition_name_joined(lines: list[str], i: int) -> str | None:
+    """`definition_name` for a definition whose parameter list wraps to the next line.
+
+    `produce_param_decoder` emits
+
+        static int ossl_cipher_generic_get_params_decoder
+            (const OSSL_PARAM *p, struct ..._st *r)
+
+    so the name sits at the end of one line and the `(` opens the next. Scanning the
+    single line finds no parameter list and the whole generated decoder, and every
+    `ERR_raise_data` inside it, appears to have no enclosing function. Joining exactly
+    one continuation line when the first holds no `(` recovers the name. It is the
+    authority's `__func__`, so it is contract.
+    """
+    got = definition_name(lines[i])
+    if got is not None:
+        return got
+    if i + 1 >= len(lines) or "(" in lines[i]:
+        return None
+    nxt = lines[i + 1].lstrip()
+    if not nxt.startswith("("):
+        return None
+    return definition_name(lines[i].rstrip() + " " + nxt)
 
 
 def enclosing_function(lines: list[str], lineno: int) -> str:
     """Name of the function whose body contains `lineno` (1-based)."""
     best = None
     for i in range(lineno - 1):
-        got = definition_name(lines[i])
+        got = definition_name_joined(lines, i)
         if got:
             best = got
     if best is None:
@@ -858,12 +1656,45 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
     "#include <openssl/evperr.h>",
     "#include <openssl/pemerr.h>",
     "#include <openssl/rsaerr.h>",
+    # Phase 9 needs `RAND_R_*` for `crypto/rand/rand_lib.c`, `randfile.c` and `rand_pool.c`.
+    # `randerr.h` is an installed header, so this is `evperr.h`'s case again rather than the
+    # `internal/` fallthrough below. `RAND_R_*` is the one family whose *library* is also the
+    # stratum: the sites are the random layer raising about itself.
+    "#include <openssl/randerr.h>",
     # Phase 7.6 needs `PROV_R_*`: `crypto/hpke/hpke_util.c` is a `crypto/` file whose
     # helpers raise with the *provider* library's reasons (they are shared with the
     # `providers/` implementations that use the same labelled extract/expand).
     # `proverr.h` is an installed header, so this is the same fallthrough-free case as
     # `evperr.h` above.
     "#include <openssl/proverr.h>",
+    # Phase 8.5 needs `DH_R_*` and `DSA_R_*`: `crypto/ffc/ffc_params_validate.c` and
+    # `ffc_params_generate.c` are the shared FFC units, so the DH and DSA layers' reasons are
+    # raised from a `crypto/ffc/` file -- `internal/ffc.h`'s own comment says as much about the
+    # `FFC_CHECK_*`/`FFC_ERROR_*` split. Both headers are installed, so this is `evperr.h`'s
+    # fallthrough-free case again.
+    "#include <openssl/dherr.h>",
+    "#include <openssl/dsaerr.h>",
+    # Phase 8.7 needs `EC_R_UNKNOWN_GROUP`: `crypto/ec/ec_curve.c`'s
+    # `EC_GROUP_new_by_curve_name_ex` raises it through `ERR_raise_data`, and the resolver reads
+    # the reason's *name* out of the header rather than its value out of the build, so the header
+    # has to be in this include set even though the constructor itself is `open` in this slice.
+    # `ecerr.h` is installed, so this is `dherr.h`'s case again.
+    "#include <openssl/ecerr.h>",
+    # Phase 13 staging: `UI_R_*` for `crypto/ui/ui_lib.c` and `ui_openssl.c`, which D350
+    # transcribes. `uierr.h` is an installed header, so this is `ecerr.h`'s case again.
+    "#include <openssl/uierr.h>",
+    # Phase 10 staging: `OSSL_ENCODER_R_*` for `crypto/encode_decode/encoder_lib.c`, whose
+    # "no encoders were found" refusal is the message D361 transcribes. `encodererr.h` is an
+    # installed header, so this is `ecerr.h`'s case again.
+    "#include <openssl/encodererr.h>",
+    # Phase 10 staging: `OSSL_DECODER_R_*` for `crypto/encode_decode/decoder_lib.c`,
+    # whose "no decoders were found" refusal is the message D364 transcribes.
+    # `decodererr.h` is an installed header, so this is `ecerr.h`'s case again.
+    "#include <openssl/decodererr.h>",
+    # Phase 10 staging: `PKCS12_R_*` for `crypto/pkcs12/p12_decr.c`, whose decrypt/encrypt
+    # refusals D368 transcribes. `pkcs12err.h` is an installed header, so this is `ecerr.h`'s
+    # case again.
+    "#include <openssl/pkcs12err.h>",
         # `PROP_R_*` is the first reason family this table needs that lives in an
         # *internal* header rather than an installed one: `internal/propertyerr.h`,
         # which the property grammar raises from. It is resolveable because the
@@ -874,6 +1705,10 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
         "#include <internal/propertyerr.h>",
         # `DSO_R_*` likewise, from `internal/dsoerr.h`.
         "#include <internal/dsoerr.h>",
+        # `SM2_R_*` for `crypto/sm2/sm2_key.c`, the SM2 private-key range check D389 transcribes.
+        # `crypto/sm2err.h` is not installed either, so it is the same fallthrough case as
+        # `internal/propertyerr.h`; it carries the `crypto/` prefix rather than `internal/`.
+        "#include <crypto/sm2err.h>",
         "#include <stdio.h>",
         "",
     ]
@@ -1090,13 +1925,19 @@ def main(argv: list[str]) -> int:
 
     all_sites: list[dict] = []
     unattributed: list[dict] = []
+    input_paths: dict[str, Path] = {}
     for rel_source, stem in COVERED_FILES:
-        path = auth.source / rel_source
-        if not path.is_file():
-            raise SystemExit(f"authority file missing: {path}")
+        path, generated = resolve_site_source(auth, build_dir, rel_source)
         found, skipped = scan(path)
+        input_paths[rel_source] = path
         for s in found:
             s["rel_source"] = rel_source
+            # The `__FILE__` the authority's compiler saw. A source-tree file is spelled
+            # with the `relpath(source_tree, build_dir)` prefix; a build-generated file
+            # is spelled with only its build-relative path. Derived from which tree the
+            # file is actually in, not typed.
+            s["file"] = rel_source if generated else prefix + rel_source
+            s["generated"] = generated
             s["const_name"] = const_name(stem, s["line"])
             all_sites.append(s)
         for s in skipped:
@@ -1117,8 +1958,6 @@ def main(argv: list[str]) -> int:
     for s in all_sites:
         s["lib"] = values[s["lib_symbol"]]
         s["reason"] = values[s["reason_symbol"]] if s["reason_symbol"] else 0
-        # The `__FILE__` the authority's compiler saw.
-        s["file"] = prefix + s["rel_source"]
 
     body = {
         "prefix": prefix,
@@ -1147,7 +1986,7 @@ def main(argv: list[str]) -> int:
     }
 
     inputs = [
-        InputRef(name=f"authority:{rel_source}", path=auth.source / rel_source)
+        InputRef(name=f"authority:{rel_source}", path=input_paths[rel_source])
         for rel_source, _ in COVERED_FILES
     ]
     build_records = REPO_ROOT / "forensics" / "authorities" / "BUILD_RECORDS.json"

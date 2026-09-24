@@ -99,27 +99,27 @@ const LINE_CLEAR_FREE_DERIVE_SKEY: c_int = 627;
 // ---------------------------------------------------------------------------------------------
 
 /// `OSSL_FUNC_KEYEXCH_NEWCTX`.
-const OSSL_FUNC_KEYEXCH_NEWCTX: c_int = 1;
+pub(crate) const OSSL_FUNC_KEYEXCH_NEWCTX: c_int = 1;
 /// `OSSL_FUNC_KEYEXCH_INIT`.
-const OSSL_FUNC_KEYEXCH_INIT: c_int = 2;
+pub(crate) const OSSL_FUNC_KEYEXCH_INIT: c_int = 2;
 /// `OSSL_FUNC_KEYEXCH_DERIVE`.
-const OSSL_FUNC_KEYEXCH_DERIVE: c_int = 3;
+pub(crate) const OSSL_FUNC_KEYEXCH_DERIVE: c_int = 3;
 /// `OSSL_FUNC_KEYEXCH_SET_PEER`.
-const OSSL_FUNC_KEYEXCH_SET_PEER: c_int = 4;
+pub(crate) const OSSL_FUNC_KEYEXCH_SET_PEER: c_int = 4;
 /// `OSSL_FUNC_KEYEXCH_FREECTX`.
-const OSSL_FUNC_KEYEXCH_FREECTX: c_int = 5;
+pub(crate) const OSSL_FUNC_KEYEXCH_FREECTX: c_int = 5;
 /// `OSSL_FUNC_KEYEXCH_DUPCTX`.
-const OSSL_FUNC_KEYEXCH_DUPCTX: c_int = 6;
+pub(crate) const OSSL_FUNC_KEYEXCH_DUPCTX: c_int = 6;
 /// `OSSL_FUNC_KEYEXCH_SET_CTX_PARAMS`.
-const OSSL_FUNC_KEYEXCH_SET_CTX_PARAMS: c_int = 7;
+pub(crate) const OSSL_FUNC_KEYEXCH_SET_CTX_PARAMS: c_int = 7;
 /// `OSSL_FUNC_KEYEXCH_SETTABLE_CTX_PARAMS`.
-const OSSL_FUNC_KEYEXCH_SETTABLE_CTX_PARAMS: c_int = 8;
+pub(crate) const OSSL_FUNC_KEYEXCH_SETTABLE_CTX_PARAMS: c_int = 8;
 /// `OSSL_FUNC_KEYEXCH_GET_CTX_PARAMS`.
-const OSSL_FUNC_KEYEXCH_GET_CTX_PARAMS: c_int = 9;
+pub(crate) const OSSL_FUNC_KEYEXCH_GET_CTX_PARAMS: c_int = 9;
 /// `OSSL_FUNC_KEYEXCH_GETTABLE_CTX_PARAMS`.
-const OSSL_FUNC_KEYEXCH_GETTABLE_CTX_PARAMS: c_int = 10;
+pub(crate) const OSSL_FUNC_KEYEXCH_GETTABLE_CTX_PARAMS: c_int = 10;
 /// `OSSL_FUNC_KEYEXCH_DERIVE_SKEY`.
-const OSSL_FUNC_KEYEXCH_DERIVE_SKEY: c_int = 11;
+pub(crate) const OSSL_FUNC_KEYEXCH_DERIVE_SKEY: c_int = 11;
 
 /// `OSSL_FUNC_keyexch_newctx_fn`.
 pub(crate) type KeyexchNewctxFn = unsafe extern "C" fn(*mut c_void) -> *mut c_void;

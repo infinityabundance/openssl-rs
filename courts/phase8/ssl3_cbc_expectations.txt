@@ -1,0 +1,516 @@
+# ssl3_cbc_digest_record expectations, generated from the authority itself.
+#
+# Generator: courts/phase8/gen-ssl3-cbc-values.c (tracked).
+#
+# The generator compiles the authority own ssl/record/methods/ssl3_cbc.c
+# (forensics/authorities/src/openssl-3.6.4) against the authority own libcrypto
+# (forensics/authorities/prefix/openssl-3.6.4-production). It is therefore a
+# transcription check, not an independent construction check -- the oracle is the
+# unit being transcribed. What it does cover is the constant-time block arithmetic,
+# which is where a transcription diverges and where the divergence is invisible
+# from outside.
+#
+# Command, inside the court container:
+#   A=forensics/authorities/src/openssl-3.6.4
+#   P=forensics/authorities/prefix/openssl-3.6.4-production
+#   clang -std=c11 -O1 -DNDEBUG -I "$P/include" -I "$A/include" -I "$A" \
+#     -o /tmp/ssl3vec courts/phase8/gen-ssl3-cbc-values.c \
+#     "$A/ssl/record/methods/ssl3_cbc.c" -L "$P/lib" -lcrypto -Wl,-rpath,"$P/lib"
+#   /tmp/ssl3vec
+#
+# -DNDEBUG is load-bearing: it is what makes the unsupported-digest arm return 0
+# instead of calling OPENSSL_die. The profile build tree carries it.
+#
+# Rows, in the authority own emission order:
+#   ("NAME", is_sslv3, data_size, mac_size, padding, ok, "hex", out_size)
+#   ("NAME", ok, out_size)   -- the unsupported digests, on a fixed shape
+#
+# Matrix: 6 digests the record layer supports (MD5, SHA1, SHA2-224/256/384/512)
+# x 2 (SSLv3 / TLS) x 10 message lengths (0,1,5,16,31,32,63,64,100,255)
+# x 2 paddings (16, 0) = 240, plus 3 unsupported digests = 243 cases.
+/* ssl3_cbc_digest_record on a digest the record layer does not support */
+    ("SHA3-256", 0, 0),
+    ("BLAKE2B-512", 0, 0),
+    ("SM3", 0, 0),
+
+/* ssl3_cbc_digest_record */
+/* MD5, is_sslv3=0, data=0, mac=16, pad=16 */
+    ("MD5", 0, 0, 16, 16, 1, "46aef553fa7db8a61f482864348325b7", 16),
+/* MD5, is_sslv3=0, data=0, mac=16, pad=0 */
+    ("MD5", 0, 0, 16, 0, 1, "46aef553fa7db8a61f482864348325b7", 16),
+/* MD5, is_sslv3=0, data=1, mac=16, pad=16 */
+    ("MD5", 0, 1, 16, 16, 1, "89e16b4d19a593b2270e796e68960ae8", 16),
+/* MD5, is_sslv3=0, data=1, mac=16, pad=0 */
+    ("MD5", 0, 1, 16, 0, 1, "89e16b4d19a593b2270e796e68960ae8", 16),
+/* MD5, is_sslv3=0, data=5, mac=16, pad=16 */
+    ("MD5", 0, 5, 16, 16, 1, "61b2eea7d207d71300911485566583cd", 16),
+/* MD5, is_sslv3=0, data=5, mac=16, pad=0 */
+    ("MD5", 0, 5, 16, 0, 1, "61b2eea7d207d71300911485566583cd", 16),
+/* MD5, is_sslv3=0, data=16, mac=16, pad=16 */
+    ("MD5", 0, 16, 16, 16, 1, "0460deb6c7b20fc06f85c241e2cd1120", 16),
+/* MD5, is_sslv3=0, data=16, mac=16, pad=0 */
+    ("MD5", 0, 16, 16, 0, 1, "0460deb6c7b20fc06f85c241e2cd1120", 16),
+/* MD5, is_sslv3=0, data=31, mac=16, pad=16 */
+    ("MD5", 0, 31, 16, 16, 1, "aeaae0ebec3c80b010fe2f731292b4c6", 16),
+/* MD5, is_sslv3=0, data=31, mac=16, pad=0 */
+    ("MD5", 0, 31, 16, 0, 1, "aeaae0ebec3c80b010fe2f731292b4c6", 16),
+/* MD5, is_sslv3=0, data=32, mac=16, pad=16 */
+    ("MD5", 0, 32, 16, 16, 1, "2d150852f2160477982b6325d0bd3cd3", 16),
+/* MD5, is_sslv3=0, data=32, mac=16, pad=0 */
+    ("MD5", 0, 32, 16, 0, 1, "2d150852f2160477982b6325d0bd3cd3", 16),
+/* MD5, is_sslv3=0, data=63, mac=16, pad=16 */
+    ("MD5", 0, 63, 16, 16, 1, "9f4aa8cd8b0f77d947db369d201b9eda", 16),
+/* MD5, is_sslv3=0, data=63, mac=16, pad=0 */
+    ("MD5", 0, 63, 16, 0, 1, "9f4aa8cd8b0f77d947db369d201b9eda", 16),
+/* MD5, is_sslv3=0, data=64, mac=16, pad=16 */
+    ("MD5", 0, 64, 16, 16, 1, "b9c556df6c6d81b96bff3b06c7bf66b4", 16),
+/* MD5, is_sslv3=0, data=64, mac=16, pad=0 */
+    ("MD5", 0, 64, 16, 0, 1, "b9c556df6c6d81b96bff3b06c7bf66b4", 16),
+/* MD5, is_sslv3=0, data=100, mac=16, pad=16 */
+    ("MD5", 0, 100, 16, 16, 1, "84a1a59d1c7942a2a113bed7df40fe38", 16),
+/* MD5, is_sslv3=0, data=100, mac=16, pad=0 */
+    ("MD5", 0, 100, 16, 0, 1, "84a1a59d1c7942a2a113bed7df40fe38", 16),
+/* MD5, is_sslv3=0, data=255, mac=16, pad=16 */
+    ("MD5", 0, 255, 16, 16, 1, "f71f0c77bdbec56a1338acee37935d31", 16),
+/* MD5, is_sslv3=0, data=255, mac=16, pad=0 */
+    ("MD5", 0, 255, 16, 0, 1, "f71f0c77bdbec56a1338acee37935d31", 16),
+/* MD5, is_sslv3=1, data=0, mac=16, pad=16 */
+    ("MD5", 1, 0, 16, 16, 1, "52a3674c06ac1d6a251b04cb922f9817", 16),
+/* MD5, is_sslv3=1, data=0, mac=16, pad=0 */
+    ("MD5", 1, 0, 16, 0, 1, "52a3674c06ac1d6a251b04cb922f9817", 16),
+/* MD5, is_sslv3=1, data=1, mac=16, pad=16 */
+    ("MD5", 1, 1, 16, 16, 1, "d53e7a64c6b676731907b5b2ada5e222", 16),
+/* MD5, is_sslv3=1, data=1, mac=16, pad=0 */
+    ("MD5", 1, 1, 16, 0, 1, "d53e7a64c6b676731907b5b2ada5e222", 16),
+/* MD5, is_sslv3=1, data=5, mac=16, pad=16 */
+    ("MD5", 1, 5, 16, 16, 1, "32225eadfb91429544f01a9066409842", 16),
+/* MD5, is_sslv3=1, data=5, mac=16, pad=0 */
+    ("MD5", 1, 5, 16, 0, 1, "32225eadfb91429544f01a9066409842", 16),
+/* MD5, is_sslv3=1, data=16, mac=16, pad=16 */
+    ("MD5", 1, 16, 16, 16, 1, "6cfc56d62961e8b589b19b61b31e036d", 16),
+/* MD5, is_sslv3=1, data=16, mac=16, pad=0 */
+    ("MD5", 1, 16, 16, 0, 1, "6cfc56d62961e8b589b19b61b31e036d", 16),
+/* MD5, is_sslv3=1, data=31, mac=16, pad=16 */
+    ("MD5", 1, 31, 16, 16, 1, "99db4f43543e44c19658f396e61887b8", 16),
+/* MD5, is_sslv3=1, data=31, mac=16, pad=0 */
+    ("MD5", 1, 31, 16, 0, 1, "99db4f43543e44c19658f396e61887b8", 16),
+/* MD5, is_sslv3=1, data=32, mac=16, pad=16 */
+    ("MD5", 1, 32, 16, 16, 1, "b157f99ad2e8597331c20aa89258c47b", 16),
+/* MD5, is_sslv3=1, data=32, mac=16, pad=0 */
+    ("MD5", 1, 32, 16, 0, 1, "b157f99ad2e8597331c20aa89258c47b", 16),
+/* MD5, is_sslv3=1, data=63, mac=16, pad=16 */
+    ("MD5", 1, 63, 16, 16, 1, "53b33d4063868dd4e3933f2a9871cfd1", 16),
+/* MD5, is_sslv3=1, data=63, mac=16, pad=0 */
+    ("MD5", 1, 63, 16, 0, 1, "53b33d4063868dd4e3933f2a9871cfd1", 16),
+/* MD5, is_sslv3=1, data=64, mac=16, pad=16 */
+    ("MD5", 1, 64, 16, 16, 1, "0e7cabeef336e1558c7487d09e162684", 16),
+/* MD5, is_sslv3=1, data=64, mac=16, pad=0 */
+    ("MD5", 1, 64, 16, 0, 1, "0e7cabeef336e1558c7487d09e162684", 16),
+/* MD5, is_sslv3=1, data=100, mac=16, pad=16 */
+    ("MD5", 1, 100, 16, 16, 1, "d82ec4ed36a3b146b5f37a322f2e97d2", 16),
+/* MD5, is_sslv3=1, data=100, mac=16, pad=0 */
+    ("MD5", 1, 100, 16, 0, 1, "d82ec4ed36a3b146b5f37a322f2e97d2", 16),
+/* MD5, is_sslv3=1, data=255, mac=16, pad=16 */
+    ("MD5", 1, 255, 16, 16, 1, "00dc66d295d11fac1f2b57b9cb0467d1", 16),
+/* MD5, is_sslv3=1, data=255, mac=16, pad=0 */
+    ("MD5", 1, 255, 16, 0, 1, "00dc66d295d11fac1f2b57b9cb0467d1", 16),
+/* SHA1, is_sslv3=0, data=0, mac=20, pad=16 */
+    ("SHA1", 0, 0, 20, 16, 1, "613263d5f1b7a9258a5abaa234035de672692c38", 20),
+/* SHA1, is_sslv3=0, data=0, mac=20, pad=0 */
+    ("SHA1", 0, 0, 20, 0, 1, "613263d5f1b7a9258a5abaa234035de672692c38", 20),
+/* SHA1, is_sslv3=0, data=1, mac=20, pad=16 */
+    ("SHA1", 0, 1, 20, 16, 1, "39d5e2f268ec8065ca6106fd8d30ef32df721b3b", 20),
+/* SHA1, is_sslv3=0, data=1, mac=20, pad=0 */
+    ("SHA1", 0, 1, 20, 0, 1, "39d5e2f268ec8065ca6106fd8d30ef32df721b3b", 20),
+/* SHA1, is_sslv3=0, data=5, mac=20, pad=16 */
+    ("SHA1", 0, 5, 20, 16, 1, "8a6a2b48d4dfe2023ae64b25ce8e9d3c90a72e27", 20),
+/* SHA1, is_sslv3=0, data=5, mac=20, pad=0 */
+    ("SHA1", 0, 5, 20, 0, 1, "8a6a2b48d4dfe2023ae64b25ce8e9d3c90a72e27", 20),
+/* SHA1, is_sslv3=0, data=16, mac=20, pad=16 */
+    ("SHA1", 0, 16, 20, 16, 1, "a33b838eb36ed1a421134a4b35a53b714788b721", 20),
+/* SHA1, is_sslv3=0, data=16, mac=20, pad=0 */
+    ("SHA1", 0, 16, 20, 0, 1, "a33b838eb36ed1a421134a4b35a53b714788b721", 20),
+/* SHA1, is_sslv3=0, data=31, mac=20, pad=16 */
+    ("SHA1", 0, 31, 20, 16, 1, "e03269bb67d3897c481ed882bec34ffeecabb7c5", 20),
+/* SHA1, is_sslv3=0, data=31, mac=20, pad=0 */
+    ("SHA1", 0, 31, 20, 0, 1, "e03269bb67d3897c481ed882bec34ffeecabb7c5", 20),
+/* SHA1, is_sslv3=0, data=32, mac=20, pad=16 */
+    ("SHA1", 0, 32, 20, 16, 1, "cfe3d2bb90a918a52bff82dfc8a219884d886ae0", 20),
+/* SHA1, is_sslv3=0, data=32, mac=20, pad=0 */
+    ("SHA1", 0, 32, 20, 0, 1, "cfe3d2bb90a918a52bff82dfc8a219884d886ae0", 20),
+/* SHA1, is_sslv3=0, data=63, mac=20, pad=16 */
+    ("SHA1", 0, 63, 20, 16, 1, "358d03d99d148ce67e7cd1a0d7d35c0ab3fe39bd", 20),
+/* SHA1, is_sslv3=0, data=63, mac=20, pad=0 */
+    ("SHA1", 0, 63, 20, 0, 1, "358d03d99d148ce67e7cd1a0d7d35c0ab3fe39bd", 20),
+/* SHA1, is_sslv3=0, data=64, mac=20, pad=16 */
+    ("SHA1", 0, 64, 20, 16, 1, "0d29945c273b55126291a786f8e5213dd12382ce", 20),
+/* SHA1, is_sslv3=0, data=64, mac=20, pad=0 */
+    ("SHA1", 0, 64, 20, 0, 1, "0d29945c273b55126291a786f8e5213dd12382ce", 20),
+/* SHA1, is_sslv3=0, data=100, mac=20, pad=16 */
+    ("SHA1", 0, 100, 20, 16, 1, "912a307f5d1646616d9ef18e0a25c27a9a680a4d", 20),
+/* SHA1, is_sslv3=0, data=100, mac=20, pad=0 */
+    ("SHA1", 0, 100, 20, 0, 1, "912a307f5d1646616d9ef18e0a25c27a9a680a4d", 20),
+/* SHA1, is_sslv3=0, data=255, mac=20, pad=16 */
+    ("SHA1", 0, 255, 20, 16, 1, "ee6cc3fc2ffe7523aeaaf994ebc05ae5eb4ef019", 20),
+/* SHA1, is_sslv3=0, data=255, mac=20, pad=0 */
+    ("SHA1", 0, 255, 20, 0, 1, "ee6cc3fc2ffe7523aeaaf994ebc05ae5eb4ef019", 20),
+/* SHA1, is_sslv3=1, data=0, mac=20, pad=16 */
+    ("SHA1", 1, 0, 20, 16, 1, "e8ce9bccbc269c34b28a444fa7760083eb69f9c1", 20),
+/* SHA1, is_sslv3=1, data=0, mac=20, pad=0 */
+    ("SHA1", 1, 0, 20, 0, 1, "e8ce9bccbc269c34b28a444fa7760083eb69f9c1", 20),
+/* SHA1, is_sslv3=1, data=1, mac=20, pad=16 */
+    ("SHA1", 1, 1, 20, 16, 1, "e08c02b17d46edf01642578caac1853c73097208", 20),
+/* SHA1, is_sslv3=1, data=1, mac=20, pad=0 */
+    ("SHA1", 1, 1, 20, 0, 1, "e08c02b17d46edf01642578caac1853c73097208", 20),
+/* SHA1, is_sslv3=1, data=5, mac=20, pad=16 */
+    ("SHA1", 1, 5, 20, 16, 1, "e2d92a8aacb730a7de82efed214bc1b3f863650f", 20),
+/* SHA1, is_sslv3=1, data=5, mac=20, pad=0 */
+    ("SHA1", 1, 5, 20, 0, 1, "e2d92a8aacb730a7de82efed214bc1b3f863650f", 20),
+/* SHA1, is_sslv3=1, data=16, mac=20, pad=16 */
+    ("SHA1", 1, 16, 20, 16, 1, "06629f2259f68142420ffee4bed95892f5529cb6", 20),
+/* SHA1, is_sslv3=1, data=16, mac=20, pad=0 */
+    ("SHA1", 1, 16, 20, 0, 1, "06629f2259f68142420ffee4bed95892f5529cb6", 20),
+/* SHA1, is_sslv3=1, data=31, mac=20, pad=16 */
+    ("SHA1", 1, 31, 20, 16, 1, "f5e864e20f3769a519a14d303ef6c7cf5cae53c5", 20),
+/* SHA1, is_sslv3=1, data=31, mac=20, pad=0 */
+    ("SHA1", 1, 31, 20, 0, 1, "f5e864e20f3769a519a14d303ef6c7cf5cae53c5", 20),
+/* SHA1, is_sslv3=1, data=32, mac=20, pad=16 */
+    ("SHA1", 1, 32, 20, 16, 1, "347de07c9a2bf34f6601e05d40df93947b5be312", 20),
+/* SHA1, is_sslv3=1, data=32, mac=20, pad=0 */
+    ("SHA1", 1, 32, 20, 0, 1, "347de07c9a2bf34f6601e05d40df93947b5be312", 20),
+/* SHA1, is_sslv3=1, data=63, mac=20, pad=16 */
+    ("SHA1", 1, 63, 20, 16, 1, "23e6ee274abc3739f4909aaf630ff094e7be7f4b", 20),
+/* SHA1, is_sslv3=1, data=63, mac=20, pad=0 */
+    ("SHA1", 1, 63, 20, 0, 1, "23e6ee274abc3739f4909aaf630ff094e7be7f4b", 20),
+/* SHA1, is_sslv3=1, data=64, mac=20, pad=16 */
+    ("SHA1", 1, 64, 20, 16, 1, "096610ad2aa32d0c088fda5df27868f461dd49e7", 20),
+/* SHA1, is_sslv3=1, data=64, mac=20, pad=0 */
+    ("SHA1", 1, 64, 20, 0, 1, "096610ad2aa32d0c088fda5df27868f461dd49e7", 20),
+/* SHA1, is_sslv3=1, data=100, mac=20, pad=16 */
+    ("SHA1", 1, 100, 20, 16, 1, "804a39055a5a17ad605232b806c2ca306533b89a", 20),
+/* SHA1, is_sslv3=1, data=100, mac=20, pad=0 */
+    ("SHA1", 1, 100, 20, 0, 1, "804a39055a5a17ad605232b806c2ca306533b89a", 20),
+/* SHA1, is_sslv3=1, data=255, mac=20, pad=16 */
+    ("SHA1", 1, 255, 20, 16, 1, "0c00ed4bda27845eb20e4128ca4d86dd624043b4", 20),
+/* SHA1, is_sslv3=1, data=255, mac=20, pad=0 */
+    ("SHA1", 1, 255, 20, 0, 1, "0c00ed4bda27845eb20e4128ca4d86dd624043b4", 20),
+/* SHA2-224, is_sslv3=0, data=0, mac=28, pad=16 */
+    ("SHA2-224", 0, 0, 28, 16, 1, "1758fee8cc0e300c07e4de1c466c9e7855decc051421c0280045f691", 28),
+/* SHA2-224, is_sslv3=0, data=0, mac=28, pad=0 */
+    ("SHA2-224", 0, 0, 28, 0, 1, "1758fee8cc0e300c07e4de1c466c9e7855decc051421c0280045f691", 28),
+/* SHA2-224, is_sslv3=0, data=1, mac=28, pad=16 */
+    ("SHA2-224", 0, 1, 28, 16, 1, "14288de01f5d4ff5972dfd22f3834b3d61066783d107bc6259a32c1b", 28),
+/* SHA2-224, is_sslv3=0, data=1, mac=28, pad=0 */
+    ("SHA2-224", 0, 1, 28, 0, 1, "14288de01f5d4ff5972dfd22f3834b3d61066783d107bc6259a32c1b", 28),
+/* SHA2-224, is_sslv3=0, data=5, mac=28, pad=16 */
+    ("SHA2-224", 0, 5, 28, 16, 1, "2e6ca83c613baa097a543e142942edd307f01095c823ae1c8a5432d7", 28),
+/* SHA2-224, is_sslv3=0, data=5, mac=28, pad=0 */
+    ("SHA2-224", 0, 5, 28, 0, 1, "2e6ca83c613baa097a543e142942edd307f01095c823ae1c8a5432d7", 28),
+/* SHA2-224, is_sslv3=0, data=16, mac=28, pad=16 */
+    ("SHA2-224", 0, 16, 28, 16, 1, "b19f076fd9877b33dcf66dd8e266f50941cb5823412a16585cc18ad7", 28),
+/* SHA2-224, is_sslv3=0, data=16, mac=28, pad=0 */
+    ("SHA2-224", 0, 16, 28, 0, 1, "b19f076fd9877b33dcf66dd8e266f50941cb5823412a16585cc18ad7", 28),
+/* SHA2-224, is_sslv3=0, data=31, mac=28, pad=16 */
+    ("SHA2-224", 0, 31, 28, 16, 1, "3d18ca7a03df6c57b80be2fb7bc72613053598540b75083088b352f7", 28),
+/* SHA2-224, is_sslv3=0, data=31, mac=28, pad=0 */
+    ("SHA2-224", 0, 31, 28, 0, 1, "3d18ca7a03df6c57b80be2fb7bc72613053598540b75083088b352f7", 28),
+/* SHA2-224, is_sslv3=0, data=32, mac=28, pad=16 */
+    ("SHA2-224", 0, 32, 28, 16, 1, "dd29a862467240acbe40af2826250508e1d11e0d964d201ab2087ad3", 28),
+/* SHA2-224, is_sslv3=0, data=32, mac=28, pad=0 */
+    ("SHA2-224", 0, 32, 28, 0, 1, "dd29a862467240acbe40af2826250508e1d11e0d964d201ab2087ad3", 28),
+/* SHA2-224, is_sslv3=0, data=63, mac=28, pad=16 */
+    ("SHA2-224", 0, 63, 28, 16, 1, "1129da3cfd25542116f1f87627280e04d1b2583c2a1f04ef32a56852", 28),
+/* SHA2-224, is_sslv3=0, data=63, mac=28, pad=0 */
+    ("SHA2-224", 0, 63, 28, 0, 1, "1129da3cfd25542116f1f87627280e04d1b2583c2a1f04ef32a56852", 28),
+/* SHA2-224, is_sslv3=0, data=64, mac=28, pad=16 */
+    ("SHA2-224", 0, 64, 28, 16, 1, "25e94123d1a93bad9cdb0804aa730a6de65e5ef446357e5d14757db8", 28),
+/* SHA2-224, is_sslv3=0, data=64, mac=28, pad=0 */
+    ("SHA2-224", 0, 64, 28, 0, 1, "25e94123d1a93bad9cdb0804aa730a6de65e5ef446357e5d14757db8", 28),
+/* SHA2-224, is_sslv3=0, data=100, mac=28, pad=16 */
+    ("SHA2-224", 0, 100, 28, 16, 1, "558895ed352208fa9489496a00ca75db781080444df0e65ffee18eb3", 28),
+/* SHA2-224, is_sslv3=0, data=100, mac=28, pad=0 */
+    ("SHA2-224", 0, 100, 28, 0, 1, "558895ed352208fa9489496a00ca75db781080444df0e65ffee18eb3", 28),
+/* SHA2-224, is_sslv3=0, data=255, mac=28, pad=16 */
+    ("SHA2-224", 0, 255, 28, 16, 1, "ad41382408ef803f5bc3c1b878ecbafaa3e413886b1592b92f8572b9", 28),
+/* SHA2-224, is_sslv3=0, data=255, mac=28, pad=0 */
+    ("SHA2-224", 0, 255, 28, 0, 1, "ad41382408ef803f5bc3c1b878ecbafaa3e413886b1592b92f8572b9", 28),
+/* SHA2-224, is_sslv3=1, data=0, mac=28, pad=16 */
+    ("SHA2-224", 1, 0, 28, 16, 1, "da50445d965577d2f80501cf733a1434257cefbf6d51e9b6c5c35c9c", 28),
+/* SHA2-224, is_sslv3=1, data=0, mac=28, pad=0 */
+    ("SHA2-224", 1, 0, 28, 0, 1, "da50445d965577d2f80501cf733a1434257cefbf6d51e9b6c5c35c9c", 28),
+/* SHA2-224, is_sslv3=1, data=1, mac=28, pad=16 */
+    ("SHA2-224", 1, 1, 28, 16, 1, "731105e05e5809a690c14032bee8a8c71c621dcc0c1960846a88f9d5", 28),
+/* SHA2-224, is_sslv3=1, data=1, mac=28, pad=0 */
+    ("SHA2-224", 1, 1, 28, 0, 1, "731105e05e5809a690c14032bee8a8c71c621dcc0c1960846a88f9d5", 28),
+/* SHA2-224, is_sslv3=1, data=5, mac=28, pad=16 */
+    ("SHA2-224", 1, 5, 28, 16, 1, "12717d2d1afb5503dedcc4ec265574dc69fa08b047d81aab20cfdd0a", 28),
+/* SHA2-224, is_sslv3=1, data=5, mac=28, pad=0 */
+    ("SHA2-224", 1, 5, 28, 0, 1, "12717d2d1afb5503dedcc4ec265574dc69fa08b047d81aab20cfdd0a", 28),
+/* SHA2-224, is_sslv3=1, data=16, mac=28, pad=16 */
+    ("SHA2-224", 1, 16, 28, 16, 1, "951197fbdbf6f70a458d40adccd1073c0be3dcc62920e3a88d8b00a9", 28),
+/* SHA2-224, is_sslv3=1, data=16, mac=28, pad=0 */
+    ("SHA2-224", 1, 16, 28, 0, 1, "951197fbdbf6f70a458d40adccd1073c0be3dcc62920e3a88d8b00a9", 28),
+/* SHA2-224, is_sslv3=1, data=31, mac=28, pad=16 */
+    ("SHA2-224", 1, 31, 28, 16, 1, "543a4f10ff14bb476518d14620ba561d6b97745fb5445876417c4cc7", 28),
+/* SHA2-224, is_sslv3=1, data=31, mac=28, pad=0 */
+    ("SHA2-224", 1, 31, 28, 0, 1, "543a4f10ff14bb476518d14620ba561d6b97745fb5445876417c4cc7", 28),
+/* SHA2-224, is_sslv3=1, data=32, mac=28, pad=16 */
+    ("SHA2-224", 1, 32, 28, 16, 1, "6716aede365a48e6db0b0dfed4ea34b4ad05c6a199f10ad59a0f1829", 28),
+/* SHA2-224, is_sslv3=1, data=32, mac=28, pad=0 */
+    ("SHA2-224", 1, 32, 28, 0, 1, "6716aede365a48e6db0b0dfed4ea34b4ad05c6a199f10ad59a0f1829", 28),
+/* SHA2-224, is_sslv3=1, data=63, mac=28, pad=16 */
+    ("SHA2-224", 1, 63, 28, 16, 1, "df9c8a429495302a5591baa4c5aaaebf27e81d4b857da5ea6687838f", 28),
+/* SHA2-224, is_sslv3=1, data=63, mac=28, pad=0 */
+    ("SHA2-224", 1, 63, 28, 0, 1, "df9c8a429495302a5591baa4c5aaaebf27e81d4b857da5ea6687838f", 28),
+/* SHA2-224, is_sslv3=1, data=64, mac=28, pad=16 */
+    ("SHA2-224", 1, 64, 28, 16, 1, "1d14af37f2b11c5ba5c5cb32e376e98daaad9788472a4f1f0651a615", 28),
+/* SHA2-224, is_sslv3=1, data=64, mac=28, pad=0 */
+    ("SHA2-224", 1, 64, 28, 0, 1, "1d14af37f2b11c5ba5c5cb32e376e98daaad9788472a4f1f0651a615", 28),
+/* SHA2-224, is_sslv3=1, data=100, mac=28, pad=16 */
+    ("SHA2-224", 1, 100, 28, 16, 1, "6ebdbe5aca634752da4e4e48a98635af629b31b3f1d0f59aebb05375", 28),
+/* SHA2-224, is_sslv3=1, data=100, mac=28, pad=0 */
+    ("SHA2-224", 1, 100, 28, 0, 1, "6ebdbe5aca634752da4e4e48a98635af629b31b3f1d0f59aebb05375", 28),
+/* SHA2-224, is_sslv3=1, data=255, mac=28, pad=16 */
+    ("SHA2-224", 1, 255, 28, 16, 1, "16554e1e1cb6c13192e1fffa537cde31b48df06b02d0973bad7c3616", 28),
+/* SHA2-224, is_sslv3=1, data=255, mac=28, pad=0 */
+    ("SHA2-224", 1, 255, 28, 0, 1, "16554e1e1cb6c13192e1fffa537cde31b48df06b02d0973bad7c3616", 28),
+/* SHA2-256, is_sslv3=0, data=0, mac=32, pad=16 */
+    ("SHA2-256", 0, 0, 32, 16, 1, "b55a83b89e087ad223e421e6cd5a2ea6241510d8a8fcb5249a6e901bda75ace0", 32),
+/* SHA2-256, is_sslv3=0, data=0, mac=32, pad=0 */
+    ("SHA2-256", 0, 0, 32, 0, 1, "b55a83b89e087ad223e421e6cd5a2ea6241510d8a8fcb5249a6e901bda75ace0", 32),
+/* SHA2-256, is_sslv3=0, data=1, mac=32, pad=16 */
+    ("SHA2-256", 0, 1, 32, 16, 1, "eb4dcdff2367dc4c61bdb9ae09af580f80df2d977d6b5f2b3629a8bcfb0844ac", 32),
+/* SHA2-256, is_sslv3=0, data=1, mac=32, pad=0 */
+    ("SHA2-256", 0, 1, 32, 0, 1, "eb4dcdff2367dc4c61bdb9ae09af580f80df2d977d6b5f2b3629a8bcfb0844ac", 32),
+/* SHA2-256, is_sslv3=0, data=5, mac=32, pad=16 */
+    ("SHA2-256", 0, 5, 32, 16, 1, "cade507e3390445e85b4f8c2da9f8cf6b3e36750a1ea2e63c7f10fd7bb6bf5e0", 32),
+/* SHA2-256, is_sslv3=0, data=5, mac=32, pad=0 */
+    ("SHA2-256", 0, 5, 32, 0, 1, "cade507e3390445e85b4f8c2da9f8cf6b3e36750a1ea2e63c7f10fd7bb6bf5e0", 32),
+/* SHA2-256, is_sslv3=0, data=16, mac=32, pad=16 */
+    ("SHA2-256", 0, 16, 32, 16, 1, "00e56fb8d2909df245839c7f6395a4d70e34fd6806807079100631e80e5240cf", 32),
+/* SHA2-256, is_sslv3=0, data=16, mac=32, pad=0 */
+    ("SHA2-256", 0, 16, 32, 0, 1, "00e56fb8d2909df245839c7f6395a4d70e34fd6806807079100631e80e5240cf", 32),
+/* SHA2-256, is_sslv3=0, data=31, mac=32, pad=16 */
+    ("SHA2-256", 0, 31, 32, 16, 1, "412a07c1b3c08cda9ba7d713fed0ff25b6cf1f8c0c05d08451b763a9e766b19f", 32),
+/* SHA2-256, is_sslv3=0, data=31, mac=32, pad=0 */
+    ("SHA2-256", 0, 31, 32, 0, 1, "412a07c1b3c08cda9ba7d713fed0ff25b6cf1f8c0c05d08451b763a9e766b19f", 32),
+/* SHA2-256, is_sslv3=0, data=32, mac=32, pad=16 */
+    ("SHA2-256", 0, 32, 32, 16, 1, "1337729d9b9455ace3be82777199766d481ed0a68f7bcdc992f00c3014455959", 32),
+/* SHA2-256, is_sslv3=0, data=32, mac=32, pad=0 */
+    ("SHA2-256", 0, 32, 32, 0, 1, "1337729d9b9455ace3be82777199766d481ed0a68f7bcdc992f00c3014455959", 32),
+/* SHA2-256, is_sslv3=0, data=63, mac=32, pad=16 */
+    ("SHA2-256", 0, 63, 32, 16, 1, "e9ef4a98af516073afbc4ab6b76ebeec980e13b7b23d3209d4af9b71a3446132", 32),
+/* SHA2-256, is_sslv3=0, data=63, mac=32, pad=0 */
+    ("SHA2-256", 0, 63, 32, 0, 1, "e9ef4a98af516073afbc4ab6b76ebeec980e13b7b23d3209d4af9b71a3446132", 32),
+/* SHA2-256, is_sslv3=0, data=64, mac=32, pad=16 */
+    ("SHA2-256", 0, 64, 32, 16, 1, "5c40cbd7de37af6b6eb4ea3da387ae8435562e7d9884e96facd1c7e224e8dbe1", 32),
+/* SHA2-256, is_sslv3=0, data=64, mac=32, pad=0 */
+    ("SHA2-256", 0, 64, 32, 0, 1, "5c40cbd7de37af6b6eb4ea3da387ae8435562e7d9884e96facd1c7e224e8dbe1", 32),
+/* SHA2-256, is_sslv3=0, data=100, mac=32, pad=16 */
+    ("SHA2-256", 0, 100, 32, 16, 1, "655049c5368ace586606c829490fda88ce64332946b6095eaf4dfcdb966024e1", 32),
+/* SHA2-256, is_sslv3=0, data=100, mac=32, pad=0 */
+    ("SHA2-256", 0, 100, 32, 0, 1, "655049c5368ace586606c829490fda88ce64332946b6095eaf4dfcdb966024e1", 32),
+/* SHA2-256, is_sslv3=0, data=255, mac=32, pad=16 */
+    ("SHA2-256", 0, 255, 32, 16, 1, "8fb354a0a8d45bd4a51862c2fa97a563b77545516f01067150aa17907cbc3bf5", 32),
+/* SHA2-256, is_sslv3=0, data=255, mac=32, pad=0 */
+    ("SHA2-256", 0, 255, 32, 0, 1, "8fb354a0a8d45bd4a51862c2fa97a563b77545516f01067150aa17907cbc3bf5", 32),
+/* SHA2-256, is_sslv3=1, data=0, mac=32, pad=16 */
+    ("SHA2-256", 1, 0, 32, 16, 1, "9cdb9e18bf8bcb90c18a795dbdcebb2aa46b717aa330992a2ae5f149ef3f64fb", 32),
+/* SHA2-256, is_sslv3=1, data=0, mac=32, pad=0 */
+    ("SHA2-256", 1, 0, 32, 0, 1, "9cdb9e18bf8bcb90c18a795dbdcebb2aa46b717aa330992a2ae5f149ef3f64fb", 32),
+/* SHA2-256, is_sslv3=1, data=1, mac=32, pad=16 */
+    ("SHA2-256", 1, 1, 32, 16, 1, "233f07826523dfb11a6fefb51a63599c6261f7cd6c8f97d3b61d50533a1ad439", 32),
+/* SHA2-256, is_sslv3=1, data=1, mac=32, pad=0 */
+    ("SHA2-256", 1, 1, 32, 0, 1, "233f07826523dfb11a6fefb51a63599c6261f7cd6c8f97d3b61d50533a1ad439", 32),
+/* SHA2-256, is_sslv3=1, data=5, mac=32, pad=16 */
+    ("SHA2-256", 1, 5, 32, 16, 1, "9a6832e4a310595e8f9e27e38f504bbfdc145d74e1d84a0123ddb53692807130", 32),
+/* SHA2-256, is_sslv3=1, data=5, mac=32, pad=0 */
+    ("SHA2-256", 1, 5, 32, 0, 1, "9a6832e4a310595e8f9e27e38f504bbfdc145d74e1d84a0123ddb53692807130", 32),
+/* SHA2-256, is_sslv3=1, data=16, mac=32, pad=16 */
+    ("SHA2-256", 1, 16, 32, 16, 1, "f0eea4294c6172e2f6f38b2097f397f801a9072147d3cd9883531828aa92c235", 32),
+/* SHA2-256, is_sslv3=1, data=16, mac=32, pad=0 */
+    ("SHA2-256", 1, 16, 32, 0, 1, "f0eea4294c6172e2f6f38b2097f397f801a9072147d3cd9883531828aa92c235", 32),
+/* SHA2-256, is_sslv3=1, data=31, mac=32, pad=16 */
+    ("SHA2-256", 1, 31, 32, 16, 1, "b55aec23a6857dde3dd6de844132c506827dcf55fe7a4cf3397a512619b017e0", 32),
+/* SHA2-256, is_sslv3=1, data=31, mac=32, pad=0 */
+    ("SHA2-256", 1, 31, 32, 0, 1, "b55aec23a6857dde3dd6de844132c506827dcf55fe7a4cf3397a512619b017e0", 32),
+/* SHA2-256, is_sslv3=1, data=32, mac=32, pad=16 */
+    ("SHA2-256", 1, 32, 32, 16, 1, "6a86ff74a04b5f222994f5bf7a222c274a706556828dbfc15ec162921e70e5ed", 32),
+/* SHA2-256, is_sslv3=1, data=32, mac=32, pad=0 */
+    ("SHA2-256", 1, 32, 32, 0, 1, "6a86ff74a04b5f222994f5bf7a222c274a706556828dbfc15ec162921e70e5ed", 32),
+/* SHA2-256, is_sslv3=1, data=63, mac=32, pad=16 */
+    ("SHA2-256", 1, 63, 32, 16, 1, "e5e36514020b7e7e0d453908f232f5c4b48ff343e910c071d785ed0ddd8f74ff", 32),
+/* SHA2-256, is_sslv3=1, data=63, mac=32, pad=0 */
+    ("SHA2-256", 1, 63, 32, 0, 1, "e5e36514020b7e7e0d453908f232f5c4b48ff343e910c071d785ed0ddd8f74ff", 32),
+/* SHA2-256, is_sslv3=1, data=64, mac=32, pad=16 */
+    ("SHA2-256", 1, 64, 32, 16, 1, "a38ddc1e6cc8af7bb38741ebc27d7d802d33fd4cd55ec01b32e2a8e8bc4087ef", 32),
+/* SHA2-256, is_sslv3=1, data=64, mac=32, pad=0 */
+    ("SHA2-256", 1, 64, 32, 0, 1, "a38ddc1e6cc8af7bb38741ebc27d7d802d33fd4cd55ec01b32e2a8e8bc4087ef", 32),
+/* SHA2-256, is_sslv3=1, data=100, mac=32, pad=16 */
+    ("SHA2-256", 1, 100, 32, 16, 1, "63f27ef2afb5225e117b29f98d902d852eca6e564d1f83ac2cd42a25f0ce12e6", 32),
+/* SHA2-256, is_sslv3=1, data=100, mac=32, pad=0 */
+    ("SHA2-256", 1, 100, 32, 0, 1, "63f27ef2afb5225e117b29f98d902d852eca6e564d1f83ac2cd42a25f0ce12e6", 32),
+/* SHA2-256, is_sslv3=1, data=255, mac=32, pad=16 */
+    ("SHA2-256", 1, 255, 32, 16, 1, "8c249c6f5c52621497f82d357a172e7c88e00bf347ba001834ec3305a844ca7d", 32),
+/* SHA2-256, is_sslv3=1, data=255, mac=32, pad=0 */
+    ("SHA2-256", 1, 255, 32, 0, 1, "8c249c6f5c52621497f82d357a172e7c88e00bf347ba001834ec3305a844ca7d", 32),
+/* SHA2-384, is_sslv3=0, data=0, mac=48, pad=16 */
+    ("SHA2-384", 0, 0, 48, 16, 1, "9c7ac58e707cbe58fe85412b51da3fa0b58cb702a2886cb446d9aa4b699db414cbbd8a7124c64b32524f5aa2d414c8cb", 48),
+/* SHA2-384, is_sslv3=0, data=0, mac=48, pad=0 */
+    ("SHA2-384", 0, 0, 48, 0, 1, "9c7ac58e707cbe58fe85412b51da3fa0b58cb702a2886cb446d9aa4b699db414cbbd8a7124c64b32524f5aa2d414c8cb", 48),
+/* SHA2-384, is_sslv3=0, data=1, mac=48, pad=16 */
+    ("SHA2-384", 0, 1, 48, 16, 1, "5c4a5d1b80b299c3a6c65630ccbb656ee85045d4e129b3f70a048335818457f88cb2c29bc7baadb9d7f80e401858da18", 48),
+/* SHA2-384, is_sslv3=0, data=1, mac=48, pad=0 */
+    ("SHA2-384", 0, 1, 48, 0, 1, "5c4a5d1b80b299c3a6c65630ccbb656ee85045d4e129b3f70a048335818457f88cb2c29bc7baadb9d7f80e401858da18", 48),
+/* SHA2-384, is_sslv3=0, data=5, mac=48, pad=16 */
+    ("SHA2-384", 0, 5, 48, 16, 1, "c1d65404ed75d570c7a0e1edf07ab24a9e0bcb072e022e6f0c57e5d3804aa624be1b7386bb38b0fdd34a0af96f8f68c6", 48),
+/* SHA2-384, is_sslv3=0, data=5, mac=48, pad=0 */
+    ("SHA2-384", 0, 5, 48, 0, 1, "c1d65404ed75d570c7a0e1edf07ab24a9e0bcb072e022e6f0c57e5d3804aa624be1b7386bb38b0fdd34a0af96f8f68c6", 48),
+/* SHA2-384, is_sslv3=0, data=16, mac=48, pad=16 */
+    ("SHA2-384", 0, 16, 48, 16, 1, "16b13166fa1aa1ce4c4d0f2a29bc0cb3de77e4131c8a6651bfa8b010a02fa75163921d5daee008dd93652d602bb896b8", 48),
+/* SHA2-384, is_sslv3=0, data=16, mac=48, pad=0 */
+    ("SHA2-384", 0, 16, 48, 0, 1, "16b13166fa1aa1ce4c4d0f2a29bc0cb3de77e4131c8a6651bfa8b010a02fa75163921d5daee008dd93652d602bb896b8", 48),
+/* SHA2-384, is_sslv3=0, data=31, mac=48, pad=16 */
+    ("SHA2-384", 0, 31, 48, 16, 1, "78cb35ee94f0d844e7f9c2cf722cf46280bc3ddd9845966c99d78bac7e7e78c0505b7254ab90794e97c71dd3872eabe5", 48),
+/* SHA2-384, is_sslv3=0, data=31, mac=48, pad=0 */
+    ("SHA2-384", 0, 31, 48, 0, 1, "78cb35ee94f0d844e7f9c2cf722cf46280bc3ddd9845966c99d78bac7e7e78c0505b7254ab90794e97c71dd3872eabe5", 48),
+/* SHA2-384, is_sslv3=0, data=32, mac=48, pad=16 */
+    ("SHA2-384", 0, 32, 48, 16, 1, "b56605e859f44fe97b8d220235376dbda406e68da9a59d7868eef007e199466beba7cc5ce2dff37096cd353332817901", 48),
+/* SHA2-384, is_sslv3=0, data=32, mac=48, pad=0 */
+    ("SHA2-384", 0, 32, 48, 0, 1, "b56605e859f44fe97b8d220235376dbda406e68da9a59d7868eef007e199466beba7cc5ce2dff37096cd353332817901", 48),
+/* SHA2-384, is_sslv3=0, data=63, mac=48, pad=16 */
+    ("SHA2-384", 0, 63, 48, 16, 1, "7d5b07f0ed4dd47d45af5a42837b8186eb67884e6d824e62f8a9e39adb41738f11e6fbc9418be7e5db48bc46aceecb34", 48),
+/* SHA2-384, is_sslv3=0, data=63, mac=48, pad=0 */
+    ("SHA2-384", 0, 63, 48, 0, 1, "7d5b07f0ed4dd47d45af5a42837b8186eb67884e6d824e62f8a9e39adb41738f11e6fbc9418be7e5db48bc46aceecb34", 48),
+/* SHA2-384, is_sslv3=0, data=64, mac=48, pad=16 */
+    ("SHA2-384", 0, 64, 48, 16, 1, "2ed51bf556a4a6bd6ffed1b87f6fab26a708b5dad15f8630c5c08182eb83bf08b5a38ef2af0812afc71dc6eb9a1b0c3d", 48),
+/* SHA2-384, is_sslv3=0, data=64, mac=48, pad=0 */
+    ("SHA2-384", 0, 64, 48, 0, 1, "2ed51bf556a4a6bd6ffed1b87f6fab26a708b5dad15f8630c5c08182eb83bf08b5a38ef2af0812afc71dc6eb9a1b0c3d", 48),
+/* SHA2-384, is_sslv3=0, data=100, mac=48, pad=16 */
+    ("SHA2-384", 0, 100, 48, 16, 1, "e187ff6863cf7d8c559a07f91b3973f90a4f55e6cfa73f7274a959ffce960e24c09547dabe3f1db23ca5c206c3b8b5d9", 48),
+/* SHA2-384, is_sslv3=0, data=100, mac=48, pad=0 */
+    ("SHA2-384", 0, 100, 48, 0, 1, "e187ff6863cf7d8c559a07f91b3973f90a4f55e6cfa73f7274a959ffce960e24c09547dabe3f1db23ca5c206c3b8b5d9", 48),
+/* SHA2-384, is_sslv3=0, data=255, mac=48, pad=16 */
+    ("SHA2-384", 0, 255, 48, 16, 1, "a55f46293de02d1b505fb7a8bae0ec2cf7ed75b4066c9ecf41af1e75b3dc4346c815ff4a43c64819e673009cac503775", 48),
+/* SHA2-384, is_sslv3=0, data=255, mac=48, pad=0 */
+    ("SHA2-384", 0, 255, 48, 0, 1, "a55f46293de02d1b505fb7a8bae0ec2cf7ed75b4066c9ecf41af1e75b3dc4346c815ff4a43c64819e673009cac503775", 48),
+/* SHA2-384, is_sslv3=1, data=0, mac=48, pad=16 */
+    ("SHA2-384", 1, 0, 48, 16, 1, "91c9e30c756964fbc67166db1907ff650a24d0ad1b683ef8b0b47d1c726212032fb305b843efc5f3b7e25f538049f392", 48),
+/* SHA2-384, is_sslv3=1, data=0, mac=48, pad=0 */
+    ("SHA2-384", 1, 0, 48, 0, 1, "91c9e30c756964fbc67166db1907ff650a24d0ad1b683ef8b0b47d1c726212032fb305b843efc5f3b7e25f538049f392", 48),
+/* SHA2-384, is_sslv3=1, data=1, mac=48, pad=16 */
+    ("SHA2-384", 1, 1, 48, 16, 1, "3dff6f7b259d762906614308cf9ca3a9ae10107290c7583379ec009a08767f8e56a2678eed40ebc8b758983e44e6c4b7", 48),
+/* SHA2-384, is_sslv3=1, data=1, mac=48, pad=0 */
+    ("SHA2-384", 1, 1, 48, 0, 1, "3dff6f7b259d762906614308cf9ca3a9ae10107290c7583379ec009a08767f8e56a2678eed40ebc8b758983e44e6c4b7", 48),
+/* SHA2-384, is_sslv3=1, data=5, mac=48, pad=16 */
+    ("SHA2-384", 1, 5, 48, 16, 1, "a748f589c38a15d5e3725e35f09035a222b51d08496d45ffb019b640a65bc3b880422fc3e34aed783766d2c421ba23a2", 48),
+/* SHA2-384, is_sslv3=1, data=5, mac=48, pad=0 */
+    ("SHA2-384", 1, 5, 48, 0, 1, "a748f589c38a15d5e3725e35f09035a222b51d08496d45ffb019b640a65bc3b880422fc3e34aed783766d2c421ba23a2", 48),
+/* SHA2-384, is_sslv3=1, data=16, mac=48, pad=16 */
+    ("SHA2-384", 1, 16, 48, 16, 1, "0eeff2d2ddefe511dceb28ed7ab8f983547a8b31810db02e847182a8ee4416dd0562773c0281970e4ff2fa64e671bad8", 48),
+/* SHA2-384, is_sslv3=1, data=16, mac=48, pad=0 */
+    ("SHA2-384", 1, 16, 48, 0, 1, "0eeff2d2ddefe511dceb28ed7ab8f983547a8b31810db02e847182a8ee4416dd0562773c0281970e4ff2fa64e671bad8", 48),
+/* SHA2-384, is_sslv3=1, data=31, mac=48, pad=16 */
+    ("SHA2-384", 1, 31, 48, 16, 1, "5f5f451d0269c0cd1177e1b74d3cc3a312a0f6008f2ce9d85a03330e331a5cbad763f4ba1780fc11e3deddb89dba3382", 48),
+/* SHA2-384, is_sslv3=1, data=31, mac=48, pad=0 */
+    ("SHA2-384", 1, 31, 48, 0, 1, "5f5f451d0269c0cd1177e1b74d3cc3a312a0f6008f2ce9d85a03330e331a5cbad763f4ba1780fc11e3deddb89dba3382", 48),
+/* SHA2-384, is_sslv3=1, data=32, mac=48, pad=16 */
+    ("SHA2-384", 1, 32, 48, 16, 1, "2483d0117f79fe333a825a77a6bbe456f77f157c0edc586fad2b31a0ecf4ed6857b32a5421db98e5a676b280c220ce5b", 48),
+/* SHA2-384, is_sslv3=1, data=32, mac=48, pad=0 */
+    ("SHA2-384", 1, 32, 48, 0, 1, "2483d0117f79fe333a825a77a6bbe456f77f157c0edc586fad2b31a0ecf4ed6857b32a5421db98e5a676b280c220ce5b", 48),
+/* SHA2-384, is_sslv3=1, data=63, mac=48, pad=16 */
+    ("SHA2-384", 1, 63, 48, 16, 1, "e544222fdc99335408643f0e4ccda23c30964206c95e14e7c4e0cac2ca5913c0eb96efc1f91933858fa289aba839fa05", 48),
+/* SHA2-384, is_sslv3=1, data=63, mac=48, pad=0 */
+    ("SHA2-384", 1, 63, 48, 0, 1, "e544222fdc99335408643f0e4ccda23c30964206c95e14e7c4e0cac2ca5913c0eb96efc1f91933858fa289aba839fa05", 48),
+/* SHA2-384, is_sslv3=1, data=64, mac=48, pad=16 */
+    ("SHA2-384", 1, 64, 48, 16, 1, "031e91736f5c033878e60d9b3d2c2da4f6b089a014bd8495dcca1d0bbf504030d5dc23eeb43986e1e0c458ebf82e9311", 48),
+/* SHA2-384, is_sslv3=1, data=64, mac=48, pad=0 */
+    ("SHA2-384", 1, 64, 48, 0, 1, "031e91736f5c033878e60d9b3d2c2da4f6b089a014bd8495dcca1d0bbf504030d5dc23eeb43986e1e0c458ebf82e9311", 48),
+/* SHA2-384, is_sslv3=1, data=100, mac=48, pad=16 */
+    ("SHA2-384", 1, 100, 48, 16, 1, "8411b5085db0bbcd128d92de2d2ecbd0e7c6718015a609dab7b1a677273ac166541ed67da8ab323e966fbaa77a1d255e", 48),
+/* SHA2-384, is_sslv3=1, data=100, mac=48, pad=0 */
+    ("SHA2-384", 1, 100, 48, 0, 1, "8411b5085db0bbcd128d92de2d2ecbd0e7c6718015a609dab7b1a677273ac166541ed67da8ab323e966fbaa77a1d255e", 48),
+/* SHA2-384, is_sslv3=1, data=255, mac=48, pad=16 */
+    ("SHA2-384", 1, 255, 48, 16, 1, "0e691236aa3898f1c3eba65ae5b7766b5151d651ed8044923c3b39115a22b30400b283b28e2def2532469501942edccc", 48),
+/* SHA2-384, is_sslv3=1, data=255, mac=48, pad=0 */
+    ("SHA2-384", 1, 255, 48, 0, 1, "0e691236aa3898f1c3eba65ae5b7766b5151d651ed8044923c3b39115a22b30400b283b28e2def2532469501942edccc", 48),
+/* SHA2-512, is_sslv3=0, data=0, mac=64, pad=16 */
+    ("SHA2-512", 0, 0, 64, 16, 1, "c9122bd6484a39ad5084c3de1a86767c71173622c6b566a7d5c4f52f251a1588b78275ccaaf09f4d8814569bd980d512bc515a3ea3c8765062eb1cda72fb8ffd", 64),
+/* SHA2-512, is_sslv3=0, data=0, mac=64, pad=0 */
+    ("SHA2-512", 0, 0, 64, 0, 1, "c9122bd6484a39ad5084c3de1a86767c71173622c6b566a7d5c4f52f251a1588b78275ccaaf09f4d8814569bd980d512bc515a3ea3c8765062eb1cda72fb8ffd", 64),
+/* SHA2-512, is_sslv3=0, data=1, mac=64, pad=16 */
+    ("SHA2-512", 0, 1, 64, 16, 1, "5edea1503c863421e9a001fcb8cee45e797d1b077fbcc74ffa81362e51232ae3a0233943b4bba9e37d59f61e243e46c7de7d210b93724ee97d2c43d2d3dc6836", 64),
+/* SHA2-512, is_sslv3=0, data=1, mac=64, pad=0 */
+    ("SHA2-512", 0, 1, 64, 0, 1, "5edea1503c863421e9a001fcb8cee45e797d1b077fbcc74ffa81362e51232ae3a0233943b4bba9e37d59f61e243e46c7de7d210b93724ee97d2c43d2d3dc6836", 64),
+/* SHA2-512, is_sslv3=0, data=5, mac=64, pad=16 */
+    ("SHA2-512", 0, 5, 64, 16, 1, "d1636daa269cdf210cbe7832a348ec36cdd44e2eea385243b0e892acae68056967777bd9a5a4ab1492f71eb204e6f9a058924a3ecc2d5b30b6781a9e7bf03677", 64),
+/* SHA2-512, is_sslv3=0, data=5, mac=64, pad=0 */
+    ("SHA2-512", 0, 5, 64, 0, 1, "d1636daa269cdf210cbe7832a348ec36cdd44e2eea385243b0e892acae68056967777bd9a5a4ab1492f71eb204e6f9a058924a3ecc2d5b30b6781a9e7bf03677", 64),
+/* SHA2-512, is_sslv3=0, data=16, mac=64, pad=16 */
+    ("SHA2-512", 0, 16, 64, 16, 1, "bf0424869e3608b990a0b7de086a5bca589d7973beaecc07f06d266afd97ef00fe2432e90b389fb3761dbd72f505cdc115c6927b15ac370d3180eb23d078d201", 64),
+/* SHA2-512, is_sslv3=0, data=16, mac=64, pad=0 */
+    ("SHA2-512", 0, 16, 64, 0, 1, "bf0424869e3608b990a0b7de086a5bca589d7973beaecc07f06d266afd97ef00fe2432e90b389fb3761dbd72f505cdc115c6927b15ac370d3180eb23d078d201", 64),
+/* SHA2-512, is_sslv3=0, data=31, mac=64, pad=16 */
+    ("SHA2-512", 0, 31, 64, 16, 1, "c63a9e00203d3ca2334f6f61110864c82cd41580470a4b4467f934bf17d7915ed7363a6efb2c18c99bbc8373d6c120058b2beaf4caa60bd45e0e02bbdfb244d2", 64),
+/* SHA2-512, is_sslv3=0, data=31, mac=64, pad=0 */
+    ("SHA2-512", 0, 31, 64, 0, 1, "c63a9e00203d3ca2334f6f61110864c82cd41580470a4b4467f934bf17d7915ed7363a6efb2c18c99bbc8373d6c120058b2beaf4caa60bd45e0e02bbdfb244d2", 64),
+/* SHA2-512, is_sslv3=0, data=32, mac=64, pad=16 */
+    ("SHA2-512", 0, 32, 64, 16, 1, "cb3b877b5c1d4522e931e358757d0313846c545f832bc6037fb6ed69836ac766772705f870394b49f14d789c2d48a90eb56dfbde6d5091d4609cc67b15b6645f", 64),
+/* SHA2-512, is_sslv3=0, data=32, mac=64, pad=0 */
+    ("SHA2-512", 0, 32, 64, 0, 1, "cb3b877b5c1d4522e931e358757d0313846c545f832bc6037fb6ed69836ac766772705f870394b49f14d789c2d48a90eb56dfbde6d5091d4609cc67b15b6645f", 64),
+/* SHA2-512, is_sslv3=0, data=63, mac=64, pad=16 */
+    ("SHA2-512", 0, 63, 64, 16, 1, "9eaf41480f8c91207734a2506522d296cb514929cf2625b42a3263d8fba9de2608222f8e96d6a20b55317ad6265a4a411091e39ffdf47ae8eeac6d8db61287dd", 64),
+/* SHA2-512, is_sslv3=0, data=63, mac=64, pad=0 */
+    ("SHA2-512", 0, 63, 64, 0, 1, "9eaf41480f8c91207734a2506522d296cb514929cf2625b42a3263d8fba9de2608222f8e96d6a20b55317ad6265a4a411091e39ffdf47ae8eeac6d8db61287dd", 64),
+/* SHA2-512, is_sslv3=0, data=64, mac=64, pad=16 */
+    ("SHA2-512", 0, 64, 64, 16, 1, "98461de46908c0526ab52f2f3e271b3b9cc7cc9ea77040bf84d67d476f9848c5c5937dfffc8dc21fb34fe685c574a7d5ad49b2fcf8a3a10d71b2cefc580a1e43", 64),
+/* SHA2-512, is_sslv3=0, data=64, mac=64, pad=0 */
+    ("SHA2-512", 0, 64, 64, 0, 1, "98461de46908c0526ab52f2f3e271b3b9cc7cc9ea77040bf84d67d476f9848c5c5937dfffc8dc21fb34fe685c574a7d5ad49b2fcf8a3a10d71b2cefc580a1e43", 64),
+/* SHA2-512, is_sslv3=0, data=100, mac=64, pad=16 */
+    ("SHA2-512", 0, 100, 64, 16, 1, "d1b9448b37ba6e0d2146c9a37d068c3a1f9fa7599f63a1a9275497e61ddce68e51f3f2119446e0c2ecbcc9095ca1ff302d72dbb7ad3d856ae1a1039fe69db2b8", 64),
+/* SHA2-512, is_sslv3=0, data=100, mac=64, pad=0 */
+    ("SHA2-512", 0, 100, 64, 0, 1, "d1b9448b37ba6e0d2146c9a37d068c3a1f9fa7599f63a1a9275497e61ddce68e51f3f2119446e0c2ecbcc9095ca1ff302d72dbb7ad3d856ae1a1039fe69db2b8", 64),
+/* SHA2-512, is_sslv3=0, data=255, mac=64, pad=16 */
+    ("SHA2-512", 0, 255, 64, 16, 1, "4b6ec94cd61595e52a8bb1840f63e5f42f534e498421d64806e0f4e30d3392d2b1a85c220ace3685225b66690ba2fe1875169c94b092be94a0f1fbe13f375c47", 64),
+/* SHA2-512, is_sslv3=0, data=255, mac=64, pad=0 */
+    ("SHA2-512", 0, 255, 64, 0, 1, "4b6ec94cd61595e52a8bb1840f63e5f42f534e498421d64806e0f4e30d3392d2b1a85c220ace3685225b66690ba2fe1875169c94b092be94a0f1fbe13f375c47", 64),
+/* SHA2-512, is_sslv3=1, data=0, mac=64, pad=16 */
+    ("SHA2-512", 1, 0, 64, 16, 1, "909c515aead309942e70d5018aa50e375b6d989fe98c8f8d22f8f87385e76f23ddccf2af9112d77e744a32e1502f51d9abe3359035e31064637f75853041c597", 64),
+/* SHA2-512, is_sslv3=1, data=0, mac=64, pad=0 */
+    ("SHA2-512", 1, 0, 64, 0, 1, "909c515aead309942e70d5018aa50e375b6d989fe98c8f8d22f8f87385e76f23ddccf2af9112d77e744a32e1502f51d9abe3359035e31064637f75853041c597", 64),
+/* SHA2-512, is_sslv3=1, data=1, mac=64, pad=16 */
+    ("SHA2-512", 1, 1, 64, 16, 1, "505247f8deeb4b5e8c6f0a4a1d4fadc1635505dba9f175a63480bd9db4e1c5cddcf1b9ff20cdc61886d13b9075b5cf018339c46da9b5ecc51bdadd35eed8e6c4", 64),
+/* SHA2-512, is_sslv3=1, data=1, mac=64, pad=0 */
+    ("SHA2-512", 1, 1, 64, 0, 1, "505247f8deeb4b5e8c6f0a4a1d4fadc1635505dba9f175a63480bd9db4e1c5cddcf1b9ff20cdc61886d13b9075b5cf018339c46da9b5ecc51bdadd35eed8e6c4", 64),
+/* SHA2-512, is_sslv3=1, data=5, mac=64, pad=16 */
+    ("SHA2-512", 1, 5, 64, 16, 1, "a3ed7b9ab3e09b7398546f20715cf1400a3044d346091d6326a4b55156b7f355b0b0e8f6170792ec5787c7253de75dfd47bbd4f8736a3c9a5b43965e9251afea", 64),
+/* SHA2-512, is_sslv3=1, data=5, mac=64, pad=0 */
+    ("SHA2-512", 1, 5, 64, 0, 1, "a3ed7b9ab3e09b7398546f20715cf1400a3044d346091d6326a4b55156b7f355b0b0e8f6170792ec5787c7253de75dfd47bbd4f8736a3c9a5b43965e9251afea", 64),
+/* SHA2-512, is_sslv3=1, data=16, mac=64, pad=16 */
+    ("SHA2-512", 1, 16, 64, 16, 1, "f846b199dbba57a044125c214716253d021f8e4038c858da4dbd42276b6cd39f34551ee81320dbcc35f8f7fd2c18cb873db3064de1004cc51e42c179e35bab87", 64),
+/* SHA2-512, is_sslv3=1, data=16, mac=64, pad=0 */
+    ("SHA2-512", 1, 16, 64, 0, 1, "f846b199dbba57a044125c214716253d021f8e4038c858da4dbd42276b6cd39f34551ee81320dbcc35f8f7fd2c18cb873db3064de1004cc51e42c179e35bab87", 64),
+/* SHA2-512, is_sslv3=1, data=31, mac=64, pad=16 */
+    ("SHA2-512", 1, 31, 64, 16, 1, "6216f62efc9737c556380a670c481711dc0f515678259148117c71f3a5a9694576aca5964615e24012823d30d88eeabe3276ab620f4982a2b651262c46a15241", 64),
+/* SHA2-512, is_sslv3=1, data=31, mac=64, pad=0 */
+    ("SHA2-512", 1, 31, 64, 0, 1, "6216f62efc9737c556380a670c481711dc0f515678259148117c71f3a5a9694576aca5964615e24012823d30d88eeabe3276ab620f4982a2b651262c46a15241", 64),
+/* SHA2-512, is_sslv3=1, data=32, mac=64, pad=16 */
+    ("SHA2-512", 1, 32, 64, 16, 1, "bbb634e50eb69515f0513d9f734ae5891bf1b730f4daceac1af574883e44b6833b4d3dad2d43e8b42c4438b2750cda5cd04cd56e576fece93b4c50810024d9b5", 64),
+/* SHA2-512, is_sslv3=1, data=32, mac=64, pad=0 */
+    ("SHA2-512", 1, 32, 64, 0, 1, "bbb634e50eb69515f0513d9f734ae5891bf1b730f4daceac1af574883e44b6833b4d3dad2d43e8b42c4438b2750cda5cd04cd56e576fece93b4c50810024d9b5", 64),
+/* SHA2-512, is_sslv3=1, data=63, mac=64, pad=16 */
+    ("SHA2-512", 1, 63, 64, 16, 1, "400b6d7b8d419b45d1eaba9004221b43e4a80b86bfdc65230332181da218f9e777986364b77efb301889453b57569eb74075c210d2213bf03ec6f803e491ee4b", 64),
+/* SHA2-512, is_sslv3=1, data=63, mac=64, pad=0 */
+    ("SHA2-512", 1, 63, 64, 0, 1, "400b6d7b8d419b45d1eaba9004221b43e4a80b86bfdc65230332181da218f9e777986364b77efb301889453b57569eb74075c210d2213bf03ec6f803e491ee4b", 64),
+/* SHA2-512, is_sslv3=1, data=64, mac=64, pad=16 */
+    ("SHA2-512", 1, 64, 64, 16, 1, "a5b4b30d6f14161303617f5a212c27bdab17d498c594c6f24ae12bc7223e9dc97d36c73e5ddb5b40cecd8643f0bbbd651312483f39e16f151c28afe9a720318b", 64),
+/* SHA2-512, is_sslv3=1, data=64, mac=64, pad=0 */
+    ("SHA2-512", 1, 64, 64, 0, 1, "a5b4b30d6f14161303617f5a212c27bdab17d498c594c6f24ae12bc7223e9dc97d36c73e5ddb5b40cecd8643f0bbbd651312483f39e16f151c28afe9a720318b", 64),
+/* SHA2-512, is_sslv3=1, data=100, mac=64, pad=16 */
+    ("SHA2-512", 1, 100, 64, 16, 1, "451dc516800a58cdaba5462ed970e2672e90fedc9c0d35abee6fcfbc2523708d4f60aa769a70c0960b9753ee1e9678018c927ac2db6d4dd709aaeb1c43d617ce", 64),
+/* SHA2-512, is_sslv3=1, data=100, mac=64, pad=0 */
+    ("SHA2-512", 1, 100, 64, 0, 1, "451dc516800a58cdaba5462ed970e2672e90fedc9c0d35abee6fcfbc2523708d4f60aa769a70c0960b9753ee1e9678018c927ac2db6d4dd709aaeb1c43d617ce", 64),
+/* SHA2-512, is_sslv3=1, data=255, mac=64, pad=16 */
+    ("SHA2-512", 1, 255, 64, 16, 1, "2106f554b5faafb1f316266869a437f931321a1484df8db42ad811fa0039efc1bd561ec7282cd7f3389ce8a75b993b3ff4dc15855bcdc2f5d6e4314377e2f58a", 64),
+/* SHA2-512, is_sslv3=1, data=255, mac=64, pad=0 */
+    ("SHA2-512", 1, 255, 64, 0, 1, "2106f554b5faafb1f316266869a437f931321a1484df8db42ad811fa0039efc1bd561ec7282cd7f3389ce8a75b993b3ff4dc15855bcdc2f5d6e4314377e2f58a", 64),

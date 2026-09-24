@@ -1,0 +1,29 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "claim": "Every entry of `ml_dsa_ntt.c`'s 256-entry `zetas_montgomery` table is re-derived from the definition the file's own comment states and agrees with the literal the authority emits; nothing is transcribed.",
+    "entries": 256,
+    "first_line": 47,
+    "matches_authority": true,
+    "mont_r2": 2365951,
+    "out": "src/ml_dsa/tables.rs",
+    "q": 8380417,
+    "q_neg_inv": 4236238847,
+    "root_base": 1753
+  },
+  "generator": "forensics/tools/gen_ml_dsa_tables.py",
+  "inputs": [
+    {
+      "name": "source",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_ntt.c",
+      "sha256": "96165c28d4abd25066c3882a77d81a876bcd3a697039b1babfe2263645c89580"
+    },
+    {
+      "name": "header",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_local.h",
+      "sha256": "37d765166819cfb88afe3a54402e6cbe5d688dd03d785d7e6584e80bf19148c4"
+    }
+  ],
+  "kind": "ml-dsa-tables",
+  "schema": "openssl-rs/atlas/ml-dsa-tables/v1"
+}

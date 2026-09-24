@@ -85,6 +85,22 @@ extern "C" {
     pub fn ferror(f: *mut FILE) -> c_int;
     /// `int setvbuf(FILE *, char *, int, size_t)`.
     pub fn setvbuf(f: *mut FILE, buf: *mut c_char, mode: c_int, size: size_t) -> c_int;
+    /// `void setbuf(FILE *, char *)`.
+    ///
+    /// `randfile.c` calls `setbuf(in, NULL)` before reading a seed file, which is the short form of
+    /// `setvbuf(in, NULL, _IONBF, 0)`. Declared because the authority calls the short form and the
+    /// observable is the buffering change, not the spelling.
+    pub fn setbuf(f: *mut FILE, buf: *mut c_char);
+    /// `void clearerr(FILE *)`.
+    ///
+    /// `RAND_load_file` clears the sticky end-of-file/error flags after a short read so a second
+    /// call re-reads rather than returning immediately.
+    pub fn clearerr(f: *mut FILE);
+    /// `FILE *fdopen(int, const char *)`.
+    ///
+    /// `RAND_write_file` opens with `open(2)` so it can pass `O_CREAT` mode bits, then wraps the
+    /// descriptor -- which is why the file is never created world-readable even briefly.
+    pub fn fdopen(fd: c_int, mode: *const c_char) -> *mut FILE;
 
     /// `ssize_t read(int, void *, size_t)`.
     pub fn read(fd: c_int, buf: *mut c_void, n: size_t) -> isize;
@@ -92,10 +108,26 @@ extern "C" {
     pub fn write(fd: c_int, buf: *const c_void, n: size_t) -> isize;
     /// `int close(int)`.
     pub fn close(fd: c_int) -> c_int;
+    /// `pid_t getpid(void)` — `<unistd.h>`, `pid_t` being `__S32_TYPE` on this profile.
+    ///
+    /// It lives here rather than in `src/rand/sys.rs` because two unrelated units call it:
+    /// `rand_unix.c`'s nonce mixes the process id in, and `threads_pthread.c`'s
+    /// `openssl_get_fork_id` *is* `getpid()` (docs/DECISIONS.md D304). A declaration in either one
+    /// of the two callers would have made the other import across a stratum for a `<unistd.h>`
+    /// prototype.
+    pub fn getpid() -> c_int;
     /// `off_t lseek(int, off_t, int)`.
     pub fn lseek(fd: c_int, off: i64, whence: c_int) -> i64;
-    /// `int open(const char *, int, ...)` — the two-argument form is used only.
-    pub fn open(path: *const c_char, flags: c_int) -> c_int;
+    /// `int open(const char *, int, ...)` — `<fcntl.h>`, in its **variadic** form.
+    ///
+    /// The declaration used to be the two-argument narrowng, which was true of every call site
+    /// the crate had at the time and stopped being true when the random layer's `randfile.c`
+    /// arrived: it needs `open(path, O_WRONLY | O_CREAT, 0600)` (`crypto/rand/randfile.c`). The
+    /// header's own prototype is variadic, so declaring it that way removes the possibility of a
+    /// second, narrower signature disagreeing with this one -- which is exactly what
+    /// `clashing_extern_declarations` refused to compile when the two were both present
+    /// (docs/DECISIONS.md D302). A two-argument call is still a correct call against it.
+    pub fn open(path: *const c_char, flags: c_int, ...) -> c_int;
     /// `int fcntl(int, int, ...)`.
     pub fn fcntl(fd: c_int, cmd: c_int, arg: c_int) -> c_int;
     /// `int ioctl(int, unsigned long, ...)`.

@@ -1,0 +1,43 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "checks": {
+      "every_entry_is_a_projective_niels_point": true,
+      "every_entry_satisfies_the_curve_law": true,
+      "parsed_by_brace_matching": true,
+      "token_counts_asserted": true,
+      "wnaf_entry_k_is_2k_plus_1_times_B": true
+    },
+    "counts": {
+      "entries": 112,
+      "limbs": 2688
+    },
+    "not_pinned": "the fixed-comb table's absolute values, whose digit convention and `precomputed_scalarmul_adjustment` scaling are the authority's own offline generation; their evidence is the RFC 7748 §6.2 / RFC 8032 §7.4 unit tests in src/ec/curve448.rs, which exercise every comb entry",
+    "tables": [
+      {
+        "entries": 80,
+        "limbs": 1920,
+        "rust": "CURVE448_PRECOMPUTED_BASE",
+        "sha256": "b721be3b1ff9f5dbeec38d0ac22fa4970e50b4b3a8d87d193206bd5aef8999aa",
+        "symbol": "curve448_precomputed_base_table"
+      },
+      {
+        "entries": 32,
+        "limbs": 768,
+        "rust": "CURVE448_WNAF_BASE",
+        "sha256": "057429f401500b44dbbf30c3fcbf98296f7b1776fa31716e09518cc273526b8e",
+        "symbol": "curve448_wnaf_base_table"
+      }
+    ]
+  },
+  "generator": "forensics/tools/gen_curve448_tables.py",
+  "inputs": [
+    {
+      "name": "authority-source-curve448-tables",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/ec/curve448/curve448_tables.c",
+      "sha256": "69b8af8b5ce4d71db0a9a17d2d3f843741d5f5f62bf206d3bc9de4edf507e393"
+    }
+  ],
+  "kind": "curve448-tables",
+  "schema": "openssl-rs/atlas/curve448-tables/v1"
+}

@@ -1,0 +1,509 @@
+//! Phase 9 — `crypto/rand/randfile.c`: the file-backed seed helpers behind
+//! `RAND_file_name`, `RAND_load_file` and `RAND_write_file`.
+//!
+//! The authority is 335 lines. Its whole surface is the three `#define`s
+//! `RAND_BUF_SIZE`/`RFILE`/`RAND_LOAD_BUF_SIZE`, the platform guards, and the three exports named
+//! in `include/openssl/rand.h:102-104`:
+//!
+//! ```c
+//! int         RAND_load_file(const char *file, long max_bytes);   /* randfile.c:84  */
+//! int         RAND_write_file(const char *file);                  /* randfile.c:185 */
+//! const char *RAND_file_name(char *file, size_t num);             /* randfile.c:269 */
+//! ```
+//!
+//! This is a **staging** file. It is not integrated and does not compile as written: several
+//! callees are named here but do not exist in the crate yet. They are listed in the `MISSING`
+//! inventory at the bottom and must be supplied (or generated) before integration. Nothing here
+//! defines one of them.
+//!
+//! ## The admitted build profile, arm by arm
+//!
+//! The profile is the one the Phase 9 census pins (`docs/BUILD_MATRIX.md`), `linux`/`x86_64`:
+//! `OPENSSL_NO_POSIX_IO` undefined, `OPENSSL_SYS_VMS` undefined, `OPENSSL_SYS_WINDOWS` undefined,
+//! `DEFAULT_HOME` undefined, `NO_CHMOD` undefined (it is set only for `OPENSSL_SYS_VXWORKS` /
+//! `OPENSSL_SYS_UEFI`, `include/internal/e_os.h:25-28`), `EINTR` defined, `OPENSSL_NO_STDIO`
+//! undefined, `OPENSSL_SYS_VMS`'s `#undef DEVRANDOM` therefore irrelevant. Every guard in the
+//! authority therefore resolves as follows:
+//!
+//! | guard                                             | this profile | transcribed? |
+//! | ------------------------------------------------- | ------------ | ------------ |
+//! | `__TANDEM && _SPT_MODEL_` includes                 | false        | no           |
+//! | `OPENSSL_SYS_VMS` include / `vms_fopen` / pragmas  | false        | no           |
+//! | `OPENSSL_NO_POSIX_IO` (`#ifndef`)                  | false        | yes          |
+//! | `_WIN32 && CP_UTF8 && !_WIN32_WCE` (env lookup)    | false        | no           |
+//! | `DEFAULT_HOME`                                     | false        | no           |
+//! | `#ifdef EINTR` (retry arm)                         | true         | yes          |
+//! | `O_CREAT && !NO_POSIX_IO && !VMS && !WINDOWS`      | true         | yes          |
+//! | `!NO_CHMOD && !NO_POSIX_IO` (`chmod`)              | true         | yes          |
+//! | `OPENSSL_SYS_VMS` (`"rb+"` reopen in write)        | false        | no           |
+//! | `#ifndef OPENSSL_SYS_VMS` (`strcat("/")`)          | true         | yes          |
+//!
+//! The arms **not** transcribed are named here so integration can see what is being omitted: the
+//! Tandem SPT prologue; VMS's `<unixio.h>`, `__FILE_ptr32 vms_fopen`, `VMS_OPEN_ATTRS` macro and
+//! `#pragma environment save/restore` pair plus the `out = openssl_fopen(file, "rb+")` line; and
+//! the Win32 `GetEnvironmentVariableW`/`WideCharToMultiByte` branch of `RAND_file_name`. On this
+//! profile each is constant-absent.
+//!
+//! ## Two constants the task names do not exist
+//!
+//! `RAND_FILE_NAME_MAX` and a `RANDFILE` macro do **not** exist anywhere in the 3.6.4 authority:
+//! `include/openssl/rand.h` and `include/crypto/rand.h` contain neither, and a whole-tree grep
+//! finds only the literal `"RANDFILE"` string used as an environment-variable *name* (here at
+//! `randfile.c:306` and again at `apps/lib/app_rand.c:22`). Nothing is transcribed for them.
+//!
+//! The default RNG is not seeded from `$RANDFILE` inside this translation unit either:
+//! `crypto/rand/rand_lib.c` never mentions `RANDFILE` or `RAND_file_name`. The seeding is the
+//! applications layer's — `apps/lib/app_rand.c:26/52/86` call `RAND_load_file`/`RAND_write_file` —
+//! which is outside this unit.
+//!
+//! ## Named dependencies the crate does not yet have
+//!
+//! `openssl_fopen` (`crypto/o_fopen.c:38`) is what the authority calls; on this profile its whole
+//! body is a NULL-`filename` check followed by `fopen`, and the crate's BIO layer already folds
+//! it that way (`src/runtime/bio/bss_file.rs`), so `sys::fopen` is called directly and the fold is
+//! recorded rather than re-spelled.
+//!
+//! SPDX-License-Identifier: Apache-2.0
+
+#![allow(non_snake_case)] // every export keeps the authority's C name
+
+use core::ffi::{c_char, c_double, c_int, c_long, c_void};
+use core::ptr;
+
+use crate::runtime::bio::print::BIO_snprintf;
+use crate::runtime::bio::sys;
+use crate::runtime::err::err_sites::{self, ErrSite};
+use crate::runtime::err::raise_site_data;
+use crate::runtime::getenv::ossl_safe_getenv;
+use crate::runtime::mem::OPENSSL_cleanse;
+use crate::runtime::str::{OPENSSL_strlcat, OPENSSL_strlcpy};
+
+// MISSING: `crypto/rand/rand_lib.c` (Phase 9.2) has not landed (`src/rand/mod.rs:10`), so these
+// three exports of it do not exist. They are imported under the names they will carry there; the
+// calls below are the authority's calls, not stubs.
+use crate::rand::rand_lib::{RAND_add, RAND_priv_bytes, RAND_status};
+
+// ---------------------------------------------------------------------------------------------
+// Constants — `crypto/rand/randfile.c:61-62,93` and the headers it stands on.
+// ---------------------------------------------------------------------------------------------
+
+/// `RAND_DRBG_STRENGTH` — `include/openssl/rand.h:37`.
+///
+/// The value is transcribed locally because the crate does not export it: `src/rand/pool.rs:57`
+/// declares the same literal `const` privately, as does the `rand_lib.rs` staging file. The
+/// authority uses it as the "small final chunk" cushion for the load buffer and as the byte count
+/// read from a non-regular seed file.
+const RAND_DRBG_STRENGTH: c_int = 256;
+
+/// `RAND_BUF_SIZE` — `randfile.c:61`.
+const RAND_BUF_SIZE: usize = 1024;
+
+/// `RAND_LOAD_BUF_SIZE` = `RAND_BUF_SIZE + RAND_DRBG_STRENGTH` — `randfile.c:93`.
+///
+/// 1280 bytes: the buffer deliberately exceeds the 1024-byte chunk by `RAND_DRBG_STRENGTH` bytes
+/// so that a small final chunk is folded into the previous `RAND_add` rather than added alone.
+const RAND_LOAD_BUF_SIZE: usize = RAND_BUF_SIZE + RAND_DRBG_STRENGTH as usize;
+
+/// `RFILE` — `randfile.c:62`. Appended (after a `/` on POSIX) to `$HOME` when `$RANDFILE` is
+/// unset or empty.
+const RFILE: *const c_char = c".rnd".as_ptr();
+
+/// `O_BINARY` — `randfile.c:206-208`; 0 on Linux, where `<fcntl.h>` already opens in binary.
+const O_BINARY: c_int = 0;
+
+/// `ERR_MAX_DATA_SIZE` — `include/internal/err.h`; the buffer an `ERR_raise_data` message is
+/// formatted into. The crate repeats this literal per module that formats a message.
+const ERR_MAX_DATA_SIZE: usize = 1024;
+
+/// `INT_MAX` as the signed bound the load loop's overflow guard compares against.
+const INT_MAX: c_int = c_int::MAX;
+
+// ---------------------------------------------------------------------------------------------
+// `struct stat`, `S_ISREG` — the POSIX-I/O surface `randfile.c` reaches through `<sys/stat.h>`.
+// ---------------------------------------------------------------------------------------------
+
+/// The fields of glibc's x86-64 `struct stat` that `randfile.c` reads (`st_mode` at offset 24,
+/// `st_size` at offset 48).
+///
+/// MISSING from `crate::runtime::bio::sys`: that module has no `stat`/`fstat` binding and no
+/// layout. This is the prefix of the glibc layout; integration should replace it with the crate's
+/// own `sys::Stat` when the binding lands. It is transcribed here rather than assumed so the two
+/// offsets are the platform's.
+#[repr(C)]
+pub struct Stat {
+    pub st_dev: c_ulong,
+    pub st_ino: c_ulong,
+    pub st_nlink: c_ulong,
+    pub st_mode: c_uint,
+    pub st_uid: c_uint,
+    pub st_gid: c_uint,
+    pub __pad0: c_int,
+    pub st_rdev: c_ulong,
+    pub st_size: c_long,
+    pub st_blksize: c_long,
+    pub st_blocks: c_long,
+    pub st_atime: c_long,
+    pub st_atime_nsec: c_long,
+    pub st_mtime: c_long,
+    pub st_mtime_nsec: c_long,
+    pub st_ctime: c_long,
+    pub st_ctime_nsec: c_long,
+    pub __unused: [c_long; 3],
+}
+
+impl Stat {
+    /// A zeroed `struct stat`, for the `struct stat sb;` the authority declares before `fstat`
+    /// overwrites it.
+    fn zeroed() -> Stat {
+        // SAFETY: `Stat` is `#[repr(C)]` and all-zero is a valid bit pattern for it.
+        unsafe { core::mem::zeroed() }
+    }
+}
+
+/// `S_ISREG(m)` — glibc spells it `((m & S_IFMT) == S_IFREG)` with `S_IFMT` `0o170000` and
+/// `S_IFREG` `0o100000` (`/usr/include/x86_64-linux-gnu/sys/stat.h:128`). The authority's
+/// poor-man fallback (`randfile.c:57-59`, `(m) & S_IFREG`) is only for systems without `S_ISREG`.
+fn S_ISREG(mode: c_uint) -> bool {
+    (mode & 0o170000) == 0o100000
+}
+
+// ---------------------------------------------------------------------------------------------
+// The `ERR_raise_data(..., "Filename=%s", file)` message shared by all four raise sites.
+// ---------------------------------------------------------------------------------------------
+
+/// Raise `site` with the data string `Filename=%s` applied to `file`, matching the authority's
+/// `ERR_raise_data(ERR_LIB_RAND, <reason>, "Filename=%s", file)` at `randfile.c:106/113/178/194/`
+/// `219/251`.
+///
+/// The site carries the library and constant reason, so this is the crate's `raise_site_data`
+/// form (`src/runtime/err.rs`) rather than the dynamic-reason form.
+///
+/// # Safety
+/// `file` must be NULL or NUL-terminated; `site` is a compile-time constant.
+unsafe fn raise_filename(site: &ErrSite, file: *const c_char) {
+    let mut buf = [0 as c_char; ERR_MAX_DATA_SIZE];
+    // SAFETY: `buf` is writable for its full length, the format is NUL-terminated, and `file` is
+    // NULL or NUL-terminated per the contract. `%s` renders NULL as `(null)` in glibc.
+    unsafe { BIO_snprintf(buf.as_mut_ptr(), ERR_MAX_DATA_SIZE, c"Filename=%s".as_ptr(), file) };
+    // SAFETY: `buf` was NUL-terminated by the call above; `site` is a compile-time constant.
+    unsafe { raise_site_data(site, buf.as_ptr()) };
+}
+
+// ---------------------------------------------------------------------------------------------
+// `int RAND_load_file(const char *file, long bytes)` — randfile.c:84-183
+// ---------------------------------------------------------------------------------------------
+
+/// `int RAND_load_file(const char *file, long bytes)`.
+///
+/// `bytes < 0` reads the whole file when it is a regular file, otherwise `RAND_DRBG_STRENGTH`
+/// bytes; `bytes == 0` returns 0 without touching the file; `bytes > 0` reads at most that many.
+/// The loaded bytes are fed to `RAND_add` and their count is returned. A successful read from
+/// which `RAND_status()` is still false raises `RAND_R_RESEED_ERROR` and answers -1.
+///
+/// The authority's `openssl_fopen(file, "rb")` is `sys::fopen` on this platform (see the module
+/// doc); the `#ifndef OPENSSL_NO_POSIX_IO` `fstat`/`setbuf` and the `#ifdef EINTR` retry are
+/// transcribed because the profile compiles both in.
+///
+/// # Safety
+/// `file` must be a NUL-terminated C string; NULL is the authority's `openssl_fopen` NULL case and
+/// is rejected before `fopen`.
+#[no_mangle]
+pub unsafe extern "C" fn RAND_load_file(file: *const c_char, bytes: c_long) -> c_int {
+    let mut buf = [0u8; RAND_LOAD_BUF_SIZE];
+    let mut ret: c_int = 0;
+
+    if bytes == 0 {
+        return 0;
+    }
+
+    // `if ((in = openssl_fopen(file, "rb")) == NULL)`. The authority's `openssl_fopen` answers
+    // NULL for a NULL `filename` before entering libc; `sys::fopen` is the same function after
+    // that check on this profile.
+    if file.is_null() {
+        // SAFETY: `file` is NULL and the site is a compile-time constant.
+        unsafe { raise_filename(&err_sites::RANDFILE_106, file) };
+        return -1;
+    }
+    // SAFETY: `file` is NUL-terminated and the mode is a static literal.
+    let in_ = unsafe { sys::fopen(file, c"rb".as_ptr()) };
+    if in_.is_null() {
+        // SAFETY: `file` is NUL-terminated and the site is a compile-time constant.
+        unsafe { raise_filename(&err_sites::RANDFILE_106, file) };
+        return -1;
+    }
+
+    // `#ifndef OPENSSL_NO_POSIX_IO`: true on this profile.
+    let mut sb = Stat::zeroed();
+    // SAFETY: `in_` is live; `sb` is this frame's writable storage. MISSING: `sys::fstat`.
+    if unsafe { sys::fstat(sys::fileno(in_), &mut sb) } < 0 {
+        // SAFETY: `file` is NUL-terminated.
+        unsafe { raise_filename(&err_sites::RANDFILE_113, file) };
+        // SAFETY: `in_` is live and this frame owns it.
+        unsafe { sys::fclose(in_) };
+        return -1;
+    }
+
+    let mut bytes = bytes;
+    if bytes < 0 {
+        // `if (S_ISREG(sb.st_mode)) bytes = sb.st_size; else bytes = RAND_DRBG_STRENGTH;`
+        bytes = if S_ISREG(sb.st_mode) {
+            sb.st_size
+        } else {
+            RAND_DRBG_STRENGTH as c_long
+        };
+    }
+
+    // The VMS `#pragma environment` pair around this call is absent on this profile. The buffer
+    // is dropped so no copy of the seed file's contents is left lying around.
+    // SAFETY: `in_` is live. MISSING: `sys::setbuf` (glibc's `setbuf(in, NULL)` is
+    // `setvbuf(in, NULL, _IONBF, 0)`; the crate declares only `setvbuf`).
+    unsafe { sys::setbuf(in_, ptr::null_mut()) };
+
+    loop {
+        // `if (bytes > 0) n = (bytes <= RAND_LOAD_BUF_SIZE) ? (int)bytes : RAND_BUF_SIZE; else
+        //  n = RAND_LOAD_BUF_SIZE;`
+        let n: c_int = if bytes > 0 {
+            if bytes <= RAND_LOAD_BUF_SIZE as c_long {
+                bytes as c_int
+            } else {
+                RAND_BUF_SIZE as c_int
+            }
+        } else {
+            RAND_LOAD_BUF_SIZE as c_int
+        };
+
+        // SAFETY: `buf` is writable for `n` bytes and `in_` is live.
+        let i = unsafe {
+            sys::fread(buf.as_mut_ptr().cast::<c_void>(), 1, n as usize, in_) as c_int
+        };
+
+        // `#ifdef EINTR`: defined on this profile.
+        // SAFETY: `in_` is live; `errno` is thread-local and is read only after a failed read.
+        if unsafe { sys::ferror(in_) } != 0 && unsafe { sys::errno() } == sys::EINTR {
+            // SAFETY: `in_` is live. MISSING: `sys::clearerr`.
+            unsafe { sys::clearerr(in_) };
+            if i == 0 {
+                continue;
+            }
+        }
+        if i == 0 {
+            break;
+        }
+
+        // SAFETY: `buf` holds the `i > 0` bytes `fread` just returned.
+        unsafe { RAND_add(buf.as_ptr().cast::<c_void>(), i, i as c_double) };
+        // The guard below keeps `ret` below `INT_MAX`; `wrapping_add` keeps the step defined if a
+        // future edit moves the guard (`overflow-checks = true`).
+        ret = ret.wrapping_add(i);
+
+        // If given a byte count, and it has been consumed, break. The C order matters: the
+        // subtraction is only performed when `bytes > 0`.
+        if bytes > 0 {
+            bytes -= i as c_long;
+            if bytes <= 0 {
+                break;
+            }
+        }
+
+        // A signed integer overflow is possible on the next iteration; stop first.
+        if ret > INT_MAX - RAND_LOAD_BUF_SIZE as c_int {
+            break;
+        }
+    }
+
+    // SAFETY: `buf` is this frame's live storage of `RAND_LOAD_BUF_SIZE` bytes.
+    unsafe { OPENSSL_cleanse(buf.as_mut_ptr().cast::<c_void>(), core::mem::size_of_val(&buf)) };
+    // SAFETY: `in_` is live and this frame owns it.
+    unsafe { sys::fclose(in_) };
+
+    if RAND_status() == 0 {
+        // SAFETY: `file` is NUL-terminated.
+        unsafe { raise_filename(&err_sites::RANDFILE_178, file) };
+        return -1;
+    }
+
+    ret
+}
+
+// ---------------------------------------------------------------------------------------------
+// `int RAND_write_file(const char *file)` — randfile.c:185-267
+// ---------------------------------------------------------------------------------------------
+
+/// `int RAND_write_file(const char *file)`.
+///
+/// Refuses a path that exists and is not a regular file, draws `RAND_BUF_SIZE` bytes from
+/// `RAND_priv_bytes`, writes them, and returns the `fwrite` count (`-1` on any earlier failure).
+///
+/// On this profile the `#if defined(O_CREAT) && !defined(OPENSSL_NO_POSIX_IO) && !VMS && !WINDOWS`
+/// arm is compiled in: the file is created `0600` by `open(2)` so the permissions are restrictive
+/// from the start, and `chmod` follows as a belt-and-braces step. The VMS `"rb+"` reopen is absent.
+///
+/// # Safety
+/// `file` must be a NUL-terminated C string.
+#[no_mangle]
+pub unsafe extern "C" fn RAND_write_file(file: *const c_char) -> c_int {
+    let mut buf = [0u8; RAND_BUF_SIZE];
+    let mut ret: c_int = -1;
+    let mut out: *mut sys::FILE = ptr::null_mut();
+
+    // `#ifndef OPENSSL_NO_POSIX_IO`: true on this profile.
+    let mut sb = Stat::zeroed();
+    // SAFETY: `file` is NUL-terminated; `sb` is this frame's writable storage. MISSING: `sys::stat`.
+    if unsafe { sys::stat(file, &mut sb) } >= 0 && !S_ISREG(sb.st_mode) {
+        // SAFETY: `file` is NUL-terminated.
+        unsafe { raise_filename(&err_sites::RANDFILE_194, file) };
+        return -1;
+    }
+
+    // Collect enough random data.
+    // SAFETY: `buf` is writable for its whole length; `RAND_priv_bytes` is rand_lib.c's export.
+    if unsafe { RAND_priv_bytes(buf.as_mut_ptr(), RAND_BUF_SIZE as c_int) } != 1 {
+        return -1;
+    }
+
+    // `#if defined(O_CREAT) && !defined(OPENSSL_NO_POSIX_IO) && !VMS && !WINDOWS`: permissions
+    // must be restrictive from the start, not after a later `chmod`. `O_BINARY` is 0 here.
+    {
+        // MISSING: the three-argument `sys::open` (the crate declares the two-argument form) and
+        // `sys::fdopen`.
+        // SAFETY: `file` is NUL-terminated and the mode bits are the authority's `0600`.
+        let fd = unsafe { sys::open(file, sys::O_WRONLY | sys::O_CREAT | O_BINARY, 0o600) };
+        if fd != -1 {
+            // SAFETY: `fd` is a live descriptor and the mode is a static literal.
+            out = unsafe { sys::fdopen(fd, c"wb".as_ptr()) };
+            if out.is_null() {
+                // SAFETY: `fd` is live and this frame owns it.
+                unsafe { sys::close(fd) };
+                // SAFETY: `file` is NUL-terminated.
+                unsafe { raise_filename(&err_sites::RANDFILE_219, file) };
+                return -1;
+            }
+        }
+    }
+
+    // The `#ifdef OPENSSL_SYS_VMS` `out = openssl_fopen(file, "rb+")` is absent on this profile.
+
+    if out.is_null() {
+        // SAFETY: `file` is NUL-terminated and the mode is a static literal.
+        out = unsafe { sys::fopen(file, c"wb".as_ptr()) };
+    }
+    if out.is_null() {
+        // SAFETY: `file` is NUL-terminated.
+        unsafe { raise_filename(&err_sites::RANDFILE_251, file) };
+        return -1;
+    }
+
+    // `#if !defined(NO_CHMOD) && !defined(OPENSSL_NO_POSIX_IO)`: both true on this profile. Late,
+    // but better than nothing.
+    // SAFETY: `file` is NUL-terminated. MISSING: `sys::chmod`.
+    unsafe { sys::chmod(file, 0o600) };
+
+    // SAFETY: `buf` is readable for `RAND_BUF_SIZE` bytes and `out` is live.
+    ret = unsafe { sys::fwrite(buf.as_ptr().cast::<c_void>(), 1, RAND_BUF_SIZE, out) } as c_int;
+    // SAFETY: `out` is live and this frame owns it.
+    unsafe { sys::fclose(out) };
+    // SAFETY: `buf` is this frame's storage of `RAND_BUF_SIZE` bytes.
+    unsafe { OPENSSL_cleanse(buf.as_mut_ptr().cast::<c_void>(), RAND_BUF_SIZE) };
+
+    ret
+}
+
+// ---------------------------------------------------------------------------------------------
+// `const char *RAND_file_name(char *buf, size_t size)` — randfile.c:269-335
+// ---------------------------------------------------------------------------------------------
+
+/// `const char *RAND_file_name(char *buf, size_t size)`.
+///
+/// Fills `buf` with `$RANDFILE` when it is set and non-empty; otherwise with `$HOME` + `/.rnd`
+/// (the `/` is skipped only on VMS). Returns `buf`, or NULL when neither variable yields a name or
+/// the result would not fit in `size` bytes.
+///
+/// The `_WIN32 && CP_UTF8` arm that looks up `RANDFILE`/`HOME`/`USERPROFILE`/`SYSTEMROOT` and
+/// converts from UTF-16 is **not** built on this profile and is not transcribed. `DEFAULT_HOME`
+/// (`"C:"` on Windows, `""` on WinCE, `"SYS$LOGIN:"` on VMS) is likewise not defined here, so the
+/// `if (!use_randfile && s == NULL) s = DEFAULT_HOME;` arm is absent.
+///
+/// The authority's `strcpy`/`strcat` run only after a length proof; the crate's bounded
+/// `OPENSSL_strlcpy`/`OPENSSL_strlcat` are used with the same `size`, which truncate rather than
+/// overflow if that proof were ever wrong. This is a transcription choice, recorded here.
+///
+/// # Safety
+/// `buf` must be NULL or writable for `size` bytes; `size` is the same `num` the authority
+/// receives. `$RANDFILE`/`$HOME` are read through `ossl_safe_getenv`, so a setuid process sees
+/// neither.
+#[no_mangle]
+pub unsafe extern "C" fn RAND_file_name(buf: *mut c_char, size: usize) -> *const c_char {
+    let mut use_randfile = 1;
+
+    // SAFETY: the literal is NUL-terminated.
+    let mut s = unsafe { ossl_safe_getenv(c"RANDFILE".as_ptr()) };
+    // SAFETY: `s` is NULL or NUL-terminated; the byte test is the authority's `*s == '\0'`.
+    if s.is_null() || unsafe { *s } == 0 {
+        use_randfile = 0;
+        // SAFETY: the literal is NUL-terminated.
+        s = unsafe { ossl_safe_getenv(c"HOME".as_ptr()) };
+    }
+
+    // `#ifdef DEFAULT_HOME` is absent on this profile, so `s` is not defaulted here.
+
+    // SAFETY: `s` is NULL or NUL-terminated.
+    if s.is_null() || unsafe { *s } == 0 {
+        return ptr::null();
+    }
+
+    // SAFETY: `s` is NUL-terminated.
+    let len = unsafe { sys::strlen(s) };
+
+    if use_randfile != 0 {
+        if len + 1 >= size {
+            return ptr::null();
+        }
+        // SAFETY: `buf` is writable for `size` bytes and `s` is NUL-terminated; the length test
+        // above proves the copy (with its terminator) fits, so this is the authority's `strcpy`.
+        unsafe { OPENSSL_strlcpy(buf, s, size) };
+    } else {
+        // SAFETY: `RFILE` is a static NUL-terminated literal.
+        let rfile_len = unsafe { sys::strlen(RFILE) };
+        if len + 1 + rfile_len + 1 >= size {
+            return ptr::null();
+        }
+        // SAFETY: `buf` is writable for `size` bytes and `s`/`RFILE` are NUL-terminated; the
+        // length test above proves `s`, the `/`, `RFILE` and a terminator all fit, so this is the
+        // authority's `strcpy` + `#ifndef OPENSSL_SYS_VMS` `strcat("/")` + `strcat(RFILE)`.
+        unsafe {
+            OPENSSL_strlcpy(buf, s, size);
+            OPENSSL_strlcat(buf, c"/".as_ptr(), size);
+            OPENSSL_strlcat(buf, RFILE, size);
+        }
+    }
+
+    buf
+}
+
+// ---------------------------------------------------------------------------------------------
+// MISSING — every callee named above that the crate does not have yet.
+// ---------------------------------------------------------------------------------------------
+//
+// `crate::rand::rand_lib::{RAND_add, RAND_priv_bytes, RAND_status}` — `crypto/rand/rand_lib.c`,
+//     Phase 9.2 and not landed (`src/rand/mod.rs:10`). `RAND_load_file` calls `RAND_add` and
+//     `RAND_status`; `RAND_write_file` calls `RAND_priv_bytes`. Signatures assumed:
+//     `RAND_add(buf: *const c_void, num: c_int, randomness: c_double)`,
+//     `RAND_status() -> c_int`, `RAND_priv_bytes(buf: *mut c_uchar, num: c_int) -> c_int`.
+//
+// `crate::runtime::bio::sys::{stat, fstat, fdopen, chmod, setbuf, clearerr}` — not declared by
+//     `sys.rs`. `sys::open` exists but only in the two-argument form; `randfile.c:213` needs the
+//     three-argument `open(path, flags, mode)`. A `struct stat` layout is likewise absent; the
+//     local `Stat` above stands in for it until `sys::Stat` lands.
+//
+// `crypto/o_fopen.c`'s `openssl_fopen` — not transcribed anywhere in the crate. On this profile
+//     its body is a NULL-`filename` check then `fopen`, which the crate's BIO layer folds into
+//     `sys::fopen` (`src/runtime/bio/bss_file.rs`); the fold is reproduced above rather than the
+//     function re-declared.
+//
+// `crate::runtime::err::err_sites::{RANDFILE_106, RANDFILE_113, RANDFILE_178, RANDFILE_194,`
+//     `RANDFILE_219, RANDFILE_251}` — generated and present (`err_sites.rs:22616-22673`), with
+//     `lib = 36` (`ERR_LIB_RAND`) and the constant reasons `121`, `113`, `118`, `122`, `121`,
+//     `121`. Nothing is missing here; the list records the coordinates the raises resolve to.
+//
+// The `RAND_R_*` reason constants in `src/runtime/err_reasons.rs` are not imported: the generated
+//     sites already carry `site.reason`, and `raise_site_data` reads it from the site.

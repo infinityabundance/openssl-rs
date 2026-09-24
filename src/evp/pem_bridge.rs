@@ -183,9 +183,18 @@ pub type PemPasswordCb = unsafe extern "C" fn(*mut c_char, c_int, c_int, *mut c_
 
 /// `PEM_MALLOC(num, flags)` — `crypto/pem/pem_lib.c:234`.
 ///
+/// Shared with `src/pem/pem_lib.rs` (D350), which is the unit's other module: `PEM_bytes_read_bio`
+/// and its `_secmem` spelling allocate through the `PEM_MALLOC`/`PEM_FREE` pair, and one
+/// definition of the flag dispatch is what keeps the `PEM_FLAG_SECURE` branch single.
+///
 /// # Safety
 /// The returned block is the caller's and must be released by [`pem_free`] with the same `flags`.
-unsafe fn pem_malloc(num: usize, flags: c_uint, file: *const c_char, line: c_int) -> *mut c_void {
+pub(crate) unsafe fn pem_malloc(
+    num: usize,
+    flags: c_uint,
+    file: *const c_char,
+    line: c_int,
+) -> *mut c_void {
     if flags & PEM_FLAG_SECURE != 0 {
         // SAFETY: the secure allocator validates its own argument.
         unsafe { CRYPTO_secure_malloc(num, file, line) }
@@ -196,9 +205,17 @@ unsafe fn pem_malloc(num: usize, flags: c_uint, file: *const c_char, line: c_int
 
 /// `PEM_FREE(p, flags, num)` — `crypto/pem/pem_lib.c:223`.
 ///
+/// Shared with `src/pem/pem_lib.rs` (D350); see [`pem_malloc`].
+///
 /// # Safety
 /// `p` must be NULL or a block from [`pem_malloc`] with the same `flags`, and `num` its length.
-unsafe fn pem_free(p: *mut c_void, flags: c_uint, num: usize, file: *const c_char, line: c_int) {
+pub(crate) unsafe fn pem_free(
+    p: *mut c_void,
+    flags: c_uint,
+    num: usize,
+    file: *const c_char,
+    line: c_int,
+) {
     if flags & PEM_FLAG_SECURE != 0 {
         // SAFETY: the caller's contract.
         unsafe { CRYPTO_secure_clear_free(p, num, file, line) }

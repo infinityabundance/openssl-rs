@@ -1,0 +1,210 @@
+{
+ "schema": "openssl-rs/provider-algorithm-plans/v1",
+ "note": "The one authored input to forensics/tools/gen_provider_algorithms.py, and deliberately the smallest one: which phase owns an algorithm row the crate has not landed, and what blocks it. The census itself -- the row inventory, the names, the property definitions, the dispatch symbols, the capability predicates and the row order -- is generated from the pinned provider tables and is never written here. `operation_defaults` says which phase owns a whole operation; `overrides` carve out the rows the plan's own subphases name differently, matched by exact primary name, by name prefix, or by whether the row carries a capability predicate. The most specific match wins. A row matched by neither is a FAILURE in the generator, so a row the authority publishes and the crate does not cannot go unnoticed -- which is the defect DES3-WRAP was.",
+ "operation_defaults": [
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_DIGEST",
+   "phase": 8,
+   "blocked_by": null
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_CIPHER",
+   "phase": 8,
+   "blocked_by": null
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_MAC",
+   "phase": 8,
+   "blocked_by": null
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_KDF",
+   "phase": 8,
+   "blocked_by": null
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_KEYMGMT",
+   "phase": 8,
+   "blocked_by": null
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_KEYEXCH",
+   "phase": 8,
+   "blocked_by": null
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_SIGNATURE",
+   "phase": 8,
+   "blocked_by": null
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_ASYM_CIPHER",
+   "phase": 8,
+   "blocked_by": null
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_KEM",
+   "phase": 8,
+   "blocked_by": null
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_SKEYMGMT",
+   "phase": 8,
+   "blocked_by": null
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_RAND",
+   "phase": 9,
+   "blocked_by": "RAND/DRBG is Phase 9's (docs/PHASE-8-SUBPHASES.md section 0, forensics/prerequisites.json)."
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_ENCODER",
+   "phase": 10,
+   "blocked_by": "OSSL_ENCODER_* and the key formats are Phase 10's (docs/PHASE-8-SUBPHASES.md section 0)."
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_DECODER",
+   "phase": 10,
+   "blocked_by": "OSSL_DECODER_* and the key formats are Phase 10's (docs/PHASE-8-SUBPHASES.md section 0)."
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_STORE",
+   "phase": 10,
+   "blocked_by": "the OSSL_STORE loaders are Phase 10's."
+  },
+  {
+   "provider": "legacy",
+   "operation": "OSSL_OP_DIGEST",
+   "phase": 13,
+   "blocked_by": "the legacy provider is Phase 13's; the digests it publishes (MD4, MDC2, RIPEMD-160, WHIRLPOOL) are the ones the default provider deliberately does not carry."
+  },
+  {
+   "provider": "legacy",
+   "operation": "OSSL_OP_CIPHER",
+   "phase": 13,
+   "blocked_by": "the legacy provider is Phase 13's."
+  },
+  {
+   "provider": "legacy",
+   "operation": "OSSL_OP_KDF",
+   "phase": 13,
+   "blocked_by": "the legacy provider is Phase 13's."
+  },
+  {
+   "provider": "legacy",
+   "operation": "OSSL_OP_SKEYMGMT",
+   "phase": 13,
+   "blocked_by": "the legacy provider is Phase 13's."
+  },
+  {
+   "provider": "base",
+   "operation": "OSSL_OP_ENCODER",
+   "phase": 10,
+   "blocked_by": "OSSL_ENCODER_* and the key formats are Phase 10's; the base provider's encoders are the legacy key types' (docs/PHASE-8-SUBPHASES.md section 0)."
+  },
+  {
+   "provider": "base",
+   "operation": "OSSL_OP_DECODER",
+   "phase": 10,
+   "blocked_by": "OSSL_DECODER_* and the key formats are Phase 10's."
+  },
+  {
+   "provider": "base",
+   "operation": "OSSL_OP_STORE",
+   "phase": 10,
+   "blocked_by": "the OSSL_STORE loaders are Phase 10's."
+  },
+  {
+   "provider": "base",
+   "operation": "OSSL_OP_RAND",
+   "phase": 9,
+   "blocked_by": "RAND/DRBG is Phase 9's; the base provider's single RAND row is the test RNG."
+  }
+ ],
+ "overrides": [
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_CIPHER",
+   "name": "DES3-WRAP",
+   "phase": 9,
+   "blocked_by": "RAND_bytes_ex: providers/implementations/ciphers/cipher_tdes_wrap.c's ossl_tdes_wrap_cbc_init generates the wrap IV with it, and rand.h is Phase 9's (docs/DECISIONS.md D234's class). The row is Phase 8's obligation, handed to Phase 9 with the blocker named rather than stubbed."
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_CIPHER",
+   "name": "AES-128-GCM",
+   "phase": 9,
+   "blocked_by": "RAND_bytes_ex: ciphercommon_gcm.c.in:423 and :536 (docs/DECISIONS.md D234)."
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_CIPHER",
+   "name": "AES-192-GCM",
+   "phase": 9,
+   "blocked_by": "RAND_bytes_ex: ciphercommon_gcm.c.in:423 and :536 (docs/DECISIONS.md D234)."
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_CIPHER",
+   "name": "AES-256-GCM",
+   "phase": 9,
+   "blocked_by": "RAND_bytes_ex: ciphercommon_gcm.c.in:423 and :536 (docs/DECISIONS.md D234)."
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_CIPHER",
+   "name": "ARIA-128-GCM",
+   "phase": 9,
+   "blocked_by": "RAND_bytes_ex: ciphercommon_gcm.c.in:423 and :536, the same unit and the same two sites as AES-GCM's. `cipher_aria_gcm.c:18-28`'s `aria_gcm_newctx` calls `ossl_gcm_initctx`, so the no-IV encrypting arm and the TLS arm both reach the shared RAND call; the row is a Phase-8 obligation handed to Phase 9 with the blocker named rather than stubbed (D270, and D234's class)."
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_CIPHER",
+   "name": "ARIA-192-GCM",
+   "phase": 9,
+   "blocked_by": "RAND_bytes_ex: as `ARIA-128-GCM`; the three rows differ only in `keybits` (D270)."
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_CIPHER",
+   "name": "ARIA-256-GCM",
+   "phase": 9,
+   "blocked_by": "RAND_bytes_ex: as `ARIA-128-GCM`; the three rows differ only in `keybits` (D270)."
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_CIPHER",
+   "name": "SM4-GCM",
+   "phase": 9,
+   "blocked_by": "RAND_bytes_ex: as `ARIA-128-GCM`. `cipher_sm4_gcm.c:18-30`'s `sm4_gcm_newctx` calls `ossl_gcm_initctx`, so the blocker is the shared unit rather than anything SM4's own (D270)."
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_MAC",
+   "name": "GMAC",
+   "phase": 9,
+   "blocked_by": "the AES-GCM cipher rows: gmac_set_ctx_params resolves a `cipher` name and then refuses every mode but EVP_CIPH_GCM_MODE, and this profile's only GCM ciphers are AES-{128,192,256}-GCM, which are themselves Phase 9's on RAND_bytes_ex (docs/DECISIONS.md D234). GMAC's whole engine is transcribed (src/provider/mac.rs, GMAC_FUNCTIONS); the registration row is withheld because a registered GMAC would answer EVP_MAC_fetch 1 on both sides and then fail every init where the authority succeeds -- the `DES3-WRAP` class one operation over. D243."
+  },
+  {
+   "provider": "default",
+   "operation": "OSSL_OP_CIPHER",
+   "capability": true,
+   "phase": 8,
+   "blocked_by": "a capability predicate: the row is published only when its capable() answers 1, so the crate must build ossl_prov_cache_exported_algorithms' filtering before it lands a gated row (docs/DECISIONS.md D237, and this file's census carries the predicate)."
+  }
+ ]
+}

@@ -1,0 +1,345 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "algorithm": "blake2b512",
+    "court": "CT-DIGEST",
+    "digest_bytes": 64,
+    "openssl_digest": "BLAKE2b512",
+    "primary_source": "RFC 7693; BLAKE2 reference implementation",
+    "provenance": {
+      "authority": "openssl-3.6.4-production",
+      "corpus": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_blake.txt",
+      "corpus_sha256": "6331e046525a730df94b9c83deef5ee0838d7d7347c27852a16d43e95f4bcb28",
+      "note": "Candidate-only construction verification: the primary source is named above, the bytes are mirrored through the pinned corpus (`corpus_sha256`), and the mirror's identity is fixed. This does NOT establish that the mirror is faithful to a primary source nobody in this repository has read. A CT pass is not formal validation. See D206.",
+      "primary_source": "RFC 7693; BLAKE2 reference implementation"
+    },
+    "standard": "RFC 7693 (BLAKE2)",
+    "vectors": [
+      {
+        "expected_hex": "786a02f742015903c6c6fd852552d272912f4740e15847618a86e217f71f5419d25e1031afee585313896444934eb04b903a685b1448b755d56f701afe9be2ce",
+        "id": "blake2b512-evpmd_blake-72",
+        "input_hex": "",
+        "modes": [
+          "one"
+        ],
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_blake.txt",
+          "form": "empty",
+          "line": 72,
+          "mirror_sha256": "6331e046525a730df94b9c83deef5ee0838d7d7347c27852a16d43e95f4bcb28",
+          "primary_source": "RFC 7693; BLAKE2 reference implementation",
+          "title": "BLAKE tests"
+        },
+        "standard": "RFC 7693 (BLAKE2)"
+      },
+      {
+        "expected_hex": "333fcb4ee1aa7c115355ec66ceac917c8bfd815bf7587d325aec1864edd24e34d5abe2c6b1b5ee3face62fed78dbef802f2a85cb91d455a8f5249d330853cb3c",
+        "id": "blake2b512-evpmd_blake-76",
+        "input_hex": "61",
+        "modes": [
+          "one"
+        ],
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_blake.txt",
+          "form": "hex",
+          "line": 76,
+          "mirror_sha256": "6331e046525a730df94b9c83deef5ee0838d7d7347c27852a16d43e95f4bcb28",
+          "primary_source": "RFC 7693; BLAKE2 reference implementation",
+          "title": "BLAKE tests"
+        },
+        "standard": "RFC 7693 (BLAKE2)"
+      },
+      {
+        "expected_hex": "ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d17d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923",
+        "id": "blake2b512-evpmd_blake-80",
+        "input_hex": "616263",
+        "modes": [
+          "one"
+        ],
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_blake.txt",
+          "form": "hex",
+          "line": 80,
+          "mirror_sha256": "6331e046525a730df94b9c83deef5ee0838d7d7347c27852a16d43e95f4bcb28",
+          "primary_source": "RFC 7693; BLAKE2 reference implementation",
+          "title": "BLAKE tests"
+        },
+        "standard": "RFC 7693 (BLAKE2)"
+      },
+      {
+        "expected_hex": "3c26ce487b1c0f062363afa3c675ebdbf5f4ef9bdc022cfbef91e3111cdc283840d8331fc30a8a0906cff4bcdbcd230c61aaec60fdfad457ed96b709a382359a",
+        "id": "blake2b512-evpmd_blake-84",
+        "input_hex": "6d65737361676520646967657374",
+        "modes": [
+          "one"
+        ],
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_blake.txt",
+          "form": "hex",
+          "line": 84,
+          "mirror_sha256": "6331e046525a730df94b9c83deef5ee0838d7d7347c27852a16d43e95f4bcb28",
+          "primary_source": "RFC 7693; BLAKE2 reference implementation",
+          "title": "BLAKE tests"
+        },
+        "standard": "RFC 7693 (BLAKE2)"
+      },
+      {
+        "expected_hex": "c68ede143e416eb7b4aaae0d8e48e55dd529eafed10b1df1a61416953a2b0a5666c761e7d412e6709e31ffe221b7a7a73908cb95a4d120b8b090a87d1fbedb4c",
+        "id": "blake2b512-evpmd_blake-88",
+        "input_hex": "6162636465666768696a6b6c6d6e6f707172737475767778797a",
+        "modes": [
+          "one"
+        ],
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_blake.txt",
+          "form": "hex",
+          "line": 88,
+          "mirror_sha256": "6331e046525a730df94b9c83deef5ee0838d7d7347c27852a16d43e95f4bcb28",
+          "primary_source": "RFC 7693; BLAKE2 reference implementation",
+          "title": "BLAKE tests"
+        },
+        "standard": "RFC 7693 (BLAKE2)"
+      },
+      {
+        "expected_hex": "99964802e5c25e703722905d3fb80046b6bca698ca9e2cc7e49b4fe1fa087c2edf0312dfbb275cf250a1e542fd5dc2edd313f9c491127c2e8c0c9b24168e2d50",
+        "id": "blake2b512-evpmd_blake-92",
+        "input_hex": "4142434445464748494a4b4c4d4e4f505152535455565758595a6162636465666768696a6b6c6d6e6f707172737475767778797a30313233343536373839",
+        "modes": [
+          "one"
+        ],
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_blake.txt",
+          "form": "hex",
+          "line": 92,
+          "mirror_sha256": "6331e046525a730df94b9c83deef5ee0838d7d7347c27852a16d43e95f4bcb28",
+          "primary_source": "RFC 7693; BLAKE2 reference implementation",
+          "title": "BLAKE tests"
+        },
+        "standard": "RFC 7693 (BLAKE2)"
+      },
+      {
+        "expected_hex": "686f41ec5afff6e87e1f076f542aa466466ff5fbde162c48481ba48a748d842799f5b30f5b67fc684771b33b994206d05cc310f31914edd7b97e41860d77d282",
+        "id": "blake2b512-evpmd_blake-96",
+        "input_hex": "3132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930",
+        "modes": [
+          "one"
+        ],
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_blake.txt",
+          "form": "hex",
+          "line": 96,
+          "mirror_sha256": "6331e046525a730df94b9c83deef5ee0838d7d7347c27852a16d43e95f4bcb28",
+          "primary_source": "RFC 7693; BLAKE2 reference implementation",
+          "title": "BLAKE tests"
+        },
+        "standard": "RFC 7693 (BLAKE2)"
+      },
+      {
+        "expected_hex": "2319e3789c47e2daa5fe807f61bec2a1a6537fa03f19ff32e87eecbfd64b7e0e8ccff439ac333b040f19b0c4ddd11a61e24ac1fe0f10a039806c5dcc0da3d115",
+        "id": "blake2b512-evpmd_blake-100",
+        "input_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f",
+        "modes": [
+          "one"
+        ],
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_blake.txt",
+          "form": "hex",
+          "line": 100,
+          "mirror_sha256": "6331e046525a730df94b9c83deef5ee0838d7d7347c27852a16d43e95f4bcb28",
+          "primary_source": "RFC 7693; BLAKE2 reference implementation",
+          "title": "BLAKE tests"
+        },
+        "standard": "RFC 7693 (BLAKE2)"
+      },
+      {
+        "expected_hex": "df0a9d0c212843a6a934e3902b2dd30d17fba5f969d2030b12a546d8a6a45e80cf5635f071f0452e9c919275da99bed51eb1173c1af0518726b75b0ec3bae2b5",
+        "id": "blake2b512-evpmd_blake-104",
+        "input_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f8081",
+        "modes": [
+          "one"
+        ],
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_blake.txt",
+          "form": "hex",
+          "line": 104,
+          "mirror_sha256": "6331e046525a730df94b9c83deef5ee0838d7d7347c27852a16d43e95f4bcb28",
+          "primary_source": "RFC 7693; BLAKE2 reference implementation",
+          "title": "BLAKE tests"
+        },
+        "standard": "RFC 7693 (BLAKE2)"
+      },
+      {
+        "expected_hex": "786a02f742015903c6c6fd852552d272912f4740e15847618a86e217f71f5419d25e1031afee585313896444934eb04b903a685b1448b755d56f701afe9be2ce",
+        "id": "blake2b512-boundary-empty",
+        "input_hex": "",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "empty",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "RFC 7693; BLAKE2 reference implementation"
+        },
+        "standard": "RFC 7693 (BLAKE2)"
+      },
+      {
+        "expected_hex": "333fcb4ee1aa7c115355ec66ceac917c8bfd815bf7587d325aec1864edd24e34d5abe2c6b1b5ee3face62fed78dbef802f2a85cb91d455a8f5249d330853cb3c",
+        "id": "blake2b512-boundary-one",
+        "input_hex": "61",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "one",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "RFC 7693; BLAKE2 reference implementation"
+        },
+        "standard": "RFC 7693 (BLAKE2)"
+      },
+      {
+        "expected_hex": "cd3d304c5fc217e84778b997f89dc654a6a44a88b1fd43c4668e4adfbbe2b0d169002a6f98b22ab98dde4603477dcdaeac3e6ff320b1059531fd8b6c36738e67",
+        "id": "blake2b512-boundary-len55",
+        "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "len55",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "RFC 7693; BLAKE2 reference implementation"
+        },
+        "standard": "RFC 7693 (BLAKE2)"
+      },
+      {
+        "expected_hex": "b84c95e7cb1bab5b0f5acfdd426cd90091fe5f98b2f9c047ea71542ffe6e757c29b47ec42c9fdbe423b43083f711fb546f0c3237dd42fe311ff4544d627f295a",
+        "id": "blake2b512-boundary-len56",
+        "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d84",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "len56",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "RFC 7693; BLAKE2 reference implementation"
+        },
+        "standard": "RFC 7693 (BLAKE2)"
+      },
+      {
+        "expected_hex": "70b2a0e6daecac22c7a2df82c06e3fc0b4c66bd5ef8098e4ed54e723b393d79ef3bceba079a01a14c6ef2ae2ed1171df1662cd14ef38e6f77b01c7f48144dd09",
+        "id": "blake2b512-boundary-len63",
+        "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "len63",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "RFC 7693; BLAKE2 reference implementation"
+        },
+        "standard": "RFC 7693 (BLAKE2)"
+      },
+      {
+        "expected_hex": "3db7bb5c40745f0c975ac6bb8578f590e2cd2cc1fc6d13533ef725325c9fddff5cca24e7a591a0f6032a24fad0e09f6df873c4ff314628391f78df7f09cb7ed7",
+        "id": "blake2b512-boundary-len64",
+        "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bc",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "len64",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "RFC 7693; BLAKE2 reference implementation"
+        },
+        "standard": "RFC 7693 (BLAKE2)"
+      },
+      {
+        "expected_hex": "149c114a3e8c6e06bafee27c9d0de0e39ef28294fa0d9f81876dcceb10bb41101e256593587e46b844819ed7ded90d56c0843df06c95d1695c3de635cd7a888e",
+        "id": "blake2b512-boundary-len65",
+        "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "len65",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "RFC 7693; BLAKE2 reference implementation"
+        },
+        "standard": "RFC 7693 (BLAKE2)"
+      },
+      {
+        "expected_hex": "4bdd2c9cf31d797a81d245c989ffb7515143ca345c66f73087dd5c58bf642bf083ba16894eab79e3b08d5126404d833e7510271b50be36a7b7cbbb46f5c89fac",
+        "id": "blake2b512-boundary-multi1000",
+        "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4ebf2f900070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4ebf2f900070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4ebf2f900070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4ebf2f900070e151c232a31383f464d54",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "multi1000",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "RFC 7693; BLAKE2 reference implementation"
+        },
+        "standard": "RFC 7693 (BLAKE2)"
+      }
+    ]
+  },
+  "generator": "forensics/tools/correctness_vectors.py",
+  "inputs": [
+    {
+      "name": "authority-evp-vector-file",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_blake.txt",
+      "sha256": "6331e046525a730df94b9c83deef5ee0838d7d7347c27852a16d43e95f4bcb28"
+    }
+  ],
+  "kind": "correctness-vectors-blake2b512",
+  "schema": "openssl-rs/atlas/correctness-vectors-blake2b512/v1"
+}

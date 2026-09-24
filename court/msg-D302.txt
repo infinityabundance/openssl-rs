@@ -1,0 +1,56 @@
+rand: the seeding arm's platform layer lands, with ten tests that call every binding (D302)
+
+9.5's platform surface, as src/rand/sys.rs, and the part of the seeding work that can
+be verified on its own. Ten unit tests (suite 634 -> 644) call every declaration
+against the running kernel, which matters here more than usual: the file has no
+caller yet, so without the tests the whole module would be allow(dead_code) and
+nothing in the repository would ever have called one of these bindings.
+
+What is in it, every value read from a header rather than recalled:
+
+  __NR_getrandom   318, from /usr/include/asm/unistd_64.h:322 and corroborated by
+                   rand_unix.c:283's own #if -- not asm-generic's 278, not x32
+  struct stat      144 bytes; st_dev@0, st_ino@8, st_mode@24, st_rdev@40, st_size@48,
+                   from bits/struct_stat.h's __x86_64__ arm
+  dev_t/ino_t/mode_t   8/8/4, from bits/typesizes.h
+  fd_set           16 words of 64 bits, __FD_SETSIZE 1024, from sys/select.h
+  ENOSYS           38, from asm-generic/errno.h
+  IPC_CREAT/SHM_RDONLY/S_IRUSR/G/O    from bits/ipc.h, bits/shm.h, sys/stat.h
+  CLOCK_REALTIME   0, from bits/time.h
+
+The tests are the evidence, and three of them are the ones that could not be
+written any other way:
+
+1. the_stat_layout_is_the_glibc_x86_64_arm asserts size 144 and all five field
+   offsets with core::mem::offset_of!. The seeding arm's device-identity check
+   compares st_dev/st_ino/st_mode/st_rdev, so an offset error would make that
+   comparison accidentally true or false rather than fail loudly.
+2. the_syscall_getrandom_path_answers_bytes proves __NR_getrandom is right BY
+   CALLING IT: a wrong number answers -1 with ENOSYS instead of writing 16 bytes.
+   That is the only way to verify a syscall number short of reading the header, and
+   both were done.
+3. fstat_reports_a_character_device_for_dev_urandom opens /dev/urandom through the
+   crate's own open and asserts S_IFCHR in st_mode, which exercises open, fstat and
+   the Stat offsets together against the kernel's answer.
+
+Three decisions worth recording. open is now VARIADIC in
+runtime/bio/sys.rs, because two declarations of one C function with different
+arities is a compile error (clashing_extern_declarations) and the header has one
+prototype; the crate's was the narrower one and randfile.c needs the three-argument
+form, so the prototype was widened in its one home. The six calls whose precondition
+is unconditional -- getpid, clock_gettime, fstat, shmget, uname, atoi -- are safe
+wrappers over _raw externs, the shape errno() already has, because an unsafe block
+that guards nothing is an unsafe block a reader learns to skip; shmat, shmdt,
+syscall and getentropy stay unsafe because they genuinely are. And fd_set masks its
+index into the set: glibc's macro writes past an out-of-range descriptor, so this
+divergence is defined and asserted rather than left to be discovered.
+
+One correction to the staging file it came from: S_IRWXU/G/O were omitted as
+belonging to randfile.c's half, and rand_unix.c compares the whole permission mask
+with them when it decides whether a /dev path is still the device it recorded. Added.
+
+The seeding arm itself (rand_unix.c) stays staged: its integration needs a SAFETY
+comment at each of roughly a dozen unsafe sites and it is the next unit rather than
+this one. The platform layer is what it depends on, and it is now landed and tested.
+
+PIPELINE OK, 85 courts, 31469 observations, 644 unit tests.

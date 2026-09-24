@@ -6,13 +6,14 @@
 //! registry (`_new`, `_free`, `_copy`, `_get0_info`, `_add0`, `_remove`) and the forty
 //! `EVP_PKEY_meth_get_*`/`set_*` accessors.
 //!
-//! **What is not here is the three exports that read `standard_methods[]`** —
-//! `EVP_PKEY_meth_find`, `_get0` and `_get_count` — which are 7.4l's, because that table's
-//! contents are Phase 8's `ossl_<alg>_pkey_method` objects (`docs/DECISIONS.md` D163, D165). The
-//! *application* half of the registry landed here: `evp_pkey_meth_find_added_by_application` is
-//! written and has no caller until `EVP_PKEY_meth_find` and `int_ctx_new`'s `app_pmeth` arm land,
-//! so a caller that installs its own method with `EVP_PKEY_meth_add0` is reachable today while the
-//! twelve built-in types are not.
+//! **The three exports that read `standard_methods[]` are here as of 8.8's `EVP_PKEY_METHOD`
+//! slice** (`docs/DECISIONS.md` D355): `EVP_PKEY_meth_find`, `_get0` and `_get_count`, over
+//! [`PMETH_STANDARD_METHODS`], whose contents are the four `*_pmeth.c` units' and, since D372, the
+//! four `crypto/ec/ecx_meth.c` units' `ossl_<alg>_pkey_method` objects. The *application* half of the registry landed here earlier:
+//! `evp_pkey_meth_find_added_by_application` is now `EVP_PKEY_meth_find`'s first question, so a
+//! caller that installs its own method with `EVP_PKEY_meth_add0` is found before the table is
+//! searched. What is **not** yet here is `int_ctx_new`'s `pmeth` arm, so no context is built from
+//! either half: the exports answer the registry, and the contexts still come from `EVP_KEYMGMT`.
 //!
 //! ## A context is one object with two halves, and `evp_pkey_ctx_state` is the switch
 //!
@@ -56,7 +57,7 @@ use core::ptr;
 
 use crate::asn1::a_type::{d2i_ASN1_TYPE, i2d_ASN1_TYPE};
 use crate::asn1::layout::Asn1Type;
-use crate::bn::bignum::{BN_bn2nativepad, BN_num_bits, BigNum};
+use crate::bn::bignum::{BN_bn2nativepad, BN_free, BN_num_bits, BigNum};
 use crate::evp::asymcipher::{EVP_ASYM_CIPHER_get0_provider, EvpAsymCipher};
 use crate::evp::cipher::{EVP_CIPHER_get0_name, EvpCipher};
 use crate::evp::cipher_ctx::X509Algor;
@@ -108,13 +109,13 @@ use crate::runtime::mem::{
 };
 use crate::runtime::obj::{
     NID_X9_62_id_ecPublicKey, NID_dhKeyAgreement, NID_dhpublicnumber, NID_dsa, NID_rsaEncryption,
-    NID_rsassaPss, NID_sm2, NID_undef, NID_X25519, NID_X448,
+    NID_rsassaPss, NID_sm2, NID_undef, NID_ED25519, NID_ED448, NID_X25519, NID_X448,
 };
 use crate::runtime::obj::{OBJ_nid2sn, OBJ_sn2nid};
 use crate::runtime::obj::{OBJ_obj2txt, OBJ_txt2obj};
 use crate::runtime::stack::{
-    OPENSSL_sk_delete_ptr, OPENSSL_sk_find, OPENSSL_sk_new, OPENSSL_sk_push, OPENSSL_sk_sort,
-    OPENSSL_sk_value, OpenSslStack,
+    OPENSSL_sk_delete_ptr, OPENSSL_sk_find, OPENSSL_sk_new, OPENSSL_sk_num, OPENSSL_sk_pop_free,
+    OPENSSL_sk_push, OPENSSL_sk_sort, OPENSSL_sk_value, OpenSslStack,
 };
 use crate::runtime::str::{OPENSSL_hexstr2buf, OPENSSL_strcasecmp, OPENSSL_strlcat};
 use core::ffi::c_long;
@@ -247,11 +248,20 @@ pub(crate) type EvpPkeyGenCb = unsafe extern "C" fn(*mut EvpPkeyCtx) -> c_int;
 /// reader dispatches on `operation` before touching a family's members, so the overlap is
 /// unobservable, and the field names are what a reader needs.
 ///
-/// The legacy half is here as far as it can be — `legacy_keytype`, `data`, `app_data`,
-/// `keygen_info`, `keygen_info_count`, `peerkey` — and `pmeth` and `engine` are absent because
-/// `EVP_PKEY_METHOD` is 7.4l's and `ENGINE` is Phase 13's. Both are only ever read behind a
-/// `pmeth != NULL` or `engine != NULL` test, so their absence makes those arms unreachable rather
-/// than wrong, and each site says so.
+/// The legacy half is the authority's: `legacy_keytype`, `pmeth`, `engine`, `pkey`, `peerkey`,
+/// `data`, the `flag_call_digest_custom` bit and `rsa_pubexp`. `pmeth` and `engine` were **absent**
+/// until 8.8's `EVP_PKEY_METHOD` slice landed (`docs/DECISIONS.md` D355), because `EVP_PKEY_METHOD`
+/// is 7.4l's and `ENGINE` is Phase 13's; a reader that needs them — `pkey_ctx_is_pss(ctx)`, which is
+/// `ctx->pmeth->pkey_id == EVP_PKEY_RSA_PSS`, and `pkey_dh_keygen`'s assignment type — is what the
+/// field is for. Nothing in this crate writes `engine` yet, and the field is present for the block's
+/// layout rather than for a state the crate enters.
+///
+/// **The absolute offsets are not the authority's and are not asserted to be.** The `op` union is
+/// flattened above (see this module's documentation), so this structure is *wider* than
+/// `struct evp_pkey_ctx_st`; what the `const _` block under the struct pins is the **legacy block's
+/// internal layout** — the deltas between `legacy_keytype`, `pmeth`, `engine`, `pkey`, `peerkey`,
+/// `data` and `rsa_pubexp` — which is what the callbacks read and what the measurement in
+/// `courts/layout/measure-evp-pkey-ctx.c` records from the authority.
 #[repr(C)]
 pub struct EvpPkeyCtx {
     /// `int operation` — the bit set `EVP_PKEY_OP_*` names.
@@ -296,13 +306,70 @@ pub struct EvpPkeyCtx {
     pub(crate) keygen_info_count: c_int,
     /// `int legacy_keytype`.
     pub(crate) legacy_keytype: c_int,
+    /// `const EVP_PKEY_METHOD *pmeth` — the legacy method this context was built from, or NULL.
+    ///
+    /// **8.8's writer is its enabler.** `int_ctx_new` and the `app_pmeth` arm are the authority's
+    /// writers; neither is landed here, so the field is written by nothing yet and read by the
+    /// `ossl_<alg>_pkey_method` callbacks this stratum publishes — `pkey_ctx_is_pss`
+    /// (`crypto/rsa/rsa_local.h:151`) and `pkey_dh_keygen`'s assignment type
+    /// (`crypto/dh/dh_pmeth.c:387`) are the two.
+    pub(crate) pmeth: *const EvpPkeyMethod,
+    /// `ENGINE *engine` — "Engine that implements this method or NULL if builtin". Phase 13's
+    /// object; present so the legacy block's internal layout is the authority's, and written by
+    /// nothing in this crate.
+    #[allow(dead_code)]
+    // present for the measured layout; Phase 13's `int_ctx_new` arm is its writer
+    pub(crate) engine: *mut Engine,
     /// `EVP_PKEY *pkey` — holding a reference, or NULL.
     pub(crate) pkey: *mut EvpPkey,
     /// `EVP_PKEY *peerkey` — holding a reference, or NULL.
     pub(crate) peerkey: *mut EvpPkey,
     /// `void *data` — algorithm-specific, owned by whoever set it.
     pub(crate) data: *mut c_void,
+    /// `unsigned int flag_call_digest_custom : 1` — "Indicator if `digest_custom` needs to be
+    /// called". Projected as its four-byte storage, as `EvpPkey`'s `foreign` is, and present so
+    /// `rsa_pubexp`'s offset follows `data`'s by the authority's own sixteen bytes.
+    #[allow(dead_code)]
+    // present for the measured layout; `do_sigver_init`'s `pmeth` arm is its writer
+    pub(crate) flag_call_digest_custom: c_int,
+    /// `BIGNUM *rsa_pubexp` — the authority's own comment: *"Used to support taking custody of
+    /// memory in the case of a provider being used with the deprecated
+    /// `EVP_PKEY_CTX_set_rsa_keygen_pubexp()` API. This member should NOT be used for any other
+    /// purpose and should be removed when said deprecated API is excised completely."*
+    ///
+    /// It is the **last** member of the authority's structure, after the `flag_call_digest_custom`
+    /// bit-field, and it is the only field this crate had left out for a reason other than a missing
+    /// stratum: nothing wrote it until 8.4's slice E landed `EVP_PKEY_CTX_set_rsa_keygen_pubexp`,
+    /// which is its only setter and `EVP_PKEY_CTX_free`'s only reader.
+    pub(crate) rsa_pubexp: *mut BigNum,
 }
+
+/// The measured legacy block, pinned member by member.
+///
+/// `courts/layout/measure-evp-pkey-ctx.c` compiles the authority's own `struct evp_pkey_ctx_st`
+/// against the admitted build's headers and prints its size and every member's offset. These are
+/// those numbers: `legacy_keytype` 116, `pmeth` 120, `engine` 128, `pkey` 136, `peerkey` 144,
+/// `data` 152, and `rsa_pubexp` 168 with the `flag_call_digest_custom` bit's four-byte storage in
+/// between. **The crate's absolute offsets are not these** — the flattened `op` union makes this
+/// structure wider — so what is asserted is each field's distance from the one before it, which is
+/// what a reader of the callbacks depends on and what the flattening cannot move.
+const _: () = {
+    use core::mem::{align_of, offset_of};
+    assert!(align_of::<EvpPkeyCtx>() == 8);
+    /* Two four-byte ints are adjacent in the authority: `keygen_info_count` 112, `legacy_keytype`
+     * 116. The pointer after them is eight-aligned. */
+    assert!(
+        offset_of!(EvpPkeyCtx, legacy_keytype) - offset_of!(EvpPkeyCtx, keygen_info_count) == 4
+    );
+    assert!(offset_of!(EvpPkeyCtx, pmeth) - offset_of!(EvpPkeyCtx, legacy_keytype) == 4);
+    assert!(offset_of!(EvpPkeyCtx, engine) - offset_of!(EvpPkeyCtx, pmeth) == 8);
+    assert!(offset_of!(EvpPkeyCtx, pkey) - offset_of!(EvpPkeyCtx, engine) == 8);
+    assert!(offset_of!(EvpPkeyCtx, peerkey) - offset_of!(EvpPkeyCtx, pkey) == 8);
+    assert!(offset_of!(EvpPkeyCtx, data) - offset_of!(EvpPkeyCtx, peerkey) == 8);
+    /* `data` 152 -> the bitfield's storage at 160 -> `rsa_pubexp` 168. */
+    assert!(offset_of!(EvpPkeyCtx, rsa_pubexp) - offset_of!(EvpPkeyCtx, data) == 16);
+    assert!(offset_of!(EvpPkeyCtx, flag_call_digest_custom) - offset_of!(EvpPkeyCtx, data) == 8);
+};
 
 impl EvpPkeyCtx {
     /// `EVP_PKEY_CTX_IS_SIGNATURE_OP(ctx)`.
@@ -316,12 +383,19 @@ impl EvpPkeyCtx {
     }
 
     /// `EVP_PKEY_CTX_IS_ASYM_CIPHER_OP(ctx)`.
-    fn is_asym_cipher_op(&self) -> bool {
+    ///
+    /// `pub(crate)` because `src/rsa/ctrl.rs`'s `EVP_PKEY_CTX_set0_rsa_oaep_label` and
+    /// `EVP_PKEY_CTX_get0_rsa_oaep_label` are the first exports outside this module to spell the
+    /// authority's macro — the same visibility change [`Self::is_legacy`] already carries.
+    pub(crate) fn is_asym_cipher_op(&self) -> bool {
         (self.operation & EVP_PKEY_OP_TYPE_CRYPT) != 0
     }
 
     /// `EVP_PKEY_CTX_IS_GEN_OP(ctx)`.
-    fn is_gen_op(&self) -> bool {
+    ///
+    /// `pub(crate)` for the same reason as [`Self::is_asym_cipher_op`]: three of 8.4's
+    /// `EVP_PKEY_CTX_set_rsa_keygen_*` controls are written in `src/rsa/ctl.rs` and spell it.
+    pub(crate) fn is_gen_op(&self) -> bool {
         (self.operation & EVP_PKEY_OP_TYPE_GEN) != 0
     }
 
@@ -869,8 +943,11 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_free(ctx: *mut EvpPkeyCtx) {
         EVP_PKEY_free(pkey);
         EVP_PKEY_free(peerkey);
     }
-    /* `BN_free(ctx->rsa_pubexp)` is dead here: nothing in this crate sets it, and its only setter is
-     * the deprecated `EVP_PKEY_CTX_set_rsa_keygen_pubexp`, which is Phase 8's. */
+    /* The authority's `BN_free(ctx->rsa_pubexp)`: the deprecated
+     * `EVP_PKEY_CTX_set_rsa_keygen_pubexp` hands the caller's `BIGNUM` to the context on success, so
+     * the context releases it. NULL for every context that never saw that control. */
+    // SAFETY: `rsa_pubexp` is NULL or a `BIGNUM` this context owns.
+    unsafe { BN_free((*ctx).rsa_pubexp) };
     // SAFETY: `ctx` is this object's own allocation.
     unsafe { CRYPTO_free(ctx.cast(), FILE, LINE_FREE_CTX) };
 }
@@ -1705,6 +1782,21 @@ pub struct EvpPkeyMethod {
 /// `static const` object.
 const EVP_PKEY_FLAG_DYNAMIC: c_int = 1;
 
+/// `EVP_PKEY_FLAG_AUTOARGLEN` — `include/openssl/evp.h:1830`.
+///
+/// The flag every one of Phase 8's `ossl_<alg>_pkey_method` objects sets (`rsa_pmeth.c:818`,
+/// `dh_pmeth.c:461`, `dsa_pmeth.c:260`, `ec_pmeth.c:464`), and the crate's own name for it did not
+/// exist until the four units landed. `EVP_PKEY_meth_get0_info` publishes it as the method's flags
+/// word, which is what `RT-AMETH`'s pmeth arms observe.
+pub(crate) const EVP_PKEY_FLAG_AUTOARGLEN: c_int = 2;
+
+/// `EVP_PKEY_FLAG_SIGCTX_CUSTOM` — `include/openssl/evp.h:1834`.
+///
+/// The flag the two EdDSA `EVP_PKEY_METHOD` objects set, because their `digestsign`/`digestverify`
+/// slots drive the signature themselves rather than a digest-then-sign pair. It is what
+/// `EVP_PKEY_meth_get0_info` publishes for `ossl_ed25519_pkey_method` and its Ed448 sibling.
+pub(crate) const EVP_PKEY_FLAG_SIGCTX_CUSTOM: c_int = 4;
+
 /// `app_pkey_methods` — the application-registered methods, sorted by `pmeth_cmp`.
 static mut APP_PKEY_METHODS: *mut OpenSslStack = ptr::null_mut();
 
@@ -1755,7 +1847,7 @@ unsafe extern "C" fn pmeth_cmp(a: *const c_void, b: *const c_void) -> c_int {
 ///
 /// # Safety
 /// `type_` is a legacy NID.
-#[allow(dead_code)] // first live callers are `EVP_PKEY_meth_find` (7.4l) and `int_ctx_new` (7.4c)
+#[allow(dead_code)] // `EVP_PKEY_meth_find` is its live caller; `int_ctx_new`'s arm is still absent
 pub(crate) unsafe fn evp_pkey_meth_find_added_by_application(type_: c_int) -> *const EvpPkeyMethod {
     // SAFETY: `APP_PKEY_METHODS` is NULL or a stack this module owns.
     if unsafe { APP_PKEY_METHODS }.is_null() {
@@ -1775,6 +1867,150 @@ pub(crate) unsafe fn evp_pkey_meth_find_added_by_application(type_: c_int) -> *c
     }
     // SAFETY: `idx` is a valid index into `APP_PKEY_METHODS`.
     unsafe { OPENSSL_sk_value(APP_PKEY_METHODS, idx) }.cast::<EvpPkeyMethod>()
+}
+
+/// `typedef const EVP_PKEY_METHOD *(*pmeth_fn)(void)` — `crypto/evp/pmeth_lib.c:48`.
+///
+/// The `EVP_PKEY_METHOD` table stores **functions**, not objects, which is the one structural
+/// difference from `crypto/asn1/standard_methods.h`: an ASN.1 method is a `static const` object
+/// named by address, and a `pmeth_fn` is an accessor that returns one. That is why
+/// [`pmeth_func_cmp`] calls its `b` argument before it can read a `pkey_id`, and why
+/// `EVP_PKEY_meth_get0`'s answer for a row inside the table is `(standard_methods[idx])()` rather
+/// than `standard_methods[idx]`.
+pub(crate) type PmethFn = unsafe extern "C" fn() -> *const EvpPkeyMethod;
+
+/// `static pmeth_fn standard_methods[]` — `crypto/evp/pmeth_lib.c:53-75`, the authority's **ten
+/// rows**.
+///
+/// "This array needs to be in order of NIDs" is the authority's own comment, and the order below is
+/// that one: `EVP_PKEY_RSA` 6, `EVP_PKEY_DH` 28, `EVP_PKEY_DSA` 116, `EVP_PKEY_EC` 408,
+/// `EVP_PKEY_RSA_PSS` 912, `EVP_PKEY_DHX` 920, then `EVP_PKEY_X25519` 1034, `EVP_PKEY_X448` 1035,
+/// `EVP_PKEY_ED25519` 1087 and `EVP_PKEY_ED448` 1088.
+///
+/// D355 landed the six in-reach rows and withheld the four `crypto/ec/ecx_meth.c` accessors under
+/// `docs/SECURITY_DIVERGENCE_POLICY.md`'s `D-PKEY-AMETH-3`; **D372 appends them**, so
+/// `EVP_PKEY_meth_find(EVP_PKEY_X25519)` and its three siblings answer the authority's own methods
+/// and `EVP_PKEY_meth_get_count` answers **10** where it used to answer 6, with no narrowing left.
+pub(crate) static PMETH_STANDARD_METHODS: [PmethFn; 10] = [
+    crate::rsa::pmeth::ossl_rsa_pkey_method,
+    crate::dh::pmeth::ossl_dh_pkey_method,
+    crate::dsa::pmeth::ossl_dsa_pkey_method,
+    crate::ec::pmeth::ossl_ec_pkey_method,
+    crate::rsa::pmeth::ossl_rsa_pss_pkey_method,
+    crate::dh::pmeth::ossl_dhx_pkey_method,
+    crate::ec::ecx_meth::ossl_ecx25519_pkey_method,
+    crate::ec::ecx_meth::ossl_ecx448_pkey_method,
+    crate::ec::ecx_meth::ossl_ed25519_pkey_method,
+    crate::ec::ecx_meth::ossl_ed448_pkey_method,
+];
+
+/// `static int pmeth_func_cmp(const EVP_PKEY_METHOD *const *a, pmeth_fn const *b)` —
+/// `crypto/evp/pmeth_lib.c:79`.
+///
+/// The asymmetry is the whole of it: `a` is a pointer to the **search key** slot (a
+/// `const EVP_PKEY_METHOD *`), read directly, while `b` is a pointer to a **table slot** holding a
+/// `pmeth_fn`, which has to be called before its `pkey_id` exists.
+///
+/// # Safety
+/// `a` must point at a live `*const EvpPkeyMethod` slot and `b` at a live `PmethFn` slot.
+unsafe extern "C" fn pmeth_func_cmp(a: *const c_void, b: *const c_void) -> c_int {
+    let a = a.cast::<*const EvpPkeyMethod>();
+    let b = b.cast::<PmethFn>();
+    // SAFETY: both arguments are the slots the contract describes.
+    let (x, y) = unsafe { ((**a).pkey_id, (*(*b)()).pkey_id) };
+    x - y
+}
+
+/// `const EVP_PKEY_METHOD *EVP_PKEY_meth_find(int type)` — `crypto/evp/pmeth_lib.c:106`.
+///
+/// The application table first, then `standard_methods[]`, which the authority asks with
+/// `OBJ_bsearch_pmeth_func` — `OBJ_bsearch_(key, base, num, sizeof(key), pmeth_func_cmp)` — and
+/// whose element size is `sizeof(pmeth_fn)`, the size of one function pointer. A miss is NULL, and
+/// so is a hit on a NULL slot (`ret == NULL || *ret == NULL`), which is why the slot is read and
+/// checked before it is called.
+///
+/// # Safety
+/// Nothing: both tables are this module's own.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_find(type_: c_int) -> *const EvpPkeyMethod {
+    // SAFETY: the table is this module's own.
+    let added = unsafe { evp_pkey_meth_find_added_by_application(type_) };
+    if !added.is_null() {
+        return added;
+    }
+
+    /* The comparator reads `pkey_id` alone, so a zeroed probe of the right shape is a legal
+     * argument; see `EVP_PKEY_meth_add0`'s duplicate test for the same construction. */
+    // SAFETY: every field is a scalar or an `Option` of a function pointer, so the all-zero bit
+    // pattern is valid, and `pkey_id` is assigned on the next line.
+    let mut probe: EvpPkeyMethod = unsafe { core::mem::zeroed() };
+    probe.pkey_id = type_;
+    let key: *const EvpPkeyMethod = ptr::addr_of!(probe);
+
+    // SAFETY: `key` points at the live local `probe`, `PMETH_STANDARD_METHODS` is a sorted array of
+    // `num` elements of `size` bytes, and `pmeth_func_cmp` is the comparator its order is defined
+    // by.
+    let slot = unsafe {
+        crate::runtime::obj::OBJ_bsearch_(
+            ptr::addr_of!(key).cast::<c_void>(),
+            PMETH_STANDARD_METHODS.as_ptr().cast::<c_void>(),
+            PMETH_STANDARD_METHODS.len() as c_int,
+            core::mem::size_of::<PmethFn>() as c_int,
+            Some(pmeth_func_cmp),
+        )
+    };
+    if slot.is_null() {
+        return ptr::null();
+    }
+    // SAFETY: `slot` is an element of `PMETH_STANDARD_METHODS`, a live `PmethFn`.
+    let accessor = unsafe { *slot.cast::<PmethFn>() };
+    // SAFETY: `accessor` is the table's own entry point.
+    unsafe { accessor() }
+}
+
+/// `size_t EVP_PKEY_meth_get_count(void)` — `crypto/evp/pmeth_lib.c:646`.
+///
+/// `OSSL_NELEM(standard_methods)` plus the application stack. **10** here and on the authority
+/// since D372 appended the four `crypto/ec/ecx_meth.c` rows; the withheld-rows narrowing this
+/// number used to record is gone.
+///
+/// # Safety
+/// Nothing: both tables are this module's own.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get_count() -> usize {
+    let mut rv = PMETH_STANDARD_METHODS.len();
+    // SAFETY: `APP_PKEY_METHODS` is NULL or a stack this module owns.
+    if !unsafe { APP_PKEY_METHODS }.is_null() {
+        // SAFETY: `APP_PKEY_METHODS` is live.
+        rv += unsafe { OPENSSL_sk_num(APP_PKEY_METHODS) } as usize;
+    }
+    rv
+}
+
+/// `const EVP_PKEY_METHOD *EVP_PKEY_meth_get0(size_t idx)` — `crypto/evp/pmeth_lib.c:655`.
+///
+/// The table is indexed **outright** before the application stack is touched, so an index inside
+/// `OSSL_NELEM(standard_methods)` — `0..10` since D372 — never consults it.
+///
+/// # Safety
+/// Nothing: both tables are this module's own.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get0(idx: usize) -> *const EvpPkeyMethod {
+    if idx < PMETH_STANDARD_METHODS.len() {
+        // SAFETY: `idx` is in range and the table is this module's own.
+        return unsafe { PMETH_STANDARD_METHODS[idx]() };
+    }
+    // SAFETY: `APP_PKEY_METHODS` is NULL or a stack this module owns.
+    if unsafe { APP_PKEY_METHODS }.is_null() {
+        return ptr::null();
+    }
+    let idx = idx - PMETH_STANDARD_METHODS.len();
+    // SAFETY: `APP_PKEY_METHODS` is live.
+    if idx >= unsafe { OPENSSL_sk_num(APP_PKEY_METHODS) } as usize {
+        return ptr::null();
+    }
+    // SAFETY: `idx` is a valid index into the live stack.
+    unsafe { OPENSSL_sk_value(APP_PKEY_METHODS, idx as c_int) }.cast::<EvpPkeyMethod>()
 }
 
 /// `EVP_PKEY_METHOD *EVP_PKEY_meth_new(int id, int flags)` — `crypto/evp/pmeth_lib.c:124`.
@@ -1910,6 +2146,51 @@ pub unsafe extern "C" fn EVP_PKEY_meth_add0(pmeth: *const EvpPkeyMethod) -> c_in
     // SAFETY: `APP_PKEY_METHODS` is live.
     unsafe { OPENSSL_sk_sort(APP_PKEY_METHODS) };
     1
+}
+
+/// `evp_app_cleanup_int`'s destructor argument — the `OPENSSL_sk_pop_free` half of the authority's
+/// `sk_EVP_PKEY_METHOD_pop_free(app_pkey_methods, EVP_PKEY_meth_free)`.
+///
+/// The stack erases its element type, so the typed `EVP_PKEY_meth_free` cannot be handed to
+/// `OPENSSL_sk_pop_free` directly; this is the adapter that restores the call.
+///
+/// # Safety
+/// `pmeth` must be NULL or a live method.
+unsafe extern "C" fn free_evp_pkey_meth(pmeth: *mut c_void) {
+    // SAFETY: `pmeth` is NULL or live per the contract.
+    unsafe { EVP_PKEY_meth_free(pmeth.cast::<EvpPkeyMethod>()) };
+}
+
+/// `void evp_app_cleanup_int(void)` — `crypto/evp/pmeth_lib.c:631`.
+///
+/// Releases the application-supplied `EVP_PKEY_METHOD` registry, and **only** that one: a method in
+/// `standard_methods[]` is a `static` object and survives, which is exactly what
+/// [`EVP_PKEY_meth_free`]'s `DYNAMIC` test is for. The authority's body is
+/// `if (app_pkey_methods != NULL) sk_EVP_PKEY_METHOD_pop_free(app_pkey_methods, EVP_PKEY_meth_free);`,
+/// and the NULL guard is the authority's — it is kept rather than dropped, so a cleanup before any
+/// `EVP_PKEY_meth_add0` does nothing at all.
+///
+/// **The pointer is cleared here, where the authority leaves it dangling.** The authority assigns
+/// nothing back after the pop, so a second call there is a double free; this crate clears it, as its
+/// sibling [`crate::evp::evp_pbe::EVP_PBE_cleanup`] does for the PBE registry, so a second call is a
+/// no-op rather than a use-after-free. That property is relied on rather than cosmetic: this crate's
+/// `OPENSSL_cleanup` is atomic-guarded and re-callable within a process (`src/runtime/init.rs`), and
+/// a cleared pointer is what keeps the second pass from walking a freed stack. The difference is
+/// unobservable to a caller that follows the authority's one-shot contract — `OPENSSL_cleanup` is
+/// the only caller — and is recorded here because the two bodies differ.
+///
+/// # Safety
+/// Nothing: the stack is this module's own.
+pub(crate) unsafe fn evp_app_cleanup_int() {
+    // SAFETY: `APP_PKEY_METHODS` is NULL or a stack this module owns whose every element is a
+    // method the caller pushed with `EVP_PKEY_meth_add0`.
+    if !unsafe { APP_PKEY_METHODS }.is_null() {
+        // SAFETY: `APP_PKEY_METHODS` is live, and `free_evp_pkey_meth` accepts every element it
+        // holds.
+        unsafe { OPENSSL_sk_pop_free(APP_PKEY_METHODS, Some(free_evp_pkey_meth)) };
+        // SAFETY: this module owns the pointer; clearing it makes a second call a no-op.
+        unsafe { APP_PKEY_METHODS = ptr::null_mut() };
+    }
 }
 
 /// `int EVP_PKEY_meth_remove(const EVP_PKEY_METHOD *pmeth)` — `crypto/evp/pmeth_lib.c:637`.
@@ -3243,13 +3524,13 @@ pub(crate) struct KdfTypeMap {
 }
 
 /// `EVP_PKEY_DH_KDF_NONE` — `include/openssl/dh.h:83`.
-const EVP_PKEY_DH_KDF_NONE: c_int = 1;
+pub(crate) const EVP_PKEY_DH_KDF_NONE: c_int = 1;
 /// `EVP_PKEY_DH_KDF_X9_42` — `include/openssl/dh.h:84`.
-const EVP_PKEY_DH_KDF_X9_42: c_int = 2;
+pub(crate) const EVP_PKEY_DH_KDF_X9_42: c_int = 2;
 /// `EVP_PKEY_ECDH_KDF_NONE` — `include/openssl/ec.h:66`.
-const EVP_PKEY_ECDH_KDF_NONE: c_int = 1;
+pub(crate) const EVP_PKEY_ECDH_KDF_NONE: c_int = 1;
 /// `EVP_PKEY_ECDH_KDF_X9_63` — `include/openssl/ec.h:67`.
-const EVP_PKEY_ECDH_KDF_X9_63: c_int = 2;
+pub(crate) const EVP_PKEY_ECDH_KDF_X9_63: c_int = 2;
 
 /// `fix_dh_kdf_type`'s table — `crypto/evp/ctrl_params_translate.c:927`.
 static KDF_TYPE_MAP_DH: [KdfTypeMap; 3] = [
@@ -4188,15 +4469,35 @@ pub(crate) const EVP_PKEY_EC: c_int = NID_X9_62_id_ecPublicKey;
 pub(crate) const EVP_PKEY_SM2: c_int = NID_sm2;
 /// `EVP_PKEY_X25519` = `NID_X25519` — `include/openssl/evp.h:82`.
 pub(crate) const EVP_PKEY_X25519: c_int = NID_X25519;
+/// `EVP_PKEY_ED25519` = `NID_ED25519` — `include/openssl/evp.h:83`.
+pub(crate) const EVP_PKEY_ED25519: c_int = NID_ED25519;
 /// `EVP_PKEY_X448` = `NID_X448` — `include/openssl/evp.h:84`.
 pub(crate) const EVP_PKEY_X448: c_int = NID_X448;
+/// `EVP_PKEY_ED448` = `NID_ED448` — `include/openssl/evp.h:85`.
+pub(crate) const EVP_PKEY_ED448: c_int = NID_ED448;
 
 /// `EVP_PKEY_CTRL_MD` — `include/openssl/evp.h:1807`.
 pub(crate) const EVP_PKEY_CTRL_MD: c_int = 1;
+/// `EVP_PKEY_CTRL_PEER_KEY` — `include/openssl/evp.h:1808`.
+pub(crate) const EVP_PKEY_CTRL_PEER_KEY: c_int = 2;
+/// `EVP_PKEY_CTRL_PKCS7_ENCRYPT` — `include/openssl/evp.h:1814`.
+pub(crate) const EVP_PKEY_CTRL_PKCS7_ENCRYPT: c_int = 3;
+/// `EVP_PKEY_CTRL_PKCS7_DECRYPT` — `include/openssl/evp.h:1815`.
+pub(crate) const EVP_PKEY_CTRL_PKCS7_DECRYPT: c_int = 4;
+/// `EVP_PKEY_CTRL_PKCS7_SIGN` — `include/openssl/evp.h:1816`.
+pub(crate) const EVP_PKEY_CTRL_PKCS7_SIGN: c_int = 5;
+/// `EVP_PKEY_CTRL_DIGESTINIT` — `include/openssl/evp.h:1810`.
+pub(crate) const EVP_PKEY_CTRL_DIGESTINIT: c_int = 7;
 /// `EVP_PKEY_CTRL_SET_MAC_KEY` — `include/openssl/evp.h:1809`.
 pub(crate) const EVP_PKEY_CTRL_SET_MAC_KEY: c_int = 6;
 /// `EVP_PKEY_CTRL_CIPHER` — `include/openssl/evp.h:1821`.
 pub(crate) const EVP_PKEY_CTRL_CIPHER: c_int = 12;
+/// `EVP_PKEY_CTRL_CMS_ENCRYPT` — `include/openssl/evp.h:1817`.
+pub(crate) const EVP_PKEY_CTRL_CMS_ENCRYPT: c_int = 9;
+/// `EVP_PKEY_CTRL_CMS_DECRYPT` — `include/openssl/evp.h:1818`.
+pub(crate) const EVP_PKEY_CTRL_CMS_DECRYPT: c_int = 10;
+/// `EVP_PKEY_CTRL_CMS_SIGN` — `include/openssl/evp.h:1819`.
+pub(crate) const EVP_PKEY_CTRL_CMS_SIGN: c_int = 11;
 /// `EVP_PKEY_CTRL_GET_MD` — `include/openssl/evp.h:1822`.
 pub(crate) const EVP_PKEY_CTRL_GET_MD: c_int = 13;
 /// `EVP_PKEY_CTRL_SET_DIGEST_SIZE` — `include/openssl/evp.h:1823`.
@@ -4373,6 +4674,10 @@ pub(crate) const DH_PARAMGEN_TYPE_GROUP: c_int = 3;
 pub(crate) const OSSL_ALG_PARAM_DIGEST: *const c_char = c"digest".as_ptr();
 /// `OSSL_ALG_PARAM_CIPHER` — `include/openssl/core_names.h:127`.
 pub(crate) const OSSL_ALG_PARAM_CIPHER: *const c_char = c"cipher".as_ptr();
+/// `OSSL_ALG_PARAM_PROPERTIES` — `include/openssl/core_names.h:132`. The FFC digest's property query
+/// and the RSA/OAEP ones are aliases of it, which is why they are spelled as aliases below rather
+/// than as literals.
+pub(crate) const OSSL_ALG_PARAM_PROPERTIES: *const c_char = c"properties".as_ptr();
 
 /// `OSSL_PKEY_PARAM_DIST_ID` — `include/openssl/core_names.h:376`.
 pub(crate) const OSSL_PKEY_PARAM_DIST_ID: *const c_char = c"distid".as_ptr();
@@ -4382,6 +4687,30 @@ pub(crate) const OSSL_PKEY_PARAM_FFC_TYPE: *const c_char = c"type".as_ptr();
 pub(crate) const OSSL_PKEY_PARAM_FFC_PBITS: *const c_char = c"pbits".as_ptr();
 /// `OSSL_PKEY_PARAM_FFC_QBITS` — `include/openssl/core_names.h:410`.
 pub(crate) const OSSL_PKEY_PARAM_FFC_QBITS: *const c_char = c"qbits".as_ptr();
+/// `OSSL_PKEY_PARAM_FFC_GINDEX` — `include/openssl/core_names.h:404`. Read by the DH and DSA
+/// `set_paramgen_gindex` controls.
+pub(crate) const OSSL_PKEY_PARAM_FFC_GINDEX: *const c_char = c"gindex".as_ptr();
+/// `OSSL_PKEY_PARAM_FFC_SEED` — `include/openssl/core_names.h:411`. The verifiable-generation seed.
+pub(crate) const OSSL_PKEY_PARAM_FFC_SEED: *const c_char = c"seed".as_ptr();
+/// `OSSL_PKEY_PARAM_FFC_DIGEST_PROPS` = `OSSL_PKEY_PARAM_PROPERTIES` =
+/// `OSSL_ALG_PARAM_PROPERTIES` — `include/openssl/core_names.h:402`.
+pub(crate) const OSSL_PKEY_PARAM_FFC_DIGEST_PROPS: *const c_char = OSSL_ALG_PARAM_PROPERTIES;
+/// `OSSL_PKEY_PARAM_FFC_PCOUNTER` — `include/openssl/core_names.h:408`. The counter `p` was
+/// found at in a verifiable generation, or `-1`.
+pub(crate) const OSSL_PKEY_PARAM_FFC_PCOUNTER: *const c_char = c"pcounter".as_ptr();
+/// `OSSL_PKEY_PARAM_FFC_COFACTOR` — `include/openssl/core_names.h:400`. The DH X9.42 subgroup
+/// factor `j`, whose spelling is the bare `"j"`.
+pub(crate) const OSSL_PKEY_PARAM_FFC_COFACTOR: *const c_char = c"j".as_ptr();
+/// `OSSL_PKEY_PARAM_FFC_H` — `include/openssl/core_names.h:405`. The unverifiable-`g` search's
+/// loop counter; note the spelling, `hindex` and **not** `h`, which is what the header says.
+pub(crate) const OSSL_PKEY_PARAM_FFC_H: *const c_char = c"hindex".as_ptr();
+/// `OSSL_PKEY_PARAM_FFC_VALIDATE_PQ` — `include/openssl/core_names.h:415`. One of the three
+/// `validate-*` booleans `ossl_ffc_params_fromdata` reads into `FFC_PARAM_FLAG_VALIDATE_*`.
+pub(crate) const OSSL_PKEY_PARAM_FFC_VALIDATE_PQ: *const c_char = c"validate-pq".as_ptr();
+/// `OSSL_PKEY_PARAM_FFC_VALIDATE_G` — `include/openssl/core_names.h:413`.
+pub(crate) const OSSL_PKEY_PARAM_FFC_VALIDATE_G: *const c_char = c"validate-g".as_ptr();
+/// `OSSL_PKEY_PARAM_FFC_VALIDATE_LEGACY` — `include/openssl/core_names.h:414`.
+pub(crate) const OSSL_PKEY_PARAM_FFC_VALIDATE_LEGACY: *const c_char = c"validate-legacy".as_ptr();
 pub(crate) const OSSL_PKEY_PARAM_FFC_P: *const c_char = c"p".as_ptr();
 pub(crate) const OSSL_PKEY_PARAM_FFC_Q: *const c_char = c"q".as_ptr();
 pub(crate) const OSSL_PKEY_PARAM_FFC_G: *const c_char = c"g".as_ptr();
@@ -4389,6 +4718,12 @@ pub(crate) const OSSL_PKEY_PARAM_FFC_G: *const c_char = c"g".as_ptr();
 pub(crate) const OSSL_PKEY_PARAM_GROUP_NAME: *const c_char = c"group".as_ptr();
 /// `OSSL_PKEY_PARAM_DH_GENERATOR` — `include/openssl/core_names.h:372`.
 pub(crate) const OSSL_PKEY_PARAM_DH_GENERATOR: *const c_char = c"safeprime-generator".as_ptr();
+/// `OSSL_PKEY_PARAM_DH_PRIV_LEN` — `include/openssl/core_names.h:373`. The generated private
+/// key's *maximum* length, which `DH_set_length` stores and `ossl_dh_params_todata` writes back
+/// as a `long`. Its reader arrived with D351's `crypto/dh/dh_backend.c` transcription; the
+/// constant is kept here beside its siblings because every `core_names.h` name this crate has
+/// needed lives here.
+pub(crate) const OSSL_PKEY_PARAM_DH_PRIV_LEN: *const c_char = c"priv_len".as_ptr();
 /// `OSSL_PKEY_PARAM_EC_ENCODING` — `include/openssl/core_names.h:387`.
 pub(crate) const OSSL_PKEY_PARAM_EC_ENCODING: *const c_char = c"encoding".as_ptr();
 /// `OSSL_PKEY_EC_ENCODING_EXPLICIT` — `include/openssl/core_names.h:101`.
@@ -4404,8 +4739,18 @@ pub(crate) const OSSL_PKEY_PARAM_EC_DECODED_FROM_EXPLICIT_PARAMS: *const c_char 
     c"decoded-from-explicit".as_ptr();
 /// `OSSL_PKEY_PARAM_PAD_MODE` — `include/openssl/core_names.h:438`.
 pub(crate) const OSSL_PKEY_PARAM_PAD_MODE: *const c_char = c"pad-mode".as_ptr();
+/// `OSSL_PKEY_PARAM_MASKGENFUNC` — `include/openssl/core_names.h:423`. The mask generation
+/// function's own name ("mgf1" for RSA), which `ossl_rsa_pss_params_30_fromdata` compares
+/// case-insensitively against `ossl_rsa_mgf_nid2name`'s answer.
+pub(crate) const OSSL_PKEY_PARAM_MASKGENFUNC: *const c_char = c"mgf".as_ptr();
+/// `OSSL_PKEY_PARAM_RSA_MASKGENFUNC` = `OSSL_PKEY_PARAM_MASKGENFUNC` —
+/// `include/openssl/core_names.h:480`.
+pub(crate) const OSSL_PKEY_PARAM_RSA_MASKGENFUNC: *const c_char = OSSL_PKEY_PARAM_MASKGENFUNC;
 /// `OSSL_PKEY_PARAM_MGF1_DIGEST` — `include/openssl/core_names.h:425`.
 pub(crate) const OSSL_PKEY_PARAM_MGF1_DIGEST: *const c_char = c"mgf1-digest".as_ptr();
+/// `OSSL_PKEY_PARAM_RSA_MGF1_DIGEST` = `OSSL_PKEY_PARAM_MGF1_DIGEST` —
+/// `include/openssl/core_names.h:481`.
+pub(crate) const OSSL_PKEY_PARAM_RSA_MGF1_DIGEST: *const c_char = OSSL_PKEY_PARAM_MGF1_DIGEST;
 /// `OSSL_PKEY_PARAM_RSA_PSS_SALTLEN` — `include/openssl/core_names.h:484`.
 pub(crate) const OSSL_PKEY_PARAM_RSA_PSS_SALTLEN: *const c_char = c"saltlen".as_ptr();
 /// `OSSL_SIGNATURE_PARAM_PSS_SALTLEN` — `include/openssl/core_names.h:568`. The **same string** as
@@ -4420,6 +4765,10 @@ pub(crate) const OSSL_PKEY_PARAM_BITS: *const c_char = c"bits".as_ptr();
 pub(crate) const OSSL_PKEY_PARAM_RSA_BITS: *const c_char = OSSL_PKEY_PARAM_BITS;
 /// `OSSL_PKEY_PARAM_RSA_E` — `include/openssl/core_names.h:457`.
 pub(crate) const OSSL_PKEY_PARAM_RSA_E: *const c_char = c"e".as_ptr();
+/// `OSSL_PKEY_PARAM_RSA_DERIVE_FROM_PQ` — `include/openssl/core_names.h:454`. The provider's
+/// request that `d`, `dmp1`, `dmq1` and `iqmp` be derived from `p` and `q` rather than supplied;
+/// `ossl_rsa_fromdata` reads it as an `int` and takes a different path when it is non-zero.
+pub(crate) const OSSL_PKEY_PARAM_RSA_DERIVE_FROM_PQ: *const c_char = c"rsa-derive-from-pq".as_ptr();
 /// `OSSL_PKEY_PARAM_RSA_PRIMES` — `include/openssl/core_names.h:483`.
 pub(crate) const OSSL_PKEY_PARAM_RSA_PRIMES: *const c_char = c"primes".as_ptr();
 /// `OSSL_PKEY_PARAM_RSA_N` — `include/openssl/core_names.h:482`.
@@ -4437,6 +4786,40 @@ pub(crate) const OSSL_SIGNATURE_PARAM_DIGEST: *const c_char = OSSL_PKEY_PARAM_DI
 pub(crate) const OSSL_KDF_PARAM_DIGEST: *const c_char = OSSL_ALG_PARAM_DIGEST;
 /// `OSSL_ASYM_CIPHER_PARAM_OAEP_DIGEST` = `OSSL_ALG_PARAM_DIGEST` — `include/openssl/core_names.h:142`.
 pub(crate) const OSSL_ASYM_CIPHER_PARAM_OAEP_DIGEST: *const c_char = OSSL_ALG_PARAM_DIGEST;
+/// `OSSL_ASYM_CIPHER_PARAM_OAEP_DIGEST_PROPS` — `include/openssl/core_names.h:143`. `"digest-props"`,
+/// and **not** an alias of `OSSL_PKEY_PARAM_PROPERTIES**: the OAEP digest's property query has a
+/// name of its own, which is why `EVP_PKEY_CTX_set_rsa_oaep_md_name` and
+/// `EVP_PKEY_CTX_set_rsa_mgf1_md_name` build their arrays with different keys.
+pub(crate) const OSSL_ASYM_CIPHER_PARAM_OAEP_DIGEST_PROPS: *const c_char = c"digest-props".as_ptr();
+/// `OSSL_PKEY_PARAM_MGF1_PROPERTIES` — `include/openssl/core_names.h:426`. `"mgf1-properties"`.
+pub(crate) const OSSL_PKEY_PARAM_MGF1_PROPERTIES: *const c_char = c"mgf1-properties".as_ptr();
+/// `OSSL_PKEY_PARAM_RSA_DIGEST` = `OSSL_PKEY_PARAM_DIGEST` — `include/openssl/core_names.h:455`.
+pub(crate) const OSSL_PKEY_PARAM_RSA_DIGEST: *const c_char = OSSL_PKEY_PARAM_DIGEST;
+/// `OSSL_DIGEST_NAME_SHA1` — `include/openssl/core_names.h:37`. One of the seven entries of
+/// `crypto/rsa/rsa_schemes.c`'s `oaeppss_name_nid_map`, which is why the digest *name* family
+/// is here rather than beside the provider digest tables: `ossl_rsa_oaeppss_md2nid` asks whether
+/// a fetched `EVP_MD` *is* one of these names, and `ossl_rsa_oaeppss_nid2name` answers with one.
+pub(crate) const OSSL_DIGEST_NAME_SHA1: *const c_char = c"SHA1".as_ptr();
+/// `OSSL_DIGEST_NAME_SHA2_224` — `include/openssl/core_names.h:38`.
+pub(crate) const OSSL_DIGEST_NAME_SHA2_224: *const c_char = c"SHA2-224".as_ptr();
+/// `OSSL_DIGEST_NAME_SHA2_256` — `include/openssl/core_names.h:39`.
+pub(crate) const OSSL_DIGEST_NAME_SHA2_256: *const c_char = c"SHA2-256".as_ptr();
+/// `OSSL_DIGEST_NAME_SHA2_384` — `include/openssl/core_names.h:41`.
+pub(crate) const OSSL_DIGEST_NAME_SHA2_384: *const c_char = c"SHA2-384".as_ptr();
+/// `OSSL_DIGEST_NAME_SHA2_512` — `include/openssl/core_names.h:42`.
+pub(crate) const OSSL_DIGEST_NAME_SHA2_512: *const c_char = c"SHA2-512".as_ptr();
+/// `OSSL_DIGEST_NAME_SHA2_512_224` — `include/openssl/core_names.h:43`.
+pub(crate) const OSSL_DIGEST_NAME_SHA2_512_224: *const c_char = c"SHA2-512/224".as_ptr();
+/// `OSSL_DIGEST_NAME_SHA2_512_256` — `include/openssl/core_names.h:44`. The `_256_192` sibling
+/// (`SHA2-256/192`) is deliberately absent: `oaeppss_name_nid_map` has seven rows and that is
+/// not one of them.
+pub(crate) const OSSL_DIGEST_NAME_SHA2_512_256: *const c_char = c"SHA2-512/256".as_ptr();
+/// `OSSL_PKEY_PARAM_RSA_DIGEST_PROPS` = `OSSL_PKEY_PARAM_PROPERTIES` =
+/// `OSSL_ALG_PARAM_PROPERTIES` — `include/openssl/core_names.h:456`. The literal is written here
+/// because `OSSL_PKEY_PARAM_PROPERTIES` is private to `src/evp/pkey.rs`; this is the crate's second
+/// reader of the `"properties"` string, and `src/provider/util.rs` keeps a third copy for the same
+/// reason.
+pub(crate) const OSSL_PKEY_PARAM_RSA_DIGEST_PROPS: *const c_char = c"properties".as_ptr();
 
 /// `OSSL_EXCHANGE_PARAM_KDF_TYPE` — `include/openssl/core_names.h:268`.
 pub(crate) const OSSL_EXCHANGE_PARAM_KDF_TYPE: *const c_char = c"kdf-type".as_ptr();
@@ -4545,18 +4928,32 @@ unsafe fn atoi(s: *const c_char) -> c_int {
     unsafe { strtol(s, ptr::null_mut(), 10) as c_int }
 }
 
+/// `TYPE_ANY` — `crypto/evp/dh_support.c:22`.  Matches either key type, `DH` or `DHX`.
+const DH_TYPE_ANY: c_int = -1;
+/// `TYPE_DH` — `crypto/evp/dh_support.c:24`, `DH_FLAG_TYPE_DH` (`include/openssl/dh.h:111`).
+const DH_TYPE_DH: c_int = 0x0000;
+/// `TYPE_DHX` — `crypto/evp/dh_support.c:25`, `DH_FLAG_TYPE_DHX` (`include/openssl/dh.h:112`).
+const DH_TYPE_DHX: c_int = 0x1000;
+
 /// `struct dh_name2id_st` — `crypto/evp/dh_support.c:18`.
 ///
-/// The authority's `type` member is **not** reproduced: it is read only by
-/// `ossl_dh_gen_type_name2id`, which the ctrl plane never calls — `fix_dh_paramgen_type` translates
-/// ids to names and nothing here translates back — and a member no reader reads is weight this
-/// project drops rather than carries. The `TYPE_ANY`/`TYPE_DH`/`TYPE_DHX` values it would hold are
-/// consequently absent too.
+/// Three members, as the authority has: `name`, `id` and `type`.
+///
+/// **The `type` member was absent until D387, and its return is a correction rather than an
+/// addition.** The ctrl plane reaches only the id-to-name direction (`fix_dh_paramgen_type`
+/// translates ids to names and nothing here translated back), so with no reader the member was
+/// dropped. The `providers/implementations/keymgmt/dh_kmgmt.c` unit D387 lands reads the *other*
+/// direction — `dh_gen_type_name2id_w_default` (`dh_kmgmt.c:82`) calls `ossl_dh_gen_type_name2id`
+/// with `gctx->dh_type` — and a `name2id` over a table with no `type` column could not tell a
+/// `DH` name from a `DHX` one: `"fips186_2"` would then answer for a `DH` key, which the authority
+/// refuses. The member is restored with the reader, not before it.
 struct DhGenTypeName2Id {
     /// `const char *name`.
     name: &'static CStr,
     /// `int id` — one of the four `DH_PARAMGEN_TYPE_*`.
     id: c_int,
+    /// `int type` — one of `TYPE_ANY`, `TYPE_DH`, `TYPE_DHX`.
+    type_: c_int,
 }
 
 /// `static const DH_GENTYPE_NAME2ID dhtype2id[]` — `crypto/evp/dh_support.c:31`.
@@ -4568,18 +4965,22 @@ static DHTYPE2ID: [DhGenTypeName2Id; 4] = [
     DhGenTypeName2Id {
         name: c"group",
         id: DH_PARAMGEN_TYPE_GROUP,
+        type_: DH_TYPE_ANY,
     },
     DhGenTypeName2Id {
         name: c"generator",
         id: DH_PARAMGEN_TYPE_GENERATOR,
+        type_: DH_TYPE_DH,
     },
     DhGenTypeName2Id {
         name: c"fips186_4",
         id: DH_PARAMGEN_TYPE_FIPS_186_4,
+        type_: DH_TYPE_DHX,
     },
     DhGenTypeName2Id {
         name: c"fips186_2",
         id: DH_PARAMGEN_TYPE_FIPS_186_2,
+        type_: DH_TYPE_DHX,
     },
 ];
 
@@ -4596,6 +4997,28 @@ fn ossl_dh_gen_type_id2name(id: c_int) -> *const c_char {
     ptr::null()
 }
 
+/// `int ossl_dh_gen_type_name2id(const char *name, int type)` — `crypto/evp/dh_support.c:50`.
+///
+/// The `type` test is an `||` inside the `&&`, so a `TYPE_ANY` row matches either key type and a
+/// typed row matches only its own; `-1` for a name the table does not carry for `type`, which
+/// `dh_gen_type_name2id_w_default` (`dh_kmgmt.c:98`) hands straight back and its caller turns into
+/// `ERR_R_PASSED_INVALID_ARGUMENT`. The comparison is `strcmp`, not a prefix or a length test.
+///
+/// # Safety
+/// `name` must be NUL-terminated (the authority dereferences it in `strcmp` without a NULL test).
+pub(crate) unsafe fn ossl_dh_gen_type_name2id(name: *const c_char, type_: c_int) -> c_int {
+    for e in &DHTYPE2ID {
+        if e.type_ == DH_TYPE_ANY || type_ == e.type_ {
+            // SAFETY: `name` is NUL-terminated per the contract and `e.name` is a `'static`
+            // literal, so both arguments are NUL-terminated strings.
+            if unsafe { crate::runtime::bio::sys::strcmp(e.name.as_ptr(), name) } == 0 {
+                return e.id;
+            }
+        }
+    }
+    -1
+}
+
 /// `static int fix_dh_nid(...)` — `crypto/evp/ctrl_params_translate.c:998`.
 ///
 /// `EVP_PKEY_CTRL_DH_NID`, and set-only: the parameter it fills is `OSSL_PKEY_PARAM_GROUP_NAME`, so
@@ -4604,14 +5027,14 @@ fn ossl_dh_gen_type_id2name(id: c_int) -> *const c_char {
 /// hypothetical getter into a quiet 0; the table has no getter for this ctrl, and `default_check`
 /// would refuse one anyway for the same reason.
 ///
-/// **The lookup is absent, and this is the one remaining fixer whose absence is reachable.** The
+/// **The lookup was absent until D343, and the absence was this stratum's to close.** The
 /// authority's `ossl_ffc_named_group_get_name(ossl_ffc_uid_to_dh_named_group(ctx->p1))` is two
-/// functions over `crypto/ffc/ffc_dh.c`'s `dh_named_groups[]`, a table whose entries carry each
-/// group's *prime*, *subgroup order* and *generator* as BIGNUMs. Those are Phase 8's
-/// (`docs/DECISIONS.md` D163), and transcribing only the table's `name` and `uid` columns would be
-/// the partial copy that reads as complete and is not — a later slice adding `p` would find the
-/// table already "here" and the two halves would be free to disagree. So the arm answers what the
-/// authority answers for a UID with no group at all, `EVP_R_INVALID_VALUE`, for every UID.
+/// functions over `crypto/ffc/ffc_dh.c`'s `dh_named_groups[]`, and D332 landed that unit
+/// (`src/ffc/dh.rs`) with both lookups. Until D343 the arm answered `EVP_R_INVALID_VALUE` for every
+/// UID, because the table's prime material was not yet transcribed; D332 put it in, and the
+/// `#[allow(dead_code)]` on `ossl_ffc_named_group_get_name` named `ctrl_params_translate.c:1012` as
+/// its reader. So the two calls are made and a UID with no group still answers `EVP_R_INVALID_VALUE`
+/// — the authority's own answer.
 ///
 /// # Safety
 /// `translation` NULL or live; `ctx` live.
@@ -4633,9 +5056,20 @@ pub(crate) unsafe extern "C" fn fix_dh_nid(
     }
 
     if state == XlatState::PreCtrlToParams {
-        // SAFETY: a compile-time-constant site.
-        unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_1013) };
-        return 0;
+        /* SAFETY: `ctx` is live; the lookup takes the integer the ctrl carried. */
+        let group = unsafe { crate::ffc::dh::ossl_ffc_uid_to_dh_named_group((*ctx).p1) };
+        // SAFETY: `group` is NULL or a table entry.
+        let name = unsafe { crate::ffc::dh::ossl_ffc_named_group_get_name(group) };
+        if name.is_null() {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_1013) };
+            return 0;
+        }
+        /* SAFETY: `name` is a static NUL-terminated string borrowed from the table. */
+        unsafe {
+            (*ctx).p2 = name.cast_mut().cast::<c_void>();
+            (*ctx).p1 = 0;
+        }
     }
 
     // SAFETY: `translation` and `ctx` are as the contract states.
@@ -4650,9 +5084,9 @@ pub(crate) unsafe extern "C" fn fix_dh_nid(
 /// the string arm is the caller-error guard, and it is **before** the lookup rather than after it,
 /// so a NULL value answers 0 with no error raised.
 ///
-/// The lookup itself is absent for the reason `fix_dh_nid` records: RFC 5114's three groups are
-/// three more rows of the same `dh_named_groups[]` table, uid 1, 2 and 3, and their prime material
-/// is what keeps the table out of this stratum.
+/// The lookup is the same pair D343 wires into `fix_dh_nid`: RFC 5114's three groups are three more
+/// rows of `dh_named_groups[]`, and the two lookups are what `ossl_ffc_named_group_get_name`'s
+/// `#[allow(dead_code)]` reason names as its reader in this file.
 ///
 /// # Safety
 /// `translation` NULL or live; `ctx` live, with `p2` NULL or NUL-terminated in the
@@ -4676,19 +5110,43 @@ pub(crate) unsafe extern "C" fn fix_dh_nid5114(
 
     match state {
         XlatState::PreCtrlToParams => {
-            // SAFETY: a compile-time-constant site.
-            unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_1039) };
-            return 0;
+            // SAFETY: `ctx` is live; the lookup takes the integer the ctrl carried.
+            let group = unsafe { crate::ffc::dh::ossl_ffc_uid_to_dh_named_group((*ctx).p1) };
+            // SAFETY: `group` is NULL or a table entry.
+            let name = unsafe { crate::ffc::dh::ossl_ffc_named_group_get_name(group) };
+            if name.is_null() {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_1039) };
+                return 0;
+            }
+            /* SAFETY: `name` is a static NUL-terminated string borrowed from the table. */
+            unsafe {
+                (*ctx).p2 = name.cast_mut().cast::<c_void>();
+                (*ctx).p1 = 0;
+            }
         }
         XlatState::PreCtrlStrToParams => {
             // SAFETY: `ctx` is live.
             if unsafe { (*ctx).p2 }.is_null() {
                 return 0;
             }
-            /* `atoi(ctx->p2)` is the UID the absent lookup would be given. */
-            // SAFETY: a compile-time-constant site.
-            unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_1050) };
-            return 0;
+            /* `atoi(ctx->p2)` is the UID the lookup is given. */
+            // SAFETY: `ctx` is live and `p2` is the caller's NUL-terminated value.
+            let uid = unsafe { atoi((*ctx).p2.cast::<c_char>()) };
+            // SAFETY: the lookup takes an integer.
+            let group = unsafe { crate::ffc::dh::ossl_ffc_uid_to_dh_named_group(uid) };
+            // SAFETY: `group` is NULL or a table entry.
+            let name = unsafe { crate::ffc::dh::ossl_ffc_named_group_get_name(group) };
+            if name.is_null() {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_1050) };
+                return 0;
+            }
+            /* SAFETY: `name` is a static NUL-terminated string borrowed from the table. */
+            unsafe {
+                (*ctx).p2 = name.cast_mut().cast::<c_void>();
+                (*ctx).p1 = 0;
+            }
         }
         _ => {}
     }
@@ -8083,9 +8541,12 @@ static EVP_PKEY_TRANSLATIONS: [XlatEntry; 41] = [
 /// route — and the authority's comment says so, which is why the test is `is_provided` and not
 /// "is there a method that could fail".
 ///
+/// `pub(crate)` because `src/rsa/ctrl.rs`'s four `int_{set,get}_rsa_md_name`-driven controls are its
+/// first callers outside this module.
+///
 /// # Safety
 /// `ctx` NULL or live; `params` NULL or a NULL-key-terminated array.
-unsafe extern "C" fn evp_pkey_ctx_set_params_strict(
+pub(crate) unsafe extern "C" fn evp_pkey_ctx_set_params_strict(
     ctx: *mut EvpPkeyCtx,
     params: *mut OsslParam,
 ) -> c_int {
@@ -8120,9 +8581,11 @@ unsafe extern "C" fn evp_pkey_ctx_set_params_strict(
 /// uses `settable_ctx_params`. That asymmetry is the provider contract's, not a mistake here: a
 /// method may be able to read a parameter it cannot write.
 ///
+/// `pub(crate)` for the same reason as its sibling above.
+///
 /// # Safety
 /// `ctx` NULL or live; `params` NULL or a NULL-key-terminated array.
-unsafe extern "C" fn evp_pkey_ctx_get_params_strict(
+pub(crate) unsafe extern "C" fn evp_pkey_ctx_get_params_strict(
     ctx: *mut EvpPkeyCtx,
     params: *mut OsslParam,
 ) -> c_int {
@@ -10713,9 +11176,13 @@ mod tests {
             keygen_info: ptr::null_mut(),
             keygen_info_count: 0,
             legacy_keytype: 0,
+            pmeth: ptr::null(),
+            engine: ptr::null_mut(),
             pkey: ptr::null_mut(),
             peerkey: ptr::null_mut(),
             data: ptr::null_mut(),
+            flag_call_digest_custom: 0,
+            rsa_pubexp: ptr::null_mut(),
         }
     }
 

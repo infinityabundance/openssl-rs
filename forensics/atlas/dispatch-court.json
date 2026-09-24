@@ -2,24 +2,24 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 190,
+      "crate_files_read": 462,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
     },
     "canonical_form": "the authority's typedef body and the crate's alias are both read by `ABI-PROTOTYPE`'s canonicaliser, so pointer depth, pointee constness, integer width and signedness and function-pointer shape are compared while a struct pointee's name is discarded; a C function *type* and a Rust `extern \"C\" fn` item type differ only in the canonical head tag and are compared after normalising it",
     "counts": {
-      "identities_authority_only": 82,
-      "identities_checked": 195,
+      "identities_authority_only": 55,
+      "identities_checked": 222,
       "identities_mismatches": 0,
-      "links_convention": 197,
-      "links_documented": 8,
-      "links_explicit": 14,
+      "links_convention": 224,
+      "links_documented": 15,
+      "links_explicit": 19,
       "problems": 0,
-      "signatures_authority_only": 411,
-      "signatures_checked": 222,
+      "signatures_authority_only": 372,
+      "signatures_checked": 265,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 104,
+      "signatures_not_a_dispatch": 192,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -29,10 +29,6 @@
         "OSSL_FUNC_BIO_NEW_MEMBUF",
         "OSSL_FUNC_BIO_VPRINTF",
         "OSSL_FUNC_BIO_VSNPRINTF",
-        "OSSL_FUNC_CLEANUP_ENTROPY",
-        "OSSL_FUNC_CLEANUP_NONCE",
-        "OSSL_FUNC_CLEANUP_USER_ENTROPY",
-        "OSSL_FUNC_CLEANUP_USER_NONCE",
         "OSSL_FUNC_CORE_CLEAR_LAST_ERROR_MARK",
         "OSSL_FUNC_CORE_COUNT_TO_MARK",
         "OSSL_FUNC_CORE_GETTABLE_PARAMS",
@@ -56,29 +52,6 @@
         "OSSL_FUNC_CRYPTO_SECURE_MALLOC",
         "OSSL_FUNC_CRYPTO_SECURE_ZALLOC",
         "OSSL_FUNC_CRYPTO_ZALLOC",
-        "OSSL_FUNC_DECODER_DECODE",
-        "OSSL_FUNC_DECODER_DOES_SELECTION",
-        "OSSL_FUNC_DECODER_EXPORT_OBJECT",
-        "OSSL_FUNC_DECODER_FREECTX",
-        "OSSL_FUNC_DECODER_GETTABLE_PARAMS",
-        "OSSL_FUNC_DECODER_GET_PARAMS",
-        "OSSL_FUNC_DECODER_NEWCTX",
-        "OSSL_FUNC_DECODER_SETTABLE_CTX_PARAMS",
-        "OSSL_FUNC_DECODER_SET_CTX_PARAMS",
-        "OSSL_FUNC_ENCODER_DOES_SELECTION",
-        "OSSL_FUNC_ENCODER_ENCODE",
-        "OSSL_FUNC_ENCODER_FREECTX",
-        "OSSL_FUNC_ENCODER_FREE_OBJECT",
-        "OSSL_FUNC_ENCODER_GETTABLE_PARAMS",
-        "OSSL_FUNC_ENCODER_GET_PARAMS",
-        "OSSL_FUNC_ENCODER_IMPORT_OBJECT",
-        "OSSL_FUNC_ENCODER_NEWCTX",
-        "OSSL_FUNC_ENCODER_SETTABLE_CTX_PARAMS",
-        "OSSL_FUNC_ENCODER_SET_CTX_PARAMS",
-        "OSSL_FUNC_GET_ENTROPY",
-        "OSSL_FUNC_GET_NONCE",
-        "OSSL_FUNC_GET_USER_ENTROPY",
-        "OSSL_FUNC_GET_USER_NONCE",
         "OSSL_FUNC_INDICATOR_CB",
         "OSSL_FUNC_OPENSSL_CLEANSE",
         "OSSL_FUNC_PROVIDER_GETTABLE_PARAMS",
@@ -338,10 +311,88 @@
           "symbol": "OSSL_FUNC_CIPHER_UPDATE"
         },
         {
+          "authority": 102,
+          "crate": 102,
+          "crate_at": "src/context/dispatch.rs",
+          "symbol": "OSSL_FUNC_CLEANUP_ENTROPY"
+        },
+        {
+          "authority": 104,
+          "crate": 104,
+          "crate_at": "src/context/dispatch.rs",
+          "symbol": "OSSL_FUNC_CLEANUP_NONCE"
+        },
+        {
+          "authority": 96,
+          "crate": 96,
+          "crate_at": "src/context/dispatch.rs",
+          "symbol": "OSSL_FUNC_CLEANUP_USER_ENTROPY"
+        },
+        {
+          "authority": 97,
+          "crate": 97,
+          "crate_at": "src/context/dispatch.rs",
+          "symbol": "OSSL_FUNC_CLEANUP_USER_NONCE"
+        },
+        {
           "authority": 4,
           "crate": 4,
           "crate_at": "src/provider/child.rs",
           "symbol": "OSSL_FUNC_CORE_GET_LIBCTX"
+        },
+        {
+          "authority": 11,
+          "crate": 11,
+          "crate_at": "src/decoder_meth.rs",
+          "symbol": "OSSL_FUNC_DECODER_DECODE"
+        },
+        {
+          "authority": 10,
+          "crate": 10,
+          "crate_at": "src/decoder_meth.rs",
+          "symbol": "OSSL_FUNC_DECODER_DOES_SELECTION"
+        },
+        {
+          "authority": 20,
+          "crate": 20,
+          "crate_at": "src/decoder_meth.rs",
+          "symbol": "OSSL_FUNC_DECODER_EXPORT_OBJECT"
+        },
+        {
+          "authority": 2,
+          "crate": 2,
+          "crate_at": "src/decoder_meth.rs",
+          "symbol": "OSSL_FUNC_DECODER_FREECTX"
+        },
+        {
+          "authority": 4,
+          "crate": 4,
+          "crate_at": "src/decoder_meth.rs",
+          "symbol": "OSSL_FUNC_DECODER_GETTABLE_PARAMS"
+        },
+        {
+          "authority": 3,
+          "crate": 3,
+          "crate_at": "src/decoder_meth.rs",
+          "symbol": "OSSL_FUNC_DECODER_GET_PARAMS"
+        },
+        {
+          "authority": 1,
+          "crate": 1,
+          "crate_at": "src/decoder_meth.rs",
+          "symbol": "OSSL_FUNC_DECODER_NEWCTX"
+        },
+        {
+          "authority": 6,
+          "crate": 6,
+          "crate_at": "src/decoder_meth.rs",
+          "symbol": "OSSL_FUNC_DECODER_SETTABLE_CTX_PARAMS"
+        },
+        {
+          "authority": 5,
+          "crate": 5,
+          "crate_at": "src/decoder_meth.rs",
+          "symbol": "OSSL_FUNC_DECODER_SET_CTX_PARAMS"
         },
         {
           "authority": 15,
@@ -432,6 +483,90 @@
           "crate": 3,
           "crate_at": "src/evp/digest.rs",
           "symbol": "OSSL_FUNC_DIGEST_UPDATE"
+        },
+        {
+          "authority": 10,
+          "crate": 10,
+          "crate_at": "src/encoder_meth.rs",
+          "symbol": "OSSL_FUNC_ENCODER_DOES_SELECTION"
+        },
+        {
+          "authority": 11,
+          "crate": 11,
+          "crate_at": "src/encoder_meth.rs",
+          "symbol": "OSSL_FUNC_ENCODER_ENCODE"
+        },
+        {
+          "authority": 2,
+          "crate": 2,
+          "crate_at": "src/encoder_meth.rs",
+          "symbol": "OSSL_FUNC_ENCODER_FREECTX"
+        },
+        {
+          "authority": 21,
+          "crate": 21,
+          "crate_at": "src/encoder_meth.rs",
+          "symbol": "OSSL_FUNC_ENCODER_FREE_OBJECT"
+        },
+        {
+          "authority": 4,
+          "crate": 4,
+          "crate_at": "src/encoder_meth.rs",
+          "symbol": "OSSL_FUNC_ENCODER_GETTABLE_PARAMS"
+        },
+        {
+          "authority": 3,
+          "crate": 3,
+          "crate_at": "src/encoder_meth.rs",
+          "symbol": "OSSL_FUNC_ENCODER_GET_PARAMS"
+        },
+        {
+          "authority": 20,
+          "crate": 20,
+          "crate_at": "src/encoder_meth.rs",
+          "symbol": "OSSL_FUNC_ENCODER_IMPORT_OBJECT"
+        },
+        {
+          "authority": 1,
+          "crate": 1,
+          "crate_at": "src/encoder_meth.rs",
+          "symbol": "OSSL_FUNC_ENCODER_NEWCTX"
+        },
+        {
+          "authority": 6,
+          "crate": 6,
+          "crate_at": "src/encoder_meth.rs",
+          "symbol": "OSSL_FUNC_ENCODER_SETTABLE_CTX_PARAMS"
+        },
+        {
+          "authority": 5,
+          "crate": 5,
+          "crate_at": "src/encoder_meth.rs",
+          "symbol": "OSSL_FUNC_ENCODER_SET_CTX_PARAMS"
+        },
+        {
+          "authority": 101,
+          "crate": 101,
+          "crate_at": "src/context/dispatch.rs",
+          "symbol": "OSSL_FUNC_GET_ENTROPY"
+        },
+        {
+          "authority": 103,
+          "crate": 103,
+          "crate_at": "src/context/dispatch.rs",
+          "symbol": "OSSL_FUNC_GET_NONCE"
+        },
+        {
+          "authority": 98,
+          "crate": 98,
+          "crate_at": "src/context/dispatch.rs",
+          "symbol": "OSSL_FUNC_GET_USER_ENTROPY"
+        },
+        {
+          "authority": 99,
+          "crate": 99,
+          "crate_at": "src/context/dispatch.rs",
+          "symbol": "OSSL_FUNC_GET_USER_NONCE"
         },
         {
           "authority": 5,
@@ -1380,10 +1515,6 @@
         "OSSL_CMP_certConf_cb_t",
         "OSSL_CMP_log_cb_t",
         "OSSL_CMP_transfer_cb_t",
-        "OSSL_DECODER_CLEANUP",
-        "OSSL_DECODER_CONSTRUCT",
-        "OSSL_ENCODER_CLEANUP",
-        "OSSL_ENCODER_CONSTRUCT",
         "OSSL_FUNC",
         "OSSL_FUNC_BIO_new_file_fn",
         "OSSL_FUNC_BIO_new_membuf_fn",
@@ -1407,13 +1538,8 @@
         "OSSL_FUNC_SSL_QUIC_TLS_crypto_send_fn",
         "OSSL_FUNC_SSL_QUIC_TLS_got_transport_params_fn",
         "OSSL_FUNC_SSL_QUIC_TLS_yield_secret_fn",
-        "OSSL_FUNC_cleanup_entropy_fn",
-        "OSSL_FUNC_cleanup_nonce_fn",
-        "OSSL_FUNC_cleanup_user_entropy_fn",
-        "OSSL_FUNC_cleanup_user_nonce_fn",
         "OSSL_FUNC_core_clear_last_error_mark_fn",
         "OSSL_FUNC_core_count_to_mark_fn",
-        "OSSL_FUNC_core_get_params_fn",
         "OSSL_FUNC_core_gettable_params_fn",
         "OSSL_FUNC_core_new_error_fn",
         "OSSL_FUNC_core_obj_add_sigid_fn",
@@ -1423,29 +1549,6 @@
         "OSSL_FUNC_core_set_error_mark_fn",
         "OSSL_FUNC_core_thread_start_fn",
         "OSSL_FUNC_core_vset_error_fn",
-        "OSSL_FUNC_decoder_decode_fn",
-        "OSSL_FUNC_decoder_does_selection_fn",
-        "OSSL_FUNC_decoder_export_object_fn",
-        "OSSL_FUNC_decoder_freectx_fn",
-        "OSSL_FUNC_decoder_get_params_fn",
-        "OSSL_FUNC_decoder_gettable_params_fn",
-        "OSSL_FUNC_decoder_newctx_fn",
-        "OSSL_FUNC_decoder_set_ctx_params_fn",
-        "OSSL_FUNC_decoder_settable_ctx_params_fn",
-        "OSSL_FUNC_encoder_does_selection_fn",
-        "OSSL_FUNC_encoder_encode_fn",
-        "OSSL_FUNC_encoder_free_object_fn",
-        "OSSL_FUNC_encoder_freectx_fn",
-        "OSSL_FUNC_encoder_get_params_fn",
-        "OSSL_FUNC_encoder_gettable_params_fn",
-        "OSSL_FUNC_encoder_import_object_fn",
-        "OSSL_FUNC_encoder_newctx_fn",
-        "OSSL_FUNC_encoder_set_ctx_params_fn",
-        "OSSL_FUNC_encoder_settable_ctx_params_fn",
-        "OSSL_FUNC_get_entropy_fn",
-        "OSSL_FUNC_get_nonce_fn",
-        "OSSL_FUNC_get_user_entropy_fn",
-        "OSSL_FUNC_get_user_nonce_fn",
         "OSSL_FUNC_indicator_cb_fn",
         "OSSL_FUNC_provider_get_capabilities_fn",
         "OSSL_FUNC_provider_get_params_fn",
@@ -1468,7 +1571,6 @@
         "OSSL_FUNC_store_settable_ctx_params_fn",
         "OSSL_HTTP_bio_cb_t",
         "OSSL_INOUT_CALLBACK",
-        "OSSL_PASSPHRASE_CALLBACK",
         "OSSL_STORE_attach_fn",
         "OSSL_STORE_close_fn",
         "OSSL_STORE_ctrl_fn",
@@ -1480,7 +1582,6 @@
         "OSSL_STORE_open_ex_fn",
         "OSSL_STORE_open_fn",
         "OSSL_STORE_post_process_info_fn",
-        "OSSL_i2d_of_void_ctx",
         "PKCS12_create_cb",
         "SSL_CTX_alpn_select_cb_func",
         "SSL_CTX_decrypt_session_ticket_fn",
@@ -1533,11 +1634,7 @@
         "X509_STORE_CTX_verify_cb",
         "X509_STORE_CTX_verify_fn",
         "bio_info_cb",
-        "block128_f",
-        "cbc128_f",
-        "ccm128_f",
         "conf_finish_func",
-        "ctr128_f",
         "custom_ext_add_cb",
         "custom_ext_free_cb",
         "custom_ext_parse_cb",
@@ -1546,7 +1643,6 @@
         "dyn_MEM_realloc_fn",
         "dynamic_bind_engine",
         "dynamic_v_check_fn",
-        "ecb128_f",
         "lh_CONF_VALUE_compfunc",
         "lh_CONF_VALUE_doallfunc",
         "lh_CONF_VALUE_hashfunc",
@@ -1838,6 +1934,190 @@
           "authority_signature": "fptr(int:4:s; ptr(opaque))",
           "crate_signature": "fptr(int:4:s; ptr(opaque))",
           "how": "convention"
+        },
+        {
+          "alias": "DecoderNewCtxFn",
+          "at": "src/decoder_meth.rs",
+          "authority": "OSSL_FUNC_decoder_newctx_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "DecoderFreeCtxFn",
+          "at": "src/decoder_meth.rs",
+          "authority": "OSSL_FUNC_decoder_freectx_fn",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "DecoderGetParamsFn",
+          "at": "src/decoder_meth.rs",
+          "authority": "OSSL_FUNC_decoder_get_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "DecoderGettableParamsFn",
+          "at": "src/decoder_meth.rs",
+          "authority": "OSSL_FUNC_decoder_gettable_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "DecoderSetCtxParamsFn",
+          "at": "src/decoder_meth.rs",
+          "authority": "OSSL_FUNC_decoder_set_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "DecoderSettableCtxParamsFn",
+          "at": "src/decoder_meth.rs",
+          "authority": "OSSL_FUNC_decoder_settable_ctx_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "DecoderDoesSelectionFn",
+          "at": "src/decoder_meth.rs",
+          "authority": "OSSL_FUNC_decoder_does_selection_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), int:4:s)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "DecoderDecodeFn",
+          "at": "src/decoder_meth.rs",
+          "authority": "OSSL_FUNC_decoder_decode_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), int:4:s, fptr(int:4:s; ptr(const(opaque)), ptr(opaque)), ptr(opaque), fptr(int:4:s; ptr(int:1:s), int:8:u, ptr(int:8:u), ptr(const(opaque)), ptr(opaque)), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), int:4:s, fptr(int:4:s; ptr(const(opaque)), ptr(opaque)), ptr(opaque), fptr(int:4:s; ptr(int:1:s), int:8:u, ptr(int:8:u), ptr(const(opaque)), ptr(opaque)), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "DecoderExportObjectFn",
+          "at": "src/decoder_meth.rs",
+          "authority": "OSSL_FUNC_decoder_export_object_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), int:8:u, fptr(int:4:s; ptr(const(opaque)), ptr(opaque)), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), int:8:u, fptr(int:4:s; ptr(const(opaque)), ptr(opaque)), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "DecoderConstructFn",
+          "at": "src/decoder_meth.rs",
+          "authority": "OSSL_DECODER_CONSTRUCT",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), ptr(opaque))",
+          "how": "explicit"
+        },
+        {
+          "alias": "DecoderCleanupFn",
+          "at": "src/decoder_meth.rs",
+          "authority": "OSSL_DECODER_CLEANUP",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "explicit"
+        },
+        {
+          "alias": "EncoderNewCtxFn",
+          "at": "src/encoder_meth.rs",
+          "authority": "OSSL_FUNC_encoder_newctx_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "EncoderFreeCtxFn",
+          "at": "src/encoder_meth.rs",
+          "authority": "OSSL_FUNC_encoder_freectx_fn",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "EncoderGetParamsFn",
+          "at": "src/encoder_meth.rs",
+          "authority": "OSSL_FUNC_encoder_get_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "EncoderGettableParamsFn",
+          "at": "src/encoder_meth.rs",
+          "authority": "OSSL_FUNC_encoder_gettable_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "EncoderSetCtxParamsFn",
+          "at": "src/encoder_meth.rs",
+          "authority": "OSSL_FUNC_encoder_set_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "EncoderSettableCtxParamsFn",
+          "at": "src/encoder_meth.rs",
+          "authority": "OSSL_FUNC_encoder_settable_ctx_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "EncoderDoesSelectionFn",
+          "at": "src/encoder_meth.rs",
+          "authority": "OSSL_FUNC_encoder_does_selection_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), int:4:s)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "EncoderEncodeFn",
+          "at": "src/encoder_meth.rs",
+          "authority": "OSSL_FUNC_encoder_encode_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)), ptr(const(opaque)), int:4:s, fptr(int:4:s; ptr(int:1:s), int:8:u, ptr(int:8:u), ptr(const(opaque)), ptr(opaque)), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)), ptr(const(opaque)), int:4:s, fptr(int:4:s; ptr(int:1:s), int:8:u, ptr(int:8:u), ptr(const(opaque)), ptr(opaque)), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "EncoderImportObjectFn",
+          "at": "src/encoder_meth.rs",
+          "authority": "OSSL_FUNC_encoder_import_object_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque), int:4:s, ptr(const(opaque)))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque), int:4:s, ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "EncoderFreeObjectFn",
+          "at": "src/encoder_meth.rs",
+          "authority": "OSSL_FUNC_encoder_free_object_fn",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "EncoderConstructFn",
+          "at": "src/encoder_meth.rs",
+          "authority": "OSSL_ENCODER_CONSTRUCT",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "how": "explicit"
+        },
+        {
+          "alias": "EncoderCleanupFn",
+          "at": "src/encoder_meth.rs",
+          "authority": "OSSL_ENCODER_CLEANUP",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "explicit"
         },
         {
           "alias": "AsymCipherNewctxFn",
@@ -3312,6 +3592,54 @@
           "how": "convention"
         },
         {
+          "alias": "Block128F",
+          "at": "src/modes/mod.rs",
+          "authority": "block128_f",
+          "authority_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), ptr(const(opaque)))",
+          "crate_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "Cbc128F",
+          "at": "src/modes/mod.rs",
+          "authority": "cbc128_f",
+          "authority_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), int:8:u, ptr(const(opaque)), ptr(int:1:u), int:4:s)",
+          "crate_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), int:8:u, ptr(const(opaque)), ptr(int:1:u), int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "Ctr128F",
+          "at": "src/modes/mod.rs",
+          "authority": "ctr128_f",
+          "authority_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), int:8:u, ptr(const(opaque)), ptr(const(int:1:u)))",
+          "crate_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), int:8:u, ptr(const(opaque)), ptr(const(int:1:u)))",
+          "how": "convention"
+        },
+        {
+          "alias": "Ccm128F",
+          "at": "src/modes/mod.rs",
+          "authority": "ccm128_f",
+          "authority_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), int:8:u, ptr(const(opaque)), ptr(const(int:1:u)), ptr(int:1:u))",
+          "crate_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), int:8:u, ptr(const(opaque)), ptr(const(int:1:u)), ptr(int:1:u))",
+          "how": "convention"
+        },
+        {
+          "alias": "OsslPassphraseCallback",
+          "at": "src/passphrase.rs",
+          "authority": "OSSL_PASSPHRASE_CALLBACK",
+          "authority_signature": "fptr(int:4:s; ptr(int:1:s), int:8:u, ptr(int:8:u), ptr(const(opaque)), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(int:1:s), int:8:u, ptr(int:8:u), ptr(const(opaque)), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "OsslI2dOfVoidCtx",
+          "at": "src/pem/pem_lib.rs",
+          "authority": "OSSL_i2d_of_void_ctx",
+          "authority_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(ptr(int:1:u)), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(ptr(int:1:u)), ptr(opaque))",
+          "how": "convention"
+        },
+        {
           "alias": "ProviderRandomBytesFn",
           "at": "src/provider/activate.rs",
           "authority": "OSSL_FUNC_provider_random_bytes_fn",
@@ -3384,6 +3712,46 @@
           "how": "documented"
         },
         {
+          "alias": "Ecb128F",
+          "at": "src/provider/cipher.rs",
+          "authority": "ecb128_f",
+          "authority_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), int:8:u, ptr(const(opaque)), int:4:s)",
+          "crate_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), int:8:u, ptr(const(opaque)), int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "Ccm128Fn",
+          "at": "src/provider/cipher.rs",
+          "authority": "ccm128_f",
+          "authority_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), int:8:u, ptr(const(opaque)), ptr(const(int:1:u)), ptr(int:1:u))",
+          "crate_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), int:8:u, ptr(const(opaque)), ptr(const(int:1:u)), ptr(int:1:u))",
+          "how": "explicit"
+        },
+        {
+          "alias": "CoreGetParamsFn",
+          "at": "src/provider/ctx.rs",
+          "authority": "OSSL_FUNC_core_get_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "SetCtxParamsFn",
+          "at": "src/provider/dsa_sig.rs",
+          "authority": "OSSL_FUNC_signature_set_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "how": "documented"
+        },
+        {
+          "alias": "SetCtxParamsFn",
+          "at": "src/provider/ecdsa_sig.rs",
+          "authority": "OSSL_FUNC_signature_set_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "how": "documented"
+        },
+        {
           "alias": "GetReasonStringsFn",
           "at": "src/provider/init.rs",
           "authority": "OSSL_FUNC_provider_get_reason_strings_fn",
@@ -3398,6 +3766,78 @@
           "authority_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(const(opaque)), ptr(ptr(const(opaque))), ptr(ptr(opaque)))",
           "crate_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(const(opaque)), ptr(ptr(const(opaque))), ptr(ptr(opaque)))",
           "how": "explicit"
+        },
+        {
+          "alias": "SetCtxParamsFn",
+          "at": "src/provider/rsa_sig.rs",
+          "authority": "OSSL_FUNC_signature_set_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "how": "documented"
+        },
+        {
+          "alias": "CoreGetEntropyFn",
+          "at": "src/provider/seeding.rs",
+          "authority": "OSSL_FUNC_get_entropy_fn",
+          "authority_signature": "fptr(int:8:u; ptr(const(opaque)), ptr(ptr(int:1:u)), int:4:s, int:8:u, int:8:u)",
+          "crate_signature": "fptr(int:8:u; ptr(const(opaque)), ptr(ptr(int:1:u)), int:4:s, int:8:u, int:8:u)",
+          "how": "documented"
+        },
+        {
+          "alias": "CoreGetEntropyFn",
+          "at": "src/provider/seeding.rs",
+          "authority": "OSSL_FUNC_get_user_entropy_fn",
+          "authority_signature": "fptr(int:8:u; ptr(const(opaque)), ptr(ptr(int:1:u)), int:4:s, int:8:u, int:8:u)",
+          "crate_signature": "fptr(int:8:u; ptr(const(opaque)), ptr(ptr(int:1:u)), int:4:s, int:8:u, int:8:u)",
+          "how": "documented"
+        },
+        {
+          "alias": "CoreCleanupEntropyFn",
+          "at": "src/provider/seeding.rs",
+          "authority": "OSSL_FUNC_cleanup_entropy_fn",
+          "authority_signature": "fptr(void; ptr(const(opaque)), ptr(int:1:u), int:8:u)",
+          "crate_signature": "fptr(void; ptr(const(opaque)), ptr(int:1:u), int:8:u)",
+          "how": "documented"
+        },
+        {
+          "alias": "CoreCleanupEntropyFn",
+          "at": "src/provider/seeding.rs",
+          "authority": "OSSL_FUNC_cleanup_user_entropy_fn",
+          "authority_signature": "fptr(void; ptr(const(opaque)), ptr(int:1:u), int:8:u)",
+          "crate_signature": "fptr(void; ptr(const(opaque)), ptr(int:1:u), int:8:u)",
+          "how": "documented"
+        },
+        {
+          "alias": "CoreGetNonceFn",
+          "at": "src/provider/seeding.rs",
+          "authority": "OSSL_FUNC_get_nonce_fn",
+          "authority_signature": "fptr(int:8:u; ptr(const(opaque)), ptr(ptr(int:1:u)), int:8:u, int:8:u, ptr(const(opaque)), int:8:u)",
+          "crate_signature": "fptr(int:8:u; ptr(const(opaque)), ptr(ptr(int:1:u)), int:8:u, int:8:u, ptr(const(opaque)), int:8:u)",
+          "how": "documented"
+        },
+        {
+          "alias": "CoreGetNonceFn",
+          "at": "src/provider/seeding.rs",
+          "authority": "OSSL_FUNC_get_user_nonce_fn",
+          "authority_signature": "fptr(int:8:u; ptr(const(opaque)), ptr(ptr(int:1:u)), int:8:u, int:8:u, ptr(const(opaque)), int:8:u)",
+          "crate_signature": "fptr(int:8:u; ptr(const(opaque)), ptr(ptr(int:1:u)), int:8:u, int:8:u, ptr(const(opaque)), int:8:u)",
+          "how": "documented"
+        },
+        {
+          "alias": "CoreCleanupNonceFn",
+          "at": "src/provider/seeding.rs",
+          "authority": "OSSL_FUNC_cleanup_nonce_fn",
+          "authority_signature": "fptr(void; ptr(const(opaque)), ptr(int:1:u), int:8:u)",
+          "crate_signature": "fptr(void; ptr(const(opaque)), ptr(int:1:u), int:8:u)",
+          "how": "documented"
+        },
+        {
+          "alias": "CoreCleanupNonceFn",
+          "at": "src/provider/seeding.rs",
+          "authority": "OSSL_FUNC_cleanup_user_nonce_fn",
+          "authority_signature": "fptr(void; ptr(const(opaque)), ptr(int:1:u), int:8:u)",
+          "crate_signature": "fptr(void; ptr(const(opaque)), ptr(int:1:u), int:8:u)",
+          "how": "documented"
         },
         {
           "alias": "BioInfoCb",
@@ -3533,9 +3973,79 @@
           "why": "not an authority type: a crate-local callback shape with no header counterpart"
         },
         {
+          "alias": "BnModExp",
+          "at": "src/bn/blinding.rs",
+          "why": "not a provider dispatch: the type of a parameter of `BN_BLINDING_create_param`, spelled `int (*bn_mod_exp)(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *m_ctx)` inline in the header rather than as a typedef"
+        },
+        {
           "alias": "NistReduce",
           "at": "src/bn/nist.rs",
           "why": "not an authority type: a crate-local callback shape with no header counterpart"
+        },
+        {
+          "alias": "DhGenerateKeyFn",
+          "at": "src/dh/mod.rs",
+          "why": "not a provider dispatch: a member of `DH_METHOD`'s vtable, declared inline in `crypto/dh/dh_local.h:47-64` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "DhComputeKeyFn",
+          "at": "src/dh/mod.rs",
+          "why": "not a provider dispatch: a member of `DH_METHOD`'s vtable, declared inline in `crypto/dh/dh_local.h:47-64` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "DhBnModExpFn",
+          "at": "src/dh/mod.rs",
+          "why": "not a provider dispatch: a member of `DH_METHOD`'s vtable, declared inline in `crypto/dh/dh_local.h:47-64` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "DhLifecycleFn",
+          "at": "src/dh/mod.rs",
+          "why": "not a provider dispatch: a member of `DH_METHOD`'s vtable, declared inline in `crypto/dh/dh_local.h:47-64` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "DhGenerateParamsFn",
+          "at": "src/dh/mod.rs",
+          "why": "not a provider dispatch: a member of `DH_METHOD`'s vtable, declared inline in `crypto/dh/dh_local.h:47-64` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "DsaDoSignFn",
+          "at": "src/dsa/mod.rs",
+          "why": "not a provider dispatch: a member of `DSA_METHOD`'s vtable, declared inline in `crypto/dsa/dsa_local.h:46-70` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "DsaSignSetupFn",
+          "at": "src/dsa/mod.rs",
+          "why": "not a provider dispatch: a member of `DSA_METHOD`'s vtable, declared inline in `crypto/dsa/dsa_local.h:46-70` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "DsaDoVerifyFn",
+          "at": "src/dsa/mod.rs",
+          "why": "not a provider dispatch: a member of `DSA_METHOD`'s vtable, declared inline in `crypto/dsa/dsa_local.h:46-70` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "DsaModExpFn",
+          "at": "src/dsa/mod.rs",
+          "why": "not a provider dispatch: a member of `DSA_METHOD`'s vtable, declared inline in `crypto/dsa/dsa_local.h:46-70` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "DsaBnModExpFn",
+          "at": "src/dsa/mod.rs",
+          "why": "not a provider dispatch: a member of `DSA_METHOD`'s vtable, declared inline in `crypto/dsa/dsa_local.h:46-70` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "DsaLifecycleFn",
+          "at": "src/dsa/mod.rs",
+          "why": "not a provider dispatch: a member of `DSA_METHOD`'s vtable, declared inline in `crypto/dsa/dsa_local.h:46-70` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "DsaParamgenFn",
+          "at": "src/dsa/mod.rs",
+          "why": "not a provider dispatch: a member of `DSA_METHOD`'s vtable, declared inline in `crypto/dsa/dsa_local.h:46-70` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "DsaKeygenFn",
+          "at": "src/dsa/mod.rs",
+          "why": "not a provider dispatch: a member of `DSA_METHOD`'s vtable, declared inline in `crypto/dsa/dsa_local.h:46-70` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
         },
         {
           "alias": "DsoNameConverterFunc",
@@ -3546,6 +4056,246 @@
           "alias": "DsoMergerFunc",
           "at": "src/dso/mod.rs",
           "why": "not a provider dispatch: declared in `include/internal/dso.h`, which is not installed, so the atlas has no record of it"
+        },
+        {
+          "alias": "EcMethodCtor",
+          "at": "src/ec/curve.rs",
+          "why": "not a provider dispatch: `curve_list[]`'s fourth column (`crypto/ec/ec_curve.c:2536`), a plain function pointer declared inline in the internal `_ec_list_element_st` rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "EcdhKdfFn",
+          "at": "src/ec/kmeth.rs",
+          "why": "not a provider dispatch: the type of a parameter of `ECDH_compute_key`, spelled `void *(*KDF)(const void *in, size_t inlen, void *out, size_t *outlen)` inline in the header rather than as a typedef"
+        },
+        {
+          "alias": "EcGroupInitFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcGroupFinishFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcGroupCopyFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcGroupSetCurveFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcGroupGetCurveFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcGroupQueryFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcGroupCheckDiscriminantFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointInitFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointFinishFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointCopyFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointSetToInfinityFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointSetAffineFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointGetAffineFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointSetCompressedFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPoint2OctFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcOct2PointFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointAddFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointDblFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointUnaryFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointIsAtInfinityFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointIsOnCurveFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointCmpFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointsMakeAffineFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPointMulFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPrecomputeMultFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcFieldMulFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcFieldSqrFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcFieldSetToOneFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcPriv2OctFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcOct2PrivFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcKeySetPrivateFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcKeyInitFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcKeyCheckFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcKeyCopyFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcKeyFinishFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcComputeKeyFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcKeySignSetupFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcKeySignSigFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcKeyVerifySigFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcLadderFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcGroupFullInitFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_METHOD`'s vtable, declared inline in `crypto/ec/ec_local.h:43-200` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcFieldModFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: `struct ec_group_st`'s `field_mod_func` member (`crypto/ec/ec_local.h:257-258`), a function pointer on the *group object* rather than in a method table, declared inline in an internal header"
+        },
+        {
+          "alias": "EcKeySetGroupFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_KEY_METHOD`'s table, declared inline in `crypto/ec/ec_local.h:664-688` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcKeySetPublicFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_KEY_METHOD`'s table, declared inline in `crypto/ec/ec_local.h:664-688` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcKeySignFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_KEY_METHOD`'s table, declared inline in `crypto/ec/ec_local.h:664-688` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EcKeyVerifyFn",
+          "at": "src/ec/mod.rs",
+          "why": "not a provider dispatch: a member of `EC_KEY_METHOD`'s table, declared inline in `crypto/ec/ec_local.h:664-688` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
         },
         {
           "alias": "AlgorithmPreFn",
@@ -3773,6 +4523,11 @@
           "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`. The atlas records no typedef for them because its universe is the installed public surface and that header is internal: 307 of the 465 struct records have no body at all and only 8 of the 158 complete ones have a function-pointer field, none of them this one. So the check these need is a second Clang pass over the internal headers or a generated C assertion, not a consumer of `structs.json` -- see docs/DECISIONS.md D185"
         },
         {
+          "alias": "PmethFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: `typedef const EVP_PKEY_METHOD *(*pmeth_fn)(void)` -- the accessor a row of `crypto/evp/pmeth_lib.c`'s second `standard_methods[]` is. It takes no arguments and *returns* the method object, so it is not a callback signature the dispatch plane compares; D355 landed it with the table it populates."
+        },
+        {
           "alias": "FixupArgsFn",
           "at": "src/evp/pkey_ctx.rs",
           "why": "not a provider dispatch: one of `ctrl_params_translate.c`'s two function *types*, `fixup_args_fn` and `cleanup_args_fn`, which the translation tables store as function pointers and which the authority declares as bare typedefs rather than through `OSSL_CORE_MAKE_FUNC`"
@@ -3813,6 +4568,11 @@
           "why": "not a provider dispatch: the crate's own provider-table traversal callback; the authority has no named type for it"
         },
         {
+          "alias": "AlgorithmCapability",
+          "at": "src/provider/activate.rs",
+          "why": "not a provider dispatch: the predicate field of `OSSL_ALGORITHM_CAPABLE` (`provider_util.h:140-143`), spelled inline as `int (*capable)(void)` rather than declared as a typedef"
+        },
+        {
           "alias": "CreateChildCbFn",
           "at": "src/provider/child.rs",
           "why": "not a provider dispatch: the type of a parameter of `OSSL_FUNC_provider_register_child_cb_fn`, spelled `int (*create_cb)(const OSSL_CORE_HANDLE *, const OSSL_DISPATCH *, void *)` inline in the header rather than as a typedef"
@@ -3828,6 +4588,26 @@
           "why": "not a provider dispatch: the type of a parameter of `OSSL_FUNC_provider_register_child_cb_fn`, spelled `int (*global_props_cb)(const void *, const OSSL_PARAM *)` inline in the header rather than as a typedef"
         },
         {
+          "alias": "TdesStreamFn",
+          "at": "src/provider/cipher.rs",
+          "why": "not a provider dispatch: the type of `PROV_TDES_CTX`'s `tstream` union member (`cipher_tdes.h:26-29`), written inline in the struct rather than introduced with a `typedef`, so the atlas records no name for it"
+        },
+        {
+          "alias": "AesWrapFn",
+          "at": "src/provider/cipher.rs",
+          "why": "not a provider dispatch: `cipher_aes_wrp.c:28-30`'s `aeswrap_fn`, a typedef local to a provider implementation file, which the atlas -- whose universe is the installed public surface -- records no typedef for"
+        },
+        {
+          "alias": "OsslXtsStreamFn",
+          "at": "src/provider/cipher.rs",
+          "why": "not a provider dispatch: `prov/ciphercommon.h:30`'s `PROV_CIPHER_FUNC` macro generates it as `typedef type(*OSSL_##name##_fn) args`, so the header carries no `typedef` declaration and the atlas records none"
+        },
+        {
+          "alias": "OsslSm4XtsStreamFn",
+          "at": "src/provider/cipher.rs",
+          "why": "not a provider dispatch: `prov/ciphercommon.h:30`'s `PROV_CIPHER_FUNC` macro generates it as `typedef type(*OSSL_##name##_fn) args`, so the header carries no `typedef` declaration and the atlas records none"
+        },
+        {
           "alias": "SkCompFn",
           "at": "src/provider/mod.rs",
           "why": "not a provider dispatch: `safestack.h.in`'s `sk_*_compfunc` / `freefunc` / `copyfunc` macros generate it per type, so there is no single typedef"
@@ -3841,6 +4621,76 @@
           "alias": "SkCopyFn",
           "at": "src/provider/mod.rs",
           "why": "not a provider dispatch: `safestack.h.in`'s `sk_*_compfunc` / `freefunc` / `copyfunc` macros generate it per type, so there is no single typedef"
+        },
+        {
+          "alias": "ProvDrbgInstantiateFn",
+          "at": "src/provider/rand.rs",
+          "why": "not a provider dispatch: a member of `struct prov_drbg_st`, declared inline in `providers/implementations/include/prov/drbg.h:59-165` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "ProvDrbgUninstantiateFn",
+          "at": "src/provider/rand.rs",
+          "why": "not a provider dispatch: a member of `struct prov_drbg_st`, declared inline in `providers/implementations/include/prov/drbg.h:59-165` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "ProvDrbgReseedFn",
+          "at": "src/provider/rand.rs",
+          "why": "not a provider dispatch: a member of `struct prov_drbg_st`, declared inline in `providers/implementations/include/prov/drbg.h:59-165` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "ProvDrbgGenerateFn",
+          "at": "src/provider/rand.rs",
+          "why": "not a provider dispatch: a member of `struct prov_drbg_st`, declared inline in `providers/implementations/include/prov/drbg.h:59-165` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "ProvDrbgNewFn",
+          "at": "src/provider/rand.rs",
+          "why": "not a provider dispatch: a member of `struct prov_drbg_st`, declared inline in `providers/implementations/include/prov/drbg.h:59-165` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "ProvDrbgFreeFn",
+          "at": "src/provider/rand.rs",
+          "why": "not a provider dispatch: a member of `struct prov_drbg_st`, declared inline in `providers/implementations/include/prov/drbg.h:59-165` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "RsaCryptFn",
+          "at": "src/rsa/mod.rs",
+          "why": "not a provider dispatch: a member of `RSA_METHOD`'s vtable, declared inline in `crypto/rsa/rsa_local.h:102-147` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "RsaModExpFn",
+          "at": "src/rsa/mod.rs",
+          "why": "not a provider dispatch: a member of `RSA_METHOD`'s vtable, declared inline in `crypto/rsa/rsa_local.h:102-147` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "RsaBnModExpFn",
+          "at": "src/rsa/mod.rs",
+          "why": "not a provider dispatch: a member of `RSA_METHOD`'s vtable, declared inline in `crypto/rsa/rsa_local.h:102-147` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "RsaLifecycleFn",
+          "at": "src/rsa/mod.rs",
+          "why": "not a provider dispatch: a member of `RSA_METHOD`'s vtable, declared inline in `crypto/rsa/rsa_local.h:102-147` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "RsaSignFn",
+          "at": "src/rsa/mod.rs",
+          "why": "not a provider dispatch: a member of `RSA_METHOD`'s vtable, declared inline in `crypto/rsa/rsa_local.h:102-147` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "RsaVerifyFn",
+          "at": "src/rsa/mod.rs",
+          "why": "not a provider dispatch: a member of `RSA_METHOD`'s vtable, declared inline in `crypto/rsa/rsa_local.h:102-147` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "RsaKeygenFn",
+          "at": "src/rsa/mod.rs",
+          "why": "not a provider dispatch: a member of `RSA_METHOD`'s vtable, declared inline in `crypto/rsa/rsa_local.h:102-147` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "RsaMultiPrimeKeygenFn",
+          "at": "src/rsa/mod.rs",
+          "why": "not a provider dispatch: a member of `RSA_METHOD`'s vtable, declared inline in `crypto/rsa/rsa_local.h:102-147` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
         },
         {
           "alias": "DumpCb",
@@ -4041,6 +4891,36 @@
           "alias": "FreeThunk",
           "at": "src/runtime/stack.rs",
           "why": "not a provider dispatch: `safestack.h.in`'s `sk_*_compfunc` / `freefunc` / `copyfunc` macros generate it per type, so there is no single typedef"
+        },
+        {
+          "alias": "CryptoThreadRoutine",
+          "at": "src/runtime/thread_arch.rs",
+          "why": "not a provider dispatch: declared in `include/internal/thread_arch.h:57`, which is not installed, so the atlas has no record of it"
+        },
+        {
+          "alias": "UiOpenSessionFn",
+          "at": "src/ui/ui_lib.rs",
+          "why": "not a provider dispatch: a member of `UI_METHOD`'s vtable, declared inline in `crypto/ui/ui_local.h:20-59` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "UiWriteStringFn",
+          "at": "src/ui/ui_lib.rs",
+          "why": "not a provider dispatch: a member of `UI_METHOD`'s vtable, declared inline in `crypto/ui/ui_local.h:20-59` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "UiDuplicateDataFn",
+          "at": "src/ui/ui_lib.rs",
+          "why": "not a provider dispatch: a member of `UI_METHOD`'s vtable, declared inline in `crypto/ui/ui_local.h:20-59` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "UiDestroyDataFn",
+          "at": "src/ui/ui_lib.rs",
+          "why": "not a provider dispatch: a member of `UI_METHOD`'s vtable, declared inline in `crypto/ui/ui_local.h:20-59` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "UiConstructPromptFn",
+          "at": "src/ui/ui_lib.rs",
+          "why": "not a provider dispatch: a member of `UI_METHOD`'s vtable, declared inline in `crypto/ui/ui_local.h:20-59` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
         }
       ],
       "unlinked": [],

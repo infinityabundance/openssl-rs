@@ -1,0 +1,261 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "algorithm": "des",
+    "court": "CT-CIPHER",
+    "openssl_cipher": "DES-{ECB,CBC,CFB,OFB}",
+    "primary_source": "FIPS 46-3 / FIPS PUB 81",
+    "provenance": {
+      "authority": "openssl-3.6.4-production",
+      "corpus": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_des.txt",
+      "corpus_sha256": "ec3e1cd75910417454d83234278cfc92f60b8f26877069a133a02badd2178407",
+      "note": "Candidate-only construction verification: the primary source is named, the bytes are mirrored through the pinned corpus (`corpus_sha256`), and the mirror's identity is fixed. This does NOT establish that the mirror is faithful to a primary source nobody here has read, and a CT pass is not formal validation. No independent implementation of this cipher is present in the pinned court image, so only the empty-input boundary carries an independent oracle, whose answer is the construction's own (D211/D215).",
+      "primary_source": "FIPS 46-3 / FIPS PUB 81"
+    },
+    "standard": "FIPS 46-3 / FIPS PUB 81",
+    "vectors": [
+      {
+        "aad_hex": "",
+        "cipher": "DES-ECB",
+        "expected_hex": "8ca64de9c1b123a7",
+        "id": "des-1",
+        "input_hex": "0000000000000000",
+        "iv_hex": "",
+        "key_hex": "0000000000000000",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_des.txt",
+          "form": "keyed-block",
+          "line": 12,
+          "mirror_sha256": "ec3e1cd75910417454d83234278cfc92f60b8f26877069a133a02badd2178407",
+          "primary_source": "FIPS 46-3 / FIPS PUB 81",
+          "title": "DES ECB Tests (from destest)"
+        },
+        "standard": "FIPS 46-3 / FIPS PUB 81",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "DES-ECB",
+        "expected_hex": "7359b2163e4edc58",
+        "id": "des-2",
+        "input_hex": "ffffffffffffffff",
+        "iv_hex": "",
+        "key_hex": "ffffffffffffffff",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_des.txt",
+          "form": "keyed-block",
+          "line": 18,
+          "mirror_sha256": "ec3e1cd75910417454d83234278cfc92f60b8f26877069a133a02badd2178407",
+          "primary_source": "FIPS 46-3 / FIPS PUB 81",
+          "title": "DES ECB Tests (from destest)"
+        },
+        "standard": "FIPS 46-3 / FIPS PUB 81",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "DES-ECB",
+        "expected_hex": "958e6e627a05557b",
+        "id": "des-3",
+        "input_hex": "1000000000000001",
+        "iv_hex": "",
+        "key_hex": "3000000000000000",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_des.txt",
+          "form": "keyed-block",
+          "line": 24,
+          "mirror_sha256": "ec3e1cd75910417454d83234278cfc92f60b8f26877069a133a02badd2178407",
+          "primary_source": "FIPS 46-3 / FIPS PUB 81",
+          "title": "DES ECB Tests (from destest)"
+        },
+        "standard": "FIPS 46-3 / FIPS PUB 81",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "DES-ECB",
+        "expected_hex": "f40379ab9e0ec533",
+        "id": "des-4",
+        "input_hex": "1111111111111111",
+        "iv_hex": "",
+        "key_hex": "1111111111111111",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_des.txt",
+          "form": "keyed-block",
+          "line": 30,
+          "mirror_sha256": "ec3e1cd75910417454d83234278cfc92f60b8f26877069a133a02badd2178407",
+          "primary_source": "FIPS 46-3 / FIPS PUB 81",
+          "title": "DES ECB Tests (from destest)"
+        },
+        "standard": "FIPS 46-3 / FIPS PUB 81",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "DES-ECB",
+        "expected_hex": "17668dfc7292532d",
+        "id": "des-5",
+        "input_hex": "1111111111111111",
+        "iv_hex": "",
+        "key_hex": "0123456789abcdef",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_des.txt",
+          "form": "keyed-block",
+          "line": 36,
+          "mirror_sha256": "ec3e1cd75910417454d83234278cfc92f60b8f26877069a133a02badd2178407",
+          "primary_source": "FIPS 46-3 / FIPS PUB 81",
+          "title": "DES ECB Tests (from destest)"
+        },
+        "standard": "FIPS 46-3 / FIPS PUB 81",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "DES-ECB",
+        "expected_hex": "8a5ae1f81ab8f2dd",
+        "id": "des-6",
+        "input_hex": "0123456789abcdef",
+        "iv_hex": "",
+        "key_hex": "1111111111111111",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_des.txt",
+          "form": "keyed-block",
+          "line": 42,
+          "mirror_sha256": "ec3e1cd75910417454d83234278cfc92f60b8f26877069a133a02badd2178407",
+          "primary_source": "FIPS 46-3 / FIPS PUB 81",
+          "title": "DES ECB Tests (from destest)"
+        },
+        "standard": "FIPS 46-3 / FIPS PUB 81",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "DES-ECB",
+        "expected_hex": "ed39d950fa74bcc4",
+        "id": "des-7",
+        "input_hex": "0123456789abcdef",
+        "iv_hex": "",
+        "key_hex": "fedcba9876543210",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_des.txt",
+          "form": "keyed-block",
+          "line": 48,
+          "mirror_sha256": "ec3e1cd75910417454d83234278cfc92f60b8f26877069a133a02badd2178407",
+          "primary_source": "FIPS 46-3 / FIPS PUB 81",
+          "title": "DES ECB Tests (from destest)"
+        },
+        "standard": "FIPS 46-3 / FIPS PUB 81",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "DES-CBC",
+        "expected_hex": "e5c7cdde872bf27c",
+        "id": "des-8",
+        "input_hex": "4e6f772069732074",
+        "iv_hex": "1234567890abcdef",
+        "key_hex": "0123456789abcdef",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_des.txt",
+          "form": "keyed-block",
+          "line": 56,
+          "mirror_sha256": "ec3e1cd75910417454d83234278cfc92f60b8f26877069a133a02badd2178407",
+          "primary_source": "FIPS 46-3 / FIPS PUB 81",
+          "title": "DES Tests (from FIPS PUB 81)"
+        },
+        "standard": "FIPS 46-3 / FIPS PUB 81",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "DES-CFB",
+        "expected_hex": "f3096249c7f46e51a69e839b1a92f78403467133898ea622",
+        "id": "des-9",
+        "input_hex": "4e6f77206973207468652074696d6520666f7220616c6c20",
+        "iv_hex": "1234567890abcdef",
+        "key_hex": "0123456789abcdef",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_des.txt",
+          "form": "keyed-block",
+          "line": 71,
+          "mirror_sha256": "ec3e1cd75910417454d83234278cfc92f60b8f26877069a133a02badd2178407",
+          "primary_source": "FIPS 46-3 / FIPS PUB 81",
+          "title": "DES Tests (from FIPS PUB 81)"
+        },
+        "standard": "FIPS 46-3 / FIPS PUB 81",
+        "tag_hex": ""
+      },
+      {
+        "cipher": "DES-ECB",
+        "expected_hex": "",
+        "id": "des-des-ecb-empty-10",
+        "input_hex": "",
+        "iv_hex": "",
+        "key_hex": "133457799bbcdff1",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "derivation": "independent",
+          "label": "empty",
+          "note": "the expected bytes are the construction's own answer, not a published test value",
+          "oracle": "the construction's definition: a block or feedback mode over a zero-byte input emits no bytes",
+          "primary_source": "UNKNOWN"
+        },
+        "standard": "FIPS 46-3 / FIPS PUB 81"
+      },
+      {
+        "cipher": "DES-CBC",
+        "expected_hex": "",
+        "id": "des-des-cbc-empty-11",
+        "input_hex": "",
+        "iv_hex": "0000000000000000",
+        "key_hex": "133457799bbcdff1",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "derivation": "independent",
+          "label": "empty",
+          "note": "the expected bytes are the construction's own answer, not a published test value",
+          "oracle": "the construction's definition: a block or feedback mode over a zero-byte input emits no bytes",
+          "primary_source": "UNKNOWN"
+        },
+        "standard": "FIPS 46-3 / FIPS PUB 81"
+      }
+    ]
+  },
+  "generator": "forensics/tools/correctness_vectors.py",
+  "inputs": [
+    {
+      "name": "authority-evp-vector-file",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_des.txt",
+      "sha256": "ec3e1cd75910417454d83234278cfc92f60b8f26877069a133a02badd2178407"
+    }
+  ],
+  "kind": "cipher-vectors-des",
+  "schema": "openssl-rs/atlas/cipher-vectors-des/v1"
+}

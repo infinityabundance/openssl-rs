@@ -13,7 +13,7 @@
 //! crypto/evp/p_seal.c     EVP_SealInit, EVP_SealFinal
 //! ```
 //!
-//! Ten of the thirteen land and three do not, and each of the three is a stratum boundary rather
+//! Eleven of the thirteen land and two do not, and each of the two is a stratum boundary rather
 //! than a size boundary:
 //!
 //!   * **`EVP_BytesToKey`** is a digest loop over the landed `EVP_DigestInit_ex` / `Update` /
@@ -24,14 +24,17 @@
 //!     `EVP_PKEY_CTX_new_from_pkey` + `EVP_PKEY_sign_init`/`verify_init` + `EVP_PKEY_sign`/`verify`,
 //!     all of which 7.4c and 7.4d landed. The `_ex` spellings are the bodies and the plain ones are
 //!     one-line wrappers with `libctx`/`propq` NULL — the authority's own shape, transcribed.
-//!   * **`EVP_OpenInit`**, **`EVP_OpenFinal`** and **`EVP_SealFinal`** are `EVP_CIPHER_CTX` and
-//!     `EVP_PKEY_decrypt`/`encrypt` calls, all landed.
-//!   * **`EVP_SealInit`** is **not** here: it needs `RAND_priv_bytes_ex` (`crypto/rand/rand_lib.c`,
-//!     Phase 9) directly at `p_seal.c:46` and through `EVP_CIPHER_CTX_rand_key` at `:42`. The
-//!     `_Final` half needs no random, which is why half the file lands.
-//!   * **`EVP_read_pw_string`** and **`EVP_read_pw_string_min`** are **not** here: they are the
-//!     `UI`-backed pair and `ui.h` is Phase 13. They are withheld rather than stubbed, and
-//!     `EVP_read_pw_string` goes with them because its whole body is a call to `_min`.
+//!   * **`EVP_OpenInit`**, **`EVP_OpenFinal`**, **`EVP_SealInit`** and **`EVP_SealFinal`** are
+//!     `EVP_CIPHER_CTX` and `EVP_PKEY_decrypt`/`encrypt` calls, all landed. `EVP_SealInit`'s two
+//!     former blockers have both landed (D315): `RAND_priv_bytes_ex` (`crypto/rand/rand_lib.c`,
+//!     Phase 9) directly at `p_seal.c:46`, and `EVP_CIPHER_CTX_rand_key` at `:42`.
+//!   * **`EVP_read_pw_string`** and **`EVP_read_pw_string_min`** are the `UI`-backed pair, and
+//!     they **land here now** (D350), with `crypto/ui/ui_lib.c` behind them: `UI_new`,
+//!     `UI_add_input_string`, `UI_add_verify_string`, `UI_process` and `UI_free` are landed and
+//!     the five `ui_lib.c` call sites are transcribed directly. The pair was withheld until the
+//!     UI program existed, because `EVP_read_pw_string_min`'s body *is* that program; the
+//!     `ui.h`-is-Phase-13 sentence that stood here is now recorded as a resolved boundary in
+//!     `docs/DECISIONS.md` D350 rather than as an open one.
 //!   * **`EVP_get_pw_prompt`** and **`EVP_set_pw_prompt`** *do* land: they touch the file's
 //!     eighty-byte static and nothing else, so the `UI` boundary does not reach them. This is the
 //!     one place the row's prefix grouping and the dependency boundary disagree, and the measurement
@@ -76,9 +79,14 @@
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void};
 use core::ptr;
 
-use crate::evp::asymcipher::{EVP_PKEY_decrypt, EVP_PKEY_decrypt_init};
-use crate::evp::cipher::{EVP_CIPHER_get_iv_length, EVP_CIPHER_get_key_length, EvpCipher};
+use crate::evp::asymcipher::{
+    EVP_PKEY_decrypt, EVP_PKEY_decrypt_init, EVP_PKEY_encrypt, EVP_PKEY_encrypt_init,
+};
+use crate::evp::cipher::{
+    EVP_CIPHER_get0_provider, EVP_CIPHER_get_iv_length, EVP_CIPHER_get_key_length, EvpCipher,
+};
 use crate::evp::cipher_ctx::{
+    EVP_CIPHER_CTX_get0_cipher, EVP_CIPHER_CTX_get_iv_length, EVP_CIPHER_CTX_get_key_length,
     EVP_CIPHER_CTX_reset, EVP_CIPHER_CTX_set_key_length, EVP_DecryptFinal_ex, EVP_DecryptInit_ex,
     EVP_EncryptFinal_ex, EVP_EncryptInit_ex, EvpCipherCtx,
 };
@@ -94,8 +102,14 @@ use crate::evp::pkey_ctx::{
 use crate::evp::signature::{
     EVP_PKEY_sign, EVP_PKEY_sign_init, EVP_PKEY_verify, EVP_PKEY_verify_init,
 };
+use crate::provider::ossl_provider_libctx;
+use crate::rand::rand_lib::RAND_priv_bytes_ex;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc, OPENSSL_cleanse};
+use crate::ui::ui_lib::{UI_add_input_string, UI_add_verify_string, UI_free, UI_new, UI_process};
+
+/// `BUFSIZ` — `<stdio.h>` on this platform; `EVP_read_pw_string_min`'s local buffer length.
+const BUFSIZ: usize = 8192;
 
 /// `EVP_MAX_MD_SIZE` — `include/openssl/evp.h:34`.
 const EVP_MAX_MD_SIZE: usize = 64;
@@ -331,6 +345,81 @@ pub unsafe extern "C" fn EVP_get_pw_prompt() -> *mut c_char {
         return ptr::null_mut();
     }
     ptr::addr_of_mut!(PROMPT_STRING).cast::<c_char>()
+}
+
+/// `int EVP_read_pw_string(char *buf, int len, const char *prompt, int verify)` —
+/// `crypto/evp/evp_key.c:47`.
+///
+/// One line: the minimum accepted length is 0, so the whole contract is the `_min` spelling's.
+///
+/// # Safety
+/// `buf` writable for `len` bytes plus a NUL; `prompt` NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_read_pw_string(
+    buf: *mut c_char,
+    len: c_int,
+    prompt: *const c_char,
+    verify: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe { EVP_read_pw_string_min(buf, 0, len, prompt, verify) }
+}
+
+/// `int EVP_read_pw_string_min(char *buf, int min, int len, const char *prompt, int verify)` —
+/// `crypto/evp/evp_key.c:52`.
+///
+/// The `UI` program and nothing else: create, add the prompt (and, for a verify, the confirmation
+/// prompt checked against `buf`), process, free. The `len` clamp is the authority's own — a `len`
+/// at or above `BUFSIZ` becomes `BUFSIZ - 1` — and a NULL `prompt` falls back to the file's
+/// `prompt_string` static when it is non-empty.
+///
+/// The `goto end` on a failed `UI_add_*` **skips** the `OPENSSL_cleanse(buff, BUFSIZ)`: the
+/// authority cleanses `buff` on the success path only, after `UI_process`, and that path is
+/// reproduced here rather than tidied into a single exit.
+///
+/// # Safety
+/// `buf` writable for `len` bytes plus a NUL; `prompt` NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_read_pw_string_min(
+    buf: *mut c_char,
+    min: c_int,
+    len: c_int,
+    prompt: *const c_char,
+    verify: c_int,
+) -> c_int {
+    let mut ret: c_int = -1;
+    let mut buff = [0 as c_char; BUFSIZ];
+    let mut prompt = prompt;
+
+    // SAFETY: `PROMPT_STRING` is this module's own static.
+    if prompt.is_null() && unsafe { PROMPT_STRING[0] } != 0 {
+        prompt = ptr::addr_of!(PROMPT_STRING).cast::<c_char>();
+    }
+    // SAFETY: `UI_new` allocates its own object.
+    let ui = unsafe { UI_new() };
+    if ui.is_null() {
+        return ret;
+    }
+    let max = if len >= BUFSIZ as c_int {
+        BUFSIZ as c_int - 1
+    } else {
+        len
+    };
+    // SAFETY: `ui` is live and `buf`/`buff` are the caller's buffers.
+    let added = unsafe { UI_add_input_string(ui, prompt, 0, buf, min, max) } >= 0
+        && (verify == 0
+            // SAFETY: `ui` is live; the verify buffer is this frame's own.
+            || unsafe { UI_add_verify_string(ui, prompt, 0, buff.as_mut_ptr(), min, max, buf) }
+                >= 0);
+    if added {
+        // SAFETY: `ui` is live.
+        ret = unsafe { UI_process(ui) };
+        // SAFETY: `buff` is this frame's own array; the cleanse is the success path's only.
+        unsafe { OPENSSL_cleanse(buff.as_mut_ptr().cast::<c_void>(), BUFSIZ) };
+    }
+    // SAFETY: `ui` is a live object this call created.
+    unsafe { UI_free(ui) };
+    ret
 }
 
 /// `int EVP_SignFinal_ex(EVP_MD_CTX *ctx, unsigned char *sigret, unsigned int *siglen,
@@ -693,11 +782,145 @@ pub unsafe extern "C" fn EVP_OpenFinal(
     i
 }
 
+/// `int EVP_SealInit(EVP_CIPHER_CTX *ctx, const EVP_CIPHER *type, unsigned char **ek, int *ekl,
+/// unsigned char *iv, EVP_PKEY **pubk, int npubk)` — `crypto/evp/p_seal.c:22`.
+///
+/// Three states, and the middle one is a success with no work — the `EVP_OpenInit` shape read
+/// encrypt-side. A non-NULL `type` resets and initialises the cipher context; a `npubk <= 0` or a
+/// NULL `pubk` **answers 1 immediately**, before any random is drawn; otherwise a fresh key is
+/// generated into the stack buffer and an IV is drawn with `RAND_priv_bytes_ex`. Each `pubk[i]`
+/// then wraps that same key: `ek[i]` is sized by `EVP_PKEY_get_size(pubk[i])` and `ekl[i]` is the
+/// provider's answer, not the caller's.
+///
+/// The answer is `npubk` on the loop's normal exit and 0 on every `goto err`, so the `pctx = NULL`
+/// after the loop is load-bearing: the shared cleanup must free a per-key context exactly once.
+///
+/// # Safety
+/// `ctx` live; `type_` NULL or live; when `npubk > 0`, `pubk` points at `npubk` live keys, `ek`
+/// at `npubk` writable pointers, `ekl` at `npubk` writable ints, and `iv` at
+/// `EVP_CIPHER_CTX_get_iv_length(ctx)` writable bytes.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_SealInit(
+    ctx: *mut EvpCipherCtx,
+    type_: *const EvpCipher,
+    ek: *mut *mut c_uchar,
+    ekl: *mut c_int,
+    iv: *mut c_uchar,
+    pubk: *mut *mut EvpPkey,
+    npubk: c_int,
+) -> c_int {
+    let mut key = [0u8; EVP_MAX_KEY_LENGTH as usize];
+    let mut libctx: *mut c_void = ptr::null_mut();
+    let mut pctx: *mut EvpPkeyCtx = ptr::null_mut();
+    let mut rv: c_int = 0;
+
+    if !type_.is_null() {
+        // SAFETY: `ctx` is live per the contract.
+        unsafe { EVP_CIPHER_CTX_reset(ctx) };
+        // SAFETY: `ctx` is live, `type_` is live per the check above, and the three NULLs are the
+        // authority's own.
+        if unsafe { EVP_EncryptInit_ex(ctx, type_, ptr::null_mut(), ptr::null(), ptr::null()) } == 0
+        {
+            return 0;
+        }
+    }
+
+    // SAFETY: `ctx` is live per the contract.
+    let cipher = unsafe { EVP_CIPHER_CTX_get0_cipher(ctx) };
+    if !cipher.is_null() {
+        // SAFETY: `cipher` is live per the check above.
+        let prov = unsafe { EVP_CIPHER_get0_provider(cipher) };
+        if !prov.is_null() {
+            // SAFETY: `prov` is live per the check above.
+            libctx = unsafe { ossl_provider_libctx(prov) };
+        }
+    }
+
+    if npubk <= 0 || pubk.is_null() {
+        return 1;
+    }
+
+    // SAFETY: `ctx` is live per the contract and `key` is this frame's own `EVP_MAX_KEY_LENGTH`
+    // bytes.
+    if unsafe { crate::evp::cipher_ctx::EVP_CIPHER_CTX_rand_key(ctx, key.as_mut_ptr()) } <= 0 {
+        return 0;
+    }
+
+    'body: {
+        // SAFETY: `ctx` is live per the contract.
+        let mut len = unsafe { EVP_CIPHER_CTX_get_iv_length(ctx) };
+        if len < 0 {
+            break 'body;
+        }
+
+        // SAFETY: `libctx` is the cipher's provider context or NULL, and `iv` is `len` writable
+        // bytes per the contract.
+        if unsafe { RAND_priv_bytes_ex(libctx, iv, len as usize, 0) } <= 0 {
+            break 'body;
+        }
+
+        // SAFETY: `ctx` is live per the contract.
+        len = unsafe { EVP_CIPHER_CTX_get_key_length(ctx) };
+        if len < 0 {
+            break 'body;
+        }
+
+        // SAFETY: `ctx` is live, `key` is `EVP_MAX_KEY_LENGTH` bytes and `iv` is the block just
+        // written above.
+        if unsafe { EVP_EncryptInit_ex(ctx, ptr::null(), ptr::null_mut(), key.as_ptr(), iv) } == 0 {
+            break 'body;
+        }
+
+        let mut i: c_int = 0;
+        while i < npubk {
+            let keylen = len as usize;
+            // SAFETY: `pubk` holds `npubk` live keys per the contract and `i < npubk`.
+            let mut outlen = unsafe { EVP_PKEY_get_size(*pubk.add(i as usize)) } as usize;
+
+            // SAFETY: `libctx` is the provider context or NULL, `pubk[i]` is live, and the NULL
+            // property query is the authority's.
+            pctx =
+                unsafe { EVP_PKEY_CTX_new_from_pkey(libctx, *pubk.add(i as usize), ptr::null()) };
+            if pctx.is_null() {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::P_SEAL_62) };
+                break 'body;
+            }
+
+            // SAFETY: `pctx` is live.
+            if unsafe { EVP_PKEY_encrypt_init(pctx) } <= 0 {
+                break 'body;
+            }
+            // SAFETY: `pctx` is live, `ek[i]` is `EVP_PKEY_get_size(pubk[i])` writable bytes per
+            // the contract, and `key` is `keylen` readable bytes.
+            if unsafe {
+                EVP_PKEY_encrypt(pctx, *ek.add(i as usize), &mut outlen, key.as_ptr(), keylen)
+            } <= 0
+            {
+                break 'body;
+            }
+            // SAFETY: `ekl` holds `npubk` writable slots per the contract and `i < npubk`.
+            unsafe { *ekl.add(i as usize) = outlen as c_int };
+            // SAFETY: `pctx` is live and was created by this call.
+            unsafe { EVP_PKEY_CTX_free(pctx) };
+            i += 1;
+        }
+        pctx = ptr::null_mut();
+        rv = npubk;
+    }
+
+    // SAFETY: `pctx` is NULL or a live context this call created.
+    unsafe { EVP_PKEY_CTX_free(pctx) };
+    // SAFETY: `key` is this frame's own array.
+    unsafe { OPENSSL_cleanse(key.as_mut_ptr().cast::<c_void>(), key.len()) };
+    rv
+}
+
 /// `int EVP_SealFinal(EVP_CIPHER_CTX *ctx, unsigned char *out, int *outl)` —
 /// `crypto/evp/p_seal.c:80`.
 ///
-/// `EVP_OpenFinal`'s encrypt-side twin, and identical in shape. Its `EVP_SealInit` sibling is
-/// **not** here: it needs the random layer (Phase 9), and this half does not.
+/// `EVP_OpenFinal`'s encrypt-side twin, and identical in shape. Its `EVP_SealInit` sibling is the
+/// function immediately above (D315), and this half still needs no random.
 ///
 /// # Safety
 /// `ctx` live; `out` writable for a block; `outl` writable.

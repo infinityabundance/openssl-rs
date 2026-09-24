@@ -1,0 +1,52 @@
+census: the provider row state becomes a projection, so a stratum's activation cannot move it (D295)
+
+The precondition D294 recorded for activating Phase 9, discharged before the
+activation rather than after it.
+
+gen_provider_algorithms.py derived each row's state directly:
+
+    row["state"] = "open" if phase == 8 else "deferred"
+
+which is a statement about stratum 8 rather than about the row. Activating phase 9
+with that line in place would have reclassified phase 8's 140 open rows as deferred,
+and phase_state.py's rule -- "a stratum may not be complete while any row it owns is
+open" -- would then have let phase 8 reach open_in_this_stratum == 0 with those rows
+never published.
+
+The row vocabulary is now implementation_state, implemented/unimplemented, and
+whether an unlanded row is open for a stratum or handed on by it is a derived block
+in the census body: projection.open[N] and projection.handed_on[N]. Both are
+functions of (owning_phase, implementation_state) alone.
+
+What made owning_phase a fact for every row: the plan's operation_defaults covers a
+whole operation and its overrides carve out the rows a subphase names differently, so
+plan_for answers for a landed row exactly as for an unlanded one. The old code
+consulted the plan only for unlanded rows and then gave every landed row
+owning_phase = 8 through setdefault -- the same stratum-8 assumption in a second
+place. The plan now runs over every row, and a landed row's blocked_by is cleared
+rather than left carrying the reason it was once blocked.
+
+The set does not move, and that is the check. Before: 166 implemented / 140 open /
+690 deferred, summed 996. After: 166 implemented / 830 unimplemented, with
+projection.open = {8: 140, 9: 15, 10: 636, 13: 39}. Phase 8's 140 are unchanged and
+the 15 rows that were invisible as deferred while phase 8 was active are now visibly
+open for the stratum that owns them.
+
+Consumers: phase_state.py's rule becomes "no row it owns is unimplemented", which
+needs no active-stratum notion; provider_court_coverage.py reads the renamed field;
+regression_guard.py records open_by_phase and handed_on_by_phase from the census's
+own projection rather than recomputing a phase-relative state.
+
+Both new invariants are fail-closed and the self-test proves it. The weak-tier reader
+now rejects a row carrying the retired `state` field (a hand-edit that reintroduced
+it would otherwise be silently ignored while every other consumer read the renamed
+one) and checks `projection` against a recomputation from the rows. --self-test
+provokes both against mutated copies of the real artefact.
+
+One defect found by running that self-test, recorded at the site: its first version
+reported both invariants "NOT caught" because `OUT = probe` sat inside a nested
+function without a global declaration, so the weak tier kept reading the committed
+file. Same class as the defect it was written to catch -- a check that appears to run
+and reads the wrong thing.
+
+PIPELINE OK, 85 courts, 31469 observations.

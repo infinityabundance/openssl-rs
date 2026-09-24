@@ -1,0 +1,116 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "all_pass": true,
+    "authority": "openssl-3.6.4-production",
+    "claim": "A passing RT-* court means the candidate produced the same observable transcript as the authority for the behaviours that probe exercises -- differential compatibility, NOT that its output is unpredictable (docs/PARITY_MODEL.md, docs/PHASE-9-SUBPHASES.md section 3.3). `pending_courts` names the courts the plan gives this stratum that have not landed; each is printed on every run so that 'not run yet' cannot be read as 'passed'.",
+    "courts": [
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 361,
+        "candidate_exit_code": 0,
+        "candidate_observations": 361,
+        "candidate_stderr_tail": [],
+        "court": "RT-DRBG",
+        "crashed": false,
+        "probe": "courts/phase9/rt_drbg_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase9/probes/rt_drbg_probe.authority",
+          "candidate": "artifacts/phase9/probes/rt_drbg_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 129,
+        "candidate_exit_code": 0,
+        "candidate_observations": 129,
+        "candidate_stderr_tail": [],
+        "court": "RT-RAND",
+        "crashed": false,
+        "probe": "courts/phase9/rt_rand_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase9/probes/rt_rand_probe.authority",
+          "candidate": "artifacts/phase9/probes/rt_rand_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 467,
+        "candidate_exit_code": 0,
+        "candidate_observations": 467,
+        "candidate_stderr_tail": [],
+        "court": "RT-BN-RAND",
+        "crashed": false,
+        "probe": "courts/phase9/rt_bn_rand_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase9/probes/rt_bn_rand_probe.authority",
+          "candidate": "artifacts/phase9/probes/rt_bn_rand_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 61,
+        "candidate_exit_code": 0,
+        "candidate_observations": 61,
+        "candidate_stderr_tail": [],
+        "court": "RT-RAND-USERS",
+        "crashed": false,
+        "probe": "courts/phase9/rt_rand_users_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase9/probes/rt_rand_users_probe.authority",
+          "candidate": "artifacts/phase9/probes/rt_rand_users_probe.candidate"
+        },
+        "verdict": "pass"
+      }
+    ],
+    "pending_courts": {
+      "CT-DRBG": "9.4 -- the DRBGs' construction vectors, which the pinned tree already carries: `test/recipes/30-test_evp_data/evprand.txt` mirror the NIST CAVP `drbgtestvectors.zip` sets, with the URL written in the file, and `evpkdf_hmac_drbg.txt` carries the HMAC-DRBG KDF cases. No network fetch is needed and none is permitted (docs/AUTHORITY_POLICY.md)."
+    },
+    "summary": {
+      "fail": 0,
+      "pass": 4,
+      "total": 4
+    }
+  },
+  "generator": "forensics/tools/phase9_courts.py",
+  "inputs": [
+    {
+      "name": "authority-symbols",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+      "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase9/rt_drbg_probe.c",
+      "sha256": "ff28186b339c5d666151332184383080981405286fcac3d38518b3d54e1d5b63"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase9/rt_rand_probe.c",
+      "sha256": "446ce654ced9048505cd809d4b71458e3ad91f21d82074c53f197398fb0f75be"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase9/rt_bn_rand_probe.c",
+      "sha256": "afb7b833fd1cd012cd92fdbfb8cbffc439d28fff96286a38ac46a4738b897dbe"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase9/rt_rand_users_probe.c",
+      "sha256": "870654569b9f99a2c271fe15a148a7eb14ecac1d640ed26003ee659f991713cb"
+    }
+  ],
+  "kind": "phase9-courts",
+  "schema": "openssl-rs/atlas/phase9-courts/v1"
+}

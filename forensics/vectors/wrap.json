@@ -1,0 +1,183 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "algorithm": "wrap",
+    "court": "CT-CIPHER",
+    "openssl_cipher": "id-aes{128,192,256}-{wrap,wrap-pad}",
+    "primary_source": "RFC 3394; RFC 5649",
+    "provenance": {
+      "authority": "openssl-3.6.4-production",
+      "corpus": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_aes_wrap.txt",
+      "corpus_sha256": "33db6332870dc26cc2c878df4d41daf9bc4ca9f3a364b1d51da090646f61187a",
+      "note": "Candidate-only construction verification: the primary sources are RFC 3394 (KW) and RFC 5649 (KWP), and the bytes are mirrored through the pinned corpus (`corpus_sha256`), whose identity is fixed. No independent key-wrap implementation is present in the pinned court image, so no boundary vector carries an independent oracle here: both constructions refuse a zero-length input and every legal input's output is already a published value. This is the recorded cost of D208, not an omission.",
+      "primary_source": "RFC 3394; RFC 5649"
+    },
+    "standard": "RFC 3394; RFC 5649",
+    "vectors": [
+      {
+        "aad_hex": "",
+        "cipher": "id-aes128-wrap",
+        "expected_hex": "1fa68b0a8112b447aef34bd8fb5a7b829d3e862371d2cfe5",
+        "id": "wrap-1",
+        "input_hex": "00112233445566778899aabbccddeeff",
+        "iv_hex": "",
+        "key_hex": "000102030405060708090a0b0c0d0e0f",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_aes_wrap.txt",
+          "form": "keyed-block",
+          "line": 12,
+          "mirror_sha256": "33db6332870dc26cc2c878df4d41daf9bc4ca9f3a364b1d51da090646f61187a",
+          "primary_source": "RFC 3394; RFC 5649",
+          "title": ""
+        },
+        "standard": "RFC 3394; RFC 5649",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "id-aes192-wrap",
+        "expected_hex": "96778b25ae6ca435f92b5b97c050aed2468ab8a17ad84e5d",
+        "id": "wrap-2",
+        "input_hex": "00112233445566778899aabbccddeeff",
+        "iv_hex": "",
+        "key_hex": "000102030405060708090a0b0c0d0e0f1011121314151617",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_aes_wrap.txt",
+          "form": "keyed-block",
+          "line": 17,
+          "mirror_sha256": "33db6332870dc26cc2c878df4d41daf9bc4ca9f3a364b1d51da090646f61187a",
+          "primary_source": "RFC 3394; RFC 5649",
+          "title": ""
+        },
+        "standard": "RFC 3394; RFC 5649",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "id-aes256-wrap",
+        "expected_hex": "64e8c3f9ce0f5ba263e9777905818a2a93c8191e7d6e8ae7",
+        "id": "wrap-3",
+        "input_hex": "00112233445566778899aabbccddeeff",
+        "iv_hex": "",
+        "key_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_aes_wrap.txt",
+          "form": "keyed-block",
+          "line": 22,
+          "mirror_sha256": "33db6332870dc26cc2c878df4d41daf9bc4ca9f3a364b1d51da090646f61187a",
+          "primary_source": "RFC 3394; RFC 5649",
+          "title": ""
+        },
+        "standard": "RFC 3394; RFC 5649",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "id-aes192-wrap",
+        "expected_hex": "031d33264e15d33268f24ec260743edce1c6c7ddee725a936ba814915c6762d2",
+        "id": "wrap-4",
+        "input_hex": "00112233445566778899aabbccddeeff0001020304050607",
+        "iv_hex": "",
+        "key_hex": "000102030405060708090a0b0c0d0e0f1011121314151617",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_aes_wrap.txt",
+          "form": "keyed-block",
+          "line": 27,
+          "mirror_sha256": "33db6332870dc26cc2c878df4d41daf9bc4ca9f3a364b1d51da090646f61187a",
+          "primary_source": "RFC 3394; RFC 5649",
+          "title": ""
+        },
+        "standard": "RFC 3394; RFC 5649",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "id-aes256-wrap",
+        "expected_hex": "a8f9bc1612c68b3ff6e6f4fbe30e71e4769c8b80a32cb8958cd5d17d6b254da1",
+        "id": "wrap-5",
+        "input_hex": "00112233445566778899aabbccddeeff0001020304050607",
+        "iv_hex": "",
+        "key_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_aes_wrap.txt",
+          "form": "keyed-block",
+          "line": 32,
+          "mirror_sha256": "33db6332870dc26cc2c878df4d41daf9bc4ca9f3a364b1d51da090646f61187a",
+          "primary_source": "RFC 3394; RFC 5649",
+          "title": ""
+        },
+        "standard": "RFC 3394; RFC 5649",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "id-aes192-wrap-pad",
+        "expected_hex": "138bdeaa9b8fa7fc61f97742e72248ee5ae6ae5360d1ae6a5f54f373fa543b6a",
+        "id": "wrap-6",
+        "input_hex": "c37b7e6492584340bed12207808941155068f738",
+        "iv_hex": "",
+        "key_hex": "5840df6e29b02af1ab493b705bf16ea1ae8338f4dcc176a8",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_aes_wrap.txt",
+          "form": "keyed-block",
+          "line": 59,
+          "mirror_sha256": "33db6332870dc26cc2c878df4d41daf9bc4ca9f3a364b1d51da090646f61187a",
+          "primary_source": "RFC 3394; RFC 5649",
+          "title": ""
+        },
+        "standard": "RFC 3394; RFC 5649",
+        "tag_hex": ""
+      },
+      {
+        "aad_hex": "",
+        "cipher": "id-aes192-wrap-pad",
+        "expected_hex": "afbeb0f07dfbf5419200f2ccb50bb24f",
+        "id": "wrap-7",
+        "input_hex": "466f7250617369",
+        "iv_hex": "",
+        "key_hex": "5840df6e29b02af1ab493b705bf16ea1ae8338f4dcc176a8",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_aes_wrap.txt",
+          "form": "keyed-block",
+          "line": 64,
+          "mirror_sha256": "33db6332870dc26cc2c878df4d41daf9bc4ca9f3a364b1d51da090646f61187a",
+          "primary_source": "RFC 3394; RFC 5649",
+          "title": ""
+        },
+        "standard": "RFC 3394; RFC 5649",
+        "tag_hex": ""
+      }
+    ]
+  },
+  "generator": "forensics/tools/correctness_vectors.py",
+  "inputs": [
+    {
+      "name": "authority-evp-vector-file",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_aes_wrap.txt",
+      "sha256": "33db6332870dc26cc2c878df4d41daf9bc4ca9f3a364b1d51da090646f61187a"
+    }
+  ],
+  "kind": "cipher-vectors-wrap",
+  "schema": "openssl-rs/atlas/cipher-vectors-wrap/v1"
+}

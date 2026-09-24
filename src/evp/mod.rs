@@ -45,24 +45,37 @@
 pub mod algorithm;
 pub mod asymcipher;
 pub mod bio_enc;
+pub mod bio_ok;
 pub mod cipher;
 pub mod cipher_ctx;
 pub mod digest;
 pub mod encode;
 pub mod evp_pbe;
+// Phase 7's `crypto/evp/evp_pkey.c` (D368): the legacy `PKCS8_PRIV_KEY_INFO` -> `EVP_PKEY`
+// step `pem_read_bio_key_legacy` reaches. A partial module -- the unit's encoder half and the
+// `EVP_PKCS82PKEY*` exports are Phase 10's and are withheld with their coordinates.
+pub mod evp_pkey;
 pub mod exchange;
 pub mod fetch;
 pub mod kdf;
 pub mod kem;
 pub mod keymgmt;
 pub mod keymgmt_lib;
+pub mod legacy_blake2;
 pub mod legacy_evp;
+pub mod legacy_md5;
+pub mod legacy_ripemd;
+pub mod legacy_sha;
+pub mod legacy_sha3;
 pub mod mac;
 pub mod method_store;
 pub mod p5_crpt;
 pub mod p5_crpt2;
 pub mod p5_scrypt;
+pub mod p_dec;
+pub mod p_enc;
 pub mod p_legacy;
+pub mod p_legacy_assign;
 pub mod pbe;
 pub mod pem_bridge;
 pub mod pkey;

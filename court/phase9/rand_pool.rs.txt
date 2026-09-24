@@ -1,0 +1,1256 @@
+//! Staged transcription of OpenSSL 3.6.4's RAND entropy pool.
+//!
+//! # Authority
+//!
+//! Read from `forensics/authorities/src/openssl-3.6.4/`:
+//!
+//! * `crypto/rand/rand_pool.c` — the pool itself; transcribed as `mod rand_pool`.
+//! * `include/crypto/rand_pool.h` — the `RAND_POOL` layout, `RAND_POOL_FACTOR`,
+//!   `RAND_POOL_MAX_LENGTH`, `RAND_POOL_MIN_ALLOCATION()`. This is the header that
+//!   actually exists in the 3.6.4 tree; the `include/internal/rand_pool.h` and
+//!   `crypto/rand/rand_pool_local.h` paths named in the task do **not** exist here.
+//! * `providers/implementations/rands/seeding/rand_unix.c` — the real home of
+//!   `ossl_pool_acquire_entropy`, `ossl_pool_add_nonce_data`,
+//!   `ossl_rand_pool_init`/`_cleanup`/`_keep_random_devices_open` and the
+//!   `/dev/*` device cache; transcribed as `mod rand_unix`.
+//! * `include/crypto/rand.h` — `RAND_DRBG_STRENGTH` (256), `DEVRANDOM`,
+//!   `DEVRANDOM_WAIT`, `DEVRANDOM_SAFE_KERNEL` (4, 8),
+//!   `DEVRANDM_WAIT_USE_SELECT` (1), `OPENSSL_RAND_SEED_DEVRANDOM_SHM_ID` (114),
+//!   and the `ossl_pool_acquire_entropy`/`ossl_pool_add_nonce_data` prototypes.
+//! * `crypto/rand/prov_seed.c:88` — the sole in-tree caller of
+//!   `ossl_pool_add_nonce_data`.
+//!
+//! # Symbols named by the task that do not exist in this authority
+//!
+//! * `ossl_rand_pool_entropy_required` — no such symbol anywhere in 3.6.4; the
+//!   function is `ossl_rand_pool_entropy_needed`, transcribed below.
+//! * `ossl_rand_pool_add_nonce_data` / `ossl_rand_pool_add_additional_data` — the
+//!   3.6.4 name is `ossl_pool_add_nonce_data`; there is no
+//!   `..._add_additional_data` and no additional-data function in this unit.
+//! * `ossl_rand_pool_init` / `_cleanup` / `_keep_random_devices_open` live in
+//!   `rand_unix.c`, not `rand_pool.c`.
+//! * Fork-id/discriminator logic in the nonce: not present. The 3.6.4 nonce is
+//!   `{pid, tid, time}`. Fork discrimination lives in
+//!   `providers/implementations/rands/drbg.c` (`drbg->fork_id` compared against
+//!   `openssl_get_fork_id()`), which is outside this unit.
+//!
+//! # Not transcribed (not built on the admitted linux/x86-64 profile)
+//!
+//! * `providers/implementations/rands/seeding/rand_win.c` — the Windows arm;
+//!   guarded by `#if defined(OPENSSL_SYS_WINDOWS) || defined(OPENSSL_SYS_WIN32)`
+//!   (confirmed at the top of that file). Not built.
+//! * `rand_unix.c`'s `OPENSSL_SYS_VOS` arm — its own `ossl_pool_acquire_entropy`
+//!   plus empty `ossl_rand_pool_cleanup`/`_keep_random_devices_open`.
+//! * `rand_unix.c`'s `sysctl_random` (BSD), and the
+//!   `OPENSSL_RAND_SEED_RDTSC`, `OPENSSL_RAND_SEED_RDCPU`,
+//!   `OPENSSL_RAND_SEED_EGD` and `OPENSSL_RAND_SEED_NONE` arms of
+//!   `ossl_pool_acquire_entropy`. Named only.
+//!
+//! # Conventions
+//!
+//! Internal, non-exported functions only (no `#[no_mangle]`, no `extern "C"`).
+//! `MISSING(crate):` marks a symbol the authority calls that this crate does not
+//! yet declare; the call is left in place, never stubbed.
+//!
+//! SPDX-License-Identifier: Apache-2.0
+
+#![allow(dead_code)]
+#![allow(non_camel_case_types)]
+
+// ===========================================================================
+// Section A — crypto/rand/rand_pool.c
+// ===========================================================================
+
+pub(crate) mod rand_pool {
+    use core::ffi::{c_int, c_uint, c_uchar, c_void, CStr};
+    use core::mem::size_of;
+    use core::ptr;
+
+    use crate::runtime::err::err_sites;
+    use crate::runtime::err::{raise_site, raise_site_data};
+    use crate::runtime::mem::{cleanse, CRYPTO_clear_free, CRYPTO_free, CRYPTO_zalloc};
+    use crate::runtime::secure::{CRYPTO_secure_clear_free, CRYPTO_secure_zalloc};
+
+    /// `RAND_POOL_FACTOR` — `include/crypto/rand_pool.h:35`.
+    const RAND_POOL_FACTOR: usize = 256;
+
+    /// `RAND_DRBG_STRENGTH` — `include/openssl/rand.h:37`.
+    ///
+    /// MISSING(crate): the crate does not define `RAND_DRBG_STRENGTH` anywhere in
+    /// `src/`; the value is transcribed here.
+    const RAND_DRBG_STRENGTH: usize = 256;
+
+    /// `RAND_POOL_MAX_LENGTH` — `include/crypto/rand_pool.h:36`.
+    ///
+    /// `(RAND_POOL_FACTOR * 3 * (RAND_DRBG_STRENGTH / 16))` = 12288.
+    const RAND_POOL_MAX_LENGTH: usize = RAND_POOL_FACTOR * 3 * (RAND_DRBG_STRENGTH / 16);
+
+    /// `RAND_POOL_MIN_ALLOCATION(secure)` — `include/crypto/rand_pool.h:59`.
+    const fn rand_pool_min_allocation(secure: c_int) -> usize {
+        if secure != 0 {
+            16
+        } else {
+            48
+        }
+    }
+
+    /// `ENTROPY_TO_BYTES(bits, entropy_factor)` — `rand_pool.c:161-162`.
+    ///
+    /// `(((bits) * (entropy_factor) + 7) / 8)`. The multiply/add are `wrapping_*`
+    /// because the crate builds with `overflow-checks = true` and the C is a
+    /// `size_t` expression.
+    fn entropy_to_bytes(bits: usize, entropy_factor: c_uint) -> usize {
+        bits.wrapping_mul(entropy_factor as usize)
+            .wrapping_add(7)
+            / 8
+    }
+
+    /// The authority's translation unit, so a failing allocation records its
+    /// true coordinates.
+    const FILE: &CStr = c"crypto/rand/rand_pool.c";
+
+    // Call-site lines used as the `file`/`line` recorded by the allocator.
+    const LINE_ZALLOC_POOL: c_int = 25;
+    const LINE_SECURE_ZALLOC_BUFFER: c_int = 38;
+    const LINE_ZALLOC_BUFFER: c_int = 40;
+    const LINE_FREE_POOL_ERR: c_int = 50;
+    const LINE_ZALLOC_ATTACH: c_int = 63;
+    const LINE_SECURE_CLEAR_FREE_BUFFER: c_int = 100;
+    const LINE_CLEAR_FREE_BUFFER: c_int = 102;
+    const LINE_FREE_POOL: c_int = 105;
+    const LINE_SECURE_ZALLOC_GROW: c_int = 214;
+    const LINE_ZALLOC_GROW: c_int = 216;
+    const LINE_SECURE_CLEAR_FREE_GROW: c_int = 221;
+    const LINE_CLEAR_FREE_GROW: c_int = 223;
+
+    /// `typedef struct rand_pool_st RAND_POOL` — `include/crypto/rand_pool.h:70-82`.
+    ///
+    /// Field order and widths are the authority's; `attached` and `secure` are
+    /// C `int`, the lengths and counts are `size_t`.
+    #[repr(C)]
+    pub(crate) struct RandPool {
+        /// Points to the beginning of the random pool.
+        pub(crate) buffer: *mut c_uchar,
+        /// Current number of random bytes contained in the pool.
+        pub(crate) len: usize,
+        /// True pool was attached to existing buffer.
+        pub(crate) attached: c_int,
+        /// 1: allocated on the secure heap, 0: otherwise.
+        pub(crate) secure: c_int,
+        /// Minimum number of random bytes requested.
+        pub(crate) min_len: usize,
+        /// Maximum number of random bytes (allocated buffer size).
+        pub(crate) max_len: usize,
+        /// Current number of bytes allocated.
+        pub(crate) alloc_len: usize,
+        /// Current entropy count in bits.
+        pub(crate) entropy: usize,
+        /// Requested entropy count in bits.
+        pub(crate) entropy_requested: usize,
+    }
+
+    /// `RAND_POOL *ossl_rand_pool_new(int entropy_requested, int secure, size_t min_len, size_t max_len)`
+    /// — `rand_pool.c:22-52`.
+    ///
+    /// No caller pointer is dereferenced, so this is a safe `pub(crate) fn`; the
+    /// returned pointer is exclusively owned by the caller.
+    pub(crate) fn ossl_rand_pool_new(
+        entropy_requested: c_int,
+        secure: c_int,
+        min_len: usize,
+        max_len: usize,
+    ) -> *mut RandPool {
+        // SAFETY: `CRYPTO_zalloc` answers null or `sizeof(RandPool)` zeroed bytes,
+        // as the authority's `OPENSSL_zalloc(sizeof(*pool))`.
+        let pool =
+            unsafe { CRYPTO_zalloc(size_of::<RandPool>(), FILE.as_ptr(), LINE_ZALLOC_POOL) }
+                .cast::<RandPool>();
+
+        if pool.is_null() {
+            return ptr::null_mut();
+        }
+
+        let min_alloc_size = rand_pool_min_allocation(secure);
+        // SAFETY: `pool` is a fresh, exclusively owned, zeroed `RandPool`.
+        let p = unsafe { &mut *pool };
+
+        p.min_len = min_len;
+        p.max_len = if max_len > RAND_POOL_MAX_LENGTH {
+            RAND_POOL_MAX_LENGTH
+        } else {
+            max_len
+        };
+        p.alloc_len = if min_len < min_alloc_size {
+            min_alloc_size
+        } else {
+            min_len
+        };
+        if p.alloc_len > p.max_len {
+            p.alloc_len = p.max_len;
+        }
+
+        if secure != 0 {
+            // SAFETY: the secure allocator answers null or `alloc_len` zeroed
+            // bytes; the authority's `OPENSSL_secure_zalloc`.
+            p.buffer = unsafe {
+                CRYPTO_secure_zalloc(p.alloc_len, FILE.as_ptr(), LINE_SECURE_ZALLOC_BUFFER)
+            }
+            .cast::<c_uchar>();
+        } else {
+            // SAFETY: the plain allocator answers null or `alloc_len` zeroed bytes;
+            // the authority's `OPENSSL_zalloc`.
+            p.buffer =
+                unsafe { CRYPTO_zalloc(p.alloc_len, FILE.as_ptr(), LINE_ZALLOC_BUFFER) }
+                    .cast::<c_uchar>();
+        }
+
+        if p.buffer.is_null() {
+            // SAFETY: `pool` came from `CRYPTO_zalloc` above, was never published,
+            // and is released exactly once here.
+            unsafe { CRYPTO_free(pool.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_POOL_ERR) };
+            return ptr::null_mut();
+        }
+
+        p.entropy_requested = entropy_requested as usize;
+        p.secure = secure;
+        pool
+    }
+
+    /// `RAND_POOL *ossl_rand_pool_attach(const unsigned char *buffer, size_t len, size_t entropy)`
+    /// — `rand_pool.c:60-82`.
+    ///
+    /// The `const` is cast away exactly as the authority does; attached buffers
+    /// are never modified or freed.
+    pub(crate) fn ossl_rand_pool_attach(
+        buffer: *const c_uchar,
+        len: usize,
+        entropy: usize,
+    ) -> *mut RandPool {
+        // SAFETY: `CRYPTO_zalloc` answers null or `sizeof(RandPool)` zeroed bytes.
+        let pool =
+            unsafe { CRYPTO_zalloc(size_of::<RandPool>(), FILE.as_ptr(), LINE_ZALLOC_ATTACH) }
+                .cast::<RandPool>();
+
+        if pool.is_null() {
+            return ptr::null_mut();
+        }
+
+        // SAFETY: `pool` is a fresh, exclusively owned, zeroed `RandPool`.
+        let p = unsafe { &mut *pool };
+
+        p.buffer = buffer as *mut c_uchar;
+        p.len = len;
+        p.attached = 1;
+        p.min_len = p.len;
+        p.max_len = p.len;
+        p.alloc_len = p.len;
+        p.entropy = entropy;
+        pool
+    }
+
+    /// `void ossl_rand_pool_free(RAND_POOL *pool)` — `rand_pool.c:87-106`.
+    ///
+    /// # Safety
+    /// `pool` is null or a live pool returned by `ossl_rand_pool_new`/`_attach`
+    /// that is not used again afterwards.
+    pub(crate) unsafe fn ossl_rand_pool_free(pool: *mut RandPool) {
+        if pool.is_null() {
+            return;
+        }
+
+        // SAFETY: the caller's contract: `pool` is live and exclusively owned.
+        let p = unsafe { &mut *pool };
+
+        if p.attached == 0 {
+            if p.secure != 0 {
+                // SAFETY: `p.buffer` is the secure allocation of `p.alloc_len`
+                // bytes, released exactly once; the authority routes this to
+                // `OPENSSL_secure_clear_free`.
+                unsafe {
+                    CRYPTO_secure_clear_free(
+                        p.buffer.cast::<c_void>(),
+                        p.alloc_len,
+                        FILE.as_ptr(),
+                        LINE_SECURE_CLEAR_FREE_BUFFER,
+                    )
+                };
+            } else {
+                // SAFETY: `p.buffer` is the plain allocation of `p.alloc_len`
+                // bytes, released exactly once; `OPENSSL_clear_free`.
+                unsafe {
+                    CRYPTO_clear_free(
+                        p.buffer.cast::<c_void>(),
+                        p.alloc_len,
+                        FILE.as_ptr(),
+                        LINE_CLEAR_FREE_BUFFER,
+                    )
+                };
+            }
+        }
+
+        // SAFETY: `pool` was allocated by `CRYPTO_zalloc` and is released once.
+        unsafe { CRYPTO_free(pool.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_POOL) };
+    }
+
+    /// `const unsigned char *ossl_rand_pool_buffer(RAND_POOL *pool)`
+    /// — `rand_pool.c:111-114`.
+    ///
+    /// # Safety
+    /// `pool` is a live pool.
+    pub(crate) unsafe fn ossl_rand_pool_buffer(pool: *mut RandPool) -> *const c_uchar {
+        // SAFETY: the caller's contract: `pool` is live and readable.
+        unsafe { (*pool).buffer }
+    }
+
+    /// `size_t ossl_rand_pool_entropy(RAND_POOL *pool)` — `rand_pool.c:119-122`.
+    ///
+    /// # Safety
+    /// `pool` is a live pool.
+    pub(crate) unsafe fn ossl_rand_pool_entropy(pool: *mut RandPool) -> usize {
+        // SAFETY: the caller's contract: `pool` is live and readable.
+        unsafe { (*pool).entropy }
+    }
+
+    /// `size_t ossl_rand_pool_length(RAND_POOL *pool)` — `rand_pool.c:127-130`.
+    ///
+    /// # Safety
+    /// `pool` is a live pool.
+    pub(crate) unsafe fn ossl_rand_pool_length(pool: *mut RandPool) -> usize {
+        // SAFETY: the caller's contract: `pool` is live and readable.
+        unsafe { (*pool).len }
+    }
+
+    /// `unsigned char *ossl_rand_pool_detach(RAND_POOL *pool)` — `rand_pool.c:138-144`.
+    ///
+    /// The caller now owns the buffer and must either free it or hand it back
+    /// through `ossl_rand_pool_reattach`.
+    ///
+    /// # Safety
+    /// `pool` is a live pool.
+    pub(crate) unsafe fn ossl_rand_pool_detach(pool: *mut RandPool) -> *mut c_uchar {
+        // SAFETY: the caller's contract: `pool` is live and exclusively owned.
+        let p = unsafe { &mut *pool };
+        let ret = p.buffer;
+        p.buffer = ptr::null_mut();
+        p.entropy = 0;
+        ret
+    }
+
+    /// `void ossl_rand_pool_reattach(RAND_POOL *pool, unsigned char *buffer)`
+    /// — `rand_pool.c:150-155`.
+    ///
+    /// Only the buffer previously detached from *this* pool may be passed.
+    ///
+    /// # Safety
+    /// `pool` is live; `buffer` is the pointer returned by
+    /// `ossl_rand_pool_detach(pool)` and is writable for `pool.len` bytes.
+    pub(crate) unsafe fn ossl_rand_pool_reattach(pool: *mut RandPool, buffer: *mut c_uchar) {
+        // SAFETY: the caller's contract: `pool` is live and exclusively owned.
+        let p = unsafe { &mut *pool };
+        p.buffer = buffer;
+        // SAFETY: `p.buffer` is writable for `p.len` bytes per the contract; the
+        // authority's `OPENSSL_cleanse(pool->buffer, pool->len)`.
+        unsafe { cleanse(p.buffer, p.len) };
+        p.len = 0;
+    }
+
+    /// `size_t ossl_rand_pool_entropy_available(RAND_POOL *pool)`
+    /// — `rand_pool.c:172-181`.
+    ///
+    /// # Safety
+    /// `pool` is a live pool.
+    pub(crate) unsafe fn ossl_rand_pool_entropy_available(pool: *mut RandPool) -> usize {
+        // SAFETY: the caller's contract: `pool` is live and readable.
+        let p = unsafe { &*pool };
+        if p.entropy < p.entropy_requested {
+            return 0;
+        }
+        if p.len < p.min_len {
+            return 0;
+        }
+        p.entropy
+    }
+
+    /// `size_t ossl_rand_pool_entropy_needed(RAND_POOL *pool)`
+    /// — `rand_pool.c:188-194`.
+    ///
+    /// # Safety
+    /// `pool` is a live pool.
+    pub(crate) unsafe fn ossl_rand_pool_entropy_needed(pool: *mut RandPool) -> usize {
+        // SAFETY: the caller's contract: `pool` is live and readable.
+        let p = unsafe { &*pool };
+        if p.entropy < p.entropy_requested {
+            return p.entropy_requested.wrapping_sub(p.entropy);
+        }
+        0
+    }
+
+    /// `static int rand_pool_grow(RAND_POOL *pool, size_t len)` — `rand_pool.c:197-228`.
+    ///
+    /// Increase the allocation size — not usable for an attached pool.
+    ///
+    /// # Safety
+    /// `pool` is a live pool.
+    fn rand_pool_grow(pool: *mut RandPool, len: usize) -> c_int {
+        // SAFETY: the caller's contract: `pool` is live and exclusively owned.
+        let p = unsafe { &mut *pool };
+
+        if len > p.alloc_len.wrapping_sub(p.len) {
+            let limit = p.max_len / 2;
+            let mut newlen = p.alloc_len;
+
+            if p.attached != 0 || len > p.max_len.wrapping_sub(p.len) {
+                // SAFETY: a compile-time-constant raise site.
+                unsafe { raise_site(&err_sites::RAND_POOL_205) };
+                return 0;
+            }
+
+            loop {
+                newlen = if newlen < limit {
+                    newlen.wrapping_mul(2)
+                } else {
+                    p.max_len
+                };
+                if !(len > newlen.wrapping_sub(p.len)) {
+                    break;
+                }
+            }
+
+            // SAFETY: either the secure or the plain allocator answers null or
+            // `newlen` zeroed bytes.
+            let fresh = if p.secure != 0 {
+                unsafe { CRYPTO_secure_zalloc(newlen, FILE.as_ptr(), LINE_SECURE_ZALLOC_GROW) }
+            } else {
+                unsafe { CRYPTO_zalloc(newlen, FILE.as_ptr(), LINE_ZALLOC_GROW) }
+            };
+            if fresh.is_null() {
+                return 0;
+            }
+            // SAFETY: `fresh` is writable for `newlen` bytes, `p.buffer` for
+            // `p.len` bytes, and the regions cannot overlap (fresh allocation).
+            unsafe {
+                ptr::copy_nonoverlapping(p.buffer, fresh.cast::<c_uchar>(), p.len);
+            }
+            if p.secure != 0 {
+                // SAFETY: `p.buffer` is the secure allocation of `p.alloc_len`
+                // bytes, released exactly once here.
+                unsafe {
+                    CRYPTO_secure_clear_free(
+                        p.buffer.cast::<c_void>(),
+                        p.alloc_len,
+                        FILE.as_ptr(),
+                        LINE_SECURE_CLEAR_FREE_GROW,
+                    )
+                };
+            } else {
+                // SAFETY: `p.buffer` is the plain allocation of `p.alloc_len`
+                // bytes, released exactly once here.
+                unsafe {
+                    CRYPTO_clear_free(
+                        p.buffer.cast::<c_void>(),
+                        p.alloc_len,
+                        FILE.as_ptr(),
+                        LINE_CLEAR_FREE_GROW,
+                    )
+                };
+            }
+            p.buffer = fresh.cast::<c_uchar>();
+            p.alloc_len = newlen;
+        }
+        1
+    }
+
+    /// `size_t ossl_rand_pool_bytes_needed(RAND_POOL *pool, unsigned int entropy_factor)`
+    /// — `rand_pool.c:236-281`.
+    ///
+    /// # Safety
+    /// `pool` is a live pool.
+    pub(crate) unsafe fn ossl_rand_pool_bytes_needed(
+        pool: *mut RandPool,
+        entropy_factor: c_uint,
+    ) -> usize {
+        // SAFETY: the caller's contract: `pool` is live and readable.
+        let p = unsafe { &*pool };
+        let entropy_needed = unsafe { ossl_rand_pool_entropy_needed(pool) };
+
+        if entropy_factor < 1 {
+            // SAFETY: a compile-time-constant raise site.
+            unsafe { raise_site(&err_sites::RAND_POOL_242) };
+            return 0;
+        }
+
+        let mut bytes_needed = entropy_to_bytes(entropy_needed, entropy_factor);
+
+        if bytes_needed > p.max_len.wrapping_sub(p.len) {
+            /* not enough space left */
+            // The authority's `ERR_raise_data` format string, verbatim:
+            //   "entropy_factor=%u, entropy_needed=%zu, bytes_needed=%zu,"
+            //   "pool->max_len=%zu, pool->len=%zu"
+            let mut msg = format!(
+                "entropy_factor={}, entropy_needed={}, bytes_needed={},pool->max_len={}, pool->len={}",
+                entropy_factor, entropy_needed, bytes_needed, p.max_len, p.len
+            );
+            msg.push('\0');
+            // SAFETY: a compile-time-constant site and a NUL-terminated message
+            // that outlives the call.
+            unsafe { raise_site_data(&err_sites::RAND_POOL_250, msg.as_ptr().cast()) };
+            return 0;
+        }
+
+        if p.len < p.min_len && bytes_needed < p.min_len.wrapping_sub(p.len) {
+            /* to meet the min_len requirement */
+            bytes_needed = p.min_len.wrapping_sub(p.len);
+        }
+
+        /*
+         * Make sure the buffer is large enough for the requested amount of data.
+         * ... (see rand_pool.c:262-273 for the full rationale)
+         */
+        if rand_pool_grow(pool, bytes_needed) == 0 {
+            /* persistent error for this pool */
+            // SAFETY: the caller's contract: `pool` is live and exclusively owned.
+            let p = unsafe { &mut *pool };
+            p.max_len = 0;
+            p.len = 0;
+            return 0;
+        }
+
+        bytes_needed
+    }
+
+    /// `size_t ossl_rand_pool_bytes_remaining(RAND_POOL *pool)` — `rand_pool.c:284-287`.
+    ///
+    /// # Safety
+    /// `pool` is a live pool.
+    pub(crate) unsafe fn ossl_rand_pool_bytes_remaining(pool: *mut RandPool) -> usize {
+        // SAFETY: the caller's contract: `pool` is live and readable.
+        let p = unsafe { &*pool };
+        p.max_len.wrapping_sub(p.len)
+    }
+
+    /// `int ossl_rand_pool_add(RAND_POOL *pool, const unsigned char *buffer, size_t len, size_t entropy)`
+    /// — `rand_pool.c:298-339`.
+    ///
+    /// # Safety
+    /// `pool` is a live pool; `buffer` is null or readable for `len` bytes.
+    pub(crate) unsafe fn ossl_rand_pool_add(
+        pool: *mut RandPool,
+        buffer: *const c_uchar,
+        len: usize,
+        entropy: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract: `pool` is live and exclusively owned.
+        let p = unsafe { &mut *pool };
+
+        if len > p.max_len.wrapping_sub(p.len) {
+            // SAFETY: a compile-time-constant raise site.
+            unsafe { raise_site(&err_sites::RAND_POOL_302) };
+            return 0;
+        }
+
+        if p.buffer.is_null() {
+            // SAFETY: a compile-time-constant raise site.
+            unsafe { raise_site(&err_sites::RAND_POOL_307) };
+            return 0;
+        }
+
+        if len > 0 {
+            /*
+             * Protect against accidentally passing the buffer returned from
+             * ossl_rand_pool_add_begin. The `alloc_len` check keeps the
+             * end-of-allocation comparison determinate (rand_pool.c:311-323).
+             */
+            // SAFETY: `p.len < p.alloc_len <=` the allocation of `p.buffer`, so the
+            // one-past-`len` pointer is within/at the end of that allocation.
+            if p.alloc_len > p.len
+                && unsafe { p.buffer.add(p.len) as *const c_uchar } == buffer
+            {
+                // SAFETY: a compile-time-constant raise site.
+                unsafe { raise_site(&err_sites::RAND_POOL_321) };
+                return 0;
+            }
+            if rand_pool_grow(pool, len) == 0 {
+                return 0;
+            }
+            // SAFETY: `p.buffer` is writable for `p.alloc_len >= p.len + len`
+            // bytes and `buffer` reads for `len` bytes; the regions do not
+            // overlap under the caller's contract.
+            unsafe {
+                ptr::copy_nonoverlapping(buffer, p.buffer.add(p.len), len);
+            }
+            p.len = p.len.wrapping_add(len);
+            p.entropy = p.entropy.wrapping_add(entropy);
+        }
+
+        1
+    }
+
+    /// `unsigned char *ossl_rand_pool_add_begin(RAND_POOL *pool, size_t len)`
+    /// — `rand_pool.c:353-381`.
+    ///
+    /// # Safety
+    /// `pool` is a live pool.
+    pub(crate) unsafe fn ossl_rand_pool_add_begin(pool: *mut RandPool, len: usize) -> *mut c_uchar {
+        if len == 0 {
+            return ptr::null_mut();
+        }
+
+        // SAFETY: the caller's contract: `pool` is live and exclusively owned.
+        let p = unsafe { &mut *pool };
+
+        if len > p.max_len.wrapping_sub(p.len) {
+            // SAFETY: a compile-time-constant raise site.
+            unsafe { raise_site(&err_sites::RAND_POOL_359) };
+            return ptr::null_mut();
+        }
+
+        if p.buffer.is_null() {
+            // SAFETY: a compile-time-constant raise site.
+            unsafe { raise_site(&err_sites::RAND_POOL_364) };
+            return ptr::null_mut();
+        }
+
+        if rand_pool_grow(pool, len) == 0 {
+            return ptr::null_mut();
+        }
+
+        // SAFETY: `p.len <= p.alloc_len` and the allocation is `p.alloc_len`
+        // bytes, so `p.len` is in bounds.
+        unsafe { p.buffer.add(p.len) }
+    }
+
+    /// `int ossl_rand_pool_add_end(RAND_POOL *pool, size_t len, size_t entropy)`
+    /// — `rand_pool.c:392-405`.
+    ///
+    /// # Safety
+    /// `pool` is a live pool.
+    pub(crate) unsafe fn ossl_rand_pool_add_end(
+        pool: *mut RandPool,
+        len: usize,
+        entropy: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract: `pool` is live and exclusively owned.
+        let p = unsafe { &mut *pool };
+
+        if len > p.alloc_len.wrapping_sub(p.len) {
+            // SAFETY: a compile-time-constant raise site.
+            unsafe { raise_site(&err_sites::RAND_POOL_395) };
+            return 0;
+        }
+
+        if len > 0 {
+            p.len = p.len.wrapping_add(len);
+            p.entropy = p.entropy.wrapping_add(entropy);
+        }
+
+        1
+    }
+
+    /// `int ossl_rand_pool_adin_mix_in(RAND_POOL *pool, const unsigned char *adin, size_t adin_len)`
+    /// — `rand_pool.c:418-444`.
+    ///
+    /// # Safety
+    /// `pool` is a live pool; `adin` is null or readable for `adin_len` bytes.
+    pub(crate) unsafe fn ossl_rand_pool_adin_mix_in(
+        pool: *mut RandPool,
+        adin: *const c_uchar,
+        adin_len: usize,
+    ) -> c_int {
+        if adin.is_null() || adin_len == 0 {
+            /* Nothing to mix in -> success */
+            return 1;
+        }
+
+        // SAFETY: the caller's contract: `pool` is live and exclusively owned.
+        let p = unsafe { &mut *pool };
+
+        if p.buffer.is_null() {
+            // SAFETY: a compile-time-constant raise site.
+            unsafe { raise_site(&err_sites::RAND_POOL_426) };
+            return 0;
+        }
+
+        if p.len == 0 {
+            // SAFETY: a compile-time-constant raise site.
+            unsafe { raise_site(&err_sites::RAND_POOL_431) };
+            return 0;
+        }
+
+        /* xor the additional data into the pool */
+        for i in 0..adin_len {
+            let idx = i % p.len;
+            // SAFETY: `idx < p.len <= p.alloc_len` and `i < adin_len`, so both
+            // accesses are in bounds.
+            unsafe {
+                *p.buffer.add(idx) ^= *adin.add(i);
+            }
+        }
+
+        1
+    }
+}
+
+// ===========================================================================
+// Section B — providers/implementations/rands/seeding/rand_unix.c
+//
+// This is the file the task's `ossl_pool_acquire_entropy` actually lives in
+// (declared in include/crypto/rand.h:139). The admitted profile defines
+// OPENSSL_RAND_SEED_OS, which rand_unix.c:205-211 expands to
+// OPENSSL_RAND_SEED_GETRANDOM plus OPENSSL_RAND_SEED_DEVRANDOM. That is the arm
+// transcribed here.
+//
+// Not built on this profile: the OPENSSL_SYS_VOS arm (rand_unix.c:117-194),
+// sysctl_random (BSD), and the RDTSC / RDCPU / EGD / NONE dispatch arms.
+// ===========================================================================
+
+pub(crate) mod rand_unix {
+    use core::ffi::{c_int, c_uchar, c_void, CStr};
+    use core::ptr;
+
+    use crate::runtime::bio::sys;
+    use crate::runtime::thread::{CRYPTO_THREAD_get_current_id, CryptoThreadId};
+
+    use super::rand_pool::{
+        ossl_rand_pool_add, ossl_rand_pool_add_begin, ossl_rand_pool_add_end,
+        ossl_rand_pool_bytes_needed, ossl_rand_pool_entropy_available, RandPool,
+    };
+
+    /// `DEVRANDOM` — default from `include/crypto/rand.h:47`, used because the
+    /// admitted build record contains no override in `Configurations/`.
+    const DEVRANDOM: [&CStr; 4] = [
+        c"/dev/urandom",
+        c"/dev/random",
+        c"/dev/hwrng",
+        c"/dev/srandom",
+    ];
+
+    /// `random_device_paths[]` — `rand_unix.c:411`.
+    const RANDOM_DEVICE_PATHS: [&CStr; 4] = DEVRANDOM;
+
+    /// `OSSL_NELEM(random_device_paths)`.
+    const DEVICE_COUNT: usize = RANDOM_DEVICE_PATHS.len();
+
+    /// `DEVRANDOM_WAIT` — `include/crypto/rand.h:50`.
+    const DEVRANDOM_WAIT: &CStr = c"/dev/random";
+
+    /// `DEVRANDOM_SAFE_KERNEL` — `include/crypto/rand.h:58` (`4, 8`).
+    const DEVRANDOM_SAFE_KERNEL: [c_int; 2] = [4, 8];
+
+    /// `OPENSSL_RAND_SEED_DEVRANDOM_SHM_ID` — `include/crypto/rand.h:73`.
+    const OPENSSL_RAND_SEED_DEVRANDOM_SHM_ID: c_int = 114;
+
+    /// `DEVRANDM_WAIT_USE_SELECT` — `include/crypto/rand.h:66`.
+    const DEVRANDM_WAIT_USE_SELECT: c_int = 1;
+
+    /// `TWO32TO64(a, b)` — `rand_unix.c:60`.
+    fn two32to64(a: i64, b: i64) -> u64 {
+        (a as u64).wrapping_shl(32).wrapping_add(b as u64)
+    }
+
+    /// `struct random_device` — `rand_unix.c:412-418`.
+    ///
+    /// MISSING(crate): `crate::runtime::bio::sys` declares no `dev_t`, `ino_t` or
+    /// `mode_t`; the glibc/x86-64 widths are used here.
+    type DevT = u64;
+    /// See [`DevT`].
+    type InoT = u64;
+    /// See [`DevT`].
+    type ModeT = u32;
+
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    struct RandomDevice {
+        fd: c_int,
+        dev: DevT,
+        ino: InoT,
+        mode: ModeT,
+        rdev: DevT,
+    }
+
+    impl RandomDevice {
+        /// Zero-initialised, as a C file-scope object is before `ossl_rand_pool_init`.
+        const EMPTY: RandomDevice = RandomDevice {
+            fd: 0,
+            dev: 0,
+            ino: 0,
+            mode: 0,
+            rdev: 0,
+        };
+    }
+
+    /// `static struct random_device random_devices[OSSL_NELEM(random_device_paths)]`
+    /// — `rand_unix.c:412-418`.
+    static mut RANDOM_DEVICES: [RandomDevice; DEVICE_COUNT] = [RandomDevice::EMPTY; DEVICE_COUNT];
+
+    /// `static int keep_random_devices_open = 1` — `rand_unix.c:419`.
+    static mut KEEP_RANDOM_DEVICES_OPEN: c_int = 1;
+
+    /// `static void *shm_addr` — `rand_unix.c:423`.
+    static mut SHM_ADDR: *mut c_void = ptr::null_mut();
+
+    /// `static int seeded = OPENSSL_RAND_SEED_DEVRANDOM_SHM_ID < 0` — the
+    /// function-local static of `wait_random_seeded` (rand_unix.c:438).
+    static mut SEEDED: c_int = 0;
+
+    /// `static uint64_t get_time_stamp(void)` — `rand_unix.c:782-802`.
+    ///
+    /// The `OSSL_POSIX_TIMER_OKAY` arm (`clock_gettime`) is the one compiled on
+    /// this glibc profile; the `gettimeofday` arm and the `time(NULL)` fallback
+    /// follow it exactly as in the authority.
+    ///
+    /// MISSING(crate): `clock_gettime` and `CLOCK_REALTIME` are not declared by
+    /// `crate::runtime::bio::sys`. `sys::gettimeofday` and `sys::time` exist.
+    fn get_time_stamp() -> u64 {
+        {
+            let mut ts = sys::Timespec {
+                tv_sec: 0,
+                tv_nsec: 0,
+            };
+            // MISSING(crate): clock_gettime(CLOCK_REALTIME, &ts)
+            if clock_gettime(CLOCK_REALTIME, &mut ts) == 0 {
+                return two32to64(ts.tv_sec, ts.tv_nsec);
+            }
+        }
+        {
+            let mut tv = sys::Timeval {
+                tv_sec: 0,
+                tv_usec: 0,
+            };
+            // SAFETY: `tv` is a valid, aligned `Timeval`; the timezone argument is
+            // ignored and may be null.
+            if unsafe { sys::gettimeofday(&mut tv, ptr::null_mut()) } == 0 {
+                return two32to64(tv.tv_sec, tv.tv_usec);
+            }
+        }
+        // SAFETY: `time` accepts a null `time_t *` and answers the current time.
+        unsafe { sys::time(ptr::null_mut()) as u64 }
+    }
+
+    /// `int ossl_pool_add_nonce_data(RAND_POOL *pool)` — `rand_unix.c:752-773`
+    /// (prototype `include/crypto/rand.h:140`; caller `crypto/rand/prov_seed.c:88`).
+    ///
+    /// # Safety
+    /// `pool` is a live pool.
+    pub(crate) unsafe fn ossl_pool_add_nonce_data(pool: *mut RandPool) -> c_int {
+        /// The authority's anonymous `struct { pid_t pid; CRYPTO_THREAD_ID tid;
+        /// uint64_t time; }`.
+        #[repr(C)]
+        struct NonceData {
+            pid: PidT,
+            tid: CryptoThreadId,
+            time: u64,
+        }
+
+        /// `pid_t` on the admitted glibc/x86-64 profile.
+        type PidT = c_int;
+
+        /* Erase the entire structure including any padding */
+        // SAFETY: `NonceData` is a plain C struct of integers, so all-zero is a
+        // valid value for every field and for the padding bytes.
+        let mut data: NonceData = unsafe { core::mem::zeroed() };
+
+        /*
+         * Add process id, thread id, and a high resolution timestamp to ensure
+         * that the nonce is unique with high probability for different process
+         * instances.
+         */
+        // MISSING(crate): `getpid` is not declared by `crate::runtime::bio::sys`.
+        data.pid = getpid();
+        data.tid = CRYPTO_THREAD_get_current_id();
+        data.time = get_time_stamp();
+
+        // SAFETY: `&data` is readable for `sizeof(NonceData)` bytes and outlives
+        // the call; `pool` is live per the caller's contract.
+        unsafe {
+            ossl_rand_pool_add(
+                pool,
+                (&data as *const NonceData).cast::<c_uchar>(),
+                core::mem::size_of::<NonceData>(),
+                0,
+            )
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // /dev/* device cache — rand_unix.c:410-594 (OPENSSL_RAND_SEED_DEVRANDOM arm)
+    // -----------------------------------------------------------------------
+
+    /// `ssize_t syscall_random(void *buf, size_t buflen)` — `rand_unix.c:332-407`.
+    ///
+    /// The authority first probes a weak glibc `getentropy`, then on the admitted
+    /// `__linux` arm issues `syscall(__NR_getrandom, buf, buflen, 0)`.
+    ///
+    /// MISSING(crate): `getentropy`, `syscall`, `__NR_getrandom` and, on the BSD
+    /// arms, `sysctl` are all undeclared by the crate. The calls are left in place
+    /// rather than stubbed.
+    fn syscall_random(buf: *mut c_void, buflen: usize) -> isize {
+        // Authority rand_unix.c:356-365 probes the glibc weak `getentropy` first:
+        //
+        //     if (getentropy != NULL) {
+        //         if (getentropy(buf, buflen) == 0) return (ssize_t)buflen;
+        //         if (errno != ENOSYS) return -1;
+        //     }
+        //
+        // MISSING(crate): `getentropy` has no declaration and the crate has no
+        // weak-symbol mechanism, so that probe is not reproducible here.
+
+        // Authority rand_unix.c:391-392 (Linux since 3.17).
+        // MISSING(crate): `syscall` and `__NR_getrandom` (318 on x86_64).
+        syscall(__NR_getrandom, buf, buflen, 0)
+    }
+
+    /// `static void cleanup_shm(void)` — `rand_unix.c:425-428`.
+    ///
+    /// MISSING(crate): `shmdt` is not declared by the crate.
+    fn cleanup_shm() {
+        // SAFETY: `SHM_ADDR` is the mapping installed by `wait_random_seeded`, or
+        // null; the authority passes it to `shmdt` unconditionally.
+        unsafe { shmdt(SHM_ADDR) };
+    }
+
+    /// `static int wait_random_seeded(void)` — `rand_unix.c:436-501`
+    /// (the `__linux && DEVRANDOM_WAIT && OPENSSL_RAND_SEED_GETRANDOM` arm).
+    ///
+    /// MISSING(crate): `shmget`, `shmat`, `shmdt`, `uname`, `atoi`, the
+    /// `struct utsname`/`fd_set` types, `IPC_CREAT`, `S_IRUSR`/`S_IRGRP`/`S_IROTH`,
+    /// `SHM_RDONLY`, `FD_SETSIZE`, `FD_ZERO`, `FD_SET` are all undeclared by the
+    /// crate. `sys::open`, `sys::read`, `sys::close`, `sys::select` and
+    /// `sys::strchr` do exist.
+    fn wait_random_seeded() -> c_int {
+        // SAFETY: `SEEDED` is this function's own file-scope static.
+        let seeded = unsafe { SEEDED };
+        if seeded == 0 {
+            /* See if anything has created the global seeded indication */
+            // MISSING(crate): shmget
+            let mut shm_id = shmget(OPENSSL_RAND_SEED_DEVRANDOM_SHM_ID, 1, 0);
+            if shm_id == -1 {
+                /*
+                 * Linux kernels from 4.8 onwards do not guarantee /dev/urandom is
+                 * seeded when /dev/random becomes readable; getentropy(2) covers
+                 * those. Compare the running kernel against DEVRANDOM_SAFE_KERNEL.
+                 */
+                // MISSING(crate): uname, struct utsname
+                let mut un: Utsname = unsafe { core::mem::zeroed() };
+                // SAFETY: `un` is a live local of the platform's `struct utsname`.
+                if unsafe { uname(&mut un) } == 0 {
+                    // MISSING(crate): atoi
+                    let kernel0 = atoi(un.release.as_ptr());
+                    // MISSING(crate): strchr — `sys::strchr` exists; `atoi` does not.
+                    let dot = unsafe { sys::strchr(un.release.as_ptr(), b'.' as c_int) };
+                    let kernel1 = if dot.is_null() {
+                        0
+                    } else {
+                        atoi(dot.add(1))
+                    };
+                    if kernel0 > DEVRANDOM_SAFE_KERNEL[0]
+                        || (kernel0 == DEVRANDOM_SAFE_KERNEL[0]
+                            && kernel1 >= DEVRANDOM_SAFE_KERNEL[1])
+                    {
+                        return 0;
+                    }
+                }
+                /* Open /dev/random and wait for it to be readable */
+                // SAFETY: `DEVRANDOM_WAIT` is a static NUL-terminated path.
+                let fd = unsafe { sys::open(DEVRANDOM_WAIT.as_ptr(), sys::O_RDONLY) };
+                if fd != -1 {
+                    let mut r: c_int;
+                    if DEVRANDM_WAIT_USE_SELECT != 0 && fd < FD_SETSIZE {
+                        // MISSING(crate): fd_set, FD_ZERO, FD_SET
+                        let mut fds: FdSet = unsafe { core::mem::zeroed() };
+                        fd_zero(&mut fds);
+                        fd_set(fd, &mut fds);
+                        // SAFETY: `fds` is a live local; `select` may modify it.
+                        loop {
+                            r = unsafe {
+                                sys::select(
+                                    fd + 1,
+                                    (&mut fds as *mut FdSet).cast::<c_void>(),
+                                    ptr::null_mut(),
+                                    ptr::null_mut(),
+                                    ptr::null_mut(),
+                                )
+                            };
+                            // SAFETY: `errno` is thread-local and always readable.
+                            if !(r < 0 && unsafe { sys::errno() } == sys::EINTR) {
+                                break;
+                            }
+                        }
+                    } else {
+                        let mut c: c_uchar = 0;
+                        // SAFETY: `c` is a live one-byte local; `fd` is live.
+                        loop {
+                            r = unsafe { sys::read(fd, (&mut c as *mut c_uchar).cast(), 1) }
+                                as c_int;
+                            // SAFETY: `errno` is thread-local and always readable.
+                            if !(r < 0 && unsafe { sys::errno() } == sys::EINTR) {
+                                break;
+                            }
+                        }
+                    }
+                    // SAFETY: `fd` is live.
+                    unsafe { sys::close(fd) };
+                    if r == 1 {
+                        // SAFETY: `SEEDED` is this function's own static.
+                        unsafe { SEEDED = 1 };
+                        /* Create the shared memory indicator */
+                        // MISSING(crate): shmget, IPC_CREAT, S_IRUSR/G/O
+                        shm_id = shmget(
+                            OPENSSL_RAND_SEED_DEVRANDOM_SHM_ID,
+                            1,
+                            IPC_CREAT | S_IRUSR | S_IRGRP | S_IROTH,
+                        );
+                    }
+                }
+            }
+            if shm_id != -1 {
+                // SAFETY: `SEEDED` is this function's own static.
+                unsafe { SEEDED = 1 };
+                /*
+                 * Map the shared memory to prevent its premature destruction.
+                 * If this call fails, it isn't a big problem.
+                 */
+                // MISSING(crate): shmat, SHM_RDONLY
+                // SAFETY: `SHM_ADDR` is this function's own static.
+                unsafe {
+                    SHM_ADDR = shmat(shm_id, ptr::null_mut(), SHM_RDONLY);
+                }
+                // SAFETY: `SHM_ADDR` is this function's own static.
+                if unsafe { SHM_ADDR } != (1usize as *mut c_void) {
+                    // MISSING(crate): `OPENSSL_atexit` is not implemented in this
+                    // stratum; the authority registers `&cleanup_shm`.
+                    OPENSSL_atexit(cleanup_shm as *mut c_void);
+                }
+            }
+        }
+        // SAFETY: `SEEDED` is this function's own static.
+        unsafe { SEEDED }
+    }
+
+    /// `static int check_random_device(struct random_device *rd)` — `rand_unix.c:516-526`.
+    ///
+    /// # Safety
+    /// `rd` is a live `RandomDevice`.
+    /// MISSING(crate): `fstat`, `struct stat`, the `st_dev`/`st_ino`/`st_mode`/
+    /// `st_rdev` fields and `S_IRWXU`/`S_IRWXG`/`S_IRWXO` are undeclared.
+    fn check_random_device(rd: *mut RandomDevice) -> c_int {
+        // SAFETY: the caller's contract: `rd` is live and readable.
+        let rd = unsafe { &mut *rd };
+        // MISSING(crate): struct stat
+        let mut st: Stat = unsafe { core::mem::zeroed() };
+
+        if rd.fd != -1
+            // SAFETY: `st` is a live local; `rd.fd` is live per the contract.
+            && unsafe { fstat(rd.fd, &mut st) } != -1
+            && rd.dev == st.st_dev
+            && rd.ino == st.st_ino
+            && ((rd.mode ^ st.st_mode) & !(S_IRWXU | S_IRWXG | S_IRWXO)) == 0
+            && rd.rdev == st.st_rdev
+        {
+            1
+        } else {
+            0
+        }
+    }
+
+    /// `static int get_random_device(size_t n)` — `rand_unix.c:531-556`.
+    fn get_random_device(n: usize) -> c_int {
+        // SAFETY: `RANDOM_DEVICES` is this unit's own file-scope array and `n` is
+        // bounded by its caller's loop over `OSSL_NELEM(random_device_paths)`.
+        let devices = unsafe { &mut *ptr::addr_of_mut!(RANDOM_DEVICES) };
+        let rd = &mut devices[n];
+
+        /* reuse existing file descriptor if it is (still) valid */
+        if check_random_device(rd as *mut RandomDevice) != 0 {
+            return rd.fd;
+        }
+
+        /* open the random device ... */
+        // SAFETY: `random_device_paths[n]` is a static NUL-terminated path.
+        rd.fd = unsafe { sys::open(RANDOM_DEVICE_PATHS[n].as_ptr(), sys::O_RDONLY) };
+        if rd.fd == -1 {
+            return rd.fd;
+        }
+
+        /* ... and cache its relevant stat(2) data */
+        // MISSING(crate): struct stat
+        let mut st: Stat = unsafe { core::mem::zeroed() };
+        // SAFETY: `st` is a live local; `rd.fd` is live.
+        if unsafe { fstat(rd.fd, &mut st) } != -1 {
+            rd.dev = st.st_dev;
+            rd.ino = st.st_ino;
+            rd.mode = st.st_mode;
+            rd.rdev = st.st_rdev;
+        } else {
+            // SAFETY: `rd.fd` is live.
+            unsafe { sys::close(rd.fd) };
+            rd.fd = -1;
+        }
+
+        rd.fd
+    }
+
+    /// `static void close_random_device(size_t n)` — `rand_unix.c:561-568`.
+    fn close_random_device(n: usize) {
+        // SAFETY: `RANDOM_DEVICES` is this unit's own array and `n` is bounded by
+        // its callers.
+        let devices = unsafe { &mut *ptr::addr_of_mut!(RANDOM_DEVICES) };
+        let rd = &mut devices[n];
+
+        if check_random_device(rd as *mut RandomDevice) != 0 {
+            // SAFETY: `rd.fd` is live.
+            unsafe { sys::close(rd.fd) };
+        }
+        rd.fd = -1;
+    }
+
+    /// `int ossl_rand_pool_init(void)` — `rand_unix.c:570-578`
+    /// (the `OPENSSL_RAND_SEED_DEVRANDOM` arm).
+    ///
+    /// The `#else` stub arm (rand_unix.c:598-609) returns 1 and does nothing; it
+    /// is not built on this profile.
+    pub(crate) fn ossl_rand_pool_init() -> c_int {
+        // SAFETY: `RANDOM_DEVICES` is this unit's own file-scope array.
+        let devices = unsafe { &mut *ptr::addr_of_mut!(RANDOM_DEVICES) };
+        for rd in devices.iter_mut() {
+            rd.fd = -1;
+        }
+        1
+    }
+
+    /// `void ossl_rand_pool_cleanup(void)` — `rand_unix.c:580-586`.
+    pub(crate) fn ossl_rand_pool_cleanup() {
+        for i in 0..DEVICE_COUNT {
+            close_random_device(i);
+        }
+    }
+
+    /// `void ossl_rand_pool_keep_random_devices_open(int keep)` — `rand_unix.c:588-594`.
+    pub(crate) fn ossl_rand_pool_keep_random_devices_open(keep: c_int) {
+        if keep == 0 {
+            ossl_rand_pool_cleanup();
+        }
+        // SAFETY: `KEEP_RANDOM_DEVICES_OPEN` is this unit's own file-scope static.
+        unsafe { KEEP_RANDOM_DEVICES_OPEN = keep };
+    }
+
+    /// `size_t ossl_pool_acquire_entropy(RAND_POOL *pool)` — `rand_unix.c:630-746`.
+    ///
+    /// Platform dispatch, in order, exactly as the authority:
+    ///
+    /// 1. `OPENSSL_RAND_SEED_GETRANDOM` (built): `syscall_random`.
+    /// 2. `OPENSSL_RAND_SEED_DEVRANDOM` (built): `wait_random_seeded` + the
+    ///    device cache.
+    /// 3. `OPENSSL_RAND_SEED_RDTSC` (not built): `ossl_prov_acquire_entropy_from_tsc`.
+    /// 4. `OPENSSL_RAND_SEED_RDCPU` (not built): `ossl_prov_acquire_entropy_from_cpu`.
+    /// 5. `OPENSSL_RAND_SEED_EGD` (not built): `RAND_query_egd_bytes`.
+    /// 6. `OPENSSL_RAND_SEED_NONE` (not built): returns
+    ///    `ossl_rand_pool_entropy_available` immediately.
+    ///
+    /// # Safety
+    /// `pool` is a live pool.
+    pub(crate) unsafe fn ossl_pool_acquire_entropy(pool: *mut RandPool) -> usize {
+        let mut entropy_available: usize = 0;
+        let _ = entropy_available; /* avoid compiler warning */
+
+        // ---- OPENSSL_RAND_SEED_GETRANDOM (rand_unix.c:639-663) ----
+        {
+            let mut bytes_needed = unsafe { ossl_rand_pool_bytes_needed(pool, 1) };
+            /* Maximum allowed number of consecutive unsuccessful attempts */
+            let mut attempts: c_int = 3;
+
+            while bytes_needed != 0 && attempts > 0 {
+                attempts -= 1; /* the authority's `attempts-- > 0` */
+                // SAFETY: `pool` is live per the caller's contract.
+                let buffer = unsafe { ossl_rand_pool_add_begin(pool, bytes_needed) };
+                let bytes = syscall_random(buffer.cast::<c_void>(), bytes_needed);
+                if bytes > 0 {
+                    // SAFETY: `pool` is live; `bytes` bytes were written at
+                    // `buffer`, which is what `add_end` accounts for.
+                    unsafe {
+                        ossl_rand_pool_add_end(pool, bytes as usize, (bytes as usize).wrapping_mul(8))
+                    };
+                    bytes_needed = bytes_needed.wrapping_sub(bytes as usize);
+                    attempts = 3; /* reset counter after successful attempt */
+                } else if bytes < 0
+                    // SAFETY: `errno` is thread-local and always readable.
+                    && unsafe { sys::errno() } != sys::EINTR
+                {
+                    break;
+                }
+            }
+        }
+        // SAFETY: `pool` is live.
+        entropy_available = unsafe { ossl_rand_pool_entropy_available(pool) };
+        if entropy_available > 0 {
+            return entropy_available;
+        }
+
+        // ---- OPENSSL_RAND_SEED_DEVRANDOM (rand_unix.c:665-703) ----
+        if wait_random_seeded() != 0 {
+            let mut bytes_needed = unsafe { ossl_rand_pool_bytes_needed(pool, 1) };
+            let mut i: usize = 0;
+
+            while bytes_needed > 0 && i < DEVICE_COUNT {
+                let mut bytes: isize = 0;
+                /* Maximum number of consecutive unsuccessful attempts */
+                let mut attempts: c_int = 3;
+                let fd = get_random_device(i);
+
+                if fd == -1 {
+                    i += 1;
+                    continue;
+                }
+
+                while bytes_needed != 0 && attempts > 0 {
+                    attempts -= 1; /* the authority's `attempts-- > 0` */
+                    // SAFETY: `pool` is live.
+                    let buffer = unsafe { ossl_rand_pool_add_begin(pool, bytes_needed) };
+                    // SAFETY: `fd` is live; `buffer` is writable for `bytes_needed`
+                    // bytes.
+                    bytes = unsafe {
+                        sys::read(fd, buffer.cast::<c_void>(), bytes_needed)
+                    };
+
+                    if bytes > 0 {
+                        // SAFETY: `pool` is live; `bytes` bytes were written at
+                        // `buffer`.
+                        unsafe {
+                            ossl_rand_pool_add_end(
+                                pool,
+                                bytes as usize,
+                                (bytes as usize).wrapping_mul(8),
+                            )
+                        };
+                        bytes_needed = bytes_needed.wrapping_sub(bytes as usize);
+                        attempts = 3; /* reset counter on successful attempt */
+                    } else if bytes < 0
+                        // SAFETY: `errno` is thread-local and always readable.
+                        && unsafe { sys::errno() } != sys::EINTR
+                    {
+                        break;
+                    }
+                }
+                // SAFETY: `KEEP_RANDOM_DEVICES_OPEN` is this unit's own static.
+                if bytes < 0 || unsafe { KEEP_RANDOM_DEVICES_OPEN } == 0 {
+                    close_random_device(i);
+                }
+
+                bytes_needed = unsafe { ossl_rand_pool_bytes_needed(pool, 1) };
+                i += 1;
+            }
+            // SAFETY: `pool` is live.
+            entropy_available = unsafe { ossl_rand_pool_entropy_available(pool) };
+            if entropy_available > 0 {
+                return entropy_available;
+            }
+        }
+
+        // OPENSSL_RAND_SEED_RDTSC / RDCPU / EGD arms are not built on this
+        // profile; they would call `ossl_prov_acquire_entropy_from_tsc`,
+        // `ossl_prov_acquire_entropy_from_cpu` and `RAND_query_egd_bytes`
+        // respectively (rand_unix.c:705-742).
+
+        // SAFETY: `pool` is live.
+        unsafe { ossl_rand_pool_entropy_available(pool) }
+    }
+}

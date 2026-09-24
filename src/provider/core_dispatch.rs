@@ -13,11 +13,11 @@
 //!
 //! ## What is absent, and why each one is
 //!
-//! One group, and only one:
-//!
-//! | id | function | owner |
-//! |---|---|---|
-//! | `OSSL_FUNC_CLEANUP_USER_ENTROPY` (96), `CLEANUP_USER_NONCE` (97), `GET_USER_ENTROPY` (98), `GET_USER_NONCE` (99), `GET_ENTROPY` (101), `CLEANUP_ENTROPY` (102), `GET_NONCE` (103), `CLEANUP_NONCE` (104) | the eight `rand_*` callbacks | **Phase 9** — they wrap `ossl_rand_get_entropy` and friends |
+//! **Nothing, as of D309.** The eight `rand_*` seeding callbacks
+//! (`OSSL_FUNC_CLEANUP_USER_ENTROPY` (96), `CLEANUP_USER_NONCE` (97), `GET_USER_ENTROPY` (98),
+//! `GET_USER_NONCE` (99), `GET_ENTROPY` (101), `CLEANUP_ENTROPY` (102), `GET_NONCE` (103),
+//! `CLEANUP_NONCE` (104)) were the last group, and they landed with the core half of
+//! `crypto/rand/prov_seed.c` — the DRBG rows cannot instantiate without them.
 //!
 //! Every other entry `core_dispatch_` publishes is published here, including the three that
 //! were gaps when this table was first assembled and have since been filled:
@@ -27,11 +27,10 @@
 //! distinction between "not in the table yet" and "never going to be" is the whole point of
 //! the table's being assembled rather than stubbed.
 //!
-//! The **count** of published entries is therefore 45 against the authority's 53, and the
-//! difference is exactly the eight above. `RT-PROVIDER-3P` observes the non-deferred count and
-//! a digest of the non-deferred id sequence, so an entry added, dropped, substituted or
-//! reordered outside that one recorded family is a residual; the family itself is excluded by
-//! name and the exclusion is stated in that probe's header.
+//! The **count** of published entries is therefore 53 against the authority's 53, and the
+//! difference is zero: D309 closed the eight-callback gap above. `RT-PROVIDER-3P` observes the
+//! published count and a digest of the published id sequence; the family it used to exclude by
+//! name is published now, so the exclusion is gone rather than stale.
 //!
 //! ## `core_get_params` has a fall-through that is easy to miss
 //!
@@ -51,7 +50,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_uint, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void};
 use core::ptr;
 
 use crate::context::dispatch::OsslDispatch;
@@ -388,6 +387,161 @@ pub(crate) unsafe extern "C" fn core_get_libctx(handle: *const c_void) -> *mut c
     let prov = handle.cast::<OsslProvider>();
     // SAFETY: `prov` is the live provider the handle names.
     unsafe { (*prov).libctx }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The eight seeding callbacks (`crypto/provider_core.c:2454-2530`).
+//
+// Each one resolves the provider's own library context through [`core_get_libctx`] and then
+// calls the corresponding `ossl_rand_get_*` in `crypto/rand/prov_seed.c`. They are the *core*
+// half of the provider seeding contract: `provider_seeding.c` records them from the dispatch
+// table, and `drbg.c` reaches them through `ossl_prov_get_entropy`/`_nonce`. Without them the
+// eight ids below were absent from this table and every DRBG instantiation was refused with
+// `PROV_R_ERROR_RETRIEVING_NONCE` — measured by RT-DRBG.
+// ---------------------------------------------------------------------------------------------
+
+/// `static size_t rand_get_entropy(const OSSL_CORE_HANDLE *handle, unsigned char **pout, int
+/// entropy, size_t min_len, size_t max_len)` — `provider_core.c:2454-2461`.
+///
+/// # Safety
+/// The `OSSL_FUNC_get_entropy_fn` contract; `handle` names a live provider.
+pub(crate) unsafe extern "C" fn core_get_entropy(
+    handle: *const c_void,
+    pout: *mut *mut c_uchar,
+    entropy: c_int,
+    min_len: usize,
+    max_len: usize,
+) -> usize {
+    // SAFETY: `handle` is the live provider per the contract.
+    let libctx = unsafe { core_get_libctx(handle) };
+    // SAFETY: `libctx` is that provider's context and `pout` is writable per the contract.
+    unsafe {
+        crate::rand::prov_seed::ossl_rand_get_entropy(libctx, pout, entropy, min_len, max_len)
+    }
+}
+
+/// `static size_t rand_get_user_entropy(...)` — `provider_core.c:2488-2494`.
+///
+/// # Safety
+/// The `OSSL_FUNC_get_user_entropy_fn` contract; `handle` names a live provider.
+pub(crate) unsafe extern "C" fn core_get_user_entropy(
+    handle: *const c_void,
+    pout: *mut *mut c_uchar,
+    entropy: c_int,
+    min_len: usize,
+    max_len: usize,
+) -> usize {
+    // SAFETY: `handle` is the live provider per the contract.
+    let libctx = unsafe { core_get_libctx(handle) };
+    // SAFETY: `libctx` is that provider's context and `pout` is writable per the contract.
+    unsafe {
+        crate::rand::prov_seed::ossl_rand_get_user_entropy(libctx, pout, entropy, min_len, max_len)
+    }
+}
+
+/// `static void rand_cleanup_entropy(const OSSL_CORE_HANDLE *handle, unsigned char *buf, size_t
+/// len)` — `provider_core.c:2496-2501`.
+///
+/// # Safety
+/// The `OSSL_FUNC_cleanup_entropy_fn` contract.
+pub(crate) unsafe extern "C" fn core_cleanup_entropy(
+    handle: *const c_void,
+    buf: *mut c_uchar,
+    len: usize,
+) {
+    // SAFETY: `handle` is the live provider per the contract.
+    let libctx = unsafe { core_get_libctx(handle) };
+    // SAFETY: `buf` is the seed allocation the paired get handed out.
+    unsafe { crate::rand::prov_seed::ossl_rand_cleanup_entropy(libctx, buf, len) };
+}
+
+/// `static void rand_cleanup_user_entropy(...)` — `provider_core.c:2503-2508`.
+///
+/// # Safety
+/// The `OSSL_FUNC_cleanup_user_entropy_fn` contract.
+pub(crate) unsafe extern "C" fn core_cleanup_user_entropy(
+    handle: *const c_void,
+    buf: *mut c_uchar,
+    len: usize,
+) {
+    // SAFETY: `handle` is the live provider per the contract.
+    let libctx = unsafe { core_get_libctx(handle) };
+    // SAFETY: `buf` is the seed allocation the paired get handed out.
+    unsafe { crate::rand::prov_seed::ossl_rand_cleanup_user_entropy(libctx, buf, len) };
+}
+
+/// `static size_t rand_get_nonce(const OSSL_CORE_HANDLE *handle, unsigned char **pout, size_t
+/// min_len, size_t max_len, const void *salt, size_t salt_len)` — `provider_core.c:2509-2516`.
+///
+/// # Safety
+/// The `OSSL_FUNC_get_nonce_fn` contract.
+pub(crate) unsafe extern "C" fn core_get_nonce(
+    handle: *const c_void,
+    pout: *mut *mut c_uchar,
+    min_len: usize,
+    max_len: usize,
+    salt: *const c_void,
+    salt_len: usize,
+) -> usize {
+    // SAFETY: `handle` is the live provider per the contract.
+    let libctx = unsafe { core_get_libctx(handle) };
+    // SAFETY: `libctx` is that provider's context and `pout` is writable per the contract.
+    unsafe {
+        crate::rand::prov_seed::ossl_rand_get_nonce(libctx, pout, min_len, max_len, salt, salt_len)
+    }
+}
+
+/// `static size_t rand_get_user_nonce(...)` — `provider_core.c:2518-2524`.
+///
+/// # Safety
+/// The `OSSL_FUNC_get_user_nonce_fn` contract.
+pub(crate) unsafe extern "C" fn core_get_user_nonce(
+    handle: *const c_void,
+    pout: *mut *mut c_uchar,
+    min_len: usize,
+    max_len: usize,
+    salt: *const c_void,
+    salt_len: usize,
+) -> usize {
+    // SAFETY: `handle` is the live provider per the contract.
+    let libctx = unsafe { core_get_libctx(handle) };
+    // SAFETY: `libctx` is that provider's context and `pout` is writable per the contract.
+    unsafe {
+        crate::rand::prov_seed::ossl_rand_get_user_nonce(
+            libctx, pout, min_len, max_len, salt, salt_len,
+        )
+    }
+}
+
+/// `static void rand_cleanup_nonce(const OSSL_CORE_HANDLE *handle, unsigned char *buf, size_t
+/// len)` — `provider_core.c:2526-2531`.
+///
+/// # Safety
+/// The `OSSL_FUNC_cleanup_nonce_fn` contract.
+pub(crate) unsafe extern "C" fn core_cleanup_nonce(
+    handle: *const c_void,
+    buf: *mut c_uchar,
+    len: usize,
+) {
+    // SAFETY: `handle` is the live provider per the contract.
+    let libctx = unsafe { core_get_libctx(handle) };
+    // SAFETY: `buf` is the nonce allocation the paired get handed out.
+    unsafe { crate::rand::prov_seed::ossl_rand_cleanup_nonce(libctx, buf, len) };
+}
+
+/// `static void rand_cleanup_user_nonce(...)` — `provider_core.c:2533-2538`.
+///
+/// # Safety
+/// The `OSSL_FUNC_cleanup_user_nonce_fn` contract.
+pub(crate) unsafe extern "C" fn core_cleanup_user_nonce(
+    handle: *const c_void,
+    buf: *mut c_uchar,
+    len: usize,
+) {
+    // SAFETY: `handle` is the live provider per the contract.
+    let libctx = unsafe { core_get_libctx(handle) };
+    // SAFETY: `buf` is the nonce allocation the paired get handed out.
+    unsafe { crate::rand::prov_seed::ossl_rand_cleanup_user_nonce(libctx, buf, len) };
 }
 
 /// `static void core_new_error(const OSSL_CORE_HANDLE *handle)`.
@@ -731,7 +885,7 @@ unsafe impl Sync for CoreDispatchTable {}
 
 /// A wrapper carrying the table's `Sync` claim.
 #[allow(dead_code)] // unreachable until 6.8c publishes it through `get0_dispatch`
-pub(crate) struct CoreDispatchTable(pub(crate) [OsslDispatch; 46]);
+pub(crate) struct CoreDispatchTable(pub(crate) [OsslDispatch; 54]);
 
 /// The table itself, in `core_dispatch_`'s order.
 #[allow(dead_code)] // unreachable until 6.8c publishes it through `get0_dispatch`
@@ -809,9 +963,43 @@ pub(crate) static CORE_DISPATCH: CoreDispatchTable = CoreDispatchTable([
         FUNC_INDICATOR_CB,
         core_indicator_get_callback as *mut c_void,
     ),
-    // 96-99 and 101-104: the eight `rand_*` callbacks — absent, Phase 9. They sit here in the
-    // authority's table, between the self-test pair and the `CRYPTO_*` group, so an entry added
-    // later must go in this position and not at the end.
+    // The eight seeding callbacks, in `provider_core.c`'s own table order: the two `GET_`
+    // entries first, then each `CLEANUP_` beside its getter, and the user/plain pairs in the
+    // order the authority writes them (plain, user, cleanup-plain, cleanup-user). They sit
+    // between the self-test pair and the `CRYPTO_*` group, which is where the authority puts
+    // them; **the order is observed** by `RT-PROVIDER-3P`'s digest of the published sequence.
+    e(
+        crate::context::dispatch::OSSL_FUNC_GET_ENTROPY,
+        core_get_entropy as *mut c_void,
+    ),
+    e(
+        crate::context::dispatch::OSSL_FUNC_GET_USER_ENTROPY,
+        core_get_user_entropy as *mut c_void,
+    ),
+    e(
+        crate::context::dispatch::OSSL_FUNC_CLEANUP_ENTROPY,
+        core_cleanup_entropy as *mut c_void,
+    ),
+    e(
+        crate::context::dispatch::OSSL_FUNC_CLEANUP_USER_ENTROPY,
+        core_cleanup_user_entropy as *mut c_void,
+    ),
+    e(
+        crate::context::dispatch::OSSL_FUNC_GET_NONCE,
+        core_get_nonce as *mut c_void,
+    ),
+    e(
+        crate::context::dispatch::OSSL_FUNC_GET_USER_NONCE,
+        core_get_user_nonce as *mut c_void,
+    ),
+    e(
+        crate::context::dispatch::OSSL_FUNC_CLEANUP_NONCE,
+        core_cleanup_nonce as *mut c_void,
+    ),
+    e(
+        crate::context::dispatch::OSSL_FUNC_CLEANUP_USER_NONCE,
+        core_cleanup_user_nonce as *mut c_void,
+    ),
     e(FUNC_CRYPTO_MALLOC, CRYPTO_malloc as *mut c_void),
     e(FUNC_CRYPTO_ZALLOC, CRYPTO_zalloc as *mut c_void),
     e(FUNC_CRYPTO_FREE, CRYPTO_free as *mut c_void),
@@ -1066,9 +1254,10 @@ mod tests {
             1, 2, 4, 3, 5, 6, 7, 8, 9, 10, 120, // the core, error, thread and mark group
             40, 41, 42, 43, 49, 48, 50, 44, 45, 46, 47, // the BIO group, in header order
             100, 95, // the self-test and indicator callbacks — self-test is published first
-            // 96-99 and 101-104: the eight `rand_*` callbacks -- absent, Phase 9. The run is
-            // written as a comment rather than as entries because a missing id is the fact.
-            20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, // CRYPTO_* and OPENSSL_cleanse
+            // The eight seeding callbacks, in `core_dispatch_`'s own order (D309): the plain and
+            // user getters, each followed by its cleanup, in the authority's pairing.
+            101, 98, 102, 96, 103, 99, 104, 97, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+            31, // CRYPTO_* and OPENSSL_cleanse
             105, 106, // the child-callback pair, 6.8e
             107, 108, 109, // the three provider accessors
             110, 111, // the provider refcount pair, 6.8c
@@ -1105,13 +1294,11 @@ mod tests {
                 seen[*id as usize]
             );
         }
-        // Every other id below 200 must be absent, and these are the ones that are absent on
-        // purpose: 96-99 and 101-104, the eight `rand_*` callbacks, which need Phase 9. Every
-        // other gap this test used to allow has been closed -- `CORE_THREAD_START` (3) by
-        // 6.6e-ii, the child-callback pair (105/106) by 6.8e, and `PROVIDER_UP_REF`/
-        // `PROVIDER_FREE` (110/111) by 6.8c's `provider_up_ref_intern`/`provider_free_intern`.
-        // A test that only listed the published set would let an id be *added* without anyone
-        // deciding it was ready, which is the failure this half exists to catch.
+        // Every other id below 200 must be absent, and after D309 **there is no intentional
+        // absence left**: the eight seeding callbacks were the last group, and they landed with
+        // the core half of `provider_seeding.c`. The loop is kept because it is what makes a
+        // *future* accidental publication visible -- an id added without a decision is exactly
+        // the failure this half exists to catch.
         for id in 0..200i32 {
             if published.contains(&id) {
                 continue;
@@ -1126,22 +1313,10 @@ mod tests {
     #[test]
     fn the_absent_ids_are_the_ones_the_module_doc_names() {
         // The doc table and the code cannot drift: each named absence is checked against the
-        // table. Three groups have left this list as their subphases landed -- `CORE_THREAD_START`
-        // when 6.6e-ii landed `ossl_init_thread_start` (now published as id 3), the
-        // child-callback pair when 6.8e landed `ossl_provider_register_child_cb` and its
-        // counterpart (now 105 and 106), and `PROVIDER_UP_REF`/`PROVIDER_FREE` when 6.8c's
-        // `provider_up_ref_intern`/`provider_free_intern` landed (now 110 and 111). What is
-        // left is exactly the eight `rand_*` ids, which are Phase 9's and cannot precede it.
-        let absent: &[(c_int, &str)] = &[
-            (96, "CLEANUP_USER_ENTROPY -- Phase 9"),
-            (97, "CLEANUP_USER_NONCE -- Phase 9"),
-            (98, "GET_USER_ENTROPY -- Phase 9"),
-            (99, "GET_USER_NONCE -- Phase 9"),
-            (101, "GET_ENTROPY -- Phase 9"),
-            (102, "CLEANUP_ENTROPY -- Phase 9"),
-            (103, "GET_NONCE -- Phase 9"),
-            (104, "CLEANUP_NONCE -- Phase 9"),
-        ];
+        // table. **The list is empty as of D309**: the eight `rand_*` ids, which were the last
+        // group, landed with the core half of `provider_seeding.c` (`crypto/rand/prov_seed.c`),
+        // and every earlier one left as its subphase landed.
+        let absent: &[(c_int, &str)] = &[];
         for (id, why) in absent {
             for entry in CORE_DISPATCH.0.iter() {
                 assert_ne!(

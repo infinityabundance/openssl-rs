@@ -1,0 +1,361 @@
+//! Phase 9 staging — the platform (`libc`) surface the random layer's seeding
+//! arm stands on.
+//!
+//! This is the `sys`-style companion to `crate::runtime::bio::sys`: the same
+//! discipline — declarations transcribed from the platform headers rather than
+//! taken from a `libc` dependency, because `Cargo.toml` declares no dependencies
+//! and the dependency surface is part of the supply-chain contract
+//! (`docs/CUSTODIAN_CONTRACT.md` §3) — applied to the calls the seeding arm of
+//! `providers/implementations/rands/seeding/rand_unix.c` and
+//! `crypto/rand/randfile.c` make.
+//!
+//! ## Shared items are imported, never redefined
+//!
+//! `Timespec`, `size_t`, `errno`, `EINTR` and the `O_*` flags already live in
+//! `crate::runtime::bio::sys`. They are brought into scope below rather than
+//! copied, so a layout or a value has exactly one definition. If this file is
+//! merged into that module the `use` is redundant (same scope) and should be
+//! deleted; while it is a standalone module the `use` is what keeps the
+//! definitions single.
+//!
+//! ## Headers read to produce this file
+//!
+//! The admitted platform is `linux`/`x86_64` (`docs/AUTHORITY_POLICY.md`). The
+//! values and layouts below were read from *this machine's* installed glibc
+//! headers, which on this host live directly under `/usr/include` (the Debian
+//! multiarch `/usr/include/x86_64-linux-gnu/...` path named in the task does not
+//! exist here):
+//!
+//! * `<sys/random.h>` — `getentropy`.
+//! * `<bits/struct_stat.h>` — the `struct stat` layout, pulled in by
+//!   `<sys/stat.h>`; `<bits/typesizes.h>` — `__DEV_T_TYPE`/`__INO_T_TYPE`/
+//!   `__MODE_T_TYPE` widths and `__FD_SETSIZE`.
+//! * `<sys/select.h>`, `<bits/select.h>` — `fd_set`, `FD_SETSIZE`, the
+//!   `__FD_ZERO`/`__FD_SET` macros.
+//! * `<sys/shm.h>`, `<bits/shm.h>`, `<bits/ipc.h>` — the SysV shared-memory
+//!   calls and their constants.
+//! * `<sys/utsname.h>`, `<bits/utsname.h>` — `struct utsname`.
+//! * `<sys/stat.h>` — the `S_IRUSR`/`S_IRGRP`/`S_IROTH` mode bits and `fstat`.
+//! * `<time.h>`, `<bits/time.h>` — `clock_gettime`, `CLOCK_REALTIME`.
+//! * `<unistd.h>` — `getpid`, `syscall`.
+//! * `<stdlib.h>` — `atoi`.
+//! * `<fcntl.h>` — `open`.
+//! * `<asm/unistd_64.h>` (via `<sys/syscall.h>`) — `__NR_getrandom`.
+//! * `<asm-generic/errno.h>` — `ENOSYS`.
+//!
+//! The authority citations are to
+//! `forensics/authorities/src/openssl-3.6.4/providers/implementations/rands/seeding/rand_unix.c`
+//! and `forensics/authorities/src/openssl-3.6.4/crypto/rand/randfile.c`.
+//!
+//! ## Deliberate omissions
+//!
+//! Only what the seeding arm calls is declared; `stat`, `fdopen`, `chmod`,
+//! `setbuf`, `clearerr`, `O_BINARY`, `S_ISREG` and `S_IRWXU`/`S_IRWXG`/`S_IRWXO`
+//! belong to the `crypto/rand/randfile.c` half and are not part of this surface.
+//! No `#[no_mangle]` and no weak-symbol shim is introduced here.
+//!
+//! SPDX-License-Identifier: Apache-2.0
+
+#![allow(dead_code)]
+// Declarations are shared by the seeding units; not every one is referenced
+// from every build profile.
+
+// The aliases below deliberately mirror the C spellings (`size_t`, `dev_t`,
+// `mode_t`) because they appear in transcribed prototypes, where matching the
+// header is the point. Renaming them to Rust case would make the declarations
+// harder to check against the source they were taken from.
+#![allow(non_camel_case_types)]
+
+use core::ffi::{c_char, c_int, c_long, c_void};
+
+// Shared with the BIO platform module — imported, not redefined. `errno` is the
+// wrapper `crate::runtime::bio::sys::errno`, `EINTR` its constant, and the
+// `O_*` flags its Linux values.
+pub(crate) use crate::runtime::bio::sys::{
+    errno, size_t, Timespec, EINTR, O_CREAT, O_RDONLY, O_WRONLY,
+};
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/// `CLOCK_REALTIME` — `<bits/time.h>`, `0` on Linux. The `OSSL_POSIX_TIMER_OKAY`
+/// arm of `get_time_stamp` is the one compiled on this profile
+/// (`rand_unix.c:788`).
+pub(crate) const CLOCK_REALTIME: c_int = 0;
+
+/// `__NR_getrandom` for the admitted `x86_64` (non-`__ILP32__`) kernel ABI.
+///
+/// Verified twice: `/usr/include/asm/unistd_64.h:322` defines it as `318`, and
+/// the authority's own fallback table defines the identical value for `__x86_64__`
+/// without `__ILP32__` (`rand_unix.c:283`). It is *not* the `asm-generic` value
+/// (278) nor the x32 value (`__X32_SYSCALL_BIT + 318`).
+pub(crate) const __NR_getrandom: c_long = 318;
+
+/// `ENOSYS` — `<asm-generic/errno.h>:18`, `38`. The seeding arm distinguishes a
+/// kernel without `getrandom(2)` from a real failure with `errno == ENOSYS`
+/// (`rand_unix.c:365`).
+pub(crate) const ENOSYS: c_int = 38;
+
+/// `IPC_CREAT` — `<bits/ipc.h>`, `01000` octal.
+pub(crate) const IPC_CREAT: c_int = 0o1000;
+
+/// `SHM_RDONLY` — `<bits/shm.h>`, `010000` octal; the flag `shmat` is given.
+pub(crate) const SHM_RDONLY: c_int = 0o10000;
+
+/// `S_IRUSR` — `<sys/stat.h>` (`__S_IREAD`, `<bits/stat.h>`), `0400` octal.
+///
+/// Typed `c_int`, not `mode_t`, because the call site is
+/// `shmget(key, 1, IPC_CREAT | S_IRUSR | S_IRGRP | S_IROTH)` (`rand_unix.c:485`)
+/// and `shmget`'s third parameter is an `int`: the `|` must be over `c_int`s.
+pub(crate) const S_IRUSR: c_int = 0o400;
+
+/// `S_IRGRP` — `<sys/stat.h>`, `(S_IRUSR >> 3)` = `040` octal.
+pub(crate) const S_IRGRP: c_int = 0o40;
+
+/// `S_IROTH` — `<sys/stat.h>`, `(S_IRGRP >> 3)` = `04` octal.
+pub(crate) const S_IROTH: c_int = 0o4;
+
+/// `FD_SETSIZE` — `<sys/select.h>`'s alias of `__FD_SETSIZE`, `1024`
+/// (`<bits/typesizes.h>`). `c_int` because the call site compares a descriptor
+/// to it directly: `fd < FD_SETSIZE` (`rand_unix.c:470`).
+pub(crate) const FD_SETSIZE: c_int = 1024;
+
+/// `__NFDBITS` — `<sys/select.h>`'s `(8 * (int) sizeof (__fd_mask))`, i.e. 64
+/// bits per word on x86-64.
+const NFDBITS: usize = 8 * core::mem::size_of::<c_long>();
+
+/// Number of words in an `fd_set` — `<sys/select.h>`'s
+/// `__FD_SETSIZE / __NFDBITS`, i.e. 16.
+const FD_WORDS: usize = FD_SETSIZE as usize / NFDBITS;
+
+// ---------------------------------------------------------------------------
+// Integer types
+// ---------------------------------------------------------------------------
+
+/// `dev_t` — `__DEV_T_TYPE` is `__UQUAD_TYPE` (`<bits/typesizes.h>`), i.e. a
+/// 64-bit `unsigned long long`. Used for both `st_dev` and `st_rdev`.
+pub(crate) type dev_t = u64;
+
+/// `ino_t` — `__INO_T_TYPE` is `__SYSCALL_ULONG_TYPE`
+/// (`<bits/typesizes.h>`), a 64-bit `unsigned long` on this LP64 target.
+pub(crate) type ino_t = u64;
+
+/// `mode_t` — `__MODE_T_TYPE` is `__U32_TYPE` (`<bits/typesizes.h>`), a 32-bit
+/// `unsigned int`.
+pub(crate) type mode_t = u32;
+
+// ---------------------------------------------------------------------------
+// struct stat
+// ---------------------------------------------------------------------------
+
+/// `struct stat` from `<sys/stat.h>` on glibc/x86-64.
+///
+/// The layout is the header's (`<bits/struct_stat.h>`, the `__x86_64__` arm
+/// without `__USE_TIME64_REDIRECTS`, which is the profile the authority is built
+/// for): `st_dev`@0, `st_ino`@8, `st_nlink`@16, `st_mode`@24, `st_uid`@28,
+/// `st_gid`@32, `__pad0`@36, `st_rdev`@40, `st_size`@48, `st_blksize`@56,
+/// `st_blocks`@64, and then `st_atim`/`st_mtim`/`st_ctim` (three `struct
+/// timespec`) plus `__glibc_reserved[3]` filling 72..144. The total is
+/// **144 bytes**, alignment 8.
+///
+/// The seeding arm reads `st_dev`, `st_ino`, `st_mode` and `st_rdev`
+/// (`rand_unix.c:521-525`, `rand_unix.c:545-548`); `st_size` is included because
+/// `randfile.c` reads it. The fields the call sites do not read are private
+/// padding rather than named public fields: the offsets and the total size are
+/// still exactly the header's, but no caller can accidentally start reading a
+/// field whose type this surface has not committed to. A sparse
+/// "read-fields-plus-guessed-bytes" struct would be one miscount away from a
+/// silent out-of-bounds read, so the byte counts here are the header's, not an
+/// estimate.
+#[repr(C)]
+pub(crate) struct Stat {
+    /// `st_dev` — the device the inode lives on.
+    pub st_dev: dev_t,
+    /// `st_ino` — the inode's serial number.
+    pub st_ino: ino_t,
+    /// `st_nlink` at 16..24 (`nlink_t`, 64-bit unsigned); not read here.
+    __pad_nlink: u64,
+    /// `st_mode` — file type and permission bits.
+    pub st_mode: mode_t,
+    /// `st_uid` (4) + `st_gid` (4) + `__pad0` (4) at 28..40; not read here.
+    __pad_uid_gid: [u8; 12],
+    /// `st_rdev` — the device number for a device inode.
+    pub st_rdev: dev_t,
+    /// `st_size` — size in bytes (`off_t`, 64-bit signed).
+    pub st_size: i64,
+    /// `st_blksize` + `st_blocks` + `st_atim` + `st_mtim` + `st_ctim` +
+    /// `__glibc_reserved[3]` at 56..144; not read by the seeding arm.
+    __pad_tail: [u8; 88],
+}
+
+// ---------------------------------------------------------------------------
+// struct utsname
+// ---------------------------------------------------------------------------
+
+/// `struct utsname` from `<sys/utsname.h>`.
+///
+/// `_UTSNAME_LENGTH` is `65` (`<bits/utsname.h>`), and glibc defines
+/// `_UTSNAME_DOMAIN_LENGTH` to the same value, so the struct always reserves six
+/// fields on this platform. The last is spelled `domainname` under `_GNU_SOURCE`
+/// and `__domainname` under strict POSIX namespacing; the layout is identical.
+/// `uname` writes all six.
+#[repr(C)]
+pub(crate) struct Utsname {
+    /// `sysname` — the operating-system name.
+    pub sysname: [c_char; 65],
+    /// `nodename` — the node name on the network.
+    pub nodename: [c_char; 65],
+    /// `release` — the kernel release string (`atoi`-parsed by the caller).
+    pub release: [c_char; 65],
+    /// `version` — the kernel version string.
+    pub version: [c_char; 65],
+    /// `machine` — the hardware type.
+    pub machine: [c_char; 65],
+    /// `domainname` (a.k.a. `__domainname`) — the NIS/YP domain name.
+    pub domainname: [c_char; 65],
+}
+
+// ---------------------------------------------------------------------------
+// fd_set
+// ---------------------------------------------------------------------------
+
+/// `fd_set` from `<sys/select.h>`.
+///
+/// glibc's member is `__fds_bits`, an array of `__fd_mask` (`long int`)
+/// words of which `__FD_SETSIZE / __NFDBITS` are meaningful (16 here). Under
+/// XPG4.2 namespacing (`__USE_XOPEN`) the same member is named `fds_bits`; the
+/// layout does not change, and `fds_bits` is the name used here.
+#[repr(C)]
+pub(crate) struct FdSet {
+    /// One bit per descriptor.
+    pub fds_bits: [c_long; FD_WORDS],
+}
+
+/// `FD_ZERO(set)` — `<sys/select.h>`, glibc's `__FD_ZERO` in `<bits/select.h>`.
+///
+/// The macro zeroes every word of the set; this is that loop, written as a
+/// single array write.
+///
+/// # Safety
+/// `set` must point at a live, writable [`FdSet`].
+pub(crate) unsafe fn fd_zero(set: *mut FdSet) {
+    // SAFETY: the caller guarantees `set` is a live, writable `FdSet`, so the whole-array write stays inside it.
+    unsafe {
+        (*set).fds_bits = [0; FD_WORDS];
+    }
+}
+
+/// `FD_SET(fd, set)` — `<sys/select.h>`, glibc's `__FD_SET` in `<bits/select.h>`.
+///
+/// Reproduces the macro's arithmetic: `__FD_ELT(fd) = fd / __NFDBITS` selects the
+/// word and `__FD_MASK(fd) = 1UL << (fd % __NFDBITS)` selects the bit inside it.
+///
+/// # Safety
+/// `set` must point at a live, writable [`FdSet`] and `fd` must be in
+/// `0 .. FD_SETSIZE`. The C macro performs no bounds check either, so passing a
+/// negative or oversized descriptor is the caller's contract violation in both
+/// languages.
+pub(crate) unsafe fn fd_set(fd: c_int, set: *mut FdSet) {
+    let elt = fd as usize / NFDBITS;
+    let mask = (1u64 << (fd as usize % NFDBITS)) as c_long;
+    // SAFETY: the caller guarantees a live, writable `set` and `0 <= fd < FD_SETSIZE`, so `elt < FD_WORDS`.
+    unsafe {
+        (*set).fds_bits[elt] |= mask;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Declarations
+// ---------------------------------------------------------------------------
+
+extern "C" {
+    /// `pid_t getpid(void)` — `<unistd.h>`. `pid_t` is `__S32_TYPE`
+    /// (`<bits/typesizes.h>`), i.e. `int`. Used to mix the process id into the
+    /// nonce (`rand_unix.c:768`).
+    pub(crate) fn getpid() -> c_int;
+
+    /// `int clock_gettime(clockid_t, struct timespec *)` — `<time.h>`.
+    /// `clockid_t` is `__S32_TYPE`, i.e. `int` (`<bits/typesizes.h>`).
+    pub(crate) fn clock_gettime(clk_id: c_int, tp: *mut Timespec) -> c_int;
+
+    /// `int getentropy(void *, size_t)` — `<sys/random.h>`.
+    ///
+    /// The authority probes this symbol as **weak** —
+    /// `extern int getentropy(void *, size_t) __attribute__((weak));`
+    /// (`rand_unix.c:358`) — so that libcrypto still links against a libc whose
+    /// `getentropy` is absent. Rust has no weak-symbol mechanism, and inventing
+    /// one (a `dlsym` probe, a build-script test) is out of scope for this
+    /// surface. This declaration therefore binds the symbol **strongly**: on a
+    /// toolchain/libc that truly lacks `getentropy` the link fails, where the
+    /// authority's link would not. That limitation is recorded, not hidden.
+    ///
+    /// The `pub(crate) unsafe fn getentropy` below is the callable form.
+    #[link_name = "getentropy"]
+    fn getentropy_strong(buf: *mut c_void, buflen: size_t) -> c_int;
+
+    /// `long syscall(long number, ...)` — `<unistd.h>`. Variadic, exactly as
+    /// declared; this surface calls it only as
+    /// `syscall(__NR_getrandom, buf, buflen, 0)` (`rand_unix.c:392`).
+    pub(crate) fn syscall(num: c_long, ...) -> c_long;
+
+    /// `int fstat(int, struct stat *)` — `<sys/stat.h>`. On x86-64 this is the
+    /// 64-bit-inode entry point (`fstat64` has the same shape), so no
+    /// `_FILE_OFFSET_BITS` redirection applies.
+    pub(crate) fn fstat(fd: c_int, buf: *mut Stat) -> c_int;
+
+    /// `int shmget(key_t, size_t, int)` — `<sys/shm.h>`. `key_t` is
+    /// `__S32_TYPE`, i.e. `int` (`<bits/typesizes.h>`), which is why the key is
+    /// declared `c_int` rather than a distinct alias.
+    pub(crate) fn shmget(key: c_int, size: size_t, shmflg: c_int) -> c_int;
+
+    /// `void *shmat(int, const void *, int)` — `<sys/shm.h>`.
+    pub(crate) fn shmat(shmid: c_int, shmaddr: *const c_void, shmflg: c_int) -> *mut c_void;
+
+    /// `int shmdt(const void *)` — `<sys/shm.h>`. The authority passes its
+    /// cached mapping (or null) unconditionally (`rand_unix.c:427`).
+    pub(crate) fn shmdt(shmaddr: *const c_void) -> c_int;
+
+    /// `int uname(struct utsname *)` — `<sys/utsname.h>`.
+    pub(crate) fn uname(buf: *mut Utsname) -> c_int;
+
+    /// `int atoi(const char *)` — `<stdlib.h>`. Used to parse the leading
+    /// kernel-version fields of `un.release` (`rand_unix.c:459-461`).
+    pub(crate) fn atoi(s: *const c_char) -> c_int;
+
+    /// `int open(const char *, int, ...)` — `<fcntl.h>`, transcribed in its
+    /// variadic form.
+    ///
+    /// The crate's BIO platform module declares a **two-argument** `open`
+    /// (`crate::runtime::bio::sys`, the narrowing BIO's own call sites need).
+    /// The random layer needs both arities: `open(path, O_RDONLY)`
+    /// (`rand_unix.c:469`, `rand_unix.c:541`) and the three-argument form that
+    /// supplies a creation mode, `open(path, O_WRONLY | O_CREAT, 0o600)`
+    /// (`randfile.c`). A variadic declaration is the honest choice: it *is* the
+    /// header's prototype, so there is no second, narrower signature that could
+    /// disagree with it, and a single item serves both call sites. Integration
+    /// should **replace** the two-argument `open` in `crate::runtime::bio::sys`
+    /// with this one rather than adding it alongside.
+    pub(crate) fn open(path: *const c_char, flags: c_int, ...) -> c_int;
+}
+
+// ---------------------------------------------------------------------------
+// Wrappers
+// ---------------------------------------------------------------------------
+
+/// Call `getentropy(2)` and return its raw result (`0` on success, `-1` on
+/// error).
+///
+/// This is the callable stand-in for the authority's weak-symbol probe
+/// (`rand_unix.c:356-361`). Because [`getentropy_strong`] is bound strongly, the
+/// "symbol is absent" branch of the authority cannot be reproduced; a caller
+/// that needs to detect a kernel without `getentropy` inspects `errno` for
+/// [`ENOSYS`] exactly as the authority does, rather than testing the symbol.
+///
+/// # Safety
+/// `buf` must be writable for `buflen` bytes; on success `getentropy` writes all
+/// of them. (The kernel rejects `buflen > 256` with `EIO`.)
+pub(crate) unsafe fn getentropy(buf: *mut c_void, buflen: size_t) -> c_int {
+    // SAFETY: the caller guarantees `buf` is writable for `buflen` bytes, which is `getentropy`'s own contract.
+    unsafe { getentropy_strong(buf, buflen) }
+}

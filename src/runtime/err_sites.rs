@@ -16892,6 +16892,24006 @@ pub(crate) const PEM_PK8_258: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ossl_cipher_generic_get_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:80` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_80: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 80,
+    func: c"ossl_cipher_generic_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:91` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_91: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 91,
+    func: c"ossl_cipher_generic_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:106` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_106: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 106,
+    func: c"ossl_cipher_generic_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:117` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_117: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 117,
+    func: c"ossl_cipher_generic_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:129` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_129: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 129,
+    func: c"ossl_cipher_generic_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:140` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_140: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 140,
+    func: c"ossl_cipher_generic_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:151` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_151: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 151,
+    func: c"ossl_cipher_generic_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:162` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_162: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 162,
+    func: c"ossl_cipher_generic_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:173` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_173: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 173,
+    func: c"ossl_cipher_generic_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:184` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_184: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 184,
+    func: c"ossl_cipher_generic_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params` at `providers/implementations/ciphers/ciphercommon.c:212` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_212: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 212,
+    func: c"ossl_cipher_generic_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params` at `providers/implementations/ciphers/ciphercommon.c:217` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_217: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 217,
+    func: c"ossl_cipher_generic_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params` at `providers/implementations/ciphers/ciphercommon.c:222` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_222: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 222,
+    func: c"ossl_cipher_generic_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params` at `providers/implementations/ciphers/ciphercommon.c:227` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_227: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 227,
+    func: c"ossl_cipher_generic_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params` at `providers/implementations/ciphers/ciphercommon.c:232` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_232: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 232,
+    func: c"ossl_cipher_generic_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params` at `providers/implementations/ciphers/ciphercommon.c:237` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_237: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 237,
+    func: c"ossl_cipher_generic_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params` at `providers/implementations/ciphers/ciphercommon.c:242` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_242: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 242,
+    func: c"ossl_cipher_generic_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params` at `providers/implementations/ciphers/ciphercommon.c:246` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_246: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 246,
+    func: c"ossl_cipher_generic_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params` at `providers/implementations/ciphers/ciphercommon.c:250` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_250: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 250,
+    func: c"ossl_cipher_generic_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params` at `providers/implementations/ciphers/ciphercommon.c:254` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_254: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 254,
+    func: c"ossl_cipher_generic_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_get_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:313` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_313: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 313,
+    func: c"cipher_generic_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_get_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:322` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_322: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 322,
+    func: c"cipher_generic_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_get_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:334` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_334: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 334,
+    func: c"cipher_generic_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_get_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:345` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_345: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 345,
+    func: c"cipher_generic_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_get_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:356` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_356: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 356,
+    func: c"cipher_generic_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_get_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:367` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_367: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 367,
+    func: c"cipher_generic_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_get_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:378` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_378: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 378,
+    func: c"cipher_generic_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:437` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_437: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 437,
+    func: c"cipher_generic_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:448` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_448: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 448,
+    func: c"cipher_generic_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:475` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_475: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 475,
+    func: c"cipher_generic_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:486` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_486: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 486,
+    func: c"cipher_generic_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:501` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_501: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 501,
+    func: c"cipher_generic_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_var_keylen_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:565` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_565: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 565,
+    func: c"cipher_var_keylen_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_var_keylen_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:576` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_576: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 576,
+    func: c"cipher_var_keylen_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_var_keylen_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:587` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_587: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 587,
+    func: c"cipher_var_keylen_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_var_keylen_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:614` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_614: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 614,
+    func: c"cipher_var_keylen_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_var_keylen_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:625` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_625: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 625,
+    func: c"cipher_var_keylen_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_var_keylen_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:640` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_640: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 640,
+    func: c"cipher_var_keylen_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_var_keylen_set_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:672` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_672: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 672,
+    func: c"ossl_cipher_var_keylen_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_init_internal` at `providers/implementations/ciphers/ciphercommon.c:719` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHERCOMMON_719: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 719,
+    func: c"cipher_generic_init_internal",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_update` at `providers/implementations/ciphers/ciphercommon.c:783` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_CIPHERCOMMON_783: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 783,
+    func: c"ossl_cipher_generic_block_update",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_update` at `providers/implementations/ciphers/ciphercommon.c:798` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_798: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 798,
+    func: c"ossl_cipher_generic_block_update",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_update` at `providers/implementations/ciphers/ciphercommon.c:811` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_811: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 811,
+    func: c"ossl_cipher_generic_block_update",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_update` at `providers/implementations/ciphers/ciphercommon.c:816` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_816: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 816,
+    func: c"ossl_cipher_generic_block_update",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_update` at `providers/implementations/ciphers/ciphercommon.c:833` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_833: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 833,
+    func: c"ossl_cipher_generic_block_update",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_update` at `providers/implementations/ciphers/ciphercommon.c:839` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_839: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 839,
+    func: c"ossl_cipher_generic_block_update",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_update` at `providers/implementations/ciphers/ciphercommon.c:856` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_856: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 856,
+    func: c"ossl_cipher_generic_block_update",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_update` at `providers/implementations/ciphers/ciphercommon.c:875` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHERCOMMON_875: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 875,
+    func: c"ossl_cipher_generic_block_update",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_update` at `providers/implementations/ciphers/ciphercommon.c:879` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_879: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 879,
+    func: c"ossl_cipher_generic_block_update",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_update` at `providers/implementations/ciphers/ciphercommon.c:889` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHERCOMMON_889: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 889,
+    func: c"ossl_cipher_generic_block_update",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_update` at `providers/implementations/ciphers/ciphercommon.c:896` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHERCOMMON_896: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 896,
+    func: c"ossl_cipher_generic_block_update",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_update` at `providers/implementations/ciphers/ciphercommon.c:902` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_902: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 902,
+    func: c"ossl_cipher_generic_block_update",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_final` at `providers/implementations/ciphers/ciphercommon.c:928` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_CIPHERCOMMON_928: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 928,
+    func: c"ossl_cipher_generic_block_final",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_final` at `providers/implementations/ciphers/ciphercommon.c:934` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_934: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 934,
+    func: c"ossl_cipher_generic_block_final",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_final` at `providers/implementations/ciphers/ciphercommon.c:945` (PROV_R_WRONG_FINAL_BLOCK_LENGTH).
+pub(crate) const PROV_CIPHERCOMMON_945: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 945,
+    func: c"ossl_cipher_generic_block_final",
+    lib: 57,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_final` at `providers/implementations/ciphers/ciphercommon.c:950` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHERCOMMON_950: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 950,
+    func: c"ossl_cipher_generic_block_final",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_final` at `providers/implementations/ciphers/ciphercommon.c:954` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_954: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 954,
+    func: c"ossl_cipher_generic_block_final",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_final` at `providers/implementations/ciphers/ciphercommon.c:968` (PROV_R_WRONG_FINAL_BLOCK_LENGTH).
+pub(crate) const PROV_CIPHERCOMMON_968: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 968,
+    func: c"ossl_cipher_generic_block_final",
+    lib: 57,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_final` at `providers/implementations/ciphers/ciphercommon.c:973` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_973: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 973,
+    func: c"ossl_cipher_generic_block_final",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_final` at `providers/implementations/ciphers/ciphercommon.c:983` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHERCOMMON_983: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 983,
+    func: c"ossl_cipher_generic_block_final",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_stream_update` at `providers/implementations/ciphers/ciphercommon.c:999` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_CIPHERCOMMON_999: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 999,
+    func: c"ossl_cipher_generic_stream_update",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_stream_update` at `providers/implementations/ciphers/ciphercommon.c:1009` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHERCOMMON_1009: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1009,
+    func: c"ossl_cipher_generic_stream_update",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_stream_update` at `providers/implementations/ciphers/ciphercommon.c:1014` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_1014: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1014,
+    func: c"ossl_cipher_generic_stream_update",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_stream_final` at `providers/implementations/ciphers/ciphercommon.c:1063` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_CIPHERCOMMON_1063: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1063,
+    func: c"ossl_cipher_generic_stream_final",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_cipher` at `providers/implementations/ciphers/ciphercommon.c:1081` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_CIPHERCOMMON_1081: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1081,
+    func: c"ossl_cipher_generic_cipher",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_cipher` at `providers/implementations/ciphers/ciphercommon.c:1086` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHERCOMMON_1086: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1086,
+    func: c"ossl_cipher_generic_cipher",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_cipher` at `providers/implementations/ciphers/ciphercommon.c:1091` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_1091: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1091,
+    func: c"ossl_cipher_generic_cipher",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_get_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1102` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1102: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1102,
+    func: c"ossl_cipher_common_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_get_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1107` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1107: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1107,
+    func: c"ossl_cipher_common_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_get_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1113` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1113: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1113,
+    func: c"ossl_cipher_common_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_get_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1119` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1119: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1119,
+    func: c"ossl_cipher_common_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_get_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1124` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1124: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1124,
+    func: c"ossl_cipher_common_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_get_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1129` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1129: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1129,
+    func: c"ossl_cipher_common_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_get_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1135` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1135: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1135,
+    func: c"ossl_cipher_common_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_set_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1157` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1157: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1157,
+    func: c"ossl_cipher_common_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_set_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1167` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1167: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1167,
+    func: c"ossl_cipher_common_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_set_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1175` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1175: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1175,
+    func: c"ossl_cipher_common_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_set_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1182` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1182: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1182,
+    func: c"ossl_cipher_common_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_set_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1191` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1191: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1191,
+    func: c"ossl_cipher_common_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_set_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1195` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1195: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1195,
+    func: c"ossl_cipher_common_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_initiv` at `providers/implementations/ciphers/ciphercommon.c:1221` (PROV_R_INVALID_IV_LENGTH).
+pub(crate) const PROV_CIPHERCOMMON_1221: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1221,
+    func: c"ossl_cipher_generic_initiv",
+    lib: 57,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_trailingdata` at `providers/implementations/ciphers/ciphercommon_block.c:70` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_CIPHERCOMMON_BLOCK_70: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/ciphercommon_block.c",
+    line: 70,
+    func: c"ossl_cipher_trailingdata",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_unpadblock` at `providers/implementations/ciphers/ciphercommon_block.c:97` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_CIPHERCOMMON_BLOCK_97: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/ciphercommon_block.c",
+    line: 97,
+    func: c"ossl_cipher_unpadblock",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_unpadblock` at `providers/implementations/ciphers/ciphercommon_block.c:107` (PROV_R_BAD_DECRYPT).
+pub(crate) const PROV_CIPHERCOMMON_BLOCK_107: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/ciphercommon_block.c",
+    line: 107,
+    func: c"ossl_cipher_unpadblock",
+    lib: 57,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_unpadblock` at `providers/implementations/ciphers/ciphercommon_block.c:112` (PROV_R_BAD_DECRYPT).
+pub(crate) const PROV_CIPHERCOMMON_BLOCK_112: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/ciphercommon_block.c",
+    line: 112,
+    func: c"ossl_cipher_unpadblock",
+    lib: 57,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `cipher_hw_aes_initkey` at `providers/implementations/ciphers/cipher_aes_hw.c:121` (PROV_R_KEY_SETUP_FAILED).
+pub(crate) const PROV_CIPHER_AES_HW_121: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_hw.c",
+    line: 121,
+    func: c"cipher_hw_aes_initkey",
+    lib: 57,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `cipher_hw_camellia_initkey` at `providers/implementations/ciphers/cipher_camellia_hw.c:30` (PROV_R_KEY_SETUP_FAILED).
+pub(crate) const PROV_CIPHER_CAMELLIA_HW_30: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_camellia_hw.c",
+    line: 30,
+    func: c"cipher_hw_camellia_initkey",
+    lib: 57,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `tdes_init` at `providers/implementations/ciphers/cipher_tdes_common.c:101` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_TDES_COMMON_101: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_tdes_common.c",
+    line: 101,
+    func: c"tdes_init",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `ossl_tdes_get_ctx_params` at `providers/implementations/ciphers/cipher_tdes_common.c:162` (PROV_R_FAILED_TO_GENERATE_KEY).
+pub(crate) const PROV_CIPHER_TDES_COMMON_162: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_tdes_common.c",
+    line: 162,
+    func: c"ossl_tdes_get_ctx_params",
+    lib: 57,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `ossl_tdes_get_params` at `providers/implementations/ciphers/cipher_tdes_common.c:195` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_TDES_COMMON_195: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_tdes_common.c",
+    line: 195,
+    func: c"ossl_tdes_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `null_get_ctx_params` at `providers/implementations/ciphers/cipher_null.c:130` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_NULL_130: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_null.c",
+    line: 130,
+    func: c"null_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `null_get_ctx_params` at `providers/implementations/ciphers/cipher_null.c:135` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_NULL_135: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_null.c",
+    line: 135,
+    func: c"null_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `null_get_ctx_params` at `providers/implementations/ciphers/cipher_null.c:141` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_NULL_141: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_null.c",
+    line: 141,
+    func: c"null_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `null_set_ctx_params` at `providers/implementations/ciphers/cipher_null.c:168` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_NULL_168: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_null.c",
+    line: 168,
+    func: c"null_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_init` at `providers/implementations/ciphers/cipher_aes_ocb.c:119` (PROV_R_INVALID_IV_LENGTH).
+pub(crate) const PROV_CIPHER_AES_OCB_119: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 119,
+    func: c"aes_ocb_init",
+    lib: 57,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_init` at `providers/implementations/ciphers/cipher_aes_ocb.c:130` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_AES_OCB_130: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 130,
+    func: c"aes_ocb_init",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_block_update_internal` at `providers/implementations/ciphers/cipher_aes_ocb.c:173` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHER_AES_OCB_173: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 173,
+    func: c"aes_ocb_block_update_internal",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_block_update_internal` at `providers/implementations/ciphers/cipher_aes_ocb.c:177` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHER_AES_OCB_177: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 177,
+    func: c"aes_ocb_block_update_internal",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_block_update_internal` at `providers/implementations/ciphers/cipher_aes_ocb.c:188` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHER_AES_OCB_188: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 188,
+    func: c"aes_ocb_block_update_internal",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_block_update_internal` at `providers/implementations/ciphers/cipher_aes_ocb.c:192` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHER_AES_OCB_192: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 192,
+    func: c"aes_ocb_block_update_internal",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:363` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_OCB_363: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 363,
+    func: c"aes_ocb_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:369` (PROV_R_INVALID_TAG_LENGTH).
+pub(crate) const PROV_CIPHER_AES_OCB_369: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 369,
+    func: c"aes_ocb_set_ctx_params",
+    lib: 57,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:375` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PROV_CIPHER_AES_OCB_375: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 375,
+    func: c"aes_ocb_set_ctx_params",
+    lib: 57,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:379` (PROV_R_INVALID_TAG_LENGTH).
+pub(crate) const PROV_CIPHER_AES_OCB_379: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 379,
+    func: c"aes_ocb_set_ctx_params",
+    lib: 57,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:388` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_OCB_388: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 388,
+    func: c"aes_ocb_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:404` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_OCB_404: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 404,
+    func: c"aes_ocb_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:408` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_AES_OCB_408: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 408,
+    func: c"aes_ocb_set_ctx_params",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:422` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_OCB_422: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 422,
+    func: c"aes_ocb_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:427` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_OCB_427: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 427,
+    func: c"aes_ocb_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:433` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_OCB_433: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 433,
+    func: c"aes_ocb_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:441` (PROV_R_INVALID_IV_LENGTH).
+pub(crate) const PROV_CIPHER_AES_OCB_441: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 441,
+    func: c"aes_ocb_get_ctx_params",
+    lib: 57,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:445` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_OCB_445: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 445,
+    func: c"aes_ocb_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:452` (PROV_R_INVALID_IV_LENGTH).
+pub(crate) const PROV_CIPHER_AES_OCB_452: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 452,
+    func: c"aes_ocb_get_ctx_params",
+    lib: 57,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:456` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_OCB_456: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 456,
+    func: c"aes_ocb_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:463` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_OCB_463: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 463,
+    func: c"aes_ocb_get_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:467` (PROV_R_INVALID_TAG_LENGTH).
+pub(crate) const PROV_CIPHER_AES_OCB_467: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 467,
+    func: c"aes_ocb_get_ctx_params",
+    lib: 57,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_cipher` at `providers/implementations/ciphers/cipher_aes_ocb.c:515` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHER_AES_OCB_515: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 515,
+    func: c"aes_ocb_cipher",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_cipher` at `providers/implementations/ciphers/cipher_aes_ocb.c:528` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHER_AES_OCB_528: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 528,
+    func: c"aes_ocb_cipher",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_cipher` at `providers/implementations/ciphers/cipher_aes_ocb.c:533` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHER_AES_OCB_533: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 533,
+    func: c"aes_ocb_cipher",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `aes_wrap_init` at `providers/implementations/ciphers/cipher_aes_wrp.c:123` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_AES_WRP_123: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_wrp.c",
+    line: 123,
+    func: c"aes_wrap_init",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `aes_wrap_cipher_internal` at `providers/implementations/ciphers/cipher_aes_wrp.c:178` (PROV_R_INVALID_INPUT_LENGTH).
+pub(crate) const PROV_CIPHER_AES_WRP_178: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_wrp.c",
+    line: 178,
+    func: c"aes_wrap_cipher_internal",
+    lib: 57,
+    reason: 230,
+    dynamic_reason: false,
+};
+
+/// `aes_wrap_cipher_internal` at `providers/implementations/ciphers/cipher_aes_wrp.c:184` (PROV_R_INVALID_INPUT_LENGTH).
+pub(crate) const PROV_CIPHER_AES_WRP_184: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_wrp.c",
+    line: 184,
+    func: c"aes_wrap_cipher_internal",
+    lib: 57,
+    reason: 230,
+    dynamic_reason: false,
+};
+
+/// `aes_wrap_cipher_internal` at `providers/implementations/ciphers/cipher_aes_wrp.c:190` (PROV_R_INVALID_INPUT_LENGTH).
+pub(crate) const PROV_CIPHER_AES_WRP_190: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_wrp.c",
+    line: 190,
+    func: c"aes_wrap_cipher_internal",
+    lib: 57,
+    reason: 230,
+    dynamic_reason: false,
+};
+
+/// `aes_wrap_cipher_internal` at `providers/implementations/ciphers/cipher_aes_wrp.c:214` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHER_AES_WRP_214: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_wrp.c",
+    line: 214,
+    func: c"aes_wrap_cipher_internal",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `aes_wrap_cipher_internal` at `providers/implementations/ciphers/cipher_aes_wrp.c:218` (PROV_R_INVALID_OUTPUT_LENGTH).
+pub(crate) const PROV_CIPHER_AES_WRP_218: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_wrp.c",
+    line: 218,
+    func: c"aes_wrap_cipher_internal",
+    lib: 57,
+    reason: 217,
+    dynamic_reason: false,
+};
+
+/// `aes_wrap_cipher` at `providers/implementations/ciphers/cipher_aes_wrp.c:250` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHER_AES_WRP_250: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_wrp.c",
+    line: 250,
+    func: c"aes_wrap_cipher",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `aes_wrap_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_wrp.c:274` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_WRP_274: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_wrp.c",
+    line: 274,
+    func: c"aes_wrap_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_wrap_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_wrp.c:278` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_AES_WRP_278: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_wrp.c",
+    line: 278,
+    func: c"aes_wrap_set_ctx_params",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `aes_xts_check_keys_differ` at `providers/implementations/ciphers/cipher_aes_xts.c:59` (PROV_R_XTS_DUPLICATED_KEYS).
+pub(crate) const PROV_CIPHER_AES_XTS_59: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_xts.c",
+    line: 59,
+    func: c"aes_xts_check_keys_differ",
+    lib: 57,
+    reason: 149,
+    dynamic_reason: false,
+};
+
+/// `aes_xts_init` at `providers/implementations/ciphers/cipher_aes_xts.c:90` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_AES_XTS_90: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_xts.c",
+    line: 90,
+    func: c"aes_xts_init",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `aes_xts_cipher` at `providers/implementations/ciphers/cipher_aes_xts.c:202` (PROV_R_XTS_DATA_UNIT_IS_TOO_LARGE).
+pub(crate) const PROV_CIPHER_AES_XTS_202: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_xts.c",
+    line: 202,
+    func: c"aes_xts_cipher",
+    lib: 57,
+    reason: 148,
+    dynamic_reason: false,
+};
+
+/// `aes_xts_stream_update` at `providers/implementations/ciphers/cipher_aes_xts.c:223` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHER_AES_XTS_223: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_xts.c",
+    line: 223,
+    func: c"aes_xts_stream_update",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `aes_xts_stream_update` at `providers/implementations/ciphers/cipher_aes_xts.c:228` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHER_AES_XTS_228: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_xts.c",
+    line: 228,
+    func: c"aes_xts_stream_update",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `aes_xts_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_xts.c:268` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_XTS_268: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_xts.c",
+    line: 268,
+    func: c"aes_xts_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_ccm_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon_ccm.c:108` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_CCM_108: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 108,
+    func: c"ossl_cipher_ccm_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_ccm_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon_ccm.c:123` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_CCM_123: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 123,
+    func: c"ossl_cipher_ccm_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_ccm_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon_ccm.c:142` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_CCM_142: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 142,
+    func: c"ossl_cipher_ccm_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_ccm_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon_ccm.c:153` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_CCM_153: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 153,
+    func: c"ossl_cipher_ccm_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_ccm_set_ctx_params` at `providers/implementations/ciphers/ciphercommon_ccm.c:186` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_CCM_186: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 186,
+    func: c"ossl_ccm_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_ccm_set_ctx_params` at `providers/implementations/ciphers/ciphercommon_ccm.c:190` (PROV_R_INVALID_TAG_LENGTH).
+pub(crate) const PROV_CIPHERCOMMON_CCM_190: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 190,
+    func: c"ossl_ccm_set_ctx_params",
+    lib: 57,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `ossl_ccm_set_ctx_params` at `providers/implementations/ciphers/ciphercommon_ccm.c:196` (PROV_R_TAG_NOT_NEEDED).
+pub(crate) const PROV_CIPHERCOMMON_CCM_196: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 196,
+    func: c"ossl_ccm_set_ctx_params",
+    lib: 57,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `ossl_ccm_set_ctx_params` at `providers/implementations/ciphers/ciphercommon_ccm.c:207` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_CCM_207: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 207,
+    func: c"ossl_ccm_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_ccm_set_ctx_params` at `providers/implementations/ciphers/ciphercommon_ccm.c:212` (PROV_R_INVALID_IV_LENGTH).
+pub(crate) const PROV_CIPHERCOMMON_CCM_212: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 212,
+    func: c"ossl_ccm_set_ctx_params",
+    lib: 57,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `ossl_ccm_set_ctx_params` at `providers/implementations/ciphers/ciphercommon_ccm.c:223` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_CCM_223: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 223,
+    func: c"ossl_ccm_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_ccm_set_ctx_params` at `providers/implementations/ciphers/ciphercommon_ccm.c:228` (PROV_R_INVALID_DATA).
+pub(crate) const PROV_CIPHERCOMMON_CCM_228: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 228,
+    func: c"ossl_ccm_set_ctx_params",
+    lib: 57,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `ossl_ccm_set_ctx_params` at `providers/implementations/ciphers/ciphercommon_ccm.c:236` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_CCM_236: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 236,
+    func: c"ossl_ccm_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_ccm_set_ctx_params` at `providers/implementations/ciphers/ciphercommon_ccm.c:240` (PROV_R_INVALID_IV_LENGTH).
+pub(crate) const PROV_CIPHERCOMMON_CCM_240: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 240,
+    func: c"ossl_ccm_set_ctx_params",
+    lib: 57,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_ccm_get_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon_ccm.c:298` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_CCM_298: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 298,
+    func: c"ossl_cipher_ccm_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_ccm_get_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon_ccm.c:307` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_CCM_307: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 307,
+    func: c"ossl_cipher_ccm_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_ccm_get_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon_ccm.c:319` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_CCM_319: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 319,
+    func: c"ossl_cipher_ccm_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_ccm_get_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon_ccm.c:342` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_CCM_342: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 342,
+    func: c"ossl_cipher_ccm_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_ccm_get_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon_ccm.c:351` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_CCM_351: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 351,
+    func: c"ossl_cipher_ccm_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_ccm_get_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon_ccm.c:363` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_CCM_363: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 363,
+    func: c"ossl_cipher_ccm_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_ccm_get_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon_ccm.c:375` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_CCM_375: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 375,
+    func: c"ossl_cipher_ccm_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_ccm_get_ctx_params` at `providers/implementations/ciphers/ciphercommon_ccm.c:403` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_CCM_403: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 403,
+    func: c"ossl_ccm_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_ccm_get_ctx_params` at `providers/implementations/ciphers/ciphercommon_ccm.c:408` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_CCM_408: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 408,
+    func: c"ossl_ccm_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_ccm_get_ctx_params` at `providers/implementations/ciphers/ciphercommon_ccm.c:414` (PROV_R_INVALID_IV_LENGTH).
+pub(crate) const PROV_CIPHERCOMMON_CCM_414: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 414,
+    func: c"ossl_ccm_get_ctx_params",
+    lib: 57,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `ossl_ccm_get_ctx_params` at `providers/implementations/ciphers/ciphercommon_ccm.c:418` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_CCM_418: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 418,
+    func: c"ossl_ccm_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_ccm_get_ctx_params` at `providers/implementations/ciphers/ciphercommon_ccm.c:425` (PROV_R_INVALID_IV_LENGTH).
+pub(crate) const PROV_CIPHERCOMMON_CCM_425: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 425,
+    func: c"ossl_ccm_get_ctx_params",
+    lib: 57,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `ossl_ccm_get_ctx_params` at `providers/implementations/ciphers/ciphercommon_ccm.c:429` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_CCM_429: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 429,
+    func: c"ossl_ccm_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_ccm_get_ctx_params` at `providers/implementations/ciphers/ciphercommon_ccm.c:435` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_CCM_435: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 435,
+    func: c"ossl_ccm_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_ccm_get_ctx_params` at `providers/implementations/ciphers/ciphercommon_ccm.c:440` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_CCM_440: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 440,
+    func: c"ossl_ccm_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_ccm_get_ctx_params` at `providers/implementations/ciphers/ciphercommon_ccm.c:446` (PROV_R_TAG_NOT_SET).
+pub(crate) const PROV_CIPHERCOMMON_CCM_446: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 446,
+    func: c"ossl_ccm_get_ctx_params",
+    lib: 57,
+    reason: 119,
+    dynamic_reason: false,
+};
+
+/// `ossl_ccm_get_ctx_params` at `providers/implementations/ciphers/ciphercommon_ccm.c:450` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_CCM_450: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 450,
+    func: c"ossl_ccm_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ccm_init` at `providers/implementations/ciphers/ciphercommon_ccm.c:476` (PROV_R_INVALID_IV_LENGTH).
+pub(crate) const PROV_CIPHERCOMMON_CCM_476: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 476,
+    func: c"ccm_init",
+    lib: 57,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `ccm_init` at `providers/implementations/ciphers/ciphercommon_ccm.c:484` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHERCOMMON_CCM_484: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 484,
+    func: c"ccm_init",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `ossl_ccm_stream_update` at `providers/implementations/ciphers/ciphercommon_ccm.c:514` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHERCOMMON_CCM_514: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 514,
+    func: c"ossl_ccm_stream_update",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_ccm_stream_update` at `providers/implementations/ciphers/ciphercommon_ccm.c:519` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_CCM_519: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 519,
+    func: c"ossl_ccm_stream_update",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ccm_cipher` at `providers/implementations/ciphers/ciphercommon_ccm.c:560` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHERCOMMON_CCM_560: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon_ccm.c",
+    line: 560,
+    func: c"ossl_ccm_cipher",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `siv_init` at `providers/implementations/ciphers/cipher_aes_siv.c:90` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_AES_SIV_90: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_siv.c",
+    line: 90,
+    func: c"siv_init",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `siv_cipher` at `providers/implementations/ciphers/cipher_aes_siv.c:122` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHER_AES_SIV_122: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_siv.c",
+    line: 122,
+    func: c"siv_cipher",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `aes_siv_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_siv.c:161` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_SIV_161: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_siv.c",
+    line: 161,
+    func: c"aes_siv_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_siv_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_siv.c:167` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_SIV_167: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_siv.c",
+    line: 167,
+    func: c"aes_siv_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_siv_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_siv.c:172` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_SIV_172: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_siv.c",
+    line: 172,
+    func: c"aes_siv_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_siv_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_siv.c:206` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_SIV_206: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_siv.c",
+    line: 206,
+    func: c"aes_siv_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_siv_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_siv.c:213` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_SIV_213: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_siv.c",
+    line: 213,
+    func: c"aes_siv_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_siv_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_siv.c:223` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_SIV_223: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_siv.c",
+    line: 223,
+    func: c"aes_siv_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `chacha20_get_ctx_params` at `providers/implementations/ciphers/cipher_chacha20.c:111` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_111: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_chacha20.c",
+    line: 111,
+    func: c"chacha20_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `chacha20_get_ctx_params` at `providers/implementations/ciphers/cipher_chacha20.c:116` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_116: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_chacha20.c",
+    line: 116,
+    func: c"chacha20_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `chacha20_get_ctx_params` at `providers/implementations/ciphers/cipher_chacha20.c:126` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_126: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_chacha20.c",
+    line: 126,
+    func: c"chacha20_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `chacha20_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20.c:156` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_156: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_chacha20.c",
+    line: 156,
+    func: c"chacha20_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `chacha20_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20.c:160` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_CHACHA20_160: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_chacha20.c",
+    line: 160,
+    func: c"chacha20_set_ctx_params",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `chacha20_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20.c:167` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_167: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_chacha20.c",
+    line: 167,
+    func: c"chacha20_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `chacha20_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20.c:171` (PROV_R_INVALID_IV_LENGTH).
+pub(crate) const PROV_CIPHER_CHACHA20_171: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_chacha20.c",
+    line: 171,
+    func: c"chacha20_set_ctx_params",
+    lib: 57,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_get_ctx_params_decoder` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:142` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_142: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 142,
+    func: c"chacha20_poly1305_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_get_ctx_params_decoder` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:153` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_153: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 153,
+    func: c"chacha20_poly1305_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_get_ctx_params_decoder` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:176` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_176: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 176,
+    func: c"chacha20_poly1305_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_get_ctx_params_decoder` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:185` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_185: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 185,
+    func: c"chacha20_poly1305_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_get_ctx_params_decoder` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:197` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_197: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 197,
+    func: c"chacha20_poly1305_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_get_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:221` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_221: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 221,
+    func: c"chacha20_poly1305_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_get_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:227` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_227: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 227,
+    func: c"chacha20_poly1305_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_get_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:233` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_233: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 233,
+    func: c"chacha20_poly1305_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_get_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:239` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_239: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 239,
+    func: c"chacha20_poly1305_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_get_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:245` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_245: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 245,
+    func: c"chacha20_poly1305_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_get_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:249` (PROV_R_TAG_NOT_SET).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_249: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 249,
+    func: c"chacha20_poly1305_get_ctx_params",
+    lib: 57,
+    reason: 119,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_get_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:253` (PROV_R_INVALID_TAG_LENGTH).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_253: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 253,
+    func: c"chacha20_poly1305_get_ctx_params",
+    lib: 57,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params_decoder` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:305` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_305: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 305,
+    func: c"chacha20_poly1305_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params_decoder` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:316` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_316: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 316,
+    func: c"chacha20_poly1305_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params_decoder` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:331` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_331: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 331,
+    func: c"chacha20_poly1305_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params_decoder` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:350` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_350: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 350,
+    func: c"chacha20_poly1305_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params_decoder` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:361` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_361: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 361,
+    func: c"chacha20_poly1305_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:396` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_396: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 396,
+    func: c"chacha20_poly1305_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:400` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_400: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 400,
+    func: c"chacha20_poly1305_set_ctx_params",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:407` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_407: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 407,
+    func: c"chacha20_poly1305_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:411` (PROV_R_INVALID_IV_LENGTH).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_411: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 411,
+    func: c"chacha20_poly1305_set_ctx_params",
+    lib: 57,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:418` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_418: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 418,
+    func: c"chacha20_poly1305_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:422` (PROV_R_INVALID_TAG_LENGTH).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_422: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 422,
+    func: c"chacha20_poly1305_set_ctx_params",
+    lib: 57,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:427` (PROV_R_TAG_NOT_NEEDED).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_427: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 427,
+    func: c"chacha20_poly1305_set_ctx_params",
+    lib: 57,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:437` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_437: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 437,
+    func: c"chacha20_poly1305_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:442` (PROV_R_INVALID_DATA).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_442: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 442,
+    func: c"chacha20_poly1305_set_ctx_params",
+    lib: 57,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:450` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_450: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 450,
+    func: c"chacha20_poly1305_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_set_ctx_params` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:456` (PROV_R_INVALID_IV_LENGTH).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_456: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 456,
+    func: c"chacha20_poly1305_set_ctx_params",
+    lib: 57,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_cipher` at `providers/implementations/ciphers/cipher_chacha20_poly1305.c:512` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHER_CHACHA20_POLY1305_512: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/cipher_chacha20_poly1305.c",
+    line: 512,
+    func: c"chacha20_poly1305_cipher",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `cipher_hw_aria_initkey` at `providers/implementations/ciphers/cipher_aria_hw.c:25` (PROV_R_KEY_SETUP_FAILED).
+pub(crate) const PROV_CIPHER_ARIA_HW_25: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aria_hw.c",
+    line: 25,
+    func: c"cipher_hw_aria_initkey",
+    lib: 57,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `sm4_xts_init` at `providers/implementations/ciphers/cipher_sm4_xts.c:54` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_SM4_XTS_54: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_sm4_xts.c",
+    line: 54,
+    func: c"sm4_xts_init",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `sm4_xts_cipher` at `providers/implementations/ciphers/cipher_sm4_xts.c:142` (PROV_R_XTS_DATA_UNIT_IS_TOO_LARGE).
+pub(crate) const PROV_CIPHER_SM4_XTS_142: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_sm4_xts.c",
+    line: 142,
+    func: c"sm4_xts_cipher",
+    lib: 57,
+    reason: 148,
+    dynamic_reason: false,
+};
+
+/// `sm4_xts_stream_update` at `providers/implementations/ciphers/cipher_sm4_xts.c:171` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHER_SM4_XTS_171: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_sm4_xts.c",
+    line: 171,
+    func: c"sm4_xts_stream_update",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `sm4_xts_stream_update` at `providers/implementations/ciphers/cipher_sm4_xts.c:176` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHER_SM4_XTS_176: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_sm4_xts.c",
+    line: 176,
+    func: c"sm4_xts_stream_update",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `sm4_xts_set_ctx_params` at `providers/implementations/ciphers/cipher_sm4_xts.c:227` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_SM4_XTS_227: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_sm4_xts.c",
+    line: 227,
+    func: c"sm4_xts_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `sm4_xts_set_ctx_params` at `providers/implementations/ciphers/cipher_sm4_xts.c:235` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_SM4_XTS_235: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_sm4_xts.c",
+    line: 235,
+    func: c"sm4_xts_set_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:102` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_102: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 102,
+    func: c"aes_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:113` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_113: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 113,
+    func: c"aes_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:132` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_132: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 132,
+    func: c"aes_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:162` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_162: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 162,
+    func: c"aes_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:176` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_176: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 176,
+    func: c"aes_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:188` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_188: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 188,
+    func: c"aes_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:192` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_192: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 192,
+    func: c"aes_set_ctx_params",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `aes_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:200` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_200: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 200,
+    func: c"aes_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:206` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_206: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 206,
+    func: c"aes_set_ctx_params",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `aes_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:231` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_231: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 231,
+    func: c"aes_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:238` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_238: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 238,
+    func: c"aes_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:244` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_244: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 244,
+    func: c"aes_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:250` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_250: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 250,
+    func: c"aes_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:257` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_257: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 257,
+    func: c"aes_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:262` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_262: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 262,
+    func: c"aes_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:267` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_267: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 267,
+    func: c"aes_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:273` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_273: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 273,
+    func: c"aes_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c:279` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_CBC_HMAC_SHA_279: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_cbc_hmac_sha.c",
+    line: 279,
+    func: c"aes_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_aes_gcm_siv_init` at `providers/implementations/ciphers/cipher_aes_gcm_siv.c:104` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_AES_GCM_SIV_104: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_gcm_siv.c",
+    line: 104,
+    func: c"ossl_aes_gcm_siv_init",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `ossl_aes_gcm_siv_init` at `providers/implementations/ciphers/cipher_aes_gcm_siv.c:111` (PROV_R_INVALID_IV_LENGTH).
+pub(crate) const PROV_CIPHER_AES_GCM_SIV_111: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_gcm_siv.c",
+    line: 111,
+    func: c"ossl_aes_gcm_siv_init",
+    lib: 57,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `ossl_aes_gcm_siv_cipher` at `providers/implementations/ciphers/cipher_aes_gcm_siv.c:148` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHER_AES_GCM_SIV_148: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_gcm_siv.c",
+    line: 148,
+    func: c"ossl_aes_gcm_siv_cipher",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_aes_gcm_siv_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_gcm_siv.c:185` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_GCM_SIV_185: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_gcm_siv.c",
+    line: 185,
+    func: c"ossl_aes_gcm_siv_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_aes_gcm_siv_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_gcm_siv.c:191` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_GCM_SIV_191: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_gcm_siv.c",
+    line: 191,
+    func: c"ossl_aes_gcm_siv_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_aes_gcm_siv_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_gcm_siv.c:196` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_GCM_SIV_196: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_gcm_siv.c",
+    line: 196,
+    func: c"ossl_aes_gcm_siv_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_aes_gcm_siv_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_gcm_siv.c:228` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_GCM_SIV_228: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_gcm_siv.c",
+    line: 228,
+    func: c"ossl_aes_gcm_siv_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_aes_gcm_siv_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_gcm_siv.c:239` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_GCM_SIV_239: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_gcm_siv.c",
+    line: 239,
+    func: c"ossl_aes_gcm_siv_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_aes_gcm_siv_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_gcm_siv.c:249` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_GCM_SIV_249: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_gcm_siv.c",
+    line: 249,
+    func: c"ossl_aes_gcm_siv_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_aes_gcm_siv_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_gcm_siv.c:254` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_AES_GCM_SIV_254: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_gcm_siv.c",
+    line: 254,
+    func: c"ossl_aes_gcm_siv_set_ctx_params",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `cmac_get_ctx_params_decoder` at `providers/implementations/macs/cmac_prov.c:245` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CMAC_PROV_245: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/cmac_prov.c",
+    line: 245,
+    func: c"cmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cmac_get_ctx_params_decoder` at `providers/implementations/macs/cmac_prov.c:257` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CMAC_PROV_257: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/cmac_prov.c",
+    line: 257,
+    func: c"cmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cmac_get_ctx_params_decoder` at `providers/implementations/macs/cmac_prov.c:269` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CMAC_PROV_269: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/cmac_prov.c",
+    line: 269,
+    func: c"cmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cmac_set_ctx_params_decoder` at `providers/implementations/macs/cmac_prov.c:350` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CMAC_PROV_350: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/cmac_prov.c",
+    line: 350,
+    func: c"cmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cmac_set_ctx_params_decoder` at `providers/implementations/macs/cmac_prov.c:370` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CMAC_PROV_370: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/cmac_prov.c",
+    line: 370,
+    func: c"cmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cmac_set_ctx_params_decoder` at `providers/implementations/macs/cmac_prov.c:382` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CMAC_PROV_382: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/cmac_prov.c",
+    line: 382,
+    func: c"cmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cmac_set_ctx_params_decoder` at `providers/implementations/macs/cmac_prov.c:395` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CMAC_PROV_395: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/cmac_prov.c",
+    line: 395,
+    func: c"cmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cmac_set_ctx_params_decoder` at `providers/implementations/macs/cmac_prov.c:406` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CMAC_PROV_406: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/cmac_prov.c",
+    line: 406,
+    func: c"cmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cmac_set_ctx_params` at `providers/implementations/macs/cmac_prov.c:449` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_CMAC_PROV_449: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/cmac_prov.c",
+    line: 449,
+    func: c"cmac_set_ctx_params",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `cmac_set_ctx_params` at `providers/implementations/macs/cmac_prov.c:460` (PROV_R_NOT_SUPPORTED).
+pub(crate) const PROV_CMAC_PROV_460: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/cmac_prov.c",
+    line: 460,
+    func: c"cmac_set_ctx_params",
+    lib: 57,
+    reason: 136,
+    dynamic_reason: false,
+};
+
+/// `gmac_setkey` at `providers/implementations/macs/gmac_prov.c:111` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_GMAC_PROV_111: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/gmac_prov.c",
+    line: 111,
+    func: c"gmac_setkey",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `gmac_get_params_decoder` at `providers/implementations/macs/gmac_prov.c:200` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_GMAC_PROV_200: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/gmac_prov.c",
+    line: 200,
+    func: c"gmac_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `gmac_set_ctx_params_decoder` at `providers/implementations/macs/gmac_prov.c:268` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_GMAC_PROV_268: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/gmac_prov.c",
+    line: 268,
+    func: c"gmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `gmac_set_ctx_params_decoder` at `providers/implementations/macs/gmac_prov.c:279` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_GMAC_PROV_279: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/gmac_prov.c",
+    line: 279,
+    func: c"gmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `gmac_set_ctx_params_decoder` at `providers/implementations/macs/gmac_prov.c:290` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_GMAC_PROV_290: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/gmac_prov.c",
+    line: 290,
+    func: c"gmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `gmac_set_ctx_params_decoder` at `providers/implementations/macs/gmac_prov.c:301` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_GMAC_PROV_301: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/gmac_prov.c",
+    line: 301,
+    func: c"gmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `gmac_set_ctx_params_decoder` at `providers/implementations/macs/gmac_prov.c:312` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_GMAC_PROV_312: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/gmac_prov.c",
+    line: 312,
+    func: c"gmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `gmac_set_ctx_params` at `providers/implementations/macs/gmac_prov.c:354` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_GMAC_PROV_354: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/gmac_prov.c",
+    line: 354,
+    func: c"gmac_set_ctx_params",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `hmac_setkey` at `providers/implementations/macs/hmac_prov.c:177` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_HMAC_PROV_177: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/hmac_prov.c",
+    line: 177,
+    func: c"hmac_setkey",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `hmac_get_ctx_params_decoder` at `providers/implementations/macs/hmac_prov.c:313` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMAC_PROV_313: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/hmac_prov.c",
+    line: 313,
+    func: c"hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_get_ctx_params_decoder` at `providers/implementations/macs/hmac_prov.c:325` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMAC_PROV_325: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/hmac_prov.c",
+    line: 325,
+    func: c"hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_get_ctx_params_decoder` at `providers/implementations/macs/hmac_prov.c:337` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMAC_PROV_337: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/hmac_prov.c",
+    line: 337,
+    func: c"hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_set_ctx_params_decoder` at `providers/implementations/macs/hmac_prov.c:427` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMAC_PROV_427: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/hmac_prov.c",
+    line: 427,
+    func: c"hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_set_ctx_params_decoder` at `providers/implementations/macs/hmac_prov.c:438` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMAC_PROV_438: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/hmac_prov.c",
+    line: 438,
+    func: c"hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_set_ctx_params_decoder` at `providers/implementations/macs/hmac_prov.c:462` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMAC_PROV_462: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/hmac_prov.c",
+    line: 462,
+    func: c"hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_set_ctx_params_decoder` at `providers/implementations/macs/hmac_prov.c:472` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMAC_PROV_472: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/hmac_prov.c",
+    line: 472,
+    func: c"hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_set_ctx_params_decoder` at `providers/implementations/macs/hmac_prov.c:485` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMAC_PROV_485: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/hmac_prov.c",
+    line: 485,
+    func: c"hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_set_ctx_params_decoder` at `providers/implementations/macs/hmac_prov.c:496` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMAC_PROV_496: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/hmac_prov.c",
+    line: 496,
+    func: c"hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `blake2_get_ctx_decoder` at `providers/implementations/include/prov/blake2_params.inc:46` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_BLAKE2_PARAMS_46: ErrSite = ErrSite {
+    file: c"providers/implementations/include/prov/blake2_params.inc",
+    line: 46,
+    func: c"blake2_get_ctx_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `blake2_get_ctx_decoder` at `providers/implementations/include/prov/blake2_params.inc:57` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_BLAKE2_PARAMS_57: ErrSite = ErrSite {
+    file: c"providers/implementations/include/prov/blake2_params.inc",
+    line: 57,
+    func: c"blake2_get_ctx_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `blake2_mac_set_ctx_decoder` at `providers/implementations/include/prov/blake2_params.inc:105` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_BLAKE2_PARAMS_105: ErrSite = ErrSite {
+    file: c"providers/implementations/include/prov/blake2_params.inc",
+    line: 105,
+    func: c"blake2_mac_set_ctx_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `blake2_mac_set_ctx_decoder` at `providers/implementations/include/prov/blake2_params.inc:116` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_BLAKE2_PARAMS_116: ErrSite = ErrSite {
+    file: c"providers/implementations/include/prov/blake2_params.inc",
+    line: 116,
+    func: c"blake2_mac_set_ctx_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `blake2_mac_set_ctx_decoder` at `providers/implementations/include/prov/blake2_params.inc:131` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_BLAKE2_PARAMS_131: ErrSite = ErrSite {
+    file: c"providers/implementations/include/prov/blake2_params.inc",
+    line: 131,
+    func: c"blake2_mac_set_ctx_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `blake2_mac_set_ctx_decoder` at `providers/implementations/include/prov/blake2_params.inc:142` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_BLAKE2_PARAMS_142: ErrSite = ErrSite {
+    file: c"providers/implementations/include/prov/blake2_params.inc",
+    line: 142,
+    func: c"blake2_mac_set_ctx_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `blake2_setkey` at `providers/implementations/macs/blake2_mac_impl.c:96` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_BLAKE2_MAC_IMPL_96: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/macs/blake2_mac_impl.c",
+    line: 96,
+    func: c"blake2_setkey",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `blake2_mac_init` at `providers/implementations/macs/blake2_mac_impl.c:119` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_BLAKE2_MAC_IMPL_119: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/macs/blake2_mac_impl.c",
+    line: 119,
+    func: c"blake2_mac_init",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `blake2_mac_set_ctx_params` at `providers/implementations/macs/blake2_mac_impl.c:197` (PROV_R_NOT_XOF_OR_INVALID_LENGTH).
+pub(crate) const PROV_BLAKE2_MAC_IMPL_197: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/macs/blake2_mac_impl.c",
+    line: 197,
+    func: c"blake2_mac_set_ctx_params",
+    lib: 57,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `blake2_mac_set_ctx_params` at `providers/implementations/macs/blake2_mac_impl.c:216` (PROV_R_INVALID_CUSTOM_LENGTH).
+pub(crate) const PROV_BLAKE2_MAC_IMPL_216: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/macs/blake2_mac_impl.c",
+    line: 216,
+    func: c"blake2_mac_set_ctx_params",
+    lib: 57,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `blake2_mac_set_ctx_params` at `providers/implementations/macs/blake2_mac_impl.c:231` (PROV_R_INVALID_SALT_LENGTH).
+pub(crate) const PROV_BLAKE2_MAC_IMPL_231: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/macs/blake2_mac_impl.c",
+    line: 231,
+    func: c"blake2_mac_set_ctx_params",
+    lib: 57,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `poly1305_setkey` at `providers/implementations/macs/poly1305_prov.c:92` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_POLY1305_PROV_92: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/poly1305_prov.c",
+    line: 92,
+    func: c"poly1305_setkey",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `poly1305_update` at `providers/implementations/macs/poly1305_prov.c:121` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_POLY1305_PROV_121: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/poly1305_prov.c",
+    line: 121,
+    func: c"poly1305_update",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `poly1305_final` at `providers/implementations/macs/poly1305_prov.c:141` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_POLY1305_PROV_141: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/poly1305_prov.c",
+    line: 141,
+    func: c"poly1305_final",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `poly1305_get_params_decoder` at `providers/implementations/macs/poly1305_prov.c:177` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_POLY1305_PROV_177: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/poly1305_prov.c",
+    line: 177,
+    func: c"poly1305_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `poly1305_set_ctx_params_decoder` at `providers/implementations/macs/poly1305_prov.c:234` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_POLY1305_PROV_234: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/poly1305_prov.c",
+    line: 234,
+    func: c"poly1305_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `siphash_get_ctx_params_decoder` at `providers/implementations/macs/siphash_prov.c:190` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SIPHASH_PROV_190: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/siphash_prov.c",
+    line: 190,
+    func: c"siphash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `siphash_get_ctx_params_decoder` at `providers/implementations/macs/siphash_prov.c:201` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SIPHASH_PROV_201: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/siphash_prov.c",
+    line: 201,
+    func: c"siphash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `siphash_get_ctx_params_decoder` at `providers/implementations/macs/siphash_prov.c:212` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SIPHASH_PROV_212: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/siphash_prov.c",
+    line: 212,
+    func: c"siphash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `siphash_set_params_decoder` at `providers/implementations/macs/siphash_prov.c:285` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SIPHASH_PROV_285: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/siphash_prov.c",
+    line: 285,
+    func: c"siphash_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `siphash_set_params_decoder` at `providers/implementations/macs/siphash_prov.c:296` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SIPHASH_PROV_296: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/siphash_prov.c",
+    line: 296,
+    func: c"siphash_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `siphash_set_params_decoder` at `providers/implementations/macs/siphash_prov.c:307` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SIPHASH_PROV_307: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/siphash_prov.c",
+    line: 307,
+    func: c"siphash_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `siphash_set_params_decoder` at `providers/implementations/macs/siphash_prov.c:318` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SIPHASH_PROV_318: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/siphash_prov.c",
+    line: 318,
+    func: c"siphash_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kmac_setkey` at `providers/implementations/macs/kmac_prov.c:272` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_KMAC_PROV_272: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 272,
+    func: c"kmac_setkey",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `kmac_setkey` at `providers/implementations/macs/kmac_prov.c:288` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_KMAC_PROV_288: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 288,
+    func: c"kmac_setkey",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `kmac_setkey` at `providers/implementations/macs/kmac_prov.c:295` (PROV_R_INVALID_DIGEST_LENGTH).
+pub(crate) const PROV_KMAC_PROV_295: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 295,
+    func: c"kmac_setkey",
+    lib: 57,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `kmac_init` at `providers/implementations/macs/kmac_prov.c:326` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_KMAC_PROV_326: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 326,
+    func: c"kmac_init",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `kmac_init` at `providers/implementations/macs/kmac_prov.c:335` (PROV_R_INVALID_DIGEST_LENGTH).
+pub(crate) const PROV_KMAC_PROV_335: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 335,
+    func: c"kmac_init",
+    lib: 57,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `kmac_init` at `providers/implementations/macs/kmac_prov.c:351` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_KMAC_PROV_351: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 351,
+    func: c"kmac_init",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `kmac_get_ctx_params_decoder` at `providers/implementations/macs/kmac_prov.c:434` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KMAC_PROV_434: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 434,
+    func: c"kmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kmac_get_ctx_params_decoder` at `providers/implementations/macs/kmac_prov.c:446` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KMAC_PROV_446: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 446,
+    func: c"kmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kmac_get_ctx_params_decoder` at `providers/implementations/macs/kmac_prov.c:458` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KMAC_PROV_458: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 458,
+    func: c"kmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kmac_set_ctx_params_decoder` at `providers/implementations/macs/kmac_prov.c:550` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KMAC_PROV_550: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 550,
+    func: c"kmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kmac_set_ctx_params_decoder` at `providers/implementations/macs/kmac_prov.c:574` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KMAC_PROV_574: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 574,
+    func: c"kmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kmac_set_ctx_params_decoder` at `providers/implementations/macs/kmac_prov.c:584` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KMAC_PROV_584: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 584,
+    func: c"kmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kmac_set_ctx_params_decoder` at `providers/implementations/macs/kmac_prov.c:598` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KMAC_PROV_598: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 598,
+    func: c"kmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kmac_set_ctx_params_decoder` at `providers/implementations/macs/kmac_prov.c:610` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KMAC_PROV_610: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 610,
+    func: c"kmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kmac_set_ctx_params_decoder` at `providers/implementations/macs/kmac_prov.c:621` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KMAC_PROV_621: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 621,
+    func: c"kmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kmac_set_ctx_params` at `providers/implementations/macs/kmac_prov.c:672` (PROV_R_INVALID_OUTPUT_LENGTH).
+pub(crate) const PROV_KMAC_PROV_672: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 672,
+    func: c"kmac_set_ctx_params",
+    lib: 57,
+    reason: 217,
+    dynamic_reason: false,
+};
+
+/// `kmac_set_ctx_params` at `providers/implementations/macs/kmac_prov.c:682` (PROV_R_INVALID_OUTPUT_LENGTH).
+pub(crate) const PROV_KMAC_PROV_682: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 682,
+    func: c"kmac_set_ctx_params",
+    lib: 57,
+    reason: 217,
+    dynamic_reason: false,
+};
+
+/// `kmac_set_ctx_params` at `providers/implementations/macs/kmac_prov.c:699` (PROV_R_INVALID_CUSTOM_LENGTH).
+pub(crate) const PROV_KMAC_PROV_699: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 699,
+    func: c"kmac_set_ctx_params",
+    lib: 57,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `right_encode` at `providers/implementations/macs/kmac_prov.c:741` (PROV_R_LENGTH_TOO_LARGE).
+pub(crate) const PROV_KMAC_PROV_741: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 741,
+    func: c"right_encode",
+    lib: 57,
+    reason: 202,
+    dynamic_reason: false,
+};
+
+/// `encode_string` at `providers/implementations/macs/kmac_prov.c:778` (PROV_R_LENGTH_TOO_LARGE).
+pub(crate) const PROV_KMAC_PROV_778: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 778,
+    func: c"encode_string",
+    lib: 57,
+    reason: 202,
+    dynamic_reason: false,
+};
+
+/// `bytepad` at `providers/implementations/macs/kmac_prov.c:811` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PROV_KMAC_PROV_811: ErrSite = ErrSite {
+    file: c"providers/implementations/macs/kmac_prov.c",
+    line: 811,
+    func: c"bytepad",
+    lib: 57,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `digest_default_get_params_decoder` at `providers/implementations/digests/digestcommon.c:56` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DIGESTCOMMON_56: ErrSite = ErrSite {
+    file: c"providers/implementations/digests/digestcommon.c",
+    line: 56,
+    func: c"digest_default_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `digest_default_get_params_decoder` at `providers/implementations/digests/digestcommon.c:67` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DIGESTCOMMON_67: ErrSite = ErrSite {
+    file: c"providers/implementations/digests/digestcommon.c",
+    line: 67,
+    func: c"digest_default_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `digest_default_get_params_decoder` at `providers/implementations/digests/digestcommon.c:78` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DIGESTCOMMON_78: ErrSite = ErrSite {
+    file: c"providers/implementations/digests/digestcommon.c",
+    line: 78,
+    func: c"digest_default_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `digest_default_get_params_decoder` at `providers/implementations/digests/digestcommon.c:89` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DIGESTCOMMON_89: ErrSite = ErrSite {
+    file: c"providers/implementations/digests/digestcommon.c",
+    line: 89,
+    func: c"digest_default_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_digest_default_get_params` at `providers/implementations/digests/digestcommon.c:111` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_DIGESTCOMMON_111: ErrSite = ErrSite {
+    file: c"providers/implementations/digests/digestcommon.c",
+    line: 111,
+    func: c"ossl_digest_default_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_digest_default_get_params` at `providers/implementations/digests/digestcommon.c:115` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_DIGESTCOMMON_115: ErrSite = ErrSite {
+    file: c"providers/implementations/digests/digestcommon.c",
+    line: 115,
+    func: c"ossl_digest_default_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_digest_default_get_params` at `providers/implementations/digests/digestcommon.c:120` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_DIGESTCOMMON_120: ErrSite = ErrSite {
+    file: c"providers/implementations/digests/digestcommon.c",
+    line: 120,
+    func: c"ossl_digest_default_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_digest_default_get_params` at `providers/implementations/digests/digestcommon.c:125` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_DIGESTCOMMON_125: ErrSite = ErrSite {
+    file: c"providers/implementations/digests/digestcommon.c",
+    line: 125,
+    func: c"ossl_digest_default_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `sskdf_size` at `providers/implementations/kdfs/sskdf.c:376` (PROV_R_MISSING_MESSAGE_DIGEST).
+pub(crate) const PROV_SSKDF_376: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 376,
+    func: c"sskdf_size",
+    lib: 57,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `fips_sskdf_key_check_passed` at `providers/implementations/kdfs/sskdf.c:393` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_SSKDF_393: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 393,
+    func: c"fips_sskdf_key_check_passed",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `sskdf_derive` at `providers/implementations/kdfs/sskdf.c:410` (PROV_R_MISSING_SECRET).
+pub(crate) const PROV_SSKDF_410: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 410,
+    func: c"sskdf_derive",
+    lib: 57,
+    reason: 132,
+    dynamic_reason: false,
+};
+
+/// `sskdf_derive` at `providers/implementations/kdfs/sskdf.c:427` (PROV_R_MISSING_MESSAGE_DIGEST).
+pub(crate) const PROV_SSKDF_427: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 427,
+    func: c"sskdf_derive",
+    lib: 57,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `sskdf_derive` at `providers/implementations/kdfs/sskdf.c:442` (PROV_R_UNSUPPORTED_MAC_TYPE).
+pub(crate) const PROV_SSKDF_442: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 442,
+    func: c"sskdf_derive",
+    lib: 57,
+    reason: 137,
+    dynamic_reason: false,
+};
+
+/// `sskdf_derive` at `providers/implementations/kdfs/sskdf.c:461` (PROV_R_MISSING_MESSAGE_DIGEST).
+pub(crate) const PROV_SSKDF_461: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 461,
+    func: c"sskdf_derive",
+    lib: 57,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `fips_x963kdf_digest_check_passed` at `providers/implementations/kdfs/sskdf.c:486` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_SSKDF_486: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 486,
+    func: c"fips_x963kdf_digest_check_passed",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `fips_x963kdf_key_check_passed` at `providers/implementations/kdfs/sskdf.c:502` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_SSKDF_502: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 502,
+    func: c"fips_x963kdf_key_check_passed",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `x963kdf_derive` at `providers/implementations/kdfs/sskdf.c:520` (PROV_R_MISSING_SECRET).
+pub(crate) const PROV_SSKDF_520: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 520,
+    func: c"x963kdf_derive",
+    lib: 57,
+    reason: 132,
+    dynamic_reason: false,
+};
+
+/// `x963kdf_derive` at `providers/implementations/kdfs/sskdf.c:525` (PROV_R_NOT_SUPPORTED).
+pub(crate) const PROV_SSKDF_525: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 525,
+    func: c"x963kdf_derive",
+    lib: 57,
+    reason: 136,
+    dynamic_reason: false,
+};
+
+/// `x963kdf_derive` at `providers/implementations/kdfs/sskdf.c:532` (PROV_R_MISSING_MESSAGE_DIGEST).
+pub(crate) const PROV_SSKDF_532: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 532,
+    func: c"x963kdf_derive",
+    lib: 57,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `sskdf_common_set_ctx_params` at `providers/implementations/kdfs/sskdf.c:584` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_SSKDF_584: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 584,
+    func: c"sskdf_common_set_ctx_params",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `sskdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sskdf.c:666` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSKDF_666: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 666,
+    func: c"sskdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sskdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sskdf.c:677` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSKDF_677: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 677,
+    func: c"sskdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sskdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sskdf.c:688` (PROV_R_TOO_MANY_RECORDS).
+pub(crate) const PROV_SSKDF_688: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 688,
+    func: c"sskdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `sskdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sskdf.c:712` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSKDF_712: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 712,
+    func: c"sskdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sskdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sskdf.c:722` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSKDF_722: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 722,
+    func: c"sskdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sskdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sskdf.c:747` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSKDF_747: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 747,
+    func: c"sskdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sskdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sskdf.c:756` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSKDF_756: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 756,
+    func: c"sskdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sskdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sskdf.c:769` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSKDF_769: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 769,
+    func: c"sskdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sskdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sskdf.c:784` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSKDF_784: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 784,
+    func: c"sskdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sskdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sskdf.c:795` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSKDF_795: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 795,
+    func: c"sskdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sskdf_get_ctx_params_decoder` at `providers/implementations/kdfs/sskdf.c:876` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSKDF_876: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 876,
+    func: c"sskdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sskdf_get_ctx_params_decoder` at `providers/implementations/kdfs/sskdf.c:888` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSKDF_888: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 888,
+    func: c"sskdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `x963kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sskdf.c:1010` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSKDF_1010: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 1010,
+    func: c"x963kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `x963kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sskdf.c:1020` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSKDF_1020: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 1020,
+    func: c"x963kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `x963kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sskdf.c:1036` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSKDF_1036: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 1036,
+    func: c"x963kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `x963kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sskdf.c:1047` (PROV_R_TOO_MANY_RECORDS).
+pub(crate) const PROV_SSKDF_1047: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 1047,
+    func: c"x963kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `x963kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sskdf.c:1071` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSKDF_1071: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 1071,
+    func: c"x963kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `x963kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sskdf.c:1081` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSKDF_1081: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 1081,
+    func: c"x963kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `x963kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sskdf.c:1106` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSKDF_1106: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 1106,
+    func: c"x963kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `x963kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sskdf.c:1115` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSKDF_1115: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 1115,
+    func: c"x963kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `x963kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sskdf.c:1128` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSKDF_1128: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 1128,
+    func: c"x963kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `x963kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sskdf.c:1143` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSKDF_1143: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 1143,
+    func: c"x963kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `x963kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sskdf.c:1154` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSKDF_1154: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sskdf.c",
+    line: 1154,
+    func: c"x963kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `find_alg_id` at `providers/implementations/kdfs/x942kdf.c:101` (PROV_R_UNSUPPORTED_CEK_ALG).
+pub(crate) const PROV_X942KDF_101: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 101,
+    func: c"find_alg_id",
+    lib: 57,
+    reason: 145,
+    dynamic_reason: false,
+};
+
+/// `x942kdf_hash_kdm` at `providers/implementations/kdfs/x942kdf.c:287` (PROV_R_BAD_LENGTH).
+pub(crate) const PROV_X942KDF_287: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 287,
+    func: c"x942kdf_hash_kdm",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `x942kdf_size` at `providers/implementations/kdfs/x942kdf.c:434` (PROV_R_MISSING_MESSAGE_DIGEST).
+pub(crate) const PROV_X942KDF_434: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 434,
+    func: c"x942kdf_size",
+    lib: 57,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `fips_x942kdf_key_check_passed` at `providers/implementations/kdfs/x942kdf.c:451` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_X942KDF_451: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 451,
+    func: c"fips_x942kdf_key_check_passed",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `x942kdf_derive` at `providers/implementations/kdfs/x942kdf.c:477` (PROV_R_INVALID_PUBINFO).
+pub(crate) const PROV_X942KDF_477: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 477,
+    func: c"x942kdf_derive",
+    lib: 57,
+    reason: 198,
+    dynamic_reason: false,
+};
+
+/// `x942kdf_derive` at `providers/implementations/kdfs/x942kdf.c:489` (PROV_R_INVALID_DATA).
+pub(crate) const PROV_X942KDF_489: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 489,
+    func: c"x942kdf_derive",
+    lib: 57,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `x942kdf_derive` at `providers/implementations/kdfs/x942kdf.c:493` (PROV_R_MISSING_SECRET).
+pub(crate) const PROV_X942KDF_493: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 493,
+    func: c"x942kdf_derive",
+    lib: 57,
+    reason: 132,
+    dynamic_reason: false,
+};
+
+/// `x942kdf_derive` at `providers/implementations/kdfs/x942kdf.c:498` (PROV_R_MISSING_MESSAGE_DIGEST).
+pub(crate) const PROV_X942KDF_498: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 498,
+    func: c"x942kdf_derive",
+    lib: 57,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `x942kdf_derive` at `providers/implementations/kdfs/x942kdf.c:502` (PROV_R_MISSING_CEK_ALG).
+pub(crate) const PROV_X942KDF_502: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 502,
+    func: c"x942kdf_derive",
+    lib: 57,
+    reason: 144,
+    dynamic_reason: false,
+};
+
+/// `x942kdf_derive` at `providers/implementations/kdfs/x942kdf.c:510` (PROV_R_INVALID_UKM_LENGTH).
+pub(crate) const PROV_X942KDF_510: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 510,
+    func: c"x942kdf_derive",
+    lib: 57,
+    reason: 200,
+    dynamic_reason: false,
+};
+
+/// `x942kdf_derive` at `providers/implementations/kdfs/x942kdf.c:522` (PROV_R_BAD_ENCODING).
+pub(crate) const PROV_X942KDF_522: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 522,
+    func: c"x942kdf_derive",
+    lib: 57,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/x942kdf.c:589` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_X942KDF_589: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 589,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/x942kdf.c:600` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_X942KDF_600: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 600,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/x942kdf.c:611` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_X942KDF_611: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 611,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/x942kdf.c:622` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_X942KDF_622: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 622,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/x942kdf.c:646` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_X942KDF_646: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 646,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/x942kdf.c:656` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_X942KDF_656: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 656,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/x942kdf.c:689` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_X942KDF_689: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 689,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/x942kdf.c:700` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_X942KDF_700: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 700,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/x942kdf.c:715` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_X942KDF_715: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 715,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/x942kdf.c:731` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_X942KDF_731: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 731,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/x942kdf.c:762` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_X942KDF_762: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 762,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/x942kdf.c:773` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_X942KDF_773: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 773,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/x942kdf.c:794` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_X942KDF_794: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 794,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/x942kdf.c:805` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_X942KDF_805: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 805,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `x942kdf_set_ctx_params` at `providers/implementations/kdfs/x942kdf.c:842` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_X942KDF_842: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 842,
+    func: c"x942kdf_set_ctx_params",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_get_ctx_params_decoder` at `providers/implementations/kdfs/x942kdf.c:939` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_X942KDF_939: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 939,
+    func: c"sshkdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_get_ctx_params_decoder` at `providers/implementations/kdfs/x942kdf.c:951` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_X942KDF_951: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/x942kdf.c",
+    line: 951,
+    func: c"sshkdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pkcs12kdf_derive` at `providers/implementations/kdfs/pkcs12kdf.c:67` (ERR_R_EVP_LIB).
+pub(crate) const PROV_PKCS12KDF_67: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pkcs12kdf.c",
+    line: 67,
+    func: c"pkcs12kdf_derive",
+    lib: 57,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `pkcs12kdf_derive` at `providers/implementations/kdfs/pkcs12kdf.c:73` (PROV_R_INVALID_DIGEST_SIZE).
+pub(crate) const PROV_PKCS12KDF_73: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pkcs12kdf.c",
+    line: 73,
+    func: c"pkcs12kdf_derive",
+    lib: 57,
+    reason: 218,
+    dynamic_reason: false,
+};
+
+/// `kdf_pkcs12_derive` at `providers/implementations/kdfs/pkcs12kdf.c:232` (PROV_R_MISSING_PASS).
+pub(crate) const PROV_PKCS12KDF_232: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pkcs12kdf.c",
+    line: 232,
+    func: c"kdf_pkcs12_derive",
+    lib: 57,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `kdf_pkcs12_derive` at `providers/implementations/kdfs/pkcs12kdf.c:237` (PROV_R_MISSING_SALT).
+pub(crate) const PROV_PKCS12KDF_237: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pkcs12kdf.c",
+    line: 237,
+    func: c"kdf_pkcs12_derive",
+    lib: 57,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_set_ctx_params_decoder` at `providers/implementations/kdfs/pkcs12kdf.c:288` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PKCS12KDF_288: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pkcs12kdf.c",
+    line: 288,
+    func: c"pkcs12_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_set_ctx_params_decoder` at `providers/implementations/kdfs/pkcs12kdf.c:299` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PKCS12KDF_299: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pkcs12kdf.c",
+    line: 299,
+    func: c"pkcs12_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_set_ctx_params_decoder` at `providers/implementations/kdfs/pkcs12kdf.c:316` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PKCS12KDF_316: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pkcs12kdf.c",
+    line: 316,
+    func: c"pkcs12_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_set_ctx_params_decoder` at `providers/implementations/kdfs/pkcs12kdf.c:327` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PKCS12KDF_327: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pkcs12kdf.c",
+    line: 327,
+    func: c"pkcs12_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_set_ctx_params_decoder` at `providers/implementations/kdfs/pkcs12kdf.c:343` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PKCS12KDF_343: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pkcs12kdf.c",
+    line: 343,
+    func: c"pkcs12_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_set_ctx_params_decoder` at `providers/implementations/kdfs/pkcs12kdf.c:354` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PKCS12KDF_354: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pkcs12kdf.c",
+    line: 354,
+    func: c"pkcs12_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_set_ctx_params_decoder` at `providers/implementations/kdfs/pkcs12kdf.c:366` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PKCS12KDF_366: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pkcs12kdf.c",
+    line: 366,
+    func: c"pkcs12_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_get_ctx_params_decoder` at `providers/implementations/kdfs/pkcs12kdf.c:451` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PKCS12KDF_451: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pkcs12kdf.c",
+    line: 451,
+    func: c"pkcs12_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `fips_digest_check_passed` at `providers/implementations/kdfs/sshkdf.c:151` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_SSHKDF_151: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 151,
+    func: c"fips_digest_check_passed",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `fips_key_check_passed` at `providers/implementations/kdfs/sshkdf.c:167` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_SSHKDF_167: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 167,
+    func: c"fips_key_check_passed",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `kdf_sshkdf_derive` at `providers/implementations/kdfs/sshkdf.c:186` (PROV_R_MISSING_MESSAGE_DIGEST).
+pub(crate) const PROV_SSHKDF_186: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 186,
+    func: c"kdf_sshkdf_derive",
+    lib: 57,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `kdf_sshkdf_derive` at `providers/implementations/kdfs/sshkdf.c:190` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_SSHKDF_190: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 190,
+    func: c"kdf_sshkdf_derive",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `kdf_sshkdf_derive` at `providers/implementations/kdfs/sshkdf.c:194` (PROV_R_MISSING_XCGHASH).
+pub(crate) const PROV_SSHKDF_194: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 194,
+    func: c"kdf_sshkdf_derive",
+    lib: 57,
+    reason: 135,
+    dynamic_reason: false,
+};
+
+/// `kdf_sshkdf_derive` at `providers/implementations/kdfs/sshkdf.c:198` (PROV_R_MISSING_SESSION_ID).
+pub(crate) const PROV_SSHKDF_198: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 198,
+    func: c"kdf_sshkdf_derive",
+    lib: 57,
+    reason: 133,
+    dynamic_reason: false,
+};
+
+/// `kdf_sshkdf_derive` at `providers/implementations/kdfs/sshkdf.c:202` (PROV_R_MISSING_TYPE).
+pub(crate) const PROV_SSHKDF_202: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 202,
+    func: c"kdf_sshkdf_derive",
+    lib: 57,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sshkdf.c:291` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSHKDF_291: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 291,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sshkdf.c:301` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSHKDF_301: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 301,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sshkdf.c:317` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSHKDF_317: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 317,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sshkdf.c:341` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSHKDF_341: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 341,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sshkdf.c:351` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSHKDF_351: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 351,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sshkdf.c:364` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSHKDF_364: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 364,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sshkdf.c:375` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSHKDF_375: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 375,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sshkdf.c:386` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSHKDF_386: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 386,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/sshkdf.c:397` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSHKDF_397: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 397,
+    func: c"sshkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_sshkdf_set_ctx_params` at `providers/implementations/kdfs/sshkdf.c:435` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_SSHKDF_435: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 435,
+    func: c"kdf_sshkdf_set_ctx_params",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `kdf_sshkdf_set_ctx_params` at `providers/implementations/kdfs/sshkdf.c:472` (PROV_R_VALUE_ERROR).
+pub(crate) const PROV_SSHKDF_472: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 472,
+    func: c"kdf_sshkdf_set_ctx_params",
+    lib: 57,
+    reason: 138,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_get_ctx_params_decoder` at `providers/implementations/kdfs/sshkdf.c:524` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSHKDF_524: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 524,
+    func: c"sshkdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sshkdf_get_ctx_params_decoder` at `providers/implementations/kdfs/sshkdf.c:536` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SSHKDF_536: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/sshkdf.c",
+    line: 536,
+    func: c"sshkdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `fips_lower_bound_check_passed` at `providers/implementations/kdfs/pbkdf2.c:227` (ERR_raise dynamic reason).
+pub(crate) const PROV_PBKDF2_227: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 227,
+    func: c"fips_lower_bound_check_passed",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `lower_bound_check_passed` at `providers/implementations/kdfs/pbkdf2.c:248` (ERR_raise dynamic reason).
+pub(crate) const PROV_PBKDF2_248: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 248,
+    func: c"lower_bound_check_passed",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `lower_bound_check_passed` at `providers/implementations/kdfs/pbkdf2.c:252` (PROV_R_INVALID_ITERATION_COUNT).
+pub(crate) const PROV_PBKDF2_252: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 252,
+    func: c"lower_bound_check_passed",
+    lib: 57,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `kdf_pbkdf2_derive` at `providers/implementations/kdfs/pbkdf2.c:270` (PROV_R_MISSING_PASS).
+pub(crate) const PROV_PBKDF2_270: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 270,
+    func: c"kdf_pbkdf2_derive",
+    lib: 57,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `kdf_pbkdf2_derive` at `providers/implementations/kdfs/pbkdf2.c:275` (PROV_R_MISSING_SALT).
+pub(crate) const PROV_PBKDF2_275: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 275,
+    func: c"kdf_pbkdf2_derive",
+    lib: 57,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `pbkdf2_set_ctx_params_decoder` at `providers/implementations/kdfs/pbkdf2.c:327` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PBKDF2_327: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 327,
+    func: c"pbkdf2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pbkdf2_set_ctx_params_decoder` at `providers/implementations/kdfs/pbkdf2.c:338` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PBKDF2_338: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 338,
+    func: c"pbkdf2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pbkdf2_set_ctx_params_decoder` at `providers/implementations/kdfs/pbkdf2.c:349` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PBKDF2_349: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 349,
+    func: c"pbkdf2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pbkdf2_set_ctx_params_decoder` at `providers/implementations/kdfs/pbkdf2.c:364` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PBKDF2_364: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 364,
+    func: c"pbkdf2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pbkdf2_set_ctx_params_decoder` at `providers/implementations/kdfs/pbkdf2.c:375` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PBKDF2_375: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 375,
+    func: c"pbkdf2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pbkdf2_set_ctx_params_decoder` at `providers/implementations/kdfs/pbkdf2.c:386` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PBKDF2_386: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 386,
+    func: c"pbkdf2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pbkdf2_set_ctx_params_decoder` at `providers/implementations/kdfs/pbkdf2.c:398` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PBKDF2_398: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 398,
+    func: c"pbkdf2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_pbkdf2_set_ctx_params` at `providers/implementations/kdfs/pbkdf2.c:431` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_PBKDF2_431: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 431,
+    func: c"kdf_pbkdf2_set_ctx_params",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `pbkdf2_get_ctx_params_decoder` at `providers/implementations/kdfs/pbkdf2.c:513` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PBKDF2_513: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 513,
+    func: c"pbkdf2_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pbkdf2_get_ctx_params_decoder` at `providers/implementations/kdfs/pbkdf2.c:525` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_PBKDF2_525: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 525,
+    func: c"pbkdf2_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pbkdf2_derive` at `providers/implementations/kdfs/pbkdf2.c:606` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_PBKDF2_606: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/pbkdf2.c",
+    line: 606,
+    func: c"pbkdf2_derive",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `kdf_hkdf_size` at `providers/implementations/kdfs/hkdf.c:199` (PROV_R_MISSING_MESSAGE_DIGEST).
+pub(crate) const PROV_HKDF_199: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 199,
+    func: c"kdf_hkdf_size",
+    lib: 57,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `fips_hkdf_key_check_passed` at `providers/implementations/kdfs/hkdf.c:219` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_HKDF_219: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 219,
+    func: c"fips_hkdf_key_check_passed",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `kdf_hkdf_derive` at `providers/implementations/kdfs/hkdf.c:239` (PROV_R_MISSING_MESSAGE_DIGEST).
+pub(crate) const PROV_HKDF_239: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 239,
+    func: c"kdf_hkdf_derive",
+    lib: 57,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `kdf_hkdf_derive` at `providers/implementations/kdfs/hkdf.c:243` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_HKDF_243: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 243,
+    func: c"kdf_hkdf_derive",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `kdf_hkdf_derive` at `providers/implementations/kdfs/hkdf.c:247` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_HKDF_247: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 247,
+    func: c"kdf_hkdf_derive",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `hkdf_common_set_ctx_params` at `providers/implementations/kdfs/hkdf.c:299` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_HKDF_299: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 299,
+    func: c"hkdf_common_set_ctx_params",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `hkdf_common_set_ctx_params` at `providers/implementations/kdfs/hkdf.c:313` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_HKDF_313: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 313,
+    func: c"hkdf_common_set_ctx_params",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `hkdf_common_set_ctx_params` at `providers/implementations/kdfs/hkdf.c:320` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_HKDF_320: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 320,
+    func: c"hkdf_common_set_ctx_params",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `hkdf_common_set_ctx_params` at `providers/implementations/kdfs/hkdf.c:325` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_HKDF_325: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 325,
+    func: c"hkdf_common_set_ctx_params",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `hkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:407` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_407: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 407,
+    func: c"hkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:418` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_418: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 418,
+    func: c"hkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:429` (PROV_R_TOO_MANY_RECORDS).
+pub(crate) const PROV_HKDF_429: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 429,
+    func: c"hkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `hkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:453` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_453: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 453,
+    func: c"hkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:463` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_463: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 463,
+    func: c"hkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:476` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_476: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 476,
+    func: c"hkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:487` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_487: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 487,
+    func: c"hkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:498` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_498: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 498,
+    func: c"hkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_get_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:586` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_586: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 586,
+    func: c"hkdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_get_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:598` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_598: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 598,
+    func: c"hkdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_get_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:610` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_610: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 610,
+    func: c"hkdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_get_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:621` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_621: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 621,
+    func: c"hkdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_get_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:636` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_636: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 636,
+    func: c"hkdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_get_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:647` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_647: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 647,
+    func: c"hkdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_fixed_digest_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:825` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_825: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 825,
+    func: c"hkdf_fixed_digest_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_fixed_digest_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:836` (PROV_R_TOO_MANY_RECORDS).
+pub(crate) const PROV_HKDF_836: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 836,
+    func: c"hkdf_fixed_digest_set_ctx_params_decoder",
+    lib: 57,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `hkdf_fixed_digest_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:860` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_860: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 860,
+    func: c"hkdf_fixed_digest_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_fixed_digest_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:870` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_870: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 870,
+    func: c"hkdf_fixed_digest_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_fixed_digest_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:883` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_883: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 883,
+    func: c"hkdf_fixed_digest_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hkdf_fixed_digest_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:894` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_894: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 894,
+    func: c"hkdf_fixed_digest_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_hkdf_fixed_digest_set_ctx_params` at `providers/implementations/kdfs/hkdf.c:916` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_HKDF_916: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 916,
+    func: c"kdf_hkdf_fixed_digest_set_ctx_params",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `HKDF_Extract` at `providers/implementations/kdfs/hkdf.c:1055` (PROV_R_WRONG_OUTPUT_BUFFER_SIZE).
+pub(crate) const PROV_HKDF_1055: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1055,
+    func: c"HKDF_Extract",
+    lib: 57,
+    reason: 139,
+    dynamic_reason: false,
+};
+
+/// `fips_tls1_3_digest_check_passed` at `providers/implementations/kdfs/hkdf.c:1294` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_HKDF_1294: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1294,
+    func: c"fips_tls1_3_digest_check_passed",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `fips_tls1_3_key_check_passed` at `providers/implementations/kdfs/hkdf.c:1330` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_HKDF_1330: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1330,
+    func: c"fips_tls1_3_key_check_passed",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_derive` at `providers/implementations/kdfs/hkdf.c:1349` (PROV_R_MISSING_MESSAGE_DIGEST).
+pub(crate) const PROV_HKDF_1349: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1349,
+    func: c"kdf_tls1_3_derive",
+    lib: 57,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:1440` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_1440: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1440,
+    func: c"kdf_tls1_3_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:1472` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_1472: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1472,
+    func: c"kdf_tls1_3_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:1482` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_1482: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1482,
+    func: c"kdf_tls1_3_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:1498` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_1498: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1498,
+    func: c"kdf_tls1_3_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:1522` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_1522: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1522,
+    func: c"kdf_tls1_3_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:1532` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_1532: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1532,
+    func: c"kdf_tls1_3_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:1545` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_1545: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1545,
+    func: c"kdf_tls1_3_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:1556` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_1556: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1556,
+    func: c"kdf_tls1_3_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:1575` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_1575: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1575,
+    func: c"kdf_tls1_3_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:1586` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_1586: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1586,
+    func: c"kdf_tls1_3_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_set_ctx_params_decoder` at `providers/implementations/kdfs/hkdf.c:1599` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HKDF_1599: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1599,
+    func: c"kdf_tls1_3_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_3_set_ctx_params` at `providers/implementations/kdfs/hkdf.c:1629` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_HKDF_1629: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hkdf.c",
+    line: 1629,
+    func: c"kdf_tls1_3_set_ctx_params",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `fips_ems_check_passed` at `providers/implementations/kdfs/tls1_prf.c:205` (PROV_R_EMS_NOT_ENABLED).
+pub(crate) const PROV_TLS1_PRF_205: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 205,
+    func: c"fips_ems_check_passed",
+    lib: 57,
+    reason: 233,
+    dynamic_reason: false,
+};
+
+/// `fips_digest_check_passed` at `providers/implementations/kdfs/tls1_prf.c:230` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_TLS1_PRF_230: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 230,
+    func: c"fips_digest_check_passed",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `fips_key_check_passed` at `providers/implementations/kdfs/tls1_prf.c:246` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_TLS1_PRF_246: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 246,
+    func: c"fips_key_check_passed",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_prf_derive` at `providers/implementations/kdfs/tls1_prf.c:263` (PROV_R_MISSING_MESSAGE_DIGEST).
+pub(crate) const PROV_TLS1_PRF_263: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 263,
+    func: c"kdf_tls1_prf_derive",
+    lib: 57,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_prf_derive` at `providers/implementations/kdfs/tls1_prf.c:267` (PROV_R_MISSING_SECRET).
+pub(crate) const PROV_TLS1_PRF_267: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 267,
+    func: c"kdf_tls1_prf_derive",
+    lib: 57,
+    reason: 132,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_prf_derive` at `providers/implementations/kdfs/tls1_prf.c:271` (PROV_R_MISSING_SEED).
+pub(crate) const PROV_TLS1_PRF_271: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 271,
+    func: c"kdf_tls1_prf_derive",
+    lib: 57,
+    reason: 140,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_prf_derive` at `providers/implementations/kdfs/tls1_prf.c:275` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_TLS1_PRF_275: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 275,
+    func: c"kdf_tls1_prf_derive",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `tls1prf_set_ctx_params_decoder` at `providers/implementations/kdfs/tls1_prf.c:372` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TLS1_PRF_372: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 372,
+    func: c"tls1prf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `tls1prf_set_ctx_params_decoder` at `providers/implementations/kdfs/tls1_prf.c:382` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TLS1_PRF_382: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 382,
+    func: c"tls1prf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `tls1prf_set_ctx_params_decoder` at `providers/implementations/kdfs/tls1_prf.c:403` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TLS1_PRF_403: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 403,
+    func: c"tls1prf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `tls1prf_set_ctx_params_decoder` at `providers/implementations/kdfs/tls1_prf.c:415` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TLS1_PRF_415: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 415,
+    func: c"tls1prf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `tls1prf_set_ctx_params_decoder` at `providers/implementations/kdfs/tls1_prf.c:428` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TLS1_PRF_428: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 428,
+    func: c"tls1prf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `tls1prf_set_ctx_params_decoder` at `providers/implementations/kdfs/tls1_prf.c:440` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TLS1_PRF_440: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 440,
+    func: c"tls1prf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `tls1prf_set_ctx_params_decoder` at `providers/implementations/kdfs/tls1_prf.c:459` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TLS1_PRF_459: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 459,
+    func: c"tls1prf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `tls1prf_set_ctx_params_decoder` at `providers/implementations/kdfs/tls1_prf.c:470` (PROV_R_TOO_MANY_RECORDS).
+pub(crate) const PROV_TLS1_PRF_470: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 470,
+    func: c"tls1prf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `kdf_tls1_prf_set_ctx_params` at `providers/implementations/kdfs/tls1_prf.c:537` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_TLS1_PRF_537: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 537,
+    func: c"kdf_tls1_prf_set_ctx_params",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `tls1prf_get_ctx_params_decoder` at `providers/implementations/kdfs/tls1_prf.c:655` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TLS1_PRF_655: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 655,
+    func: c"tls1prf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `tls1prf_get_ctx_params_decoder` at `providers/implementations/kdfs/tls1_prf.c:667` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TLS1_PRF_667: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/tls1_prf.c",
+    line: 667,
+    func: c"tls1prf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `fips_kbkdf_key_check_passed` at `providers/implementations/kdfs/kbkdf.c:203` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_KBKDF_203: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 203,
+    func: c"fips_kbkdf_key_check_passed",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_derive` at `providers/implementations/kdfs/kbkdf.c:315` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_KBKDF_315: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 315,
+    func: c"kbkdf_derive",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_derive` at `providers/implementations/kdfs/kbkdf.c:320` (PROV_R_MISSING_MAC).
+pub(crate) const PROV_KBKDF_320: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 320,
+    func: c"kbkdf_derive",
+    lib: 57,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_derive` at `providers/implementations/kdfs/kbkdf.c:326` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_KBKDF_326: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 326,
+    func: c"kbkdf_derive",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_derive` at `providers/implementations/kdfs/kbkdf.c:341` (PROV_R_INVALID_SEED_LENGTH).
+pub(crate) const PROV_KBKDF_341: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 341,
+    func: c"kbkdf_derive",
+    lib: 57,
+    reason: 154,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_derive` at `providers/implementations/kdfs/kbkdf.c:349` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_KBKDF_349: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 349,
+    func: c"kbkdf_derive",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:432` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_432: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 432,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:443` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_443: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 443,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:454` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_454: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 454,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:465` (PROV_R_TOO_MANY_RECORDS).
+pub(crate) const PROV_KBKDF_465: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 465,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:489` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_489: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 489,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:499` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_499: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 499,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:516` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_516: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 516,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:527` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_527: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 527,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:539` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_539: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 539,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:552` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_552: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 552,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:567` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_567: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 567,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:578` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_578: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 578,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:608` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_608: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 608,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:619` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_619: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 619,
+    func: c"kbkdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params` at `providers/implementations/kdfs/kbkdf.c:667` (PROV_R_INVALID_MAC).
+pub(crate) const PROV_KBKDF_667: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 667,
+    func: c"kbkdf_set_ctx_params",
+    lib: 57,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_set_ctx_params` at `providers/implementations/kdfs/kbkdf.c:680` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_KBKDF_680: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 680,
+    func: c"kbkdf_set_ctx_params",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_get_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:778` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_778: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 778,
+    func: c"kbkdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kbkdf_get_ctx_params_decoder` at `providers/implementations/kdfs/kbkdf.c:790` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KBKDF_790: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/kbkdf.c",
+    line: 790,
+    func: c"kbkdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `set_digest` at `providers/implementations/kdfs/scrypt.c:171` (PROV_R_UNABLE_TO_LOAD_SHA256).
+pub(crate) const PROV_SCRYPT_171: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 171,
+    func: c"set_digest",
+    lib: 57,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `kdf_scrypt_derive` at `providers/implementations/kdfs/scrypt.c:198` (PROV_R_MISSING_PASS).
+pub(crate) const PROV_SCRYPT_198: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 198,
+    func: c"kdf_scrypt_derive",
+    lib: 57,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `kdf_scrypt_derive` at `providers/implementations/kdfs/scrypt.c:203` (PROV_R_MISSING_SALT).
+pub(crate) const PROV_SCRYPT_203: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 203,
+    func: c"kdf_scrypt_derive",
+    lib: 57,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `scrypt_set_ctx_params_decoder` at `providers/implementations/kdfs/scrypt.c:264` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SCRYPT_264: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 264,
+    func: c"scrypt_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `scrypt_set_ctx_params_decoder` at `providers/implementations/kdfs/scrypt.c:277` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SCRYPT_277: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 277,
+    func: c"scrypt_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `scrypt_set_ctx_params_decoder` at `providers/implementations/kdfs/scrypt.c:292` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SCRYPT_292: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 292,
+    func: c"scrypt_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `scrypt_set_ctx_params_decoder` at `providers/implementations/kdfs/scrypt.c:303` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SCRYPT_303: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 303,
+    func: c"scrypt_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `scrypt_set_ctx_params_decoder` at `providers/implementations/kdfs/scrypt.c:312` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SCRYPT_312: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 312,
+    func: c"scrypt_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `scrypt_set_ctx_params_decoder` at `providers/implementations/kdfs/scrypt.c:325` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SCRYPT_325: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 325,
+    func: c"scrypt_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `scrypt_set_ctx_params_decoder` at `providers/implementations/kdfs/scrypt.c:336` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SCRYPT_336: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 336,
+    func: c"scrypt_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `scrypt_get_ctx_params_decoder` at `providers/implementations/kdfs/scrypt.c:432` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SCRYPT_432: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 432,
+    func: c"scrypt_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `scrypt_alg` at `providers/implementations/kdfs/scrypt.c:615` (EVP_R_MEMORY_LIMIT_EXCEEDED).
+pub(crate) const PROV_SCRYPT_615: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 615,
+    func: c"scrypt_alg",
+    lib: 6,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `scrypt_alg` at `providers/implementations/kdfs/scrypt.c:626` (EVP_R_MEMORY_LIMIT_EXCEEDED).
+pub(crate) const PROV_SCRYPT_626: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 626,
+    func: c"scrypt_alg",
+    lib: 6,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `scrypt_alg` at `providers/implementations/kdfs/scrypt.c:644` (EVP_R_MEMORY_LIMIT_EXCEEDED).
+pub(crate) const PROV_SCRYPT_644: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 644,
+    func: c"scrypt_alg",
+    lib: 6,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `scrypt_alg` at `providers/implementations/kdfs/scrypt.c:654` (EVP_R_MEMORY_LIMIT_EXCEEDED).
+pub(crate) const PROV_SCRYPT_654: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 654,
+    func: c"scrypt_alg",
+    lib: 6,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `scrypt_alg` at `providers/implementations/kdfs/scrypt.c:661` (EVP_R_MEMORY_LIMIT_EXCEEDED).
+pub(crate) const PROV_SCRYPT_661: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 661,
+    func: c"scrypt_alg",
+    lib: 6,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `scrypt_alg` at `providers/implementations/kdfs/scrypt.c:670` (EVP_R_MEMORY_LIMIT_EXCEEDED).
+pub(crate) const PROV_SCRYPT_670: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 670,
+    func: c"scrypt_alg",
+    lib: 6,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `scrypt_alg` at `providers/implementations/kdfs/scrypt.c:699` (EVP_R_PBKDF2_ERROR).
+pub(crate) const PROV_SCRYPT_699: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/scrypt.c",
+    line: 699,
+    func: c"scrypt_alg",
+    lib: 6,
+    reason: 181,
+    dynamic_reason: false,
+};
+
+/// `krb5kdf_derive` at `providers/implementations/kdfs/krb5kdf.c:140` (PROV_R_MISSING_CIPHER).
+pub(crate) const PROV_KRB5KDF_140: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 140,
+    func: c"krb5kdf_derive",
+    lib: 57,
+    reason: 155,
+    dynamic_reason: false,
+};
+
+/// `krb5kdf_derive` at `providers/implementations/kdfs/krb5kdf.c:144` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_KRB5KDF_144: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 144,
+    func: c"krb5kdf_derive",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `krb5kdf_derive` at `providers/implementations/kdfs/krb5kdf.c:148` (PROV_R_MISSING_CONSTANT).
+pub(crate) const PROV_KRB5KDF_148: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 148,
+    func: c"krb5kdf_derive",
+    lib: 57,
+    reason: 156,
+    dynamic_reason: false,
+};
+
+/// `krb5kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/krb5kdf.c:199` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KRB5KDF_199: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 199,
+    func: c"krb5kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `krb5kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/krb5kdf.c:210` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KRB5KDF_210: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 210,
+    func: c"krb5kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `krb5kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/krb5kdf.c:222` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KRB5KDF_222: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 222,
+    func: c"krb5kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `krb5kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/krb5kdf.c:233` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KRB5KDF_233: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 233,
+    func: c"krb5kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `krb5kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/krb5kdf.c:244` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KRB5KDF_244: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 244,
+    func: c"krb5kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `krb5kdf_get_ctx_params_decoder` at `providers/implementations/kdfs/krb5kdf.c:314` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_KRB5KDF_314: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 314,
+    func: c"krb5kdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `KRB5KDF` at `providers/implementations/kdfs/krb5kdf.c:538` (PROV_R_WRONG_OUTPUT_BUFFER_SIZE).
+pub(crate) const PROV_KRB5KDF_538: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 538,
+    func: c"KRB5KDF",
+    lib: 57,
+    reason: 139,
+    dynamic_reason: false,
+};
+
+/// `KRB5KDF` at `providers/implementations/kdfs/krb5kdf.c:557` (PROV_R_MISSING_CIPHER).
+pub(crate) const PROV_KRB5KDF_557: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 557,
+    func: c"KRB5KDF",
+    lib: 57,
+    reason: 155,
+    dynamic_reason: false,
+};
+
+/// `KRB5KDF` at `providers/implementations/kdfs/krb5kdf.c:563` (PROV_R_INVALID_CONSTANT_LENGTH).
+pub(crate) const PROV_KRB5KDF_563: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 563,
+    func: c"KRB5KDF",
+    lib: 57,
+    reason: 157,
+    dynamic_reason: false,
+};
+
+/// `KRB5KDF` at `providers/implementations/kdfs/krb5kdf.c:584` (PROV_R_WRONG_FINAL_BLOCK_LENGTH).
+pub(crate) const PROV_KRB5KDF_584: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 584,
+    func: c"KRB5KDF",
+    lib: 57,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `KRB5KDF` at `providers/implementations/kdfs/krb5kdf.c:618` (PROV_R_FAILED_TO_GENERATE_KEY).
+pub(crate) const PROV_KRB5KDF_618: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/krb5kdf.c",
+    line: 618,
+    func: c"KRB5KDF",
+    lib: 57,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `hmac_drbg_kdf_new` at `providers/implementations/kdfs/hmacdrbg_kdf.c:53` (ERR_R_MALLOC_FAILURE).
+pub(crate) const PROV_HMACDRBG_KDF_53: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hmacdrbg_kdf.c",
+    line: 53,
+    func: c"hmac_drbg_kdf_new",
+    lib: 57,
+    reason: 786688,
+    dynamic_reason: false,
+};
+
+/// `hmac_drbg_kdf_get_ctx_params_decoder` at `providers/implementations/kdfs/hmacdrbg_kdf.c:177` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMACDRBG_KDF_177: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hmacdrbg_kdf.c",
+    line: 177,
+    func: c"hmac_drbg_kdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_drbg_kdf_get_ctx_params_decoder` at `providers/implementations/kdfs/hmacdrbg_kdf.c:188` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMACDRBG_KDF_188: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hmacdrbg_kdf.c",
+    line: 188,
+    func: c"hmac_drbg_kdf_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_drbg_kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hmacdrbg_kdf.c:273` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMACDRBG_KDF_273: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hmacdrbg_kdf.c",
+    line: 273,
+    func: c"hmac_drbg_kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_drbg_kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hmacdrbg_kdf.c:292` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMACDRBG_KDF_292: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hmacdrbg_kdf.c",
+    line: 292,
+    func: c"hmac_drbg_kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_drbg_kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hmacdrbg_kdf.c:303` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMACDRBG_KDF_303: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hmacdrbg_kdf.c",
+    line: 303,
+    func: c"hmac_drbg_kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_drbg_kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hmacdrbg_kdf.c:316` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMACDRBG_KDF_316: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hmacdrbg_kdf.c",
+    line: 316,
+    func: c"hmac_drbg_kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_drbg_kdf_set_ctx_params_decoder` at `providers/implementations/kdfs/hmacdrbg_kdf.c:327` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_HMACDRBG_KDF_327: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hmacdrbg_kdf.c",
+    line: 327,
+    func: c"hmac_drbg_kdf_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `hmac_drbg_kdf_set_ctx_params` at `providers/implementations/kdfs/hmacdrbg_kdf.c:386` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_HMACDRBG_KDF_386: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/hmacdrbg_kdf.c",
+    line: 386,
+    func: c"hmac_drbg_kdf_set_ctx_params",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `initialize` at `providers/implementations/kdfs/argon2.c:741` (PROV_R_INVALID_MEMORY_SIZE).
+pub(crate) const PROV_ARGON2_741: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 741,
+    func: c"initialize",
+    lib: 57,
+    reason: 235,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2d_new` at `providers/implementations/kdfs/argon2.c:938` (ERR_R_MALLOC_FAILURE).
+pub(crate) const PROV_ARGON2_938: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 938,
+    func: c"kdf_argon2d_new",
+    lib: 57,
+    reason: 786688,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2i_new` at `providers/implementations/kdfs/argon2.c:957` (ERR_R_MALLOC_FAILURE).
+pub(crate) const PROV_ARGON2_957: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 957,
+    func: c"kdf_argon2i_new",
+    lib: 57,
+    reason: 786688,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2id_new` at `providers/implementations/kdfs/argon2.c:976` (ERR_R_MALLOC_FAILURE).
+pub(crate) const PROV_ARGON2_976: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 976,
+    func: c"kdf_argon2id_new",
+    lib: 57,
+    reason: 786688,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_derive` at `providers/implementations/kdfs/argon2.c:1031` (PROV_R_MISSING_MAC).
+pub(crate) const PROV_ARGON2_1031: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1031,
+    func: c"kdf_argon2_derive",
+    lib: 57,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_derive` at `providers/implementations/kdfs/argon2.c:1039` (PROV_R_MISSING_MESSAGE_DIGEST).
+pub(crate) const PROV_ARGON2_1039: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1039,
+    func: c"kdf_argon2_derive",
+    lib: 57,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_derive` at `providers/implementations/kdfs/argon2.c:1045` (PROV_R_MISSING_SALT).
+pub(crate) const PROV_ARGON2_1045: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1045,
+    func: c"kdf_argon2_derive",
+    lib: 57,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_derive` at `providers/implementations/kdfs/argon2.c:1052` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_ARGON2_1052: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1052,
+    func: c"kdf_argon2_derive",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_derive` at `providers/implementations/kdfs/argon2.c:1065` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_ARGON2_1065: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1065,
+    func: c"kdf_argon2_derive",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_derive` at `providers/implementations/kdfs/argon2.c:1071` (PROV_R_INVALID_THREAD_POOL_SIZE).
+pub(crate) const PROV_ARGON2_1071: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1071,
+    func: c"kdf_argon2_derive",
+    lib: 57,
+    reason: 234,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_derive` at `providers/implementations/kdfs/argon2.c:1077` (PROV_R_INVALID_THREAD_POOL_SIZE).
+pub(crate) const PROV_ARGON2_1077: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1077,
+    func: c"kdf_argon2_derive",
+    lib: 57,
+    reason: 234,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_derive` at `providers/implementations/kdfs/argon2.c:1084` (PROV_R_INVALID_THREAD_POOL_SIZE).
+pub(crate) const PROV_ARGON2_1084: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1084,
+    func: c"kdf_argon2_derive",
+    lib: 57,
+    reason: 234,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_derive` at `providers/implementations/kdfs/argon2.c:1092` (PROV_R_INVALID_MEMORY_SIZE).
+pub(crate) const PROV_ARGON2_1092: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1092,
+    func: c"kdf_argon2_derive",
+    lib: 57,
+    reason: 235,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_ctx_set_threads` at `providers/implementations/kdfs/argon2.c:1157` (PROV_R_INVALID_THREAD_POOL_SIZE).
+pub(crate) const PROV_ARGON2_1157: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1157,
+    func: c"kdf_argon2_ctx_set_threads",
+    lib: 57,
+    reason: 234,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_ctx_set_threads` at `providers/implementations/kdfs/argon2.c:1163` (PROV_R_INVALID_THREAD_POOL_SIZE).
+pub(crate) const PROV_ARGON2_1163: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1163,
+    func: c"kdf_argon2_ctx_set_threads",
+    lib: 57,
+    reason: 234,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_ctx_set_lanes` at `providers/implementations/kdfs/argon2.c:1175` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_ARGON2_1175: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1175,
+    func: c"kdf_argon2_ctx_set_lanes",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_ctx_set_lanes` at `providers/implementations/kdfs/argon2.c:1181` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_ARGON2_1181: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1181,
+    func: c"kdf_argon2_ctx_set_lanes",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_ctx_set_t_cost` at `providers/implementations/kdfs/argon2.c:1195` (PROV_R_INVALID_ITERATION_COUNT).
+pub(crate) const PROV_ARGON2_1195: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1195,
+    func: c"kdf_argon2_ctx_set_t_cost",
+    lib: 57,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_ctx_set_m_cost` at `providers/implementations/kdfs/argon2.c:1209` (PROV_R_INVALID_MEMORY_SIZE).
+pub(crate) const PROV_ARGON2_1209: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1209,
+    func: c"kdf_argon2_ctx_set_m_cost",
+    lib: 57,
+    reason: 235,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_ctx_set_out_length` at `providers/implementations/kdfs/argon2.c:1227` (PROV_R_INVALID_OUTPUT_LENGTH).
+pub(crate) const PROV_ARGON2_1227: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1227,
+    func: c"kdf_argon2_ctx_set_out_length",
+    lib: 57,
+    reason: 217,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_ctx_set_pwd` at `providers/implementations/kdfs/argon2.c:1280` (PROV_R_INVALID_SALT_LENGTH).
+pub(crate) const PROV_ARGON2_1280: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1280,
+    func: c"kdf_argon2_ctx_set_pwd",
+    lib: 57,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_ctx_set_salt` at `providers/implementations/kdfs/argon2.c:1312` (PROV_R_INVALID_SALT_LENGTH).
+pub(crate) const PROV_ARGON2_1312: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1312,
+    func: c"kdf_argon2_ctx_set_salt",
+    lib: 57,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_ctx_set_salt` at `providers/implementations/kdfs/argon2.c:1318` (PROV_R_INVALID_SALT_LENGTH).
+pub(crate) const PROV_ARGON2_1318: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1318,
+    func: c"kdf_argon2_ctx_set_salt",
+    lib: 57,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `kdf_argon2_ctx_set_version` at `providers/implementations/kdfs/argon2.c:1373` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_ARGON2_1373: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1373,
+    func: c"kdf_argon2_ctx_set_version",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `argon2_set_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1448` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1448: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1448,
+    func: c"argon2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `argon2_set_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1459` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1459: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1459,
+    func: c"argon2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `argon2_set_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1470` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1470: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1470,
+    func: c"argon2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `argon2_set_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1481` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1481: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1481,
+    func: c"argon2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `argon2_set_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1492` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1492: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1492,
+    func: c"argon2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `argon2_set_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1507` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1507: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1507,
+    func: c"argon2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `argon2_set_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1518` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1518: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1518,
+    func: c"argon2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `argon2_set_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1534` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1534: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1534,
+    func: c"argon2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `argon2_set_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1545` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1545: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1545,
+    func: c"argon2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `argon2_set_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1556` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1556: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1556,
+    func: c"argon2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `argon2_set_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1568` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1568: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1568,
+    func: c"argon2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `argon2_set_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1579` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1579: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1579,
+    func: c"argon2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `argon2_get_ctx_params_decoder` at `providers/implementations/kdfs/argon2.c:1711` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ARGON2_1711: ErrSite = ErrSite {
+    file: c"providers/implementations/kdfs/argon2.c",
+    line: 1711,
+    func: c"argon2_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `generic_skey_import_decoder` at `providers/implementations/skeymgmt/generic.c:63` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_GENERIC_SKEYMGMT_63: ErrSite = ErrSite {
+    file: c"providers/implementations/skeymgmt/generic.c",
+    line: 63,
+    func: c"generic_skey_import_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `kdf_derive` at `providers/implementations/exchange/kdf_exch.c:117` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_KDF_EXCH_117: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/exchange/kdf_exch.c",
+    line: 117,
+    func: c"kdf_derive",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `dh_gen_common_set_params` at `providers/implementations/keymgmt/dh_kmgmt.c:544` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PROV_DH_KMGMT_544: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/dh_kmgmt.c",
+    line: 544,
+    func: c"dh_gen_common_set_params",
+    lib: 57,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `dh_gen_common_set_params` at `providers/implementations/keymgmt/dh_kmgmt.c:558` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PROV_DH_KMGMT_558: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/dh_kmgmt.c",
+    line: 558,
+    func: c"dh_gen_common_set_params",
+    lib: 57,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `dhx_gen_set_params` at `providers/implementations/keymgmt/dh_kmgmt.c:653` (ERR_R_UNSUPPORTED).
+pub(crate) const PROV_DH_KMGMT_653: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/dh_kmgmt.c",
+    line: 653,
+    func: c"dhx_gen_set_params",
+    lib: 57,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `dh_gen_set_params` at `providers/implementations/keymgmt/dh_kmgmt.c:681` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PROV_DH_KMGMT_681: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/dh_kmgmt.c",
+    line: 681,
+    func: c"dh_gen_set_params",
+    lib: 57,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `dh_gen` at `providers/implementations/keymgmt/dh_kmgmt.c:725` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_DH_KMGMT_725: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/dh_kmgmt.c",
+    line: 725,
+    func: c"dh_gen",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `dh_check_key` at `providers/implementations/exchange/dh_exch.c:111` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_DH_EXCH_111: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 111,
+    func: c"dh_check_key",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `dh_match_params` at `providers/implementations/exchange/dh_exch.c:163` (PROV_R_MISMATCHING_DOMAIN_PARAMETERS).
+pub(crate) const PROV_DH_EXCH_163: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 163,
+    func: c"dh_match_params",
+    lib: 57,
+    reason: 203,
+    dynamic_reason: false,
+};
+
+/// `dh_plain_derive` at `providers/implementations/exchange/dh_exch.c:192` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_DH_EXCH_192: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 192,
+    func: c"dh_plain_derive",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `dh_plain_derive` at `providers/implementations/exchange/dh_exch.c:202` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_DH_EXCH_202: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 202,
+    func: c"dh_plain_derive",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `dh_X9_42_kdf_derive` at `providers/implementations/exchange/dh_exch.c:232` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_DH_EXCH_232: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 232,
+    func: c"dh_X9_42_kdf_derive",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `dh_set_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:402` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_402: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 402,
+    func: c"dh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_set_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:414` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_414: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 414,
+    func: c"dh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_set_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:466` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_466: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 466,
+    func: c"dh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_set_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:475` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_475: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 475,
+    func: c"dh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_set_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:491` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_491: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 491,
+    func: c"dh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_set_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:502` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_502: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 502,
+    func: c"dh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_set_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:513` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_513: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 513,
+    func: c"dh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_set_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:528` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_528: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 528,
+    func: c"dh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_set_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:542` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_542: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 542,
+    func: c"dh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_set_ctx_params` at `providers/implementations/exchange/dh_exch.c:603` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_DH_EXCH_603: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 603,
+    func: c"dh_set_ctx_params",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `dh_get_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:712` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_712: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 712,
+    func: c"dh_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_get_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:724` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_724: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 724,
+    func: c"dh_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_get_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:752` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_752: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 752,
+    func: c"dh_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_get_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:763` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_763: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 763,
+    func: c"dh_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_get_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:774` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_774: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 774,
+    func: c"dh_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dh_get_ctx_params_decoder` at `providers/implementations/exchange/dh_exch.c:785` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DH_EXCH_785: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/dh_exch.c",
+    line: 785,
+    func: c"dh_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_imexport_types_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:247` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_247: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 247,
+    func: c"ecx_imexport_types_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_imexport_types_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:258` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_258: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 258,
+    func: c"ecx_imexport_types_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:420` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_420: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 420,
+    func: c"ecx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:431` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_431: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 431,
+    func: c"ecx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:443` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_443: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 443,
+    func: c"ecx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:455` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_455: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 455,
+    func: c"ecx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:470` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_470: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 470,
+    func: c"ecx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:481` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_481: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 481,
+    func: c"ecx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:529` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_529: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 529,
+    func: c"ecx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:540` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_540: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 540,
+    func: c"ecx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ed_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:607` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_607: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 607,
+    func: c"ed_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ed_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:626` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_626: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 626,
+    func: c"ed_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ed_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:637` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_637: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 637,
+    func: c"ed_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ed_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:654` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_654: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 654,
+    func: c"ed_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ed_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:665` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_665: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 665,
+    func: c"ed_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ed_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:713` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_713: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 713,
+    func: c"ed_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ed_get_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:724` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_724: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 724,
+    func: c"ed_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_set_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:891` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_891: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 891,
+    func: c"ecx_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_set_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:902` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_902: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 902,
+    func: c"ecx_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_gen_set_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:1079` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_1079: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1079,
+    func: c"ecx_gen_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_gen_set_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:1090` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_1090: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1090,
+    func: c"ecx_gen_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_gen_set_params_decoder` at `providers/implementations/keymgmt/ecx_kmgmt.c:1101` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KMGMT_1101: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1101,
+    func: c"ecx_gen_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_gen_set_params` at `providers/implementations/keymgmt/ecx_kmgmt.c:1144` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PROV_ECX_KMGMT_1144: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1144,
+    func: c"ecx_gen_set_params",
+    lib: 57,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `ecx_gen` at `providers/implementations/keymgmt/ecx_kmgmt.c:1255` (ERR_R_EC_LIB).
+pub(crate) const PROV_ECX_KMGMT_1255: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1255,
+    func: c"ecx_gen",
+    lib: 57,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ecx_gen` at `providers/implementations/keymgmt/ecx_kmgmt.c:1264` (ERR_R_EC_LIB).
+pub(crate) const PROV_ECX_KMGMT_1264: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1264,
+    func: c"ecx_gen",
+    lib: 57,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ecx_validate` at `providers/implementations/keymgmt/ecx_kmgmt.c:1514` (PROV_R_ALGORITHM_MISMATCH).
+pub(crate) const PROV_ECX_KMGMT_1514: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1514,
+    func: c"ecx_validate",
+    lib: 57,
+    reason: 173,
+    dynamic_reason: false,
+};
+
+/// `s390x_ecx_keygen25519` at `providers/implementations/keymgmt/ecx_kmgmt.c:1610` (ERR_R_EC_LIB).
+pub(crate) const PROV_ECX_KMGMT_1610: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1610,
+    func: c"s390x_ecx_keygen25519",
+    lib: 57,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_ecx_keygen25519` at `providers/implementations/keymgmt/ecx_kmgmt.c:1622` (ERR_R_EC_LIB).
+pub(crate) const PROV_ECX_KMGMT_1622: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1622,
+    func: c"s390x_ecx_keygen25519",
+    lib: 57,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_ecx_keygen448` at `providers/implementations/keymgmt/ecx_kmgmt.c:1667` (ERR_R_EC_LIB).
+pub(crate) const PROV_ECX_KMGMT_1667: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1667,
+    func: c"s390x_ecx_keygen448",
+    lib: 57,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_ecx_keygen448` at `providers/implementations/keymgmt/ecx_kmgmt.c:1679` (ERR_R_EC_LIB).
+pub(crate) const PROV_ECX_KMGMT_1679: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1679,
+    func: c"s390x_ecx_keygen448",
+    lib: 57,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_ecd_keygen25519` at `providers/implementations/keymgmt/ecx_kmgmt.c:1731` (ERR_R_EC_LIB).
+pub(crate) const PROV_ECX_KMGMT_1731: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1731,
+    func: c"s390x_ecd_keygen25519",
+    lib: 57,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_ecd_keygen25519` at `providers/implementations/keymgmt/ecx_kmgmt.c:1743` (ERR_R_EC_LIB).
+pub(crate) const PROV_ECX_KMGMT_1743: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1743,
+    func: c"s390x_ecd_keygen25519",
+    lib: 57,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_ecd_keygen448` at `providers/implementations/keymgmt/ecx_kmgmt.c:1799` (ERR_R_EC_LIB).
+pub(crate) const PROV_ECX_KMGMT_1799: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1799,
+    func: c"s390x_ecd_keygen448",
+    lib: 57,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_ecd_keygen448` at `providers/implementations/keymgmt/ecx_kmgmt.c:1811` (ERR_R_EC_LIB).
+pub(crate) const PROV_ECX_KMGMT_1811: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ecx_kmgmt.c",
+    line: 1811,
+    func: c"s390x_ecd_keygen448",
+    lib: 57,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ecx_init` at `providers/implementations/exchange/ecx_exch.c:86` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_ECX_EXCH_86: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecx_exch.c",
+    line: 86,
+    func: c"ecx_init",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ecx_set_peer` at `providers/implementations/exchange/ecx_exch.c:124` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_ECX_EXCH_124: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecx_exch.c",
+    line: 124,
+    func: c"ecx_set_peer",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ecx_dupctx` at `providers/implementations/exchange/ecx_exch.c:168` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_ECX_EXCH_168: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecx_exch.c",
+    line: 168,
+    func: c"ecx_dupctx",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ecx_dupctx` at `providers/implementations/exchange/ecx_exch.c:174` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_ECX_EXCH_174: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecx_exch.c",
+    line: 174,
+    func: c"ecx_dupctx",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ecx_get_ctx_params_decoder` at `providers/implementations/exchange/ecx_exch.c:218` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_EXCH_218: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecx_exch.c",
+    line: 218,
+    func: c"ecx_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecx_pubkey` at `providers/implementations/kem/ecx_kem.c:155` (PROV_R_NOT_A_PUBLIC_KEY).
+pub(crate) const PROV_ECX_KEM_155: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ecx_kem.c",
+    line: 155,
+    func: c"ecx_pubkey",
+    lib: 57,
+    reason: 220,
+    dynamic_reason: false,
+};
+
+/// `ecxkem_set_ctx_params_decoder` at `providers/implementations/kem/ecx_kem.c:280` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KEM_280: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ecx_kem.c",
+    line: 280,
+    func: c"ecxkem_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecxkem_set_ctx_params_decoder` at `providers/implementations/kem/ecx_kem.c:291` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECX_KEM_291: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ecx_kem.c",
+    line: 291,
+    func: c"ecxkem_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_dhkem_derive_private` at `providers/implementations/kem/ecx_kem.c:401` (PROV_R_INVALID_INPUT_LENGTH).
+pub(crate) const PROV_ECX_KEM_401: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ecx_kem.c",
+    line: 401,
+    func: c"ossl_ecx_dhkem_derive_private",
+    lib: 57,
+    reason: 230,
+    dynamic_reason: false,
+};
+
+/// `dhkem_encap` at `providers/implementations/kem/ecx_kem.c:618` (PROV_R_BAD_LENGTH).
+pub(crate) const PROV_ECX_KEM_618: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ecx_kem.c",
+    line: 618,
+    func: c"dhkem_encap",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `dhkem_encap` at `providers/implementations/kem/ecx_kem.c:622` (PROV_R_BAD_LENGTH).
+pub(crate) const PROV_ECX_KEM_622: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ecx_kem.c",
+    line: 622,
+    func: c"dhkem_encap",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `dhkem_decap` at `providers/implementations/kem/ecx_kem.c:681` (PROV_R_BAD_LENGTH).
+pub(crate) const PROV_ECX_KEM_681: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ecx_kem.c",
+    line: 681,
+    func: c"dhkem_decap",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `dhkem_decap` at `providers/implementations/kem/ecx_kem.c:685` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_ECX_KEM_685: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ecx_kem.c",
+    line: 685,
+    func: c"dhkem_decap",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ecxkem_encapsulate` at `providers/implementations/kem/ecx_kem.c:720` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_ECX_KEM_720: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ecx_kem.c",
+    line: 720,
+    func: c"ecxkem_encapsulate",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `ecxkem_decapsulate` at `providers/implementations/kem/ecx_kem.c:734` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_ECX_KEM_734: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ecx_kem.c",
+    line: 734,
+    func: c"ecxkem_decapsulate",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `mac_key_fromdata` at `providers/implementations/keymgmt/mac_legacy_kmgmt.c:187` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PROV_MAC_LEGACY_KMGMT_187: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/mac_legacy_kmgmt.c",
+    line: 187,
+    func: c"mac_key_fromdata",
+    lib: 57,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `mac_key_fromdata` at `providers/implementations/keymgmt/mac_legacy_kmgmt.c:202` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PROV_MAC_LEGACY_KMGMT_202: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/mac_legacy_kmgmt.c",
+    line: 202,
+    func: c"mac_key_fromdata",
+    lib: 57,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `mac_key_fromdata` at `providers/implementations/keymgmt/mac_legacy_kmgmt.c:212` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PROV_MAC_LEGACY_KMGMT_212: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/mac_legacy_kmgmt.c",
+    line: 212,
+    func: c"mac_key_fromdata",
+    lib: 57,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `mac_gen_set_params` at `providers/implementations/keymgmt/mac_legacy_kmgmt.c:422` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PROV_MAC_LEGACY_KMGMT_422: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/mac_legacy_kmgmt.c",
+    line: 422,
+    func: c"mac_gen_set_params",
+    lib: 57,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `cmac_gen_set_params` at `providers/implementations/keymgmt/mac_legacy_kmgmt.c:444` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PROV_MAC_LEGACY_KMGMT_444: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/mac_legacy_kmgmt.c",
+    line: 444,
+    func: c"cmac_gen_set_params",
+    lib: 57,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `mac_gen` at `providers/implementations/keymgmt/mac_legacy_kmgmt.c:481` (ERR_R_PROV_LIB).
+pub(crate) const PROV_MAC_LEGACY_KMGMT_481: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/mac_legacy_kmgmt.c",
+    line: 481,
+    func: c"mac_gen",
+    lib: 57,
+    reason: 524345,
+    dynamic_reason: false,
+};
+
+/// `mac_gen` at `providers/implementations/keymgmt/mac_legacy_kmgmt.c:490` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_MAC_LEGACY_KMGMT_490: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/mac_legacy_kmgmt.c",
+    line: 490,
+    func: c"mac_gen",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `mac_gen` at `providers/implementations/keymgmt/mac_legacy_kmgmt.c:503` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_MAC_LEGACY_KMGMT_503: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/mac_legacy_kmgmt.c",
+    line: 503,
+    func: c"mac_gen",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_gen_set_params` at `providers/implementations/keymgmt/rsa_kmgmt.c:513` (PROV_R_KEY_SIZE_TOO_SMALL).
+pub(crate) const PROV_RSA_KMGMT_513: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/rsa_kmgmt.c",
+    line: 513,
+    func: c"rsa_gen_set_params",
+    lib: 57,
+    reason: 171,
+    dynamic_reason: false,
+};
+
+/// `dsa_gen_set_params` at `providers/implementations/keymgmt/dsa_kmgmt.c:486` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PROV_DSA_KMGMT_486: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/dsa_kmgmt.c",
+    line: 486,
+    func: c"dsa_gen_set_params",
+    lib: 57,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `dsa_gen` at `providers/implementations/keymgmt/dsa_kmgmt.c:633` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_DSA_KMGMT_633: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/dsa_kmgmt.c",
+    line: 633,
+    func: c"dsa_gen",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `common_get_params` at `providers/implementations/keymgmt/ec_kmgmt.c:632` (PROV_R_NO_PARAMETERS_SET).
+pub(crate) const PROV_EC_KMGMT_632: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/ec_kmgmt.c",
+    line: 632,
+    func: c"common_get_params",
+    lib: 57,
+    reason: 177,
+    dynamic_reason: false,
+};
+
+/// `common_get_params` at `providers/implementations/keymgmt/ec_kmgmt.c:729` (PROV_R_NOT_A_PUBLIC_KEY).
+pub(crate) const PROV_EC_KMGMT_729: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/ec_kmgmt.c",
+    line: 729,
+    func: c"common_get_params",
+    lib: 57,
+    reason: 220,
+    dynamic_reason: false,
+};
+
+/// `ec_gen_set_group` at `providers/implementations/keymgmt/ec_kmgmt.c:1021` (PROV_R_INVALID_CURVE).
+pub(crate) const PROV_EC_KMGMT_1021: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/ec_kmgmt.c",
+    line: 1021,
+    func: c"ec_gen_set_group",
+    lib: 57,
+    reason: 176,
+    dynamic_reason: false,
+};
+
+/// `ec_gen_assign_group` at `providers/implementations/keymgmt/ec_kmgmt.c:1241` (PROV_R_NO_PARAMETERS_SET).
+pub(crate) const PROV_EC_KMGMT_1241: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/keymgmt/ec_kmgmt.c",
+    line: 1241,
+    func: c"ec_gen_assign_group",
+    lib: 57,
+    reason: 177,
+    dynamic_reason: false,
+};
+
+/// `ecdh_match_params` at `providers/implementations/exchange/ecdh_exch.c:143` (ERR_R_BN_LIB).
+pub(crate) const PROV_ECDH_EXCH_143: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 143,
+    func: c"ecdh_match_params",
+    lib: 57,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ecdh_match_params` at `providers/implementations/exchange/ecdh_exch.c:150` (PROV_R_MISMATCHING_DOMAIN_PARAMETERS).
+pub(crate) const PROV_ECDH_EXCH_150: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 150,
+    func: c"ecdh_match_params",
+    lib: 57,
+    reason: 203,
+    dynamic_reason: false,
+};
+
+/// `ecdh_set_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:305` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_305: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 305,
+    func: c"ecdh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_set_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:374` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_374: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 374,
+    func: c"ecdh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_set_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:386` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_386: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 386,
+    func: c"ecdh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_set_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:451` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_451: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 451,
+    func: c"ecdh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_set_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:460` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_460: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 460,
+    func: c"ecdh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_set_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:476` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_476: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 476,
+    func: c"ecdh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_set_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:487` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_487: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 487,
+    func: c"ecdh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_set_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:498` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_498: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 498,
+    func: c"ecdh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_set_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:513` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_513: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 513,
+    func: c"ecdh_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_set_ctx_params` at `providers/implementations/exchange/ecdh_exch.c:591` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_ECDH_EXCH_591: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 591,
+    func: c"ecdh_set_ctx_params",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `ecdh_get_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:678` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_678: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 678,
+    func: c"ecdh_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_get_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:690` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_690: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 690,
+    func: c"ecdh_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_get_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:718` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_718: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 718,
+    func: c"ecdh_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_get_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:729` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_729: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 729,
+    func: c"ecdh_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_get_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:740` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_740: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 740,
+    func: c"ecdh_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_get_ctx_params_decoder` at `providers/implementations/exchange/ecdh_exch.c:751` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDH_EXCH_751: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 751,
+    func: c"ecdh_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdh_plain_derive` at `providers/implementations/exchange/ecdh_exch.c:861` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_ECDH_EXCH_861: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 861,
+    func: c"ecdh_plain_derive",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `ecdh_plain_derive` at `providers/implementations/exchange/ecdh_exch.c:926` (PROV_R_COFACTOR_REQUIRED).
+pub(crate) const PROV_ECDH_EXCH_926: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 926,
+    func: c"ecdh_plain_derive",
+    lib: 57,
+    reason: 236,
+    dynamic_reason: false,
+};
+
+/// `ecdh_X9_63_kdf_derive` at `providers/implementations/exchange/ecdh_exch.c:962` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_ECDH_EXCH_962: ErrSite = ErrSite {
+    file: c"providers/implementations/exchange/ecdh_exch.c",
+    line: 962,
+    func: c"ecdh_X9_63_kdf_derive",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `eckey_check` at `providers/implementations/kem/ec_kem.c:80` (PROV_R_NOT_A_PUBLIC_KEY).
+pub(crate) const PROV_EC_KEM_80: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 80,
+    func: c"eckey_check",
+    lib: 57,
+    reason: 220,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_match_params` at `providers/implementations/kem/ec_kem.c:234` (PROV_R_MISMATCHING_DOMAIN_PARAMETERS).
+pub(crate) const PROV_EC_KEM_234: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 234,
+    func: c"ossl_ec_match_params",
+    lib: 57,
+    reason: 203,
+    dynamic_reason: false,
+};
+
+/// `eckem_set_ctx_params_decoder` at `providers/implementations/kem/ec_kem.c:324` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_EC_KEM_324: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 324,
+    func: c"eckem_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `eckem_set_ctx_params_decoder` at `providers/implementations/kem/ec_kem.c:335` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_EC_KEM_335: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 335,
+    func: c"eckem_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_dhkem_derive_private` at `providers/implementations/kem/ec_kem.c:463` (PROV_R_INVALID_INPUT_LENGTH).
+pub(crate) const PROV_EC_KEM_463: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 463,
+    func: c"ossl_ec_dhkem_derive_private",
+    lib: 57,
+    reason: 230,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_dhkem_derive_private` at `providers/implementations/kem/ec_kem.c:489` (PROV_R_FAILED_TO_GENERATE_KEY).
+pub(crate) const PROV_EC_KEM_489: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 489,
+    func: c"ossl_ec_dhkem_derive_private",
+    lib: 57,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `generate_ecdhkm` at `providers/implementations/kem/ec_kem.c:582` (PROV_R_BAD_LENGTH).
+pub(crate) const PROV_EC_KEM_582: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 582,
+    func: c"generate_ecdhkm",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `derive_secret` at `providers/implementations/kem/ec_kem.c:646` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_EC_KEM_646: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 646,
+    func: c"derive_secret",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `dhkem_encap` at `providers/implementations/kem/ec_kem.c:720` (PROV_R_BAD_LENGTH).
+pub(crate) const PROV_EC_KEM_720: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 720,
+    func: c"dhkem_encap",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `dhkem_encap` at `providers/implementations/kem/ec_kem.c:724` (PROV_R_BAD_LENGTH).
+pub(crate) const PROV_EC_KEM_724: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 724,
+    func: c"dhkem_encap",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `dhkem_encap` at `providers/implementations/kem/ec_kem.c:740` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_EC_KEM_740: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 740,
+    func: c"dhkem_encap",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `dhkem_decap` at `providers/implementations/kem/ec_kem.c:793` (PROV_R_BAD_LENGTH).
+pub(crate) const PROV_EC_KEM_793: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 793,
+    func: c"dhkem_decap",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `dhkem_decap` at `providers/implementations/kem/ec_kem.c:797` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_EC_KEM_797: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 797,
+    func: c"dhkem_decap",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `dhkem_decap` at `providers/implementations/kem/ec_kem.c:808` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_EC_KEM_808: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 808,
+    func: c"dhkem_decap",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `eckem_encapsulate` at `providers/implementations/kem/ec_kem.c:833` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_EC_KEM_833: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 833,
+    func: c"eckem_encapsulate",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `eckem_decapsulate` at `providers/implementations/kem/ec_kem.c:847` (PROV_R_INVALID_MODE).
+pub(crate) const PROV_EC_KEM_847: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ec_kem.c",
+    line: 847,
+    func: c"eckem_decapsulate",
+    lib: 57,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_key_private_check` at `crypto/sm2/sm2_key.c:33` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const SM2_KEY_33: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_key.c",
+    line: 33,
+    func: c"ossl_sm2_key_private_check",
+    lib: 53,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_key_private_check` at `crypto/sm2/sm2_key.c:43` (SM2_R_INVALID_PRIVATE_KEY).
+pub(crate) const SM2_KEY_43: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_key.c",
+    line: 43,
+    func: c"ossl_sm2_key_private_check",
+    lib: 53,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_compute_z_digest` at `crypto/sm2/sm2_sign.c:48` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const SM2_SIGN_48: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 48,
+    func: c"ossl_sm2_compute_z_digest",
+    lib: 53,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_compute_z_digest` at `crypto/sm2/sm2_sign.c:54` (ERR_R_EVP_LIB).
+pub(crate) const SM2_SIGN_54: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 54,
+    func: c"ossl_sm2_compute_z_digest",
+    lib: 53,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_compute_z_digest` at `crypto/sm2/sm2_sign.c:59` (ERR_R_BN_LIB).
+pub(crate) const SM2_SIGN_59: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 59,
+    func: c"ossl_sm2_compute_z_digest",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_compute_z_digest` at `crypto/sm2/sm2_sign.c:73` (ERR_R_BN_LIB).
+pub(crate) const SM2_SIGN_73: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 73,
+    func: c"ossl_sm2_compute_z_digest",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_compute_z_digest` at `crypto/sm2/sm2_sign.c:78` (ERR_R_EVP_LIB).
+pub(crate) const SM2_SIGN_78: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 78,
+    func: c"ossl_sm2_compute_z_digest",
+    lib: 53,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_compute_z_digest` at `crypto/sm2/sm2_sign.c:86` (SM2_R_ID_TOO_LARGE).
+pub(crate) const SM2_SIGN_86: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 86,
+    func: c"ossl_sm2_compute_z_digest",
+    lib: 53,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_compute_z_digest` at `crypto/sm2/sm2_sign.c:94` (ERR_R_EVP_LIB).
+pub(crate) const SM2_SIGN_94: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 94,
+    func: c"ossl_sm2_compute_z_digest",
+    lib: 53,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_compute_z_digest` at `crypto/sm2/sm2_sign.c:99` (ERR_R_EVP_LIB).
+pub(crate) const SM2_SIGN_99: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 99,
+    func: c"ossl_sm2_compute_z_digest",
+    lib: 53,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_compute_z_digest` at `crypto/sm2/sm2_sign.c:104` (ERR_R_EVP_LIB).
+pub(crate) const SM2_SIGN_104: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 104,
+    func: c"ossl_sm2_compute_z_digest",
+    lib: 53,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_compute_z_digest` at `crypto/sm2/sm2_sign.c:109` (ERR_R_EC_LIB).
+pub(crate) const SM2_SIGN_109: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 109,
+    func: c"ossl_sm2_compute_z_digest",
+    lib: 53,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_compute_z_digest` at `crypto/sm2/sm2_sign.c:137` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_SIGN_137: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 137,
+    func: c"ossl_sm2_compute_z_digest",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `sm2_compute_msg_hash` at `crypto/sm2/sm2_sign.c:166` (SM2_R_INVALID_DIGEST).
+pub(crate) const SM2_SIGN_166: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 166,
+    func: c"sm2_compute_msg_hash",
+    lib: 53,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `sm2_compute_msg_hash` at `crypto/sm2/sm2_sign.c:170` (ERR_R_EVP_LIB).
+pub(crate) const SM2_SIGN_170: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 170,
+    func: c"sm2_compute_msg_hash",
+    lib: 53,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `sm2_compute_msg_hash` at `crypto/sm2/sm2_sign.c:180` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_SIGN_180: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 180,
+    func: c"sm2_compute_msg_hash",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `sm2_compute_msg_hash` at `crypto/sm2/sm2_sign.c:194` (ERR_R_EVP_LIB).
+pub(crate) const SM2_SIGN_194: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 194,
+    func: c"sm2_compute_msg_hash",
+    lib: 53,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `sm2_compute_msg_hash` at `crypto/sm2/sm2_sign.c:200` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_SIGN_200: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 200,
+    func: c"sm2_compute_msg_hash",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_gen` at `crypto/sm2/sm2_sign.c:226` (SM2_R_INVALID_PRIVATE_KEY).
+pub(crate) const SM2_SIGN_226: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 226,
+    func: c"sm2_sig_gen",
+    lib: 53,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_gen` at `crypto/sm2/sm2_sign.c:231` (ERR_R_EC_LIB).
+pub(crate) const SM2_SIGN_231: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 231,
+    func: c"sm2_sig_gen",
+    lib: 53,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_gen` at `crypto/sm2/sm2_sign.c:236` (ERR_R_BN_LIB).
+pub(crate) const SM2_SIGN_236: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 236,
+    func: c"sm2_sig_gen",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_gen` at `crypto/sm2/sm2_sign.c:246` (ERR_R_BN_LIB).
+pub(crate) const SM2_SIGN_246: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 246,
+    func: c"sm2_sig_gen",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_gen` at `crypto/sm2/sm2_sign.c:258` (ERR_R_BN_LIB).
+pub(crate) const SM2_SIGN_258: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 258,
+    func: c"sm2_sig_gen",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_gen` at `crypto/sm2/sm2_sign.c:273` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_SIGN_273: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 273,
+    func: c"sm2_sig_gen",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_gen` at `crypto/sm2/sm2_sign.c:281` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_SIGN_281: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 281,
+    func: c"sm2_sig_gen",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_gen` at `crypto/sm2/sm2_sign.c:290` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_SIGN_290: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 290,
+    func: c"sm2_sig_gen",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_gen` at `crypto/sm2/sm2_sign.c:302` (ERR_R_BN_LIB).
+pub(crate) const SM2_SIGN_302: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 302,
+    func: c"sm2_sig_gen",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_gen` at `crypto/sm2/sm2_sign.c:312` (ERR_R_ECDSA_LIB).
+pub(crate) const SM2_SIGN_312: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 312,
+    func: c"sm2_sig_gen",
+    lib: 53,
+    reason: 524330,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_verify` at `crypto/sm2/sm2_sign.c:349` (ERR_R_BN_LIB).
+pub(crate) const SM2_SIGN_349: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 349,
+    func: c"sm2_sig_verify",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_verify` at `crypto/sm2/sm2_sign.c:356` (ERR_R_BN_LIB).
+pub(crate) const SM2_SIGN_356: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 356,
+    func: c"sm2_sig_verify",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_verify` at `crypto/sm2/sm2_sign.c:362` (ERR_R_EC_LIB).
+pub(crate) const SM2_SIGN_362: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 362,
+    func: c"sm2_sig_verify",
+    lib: 53,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_verify` at `crypto/sm2/sm2_sign.c:382` (SM2_R_BAD_SIGNATURE).
+pub(crate) const SM2_SIGN_382: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 382,
+    func: c"sm2_sig_verify",
+    lib: 53,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_verify` at `crypto/sm2/sm2_sign.c:387` (ERR_R_BN_LIB).
+pub(crate) const SM2_SIGN_387: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 387,
+    func: c"sm2_sig_verify",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_verify` at `crypto/sm2/sm2_sign.c:392` (SM2_R_BAD_SIGNATURE).
+pub(crate) const SM2_SIGN_392: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 392,
+    func: c"sm2_sig_verify",
+    lib: 53,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_verify` at `crypto/sm2/sm2_sign.c:398` (ERR_R_EC_LIB).
+pub(crate) const SM2_SIGN_398: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 398,
+    func: c"sm2_sig_verify",
+    lib: 53,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `sm2_sig_verify` at `crypto/sm2/sm2_sign.c:403` (ERR_R_BN_LIB).
+pub(crate) const SM2_SIGN_403: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 403,
+    func: c"sm2_sig_verify",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_internal_sign` at `crypto/sm2/sm2_sign.c:472` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const SM2_SIGN_472: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 472,
+    func: c"ossl_sm2_internal_sign",
+    lib: 53,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_internal_sign` at `crypto/sm2/sm2_sign.c:478` (ERR_R_BN_LIB).
+pub(crate) const SM2_SIGN_478: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 478,
+    func: c"ossl_sm2_internal_sign",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_internal_sign` at `crypto/sm2/sm2_sign.c:484` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_SIGN_484: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 484,
+    func: c"ossl_sm2_internal_sign",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_internal_sign` at `crypto/sm2/sm2_sign.c:490` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_SIGN_490: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 490,
+    func: c"ossl_sm2_internal_sign",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_internal_verify` at `crypto/sm2/sm2_sign.c:516` (ERR_R_ECDSA_LIB).
+pub(crate) const SM2_SIGN_516: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 516,
+    func: c"ossl_sm2_internal_verify",
+    lib: 53,
+    reason: 524330,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_internal_verify` at `crypto/sm2/sm2_sign.c:520` (SM2_R_INVALID_ENCODING).
+pub(crate) const SM2_SIGN_520: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 520,
+    func: c"ossl_sm2_internal_verify",
+    lib: 53,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_internal_verify` at `crypto/sm2/sm2_sign.c:526` (SM2_R_INVALID_ENCODING).
+pub(crate) const SM2_SIGN_526: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 526,
+    func: c"ossl_sm2_internal_verify",
+    lib: 53,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_internal_verify` at `crypto/sm2/sm2_sign.c:532` (ERR_R_BN_LIB).
+pub(crate) const SM2_SIGN_532: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_sign.c",
+    line: 532,
+    func: c"ossl_sm2_internal_verify",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_plaintext_size` at `crypto/sm2/sm2_crypt.c:77` (SM2_R_INVALID_ENCODING).
+pub(crate) const SM2_CRYPT_77: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 77,
+    func: c"ossl_sm2_plaintext_size",
+    lib: 53,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:141` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const SM2_CRYPT_141: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 141,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:146` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_CRYPT_146: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 146,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:152` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_CRYPT_152: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 152,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:159` (ERR_R_EC_LIB).
+pub(crate) const SM2_CRYPT_159: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 159,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:164` (ERR_R_BN_LIB).
+pub(crate) const SM2_CRYPT_164: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 164,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:176` (ERR_R_BN_LIB).
+pub(crate) const SM2_CRYPT_176: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 176,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:194` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_CRYPT_194: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 194,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:202` (ERR_R_EC_LIB).
+pub(crate) const SM2_CRYPT_202: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 202,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:208` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_CRYPT_208: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 208,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:215` (ERR_R_EVP_LIB).
+pub(crate) const SM2_CRYPT_215: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 215,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:229` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_CRYPT_229: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 229,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:237` (ERR_R_EVP_LIB).
+pub(crate) const SM2_CRYPT_237: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 237,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:247` (ERR_R_ASN1_LIB).
+pub(crate) const SM2_CRYPT_247: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 247,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:252` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_CRYPT_252: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 252,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:259` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_CRYPT_259: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 259,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:264` (SM2_R_BUFFER_TOO_SMALL).
+pub(crate) const SM2_CRYPT_264: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 264,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_encrypt` at `crypto/sm2/sm2_crypt.c:270` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_CRYPT_270: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 270,
+    func: c"ossl_sm2_encrypt",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_decrypt` at `crypto/sm2/sm2_crypt.c:325` (SM2_R_ASN1_ERROR).
+pub(crate) const SM2_CRYPT_325: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 325,
+    func: c"ossl_sm2_decrypt",
+    lib: 53,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_decrypt` at `crypto/sm2/sm2_crypt.c:330` (SM2_R_INVALID_ENCODING).
+pub(crate) const SM2_CRYPT_330: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 330,
+    func: c"ossl_sm2_decrypt",
+    lib: 53,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_decrypt` at `crypto/sm2/sm2_crypt.c:338` (SM2_R_BUFFER_TOO_SMALL).
+pub(crate) const SM2_CRYPT_338: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 338,
+    func: c"ossl_sm2_decrypt",
+    lib: 53,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_decrypt` at `crypto/sm2/sm2_crypt.c:344` (ERR_R_BN_LIB).
+pub(crate) const SM2_CRYPT_344: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 344,
+    func: c"ossl_sm2_decrypt",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_decrypt` at `crypto/sm2/sm2_crypt.c:353` (ERR_R_BN_LIB).
+pub(crate) const SM2_CRYPT_353: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 353,
+    func: c"ossl_sm2_decrypt",
+    lib: 53,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_decrypt` at `crypto/sm2/sm2_crypt.c:366` (ERR_R_EC_LIB).
+pub(crate) const SM2_CRYPT_366: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 366,
+    func: c"ossl_sm2_decrypt",
+    lib: 53,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_decrypt` at `crypto/sm2/sm2_crypt.c:375` (ERR_R_EC_LIB).
+pub(crate) const SM2_CRYPT_375: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 375,
+    func: c"ossl_sm2_decrypt",
+    lib: 53,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_decrypt` at `crypto/sm2/sm2_crypt.c:383` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SM2_CRYPT_383: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 383,
+    func: c"ossl_sm2_decrypt",
+    lib: 53,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_decrypt` at `crypto/sm2/sm2_crypt.c:388` (SM2_R_INVALID_ENCODING).
+pub(crate) const SM2_CRYPT_388: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 388,
+    func: c"ossl_sm2_decrypt",
+    lib: 53,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_decrypt` at `crypto/sm2/sm2_crypt.c:397` (ERR_R_EVP_LIB).
+pub(crate) const SM2_CRYPT_397: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 397,
+    func: c"ossl_sm2_decrypt",
+    lib: 53,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_decrypt` at `crypto/sm2/sm2_crypt.c:406` (ERR_R_EVP_LIB).
+pub(crate) const SM2_CRYPT_406: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 406,
+    func: c"ossl_sm2_decrypt",
+    lib: 53,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_sm2_decrypt` at `crypto/sm2/sm2_crypt.c:411` (SM2_R_INVALID_DIGEST).
+pub(crate) const SM2_CRYPT_411: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/sm2/sm2_crypt.c",
+    line: 411,
+    func: c"ossl_sm2_decrypt",
+    lib: 53,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `sm2sig_set_mdname` at `providers/implementations/signature/sm2_sig.c:105` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_SM2_SIG_105: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/sm2_sig.c",
+    line: 105,
+    func: c"sm2sig_set_mdname",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `sm2sig_set_mdname` at `providers/implementations/signature/sm2_sig.c:114` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_SM2_SIG_114: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/sm2_sig.c",
+    line: 114,
+    func: c"sm2sig_set_mdname",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `sm2sig_signature_init` at `providers/implementations/signature/sm2_sig.c:150` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_SM2_SIG_150: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/sm2_sig.c",
+    line: 150,
+    func: c"sm2sig_signature_init",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `sm2sig_get_ctx_params_decoder` at `providers/implementations/signature/sm2_sig.c:440` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SM2_SIG_440: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/sm2_sig.c",
+    line: 440,
+    func: c"sm2sig_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sm2sig_get_ctx_params_decoder` at `providers/implementations/signature/sm2_sig.c:475` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SM2_SIG_475: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/sm2_sig.c",
+    line: 475,
+    func: c"sm2sig_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sm2sig_get_ctx_params_decoder` at `providers/implementations/signature/sm2_sig.c:484` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SM2_SIG_484: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/sm2_sig.c",
+    line: 484,
+    func: c"sm2sig_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sm2sig_set_ctx_params_decoder` at `providers/implementations/signature/sm2_sig.c:591` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SM2_SIG_591: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/sm2_sig.c",
+    line: 591,
+    func: c"sm2sig_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sm2sig_set_ctx_params_decoder` at `providers/implementations/signature/sm2_sig.c:600` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SM2_SIG_600: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/sm2_sig.c",
+    line: 600,
+    func: c"sm2sig_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sm2sig_set_ctx_params_decoder` at `providers/implementations/signature/sm2_sig.c:614` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SM2_SIG_614: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/sm2_sig.c",
+    line: 614,
+    func: c"sm2sig_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sm2_asym_encrypt` at `providers/implementations/asymciphers/sm2_enc.c:98` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_SM2_ENC_98: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/sm2_enc.c",
+    line: 98,
+    func: c"sm2_asym_encrypt",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `sm2_get_ctx_params_decoder` at `providers/implementations/asymciphers/sm2_enc.c:188` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SM2_ENC_188: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/sm2_enc.c",
+    line: 188,
+    func: c"sm2_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sm2_set_ctx_params_decoder` at `providers/implementations/asymciphers/sm2_enc.c:259` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SM2_ENC_259: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/sm2_enc.c",
+    line: 259,
+    func: c"sm2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sm2_set_ctx_params_decoder` at `providers/implementations/asymciphers/sm2_enc.c:270` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SM2_ENC_270: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/sm2_enc.c",
+    line: 270,
+    func: c"sm2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `sm2_set_ctx_params_decoder` at `providers/implementations/asymciphers/sm2_enc.c:281` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SM2_ENC_281: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/sm2_enc.c",
+    line: 281,
+    func: c"sm2_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_setup_md` at `providers/implementations/signature/dsa_sig.c:171` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_DSA_SIG_171: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 171,
+    func: c"dsa_setup_md",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `dsa_setup_md` at `providers/implementations/signature/dsa_sig.c:176` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_DSA_SIG_176: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 176,
+    func: c"dsa_setup_md",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `dsa_setup_md` at `providers/implementations/signature/dsa_sig.c:181` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_DSA_SIG_181: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 181,
+    func: c"dsa_setup_md",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `dsa_setup_md` at `providers/implementations/signature/dsa_sig.c:187` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_DSA_SIG_187: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 187,
+    func: c"dsa_setup_md",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `dsa_setup_md` at `providers/implementations/signature/dsa_sig.c:209` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_DSA_SIG_209: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 209,
+    func: c"dsa_setup_md",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `dsa_check_key` at `providers/implementations/signature/dsa_sig.c:272` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_DSA_SIG_272: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 272,
+    func: c"dsa_check_key",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `dsa_signverify_init` at `providers/implementations/signature/dsa_sig.c:293` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_DSA_SIG_293: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 293,
+    func: c"dsa_signverify_init",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `dsa_get_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:714` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_714: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 714,
+    func: c"dsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_get_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:725` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_725: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 725,
+    func: c"dsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_get_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:737` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_737: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 737,
+    func: c"dsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_get_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:749` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_749: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 749,
+    func: c"dsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_set_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:910` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_910: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 910,
+    func: c"dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_set_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:920` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_920: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 920,
+    func: c"dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_set_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:937` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_937: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 937,
+    func: c"dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_set_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:949` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_949: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 949,
+    func: c"dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_set_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:960` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_960: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 960,
+    func: c"dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_set_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:972` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_972: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 972,
+    func: c"dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_sigalg_set_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:1219` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_1219: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 1219,
+    func: c"dsa_sigalg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_sigalg_set_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:1232` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_1232: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 1232,
+    func: c"dsa_sigalg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_sigalg_set_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:1244` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_1244: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 1244,
+    func: c"dsa_sigalg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_sigalg_set_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:1272` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_1272: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 1272,
+    func: c"dsa_sigalg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `dsa_sigalg_set_ctx_params_decoder` at `providers/implementations/signature/dsa_sig.c:1284` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DSA_SIG_1284: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/dsa_sig.c",
+    line: 1284,
+    func: c"dsa_sigalg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_setup_md` at `providers/implementations/signature/ecdsa_sig.c:184` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_ECDSA_SIG_184: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 184,
+    func: c"ecdsa_setup_md",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_setup_md` at `providers/implementations/signature/ecdsa_sig.c:192` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_ECDSA_SIG_192: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 192,
+    func: c"ecdsa_setup_md",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_setup_md` at `providers/implementations/signature/ecdsa_sig.c:198` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_ECDSA_SIG_198: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 198,
+    func: c"ecdsa_setup_md",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_setup_md` at `providers/implementations/signature/ecdsa_sig.c:205` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_ECDSA_SIG_205: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 205,
+    func: c"ecdsa_setup_md",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_setup_md` at `providers/implementations/signature/ecdsa_sig.c:212` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_ECDSA_SIG_212: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 212,
+    func: c"ecdsa_setup_md",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_setup_md` at `providers/implementations/signature/ecdsa_sig.c:234` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_ECDSA_SIG_234: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 234,
+    func: c"ecdsa_setup_md",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_signverify_init` at `providers/implementations/signature/ecdsa_sig.c:285` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_ECDSA_SIG_285: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 285,
+    func: c"ecdsa_signverify_init",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_get_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:723` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_723: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 723,
+    func: c"ecdsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_get_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:758` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_758: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 758,
+    func: c"ecdsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_get_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:767` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_767: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 767,
+    func: c"ecdsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_get_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:784` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_784: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 784,
+    func: c"ecdsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_get_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:796` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_796: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 796,
+    func: c"ecdsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_get_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:808` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_808: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 808,
+    func: c"ecdsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_set_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:989` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_989: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 989,
+    func: c"ecdsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_set_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:1001` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_1001: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 1001,
+    func: c"ecdsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_set_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:1011` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_1011: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 1011,
+    func: c"ecdsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_set_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:1032` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_1032: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 1032,
+    func: c"ecdsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_set_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:1045` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_1045: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 1045,
+    func: c"ecdsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_set_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:1059` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_1059: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 1059,
+    func: c"ecdsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_set_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:1070` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_1070: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 1070,
+    func: c"ecdsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sigalg_set_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:1315` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_1315: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 1315,
+    func: c"ecdsa_sigalg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sigalg_set_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:1332` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_1332: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 1332,
+    func: c"ecdsa_sigalg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sigalg_set_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:1345` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_1345: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 1345,
+    func: c"ecdsa_sigalg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sigalg_set_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:1359` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_1359: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 1359,
+    func: c"ecdsa_sigalg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sigalg_set_ctx_params_decoder` at `providers/implementations/signature/ecdsa_sig.c:1370` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ECDSA_SIG_1370: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ecdsa_sig.c",
+    line: 1370,
+    func: c"ecdsa_sigalg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `eddsa_signverify_init` at `providers/implementations/signature/eddsa_sig.c:249` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_EDDSA_SIG_249: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 249,
+    func: c"eddsa_signverify_init",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `eddsa_signverify_init` at `providers/implementations/signature/eddsa_sig.c:254` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_EDDSA_SIG_254: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 254,
+    func: c"eddsa_signverify_init",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `eddsa_signverify_init` at `providers/implementations/signature/eddsa_sig.c:284` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_EDDSA_SIG_284: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 284,
+    func: c"eddsa_signverify_init",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ed25519_sign` at `providers/implementations/signature/eddsa_sig.c:406` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_EDDSA_SIG_406: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 406,
+    func: c"ed25519_sign",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ed25519_sign` at `providers/implementations/signature/eddsa_sig.c:410` (PROV_R_NOT_A_PRIVATE_KEY).
+pub(crate) const PROV_EDDSA_SIG_410: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 410,
+    func: c"ed25519_sign",
+    lib: 57,
+    reason: 221,
+    dynamic_reason: false,
+};
+
+/// `ed25519_sign` at `providers/implementations/signature/eddsa_sig.c:426` (PROV_R_FAILED_TO_SIGN).
+pub(crate) const PROV_EDDSA_SIG_426: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 426,
+    func: c"ed25519_sign",
+    lib: 57,
+    reason: 175,
+    dynamic_reason: false,
+};
+
+/// `ed25519_sign` at `providers/implementations/signature/eddsa_sig.c:439` (PROV_R_INVALID_PREHASHED_DIGEST_LENGTH).
+pub(crate) const PROV_EDDSA_SIG_439: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 439,
+    func: c"ed25519_sign",
+    lib: 57,
+    reason: 241,
+    dynamic_reason: false,
+};
+
+/// `ed25519_sign` at `providers/implementations/signature/eddsa_sig.c:445` (PROV_R_INVALID_DIGEST_LENGTH).
+pub(crate) const PROV_EDDSA_SIG_445: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 445,
+    func: c"ed25519_sign",
+    lib: 57,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `ed25519_sign` at `providers/implementations/signature/eddsa_sig.c:450` (PROV_R_INVALID_EDDSA_INSTANCE_FOR_ATTEMPTED_OPERATION).
+pub(crate) const PROV_EDDSA_SIG_450: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 450,
+    func: c"ed25519_sign",
+    lib: 57,
+    reason: 243,
+    dynamic_reason: false,
+};
+
+/// `ed25519_sign` at `providers/implementations/signature/eddsa_sig.c:460` (PROV_R_FAILED_TO_SIGN).
+pub(crate) const PROV_EDDSA_SIG_460: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 460,
+    func: c"ed25519_sign",
+    lib: 57,
+    reason: 175,
+    dynamic_reason: false,
+};
+
+/// `ed448_sign` at `providers/implementations/signature/eddsa_sig.c:515` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_EDDSA_SIG_515: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 515,
+    func: c"ed448_sign",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ed448_sign` at `providers/implementations/signature/eddsa_sig.c:519` (PROV_R_NOT_A_PRIVATE_KEY).
+pub(crate) const PROV_EDDSA_SIG_519: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 519,
+    func: c"ed448_sign",
+    lib: 57,
+    reason: 221,
+    dynamic_reason: false,
+};
+
+/// `ed448_sign` at `providers/implementations/signature/eddsa_sig.c:533` (PROV_R_FAILED_TO_SIGN).
+pub(crate) const PROV_EDDSA_SIG_533: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 533,
+    func: c"ed448_sign",
+    lib: 57,
+    reason: 175,
+    dynamic_reason: false,
+};
+
+/// `ed448_sign` at `providers/implementations/signature/eddsa_sig.c:548` (PROV_R_INVALID_DIGEST_LENGTH).
+pub(crate) const PROV_EDDSA_SIG_548: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 548,
+    func: c"ed448_sign",
+    lib: 57,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `ed448_sign` at `providers/implementations/signature/eddsa_sig.c:553` (PROV_R_INVALID_EDDSA_INSTANCE_FOR_ATTEMPTED_OPERATION).
+pub(crate) const PROV_EDDSA_SIG_553: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 553,
+    func: c"ed448_sign",
+    lib: 57,
+    reason: 243,
+    dynamic_reason: false,
+};
+
+/// `ed448_sign` at `providers/implementations/signature/eddsa_sig.c:563` (PROV_R_FAILED_TO_SIGN).
+pub(crate) const PROV_EDDSA_SIG_563: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 563,
+    func: c"ed448_sign",
+    lib: 57,
+    reason: 175,
+    dynamic_reason: false,
+};
+
+/// `ed25519_verify` at `providers/implementations/signature/eddsa_sig.c:606` (PROV_R_INVALID_PREHASHED_DIGEST_LENGTH).
+pub(crate) const PROV_EDDSA_SIG_606: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 606,
+    func: c"ed25519_verify",
+    lib: 57,
+    reason: 241,
+    dynamic_reason: false,
+};
+
+/// `ed25519_verify` at `providers/implementations/signature/eddsa_sig.c:612` (PROV_R_INVALID_DIGEST_LENGTH).
+pub(crate) const PROV_EDDSA_SIG_612: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 612,
+    func: c"ed25519_verify",
+    lib: 57,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `ed25519_verify` at `providers/implementations/signature/eddsa_sig.c:617` (PROV_R_INVALID_EDDSA_INSTANCE_FOR_ATTEMPTED_OPERATION).
+pub(crate) const PROV_EDDSA_SIG_617: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 617,
+    func: c"ed25519_verify",
+    lib: 57,
+    reason: 243,
+    dynamic_reason: false,
+};
+
+/// `ed448_verify` at `providers/implementations/signature/eddsa_sig.c:664` (PROV_R_INVALID_DIGEST_LENGTH).
+pub(crate) const PROV_EDDSA_SIG_664: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 664,
+    func: c"ed448_verify",
+    lib: 57,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `ed448_verify` at `providers/implementations/signature/eddsa_sig.c:669` (PROV_R_INVALID_EDDSA_INSTANCE_FOR_ATTEMPTED_OPERATION).
+pub(crate) const PROV_EDDSA_SIG_669: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 669,
+    func: c"ed448_verify",
+    lib: 57,
+    reason: 243,
+    dynamic_reason: false,
+};
+
+/// `ed25519_digest_signverify_init` at `providers/implementations/signature/eddsa_sig.c:688` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_EDDSA_SIG_688: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 688,
+    func: c"ed25519_digest_signverify_init",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `ed448_digest_signverify_init` at `providers/implementations/signature/eddsa_sig.c:722` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_EDDSA_SIG_722: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 722,
+    func: c"ed448_digest_signverify_init",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `eddsa_dupctx` at `providers/implementations/signature/eddsa_sig.c:774` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_EDDSA_SIG_774: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 774,
+    func: c"eddsa_dupctx",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `eddsa_get_ctx_params_decoder` at `providers/implementations/signature/eddsa_sig.c:826` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_EDDSA_SIG_826: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 826,
+    func: c"eddsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `eddsa_set_ctx_params_decoder` at `providers/implementations/signature/eddsa_sig.c:894` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_EDDSA_SIG_894: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 894,
+    func: c"eddsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `eddsa_set_ctx_params_decoder` at `providers/implementations/signature/eddsa_sig.c:905` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_EDDSA_SIG_905: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 905,
+    func: c"eddsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `eddsa_set_ctx_params_internal` at `providers/implementations/signature/eddsa_sig.c:926` (PROV_R_NO_INSTANCE_ALLOWED).
+pub(crate) const PROV_EDDSA_SIG_926: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 926,
+    func: c"eddsa_set_ctx_params_internal",
+    lib: 57,
+    reason: 242,
+    dynamic_reason: false,
+};
+
+/// `eddsa_set_ctx_params_internal` at `providers/implementations/signature/eddsa_sig.c:961` (PROV_R_INVALID_EDDSA_INSTANCE_FOR_ATTEMPTED_OPERATION).
+pub(crate) const PROV_EDDSA_SIG_961: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 961,
+    func: c"eddsa_set_ctx_params_internal",
+    lib: 57,
+    reason: 243,
+    dynamic_reason: false,
+};
+
+/// `eddsa_set_variant_ctx_params_decoder` at `providers/implementations/signature/eddsa_sig.c:1027` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_EDDSA_SIG_1027: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/eddsa_sig.c",
+    line: 1027,
+    func: c"eddsa_set_variant_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_check_padding` at `providers/implementations/signature/rsa_sig.c:186` (PROV_R_INVALID_PADDING_MODE).
+pub(crate) const PROV_RSA_SIG_186: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 186,
+    func: c"rsa_check_padding",
+    lib: 57,
+    reason: 168,
+    dynamic_reason: false,
+};
+
+/// `rsa_check_padding` at `providers/implementations/signature/rsa_sig.c:192` (PROV_R_INVALID_X931_DIGEST).
+pub(crate) const PROV_RSA_SIG_192: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 192,
+    func: c"rsa_check_padding",
+    lib: 57,
+    reason: 170,
+    dynamic_reason: false,
+};
+
+/// `rsa_check_padding` at `providers/implementations/signature/rsa_sig.c:201` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_RSA_SIG_201: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 201,
+    func: c"rsa_check_padding",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `rsa_check_parameters` at `providers/implementations/signature/rsa_sig.c:222` (PROV_R_INVALID_SALT_LENGTH).
+pub(crate) const PROV_RSA_SIG_222: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 222,
+    func: c"rsa_check_parameters",
+    lib: 57,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `rsa_pss_compute_saltlen` at `providers/implementations/signature/rsa_sig.c:272` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_RSA_SIG_272: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 272,
+    func: c"rsa_pss_compute_saltlen",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `rsa_pss_compute_saltlen` at `providers/implementations/signature/rsa_sig.c:278` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_RSA_SIG_278: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 278,
+    func: c"rsa_pss_compute_saltlen",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `rsa_pss_compute_saltlen` at `providers/implementations/signature/rsa_sig.c:286` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_RSA_SIG_286: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 286,
+    func: c"rsa_pss_compute_saltlen",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `rsa_pss_compute_saltlen` at `providers/implementations/signature/rsa_sig.c:290` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_RSA_SIG_290: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 290,
+    func: c"rsa_pss_compute_saltlen",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `rsa_pss_compute_saltlen` at `providers/implementations/signature/rsa_sig.c:300` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_RSA_SIG_300: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 300,
+    func: c"rsa_pss_compute_saltlen",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_pss_compute_saltlen` at `providers/implementations/signature/rsa_sig.c:303` (PROV_R_PSS_SALTLEN_TOO_SMALL).
+pub(crate) const PROV_RSA_SIG_303: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 303,
+    func: c"rsa_pss_compute_saltlen",
+    lib: 57,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `rsa_generate_signature_aid` at `providers/implementations/signature/rsa_sig.c:323` (ERR_R_CRYPTO_LIB).
+pub(crate) const PROV_RSA_SIG_323: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 323,
+    func: c"rsa_generate_signature_aid",
+    lib: 57,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `rsa_generate_signature_aid` at `providers/implementations/signature/rsa_sig.c:335` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_RSA_SIG_335: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 335,
+    func: c"rsa_generate_signature_aid",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_generate_signature_aid` at `providers/implementations/signature/rsa_sig.c:338` (ERR_R_UNSUPPORTED).
+pub(crate) const PROV_RSA_SIG_338: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 338,
+    func: c"rsa_generate_signature_aid",
+    lib: 57,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `rsa_generate_signature_aid` at `providers/implementations/signature/rsa_sig.c:354` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_RSA_SIG_354: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 354,
+    func: c"rsa_generate_signature_aid",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_generate_signature_aid` at `providers/implementations/signature/rsa_sig.c:359` (ERR_R_UNSUPPORTED).
+pub(crate) const PROV_RSA_SIG_359: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 359,
+    func: c"rsa_generate_signature_aid",
+    lib: 57,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `rsa_setup_md` at `providers/implementations/signature/rsa_sig.c:388` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_RSA_SIG_388: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 388,
+    func: c"rsa_setup_md",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `rsa_setup_md` at `providers/implementations/signature/rsa_sig.c:394` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_RSA_SIG_394: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 394,
+    func: c"rsa_setup_md",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `rsa_setup_md` at `providers/implementations/signature/rsa_sig.c:405` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_RSA_SIG_405: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 405,
+    func: c"rsa_setup_md",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `rsa_setup_md` at `providers/implementations/signature/rsa_sig.c:427` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_RSA_SIG_427: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 427,
+    func: c"rsa_setup_md",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `rsa_setup_md` at `providers/implementations/signature/rsa_sig.c:434` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_RSA_SIG_434: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 434,
+    func: c"rsa_setup_md",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `rsa_setup_mgf1_md` at `providers/implementations/signature/rsa_sig.c:478` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_RSA_SIG_478: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 478,
+    func: c"rsa_setup_mgf1_md",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `rsa_setup_mgf1_md` at `providers/implementations/signature/rsa_sig.c:486` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_RSA_SIG_486: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 486,
+    func: c"rsa_setup_mgf1_md",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `rsa_setup_mgf1_md` at `providers/implementations/signature/rsa_sig.c:493` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_RSA_SIG_493: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 493,
+    func: c"rsa_setup_mgf1_md",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `rsa_signverify_init` at `providers/implementations/signature/rsa_sig.c:518` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_RSA_SIG_518: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 518,
+    func: c"rsa_signverify_init",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `rsa_signverify_init` at `providers/implementations/signature/rsa_sig.c:561` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_RSA_SIG_561: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 561,
+    func: c"rsa_signverify_init",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `rsa_signverify_init` at `providers/implementations/signature/rsa_sig.c:566` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_RSA_SIG_566: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 566,
+    func: c"rsa_signverify_init",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `rsa_signverify_init` at `providers/implementations/signature/rsa_sig.c:574` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_RSA_SIG_574: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 574,
+    func: c"rsa_signverify_init",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `rsa_signverify_init` at `providers/implementations/signature/rsa_sig.c:581` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_RSA_SIG_581: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 581,
+    func: c"rsa_signverify_init",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `rsa_signverify_init` at `providers/implementations/signature/rsa_sig.c:597` (PROV_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const PROV_RSA_SIG_597: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 597,
+    func: c"rsa_signverify_init",
+    lib: 57,
+    reason: 178,
+    dynamic_reason: false,
+};
+
+/// `rsa_pss_saltlen_check_passed` at `providers/implementations/signature/rsa_sig.c:652` (PROV_R_INVALID_SALT_LENGTH).
+pub(crate) const PROV_RSA_SIG_652: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 652,
+    func: c"rsa_pss_saltlen_check_passed",
+    lib: 57,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_directly` at `providers/implementations/signature/rsa_sig.c:696` (PROV_R_INVALID_SIGNATURE_SIZE).
+pub(crate) const PROV_RSA_SIG_696: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 696,
+    func: c"rsa_sign_directly",
+    lib: 57,
+    reason: 179,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_directly` at `providers/implementations/signature/rsa_sig.c:703` (PROV_R_INVALID_DIGEST_LENGTH).
+pub(crate) const PROV_RSA_SIG_703: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 703,
+    func: c"rsa_sign_directly",
+    lib: 57,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_directly` at `providers/implementations/signature/rsa_sig.c:712` (PROV_R_INVALID_PADDING_MODE).
+pub(crate) const PROV_RSA_SIG_712: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 712,
+    func: c"rsa_sign_directly",
+    lib: 57,
+    reason: 168,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_directly` at `providers/implementations/signature/rsa_sig.c:720` (ERR_R_RSA_LIB).
+pub(crate) const PROV_RSA_SIG_720: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 720,
+    func: c"rsa_sign_directly",
+    lib: 57,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_directly` at `providers/implementations/signature/rsa_sig.c:730` (PROV_R_KEY_SIZE_TOO_SMALL).
+pub(crate) const PROV_RSA_SIG_730: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 730,
+    func: c"rsa_sign_directly",
+    lib: 57,
+    reason: 171,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_directly` at `providers/implementations/signature/rsa_sig.c:736` (ERR_R_PROV_LIB).
+pub(crate) const PROV_RSA_SIG_736: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 736,
+    func: c"rsa_sign_directly",
+    lib: 57,
+    reason: 524345,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_directly` at `providers/implementations/signature/rsa_sig.c:751` (ERR_R_RSA_LIB).
+pub(crate) const PROV_RSA_SIG_751: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 751,
+    func: c"rsa_sign_directly",
+    lib: 57,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_directly` at `providers/implementations/signature/rsa_sig.c:765` (PROV_R_PSS_SALTLEN_TOO_SMALL).
+pub(crate) const PROV_RSA_SIG_765: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 765,
+    func: c"rsa_sign_directly",
+    lib: 57,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_directly` at `providers/implementations/signature/rsa_sig.c:777` (PROV_R_PSS_SALTLEN_TOO_SMALL).
+pub(crate) const PROV_RSA_SIG_777: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 777,
+    func: c"rsa_sign_directly",
+    lib: 57,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_directly` at `providers/implementations/signature/rsa_sig.c:795` (ERR_R_RSA_LIB).
+pub(crate) const PROV_RSA_SIG_795: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 795,
+    func: c"rsa_sign_directly",
+    lib: 57,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_directly` at `providers/implementations/signature/rsa_sig.c:808` (PROV_R_INVALID_PADDING_MODE).
+pub(crate) const PROV_RSA_SIG_808: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 808,
+    func: c"rsa_sign_directly",
+    lib: 57,
+    reason: 168,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_directly` at `providers/implementations/signature/rsa_sig.c:821` (ERR_R_RSA_LIB).
+pub(crate) const PROV_RSA_SIG_821: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 821,
+    func: c"rsa_sign_directly",
+    lib: 57,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `rsa_signverify_message_update` at `providers/implementations/signature/rsa_sig.c:839` (PROV_R_UPDATE_CALL_OUT_OF_ORDER).
+pub(crate) const PROV_RSA_SIG_839: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 839,
+    func: c"rsa_signverify_message_update",
+    lib: 57,
+    reason: 240,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign_message_final` at `providers/implementations/signature/rsa_sig.c:859` (PROV_R_FINAL_CALL_OUT_OF_ORDER).
+pub(crate) const PROV_RSA_SIG_859: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 859,
+    func: c"rsa_sign_message_final",
+    lib: 57,
+    reason: 237,
+    dynamic_reason: false,
+};
+
+/// `rsa_sign` at `providers/implementations/signature/rsa_sig.c:895` (PROV_R_ONESHOT_CALL_OUT_OF_ORDER).
+pub(crate) const PROV_RSA_SIG_895: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 895,
+    func: c"rsa_sign",
+    lib: 57,
+    reason: 239,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_recover` at `providers/implementations/signature/rsa_sig.c:955` (ERR_R_RSA_LIB).
+pub(crate) const PROV_RSA_SIG_955: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 955,
+    func: c"rsa_verify_recover",
+    lib: 57,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_recover` at `providers/implementations/signature/rsa_sig.c:960` (PROV_R_ALGORITHM_MISMATCH).
+pub(crate) const PROV_RSA_SIG_960: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 960,
+    func: c"rsa_verify_recover",
+    lib: 57,
+    reason: 173,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_recover` at `providers/implementations/signature/rsa_sig.c:964` (PROV_R_INVALID_DIGEST_LENGTH).
+pub(crate) const PROV_RSA_SIG_964: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 964,
+    func: c"rsa_verify_recover",
+    lib: 57,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_recover` at `providers/implementations/signature/rsa_sig.c:973` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_RSA_SIG_973: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 973,
+    func: c"rsa_verify_recover",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_recover` at `providers/implementations/signature/rsa_sig.c:987` (PROV_R_INVALID_DIGEST_LENGTH).
+pub(crate) const PROV_RSA_SIG_987: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 987,
+    func: c"rsa_verify_recover",
+    lib: 57,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_recover` at `providers/implementations/signature/rsa_sig.c:991` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_RSA_SIG_991: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 991,
+    func: c"rsa_verify_recover",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_recover` at `providers/implementations/signature/rsa_sig.c:999` (ERR_R_RSA_LIB).
+pub(crate) const PROV_RSA_SIG_999: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 999,
+    func: c"rsa_verify_recover",
+    lib: 57,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_recover` at `providers/implementations/signature/rsa_sig.c:1006` (PROV_R_INVALID_PADDING_MODE).
+pub(crate) const PROV_RSA_SIG_1006: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1006,
+    func: c"rsa_verify_recover",
+    lib: 57,
+    reason: 168,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_recover` at `providers/implementations/signature/rsa_sig.c:1014` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_RSA_SIG_1014: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1014,
+    func: c"rsa_verify_recover",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_recover` at `providers/implementations/signature/rsa_sig.c:1028` (ERR_R_RSA_LIB).
+pub(crate) const PROV_RSA_SIG_1028: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1028,
+    func: c"rsa_verify_recover",
+    lib: 57,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_directly` at `providers/implementations/signature/rsa_sig.c:1063` (ERR_R_RSA_LIB).
+pub(crate) const PROV_RSA_SIG_1063: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1063,
+    func: c"rsa_verify_directly",
+    lib: 57,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_directly` at `providers/implementations/signature/rsa_sig.c:1086` (PROV_R_INVALID_DIGEST_LENGTH).
+pub(crate) const PROV_RSA_SIG_1086: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1086,
+    func: c"rsa_verify_directly",
+    lib: 57,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_directly` at `providers/implementations/signature/rsa_sig.c:1097` (ERR_R_RSA_LIB).
+pub(crate) const PROV_RSA_SIG_1097: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1097,
+    func: c"rsa_verify_directly",
+    lib: 57,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_directly` at `providers/implementations/signature/rsa_sig.c:1106` (ERR_R_RSA_LIB).
+pub(crate) const PROV_RSA_SIG_1106: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1106,
+    func: c"rsa_verify_directly",
+    lib: 57,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_directly` at `providers/implementations/signature/rsa_sig.c:1116` (PROV_R_INVALID_PADDING_MODE).
+pub(crate) const PROV_RSA_SIG_1116: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1116,
+    func: c"rsa_verify_directly",
+    lib: 57,
+    reason: 168,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_directly` at `providers/implementations/signature/rsa_sig.c:1128` (ERR_R_RSA_LIB).
+pub(crate) const PROV_RSA_SIG_1128: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1128,
+    func: c"rsa_verify_directly",
+    lib: 57,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify_message_final` at `providers/implementations/signature/rsa_sig.c:1163` (PROV_R_FINAL_CALL_OUT_OF_ORDER).
+pub(crate) const PROV_RSA_SIG_1163: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1163,
+    func: c"rsa_verify_message_final",
+    lib: 57,
+    reason: 237,
+    dynamic_reason: false,
+};
+
+/// `rsa_verify` at `providers/implementations/signature/rsa_sig.c:1195` (PROV_R_ONESHOT_CALL_OUT_OF_ORDER).
+pub(crate) const PROV_RSA_SIG_1195: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1195,
+    func: c"rsa_verify",
+    lib: 57,
+    reason: 239,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1466` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1466: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1466,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1477` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1477: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1477,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1489` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1489: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1489,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1501` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1501: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1501,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1512` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1512: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1512,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1523` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1523: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1523,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1535` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1535: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1535,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params` at `providers/implementations/signature/rsa_sig.c:1589` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_RSA_SIG_1589: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1589,
+    func: c"rsa_get_ctx_params",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_x931_padding_allowed` at `providers/implementations/signature/rsa_sig.c:1662` (PROV_R_ILLEGAL_OR_UNSUPPORTED_PADDING_MODE).
+pub(crate) const PROV_RSA_SIG_1662: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1662,
+    func: c"rsa_x931_padding_allowed",
+    lib: 57,
+    reason: 165,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1763` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1763: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1763,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1773` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1773: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1773,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1790` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1790: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1790,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1822` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1822: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1822,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1833` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1833: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1833,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1853` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1853: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1853,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1864` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1864: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1864,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1877` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1877: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1877,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1893` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1893: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1893,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:1905` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1905: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1905,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_no_digest_decoder` at `providers/implementations/signature/rsa_sig.c:1988` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_1988: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 1988,
+    func: c"rsa_set_ctx_params_no_digest_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_no_digest_decoder` at `providers/implementations/signature/rsa_sig.c:2001` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_2001: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2001,
+    func: c"rsa_set_ctx_params_no_digest_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_no_digest_decoder` at `providers/implementations/signature/rsa_sig.c:2033` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_2033: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2033,
+    func: c"rsa_set_ctx_params_no_digest_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_no_digest_decoder` at `providers/implementations/signature/rsa_sig.c:2044` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_2044: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2044,
+    func: c"rsa_set_ctx_params_no_digest_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_no_digest_decoder` at `providers/implementations/signature/rsa_sig.c:2060` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_2060: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2060,
+    func: c"rsa_set_ctx_params_no_digest_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_no_digest_decoder` at `providers/implementations/signature/rsa_sig.c:2072` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_2072: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2072,
+    func: c"rsa_set_ctx_params_no_digest_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_no_digest_decoder` at `providers/implementations/signature/rsa_sig.c:2088` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_2088: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2088,
+    func: c"rsa_set_ctx_params_no_digest_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_no_digest_decoder` at `providers/implementations/signature/rsa_sig.c:2100` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_2100: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2100,
+    func: c"rsa_set_ctx_params_no_digest_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params` at `providers/implementations/signature/rsa_sig.c:2222` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_RSA_SIG_2222: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2222,
+    func: c"rsa_set_ctx_params",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params` at `providers/implementations/signature/rsa_sig.c:2239` (PROV_R_ILLEGAL_OR_UNSUPPORTED_PADDING_MODE).
+pub(crate) const PROV_RSA_SIG_2239: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2239,
+    func: c"rsa_set_ctx_params",
+    lib: 57,
+    reason: 165,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params` at `providers/implementations/signature/rsa_sig.c:2242` (PROV_R_ILLEGAL_OR_UNSUPPORTED_PADDING_MODE).
+pub(crate) const PROV_RSA_SIG_2242: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2242,
+    func: c"rsa_set_ctx_params",
+    lib: 57,
+    reason: 165,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params` at `providers/implementations/signature/rsa_sig.c:2251` (PROV_R_NOT_SUPPORTED).
+pub(crate) const PROV_RSA_SIG_2251: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2251,
+    func: c"rsa_set_ctx_params",
+    lib: 57,
+    reason: 136,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params` at `providers/implementations/signature/rsa_sig.c:2280` (PROV_R_INVALID_SALT_LENGTH).
+pub(crate) const PROV_RSA_SIG_2280: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2280,
+    func: c"rsa_set_ctx_params",
+    lib: 57,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params` at `providers/implementations/signature/rsa_sig.c:2291` (PROV_R_INVALID_SALT_LENGTH).
+pub(crate) const PROV_RSA_SIG_2291: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2291,
+    func: c"rsa_set_ctx_params",
+    lib: 57,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params` at `providers/implementations/signature/rsa_sig.c:2298` (PROV_R_PSS_SALTLEN_TOO_SMALL).
+pub(crate) const PROV_RSA_SIG_2298: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2298,
+    func: c"rsa_set_ctx_params",
+    lib: 57,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params` at `providers/implementations/signature/rsa_sig.c:2309` (PROV_R_PSS_SALTLEN_TOO_SMALL).
+pub(crate) const PROV_RSA_SIG_2309: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2309,
+    func: c"rsa_set_ctx_params",
+    lib: 57,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params` at `providers/implementations/signature/rsa_sig.c:2333` (PROV_R_INVALID_MGF1_MD).
+pub(crate) const PROV_RSA_SIG_2333: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2333,
+    func: c"rsa_set_ctx_params",
+    lib: 57,
+    reason: 167,
+    dynamic_reason: false,
+};
+
+/// `rsa_sigalg_signverify_init` at `providers/implementations/signature/rsa_sig.c:2484` (PROV_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const PROV_RSA_SIG_2484: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2484,
+    func: c"rsa_sigalg_signverify_init",
+    lib: 57,
+    reason: 178,
+    dynamic_reason: false,
+};
+
+/// `rsa_sigalg_set_ctx_params_decoder` at `providers/implementations/signature/rsa_sig.c:2546` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_SIG_2546: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/rsa_sig.c",
+    line: 2546,
+    func: c"rsa_sigalg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_DER_w_RSASSA_PSS_params` at `providers/common/der/der_rsa_key.c:308` (RSA_R_INVALID_SALT_LENGTH).
+pub(crate) const DER_RSA_KEY_308: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/common/der/der_rsa_key.c",
+    line: 308,
+    func: c"ossl_DER_w_RSASSA_PSS_params",
+    lib: 4,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `ossl_DER_w_RSASSA_PSS_params` at `providers/common/der/der_rsa_key.c:312` (RSA_R_INVALID_TRAILER).
+pub(crate) const DER_RSA_KEY_312: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/common/der/der_rsa_key.c",
+    line: 312,
+    func: c"ossl_DER_w_RSASSA_PSS_params",
+    lib: 4,
+    reason: 139,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_key_op_get_protect` at `providers/common/securitycheck.c:47` (PROV_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const SECURITYCHECK_47: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/common/securitycheck.c",
+    line: 47,
+    func: c"ossl_rsa_key_op_get_protect",
+    lib: 57,
+    reason: 178,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_key_op_get_protect` at `providers/common/securitycheck.c:54` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SECURITYCHECK_54: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/common/securitycheck.c",
+    line: 54,
+    func: c"ossl_rsa_key_op_get_protect",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_init` at `providers/implementations/asymciphers/rsa_enc.c:124` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_RSA_ENC_124: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 124,
+    func: c"rsa_init",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_encrypt` at `providers/implementations/asymciphers/rsa_enc.c:171` (PROV_R_INVALID_PADDING_MODE).
+pub(crate) const PROV_RSA_ENC_171: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 171,
+    func: c"rsa_encrypt",
+    lib: 57,
+    reason: 168,
+    dynamic_reason: false,
+};
+
+/// `rsa_encrypt` at `providers/implementations/asymciphers/rsa_enc.c:177` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_RSA_ENC_177: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 177,
+    func: c"rsa_encrypt",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `rsa_encrypt` at `providers/implementations/asymciphers/rsa_enc.c:187` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_RSA_ENC_187: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 187,
+    func: c"rsa_encrypt",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `rsa_encrypt` at `providers/implementations/asymciphers/rsa_enc.c:201` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_RSA_ENC_201: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 201,
+    func: c"rsa_encrypt",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_decrypt` at `providers/implementations/asymciphers/rsa_enc.c:247` (PROV_R_BAD_LENGTH).
+pub(crate) const PROV_RSA_ENC_247: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 247,
+    func: c"rsa_decrypt",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `rsa_decrypt` at `providers/implementations/asymciphers/rsa_enc.c:253` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_RSA_ENC_253: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 253,
+    func: c"rsa_decrypt",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `rsa_decrypt` at `providers/implementations/asymciphers/rsa_enc.c:261` (PROV_R_BAD_LENGTH).
+pub(crate) const PROV_RSA_ENC_261: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 261,
+    func: c"rsa_decrypt",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `rsa_decrypt` at `providers/implementations/asymciphers/rsa_enc.c:280` (PROV_R_FAILED_TO_DECRYPT).
+pub(crate) const PROV_RSA_ENC_280: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 280,
+    func: c"rsa_decrypt",
+    lib: 57,
+    reason: 162,
+    dynamic_reason: false,
+};
+
+/// `rsa_decrypt` at `providers/implementations/asymciphers/rsa_enc.c:288` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_RSA_ENC_288: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 288,
+    func: c"rsa_decrypt",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_decrypt` at `providers/implementations/asymciphers/rsa_enc.c:301` (PROV_R_BAD_TLS_CLIENT_VERSION).
+pub(crate) const PROV_RSA_ENC_301: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 301,
+    func: c"rsa_decrypt",
+    lib: 57,
+    reason: 161,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:425` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_425: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 425,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:437` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_437: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 437,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:449` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_449: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 449,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:460` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_460: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 460,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:471` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_471: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 471,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:482` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_482: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 482,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:509` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_509: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 509,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:520` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_520: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 520,
+    func: c"rsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_get_ctx_params` at `providers/implementations/asymciphers/rsa_enc.c:565` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_RSA_ENC_565: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 565,
+    func: c"rsa_get_ctx_params",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:694` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_694: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 694,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:703` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_703: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 703,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:719` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_719: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 719,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:731` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_731: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 731,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:763` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_763: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 763,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:774` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_774: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 774,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:790` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_790: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 790,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:801` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_801: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 801,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:813` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_813: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 813,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:841` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_841: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 841,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsa_set_ctx_params_decoder` at `providers/implementations/asymciphers/rsa_enc.c:852` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_ENC_852: ErrSite = ErrSite {
+    file: c"providers/implementations/asymciphers/rsa_enc.c",
+    line: 852,
+    func: c"rsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsakem_init` at `providers/implementations/kem/rsa_kem.c:162` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_RSA_KEM_162: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/rsa_kem.c",
+    line: 162,
+    func: c"rsakem_init",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `rsakem_get_ctx_params_decoder` at `providers/implementations/kem/rsa_kem.c:226` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_KEM_226: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/rsa_kem.c",
+    line: 226,
+    func: c"rsakem_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsakem_set_ctx_params_decoder` at `providers/implementations/kem/rsa_kem.c:298` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_KEM_298: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/rsa_kem.c",
+    line: 298,
+    func: c"rsakem_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsakem_set_ctx_params_decoder` at `providers/implementations/kem/rsa_kem.c:310` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_RSA_KEM_310: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/rsa_kem.c",
+    line: 310,
+    func: c"rsakem_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `rsasve_generate` at `providers/implementations/kem/rsa_kem.c:406` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_RSA_KEM_406: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/rsa_kem.c",
+    line: 406,
+    func: c"rsasve_generate",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `rsasve_generate` at `providers/implementations/kem/rsa_kem.c:424` (PROV_R_INVALID_OUTPUT_LENGTH).
+pub(crate) const PROV_RSA_KEM_424: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/rsa_kem.c",
+    line: 424,
+    func: c"rsasve_generate",
+    lib: 57,
+    reason: 217,
+    dynamic_reason: false,
+};
+
+/// `rsasve_recover` at `providers/implementations/kem/rsa_kem.c:483` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_RSA_KEM_483: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/rsa_kem.c",
+    line: 483,
+    func: c"rsasve_recover",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `rsasve_recover` at `providers/implementations/kem/rsa_kem.c:495` (PROV_R_BAD_LENGTH).
+pub(crate) const PROV_RSA_KEM_495: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/rsa_kem.c",
+    line: 495,
+    func: c"rsasve_recover",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `rsasve_recover` at `providers/implementations/kem/rsa_kem.c:505` (PROV_R_INVALID_OUTPUT_LENGTH).
+pub(crate) const PROV_RSA_KEM_505: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/rsa_kem.c",
+    line: 505,
+    func: c"rsasve_recover",
+    lib: 57,
+    reason: 217,
+    dynamic_reason: false,
+};
+
+/// `rsasve_recover` at `providers/implementations/kem/rsa_kem.c:541` (ERR_raise dynamic reason).
+pub(crate) const PROV_RSA_KEM_541: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/rsa_kem.c",
+    line: 541,
+    func: c"rsasve_recover",
+    lib: 4,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `slh_sign_internal` at `crypto/slh_dsa/slh_dsa.c:74` (PROV_R_INVALID_SIGNATURE_SIZE).
+pub(crate) const SLH_DSA_74: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/slh_dsa/slh_dsa.c",
+    line: 74,
+    func: c"slh_sign_internal",
+    lib: 57,
+    reason: 179,
+    dynamic_reason: false,
+};
+
+/// `slh_sign_internal` at `crypto/slh_dsa/slh_dsa.c:80` (PROV_R_MISSING_KEY).
+pub(crate) const SLH_DSA_80: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/slh_dsa/slh_dsa.c",
+    line: 80,
+    func: c"slh_sign_internal",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `slh_verify_internal` at `crypto/slh_dsa/slh_dsa.c:177` (PROV_R_MISSING_KEY).
+pub(crate) const SLH_DSA_177: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/slh_dsa/slh_dsa.c",
+    line: 177,
+    func: c"slh_verify_internal",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `parse_pubkey` at `crypto/ml_kem/ml_kem.c:1642` (PROV_R_INVALID_KEY).
+pub(crate) const ML_KEM_1642: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_kem/ml_kem.c",
+    line: 1642,
+    func: c"parse_pubkey",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `parse_pubkey` at `crypto/ml_kem/ml_kem.c:1655` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ML_KEM_1655: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_kem/ml_kem.c",
+    line: 1655,
+    func: c"parse_pubkey",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `parse_prvkey` at `crypto/ml_kem/ml_kem.c:1675` (PROV_R_INVALID_KEY).
+pub(crate) const ML_KEM_1675: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_kem/ml_kem.c",
+    line: 1675,
+    func: c"parse_prvkey",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `parse_prvkey` at `crypto/ml_kem/ml_kem.c:1688` (PROV_R_INVALID_KEY).
+pub(crate) const ML_KEM_1688: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_kem/ml_kem.c",
+    line: 1688,
+    func: c"parse_prvkey",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `genkey` at `crypto/ml_kem/ml_kem.c:1786` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ML_KEM_1786: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_kem/ml_kem.c",
+    line: 1786,
+    func: c"genkey",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `encap` at `crypto/ml_kem/ml_kem.c:1819` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ML_KEM_1819: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_kem/ml_kem.c",
+    line: 1819,
+    func: c"encap",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `decap` at `crypto/ml_kem/ml_kem.c:1866` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ML_KEM_1866: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_kem/ml_kem.c",
+    line: 1866,
+    func: c"decap",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_kem_key_new` at `crypto/ml_kem/ml_kem.c:1997` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const ML_KEM_1997: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_kem/ml_kem.c",
+    line: 1997,
+    func: c"ossl_ml_kem_key_new",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_kem_key_new` at `crypto/ml_kem/ml_kem.c:2022` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ML_KEM_2022: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_kem/ml_kem.c",
+    line: 2022,
+    func: c"ossl_ml_kem_key_new",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_encapsulate_init` at `providers/implementations/kem/ml_kem_kem.c:84` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_ML_KEM_KEM_84: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ml_kem_kem.c",
+    line: 84,
+    func: c"ml_kem_encapsulate_init",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_decapsulate_init` at `providers/implementations/kem/ml_kem_kem.c:96` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_ML_KEM_KEM_96: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ml_kem_kem.c",
+    line: 96,
+    func: c"ml_kem_decapsulate_init",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_set_ctx_params_decoder` at `providers/implementations/kem/ml_kem_kem.c:129` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KEM_129: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ml_kem_kem.c",
+    line: 129,
+    func: c"ml_kem_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_set_ctx_params` at `providers/implementations/kem/ml_kem_kem.c:166` (PROV_R_INVALID_SEED_LENGTH).
+pub(crate) const PROV_ML_KEM_KEM_166: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ml_kem_kem.c",
+    line: 166,
+    func: c"ml_kem_set_ctx_params",
+    lib: 57,
+    reason: 154,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_encapsulate` at `providers/implementations/kem/ml_kem_kem.c:192` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_ML_KEM_KEM_192: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ml_kem_kem.c",
+    line: 192,
+    func: c"ml_kem_encapsulate",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_encapsulate` at `providers/implementations/kem/ml_kem_kem.c:209` (PROV_R_NULL_OUTPUT_BUFFER).
+pub(crate) const PROV_ML_KEM_KEM_209: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ml_kem_kem.c",
+    line: 209,
+    func: c"ml_kem_encapsulate",
+    lib: 57,
+    reason: 248,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_encapsulate` at `providers/implementations/kem/ml_kem_kem.c:215` (PROV_R_NULL_LENGTH_POINTER).
+pub(crate) const PROV_ML_KEM_KEM_215: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ml_kem_kem.c",
+    line: 215,
+    func: c"ml_kem_encapsulate",
+    lib: 57,
+    reason: 247,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_encapsulate` at `providers/implementations/kem/ml_kem_kem.c:219` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_ML_KEM_KEM_219: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ml_kem_kem.c",
+    line: 219,
+    func: c"ml_kem_encapsulate",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_encapsulate` at `providers/implementations/kem/ml_kem_kem.c:227` (PROV_R_NULL_LENGTH_POINTER).
+pub(crate) const PROV_ML_KEM_KEM_227: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ml_kem_kem.c",
+    line: 227,
+    func: c"ml_kem_encapsulate",
+    lib: 57,
+    reason: 247,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_encapsulate` at `providers/implementations/kem/ml_kem_kem.c:231` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_ML_KEM_KEM_231: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ml_kem_kem.c",
+    line: 231,
+    func: c"ml_kem_encapsulate",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_decapsulate` at `providers/implementations/kem/ml_kem_kem.c:267` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_ML_KEM_KEM_267: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ml_kem_kem.c",
+    line: 267,
+    func: c"ml_kem_decapsulate",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_decapsulate` at `providers/implementations/kem/ml_kem_kem.c:282` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_ML_KEM_KEM_282: ErrSite = ErrSite {
+    file: c"providers/implementations/kem/ml_kem_kem.c",
+    line: 282,
+    func: c"ml_kem_decapsulate",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_pairwise_test` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:148` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_ML_KEM_KMGMT_148: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 148,
+    func: c"ml_kem_pairwise_test",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_export` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:263` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_ML_KEM_KMGMT_263: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 263,
+    func: c"ml_kem_export",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_key_type_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:380` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_380: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 380,
+    func: c"ml_kem_key_type_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_key_type_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:391` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_391: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 391,
+    func: c"ml_kem_key_type_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_key_type_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:403` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_403: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 403,
+    func: c"ml_kem_key_type_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `check_seed` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:432` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_ML_KEM_KMGMT_432: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 432,
+    func: c"check_seed",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `check_prvenc` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:453` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_ML_KEM_KMGMT_453: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 453,
+    func: c"check_prvenc",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_key_fromdata` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:489` (PROV_R_INVALID_SEED_LENGTH).
+pub(crate) const PROV_ML_KEM_KMGMT_489: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 489,
+    func: c"ml_kem_key_fromdata",
+    lib: 57,
+    reason: 154,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_key_fromdata` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:498` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_ML_KEM_KMGMT_498: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 498,
+    func: c"ml_kem_key_fromdata",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_key_fromdata` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:508` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_ML_KEM_KMGMT_508: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 508,
+    func: c"ml_kem_key_fromdata",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_key_fromdata` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:515` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_ML_KEM_KMGMT_515: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 515,
+    func: c"ml_kem_key_fromdata",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_key_fromdata` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:524` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_ML_KEM_KMGMT_524: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 524,
+    func: c"ml_kem_key_fromdata",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_get_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:616` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_616: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 616,
+    func: c"ml_kem_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_get_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:627` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_627: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 627,
+    func: c"ml_kem_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_get_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:638` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_638: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 638,
+    func: c"ml_kem_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_get_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:649` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_649: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 649,
+    func: c"ml_kem_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_get_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:664` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_664: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 664,
+    func: c"ml_kem_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_get_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:675` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_675: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 675,
+    func: c"ml_kem_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_get_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:687` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_687: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 687,
+    func: c"ml_kem_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_get_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:734` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_734: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 734,
+    func: c"ml_kem_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_get_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:745` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_745: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 745,
+    func: c"ml_kem_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_get_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:763` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_763: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 763,
+    func: c"ml_kem_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_load` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:811` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_ML_KEM_KMGMT_811: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 811,
+    func: c"ml_kem_load",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_set_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:960` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_960: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 960,
+    func: c"ml_kem_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_set_params` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:991` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_ML_KEM_KMGMT_991: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 991,
+    func: c"ml_kem_set_params",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_set_params` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:1000` (PROV_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const PROV_ML_KEM_KMGMT_1000: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 1000,
+    func: c"ml_kem_set_params",
+    lib: 57,
+    reason: 178,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_gen_set_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:1042` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_1042: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 1042,
+    func: c"ml_kem_gen_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_gen_set_params_decoder` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:1053` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_KEM_KMGMT_1053: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 1053,
+    func: c"ml_kem_gen_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_gen_set_params` at `providers/implementations/keymgmt/ml_kem_kmgmt.c:1091` (PROV_R_INVALID_SEED_LENGTH).
+pub(crate) const PROV_ML_KEM_KMGMT_1091: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_kem_kmgmt.c",
+    line: 1091,
+    func: c"ml_kem_gen_set_params",
+    lib: 57,
+    reason: 154,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_import_export_decoder` at `providers/implementations/keymgmt/mlx_kmgmt.c:186` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_MLX_KMGMT_186: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 186,
+    func: c"ml_kem_import_export_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_kem_import_export_decoder` at `providers/implementations/keymgmt/mlx_kmgmt.c:197` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_MLX_KMGMT_197: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 197,
+    func: c"ml_kem_import_export_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `export_sub_cb` at `providers/implementations/keymgmt/mlx_kmgmt.c:244` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_MLX_KMGMT_244: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 244,
+    func: c"export_sub_cb",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `export_sub_cb` at `providers/implementations/keymgmt/mlx_kmgmt.c:258` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_MLX_KMGMT_258: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 258,
+    func: c"export_sub_cb",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_export` at `providers/implementations/keymgmt/mlx_kmgmt.c:326` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_MLX_KMGMT_326: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 326,
+    func: c"mlx_kem_export",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_key_fromdata` at `providers/implementations/keymgmt/mlx_kmgmt.c:503` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_MLX_KMGMT_503: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 503,
+    func: c"mlx_kem_key_fromdata",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_key_fromdata` at `providers/implementations/keymgmt/mlx_kmgmt.c:513` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_MLX_KMGMT_513: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 513,
+    func: c"mlx_kem_key_fromdata",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_key_fromdata` at `providers/implementations/keymgmt/mlx_kmgmt.c:517` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_MLX_KMGMT_517: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 517,
+    func: c"mlx_kem_key_fromdata",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `mlx_get_params_decoder` at `providers/implementations/keymgmt/mlx_kmgmt.c:580` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_MLX_KMGMT_580: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 580,
+    func: c"mlx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `mlx_get_params_decoder` at `providers/implementations/keymgmt/mlx_kmgmt.c:591` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_MLX_KMGMT_591: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 591,
+    func: c"mlx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `mlx_get_params_decoder` at `providers/implementations/keymgmt/mlx_kmgmt.c:602` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_MLX_KMGMT_602: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 602,
+    func: c"mlx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `mlx_get_params_decoder` at `providers/implementations/keymgmt/mlx_kmgmt.c:613` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_MLX_KMGMT_613: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 613,
+    func: c"mlx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `mlx_get_params_decoder` at `providers/implementations/keymgmt/mlx_kmgmt.c:660` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_MLX_KMGMT_660: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 660,
+    func: c"mlx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `mlx_get_params_decoder` at `providers/implementations/keymgmt/mlx_kmgmt.c:671` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_MLX_KMGMT_671: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 671,
+    func: c"mlx_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_get_params` at `providers/implementations/keymgmt/mlx_kmgmt.c:745` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_MLX_KMGMT_745: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 745,
+    func: c"mlx_kem_get_params",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_get_params` at `providers/implementations/keymgmt/mlx_kmgmt.c:764` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_MLX_KMGMT_764: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 764,
+    func: c"mlx_kem_get_params",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `mlx_set_params_decoder` at `providers/implementations/keymgmt/mlx_kmgmt.c:832` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_MLX_KMGMT_832: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 832,
+    func: c"mlx_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `mlx_set_params_decoder` at `providers/implementations/keymgmt/mlx_kmgmt.c:843` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_MLX_KMGMT_843: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 843,
+    func: c"mlx_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_set_params` at `providers/implementations/keymgmt/mlx_kmgmt.c:883` (PROV_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const PROV_MLX_KMGMT_883: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 883,
+    func: c"mlx_kem_set_params",
+    lib: 57,
+    reason: 178,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_set_params` at `providers/implementations/keymgmt/mlx_kmgmt.c:893` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_MLX_KMGMT_893: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 893,
+    func: c"mlx_kem_set_params",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `mlx_gen_set_params_decoder` at `providers/implementations/keymgmt/mlx_kmgmt.c:927` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_MLX_KMGMT_927: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 927,
+    func: c"mlx_gen_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_dup` at `providers/implementations/keymgmt/mlx_kmgmt.c:1069` (PROV_R_UNSUPPORTED_SELECTION).
+pub(crate) const PROV_MLX_KMGMT_1069: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/mlx_kmgmt.c",
+    line: 1069,
+    func: c"mlx_kem_dup",
+    lib: 57,
+    reason: 250,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_encapsulate_init` at `providers/implementations/kem/mlx_kem.c:74` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_MLX_KEM_74: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 74,
+    func: c"mlx_kem_encapsulate_init",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_decapsulate_init` at `providers/implementations/kem/mlx_kem.c:86` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_MLX_KEM_86: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 86,
+    func: c"mlx_kem_decapsulate_init",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_encapsulate` at `providers/implementations/kem/mlx_kem.c:120` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_MLX_KEM_120: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 120,
+    func: c"mlx_kem_encapsulate",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_encapsulate` at `providers/implementations/kem/mlx_kem.c:136` (PROV_R_NULL_OUTPUT_BUFFER).
+pub(crate) const PROV_MLX_KEM_136: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 136,
+    func: c"mlx_kem_encapsulate",
+    lib: 57,
+    reason: 248,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_encapsulate` at `providers/implementations/kem/mlx_kem.c:142` (PROV_R_NULL_LENGTH_POINTER).
+pub(crate) const PROV_MLX_KEM_142: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 142,
+    func: c"mlx_kem_encapsulate",
+    lib: 57,
+    reason: 247,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_encapsulate` at `providers/implementations/kem/mlx_kem.c:146` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_MLX_KEM_146: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 146,
+    func: c"mlx_kem_encapsulate",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_encapsulate` at `providers/implementations/kem/mlx_kem.c:154` (PROV_R_NULL_LENGTH_POINTER).
+pub(crate) const PROV_MLX_KEM_154: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 154,
+    func: c"mlx_kem_encapsulate",
+    lib: 57,
+    reason: 247,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_encapsulate` at `providers/implementations/kem/mlx_kem.c:158` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_MLX_KEM_158: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 158,
+    func: c"mlx_kem_encapsulate",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_encapsulate` at `providers/implementations/kem/mlx_kem.c:176` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_MLX_KEM_176: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 176,
+    func: c"mlx_kem_encapsulate",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_encapsulate` at `providers/implementations/kem/mlx_kem.c:182` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_MLX_KEM_182: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 182,
+    func: c"mlx_kem_encapsulate",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_encapsulate` at `providers/implementations/kem/mlx_kem.c:214` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_MLX_KEM_214: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 214,
+    func: c"mlx_kem_encapsulate",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_encapsulate` at `providers/implementations/kem/mlx_kem.c:231` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_MLX_KEM_231: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 231,
+    func: c"mlx_kem_encapsulate",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_decapsulate` at `providers/implementations/kem/mlx_kem.c:262` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_MLX_KEM_262: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 262,
+    func: c"mlx_kem_decapsulate",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_decapsulate` at `providers/implementations/kem/mlx_kem.c:277` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_MLX_KEM_277: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 277,
+    func: c"mlx_kem_decapsulate",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_decapsulate` at `providers/implementations/kem/mlx_kem.c:284` (PROV_R_WRONG_CIPHERTEXT_SIZE).
+pub(crate) const PROV_MLX_KEM_284: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 284,
+    func: c"mlx_kem_decapsulate",
+    lib: 57,
+    reason: 251,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_decapsulate` at `providers/implementations/kem/mlx_kem.c:301` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_MLX_KEM_301: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 301,
+    func: c"mlx_kem_decapsulate",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `mlx_kem_decapsulate` at `providers/implementations/kem/mlx_kem.c:323` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_MLX_KEM_323: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/kem/mlx_kem.c",
+    line: 323,
+    func: c"mlx_kem_decapsulate",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_import_decoder` at `providers/implementations/keymgmt/slh_dsa_kmgmt.c:151` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_KMGMT_151: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/slh_dsa_kmgmt.c",
+    line: 151,
+    func: c"slh_dsa_import_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_import_decoder` at `providers/implementations/keymgmt/slh_dsa_kmgmt.c:162` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_KMGMT_162: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/slh_dsa_kmgmt.c",
+    line: 162,
+    func: c"slh_dsa_import_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_get_params_decoder` at `providers/implementations/keymgmt/slh_dsa_kmgmt.c:244` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_KMGMT_244: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/slh_dsa_kmgmt.c",
+    line: 244,
+    func: c"slh_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_get_params_decoder` at `providers/implementations/keymgmt/slh_dsa_kmgmt.c:263` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_KMGMT_263: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/slh_dsa_kmgmt.c",
+    line: 263,
+    func: c"slh_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_get_params_decoder` at `providers/implementations/keymgmt/slh_dsa_kmgmt.c:274` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_KMGMT_274: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/slh_dsa_kmgmt.c",
+    line: 274,
+    func: c"slh_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_get_params_decoder` at `providers/implementations/keymgmt/slh_dsa_kmgmt.c:291` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_KMGMT_291: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/slh_dsa_kmgmt.c",
+    line: 291,
+    func: c"slh_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_get_params_decoder` at `providers/implementations/keymgmt/slh_dsa_kmgmt.c:302` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_KMGMT_302: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/slh_dsa_kmgmt.c",
+    line: 302,
+    func: c"slh_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_get_params_decoder` at `providers/implementations/keymgmt/slh_dsa_kmgmt.c:350` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_KMGMT_350: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/slh_dsa_kmgmt.c",
+    line: 350,
+    func: c"slh_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_get_params_decoder` at `providers/implementations/keymgmt/slh_dsa_kmgmt.c:361` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_KMGMT_361: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/slh_dsa_kmgmt.c",
+    line: 361,
+    func: c"slh_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_gen_set_params_decoder` at `providers/implementations/keymgmt/slh_dsa_kmgmt.c:657` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_KMGMT_657: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/slh_dsa_kmgmt.c",
+    line: 657,
+    func: c"slh_dsa_gen_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_gen_set_params_decoder` at `providers/implementations/keymgmt/slh_dsa_kmgmt.c:668` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_KMGMT_668: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/slh_dsa_kmgmt.c",
+    line: 668,
+    func: c"slh_dsa_gen_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_signverify_msg_init` at `providers/implementations/signature/slh_dsa_sig.c:161` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_SLH_DSA_SIG_161: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/slh_dsa_sig.c",
+    line: 161,
+    func: c"slh_dsa_signverify_msg_init",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_digest_signverify_init` at `providers/implementations/signature/slh_dsa_sig.c:192` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_SLH_DSA_SIG_192: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/slh_dsa_sig.c",
+    line: 192,
+    func: c"slh_dsa_digest_signverify_init",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_set_ctx_params_decoder` at `providers/implementations/signature/slh_dsa_sig.c:301` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_SIG_301: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/slh_dsa_sig.c",
+    line: 301,
+    func: c"slh_dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_set_ctx_params_decoder` at `providers/implementations/signature/slh_dsa_sig.c:312` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_SIG_312: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/slh_dsa_sig.c",
+    line: 312,
+    func: c"slh_dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_set_ctx_params_decoder` at `providers/implementations/signature/slh_dsa_sig.c:323` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_SIG_323: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/slh_dsa_sig.c",
+    line: 323,
+    func: c"slh_dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_set_ctx_params_decoder` at `providers/implementations/signature/slh_dsa_sig.c:334` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_SIG_334: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/slh_dsa_sig.c",
+    line: 334,
+    func: c"slh_dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_get_ctx_params_decoder` at `providers/implementations/signature/slh_dsa_sig.c:418` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SLH_DSA_SIG_418: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/slh_dsa_sig.c",
+    line: 418,
+    func: c"slh_dsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_dsa_sk_decode` at `crypto/ml_dsa/ml_dsa_encoders.c:820` (PROV_R_INVALID_KEY).
+pub(crate) const ML_DSA_ENCODERS_820: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_encoders.c",
+    line: 820,
+    func: c"ossl_ml_dsa_sk_decode",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_dsa_generate_key` at `crypto/ml_dsa/ml_dsa_key.c:501` (PROV_R_INVALID_KEY).
+pub(crate) const ML_DSA_KEY_501: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_key.c",
+    line: 501,
+    func: c"ossl_ml_dsa_generate_key",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_dsa_mu_finalize` at `crypto/ml_dsa/ml_dsa_sign.c:135` (PROV_R_BAD_LENGTH).
+pub(crate) const ML_DSA_SIGN_135: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_sign.c",
+    line: 135,
+    func: c"ossl_ml_dsa_mu_finalize",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_sign_internal` at `crypto/ml_dsa/ml_dsa_sign.c:181` (PROV_R_BAD_LENGTH).
+pub(crate) const ML_DSA_SIGN_181: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_sign.c",
+    line: 181,
+    func: c"ml_dsa_sign_internal",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_verify_internal` at `crypto/ml_dsa/ml_dsa_sign.c:344` (PROV_R_BAD_LENGTH).
+pub(crate) const ML_DSA_SIGN_344: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ml_dsa/ml_dsa_sign.c",
+    line: 344,
+    func: c"ml_dsa_verify_internal",
+    lib: 57,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_key_type_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:227` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_227: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 227,
+    func: c"ml_dsa_key_type_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_key_type_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:238` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_238: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 238,
+    func: c"ml_dsa_key_type_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_key_type_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:250` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_250: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 250,
+    func: c"ml_dsa_key_type_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_key_fromdata` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:287` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_ML_DSA_KMGMT_287: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 287,
+    func: c"ml_dsa_key_fromdata",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_key_fromdata` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:299` (PROV_R_INVALID_SEED_LENGTH).
+pub(crate) const PROV_ML_DSA_KMGMT_299: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 299,
+    func: c"ml_dsa_key_fromdata",
+    lib: 57,
+    reason: 154,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_key_fromdata` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:310` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_ML_DSA_KMGMT_310: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 310,
+    func: c"ml_dsa_key_fromdata",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_key_fromdata` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:319` (PROV_R_MISSING_KEY).
+pub(crate) const PROV_ML_DSA_KMGMT_319: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 319,
+    func: c"ml_dsa_key_fromdata",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_key_fromdata` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:329` (PROV_R_FAILED_TO_GENERATE_KEY).
+pub(crate) const PROV_ML_DSA_KMGMT_329: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 329,
+    func: c"ml_dsa_key_fromdata",
+    lib: 57,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_key_fromdata` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:345` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_ML_DSA_KMGMT_345: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 345,
+    func: c"ml_dsa_key_fromdata",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_get_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:428` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_428: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 428,
+    func: c"ml_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_get_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:447` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_447: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 447,
+    func: c"ml_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_get_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:458` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_458: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 458,
+    func: c"ml_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_get_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:475` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_475: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 475,
+    func: c"ml_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_get_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:486` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_486: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 486,
+    func: c"ml_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_get_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:534` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_534: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 534,
+    func: c"ml_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_get_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:545` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_545: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 545,
+    func: c"ml_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_get_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:563` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_563: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 563,
+    func: c"ml_dsa_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_load` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:709` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_ML_DSA_KMGMT_709: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 709,
+    func: c"ml_dsa_load",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_gen` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:755` (PROV_R_FAILED_TO_GENERATE_KEY).
+pub(crate) const PROV_ML_DSA_KMGMT_755: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 755,
+    func: c"ml_dsa_gen",
+    lib: 57,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_gen_set_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:801` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_801: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 801,
+    func: c"ml_dsa_gen_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_gen_set_params_decoder` at `providers/implementations/keymgmt/ml_dsa_kmgmt.c:812` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_KMGMT_812: ErrSite = ErrSite {
+    file: c"providers/implementations/keymgmt/ml_dsa_kmgmt.c",
+    line: 812,
+    func: c"ml_dsa_gen_set_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_signverify_msg_init` at `providers/implementations/signature/ml_dsa_sig.c:177` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_ML_DSA_SIG_177: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 177,
+    func: c"ml_dsa_signverify_msg_init",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_digest_signverify_init` at `providers/implementations/signature/ml_dsa_sig.c:205` (PROV_R_INVALID_DIGEST).
+pub(crate) const PROV_ML_DSA_SIG_205: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 205,
+    func: c"ml_dsa_digest_signverify_init",
+    lib: 57,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_set_ctx_params_decoder` at `providers/implementations/signature/ml_dsa_sig.c:415` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_SIG_415: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 415,
+    func: c"ml_dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_set_ctx_params_decoder` at `providers/implementations/signature/ml_dsa_sig.c:426` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_SIG_426: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 426,
+    func: c"ml_dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_set_ctx_params_decoder` at `providers/implementations/signature/ml_dsa_sig.c:441` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_SIG_441: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 441,
+    func: c"ml_dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_set_ctx_params_decoder` at `providers/implementations/signature/ml_dsa_sig.c:454` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_SIG_454: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 454,
+    func: c"ml_dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_set_ctx_params_decoder` at `providers/implementations/signature/ml_dsa_sig.c:466` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_SIG_466: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 466,
+    func: c"ml_dsa_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_verifymsg_set_ctx_params_decoder` at `providers/implementations/signature/ml_dsa_sig.c:520` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_SIG_520: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 520,
+    func: c"ml_dsa_verifymsg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_verifymsg_set_ctx_params_decoder` at `providers/implementations/signature/ml_dsa_sig.c:531` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_SIG_531: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 531,
+    func: c"ml_dsa_verifymsg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_verifymsg_set_ctx_params_decoder` at `providers/implementations/signature/ml_dsa_sig.c:546` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_SIG_546: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 546,
+    func: c"ml_dsa_verifymsg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_verifymsg_set_ctx_params_decoder` at `providers/implementations/signature/ml_dsa_sig.c:559` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_SIG_559: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 559,
+    func: c"ml_dsa_verifymsg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_verifymsg_set_ctx_params_decoder` at `providers/implementations/signature/ml_dsa_sig.c:571` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_SIG_571: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 571,
+    func: c"ml_dsa_verifymsg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_verifymsg_set_ctx_params_decoder` at `providers/implementations/signature/ml_dsa_sig.c:582` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_SIG_582: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 582,
+    func: c"ml_dsa_verifymsg_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_set_ctx_params` at `providers/implementations/signature/ml_dsa_sig.c:622` (PROV_R_INVALID_SEED_LENGTH).
+pub(crate) const PROV_ML_DSA_SIG_622: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 622,
+    func: c"ml_dsa_set_ctx_params",
+    lib: 57,
+    reason: 154,
+    dynamic_reason: false,
+};
+
+/// `ml_dsa_get_ctx_params_decoder` at `providers/implementations/signature/ml_dsa_sig.c:686` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ML_DSA_SIG_686: ErrSite = ErrSite {
+    file: c"providers/implementations/signature/ml_dsa_sig.c",
+    line: 686,
+    func: c"ml_dsa_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `mac_digest_sign_init` at `providers/implementations/signature/mac_legacy_sig.c:107` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_MAC_LEGACY_SIG_107: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/signature/mac_legacy_sig.c",
+    line: 107,
+    func: c"mac_digest_sign_init",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `rsa_new_intern` at `crypto/rsa/rsa_lib.c:85` (ERR_R_CRYPTO_LIB).
+pub(crate) const RSA_LIB_85: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
+    line: 85,
+    func: c"rsa_new_intern",
+    lib: 4,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `rsa_new_intern` at `crypto/rsa/rsa_lib.c:106` (ERR_R_ENGINE_LIB).
+pub(crate) const RSA_LIB_106: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
+    line: 106,
+    func: c"rsa_new_intern",
+    lib: 4,
+    reason: 524326,
+    dynamic_reason: false,
+};
+
+/// `rsa_new_intern` at `crypto/rsa/rsa_lib.c:116` (ERR_R_ENGINE_LIB).
+pub(crate) const RSA_LIB_116: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
+    line: 116,
+    func: c"rsa_new_intern",
+    lib: 4,
+    reason: 524326,
+    dynamic_reason: false,
+};
+
+/// `rsa_new_intern` at `crypto/rsa/rsa_lib.c:130` (ERR_R_INIT_FAIL).
+pub(crate) const RSA_LIB_130: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
+    line: 130,
+    func: c"rsa_new_intern",
+    lib: 4,
+    reason: 786693,
+    dynamic_reason: false,
+};
+
+/// `int_set_rsa_md_name` at `crypto/rsa/rsa_lib.c:973` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const RSA_LIB_973: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
+    line: 973,
+    func: c"int_set_rsa_md_name",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `int_get_rsa_md_name` at `crypto/rsa/rsa_lib.c:1013` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const RSA_LIB_1013: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
+    line: 1013,
+    func: c"int_get_rsa_md_name",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_set0_rsa_oaep_label` at `crypto/rsa/rsa_lib.c:1188` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const RSA_LIB_1188: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
+    line: 1188,
+    func: c"EVP_PKEY_CTX_set0_rsa_oaep_label",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_get0_rsa_oaep_label` at `crypto/rsa/rsa_lib.c:1221` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const RSA_LIB_1221: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
+    line: 1221,
+    func: c"EVP_PKEY_CTX_get0_rsa_oaep_label",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_set_rsa_pss_keygen_saltlen` at `crypto/rsa/rsa_lib.c:1288` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const RSA_LIB_1288: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
+    line: 1288,
+    func: c"EVP_PKEY_CTX_set_rsa_pss_keygen_saltlen",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_set_rsa_keygen_bits` at `crypto/rsa/rsa_lib.c:1309` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const RSA_LIB_1309: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
+    line: 1309,
+    func: c"EVP_PKEY_CTX_set_rsa_keygen_bits",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_set_rsa_keygen_primes` at `crypto/rsa/rsa_lib.c:1369` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const RSA_LIB_1369: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_lib.c",
+    line: 1369,
+    func: c"EVP_PKEY_CTX_set_rsa_keygen_primes",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `RSA_setup_blinding` at `crypto/rsa/rsa_crpt.c:120` (ERR_R_BN_LIB).
+pub(crate) const RSA_CRPT_120: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_crpt.c",
+    line: 120,
+    func: c"RSA_setup_blinding",
+    lib: 4,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `RSA_setup_blinding` at `crypto/rsa/rsa_crpt.c:127` (RSA_R_NO_PUBLIC_EXPONENT).
+pub(crate) const RSA_CRPT_127: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_crpt.c",
+    line: 127,
+    func: c"RSA_setup_blinding",
+    lib: 4,
+    reason: 140,
+    dynamic_reason: false,
+};
+
+/// `RSA_setup_blinding` at `crypto/rsa/rsa_crpt.c:138` (ERR_R_BN_LIB).
+pub(crate) const RSA_CRPT_138: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_crpt.c",
+    line: 138,
+    func: c"RSA_setup_blinding",
+    lib: 4,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `RSA_setup_blinding` at `crypto/rsa/rsa_crpt.c:149` (ERR_R_BN_LIB).
+pub(crate) const RSA_CRPT_149: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_crpt.c",
+    line: 149,
+    func: c"RSA_setup_blinding",
+    lib: 4,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_add_PKCS1_type_1` at `crypto/rsa/rsa_pk1.c:38` (RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE).
+pub(crate) const RSA_PK1_38: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 38,
+    func: c"RSA_padding_add_PKCS1_type_1",
+    lib: 4,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_type_1` at `crypto/rsa/rsa_pk1.c:78` (RSA_R_INVALID_PADDING).
+pub(crate) const RSA_PK1_78: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 78,
+    func: c"RSA_padding_check_PKCS1_type_1",
+    lib: 4,
+    reason: 138,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_type_1` at `crypto/rsa/rsa_pk1.c:85` (RSA_R_BLOCK_TYPE_IS_NOT_01).
+pub(crate) const RSA_PK1_85: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 85,
+    func: c"RSA_padding_check_PKCS1_type_1",
+    lib: 4,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_type_1` at `crypto/rsa/rsa_pk1.c:97` (RSA_R_BAD_FIXED_HEADER_DECRYPT).
+pub(crate) const RSA_PK1_97: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 97,
+    func: c"RSA_padding_check_PKCS1_type_1",
+    lib: 4,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_type_1` at `crypto/rsa/rsa_pk1.c:105` (RSA_R_NULL_BEFORE_BLOCK_MISSING).
+pub(crate) const RSA_PK1_105: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 105,
+    func: c"RSA_padding_check_PKCS1_type_1",
+    lib: 4,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_type_1` at `crypto/rsa/rsa_pk1.c:110` (RSA_R_BAD_PAD_BYTE_COUNT).
+pub(crate) const RSA_PK1_110: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 110,
+    func: c"RSA_padding_check_PKCS1_type_1",
+    lib: 4,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_type_1` at `crypto/rsa/rsa_pk1.c:116` (RSA_R_DATA_TOO_LARGE).
+pub(crate) const RSA_PK1_116: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 116,
+    func: c"RSA_padding_check_PKCS1_type_1",
+    lib: 4,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_add_PKCS1_type_2_ex` at `crypto/rsa/rsa_pk1.c:132` (RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE).
+pub(crate) const RSA_PK1_132: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 132,
+    func: c"ossl_rsa_padding_add_PKCS1_type_2_ex",
+    lib: 4,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_add_PKCS1_type_2_ex` at `crypto/rsa/rsa_pk1.c:135` (RSA_R_INVALID_LENGTH).
+pub(crate) const RSA_PK1_135: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 135,
+    func: c"ossl_rsa_padding_add_PKCS1_type_2_ex",
+    lib: 4,
+    reason: 181,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_type_2` at `crypto/rsa/rsa_pk1.c:189` (RSA_R_PKCS_DECODING_ERROR).
+pub(crate) const RSA_PK1_189: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 189,
+    func: c"RSA_padding_check_PKCS1_type_2",
+    lib: 4,
+    reason: 159,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_type_2` at `crypto/rsa/rsa_pk1.c:270` (RSA_R_PKCS_DECODING_ERROR).
+pub(crate) const RSA_PK1_270: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 270,
+    func: c"RSA_padding_check_PKCS1_type_2",
+    lib: 4,
+    reason: 159,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_prf` at `crypto/rsa/rsa_pk1.c:294` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_294: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 294,
+    func: c"ossl_rsa_prf",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_prf` at `crypto/rsa/rsa_pk1.c:303` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_303: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 303,
+    func: c"ossl_rsa_prf",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_prf` at `crypto/rsa/rsa_pk1.c:316` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_316: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 316,
+    func: c"ossl_rsa_prf",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_prf` at `crypto/rsa/rsa_pk1.c:321` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_321: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 321,
+    func: c"ossl_rsa_prf",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_prf` at `crypto/rsa/rsa_pk1.c:327` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_327: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 327,
+    func: c"ossl_rsa_prf",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_prf` at `crypto/rsa/rsa_pk1.c:335` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_335: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 335,
+    func: c"ossl_rsa_prf",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_prf` at `crypto/rsa/rsa_pk1.c:339` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_339: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 339,
+    func: c"ossl_rsa_prf",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_prf` at `crypto/rsa/rsa_pk1.c:343` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_343: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 343,
+    func: c"ossl_rsa_prf",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_prf` at `crypto/rsa/rsa_pk1.c:355` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_355: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 355,
+    func: c"ossl_rsa_prf",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_prf` at `crypto/rsa/rsa_pk1.c:361` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_361: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 361,
+    func: c"ossl_rsa_prf",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_check_PKCS1_type_2` at `crypto/rsa/rsa_pk1.c:419` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_419: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 419,
+    func: c"ossl_rsa_padding_check_PKCS1_type_2",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_check_PKCS1_type_2` at `crypto/rsa/rsa_pk1.c:426` (ERR_R_MALLOC_FAILURE).
+pub(crate) const RSA_PK1_426: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 426,
+    func: c"ossl_rsa_padding_check_PKCS1_type_2",
+    lib: 4,
+    reason: 786688,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_check_PKCS1_type_2` at `crypto/rsa/rsa_pk1.c:520` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_520: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 520,
+    func: c"ossl_rsa_padding_check_PKCS1_type_2",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_check_PKCS1_type_2_TLS` at `crypto/rsa/rsa_pk1.c:561` (RSA_R_PKCS_DECODING_ERROR).
+pub(crate) const RSA_PK1_561: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 561,
+    func: c"ossl_rsa_padding_check_PKCS1_type_2_TLS",
+    lib: 4,
+    reason: 159,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_check_PKCS1_type_2_TLS` at `crypto/rsa/rsa_pk1.c:572` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_PK1_572: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pk1.c",
+    line: 572,
+    func: c"ossl_rsa_padding_check_PKCS1_type_2_TLS",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_add_none` at `crypto/rsa/rsa_none.c:24` (RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE).
+pub(crate) const RSA_NONE_24: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_none.c",
+    line: 24,
+    func: c"RSA_padding_add_none",
+    lib: 4,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_add_none` at `crypto/rsa/rsa_none.c:29` (RSA_R_DATA_TOO_SMALL_FOR_KEY_SIZE).
+pub(crate) const RSA_NONE_29: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_none.c",
+    line: 29,
+    func: c"RSA_padding_add_none",
+    lib: 4,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_none` at `crypto/rsa/rsa_none.c:42` (RSA_R_DATA_TOO_LARGE).
+pub(crate) const RSA_NONE_42: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_none.c",
+    line: 42,
+    func: c"RSA_padding_check_none",
+    lib: 4,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_add_X931` at `crypto/rsa/rsa_x931.c:56` (RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE).
+pub(crate) const RSA_X931_56: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_x931.c",
+    line: 56,
+    func: c"RSA_padding_add_X931",
+    lib: 4,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_X931` at `crypto/rsa/rsa_x931.c:87` (RSA_R_INVALID_HEADER).
+pub(crate) const RSA_X931_87: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_x931.c",
+    line: 87,
+    func: c"RSA_padding_check_X931",
+    lib: 4,
+    reason: 137,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_X931` at `crypto/rsa/rsa_x931.c:98` (RSA_R_INVALID_PADDING).
+pub(crate) const RSA_X931_98: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_x931.c",
+    line: 98,
+    func: c"RSA_padding_check_X931",
+    lib: 4,
+    reason: 138,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_X931` at `crypto/rsa/rsa_x931.c:106` (RSA_R_INVALID_PADDING).
+pub(crate) const RSA_X931_106: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_x931.c",
+    line: 106,
+    func: c"RSA_padding_check_X931",
+    lib: 4,
+    reason: 138,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_X931` at `crypto/rsa/rsa_x931.c:115` (RSA_R_INVALID_TRAILER).
+pub(crate) const RSA_X931_115: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_x931.c",
+    line: 115,
+    func: c"RSA_padding_check_X931",
+    lib: 4,
+    reason: 139,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` at `crypto/rsa/rsa_oaep.c:72` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const RSA_OAEP_72: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c",
+    line: 72,
+    func: c"ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex",
+    lib: 4,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` at `crypto/rsa/rsa_oaep.c:82` (RSA_R_DIGEST_NOT_ALLOWED).
+pub(crate) const RSA_OAEP_82: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c",
+    line: 82,
+    func: c"ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex",
+    lib: 4,
+    reason: 145,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` at `crypto/rsa/rsa_oaep.c:86` (RSA_R_MGF1_DIGEST_NOT_ALLOWED).
+pub(crate) const RSA_OAEP_86: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c",
+    line: 86,
+    func: c"ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex",
+    lib: 4,
+    reason: 152,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` at `crypto/rsa/rsa_oaep.c:93` (RSA_R_INVALID_LENGTH).
+pub(crate) const RSA_OAEP_93: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c",
+    line: 93,
+    func: c"ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex",
+    lib: 4,
+    reason: 181,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` at `crypto/rsa/rsa_oaep.c:99` (RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE).
+pub(crate) const RSA_OAEP_99: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c",
+    line: 99,
+    func: c"ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex",
+    lib: 4,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex` at `crypto/rsa/rsa_oaep.c:104` (RSA_R_KEY_SIZE_TOO_SMALL).
+pub(crate) const RSA_OAEP_104: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c",
+    line: 104,
+    func: c"ossl_rsa_padding_add_PKCS1_OAEP_mgf1_ex",
+    lib: 4,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_OAEP_mgf1` at `crypto/rsa/rsa_oaep.c:189` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const RSA_OAEP_189: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c",
+    line: 189,
+    func: c"RSA_padding_check_PKCS1_OAEP_mgf1",
+    lib: 4,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_OAEP_mgf1` at `crypto/rsa/rsa_oaep.c:200` (RSA_R_DIGEST_NOT_ALLOWED).
+pub(crate) const RSA_OAEP_200: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c",
+    line: 200,
+    func: c"RSA_padding_check_PKCS1_OAEP_mgf1",
+    lib: 4,
+    reason: 145,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_OAEP_mgf1` at `crypto/rsa/rsa_oaep.c:204` (RSA_R_MGF1_DIGEST_NOT_ALLOWED).
+pub(crate) const RSA_OAEP_204: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c",
+    line: 204,
+    func: c"RSA_padding_check_PKCS1_OAEP_mgf1",
+    lib: 4,
+    reason: 152,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_OAEP_mgf1` at `crypto/rsa/rsa_oaep.c:222` (RSA_R_OAEP_DECODING_ERROR).
+pub(crate) const RSA_OAEP_222: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c",
+    line: 222,
+    func: c"RSA_padding_check_PKCS1_OAEP_mgf1",
+    lib: 4,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `RSA_padding_check_PKCS1_OAEP_mgf1` at `crypto/rsa/rsa_oaep.c:332` (RSA_R_OAEP_DECODING_ERROR).
+pub(crate) const RSA_OAEP_332: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_oaep.c",
+    line: 332,
+    func: c"RSA_padding_check_PKCS1_OAEP_mgf1",
+    lib: 4,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify_PKCS1_PSS_mgf1` at `crypto/rsa/rsa_pss.c:78` (RSA_R_SLEN_CHECK_FAILED).
+pub(crate) const RSA_PSS_78: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c",
+    line: 78,
+    func: c"ossl_rsa_verify_PKCS1_PSS_mgf1",
+    lib: 4,
+    reason: 136,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify_PKCS1_PSS_mgf1` at `crypto/rsa/rsa_pss.c:85` (RSA_R_FIRST_OCTET_INVALID).
+pub(crate) const RSA_PSS_85: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c",
+    line: 85,
+    func: c"ossl_rsa_verify_PKCS1_PSS_mgf1",
+    lib: 4,
+    reason: 133,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify_PKCS1_PSS_mgf1` at `crypto/rsa/rsa_pss.c:93` (RSA_R_DATA_TOO_LARGE).
+pub(crate) const RSA_PSS_93: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c",
+    line: 93,
+    func: c"ossl_rsa_verify_PKCS1_PSS_mgf1",
+    lib: 4,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify_PKCS1_PSS_mgf1` at `crypto/rsa/rsa_pss.c:99` (RSA_R_DATA_TOO_LARGE).
+pub(crate) const RSA_PSS_99: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c",
+    line: 99,
+    func: c"ossl_rsa_verify_PKCS1_PSS_mgf1",
+    lib: 4,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify_PKCS1_PSS_mgf1` at `crypto/rsa/rsa_pss.c:103` (RSA_R_LAST_OCTET_INVALID).
+pub(crate) const RSA_PSS_103: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c",
+    line: 103,
+    func: c"ossl_rsa_verify_PKCS1_PSS_mgf1",
+    lib: 4,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify_PKCS1_PSS_mgf1` at `crypto/rsa/rsa_pss.c:120` (RSA_R_SLEN_RECOVERY_FAILED).
+pub(crate) const RSA_PSS_120: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c",
+    line: 120,
+    func: c"ossl_rsa_verify_PKCS1_PSS_mgf1",
+    lib: 4,
+    reason: 135,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify_PKCS1_PSS_mgf1` at `crypto/rsa/rsa_pss.c:126` (RSA_R_SLEN_CHECK_FAILED).
+pub(crate) const RSA_PSS_126: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c",
+    line: 126,
+    func: c"ossl_rsa_verify_PKCS1_PSS_mgf1",
+    lib: 4,
+    reason: 136,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify_PKCS1_PSS_mgf1` at `crypto/rsa/rsa_pss.c:144` (RSA_R_BAD_SIGNATURE).
+pub(crate) const RSA_PSS_144: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c",
+    line: 144,
+    func: c"ossl_rsa_verify_PKCS1_PSS_mgf1",
+    lib: 4,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_add_PKCS1_PSS_mgf1` at `crypto/rsa/rsa_pss.c:216` (RSA_R_SLEN_CHECK_FAILED).
+pub(crate) const RSA_PSS_216: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c",
+    line: 216,
+    func: c"ossl_rsa_padding_add_PKCS1_PSS_mgf1",
+    lib: 4,
+    reason: 136,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_add_PKCS1_PSS_mgf1` at `crypto/rsa/rsa_pss.c:227` (RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE).
+pub(crate) const RSA_PSS_227: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c",
+    line: 227,
+    func: c"ossl_rsa_padding_add_PKCS1_PSS_mgf1",
+    lib: 4,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_padding_add_PKCS1_PSS_mgf1` at `crypto/rsa/rsa_pss.c:235` (RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE).
+pub(crate) const RSA_PSS_235: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pss.c",
+    line: 235,
+    func: c"ossl_rsa_padding_add_PKCS1_PSS_mgf1",
+    lib: 4,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_encrypt` at `crypto/rsa/rsa_ossl.c:115` (RSA_R_MODULUS_TOO_LARGE).
+pub(crate) const RSA_OSSL_115: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 115,
+    func: c"rsa_ossl_public_encrypt",
+    lib: 4,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_encrypt` at `crypto/rsa/rsa_ossl.c:120` (RSA_R_BAD_E_VALUE).
+pub(crate) const RSA_OSSL_120: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 120,
+    func: c"rsa_ossl_public_encrypt",
+    lib: 4,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_encrypt` at `crypto/rsa/rsa_ossl.c:127` (RSA_R_BAD_E_VALUE).
+pub(crate) const RSA_OSSL_127: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 127,
+    func: c"rsa_ossl_public_encrypt",
+    lib: 4,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_encrypt` at `crypto/rsa/rsa_ossl.c:156` (RSA_R_UNKNOWN_PADDING_TYPE).
+pub(crate) const RSA_OSSL_156: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 156,
+    func: c"rsa_ossl_public_encrypt",
+    lib: 4,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_encrypt` at `crypto/rsa/rsa_ossl.c:183` (RSA_R_DATA_TOO_SMALL).
+pub(crate) const RSA_OSSL_183: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 183,
+    func: c"rsa_ossl_public_encrypt",
+    lib: 4,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_encrypt` at `crypto/rsa/rsa_ossl.c:191` (RSA_R_DATA_TOO_LARGE_FOR_MODULUS).
+pub(crate) const RSA_OSSL_191: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 191,
+    func: c"rsa_ossl_public_encrypt",
+    lib: 4,
+    reason: 132,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_encrypt` at `crypto/rsa/rsa_ossl.c:199` (RSA_R_DATA_TOO_LARGE_FOR_MODULUS).
+pub(crate) const RSA_OSSL_199: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 199,
+    func: c"rsa_ossl_public_encrypt",
+    lib: 4,
+    reason: 132,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_encrypt` at `crypto/rsa/rsa_ossl.c:359` (RSA_R_UNKNOWN_PADDING_TYPE).
+pub(crate) const RSA_OSSL_359: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 359,
+    func: c"rsa_ossl_private_encrypt",
+    lib: 4,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_encrypt` at `crypto/rsa/rsa_ossl.c:370` (RSA_R_DATA_TOO_LARGE_FOR_MODULUS).
+pub(crate) const RSA_OSSL_370: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 370,
+    func: c"rsa_ossl_private_encrypt",
+    lib: 4,
+    reason: 132,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_encrypt` at `crypto/rsa/rsa_ossl.c:382` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_OSSL_382: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 382,
+    func: c"rsa_ossl_private_encrypt",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_encrypt` at `crypto/rsa/rsa_ossl.c:396` (ERR_R_BN_LIB).
+pub(crate) const RSA_OSSL_396: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 396,
+    func: c"rsa_ossl_private_encrypt",
+    lib: 4,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_encrypt` at `crypto/rsa/rsa_ossl.c:400` (RSA_R_MISSING_PRIVATE_KEY).
+pub(crate) const RSA_OSSL_400: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 400,
+    func: c"rsa_ossl_private_encrypt",
+    lib: 4,
+    reason: 179,
+    dynamic_reason: false,
+};
+
+/// `derive_kdk` at `crypto/rsa/rsa_ossl.c:457` (ERR_R_CRYPTO_LIB).
+pub(crate) const RSA_OSSL_457: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 457,
+    func: c"derive_kdk",
+    lib: 4,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `derive_kdk` at `crypto/rsa/rsa_ossl.c:461` (RSA_R_MISSING_PRIVATE_KEY).
+pub(crate) const RSA_OSSL_461: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 461,
+    func: c"derive_kdk",
+    lib: 4,
+    reason: 179,
+    dynamic_reason: false,
+};
+
+/// `derive_kdk` at `crypto/rsa/rsa_ossl.c:467` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_OSSL_467: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 467,
+    func: c"derive_kdk",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `derive_kdk` at `crypto/rsa/rsa_ossl.c:482` (ERR_R_FETCH_FAILED).
+pub(crate) const RSA_OSSL_482: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 482,
+    func: c"derive_kdk",
+    lib: 4,
+    reason: 524557,
+    dynamic_reason: false,
+};
+
+/// `derive_kdk` at `crypto/rsa/rsa_ossl.c:487` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_OSSL_487: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 487,
+    func: c"derive_kdk",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `derive_kdk` at `crypto/rsa/rsa_ossl.c:493` (ERR_R_CRYPTO_LIB).
+pub(crate) const RSA_OSSL_493: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 493,
+    func: c"derive_kdk",
+    lib: 4,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `derive_kdk` at `crypto/rsa/rsa_ossl.c:498` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_OSSL_498: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 498,
+    func: c"derive_kdk",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `derive_kdk` at `crypto/rsa/rsa_ossl.c:505` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_OSSL_505: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 505,
+    func: c"derive_kdk",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `derive_kdk` at `crypto/rsa/rsa_ossl.c:510` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_OSSL_510: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 510,
+    func: c"derive_kdk",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `derive_kdk` at `crypto/rsa/rsa_ossl.c:516` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_OSSL_516: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 516,
+    func: c"derive_kdk",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_decrypt` at `crypto/rsa/rsa_ossl.c:549` (ERR_R_BN_LIB).
+pub(crate) const RSA_OSSL_549: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 549,
+    func: c"rsa_ossl_private_decrypt",
+    lib: 4,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_decrypt` at `crypto/rsa/rsa_ossl.c:562` (RSA_R_DATA_GREATER_THAN_MOD_LEN).
+pub(crate) const RSA_OSSL_562: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 562,
+    func: c"rsa_ossl_private_decrypt",
+    lib: 4,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_decrypt` at `crypto/rsa/rsa_ossl.c:567` (RSA_R_DATA_TOO_SMALL).
+pub(crate) const RSA_OSSL_567: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 567,
+    func: c"rsa_ossl_private_decrypt",
+    lib: 4,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_decrypt` at `crypto/rsa/rsa_ossl.c:591` (RSA_R_DATA_TOO_SMALL).
+pub(crate) const RSA_OSSL_591: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 591,
+    func: c"rsa_ossl_private_decrypt",
+    lib: 4,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_decrypt` at `crypto/rsa/rsa_ossl.c:599` (RSA_R_DATA_TOO_LARGE_FOR_MODULUS).
+pub(crate) const RSA_OSSL_599: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 599,
+    func: c"rsa_ossl_private_decrypt",
+    lib: 4,
+    reason: 132,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_decrypt` at `crypto/rsa/rsa_ossl.c:606` (RSA_R_DATA_TOO_LARGE_FOR_MODULUS).
+pub(crate) const RSA_OSSL_606: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 606,
+    func: c"rsa_ossl_private_decrypt",
+    lib: 4,
+    reason: 132,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_decrypt` at `crypto/rsa/rsa_ossl.c:618` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_OSSL_618: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 618,
+    func: c"rsa_ossl_private_decrypt",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_decrypt` at `crypto/rsa/rsa_ossl.c:633` (ERR_R_BN_LIB).
+pub(crate) const RSA_OSSL_633: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 633,
+    func: c"rsa_ossl_private_decrypt",
+    lib: 4,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_decrypt` at `crypto/rsa/rsa_ossl.c:637` (RSA_R_MISSING_PRIVATE_KEY).
+pub(crate) const RSA_OSSL_637: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 637,
+    func: c"rsa_ossl_private_decrypt",
+    lib: 4,
+    reason: 179,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_decrypt` at `crypto/rsa/rsa_ossl.c:682` (RSA_R_UNKNOWN_PADDING_TYPE).
+pub(crate) const RSA_OSSL_682: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 682,
+    func: c"rsa_ossl_private_decrypt",
+    lib: 4,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_private_decrypt` at `crypto/rsa/rsa_ossl.c:691` (RSA_R_PADDING_CHECK_FAILED).
+pub(crate) const RSA_OSSL_691: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 691,
+    func: c"rsa_ossl_private_decrypt",
+    lib: 4,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_decrypt` at `crypto/rsa/rsa_ossl.c:712` (RSA_R_MODULUS_TOO_LARGE).
+pub(crate) const RSA_OSSL_712: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 712,
+    func: c"rsa_ossl_public_decrypt",
+    lib: 4,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_decrypt` at `crypto/rsa/rsa_ossl.c:717` (RSA_R_BAD_E_VALUE).
+pub(crate) const RSA_OSSL_717: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 717,
+    func: c"rsa_ossl_public_decrypt",
+    lib: 4,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_decrypt` at `crypto/rsa/rsa_ossl.c:724` (RSA_R_BAD_E_VALUE).
+pub(crate) const RSA_OSSL_724: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 724,
+    func: c"rsa_ossl_public_decrypt",
+    lib: 4,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_decrypt` at `crypto/rsa/rsa_ossl.c:735` (ERR_R_BN_LIB).
+pub(crate) const RSA_OSSL_735: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 735,
+    func: c"rsa_ossl_public_decrypt",
+    lib: 4,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_decrypt` at `crypto/rsa/rsa_ossl.c:748` (RSA_R_DATA_GREATER_THAN_MOD_LEN).
+pub(crate) const RSA_OSSL_748: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 748,
+    func: c"rsa_ossl_public_decrypt",
+    lib: 4,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_decrypt` at `crypto/rsa/rsa_ossl.c:756` (RSA_R_DATA_TOO_LARGE_FOR_MODULUS).
+pub(crate) const RSA_OSSL_756: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 756,
+    func: c"rsa_ossl_public_decrypt",
+    lib: 4,
+    reason: 132,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_decrypt` at `crypto/rsa/rsa_ossl.c:789` (RSA_R_UNKNOWN_PADDING_TYPE).
+pub(crate) const RSA_OSSL_789: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 789,
+    func: c"rsa_ossl_public_decrypt",
+    lib: 4,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `rsa_ossl_public_decrypt` at `crypto/rsa/rsa_ossl.c:793` (RSA_R_PADDING_CHECK_FAILED).
+pub(crate) const RSA_OSSL_793: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ossl.c",
+    line: 793,
+    func: c"rsa_ossl_public_decrypt",
+    lib: 4,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `rsa_multiprime_keygen` at `crypto/rsa/rsa_gen.c:282` (RSA_R_KEY_SIZE_TOO_SMALL).
+pub(crate) const RSA_GEN_282: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_gen.c",
+    line: 282,
+    func: c"rsa_multiprime_keygen",
+    lib: 4,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `rsa_multiprime_keygen` at `crypto/rsa/rsa_gen.c:286` (RSA_R_BAD_E_VALUE).
+pub(crate) const RSA_GEN_286: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_gen.c",
+    line: 286,
+    func: c"rsa_multiprime_keygen",
+    lib: 4,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `rsa_multiprime_keygen` at `crypto/rsa/rsa_gen.c:291` (RSA_R_PUB_EXPONENT_OUT_OF_RANGE).
+pub(crate) const RSA_GEN_291: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_gen.c",
+    line: 291,
+    func: c"rsa_multiprime_keygen",
+    lib: 4,
+    reason: 178,
+    dynamic_reason: false,
+};
+
+/// `rsa_multiprime_keygen` at `crypto/rsa/rsa_gen.c:296` (RSA_R_KEY_PRIME_NUM_INVALID).
+pub(crate) const RSA_GEN_296: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_gen.c",
+    line: 296,
+    func: c"rsa_multiprime_keygen",
+    lib: 4,
+    reason: 165,
+    dynamic_reason: false,
+};
+
+/// `rsa_multiprime_keygen` at `crypto/rsa/rsa_gen.c:602` (ERR_R_BN_LIB).
+pub(crate) const RSA_GEN_602: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_gen.c",
+    line: 602,
+    func: c"rsa_multiprime_keygen",
+    lib: 4,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:31` (RSA_R_VALUE_MISSING).
+pub(crate) const RSA_CHK_31: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 31,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:40` (RSA_R_INVALID_MULTI_PRIME_KEY).
+pub(crate) const RSA_CHK_40: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 40,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 167,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:54` (ERR_R_BN_LIB).
+pub(crate) const RSA_CHK_54: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 54,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:60` (RSA_R_BAD_E_VALUE).
+pub(crate) const RSA_CHK_60: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 60,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:64` (RSA_R_BAD_E_VALUE).
+pub(crate) const RSA_CHK_64: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 64,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:70` (RSA_R_P_NOT_PRIME).
+pub(crate) const RSA_CHK_70: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 70,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:76` (RSA_R_Q_NOT_PRIME).
+pub(crate) const RSA_CHK_76: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 76,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:84` (RSA_R_MP_R_NOT_PRIME).
+pub(crate) const RSA_CHK_84: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 84,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 170,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:103` (RSA_R_N_DOES_NOT_EQUAL_PRODUCT_OF_PRIMES).
+pub(crate) const RSA_CHK_103: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 103,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:105` (RSA_R_N_DOES_NOT_EQUAL_P_Q).
+pub(crate) const RSA_CHK_105: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 105,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 127,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:157` (RSA_R_D_E_NOT_CONGRUENT_TO_1).
+pub(crate) const RSA_CHK_157: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 157,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:172` (RSA_R_DMP1_NOT_CONGRUENT_TO_D).
+pub(crate) const RSA_CHK_172: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 172,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:186` (RSA_R_DMQ1_NOT_CONGRUENT_TO_D).
+pub(crate) const RSA_CHK_186: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 186,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:196` (RSA_R_IQMP_NOT_INVERSE_OF_Q).
+pub(crate) const RSA_CHK_196: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 196,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:213` (RSA_R_MP_EXPONENT_NOT_CONGRUENT_TO_D).
+pub(crate) const RSA_CHK_213: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 213,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 169,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_keypair_multiprime` at `crypto/rsa/rsa_chk.c:222` (RSA_R_MP_COEFFICIENT_NOT_INVERSE_OF_R).
+pub(crate) const RSA_CHK_222: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_chk.c",
+    line: 222,
+    func: c"rsa_validate_keypair_multiprime",
+    lib: 4,
+    reason: 168,
+    dynamic_reason: false,
+};
+
+/// `encode_pkcs1` at `crypto/rsa/rsa_sign.c:265` (RSA_R_UNKNOWN_ALGORITHM_TYPE).
+pub(crate) const RSA_SIGN_265: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c",
+    line: 265,
+    func: c"encode_pkcs1",
+    lib: 4,
+    reason: 117,
+    dynamic_reason: false,
+};
+
+/// `encode_pkcs1` at `crypto/rsa/rsa_sign.c:270` (RSA_R_THE_ASN1_OBJECT_IDENTIFIER_IS_NOT_KNOWN_FOR_THIS_MD).
+pub(crate) const RSA_SIGN_270: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c",
+    line: 270,
+    func: c"encode_pkcs1",
+    lib: 4,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `RSA_sign` at `crypto/rsa/rsa_sign.c:307` (RSA_R_INVALID_MESSAGE_LENGTH).
+pub(crate) const RSA_SIGN_307: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c",
+    line: 307,
+    func: c"RSA_sign",
+    lib: 4,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `RSA_sign` at `crypto/rsa/rsa_sign.c:319` (RSA_R_DIGEST_TOO_BIG_FOR_RSA_KEY).
+pub(crate) const RSA_SIGN_319: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c",
+    line: 319,
+    func: c"RSA_sign",
+    lib: 4,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify` at `crypto/rsa/rsa_sign.c:353` (RSA_R_WRONG_SIGNATURE_LENGTH).
+pub(crate) const RSA_SIGN_353: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c",
+    line: 353,
+    func: c"ossl_rsa_verify",
+    lib: 4,
+    reason: 119,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify` at `crypto/rsa/rsa_sign.c:376` (RSA_R_BAD_SIGNATURE).
+pub(crate) const RSA_SIGN_376: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c",
+    line: 376,
+    func: c"ossl_rsa_verify",
+    lib: 4,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify` at `crypto/rsa/rsa_sign.c:385` (RSA_R_INVALID_MESSAGE_LENGTH).
+pub(crate) const RSA_SIGN_385: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c",
+    line: 385,
+    func: c"ossl_rsa_verify",
+    lib: 4,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify` at `crypto/rsa/rsa_sign.c:390` (RSA_R_BAD_SIGNATURE).
+pub(crate) const RSA_SIGN_390: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c",
+    line: 390,
+    func: c"ossl_rsa_verify",
+    lib: 4,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify` at `crypto/rsa/rsa_sign.c:405` (RSA_R_INVALID_MESSAGE_LENGTH).
+pub(crate) const RSA_SIGN_405: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c",
+    line: 405,
+    func: c"ossl_rsa_verify",
+    lib: 4,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify` at `crypto/rsa/rsa_sign.c:410` (RSA_R_BAD_SIGNATURE).
+pub(crate) const RSA_SIGN_410: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c",
+    line: 410,
+    func: c"ossl_rsa_verify",
+    lib: 4,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify` at `crypto/rsa/rsa_sign.c:429` (RSA_R_INVALID_DIGEST_LENGTH).
+pub(crate) const RSA_SIGN_429: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c",
+    line: 429,
+    func: c"ossl_rsa_verify",
+    lib: 4,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_verify` at `crypto/rsa/rsa_sign.c:441` (RSA_R_BAD_SIGNATURE).
+pub(crate) const RSA_SIGN_441: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sign.c",
+    line: 441,
+    func: c"ossl_rsa_verify",
+    lib: 4,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `RSA_sign_ASN1_OCTET_STRING` at `crypto/rsa/rsa_saos.c:39` (RSA_R_DIGEST_TOO_BIG_FOR_RSA_KEY).
+pub(crate) const RSA_SAOS_39: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_saos.c",
+    line: 39,
+    func: c"RSA_sign_ASN1_OCTET_STRING",
+    lib: 4,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `RSA_verify_ASN1_OCTET_STRING` at `crypto/rsa/rsa_saos.c:68` (RSA_R_WRONG_SIGNATURE_LENGTH).
+pub(crate) const RSA_SAOS_68: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_saos.c",
+    line: 68,
+    func: c"RSA_verify_ASN1_OCTET_STRING",
+    lib: 4,
+    reason: 119,
+    dynamic_reason: false,
+};
+
+/// `RSA_verify_ASN1_OCTET_STRING` at `crypto/rsa/rsa_saos.c:86` (RSA_R_BAD_SIGNATURE).
+pub(crate) const RSA_SAOS_86: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_saos.c",
+    line: 86,
+    func: c"RSA_verify_ASN1_OCTET_STRING",
+    lib: 4,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_sign` at `crypto/rsa/rsa_pmeth.c:151` (RSA_R_INVALID_DIGEST_LENGTH).
+pub(crate) const RSA_PMETH_151: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 151,
+    func: c"pkey_rsa_sign",
+    lib: 4,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_sign` at `crypto/rsa/rsa_pmeth.c:156` (RSA_R_INVALID_DIGEST_LENGTH).
+pub(crate) const RSA_PMETH_156: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 156,
+    func: c"pkey_rsa_sign",
+    lib: 4,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_sign` at `crypto/rsa/rsa_pmeth.c:171` (RSA_R_KEY_SIZE_TOO_SMALL).
+pub(crate) const RSA_PMETH_171: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 171,
+    func: c"pkey_rsa_sign",
+    lib: 4,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_sign` at `crypto/rsa/rsa_pmeth.c:175` (ERR_R_RSA_LIB).
+pub(crate) const RSA_PMETH_175: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 175,
+    func: c"pkey_rsa_sign",
+    lib: 4,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_verifyrecover` at `crypto/rsa/rsa_pmeth.c:234` (RSA_R_ALGORITHM_MISMATCH).
+pub(crate) const RSA_PMETH_234: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 234,
+    func: c"pkey_rsa_verifyrecover",
+    lib: 4,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_verifyrecover` at `crypto/rsa/rsa_pmeth.c:238` (RSA_R_INVALID_DIGEST_LENGTH).
+pub(crate) const RSA_PMETH_238: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 238,
+    func: c"pkey_rsa_verifyrecover",
+    lib: 4,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_verify` at `crypto/rsa/rsa_pmeth.c:283` (RSA_R_INVALID_DIGEST_LENGTH).
+pub(crate) const RSA_PMETH_283: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 283,
+    func: c"pkey_rsa_verify",
+    lib: 4,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_verify` at `crypto/rsa/rsa_pmeth.c:287` (RSA_R_INVALID_DIGEST_LENGTH).
+pub(crate) const RSA_PMETH_287: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 287,
+    func: c"pkey_rsa_verify",
+    lib: 4,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `check_padding_md` at `crypto/rsa/rsa_pmeth.c:405` (RSA_R_INVALID_PADDING_MODE).
+pub(crate) const RSA_PMETH_405: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 405,
+    func: c"check_padding_md",
+    lib: 4,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `check_padding_md` at `crypto/rsa/rsa_pmeth.c:411` (RSA_R_INVALID_X931_DIGEST).
+pub(crate) const RSA_PMETH_411: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 411,
+    func: c"check_padding_md",
+    lib: 4,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `check_padding_md` at `crypto/rsa/rsa_pmeth.c:437` (RSA_R_INVALID_DIGEST).
+pub(crate) const RSA_PMETH_437: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 437,
+    func: c"check_padding_md",
+    lib: 4,
+    reason: 157,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:473` (RSA_R_ILLEGAL_OR_UNSUPPORTED_PADDING_MODE).
+pub(crate) const RSA_PMETH_473: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 473,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 144,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:483` (RSA_R_INVALID_PSS_SALTLEN).
+pub(crate) const RSA_PMETH_483: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 483,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 146,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:494` (RSA_R_INVALID_PSS_SALTLEN).
+pub(crate) const RSA_PMETH_494: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 494,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 146,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:499` (RSA_R_INVALID_DIGEST_LENGTH).
+pub(crate) const RSA_PMETH_499: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 499,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:505` (RSA_R_PSS_SALTLEN_TOO_SMALL).
+pub(crate) const RSA_PMETH_505: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 505,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 164,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:515` (RSA_R_KEY_SIZE_TOO_SMALL).
+pub(crate) const RSA_PMETH_515: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 515,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:523` (RSA_R_BAD_E_VALUE).
+pub(crate) const RSA_PMETH_523: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 523,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:532` (RSA_R_KEY_PRIME_NUM_INVALID).
+pub(crate) const RSA_PMETH_532: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 532,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 165,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:541` (RSA_R_INVALID_PADDING_MODE).
+pub(crate) const RSA_PMETH_541: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 541,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:556` (RSA_R_DIGEST_NOT_ALLOWED).
+pub(crate) const RSA_PMETH_556: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 556,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 145,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:570` (RSA_R_INVALID_MGF1_MD).
+pub(crate) const RSA_PMETH_570: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 570,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 156,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:582` (RSA_R_MGF1_DIGEST_NOT_ALLOWED).
+pub(crate) const RSA_PMETH_582: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 582,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 152,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:591` (RSA_R_INVALID_PADDING_MODE).
+pub(crate) const RSA_PMETH_591: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 591,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:606` (RSA_R_INVALID_PADDING_MODE).
+pub(crate) const RSA_PMETH_606: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 606,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:610` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const RSA_PMETH_610: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 610,
+    func: c"pkey_rsa_ctrl",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:618` (RSA_R_INVALID_PADDING_MODE).
+pub(crate) const RSA_PMETH_618: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 618,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl` at `crypto/rsa/rsa_pmeth.c:641` (RSA_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const RSA_PMETH_641: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 641,
+    func: c"pkey_rsa_ctrl",
+    lib: 4,
+    reason: 148,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl_str` at `crypto/rsa/rsa_pmeth.c:653` (RSA_R_VALUE_MISSING).
+pub(crate) const RSA_PMETH_653: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 653,
+    func: c"pkey_rsa_ctrl_str",
+    lib: 4,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `pkey_rsa_ctrl_str` at `crypto/rsa/rsa_pmeth.c:672` (RSA_R_UNKNOWN_PADDING_TYPE).
+pub(crate) const RSA_PMETH_672: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 672,
+    func: c"pkey_rsa_ctrl_str",
+    lib: 4,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `pkey_pss_init` at `crypto/rsa/rsa_pmeth.c:883` (RSA_R_INVALID_DIGEST_LENGTH).
+pub(crate) const RSA_PMETH_883: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 883,
+    func: c"pkey_pss_init",
+    lib: 4,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `pkey_pss_init` at `crypto/rsa/rsa_pmeth.c:890` (RSA_R_INVALID_SALT_LENGTH).
+pub(crate) const RSA_PMETH_890: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_pmeth.c",
+    line: 890,
+    func: c"pkey_pss_init",
+    lib: 4,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `pkey_dsa_ctrl` at `crypto/dsa/dsa_pmeth.c:152` (DSA_R_INVALID_DIGEST_TYPE).
+pub(crate) const DSA_PMETH_152: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_pmeth.c",
+    line: 152,
+    func: c"pkey_dsa_ctrl",
+    lib: 10,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `pkey_dsa_ctrl` at `crypto/dsa/dsa_pmeth.c:160` (DSA_R_INVALID_DIGEST_TYPE).
+pub(crate) const DSA_PMETH_160: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_pmeth.c",
+    line: 160,
+    func: c"pkey_dsa_ctrl",
+    lib: 10,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `pkey_dsa_ctrl` at `crypto/dsa/dsa_pmeth.c:176` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const DSA_PMETH_176: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_pmeth.c",
+    line: 176,
+    func: c"pkey_dsa_ctrl",
+    lib: 10,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `pkey_dsa_ctrl_str` at `crypto/dsa/dsa_pmeth.c:199` (DSA_R_INVALID_DIGEST_TYPE).
+pub(crate) const DSA_PMETH_199: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_pmeth.c",
+    line: 199,
+    func: c"pkey_dsa_ctrl_str",
+    lib: 10,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `pkey_dsa_keygen` at `crypto/dsa/dsa_pmeth.c:245` (DSA_R_NO_PARAMETERS_SET).
+pub(crate) const DSA_PMETH_245: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_pmeth.c",
+    line: 245,
+    func: c"pkey_dsa_keygen",
+    lib: 10,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `pkey_dh_ctrl_str` at `crypto/dh/dh_pmeth.c:243` (DH_R_INVALID_PARAMETER_NAME).
+pub(crate) const DH_PMETH_243: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_pmeth.c",
+    line: 243,
+    func: c"pkey_dh_ctrl_str",
+    lib: 5,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `pkey_dh_keygen` at `crypto/dh/dh_pmeth.c:378` (DH_R_NO_PARAMETERS_SET).
+pub(crate) const DH_PMETH_378: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_pmeth.c",
+    line: 378,
+    func: c"pkey_dh_keygen",
+    lib: 5,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `pkey_dh_derive` at `crypto/dh/dh_pmeth.c:404` (DH_R_KEYS_NOT_SET).
+pub(crate) const DH_PMETH_404: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_pmeth.c",
+    line: 404,
+    func: c"pkey_dh_derive",
+    lib: 5,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `pkey_dh_derive` at `crypto/dh/dh_pmeth.c:410` (DH_R_KEYS_NOT_SET).
+pub(crate) const DH_PMETH_410: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_pmeth.c",
+    line: 410,
+    func: c"pkey_dh_derive",
+    lib: 5,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `pkey_ec_sign` at `crypto/ec/ec_pmeth.c:128` (EC_R_BUFFER_TOO_SMALL).
+pub(crate) const EC_PMETH_128: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c",
+    line: 128,
+    func: c"pkey_ec_sign",
+    lib: 16,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `pkey_ec_derive` at `crypto/ec/ec_pmeth.c:176` (EC_R_KEYS_NOT_SET).
+pub(crate) const EC_PMETH_176: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c",
+    line: 176,
+    func: c"pkey_ec_derive",
+    lib: 16,
+    reason: 140,
+    dynamic_reason: false,
+};
+
+/// `pkey_ec_derive` at `crypto/ec/ec_pmeth.c:181` (EC_R_KEYS_NOT_SET).
+pub(crate) const EC_PMETH_181: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c",
+    line: 181,
+    func: c"pkey_ec_derive",
+    lib: 16,
+    reason: 140,
+    dynamic_reason: false,
+};
+
+/// `pkey_ec_ctrl` at `crypto/ec/ec_pmeth.c:255` (EC_R_INVALID_CURVE).
+pub(crate) const EC_PMETH_255: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c",
+    line: 255,
+    func: c"pkey_ec_ctrl",
+    lib: 16,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `pkey_ec_ctrl` at `crypto/ec/ec_pmeth.c:264` (EC_R_NO_PARAMETERS_SET).
+pub(crate) const EC_PMETH_264: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c",
+    line: 264,
+    func: c"pkey_ec_ctrl",
+    lib: 16,
+    reason: 139,
+    dynamic_reason: false,
+};
+
+/// `pkey_ec_ctrl` at `crypto/ec/ec_pmeth.c:290` (ERR_R_UNSUPPORTED).
+pub(crate) const EC_PMETH_290: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c",
+    line: 290,
+    func: c"pkey_ec_ctrl",
+    lib: 16,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `pkey_ec_ctrl` at `crypto/ec/ec_pmeth.c:355` (EC_R_INVALID_DIGEST_TYPE).
+pub(crate) const EC_PMETH_355: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c",
+    line: 355,
+    func: c"pkey_ec_ctrl",
+    lib: 16,
+    reason: 138,
+    dynamic_reason: false,
+};
+
+/// `pkey_ec_ctrl_str` at `crypto/ec/ec_pmeth.c:388` (EC_R_INVALID_CURVE).
+pub(crate) const EC_PMETH_388: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c",
+    line: 388,
+    func: c"pkey_ec_ctrl_str",
+    lib: 16,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `pkey_ec_ctrl_str` at `crypto/ec/ec_pmeth.c:404` (EC_R_INVALID_DIGEST).
+pub(crate) const EC_PMETH_404: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c",
+    line: 404,
+    func: c"pkey_ec_ctrl_str",
+    lib: 16,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `pkey_ec_paramgen` at `crypto/ec/ec_pmeth.c:424` (EC_R_NO_PARAMETERS_SET).
+pub(crate) const EC_PMETH_424: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c",
+    line: 424,
+    func: c"pkey_ec_paramgen",
+    lib: 16,
+    reason: 139,
+    dynamic_reason: false,
+};
+
+/// `pkey_ec_keygen` at `crypto/ec/ec_pmeth.c:443` (EC_R_NO_PARAMETERS_SET).
+pub(crate) const EC_PMETH_443: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_pmeth.c",
+    line: 443,
+    func: c"pkey_ec_keygen",
+    lib: 16,
+    reason: 139,
+    dynamic_reason: false,
+};
+
+/// `rsa_priv_encode` at `crypto/rsa/rsa_ameth.c:157` (ERR_R_ASN1_LIB).
+pub(crate) const RSA_AMETH_157: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ameth.c",
+    line: 157,
+    func: c"rsa_priv_encode",
+    lib: 4,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `rsa_priv_encode` at `crypto/rsa/rsa_ameth.c:164` (ERR_R_ASN1_LIB).
+pub(crate) const RSA_AMETH_164: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ameth.c",
+    line: 164,
+    func: c"rsa_priv_encode",
+    lib: 4,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `rsa_pkey_ctrl` at `crypto/rsa/rsa_ameth.c:431` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_AMETH_431: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ameth.c",
+    line: 431,
+    func: c"rsa_pkey_ctrl",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_pss_to_ctx` at `crypto/rsa/rsa_ameth.c:551` (RSA_R_UNSUPPORTED_SIGNATURE_TYPE).
+pub(crate) const RSA_AMETH_551: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ameth.c",
+    line: 551,
+    func: c"ossl_rsa_pss_to_ctx",
+    lib: 4,
+    reason: 155,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_pss_to_ctx` at `crypto/rsa/rsa_ameth.c:558` (RSA_R_INVALID_PSS_PARAMETERS).
+pub(crate) const RSA_AMETH_558: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ameth.c",
+    line: 558,
+    func: c"ossl_rsa_pss_to_ctx",
+    lib: 4,
+    reason: 149,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_pss_to_ctx` at `crypto/rsa/rsa_ameth.c:571` (RSA_R_DIGEST_DOES_NOT_MATCH).
+pub(crate) const RSA_AMETH_571: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ameth.c",
+    line: 571,
+    func: c"ossl_rsa_pss_to_ctx",
+    lib: 4,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `rsa_pss_verify_param` at `crypto/rsa/rsa_ameth.c:596` (RSA_R_INVALID_SALT_LENGTH).
+pub(crate) const RSA_AMETH_596: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ameth.c",
+    line: 596,
+    func: c"rsa_pss_verify_param",
+    lib: 4,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `rsa_pss_verify_param` at `crypto/rsa/rsa_ameth.c:604` (RSA_R_INVALID_TRAILER).
+pub(crate) const RSA_AMETH_604: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ameth.c",
+    line: 604,
+    func: c"rsa_pss_verify_param",
+    lib: 4,
+    reason: 139,
+    dynamic_reason: false,
+};
+
+/// `rsa_item_verify` at `crypto/rsa/rsa_ameth.c:639` (RSA_R_UNSUPPORTED_SIGNATURE_TYPE).
+pub(crate) const RSA_AMETH_639: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ameth.c",
+    line: 639,
+    func: c"rsa_item_verify",
+    lib: 4,
+    reason: 155,
+    dynamic_reason: false,
+};
+
+/// `rsa_int_import_from` at `crypto/rsa/rsa_ameth.c:862` (ERR_R_RSA_LIB).
+pub(crate) const RSA_AMETH_862: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_ameth.c",
+    line: 862,
+    func: c"rsa_int_import_from",
+    lib: 5,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fromdata` at `crypto/rsa/rsa_backend.c:83` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const RSA_BACKEND_83: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 83,
+    func: c"ossl_rsa_fromdata",
+    lib: 4,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fromdata` at `crypto/rsa/rsa_backend.c:97` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const RSA_BACKEND_97: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 97,
+    func: c"ossl_rsa_fromdata",
+    lib: 4,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fromdata` at `crypto/rsa/rsa_backend.c:111` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const RSA_BACKEND_111: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 111,
+    func: c"ossl_rsa_fromdata",
+    lib: 4,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fromdata` at `crypto/rsa/rsa_backend.c:139` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const RSA_BACKEND_139: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 139,
+    func: c"ossl_rsa_fromdata",
+    lib: 4,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fromdata` at `crypto/rsa/rsa_backend.c:149` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const RSA_BACKEND_149: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 149,
+    func: c"ossl_rsa_fromdata",
+    lib: 4,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fromdata` at `crypto/rsa/rsa_backend.c:158` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_BACKEND_158: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 158,
+    func: c"ossl_rsa_fromdata",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fromdata` at `crypto/rsa/rsa_backend.c:177` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_BACKEND_177: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 177,
+    func: c"ossl_rsa_fromdata",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fromdata` at `crypto/rsa/rsa_backend.c:190` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_BACKEND_190: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 190,
+    func: c"ossl_rsa_fromdata",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fromdata` at `crypto/rsa/rsa_backend.c:199` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_BACKEND_199: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 199,
+    func: c"ossl_rsa_fromdata",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fromdata` at `crypto/rsa/rsa_backend.c:205` (ERR_R_UNSUPPORTED).
+pub(crate) const RSA_BACKEND_205: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 205,
+    func: c"ossl_rsa_fromdata",
+    lib: 4,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fromdata` at `crypto/rsa/rsa_backend.c:223` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RSA_BACKEND_223: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 223,
+    func: c"ossl_rsa_fromdata",
+    lib: 4,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fromdata` at `crypto/rsa/rsa_backend.c:232` (RSA_R_INVALID_KEYPAIR).
+pub(crate) const RSA_BACKEND_232: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 232,
+    func: c"ossl_rsa_fromdata",
+    lib: 4,
+    reason: 171,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_param_decode` at `crypto/rsa/rsa_backend.c:665` (RSA_R_INVALID_PSS_PARAMETERS).
+pub(crate) const RSA_BACKEND_665: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 665,
+    func: c"ossl_rsa_param_decode",
+    lib: 4,
+    reason: 149,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_key_from_pkcs8` at `crypto/rsa/rsa_backend.c:690` (ERR_R_RSA_LIB).
+pub(crate) const RSA_BACKEND_690: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_backend.c",
+    line: 690,
+    func: c"ossl_rsa_key_from_pkcs8",
+    lib: 4,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `RSA_print_fp` at `crypto/rsa/rsa_prn.c:28` (ERR_R_BUF_LIB).
+pub(crate) const RSA_PRN_28: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_prn.c",
+    line: 28,
+    func: c"RSA_print_fp",
+    lib: 4,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `DSA_print_fp` at `crypto/dsa/dsa_prn.c:28` (ERR_R_BUF_LIB).
+pub(crate) const DSA_PRN_28: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_prn.c",
+    line: 28,
+    func: c"DSA_print_fp",
+    lib: 10,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `DSAparams_print_fp` at `crypto/dsa/dsa_prn.c:43` (ERR_R_BUF_LIB).
+pub(crate) const DSA_PRN_43: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_prn.c",
+    line: 43,
+    func: c"DSAparams_print_fp",
+    lib: 10,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_public` at `crypto/rsa/rsa_sp800_56b_check.c:294` (RSA_R_MODULUS_TOO_LARGE).
+pub(crate) const RSA_SP800_56B_CHECK_294: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 294,
+    func: c"ossl_rsa_sp800_56b_check_public",
+    lib: 4,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_public` at `crypto/rsa/rsa_sp800_56b_check.c:304` (RSA_R_INVALID_KEY_LENGTH).
+pub(crate) const RSA_SP800_56B_CHECK_304: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 304,
+    func: c"ossl_rsa_sp800_56b_check_public",
+    lib: 4,
+    reason: 173,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_public` at `crypto/rsa/rsa_sp800_56b_check.c:309` (RSA_R_INVALID_MODULUS).
+pub(crate) const RSA_SP800_56B_CHECK_309: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 309,
+    func: c"ossl_rsa_sp800_56b_check_public",
+    lib: 4,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_public` at `crypto/rsa/rsa_sp800_56b_check.c:314` (RSA_R_PUB_EXPONENT_OUT_OF_RANGE).
+pub(crate) const RSA_SP800_56B_CHECK_314: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 314,
+    func: c"ossl_rsa_sp800_56b_check_public",
+    lib: 4,
+    reason: 178,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_public` at `crypto/rsa/rsa_sp800_56b_check.c:329` (RSA_R_INVALID_MODULUS).
+pub(crate) const RSA_SP800_56B_CHECK_329: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 329,
+    func: c"ossl_rsa_sp800_56b_check_public",
+    lib: 4,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_public` at `crypto/rsa/rsa_sp800_56b_check.c:340` (RSA_R_INVALID_MODULUS).
+pub(crate) const RSA_SP800_56B_CHECK_340: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 340,
+    func: c"ossl_rsa_sp800_56b_check_public",
+    lib: 4,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_keypair` at `crypto/rsa/rsa_sp800_56b_check.c:385` (RSA_R_INVALID_REQUEST).
+pub(crate) const RSA_SP800_56B_CHECK_385: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 385,
+    func: c"ossl_rsa_sp800_56b_check_keypair",
+    lib: 4,
+    reason: 175,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_keypair` at `crypto/rsa/rsa_sp800_56b_check.c:396` (RSA_R_INVALID_REQUEST).
+pub(crate) const RSA_SP800_56B_CHECK_396: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 396,
+    func: c"ossl_rsa_sp800_56b_check_keypair",
+    lib: 4,
+    reason: 175,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_keypair` at `crypto/rsa/rsa_sp800_56b_check.c:403` (RSA_R_PUB_EXPONENT_OUT_OF_RANGE).
+pub(crate) const RSA_SP800_56B_CHECK_403: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 403,
+    func: c"ossl_rsa_sp800_56b_check_keypair",
+    lib: 4,
+    reason: 178,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_keypair` at `crypto/rsa/rsa_sp800_56b_check.c:408` (RSA_R_INVALID_KEYPAIR).
+pub(crate) const RSA_SP800_56B_CHECK_408: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 408,
+    func: c"ossl_rsa_sp800_56b_check_keypair",
+    lib: 4,
+    reason: 171,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_keypair` at `crypto/rsa/rsa_sp800_56b_check.c:413` (RSA_R_INVALID_KEYPAIR).
+pub(crate) const RSA_SP800_56B_CHECK_413: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 413,
+    func: c"ossl_rsa_sp800_56b_check_keypair",
+    lib: 4,
+    reason: 171,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_keypair` at `crypto/rsa/rsa_sp800_56b_check.c:427` (RSA_R_INVALID_REQUEST).
+pub(crate) const RSA_SP800_56B_CHECK_427: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 427,
+    func: c"ossl_rsa_sp800_56b_check_keypair",
+    lib: 4,
+    reason: 175,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_check_keypair` at `crypto/rsa/rsa_sp800_56b_check.c:440` (RSA_R_INVALID_KEYPAIR).
+pub(crate) const RSA_SP800_56B_CHECK_440: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_check.c",
+    line: 440,
+    func: c"ossl_rsa_sp800_56b_check_keypair",
+    lib: 4,
+    reason: 171,
+    dynamic_reason: false,
+};
+
+/// `dsa_precheck_params` at `crypto/dsa/dsa_check.c:25` (DSA_R_BAD_FFC_PARAMETERS).
+pub(crate) const DSA_CHECK_25: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_check.c",
+    line: 25,
+    func: c"dsa_precheck_params",
+    lib: 10,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `dsa_precheck_params` at `crypto/dsa/dsa_check.c:31` (DSA_R_MODULUS_TOO_LARGE).
+pub(crate) const DSA_CHECK_31: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_check.c",
+    line: 31,
+    func: c"dsa_precheck_params",
+    lib: 10,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `dsa_precheck_params` at `crypto/dsa/dsa_check.c:37` (DSA_R_BAD_Q_VALUE).
+pub(crate) const DSA_CHECK_37: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_check.c",
+    line: 37,
+    func: c"dsa_precheck_params",
+    lib: 10,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fips186_4_gen_prob_primes` at `crypto/rsa/rsa_sp800_56b_gen.c:89` (RSA_R_KEY_SIZE_TOO_SMALL).
+pub(crate) const RSA_SP800_56B_GEN_89: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_gen.c",
+    line: 89,
+    func: c"ossl_rsa_fips186_4_gen_prob_primes",
+    lib: 4,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_fips186_4_gen_prob_primes` at `crypto/rsa/rsa_sp800_56b_gen.c:94` (RSA_R_PUB_EXPONENT_OUT_OF_RANGE).
+pub(crate) const RSA_SP800_56B_GEN_94: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_gen.c",
+    line: 94,
+    func: c"ossl_rsa_fips186_4_gen_prob_primes",
+    lib: 4,
+    reason: 178,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_validate_strength` at `crypto/rsa/rsa_sp800_56b_gen.c:180` (RSA_R_INVALID_MODULUS).
+pub(crate) const RSA_SP800_56B_GEN_180: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_gen.c",
+    line: 180,
+    func: c"ossl_rsa_sp800_56b_validate_strength",
+    lib: 4,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_validate_strength` at `crypto/rsa/rsa_sp800_56b_gen.c:185` (RSA_R_INVALID_STRENGTH).
+pub(crate) const RSA_SP800_56B_GEN_185: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_gen.c",
+    line: 185,
+    func: c"ossl_rsa_sp800_56b_validate_strength",
+    lib: 4,
+    reason: 176,
+    dynamic_reason: false,
+};
+
+/// `rsa_validate_rng_strength` at `crypto/rsa/rsa_sp800_56b_gen.c:205` (RSA_R_RANDOMNESS_SOURCE_STRENGTH_INSUFFICIENT).
+pub(crate) const RSA_SP800_56B_GEN_205: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_gen.c",
+    line: 205,
+    func: c"rsa_validate_rng_strength",
+    lib: 4,
+    reason: 180,
+    dynamic_reason: false,
+};
+
+/// `ossl_rsa_sp800_56b_pairwise_test` at `crypto/rsa/rsa_sp800_56b_gen.c:454` (RSA_R_PAIRWISE_TEST_FAILURE).
+pub(crate) const RSA_SP800_56B_GEN_454: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rsa/rsa_sp800_56b_gen.c",
+    line: 454,
+    func: c"ossl_rsa_sp800_56b_pairwise_test",
+    lib: 4,
+    reason: 177,
+    dynamic_reason: false,
+};
+
+/// `ossl_x509_algor_get_md` at `crypto/asn1/x_algor.c:165` (ASN1_R_UNKNOWN_DIGEST).
+pub(crate) const X_ALGOR_165: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/x_algor.c",
+    line: 165,
+    func: c"ossl_x509_algor_get_md",
+    lib: 13,
+    reason: 229,
+    dynamic_reason: false,
+};
+
+/// `ffc_validate_LN` at `crypto/ffc/ffc_params_generate.c:49` (DH_R_BAD_FFC_PARAMETERS).
+pub(crate) const FFC_PARAMS_GENERATE_49: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ffc/ffc_params_generate.c",
+    line: 49,
+    func: c"ffc_validate_LN",
+    lib: 5,
+    reason: 127,
+    dynamic_reason: false,
+};
+
+/// `ffc_validate_LN` at `crypto/ffc/ffc_params_generate.c:61` (DSA_R_BAD_FFC_PARAMETERS).
+pub(crate) const FFC_PARAMS_GENERATE_61: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ffc/ffc_params_generate.c",
+    line: 61,
+    func: c"ffc_validate_LN",
+    lib: 10,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ffc_validate_LN` at `crypto/ffc/ffc_params_generate.c:77` (DH_R_BAD_FFC_PARAMETERS).
+pub(crate) const FFC_PARAMS_GENERATE_77: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ffc/ffc_params_generate.c",
+    line: 77,
+    func: c"ffc_validate_LN",
+    lib: 5,
+    reason: 127,
+    dynamic_reason: false,
+};
+
+/// `ffc_validate_LN` at `crypto/ffc/ffc_params_generate.c:82` (DSA_R_BAD_FFC_PARAMETERS).
+pub(crate) const FFC_PARAMS_GENERATE_82: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ffc/ffc_params_generate.c",
+    line: 82,
+    func: c"ffc_validate_LN",
+    lib: 10,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ffc_validate_LN` at `crypto/ffc/ffc_params_generate.c:94` (DSA_R_BAD_FFC_PARAMETERS).
+pub(crate) const FFC_PARAMS_GENERATE_94: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ffc/ffc_params_generate.c",
+    line: 94,
+    func: c"ffc_validate_LN",
+    lib: 10,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ossl_ffc_params_simple_validate` at `crypto/ffc/ffc_params_validate.c:125` (DH_R_NOT_SUITABLE_GENERATOR).
+pub(crate) const FFC_PARAMS_VALIDATE_125: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ffc/ffc_params_validate.c",
+    line: 125,
+    func: c"ossl_ffc_params_simple_validate",
+    lib: 5,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `ossl_ffc_params_full_validate` at `crypto/ffc/ffc_params_validate.c:172` (DSA_R_Q_NOT_PRIME).
+pub(crate) const FFC_PARAMS_VALIDATE_172: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ffc/ffc_params_validate.c",
+    line: 172,
+    func: c"ossl_ffc_params_full_validate",
+    lib: 10,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `ossl_ffc_params_full_validate` at `crypto/ffc/ffc_params_validate.c:178` (DSA_R_P_NOT_PRIME).
+pub(crate) const FFC_PARAMS_VALIDATE_178: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ffc/ffc_params_validate.c",
+    line: 178,
+    func: c"ossl_ffc_params_full_validate",
+    lib: 10,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `dh_new_intern` at `crypto/dh/dh_lib.c:83` (ERR_R_CRYPTO_LIB).
+pub(crate) const DH_LIB_83: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_lib.c",
+    line: 83,
+    func: c"dh_new_intern",
+    lib: 5,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `dh_new_intern` at `crypto/dh/dh_lib.c:100` (ERR_R_ENGINE_LIB).
+pub(crate) const DH_LIB_100: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_lib.c",
+    line: 100,
+    func: c"dh_new_intern",
+    lib: 5,
+    reason: 524326,
+    dynamic_reason: false,
+};
+
+/// `dh_new_intern` at `crypto/dh/dh_lib.c:109` (ERR_R_ENGINE_LIB).
+pub(crate) const DH_LIB_109: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_lib.c",
+    line: 109,
+    func: c"dh_new_intern",
+    lib: 5,
+    reason: 524326,
+    dynamic_reason: false,
+};
+
+/// `dh_new_intern` at `crypto/dh/dh_lib.c:125` (ERR_R_INIT_FAIL).
+pub(crate) const DH_LIB_125: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_lib.c",
+    line: 125,
+    func: c"dh_new_intern",
+    lib: 5,
+    reason: 786693,
+    dynamic_reason: false,
+};
+
+/// `ossl_dh_compute_key` at `crypto/dh/dh_key.c:48` (DH_R_MODULUS_TOO_LARGE).
+pub(crate) const DH_KEY_48: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 48,
+    func: c"ossl_dh_compute_key",
+    lib: 5,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_dh_compute_key` at `crypto/dh/dh_key.c:54` (DH_R_Q_TOO_LARGE).
+pub(crate) const DH_KEY_54: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 54,
+    func: c"ossl_dh_compute_key",
+    lib: 5,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `ossl_dh_compute_key` at `crypto/dh/dh_key.c:59` (DH_R_MODULUS_TOO_SMALL).
+pub(crate) const DH_KEY_59: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 59,
+    func: c"ossl_dh_compute_key",
+    lib: 5,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `ossl_dh_compute_key` at `crypto/dh/dh_key.c:73` (DH_R_NO_PRIVATE_VALUE).
+pub(crate) const DH_KEY_73: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 73,
+    func: c"ossl_dh_compute_key",
+    lib: 5,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `ossl_dh_compute_key` at `crypto/dh/dh_key.c:88` (ERR_R_BN_LIB).
+pub(crate) const DH_KEY_88: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 88,
+    func: c"ossl_dh_compute_key",
+    lib: 5,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_dh_compute_key` at `crypto/dh/dh_key.c:97` (DH_R_INVALID_SECRET).
+pub(crate) const DH_KEY_97: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 97,
+    func: c"ossl_dh_compute_key",
+    lib: 5,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `generate_key` at `crypto/dh/dh_key.c:276` (DH_R_MODULUS_TOO_LARGE).
+pub(crate) const DH_KEY_276: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 276,
+    func: c"generate_key",
+    lib: 5,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `generate_key` at `crypto/dh/dh_key.c:282` (DH_R_Q_TOO_LARGE).
+pub(crate) const DH_KEY_282: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 282,
+    func: c"generate_key",
+    lib: 5,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `generate_key` at `crypto/dh/dh_key.c:287` (DH_R_MODULUS_TOO_SMALL).
+pub(crate) const DH_KEY_287: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 287,
+    func: c"generate_key",
+    lib: 5,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `generate_key` at `crypto/dh/dh_key.c:379` (ERR_R_BN_LIB).
+pub(crate) const DH_KEY_379: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 379,
+    func: c"generate_key",
+    lib: 5,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_dh_buf2key` at `crypto/dh/dh_key.c:412` (ERR_raise dynamic reason).
+pub(crate) const DH_KEY_412: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 412,
+    func: c"ossl_dh_buf2key",
+    lib: 5,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `ossl_dh_key2buf` at `crypto/dh/dh_key.c:430` (DH_R_INVALID_PUBKEY).
+pub(crate) const DH_KEY_430: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 430,
+    func: c"ossl_dh_key2buf",
+    lib: 5,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_dh_key2buf` at `crypto/dh/dh_key.c:438` (DH_R_INVALID_SIZE).
+pub(crate) const DH_KEY_438: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 438,
+    func: c"ossl_dh_key2buf",
+    lib: 5,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `ossl_dh_key2buf` at `crypto/dh/dh_key.c:453` (DH_R_BN_ERROR).
+pub(crate) const DH_KEY_453: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_key.c",
+    line: 453,
+    func: c"ossl_dh_key2buf",
+    lib: 5,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `dh_builtin_genparams` at `crypto/dh/dh_gen.c:164` (DH_R_MODULUS_TOO_LARGE).
+pub(crate) const DH_GEN_164: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_gen.c",
+    line: 164,
+    func: c"dh_builtin_genparams",
+    lib: 5,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `dh_builtin_genparams` at `crypto/dh/dh_gen.c:169` (DH_R_MODULUS_TOO_SMALL).
+pub(crate) const DH_GEN_169: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_gen.c",
+    line: 169,
+    func: c"dh_builtin_genparams",
+    lib: 5,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `dh_builtin_genparams` at `crypto/dh/dh_gen.c:189` (DH_R_BAD_GENERATOR).
+pub(crate) const DH_GEN_189: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_gen.c",
+    line: 189,
+    func: c"dh_builtin_genparams",
+    lib: 5,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `dh_builtin_genparams` at `crypto/dh/dh_gen.c:231` (ERR_R_BN_LIB).
+pub(crate) const DH_GEN_231: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_gen.c",
+    line: 231,
+    func: c"dh_builtin_genparams",
+    lib: 5,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `DH_check_params_ex` at `crypto/dh/dh_check.c:37` (DH_R_CHECK_P_NOT_PRIME).
+pub(crate) const DH_CHECK_37: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 37,
+    func: c"DH_check_params_ex",
+    lib: 5,
+    reason: 117,
+    dynamic_reason: false,
+};
+
+/// `DH_check_params_ex` at `crypto/dh/dh_check.c:39` (DH_R_NOT_SUITABLE_GENERATOR).
+pub(crate) const DH_CHECK_39: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 39,
+    func: c"DH_check_params_ex",
+    lib: 5,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `DH_check_params_ex` at `crypto/dh/dh_check.c:41` (DH_R_MODULUS_TOO_SMALL).
+pub(crate) const DH_CHECK_41: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 41,
+    func: c"DH_check_params_ex",
+    lib: 5,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `DH_check_params_ex` at `crypto/dh/dh_check.c:43` (DH_R_MODULUS_TOO_LARGE).
+pub(crate) const DH_CHECK_43: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 43,
+    func: c"DH_check_params_ex",
+    lib: 5,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `DH_check_ex` at `crypto/dh/dh_check.c:128` (DH_R_NOT_SUITABLE_GENERATOR).
+pub(crate) const DH_CHECK_128: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 128,
+    func: c"DH_check_ex",
+    lib: 5,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `DH_check_ex` at `crypto/dh/dh_check.c:130` (DH_R_CHECK_Q_NOT_PRIME).
+pub(crate) const DH_CHECK_130: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 130,
+    func: c"DH_check_ex",
+    lib: 5,
+    reason: 119,
+    dynamic_reason: false,
+};
+
+/// `DH_check_ex` at `crypto/dh/dh_check.c:132` (DH_R_CHECK_INVALID_Q_VALUE).
+pub(crate) const DH_CHECK_132: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 132,
+    func: c"DH_check_ex",
+    lib: 5,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `DH_check_ex` at `crypto/dh/dh_check.c:134` (DH_R_CHECK_INVALID_J_VALUE).
+pub(crate) const DH_CHECK_134: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 134,
+    func: c"DH_check_ex",
+    lib: 5,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `DH_check_ex` at `crypto/dh/dh_check.c:136` (DH_R_UNABLE_TO_CHECK_GENERATOR).
+pub(crate) const DH_CHECK_136: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 136,
+    func: c"DH_check_ex",
+    lib: 5,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `DH_check_ex` at `crypto/dh/dh_check.c:138` (DH_R_CHECK_P_NOT_PRIME).
+pub(crate) const DH_CHECK_138: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 138,
+    func: c"DH_check_ex",
+    lib: 5,
+    reason: 117,
+    dynamic_reason: false,
+};
+
+/// `DH_check_ex` at `crypto/dh/dh_check.c:140` (DH_R_CHECK_P_NOT_SAFE_PRIME).
+pub(crate) const DH_CHECK_140: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 140,
+    func: c"DH_check_ex",
+    lib: 5,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `DH_check_ex` at `crypto/dh/dh_check.c:142` (DH_R_MODULUS_TOO_SMALL).
+pub(crate) const DH_CHECK_142: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 142,
+    func: c"DH_check_ex",
+    lib: 5,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `DH_check_ex` at `crypto/dh/dh_check.c:144` (DH_R_MODULUS_TOO_LARGE).
+pub(crate) const DH_CHECK_144: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 144,
+    func: c"DH_check_ex",
+    lib: 5,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `DH_check` at `crypto/dh/dh_check.c:171` (DH_R_MODULUS_TOO_LARGE).
+pub(crate) const DH_CHECK_171: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 171,
+    func: c"DH_check",
+    lib: 5,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `DH_check_pub_key_ex` at `crypto/dh/dh_check.c:252` (DH_R_CHECK_PUBKEY_TOO_SMALL).
+pub(crate) const DH_CHECK_252: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 252,
+    func: c"DH_check_pub_key_ex",
+    lib: 5,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `DH_check_pub_key_ex` at `crypto/dh/dh_check.c:254` (DH_R_CHECK_PUBKEY_TOO_LARGE).
+pub(crate) const DH_CHECK_254: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 254,
+    func: c"DH_check_pub_key_ex",
+    lib: 5,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `DH_check_pub_key_ex` at `crypto/dh/dh_check.c:256` (DH_R_CHECK_PUBKEY_INVALID).
+pub(crate) const DH_CHECK_256: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 256,
+    func: c"DH_check_pub_key_ex",
+    lib: 5,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `DH_check_pub_key` at `crypto/dh/dh_check.c:277` (DH_R_MODULUS_TOO_LARGE).
+pub(crate) const DH_CHECK_277: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_check.c",
+    line: 277,
+    func: c"DH_check_pub_key",
+    lib: 5,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_dh_new_by_nid_ex` at `crypto/dh/dh_group_params.c:47` (DH_R_INVALID_PARAMETER_NID).
+pub(crate) const DH_GROUP_PARAMS_47: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_group_params.c",
+    line: 47,
+    func: c"ossl_dh_new_by_nid_ex",
+    lib: 5,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ossl_dh_key_from_pkcs8` at `crypto/dh/dh_backend.c:222` (DH_R_BN_ERROR).
+pub(crate) const DH_BACKEND_222: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_backend.c",
+    line: 222,
+    func: c"ossl_dh_key_from_pkcs8",
+    lib: 5,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_dh_key_from_pkcs8` at `crypto/dh/dh_backend.c:235` (DH_R_DECODE_ERROR).
+pub(crate) const DH_BACKEND_235: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_backend.c",
+    line: 235,
+    func: c"ossl_dh_key_from_pkcs8",
+    lib: 5,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `dh_pub_decode` at `crypto/dh/dh_ameth.c:77` (DH_R_PARAMETER_ENCODING_ERROR).
+pub(crate) const DH_AMETH_77: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 77,
+    func: c"dh_pub_decode",
+    lib: 5,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `dh_pub_decode` at `crypto/dh/dh_ameth.c:86` (DH_R_DECODE_ERROR).
+pub(crate) const DH_AMETH_86: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 86,
+    func: c"dh_pub_decode",
+    lib: 5,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `dh_pub_decode` at `crypto/dh/dh_ameth.c:91` (DH_R_DECODE_ERROR).
+pub(crate) const DH_AMETH_91: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 91,
+    func: c"dh_pub_decode",
+    lib: 5,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `dh_pub_decode` at `crypto/dh/dh_ameth.c:97` (DH_R_BN_DECODE_ERROR).
+pub(crate) const DH_AMETH_97: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 97,
+    func: c"dh_pub_decode",
+    lib: 5,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `dh_pub_encode` at `crypto/dh/dh_ameth.c:124` (ERR_R_ASN1_LIB).
+pub(crate) const DH_AMETH_124: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 124,
+    func: c"dh_pub_encode",
+    lib: 5,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `dh_pub_encode` at `crypto/dh/dh_ameth.c:129` (ERR_R_ASN1_LIB).
+pub(crate) const DH_AMETH_129: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 129,
+    func: c"dh_pub_encode",
+    lib: 5,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `dh_pub_encode` at `crypto/dh/dh_ameth.c:143` (ERR_R_ASN1_LIB).
+pub(crate) const DH_AMETH_143: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 143,
+    func: c"dh_pub_encode",
+    lib: 5,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `dh_priv_encode` at `crypto/dh/dh_ameth.c:187` (ERR_R_ASN1_LIB).
+pub(crate) const DH_AMETH_187: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 187,
+    func: c"dh_priv_encode",
+    lib: 5,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `dh_priv_encode` at `crypto/dh/dh_ameth.c:193` (ERR_R_ASN1_LIB).
+pub(crate) const DH_AMETH_193: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 193,
+    func: c"dh_priv_encode",
+    lib: 5,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `dh_priv_encode` at `crypto/dh/dh_ameth.c:202` (DH_R_BN_ERROR).
+pub(crate) const DH_AMETH_202: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 202,
+    func: c"dh_priv_encode",
+    lib: 5,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `dh_priv_encode` at `crypto/dh/dh_ameth.c:211` (DH_R_BN_ERROR).
+pub(crate) const DH_AMETH_211: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 211,
+    func: c"dh_priv_encode",
+    lib: 5,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `do_dh_print` at `crypto/dh/dh_ameth.c:297` (ERR_raise dynamic reason).
+pub(crate) const DH_AMETH_297: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 297,
+    func: c"do_dh_print",
+    lib: 5,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `dh_pkey_public_check` at `crypto/dh/dh_ameth.c:433` (DH_R_MISSING_PUBKEY).
+pub(crate) const DH_AMETH_433: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 433,
+    func: c"dh_pkey_public_check",
+    lib: 5,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `dh_pkey_import_from_type` at `crypto/dh/dh_ameth.c:517` (ERR_R_DH_LIB).
+pub(crate) const DH_AMETH_517: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dh/dh_ameth.c",
+    line: 517,
+    func: c"dh_pkey_import_from_type",
+    lib: 5,
+    reason: 524293,
+    dynamic_reason: false,
+};
+
+/// `dsa_new_intern` at `crypto/dsa/dsa_lib.c:141` (ERR_R_CRYPTO_LIB).
+pub(crate) const DSA_LIB_141: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_lib.c",
+    line: 141,
+    func: c"dsa_new_intern",
+    lib: 10,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `dsa_new_intern` at `crypto/dsa/dsa_lib.c:158` (ERR_R_ENGINE_LIB).
+pub(crate) const DSA_LIB_158: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_lib.c",
+    line: 158,
+    func: c"dsa_new_intern",
+    lib: 10,
+    reason: 524326,
+    dynamic_reason: false,
+};
+
+/// `dsa_new_intern` at `crypto/dsa/dsa_lib.c:167` (ERR_R_ENGINE_LIB).
+pub(crate) const DSA_LIB_167: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_lib.c",
+    line: 167,
+    func: c"dsa_new_intern",
+    lib: 10,
+    reason: 524326,
+    dynamic_reason: false,
+};
+
+/// `dsa_new_intern` at `crypto/dsa/dsa_lib.c:184` (ERR_R_INIT_FAIL).
+pub(crate) const DSA_LIB_184: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_lib.c",
+    line: 184,
+    func: c"dsa_new_intern",
+    lib: 10,
+    reason: 786693,
+    dynamic_reason: false,
+};
+
+/// `ossl_dsa_do_sign_int` at `crypto/dsa/dsa_ossl.c:195` (ERR_raise dynamic reason).
+pub(crate) const DSA_OSS_195: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ossl.c",
+    line: 195,
+    func: c"ossl_dsa_do_sign_int",
+    lib: 10,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `dsa_sign_setup` at `crypto/dsa/dsa_ossl.c:230` (DSA_R_MISSING_PARAMETERS).
+pub(crate) const DSA_OSS_230: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ossl.c",
+    line: 230,
+    func: c"dsa_sign_setup",
+    lib: 10,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `dsa_sign_setup` at `crypto/dsa/dsa_ossl.c:241` (DSA_R_INVALID_PARAMETERS).
+pub(crate) const DSA_OSS_241: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ossl.c",
+    line: 241,
+    func: c"dsa_sign_setup",
+    lib: 10,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `dsa_sign_setup` at `crypto/dsa/dsa_ossl.c:245` (DSA_R_MISSING_PRIVATE_KEY).
+pub(crate) const DSA_OSS_245: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ossl.c",
+    line: 245,
+    func: c"dsa_sign_setup",
+    lib: 10,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `dsa_sign_setup` at `crypto/dsa/dsa_ossl.c:347` (ERR_R_BN_LIB).
+pub(crate) const DSA_OSS_347: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ossl.c",
+    line: 347,
+    func: c"dsa_sign_setup",
+    lib: 10,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `dsa_do_verify` at `crypto/dsa/dsa_ossl.c:367` (DSA_R_MISSING_PARAMETERS).
+pub(crate) const DSA_OSS_367: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ossl.c",
+    line: 367,
+    func: c"dsa_do_verify",
+    lib: 10,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `dsa_do_verify` at `crypto/dsa/dsa_ossl.c:374` (DSA_R_BAD_Q_VALUE).
+pub(crate) const DSA_OSS_374: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ossl.c",
+    line: 374,
+    func: c"dsa_do_verify",
+    lib: 10,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `dsa_do_verify` at `crypto/dsa/dsa_ossl.c:379` (DSA_R_MODULUS_TOO_LARGE).
+pub(crate) const DSA_OSS_379: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ossl.c",
+    line: 379,
+    func: c"dsa_do_verify",
+    lib: 10,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `dsa_do_verify` at `crypto/dsa/dsa_ossl.c:453` (ERR_R_BN_LIB).
+pub(crate) const DSA_OSS_453: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ossl.c",
+    line: 453,
+    func: c"dsa_do_verify",
+    lib: 10,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_dsa_key_from_pkcs8` at `crypto/dsa/dsa_backend.c:154` (DSA_R_BN_ERROR).
+pub(crate) const DSA_BACKEND_154: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_backend.c",
+    line: 154,
+    func: c"ossl_dsa_key_from_pkcs8",
+    lib: 10,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `ossl_dsa_key_from_pkcs8` at `crypto/dsa/dsa_backend.c:159` (ERR_R_BN_LIB).
+pub(crate) const DSA_BACKEND_159: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_backend.c",
+    line: 159,
+    func: c"ossl_dsa_key_from_pkcs8",
+    lib: 10,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_dsa_key_from_pkcs8` at `crypto/dsa/dsa_backend.c:163` (ERR_R_BN_LIB).
+pub(crate) const DSA_BACKEND_163: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_backend.c",
+    line: 163,
+    func: c"ossl_dsa_key_from_pkcs8",
+    lib: 10,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_dsa_key_from_pkcs8` at `crypto/dsa/dsa_backend.c:171` (DSA_R_BN_ERROR).
+pub(crate) const DSA_BACKEND_171: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_backend.c",
+    line: 171,
+    func: c"ossl_dsa_key_from_pkcs8",
+    lib: 10,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `ossl_dsa_key_from_pkcs8` at `crypto/dsa/dsa_backend.c:175` (ERR_R_INTERNAL_ERROR).
+pub(crate) const DSA_BACKEND_175: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_backend.c",
+    line: 175,
+    func: c"ossl_dsa_key_from_pkcs8",
+    lib: 10,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_dsa_key_from_pkcs8` at `crypto/dsa/dsa_backend.c:182` (DSA_R_DECODE_ERROR).
+pub(crate) const DSA_BACKEND_182: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_backend.c",
+    line: 182,
+    func: c"ossl_dsa_key_from_pkcs8",
+    lib: 10,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `dsa_pub_decode` at `crypto/dsa/dsa_ameth.c:51` (DSA_R_DECODE_ERROR).
+pub(crate) const DSA_AMETH_51: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 51,
+    func: c"dsa_pub_decode",
+    lib: 10,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `dsa_pub_decode` at `crypto/dsa/dsa_ameth.c:57` (ERR_R_DSA_LIB).
+pub(crate) const DSA_AMETH_57: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 57,
+    func: c"dsa_pub_decode",
+    lib: 10,
+    reason: 524298,
+    dynamic_reason: false,
+};
+
+/// `dsa_pub_decode` at `crypto/dsa/dsa_ameth.c:61` (DSA_R_PARAMETER_ENCODING_ERROR).
+pub(crate) const DSA_AMETH_61: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 61,
+    func: c"dsa_pub_decode",
+    lib: 10,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `dsa_pub_decode` at `crypto/dsa/dsa_ameth.c:66` (DSA_R_DECODE_ERROR).
+pub(crate) const DSA_AMETH_66: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 66,
+    func: c"dsa_pub_decode",
+    lib: 10,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `dsa_pub_decode` at `crypto/dsa/dsa_ameth.c:71` (DSA_R_BN_DECODE_ERROR).
+pub(crate) const DSA_AMETH_71: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 71,
+    func: c"dsa_pub_decode",
+    lib: 10,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `dsa_pub_encode` at `crypto/dsa/dsa_ameth.c:103` (ERR_R_ASN1_LIB).
+pub(crate) const DSA_AMETH_103: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 103,
+    func: c"dsa_pub_encode",
+    lib: 10,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `dsa_pub_encode` at `crypto/dsa/dsa_ameth.c:108` (ERR_R_ASN1_LIB).
+pub(crate) const DSA_AMETH_108: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 108,
+    func: c"dsa_pub_encode",
+    lib: 10,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `dsa_pub_encode` at `crypto/dsa/dsa_ameth.c:118` (ERR_R_ASN1_LIB).
+pub(crate) const DSA_AMETH_118: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 118,
+    func: c"dsa_pub_encode",
+    lib: 10,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `dsa_pub_encode` at `crypto/dsa/dsa_ameth.c:126` (ERR_R_ASN1_LIB).
+pub(crate) const DSA_AMETH_126: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 126,
+    func: c"dsa_pub_encode",
+    lib: 10,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `dsa_priv_encode` at `crypto/dsa/dsa_ameth.c:170` (DSA_R_MISSING_PARAMETERS).
+pub(crate) const DSA_AMETH_170: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 170,
+    func: c"dsa_priv_encode",
+    lib: 10,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `dsa_priv_encode` at `crypto/dsa/dsa_ameth.c:177` (ERR_R_ASN1_LIB).
+pub(crate) const DSA_AMETH_177: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 177,
+    func: c"dsa_priv_encode",
+    lib: 10,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `dsa_priv_encode` at `crypto/dsa/dsa_ameth.c:183` (ERR_R_ASN1_LIB).
+pub(crate) const DSA_AMETH_183: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 183,
+    func: c"dsa_priv_encode",
+    lib: 10,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `dsa_priv_encode` at `crypto/dsa/dsa_ameth.c:192` (DSA_R_BN_ERROR).
+pub(crate) const DSA_AMETH_192: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 192,
+    func: c"dsa_priv_encode",
+    lib: 10,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `dsa_priv_encode` at `crypto/dsa/dsa_ameth.c:201` (DSA_R_BN_ERROR).
+pub(crate) const DSA_AMETH_201: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 201,
+    func: c"dsa_priv_encode",
+    lib: 10,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `old_dsa_priv_decode` at `crypto/dsa/dsa_ameth.c:361` (ERR_R_DSA_LIB).
+pub(crate) const DSA_AMETH_361: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 361,
+    func: c"old_dsa_priv_decode",
+    lib: 10,
+    reason: 524298,
+    dynamic_reason: false,
+};
+
+/// `dsa_pkey_import_from` at `crypto/dsa/dsa_ameth.c:485` (ERR_R_DSA_LIB).
+pub(crate) const DSA_AMETH_485: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dsa/dsa_ameth.c",
+    line: 485,
+    func: c"dsa_pkey_import_from",
+    lib: 10,
+    reason: 524298,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2876` (ERR_R_BN_LIB).
+pub(crate) const EC_CURVE_2876: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2876,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2888` (ERR_R_EC_LIB).
+pub(crate) const EC_CURVE_2888: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2888,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2893` (ERR_R_EC_LIB).
+pub(crate) const EC_CURVE_2893: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2893,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2907` (ERR_R_BN_LIB).
+pub(crate) const EC_CURVE_2907: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2907,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2913` (ERR_R_EC_LIB).
+pub(crate) const EC_CURVE_2913: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2913,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2918` (ERR_R_EC_LIB).
+pub(crate) const EC_CURVE_2918: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2918,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2927` (ERR_R_EC_LIB).
+pub(crate) const EC_CURVE_2927: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2927,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2936` (ERR_R_EC_LIB).
+pub(crate) const EC_CURVE_2936: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2936,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2942` (ERR_R_BN_LIB).
+pub(crate) const EC_CURVE_2942: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2942,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2946` (ERR_R_EC_LIB).
+pub(crate) const EC_CURVE_2946: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2946,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2951` (ERR_R_BN_LIB).
+pub(crate) const EC_CURVE_2951: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2951,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2955` (ERR_R_EC_LIB).
+pub(crate) const EC_CURVE_2955: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2955,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2960` (ERR_R_EC_LIB).
+pub(crate) const EC_CURVE_2960: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2960,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_group_new_from_data` at `crypto/ec/ec_curve.c:2982` (ERR_R_OBJ_LIB).
+pub(crate) const EC_CURVE_2982: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 2982,
+    func: c"ec_group_new_from_data",
+    lib: 16,
+    reason: 524296,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_by_curve_name_ex` at `crypto/ec/ec_curve.c:3027` (EC_R_UNKNOWN_GROUP).
+pub(crate) const EC_CURVE_3027: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 3027,
+    func: c"EC_GROUP_new_by_curve_name_ex",
+    lib: 16,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_by_curve_name_ex` at `crypto/ec/ec_curve.c:3030` (EC_R_UNKNOWN_GROUP).
+pub(crate) const EC_CURVE_3030: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_curve.c",
+    line: 3030,
+    func: c"EC_GROUP_new_by_curve_name_ex",
+    lib: 16,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_group_new_ex` at `crypto/ec/ec_lib.c:36` (EC_R_SLOT_FULL).
+pub(crate) const EC_LIB_36: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 36,
+    func: c"ossl_ec_group_new_ex",
+    lib: 16,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_group_new_ex` at `crypto/ec/ec_lib.c:40` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_40: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 40,
+    func: c"ossl_ec_group_new_ex",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_copy` at `crypto/ec/ec_lib.c:165` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_165: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 165,
+    func: c"EC_GROUP_copy",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_copy` at `crypto/ec/ec_lib.c:169` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_169: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 169,
+    func: c"EC_GROUP_copy",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_set_generator` at `crypto/ec/ec_lib.c:374` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_LIB_374: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 374,
+    func: c"EC_GROUP_set_generator",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_set_generator` at `crypto/ec/ec_lib.c:381` (EC_R_INVALID_FIELD).
+pub(crate) const EC_LIB_381: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 381,
+    func: c"EC_GROUP_set_generator",
+    lib: 16,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_set_generator` at `crypto/ec/ec_lib.c:392` (EC_R_INVALID_GROUP_ORDER).
+pub(crate) const EC_LIB_392: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 392,
+    func: c"EC_GROUP_set_generator",
+    lib: 16,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_set_generator` at `crypto/ec/ec_lib.c:402` (EC_R_UNKNOWN_COFACTOR).
+pub(crate) const EC_LIB_402: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 402,
+    func: c"EC_GROUP_set_generator",
+    lib: 16,
+    reason: 164,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_set_curve` at `crypto/ec/ec_lib.c:563` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_563: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 563,
+    func: c"EC_GROUP_set_curve",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_curve` at `crypto/ec/ec_lib.c:573` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_573: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 573,
+    func: c"EC_GROUP_get_curve",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_degree` at `crypto/ec/ec_lib.c:610` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_610: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 610,
+    func: c"EC_GROUP_get_degree",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_check_discriminant` at `crypto/ec/ec_lib.c:619` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_619: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 619,
+    func: c"EC_GROUP_check_discriminant",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_new` at `crypto/ec/ec_lib.c:721` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_LIB_721: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 721,
+    func: c"EC_POINT_new",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_new` at `crypto/ec/ec_lib.c:725` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_725: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 725,
+    func: c"EC_POINT_new",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_copy` at `crypto/ec/ec_lib.c:773` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_773: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 773,
+    func: c"EC_POINT_copy",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_copy` at `crypto/ec/ec_lib.c:780` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_780: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 780,
+    func: c"EC_POINT_copy",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_set_to_infinity` at `crypto/ec/ec_lib.c:817` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_817: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 817,
+    func: c"EC_POINT_set_to_infinity",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_set_to_infinity` at `crypto/ec/ec_lib.c:821` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_821: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 821,
+    func: c"EC_POINT_set_to_infinity",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_set_Jprojective_coordinates_GFp` at `crypto/ec/ec_lib.c:834` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_834: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 834,
+    func: c"EC_POINT_set_Jprojective_coordinates_GFp",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_set_Jprojective_coordinates_GFp` at `crypto/ec/ec_lib.c:838` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_838: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 838,
+    func: c"EC_POINT_set_Jprojective_coordinates_GFp",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_get_Jprojective_coordinates_GFp` at `crypto/ec/ec_lib.c:851` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_851: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 851,
+    func: c"EC_POINT_get_Jprojective_coordinates_GFp",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_get_Jprojective_coordinates_GFp` at `crypto/ec/ec_lib.c:855` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_855: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 855,
+    func: c"EC_POINT_get_Jprojective_coordinates_GFp",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_set_affine_coordinates` at `crypto/ec/ec_lib.c:868` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_868: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 868,
+    func: c"EC_POINT_set_affine_coordinates",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_set_affine_coordinates` at `crypto/ec/ec_lib.c:872` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_872: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 872,
+    func: c"EC_POINT_set_affine_coordinates",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_set_affine_coordinates` at `crypto/ec/ec_lib.c:879` (EC_R_POINT_IS_NOT_ON_CURVE).
+pub(crate) const EC_LIB_879: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 879,
+    func: c"EC_POINT_set_affine_coordinates",
+    lib: 16,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_get_affine_coordinates` at `crypto/ec/ec_lib.c:908` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_908: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 908,
+    func: c"EC_POINT_get_affine_coordinates",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_get_affine_coordinates` at `crypto/ec/ec_lib.c:912` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_912: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 912,
+    func: c"EC_POINT_get_affine_coordinates",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_get_affine_coordinates` at `crypto/ec/ec_lib.c:916` (EC_R_POINT_AT_INFINITY).
+pub(crate) const EC_LIB_916: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 916,
+    func: c"EC_POINT_get_affine_coordinates",
+    lib: 16,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_add` at `crypto/ec/ec_lib.c:944` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_944: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 944,
+    func: c"EC_POINT_add",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_add` at `crypto/ec/ec_lib.c:949` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_949: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 949,
+    func: c"EC_POINT_add",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_dbl` at `crypto/ec/ec_lib.c:959` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_959: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 959,
+    func: c"EC_POINT_dbl",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_dbl` at `crypto/ec/ec_lib.c:963` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_963: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 963,
+    func: c"EC_POINT_dbl",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_invert` at `crypto/ec/ec_lib.c:972` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_972: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 972,
+    func: c"EC_POINT_invert",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_invert` at `crypto/ec/ec_lib.c:976` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_976: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 976,
+    func: c"EC_POINT_invert",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_is_at_infinity` at `crypto/ec/ec_lib.c:985` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_985: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 985,
+    func: c"EC_POINT_is_at_infinity",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_is_at_infinity` at `crypto/ec/ec_lib.c:989` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_989: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 989,
+    func: c"EC_POINT_is_at_infinity",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_is_on_curve` at `crypto/ec/ec_lib.c:1006` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_1006: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1006,
+    func: c"EC_POINT_is_on_curve",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_is_on_curve` at `crypto/ec/ec_lib.c:1010` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_1010: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1010,
+    func: c"EC_POINT_is_on_curve",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_cmp` at `crypto/ec/ec_lib.c:1020` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_1020: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1020,
+    func: c"EC_POINT_cmp",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_cmp` at `crypto/ec/ec_lib.c:1024` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_1024: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1024,
+    func: c"EC_POINT_cmp",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_make_affine` at `crypto/ec/ec_lib.c:1034` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_1034: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1034,
+    func: c"EC_POINT_make_affine",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_make_affine` at `crypto/ec/ec_lib.c:1038` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_1038: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1038,
+    func: c"EC_POINT_make_affine",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINTs_make_affine` at `crypto/ec/ec_lib.c:1050` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_1050: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1050,
+    func: c"EC_POINTs_make_affine",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINTs_make_affine` at `crypto/ec/ec_lib.c:1055` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_1055: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1055,
+    func: c"EC_POINTs_make_affine",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINTs_mul` at `crypto/ec/ec_lib.c:1081` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_1081: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1081,
+    func: c"EC_POINTs_mul",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINTs_mul` at `crypto/ec/ec_lib.c:1090` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_1090: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1090,
+    func: c"EC_POINTs_mul",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINTs_mul` at `crypto/ec/ec_lib.c:1100` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC_LIB_1100: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1100,
+    func: c"EC_POINTs_mul",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_mul` at `crypto/ec/ec_lib.c:1128` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_LIB_1128: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1128,
+    func: c"EC_POINT_mul",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_mul` at `crypto/ec/ec_lib.c:1140` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC_LIB_1140: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1140,
+    func: c"EC_POINT_mul",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_trinomial_basis` at `crypto/ec/ec_lib.c:1357` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_1357: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1357,
+    func: c"EC_GROUP_get_trinomial_basis",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_pentanomial_basis` at `crypto/ec/ec_lib.c:1377` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_LIB_1377: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1377,
+    func: c"EC_GROUP_get_pentanomial_basis",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `group_new_from_name` at `crypto/ec/ec_lib.c:1495` (EC_R_INVALID_CURVE).
+pub(crate) const EC_LIB_1495: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1495,
+    func: c"group_new_from_name",
+    lib: 16,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_group_set_params` at `crypto/ec/ec_lib.c:1513` (EC_R_INVALID_FORM).
+pub(crate) const EC_LIB_1513: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1513,
+    func: c"ossl_ec_group_set_params",
+    lib: 16,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_group_set_params` at `crypto/ec/ec_lib.c:1522` (EC_R_INVALID_FORM).
+pub(crate) const EC_LIB_1522: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1522,
+    func: c"ossl_ec_group_set_params",
+    lib: 16,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_group_set_params` at `crypto/ec/ec_lib.c:1533` (EC_R_INVALID_SEED).
+pub(crate) const EC_LIB_1533: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1533,
+    func: c"ossl_ec_group_set_params",
+    lib: 16,
+    reason: 175,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1574` (EC_R_WRONG_CURVE_PARAMETERS).
+pub(crate) const EC_LIB_1574: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1574,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 145,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1582` (EC_R_EXPLICIT_PARAMS_NOT_SUPPORTED).
+pub(crate) const EC_LIB_1582: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1582,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 127,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1588` (ERR_R_BN_LIB).
+pub(crate) const EC_LIB_1588: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1588,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1598` (ERR_R_BN_LIB).
+pub(crate) const EC_LIB_1598: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1598,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1604` (EC_R_INVALID_FIELD).
+pub(crate) const EC_LIB_1604: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1604,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1615` (EC_R_UNSUPPORTED_FIELD).
+pub(crate) const EC_LIB_1615: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1615,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1621` (EC_R_INVALID_A).
+pub(crate) const EC_LIB_1621: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1621,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 168,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1626` (EC_R_INVALID_B).
+pub(crate) const EC_LIB_1626: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1626,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 169,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1633` (EC_R_INVALID_P).
+pub(crate) const EC_LIB_1633: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1633,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1639` (EC_R_INVALID_P).
+pub(crate) const EC_LIB_1639: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1639,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 172,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1644` (EC_R_FIELD_TOO_LARGE).
+pub(crate) const EC_LIB_1644: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1644,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1652` (EC_R_GF2M_NOT_SUPPORTED).
+pub(crate) const EC_LIB_1652: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1652,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1660` (EC_R_FIELD_TOO_LARGE).
+pub(crate) const EC_LIB_1660: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1660,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1668` (ERR_R_EC_LIB).
+pub(crate) const EC_LIB_1668: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1668,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1676` (EC_R_INVALID_SEED).
+pub(crate) const EC_LIB_1676: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1676,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 175,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1688` (EC_R_INVALID_GENERATOR).
+pub(crate) const EC_LIB_1688: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1688,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 173,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1697` (EC_R_INVALID_GENERATOR).
+pub(crate) const EC_LIB_1697: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1697,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 173,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1706` (EC_R_INVALID_GROUP_ORDER).
+pub(crate) const EC_LIB_1706: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1706,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1715` (EC_R_INVALID_COFACTOR).
+pub(crate) const EC_LIB_1715: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1715,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 171,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1722` (EC_R_INVALID_GENERATOR).
+pub(crate) const EC_LIB_1722: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1722,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 173,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1728` (EC_R_INVALID_NAMED_GROUP_CONVERSION).
+pub(crate) const EC_LIB_1728: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1728,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1739` (EC_R_INVALID_ENCODING).
+pub(crate) const EC_LIB_1739: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1739,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_params` at `crypto/ec/ec_lib.c:1743` (EC_R_INVALID_ENCODING).
+pub(crate) const EC_LIB_1743: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_lib.c",
+    line: 1743,
+    func: c"EC_GROUP_new_from_params",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_group_set_curve` at `crypto/ec/ecp_smpl.c:151` (EC_R_INVALID_FIELD).
+pub(crate) const ECP_SMPL_151: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_smpl.c",
+    line: 151,
+    func: c"ossl_ec_GFp_simple_group_set_curve",
+    lib: 16,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_group_check_discriminant` at `crypto/ec/ecp_smpl.c:261` (ERR_R_BN_LIB).
+pub(crate) const ECP_SMPL_261: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_smpl.c",
+    line: 261,
+    func: c"ossl_ec_GFp_simple_group_check_discriminant",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_point_set_affine_coordinates` at `crypto/ec/ecp_smpl.c:492` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ECP_SMPL_492: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_smpl.c",
+    line: 492,
+    func: c"ossl_ec_GFp_simple_point_set_affine_coordinates",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_point_get_affine_coordinates` at `crypto/ec/ecp_smpl.c:511` (EC_R_POINT_AT_INFINITY).
+pub(crate) const ECP_SMPL_511: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_smpl.c",
+    line: 511,
+    func: c"ossl_ec_GFp_simple_point_get_affine_coordinates",
+    lib: 16,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_point_get_affine_coordinates` at `crypto/ec/ecp_smpl.c:561` (ERR_R_BN_LIB).
+pub(crate) const ECP_SMPL_561: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_smpl.c",
+    line: 561,
+    func: c"ossl_ec_GFp_simple_point_get_affine_coordinates",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_make_affine` at `crypto/ec/ecp_smpl.c:1193` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ECP_SMPL_1193: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_smpl.c",
+    line: 1193,
+    func: c"ossl_ec_GFp_simple_make_affine",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_points_make_affine` at `crypto/ec/ecp_smpl.c:1273` (ERR_R_BN_LIB).
+pub(crate) const ECP_SMPL_1273: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_smpl.c",
+    line: 1273,
+    func: c"ossl_ec_GFp_simple_points_make_affine",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_field_inv` at `crypto/ec/ecp_smpl.c:1405` (EC_R_CANNOT_INVERT).
+pub(crate) const ECP_SMPL_1405: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_smpl.c",
+    line: 1405,
+    func: c"ossl_ec_GFp_simple_field_inv",
+    lib: 16,
+    reason: 165,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_blind_coordinates` at `crypto/ec/ecp_smpl.c:1438` (ERR_R_BN_LIB).
+pub(crate) const ECP_SMPL_1438: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_smpl.c",
+    line: 1438,
+    func: c"ossl_ec_GFp_simple_blind_coordinates",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_mont_group_set_curve` at `crypto/ec/ecp_mont.c:166` (ERR_R_BN_LIB).
+pub(crate) const ECP_MONT_166: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_mont.c",
+    line: 166,
+    func: c"ossl_ec_GFp_mont_group_set_curve",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_mont_field_mul` at `crypto/ec/ecp_mont.c:200` (EC_R_NOT_INITIALIZED).
+pub(crate) const ECP_MONT_200: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_mont.c",
+    line: 200,
+    func: c"ossl_ec_GFp_mont_field_mul",
+    lib: 16,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_mont_field_sqr` at `crypto/ec/ecp_mont.c:211` (EC_R_NOT_INITIALIZED).
+pub(crate) const ECP_MONT_211: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_mont.c",
+    line: 211,
+    func: c"ossl_ec_GFp_mont_field_sqr",
+    lib: 16,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_mont_field_inv` at `crypto/ec/ecp_mont.c:255` (EC_R_CANNOT_INVERT).
+pub(crate) const ECP_MONT_255: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_mont.c",
+    line: 255,
+    func: c"ossl_ec_GFp_mont_field_inv",
+    lib: 16,
+    reason: 165,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_mont_field_encode` at `crypto/ec/ecp_mont.c:271` (EC_R_NOT_INITIALIZED).
+pub(crate) const ECP_MONT_271: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_mont.c",
+    line: 271,
+    func: c"ossl_ec_GFp_mont_field_encode",
+    lib: 16,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_mont_field_decode` at `crypto/ec/ecp_mont.c:282` (EC_R_NOT_INITIALIZED).
+pub(crate) const ECP_MONT_282: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_mont.c",
+    line: 282,
+    func: c"ossl_ec_GFp_mont_field_decode",
+    lib: 16,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_mont_field_set_to_one` at `crypto/ec/ecp_mont.c:293` (EC_R_NOT_INITIALIZED).
+pub(crate) const ECP_MONT_293: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_mont.c",
+    line: 293,
+    func: c"ossl_ec_GFp_mont_field_set_to_one",
+    lib: 16,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_nist_group_set_curve` at `crypto/ec/ecp_nist.c:116` (EC_R_NOT_A_NIST_PRIME).
+pub(crate) const ECP_NIST_116: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_nist.c",
+    line: 116,
+    func: c"ossl_ec_GFp_nist_group_set_curve",
+    lib: 16,
+    reason: 135,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_nist_field_mul` at `crypto/ec/ecp_nist.c:135` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ECP_NIST_135: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_nist.c",
+    line: 135,
+    func: c"ossl_ec_GFp_nist_field_mul",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_nist_field_sqr` at `crypto/ec/ecp_nist.c:160` (EC_R_PASSED_NULL_PARAMETER).
+pub(crate) const ECP_NIST_160: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_nist.c",
+    line: 160,
+    func: c"ossl_ec_GFp_nist_field_sqr",
+    lib: 16,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:157` (EC_R_UNKNOWN_ORDER).
+pub(crate) const EC_MULT_157: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 157,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:161` (EC_R_UNKNOWN_COFACTOR).
+pub(crate) const EC_MULT_161: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 161,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 164,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:169` (ERR_R_EC_LIB).
+pub(crate) const EC_MULT_169: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 169,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:175` (ERR_R_EC_LIB).
+pub(crate) const EC_MULT_175: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 175,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:180` (ERR_R_EC_LIB).
+pub(crate) const EC_MULT_180: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 180,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:193` (ERR_R_BN_LIB).
+pub(crate) const EC_MULT_193: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 193,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:198` (ERR_R_BN_LIB).
+pub(crate) const EC_MULT_198: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 198,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:212` (ERR_R_BN_LIB).
+pub(crate) const EC_MULT_212: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 212,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:217` (ERR_R_BN_LIB).
+pub(crate) const EC_MULT_217: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 217,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:229` (ERR_R_BN_LIB).
+pub(crate) const EC_MULT_229: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 229,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:235` (ERR_R_BN_LIB).
+pub(crate) const EC_MULT_235: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 235,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:240` (ERR_R_BN_LIB).
+pub(crate) const EC_MULT_240: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 240,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:260` (ERR_R_BN_LIB).
+pub(crate) const EC_MULT_260: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 260,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:266` (ERR_R_EC_LIB).
+pub(crate) const EC_MULT_266: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 266,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:272` (EC_R_LADDER_PRE_FAILURE).
+pub(crate) const EC_MULT_272: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 272,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 153,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:353` (EC_R_LADDER_STEP_FAILURE).
+pub(crate) const EC_MULT_353: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 353,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 162,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_scalar_mul_ladder` at `crypto/ec/ec_mult.c:368` (EC_R_LADDER_POST_FAILURE).
+pub(crate) const EC_MULT_368: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 368,
+    func: c"ossl_ec_scalar_mul_ladder",
+    lib: 16,
+    reason: 136,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_mul` at `crypto/ec/ec_mult.c:464` (EC_R_UNDEFINED_GENERATOR).
+pub(crate) const EC_MULT_464: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 464,
+    func: c"ossl_ec_wNAF_mul",
+    lib: 16,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_mul` at `crypto/ec/ec_mult.c:491` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC_MULT_491: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 491,
+    func: c"ossl_ec_wNAF_mul",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_mul` at `crypto/ec/ec_mult.c:543` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC_MULT_543: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 543,
+    func: c"ossl_ec_wNAF_mul",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_mul` at `crypto/ec/ec_mult.c:552` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC_MULT_552: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 552,
+    func: c"ossl_ec_wNAF_mul",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_mul` at `crypto/ec/ec_mult.c:595` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC_MULT_595: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 595,
+    func: c"ossl_ec_wNAF_mul",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_mul` at `crypto/ec/ec_mult.c:610` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC_MULT_610: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 610,
+    func: c"ossl_ec_wNAF_mul",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_mul` at `crypto/ec/ec_mult.c:633` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC_MULT_633: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 633,
+    func: c"ossl_ec_wNAF_mul",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_mul` at `crypto/ec/ec_mult.c:668` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC_MULT_668: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 668,
+    func: c"ossl_ec_wNAF_mul",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_mul` at `crypto/ec/ec_mult.c:749` (EC_R_POINT_COORDINATES_BLIND_FAILURE).
+pub(crate) const EC_MULT_749: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 749,
+    func: c"ossl_ec_wNAF_mul",
+    lib: 16,
+    reason: 163,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_precompute_mult` at `crypto/ec/ec_mult.c:837` (EC_R_UNDEFINED_GENERATOR).
+pub(crate) const EC_MULT_837: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 837,
+    func: c"ossl_ec_wNAF_precompute_mult",
+    lib: 16,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_precompute_mult` at `crypto/ec/ec_mult.c:855` (EC_R_UNKNOWN_ORDER).
+pub(crate) const EC_MULT_855: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 855,
+    func: c"ossl_ec_wNAF_precompute_mult",
+    lib: 16,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_precompute_mult` at `crypto/ec/ec_mult.c:889` (ERR_R_EC_LIB).
+pub(crate) const EC_MULT_889: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 889,
+    func: c"ossl_ec_wNAF_precompute_mult",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_precompute_mult` at `crypto/ec/ec_mult.c:896` (ERR_R_EC_LIB).
+pub(crate) const EC_MULT_896: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 896,
+    func: c"ossl_ec_wNAF_precompute_mult",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_wNAF_precompute_mult` at `crypto/ec/ec_mult.c:928` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC_MULT_928: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_mult.c",
+    line: 928,
+    func: c"ossl_ec_wNAF_precompute_mult",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_set_compressed_coordinates` at `crypto/ec/ecp_oct.c:112` (EC_R_INVALID_COMPRESSED_POINT).
+pub(crate) const ECP_OCT_112: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 112,
+    func: c"ossl_ec_GFp_simple_set_compressed_coordinates",
+    lib: 16,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_set_compressed_coordinates` at `crypto/ec/ecp_oct.c:117` (ERR_R_BN_LIB).
+pub(crate) const ECP_OCT_117: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 117,
+    func: c"ossl_ec_GFp_simple_set_compressed_coordinates",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_set_compressed_coordinates` at `crypto/ec/ecp_oct.c:132` (EC_R_INVALID_COMPRESSION_BIT).
+pub(crate) const ECP_OCT_132: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 132,
+    func: c"ossl_ec_GFp_simple_set_compressed_coordinates",
+    lib: 16,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_set_compressed_coordinates` at `crypto/ec/ecp_oct.c:137` (EC_R_INVALID_COMPRESSED_POINT).
+pub(crate) const ECP_OCT_137: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 137,
+    func: c"ossl_ec_GFp_simple_set_compressed_coordinates",
+    lib: 16,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_set_compressed_coordinates` at `crypto/ec/ecp_oct.c:144` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ECP_OCT_144: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 144,
+    func: c"ossl_ec_GFp_simple_set_compressed_coordinates",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_point2oct` at `crypto/ec/ecp_oct.c:172` (EC_R_INVALID_FORM).
+pub(crate) const ECP_OCT_172: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 172,
+    func: c"ossl_ec_GFp_simple_point2oct",
+    lib: 16,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_point2oct` at `crypto/ec/ecp_oct.c:180` (EC_R_BUFFER_TOO_SMALL).
+pub(crate) const ECP_OCT_180: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 180,
+    func: c"ossl_ec_GFp_simple_point2oct",
+    lib: 16,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_point2oct` at `crypto/ec/ecp_oct.c:195` (EC_R_BUFFER_TOO_SMALL).
+pub(crate) const ECP_OCT_195: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 195,
+    func: c"ossl_ec_GFp_simple_point2oct",
+    lib: 16,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_point2oct` at `crypto/ec/ecp_oct.c:226` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ECP_OCT_226: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 226,
+    func: c"ossl_ec_GFp_simple_point2oct",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_point2oct` at `crypto/ec/ecp_oct.c:236` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ECP_OCT_236: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 236,
+    func: c"ossl_ec_GFp_simple_point2oct",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_point2oct` at `crypto/ec/ecp_oct.c:244` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ECP_OCT_244: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 244,
+    func: c"ossl_ec_GFp_simple_point2oct",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_point2oct` at `crypto/ec/ecp_oct.c:256` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ECP_OCT_256: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 256,
+    func: c"ossl_ec_GFp_simple_point2oct",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_oct2point` at `crypto/ec/ecp_oct.c:285` (EC_R_BUFFER_TOO_SMALL).
+pub(crate) const ECP_OCT_285: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 285,
+    func: c"ossl_ec_GFp_simple_oct2point",
+    lib: 16,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_oct2point` at `crypto/ec/ecp_oct.c:294` (EC_R_INVALID_ENCODING).
+pub(crate) const ECP_OCT_294: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 294,
+    func: c"ossl_ec_GFp_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_oct2point` at `crypto/ec/ecp_oct.c:298` (EC_R_INVALID_ENCODING).
+pub(crate) const ECP_OCT_298: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 298,
+    func: c"ossl_ec_GFp_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_oct2point` at `crypto/ec/ecp_oct.c:304` (EC_R_INVALID_ENCODING).
+pub(crate) const ECP_OCT_304: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 304,
+    func: c"ossl_ec_GFp_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_oct2point` at `crypto/ec/ecp_oct.c:315` (EC_R_INVALID_ENCODING).
+pub(crate) const ECP_OCT_315: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 315,
+    func: c"ossl_ec_GFp_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_oct2point` at `crypto/ec/ecp_oct.c:334` (EC_R_INVALID_ENCODING).
+pub(crate) const ECP_OCT_334: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 334,
+    func: c"ossl_ec_GFp_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_oct2point` at `crypto/ec/ecp_oct.c:345` (EC_R_INVALID_ENCODING).
+pub(crate) const ECP_OCT_345: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 345,
+    func: c"ossl_ec_GFp_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GFp_simple_oct2point` at `crypto/ec/ecp_oct.c:350` (EC_R_INVALID_ENCODING).
+pub(crate) const ECP_OCT_350: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecp_oct.c",
+    line: 350,
+    func: c"ossl_ec_GFp_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_set_compressed_coordinates` at `crypto/ec/ec_oct.c:29` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_OCT_29: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_oct.c",
+    line: 29,
+    func: c"EC_POINT_set_compressed_coordinates",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_set_compressed_coordinates` at `crypto/ec/ec_oct.c:33` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_OCT_33: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_oct.c",
+    line: 33,
+    func: c"EC_POINT_set_compressed_coordinates",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_set_compressed_coordinates` at `crypto/ec/ec_oct.c:43` (EC_R_GF2M_NOT_SUPPORTED).
+pub(crate) const EC_OCT_43: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_oct.c",
+    line: 43,
+    func: c"EC_POINT_set_compressed_coordinates",
+    lib: 16,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_point2oct` at `crypto/ec/ec_oct.c:78` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_OCT_78: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_oct.c",
+    line: 78,
+    func: c"EC_POINT_point2oct",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_point2oct` at `crypto/ec/ec_oct.c:83` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_OCT_83: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_oct.c",
+    line: 83,
+    func: c"EC_POINT_point2oct",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_point2oct` at `crypto/ec/ec_oct.c:87` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_OCT_87: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_oct.c",
+    line: 87,
+    func: c"EC_POINT_point2oct",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_point2oct` at `crypto/ec/ec_oct.c:97` (EC_R_GF2M_NOT_SUPPORTED).
+pub(crate) const EC_OCT_97: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_oct.c",
+    line: 97,
+    func: c"EC_POINT_point2oct",
+    lib: 16,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_oct2point` at `crypto/ec/ec_oct.c:114` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_OCT_114: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_oct.c",
+    line: 114,
+    func: c"EC_POINT_oct2point",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_oct2point` at `crypto/ec/ec_oct.c:118` (EC_R_INCOMPATIBLE_OBJECTS).
+pub(crate) const EC_OCT_118: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_oct.c",
+    line: 118,
+    func: c"EC_POINT_oct2point",
+    lib: 16,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EC_POINT_oct2point` at `crypto/ec/ec_oct.c:127` (EC_R_GF2M_NOT_SUPPORTED).
+pub(crate) const EC_OCT_127: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_oct.c",
+    line: 127,
+    func: c"EC_POINT_oct2point",
+    lib: 16,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_group_set_curve` at `crypto/ec/ec2_smpl.c:110` (EC_R_UNSUPPORTED_FIELD).
+pub(crate) const EC2_SMPL_110: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_smpl.c",
+    line: 110,
+    func: c"ossl_ec_GF2m_simple_group_set_curve",
+    lib: 16,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_group_check_discriminant` at `crypto/ec/ec2_smpl.c:189` (ERR_R_BN_LIB).
+pub(crate) const EC2_SMPL_189: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_smpl.c",
+    line: 189,
+    func: c"ossl_ec_GF2m_simple_group_check_discriminant",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_point_set_affine_coordinates` at `crypto/ec/ec2_smpl.c:294` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC2_SMPL_294: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_smpl.c",
+    line: 294,
+    func: c"ossl_ec_GF2m_simple_point_set_affine_coordinates",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_point_get_affine_coordinates` at `crypto/ec/ec2_smpl.c:326` (EC_R_POINT_AT_INFINITY).
+pub(crate) const EC2_SMPL_326: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_smpl.c",
+    line: 326,
+    func: c"ossl_ec_GF2m_simple_point_get_affine_coordinates",
+    lib: 16,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_point_get_affine_coordinates` at `crypto/ec/ec2_smpl.c:331` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC2_SMPL_331: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_smpl.c",
+    line: 331,
+    func: c"ossl_ec_GF2m_simple_point_get_affine_coordinates",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `ec_GF2m_simple_ladder_pre` at `crypto/ec/ec2_smpl.c:731` (ERR_R_BN_LIB).
+pub(crate) const EC2_SMPL_731: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_smpl.c",
+    line: 731,
+    func: c"ec_GF2m_simple_ladder_pre",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ec_GF2m_simple_ladder_pre` at `crypto/ec/ec2_smpl.c:746` (ERR_R_BN_LIB).
+pub(crate) const EC2_SMPL_746: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_smpl.c",
+    line: 746,
+    func: c"ec_GF2m_simple_ladder_pre",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ec_GF2m_simple_ladder_post` at `crypto/ec/ec2_smpl.c:813` (ERR_R_EC_LIB).
+pub(crate) const EC2_SMPL_813: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_smpl.c",
+    line: 813,
+    func: c"ec_GF2m_simple_ladder_post",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_GF2m_simple_ladder_post` at `crypto/ec/ec2_smpl.c:824` (ERR_R_BN_LIB).
+pub(crate) const EC2_SMPL_824: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_smpl.c",
+    line: 824,
+    func: c"ec_GF2m_simple_ladder_post",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ec_GF2m_simple_points_mul` at `crypto/ec/ec2_smpl.c:902` (ERR_R_EC_LIB).
+pub(crate) const EC2_SMPL_902: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_smpl.c",
+    line: 902,
+    func: c"ec_GF2m_simple_points_mul",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_GF2m_simple_field_inv` at `crypto/ec/ec2_smpl.c:929` (EC_R_CANNOT_INVERT).
+pub(crate) const EC2_SMPL_929: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_smpl.c",
+    line: 929,
+    func: c"ec_GF2m_simple_field_inv",
+    lib: 16,
+    reason: 165,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_set_compressed_coordinates` at `crypto/ec/ec2_oct.c:88` (EC_R_INVALID_COMPRESSED_POINT).
+pub(crate) const EC2_OCT_88: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 88,
+    func: c"ossl_ec_GF2m_simple_set_compressed_coordinates",
+    lib: 16,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_set_compressed_coordinates` at `crypto/ec/ec2_oct.c:93` (ERR_R_BN_LIB).
+pub(crate) const EC2_OCT_93: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 93,
+    func: c"ossl_ec_GF2m_simple_set_compressed_coordinates",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_point2oct` at `crypto/ec/ec2_oct.c:141` (EC_R_INVALID_FORM).
+pub(crate) const EC2_OCT_141: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 141,
+    func: c"ossl_ec_GF2m_simple_point2oct",
+    lib: 16,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_point2oct` at `crypto/ec/ec2_oct.c:149` (EC_R_BUFFER_TOO_SMALL).
+pub(crate) const EC2_OCT_149: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 149,
+    func: c"ossl_ec_GF2m_simple_point2oct",
+    lib: 16,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_point2oct` at `crypto/ec/ec2_oct.c:164` (EC_R_BUFFER_TOO_SMALL).
+pub(crate) const EC2_OCT_164: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 164,
+    func: c"ossl_ec_GF2m_simple_point2oct",
+    lib: 16,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_point2oct` at `crypto/ec/ec2_oct.c:199` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC2_OCT_199: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 199,
+    func: c"ossl_ec_GF2m_simple_point2oct",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_point2oct` at `crypto/ec/ec2_oct.c:209` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC2_OCT_209: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 209,
+    func: c"ossl_ec_GF2m_simple_point2oct",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_point2oct` at `crypto/ec/ec2_oct.c:217` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC2_OCT_217: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 217,
+    func: c"ossl_ec_GF2m_simple_point2oct",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_point2oct` at `crypto/ec/ec2_oct.c:229` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EC2_OCT_229: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 229,
+    func: c"ossl_ec_GF2m_simple_point2oct",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_oct2point` at `crypto/ec/ec2_oct.c:268` (EC_R_BUFFER_TOO_SMALL).
+pub(crate) const EC2_OCT_268: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 268,
+    func: c"ossl_ec_GF2m_simple_oct2point",
+    lib: 16,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_oct2point` at `crypto/ec/ec2_oct.c:289` (EC_R_INVALID_ENCODING).
+pub(crate) const EC2_OCT_289: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 289,
+    func: c"ossl_ec_GF2m_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_oct2point` at `crypto/ec/ec2_oct.c:293` (EC_R_INVALID_ENCODING).
+pub(crate) const EC2_OCT_293: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 293,
+    func: c"ossl_ec_GF2m_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_oct2point` at `crypto/ec/ec2_oct.c:300` (EC_R_INVALID_ENCODING).
+pub(crate) const EC2_OCT_300: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 300,
+    func: c"ossl_ec_GF2m_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_oct2point` at `crypto/ec/ec2_oct.c:312` (EC_R_INVALID_ENCODING).
+pub(crate) const EC2_OCT_312: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 312,
+    func: c"ossl_ec_GF2m_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_oct2point` at `crypto/ec/ec2_oct.c:334` (EC_R_INVALID_ENCODING).
+pub(crate) const EC2_OCT_334: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 334,
+    func: c"ossl_ec_GF2m_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_oct2point` at `crypto/ec/ec2_oct.c:345` (EC_R_INVALID_ENCODING).
+pub(crate) const EC2_OCT_345: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 345,
+    func: c"ossl_ec_GF2m_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_oct2point` at `crypto/ec/ec2_oct.c:356` (EC_R_INVALID_ENCODING).
+pub(crate) const EC2_OCT_356: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 356,
+    func: c"ossl_ec_GF2m_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_GF2m_simple_oct2point` at `crypto/ec/ec2_oct.c:363` (EC_R_INVALID_ENCODING).
+pub(crate) const EC2_OCT_363: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec2_oct.c",
+    line: 363,
+    func: c"ossl_ec_GF2m_simple_oct2point",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `EC_KEY_copy` at `crypto/ec/ec_key.c:109` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_KEY_109: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 109,
+    func: c"EC_KEY_copy",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EC_KEY_generate_key` at `crypto/ec/ec_key.c:212` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_KEY_212: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 212,
+    func: c"EC_KEY_generate_key",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EC_KEY_generate_key` at `crypto/ec/ec_key.c:224` (EC_R_OPERATION_NOT_SUPPORTED).
+pub(crate) const EC_KEY_224: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 224,
+    func: c"EC_KEY_generate_key",
+    lib: 16,
+    reason: 152,
+    dynamic_reason: false,
+};
+
+/// `EC_KEY_check_key` at `crypto/ec/ec_key.c:419` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_KEY_419: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 419,
+    func: c"EC_KEY_check_key",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EC_KEY_check_key` at `crypto/ec/ec_key.c:424` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_KEY_424: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 424,
+    func: c"EC_KEY_check_key",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_public_check_quick` at `crypto/ec/ec_key.c:480` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_KEY_480: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 480,
+    func: c"ossl_ec_key_public_check_quick",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_public_check_quick` at `crypto/ec/ec_key.c:486` (EC_R_POINT_AT_INFINITY).
+pub(crate) const EC_KEY_486: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 486,
+    func: c"ossl_ec_key_public_check_quick",
+    lib: 16,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_public_check_quick` at `crypto/ec/ec_key.c:492` (EC_R_COORDINATES_OUT_OF_RANGE).
+pub(crate) const EC_KEY_492: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 492,
+    func: c"ossl_ec_key_public_check_quick",
+    lib: 16,
+    reason: 146,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_public_check_quick` at `crypto/ec/ec_key.c:498` (EC_R_POINT_IS_NOT_ON_CURVE).
+pub(crate) const EC_KEY_498: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 498,
+    func: c"ossl_ec_key_public_check_quick",
+    lib: 16,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_public_check` at `crypto/ec/ec_key.c:529` (EC_R_INVALID_GROUP_ORDER).
+pub(crate) const EC_KEY_529: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 529,
+    func: c"ossl_ec_key_public_check",
+    lib: 16,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_public_check` at `crypto/ec/ec_key.c:534` (ERR_R_EC_LIB).
+pub(crate) const EC_KEY_534: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 534,
+    func: c"ossl_ec_key_public_check",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_public_check` at `crypto/ec/ec_key.c:538` (EC_R_WRONG_ORDER).
+pub(crate) const EC_KEY_538: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 538,
+    func: c"ossl_ec_key_public_check",
+    lib: 16,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_private_check` at `crypto/ec/ec_key.c:555` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_KEY_555: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 555,
+    func: c"ossl_ec_key_private_check",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_private_check` at `crypto/ec/ec_key.c:560` (EC_R_INVALID_PRIVATE_KEY).
+pub(crate) const EC_KEY_560: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 560,
+    func: c"ossl_ec_key_private_check",
+    lib: 16,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_pairwise_check` at `crypto/ec/ec_key.c:580` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_KEY_580: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 580,
+    func: c"ossl_ec_key_pairwise_check",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_pairwise_check` at `crypto/ec/ec_key.c:589` (ERR_R_EC_LIB).
+pub(crate) const EC_KEY_589: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 589,
+    func: c"ossl_ec_key_pairwise_check",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_pairwise_check` at `crypto/ec/ec_key.c:593` (EC_R_INVALID_PRIVATE_KEY).
+pub(crate) const EC_KEY_593: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 593,
+    func: c"ossl_ec_key_pairwise_check",
+    lib: 16,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_simple_check_key` at `crypto/ec/ec_key.c:618` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_KEY_618: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 618,
+    func: c"ossl_ec_key_simple_check_key",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EC_KEY_set_public_key_affine_coordinates` at `crypto/ec/ec_key.c:647` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_KEY_647: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 647,
+    func: c"EC_KEY_set_public_key_affine_coordinates",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EC_KEY_set_public_key_affine_coordinates` at `crypto/ec/ec_key.c:675` (EC_R_COORDINATES_OUT_OF_RANGE).
+pub(crate) const EC_KEY_675: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 675,
+    func: c"EC_KEY_set_public_key_affine_coordinates",
+    lib: 16,
+    reason: 146,
+    dynamic_reason: false,
+};
+
+/// `EC_KEY_priv2oct` at `crypto/ec/ec_key.c:944` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_KEY_944: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 944,
+    func: c"EC_KEY_priv2oct",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_simple_priv2oct` at `crypto/ec/ec_key.c:967` (EC_R_BUFFER_TOO_SMALL).
+pub(crate) const EC_KEY_967: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 967,
+    func: c"ossl_ec_key_simple_priv2oct",
+    lib: 16,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `EC_KEY_oct2priv` at `crypto/ec/ec_key.c:981` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const EC_KEY_981: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 981,
+    func: c"EC_KEY_oct2priv",
+    lib: 16,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_simple_oct2priv` at `crypto/ec/ec_key.c:994` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const EC_KEY_994: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 994,
+    func: c"ossl_ec_key_simple_oct2priv",
+    lib: 16,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_simple_oct2priv` at `crypto/ec/ec_key.c:1000` (ERR_R_BN_LIB).
+pub(crate) const EC_KEY_1000: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 1000,
+    func: c"ossl_ec_key_simple_oct2priv",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_simple_oct2priv` at `crypto/ec/ec_key.c:1004` (ERR_R_BN_LIB).
+pub(crate) const EC_KEY_1004: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_key.c",
+    line: 1004,
+    func: c"ossl_ec_key_simple_oct2priv",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_new_method_int` at `crypto/ec/ec_kmeth.c:104` (ERR_R_ENGINE_LIB).
+pub(crate) const EC_KMETH_104: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_kmeth.c",
+    line: 104,
+    func: c"ossl_ec_key_new_method_int",
+    lib: 16,
+    reason: 524326,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_new_method_int` at `crypto/ec/ec_kmeth.c:113` (ERR_R_ENGINE_LIB).
+pub(crate) const EC_KMETH_113: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_kmeth.c",
+    line: 113,
+    func: c"ossl_ec_key_new_method_int",
+    lib: 16,
+    reason: 524326,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_new_method_int` at `crypto/ec/ec_kmeth.c:125` (ERR_R_CRYPTO_LIB).
+pub(crate) const EC_KMETH_125: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_kmeth.c",
+    line: 125,
+    func: c"ossl_ec_key_new_method_int",
+    lib: 16,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_new_method_int` at `crypto/ec/ec_kmeth.c:131` (ERR_R_INIT_FAIL).
+pub(crate) const EC_KMETH_131: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_kmeth.c",
+    line: 131,
+    func: c"ossl_ec_key_new_method_int",
+    lib: 16,
+    reason: 786693,
+    dynamic_reason: false,
+};
+
+/// `ECDH_compute_key` at `crypto/ec/ec_kmeth.c:156` (EC_R_OPERATION_NOT_SUPPORTED).
+pub(crate) const EC_KMETH_156: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_kmeth.c",
+    line: 156,
+    func: c"ECDH_compute_key",
+    lib: 16,
+    reason: 152,
+    dynamic_reason: false,
+};
+
+/// `ECDH_compute_key` at `crypto/ec/ec_kmeth.c:160` (EC_R_INVALID_OUTPUT_LENGTH).
+pub(crate) const EC_KMETH_160: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_kmeth.c",
+    line: 160,
+    func: c"ECDH_compute_key",
+    lib: 16,
+    reason: 161,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:43` (EC_R_CURVE_DOES_NOT_SUPPORT_ECDSA).
+pub(crate) const ECDSA_OSSL_43: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 43,
+    func: c"ossl_ecdsa_sign_setup",
+    lib: 16,
+    reason: 170,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_sign_sig` at `crypto/ec/ecdsa_ossl.c:55` (EC_R_CURVE_DOES_NOT_SUPPORT_ECDSA).
+pub(crate) const ECDSA_OSSL_55: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 55,
+    func: c"ossl_ecdsa_sign_sig",
+    lib: 16,
+    reason: 170,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_verify_sig` at `crypto/ec/ecdsa_ossl.c:67` (EC_R_CURVE_DOES_NOT_SUPPORT_ECDSA).
+pub(crate) const ECDSA_OSSL_67: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 67,
+    func: c"ossl_ecdsa_verify_sig",
+    lib: 16,
+    reason: 170,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_deterministic_sign` at `crypto/ec/ecdsa_ossl.c:106` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ECDSA_OSSL_106: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 106,
+    func: c"ossl_ecdsa_deterministic_sign",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_deterministic_sign` at `crypto/ec/ecdsa_ossl.c:110` (EC_R_INVALID_DIGEST).
+pub(crate) const ECDSA_OSSL_110: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 110,
+    func: c"ossl_ecdsa_deterministic_sign",
+    lib: 16,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:148` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ECDSA_OSSL_148: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 148,
+    func: c"ecdsa_sign_setup",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:152` (EC_R_MISSING_PRIVATE_KEY).
+pub(crate) const ECDSA_OSSL_152: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 152,
+    func: c"ecdsa_sign_setup",
+    lib: 16,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:157` (EC_R_CURVE_DOES_NOT_SUPPORT_SIGNING).
+pub(crate) const ECDSA_OSSL_157: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 157,
+    func: c"ecdsa_sign_setup",
+    lib: 16,
+    reason: 159,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:163` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_163: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 163,
+    func: c"ecdsa_sign_setup",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:172` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_172: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 172,
+    func: c"ecdsa_sign_setup",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:176` (ERR_R_EC_LIB).
+pub(crate) const ECDSA_OSSL_176: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 176,
+    func: c"ecdsa_sign_setup",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:181` (ERR_R_EC_LIB).
+pub(crate) const ECDSA_OSSL_181: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 181,
+    func: c"ecdsa_sign_setup",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:214` (EC_R_RANDOM_NUMBER_GENERATION_FAILED).
+pub(crate) const ECDSA_OSSL_214: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 214,
+    func: c"ecdsa_sign_setup",
+    lib: 16,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:221` (ERR_R_EC_LIB).
+pub(crate) const ECDSA_OSSL_221: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 221,
+    func: c"ecdsa_sign_setup",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:226` (ERR_R_EC_LIB).
+pub(crate) const ECDSA_OSSL_226: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 226,
+    func: c"ecdsa_sign_setup",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:231` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_231: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 231,
+    func: c"ecdsa_sign_setup",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ecdsa_sign_setup` at `crypto/ec/ecdsa_ossl.c:238` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_238: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 238,
+    func: c"ecdsa_sign_setup",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:285` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ECDSA_OSSL_285: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 285,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:289` (EC_R_MISSING_PRIVATE_KEY).
+pub(crate) const ECDSA_OSSL_289: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 289,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:294` (EC_R_CURVE_DOES_NOT_SUPPORT_SIGNING).
+pub(crate) const ECDSA_OSSL_294: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 294,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 159,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:300` (ERR_R_ECDSA_LIB).
+pub(crate) const ECDSA_OSSL_300: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 300,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 524330,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:306` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_306: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 306,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:313` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_313: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 313,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:318` (ERR_R_EC_LIB).
+pub(crate) const ECDSA_OSSL_318: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 318,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:329` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_329: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 329,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:334` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_334: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 334,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:341` (ERR_R_ECDSA_LIB).
+pub(crate) const ECDSA_OSSL_341: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 341,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 524330,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:348` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_348: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 348,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:362` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_362: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 362,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:366` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_366: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 366,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:375` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_375: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 375,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:385` (EC_R_NEED_NEW_SETUP_VALUES).
+pub(crate) const ECDSA_OSSL_385: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 385,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 157,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_sign_sig` at `crypto/ec/ecdsa_ossl.c:390` (EC_R_TOO_MANY_RETRIES).
+pub(crate) const ECDSA_OSSL_390: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 390,
+    func: c"ossl_ecdsa_simple_sign_sig",
+    lib: 16,
+    reason: 176,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:455` (EC_R_MISSING_PARAMETERS).
+pub(crate) const ECDSA_OSSL_455: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 455,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:460` (EC_R_CURVE_DOES_NOT_SUPPORT_SIGNING).
+pub(crate) const ECDSA_OSSL_460: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 460,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 159,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:466` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_466: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 466,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:475` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_475: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 475,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:481` (ERR_R_EC_LIB).
+pub(crate) const ECDSA_OSSL_481: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 481,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:486` (EC_R_BAD_SIGNATURE).
+pub(crate) const ECDSA_OSSL_486: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 486,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 156,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:492` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_492: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 492,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:503` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_503: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 503,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:508` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_508: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 508,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:513` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_513: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 513,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:518` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_518: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 518,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:523` (ERR_R_EC_LIB).
+pub(crate) const ECDSA_OSSL_523: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 523,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:527` (ERR_R_EC_LIB).
+pub(crate) const ECDSA_OSSL_527: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 527,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:532` (ERR_R_EC_LIB).
+pub(crate) const ECDSA_OSSL_532: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 532,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdsa_simple_verify_sig` at `crypto/ec/ecdsa_ossl.c:537` (ERR_R_BN_LIB).
+pub(crate) const ECDSA_OSSL_537: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_ossl.c",
+    line: 537,
+    func: c"ossl_ecdsa_simple_verify_sig",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdh_compute_key` at `crypto/ec/ecdh_ossl.c:32` (EC_R_CURVE_DOES_NOT_SUPPORT_ECDH).
+pub(crate) const ECDH_OSSL_32: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdh_ossl.c",
+    line: 32,
+    func: c"ossl_ecdh_compute_key",
+    lib: 16,
+    reason: 160,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdh_simple_compute_key` at `crypto/ec/ecdh_ossl.c:66` (ERR_R_BN_LIB).
+pub(crate) const ECDH_OSSL_66: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdh_ossl.c",
+    line: 66,
+    func: c"ossl_ecdh_simple_compute_key",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdh_simple_compute_key` at `crypto/ec/ecdh_ossl.c:72` (EC_R_MISSING_PRIVATE_KEY).
+pub(crate) const ECDH_OSSL_72: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdh_ossl.c",
+    line: 72,
+    func: c"ossl_ecdh_simple_compute_key",
+    lib: 16,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdh_simple_compute_key` at `crypto/ec/ecdh_ossl.c:84` (ERR_R_EC_LIB).
+pub(crate) const ECDH_OSSL_84: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdh_ossl.c",
+    line: 84,
+    func: c"ossl_ecdh_simple_compute_key",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdh_simple_compute_key` at `crypto/ec/ecdh_ossl.c:88` (ERR_R_BN_LIB).
+pub(crate) const ECDH_OSSL_88: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdh_ossl.c",
+    line: 88,
+    func: c"ossl_ecdh_simple_compute_key",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdh_simple_compute_key` at `crypto/ec/ecdh_ossl.c:95` (ERR_R_EC_LIB).
+pub(crate) const ECDH_OSSL_95: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdh_ossl.c",
+    line: 95,
+    func: c"ossl_ecdh_simple_compute_key",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdh_simple_compute_key` at `crypto/ec/ecdh_ossl.c:100` (EC_R_POINT_ARITHMETIC_FAILURE).
+pub(crate) const ECDH_OSSL_100: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdh_ossl.c",
+    line: 100,
+    func: c"ossl_ecdh_simple_compute_key",
+    lib: 16,
+    reason: 155,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdh_simple_compute_key` at `crypto/ec/ecdh_ossl.c:110` (EC_R_POINT_ARITHMETIC_FAILURE).
+pub(crate) const ECDH_OSSL_110: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdh_ossl.c",
+    line: 110,
+    func: c"ossl_ecdh_simple_compute_key",
+    lib: 16,
+    reason: 155,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdh_simple_compute_key` at `crypto/ec/ecdh_ossl.c:121` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ECDH_OSSL_121: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdh_ossl.c",
+    line: 121,
+    func: c"ossl_ecdh_simple_compute_key",
+    lib: 16,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecdh_simple_compute_key` at `crypto/ec/ecdh_ossl.c:129` (ERR_R_BN_LIB).
+pub(crate) const ECDH_OSSL_129: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdh_ossl.c",
+    line: 129,
+    func: c"ossl_ecdh_simple_compute_key",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ECDSA_do_sign_ex` at `crypto/ec/ecdsa_sign.c:31` (EC_R_OPERATION_NOT_SUPPORTED).
+pub(crate) const ECDSA_SIGN_31: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_sign.c",
+    line: 31,
+    func: c"ECDSA_do_sign_ex",
+    lib: 16,
+    reason: 152,
+    dynamic_reason: false,
+};
+
+/// `ECDSA_sign_ex` at `crypto/ec/ecdsa_sign.c:46` (EC_R_OPERATION_NOT_SUPPORTED).
+pub(crate) const ECDSA_SIGN_46: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_sign.c",
+    line: 46,
+    func: c"ECDSA_sign_ex",
+    lib: 16,
+    reason: 152,
+    dynamic_reason: false,
+};
+
+/// `ECDSA_sign_setup` at `crypto/ec/ecdsa_sign.c:55` (EC_R_OPERATION_NOT_SUPPORTED).
+pub(crate) const ECDSA_SIGN_55: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_sign.c",
+    line: 55,
+    func: c"ECDSA_sign_setup",
+    lib: 16,
+    reason: 152,
+    dynamic_reason: false,
+};
+
+/// `ECDSA_do_verify` at `crypto/ec/ecdsa_vrf.c:31` (EC_R_OPERATION_NOT_SUPPORTED).
+pub(crate) const ECDSA_VRF_31: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_vrf.c",
+    line: 31,
+    func: c"ECDSA_do_verify",
+    lib: 16,
+    reason: 152,
+    dynamic_reason: false,
+};
+
+/// `ECDSA_verify` at `crypto/ec/ecdsa_vrf.c:47` (EC_R_OPERATION_NOT_SUPPORTED).
+pub(crate) const ECDSA_VRF_47: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecdsa_vrf.c",
+    line: 47,
+    func: c"ECDSA_verify",
+    lib: 16,
+    reason: 152,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_check_named_curve` at `crypto/ec/ec_check.c:26` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_CHECK_26: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_check.c",
+    line: 26,
+    func: c"EC_GROUP_check_named_curve",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_check_named_curve` at `crypto/ec/ec_check.c:33` (ERR_R_BN_LIB).
+pub(crate) const EC_CHECK_33: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_check.c",
+    line: 33,
+    func: c"EC_GROUP_check_named_curve",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_check` at `crypto/ec/ec_check.c:61` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_CHECK_61: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_check.c",
+    line: 61,
+    func: c"EC_GROUP_check",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_check` at `crypto/ec/ec_check.c:72` (ERR_R_BN_LIB).
+pub(crate) const EC_CHECK_72: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_check.c",
+    line: 72,
+    func: c"EC_GROUP_check",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_check` at `crypto/ec/ec_check.c:79` (EC_R_DISCRIMINANT_IS_ZERO).
+pub(crate) const EC_CHECK_79: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_check.c",
+    line: 79,
+    func: c"EC_GROUP_check",
+    lib: 16,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_check` at `crypto/ec/ec_check.c:85` (EC_R_UNDEFINED_GENERATOR).
+pub(crate) const EC_CHECK_85: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_check.c",
+    line: 85,
+    func: c"EC_GROUP_check",
+    lib: 16,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_check` at `crypto/ec/ec_check.c:89` (EC_R_POINT_IS_NOT_ON_CURVE).
+pub(crate) const EC_CHECK_89: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_check.c",
+    line: 89,
+    func: c"EC_GROUP_check",
+    lib: 16,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_check` at `crypto/ec/ec_check.c:100` (EC_R_UNDEFINED_ORDER).
+pub(crate) const EC_CHECK_100: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_check.c",
+    line: 100,
+    func: c"EC_GROUP_check",
+    lib: 16,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_check` at `crypto/ec/ec_check.c:107` (EC_R_INVALID_GROUP_ORDER).
+pub(crate) const EC_CHECK_107: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_check.c",
+    line: 107,
+    func: c"EC_GROUP_check",
+    lib: 16,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:174` (EC_R_GF2M_NOT_SUPPORTED).
+pub(crate) const EC_BACKEND_174: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 174,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:180` (EC_R_INVALID_FIELD).
+pub(crate) const EC_BACKEND_180: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 180,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:193` (ERR_R_BN_LIB).
+pub(crate) const EC_BACKEND_193: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 193,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:198` (EC_R_INVALID_CURVE).
+pub(crate) const EC_BACKEND_198: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 198,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:204` (ERR_R_CRYPTO_LIB).
+pub(crate) const EC_BACKEND_204: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 204,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:214` (EC_R_INVALID_GROUP_ORDER).
+pub(crate) const EC_BACKEND_214: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 214,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:219` (ERR_R_CRYPTO_LIB).
+pub(crate) const EC_BACKEND_219: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 219,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:229` (ERR_R_CRYPTO_LIB).
+pub(crate) const EC_BACKEND_229: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 229,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:241` (EC_R_INVALID_GENERATOR).
+pub(crate) const EC_BACKEND_241: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 241,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 173,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:246` (EC_R_INVALID_GENERATOR).
+pub(crate) const EC_BACKEND_246: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 246,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 173,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:252` (ERR_R_CRYPTO_LIB).
+pub(crate) const EC_BACKEND_252: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 252,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:264` (ERR_R_CRYPTO_LIB).
+pub(crate) const EC_BACKEND_264: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 264,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ec_group_explicit_todata` at `crypto/ec/ec_backend.c:279` (ERR_R_CRYPTO_LIB).
+pub(crate) const EC_BACKEND_279: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 279,
+    func: c"ec_group_explicit_todata",
+    lib: 16,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_group_todata` at `crypto/ec/ec_backend.c:298` (EC_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_BACKEND_298: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 298,
+    func: c"ossl_ec_group_todata",
+    lib: 16,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_group_todata` at `crypto/ec/ec_backend.c:308` (EC_R_INVALID_FORM).
+pub(crate) const EC_BACKEND_308: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 308,
+    func: c"ossl_ec_group_todata",
+    lib: 16,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_group_todata` at `crypto/ec/ec_backend.c:317` (EC_R_INVALID_ENCODING).
+pub(crate) const EC_BACKEND_317: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 317,
+    func: c"ossl_ec_group_todata",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_group_todata` at `crypto/ec/ec_backend.c:345` (EC_R_INVALID_CURVE).
+pub(crate) const EC_BACKEND_345: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 345,
+    func: c"ossl_ec_group_todata",
+    lib: 16,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `ec_key_point_format_fromdata` at `crypto/ec/ec_backend.c:524` (EC_R_INVALID_FORM).
+pub(crate) const EC_BACKEND_524: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 524,
+    func: c"ec_key_point_format_fromdata",
+    lib: 16,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_dup` at `crypto/ec/ec_backend.c:599` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_BACKEND_599: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 599,
+    func: c"ossl_ec_key_dup",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_param_from_x509_algor` at `crypto/ec/ec_backend.c:769` (ERR_R_EC_LIB).
+pub(crate) const EC_BACKEND_769: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 769,
+    func: c"ossl_ec_key_param_from_x509_algor",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_param_from_x509_algor` at `crypto/ec/ec_backend.c:779` (EC_R_DECODE_ERROR).
+pub(crate) const EC_BACKEND_779: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 779,
+    func: c"ossl_ec_key_param_from_x509_algor",
+    lib: 16,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_param_from_x509_algor` at `crypto/ec/ec_backend.c:797` (EC_R_DECODE_ERROR).
+pub(crate) const EC_BACKEND_797: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 797,
+    func: c"ossl_ec_key_param_from_x509_algor",
+    lib: 16,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `ossl_ec_key_from_pkcs8` at `crypto/ec/ec_backend.c:825` (EC_R_DECODE_ERROR).
+pub(crate) const EC_BACKEND_825: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_backend.c",
+    line: 825,
+    func: c"ossl_ec_key_from_pkcs8",
+    lib: 16,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:194` (ERR_R_OBJ_LIB).
+pub(crate) const EC_ASN1_194: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 194,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 524296,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:200` (ERR_R_BN_LIB).
+pub(crate) const EC_ASN1_200: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 200,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:205` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_205: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 205,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:211` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_211: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 211,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:217` (EC_R_GF2M_NOT_SUPPORTED).
+pub(crate) const EC_ASN1_217: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 217,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:229` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_229: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 229,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:238` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_238: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 238,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:243` (ERR_R_OBJ_LIB).
+pub(crate) const EC_ASN1_243: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 243,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 524296,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:255` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_255: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 255,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:259` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_259: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 259,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:270` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_270: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 270,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:283` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_283: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 283,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2fieldid` at `crypto/ec/ec_asn1.c:290` (EC_R_UNSUPPORTED_FIELD).
+pub(crate) const EC_ASN1_290: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 290,
+    func: c"ec_asn1_group2fieldid",
+    lib: 16,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2curve` at `crypto/ec/ec_asn1.c:312` (ERR_R_BN_LIB).
+pub(crate) const EC_ASN1_312: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 312,
+    func: c"ec_asn1_group2curve",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2curve` at `crypto/ec/ec_asn1.c:318` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_318: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 318,
+    func: c"ec_asn1_group2curve",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2curve` at `crypto/ec/ec_asn1.c:333` (ERR_R_BN_LIB).
+pub(crate) const EC_ASN1_333: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 333,
+    func: c"ec_asn1_group2curve",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2curve` at `crypto/ec/ec_asn1.c:340` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_340: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 340,
+    func: c"ec_asn1_group2curve",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2curve` at `crypto/ec/ec_asn1.c:348` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_348: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 348,
+    func: c"ec_asn1_group2curve",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `ec_asn1_group2curve` at `crypto/ec/ec_asn1.c:354` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_354: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 354,
+    func: c"ec_asn1_group2curve",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_ecparameters` at `crypto/ec/ec_asn1.c:385` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_385: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 385,
+    func: c"EC_GROUP_get_ecparameters",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_ecparameters` at `crypto/ec/ec_asn1.c:396` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_396: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 396,
+    func: c"EC_GROUP_get_ecparameters",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_ecparameters` at `crypto/ec/ec_asn1.c:402` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_402: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 402,
+    func: c"EC_GROUP_get_ecparameters",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_ecparameters` at `crypto/ec/ec_asn1.c:408` (EC_R_UNDEFINED_GENERATOR).
+pub(crate) const EC_ASN1_408: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 408,
+    func: c"EC_GROUP_get_ecparameters",
+    lib: 16,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_ecparameters` at `crypto/ec/ec_asn1.c:416` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_416: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 416,
+    func: c"EC_GROUP_get_ecparameters",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_ecparameters` at `crypto/ec/ec_asn1.c:421` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_421: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 421,
+    func: c"EC_GROUP_get_ecparameters",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_ecparameters` at `crypto/ec/ec_asn1.c:429` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_429: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 429,
+    func: c"EC_GROUP_get_ecparameters",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_ecparameters` at `crypto/ec/ec_asn1.c:435` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_435: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 435,
+    func: c"EC_GROUP_get_ecparameters",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_ecparameters` at `crypto/ec/ec_asn1.c:445` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_445: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 445,
+    func: c"EC_GROUP_get_ecparameters",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_ecpkparameters` at `crypto/ec/ec_asn1.c:466` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_466: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 466,
+    func: c"EC_GROUP_get_ecpkparameters",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_get_ecpkparameters` at `crypto/ec/ec_asn1.c:487` (EC_R_MISSING_OID).
+pub(crate) const EC_ASN1_487: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 487,
+    func: c"EC_GROUP_get_ecpkparameters",
+    lib: 16,
+    reason: 167,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:523` (EC_R_ASN1_ERROR).
+pub(crate) const EC_ASN1_523: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 523,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:536` (EC_R_ASN1_ERROR).
+pub(crate) const EC_ASN1_536: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 536,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:541` (ERR_R_BN_LIB).
+pub(crate) const EC_ASN1_541: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 541,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:546` (ERR_R_BN_LIB).
+pub(crate) const EC_ASN1_546: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 546,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:555` (EC_R_GF2M_NOT_SUPPORTED).
+pub(crate) const EC_ASN1_555: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 555,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:566` (EC_R_FIELD_TOO_LARGE).
+pub(crate) const EC_ASN1_566: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 566,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:571` (ERR_R_BN_LIB).
+pub(crate) const EC_ASN1_571: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 571,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:582` (EC_R_ASN1_ERROR).
+pub(crate) const EC_ASN1_582: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 582,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:589` (EC_R_INVALID_TRINOMIAL_BASIS).
+pub(crate) const EC_ASN1_589: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 589,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 137,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:605` (EC_R_ASN1_ERROR).
+pub(crate) const EC_ASN1_605: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 605,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:611` (EC_R_INVALID_PENTANOMIAL_BASIS).
+pub(crate) const EC_ASN1_611: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 611,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 132,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:627` (EC_R_NOT_IMPLEMENTED).
+pub(crate) const EC_ASN1_627: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 627,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:631` (EC_R_ASN1_ERROR).
+pub(crate) const EC_ASN1_631: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 631,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:643` (EC_R_ASN1_ERROR).
+pub(crate) const EC_ASN1_643: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 643,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:648` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_648: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 648,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:653` (EC_R_INVALID_FIELD).
+pub(crate) const EC_ASN1_653: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 653,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:659` (EC_R_FIELD_TOO_LARGE).
+pub(crate) const EC_ASN1_659: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 659,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:666` (EC_R_INVALID_FIELD).
+pub(crate) const EC_ASN1_666: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 666,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:671` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_671: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 671,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:684` (EC_R_ASN1_ERROR).
+pub(crate) const EC_ASN1_684: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 684,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:699` (EC_R_ASN1_ERROR).
+pub(crate) const EC_ASN1_699: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 699,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:712` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_712: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 712,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:718` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_718: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 718,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:722` (EC_R_INVALID_GROUP_ORDER).
+pub(crate) const EC_ASN1_722: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 722,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:726` (EC_R_INVALID_GROUP_ORDER).
+pub(crate) const EC_ASN1_726: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 726,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:735` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_735: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 735,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:740` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_740: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 740,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:757` (ERR_R_BN_LIB).
+pub(crate) const EC_ASN1_757: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 757,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:763` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_763: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 763,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecparameters` at `crypto/ec/ec_asn1.c:788` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_788: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 788,
+    func: c"EC_GROUP_new_from_ecparameters",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecpkparameters` at `crypto/ec/ec_asn1.c:840` (EC_R_MISSING_PARAMETERS).
+pub(crate) const EC_ASN1_840: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 840,
+    func: c"EC_GROUP_new_from_ecpkparameters",
+    lib: 16,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecpkparameters` at `crypto/ec/ec_asn1.c:848` (EC_R_EC_GROUP_NEW_BY_NAME_FAILURE).
+pub(crate) const EC_ASN1_848: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 848,
+    func: c"EC_GROUP_new_from_ecpkparameters",
+    lib: 16,
+    reason: 119,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecpkparameters` at `crypto/ec/ec_asn1.c:856` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_856: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 856,
+    func: c"EC_GROUP_new_from_ecpkparameters",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `EC_GROUP_new_from_ecpkparameters` at `crypto/ec/ec_asn1.c:864` (EC_R_ASN1_ERROR).
+pub(crate) const EC_ASN1_864: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 864,
+    func: c"EC_GROUP_new_from_ecpkparameters",
+    lib: 16,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `i2d_ECPKParameters` at `crypto/ec/ec_asn1.c:907` (EC_R_GROUP2PKPARAMETERS_FAILURE).
+pub(crate) const EC_ASN1_907: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 907,
+    func: c"i2d_ECPKParameters",
+    lib: 16,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `i2d_ECPKParameters` at `crypto/ec/ec_asn1.c:911` (EC_R_I2D_ECPKPARAMETERS_FAILURE).
+pub(crate) const EC_ASN1_911: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 911,
+    func: c"i2d_ECPKParameters",
+    lib: 16,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `d2i_ECPrivateKey` at `crypto/ec/ec_asn1.c:932` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_932: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 932,
+    func: c"d2i_ECPrivateKey",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `d2i_ECPrivateKey` at `crypto/ec/ec_asn1.c:947` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_947: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 947,
+    func: c"d2i_ECPrivateKey",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `d2i_ECPrivateKey` at `crypto/ec/ec_asn1.c:960` (EC_R_MISSING_PRIVATE_KEY).
+pub(crate) const EC_ASN1_960: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 960,
+    func: c"d2i_ECPrivateKey",
+    lib: 16,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `d2i_ECPrivateKey` at `crypto/ec/ec_asn1.c:970` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_970: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 970,
+    func: c"d2i_ECPrivateKey",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `d2i_ECPrivateKey` at `crypto/ec/ec_asn1.c:981` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_981: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 981,
+    func: c"d2i_ECPrivateKey",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `i2d_ECPrivateKey` at `crypto/ec/ec_asn1.c:1015` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_ASN1_1015: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1015,
+    func: c"i2d_ECPrivateKey",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `i2d_ECPrivateKey` at `crypto/ec/ec_asn1.c:1020` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_1020: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1020,
+    func: c"i2d_ECPrivateKey",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `i2d_ECPrivateKey` at `crypto/ec/ec_asn1.c:1029` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_1029: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1029,
+    func: c"i2d_ECPrivateKey",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `i2d_ECPrivateKey` at `crypto/ec/ec_asn1.c:1040` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_1040: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1040,
+    func: c"i2d_ECPrivateKey",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `i2d_ECPrivateKey` at `crypto/ec/ec_asn1.c:1048` (ERR_R_ASN1_LIB).
+pub(crate) const EC_ASN1_1048: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1048,
+    func: c"i2d_ECPrivateKey",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `i2d_ECPrivateKey` at `crypto/ec/ec_asn1.c:1055` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_1055: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1055,
+    func: c"i2d_ECPrivateKey",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `i2d_ECPrivateKey` at `crypto/ec/ec_asn1.c:1065` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_1065: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1065,
+    func: c"i2d_ECPrivateKey",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `i2d_ECParameters` at `crypto/ec/ec_asn1.c:1079` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_ASN1_1079: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1079,
+    func: c"i2d_ECParameters",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `d2i_ECParameters` at `crypto/ec/ec_asn1.c:1090` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_ASN1_1090: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1090,
+    func: c"d2i_ECParameters",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `d2i_ECParameters` at `crypto/ec/ec_asn1.c:1096` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_1096: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1096,
+    func: c"d2i_ECParameters",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `o2i_ECPublicKey` at `crypto/ec/ec_asn1.c:1129` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_ASN1_1129: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1129,
+    func: c"o2i_ECPublicKey",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `o2i_ECPublicKey` at `crypto/ec/ec_asn1.c:1135` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_1135: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1135,
+    func: c"o2i_ECPublicKey",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `i2o_ECPublicKey` at `crypto/ec/ec_asn1.c:1148` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_ASN1_1148: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1148,
+    func: c"i2o_ECPublicKey",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `i2o_ECPublicKey` at `crypto/ec/ec_asn1.c:1156` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const EC_ASN1_1156: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1156,
+    func: c"i2o_ECPublicKey",
+    lib: 16,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `i2o_ECPublicKey` at `crypto/ec/ec_asn1.c:1170` (ERR_R_EC_LIB).
+pub(crate) const EC_ASN1_1170: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_asn1.c",
+    line: 1170,
+    func: c"i2o_ECPublicKey",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `eckey_param2type` at `crypto/ec/ec_ameth.c:35` (EC_R_MISSING_PARAMETERS).
+pub(crate) const EC_AMETH_35: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 35,
+    func: c"eckey_param2type",
+    lib: 16,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `eckey_param2type` at `crypto/ec/ec_ameth.c:45` (EC_R_MISSING_OID).
+pub(crate) const EC_AMETH_45: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 45,
+    func: c"eckey_param2type",
+    lib: 16,
+    reason: 167,
+    dynamic_reason: false,
+};
+
+/// `eckey_param2type` at `crypto/ec/ec_ameth.c:59` (ERR_R_EC_LIB).
+pub(crate) const EC_AMETH_59: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 59,
+    func: c"eckey_param2type",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `eckey_pub_encode` at `crypto/ec/ec_ameth.c:77` (ERR_R_EC_LIB).
+pub(crate) const EC_AMETH_77: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 77,
+    func: c"eckey_pub_encode",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `eckey_pub_decode` at `crypto/ec/ec_ameth.c:119` (EC_R_DECODE_ERROR).
+pub(crate) const EC_AMETH_119: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 119,
+    func: c"eckey_pub_decode",
+    lib: 16,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `eckey_priv_encode` at `crypto/ec/ec_ameth.c:171` (EC_R_DECODE_ERROR).
+pub(crate) const EC_AMETH_171: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 171,
+    func: c"eckey_priv_encode",
+    lib: 16,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `eckey_priv_encode` at `crypto/ec/ec_ameth.c:186` (ERR_R_EC_LIB).
+pub(crate) const EC_AMETH_186: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 186,
+    func: c"eckey_priv_encode",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `eckey_priv_encode` at `crypto/ec/ec_ameth.c:192` (ERR_R_ASN1_LIB).
+pub(crate) const EC_AMETH_192: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 192,
+    func: c"eckey_priv_encode",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `do_EC_KEY_print` at `crypto/ec/ec_ameth.c:292` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EC_AMETH_292: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 292,
+    func: c"do_EC_KEY_print",
+    lib: 16,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `do_EC_KEY_print` at `crypto/ec/ec_ameth.c:341` (ERR_R_EC_LIB).
+pub(crate) const EC_AMETH_341: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 341,
+    func: c"do_EC_KEY_print",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ec_pkey_check` at `crypto/ec/ec_ameth.c:430` (EC_R_MISSING_PRIVATE_KEY).
+pub(crate) const EC_AMETH_430: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 430,
+    func: c"ec_pkey_check",
+    lib: 16,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `ec_pkey_param_check` at `crypto/ec/ec_ameth.c:459` (EC_R_MISSING_PARAMETERS).
+pub(crate) const EC_AMETH_459: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 459,
+    func: c"ec_pkey_param_check",
+    lib: 16,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `ec_pkey_import_from` at `crypto/ec/ec_ameth.c:615` (ERR_R_EC_LIB).
+pub(crate) const EC_AMETH_615: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ec_ameth.c",
+    line: 615,
+    func: c"ec_pkey_import_from",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ECPKParameters_print_fp` at `crypto/ec/eck_prn.c:27` (ERR_R_BUF_LIB).
+pub(crate) const ECK_PRN_27: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/eck_prn.c",
+    line: 27,
+    func: c"ECPKParameters_print_fp",
+    lib: 16,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `EC_KEY_print_fp` at `crypto/ec/eck_prn.c:42` (ERR_R_BIO_LIB).
+pub(crate) const ECK_PRN_42: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/eck_prn.c",
+    line: 42,
+    func: c"EC_KEY_print_fp",
+    lib: 16,
+    reason: 524320,
+    dynamic_reason: false,
+};
+
+/// `ECParameters_print_fp` at `crypto/ec/eck_prn.c:57` (ERR_R_BIO_LIB).
+pub(crate) const ECK_PRN_57: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/eck_prn.c",
+    line: 57,
+    func: c"ECParameters_print_fp",
+    lib: 16,
+    reason: 524320,
+    dynamic_reason: false,
+};
+
+/// `ECPKParameters_print` at `crypto/ec/eck_prn.c:214` (ERR_raise dynamic reason).
+pub(crate) const ECK_PRN_214: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/eck_prn.c",
+    line: 214,
+    func: c"ECPKParameters_print",
+    lib: 16,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `ossl_param_build_set_bn_pad` at `crypto/param_build_set.c:82` (CRYPTO_R_TOO_SMALL_BUFFER).
+pub(crate) const PARAM_BUILD_SET_82: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build_set.c",
+    line: 82,
+    func: c"ossl_param_build_set_bn_pad",
+    lib: 15,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `RAND_pseudo_bytes` at `crypto/rand/rand_lib.c:386` (RAND_R_FUNC_NOT_IMPLEMENTED).
+pub(crate) const RAND_LIB_386: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 386,
+    func: c"RAND_pseudo_bytes",
+    lib: 36,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `RAND_priv_bytes_ex` at `crypto/rand/rand_lib.c:430` (RAND_R_ARGUMENT_OUT_OF_RANGE).
+pub(crate) const RAND_LIB_430: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 430,
+    func: c"RAND_priv_bytes_ex",
+    lib: 36,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `RAND_priv_bytes_ex` at `crypto/rand/rand_lib.c:435` (RAND_R_FUNC_NOT_IMPLEMENTED).
+pub(crate) const RAND_LIB_435: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 435,
+    func: c"RAND_priv_bytes_ex",
+    lib: 36,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `RAND_bytes_ex` at `crypto/rand/rand_lib.c:473` (RAND_R_ARGUMENT_OUT_OF_RANGE).
+pub(crate) const RAND_LIB_473: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 473,
+    func: c"RAND_bytes_ex",
+    lib: 36,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `RAND_bytes_ex` at `crypto/rand/rand_lib.c:478` (RAND_R_FUNC_NOT_IMPLEMENTED).
+pub(crate) const RAND_LIB_478: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 478,
+    func: c"RAND_bytes_ex",
+    lib: 36,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `rand_new_seed` at `crypto/rand/rand_lib.c:610` (RAND_R_UNABLE_TO_FETCH_DRBG).
+pub(crate) const RAND_LIB_610: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 610,
+    func: c"rand_new_seed",
+    lib: 36,
+    reason: 144,
+    dynamic_reason: false,
+};
+
+/// `rand_new_seed` at `crypto/rand/rand_lib.c:616` (RAND_R_UNABLE_TO_CREATE_DRBG).
+pub(crate) const RAND_LIB_616: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 616,
+    func: c"rand_new_seed",
+    lib: 36,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `rand_new_seed` at `crypto/rand/rand_lib.c:620` (RAND_R_ERROR_INSTANTIATING_DRBG).
+pub(crate) const RAND_LIB_620: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 620,
+    func: c"rand_new_seed",
+    lib: 36,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `rand_new_drbg` at `crypto/rand/rand_lib.c:664` (RAND_R_UNABLE_TO_FETCH_DRBG).
+pub(crate) const RAND_LIB_664: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 664,
+    func: c"rand_new_drbg",
+    lib: 36,
+    reason: 144,
+    dynamic_reason: false,
+};
+
+/// `rand_new_drbg` at `crypto/rand/rand_lib.c:670` (RAND_R_UNABLE_TO_CREATE_DRBG).
+pub(crate) const RAND_LIB_670: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 670,
+    func: c"rand_new_drbg",
+    lib: 36,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `rand_new_drbg` at `crypto/rand/rand_lib.c:697` (RAND_R_ERROR_INSTANTIATING_DRBG).
+pub(crate) const RAND_LIB_697: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 697,
+    func: c"rand_new_drbg",
+    lib: 36,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `rand_new_crngt` at `crypto/rand/rand_lib.c:712` (RAND_R_UNABLE_TO_FETCH_DRBG).
+pub(crate) const RAND_LIB_712: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 712,
+    func: c"rand_new_crngt",
+    lib: 36,
+    reason: 144,
+    dynamic_reason: false,
+};
+
+/// `rand_new_crngt` at `crypto/rand/rand_lib.c:718` (RAND_R_UNABLE_TO_CREATE_DRBG).
+pub(crate) const RAND_LIB_718: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 718,
+    func: c"rand_new_crngt",
+    lib: 36,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `rand_new_crngt` at `crypto/rand/rand_lib.c:723` (RAND_R_ERROR_INSTANTIATING_DRBG).
+pub(crate) const RAND_LIB_723: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 723,
+    func: c"rand_new_crngt",
+    lib: 36,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `rand_get0_primary` at `crypto/rand/rand_lib.c:776` (EVP_R_UNABLE_TO_ENABLE_LOCKING).
+pub(crate) const RAND_LIB_776: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 776,
+    func: c"rand_get0_primary",
+    lib: 6,
+    reason: 212,
+    dynamic_reason: false,
+};
+
+/// `random_conf_init` at `crypto/rand/rand_lib.c:977` (CRYPTO_R_RANDOM_SECTION_ERROR).
+pub(crate) const RAND_LIB_977: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 977,
+    func: c"random_conf_init",
+    lib: 15,
+    reason: 119,
+    dynamic_reason: false,
+};
+
+/// `random_conf_init` at `crypto/rand/rand_lib.c:1010` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RAND_LIB_1010: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 1010,
+    func: c"random_conf_init",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `random_conf_init` at `crypto/rand/rand_lib.c:1030` (CRYPTO_R_UNKNOWN_NAME_IN_RANDOM_SECTION).
+pub(crate) const RAND_LIB_1030: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 1030,
+    func: c"random_conf_init",
+    lib: 15,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `RAND_set_DRBG_type` at `crypto/rand/rand_lib.c:1058` (RAND_R_ALREADY_INSTANTIATED).
+pub(crate) const RAND_LIB_1058: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 1058,
+    func: c"RAND_set_DRBG_type",
+    lib: 36,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `RAND_set_seed_source_type` at `crypto/rand/rand_lib.c:1075` (RAND_R_ALREADY_INSTANTIATED).
+pub(crate) const RAND_LIB_1075: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_lib.c",
+    line: 1075,
+    func: c"RAND_set_seed_source_type",
+    lib: 36,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `RAND_load_file` at `crypto/rand/randfile.c:106` (RAND_R_CANNOT_OPEN_FILE).
+pub(crate) const RANDFILE_106: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/randfile.c",
+    line: 106,
+    func: c"RAND_load_file",
+    lib: 36,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `RAND_load_file` at `crypto/rand/randfile.c:113` (RAND_R_INTERNAL_ERROR).
+pub(crate) const RANDFILE_113: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/randfile.c",
+    line: 113,
+    func: c"RAND_load_file",
+    lib: 36,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `RAND_load_file` at `crypto/rand/randfile.c:178` (RAND_R_RESEED_ERROR).
+pub(crate) const RANDFILE_178: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/randfile.c",
+    line: 178,
+    func: c"RAND_load_file",
+    lib: 36,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `RAND_write_file` at `crypto/rand/randfile.c:194` (RAND_R_NOT_A_REGULAR_FILE).
+pub(crate) const RANDFILE_194: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/randfile.c",
+    line: 194,
+    func: c"RAND_write_file",
+    lib: 36,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `RAND_write_file` at `crypto/rand/randfile.c:219` (RAND_R_CANNOT_OPEN_FILE).
+pub(crate) const RANDFILE_219: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/randfile.c",
+    line: 219,
+    func: c"RAND_write_file",
+    lib: 36,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `RAND_write_file` at `crypto/rand/randfile.c:251` (RAND_R_CANNOT_OPEN_FILE).
+pub(crate) const RANDFILE_251: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/randfile.c",
+    line: 251,
+    func: c"RAND_write_file",
+    lib: 36,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `rand_pool_grow` at `crypto/rand/rand_pool.c:205` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RAND_POOL_205: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_pool.c",
+    line: 205,
+    func: c"rand_pool_grow",
+    lib: 36,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_pool_bytes_needed` at `crypto/rand/rand_pool.c:242` (RAND_R_ARGUMENT_OUT_OF_RANGE).
+pub(crate) const RAND_POOL_242: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_pool.c",
+    line: 242,
+    func: c"ossl_rand_pool_bytes_needed",
+    lib: 36,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_pool_bytes_needed` at `crypto/rand/rand_pool.c:250` (RAND_R_RANDOM_POOL_OVERFLOW).
+pub(crate) const RAND_POOL_250: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_pool.c",
+    line: 250,
+    func: c"ossl_rand_pool_bytes_needed",
+    lib: 36,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_pool_add` at `crypto/rand/rand_pool.c:302` (RAND_R_ENTROPY_INPUT_TOO_LONG).
+pub(crate) const RAND_POOL_302: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_pool.c",
+    line: 302,
+    func: c"ossl_rand_pool_add",
+    lib: 36,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_pool_add` at `crypto/rand/rand_pool.c:307` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RAND_POOL_307: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_pool.c",
+    line: 307,
+    func: c"ossl_rand_pool_add",
+    lib: 36,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_pool_add` at `crypto/rand/rand_pool.c:321` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RAND_POOL_321: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_pool.c",
+    line: 321,
+    func: c"ossl_rand_pool_add",
+    lib: 36,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_pool_add_begin` at `crypto/rand/rand_pool.c:359` (RAND_R_RANDOM_POOL_OVERFLOW).
+pub(crate) const RAND_POOL_359: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_pool.c",
+    line: 359,
+    func: c"ossl_rand_pool_add_begin",
+    lib: 36,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_pool_add_begin` at `crypto/rand/rand_pool.c:364` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RAND_POOL_364: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_pool.c",
+    line: 364,
+    func: c"ossl_rand_pool_add_begin",
+    lib: 36,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_pool_add_end` at `crypto/rand/rand_pool.c:395` (RAND_R_RANDOM_POOL_OVERFLOW).
+pub(crate) const RAND_POOL_395: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_pool.c",
+    line: 395,
+    func: c"ossl_rand_pool_add_end",
+    lib: 36,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_pool_adin_mix_in` at `crypto/rand/rand_pool.c:426` (ERR_R_INTERNAL_ERROR).
+pub(crate) const RAND_POOL_426: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_pool.c",
+    line: 426,
+    func: c"ossl_rand_pool_adin_mix_in",
+    lib: 36,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_pool_adin_mix_in` at `crypto/rand/rand_pool.c:431` (RAND_R_RANDOM_POOL_IS_EMPTY).
+pub(crate) const RAND_POOL_431: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/rand_pool.c",
+    line: 431,
+    func: c"ossl_rand_pool_adin_mix_in",
+    lib: 36,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_get_entropy` at `crypto/rand/prov_seed.c:28` (ERR_R_RAND_LIB).
+pub(crate) const PROV_SEED_28: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/prov_seed.c",
+    line: 28,
+    func: c"ossl_rand_get_entropy",
+    lib: 36,
+    reason: 524324,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_get_nonce` at `crypto/rand/prov_seed.c:84` (ERR_R_RAND_LIB).
+pub(crate) const PROV_SEED_84: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/rand/prov_seed.c",
+    line: 84,
+    func: c"ossl_rand_get_nonce",
+    lib: 36,
+    reason: 524324,
+    dynamic_reason: false,
+};
+
+/// `ossl_drbg_lock_parent` at `providers/implementations/rands/drbg.c:70` (PROV_R_PARENT_LOCKING_NOT_ENABLED).
+pub(crate) const PROV_DRBG_70: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 70,
+    func: c"ossl_drbg_lock_parent",
+    lib: 57,
+    reason: 182,
+    dynamic_reason: false,
+};
+
+/// `get_parent_strength` at `providers/implementations/rands/drbg.c:91` (PROV_R_UNABLE_TO_GET_PARENT_STRENGTH).
+pub(crate) const PROV_DRBG_91: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 91,
+    func: c"get_parent_strength",
+    lib: 57,
+    reason: 199,
+    dynamic_reason: false,
+};
+
+/// `get_parent_strength` at `providers/implementations/rands/drbg.c:97` (PROV_R_UNABLE_TO_LOCK_PARENT).
+pub(crate) const PROV_DRBG_97: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 97,
+    func: c"get_parent_strength",
+    lib: 57,
+    reason: 201,
+    dynamic_reason: false,
+};
+
+/// `get_parent_strength` at `providers/implementations/rands/drbg.c:103` (PROV_R_UNABLE_TO_GET_PARENT_STRENGTH).
+pub(crate) const PROV_DRBG_103: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 103,
+    func: c"get_parent_strength",
+    lib: 57,
+    reason: 199,
+    dynamic_reason: false,
+};
+
+/// `get_parent_reseed_count` at `providers/implementations/rands/drbg.c:117` (PROV_R_UNABLE_TO_LOCK_PARENT).
+pub(crate) const PROV_DRBG_117: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 117,
+    func: c"get_parent_reseed_count",
+    lib: 57,
+    reason: 201,
+    dynamic_reason: false,
+};
+
+/// `ossl_drbg_get_seed` at `providers/implementations/rands/drbg.c:178` (PROV_R_GENERATE_ERROR).
+pub(crate) const PROV_DRBG_178: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 178,
+    func: c"ossl_drbg_get_seed",
+    lib: 57,
+    reason: 191,
+    dynamic_reason: false,
+};
+
+/// `get_entropy` at `providers/implementations/rands/drbg.c:208` (PROV_R_PARENT_CANNOT_SUPPLY_ENTROPY_SEED).
+pub(crate) const PROV_DRBG_208: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 208,
+    func: c"get_entropy",
+    lib: 57,
+    reason: 187,
+    dynamic_reason: false,
+};
+
+/// `get_entropy` at `providers/implementations/rands/drbg.c:218` (PROV_R_PARENT_STRENGTH_TOO_WEAK).
+pub(crate) const PROV_DRBG_218: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 218,
+    func: c"get_entropy",
+    lib: 57,
+    reason: 194,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_instantiate` at `providers/implementations/rands/drbg.c:359` (PROV_R_INSUFFICIENT_DRBG_STRENGTH).
+pub(crate) const PROV_DRBG_359: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 359,
+    func: c"ossl_prov_drbg_instantiate",
+    lib: 57,
+    reason: 181,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_instantiate` at `providers/implementations/rands/drbg.c:371` (PROV_R_PERSONALISATION_STRING_TOO_LONG).
+pub(crate) const PROV_DRBG_371: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 371,
+    func: c"ossl_prov_drbg_instantiate",
+    lib: 57,
+    reason: 195,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_instantiate` at `providers/implementations/rands/drbg.c:377` (PROV_R_IN_ERROR_STATE).
+pub(crate) const PROV_DRBG_377: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 377,
+    func: c"ossl_prov_drbg_instantiate",
+    lib: 57,
+    reason: 192,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_instantiate` at `providers/implementations/rands/drbg.c:379` (PROV_R_ALREADY_INSTANTIATED).
+pub(crate) const PROV_DRBG_379: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 379,
+    func: c"ossl_prov_drbg_instantiate",
+    lib: 57,
+    reason: 185,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_instantiate` at `providers/implementations/rands/drbg.c:391` (PROV_R_ERROR_RETRIEVING_NONCE).
+pub(crate) const PROV_DRBG_391: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 391,
+    func: c"ossl_prov_drbg_instantiate",
+    lib: 57,
+    reason: 190,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_instantiate` at `providers/implementations/rands/drbg.c:396` (PROV_R_ERROR_RETRIEVING_NONCE).
+pub(crate) const PROV_DRBG_396: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 396,
+    func: c"ossl_prov_drbg_instantiate",
+    lib: 57,
+    reason: 190,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_instantiate` at `providers/implementations/rands/drbg.c:400` (PROV_R_ERROR_RETRIEVING_NONCE).
+pub(crate) const PROV_DRBG_400: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 400,
+    func: c"ossl_prov_drbg_instantiate",
+    lib: 57,
+    reason: 190,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_instantiate` at `providers/implementations/rands/drbg.c:423` (PROV_R_ERROR_RETRIEVING_NONCE).
+pub(crate) const PROV_DRBG_423: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 423,
+    func: c"ossl_prov_drbg_instantiate",
+    lib: 57,
+    reason: 190,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_instantiate` at `providers/implementations/rands/drbg.c:442` (PROV_R_ERROR_RETRIEVING_ENTROPY).
+pub(crate) const PROV_DRBG_442: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 442,
+    func: c"ossl_prov_drbg_instantiate",
+    lib: 57,
+    reason: 189,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_instantiate` at `providers/implementations/rands/drbg.c:449` (PROV_R_ERROR_INSTANTIATING_DRBG).
+pub(crate) const PROV_DRBG_449: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 449,
+    func: c"ossl_prov_drbg_instantiate",
+    lib: 57,
+    reason: 188,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_reseed_unlocked` at `providers/implementations/rands/drbg.c:498` (PROV_R_IN_ERROR_STATE).
+pub(crate) const PROV_DRBG_498: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 498,
+    func: c"ossl_prov_drbg_reseed_unlocked",
+    lib: 57,
+    reason: 192,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_reseed_unlocked` at `providers/implementations/rands/drbg.c:502` (PROV_R_NOT_INSTANTIATED).
+pub(crate) const PROV_DRBG_502: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 502,
+    func: c"ossl_prov_drbg_reseed_unlocked",
+    lib: 57,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_reseed_unlocked` at `providers/implementations/rands/drbg.c:509` (RAND_R_ENTROPY_OUT_OF_RANGE).
+pub(crate) const PROV_DRBG_509: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 509,
+    func: c"ossl_prov_drbg_reseed_unlocked",
+    lib: 36,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_reseed_unlocked` at `providers/implementations/rands/drbg.c:514` (RAND_R_ENTROPY_INPUT_TOO_LONG).
+pub(crate) const PROV_DRBG_514: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 514,
+    func: c"ossl_prov_drbg_reseed_unlocked",
+    lib: 36,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_reseed_unlocked` at `providers/implementations/rands/drbg.c:523` (PROV_R_ADDITIONAL_INPUT_TOO_LONG).
+pub(crate) const PROV_DRBG_523: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 523,
+    func: c"ossl_prov_drbg_reseed_unlocked",
+    lib: 57,
+    reason: 184,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_reseed_unlocked` at `providers/implementations/rands/drbg.c:546` (PROV_R_UNABLE_TO_RESEED).
+pub(crate) const PROV_DRBG_546: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 546,
+    func: c"ossl_prov_drbg_reseed_unlocked",
+    lib: 57,
+    reason: 204,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_reseed_unlocked` at `providers/implementations/rands/drbg.c:551` (PROV_R_UNABLE_TO_RESEED).
+pub(crate) const PROV_DRBG_551: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 551,
+    func: c"ossl_prov_drbg_reseed_unlocked",
+    lib: 57,
+    reason: 204,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_reseed_unlocked` at `providers/implementations/rands/drbg.c:566` (PROV_R_ERROR_RETRIEVING_ENTROPY).
+pub(crate) const PROV_DRBG_566: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 566,
+    func: c"ossl_prov_drbg_reseed_unlocked",
+    lib: 57,
+    reason: 189,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_generate` at `providers/implementations/rands/drbg.c:648` (PROV_R_IN_ERROR_STATE).
+pub(crate) const PROV_DRBG_648: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 648,
+    func: c"ossl_prov_drbg_generate",
+    lib: 57,
+    reason: 192,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_generate` at `providers/implementations/rands/drbg.c:652` (PROV_R_NOT_INSTANTIATED).
+pub(crate) const PROV_DRBG_652: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 652,
+    func: c"ossl_prov_drbg_generate",
+    lib: 57,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_generate` at `providers/implementations/rands/drbg.c:657` (PROV_R_INSUFFICIENT_DRBG_STRENGTH).
+pub(crate) const PROV_DRBG_657: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 657,
+    func: c"ossl_prov_drbg_generate",
+    lib: 57,
+    reason: 181,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_generate` at `providers/implementations/rands/drbg.c:662` (PROV_R_REQUEST_TOO_LARGE_FOR_DRBG).
+pub(crate) const PROV_DRBG_662: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 662,
+    func: c"ossl_prov_drbg_generate",
+    lib: 57,
+    reason: 196,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_generate` at `providers/implementations/rands/drbg.c:666` (PROV_R_ADDITIONAL_INPUT_TOO_LONG).
+pub(crate) const PROV_DRBG_666: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 666,
+    func: c"ossl_prov_drbg_generate",
+    lib: 57,
+    reason: 184,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_generate` at `providers/implementations/rands/drbg.c:691` (PROV_R_RESEED_ERROR).
+pub(crate) const PROV_DRBG_691: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 691,
+    func: c"ossl_prov_drbg_generate",
+    lib: 57,
+    reason: 197,
+    dynamic_reason: false,
+};
+
+/// `ossl_prov_drbg_generate` at `providers/implementations/rands/drbg.c:700` (PROV_R_GENERATE_ERROR).
+pub(crate) const PROV_DRBG_700: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 700,
+    func: c"ossl_prov_drbg_generate",
+    lib: 57,
+    reason: 191,
+    dynamic_reason: false,
+};
+
+/// `ossl_drbg_enable_locking` at `providers/implementations/rands/drbg.c:765` (PROV_R_PARENT_LOCKING_NOT_ENABLED).
+pub(crate) const PROV_DRBG_765: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 765,
+    func: c"ossl_drbg_enable_locking",
+    lib: 57,
+    reason: 182,
+    dynamic_reason: false,
+};
+
+/// `ossl_drbg_enable_locking` at `providers/implementations/rands/drbg.c:770` (PROV_R_FAILED_TO_CREATE_LOCK).
+pub(crate) const PROV_DRBG_770: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 770,
+    func: c"ossl_drbg_enable_locking",
+    lib: 57,
+    reason: 180,
+    dynamic_reason: false,
+};
+
+/// `ossl_rand_drbg_new` at `providers/implementations/rands/drbg.c:854` (PROV_R_PARENT_STRENGTH_TOO_WEAK).
+pub(crate) const PROV_DRBG_854: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 854,
+    func: c"ossl_rand_drbg_new",
+    lib: 57,
+    reason: 194,
+    dynamic_reason: false,
+};
+
+/// `ossl_drbg_verify_digest` at `providers/implementations/rands/drbg.c:1014` (PROV_R_DIGEST_NOT_ALLOWED).
+pub(crate) const PROV_DRBG_1014: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 1014,
+    func: c"ossl_drbg_verify_digest",
+    lib: 57,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `ossl_drbg_verify_digest` at `providers/implementations/rands/drbg.c:1021` (PROV_R_XOF_DIGESTS_NOT_ALLOWED).
+pub(crate) const PROV_DRBG_1021: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/rands/drbg.c",
+    line: 1021,
+    func: c"ossl_drbg_verify_digest",
+    lib: 57,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_init` at `providers/implementations/rands/drbg_ctr.c:577` (PROV_R_MISSING_CIPHER).
+pub(crate) const PROV_DRBG_CTR_577: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 577,
+    func: c"drbg_ctr_init",
+    lib: 57,
+    reason: 155,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_init` at `providers/implementations/rands/drbg_ctr.c:586` (ERR_R_EVP_LIB).
+pub(crate) const PROV_DRBG_CTR_586: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 586,
+    func: c"drbg_ctr_init",
+    lib: 57,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_init` at `providers/implementations/rands/drbg_ctr.c:594` (PROV_R_UNABLE_TO_INITIALISE_CIPHERS).
+pub(crate) const PROV_DRBG_CTR_594: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 594,
+    func: c"drbg_ctr_init",
+    lib: 57,
+    reason: 208,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_init` at `providers/implementations/rands/drbg_ctr.c:607` (PROV_R_DERIVATION_FUNCTION_INIT_FAILED).
+pub(crate) const PROV_DRBG_CTR_607: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 607,
+    func: c"drbg_ctr_init",
+    lib: 57,
+    reason: 205,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_init` at `providers/implementations/rands/drbg_ctr.c:625` (ERR_R_EVP_LIB).
+pub(crate) const PROV_DRBG_CTR_625: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 625,
+    func: c"drbg_ctr_init",
+    lib: 57,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_init` at `providers/implementations/rands/drbg_ctr.c:631` (PROV_R_DERIVATION_FUNCTION_INIT_FAILED).
+pub(crate) const PROV_DRBG_CTR_631: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 631,
+    func: c"drbg_ctr_init",
+    lib: 57,
+    reason: 205,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:751` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_751: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 751,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:763` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_763: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 763,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:791` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_791: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 791,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:802` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_802: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 802,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:813` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_813: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 813,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:824` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_824: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 824,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:835` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_835: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 835,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:861` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_861: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 861,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:872` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_872: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 872,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:915` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_915: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 915,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:926` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_926: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 926,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:953` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_953: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 953,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:962` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_962: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 962,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:991` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_991: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 991,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:1002` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_1002: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 1002,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_get_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:1015` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_1015: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 1015,
+    func: c"drbg_ctr_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_set_ctx_params_locked` at `providers/implementations/rands/drbg_ctr.c:1105` (PROV_R_REQUIRE_CTR_MODE_CIPHER).
+pub(crate) const PROV_DRBG_CTR_1105: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 1105,
+    func: c"drbg_ctr_set_ctx_params_locked",
+    lib: 57,
+    reason: 206,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_set_ctx_params_locked` at `providers/implementations/rands/drbg_ctr.c:1124` (PROV_R_UNABLE_TO_FIND_CIPHERS).
+pub(crate) const PROV_DRBG_CTR_1124: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 1124,
+    func: c"drbg_ctr_set_ctx_params_locked",
+    lib: 57,
+    reason: 207,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_set_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:1179` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_1179: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 1179,
+    func: c"drbg_ctr_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_set_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:1202` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_1202: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 1202,
+    func: c"drbg_ctr_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_set_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:1213` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_1213: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 1213,
+    func: c"drbg_ctr_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_set_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:1255` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_1255: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 1255,
+    func: c"drbg_ctr_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_set_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:1266` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_1266: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 1266,
+    func: c"drbg_ctr_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_ctr_set_ctx_params_decoder` at `providers/implementations/rands/drbg_ctr.c:1284` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_CTR_1284: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_ctr.c",
+    line: 1284,
+    func: c"drbg_ctr_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:540` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_540: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 540,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:552` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_552: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 552,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:580` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_580: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 580,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:591` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_591: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 591,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:602` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_602: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 602,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:613` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_613: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 613,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:624` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_624: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 624,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:650` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_650: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 650,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:661` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_661: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 661,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:704` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_704: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 704,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:715` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_715: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 715,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:742` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_742: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 742,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:751` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_751: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 751,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:780` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_780: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 780,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:791` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_791: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 791,
+    func: c"drbg_hash_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:1011` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_1011: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 1011,
+    func: c"drbg_hash_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:1021` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_1021: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 1021,
+    func: c"drbg_hash_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:1037` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_1037: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 1037,
+    func: c"drbg_hash_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:1060` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_1060: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 1060,
+    func: c"drbg_hash_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:1071` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_1071: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 1071,
+    func: c"drbg_hash_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:1113` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_1113: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 1113,
+    func: c"drbg_hash_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hash_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hash.c:1124` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HASH_1124: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hash.c",
+    line: 1124,
+    func: c"drbg_hash_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_drbg_hmac_init` at `providers/implementations/rands/drbg_hmac.c:129` (PROV_R_MISSING_MAC).
+pub(crate) const PROV_DRBG_HMAC_129: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 129,
+    func: c"ossl_drbg_hmac_init",
+    lib: 57,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:434` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_434: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 434,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:446` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_446: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 446,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:468` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_468: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 468,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:487` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_487: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 487,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:498` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_498: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 498,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:509` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_509: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 509,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:520` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_520: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 520,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:531` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_531: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 531,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:557` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_557: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 557,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:568` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_568: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 568,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:611` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_611: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 611,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:622` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_622: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 622,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:649` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_649: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 649,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:658` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_658: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 658,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:687` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_687: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 687,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_get_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:698` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_698: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 698,
+    func: c"drbg_hmac_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:957` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_957: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 957,
+    func: c"drbg_hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:967` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_967: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 967,
+    func: c"drbg_hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:983` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_983: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 983,
+    func: c"drbg_hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:994` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_994: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 994,
+    func: c"drbg_hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:1017` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_1017: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 1017,
+    func: c"drbg_hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:1028` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_1028: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 1028,
+    func: c"drbg_hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:1070` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_1070: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 1070,
+    func: c"drbg_hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `drbg_hmac_set_ctx_params_decoder` at `providers/implementations/rands/drbg_hmac.c:1081` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DRBG_HMAC_1081: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/drbg_hmac.c",
+    line: 1081,
+    func: c"drbg_hmac_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `seed_src_new` at `providers/implementations/rands/seed_src.c:55` (PROV_R_SEED_SOURCES_MUST_NOT_HAVE_A_PARENT).
+pub(crate) const PROV_SEED_SRC_55: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/seed_src.c",
+    line: 55,
+    func: c"seed_src_new",
+    lib: 57,
+    reason: 229,
+    dynamic_reason: false,
+};
+
+/// `seed_src_generate` at `providers/implementations/rands/seed_src.c:103` (ERR_raise dynamic reason).
+pub(crate) const PROV_SEED_SRC_103: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/seed_src.c",
+    line: 103,
+    func: c"seed_src_generate",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `seed_src_generate` at `providers/implementations/rands/seed_src.c:111` (ERR_R_RAND_LIB).
+pub(crate) const PROV_SEED_SRC_111: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/seed_src.c",
+    line: 111,
+    func: c"seed_src_generate",
+    lib: 57,
+    reason: 524324,
+    dynamic_reason: false,
+};
+
+/// `seed_src_reseed` at `providers/implementations/rands/seed_src.c:140` (ERR_raise dynamic reason).
+pub(crate) const PROV_SEED_SRC_140: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/seed_src.c",
+    line: 140,
+    func: c"seed_src_reseed",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `seed_src_get_ctx_params_decoder` at `providers/implementations/rands/seed_src.c:183` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SEED_SRC_183: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/seed_src.c",
+    line: 183,
+    func: c"seed_src_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `seed_src_get_ctx_params_decoder` at `providers/implementations/rands/seed_src.c:202` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SEED_SRC_202: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/seed_src.c",
+    line: 202,
+    func: c"seed_src_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `seed_src_get_ctx_params_decoder` at `providers/implementations/rands/seed_src.c:213` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_SEED_SRC_213: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/seed_src.c",
+    line: 213,
+    func: c"seed_src_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `seed_get_seed` at `providers/implementations/rands/seed_src.c:269` (ERR_R_RAND_LIB).
+pub(crate) const PROV_SEED_SRC_269: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/seed_src.c",
+    line: 269,
+    func: c"seed_get_seed",
+    lib: 57,
+    reason: 524324,
+    dynamic_reason: false,
+};
+
+/// `seed_get_seed` at `providers/implementations/rands/seed_src.c:281` (PROV_R_ENTROPY_SOURCE_STRENGTH_TOO_WEAK).
+pub(crate) const PROV_SEED_SRC_281: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/seed_src.c",
+    line: 281,
+    func: c"seed_get_seed",
+    lib: 57,
+    reason: 186,
+    dynamic_reason: false,
+};
+
+/// `test_rng_get_ctx_params_decoder` at `providers/implementations/rands/test_rng.c:232` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TEST_RNG_232: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/test_rng.c",
+    line: 232,
+    func: c"test_rng_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `test_rng_get_ctx_params_decoder` at `providers/implementations/rands/test_rng.c:244` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TEST_RNG_244: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/test_rng.c",
+    line: 244,
+    func: c"test_rng_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `test_rng_get_ctx_params_decoder` at `providers/implementations/rands/test_rng.c:255` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TEST_RNG_255: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/test_rng.c",
+    line: 255,
+    func: c"test_rng_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `test_rng_get_ctx_params_decoder` at `providers/implementations/rands/test_rng.c:274` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TEST_RNG_274: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/test_rng.c",
+    line: 274,
+    func: c"test_rng_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `test_rng_get_ctx_params_decoder` at `providers/implementations/rands/test_rng.c:285` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TEST_RNG_285: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/test_rng.c",
+    line: 285,
+    func: c"test_rng_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `test_rng_set_ctx_params_decoder` at `providers/implementations/rands/test_rng.c:373` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TEST_RNG_373: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/test_rng.c",
+    line: 373,
+    func: c"test_rng_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `test_rng_set_ctx_params_decoder` at `providers/implementations/rands/test_rng.c:384` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TEST_RNG_384: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/test_rng.c",
+    line: 384,
+    func: c"test_rng_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `test_rng_set_ctx_params_decoder` at `providers/implementations/rands/test_rng.c:395` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TEST_RNG_395: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/test_rng.c",
+    line: 395,
+    func: c"test_rng_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `test_rng_set_ctx_params_decoder` at `providers/implementations/rands/test_rng.c:426` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TEST_RNG_426: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/test_rng.c",
+    line: 426,
+    func: c"test_rng_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `test_rng_set_ctx_params_decoder` at `providers/implementations/rands/test_rng.c:437` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_TEST_RNG_437: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/test_rng.c",
+    line: 437,
+    func: c"test_rng_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `test_rng_enable_locking` at `providers/implementations/rands/test_rng.c:524` (PROV_R_FAILED_TO_CREATE_LOCK).
+pub(crate) const PROV_TEST_RNG_524: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/test_rng.c",
+    line: 524,
+    func: c"test_rng_enable_locking",
+    lib: 57,
+    reason: 180,
+    dynamic_reason: false,
+};
+
+/// `lock_parent` at `providers/implementations/rands/fips_crng_test.c:94` (PROV_R_PARENT_LOCKING_NOT_ENABLED).
+pub(crate) const PROV_FIPS_CRNG_TEST_94: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/fips_crng_test.c",
+    line: 94,
+    func: c"lock_parent",
+    lib: 57,
+    reason: 182,
+    dynamic_reason: false,
+};
+
+/// `crng_test` at `providers/implementations/rands/fips_crng_test.c:172` (PROV_R_ENTROPY_SOURCE_FAILED_CONTINUOUS_TESTS).
+pub(crate) const PROV_FIPS_CRNG_TEST_172: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/fips_crng_test.c",
+    line: 172,
+    func: c"crng_test",
+    lib: 57,
+    reason: 244,
+    dynamic_reason: false,
+};
+
+/// `crng_test_enable_locking` at `providers/implementations/rands/fips_crng_test.c:341` (PROV_R_PARENT_LOCKING_NOT_ENABLED).
+pub(crate) const PROV_FIPS_CRNG_TEST_341: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/fips_crng_test.c",
+    line: 341,
+    func: c"crng_test_enable_locking",
+    lib: 57,
+    reason: 182,
+    dynamic_reason: false,
+};
+
+/// `crng_test_enable_locking` at `providers/implementations/rands/fips_crng_test.c:346` (PROV_R_FAILED_TO_CREATE_LOCK).
+pub(crate) const PROV_FIPS_CRNG_TEST_346: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/fips_crng_test.c",
+    line: 346,
+    func: c"crng_test_enable_locking",
+    lib: 57,
+    reason: 180,
+    dynamic_reason: false,
+};
+
+/// `crng_test_get_ctx_params_decoder` at `providers/implementations/rands/fips_crng_test.c:410` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_FIPS_CRNG_TEST_410: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/fips_crng_test.c",
+    line: 410,
+    func: c"crng_test_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `crng_test_get_ctx_params_decoder` at `providers/implementations/rands/fips_crng_test.c:422` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_FIPS_CRNG_TEST_422: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/fips_crng_test.c",
+    line: 422,
+    func: c"crng_test_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `crng_test_get_ctx_params_decoder` at `providers/implementations/rands/fips_crng_test.c:441` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_FIPS_CRNG_TEST_441: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/fips_crng_test.c",
+    line: 441,
+    func: c"crng_test_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `crng_test_get_ctx_params_decoder` at `providers/implementations/rands/fips_crng_test.c:452` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_FIPS_CRNG_TEST_452: ErrSite = ErrSite {
+    file: c"providers/implementations/rands/fips_crng_test.c",
+    line: 452,
+    func: c"crng_test_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `UI_new_method` at `crypto/ui/ui_lib.c:32` (ERR_R_CRYPTO_LIB).
+pub(crate) const UI_LIB_32: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 32,
+    func: c"UI_new_method",
+    lib: 40,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `general_allocate_prompt` at `crypto/ui/ui_lib.c:103` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const UI_LIB_103: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 103,
+    func: c"general_allocate_prompt",
+    lib: 40,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `general_allocate_prompt` at `crypto/ui/ui_lib.c:107` (UI_R_NO_RESULT_BUFFER).
+pub(crate) const UI_LIB_107: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 107,
+    func: c"general_allocate_prompt",
+    lib: 40,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `general_allocate_boolean` at `crypto/ui/ui_lib.c:159` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const UI_LIB_159: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 159,
+    func: c"general_allocate_boolean",
+    lib: 40,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `general_allocate_boolean` at `crypto/ui/ui_lib.c:161` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const UI_LIB_161: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 161,
+    func: c"general_allocate_boolean",
+    lib: 40,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `general_allocate_boolean` at `crypto/ui/ui_lib.c:165` (UI_R_COMMON_OK_AND_CANCEL_CHARACTERS).
+pub(crate) const UI_LIB_165: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 165,
+    func: c"general_allocate_boolean",
+    lib: 40,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `UI_dup_user_data` at `crypto/ui/ui_lib.c:415` (UI_R_USER_DATA_DUPLICATION_UNSUPPORTED).
+pub(crate) const UI_LIB_415: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 415,
+    func: c"UI_dup_user_data",
+    lib: 40,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `UI_dup_user_data` at `crypto/ui/ui_lib.c:421` (ERR_R_UI_LIB).
+pub(crate) const UI_LIB_421: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 421,
+    func: c"UI_dup_user_data",
+    lib: 40,
+    reason: 524328,
+    dynamic_reason: false,
+};
+
+/// `UI_get0_result` at `crypto/ui/ui_lib.c:439` (UI_R_INDEX_TOO_SMALL).
+pub(crate) const UI_LIB_439: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 439,
+    func: c"UI_get0_result",
+    lib: 40,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `UI_get0_result` at `crypto/ui/ui_lib.c:443` (UI_R_INDEX_TOO_LARGE).
+pub(crate) const UI_LIB_443: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 443,
+    func: c"UI_get0_result",
+    lib: 40,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `UI_get_result_length` at `crypto/ui/ui_lib.c:452` (UI_R_INDEX_TOO_SMALL).
+pub(crate) const UI_LIB_452: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 452,
+    func: c"UI_get_result_length",
+    lib: 40,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `UI_get_result_length` at `crypto/ui/ui_lib.c:456` (UI_R_INDEX_TOO_LARGE).
+pub(crate) const UI_LIB_456: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 456,
+    func: c"UI_get_result_length",
+    lib: 40,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `UI_process` at `crypto/ui/ui_lib.c:553` (UI_R_PROCESSING_ERROR).
+pub(crate) const UI_LIB_553: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 553,
+    func: c"UI_process",
+    lib: 40,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `UI_ctrl` at `crypto/ui/ui_lib.c:560` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const UI_LIB_560: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 560,
+    func: c"UI_ctrl",
+    lib: 40,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `UI_ctrl` at `crypto/ui/ui_lib.c:577` (UI_R_UNKNOWN_CONTROL_COMMAND).
+pub(crate) const UI_LIB_577: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 577,
+    func: c"UI_ctrl",
+    lib: 40,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `UI_create_method` at `crypto/ui/ui_lib.c:617` (ERR_R_CRYPTO_LIB).
+pub(crate) const UI_LIB_617: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 617,
+    func: c"UI_create_method",
+    lib: 40,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `UI_set_result_ex` at `crypto/ui/ui_lib.c:898` (UI_R_RESULT_TOO_SMALL).
+pub(crate) const UI_LIB_898: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 898,
+    func: c"UI_set_result_ex",
+    lib: 40,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `UI_set_result_ex` at `crypto/ui/ui_lib.c:906` (UI_R_RESULT_TOO_LARGE).
+pub(crate) const UI_LIB_906: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 906,
+    func: c"UI_set_result_ex",
+    lib: 40,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `UI_set_result_ex` at `crypto/ui/ui_lib.c:914` (UI_R_NO_RESULT_BUFFER).
+pub(crate) const UI_LIB_914: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 914,
+    func: c"UI_set_result_ex",
+    lib: 40,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `UI_set_result_ex` at `crypto/ui/ui_lib.c:927` (UI_R_NO_RESULT_BUFFER).
+pub(crate) const UI_LIB_927: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_lib.c",
+    line: 927,
+    func: c"UI_set_result_ex",
+    lib: 40,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `open_console` at `crypto/ui/ui_openssl.c:457` (UI_R_UNKNOWN_TTYGET_ERRNO_VALUE).
+pub(crate) const UI_OPENSSL_457: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_openssl.c",
+    line: 457,
+    func: c"open_console",
+    lib: 40,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `open_console` at `crypto/ui/ui_openssl.c:468` (UI_R_SYSASSIGN_ERROR).
+pub(crate) const UI_OPENSSL_468: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_openssl.c",
+    line: 468,
+    func: c"open_console",
+    lib: 40,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `noecho_console` at `crypto/ui/ui_openssl.c:502` (UI_R_SYSQIOW_ERROR).
+pub(crate) const UI_OPENSSL_502: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_openssl.c",
+    line: 502,
+    func: c"noecho_console",
+    lib: 40,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `echo_console` at `crypto/ui/ui_openssl.c:534` (UI_R_SYSQIOW_ERROR).
+pub(crate) const UI_OPENSSL_534: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_openssl.c",
+    line: 534,
+    func: c"echo_console",
+    lib: 40,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `close_console` at `crypto/ui/ui_openssl.c:561` (UI_R_SYSDASSGN_ERROR).
+pub(crate) const UI_OPENSSL_561: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ui/ui_openssl.c",
+    line: 561,
+    func: c"close_console",
+    lib: 40,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `PEM_read_bio_DHparams` at `crypto/pem/pem_all.c:201` (ERR_R_ASN1_LIB).
+pub(crate) const PEM_ALL_201: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_all.c",
+    line: 201,
+    func: c"PEM_read_bio_DHparams",
+    lib: 9,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PEM_read_DHparams` at `crypto/pem/pem_all.c:214` (ERR_R_BUF_LIB).
+pub(crate) const PEM_ALL_214: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_all.c",
+    line: 214,
+    func: c"PEM_read_DHparams",
+    lib: 9,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `ossl_pw_set_passphrase` at `crypto/passphrase.c:38` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PASSPHRASE_38: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 38,
+    func: c"ossl_pw_set_passphrase",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_pw_set_pem_password_cb` at `crypto/passphrase.c:55` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PASSPHRASE_55: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 55,
+    func: c"ossl_pw_set_pem_password_cb",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_pw_set_ossl_passphrase_cb` at `crypto/passphrase.c:69` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PASSPHRASE_69: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 69,
+    func: c"ossl_pw_set_ossl_passphrase_cb",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_pw_set_ui_method` at `crypto/passphrase.c:83` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PASSPHRASE_83: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 83,
+    func: c"ossl_pw_set_ui_method",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `do_ui_passphrase` at `crypto/passphrase.c:124` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PASSPHRASE_124: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 124,
+    func: c"do_ui_passphrase",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `do_ui_passphrase` at `crypto/passphrase.c:129` (ERR_R_UI_LIB).
+pub(crate) const PASSPHRASE_129: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 129,
+    func: c"do_ui_passphrase",
+    lib: 15,
+    reason: 524328,
+    dynamic_reason: false,
+};
+
+/// `do_ui_passphrase` at `crypto/passphrase.c:142` (ERR_R_UI_LIB).
+pub(crate) const PASSPHRASE_142: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 142,
+    func: c"do_ui_passphrase",
+    lib: 15,
+    reason: 524328,
+    dynamic_reason: false,
+};
+
+/// `do_ui_passphrase` at `crypto/passphrase.c:156` (ERR_R_UI_LIB).
+pub(crate) const PASSPHRASE_156: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 156,
+    func: c"do_ui_passphrase",
+    lib: 15,
+    reason: 524328,
+    dynamic_reason: false,
+};
+
+/// `do_ui_passphrase` at `crypto/passphrase.c:171` (ERR_R_UI_LIB).
+pub(crate) const PASSPHRASE_171: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 171,
+    func: c"do_ui_passphrase",
+    lib: 15,
+    reason: 524328,
+    dynamic_reason: false,
+};
+
+/// `do_ui_passphrase` at `crypto/passphrase.c:178` (ERR_R_INTERRUPTED_OR_CANCELLED).
+pub(crate) const PASSPHRASE_178: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 178,
+    func: c"do_ui_passphrase",
+    lib: 15,
+    reason: 524553,
+    dynamic_reason: false,
+};
+
+/// `do_ui_passphrase` at `crypto/passphrase.c:181` (ERR_R_UI_LIB).
+pub(crate) const PASSPHRASE_181: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 181,
+    func: c"do_ui_passphrase",
+    lib: 15,
+    reason: 524328,
+    dynamic_reason: false,
+};
+
+/// `do_ui_passphrase` at `crypto/passphrase.c:186` (ERR_R_UI_LIB).
+pub(crate) const PASSPHRASE_186: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 186,
+    func: c"do_ui_passphrase",
+    lib: 15,
+    reason: 524328,
+    dynamic_reason: false,
+};
+
+/// `ossl_pw_get_passphrase` at `crypto/passphrase.c:251` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PASSPHRASE_251: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 251,
+    func: c"ossl_pw_get_passphrase",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `ossl_pw_get_passphrase` at `crypto/passphrase.c:266` (ERR_R_UI_LIB).
+pub(crate) const PASSPHRASE_266: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 266,
+    func: c"ossl_pw_get_passphrase",
+    lib: 15,
+    reason: 524328,
+    dynamic_reason: false,
+};
+
+/// `ossl_pw_get_passphrase` at `crypto/passphrase.c:275` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PASSPHRASE_275: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/passphrase.c",
+    line: 275,
+    func: c"ossl_pw_get_passphrase",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `encoder_from_algorithm` at `crypto/encode_decode/encoder_meth.c:286` (ERR_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const ENCODER_METH_286: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_meth.c",
+    line: 286,
+    func: c"encoder_from_algorithm",
+    lib: 59,
+    reason: 786696,
+    dynamic_reason: false,
+};
+
+/// `inner_ossl_encoder_fetch` at `crypto/encode_decode/encoder_meth.c:362` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const ENCODER_METH_362: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_meth.c",
+    line: 362,
+    func: c"inner_ossl_encoder_fetch",
+    lib: 59,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `inner_ossl_encoder_fetch` at `crypto/encode_decode/encoder_meth.c:419` (ERR_raise_data dynamic reason).
+pub(crate) const ENCODER_METH_419: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_meth.c",
+    line: 419,
+    func: c"inner_ossl_encoder_fetch",
+    lib: 59,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `OSSL_ENCODER_get0_provider` at `crypto/encode_decode/encoder_meth.c:468` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_METH_468: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_meth.c",
+    line: 468,
+    func: c"OSSL_ENCODER_get0_provider",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_get0_properties` at `crypto/encode_decode/encoder_meth.c:478` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_METH_478: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_meth.c",
+    line: 478,
+    func: c"OSSL_ENCODER_get0_properties",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_encoder_parsed_properties` at `crypto/encode_decode/encoder_meth.c:489` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_METH_489: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_meth.c",
+    line: 489,
+    func: c"ossl_encoder_parsed_properties",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_encoder_get_number` at `crypto/encode_decode/encoder_meth.c:499` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_METH_499: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_meth.c",
+    line: 499,
+    func: c"ossl_encoder_get_number",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_CTX_set_params` at `crypto/encode_decode/encoder_meth.c:624` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_METH_624: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_meth.c",
+    line: 624,
+    func: c"OSSL_ENCODER_CTX_set_params",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_to_bio` at `crypto/encode_decode/encoder_lib.c:78` (OSSL_ENCODER_R_ENCODER_NOT_FOUND).
+pub(crate) const ENCODER_LIB_78: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 78,
+    func: c"OSSL_ENCODER_to_bio",
+    lib: 59,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_to_bio` at `crypto/encode_decode/encoder_lib.c:86` (ERR_R_INIT_FAIL).
+pub(crate) const ENCODER_LIB_86: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 86,
+    func: c"OSSL_ENCODER_to_bio",
+    lib: 59,
+    reason: 786693,
+    dynamic_reason: false,
+};
+
+/// `bio_from_file` at `crypto/encode_decode/encoder_lib.c:99` (ERR_R_BUF_LIB).
+pub(crate) const ENCODER_LIB_99: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 99,
+    func: c"bio_from_file",
+    lib: 59,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_to_data` at `crypto/encode_decode/encoder_lib.c:127` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_LIB_127: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 127,
+    func: c"OSSL_ENCODER_to_data",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_CTX_set_selection` at `crypto/encode_decode/encoder_lib.c:173` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_LIB_173: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 173,
+    func: c"OSSL_ENCODER_CTX_set_selection",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_CTX_set_selection` at `crypto/encode_decode/encoder_lib.c:178` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const ENCODER_LIB_178: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 178,
+    func: c"OSSL_ENCODER_CTX_set_selection",
+    lib: 59,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_CTX_set_output_type` at `crypto/encode_decode/encoder_lib.c:190` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_LIB_190: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 190,
+    func: c"OSSL_ENCODER_CTX_set_output_type",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_CTX_set_output_structure` at `crypto/encode_decode/encoder_lib.c:202` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_LIB_202: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 202,
+    func: c"OSSL_ENCODER_CTX_set_output_structure",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_encoder_instance_new` at `crypto/encode_decode/encoder_lib.c:220` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_LIB_220: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 220,
+    func: c"ossl_encoder_instance_new",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_encoder_instance_new` at `crypto/encode_decode/encoder_lib.c:228` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ENCODER_LIB_228: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 228,
+    func: c"ossl_encoder_instance_new",
+    lib: 59,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_encoder_instance_new` at `crypto/encode_decode/encoder_lib.c:236` (ERR_R_INVALID_PROPERTY_DEFINITION).
+pub(crate) const ENCODER_LIB_236: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 236,
+    func: c"ossl_encoder_instance_new",
+    lib: 60,
+    reason: 524558,
+    dynamic_reason: false,
+};
+
+/// `ossl_encoder_instance_new` at `crypto/encode_decode/encoder_lib.c:246` (ERR_R_INVALID_PROPERTY_DEFINITION).
+pub(crate) const ENCODER_LIB_246: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 246,
+    func: c"ossl_encoder_instance_new",
+    lib: 60,
+    reason: 524558,
+    dynamic_reason: false,
+};
+
+/// `ossl_encoder_ctx_add_encoder_inst` at `crypto/encode_decode/encoder_lib.c:287` (ERR_R_CRYPTO_LIB).
+pub(crate) const ENCODER_LIB_287: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 287,
+    func: c"ossl_encoder_ctx_add_encoder_inst",
+    lib: 59,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_CTX_add_encoder` at `crypto/encode_decode/encoder_lib.c:315` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_LIB_315: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 315,
+    func: c"OSSL_ENCODER_CTX_add_encoder",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_CTX_set_construct` at `crypto/encode_decode/encoder_lib.c:356` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_LIB_356: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 356,
+    func: c"OSSL_ENCODER_CTX_set_construct",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_CTX_set_construct_data` at `crypto/encode_decode/encoder_lib.c:367` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_LIB_367: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 367,
+    func: c"OSSL_ENCODER_CTX_set_construct_data",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_CTX_set_cleanup` at `crypto/encode_decode/encoder_lib.c:378` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_LIB_378: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 378,
+    func: c"OSSL_ENCODER_CTX_set_cleanup",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `encoder_process` at `crypto/encode_decode/encoder_lib.c:614` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ENCODER_LIB_614: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_lib.c",
+    line: 614,
+    func: c"encoder_process",
+    lib: 59,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_encoder_ctx_setup_for_pkey` at `crypto/encode_decode/encoder_pkey.c:239` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_PKEY_239: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_pkey.c",
+    line: 239,
+    func: c"ossl_encoder_ctx_setup_for_pkey",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_encoder_ctx_setup_for_pkey` at `crypto/encode_decode/encoder_pkey.c:261` (ERR_R_CRYPTO_LIB).
+pub(crate) const ENCODER_PKEY_261: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_pkey.c",
+    line: 261,
+    func: c"ossl_encoder_ctx_setup_for_pkey",
+    lib: 59,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ossl_encoder_ctx_setup_for_pkey` at `crypto/encode_decode/encoder_pkey.c:316` (ERR_R_CRYPTO_LIB).
+pub(crate) const ENCODER_PKEY_316: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_pkey.c",
+    line: 316,
+    func: c"ossl_encoder_ctx_setup_for_pkey",
+    lib: 59,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_CTX_new_for_pkey` at `crypto/encode_decode/encoder_pkey.c:352` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENCODER_PKEY_352: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_pkey.c",
+    line: 352,
+    func: c"OSSL_ENCODER_CTX_new_for_pkey",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_CTX_new_for_pkey` at `crypto/encode_decode/encoder_pkey.c:357` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const ENCODER_PKEY_357: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_pkey.c",
+    line: 357,
+    func: c"OSSL_ENCODER_CTX_new_for_pkey",
+    lib: 59,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_ENCODER_CTX_new_for_pkey` at `crypto/encode_decode/encoder_pkey.c:363` (ERR_R_OSSL_ENCODER_LIB).
+pub(crate) const ENCODER_PKEY_363: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/encoder_pkey.c",
+    line: 363,
+    func: c"OSSL_ENCODER_CTX_new_for_pkey",
+    lib: 59,
+    reason: 524347,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_from_algorithm` at `crypto/encode_decode/decoder_meth.c:280` (ERR_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const DECODER_METH_280: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+    line: 280,
+    func: c"ossl_decoder_from_algorithm",
+    lib: 60,
+    reason: 786696,
+    dynamic_reason: false,
+};
+
+/// `inner_ossl_decoder_fetch` at `crypto/encode_decode/decoder_meth.c:356` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const DECODER_METH_356: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+    line: 356,
+    func: c"inner_ossl_decoder_fetch",
+    lib: 60,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `inner_ossl_decoder_fetch` at `crypto/encode_decode/decoder_meth.c:414` (ERR_raise_data dynamic reason).
+pub(crate) const DECODER_METH_414: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+    line: 414,
+    func: c"inner_ossl_decoder_fetch",
+    lib: 60,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `OSSL_DECODER_get0_provider` at `crypto/encode_decode/decoder_meth.c:463` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_METH_463: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+    line: 463,
+    func: c"OSSL_DECODER_get0_provider",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_get0_properties` at `crypto/encode_decode/decoder_meth.c:473` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_METH_473: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+    line: 473,
+    func: c"OSSL_DECODER_get0_properties",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_parsed_properties` at `crypto/encode_decode/decoder_meth.c:484` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_METH_484: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+    line: 484,
+    func: c"ossl_decoder_parsed_properties",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_get_number` at `crypto/encode_decode/decoder_meth.c:494` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_METH_494: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+    line: 494,
+    func: c"ossl_decoder_get_number",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_set_params` at `crypto/encode_decode/decoder_meth.c:644` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_METH_644: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_meth.c",
+    line: 644,
+    func: c"OSSL_DECODER_CTX_set_params",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_from_bio` at `crypto/encode_decode/decoder_lib.c:55` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_55: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 55,
+    func: c"OSSL_DECODER_from_bio",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_from_bio` at `crypto/encode_decode/decoder_lib.c:60` (OSSL_DECODER_R_DECODER_NOT_FOUND).
+pub(crate) const DECODER_LIB_60: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 60,
+    func: c"OSSL_DECODER_from_bio",
+    lib: 60,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_from_bio` at `crypto/encode_decode/decoder_lib.c:104` (ERR_R_UNSUPPORTED).
+pub(crate) const DECODER_LIB_104: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 104,
+    func: c"OSSL_DECODER_from_bio",
+    lib: 60,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `bio_from_file` at `crypto/encode_decode/decoder_lib.c:127` (ERR_R_BIO_LIB).
+pub(crate) const DECODER_LIB_127: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 127,
+    func: c"bio_from_file",
+    lib: 60,
+    reason: 524320,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_from_data` at `crypto/encode_decode/decoder_lib.c:154` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_154: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 154,
+    func: c"OSSL_DECODER_from_data",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_set_selection` at `crypto/encode_decode/decoder_lib.c:171` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_171: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 171,
+    func: c"OSSL_DECODER_CTX_set_selection",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_set_input_type` at `crypto/encode_decode/decoder_lib.c:187` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_187: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 187,
+    func: c"OSSL_DECODER_CTX_set_input_type",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_set_input_structure` at `crypto/encode_decode/decoder_lib.c:203` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_203: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 203,
+    func: c"OSSL_DECODER_CTX_set_input_structure",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_instance_new_forprov` at `crypto/encode_decode/decoder_lib.c:222` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_222: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 222,
+    func: c"ossl_decoder_instance_new_forprov",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_instance_new` at `crypto/encode_decode/decoder_lib.c:252` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_252: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 252,
+    func: c"ossl_decoder_instance_new",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_instance_new` at `crypto/encode_decode/decoder_lib.c:263` (ERR_R_INVALID_PROPERTY_DEFINITION).
+pub(crate) const DECODER_LIB_263: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 263,
+    func: c"ossl_decoder_instance_new",
+    lib: 60,
+    reason: 524558,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_instance_new` at `crypto/encode_decode/decoder_lib.c:274` (ERR_R_INVALID_PROPERTY_DEFINITION).
+pub(crate) const DECODER_LIB_274: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 274,
+    func: c"ossl_decoder_instance_new",
+    lib: 60,
+    reason: 524558,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_instance_new` at `crypto/encode_decode/decoder_lib.c:290` (ERR_R_INTERNAL_ERROR).
+pub(crate) const DECODER_LIB_290: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 290,
+    func: c"ossl_decoder_instance_new",
+    lib: 60,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_instance_dup` at `crypto/encode_decode/decoder_lib.c:324` (ERR_R_INTERNAL_ERROR).
+pub(crate) const DECODER_LIB_324: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 324,
+    func: c"ossl_decoder_instance_dup",
+    lib: 60,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_instance_dup` at `crypto/encode_decode/decoder_lib.c:332` (ERR_R_INTERNAL_ERROR).
+pub(crate) const DECODER_LIB_332: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 332,
+    func: c"ossl_decoder_instance_dup",
+    lib: 60,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_ctx_add_decoder_inst` at `crypto/encode_decode/decoder_lib.c:361` (ERR_R_CRYPTO_LIB).
+pub(crate) const DECODER_LIB_361: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 361,
+    func: c"ossl_decoder_ctx_add_decoder_inst",
+    lib: 60,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_add_decoder` at `crypto/encode_decode/decoder_lib.c:389` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_389: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 389,
+    func: c"OSSL_DECODER_CTX_add_decoder",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_add_extra` at `crypto/encode_decode/decoder_lib.c:589` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_589: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 589,
+    func: c"OSSL_DECODER_CTX_add_extra",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_add_extra` at `crypto/encode_decode/decoder_lib.c:609` (ERR_R_CRYPTO_LIB).
+pub(crate) const DECODER_LIB_609: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 609,
+    func: c"OSSL_DECODER_CTX_add_extra",
+    lib: 60,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_set_construct` at `crypto/encode_decode/decoder_lib.c:691` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_691: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 691,
+    func: c"OSSL_DECODER_CTX_set_construct",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_set_construct_data` at `crypto/encode_decode/decoder_lib.c:702` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_702: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 702,
+    func: c"OSSL_DECODER_CTX_set_construct_data",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_set_cleanup` at `crypto/encode_decode/decoder_lib.c:713` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_713: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 713,
+    func: c"OSSL_DECODER_CTX_set_cleanup",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_export` at `crypto/encode_decode/decoder_lib.c:754` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DECODER_LIB_754: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 754,
+    func: c"OSSL_DECODER_export",
+    lib: 60,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `decoder_process` at `crypto/encode_decode/decoder_lib.c:965` (ERR_R_BIO_LIB).
+pub(crate) const DECODER_LIB_965: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 965,
+    func: c"decoder_process",
+    lib: 60,
+    reason: 524320,
+    dynamic_reason: false,
+};
+
+/// `decoder_process` at `crypto/encode_decode/decoder_lib.c:970` (ERR_R_BIO_LIB).
+pub(crate) const DECODER_LIB_970: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_lib.c",
+    line: 970,
+    func: c"decoder_process",
+    lib: 60,
+    reason: 524320,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_ctx_setup_for_pkey` at `crypto/encode_decode/decoder_pkey.c:470` (ERR_R_CRYPTO_LIB).
+pub(crate) const DECODER_PKEY_470: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 470,
+    func: c"ossl_decoder_ctx_setup_for_pkey",
+    lib: 60,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_ctx_for_pkey_dup` at `crypto/encode_decode/decoder_pkey.c:587` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const DECODER_PKEY_587: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 587,
+    func: c"ossl_decoder_ctx_for_pkey_dup",
+    lib: 60,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_ctx_for_pkey_dup` at `crypto/encode_decode/decoder_pkey.c:593` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const DECODER_PKEY_593: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 593,
+    func: c"ossl_decoder_ctx_for_pkey_dup",
+    lib: 60,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_ctx_for_pkey_dup` at `crypto/encode_decode/decoder_pkey.c:604` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const DECODER_PKEY_604: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 604,
+    func: c"ossl_decoder_ctx_for_pkey_dup",
+    lib: 60,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_ctx_for_pkey_dup` at `crypto/encode_decode/decoder_pkey.c:611` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const DECODER_PKEY_611: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 611,
+    func: c"ossl_decoder_ctx_for_pkey_dup",
+    lib: 60,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_ctx_for_pkey_dup` at `crypto/encode_decode/decoder_pkey.c:619` (ERR_R_CRYPTO_LIB).
+pub(crate) const DECODER_PKEY_619: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 619,
+    func: c"ossl_decoder_ctx_for_pkey_dup",
+    lib: 60,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_ctx_for_pkey_dup` at `crypto/encode_decode/decoder_pkey.c:625` (ERR_R_CRYPTO_LIB).
+pub(crate) const DECODER_PKEY_625: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 625,
+    func: c"ossl_decoder_ctx_for_pkey_dup",
+    lib: 60,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_ctx_for_pkey_dup` at `crypto/encode_decode/decoder_pkey.c:636` (ERR_R_EVP_LIB).
+pub(crate) const DECODER_PKEY_636: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 636,
+    func: c"ossl_decoder_ctx_for_pkey_dup",
+    lib: 60,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_ctx_for_pkey_dup` at `crypto/encode_decode/decoder_pkey.c:646` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const DECODER_PKEY_646: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 646,
+    func: c"ossl_decoder_ctx_for_pkey_dup",
+    lib: 60,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_ctx_for_pkey_dup` at `crypto/encode_decode/decoder_pkey.c:654` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const DECODER_PKEY_654: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 654,
+    func: c"ossl_decoder_ctx_for_pkey_dup",
+    lib: 60,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `ossl_decoder_cache_flush` at `crypto/encode_decode/decoder_pkey.c:809` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const DECODER_PKEY_809: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 809,
+    func: c"ossl_decoder_cache_flush",
+    lib: 60,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_new_for_pkey` at `crypto/encode_decode/decoder_pkey.c:839` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const DECODER_PKEY_839: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 839,
+    func: c"OSSL_DECODER_CTX_new_for_pkey",
+    lib: 60,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_new_for_pkey` at `crypto/encode_decode/decoder_pkey.c:857` (ERR_R_CRYPTO_LIB).
+pub(crate) const DECODER_PKEY_857: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 857,
+    func: c"OSSL_DECODER_CTX_new_for_pkey",
+    lib: 60,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_new_for_pkey` at `crypto/encode_decode/decoder_pkey.c:873` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const DECODER_PKEY_873: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 873,
+    func: c"OSSL_DECODER_CTX_new_for_pkey",
+    lib: 60,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_new_for_pkey` at `crypto/encode_decode/decoder_pkey.c:901` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const DECODER_PKEY_901: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 901,
+    func: c"OSSL_DECODER_CTX_new_for_pkey",
+    lib: 60,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_new_for_pkey` at `crypto/encode_decode/decoder_pkey.c:937` (ERR_R_CRYPTO_LIB).
+pub(crate) const DECODER_PKEY_937: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 937,
+    func: c"OSSL_DECODER_CTX_new_for_pkey",
+    lib: 60,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `OSSL_DECODER_CTX_new_for_pkey` at `crypto/encode_decode/decoder_pkey.c:946` (ERR_R_CRYPTO_LIB).
+pub(crate) const DECODER_PKEY_946: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/encode_decode/decoder_pkey.c",
+    line: 946,
+    func: c"OSSL_DECODER_CTX_new_for_pkey",
+    lib: 60,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_pbe_crypt_ex` at `crypto/pkcs12/p12_decr.c:32` (ERR_R_EVP_LIB).
+pub(crate) const PKCS12_32: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 32,
+    func: c"PKCS12_pbe_crypt_ex",
+    lib: 35,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_pbe_crypt_ex` at `crypto/pkcs12/p12_decr.c:50` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PKCS12_50: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 50,
+    func: c"PKCS12_pbe_crypt_ex",
+    lib: 35,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_pbe_crypt_ex` at `crypto/pkcs12/p12_decr.c:60` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PKCS12_60: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 60,
+    func: c"PKCS12_pbe_crypt_ex",
+    lib: 35,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_pbe_crypt_ex` at `crypto/pkcs12/p12_decr.c:68` (PKCS12_R_UNSUPPORTED_PKCS12_MODE).
+pub(crate) const PKCS12_68: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 68,
+    func: c"PKCS12_pbe_crypt_ex",
+    lib: 35,
+    reason: 119,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_pbe_crypt_ex` at `crypto/pkcs12/p12_decr.c:75` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PKCS12_75: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 75,
+    func: c"PKCS12_pbe_crypt_ex",
+    lib: 35,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_pbe_crypt_ex` at `crypto/pkcs12/p12_decr.c:87` (ERR_R_EVP_LIB).
+pub(crate) const PKCS12_87: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 87,
+    func: c"PKCS12_pbe_crypt_ex",
+    lib: 35,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_pbe_crypt_ex` at `crypto/pkcs12/p12_decr.c:95` (PKCS12_R_PKCS12_CIPHERFINAL_ERROR).
+pub(crate) const PKCS12_95: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 95,
+    func: c"PKCS12_pbe_crypt_ex",
+    lib: 35,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_pbe_crypt_ex` at `crypto/pkcs12/p12_decr.c:110` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PKCS12_110: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 110,
+    func: c"PKCS12_pbe_crypt_ex",
+    lib: 35,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_item_decrypt_d2i_ex` at `crypto/pkcs12/p12_decr.c:151` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PKCS12_151: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 151,
+    func: c"PKCS12_item_decrypt_d2i_ex",
+    lib: 35,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_item_decrypt_d2i_ex` at `crypto/pkcs12/p12_decr.c:170` (PKCS12_R_DECODE_ERROR).
+pub(crate) const PKCS12_170: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 170,
+    func: c"PKCS12_item_decrypt_d2i_ex",
+    lib: 35,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_item_i2d_encrypt_ex` at `crypto/pkcs12/p12_decr.c:200` (ERR_R_ASN1_LIB).
+pub(crate) const PKCS12_200: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 200,
+    func: c"PKCS12_item_i2d_encrypt_ex",
+    lib: 35,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_item_i2d_encrypt_ex` at `crypto/pkcs12/p12_decr.c:205` (PKCS12_R_ENCODE_ERROR).
+pub(crate) const PKCS12_205: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 205,
+    func: c"PKCS12_item_i2d_encrypt_ex",
+    lib: 35,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_item_i2d_encrypt_ex` at `crypto/pkcs12/p12_decr.c:210` (PKCS12_R_ENCRYPT_ERROR).
+pub(crate) const PKCS12_210: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
+    line: 210,
+    func: c"PKCS12_item_i2d_encrypt_ex",
+    lib: 35,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `X509at_get_attr` at `crypto/x509/x509_att.c:59` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ATT_59: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 59,
+    func: c"X509at_get_attr",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509at_get_attr` at `crypto/x509/x509_att.c:63` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const X509_ATT_63: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 63,
+    func: c"X509at_get_attr",
+    lib: 11,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `X509at_delete_attr` at `crypto/x509/x509_att.c:72` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ATT_72: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 72,
+    func: c"X509at_delete_attr",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509at_delete_attr` at `crypto/x509/x509_att.c:76` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const X509_ATT_76: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 76,
+    func: c"X509at_delete_attr",
+    lib: 11,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `ossl_x509at_add1_attr` at `crypto/x509/x509_att.c:89` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ATT_89: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 89,
+    func: c"ossl_x509at_add1_attr",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_x509at_add1_attr` at `crypto/x509/x509_att.c:95` (ERR_R_CRYPTO_LIB).
+pub(crate) const X509_ATT_95: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 95,
+    func: c"ossl_x509at_add1_attr",
+    lib: 11,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ossl_x509at_add1_attr` at `crypto/x509/x509_att.c:105` (ERR_R_CRYPTO_LIB).
+pub(crate) const X509_ATT_105: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 105,
+    func: c"ossl_x509at_add1_attr",
+    lib: 11,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `X509at_add1_attr` at `crypto/x509/x509_att.c:122` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ATT_122: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 122,
+    func: c"X509at_add1_attr",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509at_add1_attr` at `crypto/x509/x509_att.c:126` (X509_R_DUPLICATE_ATTRIBUTE).
+pub(crate) const X509_ATT_126: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 126,
+    func: c"X509at_add1_attr",
+    lib: 11,
+    reason: 140,
+    dynamic_reason: false,
+};
+
+/// `X509at_add1_attr_by_OBJ` at `crypto/x509/x509_att.c:159` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ATT_159: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 159,
+    func: c"X509at_add1_attr_by_OBJ",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509at_add1_attr_by_OBJ` at `crypto/x509/x509_att.c:163` (X509_R_DUPLICATE_ATTRIBUTE).
+pub(crate) const X509_ATT_163: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 163,
+    func: c"X509at_add1_attr_by_OBJ",
+    lib: 11,
+    reason: 140,
+    dynamic_reason: false,
+};
+
+/// `X509at_add1_attr_by_NID` at `crypto/x509/x509_att.c:194` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ATT_194: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 194,
+    func: c"X509at_add1_attr_by_NID",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509at_add1_attr_by_NID` at `crypto/x509/x509_att.c:198` (X509_R_DUPLICATE_ATTRIBUTE).
+pub(crate) const X509_ATT_198: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 198,
+    func: c"X509at_add1_attr_by_NID",
+    lib: 11,
+    reason: 140,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_create_by_NID` at `crypto/x509/x509_att.c:279` (X509_R_UNKNOWN_NID).
+pub(crate) const X509_ATT_279: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 279,
+    func: c"X509_ATTRIBUTE_create_by_NID",
+    lib: 11,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_create_by_OBJ` at `crypto/x509/x509_att.c:297` (ERR_R_ASN1_LIB).
+pub(crate) const X509_ATT_297: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 297,
+    func: c"X509_ATTRIBUTE_create_by_OBJ",
+    lib: 11,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_create_by_txt` at `crypto/x509/x509_att.c:327` (X509_R_INVALID_FIELD_NAME).
+pub(crate) const X509_ATT_327: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 327,
+    func: c"X509_ATTRIBUTE_create_by_txt",
+    lib: 11,
+    reason: 119,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_set1_object` at `crypto/x509/x509_att.c:339` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ATT_339: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 339,
+    func: c"X509_ATTRIBUTE_set1_object",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_set1_data` at `crypto/x509/x509_att.c:355` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ATT_355: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 355,
+    func: c"X509_ATTRIBUTE_set1_data",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_set1_data` at `crypto/x509/x509_att.c:362` (ERR_R_ASN1_LIB).
+pub(crate) const X509_ATT_362: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 362,
+    func: c"X509_ATTRIBUTE_set1_data",
+    lib: 11,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_set1_data` at `crypto/x509/x509_att.c:369` (ERR_R_ASN1_LIB).
+pub(crate) const X509_ATT_369: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 369,
+    func: c"X509_ATTRIBUTE_set1_data",
+    lib: 11,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_set1_data` at `crypto/x509/x509_att.c:384` (ERR_R_ASN1_LIB).
+pub(crate) const X509_ATT_384: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 384,
+    func: c"X509_ATTRIBUTE_set1_data",
+    lib: 11,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_set1_data` at `crypto/x509/x509_att.c:389` (ERR_R_ASN1_LIB).
+pub(crate) const X509_ATT_389: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 389,
+    func: c"X509_ATTRIBUTE_set1_data",
+    lib: 11,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_set1_data` at `crypto/x509/x509_att.c:397` (ERR_R_CRYPTO_LIB).
+pub(crate) const X509_ATT_397: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 397,
+    func: c"X509_ATTRIBUTE_set1_data",
+    lib: 11,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_get0_object` at `crypto/x509/x509_att.c:417` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ATT_417: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 417,
+    func: c"X509_ATTRIBUTE_get0_object",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_get0_data` at `crypto/x509/x509_att.c:433` (X509_R_WRONG_TYPE).
+pub(crate) const X509_ATT_433: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 433,
+    func: c"X509_ATTRIBUTE_get0_data",
+    lib: 11,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `X509_ATTRIBUTE_get0_type` at `crypto/x509/x509_att.c:442` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ATT_442: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
+    line: 442,
+    func: c"X509_ATTRIBUTE_get0_type",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `x509_pubkey_ex_new_ex` at `crypto/x509/x_pubkey.c:120` (ERR_R_X509_LIB).
+pub(crate) const X509_PUBKEY_120: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 120,
+    func: c"x509_pubkey_ex_new_ex",
+    lib: 13,
+    reason: 524299,
+    dynamic_reason: false,
+};
+
+/// `x509_pubkey_ex_d2i_ex` at `crypto/x509/x_pubkey.c:144` (ERR_R_X509_LIB).
+pub(crate) const X509_PUBKEY_144: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 144,
+    func: c"x509_pubkey_ex_d2i_ex",
+    lib: 13,
+    reason: 524299,
+    dynamic_reason: false,
+};
+
+/// `x509_pubkey_ex_d2i_ex` at `crypto/x509/x_pubkey.c:160` (ERR_R_INTERNAL_ERROR).
+pub(crate) const X509_PUBKEY_160: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 160,
+    func: c"x509_pubkey_ex_d2i_ex",
+    lib: 13,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `x509_pubkey_ex_d2i_ex` at `crypto/x509/x_pubkey.c:227` (ASN1_R_DECODE_ERROR).
+pub(crate) const X509_PUBKEY_227: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 227,
+    func: c"x509_pubkey_ex_d2i_ex",
+    lib: 13,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `X509_PUBKEY_dup` at `crypto/x509/x_pubkey.c:293` (ERR_R_X509_LIB).
+pub(crate) const X509_PUBKEY_293: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 293,
+    func: c"X509_PUBKEY_dup",
+    lib: 11,
+    reason: 524299,
+    dynamic_reason: false,
+};
+
+/// `X509_PUBKEY_dup` at `crypto/x509/x_pubkey.c:305` (ERR_R_ASN1_LIB).
+pub(crate) const X509_PUBKEY_305: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 305,
+    func: c"X509_PUBKEY_dup",
+    lib: 11,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `X509_PUBKEY_set` at `crypto/x509/x_pubkey.c:331` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_PUBKEY_331: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 331,
+    func: c"X509_PUBKEY_set",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509_PUBKEY_set` at `crypto/x509/x_pubkey.c:337` (ERR_R_ASN1_LIB).
+pub(crate) const X509_PUBKEY_337: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 337,
+    func: c"X509_PUBKEY_set",
+    lib: 11,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `X509_PUBKEY_set` at `crypto/x509/x_pubkey.c:342` (X509_R_PUBLIC_KEY_ENCODE_ERROR).
+pub(crate) const X509_PUBKEY_342: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 342,
+    func: c"X509_PUBKEY_set",
+    lib: 11,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `X509_PUBKEY_set` at `crypto/x509/x_pubkey.c:346` (X509_R_METHOD_NOT_SUPPORTED).
+pub(crate) const X509_PUBKEY_346: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 346,
+    func: c"X509_PUBKEY_set",
+    lib: 11,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `X509_PUBKEY_set` at `crypto/x509/x_pubkey.c:367` (X509_R_UNSUPPORTED_ALGORITHM).
+pub(crate) const X509_PUBKEY_367: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 367,
+    func: c"X509_PUBKEY_set",
+    lib: 11,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `X509_PUBKEY_set` at `crypto/x509/x_pubkey.c:373` (ERR_R_INTERNAL_ERROR).
+pub(crate) const X509_PUBKEY_373: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 373,
+    func: c"X509_PUBKEY_set",
+    lib: 11,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `x509_pubkey_decode` at `crypto/x509/x_pubkey.c:427` (ERR_R_EVP_LIB).
+pub(crate) const X509_PUBKEY_427: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 427,
+    func: c"x509_pubkey_decode",
+    lib: 11,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `x509_pubkey_decode` at `crypto/x509/x_pubkey.c:432` (X509_R_UNSUPPORTED_ALGORITHM).
+pub(crate) const X509_PUBKEY_432: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 432,
+    func: c"x509_pubkey_decode",
+    lib: 11,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `x509_pubkey_decode` at `crypto/x509/x_pubkey.c:445` (X509_R_METHOD_NOT_SUPPORTED).
+pub(crate) const X509_PUBKEY_445: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 445,
+    func: c"x509_pubkey_decode",
+    lib: 11,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `X509_PUBKEY_get0` at `crypto/x509/x_pubkey.c:460` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_PUBKEY_460: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 460,
+    func: c"X509_PUBKEY_get0",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509_PUBKEY_get0` at `crypto/x509/x_pubkey.c:466` (EVP_R_DECODE_ERROR).
+pub(crate) const X509_PUBKEY_466: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 466,
+    func: c"X509_PUBKEY_get0",
+    lib: 6,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `X509_PUBKEY_get` at `crypto/x509/x_pubkey.c:478` (ERR_R_INTERNAL_ERROR).
+pub(crate) const X509_PUBKEY_478: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 478,
+    func: c"X509_PUBKEY_get",
+    lib: 11,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `i2d_RSA_PUBKEY` at `crypto/x509/x_pubkey.c:635` (ERR_R_EVP_LIB).
+pub(crate) const X509_PUBKEY_635: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 635,
+    func: c"i2d_RSA_PUBKEY",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_i2d_DH_PUBKEY` at `crypto/x509/x_pubkey.c:677` (ERR_R_EVP_LIB).
+pub(crate) const X509_PUBKEY_677: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 677,
+    func: c"ossl_i2d_DH_PUBKEY",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_i2d_DHx_PUBKEY` at `crypto/x509/x_pubkey.c:718` (ERR_R_EVP_LIB).
+pub(crate) const X509_PUBKEY_718: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 718,
+    func: c"ossl_i2d_DHx_PUBKEY",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `i2d_DSA_PUBKEY` at `crypto/x509/x_pubkey.c:784` (ERR_R_EVP_LIB).
+pub(crate) const X509_PUBKEY_784: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 784,
+    func: c"i2d_DSA_PUBKEY",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `i2d_EC_PUBKEY` at `crypto/x509/x_pubkey.c:829` (ERR_R_EVP_LIB).
+pub(crate) const X509_PUBKEY_829: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 829,
+    func: c"i2d_EC_PUBKEY",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_i2d_ED25519_PUBKEY` at `crypto/x509/x_pubkey.c:871` (ERR_R_EVP_LIB).
+pub(crate) const X509_PUBKEY_871: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 871,
+    func: c"ossl_i2d_ED25519_PUBKEY",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_i2d_ED448_PUBKEY` at `crypto/x509/x_pubkey.c:913` (ERR_R_EVP_LIB).
+pub(crate) const X509_PUBKEY_913: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 913,
+    func: c"ossl_i2d_ED448_PUBKEY",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_i2d_X25519_PUBKEY` at `crypto/x509/x_pubkey.c:955` (ERR_R_EVP_LIB).
+pub(crate) const X509_PUBKEY_955: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 955,
+    func: c"ossl_i2d_X25519_PUBKEY",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_i2d_X448_PUBKEY` at `crypto/x509/x_pubkey.c:997` (ERR_R_EVP_LIB).
+pub(crate) const X509_PUBKEY_997: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_pubkey.c",
+    line: 997,
+    func: c"ossl_i2d_X448_PUBKEY",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_compute_key` at `crypto/ec/ecx_key.c:116` (PROV_R_MISSING_KEY).
+pub(crate) const ECX_KEY_116: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c",
+    line: 116,
+    func: c"ossl_ecx_compute_key",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_compute_key` at `crypto/ec/ecx_key.c:122` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const ECX_KEY_122: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c",
+    line: 122,
+    func: c"ossl_ecx_compute_key",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_compute_key` at `crypto/ec/ecx_key.c:131` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const ECX_KEY_131: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c",
+    line: 131,
+    func: c"ossl_ecx_compute_key",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_compute_key` at `crypto/ec/ecx_key.c:140` (PROV_R_FAILED_DURING_DERIVATION).
+pub(crate) const ECX_KEY_140: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c",
+    line: 140,
+    func: c"ossl_ecx_compute_key",
+    lib: 57,
+    reason: 164,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_compute_key` at `crypto/ec/ecx_key.c:146` (PROV_R_FAILED_DURING_DERIVATION).
+pub(crate) const ECX_KEY_146: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c",
+    line: 146,
+    func: c"ossl_ecx_compute_key",
+    lib: 57,
+    reason: 164,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_compute_key` at `crypto/ec/ecx_key.c:154` (PROV_R_FAILED_DURING_DERIVATION).
+pub(crate) const ECX_KEY_154: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c",
+    line: 154,
+    func: c"ossl_ecx_compute_key",
+    lib: 57,
+    reason: 164,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_compute_key` at `crypto/ec/ecx_key.c:160` (PROV_R_FAILED_DURING_DERIVATION).
+pub(crate) const ECX_KEY_160: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c",
+    line: 160,
+    func: c"ossl_ecx_compute_key",
+    lib: 57,
+    reason: 164,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_public_from_private` at `crypto/ec/ecx_backend.c:37` (EC_R_FAILED_MAKING_PUBLIC_KEY).
+pub(crate) const ECX_BACKEND_37: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_backend.c",
+    line: 37,
+    func: c"ossl_ecx_public_from_private",
+    lib: 16,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_public_from_private` at `crypto/ec/ecx_backend.c:47` (EC_R_FAILED_MAKING_PUBLIC_KEY).
+pub(crate) const ECX_BACKEND_47: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_backend.c",
+    line: 47,
+    func: c"ossl_ecx_public_from_private",
+    lib: 16,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_key_dup` at `crypto/ec/ecx_backend.c:133` (ERR_R_EC_LIB).
+pub(crate) const ECX_BACKEND_133: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_backend.c",
+    line: 133,
+    func: c"ossl_ecx_key_dup",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_key_op` at `crypto/ec/ecx_backend.c:163` (EC_R_INVALID_ENCODING).
+pub(crate) const ECX_BACKEND_163: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_backend.c",
+    line: 163,
+    func: c"ossl_ecx_key_op",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_key_op` at `crypto/ec/ecx_backend.c:169` (EC_R_INVALID_ENCODING).
+pub(crate) const ECX_BACKEND_169: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_backend.c",
+    line: 169,
+    func: c"ossl_ecx_key_op",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_key_op` at `crypto/ec/ecx_backend.c:175` (EC_R_INVALID_ENCODING).
+pub(crate) const ECX_BACKEND_175: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_backend.c",
+    line: 175,
+    func: c"ossl_ecx_key_op",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_key_op` at `crypto/ec/ecx_backend.c:182` (ERR_R_EC_LIB).
+pub(crate) const ECX_BACKEND_182: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_backend.c",
+    line: 182,
+    func: c"ossl_ecx_key_op",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_key_op` at `crypto/ec/ecx_backend.c:192` (ERR_R_EC_LIB).
+pub(crate) const ECX_BACKEND_192: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_backend.c",
+    line: 192,
+    func: c"ossl_ecx_key_op",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ossl_ecx_key_op` at `crypto/ec/ecx_backend.c:212` (EC_R_FAILED_MAKING_PUBLIC_KEY).
+pub(crate) const ECX_BACKEND_212: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_backend.c",
+    line: 212,
+    func: c"ossl_ecx_key_op",
+    lib: 16,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `ecx_pub_encode` at `crypto/ec/ecx_meth.c:37` (EC_R_INVALID_KEY).
+pub(crate) const ECX_METH_37: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 37,
+    func: c"ecx_pub_encode",
+    lib: 16,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `ecx_pub_encode` at `crypto/ec/ecx_meth.c:48` (ERR_R_X509_LIB).
+pub(crate) const ECX_METH_48: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 48,
+    func: c"ecx_pub_encode",
+    lib: 16,
+    reason: 524299,
+    dynamic_reason: false,
+};
+
+/// `ecx_priv_encode` at `crypto/ec/ecx_meth.c:106` (EC_R_INVALID_PRIVATE_KEY).
+pub(crate) const ECX_METH_106: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 106,
+    func: c"ecx_priv_encode",
+    lib: 16,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `ecx_priv_encode` at `crypto/ec/ecx_meth.c:116` (ERR_R_ASN1_LIB).
+pub(crate) const ECX_METH_116: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 116,
+    func: c"ecx_priv_encode",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `ecx_priv_encode` at `crypto/ec/ecx_meth.c:123` (ERR_R_ASN1_LIB).
+pub(crate) const ECX_METH_123: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 123,
+    func: c"ecx_priv_encode",
+    lib: 16,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `ecx_generic_import_from` at `crypto/ec/ecx_meth.c:395` (ERR_R_EC_LIB).
+pub(crate) const ECX_METH_395: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 395,
+    func: c"ecx_generic_import_from",
+    lib: 5,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `ecd_item_verify` at `crypto/ec/ecx_meth.c:554` (EC_R_INVALID_ENCODING).
+pub(crate) const ECX_METH_554: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 554,
+    func: c"ecd_item_verify",
+    lib: 16,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `validate_ecx_derive` at `crypto/ec/ecx_meth.c:733` (EC_R_KEYS_NOT_SET).
+pub(crate) const ECX_METH_733: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 733,
+    func: c"validate_ecx_derive",
+    lib: 16,
+    reason: 140,
+    dynamic_reason: false,
+};
+
+/// `validate_ecx_derive` at `crypto/ec/ecx_meth.c:739` (EC_R_INVALID_PRIVATE_KEY).
+pub(crate) const ECX_METH_739: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 739,
+    func: c"validate_ecx_derive",
+    lib: 16,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `validate_ecx_derive` at `crypto/ec/ecx_meth.c:743` (EC_R_INVALID_PEER_KEY).
+pub(crate) const ECX_METH_743: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 743,
+    func: c"validate_ecx_derive",
+    lib: 16,
+    reason: 133,
+    dynamic_reason: false,
+};
+
+/// `pkey_ecd_digestsign25519` at `crypto/ec/ecx_meth.c:813` (EC_R_INVALID_KEY).
+pub(crate) const ECX_METH_813: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 813,
+    func: c"pkey_ecd_digestsign25519",
+    lib: 16,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `pkey_ecd_digestsign25519` at `crypto/ec/ecx_meth.c:822` (EC_R_BUFFER_TOO_SMALL).
+pub(crate) const ECX_METH_822: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 822,
+    func: c"pkey_ecd_digestsign25519",
+    lib: 16,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `pkey_ecd_digestsign448` at `crypto/ec/ecx_meth.c:843` (EC_R_INVALID_KEY).
+pub(crate) const ECX_METH_843: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 843,
+    func: c"pkey_ecd_digestsign448",
+    lib: 16,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `pkey_ecd_digestsign448` at `crypto/ec/ecx_meth.c:852` (EC_R_BUFFER_TOO_SMALL).
+pub(crate) const ECX_METH_852: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 852,
+    func: c"pkey_ecd_digestsign448",
+    lib: 16,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `pkey_ecd_digestverify25519` at `crypto/ec/ecx_meth.c:871` (EC_R_INVALID_KEY).
+pub(crate) const ECX_METH_871: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 871,
+    func: c"pkey_ecd_digestverify25519",
+    lib: 16,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `pkey_ecd_digestverify448` at `crypto/ec/ecx_meth.c:891` (EC_R_INVALID_KEY).
+pub(crate) const ECX_METH_891: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 891,
+    func: c"pkey_ecd_digestverify448",
+    lib: 16,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `pkey_ecd_ctrl` at `crypto/ec/ecx_meth.c:909` (EC_R_INVALID_DIGEST_TYPE).
+pub(crate) const ECX_METH_909: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 909,
+    func: c"pkey_ecd_ctrl",
+    lib: 16,
+    reason: 138,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecx_keygen25519` at `crypto/ec/ecx_meth.c:955` (ERR_R_EC_LIB).
+pub(crate) const ECX_METH_955: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 955,
+    func: c"s390x_pkey_ecx_keygen25519",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecx_keygen25519` at `crypto/ec/ecx_meth.c:963` (ERR_R_EC_LIB).
+pub(crate) const ECX_METH_963: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 963,
+    func: c"s390x_pkey_ecx_keygen25519",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecx_keygen448` at `crypto/ec/ecx_meth.c:998` (ERR_R_EC_LIB).
+pub(crate) const ECX_METH_998: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 998,
+    func: c"s390x_pkey_ecx_keygen448",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecx_keygen448` at `crypto/ec/ecx_meth.c:1006` (ERR_R_EC_LIB).
+pub(crate) const ECX_METH_1006: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 1006,
+    func: c"s390x_pkey_ecx_keygen448",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecd_keygen25519` at `crypto/ec/ecx_meth.c:1076` (ERR_R_EC_LIB).
+pub(crate) const ECX_METH_1076: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 1076,
+    func: c"s390x_pkey_ecd_keygen25519",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecd_keygen25519` at `crypto/ec/ecx_meth.c:1084` (ERR_R_EC_LIB).
+pub(crate) const ECX_METH_1084: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 1084,
+    func: c"s390x_pkey_ecd_keygen25519",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecd_keygen448` at `crypto/ec/ecx_meth.c:1143` (ERR_R_EC_LIB).
+pub(crate) const ECX_METH_1143: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 1143,
+    func: c"s390x_pkey_ecd_keygen448",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecd_keygen448` at `crypto/ec/ecx_meth.c:1151` (ERR_R_EC_LIB).
+pub(crate) const ECX_METH_1151: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 1151,
+    func: c"s390x_pkey_ecd_keygen448",
+    lib: 16,
+    reason: 524304,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecd_digestsign25519` at `crypto/ec/ecx_meth.c:1238` (EC_R_INVALID_KEY).
+pub(crate) const ECX_METH_1238: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 1238,
+    func: c"s390x_pkey_ecd_digestsign25519",
+    lib: 16,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecd_digestsign25519` at `crypto/ec/ecx_meth.c:1248` (EC_R_BUFFER_TOO_SMALL).
+pub(crate) const ECX_METH_1248: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 1248,
+    func: c"s390x_pkey_ecd_digestsign25519",
+    lib: 16,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecd_digestsign448` at `crypto/ec/ecx_meth.c:1283` (EC_R_INVALID_KEY).
+pub(crate) const ECX_METH_1283: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 1283,
+    func: c"s390x_pkey_ecd_digestsign448",
+    lib: 16,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecd_digestsign448` at `crypto/ec/ecx_meth.c:1293` (EC_R_BUFFER_TOO_SMALL).
+pub(crate) const ECX_METH_1293: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 1293,
+    func: c"s390x_pkey_ecd_digestsign448",
+    lib: 16,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecd_digestverify25519` at `crypto/ec/ecx_meth.c:1330` (EC_R_INVALID_KEY).
+pub(crate) const ECX_METH_1330: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 1330,
+    func: c"s390x_pkey_ecd_digestverify25519",
+    lib: 16,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `s390x_pkey_ecd_digestverify448` at `crypto/ec/ecx_meth.c:1365` (EC_R_INVALID_KEY).
+pub(crate) const ECX_METH_1365: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/ec/ecx_meth.c",
+    line: 1365,
+    func: c"s390x_pkey_ecd_digestverify448",
+    lib: 16,
+    reason: 116,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -18589,4 +42589,2404 @@ pub(crate) static ALL: &[ErrSite] = &[
     PEM_PK8_185,
     PEM_PK8_243,
     PEM_PK8_258,
+    PROV_CIPHERCOMMON_80,
+    PROV_CIPHERCOMMON_91,
+    PROV_CIPHERCOMMON_106,
+    PROV_CIPHERCOMMON_117,
+    PROV_CIPHERCOMMON_129,
+    PROV_CIPHERCOMMON_140,
+    PROV_CIPHERCOMMON_151,
+    PROV_CIPHERCOMMON_162,
+    PROV_CIPHERCOMMON_173,
+    PROV_CIPHERCOMMON_184,
+    PROV_CIPHERCOMMON_212,
+    PROV_CIPHERCOMMON_217,
+    PROV_CIPHERCOMMON_222,
+    PROV_CIPHERCOMMON_227,
+    PROV_CIPHERCOMMON_232,
+    PROV_CIPHERCOMMON_237,
+    PROV_CIPHERCOMMON_242,
+    PROV_CIPHERCOMMON_246,
+    PROV_CIPHERCOMMON_250,
+    PROV_CIPHERCOMMON_254,
+    PROV_CIPHERCOMMON_313,
+    PROV_CIPHERCOMMON_322,
+    PROV_CIPHERCOMMON_334,
+    PROV_CIPHERCOMMON_345,
+    PROV_CIPHERCOMMON_356,
+    PROV_CIPHERCOMMON_367,
+    PROV_CIPHERCOMMON_378,
+    PROV_CIPHERCOMMON_437,
+    PROV_CIPHERCOMMON_448,
+    PROV_CIPHERCOMMON_475,
+    PROV_CIPHERCOMMON_486,
+    PROV_CIPHERCOMMON_501,
+    PROV_CIPHERCOMMON_565,
+    PROV_CIPHERCOMMON_576,
+    PROV_CIPHERCOMMON_587,
+    PROV_CIPHERCOMMON_614,
+    PROV_CIPHERCOMMON_625,
+    PROV_CIPHERCOMMON_640,
+    PROV_CIPHERCOMMON_672,
+    PROV_CIPHERCOMMON_719,
+    PROV_CIPHERCOMMON_783,
+    PROV_CIPHERCOMMON_798,
+    PROV_CIPHERCOMMON_811,
+    PROV_CIPHERCOMMON_816,
+    PROV_CIPHERCOMMON_833,
+    PROV_CIPHERCOMMON_839,
+    PROV_CIPHERCOMMON_856,
+    PROV_CIPHERCOMMON_875,
+    PROV_CIPHERCOMMON_879,
+    PROV_CIPHERCOMMON_889,
+    PROV_CIPHERCOMMON_896,
+    PROV_CIPHERCOMMON_902,
+    PROV_CIPHERCOMMON_928,
+    PROV_CIPHERCOMMON_934,
+    PROV_CIPHERCOMMON_945,
+    PROV_CIPHERCOMMON_950,
+    PROV_CIPHERCOMMON_954,
+    PROV_CIPHERCOMMON_968,
+    PROV_CIPHERCOMMON_973,
+    PROV_CIPHERCOMMON_983,
+    PROV_CIPHERCOMMON_999,
+    PROV_CIPHERCOMMON_1009,
+    PROV_CIPHERCOMMON_1014,
+    PROV_CIPHERCOMMON_1063,
+    PROV_CIPHERCOMMON_1081,
+    PROV_CIPHERCOMMON_1086,
+    PROV_CIPHERCOMMON_1091,
+    PROV_CIPHERCOMMON_1102,
+    PROV_CIPHERCOMMON_1107,
+    PROV_CIPHERCOMMON_1113,
+    PROV_CIPHERCOMMON_1119,
+    PROV_CIPHERCOMMON_1124,
+    PROV_CIPHERCOMMON_1129,
+    PROV_CIPHERCOMMON_1135,
+    PROV_CIPHERCOMMON_1157,
+    PROV_CIPHERCOMMON_1167,
+    PROV_CIPHERCOMMON_1175,
+    PROV_CIPHERCOMMON_1182,
+    PROV_CIPHERCOMMON_1191,
+    PROV_CIPHERCOMMON_1195,
+    PROV_CIPHERCOMMON_1221,
+    PROV_CIPHERCOMMON_BLOCK_70,
+    PROV_CIPHERCOMMON_BLOCK_97,
+    PROV_CIPHERCOMMON_BLOCK_107,
+    PROV_CIPHERCOMMON_BLOCK_112,
+    PROV_CIPHER_AES_HW_121,
+    PROV_CIPHER_CAMELLIA_HW_30,
+    PROV_CIPHER_TDES_COMMON_101,
+    PROV_CIPHER_TDES_COMMON_162,
+    PROV_CIPHER_TDES_COMMON_195,
+    PROV_CIPHER_NULL_130,
+    PROV_CIPHER_NULL_135,
+    PROV_CIPHER_NULL_141,
+    PROV_CIPHER_NULL_168,
+    PROV_CIPHER_AES_OCB_119,
+    PROV_CIPHER_AES_OCB_130,
+    PROV_CIPHER_AES_OCB_173,
+    PROV_CIPHER_AES_OCB_177,
+    PROV_CIPHER_AES_OCB_188,
+    PROV_CIPHER_AES_OCB_192,
+    PROV_CIPHER_AES_OCB_363,
+    PROV_CIPHER_AES_OCB_369,
+    PROV_CIPHER_AES_OCB_375,
+    PROV_CIPHER_AES_OCB_379,
+    PROV_CIPHER_AES_OCB_388,
+    PROV_CIPHER_AES_OCB_404,
+    PROV_CIPHER_AES_OCB_408,
+    PROV_CIPHER_AES_OCB_422,
+    PROV_CIPHER_AES_OCB_427,
+    PROV_CIPHER_AES_OCB_433,
+    PROV_CIPHER_AES_OCB_441,
+    PROV_CIPHER_AES_OCB_445,
+    PROV_CIPHER_AES_OCB_452,
+    PROV_CIPHER_AES_OCB_456,
+    PROV_CIPHER_AES_OCB_463,
+    PROV_CIPHER_AES_OCB_467,
+    PROV_CIPHER_AES_OCB_515,
+    PROV_CIPHER_AES_OCB_528,
+    PROV_CIPHER_AES_OCB_533,
+    PROV_CIPHER_AES_WRP_123,
+    PROV_CIPHER_AES_WRP_178,
+    PROV_CIPHER_AES_WRP_184,
+    PROV_CIPHER_AES_WRP_190,
+    PROV_CIPHER_AES_WRP_214,
+    PROV_CIPHER_AES_WRP_218,
+    PROV_CIPHER_AES_WRP_250,
+    PROV_CIPHER_AES_WRP_274,
+    PROV_CIPHER_AES_WRP_278,
+    PROV_CIPHER_AES_XTS_59,
+    PROV_CIPHER_AES_XTS_90,
+    PROV_CIPHER_AES_XTS_202,
+    PROV_CIPHER_AES_XTS_223,
+    PROV_CIPHER_AES_XTS_228,
+    PROV_CIPHER_AES_XTS_268,
+    PROV_CIPHERCOMMON_CCM_108,
+    PROV_CIPHERCOMMON_CCM_123,
+    PROV_CIPHERCOMMON_CCM_142,
+    PROV_CIPHERCOMMON_CCM_153,
+    PROV_CIPHERCOMMON_CCM_186,
+    PROV_CIPHERCOMMON_CCM_190,
+    PROV_CIPHERCOMMON_CCM_196,
+    PROV_CIPHERCOMMON_CCM_207,
+    PROV_CIPHERCOMMON_CCM_212,
+    PROV_CIPHERCOMMON_CCM_223,
+    PROV_CIPHERCOMMON_CCM_228,
+    PROV_CIPHERCOMMON_CCM_236,
+    PROV_CIPHERCOMMON_CCM_240,
+    PROV_CIPHERCOMMON_CCM_298,
+    PROV_CIPHERCOMMON_CCM_307,
+    PROV_CIPHERCOMMON_CCM_319,
+    PROV_CIPHERCOMMON_CCM_342,
+    PROV_CIPHERCOMMON_CCM_351,
+    PROV_CIPHERCOMMON_CCM_363,
+    PROV_CIPHERCOMMON_CCM_375,
+    PROV_CIPHERCOMMON_CCM_403,
+    PROV_CIPHERCOMMON_CCM_408,
+    PROV_CIPHERCOMMON_CCM_414,
+    PROV_CIPHERCOMMON_CCM_418,
+    PROV_CIPHERCOMMON_CCM_425,
+    PROV_CIPHERCOMMON_CCM_429,
+    PROV_CIPHERCOMMON_CCM_435,
+    PROV_CIPHERCOMMON_CCM_440,
+    PROV_CIPHERCOMMON_CCM_446,
+    PROV_CIPHERCOMMON_CCM_450,
+    PROV_CIPHERCOMMON_CCM_476,
+    PROV_CIPHERCOMMON_CCM_484,
+    PROV_CIPHERCOMMON_CCM_514,
+    PROV_CIPHERCOMMON_CCM_519,
+    PROV_CIPHERCOMMON_CCM_560,
+    PROV_CIPHER_AES_SIV_90,
+    PROV_CIPHER_AES_SIV_122,
+    PROV_CIPHER_AES_SIV_161,
+    PROV_CIPHER_AES_SIV_167,
+    PROV_CIPHER_AES_SIV_172,
+    PROV_CIPHER_AES_SIV_206,
+    PROV_CIPHER_AES_SIV_213,
+    PROV_CIPHER_AES_SIV_223,
+    PROV_CIPHER_CHACHA20_111,
+    PROV_CIPHER_CHACHA20_116,
+    PROV_CIPHER_CHACHA20_126,
+    PROV_CIPHER_CHACHA20_156,
+    PROV_CIPHER_CHACHA20_160,
+    PROV_CIPHER_CHACHA20_167,
+    PROV_CIPHER_CHACHA20_171,
+    PROV_CIPHER_CHACHA20_POLY1305_142,
+    PROV_CIPHER_CHACHA20_POLY1305_153,
+    PROV_CIPHER_CHACHA20_POLY1305_176,
+    PROV_CIPHER_CHACHA20_POLY1305_185,
+    PROV_CIPHER_CHACHA20_POLY1305_197,
+    PROV_CIPHER_CHACHA20_POLY1305_221,
+    PROV_CIPHER_CHACHA20_POLY1305_227,
+    PROV_CIPHER_CHACHA20_POLY1305_233,
+    PROV_CIPHER_CHACHA20_POLY1305_239,
+    PROV_CIPHER_CHACHA20_POLY1305_245,
+    PROV_CIPHER_CHACHA20_POLY1305_249,
+    PROV_CIPHER_CHACHA20_POLY1305_253,
+    PROV_CIPHER_CHACHA20_POLY1305_305,
+    PROV_CIPHER_CHACHA20_POLY1305_316,
+    PROV_CIPHER_CHACHA20_POLY1305_331,
+    PROV_CIPHER_CHACHA20_POLY1305_350,
+    PROV_CIPHER_CHACHA20_POLY1305_361,
+    PROV_CIPHER_CHACHA20_POLY1305_396,
+    PROV_CIPHER_CHACHA20_POLY1305_400,
+    PROV_CIPHER_CHACHA20_POLY1305_407,
+    PROV_CIPHER_CHACHA20_POLY1305_411,
+    PROV_CIPHER_CHACHA20_POLY1305_418,
+    PROV_CIPHER_CHACHA20_POLY1305_422,
+    PROV_CIPHER_CHACHA20_POLY1305_427,
+    PROV_CIPHER_CHACHA20_POLY1305_437,
+    PROV_CIPHER_CHACHA20_POLY1305_442,
+    PROV_CIPHER_CHACHA20_POLY1305_450,
+    PROV_CIPHER_CHACHA20_POLY1305_456,
+    PROV_CIPHER_CHACHA20_POLY1305_512,
+    PROV_CIPHER_ARIA_HW_25,
+    PROV_CIPHER_SM4_XTS_54,
+    PROV_CIPHER_SM4_XTS_142,
+    PROV_CIPHER_SM4_XTS_171,
+    PROV_CIPHER_SM4_XTS_176,
+    PROV_CIPHER_SM4_XTS_227,
+    PROV_CIPHER_SM4_XTS_235,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_102,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_113,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_132,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_162,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_176,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_188,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_192,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_200,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_206,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_231,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_238,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_244,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_250,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_257,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_262,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_267,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_273,
+    PROV_CIPHER_AES_CBC_HMAC_SHA_279,
+    PROV_CIPHER_AES_GCM_SIV_104,
+    PROV_CIPHER_AES_GCM_SIV_111,
+    PROV_CIPHER_AES_GCM_SIV_148,
+    PROV_CIPHER_AES_GCM_SIV_185,
+    PROV_CIPHER_AES_GCM_SIV_191,
+    PROV_CIPHER_AES_GCM_SIV_196,
+    PROV_CIPHER_AES_GCM_SIV_228,
+    PROV_CIPHER_AES_GCM_SIV_239,
+    PROV_CIPHER_AES_GCM_SIV_249,
+    PROV_CIPHER_AES_GCM_SIV_254,
+    PROV_CMAC_PROV_245,
+    PROV_CMAC_PROV_257,
+    PROV_CMAC_PROV_269,
+    PROV_CMAC_PROV_350,
+    PROV_CMAC_PROV_370,
+    PROV_CMAC_PROV_382,
+    PROV_CMAC_PROV_395,
+    PROV_CMAC_PROV_406,
+    PROV_CMAC_PROV_449,
+    PROV_CMAC_PROV_460,
+    PROV_GMAC_PROV_111,
+    PROV_GMAC_PROV_200,
+    PROV_GMAC_PROV_268,
+    PROV_GMAC_PROV_279,
+    PROV_GMAC_PROV_290,
+    PROV_GMAC_PROV_301,
+    PROV_GMAC_PROV_312,
+    PROV_GMAC_PROV_354,
+    PROV_HMAC_PROV_177,
+    PROV_HMAC_PROV_313,
+    PROV_HMAC_PROV_325,
+    PROV_HMAC_PROV_337,
+    PROV_HMAC_PROV_427,
+    PROV_HMAC_PROV_438,
+    PROV_HMAC_PROV_462,
+    PROV_HMAC_PROV_472,
+    PROV_HMAC_PROV_485,
+    PROV_HMAC_PROV_496,
+    PROV_BLAKE2_PARAMS_46,
+    PROV_BLAKE2_PARAMS_57,
+    PROV_BLAKE2_PARAMS_105,
+    PROV_BLAKE2_PARAMS_116,
+    PROV_BLAKE2_PARAMS_131,
+    PROV_BLAKE2_PARAMS_142,
+    PROV_BLAKE2_MAC_IMPL_96,
+    PROV_BLAKE2_MAC_IMPL_119,
+    PROV_BLAKE2_MAC_IMPL_197,
+    PROV_BLAKE2_MAC_IMPL_216,
+    PROV_BLAKE2_MAC_IMPL_231,
+    PROV_POLY1305_PROV_92,
+    PROV_POLY1305_PROV_121,
+    PROV_POLY1305_PROV_141,
+    PROV_POLY1305_PROV_177,
+    PROV_POLY1305_PROV_234,
+    PROV_SIPHASH_PROV_190,
+    PROV_SIPHASH_PROV_201,
+    PROV_SIPHASH_PROV_212,
+    PROV_SIPHASH_PROV_285,
+    PROV_SIPHASH_PROV_296,
+    PROV_SIPHASH_PROV_307,
+    PROV_SIPHASH_PROV_318,
+    PROV_KMAC_PROV_272,
+    PROV_KMAC_PROV_288,
+    PROV_KMAC_PROV_295,
+    PROV_KMAC_PROV_326,
+    PROV_KMAC_PROV_335,
+    PROV_KMAC_PROV_351,
+    PROV_KMAC_PROV_434,
+    PROV_KMAC_PROV_446,
+    PROV_KMAC_PROV_458,
+    PROV_KMAC_PROV_550,
+    PROV_KMAC_PROV_574,
+    PROV_KMAC_PROV_584,
+    PROV_KMAC_PROV_598,
+    PROV_KMAC_PROV_610,
+    PROV_KMAC_PROV_621,
+    PROV_KMAC_PROV_672,
+    PROV_KMAC_PROV_682,
+    PROV_KMAC_PROV_699,
+    PROV_KMAC_PROV_741,
+    PROV_KMAC_PROV_778,
+    PROV_KMAC_PROV_811,
+    PROV_DIGESTCOMMON_56,
+    PROV_DIGESTCOMMON_67,
+    PROV_DIGESTCOMMON_78,
+    PROV_DIGESTCOMMON_89,
+    PROV_DIGESTCOMMON_111,
+    PROV_DIGESTCOMMON_115,
+    PROV_DIGESTCOMMON_120,
+    PROV_DIGESTCOMMON_125,
+    PROV_SSKDF_376,
+    PROV_SSKDF_393,
+    PROV_SSKDF_410,
+    PROV_SSKDF_427,
+    PROV_SSKDF_442,
+    PROV_SSKDF_461,
+    PROV_SSKDF_486,
+    PROV_SSKDF_502,
+    PROV_SSKDF_520,
+    PROV_SSKDF_525,
+    PROV_SSKDF_532,
+    PROV_SSKDF_584,
+    PROV_SSKDF_666,
+    PROV_SSKDF_677,
+    PROV_SSKDF_688,
+    PROV_SSKDF_712,
+    PROV_SSKDF_722,
+    PROV_SSKDF_747,
+    PROV_SSKDF_756,
+    PROV_SSKDF_769,
+    PROV_SSKDF_784,
+    PROV_SSKDF_795,
+    PROV_SSKDF_876,
+    PROV_SSKDF_888,
+    PROV_SSKDF_1010,
+    PROV_SSKDF_1020,
+    PROV_SSKDF_1036,
+    PROV_SSKDF_1047,
+    PROV_SSKDF_1071,
+    PROV_SSKDF_1081,
+    PROV_SSKDF_1106,
+    PROV_SSKDF_1115,
+    PROV_SSKDF_1128,
+    PROV_SSKDF_1143,
+    PROV_SSKDF_1154,
+    PROV_X942KDF_101,
+    PROV_X942KDF_287,
+    PROV_X942KDF_434,
+    PROV_X942KDF_451,
+    PROV_X942KDF_477,
+    PROV_X942KDF_489,
+    PROV_X942KDF_493,
+    PROV_X942KDF_498,
+    PROV_X942KDF_502,
+    PROV_X942KDF_510,
+    PROV_X942KDF_522,
+    PROV_X942KDF_589,
+    PROV_X942KDF_600,
+    PROV_X942KDF_611,
+    PROV_X942KDF_622,
+    PROV_X942KDF_646,
+    PROV_X942KDF_656,
+    PROV_X942KDF_689,
+    PROV_X942KDF_700,
+    PROV_X942KDF_715,
+    PROV_X942KDF_731,
+    PROV_X942KDF_762,
+    PROV_X942KDF_773,
+    PROV_X942KDF_794,
+    PROV_X942KDF_805,
+    PROV_X942KDF_842,
+    PROV_X942KDF_939,
+    PROV_X942KDF_951,
+    PROV_PKCS12KDF_67,
+    PROV_PKCS12KDF_73,
+    PROV_PKCS12KDF_232,
+    PROV_PKCS12KDF_237,
+    PROV_PKCS12KDF_288,
+    PROV_PKCS12KDF_299,
+    PROV_PKCS12KDF_316,
+    PROV_PKCS12KDF_327,
+    PROV_PKCS12KDF_343,
+    PROV_PKCS12KDF_354,
+    PROV_PKCS12KDF_366,
+    PROV_PKCS12KDF_451,
+    PROV_SSHKDF_151,
+    PROV_SSHKDF_167,
+    PROV_SSHKDF_186,
+    PROV_SSHKDF_190,
+    PROV_SSHKDF_194,
+    PROV_SSHKDF_198,
+    PROV_SSHKDF_202,
+    PROV_SSHKDF_291,
+    PROV_SSHKDF_301,
+    PROV_SSHKDF_317,
+    PROV_SSHKDF_341,
+    PROV_SSHKDF_351,
+    PROV_SSHKDF_364,
+    PROV_SSHKDF_375,
+    PROV_SSHKDF_386,
+    PROV_SSHKDF_397,
+    PROV_SSHKDF_435,
+    PROV_SSHKDF_472,
+    PROV_SSHKDF_524,
+    PROV_SSHKDF_536,
+    PROV_PBKDF2_227,
+    PROV_PBKDF2_248,
+    PROV_PBKDF2_252,
+    PROV_PBKDF2_270,
+    PROV_PBKDF2_275,
+    PROV_PBKDF2_327,
+    PROV_PBKDF2_338,
+    PROV_PBKDF2_349,
+    PROV_PBKDF2_364,
+    PROV_PBKDF2_375,
+    PROV_PBKDF2_386,
+    PROV_PBKDF2_398,
+    PROV_PBKDF2_431,
+    PROV_PBKDF2_513,
+    PROV_PBKDF2_525,
+    PROV_PBKDF2_606,
+    PROV_HKDF_199,
+    PROV_HKDF_219,
+    PROV_HKDF_239,
+    PROV_HKDF_243,
+    PROV_HKDF_247,
+    PROV_HKDF_299,
+    PROV_HKDF_313,
+    PROV_HKDF_320,
+    PROV_HKDF_325,
+    PROV_HKDF_407,
+    PROV_HKDF_418,
+    PROV_HKDF_429,
+    PROV_HKDF_453,
+    PROV_HKDF_463,
+    PROV_HKDF_476,
+    PROV_HKDF_487,
+    PROV_HKDF_498,
+    PROV_HKDF_586,
+    PROV_HKDF_598,
+    PROV_HKDF_610,
+    PROV_HKDF_621,
+    PROV_HKDF_636,
+    PROV_HKDF_647,
+    PROV_HKDF_825,
+    PROV_HKDF_836,
+    PROV_HKDF_860,
+    PROV_HKDF_870,
+    PROV_HKDF_883,
+    PROV_HKDF_894,
+    PROV_HKDF_916,
+    PROV_HKDF_1055,
+    PROV_HKDF_1294,
+    PROV_HKDF_1330,
+    PROV_HKDF_1349,
+    PROV_HKDF_1440,
+    PROV_HKDF_1472,
+    PROV_HKDF_1482,
+    PROV_HKDF_1498,
+    PROV_HKDF_1522,
+    PROV_HKDF_1532,
+    PROV_HKDF_1545,
+    PROV_HKDF_1556,
+    PROV_HKDF_1575,
+    PROV_HKDF_1586,
+    PROV_HKDF_1599,
+    PROV_HKDF_1629,
+    PROV_TLS1_PRF_205,
+    PROV_TLS1_PRF_230,
+    PROV_TLS1_PRF_246,
+    PROV_TLS1_PRF_263,
+    PROV_TLS1_PRF_267,
+    PROV_TLS1_PRF_271,
+    PROV_TLS1_PRF_275,
+    PROV_TLS1_PRF_372,
+    PROV_TLS1_PRF_382,
+    PROV_TLS1_PRF_403,
+    PROV_TLS1_PRF_415,
+    PROV_TLS1_PRF_428,
+    PROV_TLS1_PRF_440,
+    PROV_TLS1_PRF_459,
+    PROV_TLS1_PRF_470,
+    PROV_TLS1_PRF_537,
+    PROV_TLS1_PRF_655,
+    PROV_TLS1_PRF_667,
+    PROV_KBKDF_203,
+    PROV_KBKDF_315,
+    PROV_KBKDF_320,
+    PROV_KBKDF_326,
+    PROV_KBKDF_341,
+    PROV_KBKDF_349,
+    PROV_KBKDF_432,
+    PROV_KBKDF_443,
+    PROV_KBKDF_454,
+    PROV_KBKDF_465,
+    PROV_KBKDF_489,
+    PROV_KBKDF_499,
+    PROV_KBKDF_516,
+    PROV_KBKDF_527,
+    PROV_KBKDF_539,
+    PROV_KBKDF_552,
+    PROV_KBKDF_567,
+    PROV_KBKDF_578,
+    PROV_KBKDF_608,
+    PROV_KBKDF_619,
+    PROV_KBKDF_667,
+    PROV_KBKDF_680,
+    PROV_KBKDF_778,
+    PROV_KBKDF_790,
+    PROV_SCRYPT_171,
+    PROV_SCRYPT_198,
+    PROV_SCRYPT_203,
+    PROV_SCRYPT_264,
+    PROV_SCRYPT_277,
+    PROV_SCRYPT_292,
+    PROV_SCRYPT_303,
+    PROV_SCRYPT_312,
+    PROV_SCRYPT_325,
+    PROV_SCRYPT_336,
+    PROV_SCRYPT_432,
+    PROV_SCRYPT_615,
+    PROV_SCRYPT_626,
+    PROV_SCRYPT_644,
+    PROV_SCRYPT_654,
+    PROV_SCRYPT_661,
+    PROV_SCRYPT_670,
+    PROV_SCRYPT_699,
+    PROV_KRB5KDF_140,
+    PROV_KRB5KDF_144,
+    PROV_KRB5KDF_148,
+    PROV_KRB5KDF_199,
+    PROV_KRB5KDF_210,
+    PROV_KRB5KDF_222,
+    PROV_KRB5KDF_233,
+    PROV_KRB5KDF_244,
+    PROV_KRB5KDF_314,
+    PROV_KRB5KDF_538,
+    PROV_KRB5KDF_557,
+    PROV_KRB5KDF_563,
+    PROV_KRB5KDF_584,
+    PROV_KRB5KDF_618,
+    PROV_HMACDRBG_KDF_53,
+    PROV_HMACDRBG_KDF_177,
+    PROV_HMACDRBG_KDF_188,
+    PROV_HMACDRBG_KDF_273,
+    PROV_HMACDRBG_KDF_292,
+    PROV_HMACDRBG_KDF_303,
+    PROV_HMACDRBG_KDF_316,
+    PROV_HMACDRBG_KDF_327,
+    PROV_HMACDRBG_KDF_386,
+    PROV_ARGON2_741,
+    PROV_ARGON2_938,
+    PROV_ARGON2_957,
+    PROV_ARGON2_976,
+    PROV_ARGON2_1031,
+    PROV_ARGON2_1039,
+    PROV_ARGON2_1045,
+    PROV_ARGON2_1052,
+    PROV_ARGON2_1065,
+    PROV_ARGON2_1071,
+    PROV_ARGON2_1077,
+    PROV_ARGON2_1084,
+    PROV_ARGON2_1092,
+    PROV_ARGON2_1157,
+    PROV_ARGON2_1163,
+    PROV_ARGON2_1175,
+    PROV_ARGON2_1181,
+    PROV_ARGON2_1195,
+    PROV_ARGON2_1209,
+    PROV_ARGON2_1227,
+    PROV_ARGON2_1280,
+    PROV_ARGON2_1312,
+    PROV_ARGON2_1318,
+    PROV_ARGON2_1373,
+    PROV_ARGON2_1448,
+    PROV_ARGON2_1459,
+    PROV_ARGON2_1470,
+    PROV_ARGON2_1481,
+    PROV_ARGON2_1492,
+    PROV_ARGON2_1507,
+    PROV_ARGON2_1518,
+    PROV_ARGON2_1534,
+    PROV_ARGON2_1545,
+    PROV_ARGON2_1556,
+    PROV_ARGON2_1568,
+    PROV_ARGON2_1579,
+    PROV_ARGON2_1711,
+    PROV_GENERIC_SKEYMGMT_63,
+    PROV_KDF_EXCH_117,
+    PROV_DH_KMGMT_544,
+    PROV_DH_KMGMT_558,
+    PROV_DH_KMGMT_653,
+    PROV_DH_KMGMT_681,
+    PROV_DH_KMGMT_725,
+    PROV_DH_EXCH_111,
+    PROV_DH_EXCH_163,
+    PROV_DH_EXCH_192,
+    PROV_DH_EXCH_202,
+    PROV_DH_EXCH_232,
+    PROV_DH_EXCH_402,
+    PROV_DH_EXCH_414,
+    PROV_DH_EXCH_466,
+    PROV_DH_EXCH_475,
+    PROV_DH_EXCH_491,
+    PROV_DH_EXCH_502,
+    PROV_DH_EXCH_513,
+    PROV_DH_EXCH_528,
+    PROV_DH_EXCH_542,
+    PROV_DH_EXCH_603,
+    PROV_DH_EXCH_712,
+    PROV_DH_EXCH_724,
+    PROV_DH_EXCH_752,
+    PROV_DH_EXCH_763,
+    PROV_DH_EXCH_774,
+    PROV_DH_EXCH_785,
+    PROV_ECX_KMGMT_247,
+    PROV_ECX_KMGMT_258,
+    PROV_ECX_KMGMT_420,
+    PROV_ECX_KMGMT_431,
+    PROV_ECX_KMGMT_443,
+    PROV_ECX_KMGMT_455,
+    PROV_ECX_KMGMT_470,
+    PROV_ECX_KMGMT_481,
+    PROV_ECX_KMGMT_529,
+    PROV_ECX_KMGMT_540,
+    PROV_ECX_KMGMT_607,
+    PROV_ECX_KMGMT_626,
+    PROV_ECX_KMGMT_637,
+    PROV_ECX_KMGMT_654,
+    PROV_ECX_KMGMT_665,
+    PROV_ECX_KMGMT_713,
+    PROV_ECX_KMGMT_724,
+    PROV_ECX_KMGMT_891,
+    PROV_ECX_KMGMT_902,
+    PROV_ECX_KMGMT_1079,
+    PROV_ECX_KMGMT_1090,
+    PROV_ECX_KMGMT_1101,
+    PROV_ECX_KMGMT_1144,
+    PROV_ECX_KMGMT_1255,
+    PROV_ECX_KMGMT_1264,
+    PROV_ECX_KMGMT_1514,
+    PROV_ECX_KMGMT_1610,
+    PROV_ECX_KMGMT_1622,
+    PROV_ECX_KMGMT_1667,
+    PROV_ECX_KMGMT_1679,
+    PROV_ECX_KMGMT_1731,
+    PROV_ECX_KMGMT_1743,
+    PROV_ECX_KMGMT_1799,
+    PROV_ECX_KMGMT_1811,
+    PROV_ECX_EXCH_86,
+    PROV_ECX_EXCH_124,
+    PROV_ECX_EXCH_168,
+    PROV_ECX_EXCH_174,
+    PROV_ECX_EXCH_218,
+    PROV_ECX_KEM_155,
+    PROV_ECX_KEM_280,
+    PROV_ECX_KEM_291,
+    PROV_ECX_KEM_401,
+    PROV_ECX_KEM_618,
+    PROV_ECX_KEM_622,
+    PROV_ECX_KEM_681,
+    PROV_ECX_KEM_685,
+    PROV_ECX_KEM_720,
+    PROV_ECX_KEM_734,
+    PROV_MAC_LEGACY_KMGMT_187,
+    PROV_MAC_LEGACY_KMGMT_202,
+    PROV_MAC_LEGACY_KMGMT_212,
+    PROV_MAC_LEGACY_KMGMT_422,
+    PROV_MAC_LEGACY_KMGMT_444,
+    PROV_MAC_LEGACY_KMGMT_481,
+    PROV_MAC_LEGACY_KMGMT_490,
+    PROV_MAC_LEGACY_KMGMT_503,
+    PROV_RSA_KMGMT_513,
+    PROV_DSA_KMGMT_486,
+    PROV_DSA_KMGMT_633,
+    PROV_EC_KMGMT_632,
+    PROV_EC_KMGMT_729,
+    PROV_EC_KMGMT_1021,
+    PROV_EC_KMGMT_1241,
+    PROV_ECDH_EXCH_143,
+    PROV_ECDH_EXCH_150,
+    PROV_ECDH_EXCH_305,
+    PROV_ECDH_EXCH_374,
+    PROV_ECDH_EXCH_386,
+    PROV_ECDH_EXCH_451,
+    PROV_ECDH_EXCH_460,
+    PROV_ECDH_EXCH_476,
+    PROV_ECDH_EXCH_487,
+    PROV_ECDH_EXCH_498,
+    PROV_ECDH_EXCH_513,
+    PROV_ECDH_EXCH_591,
+    PROV_ECDH_EXCH_678,
+    PROV_ECDH_EXCH_690,
+    PROV_ECDH_EXCH_718,
+    PROV_ECDH_EXCH_729,
+    PROV_ECDH_EXCH_740,
+    PROV_ECDH_EXCH_751,
+    PROV_ECDH_EXCH_861,
+    PROV_ECDH_EXCH_926,
+    PROV_ECDH_EXCH_962,
+    PROV_EC_KEM_80,
+    PROV_EC_KEM_234,
+    PROV_EC_KEM_324,
+    PROV_EC_KEM_335,
+    PROV_EC_KEM_463,
+    PROV_EC_KEM_489,
+    PROV_EC_KEM_582,
+    PROV_EC_KEM_646,
+    PROV_EC_KEM_720,
+    PROV_EC_KEM_724,
+    PROV_EC_KEM_740,
+    PROV_EC_KEM_793,
+    PROV_EC_KEM_797,
+    PROV_EC_KEM_808,
+    PROV_EC_KEM_833,
+    PROV_EC_KEM_847,
+    SM2_KEY_33,
+    SM2_KEY_43,
+    SM2_SIGN_48,
+    SM2_SIGN_54,
+    SM2_SIGN_59,
+    SM2_SIGN_73,
+    SM2_SIGN_78,
+    SM2_SIGN_86,
+    SM2_SIGN_94,
+    SM2_SIGN_99,
+    SM2_SIGN_104,
+    SM2_SIGN_109,
+    SM2_SIGN_137,
+    SM2_SIGN_166,
+    SM2_SIGN_170,
+    SM2_SIGN_180,
+    SM2_SIGN_194,
+    SM2_SIGN_200,
+    SM2_SIGN_226,
+    SM2_SIGN_231,
+    SM2_SIGN_236,
+    SM2_SIGN_246,
+    SM2_SIGN_258,
+    SM2_SIGN_273,
+    SM2_SIGN_281,
+    SM2_SIGN_290,
+    SM2_SIGN_302,
+    SM2_SIGN_312,
+    SM2_SIGN_349,
+    SM2_SIGN_356,
+    SM2_SIGN_362,
+    SM2_SIGN_382,
+    SM2_SIGN_387,
+    SM2_SIGN_392,
+    SM2_SIGN_398,
+    SM2_SIGN_403,
+    SM2_SIGN_472,
+    SM2_SIGN_478,
+    SM2_SIGN_484,
+    SM2_SIGN_490,
+    SM2_SIGN_516,
+    SM2_SIGN_520,
+    SM2_SIGN_526,
+    SM2_SIGN_532,
+    SM2_CRYPT_77,
+    SM2_CRYPT_141,
+    SM2_CRYPT_146,
+    SM2_CRYPT_152,
+    SM2_CRYPT_159,
+    SM2_CRYPT_164,
+    SM2_CRYPT_176,
+    SM2_CRYPT_194,
+    SM2_CRYPT_202,
+    SM2_CRYPT_208,
+    SM2_CRYPT_215,
+    SM2_CRYPT_229,
+    SM2_CRYPT_237,
+    SM2_CRYPT_247,
+    SM2_CRYPT_252,
+    SM2_CRYPT_259,
+    SM2_CRYPT_264,
+    SM2_CRYPT_270,
+    SM2_CRYPT_325,
+    SM2_CRYPT_330,
+    SM2_CRYPT_338,
+    SM2_CRYPT_344,
+    SM2_CRYPT_353,
+    SM2_CRYPT_366,
+    SM2_CRYPT_375,
+    SM2_CRYPT_383,
+    SM2_CRYPT_388,
+    SM2_CRYPT_397,
+    SM2_CRYPT_406,
+    SM2_CRYPT_411,
+    PROV_SM2_SIG_105,
+    PROV_SM2_SIG_114,
+    PROV_SM2_SIG_150,
+    PROV_SM2_SIG_440,
+    PROV_SM2_SIG_475,
+    PROV_SM2_SIG_484,
+    PROV_SM2_SIG_591,
+    PROV_SM2_SIG_600,
+    PROV_SM2_SIG_614,
+    PROV_SM2_ENC_98,
+    PROV_SM2_ENC_188,
+    PROV_SM2_ENC_259,
+    PROV_SM2_ENC_270,
+    PROV_SM2_ENC_281,
+    PROV_DSA_SIG_171,
+    PROV_DSA_SIG_176,
+    PROV_DSA_SIG_181,
+    PROV_DSA_SIG_187,
+    PROV_DSA_SIG_209,
+    PROV_DSA_SIG_272,
+    PROV_DSA_SIG_293,
+    PROV_DSA_SIG_714,
+    PROV_DSA_SIG_725,
+    PROV_DSA_SIG_737,
+    PROV_DSA_SIG_749,
+    PROV_DSA_SIG_910,
+    PROV_DSA_SIG_920,
+    PROV_DSA_SIG_937,
+    PROV_DSA_SIG_949,
+    PROV_DSA_SIG_960,
+    PROV_DSA_SIG_972,
+    PROV_DSA_SIG_1219,
+    PROV_DSA_SIG_1232,
+    PROV_DSA_SIG_1244,
+    PROV_DSA_SIG_1272,
+    PROV_DSA_SIG_1284,
+    PROV_ECDSA_SIG_184,
+    PROV_ECDSA_SIG_192,
+    PROV_ECDSA_SIG_198,
+    PROV_ECDSA_SIG_205,
+    PROV_ECDSA_SIG_212,
+    PROV_ECDSA_SIG_234,
+    PROV_ECDSA_SIG_285,
+    PROV_ECDSA_SIG_723,
+    PROV_ECDSA_SIG_758,
+    PROV_ECDSA_SIG_767,
+    PROV_ECDSA_SIG_784,
+    PROV_ECDSA_SIG_796,
+    PROV_ECDSA_SIG_808,
+    PROV_ECDSA_SIG_989,
+    PROV_ECDSA_SIG_1001,
+    PROV_ECDSA_SIG_1011,
+    PROV_ECDSA_SIG_1032,
+    PROV_ECDSA_SIG_1045,
+    PROV_ECDSA_SIG_1059,
+    PROV_ECDSA_SIG_1070,
+    PROV_ECDSA_SIG_1315,
+    PROV_ECDSA_SIG_1332,
+    PROV_ECDSA_SIG_1345,
+    PROV_ECDSA_SIG_1359,
+    PROV_ECDSA_SIG_1370,
+    PROV_EDDSA_SIG_249,
+    PROV_EDDSA_SIG_254,
+    PROV_EDDSA_SIG_284,
+    PROV_EDDSA_SIG_406,
+    PROV_EDDSA_SIG_410,
+    PROV_EDDSA_SIG_426,
+    PROV_EDDSA_SIG_439,
+    PROV_EDDSA_SIG_445,
+    PROV_EDDSA_SIG_450,
+    PROV_EDDSA_SIG_460,
+    PROV_EDDSA_SIG_515,
+    PROV_EDDSA_SIG_519,
+    PROV_EDDSA_SIG_533,
+    PROV_EDDSA_SIG_548,
+    PROV_EDDSA_SIG_553,
+    PROV_EDDSA_SIG_563,
+    PROV_EDDSA_SIG_606,
+    PROV_EDDSA_SIG_612,
+    PROV_EDDSA_SIG_617,
+    PROV_EDDSA_SIG_664,
+    PROV_EDDSA_SIG_669,
+    PROV_EDDSA_SIG_688,
+    PROV_EDDSA_SIG_722,
+    PROV_EDDSA_SIG_774,
+    PROV_EDDSA_SIG_826,
+    PROV_EDDSA_SIG_894,
+    PROV_EDDSA_SIG_905,
+    PROV_EDDSA_SIG_926,
+    PROV_EDDSA_SIG_961,
+    PROV_EDDSA_SIG_1027,
+    PROV_RSA_SIG_186,
+    PROV_RSA_SIG_192,
+    PROV_RSA_SIG_201,
+    PROV_RSA_SIG_222,
+    PROV_RSA_SIG_272,
+    PROV_RSA_SIG_278,
+    PROV_RSA_SIG_286,
+    PROV_RSA_SIG_290,
+    PROV_RSA_SIG_300,
+    PROV_RSA_SIG_303,
+    PROV_RSA_SIG_323,
+    PROV_RSA_SIG_335,
+    PROV_RSA_SIG_338,
+    PROV_RSA_SIG_354,
+    PROV_RSA_SIG_359,
+    PROV_RSA_SIG_388,
+    PROV_RSA_SIG_394,
+    PROV_RSA_SIG_405,
+    PROV_RSA_SIG_427,
+    PROV_RSA_SIG_434,
+    PROV_RSA_SIG_478,
+    PROV_RSA_SIG_486,
+    PROV_RSA_SIG_493,
+    PROV_RSA_SIG_518,
+    PROV_RSA_SIG_561,
+    PROV_RSA_SIG_566,
+    PROV_RSA_SIG_574,
+    PROV_RSA_SIG_581,
+    PROV_RSA_SIG_597,
+    PROV_RSA_SIG_652,
+    PROV_RSA_SIG_696,
+    PROV_RSA_SIG_703,
+    PROV_RSA_SIG_712,
+    PROV_RSA_SIG_720,
+    PROV_RSA_SIG_730,
+    PROV_RSA_SIG_736,
+    PROV_RSA_SIG_751,
+    PROV_RSA_SIG_765,
+    PROV_RSA_SIG_777,
+    PROV_RSA_SIG_795,
+    PROV_RSA_SIG_808,
+    PROV_RSA_SIG_821,
+    PROV_RSA_SIG_839,
+    PROV_RSA_SIG_859,
+    PROV_RSA_SIG_895,
+    PROV_RSA_SIG_955,
+    PROV_RSA_SIG_960,
+    PROV_RSA_SIG_964,
+    PROV_RSA_SIG_973,
+    PROV_RSA_SIG_987,
+    PROV_RSA_SIG_991,
+    PROV_RSA_SIG_999,
+    PROV_RSA_SIG_1006,
+    PROV_RSA_SIG_1014,
+    PROV_RSA_SIG_1028,
+    PROV_RSA_SIG_1063,
+    PROV_RSA_SIG_1086,
+    PROV_RSA_SIG_1097,
+    PROV_RSA_SIG_1106,
+    PROV_RSA_SIG_1116,
+    PROV_RSA_SIG_1128,
+    PROV_RSA_SIG_1163,
+    PROV_RSA_SIG_1195,
+    PROV_RSA_SIG_1466,
+    PROV_RSA_SIG_1477,
+    PROV_RSA_SIG_1489,
+    PROV_RSA_SIG_1501,
+    PROV_RSA_SIG_1512,
+    PROV_RSA_SIG_1523,
+    PROV_RSA_SIG_1535,
+    PROV_RSA_SIG_1589,
+    PROV_RSA_SIG_1662,
+    PROV_RSA_SIG_1763,
+    PROV_RSA_SIG_1773,
+    PROV_RSA_SIG_1790,
+    PROV_RSA_SIG_1822,
+    PROV_RSA_SIG_1833,
+    PROV_RSA_SIG_1853,
+    PROV_RSA_SIG_1864,
+    PROV_RSA_SIG_1877,
+    PROV_RSA_SIG_1893,
+    PROV_RSA_SIG_1905,
+    PROV_RSA_SIG_1988,
+    PROV_RSA_SIG_2001,
+    PROV_RSA_SIG_2033,
+    PROV_RSA_SIG_2044,
+    PROV_RSA_SIG_2060,
+    PROV_RSA_SIG_2072,
+    PROV_RSA_SIG_2088,
+    PROV_RSA_SIG_2100,
+    PROV_RSA_SIG_2222,
+    PROV_RSA_SIG_2239,
+    PROV_RSA_SIG_2242,
+    PROV_RSA_SIG_2251,
+    PROV_RSA_SIG_2280,
+    PROV_RSA_SIG_2291,
+    PROV_RSA_SIG_2298,
+    PROV_RSA_SIG_2309,
+    PROV_RSA_SIG_2333,
+    PROV_RSA_SIG_2484,
+    PROV_RSA_SIG_2546,
+    DER_RSA_KEY_308,
+    DER_RSA_KEY_312,
+    SECURITYCHECK_47,
+    SECURITYCHECK_54,
+    PROV_RSA_ENC_124,
+    PROV_RSA_ENC_171,
+    PROV_RSA_ENC_177,
+    PROV_RSA_ENC_187,
+    PROV_RSA_ENC_201,
+    PROV_RSA_ENC_247,
+    PROV_RSA_ENC_253,
+    PROV_RSA_ENC_261,
+    PROV_RSA_ENC_280,
+    PROV_RSA_ENC_288,
+    PROV_RSA_ENC_301,
+    PROV_RSA_ENC_425,
+    PROV_RSA_ENC_437,
+    PROV_RSA_ENC_449,
+    PROV_RSA_ENC_460,
+    PROV_RSA_ENC_471,
+    PROV_RSA_ENC_482,
+    PROV_RSA_ENC_509,
+    PROV_RSA_ENC_520,
+    PROV_RSA_ENC_565,
+    PROV_RSA_ENC_694,
+    PROV_RSA_ENC_703,
+    PROV_RSA_ENC_719,
+    PROV_RSA_ENC_731,
+    PROV_RSA_ENC_763,
+    PROV_RSA_ENC_774,
+    PROV_RSA_ENC_790,
+    PROV_RSA_ENC_801,
+    PROV_RSA_ENC_813,
+    PROV_RSA_ENC_841,
+    PROV_RSA_ENC_852,
+    PROV_RSA_KEM_162,
+    PROV_RSA_KEM_226,
+    PROV_RSA_KEM_298,
+    PROV_RSA_KEM_310,
+    PROV_RSA_KEM_406,
+    PROV_RSA_KEM_424,
+    PROV_RSA_KEM_483,
+    PROV_RSA_KEM_495,
+    PROV_RSA_KEM_505,
+    PROV_RSA_KEM_541,
+    SLH_DSA_74,
+    SLH_DSA_80,
+    SLH_DSA_177,
+    ML_KEM_1642,
+    ML_KEM_1655,
+    ML_KEM_1675,
+    ML_KEM_1688,
+    ML_KEM_1786,
+    ML_KEM_1819,
+    ML_KEM_1866,
+    ML_KEM_1997,
+    ML_KEM_2022,
+    PROV_ML_KEM_KEM_84,
+    PROV_ML_KEM_KEM_96,
+    PROV_ML_KEM_KEM_129,
+    PROV_ML_KEM_KEM_166,
+    PROV_ML_KEM_KEM_192,
+    PROV_ML_KEM_KEM_209,
+    PROV_ML_KEM_KEM_215,
+    PROV_ML_KEM_KEM_219,
+    PROV_ML_KEM_KEM_227,
+    PROV_ML_KEM_KEM_231,
+    PROV_ML_KEM_KEM_267,
+    PROV_ML_KEM_KEM_282,
+    PROV_ML_KEM_KMGMT_148,
+    PROV_ML_KEM_KMGMT_263,
+    PROV_ML_KEM_KMGMT_380,
+    PROV_ML_KEM_KMGMT_391,
+    PROV_ML_KEM_KMGMT_403,
+    PROV_ML_KEM_KMGMT_432,
+    PROV_ML_KEM_KMGMT_453,
+    PROV_ML_KEM_KMGMT_489,
+    PROV_ML_KEM_KMGMT_498,
+    PROV_ML_KEM_KMGMT_508,
+    PROV_ML_KEM_KMGMT_515,
+    PROV_ML_KEM_KMGMT_524,
+    PROV_ML_KEM_KMGMT_616,
+    PROV_ML_KEM_KMGMT_627,
+    PROV_ML_KEM_KMGMT_638,
+    PROV_ML_KEM_KMGMT_649,
+    PROV_ML_KEM_KMGMT_664,
+    PROV_ML_KEM_KMGMT_675,
+    PROV_ML_KEM_KMGMT_687,
+    PROV_ML_KEM_KMGMT_734,
+    PROV_ML_KEM_KMGMT_745,
+    PROV_ML_KEM_KMGMT_763,
+    PROV_ML_KEM_KMGMT_811,
+    PROV_ML_KEM_KMGMT_960,
+    PROV_ML_KEM_KMGMT_991,
+    PROV_ML_KEM_KMGMT_1000,
+    PROV_ML_KEM_KMGMT_1042,
+    PROV_ML_KEM_KMGMT_1053,
+    PROV_ML_KEM_KMGMT_1091,
+    PROV_MLX_KMGMT_186,
+    PROV_MLX_KMGMT_197,
+    PROV_MLX_KMGMT_244,
+    PROV_MLX_KMGMT_258,
+    PROV_MLX_KMGMT_326,
+    PROV_MLX_KMGMT_503,
+    PROV_MLX_KMGMT_513,
+    PROV_MLX_KMGMT_517,
+    PROV_MLX_KMGMT_580,
+    PROV_MLX_KMGMT_591,
+    PROV_MLX_KMGMT_602,
+    PROV_MLX_KMGMT_613,
+    PROV_MLX_KMGMT_660,
+    PROV_MLX_KMGMT_671,
+    PROV_MLX_KMGMT_745,
+    PROV_MLX_KMGMT_764,
+    PROV_MLX_KMGMT_832,
+    PROV_MLX_KMGMT_843,
+    PROV_MLX_KMGMT_883,
+    PROV_MLX_KMGMT_893,
+    PROV_MLX_KMGMT_927,
+    PROV_MLX_KMGMT_1069,
+    PROV_MLX_KEM_74,
+    PROV_MLX_KEM_86,
+    PROV_MLX_KEM_120,
+    PROV_MLX_KEM_136,
+    PROV_MLX_KEM_142,
+    PROV_MLX_KEM_146,
+    PROV_MLX_KEM_154,
+    PROV_MLX_KEM_158,
+    PROV_MLX_KEM_176,
+    PROV_MLX_KEM_182,
+    PROV_MLX_KEM_214,
+    PROV_MLX_KEM_231,
+    PROV_MLX_KEM_262,
+    PROV_MLX_KEM_277,
+    PROV_MLX_KEM_284,
+    PROV_MLX_KEM_301,
+    PROV_MLX_KEM_323,
+    PROV_SLH_DSA_KMGMT_151,
+    PROV_SLH_DSA_KMGMT_162,
+    PROV_SLH_DSA_KMGMT_244,
+    PROV_SLH_DSA_KMGMT_263,
+    PROV_SLH_DSA_KMGMT_274,
+    PROV_SLH_DSA_KMGMT_291,
+    PROV_SLH_DSA_KMGMT_302,
+    PROV_SLH_DSA_KMGMT_350,
+    PROV_SLH_DSA_KMGMT_361,
+    PROV_SLH_DSA_KMGMT_657,
+    PROV_SLH_DSA_KMGMT_668,
+    PROV_SLH_DSA_SIG_161,
+    PROV_SLH_DSA_SIG_192,
+    PROV_SLH_DSA_SIG_301,
+    PROV_SLH_DSA_SIG_312,
+    PROV_SLH_DSA_SIG_323,
+    PROV_SLH_DSA_SIG_334,
+    PROV_SLH_DSA_SIG_418,
+    ML_DSA_ENCODERS_820,
+    ML_DSA_KEY_501,
+    ML_DSA_SIGN_135,
+    ML_DSA_SIGN_181,
+    ML_DSA_SIGN_344,
+    PROV_ML_DSA_KMGMT_227,
+    PROV_ML_DSA_KMGMT_238,
+    PROV_ML_DSA_KMGMT_250,
+    PROV_ML_DSA_KMGMT_287,
+    PROV_ML_DSA_KMGMT_299,
+    PROV_ML_DSA_KMGMT_310,
+    PROV_ML_DSA_KMGMT_319,
+    PROV_ML_DSA_KMGMT_329,
+    PROV_ML_DSA_KMGMT_345,
+    PROV_ML_DSA_KMGMT_428,
+    PROV_ML_DSA_KMGMT_447,
+    PROV_ML_DSA_KMGMT_458,
+    PROV_ML_DSA_KMGMT_475,
+    PROV_ML_DSA_KMGMT_486,
+    PROV_ML_DSA_KMGMT_534,
+    PROV_ML_DSA_KMGMT_545,
+    PROV_ML_DSA_KMGMT_563,
+    PROV_ML_DSA_KMGMT_709,
+    PROV_ML_DSA_KMGMT_755,
+    PROV_ML_DSA_KMGMT_801,
+    PROV_ML_DSA_KMGMT_812,
+    PROV_ML_DSA_SIG_177,
+    PROV_ML_DSA_SIG_205,
+    PROV_ML_DSA_SIG_415,
+    PROV_ML_DSA_SIG_426,
+    PROV_ML_DSA_SIG_441,
+    PROV_ML_DSA_SIG_454,
+    PROV_ML_DSA_SIG_466,
+    PROV_ML_DSA_SIG_520,
+    PROV_ML_DSA_SIG_531,
+    PROV_ML_DSA_SIG_546,
+    PROV_ML_DSA_SIG_559,
+    PROV_ML_DSA_SIG_571,
+    PROV_ML_DSA_SIG_582,
+    PROV_ML_DSA_SIG_622,
+    PROV_ML_DSA_SIG_686,
+    PROV_MAC_LEGACY_SIG_107,
+    RSA_LIB_85,
+    RSA_LIB_106,
+    RSA_LIB_116,
+    RSA_LIB_130,
+    RSA_LIB_973,
+    RSA_LIB_1013,
+    RSA_LIB_1188,
+    RSA_LIB_1221,
+    RSA_LIB_1288,
+    RSA_LIB_1309,
+    RSA_LIB_1369,
+    RSA_CRPT_120,
+    RSA_CRPT_127,
+    RSA_CRPT_138,
+    RSA_CRPT_149,
+    RSA_PK1_38,
+    RSA_PK1_78,
+    RSA_PK1_85,
+    RSA_PK1_97,
+    RSA_PK1_105,
+    RSA_PK1_110,
+    RSA_PK1_116,
+    RSA_PK1_132,
+    RSA_PK1_135,
+    RSA_PK1_189,
+    RSA_PK1_270,
+    RSA_PK1_294,
+    RSA_PK1_303,
+    RSA_PK1_316,
+    RSA_PK1_321,
+    RSA_PK1_327,
+    RSA_PK1_335,
+    RSA_PK1_339,
+    RSA_PK1_343,
+    RSA_PK1_355,
+    RSA_PK1_361,
+    RSA_PK1_419,
+    RSA_PK1_426,
+    RSA_PK1_520,
+    RSA_PK1_561,
+    RSA_PK1_572,
+    RSA_NONE_24,
+    RSA_NONE_29,
+    RSA_NONE_42,
+    RSA_X931_56,
+    RSA_X931_87,
+    RSA_X931_98,
+    RSA_X931_106,
+    RSA_X931_115,
+    RSA_OAEP_72,
+    RSA_OAEP_82,
+    RSA_OAEP_86,
+    RSA_OAEP_93,
+    RSA_OAEP_99,
+    RSA_OAEP_104,
+    RSA_OAEP_189,
+    RSA_OAEP_200,
+    RSA_OAEP_204,
+    RSA_OAEP_222,
+    RSA_OAEP_332,
+    RSA_PSS_78,
+    RSA_PSS_85,
+    RSA_PSS_93,
+    RSA_PSS_99,
+    RSA_PSS_103,
+    RSA_PSS_120,
+    RSA_PSS_126,
+    RSA_PSS_144,
+    RSA_PSS_216,
+    RSA_PSS_227,
+    RSA_PSS_235,
+    RSA_OSSL_115,
+    RSA_OSSL_120,
+    RSA_OSSL_127,
+    RSA_OSSL_156,
+    RSA_OSSL_183,
+    RSA_OSSL_191,
+    RSA_OSSL_199,
+    RSA_OSSL_359,
+    RSA_OSSL_370,
+    RSA_OSSL_382,
+    RSA_OSSL_396,
+    RSA_OSSL_400,
+    RSA_OSSL_457,
+    RSA_OSSL_461,
+    RSA_OSSL_467,
+    RSA_OSSL_482,
+    RSA_OSSL_487,
+    RSA_OSSL_493,
+    RSA_OSSL_498,
+    RSA_OSSL_505,
+    RSA_OSSL_510,
+    RSA_OSSL_516,
+    RSA_OSSL_549,
+    RSA_OSSL_562,
+    RSA_OSSL_567,
+    RSA_OSSL_591,
+    RSA_OSSL_599,
+    RSA_OSSL_606,
+    RSA_OSSL_618,
+    RSA_OSSL_633,
+    RSA_OSSL_637,
+    RSA_OSSL_682,
+    RSA_OSSL_691,
+    RSA_OSSL_712,
+    RSA_OSSL_717,
+    RSA_OSSL_724,
+    RSA_OSSL_735,
+    RSA_OSSL_748,
+    RSA_OSSL_756,
+    RSA_OSSL_789,
+    RSA_OSSL_793,
+    RSA_GEN_282,
+    RSA_GEN_286,
+    RSA_GEN_291,
+    RSA_GEN_296,
+    RSA_GEN_602,
+    RSA_CHK_31,
+    RSA_CHK_40,
+    RSA_CHK_54,
+    RSA_CHK_60,
+    RSA_CHK_64,
+    RSA_CHK_70,
+    RSA_CHK_76,
+    RSA_CHK_84,
+    RSA_CHK_103,
+    RSA_CHK_105,
+    RSA_CHK_157,
+    RSA_CHK_172,
+    RSA_CHK_186,
+    RSA_CHK_196,
+    RSA_CHK_213,
+    RSA_CHK_222,
+    RSA_SIGN_265,
+    RSA_SIGN_270,
+    RSA_SIGN_307,
+    RSA_SIGN_319,
+    RSA_SIGN_353,
+    RSA_SIGN_376,
+    RSA_SIGN_385,
+    RSA_SIGN_390,
+    RSA_SIGN_405,
+    RSA_SIGN_410,
+    RSA_SIGN_429,
+    RSA_SIGN_441,
+    RSA_SAOS_39,
+    RSA_SAOS_68,
+    RSA_SAOS_86,
+    RSA_PMETH_151,
+    RSA_PMETH_156,
+    RSA_PMETH_171,
+    RSA_PMETH_175,
+    RSA_PMETH_234,
+    RSA_PMETH_238,
+    RSA_PMETH_283,
+    RSA_PMETH_287,
+    RSA_PMETH_405,
+    RSA_PMETH_411,
+    RSA_PMETH_437,
+    RSA_PMETH_473,
+    RSA_PMETH_483,
+    RSA_PMETH_494,
+    RSA_PMETH_499,
+    RSA_PMETH_505,
+    RSA_PMETH_515,
+    RSA_PMETH_523,
+    RSA_PMETH_532,
+    RSA_PMETH_541,
+    RSA_PMETH_556,
+    RSA_PMETH_570,
+    RSA_PMETH_582,
+    RSA_PMETH_591,
+    RSA_PMETH_606,
+    RSA_PMETH_610,
+    RSA_PMETH_618,
+    RSA_PMETH_641,
+    RSA_PMETH_653,
+    RSA_PMETH_672,
+    RSA_PMETH_883,
+    RSA_PMETH_890,
+    DSA_PMETH_152,
+    DSA_PMETH_160,
+    DSA_PMETH_176,
+    DSA_PMETH_199,
+    DSA_PMETH_245,
+    DH_PMETH_243,
+    DH_PMETH_378,
+    DH_PMETH_404,
+    DH_PMETH_410,
+    EC_PMETH_128,
+    EC_PMETH_176,
+    EC_PMETH_181,
+    EC_PMETH_255,
+    EC_PMETH_264,
+    EC_PMETH_290,
+    EC_PMETH_355,
+    EC_PMETH_388,
+    EC_PMETH_404,
+    EC_PMETH_424,
+    EC_PMETH_443,
+    RSA_AMETH_157,
+    RSA_AMETH_164,
+    RSA_AMETH_431,
+    RSA_AMETH_551,
+    RSA_AMETH_558,
+    RSA_AMETH_571,
+    RSA_AMETH_596,
+    RSA_AMETH_604,
+    RSA_AMETH_639,
+    RSA_AMETH_862,
+    RSA_BACKEND_83,
+    RSA_BACKEND_97,
+    RSA_BACKEND_111,
+    RSA_BACKEND_139,
+    RSA_BACKEND_149,
+    RSA_BACKEND_158,
+    RSA_BACKEND_177,
+    RSA_BACKEND_190,
+    RSA_BACKEND_199,
+    RSA_BACKEND_205,
+    RSA_BACKEND_223,
+    RSA_BACKEND_232,
+    RSA_BACKEND_665,
+    RSA_BACKEND_690,
+    RSA_PRN_28,
+    DSA_PRN_28,
+    DSA_PRN_43,
+    RSA_SP800_56B_CHECK_294,
+    RSA_SP800_56B_CHECK_304,
+    RSA_SP800_56B_CHECK_309,
+    RSA_SP800_56B_CHECK_314,
+    RSA_SP800_56B_CHECK_329,
+    RSA_SP800_56B_CHECK_340,
+    RSA_SP800_56B_CHECK_385,
+    RSA_SP800_56B_CHECK_396,
+    RSA_SP800_56B_CHECK_403,
+    RSA_SP800_56B_CHECK_408,
+    RSA_SP800_56B_CHECK_413,
+    RSA_SP800_56B_CHECK_427,
+    RSA_SP800_56B_CHECK_440,
+    DSA_CHECK_25,
+    DSA_CHECK_31,
+    DSA_CHECK_37,
+    RSA_SP800_56B_GEN_89,
+    RSA_SP800_56B_GEN_94,
+    RSA_SP800_56B_GEN_180,
+    RSA_SP800_56B_GEN_185,
+    RSA_SP800_56B_GEN_205,
+    RSA_SP800_56B_GEN_454,
+    X_ALGOR_165,
+    FFC_PARAMS_GENERATE_49,
+    FFC_PARAMS_GENERATE_61,
+    FFC_PARAMS_GENERATE_77,
+    FFC_PARAMS_GENERATE_82,
+    FFC_PARAMS_GENERATE_94,
+    FFC_PARAMS_VALIDATE_125,
+    FFC_PARAMS_VALIDATE_172,
+    FFC_PARAMS_VALIDATE_178,
+    DH_LIB_83,
+    DH_LIB_100,
+    DH_LIB_109,
+    DH_LIB_125,
+    DH_KEY_48,
+    DH_KEY_54,
+    DH_KEY_59,
+    DH_KEY_73,
+    DH_KEY_88,
+    DH_KEY_97,
+    DH_KEY_276,
+    DH_KEY_282,
+    DH_KEY_287,
+    DH_KEY_379,
+    DH_KEY_412,
+    DH_KEY_430,
+    DH_KEY_438,
+    DH_KEY_453,
+    DH_GEN_164,
+    DH_GEN_169,
+    DH_GEN_189,
+    DH_GEN_231,
+    DH_CHECK_37,
+    DH_CHECK_39,
+    DH_CHECK_41,
+    DH_CHECK_43,
+    DH_CHECK_128,
+    DH_CHECK_130,
+    DH_CHECK_132,
+    DH_CHECK_134,
+    DH_CHECK_136,
+    DH_CHECK_138,
+    DH_CHECK_140,
+    DH_CHECK_142,
+    DH_CHECK_144,
+    DH_CHECK_171,
+    DH_CHECK_252,
+    DH_CHECK_254,
+    DH_CHECK_256,
+    DH_CHECK_277,
+    DH_GROUP_PARAMS_47,
+    DH_BACKEND_222,
+    DH_BACKEND_235,
+    DH_AMETH_77,
+    DH_AMETH_86,
+    DH_AMETH_91,
+    DH_AMETH_97,
+    DH_AMETH_124,
+    DH_AMETH_129,
+    DH_AMETH_143,
+    DH_AMETH_187,
+    DH_AMETH_193,
+    DH_AMETH_202,
+    DH_AMETH_211,
+    DH_AMETH_297,
+    DH_AMETH_433,
+    DH_AMETH_517,
+    DSA_LIB_141,
+    DSA_LIB_158,
+    DSA_LIB_167,
+    DSA_LIB_184,
+    DSA_OSS_195,
+    DSA_OSS_230,
+    DSA_OSS_241,
+    DSA_OSS_245,
+    DSA_OSS_347,
+    DSA_OSS_367,
+    DSA_OSS_374,
+    DSA_OSS_379,
+    DSA_OSS_453,
+    DSA_BACKEND_154,
+    DSA_BACKEND_159,
+    DSA_BACKEND_163,
+    DSA_BACKEND_171,
+    DSA_BACKEND_175,
+    DSA_BACKEND_182,
+    DSA_AMETH_51,
+    DSA_AMETH_57,
+    DSA_AMETH_61,
+    DSA_AMETH_66,
+    DSA_AMETH_71,
+    DSA_AMETH_103,
+    DSA_AMETH_108,
+    DSA_AMETH_118,
+    DSA_AMETH_126,
+    DSA_AMETH_170,
+    DSA_AMETH_177,
+    DSA_AMETH_183,
+    DSA_AMETH_192,
+    DSA_AMETH_201,
+    DSA_AMETH_361,
+    DSA_AMETH_485,
+    EC_CURVE_2876,
+    EC_CURVE_2888,
+    EC_CURVE_2893,
+    EC_CURVE_2907,
+    EC_CURVE_2913,
+    EC_CURVE_2918,
+    EC_CURVE_2927,
+    EC_CURVE_2936,
+    EC_CURVE_2942,
+    EC_CURVE_2946,
+    EC_CURVE_2951,
+    EC_CURVE_2955,
+    EC_CURVE_2960,
+    EC_CURVE_2982,
+    EC_CURVE_3027,
+    EC_CURVE_3030,
+    EC_LIB_36,
+    EC_LIB_40,
+    EC_LIB_165,
+    EC_LIB_169,
+    EC_LIB_374,
+    EC_LIB_381,
+    EC_LIB_392,
+    EC_LIB_402,
+    EC_LIB_563,
+    EC_LIB_573,
+    EC_LIB_610,
+    EC_LIB_619,
+    EC_LIB_721,
+    EC_LIB_725,
+    EC_LIB_773,
+    EC_LIB_780,
+    EC_LIB_817,
+    EC_LIB_821,
+    EC_LIB_834,
+    EC_LIB_838,
+    EC_LIB_851,
+    EC_LIB_855,
+    EC_LIB_868,
+    EC_LIB_872,
+    EC_LIB_879,
+    EC_LIB_908,
+    EC_LIB_912,
+    EC_LIB_916,
+    EC_LIB_944,
+    EC_LIB_949,
+    EC_LIB_959,
+    EC_LIB_963,
+    EC_LIB_972,
+    EC_LIB_976,
+    EC_LIB_985,
+    EC_LIB_989,
+    EC_LIB_1006,
+    EC_LIB_1010,
+    EC_LIB_1020,
+    EC_LIB_1024,
+    EC_LIB_1034,
+    EC_LIB_1038,
+    EC_LIB_1050,
+    EC_LIB_1055,
+    EC_LIB_1081,
+    EC_LIB_1090,
+    EC_LIB_1100,
+    EC_LIB_1128,
+    EC_LIB_1140,
+    EC_LIB_1357,
+    EC_LIB_1377,
+    EC_LIB_1495,
+    EC_LIB_1513,
+    EC_LIB_1522,
+    EC_LIB_1533,
+    EC_LIB_1574,
+    EC_LIB_1582,
+    EC_LIB_1588,
+    EC_LIB_1598,
+    EC_LIB_1604,
+    EC_LIB_1615,
+    EC_LIB_1621,
+    EC_LIB_1626,
+    EC_LIB_1633,
+    EC_LIB_1639,
+    EC_LIB_1644,
+    EC_LIB_1652,
+    EC_LIB_1660,
+    EC_LIB_1668,
+    EC_LIB_1676,
+    EC_LIB_1688,
+    EC_LIB_1697,
+    EC_LIB_1706,
+    EC_LIB_1715,
+    EC_LIB_1722,
+    EC_LIB_1728,
+    EC_LIB_1739,
+    EC_LIB_1743,
+    ECP_SMPL_151,
+    ECP_SMPL_261,
+    ECP_SMPL_492,
+    ECP_SMPL_511,
+    ECP_SMPL_561,
+    ECP_SMPL_1193,
+    ECP_SMPL_1273,
+    ECP_SMPL_1405,
+    ECP_SMPL_1438,
+    ECP_MONT_166,
+    ECP_MONT_200,
+    ECP_MONT_211,
+    ECP_MONT_255,
+    ECP_MONT_271,
+    ECP_MONT_282,
+    ECP_MONT_293,
+    ECP_NIST_116,
+    ECP_NIST_135,
+    ECP_NIST_160,
+    EC_MULT_157,
+    EC_MULT_161,
+    EC_MULT_169,
+    EC_MULT_175,
+    EC_MULT_180,
+    EC_MULT_193,
+    EC_MULT_198,
+    EC_MULT_212,
+    EC_MULT_217,
+    EC_MULT_229,
+    EC_MULT_235,
+    EC_MULT_240,
+    EC_MULT_260,
+    EC_MULT_266,
+    EC_MULT_272,
+    EC_MULT_353,
+    EC_MULT_368,
+    EC_MULT_464,
+    EC_MULT_491,
+    EC_MULT_543,
+    EC_MULT_552,
+    EC_MULT_595,
+    EC_MULT_610,
+    EC_MULT_633,
+    EC_MULT_668,
+    EC_MULT_749,
+    EC_MULT_837,
+    EC_MULT_855,
+    EC_MULT_889,
+    EC_MULT_896,
+    EC_MULT_928,
+    ECP_OCT_112,
+    ECP_OCT_117,
+    ECP_OCT_132,
+    ECP_OCT_137,
+    ECP_OCT_144,
+    ECP_OCT_172,
+    ECP_OCT_180,
+    ECP_OCT_195,
+    ECP_OCT_226,
+    ECP_OCT_236,
+    ECP_OCT_244,
+    ECP_OCT_256,
+    ECP_OCT_285,
+    ECP_OCT_294,
+    ECP_OCT_298,
+    ECP_OCT_304,
+    ECP_OCT_315,
+    ECP_OCT_334,
+    ECP_OCT_345,
+    ECP_OCT_350,
+    EC_OCT_29,
+    EC_OCT_33,
+    EC_OCT_43,
+    EC_OCT_78,
+    EC_OCT_83,
+    EC_OCT_87,
+    EC_OCT_97,
+    EC_OCT_114,
+    EC_OCT_118,
+    EC_OCT_127,
+    EC2_SMPL_110,
+    EC2_SMPL_189,
+    EC2_SMPL_294,
+    EC2_SMPL_326,
+    EC2_SMPL_331,
+    EC2_SMPL_731,
+    EC2_SMPL_746,
+    EC2_SMPL_813,
+    EC2_SMPL_824,
+    EC2_SMPL_902,
+    EC2_SMPL_929,
+    EC2_OCT_88,
+    EC2_OCT_93,
+    EC2_OCT_141,
+    EC2_OCT_149,
+    EC2_OCT_164,
+    EC2_OCT_199,
+    EC2_OCT_209,
+    EC2_OCT_217,
+    EC2_OCT_229,
+    EC2_OCT_268,
+    EC2_OCT_289,
+    EC2_OCT_293,
+    EC2_OCT_300,
+    EC2_OCT_312,
+    EC2_OCT_334,
+    EC2_OCT_345,
+    EC2_OCT_356,
+    EC2_OCT_363,
+    EC_KEY_109,
+    EC_KEY_212,
+    EC_KEY_224,
+    EC_KEY_419,
+    EC_KEY_424,
+    EC_KEY_480,
+    EC_KEY_486,
+    EC_KEY_492,
+    EC_KEY_498,
+    EC_KEY_529,
+    EC_KEY_534,
+    EC_KEY_538,
+    EC_KEY_555,
+    EC_KEY_560,
+    EC_KEY_580,
+    EC_KEY_589,
+    EC_KEY_593,
+    EC_KEY_618,
+    EC_KEY_647,
+    EC_KEY_675,
+    EC_KEY_944,
+    EC_KEY_967,
+    EC_KEY_981,
+    EC_KEY_994,
+    EC_KEY_1000,
+    EC_KEY_1004,
+    EC_KMETH_104,
+    EC_KMETH_113,
+    EC_KMETH_125,
+    EC_KMETH_131,
+    EC_KMETH_156,
+    EC_KMETH_160,
+    ECDSA_OSSL_43,
+    ECDSA_OSSL_55,
+    ECDSA_OSSL_67,
+    ECDSA_OSSL_106,
+    ECDSA_OSSL_110,
+    ECDSA_OSSL_148,
+    ECDSA_OSSL_152,
+    ECDSA_OSSL_157,
+    ECDSA_OSSL_163,
+    ECDSA_OSSL_172,
+    ECDSA_OSSL_176,
+    ECDSA_OSSL_181,
+    ECDSA_OSSL_214,
+    ECDSA_OSSL_221,
+    ECDSA_OSSL_226,
+    ECDSA_OSSL_231,
+    ECDSA_OSSL_238,
+    ECDSA_OSSL_285,
+    ECDSA_OSSL_289,
+    ECDSA_OSSL_294,
+    ECDSA_OSSL_300,
+    ECDSA_OSSL_306,
+    ECDSA_OSSL_313,
+    ECDSA_OSSL_318,
+    ECDSA_OSSL_329,
+    ECDSA_OSSL_334,
+    ECDSA_OSSL_341,
+    ECDSA_OSSL_348,
+    ECDSA_OSSL_362,
+    ECDSA_OSSL_366,
+    ECDSA_OSSL_375,
+    ECDSA_OSSL_385,
+    ECDSA_OSSL_390,
+    ECDSA_OSSL_455,
+    ECDSA_OSSL_460,
+    ECDSA_OSSL_466,
+    ECDSA_OSSL_475,
+    ECDSA_OSSL_481,
+    ECDSA_OSSL_486,
+    ECDSA_OSSL_492,
+    ECDSA_OSSL_503,
+    ECDSA_OSSL_508,
+    ECDSA_OSSL_513,
+    ECDSA_OSSL_518,
+    ECDSA_OSSL_523,
+    ECDSA_OSSL_527,
+    ECDSA_OSSL_532,
+    ECDSA_OSSL_537,
+    ECDH_OSSL_32,
+    ECDH_OSSL_66,
+    ECDH_OSSL_72,
+    ECDH_OSSL_84,
+    ECDH_OSSL_88,
+    ECDH_OSSL_95,
+    ECDH_OSSL_100,
+    ECDH_OSSL_110,
+    ECDH_OSSL_121,
+    ECDH_OSSL_129,
+    ECDSA_SIGN_31,
+    ECDSA_SIGN_46,
+    ECDSA_SIGN_55,
+    ECDSA_VRF_31,
+    ECDSA_VRF_47,
+    EC_CHECK_26,
+    EC_CHECK_33,
+    EC_CHECK_61,
+    EC_CHECK_72,
+    EC_CHECK_79,
+    EC_CHECK_85,
+    EC_CHECK_89,
+    EC_CHECK_100,
+    EC_CHECK_107,
+    EC_BACKEND_174,
+    EC_BACKEND_180,
+    EC_BACKEND_193,
+    EC_BACKEND_198,
+    EC_BACKEND_204,
+    EC_BACKEND_214,
+    EC_BACKEND_219,
+    EC_BACKEND_229,
+    EC_BACKEND_241,
+    EC_BACKEND_246,
+    EC_BACKEND_252,
+    EC_BACKEND_264,
+    EC_BACKEND_279,
+    EC_BACKEND_298,
+    EC_BACKEND_308,
+    EC_BACKEND_317,
+    EC_BACKEND_345,
+    EC_BACKEND_524,
+    EC_BACKEND_599,
+    EC_BACKEND_769,
+    EC_BACKEND_779,
+    EC_BACKEND_797,
+    EC_BACKEND_825,
+    EC_ASN1_194,
+    EC_ASN1_200,
+    EC_ASN1_205,
+    EC_ASN1_211,
+    EC_ASN1_217,
+    EC_ASN1_229,
+    EC_ASN1_238,
+    EC_ASN1_243,
+    EC_ASN1_255,
+    EC_ASN1_259,
+    EC_ASN1_270,
+    EC_ASN1_283,
+    EC_ASN1_290,
+    EC_ASN1_312,
+    EC_ASN1_318,
+    EC_ASN1_333,
+    EC_ASN1_340,
+    EC_ASN1_348,
+    EC_ASN1_354,
+    EC_ASN1_385,
+    EC_ASN1_396,
+    EC_ASN1_402,
+    EC_ASN1_408,
+    EC_ASN1_416,
+    EC_ASN1_421,
+    EC_ASN1_429,
+    EC_ASN1_435,
+    EC_ASN1_445,
+    EC_ASN1_466,
+    EC_ASN1_487,
+    EC_ASN1_523,
+    EC_ASN1_536,
+    EC_ASN1_541,
+    EC_ASN1_546,
+    EC_ASN1_555,
+    EC_ASN1_566,
+    EC_ASN1_571,
+    EC_ASN1_582,
+    EC_ASN1_589,
+    EC_ASN1_605,
+    EC_ASN1_611,
+    EC_ASN1_627,
+    EC_ASN1_631,
+    EC_ASN1_643,
+    EC_ASN1_648,
+    EC_ASN1_653,
+    EC_ASN1_659,
+    EC_ASN1_666,
+    EC_ASN1_671,
+    EC_ASN1_684,
+    EC_ASN1_699,
+    EC_ASN1_712,
+    EC_ASN1_718,
+    EC_ASN1_722,
+    EC_ASN1_726,
+    EC_ASN1_735,
+    EC_ASN1_740,
+    EC_ASN1_757,
+    EC_ASN1_763,
+    EC_ASN1_788,
+    EC_ASN1_840,
+    EC_ASN1_848,
+    EC_ASN1_856,
+    EC_ASN1_864,
+    EC_ASN1_907,
+    EC_ASN1_911,
+    EC_ASN1_932,
+    EC_ASN1_947,
+    EC_ASN1_960,
+    EC_ASN1_970,
+    EC_ASN1_981,
+    EC_ASN1_1015,
+    EC_ASN1_1020,
+    EC_ASN1_1029,
+    EC_ASN1_1040,
+    EC_ASN1_1048,
+    EC_ASN1_1055,
+    EC_ASN1_1065,
+    EC_ASN1_1079,
+    EC_ASN1_1090,
+    EC_ASN1_1096,
+    EC_ASN1_1129,
+    EC_ASN1_1135,
+    EC_ASN1_1148,
+    EC_ASN1_1156,
+    EC_ASN1_1170,
+    EC_AMETH_35,
+    EC_AMETH_45,
+    EC_AMETH_59,
+    EC_AMETH_77,
+    EC_AMETH_119,
+    EC_AMETH_171,
+    EC_AMETH_186,
+    EC_AMETH_192,
+    EC_AMETH_292,
+    EC_AMETH_341,
+    EC_AMETH_430,
+    EC_AMETH_459,
+    EC_AMETH_615,
+    ECK_PRN_27,
+    ECK_PRN_42,
+    ECK_PRN_57,
+    ECK_PRN_214,
+    PARAM_BUILD_SET_82,
+    RAND_LIB_386,
+    RAND_LIB_430,
+    RAND_LIB_435,
+    RAND_LIB_473,
+    RAND_LIB_478,
+    RAND_LIB_610,
+    RAND_LIB_616,
+    RAND_LIB_620,
+    RAND_LIB_664,
+    RAND_LIB_670,
+    RAND_LIB_697,
+    RAND_LIB_712,
+    RAND_LIB_718,
+    RAND_LIB_723,
+    RAND_LIB_776,
+    RAND_LIB_977,
+    RAND_LIB_1010,
+    RAND_LIB_1030,
+    RAND_LIB_1058,
+    RAND_LIB_1075,
+    RANDFILE_106,
+    RANDFILE_113,
+    RANDFILE_178,
+    RANDFILE_194,
+    RANDFILE_219,
+    RANDFILE_251,
+    RAND_POOL_205,
+    RAND_POOL_242,
+    RAND_POOL_250,
+    RAND_POOL_302,
+    RAND_POOL_307,
+    RAND_POOL_321,
+    RAND_POOL_359,
+    RAND_POOL_364,
+    RAND_POOL_395,
+    RAND_POOL_426,
+    RAND_POOL_431,
+    PROV_SEED_28,
+    PROV_SEED_84,
+    PROV_DRBG_70,
+    PROV_DRBG_91,
+    PROV_DRBG_97,
+    PROV_DRBG_103,
+    PROV_DRBG_117,
+    PROV_DRBG_178,
+    PROV_DRBG_208,
+    PROV_DRBG_218,
+    PROV_DRBG_359,
+    PROV_DRBG_371,
+    PROV_DRBG_377,
+    PROV_DRBG_379,
+    PROV_DRBG_391,
+    PROV_DRBG_396,
+    PROV_DRBG_400,
+    PROV_DRBG_423,
+    PROV_DRBG_442,
+    PROV_DRBG_449,
+    PROV_DRBG_498,
+    PROV_DRBG_502,
+    PROV_DRBG_509,
+    PROV_DRBG_514,
+    PROV_DRBG_523,
+    PROV_DRBG_546,
+    PROV_DRBG_551,
+    PROV_DRBG_566,
+    PROV_DRBG_648,
+    PROV_DRBG_652,
+    PROV_DRBG_657,
+    PROV_DRBG_662,
+    PROV_DRBG_666,
+    PROV_DRBG_691,
+    PROV_DRBG_700,
+    PROV_DRBG_765,
+    PROV_DRBG_770,
+    PROV_DRBG_854,
+    PROV_DRBG_1014,
+    PROV_DRBG_1021,
+    PROV_DRBG_CTR_577,
+    PROV_DRBG_CTR_586,
+    PROV_DRBG_CTR_594,
+    PROV_DRBG_CTR_607,
+    PROV_DRBG_CTR_625,
+    PROV_DRBG_CTR_631,
+    PROV_DRBG_CTR_751,
+    PROV_DRBG_CTR_763,
+    PROV_DRBG_CTR_791,
+    PROV_DRBG_CTR_802,
+    PROV_DRBG_CTR_813,
+    PROV_DRBG_CTR_824,
+    PROV_DRBG_CTR_835,
+    PROV_DRBG_CTR_861,
+    PROV_DRBG_CTR_872,
+    PROV_DRBG_CTR_915,
+    PROV_DRBG_CTR_926,
+    PROV_DRBG_CTR_953,
+    PROV_DRBG_CTR_962,
+    PROV_DRBG_CTR_991,
+    PROV_DRBG_CTR_1002,
+    PROV_DRBG_CTR_1015,
+    PROV_DRBG_CTR_1105,
+    PROV_DRBG_CTR_1124,
+    PROV_DRBG_CTR_1179,
+    PROV_DRBG_CTR_1202,
+    PROV_DRBG_CTR_1213,
+    PROV_DRBG_CTR_1255,
+    PROV_DRBG_CTR_1266,
+    PROV_DRBG_CTR_1284,
+    PROV_DRBG_HASH_540,
+    PROV_DRBG_HASH_552,
+    PROV_DRBG_HASH_580,
+    PROV_DRBG_HASH_591,
+    PROV_DRBG_HASH_602,
+    PROV_DRBG_HASH_613,
+    PROV_DRBG_HASH_624,
+    PROV_DRBG_HASH_650,
+    PROV_DRBG_HASH_661,
+    PROV_DRBG_HASH_704,
+    PROV_DRBG_HASH_715,
+    PROV_DRBG_HASH_742,
+    PROV_DRBG_HASH_751,
+    PROV_DRBG_HASH_780,
+    PROV_DRBG_HASH_791,
+    PROV_DRBG_HASH_1011,
+    PROV_DRBG_HASH_1021,
+    PROV_DRBG_HASH_1037,
+    PROV_DRBG_HASH_1060,
+    PROV_DRBG_HASH_1071,
+    PROV_DRBG_HASH_1113,
+    PROV_DRBG_HASH_1124,
+    PROV_DRBG_HMAC_129,
+    PROV_DRBG_HMAC_434,
+    PROV_DRBG_HMAC_446,
+    PROV_DRBG_HMAC_468,
+    PROV_DRBG_HMAC_487,
+    PROV_DRBG_HMAC_498,
+    PROV_DRBG_HMAC_509,
+    PROV_DRBG_HMAC_520,
+    PROV_DRBG_HMAC_531,
+    PROV_DRBG_HMAC_557,
+    PROV_DRBG_HMAC_568,
+    PROV_DRBG_HMAC_611,
+    PROV_DRBG_HMAC_622,
+    PROV_DRBG_HMAC_649,
+    PROV_DRBG_HMAC_658,
+    PROV_DRBG_HMAC_687,
+    PROV_DRBG_HMAC_698,
+    PROV_DRBG_HMAC_957,
+    PROV_DRBG_HMAC_967,
+    PROV_DRBG_HMAC_983,
+    PROV_DRBG_HMAC_994,
+    PROV_DRBG_HMAC_1017,
+    PROV_DRBG_HMAC_1028,
+    PROV_DRBG_HMAC_1070,
+    PROV_DRBG_HMAC_1081,
+    PROV_SEED_SRC_55,
+    PROV_SEED_SRC_103,
+    PROV_SEED_SRC_111,
+    PROV_SEED_SRC_140,
+    PROV_SEED_SRC_183,
+    PROV_SEED_SRC_202,
+    PROV_SEED_SRC_213,
+    PROV_SEED_SRC_269,
+    PROV_SEED_SRC_281,
+    PROV_TEST_RNG_232,
+    PROV_TEST_RNG_244,
+    PROV_TEST_RNG_255,
+    PROV_TEST_RNG_274,
+    PROV_TEST_RNG_285,
+    PROV_TEST_RNG_373,
+    PROV_TEST_RNG_384,
+    PROV_TEST_RNG_395,
+    PROV_TEST_RNG_426,
+    PROV_TEST_RNG_437,
+    PROV_TEST_RNG_524,
+    PROV_FIPS_CRNG_TEST_94,
+    PROV_FIPS_CRNG_TEST_172,
+    PROV_FIPS_CRNG_TEST_341,
+    PROV_FIPS_CRNG_TEST_346,
+    PROV_FIPS_CRNG_TEST_410,
+    PROV_FIPS_CRNG_TEST_422,
+    PROV_FIPS_CRNG_TEST_441,
+    PROV_FIPS_CRNG_TEST_452,
+    UI_LIB_32,
+    UI_LIB_103,
+    UI_LIB_107,
+    UI_LIB_159,
+    UI_LIB_161,
+    UI_LIB_165,
+    UI_LIB_415,
+    UI_LIB_421,
+    UI_LIB_439,
+    UI_LIB_443,
+    UI_LIB_452,
+    UI_LIB_456,
+    UI_LIB_553,
+    UI_LIB_560,
+    UI_LIB_577,
+    UI_LIB_617,
+    UI_LIB_898,
+    UI_LIB_906,
+    UI_LIB_914,
+    UI_LIB_927,
+    UI_OPENSSL_457,
+    UI_OPENSSL_468,
+    UI_OPENSSL_502,
+    UI_OPENSSL_534,
+    UI_OPENSSL_561,
+    PEM_ALL_201,
+    PEM_ALL_214,
+    PASSPHRASE_38,
+    PASSPHRASE_55,
+    PASSPHRASE_69,
+    PASSPHRASE_83,
+    PASSPHRASE_124,
+    PASSPHRASE_129,
+    PASSPHRASE_142,
+    PASSPHRASE_156,
+    PASSPHRASE_171,
+    PASSPHRASE_178,
+    PASSPHRASE_181,
+    PASSPHRASE_186,
+    PASSPHRASE_251,
+    PASSPHRASE_266,
+    PASSPHRASE_275,
+    ENCODER_METH_286,
+    ENCODER_METH_362,
+    ENCODER_METH_419,
+    ENCODER_METH_468,
+    ENCODER_METH_478,
+    ENCODER_METH_489,
+    ENCODER_METH_499,
+    ENCODER_METH_624,
+    ENCODER_LIB_78,
+    ENCODER_LIB_86,
+    ENCODER_LIB_99,
+    ENCODER_LIB_127,
+    ENCODER_LIB_173,
+    ENCODER_LIB_178,
+    ENCODER_LIB_190,
+    ENCODER_LIB_202,
+    ENCODER_LIB_220,
+    ENCODER_LIB_228,
+    ENCODER_LIB_236,
+    ENCODER_LIB_246,
+    ENCODER_LIB_287,
+    ENCODER_LIB_315,
+    ENCODER_LIB_356,
+    ENCODER_LIB_367,
+    ENCODER_LIB_378,
+    ENCODER_LIB_614,
+    ENCODER_PKEY_239,
+    ENCODER_PKEY_261,
+    ENCODER_PKEY_316,
+    ENCODER_PKEY_352,
+    ENCODER_PKEY_357,
+    ENCODER_PKEY_363,
+    DECODER_METH_280,
+    DECODER_METH_356,
+    DECODER_METH_414,
+    DECODER_METH_463,
+    DECODER_METH_473,
+    DECODER_METH_484,
+    DECODER_METH_494,
+    DECODER_METH_644,
+    DECODER_LIB_55,
+    DECODER_LIB_60,
+    DECODER_LIB_104,
+    DECODER_LIB_127,
+    DECODER_LIB_154,
+    DECODER_LIB_171,
+    DECODER_LIB_187,
+    DECODER_LIB_203,
+    DECODER_LIB_222,
+    DECODER_LIB_252,
+    DECODER_LIB_263,
+    DECODER_LIB_274,
+    DECODER_LIB_290,
+    DECODER_LIB_324,
+    DECODER_LIB_332,
+    DECODER_LIB_361,
+    DECODER_LIB_389,
+    DECODER_LIB_589,
+    DECODER_LIB_609,
+    DECODER_LIB_691,
+    DECODER_LIB_702,
+    DECODER_LIB_713,
+    DECODER_LIB_754,
+    DECODER_LIB_965,
+    DECODER_LIB_970,
+    DECODER_PKEY_470,
+    DECODER_PKEY_587,
+    DECODER_PKEY_593,
+    DECODER_PKEY_604,
+    DECODER_PKEY_611,
+    DECODER_PKEY_619,
+    DECODER_PKEY_625,
+    DECODER_PKEY_636,
+    DECODER_PKEY_646,
+    DECODER_PKEY_654,
+    DECODER_PKEY_809,
+    DECODER_PKEY_839,
+    DECODER_PKEY_857,
+    DECODER_PKEY_873,
+    DECODER_PKEY_901,
+    DECODER_PKEY_937,
+    DECODER_PKEY_946,
+    PKCS12_32,
+    PKCS12_50,
+    PKCS12_60,
+    PKCS12_68,
+    PKCS12_75,
+    PKCS12_87,
+    PKCS12_95,
+    PKCS12_110,
+    PKCS12_151,
+    PKCS12_170,
+    PKCS12_200,
+    PKCS12_205,
+    PKCS12_210,
+    X509_ATT_59,
+    X509_ATT_63,
+    X509_ATT_72,
+    X509_ATT_76,
+    X509_ATT_89,
+    X509_ATT_95,
+    X509_ATT_105,
+    X509_ATT_122,
+    X509_ATT_126,
+    X509_ATT_159,
+    X509_ATT_163,
+    X509_ATT_194,
+    X509_ATT_198,
+    X509_ATT_279,
+    X509_ATT_297,
+    X509_ATT_327,
+    X509_ATT_339,
+    X509_ATT_355,
+    X509_ATT_362,
+    X509_ATT_369,
+    X509_ATT_384,
+    X509_ATT_389,
+    X509_ATT_397,
+    X509_ATT_417,
+    X509_ATT_433,
+    X509_ATT_442,
+    X509_PUBKEY_120,
+    X509_PUBKEY_144,
+    X509_PUBKEY_160,
+    X509_PUBKEY_227,
+    X509_PUBKEY_293,
+    X509_PUBKEY_305,
+    X509_PUBKEY_331,
+    X509_PUBKEY_337,
+    X509_PUBKEY_342,
+    X509_PUBKEY_346,
+    X509_PUBKEY_367,
+    X509_PUBKEY_373,
+    X509_PUBKEY_427,
+    X509_PUBKEY_432,
+    X509_PUBKEY_445,
+    X509_PUBKEY_460,
+    X509_PUBKEY_466,
+    X509_PUBKEY_478,
+    X509_PUBKEY_635,
+    X509_PUBKEY_677,
+    X509_PUBKEY_718,
+    X509_PUBKEY_784,
+    X509_PUBKEY_829,
+    X509_PUBKEY_871,
+    X509_PUBKEY_913,
+    X509_PUBKEY_955,
+    X509_PUBKEY_997,
+    ECX_KEY_116,
+    ECX_KEY_122,
+    ECX_KEY_131,
+    ECX_KEY_140,
+    ECX_KEY_146,
+    ECX_KEY_154,
+    ECX_KEY_160,
+    ECX_BACKEND_37,
+    ECX_BACKEND_47,
+    ECX_BACKEND_133,
+    ECX_BACKEND_163,
+    ECX_BACKEND_169,
+    ECX_BACKEND_175,
+    ECX_BACKEND_182,
+    ECX_BACKEND_192,
+    ECX_BACKEND_212,
+    ECX_METH_37,
+    ECX_METH_48,
+    ECX_METH_106,
+    ECX_METH_116,
+    ECX_METH_123,
+    ECX_METH_395,
+    ECX_METH_554,
+    ECX_METH_733,
+    ECX_METH_739,
+    ECX_METH_743,
+    ECX_METH_813,
+    ECX_METH_822,
+    ECX_METH_843,
+    ECX_METH_852,
+    ECX_METH_871,
+    ECX_METH_891,
+    ECX_METH_909,
+    ECX_METH_955,
+    ECX_METH_963,
+    ECX_METH_998,
+    ECX_METH_1006,
+    ECX_METH_1076,
+    ECX_METH_1084,
+    ECX_METH_1143,
+    ECX_METH_1151,
+    ECX_METH_1238,
+    ECX_METH_1248,
+    ECX_METH_1283,
+    ECX_METH_1293,
+    ECX_METH_1330,
+    ECX_METH_1365,
 ];
