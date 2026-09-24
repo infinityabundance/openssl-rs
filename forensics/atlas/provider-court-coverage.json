@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 297,
+        "implemented": 299,
         "unmatched": 0
       },
       "9": {
@@ -58,8 +58,8 @@
         ]
       }
     ],
-    "directly_courted": 302,
-    "implemented_rows": 302,
+    "directly_courted": 304,
+    "implemented_rows": 304,
     "rows": [
       {
         "algorithm_names": "RSA",
@@ -70,6 +70,22 @@
         ],
         "courts": [
           "RT-DRBG",
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-ASYM-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ASYM_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SM2",
+        "aliases": [
+          "SM2",
+          "1.2.156.10197.1.301"
+        ],
+        "courts": [
           "RT-KEYMGMT",
           "RT-SIGNATURE",
           "RT-ASYM-CIPHER"
@@ -2285,7 +2301,8 @@
           "1.2.156.10197.1.401"
         ],
         "courts": [
-          "RT-DIGEST"
+          "RT-DIGEST",
+          "RT-SIGNATURE"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_DIGEST",
@@ -3266,7 +3283,9 @@
           "1.2.156.10197.1.301"
         ],
         "courts": [
-          "RT-KEYMGMT"
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-ASYM-CIPHER"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -4417,6 +4436,22 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "SM2",
+        "aliases": [
+          "SM2",
+          "1.2.156.10197.1.301"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-ASYM-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SIGNATURE",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "AES",
         "aliases": [
           "AES",
@@ -4451,7 +4486,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "1121ffd6793d902f37c9a82846cb5c4b262281ffebc9202d3f9906eb34daf711"
+      "sha256": "8abf06cb73f30a33dcc7bef4125428a36c068e90dd607a96a3bf65286094b59e"
     },
     {
       "name": "court:RT-DIGEST:rt_digest_probe.c",
@@ -4481,7 +4516,7 @@
     {
       "name": "court:RT-SIGNATURE:rt_signature_probe.c",
       "path": "courts/phase8/rt_signature_probe.c",
-      "sha256": "e51a25cc5392bdd7d26af2d03c1a1704a24d69adf892dd6352c7ab2054cd4658"
+      "sha256": "288c72b8f69ffc696e16c87748b27d2879161499e94959cc6991adc9f0159a2b"
     },
     {
       "name": "court:RT-SIGNATURE:slh_dsa_probe.h",
@@ -4491,7 +4526,7 @@
     {
       "name": "court:RT-ASYM-CIPHER:rt_asymcipher_probe.c",
       "path": "courts/phase8/rt_asymcipher_probe.c",
-      "sha256": "706658dd0d827b42bd4b99422b2c340a6ef9c0eef817c07ba3426e0f86004271"
+      "sha256": "4420251dd24a38970f7b4cf8f05a9eb56a86765749f1574ec199df1279adf366"
     }
   ],
   "kind": "provider-court-coverage",

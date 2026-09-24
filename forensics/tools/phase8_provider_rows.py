@@ -83,8 +83,10 @@ OUT = REPO_ROOT / "docs" / "PHASE-8-PROVIDER-ROWS.md"
 # `argon2.c.in`, `ml_kem_kmgmt.c.in`, `mlx_kmgmt.c.in`, `slh_dsa_kmgmt.c.in` and `slh_dsa_sig.c.in`
 # entries were deleted (all five units landed at D397-D404, and each note named a thread or `crypto/`
 # implementation the crate now has), and the SM2 signature note -- shadowed by a duplicate
-# `ml_dsa_sig.c.in` key, so it never printed at all -- was re-keyed to its own unit. The five entries
-# below are the whole of what the census leaves unlanded.
+# `ml_dsa_sig.c.in` key, so it never printed at all -- was re-keyed to its own unit. D406 then
+# landed both SM2 units, so the `sm2_sig.c.in` and `sm2_enc.c.in` entries are deleted too. The
+# **three** entries below are the whole of what the census leaves unlanded: the two ML-DSA units and
+# the `EC` KEM unit.
 WITHHELD: dict[str, str] = {
     # The `OSSL_OP_KEYEXCH` group. D386 landed the crate's `OSSL_OP_KEYMGMT` arm -- the gate this
     # comment used to describe as absent -- and, on it, the `kdf_exch.c` unit. D387 landed
@@ -137,9 +139,9 @@ WITHHELD: dict[str, str] = {
     # `DEFLT_SIGNATURES` land with `mac_legacy_sig.c`'s four rows and `dsa_sig.c.in`'s ten. D393
     # landed `ecdsa_sig.c.in`'s ten on `der_ec_sig.c`, D394 `eddsa_sig.c.in`'s five on
     # `der_ecx_key.c`, D395 `rsa_sig.c.in`'s fourteen on `der_rsa_sig.c`, `der_rsa_key.c`'s PSS
-    # params writer and `securitycheck*.c`, and D399 `slh_dsa_sig.c.in`'s twelve on `crypto/slh_dsa/`
-    # -- so the two entries below are the whole of what remains: `sm2_sig.c.in`, held on
-    # `crypto/sm2/` and `der_sm2_sig.c`, and `ml_dsa_sig.c.in`, held on `crypto/ml_dsa/`.
+    # params writer and `securitycheck*.c`, D399 `slh_dsa_sig.c.in`'s twelve on `crypto/slh_dsa/`,
+    # and D406 `sm2_sig.c.in`'s one on `crypto/sm2/` and `der_sm2_sig.c` -- so the one entry below is
+    # the whole of what remains: `ml_dsa_sig.c.in`, held on `crypto/ml_dsa/`.
     #
     # `dsa_sig.c.in` is **not** here: its only non-FIPS prerequisites are
     # `providers/common/digest_to_nid.c` and `der_dsa_sig.c`, both landed as
@@ -147,26 +149,6 @@ WITHHELD: dict[str, str] = {
     # that let DSA land before RSA and ECDSA: `ossl_dsa_check_key`, the callee this comment would
     # otherwise have named, is reached only from `dsa_sig.c.in`'s `#ifdef FIPS_MODULE` block at
     # `:266`, so `providers/common/securitycheck.c` is not on the DSA path at all.
-    "forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/sm2_sig.c.in": (
-        "**Withheld: the unit's one row, on two unlanded units.** `sm2_sig.c.in`'s sign path is "
-        "`ossl_sm2_internal_sign`/`ossl_sm2_internal_verify` and `ossl_sm2_compute_z_digest` "
-        "(`crypto/sm2/sm2_sign.c`, 543 lines), and its AlgorithmIdentifier comes from "
-        "`providers/common/der/der_sm2_sig.c` (39 lines). Neither unit is in this tree, so the "
-        "single `SM2` row costs two whole transcriptions and lands with them. **D396 measured "
-        "their closure and found only one prerequisite the crate lacks**: the EC half is landed "
-        "(`ossl_ec_group_do_inverse_ord` is `src/ec/lib.rs:2236`'s, `ossl_ec_key_get_libctx`/"
-        "`ossl_ec_key_get0_propq` and the `EC_GROUP`/`EC_POINT`/`ECDSA_SIG` accessors are all in "
-        "`src/ec/`), and `SM2_R_*` is already in `src/runtime/err_reasons.rs`, so what remains is "
-        "these two units plus the row's own dispatch."
-    ),
-    "forensics/authorities/src/openssl-3.6.4/providers/implementations/asymciphers/sm2_enc.c.in": (
-        "**Withheld: the unit's one row, on three unlanded units.** `sm2_enc.c.in`'s encrypt and "
-        "decrypt arms call `ossl_sm2_encrypt`/`ossl_sm2_decrypt` (`crypto/sm2/sm2_crypt.c`), which "
-        "is not in this tree, and its AlgorithmIdentifier comes from the same "
-        "`providers/common/der/der_sm2_sig.c` that `sm2_sig.c.in` waits on. It is therefore the "
-        "**last** of the `OSSL_OP_ASYM_CIPHER` group's two rows to land: the `RSA` row landed at "
-        "D396, and this one lands with the `SM2` crypt unit D396 measured."
-    ),
     "forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/ml_dsa_sig.c.in": (
         "**Withheld: not reachable.** The unit's three rows (`ML-DSA-44`, `ML-DSA-65`, "
         "`ML-DSA-87`) dispatch to `ossl_ml_dsa_*` (`crypto/ml_dsa/`), which the crate does not "

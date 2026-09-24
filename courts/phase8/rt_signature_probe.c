@@ -1244,6 +1244,64 @@ static void arm_slh_dsa_rows(void)
     }
 }
 
+/* The one `SM2` signature row (D406). The row is fetched by name, an SM2 key is generated through
+ * the `SM2` keymgmt row, and the DigestSign/DigestVerify pair is driven over SM3 — the only digest
+ * the row accepts. The published GM/T 0003.5-2012 known answer is the crypt unit's own unit test
+ * (`src/sm2/sign.rs`); this arm is the registration-row court's differential one. */
+static void arm_sm2_rows(void)
+{
+    EVP_PKEY_CTX *kctx = EVP_PKEY_CTX_new_from_name(NULL, "SM2", NULL);
+    OSSL_PARAM gparams[2];
+    EVP_PKEY *pkey = NULL;
+    EVP_MD *md;
+    unsigned char sig[256];
+    size_t siglen = sizeof(sig);
+
+    kv_int("sm2.fetch", EVP_SIGNATURE_fetch(NULL, "SM2", NULL) != NULL);
+
+    gparams[0] = OSSL_PARAM_construct_utf8_string(OSSL_PKEY_PARAM_GROUP_NAME, (char *)"SM2", 0);
+    gparams[1] = OSSL_PARAM_construct_end();
+    kv_int("sm2.keygen_init", kctx != NULL && EVP_PKEY_keygen_init(kctx) > 0);
+    kv_int("sm2.set_group", kctx != NULL && EVP_PKEY_CTX_set_params(kctx, gparams) > 0);
+    kv_int("sm2.keygen", kctx != NULL && EVP_PKEY_keygen(kctx, &pkey) > 0);
+    EVP_PKEY_CTX_free(kctx);
+
+    if (pkey == NULL)
+        return;
+
+    md = EVP_MD_fetch(NULL, "SM3", NULL);
+    kv_int("sm2.sm3_fetch", md != NULL);
+
+    {
+        EVP_MD_CTX *sctx = EVP_MD_CTX_new();
+        EVP_PKEY_CTX *pctx = NULL;
+
+        kv_int("sm2.digest_sign_init", EVP_DigestSignInit(sctx, &pctx, md, NULL, pkey));
+        kv_int("sm2.update", EVP_DigestSignUpdate(sctx, sig_message, sizeof(sig_message) - 1));
+        /* The size query is deterministic (`ECDSA_size`); the signed length is not, because an
+         * SM2 `(r, s)` DER length depends on the two components' leading zeroes, so it is not
+         * printed. */
+        siglen = sizeof(sig);
+        kv_int("sm2.size", EVP_DigestSignFinal(sctx, NULL, &siglen));
+        siglen = sizeof(sig);
+        kv_int("sm2.sign", EVP_DigestSignFinal(sctx, sig, &siglen) > 0);
+        EVP_MD_CTX_free(sctx);
+    }
+
+    {
+        EVP_MD_CTX *vctx = EVP_MD_CTX_new();
+        EVP_PKEY_CTX *pctx = NULL;
+
+        if (EVP_DigestVerifyInit(vctx, &pctx, md, NULL, pkey) > 0)
+            (void)EVP_DigestVerifyUpdate(vctx, sig_message, sizeof(sig_message) - 1);
+        kv_int("sm2.verify", EVP_DigestVerifyFinal(vctx, sig, siglen));
+        EVP_MD_CTX_free(vctx);
+    }
+
+    EVP_MD_free(md);
+    EVP_PKEY_free(pkey);
+}
+
 int main(void)
 {
     /* The warm-up: the `DSA` sign path reaches `ossl_bn_gen_dsa_nonce_fixed_top`, whose first act
@@ -1264,6 +1322,7 @@ int main(void)
     arm_eddsa_rows();
     arm_rsa_rows();
     arm_slh_dsa_rows();
+    arm_sm2_rows();
     ERR_clear_error();
     return 0;
 }

@@ -22,10 +22,10 @@ Read from the census's own `implementation_state` for the rows this stratum owns
 | quantity | count |
 |---|---|
 | provider rows this stratum owns | 306 |
-| of those, implemented | 297 |
-| of those, unlanded | 9 |
+| of those, implemented | 299 |
+| of those, unlanded | 7 |
 
-The document below names all **9** unlanded rows this stratum owns across **19** translation units, and — so the first group can be read whole — the **21** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (9). The identity `306 = 297 + 9` holds.
+The document below names all **7** unlanded rows this stratum owns across **17** translation units, and — so the first group can be read whole — the **21** already-landed rows of the two operations that group covers: the first group in full (21 rows in `OSSL_OP_KDF` and `OSSL_OP_SKEYMGMT`) plus every other unlanded row (7). The identity `306 = 299 + 7` holds.
 
 ## The first group: the `OSSL_OP_KDF` rows and the `OSSL_OP_SKEYMGMT` pair
 
@@ -130,14 +130,6 @@ rather than stubbed.
 Every other unlanded row this stratum owns, grouped by the unit that defines its
 `dispatch_table_symbol`, then listed by its `deflt_*` table in the authority's order.
 
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/asymciphers/sm2_enc.c.in` — 1 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_asym_cipher` | `ossl_sm2_asym_cipher_functions` | `OSSL_OP_ASYM_CIPHER` | `SM2:1.2.156.10197.1.301` | `src/provider/asymcipher.rs` |
-
-**Withheld: the unit's one row, on three unlanded units.** `sm2_enc.c.in`'s encrypt and decrypt arms call `ossl_sm2_encrypt`/`ossl_sm2_decrypt` (`crypto/sm2/sm2_crypt.c`), which is not in this tree, and its AlgorithmIdentifier comes from the same `providers/common/der/der_sm2_sig.c` that `sm2_sig.c.in` waits on. It is therefore the **last** of the `OSSL_OP_ASYM_CIPHER` group's two rows to land: the `RSA` row landed at D396, and this one lands with the `SM2` crypt unit D396 measured.
-
 ### `forensics/authorities/src/openssl-3.6.4/providers/implementations/kem/ec_kem.c.in` — 1 row(s)
 
 | table | dispatch table symbol | operation | algorithm name(s) | crate file |
@@ -166,21 +158,13 @@ Every other unlanded row this stratum owns, grouped by the unit that defines its
 
 **Withheld: not reachable.** The unit's three rows (`ML-DSA-44`, `ML-DSA-65`, `ML-DSA-87`) dispatch to `ossl_ml_dsa_*` (`crypto/ml_dsa/`), which the crate does not have.
 
-### `forensics/authorities/src/openssl-3.6.4/providers/implementations/signature/sm2_sig.c.in` — 1 row(s)
-
-| table | dispatch table symbol | operation | algorithm name(s) | crate file |
-|---|---|---|---|---|
-| `deflt_signature` | `ossl_sm2_signature_functions` | `OSSL_OP_SIGNATURE` | `SM2:1.2.156.10197.1.301` | `src/provider/signature.rs` |
-
-**Withheld: the unit's one row, on two unlanded units.** `sm2_sig.c.in`'s sign path is `ossl_sm2_internal_sign`/`ossl_sm2_internal_verify` and `ossl_sm2_compute_z_digest` (`crypto/sm2/sm2_sign.c`, 543 lines), and its AlgorithmIdentifier comes from `providers/common/der/der_sm2_sig.c` (39 lines). Neither unit is in this tree, so the single `SM2` row costs two whole transcriptions and lands with them. **D396 measured their closure and found only one prerequisite the crate lacks**: the EC half is landed (`ossl_ec_group_do_inverse_ord` is `src/ec/lib.rs:2236`'s, `ossl_ec_key_get_libctx`/`ossl_ec_key_get0_propq` and the `EC_GROUP`/`EC_POINT`/`ECDSA_SIG` accessors are all in `src/ec/`), and `SM2_R_*` is already in `src/runtime/err_reasons.rs`, so what remains is these two units plus the row's own dispatch.
-
 ## Provenance
 
 | field | value |
 |---|---|
 | generator | `forensics/tools/phase8_provider_rows.py` |
 | census | `forensics/atlas/provider-algorithms.json` |
-| census content hash | `f452581aecafd379df4b80e268033d72e74e3e28a1c03231e703d072ca92c345` |
+| census content hash | `787269459b2a2a3b89f9b786c42cfa7fbaa646620612fbb733cc2ad5827304a4` |
 | authority tree | `forensics/authorities/src/openssl-3.6.4` |
 | crate query read | `src/provider/digest.rs` |
 

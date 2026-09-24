@@ -29235,3 +29235,73 @@ them as unlanded.
 `complete: true`, implemented **786**, deferred **0**, open **0**). `cargo test --lib` is **1025
 passed, 0 failed**, `cargo clippy --all-targets -- -D warnings` is clean, and the pipeline is
 `PIPELINE OK` with **exit 0**.
+
+---
+
+## D406 -- `crypto/sm2/` and its two provider units land, and `SM2` publishes on
+`OSSL_OP_SIGNATURE` and `OSSL_OP_ASYM_CIPHER`
+
+`provider_rows` moves **297/9 -> 299/7**. The two rows are `deflt_signature[]`'s one `SM2` row
+(`ossl_sm2_signature_functions`) and `deflt_asym_cipher[]`'s one `SM2` row
+(`ossl_sm2_asym_cipher_functions`), each the sole row of its unit.
+
+### The five units
+
+* **`crypto/sm2/sm2_sign.c` (543) -> `src/sm2/sign.rs`.** The Z digest
+  (`Z = H(ENTL || ID || a || b || xG || yG || xA || yA)`), `sm2_compute_msg_hash` (`e = H(Z || M)`),
+  the SM2 signature equation `s = (1/(1 + dA)) * (k - r*dA) mod n`, the B1-B7 verifier, the
+  `ossl_sm2_do_sign`/`ossl_sm2_do_verify` pair and the `ossl_sm2_internal_sign`/`_verify` pair the
+  provider runs on. The EC half was already landed (`ossl_ec_group_do_inverse_ord` is
+  `src/ec/lib.rs`, the `EC_GROUP`/`EC_POINT`/`ECDSA_SIG` accessors are in `src/ec/`).
+* **`crypto/sm2/sm2_crypt.c` (432) -> `src/sm2/crypt.rs`.** The `SM2_Ciphertext` ASN.1 template and
+  its four `IMPLEMENT_ASN1_FUNCTIONS` accessors, `ossl_sm2_ciphertext_size`/
+  `ossl_sm2_plaintext_size`, and the encrypt/decrypt pair over the X9.63 KDF
+  (`ossl_ecdh_kdf_X9_63`, already landed).
+* **`providers/common/der/der_sm2_sig.c` (39) -> `src/provider/der_sm2_sig.rs`.** The one-case
+  `sm2-with-SM3` AlgorithmIdentifier writer, over the OID read back from the generated `der_sm2.h`.
+* **`providers/implementations/signature/sm2_sig.c.in` (585) -> `src/provider/sm2_sig.rs`.**
+* **`providers/implementations/asymciphers/sm2_enc.c.in` (240) -> `src/provider/sm2_enc.rs`.**
+
+`DEFLT_SIGNATURES` grows 56 -> 57, the `SM2` row inserted **between the ECDSA group and the legacy
+MACs** -- the authority's own position (`defltprov.c:460`) -- and `DEFLT_ASYM_CIPHER` 2 -> 3 (`RSA`
+then `SM2`). Both remain subsequences of the authority's.
+
+### Two things the pass had to get right
+
+* **The generated accessors carry the authority's spelling.** `IMPLEMENT_ASN1_FUNCTIONS` makes
+  `SM2_Ciphertext_new`/`_free`, `d2i_SM2_Ciphertext` and `i2d_SM2_Ciphertext` non-`static`, so they
+  are named exactly that here; a lowercase spelling leaves them out of the crate's `built` set and
+  `prerequisite_gate.py` reports the three the unit calls as
+  `unwired_function_in_the_current_stratum`. They are private fns rather than `#[no_mangle]`
+  exports, so the export surface does not move.
+* **`SM2_Ciphertext`'s field order is `C1x, C1y, C3, C2`** -- the digest `C3` *before* the masked
+  message `C2` -- which the DER bytes make observable and which d2i/i2d pin.
+
+### The evidence is the authority's own published vectors
+
+`src/sm2/sign.rs`'s test drives the GM/T 0003.5-2012 (and GB/T 32918.5-2016) Annex A signature -- a
+private key, the default user ID, a message and the expected `(r, s)`, read back from the
+authority's own `test/sm2_internal_test.c` -- through `ossl_sm2_do_verify`, which recomputes `Z` and
+`e` from the same public inputs, so the **derived value `Z` is closed against the published
+vector** (D400/D401's rule). `src/sm2/crypt.rs`'s test drives the Annex C encryption known answer
+through the deterministic `ossl_sm2_decrypt` and requires the exact plaintext back. A differential
+court would only prove the two sides agree.
+
+`courts/phase8/rt_asymcipher_probe.c` gains an `arm_sm2` and `courts/phase8/rt_signature_probe.c`
+an `arm_sm2_rows`; both **avoid printing a randomised quantity** -- the SM2 ciphertext and the
+signature's DER length vary with the INTEGER components' leading zeroes -- so only the size query,
+the message length and the round trip are observed. `RT-ASYM-CIPHER` is **118 observations** and
+`RT-SIGNATURE` **439**. The map's `sm2_sig.c.in` and `sm2_enc.c.in` entries are deleted, as the rule
+at the map's head requires.
+
+### What remains
+
+**`kem/ec_kem.c.in` (1 row, 822)** and **`crypto/ml_dsa/` (6 rows, 4,925)** -- the order D403 named.
+Neither is withheld as unreachable, and the map now names exactly those three units.
+
+### Movement
+
+`provider_rows` is **299/7** and the export ledger is untouched (`forensics/phase8-obligations.json`
+`complete: true`, implemented **786**, deferred **0**, open **0**). `cargo test --lib` is **1032
+passed, 0 failed**, `cargo clippy --all-targets -- -D warnings` is clean, and the pipeline is
+`PIPELINE OK` with **exit 0**.
