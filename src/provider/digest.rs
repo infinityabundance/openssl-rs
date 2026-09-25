@@ -2101,7 +2101,8 @@ static DEFLT_DIGESTS: [OsslAlgorithm; 28] = [
 /// `static const OSSL_ALGORITHM *deflt_query(void *provctx, int operation_id, int *no_cache)` —
 /// `providers/defltprov.c`, with the `OSSL_OP_DIGEST`, `OSSL_OP_CIPHER`, `OSSL_OP_MAC`,
 /// `OSSL_OP_KDF`, `OSSL_OP_RAND`, `OSSL_OP_KEYMGMT`, `OSSL_OP_KEYEXCH`, `OSSL_OP_SIGNATURE`,
-/// `OSSL_OP_ASYM_CIPHER`, `OSSL_OP_KEM` and `OSSL_OP_SKEYMGMT` arms.
+/// `OSSL_OP_ASYM_CIPHER`, `OSSL_OP_KEM`, `OSSL_OP_SKEYMGMT`, `OSSL_OP_ENCODER` and
+/// `OSSL_OP_DECODER` arms.
 ///
 /// The other operations the authority answers are other subphases' and are absent, not stubbed.
 /// The arms are in the authority's own `switch` order (`defltprov.c:702-731`), where `SIGNATURE`
@@ -2160,9 +2161,15 @@ unsafe extern "C" fn deflt_query(
         return crate::provider::kem::DEFLT_ASYM_KEM.as_ptr();
     }
     if operation_id == crate::provider::encode_key2text::OSSL_OP_ENCODER {
-        // `defltprov.c:723` returns `deflt_encoder`, restricted to the eleven text rows this crate
-        // publishes (10.1); the other 230 encoder rows are still unimplemented and absent.
+        // `defltprov.c:723` returns `deflt_encoder`, the crate's own `DEFLT_ENCODERS` -- the
+        // thirteen text and blob rows 10.1 has published; the other 228 encoder rows are still
+        // unimplemented and absent.
         return crate::provider::encode_key2text::DEFLT_ENCODERS.as_ptr();
+    }
+    if operation_id == crate::provider::decode_epki2pki::OSSL_OP_DECODER {
+        // `defltprov.c:725` returns `deflt_decoder`, of which 10.1 publishes the one
+        // `EncryptedPrivateKeyInfo` row; the other 74 decoder rows are still unimplemented.
+        return crate::provider::decode_epki2pki::DEFLT_DECODERS.as_ptr();
     }
     ptr::null()
 }

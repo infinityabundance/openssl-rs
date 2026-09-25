@@ -1685,6 +1685,13 @@
         "translation_unit": "providers/common/libcommon-lib-provider_ctx.c"
       },
       {
+        "module": "src/provider/decode_epki2pki.rs",
+        "phase": 10,
+        "phase_source": "module-declaration",
+        "share": "1/1",
+        "translation_unit": "providers/implementations/encode_decode/libdefault-lib-decode_epki2pki.c"
+      },
+      {
         "module": "src/provider/der_dsa_sig.rs",
         "phase": 8,
         "phase_source": "module-declaration",

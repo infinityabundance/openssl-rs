@@ -1122,6 +1122,19 @@ COVERED_FILES = [
     # `MAKE_TEXT_ENCODER` body is a preprocessor macro's and is not attributed, the same rule
     # `encode_key2any.c`'s `MAKE_ENCODER` is under.
     ("providers/implementations/encode_decode/encode_key2text.c", "PROV_ENCODE_KEY2TEXT"),
+    # Phase 10.1's second provider codec unit: `providers/implementations/encode_decode/
+    # encode_key2blob.c` -- the `EC`/`SM2` public-point blob encoders. It is a plain `.c`, so its
+    # `__FILE__` carries the source-tree prefix. Its one raise is the
+    # `ERR_R_PASSED_INVALID_ARGUMENT` in the `MAKE_BLOB_ENCODER` body, and a local raise macro is
+    # attributed to each invocation line (`:175`, `:177`) -- the same rule `MAKE_TEXT_ENCODER` is
+    # under above.
+    ("providers/implementations/encode_decode/encode_key2blob.c", "PROV_ENCODE_KEY2BLOB"),
+    # Phase 10.1's first provider codec *decoder* unit: `providers/implementations/encode_decode/
+    # decode_epki2pki.c` -- the `EncryptedPrivateKeyInfo`-to-`PrivateKeyInfo` engine. It is a
+    # generated `.c.in`, so its `__FILE__` carries only the build-relative path. Its two raises are
+    # the machine-generated `set_ctx_params` parser's `PROV_R_REPEATED_PARAMETER` (`:87`) and the
+    # passphrase refusal's `PROV_R_UNABLE_TO_GET_PASSPHRASE` (`:179`).
+    ("providers/implementations/encode_decode/decode_epki2pki.c", "PROV_DECODE_EPKI2PKI"),
     # Phase 10 staging: `crypto/pkcs12/p12_decr.c`, the PBE buffer crypt and the ASN.1 decrypt/
     # encrypt pair `PKCS8_decrypt` reads an `EncryptedPrivateKeyInfo` through (D368). Its
     # thirteen sites are `ERR_LIB_PKCS12` with `ERR_R_EVP_LIB`, `ERR_R_PASSED_NULL_PARAMETER`,
