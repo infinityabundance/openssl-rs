@@ -165,6 +165,15 @@ pub mod sm4;
 // two crypt units the `SM2` signature and asym-cipher rows publish on.
 pub(crate) mod sm2;
 pub mod status;
+// Test-only: the one process-wide lock that serialises tests touching the crate's
+// process-global state (init/cleanup, the default `OSSL_LIB_CTX`, the memory
+// functions, the error registry, the object database, the property/method stores,
+// RCU and the thread-event register). A per-module lock could not exclude a test
+// in one module from a test in another, so all such tests share this one; the
+// module documents the classification rule. Declared here, in the ordinary
+// order, and only under `#[cfg(test)]`.
+#[cfg(test)]
+pub(crate) mod test_support;
 // Phase 8.8's `crypto/x509/` substream (D349): the accessor slices of `x_pubkey.c`,
 // `x509_set.c` and `t_x509.c` that the ASN.1 method objects call by name. The directory
 // is new here; each module is a partial transcription and names what it withholds in

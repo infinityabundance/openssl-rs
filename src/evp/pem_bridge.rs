@@ -1559,6 +1559,16 @@ mod tests {
     use crate::runtime::bio::bss_mem::BIO_s_mem;
     use crate::runtime::bio::{BIO_free, BIO_new};
 
+    /// Takes the crate-wide global-state lock. Only
+    /// `cipher_info_skips_the_whitespace_before_the_dek_info_name` needs it: it
+    /// writes the process-global object-name table through `EVP_add_cipher`,
+    /// whereas the other tests here read it. [`crate::test_support::lock_global_state`]
+    /// is the one lock every global-touching test shares, not a lock local to
+    /// this module.
+    fn lock() -> std::sync::MutexGuard<'static, ()> {
+        crate::test_support::lock_global_state()
+    }
+
     /// `PEM_write_bio` then `PEM_read_bio_ex` over one memory BIO: the name, the header and the
     /// bytes all come back as this test wrote them, and the writer's answer is the *encoded body's*
     /// length.
@@ -1663,6 +1673,7 @@ mod tests {
     /// what this test pins. It is deliberately not freed: the table holds the borrowed pointer.
     #[test]
     fn cipher_info_skips_the_whitespace_before_the_dek_info_name() {
+        let _g = lock();
         // SAFETY: the method is this test's own object, every buffer is its own storage, and the
         // header below is NUL-terminated.
         unsafe {

@@ -255,7 +255,8 @@
       "src/runtime/err_strings.rs",
       "src/runtime/getenv.rs",
       "src/runtime/obj_table.rs",
-      "src/status.rs"
+      "src/status.rs",
+      "src/test_support.rs"
     ],
     "not_checked": "authority symbols defined only by an area outside crypto/ssl/providers/engines, and C constructs this tool's lexical scans do not model",
     "records": [

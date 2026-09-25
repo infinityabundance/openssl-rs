@@ -939,8 +939,21 @@ pub(crate) unsafe fn ossl_rcu_lock_free(lock: *mut RcuLockSt) {
 mod tests {
     use super::*;
     use core::sync::atomic::{AtomicBool, AtomicI32};
+    use std::sync::MutexGuard;
     use std::thread;
     use std::time::Duration;
+
+    /// Takes the crate-wide global-state lock. These tests share the
+    /// process-global RCU registry (`CB_CALLS`/`CB_SAW`, the `MARKER`, the
+    /// per-thread RCU tables) and the thread-event machinery `reset` tears down
+    /// and re-arms, so the exclusion is crate-wide:
+    /// [`crate::test_support::lock_global_state`] is the one lock every
+    /// global-touching test shares, not a lock local to this module. Without it
+    /// two tests interleave `reset` and a callback and observe each other's
+    /// counts.
+    fn lock() -> MutexGuard<'static, ()> {
+        crate::test_support::lock_global_state()
+    }
 
     /// A callback that records that it ran and what it was handed.
     static CB_CALLS: AtomicI32 = AtomicI32::new(0);
@@ -995,6 +1008,7 @@ mod tests {
 
     #[test]
     fn a_queued_callback_runs_at_synchronize_and_its_node_is_consumed() {
+        let _guard = lock();
         reset();
         // SAFETY: a NULL context is resolved rather than refused, which is what the
         // authority's `ossl_lib_ctx_get_concrete` is for.
@@ -1036,6 +1050,7 @@ mod tests {
 
     #[test]
     fn a_read_hold_counts_once_and_a_re_entrant_hold_counts_depth() {
+        let _guard = lock();
         reset();
         // SAFETY: as above.
         let lock = unsafe { ossl_rcu_lock_new(2, ptr::null_mut()) };
@@ -1072,6 +1087,7 @@ mod tests {
 
     #[test]
     fn two_locks_take_two_quiescent_points_on_one_thread() {
+        let _guard = lock();
         reset();
         // SAFETY: as above.
         let a = unsafe { ossl_rcu_lock_new(2, ptr::null_mut()) };
@@ -1101,6 +1117,7 @@ mod tests {
 
     #[test]
     fn a_thread_stop_frees_the_per_thread_data_and_the_next_hold_rebuilds_it() {
+        let _guard = lock();
         reset();
         // SAFETY: as above.
         let lock = unsafe { ossl_rcu_lock_new(2, ptr::null_mut()) };
@@ -1127,6 +1144,7 @@ mod tests {
 
     #[test]
     fn an_unbalanced_unlock_neither_faults_nor_disturbs_a_later_hold() {
+        let _guard = lock();
         reset();
         // SAFETY: as above.
         let lock = unsafe { ossl_rcu_lock_new(2, ptr::null_mut()) };
@@ -1160,6 +1178,7 @@ mod tests {
 
     #[test]
     fn num_writers_is_raised_to_two_and_a_null_context_is_resolved() {
+        let _guard = lock();
         reset();
         // SAFETY: a NULL context resolves to the default one.
         let small = unsafe { ossl_rcu_lock_new(1, ptr::null_mut()) };
@@ -1188,6 +1207,7 @@ mod tests {
 
     #[test]
     fn an_eleventh_distinct_lock_is_refused_rather_than_indexed_out_of_bounds() {
+        let _guard = lock();
         reset();
         let mut locks = [ptr::null_mut::<RcuLockSt>(); MAX_QPS + 1];
         for slot in locks.iter_mut() {
@@ -1232,6 +1252,7 @@ mod tests {
 
     #[test]
     fn an_unqueued_callback_node_is_freeable_and_a_queued_one_is_not_the_caller_s() {
+        let _guard = lock();
         reset();
         // A node that never reaches a lock is the caller's to release, and NULL is legal.
         let orphan = ossl_rcu_cb_item_new();
@@ -1262,6 +1283,7 @@ mod tests {
 
     #[test]
     fn a_reader_of_another_thread_holds_off_retirement() {
+        let _guard = lock();
         reset();
         static READER_HELD: AtomicBool = AtomicBool::new(false);
         static RELEASE: AtomicBool = AtomicBool::new(false);

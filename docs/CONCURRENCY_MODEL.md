@@ -65,3 +65,26 @@ Concurrency courts use:
 - canary/refcount probes in the authority process;
 - deterministic scheduling for reproducibility where the mechanism permits it,
   with the schedule recorded as part of the run.
+
+## 7. Test isolation
+
+The unit suite has **two** runs, and both are required.
+
+| run | role |
+|---|---|
+| `cargo test --lib -- --test-threads=1` | **authoritative.** A test that mutates process-global state is defined to run alone, so this run is the one whose result the project trusts. |
+| `cargo test --lib` (default thread count) | the **parallel-safety gate.** An *accidental* cross-module coupling must surface as a failure here; otherwise it hides behind the same serialisation that protects the legitimate global-state tests, and the serialisation stops being evidence. |
+
+**A test that touches process-global state takes `crate::test_support::lock_global_state`.** That
+call *is* the classification. There is one process-wide mutex rather than a lock per test module,
+because a per-module lock cannot exclude a test in one module from a test in another -- which is
+exactly the coupling the gate exists to catch -- so a per-module lock would make the exclusion look
+stronger than it is. A test that only reads immutable data does **not** take the lock, so the
+parallel-safe subset stays parallel, and a test whose result depends on process ordering says so in
+its own comment beside the lock rather than leaving a reader to infer it.
+
+The surfaces that make this necessary are the ones §1 and §2 name: the terminal
+`OPENSSL_cleanup()`, the default `OSSL_LIB_CTX`, `CRYPTO_set_mem_functions`, the error queue's
+process-global registries, the object database's NID counter and name table, the RCU registry, the
+thread-event register and the property/method store. `docs/DECISIONS.md` D429 and D430 are where the
+incomplete and the per-module forms of this lock were measured and repaired.

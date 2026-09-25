@@ -2110,6 +2110,20 @@ pub unsafe extern "C" fn ERR_add_error_mem_bio(
 mod tests {
     use super::*;
 
+    /// Takes the crate-wide global-state lock. The error registry is
+    /// process-global (`GENERIC_LOADED`/`LIB_LOADED`, `NEXT_LIB` and the shared
+    /// `ERR_error_string` buffer), and every queue call reads the crate-wide init
+    /// flag (`init::stopped`), so a test here must not run concurrently with any
+    /// test that initialises or tears down the library:
+    /// [`crate::test_support::lock_global_state`] is the one lock every
+    /// global-touching test shares, not a lock local to this module.
+    ///
+    /// `generated_tables_are_complete_and_sorted` is deliberately **not** locked:
+    /// it reads only the immutable generated `err_strings` tables.
+    fn lock() -> std::sync::MutexGuard<'static, ()> {
+        crate::test_support::lock_global_state()
+    }
+
     /// Read a static C string returned by the tables.
     fn cstr(p: *const c_char) -> Option<String> {
         if p.is_null() {
@@ -2146,6 +2160,7 @@ mod tests {
 
     #[test]
     fn string_lookups_match_the_measured_authority_values() {
+        let _g = lock();
         // `0x0780007F` is the overflow error the RT-MEM probe measured: library
         // 15 (`ERR_LIB_CRYPTO`), reason 127 (`CRYPTO_R_INTEGER_OVERFLOW`).
         assert_eq!(
@@ -2166,6 +2181,7 @@ mod tests {
 
     #[test]
     fn ring_keeps_fifteen_errors_and_evicts_the_oldest() {
+        let _g = lock();
         drain();
         for i in 1..=20u32 {
             ERR_new();
@@ -2189,6 +2205,7 @@ mod tests {
 
     #[test]
     fn get_is_fifo_and_peek_last_is_the_newest() {
+        let _g = lock();
         drain();
         for i in 1..=3u32 {
             ERR_new();
@@ -2205,6 +2222,7 @@ mod tests {
 
     #[test]
     fn an_incomplete_slot_is_invisible() {
+        let _g = lock();
         drain();
         ERR_new(); // never completed
         assert_eq!(ERR_peek_error(), 0);
@@ -2217,6 +2235,7 @@ mod tests {
 
     #[test]
     fn marks_behave_as_measured() {
+        let _g = lock();
         drain();
         // An empty queue has nothing to mark.
         assert_eq!(ERR_set_mark(), 0);
@@ -2241,6 +2260,7 @@ mod tests {
 
     #[test]
     fn error_string_uses_the_authority_format() {
+        let _g = lock();
         let mut buf = [0i8; 256];
         // SAFETY: 256 writable bytes.
         unsafe { ERR_error_string_n(0x0780_007F, buf.as_mut_ptr(), 256) };
@@ -2260,6 +2280,7 @@ mod tests {
 
     #[test]
     fn error_string_falls_back_to_numeric_fields() {
+        let _g = lock();
         let mut buf = [0i8; 256];
         // SAFETY: 256 writable bytes.
         unsafe { ERR_error_string_n(0x7F80_0001, buf.as_mut_ptr(), 256) };
@@ -2271,6 +2292,7 @@ mod tests {
 
     #[test]
     fn get_state_exposes_the_ring() {
+        let _g = lock();
         drain();
         let es = ERR_get_state();
         assert!(!es.is_null());
@@ -2296,6 +2318,7 @@ mod tests {
 
     #[test]
     fn data_flags_and_ownership() {
+        let _g = lock();
         drain();
         ERR_new();
         // SAFETY: NV is NUL-terminated.
